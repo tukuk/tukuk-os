@@ -1,0 +1,8 @@
+{
+  "name": "Tukuk-OS — Web Search Engine",
+  "description": "Tukuk-OS is a free web search engine that indexes websites and delivers statistics. Search fast with snippets, filters and facets.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

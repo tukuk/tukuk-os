@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tukuk-OS — Server &amp; Website Admin Center</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="stylesheet" href="/theme.css">
+<style>
+  :root {
+    --bg: #0c0e12;
+    --panel: #14171f;
+    --panel-border: #232834;
+    --text: #e6e9ef;
+    --text-muted: #8c96a5;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  
+  .layout { display: flex; min-height: 100vh; }
+  
+  /* Sidebar */
+  aside {
+    width: 260px;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 8px;
+  }
+  .brand-badge {
+    font-size: 0.72rem;
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  nav.menu { display: flex; flex-direction: column; gap: 4px; }
+  .menu button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: none;
+    border: 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: all 0.15s;
+  }
+  .menu button:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+  .menu button.active { background: var(--accent); color: #fff; font-weight: 600; }
+  
+  /* Main Content */
+  main { flex: 1; padding: 32px 40px; max-width: 1100px; }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .header h1 { margin: 0; font-size: 1.6rem; font-weight: 700; }
+  
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .card h2 { margin-top: 0; margin-bottom: 16px; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+  
+  /* Metrics Grid */
+  .grid-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-val { font-size: 1.6rem; font-weight: 700; }
+  .stat-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; margin-top: 10px; overflow: hidden; }
+  .stat-fill { height: 100%; background: var(--accent); border-radius: 999px; width: 0%; transition: width 0.4s; }
+  
+  /* Forms & Inputs */
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+  .help-text { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+  input[type="text"], input[type="password"], input[type="url"], input[type="number"], select, textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 0;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+  .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
+  .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+  .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+  .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+  
+  .toggle-switch { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .toggle-switch input { display: none; }
+  .slider {
+    width: 44px; height: 24px; background: #374151; border-radius: 999px; position: relative; transition: background 0.2s;
+  }
+  .slider::before {
+    content: ""; position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s;
+  }
+  input:checked + .slider { background: var(--success); }
+  input:checked + .slider::before { transform: translateX(20px); }
+  
+  /* Web Terminal Styling */
+  .terminal-box {
+    background: #050608;
+    border: 1px solid #1f242f;
+    border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.9rem;
+    color: #4ade80;
+    overflow: hidden;
+  }
+  .terminal-topbar {
+    background: #11141c;
+    padding: 8px 14px;
+    border-bottom: 1px solid #1f242f;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+  .terminal-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .terminal-output {
+    padding: 16px;
+    height: 320px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.45;
+    color: #cbd5e1;
+  }
+  .terminal-input-row {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #1f242f;
+    padding: 8px 14px;
+    background: #090b10;
+  }
+  .terminal-prompt { color: #3b82f6; font-weight: 700; margin-right: 8px; user-select: none; }
+  .terminal-input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: #4ade80;
+    font-family: inherit;
+    font-size: 0.95rem;
+  }
+  .quick-cmds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .quick-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--panel-border);
+    color: #94a3b8;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-family: monospace;
+    cursor: pointer;
+  }
+  .quick-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+  /* Modal Login */
+  .auth-overlay {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .auth-box {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: var(--radius); padding: 32px; width: 100%; max-width: 380px; text-align: center;
+  }
+  
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    aside { width: 100%; border-right: 0; border-bottom: 1px solid var(--panel-border); }
+    main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PIN Gate -->
+<div id="authGate" class="auth-overlay">
+  <div class="auth-box">
+    <div style="font-size:2rem; margin-bottom:10px;">🔐</div>
+    <h2 style="margin:0 0 8px;">Tukuk-OS Admin</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Enter your admin passcode to access server settings</p>
+    <form id="authForm">
+      <input type="password" id="authPin" placeholder="Enter PIN (Default: tukuk123)" style="text-align:center; font-size:1.1rem; margin-bottom:16px;" autofocus required>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Unlock Dashboard</button>
+      <div id="authErr" style="color:var(--danger); font-size:0.85rem; margin-top:10px;" hidden>Invalid Passcode</div>
+    </form>
+  </div>
+</div>
+
+<div class="layout">
+  <aside>
+    <div class="brand">
+      <span>🔎 Tukuk-OS</span>
+      <span class="brand-badge">Control</span>
+    </div>
+    
+    <nav class="menu">
+      <button type="button" class="active" data-tab="tab-monitor">
+        <span>📊</span> <span>Server Monitor</span>
+      </button>
+      <button type="button" data-tab="tab-terminal">
+        <span>💻</span> <span>Web Terminal</span>
+      </button>
+      <button type="button" data-tab="tab-crawler">
+        <span>🌐</span> <span>Add Web Crawl</span>
+      </button>
+      <button type="button" data-tab="tab-ads">
+        <span>📢</span> <span>Ads (Google &amp; MS)</span>
+      </button>
+      <button type="button" data-tab="tab-ui">
+        <span>🎨</span> <span>UI &amp; Custom Theme</span>
+      </button>
+      <button type="button" data-tab="tab-posts">
+        <span>📝</span> <span>Articles &amp; Blog</span>
+      </button>
+      <button type="button" data-tab="tab-ai">
+        <span>🤖</span> <span>AI Engine &amp; Writer</span>
+      </button>
+    </nav>
+    
+    <div style="margin-top:auto; padding-top:20px; border-top:1px solid var(--panel-border);">
+      <a href="/" target="_blank" class="btn btn-secondary" style="width:100%; justify-content:center; text-decoration:none;">
+        ↗ Open Search Engine
+      </a>
+    </div>
+  </aside>
+  
+  <main>
+    <div class="header">
+      <div>
+        <h1 id="pageTitle">Server &amp; Security Monitor</h1>
+        <div style="font-size:0.85rem; color:var(--text-muted);">Real-time performance for 2GB RAM server connected via Cloudflare</div>
+      </div>
+      <div>
+        <button id="refreshStatsBtn" class="btn btn-secondary">🔄 Refresh</button>
+      </div>
+    </div>
+    
+    <!-- Tab 1: Server & Security Monitor -->
+    <div id="tab-monitor" class="tab-pane active">
+      <div class="grid-stats">
+        <div class="stat-card">
+          <div class="stat-label">RAM Usage (2GB Limit)</div>
+          <div class="stat-val" id="statRam">... MB</div>
+          <div class="stat-bar"><div class="stat-fill" id="statRamBar"></div></div>
+          <div class="help-text" id="statRamPercent">...% of 2GB RAM</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Indexed Documents</div>
+          <div class="stat-val" id="statDocs">0</div>
+          <div class="help-text">Searchable web documents</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Server Uptime</div>
+          <div class="stat-val" id="statUptime">0m</div>
+          <div class="help-text">Service continuous uptime</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cloudflare Tunnel</div>
+          <div class="stat-val" style="color:var(--success);">Active</div>
+          <div class="help-text">Domain: tukuk.org</div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>🛡️ Security &amp; Protection Status</h2>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span class="badge badge-success">✓ ENABLED</span>
+            <div>
+              <strong>Cloudflare Edge SSL &amp; WAF</strong>
+              <div class="help-text">DDoS shield and edge cache enabled</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span class="badge badge-success">✓ TUNED</span>
+            <div>
+              <strong>ZRAM Swap &amp; Swappiness (10)</strong>
+              <div class="help-text">Compressed memory protection for 2GB RAM</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span class="badge badge-success">✓ ACTIVE</span>
+            <div>
+              <strong>Node.js Heap Capped (768MB)</strong>
+              <div class="help-text">Prevents Linux OOM (Out Of Memory) kills</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span class="badge badge-success">✓ ACTIVE</span>
+            <div>
+              <strong>Rate Limiting</strong>
+              <div class="help-text">Search request flood throttle</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>🔥 Popular Search Queries</h2>
+        <div id="popularQueriesList" style="display:flex; flex-wrap:wrap; gap:8px;">
+          <span style="color:var(--text-muted);">No queries recorded yet.</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab 2: Web Terminal -->
+    <div id="tab-terminal" class="tab-pane">
+      <div class="card">
+        <h2>💻 Server Web Terminal</h2>
+        <p style="color:var(--text-muted); font-size:0.92rem; margin-top:0;">
+          Execute quick management commands directly on your server without opening SSH.
+        </p>
+        
+        <div class="terminal-box">
+          <div class="terminal-topbar">
+            <span class="terminal-dot" style="background:#ef4444;"></span>
+            <span class="terminal-dot" style="background:#f59e0b;"></span>
+            <span class="terminal-dot" style="background:#10b981;"></span>
+            <span style="margin-left:8px;">tukuk@server:~ (bash)</span>
+          </div>
+          <div class="terminal-output" id="termOutput">Tukuk-OS Server Shell Console v2.1
+System: Linux (Ubuntu 24.04 LTS / 2GB RAM)
+Type a command below or click a quick action.
+</div>
+          <div class="terminal-input-row">
+            <span class="terminal-prompt">tukuk@server:~$</span>
+            <input type="text" id="termInput" class="terminal-input" placeholder="Type command here and press Enter..." autocomplete="off">
+          </div>
+        </div>
+        
+        <div class="quick-cmds">
+          <button type="button" class="quick-btn" data-cmd="free -h">free -h</button>
+          <button type="button" class="quick-btn" data-cmd="uptime">uptime</button>
+          <button type="button" class="quick-btn" data-cmd="df -h">df -h</button>
+          <button type="button" class="quick-btn" data-cmd="node -v">node -v</button>
+          <button type="button" class="quick-btn" data-cmd="systemctl status tukuk-os --no-pager">systemctl status tukuk-os</button>
+          <button type="button" class="quick-btn" data-cmd="ps aux --sort=-%mem | head -8">top memory processes</button>
+          <button type="button" class="quick-btn" data-cmd="git status">git status</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab 3: Crawler (Add Websites) -->
+    <div id="tab-crawler" class="tab-pane">
+      <div class="card">
+        <h2>🌐 Add Websites to Tukuk-OS Index</h2>
+        <p style="color:var(--text-muted); font-size:0.92rem; margin-top:0;">
+          Expand your search engine index! Enter any website URL or XML sitemap to automatically extract and index its pages.
+        </p>
+        
+        <form id="crawlForm">
+          <div class="form-group">
+            <label for="crawlUrl">Target Website or Sitemap URL</label>
+            <input type="url" id="crawlUrl" placeholder="https://example.com or https://example.com/sitemap.xml" required>
+            <div class="help-text">Examples: your blog, personal site, documentation portal, or any public web address.</div>
+          </div>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label for="crawlMode">Crawl Strategy</label>
+              <select id="crawlMode">
+                <option value="single">Single Page (Just this exact URL)</option>
+                <option value="site" selected>Crawl Whole Site (Follow internal links)</option>
+                <option value="sitemap">Sitemap (Read all links from sitemap.xml)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="crawlMax">Max Pages (To save 2GB RAM)</label>
+              <input type="number" id="crawlMax" value="25" min="1" max="200">
+            </div>
+          </div>
+          
+          <button type="submit" id="crawlSubmitBtn" class="btn btn-primary">
+            🚀 Start Crawling &amp; Indexing
+          </button>
+        </form>
+        
+        <div id="crawlStatusBox" style="margin-top:20px;" hidden>
+          <div style="font-weight:600; margin-bottom:8px;" id="crawlStatusTitle">Crawling...</div>
+          <div class="log-box" id="crawlLogs">Connecting to target...</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab 4: Ads & Monetization -->
+    <div id="tab-ads" class="tab-pane">
+      <div class="card">
+        <h2>📢 Google &amp; Microsoft Ads Settings ("Rumah Iklan")</h2>
+        <p style="color:var(--text-muted); font-size:0.92rem;">
+          Configure Google AdSense and Microsoft Advertising (Bing Ads) banners safely.
+        </p>
+        
+        <form id="adsForm">
+          <h3 style="margin-top:24px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">Google AdSense</h3>
+          <div class="form-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="adsEnabled">
+              <span class="slider"></span>
+              <span><strong>Enable Google AdSense</strong></span>
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label for="adsClient">AdSense Publisher ID (client)</label>
+            <input type="text" id="adsClient" placeholder="ca-pub-8954948214333501">
+          </div>
+          
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+            <div class="form-group">
+              <label for="adsSlotTop">Top Banner Slot ID</label>
+              <input type="text" id="adsSlotTop" placeholder="e.g. 2206273113">
+            </div>
+            <div class="form-group">
+              <label for="adsSlotInArticle">In-Article Slot ID</label>
+              <input type="text" id="adsSlotInArticle" placeholder="e.g. 3311224455">
+            </div>
+            <div class="form-group">
+              <label for="adsSlotBottom">Bottom Slot ID</label>
+              <input type="text" id="adsSlotBottom" placeholder="e.g. 9988776655">
+            </div>
+          </div>
+
+          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">Microsoft Advertising (Bing Ads / Monetize)</h3>
+          <div class="form-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="msAdsEnabled">
+              <span class="slider"></span>
+              <span><strong>Enable Microsoft Advertising</strong></span>
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label for="msAdsTagId">Microsoft Partner / Tag ID</label>
+            <input type="text" id="msAdsTagId" placeholder="e.g. ms-pub-12345678">
+          </div>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="msAdsSlotTop">Microsoft Header Slot ID</label>
+              <input type="text" id="msAdsSlotTop" placeholder="e.g. 1001">
+            </div>
+            <div class="form-group">
+              <label for="msAdsSlotBottom">Microsoft Footer Slot ID</label>
+              <input type="text" id="msAdsSlotBottom" placeholder="e.g. 1002">
+            </div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" style="margin-top:16px;">💾 Save Ad Settings</button>
+          <span id="adsSavedBadge" class="badge badge-success" style="margin-left:12px;" hidden>Settings Saved!</span>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Tab 5: UI & Custom Theme -->
+    <div id="tab-ui" class="tab-pane">
+      <div class="card">
+        <h2>🎨 Website UI &amp; Custom Theme / Wallpaper</h2>
+        
+        <form id="uiForm">
+          <div class="form-group">
+            <label for="siteTitle">Website Name</label>
+            <input type="text" id="siteTitle" value="Tukuk-OS">
+          </div>
+          
+          <div class="form-group">
+            <label for="siteTagline">Header Tagline</label>
+            <input type="text" id="siteTagline" value="Free web search engine — inverted index, word highlighting, faceted filters">
+          </div>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label for="defaultTheme">Default Color Theme</label>
+              <select id="defaultTheme">
+                <option value="system">System (Auto light/dark)</option>
+                <option value="dark" selected>Dark Mode (Default)</option>
+                <option value="light">Light Mode</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="defaultAccent">Primary Accent Color</label>
+              <select id="defaultAccent">
+                <option value="blue" selected>Electric Blue</option>
+                <option value="green">Emerald Green</option>
+                <option value="violet">Purple Violet</option>
+                <option value="amber">Warm Amber</option>
+                <option value="rose">Neon Rose</option>
+              </select>
+            </div>
+          </div>
+
+          <h3 style="margin-top:24px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">Background Wallpaper / Animation</h3>
+          
+          <div class="form-group">
+            <label for="bgMode">Background Visual Effect</label>
+            <select id="bgMode">
+              <option value="default" selected>Default Solid Minimalist (Best for 2GB RAM)</option>
+              <option value="aurora">Animated Aurora Glow (CSS Mesh, ultra-smooth)</option>
+              <option value="stars">Deep Space Starfield (CSS Stars)</option>
+              <option value="custom">Custom Image / Animated GIF / Wallpaper URL</option>
+            </select>
+          </div>
+          
+          <div class="form-group" id="customBgGroup">
+            <label for="customBgUrl">Custom Background Wallpaper URL (Image, GIF, WebM)</label>
+            <input type="url" id="customBgUrl" placeholder="https://images.unsplash.com/... or https://domain.com/live-bg.gif">
+            <div class="help-text">Enter any direct URL to a picture or animated wallpaper.</div>
+          </div>
+          
+          <div class="form-group" style="margin-top:24px;">
+            <label for="adminPin">Admin Access PIN / Passcode</label>
+            <input type="password" id="adminPin" placeholder="Change dashboard PIN">
+            <div class="help-text">Keep this safe to prevent unauthorized changes to your server settings.</div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary">💾 Save Branding &amp; UI</button>
+          <span id="uiSavedBadge" class="badge badge-success" style="margin-left:12px;" hidden>Saved!</span>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Tab 6: Articles & Blog (Stor) -->
+    <div id="tab-posts" class="tab-pane">
+      <div class="card">
+        <h2>📝 Publish New Blog Article</h2>
+        <p style="color:var(--text-muted); font-size:0.92rem;">Articles published here are immediately indexed and available at <code>/blog</code> and search results.</p>
+        
+        <form id="postForm">
+          <div class="form-group">
+            <label for="postTitle">Article Title</label>
+            <input type="text" id="postTitle" placeholder="e.g. Building an Inverted Index in Node.js" required>
+          </div>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label for="postSlug">Custom Slug (URL path)</label>
+              <input type="text" id="postSlug" placeholder="e.g. building-inverted-index">
+            </div>
+            <div class="form-group">
+              <label for="postTags">Tags (comma separated)</label>
+              <input type="text" id="postTags" placeholder="search, nodejs, linux">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="postContent">Article Body (Markdown)</label>
+            <textarea id="postContent" rows="8" placeholder="Write your article in Markdown..." required></textarea>
+          </div>
+          
+          <button type="submit" class="btn btn-primary">🚀 Publish Article</button>
+          <span id="postSavedBadge" class="badge badge-success" style="margin-left:12px;" hidden>Article Published!</span>
+        </form>
+      </div>
+      
+      <div class="card">
+        <h2>📚 Stored Articles</h2>
+        <div id="postsList">Loading articles...</div>
+      </div>
+    </div>
+    
+    <!-- Tab 7: AI Engine & Writer -->
+    <div id="tab-ai" class="tab-pane">
+      <div class="card">
+        <h2>🤖 AI Engine &amp; Automatic Writer Setup</h2>
+        <p style="color:var(--text-muted); font-size:0.92rem;">
+          Configure AI generation for articles, storytelling, and smart answers. Supports Cloud API (for 2GB RAM) and Local Ollama (for larger servers).
+        </p>
+        
+        <form id="aiConfigForm">
+          <div class="form-group">
+            <label for="aiProvider">AI Engine Provider</label>
+            <select id="aiProvider">
+              <option value="gemini" selected>Google Gemini API (Cloud - 0MB Server RAM Usage)</option>
+              <option value="ollama">Local Self-Hosted Ollama (For Upgraded Server 16GB+ RAM)</option>
+            </select>
+          </div>
+          
+          <div id="geminiGroup">
+            <div class="form-group">
+              <label for="aiApiKey">Gemini API Key</label>
+              <input type="password" id="aiApiKey" placeholder="AIzaSy...">
+              <div class="help-text">Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</div>
+            </div>
+            <div class="form-group">
+              <label for="aiModel">Gemini Model</label>
+              <select id="aiModel">
+                <option value="gemini-2.5-flash" selected>gemini-2.5-flash (Fastest &amp; Most Cost-Effective)</option>
+                <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                <option value="gemini-2.5-pro">gemini-2.5-pro (High Quality Reasoning)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div id="ollamaGroup" hidden>
+            <div class="form-group">
+              <label for="ollamaUrl">Local Ollama URL</label>
+              <input type="url" id="ollamaUrl" value="http://127.0.0.1:11434">
+            </div>
+            <div class="form-group">
+              <label for="ollamaModel">Local Model Name</label>
+              <input type="text" id="ollamaModel" value="llama3.2">
+            </div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary">💾 Save AI Engine Settings</button>
+          <span id="aiSavedBadge" class="badge badge-success" style="margin-left:12px;" hidden>Saved!</span>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>✍️ AI Article &amp; Story Generator Playground</h2>
+        <p style="color:var(--text-muted); font-size:0.92rem;">
+          Ask AI to write a full Markdown blog article, story, or guide. You can review it and publish directly to Tukuk-OS with 1 click!
+        </p>
+        
+        <div class="form-group">
+          <label for="aiPrompt">Topic or Writing Prompt</label>
+          <textarea id="aiPrompt" rows="3" placeholder="e.g. Write a comprehensive guide on setting up a self-hosted search engine with Ubuntu and Cloudflare..."></textarea>
+        </div>
+        
+        <button type="button" id="aiGenBtn" class="btn btn-primary">✨ Generate Article with AI</button>
+        
+        <div id="aiResultBox" style="margin-top:20px;" hidden>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong>Generated Content:</strong>
+            <button type="button" id="aiCopyBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:4px 10px;">📋 Copy to Blog Form</button>
+          </div>
+          <div class="log-box" id="aiResultText" style="max-height:360px;"></div>
+        </div>
+      </div>
+    </div>
+    
+  </main>
+</div>
+
+<script>
+  let authToken = localStorage.getItem('tukuk_admin_token') || '';
+  
+  // Tab switching
+  const tabs = document.querySelectorAll('.menu button');
+  const panes = document.querySelectorAll('.tab-pane');
+  const pageTitle = document.getElementById('pageTitle');
+  
+  const tabTitles = {
+    'tab-monitor': 'Server & Security Monitor',
+    'tab-terminal': 'Server Web Terminal',
+    'tab-crawler': 'Add Web Crawl & Index',
+    'tab-ads': 'Google & Microsoft Ads',
+    'tab-ui': 'Website UI & Custom Theme',
+    'tab-posts': 'Article Storage & Blog',
+    'tab-ai': 'AI Engine & Automatic Writer'
+  };
+  
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      panes.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.dataset.tab;
+      document.getElementById(target).classList.add('active');
+      pageTitle.textContent = tabTitles[target] || 'Admin Center';
+      if (target === 'tab-terminal') document.getElementById('termInput').focus();
+    });
+  });
+  
+  // Auth Form
+  document.getElementById('authForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pin = document.getElementById('authPin').value.trim();
+    try {
+      const res = await fetch('/api/admin/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      const d = await res.json();
+      if (d.ok) {
+        authToken = pin;
+        localStorage.setItem('tukuk_admin_token', pin);
+        document.getElementById('authGate').hidden = true;
+        loadData();
+      } else {
+        document.getElementById('authErr').hidden = false;
+      }
+    } catch {
+      document.getElementById('authErr').hidden = false;
+    }
+  });
+  
+  // Auto check token
+  if (authToken) {
+    fetch('/api/admin/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: authToken })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) {
+        document.getElementById('authGate').hidden = true;
+        loadData();
+      }
+    }).catch(() => {});
+  }
+  
+  async function loadData() {
+    loadStatus();
+    loadSettings();
+    loadPosts();
+  }
+  
+  async function loadStatus() {
+    try {
+      const res = await fetch('/api/admin/status');
+      const data = await res.json();
+      
+      document.getElementById('statRam').textContent = `${data.memoryRssMb} MB`;
+      const pct = Math.min(100, Math.round((data.memoryRssMb / 2048) * 100));
+      document.getElementById('statRamBar').style.width = `${pct}%`;
+      document.getElementById('statRamPercent').textContent = `${pct}% of 2,048 MB RAM used`;
+      
+      document.getElementById('statDocs').textContent = data.documentsCount || 0;
+      document.getElementById('statUptime').textContent = `${Math.round(data.uptimeSeconds / 60)}m`;
+      
+      const qList = document.getElementById('popularQueriesList');
+      if (data.popularQueries && data.popularQueries.length) {
+        qList.innerHTML = data.popularQueries.map(q => 
+          `<span style="background:rgba(255,255,255,0.06); padding:4px 10px; border-radius:999px; font-size:0.88rem;">${q.query} (${q.count})</span>`
+        ).join('');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  
+  document.getElementById('refreshStatsBtn').addEventListener('click', loadStatus);
+  
+  // Load Settings
+  async function loadSettings() {
+    try {
+      const res = await fetch('/api/admin/settings');
+      const s = await res.json();
+      
+      // Google Ads
+      document.getElementById('adsEnabled').checked = Boolean(s.adsEnabled);
+      document.getElementById('adsClient').value = s.adsClient || '';
+      document.getElementById('adsSlotTop').value = s.adsSlotTop || '';
+      document.getElementById('adsSlotInArticle').value = s.adsSlotInArticle || '';
+      document.getElementById('adsSlotBottom').value = s.adsSlotBottom || '';
+      
+      // Microsoft Ads
+      document.getElementById('msAdsEnabled').checked = Boolean(s.msAdsEnabled);
+      document.getElementById('msAdsTagId').value = s.msAdsTagId || '';
+      document.getElementById('msAdsSlotTop').value = s.msAdsSlotTop || '';
+      document.getElementById('msAdsSlotBottom').value = s.msAdsSlotBottom || '';
+      
+      // UI & Wallpaper
+      document.getElementById('siteTitle').value = s.siteTitle || 'Tukuk-OS';
+      document.getElementById('siteTagline').value = s.siteTagline || '';
+      document.getElementById('defaultTheme').value = s.defaultTheme || 'dark';
+      document.getElementById('defaultAccent').value = s.defaultAccent || 'blue';
+      document.getElementById('bgMode').value = s.bgMode || 'default';
+      document.getElementById('customBgUrl').value = s.customBgUrl || '';
+      
+      // AI
+      document.getElementById('aiProvider').value = s.aiProvider || 'gemini';
+      document.getElementById('aiApiKey').value = s.aiApiKey || '';
+      document.getElementById('aiModel').value = s.aiModel || 'gemini-2.5-flash';
+      document.getElementById('ollamaUrl').value = s.ollamaUrl || 'http://127.0.0.1:11434';
+      document.getElementById('ollamaModel').value = s.ollamaModel || 'llama3.2';
+      toggleAiProvider(s.aiProvider || 'gemini');
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  
+  function toggleAiProvider(p) {
+    document.getElementById('geminiGroup').hidden = (p === 'ollama');
+    document.getElementById('ollamaGroup').hidden = (p !== 'ollama');
+  }
+  document.getElementById('aiProvider').addEventListener('change', (e) => toggleAiProvider(e.target.value));
+  
+  // Save Ads
+  document.getElementById('adsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      adsEnabled: document.getElementById('adsEnabled').checked,
+      adsClient: document.getElementById('adsClient').value.trim(),
+      adsSlotTop: document.getElementById('adsSlotTop').value.trim(),
+      adsSlotInArticle: document.getElementById('adsSlotInArticle').value.trim(),
+      adsSlotBottom: document.getElementById('adsSlotBottom').value.trim(),
+      msAdsEnabled: document.getElementById('msAdsEnabled').checked,
+      msAdsTagId: document.getElementById('msAdsTagId').value.trim(),
+      msAdsSlotTop: document.getElementById('msAdsSlotTop').value.trim(),
+      msAdsSlotBottom: document.getElementById('msAdsSlotBottom').value.trim()
+    };
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify(payload)
+    });
+    const b = document.getElementById('adsSavedBadge');
+    b.hidden = false;
+    setTimeout(() => { b.hidden = true; }, 2500);
+  });
+  
+  // Save UI
+  document.getElementById('uiForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      siteTitle: document.getElementById('siteTitle').value.trim(),
+      siteTagline: document.getElementById('siteTagline').value.trim(),
+      defaultTheme: document.getElementById('defaultTheme').value,
+      defaultAccent: document.getElementById('defaultAccent').value,
+      bgMode: document.getElementById('bgMode').value,
+      customBgUrl: document.getElementById('customBgUrl').value.trim()
+    };
+    const pin = document.getElementById('adminPin').value.trim();
+    if (pin) payload.adminPin = pin;
+    
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify(payload)
+    });
+    const b = document.getElementById('uiSavedBadge');
+    b.hidden = false;
+    setTimeout(() => { b.hidden = true; }, 2500);
+  });
+  
+  // Save AI Config
+  document.getElementById('aiConfigForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      aiProvider: document.getElementById('aiProvider').value,
+      aiApiKey: document.getElementById('aiApiKey').value.trim(),
+      aiModel: document.getElementById('aiModel').value,
+      ollamaUrl: document.getElementById('ollamaUrl').value.trim(),
+      ollamaModel: document.getElementById('ollamaModel').value.trim()
+    };
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify(payload)
+    });
+    const b = document.getElementById('aiSavedBadge');
+    b.hidden = false;
+    setTimeout(() => { b.hidden = true; }, 2500);
+  });
+  
+  // AI Generator Playground
+  document.getElementById('aiGenBtn').addEventListener('click', async () => {
+    const prompt = document.getElementById('aiPrompt').value.trim();
+    if (!prompt) return alert('Please enter a topic or prompt');
+    
+    const btn = document.getElementById('aiGenBtn');
+    const box = document.getElementById('aiResultBox');
+    const out = document.getElementById('aiResultText');
+    
+    btn.disabled = true;
+    btn.textContent = 'Thinking and generating article...';
+    box.hidden = false;
+    out.textContent = 'Generating content via AI... Please wait.';
+    
+    try {
+      const res = await fetch('/api/admin/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      if (data.error) {
+        out.textContent = `Error: ${data.error}`;
+      } else {
+        out.textContent = data.text;
+      }
+    } catch (err) {
+      out.textContent = `Connection error: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✨ Generate Article with AI';
+    }
+  });
+  
+  document.getElementById('aiCopyBtn').addEventListener('click', () => {
+    const text = document.getElementById('aiResultText').textContent;
+    if (!text) return;
+    document.querySelector('.menu button[data-tab="tab-posts"]').click();
+    document.getElementById('postTitle').value = document.getElementById('aiPrompt').value.slice(0, 70);
+    document.getElementById('postContent').value = text;
+  });
+  
+  // Terminal
+  const termHistory = [];
+  let termHistIdx = -1;
+  const termInput = document.getElementById('termInput');
+  const termOutput = document.getElementById('termOutput');
+  
+  async function runTerminalCommand(cmd) {
+    if (!cmd) return;
+    termHistory.unshift(cmd);
+    termHistIdx = -1;
+    termOutput.textContent += `\n$ ${cmd}\n`;
+    termInput.value = '';
+    termOutput.scrollTop = termOutput.scrollHeight;
+    
+    try {
+      const res = await fetch('/api/admin/terminal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ cmd })
+      });
+      const data = await res.json();
+      if (data.stdout) termOutput.textContent += data.stdout;
+      if (data.stderr) termOutput.textContent += `[stderr]: ${data.stderr}\n`;
+      if (!data.stdout && !data.stderr) termOutput.textContent += `(Command finished with code ${data.code})\n`;
+    } catch (err) {
+      termOutput.textContent += `Error: ${err.message}\n`;
+    }
+    termOutput.scrollTop = termOutput.scrollHeight;
+  }
+  
+  termInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      runTerminalCommand(termInput.value.trim());
+    } else if (e.key === 'ArrowUp') {
+      if (termHistory.length && termHistIdx < termHistory.length - 1) {
+        termHistIdx++;
+        termInput.value = termHistory[termHistIdx];
+      }
+    } else if (e.key === 'ArrowDown') {
+      if (termHistIdx > 0) {
+        termHistIdx--;
+        termInput.value = termHistory[termHistIdx];
+      } else {
+        termHistIdx = -1;
+        termInput.value = '';
+      }
+    }
+  });
+  
+  document.querySelectorAll('.quick-btn').forEach(b => {
+    b.addEventListener('click', () => runTerminalCommand(b.dataset.cmd));
+  });
+  
+  // Crawler
+  document.getElementById('crawlForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = document.getElementById('crawlUrl').value.trim();
+    const mode = document.getElementById('crawlMode').value;
+    const maxPages = Number(document.getElementById('crawlMax').value) || 25;
+    
+    const box = document.getElementById('crawlStatusBox');
+    const logs = document.getElementById('crawlLogs');
+    const title = document.getElementById('crawlStatusTitle');
+    const btn = document.getElementById('crawlSubmitBtn');
+    
+    box.hidden = false;
+    btn.disabled = true;
+    title.textContent = `Crawling ${url}...`;
+    logs.textContent = `Connecting to ${url} with mode "${mode}"...\nFetching HTML and extracting text, links, metadata...`;
+    
+    try {
+      const res = await fetch('/api/admin/crawl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ url, mode, maxPages })
+      });
+      const data = await res.json();
+      
+      if (data.error) {
+        title.textContent = `Crawl Failed`;
+        logs.textContent += `\n\nError: ${data.error}`;
+      } else {
+        title.textContent = `✓ Crawl & Index Completed!`;
+        logs.textContent += `\n\nSuccess! Indexed ${data.indexedCount || 1} pages into Tukuk-OS!\nSample Titles:\n- ${(data.sampleTitles || []).join('\n- ')}\n\nYou can now search for these pages on Tukuk-OS!`;
+        loadStatus();
+      }
+    } catch (err) {
+      title.textContent = `Crawl Failed`;
+      logs.textContent += `\n\nConnection error: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  
+  // Publish Post
+  document.getElementById('postForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      title: document.getElementById('postTitle').value.trim(),
+      slug: document.getElementById('postSlug').value.trim(),
+      tags: document.getElementById('postTags').value.split(',').map(t => t.trim()).filter(Boolean),
+      content: document.getElementById('postContent').value.trim()
+    };
+    await fetch('/api/admin/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify(payload)
+    });
+    const b = document.getElementById('postSavedBadge');
+    b.hidden = false;
+    setTimeout(() => { b.hidden = true; }, 2500);
+    document.getElementById('postForm').reset();
+    loadPosts();
+  });
+  
+  async function loadPosts() {
+    const box = document.getElementById('postsList');
+    try {
+      const res = await fetch('/api/admin/posts');
+      const posts = await res.json();
+      if (!posts.length) {
+        box.innerHTML = '<span style="color:var(--text-muted);">No posts found.</span>';
+        return;
+      }
+      box.innerHTML = posts.map(p => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--panel-border);">
+          <div>
+            <strong>${p.title}</strong>
+            <div style="font-size:0.82rem; color:var(--text-muted);"><a href="/blog/${p.slug}" target="_blank">/blog/${p.slug}</a> &middot; ${new Date(p.createdAt).toLocaleDateString()}</div>
+          </div>
+          <button class="btn btn-secondary" onclick="deletePost('${p.id}')" style="font-size:0.8rem; padding:4px 10px; color:var(--danger);">Delete</button>
+        </div>
+      `).join('');
+    } catch {
+      box.innerHTML = '<span style="color:var(--danger);">Failed to load posts.</span>';
+    }
+  }
+  
+  window.deletePost = async function(id) {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    await fetch(`/api/admin/posts/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    loadPosts();
+  };
+</script>
+</body>
+</html>

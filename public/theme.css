@@ -1,0 +1,168 @@
+/* Tukuk-OS shared theme layer — loaded AFTER each page's inline <style>. */
+
+:root {
+  --mark: #ffd54a;
+  --card: #181d2a;
+  --code-bg: #12151c;
+  --gold: #ffd54a;
+  --danger: #ff5555;
+  --success: #4cd964;
+  --accent-glow: rgba(76, 141, 255, 0.2);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1115; --panel: #171a21; --line: #262b36; --text: #e6e9ef;
+  --muted: #9aa3b2; --mark: #ffd54a; --card: #181d2a; --code-bg: #12151c;
+  --gold: #ffd54a; --danger: #ff5555; --success: #4cd964;
+  --accent-glow: rgba(76, 141, 255, 0.2);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f8fa; --panel: #ffffff; --line: #e3e6ec; --text: #151922;
+  --muted: #5c6472; --mark: #fff3a3; --card: #f0f3fa; --code-bg: #f0f3f8;
+  --gold: #b38600; --danger: #cf222e; --success: #1a7f37;
+  --accent-glow: rgba(31, 111, 235, 0.15);
+  color-scheme: light;
+}
+
+:root[data-accent="blue"] { --accent-fill: #2a6edb; --accent: #4c8dff; }
+:root[data-accent="green"] { --accent-fill: #047857; --accent: #34d399; }
+:root[data-accent="violet"] { --accent-fill: #6d28d9; --accent: #a78bfa; }
+:root[data-accent="amber"] { --accent-fill: #b45309; --accent: #fbbf24; }
+:root[data-accent="rose"] { --accent-fill: #be123c; --accent: #fb7185; }
+
+:root[data-theme="light"][data-accent="blue"] { --accent-fill: #2a6edb; --accent: #1f6feb; }
+:root[data-theme="light"][data-accent="green"] { --accent-fill: #047857; --accent: #0f9d6f; }
+:root[data-theme="light"][data-accent="violet"] { --accent-fill: #6d28d9; --accent: #7c3aed; }
+:root[data-theme="light"][data-accent="amber"] { --accent-fill: #b45309; --accent: #b45309; }
+:root[data-theme="light"][data-accent="rose"] { --accent-fill: #be123c; --accent: #e11d48; }
+
+body, header, footer, nav, main, .box, .card, .panel, .post-card,
+.site-nav, .search-box, input, button, pre, code, table, th, td, .tag {
+  transition: background-color 0.22s ease, border-color 0.22s ease,
+              color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.theme-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tk-btn {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tk-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.tk-accents { display: inline-flex; gap: 6px; align-items: center; }
+
+.tk-dot {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.tk-dot[data-accent-set="blue"] { background: #4c8dff; }
+.tk-dot[data-accent-set="green"] { background: #34d399; }
+.tk-dot[data-accent-set="violet"] { background: #a78bfa; }
+.tk-dot[data-accent-set="amber"] { background: #fbbf24; }
+.tk-dot[data-accent-set="rose"] { background: #fb7185; }
+
+.tk-dot[aria-pressed="true"] {
+  border-color: var(--text);
+  transform: scale(1.15);
+}
+
+@media (max-width: 640px) {
+  .tk-accents { display: none; }
+}
+
+/* ==========================================================================
+   Tukuk-OS Live Animated Background Themes & Custom Wallpaper
+   ========================================================================== */
+
+@keyframes tkAuroraMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+body[data-bg="aurora"] {
+  background: linear-gradient(135deg, #090d16 0%, #101c38 25%, #1c1033 50%, #0d2229 75%, #090d16 100%) !important;
+  background-size: 300% 300% !important;
+  animation: tkAuroraMove 18s ease infinite !important;
+}
+
+@keyframes tkStarTwinkle {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.55; }
+}
+
+body[data-bg="stars"] {
+  background-color: #06070a !important;
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 160px 120px, #a78bfa, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 240px 80px, #60a5fa, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 300px 180px, #ffffff, rgba(0,0,0,0)) !important;
+  background-repeat: repeat !important;
+  background-size: 320px 320px !important;
+  animation: tkStarTwinkle 6s ease-in-out infinite alternate !important;
+}
+
+body[data-bg="matrix"] {
+  background-color: #030708 !important;
+  background-image: 
+    linear-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px) !important;
+  background-size: 28px 28px !important;
+}
+
+@keyframes tkOceanWave {
+  0% { background-position: 50% 0%; }
+  50% { background-position: 50% 100%; }
+  100% { background-position: 50% 0%; }
+}
+
+body[data-bg="ocean"] {
+  background: linear-gradient(180deg, #051329 0%, #0c2747 45%, #07192f 100%) !important;
+  background-size: 100% 200% !important;
+  animation: tkOceanWave 14s ease-in-out infinite !important;
+}
+
+body[data-bg="custom"] {
+  background-image: var(--custom-bg-img, none) !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+body[data-bg="custom"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 14, 20, 0.82);
+  backdrop-filter: blur(2px);
+  z-index: -1;
+  pointer-events: none;
+}
+

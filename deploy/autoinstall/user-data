@@ -1,0 +1,75 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  network:
+    network:
+      version: 2
+      ethernets:
+        all-en:
+          match:
+            name: "en*"
+          dhcp4: true
+        all-eth:
+          match:
+            name: "eth*"
+          dhcp4: true
+  identity:
+    hostname: tukuk-server
+    username: tukuk
+    password: "$6$rounds=4096$TukukOS$E7g3q5P0c1x0Wk6K1j8Uf2N0a8B9y4V3m2Q1l0Z9x8C7v6B5n4M3" # default: tukuk123 (change on first login)
+  ssh:
+    install-server: true
+    allow-pw: true
+  packages:
+    - curl
+    - wget
+    - git
+    - zram-tools
+    - htop
+    - net-tools
+  late-commands:
+    # 1. Enable ZRAM for 2GB RAM systems (compresses RAM into fast swap)
+    - curtin in-target --target=/target -- bash -c 'echo -e "ALGO=zstd\nPERCENT=75\nPRIORITY=100" > /etc/default/zramswap'
+    
+    # 2. Kernel performance sysctl tuning
+    - curtin in-target --target=/target -- bash -c 'cat << "EOF" > /etc/sysctl.d/99-tukuk.conf
+vm.swappiness = 10
+vm.vfs_cache_pressure = 50
+net.core.somaxconn = 4096
+net.ipv4.tcp_fastopen = 3
+EOF'
+
+    # 3. Install Node.js 22 LTS
+    - curtin in-target --target=/target -- bash -c 'curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs'
+
+    # 4. Install Cloudflare Tunnel (cloudflared)
+    - curtin in-target --target=/target -- bash -c 'curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg > /dev/null && echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared jammy main" | tee /etc/apt/sources.list.d/cloudflared.list && apt-get update && apt-get install -y cloudflared'
+
+    # 5. Clone and install Tukuk-OS
+    - curtin in-target --target=/target -- bash -c 'git clone https://github.com/fevian/tukuk-os.git /opt/tukuk-os && cd /opt/tukuk-os && npm install --omit=dev --no-audit'
+
+    # 6. Enable systemd service
+    - curtin in-target --target=/target -- bash -c 'cat << "EOF" > /etc/systemd/system/tukuk-os.service
+[Unit]
+Description=Tukuk-OS Search Engine
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tukuk-os
+Environment=PORT=3000
+Environment=HOST=0.0.0.0
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS="--max-old-space-size=768"
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+    - curtin in-target --target=/target -- systemctl enable tukuk-os
