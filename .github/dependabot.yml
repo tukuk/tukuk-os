@@ -1,0 +1,38 @@
+# Dependabot — PR automatik untuk dependensi terdedah/cemar.
+# Diset supaya kecairan selamat: hanya patch/minor digrup (major perlu semak manual),
+# jumlah PR terhad, dan npm + Actions diselia. Tambah `audit-check` utk amaran keselamatan.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "03:45"
+      timezone: "Asia/Kuala_Lumpur"
+    open-pull-requests-limit: 5
+    groups:
+      production-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "npm"
+    directory: "/cloudflare-worker/tukuk-fallback"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "03:45"
+      timezone: "Asia/Kuala_Lumpur"
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "03:45"
+      timezone: "Asia/Kuala_Lumpur"
+    open-pull-requests-limit: 5

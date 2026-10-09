@@ -1,0 +1,44 @@
+# Tukuk-OS
+
+> Tukuk-OS is a free, open-source, privacy-first web search engine and app suite
+> served from https://tukuk.org. It is self-hosted (Meilisearch index), sets no
+> tracking cookies, and exposes a friendly JSON API. Content and UI are primarily
+> in Malay (Bahasa Melayu). Search results pages (`/cari`) carry no ads; the
+> homepage dashboard may.
+
+Tukuk-OS answers a query by ranking its own crawled index, then can generate an
+extractive or LLM-assisted answer. Beyond search it hosts client-side tools
+(image & video editors, an offline app hub, a NASA data hub, radio/music/news
+explorers) and a daily generator that turns one word into a web app + web game.
+
+## Core search & AI
+- [Search](https://tukuk.org/search?q=sqlite): ranked results from the local index. `GET /search?q=<query>&limit=<n>`.
+- [Ask (AI answer)](https://tukuk.org/ask?q=apa+itu+tukuk-os): extractive/cloud answer for a question. `GET /ask?q=<question>`.
+- [Brain status](https://tukuk.org/brain): which AI backend is active (cloud/ollama/extractive) + online state.
+- [API index](https://tukuk.org/api): self-describing list of available endpoints.
+- [CC asset search](https://tukuk.org/cc?q=cat): Creative Commons images (Wikimedia Commons), returns `{title,thumb,full,license,author}`.
+
+## Content
+- [Blog](https://tukuk.org/blog): engineering & privacy articles (Malay). Individual posts at `/blog/<slug>`.
+- [Docs](https://tukuk.org/docs): how the engine and tools work.
+- [About](https://tukuk.org/about) · [Privacy](https://tukuk.org/privacy) · [Terms](https://tukuk.org/terms) · [Contact](https://tukuk.org/contact).
+- [Explore](https://tukuk.org/explore): live datasets (weather, earthquakes, arXiv, sun, geocode, IP, countries).
+- [NASA hub](https://tukuk.org/nasa): APOD, ISS, Mars, asteroids, EPIC, space weather, crew (JSON under `/api/nasa/*`).
+- [Radio](https://tukuk.org/radio) · [Music](https://tukuk.org/music) · [News](https://tukuk.org/news).
+
+## One-word app + game generator
+- [Satu Kata hub](https://tukuk.org/satu-kata/): each word becomes one static web app + one web game (Preact + Phaser), auto-generated daily via free CI. No build step, no login.
+
+## Tools (client-side, no upload)
+- [Studio hub](https://tukuk.org/studio) · [Image editor](https://tukuk.org/editor) · [Video editor](https://tukuk.org/editor-video) · [App hub](https://tukuk.org/apps).
+
+## Machine-readable
+- [sitemap.xml](https://tukuk.org/sitemap.xml): full URL list.
+- [robots.txt](https://tukuk.org/robots.txt): crawl policy (Googlebot/Bingbot allowed).
+- [health](https://tukuk.org/health): liveness check.
+- [Onion mirror](http://d33axv7iaq4sp5hlwjn7i2tovkuxmxc53xl2drjhve7mboitsoicdfid.onion/): Tor copy of the site (advertised via the `Onion-Location` header).
+
+## Notes for agents
+- All endpoints return JSON unless the request `Accept`s `text/html` (content negotiation on `/search`, `/ask`, etc.).
+- `/api/image?url=` is a same-origin image proxy for cross-origin media.
+- No account or API key is required for search, ask, blog, NASA, radio, or the Satu Kata apps.

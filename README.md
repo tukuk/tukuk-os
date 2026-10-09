@@ -154,6 +154,9 @@ Soalan kendiri ("apa itu tukuk-os", "endpoint", dll.) dijawab dari pengetahuan t
 - **Aset & iklan:** utamakan aset berlesen **CC**; **jangan** letak iklan pada halaman hasil carian pihak ketiga (`/cari`).
 - **Semak sintaks JS dalam HTML:** `awk '/<script>/{f=1;next}/</script>/{f=0} f' public/FILE.html > /tmp/x.js && node --check /tmp/x.js`.
 - **Git:** jangan commit/push tanpa arahan pengguna. (Setakat ini semua kerja Studio/AI/video-fix **sudah di-commit & push** ke `origin/main`.)
+- **CSP = REPORT-ONLY sahaja** (`src/server.js`: `Content-Security-Policy-Report-Only` + endpoint `POST /csp-report`). sengaja TIDAK dipaksa (enforced) sebab `index.html` ada satu `<script>` inline besar + 62 `style="…"` — `unsafe-inline` perlu dikekalkan. **Untuk enforce kelak:** ekstrak skrip inline → fail luar (`/app.js`) + nonce/hash, baru tukar header `...-Report-Only` → `Content-Security-Policy` dan buang `unsafe-inline`. SelONGgok pelanggaran masuk ke log (`CSP_REPORTS=0` utk mati). Header asal (`X-Frame-Options`, `nosniff`, HSTS, COOP, Referrer-Policy) masih DIPAKSA.
+- **Dependabot:** `.github/dependabot.yml` — npm (akar + `cloudflare-worker/tukuk-fallback`) + github-actions, mingguan (Sel 03:45 MYT), minor/patch digrup, major manual, PR terhad.
+- **`public/llms.txt`:** ringkasan mesra-agen (disediakan statik di `/llms.txt`) — kemas kini bila tambah buang API/halaman besar.
 
 ---
 

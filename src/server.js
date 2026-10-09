@@ -105,16 +105,34 @@ app.disable('x-powered-by');
 
 // Security headers (Lighthouse "Trust & Safety"). Cloudflare boleh tambah di edge juga,
 // tapi ini memastikan header ada tanpa mengira laluan (aplikasi terus, tunnel, dsb.).
-// CSP sengaja TIDAK dipasang: SPA ini bergantung kepada inline <script> + inline handler;
-// CSP ketat memerlukan nonce/hash (refactor besar) — follow-up supaya tak memecahkan fungsi.
-// Clickjacking dilindungi oleh X-Frame-Options; COOP pilih same-origin-allow-popups supaya
-// popup OAuth/login (window.open) tidak terputus.
+// CSP dipasang sebagai REPORT-ONLY: SPA ini bergantung pada satu <script> inline besar +
+// 62 atribut style="…", jadi CSP TERPAKSA (enforced) perlu ekstraksi skrip inline ke fail
+// luar + nonce/hash (refactor besar). Report-Only = SIFAR kerosakan: dasar diuji & pelanggaran
+// dilaporkan ke /csp-report untuk penajaman, tanpa menyekat apa-apa. Clickjacking dilindungi
+// X-Frame-Options + frame-ancestors; COOP pilih same-origin-allow-popups supaya popup OAuth/
+// login (window.open) tidak terputus.
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' data: blob: https: wss:",
+  "media-src 'self' data: blob: https:",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com",
+  "frame-ancestors 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "report-uri /csp-report",
+].join('; ') + ';';
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('X-DNS-Prefetch-Control', 'on');
+  res.setHeader('Content-Security-Policy-Report-Only', CSP_REPORT_ONLY);
   // HSTS hanya bermakna atas HTTPS; tiada `preload` (butuh daftar + semua subdomain HTTPS dulu).
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
@@ -207,6 +225,17 @@ for (const [alias, name] of Object.entries(PAGE_ALIASES)) {
 }
 
 app.get("/test", (req, res) => res.send("OK"));
+
+// CSP Report-Only receiver — browser POST JSON bertipe `application/csp-report` ke sini.
+// Bukan kritikal: cuma log baris ringkas (matikan dgn CSP_REPORTS=0) & balas 204. Tiada
+// PII disimpan; had body 16kb supaya tak boleh digunakan utk spam.
+app.post('/csp-report', express.json({ type: ['application/csp-report', 'application/json'], limit: '16kb' }), (req, res) => {
+  if (process.env.CSP_REPORTS !== '0') {
+    const r = (req.body && req.body['csp-report']) || {};
+    console.log(`[csp-report] directive=${r['violated-directive'] || r['effective-directive'] || '?'} blocked=${r['blocked-uri'] || '?'} page=${r['document-uri'] || '?'}`);
+  }
+  res.status(204).end();
+});
 
 // Negotiasi kandungan: pelayar (Accept: text/html) dapat halaman HTML yang cantik;
 // skrip/API/agent (curl default, fetch Accept:*/*) kekal dapat JSON seperti sebelum ini.
