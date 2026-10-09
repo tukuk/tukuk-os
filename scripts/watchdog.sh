@@ -3,8 +3,8 @@
 #
 # systemd `Restart=always` hanya guna bila proses itu mati. Watchdog ini
 # mengendalikan kes lain:
-#   1. proses mati              → systemctl --user start
-#   2. proses hidup tapi hang   → systemctl --user restart
+#   1. proses mati              → systemctl start
+#   2. proses hidup tapi hang   → systemctl restart
 #   3. Meilisearch mati         → cascade restart
 #   4. internet/tunnel bermasalah → log amaran sahaja
 #      (laman kekal hidup kerana Cloudflare fallback melayan dari R2)
@@ -15,15 +15,15 @@ set -uo pipefail
 
 APP="tukuk-os.service"
 MEILI="meilisearch.service"
-URL="${WATCHDOG_URL:-http://127.0.0.1:8000/health}"
+URL="${WATCHDOG_URL:-http://127.0.0.1:3000/health}"
 THRESHOLD="${WATCHDOG_THRESHOLD:-2}"
 STAMP="/tmp/tukuk-os-watchdog.fail"
 
 log() { logger -t tukuk-os-watchdog -- "$*"; echo "[watchdog] $*"; }
 
-if ! systemctl --user is-active --quiet "$MEILI"; then
+if ! systemctl is-active --quiet "$MEILI"; then
   log "Meilisearch tidak aktif — restart"
-  systemctl --user restart "$MEILI"
+  systemctl restart "$MEILI"
 fi
 
 # --- tunnel (servis sistem; kami hanya boleh log, restart perlukan sudo) ---
@@ -50,9 +50,9 @@ else
   fi
 fi
 
-if ! systemctl --user is-active --quiet "$APP"; then
+if ! systemctl is-active --quiet "$APP"; then
   log "Enjin carian tidak aktif — start"
-  systemctl --user start "$APP"
+  systemctl start "$APP"
   rm -f "$STAMP"
   exit 0
 fi
@@ -72,7 +72,7 @@ log "Health check gagal (percubaan $COUNT/$THRESHOLD): $URL"
 
 if [ "$COUNT" -ge "$THRESHOLD" ]; then
   log "Melebihi ambang — restart $APP"
-  systemctl --user restart "$APP"
+  systemctl restart "$APP"
   rm -f "$STAMP"
 fi
 

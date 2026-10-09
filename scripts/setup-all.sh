@@ -336,7 +336,7 @@ sleep 3
 for svc in meilisearch tukuk-os cloudflared; do
   printf "  %-14s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
 done
-if curl -s --max-time 5 http://127.0.0.1:3000/api/health 2>/dev/null | grep -q '"status"'; then
+if [[ "$(curl -s -m5 -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health 2>/dev/null)" == "200" ]]; then
   ok "Enjin carian hidup di http://127.0.0.1:3000"
 else
   warn "Server belum respons — semak: journalctl -u tukuk-os -n 30"

@@ -95,7 +95,7 @@ TUKUK_AUTO_SETUP=1 bash scripts/setup-all.sh
 # ── 4. Pengesahan & penutup ───────────────────────────────────────────────────
 info "[3/3] Mengesahkan ..."
 sleep 2
-if curl -s --max-time 5 http://127.0.0.1:3000/api/health 2>/dev/null | grep -q '"status"'; then
+if [[ "$(curl -s -m5 -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health 2>/dev/null)" == "200" ]]; then
   ok "Enjin carian hidup di http://127.0.0.1:3000"
 else
   warn "Belum respons — semak: journalctl -u tukuk-os -n 30"
