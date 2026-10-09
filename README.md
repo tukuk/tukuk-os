@@ -18,7 +18,7 @@ Enjin carian web bebas, ringan, dan berkuasa tinggi yang dioptimumkan untuk pela
 | Ubah halaman statik (`public/*.html`) | **Hanya reload browser** — dibaca setiap request. |
 | Ubah `src/server.js` (route/`STATIC_PAGES`) | **WAJIB restart** `node index.js` — route dalam memori. |
 | Tukar config/kunci | Edit `deploy/env.defaults` (repo private) → `sudo bash scripts/setup-all.sh` (idempotent). |
-| Jana app+game dari 1 kata | `node scripts/satu-kata/generate.mjs [kata]` — CI percuma (GitHub Actions) cron harian → Cloudflare Pages. Lihat **§12** |
+| Jana app+game dari 1 kata | `node scripts/satu-kata/generate.mjs [kata]` — CI percuma (GitHub Actions) cron harian → hub disajikan di **`tukuk.org/satu-kata/`** (Cloudflare Pages = pilihan). Lihat **§12** |
 | Semak kesihatan | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
 | Situs awam kini | ✅ `tukuk.org`, `dashboard.tukuk.org`, `www.tukuk.org` = **200** (Cloudflare Free) |
 
@@ -218,7 +218,7 @@ Tiada satu pun perlu dibayar untuk skala kecil. Ini senarai + tempat ia diset:
 
 ## 🧩 12. Satu Kata — skills agent + CI/CD percuma (1 kata → app + game)
 
-Ubah **satu kata** menjadi **satu web-app + satu web-game** yang siap live — **tanpa build step**, dan **VPS tidak pernah dibebani** (semua pembinaan berjalan di runner percuma, bukan di `192.168.8.100`).
+Ubah **satu kata** menjadi **satu web-app + satu web-game** yang siap live — **tanpa build step**. Pembinaan (generate) berjalan di runner percuma (GitHub Actions), jadi VPS tak dibebani *build*. **Hosting utama = terus dari tapak:** hub disajikan pada **`https://tukuk.org/satu-kata/`** (mount statik `generated/public` di `src/server.js`) — **tiada Cloudflare Pages atau token API diperlukan**. Cloudflare Pages (`tukuk-satu-kata`) hanya **pilihan/aksesori**.
 
 **Cara guna:**
 - `node scripts/satu-kata/generate.mjs [kata] [--unity] [--dry]` — tulis `generated/public/<slug>/{app,game}/index.html`, kemas kini **hub** `generated/public/index.html` + `generated/manifest.json`.
@@ -230,11 +230,11 @@ Ubah **satu kata** menjadi **satu web-app + satu web-game** yang siap live — *
 | Peranan | Sumber (percuma) | Fail |
 |---|---|---|
 | Cron harian `03:15 MYT` + trigger manual | **GitHub Actions** | `.github/workflows/satu-kata.yml` |
-| Hosting + deploy | **Cloudflare Pages** (`tukuk-satu-kata`) | — |
+| Hosting + deploy | **utama: `tukuk.org/satu-kata`** (mount statik, tanpa token) · pilihan: Cloudflare Pages `tukuk-satu-kata` | `src/server.js` (`GENERATED_DIR`) |
 | Mirror mingguan (terhad) | **GitLab CI** (~400 min/bln → schedule-only, tak ubah state GitHub) | `.gitlab-ci.yml` |
 | Game "serius" (opt-in manual) | **Unity Cloud** | `scripts/satu-kata/templates/unity-GameMain.cs.tpl` |
 
-**Setup sekali (di GitHub):** tambah Secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`); set **Settings → Actions → General → Workflow permissions = Read and write** (supaya Actions boleh push `manifest` semula untuk kata esok). Workflow tak ada trigger `push` → tiada gelung.
+**Setup (sudah dibuat):** Secret `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`) sudah diset; **Workflow permissions = Read and write** sudah dihidupkan (Actions push `manifest` semula untuk kata esok). **Hosting utama tak bergantung pada ini** — langkah Pages di workflow ialah `continue-on-error: true`, jadi cron kekal jana + commit walaupun token Pages tiada cakupan `Pages: Edit` (token API semasa TIDAK ada cakupan Pages; ini sahaja menghalang deploy Pages automatik, bukan `/satu-kata`). Workflow tak ada trigger `push` → tiada gelung.
 
 **Kenapa default bukan Unity:** Unity perlukan editor berlesen + build berat → tak sesuai untuk "1 hari 1 game" auto pada CI percuma tanpa membebankan server. Web (Phaser) = default auto; Unity kekal scaffold opt-in manual.
 
