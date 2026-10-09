@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# auto-update.sh — Kemas kini TEPENUH satu baris: git → npm → servis → edge.
+# auto-update.sh — Kemas kini TEPENUH satu baris: git → (npm) → restart servis.
 #
-#   npm run update            (manual, di server)
+#   npm run update            (manual, di server; perlu root)
 #   tukuk-update.timer        (harian, automatik — dipasang setup-all.sh)
 #
-# Rantaian: git pull → npm install (postinstall → setup-all.sh: servis systemd,
-# tunnel cloudflared, deploy worker www, snapshot R2) → servis sudah dijalankan
-# semula oleh setup-all.sh. Tiada langkah manual.
+# Rantaian CERDIK (elak beban + hang pada VPS perlahan):
+#   git fetch + merge --ff-only → kalau TIADA commit baharu: keluar serta-merta.
+#   kalau ada: `npm install` HANYA bila package.json/package-lock berubah
+#   (satu-kata/kod/README tak sentuh dependensi → langkau muat turun native berat
+#   seperti onnxruntime yang boleh menggantung), kemudian `systemctl restart
+#   tukuk-os` supaya kod baru dimuat. Unit systemd & tunnel sudah dipasang
+#   setup-all.sh, jadi tak perlu rantaian postinstall penuh setiap hari.
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -26,13 +30,33 @@ BRANCH="$(grep -E '^GIT_BRANCH=' .env 2>/dev/null | head -1 | cut -d= -f2- || tr
 BRANCH="${BRANCH:-main}"
 
 echo "[auto-update] $(date -Is) — tarik origin/$BRANCH ..."
+OLD="$(git rev-parse HEAD)"
 git fetch origin "$BRANCH" || { echo "[auto-update] git fetch gagal (jaringan?) — langkau kitaran ini."; exit 0; }
 if ! git merge --ff-only "origin/$BRANCH"; then
   echo "[auto-update] working tree berubah/diverged — tiada auto-merge demi keselamatan. Semak: git status"
   exit 0
 fi
+NEW="$(git rev-parse HEAD)"
 
-echo "[auto-update] npm install → postinstall menjalankan setup-all.sh (servis, tunnel, worker, snapshot)..."
-npm install --omit=dev
+if [[ "$OLD" == "$NEW" ]]; then
+  echo "[auto-update] tiada kemas kini baharu (pada $OLD) — langkau npm & restart."
+  exit 0
+fi
+echo "[auto-update] kemas kini $OLD → $NEW."
+
+# HANYA install semula bila dependensi benar-benar berubah. Ini elak `npm install`
+# harian menarik balik binary native berat (onnxruntime ~300MB) yang boleh HANG
+# pada rangkaian perlahan, dan elak pemuatan balik yang tak perlu.
+if git diff --quiet "$OLD" "$NEW" -- package.json package-lock.json; then
+  echo "[auto-update] package.json/lock tak berubah — langkau npm install."
+else
+  echo "[auto-update] dependensi berubah → npm install --omit=dev ..."
+  npm install --omit=dev || echo "[auto-update] AMARAN: npm install gagal (code $?) — teruskan ke restart."
+fi
+
+# Kod sumber mungkin berubah → restart supaya proses muat logik baru (Express
+# route dalam memori, mount statik, indeks blog). Unit/tunnel sudah sedia ada.
+echo "[auto-update] restart tukuk-os ..."
+systemctl restart tukuk-os
 
 echo "[auto-update] $(date -Is) — selesai. Tukuk-OS kini pada commit: $(git rev-parse --short HEAD)"
