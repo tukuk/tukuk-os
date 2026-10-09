@@ -98,6 +98,15 @@ sudo ./deploy/build-iso.sh
 2. **Cloudflare Tunnel (mod TOKEN — automatik, jangan create baru):**
    Tunnel `tukuk-os-v2` (UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae`) sudah wujud & token tersimpan di `deploy/env.defaults`. `setup-all.sh` menulis `/etc/cloudflared/config.yml` (token + ingress `tukuk.org`/`www`/`dashboard`) dan unit systemd `--config ... tunnel run`. **DNS `tukuk.org`/`dashboard`/`www` sudah di-route.** Hanya perlu `sudo bash scripts/setup-all.sh` — jangan `tunnel create` baru.
 
+3. **Auto-sync — `/opt/tukuk-os` kini `git clone` ASLI (deploy = push, bukan rsync):**
+   Skrip `scripts/setup-autosync.sh` menukarkan direktori pasang jadi repo git yang diautentik **SSH deploy key read-only** (`/root/.ssh/tukuk_deploy`, didaftarkan pada repo → hanya boleh `pull`, tiada token dalam URL, tiada login interaktif). Selepas itu **timer `tukuk-update.timer` (root, ~04:30)** yang dah sedia (dihidupkan `setup-all.sh` melainkan `GIT_AUTO_UPDATE=0`) betul-betul berfungsi:
+   ```bash
+   # Kitaran auto (harian, root): fetch origin/main → merge --ff-only → npm install
+   sudo bash scripts/auto-update.sh          # atau: sudo systemctl start tukuk-update.service
+   npm run update                            # sama, tapi perlu root
+   ```
+   Aliran kerja baharu: **commit + push dari mesin dev → VPS self-pull** (cron, atau picu serta-merta di atas). `data/`, `.env`, `node_modules` TIDAK dilacak git (`.gitignore`) → `merge --ff-only` kekal bersih (working tree tak dicemari runtime). `git reset --hard origin/main` semasa setup mengekalkan fail untracked. ⚠️ **Jangan lagi rsync fail terlacak** ke `/opt/tukuk-os` — itu mencemarkan tree & `auto-update` akan `langkau` (demi keselamatan).
+
 ---
 
 ## 🧠 6. AI Sembang (Chat) — cara berfungsi & cara atur
@@ -234,7 +243,7 @@ Ubah **satu kata** menjadi **satu web-app + satu web-game** yang siap live — *
 | Mirror mingguan (terhad) | **GitLab CI** (~400 min/bln → schedule-only, tak ubah state GitHub) | `.gitlab-ci.yml` |
 | Game "serius" (opt-in manual) | **Unity Cloud** | `scripts/satu-kata/templates/unity-GameMain.cs.tpl` |
 
-**Setup (sudah dibuat & disahkan hijau):** Secret `CLOUDFLARE_API_TOKEN` (token **bercakupan `Cloudflare Pages: Edit`**) + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`) sudah diset; **Workflow permissions = Read and write** sudah dihidupkan. Satu larian penuh (`workflow_dispatch`) berjaya: jana kata → **deploy Pages OK** → bot `git push` manifest semula ke `main`. cron harian `03:15 MYT` kini auto kemas kini **Cloudflare Pages (`tukuk-satu-kata.pages.dev`)** DAN commit kata seterusnya. Langkah Pages `continue-on-error: true` supaya cron kekal commit walaupun deploy Pages bermasalah. **Hosting utama `tukuk.org/satu-kata` tetap bebas-Token** (jalur kedua / redundancy). Workflow tak ada trigger `push` → tiada gelung CI. ⚠️ `generated/` pada VPS diselaraskan via rsync/auto-update (bukan git repo di `/opt/tukuk-os`).
+**Setup (sudah dibuat & disahkan hijau):** Secret `CLOUDFLARE_API_TOKEN` (token **bercakupan `Cloudflare Pages: Edit`**) + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`) sudah diset; **Workflow permissions = Read and write** sudah dihidupkan. Satu larian penuh (`workflow_dispatch`) berjaya: jana kata → **deploy Pages OK** → bot `git push` manifest semula ke `main`. cron harian `03:15 MYT` kini auto kemas kini **Cloudflare Pages (`tukuk-satu-kata.pages.dev`)** DAN commit kata seterusnya. Langkah Pages `continue-on-error: true` supaya cron kekal commit walaupun deploy Pages bermasalah. **Hosting utama `tukuk.org/satu-kata` tetap bebas-Token** (jalur kedua / redundancy). Workflow tak ada trigger `push` → tiada gelung CI. ⚠️ `generated/` (kata baharu tiap cron) kini sampai ke VPS secara **auto-git-pull** (`/opt/tukuk-os` sudah `git clone` — lihat §5#3): bot commit manifest → `tukuk-update.timer` tarik → hub `tukuk.org/satu-kata` kemas kini sendiri.
 
 **Kenapa default bukan Unity:** Unity perlukan editor berlesen + build berat → tak sesuai untuk "1 hari 1 game" auto pada CI percuma tanpa membebankan server. Web (Phaser) = default auto; Unity kekal scaffold opt-in manual.
 
