@@ -1,0 +1,49 @@
+# satu-kata — senarai kata tema untuk jana app+game harian.
+# Format:  kata | emoji | tagline  (emoji & tagline opsiional)
+# Cron GitHub Actions pilih baris belum-jana (ikut manifest), satu setiap hari.
+hujan | 🌧️ | Kumpul titis hujan sebelum jatuh ke tanah.
+kopi | ☕ | Satu teguk setiap sentuhan — pengira kafein.
+buku | 📚 | Kekalkan rentetan halaman yang dibaca.
+roket | 🚀 | Tangkap bahan api, capai orbit.
+ikan | 🐟 | Akuarium mini: kumpul ikan berwarna.
+awan | ☁️ | Pintas awan, elak kilat.
+bunga | 🌸 | Taman: kutip kelopak sebelum layu.
+moonsarung | 🌙 | Kumpul bulan sabit setiap malam.
+keretapi | 🚂 | Landasan: kutip penumpang di stesen.
+cili | 🌶️ | Pedas! Elak biji, kumpul cudang.
+nelayan | 🎣 | Tangkap ikan, lepas yang kecik.
+durian | 🥭 | Musim buah: kumpul durian jatuh.
+robin | 🐦 | Burong: terbang, hindari dawai.
+kompas | 🧭 | Arah utara: kumpul mata angin.
+gitar | 🎸 | Ritma: sentuh not yang betul.
+bintang | ⭐ | Kumpul bintang di langit malam.
+kelapa | 🥥 | Tebuk kelapa, kumpul isi.
+payung | ☂️ | Lindungi dari hujan, elak terik.
+oud | 🎼 | Muzik tradisional: susun nota.
+bayt | 🏠 | Bina rumah: kumpul bahan binaan.
+kicik | 🐤 | Anak ayam: makan, membesar, lari.
+ombak | 🌊 | Luncur ombak, tangkap spray.
+cendawan | 🍄 | Kumpul cendawan, elak yang beracun.
+lampion | 🏮 | Terangi malam dengan lampion.
+merlim | 🐢 | Kura-kura pantas: elak halangan.
+salju | ❄️ | Baling bola salju ke sasaran.
+mangga | 🥭 | Kumpul mangga masak dari pokok.
+gunting | ✂️ | Potong tali pada waktu tepat.
+nakhoda | ⚓ | Nakhoda: kumpulkan kunci kapal.
+tebing | 🏔️ | Daki tebing, pegang pijakan.
+pelita | 🕯️ | Jaga api pelita jangan padam.
+semut | 🐜 | Koloni: kumpul remah roti.
+layang | 🪁 | Terbangkan layang-layang, jaga benang.
+teratai | 🌺 | Tasik: petik bunga teratai.
+renjatan | ⚡ | Kumpul tenaga, lepas cas ke grid.
+cempaka | 🌼 | Kumpul kelopak cempaka untuk karangan.
+balon | 🎈 | Pecahkan balon, jangan letup diri.
+cengkerang | 🐚 | Pantai: kutip cengkerang unik.
+kuih | 🍮 | dapur: kumpul bahan kuih.
+meriam | 💣 | Lontar, elak serpihan.
+sagu | 🌴 | Tebang sagu, kumpul pati.
+ketupat | 🍱 | anyam daun, isi beras.
+pelangi | 🌈 | Kumpul warna pelangi.
+lang | 🦅 | Elang: burung mangsa di padang.
+tifa | 🪘 | Genderang: pukul pada irama.
+nanas | 🍍 | Ladang: petik nanas manis.

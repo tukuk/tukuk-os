@@ -1,0 +1,40 @@
+# ============================================================================
+# satu-kata — MIRRORED pipeline di GitLab CI (devops/CI kedua, percuma).
+# GUNA TERHAD: GitLab Free cuma ~400 minit/bulan, jadi ia TIDAK berjalan setiap
+# push. Ia hanya jalan bila anda set "Pipeline schedule" mingguan di GitLab UI
+# (Build → Pipeline schedules) dan bertindak sebagai SANDARAN/backup kepada cron
+# GitHub Actions. Ia TIDAK mengubah manifest di GitHub (state utama = GitHub).
+#
+# SEDIA di GitLab: Settings → CI/CD → Variables
+#   CLOUDFLARE_API_TOKEN (masked)  CLOUDFLARE_ACCOUNT_ID
+# Deploy ke projek Pages BERBEZA (…-mirror) supaya tak bergesel dengan GitHub.
+# ============================================================================
+stages: [generate, deploy]
+
+satu-kata-mirror:
+  stage: generate
+  image: node:22-alpine
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # hanya jadual mingguan
+  before_script:
+    - apk add --no-cache git
+  script:
+    - node scripts/satu-kata/generate.mjs            # auto-pilih kata (read-only, tak push)
+    - ls -R generated/public | head -40
+  artifacts:
+    paths: [generated/]
+    expire_in: 1 week
+
+deploy-pages-mirror:
+  stage: deploy
+  image: node:22-alpine
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: manual                                # deploy mirror hanya bila perlu (jimat minit)
+    - when: never
+  needs: [satu-kata-mirror]
+  script:
+    - npx --yes wrangler@latest pages project create tukuk-satu-kata-mirror --production-branch main || true
+    - npx --yes wrangler@latest pages deploy generated/public --project-name tukuk-satu-kata-mirror --branch main
+  environment:
+    name: satu-kata-mirror
