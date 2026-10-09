@@ -104,7 +104,7 @@ async function rerank(query, hits, { topN } = {}) {
   if (!eng) return list;
 
   const started = Date.now();
-  try {
+  const work = (async () => {
     const queries = list.map(() => String(query || ''));
     const passages = list.map((h) => docText(h));
     // API transformers.js v4: 2nd arg = OBJEK options dengan `text_pair`.
@@ -121,11 +121,20 @@ async function rerank(query, hits, { topN } = {}) {
     const data = logits.data;
     const scored = list.map((hit, i) => ({ hit, s: Number(data[i]) || 0 }));
     scored.sort((a, b) => b.s - a.s);
-    status.lastTookMs = Date.now() - started;
-    status.lastCount = scored.length;
     const sliced = scored.slice(0, topN == null ? scored.length : topN);
     // Tampal skor mentah untuk debug/papar (bukan medan wajib frontend).
     return sliced.map((x) => Object.assign({}, x.hit, { _relevance: Number(x.s.toFixed(4)) }));
+  })();
+
+  // Pagar latensi: CPU tanpa AVX2 boleh lambat. Jika kerja melebihi
+  // `timeoutMs`, kita SERAH susunan BM25 asal (user tak menunggu lama).
+  const guard = new Promise((resolve) => setTimeout(() => resolve(null), config.rerank.timeoutMs));
+  try {
+    const out = await Promise.race([work, guard]);
+    if (out === null) { status.error = 'timeout'; return list; }
+    status.lastTookMs = Date.now() - started;
+    status.lastCount = out.length;
+    return out;
   } catch (err) {
     status.error = err && err.message ? err.message : String(err);
     return list; // selamat: jangan pecahkan /search
