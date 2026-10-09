@@ -1,9 +1,9 @@
-// tukuk-www-worker — www.tukuk.org sentiasa hidup, sama seperti tukuk.org.
-// 1. Origin hidup → proxy SEMUA permintaan ke tukuk.org (tunnel). www identik.
-// 2. Origin mati/5xx → mod sandaran:
+// tukuk-www-worker — tukuk.org DAN www.tukuk.org sentiasa hidup.
+// 1. Origin hidup → proxy ke tunnel. (fetch() Worker ke hostname zonet yang sama
+//    pergi TERUS ke origin, BUKAN masuk semula ke route Worker — jadi tiada gelung.)
+// 2. Origin mati/5xx → mod sandaran daripada snapshot R2:
 //    a. /search & /suggest → enjin carian mini dalam worker, skor snapshot
-//       indeks dari R2 (search-index.json) — bentuk JSON sama seperti API asli,
-//       jadi UI laman depan terus berfungsi tanpa pelayan.
+//       indeks dari R2 (search-index.json) — bentuk JSON sama seperti API asli.
 //    b. Halaman statik → snapshot HTML/assets dari R2.
 //    c. Snapshot pun takde → halaman penyelenggaraan.
 
