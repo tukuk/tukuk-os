@@ -136,13 +136,37 @@ const CSP_REPORT_ONLY = [
   "form-action 'self'",
   "report-uri /csp-report",
 ].join('; ') + ';';
+// (3) CSP_STRICT — untuk halaman STATIK yang terbukti bersih (0 handler inline, 0 <script>
+//     inline — skripnya external sahaja, 0 rujukan iklan/analytics, dan player.js yang
+//     disuntik theme.js tidak pakai `new Function`/`eval`). Untuk halaman ini kita ENFORCE
+//     `script-src 'self'` TANPA unsafe-inline/unsafe-eval — inilah kemenangan Lighthouse
+//     sebenar. Halaman interaktif (index/apps/nasa/editor/collage/studio*) TIDAK dahilkan
+//     kerana ada <script> inline + handler + `new Function` (boleh rosak senyap).
+const CSP_STRICT_PAGES = new Set(['about', 'privacy', 'terms', 'docs', 'access', 'tentang', 'terma', 'privasi', 'dokumen']);
+const CSP_STRICT = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https:",
+  "media-src 'self' data: blob: https:",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com",
+  "object-src 'none'",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "report-uri /csp-report",
+].join('; ') + ';';
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('X-DNS-Prefetch-Control', 'on');
-  res.setHeader('Content-Security-Policy', CSP_ENFORCED);
+  // Halaman statik bersih → ENFORCE script-src penuh; selainnya → enforced struktur sahaja.
+  const seg = req.path.replace(/^\/+/, '').replace(/\.html$/i, '').replace(/\/+$/, '').toLowerCase();
+  res.setHeader('Content-Security-Policy', CSP_STRICT_PAGES.has(seg) ? CSP_STRICT : CSP_ENFORCED);
   res.setHeader('Content-Security-Policy-Report-Only', CSP_REPORT_ONLY);
   // HSTS hanya bermakna atas HTTPS; tiada `preload` (butuh daftar + semua subdomain HTTPS dulu).
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
