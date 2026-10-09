@@ -15,6 +15,8 @@ const KEY = process.env.MEILI_MASTER_KEY || '';
 const FILE = process.argv[2];
 const OVERRIDE_INDEX = process.argv[3] || null;
 const BATCH = 500;
+// Indeks besar (puluhan ribu dokumen) pada CPU lama boleh ambil beberapa minit.
+const TASK_TIMEOUT_MS = Number(process.env.IMPORT_TASK_TIMEOUT_MS || 900000);
 
 if (!FILE) {
   console.error('guna: node scripts/import-index.js <fail.json.gz> [index]');
@@ -40,7 +42,7 @@ function request(method, pathname, body) {
   });
 }
 
-async function waitForTasks(taskUids, timeoutMs = 120000) {
+async function waitForTasks(taskUids, timeoutMs = TASK_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const pending = taskUids.filter((uid) => uid != null);
