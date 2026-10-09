@@ -622,8 +622,12 @@
 
 <audio id="mediaAudio" preload="none"></audio>
 <div class="audio-bar" id="audioBar" hidden>
+  <button type="button" id="audioPrev" class="ab-btn" aria-label="Previous track">⏮</button>
+  <button type="button" id="audioPlayPause" class="ab-btn ab-pp" aria-label="Play or pause" aria-pressed="false">⏯</button>
+  <button type="button" id="audioNext" class="ab-btn" aria-label="Next track">⏭</button>
   <span class="ab-title" id="audioBarTitle"></span>
-  <button type="button" id="audioBarStop" aria-label="Stop player">&#9209;</button>
+  <label class="ab-auto" title="Lagu habis → main lagu seterusnya"><input type="checkbox" id="audioAuto"> Auto‑next</label>
+  <button type="button" id="audioBarStop" class="ab-btn" aria-label="Stop player">⏹</button>
 </div>
 
 <div class="vmodal" id="vmodal" hidden>
@@ -751,6 +755,7 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let query = '', offset = 0, mode = 'web', corpus = '', timer = null, sugIdx = -1;
+let radioTag = '', radioCountry = '';   // penapis pelayaran radio dunia (genre/negara)
 
 // Pemisahan URL: `/` = dashboard (kandungan original, boleh ada iklan),
 // `/cari` = halaman hasil (SPA sama, TIADA iklan). Mematuhi dasar AdSense.
@@ -855,6 +860,7 @@ function pushURL(extra = {}) {
 
 function setMode(m, push = true) {
   mode = m;
+  if (m !== 'radio') { radioTag = ''; radioCountry = ''; }
   document.querySelectorAll('#tabs button').forEach((b) => {
     b.classList.toggle('on', b.dataset.mode === m);
   });
@@ -871,7 +877,7 @@ function setMode(m, push = true) {
 
 async function run() {
   const q = $('q').value.trim();
-  if (!q) return;
+  if (!q && mode !== 'radio') return;
   if (toResultsIfNeeded()) return; // dari dashboard → pindah ke /cari, biarkan sana yang jalankan
   query = q;
   offset = 0;
@@ -881,7 +887,10 @@ async function run() {
   try {
     const base = buildSearchURL(query);
     const isWeb = mode === 'web';
-    const url = isWeb ? base : `/${mode}?q=${encodeURIComponent(query)}`;
+    const isRadio = mode === 'radio';
+    const url = isWeb ? base : isRadio
+      ? `/radio?q=${encodeURIComponent(query)}&tag=${encodeURIComponent(radioTag)}&country=${encodeURIComponent(radioCountry)}`
+      : `/${mode}?q=${encodeURIComponent(query)}`;
     let data;
     if (isWeb) {
       // Web: HANTAR ketiga-tiga serentak, tetapi jangan tunggu — papar indeks
@@ -1065,7 +1074,7 @@ async function loadMoreMedia() {
       : m0 === 'music'
         ? `/music?q=${encodeURIComponent(mediaState.q)}&offset=${encodeURIComponent(mediaState.sp || 0)}`
         : m0 === 'radio'
-          ? `/radio?q=${encodeURIComponent(mediaState.q)}&skip=${encodeURIComponent(mediaState.sp || 0)}`
+          ? `/radio?q=${encodeURIComponent(mediaState.q)}&skip=${encodeURIComponent(mediaState.sp || 0)}&tag=${encodeURIComponent(radioTag)}&country=${encodeURIComponent(radioCountry)}`
           : m0 === 'news'
             ? `/news?q=${encodeURIComponent(mediaState.q)}&offset=${encodeURIComponent(mediaState.sp || 0)}`
             : `/videos?q=${encodeURIComponent(mediaState.q)}&sp=${encodeURIComponent(mediaState.sp)}`;
@@ -1085,6 +1094,52 @@ async function loadMoreMedia() {
   } catch {
     const live = document.getElementById('loadMoreBtn');
     if (live) { live.disabled = false; live.textContent = 'Retry — failed to load'; }
+  }
+}
+
+// ── Pelayaran Radio Dunia: genre + pemilih negara (radio-browser, ±50k stesen) ──
+const RADIO_GENRES = ['Pop', 'Rock', 'Hip Hop', 'Jazz', 'Classical', 'Electronic', 'News', 'Talk', 'Latin', 'Country', 'Metal', 'Reggae', 'Ambient', 'Chill', 'Oldies', 'Dance', 'Sports', 'Kids'];
+const _ACCENT = 'var(--accent,#3b82f6)';
+function _rChip(label, active) {
+  const st = active ? `border-color:${_ACCENT};color:${_ACCENT};font-weight:600;` : '';
+  return `<button type="button" class="chip" style="${st}" data-rtag="${esc(label)}">${esc(label)}</button>`;
+}
+function radioBrowseBarHtml() {
+  const chips = RADIO_GENRES.map(g => _rChip(g, radioTag === g)).join('');
+  const topActive = !radioTag && !radioCountry;
+  const selStyle = 'padding:6px 10px;border-radius:8px;border:1px solid var(--line,#262b36);background:var(--bg,#0b0d12);color:var(--text,#e6e6e6);max-width:220px;';
+  return `<div class="radio-browse" id="radioBrowse" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line,#262b36);border-radius:12px;">
+    <strong style="margin-right:2;">&#127758; Radio seluruh dunia</strong>
+    <select id="radioCountrySel" style="${selStyle}" aria-label="Pilih negara"><option value="">Semua negara&#8230;</option></select>
+    <button type="button" class="chip" style="${topActive ? `border-color:${_ACCENT};color:${_ACCENT};font-weight:600;` : ''}" data-rclear>&#128293; Popular</button>
+    <span style="flex-basis:100%;height:0;"></span>
+    ${chips}
+  </div>`;
+}
+let _radioCountriesLoaded = false;
+function wireRadioBrowse() {
+  const bar = document.getElementById('radioBrowse');
+  if (!bar) return;
+  bar.querySelectorAll('[data-rtag]').forEach(b => b.addEventListener('click', () => {
+    radioTag = (radioTag === b.dataset.rtag) ? '' : b.dataset.rtag;
+    $('q').value = '';
+    run();
+  }));
+  const clear = bar.querySelector('[data-rclear]');
+  if (clear) clear.addEventListener('click', () => { radioTag = ''; radioCountry = ''; $('q').value = ''; run(); });
+  const sel = document.getElementById('radioCountrySel');
+  if (sel) {
+    sel.value = radioCountry;
+    sel.addEventListener('change', () => { radioCountry = sel.value; $('q').value = ''; run(); });
+    if (!_radioCountriesLoaded) {
+      _radioCountriesLoaded = true;
+      fetch('/radio/countries').then(r => (r.ok ? r.json() : null)).then(d => {
+        const list = (d && d.countries) || [];
+        sel.innerHTML = `<option value="">Semua negara (${list.length})&#8230;</option>` +
+          list.map(c => `<option value="${esc(c.name)}">${esc(c.name)} · ${c.count}</option>`).join('');
+        sel.value = radioCountry;
+      }).catch(() => { _radioCountriesLoaded = false; });
+    }
   }
 }
 
@@ -1167,7 +1222,8 @@ function renderResults(data, m) {
 
   if (m === 'radio') {
     mediaState = { mode: 'radio', q: query, page: 0, sp: data.nextSkip || 0 };
-    out.innerHTML = `<div class="video-list">${hits.map(radioCard).join('')}</div>${loadMoreHtml(!!data.nextSkip)}`;
+    out.innerHTML = radioBrowseBarHtml() + `<div class="video-list">${hits.map(radioCard).join('')}</div>${loadMoreHtml(!!data.nextSkip)}`;
+    wireRadioBrowse();
     return;
   }
 
@@ -1458,6 +1514,17 @@ let wantPlay = false;
 let playToken = 0;
 let retryTimer = null;
 let retryCount = 0;
+let playStartedAt = 0;   // bila play benar-benar mula — elak 'ended' serta-merta daripada klip rosak (cascade)
+let currentLive = false; // true = siaran langsung radio: 'ended'/stall → sambung semula, jangan tukar stesen
+
+const audioPlayPauseEl = document.getElementById('audioPlayPause');
+const audioAutoEl = document.getElementById('audioAuto');
+function updatePpLabel() {
+  if (!audioPlayPauseEl) return;
+  const playing = !mediaAudio.paused && !mediaAudio.ended;
+  audioPlayPauseEl.textContent = playing ? '\u23f8' : '\u25b6';
+  audioPlayPauseEl.setAttribute('aria-pressed', playing ? 'true' : 'false');
+}
 
 function normAudioSrc(raw) {
   let src = String(raw || '').trim();
@@ -1481,6 +1548,7 @@ function stopAudio() {
   mediaAudio.removeAttribute('src');
   mediaAudio.load();
   currentSrc = '';
+  currentLive = false;
   resetOwnerBtn();
   audioBar.hidden = true;
 }
@@ -1495,6 +1563,8 @@ function markPlaying(pBtn, title) {
   }
   audioBarTitle.textContent = title || '';
   audioBar.hidden = false;
+  playStartedAt = Date.now();
+  updatePpLabel();
 }
 
 function beginPlay(rawSrc, title, pBtn, opts = {}) {
@@ -1502,6 +1572,7 @@ function beginPlay(rawSrc, title, pBtn, opts = {}) {
   if (!audioSrc) return;
   if (audioOwner && audioOwner !== pBtn) resetOwnerBtn();
   currentSrc = audioSrc;
+  currentLive = !!opts.live;
   wantPlay = true;
   retryCount = 0;
   playToken++;
@@ -1528,7 +1599,8 @@ function scheduleRetry() {
   if (!wantPlay || !currentSrc) return;
   if (retryTimer) clearTimeout(retryTimer);
   retryCount++;
-  if (retryCount > 10) { advanceQueue(); return; }
+  // Bila gagal berulang: radio → berhenti (stesen mungkin turun); muzik → lompat lagu hanya jika Auto-next.
+  if (retryCount > 10) { if (!currentLive && audioAutoEl && audioAutoEl.checked) advanceQueue(); else stopAudio(); return; }
   const delay = Math.min(800 * retryCount, 4000);
   retryTimer = setTimeout(() => {
     retryTimer = null;
@@ -1538,24 +1610,53 @@ function scheduleRetry() {
   }, delay);
 }
 
-// Bila satu lagu habis, main lagu seterusnya dalam senarai (loop ke awal).
-function findQueueNext() {
+// Kad dalam senarai hasil semasa, kira ke hadapan/ke belakang (loop).
+function queueCard(step) {
   const cards = [...document.querySelectorAll('.play-card[data-audio]')].filter(c => normAudioSrc(c.dataset.audio));
   if (!cards.length) return null;
-  const idx = cards.findIndex(c => c === audioOwner || c.contains(audioOwner) || c.querySelector('.play-btn') === audioOwner);
-  return cards[(idx + 1) % cards.length];
+  let idx = cards.findIndex(c => c === audioOwner || c.contains(audioOwner) || (c.querySelector('.play-btn') && c.querySelector('.play-btn') === audioOwner));
+  if (idx === -1) idx = 0;
+  return cards[(idx + step + cards.length) % cards.length];
 }
+function playQueueCard(card) {
+  if (!card) return;
+  beginPlay(card.dataset.audio, card.dataset.title || 'Media', card.querySelector('.play-btn') || card,
+    { live: mode === 'radio', fallback: mode !== 'radio' });
+}
+function findQueueNext() { return queueCard(1); }
 function advanceQueue() {
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
   const next = findQueueNext();
-  if (next) beginPlay(next.dataset.audio, next.dataset.title || 'Music', next.querySelector('.play-btn') || next);
-  else if (currentSrc) { mediaAudio.src = currentSrc; mediaAudio.play().catch(() => stopAudio()); }
+  if (next) playQueueCard(next);
   else stopAudio();
 }
-mediaAudio.addEventListener('ended', () => { if (wantPlay) advanceQueue(); });
+
+// — Kawalan bar audio: play/pause manual, prev, next —
+if (audioPlayPauseEl) audioPlayPauseEl.addEventListener('click', () => {
+  if (!currentSrc) return;
+  if (mediaAudio.paused) { wantPlay = true; playToken++; mediaAudio.src = currentSrc; mediaAudio.play().then(updatePpLabel).catch(() => scheduleRetry()); }
+  else { mediaAudio.pause(); updatePpLabel(); }
+});
+const audioPrevEl = document.getElementById('audioPrev');
+const audioNextEl = document.getElementById('audioNext');
+if (audioPrevEl) audioPrevEl.addEventListener('click', () => playQueueCard(queueCard(-1)));
+if (audioNextEl) audioNextEl.addEventListener('click', () => playQueueCard(queueCard(1)));
+
+mediaAudio.addEventListener('ended', () => {
+  if (!wantPlay) return;
+  // Anti-cascade: klip/stream rosak boleh trigger 'ended' serta-merta — cuba lagi, jangan lompat.
+  if (Date.now() - playStartedAt < 3000) { scheduleRetry(); return; }
+  // Radio = siaran langsung; 'ended' biasanya ertinya terputus → sambung semula, jangan tukar stesen.
+  if (currentLive) { scheduleRetry(); return; }
+  // Muzik (prabayar 30s iTunes): tukar lagu HANYA bila Auto-next dihidupkan; jika tidak, berhenti.
+  if (audioAutoEl && audioAutoEl.checked) advanceQueue();
+  else stopAudio();
+});
 mediaAudio.addEventListener('error', () => { if (wantPlay) scheduleRetry(); });
 mediaAudio.addEventListener('stalled', () => { if (wantPlay) scheduleRetry(); });
-mediaAudio.addEventListener('playing', () => { retryCount = 0; });
+mediaAudio.addEventListener('playing', () => { retryCount = 0; playStartedAt = Date.now(); updatePpLabel(); });
+mediaAudio.addEventListener('play', updatePpLabel);
+mediaAudio.addEventListener('pause', updatePpLabel);
 
 document.addEventListener('click', (e) => {
   const card = e.target.closest('.play-card');
@@ -1573,7 +1674,7 @@ document.addEventListener('click', (e) => {
   // Klik track yang sedang main → berhenti.
   if ((audioOwner === pBtn || currentSrc === audioSrc) && !mediaAudio.paused && wantPlay) { stopAudio(); return; }
 
-  beginPlay(audioSrc, title, pBtn, { fallback: true });
+  beginPlay(audioSrc, title, pBtn, { fallback: true, live: mode === 'radio' });
 });
 
 // ── In-App Reader Modal for Search Results & Articles (Like Video Modal) ──

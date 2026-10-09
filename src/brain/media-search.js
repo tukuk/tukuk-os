@@ -316,10 +316,7 @@ async function searchMusicItunes(q, offset = 0) {
 /* ---------- Radio: Radio Browser API (komuniti, tanpa kunci) ---------- */
 const RADIO_BASES = ['https://all.api.radio-browser.info', 'https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info'];
 
-async function searchRadioStations(q, skip = 0) {
-  const path = q
-    ? `/json/stations/search?name=${encodeURIComponent(q)}&is_https=true&hidebroken=true&order=votes&reverse=true&limit=40&skip=${skip}`
-    : `/json/stations/topvote/40?is_https=true&hidebroken=true&offset=${skip}`;
+async function fetchRadioJson(path) {
   let data = null;
   for (let round = 0; round < 2 && !Array.isArray(data); round++) {
     for (const base of RADIO_BASES) {
@@ -327,6 +324,24 @@ async function searchRadioStations(q, skip = 0) {
     }
     if (!Array.isArray(data) && round === 0) await new Promise((r) => setTimeout(r, 400));
   }
+  return data;
+}
+
+// q = nama, country = nama penuh negara, tag = genre. Semua ini filter radio-browser.
+async function searchRadioStations(q, skip = 0, { country = '', tag = '' } = {}) {
+  let path;
+  if (tag || country) {
+    const params = new URLSearchParams({ hidebroken: 'true', is_https: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
+    if (tag) params.set('tag_exact', tag.toLowerCase());
+    if (country) params.set('country', country);
+    if (q) params.set('name', q);
+    path = `/json/stations/search?${params}`;
+  } else if (q) {
+    path = `/json/stations/search?name=${encodeURIComponent(q)}&is_https=true&hidebroken=true&order=votes&reverse=true&limit=40&skip=${skip}`;
+  } else {
+    path = `/json/stations/topvote/40?is_https=true&hidebroken=true&offset=${skip}`;
+  }
+  const data = await fetchRadioJson(path);
   if (!Array.isArray(data)) throw new Error('radio-browser tidak dapat dihubungi');
   const hits = data.map((s) => ({
     type: 'radio',
@@ -343,6 +358,22 @@ async function searchRadioStations(q, skip = 0) {
   })).filter((h) => h.url);
   const nextSkip = data.length === 40 ? skip + 40 : 0;
   return { hits, nextSkip };
+}
+
+// Senarai negara (untuk pemilih "semua radio di dunia"). Di-cache sehari.
+async function listRadioCountries() {
+  const cached = CACHE.get('radio:countries');
+  if (cached && Date.now() - cached.at <= 24 * 3600 * 1000) return cached.value;
+  const data = await fetchRadioJson('/json/countries?hidebroken=true&order=stationcount&reverse=true');
+  const list = Array.isArray(data)
+    ? data
+        .filter((c) => c && (c.name || c.country))
+        .map((c) => ({ name: c.name || c.country, code: c.iso_3166_1 || c.countrycode || '', count: c.stationcount || 0 }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 250)
+    : [];
+  if (list.length) CACHE.set('radio:countries', { at: Date.now(), value: list });
+  return list;
 }
 
 const FALLBACK_STATIONS = [
@@ -388,16 +419,18 @@ async function searchMusic(query, { offset = 0 } = {}) {
   return result;
 }
 
-async function searchRadio(query, { skip = 0 } = {}) {
+async function searchRadio(query, { skip = 0, country = '', tag = '' } = {}) {
   const q = String(query || '').trim();
-  const key = `radio:${q}:${skip}`;
+  const key = `radio:${q}:${country}:${tag}:${skip}`;
   const cached = CACHE.get(key);
   if (cached && Date.now() - cached.at <= CACHE_TTL) return cached.value;
 
   let hits = [];
+  let nextSkip = 0;
   try {
-    const res = await searchRadioStations(q, skip);
+    const res = await searchRadioStations(q, skip, { country, tag });
     hits = res.hits;
+    nextSkip = res.nextSkip;
   } catch {
     hits = FALLBACK_STATIONS.filter(s => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.tags.some(t => t.toLowerCase().includes(q.toLowerCase())));
   }
@@ -406,9 +439,9 @@ async function searchRadio(query, { skip = 0 } = {}) {
     hits = FALLBACK_STATIONS;
   }
 
-  const result = { hits, total: hits.length, query: q, provider: 'radio-browser/fallback', nextSkip: 0 };
-  CACHE.set(key, { at: Date.now(), value: result });
+  const result = { hits, total: hits.length, query: q, country, tag, provider: 'radio-browser/fallback', nextSkip };
+  if (hits.length >= 3) CACHE.set(key, { at: Date.now(), value: result });
   return result;
 }
 
-module.exports = { searchImages, searchVideos, searchMusic, searchRadio };
+module.exports = { searchImages, searchVideos, searchMusic, searchRadio, listRadioCountries };

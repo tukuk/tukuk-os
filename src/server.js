@@ -1127,9 +1127,20 @@ app.get('/music', limiter.search, async (req, res) => {
 app.get('/radio', limiter.search, async (req, res) => {
   try {
     const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
-    res.json(await mediaSearch.searchRadio(String(req.query.q || ''), { skip }));
+    const country = String(req.query.country || '').trim();
+    const tag = String(req.query.tag || '').trim();
+    res.json(await mediaSearch.searchRadio(String(req.query.q || ''), { skip, country, tag }));
   } catch (error) {
     res.status(500).json({ error: 'Radio search failed', details: safeError(error) });
+  }
+});
+
+// Senarai negara untuk pelayaran radio seluruh dunia (radio-browser, di-cache).
+app.get('/radio/countries', limiter.search, async (req, res) => {
+  try {
+    res.json({ countries: await mediaSearch.listRadioCountries() });
+  } catch (error) {
+    res.status(502).json({ error: 'Radio countries failed', details: safeError(error) });
   }
 });
 
