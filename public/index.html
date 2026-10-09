@@ -658,7 +658,7 @@
         <div style="text-align:center; padding:50px; color:var(--muted);">Loading article reader&hellip;</div>
       </div>
       <div id="reader-iframe-wrap" class="reader-iframe-wrap" hidden>
-        <iframe id="reader-iframe" src="" title="Live web preview" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe>
+        <iframe id="reader-iframe" src="" title="Live web preview" sandbox="allow-scripts allow-forms allow-popups" referrerpolicy="no-referrer"></iframe>
       </div>
     </div>
     <div class="vmodal-foot" style="display:flex; justify-content:space-between; align-items:center;">
@@ -1678,43 +1678,94 @@ document.addEventListener('click', (e) => {
 });
 
 // ── In-App Reader Modal for Search Results & Articles (Like Video Modal) ──
+let readerUrl = '';
+
+function readerFallbackHtml(url, text) {
+  const head = esc(document.getElementById('reader-title').textContent);
+  return `
+    <h1>${head}</h1>
+    ${text ? `<p>${esc(text)}</p>` : ''}
+    <div style="margin-top:24px; padding:18px; background:rgba(59,130,246,0.08); border-radius:8px; border:1px solid rgba(59,130,246,0.2);">
+      <p style="margin:0 0 12px; font-weight:600;">Couldn&#39;t extract the full text automatically. Try the live page or open a new tab:</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" id="reader-try-live">🌐 Live Web View</button>
+        <a class="btn" href="${esc(url)}" target="_blank" rel="noopener">↗ New Tab</a>
+      </div>
+    </div>`;
+}
+
+function wireReaderTryLive() {
+  const tb = document.getElementById('reader-try-live');
+  if (tb) tb.addEventListener('click', () => document.getElementById('reader-btn-live').click());
+}
+
+async function fetchReader(url, box, snippet) {
+  box.innerHTML = `<div style="text-align:center; padding:50px; color:var(--muted);">Loading article reader&hellip;</div>`;
+  try {
+    const d = await (await fetch('/api/reader?url=' + encodeURIComponent(url))).json();
+    const blocks = Array.isArray(d.blocks) ? d.blocks : [];
+    if (!d.ok || !blocks.length) {
+      box.innerHTML = readerFallbackHtml(url, d.excerpt || snippet || '');
+      wireReaderTryLive();
+      return;
+    }
+    const hero = d.heroImage ? `<img class="hero" src="${esc(d.heroImage)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : '';
+    const body = blocks.map((b) => {
+      const t = esc(b.text);
+      switch (b.tag) {
+        case 'h1': return `<h1>${t}</h1>`;
+        case 'h2': return `<h2>${t}</h2>`;
+        case 'h3': case 'h4': return `<h3>${t}</h3>`;
+        case 'li': return `<p>&bull; ${t}</p>`;
+        case 'blockquote': return `<p style="border-left:3px solid var(--accent); padding-left:12px; color:var(--muted); font-style:italic;">${t}</p>`;
+        default: return `<p>${t}</p>`;
+      }
+    }).join('\n    ');
+    box.innerHTML = `
+      ${hero}
+      <h1>${esc(d.title || document.getElementById('reader-title').textContent)}</h1>
+      <div class="meta-info">Source: <a href="${esc(url)}" target="_blank" rel="noopener" style="color:var(--accent);">${esc(d.siteName || url)}</a></div>
+      ${body}`;
+  } catch {
+    box.innerHTML = readerFallbackHtml(url, snippet || '');
+    wireReaderTryLive();
+  }
+}
+
 function openReader(url, title, snippet) {
   const modal = document.getElementById('readerModal');
   if (!modal) {
     window.open(url, '_blank', 'noopener');
     return;
   }
+  readerUrl = url;
   document.getElementById('reader-title').textContent = title || 'Reader View';
-  document.getElementById('reader-site').textContent = (() => { try { return new URL(url).hostname; } catch { return 'tukuk.org'; } })();
+  document.getElementById('reader-site').textContent = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'web'; } })();
   document.getElementById('reader-ext-link').href = url;
   document.getElementById('reader-url-display').textContent = url;
+  // JANGAN terus tunjuk URL luar pada iframe — tapak yang hantar X-Frame-Options/CSP
+  // frame-ancestors (BBC dll.) akan "refuse to connect". Live Web dimuatkan secara
+  // lazy menerusi proksi same-origin /api/proxy/reader apabila butang ditekan.
+  document.getElementById('reader-iframe').removeAttribute('src');
 
-  document.getElementById('reader-content').innerHTML = `
-    <h2>${esc(title)}</h2>
-    <div class="meta-info">Source URL: <a href="${esc(url)}" target="_blank" rel="noopener" style="color:var(--accent);">${esc(url)}</a></div>
-    <p><strong>Preview / Snippet:</strong></p>
-    <p>${esc(snippet || 'Loading content preview…')}</p>
-    <div style="margin-top:28px; padding:20px; background:rgba(59,130,246,0.08); border-radius:8px; border:1px solid rgba(59,130,246,0.2);">
-      <p style="margin:0 0 12px; font-weight:600;">Want to view the full live website inside Tukuk-OS?</p>
-      <button type="button" class="btn btn-primary" onclick="document.getElementById('reader-btn-live').click()">Switch to Live Web View 🌐</button>
-    </div>
-  `;
-  document.getElementById('reader-iframe').src = url;
-
-  document.getElementById('reader-content').hidden = false;
+  const box = document.getElementById('reader-content');
+  box.hidden = false;
   document.getElementById('reader-iframe-wrap').hidden = true;
   document.getElementById('reader-btn-clean').classList.add('on');
   document.getElementById('reader-btn-live').classList.remove('on');
 
   modal.hidden = false;
   document.body.style.overflow = 'hidden';
+  fetchReader(url, box, snippet);
 }
 
 function closeReader() {
   const modal = document.getElementById('readerModal');
   if (!modal || modal.hidden) return;
   modal.hidden = true;
-  document.getElementById('reader-iframe').src = '';
+  const iframe = document.getElementById('reader-iframe');
+  if (iframe) iframe.removeAttribute('src');
+  readerUrl = '';
   document.body.style.overflow = '';
 }
 
@@ -1816,6 +1867,12 @@ if (readerClean) {
 const readerLive = document.getElementById('reader-btn-live');
 if (readerLive) {
   readerLive.addEventListener('click', () => {
+    const iframe = document.getElementById('reader-iframe');
+    // Load via our same-origin reader proxy so frame-blocking hosts (X-Frame-Options /
+    // CSP frame-ancestors) still preview instead of "refusing to connect".
+    const target = readerUrl || document.getElementById('reader-ext-link').href;
+    const src = '/api/proxy/reader?url=' + encodeURIComponent(target);
+    if (iframe.getAttribute('src') !== src) iframe.setAttribute('src', src);
     document.getElementById('reader-content').hidden = true;
     document.getElementById('reader-iframe-wrap').hidden = false;
     readerLive.classList.add('on');
