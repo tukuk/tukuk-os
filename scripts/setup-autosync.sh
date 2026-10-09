@@ -33,6 +33,10 @@ ssh-keyscan -t ed25519 github.com >> /root/.ssh/known_hosts 2>/dev/null || true
 sort -u /root/.ssh/known_hosts -o /root/.ssh/known_hosts 2>/dev/null || true
 
 # 2) Git boleh akses dir milik user lain (kita jalan sebagai root) -------------
+# PENTING: guna `--system` (/etc/gitconfig), BUKAN `--global`. Timer systemd
+# menjalankan auto-update dengan $HOME KOSONG, jadi git TIDAK membaca
+# ~/.gitconfig — safe.directory HANYA berkesan kalau ada dalam config sistem.
+git config --system --add safe.directory "$REPO" 2>/dev/null || true
 git config --global --add safe.directory "$REPO" 2>/dev/null || true
 
 # 3) Ujian auth SSH ------------------------------------------------------------
