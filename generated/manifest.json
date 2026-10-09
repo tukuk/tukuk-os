@@ -10,6 +10,39 @@
       "game": true,
       "createdAt": "2026-10-09T19:28:50.846Z",
       "palette": "solar"
+    },
+    {
+      "word": "kopi",
+      "slug": "kopi",
+      "emoji": "☕",
+      "tagline": "Satu teguk setiap sentuhan — pengira kafein.",
+      "genre": "catch",
+      "theme": "karat",
+      "game": true,
+      "createdAt": "2026-10-09T20:14:24.580Z",
+      "palette": "karat"
+    },
+    {
+      "word": "buku",
+      "slug": "buku",
+      "emoji": "📚",
+      "tagline": "Kekalkan rentetan halaman yang dibaca.",
+      "genre": "tap",
+      "theme": "karat",
+      "game": true,
+      "createdAt": "2026-10-09T20:14:25.144Z",
+      "palette": "karat"
+    },
+    {
+      "word": "roket",
+      "slug": "roket",
+      "emoji": "🚀",
+      "tagline": "Tangkap bahan api, capai orbit.",
+      "genre": "catch",
+      "theme": "solar",
+      "game": true,
+      "createdAt": "2026-10-09T20:14:25.673Z",
+      "palette": "solar"
     }
   ]
 }

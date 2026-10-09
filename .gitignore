@@ -24,6 +24,10 @@ dumps/
 data/
 *.log
 
+# ─── Cloudflare Wrangler state (tempatan) ─────────────────────
+# Cache/KV/DO miniflare daripada `wrangler dev`; dijana semula, jangan commit.
+.wrangler/
+
 # ─── Artifak tetap ───────────────────────────────────────────
 # Salinan statik yang tidak perlu dalam kawalan versi.
 Tukuk-Os.html

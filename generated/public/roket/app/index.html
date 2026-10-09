@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>roket — Tukuk Satu Kata</title>
+<meta name="description" content="Mini-app bertema roket, dijana automatik oleh Tukuk-OS.">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif;min-height:100vh;
+    display:grid;place-items:center;padding:24px;background:var(--bg);color:var(--fg)}
+  .card{width:min(520px,100%);background:var(--soft);border:1px solid #ffffff14;border-radius:20px;
+    padding:28px;box-shadow:0 20px 60px #0006}
+  h1{margin:0 0 4px;font-size:28px} h1 .em{margin-right:8px}
+  .tag{opacity:.7;margin:0 0 20px;font-size:14px}
+  .big{font-size:64px;text-align:center;margin:8px 0;font-weight:800}
+  .row{display:flex;gap:12px;margin-top:16px}
+  button{flex:1;cursor:pointer;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:700;
+    background:var(--accent);color:#0b0b0b;transition:transform .06s}
+  button:active{transform:scale(.96)}
+  button.ghost{background:#ffffff18;color:var(--fg)}
+  .list{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:#ffffff12;border-radius:999px;padding:6px 12px;font-size:13px}
+  .foot{margin-top:22px;font-size:12px;opacity:.55;text-align:center}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>var CFG = {"word":"roket","slug":"roket","emoji":"🚀","tagline":"Tangkap bahan api, capai orbit.","genre":"catch","palette":{"name":"solar","bg":"#0f172a","fg":"#e2e8ff","accent":"#f59e0b","soft":"#1e293b"}};</script>
+<script type="module">
+import { h, render } from 'https://esm.sh/preact@10.24.3';
+import htm from 'https://esm.sh/htm@3.1.1';
+import { useState, useEffect } from 'https://esm.sh/preact@10.24.3/hooks';
+const html = htm.bind(h);
+
+// terapkan tema daripada CFG
+const r = document.documentElement.style;
+r.setProperty('--bg', CFG.palette.bg);
+r.setProperty('--fg', CFG.palette.fg);
+r.setProperty('--accent', CFG.palette.accent);
+r.setProperty('--soft', CFG.palette.soft);
+
+const KEY = 'satukata:' + CFG.slug;
+
+function App() {
+  const [count, setCount] = useState(() => Number(localStorage.getItem(KEY)) || 0);
+  const [log, setLog] = useState(() => JSON.parse(localStorage.getItem(KEY + ':log') || '[]'));
+  useEffect(() => { localStorage.setItem(KEY, String(count)); }, [count]);
+  useEffect(() => { localStorage.setItem(KEY + ':log', JSON.stringify(log.slice(0, 20))); }, [log]);
+
+  const tap = () => { setCount((c) => c + 1); setLog((l) => [new Date().toLocaleTimeString(), ...l]); };
+  const reset = () => { if (confirm('Set semula?')) { setCount(0); setLog([]); } };
+
+  return html`<div class="card">
+    <h1><span class="em">${CFG.emoji}</span>${CFG.word}</h1>
+    <p class="tag">${CFG.tagline || 'Sentuh untuk mengumpul — data disimpan lokal (offline-first).'}</p>
+    <div class="big">${count}</div>
+    <div class="row">
+      <button onClick=${tap}>Kumpul ${CFG.emoji}</button>
+      <button class="ghost" onClick=${reset}>Reset</button>
+    </div>
+    <div class="list">${log.slice(0, 8).map((x, i) => html`<span class="chip" key=${i}>${x}</span>`)}</div>
+    <div class="foot">Dijana oleh <a href="../../">Tukuk-OS • Satu Kata</a> — game tersedia di <a href="../game/">/game</a>.</div>
+  </div>`;
+}
+render(html`<${App}/>`, document.getElementById('root'));
+</script>
+</body>
+</html>
