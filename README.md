@@ -106,6 +106,7 @@ sudo ./deploy/build-iso.sh
    npm run update                            # sama, tapi perlu root
    ```
    Aliran kerja baharu: **commit + push dari mesin dev → VPS self-pull** (cron, atau picu serta-merta di atas). `data/`, `.env`, `node_modules` TIDAK dilacak git (`.gitignore`) → `merge --ff-only` kekal bersih (working tree tak dicemari runtime). `git reset --hard origin/main` semasa setup mengekalkan fail untracked. ⚠️ **Jangan lagi rsync fail terlacak** ke `/opt/tukuk-os` — itu mencemarkan tree & `auto-update` akan `langkau` (demi keselamatan).
+   > **`auto-update.sh` kini cekap:** tiada commit baharu → keluar serta-merta; ada commit → `npm install` **hanya bila `package.json`/`package-lock.json` benar-benar berubah** (elak muat turun binary native berat seperti onnxruntime ~300MB yang boleh *hang* pada rangkaian perlahan), kemudian `systemctl restart tukuk-os` untuk muat kod baru. Jadi cron kata (`generated/`) & tukar kod/README **tidak** pernah pikul `npm install` harian.
 
 ---
 
