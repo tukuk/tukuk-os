@@ -43,6 +43,17 @@
       "game": true,
       "createdAt": "2026-10-09T20:14:25.673Z",
       "palette": "solar"
+    },
+    {
+      "word": "ikan",
+      "slug": "ikan",
+      "emoji": "🐟",
+      "tagline": "Akuarium mini: kumpul ikan berwarna.",
+      "genre": "catch",
+      "theme": "hijau",
+      "game": true,
+      "createdAt": "2026-10-09T20:37:02.184Z",
+      "palette": "hijau"
     }
   ]
 }
