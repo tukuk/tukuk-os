@@ -446,19 +446,109 @@ class MockClient {
 
 const mockClientInstance = new MockClient();
 
+// ── Klien Meilisearch SEBENAR (pakej `meilisearch`) ──────────────────────────
+// SEBELUM ini, `client` yang dieksport ialah mock in-memory semata-mata. Akibat:
+// carian runtime, grounding AI Sembang (/ask) dan MCP `tukuk_search` HANYA nampak
+// ~puluhan artikel seed, BUKAN korpus crawl sebenar (puluh ribu dokumen) yang
+// sudah pun ada di Meilisearch — dan hasil crawler ditulis ke mock lalu lesap
+// setiap reboot.
+//
+// Sekarang kita guna klien sebenar, dengan mock sebagai SANDARAN AUTOMATIK bila
+// Meilisearch tak dapat dicapai (ralat rangkaian / index belum sedia). Jadi
+// tapak tidak mungkin menjadi lebih teruk daripada sebelum ini; worst case =
+// kelakuan lama.
+let realClient = null;
+try {
+  const { Meilisearch } = require('meilisearch');
+  realClient = new Meilisearch({
+    host: config.meili.host,
+    apiKey: config.meili.apiKey,
+    requestTimeout: config.meili.timeout
+  });
+} catch (err) {
+  console.warn('[meili] pakej meilisearch gagal dimuat — guna mock sahaja:', err.message);
+}
+
+const INDEX_METHODS = [
+  'search', 'getStats', 'getDocument', 'getDocuments',
+  'addDocuments', 'updateDocuments', 'deleteDocument', 'deleteDocuments',
+  'deleteAllDocuments', 'getSettings', 'updateSettings'
+];
+
+// Bungkus satu index: cuba Meilisearch sebenar; kalau throw, jatuh ke mock.
+function wrapIndex(name) {
+  if (!realClient) return mockClientInstance.index(name);
+  const real = realClient.index(name);
+  const fb = mockClientInstance.index(name);
+  const hybrid = { indexUid: name, _real: real, _fallback: fb };
+  for (const method of INDEX_METHODS) {
+    hybrid[method] = async (...args) => {
+      try {
+        return await real[method](...args);
+      } catch (err) {
+        console.warn(`[meili] ${name}.${method} gagal (${err.message}) — sandaran mock`);
+        return fb[method](...args);
+      }
+    };
+  }
+  return hybrid;
+}
+
+const client = {
+  index: (name) => wrapIndex(name),
+  async getIndex(name) {
+    return realClient ? realClient.getIndex(name) : mockClientInstance.getIndex(name);
+  },
+  async getIndexes() {
+    return realClient ? realClient.getIndexes() : mockClientInstance.getIndexes();
+  },
+  async createIndex(name, options) {
+    return realClient ? realClient.createIndex(name, options) : mockClientInstance.createIndex(name);
+  },
+  async health() {
+    return realClient ? realClient.health() : mockClientInstance.health();
+  },
+  async waitForTask(taskUid) {
+    return realClient ? realClient.waitForTask(taskUid) : { taskUid, status: 'succeeded' };
+  },
+  tasks: {
+    async waitForTask(taskUid) {
+      return realClient ? realClient.waitForTask(taskUid) : { taskUid, status: 'succeeded' };
+    }
+  }
+};
+
 async function ensureIndex({ logger = console } = {}) {
   const name = config.indexName;
-  const idx = mockClientInstance.index(name);
-  logger.log(`[meili] index sedia (in-memory mock): "${name}" (${idx.documents.size} dokumen)`);
+  const idx = client.index(name);
+  if (!realClient) {
+    logger.log(`[meili] index mock (tiada klien sebenar): "${name}"`);
+    return idx;
+  }
+  try {
+    const stats = await realClient.index(name).getStats();
+    logger.log(`[meili] index SEBENAR tersambung: "${name}" (${stats.numberOfDocuments} dokumen)`);
+  } catch (err) {
+    // Index belum wujud → cipta + terap tetapan supaya crawler mula guna.
+    try {
+      const created = await realClient.createIndex(name, { primaryKey: 'id' });
+      await realClient.waitForTask(created.taskUid).catch(() => {});
+      const task = await realClient.index(name).updateSettings(settings());
+      await realClient.waitForTask(task.taskUid).catch(() => {});
+      logger.log(`[meili] index "${name}" dicipta + tetapan diterapkan.`);
+    } catch (err2) {
+      logger.warn(`[meili] tak dapat sedia index sebenar (${err2.message}) — sandaran mock aktif.`);
+    }
+  }
   return idx;
 }
 
 async function health() {
-  return mockClientInstance.health();
+  return client.health();
 }
 
 module.exports = {
-  client: mockClientInstance,
+  client,
   ensureIndex,
   health,
   settings,
