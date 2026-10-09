@@ -204,14 +204,32 @@ async function ask(question, { limit } = {}) {
 
   let answer = '';
   let model = provider.currentModel();
+  let method = 'llm';
   let rejected = [];
 
-  // Fast mode: skip LLM, return extractive answer immediately
-  if (config.brain.fastMode && !selfQuestion) {
+  const backend = await provider.activeBackend();
+  // Ekstraktif serta-merta bila: tiada LLM langsung, ATAU Ollama + mod laju (bukan soalan kendiri).
+  const useExtractive = backend.kind === 'none' || (backend.kind === 'ollama' && config.brain.fastMode && !selfQuestion);
+
+  if (useExtractive) {
     const extracted = hits.length > 0 ? extractiveAnswer(query, hits) : { answer: '', method: 'none' };
     answer = extracted.answer;
+    method = extracted.method;
     model = 'extractive (no LLM)';
+  } else if (backend.kind === 'cloud') {
+    try {
+      const out = await provider.generateCloud(backend, prompt, {
+        system, temperature: config.brain.temperature, maxTokens: numPredict, topP: config.brain.topP
+      });
+      const text = String(out?.response || '').trim();
+      model = out?._model || backend.model;
+      if (isEcho(text, prompt)) rejected.push({ model, reason: 'output tidak koheren (mengulang arahan)' });
+      else answer = text;
+    } catch (error) {
+      rejected.push({ model: backend.model, reason: error.message });
+    }
   } else {
+    // Ollama (dipilih eksplisit) — rantaian failover seperti biasa.
     for (const candidate of config.brain.chain) {
       let output;
       try {
@@ -220,15 +238,12 @@ async function ask(question, { limit } = {}) {
         rejected.push({ model: candidate, reason: error.message });
         continue;
       }
-
       const text = String(output?.response || '').trim();
       model = candidate;
-
       if (isEcho(text, prompt)) {
         rejected.push({ model: candidate, reason: 'output tidak koheren (mengulang arahan)' });
         continue;
       }
-
       answer = text;
       break;
     }
@@ -236,14 +251,14 @@ async function ask(question, { limit } = {}) {
 
   const sources = buildSources(hits);
 
-  // Semua model ditolak — jana jawapan ekstraktif terus daripada sumber.
-  let method = 'llm';
+  // Tiada jawapan daripada LLM (gagal/offline/tiada model) → jatuhkan ke ekstraktif.
   if (!answer) {
     const extracted = hits.length > 0
       ? extractiveAnswer(query, hits)
       : { answer: '', method: 'none' };
     answer = extracted.answer;
     method = extracted.method;
+    model = 'extractive (no LLM)';
   }
 
   if (!answer) {

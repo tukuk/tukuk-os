@@ -132,6 +132,17 @@ function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Loloskan karakter HTML supaya kandungan pengguna (title/author/excerpt)
+// tidak boleh menyuntik skrip (XSS) ke dalam templat.
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 module.exports = {
   assertPublicUrl,
   isPrivateAddress,
@@ -141,5 +152,6 @@ module.exports = {
   contentHash,
   truncate,
   decodeEntities,
-  safeError
+  safeError,
+  escapeHtml
 };

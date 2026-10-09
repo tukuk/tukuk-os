@@ -22,7 +22,9 @@ const fallback = require('./fallback');
 const nasa = require('./nasa');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
-const { safeError, truncate } = require('./util');
+const { safeError, truncate, escapeHtml } = require('./util');
+const { assertPublicUrl } = require('./util');
+const auth = require('./auth');
 const blogRedirects = require('./blog-redirects');
 const { exec } = require('child_process');
 
@@ -109,7 +111,7 @@ app.use(express.static(PUBLIC_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'studio'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
@@ -129,6 +131,42 @@ for (const [alias, name] of Object.entries(PAGE_ALIASES)) {
 }
 
 app.get("/test", (req, res) => res.send("OK"));
+
+// Halaman HASIL carian — SPA yang sama dengan index.html, tetapi pada URL
+// berasingan. Ini memisahkan permukaan iklan: `/` = dashboard kandungan original
+// (layak AdSense), `/cari` = hasil carian pihak ketiga (KOSONG iklan, mematuhi
+// dasar Google "no ads on web-search result pages").
+app.get('/cari', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'), (error) => {
+    if (error) res.status(404).json({ error: 'Halaman tidak dijumpai', path: req.originalUrl });
+  });
+});
+
+// Proksi imej luar — untuk lightbox & Tukuk Studio (/editor).
+// Same-origin = canvas tidak "tainted", export/edge filter boleh jalan.
+app.get('/api/image', limiter.search, async (req, res) => {
+  const targetUrl = String(req.query.url || '').trim();
+  if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
+    return res.status(400).json({ error: 'Parameter url (http/https) diperlukan' });
+  }
+  try {
+    await assertPublicUrl(targetUrl); // sekat SSRF alamat dalaman
+    const upstream = await fetch(targetUrl, {
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TukukOSBot/2.1; +https://tukuk.org)' }
+    });
+    if (!upstream.ok) return res.status(502).json({ error: `Remote responded ${upstream.status}` });
+    const ct = upstream.headers.get('content-type') || '';
+    if (!/^image\//i.test(ct)) return res.status(415).json({ error: `Bukan imej (${ct || 'unknown'})` });
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    if (buf.byteLength > 15 * 1024 * 1024) return res.status(413).json({ error: 'Imej terlalu besar (max 15MB)' });
+    res.set('Content-Type', ct);
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(buf);
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal proksi imej', details: safeError(error) });
+  }
+});
 
 app.use((req, res, next) => {
   const startedAt = process.hrtime.bigint();
@@ -252,13 +290,7 @@ app.get('/ask', limiter.search, async (req, res) => {
   }
 
   const health = await brain.health();
-  if (!health.online) {
-    return res.status(503).json({
-      error: 'Brain engine is unreachable',
-      detail: `Ollama is not responding at ${config.brain.ollamaHost}. Tukuk-OS can still search — use /search.`,
-      network: net.snapshot()
-    });
-  }
+  // Jangan blok walaupun Ollama mati — rag.ask akan guna cloud (jika ada kunci) atau jawapan ekstraktif.
 
   try {
     const offline = !net.snapshot().internet;
@@ -269,11 +301,13 @@ app.get('/ask', limiter.search, async (req, res) => {
       sources: answer.sources.length,
       offline
     });
+    const backendName = health.cloud ? health.provider : (health.online ? 'ollama' : 'extractive');
     res.json({
       question,
       answer: answer.answer,
       mode: answer.mode,
       model: answer.model,
+      provider: backendName,
       sources: answer.sources,
       tookMs: answer.tookMs,
       cached: Boolean(answer.cached),
@@ -290,7 +324,9 @@ app.get('/brain', async (req, res) => {
   const [health, network] = await Promise.all([brain.health(), net.check()]);
   res.json({
     enabled: config.brain.enabled,
-    provider: 'ollama',
+    provider: health.cloud ? health.provider : (health.online ? 'ollama' : 'extractive'),
+    cloud: Boolean(health.cloud),
+    extractiveOnly: Boolean(health.extractiveOnly),
     host: config.brain.ollamaHost,
     chain: config.brain.chain,
     activeModel: health.model,
@@ -464,10 +500,10 @@ app.get('/blog', (req, res) => {
     const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
     html += `
     <div class="post-card">
-      <h2><a href="/blog/${encodeURIComponent(post.slug)}">${post.title}</a></h2>
-      <div class="meta">${postDate} &middot; Author: ${post.author || 'Fevian Donald'}</div>
-      <p>${post.excerpt}</p>
-      ${post.tags && post.tags.length ? `<div class="tags">${post.tags.map(t => `<span class="tag">#${t}</span>`).join('')}</div>` : ''}
+      <h2><a href="/blog/${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a></h2>
+      <div class="meta">${postDate} &middot; Author: ${escapeHtml(post.author || 'Fevian Donald')}</div>
+      <p>${escapeHtml(post.excerpt)}</p>
+      ${post.tags && post.tags.length ? `<div class="tags">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
     </div>`;
   }
 
@@ -672,7 +708,7 @@ app.get('/learn', (req, res) => {
       if (!post) continue;
       lessonNo += 1;
       html += `
-      <li><a href="/blog/${encodeURIComponent(post.slug)}">${post.title}</a><span class="ex">${post.excerpt || ''}</span></li>`;
+      <li><a href="/blog/${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a><span class="ex">${escapeHtml(post.excerpt || '')}</span></li>`;
     }
     html += `
     </ol>`;
@@ -701,6 +737,12 @@ app.get('/blog/:slug', (req, res) => {
   const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
   const renderedContent = renderMarkdown(post.content);
 
+  // Nilai lolos-HTML untuk mengelakkan XSS dalam kepala/meta & badan.
+  const eTitle = escapeHtml(post.title);
+  const eTitleAttr = escapeHtml(post.title);
+  const eExcerptAttr = escapeHtml(post.excerpt || '');
+  const eAuthor = escapeHtml(post.author || 'Fevian Donald');
+
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -718,26 +760,26 @@ app.get('/blog/:slug', (req, res) => {
       "name": "Tukuk-OS",
       "url": "https://tukuk.org"
     }
-  });
+  }).replace(/</g, '\\u003c');
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${post.title} &mdash; Tukuk-OS</title>
-<meta name="description" content="${post.excerpt.replace(/"/g, '&quot;')}">
+<title>${eTitle} &mdash; Tukuk-OS</title>
+<meta name="description" content="${eExcerptAttr}">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Tukuk-OS">
-<meta property="og:title" content="${post.title.replace(/"/g, '&quot;')}">
-<meta property="og:description" content="${post.excerpt.replace(/"/g, '&quot;')}">
+<meta property="og:title" content="${eTitleAttr}">
+<meta property="og:description" content="${eExcerptAttr}">
 <meta property="og:url" content="https://tukuk.org/blog/${encodeURIComponent(post.slug)}">
 <meta property="og:image" content="https://tukuk.org/og.png">
-<meta property="article:published_time" content="${post.createdAt}">
-<meta property="article:author" content="${(post.author || 'Fevian Donald').replace(/"/g, '&quot;')}">
+<meta property="article:published_time" content="${escapeHtml(post.createdAt)}">
+<meta property="article:author" content="${eAuthor}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${post.title.replace(/"/g, '&quot;')}">
-<meta name="twitter:description" content="${post.excerpt.replace(/"/g, '&quot;')}">
+<meta name="twitter:title" content="${eTitleAttr}">
+<meta name="twitter:description" content="${eExcerptAttr}">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 <link rel="canonical" href="https://tukuk.org/blog/${encodeURIComponent(post.slug)}">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -752,8 +794,8 @@ app.get('/blog/:slug', (req, res) => {
 <div class="wrap">
   <header>
     <a href="/blog" class="back-link">&larr; Back to all articles</a>
-    <h1>${post.title}</h1>
-    <div class="meta">Published: ${postDate} &middot; Author: ${post.author || 'Fevian Donald'}</div>
+    <h1>${eTitle}</h1>
+    <div class="meta">Published: ${postDate} &middot; Author: ${eAuthor}</div>
     <nav>
       <a href="/">Home</a>
       <a href="/explore">Explore</a>
@@ -781,7 +823,7 @@ app.get('/blog/:slug', (req, res) => {
     <article>
       ${renderedContent}
       ${adUnit(config.adsense.slotInArticle, 'in-article')}
-      ${post.tags && post.tags.length ? `<div class="tags" style="margin-top:28px; padding-top:16px; border-top:1px solid var(--line);">${post.tags.map(t => `<span class="tag">#${t}</span>`).join('')}</div>` : ''}
+      ${post.tags && post.tags.length ? `<div class="tags" style="margin-top:28px; padding-top:16px; border-top:1px solid var(--line);">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
     </article>
     ${adUnit(config.adsense.slotBottom, 'bottom')}
   </main>
@@ -986,6 +1028,52 @@ app.get('/radio', limiter.search, async (req, res) => {
   }
 });
 
+// Carian ASET Creative Commons — Wikimedia Commons (semua gambar berlesen bebas/CC).
+// Direka untuk Tab "CC Aset" di Studio: setiap hasil SAH diedit & dieksport,
+// jadi tiada isu hak cipta bila pengguna hantar gambar ke Tukuk Studio.
+app.get('/cc', limiter.search, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.json({ hits: [], provider: 'Wikimedia Commons' });
+  const startedAt = Date.now();
+  try {
+    const params = new URLSearchParams({
+      action: 'query', format: 'json', generator: 'search',
+      gsrsearch: q, gsrnamespace: '6', gsrlimit: '48',
+      prop: 'imageinfo', iiprop: 'url|extmetadata|size|mime', iiurlwidth: '640',
+    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const upstream = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Tukuk-OS/1.0 (search; +https://tukuk.org)' },
+    });
+    clearTimeout(timeout);
+    const j = await upstream.json();
+    const pages = j && j.query && j.query.pages ? Object.values(j.query.pages) : [];
+    const stripTags = (s) => String(s || '').replace(/<[^>]+>/g, '').trim();
+    const hits = pages
+      .sort((a, b) => (a.index || 0) - (b.index || 0))
+      .map((p) => {
+        const ii = (p.imageinfo && p.imageinfo[0]) || {};
+        const md = ii.extmetadata || {};
+        return {
+          title: String(p.title || '').replace(/^File:/, ''),
+          url: ii.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title || '')}`,
+          thumb: ii.thumburl || ii.url,
+          full: ii.url,
+          width: ii.width, height: ii.height, mime: ii.mime || '',
+          license: stripTags((md.LicenseShortName && md.LicenseShortName.value) || (md.License && md.License.value) || 'CC'),
+          author: stripTags((md.Artist && md.Artist.value)).slice(0, 80),
+          source: 'Wikimedia Commons',
+        };
+      })
+      .filter((h) => h.thumb && /^image\//i.test(h.mime));
+    res.json({ hits, provider: 'Wikimedia Commons (Creative Commons)', total: hits.length, tookMs: Date.now() - startedAt });
+  } catch (error) {
+    res.status(502).json({ error: 'CC search failed', details: safeError(error) });
+  }
+});
+
 // Cadangan automatik (autocomplete) untuk kotak carian di laman depan
 app.get('/suggest', limiter.search, async (req, res) => {
   const q = String(req.query.q || '').trim();
@@ -1009,10 +1097,8 @@ app.get('/api/reader', limiter.search, async (req, res) => {
   }
 
   try {
-    const parsed = new URL(targetUrl);
-    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname.startsWith('192.168.') || parsed.hostname.startsWith('10.')) {
-      return res.status(403).json({ ok: false, error: 'Access to internal address is blocked' });
-    }
+    // Sekat SSRF: selesaikan DNS dan tolak alamat dalaman/tertempatan.
+    const parsed = await assertPublicUrl(targetUrl);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
@@ -1492,16 +1578,84 @@ app.get('/admin', (req, res) => {
 });
 
 // Admin API
-app.post('/api/admin/verify-pin', (req, res) => {
-  const pin = req.body && String(req.body.pin || '').trim();
-  const validPin = String(store.getSetting('adminPin', process.env.ADMIN_PIN || 'tukuk123')).trim();
-  if (pin && pin === validPin) {
-    return res.json({ ok: true });
-  }
-  return res.status(401).json({ ok: false, error: 'Invalid PIN' });
+// ── Pentadbir: login e-mel + WebAuthn passkey ────────────────────────────────
+// Hanya SATU e-mel dibenarkan (config.admin.email). Yang lain ditolak.
+const adminLoginLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 5 * 60 * 1000, max: 20, keyPrefix: 'adminlogin:' })
+  : (req, res, next) => next();
+
+// Konfigurasi awam untuk UI login (e-mel dibenarkan, ada passkey?, RP config).
+app.get('/api/admin/auth/config', (req, res) => {
+  res.json(auth.publicConfig());
 });
 
-app.get('/api/admin/status', async (req, res) => {
+// Langkah 1 daftar passkey: sahkan e-mel + kata laluan bootstrap, dapat cabaran.
+app.post('/api/admin/auth/register/start', adminLoginLimiter, auth.requireAllowedEmail, (req, res) => {
+  const password = String((req.body && req.body.password) || '');
+  if (!auth.checkBootstrapPassword(password)) {
+    return res.status(401).json({ error: 'Kata laluan bootstrap tidak sah.' });
+  }
+  auth.startRegistration(req.body.email)
+    .then((options) => res.json(options))
+    .catch((error) => res.status(500).json({ error: 'Gagal memulakan pendaftaran', details: safeError(error) }));
+});
+
+// Langkah 2 daftar: sahkan attestasi, simpan passkey, keluarkan sesi.
+app.post('/api/admin/auth/register/finish', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
+  try {
+    const credential = req.body && req.body.credential;
+    if (!credential) return res.status(400).json({ error: 'Kredential diperlukan' });
+    const result = await auth.finishRegistration(req.body.email, credential);
+    const token = auth.issueSession(req.body.email);
+    res.json({ ok: true, registered: result, token });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: 'Pendaftaran passkey gagal', details: safeError(error) });
+  }
+});
+
+// Langkah 1 login: sahkan e-mel, dapat cabaran authenticasi (passkey).
+app.post('/api/admin/auth/login/start', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
+  try {
+    if (!auth.passkeys().length) {
+      return res.json({ status: 'needs-setup' });
+    }
+    const options = await auth.startAuthentication(req.body.email);
+    res.json({ status: 'ok', options });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal memulakan login', details: safeError(error) });
+  }
+});
+
+// Langkah 2 login: sahkan assertasi passkey, keluarkan token sesi.
+app.post('/api/admin/auth/login/finish', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
+  try {
+    const credential = req.body && req.body.credential;
+    if (!credential) return res.status(400).json({ error: 'Kredential diperlukan' });
+    const token = await auth.finishAuthentication(req.body.email, credential);
+    res.json({ ok: true, token });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ ok: false, error: 'Login passkey gagal', details: safeError(error) });
+  }
+});
+
+// Logout: batalkan sesi semasa.
+app.post('/api/admin/auth/logout', (req, res) => {
+  auth.revokeSession((req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
+  res.json({ ok: true });
+});
+
+// Senarai & buang passkey (perlu sesi sah).
+app.get('/api/admin/auth/passkeys', auth.requireAdmin, (req, res) => {
+  res.json({ passkeys: auth.passkeys().map((k) => ({ id: k.id, label: k.label, addedAt: k.addedAt })) });
+});
+
+app.post('/api/admin/auth/passkeys/remove', auth.requireAdmin, (req, res) => {
+  const id = String((req.body && req.body.id) || '');
+  if (!id) return res.status(400).json({ error: 'id diperlukan' });
+  res.json(auth.removePasskey(id));
+});
+
+app.get('/api/admin/status', auth.requireAdmin, async (req, res) => {
   try {
     const stats = await index.getStats();
     res.json({
@@ -1518,7 +1672,23 @@ app.get('/api/admin/status', async (req, res) => {
   }
 });
 
-app.get('/api/admin/settings', (req, res) => {
+app.get('/api/public/settings', (req, res) => {
+  res.json({
+    adsEnabled: Boolean(store.getSetting('adsEnabled', false)),
+    adsClient: store.getSetting('adsClient', 'ca-pub-8954948214333501'),
+    adsSlotTop: store.getSetting('adsSlotTop', ''),
+    adsSlotBottom: store.getSetting('adsSlotBottom', ''),
+    msAdsEnabled: Boolean(store.getSetting('msAdsEnabled', false)),
+    msAdsTagId: store.getSetting('msAdsTagId', ''),
+    bgMode: store.getSetting('bgMode', 'default'),
+    customBgUrl: store.getSetting('customBgUrl', ''),
+    siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
+    siteTagline: store.getSetting('siteTagline', 'Free web search engine — inverted index, word highlighting, faceted filters')
+  });
+});
+
+app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
+  const rawKey = String(store.getSetting('aiApiKey', '') || '');
   res.json({
     // Google Ads
     adsEnabled: Boolean(store.getSetting('adsEnabled', false)),
@@ -1534,9 +1704,10 @@ app.get('/api/admin/settings', (req, res) => {
     // Custom Themes & Wallpaper
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
-    // AI Configuration
+    // AI Configuration — jangan pulangkan kunci sebenar, hanya status tersimpan
     aiProvider: store.getSetting('aiProvider', 'gemini'),
-    aiApiKey: store.getSetting('aiApiKey', ''),
+    aiApiKeySet: Boolean(rawKey),
+    aiApiKeyMasked: rawKey ? `${rawKey.slice(0, 4)}…${rawKey.slice(-4)}` : '',
     aiModel: store.getSetting('aiModel', 'gemini-2.5-flash'),
     ollamaUrl: store.getSetting('ollamaUrl', 'http://127.0.0.1:11434'),
     ollamaModel: store.getSetting('ollamaModel', 'llama3.2'),
@@ -1548,7 +1719,7 @@ app.get('/api/admin/settings', (req, res) => {
   });
 });
 
-app.post('/api/admin/settings', (req, res) => {
+app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   const b = req.body || {};
   // Google Ads
   if (typeof b.adsEnabled !== 'undefined') store.setSetting('adsEnabled', Boolean(b.adsEnabled));
@@ -1564,9 +1735,9 @@ app.post('/api/admin/settings', (req, res) => {
   // Themes & Custom Background
   if (typeof b.bgMode !== 'undefined') store.setSetting('bgMode', String(b.bgMode));
   if (typeof b.customBgUrl !== 'undefined') store.setSetting('customBgUrl', String(b.customBgUrl));
-  // AI Settings
+  // AI Settings — hanya kemas kini kunci jika nilai baharu diberikan (jangan kosongkan tersirat)
   if (typeof b.aiProvider !== 'undefined') store.setSetting('aiProvider', String(b.aiProvider));
-  if (typeof b.aiApiKey !== 'undefined') store.setSetting('aiApiKey', String(b.aiApiKey));
+  if (typeof b.aiApiKey !== 'undefined' && String(b.aiApiKey).trim()) store.setSetting('aiApiKey', String(b.aiApiKey).trim());
   if (typeof b.aiModel !== 'undefined') store.setSetting('aiModel', String(b.aiModel));
   if (typeof b.ollamaUrl !== 'undefined') store.setSetting('ollamaUrl', String(b.ollamaUrl));
   if (typeof b.ollamaModel !== 'undefined') store.setSetting('ollamaModel', String(b.ollamaModel));
@@ -1575,17 +1746,28 @@ app.post('/api/admin/settings', (req, res) => {
   if (typeof b.siteTagline !== 'undefined') store.setSetting('siteTagline', String(b.siteTagline));
   if (typeof b.defaultTheme !== 'undefined') store.setSetting('defaultTheme', String(b.defaultTheme));
   if (typeof b.defaultAccent !== 'undefined') store.setSetting('defaultAccent', String(b.defaultAccent));
-  if (b.adminPin && String(b.adminPin).trim()) store.setSetting('adminPin', String(b.adminPin).trim());
   res.json({ ok: true });
 });
 
-// Admin Web Terminal
-app.post('/api/admin/terminal', (req, res) => {
+// Admin Web Terminal — hanya pentadbir bersesi. Sekatan arahan musnah diperketat.
+app.post('/api/admin/terminal', auth.requireAdmin, (req, res) => {
   const cmd = req.body && String(req.body.cmd || '').trim();
   if (!cmd) return res.status(400).json({ error: 'Command is required' });
 
-  // Disallow destructive commands
-  if (cmd.match(/\brm\s+(-rf|\/)\b/i) || cmd.match(/>\s*\/dev\/sd/i) || cmd.includes(':(){ :|:& };:')) {
+  // Sekat arahan pemadam/perosak dan helah rantai shell yang jelas berbahaya.
+  const dangerous = [
+    /\brm\b/i,
+    /\brmdir\b/i,
+    /\bmkfs\b/i,
+    /\bdd\b.*of=\/dev/i,
+    /:\(\)\s*\{\s*:\|:&\s*\};:/,
+    /\bshutdown\b/i,
+    /\breboot\b/i,
+    /\bdeluser\b/i,
+    /\buserdel\b/i,
+    />\s*\/dev\/sd/i
+  ];
+  if (dangerous.some((re) => re.test(cmd))) {
     return res.status(403).json({ error: 'Command blocked for server safety' });
   }
 
@@ -1602,7 +1784,7 @@ app.post('/api/admin/terminal', (req, res) => {
 });
 
 // Admin AI Content Generation
-app.post('/api/admin/ai/generate', async (req, res) => {
+app.post('/api/admin/ai/generate', auth.requireAdmin, async (req, res) => {
   const prompt = req.body && String(req.body.prompt || '').trim();
   if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
@@ -1644,10 +1826,16 @@ app.post('/api/admin/ai/generate', async (req, res) => {
 });
 
 // In-app Reader View Proxy (opens articles inside Tukuk-OS without leaving)
+// Lindung daripada SSRF: hanya URL awam yang dibenarkan.
 app.get('/api/proxy/reader', async (req, res) => {
   const targetUrl = String(req.query.url || '').trim();
-  if (!targetUrl || !targetUrl.startsWith('http')) {
+  if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
     return res.status(400).send('Invalid URL');
+  }
+  try {
+    await assertPublicUrl(targetUrl);
+  } catch {
+    return res.status(403).send('Access to internal address is blocked');
   }
   try {
     const resp = await fetch(targetUrl, {
@@ -1658,18 +1846,18 @@ app.get('/api/proxy/reader', async (req, res) => {
     });
     let html = await resp.text();
     // Inject base href so images & relative links work
-    const baseTag = `<base href="${targetUrl}">`;
+    const baseTag = `<base href="${escapeHtml(targetUrl)}">`;
     html = html.replace(/<head[^>]*>/i, `$&${baseTag}`);
     // Disable intrusive redirects inside iframe
     html = html.replace(/window\.top\.location/g, 'window.self.location');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (err) {
-    res.status(500).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#111;color:#eee;padding:40px;text-align:center;"><h2>Could not load preview</h2><p>This website prevents in-frame preview.</p><a href="${targetUrl}" target="_blank" style="color:#3b82f6;font-size:1.1rem;">Open in new window &rarr;</a></body></html>`);
+    res.status(500).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#111;color:#eee;padding:40px;text-align:center;"><h2>Could not load preview</h2><p>This website prevents in-frame preview.</p><a href="${escapeHtml(targetUrl)}" target="_blank" style="color:#3b82f6;font-size:1.1rem;">Open in new window &rarr;</a></body></html>`);
   }
 });
 
-app.post('/api/admin/crawl', async (req, res) => {
+app.post('/api/admin/crawl', auth.requireAdmin, async (req, res) => {
   const { url, mode, maxPages } = req.body || {};
   if (!url) return res.status(400).json({ error: 'URL is required' });
   try {
@@ -1698,11 +1886,11 @@ app.post('/api/admin/crawl', async (req, res) => {
   }
 });
 
-app.get('/api/admin/posts', (req, res) => {
+app.get('/api/admin/posts', auth.requireAdmin, (req, res) => {
   res.json(store.getAllPosts(100));
 });
 
-app.post('/api/admin/posts', (req, res) => {
+app.post('/api/admin/posts', auth.requireAdmin, (req, res) => {
   const { title, content, slug, tags, author } = req.body || {};
   if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
   const post = store.createPost({ title, content, slug, tags, author });
@@ -1728,7 +1916,7 @@ app.post('/api/admin/posts', (req, res) => {
   res.json(post);
 });
 
-app.delete('/api/admin/posts/:id', (req, res) => {
+app.delete('/api/admin/posts/:id', auth.requireAdmin, (req, res) => {
   const success = store.deletePost(req.params.id);
   res.json({ ok: success });
 });

@@ -345,14 +345,45 @@ async function searchRadioStations(q, skip = 0) {
   return { hits, nextSkip };
 }
 
+const FALLBACK_STATIONS = [
+  { type: 'radio', title: 'BBC World Service', url: 'https://stream.live.vc.bbcwebcast.co.uk/bbc_world_service', country: 'United Kingdom', codec: 'MP3', bitrate: 128, tags: ['news', 'global', 'talk'], description: 'United Kingdom · MP3 · 128 kbps · news, global' },
+  { type: 'radio', title: 'Jazz Radio', url: 'https://jazz-webradio.net/jazz', country: 'France', codec: 'MP3', bitrate: 192, tags: ['jazz', 'smooth', 'classic'], description: 'France · MP3 · 192 kbps · jazz, smooth' },
+  { type: 'radio', title: 'Classical Piano', url: 'https://stream.classicalradio.com/classical_piano', country: 'United States', codec: 'MP3', bitrate: 128, tags: ['classical', 'piano', 'relax'], description: 'United States · MP3 · 128 kbps · classical, piano' },
+  { type: 'radio', title: 'Ambient Sleeping Pill', url: 'https://radiostream.ambientsleepingpill.com/stream', country: 'Sweden', codec: 'OGG', bitrate: 96, tags: ['ambient', 'chill', 'sleep'], description: 'Sweden · OGG · 96 kbps · ambient, chill' },
+  { type: 'radio', title: 'Electronic Dance Experience', url: 'https://hd.clubbersradio.com/live.mp3', country: 'Germany', codec: 'MP3', bitrate: 320, tags: ['edm', 'dance', 'club'], description: 'Germany · MP3 · 320 kbps · edm, dance' },
+  { type: 'radio', title: 'Smooth Lounge', url: 'https://lounge.stream.popradiodigital.com/lounge.mp3', country: 'Italy', codec: 'MP3', bitrate: 192, tags: ['lounge', 'chillout', 'jazz'], description: 'Italy · MP3 · 192 kbps · lounge, chill' }
+];
+
+const FALLBACK_MUSIC = [
+  { type: 'music', title: 'Blinding Lights', artist: 'The Weeknd', album: 'After Hours', artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/7b/0a/61/7b0a6125-f481-f2f6-3c22-b4c6e1c26b20/20UMGIM08914.rgb.jpg/400x400bb.jpg', preview: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/c3/86/e8/c386e828-5a02-5339-16e7-142b94f1be0e/mza_10795551221764654065.128.m4a', duration: '3:20', url: 'https://music.apple.com', description: 'The Weeknd · After Hours' },
+  { type: 'music', title: 'Shape of You', artist: 'Ed Sheeran', album: '÷', artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/65/1c/3e/651c3e38-6b87-2856-b049-598bc6cd1120/00602557434771.rgb.jpg/400x400bb.jpg', preview: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/21/51/9d/21519d0a-9d97-3932-5a44-884812a64c57/mza_7223048037168864756.128.m4a', duration: '3:53', url: 'https://music.apple.com', description: 'Ed Sheeran · ÷' },
+  { type: 'music', title: 'Levitating', artist: 'Dua Lipa', album: 'Future Nostalgia', artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/91/b6/4f/91b64f43-410a-3a56-829d-4729f63567df/20UMGIM10787.rgb.jpg/400x400bb.jpg', preview: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/d5/4b/32/d54b321a-e9fa-f273-02f8-06a1c8f41334/mza_16386375089312686161.128.m4a', duration: '3:23', url: 'https://music.apple.com', description: 'Dua Lipa · Future Nostalgia' },
+  { type: 'music', title: 'Starboy', artist: 'The Weeknd ft. Daft Punk', album: 'Starboy', artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/71/66/9e/71669e26-2582-7e87-0b1a-289568936997/16UMGIM36766.rgb.jpg/400x400bb.jpg', preview: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/2a/3b/bc/2a3bbc8e-7e90-c1e4-3996-276941604a11/mza_9519139049443573887.128.m4a', duration: '3:50', url: 'https://music.apple.com', description: 'The Weeknd · Starboy' },
+  { type: 'music', title: 'Bad Guy', artist: 'Billie Eilish', album: 'When We All Fall Asleep, Where Do We Go?', artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/a5/d5/08/a5d508e6-993d-425b-2a62-63b782987114/19UMGIM03058.rgb.jpg/400x400bb.jpg', preview: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/8b/6e/f8/8b6ef844-3d12-1f7c-54a7-02058ea8d867/mza_4812304958046714088.128.m4a', duration: '3:14', url: 'https://music.apple.com', description: 'Billie Eilish · When We All Fall Asleep' },
+  { type: 'music', title: 'As It Was', artist: 'Harry Styles', album: "Harry's House", artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/4a/1c/29/4a1c29e6-0be6-f368-e56d-e089201a0709/22UMGIM26786.rgb.jpg/400x400bb.jpg', preview: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview112/v4/c7/2b/9d/c72b9dc9-e48f-cd32-58e1-512595f9c470/mza_10332851443657757049.128.m4a', duration: '2:47', url: 'https://music.apple.com', description: "Harry Styles · Harry's House" }
+];
+
 async function searchMusic(query, { offset = 0 } = {}) {
   const q = String(query || '').trim();
-  if (!q) return { hits: [], total: 0, query: q, nextOffset: 0 };
   const key = `music:${q}:${offset}`;
   const cached = CACHE.get(key);
   if (cached && Date.now() - cached.at <= CACHE_TTL) return cached.value;
-  const { hits, nextOffset } = await searchMusicItunes(q, offset);
-  const result = { hits, total: hits.length, query: q, provider: 'itunes', nextOffset };
+
+  let hits = [];
+  let nextOffset = 0;
+  try {
+    const res = await searchMusicItunes(q || 'pop', offset);
+    hits = res.hits;
+    nextOffset = res.nextOffset;
+  } catch {
+    hits = FALLBACK_MUSIC.filter(m => !q || m.title.toLowerCase().includes(q.toLowerCase()) || m.artist.toLowerCase().includes(q.toLowerCase()));
+  }
+
+  if (!hits || hits.length === 0) {
+    hits = FALLBACK_MUSIC;
+  }
+
+  const result = { hits, total: hits.length, query: q, provider: 'itunes/fallback', nextOffset };
   if (hits.length >= 3) CACHE.set(key, { at: Date.now(), value: result });
   return result;
 }
@@ -362,9 +393,21 @@ async function searchRadio(query, { skip = 0 } = {}) {
   const key = `radio:${q}:${skip}`;
   const cached = CACHE.get(key);
   if (cached && Date.now() - cached.at <= CACHE_TTL) return cached.value;
-  const { hits, nextSkip } = await searchRadioStations(q, skip);
-  const result = { hits, total: hits.length, query: q, provider: 'radio-browser', nextSkip };
-  if (hits.length >= 3) CACHE.set(key, { at: Date.now(), value: result });
+
+  let hits = [];
+  try {
+    const res = await searchRadioStations(q, skip);
+    hits = res.hits;
+  } catch {
+    hits = FALLBACK_STATIONS.filter(s => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.tags.some(t => t.toLowerCase().includes(q.toLowerCase())));
+  }
+
+  if (!hits || hits.length === 0) {
+    hits = FALLBACK_STATIONS;
+  }
+
+  const result = { hits, total: hits.length, query: q, provider: 'radio-browser/fallback', nextSkip: 0 };
+  CACHE.set(key, { at: Date.now(), value: result });
   return result;
 }
 

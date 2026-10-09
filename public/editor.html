@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tukuk Studio — Editor Gambar</title>
+<meta name="description" content="Editor gambar dalam pelayar: pencahayaan, potongan, teks, lukisan berus, batch proses, exports PNG/JPG. Sebahagian daripada Tukuk-OS.">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<style>
+  :root { --bg:#0b0d12; --panel:#12151d; --panel2:#171b25; --line:#262b38; --text:#e8ecf3; --muted:#8b94a5; --accent:#4c8dff; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f4f6fa; --panel:#fff; --panel2:#eef1f6; --line:#d7dce6; --text:#17202f; --muted:#5b6474; } }
+  html[data-theme="light"] { --bg:#f4f6fa; --panel:#fff; --panel2:#eef1f6; --line:#d7dce6; --text:#17202f; --muted:#5b6474; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .logo { font-weight:800; font-size:1.02rem; color:var(--accent); white-space:nowrap; }
+  .logo small { color:var(--muted); font-weight:500; }
+  button, .btn { background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:7px 12px; cursor:pointer; font-size:.86rem; font-family:inherit; }
+  button:hover, .btn:hover { border-color:var(--accent); color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  button.primary:hover { color:#fff; opacity:.9; }
+  button.on { border-color:var(--accent); color:var(--accent); background:rgba(76,141,255,.12); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  input[type=text], input[type=url], input[type=color] { background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:7px 10px; font-size:.86rem; }
+  input[type=url] { min-width:220px; flex:1; }
+  input[type=number] { background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:7px 8px; font-size:.85rem; width:100%; }
+  .sticker-row { display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 2px; }
+  .sticker-row button { font-size:18px; padding:4px 7px; line-height:1; min-width:0; }
+  .spacer { flex:1; }
+  main { display:flex; flex:1; min-height:0; }
+  aside { width:250px; flex:none; background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:12px; }
+  aside h3 { margin:14px 0 8px; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  aside h3:first-child { margin-top:2px; }
+  .row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+  .row button { flex:1; padding:7px 4px; }
+  .slider { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  .slider label { width:74px; font-size:.8rem; color:var(--muted); flex:none; }
+  .slider input[type=range] { flex:1; accent-color:var(--accent); }
+  .slider output { width:32px; text-align:right; font-size:.76rem; color:var(--muted); }
+  .stage { flex:1; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; background:
+    radial-gradient(circle at 50% 40%, rgba(76,141,255,.06), transparent 60%); }
+  #cv { max-width:94%; max-height:94%; box-shadow:0 14px 50px rgba(0,0,0,.45); border-radius:6px; touch-action:none; }
+  .drop-hint { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--muted); pointer-events:none; }
+  .drop-hint.big { font-size:2.6rem; }
+  #cropLayer { position:absolute; inset:0; cursor:crosshair; }
+  #cropRect { position:absolute; border:2px dashed var(--accent); background:rgba(76,141,255,.12); display:none; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--panel); border:1px solid var(--accent); padding:10px 18px; border-radius:10px; font-size:.88rem; opacity:0; transition:opacity .25s; pointer-events:none; z-index:50; max-width:80vw; }
+  .toast.show { opacity:1; }
+  #cv.brush { cursor:crosshair; }
+  .foot-status { font-size:.75rem; color:var(--muted); }
+  @media (max-width:760px) { aside { width:180px; } input[type=url] { min-width:120px; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">✂ Tukuk Studio <small>editor gambar</small></span>
+  <button id="openBtn">📂 Buka fail</button>
+  <input type="file" id="fileInput" accept="image/*" hidden>
+  <input type="url" id="urlInput" placeholder="Tampal URL imej…">
+  <button id="urlBtn">Muat URL</button>
+  <span class="spacer"></span>
+  <button id="undoBtn" title="Ctrl+Z">⟲ Undo</button>
+  <button id="redoBtn" title="Ctrl+Y">⟳ Redo</button>
+  <button id="resetBtn">↺ Reset</button>
+  <button id="viewOriginal" title="Tahan untuk banding dengan gambar asal">👁 Asal</button>
+  <button id="projSave" title="Muat turun fail projek (.json) — boleh dibuka semula nanti">💾 Projek</button>
+  <button id="projOpen" title="Buka fail projek yang pernah disimpan">📂 Buka Projek</button>
+  <input type="file" id="projInput" accept=".json,application/json" hidden>
+  <input type="file" id="batchInput" accept="image/*" multiple hidden>
+  <button id="batchBtn" title="Amaikan penapis sekarang ke banyak gambar sekaligus, muat turun semua">⚡ Batch</button>
+  <button id="exportPng" class="primary">⬇ PNG</button>
+  <button id="exportJpg" class="primary">⬇ JPG</button>
+  <a class="btn" href="/editor-video" title="Editor video — trim, penapis, teks, eksport WebM">🎬 Video</a>
+  <a class="btn" href="/studio" title="Tukuk Studio home">◂ Studio</a>
+  <a class="btn" href="/" title="Back to search">⌕ Carian</a>
+</header>
+
+<main>
+  <aside>
+    <h3>Suai aras</h3>
+    <div class="slider"><label>Kecerahan</label><input type="range" id="f-bright" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Kontras</label><input type="range" id="f-contrast" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Saturasi</label><input type="range" id="f-saturate" min="0" max="250" value="100"><output>100</output></div>
+    <div class="slider"><label>Sepia</label><input type="range" id="f-sepia" min="0" max="100" value="0"><output>0</output></div>
+    <div class="slider"><label>Grayscale</label><input type="range" id="f-gray" min="0" max="100" value="0"><output>0</output></div>
+    <div class="slider"><label>Hue</label><input type="range" id="f-hue" min="0" max="360" value="0"><output>0</output></div>
+    <div class="slider"><label>Blur</label><input type="range" id="f-blur" min="0" max="12" value="0"><output>0</output></div>
+    <div class="slider"><label>Invert</label><input type="range" id="f-invert" min="0" max="100" value="0"><output>0</output></div>
+    <div class="slider"><label>Suhu</label><input type="range" id="f-temp" min="-100" max="100" value="0"><output>0</output></div>
+    <div class="slider"><label>Vignette</label><input type="range" id="f-vig" min="0" max="100" value="0"><output>0</output></div>
+    <div class="row"><button id="presetNone">Original</button><button id="presetMono">Hitam putih</button><button id="presetWarm">Hangat</button><button id="presetCool">Sejuk</button></div>
+
+    <h3>Geometri</h3>
+    <div class="row"><button id="rotL">⟲ 90°</button><button id="rotR">90° ⟳</button></div>
+    <div class="row"><button id="flipH">↔ Flip</button><button id="flipV">↕ Flip</button></div>
+    <div class="slider"><label>Luruskan°</label><input type="range" id="straight" min="-45" max="45" value="0"><output>0</output></div>
+    <div class="row"><button id="straightApply">✓ Guna pusingan</button></div>
+    <div class="row"><button id="cropToggle">✂ Crop</button><button id="cropApply" hidden>✓ Guna crop</button></div>
+    <h3>Nisbah crop</h3>
+    <div class="row"><button data-ratio="0" class="on">Bebas</button><button data-ratio="1">1:1</button><button data-ratio="0.75">4:5</button><button data-ratio="0.5625">9:16</button></div>
+    <div class="row"><button data-ratio="1.3333">4:3</button><button data-ratio="1.7778">16:9</button><button id="cropClear" hidden>✕ Kosongkan</button></div>
+
+    <h3>Teks</h3>
+    <input type="text" id="textInput" placeholder="Teks baharu…" style="width:100%; margin-bottom:6px;">
+    <div class="row" style="align-items:center;">
+      <input type="color" id="textColor" value="#ffffff" title="Warna" style="width:44px; padding:2px;">
+      <div class="slider" style="flex:1; margin:0;"><label style="width:34px;">Saiz</label><input type="range" id="textSize" min="2" max="18" value="7"></div>
+    </div>
+    <div class="row"><button id="textAdd">＋ Tambah teks</button><button id="textDel">🗑 Buang</button></div>
+    <div class="foot-status">Seret teks pada kanvas untuk alihkan. Klik teks untuk pilih.</div>
+
+    <h3>Lukisan & Anotasi ✏️</h3>
+    <div class="row">
+      <button data-tool="pen" class="on">✏️ Pen</button>
+      <button data-tool="line">─ Garis</button>
+      <button data-tool="arrow">➤ Panah</button>
+    </div>
+    <div class="row">
+      <button data-tool="rect">▭ Segi</button>
+      <button data-tool="ellipse">◯ Elips</button>
+      <button id="shapeFill" title="Isi bentuk dengan warna">▨ Isi</button>
+    </div>
+    <div class="row"><button id="brushToggle">✏️ Aktifkan lukis</button><button id="brushClear">🗑 Padam lukisan</button></div>
+    <div class="row" style="align-items:center;">
+      <input type="color" id="brushColor" value="#ff3b30" title="Warna berus" style="width:44px; padding:2px;">
+      <div class="slider" style="flex:1; margin:0;"><label style="width:34px;">Saiz</label><input type="range" id="brushSize" min="1" max="24" value="4"></div>
+    </div>
+    <div class="sticker-row" id="emojiRow"></div>
+    <div class="foot-status">Pilih alat → “Aktifkan lukis” → seret pada gambar. Goresan &amp; bentuk kekal ketika eksport.</div>
+
+    <h3>Kesan pantas</h3>
+    <div class="row"><button id="fxSharpen" title="Konvolusi penajaman">🔆 Tajamkan</button><button id="fxPixel" title="Mosaik/pikselatkan gambar">▦ Mosaik</button></div>
+
+    <h3>Bingkai &amp; Saiz</h3>
+    <div class="row" style="align-items:center;">
+      <div class="slider" style="flex:1; margin:0;"><label style="width:44px;">Lebar</label><input type="range" id="borderW" min="0" max="300" value="0"><output>0</output></div>
+      <input type="color" id="borderC" value="#ffffff" title="Warna bingkai" style="width:44px; padding:2px;">
+    </div>
+    <div class="row"><button id="borderApply">🖼 Tambah bingkai</button></div>
+    <div class="row" style="align-items:center;">
+      <input type="number" id="rw" placeholder="Lebar px" style="flex:1;" min="1">
+      <input type="number" id="rh" placeholder="Tinggi px" style="flex:1;" min="1">
+    </div>
+    <div class="row"><button id="resizeApply">⤢ Saiz semula</button><button id="resizeHalf">➖ 50%</button><button id="fillDims">↺ Ikut asal</button></div>
+
+    <h3>Eksport</h3>
+    <div class="slider"><label>Bucu bulat</label><input type="range" id="exportCorner" min="0" max="50" value="0"><output>0</output></div>
+
+    <h3>Pra-set gaya CapCut</h3>
+    <div class="row"><button id="presetDrama">Drama</button><button id="presetVivid">Vivid</button><button id="presetFaded">Faded</button><button id="presetNoir">Noir</button></div>
+  </aside>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="640" height="400" hidden></canvas>
+    <div id="cropLayer" hidden><div id="cropRect"></div></div>
+    <div class="drop-hint" id="dropHint">
+      <div class="big">🖼️</div>
+      <div>Drag &amp; jatuh gambar ke sini, atau <b>📂 Buka fail</b> / tampal URL di atas.</div>
+      <div class="foot-status">Semua suntingan berlaku dalam pelayar anda — tiada gambar dihantar ke mana-mana.</div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d'), stage = $('stage');
+const MAX_DIM = 3000, EXPORT_CAP = 4200;
+
+let bitmap = null;                 // canvas/offscreen imej asas (transform sudah dibakar)
+let lastSrc = null;                // URL asal gambar (untuk rujukan dalam projek)
+let texts = [];                    // {id,text,color,sizeN,x,y} ternormalisasi (pusat) pada output
+let selectedText = null;
+let strokes = [];                  // goresan/bentuk: pen {type,color,sizeP,f:[x,y…]}; bentuk {type,color,sizeP,fill,x1,y1,x2,y2} dalam piksel bitmap
+let cropMode = false;
+let brushMode = false;
+let drawTool = 'pen';             // pen | line | arrow | rect | ellipse
+let shapeFill = false;           // isi bentuk dengan warna
+let drawingShape = null;        // bentuk sementara semasa seret
+let cropRatio = 0;                 // 0 = bebas; jika tidak: lebar/tinggi dalam ruang piksel bitmap
+const history = [];                // snapshot {bitmap, texts}
+const future = [];
+
+const F = { bright:100, contrast:100, saturate:100, sepia:0, gray:0, hue:0, blur:0, invert:0, temp:0, vig:0 };
+
+// Salin goresan/bentuk tanpa bergantung pada struktur (pen ada .f, bentuk ada x1..y2).
+function cloneStroke(s) { const o = { ...s }; if (Array.isArray(s.f)) o.f = s.f.slice(); return o; }
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function filterString(heightPx) {
+  const parts = [
+    `brightness(${F.bright}%)`, `contrast(${F.contrast}%)`, `saturate(${F.saturate}%)`,
+    `sepia(${F.sepia}%)`, `grayscale(${F.gray}%)`, `hue-rotate(${F.hue}deg)`, `invert(${F.invert}%)`
+  ];
+  if (F.blur > 0) parts.push(`blur(${(F.blur / 100 * heightPx).toFixed(1)}px)`);
+  return parts.join(' ');
+}
+
+// ── Muat imej (fail / URL / ?img=) ──
+function loadImageFromSrc(src, label) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    pushHistory();
+    bitmap = c; texts = []; strokes = []; selectedText = null; lastSrc = src;
+    resetFilters();
+    cv.hidden = false; $('dropHint').style.display = 'none';
+    draw();
+    fillDims();
+    toast(`${label || 'Imej'} dimuat: ${c.width}×${c.height}`);
+  };
+  img.onerror = () => toast('Gagal memuat imej — cuba melalui pautan /api/image atau fail lokal.');
+  img.src = src;
+}
+
+function proxySrc(u) {
+  try {
+    const x = new URL(u, location.href);
+    if (x.origin === location.origin) return x.href;
+    return '/api/image?url=' + encodeURIComponent(x.href);
+  } catch { return u; }
+}
+
+// ── Render预览 ──
+function draw() {
+  if (!bitmap) return;
+  scheduleLocal();
+  const bw = bitmap.width, bh = bitmap.height;
+  const box = stage.getBoundingClientRect();
+  const scale = Math.min((box.width - 40) / bw, (box.height - 40) / bh);
+  cv.width = Math.max(1, Math.round(bw * scale));
+  cv.height = Math.max(1, Math.round(bh * scale));
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.save();
+  if ('filter' in ctx) ctx.filter = filterString(cv.height);
+  ctx.drawImage(bitmap, 0, 0, cv.width, cv.height);
+  ctx.restore();
+  applyPostFx(ctx, cv.width, cv.height);
+  drawStrokes(ctx, cv.width / bw, cv.height / bh, bh);
+  for (const t of texts) drawText(t, t.id === selectedText);
+}
+
+// Kesan pasca di atas bitmap terfilter: suhu (per-channel) + vignette.
+function applyPostFx(g, w, h) {
+  if (F.temp !== 0) {
+    const t = F.temp / 100;
+    g.save();
+    g.globalCompositeOperation = 'overlay';
+    g.globalAlpha = Math.min(0.4, Math.abs(t) * 0.32);
+    g.fillStyle = t > 0 ? '#ff8a3d' : '#3d8aff';
+    g.fillRect(0, 0, w, h);
+    g.restore();
+  }
+  if (F.vig > 0) {
+    const gr = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.32, w / 2, h / 2, Math.max(w, h) * 0.78);
+    gr.addColorStop(0, 'rgba(0,0,0,0)');
+    gr.addColorStop(1, `rgba(0,0,0,${(F.vig / 100 * 0.85).toFixed(3)})`);
+    g.save(); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.restore();
+  }
+}
+
+// Goresan/bentuk — store dalam piksel bitmap, scale masa gambar.
+// bmpH = tinggi bitmap rujukan (current bitmap, atau naturalHeight dalam batch).
+function drawStrokes(g, sx, sy, bmpH) {
+  if (!strokes.length) return;
+  g.save();
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const s of strokes) {
+    const lw = Math.max(1, (s.sizeP / 100 * bmpH) * sy);
+    g.lineWidth = lw; g.strokeStyle = s.color; g.fillStyle = s.color;
+    const type = s.type || 'pen';
+    if (type === 'pen') {
+      g.beginPath();
+      for (let i = 0; i < s.f.length; i += 2) {
+        const x = s.f[i] * sx, y = s.f[i + 1] * sy;
+        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+    } else if (type === 'line' || type === 'arrow') {
+      const ax = s.x1 * sx, ay = s.y1 * sy, bx = s.x2 * sx, by = s.y2 * sy;
+      g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+      if (type === 'arrow') {
+        const ang = Math.atan2(by - ay, bx - ax), hl = Math.max(lw * 3, 12);
+        g.beginPath(); g.moveTo(bx, by);
+        g.lineTo(bx - hl * Math.cos(ang - Math.PI / 6), by - hl * Math.sin(ang - Math.PI / 6));
+        g.lineTo(bx - hl * Math.cos(ang + Math.PI / 6), by - hl * Math.sin(ang + Math.PI / 6));
+        g.closePath(); g.fill();
+      }
+    } else if (type === 'rect' || type === 'ellipse') {
+      const x = Math.min(s.x1, s.x2) * sx, y = Math.min(s.y1, s.y2) * sy;
+      const w = Math.abs(s.x2 - s.x1) * sx, h = Math.abs(s.y2 - s.y1) * sy;
+      g.beginPath();
+      if (type === 'rect') g.rect(x, y, w, h); else g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+      if (s.fill) g.fill();
+      g.stroke();
+    }
+  }
+  g.restore();
+}
+
+// ── Lukis/bentuk: terus pada kanvas (koordinat piksel bitmap) ──
+let activeStroke = null;
+function bmpPoint(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width * bitmap.width, (e.clientY - r.top) / r.height * bitmap.height];
+}
+cv.addEventListener('pointerdown', (e) => {
+  if (!bitmap || !brushMode || cropMode) return;
+  e.preventDefault();
+  pushHistory(); // sebelum objek masuk — supaya Ctrl+Z buang goresan/bentuk ini
+  const [px, py] = bmpPoint(e);
+  const base = { type: drawTool, color: $('brushColor').value, sizeP: Number($('brushSize').value) };
+  if (drawTool === 'pen') activeStroke = { ...base, f: [px, py, px, py] }; // titik tunggal = dot
+  else activeStroke = { ...base, fill: shapeFill, x1: px, y1: py, x2: px, y2: py };
+  strokes.push(activeStroke);
+  cv.setPointerCapture(e.pointerId);
+  draw();
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!activeStroke) return;
+  const [px, py] = bmpPoint(e);
+  if (activeStroke.type === 'pen') activeStroke.f.push(px, py);
+  else { activeStroke.x2 = px; activeStroke.y2 = py; }
+  draw();
+});
+cv.addEventListener('pointerup', () => { activeStroke = null; });
+cv.addEventListener('pointerleave', () => { activeStroke = null; });
+
+function drawText(t, showBox) {
+  const px = Math.max(8, t.sizeN / 100 * cv.height);
+  ctx.save();
+  ctx.font = `800 ${px}px system-ui, "Segoe UI", Roboto, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = px * 0.18;
+  ctx.fillStyle = t.color;
+  ctx.fillText(t.text, t.x * cv.width, t.y * cv.height);
+  ctx.shadowBlur = 0;
+  const m = ctx.measureText(t.text);
+  t._rect = { l: t.x * cv.width - m.width / 2 - 6, r: t.x * cv.width + m.width / 2 + 6,
+              t: t.y * cv.height - px / 2 - 4, b: t.y * cv.height + px / 2 + 4 };
+  if (showBox) {
+    ctx.strokeStyle = 'rgba(76,141,255,.9)'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+    ctx.strokeRect(t._rect.l, t._rect.t, t._rect.r - t._rect.l, t._rect.b - t._rect.t);
+  }
+  ctx.restore();
+}
+
+// ── Sejarah undo/redo ──
+function snap() {
+  const c = document.createElement('canvas'); c.width = bitmap.width; c.height = bitmap.height;
+  c.getContext('2d').drawImage(bitmap, 0, 0);
+  return { bitmap: c, texts: texts.map(t => ({ ...t })), strokes: strokes.map(cloneStroke) };
+}
+function pushHistory() {
+  if (!bitmap) return;
+  history.push(snap());
+  if (history.length > 10) history.shift();
+  future.length = 0;
+  updateHistBtns();
+}
+function restore(s) { bitmap = s.bitmap; texts = s.texts.map(t => ({ ...t })); strokes = (s.strokes || []).map(cloneStroke); selectedText = null; draw(); }
+function undo() { if (!bitmap || !history.length) return; future.push(snap()); restore(history.pop()); updateHistBtns(); }
+function redo() { if (!bitmap || !future.length) return; history.push(snap()); restore(future.pop()); updateHistBtns(); }
+function updateHistBtns() { $('undoBtn').disabled = !history.length; $('redoBtn').disabled = !future.length; }
+
+// ── Bake transform (rotate/flip/crop) ke bitmap ──
+function bake(drawFn, outW, outH) {
+  const c = document.createElement('canvas'); c.width = outW; c.height = outH;
+  drawFn(c.getContext('2d'), c);
+  pushHistory();
+  bitmap = c;
+  draw();
+}
+function rotate90(right) {
+  if (!bitmap) return;
+  bake((g) => {
+    g.translate(bitmap.width, 0);
+    g.rotate(right ? Math.PI / 2 : -Math.PI / 2);
+    g.drawImage(bitmap, 0, 0);
+  }, bitmap.height, bitmap.width);
+}
+function flip(horizontal) {
+  if (!bitmap) return;
+  bake((g) => {
+    if (horizontal) { g.translate(bitmap.width, 0); g.scale(-1, 1); }
+    else { g.translate(0, bitmap.height); g.scale(1, -1); }
+    g.drawImage(bitmap, 0, 0);
+  }, bitmap.width, bitmap.height);
+}
+
+// Luruskan: pusing sebarang sudut, kanvas mengembang (bucu jadi lutsinar → guna PNG).
+function straighten(deg) {
+  if (!bitmap || !deg) return;
+  const rad = deg * Math.PI / 180, w = bitmap.width, h = bitmap.height;
+  const ow = Math.round(Math.abs(w * Math.cos(rad)) + Math.abs(h * Math.sin(rad)));
+  const oh = Math.round(Math.abs(w * Math.sin(rad)) + Math.abs(h * Math.cos(rad)));
+  bake((g) => { g.translate(ow / 2, oh / 2); g.rotate(rad); g.drawImage(bitmap, -w / 2, -h / 2); }, ow, oh);
+  strokes = []; texts = []; selectedText = null; draw(); // overlay tak selari selepas pusing — buang
+  $('straight').value = 0; $('straight').nextElementSibling.textContent = '0';
+  toast(`Diluruskan ${deg}°.`);
+}
+
+// Tajamkan: konvolusi unsharp. Dimensi kekal — overlay dibiarkan.
+function sharpen() {
+  if (!bitmap) return;
+  const w = bitmap.width, h = bitmap.height;
+  let src;
+  try { src = bitmap.getContext('2d').getImageData(0, 0, w, h); }
+  catch { toast('Tak boleh baca piksel (canvas dikunci).'); return; }
+  const s = src.data, out = new Uint8ClampedArray(s);
+  const k = [0, -0.75, 0, -0.75, 4.0, -0.75, 0, -0.75, 0];
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    for (let c = 0; c < 3; c++) {
+      let sum = 0, ki = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sum += s[((y + dy) * w + (x + dx)) * 4 + c] * k[ki++];
+      out[(y * w + x) * 4 + c] = sum;
+    }
+  }
+  bake((g, c2) => g.putImageData(new ImageData(out, c2.width, c2.height), 0, 0), w, h);
+  toast('Ditajamkan.');
+}
+
+// Mosaik: kecilkan lalu besarkan tanpa smoothing (blok piksel).
+function pixelate() {
+  if (!bitmap) return;
+  const w = bitmap.width, h = bitmap.height;
+  const small = document.createElement('canvas');
+  small.width = Math.max(1, Math.round(w / 18)); small.height = Math.max(1, Math.round(h / 18));
+  small.getContext('2d').drawImage(bitmap, 0, 0, small.width, small.height);
+  bake((g) => { g.imageSmoothingEnabled = false; g.drawImage(small, 0, 0, w, h); }, w, h);
+  toast('Dipikselatkan (mosaik).');
+}
+
+// Bingkai: tambah pad mengelilingi gambar (dimensi berubah → overlay dibuang).
+function addBorder() {
+  if (!bitmap) return;
+  const px = Number($('borderW').value) || 0;
+  if (px <= 0) { toast('Naikkan slider lebar bingkai dahulu.'); return; }
+  const color = $('borderC').value, w = bitmap.width, h = bitmap.height;
+  bake((g) => { g.fillStyle = color; g.fillRect(0, 0, w + px * 2, h + px * 2); g.drawImage(bitmap, px, px); }, w + px * 2, h + px * 2);
+  strokes = []; texts = []; selectedText = null; draw();
+  toast(`Bingkai ${px}px ditambah.`);
+}
+
+function doResize(nw, nh) {
+  if (!bitmap) return;
+  nw = Math.round(nw); nh = Math.round(nh);
+  if (!nw || !nh || nw < 1 || nh < 1) { toast('Masuk lebar & tinggi yang sah.'); return; }
+  nw = Math.min(EXPORT_CAP, nw); nh = Math.min(EXPORT_CAP, nh);
+  bake((g) => g.drawImage(bitmap, 0, 0, nw, nh), nw, nh);
+  strokes = []; texts = []; selectedText = null; draw();
+  fillDims();
+  toast(`Disaizkan ke ${nw}×${nh}.`);
+}
+function fillDims() { if (bitmap) { $('rw').value = bitmap.width; $('rh').value = bitmap.height; } }
+
+function addEmoji(ch) {
+  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
+  pushHistory();
+  const t = { id: textId++, text: ch, color: '#ffffff', sizeN: 14, x: 0.5, y: 0.5 };
+  texts.push(t); selectedText = t.id; draw();
+}
+
+// ── Crop ──
+const cropLayer = $('cropLayer'), cropRect = $('cropRect');
+let cropStart = null;
+function setCropMode(on) {
+  if (on && brushMode) setBrushMode(false);
+  cropMode = on;
+  $('cropToggle').classList.toggle('on', on);
+  $('cropApply').hidden = !on;
+  $('cropClear').hidden = !on;
+  syncCropLayer();
+  cropRect.style.display = 'none';
+}
+function syncCropLayer() {
+  if (!cropMode || !bitmap) { cropLayer.hidden = true; return; }
+  cropLayer.hidden = false;
+  const cr = cv.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  cropLayer.style.inset = '';
+  cropLayer.style.position = 'absolute';
+  cropLayer.style.left = (cr.left - sr.left) + 'px';
+  cropLayer.style.top = (cr.top - sr.top) + 'px';
+  cropLayer.style.width = cr.width + 'px';
+  cropLayer.style.height = cr.height + 'px';
+}
+function cropPointer(ev, kind) {
+  const r = cropLayer.getBoundingClientRect();
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const x = clamp(ev.clientX - r.left, 0, r.width), y = clamp(ev.clientY - r.top, 0, r.height);
+  if (kind === 'down') cropStart = { x, y, w: r, h: r.height };
+  if (!cropStart) return;
+  const px = clamp(ev.clientX - r.left, 0, r.width), py = clamp(ev.clientY - r.top, 0, r.height);
+  let l = Math.min(cropStart.x, px), t0 = Math.min(cropStart.y, py);
+  let w = Math.abs(px - cropStart.x), h = Math.abs(py - cropStart.y);
+  if (cropRatio > 0 && bitmap) {
+    // kekalkan nisbah dalam ruang papar (bitmap mungkin berputar → tukar ratio)
+    const dispRatio = (bitmap.width / bitmap.height) * cropRatio;
+    h = w / dispRatio;
+    if (t0 + h > r.height) { h = r.height - t0; w = h * dispRatio; }
+    if (l + w > r.width) { w = r.width - l; h = w / dispRatio; }
+  }
+  cropRect.style.display = 'block';
+  Object.assign(cropRect.style, { left: l + 'px', top: t0 + 'px', width: w + 'px', height: h + 'px' });
+  cropRect._sel = { l, t: t0, w, h, baseW: r.width, baseH: r.height };
+}
+cropLayer.addEventListener('pointerdown', (e) => { cropLayer.setPointerCapture(e.pointerId); cropPointer(e, 'down'); });
+cropLayer.addEventListener('pointermove', (e) => { if (cropStart) cropPointer(e, 'move'); });
+cropLayer.addEventListener('pointerup', (e) => { cropPointer(e, 'move'); cropStart = null; });
+function applyCrop() {
+  const sel = cropRect._sel;
+  if (!sel || sel.w < 6 || sel.h < 6 || !bitmap) { toast('Seret segi empat crop dahulu.'); return; }
+  const sx = sel.l / sel.baseW * bitmap.width, sy = sel.t / sel.baseH * bitmap.height;
+  const sw = sel.w / sel.baseW * bitmap.width, sh = sel.h / sel.baseH * bitmap.height;
+  bake((g) => g.drawImage(bitmap, sx, sy, sw, sh, 0, 0, Math.round(sw), Math.round(sh)),
+       Math.round(sw), Math.round(sh));
+  texts = []; strokes = []; selectedText = null;
+  setCropMode(false);
+  toast('Crop digunakan.');
+}
+
+// ── Teks: pilih/seret pada kanvas ──
+let dragText = null;
+cv.addEventListener('pointerdown', (e) => {
+  if (!bitmap || cropMode || brushMode) return;
+  const r = cv.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  for (let i = texts.length - 1; i >= 0; i--) {
+    const b = texts[i]._rect;
+    if (b && x >= b.l && x <= b.r && y >= b.t && y <= b.b) {
+      selectedText = texts[i].id; dragText = { id: texts[i].id, dx: 0, dy: 0 };
+      $('textInput').value = texts[i].text; $('textColor').value = texts[i].color;
+      $('textSize').value = Math.round(texts[i].sizeN);
+      draw(); cv.setPointerCapture(e.pointerId); return;
+    }
+  }
+  selectedText = null; draw();
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!dragText || !bitmap) return;
+  const t = texts.find((x) => x.id === dragText.id); if (!t) return;
+  const r = cv.getBoundingClientRect();
+  t.x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  t.y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+  draw();
+});
+cv.addEventListener('pointerup', () => { dragText = null; });
+
+let textId = 1;
+function addText() {
+  const val = $('textInput').value.trim();
+  if (!val || !bitmap) { toast(bitmap ? 'Taip teks dahulu.' : 'Muat gambar dahulu.'); return; }
+  pushHistory();
+  const t = { id: textId++, text: val, color: $('textColor').value, sizeN: Number($('textSize').value), x: 0.5, y: 0.88 };
+  texts.push(t); selectedText = t.id;
+  draw();
+}
+function updateSelected(patch) {
+  const t = texts.find((x) => x.id === selectedText);
+  if (!t) return;
+  Object.assign(t, patch); draw();
+}
+
+// ── Penapis UI ──
+const SLIDER_MAP = { 'f-bright':'bright', 'f-contrast':'contrast', 'f-saturate':'saturate', 'f-sepia':'sepia', 'f-gray':'gray', 'f-hue':'hue', 'f-blur':'blur', 'f-invert':'invert', 'f-temp':'temp', 'f-vig':'vig' };
+for (const [id, key] of Object.entries(SLIDER_MAP)) {
+  const el = $(id);
+  el.addEventListener('input', () => { F[key] = Number(el.value); el.nextElementSibling.textContent = el.value; draw(); });
+}
+function applyPreset(p) {
+  Object.assign(F, { bright:100, contrast:100, saturate:100, sepia:0, gray:0, hue:0, blur:0, invert:0, temp:0, vig:0 }, p);
+  for (const [id, key] of Object.entries(SLIDER_MAP)) { $(id).value = F[key]; $(id).nextElementSibling.textContent = F[key]; }
+  draw();
+}
+function resetFilters() { applyPreset({}); }
+$('presetNone').onclick = () => applyPreset({});
+$('presetMono').onclick = () => applyPreset({ gray:100, contrast:115 });
+$('presetWarm').onclick = () => applyPreset({ sepia:35, saturate:120, bright:105 });
+$('presetCool').onclick = () => applyPreset({ hue:190, saturate:110, bright:102 });
+$('presetDrama').onclick = () => applyPreset({ contrast:140, saturate:125, bright:95 });
+$('presetVivid').onclick = () => applyPreset({ saturate:180, contrast:120 });
+$('presetFaded').onclick = () => applyPreset({ contrast:80, saturate:70, bright:112 });
+$('presetNoir').onclick = () => applyPreset({ gray:100, contrast:150, bright:88 });
+
+// ── Projek: simpan/buka fail .json + auto-persist dalam pelayar ──
+const LS_KEY = 'tukuk-studio-project';
+let localTimer = null;
+function projectJSON() {
+  if (!bitmap) return null;
+  return JSON.stringify({
+    v: 3, savedAt: new Date().toISOString(), src: lastSrc,
+    base: bitmap.toDataURL('image/png'), filter: F,
+    corner: Number($('exportCorner').value) || 0,
+    strokes: strokes.map(cloneStroke),
+    texts: texts.map(({ id, text, color, sizeN, x, y }) => ({ id, text, color, sizeN, x, y }))
+  });
+}
+function scheduleLocal() {
+  clearTimeout(localTimer);
+  localTimer = setTimeout(() => {
+    try {
+      const j = projectJSON();
+      if (j && j.length < 9e6) localStorage.setItem(LS_KEY, j);
+    } catch { /* kuota penuh — simpan manual masih boleh */ }
+  }, 1500);
+}
+function openProject(text) {
+  try {
+    const p = JSON.parse(text);
+    if (!p || !p.base || !(p.v >= 1 && p.v <= 3)) { toast('Fail projek tidak dikenali.'); return; }
+    const img = new Image();
+    img.onload = () => {
+      pushHistory();
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      bitmap = c; lastSrc = p.src || null;
+      texts = (p.texts || []).map((t) => ({ ...t }));
+      strokes = (p.strokes || []).map(cloneStroke);
+      $('exportCorner').value = p.corner || 0;
+      $('exportCorner').nextElementSibling.textContent = p.corner || 0;
+      textId = texts.reduce((m, t) => Math.max(m, t.id || 0), 0) + 1;
+      selectedText = null;
+      cv.hidden = false; $('dropHint').style.display = 'none';
+      if (p.filter) Object.assign(F, p.filter); // pulih nilai slider sebenar (termasuk temp/vig)
+      applyPreset(p.filter || {});
+      toast('Hasil kerja dimuat semula. ⬇ PNG/JPG untuk muat turun.');
+    };
+    img.onerror = () => toast('Imagen dalam projek rosak.');
+    img.src = p.base;
+  } catch (e) { toast('Fail projek tidak sah: ' + e.message); }
+}
+
+// ── Export ──
+function triggerDownload(href, filename) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a); // wajib untuk sesetengah pelayar (Firefox/WebView)
+  a.click();
+  a.remove();
+}
+function exportImage(type) {
+  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
+  const ext = type === 'image/jpeg' ? 'jpg' : 'png';
+  const filename = `tukuk-studio-${Date.now()}.${ext}`;
+  let out;
+  try {
+    const cap = Math.min(1, EXPORT_CAP / Math.max(bitmap.width, bitmap.height));
+    out = document.createElement('canvas');
+    out.width = Math.round(bitmap.width * cap); out.height = Math.round(bitmap.height * cap);
+    const g = out.getContext('2d');
+    if ('filter' in g) g.filter = filterString(out.height);
+    g.drawImage(bitmap, 0, 0, out.width, out.height);
+    g.filter = 'none';
+    applyPostFx(g, out.width, out.height);
+    drawStrokes(g, out.width / bitmap.width, out.height / bitmap.height, bitmap.height);
+    for (const t of texts) {
+      const px = Math.max(8, t.sizeN / 100 * out.height);
+      g.font = `800 ${px}px system-ui, "Segoe UI", Roboto, sans-serif`;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = px * 0.18;
+      g.fillStyle = t.color;
+      g.fillText(t.text, t.x * out.width, t.y * out.height);
+    }
+    applyCornerMask(g, out.width, out.height);
+  } catch (e) {
+    toast('Eksport gagal (canvas dikunci): ' + e.message);
+    return;
+  }
+  const finish = (blob) => {
+    if (blob) {
+      const href = URL.createObjectURL(blob);
+      triggerDownload(href, filename);
+      setTimeout(() => URL.revokeObjectURL(href), 8000);
+      toast(`Dieksport sebagai ${ext.toUpperCase()} (${out.width}×${out.height}).`);
+      return;
+    }
+    // toBlob null = canvas tainted (gambar luar) atau format tak disokong → dataURL fallback
+    try {
+      triggerDownload(out.toDataURL(type, 0.93), filename);
+      toast(`Dieksport (${ext.toUpperCase()}) via dataURL — jika gagal, benarkan download di bar alamat.`);
+    } catch (e) {
+      toast('Eksport gagal: gambar luar perlu dimuat melalui URL proksi (automatik). ' + e.message);
+    }
+  };
+  try {
+    if (out.toBlob) out.toBlob(finish, type, 0.93);
+    else finish(null);
+  } catch (e) { finish(null); }
+}
+
+// Bucu bulat: potong radius daripada alpha (hanya bermakna untuk PNG).
+function applyCornerMask(g, w, h) {
+  const pct = Number($('exportCorner').value) || 0;
+  if (pct <= 0) return;
+  const r = Math.min(pct / 100 * Math.min(w, h) / 2, Math.min(w, h) / 2);
+  g.save();
+  g.globalCompositeOperation = 'destination-in';
+  g.beginPath();
+  g.roundRect(0, 0, w, h, r);
+  g.fill();
+  g.restore();
+}
+
+// ── Wiring header ──
+$('openBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = (e) => {
+  const f = e.target.files[0];
+  if (f) loadImageFromSrc(URL.createObjectURL(f), f.name);
+};
+$('urlBtn').onclick = () => {
+  const u = $('urlInput').value.trim();
+  if (u) loadImageFromSrc(proxySrc(u), 'URL');
+};
+$('rotL').onclick = () => rotate90(false);
+$('rotR').onclick = () => rotate90(true);
+$('flipH').onclick = () => flip(true);
+$('flipV').onclick = () => flip(false);
+$('cropToggle').onclick = () => setCropMode(!cropMode);
+$('cropApply').onclick = applyCrop;
+$('textAdd').onclick = addText;
+$('textDel').onclick = () => { texts = texts.filter((t) => t.id !== selectedText); selectedText = null; draw(); };
+$('textInput').addEventListener('input', () => updateSelected({ text: $('textInput').value }));
+$('textColor').addEventListener('input', () => updateSelected({ color: $('textColor').value }));
+$('textSize').addEventListener('input', () => updateSelected({ sizeN: Number($('textSize').value) }));
+$('undoBtn').onclick = undo;
+$('redoBtn').onclick = redo;
+$('projSave').onclick = () => {
+  const j = projectJSON();
+  if (!j) { toast('Muat gambar dahulu.'); return; }
+  const url = URL.createObjectURL(new Blob([j], { type: 'application/json' }));
+  triggerDownload(url, 'tukuk-studio-projek.json');
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
+  toast('Hasil kerja disimpan sebagai fail projek — buka semula dengan 📂 Buka Projek.');
+};
+$('projOpen').onclick = () => $('projInput').click();
+$('projInput').onchange = (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => openProject(r.result);
+  r.readAsText(f);
+  e.target.value = '';
+};
+$('resetBtn').onclick = () => { resetFilters(); toast('Penapis set semula.'); };
+$('exportPng').onclick = () => exportImage('image/png');
+$('exportJpg').onclick = () => exportImage('image/jpeg');
+
+// ── Alat lukis/bentuk ──
+document.querySelectorAll('[data-tool]').forEach((b) => {
+  b.onclick = () => {
+    drawTool = b.dataset.tool;
+    document.querySelectorAll('[data-tool]').forEach((x) => x.classList.toggle('on', x === b));
+    if (!brushMode) setBrushMode(true);
+  };
+});
+$('shapeFill').onclick = () => { shapeFill = !shapeFill; $('shapeFill').classList.toggle('on', shapeFill); };
+
+// ── Luruskan / kesan pantas / bingkai / saiz ──
+$('straight').addEventListener('input', () => { $('straight').nextElementSibling.textContent = $('straight').value + '°'; });
+$('straightApply').onclick = () => straighten(Number($('straight').value));
+$('fxSharpen').onclick = sharpen;
+$('fxPixel').onclick = pixelate;
+$('borderW').addEventListener('input', () => { $('borderW').nextElementSibling.textContent = $('borderW').value + 'px'; });
+$('borderApply').onclick = addBorder;
+$('resizeApply').onclick = () => doResize(Number($('rw').value), Number($('rh').value));
+$('resizeHalf').onclick = () => { if (bitmap) doResize(bitmap.width / 2, bitmap.height / 2); };
+$('fillDims').onclick = fillDims;
+
+// ── Stiker emoji ──
+['😀','😂','❤️','🔥','✨','🎉','👍','🙌','💯','⭐','🌈','😍','🤩','🥳','😎','🎯'].forEach((ch) => {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = ch;
+  b.onclick = () => addEmoji(ch); $('emojiRow').appendChild(b);
+});
+
+// ── Berus: toggle/clear/corner/ratio wiring ──
+function setBrushMode(on) {
+  brushMode = on;
+  if (on && cropMode) setCropMode(false);
+  $('brushToggle').classList.toggle('on', on);
+  $('brushToggle').textContent = on ? '🛑 Berhenti lukis' : '✏️ Aktifkan lukis';
+  cv.classList.toggle('brush', on);
+}
+$('brushToggle').onclick = () => setBrushMode(!brushMode);
+$('brushClear').onclick = () => {
+  if (!strokes.length) { toast('Tiada lukisan untuk dibuang.'); return; }
+  pushHistory(); strokes = []; draw(); toast('Lukisan dibuang (Ctrl+Z untuk kembalikan).');
+};
+$('exportCorner').addEventListener('input', () => {
+  $('exportCorner').nextElementSibling.textContent = $('exportCorner').value;
+});
+document.querySelectorAll('[data-ratio]').forEach((b) => {
+  b.onclick = () => {
+    cropRatio = Number(b.dataset.ratio) || 0;
+    document.querySelectorAll('[data-ratio]').forEach((x) => x.classList.toggle('on', x === b));
+    cropRect.style.display = 'none'; cropRect._sel = null;
+  };
+});
+$('cropClear').onclick = () => { cropRect.style.display = 'none'; cropRect._sel = null; };
+
+// ── Banding asal: tahan butang ──
+$('viewOriginal').addEventListener('pointerdown', () => {
+  if (!bitmap) return;
+  ctx.save(); ctx.drawImage(bitmap, 0, 0, cv.width, cv.height); ctx.restore();
+});
+$('viewOriginal').addEventListener('pointerup', draw);
+$('viewOriginal').addEventListener('pointerleave', () => { if (bitmap) draw(); });
+
+// ── Batch: penapis + teks + berus sekarang → banyak gambar sekaligus ──
+$('batchBtn').onclick = () => {
+  if (!bitmap) { toast('Muat satu gambar sebagai rujukan dahulu (penapis/teks/berus akan dictrip).'); return; }
+  $('batchInput').click();
+};
+$('batchInput').onchange = async (e) => {
+  const files = [...e.target.files].filter((f) => f.type.startsWith('image/'));
+  e.target.value = '';
+  if (!files.length) return;
+  toast(`Batch: memproses ${files.length} gambar…`);
+  const cfg = { filter: { ...F }, texts: texts.map((t) => ({ ...t })), strokes: strokes.map(cloneStroke), corner: Number($('exportCorner').value) || 0 };
+  let done = 0;
+  for (const f of files) {
+    const url = URL.createObjectURL(f);
+    const oc = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, EXPORT_CAP / Math.max(img.naturalWidth, img.naturalHeight));
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const g = c.getContext('2d');
+          if ('filter' in g) g.filter = filterString(c.height);
+          g.drawImage(img, 0, 0, c.width, c.height);
+          g.filter = 'none';
+          applyPostFx(g, c.width, c.height);
+          drawStrokes(g, c.width / img.naturalWidth, c.height / img.naturalHeight, img.naturalHeight);
+          for (const t of cfg.texts) {
+            const px = Math.max(8, t.sizeN / 100 * c.height);
+            g.font = `800 ${px}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = px * 0.18; g.fillStyle = t.color;
+            g.fillText(t.text, t.x * c.width, t.y * c.height);
+          }
+          if (cfg.corner > 0) {
+            const r = Math.min(cfg.corner / 100 * Math.min(c.width, c.height) / 2, Math.min(c.width, c.height) / 2);
+            g.save(); g.globalCompositeOperation = 'destination-in';
+            g.beginPath(); g.roundRect(0, 0, c.width, c.height, r); g.fill(); g.restore();
+          }
+          resolve(c);
+        } catch { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+    URL.revokeObjectURL(url);
+    if (oc) {
+      const blob = await new Promise((res) => oc.toBlob(res, 'image/png'));
+      if (blob) {
+        const h = URL.createObjectURL(blob);
+        triggerDownload(h, `batch-${done + 1}-${f.name.replace(/\.[a-z]+$/i, '')}.png`);
+        setTimeout(() => URL.revokeObjectURL(h), 15000);
+        done++;
+        await new Promise((r) => setTimeout(r, 400)); // elak Chrome sekat download berturutan
+      }
+    }
+  }
+  toast(`Batch selesai: ${done}/${files.length} gambar dieksport dengan gaya semasa.`);
+};
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !$('textInput').matches(':focus')) { e.preventDefault(); undo(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !$('textInput').matches(':focus')) { e.preventDefault(); redo(); }
+});
+window.addEventListener('resize', () => { draw(); syncCropLayer(); });
+
+// Drag & drop
+stage.addEventListener('dragover', (e) => { e.preventDefault(); });
+stage.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const f = [...(e.dataTransfer.files || [])].find((x) => x.type.startsWith('image/'));
+  if (f) { loadImageFromSrc(URL.createObjectURL(f), f.name); return; }
+  const u = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+  if (u) loadImageFromSrc(proxySrc(u.trim()), 'URL');
+});
+
+// Auto-muat ?img=; kalau tiada, pulih hasil kerja terakhir dari pelayar.
+const p = new URLSearchParams(location.search).get('img');
+if (p) { $('urlInput').value = p; loadImageFromSrc(proxySrc(p), 'Hasil carian'); }
+else {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) openProject(saved);
+  } catch { /* abai */ }
+}
+updateHistBtns();
+})();
+</script>
+</body>
+</html>

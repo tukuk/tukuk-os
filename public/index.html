@@ -185,8 +185,14 @@
   .video-card { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--panel);
     color:var(--text); display:flex; flex-direction:column; }
   .video-card:hover { border-color:var(--accent); }
-  .video-card .ph { position:relative; display:block; background:rgba(128,128,128,.15); }
-  .video-card .ph img { width:100%; height:170px; object-fit:cover; display:block; }
+  .video-card .ph { position:relative; display:flex; align-items:center; justify-content:center; height:170px; background:rgba(128,128,128,.15); font-size:2.5rem; }
+  .video-card .ph img { width:100%; height:100%; object-fit:cover; display:block; }
+  .play-card { cursor: pointer; position: relative; }
+  .play-card:hover .play-overlay { opacity: 1; }
+  .play-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 2.2rem; opacity: 0; transition: opacity 0.2s ease;
+  }
   .video-card .len { position:absolute; right:8px; bottom:8px; background:rgba(0,0,0,.82); color:#fff;
     font-size:.72rem; padding:2px 6px; border-radius:4px; }
   .video-card .body { padding:10px 12px; }
@@ -294,7 +300,13 @@
     object-fit: contain;
     border-radius: 4px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    transform-origin: center;
+    transition: transform .12s ease;
+    cursor: zoom-in;
   }
+  .lb-ctrl { border:1px solid var(--line); background:var(--panel); color:var(--text);
+    min-width:34px; height:30px; border-radius:7px; cursor:pointer; font-size:1rem; line-height:1; }
+  .lb-ctrl:hover { border-color:var(--accent); color:var(--accent); }
 
   /* Themes & Wallpapers Modal */
   .theme-box {
@@ -357,6 +369,22 @@
   .trending-home { text-align:center; padding:26px 0 8px; }
   .trending-home .t-label { display:block; font-size:.9rem; color:var(--muted); margin-bottom:12px; }
   .trending-home .chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+
+  /* Dashboard Studio (laman / — kandungan original, permukaan iklan) */
+  .dashboard { max-width: 960px; margin: 8px auto 0; padding: 8px 20px 40px; }
+  .dashboard[hidden] { display: none; }
+  .d-title { font-size: 1.35rem; font-weight: 800; margin: 22px 0 4px; text-align: center; }
+  .d-sub { color: var(--muted); text-align: center; margin: 0 0 22px; font-size: .95rem; }
+  .d-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+  .d-tile { display: flex; flex-direction: column; gap: 6px; padding: 18px; border: 1px solid var(--line);
+    border-radius: 14px; background: var(--panel); color: var(--text); text-decoration: none; transition: .15s; }
+  .d-tile:hover { border-color: var(--accent); transform: translateY(-2px); text-decoration: none; }
+  .d-tile .ico { font-size: 1.8rem; }
+  .d-tile h3 { margin: 0; font-size: 1.02rem; font-weight: 700; }
+  .d-tile p { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.4; }
+  .d-ad { margin: 26px auto 4px; max-width: 728px; min-height: 90px; border: 1px dashed var(--line);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .78rem; }
+  .d-ad[hidden] { display: none; }
 
   footer { margin:60px 0 40px; padding-top:24px; border-top:1px solid var(--line);
     color:var(--muted); font-size:.9rem; text-align:center; }
@@ -482,6 +510,7 @@
   <a href="/explore">Explore</a>
   <a href="/nasa">NASA</a>
   <a href="/blog">Blog</a>
+  <a href="/studio" style="font-weight:600;">🎛 Studio</a>
   <a href="/docs">Docs</a>
   <a href="/about">About</a>
   <a href="/contact">Contact</a>
@@ -509,12 +538,30 @@
   <div class="tabs" id="tabs">
     <button type="button" data-mode="web" class="on">Web</button>
     <button type="button" data-mode="images">Images</button>
+    <button type="button" data-mode="cc">🧩 CC Aset</button>
     <button type="button" data-mode="videos">Videos</button>
     <button type="button" data-mode="news">News</button>
     <button type="button" data-mode="music">Music</button>
     <button type="button" data-mode="radio">Radio</button>
   </div>
 </header>
+
+<!-- Dashboard Studio — hanya di / (kandungan original; permukaan iklan yang selamat) -->
+<section class="dashboard" id="dashboard" hidden>
+  <h2 class="d-title">🎛 Tukuk Studio — ruang kreatif anda</h2>
+  <p class="d-sub">Cari, edit &amp; belajar — semua dalam pelayar, semua tanpa upload. Pilih satu alat di bawah atau cari di kotak atas.</p>
+  <div class="d-grid">
+    <a class="d-tile" href="/editor"><span class="ico">✂️</span><h3>Image Editor</h3><p>Penapis, anotasi bentuk, berus, stiker emoji, lurus/tajam/mosaik, bingkai, crop nisbah, resize, teks &amp; batch export. 100% lokal.</p></a>
+    <a class="d-tile" href="/editor-video"><span class="ico">🎬</span><h3>Video Editor</h3><p>Trim, penapis warna, putar, nisbah aspek, kelajuan &amp; kapsyen — dirakam ke WebM terus dalam pelayar.</p></a>
+    <a class="d-tile" href="/cari?mode=cc"><span class="ico">🧩</span><h3>CC Asset Search</h3><p>Cari gambar berlesen Creative Commons, terus edit — sah digunakan semula.</p></a>
+    <a class="d-tile" href="/studio"><span class="ico">🎛</span><h3>Studio Hub</h3><p>Katalog semua alat Tukuk Studio dalam satu tempat.</p></a>
+    <a class="d-tile" href="/learn"><span class="ico">🎓</span><h3>Learn 0 → Hero</h3><p>Kursus pembangunan web &amp; enjin carian, percuma.</p></a>
+    <a class="d-tile" href="/blog"><span class="ico">📝</span><h3>Blog &amp; Articles</h3><p>Penulisan asli tentang pencarian, Node, privasi &amp; infrastruktur.</p></a>
+    <a class="d-tile" href="/nasa"><span class="ico">🚀</span><h3>NASA Explorer</h3><p>Gambar astronomi harian, Mars rover &amp; data terbuka NASA.</p></a>
+  </div>
+  <div class="d-ad" id="ad-slot">Ruang iklan — hanya pada halaman kandungan original (/ , /blog, /studio). Halaman hasil carian (/cari) sentiasa bebas iklan.</div>
+  <div class="trending-home" id="dashTrending"></div>
+</section>
 
 <main class="wrap results-area">
   <div class="meta" id="meta" role="status" aria-live="polite" hidden>
@@ -538,6 +585,7 @@
     <a href="/nasa">🚀 NASA Explorer</a>
     <a href="/blog">Blog &amp; Articles</a>
     <a href="/learn">Learn 0 → Hero</a>
+    <a href="/studio">🎛 Tukuk Studio</a>
     <a href="/docs">API Docs</a>
     <a href="/about">About</a>
     <a href="/privacy">Privacy Policy</a>
@@ -555,15 +603,15 @@
 <button class="chat-fab" id="chatFab" title="Chat AI" aria-label="Open AI chat">&#128172;</button>
 <div class="chat-panel" id="chatPanel">
   <div class="chat-header">
-    <span>Chat AI</span>
+    <span>AI Sembang</span>
     <button id="chatClose" aria-label="Close chat">&times;</button>
   </div>
   <div class="chat-body" id="chatBody">
     <div id="chatAnswer" class="chat-answer" hidden></div>
   </div>
   <form class="chat-form" id="chatForm" autocomplete="off">
-    <input type="search" id="chatQ" placeholder="Ask anything&hellip;" aria-label="Chat question" required>
-    <button type="submit">Ask</button>
+    <input type="search" id="chatQ" placeholder="Tanya apa sahaja&hellip;" aria-label="Soalan"></input>
+    <button type="submit">Tanya</button>
   </form>
 </div>
 
@@ -617,14 +665,20 @@
   <div class="vmodal-box img-box" role="dialog" aria-modal="true" aria-labelledby="imgModal-title">
     <div class="vmodal-head">
       <span class="t" id="imgModal-title">Image View</span>
-      <a id="imgModal-download" href="#" download target="_blank" class="src-link" title="Full Image">⬇ Full Resolution</a>
+      <a id="imgModal-download" href="#" download class="src-link" title="Download image">⬇ Download</a>
       <a id="imgModal-source" href="#" target="_blank" rel="noopener" class="src-link" title="Visit Page">↗ Visit Page</a>
       <button type="button" class="x" id="imgModal-x" aria-label="Close">&#10005;</button>
     </div>
     <div class="img-modal-viewport">
       <img id="imgModal-img" src="" alt="High resolution preview">
     </div>
-    <div class="vmodal-foot" id="imgModal-foot" style="font-size:0.82rem; color:var(--muted);"></div>
+    <div class="vmodal-foot" style="display:flex; align-items:center; gap:10px;">
+      <span id="imgModal-foot" style="flex:1; font-size:0.82rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+      <a id="imgModal-edit" href="/editor" class="src-link" style="color:var(--accent); font-weight:600;">✂ Edit in Studio</a>
+      <button type="button" class="lb-ctrl" id="lb-zoom-out" aria-label="Zoom out">−</button>
+      <button type="button" class="lb-ctrl" id="lb-zoom-in" aria-label="Zoom in">＋</button>
+      <button type="button" class="lb-ctrl" id="lb-zoom-reset" aria-label="Reset zoom" style="width:auto; padding:0 10px; font-size:.8rem;">1:1</button>
+    </div>
   </div>
 </div>
 
@@ -692,6 +746,23 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let query = '', offset = 0, mode = 'web', corpus = '', timer = null, sugIdx = -1;
+
+// Pemisahan URL: `/` = dashboard (kandungan original, boleh ada iklan),
+// `/cari` = halaman hasil (SPA sama, TIADA iklan). Mematuhi dasar AdSense.
+const RESULT_PATH = '/cari';
+const IS_RESULTS = location.pathname === RESULT_PATH;
+
+// Bina URL hasil dan (jika sedang di dashboard) pindahkan pengguna ke /cari.
+// Return true jika navigasi penuh dilakukan (panggilan perlu berhenti).
+function toResultsIfNeeded() {
+  if (IS_RESULTS) return false;
+  const p = new URLSearchParams();
+  const qq = $('q').value.trim();
+  if (qq) p.set('q', qq);
+  p.set('mode', mode);
+  location.href = `${RESULT_PATH}?${p}`;
+  return true;
+}
 
 const FILTER_PARAMS = ['host', 'lang', 'section', 'site', 'type', 'after', 'before', 'minWords', 'excludeHost'];
 
@@ -774,7 +845,7 @@ function pushURL(extra = {}) {
     const v = current.get(key);
     if (v) p.set(key, v);
   }
-  history.replaceState(null, '', `/?${p}`);
+  history.replaceState(null, '', `${location.pathname}?${p}`);
 }
 
 function setMode(m, push = true) {
@@ -789,13 +860,14 @@ function setMode(m, push = true) {
     if (query) p.set('q', query);
     p.set('mode', m);
     if (corpus) p.set('index', corpus);
-    history.replaceState(null, '', `/?${p}`);
+    history.replaceState(null, '', `${location.pathname}?${p}`);
   }
 }
 
 async function run() {
   const q = $('q').value.trim();
   if (!q) return;
+  if (toResultsIfNeeded()) return; // dari dashboard → pindah ke /cari, biarkan sana yang jalankan
   query = q;
   offset = 0;
   pushURL();
@@ -943,14 +1015,15 @@ function newsCard(h) {
 }
 
 function musicCard(h) {
-  return `<div class="video-card">
-    <span class="ph art-ph">\ud83c\udfb5${h.artwork ? `<img src="${esc(h.artwork)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}</span>
+  const audioTarget = h.preview || h.url;
+  return `<div class="video-card play-card" data-audio="${esc(audioTarget)}" data-title="${esc(h.title || 'Music')}">
+    <span class="ph art-ph">\ud83c\udfb5${h.artwork ? `<img src="${esc(h.artwork)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}<span class="play-overlay">&#9658;</span></span>
     <div class="body">
       <h3>${esc(h.title || '')}</h3>
       <div class="meta">${esc(h.description || '')}${h.duration ? ` &middot; ${esc(h.duration)}` : ''}</div>
       <div class="card-actions">
-        ${h.preview ? `<button type="button" class="play-btn" data-audio="${esc(h.preview)}" data-title="${esc(h.title || 'Music')}" aria-label="Play ${esc(h.title || 'music')}">\u25b6</button>` : ''}
-        ${h.url ? `<a class="src-link" href="${esc(h.url)}" target="_blank" rel="noopener">Open &#8599;</a>` : ''}
+        ${audioTarget ? `<button type="button" class="play-btn" data-audio="${esc(audioTarget)}" data-title="${esc(h.title || 'Music')}">\u25b6 Play</button>` : ''}
+        ${h.url ? `<a class="src-link reader-link" href="${esc(h.url)}" data-title="${esc(h.title || 'Music')}">Open &#8599;</a>` : ''}
       </div>
     </div>
   </div>`;
@@ -958,14 +1031,14 @@ function musicCard(h) {
 
 function radioCard(h) {
   const meta = [h.country, h.codec, h.bitrate ? `${h.bitrate} kbps` : ''].filter(Boolean).join(' \u00b7 ');
-  return `<div class="video-card">
-    <span class="ph art-ph radio-ph">\ud83d\udcefb${h.favicon ? `<img src="${esc(h.favicon)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</span>
+  return `<div class="video-card play-card" data-audio="${esc(h.url)}" data-title="${esc(h.title || 'Radio')}">
+    <span class="ph art-ph radio-ph">\ud83d\udcefb${h.favicon ? `<img src="${esc(h.favicon)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<span class="play-overlay">&#9658;</span></span>
     <div class="body">
       <h3>${esc(h.title || '')}</h3>
       <div class="meta">${esc(meta || h.source || '')}${h.tags && h.tags.length ? ` &middot; ${esc(h.tags.join(', '))}` : ''}</div>
       <div class="card-actions">
-        <button type="button" class="play-btn" data-audio="${esc(h.url)}" data-title="${esc(h.title || 'Radio')}" aria-label="Play ${esc(h.title || 'radio station')}">\u25b6</button>
-        ${h.url ? `<a class="src-link" href="${esc(h.url)}" target="_blank" rel="noopener">Stream &#8599;</a>` : ''}
+        <button type="button" class="play-btn" data-audio="${esc(h.url)}" data-title="${esc(h.title || 'Radio')}">\u25b6 Stream</button>
+        ${h.url ? `<a class="src-link" href="${esc(h.url)}" target="_blank" rel="noopener">Source &#8599;</a>` : ''}
       </div>
     </div>
   </div>`;
@@ -1010,6 +1083,20 @@ async function loadMoreMedia() {
   }
 }
 
+// Kad aset Creative Commons — sama seperti kad imej: klik → lightbox
+// (butang ⬇ Download & ✂ Edit in Studio sudah ada di situ). `href` ialah
+// imej penuh luar-domain → lightbox hantar lewat /api/image (selamat).
+function ccCard(hit) {
+  const full = hit.full || hit.thumb;
+  const thumb = hit.thumb || full;
+  const lic = esc(hit.license || 'CC');
+  const author = hit.author ? ` · ${esc(hit.author)}` : '';
+  return `<a class="img-card" href="${esc(full)}" title="${esc(hit.title)} — ${esc(hit.source || 'Wikimedia Commons')}">
+    <img class="ph" src="${esc(thumb)}" alt="${esc(hit.title)}" loading="lazy">
+    <div class="cap">🧩 ${esc(hit.title)} · ${lic}${author}</div>
+  </a>`;
+}
+
 function hitCard(hit) {
   const title = hit._formatted?.title || hit.title || hit.url;
   const url = hit.url;
@@ -1045,6 +1132,13 @@ function renderResults(data, m) {
   if (m === 'images') {
     mediaState = { mode: 'images', q: query, page: data.nextPage || 0, sp: '' };
     out.innerHTML = `<div class="img-grid">${hits.map(imageCard).join('')}</div>${loadMoreHtml(!!data.nextPage)}`;
+    return;
+  }
+
+  if (m === 'cc') {
+    out.innerHTML = hits.length
+      ? `<div class="img-grid">${hits.map(ccCard).join('')}</div>`
+      : `<div class="empty">Tiada aset Creative Commons untuk “${esc(query)}”.</div>`;
     return;
   }
 
@@ -1132,13 +1226,22 @@ $('facets').addEventListener('click', (e) => {
   p.delete('offset');
   if (corpus) p.set('index', corpus);
   else p.delete('index');
-  history.replaceState(null, '', `/?${p}`);
+  history.replaceState(null, '', `${location.pathname}?${p}`);
   $('q').value = query; offset = 0;
   run();
 });
 
 document.querySelectorAll('#tabs button').forEach((btn) => {
-  btn.addEventListener('click', () => { offset = 0; setMode(btn.dataset.mode); run(); });
+  btn.addEventListener('click', () => {
+    offset = 0;
+    const m = btn.dataset.mode;
+    setMode(m);
+    if (!$('q').value.trim()) {
+      const defaultQueries = { web: 'tukuk-os', images: 'nature', videos: 'tutorial', news: 'technology', music: 'pop', radio: 'jazz' };
+      $('q').value = defaultQueries[m] || 'tech';
+    }
+    run();
+  });
 });
 
 $('q').addEventListener('input', () => {
@@ -1198,16 +1301,29 @@ document.addEventListener('click', (e) => {
 });
 
 query = readURL();
-if (query) run();
-else {
-  // Homepage kosong — papar carian trending 7 hari lepas (kalau ada log).
-  fetch('/trending').then((r) => (r.ok ? r.json() : null)).then((t) => {
-    const list = t && t.queries ? t.queries : [];
-    if (!list.length) return;
-    const box = document.getElementById('results');
-    if (!box || box.children.length) return;
-    box.innerHTML = `<div class="trending-home"><span class="t-label">Trending searches</span><div class="chips">${list.map((x) => `<button type="button" class="chip" data-sugq="${esc(x.q)}">${esc(x.q)} <span class="n">${x.count}</span></button>`).join('')}</div></div>`;
-  }).catch(() => {});
+if (!IS_RESULTS) {
+  // ── Dashboard `/` — kandungan original, permukaan iklan. ──
+  const dash = document.getElementById('dashboard');
+  const area = document.querySelector('main.results-area');
+  if (dash) dash.hidden = false;
+  if (area) area.hidden = true;
+  if (query) {
+    // Pautan lama `/?q=...` → alih ke /cari supaya hasil sentiasa di URL bebas-iklan.
+    location.replace(`${RESULT_PATH}?${new URLSearchParams(location.search)}`);
+  } else {
+    fetch('/trending').then((r) => (r.ok ? r.json() : null)).then((t) => {
+      const list = t && t.queries ? t.queries : [];
+      const box = document.getElementById('dashTrending');
+      if (!box || !list.length) return;
+      box.innerHTML = `<span class="t-label">Carian popular</span><div class="chips">${list.map((x) => `<a class="chip" href="${RESULT_PATH}?q=${encodeURIComponent(x.q)}&mode=web">${esc(x.q)} <span class="n">${x.count}</span></a>`).join('')}</div>`;
+    }).catch(() => {});
+  }
+} else {
+  // ── Hasil `/cari` ──
+  const dash = document.getElementById('dashboard');
+  if (dash) dash.hidden = true;
+  if (query) run();
+  else $('results').innerHTML = '<div class="empty">Taip sesuatu untuk mula mencari.</div>';
 }
 
 // Chat FAB
@@ -1234,12 +1350,18 @@ chatForm.addEventListener('submit', async (e) => {
   const btn = chatForm.querySelector('button');
   btn.disabled = true;
   chatAnswer.hidden = false;
-  chatAnswer.innerHTML = '<div class="mode">Thinking...</div><p>Loading...</p>';
+  chatAnswer.innerHTML = '<div class="mode">Memikir…</div><p>Menunggu respons…</p>';
   try {
     const res = await fetch('/ask?q=' + encodeURIComponent(q));
     const data = await res.json();
-    let html = '<div class="mode">' + (data.mode || 'chat') + '</div>';
-    html += '<p>' + (data.answer || data.text || 'No answer').replace(/\n/g, '<br>') + '</p>';
+    if (!res.ok || data.error) {
+      const reason = data.detail || data.error || 'Ralat tidak diketahui.';
+      chatAnswer.innerHTML = '<div class="mode">ralat</div><p>' + reason + '</p>' +
+        '<p class="foot-status">AI Sembang guna LLM cloud (Gemini/Groq/OpenAI) bila kunci dikonfigurasi, atau jawapan ekstraktif bila tiada. Semak status di /brain.</p>';
+      return;
+    }
+    let html = '<div class="mode">' + (data.mode || 'chat') + (data.provider ? ' · ' + data.provider : '') + '</div>';
+    html += '<p>' + (data.answer || data.text || 'Tiada jawapan').replace(/\n/g, '<br>') + '</p>';
     if (data.sources && data.sources.length) {
       html += '<div class="sources">';
       for (const s of data.sources) {
@@ -1289,14 +1411,19 @@ function closeVideo() {
 document.addEventListener('click', (e) => {
   const a = e.target.closest('a.video-card');
   if (!a) return;
-  const src = embedSrc(a.href);
-  if (!src) return; // platform tak disokong → biar buka luar macam biasa
+  if (e.target.closest('.card-actions')) return; // butangan dalaman → biar handler lain
+  const url = a.href;
+  const title = (a.querySelector('h3') || {}).textContent || 'Video';
+  const src = embedSrc(url);
+  // Host tak boleh embed (artikel/bilibili/lain) → KEKAL dalam-app, buka Reader;
+  // jangan biar <a target=_blank> bawa pengguna keluar dari Tukuk-OS.
+  if (!src) { e.preventDefault(); openReader(url, title, (a.querySelector('.meta') || {}).textContent || ''); return; }
   e.preventDefault();
-  document.getElementById('vmodal-title').textContent = (a.querySelector('h3') || {}).textContent || 'Video';
+  document.getElementById('vmodal-title').textContent = title;
   document.getElementById('vmodal-frame').src = src;
   const lnk = document.getElementById('vmodal-link');
-  lnk.href = a.href;
-  const host = (() => { try { return new URL(a.href).hostname.replace(/^www\./, ''); } catch { return 'source'; } })();
+  lnk.href = url;
+  const host = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'source'; } })();
   lnk.textContent = `Open on ${host}`;
   document.getElementById('vmodal').hidden = false;
   document.body.style.overflow = 'hidden';
@@ -1321,35 +1448,274 @@ const mediaAudio = document.getElementById('mediaAudio');
 const audioBar = document.getElementById('audioBar');
 const audioBarTitle = document.getElementById('audioBarTitle');
 let audioOwner = null;
-function stopAudio() {
-  mediaAudio.pause();
-  mediaAudio.removeAttribute('src');
+let currentSrc = '';
+let wantPlay = false;
+let playToken = 0;
+let retryTimer = null;
+let retryCount = 0;
+
+function normAudioSrc(raw) {
+  let src = String(raw || '').trim();
+  if (!src.startsWith('http')) return '';
+  if (window.location.protocol === 'https:' && src.startsWith('http://')) src = src.replace('http://', 'https://');
+  return src;
+}
+function resetOwnerBtn() {
   if (audioOwner) {
     audioOwner.textContent = '\u25b6';
     audioOwner.setAttribute('aria-pressed', 'false');
     audioOwner.classList.remove('playing');
     audioOwner = null;
   }
+}
+function stopAudio() {
+  wantPlay = false;
+  playToken++;
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  mediaAudio.pause();
+  mediaAudio.removeAttribute('src');
+  mediaAudio.load();
+  currentSrc = '';
+  resetOwnerBtn();
   audioBar.hidden = true;
 }
 document.getElementById('audioBarStop').addEventListener('click', stopAudio);
-mediaAudio.addEventListener('error', () => { if (audioOwner && mediaAudio.getAttribute('src')) stopAudio(); });
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('.play-btn');
-  if (!btn || !btn.dataset.audio) return;
-  e.preventDefault();
-  if (audioOwner === btn && !mediaAudio.paused) { stopAudio(); return; }
-  if (audioOwner && audioOwner !== btn) stopAudio();
-  mediaAudio.src = btn.dataset.audio;
+
+function markPlaying(pBtn, title) {
+  audioOwner = pBtn;
+  if (pBtn) {
+    pBtn.textContent = '\u23f8 Pause';
+    pBtn.setAttribute('aria-pressed', 'true');
+    pBtn.classList.add('playing');
+  }
+  audioBarTitle.textContent = title || '';
+  audioBar.hidden = false;
+}
+
+function beginPlay(rawSrc, title, pBtn, opts = {}) {
+  const audioSrc = normAudioSrc(rawSrc);
+  if (!audioSrc) return;
+  if (audioOwner && audioOwner !== pBtn) resetOwnerBtn();
+  currentSrc = audioSrc;
+  wantPlay = true;
+  retryCount = 0;
+  playToken++;
+  const myToken = playToken;
+  mediaAudio.src = audioSrc;
   mediaAudio.play().then(() => {
-    audioOwner = btn;
-    btn.textContent = '\u23f8';
-    btn.setAttribute('aria-pressed', 'true');
-    btn.classList.add('playing');
-    audioBarTitle.textContent = btn.dataset.title || '';
-    audioBar.hidden = false;
-  }).catch(() => { btn.textContent = '\u25b6'; audioBar.hidden = true; });
+    if (!wantPlay || myToken !== playToken) return;
+    markPlaying(pBtn, title);
+  }).catch(() => {
+    if (!wantPlay || myToken !== playToken) return;
+    if (opts.fallback) {
+      openReader(audioSrc, title || 'Radio / Audio', 'This audio stream could not be played directly due to browser security (Mixed Content or CORS restrictions). Click below to open stream.');
+      if (pBtn) pBtn.textContent = '\u25b6 Play';
+      audioBar.hidden = true;
+      wantPlay = false;
+    } else {
+      scheduleRetry();
+    }
+  });
+}
+
+// Sambung semula secara automatik kalau stream terputus — jangan berhenti.
+function scheduleRetry() {
+  if (!wantPlay || !currentSrc) return;
+  if (retryTimer) clearTimeout(retryTimer);
+  retryCount++;
+  if (retryCount > 10) { advanceQueue(); return; }
+  const delay = Math.min(800 * retryCount, 4000);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    if (!wantPlay || !currentSrc) return;
+    mediaAudio.src = currentSrc;
+    mediaAudio.play().catch(() => scheduleRetry());
+  }, delay);
+}
+
+// Bila satu lagu habis, main lagu seterusnya dalam senarai (loop ke awal).
+function findQueueNext() {
+  const cards = [...document.querySelectorAll('.play-card[data-audio]')].filter(c => normAudioSrc(c.dataset.audio));
+  if (!cards.length) return null;
+  const idx = cards.findIndex(c => c === audioOwner || c.contains(audioOwner) || c.querySelector('.play-btn') === audioOwner);
+  return cards[(idx + 1) % cards.length];
+}
+function advanceQueue() {
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  const next = findQueueNext();
+  if (next) beginPlay(next.dataset.audio, next.dataset.title || 'Music', next.querySelector('.play-btn') || next);
+  else if (currentSrc) { mediaAudio.src = currentSrc; mediaAudio.play().catch(() => stopAudio()); }
+  else stopAudio();
+}
+mediaAudio.addEventListener('ended', () => { if (wantPlay) advanceQueue(); });
+mediaAudio.addEventListener('error', () => { if (wantPlay) scheduleRetry(); });
+mediaAudio.addEventListener('stalled', () => { if (wantPlay) scheduleRetry(); });
+mediaAudio.addEventListener('playing', () => { retryCount = 0; });
+
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('.play-card');
+  const btn = e.target.closest('.play-btn');
+  const target = btn || card;
+  if (!target || !target.dataset.audio) return;
+  if (e.target.closest('.card-actions a')) return;
+
+  e.preventDefault();
+  const audioSrc = normAudioSrc(target.dataset.audio);
+  if (!audioSrc) return;
+  const pBtn = card ? card.querySelector('.play-btn') : btn;
+  const title = target.dataset.title || (card && card.dataset.title) || '';
+
+  // Klik track yang sedang main → berhenti.
+  if ((audioOwner === pBtn || currentSrc === audioSrc) && !mediaAudio.paused && wantPlay) { stopAudio(); return; }
+
+  beginPlay(audioSrc, title, pBtn, { fallback: true });
 });
+
+// ── In-App Reader Modal for Search Results & Articles (Like Video Modal) ──
+function openReader(url, title, snippet) {
+  const modal = document.getElementById('readerModal');
+  if (!modal) {
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+  document.getElementById('reader-title').textContent = title || 'Reader View';
+  document.getElementById('reader-site').textContent = (() => { try { return new URL(url).hostname; } catch { return 'tukuk.org'; } })();
+  document.getElementById('reader-ext-link').href = url;
+  document.getElementById('reader-url-display').textContent = url;
+
+  document.getElementById('reader-content').innerHTML = `
+    <h2>${esc(title)}</h2>
+    <div class="meta-info">Source URL: <a href="${esc(url)}" target="_blank" rel="noopener" style="color:var(--accent);">${esc(url)}</a></div>
+    <p><strong>Preview / Snippet:</strong></p>
+    <p>${esc(snippet || 'Loading content preview…')}</p>
+    <div style="margin-top:28px; padding:20px; background:rgba(59,130,246,0.08); border-radius:8px; border:1px solid rgba(59,130,246,0.2);">
+      <p style="margin:0 0 12px; font-weight:600;">Want to view the full live website inside Tukuk-OS?</p>
+      <button type="button" class="btn btn-primary" onclick="document.getElementById('reader-btn-live').click()">Switch to Live Web View 🌐</button>
+    </div>
+  `;
+  document.getElementById('reader-iframe').src = url;
+
+  document.getElementById('reader-content').hidden = false;
+  document.getElementById('reader-iframe-wrap').hidden = true;
+  document.getElementById('reader-btn-clean').classList.add('on');
+  document.getElementById('reader-btn-live').classList.remove('on');
+
+  modal.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeReader() {
+  const modal = document.getElementById('readerModal');
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  document.getElementById('reader-iframe').src = '';
+  document.body.style.overflow = '';
+}
+
+// ── Imej Lightbox: membesar (zoom roda/Butang/dua-klik), hantar ke Studio ──
+const lbState = { scale: 1 };
+function lbApply() {
+  const img = $('imgModal-img');
+  if (img) {
+    img.style.transform = `scale(${lbState.scale})`;
+    img.style.cursor = lbState.scale > 1.05 ? 'grab' : 'zoom-in';
+  }
+}
+function lbZoomBy(factor) { lbState.scale = Math.min(12, Math.max(0.2, lbState.scale * factor)); lbApply(); }
+function lbReset() { lbState.scale = 1; lbApply(); }
+// URL luar tidak boleh di-download dengan atribut `download` (cross-origin) —
+// hantar lewat proksi same-origin /api/image supaya satu klik terus muat turun.
+function downloadHrefFor(u) {
+  try {
+    const x = new URL(u, location.href);
+    if (x.origin === location.origin) return x.href;
+    return '/api/image?url=' + encodeURIComponent(x.href);
+  } catch { return u; }
+}
+function openImageLightbox(src, title, pageUrl) {
+  const modal = $('imgModal');
+  if (!modal) { window.open(src, '_blank', 'noopener'); return; }
+  lbState.scale = 1;
+  const img = $('imgModal-img');
+  img.src = src; lbApply();
+  $('imgModal-title').textContent = title || 'Image View';
+  $('imgModal-foot').textContent = src;
+  $('imgModal-download').href = downloadHrefFor(src);
+  $('imgModal-source').href = pageUrl || src;
+  $('imgModal-edit').href = '/editor?img=' + encodeURIComponent(src);
+  modal.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closeImageLightbox() {
+  const modal = $('imgModal');
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  $('imgModal-img').src = '';
+  document.body.style.overflow = '';
+}
+$('imgModal-x').addEventListener('click', closeImageLightbox);
+$('imgModal-bd').addEventListener('click', closeImageLightbox);
+$('lb-zoom-in').addEventListener('click', () => lbZoomBy(1.3));
+$('lb-zoom-out').addEventListener('click', () => lbZoomBy(1 / 1.3));
+$('lb-zoom-reset').addEventListener('click', lbReset);
+$('imgModal-img').addEventListener('dblclick', () => { lbState.scale = lbState.scale > 1.05 ? 1 : 2.6; lbApply(); });
+$('imgModal-img').addEventListener('wheel', (e) => { e.preventDefault(); lbZoomBy(e.deltaY < 0 ? 1.18 : 1 / 1.18); }, { passive: false });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeImageLightbox(); closeReader(); }
+});
+
+// Klik hasil/pautan: TERUS BUKA — tiada modal pertanyaan.
+// Tap dalam (tukuk.org / www / localhost) → navigasi tab ini.
+// Tap luar → tab baru. Reader modal hanya untuk fallback audio (call terus).
+document.addEventListener('click', (e) => {
+  // Tab Imej → lightbox membesar, bukan tab baru.
+  const cardImg = e.target.closest('.img-card');
+  if (cardImg) {
+    e.preventDefault();
+    const full = cardImg.getAttribute('href') || '';
+    const thumb = cardImg.querySelector('img')?.getAttribute('src') || full;
+    openImageLightbox(full || thumb, cardImg.querySelector('.cap')?.textContent || 'Image', full);
+    return;
+  }
+  // Kad video & berita dikendalikan handler modal video di atas — JANGAN buka
+  // tab luar di sini (inilah punca "klik video terus keluar website").
+  if (e.target.closest('a.video-card')) return;
+  const a = e.target.closest('.result a, .blog-card a, a.reader-link, #results a');
+  if (!a) return;
+  const href = a.getAttribute('href') || '';
+  if (href.startsWith('#') || href.startsWith('javascript')) return;
+  if (!/^https?:\/\//i.test(href)) return; // pautan relatif → tingkah laku asli pelayar
+  let host = '';
+  try { host = new URL(href).hostname; } catch { return; }
+  const internal = host === location.hostname || host === 'tukuk.org' ||
+    host.endsWith('.tukuk.org') || /^(localhost|127\.0\.0\.1)$/.test(host);
+  e.preventDefault();
+  if (internal) location.assign(href);
+  else window.open(href, '_blank', 'noopener');
+});
+
+const readerX = document.getElementById('reader-x');
+if (readerX) readerX.addEventListener('click', closeReader);
+const readerBd = document.getElementById('readerModal-bd');
+if (readerBd) readerBd.addEventListener('click', closeReader);
+const readerClean = document.getElementById('reader-btn-clean');
+if (readerClean) {
+  readerClean.addEventListener('click', () => {
+    document.getElementById('reader-content').hidden = false;
+    document.getElementById('reader-iframe-wrap').hidden = true;
+    readerClean.classList.add('on');
+    document.getElementById('reader-btn-live').classList.remove('on');
+  });
+}
+const readerLive = document.getElementById('reader-btn-live');
+if (readerLive) {
+  readerLive.addEventListener('click', () => {
+    document.getElementById('reader-content').hidden = true;
+    document.getElementById('reader-iframe-wrap').hidden = false;
+    readerLive.classList.add('on');
+    document.getElementById('reader-btn-clean').classList.remove('on');
+  });
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

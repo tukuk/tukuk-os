@@ -61,7 +61,63 @@ function load() {
       data.posts = [];
     }
   }
+  syncPostsFromContent();
   return data;
+}
+
+// Sinkron fail content/blog/*.md ke dalam store (idempotent; kemas kini ikut slug).
+// Dulu hanya dijalankan manual lewat scripts/import-posts.js — sebab itu pautan
+// blog jadi 404 pada server baru. Kini auto setiap cold start.
+const CONTENT_DIR = path.join(__dirname, '..', 'content', 'blog');
+let lastSyncedDir = null;
+
+function syncPostsFromContent(dir = CONTENT_DIR) {
+  if (lastSyncedDir === dir) return; // sekali sahaja per proses
+  lastSyncedDir = dir;
+  let files;
+  try {
+    files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
+  } catch {
+    return; // tiada folder content — biarkan store apa adanya
+  }
+  let changed = false;
+  for (const file of files) {
+    let raw;
+    try { raw = fs.readFileSync(path.join(dir, file), 'utf8'); } catch { continue; }
+    const lines = raw.split(/\r?\n/);
+    const header = {};
+    let i = 0;
+    for (; i < lines.length; i += 1) {
+      const match = lines[i].match(/^(SLUG|TITLE|EXCERPT|TAGS):\s*(.*)$/);
+      if (!match) break;
+      header[match[1]] = match[2].trim();
+    }
+    const body = lines.slice(i).join('\n').replace(/^\s*\n/, '').trimEnd();
+    if (body.split(/\s+/).filter(Boolean).length < 80) continue; // terlalu pendek
+    const slug = header.SLUG || file.replace(/\.md$/, '');
+    const title = header.TITLE || slug;
+    const excerpt = header.EXCERPT || body.slice(0, 200);
+    const tags = (header.TAGS || '').split(',').map((t) => t.trim()).filter(Boolean);
+    const content = body + '\n';
+    const existing = data.posts.find((p) => p.slug === slug);
+    if (existing) {
+      const rawNorm = raw.trimEnd() + '\n';
+      if (existing.content !== content && existing.content !== rawNorm) {
+        Object.assign(existing, { title, excerpt, tags, content, updatedAt: new Date().toISOString() });
+        changed = true;
+      }
+    } else {
+      data.posts.unshift({
+        id: (Date.now() + Math.random()).toString(36),
+        slug, title, content, excerpt,
+        author: 'Fevian Donald', tags,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      changed = true;
+    }
+  }
+  if (changed) touch();
 }
 
 function flush() {
@@ -207,7 +263,8 @@ function deletePost(id) {
 }
 
 function getPostBySlug(slug) {
-  return load().posts.find(p => p.slug === slug) || null;
+  const decoded = decodeURIComponent(slug || '').trim().toLowerCase();
+  return load().posts.find(p => p.slug.toLowerCase() === decoded || encodeURIComponent(p.slug).toLowerCase() === decoded || p.id === slug) || null;
 }
 
 function getPostById(id) {

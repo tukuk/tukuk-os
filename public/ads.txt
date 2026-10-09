@@ -1,1 +1,2 @@
 google.com, pub-8954948214333501, DIRECT, f08c47fec0942fa0
+microsoft.com, 100001, DIRECT, 0f3938af

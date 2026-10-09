@@ -5,3 +5,8 @@ compatibility_date = "2026-10-08"
 routes = [
   { pattern = "www.tukuk.org/*", zone_name = "tukuk.org" }
 ]
+
+# Bucket snapshot laman — bila origin mati, worker hidang fail dari sini.
+[[r2_buckets]]
+binding = "BACKUP"
+bucket_name = "tukuk-fallback"

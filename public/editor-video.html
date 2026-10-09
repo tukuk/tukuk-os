@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tukuk Studio — Editor Video</title>
+<meta name="description" content="Editor video percuma dalam pelayar: trim, penapis warna, putar, nisbah aspek, teks & eksport WebM. Tiada muat naik, semua diproses lokal.">
+<link rel="canonical" href="https://tukuk.org/editor-video">
+<style>
+  :root { --bg:#0f1320; --panel:#161b2c; --panel2:#1e2540; --line:#2a3350; --text:#e7ecff; --muted:#9aa6cc; --accent:#4c8dff; }
+  * { box-sizing:border-box; }
+  html,body { height:100%; }
+  body { margin:0; font-family:system-ui,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .logo { font-weight:800; letter-spacing:.2px; margin-right:6px; }
+  .logo small { color:var(--muted); font-weight:600; margin-left:6px; font-size:.72rem; }
+  button, a.btn { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:9px; padding:8px 11px; font-size:.86rem; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  button:hover, a.btn:hover { border-color:var(--accent); }
+  button.on { background:var(--accent); color:#04102a; border-color:var(--accent); font-weight:700; }
+  button.primary { background:linear-gradient(180deg,#4c8dff,#2f6fe0); color:#fff; border-color:#2f6fe0; font-weight:700; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  input[type=color] { background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:4px; width:40px; height:34px; }
+  select { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 8px; font-size:.84rem; }
+  input[type=text] { flex:1; min-width:120px; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 10px; font-size:.86rem; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .spacer { flex:1; }
+  main { display:flex; flex:1; min-height:0; }
+  aside { width:262px; flex:none; background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:12px; }
+  aside h3 { margin:14px 0 8px; font-size:.74rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  aside h3:first-child { margin-top:0; }
+  .row { display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
+  .row button { flex:1; min-width:0; }
+  .slider { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .slider label { width:74px; font-size:.78rem; color:var(--muted); flex:none; }
+  .slider output { width:40px; text-align:right; font-size:.76rem; color:var(--text); flex:none; }
+  .foot-status { color:var(--muted); font-size:.72rem; margin:4px 0 0; line-height:1.4; }
+  .stage { flex:1; position:relative; display:flex; align-items:center; justify-content:center; background:
+    repeating-conic-gradient(#12182a 0% 25%, #0f1424 0% 50%) 50% / 28px 28px; overflow:hidden; }
+  canvas { max-width:calc(100% - 32px); max-height:calc(100% - 32px); box-shadow:0 12px 40px rgba(0,0,0,.55); border-radius:8px; background:#000; }
+  .drop-hint { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--muted); text-align:center; padding:24px; }
+  .drop-hint .big { font-size:52px; }
+  .drop-hint b { color:var(--text); }
+  .timeline { position:absolute; left:0; right:0; bottom:0; background:rgba(15,19,32,.92); border-top:1px solid var(--line); padding:8px 14px; display:flex; align-items:center; gap:12px; }
+  .timeline .t { font-variant-numeric:tabular-nums; font-size:.78rem; color:var(--muted); flex:none; }
+  .rec-dot { width:9px; height:9px; border-radius:50%; background:#37d67a; display:inline-block; margin-right:6px; }
+  .rec-dot.live { background:#ff3b30; animation:blink 1s infinite; }
+  @keyframes blink { 50% { opacity:.25; } }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0b1020; color:#fff; border:1px solid var(--accent); border-radius:10px; padding:10px 16px; font-size:.85rem; opacity:0; pointer-events:none; transition:opacity .25s; z-index:50; }
+  .toast.show { opacity:1; }
+  video { display:none; }
+  @media (max-width:760px) { aside { width:190px; } .slider label { width:56px; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🎬 Tukuk Studio <small>editor video</small></span>
+  <button id="openBtn">📂 Buka video</button>
+  <input type="file" id="fileInput" accept="video/*" hidden>
+  <span class="spacer"></span>
+  <span class="t"><span class="rec-dot" id="recDot"></span><span id="stateLbl">sedia</span></span>
+  <button id="snapBtn" title="Simpan bingkai semasa sebagai PNG">📸 Bingkai</button>
+  <button id="exportBtn" class="primary" title="Rakam &amp; muat turun sebagai WebM (masa nyata)">⬇ Eksport WebM</button>
+  <a class="btn" href="/editor" title="Editor gambar">🖼 Gambar</a>
+  <a class="btn" href="/studio" title="Tukuk Studio home">◂ Studio</a>
+  <a class="btn" href="/" title="Kembali ke carian">⌕ Carian</a>
+</header>
+
+<main>
+  <aside>
+    <h3>MAIN</h3>
+    <div class="row"><button id="playBtn">▶ Main</button><button id="stopBtn">⏹ Ke awal</button></div>
+    <div class="row"><button id="inBtn">⬅ Set In</button><button id="outBtn">Set Out ➡</button></div>
+    <div class="foot-status" id="inOutLbl">In: 0.0s · Out: —</div>
+    <div class="slider" style="margin-top:6px;"><label>Kelajuan</label>
+      <select id="speedSel" style="flex:1;"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+    </div>
+
+    <h3>Nisbah &amp; Putaran</h3>
+    <div class="row">
+      <button data-aspect="0" class="on">Asal</button>
+      <button data-aspect="1">1:1</button>
+      <button data-aspect="1.7778">16:9</button>
+    </div>
+    <div class="row">
+      <button data-aspect="0.5625">9:16</button>
+      <button data-aspect="0.8">4:5</button>
+      <button data-aspect="1.3333">4:3</button>
+    </div>
+    <div class="row"><button id="rotBtn">⟳ Putar</button><button id="flipHBtn">↔ Flip-H</button><button id="flipVBtn">↕ Flip-V</button></div>
+
+    <h3>Penapis warna</h3>
+    <div class="slider"><label>Kecerahan</label><input type="range" id="v-bright" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Kontras</label><input type="range" id="v-contrast" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Saturasi</label><input type="range" id="v-saturate" min="0" max="250" value="100"><output>100</output></div>
+    <div class="slider"><label>Sepia</label><input type="range" id="v-sepia" min="0" max="100" value="0"><output>0</output></div>
+    <div class="slider"><label>Grayscale</label><input type="range" id="v-gray" min="0" max="100" value="0"><output>0</output></div>
+    <div class="slider"><label>Hue</label><input type="range" id="v-hue" min="0" max="360" value="0"><output>0</output></div>
+    <div class="slider"><label>Blur</label><input type="range" id="v-blur" min="0" max="12" value="0"><output>0</output></div>
+    <div class="slider"><label>Vignette</label><input type="range" id="v-vig" min="0" max="100" value="0"><output>0</output></div>
+    <div class="row"><button id="preNone">Original</button><button id="preMono">Hitam putih</button><button id="preWarm">Hangat</button><button id="preCool">Sejuk</button></div>
+
+    <h3>Teks</h3>
+    <input type="text" id="vText" placeholder="Teks atas video…" style="margin-bottom:6px;">
+    <div class="row" style="align-items:center;">
+      <input type="color" id="vTextColor" value="#ffffff" title="Warna">
+      <select id="vTextPos" style="flex:1;"><option value="top">Atas</option><option value="center">Tengah</option><option value="bottom" selected>Bawah</option></select>
+    </div>
+    <div class="slider"><label>Saiz</label><input type="range" id="vTextSize" min="3" max="16" value="8"><output>8</output></div>
+    <div class="foot-status">Teks kekal tegak walaupun video diputar, dan dirakam dalam eksport.</div>
+  </aside>
+
+  <div class="stage" id="stage">
+    <canvas id="cvs" width="640" height="360"></canvas>
+    <div class="drop-hint" id="dropHint">
+      <div class="big">🎬</div>
+      <div>Seret &amp; jatuh video ke sini, atau <b>📂 Buka video</b>.</div>
+      <div class="foot-status">Semua suntingan &amp; rakaman berlaku dalam pelayar anda — tiada video dihantar ke mana-mana.<br>Eksport WebM dirakam secara <b>masa nyata</b> (durasi rakaman = panjang klip).</div>
+    </div>
+    <div class="timeline" id="timeline" hidden>
+      <button id="playTBtn" style="flex:none;">▶</button>
+      <span class="t" id="curT">0:00</span>
+      <input type="range" id="scrub" min="0" max="0" step="0.05" value="0" style="flex:1;">
+      <span class="t" id="durT">0:00</span>
+    </div>
+  </div>
+</main>
+
+<video id="video" playsinline muted></video>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const cvs = $('cvs'), ctx = cvs.getContext('2d'), video = $('video'), stage = $('stage');
+const MAX_OUT = 1280;
+
+let ready = false;           // video dimuat & ada dimensi
+let rot = 0;                 // 0/90/180/270
+let flipH = false, flipV = false;
+let aspect = 0;              // 0 = asal; jika tidak W/H
+let inPoint = 0, outPoint = 0;
+let recording = false;
+let scrubbing = false;
+let audioCtx = null, mediaSrc = null;
+
+const F = { bright:100, contrast:100, saturate:100, sepia:0, gray:0, hue:0, blur:0, vig:0 };
+
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3200); }
+function fmt(s) { s = Math.max(0, s | 0); const m = (s / 60) | 0; return m + ':' + String(s % 60).padStart(2, '0'); }
+
+function filterStr(hPx) {
+  const p = [`brightness(${F.bright}%)`, `contrast(${F.contrast}%)`, `saturate(${F.saturate}%)`, `sepia(${F.sepia}%)`, `grayscale(${F.gray}%)`, `hue-rotate(${F.hue}deg)`];
+  if (F.blur > 0) p.push(`blur(${(F.blur / 100 * hPx).toFixed(1)}px)`);
+  return p.join(' ');
+}
+
+// ── Muat video ──
+$('openBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = (e) => { const f = e.target.files[0]; if (f) loadFile(f); };
+function loadFile(f) {
+  const url = URL.createObjectURL(f);
+  video.src = url;
+  video.load();
+}
+video.addEventListener('loadedmetadata', () => {
+  ready = true;
+  $('dropHint').style.display = 'none';
+  $('timeline').hidden = false;
+  $('scrub').max = (video.duration || 0).toFixed(2);
+  $('durT').textContent = fmt(video.duration);
+  inPoint = 0; outPoint = video.duration || 0;
+  updateInOut();
+  video.playbackRate = Number($('speedSel').value);
+  toast(`Video dimuat: ${video.videoWidth}×${video.videoHeight} · ${fmt(video.duration)}`);
+});
+video.addEventListener('error', () => { if (video.src) toast('Video tidak dapat dimuat (format tidak disokong pelayar).'); });
+
+// ── Kira saiz output ──
+function computeOut(vw, vh) {
+  const rotated = (rot === 90 || rot === 270);
+  const sw = rotated ? vh : vw, sh = rotated ? vw : vh;
+  const r = aspect ? aspect : sw / sh;
+  const ref = Math.min(MAX_OUT, Math.max(sw, sh));
+  let OW, OH;
+  if (r >= 1) { OW = Math.round(ref); OH = Math.round(ref / r); }
+  else { OH = Math.round(ref); OW = Math.round(ref * r); }
+  return [Math.max(2, OW), Math.max(2, OH)];
+}
+
+// ── Render satu bingkai ──
+function render() {
+  if (!ready) return;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return;
+  const [OW, OH] = computeOut(vw, vh);
+  if (cvs.width !== OW || cvs.height !== OH) { cvs.width = OW; cvs.height = OH; }
+  ctx.save();
+  ctx.clearRect(0, 0, OW, OH);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, OW, OH);
+  if ('filter' in ctx) ctx.filter = filterStr(OH);
+  ctx.translate(OW / 2, OH / 2);
+  ctx.rotate(rot * Math.PI / 180);
+  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+  const rotated = (rot === 90 || rot === 270);
+  const sw = rotated ? vh : vw, sh = rotated ? vw : vh;
+  const s = Math.max(OW / sw, OH / sh);       // cover-fit
+  ctx.drawImage(video, -vw * s / 2, -vh * s / 2, vw * s, vh * s);
+  ctx.restore();
+  applyVignette(ctx, OW, OH);
+  drawOverlayText(ctx, OW, OH);
+}
+
+function applyVignette(g, OW, OH) {
+  const v = F.vig || 0; if (v <= 0) return;
+  const gr = g.createRadialGradient(OW / 2, OH / 2, Math.min(OW, OH) * 0.32, OW / 2, OH / 2, Math.max(OW, OH) * 0.78);
+  gr.addColorStop(0, 'rgba(0,0,0,0)');
+  gr.addColorStop(1, `rgba(0,0,0,${(v / 100 * 0.85).toFixed(3)})`);
+  g.save(); g.fillStyle = gr; g.fillRect(0, 0, OW, OH); g.restore();
+}
+function drawOverlayText(g, OW, OH) {
+  const t = $('vText').value; if (!t) return;
+  const px = Math.max(12, Number($('vTextSize').value) / 100 * OH);
+  g.save();
+  g.font = `800 ${px}px system-ui,"Segoe UI",Roboto,sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = px * 0.18; g.fillStyle = $('vTextColor').value;
+  const yMap = { top: 0.12, center: 0.5, bottom: 0.88 };
+  g.fillText(t, OW / 2, (yMap[$('vTextPos').value] || 0.88) * OH);
+  g.restore();
+}
+
+// ── Loop rAF: render sentiasa supaya perubahan kontrol serta-merta kelihatan ──
+(function loop() {
+  if (ready) { render(); if (!scrubbing) { $('scrub').value = video.currentTime; $('curT').textContent = fmt(video.currentTime); } }
+  requestAnimationFrame(loop);
+})();
+
+// ── Playback / scrub ──
+function setPlay(on) {
+  if (!ready) return;
+  if (on) {
+    if (outPoint && video.currentTime >= outPoint - 0.05) video.currentTime = inPoint;
+    video.play(); $('playBtn').textContent = '⏸ Jeda'; $('playTBtn').textContent = '⏸';
+  } else {
+    video.pause(); $('playBtn').textContent = '▶ Main'; $('playTBtn').textContent = '▶';
+  }
+}
+$('playBtn').onclick = () => setPlay(video.paused);
+$('playTBtn').onclick = () => setPlay(video.paused);
+$('stopBtn').onclick = () => { if (ready) video.currentTime = inPoint; };
+video.addEventListener('play', () => { $('playBtn').textContent = '⏸ Jeda'; $('playTBtn').textContent = '⏸'; });
+video.addEventListener('pause', () => { $('playBtn').textContent = '▶ Main'; $('playTBtn').textContent = '▶'; });
+$('scrub').addEventListener('pointerdown', () => scrubbing = true);
+window.addEventListener('pointerup', () => scrubbing = false);
+$('scrub').addEventListener('input', (e) => { if (ready) { video.currentTime = Number(e.target.value); $('curT').textContent = fmt(video.currentTime); } });
+$('speedSel').onchange = (e) => { video.playbackRate = Number(e.target.value); };
+
+function updateInOut() { $('inOutLbl').textContent = `In: ${inPoint.toFixed(1)}s · Out: ${outPoint ? outPoint.toFixed(1) + 's' : '—'}`; }
+$('inBtn').onclick = () => { if (!ready) return; inPoint = video.currentTime; if (outPoint <= inPoint) outPoint = video.duration; updateInOut(); };
+$('outBtn').onclick = () => { if (!ready) return; outPoint = video.currentTime; if (outPoint <= inPoint) inPoint = Math.max(0, outPoint - 0.1); updateInOut(); };
+
+// ── Alat transform ──
+$('rotBtn').onclick = () => { rot = (rot + 90) % 360; $('rotBtn').classList.toggle('on', rot !== 0); };
+$('flipHBtn').onclick = () => { flipH = !flipH; $('flipHBtn').classList.toggle('on', flipH); };
+$('flipVBtn').onclick = () => { flipV = !flipV; $('flipVBtn').classList.toggle('on', flipV); };
+document.querySelectorAll('[data-aspect]').forEach((b) => {
+  b.onclick = () => { aspect = Number(b.dataset.aspect) || 0; document.querySelectorAll('[data-aspect]').forEach((x) => x.classList.toggle('on', x === b)); };
+});
+
+// ── Penapis UI ──
+const SLIDER_MAP = { 'v-bright': 'bright', 'v-contrast': 'contrast', 'v-saturate': 'saturate', 'v-sepia': 'sepia', 'v-gray': 'gray', 'v-hue': 'hue', 'v-blur': 'blur', 'v-vig': 'vig' };
+for (const [id, key] of Object.entries(SLIDER_MAP)) {
+  const el = $(id);
+  el.addEventListener('input', () => { F[key] = Number(el.value); el.nextElementSibling.textContent = el.value; });
+}
+$('vTextSize').addEventListener('input', (e) => { e.target.nextElementSibling.textContent = e.target.value; });
+function preset(p) { Object.assign(F, { bright: 100, contrast: 100, saturate: 100, sepia: 0, gray: 0, hue: 0, blur: 0, vig: 0 }, p); for (const [id, key] of Object.entries(SLIDER_MAP)) { $(id).value = F[key]; $(id).nextElementSibling.textContent = F[key]; } }
+$('preNone').onclick = () => preset({});
+$('preMono').onclick = () => preset({ gray: 100, contrast: 115 });
+$('preWarm').onclick = () => preset({ sepia: 35, saturate: 120, bright: 105 });
+$('preCool').onclick = () => preset({ hue: 190, saturate: 110, bright: 102 });
+
+// ── Snapshot bingkai (PNG segera) ──
+function downloadBlob(blob, name) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 8000); }
+$('snapBtn').onclick = () => {
+  if (!ready) { toast('Muat video dahulu.'); return; }
+  render();
+  cvs.toBlob((b) => { if (b) { downloadBlob(b, `tukuk-bingkai-${Date.now()}.png`); toast('Bingkai disimpan sebagai PNG.'); } }, 'image/png');
+};
+
+// ── Eksport WebM (rakaman masa nyata) ──
+function pickMime() {
+  const c = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+  for (const m of c) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  return null;
+}
+function seeked() { return new Promise((r) => { const h = () => { video.removeEventListener('seeked', h); r(); }; video.addEventListener('seeked', h); }); }
+
+$('exportBtn').onclick = async () => {
+  if (!ready) { toast('Muat video dahulu.'); return; }
+  if (recording) return;
+  const mime = pickMime();
+  if (!mime) { toast('Pelayar ini tak sokong MediaRecorder — guna Chrome/Edge/Firefox terbaru.'); return; }
+  const start = Math.min(inPoint, outPoint || inPoint);
+  const end = outPoint > start ? outPoint : (video.duration || start + 1);
+  const fps = 30;
+  video.pause();
+  try { video.currentTime = start; await seeked(); } catch { /* abai */ }
+
+  const stream = cvs.captureStream(fps);
+  // Sambung audio video → MediaStreamDestination (sekali sahaja createMediaElementSource per elemen)
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    await audioCtx.resume();
+    if (!mediaSrc) mediaSrc = audioCtx.createMediaElementSource(video);
+    const dst = audioCtx.createMediaStreamDestination();
+    mediaSrc.connect(dst); mediaSrc.connect(audioCtx.destination);
+    dst.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+  } catch (e) { /* video tanpa audio / sudah bersambung — rakam senyap */ }
+
+  let rec;
+  try { rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 }); }
+  catch { rec = new MediaRecorder(stream); }
+  const chunks = [];
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  const stopped = new Promise((res) => { rec.onstop = res; });
+
+  recording = true;
+  $('recDot').classList.add('live'); $('stateLbl').textContent = 'merakam…';
+  $('exportBtn').disabled = true; $('snapBtn').disabled = true;
+  video.playbackRate = Number($('speedSel').value);
+  rec.start(250);
+  video.play();
+
+  await new Promise((res) => {
+    const tick = () => {
+      if (video.currentTime >= end || video.ended) return res();
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
+
+  video.pause();
+  try { rec.stop(); } catch { /* abai */ }
+  await stopped;
+  recording = false;
+  $('recDot').classList.remove('live'); $('stateLbl').textContent = 'sedia';
+  $('exportBtn').disabled = false; $('snapBtn').disabled = false;
+
+  const blob = new Blob(chunks, { type: (mime.split(';')[0] || 'video/webm') });
+  if (!blob.size) { toast('Rakaman kosong — cuba lagi.'); return; }
+  const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+  downloadBlob(blob, `tukuk-studio-video-${Date.now()}.${ext}`);
+  toast(`Dieksport sebagai ${ext.toUpperCase()} (~${(end - start).toFixed(1)}s, ${cvs.width}×${cvs.height}).`);
+};
+
+// ── Drag & drop video ──
+stage.addEventListener('dragover', (e) => e.preventDefault());
+stage.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const f = [...(e.dataTransfer.files || [])].find((x) => x.type.startsWith('video/'));
+  if (f) loadFile(f); else toast('Seret fail video (mp4/webm/ogg).');
+});
+
+document.addEventListener('keydown', (e) => { if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); setPlay(video.paused); } });
+})();
+</script>
+</body>
+</html>

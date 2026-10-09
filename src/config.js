@@ -92,11 +92,29 @@ module.exports = {
     searchMax: num(process.env.RATE_LIMIT_SEARCH_MAX, 120),
     writeWindowMs: num(process.env.RATE_LIMIT_WRITE_WINDOW, 60000),
     writeMax: num(process.env.RATE_LIMIT_WRITE_MAX, 10),
-    crawlMax: num(process.env.RATE_LIMIT_CRAWL_MAX, 5)
+    crawlMax: num(process.env.RATE_LIMIT_CRAWL_MAX, 5),
+    websearchMax: num(process.env.RATE_LIMIT_WEBSEARCH_MAX, 60)
   },
 
   security: {
     apiKey: process.env.API_KEY || ''
+  },
+
+  // Pentadbir: hanya SATU e-mel dibenarkan + WebAuthn passkey.
+  admin: {
+    // E-mel pemilik yang dibenarkan. Siapa selain ini DITOLAK.
+    email: String(process.env.ADMIN_EMAIL || 'fevianbenjo48@gmail.com').trim().toLowerCase(),
+    // Kata laluan bootstrap (hanya untuk mendaftarkan passkey pertama).
+    bootstrapPassword: process.env.ADMIN_PASSWORD || process.env.ADMIN_PIN || 'tukuk123',
+    // Tempoh sesi login (millisaat). Lalai 8 jam.
+    sessionTtlMs: num(process.env.ADMIN_SESSION_TTL_MS, 8 * 60 * 60 * 1000)
+  },
+
+  // Konfigurasi WebAuthn (passkey). rpID mesti sepadan dengan domain sebenar.
+  webauthn: {
+    rpName: process.env.WEBAUTHN_RP_NAME || 'Tukuk-OS Admin',
+    rpID: process.env.WEBAUTHN_RP_ID || 'tukuk.org',
+    origin: process.env.WEBAUTHN_ORIGIN || 'https://tukuk.org'
   },
 
   adsense: {
