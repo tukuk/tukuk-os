@@ -11,3 +11,9 @@ routes = [
 [[r2_buckets]]
 binding = "BACKUP"
 bucket_name = "tukuk-fallback"
+
+# Analytics Engine (percuma, ~5 juta baris/bulan) — rekod permintaan tepi,
+# kata kunci carian /search, dan BILA mod sandaran (R2) digunakan.
+[[analytics_engine_datasets]]
+binding = "TUKUK_ENGINE"
+dataset = "tukuk-os"

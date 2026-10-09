@@ -172,10 +172,26 @@ async function handleBackupMode(request, env, pathname) {
   return maintenancePage();
 }
 
+// Analytics Engine — tulis satu baris telemetry. Gagal senyap (jangan jejaskan respons).
+function logEvent(env, e) {
+  if (!env || !env.TUKUK_ENGINE) return;
+  try {
+    env.TUKUK_ENGINE.writeDataPoint({
+      indexes: [String(e.hostname || "")],
+      blobs: [String(e.method || ""), String(e.pathname || ""), String(e.q || ""), String(e.mode || "")],
+      doubles: [Number(e.status) || 0]
+    });
+  } catch (err) {
+    console.error("logEvent gagal:", err && err.message);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const host = url.hostname; // host asal: tukuk.org / www.tukuk.org
+    const q = (url.searchParams.get("q") || "").slice(0, 200);
     url.hostname = "tukuk.org";
 
     try {
@@ -189,9 +205,16 @@ export default {
       // Jika pelayan membalas 5xx → masuk mod sandaran sepenuhnya
       if (response.status >= 500) throw new Error("Server error");
 
+      ctx.waitUntil(Promise.resolve().then(() =>
+        logEvent(env, { hostname: host, method: request.method, pathname, q, mode: "proxy", status: response.status })
+      ));
       return response;
     } catch (err) {
-      return handleBackupMode(request, env, pathname);
+      const resp = await handleBackupMode(request, env, pathname);
+      ctx.waitUntil(Promise.resolve().then(() =>
+        logEvent(env, { hostname: host, method: request.method, pathname, q, mode: "backup", status: resp.status })
+      ));
+      return resp;
     }
   },
 };
