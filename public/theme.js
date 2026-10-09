@@ -184,3 +184,17 @@
     report('promise', msg || 'unhandled rejection', '', 0, 0);
   });
 })();
+
+/* Mini-pemain global — muzik/radio sambung bermain di halaman selain index
+   (studio, editor, nasa, blog…). player.js berhenti sendiri bila bar index wujud. */
+(function () {
+  try {
+    if (/^\/admin/.test(location.pathname)) return;
+    if (document.querySelector('script[data-tk-player]')) return;
+    var s = document.createElement('script');
+    s.src = '/player.js';
+    s.defer = true;
+    s.setAttribute('data-tk-player', '1');
+    (document.head || document.documentElement).appendChild(s);
+  } catch (e) {}
+})();

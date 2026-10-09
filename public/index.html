@@ -877,7 +877,7 @@ function setMode(m, push = true) {
 
 async function run() {
   const q = $('q').value.trim();
-  if (!q && mode !== 'radio') return;
+  if (!q && mode !== 'radio' && mode !== 'music') return; // radio → stesen teratas; music → carta pop default
   if (toResultsIfNeeded()) return; // dari dashboard → pindah ke /cari, biarkan sana yang jalankan
   query = q;
   offset = 0;
@@ -1383,7 +1383,7 @@ if (!IS_RESULTS) {
   // ── Hasil `/cari` ──
   const dash = document.getElementById('dashboard');
   if (dash) dash.hidden = true;
-  if (query) run();
+  if (query || mode === 'radio' || mode === 'music') run();
   else $('results').innerHTML = '<div class="empty">Taip sesuatu untuk mula mencari.</div>';
 }
 
@@ -1517,6 +1517,27 @@ let retryCount = 0;
 let playStartedAt = 0;   // bila play benar-benar mula — elak 'ended' serta-merta daripada klip rosak (cascade)
 let currentLive = false; // true = siaran langsung radio: 'ended'/stall → sambung semula, jangan tukar stesen
 
+// ── State pemain global — dibaca /player.js supaya muzik/radio sambung di halaman lain ──
+const PLAYER_STATE_KEY = 'tk-player-state';
+function currentQueueArr() {
+  const cards = [...document.querySelectorAll('.play-card[data-audio]')].filter((c) => normAudioSrc(c.dataset.audio));
+  return cards.map((c) => ({ src: normAudioSrc(c.dataset.audio), title: c.dataset.title || 'Media', live: mode === 'radio' }));
+}
+function savePlayerState(playing) {
+  if (!currentSrc) return;
+  try {
+    const queue = currentQueueArr();
+    let qi = queue.findIndex((x) => x.src === currentSrc);
+    if (qi === -1) qi = 0;
+    localStorage.setItem(PLAYER_STATE_KEY, JSON.stringify({
+      src: currentSrc, title: audioBarTitle.textContent, live: currentLive,
+      playing: !!playing, pos: currentLive ? 0 : (mediaAudio.currentTime || 0),
+      queue, qi, ts: Date.now()
+    }));
+  } catch (e) {}
+}
+function clearPlayerState() { try { localStorage.removeItem(PLAYER_STATE_KEY); } catch (e) {} }
+
 const audioPlayPauseEl = document.getElementById('audioPlayPause');
 const audioAutoEl = document.getElementById('audioAuto');
 function updatePpLabel() {
@@ -1551,6 +1572,7 @@ function stopAudio() {
   currentLive = false;
   resetOwnerBtn();
   audioBar.hidden = true;
+  clearPlayerState();
 }
 document.getElementById('audioBarStop').addEventListener('click', stopAudio);
 
@@ -1565,6 +1587,7 @@ function markPlaying(pBtn, title) {
   audioBar.hidden = false;
   playStartedAt = Date.now();
   updatePpLabel();
+  savePlayerState(true);
 }
 
 function beginPlay(rawSrc, title, pBtn, opts = {}) {
@@ -1600,7 +1623,9 @@ function scheduleRetry() {
   if (retryTimer) clearTimeout(retryTimer);
   retryCount++;
   // Bila gagal berulang: radio → berhenti (stesen mungkin turun); muzik → lompat lagu hanya jika Auto-next.
-  if (retryCount > 10) { if (!currentLive && audioAutoEl && audioAutoEl.checked) advanceQueue(); else stopAudio(); return; }
+  // Trek mati (pratinjau 404) dilompat lebih cepat supaya tak nampak "berhenti/bertukar" rawak.
+  const maxRetry = currentLive ? 10 : 4;
+  if (retryCount > maxRetry) { if (!currentLive && audioAutoEl && audioAutoEl.checked) advanceQueue(); else stopAudio(); return; }
   const delay = Math.min(800 * retryCount, 4000);
   retryTimer = setTimeout(() => {
     retryTimer = null;
@@ -1654,9 +1679,11 @@ mediaAudio.addEventListener('ended', () => {
 });
 mediaAudio.addEventListener('error', () => { if (wantPlay) scheduleRetry(); });
 mediaAudio.addEventListener('stalled', () => { if (wantPlay) scheduleRetry(); });
-mediaAudio.addEventListener('playing', () => { retryCount = 0; playStartedAt = Date.now(); updatePpLabel(); });
-mediaAudio.addEventListener('play', updatePpLabel);
-mediaAudio.addEventListener('pause', updatePpLabel);
+mediaAudio.addEventListener('playing', () => { retryCount = 0; playStartedAt = Date.now(); updatePpLabel(); savePlayerState(true); });
+mediaAudio.addEventListener('play', () => { updatePpLabel(); savePlayerState(true); });
+mediaAudio.addEventListener('pause', () => { updatePpLabel(); if (wantPlay) savePlayerState(false); });
+let saveTick = 0;
+mediaAudio.addEventListener('timeupdate', () => { if (++saveTick % 8 === 0 && !mediaAudio.paused) savePlayerState(true); });
 
 document.addEventListener('click', (e) => {
   const card = e.target.closest('.play-card');
@@ -1676,6 +1703,23 @@ document.addEventListener('click', (e) => {
 
   beginPlay(audioSrc, title, pBtn, { fallback: true, live: mode === 'radio' });
 });
+
+// Sambung semula automatik bila pengguna kembali ke halaman carian sambil muzik berbunyi.
+(function restorePlayerState() {
+  let st = null;
+  try { st = JSON.parse(localStorage.getItem(PLAYER_STATE_KEY) || 'null'); } catch (e) { return; }
+  if (!st || !st.src || !st.playing || Date.now() - (st.ts || 0) > 12 * 3600 * 1000) return;
+  const src = normAudioSrc(st.src);
+  if (!src) return;
+  currentSrc = src; currentLive = !!st.live; wantPlay = true; retryCount = 0; playToken++;
+  audioBarTitle.textContent = st.title || '';
+  audioBar.hidden = false;
+  mediaAudio.src = currentSrc;
+  if (!currentLive && st.pos) {
+    mediaAudio.addEventListener('loadedmetadata', () => { try { mediaAudio.currentTime = st.pos; } catch (e) {} }, { once: true });
+  }
+  mediaAudio.play().catch(() => updatePpLabel());
+})();
 
 // ── In-App Reader Modal for Search Results & Articles (Like Video Modal) ──
 let readerUrl = '';
