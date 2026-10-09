@@ -18,6 +18,7 @@ Enjin carian web bebas, ringan, dan berkuasa tinggi yang dioptimumkan untuk pela
 | Ubah halaman statik (`public/*.html`) | **Hanya reload browser** — dibaca setiap request. |
 | Ubah `src/server.js` (route/`STATIC_PAGES`) | **WAJIB restart** `node index.js` — route dalam memori. |
 | Tukar config/kunci | Edit `deploy/env.defaults` (repo private) → `sudo bash scripts/setup-all.sh` (idempotent). |
+| Jana app+game dari 1 kata | `node scripts/satu-kata/generate.mjs [kata]` — CI percuma (GitHub Actions) cron harian → Cloudflare Pages. Lihat **§12** |
 | Semak kesihatan | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
 | Situs awam kini | ✅ `tukuk.org`, `dashboard.tukuk.org`, `www.tukuk.org` = **200** (Cloudflare Free) |
 
@@ -188,6 +189,9 @@ Tiada satu pun perlu dibayar untuk skala kecil. Ini senarai + tempat ia diset:
 | **Google Search Console** | Free | Fail verifikasi `public/*.html` (bingbot dsb.) — daftar & submit `sitemap.xml` |
 | **Microsoft Clarity** | Free (analitik tanpa cookie) | Token pernah dikongsi — letak ID di Admin jika mahu rekod sesi |
 | **NASA APOD API** | Free (DEMO_KEY) | `src/nasa.js` / `public/nasa.html` |
+| **GitHub Actions** | 2,000 min/bln (private) · unlimited (public) | Otak cron + deploy `satu-kata` → `.github/workflows/satu-kata.yml` |
+| **GitLab CI** | ~400 min/bln | Mirror mingguan `satu-kata` → `.gitlab-ci.yml` |
+| **Cloudflare Pages** | Free (statis) | Hub app+game `tukuk-satu-kata` (`generated/public/`) — §12 |
 | **Google AdSense / Microsoft Ads** | Free (hasil) | `public/ads.txt` + `src/config.js:adsense` |
 
 **Semua ini lalai-lalai hidup sebaik `npm install`** kerana kunci tersimpan di `deploy/env.defaults` (repo private). Yang PERLU tindakan manual di dashboard (tak boleh auto): daftar Search Console, hantar AdSense, aktifkan Clarity tag.
@@ -212,7 +216,35 @@ Tiada satu pun perlu dibayar untuk skala kecil. Ini senarai + tempat ia diset:
 
 ---
 
-## 🔮 12. Pelan Masa Depan (Future Roadmap)
-- **1 Hari 1 App:** Tambah modul/aplikasi web baharu secara berterusan.
-- **Unity Cloud Games:** Integrasi permainan WebGL Unity ke dalam tab permainan Tukuk-OS.
+## 🧩 12. Satu Kata — skills agent + CI/CD percuma (1 kata → app + game)
+
+Ubah **satu kata** menjadi **satu web-app + satu web-game** yang siap live — **tanpa build step**, dan **VPS tidak pernah dibebani** (semua pembinaan berjalan di runner percuma, bukan di `192.168.8.100`).
+
+**Cara guna:**
+- `node scripts/satu-kata/generate.mjs [kata] [--unity] [--dry]` — tulis `generated/public/<slug>/{app,game}/index.html`, kemas kini **hub** `generated/public/index.html` + `generated/manifest.json`.
+- **Skills agent:** `kilo satu-kata [kata]` — lihat `.kilo/command/satu-kata.md` (format sama dengan command Kilo lain).
+- Tiada kata diberi → auto-pilih kata **seterusnya** dalam `scripts/satu-kata/words.txt` yang belum ada di manifest (inilah yang cron guna setiap hari). Keluaran **idempotent** (slug → sama, kemas kini bukan duplikat).
+- App = **Preact+htm** (gaya React, HTML tunggal). Game = **Phaser** (canvas). Tema (palette + genre) **deterministik** daripada hash slug.
+
+**CI/CD — siapa buat apa:**
+| Peranan | Sumber (percuma) | Fail |
+|---|---|---|
+| Cron harian `03:15 MYT` + trigger manual | **GitHub Actions** | `.github/workflows/satu-kata.yml` |
+| Hosting + deploy | **Cloudflare Pages** (`tukuk-satu-kata`) | — |
+| Mirror mingguan (terhad) | **GitLab CI** (~400 min/bln → schedule-only, tak ubah state GitHub) | `.gitlab-ci.yml` |
+| Game "serius" (opt-in manual) | **Unity Cloud** | `scripts/satu-kata/templates/unity-GameMain.cs.tpl` |
+
+**Setup sekali (di GitHub):** tambah Secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`); set **Settings → Actions → General → Workflow permissions = Read and write** (supaya Actions boleh push `manifest` semula untuk kata esok). Workflow tak ada trigger `push` → tiada gelung.
+
+**Kenapa default bukan Unity:** Unity perlukan editor berlesen + build berat → tak sesuai untuk "1 hari 1 game" auto pada CI percuma tanpa membebankan server. Web (Phaser) = default auto; Unity kekal scaffold opt-in manual.
+
+**⚠️ Git gotcha:** push fail `.github/workflows/*` **kena** ada scope `workflow` — `gh auth refresh -h github.com -s workflow`; kalau tidak GitHub akan **reject** push (`refusing to allow an OAuth App to create or update workflow ... without workflow scope`).
+
+**Susun kata:** sunting `scripts/satu-kata/words.txt` (`kata | emoji | tagline`). `generated/` di-commit (kecil; HTML sahaja) supaya CI tahu kata mana sudah guna.
+
+---
+
+## 🔮 13. Pelan Masa Depan (Future Roadmap)
+- ✅ **1 Hari 1 App + Game:** **Sudah SIAP** — lihat **§12** (cron GitHub Actions jana app+game setiap kata, setiap hari, auto).
+- **Unity Cloud Games:** Scaffold opt-in sudah ada (**§12**); seterusnya = sambungkan *build* WebGL Unity (perlun lesen + minit CI berbayar/manual) ke tab permainan Tukuk-OS.
 - **Kaggle CLI:** Gunakan Kaggle CLI untuk memproses data/latihan AI berat jika RAM laptop terbatas.
