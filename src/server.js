@@ -103,6 +103,25 @@ const contactLimiter = config.rateLimit.enabled
 const app = express();
 app.disable('x-powered-by');
 
+// Security headers (Lighthouse "Trust & Safety"). Cloudflare boleh tambah di edge juga,
+// tapi ini memastikan header ada tanpa mengira laluan (aplikasi terus, tunnel, dsb.).
+// CSP sengaja TIDAK dipasang: SPA ini bergantung kepada inline <script> + inline handler;
+// CSP ketat memerlukan nonce/hash (refactor besar) — follow-up supaya tak memecahkan fungsi.
+// Clickjacking dilindungi oleh X-Frame-Options; COOP pilih same-origin-allow-popups supaya
+// popup OAuth/login (window.open) tidak terputus.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('X-DNS-Prefetch-Control', 'on');
+  // HSTS hanya bermakna atas HTTPS; tiada `preload` (butuh daftar + semua subdomain HTTPS dulu).
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 // SEO: canonical host — semua permintaan www di301 ke apex
 app.use((req, res, next) => {
   if (req.hostname === 'www.tukuk.org') {
