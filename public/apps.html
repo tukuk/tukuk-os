@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tukuk Apps — Free Web Apps in your Browser — Tukuk-OS</title>
+<meta name="description" content="Tukuk Apps: a collection of free web apps that run 100% in your browser — notes, calculator, to-do list, unit converter, timer, colour picker, password generator and text tools. No sign-up, no uploads, no watermarks.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="Tukuk Apps — Free Web Apps in your Browser">
+<meta property="og:description" content="A growing shelf of local-first web apps: notes, calculator, to-do, converter, timer, colour tools and more. Nothing leaves your device.">
+<meta property="og:url" content="https://tukuk.org/apps">
+<link rel="canonical" href="https://tukuk.org/apps">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 20px; }
+  header { padding:44px 0 12px; text-align:center; }
+  h1 { margin:0; font-size:2.3rem; letter-spacing:-.5px; }
+  h1 .accent { color:var(--accent); }
+  .tagline { color:var(--muted); margin:10px 0 26px; font-size:1.05rem; }
+  nav.top { display:flex; justify-content:center; flex-wrap:wrap; gap:14px; font-size:.9rem; margin-bottom:22px; }
+  nav.top a { color:var(--muted); text-decoration:none; }
+  nav.top a:hover { color:var(--accent); }
+  .search { display:flex; gap:10px; align-items:center; justify-content:center; margin:14px 0 22px; }
+  .search input { width:100%; max-width:420px; padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:.95rem; outline:none; }
+  .search input:focus { border-color:var(--accent); }
+  .shelf { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; margin:8px 0 40px; }
+  .app-card { display:flex; flex-direction:column; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; text-decoration:none; color:var(--text); transition:border-color .18s, transform .18s; }
+  .app-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .app-card .icon { font-size:2rem; }
+  .app-card h2 { margin:0; font-size:1.05rem; }
+  .app-card p { margin:0; color:var(--muted); font-size:.86rem; line-height:1.5; }
+  .app-card .go { margin-top:auto; color:var(--accent); font-weight:600; font-size:.86rem; }
+  .badge { display:inline-block; font-size:.72rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  footer { border-top:1px solid var(--line); color:var(--muted); text-align:center; font-size:.88rem; padding:22px 0 34px; margin-top:20px; }
+  footer a { color:var(--accent); text-decoration:none; margin:0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📱 Tukuk <span class="accent">Apps</span></h1>
+    <p class="tagline">Tiny web apps that run entirely in your browser — no sign-up, no uploads, no ads inside apps. Your data stays on your device.</p>
+    <nav class="top"><a href="/">Home</a><a href="/apps">Apps</a><a href="/studio">Studio</a><a href="/nasa">NASA</a><a href="/explore">Explore</a><a href="/about">About</a></nav>
+  </header>
+
+  <div class="search"><input id="q" type="search" placeholder="Search apps…" aria-label="Search apps"></div>
+
+  <div class="shelf" id="shelf">
+    <a class="app-card" href="/apps/notes"><div class="icon">📝</div><h2>Notes</h2><p>Plain notes with local autosave, tags, search and Markdown-style formatting. Stored in your browser.</p><span class="badge">Local-first</span><span class="go">Open →</span></a>
+    <a class="app-card" href="/apps/calc"><div class="icon">🧮</div><h2>Calculator</h2><p>Keyboard-friendly calculator with scientific mode, history, parentheses and copy result.</p><span class="badge">Offline</span><span class="go">Open →</span></a>
+    <a class="app-card" href="/apps/todo"><div class="icon">✅</div><h2>To-Do</h2><p>Simple task list with priorities, filters, and localStorage persistence. Nothing leaves your device.</p><span class="badge">Local-first</span><span class="go">Open →</span></a>
+    <a class="app-card" href="/apps/convert"><div class="icon">📐</div><h2>Unit Converter</h2><p>Convert length, mass, temperature, area, volume, data size, speed, time and more.</p><span class="badge">Instant</span><span class="go">Open →</span></a>
+    <a class="app-card" href="/apps/timer"><div class="icon">⏱️</div><h2>Timer, Stopwatch &amp; Pomodoro</h2><p>All three time tools on one page. Save laps, schedule breaks, get a beep when time is up.</p><span class="badge">Works offline</span><span class="go">Open →</span></a>
+    <a class="app-card" href="/apps/color"><div class="icon">🎨</div><h2>Colour Picker</h2><p>Pick or paste colours, get HEX/RGB/HSL, shades/tints, complementary palette and contrast ratio.</p><span class="badge">Design helper</span><span class="go">Open →</span></a>
+    <a class="app-card" href="/apps/password"><div class="icon">🔐</div><h2>Password Generator</h2><p>Cryptographically-random passwords or memorable passphrases with strength meter.</p><span class="badge">Uses crypto.getRandomValues</span><span class="go">Open →</span></a>
+    <a class="app-card" href="/apps/text"><div class="icon">🔡</div><h2>Text Tools</h2><p>Word/char count, case transforms, trim, sort, dedupe, Base64, URL encode/decode, reverse.</p><span class="badge">No uploads</span><span class="go">Open →</span></a>
+  </div>
+
+  <p class="tagline" style="margin-top:6px;">New apps are being added — check back soon.</p>
+
+  <footer>
+    &copy; 2026 Tukuk-OS — <a href="/">Search</a> <a href="/apps">Apps</a> <a href="/studio">Studio</a> <a href="/about">About</a> <a href="/privacy">Privacy</a> <a href="/terms">Terms</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const q = document.getElementById('q');
+  const cards = [...document.querySelectorAll('.app-card')];
+  const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  q.addEventListener('input', () => {
+    const query = norm(q.value.trim());
+    if (!query) { cards.forEach(c => c.style.display = ''); return; }
+    cards.forEach(c => {
+      const text = norm(c.textContent);
+      c.style.display = text.includes(query) ? '' : 'none';
+    });
+  });
+})();
+</script>
+</body>
+</html>

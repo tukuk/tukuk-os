@@ -111,11 +111,21 @@ app.use(express.static(PUBLIC_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'studio', 'bg-remover', 'collage'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'studio', 'apps', 'bg-remover', 'collage'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
       if (error) res.status(404).json({ error: 'Halaman tidak dijumpai', path: req.originalUrl });
+    });
+  });
+}
+
+// Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text'];
+for (const name of APPS) {
+  app.get(`/apps/${name}`, (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
+      if (error) res.status(404).json({ error: `App '${name}' belum wujud`, path: req.originalUrl });
     });
   });
 }
