@@ -738,6 +738,35 @@ async function getSpaceAudio(query = 'apollo') {
   }
 }
 
+/**
+ * 7b. Live crew — siapa yang sedang berada di angkasa lepas sekarang.
+ *     open-notify.org (tiada kunci, percuma). Sandaran: senarai kosong + nota.
+ */
+async function getCrew() {
+  const cacheKey = 'crew:live';
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  try {
+    const res = await http.get('http://api.open-notify.org/astros.json', { timeout: 8000 });
+    const people = Array.isArray(res.data?.people) ? res.data.people : [];
+    const byCraft = {};
+    for (const p of people) {
+      const craft = p.craft || 'Unknown';
+      (byCraft[craft] = byCraft[craft] || []).push({ name: p.name, craft });
+    }
+    const result = {
+      source: 'open-notify.org',
+      inSpace: Number(res.data?.number) || people.length,
+      people,
+      stations: Object.entries(byCraft).map(([craft, list]) => ({ craft, count: list.length, crew: list }))
+    };
+    setCache(cacheKey, result, 10 * 60 * 1000); // 10 minit — krew jarang berubah
+    return result;
+  } catch {
+    return { source: 'unavailable', inSpace: 0, people: [], stations: [], note: 'Crew feed temporarily unreachable.' };
+  }
+}
+
 function isoDate(d) {
   return new Date(d).toISOString().slice(0, 10);
 }
@@ -953,6 +982,7 @@ module.exports = {
   getSpaceWeather,
   searchNASAMedia,
   getISSTelemetry,
+  getCrew,
   getSpaceAudio,
   getAsteroidTrend,
   getSolarActivity

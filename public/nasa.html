@@ -168,6 +168,7 @@
     <button class="tab-btn active" onclick="switchTab('apod')">&#127775; Astronomy Picture (APOD)</button>
     <button class="tab-btn" onclick="switchTab('experiments')">&#129514; Experiments</button>
     <button class="tab-btn" onclick="switchTab('iss')">&#128752; 3D Live ISS Tracker</button>
+    <button class="tab-btn" onclick="switchTab('crew')">&#129493; Who's in Space</button>
     <button class="tab-btn" onclick="switchTab('mars')">&#129680; Mars Rovers</button>
     <button class="tab-btn" onclick="switchTab('asteroids')">&#9732;&#65039; Near-Earth Asteroids</button>
     <button class="tab-btn" onclick="switchTab('epic')">&#127757; EPIC Live Earth</button>
@@ -288,6 +289,20 @@
         </div>
         <div id="issMap"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- 2b. WHO'S IN SPACE PANEL (live crew) -->
+  <div id="panel-crew" class="section-panel">
+    <div class="card">
+      <h2 style="margin-top:0;">&#129493; Who's in Space Right Now</h2>
+      <p style="color:var(--muted);">Live count and names of every human currently off-planet, read straight from the open astronaut registry. Updates automatically while this tab is open.</p>
+      <div class="telemetry-grid">
+        <div class="telemetry-box"><div class="telemetry-label">Humans in space</div><div class="telemetry-val" id="crewCount">--</div></div>
+        <div class="telemetry-box"><div class="telemetry-label">Spacecraft / stations</div><div class="telemetry-val" id="crewCraft">--</div></div>
+        <div class="telemetry-box"><div class="telemetry-label">Last updated</div><div class="telemetry-val" id="crewAt" style="font-size:1.05rem;">--</div></div>
+      </div>
+      <div id="crewContent" class="spinner">Loading live crew manifest...</div>
     </div>
   </div>
 
@@ -423,6 +438,7 @@ function switchTab(name) {
   }
 
   if (name === 'mars' && !document.getElementById('marsContent').children.length) loadMarsPhotos();
+  if (name === 'crew' && !document.getElementById('crewContent').children.length) loadCrew();
   if (name === 'asteroids' && !document.getElementById('asteroidContent').querySelector('table')) loadAsteroids();
   if (name === 'epic' && !document.getElementById('epicContent').children.length) loadEPIC();
   if (name === 'audio' && !document.getElementById('audioContent').children.length) loadSpaceAudio();
@@ -496,6 +512,32 @@ async function loadRandomAPOD() {
   const randomDate = getRandomDate();
   document.getElementById('apodDate').value = randomDate;
   loadAPOD(randomDate);
+}
+
+/* 1b. WHO'S IN SPACE — live crew */
+async function loadCrew() {
+  const container = document.getElementById('crewContent');
+  try {
+    const data = await safeFetchJson('/api/nasa/crew');
+    if (data.error) throw new Error(data.error);
+    document.getElementById('crewCount').textContent = data.inSpace ?? 0;
+    document.getElementById('crewCraft').textContent = (data.stations || []).length;
+    document.getElementById('crewAt').textContent = new Date().toLocaleTimeString();
+    if (data.source === 'unavailable' || !data.people || !data.people.length) {
+      container.innerHTML = `<div style="color:var(--muted); text-align:center; padding:20px;">&#9888;&#65039; ${esc(data.note || 'No crew data right now.')} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadCrew()">Retry</button></div>`;
+      return;
+    }
+    container.innerHTML = (data.stations || []).map(st => `
+      <div style="margin:18px 0;">
+        <h3 style="margin:0 0 8px;">&#128640; ${esc(st.craft)} <span style="color:var(--muted); font-weight:400; font-size:.85rem;">&middot; ${st.count} aboard</span></h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${st.crew.map(c => `<span class="tag" style="font-size:.9rem; padding:6px 12px;">${esc(c.name)}</span>`).join('')}
+        </div>
+      </div>`).join('') +
+      `<p style="color:var(--muted); font-size:.82rem; margin-top:18px;">Source: open-notify.org &middot; refreshes every ~10 minutes on the server.</p>`;
+  } catch (err) {
+    container.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Failed to load crew: ${esc(err.message)}</div>`;
+  }
 }
 
 /* 2. 3D LIVE ISS TRACKER (THREE.JS GLOBE + LEAFLET 2D) */

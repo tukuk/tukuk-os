@@ -111,7 +111,7 @@ app.use(express.static(PUBLIC_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'studio'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'studio', 'bg-remover', 'collage'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
@@ -131,6 +131,26 @@ for (const [alias, name] of Object.entries(PAGE_ALIASES)) {
 }
 
 app.get("/test", (req, res) => res.send("OK"));
+
+// Negotiasi kandungan: pelayar (Accept: text/html) dapat halaman HTML yang cantik;
+// skrip/API/agent (curl default, fetch Accept:*/*) kekal dapat JSON seperti sebelum ini.
+function isHtmlRequest(req) {
+  return req.accepts(['json', 'html']) === 'html';
+}
+
+// ——— IndexNow: beritahu enjin carian (Bing/Yandex/Naver/Seznam) serta-merta bila
+// kandungan baharu diterbitkan. Non-blocking, ralat diabaikan. Dimatikan jika tiada key.
+const INDEXNOW_KEY = (process.env.INDEXNOW_KEY || 'bd8f0317c5ab4cddb9a3dc62f7ec15ae').trim();
+function notifyIndexNow(urls) {
+  if (!INDEXNOW_KEY || !process.env.INDEXNOW_ENABLED) return; // opt-in supaya tak bazir derma permintaan
+  const list = (Array.isArray(urls) ? urls : [urls]).filter(u => typeof u === 'string' && u.startsWith('https://tukuk.org/'));
+  if (!list.length) return;
+  fetch('https://api.indexnow.org/indexnow', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ host: 'tukuk.org', key: INDEXNOW_KEY, keyLocation: `https://tukuk.org/${INDEXNOW_KEY}.txt`, urlList: list })
+  }).catch(() => {}); // senyap — pengindeksan ialah penambahbaikan, bukan kritikal
+}
 
 // Halaman HASIL carian — SPA yang sama dengan index.html, tetapi pada URL
 // berasingan. Ini memisahkan permukaan iklan: `/` = dashboard kandungan original
@@ -865,6 +885,8 @@ app.get('/api', (req, res) => {
       { method: 'GET', path: '/api/explore/sun', description: 'Sunrise and sunset times' },
       { method: 'GET', path: '/api/explore/arxiv', description: 'Research papers (arXiv)' },
       { method: 'GET', path: '/api/explore/ip', description: 'Visitor IP geolocation' },
+      { method: 'GET', path: '/api/nasa/iss', description: 'Live ISS position & telemetry (wheretheiss.at)' },
+      { method: 'GET', path: '/api/nasa/crew', description: 'Who is in space right now (open-notify.org)' },
       { method: 'GET', path: '/api/nasa/apod', description: 'Astronomy Picture of the Day' },
       { method: 'GET', path: '/api/nasa/asteroids', description: 'Near-Earth asteroids (NeoWs)' },
       { method: 'GET', path: '/api/nasa/experiments/asteroid-trend', description: 'Experiment: asteroid approach trend (weeks)' },
@@ -903,7 +925,7 @@ app.get('/health', async (req, res) => {
 app.get('/stats', limiter.search, async (req, res) => {
   try {
     const [indexStats, settings] = await Promise.all([index.getStats(), index.getSettings()]);
-    res.json({
+    const data = {
       documents: indexStats.numberOfDocuments,
       indexSize: indexStats.indexSize,
       searchableAttributes: settings.searchableAttributes,
@@ -917,11 +939,81 @@ app.get('/stats', limiter.search, async (req, res) => {
         memoryMb: Math.round(process.memoryUsage().rss / 1048576),
         startedAt: new Date(START_TIME).toISOString()
       }
-    });
+    };
+    if (isHtmlRequest(req)) return res.send(statsPageHtml(data));
+    res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to read statistics', details: safeError(error) });
   }
 });
+
+// Halaman transparansi manusia untuk /stats (isyarat kepercayaan untuk pelawat & Google AdSense:
+// "laman ini jujur tentang cara ia beroperasi, tiada penjejakan").
+function fmtBytes(n) {
+  n = Number(n) || 0;
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+}
+function fmtUptime(sec) {
+  sec = Number(sec) || 0;
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+  return (d ? `${d}d ` : '') + (h ? `${h}j ` : '') + `${m}m`;
+}
+function statsPageHtml(d) {
+  const rows = [
+    ['Documents indexed', (Number(d.documents) || 0).toLocaleString('en-US')],
+    ['Index size', fmtBytes(d.indexSize)],
+    ['Requests served (this run)', (Number(d.http && d.http.requests) || 0).toLocaleString('en-US')],
+    ['Errors (this run)', (Number(d.http && d.http.errors) || 0).toLocaleString('en-US')],
+    ['Uptime (this run)', fmtUptime(d.process && d.process.uptimeSeconds)],
+    ['Memory in use', `${(Number(d.process && d.process.memoryMb) || 0)} MB`],
+    ['Started at', d.process ? new Date(d.process.startedAt).toUTCString() : '—']
+  ].map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('\n    ');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Statistics &amp; Transparency — Tukuk-OS</title>
+<meta name="description" content="Real-time, honest statistics for the Tukuk-OS search index: documents indexed, uptime, memory and request counts. No tracking cookies, no analytics scripts.">
+<link rel="canonical" href="https://tukuk.org/stats">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; margin:24px 0; }
+  th, td { text-align:left; padding:14px 18px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; width:50%; }
+  td { font-variant-numeric:tabular-nums; }
+  tr:last-child th, tr:last-child td { border-bottom:0; }
+  .trust { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:10px; padding:18px 22px; margin:24px 0; color:var(--muted); line-height:1.7; }
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Live Statistics</h1>
+    <p class="tagline">A fully transparent look at how Tukuk-OS is running right now.</p>
+    <nav><a href="/">Home</a><a href="/blog">Blog</a><a href="/explore">Explore</a><a href="/nasa">NASA</a><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a></nav>
+  </header>
+  <main>
+    <p>Tukuk-OS is a free, open web search engine. These numbers are read live from the running server — refresh the page to see them change.</p>
+    <table>
+    ${rows}
+    </table>
+    <div class="trust">
+      <strong>Privacy promise.</strong> This page loads no third-party analytics or tracking cookies. The counts above are in-memory totals for the current server run and contain no personal data about any visitor.
+    </div>
+    <p class="meta">Want the machine-readable version? This page is served from the same data as <a href="/stats" rel="nofollow">the JSON <code>/stats</code> endpoint</a>.</p>
+  </main>
+  <footer><p>&copy; 2026 Tukuk-OS &mdash; A free and open web search engine.</p></footer>
+</div>
+</body>
+</html>`;
+}
 
 app.get('/search', limiter.search, async (req, res) => {
   const { q, index: indexParam, ...rest } = req.query;
@@ -1270,6 +1362,15 @@ app.get('/api/nasa/iss', async (req, res) => {
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to read ISS position', details: safeError(error) });
+  }
+});
+
+// Krew ISS langsung — siapa yang sedang di angkasa sekarang (open-notify.org, tiada kunci)
+app.get('/api/nasa/crew', async (req, res) => {
+  try {
+    res.json(await nasa.getCrew());
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to read live crew', details: safeError(error) });
   }
 });
 
@@ -1914,6 +2015,7 @@ app.post('/api/admin/posts', auth.requireAdmin, (req, res) => {
     wordCount: post.content.split(/\s+/).length,
     quality: 1.0
   }]);
+  notifyIndexNow(`https://tukuk.org/blog/${post.slug}`);
   res.json(post);
 });
 
@@ -1923,7 +2025,48 @@ app.delete('/api/admin/posts/:id', auth.requireAdmin, (req, res) => {
 });
 
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found', path: req.originalUrl });
+  const wantsJson = req.path.startsWith('/api') || /\.(json|xml)$/i.test(req.path) || !isHtmlRequest(req);
+  if (wantsJson) return res.status(404).json({ error: 'Route not found', path: req.originalUrl });
+  res.status(404).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 — Page Not Found — Tukuk-OS</title>
+<meta name="description" content="The page you were looking for on Tukuk-OS could not be found. Search the web or browse the blog instead.">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://tukuk.org/">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+  .oops { text-align:center; padding:40px 0 8px; }
+  .oops .code { font-size:5rem; font-weight:800; color:var(--accent); line-height:1; letter-spacing:-2px; }
+  .hint { color:var(--muted); margin:6px 0 26px; }
+  .actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:24px 0; }
+  .actions a { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 20px; text-decoration:none; color:var(--text); }
+  .actions a:hover { border-color:var(--accent); color:var(--accent); }
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="oops">
+    <div class="code">404</div>
+    <h1>Page not found</h1>
+    <p class="hint">Sorry — <code>${escapeHtml(req.path)}</code> doesn't exist, or has moved.</p>
+    <div class="actions">
+      <a href="/">🔍 Search the web</a>
+      <a href="/blog">📝 Read the blog</a>
+      <a href="/explore">🌍 Explore</a>
+      <a href="/nasa">🚀 NASA</a>
+      <a href="/contact">✉️ Contact us</a>
+    </div>
+  </div>
+  <footer><p>&copy; 2026 Tukuk-OS &mdash; A free and open web search engine. <a href="/">Home</a> <a href="/about">About</a> <a href="/privacy">Privacy</a></p></footer>
+</div>
+</body>
+</html>`);
 });
 
 app.use((error, req, res, next) => {
