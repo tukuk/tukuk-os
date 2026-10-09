@@ -774,30 +774,72 @@ async function getNasaAssetUrl(nasaId) {
 
 /**
  * 7b. Live crew — siapa yang sedang berada di angkasa lepas sekarang.
- *     open-notify.org (tiada kunci, percuma). Sandaran: senarai kosong + nota.
+ *     open-notify.org (tiada kunci, percuma) SANGAT tidak stabil — kadang TCP
+ *     connect menggantung puluhan saat. Strategi 'stale-while-revalidate':
+ *     hidang data terakhir yang baik serta-merta (dari cakera), dan segar semula
+ *     di latar belakang. Endpoint jadi tidak pernah menyekat pengguna.
  */
+const CREW_FILE = path.join(path.dirname(config.store.path), 'crew-last.json');
+
+function readCrewFallback() {
+  try {
+    const j = JSON.parse(fs.readFileSync(CREW_FILE, 'utf8'));
+    return j && j.result ? j : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCrewFallback(result) {
+  try {
+    fs.mkdirSync(path.dirname(CREW_FILE), { recursive: true });
+    fs.writeFileSync(CREW_FILE, JSON.stringify({ savedAt: Date.now(), result }));
+  } catch {
+    /* sandaran tulis gagal — bukan kritikal */
+  }
+}
+
+// Fetch open-notify (blocking) — bina result, simpan ke memory + cakera.
+async function refreshCrew() {
+  const res = await http.get('http://api.open-notify.org/astros.json', { timeout: 6000 });
+  const people = Array.isArray(res.data?.people) ? res.data.people : [];
+  const byCraft = {};
+  for (const p of people) {
+    const craft = p.craft || 'Unknown';
+    (byCraft[craft] = byCraft[craft] || []).push({ name: p.name, craft });
+  }
+  const result = {
+    source: 'open-notify.org',
+    inSpace: Number(res.data?.number) || people.length,
+    people,
+    stations: Object.entries(byCraft).map(([craft, list]) => ({ craft, count: list.length, crew: list }))
+  };
+  writeCrewFallback(result);
+  setCache('crew:live', result, 10 * 60 * 1000); // 10 minit — krew jarang berubah
+  return result;
+}
+
 async function getCrew() {
-  const cacheKey = 'crew:live';
-  const cached = getCache(cacheKey);
+  const cached = getCache('crew:live');
   if (cached) return cached;
   try {
-    const res = await http.get('http://api.open-notify.org/astros.json', { timeout: 8000 });
-    const people = Array.isArray(res.data?.people) ? res.data.people : [];
-    const byCraft = {};
-    for (const p of people) {
-      const craft = p.craft || 'Unknown';
-      (byCraft[craft] = byCraft[craft] || []).push({ name: p.name, craft });
-    }
-    const result = {
-      source: 'open-notify.org',
-      inSpace: Number(res.data?.number) || people.length,
-      people,
-      stations: Object.entries(byCraft).map(([craft, list]) => ({ craft, count: list.length, crew: list }))
-    };
-    setCache(cacheKey, result, 10 * 60 * 1000); // 10 minit — krew jarang berubah
-    return result;
+    return await refreshCrew();
   } catch {
-    return { source: 'unavailable', inSpace: 0, people: [], stations: [], note: 'Crew feed temporarily unreachable.' };
+    // open-notify lambat/gagal → hidang salinan terakhir (jika ada), jangan sekat.
+    const disk = readCrewFallback();
+    if (disk && disk.result && Date.now() - disk.savedAt < 6 * 60 * 60 * 1000) {
+      const stale = {
+        ...disk.result,
+        stale: true,
+        savedAt: disk.savedAt,
+        note: 'Suapan langsung sedang sesak — memaparkan krew terakhir yang dibaca pada ' + new Date(disk.savedAt).toUTCString()
+      };
+      setCache('crew:live', stale, 2 * 60 * 1000); // cache pendek, cuba segar semula lepas 2 min
+      // Cuba lagi di latar belakang supaya permintaan seterusnya dapat data segar.
+      refreshCrew().catch(() => {});
+      return stale;
+    }
+    return { source: 'unavailable', inSpace: 0, people: [], stations: [], note: 'Crew feed (open-notify.org) is temporarily unreachable. Please retry in a minute.' };
   }
 }
 

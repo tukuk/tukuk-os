@@ -560,13 +560,22 @@ function switchTab(name) {
   }
 }
 
-async function safeFetchJson(url) {
-  const res = await fetch(url);
-  const text = await res.text();
+async function safeFetchJson(url, ms = 15000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error('NASA API server returned non-JSON response or is temporarily busy.');
+    const res = await fetch(url, { signal: ctrl.signal });
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('NASA API server returned non-JSON response or is temporarily busy.');
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') throw new Error('Request timed out — the upstream service is busy, please retry.');
+    throw err;
+  } finally {
+    clearTimeout(t);
   }
 }
 
@@ -630,7 +639,7 @@ async function loadCrew() {
     if (data.error) throw new Error(data.error);
     document.getElementById('crewCount').textContent = data.inSpace ?? 0;
     document.getElementById('crewCraft').textContent = (data.stations || []).length;
-    document.getElementById('crewAt').textContent = new Date().toLocaleTimeString();
+    document.getElementById('crewAt').textContent = (data.stale && data.savedAt) ? ('\u26a0 ' + new Date(data.savedAt).toLocaleTimeString()) : new Date().toLocaleTimeString();
     if (data.source === 'unavailable' || !data.people || !data.people.length) {
       container.innerHTML = `<div style="color:var(--muted); text-align:center; padding:20px;">&#9888;&#65039; ${esc(data.note || 'No crew data right now.')} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadCrew()">Retry</button></div>`;
       return;
@@ -644,7 +653,7 @@ async function loadCrew() {
       </div>`).join('') +
       `<p style="color:var(--muted); font-size:.82rem; margin-top:18px;">Source: open-notify.org &middot; refreshes every ~10 minutes on the server.</p>`;
   } catch (err) {
-    container.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Failed to load crew: ${esc(err.message)}</div>`;
+    container.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Failed to load crew: ${esc(err.message)} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadCrew()">&#8635; Retry</button></div>`;
   }
 }
 
