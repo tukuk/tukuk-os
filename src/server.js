@@ -35,8 +35,39 @@ const index = client.index(config.indexName);
 const DEMO_INDEXES = new Set(['uji_coba']);
 
 const START_TIME = Date.now();
-let requestCount = 0;
-let errorCount = 0;
+
+// Jumlah seumur-hidup yang DISIMPAN ke cakera supaya /stats tidak set ke 0 setiap kali
+// restart/deploy. requestCount/errorCount dimulakan daripada fail ini dan diflush berkala.
+const LIFETIME_FILE = path.join(path.dirname(config.store.path), 'lifetime-stats.json');
+let lifetime = { requests: 0, errors: 0, firstStartedAt: START_TIME };
+try {
+  const j = JSON.parse(fs.readFileSync(LIFETIME_FILE, 'utf8'));
+  if (j && typeof j === 'object') {
+    lifetime = {
+      requests: Number(j.requests) || 0,
+      errors: Number(j.errors) || 0,
+      firstStartedAt: Number(j.firstStartedAt) || START_TIME
+    };
+  }
+} catch { /* fail belum wujud — mula kosong */ }
+let requestCount = lifetime.requests;
+let errorCount = lifetime.errors;
+
+function persistLifetime() {
+  try {
+    lifetime.requests = requestCount;
+    lifetime.errors = errorCount;
+    lifetime.firstStartedAt = Math.min(lifetime.firstStartedAt || START_TIME, START_TIME);
+    fs.mkdirSync(path.dirname(LIFETIME_FILE), { recursive: true });
+    const tmp = `${LIFETIME_FILE}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(lifetime));
+    fs.renameSync(tmp, LIFETIME_FILE);
+  } catch { /* terbaik sahaja — jangan gagikan permintaan */ }
+}
+const lifetimeTimer = setInterval(persistLifetime, 20000);
+if (lifetimeTimer.unref) lifetimeTimer.unref();
+process.on('SIGTERM', persistLifetime);
+process.on('SIGINT', persistLifetime);
 
 const limiter = config.rateLimit.enabled
   ? {
@@ -947,7 +978,7 @@ app.get('/stats', limiter.search, async (req, res) => {
       filters: settings.filterableAttributes,
       fallbackCache: fallback.size(),
       crawler: crawler.snapshot(),
-      http: { requests: requestCount, errors: errorCount },
+      http: { requests: requestCount, errors: errorCount, firstStartedAt: new Date(lifetime.firstStartedAt).toISOString() },
       process: {
         uptimeSeconds: Math.round(process.uptime()),
         memoryMb: Math.round(process.memoryUsage().rss / 1048576),
@@ -979,11 +1010,11 @@ function statsPageHtml(d) {
   const rows = [
     ['Documents indexed', (Number(d.documents) || 0).toLocaleString('en-US')],
     ['Index size', fmtBytes(d.indexSize)],
-    ['Requests served (this run)', (Number(d.http && d.http.requests) || 0).toLocaleString('en-US')],
-    ['Errors (this run)', (Number(d.http && d.http.errors) || 0).toLocaleString('en-US')],
+    ['Requests served (total)', (Number(d.http && d.http.requests) || 0).toLocaleString('en-US')],
+    ['Errors logged (total)', (Number(d.http && d.http.errors) || 0).toLocaleString('en-US')],
+    ['Online since', d.http && d.http.firstStartedAt ? new Date(d.http.firstStartedAt).toUTCString() : '—'],
     ['Uptime (this run)', fmtUptime(d.process && d.process.uptimeSeconds)],
-    ['Memory in use', `${(Number(d.process && d.process.memoryMb) || 0)} MB`],
-    ['Started at', d.process ? new Date(d.process.startedAt).toUTCString() : '—']
+    ['Memory in use', `${(Number(d.process && d.process.memoryMb) || 0)} MB`]
   ].map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('\n    ');
   return `<!DOCTYPE html>
 <html lang="en">
