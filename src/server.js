@@ -12,6 +12,7 @@ const brain = require('./brain/provider');
 const rag = require('./brain/rag');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
+const reranker = require('./brain/reranker');
 const news = require('./news');
 const queries = require('./queries');
 const answer = require('./answer');
@@ -1069,7 +1070,19 @@ app.get('/search', limiter.search, async (req, res) => {
   try {
     const target = corpus ? client.index(corpus) : index;
     const qq = String(q).trim();
-    const result = await target.search(qq, buildSearchParams(rest));
+    const params = buildSearchParams(rest);
+    const wantedLimit = params.limit;
+    let result = await target.search(qq, params);
+    // Rerank neural (hanya mod relevansi, halaman pertama). Selamat: no-op jika
+    // RERANK_ENABLED=false atau model belum di-deploy.
+    if (config.rerank.enabled && !params.sort && (params.offset || 0) === 0 && result.hits.length > 1) {
+      if (wantedLimit < config.rerank.candidates) {
+        params.limit = Math.min(config.rerank.candidates, config.search.maxLimit);
+        result = await target.search(qq, params);
+      }
+      const reranked = await reranker.rerank(qq, result.hits, { topN: wantedLimit });
+      result = { ...result, hits: reranked };
+    }
     const total = result.totalHits ?? result.estimatedTotalHits ?? result.hits.length;
     queries.logQuery(qq, { hits: total });
     res.json({

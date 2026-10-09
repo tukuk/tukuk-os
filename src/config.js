@@ -85,6 +85,16 @@ module.exports = {
     fallbackOnEmpty: bool(process.env.SEARCH_FALLBACK_ON_EMPTY, true)
   },
 
+  // Neural re-ranking (cross-encoder ONNX, dijalankan sepenuhnya dalam Node).
+  // Lalai MATI supaya /search tak berubah sehingga model Kaggle di-deploy.
+  rerank: {
+    enabled: bool(process.env.RERANK_ENABLED, false),
+    modelDir: process.env.RERANK_MODEL_DIR || path.join(__dirname, '..', 'models', 'tukuk-reranker'),
+    quantized: bool(process.env.RERANK_QUANTIZED, false),
+    candidates: Math.min(num(process.env.RERANK_CANDIDATES, 40), 100),
+    timeoutMs: num(process.env.RERANK_TIMEOUT_MS, 2500)
+  },
+
   rateLimit: {
     enabled: bool(process.env.RATE_LIMIT_ENABLED, true),
     trustProxy: bool(process.env.RATE_LIMIT_TRUST_PROXY, true),

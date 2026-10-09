@@ -41,3 +41,13 @@ dist/
 datasets/
 node_modules/
 meili_data/
+
+# ─── Model AI (ONNX/GGUF) ────────────────────────────────────
+# Bobot cross-encoder yang dieskport dari Kaggle — binari besar, dimuat turun
+# semula oleh scripts/setup, bukan disimpan dalam git.
+models/
+*.onnx
+
+# ─── Python bytecode (Kaggle kernels) ───
+__pycache__/
+*.pyc
