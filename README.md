@@ -67,19 +67,14 @@ sudo ./deploy/build-iso.sh
    ```
    Skrip menyalin ke `/opt/tukuk-os`, jana `.env` daripada `deploy/env.defaults`, dan panggil `setup-all.sh` (Node→Meili→servis→tunnel). **Server mesti ada internet** untuk langkah ini.
    - **Offline penuh (tiada internet):** `TUKUK_KEEP_NODEMODULES=1 TUKUK_OFFLINE=1 sudo bash scripts/install-from-usb.sh` — tapi anda juga mesti bawa `node_modules` (dijana pada mesin online arch sama) + binary `node`/`cloudflared`/`meilisearch`, dan aktifkan servis systemd secara manual.
-   - **Selepas siap:** isi `CF_TUNNEL_TOKEN` (+ `CLOUDFLARE_API_TOKEN` untuk www/edge) dalam `/opt/tukuk-os/.env`, lalu `sudo bash scripts/setup-all.sh` sekali lagi (idempotent) untuk hidupkan tunnel & edge.
+   - **Tunnel & edge AUTOMATIK:** `deploy/env.defaults` kini sudah mengandungi `CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) dan `CLOUDFLARE_API_TOKEN` — jadi `setup-all.sh` terus hidupkan tunnel (mod TOKEN, tanpa fail `.json`) dan deploy worker/edge. **Tiada langkah manual diperlukan** pada server baru.
 
 1. **Quick Install pada Ubuntu Server sedia ada (`192.168.8.100`):**
    ```bash
    sudo ./deploy/quick-install.sh
    ```
-2. **Sambungkan ke Cloudflare (`tukuk.org`):**
-   ```bash
-   cloudflared tunnel login
-   cloudflared tunnel create tukuk-tunnel
-   cloudflared tunnel route dns tukuk-tunnel tukuk.org
-   cloudflared tunnel run --url http://localhost:3000 tukuk-tunnel
-   ```
+2. **Cloudflare Tunnel (mod TOKEN — automatik, jangan create baru):**
+   Tunnel `tukuk-os-v2` (UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae`) sudah wujud & token tersimpan di `deploy/env.defaults`. `setup-all.sh` menulis `/etc/cloudflared/config.yml` (token + ingress `tukuk.org`/`www`/`dashboard`) dan unit systemd `--config ... tunnel run`. **DNS `tukuk.org`/`dashboard`/`www` sudah di-route.** Hanya perlu `sudo bash scripts/setup-all.sh` — jangan `tunnel create` baru.
 
 ---
 

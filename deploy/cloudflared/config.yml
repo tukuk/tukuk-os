@@ -1,22 +1,23 @@
 # ==============================================================================
-# Cloudflared config untuk Tukuk-OS — salin ke /etc/cloudflared/config.yml
+# Templat Cloudflared config untuk Tukuk-OS.
+# setup-all.sh menyalin fail ini ke /etc/cloudflared/config.yml dan mengganti
+# <TUNNEL_ID> dengan UUID tunnel anda.
 #
-#   sudo mkdir -p /etc/cloudflared
-#   sudo cp deploy/cloudflared/config.yml /etc/cloudflared/config.yml
-#   sudo cp ~/.cloudflared/<TUNNEL_ID>.json /etc/cloudflared/
-#   sudo cloudflared service install
+#   MOD TOKEN (disyorkan, portabel): setup-all menukar baris `credentials-file:`
+#     kepada `token: <CF_TUNNEL_TOKEN>` — TIADA fail .json diperlukan, jadi
+#     pelayan baru cukup CF_TUNNEL_TOKEN + CF_TUNNEL_ID dalam .env → terus hidup.
+#   MOD JSON (fallback): <TUNNEL_ID>.json mesti wujud di /etc/cloudflared/.
 #
 # PENTING (kesilapan biasa):
-#   1. `tunnel:` mesti TUNNEL ID (UUID), bukan nama — atau nama boleh tapi
-#      credentials-file mesti wujud & betul. Jangan tinggal <TUNNEL_ID>.json.
-#   2. `sudo cloudflared service install` berjalan sebagai root, jadi ia HANYA
-#      cari config di /etc/cloudflared — bukan di ~/.cloudflared anda.
-#   3. Credentials JSON ialah rahsia — chmod 600, jangan commit ke git.
+#   1. `tunnel:` mesti TUNNEL ID (UUID). setup-all isi automatik dari CF_TUNNEL_ID.
+#   2. `sudo cloudflared service install` berjalan sebagai root — ia HANYA baca
+#      /etc/cloudflared/config.yml, bukan ~/.cloudflared anda.
+#   3. Token/credentials ialah RAHSIA — config.yml yang mengandungi token
+#      di-chmod 600; jangan tampal token terus ke dalam fail templat ini.
 # ==============================================================================
 
-# Tunnel "tukuk-os" (guna UUID tunnel baru anda; mod token = dashboard, bukan fail ini):
-tunnel: 168a53af-7e70-460f-b697-2190ec0f28ba
-credentials-file: /etc/cloudflared/168a53af-7e70-460f-b697-2190ec0f28ba.json
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
 
 ingress:
   # Enjin carian + panel admin Tukuk-OS (node index.js, port 3000)

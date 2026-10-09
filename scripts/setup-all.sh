@@ -228,36 +228,63 @@ fi
 
 CF_TOKEN="$(get_env CF_TUNNEL_TOKEN)"
 CF_ID="$(get_env CF_TUNNEL_ID)"
+# Token cloudflared sejati SELALU bermula "eyJ" (JSON base64). Tolak nilai
+# rosak/placeholder supaya pelayan baru tak mati pada `service install <sampah>`.
+if [[ -n "$CF_TOKEN" && "$CF_TOKEN" != eyJ* ]]; then
+  warn "CF_TUNNEL_TOKEN bukan token cloudflared sah (mestinya bermula 'eyJ…'). Diabaikan."
+  CF_TOKEN=""
+fi
+mkdir -p /etc/cloudflared
 if [[ -n "$CF_TOKEN" ]]; then
-  if systemctl is-active --quiet cloudflared; then
-    ok "cloudflared sudah aktif — tunnel tersambung."
-  else
-    cloudflared service install "$CF_TOKEN" >/dev/null && systemctl enable --now cloudflared >/dev/null \
-      && ok "Cloudflare Tunnel dipasang & berjalan (token dari .env)." \
-      || die "Gagal pasang tunnel — semak CF_TUNNEL_TOKEN anda."
-  fi
+  # ── MOD TOKEN (paling portabel — TIADA fail credentials .json diperlukan) ──
+  # config.yml dibina daripada templat: baris `credentials-file:` digantikan
+  # `token: <TOKEN>`. Ingress kekal dalam fail ini (tidak bergantung dashboard).
+  # PENTING: `cloudflared service install` MENOLAK config `token:` (minta
+  # credentials-file), TETAPI `cloudflared tunnel run --config` MENERIMA token.
+  # Jadi unit systemd ditulis terus (ExecStart `--config ... tunnel run`), bukan
+  # melalui `service install` — beginilah pelayan baru boleh 100% auto.
+  [[ -n "$CF_ID" ]] || die "CF_TUNNEL_TOKEN diisi tapi CF_TUNNEL_ID kosong — letak UUID tunnel."
+  sed -e "s#<TUNNEL_ID>#$CF_ID#g" \
+      -e "s#^credentials-file:.*#token: $CF_TOKEN#" \
+      "$INSTALL_DIR/deploy/cloudflared/config.yml" > /etc/cloudflared/config.yml
+  chmod 600 /etc/cloudflared/config.yml   # config kini mengandungi token rahsia
+  cat > /etc/systemd/system/cloudflared.service << 'EOF'
+[Unit]
+Description=cloudflared Tunnel (Tukuk-OS, mod token)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now cloudflared >/dev/null && systemctl restart cloudflared >/dev/null \
+    && ok "Cloudflare Tunnel ($CF_ID) berjalan dalam MOD TOKEN (portabel, tiada .json)." \
+    || die "Gagal mulakan servis cloudflared — semak: journalctl -u cloudflared -n 30"
 elif [[ -n "$CF_ID" ]]; then
-  # Mod tunnel bernama (cloudflared tunnel create + config lokal).
+  # ── MOD NAMED/JSON (fallback: perlu fail <CF_ID>.json pada pelayan ini) ──
   CRED_SRC=""
   for cand in "$INSTALL_DIR/deploy/cloudflared/$CF_ID.json" "$HOME/.cloudflared/$CF_ID.json" "/root/.cloudflared/$CF_ID.json" "/home/tukuk/.cloudflared/$CF_ID.json"; do
     [[ -f "$cand" ]] && CRED_SRC="$cand" && break
   done
-  [[ -n "$CRED_SRC" ]] || die "Credentials $CF_ID.json tidak ditemui. Salin SEKALI dari pelayan lama:  scp tukuk@192.168.8.100:.cloudflared/$CF_ID.json $INSTALL_DIR/deploy/cloudflared/  (dan commit ke repo private supaya pelayan akan datang 100% auto)"
-  mkdir -p /etc/cloudflared
+  [[ -n "$CRED_SRC" ]] || die "Tiada CF_TUNNEL_TOKEN & credentials $CF_ID.json tidak ditemui. Paling mudah: dashboard Cloudflare → Networks → Tunnels → $CF_ID → salin TOKEN, letak CF_TUNNEL_TOKEN=<eyJ…> dalam .env, ulangi setup-all.sh. ATAU scp fail .json dari pelayan lama."
   cp "$CRED_SRC" "/etc/cloudflared/$CF_ID.json" && chmod 600 "/etc/cloudflared/$CF_ID.json"
-  if [[ ! -f /etc/cloudflared/config.yml ]]; then
-    sed "s/168a53af-7e70-460f-b697-2190ec0f28ba/$CF_ID/g" "$INSTALL_DIR/deploy/cloudflared/config.yml" > /etc/cloudflared/config.yml
-  fi
+  sed "s#<TUNNEL_ID>#$CF_ID#g" "$INSTALL_DIR/deploy/cloudflared/config.yml" > /etc/cloudflared/config.yml
   cloudflared service install >/dev/null && systemctl enable --now cloudflared >/dev/null \
-    && ok "Cloudflare Tunnel ($CF_ID) dipasang daripada config lokal." \
+    && ok "Cloudflare Tunnel ($CF_ID) dipasang daripada credentials JSON lokal." \
     || die "Gagal pasang servis cloudflared — semak /etc/cloudflared/config.yml."
 else
-  warn "CF_TUNNEL_TOKEN / CF_TUNNEL_ID belum diisi dalam .env."
-  echo "   Cara pantas (Zero Trust Dashboard): Cloudflare One → Tunnels → Create →"
-  echo "   salin token, tampal sebagai CF_TUNNEL_TOKEN=<token> dalam $INSTALL_DIR/.env"
-  echo "   ATAU mod tunnel bernama: CF_TUNNEL_ID=<uuid> + fail .cloudflared/<uuid>.json"
+  warn "CF_TUNNEL_TOKEN / CF_TUNNEL_ID belum diisi dalam .env — tunnel dilangkau."
+  echo "   Cara disyorkan (MOD TOKEN, portabel ke semua pelayan):"
+  echo "   Cloudflare One → Tunnels → $CF_ID (atau create baharu) → salin TOKEN (mula 'eyJ'),"
+  echo "   tampal CF_TUNNEL_TOKEN=<token> + CF_TUNNEL_ID=<uuid> dalam $INSTALL_DIR/.env,"
   echo "   kemudian:  sudo bash scripts/setup-all.sh   (hanya langkah tunnel diulang)"
-  echo "   Untuk ujian cepat tanpa token:  cloudflared tunnel --url http://localhost:3000"
+  echo "   Ujian pantas tanpa token:  cloudflared tunnel --url http://localhost:3000"
 fi
 
 # ── [8] Cloudflare Edge — www.tukuk.org sentiasa hidup ─────────────────────
