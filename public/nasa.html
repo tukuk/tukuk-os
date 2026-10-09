@@ -125,6 +125,38 @@
   }
 
   .ad-slot{margin:24px 0;overflow:hidden;}
+
+  /* Satellite-view HUD controls */
+  .sat-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px; }
+  .sat-chip { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; color:var(--text); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 12px; cursor:pointer; user-select:none; }
+  .sat-chip input { accent-color: var(--accent); width:14px; height:14px; }
+  .sat-chip.off { opacity:.5; }
+  .hud-corner { position:absolute; left:14px; top:12px; z-index:10; font-family:ui-monospace,Menlo,monospace; font-size:.72rem; color:#7fd0ff; text-shadow:0 0 6px rgba(60,150,255,.4); pointer-events:none; line-height:1.5; }
+  .hud-corner .rec { color:#ff5b5b; animation:blink 1.2s steps(2,start) infinite; }
+  @keyframes blink { to { visibility:hidden; } }
+
+  /* Live Space TV */
+  .live-grid { display:grid; grid-template-columns: 2fr 1fr; gap:16px; align-items:start; }
+  @media (max-width:820px){ .live-grid { grid-template-columns:1fr; } }
+  .live-frame-wrap { position:relative; width:100%; aspect-ratio:16/9; background:#05070c; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .live-frame-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .live-sources { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .live-src { font-size:.82rem; padding:7px 13px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--text); cursor:pointer; }
+  .live-src.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .planet-grid { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+  .planet-chip { font-size:.86rem; padding:7px 13px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--text); cursor:pointer; }
+  .planet-chip.active { border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .vid-thumb { position:relative; cursor:pointer; }
+  .vid-thumb .play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2rem; color:#fff; background:rgba(0,0,0,.25); opacity:0; transition:opacity .2s; }
+  .vid-thumb:hover .play { opacity:1; }
+
+  /* In-app video modal */
+  .vid-modal { display:none; position:fixed; inset:0; z-index:1000; background:rgba(3,6,12,.82); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:18px; }
+  .vid-modal.open { display:flex; }
+  .vid-modal-box { width:min(920px,96vw); background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .vid-modal-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .vid-modal-body { background:#000; }
+  .vid-modal-body video { width:100%; max-height:70vh; display:block; }
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
@@ -168,6 +200,7 @@
     <button class="tab-btn active" onclick="switchTab('apod')">&#127775; Astronomy Picture (APOD)</button>
     <button class="tab-btn" onclick="switchTab('experiments')">&#129514; Experiments</button>
     <button class="tab-btn" onclick="switchTab('iss')">&#128752; 3D Live ISS Tracker</button>
+    <button class="tab-btn" onclick="switchTab('live')">&#128225; Live Space TV</button>
     <button class="tab-btn" onclick="switchTab('crew')">&#129493; Who's in Space</button>
     <button class="tab-btn" onclick="switchTab('mars')">&#129680; Mars Rovers</button>
     <button class="tab-btn" onclick="switchTab('asteroids')">&#9732;&#65039; Near-Earth Asteroids</button>
@@ -258,7 +291,7 @@
   <div id="panel-iss" class="section-panel">
     <div class="card">
       <h2 style="margin-top:0;">International Space Station (ISS) 3D Live Orbit Tracker</h2>
-      <p style="color:var(--muted);">Live 3D telemetry of the Space Station orbiting Earth at ~27,600 km/h (~420 km altitude). Drag to rotate 3D Earth, scroll to zoom.</p>
+      <p style="color:var(--muted);">Live 3D telemetry of the Space Station orbiting Earth at ~27,600 km/h (~420 km altitude), rendered as a photorealistic satellite-tracking view &mdash; cloud layer, city night-lights, orbit path and a live ground trail. Drag to rotate 3D Earth, scroll to zoom.</p>
       
       <div class="telemetry-grid">
         <div class="telemetry-box">
@@ -281,14 +314,64 @@
 
       <div class="iss-view-container">
         <div class="mode-switch">
-          <button class="mode-btn active" id="btn3d" onclick="setISSView('3d')">🌍 3D Globe</button>
-          <button class="mode-btn" id="btn2d" onclick="setISSView('2d')">🗺️ 2D Radar</button>
+          <button class="mode-btn active" id="btn3d" onclick="setISSView('3d')">&#127757; 3D Globe</button>
+          <button class="mode-btn" id="btn2d" onclick="setISSView('2d')">&#128506;&#65039; 2D Radar</button>
+        </div>
+        <div class="hud-corner" id="issHud">
+          <div><span class="rec">&#9679;</span> LIVE &middot; SAT-TRACK MODE</div>
+          <div id="hudLat">LAT --.--</div>
+          <div id="hudLon">LON --.--</div>
+          <div id="hudVel">VEL --,--- KM/H</div>
+          <div id="hudAlt">ALT --- KM</div>
         </div>
         <div id="iss3dContainer" style="width:100%; height:100%;">
           <canvas id="iss3dCanvas"></canvas>
         </div>
         <div id="issMap"></div>
       </div>
+
+      <div class="sat-bar">
+        <span style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-right:2px;">Satellite view:</span>
+        <label class="sat-chip" id="chipClouds"><input type="checkbox" checked onchange="toggleSatLayer('clouds',this)">&#9729;&#65039; Clouds</label>
+        <label class="sat-chip" id="chipNight"><input type="checkbox" checked onchange="toggleSatLayer('night',this)">&#127751; Night lights</label>
+        <label class="sat-chip" id="chipOrbit"><input type="checkbox" checked onchange="toggleSatLayer('orbit',this)">&#128736; Orbit path</label>
+        <label class="sat-chip" id="chipTrail"><input type="checkbox" checked onchange="toggleSatLayer('trail',this)">&#128226; Live trail</label>
+        <label class="sat-chip" id="chipSpin"><input type="checkbox" onchange="toggleSatLayer('spin',this)">&#128260; Auto-rotate</label>
+        <button class="btn btn-secondary" style="margin-left:auto;" onclick="switchTab('live')">&#128225; Watch live from orbit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2A. LIVE SPACE TV PANEL -->
+  <div id="panel-live" class="section-panel">
+    <div class="card">
+      <h2 style="margin-top:0;">&#128225; Live Space TV</h2>
+      <p style="color:var(--muted);">Real video streamed live from orbit &mdash; the official NASA feed from the International Space Station, plus on-demand footage of every planet captured by NASA spacecraft. Live broadcast plays right here; nothing opens in a new tab unless you tap a thumbnail.</p>
+      <div class="live-grid">
+        <div>
+          <div class="live-frame-wrap">
+            <iframe id="liveFrame" title="Live from space" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen src="about:blank"></iframe>
+          </div>
+          <div class="live-sources" id="liveSources"></div>
+        </div>
+        <div>
+          <h3 style="margin:0 0 6px; font-size:1rem;">&#129668; On-demand planet footage</h3>
+          <p style="color:var(--muted); font-size:.85rem; margin:0 0 4px;">No planet broadcasts live video, so these are real NASA clips &mdash; pick a world and press play.</p>
+          <div class="planet-grid" id="planetGrid"></div>
+          <div id="planetVideos" style="color:var(--muted); font-size:.88rem;">Pick a body above to load NASA clips.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-app video modal -->
+  <div class="vid-modal" id="vidModal" onclick="if(event.target===this)closeVidModal()">
+    <div class="vid-modal-box">
+      <div class="vid-modal-head">
+        <strong id="vidModalTitle" style="font-size:.95rem;">&nbsp;</strong>
+        <button class="btn btn-secondary" onclick="closeVidModal()">&times; Close</button>
+      </div>
+      <div class="vid-modal-body"><video id="vidModalPlayer" controls playsinline src=""></video></div>
     </div>
   </div>
 
@@ -413,6 +496,11 @@ let experimentRuns = 0;
 let scene, camera3d, renderer, globeMesh, atmosphereMesh, issMesh3d, starsMesh;
 let isDragging = false, prevMouseX = 0, prevMouseY = 0;
 let currentLat = 0, currentLon = 0;
+// Satellite-view layers
+let cloudsMesh = null, orbitLine = null, trailLine = null, nadirLine = null, issGlow = null, nightTexture = null;
+let trailPoints = [];
+const satLayers = { clouds: true, night: true, orbit: true, trail: true, spin: false };
+const EARTH_R = 70, ISS_R = 76;
 
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -435,6 +523,14 @@ function switchTab(name) {
   } else if (issInterval) {
     clearInterval(issInterval);
     issInterval = null;
+  }
+
+  // Live Space TV: load once, and stop the stream (avoid background audio) when leaving
+  if (name === 'live') {
+    loadLiveTV();
+  } else {
+    const lf = document.getElementById('liveFrame');
+    if (lf && lf.getAttribute('src') !== 'about:blank') lf.setAttribute('src', 'about:blank');
   }
 
   if (name === 'mars' && !document.getElementById('marsContent').children.length) loadMarsPhotos();
@@ -603,17 +699,32 @@ function init3DGlobe() {
   starsMesh = new THREE.Points(starsGeo, starsMat);
   scene.add(starsMesh);
 
-  // Earth Sphere
+  // Earth Sphere (photorealistic day map + city-lights emissive for satellite look)
   const textureLoader = new THREE.TextureLoader();
+  textureLoader.setCrossOrigin('anonymous');
   const earthTexture = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
-  const earthGeo = new THREE.SphereGeometry(70, 64, 64);
+  nightTexture = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-night.jpg');
+  const earthGeo = new THREE.SphereGeometry(EARTH_R, 64, 64);
   const earthMat = new THREE.MeshStandardMaterial({
     map: earthTexture,
-    roughness: 0.8,
-    metalness: 0.1
+    emissive: 0xffffff,
+    emissiveMap: nightTexture,
+    emissiveIntensity: satLayers.night ? 0.9 : 0,
+    roughness: 0.85,
+    metalness: 0.05
   });
   globeMesh = new THREE.Mesh(earthGeo, earthMat);
   scene.add(globeMesh);
+
+  // Cloud layer (slowly drifting, semi-transparent)
+  const cloudTexture = textureLoader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
+  const cloudGeo = new THREE.SphereGeometry(EARTH_R + 0.8, 64, 64);
+  const cloudMat = new THREE.MeshLambertMaterial({
+    map: cloudTexture, transparent: true, opacity: 0.55, depthWrite: false
+  });
+  cloudsMesh = new THREE.Mesh(cloudGeo, cloudMat);
+  cloudsMesh.visible = satLayers.clouds;
+  scene.add(cloudsMesh);
 
   // Atmosphere glow
   const atmosGeo = new THREE.SphereGeometry(72.5, 64, 64);
@@ -626,16 +737,44 @@ function init3DGlobe() {
   atmosphereMesh = new THREE.Mesh(atmosGeo, atmosMat);
   scene.add(atmosphereMesh);
 
+  // Orbit path ring (styled, tilted to the real ~51.6° inclination)
+  const orbitPts = [];
+  for (let i = 0; i <= 128; i++) {
+    const a = (i / 128) * Math.PI * 2;
+    orbitPts.push(new THREE.Vector3(Math.cos(a) * ISS_R, 0, Math.sin(a) * ISS_R));
+  }
+  const orbitGeo = new THREE.BufferGeometry().setFromPoints(orbitPts);
+  orbitLine = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({ color: 0x4c8dff, transparent: true, opacity: 0.4 }));
+  orbitLine.rotation.x = THREE.MathUtils.degToRad(51.6);
+  orbitLine.visible = satLayers.orbit;
+  scene.add(orbitLine);
+
+  // Live ground trail (recent ISS positions)
+  trailLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x7fd0ff, transparent: true, opacity: 0.85 }));
+  trailLine.visible = satLayers.trail;
+  trailPoints = [];
+  scene.add(trailLine);
+
+  // Nadir line (satellite -> ground directly below)
+  nadirLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xffd54a, transparent: true, opacity: 0.5 }));
+  nadirLine.visible = satLayers.trail;
+  scene.add(nadirLine);
+
   // ISS Satellite Marker
   const issGeo = new THREE.SphereGeometry(2.5, 16, 16);
   const issMat = new THREE.MeshBasicMaterial({ color: 0xffd54a });
   issMesh3d = new THREE.Mesh(issGeo, issMat);
-  
+
   // Glowing ring for ISS
   const ringGeo = new THREE.RingGeometry(3.5, 4.5, 32);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0x4c8dff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
   const ringMesh = new THREE.Mesh(ringGeo, ringMat);
   issMesh3d.add(ringMesh);
+
+  // Soft glow sprite so the satellite reads like a tracked beacon
+  issGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(), color: 0x9fd0ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  issGlow.scale.set(16, 16, 1);
+  issMesh3d.add(issGlow);
 
   scene.add(issMesh3d);
 
@@ -679,13 +818,46 @@ function init3DGlobe() {
 
   function animate() {
     requestAnimationFrame(animate);
-    if (!isDragging && globeMesh) {
-      globeMesh.rotation.y += 0.0008;
+    if (satLayers.spin && !isDragging && globeMesh) {
+      globeMesh.rotation.y += 0.0009;
+    }
+    // Keep the cloud shell locked to the globe, with a faint independent drift
+    if (cloudsMesh && globeMesh) {
+      cloudsMesh.rotation.x = globeMesh.rotation.x;
+      cloudsMesh.rotation.y = globeMesh.rotation.y + 0.02 * Math.sin(Date.now() * 0.00005);
     }
     if (starsMesh) starsMesh.rotation.y += 0.0002;
     renderer.render(scene, camera3d);
   }
   animate();
+}
+
+// Radial-gradient sprite texture for the ISS beacon glow
+function makeGlowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(190,225,255,0.9)');
+  g.addColorStop(0.4, 'rgba(120,180,255,0.35)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  return tex;
+}
+
+// Toggle satellite-view layers at runtime
+function toggleSatLayer(which, el) {
+  const on = el && el.checked;
+  satLayers[which] = !!on;
+  if (which === 'clouds' && cloudsMesh) cloudsMesh.visible = !!on;
+  if (which === 'orbit' && orbitLine) orbitLine.visible = !!on;
+  if (which === 'trail') {
+    if (trailLine) trailLine.visible = !!on;
+    if (nadirLine) nadirLine.visible = !!on;
+  }
+  if (which === 'night' && globeMesh) globeMesh.material.emissiveIntensity = on ? 0.9 : 0;
 }
 
 function onWindowResize() {
@@ -725,11 +897,30 @@ async function updateISSTelemetry() {
     document.getElementById('issSpeed').textContent = `${data.velocity_kmh.toLocaleString()} km/h`;
     document.getElementById('issAlt').textContent = `${data.altitude_km} km`;
 
+    // HUD corner readout
+    const hudLat = document.getElementById('hudLat');
+    if (hudLat) {
+      hudLat.textContent = `LAT ${currentLat >= 0 ? 'N' : 'S'} ${Math.abs(currentLat).toFixed(2)}`;
+      document.getElementById('hudLon').textContent = `LON ${currentLon >= 0 ? 'E' : 'W'} ${Math.abs(currentLon).toFixed(2)}`;
+      document.getElementById('hudVel').textContent = `VEL ${Math.round(data.velocity_kmh).toLocaleString()} KM/H`;
+      document.getElementById('hudAlt').textContent = `ALT ${Math.round(data.altitude_km)} KM`;
+    }
+
     // Update 3D position
     if (issMesh3d) {
-      const pos3d = latLonToVector3(currentLat, currentLon, 76);
+      const pos3d = latLonToVector3(currentLat, currentLon, ISS_R);
       issMesh3d.position.copy(pos3d);
       issMesh3d.lookAt(0, 0, 0);
+      // Trail of recent positions
+      if (satLayers.trail) {
+        trailPoints.push(pos3d.clone());
+        if (trailPoints.length > 90) trailPoints.shift();
+        if (trailLine) trailLine.geometry.setFromPoints(trailPoints);
+        if (nadirLine) {
+          const surf = latLonToVector3(currentLat, currentLon, EARTH_R);
+          nadirLine.geometry.setFromPoints([surf, pos3d]);
+        }
+      }
     }
 
     // Update 2D Map position
@@ -748,6 +939,109 @@ function initISS() {
   updateISSTelemetry();
   if (issInterval) clearInterval(issInterval);
   issInterval = setInterval(updateISSTelemetry, 4000);
+}
+
+/* 2A. LIVE SPACE TV */
+let liveLoaded = false;
+const LIVE_SOURCES = [
+  { label: '\uD83D\uDEF0 ISS Live \u00b7 NASA', url: 'https://www.youtube.com/embed/live_stream?channel=UCLA_DiR1FfKNvjuUpBHmylQ&autoplay=1&mute=1' },
+  { label: '\uD83C\uDF0D Earth Cam \u00b7 24/7', url: 'https://www.youtube.com/embed/tj4knR4r1UU?autoplay=1&mute=1' },
+  { label: '\uD83D\uDCFA 4K View of Earth', url: 'https://www.youtube.com/embed/lmFZ42AR_2E?autoplay=1&mute=1' }
+];
+const PLANETS = [
+  { label: '\u2600\uFE0F Sun', q: 'Sun solar dynamics observatory' },
+  { label: '\uD83D\uDF41 Mercury', q: 'Mercury MESSENGER planet' },
+  { label: '\uD83C\uDF1F Venus', q: 'Venus planet surface' },
+  { label: '\uD83C\uDF0D Earth', q: 'Earth from space' },
+  { label: '\uD83D\uDF11 Moon', q: 'Moon lunar surface' },
+  { label: '\uD83D\uDFE5 Mars', q: 'Mars rover planet surface' },
+  { label: '\uD83D\uDF03 Jupiter', q: 'Jupiter Juno planet' },
+  { label: '\uD83E\uDEDE Saturn', q: 'Saturn rings cassini planet' },
+  { label: '\uD83C\uDF10 Uranus', q: 'Uranus planet' },
+  { label: '\uD83D\uDF0D Neptune', q: 'Neptune planet' },
+  { label: '\uD83C\uDF0C Pluto', q: 'Pluto New Horizons' }
+];
+
+function loadLiveTV() {
+  if (liveLoaded) return;
+  liveLoaded = true;
+  const srcWrap = document.getElementById('liveSources');
+  srcWrap.innerHTML = LIVE_SOURCES.map((s, i) =>
+    `<button class="live-src${i === 0 ? ' active' : ''}" onclick="selectLiveSource(${i},this)">${s.label}</button>`).join('');
+  const pg = document.getElementById('planetGrid');
+  pg.innerHTML = PLANETS.map((p, i) =>
+    `<button class="planet-chip" onclick="loadPlanetVideos(${i},this)">${p.label}</button>`).join('');
+  selectLiveSource(0, srcWrap.firstElementChild);
+}
+
+function selectLiveSource(i, btn) {
+  document.querySelectorAll('#liveSources .live-src').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const frame = document.getElementById('liveFrame');
+  if (frame) frame.setAttribute('src', LIVE_SOURCES[i].url);
+}
+
+async function loadPlanetVideos(i, btn) {
+  document.querySelectorAll('#planetGrid .planet-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const body = PLANETS[i];
+  const box = document.getElementById('planetVideos');
+  box.innerHTML = '<div class="spinner" style="padding:20px;">Loading NASA footage\u2026</div>';
+  try {
+    const data = await safeFetchJson(`/api/nasa/search?q=${encodeURIComponent(body.q)}&mediaType=video`);
+    const items = (data.items || []).filter(it => it.nasa_id);
+    if (!items.length) {
+      box.innerHTML = '<div style="color:var(--muted);padding:16px;">No clips found for this body right now.</div>';
+      return;
+    }
+    box.innerHTML = `<div class="grid-3">` + items.slice(0, 12).map(it => `
+      <div class="photo-card vid-thumb" onclick="playPlanetClip('${esc(it.nasa_id)}','${esc(it.title || body.label)}')">
+        <div style="position:relative;">${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy">` : ''}<span class="play">&#9654;</span></div>
+        <div class="photo-card-body"><div class="photo-card-title" style="font-size:.9rem;">${esc(it.title || '')}</div>
+        <div class="photo-card-meta">&#128197; ${it.date_created ? it.date_created.slice(0, 10) : ''}</div></div>
+      </div>`).join('') + `</div>`;
+  } catch (err) {
+    box.innerHTML = `<div style="color:var(--danger);padding:16px;">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+async function playPlanetClip(nasaId, title) {
+  const box = document.getElementById('planetVideos');
+  const prev = box.querySelector('.clip-note');
+  if (prev) prev.remove();
+  const note = document.createElement('div');
+  note.className = 'clip-note';
+  note.style.cssText = 'color:var(--muted);padding:10px 4px;font-size:.85rem;';
+  note.textContent = 'Preparing clip\u2026';
+  box.prepend(note);
+  try {
+    const a = await safeFetchJson(`/api/nasa/asset?id=${encodeURIComponent(nasaId)}`);
+    if (a && a.video_url) {
+      openVidModal(a.video_url, title);
+      note.remove();
+    } else {
+      note.textContent = 'No streamable file for this clip \u2014 try another thumbnail.';
+    }
+  } catch (err) {
+    note.textContent = 'Could not load clip: ' + err.message;
+  }
+}
+
+function openVidModal(url, title) {
+  const modal = document.getElementById('vidModal');
+  const player = document.getElementById('vidModalPlayer');
+  document.getElementById('vidModalTitle').textContent = title || 'NASA clip';
+  player.src = url;
+  modal.classList.add('open');
+  player.play().catch(() => {});
+}
+
+function closeVidModal() {
+  const player = document.getElementById('vidModalPlayer');
+  player.pause();
+  player.removeAttribute('src');
+  player.load();
+  document.getElementById('vidModal').classList.remove('open');
 }
 
 /* 3. MARS ROVERS */

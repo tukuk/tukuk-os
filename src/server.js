@@ -900,6 +900,7 @@ app.get('/api', (req, res) => {
       { method: 'GET', path: '/api/explore/ip', description: 'Visitor IP geolocation' },
       { method: 'GET', path: '/api/nasa/iss', description: 'Live ISS position & telemetry (wheretheiss.at)' },
       { method: 'GET', path: '/api/nasa/crew', description: 'Who is in space right now (open-notify.org)' },
+      { method: 'GET', path: '/api/nasa/asset', description: 'Direct mp4 asset for a NASA media id' },
       { method: 'GET', path: '/api/nasa/apod', description: 'Astronomy Picture of the Day' },
       { method: 'GET', path: '/api/nasa/asteroids', description: 'Near-Earth asteroids (NeoWs)' },
       { method: 'GET', path: '/api/nasa/experiments/asteroid-trend', description: 'Experiment: asteroid approach trend (weeks)' },
@@ -1377,6 +1378,14 @@ app.get('/api/nasa/search', async (req, res) => {
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to search NASA media archive', details: safeError(error) });
+  }
+});
+
+app.get('/api/nasa/asset', async (req, res) => {
+  try {
+    res.json(await nasa.getNasaAssetUrl(req.query.id));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to resolve NASA asset', details: safeError(error) });
   }
 });
 

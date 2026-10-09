@@ -739,6 +739,40 @@ async function getSpaceAudio(query = 'apollo') {
 }
 
 /**
+ * 7a2. Direct media asset (mp4/poster) untuk sesuatu nasa_id — dibaca dari manifest aset.
+ *      Dipakai modal "Live Space TV" supaya klip planet main dalam-app, bukan pautan luar.
+ */
+async function getNasaAssetUrl(nasaId) {
+  const clean = String(nasaId || '').trim();
+  if (!clean) return { video_url: '', poster: '' };
+  const cacheKey = `nasa-asset:${clean}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  try {
+    const res = await http.get(`https://images-api.nasa.gov/asset/${encodeURIComponent(clean)}`, { timeout: 10000 });
+    const groups = res.data?.collection?.items || [];
+    const urls = [];
+    for (const g of groups) {
+      for (const l of (Array.isArray(g.href) ? g.href : [])) {
+        if (typeof l === 'string') urls.push(safeAssetUrl(l));
+      }
+    }
+    const video_url =
+      urls.find((u) => u.endsWith('~mobile.mp4')) ||
+      urls.find((u) => u.endsWith('~small.mp4')) ||
+      urls.find((u) => u.endsWith('.mp4')) ||
+      urls.find((u) => u.includes('.mp4')) ||
+      '';
+    const poster = urls.find((u) => /~thumb|poster|~mediumjpg/.test(u)) || '';
+    const result = { video_url, poster };
+    setCache(cacheKey, result, 24 * 60 * 60 * 1000);
+    return result;
+  } catch {
+    return { video_url: '', poster: '' };
+  }
+}
+
+/**
  * 7b. Live crew — siapa yang sedang berada di angkasa lepas sekarang.
  *     open-notify.org (tiada kunci, percuma). Sandaran: senarai kosong + nota.
  */
@@ -984,6 +1018,7 @@ module.exports = {
   getISSTelemetry,
   getCrew,
   getSpaceAudio,
+  getNasaAssetUrl,
   getAsteroidTrend,
   getSolarActivity
 };
