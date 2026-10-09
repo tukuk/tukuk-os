@@ -753,9 +753,9 @@ async function getNasaAssetUrl(nasaId) {
     const groups = res.data?.collection?.items || [];
     const urls = [];
     for (const g of groups) {
-      for (const l of (Array.isArray(g.href) ? g.href : [])) {
-        if (typeof l === 'string') urls.push(safeAssetUrl(l));
-      }
+      const h = g && g.href;
+      if (typeof h === 'string') urls.push(safeAssetUrl(h));
+      else if (Array.isArray(h)) h.forEach((l) => { if (typeof l === 'string') urls.push(safeAssetUrl(l)); });
     }
     const video_url =
       urls.find((u) => u.endsWith('~mobile.mp4')) ||
