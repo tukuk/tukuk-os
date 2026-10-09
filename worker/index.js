@@ -133,7 +133,11 @@ async function serveStatic(pathname, env) {
   if (!clean) keys.push("index.html");
   else {
     keys.push(clean);
-    if (!/\.[a-z0-9]+$/i.test(clean)) keys.push(`${clean}/index.html`);
+    // Laman disimpan sebagai <name>.html (contoh: /about → about.html)
+    if (!/\.[a-z0-9]+$/i.test(clean)) {
+      keys.push(`${clean}.html`);
+      keys.push(`${clean}/index.html`);
+    }
   }
   for (const key of keys) {
     try {

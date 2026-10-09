@@ -44,7 +44,7 @@ for path in "${!PAGES[@]}"; do
   key="${PAGES[$path]}"
   mkdir -p "$TMP/$(dirname "$key")"
   if curl -fsS --max-time 30 "$BASE$path" -o "$TMP$key" 2>/dev/null; then
-    put "$key" "$TMP$key" "text/html;charset=UTF-8"
+    put "${key#/}" "$TMP$key" "text/html;charset=UTF-8"
   else
     echo "  ! $path tidak dapat ditarik"
   fi
