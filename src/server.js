@@ -100,6 +100,7 @@ app.use((req, res, next) => {
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
+  redirect: false,   // jangan redirect /apps → /apps/ — biar lalu ke STATIC_PAGES
   setHeaders(res, filePath) {
     // Service worker: JANGAN sekali cache — pelanggan mesti dapat versi terkini terus.
     if (filePath.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-store');
@@ -129,6 +130,8 @@ for (const name of APPS) {
     });
   });
 }
+// Alias /apps/ → sama seperti /apps
+app.get('/apps/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'apps.html')));
 
 // Alias bahasa supaya pautan sedia ada tidak 404
 const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', privasi: 'privacy', dokumen: 'docs' };
