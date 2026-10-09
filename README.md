@@ -2,6 +2,27 @@
 
 Enjin carian web bebas, ringan, dan berkuasa tinggi yang dioptimumkan untuk pelayan RAM rendah (2GB) dan integrasi awan (Cloudflare, Google AdSense, Microsoft Ads).
 
+> **Ini satu-satunya projek yang difokuskan.** Jangan pecah tumpuan ke repo lain.
+
+---
+
+## ⚡ TL;DR — Runbook Pantas (baca ini dulu)
+
+**Benda yang anda JARANG sentuh tapi SELALU perlu tahu:**
+
+| Nak buat... | Arahan / fakta |
+|---|---|
+| Jalankan tempatan | `npm install` → `npm start` → `http://localhost:3000` |
+| Deploy ke SERVER BARU | Bawa kod (USB/push) → `sudo bash scripts/install-from-usb.sh`. Semua auto (Node, Meili, systemd, tunnel, edge). **Tiada auth GitHub / tiada fail `.json`.** |
+| Server sedang berjalan | `192.168.8.100` (user `tukuk`). Akses admin: `ssh -L 3000:localhost:3000 tukuk@192.168.8.100` → `http://localhost:3000/admin` (e-mel + **passkey WebAuthn**). Awam: `https://dashboard.tukuk.org/admin` |
+| Ubah halaman statik (`public/*.html`) | **Hanya reload browser** — dibaca setiap request. |
+| Ubah `src/server.js` (route/`STATIC_PAGES`) | **WAJIB restart** `node index.js` — route dalam memori. |
+| Tukar config/kunci | Edit `deploy/env.defaults` (repo private) → `sudo bash scripts/setup-all.sh` (idempotent). |
+| Semak kesihatan | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
+| Situs awam kini | ✅ `tukuk.org`, `dashboard.tukuk.org`, `www.tukuk.org` = **200** (Cloudflare Free) |
+
+**Rangka fail kunci:** `src/server.js` (semua route) · `public/index.html` (SPA carian+dashboard) · `public/editor.html` & `public/editor-video.html` (Studio) · `src/brain/*` (AI + carian) · `scripts/setup-all.sh` (auto-setup) · `deploy/env.defaults` (kunci & config terbawa) · `deploy/cloudflared/config.yml` (templat tunnel).
+
 ---
 
 ## 🚀 1. Cara Mula Tempatan (Local Testing)
@@ -125,7 +146,73 @@ Soalan kendiri ("apa itu tukuk-os", "endpoint", dll.) dijawab dari pengetahuan t
 
 ---
 
-## 🔮 9. Pelan Masa Depan (Future Roadmap)
+## ☁️ 9. Cloudflare — Fakta, Audit & Peraturan (JANGAN rombak buta)
+
+**Zon:** `tukuk.org` · **Plan:** *Free Website* (Cloudflare Free) · **Node bind:** `127.0.0.1:3000` (loopback-only → awam HANYA melalui tunnel).
+
+**Tunnel (SATU sahaja kini):** `tukuk-os-v2` · UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae` · **mod TOKEN** (tiada fail `.json`).
+- Token = `cloudflared tunnel token 87e7e77f…` (guna `~/.cloudflared/cert.pem`). Sudah disimpan dalam `deploy/env.defaults` (`CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID`).
+- `/etc/cloudflared/config.yml` ditulis `setup-all.sh` (token + ingress) + unit systemd `--config … tunnel run`. **`cloudflared service install` TOLAK config `token:`** — itu sebab unit ditulis terus.
+- **JANGAN `tunnel create` baru.** Sediakan hostname baru = tambah baris `ingress` di `deploy/cloudflared/config.yml` + `cloudflared tunnel route dns tukuk-os-v2 <subdomain>`.
+
+**Inventori DNS & maksudnya (13 rekaman):**
+| Rekaman | Untuk | Padam? |
+|---|---|---|
+| `CNAME @ (tukuk.org) → 87e7e77f…cfargotunnel` (proxy) | Situs utama | ❌ JANGAN |
+| `CNAME dashboard → 87e7e77f…` (proxy) | Panel/admin | ❌ JANGAN |
+| `AAAA www → 100::` (proxy) | Fallback www (Worker edge) | ❌ JANGAN |
+| `MX ×3 → route1/2/3.mx.cloudflare.net` | E-mel Cloudflare Email Routing | ❌ JANGAN |
+| `TXT @ → v=spf1 include:_spf.mx.cloudflare.net` | SPF e-mel | ❌ JANGAN |
+| `TXT cf2024-1._domainkey` (DKIM) · `TXT _dmarc` | DKIM/DMARC e-mel | ❌ JANGAN |
+| `CAA @ → 0 issue "digicert.com"` | Benarkan cert Cloudflare | ❌ JANGAN |
+| `CNAME github/gitlab/bitbucket → *.com` (proxy) | Alias selesa (bukan perlu Tukuk-OS) | ⚠️ boleh padam jika tak guna |
+
+**Sudah dibersihkan (session ini) — jangan cuba hidupkan semula:** DNS `api.tukuk.org` & `mqtt.tukuk.org` (menunjuk tunnel mati → 530) **dipadam**; tunnel mati `5ee04cc8` (cloudflare-os), `b400ad84` (iot-audit), `168a53af` (tukuk-os) **dipadam**. Tinggal 1 tunnel aktif.
+
+**Keselamatan:** `cert.pem` (`~/.cloudflared`) mengandungi `apiToken` `cfut_…` — **JANGAN commit**; keizinan 600 sahaja. Token API juga tersimpan di `deploy/env.defaults` (private) untuk auto-DNS/edge.
+
+---
+
+## 🆓 10. Stack Percuma (Free Tier) — semua dah disambungkan
+
+Tiada satu pun perlu dibayar untuk skala kecil. Ini senarai + tempat ia diset:
+| Perkhidmatan | Pelan percuma | Di mana / cara |
+|---|---|---|
+| **Cloudflare DNS + Tunnel** | Free | Zon `tukuk.org`; tunnel `tukuk-os-v2` (mod token) |
+| **Cloudflare Workers** | 100k req/hari | `worker/` + `cloudflare-worker/tukuk-fallback` (cermin www) — deploy bila `CLOUDFLARE_API_TOKEN` ada |
+| **Cloudflare R2** | 10 GB simpan | Snapshot `scripts/snapshot-r2.sh` (timer 6 jam) — fail `scripts/r2.env` |
+| **Cloudflare Email Routing** | Free | MX/SPF/DKIM/DMARC aktif (hello@tukuk.org) |
+| **Cloudflare Zero Trust** | 50 pengguna free | Tunnel + akses; passkey admin |
+| **Meilisearch** | Open-source | Carian indeks (self-host, RAM rendah + ZRAM) |
+| **IndexNow** | Free (Bing/Yandex/DuckDuckGo) | `scripts/indexnow.sh` + kunci `public/bd8f0317….txt` |
+| **Google Search Console** | Free | Fail verifikasi `public/*.html` (bingbot dsb.) — daftar & submit `sitemap.xml` |
+| **Microsoft Clarity** | Free (analitik tanpa cookie) | Token pernah dikongsi — letak ID di Admin jika mahu rekod sesi |
+| **NASA APOD API** | Free (DEMO_KEY) | `src/nasa.js` / `public/nasa.html` |
+| **Google AdSense / Microsoft Ads** | Free (hasil) | `public/ads.txt` + `src/config.js:adsense` |
+
+**Semua ini lalai-lalai hidup sebaik `npm install`** kerana kunci tersimpan di `deploy/env.defaults` (repo private). Yang PERLU tindakan manual di dashboard (tak boleh auto): daftar Search Console, hantar AdSense, aktifkan Clarity tag.
+
+---
+
+## 💰 11. Google AdSense — Status & Jawapan Jujur: "akan lulus?"
+
+**Infrastrukur SUDAH sedia (✓):**
+- `ads.txt` asli: `ca-pub-8954948214333501` + Microsoft.
+- `ADSENSE_ENABLED=true`, klien `ca-pub-8954948214333501` (`src/config.js`); slot dipasang **hanya pada halaman kandungan/blog** (`server.js:822`), **bukan** pada `/cari` (hasil carian) → patuh dasar (tiada iklan atas kandungan pihak ketiga).
+- `sitemap.xml` (route wujud), `robots.txt` betul (benarkan Googlebot/AdsBot), **48 artikel** asli (28 blog + 20 arkib), halaman Privacy/About/Contact/Terms ada, HTTPS, mesra-mobil.
+
+**Yang Google TETAPI nilai sendiri (✗ tak boleh dijamin oleh kod):**
+1. **Trafik organik asli** — perlu pelawat sebenar beberapa minggu. Site baru tanpa trafik kerap "Pending/Not ready".
+2. **Kandungan cukup & bukan salin** — 48 artikel baik, tapi pastikan tak duplicate/low-value; elakan halaman auto-jana tipis.
+3. **Navigasi jelas** — menu/pautan antara halaman (ada Studio/blog/about) mesti wujud.
+4. **Domain & sejarah** — `tukuk.org` matang + tiada penolakan sebelum ini membantu.
+5. **Slot iklan sejati** — kini `slotTop/InArticle/Bottom` sama (`2206273113` = placeholder). Lepas diluluskan, Jana **3 ad unit berbeza** di AdSense & letak ID masing-masing (atau biarkan auto).
+
+**Jawapan terus:** Peluang **BAIK** dari segi teknikal (semua syarat dasar utama sudah dipenuhi), tetapi **kelulusan tidak dijamin** — Google mahu trafik organik & usia/keaslian kandungan. **Langkah disyorkan:** (a) daftar Search Console + submit sitemap, kumpul beberapa trafik asli (IndieHackers/Reddit/produk anda), (b) pastikan pautan navigasi hidup, (c) baru mohon AdSense untuk `tukuk.org`. Jangan tampal kod AdSense sebelum akaun diluluskan (ini boleh trigger penolakan).
+
+---
+
+## 🔮 12. Pelan Masa Depan (Future Roadmap)
 - **1 Hari 1 App:** Tambah modul/aplikasi web baharu secara berterusan.
 - **Unity Cloud Games:** Integrasi permainan WebGL Unity ke dalam tab permainan Tukuk-OS.
 - **Kaggle CLI:** Gunakan Kaggle CLI untuk memproses data/latihan AI berat jika RAM laptop terbatas.
