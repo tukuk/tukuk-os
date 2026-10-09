@@ -255,7 +255,7 @@
     <h2 style="margin:0 0 8px;">Tukuk-OS Admin</h2>
     <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Sign in with your email and passkey. Only the authorised owner email may access this panel.</p>
     <form id="authForm">
-      <input type="email" id="authEmail" placeholder="Admin email" autocomplete="username" style="margin-bottom:12px;" required>
+      <input type="email" id="authEmail" placeholder="Admin email" autocomplete="off" spellcheck="false" style="margin-bottom:12px;" required>
       <input type="password" id="authPassword" placeholder="Bootstrap password (first-time setup only)" autocomplete="current-password" style="margin-bottom:12px; display:none;">
       <button type="submit" id="authPasskeyBtn" class="btn btn-primary" style="width:100%; justify-content:center;">🔑 Sign in with Passkey</button>
       <button type="button" id="authRegisterBtn" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:10px; display:none;">🛡️ Register Passkey</button>
@@ -797,7 +797,8 @@ Type a command below or click a quick action.
     try {
       const res = await fetch('/api/admin/auth/config');
       authConfig = await res.json();
-      if (authConfig && authConfig.allowedEmail) authEmailEl.value = authConfig.allowedEmail;
+      // E-mel TIDAK lagi di-auto-fill — dahulu ia terserlah setiap kali /admin
+      // dibuka (bocor melalui /api/admin/auth/config). Taip sendiri sekali sahaja.
       if (authConfig && !authConfig.passkeysRegistered) enterSetupMode();
       else enterLoginMode();
     } catch { /* biarkan mod login */ }
@@ -809,7 +810,7 @@ Type a command below or click a quick action.
       allowCredentials: (o.allowCredentials || []).map(c => ({ id: b64urlToBuf(c.id), type: c.type || 'public-key' })),
       userVerification: o.userVerification || 'preferred',
       timeout: o.timeout || 120000,
-      rpId: o.rpID || (authConfig && authConfig.rpID) || location.hostname
+      rpId: o.rpId || o.rpID || (authConfig && authConfig.rpID) || location.hostname
     };
   }
   function serializeAuthCredential(cred) {

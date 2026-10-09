@@ -62,6 +62,12 @@ function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+// base64url (string) → Uint8Array — perlu untuk API @simplewebauthn/server v8
+// yang menerima/memulang buffer mentah, bukan string.
+function b64urlToBuf(b64url) {
+  return new Uint8Array(Buffer.from(String(b64url), 'base64url'));
+}
+
 function isAllowedEmail(value) {
   return normalizeEmail(value) === ALLOWED_EMAIL;
 }
@@ -140,13 +146,14 @@ function checkBootstrapPassword(value) {
   return crypto.timingSafeEqual(a, b);
 }
 
-/** Maklumat awam untuk UI: e-mel dibenarkan, ada/tidak passkey, konfigurasi RP. */
+/** Maklumat awam untuk UI: ada/tidak passkey, konfigurasi RP.
+ *  NOTA: `allowedEmail` SENGAJA tidak dipulangkan — sebelum ini e-mel pemilik
+ *  dibocorkan kepada sesiapa yang membuka /admin (auto-fill pada input). */
 function publicConfig() {
   const keys = passkeys();
   return {
     rpID: RP_ID,
     rpName: RP_NAME,
-    allowedEmail: ALLOWED_EMAIL,
     passkeyCount: keys.length,
     passkeysRegistered: keys.length > 0,
     requiresBootstrap: keys.length === 0
@@ -156,7 +163,9 @@ function publicConfig() {
 // ── Registration (perlu e-mel yang dibenarkan + kata laluan bootstrap) ─────────
 async function startRegistration(email) {
   const userId = crypto.randomBytes(16);
-  const options = generateRegistrationOptions({
+  // PENTING: generateRegistrationOptions ialah ASINKRON pada v8 — mesti `await`
+  // supaya `options.challenge` wujud sebelum disimpan sebagai cabaran jangka pendek.
+  const options = await generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: RP_ID,
     userID: Buffer.from(userId).toString('base64url'),
@@ -209,11 +218,13 @@ async function finishRegistration(email, credential) {
 // ── Authentication (passkey) ──────────────────────────────────────────────────
 async function startAuthentication(email) {
   const keys = passkeys();
-  const options = generateAuthenticationOptions({
+  // v8: generateAuthenticationOptions ASINKRON (mesti await), dan `allowCredentials[].id`
+  // kena Uint8Array (bukan string base64url) — kalau string, id jadi kosong.
+  const options = await generateAuthenticationOptions({
     rpID: RP_ID,
     userVerification: 'preferred',
     timeout: CHALLENGE_TTL_MS,
-    allowCredentials: keys.map((k) => ({ id: k.id, type: 'public-key' }))
+    allowCredentials: keys.map((k) => ({ id: b64urlToBuf(k.id), type: 'public-key' }))
   });
   setChallenge(normalizeEmail(email), options.challenge, 'authenticate');
   return options;
@@ -229,17 +240,18 @@ async function finishAuthentication(email, credential) {
   if (!stored) {
     throw Object.assign(new Error('Passkey ini tidak didaftarkan pada pelayan.'), { statusCode: 401 });
   }
+  // v8 API: parameter `authenticator` (bukan `credential`) dengan field
+  // `credentialID`/`credentialPublicKey` sebagai Uint8Array; keputusan dibaca
+  // daripada `authenticationInfo` (bukan `authenticationResult`).
   const verification = await verifyAuthenticationResponse({
     response: credential,
     expectedChallenge,
     expectedOrigin: EXPECTED_ORIGINS,
     expectedRPID: RP_ID,
-    credential: {
-      id: stored.id,
-      publicKey: stored.publicKey,
-      counter: stored.counter || 0,
-      credentialDeviceType: stored.credentialDeviceType,
-      credentialBackedUp: stored.credentialBackedUp
+    authenticator: {
+      credentialID: b64urlToBuf(stored.id),
+      credentialPublicKey: b64urlToBuf(stored.publicKey),
+      counter: stored.counter || 0
     }
   });
   if (!verification.verified) {
@@ -247,8 +259,9 @@ async function finishAuthentication(email, credential) {
   }
   // Simpan counter baharu (anti-replay untuk authenticator FIDO2 yangincrements).
   const idx = keys.findIndex((k) => k.id === credential.id);
-  if (idx !== -1 && verification.authenticationResult) {
-    keys[idx].counter = verification.authenticationResult.newCounter || keys[idx].counter;
+  const authInfo = verification.authenticationInfo;
+  if (idx !== -1 && authInfo) {
+    keys[idx].counter = authInfo.newCounter ?? keys[idx].counter;
     savePasskeys(keys);
   }
   return issueSession(normalizeEmail(email));
