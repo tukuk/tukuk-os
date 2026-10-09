@@ -107,9 +107,11 @@ async function rerank(query, hits, { topN } = {}) {
   try {
     const queries = list.map(() => String(query || ''));
     const passages = list.map((h) => docText(h));
-    // Bentuk positional `tokenizer(text, text_pair, options)` — selamat & sepadan
-    // dengan Python; text/text_pair sebagai array = batch.
-    const encoded = await eng.tokenizer(queries, passages, {
+    // API transformers.js v4: 2nd arg = OBJEK options dengan `text_pair`.
+    // (Bentuk positional `tok(qs, ps, opts)` SILENTLY menjatuhkan text_pair —
+    //  disahkan melalui probe: semua logit menjadi sama.)
+    const encoded = await eng.tokenizer(queries, {
+      text_pair: passages,
       padding: true,
       truncation: true,
       max_length: 256

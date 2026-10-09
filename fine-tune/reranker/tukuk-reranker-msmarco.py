@@ -161,6 +161,9 @@ torch.onnx.export(
     wrapper,
     (dummy["input_ids"], dummy["attention_mask"], dummy.get("token_type_ids", torch.zeros_like(dummy["input_ids"]))),
     onnx_path,
+    dynamo=False,          # torch 2.9+ default ke eksport baharu (dynamo) yang
+                           # perlukan `onnxscript` — TIADA dalam imej Kaggle offline.
+                           # Legacy TorchScript exporter tak perlu dep tambahan.
     opset_version=OPSET,
     input_names=["input_ids", "attention_mask", "token_type_ids"],
     output_names=["logits"],
