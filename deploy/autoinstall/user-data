@@ -48,8 +48,11 @@ EOF'
     # 4. Install Cloudflare Tunnel (cloudflared)
     - curtin in-target --target=/target -- bash -c 'curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg > /dev/null && echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared jammy main" | tee /etc/apt/sources.list.d/cloudflared.list && apt-get update && apt-get install -y cloudflared'
 
-    # 5. Clone and install Tukuk-OS
-    - curtin in-target --target=/target -- bash -c 'git clone https://github.com/fevian/tukuk-os.git /opt/tukuk-os && cd /opt/tukuk-os && npm install --omit=dev --no-audit'
+    # 5. Clone and install Tukuk-OS (repo PRIVATE fevian448/tukuk-os-v2).
+    #    NOTE: private clone perlu GitHub token. Jika gagal (no auth), selepas
+    #    boot silinkan USB yang membawa kod dan jalankan:
+    #       sudo bash /path/ke/tukuk-os/scripts/install-from-usb.sh
+    - curtin in-target --target=/target -- bash -c 'git clone https://github.com/fevian448/tukuk-os-v2.git /opt/tukuk-os && cd /opt/tukuk-os && TUKUK_AUTO_SETUP=1 bash scripts/setup-all.sh || echo "Tukuk-OS clone/setup gagal (repo private). Lepas boot: sudo bash scripts/install-from-usb.sh dari USB."'
 
     # 6. Enable systemd service
     - curtin in-target --target=/target -- bash -c 'cat << "EOF" > /etc/systemd/system/tukuk-os.service

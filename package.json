@@ -8,6 +8,7 @@
     "dev": "node index.js",
     "postinstall": "bash scripts/setup-all.sh --from-npm || true",
     "setup": "bash scripts/setup-all.sh",
+    "usb": "sudo bash scripts/install-from-usb.sh",
     "update": "bash scripts/auto-update.sh",
     "build": "node -e 'console.log(\"Build complete\")'",
     "lint": "node -e 'console.log(\"No lint errors\")'",

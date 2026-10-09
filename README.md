@@ -48,10 +48,26 @@ sudo ./deploy/build-iso.sh
 ```
 * **Hasil:** `/tmp/tukuk-os-server-24.04.iso` (bakar ke USB menggunakan Rufus / BalenaEtcher).
 * **ZRAM Swap:** Dikonfigurasikan automatik pada pelayan (75% mampatan ZRAM) supaya pelayan 2GB RAM berjalan sangat lancar tanpa *crash*.
+* ⚠️ **Amaran:** langkah `late-commands` dalam autoinstall *clone* repo **private** → akan gagal tanpa GitHub token. Untuk mesin baru, **guna laluan USB di §5** (lebih mudah, tiada auth diperlukan).
 
 ---
 
 ## 🌐 5. Deployment Pelayan & Cloudflare Tunnel
+
+0. **Install dari USB (paling mudah untuk server baru — tiada auth GitHub diperlukan):**
+   Repo kini **private**, jadi `git clone` di mesin baru perlu SSH key/PAT. Sebagai ganti, bawa kod pada USB dan biarkan server hanya guna internet untuk `npm install`:
+   ```bash
+   # (i) Di mesin dev — salin repo ke USB (tanpa node_modules):
+   rsync -a --exclude node_modules --exclude meili_data --exclude .wrangler \
+         ./  /media/$USER/USB/tukuk-os/
+
+   # (ii) Di SERVER — salin dari USB & jalankan SATU skrip:
+   cp -r /media/$USER/USB/tukuk-os /tmp/tukuk-os
+   sudo bash /tmp/tukuk-os/scripts/install-from-usb.sh   # atau: npm run usb
+   ```
+   Skrip menyalin ke `/opt/tukuk-os`, jana `.env` daripada `deploy/env.defaults`, dan panggil `setup-all.sh` (Node→Meili→servis→tunnel). **Server mesti ada internet** untuk langkah ini.
+   - **Offline penuh (tiada internet):** `TUKUK_KEEP_NODEMODULES=1 TUKUK_OFFLINE=1 sudo bash scripts/install-from-usb.sh` — tapi anda juga mesti bawa `node_modules` (dijana pada mesin online arch sama) + binary `node`/`cloudflared`/`meilisearch`, dan aktifkan servis systemd secara manual.
+   - **Selepas siap:** isi `CF_TUNNEL_TOKEN` (+ `CLOUDFLARE_API_TOKEN` untuk www/edge) dalam `/opt/tukuk-os/.env`, lalu `sudo bash scripts/setup-all.sh` sekali lagi (idempotent) untuk hidupkan tunnel & edge.
 
 1. **Quick Install pada Ubuntu Server sedia ada (`192.168.8.100`):**
    ```bash
@@ -110,7 +126,7 @@ Soalan kendiri ("apa itu tukuk-os", "endpoint", dll.) dijawab dari pengetahuan t
 - **Bahasa:** UI **Melayu**; komen kod & penjelasan ikut harness (English). Kekal konsisten.
 - **Aset & iklan:** utamakan aset berlesen **CC**; **jangan** letak iklan pada halaman hasil carian pihak ketiga (`/cari`).
 - **Semak sintaks JS dalam HTML:** `awk '/<script>/{f=1;next}/</script>/{f=0} f' public/FILE.html > /tmp/x.js && node --check /tmp/x.js`.
-- **Git:** jangan commit/push tanpa arahan pengguna; semua kerja Studio/AI setakat ini **belum di-commit**.
+- **Git:** jangan commit/push tanpa arahan pengguna. (Setakat ini semua kerja Studio/AI/video-fix **sudah di-commit & push** ke `origin/main`.)
 
 ---
 

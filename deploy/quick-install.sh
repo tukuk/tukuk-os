@@ -75,7 +75,13 @@ if [[ ! -f "$INSTALL_DIR/package.json" ]]; then
   if [[ -d "./src" && -f "./package.json" ]]; then
     cp -r ./* "$INSTALL_DIR/"
   else
-    git clone https://github.com/fevian/tukuk-os.git "$INSTALL_DIR" || true
+    # Repo sebenar kini PRIVATE (fevian448/tukuk-os-v2). Clone HTTPS di mesin
+    # baru akan GAGAL tanpa auth — disyorkan bawa kod guna USB:
+    #   sudo bash scripts/install-from-usb.sh
+    # (Klon HTTPS di bawah hanya berfungsi jika repo dijadikan public / ada PAT.)
+    git clone https://github.com/fevian448/tukuk-os-v2.git "$INSTALL_DIR" || {
+      echo "git clone gagal (repo private). Gunakan: sudo bash scripts/install-from-usb.sh" >&2
+    }
   fi
 fi
 
