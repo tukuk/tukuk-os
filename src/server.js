@@ -105,12 +105,22 @@ app.disable('x-powered-by');
 
 // Security headers (Lighthouse "Trust & Safety"). Cloudflare boleh tambah di edge juga,
 // tapi ini memastikan header ada tanpa mengira laluan (aplikasi terus, tunnel, dsb.).
-// CSP dipasang sebagai REPORT-ONLY: SPA ini bergantung pada satu <script> inline besar +
-// 62 atribut style="…", jadi CSP TERPAKSA (enforced) perlu ekstraksi skrip inline ke fail
-// luar + nonce/hash (refactor besar). Report-Only = SIFAR kerosakan: dasar diuji & pelanggaran
-// dilaporkan ke /csp-report untuk penajaman, tanpa menyekat apa-apa. Clickjacking dilindungi
-// X-Frame-Options + frame-ancestors; COOP pilih same-origin-allow-popups supaya popup OAuth/
-// login (window.open) tidak terputus.
+// CSP DUA LAPISAN:
+//  (1) ENFORCED — `CSP_ENFORCED` HANYA direktif struktur (frame-ancestors/object-src/
+//      base-uri/form-action). Sengaja TIDAK menyentuh default-src/script-src/style-src,
+//      jadi TiADA kerosakan: AdSense + `<script>` inline SPA + 62 atribut style= terus jalan.
+//      Ini tetap memberi perlindungan nyata (clickjacking, penyisipan <base>/<object>/form).
+//  (2) REPORT-ONLY — `CSP_REPORT_ONLY` = dasar ketat penuh (default/script-src dll.) untuk
+//      kumpul telemetri ke /csp-report. Peralihan ke enforced PENUH butuh: esktraksi skrip
+//      inline ke fail luar + de-inline 70 handler (onclick/onerror) + AdSense strict-dynamic/
+//      nonce — kerja besar & wajib QA pelayar. Clickjacking juga dilindungi X-Frame-Options;
+//      COOP = same-origin-allow-popups supaya popup OAuth/login (window.open) tak terputus.
+const CSP_ENFORCED = [
+  "frame-ancestors 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ') + ';';
 const CSP_REPORT_ONLY = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com",
@@ -132,6 +142,7 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('X-DNS-Prefetch-Control', 'on');
+  res.setHeader('Content-Security-Policy', CSP_ENFORCED);
   res.setHeader('Content-Security-Policy-Report-Only', CSP_REPORT_ONLY);
   // HSTS hanya bermakna atas HTTPS; tiada `preload` (butuh daftar + semua subdomain HTTPS dulu).
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
