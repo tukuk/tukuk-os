@@ -157,6 +157,14 @@
   .vid-modal-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); }
   .vid-modal-body { background:#000; }
   .vid-modal-body video { width:100%; max-height:70vh; display:block; }
+
+  /* NASA History learning UI */
+  .hist-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .hist-chip { font-size:.82rem; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--text); cursor:pointer; }
+  .hist-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .hist-cat-tag { font-size:.66rem; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:1px 8px; white-space:nowrap; }
+  .hist-intro { border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:12px; padding:16px 20px; background:rgba(255,255,255,.03); margin-bottom:6px; line-height:1.7; }
+  .figure-card .photo-card-title { color:var(--accent); }
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
@@ -453,7 +461,7 @@
   <div id="panel-history" class="section-panel">
     <div class="card">
       <h2 style="margin-top:0;">NASA History &mdash; Timeline of Space Exploration</h2>
-      <p style="color:var(--muted);">From the NACA propeller labs to the Artemis generation: the milestones that shaped NASA and human spaceflight. Press <strong>View NASA photo</strong> on any entry to pull an archival image straight from the NASA image library.</p>
+      <p style="color:var(--muted);">A learning timeline of nearly six decades of exploration, from the NACA wind tunnels to the Artemis Moon programme &mdash; organised by era, searchable, and illustrated with real photographs pulled live from the official NASA archive. Most NASA media is public domain, so this is free for anyone, anywhere, to study.</p>
       <div id="historyContent"></div>
     </div>
   </div>
@@ -1391,72 +1399,229 @@ async function runIssMath() {
   }
 }
 
-/* ===== NASA HISTORY TIMELINE ===== */
+/* ===== NASA HISTORY — a learning timeline ===== */
+const HIST_CATS = [
+  { id: 'all', label: '🗂️ Semua · All' },
+  { id: 'pioneers', label: '🛩️ Pioneers & NACA' },
+  { id: 'race', label: '🥇 Space Race & Mercury' },
+  { id: 'apollo', label: '🌕 Apollo & Skylab' },
+  { id: 'shuttle', label: '🚀 Shuttle Era' },
+  { id: 'station', label: '🛰️ Space Stations' },
+  { id: 'robots', label: '🤖 Robotic Explorers' },
+  { id: 'science', label: '🔭 Science & Telescopes' },
+  { id: 'artemis', label: '🌘 Artemis & Beyond' },
+  { id: 'lessons', label: '⚠️ Lessons & Tragedies' }
+];
+function catLabel(id) { const c = HIST_CATS.find((x) => x.id === id); return c ? c.label : id; }
+
 const NASA_HISTORY = [
-  { year: '1915', title: 'NACA is founded', q: 'NACA wind tunnel', text: 'The National Advisory Committee for Aeronautics opens for business on 3 March 1915 to keep American aviation competitive. Its Langley laboratories in Virginia build the wind tunnels and propeller research that will later feed directly into the space age.' },
-  { year: '1947', title: 'Breaking the sound barrier', q: 'Bell X-1', text: 'On 14 October 1947 Chuck Yeager flies the rocket-powered Bell X-1 past Mach 1 in a NACA programme. The data gathered from flights like this one turns supersonic flight from a dangerous guess into an engineering discipline.' },
-  { year: '1958', title: 'NASA is born', q: 'Explorer 1 satellite', text: 'President Eisenhower signs the National Aeronautics and Space Act on 29 July 1958, folding NACA and the Army and Navy space efforts into one civilian agency. Earlier that year Explorer 1 had already become the first American satellite, discovering the Van Allen radiation belts.' },
-  { year: '1961', title: 'First American in space', q: 'Alan Shepard Freedom 7', text: 'Alan Shepard flies Freedom 7 on 5 May 1961, a 15-minute suborbital hop that proves the Mercury capsule works. Three weeks later President Kennedy commits the nation to landing a man on the Moon before the end of the decade.' },
-  { year: '1962', title: 'America orbits the Earth', q: 'John Glenn Friendship 7', text: 'John Glenn circles the globe three times in Friendship 7 on 20 February 1962, watching fires in Australia and a parachute dropped by fishermen flash beneath him. The flight makes Mercury a true orbital programme overnight.' },
-  { year: '1969', title: 'Apollo 11 lands on the Moon', q: 'Apollo 11 launch', text: 'On 20 July 1969 Neil Armstrong and Buzz Aldrin set the lunar module Eagle down in the Sea of Tranquility while Michael Collins waits in orbit. "That is one small step for man, one giant leap for mankind" is heard by an estimated 600 million people.' },
-  { year: '1976', title: 'Viking touches down on Mars', q: 'Viking Mars lander', text: 'Viking 1 becomes the first US spacecraft to land successfully on Mars on 20 July 1976, operating for over six years. Its cameras and soil experiments give humanity its first close look at the Martian surface and the first search for life there.' },
-  { year: '1977', title: 'Voyager starts the Grand Tour', q: 'Voyager spacecraft', text: 'Voyager 2 launches on 20 August 1977, Voyager 1 on 5 September, exploiting a rare alignment of the outer planets. They go on to reveal active volcanoes on Io, new moons of Uranus and Neptune, and still phone home from interstellar space today.' },
-  { year: '1981', title: 'First Space Shuttle flight', q: 'Space Shuttle Columbia first flight', text: 'Columbia lifts off on 12 April 1981 on STS-1, the first crewed launch of a reusable spacecraft. It lands like an aeroplane two days later, opening the era in which astronauts fly to orbit, work, and come home to a runway.' },
-  { year: '1986', title: 'Challenger, STS-51-L', q: 'Challenger STS-51-L', text: 'On 28 January 1986 the shuttle Challenger breaks apart 73 seconds after launch, killing the seven-member crew including teacher Christa McAuliffe. The Rogers Commission traces the loss to an O-ring seal that failed in cold weather — NASA rewrites its safety culture.' },
-  { year: '1990', title: 'Hubble sees first light', q: 'Hubble Space Telescope deployment', text: 'Deployed from Discovery on 24 April 1990, the Hubble Space Telescope is released with a flawed mirror, corrected by servicing missions a few years later. From orbit it sees past dust and atmosphere, remapping the age and expansion of the universe.' },
-  { year: '1997', title: 'Sojourner rolls on Mars', q: 'Mars Pathfinder', text: 'Mars Pathfinder lands on 4 July 1997 and releases Sojourner, the first wheeled rover to drive on another planet. Airbag landings and small autonomous rovers prove that Mars can be explored on a fraction of a flagship mission budget.' },
-  { year: '1998', title: 'The ISS begins', q: 'International Space Station assembly', text: 'The Russian Zarya module launches on 20 November 1998 and is joined by Unity from the shuttle ten days later. Since 2000 the International Space Station has been continuously occupied — a laboratory that has hosted thousands of experiments and crews from dozens of countries.' },
-  { year: '2003', title: 'Columbia, STS-107', q: 'Space Shuttle Columbia STS-107', text: 'On 1 February 2003 Columbia is lost during re-entry with its crew of seven after foam struck the wing during launch. The Columbia Accident Investigation Board reforms shuttle inspection and retirement follows in 2011 — the lesson is written into every mission since.' },
-  { year: '2004', title: 'Twin rovers on Mars', q: 'Mars Exploration Rover Spirit Opportunity', text: 'Spirit lands on 3 January and Opportunity on 24 January 2004, each designed for 90 days. Opportunity keeps driving for almost 15 years, finding ancient lakebeds and mineral evidence that liquid water once flowed across the Martian surface.' },
-  { year: '2011', title: 'The shuttle era ends', q: 'Space Shuttle Atlantis STS-135', text: 'Atlantis lands on 21 July 2011 at the close of STS-135, the 135th shuttle mission. Across 30 years the fleet flew 135 missions, deployed the Hubble Space Telescope, assembled the space station, and brought crews home to a runway for the last time.' },
-  { year: '2012', title: 'Curiosity in Gale Crater', q: 'Curiosity rover Gale crater', text: 'On 6 August 2012 the Mars Science Laboratory lowers Curiosity onto the floor of Gale Crater on a rocket-powered sky crane. The car-sized rover climbs Mount Sharp reading a chapter-by-chapter record of Mars changing from wet to dry.' },
-  { year: '2015', title: 'Pluto up close', q: 'New Horizons Pluto', text: 'New Horizons flies past Pluto on 14 July 2015 after a nine-and-a-half-year cruise, returning the first detailed images of the dwarf planet. The pictures show nitrogen-ice glaciers, water-ice mountains and a thin blue haze — worlds at the edge are geologically alive.' },
-  { year: '2021', title: 'Perseverance, Ingenuity and Webb', q: 'Perseverance rover Jezero', text: 'Perseverance lands in Jezero Crater on 18 February 2021 to cache samples for return, and on 19 April the Ingenuity helicopter makes the first powered flight on another world. On 25 December the James Webb Space Telescope launches toward the Sun-Earth L2 point.' },
-  { year: '2022', title: 'Artemis I and Webb first images', q: 'Artemis I', text: 'Webb delivers its first deep-field images on 12 July 2022, looking further into the universe than ever before. On 16 November the uncrewed Artemis I Orion spacecraft launches on the Space Launch System, flying around the Moon and splashing down on 11 December.' },
-  { year: 'Today', title: 'The Artemis generation', q: 'International Space Station', text: 'NASA now runs the ISS, operates Webb, studies the Sun with Parker and the asteroids with OSIRIS-REx samples, and prepares crewed Artemis missions to the Moon ahead of the first human steps on Mars — every mission built on the timeline above.' }
+  { year: '1903', cat: 'pioneers', title: 'The first powered flight', q: 'Wright brothers airplane', text: "On 17 December 1903 Orville and Wilbur Wright achieve the first sustained, controlled, powered heavier-than-air flight at Kitty Hawk, North Carolina — the foundation that NASA's aeronautics research would later build upon." },
+  { year: '1915', cat: 'pioneers', title: 'NACA is founded', q: 'NACA wind tunnel', text: "The National Advisory Committee for Aeronautics opens on 3 March 1915 to keep American aviation competitive. Its Langley laboratories build the wind tunnels and propeller research that would feed directly into the space age." },
+  { year: '1926', cat: 'pioneers', title: 'The first liquid-fuel rocket', q: 'Goddard rocket launch', text: "Robert Goddard launches the world's first liquid-fuelled rocket (kerosene and liquid oxygen) in Auburn, Massachusetts on 16 March 1926. It flew for 2.5 seconds, but proved a rocket could work — the template for every large launcher since." },
+  { year: '1947', cat: 'pioneers', title: 'Breaking the sound barrier', q: 'Bell X-1', text: "On 14 October 1947 Chuck Yeager flies the rocket-powered Bell X-1 past Mach 1 in a NACA programme. Data from flights like this turned supersonic travel from a dangerous guess into an engineering discipline." },
+  { year: '1957', cat: 'pioneers', title: 'Sputnik opens the Space Age', q: 'Sputnik satellite', text: "On 4 October 1957 the Soviet Union beams the first artificial satellite, Sputnik 1, into orbit. Its steady 'beep-beep' triggers the Space Race and pushes the United States to create a civilian space agency." },
+  { year: '1958', cat: 'pioneers', title: 'NASA is born', q: 'Explorer 1 satellite', text: "President Eisenhower signs the National Aeronautics and Space Act on 29 July 1958, folding NACA and the Army and Navy space efforts into one civilian agency. Earlier that year Explorer 1 had become the first American satellite, discovering the Van Allen radiation belts." },
+
+  { year: '1961', cat: 'race', title: 'First human in space', q: 'Vostok spacecraft', text: "Yuri Gagarin orbits the Earth aboard Vostok 1 on 12 April 1961, becoming the first human in space and sharply raising the stakes of the Space Race." },
+  { year: '1961', cat: 'race', title: 'First American in space', q: 'Alan Shepard Freedom 7', text: "Alan Shepard flies Freedom 7 on 5 May 1961, a 15-minute suborbital hop that proves the Mercury capsule works." },
+  { year: '1961', cat: 'race', title: 'We choose to go to the Moon', q: 'Kennedy Rice University speech', text: "On 25 May 1961, weeks after Gagarin, President Kennedy commits the nation to land astronauts on the Moon before the decade ends — a deadline that shapes everything that follows." },
+  { year: '1962', cat: 'race', title: 'America orbits the Earth', q: 'John Glenn Friendship 7', text: "John Glenn circles the globe three times in Friendship 7 on 20 February 1962, watching fires in Australia and a parachute dropped by fishermen flash beneath him." },
+  { year: '1963', cat: 'race', title: 'First woman in space', q: 'Tereshkova Vostok 6', text: "Valentina Tereshkova flies 48 orbits aboard Vostok 6 on 16 June 1963, becoming the first woman to travel into space." },
+  { year: '1965', cat: 'race', title: 'Gemini and the first US spacewalk', q: 'Ed White astronaut', text: "Project Gemini masters the tricks Apollo needs: rendezvous, docking and long-duration flight. On 3 June 1965 Ed White performs the first American orbital spacewalk on Gemini 4." },
+  { year: '1966', cat: 'race', title: 'First spacecraft docking', q: 'Gemini 8 Agena docking', text: "Neil Armstrong docks Gemini 8 with an Agena target — the first spacecraft docking ever — then saves the mission during a dangerous spin, showing the cool that would land Apollo 11." },
+
+  { year: '1967', cat: 'lessons', title: 'Apollo 1 fire', q: 'Apollo 1 astronauts', text: "On 27 January 1967 a cabin fire kills astronauts Grissom, White and Chaffee during a launch rehearsal. The investigation redesigns the capsule, its pure-oxygen air and its plug hatch — their initials are worn on the missions that followed." },
+  { year: '1968', cat: 'apollo', title: 'Apollo 8: first crewed flight to the Moon', q: 'Apollo 8 Earthrise', text: "Frank Borman, Jim Lovell and Bill Anders orbit the Moon ten times on Christmas Eve 1968. Their 'Earthrise' photograph reframes how humanity sees its home planet." },
+  { year: '1969', cat: 'apollo', title: 'Apollo 11 lands on the Moon', q: 'Apollo 11 launch', text: "On 20 July 1969 Neil Armstrong and Buzz Aldrin set the lunar module Eagle down in the Sea of Tranquility while Michael Collins waits in orbit. 'That is one small step for man, one giant leap for mankind' reaches some 600 million listeners." },
+  { year: '1970', cat: 'apollo', title: 'Apollo 13: a successful failure', q: 'Apollo 13', text: "An oxygen tank explodes en route to the Moon. Using the lunar module as a lifeboat, the crew loops around the Moon and returns safely — a case study in improvisation that is still taught today." },
+  { year: '1971', cat: 'apollo', title: 'Apollo 15: first rover on the Moon', q: 'Lunar Roving Vehicle', text: "Apollo 15 carries the first Lunar Roving Vehicle, tripling how far astronauts can explore, and returns the Genesis Rock from the lunar highlands." },
+  { year: '1972', cat: 'apollo', title: 'Apollo 17: the last Moonwalks', q: 'Apollo 17 Cernan', text: "Eugene Cernan and Harrison Schmitt fly the final Apollo Moon mission in December 1972. Schmitt, a geologist, is the last scientist to walk on another world — no humans have returned to the Moon since." },
+  { year: '1973', cat: 'apollo', title: 'Skylab: America’s first space station', q: 'Skylab space station', text: "Built from a converted Saturn V stage, Skylab hosts three crews in 1973–74 for as long as 84 days, proving people can live and work in space for months and pioneering solar astronomy." },
+  { year: '1975', cat: 'apollo', title: 'Apollo–Soyuz: a handshake in orbit', q: 'Apollo Soyuz handshake', text: "On 17 July 1975 an American Apollo and a Soviet Soyuz dock in the first international crewed space mission — a thaw in the Cold War and the ancestor of cooperation on today's space station." },
+
+  { year: '1981', cat: 'shuttle', title: 'First Space Shuttle flight', q: 'Space Shuttle Columbia STS-1', text: "Columbia lifts off on 12 April 1981 on STS-1, the first crewed launch of a reusable spacecraft. It lands like an aeroplane two days later, opening the era in which astronauts fly, work, and come home to a runway." },
+  { year: '1986', cat: 'lessons', title: 'Challenger, STS-51-L', q: 'Challenger STS-51-L', text: "On 28 January 1986 the shuttle Challenger breaks apart 73 seconds after launch, killing the seven-member crew including teacher Christa McAuliffe. The Rogers Commission traces the loss to an O-ring seal that failed in cold weather, and NASA rewrites its safety culture." },
+  { year: '1983', cat: 'shuttle', title: 'A wider circle of explorers', q: 'Sally Ride space shuttle', text: "On STS-7 in June 1983 Sally Ride becomes the first American woman in space and Guion Bluford the first African-American astronaut to fly — widening who gets to leave the planet." },
+  { year: '1993', cat: 'shuttle', title: 'Shuttle rescues Hubble', q: 'Hubble servicing mission', text: "The STS-61 crew installs corrective optics in December 1993, fixing Hubble's flawed mirror and launching it into its role as one of science's greatest instruments. Further servicing missions extend its life by decades." },
+  { year: '2011', cat: 'shuttle', title: 'The shuttle era ends', q: 'Space Shuttle Atlantis STS-135', text: "Atlantis lands on 21 July 2011 at the close of STS-135, the 135th shuttle mission. Across 30 years the fleet deployed Hubble, assembled the space station and carried hundreds of astronauts to orbit and home." },
+
+  { year: '1971', cat: 'station', title: 'Salyut 1: the first space station', q: 'Salyut space station', text: "The world's first space station, the Soviet Salyut 1, launches in April 1971; a later crew lives aboard for 24 days, opening the era of humans living in orbit." },
+  { year: '1986', cat: 'station', title: 'Mir core module launches', q: 'Mir space station', text: "The Soviet Mir station's core module lifts off on 20 February 1986. Over 15 years it hosts cosmonauts and, through the Shuttle–Mir programme, American astronauts — NASA's on-orbit training ground for the ISS." },
+  { year: '1995', cat: 'station', title: 'Shuttle–Mir operations begin', q: 'Shuttle Mir docking', text: "From 1995 US shuttles dock with Mir many times and astronauts live aboard for months, and the two nations learn to build and run a station together." },
+  { year: '1998', cat: 'station', title: 'The ISS begins assembly', q: 'International Space Station Zarya Unity', text: "The Russian Zarya module launches on 20 November 1998 and is joined by the US Unity node from the shuttle days later — the first blocks of the largest structure ever built in space." },
+  { year: '2000', cat: 'station', title: 'Continuous human presence in orbit', q: 'ISS Expedition 1', text: "Expedition 1 arrives on 2 November 2000, and the International Space Station has been crewed without interruption ever since — more than two decades of continuous human life off the Earth." },
+  { year: '2020', cat: 'station', title: 'Commercial crew returns launches to the US', q: 'Crew Dragon Demo-2', text: "SpaceX's Crew Dragon carries NASA astronauts Doug Hurley and Bob Behnken to the ISS in May 2020 — the first crewed orbital launch from US soil in nine years and the start of the commercial-crew era." },
+
+  { year: '1962', cat: 'robots', title: 'First successful interplanetary flyby', q: 'Mariner 2 spacecraft', text: "On 14 December 1962 Mariner 2 flies past Venus, returning data that reveals a scorching world — the first time a spacecraft reached another planet intact." },
+  { year: '1964', cat: 'robots', title: 'Mars seen up close', q: 'Mariner 4 Mars', text: "Mariner 4 returns the first close-up photographs of another planet's surface — a handful of images of a cratered, Moon-like Mars that began real planetary science." },
+  { year: '1973', cat: 'robots', title: 'Pioneer 10 crosses to Jupiter', q: 'Pioneer 10 Jupiter', text: "Pioneer 10 becomes the first spacecraft to traverse the asteroid belt and fly past Jupiter in December 1973, carrying a gold plaque that sends humanity's greeting to the cosmos." },
+  { year: '1976', cat: 'robots', title: 'Viking touches down on Mars', q: 'Viking Mars lander', text: "Viking 1 becomes the first US spacecraft to land successfully on Mars on 20 July 1976, operating for over six years. Its cameras and soil experiments give the first close look at the Martian surface and the first search for life there." },
+  { year: '1977', cat: 'robots', title: 'Voyager starts the Grand Tour', q: 'Voyager spacecraft', text: "Voyager 2 launches on 20 August 1977 and Voyager 1 on 5 September, exploiting a rare alignment of the outer planets. They reveal active volcanoes on Io and new moons of Uranus and Neptune, and still phone home from interstellar space today." },
+  { year: '1989', cat: 'robots', title: 'Voyager 2 at Neptune', q: 'Voyager Neptune', text: "On 25 August 1989 Voyager 2 makes the first and only close study of Neptune, discovering its Great Dark Spot, six new moons and supersonic winds — completing the Grand Tour of the giants." },
+  { year: '1990', cat: 'robots', title: 'The Pale Blue Dot', q: 'Pale Blue Dot', text: "Turned back toward home from some six billion kilometres, Voyager 1 photographs Earth as a tiny speck in a sunbeam — a humbling portrait of our planet's fragility." },
+  { year: '1995', cat: 'robots', title: 'Galileo at Jupiter', q: 'Galileo Jupiter', text: "Galileo arrives at Jupiter in December 1995, dropping a probe into the atmosphere and orbiting for eight years — finding strong evidence for a salty ocean beneath Europa's icy crust." },
+  { year: '1997', cat: 'robots', title: 'Sojourner rolls on Mars', q: 'Mars Pathfinder', text: "Mars Pathfinder lands on 4 July 1997 and releases Sojourner, the first wheeled rover to drive on another planet, proving Mars can be explored on a modest budget." },
+  { year: '2004', cat: 'robots', title: 'Twin rovers on Mars', q: 'Mars Exploration Rover Spirit Opportunity', text: "Spirit lands on 3 January and Opportunity on 24 January 2004, each designed for 90 days. Opportunity keeps driving for nearly 15 years, finding mineral evidence that liquid water once flowed across the surface." },
+  { year: '2004', cat: 'robots', title: 'Cassini reaches Saturn', q: 'Cassini Saturn rings', text: "After a seven-year cruise, Cassini enters orbit at Saturn on 1 July 2004. Over 13 years it reveals ring structures, methane lakes on Titan and water geysers venting from Enceladus." },
+  { year: '2012', cat: 'robots', title: 'Curiosity in Gale Crater', q: 'Curiosity rover Gale crater', text: "On 6 August 2012 the Mars Science Laboratory lowers Curiosity onto the floor of Gale Crater on a rocket-powered sky crane. The car-sized rover climbs Mount Sharp reading how Mars changed from wet to dry." },
+  { year: '2015', cat: 'robots', title: 'Pluto up close', q: 'New Horizons Pluto', text: "New Horizons flies past Pluto on 14 July 2015 after a nine-and-a-half-year cruise, returning the first detailed images of the dwarf planet — nitrogen-ice glaciers, water-ice mountains and a thin blue haze." },
+  { year: '2018', cat: 'robots', title: 'Touching the Sun, listening to Mars', q: 'Parker Solar Probe', text: "Parker Solar Probe launches to fly through the Sun's corona — the first spacecraft to touch our star — while InSight lands on Mars to detect the planet's first recorded quakes." },
+  { year: '2021', cat: 'robots', title: 'Perseverance and the first flight on Mars', q: 'Perseverance rover Jezero', text: "Perseverance lands in Jezero Crater on 18 February 2021 to cache samples for return, and on 19 April the Ingenuity helicopter makes the first powered flight on another world." },
+  { year: '2022', cat: 'robots', title: 'DART: humanity deflects an asteroid', q: 'DART asteroid', text: "On 26 September 2022 NASA's DART deliberately crashes into the moonlet Dimorphos and changes its orbit — the first time humans altered the motion of a celestial body, proving planetary defence is real." },
+
+  { year: '1990', cat: 'science', title: 'Hubble sees first light', q: 'Hubble Space Telescope deployment', text: "Deployed from Discovery on 24 April 1990, the Hubble Space Telescope looks past dust and atmosphere. Once its mirror is corrected it helps remap the age and expansion of the universe." },
+  { year: '2003', cat: 'science', title: 'Spitzer views the infrared universe', q: 'Spitzer Space Telescope', text: "Spitzer launches in August 2003 to see the cosmos in infrared, piercing dust clouds to reveal hidden stars, distant galaxies and complex organic molecules." },
+  { year: '2009', cat: 'science', title: 'Kepler hunts other Earths', q: 'Kepler exoplanets', text: "The Kepler Space Telescope launches on 7 March 2009 and monitors some 150,000 stars, discovering thousands of worlds and showing that planets outnumber the stars in our galaxy." },
+  { year: '2016', cat: 'science', title: 'Gravitational waves detected', q: 'LIGO gravitational waves', text: "On 11 February 2016 LIGO — co-funded by NASA — announces the first direct detection of gravitational waves, ripples from two colliding black holes 1.3 billion years away, confirming a century-old Einstein prediction." },
+  { year: '2018', cat: 'science', title: 'TESS surveys nearby worlds', q: 'TESS exoplanet survey', text: "TESS launches in April 2018 to scan the brightest nearby stars for transiting planets, hunting the kinds of worlds we might one day visit and study in detail." },
+  { year: '2021', cat: 'science', title: 'James Webb launches', q: 'James Webb Space Telescope', text: "The James Webb Space Telescope launches on 25 December 2021 and unfolds a 6.5-metre golden mirror at the Sun–Earth L2 point, the most powerful space observatory ever built." },
+  { year: '2022', cat: 'science', title: 'Webb’s first deep field', q: 'Webb first deep field', text: "On 12 July 2022 Webb delivers its first full-colour images — a deep field, an exoplanet atmosphere and stellar nurseries — looking further into cosmic time than any telescope before." },
+
+  { year: '2017', cat: 'artemis', title: 'Artemis is directed', q: 'Space Launch System rocket', text: "In December 2017 NASA is directed to return astronauts to the Moon, and the Space Launch System and Orion capsule — built on Apollo and Shuttle hardware — are pressed into service for the Artemis campaign." },
+  { year: '2022', cat: 'artemis', title: 'Artemis I flies around the Moon', q: 'Artemis I launch', text: "On 16 November the uncrewed Artemis I Orion spacecraft launches on the SLS, travels farther from Earth than any human-rated ship ever, and splashes down safely on 11 December." },
+  { year: 'Today', cat: 'artemis', title: 'The Artemis generation', q: 'International Space Station orbit', text: "NASA now runs the ISS, operates Webb, studies the Sun with Parker and returned asteroid samples from OSIRIS-REx, and prepares crewed Artemis missions back to the Moon ahead of the first human steps on Mars." }
 ];
 
-async function loadHistory() {
+const NASA_FIGURES = [
+  { name: 'Robert Goddard', role: 'Rocket pioneer', q: 'Robert Goddard rocket', text: "The father of American rocketry; his 1926 liquid-fuel rocket made large-scale spaceflight possible." },
+  { name: 'Wernher von Braun', role: 'Rocket engineer', q: 'Wernher von Braun', text: 'Lead designer of the Saturn V Moon rocket whose engineering made the Apollo landings possible.' },
+  { name: 'Katherine Johnson', role: 'Mathematician', q: 'Katherine Johnson NASA', text: 'Computed trajectories for Mercury and Apollo 11 by hand; astronauts trusted her numbers with their lives.' },
+  { name: 'Dorothy Vaughan', role: 'Computing pioneer', q: 'Dorothy Vaughan NASA', text: 'A pioneer of electronic computing at Langley and the first African-American supervisor at NASA.' },
+  { name: 'Mary Jackson', role: 'Engineer', q: 'Mary Jackson NASA engineer', text: "NASA's first African-American female engineer; she fought for the access to training that got her there." },
+  { name: 'Alan Shepard', role: 'Astronaut', q: 'Alan Shepard astronaut', text: 'First American in space in 1961 and, decades later, walked on the Moon during Apollo 14.' },
+  { name: 'John Glenn', role: 'Astronaut & senator', q: 'John Glenn astronaut', text: 'First American to orbit Earth; returned to space aboard Discovery in 1998 at age 77.' },
+  { name: 'Gus Grissom', role: 'Astronaut', q: 'Gus Grissom astronaut', text: 'Mercury and Gemini veteran who died in the Apollo 1 fire; his name was left on the lunar surface.' },
+  { name: 'Neil Armstrong', role: 'Astronaut', q: 'Neil Armstrong astronaut', text: 'The first person to walk on the Moon on 20 July 1969.' },
+  { name: 'Buzz Aldrin', role: 'Astronaut', q: 'Buzz Aldrin astronaut', text: 'Second person on the Moon; pioneered the rendezvous techniques Gemini and Apollo relied on.' },
+  { name: 'Michael Collins', role: 'Astronaut', q: 'Michael Collins astronaut', text: 'Kept watch alone in lunar orbit aboard Columbia so Apollo 11 could make history below him.' },
+  { name: 'Sally Ride', role: 'Physicist & astronaut', q: 'Sally Ride astronaut', text: 'First American woman in space in 1983; later inspired a generation of girls toward science.' },
+  { name: 'Guion Bluford', role: 'Engineer & astronaut', q: 'Guion Bluford astronaut', text: 'First African-American astronaut to fly in space, on STS-7 in 1983.' },
+  { name: 'Mae Jemison', role: 'Physician & astronaut', q: 'Mae Jemison astronaut', text: 'First African-American woman in space, aboard Endeavour in 1992.' },
+  { name: 'Ellen Ochoa', role: 'Engineer & astronaut', q: 'Ellen Ochoa astronaut', text: 'First Hispanic woman in space in 1993; later directed NASA’s Johnson Space Center.' },
+  { name: 'Peggy Whitson', role: 'Biochemist & astronaut', q: 'Peggy Whitson astronaut', text: 'The most-experienced American astronaut on orbit, who commanded the ISS twice.' },
+  { name: 'Christa McAuliffe', role: 'Teacher in Space', q: 'Christa McAuliffe teacher', text: 'Selected as the first teacher to fly to space; her death aboard Challenger advanced education and safety.' },
+  { name: 'Kalpana Chawla', role: 'Engineer & astronaut', q: 'Kalpana Chawla astronaut', text: 'First woman of Indian origin in space; she died aboard Columbia in 2003, remembered as a champion of learning.' }
+];
+
+let histCat = 'all';
+let histQuery = '';
+
+function histIntroHtml() {
+  return `
+    <div class="hist-intro">
+      <h3 style="margin:0 0 8px;">&#127760; Apakah NASA? &mdash; What is NASA?</h3>
+      <p style="margin:0 0 8px; color:var(--text);">NASA &mdash; the <strong>National Aeronautics and Space Administration</strong> &mdash; is the civilian agency of the United States responsible for space exploration and aeronautics research, founded in 1958. Its missions study the Earth, the Sun, the planets and the deep universe, and develop the technology to send humans beyond our world.</p>
+      <p style="margin:0; color:var(--muted);">As a US government agency, most of NASA's imagery and data is in the <strong>public domain</strong> &mdash; free for everyone on Earth to use and learn from. Explore by era below, search any milestone, and tap <em>NASA photo</em> to pull a real archival image for each event.</p>
+    </div>`;
+}
+
+function histControlsHtml() {
+  return `
+    <div style="margin:14px 0 6px;">
+      <div class="hist-chips" id="histChips">
+        ${HIST_CATS.map((c) => `<button class="hist-chip${c.id === histCat ? ' active' : ''}" data-cat="${c.id}" onclick="setHistCat('${c.id}')">${c.label}</button>`).join('')}
+      </div>
+      <input type="search" id="histSearch" placeholder="🔍 Cari peristiwa / search milestones (e.g. Moon, Voyager, Hubble)…" oninput="onHistSearch(this.value)" style="width:100%; margin-top:12px;">
+    </div>`;
+}
+
+function histFiguresHtml() {
+  return `
+    <h3 style="margin:26px 0 6px;">&#128105;&#8205;&#128640; Tokoh &mdash; The people behind the history</h3>
+    <p style="color:var(--muted); font-size:.9rem; margin:0 0 12px;">Engineers, mathematicians and astronauts whose work is written into this timeline. Tap a name for their official NASA portrait.</p>
+    <div class="grid-3">
+      ${NASA_FIGURES.map((f, i) => `
+        <div class="photo-card figure-card">
+          <div class="photo-card-body">
+            <div class="photo-card-title">${esc(f.name)}</div>
+            <div class="photo-card-meta">${esc(f.role)}</div>
+            <p style="font-size:.85rem; color:var(--text); margin:8px 0 10px; line-height:1.55;">${esc(f.text)}</p>
+            <button class="btn btn-secondary" style="font-size:.78rem; padding:5px 12px;" onclick="loadFigPhoto(${i}, this)">&#128247; NASA portrait</button>
+            <div id="figPhoto${i}" style="margin-top:10px;"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function loadHistory() {
   const wrap = document.getElementById('historyContent');
-  wrap.innerHTML = `
+  if (!wrap) return;
+  wrap.innerHTML = histIntroHtml() + histControlsHtml() + '<div id="histList"></div>' + histFiguresHtml();
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('histList');
+  if (!list) return;
+  const q = histQuery.trim().toLowerCase();
+  const items = NASA_HISTORY
+    .map((h, i) => ({ h, i }))
+    .filter(({ h }) => {
+      if (histCat !== 'all' && h.cat !== histCat) return false;
+      if (q && !((h.title + ' ' + h.text + ' ' + h.year + ' ' + h.title).toLowerCase().includes(q))) return false;
+      return true;
+    });
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--muted); padding:24px; text-align:center;">No milestones match that search.</div>';
+    return;
+  }
+  list.innerHTML = `
     <div class="timeline" style="position:relative; padding-left:26px; margin-top:10px;">
       <div style="position:absolute; left:7px; top:6px; bottom:6px; width:2px; background:linear-gradient(var(--accent), transparent);"></div>
-      ${NASA_HISTORY.map((h, i) => `
+      ${items.map(({ h, i }) => `
         <div class="timeline-item" style="position:relative; margin-bottom:22px;">
           <span style="position:absolute; left:-25px; top:6px; width:14px; height:14px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px rgba(96,165,250,.25);"></span>
           <div style="display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;">
             <strong style="font-size:1.08rem; color:var(--accent);">${esc(h.year)}</strong>
             <span style="font-weight:600;">${esc(h.title)}</span>
+            <span class="hist-cat-tag">${esc(catLabel(h.cat))}</span>
           </div>
           <p style="margin:6px 0 8px; font-size:.9rem; color:var(--text); line-height:1.6;">${esc(h.text)}</p>
-          <button class="btn btn-secondary" style="font-size:.78rem; padding:5px 12px;" onclick="loadHistoryPhoto(${i}, this)">&#128247; View NASA photo</button>
+          <button class="btn btn-secondary" style="font-size:.78rem; padding:5px 12px;" onclick="loadHistPhoto(${i}, this)">&#128247; NASA photo</button>
           <div id="histPhoto${i}" style="margin-top:10px;"></div>
-        </div>
-      `).join('')}
+        </div>`).join('')}
     </div>
-    <p style="font-size:.78rem; color:var(--muted); margin-top:6px;">Dates are historical record; images are pulled live from the official NASA image and video library.</p>
-  `;
+    <p style="font-size:.78rem; color:var(--muted); margin-top:6px;">Dates follow the historical record; every image is pulled live from the official NASA image &amp; video library (images-api.nasa.gov).</p>`;
 }
 
-async function loadHistoryPhoto(idx, btn) {
-  const target = document.getElementById('histPhoto' + idx);
-  const entry = NASA_HISTORY[idx];
-  if (!target || !entry) return;
+function setHistCat(id) {
+  histCat = id;
+  document.querySelectorAll('#histChips .hist-chip').forEach((c) => c.classList.toggle('active', c.getAttribute('data-cat') === id));
+  renderHistory();
+}
+
+function onHistSearch(v) {
+  histQuery = v || '';
+  renderHistory();
+}
+
+function loadHistPhoto(idx, btn) {
+  const e = NASA_HISTORY[idx];
+  if (e) fetchNasaPhoto('histPhoto' + idx, e.q, btn, `loadHistPhoto(${idx}, this)`);
+}
+
+function loadFigPhoto(idx, btn) {
+  const f = NASA_FIGURES[idx];
+  if (f) fetchNasaPhoto('figPhoto' + idx, f.q, btn, `loadFigPhoto(${idx}, this)`);
+}
+
+async function fetchNasaPhoto(targetId, query, btn, retryExpr) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
-  target.innerHTML = '<div class="spinner" style="padding:8px;">Searching NASA image library…</div>';
+  target.innerHTML = '<div class="spinner" style="padding:8px;">Searching the NASA image library…</div>';
   try {
-    const data = await safeFetchJson(`/api/nasa/search?q=${encodeURIComponent(entry.q)}`);
+    const data = await safeFetchJson(`/api/nasa/search?q=${encodeURIComponent(query)}`);
     const item = (data.items || [])[0];
     if (!item || !item.thumb) throw new Error('no image found');
     target.innerHTML = `
       <a href="${esc(item.asset_url || item.thumb)}" target="_blank" rel="noopener" style="display:block; max-width:520px;">
-        <img src="${esc(item.thumb)}" alt="${esc(item.title || entry.title)}" loading="lazy" style="width:100%; border-radius:10px; border:1px solid rgba(255,255,255,.12);">
+        <img src="${esc(item.thumb)}" alt="${esc(item.title || query)}" loading="lazy" style="width:100%; border-radius:10px; border:1px solid rgba(255,255,255,.12);">
       </a>
-      <div style="font-size:.76rem; color:var(--muted); margin-top:6px;">${esc(item.title || '')}</div>
-    `;
+      <div style="font-size:.76rem; color:var(--muted); margin-top:6px;">${esc(item.title || '')}</div>`;
     if (btn) btn.textContent = '✓ Photo loaded';
   } catch (err) {
-    target.innerHTML = `<div style="color:var(--danger); font-size:.85rem;">Could not load a photo: ${esc(err.message)} <button class="btn btn-secondary" style="font-size:.75rem; padding:3px 8px; margin-left:6px;" onclick="loadHistoryPhoto(${idx}, this)">Retry</button></div>`;
+    target.innerHTML = `<div style="color:var(--danger); font-size:.85rem;">Could not load a photo: ${esc(err.message)} <button class="btn btn-secondary" style="font-size:.75rem; padding:3px 8px; margin-left:6px;" onclick="${retryExpr}">Retry</button></div>`;
     if (btn) btn.remove();
   }
 }
