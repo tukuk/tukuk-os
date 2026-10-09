@@ -62,7 +62,16 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
       attributesToRetrieve: ['url', 'title', 'description', 'siteName', 'host', 'lang', 'wordCount'],
       showRankingScore: true
     });
-    const hits = result.hits || [];
+    // Tapis ikut skor relevan Meilisearch. TANPA ini, dokumen yang HANYA padan
+    // separa (cth. "enjin KERETA" -> artikel "enjin CARIAN web", skor ~0.49) ikut
+    // dihantar sebagai "grounded", lalu model kecil mengarang jawapan yang salah
+    // topik ("lain tanya lain dijawab"). Had `minConfidence` (=BRAIN_MIN_CONFIDENCE,
+    // lalai 0.5) mengekalkan padanan SEJATI (skor ~0.9) & menolak yang kebetulan.
+    // Skor hasil web (di bawah) TIDAK ditapis — ia memang fallback semasa indeks
+    // tempatan kosong, dan DuckDuckGo sudah menyusunnya ikut relevansi.
+    const hits = (result.hits || []).filter(
+      (hit) => (hit._rankingScore ?? 0) >= config.brain.minConfidence
+    );
 
     if (hits.length === 0 && config.websearch.enabled) {
       try {
@@ -124,8 +133,10 @@ function buildSources(hits) {
 }
 
 const MINIMAL_SYSTEM =
-  'You are a search assistant. Answer briefly in English. ' +
-  'Use ONLY information in the context. If there is no context, answer "I don\'t know".';
+  'You are a search assistant. Answer briefly IN THE SAME LANGUAGE as the QUESTION ' +
+  '(Malay question -> Malay answer, English -> English). Use ONLY the information in ' +
+  'the context. If the context does not actually answer the question, say you do not ' +
+  'know instead of guessing or inventing.';
 
 function buildPrompt(question, hits, selfQuestion) {
   const lines = [];
@@ -143,8 +154,10 @@ function buildPrompt(question, hits, selfQuestion) {
   if (hits.length > 0) {
     lines.push(`SOURCES:\n${buildContext(hits)}`);
     lines.push(
-      'Write a 2-4 sentence answer in English using only the sources. ' +
-      `Reference sources with numbers [1], [2].`
+      'Write a 2-4 sentence answer in the SAME LANGUAGE as the QUESTION, using only ' +
+      'the sources above. Reference sources with numbers [1], [2]. ' +
+      'If the sources do NOT actually address the question, do not force an answer — '
+      + 'say you do not know.'
     );
   } else {
     lines.push(

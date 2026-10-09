@@ -150,7 +150,7 @@ module.exports = {
     timeout: num(process.env.LLM_TIMEOUT, 30000),
     retrievalLimit: num(process.env.BRAIN_RETRIEVAL_LIMIT, 4),
     snippetChars: num(process.env.BRAIN_SNIPPET_CHARS, 700),
-    minConfidence: Number(process.env.BRAIN_MIN_CONFIDENCE ?? 0.35),
+    minConfidence: Number(process.env.BRAIN_MIN_CONFIDENCE ?? 0.5),
     fastMode: bool(process.env.BRAIN_FAST_MODE, true),
     provider: process.env.BRAIN_PROVIDER || 'ollama',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
