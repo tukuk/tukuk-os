@@ -3,6 +3,7 @@ const { ensureIndex, health } = require('./src/meili');
 const crawler = require('./src/crawler');
 const net = require('./src/net');
 const store = require('./src/store');
+const { indexBlogPosts } = require('./src/blog-index');
 const { app } = require('./src/server');
 const news = require('./src/news');
 const queries = require('./src/queries');
@@ -40,6 +41,11 @@ async function main() {
     index = await ensureIndex();
     crawler.setIndex(index);
     console.log(`[meili] index sedia: ${config.indexName}`);
+    // Indekskan kandungan blog ke korpus utama supaya panduan/blog kurasi boleh
+    // dicari di /search (idempotent; non-blocking — jangan tahan cold start).
+    indexBlogPosts(index)
+      .then(({ count }) => { if (count > 0) console.log(`[blog-index] ${count} post blog boleh dicari`); })
+      .catch((err) => console.warn(`[blog-index] dilewati: ${err.message}`));
   } catch (error) {
     // Jangan mati — enjin carian masih boleh menjawab daripada cache fallback.
     console.warn(`[tukuk-os] AMARAN: ${error.message}`);
