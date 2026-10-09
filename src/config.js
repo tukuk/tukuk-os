@@ -173,7 +173,9 @@ module.exports = {
 
   nasa: {
     apiKey: process.env.NASA_API_KEY || 'fmALFBwD70rhld4szo2P3qGezLRgTqWH6vLUh2lb',
-    baseUrl: 'https://api.nasa.gov'
+    baseUrl: 'https://api.nasa.gov',
+    // Auto-update APOD: selang tarikan latar belakang (minit, minimum 5)
+    apodRefreshMinutes: num(process.env.NASA_APOD_REFRESH_MIN, 30)
   },
 
   envFile

@@ -1195,7 +1195,8 @@ app.get('/api/nasa/apod', async (req, res) => {
   try {
     const data = await nasa.getAPOD({
       date: req.query.date,
-      count: req.query.count
+      count: req.query.count,
+      force: req.query.force === '1' || req.query.force === 'true'
     });
     res.json(data);
   } catch (error) {

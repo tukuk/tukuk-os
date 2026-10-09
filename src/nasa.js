@@ -1,10 +1,77 @@
 const axios = require('axios');
 const fs = require('fs');
+const https = require('https');
+const dns = require('dns');
 const path = require('path');
 const config = require('./config');
 
+// ——— Rotasi IP untuk api.nasa.gov ———
+// Salah satu backend LB NASA sering rosak (500/timeout); pemerhatian menunjukkan rekod A
+// (IPv4) jauh lebih rosak daripada rekod AAAA (IPv6). Node default tersekat pada satu IP,
+// jadi agen ini pusing SEMUA IPv6+IPv4 setiap sambungan dan blacklist sementara IP yang
+// error di peringkat soket; keep-alive memastikan soket sihat diulang-pakai.
+const NASA_HOST = (() => { try { return new URL(config.nasa.baseUrl).hostname; } catch { return 'api.nasa.gov'; } })();
+let nasaIps = [];
+let nasaIpAt = 0;
+const nasaIpBadUntil = new Map();
+
+function refreshNasaIps() {
+  let v4 = [];
+  let v6 = [];
+  let pending = 2;
+  const done = () => {
+    if (--pending > 0) return;
+    const merged = [...v6, ...v4]; // IPv6 didahulukan (backend IPv4 lebih rosak)
+    if (merged.length) nasaIps = merged;
+  };
+  dns.resolve4(NASA_HOST, (err, addrs) => { if (!err && Array.isArray(addrs)) v4 = addrs; done(); });
+  dns.resolve6(NASA_HOST, (err, addrs) => { if (!err && Array.isArray(addrs)) v6 = addrs; done(); });
+}
+refreshNasaIps();
+setInterval(refreshNasaIps, 5 * 60 * 1000).unref();
+
+function pickNasaIp() {
+  const now = Date.now();
+  for (const [ip, until] of nasaIpBadUntil) if (until <= now) nasaIpBadUntil.delete(ip);
+  const pool = nasaIps.filter(ip => !nasaIpBadUntil.has(ip));
+  const usable = pool.length ? pool : nasaIps;
+  if (!usable.length) return null;
+  return usable[(nasaIpAt++) % usable.length];
+}
+
+class NasaAwareAgent extends https.Agent {
+  createConnection(options, cb) {
+    const hostname = options.servername || options.host;
+    if (hostname !== NASA_HOST) return super.createConnection(options, cb);
+    const ip = pickNasaIp();
+    if (!ip) return super.createConnection(options, cb);
+    const isV6 = ip.includes(':');
+    const socket = super.createConnection(
+      { ...options, host: ip, hostname: ip, family: isV6 ? 6 : 4, servername: hostname, path: undefined },
+      cb
+    );
+    if (socket && typeof socket.once === 'function') {
+      socket.once('error', () => nasaIpBadUntil.set(ip, Date.now() + 10 * 60 * 1000));
+    }
+    return socket;
+  }
+}
+
 const http = axios.create({
   timeout: 20000,
+  httpsAgent: new NasaAwareAgent({ keepAlive: true, maxSockets: 12 }),
+  headers: {
+    'User-Agent': 'TukukOS-NASA-Client/1.0 (+https://tukuk.org)'
+  }
+});
+
+// Khusus api.nasa.gov: TANPA keep-alive supaya setiap percubaan mendapat sambungan
+// (dan backend LB) baharu. NASA kini Separuh balas dengan HTTP 200 "payload rosak"
+// (title "NASA Science" + logo) dan 500; soket diulang-pakai akan tersepit pada backend
+// rosak yang sama — retry jadi sia-sia. Rotasi IP + sambungan baru = peluang terbaik.
+const apiHttp = axios.create({
+  timeout: 20000,
+  httpsAgent: new NasaAwareAgent({ keepAlive: false, maxSockets: 12 }),
   headers: {
     'User-Agent': 'TukukOS-NASA-Client/1.0 (+https://tukuk.org)'
   }
@@ -153,9 +220,10 @@ function isValidApodPayload(data, acceptedDates) {
  *    API NASA kadang-kadang503 (upstream) — cuba beberapa kali, kemudian
  *    jatuh ke arkib rasmi science.nasa.gov, kemudian cakera tempatan.
  */
-async function getAPOD({ date, count } = {}) {
+async function getAPOD({ date, count, force } = {}) {
   const cacheKey = `apod:${date || 'today'}:${count || 1}`;
-  const cached = getCache(cacheKey);
+  if (force) apodApiDownUntil = 0; // "Try live again" / auto-update: cabut pemutus litar dulu
+  const cached = force ? null : getCache(cacheKey);
   if (cached && isValidApodPayload(cached, null)) return cached;
 
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -170,9 +238,9 @@ async function getAPOD({ date, count } = {}) {
   const apiUsable = Date.now() >= apodApiDownUntil;
 
   if (apiUsable) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const res = await http.get(url, { params, timeout: 10000 });
+        const res = await apiHttp.get(url, { params, timeout: 18000 });
         if (res.data && isValidApodPayload(res.data, acceptedApiDates)) {
           apodApiDownUntil = 0;
           setCache(cacheKey, res.data, 4 * 60 * 60 * 1000);
@@ -180,8 +248,10 @@ async function getAPOD({ date, count } = {}) {
           return res.data;
         }
         lastError = new Error('payload APOD tidak sah dari API NASA');
+        if (process.env.NASA_DEBUG === '1') console.error('[apod] attempt' , attempt, 'tak sah:', JSON.stringify(res.data).slice(0, 120));
       } catch (err) {
         lastError = err;
+        if (process.env.NASA_DEBUG === '1') console.error('[apod] attempt', attempt, err.response?.status || err.code || err.message);
       }
       await sleep(500 * (attempt + 1));
     }
@@ -189,7 +259,7 @@ async function getAPOD({ date, count } = {}) {
     // Jika tarikh hari ini belum wujud (rupa API NASA), cuba semalam
     if (!date && !count) {
       try {
-        const fallbackRes = await http.get(url, { params: { api_key: config.nasa.apiKey, date: yesterday }, timeout: 10000 });
+        const fallbackRes = await apiHttp.get(url, { params: { api_key: config.nasa.apiKey, date: yesterday }, timeout: 18000 });
         if (fallbackRes.data && isValidApodPayload(fallbackRes.data, [yesterday])) {
           apodApiDownUntil = 0;
           setCache(cacheKey, fallbackRes.data, 4 * 60 * 60 * 1000);
@@ -233,6 +303,50 @@ async function getAPOD({ date, count } = {}) {
   throw lastError || new Error('NASA APOD tidak tersedia buat masa ini');
 }
 
+let apodRefreshTimer = null;
+
+// Satu tarikan APOD "hari ini" dari luar (lintasi cache & pemutus litar) untuk auto-update
+async function refreshApodNow() {
+  try {
+    return await getAPOD({ force: true });
+  } catch {
+    return null;
+  }
+}
+
+function apodRefreshIntervalMs() {
+  return Math.max(Number(config.nasa.apodRefreshMinutes) || 30, 5) * 60 * 1000;
+}
+
+// Jadual diri: API hidup → selang biasa; API rosak/timeout → cuba lebih awal (5 min)
+// supaya paparan kembali ke sumber hidup sendiri sebaik NASA pulih.
+function scheduleApodRefresh(delayMs) {
+  apodRefreshTimer = setTimeout(async () => {
+    const data = await refreshApodNow();
+    const healthy = data && !data.api_down && !data.stale;
+    scheduleApodRefresh(healthy ? apodRefreshIntervalMs() : 5 * 60 * 1000);
+  }, delayMs);
+  apodRefreshTimer.unref();
+}
+
+/**
+ * Auto-update APOD: tarikan latar belakang berkala (NASA_APOD_REFRESH_MIN minit, lalai 30;
+ * 5 min apabila API masih rosak) — API hidup→cache + cakera dikemas kini,
+ * API down→arkib science.nasa.gov. Pengguna sentiasa hidang data terbaharu tanpa
+ * perlu menunggu permintaan pertama, dan pemutus litar diuji semula setiap pusingan.
+ */
+function startApodAutoUpdate() {
+  if (apodRefreshTimer) return;
+  scheduleApodRefresh(5000);
+}
+
+function stopApodAutoUpdate() {
+  if (apodRefreshTimer) {
+    clearTimeout(apodRefreshTimer);
+    apodRefreshTimer = null;
+  }
+}
+
 /**
  * 2. Mars Rover Photos (Curiosity, Perseverance, Opportunity, Spirit)
  * Dilengkapi dengan fallback pintar ke NASA Media Library jika pelayan lama mars-photos tidak tersedia.
@@ -252,7 +366,7 @@ async function getMarsPhotos({ rover = 'curiosity', sol = 1000, earth_date, came
     }
     if (camera) params.camera = camera;
 
-    const res = await http.get(`${config.nasa.baseUrl}/mars-photos/api/v1/rovers/${cleanRover}/photos`, { params });
+    const res = await apiHttp.get(`${config.nasa.baseUrl}/mars-photos/api/v1/rovers/${cleanRover}/photos`, { params });
     if (res.data?.photos?.length) {
       const data = {
         source: 'mars-photos-api',
@@ -320,7 +434,7 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
       end_date: end
     };
 
-    const res = await http.get(`${config.nasa.baseUrl}/neo/rest/v1/feed`, { params, timeout: 8000 });
+    const res = await apiHttp.get(`${config.nasa.baseUrl}/neo/rest/v1/feed`, { params, timeout: 8000 });
     const rawObjects = res.data?.near_earth_objects || {};
     const formatted = [];
 
@@ -386,7 +500,7 @@ async function getEPIC({ date } = {}) {
       ? `${config.nasa.baseUrl}/EPIC/api/natural/date/${date}`
       : `${config.nasa.baseUrl}/EPIC/api/natural`;
 
-    const res = await http.get(url, { params: { api_key: config.nasa.apiKey }, timeout: 7000 });
+    const res = await apiHttp.get(url, { params: { api_key: config.nasa.apiKey }, timeout: 7000 });
     if (Array.isArray(res.data) && res.data.length > 0) {
       const list = res.data.slice(0, 12);
       const formatted = list.map(item => {
@@ -449,7 +563,7 @@ async function getSpaceWeather({ type = 'FLR', startDate, endDate } = {}) {
   if (cached) return cached;
 
   try {
-    const res = await http.get(`${config.nasa.baseUrl}/DONKI/${cleanType}`, {
+    const res = await apiHttp.get(`${config.nasa.baseUrl}/DONKI/${cleanType}`, {
       params: {
         api_key: config.nasa.apiKey,
         startDate: start,
@@ -831,6 +945,8 @@ async function getSolarActivity({ days = 30 } = {}) {
 
 module.exports = {
   getAPOD,
+  startApodAutoUpdate,
+  stopApodAutoUpdate,
   getMarsPhotos,
   getNearEarthObjects,
   getEPIC,

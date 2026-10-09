@@ -259,6 +259,9 @@
       <input type="password" id="authPassword" placeholder="Bootstrap password (first-time setup only)" autocomplete="current-password" style="margin-bottom:12px; display:none;">
       <button type="submit" id="authPasskeyBtn" class="btn btn-primary" style="width:100%; justify-content:center;">🔑 Sign in with Passkey</button>
       <button type="button" id="authRegisterBtn" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:10px; display:none;">🛡️ Register Passkey</button>
+      <div id="authBootstrapLink" style="margin-top:10px; text-align:center;" hidden>
+        <a href="#" id="authBootstrapToggle" style="color:var(--text-muted); font-size:0.8rem; text-decoration:underline;">Passkey pada peranti ini tidak sepadan? Daftar passkey baharu dengan kata laluan bootstrap.</a>
+      </div>
       <div id="authErr" style="color:var(--danger); font-size:0.85rem; margin-top:10px;" hidden></div>
       <div id="authHint" style="color:var(--text-muted); font-size:0.8rem; margin-top:10px;" hidden></div>
     </form>
@@ -744,6 +747,7 @@ Type a command below or click a quick action.
   const authPassEl = document.getElementById('authPassword');
   const authPasskeyBtn = document.getElementById('authPasskeyBtn');
   const authRegisterBtn = document.getElementById('authRegisterBtn');
+  const authBootstrapLinkEl = document.getElementById('authBootstrapLink');
   const authErrEl = document.getElementById('authErr');
   const authHintEl = document.getElementById('authHint');
   let authConfig = null;
@@ -783,6 +787,7 @@ Type a command below or click a quick action.
     authPassEl.style.display = '';
     authPasskeyBtn.style.display = 'none';
     authRegisterBtn.style.display = '';
+    authBootstrapLinkEl.hidden = true;
     authHintEl.hidden = false;
     authHintEl.textContent = 'Tiada passkey didaftarkan lagi. Daftar passkey pertama menggunakan e-mel + kata laluan bootstrap.';
   }
@@ -790,6 +795,7 @@ Type a command below or click a quick action.
     authPassEl.style.display = 'none';
     authPasskeyBtn.style.display = '';
     authRegisterBtn.style.display = 'none';
+    authBootstrapLinkEl.hidden = false;
     authHintEl.hidden = true;
   }
 
@@ -877,6 +883,18 @@ Type a command below or click a quick action.
     } catch (err) {
       showErr(err && err.message ? err.message : 'Pengesahan passkey dibatalkan atau gagal.');
     }
+  });
+
+  // Escape hatch: passkey peranti tidak sepadan/lost — benarkan pendaftaran
+  // passkey BAHARU dengan kata laluan bootstrap walaupun pelayan sudah ada
+  // passkey (tanpa itu pengguna terkunci keluar sepenuhnya).
+  document.getElementById('authBootstrapToggle').addEventListener('click', (e) => {
+    e.preventDefault();
+    authBootstrapLinkEl.hidden = true;
+    authPassEl.style.display = '';
+    authRegisterBtn.style.display = '';
+    authHintEl.hidden = false;
+    authHintEl.textContent = 'Isi kata laluan bootstrap dan tekan Register Passkey. Passkey baharu akan ditambah; passkey lama tidak diperlukan.';
   });
 
   // Daftar passkey pertama (e-mel + kata laluan bootstrap)

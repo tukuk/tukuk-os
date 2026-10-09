@@ -6,6 +6,7 @@ const store = require('./src/store');
 const { app } = require('./src/server');
 const news = require('./src/news');
 const queries = require('./src/queries');
+const nasa = require('./src/nasa');
 
 async function waitForMeili({ attempts = 30, delayMs = 1000 } = {}) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -61,11 +62,15 @@ async function main() {
         .then((n) => { if (n > 0) console.log(`[news] ${n} item RSS sedia`); })
         .catch(() => {});
     }, 3000);
+    // Auto-update APOD: tarik gambar hari ini di latar belakang setiap beberapa minit.
+    nasa.startApodAutoUpdate();
+    console.log(`[nasa] auto-update APOD setiap ${config.nasa.apodRefreshMinutes} minit`);
   });
 
   const shutdown = (signal) => async () => {
     console.log(`\n[tukuk-os] menerima ${signal}, menutup dengan perlahan...`);
     net.stop();
+    nasa.stopApodAutoUpdate();
     store.close();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 5000).unref();

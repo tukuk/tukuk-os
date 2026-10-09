@@ -559,7 +559,12 @@
     <a class="d-tile" href="/blog"><span class="ico">📝</span><h3>Blog &amp; Articles</h3><p>Penulisan asli tentang pencarian, Node, privasi &amp; infrastruktur.</p></a>
     <a class="d-tile" href="/nasa"><span class="ico">🚀</span><h3>NASA Explorer</h3><p>Gambar astronomi harian, Mars rover &amp; data terbuka NASA.</p></a>
   </div>
-  <div class="d-ad" id="ad-slot">Ruang iklan — hanya pada halaman kandungan original (/ , /blog, /studio). Halaman hasil carian (/cari) sentiasa bebas iklan.</div>
+  <!-- Ruang iklan: TIDAK dipaparkan sehingga unit AdSense sebenar disuntik (lihat JS di bawah).
+       Dahulunya ia kotak putus-putus berisi ayat dasar yang bocor ke pengguna → nampak seperti bug.
+       Bila AdSense lulus: set data-ad-slot pada <ins> di bawah & buang atribut `hidden`. -->
+  <div class="d-ad" id="ad-slot" hidden>
+    <ins class="adsbygoogle" style="display:block" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  </div>
   <div class="trending-home" id="dashTrending"></div>
 </section>
 

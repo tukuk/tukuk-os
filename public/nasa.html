@@ -454,11 +454,12 @@ function getRandomDate() {
 }
 
 /* 1. APOD */
-async function loadAPOD(customDate) {
+async function loadAPOD(customDate, force) {
   const container = document.getElementById('apodContent');
   container.innerHTML = '<div class="spinner">Fetching NASA Astronomy Picture...</div>';
   const dateVal = customDate || document.getElementById('apodDate').value;
-  const url = dateVal ? `/api/nasa/apod?date=${encodeURIComponent(dateVal)}` : '/api/nasa/apod';
+  let url = dateVal ? `/api/nasa/apod?date=${encodeURIComponent(dateVal)}` : '/api/nasa/apod';
+  if (force) url += (url.includes('?') ? '&' : '?') + 'force=1';
 
   try {
     const data = await safeFetchJson(url);
@@ -472,7 +473,7 @@ async function loadAPOD(customDate) {
     }
 
     container.innerHTML = `
-      ${(data.stale || data.api_down) ? `<div style="background:rgba(255,196,0,.12); border:1px solid var(--gold); color:var(--text); padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:.9rem;">&#9888;&#65039; ${esc(data.staleNote || (data.api_down ? 'NASA\'s APOD API is temporarily offline — showing the same picture from the official NASA Science archive.' : 'NASA APOD API is temporarily unreachable — showing the last successful picture.'))} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadAPOD()">Try live again</button></div>` : ''}
+      ${(data.stale || data.api_down) ? `<div style="background:rgba(255,196,0,.12); border:1px solid var(--gold); color:var(--text); padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:.9rem;">&#9888;&#65039; ${esc(data.staleNote || (data.api_down ? 'NASA\'s APOD API is temporarily offline — showing the same picture from the official NASA Science archive.' : 'NASA APOD API is temporarily unreachable — showing the last successful picture.'))} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadAPOD(null, true)">Try live again</button></div>` : ''}
       ${mediaHtml}
       <h2 class="apod-title">${data.title}</h2>
       <div class="apod-meta">&#128197; ${data.date} ${data.copyright ? `&middot; &copy; ${data.copyright}` : ''}</div>
