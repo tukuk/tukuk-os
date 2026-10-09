@@ -354,11 +354,15 @@
   <div id="panel-live" class="section-panel">
     <div class="card">
       <h2 style="margin-top:0;">&#128225; Live Space TV</h2>
-      <p style="color:var(--muted);">Real video streamed live from orbit &mdash; the official NASA feed from the International Space Station, plus on-demand footage of every planet captured by NASA spacecraft. Live broadcast plays right here; nothing opens in a new tab unless you tap a thumbnail.</p>
+      <p style="color:var(--muted);">Real video streamed live from orbit. The Earth &amp; ISS feeds run 24/7; <strong>NASA TV</strong> only broadcasts during missions &mdash; if a feed shows a blank or &ldquo;not live&rdquo; screen, tap &#8635; Reload or open it on YouTube. On-demand planet footage (real NASA clips) is below.</p>
       <div class="live-grid">
         <div>
           <div class="live-frame-wrap">
             <iframe id="liveFrame" title="Live from space" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen src="about:blank"></iframe>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0;">
+            <button class="btn btn-secondary" type="button" onclick="reloadLiveFeed()">&#8635; Reload feed</button>
+            <a id="liveExternal" href="#" target="_blank" rel="noopener" class="btn btn-secondary">Open on YouTube &#8599;</a>
           </div>
           <div class="live-sources" id="liveSources"></div>
         </div>
@@ -952,9 +956,9 @@ function initISS() {
 /* 2A. LIVE SPACE TV */
 let liveLoaded = false;
 const LIVE_SOURCES = [
-  { label: '\uD83D\uDEF0 ISS Live \u00b7 NASA', url: 'https://www.youtube.com/embed/live_stream?channel=UCLA_DiR1FfKNvjuUpBHmylQ&autoplay=1&mute=1' },
-  { label: '\uD83C\uDF0D Earth Cam \u00b7 24/7', url: 'https://www.youtube.com/embed/tj4knR4r1UU?autoplay=1&mute=1' },
-  { label: '\uD83D\uDCFA 4K View of Earth', url: 'https://www.youtube.com/embed/lmFZ42AR_2E?autoplay=1&mute=1' }
+  { label: '\uD83C\uDF0D Earth Cam \u00b7 24/7', url: 'https://www.youtube.com/embed/tj4knR4r1UU?autoplay=1&mute=1&rel=0&playsinline=1', ext: 'https://www.youtube.com/watch?v=tj4knR4r1UU' },
+  { label: '\uD83D\uDEF0 ISS Live \u00b7 24/7', url: 'https://www.youtube.com/embed/live_stream?channel=UCaG0IHN1RMOZ4-U3wDXAkwA&autoplay=1&mute=1&rel=0', ext: 'https://www.youtube.com/channel/UCaG0IHN1RMOZ4-U3wDXAkwA/live' },
+  { label: '\uD83D\uDCE1 NASA TV \u00b7 live', url: 'https://www.youtube.com/embed/live_stream?channel=UCLA_DiR1FfKNvjuUpBHmylQ&autoplay=1&mute=1&rel=0', ext: 'https://www.youtube.com/@NASA/streams/live' }
 ];
 const PLANETS = [
   { label: '\u2600\uFE0F Sun', q: 'Sun solar dynamics observatory' },
@@ -970,6 +974,8 @@ const PLANETS = [
   { label: '\uD83C\uDF0C Pluto', q: 'Pluto New Horizons' }
 ];
 
+let liveIdx = 0;
+
 function loadLiveTV() {
   if (liveLoaded) return;
   liveLoaded = true;
@@ -983,10 +989,25 @@ function loadLiveTV() {
 }
 
 function selectLiveSource(i, btn) {
+  liveIdx = i;
   document.querySelectorAll('#liveSources .live-src').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  const target = btn || document.querySelectorAll('#liveSources .live-src')[i];
+  if (target) target.classList.add('active');
+  const s = LIVE_SOURCES[i];
   const frame = document.getElementById('liveFrame');
-  if (frame) frame.setAttribute('src', LIVE_SOURCES[i].url);
+  if (frame) frame.setAttribute('src', s.url);
+  const ext = document.getElementById('liveExternal');
+  if (ext) ext.href = s.ext || s.url;
+}
+
+// 24/7 suapan kadang-kadang ada jurang pendek (restart). Butang ini muat semula
+// sumber semasa tanpa perlu tinggalkan halaman; jika masih kosong, YouTube
+// sendiri paparkan mesej 'not live' — buka terus di YouTube sebagai jalan keluar.
+function reloadLiveFeed() {
+  const frame = document.getElementById('liveFrame');
+  if (!frame) return;
+  frame.setAttribute('src', 'about:blank');
+  setTimeout(() => selectLiveSource(liveIdx), 200);
 }
 
 async function loadPlanetVideos(i, btn) {
@@ -1004,7 +1025,7 @@ async function loadPlanetVideos(i, btn) {
     }
     box.innerHTML = `<div class="grid-3">` + items.slice(0, 12).map(it => `
       <div class="photo-card vid-thumb" onclick="playPlanetClip('${esc(it.nasa_id)}','${esc(it.title || body.label)}')">
-        <div style="position:relative;">${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy">` : ''}<span class="play">&#9654;</span></div>
+        <div style="position:relative;">${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : '<div style="height:150px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);font-size:2.2rem;">&#127916;</div>'}<span class="play">&#9654;</span></div>
         <div class="photo-card-body"><div class="photo-card-title" style="font-size:.9rem;">${esc(it.title || '')}</div>
         <div class="photo-card-meta">&#128197; ${it.date_created ? it.date_created.slice(0, 10) : ''}</div></div>
       </div>`).join('') + `</div>`;
