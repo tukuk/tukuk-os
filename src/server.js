@@ -1715,6 +1715,15 @@ app.get('/api/admin/auth/config', (req, res) => {
   res.json(auth.publicConfig());
 });
 
+// Origin sebenar permintaan (untuk pengesahan WebAuthn pelbagai-hostname).
+function requestOrigin(req) {
+  const h = String(req.headers.origin || '').trim();
+  if (h) return h;
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  return host ? `${proto}://${host}` : '';
+}
+
 // Langkah 1 daftar passkey: sahkan e-mel + kata laluan bootstrap, dapat cabaran.
 app.post('/api/admin/auth/register/start', adminLoginLimiter, auth.requireAllowedEmail, (req, res) => {
   const password = String((req.body && req.body.password) || '');
@@ -1731,10 +1740,11 @@ app.post('/api/admin/auth/register/finish', adminLoginLimiter, auth.requireAllow
   try {
     const credential = req.body && req.body.credential;
     if (!credential) return res.status(400).json({ error: 'Kredential diperlukan' });
-    const result = await auth.finishRegistration(req.body.email, credential);
+    const result = await auth.finishRegistration(req.body.email, credential, requestOrigin(req));
     const token = auth.issueSession(req.body.email);
     res.json({ ok: true, registered: result, token });
   } catch (error) {
+    console.error('[webauthn register/finish]', error && error.message, 'origin=', requestOrigin(req));
     res.status(error.statusCode || 500).json({ error: 'Pendaftaran passkey gagal', details: safeError(error) });
   }
 });
@@ -1757,9 +1767,10 @@ app.post('/api/admin/auth/login/finish', adminLoginLimiter, auth.requireAllowedE
   try {
     const credential = req.body && req.body.credential;
     if (!credential) return res.status(400).json({ error: 'Kredential diperlukan' });
-    const token = await auth.finishAuthentication(req.body.email, credential);
+    const token = await auth.finishAuthentication(req.body.email, credential, requestOrigin(req));
     res.json({ ok: true, token });
   } catch (error) {
+    console.error('[webauthn login/finish]', error && error.message, 'origin=', requestOrigin(req));
     res.status(error.statusCode || 500).json({ ok: false, error: 'Login passkey gagal', details: safeError(error) });
   }
 });

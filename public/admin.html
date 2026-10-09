@@ -879,7 +879,7 @@ Type a command below or click a quick action.
       });
       const finish = await finishRes.json();
       if (finish.ok && finish.token) setSession(finish.token);
-      else showErr(finish.error || 'Login passkey gagal.');
+      else showErr((finish.error || 'Login passkey gagal.') + (finish.details ? ` — ${finish.details}` : ''));
     } catch (err) {
       showErr(err && err.message ? err.message : 'Pengesahan passkey dibatalkan atau gagal.');
     }
@@ -920,7 +920,7 @@ Type a command below or click a quick action.
       });
       const finish = await finishRes.json();
       if (finish.ok && finish.token) setSession(finish.token);
-      else showErr(finish.error || 'Pendaftaran passkey gagal.');
+      else showErr((finish.error || 'Pendaftaran passkey gagal.') + (finish.details ? ` — ${finish.details}` : ''));
     } catch (err) {
       showErr(err && err.message ? err.message : 'Pendaftaran passkey dibatalkan atau gagal.');
     }

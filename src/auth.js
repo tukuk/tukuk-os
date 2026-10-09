@@ -43,6 +43,16 @@ for (const host of ['localhost', '127.0.0.1']) {
 const ALLOWED_EMAIL = String(config.admin.email || '').trim().toLowerCase();
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
+// Origin tambahan daripada permintaan semasa. Pengesahan WebAuthn TETAP terikat
+// pada rpID (tukuk.org) — domain lain tidak boleh mengeluarkan assertion untuk rpID
+// ini (browser sekat), jadi menerima origin peminta adalah selamat dan menghapuskan
+// ralat "origin mismatch" bila /admin dibuka dari hostname berbeza (tunnel/LAN/www).
+function originsFor(reqOrigin) {
+  const o = String(reqOrigin || '').trim().replace(/\/+$/, '');
+  if (o && /^https?:\/\/.+/i.test(o) && !EXPECTED_ORIGINS.includes(o)) return [...EXPECTED_ORIGINS, o];
+  return EXPECTED_ORIGINS;
+}
+
 /** @type {{ id: string, publicKey: string, counter: number, credentialDeviceType: string, credentialBackedUp: boolean, label: string, addedAt: string }[]} */
 function passkeys() {
   const list = store.getSetting('passkeys', []);
@@ -182,7 +192,7 @@ async function startRegistration(email) {
   return options;
 }
 
-async function finishRegistration(email, credential) {
+async function finishRegistration(email, credential, reqOrigin) {
   const expectedChallenge = takeChallenge(normalizeEmail(email), 'register');
   if (!expectedChallenge) {
     throw Object.assign(new Error('Cabaran tidak sah atau telah luput. Cuba lagi.'), { statusCode: 400 });
@@ -190,7 +200,7 @@ async function finishRegistration(email, credential) {
   const verification = await verifyRegistrationResponse({
     response: credential,
     expectedChallenge,
-    expectedOrigin: EXPECTED_ORIGINS,
+    expectedOrigin: originsFor(reqOrigin),
     expectedRPID: RP_ID
   });
   if (!verification.verified || !verification.registrationInfo) {
@@ -230,7 +240,7 @@ async function startAuthentication(email) {
   return options;
 }
 
-async function finishAuthentication(email, credential) {
+async function finishAuthentication(email, credential, reqOrigin) {
   const expectedChallenge = takeChallenge(normalizeEmail(email), 'authenticate');
   if (!expectedChallenge) {
     throw Object.assign(new Error('Cabaran tidak sah atau telah luput. Cuba lagi.'), { statusCode: 400 });
@@ -246,7 +256,7 @@ async function finishAuthentication(email, credential) {
   const verification = await verifyAuthenticationResponse({
     response: credential,
     expectedChallenge,
-    expectedOrigin: EXPECTED_ORIGINS,
+    expectedOrigin: originsFor(reqOrigin),
     expectedRPID: RP_ID,
     authenticator: {
       credentialID: b64urlToBuf(stored.id),
