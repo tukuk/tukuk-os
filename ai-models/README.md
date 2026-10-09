@@ -4,7 +4,48 @@ Folder ini menyimpan model AI untuk chat dan brain Tukuk-OS.
 
 ## Model yang Digunakan
 
-Tukuk-OS menggunakan **Ollama** untuk menjalankan model AI secara tempatan.
+Tukuk-OS mempunyai **dua lapis otak**. Lantai utama = **cloud** (API percuma,
+laju). Lantai sandaran = **Ollama** tempatan (offline, CPU). Urutan pemilihan
+automatik (`src/brain/provider.js` → `activeBackend()`):
+
+`cloud (kunci dijumpai)` → `Ollama (boleh dicapai)` → `tiada LLM (ekstraktif sahaja)`
+
+> Server Tukuk-OS adalah CPU-only (AMD Kaveri, tiada AVX2/GPU). LLM lokal
+> berjalan tetapi **lambat & lemah**. Sebab itu cloud ialah otak utama; Ollama
+> hanya sandaran apabila internet/kunci awan tiada. Ini juga yang dipakai
+> agen **Tukuk Code** (alat MCP `tukuk_agent`) — tanpa LLM ia tetap keluarkan
+> templat berfungsi, dengan LLM ia perkasa rancangan & kod.
+
+### Aktifkan cloud (paling ringan — disyorkan)
+
+1. Dapat kunci **percuma** (pilih satu):
+   - Groq (pantas): https://console.groq.com/keys → `GROQ_API_KEY`
+   - Google Gemini: https://aistudio.google.com/apikey → `GEMINI_API_KEY`
+   - OpenAI (berbayar): `OPENAI_API_KEY`
+2. Tambah ke `.env` di server (`/opt/tukuk-os/.env`) — **tiada `BRAIN_PROVIDER`
+   diperlukan**, pengesanan automatik akan pilih cloud apabila kunci ada:
+   ```env
+   GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxx
+   # atau GEMINI_API_KEY=AIza...
+   ```
+3. Restart servis: `sudo systemctl restart tukuk-os`
+4. Sahkan: `curl -s localhost:3000/brain` → `online:true, cloud:true, provider:groq`.
+
+Alternatif tanpa restart: panel admin (`/admin`) → tetapkan pembekal & kunci
+(disimpan sebagai setting `aiProvider`/`aiApiKey`/`aiModel` dan didahulukan
+berbanding env).
+
+### Sandaran Ollama (offline)
+
+Apabila **tiada** kunci cloud (atau `aiProvider=ollama`), Tukuk-OS jatuh ke
+Ollama tempatan. Install sendiri (skrip ini memuat turun perisian, jadi jalankan
+manual):
+
+```bash
+bash ai-models/setup-ollama.sh   # install Ollama + pull model di bawah
+```
+
+Tukuk-OS menjalankan model AI secara tempatan melalui Ollama.
 
 ### Model Default (Free Tier)
 
