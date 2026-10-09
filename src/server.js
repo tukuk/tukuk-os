@@ -162,6 +162,18 @@ app.use(express.static(PUBLIC_DIR, {
   }
 }));
 
+// Satu Kata — hidangkan hub app+game STATIK daripada generated/public (dijana cron
+// GitHub Actions). Ini HILANGkan kebergantungan pada Cloudflare Pages & token API-nya;
+// hanya fail HTML statik, jadi kos pada VPS sangat ringan. Tiada kata → hub di /satu-kata/.
+const GENERATED_DIR = path.join(__dirname, '..', 'generated', 'public');
+app.use('/satu-kata', express.static(GENERATED_DIR, {
+  index: 'index.html',
+  maxAge: '1h',
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
+
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
 const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'studio', 'apps', 'bg-remover', 'collage'];
 for (const name of STATIC_PAGES) {
