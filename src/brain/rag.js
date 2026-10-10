@@ -266,9 +266,17 @@ async function ask(question, { limit } = {}) {
 
   // Tiada jawapan daripada LLM (gagal/offline/tiada model) → jatuhkan ke ekstraktif.
   if (!answer) {
-    const extracted = hits.length > 0
-      ? extractiveAnswer(query, hits)
-      : { answer: '', method: 'none' };
+    let extracted;
+    if (hits.length > 0 && hits[0].source === 'web') {
+      // Hasil WEB jarang mengandungi satu ayat yang boleh dipetik; teks Wikipedia
+      // (infobox) bila dilombat jadi run-on "dishes Java rice Nasi bogana…" yang
+      // busuk. Untuk mod web, hidangkan SENARAI tajuk + penerangan yang kemas.
+      const lines = hits.slice(0, 4).map((hit, i) =>
+        `[${i + 1}] ${hit.title || hit.url}${hit.description ? ' — ' + String(hit.description).replace(/\s+/g, ' ').trim().slice(0, 160) : ''}`);
+      extracted = { answer: `Berikut hasil web yang paling relevan:\n${lines.join('\n')}`, method: 'web-list' };
+    } else {
+      extracted = hits.length > 0 ? extractiveAnswer(query, hits) : { answer: '', method: 'none' };
+    }
     answer = extracted.answer;
     method = extracted.method;
     model = 'extractive (no LLM)';
