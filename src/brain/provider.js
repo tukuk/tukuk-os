@@ -127,13 +127,15 @@ function setting(key, fb) {
 }
 
 const CLOUD_PROVIDERS = {
-  gemini: { defaultModel: 'gemini-2.5-flash', kind: 'gemini' },
+  gemini: { defaultModel: 'gemini-flash-latest', kind: 'gemini' },
   groq: { defaultModel: 'gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
   openai: { defaultModel: 'gpt-4o-mini', kind: 'openai', baseUrl: 'https://api.openai.com/v1' },
   openrouter: { defaultModel: 'openrouter/free', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
+  xai: { defaultModel: 'grok-4', kind: 'openai', baseUrl: 'https://api.x.ai/v1' },
+  huggingface: { defaultModel: 'meta-llama/Llama-3.3-70B-Instruct', kind: 'openai', baseUrl: 'https://router.huggingface.co/v1' },
   cloudflare: { defaultModel: '@cf/meta/llama-3.1-8b-instruct', kind: 'cloudflare' }
 };
-const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'cloudflare', 'openai'];
+const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'huggingface', 'xai', 'cloudflare', 'openai'];
 
 function cloudKey(name) {
   const b = config.brain;
@@ -145,6 +147,8 @@ function cloudKey(name) {
   if (name === 'openai') return process.env.OPENAI_API_KEY || b.openaiApiKey || adminKey;
   if (name === 'groq') return process.env.GROQ_API_KEY || b.groqApiKey || adminKey;
   if (name === 'openrouter') return process.env.OPENROUTER_API_KEY || b.openrouterApiKey || adminKey;
+  if (name === 'xai') return process.env.XAI_API_KEY || b.xaiApiKey || adminKey;
+  if (name === 'huggingface') return process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN || b.huggingfaceApiKey || adminKey;
   if (name === 'cloudflare') return process.env.CLOUDFLARE_AI_TOKEN || b.cloudflareAiToken || adminKey;
   return '';
 }
@@ -191,13 +195,15 @@ function coolingRemaining(name) {
 function markCooling(name, ms) { cooldown.set(name, Date.now() + ms); }
 function isQuotaError(err) {
   const status = err && (err.status || err.statusCode);
-  if (status === 429) return true;
-  return /quota|rate.?limit|too many|exhaust|429|overloaded|capacity|resource_exhausted|daily/i
+  if (status === 429 || status === 402) return true;
+  return /quota|rate.?limit|too many|exhaust|429|overloaded|capacity|resource_exhausted|daily|credit|billing|insufficient|payment|not have any credit/i
     .test(String(err && err.message || ''));
 }
 function quotaCooldownMs(err) {
   const msg = String(err && err.message || '').toLowerCase();
-  // Kuota harian → cooling panjang (10 min); had seminit → 60s.
+  // Tiada kredit / isu pembayaran → cooling panjang (tak cuba lagi 2 jam).
+  if (/credit|billing|insufficient|payment|top.?up|subscribe/i.test(msg)) return 2 * 60 * 60 * 1000;
+  // Kuota harian → 10 min; had seminit → 60s.
   if (/daily|per day|per-day|resets|day\b/i.test(msg)) return 10 * 60 * 1000;
   return 60 * 1000;
 }
