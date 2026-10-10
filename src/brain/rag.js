@@ -224,11 +224,22 @@ async function ask(question, { limit } = {}) {
     return { answer: 'Empty question. Type your question.', sources: [], mode: 'empty' };
   }
 
+  const startedAt = Date.now();
+  // Gate awal: soalan terlalu kabur (hanya stopword/common words) → BM25 tidak
+  // dapat membezakan → jangan cari, refuse. Contoh: "untuk apa ini", "apa itu".
+  const meaningful = query.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/)
+    .filter((w) => w.length > 2 && !WEB_STOPWORDS.has(w));
+  if (!meaningful.length && !isSelfQuestion(query)) {
+    const msg = detectLocale(query) === 'ms'
+      ? 'Soalan terlalu umum. Sila tanya sesuatu yang lebih spesifik.'
+      : 'Question too vague. Please ask something more specific.';
+    return { question: query, answer: msg, method: 'refuse', model: null, tookMs: Date.now() - startedAt, sources: [], mode: 'ungrounded', warning: undefined };
+  }
+
   const cacheKey = `${query}|${limit || config.brain.retrievalLimit}`;
   const cached = cacheGet(cacheKey);
   if (cached) return { ...cached, mode: cached.mode, cached: true };
 
-  const startedAt = Date.now();
   const selfQuestion = isSelfQuestion(query);
   const task = taskrouter.classify(query);
   // Aritmetik tulen → jawab dengan KALKULATOR deterministik (tepat, serta-merta,
