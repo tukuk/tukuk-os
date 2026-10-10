@@ -10,18 +10,27 @@
  *      Ini tidak guna LLM langsung, jadi sentiasa tepat (tiada halusinasi).
  */
 
+const { detectLocale, isSpacelessScript, splitSentencesUnicode, tokenizeQuery, t } = require('../lang');
+
 const ECHO_MIN_LENGTH = 20;
 const MIN_COHERENT_CHARS = 40;
+// Skrip tanpa-ruang (CJK/Jepun/Korea): 40 aksara ≈ 20+ perkataan — terlalu ketat.
+// Ambang berasingan supaya jawapan Cina 15 aksara yang sah tidak ditolak isEcho,
+// dan ayat 20 aksara CJK cukup panjang untuk dipetik.
+const MIN_COHERENT_CHARS_SPACELESS = 12;
+const SENT_LEN_SPACELESS = [12, 150];
 
 /** Adakah output ini cuma menggulang arahan atau soalan? */
 function isEcho(answer, prompt) {
   if (!answer) return true;
 
   const normalized = answer.toLowerCase().replace(/\s+/g, ' ').trim();
-  if (normalized.length < MIN_COHERENT_CHARS) return true;
+  const minCoherent = isSpacelessScript(normalized) ? MIN_COHERENT_CHARS_SPACELESS : MIN_COHERENT_CHARS;
+  if ([...normalized].length < minCoherent) return true;
 
-  // Ayat berulang (litar ulang) — model 135M kerap melakukan ini.
-  const sentences = normalized.split(/(?<=[.!?])\s+/).filter(Boolean);
+  // Ayat berulang (litar ulang) — model 135M kerap melakukan ini. Potong
+  // Unicode-sedar supaya ulang-an CJK （。！？） turut dikesan.
+  const sentences = splitSentencesUnicode(normalized);
   if (sentences.length >= 2) {
     const unique = new Set(sentences.map((s) => s.trim()));
     if (unique.size <= sentences.length / 2) return true;
@@ -39,8 +48,9 @@ function isEcho(answer, prompt) {
     if (sentences[i] === sentences[i - 1]) return true;
   }
 
-  // Frasa berulang: "X is: ... X is: ..." lebih dari sekali
-  const phraseMatches = normalized.match(/\b[a-z]{3,}\s+(?:is|are|adalah|itu|here)\s*:/g);
+  // Frasa berulang: "X is: ... X is: ..." lebih dari sekali. Skrip-agnostic —
+  // pemisah kata Unicode, sebarang aksara/huruf, sebarang kata bantu common.
+  const phraseMatches = normalized.match(/\b\p{L}{3,}\s+(?:is|are|adalah|itu|berarti|c'est|ist|es|son|este)\s*:/gu);
   if (phraseMatches && phraseMatches.length >= 2) {
     const uniquePhrases = new Set(phraseMatches);
     if (uniquePhrases.size < phraseMatches.length) return true;
@@ -50,8 +60,8 @@ function isEcho(answer, prompt) {
   // Cth. "[1] tajuk\nURL: ...\nLaman: ...\nIsi: ..."
   if (/^\s*\[\d+\]\s/.test(answer) && answer.split('\n').length >= 4) return true;
 
-  // perkataan yang sama berulang kali
-  const words = normalized.split(' ').filter((w) => w.length > 4);
+  // perkataan yang sama berulang kali — bilangan aksara untuk skrip tanpa-ruang
+  const words = normalized.split(/\s+/).filter((w) => [...w].length > 4);
   if (words.length >= 12) {
     const uniqueWords = new Set(words);
     if (uniqueWords.size / words.length < 0.4) return true;
@@ -64,10 +74,10 @@ function isEcho(answer, prompt) {
     .map((line) => line.trim())
     .filter((line) => line.length >= ECHO_MIN_LENGTH);
 
-  const answerWords = new Set(normalized.replace(/\[\d+\]/g, '').split(' ').filter((w) => w.length > 3));
+  const answerWords = new Set(normalized.replace(/\[\d+\]/g, '').split(/\s+/).filter((w) => [...w].length > 3));
   for (const line of promptLines) {
     if (normalized === line) return true;
-    const lineWords = new Set(line.split(' ').filter((w) => w.length > 3));
+    const lineWords = new Set(line.split(/\s+/).filter((w) => [...w].length > 3));
     const overlap = [...answerWords].filter((w) => lineWords.has(w)).length;
     const union = new Set([...answerWords, ...lineWords]).size;
     if (union > 0 && overlap / union > 0.55) return true;
@@ -76,13 +86,13 @@ function isEcho(answer, prompt) {
   return false;
 }
 
-/** Babak ayat daripada teks, susun mengikut skor relevance. */
+/** Babak ayat daripada teks, susun mengikut skor relevance. 
+ *  Unicode-sedar: CJK 。！？, Devanagari ।॥, Thai ฯ ikut dipotong. */
 function splitSentences(text) {
-  return String(text || '')
-    .replace(/\s+/g, ' ')
-    .split(/(?<=[.!?])\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 40 && sentence.length < 400);
+  const spaceless = isSpacelessScript(text);
+  const [minLen, maxLen] = spaceless ? SENT_LEN_SPACELESS : [40, 400];
+  return splitSentencesUnicode(text)
+    .filter((sentence) => sentence.length > minLen && sentence.length < maxLen);
 }
 
 function scoreSentence(sentence, terms) {
@@ -99,17 +109,19 @@ function scoreSentence(sentence, terms) {
 /**
  * Jawapan ekstraktif: pilih ayat paling relevan daripada sumber.
  * Tidak menggunakan LLM, jadi tiada risiko halusinasi.
+ * Tokenisasi + label berlokal (internasional) — skrip tanpa-ruang (CJK)
+ * ditokenkan aksara demi aksara supaya padanan tetap berfungsi.
  */
 function extractiveAnswer(question, hits, maxSentences = 3) {
-  const terms = String(question)
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((term) => term.length > 2);
+  const locale = detectLocale(question);
+  const terms = tokenizeQuery(question);
 
   // Query berbilang kata perlu padanan kukuh (≥2 kata kunci ATAU kata kunci
   // di posisi awal) supaya ayat yang hanya mengandungi kata umum ("what")
-  // tak tersenarai sebagai jawapan.
-  const minScore = terms.length >= 2 ? 5 : 3;
+  // tak tersenarai sebagai jawapan. Untuk skrip tanpa-ruang (token = aksara),
+  // ambang skor dinaikan supaya 1 aksara common tak cukup.
+  const spaceless = isSpacelessScript(question);
+  const minScore = terms.length >= 2 ? (spaceless ? 7 : 5) : (spaceless ? 4 : 3);
   const candidates = [];
   for (const hit of hits) {
     const text = String(hit.content || hit.description || '');
@@ -123,7 +135,7 @@ function extractiveAnswer(question, hits, maxSentences = 3) {
     // Tiada ayat relevan — pulangkan ringkasan tajuk + deskripsi.
     const lines = hits.slice(0, 3).map((hit, position) => `[${position + 1}] ${hit.title} — ${hit.description || hit.url}`);
     return {
-      answer: lines.length ? `No exact phrase match — here are the most relevant results:\n${lines.join('\n')}` : '',
+      answer: lines.length ? `${t('extractiveNoPhrase', locale)}\n${lines.join('\n')}` : '',
       method: 'extractive-fallback-list'
     };
   }
@@ -141,7 +153,7 @@ function extractiveAnswer(question, hits, maxSentences = 3) {
 
   const body = picked.map((item) => item.sentence).join(' ');
   return {
-    answer: `${body}\n\n(Sources: ${[...new Set(picked.map((item) => item.title))].join('; ')})`,
+    answer: `${body}\n\n(${t('sourcesLabel', locale)}: ${[...new Set(picked.map((item) => item.title))].join('; ')})`,
     method: 'extractive'
   };
 }

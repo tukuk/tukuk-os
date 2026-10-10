@@ -131,6 +131,12 @@ Soalan kendiri ("apa itu tukuk-os", "endpoint", dll.) dijawab dari pengetahuan t
 
 **Flag:** `BRAIN_ENABLED=false` lumpuhkan `/ask` (503). `BRAIN_FAST_MODE=true` (lalai) + Ollama → ekstraktif serta-merta (langkau LLM). `LLM_CHAIN` = failover Ollama.
 
+**Internasional (semua bahasa):** `/ask` menjawab dalam bahasa soalan pada SEMUA tingkat, bukan sahaja Melayu/English:
+- Kelas tinggi (LLM): arahan prompt "SAME LANGUAGE as the QUESTION" (bahasa-agnostic).
+- Lantai rendah (fallback tanpa LLM): `src/lang.js` → `detectLocale()` kesan skrip (CJK/Jepun/Korea/Arab/Cyrillic/Devanagari/Thai/Latin-hint) + `t()` menyediakan rangkataan penolakan/senarai web/label sumber dalam 15 bahasa (en ms id ja ko zh ru ar hi bn th fr de es pt).
+- Pemotongan ayat & tokenisasi Unicode-sedar (`splitSentencesUnicode`, `tokenizeQuery`): `。！？`/`।॥`/`ฯ` dipotong betul; skrip tanpa-ruang (CJK) ditokenkan aksara demi aksara dengan ambang isEcho/skor berasingan.
+- Carian web: `looksRelevant` tidak lagi buang aksara bukan-Latin; Bing TIDAK dipaksa `setmkt=en-us` untuk query bukan Inggeris (elak decoy); Wikipedia dicari pada domain bahasa soalan (`ja.wikipedia.org` dll.).
+
 ---
 
 ## 🎛 7. Tukuk Studio (suite alat dalam pelayar, tanpa upload)

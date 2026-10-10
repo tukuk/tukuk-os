@@ -3,6 +3,7 @@ const https = require('https');
 const { URL } = require('url');
 const zlib = require('zlib');
 const config = require('../config');
+const { detectLocale, tokenizeQuery } = require('../lang');
 
 const cache = new Map();
 const CACHE_TTL_MS = config.websearch.cacheSeconds * 1000;
@@ -236,7 +237,10 @@ const STOPWORDS = new Set([
 ]);
 
 function looksRelevant(hits, query) {
-  let tokens = query.toLowerCase().split(/[^a-z0-9+#.]+/i).filter((t) => t.length >= 3);
+  // Tokenisasi Unicode-sedar (internasional): sebelum ini `[^a-z0-9+#.]+`
+  // buang terus aksara bukan-Latin — query Arab/Cyrillic/CJK jadi token kosong
+  // dan sentiasa "lulus", sementara Hindi/Yunani terpotong separuh.
+  let tokens = tokenizeQuery(query).filter((t) => t.length >= 3 || /[\u3040-\u9FFF\uAC00-\uD7AF]/.test(t));
   if (tokens.length === 0) return true;
   const nonStop = tokens.filter((t) => !STOPWORDS.has(t));
   if (nonStop.length > 0) tokens = nonStop;
@@ -259,13 +263,20 @@ async function searchBing(query) {
     'Connection': 'keep-alive',
     'Upgrade-Insecure-Requests': '1'
   };
-  // English-first: pasaran en-us dulu; kalau tiada keputusan ATAU keputusan
-  // nampak tak kena (Bing hantar decoy untuk query bukan Inggeris),
-  // cuba sekali lagi tanpa paksaan pasaran.
-  const attempts = [
-    `${encodeURIComponent(query)}&setmkt=en-us&setlang=en&ensearch=1`,
-    encodeURIComponent(query)
-  ];
+  // Bahasa-neutra (internasional): paksaan setmkt=en-us dulu membuatkan Bing
+  // sengaja hantar decoy untuk query bukan Inggeris. Biar Bing kesan bahasa
+  // query sendiri; jika keputusan nampak tak relevan, cuba sekali lagi dengan
+  // pasaran en-us sebagai sandaran.
+  const locale = detectLocale(query);
+  const attempts = locale === 'en'
+    ? [
+      `${encodeURIComponent(query)}&setmkt=en-us&setlang=en&ensearch=1`,
+      encodeURIComponent(query)
+    ]
+    : [
+      encodeURIComponent(query),
+      `${encodeURIComponent(query)}&setmkt=en-us&setlang=en`
+    ];
   let sawIrrelevant = false;
   for (const qs of attempts) {
     try {
@@ -336,8 +347,12 @@ async function searchBrave(query) {
 }
 
 async function searchWikipedia(query) {
+  // Carian di Wikipedia BAHASA soalan (ms.wikipedia.org untuk Melayu,
+  // ja. untuk Jepun, dll) — bukan en. sahaja, supaya pengguna antarabangsa
+  // dapat sumber dalam bahasa mereka.
+  const wikiLang = { ms: 'ms', id: 'id', ja: 'ja', ko: 'ko', zh: 'zh', ru: 'ru', ar: 'ar', hi: 'hi', bn: 'bn', th: 'th', fr: 'fr', de: 'de', es: 'es', pt: 'pt' }[detectLocale(query)] || 'en';
   try {
-    const target = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=4&format=json&utf8=1`;
+    const target = `https://${wikiLang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=4&format=json&utf8=1`;
     const json = await getJson(target, { 'Api-User-Agent': config.websearch.userAgent });
     const hits = ((json.query && json.query.search) || [])
       .filter((r) => r && r.title)
@@ -345,7 +360,7 @@ async function searchWikipedia(query) {
         const desc = cleanText(r.snippet || '');
         return {
           title: r.title,
-          url: `https://en.wikipedia.org/wiki/${encodeURIComponent(String(r.title).replace(/ /g, '_'))}`,
+          url: `https://${wikiLang}.wikipedia.org/wiki/${encodeURIComponent(String(r.title).replace(/ /g, '_'))}`,
           description: desc,
           snippet: desc
         };

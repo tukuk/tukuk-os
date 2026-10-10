@@ -4,6 +4,7 @@ const { systemPrompt, knowledge } = require('./knowledge');
 const provider = require('./provider');
 const websearch = require('./websearch');
 const { isEcho, extractiveAnswer } = require('./quality');
+const { detectLocale, t } = require('../lang');
 
 const index = client.index(config.indexName);
 
@@ -145,7 +146,7 @@ function buildPrompt(question, hits, selfQuestion) {
     // Soalan tentang Tukuk-OS: gunakan pengetahuan sistem sahaja.
     lines.push(knowledgeForSelf());
     lines.push(`QUESTION: ${question}`);
-    lines.push('Answer in 2-3 English sentences.');
+    lines.push('Answer in 2-3 sentences, in the SAME LANGUAGE as the QUESTION.');
     return lines.join('\n\n');
   }
 
@@ -154,15 +155,16 @@ function buildPrompt(question, hits, selfQuestion) {
   if (hits.length > 0) {
     lines.push(`SOURCES:\n${buildContext(hits)}`);
     lines.push(
-      'Write a 2-4 sentence answer in the SAME LANGUAGE as the QUESTION, using only ' +
-      'the sources above. Reference sources with numbers [1], [2]. ' +
-      'If the sources do NOT actually address the question, do not force an answer — '
-      + 'say you do not know.'
+      'Write a 2-4 sentence answer in the SAME LANGUAGE as the QUESTION (any language — '
+      + 'answer in whatever language the question is written in), using only '
+      + 'the sources above. Reference sources with numbers [1], [2]. '
+      + 'If the sources do NOT actually address the question, do not force an answer — '
+      + 'say you do not know in the language of the question.'
     );
   } else {
     lines.push(
-      'No information in the sources. Answer exactly: "I don\'t know — that information is not in the Tukuk-OS index." ' +
-      'Do not make anything up.'
+      'No information in the sources. Answer exactly, in the SAME LANGUAGE as the QUESTION, '
+      + 'that you do not know and the information is not in the Tukuk-OS index. Do not make anything up.'
     );
   }
 
@@ -273,7 +275,7 @@ async function ask(question, { limit } = {}) {
       // busuk. Untuk mod web, hidangkan SENARAI tajuk + penerangan yang kemas.
       const lines = hits.slice(0, 4).map((hit, i) =>
         `[${i + 1}] ${hit.title || hit.url}${hit.description ? ' — ' + String(hit.description).replace(/\s+/g, ' ').trim().slice(0, 160) : ''}`);
-      extracted = { answer: `Berikut hasil web yang paling relevan:\n${lines.join('\n')}`, method: 'web-list' };
+      extracted = { answer: `${t('webListHeader', detectLocale(query))}\n${lines.join('\n')}`, method: 'web-list' };
     } else {
       extracted = hits.length > 0 ? extractiveAnswer(query, hits) : { answer: '', method: 'none' };
     }
@@ -285,7 +287,7 @@ async function ask(question, { limit } = {}) {
   if (!answer) {
     answer = selfQuestion
       ? `Tukuk-OS is a web search engine for tukuk.org. Use /search to search, or /ask to ask questions.`
-      : 'I don\'t know — that information is not in the Tukuk-OS index.';
+      : t('dontKnow', detectLocale(query));
     method = 'fallback';
   }
 
