@@ -128,7 +128,7 @@ function setting(key, fb) {
 
 const CLOUD_PROVIDERS = {
   gemini: { defaultModel: 'gemini-flash-latest', kind: 'gemini' },
-  groq: { defaultModel: 'gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
+  groq: { defaultModel: 'openai/gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
   openai: { defaultModel: 'gpt-4o-mini', kind: 'openai', baseUrl: 'https://api.openai.com/v1' },
   openrouter: { defaultModel: 'openrouter/free', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
   xai: { defaultModel: 'grok-4', kind: 'openai', baseUrl: 'https://api.x.ai/v1' },
