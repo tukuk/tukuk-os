@@ -96,10 +96,14 @@ const GUIDANCE = {
 /** Kelas utama + cadangan guidance + token tambahan (untuk math/code yang perlu ruang). */
 function classify(query) {
   const q = String(query || '');
-  // Arithmetik jelas menang (kerap tiada kata kunci bahasa). Ia self-contained:
-  // bukan fakta dunia, jadi boleh dikira terus tanpa sumber.
-  const pureMath = ARITH_RE(q);
-  if (pureMath) return { ...finalize('math'), pureMath: true, selfContained: true };
+  // Arithmetik: jika boleh dinilai sebagai ekspresi numeric bersih, kira DETERMINISTIK
+  // (kalkulator) — jauh lebih tepat daripada model 1.5B. Jika ada perkataan lain
+  // (masalah cerita / julat tarikh) → kekal math BERGROUNDED, jangan kira buta.
+  if (ARITH_RE(q)) {
+    const calc = computeArithmetic(q);
+    if (calc) return { ...finalize('math'), pureMath: true, selfContained: true, arithmetic: calc };
+    return finalize('math');
+  }
   if (matches(SIGNALS.code, q)) return { ...finalize('code'), selfContained: true };
   if (matches(SIGNALS.math, q)) return finalize('math');
   if (matches(SIGNALS.compare, q)) return finalize('compare');
@@ -126,4 +130,58 @@ function finalize(kind) {
   };
 }
 
-module.exports = { classify };
+// Kata tanya/pengisi yang DIBENARKAN dalam soalan aritmetik (pelbagai bahasa).
+// Selepas operator-perkataan ditukar ke simbol & kata ini dibuang, jika ada HURUF
+// lain tinggal → soalan itu bukan aritmetik tulen (cth "perang 1939-1945").
+const FILLER_RE = new RegExp(
+  '\\b(' + [
+    'berapa', 'berapakah', 'berapa banyak', 'hitung', 'hitungkan', 'kira', 'kirakan', 'kiran',
+    'jumlah', 'result', 'hasil', 'apa', 'itu', 'ini', 'ialah', 'adalah', 'dan', 'kan',
+    'peratus', 'percent', 'percentage', 'of', 'dari', 'daripada', 'untuk', 'dalam',
+    'what', 'is', 'the', 'how', 'much', 'many', 'calculate', 'compute', 'equals', 'equal',
+    'plus', 'minus', 'times', 'multiplied', 'multiply', 'divided', 'divide', 'by', 'total',
+    'power', 'to', 'and', 'a', 'an', 'jawi', 'nilai'
+  ].join('|') + ')\\b', 'gi');
+
+/**
+ * Nilai ekspresi aritmetik SECURA dari teks multi-bahasa. Pulangkan
+ * { expression, value } jika ia benar-benar pengiraan numeric bersih; null jika
+ * terdapat perkataan/ubah suai lain (supaya pemanggil boleh bergaya grounded).
+ */
+function computeArithmetic(query) {
+  let s = ' ' + String(query || '').toLowerCase() + ' ';
+  s = s.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/,/g, '');
+  // "X% of Y" / "X peratus dari Y" → (X/100)*Y
+  s = s.replace(/(\d+(?:\.\d+)?)\s*(?:%|peratus|percent)\s*(?:of|dari|daripada)\s*(\d+(?:\.\d+)?)/g, '($1/100)*$2');
+  // operator-perkataan → simbol
+  s = s.replace(/\b(?:darab|kali|times|multiplied|multiply)\b/g, '*');
+  s = s.replace(/\b(?:dibahagi|bahagi|divided|divide)\b/g, '/');
+  s = s.replace(/\b(?:tambah|plus|add)\b/g, '+');
+  s = s.replace(/\b(?:tolak|kurang|minus|subtract|less)\b/g, '-');
+  s = s.replace(/\b(?:kuasa|power|eksponen)\b/g, '^');
+  // buang kata pengisi yang dibenarkan
+  s = s.replace(FILLER_RE, ' ');
+  // jika masih ada HURUF (aksara apa-apa script) → bukan aritmetik tulen
+  if (/\p{L}/u.test(s)) return null;
+  // kunci kepada aksara matematik sahaja
+  s = s.replace(/[^0-9.+\-*/^()\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  // mestilah ada sekurang-kurangnya satu operator BINARI antara dua angka
+  const hasBinOp = /[+*/^]/.test(s) || /\d\s*-\s*\d/.test(s);
+  if (!hasBinOp || !/\d/.test(s)) return null;
+  // imbang kurungan
+  if (((s.match(/\(/g) || []).length) !== ((s.match(/\)/g) || []).length)) return null;
+  // bentuk bersih: hanya angka/operator/kurungan/ruang
+  if (!/^[-+*/^().\d\s]+$/.test(s)) return null;
+  const expr = s.replace(/\^/g, '**');
+  let value;
+  try {
+    value = Function('"use strict"; return (' + expr + ');')();
+  } catch {
+    return null;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  value = Math.round(value * 1e10) / 1e10;
+  return { expression: s, value };
+}
+
+module.exports = { classify, computeArithmetic };

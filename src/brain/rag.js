@@ -214,6 +214,20 @@ async function ask(question, { limit } = {}) {
   const startedAt = Date.now();
   const selfQuestion = isSelfQuestion(query);
   const task = taskrouter.classify(query);
+  // Aritmetik tulen → jawab dengan KALKULATOR deterministik (tepat, serta-merta,
+  // tiada halusinasi). Jangan guna LLM untuk kira 12*7 — dia boleh silap.
+  if (!selfQuestion && task.arithmetic) {
+    const { expression, value } = task.arithmetic;
+    return {
+      question: query,
+      answer: `${expression} = ${value}`,
+      method: 'arithmetic',
+      model: 'deterministic calculator',
+      tookMs: Date.now() - startedAt,
+      sources: [],
+      mode: 'direct'
+    };
+  }
   const hits = selfQuestion ? [] : await retrieve(query, { limit });
 
   // Soalan tentang Tukuk-OS: gunakan pengetahuan sistem terus — tidak guna LLM.
