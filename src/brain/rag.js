@@ -253,6 +253,9 @@ async function ask(question, { limit } = {}) {
   // (dibincangkan pada lantai CPU kecil — tambahan hanya bila tugasan benar-benar perlu).
   const baseTokens = selfQuestion ? config.brain.maxTokens : Math.min(config.brain.maxTokens, 120);
   const numPredict = Math.min(baseTokens + (selfQuestion ? 0 : (task.extraTokens || 0)), 320);
+  // Cloud boleh guna bajet lebih besar: model reasoning (gpt-oss/qwen3/gemini-latest)
+  // perlukan ruang akal dalaman sebelum jawapan; bajet Ollama kecil akan kosongkan mereka.
+  const cloudTokens = Math.max(numPredict, config.brain.cloudMaxTokens);
 
   let answer = '';
   let model = provider.currentModel();
@@ -275,7 +278,7 @@ async function ask(question, { limit } = {}) {
     // 1) Rotasi cloud — cuba setiap pembekal, langkau yang baru habis kuota (cooling).
     if (backend.kind === 'cloud') {
       const out = await provider.generateCloud(backend, prompt, {
-        system, temperature: config.brain.temperature, maxTokens: numPredict, topP: config.brain.topP
+        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP
       });
       const text = String(out?.response || '').trim();
       if (text && !isEcho(text, prompt)) {

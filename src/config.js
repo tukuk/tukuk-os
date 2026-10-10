@@ -145,6 +145,10 @@ module.exports = {
     temperature: Number(process.env.LLM_TEMPERATURE ?? 0.2),
     topP: Number(process.env.LLM_TOP_P ?? 0.9),
     maxTokens: num(process.env.LLM_MAX_TOKENS, 120),
+    // Model reasoning cloud (gpt-oss, qwen3, gemini-*-latest) belanja token pada
+    // akal dalaman SEBELUM jawapan; bajet Ollama (≈80) memotong mereka jadi KOSONG.
+    // Cloud murah & laju → beri bajet longgar (ruang akal + jawapan). Override env.
+    cloudMaxTokens: num(process.env.LLM_CLOUD_MAX_TOKENS, 512),
     contextWindow: num(process.env.LLM_CONTEXT_WINDOW, 2048),
     seed: num(process.env.LLM_SEED, 42),
     timeout: num(process.env.LLM_TIMEOUT, 30000),
