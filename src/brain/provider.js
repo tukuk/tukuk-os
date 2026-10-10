@@ -236,7 +236,10 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {
   const signal = AbortSignal.timeout(config.brain.timeout);
 
   if (p.kind === 'gemini') {
-    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: t, maxOutputTokens: mt, topP: tp } };
+    // gemini-*-latest ialah model "thinking": tanpa budget, token akal dalan
+    // habiskan bajet kecil → jawapan KOSONG (finishReason MAX_TOKENS). Matikan
+    // thinking (thinkingBudget 0) supaya jawapan ringkas cukup ruang & laju.
+    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: t, maxOutputTokens: mt, topP: tp, thinkingConfig: { thinkingBudget: 0 } } };
     if (system) body.systemInstruction = { parts: [{ text: system }] };
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${p.model}:generateContent?key=${encodeURIComponent(p.key)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal
