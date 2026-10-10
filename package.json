@@ -3,9 +3,13 @@
   "version": "2.1.0",
   "description": "Tukuk-OS - enjin carian web berterasaskan Meilisearch + desktop app",
   "main": "index.js",
+  "bin": {
+    "tukuk-os": "bin/tukuk-os.js"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
+    "mcp": "node mcp/server.js",
     "postinstall": "bash scripts/setup-all.sh --from-npm || true",
     "setup": "bash scripts/setup-all.sh",
     "usb": "sudo bash scripts/install-from-usb.sh",
