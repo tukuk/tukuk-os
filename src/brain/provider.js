@@ -137,11 +137,15 @@ const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'cloudflare', 'openai'];
 
 function cloudKey(name) {
   const b = config.brain;
-  if (name === 'gemini') return process.env.GEMINI_API_KEY || b.geminiApiKey || '';
-  if (name === 'openai') return process.env.OPENAI_API_KEY || b.openaiApiKey || '';
-  if (name === 'groq') return process.env.GROQ_API_KEY || b.groqApiKey || '';
-  if (name === 'openrouter') return process.env.OPENROUTER_API_KEY || b.openrouterApiKey || '';
-  if (name === 'cloudflare') return process.env.CLOUDFLARE_AI_TOKEN || b.cloudflareAiToken || '';
+  // Kunci Admin (aiProvider + aiApiKey) menghidupkan pembekal yang sepadan,
+  // supaya UI Admin → AI Settings tetap berfungsi walaupun rotasi baca env.
+  const pref = String(setting('aiProvider', '') || '').toLowerCase();
+  const adminKey = (pref === name) ? (setting('aiApiKey', '') || '') : '';
+  if (name === 'gemini') return process.env.GEMINI_API_KEY || b.geminiApiKey || adminKey;
+  if (name === 'openai') return process.env.OPENAI_API_KEY || b.openaiApiKey || adminKey;
+  if (name === 'groq') return process.env.GROQ_API_KEY || b.groqApiKey || adminKey;
+  if (name === 'openrouter') return process.env.OPENROUTER_API_KEY || b.openrouterApiKey || adminKey;
+  if (name === 'cloudflare') return process.env.CLOUDFLARE_AI_TOKEN || b.cloudflareAiToken || adminKey;
   return '';
 }
 function cloudAccountId() {
