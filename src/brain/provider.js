@@ -116,76 +116,195 @@ async function generate(prompt, { system, numPredict, temperature, model: forceM
   return result;
 }
 
-const CLOUD_DEFAULT_MODEL = { gemini: 'gemini-2.5-flash', openai: 'gpt-4o-mini', groq: 'llama-3.1-8b-instant' };
-
+// ── Pendaftar pembekal LLM awan ────────────────────────────────────────
+// Lebih SATU pembekal boleh didaftarkan serentak (satu pembolehubah env per
+// pembekal). /ask mencuba KEDAP secara rotasi: pembekal yang baru habis kuota
+// (429 / "quota / rate limit / daily") dimasukan "cooling" seketika lalu terus
+// dilangkau ke pembekal seterusnya yang masih ada kuota. Semua habis → Ollama
+// lokal → ekstraktif. Tiada pengiraan kuota manual — isyarat 429 menjadi trigger.
 function setting(key, fb) {
   try { return require('../store').getSetting(key, fb); } catch { return fb; }
 }
-function envKeyFor(name) {
-  if (name === 'gemini') return process.env.GEMINI_API_KEY || config.brain.geminiApiKey || '';
-  if (name === 'openai') return process.env.OPENAI_API_KEY || config.brain.openaiApiKey || '';
-  if (name === 'groq') return process.env.GROQ_API_KEY || config.brain.groqApiKey || '';
+
+const CLOUD_PROVIDERS = {
+  gemini: { defaultModel: 'gemini-2.5-flash', kind: 'gemini' },
+  groq: { defaultModel: 'gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
+  openai: { defaultModel: 'gpt-4o-mini', kind: 'openai', baseUrl: 'https://api.openai.com/v1' },
+  openrouter: { defaultModel: 'openrouter/free', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
+  cloudflare: { defaultModel: '@cf/meta/llama-3.1-8b-instruct', kind: 'cloudflare' }
+};
+const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'cloudflare', 'openai'];
+
+function cloudKey(name) {
+  const b = config.brain;
+  if (name === 'gemini') return process.env.GEMINI_API_KEY || b.geminiApiKey || '';
+  if (name === 'openai') return process.env.OPENAI_API_KEY || b.openaiApiKey || '';
+  if (name === 'groq') return process.env.GROQ_API_KEY || b.groqApiKey || '';
+  if (name === 'openrouter') return process.env.OPENROUTER_API_KEY || b.openrouterApiKey || '';
+  if (name === 'cloudflare') return process.env.CLOUDFLARE_AI_TOKEN || b.cloudflareAiToken || '';
   return '';
 }
+function cloudAccountId() {
+  return process.env.CLOUDFLARE_ACCOUNT_ID || config.brain.cloudflareAccountId || '';
+}
+function cloudModel(name) {
+  const fromEnv = process.env[`${name.toUpperCase()}_MODEL`];
+  return setting(`${name}Model`, '') || fromEnv || CLOUD_PROVIDERS[name]?.defaultModel || '';
+}
+function cloudAvailable(name) {
+  if (!CLOUD_PROVIDERS[name] || !cloudKey(name)) return false;
+  // Workers AI perlu account id selain token — kalau tiada, anggap tak dikonfigurasi.
+  if (name === 'cloudflare' && !cloudAccountId()) return false;
+  return true;
+}
+function providerOrder() {
+  const configured = String(config.brain.cloudOrder || DEFAULT_ORDER.join(','))
+    .split(',').map((s) => s.trim()).filter((n) => CLOUD_PROVIDERS[n]);
+  const order = configured.length ? configured : DEFAULT_ORDER.slice();
+  // aiProvider admin (jika salah satu cloud) menolak pembekal itu ke depan.
+  const pref = String(setting('aiProvider', '') || '').toLowerCase();
+  if (order.includes(pref)) { order.splice(order.indexOf(pref), 1); order.unshift(pref); }
+  return order;
+}
+// Pembekal awan yang ADA kunci, ikut susunan rotasi.
+function listCloudProviders() {
+  return providerOrder().filter(cloudAvailable).map((name) => ({
+    name,
+    kind: CLOUD_PROVIDERS[name].kind,
+    key: cloudKey(name),
+    model: cloudModel(name),
+    baseUrl: CLOUD_PROVIDERS[name].baseUrl,
+    account: name === 'cloudflare' ? cloudAccountId() : undefined
+  }));
+}
+
+// ── Cooling: jangan tempek pembekal yang baru saja habis kuota ─────────
+const cooldown = new Map(); // name -> untilTs(ms)
+function coolingRemaining(name) {
+  const until = cooldown.get(name) || 0;
+  return Date.now() < until ? until - Date.now() : 0;
+}
+function markCooling(name, ms) { cooldown.set(name, Date.now() + ms); }
+function isQuotaError(err) {
+  const status = err && (err.status || err.statusCode);
+  if (status === 429) return true;
+  return /quota|rate.?limit|too many|exhaust|429|overloaded|capacity|resource_exhausted|daily/i
+    .test(String(err && err.message || ''));
+}
+function quotaCooldownMs(err) {
+  const msg = String(err && err.message || '').toLowerCase();
+  // Kuota harian → cooling panjang (10 min); had seminit → 60s.
+  if (/daily|per day|per-day|resets|day\b/i.test(msg)) return 10 * 60 * 1000;
+  return 60 * 1000;
+}
+
 async function ollamaReachable() {
   try { await availableModels(); return true; } catch { return false; }
 }
 
-// Tentukan backend LLM aktif: cloud (Gemini/OpenAI/Groq) → Ollama → none (ekstraktif).
-// Sesuai server CPU-only — tiada model dilari lokal; hanya satu panggilan HTTP ke awan.
+// Backend aktif. `cloud` kini membawa SENARAI pembekal (rotasi), bukan satu sahaja.
 async function activeBackend() {
   const pref = String(setting('aiProvider', '') || '').toLowerCase();
   if (pref === 'ollama') {
     return (await ollamaReachable()) ? { kind: 'ollama' } : { kind: 'none' };
   }
-  const clouds = ['gemini', 'openai', 'groq'];
-  if (clouds.includes(pref)) {
-    const key = setting('aiApiKey', '') || envKeyFor(pref);
-    if (key) return { kind: 'cloud', name: pref, key, model: setting('aiModel', '') || CLOUD_DEFAULT_MODEL[pref] };
-  }
-  for (const name of ['gemini', 'groq', 'openai']) {
-    const k = envKeyFor(name);
-    if (k) return { kind: 'cloud', name, key: k, model: setting('aiModel', '') || CLOUD_DEFAULT_MODEL[name] };
+  const providers = listCloudProviders();
+  if (providers.length) {
+    const first = providers.find((p) => !coolingRemaining(p.name)) || providers[0];
+    return { kind: 'cloud', name: first.name, key: first.key, model: first.model, providers: providers.map((p) => p.name) };
   }
   if (await ollamaReachable()) return { kind: 'ollama' };
   return { kind: 'none' };
 }
 
-// Jana teks melalui API cloud. Pulangkan bentuk sama seperti Ollama ({ response }).
-async function generateCloud(b, prompt, { system, temperature, maxTokens, topP } = {}) {
+// Satu panggilan ke SATU pembekal. Ralat HTTP dinaikkan dengan .status supaya
+// rotasi dapat bezakan kuota (429) daripada ralat sementara.
+async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {}) {
   const t = temperature ?? config.brain.temperature;
   const mt = maxTokens ?? config.brain.maxTokens;
   const tp = topP ?? config.brain.topP;
-  const timeout = { signal: AbortSignal.timeout(config.brain.timeout) };
+  const signal = AbortSignal.timeout(config.brain.timeout);
 
-  if (b.name === 'gemini') {
+  if (p.kind === 'gemini') {
     const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: t, maxOutputTokens: mt, topP: tp } };
     if (system) body.systemInstruction = { parts: [{ text: system }] };
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${b.model}:generateContent?key=${encodeURIComponent(b.key)}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), ...timeout
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${p.model}:generateContent?key=${encodeURIComponent(p.key)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal
     });
-    const data = await res.json();
-    const text = (data?.candidates?.[0]?.content?.parts || []).map((p) => p.text).join('') || '';
-    if (!text) throw new Error(data?.error?.message || 'Gemini: respons kosong');
-    return { response: text, _model: b.model };
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error(`gemini ${res.status}: ${String(data?.error?.message || '').slice(0, 160)}`); e.status = res.status; throw e; }
+    const text = (data?.candidates?.[0]?.content?.parts || []).map((x) => x.text).join('') || '';
+    if (!text) { const e = new Error('gemini: respons kosong'); e.status = res.status; throw e; }
+    return { response: text, _model: p.model };
   }
 
-  const base = b.name === 'openai' ? 'https://api.openai.com/v1' : 'https://api.groq.com/openai/v1';
-  const res = await fetch(`${base}/chat/completions`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${b.key}` },
-    body: JSON.stringify({ model: b.model, messages: [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }], temperature: t, max_tokens: mt, top_p: tp }),
-    ...timeout
-  });
-  const data = await res.json();
+  const base = p.kind === 'cloudflare'
+    ? `https://api.cloudflare.com/client/v4/accounts/${p.account}/ai/v1`
+    : p.baseUrl;
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` };
+  if (p.name === 'openrouter') { headers['HTTP-Referer'] = 'https://tukuk.org'; headers['X-Title'] = 'Tukuk-OS'; }
+  const body = { model: p.model, messages: [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }], temperature: t, max_tokens: mt, top_p: tp };
+  const res = await fetch(`${base}/chat/completions`, { method: 'POST', headers, body: JSON.stringify(body), signal });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = data?.error?.message || data?.errors?.[0]?.message || JSON.stringify(data).slice(0, 120);
+    const e = new Error(`${p.name} ${res.status}: ${String(detail).slice(0, 160)}`); e.status = res.status; throw e;
+  }
   const text = data?.choices?.[0]?.message?.content || '';
-  if (!text) throw new Error(data?.error?.message || `${b.name}: respons kosong`);
-  return { response: text, _model: b.model };
+  if (!text) { const e = new Error(`${p.name}: respons kosong`); e.status = res.status; throw e; }
+  return { response: text, _model: p.model };
+}
+
+// Rotasi penuh: cuba setiap pembekal (langkau yang cooling). Pulangkan { response,
+// _model, _provider } jaya, atau { response:'', rejected:[...] } bila semua habis/gagal.
+async function generateCloudRotation(prompt, opts = {}) {
+  const rejected = [];
+  for (const p of listCloudProviders()) {
+    const rem = coolingRemaining(p.name);
+    if (rem) { rejected.push({ provider: p.name, reason: `cooling (habis kuota; cuba semula dlm ${Math.ceil(rem / 1000)}s)` }); continue; }
+    try {
+      const out = await callCloud(p, prompt, opts);
+      return { ...out, _provider: p.name };
+    } catch (err) {
+      if (isQuotaError(err)) markCooling(p.name, quotaCooldownMs(err));
+      rejected.push({ provider: p.name, reason: err.message });
+    }
+  }
+  return { response: '', _provider: null, rejected };
+}
+
+// Muka TERPELIHARA: `generateCloud(backend, ...)` kini menjalankan ROTASI penuh,
+// jadi pemanggil lama (rag.js, mcp/server.js) dapat kedap-automatik tanpa diubah
+// panggilannya. Jika `backend` ialah satu pembekal eksplisit (ada .key), cuba dia
+// dahulu; bila ia gagal/habis, sambung rotasi pembekal lain.
+async function generateCloud(b, prompt, opts = {}) {
+  if (b && b.key && b.name && CLOUD_PROVIDERS[b.name]) {
+    const single = {
+      name: b.name, kind: CLOUD_PROVIDERS[b.name].kind, key: b.key,
+      model: b.model || cloudModel(b.name), baseUrl: CLOUD_PROVIDERS[b.name].baseUrl,
+      account: b.name === 'cloudflare' ? cloudAccountId() : undefined
+    };
+    if (!coolingRemaining(single.name)) {
+      try {
+        const out = await callCloud(single, prompt, opts);
+        return { ...out, _provider: single.name };
+      } catch (err) {
+        if (isQuotaError(err)) markCooling(single.name, quotaCooldownMs(err));
+      }
+    }
+  }
+  return generateCloudRotation(prompt, opts);
 }
 
 async function health() {
   const b = await activeBackend();
   if (b.kind === 'cloud') {
-    return { online: true, cloud: true, provider: b.name, model: b.model, wanted: config.brain.chain, satisfied: true };
+    const providers = b.providers.map((name) => ({
+      name, model: cloudModel(name), cooling: Boolean(coolingRemaining(name)),
+      retryInMs: coolingRemaining(name)
+    }));
+    const active = providers.find((p) => !p.cooling) || providers[0];
+    return { online: true, cloud: true, provider: active.name, model: active.model, providers, wanted: config.brain.chain, satisfied: true };
   }
   if (b.kind === 'ollama') {
     try {
@@ -202,4 +321,7 @@ function currentModel() {
   return activeModel || config.brain.chain[0];
 }
 
-module.exports = { generate, generateCloud, health, availableModels, pickModel, currentModel, activeBackend };
+module.exports = {
+  generate, generateCloud, generateCloudRotation, health, availableModels, pickModel,
+  currentModel, activeBackend, ollamaReachable, listCloudProviders
+};

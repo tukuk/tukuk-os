@@ -261,44 +261,50 @@ async function ask(question, { limit } = {}) {
 
   const backend = await provider.activeBackend();
   // Ekstraktif serta-merta bila: tiada LLM langsung, ATAU Ollama + mod laju.
+  // Cloud SENTIASA dicuba (cepat & murah) — fastMode hanya penggalang ollama/none.
   // Tugasan self-contained (aritmetik/kod) WAJIB lalu LLM — ekstraktif tak boleh mengira/menjana kod.
-  const useExtractive = backend.kind === 'none' || (backend.kind === 'ollama' && config.brain.fastMode && !selfQuestion && !task.selfContained);
+  const useExtractive = backend.kind === 'none'
+    || (backend.kind === 'ollama' && config.brain.fastMode && !selfQuestion && !task.selfContained);
 
   if (useExtractive) {
     const extracted = hits.length > 0 ? extractiveAnswer(query, hits) : { answer: '', method: 'none' };
     answer = extracted.answer;
     method = extracted.method;
     model = 'extractive (no LLM)';
-  } else if (backend.kind === 'cloud') {
-    try {
+  } else {
+    // 1) Rotasi cloud — cuba setiap pembekal, langkau yang baru habis kuota (cooling).
+    if (backend.kind === 'cloud') {
       const out = await provider.generateCloud(backend, prompt, {
         system, temperature: config.brain.temperature, maxTokens: numPredict, topP: config.brain.topP
       });
       const text = String(out?.response || '').trim();
-      model = out?._model || backend.model;
-      if (isEcho(text, prompt)) rejected.push({ model, reason: 'output tidak koheren (mengulang arahan)' });
-      else answer = text;
-    } catch (error) {
-      rejected.push({ model: backend.model, reason: error.message });
+      if (text && !isEcho(text, prompt)) {
+        answer = text;
+        model = `${out._provider}:${out._model}`;
+      } else if (text) {
+        rejected.push({ model: out._provider, reason: 'output tidak koheren (mengulang arahan)' });
+      }
+      for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
     }
-  } else {
-    // Ollama (dipilih eksplisit) — rantaian failover seperti biasa.
-    for (const candidate of config.brain.chain) {
-      let output;
-      try {
-        output = await provider.generate(prompt, { system, temperature: config.brain.temperature, numPredict, model: candidate });
-      } catch (error) {
-        rejected.push({ model: candidate, reason: error.message });
-        continue;
+    // 2) Ollama lokal — fallback bila tiada cloud ATAU semua cloud habis/gagal.
+    if (!answer && (await provider.ollamaReachable())) {
+      for (const candidate of config.brain.chain) {
+        let output;
+        try {
+          output = await provider.generate(prompt, { system, temperature: config.brain.temperature, numPredict, model: candidate });
+        } catch (error) {
+          rejected.push({ model: candidate, reason: error.message });
+          continue;
+        }
+        const text = String(output?.response || '').trim();
+        model = candidate;
+        if (isEcho(text, prompt)) {
+          rejected.push({ model: candidate, reason: 'output tidak koheren (mengulang arahan)' });
+          continue;
+        }
+        answer = text;
+        break;
       }
-      const text = String(output?.response || '').trim();
-      model = candidate;
-      if (isEcho(text, prompt)) {
-        rejected.push({ model: candidate, reason: 'output tidak koheren (mengulang arahan)' });
-        continue;
-      }
-      answer = text;
-      break;
     }
   }
 

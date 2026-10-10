@@ -155,7 +155,14 @@ module.exports = {
     provider: process.env.BRAIN_PROVIDER || 'ollama',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
-    groqApiKey: process.env.GROQ_API_KEY || ''
+    groqApiKey: process.env.GROQ_API_KEY || '',
+    openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
+    // Cloudflare Workers AI: token (boleh pakai CLOUDFLARE_API_TOKEN jika ia
+    // mempunyai keizinan Workers AI) + account id. Kedua-dua wajib ada.
+    cloudflareAiToken: process.env.CLOUDFLARE_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '',
+    cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
+    // Susunan rotasi cloud (kiri→kanan). Override menerusi LLM_CLOUD_ORDER.
+    cloudOrder: process.env.LLM_CLOUD_ORDER || 'gemini,groq,openrouter,cloudflare,openai'
   },
 
   net: {
