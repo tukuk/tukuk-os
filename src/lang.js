@@ -69,13 +69,15 @@ const SCRIPT_TO_LOCALE = [
   ['ethiopic', 'am'],
 ];
 
-/** Kod skrip Unicode untuk bahasa Latin — pembezian MS/ID/EN/ES/FR/DE/PT. */
+/** Kod skrip Unicode untuk bahasa Latin — pembezian MS/ID/EN/ES/FR/DE/PT.
+ *  Corak mengandungi varian TANPA aksen (que/como/donde/est ce) sebab pengguna
+ *  sering menaip tanpa aksen — tapi hanya token yang jarang dalam query English. */
 const LATIN_HINTS = [
   [/\b(tidak|tak|apa|itu|ini|dan|yang|di|ke|dari|untuk|dengan|bagaimana|mengapa|adalah|boleh|sudah|saja|atau)\b/i, 'ms'],
-  [/\b(qu'est|quelle|êtes|mercie|français|est-ce|avec|dans|pour|une|vous)\b/i, 'fr'],
+  [/\b(qu'est|qu est|quelle|êtes|mercie|français|est-ce|est ce|avec|dans|pour|une|vous|où)\b/i, 'fr'],
   [/\b(ß|ä|ö|ü|wie|was|ist|nicht|und|für|mit|von)\b/, 'de'],
-  [/\b(¿|qué|dónde|gracias|por|una|los|está|cómo)\b/i, 'es'],
-  [/\b(você|não|obrigad|está|como|onde|uma|não)\b/i, 'pt'],
+  [/\b(¿|qué|que|dónde|donde|cómo|como|cuándo|gracias|por|una|los|está|esta|también)\b/i, 'es'],
+  [/\b(você|voce|não|nao|obrigad|está|como|onde|uma)\b/i, 'pt'],
   [/\b(apakah|bagaimana|kenapa|saja|begini|terima kasih)\b/i, 'id'],
 ];
 
