@@ -167,8 +167,9 @@ module.exports = {
     // mempunyai keizinan Workers AI) + account id. Kedua-dua wajib ada.
     cloudflareAiToken: process.env.CLOUDFLARE_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '',
     cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
+    ollamaCloudApiKey: process.env.OLLAMA_CLOUD_API_KEY || '',
     // Susunan rotasi cloud (kiri→kanan). Override menerusi LLM_CLOUD_ORDER.
-    cloudOrder: process.env.LLM_CLOUD_ORDER || 'gemini,groq,openrouter,huggingface,xai,cloudflare,openai'
+    cloudOrder: process.env.LLM_CLOUD_ORDER || 'gemini,groq,openrouter,huggingface,xai,cloudflare,ollama-cloud,openai'
   },
 
   net: {

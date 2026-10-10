@@ -133,9 +133,12 @@ const CLOUD_PROVIDERS = {
   openrouter: { defaultModel: 'openrouter/free', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
   xai: { defaultModel: 'grok-4', kind: 'openai', baseUrl: 'https://api.x.ai/v1' },
   huggingface: { defaultModel: 'meta-llama/Llama-3.3-70B-Instruct', kind: 'openai', baseUrl: 'https://router.huggingface.co/v1' },
-  cloudflare: { defaultModel: '@cf/meta/llama-4-scout-17b-16e-instruct', kind: 'cloudflare' }
+  cloudflare: { defaultModel: '@cf/meta/llama-4-scout-17b-16e-instruct', kind: 'cloudflare' },
+  // Ollama Cloud API (format native /api/chat, bukan OpenAI). Free tier ada had
+  // 5-jam/harian → cooldown automatik bila 429, serve model besar bila quota ada.
+  'ollama-cloud': { defaultModel: 'gpt-oss:20b', kind: 'ollama-native', baseUrl: 'https://api.ollama.com' }
 };
-const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'huggingface', 'xai', 'cloudflare', 'openai'];
+const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'huggingface', 'xai', 'cloudflare', 'ollama-cloud', 'openai'];
 
 function cloudKey(name) {
   const b = config.brain;
@@ -150,13 +153,14 @@ function cloudKey(name) {
   if (name === 'xai') return process.env.XAI_API_KEY || b.xaiApiKey || adminKey;
   if (name === 'huggingface') return process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN || b.huggingfaceApiKey || adminKey;
   if (name === 'cloudflare') return process.env.CLOUDFLARE_AI_TOKEN || b.cloudflareAiToken || adminKey;
+  if (name === 'ollama-cloud') return process.env.OLLAMA_CLOUD_API_KEY || b.ollamaCloudApiKey || adminKey;
   return '';
 }
 function cloudAccountId() {
   return process.env.CLOUDFLARE_ACCOUNT_ID || config.brain.cloudflareAccountId || '';
 }
 function cloudModel(name) {
-  const fromEnv = process.env[`${name.toUpperCase()}_MODEL`];
+  const fromEnv = process.env[name.toUpperCase().replace(/-/g, '_') + '_MODEL'];
   return setting(`${name}Model`, '') || fromEnv || CLOUD_PROVIDERS[name]?.defaultModel || '';
 }
 function cloudAvailable(name) {
@@ -204,7 +208,7 @@ function quotaCooldownMs(err) {
   // Tiada kredit / isu pembayaran → cooling panjang (tak cuba lagi 2 jam).
   if (/credit|billing|insufficient|payment|top.?up|subscribe/i.test(msg)) return 2 * 60 * 60 * 1000;
   // Kuota harian → 10 min; had seminit → 60s.
-  if (/daily|per day|per-day|resets|day\b/i.test(msg)) return 10 * 60 * 1000;
+  if (/daily|per day|per-day|resets|day\b|usage.?limit|free.?limit|5.?hour|weekly/i.test(msg)) return 10 * 60 * 1000;
   return 60 * 1000;
 }
 
@@ -251,6 +255,18 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {
     return { response: text, _model: p.model };
   }
 
+  // Ollama native cloud API (format /api/chat dengan response shape berbeza)
+  if (p.kind === 'ollama-native') {
+    const body = { model: p.model, messages: [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }], stream: false, options: { temperature: t, num_predict: mt } };
+    const res = await fetch(`${p.baseUrl}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` }, body: JSON.stringify(body), signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error(`${p.name} ${res.status}: ${String(data?.error || JSON.stringify(data)).slice(0,160)}`); e.status = res.status; throw e; }
+    const text = data?.message?.content || '';
+    if (!text) { const e = new Error(`${p.name}: respons kosong`); e.status = res.status; throw e; }
+    return { response: text, _model: p.model };
+  }
+
+  // OpenAI-compatible providers (groq, openai, openrouter, xai, huggingface)
   const base = p.kind === 'cloudflare'
     ? `https://api.cloudflare.com/client/v4/accounts/${p.account}/ai/v1`
     : p.baseUrl;
