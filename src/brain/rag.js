@@ -55,6 +55,24 @@ function cacheSet(key, value) {
   answerCache.set(key, { at: Date.now(), value });
 }
 
+// ─── Web-relevance: tapis hasil DuckDuckGo yang langsung tak berkait ───────
+// Stopword Melayu + Inggeris yang kerap dalam soalan kabur ("apa itu ini", "untuk apa").
+// Jika semua terma soalan adalah stopword → terlalu kabur (score 0) → buang web hits.
+const WEB_STOPWORDS = new Set([
+  'apa','itu','ini','yang','dan','untuk','dengan','dari','kepada','pada','dalam','adalah',
+  'is','the','a','an','of','in','to','on','for','how','what','do','does','are','was','it',
+  'this','that','can','i','you','my','me'  
+]);
+function webRelevanceScore(query, hit) {
+  const qt = String(query).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/)
+    .filter((w) => w.length > 2 && !WEB_STOPWORDS.has(w));
+  if (!qt.length) return 0; // soalan 100% stopword → terlalu kabur untuk web
+  const title = String(hit.title || '').toLowerCase();
+  const desc = String(hit.description || '').toLowerCase();
+  const overlap = qt.filter((t) => title.includes(t) || desc.includes(t)).length;
+  return overlap / qt.length;
+}
+
 async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
   try {
     const result = await index.search(query, {
@@ -64,13 +82,7 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
       attributesToRetrieve: ['url', 'title', 'description', 'siteName', 'host', 'lang', 'wordCount'],
       showRankingScore: true
     });
-    // Tapis ikut skor relevan Meilisearch. TANPA ini, dokumen yang HANYA padan
-    // separa (cth. "enjin KERETA" -> artikel "enjin CARIAN web", skor ~0.49) ikut
-    // dihantar sebagai "grounded", lalu model kecil mengarang jawapan yang salah
-    // topik ("lain tanya lain dijawab"). Had `minConfidence` (=BRAIN_MIN_CONFIDENCE,
-    // lalai 0.5) mengekalkan padanan SEJATI (skor ~0.9) & menolak yang kebetulan.
-    // Skor hasil web (di bawah) TIDAK ditapis — ia memang fallback semasa indeks
-    // tempatan kosong, dan DuckDuckGo sudah menyusunnya ikut relevansi.
+    // Tapis ikut skor relevan Meilisearch.
     const hits = (result.hits || []).filter(
       (hit) => (hit._rankingScore ?? 0) >= config.brain.minConfidence
     );
@@ -79,15 +91,20 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
       try {
         const webResult = await websearch.search(query);
         if (webResult.hits && webResult.hits.length > 0) {
-          return webResult.hits.slice(0, limit).map((hit, idx) => ({
+          const scored = webResult.hits.slice(0, limit).map((hit, idx) => ({
             ...hit,
             _rankingScore: 0,
             source: 'web',
-            webRef: idx + 1
+            webRef: idx + 1,
+            _webRelevance: webRelevanceScore(query, hit)
           }));
+          // Hanya kekalkan hasil yang ada OVERLAP nyata dengan soalan.
+          // Kalau semua < 0.3 → soalan terlalu kabur untuk web-search → buang semua.
+          const relevant = scored.filter((h) => h._webRelevance >= 0.3);
+          if (relevant.length > 0) return relevant;
         }
       } catch {
-        // abaikan ralat carian web, gunakan hasil tempatan (kosong)
+        // abaikan ralat carian web
       }
     }
 
