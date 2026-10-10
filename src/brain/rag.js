@@ -286,8 +286,12 @@ async function ask(question, { limit } = {}) {
       }
       for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
     }
-    // 2) Ollama lokal — fallback bila tiada cloud ATAU semua cloud habis/gagal.
-    if (!answer && (await provider.ollamaReachable())) {
+    // 2) Ollama lokal — HANYA bila tiada cloud dikonfigurasi (server CPU-only),
+    //    ATAU untuk tugasan self-contained (penjanaan kod) yang ekstraktif tak
+    //    mampu penuhi. Bila cloud ADA tapi blip (429/503/cooling), kita TIDAK
+    //    tunggu Ollama 45s — terus ke ekstraktif (instan, berpunca) di bawah.
+    const wantOllama = backend.kind !== 'cloud' || task.selfContained;
+    if (!answer && wantOllama && (await provider.ollamaReachable())) {
       for (const candidate of config.brain.chain) {
         let output;
         try {
