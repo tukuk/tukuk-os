@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>awan Game — Tukuk Satu Kata</title>
+<style>
+  body{margin:0;color:#fff;font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+  .wrap{text-align:center;padding:16px}
+  #game{border-radius:16px;overflow:hidden;box-shadow:0 20px 60px #0008}
+  .hud{margin:10px 0;font-weight:700}
+  a{color:var(--accent,#a78bfa)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud"><span id="score">0</span> · <em id="label"></em> — <a href="../../">hub</a> · <a href="../app/">app</a></div>
+  <div id="game"></div>
+  <small id="hint"></small>
+</div>
+<script>var CFG = {"word":"awan","slug":"awan","emoji":"☁️","tagline":"Pintas awan, elak kilat.","genre":"runner","palette":{"name":"ungu","bg":"#12081f","fg":"#ede9fe","accent":"#a78bfa","soft":"#2a1650"}};</script>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script>
+document.body.style.background = CFG.palette.bg;
+document.querySelector('a').style.color = CFG.palette.accent;
+document.getElementById('label').textContent = CFG.word + ' (' + CFG.genre + ')';
+const IS_TAP = CFG.genre === 'tap';
+document.getElementById('hint').textContent = IS_TAP
+  ? 'Sentuh item untuk markah. Elak biarkan ia luput!'
+  : 'Gerak: ← → atau sentuh/seret. Tangkap item yang jatuh.';
+
+const EMOJI = CFG.emoji;
+const W = 380, H = 560;
+const state = { score: 0 };
+const setScore = (n) => { state.score = n; document.getElementById('score').textContent = String(n); };
+
+class Play extends Phaser.Scene {
+  constructor() { super('play'); }
+  create() {
+    this.player = this.add.text(W / 2, H - 40, '🧺', { fontSize: '44px' }).setOrigin(0.5);
+    this.items = this.add.group();
+    setScore(0);
+    this.cameras.main.setBackgroundColor(CFG.palette.soft);
+    if (IS_TAP) {
+      this.time.addEvent({ delay: 650, loop: true, callback: () => this.spawnTap() });
+    } else {
+      this.time.addEvent({ delay: 820, loop: true, callback: () => this.spawnFall() });
+      this.input.on('pointermove', (p) => { this.player.x = Phaser.Math.Clamp(p.x, 24, W - 24); });
+      this.cursors = this.input.keyboard.createCursorKeys();
+    }
+  }
+  spawnFall() {
+    const it = this.add.text(Phaser.Math.Between(20, W - 20), -20, EMOJI, { fontSize: '34px' }).setOrigin(0.5);
+    it.setData('vy', Phaser.Math.Between(2, 5));
+    this.items.add(it);
+  }
+  spawnTap() {
+    const it = this.add.text(Phaser.Math.Between(30, W - 30), Phaser.Math.Between(60, H - 80), EMOJI, { fontSize: '38px' })
+      .setOrigin(0.5).setInteractive({ useHandCursor: true });
+    it.once('pointerdown', () => { setScore(state.score + 1); it.destroy(); });
+    this.time.delayedCall(1300, () => { if (it.active) it.destroy(); });
+  }
+  update() {
+    if (IS_TAP) return;
+    if (this.cursors && this.cursors.left.isDown) this.player.x -= 6;
+    if (this.cursors && this.cursors.right.isDown) this.player.x += 6;
+    this.player.x = Phaser.Math.Clamp(this.player.x, 24, W - 24);
+    this.items.getChildren.forEach((it) => {
+      it.y += it.getData('vy');
+      if (Math.abs(it.y - this.player.y) < 30 && Math.abs(it.x - this.player.x) < 34) {
+        setScore(state.score + 1); it.destroy();
+      } else if (it.y > H + 24) { it.destroy(); }
+    });
+  }
+}
+new Phaser.Game({ type: Phaser.AUTO, width: W, height: H, parent: 'game', backgroundColor: CFG.palette.bg, scene: Play });
+</script>
+</body>
+</html>

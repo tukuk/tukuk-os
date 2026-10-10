@@ -54,6 +54,17 @@
       "game": true,
       "createdAt": "2026-10-09T20:37:02.184Z",
       "palette": "hijau"
+    },
+    {
+      "word": "awan",
+      "slug": "awan",
+      "emoji": "☁️",
+      "tagline": "Pintas awan, elak kilat.",
+      "genre": "runner",
+      "theme": "ungu",
+      "game": true,
+      "createdAt": "2026-10-10T21:47:14.858Z",
+      "palette": "ungu"
     }
   ]
 }
