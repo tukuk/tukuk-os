@@ -133,7 +133,7 @@ const CLOUD_PROVIDERS = {
   openrouter: { defaultModel: 'openrouter/free', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
   xai: { defaultModel: 'grok-4', kind: 'openai', baseUrl: 'https://api.x.ai/v1' },
   huggingface: { defaultModel: 'meta-llama/Llama-3.3-70B-Instruct', kind: 'openai', baseUrl: 'https://router.huggingface.co/v1' },
-  cloudflare: { defaultModel: '@cf/meta/llama-3.1-8b-instruct', kind: 'cloudflare' }
+  cloudflare: { defaultModel: '@cf/meta/llama-4-scout-17b-16e-instruct', kind: 'cloudflare' }
 };
 const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'huggingface', 'xai', 'cloudflare', 'openai'];
 
