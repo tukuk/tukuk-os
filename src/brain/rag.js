@@ -5,6 +5,7 @@ const provider = require('./provider');
 const websearch = require('./websearch');
 const { isEcho, extractiveAnswer } = require('./quality');
 const { detectLocale, t } = require('../lang');
+const taskrouter = require('./taskrouter');
 
 const index = client.index(config.indexName);
 
@@ -135,11 +136,14 @@ function buildSources(hits) {
 
 const MINIMAL_SYSTEM =
   'You are a search assistant. Answer briefly IN THE SAME LANGUAGE as the QUESTION ' +
-  '(Malay question -> Malay answer, English -> English). Use ONLY the information in ' +
-  'the context. If the context does not actually answer the question, say you do not ' +
-  'know instead of guessing or inventing.';
+  '(Malay question -> Malay answer, English -> English, any script -> that language). ' +
+  'Use ONLY the information in the context. If the context does not actually answer the ' +
+  'question, say you do not know instead of guessing or inventing.';
 
-function buildPrompt(question, hits, selfQuestion) {
+// Fall-back jika taskrouter tidak diberi (keliru-pelindung).
+const GUIDANCE_DEFAULT = 'Answer directly in 2-4 sentences, using only the sources.';
+
+function buildPrompt(question, hits, selfQuestion, task) {
   const lines = [];
 
   if (selfQuestion) {
@@ -154,12 +158,16 @@ function buildPrompt(question, hits, selfQuestion) {
 
   if (hits.length > 0) {
     lines.push(`SOURCES:\n${buildContext(hits)}`);
+    // Arahan adaptif ikut JENIS tugasan (math/code/list/…) — membuatkan model
+    // kecil memberi BENTUK jawapan yang betul, bukan hanya 2-4 ayat generic.
+    const guidance = (task && task.guidance) || GUIDANCE_DEFAULT;
     lines.push(
-      'Write a 2-4 sentence answer in the SAME LANGUAGE as the QUESTION (any language — '
-      + 'answer in whatever language the question is written in), using only '
-      + 'the sources above. Reference sources with numbers [1], [2]. '
+      'Write the answer in the SAME LANGUAGE as the QUESTION (any language — answer in '
+      + 'whatever language the question is written in), using only the sources above. '
+      + 'Reference sources with numbers [1], [2]. '
       + 'If the sources do NOT actually address the question, do not force an answer — '
-      + 'say you do not know in the language of the question.'
+      + 'say you do not know in the language of the question.\n'
+      + guidance
     );
   } else {
     lines.push(
@@ -194,6 +202,7 @@ async function ask(question, { limit } = {}) {
 
   const startedAt = Date.now();
   const selfQuestion = isSelfQuestion(query);
+  const task = taskrouter.classify(query);
   const hits = selfQuestion ? [] : await retrieve(query, { limit });
 
   // Soalan tentang Tukuk-OS: gunakan pengetahuan sistem terus — tidak guna LLM.
@@ -212,10 +221,13 @@ async function ask(question, { limit } = {}) {
     };
   }
 
-  const prompt = buildPrompt(query, hits, selfQuestion);
+  const prompt = buildPrompt(query, hits, selfQuestion, task);
 
   const system = selfQuestion ? systemPrompt() : MINIMAL_SYSTEM;
-  const numPredict = selfQuestion ? config.brain.maxTokens : Math.min(config.brain.maxTokens, 120);
+  // Bawaan token; code/math dapat ruang tambahan supaya jawapan tidak terpotong
+  // (dibincangkan pada lantai CPU kecil — tambahan hanya bila tugasan benar-benar perlu).
+  const baseTokens = selfQuestion ? config.brain.maxTokens : Math.min(config.brain.maxTokens, 120);
+  const numPredict = Math.min(baseTokens + (selfQuestion ? 0 : (task.extraTokens || 0)), 320);
 
   let answer = '';
   let model = provider.currentModel();
