@@ -156,6 +156,17 @@ function buildPrompt(question, hits, selfQuestion, task) {
 
   lines.push(`QUESTION: ${question}`);
 
+  // Arithmetik tulen / penjanaan kod: bukan fakta dunia — jawab terus, ABAIKAN
+  // hit yang tak relevan (retrieve mungkin keluarkan noise) supaya tak tertolak.
+  if (task && task.selfContained) {
+    lines.push(
+      'This is a self-contained task (arithmetic or code), not a factual lookup. Solve it '
+      + 'directly and correctly. ' + (task.guidance || '') + '\n'
+      + 'Give the response in the SAME LANGUAGE as the QUESTION (code and numbers stay as-is).'
+    );
+    return lines.join('\n\n');
+  }
+
   if (hits.length > 0) {
     lines.push(`SOURCES:\n${buildContext(hits)}`);
     // Arahan adaptif ikut JENIS tugasan (math/code/list/…) — membuatkan model
@@ -235,8 +246,9 @@ async function ask(question, { limit } = {}) {
   let rejected = [];
 
   const backend = await provider.activeBackend();
-  // Ekstraktif serta-merta bila: tiada LLM langsung, ATAU Ollama + mod laju (bukan soalan kendiri).
-  const useExtractive = backend.kind === 'none' || (backend.kind === 'ollama' && config.brain.fastMode && !selfQuestion);
+  // Ekstraktif serta-merta bila: tiada LLM langsung, ATAU Ollama + mod laju.
+  // Tugasan self-contained (aritmetik/kod) WAJIB lalu LLM — ekstraktif tak boleh mengira/menjana kod.
+  const useExtractive = backend.kind === 'none' || (backend.kind === 'ollama' && config.brain.fastMode && !selfQuestion && !task.selfContained);
 
   if (useExtractive) {
     const extracted = hits.length > 0 ? extractiveAnswer(query, hits) : { answer: '', method: 'none' };
@@ -311,9 +323,9 @@ async function ask(question, { limit } = {}) {
     tookMs: Date.now() - startedAt,
     sources,
     rejectedModels: rejected,
-    mode: selfQuestion ? 'self' : sources.length > 0 ? (sources.some(s => s.source === 'web') ? 'web' : 'grounded') : 'ungrounded',
+    mode: selfQuestion ? 'self' : task.selfContained ? 'direct' : sources.length > 0 ? (sources.some(s => s.source === 'web') ? 'web' : 'grounded') : 'ungrounded',
     warning:
-      sources.length === 0 && !selfQuestion
+      sources.length === 0 && !selfQuestion && !task.selfContained
         ? 'No sources in the index — this answer is not grounded.'
         : rejected.length > 0 && method !== 'llm'
           ? 'The small model failed to give a coherent answer — the answer was generated directly from the sources.'

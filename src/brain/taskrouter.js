@@ -16,12 +16,16 @@
  */
 
 // Ekspresi arithmetik murni / separuh (script-neutral): "12*7", "(3+4)/2", "18%of 250".
-const ARITH_RE = /(\d+\s*[+\-*/x×÷%^]\s*\d+|\d+\s*(?:%|peratus)\s*(?:of|dari|daripada)\s*\d+)/i;
+const ARITH_SYM_RE = /(\d+\s*[+/\-*x×÷%^]\s*\d+|\d+\s*(?:%|peratus)\s*(?:of|dari|daripada)\s*\d+)/i;
+// Bentuk perkataan pelbagai bahasa: "12 darab 7", "10 divided by 4", "5 tambah 3".
+const ARITH_WORD_RE = /\b\d+\s*(?:darab|dibahagi|bahagi|tambah|tolak|kurang|kali|power|kuasa|times|multiplied\s+by|divided\s+by|plus|minus|to\s+the\s+power)\s*\d+\b/i;
+const ARITH_RE = (q) => ARITH_SYM_RE.test(q) || ARITH_WORD_RE.test(q);
 
 const SIGNALS = {
   math: {
     re: [
-      ARITH_RE,
+      ARITH_SYM_RE,
+      ARITH_WORD_RE,
       /\b(hitung|kira|kira|berapakah|calculate|compute|how many|berapa|jumlah|result of|berapa banyak)\b/i,
       /(多少|いくら|كم|कितने|combien|cuánto|quantos|сколько)/,
     ],
@@ -92,9 +96,11 @@ const GUIDANCE = {
 /** Kelas utama + cadangan guidance + token tambahan (untuk math/code yang perlu ruang). */
 function classify(query) {
   const q = String(query || '');
-  // Arithmetik jelas menang (kerap tiada kata kunci bahasa).
-  if (ARITH_RE.test(q)) return finalize('math');
-  if (matches(SIGNALS.code, q)) return finalize('code');
+  // Arithmetik jelas menang (kerap tiada kata kunci bahasa). Ia self-contained:
+  // bukan fakta dunia, jadi boleh dikira terus tanpa sumber.
+  const pureMath = ARITH_RE(q);
+  if (pureMath) return { ...finalize('math'), pureMath: true, selfContained: true };
+  if (matches(SIGNALS.code, q)) return { ...finalize('code'), selfContained: true };
   if (matches(SIGNALS.math, q)) return finalize('math');
   if (matches(SIGNALS.compare, q)) return finalize('compare');
   if (matches(SIGNALS.howto, q)) return finalize('howto');
@@ -111,6 +117,10 @@ function finalize(kind) {
   return {
     kind,
     guidance: GUIDANCE[kind],
+    // Tugasan self-contained ( arithmetic tulen / penjanaan kod ) tidak memerlukan
+    // sumber dunia — boleh dijawab terus tanpa gate "mesti ada konteks".
+    selfContained: false,
+    pureMath: false,
     // code & math untung dengan lebih token; lain cukup ringkas.
     extraTokens: kind === 'code' ? 160 : kind === 'math' ? 60 : 0,
   };
