@@ -311,13 +311,13 @@ async function addFiles(list) {
     const id = 'c' + (uid++);
     if (isImg) {
       const img = new Image(); img.src = url; await img.decode().catch(() => {});
-      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: true, thumb: url, trans: 0, transType: 'dissolve' };
+      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: true, thumb: url, trans: 0, transType: 'dissolve', kx: 50, ky: 50, ks: 1, krot: 0, ka: 1, kfs: [] };
       elMap[id] = img; clips.push(c); addedFirst = addedFirst || false;
     } else {
       const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.muted = false;
       await new Promise((res) => { const h = () => { v.removeEventListener('loadedmetadata', h); res(); }; v.addEventListener('loadedmetadata', h); setTimeout(res, 4000); });
       if (!addedFirst && v.videoWidth) { const sc = Math.min(1, 1280 / v.videoWidth); cvs.width = Math.round(v.videoWidth * sc); cvs.height = Math.round(v.videoHeight * sc); addedFirst = true; }
-      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: false, thumb: null, trans: 0, transType: 'dissolve' };
+      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: false, thumb: null, trans: 0, transType: 'dissolve', kx: 50, ky: 50, ks: 1, krot: 0, ka: 1, kfs: [] };
       elMap[id] = v; document.body.appendChild(v); clips.push(c); genThumb(c);
     }
     selId = id;
@@ -370,19 +370,37 @@ function syncActive(t) {
   activeId = cov.length ? cov[cov.length - 1].clip.id : null;
 }
 
+// ── Bantu keyframe klip video (posisi/skala/rotasi/opasiti) ──
+function normClipKF(k) { return { x: k.x, y: k.y, s: k.s != null ? k.s : 1, rot: k.rot || 0, a: k.a != null ? k.a : 1 }; }
+function sampleClipKF(kfs, t) {
+  if (!kfs || !kfs.length) return null;
+  if (t <= kfs[0].t) return normClipKF(kfs[0]);
+  const L = kfs[kfs.length - 1]; if (t >= L.t) return normClipKF(L);
+  for (let i = 1; i < kfs.length; i++) { if (t <= kfs[i].t) { const A = normClipKF(kfs[i - 1]), B = normClipKF(kfs[i]); const p = (t - A.t) / ((B.t - A.t) || 1); return { x: A.x + (B.x - A.x) * p, y: A.y + (B.y - A.y) * p, s: A.s + (B.s - A.s) * p, rot: A.rot + (B.rot - A.rot) * p, a: A.a + (B.a - A.a) * p }; } }
+  return normClipKF(L);
+}
+function clipPose(c, local) {
+  if (c.kfs && c.kfs.length) { const k = sampleClipKF(c.kfs, local); if (k) return k; }
+  return { x: c.kx != null ? c.kx : 50, y: c.ky != null ? c.ky : 50, s: c.ks != null ? c.ks : 1, rot: c.krot || 0, a: c.ka != null ? c.ka : 1 };
+}
+
 // ── Lukis satu sumber ke canvas ──
 function drawSource(c, cw, ch, local, alphaOverride, dx, tscale) {
   const el = c.el; if (!el) return;
   const sw = c.w || el.videoWidth || el.naturalWidth || cw;
   const sh = c.h || el.videoHeight || el.naturalHeight || ch;
   const len = clipLen(c);
-  const a = (alphaOverride != null) ? Math.max(0, Math.min(1, alphaOverride)) : edgeAlpha(c, local);
+  const pose = clipPose(c, local);
+  const a0 = (alphaOverride != null) ? Math.max(0, Math.min(1, alphaOverride)) : edgeAlpha(c, local);
+  const a = Math.max(0, Math.min(1, a0 * pose.a));
   const f = c.filt;
   const css = `brightness(${f.bright}%) contrast(${f.contrast}%) saturate(${f.saturate}%) grayscale(${f.gray}%) sepia(${f.sepia}%)`;
   g.save();
   g.globalAlpha = a;
   g.translate(cw / 2, ch / 2);
+  g.translate(((pose.x - 50) / 100) * cw, ((pose.y - 50) / 100) * ch);
   if (c.rot) g.rotate((c.rot * Math.PI) / 180);
+  if (pose.rot) g.rotate((pose.rot * Math.PI) / 180);
   if (c.flipH) g.scale(-1, 1);
   if (c.flipV) g.scale(1, -1);
   try { g.filter = css; } catch (e) {}
@@ -390,7 +408,7 @@ function drawSource(c, cw, ch, local, alphaOverride, dx, tscale) {
   const scale = cover ? Math.max(cw / sw, ch / sh) : Math.min(cw / sw, ch / sh);
   let kb = 1, ox = 0, oy = 0;
   if (c.kb && len > 0) { const p = Math.min(1, Math.max(0, local / len)); kb = 1 + 0.14 * p; ox = (p - 0.5) * cw * 0.06; oy = (p - 0.5) * ch * 0.03; }
-  const ksz = (tscale || 1);
+  const ksz = (tscale || 1) * pose.s;
   const dw = sw * scale * kb * ksz, dh = sh * scale * kb * ksz;
   try { g.drawImage(el, -dw / 2 + ox + (dx || 0), -dh / 2 + oy, dw, dh); } catch (e) {}
   g.restore();
@@ -541,7 +559,7 @@ function dupClip(c) {
   if (c.kind === 'video') { el = document.createElement('video'); el.src = c.url; el.playsInline = true; el.preload = 'auto'; el.crossOrigin = 'anonymous'; el.muted = false; document.body.appendChild(el); }
   else { el = new Image(); el.src = c.url; }
   elMap[id] = el;
-  const n = { ...c, id, filt: { ...c.filt }, el, thumb: c.kind === 'image' ? c.thumb : null, _anode: null, _gain: null };
+  const n = { ...c, id, filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })), el, thumb: c.kind === 'image' ? c.thumb : null, _anode: null, _gain: null };
   clips.splice(clips.indexOf(c) + 1, 0, n); selId = id;
   buildTimeline(); renderClipPanel();
   if (c.kind === 'video') genThumb(n);
@@ -625,6 +643,17 @@ function renderClipPanel() {
       <div class="slider"><label>Fade</label><input type="range" id="c-fade" min="0" max="2" step="0.1" value="${c.fade}"><output>${fmt1(c.fade)}s</output></div>
       <div class="row"><button id="c-rot" title="Putar 90°">⟳ ${c.rot}°</button><button id="c-flipH" class="${c.flipH ? 'on' : ''}">↔ H</button><button id="c-flipV" class="${c.flipV ? 'on' : ''}">↕ V</button><button id="c-asp" class="${c.aspect === 1 ? 'on' : ''}">${c.aspect === 1 ? 'Cover' : 'Contain'}</button><button id="c-kb" class="${c.kb ? 'on' : ''}" title="Gerak Ken Burns (zoom/pan auto)">🎬 KB</button></div>
     </div>
+    <h3>🔑 Animasi Klip (Keyframe)</h3>
+    <div class="grp">
+      <div class="slider"><label>Pos X</label><input type="range" id="kx" min="0" max="100" value="${c.kx != null ? c.kx : 50}"><output>${Math.round(c.kx != null ? c.kx : 50)}%</output></div>
+      <div class="slider"><label>Pos Y</label><input type="range" id="ky" min="0" max="100" value="${c.ky != null ? c.ky : 50}"><output>${Math.round(c.ky != null ? c.ky : 50)}%</output></div>
+      <div class="slider"><label>Skala</label><input type="range" id="ks" min="0.2" max="3" step="0.05" value="${c.ks != null ? c.ks : 1}"><output>${Number(c.ks != null ? c.ks : 1).toFixed(2)}×</output></div>
+      <div class="slider"><label>Rotasi</label><input type="range" id="krot" min="-180" max="180" step="1" value="${c.krot || 0}"><output>${Math.round(c.krot || 0)}°</output></div>
+      <div class="slider"><label>Opasiti</label><input type="range" id="ka" min="0" max="100" value="${Math.round((c.ka != null ? c.ka : 1) * 100)}"><output>${Math.round((c.ka != null ? c.ka : 1) * 100)}%</output></div>
+      <div class="row"><button id="kAdd" title="Rekam pose slider pada playhead">🔑 + Keyframe</button><button id="kClr" class="danger" title="Kosongkan animasi klip">🗑 Anim</button></div>
+      <div class="kfchips" id="kChips"></div>
+      <div style="color:var(--muted);font-size:.7rem;">Tiada keyframe = klip statik ikut slider. Set keyframe pada masa berbeza untuk animasi posisi/skala/rotasi/kelihatan.</div>
+    </div>
     ${isImg ? `<h3>Tempoh gambar</h3><div class="grp"><div class="slider"><label>Saat</label><input type="range" id="c-dur" min="0.5" max="15" step="0.5" value="${c.dur}"><output>${fmt1(c.dur)}s</output></div></div>` : `<h3>🔊 Audio klip</h3><div class="grp"><div class="slider"><label>Volum</label><input type="range" id="c-vol" min="0" max="150" value="${Math.round(c.vol * 100)}"><output>${Math.round(c.vol * 100)}%</output></div><div class="row"><button id="c-mute" class="${c.muted ? 'on' : ''}" style="width:100%">${c.muted ? '🔇 Dibisukan' : '🔊 Hidup'}</button></div></div>`}
   `;
   bindClipPanel(c, isImg);
@@ -666,6 +695,25 @@ function bindClipPanel(c, isImg) {
     const v = $('c-vol'); v.oninput = () => { c.vol = Number(v.value) / 100; v.nextElementSibling.textContent = v.value + '%'; applyClipGain(c); }; v.onchange = () => saveHistory();
     $('c-mute').onclick = () => { c.muted = !c.muted; ensureAudio(); applyClipGain(c); renderClipPanel(); };
   }
+  const KMAP = { kx: 'kx', ky: 'ky', ks: 'ks', krot: 'krot', ka: 'ka' };
+  for (const [id, key] of Object.entries(KMAP)) {
+    const el = $(id); if (!el) continue; const out = el.nextElementSibling;
+    const fmtv = (v) => key === 'ks' ? Number(v).toFixed(2) + '×' : key === 'ka' ? Math.round(v) + '%' : key === 'krot' ? Math.round(v) + '°' : Math.round(v) + '%';
+    el.oninput = () => { const v = Number(el.value); c[key] = key === 'ka' ? v / 100 : v; out.textContent = fmtv(v); };
+    el.onchange = () => saveHistory();
+  }
+  const kfLocal = () => { const s = starts[clips.indexOf(c)]; if (s == null) return 0; return Math.max(0, Math.min(clipLen(c), clock - s)); };
+  $('kAdd').onclick = () => { saveHistory(); const t = kfLocal(); c.kfs = (c.kfs || []).filter((k) => Math.abs(k.t - t) > 0.08); c.kfs.push({ t, x: c.kx != null ? c.kx : 50, y: c.ky != null ? c.ky : 50, s: c.ks != null ? c.ks : 1, rot: c.krot || 0, a: c.ka != null ? c.ka : 1 }); c.kfs.sort((a, b) => a.t - b.t); renderClipKfChips(c); toast('Keyframe klip @ ' + fmt1(t) + 's.'); };
+  $('kClr').onclick = () => { saveHistory(); c.kfs = []; renderClipKfChips(c); toast('Animasi klip dikosongkan.'); };
+  renderClipKfChips(c);
+}
+
+// ── Chips keyframe klip ──
+function renderClipKfChips(c) {
+  const host = $('kChips'); if (!host || !c) return; const kf = c.kfs || [];
+  if (!kf.length) { host.innerHTML = '<span style="color:var(--muted);font-size:.68rem">tiada keyframe — klip statik</span>'; return; }
+  host.innerHTML = kf.map((k, i) => `<span class="chip">@${fmt1(k.t)}s<button data-ck="${i}" title="Buang">✕</button></span>`).join('');
+  host.querySelectorAll('[data-ck]').forEach((b) => { b.onclick = () => { saveHistory(); c.kfs.splice(Number(b.dataset.ck), 1); renderClipKfChips(c); }; });
 }
 // masa sumber playhead dalam klip terpilih (untuk Set In/Out)
 function clockSrc(c) { const s = starts[clips.indexOf(c)]; if (s == null) return c.in; return c.in + (clock - s) * (c.speed || 1); }
@@ -682,18 +730,18 @@ function splitClip(c) {
   const s = starts[clips.indexOf(c)]; const local = clock - s;
   const len = clipLen(c);
   if (local <= 0.05 || local >= len - 0.05) { toast('Letakkan playhead di dalam klip untuk split.'); return; }
-  if (c.kind === 'image') { const d2 = Math.max(0.1, c.dur - local); saveHistory(); const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, dur: d2, el: c.el }; c.dur = local; elMap[right.id] = right.el; clips.splice(clips.indexOf(c) + 1, 0, right); buildTimeline(); toast('Split gambar.'); return; }
+  if (c.kind === 'image') { const d2 = Math.max(0.1, c.dur - local); saveHistory(); const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })), dur: d2, el: c.el }; c.dur = local; elMap[right.id] = right.el; clips.splice(clips.indexOf(c) + 1, 0, right); buildTimeline(); toast('Split gambar.'); return; }
   const cutSrc = srcTime(c, local); saveHistory();
-  const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, in: cutSrc, el: c.el };
+  const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })), in: cutSrc, el: c.el };
   c.out = cutSrc; elMap[right.id] = right.el;
   clips.splice(clips.indexOf(c) + 1, 0, right);
   buildTimeline(); renderClipPanel(); toast('Klip dibelah.');
 }
 
 // ── Undo / Redo ──
-function serialize() { return { clips: clips.map((c) => ({ ...c, filt: { ...c.filt } })), titles: titles.map((t) => ({ ...t, kfs: (t.kfs || []).map((k) => ({ ...k })) })) }; }
+function serialize() { return { clips: clips.map((c) => ({ ...c, filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })) })), titles: titles.map((t) => ({ ...t, kfs: (t.kfs || []).map((k) => ({ ...k })) })) }; }
 function applyState(s) {
-  clips = s.clips.map((c) => ({ ...c, filt: { ...c.filt }, el: elMap[c.id] })).filter((c) => c.el);
+  clips = s.clips.map((c) => ({ ...c, filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })), el: elMap[c.id] })).filter((c) => c.el);
   titles = s.titles.map((t) => ({ ...t, kfs: (t.kfs || []).map((k) => ({ ...k })) }));
   selId = clips.length ? clips[clips.length - 1].id : null;
   buildTimeline(); renderClipPanel(); renderTitleList();
@@ -852,7 +900,7 @@ async function finishRecording() {
 function projectJSON() {
   return {
     v: 1, res: [cvs.width, cvs.height],
-    clips: clips.map((c, i) => ({ id: c.id, kind: c.kind, name: c.name, in: c.in, out: c.out, dur: c.dur, srcDur: c.srcDur, speed: c.speed, vol: c.vol, muted: c.muted, fade: c.fade, rot: c.rot, flipH: c.flipH, flipV: c.flipV, aspect: c.aspect, kb: c.kb, trans: c.trans, transType: c.transType, filt: c.filt, start: starts[i] })),
+    clips: clips.map((c, i) => ({ id: c.id, kind: c.kind, name: c.name, in: c.in, out: c.out, dur: c.dur, srcDur: c.srcDur, speed: c.speed, vol: c.vol, muted: c.muted, fade: c.fade, rot: c.rot, flipH: c.flipH, flipV: c.flipV, aspect: c.aspect, kb: c.kb, trans: c.trans, transType: c.transType, filt: c.filt, kx: c.kx, ky: c.ky, ks: c.ks, krot: c.krot, ka: c.ka, kfs: (c.kfs || []).map((k) => Object.assign({}, k)), start: starts[i] })),
     titles: titles.map((t) => ({ id: t.id, text: t.text, start: t.start, dur: t.dur, size: t.size, color: t.color, pos: t.pos, x: t.x, y: t.y, scale: t.scale, alpha: t.alpha, kfs: (t.kfs || []).map((k) => Object.assign({}, k)) })),
     music: music ? { name: music.name } : null
   };
@@ -870,6 +918,8 @@ function applyProjectSettings(data) {
     c.in = dc.in || 0; c.speed = dc.speed || 1; c.vol = dc.vol != null ? dc.vol : 1; c.muted = !!dc.muted;
     c.fade = dc.fade != null ? dc.fade : 0.4; c.rot = dc.rot || 0; c.flipH = !!dc.flipH; c.flipV = !!dc.flipV;
     c.aspect = dc.aspect || 0; c.kb = !!dc.kb; c.trans = dc.trans || 0; c.transType = dc.transType || 'dissolve';
+    c.kx = dc.kx != null ? dc.kx : 50; c.ky = dc.ky != null ? dc.ky : 50; c.ks = dc.ks != null ? dc.ks : 1; c.krot = dc.krot || 0; c.ka = dc.ka != null ? dc.ka : 1;
+    c.kfs = (dc.kfs || []).map((k) => Object.assign({}, k));
     c.filt = Object.assign(defaultFilt(), dc.filt || {});
     if (c.kind === 'image') { c.dur = dc.dur || 3; }
     else { c.srcDur = (c.el && c.el.duration) || dc.srcDur || 0; if (!c.out || c.out > c.srcDur) c.out = c.srcDur; if (c.in >= c.out) c.in = 0; }
