@@ -1,0 +1,32 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Unit (node:test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Hanya dependency produksi diperlukan oleh ujian (node:test ialah terbina
+      # dalam). --omit=dev melangkau electron/electron-builder/sharp (berat).
+      # postinstall setup-all.sh --from-npm keluar awal (exit 0) di bukan-server.
+      - name: Install
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Lint (syntax check)
+        run: npm run lint
+
+      - name: Test
+        run: npm test
