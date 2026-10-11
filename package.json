@@ -17,7 +17,7 @@
     "build": "node -e 'console.log(\"Build complete\")'",
     "lint": "node -e 'console.log(\"No lint errors\")'",
     "meili": "meilisearch --db-path ./meili_data --master-key $(grep '^MEILI_MASTER_KEY=' ~/.config/tukuk-os/env | cut -d= -f2-) --http-addr 127.0.0.1:7700",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "desktop": "electron .",
     "desktop:dev": "electron . --dev",
     "desktop:no-sandbox": "electron . --no-sandbox",
