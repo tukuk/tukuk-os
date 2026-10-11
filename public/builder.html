@@ -62,6 +62,23 @@
   .swatch { width:34px; height:34px; padding:0; border:1px solid var(--line); border-radius:8px; }
   .movedis { display:flex; gap:4px; }
   @media (max-width:900px){ .grid3{grid-template-columns:1fr; height:auto;} body{height:auto;} .col.left,.col.right{border:none;} }
+  /* ── Paparan KOD (editor + pratonton langsung, tanpa AI) ── */
+  body.code .col.left, body.code .col.right { display:none; }
+  body.code .grid3 { grid-template-columns:1fr; }
+  body.code .devs, body.code #frame, body.code #modeBtn { display:none; }
+  #codeView { display:none; flex-direction:column; gap:10px; align-self:stretch; width:100%; flex:1; min-height:0; }
+  body.code #codeView { display:flex; }
+  .codebar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .codebar label { font-size:12px; color:var(--muted); display:flex; gap:4px; align-items:center; }
+  .codesplit { display:flex; gap:10px; flex:1; min-height:0; }
+  .edWrap { position:relative; flex:1; min-width:0; background:#0b0f1a; border:1px solid var(--line); border-radius:12px; display:flex; overflow:hidden; }
+  .gutter { width:40px; flex:none; padding:12px 8px 12px 0; text-align:right; color:#4a5570; background:rgba(255,255,255,.03); font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; white-space:pre; overflow:hidden; user-select:none; }
+  .edWrap pre, .edWrap textarea { margin:0; border:0; font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; white-space:pre; tab-size:2; }
+  .edWrap pre { position:relative; flex:1; padding:12px; overflow:auto; color:#cdd6ea; background:transparent; pointer-events:none; }
+  .edWrap textarea { position:absolute; top:0; left:40px; right:0; bottom:0; padding:12px; overflow:auto; background:transparent; color:transparent; caret-color:#fff; resize:none; outline:none; white-space:pre; }
+  #edPre .c { color:#5f6b85; font-style:italic; } #edPre .s { color:#9ce6a0; } #edPre .t { color:#7cc4ff; } #edPre .k { color:#ff9ecd; }
+  #edPreview { flex:1; min-width:0; border:1px solid var(--line); border-radius:12px; background:#fff; width:100%; height:100%; }
+  @media (max-width:1000px){ .codesplit{ flex-direction:column; } }
 </style>
 </head>
 <body class="edit">
@@ -71,6 +88,8 @@
   <div class="sp"></div>
   <select id="tpl" class="name" title="Muat templat awal"><option value="">🗂 Templat…</option></select>
   <button id="modeBtn" class="ghost active" title="Tukar antara menyunting & mencuba interaktif">✏️ Edit</button>
+  <button id="viewDesign" class="ghost active" title="Paparan blok visual">🧱 Rekaan</button>
+  <button id="viewCode" class="ghost" title="Editor Kod + pratonton langsung (tanpa AI)">&lt;/&gt; Kod</button>
   <button id="undo" title="Undo">↶</button>
   <button id="redo" title="Redo">↷</button>
   <button id="openBtn" title="Buka projek .json">📂 Buka</button>
@@ -92,6 +111,24 @@
       <button data-dev="desktop" class="ghost">🖥 Desktop</button>
     </div>
     <div class="frame" id="frame"></div>
+    <div id="codeView">
+      <div class="codebar">
+        <button id="codeRegen" title="Jana semula kod daripada blok Rekaan">↺ Jana dari Rekaan</button>
+        <button id="codeCopy" title="Salin kod ke papan klip">📋 Salin</button>
+        <button id="codeDl" title="Muat turun HTML ini">⬇️ Muat turun</button>
+        <button id="codeRun" title="Jalankan pratonton">▶️ Jalankan</button>
+        <label><input type="checkbox" id="codeRunChk" checked> Auto</label>
+        <span class="hint" style="margin:0">Kod dijana daripada blok. Suntingan manual terpakai untuk pratonton/muat turun sahaja — tak kembali ke blok.</span>
+      </div>
+      <div class="codesplit">
+        <div class="edWrap">
+          <div class="gutter" id="edGutter">1</div>
+          <pre id="edPre"><code id="edCode"></code></pre>
+          <textarea id="edTA" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        </div>
+        <iframe id="edPreview" title="Pratonton kod" sandbox="allow-scripts allow-forms allow-popups"></iframe>
+      </div>
+    </div>
   </div>
 
   <div class="col right">
@@ -436,6 +473,50 @@ renderStage(); applyTheme(); renderInspector(); pushH();
 document.addEventListener('keydown',(e)=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); } if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); } });
 window.builderExport = buildExport;   // dieksport untuk ujian unit
 window.builderWidgetMarkup = widgetMarkup;
+</script>
+
+<script>
+'use strict';
+// ── Paparan KOD: editor HTML bersorak + pratonton langsung (gaya "coder", tanpa AI) ──
+(function(){
+  const ta=$('edTA'), codeEl=$('edCode'), preWrap=$('edPre'), gutter=$('edGutter'), preview=$('edPreview');
+  const escHtml=(s)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Sorak sintaks ringan: komen, rentetan, tag HTML, kata kunci JS. Selamat (keluar di-escape).
+  function highlight(c){
+    let out='',last=0,m;
+    const re=/(<!--[\s\S]*?-->|\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("(?:[^"\\]|\\.)*?"|'(?:[^'\\]|\\.)*?')|(<\/?[A-Za-z][^>]*>?)|(\b(?:function|return|if|else|for|while|var|let|const|new|document|window)\b)/g;
+    while((m=re.exec(c))){
+      out+=escHtml(c.slice(last,m.index));
+      const cls=m[1]?'c':m[2]?'s':m[3]?'t':'k';
+      out+='<span class="'+cls+'">'+escHtml(m[0])+'</span>';
+      last=m.index+m[0].length;
+    }
+    return out+escHtml(c.slice(last));
+  }
+  function renderEditor(){ const v=ta.value; codeEl.innerHTML=highlight(v)+'\n'; let g=''; const n=v.split('\n').length; for(let i=1;i<=n;i++) g+=i+'\n'; gutter.textContent=g; syncScroll(); }
+  function syncScroll(){ preWrap.scrollTop=ta.scrollTop; preWrap.scrollLeft=ta.scrollLeft; gutter.scrollTop=ta.scrollTop; }
+  function runPreview(){ preview.srcdoc=ta.value; }
+  let rt; function autoRun(){ clearTimeout(rt); rt=setTimeout(runPreview,400); }
+  function refresh(){ renderEditor(); if($('codeRunChk').checked) autoRun(); }
+  function setView(v){ const code=v==='code'; document.body.classList.toggle('code',code); $('viewCode').classList.toggle('active',code); $('viewDesign').classList.toggle('active',!code); }
+  function toCode(){ ta.value=buildExport(); setView('code'); renderEditor(); runPreview(); }
+
+  $('viewCode').onclick=toCode;
+  $('viewDesign').onclick=()=>setView('design');
+  $('codeRegen').onclick=()=>{ ta.value=buildExport(); refresh(); toast('↺ Kod dijana semula daripada Rekaan'); };
+  $('codeRun').onclick=()=>{ runPreview(); toast('▶️ Pratonton disegar semula'); };
+  $('codeDl').onclick=()=>{ download(ta.value, safe($('appName').value)+'.html','text/html'); toast('⬇️ HTML dimuat turun'); };
+  $('codeCopy').onclick=()=>{ const ok=()=>toast('📋 Kod disalin'); function fb(){ ta.focus(); ta.select(); try{ document.execCommand('copy'); }catch{} ok(); } try{ navigator.clipboard.writeText(ta.value).then(ok,fb); }catch{ fb(); } };
+
+  ta.addEventListener('input',refresh);
+  ta.addEventListener('scroll',syncScroll);
+  ta.addEventListener('keydown',(e)=>{ if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(en); ta.selectionStart=ta.selectionEnd=s+2; refresh(); } });
+
+  // Eksport menghormati mod: dalam Kod → guna kod semasa (termasuk suntingan manual).
+  $('exportBtn').onclick=()=>{ const code=document.body.classList.contains('code'); download(code?ta.value:buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport'+(code?' (kod)':'')+' — buka di mana-mana.'); };
+
+  window.builderCodeOpen=()=>document.body.classList.contains('code');
+})();
 </script>
 </body>
 </html>

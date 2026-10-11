@@ -142,3 +142,24 @@ test('TYPES: 14 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
   assert.equal(keys.length, 14);
   for (const t of keys) assert.equal(TYPES[t].make().type, t);
 });
+
+// ── Paparan KOD: penyorak sintaks `highlight()` + struktur editor ──
+const escHtml = new Function(extractLine(html, 'const escHtml=') + '; return escHtml;')();
+const highlight = new Function('escHtml', extractFn(html, 'highlight') + '; return highlight;')(escHtml);
+
+test('highlight: escape HTML (tiada tembus) & balut token dengan span kelas', () => {
+  const out = highlight('<div class="x">&</div>');
+  assert.ok(out.includes('&lt;div'), 'kurungan sudu di-escape');
+  assert.ok(!out.includes('<div class="x">'), 'tag mentah tidak boleh tembus sebagai HTML hidup');
+  assert.ok(out.includes('<span class="t">'), 'tag dibalut span t');
+  const kw = highlight('function foo(){}');
+  assert.ok(kw.includes('<span class="k">function</span>'), 'kata kunci JS disorak');
+  const cm = highlight('<!-- nota -->');
+  assert.ok(cm.includes('<span class="c">'), 'komen disorak kelas c');
+});
+
+test('codeView: editor + pratonton + butang ada dalam DOM builder', () => {
+  for (const id of ['codeView','edTA','edPre','edCode','edGutter','edPreview','viewCode','viewDesign','codeRegen','codeCopy','codeDl','codeRun','codeRunChk'])
+    assert.ok(html.includes('id="' + id + '"'), 'elemen hilang: #' + id);
+  assert.ok(/iframe[^>]*sandbox="allow-scripts/.test(html), 'iframe pratonton mesti sandboxed');
+});
