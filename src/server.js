@@ -228,7 +228,7 @@ app.use('/satu-kata', express.static(GENERATED_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'design', '3d', 'studio', 'apps', 'bg-remover', 'collage'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'studio', 'apps', 'bg-remover', 'collage'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {

@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tukuk Movie Studio — Editor Timeline Multi-Klip</title>
+<meta name="description" content="Editor video lanjutan dalam pelayar: susun banyak klip & gambar pada garis masa, trim, split, fade, penapis, teks & muzik latar, eksport WebM. Semua diproses lokal, tiada muat naik.">
+<link rel="canonical" href="https://tukuk.org/movie">
+<style>
+  :root { --bg:#0f1320; --panel:#161b2c; --panel2:#1e2540; --line:#2a3350; --text:#e7ecff; --muted:#9aa6cc; --accent:#4c8dff; --video:#3aa0ff; --image:#8a6bff; --title:#f5b445; --music:#37d67a; }
+  * { box-sizing:border-box; }
+  html,body { height:100%; }
+  body { margin:0; font-family:system-ui,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:8px; padding:9px 14px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .logo { font-weight:800; letter-spacing:.2px; margin-right:6px; }
+  .logo small { color:var(--muted); font-weight:600; margin-left:6px; font-size:.72rem; }
+  button, a.btn { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:9px; padding:7px 10px; font-size:.84rem; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  button:hover, a.btn:hover { border-color:var(--accent); }
+  button.on { background:var(--accent); color:#04102a; border-color:var(--accent); font-weight:700; }
+  button.danger:hover { border-color:#ff5a5a; color:#ffb4b4; }
+  button.primary { background:linear-gradient(180deg,#4c8dff,#2f6fe0); color:#fff; border-color:#2f6fe0; font-weight:700; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  input[type=color] { background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:2px; width:38px; height:32px; }
+  select, input[type=number], input[type=text] { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 8px; font-size:.83rem; }
+  input[type=number] { width:72px; }
+  input[type=text] { flex:1; min-width:120px; }
+  input[type=range] { accent-color:var(--accent); }
+  .spacer { flex:1; }
+  .tcode { font-variant-numeric:tabular-nums; font-size:.8rem; color:var(--muted); padding:0 4px; }
+  main { display:flex; flex:1; min-height:0; }
+  aside { width:300px; flex:none; background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:0 0 24px; }
+  aside h3 { margin:16px 12px 8px; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .panel { padding:0 12px; }
+  .grp { background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:8px 0; }
+  .row { display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
+  .row button { flex:1; min-width:0; }
+  .row label { font-size:.74rem; color:var(--muted); }
+  .slider { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  .slider label { width:78px; font-size:.78rem; color:var(--muted); flex:none; }
+  .slider input[type=range] { flex:1; }
+  .slider output { width:42px; text-align:right; font-size:.75rem; color:var(--text); flex:none; }
+  .kv { display:flex; justify-content:space-between; font-size:.78rem; color:var(--muted); margin:2px 0; }
+  .kv b { color:var(--text); font-weight:600; }
+  .empty { color:var(--muted); font-size:.82rem; padding:8px 12px; }
+  .listItem { display:flex; align-items:center; gap:8px; background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:6px 8px; margin:5px 0; font-size:.8rem; }
+  .listItem .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .listItem button { padding:3px 7px; font-size:.75rem; flex:none; }
+  .listItem.sel { border-color:var(--accent); }
+  .workspace { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .stage { flex:1; position:relative; display:flex; align-items:center; justify-content:center; background:repeating-conic-gradient(#12182a 0% 25%, #0f1424 0% 50%) 50% / 28px 28px; overflow:hidden; min-height:180px; }
+  canvas { max-width:calc(100% - 28px); max-height:calc(100% - 28px); box-shadow:0 12px 40px rgba(0,0,0,.55); border-radius:8px; background:#000; }
+  .drop-hint { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--muted); text-align:center; padding:24px; }
+  .drop-hint .big { font-size:52px; }
+  .drop-hint b { color:var(--text); }
+  /* ── Timeline ── */
+  .timeline { flex:none; background:var(--panel); border-top:1px solid var(--line); padding:8px 12px 12px; }
+  .tl-top { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .tl-top input[type=range] { flex:1; }
+  .ruler { position:relative; height:16px; margin:0 0 4px; border-bottom:1px solid var(--line); }
+  .tick { position:absolute; top:0; height:16px; border-left:1px solid var(--line); font-size:.6rem; color:var(--muted); padding-left:3px; }
+  .track { position:relative; display:flex; gap:2px; align-items:stretch; height:56px; background:var(--bg); border:1px solid var(--line); border-radius:9px; padding:3px; overflow-x:auto; overflow-y:hidden; }
+  .track.dragover { outline:2px dashed var(--accent); }
+  .clipblk { position:relative; flex:none; height:100%; min-width:34px; border-radius:7px; border:1px solid var(--line); color:#04102a; font-size:.72rem; font-weight:700; cursor:grab; overflow:hidden; display:flex; align-items:flex-end; padding:3px 5px; user-select:none; }
+  .clipblk.video { background:linear-gradient(180deg,#4c8dff,#2f6fe0); }
+  .clipblk.image { background:linear-gradient(180deg,#a894ff,#7a5cff); }
+  .clipblk.sel { outline:2px solid #fff; outline-offset:-2px; }
+  .clipblk.dragging { opacity:.4; }
+  .clipblk .lbl { text-shadow:0 1px 2px rgba(255,255,255,.4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .clipblk .fadeI, .clipblk .fadeO { position:absolute; top:0; bottom:0; width:0; background:rgba(0,0,0,.35); pointer-events:none; }
+  .clipblk .fadeI { left:0; } .clipblk .fadeO { right:0; }
+  .titlelane { margin-top:6px; height:26px; position:relative; background:var(--bg); border:1px dashed var(--line); border-radius:7px; overflow-x:auto; }
+  .titleblk { position:absolute; top:2px; height:20px; background:var(--title); color:#2a1e00; border-radius:5px; font-size:.66rem; font-weight:700; padding:2px 5px; overflow:hidden; white-space:nowrap; cursor:pointer; }
+  .playhead { position:absolute; top:-24px; bottom:0; width:2px; background:#ff3b30; z-index:6; pointer-events:none; }
+  .playhead::before { content:""; position:absolute; top:20px; left:-4px; width:10px; height:10px; background:#ff3b30; border-radius:2px; }
+  video,audio { display:none; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0b1020; color:#fff; border:1px solid var(--accent); border-radius:10px; padding:10px 16px; font-size:.85rem; opacity:0; pointer-events:none; transition:opacity .25s; z-index:60; }
+  .toast.show { opacity:1; }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(5px); z-index:100; display:flex; align-items:center; justify-content:center; }
+  .modal-bg[hidden], [hidden] { display:none !important; }
+  .modal-card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 26px; max-width:520px; width:92%; color:var(--text); box-shadow:0 20px 50px rgba(0,0,0,.6); }
+  .modal-card h2 { margin-top:0; font-size:1.15rem; color:var(--accent); }
+  .modal-card table { width:100%; border-collapse:collapse; margin:12px 0; font-size:.86rem; }
+  .modal-card td { padding:7px 4px; border-bottom:1px solid var(--line); }
+  .modal-card kbd { background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:3px 7px; font-family:monospace; font-size:.82rem; color:var(--accent); }
+  @media (max-width:760px) { aside { width:220px; } .slider label { width:60px; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🎞 Tukuk Movie Studio <small>timeline lanjutan</small></span>
+  <button id="addBtn" class="primary" title="Tambah klip video / gambar ke garis masa">＋ Tambah klip</button>
+  <input type="file" id="fileInput" accept="video/*,image/*" multiple hidden>
+  <button id="musicBtn" title="Tambah trek muzik latar">🎵 Muzik</button>
+  <input type="file" id="musicInput" accept="audio/*" hidden>
+  <span class="spacer"></span>
+  <button id="toStart" title="Ke awal (Home)">⏮</button>
+  <button id="playBtn" title="Main / Jeda (Space)">▶ Main</button>
+  <button id="toEnd" title="Ke akhir (End)">⏭</button>
+  <span class="tcode"><span id="tCur">0:00</span> / <span id="tDur">0:00</span></span>
+  <button id="undoBtn" title="Undur (Ctrl+Z)">↶</button>
+  <button id="redoBtn" title="Buat semula (Ctrl+Y)">↷</button>
+  <button id="shortcutsBtn" title="Pintasan (?)">⌨</button>
+  <button id="exportBtn" class="primary" title="Rakam garis masa penuh &amp; muat turun WebM (masa nyata)">⬇ Eksport</button>
+  <a class="btn" href="/editor-video" title="Editor FX klip tunggal (kesan kartun)">🎬 FX</a>
+  <a class="btn" href="/studio" title="Tukuk Studio Suite">◂ Suite</a>
+  <a class="btn" href="/" title="Kembali ke carian">⌕</a>
+</header>
+
+<main>
+  <aside>
+    <div class="panel" id="clipPanel"></div>
+
+    <h3>🅣 Trek Teks</h3>
+    <div class="panel">
+      <div class="grp">
+        <div class="row"><input type="text" id="titleText" placeholder="Tulis tajuk / kapsyen…"></div>
+        <div class="row" style="align-items:center;">
+          <input type="color" id="titleColor" value="#ffffff" title="Warna teks">
+          <select id="titlePos" style="flex:1;"><option value="top">Atas</option><option value="center">Tengah</option><option value="bottom" selected>Bawah</option></select>
+        </div>
+        <div class="slider"><label>Saiz</label><input type="range" id="titleSize" min="4" max="18" value="9"><output>9</output></div>
+        <div class="kv"><span>Mula @ playhead</span><b id="titleStartVal">0.0s</b></div>
+        <div class="slider"><label>Tempoh</label><input type="range" id="titleDur" min="0.5" max="10" step="0.1" value="3"><output>3.0s</output></div>
+        <div class="row"><button id="addTitleBtn">＋ Tambah Teks</button></div>
+      </div>
+      <div id="titleList"></div>
+    </div>
+
+    <h3>🎵 Muzik Latar</h3>
+    <div class="panel">
+      <div class="grp">
+        <div class="kv"><span>Fail</span><b id="musicName">— tiada —</b></div>
+        <div class="slider"><label>Volum</label><input type="range" id="musicVol" min="0" max="100" value="80"><output>80%</output></div>
+        <div class="row"><button id="clearMusicBtn" class="danger">🗑 Buang muzik</button></div>
+        <div class="foot-status" style="color:var(--muted);font-size:.72rem;">Muzik dimainkan bermula dari awal garis masa dan ikut terbawa dalam eksport.</div>
+      </div>
+    </div>
+
+    <h3>ℹ Projek</h3>
+    <div class="panel">
+      <div class="grp">
+        <div class="kv"><span>Klip</span><b id="statClips">0</b></div>
+        <div class="kv"><span>Jumlah durasi</span><b id="statDur">0:00</b></div>
+        <div class="kv"><span>Resolusi keluar</span><b id="statRes">—</b></div>
+        <div class="row"><button id="clearAllBtn" class="danger">🗑 Kosongkan garis masa</button></div>
+      </div>
+      <div class="foot-status" style="color:var(--muted);font-size:.74rem;padding:0 2px;">Semua suntingan &amp; rakaman berlaku dalam pelayar — tiada video dihantar ke mana-mana. Eksport dirakam secara <b>masa nyata</b> (durasi rakaman = panjang garis masa).</div>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <div class="stage" id="stage">
+      <canvas id="cvs" width="1280" height="720"></canvas>
+      <div class="drop-hint" id="dropHint">
+        <div class="big">🎞</div>
+        <div>Seret &amp; jatuh <b>video / gambar</b> ke sini, atau tekan <b>＋ Tambah klip</b>.</div>
+        <div class="foot-status">Bina filem daripada banyak klip: susun semula (seret blok), trim, split, fade, penapis warna, teks &amp; muzik — kemudian eksport satu WebM.</div>
+      </div>
+    </div>
+
+    <div class="timeline" id="timeline">
+      <div class="tl-top">
+        <input type="range" id="scrub" min="0" max="0" step="0.01" value="0">
+      </div>
+      <div class="ruler" id="ruler"></div>
+      <div class="track" id="track"></div>
+      <div class="titlelane" id="titleLane"></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-bg" id="shortcutsModal" hidden>
+  <div class="modal-card">
+    <h2>⌨️ Pintasan Movie Studio</h2>
+    <table>
+      <tr><td>Main / Jeda</td><td><kbd>Space</kbd></td></tr>
+      <tr><td>Ke awal / akhir</td><td><kbd>Home</kbd> / <kbd>End</kbd></td></tr>
+      <tr><td>Langkah 1 bingkai (±0.03s)</td><td><kbd>←</kbd> / <kbd>→</kbd></td></tr>
+      <tr><td>Split klip di playhead</td><td><kbd>S</kbd></td></tr>
+      <tr><td>Buang klip terpilih</td><td><kbd>Del</kbd></td></tr>
+      <tr><td>Undur / Buat semula</td><td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td></tr>
+      <tr><td>Papar pintasan / tutup</td><td><kbd>?</kbd> / <kbd>Esc</kbd></td></tr>
+    </table>
+    <div style="text-align:right; margin-top:14px;"><button class="primary" id="closeModalBtn">✓ Faham</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ── Tukuk Movie Studio — editor timeline multi-klip (browser-only) ──
+const $ = (id) => document.getElementById(id);
+const cvs = $('cvs');
+const g = cvs.getContext('2d');
+const videoHost = document.createElement('div'); // penyimpanan elemen media tersembunyi
+const PPS_BASE = 48;   // piksel per saat (disuaikan mengikut lebar track)
+let PPS = PPS_BASE;
+let GAP = 2;
+
+// ── Keadaan global ──
+let clips = [];        // jujukan klip
+let titles = [];       // overlay teks
+let music = null;      // { el, url, name }
+let elMap = {};        // id -> elemen media (untuk undo/redo)
+let uid = 1;
+let starts = [];       // masa mula kumulatif setiap klip
+let total = 0;         // jumlah durasi garis masa (saat)
+let selId = null;      // klip terpilih
+let clock = 0;         // kedudukan playhead semasa (saat)
+let playing = false;
+let recording = false;
+let activeId = null;   // klip yang sedang aktif ( utk sinkron )
+let lastTs = 0;
+let scrubbing = false;
+let history = [], future = [];
+
+// ── Utiliti ──
+function fmt(s) { s = Math.max(0, s || 0); const m = Math.floor(s / 60); const ss = Math.floor(s % 60); return m + ':' + String(ss).padStart(2, '0'); }
+function fmt1(s) { return (Math.round((s || 0) * 10) / 10).toFixed(1); }
+let toastT = null;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+function downloadBlob(blob, name) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 8000); }
+function defaultFilt() { return { bright: 100, contrast: 100, saturate: 100, gray: 0, sepia: 0 }; }
+
+// ── Panjang paparan satu klip (dipengaruhi trim & kelajuan) ──
+function clipLen(c) {
+  if (c.kind === 'image') return c.dur || 3;
+  const s = (c.out > c.in) ? (c.out - c.in) : (c.srcDur || 1);
+  return Math.max(0.05, s / (c.speed || 1));
+}
+
+// ── Bina semula garis masa: starts, total, layout, statistik ──
+function buildTimeline() {
+  starts = [];
+  let acc = 0;
+  for (const c of clips) { starts.push(acc); acc += clipLen(c); }
+  total = acc;
+  // sesuaikan PPS supaya muat dalam track tanpa scroll (selari tepat dgn playhead/ruler)
+  const inner = Math.max(80, $('track').clientWidth - 6);
+  PPS = total > 0 ? inner / total : PPS_BASE;
+  $('scrub').max = String(total);
+  $('tDur').textContent = fmt(total);
+  $('statClips').textContent = String(clips.length);
+  $('statDur').textContent = fmt(total);
+  $('statRes').textContent = cvs.width + '×' + cvs.height;
+  drawRuler();
+  renderTrack();
+  renderTitleLane();
+  updateTransport();
+}
+
+// ── Cari klip pada masa t ──
+function findAt(t) {
+  if (!clips.length) return null;
+  if (t >= total) t = Math.max(0, total - 0.001);
+  if (t < 0) t = 0;
+  for (let i = 0; i < clips.length; i++) {
+    const s = starts[i];
+    const len = clipLen(clips[i]);
+    if (t < s + len || i === clips.length - 1) return { clip: clips[i], index: i, start: s, local: Math.min(len, t - s) };
+  }
+  return null;
+}
+
+// ── Muat fail media ──
+async function addFiles(list) {
+  let addedFirst = false;
+  for (const f of list) {
+    const isVid = (f.type || '').startsWith('video/');
+    const isImg = (f.type || '').startsWith('image/');
+    if (!isVid && !isImg) continue;
+    const url = URL.createObjectURL(f);
+    const id = 'c' + (uid++);
+    if (isImg) {
+      const img = new Image(); img.src = url; await img.decode().catch(() => {});
+      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt() };
+      elMap[id] = img; clips.push(c); addedFirst = addedFirst || false;
+    } else {
+      const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.muted = false;
+      await new Promise((res) => { const h = () => { v.removeEventListener('loadedmetadata', h); res(); }; v.addEventListener('loadedmetadata', h); setTimeout(res, 4000); });
+      if (!addedFirst && v.videoWidth) { const sc = Math.min(1, 1280 / v.videoWidth); cvs.width = Math.round(v.videoWidth * sc); cvs.height = Math.round(v.videoHeight * sc); addedFirst = true; }
+      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt() };
+      elMap[id] = v; document.body.appendChild(v); clips.push(c);
+    }
+    selId = id;
+  }
+  if (clips.length) { if (clock > total) clock = 0; buildTimeline(); renderClipPanel(); }
+  $('dropHint').hidden = clips.length > 0;
+  toast('Klip ditambah.');
+}
+
+// ── Audio graph (lazily, sekali per elemen) ──
+let actx = null, master = null, musicGain = null, musicSrc = null;
+function ensureAudio() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  if (!master) { master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination); }
+  for (const c of clips) {
+    if (c.kind !== 'video' || c._anode) continue;
+    try {
+      const src = actx.createMediaElementSource(c.el);
+      const gn = actx.createGain();
+      src.connect(gn); gn.connect(master);
+      c._anode = src; c._gain = gn;
+    } catch (e) { /* mungkin sudah bersumber */ }
+  }
+  if (music && !musicSrc) {
+    try { musicSrc = actx.createMediaElementSource(music.el); musicGain = actx.createGain(); musicSrc.connect(musicGain); musicGain.connect(master); musicGain.gain.value = Number($('musicVol').value) / 100; } catch (e) {}
+  }
+}
+function applyClipGain(c) { if (c._gain) c._gain.gain.value = c.muted ? 0 : (c.vol || 0); }
+
+// ── Pengiraan masa sumber ──
+function srcTime(c, local) { return c.in + local * (c.speed || 1); }
+
+// ── Sinkronkan elemen video aktif dengan jam ──
+function syncActive(t) {
+  const A = findAt(t);
+  if (!A) { return; }
+  if (activeId !== A.clip.id) {
+    for (const c of clips) if (c.kind === 'video' && c.el) { if (c.id !== A.clip.id) { try { c.el.pause(); } catch (e) {} } }
+    activeId = A.clip.id;
+    if (A.clip.kind === 'video' && A.clip.el) { try { A.clip.el.currentTime = srcTime(A.clip, A.local); A.clip.el.playbackRate = A.clip.speed || 1; if (playing) A.clip.el.play().catch(() => {}); } catch (e) {} }
+  }
+  const c = A.clip;
+  if (playing && c.kind === 'video' && c.el) {
+    const exp = srcTime(c, A.local);
+    if (Math.abs(c.el.currentTime - exp) > 0.3) { try { c.el.currentTime = exp; } catch (e) {} }
+    if (c.el.paused) { try { c.el.play().catch(() => {}); } catch (e) {} }
+  }
+}
+
+// ── Lukis satu sumber ke canvas ──
+function drawSource(c, cw, ch, local) {
+  const el = c.el; if (!el) return;
+  const sw = c.w || el.videoWidth || el.naturalWidth || cw;
+  const sh = c.h || el.videoHeight || el.naturalHeight || ch;
+  let a = 1;
+  const len = clipLen(c);
+  if (c.fade > 0) { const dIn = local, dOut = len - local; a = Math.min(a, Math.min(1, dIn / c.fade), Math.min(1, dOut / c.fade)); }
+  a = Math.max(0, a);
+  const f = c.filt;
+  const css = `brightness(${f.bright}%) contrast(${f.contrast}%) saturate(${f.saturate}%) grayscale(${f.gray}%) sepia(${f.sepia}%)`;
+  g.save();
+  g.globalAlpha = a;
+  g.translate(cw / 2, ch / 2);
+  if (c.rot) g.rotate((c.rot * Math.PI) / 180);
+  if (c.flipH) g.scale(-1, 1);
+  if (c.flipV) g.scale(1, -1);
+  try { g.filter = css; } catch (e) {}
+  const cover = c.aspect === 1;
+  const scale = cover ? Math.max(cw / sw, ch / sh) : Math.min(cw / sw, ch / sh);
+  const dw = sw * scale, dh = sh * scale;
+  try { g.drawImage(el, -dw / 2, -dh / 2, dw, dh); } catch (e) {}
+  g.restore();
+  g.filter = 'none';
+}
+
+// ── Lukis overlay teks aktif ──
+function drawTitles(t) {
+  const cw = cvs.width, ch = cvs.height;
+  for (const ti of titles) {
+    if (t < ti.start || t > ti.start + ti.dur) continue;
+    const local = t - ti.start;
+    let a = 1; const fd = 0.3;
+    if (local < fd) a = local / fd;
+    if (ti.dur - local < fd) a = Math.min(a, (ti.dur - local) / fd);
+    const px = Math.round(cw * (ti.size / 100));
+    g.save();
+    g.globalAlpha = Math.max(0, a);
+    g.font = '700 ' + px + 'px system-ui,"Segoe UI",Roboto,sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    let ty = ch * 0.5;
+    if (ti.pos === 'top') ty = px;
+    else if (ti.pos === 'bottom') ty = ch - px;
+    g.lineWidth = Math.max(2, px * 0.08); g.strokeStyle = 'rgba(0,0,0,.75)';
+    g.strokeText(ti.text, cw / 2, ty);
+    g.fillStyle = ti.color; g.fillText(ti.text, cw / 2, ty);
+    g.restore();
+  }
+}
+
+// ── Render bingkai pada masa t ──
+function renderAt(t) {
+  const cw = cvs.width, ch = cvs.height;
+  g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch);
+  const A = findAt(t);
+  if (A) drawSource(A.clip, cw, ch, A.local);
+  drawTitles(t);
+}
+
+// ── Gelung rAF utama (jam-master bebas) ──
+function frame(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = (ts - lastTs) / 1000; lastTs = ts;
+  if (playing) {
+    clock += dt;
+    if (clock >= total) { clock = total; onReachEnd(); }
+    syncActive(clock);
+  }
+  renderAt(clock);
+  updateTransport();
+  requestAnimationFrame(frame);
+}
+function onReachEnd() {
+  if (recording) { finishRecording(); }
+  else { pause(); }
+}
+
+// ── Transport UI ──
+function updateTransport() {
+  $('tCur').textContent = fmt(clock);
+  if (!scrubbing) $('scrub').value = String(clock);
+  const ph = playheadEl(); if (ph) ph.style.left = (clock * PPS) + 'px';
+  const tl = $('track'); if (playing && tl) { const x = clock * PPS; if (x > tl.scrollLeft + tl.clientWidth - 40) tl.scrollLeft = x - tl.clientWidth + 60; else if (x < tl.scrollLeft) tl.scrollLeft = x; }
+}
+function play() {
+  if (!total) { toast('Tiada klip pada garis masa.'); return; }
+  ensureAudio(); if (actx && actx.state === 'suspended') actx.resume();
+  if (clock >= total - 0.01) { clock = 0; if (music && music.el) { try { music.el.currentTime = 0; } catch (e) {} } }
+  playing = true; lastTs = 0; $('playBtn').textContent = '⏸ Jeda';
+  if (music && music.el) { try { music.el.play().catch(() => {}); } catch (e) {} }
+}
+function pause() {
+  playing = false; $('playBtn').textContent = '▶ Main';
+  for (const c of clips) if (c.kind === 'video' && c.el) { try { c.el.pause(); } catch (e) {} }
+  if (music && music.el) { try { music.el.pause(); } catch (e) {} }
+}
+function seekTo(t) {
+  clock = Math.max(0, Math.min(total, t));
+  const A = findAt(clock);
+  activeId = null; // paksa re-sync
+  if (A && A.clip.kind === 'video' && A.clip.el) { try { A.clip.el.currentTime = srcTime(A.clip, A.local); } catch (e) {} }
+  renderAt(clock); updateTransport();
+}
+
+// ── Elemen playhead ──
+function playheadEl() { let el = $('playhead'); if (!el) { el = document.createElement('div'); el.id = 'playhead'; el.className = 'playhead'; } return el; }
+
+// ── Render blok klip pada track ──
+function renderTrack() {
+  const track = $('track');
+  track.querySelectorAll('.clipblk').forEach((x) => x.remove());
+  clips.forEach((c, i) => {
+    const b = document.createElement('div');
+    b.className = 'clipblk ' + c.kind + (c.id === selId ? ' sel' : '');
+    b.draggable = true; b.dataset.i = String(i); b.dataset.id = c.id;
+    b.style.width = Math.max(24, Math.round(clipLen(c) * PPS)) + 'px';
+    b.innerHTML = '<span class="lbl">' + escapeHtml(c.name || (c.kind === 'video' ? 'klip' : 'gambar')) + '</span>';
+    b.title = c.name + ' · ' + fmt1(clipLen(c)) + 's';
+    track.insertBefore(b, $('playhead') || null);
+  });
+  const ph = playheadEl(); if (!ph.parentNode) track.appendChild(ph);
+  ph.style.position = 'absolute'; ph.style.top = '-24px';
+}
+
+// ── Ruler ──
+function drawRuler() {
+  const r = $('ruler'); r.innerHTML = '';
+  const step = total <= 12 ? 1 : total <= 40 ? 5 : total <= 120 ? 10 : 30;
+  for (let s = 0; s <= total; s += step) {
+    const tk = document.createElement('div'); tk.className = 'tick';
+    tk.style.left = (s * PPS) + 'px'; tk.textContent = fmt(s);
+    r.appendChild(tk);
+  }
+  r.style.width = Math.max(60, total * PPS) + 'px';
+}
+
+// ── Lane teks ──
+function renderTitleLane() {
+  const lane = $('titleLane'); lane.innerHTML = '';
+  for (const ti of titles) {
+    const b = document.createElement('div'); b.className = 'titleblk';
+    b.style.left = (ti.start * PPS) + 'px'; b.style.width = Math.max(30, ti.dur * PPS) + 'px';
+    b.textContent = ti.text || 'Teks'; b.title = ti.text;
+    b.onclick = () => { editTitle(ti.id); };
+    lane.appendChild(b);
+  }
+  lane.style.width = Math.max(60, total * PPS) + 'px';
+}
+
+function escapeHtml(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+</script>
+
+<script>
+'use strict';
+// ── Panel properti klip terpilih ──
+function selClip() { return clips.find((c) => c.id === selId) || null; }
+function selectClip(id) { selId = id; renderTrack(); renderClipPanel(); }
+
+function renderClipPanel() {
+  const host = $('clipPanel'); const c = selClip();
+  if (!c) { host.innerHTML = '<h3>🎬 Klip</h3><div class="empty">Pilih satu blok klip pada garis masa untuk menyuntingnya.</div>'; return; }
+  const isImg = c.kind === 'image';
+  host.innerHTML = `
+    <h3>🎬 Klip</h3>
+    <div class="kv"><span>Nama</span><b>${escapeHtml(c.name)}</b></div>
+    <div class="kv"><span>Jenis</span><b>${isImg ? 'Gambar' : 'Video'}</b></div>
+    <div class="kv"><span>Panjang garis masa</span><b>${fmt1(clipLen(c))}s</b></div>
+    <div class="grp">
+      <div class="row">
+        <button id="moveL">◀</button><button id="moveR">▶</button>
+        <button id="splitBtn" title="Belah klip di playhead">✂ Split</button>
+        <button id="delBtn" class="danger" title="Buang klip">🗑</button>
+      </div>
+    </div>
+    ${isImg ? '' : `<h3>✂ Trim & Kelajuan</h3>
+    <div class="grp">
+      <div class="kv"><span>In (sumber)</span><b id="inLbl">${fmt1(c.in)}s</b></div>
+      <div class="kv"><span>Out (sumber)</span><b id="outLbl">${fmt1(c.out)}s</b></div>
+      <div class="row"><button id="setIn" style="flex:1">⬅ Set In @playhead</button><button id="setOut" style="flex:1">Set Out @playhead ➡</button></div>
+      <div class="slider"><label>Kelajuan</label><select id="cSpeed" style="flex:1">${[0.25, 0.5, 1, 1.5, 2, 3].map((v) => `<option value="${v}" ${c.speed === v ? 'selected' : ''}>${v}×</option>`).join('')}</select></div>
+    </div>`}
+    <h3>🎨 Gaya & Geometri</h3>
+    <div class="grp">
+      <div class="slider"><label>Kecerahan</label><input type="range" id="c-bright" min="20" max="200" value="${c.filt.bright}"><output>${c.filt.bright}</output></div>
+      <div class="slider"><label>Kontras</label><input type="range" id="c-contrast" min="20" max="200" value="${c.filt.contrast}"><output>${c.filt.contrast}</output></div>
+      <div class="slider"><label>Saturasi</label><input type="range" id="c-saturate" min="0" max="250" value="${c.filt.saturate}"><output>${c.filt.saturate}</output></div>
+      <div class="slider"><label>Grayscale</label><input type="range" id="c-gray" min="0" max="100" value="${c.filt.gray}"><output>${c.filt.gray}</output></div>
+      <div class="slider"><label>Sepia</label><input type="range" id="c-sepia" min="0" max="100" value="${c.filt.sepia}"><output>${c.filt.sepia}</output></div>
+      <div class="slider"><label>Fade</label><input type="range" id="c-fade" min="0" max="2" step="0.1" value="${c.fade}"><output>${fmt1(c.fade)}s</output></div>
+      <div class="row"><button id="c-rot" title="Putar 90°">⟳ ${c.rot}°</button><button id="c-flipH" class="${c.flipH ? 'on' : ''}">↔ H</button><button id="c-flipV" class="${c.flipV ? 'on' : ''}">↕ V</button><button id="c-asp" class="${c.aspect === 1 ? 'on' : ''}">${c.aspect === 1 ? 'Cover' : 'Contain'}</button></div>
+    </div>
+    ${isImg ? `<h3>Tempoh gambar</h3><div class="grp"><div class="slider"><label>Saat</label><input type="range" id="c-dur" min="0.5" max="15" step="0.5" value="${c.dur}"><output>${fmt1(c.dur)}s</output></div></div>` : `<h3>🔊 Audio klip</h3><div class="grp"><div class="slider"><label>Volum</label><input type="range" id="c-vol" min="0" max="150" value="${Math.round(c.vol * 100)}"><output>${Math.round(c.vol * 100)}%</output></div><div class="row"><button id="c-mute" class="${c.muted ? 'on' : ''}" style="width:100%">${c.muted ? '🔇 Dibisukan' : '🔊 Hidup'}</button></div></div>`}
+  `;
+  bindClipPanel(c, isImg);
+}
+
+function bindClipPanel(c, isImg) {
+  const touch = () => { saveHistory(); };
+  $('moveL').onclick = () => { const i = clips.indexOf(c); if (i > 0) { touch(); clips.splice(i - 1, 0, clips.splice(i, 1)[0]); buildTimeline(); } };
+  $('moveR').onclick = () => { const i = clips.indexOf(c); if (i < clips.length - 1) { touch(); clips.splice(i + 1, 0, clips.splice(i, 1)[0]); buildTimeline(); } };
+  $('delBtn').onclick = () => delClip(c.id);
+  if (!isImg) {
+    $('setIn').onclick = () => { saveHistory(); c.in = Math.max(0, Math.min(c.srcDur - 0.05, clockSrc(c))); if (c.out <= c.in) c.out = Math.min(c.srcDur, c.in + 0.2); buildTimeline(); renderClipPanel(); };
+    $('setOut').onclick = () => { saveHistory(); c.out = Math.max(c.in + 0.05, Math.min(c.srcDur, clockSrc(c))); buildTimeline(); renderClipPanel(); };
+    $('splitBtn').onclick = () => splitClip(c);
+    $('cSpeed').onchange = (e) => { touch(); c.speed = Number(e.target.value); c.el.playbackRate = c.speed; buildTimeline(); };
+  }
+  const fs = { 'c-bright': 'bright', 'c-contrast': 'contrast', 'c-saturate': 'saturate', 'c-gray': 'gray', 'c-sepia': 'sepia' };
+  for (const [id, key] of Object.entries(fs)) { const el = $(id); if (!el) continue; el.oninput = () => { c.filt[key] = Number(el.value); el.nextElementSibling.textContent = el.value; }; }
+  $('c-fade').oninput = (e) => { c.fade = Number(e.target.value); e.target.nextElementSibling.textContent = fmt1(c.fade) + 's'; };
+  $('c-fade').onchange = () => saveHistory();
+  $('c-rot').onclick = () => { saveHistory(); c.rot = (c.rot + 90) % 360; renderClipPanel(); };
+  $('c-flipH').onclick = () => { c.flipH = !c.flipH; renderClipPanel(); };
+  $('c-flipV').onclick = () => { c.flipV = !c.flipV; renderClipPanel(); };
+  $('c-asp').onclick = () => { c.aspect = c.aspect === 1 ? 0 : 1; renderClipPanel(); };
+  if (isImg) { const el = $('c-dur'); if (el) { el.oninput = () => { c.dur = Number(el.value); el.nextElementSibling.textContent = fmt1(c.dur) + 's'; buildTimeline(); }; el.onchange = () => saveHistory(); } }
+  else {
+    const v = $('c-vol'); v.oninput = () => { c.vol = Number(v.value) / 100; v.nextElementSibling.textContent = v.value + '%'; applyClipGain(c); }; v.onchange = () => saveHistory();
+    $('c-mute').onclick = () => { c.muted = !c.muted; ensureAudio(); applyClipGain(c); renderClipPanel(); };
+  }
+}
+// masa sumber playhead dalam klip terpilih (untuk Set In/Out)
+function clockSrc(c) { const s = starts[clips.indexOf(c)]; if (s == null) return c.in; return c.in + (clock - s) * (c.speed || 1); }
+
+// ── Tambah / buang / split ──
+function delClip(id) {
+  saveHistory();
+  clips = clips.filter((c) => c.id !== id);
+  if (selId === id) selId = clips.length ? clips[0].id : null;
+  buildTimeline(); renderClipPanel();
+  $('dropHint').hidden = clips.length > 0;
+}
+function splitClip(c) {
+  const s = starts[clips.indexOf(c)]; const local = clock - s;
+  const len = clipLen(c);
+  if (local <= 0.05 || local >= len - 0.05) { toast('Letakkan playhead di dalam klip untuk split.'); return; }
+  if (c.kind === 'image') { const d2 = Math.max(0.1, c.dur - local); saveHistory(); const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, dur: d2, el: c.el }; c.dur = local; elMap[right.id] = right.el; clips.splice(clips.indexOf(c) + 1, 0, right); buildTimeline(); toast('Split gambar.'); return; }
+  const cutSrc = srcTime(c, local); saveHistory();
+  const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, in: cutSrc, el: c.el };
+  c.out = cutSrc; elMap[right.id] = right.el;
+  clips.splice(clips.indexOf(c) + 1, 0, right);
+  buildTimeline(); renderClipPanel(); toast('Klip dibelah.');
+}
+
+// ── Undo / Redo ──
+function serialize() { return { clips: clips.map((c) => ({ ...c, filt: { ...c.filt } })), titles: titles.map((t) => ({ ...t })) }; }
+function applyState(s) {
+  clips = s.clips.map((c) => ({ ...c, filt: { ...c.filt }, el: elMap[c.id] })).filter((c) => c.el);
+  titles = s.titles.map((t) => ({ ...t }));
+  selId = clips.length ? clips[clips.length - 1].id : null;
+  buildTimeline(); renderClipPanel(); renderTitleList();
+}
+function saveHistory() { history.push(serialize()); if (history.length > 50) history.shift(); future = []; updUndo(); }
+function undo() { if (!history.length) return; future.push(serialize()); applyState(history.pop()); updUndo(); }
+function redo() { if (!future.length) return; history.push(serialize()); applyState(future.pop()); updUndo(); }
+function updUndo() { $('undoBtn').disabled = !history.length; $('redoBtn').disabled = !future.length; }
+
+// ── Trek Teks ──
+let titleUid = 1;
+function editTitle(id) {
+  const ti = titles.find((x) => x.id === id); if (!ti) return;
+  const nv = prompt('Sunting teks:', ti.text);
+  if (nv != null) { saveHistory(); ti.text = nv; buildTimeline(); renderTitleList(); }
+}
+function renderTitleList() {
+  const host = $('titleList'); if (!host) return;
+  if (!titles.length) { host.innerHTML = '<div class="empty">Belum ada teks.</div>'; return; }
+  host.innerHTML = titles.map((ti) => `<div class="listItem"><span class="nm">${escapeHtml(ti.text || 'Teks')} <small style="color:var(--muted)">@${fmt1(ti.start)}s +${fmt1(ti.dur)}s</small></span><button data-dl="${ti.id}" class="danger">✕</button></div>`).join('');
+  host.querySelectorAll('[data-dl]').forEach((b) => { b.onclick = () => { saveHistory(); titles = titles.filter((t) => t.id !== b.dataset.dl); renderTitleLane(); renderTitleList(); }; });
+}
+$('addTitleBtn').onclick = () => {
+  const text = $('titleText').value.trim();
+  if (!text) { toast('Taip teks dahulu.'); return; }
+  if (!total) { toast('Tambah klip dahulu.'); return; }
+  saveHistory();
+  titles.push({ id: 't' + (titleUid++), text, start: clock, dur: Number($('titleDur').value), size: Number($('titleSize').value), color: $('titleColor').value, pos: $('titlePos').value });
+  $('titleText').value = '';
+  renderTitleLane(); renderTitleList(); toast('Teks ditambah @ ' + fmt1(clock) + 's.');
+};
+</script>
+
+<script>
+'use strict';
+// ── Muzik latar ──
+$('musicBtn').onclick = () => $('musicInput').click();
+$('musicInput').onchange = (e) => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  if (music) { try { music.el.pause(); URL.revokeObjectURL(music.url); } catch (err) {} }
+  const url = URL.createObjectURL(f);
+  const el = new Audio(url); el.loop = true; el.preload = 'auto';
+  music = { el, url, name: f.name }; musicSrc = null;
+  $('musicName').textContent = f.name;
+  toast('Muzik dimuat — akan ikut semasa main/eksport.');
+};
+$('clearMusicBtn').onclick = () => { if (music) { try { music.el.pause(); URL.revokeObjectURL(music.url); } catch (e) {} music = null; musicSrc = null; $('musicName').textContent = '— tiada —'; } };
+$('musicVol').oninput = (e) => { e.target.nextElementSibling.textContent = e.target.value + '%'; if (musicGain) musicGain.gain.value = Number(e.target.value) / 100; };
+
+// ── Eksport WebM (rakaman masa nyata seluruh garis masa) ──
+function pickMime() { const c = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']; for (const m of c) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; return null; }
+let rec = null, recChunks = [], recMime = '', recDone = null;
+$('exportBtn').onclick = async () => {
+  if (!total) { toast('Tiada klip untuk dieksport.'); return; }
+  if (recording) return;
+  const mime = pickMime();
+  if (!mime) { toast('Pelayar ini tak sokong MediaRecorder — guna Chrome/Edge/Firefox terbaru.'); return; }
+  ensureAudio(); if (actx.state === 'suspended') await actx.resume();
+  pause();
+  clock = 0; activeId = null; if (music && music.el) { try { music.el.currentTime = 0; } catch (e) {} }
+  renderAt(0);
+  const fps = 30;
+  const stream = cvs.captureStream(fps);
+  try {
+    const dst = actx.createMediaStreamDestination();
+    master.connect(dst);
+    dst.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+  } catch (e) {}
+  try { rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 }); } catch (e) { rec = new MediaRecorder(stream); }
+  recChunks = []; recMime = mime;
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
+  recDone = new Promise((res) => { rec.onstop = res; });
+  recording = true; $('exportBtn').disabled = true; $('playBtn').textContent = '⏺ Rakam…';
+  rec.start(250);
+  playing = true; lastTs = 0;
+  if (music && music.el) { try { music.el.play().catch(() => {}); } catch (e) {} }
+  syncActive(0);
+  toast('Merakam garis masa penuh (' + fmt(total) + ') — jangan tutup tab.');
+};
+async function finishRecording() {
+  recording = false; pause();
+  try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (e) {}
+  await recDone;
+  $('exportBtn').disabled = false; $('playBtn').textContent = '▶ Main';
+  const blob = new Blob(recChunks, { type: (recMime.split(';')[0] || 'video/webm') });
+  if (!blob.size) { toast('Rakaman kosong — cuba lagi.'); return; }
+  const ext = recMime.includes('mp4') ? 'mp4' : 'webm';
+  downloadBlob(blob, 'tukuk-movie-' + Date.now() + '.' + ext);
+  toast('Dieksport sebagai ' + ext.toUpperCase() + ' (' + fmt(total) + ', ' + cvs.width + '×' + cvs.height + ').');
+}
+
+// ── Wiring header/transport ──
+$('addBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = (e) => { if (e.target.files && e.target.files.length) addFiles([...e.target.files]); e.target.value = ''; };
+$('playBtn').onclick = () => { playing ? pause() : play(); };
+$('toStart').onclick = () => seekTo(0);
+$('toEnd').onclick = () => seekTo(total);
+$('undoBtn').onclick = undo;
+$('redoBtn').onclick = redo;
+$('clearAllBtn').onclick = () => { if (!clips.length) return; saveHistory(); clips = []; titles = []; selId = null; clock = 0; buildTimeline(); renderClipPanel(); $('dropHint').hidden = false; };
+$('titleDur').oninput = (e) => { e.target.nextElementSibling.textContent = fmt1(Number(e.target.value)) + 's'; };
+$('titleSize').oninput = (e) => { e.target.nextElementSibling.textContent = e.target.value; };
+$('titleText').addEventListener('input', () => {});
+
+// ── Scrub / playhead klik pada track ──
+const scrub = $('scrub');
+scrub.addEventListener('pointerdown', () => { scrubbing = true; });
+window.addEventListener('pointerup', () => { scrubbing = false; });
+scrub.addEventListener('input', () => { seekTo(Number(scrub.value)); });
+$('track').addEventListener('click', (e) => {
+  const blk = e.target.closest('.clipblk');
+  const tr = $('track').getBoundingClientRect();
+  if (blk) { selectClip(blk.dataset.id); }
+  seekTo((e.clientX - tr.left) / PPS);
+});
+
+// ── Susun semula blok klip (drag & drop native) ──
+let dragIdx = null;
+$('track').addEventListener('dragstart', (e) => { const b = e.target.closest('.clipblk'); if (!b) return; dragIdx = Number(b.dataset.i); b.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+$('track').addEventListener('dragover', (e) => { e.preventDefault(); });
+$('track').addEventListener('drop', (e) => {
+  e.preventDefault();
+  const b = e.target.closest('.clipblk');
+  if (dragIdx == null) return;
+  const to = b ? clips.indexOf(clips.find((c) => c.id === b.dataset.id)) : clips.length - 1;
+  if (to >= 0 && to !== dragIdx) { saveHistory(); const [m] = clips.splice(dragIdx, 1); clips.splice(to, 0, m); buildTimeline(); }
+  dragIdx = null; document.querySelectorAll('.clipblk.dragging').forEach((x) => x.classList.remove('dragging'));
+});
+
+// ── Drag & drop fail ke stage ──
+const stage = $('stage');
+stage.addEventListener('dragover', (e) => e.preventDefault());
+stage.addEventListener('drop', (e) => { e.preventDefault(); const fs = [...(e.dataTransfer.files || [])].filter((x) => x.type.startsWith('video/') || x.type.startsWith('image/')); if (fs.length) addFiles(fs); else toast('Seret fail video atau gambar.'); });
+
+// ── Pintasan papan kekunci ──
+const modal = $('shortcutsModal');
+function hideModal() { modal.hidden = true; modal.style.display = 'none'; }
+function showModal() { modal.hidden = false; modal.style.display = 'flex'; }
+$('shortcutsBtn').onclick = showModal; $('closeModalBtn').onclick = hideModal;
+window.addEventListener('keydown', (e) => {
+  const ae = document.activeElement;
+  if (ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) { if (e.key === 'Escape') ae.blur(); return; }
+  const k = e.key;
+  if (k === ' ') { e.preventDefault(); playing ? pause() : play(); }
+  else if (k === 'Home') { e.preventDefault(); seekTo(0); }
+  else if (k === 'End') { e.preventDefault(); seekTo(total); }
+  else if (k === 'ArrowLeft') { e.preventDefault(); seekTo(clock - 1 / 30); }
+  else if (k === 'ArrowRight') { e.preventDefault(); seekTo(clock + 1 / 30); }
+  else if (k === 's' || k === 'S') { const c = selClip(); if (c) splitClip(c); }
+  else if (k === 'Delete') { const c = selClip(); if (c) delClip(c.id); }
+  else if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) { e.preventDefault(); undo(); }
+  else if ((e.ctrlKey || e.metaKey) && (k === 'y' || k === 'Y')) { e.preventDefault(); redo(); }
+  else if (k === '?') { showModal(); }
+  else if (k === 'Escape') { hideModal(); }
+});
+window.addEventListener('resize', () => { if (total) { buildTimeline(); } });
+
+// ── Auto-muat ?src=<url> (dari Studio) ──
+try { const _p = new URLSearchParams(location.search).get('src'); if (_p) { fetch(_p).then((r) => r.blob()).then((b) => { const f = new File([b], _p.split('/').pop() || 'clip.mp4', { type: b.type || 'video/mp4' }); addFiles([f]); }).catch(() => toast('Gagal muat ?src — sumber perlukan CORS.')); } } catch (e) {}
+
+// ── Pintasan awal: titleStart label ikut scrub ──
+const _origSeek = seekTo; seekTo = function (t) { _origSeek(t); $('titleStartVal').textContent = fmt1(clock) + 's'; };
+$('titleStartVal').textContent = '0.0s';
+renderTitleList(); updUndo(); renderClipPanel();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
