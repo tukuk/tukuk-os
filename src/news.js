@@ -201,4 +201,4 @@ async function searchNews(query, { offset = 0, limit = PAGE_SIZE } = {}) {
   };
 }
 
-module.exports = { searchNews, refresh };
+module.exports = { searchNews, refresh, stripHtml, parseFeed };
