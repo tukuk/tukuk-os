@@ -274,14 +274,14 @@ async function addFiles(list) {
     const id = 'c' + (uid++);
     if (isImg) {
       const img = new Image(); img.src = url; await img.decode().catch(() => {});
-      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt() };
+      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: true, thumb: url };
       elMap[id] = img; clips.push(c); addedFirst = addedFirst || false;
     } else {
       const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.muted = false;
       await new Promise((res) => { const h = () => { v.removeEventListener('loadedmetadata', h); res(); }; v.addEventListener('loadedmetadata', h); setTimeout(res, 4000); });
       if (!addedFirst && v.videoWidth) { const sc = Math.min(1, 1280 / v.videoWidth); cvs.width = Math.round(v.videoWidth * sc); cvs.height = Math.round(v.videoHeight * sc); addedFirst = true; }
-      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt() };
-      elMap[id] = v; document.body.appendChild(v); clips.push(c);
+      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: false, thumb: null };
+      elMap[id] = v; document.body.appendChild(v); clips.push(c); genThumb(c);
     }
     selId = id;
   }
@@ -351,8 +351,10 @@ function drawSource(c, cw, ch, local) {
   try { g.filter = css; } catch (e) {}
   const cover = c.aspect === 1;
   const scale = cover ? Math.max(cw / sw, ch / sh) : Math.min(cw / sw, ch / sh);
-  const dw = sw * scale, dh = sh * scale;
-  try { g.drawImage(el, -dw / 2, -dh / 2, dw, dh); } catch (e) {}
+  let kb = 1, ox = 0, oy = 0;
+  if (c.kb && len > 0) { const p = Math.min(1, Math.max(0, local / len)); kb = 1 + 0.14 * p; ox = (p - 0.5) * cw * 0.06; oy = (p - 0.5) * ch * 0.03; }
+  const dw = sw * scale * kb, dh = sh * scale * kb;
+  try { g.drawImage(el, -dw / 2 + ox, -dh / 2 + oy, dw, dh); } catch (e) {}
   g.restore();
   g.filter = 'none';
 }
@@ -447,12 +449,41 @@ function renderTrack() {
     b.className = 'clipblk ' + c.kind + (c.id === selId ? ' sel' : '');
     b.draggable = true; b.dataset.i = String(i); b.dataset.id = c.id;
     b.style.width = Math.max(24, Math.round(clipLen(c) * PPS)) + 'px';
+    if (c.thumb) { b.style.backgroundColor = '#0d1424'; b.style.backgroundImage = 'linear-gradient(180deg, rgba(8,12,24,0) 55%, rgba(8,12,24,.65)), url(' + JSON.stringify(c.thumb) + ')'; b.style.backgroundSize = '100% 100%, ' + (c.kind === 'image' ? 'cover' : '100% 100%'); b.style.backgroundPosition = 'center, center'; b.style.backgroundRepeat = 'no-repeat, no-repeat'; }
     b.innerHTML = '<span class="lbl">' + escapeHtml(c.name || (c.kind === 'video' ? 'klip' : 'gambar')) + '</span>';
     b.title = c.name + ' · ' + fmt1(clipLen(c)) + 's';
     track.insertBefore(b, $('playhead') || null);
   });
   const ph = playheadEl(); if (!ph.parentNode) track.appendChild(ph);
   ph.style.position = 'absolute'; ph.style.top = '-24px';
+}
+
+// ── Penjana thumbnail filem-strip + Duplikasi klip ──
+function seekTime(v, t) { return new Promise((res) => { let done = false; const h = () => { if (done) return; done = true; v.removeEventListener('seeked', h); res(); }; v.addEventListener('seeked', h); try { v.currentTime = Math.max(0, t); } catch (e) { res(); } setTimeout(() => { if (!done) { done = true; v.removeEventListener('seeked', h); res(); } }, 650); }); }
+async function genThumb(c) {
+  if (!c || c.kind !== 'video' || !c.el) return;
+  if (c.el.readyState < 1) { await new Promise((r) => { const h = () => { c.el.removeEventListener('loadedmetadata', h); r(); }; c.el.addEventListener('loadedmetadata', h); setTimeout(r, 4000); }); }
+  const frames = 6, fw = 72, fh = Math.max(28, Math.round(fw * ((c.h && c.w) ? c.h / c.w : 0.5625)));
+  const cv = document.createElement('canvas'); cv.width = fw * frames; cv.height = fh; const cx = cv.getContext('2d');
+  cx.fillStyle = '#0b1020'; cx.fillRect(0, 0, cv.width, cv.height);
+  const base = c.in || 0; const top = (c.out > base ? c.out : base + (c.srcDur || 1)); const span = Math.max(0.15, top - base);
+  const keep = c.el.currentTime; const wasMuted = c.el.muted; try { c.el.muted = true; } catch (e) {}
+  for (let i = 0; i < frames; i++) { const t = base + span * ((i + 0.5) / frames); await seekTime(c.el, t); try { cx.drawImage(c.el, i * fw, 0, fw, cv.height); } catch (e) {} }
+  try { c.el.currentTime = keep; c.el.muted = wasMuted; } catch (e) {}
+  try { c.thumb = cv.toDataURL('image/jpeg', 0.5); } catch (e) { c.thumb = null; }
+  renderTrack();
+}
+function dupClip(c) {
+  if (!c) return; saveHistory();
+  const id = 'c' + (uid++); let el;
+  if (c.kind === 'video') { el = document.createElement('video'); el.src = c.url; el.playsInline = true; el.preload = 'auto'; el.crossOrigin = 'anonymous'; el.muted = false; document.body.appendChild(el); }
+  else { el = new Image(); el.src = c.url; }
+  elMap[id] = el;
+  const n = { ...c, id, filt: { ...c.filt }, el, thumb: c.kind === 'image' ? c.thumb : null, _anode: null, _gain: null };
+  clips.splice(clips.indexOf(c) + 1, 0, n); selId = id;
+  buildTimeline(); renderClipPanel();
+  if (c.kind === 'video') genThumb(n);
+  toast('Klip diduplikasi.');
 }
 
 // ── Ruler ──
@@ -500,7 +531,8 @@ function renderClipPanel() {
     <div class="kv"><span>Panjang garis masa</span><b>${fmt1(clipLen(c))}s</b></div>
     <div class="grp">
       <div class="row">
-        <button id="moveL">◀</button><button id="moveR">▶</button>
+        <button id="moveL" title="Gerak kiri">◀</button><button id="moveR" title="Gerak kanan">▶</button>
+        <button id="dupBtn" title="Duplikasi klip">⧉</button>
         <button id="splitBtn" title="Belah klip di playhead">✂ Split</button>
         <button id="delBtn" class="danger" title="Buang klip">🗑</button>
       </div>
@@ -520,7 +552,7 @@ function renderClipPanel() {
       <div class="slider"><label>Grayscale</label><input type="range" id="c-gray" min="0" max="100" value="${c.filt.gray}"><output>${c.filt.gray}</output></div>
       <div class="slider"><label>Sepia</label><input type="range" id="c-sepia" min="0" max="100" value="${c.filt.sepia}"><output>${c.filt.sepia}</output></div>
       <div class="slider"><label>Fade</label><input type="range" id="c-fade" min="0" max="2" step="0.1" value="${c.fade}"><output>${fmt1(c.fade)}s</output></div>
-      <div class="row"><button id="c-rot" title="Putar 90°">⟳ ${c.rot}°</button><button id="c-flipH" class="${c.flipH ? 'on' : ''}">↔ H</button><button id="c-flipV" class="${c.flipV ? 'on' : ''}">↕ V</button><button id="c-asp" class="${c.aspect === 1 ? 'on' : ''}">${c.aspect === 1 ? 'Cover' : 'Contain'}</button></div>
+      <div class="row"><button id="c-rot" title="Putar 90°">⟳ ${c.rot}°</button><button id="c-flipH" class="${c.flipH ? 'on' : ''}">↔ H</button><button id="c-flipV" class="${c.flipV ? 'on' : ''}">↕ V</button><button id="c-asp" class="${c.aspect === 1 ? 'on' : ''}">${c.aspect === 1 ? 'Cover' : 'Contain'}</button><button id="c-kb" class="${c.kb ? 'on' : ''}" title="Gerak Ken Burns (zoom/pan auto)">🎬 KB</button></div>
     </div>
     ${isImg ? `<h3>Tempoh gambar</h3><div class="grp"><div class="slider"><label>Saat</label><input type="range" id="c-dur" min="0.5" max="15" step="0.5" value="${c.dur}"><output>${fmt1(c.dur)}s</output></div></div>` : `<h3>🔊 Audio klip</h3><div class="grp"><div class="slider"><label>Volum</label><input type="range" id="c-vol" min="0" max="150" value="${Math.round(c.vol * 100)}"><output>${Math.round(c.vol * 100)}%</output></div><div class="row"><button id="c-mute" class="${c.muted ? 'on' : ''}" style="width:100%">${c.muted ? '🔇 Dibisukan' : '🔊 Hidup'}</button></div></div>`}
   `;
@@ -532,6 +564,8 @@ function bindClipPanel(c, isImg) {
   $('moveL').onclick = () => { const i = clips.indexOf(c); if (i > 0) { touch(); clips.splice(i - 1, 0, clips.splice(i, 1)[0]); buildTimeline(); } };
   $('moveR').onclick = () => { const i = clips.indexOf(c); if (i < clips.length - 1) { touch(); clips.splice(i + 1, 0, clips.splice(i, 1)[0]); buildTimeline(); } };
   $('delBtn').onclick = () => delClip(c.id);
+  $('dupBtn').onclick = () => dupClip(c);
+  $('c-kb').onclick = () => { c.kb = !c.kb; renderClipPanel(); };
   if (!isImg) {
     $('setIn').onclick = () => { saveHistory(); c.in = Math.max(0, Math.min(c.srcDur - 0.05, clockSrc(c))); if (c.out <= c.in) c.out = Math.min(c.srcDur, c.in + 0.2); buildTimeline(); renderClipPanel(); };
     $('setOut').onclick = () => { saveHistory(); c.out = Math.max(c.in + 0.05, Math.min(c.srcDur, clockSrc(c))); buildTimeline(); renderClipPanel(); };
