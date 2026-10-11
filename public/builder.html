@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tukuk Studio — Pembina Aplikasi (No-Code) — Tukuk-OS</title>
+<meta name="description" content="Bina aplikasi/web kecil tanpa kod: seret widget, pratonton langsung pada bingkai telefon, lalu eksport satu fail HTML berdiri sendiri. 100% dalam pelayar, tanpa pendaftaran.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="Tukuk Studio — Pembina Aplikasi No-Code">
+<meta property="og:description" content="Reka aplikasi kecil secara visual dan eksport HTML siap guna. Percuma & privasi 100%.">
+<link rel="canonical" href="https://tukuk.org/builder">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  :root { --bg:#090c15; --panel:rgba(18,24,38,.72); --line:rgba(255,255,255,.1); --acc:#4c8dff; --fg:#eaf0ff; --muted:#8b99b5; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(circle at 50% 0,#151d33,#090c15 70%); color:var(--fg); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; height:100vh; display:flex; flex-direction:column; }
+  header { display:flex; gap:10px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  header .logo { font-weight:800; letter-spacing:.3px; }
+  header input.name { background:rgba(255,255,255,.06); border:1px solid var(--line); color:var(--fg); padding:7px 10px; border-radius:9px; min-width:160px; }
+  .sp { flex:1; }
+  button, .btn { cursor:pointer; border:1px solid var(--line); background:rgba(255,255,255,.06); color:var(--fg); padding:8px 12px; border-radius:10px; font:inherit; }
+  button:hover { background:rgba(255,255,255,.12); }
+  button.primary { background:var(--acc); border-color:transparent; color:#04101f; font-weight:700; }
+  button.ghost.active { outline:2px solid var(--acc); }
+  .grid3 { display:grid; grid-template-columns:220px 1fr 300px; flex:1; min-height:0; }
+  .col { overflow:auto; padding:12px; }
+  .col.left { border-right:1px solid var(--line); background:rgba(255,255,255,.02); }
+  .col.right { border-left:1px solid var(--line); background:rgba(255,255,255,.02); }
+  h4 { margin:6px 0 10px; font-size:12px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
+  .palette { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .pal { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; border-radius:10px; font-size:12px; background:rgba(255,255,255,.05); border:1px solid var(--line); }
+  .pal .ic { font-size:20px; }
+  .stage { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .devs { display:flex; gap:6px; }
+  .frame { width:390px; max-width:96%; background:#fff; border-radius:28px; padding:14px; color:#111; box-shadow:0 20px 60px rgba(0,0,0,.5); transition:width .2s; min-height:60vh; overflow:auto; }
+  .frame.tablet { width:700px; } .frame.desktop { width:960px; border-radius:14px; }
+  .frame .appbar { font-weight:800; font-size:18px; margin-bottom:4px; }
+  .frame .sub { color:#666; font-size:13px; margin-bottom:14px; }
+  .w { position:relative; border:1.5px dashed transparent; border-radius:10px; margin:6px 0; padding:2px; }
+  body.edit .w:hover { border-color:#b9c7ff; }
+  body.edit .w.sel { border-color:#4c8dff; background:rgba(76,141,255,.06); }
+  .w .tag { display:none; position:absolute; top:-9px; right:6px; font-size:10px; background:#4c8dff; color:#04101f; padding:1px 7px; border-radius:8px; font-weight:700; }
+  body.edit .w.sel .tag { display:inline-block; }
+  body.edit .w [data-interactive] { pointer-events:none; }
+  .empty { color:#999; text-align:center; padding:40px 10px; border:2px dashed #ccc; border-radius:14px; }
+  /* props */
+  .fld { margin-bottom:10px; }
+  .fld label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
+  .fld input, .fld select, .fld textarea { width:100%; background:rgba(255,255,255,.06); border:1px solid var(--line); color:var(--fg); border-radius:8px; padding:7px 8px; font:inherit; }
+  .fld textarea { min-height:64px; resize:vertical; }
+  .row2 { display:flex; gap:8px; } .row2 > * { flex:1; }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; }
+  .tabs button.on { background:var(--acc); color:#04101f; }
+  .insp-actions { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#0b0f1a; border:1px solid var(--acc); padding:10px 16px; border-radius:12px; opacity:0; transition:.25s; pointer-events:none; z-index:20; }
+  .toast.show { opacity:1; }
+  .hint { font-size:11px; color:var(--muted); margin-top:8px; line-height:1.5; }
+  .swatch { width:34px; height:34px; padding:0; border:1px solid var(--line); border-radius:8px; }
+  .movedis { display:flex; gap:4px; }
+  @media (max-width:900px){ .grid3{grid-template-columns:1fr; height:auto;} body{height:auto;} .col.left,.col.right{border:none;} }
+</style>
+</head>
+<body class="edit">
+<header>
+  <span class="logo">🧩 Tukuk Studio · Pembina Aplikasi</span>
+  <input id="appName" class="name" placeholder="Nama aplikasi" value="Aplikasi Saya">
+  <div class="sp"></div>
+  <button id="modeBtn" class="ghost active" title="Tukar antara menyunting & mencuba interaktif">✏️ Edit</button>
+  <button id="undo" title="Undo">↶</button>
+  <button id="redo" title="Redo">↷</button>
+  <button id="openBtn" title="Buka projek .json">📂 Buka</button>
+  <button id="saveBtn" title="Simpan projek .json">💾 JSON</button>
+  <button id="exportBtn" class="primary" title="Eksport HTML berdiri sendiri">⬇️ Eksport HTML</button>
+</header>
+
+<div class="grid3">
+  <div class="col left">
+    <h4>Tambah widget</h4>
+    <div class="palette" id="palette"></div>
+    <div class="hint">Klik untuk tambah ke bawah. Seret blok pada kanvas untuk susun semula. Guna <b>Mod Cuba</b> untuk uji interaksi.</div>
+  </div>
+
+  <div class="col stage">
+    <div class="devs">
+      <button data-dev="phone" class="ghost active">📱 Telefon</button>
+      <button data-dev="tablet" class="ghost">📟 Tablet</button>
+      <button data-dev="desktop" class="ghost">🖥 Desktop</button>
+    </div>
+    <div class="frame" id="frame"></div>
+  </div>
+
+  <div class="col right">
+    <div class="tabs">
+      <button id="tabWidget" class="on">Widget</button>
+      <button id="tabTheme">Tema</button>
+    </div>
+    <div id="insp"></div>
+  </div>
+</div>
+
+<input type="file" id="fileIn" accept="application/json" hidden>
+<input type="file" id="imgIn" accept="image/*" hidden>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ── Model & util ────────────────────────────────────────────────────────────
+let uid = 1;
+const DEF_THEME = { accent:'#4c8dff', bg:'#ffffff', fg:'#16181d', dark:false, radius:14, font:"system-ui, Segoe UI, Roboto, sans-serif", sub:'Dibina dengan Tukuk Studio' };
+let theme = { ...DEF_THEME };
+let widgets = [];           // [{id,type,...props}]
+let selId = null;
+let mode = 'edit';          // edit | preview
+let device = 'phone';
+let history = [], future = [];
+
+const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $ = (id) => document.getElementById(id);
+const byId = (id) => widgets.find((w) => w.id === id) || null;
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); }
+
+const TYPES = {
+  heading:{ ic:'🅃', name:'Tajuk', make:()=>({type:'heading', text:'Tajuk Aplikasi', level:2, align:'left'}) },
+  text:{ ic:'¶', name:'Teks', make:()=>({type:'text', text:'Letakkan penerangan atau isi here di sini.', align:'left'}) },
+  button:{ ic:'🔘', name:'Butang', make:()=>({type:'button', label:'Klik saya', href:'', variant:'primary', fullWidth:false}) },
+  image:{ ic:'🖼️', name:'Imej', make:()=>({type:'image', src:'', alt:'gambar', radius:12, caption:''}) },
+  input:{ ic:'⌨️', name:'Input', make:()=>({type:'input', label:'Nama', placeholder:'Taip di sini…', kind:'text'}) },
+  counter:{ ic:'➕', name:'Kaunter', make:()=>({type:'counter', label:'Bilangan', value:0, step:1}) },
+  toggle:{ ic:'🔀', name:'Togol', make:()=>({type:'toggle', label:'Aktifkan', on:false}) },
+  list:{ ic:'📝', name:'Senarai', make:()=>({type:'list', items:['Beli barang','Buang sampah'], allowAdd:true}) },
+  card:{ ic:'🗃️', name:'Kad', make:()=>({type:'card', title:'Nota', body:'Kandungan ringkas dalam kad.'}) },
+  divider:{ ic:'➖', name:'Pemisah', make:()=>({type:'divider'}) },
+  spacer:{ ic:'↕️', name:'Ruang', make:()=>({type:'spacer', height:24}) }
+};
+</script>
+
+<script>
+'use strict';
+// ── Render kanvas ───────────────────────────────────────────────────────────
+function widgetMarkup(w){
+  const t = theme;
+  switch(w.type){
+    case 'heading': return `<h${w.level||2} style="text-align:${w.align};margin:.3em 0">${esc(w.text)}</h${w.level||2}>`;
+    case 'text': return `<p style="text-align:${w.align};margin:.3em 0;line-height:1.5">${esc(w.text)}</p>`;
+    case 'button': {
+      const css=`display:inline-block;background:${t.accent};color:#fff;border:none;padding:10px 16px;border-radius:${t.radius}px;font:inherit;font-weight:700;${w.fullWidth?'display:block;text-align:center;width:100%':''}`;
+      return w.href
+        ? `<a href="${esc(w.href)}" target="_blank" rel="noopener" style="${css}">${esc(w.label)}</a>`
+        : `<button data-interactive data-act="noop" style="${css}">${esc(w.label)}</button>`;
+    }
+    case 'image': return w.src
+      ? `<figure style="margin:0"><img src="${esc(w.src)}" alt="${esc(w.alt)}" style="width:100%;display:block;border-radius:${w.radius}px"><figcaption style="font-size:12px;color:#777;margin-top:4px">${esc(w.caption)}</figcaption></figure>`
+      : `<div style="border:2px dashed #bbb;border-radius:${w.radius}px;padding:22px;text-align:center;color:#999">Imej (belum dipilih)</div>`;
+    case 'input': return `<label style="display:block;font-size:13px;margin-bottom:8px">${esc(w.label)}<input data-interactive type="${w.kind}" placeholder="${esc(w.placeholder)}" style="width:100%;margin-top:4px;padding:9px 10px;border:1px solid #ccd;border-radius:${w.type==='input'?8:8}px;font:inherit"></label>`;
+    case 'counter': return `<div data-interactive data-w="${w.id}" data-step="${Number(w.step)||1}" style="display:flex;align-items:center;gap:12px"><span>${esc(w.label)}</span><button data-act="dec" style="width:36px;height:36px;border-radius:10px;border:1px solid #ccc;background:#f3f5fb;font-size:18px">−</button><b data-val style="min-width:24px;text-align:center;font-size:18px">${Number(w.value)||0}</b><button data-act="inc" style="width:36px;height:36px;border-radius:10px;border:1px solid #ccc;background:#f3f5fb;font-size:18px">+</button></div>`;
+    case 'toggle': return `<label data-interactive style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" ${w.on?'checked':''} style="width:20px;height:20px">${esc(w.label)}</label>`;
+    case 'list': {
+      const lis=(w.items||[]).map((it,i)=>`<li data-i="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eee"><span style="flex:1">${esc(it)}</span><button data-interactive data-act="listdel" data-i="${i}" style="border:none;background:none;color:#e5484d;cursor:pointer">✕</button></li>`).join('');
+      const add=w.allowAdd?`<form data-interactive data-list style="display:flex;gap:6px;margin-top:8px"><input placeholder="Tambah…" style="flex:1;padding:8px;border:1px solid #ccd;border-radius:8px"><button class="ladd" style="background:${theme.accent};color:#fff;border:none;border-radius:8px;padding:8px 12px">Tambah</button></form>`:'';
+      return `<ul style="list-style:none;margin:0;padding:0">${lis||'<li style="color:#999">Kosong</li>'}</ul>${add}`;
+    }
+    case 'card': return `<div style="background:#f5f7fb;border:1px solid #e6e9f2;border-radius:${theme.radius}px;padding:14px"><h4 style="margin:0 0 6px">${esc(w.title)}</h4><p style="margin:0;color:#444;line-height:1.5">${esc(w.body)}</p></div>`;
+    case 'divider': return `<hr style="border:none;border-top:1px solid #e3e3e3;margin:14px 0">`;
+    case 'spacer': return `<div style="height:${Number(w.height)||24}px"></div>`;
+    default: return '';
+  }
+}
+
+function renderStage(){
+  const f = $('frame');
+  f.className = 'frame' + (device==='tablet'?' tablet':device==='desktop'?' desktop':'');
+  const body = widgets.map((w)=>`<div class="w${w.id===selId?' sel':''}" data-id="${w.id}" draggable="${mode==='edit'}"><span class="tag">${(TYPES[w.type]||{}).name||w.type}</span>${widgetMarkup(w)}</div>`).join('');
+  const inner = widgets.length ? body : `<div class="empty">Belum ada widget.<br>Tambah dari panel kiri →</div>`;
+  f.innerHTML = `<div class="appbar" style="color:${theme.accent}">${esc($('appName').value||'Aplikasi')}</div><div class="sub">${esc(theme.sub||'')}</div><div>${inner}</div>`;
+  try{ if(typeof autoSave==='function') autoSave(); }catch{}
+}
+
+// ── Selection + properties ──────────────────────────────────────────────────
+function select(id){ selId=id; renderStage(); renderInspector(); }
+
+function field(label, el){ return `<div class="fld"><label>${esc(label)}</label>${el}</div>`; }
+function inTxt(key,val){ return `<input data-key="${key}" value="${esc(val==null?'':val)}">`; }
+function inArea(key,val){ return `<textarea data-key="${key}">${esc(val==null?'':val)}</textarea>`; }
+function inNum(key,val,min,max,step){ return `<input type="number" data-key="${key}" value="${val}" min="${min}" max="${max}" step="${step||1}">`; }
+function inSel(key,val,opts){ return `<select data-key="${key}">${opts.map(o=>`<option value="${o[0]}" ${String(val)===String(o[0])?'selected':''}>${o[1]}</option>`).join('')}</select>`; }
+function inChk(key,val){ return `<input type="checkbox" data-key="${key}" ${val?'checked':''}>`; }
+function inColor(key,val){ return `<input class="swatch" type="color" data-key="${key}" value="${val}">`; }
+function inBtn(key,label){ return `<button data-act="${key}" class="btn" style="width:100%">${label}</button>`; }
+
+function widgetFields(w){
+  const F=[];
+  switch(w.type){
+    case 'heading': F.push(field('Teks',inArea('text',w.text))); F.push(field('Tahap',inSel('level',w.level,[[1,'H1'],[2,'H2'],[3,'H3']]))); F.push(field('Jajar',alignSel(w.align))); break;
+    case 'text': F.push(field('Teks',inArea('text',w.text))); F.push(field('Jajar',alignSel(w.align))); break;
+    case 'button': F.push(field('Label',inTxt('label',w.label))); F.push(field('Pautan (optional, kosong=interaktif)',inTxt('href',w.href))); F.push(field('Gaya',inSel('variant',w.variant,[['primary','Utama'],['ghost','Kosong']]))); F.push(field('',inChk('fullWidth',w.fullWidth)+' <span style="font-size:12px">Lebar penuh</span>')); break;
+    case 'image': F.push(field('Alt',inTxt('alt',w.alt))); F.push(field('Keterangan',inTxt('caption',w.caption))); F.push(field('Bulat',inNum('radius',w.radius,0,50))); F.push(field('',inBtn('pickimg', w.src?'🖼️ Tukar imej':'⬆️ Muat naik imej'))); if(w.src) F.push(field('',inBtn('clearimg','🗑 Kosongkan imej'))); break;
+    case 'input': F.push(field('Label',inTxt('label',w.label))); F.push(field('Placeholder',inTxt('placeholder',w.placeholder))); F.push(field('Jenis',inSel('kind',w.kind,[['text','Teks'],['number','Nombor'],['email','E-mel'],['tel','Tel'],['date','Tarikh']]))); break;
+    case 'counter': F.push(field('Label',inTxt('label',w.label))); F.push(field('Nilai mula',inNum('value',w.value,-100000,100000))); F.push(field('Langkah',inNum('step',w.step,1,1000))); break;
+    case 'toggle': F.push(field('Label',inTxt('label',w.label))); F.push(field('',inChk('on',w.on)+' <span style="font-size:12px">Mula ON</span>')); break;
+    case 'list': F.push(field('Item (satu per baris)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); F.push(field('',inChk('allowAdd',w.allowAdd)+' <span style="font-size:12px">Benar tambah</span>')); break;
+    case 'card': F.push(field('Tajuk',inTxt('title',w.title))); F.push(field('Isi',inArea('body',w.body))); break;
+    case 'spacer': F.push(field('Tinggi (px)',inNum('height',w.height,4,200))); break;
+    case 'divider': break;
+  }
+  return F.join('');
+}
+function alignSel(a){ return inSel('align',a,[['left','Kiri'],['center','Tengah'],['right','Kanan']]); }
+
+let tab='widget';
+function renderInspector(){
+  const host=$('insp');
+  $('tabWidget').classList.toggle('on',tab==='widget');
+  $('tabTheme').classList.toggle('on',tab==='theme');
+  if(tab==='theme'){ host.innerHTML = themeFields(); return; }
+  const w=byId(selId);
+  if(!w){ host.innerHTML='<div class="hint">Pilih satu widget pada kanvas untuk menyunting propertinya, atau tambah daripada panel kiri.</div>'; return; }
+  const idx=widgets.indexOf(w);
+  host.innerHTML = `<h4>${(TYPES[w.type]||{}).ic||''} ${(TYPES[w.type]||{}).name||w.type}</h4>${widgetFields(w)}
+    <div class="insp-actions">
+      <div class="movedis"><button data-act="up" ${idx<=0?'disabled':''}>▲</button><button data-act="down" ${idx>=widgets.length-1?'disabled':''}>▼</button></div>
+      <button data-act="dup">⧉ Duplikasi</button>
+      <button data-act="del" style="color:#e5484d">🗑 Buang</button>
+    </div>`;
+}
+
+function themeFields(){
+  return `<h4>🎨 Tema aplikasi</h4>`+
+    field('Aksen',inColor('accent',theme.accent))+
+    field('Warna latar',inColor('bg',theme.bg))+
+    field('Warna teks',inColor('fg',theme.fg))+
+    field('Bulat (radius)',inNum('radius',theme.radius,0,28))+
+    field('Sub-tajuk',inTxt('sub',theme.sub))+
+    field('',inChk('dark',theme.dark)+' <span style="font-size:12px">Mod gelap</span>')+
+    field('Huruf',inSel('font',theme.font,[["system-ui, Segoe UI, Roboto, sans-serif","Sistem"],["Georgia, serif","Serif"],["Courier New, monospace","Monospace"],["Impact, sans-serif","Impact"]]));
+}
+
+function applyTheme(){
+  const f=$('frame');
+  f.style.background = theme.bg; f.style.color = theme.fg; f.style.fontFamily = theme.font;
+  document.documentElement.style.setProperty('--acc', theme.accent);
+}
+</script>
+
+<script>
+'use strict';
+// ── Sejarah (undo/redo) ─────────────────────────────────────────────────────
+function snapshot(){ return JSON.stringify({ widgets, theme, appName: $('appName').value }); }
+function pushH(){ const s=snapshot(); if(history.length && history[history.length-1]===s) return; history.push(s); if(history.length>60) history.shift(); future.length=0; }
+function restore(s){ const o=JSON.parse(s); widgets=o.widgets; theme=o.theme; $('appName').value=o.appName; if(!byId(selId)) selId=null; renderStage(); applyTheme(); renderInspector(); }
+function undo(){ if(history.length<=1) return; future.push(history.pop()); restore(history[history.length-1]); }
+function redo(){ if(!future.length) return; const s=future.pop(); history.push(s); restore(s); }
+function commit(){ pushH(); renderStage(); applyTheme(); renderInspector(); }
+
+// ── Tambah / ubah widget ────────────────────────────────────────────────────
+function addWidget(type){ pushH(); const w={ id:'w'+(uid++), ...TYPES[type].make() }; widgets.push(w); selId=w.id; renderStage(); renderInspector(); }
+function setProp(key,val){ const w=byId(selId); if(!w) return; if(key==='__items'){ w.items=String(val).split('\n'); } else w[key]=val; renderStage(); }
+
+// ── Interaksi kanvas (delegasi) ─────────────────────────────────────────────
+$('frame').addEventListener('click',(e)=>{
+  const wEl=e.target.closest('.w'); if(!wEl) return;
+  if(mode==='edit'){ const id=wEl.dataset.id; if(id) select(id); e.preventDefault(); return; }
+  // preview: jalankan tindakan interaktif
+  const act=e.target.closest('[data-act]'); if(!act) return;
+  const a=act.dataset.act;
+  if(a==='inc'||a==='dec'){ const box=act.closest('[data-w]'); const w=byId(box.dataset.w); if(!w)return; const step=Number(w.step)||1; w.value=(Number(w.value)||0)+(a==='inc'?step:-step); const v=box.querySelector('[data-val]'); if(v) v.textContent=w.value; e.preventDefault(); }
+  if(a==='noop'){ toast('Butang contoh ✨'); e.preventDefault(); }
+});
+$('frame').addEventListener('submit',(e)=>{
+  if(mode!=='preview') return;
+  const f=e.target.closest('[data-list]'); if(!f) return; e.preventDefault();
+  const box=f.closest('.w'); const w=byId(box.dataset.w); if(!w)return;
+  const inp=f.querySelector('input'); const val=(inp.value||'').trim(); if(!val)return;
+  w.items=(w.items||[]).concat([val]); inp.value=''; renderStage();
+});
+$('frame').addEventListener('click',(e)=>{
+  if(mode!=='preview') return; const d=e.target.closest('[data-act="listdel"]'); if(!d)return; const box=d.closest('.w'); const w=byId(box.dataset.w); if(!w)return; w.items.splice(Number(d.dataset.i),1); renderStage(); e.preventDefault();
+});
+
+// ── Inspector (delegasi) ────────────────────────────────────────────────────
+function applyField(k,el){ const val=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value; if(tab==='theme'){ theme[k]=val; applyTheme(); renderStage(); } else setProp(k,val); }
+$('insp').addEventListener('input',(e)=>{ const k=e.target.dataset.key; if(k) applyField(k,e.target); });
+$('insp').addEventListener('change',(e)=>{ const k=e.target.dataset.key; if(k){ applyField(k,e.target); if(tab==='theme') commit(); } });
+$('insp').addEventListener('blur',(e)=>{ if(e.target.dataset.key) commit(); }, true);
+$('insp').addEventListener('click',(e)=>{
+  const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; const w=byId(selId); const idx=w?widgets.indexOf(w):-1;
+  if(a==='up'&&idx>0){ pushH(); widgets.splice(idx-1,0,widgets.splice(idx,1)[0]); commit(); }
+  if(a==='down'&&idx>=0&&idx<widgets.length-1){ pushH(); widgets.splice(idx+1,0,widgets.splice(idx,1)[0]); commit(); }
+  if(a==='dup'&&w){ pushH(); const c=JSON.parse(JSON.stringify(w)); c.id='w'+(uid++); widgets.splice(idx+1,0,c); selId=c.id; commit(); }
+  if(a==='del'&&w){ pushH(); widgets=widgets.filter(x=>x.id!==w.id); selId=null; commit(); toast('Widget dibuang.'); }
+  if(a==='pickimg'){ $('imgIn').dataset.for=w.id; $('imgIn').click(); }
+  if(a==='clearimg'&&w){ pushH(); w.src=''; commit(); }
+});
+
+// ── Muat naik imej → dataURL (mandiri dalam eksport) ────────────────────────
+$('imgIn').addEventListener('change',(e)=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ const w=byId($('imgIn').dataset.for); if(w){ pushH(); w.src=r.result; commit(); toast('Imej dimuat naik.'); } };
+  r.readAsDataURL(f); e.target.value='';
+});
+
+// ── Drag & drop susun semula (mod edit) ─────────────────────────────────────
+let dragId=null;
+$('frame').addEventListener('dragstart',(e)=>{ const el=e.target.closest('.w'); if(!el||mode!=='edit'){ e.preventDefault(); return; } dragId=el.dataset.id; });
+$('frame').addEventListener('dragover',(e)=>{ if(mode!=='edit')return; e.preventDefault(); const over=e.target.closest('.w'); if(!over||!dragId||over.dataset.id===dragId)return; const from=widgets.findIndex(w=>w.id===dragId); const to=widgets.findIndex(w=>w.id===over.dataset.id); if(from<0||to<0)return; const [m]=widgets.splice(from,1); widgets.splice(to,0,m); if(from!==to) renderStage(); });
+$('frame').addEventListener('dragend',()=>{ if(dragId){ pushH(); dragId=null; renderStage(); } });
+</script>
+
+<script>
+'use strict';
+// ── Toolbar & mod ───────────────────────────────────────────────────────────
+$('palette').innerHTML = Object.entries(TYPES).map(([k,v])=>`<button class="pal" data-add="${k}"><span class="ic">${v.ic}</span>${v.name}</button>`).join('');
+$('palette').addEventListener('click',(e)=>{ const b=e.target.closest('[data-add]'); if(b) addWidget(b.dataset.add); });
+
+document.querySelectorAll('.devs [data-dev]').forEach((b)=>b.onclick=()=>{ device=b.dataset.dev; document.querySelectorAll('.devs [data-dev]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderStage(); });
+
+$('tabWidget').onclick=()=>{ tab='widget'; renderInspector(); };
+$('tabTheme').onclick=()=>{ tab='theme'; renderInspector(); };
+
+$('modeBtn').onclick=()=>{ mode = mode==='edit'?'preview':'edit'; document.body.classList.toggle('edit',mode==='edit'); $('modeBtn').textContent = mode==='edit'?'✏️ Edit':'▶️ Cuba'; $('modeBtn').classList.add('active'); if(mode==='preview'){ selId=null; renderStage(); renderInspector(); } };
+
+$('appName').addEventListener('input',()=>renderStage());
+$('appName').addEventListener('change',()=>commit());
+$('undo').onclick=undo; $('redo').onclick=redo;
+
+// ── Eksport HTML berdiri sendiri ────────────────────────────────────────────
+function runtimeJS(){
+  return `
+document.addEventListener('click',function(e){
+  var del=e.target.closest('[data-act="listdel"]');
+  if(del){ var li=del.closest('li'); if(li)li.remove(); return; }
+  var inc=e.target.closest('[data-act="inc"],[data-act="dec"]');
+  if(inc){ var box=inc.closest('[data-w]'); if(box){ var v=box.querySelector('[data-val]'); var s=Number(box.dataset.step||1); v.textContent=String(Number(v.textContent||0)+(inc.dataset.act==='inc'?s:-s)); } e.preventDefault(); }
+});
+document.addEventListener('submit',function(e){
+  var f=e.target.closest('[data-list]'); if(!f)return; e.preventDefault();
+  var inp=f.querySelector('input'); var t=(inp.value||'').trim(); if(!t)return;
+  var ul=f.previousElementSibling; if(!ul||ul.tagName!=='UL')return;
+  var li=document.createElement('li'); li.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eee';
+  var sp=document.createElement('span'); sp.style.flex='1'; sp.textContent=t;
+  var bt=document.createElement('button'); bt.textContent='\u2715'; bt.setAttribute('data-act','listdel'); bt.style.cssText='border:none;background:none;color:#e5484d;cursor:pointer';
+  li.appendChild(sp); li.appendChild(bt); ul.appendChild(li); inp.value='';
+});`;
+}
+function buildExport(){
+  const name=$('appName').value||'Aplikasi';
+  const body=widgets.map(widgetMarkup).join('\n');
+  const css=`:root{color-scheme:${theme.dark?'dark':'light'}}*{box-sizing:border-box}body{margin:0;background:${theme.bg};color:${theme.fg};font-family:${theme.font};padding:20px;max-width:${device==='desktop'?880:device==='tablet'?680:480}px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}.appbar{font-weight:800;font-size:20px;color:${theme.accent};margin-bottom:2px}.sub{color:#888;font-size:13px;margin-bottom:16px}button,.btn{font:inherit}`;
+  return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${runtimeJS()}<\/script></body></html>`;
+}
+function download(text, filename, mime){ const b=new Blob([text],{type:mime}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),8000); }
+const safe=(s)=>String(s||'app').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'app';
+
+$('exportBtn').onclick=()=>{ download(buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport — buka di mana-mana.'); };
+$('saveBtn').onclick=()=>{ const proj={ v:1, appName:$('appName').value, theme, widgets }; download(JSON.stringify(proj,null,2), safe($('appName').value)+'.json','application/json'); toast('💾 Projek disimpan (.json).'); };
+$('openBtn').onclick=()=> $('fileIn').click();
+$('fileIn').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); pushH(); $('appName').value=o.appName||'Aplikasi'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; uid=Date.now(); selId=null; renderStage(); applyTheme(); renderInspector(); toast('📂 Projek dibuka.'); }catch(err){ toast('Fail JSON tidak sah.'); } }; r.readAsText(f); e.target.value=''; });
+
+// ── Sampel awal + auto-save lokal ───────────────────────────────────────────
+function seed(){ widgets=[ {id:'w'+(uid++),...TYPES.heading.make(),text:'Selamat Datang'}, {id:'w'+(uid++),...TYPES.text.make(),text:'Ini demo pembina aplikasi. Tukar widget, tema, lalu Eksport HTML.'}, {id:'w'+(uid++),...TYPES.counter.make(),label:'Klik'}, {id:'w'+(uid++),...TYPES.button.make()} ]; }
+try{ const raw=localStorage.getItem('tukuk-builder'); if(raw){ const o=JSON.parse(raw); $('appName').value=o.appName||'Aplikasi Saya'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; selId=null; } else seed(); }catch{ seed(); }
+let _asv=null; function autoSave(){ clearTimeout(_asv); _asv=setTimeout(()=>{ try{ localStorage.setItem('tukuk-builder',JSON.stringify({ appName:$('appName').value, theme, widgets })); }catch{} },500); }
+const _renderStage=renderStage; renderStage=function(){ _renderStage(); autoSave(); };
+
+renderStage(); applyTheme(); renderInspector(); pushH();
+document.addEventListener('keydown',(e)=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); } if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); } });
+window.builderExport = buildExport;   // dieksport untuk ujian unit
+window.builderWidgetMarkup = widgetMarkup;
+</script>
+</body>
+</html>
