@@ -628,6 +628,19 @@ function adsenseLoader() {
   return `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`;
 }
 
+// Microsoft Ads / rangkaian lain: Admin tampal snippet HTML/JS penuh dari
+// pembekal (mis. Microsoft monetizenow). Kita inject APA ADANYA bila msAdsEnabled.
+// Reka bentuk ini elak daripada aku mereka markup MS yang mungkin salah.
+// Field store: msAdsSnippetTop / msAdsSnippetInArticle / msAdsSnippetBottom.
+const MSADS_STORE_KEYS = { top: 'msAdsSnippetTop', 'in-article': 'msAdsSnippetInArticle', bottom: 'msAdsSnippetBottom' };
+function msAdUnit(label) {
+  if (!store.getSetting('msAdsEnabled', false)) return '';
+  const key = MSADS_STORE_KEYS[label];
+  if (!key) return '';
+  const raw = String(store.getSetting(key, '') || '').trim();
+  return raw ? `<div class="ad-slot" data-ad-network="ms-${label}">${raw}</div>` : '';
+}
+
 app.get('/blog', (req, res) => {
   const posts = store.getAllPosts(100);
   let html = `<!DOCTYPE html>
@@ -685,7 +698,7 @@ ${adsenseLoader()}
       </span>
     </nav>
   </header>
-  <main>${adUnit(config.adsense.slotTop, 'top')}`;
+  <main>${adUnit(config.adsense.slotTop, 'top')}${msAdUnit('top')}`;
 
   for (const post of posts) {
     const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -699,7 +712,7 @@ ${adsenseLoader()}
   }
 
   html += `
-  ${adUnit(config.adsense.slotBottom, 'bottom')}
+  ${adUnit(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
   <footer>
     <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. A free and open web search engine.</p>
@@ -1011,13 +1024,13 @@ ${adsenseLoader()}
     </nav>
   </header>
   <main>
-    ${adUnit(config.adsense.slotTop, 'top')}
+    ${adUnit(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     <article>
       ${renderedContent}
-      ${adUnit(config.adsense.slotInArticle, 'in-article')}
+      ${adUnit(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
       ${post.tags && post.tags.length ? `<div class="tags" style="margin-top:28px; padding-top:16px; border-top:1px solid var(--line);">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
     </article>
-    ${adUnit(config.adsense.slotBottom, 'bottom')}
+    ${adUnit(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
   <footer>
     <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. A free and open web search engine.</p>
@@ -2021,6 +2034,10 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     msAdsTagId: store.getSetting('msAdsTagId', ''),
     msAdsSlotTop: store.getSetting('msAdsSlotTop', ''),
     msAdsSlotBottom: store.getSetting('msAdsSlotBottom', ''),
+    // Snippet penuh (HTML/JS) ditampal dari pembekal. Renderer inject apa adanya.
+    msAdsSnippetTop: store.getSetting('msAdsSnippetTop', ''),
+    msAdsSnippetInArticle: store.getSetting('msAdsSnippetInArticle', ''),
+    msAdsSnippetBottom: store.getSetting('msAdsSnippetBottom', ''),
     // Microsoft Clarity (analytics)
     clarityEnabled: Boolean(store.getSetting('clarityEnabled', false)),
     clarityId: String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || '') || ''),
@@ -2055,6 +2072,9 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   if (typeof b.msAdsTagId !== 'undefined') store.setSetting('msAdsTagId', String(b.msAdsTagId));
   if (typeof b.msAdsSlotTop !== 'undefined') store.setSetting('msAdsSlotTop', String(b.msAdsSlotTop));
   if (typeof b.msAdsSlotBottom !== 'undefined') store.setSetting('msAdsSlotBottom', String(b.msAdsSlotBottom));
+  if (typeof b.msAdsSnippetTop !== 'undefined') store.setSetting('msAdsSnippetTop', String(b.msAdsSnippetTop));
+  if (typeof b.msAdsSnippetInArticle !== 'undefined') store.setSetting('msAdsSnippetInArticle', String(b.msAdsSnippetInArticle));
+  if (typeof b.msAdsSnippetBottom !== 'undefined') store.setSetting('msAdsSnippetBottom', String(b.msAdsSnippetBottom));
   // Microsoft Clarity
   if (typeof b.clarityEnabled !== 'undefined') store.setSetting('clarityEnabled', Boolean(b.clarityEnabled));
   if (typeof b.clarityId !== 'undefined') store.setSetting('clarityId', String(b.clarityId).trim());

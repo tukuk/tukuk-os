@@ -530,6 +530,21 @@ Type a command below or click a quick action.
             </div>
           </div>
           
+          <h3 style="margin-top:28px; font-size:1.02rem; border-bottom:1px solid var(--panel-border); padding-bottom:6px;">Snippet Penuh Microsoft Ads (HTML/JS)</h3>
+          <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Microsoft (monetizenow) selalunya beri snippet HTML/JS penuh untuk setiap unit. Tampal di sini. Renderer akan inject apa adanya bila Microsoft Ads diaktifkan. Kosongkan = tiada paparan.</p>
+          <div class="form-group">
+            <label for="msAdsSnippetTop">Header Snippet (blog + atas artikel)</label>
+            <textarea id="msAdsSnippetTop" rows="3" placeholder="&lt;script src=...&gt; atau &lt;ins ...&gt;"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="msAdsSnippetInArticle">In-Article Snippet (tengah artikel)</label>
+            <textarea id="msAdsSnippetInArticle" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="msAdsSnippetBottom">Footer Snippet (bawah blog/artikel)</label>
+            <textarea id="msAdsSnippetBottom" rows="3"></textarea>
+          </div>
+          
           <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">Microsoft Clarity (Analitik usage)</h3>
           <div class="form-group">
             <label class="toggle-switch">
@@ -1004,6 +1019,9 @@ Type a command below or click a quick action.
       document.getElementById('msAdsTagId').value = s.msAdsTagId || '';
       document.getElementById('msAdsSlotTop').value = s.msAdsSlotTop || '';
       document.getElementById('msAdsSlotBottom').value = s.msAdsSlotBottom || '';
+      document.getElementById('msAdsSnippetTop').value = s.msAdsSnippetTop || '';
+      document.getElementById('msAdsSnippetInArticle').value = s.msAdsSnippetInArticle || '';
+      document.getElementById('msAdsSnippetBottom').value = s.msAdsSnippetBottom || '';
       
       // Microsoft Clarity
       document.getElementById('clarityEnabled').checked = Boolean(s.clarityEnabled);
@@ -1049,6 +1067,9 @@ Type a command below or click a quick action.
       msAdsTagId: document.getElementById('msAdsTagId').value.trim(),
       msAdsSlotTop: document.getElementById('msAdsSlotTop').value.trim(),
       msAdsSlotBottom: document.getElementById('msAdsSlotBottom').value.trim(),
+      msAdsSnippetTop: document.getElementById('msAdsSnippetTop').value,
+      msAdsSnippetInArticle: document.getElementById('msAdsSnippetInArticle').value,
+      msAdsSnippetBottom: document.getElementById('msAdsSnippetBottom').value,
       clarityEnabled: document.getElementById('clarityEnabled').checked,
       clarityId: document.getElementById('clarityId').value.trim()
     };
