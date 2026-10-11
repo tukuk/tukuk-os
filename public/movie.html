@@ -85,6 +85,7 @@
   @media (max-width:760px) { aside { width:220px; } .slider label { width:60px; } }
   .clipblk .transBadge { position:absolute; top:2px; left:3px; z-index:2; font-size:.6rem; background:rgba(255,255,255,.85); color:#04102a; border-radius:4px; padding:0 4px; pointer-events:none; }
   .waveform { position:relative; height:34px; margin-top:6px; background:var(--bg); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .clipwave { position:absolute; left:0; bottom:0; width:100%; height:14px; display:block; opacity:.85; pointer-events:none; }
   .waveform canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
   .waveform .wlabel { position:absolute; left:6px; top:50%; transform:translateY(-50%); font-size:.62rem; color:var(--muted); pointer-events:none; }
   .waveform .wavehead { position:absolute; top:0; bottom:0; width:2px; background:#ff3b30; z-index:3; pointer-events:none; }
@@ -311,14 +312,14 @@ async function addFiles(list) {
     const id = 'c' + (uid++);
     if (isImg) {
       const img = new Image(); img.src = url; await img.decode().catch(() => {});
-      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: true, thumb: url, trans: 0, transType: 'dissolve', kx: 50, ky: 50, ks: 1, krot: 0, ka: 1, kfs: [] };
+      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: true, thumb: url, trans: 0, transType: 'dissolve', kx: 50, ky: 50, ks: 1, krot: 0, ka: 1, kfs: [], wave: null };
       elMap[id] = img; clips.push(c); addedFirst = addedFirst || false;
     } else {
       const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.muted = false;
       await new Promise((res) => { const h = () => { v.removeEventListener('loadedmetadata', h); res(); }; v.addEventListener('loadedmetadata', h); setTimeout(res, 4000); });
       if (!addedFirst && v.videoWidth) { const sc = Math.min(1, 1280 / v.videoWidth); cvs.width = Math.round(v.videoWidth * sc); cvs.height = Math.round(v.videoHeight * sc); addedFirst = true; }
-      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: false, thumb: null, trans: 0, transType: 'dissolve', kx: 50, ky: 50, ks: 1, krot: 0, ka: 1, kfs: [] };
-      elMap[id] = v; document.body.appendChild(v); clips.push(c); genThumb(c);
+      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: false, thumb: null, trans: 0, transType: 'dissolve', kx: 50, ky: 50, ks: 1, krot: 0, ka: 1, kfs: [], wave: null };
+      elMap[id] = v; document.body.appendChild(v); clips.push(c); genThumb(c); addClipWave(c, f);
     }
     selId = id;
   }
@@ -531,6 +532,7 @@ function renderTrack() {
     let inner = '<span class="lbl">' + escapeHtml(c.name || (c.kind === 'video' ? 'klip' : 'gambar')) + '</span>';
     if (i < clips.length - 1 && (c.trans || 0) > 0) { const gl = ({ slide: '\u2192', zoom: '\u25ce' })[c.transType] || '\u21c4'; inner += '<span class="transBadge">' + gl + ' ' + fmt1(c.trans) + 's</span>'; }
     b.innerHTML = inner;
+    if (c.wave && c.wave.length) { const wc = document.createElement('canvas'); wc.className = 'clipwave'; b.appendChild(wc); drawClipWave(wc, c.wave, Math.max(20, Math.round(clipLen(c) * PPS))); }
     b.title = (c.name || '') + ' \u00b7 ' + fmt1(clipLen(c)) + 's' + (i < clips.length - 1 && (c.trans || 0) > 0 ? ' \u00b7 transisi ' + fmt1(c.trans) + 's' : '');
     track.appendChild(b);
   });
@@ -553,6 +555,33 @@ async function genThumb(c) {
   try { c.thumb = cv.toDataURL('image/jpeg', 0.5); } catch (e) { c.thumb = null; }
   renderTrack();
 }
+// ── Gelombang audio per-klip (decoding dijaga, sekali sahaja) ──
+async function audioPeaks(file, buckets) {
+  buckets = buckets || 220;
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+  const ctx = new AC();
+  try {
+    const buf = await file.arrayBuffer();
+    const audio = await ctx.decodeAudioData(buf);
+    const data = audio.getChannelData(0);
+    const block = Math.max(1, Math.floor(data.length / buckets)); const peaks = new Array(buckets);
+    for (let i = 0; i < buckets; i++) { let mx = 0; const s = i * block; for (let j = 0; j < block; j += 8) { const v = Math.abs(data[s + j] || 0); if (v > mx) mx = v; } peaks[i] = mx; }
+    return peaks;
+  } finally { try { ctx.close(); } catch (e) {} }
+}
+async function addClipWave(c, file) {
+  if (!c || c.kind !== 'video' || !file) return;
+  if (file.size && file.size > 60 * 1024 * 1024) return; // elak decode fail terlalu besar
+  try { const pk = await audioPeaks(file, 220); if (pk && pk.some((x) => x > 0.001)) { c.wave = pk; renderTrack(); } } catch (e) { c.wave = null; }
+}
+function drawClipWave(wc, peaks, W) {
+  const dpr = Math.max(1, window.devicePixelRatio || 1); const H = 14;
+  wc.width = Math.max(8, Math.round(W * dpr)); wc.height = Math.round(H * dpr);
+  const cx = wc.getContext('2d'); cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, W, H);
+  const mid = H / 2; const bw = W / peaks.length; cx.fillStyle = 'rgba(120,200,255,.9)';
+  for (let i = 0; i < peaks.length; i++) { const h = Math.max(1, peaks[i] * (H * 0.9)); cx.fillRect(i * bw, mid - h / 2, Math.max(0.6, bw * 0.6), h); }
+}
+
 function dupClip(c) {
   if (!c) return; saveHistory();
   const id = 'c' + (uid++); let el;
@@ -798,7 +827,7 @@ $('addTitleBtn').onclick = () => {
   if (!text) { toast('Taip teks dahulu.'); return; }
   if (!total) { toast('Tambah klip dahulu.'); return; }
   const p = poseFromControls(); saveHistory();
-  const ti = { id: 't' + (titleUid++), text, start: clock, dur: Number($('titleDur').value), size: Number($('titleSize').value), color: $('titleColor').value, pos: $('titlePos').value, x: p.x, y: p.y, scale: p.s, alpha: p.a, kfs: [] };
+  const ti = { id: 't' + (titleUid++), text, start: clock, dur: Number($('titleDur').value), size: Number($('titleSize').value), color: $('titleColor').value, pos: $('titlePos').value, x: p.x, y: p.y, scale: p.s, alpha: p.a, kfs: [], wave: null };
   titles.push(ti); selTitleId = ti.id; $('titleText').value = '';
   loadControls(ti); renderTitleLane(); renderTitleList(); toast('Teks ditambah @ ' + fmt1(clock) + 's — kini terpilih untuk keyframe.');
 };
