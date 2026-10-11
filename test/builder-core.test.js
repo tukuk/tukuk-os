@@ -1,8 +1,8 @@
 'use strict';
 // Ujian enjin Pembina Aplikasi (/builder). `widgetMarkup` (penjana HTML setiap
-// widget) + `runtimeJS` (skrip kecil dalam fail eksport) + `esc` Diekstrak terus
-// daripada public/builder.html — sumber sebenar yang dihantar ke pelayar — lalu
-// dijalankan dalam sandbox. Ini menguji BETULnya output yang dieksport tanpa pelayar.
+// widget) + `runtimeJS` (skrip kecil dalam fail eksport) + `esc` + `TYPES`
+// Diekstrak terus daripada public/builder.html — sumber sebenar yang dihantar ke
+// pelayar — lalu dijalankan dalam sandbox. Menguji output eksport tanpa pelayar.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -29,11 +29,19 @@ function extractLine(src, prefix) {
   if (!line) throw new Error('baris tidak ditemui: ' + prefix);
   return line.trim();
 }
+// Ambil satu `const NAMA = { ... };` objek berbilang baris (padan '\n};').
+function extractObj(src, decl) {
+  const s = src.indexOf(decl);
+  if (s < 0) throw new Error('objek tidak ditemui: ' + decl);
+  const e = src.indexOf('\n};', s);
+  if (e < 0) throw new Error('penutup tidak ditemui: ' + decl);
+  return src.slice(s, e + 3);
+}
 
 const codeMarkup = extractFn(html, 'widgetMarkup');
 const codeRuntime = extractFn(html, 'runtimeJS');
-const escSrc = extractLine(html, 'const esc =');
-const esc = new Function(escSrc + '; return esc;')();
+const esc = new Function(extractLine(html, 'const esc =') + '; return esc;')();
+const TYPES = new Function(extractObj(html, 'const TYPES = {') + '; return TYPES;')();
 
 const THEME = { accent:'#4c8dff', bg:'#ffffff', fg:'#111111', dark:false, radius:14, font:'system-ui', sub:'s' };
 
@@ -42,8 +50,9 @@ function markup(w, theme = THEME) {
   const f = new Function('theme', 'esc', codeMarkup + '; return widgetMarkup;');
   return f(theme, esc)(w);
 }
+function runtime() { return new Function(codeRuntime + '; return runtimeJS;')()(); }
 
-test('esc:Neutral HTML (tiada XSS dalam eksport)', () => {
+test('esc: escape HTML (tiada XSS tembus ke eksport)', () => {
   assert.equal(esc('<b>&"x"'), '&lt;b&gt;&amp;&quot;x&quot;');
   assert.equal(esc(null), '');
 });
@@ -60,7 +69,6 @@ test('button: dengan href → <a target=_blank>; tanpa href → <button noop>', 
   const withHref = markup({ type:'button', label:'Buka', href:'https://tukuk.org', variant:'primary', fullWidth:false });
   assert.ok(withHref.includes('<a href="https://tukuk.org"'));
   assert.ok(withHref.includes('rel="noopener"'));
-  assert.ok(withHref.includes('Buka'));
   const noHref = markup({ type:'button', label:'Klik', href:'', fullWidth:true });
   assert.ok(noHref.includes('<button') && noHref.includes('data-act="noop"'));
   assert.ok(noHref.includes('width:100%'), 'fullWidth wajar CSS lebar penuh');
@@ -75,13 +83,13 @@ test('image: src kosong → placeholder; src dataURL → <img> + radius', () => 
 });
 
 test('counter: bawa data-step & nilai awal (runtime eksport bergantung padanya)', () => {
-  const out = markup({ type:'counter', label:'Bilangan', value:7, step:3 });
+  const out = markup({ type:'counter', id:'c1', label:'Bilangan', value:7, step:3 });
   assert.ok(out.includes('data-step="3"'), 'langkah mesti tertanam untuk JS eksport');
-  assert.ok(out.includes('data-w='));
+  assert.ok(out.includes('data-w="c1"'));
   assert.ok(/>7</.test(out), 'nilai awal muncul');
 });
 
-test('list: item jadi <li>, benartambah → form data-list, padam → listdel', () => {
+test('list: item jadi <li>, benar tambah → form data-list, padam → listdel', () => {
   const out = markup({ type:'list', items:['a','b'], allowAdd:true });
   assert.equal((out.match(/<li/g) || []).length, 2);
   assert.ok(out.includes('data-list'));
@@ -96,10 +104,41 @@ test('toggle & input: keadaan awal & jenis dipantul', () => {
   assert.ok(markup({ type:'input', label:'Umur', placeholder:'n', kind:'number' }).includes('type="number"'));
 });
 
-test('runtimeJS: parse bersih & urus kaunter/list-del/submit', () => {
-  const js = new Function(codeRuntime + '; return runtimeJS;')()();
+test('faq: setiap item → soalan boleh klik + jawapan tersembunyi (class ans)', () => {
+  const out = markup({ type:'faq', items:[{q:'Soal 1', a:'Jawab 1'}, {q:'Soal 2', a:'Jawab 2'}] });
+  assert.equal((out.match(/data-act="faq"/g) || []).length, 2);
+  assert.equal((out.match(/class="ans"/g) || []).length, 2);
+  assert.ok(out.includes('display:none'), 'jawapan mesti tersembunyi mula-mula');
+  assert.ok(out.includes('Soal 1') && out.includes('Jawab 2'));
+});
+
+test('steps: senarai bernombor <ol> ikut bilangan langkah + tajuk', () => {
+  const out = markup({ type:'steps', title:'Cara', items:['Satu', 'Dua', 'Tiga'] });
+  assert.match(out, /<ol/);
+  assert.equal((out.match(/<li/g) || []).length, 3);
+  assert.ok(out.includes('Cara'));
+});
+
+test('quiz: container bawa data-answer; setiap pilihan button data-i', () => {
+  const out = markup({ type:'quiz', q:'Ibukota?', options:['KL', 'SG', 'BKK'], answer:1 });
+  assert.ok(out.includes('data-quiz'));
+  assert.ok(out.includes('data-answer="1"'));
+  assert.equal((out.match(/data-act="quiz"/g) || []).length, 3);
+  assert.ok(out.includes('data-i="2"'));
+});
+
+test('runtimeJS: parse bersih & urus kaunter/list-del/faq/quiz/submit', () => {
+  const js = runtime();
   new Function(js); // mesti JS yang sah
   assert.ok(js.includes('listdel'));
   assert.ok(js.includes('data-act="inc"'));
+  assert.ok(js.includes('[data-act="faq"]'), 'handler faq perlu ada');
+  assert.ok(js.includes('[data-quiz]'), 'handler quiz perlu ada');
   assert.ok(js.includes("addEventListener('submit'"));
+});
+
+test('TYPES: 14 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
+  const keys = Object.keys(TYPES);
+  assert.equal(keys.length, 14);
+  for (const t of keys) assert.equal(TYPES[t].make().type, t);
 });

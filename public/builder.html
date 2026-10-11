@@ -69,6 +69,7 @@
   <span class="logo">🧩 Tukuk Studio · Pembina Aplikasi</span>
   <input id="appName" class="name" placeholder="Nama aplikasi" value="Aplikasi Saya">
   <div class="sp"></div>
+  <select id="tpl" class="name" title="Muat templat awal"><option value="">🗂 Templat…</option></select>
   <button id="modeBtn" class="ghost active" title="Tukar antara menyunting & mencuba interaktif">✏️ Edit</button>
   <button id="undo" title="Undo">↶</button>
   <button id="redo" title="Redo">↷</button>
@@ -134,7 +135,40 @@ const TYPES = {
   list:{ ic:'📝', name:'Senarai', make:()=>({type:'list', items:['Beli barang','Buang sampah'], allowAdd:true}) },
   card:{ ic:'🗃️', name:'Kad', make:()=>({type:'card', title:'Nota', body:'Kandungan ringkas dalam kad.'}) },
   divider:{ ic:'➖', name:'Pemisah', make:()=>({type:'divider'}) },
-  spacer:{ ic:'↕️', name:'Ruang', make:()=>({type:'spacer', height:24}) }
+  spacer:{ ic:'↕️', name:'Ruang', make:()=>({type:'spacer', height:24}) },
+  faq:{ ic:'❓', name:'FAQ', make:()=>({type:'faq', items:[{q:'Ini soalan?',a:'Ini jawapan.'},{q:'Satu lagi?',a:'Baik, ini contoh.'}]}) },
+  steps:{ ic:'🔢', name:'Cara-cara', make:()=>({type:'steps', title:'Langkah', items:['Buka aplikasi','Pilih pilihan','Selesai']}) },
+  quiz:{ ic:'🎯', name:'Kuiz', make:()=>({type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0}) }
+};
+
+// Templat awal — setiap satu muat set widget + tema + nama (id dijana semasa dimuat).
+const TEMPLATES = {
+  todo:{ label:'✅ To-Do', appName:'Senarai Tugas', theme:{accent:'#30d158'}, widgets:[
+    {type:'heading', text:'Tugasan Hari Ini', level:2, align:'left'},
+    {type:'list', items:['Semak e-mel','Mesyuarat 10:00','Beli barang'], allowAdd:true},
+    {type:'text', text:'Guna Mod Cuba untuk tambah item baharu.', align:'left'}
+  ]},
+  linkbio:{ label:'🔗 Link-in-bio', appName:'Rangkaian Saya', theme:{accent:'#a259ff',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'image', src:'', alt:'logo', radius:40, caption:''},
+    {type:'heading', text:'Nama Anda', level:2, align:'center'},
+    {type:'text', text:'Pembangun • Pereka • Penulis', align:'center'},
+    {type:'button', label:'Instagram', href:'https://instagram.com', variant:'primary', fullWidth:true},
+    {type:'button', label:'YouTube', href:'https://youtube.com', variant:'primary', fullWidth:true},
+    {type:'button', label:'Hubungi', href:'mailto:anda@contoh.com', variant:'primary', fullWidth:true}
+  ]},
+  product:{ label:'🛍️ Halaman Produk', appName:'Produk Hebat', theme:{accent:'#ff8a3c'}, widgets:[
+    {type:'heading', text:'Kenapa produk ini?', level:2, align:'left'},
+    {type:'image', src:'', alt:'produk', radius:16, caption:'Gambar produk'},
+    {type:'text', text:'Reka bentuk minimalis, tahan lama, dan mesra alam.', align:'left'},
+    {type:'card', title:'Ciri utama', body:'Penghantaran percuma • Jaminan 30 hari • Sokongan 24/7'},
+    {type:'button', label:'Beli Sekarang', href:'https://tukuk.org', variant:'primary', fullWidth:true},
+    {type:'faq', items:[{q:'Ada waranti?',a:'Ya, 30 hari.'},{q:'Bila sampai?',a:'1-3 hari bekerja.'}]}
+  ]},
+  quiztpl:{ label:'🎯 Kuiz Pantas', appName:'Uji Diri', theme:{accent:'#4c8dff'}, widgets:[
+    {type:'heading', text:'Kuiz Ringkas', level:2, align:'center'},
+    {type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0},
+    {type:'text', text:'Pilih satu jawapan. Hijau = betul, merah = salah.', align:'center'}
+  ]}
 };
 </script>
 
@@ -166,6 +200,19 @@ function widgetMarkup(w){
     case 'card': return `<div style="background:#f5f7fb;border:1px solid #e6e9f2;border-radius:${theme.radius}px;padding:14px"><h4 style="margin:0 0 6px">${esc(w.title)}</h4><p style="margin:0;color:#444;line-height:1.5">${esc(w.body)}</p></div>`;
     case 'divider': return `<hr style="border:none;border-top:1px solid #e3e3e3;margin:14px 0">`;
     case 'spacer': return `<div style="height:${Number(w.height)||24}px"></div>`;
+    case 'faq': {
+      const one=(f)=>`<div style="border-bottom:1px solid #eee;padding:6px 0"><button data-interactive data-act="faq" style="width:100%;text-align:left;background:none;border:none;font:inherit;font-weight:700;cursor:pointer;padding:0">▸ ${esc(f.q)}</button><div class="ans" style="display:none;padding:6px 0;color:#555;line-height:1.5">${esc(f.a)}</div></div>`;
+      return (w.items||[]).map(one).join('') || `<div style="color:#999">Tiada FAQ</div>`;
+    }
+    case 'steps': {
+      const title=w.title?`<h4 style="margin:.3em 0">${esc(w.title)}</h4>`:'';
+      const lis=(w.items||[]).map((it)=>`<li style="margin:6px 0;line-height:1.5">${esc(it)}</li>`).join('');
+      return `${title}<ol style="padding-left:22px;margin:0">${lis}</ol>`;
+    }
+    case 'quiz': {
+      const opts=(w.options||[]).map((o,i)=>`<button data-interactive data-act="quiz" data-i="${i}" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border:1px solid #ccd;border-radius:${theme.radius}px;background:#fff;color:#111;font:inherit;cursor:pointer">${esc(o)}</button>`).join('');
+      return `<p style="font-weight:700;margin:.3em 0">${esc(w.q)}</p><div data-interactive data-quiz data-answer="${Number(w.answer)||0}">${opts}</div>`;
+    }
     default: return '';
   }
 }
@@ -204,6 +251,9 @@ function widgetFields(w){
     case 'list': F.push(field('Item (satu per baris)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); F.push(field('',inChk('allowAdd',w.allowAdd)+' <span style="font-size:12px">Benar tambah</span>')); break;
     case 'card': F.push(field('Tajuk',inTxt('title',w.title))); F.push(field('Isi',inArea('body',w.body))); break;
     case 'spacer': F.push(field('Tinggi (px)',inNum('height',w.height,4,200))); break;
+    case 'faq': F.push(field('Soalan :: Jawapan (satu per baris)',`<textarea data-key="__faq" rows="5">${esc((w.items||[]).map((x)=>x.q+' :: '+x.a).join('\n'))}</textarea>`)); break;
+    case 'steps': F.push(field('Tajuk (optional)',inTxt('title',w.title))); F.push(field('Langkah (satu per baris)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); break;
+    case 'quiz': F.push(field('Soalan',inTxt('q',w.q))); F.push(field('Pilihan (satu per baris)',`<textarea data-key="__options" rows="4">${esc((w.options||[]).join('\n'))}</textarea>`)); F.push(field('Jawapan betul',inSel('answer',w.answer,(w.options||[]).map((o,i)=>[i,(i+1)+'. '+o])))); break;
     case 'divider': break;
   }
   return F.join('');
@@ -257,7 +307,13 @@ function commit(){ pushH(); renderStage(); applyTheme(); renderInspector(); }
 
 // ── Tambah / ubah widget ────────────────────────────────────────────────────
 function addWidget(type){ pushH(); const w={ id:'w'+(uid++), ...TYPES[type].make() }; widgets.push(w); selId=w.id; renderStage(); renderInspector(); }
-function setProp(key,val){ const w=byId(selId); if(!w) return; if(key==='__items'){ w.items=String(val).split('\n'); } else w[key]=val; renderStage(); }
+function setProp(key,val){ const w=byId(selId); if(!w) return;
+  if(key==='__items'){ w.items=String(val).split('\n'); }
+  else if(key==='__options'){ w.options=String(val).split('\n').map((s)=>s.trim()).filter(Boolean); if((Number(w.answer)||0)>=w.options.length) w.answer=0; }
+  else if(key==='__faq'){ w.items=String(val).split('\n').map((l)=>{ const p=l.split('::'); return {q:(p[0]||'').trim(), a:(p[1]||'').trim()}; }).filter((o)=>o.q||o.a); }
+  else w[key]=val;
+  renderStage();
+}
 
 // ── Interaksi kanvas (delegasi) ─────────────────────────────────────────────
 $('frame').addEventListener('click',(e)=>{
@@ -268,6 +324,8 @@ $('frame').addEventListener('click',(e)=>{
   const a=act.dataset.act;
   if(a==='inc'||a==='dec'){ const box=act.closest('[data-w]'); const w=byId(box.dataset.w); if(!w)return; const step=Number(w.step)||1; w.value=(Number(w.value)||0)+(a==='inc'?step:-step); const v=box.querySelector('[data-val]'); if(v) v.textContent=w.value; e.preventDefault(); }
   if(a==='noop'){ toast('Butang contoh ✨'); e.preventDefault(); }
+  if(a==='faq'){ const ans=act.parentElement.querySelector('.ans'); if(ans){ const open=ans.style.display!=='none'; ans.style.display=open?'none':'block'; act.textContent=(open?'▸ ':'▾ ')+act.textContent.replace(/^[▸▾]\s/,''); } e.preventDefault(); }
+  if(a==='quiz'){ const box=act.closest('[data-quiz]'); const correct=Number(box.dataset.answer); const os=box.querySelectorAll('[data-act="quiz"]'); os.forEach((o)=>{ o.style.background='#fff'; o.style.borderColor='#ccd'; }); const ok=Number(act.dataset.i)===correct; act.style.background=ok?'#d7f7dd':'#fde0e0'; act.style.borderColor=ok?'#30d158':'#e5484d'; e.preventDefault(); }
 });
 $('frame').addEventListener('submit',(e)=>{
   if(mode!=='preview') return;
@@ -315,6 +373,11 @@ $('frame').addEventListener('dragend',()=>{ if(dragId){ pushH(); dragId=null; re
 $('palette').innerHTML = Object.entries(TYPES).map(([k,v])=>`<button class="pal" data-add="${k}"><span class="ic">${v.ic}</span>${v.name}</button>`).join('');
 $('palette').addEventListener('click',(e)=>{ const b=e.target.closest('[data-add]'); if(b) addWidget(b.dataset.add); });
 
+// Templat awal: populasikan dropdown + muat apabila dipilih.
+$('tpl').innerHTML = '<option value="">🗂 Templat…</option>' + Object.entries(TEMPLATES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+$('tpl').addEventListener('change',(e)=>{ const v=e.target.value; if(v) loadTemplate(v); e.target.value=''; });
+function loadTemplate(name){ const t=TEMPLATES[name]; if(!t) return; pushH(); $('appName').value=t.appName||'Aplikasi'; theme=Object.assign({},DEF_THEME,t.theme||{}); widgets=(t.widgets||[]).map((r)=>Object.assign({id:'w'+(uid++)},r)); selId=null; renderStage(); applyTheme(); renderInspector(); toast('🗂 Templat dimuat: '+t.label); }
+
 document.querySelectorAll('.devs [data-dev]').forEach((b)=>b.onclick=()=>{ device=b.dataset.dev; document.querySelectorAll('.devs [data-dev]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderStage(); });
 
 $('tabWidget').onclick=()=>{ tab='widget'; renderInspector(); };
@@ -332,6 +395,10 @@ function runtimeJS(){
 document.addEventListener('click',function(e){
   var del=e.target.closest('[data-act="listdel"]');
   if(del){ var li=del.closest('li'); if(li)li.remove(); return; }
+  var fq=e.target.closest('[data-act="faq"]');
+  if(fq){ var an=fq.parentElement.querySelector('.ans'); if(an){ var op=an.style.display!=='none'; an.style.display=op?'none':'block'; fq.textContent=(op?'▸ ':'▾ ')+fq.textContent.replace(/^[▸▾]\s/,''); } return; }
+  var qz=e.target.closest('[data-act="quiz"]');
+  if(qz){ var qc=qz.closest('[data-quiz]'); var ca=Number(qc.dataset.answer); var os=qc.querySelectorAll('[data-act="quiz"]'); for(var oi=0;oi<os.length;oi++){ os[oi].style.background='#fff'; os[oi].style.borderColor='#ccd'; } var qok=Number(qz.dataset.i)===ca; qz.style.background=qok?'#d7f7dd':'#fde0e0'; qz.style.borderColor=qok?'#30d158':'#e5484d'; return; }
   var inc=e.target.closest('[data-act="inc"],[data-act="dec"]');
   if(inc){ var box=inc.closest('[data-w]'); if(box){ var v=box.querySelector('[data-val]'); var s=Number(box.dataset.step||1); v.textContent=String(Number(v.textContent||0)+(inc.dataset.act==='inc'?s:-s)); } e.preventDefault(); }
 });
