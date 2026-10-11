@@ -65,6 +65,17 @@
       "game": true,
       "createdAt": "2026-10-10T21:47:14.858Z",
       "palette": "ungu"
+    },
+    {
+      "word": "bunga",
+      "slug": "bunga",
+      "emoji": "🌸",
+      "tagline": "Taman: kutip kelopak sebelum layu.",
+      "genre": "runner",
+      "theme": "hijau",
+      "game": true,
+      "createdAt": "2026-10-11T22:00:33.023Z",
+      "palette": "hijau"
     }
   ]
 }
