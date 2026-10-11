@@ -609,9 +609,14 @@ function realSlot(slot) {
   const s = String(slot || '').trim();
   return /^\d+$/.test(s) && s !== ADSENSE_PLACEHOLDER ? s : '';
 }
+// Slot boleh dikonfigur via Admin (store: adsSlotTop/adsSlotInArticle/adsSlotBottom)
+// dengan fallback ke env/config. `label` dari pemanggil menentukan kunci store.
+const ADSENSE_STORE_KEYS = { top: 'adsSlotTop', 'in-article': 'adsSlotInArticle', bottom: 'adsSlotBottom' };
 function adUnit(slot, label) {
   const client = adsenseOn();
-  const s = realSlot(slot);
+  const storeKey = ADSENSE_STORE_KEYS[label];
+  const raw = storeKey ? store.getSetting(storeKey, slot) : slot;
+  const s = realSlot(raw);
   if (!client || !s) return '';
   return `<ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${s}" data-ad-format="auto" data-full-width-responsive="true"></ins>` +
     `<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>`;
