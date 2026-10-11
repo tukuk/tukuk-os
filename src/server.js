@@ -594,8 +594,33 @@ const COMMON_CSS = `
 `;
 
 // Blog routes
+// AdSense: hanya papar unit bila AKTIF + client `ca-pub-…` sah + slot numerik
+// SEBENAR. Placeholder `2206273113` dianggap belum dikonfigurasi → return ''
+// (laman kekal bersih iklan sampai ID sebenar ditampal di Admin → paste-and-go).
+const ADSENSE_PLACEHOLDER = '2206273113';
+function adsenseClient() {
+  const c = String(store.getSetting('adsClient', config.adsense.client) || '').trim();
+  return /^ca-pub-\d+$/.test(c) ? c : '';
+}
+function adsenseOn() {
+  return config.adsense.enabled && adsenseClient();
+}
+function realSlot(slot) {
+  const s = String(slot || '').trim();
+  return /^\d+$/.test(s) && s !== ADSENSE_PLACEHOLDER ? s : '';
+}
 function adUnit(slot, label) {
-  return '';
+  const client = adsenseOn();
+  const s = realSlot(slot);
+  if (!client || !s) return '';
+  return `<ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${s}" data-ad-format="auto" data-full-width-responsive="true"></ins>` +
+    `<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>`;
+}
+// Script pemuat Adsense satu kali di <head> (hanya bila aktif + client sah).
+function adsenseLoader() {
+  const client = adsenseOn();
+  if (!client) return '';
+  return `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`;
 }
 
 app.get('/blog', (req, res) => {
@@ -625,6 +650,7 @@ app.get('/blog', (req, res) => {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
+${adsenseLoader()}
 </head>
 <body>
 <div class="wrap">
@@ -949,6 +975,7 @@ app.get('/blog/:slug', (req, res) => {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
+${adsenseLoader()}
 </head>
 <body>
 <div class="wrap">
