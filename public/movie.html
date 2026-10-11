@@ -350,7 +350,7 @@ function ensureAudio() {
 function applyClipGain(c) { if (c._gain) c._gain.gain.value = c.muted ? 0 : (c.vol || 0); }
 
 // ── Pengiraan masa sumber ──
-function srcTime(c, local) { return c.in + local * (c.speed || 1); }
+function srcTime(c, local) { const t = c.in + local * (c.speed || 1); if (c.kind === 'video') { const hi = (c.out > c.in) ? c.out : (c.srcDur || 0); return Math.min(t, Math.max(c.in, hi - 0.02)); } return t; }
 
 // ── Sinkronkan elemen video aktif dengan jam ──
 function syncActive(t) {
@@ -452,6 +452,7 @@ function drawTitles(t) {
 
 // ── Render bingkai pada masa t ──
 function renderAt(t) {
+  if (total > 0) t = Math.max(0, Math.min(total - 1 / 30, t)); else t = 0; // jangan render saat tepat hujung (fallback hitam / akhir-stream)
   const cw = cvs.width, ch = cvs.height;
   g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch);
   const cov = coveringClips(t);
