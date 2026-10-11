@@ -25,9 +25,17 @@
   input[type=range] { width:100%; accent-color:var(--accent); }
   .spacer { flex:1; }
   main { display:flex; flex:1; min-height:0; }
-  aside { width:262px; flex:none; background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:12px; }
-  aside h3 { margin:14px 0 8px; font-size:.74rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
-  aside h3:first-child { margin-top:0; }
+  aside { width:270px; flex:none; background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:0; }
+  .tabs { position:sticky; top:0; z-index:5; display:flex; background:var(--panel); border-bottom:1px solid var(--line); padding:6px 6px 0; }
+  .tab-btn { flex:1; background:transparent; border:none; border-bottom:2px solid transparent; border-radius:6px 6px 0 0; color:var(--muted); padding:6px 2px 8px; font-size:.65rem; line-height:1.15; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; font-family:inherit; transition:color .15s, background .15s; min-width:0; }
+  .tab-btn .ti { font-size:1.05rem; line-height:1; }
+  .tab-btn:hover { color:var(--accent); }
+  .tab-btn.on { color:var(--accent); border-bottom-color:var(--accent); background:rgba(76,141,255,.10); }
+  .tab-panel { display:none; padding:12px; }
+  .tab-panel.on { display:block; }
+  aside h3 { margin:14px 0 8px; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .tab-panel h3:first-of-type { margin-top:2px; }
+  aside h3:first-child { margin-top:2px; }
   .row { display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
   .row button { flex:1; min-width:0; }
   .slider { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
@@ -47,8 +55,15 @@
   @keyframes blink { 50% { opacity:.25; } }
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0b1020; color:#fff; border:1px solid var(--accent); border-radius:10px; padding:10px 16px; font-size:.85rem; opacity:0; pointer-events:none; transition:opacity .25s; z-index:50; }
   .toast.show { opacity:1; }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(5px); z-index:100; display:flex; align-items:center; justify-content:center; }
+  .modal-bg[hidden], [hidden] { display:none !important; }
+  .modal-card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 26px; max-width:480px; width:90%; color:var(--text); box-shadow:0 20px 50px rgba(0,0,0,.6); }
+  .modal-card h2 { margin-top:0; font-size:1.15rem; color:var(--accent); }
+  .modal-card table { width:100%; border-collapse:collapse; margin:12px 0; font-size:.86rem; }
+  .modal-card td { padding:7px 4px; border-bottom:1px solid var(--line); }
+  .modal-card kbd { background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:3px 7px; font-family:monospace; font-size:.82rem; color:var(--accent); }
   video { display:none; }
-  @media (max-width:760px) { aside { width:190px; } .slider label { width:56px; } }
+  @media (max-width:760px) { aside { width:200px; } .tab-btn { font-size:.55rem; padding:5px 1px 7px; } .tab-btn .ti { font-size:.9rem; } .slider label { width:56px; } }
 </style>
 </head>
 <body>
@@ -56,25 +71,44 @@
   <span class="logo">🎬 Tukuk Studio <small>editor video</small></span>
   <button id="openBtn">📂 Buka video</button>
   <input type="file" id="fileInput" accept="video/*" hidden>
+  <input type="url" id="urlInput" placeholder="Tampal URL video (mp4/webm)…" style="flex:1;min-width:180px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:.85rem;">
+  <button id="urlBtn" title="Muat video daripada URL (perlukan CORS pada pelayar sumber)">🌐 Muat URL</button>
   <span class="spacer"></span>
+  <button id="shortcutsBtn" title="Pintasan papan kekunci (?)">⌨️ Pintasan</button>
   <span class="t"><span class="rec-dot" id="recDot"></span><span id="stateLbl">sedia</span></span>
   <button id="snapBtn" title="Simpan bingkai semasa sebagai PNG">📸 Bingkai</button>
   <button id="exportBtn" class="primary" title="Rakam &amp; muat turun sebagai WebM (masa nyata)">⬇ Eksport WebM</button>
   <a class="btn" href="/editor" title="Editor gambar">🖼 Gambar</a>
-  <a class="btn" href="/studio" title="Tukuk Studio home">◂ Studio</a>
+  <a class="btn" href="/design" title="Reka bentuk gaya Canva">🎨 Design</a>
+  <a class="btn" href="/3d" title="Model & render 3D">🧊 3D</a>
+  <a class="btn" href="/studio" title="Tukuk Studio Suite">◂ Suite</a>
   <a class="btn" href="/" title="Kembali ke carian">⌕ Carian</a>
 </header>
 
 <main>
   <aside>
-    <h3>MAIN</h3>
+    <div class="tabs">
+      <button class="tab-btn on" data-tab="main"><span class="ti">▶</span>Main</button>
+      <button class="tab-btn" data-tab="geo"><span class="ti">✂</span>Geo</button>
+      <button class="tab-btn" data-tab="gaya"><span class="ti">🎚</span>Gaya</button>
+      <button class="tab-btn" data-tab="kartun"><span class="ti">🎨</span>Kartun</button>
+      <button class="tab-btn" data-tab="teks"><span class="ti">🔤</span>Teks</button>
+    </div>
+    <div class="tab-panel on" data-tab="main">
+    <h3>Kawalan &amp; Trimming</h3>
     <div class="row"><button id="playBtn">▶ Main</button><button id="stopBtn">⏹ Ke awal</button></div>
+    <div class="row"><button id="stepBackBtn" title="Undur 1 bingkai (~0.03s)">|◀ Bingkai</button><button id="stepFwdBtn" title="Maju 1 bingkai (~0.03s)">Bingkai ▶|</button></div>
     <div class="row"><button id="inBtn">⬅ Set In</button><button id="outBtn">Set Out ➡</button></div>
     <div class="foot-status" id="inOutLbl">In: 0.0s · Out: —</div>
     <div class="slider" style="margin-top:6px;"><label>Kelajuan</label>
-      <select id="speedSel" style="flex:1;"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+      <select id="speedSel" style="flex:1;"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
     </div>
 
+    <h3>Kawalan Audio 🔊</h3>
+    <div class="slider"><label>Volume</label><input type="range" id="v-vol" min="0" max="200" value="100"><output>100%</output></div>
+    <div class="row"><button id="muteBtn" style="width:100%">🔊 Audio Hidup</button></div>
+    </div>
+    <div class="tab-panel" data-tab="geo">
     <h3>Nisbah &amp; Putaran</h3>
     <div class="row">
       <button data-aspect="0" class="on">Asal</button>
@@ -88,7 +122,9 @@
     </div>
     <div class="row"><button id="rotBtn">⟳ Putar</button><button id="flipHBtn">↔ Flip-H</button><button id="flipVBtn">↕ Flip-V</button></div>
 
-    <h3>Penapis warna</h3>
+    </div>
+    <div class="tab-panel" data-tab="gaya">
+    <h3>Penapis Warna &amp; LUTs</h3>
     <div class="slider"><label>Kecerahan</label><input type="range" id="v-bright" min="20" max="200" value="100"><output>100</output></div>
     <div class="slider"><label>Kontras</label><input type="range" id="v-contrast" min="20" max="200" value="100"><output>100</output></div>
     <div class="slider"><label>Saturasi</label><input type="range" id="v-saturate" min="0" max="250" value="100"><output>100</output></div>
@@ -98,15 +134,31 @@
     <div class="slider"><label>Blur</label><input type="range" id="v-blur" min="0" max="12" value="0"><output>0</output></div>
     <div class="slider"><label>Vignette</label><input type="range" id="v-vig" min="0" max="100" value="0"><output>0</output></div>
     <div class="row"><button id="preNone">Original</button><button id="preMono">Hitam putih</button><button id="preWarm">Hangat</button><button id="preCool">Sejuk</button></div>
-
-    <h3>Teks</h3>
-    <input type="text" id="vText" placeholder="Teks atas video…" style="margin-bottom:6px;">
+    <div class="row"><button id="preTeal">Teal/Orange</button><button id="preCyber">Cyberpunk</button><button id="preRetro">Retro 80s</button><button id="preGold">Gold</button></div>
+    </div>
+    <div class="tab-panel" data-tab="kartun">
+    <h3>🎨 Kesan Kartun &amp; Artistik</h3>
+    <div class="row"><button id="ceOff" class="on">✕ Matikan Kesan</button></div>
+    <div class="row"><button id="ceToon">🧸 Toon</button><button id="ceComic">🖌 Komik</button><button id="ceSketch">✏️ Sketsa</button></div>
+    <div class="row"><button id="ceOil">🎨 Cat Minyak</button><button id="cePop">🎭 Pop Art</button><button id="ceAnime">🌸 Anime</button></div>
+    <div class="row"><button id="ceWater">💧 Cat Air</button><button id="cePixel">▦ Mosaik</button><button id="ceHalf">⬤ Halftone</button></div>
+    <div class="slider"><label>Kualiti</label><select id="ceRes" style="flex:1;"><option value="256">256p (pantas)</option><option value="448" selected>448p (seimbang)</option><option value="640">640p (halus)</option><option value="900">900p (perlahankan)</option></select></div>
+    <div class="slider"><label>Tepi</label><input type="range" id="ceEdge" min="5" max="120" value="35"><output>35</output></div>
+    <div class="slider"><label>Tahap</label><input type="range" id="ceLevels" min="2" max="20" value="7"><output>7</output></div>
+    <div class="slider"><label>Licinkan</label><input type="range" id="ceSmooth" min="1" max="8" value="3"><output>3</output></div>
+    <div class="foot-status">Kesan kartun diproses bingkai-demi-bingkai dalam pelayar — turut terbawa ketika eksport WebM. Naikkan “Kualiti” untuk hasil lebih tajam, turunkan untuk FPS lebih tinggi.</div>
+    </div>
+    <div class="tab-panel" data-tab="teks">
+    <h3>Teks &amp; Sarkas Subtajuk</h3>
+    <input type="text" id="vText" placeholder="Teks / Subtajuk video…" style="margin-bottom:6px;">
     <div class="row" style="align-items:center;">
       <input type="color" id="vTextColor" value="#ffffff" title="Warna">
       <select id="vTextPos" style="flex:1;"><option value="top">Atas</option><option value="center">Tengah</option><option value="bottom" selected>Bawah</option></select>
     </div>
     <div class="slider"><label>Saiz</label><input type="range" id="vTextSize" min="3" max="16" value="8"><output>8</output></div>
+    <div class="row"><button id="vTextPill" style="width:100%" title="Tambah petak latar kontras tinggi pada teks">⬛ Latar Petak</button></div>
     <div class="foot-status">Teks kekal tegak walaupun video diputar, dan dirakam dalam eksport.</div>
+    </div>
   </aside>
 
   <div class="stage" id="stage">
@@ -126,6 +178,25 @@
 </main>
 
 <video id="video" playsinline muted></video>
+
+<div class="modal-bg" id="shortcutsModal" hidden>
+  <div class="modal-card">
+    <h2>⌨️ Pintasan Editor Video</h2>
+    <table>
+      <tr><td>Main / Jeda Video</td><td><kbd>Space</kbd></td></tr>
+      <tr><td>Langkah 1 Bingkai Undur / Maju</td><td><kbd>Left</kbd> / <kbd>Right</kbd></td></tr>
+      <tr><td>Set In / Set Out Point</td><td><kbd>[</kbd> / <kbd>]</kbd></td></tr>
+      <tr><td>Bisu / Buka Suara Audio</td><td><kbd>M</kbd></td></tr>
+      <tr><td>Tangkap Bingkai PNG</td><td><kbd>S</kbd></td></tr>
+      <tr><td>Paparkan Pintasan ini</td><td><kbd>?</kbd></td></tr>
+      <tr><td>Tutup Dialog Modal</td><td><kbd>Esc</kbd></td></tr>
+    </table>
+    <div style="text-align:right; margin-top:14px;">
+      <button class="primary" id="closeModalBtn">✓ Faham</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -143,6 +214,8 @@ let inPoint = 0, outPoint = 0;
 let recording = false;
 let scrubbing = false;
 let audioCtx = null, mediaSrc = null;
+let _pix = null;             // ImageData bingkai ber resolution rendah untuk kesan kartun
+let ceFx = '';               // kunci efek kartun aktif ('' = mati)
 
 const F = { bright:100, contrast:100, saturate:100, sepia:0, gray:0, hue:0, blur:0, vig:0 };
 
@@ -163,6 +236,14 @@ function loadFile(f) {
   video.src = url;
   video.load();
 }
+$('urlBtn').onclick = () => {
+  const u = $('urlInput').value.trim();
+  if (!u) { toast('Tmpal URL video dahulu.'); return; }
+  video.crossOrigin = 'anonymous';
+  video.src = u;
+  video.load();
+  toast('Memuat video daripada URL… (mungkin gagal jika sumber tiada CORS)');
+};
 video.addEventListener('loadedmetadata', () => {
   ready = true;
   $('dropHint').style.display = 'none';
@@ -172,9 +253,10 @@ video.addEventListener('loadedmetadata', () => {
   inPoint = 0; outPoint = video.duration || 0;
   updateInOut();
   video.playbackRate = Number($('speedSel').value);
+  try { video.currentTime = Math.min(0.05, (video.duration || 0.1) / 2); } catch (e) { /* abai */ }
   toast(`Video dimuat: ${video.videoWidth}×${video.videoHeight} · ${fmt(video.duration)}`);
 });
-video.addEventListener('error', () => { if (video.src) toast('Video tidak dapat dimuat (format tidak disokong pelayar).'); });
+video.addEventListener('error', () => { if (video.src) toast('Video tidak dapat dimuat (format tidak disokong pelayar, atau CORS telah menolak).'); });
 
 // ── Kira saiz output ──
 function computeOut(vw, vh) {
@@ -195,18 +277,53 @@ function render() {
   if (!vw || !vh) return;
   const [OW, OH] = computeOut(vw, vh);
   if (cvs.width !== OW || cvs.height !== OH) { cvs.width = OW; cvs.height = OH; }
-  ctx.save();
-  ctx.clearRect(0, 0, OW, OH);
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, OW, OH);
-  if ('filter' in ctx) ctx.filter = filterStr(OH);
-  ctx.translate(OW / 2, OH / 2);
-  ctx.rotate(rot * Math.PI / 180);
-  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-  const rotated = (rot === 90 || rot === 270);
-  const sw = rotated ? vh : vw, sh = rotated ? vw : vh;
-  const s = Math.max(OW / sw, OH / sh);       // cover-fit
-  ctx.drawImage(video, -vw * s / 2, -vh * s / 2, vw * s, vh * s);
-  ctx.restore();
+  if (!ceFx) {
+    ctx.save();
+    ctx.clearRect(0, 0, OW, OH);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, OW, OH);
+    if ('filter' in ctx) ctx.filter = filterStr(OH);
+    ctx.translate(OW / 2, OH / 2);
+    ctx.rotate(rot * Math.PI / 180);
+    ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+    const rotated0 = (rot === 90 || rot === 270);
+    const sw0 = rotated0 ? vh : vw, sh0 = rotated0 ? vw : vh;
+    const s0 = Math.max(OW / sw0, OH / sh0);
+    ctx.drawImage(video, -vw * s0 / 2, -vh * s0 / 2, vw * s0, vh * s0);
+    ctx.restore();
+  } else {
+    const rotated = (rot === 90 || rot === 270);
+    const sw = rotated ? vh : vw, sh = rotated ? vw : vh;
+    const ref = Math.max(sw, sh);
+    const q = Math.max(128, Math.min(900, Number($('ceRes').value) || 448));
+    const PW = Math.max(2, Math.round(q * sw / ref)), PH = Math.max(2, Math.round(q * sh / ref));
+    if (!_pix || _pix.width !== PW || _pix.height !== PH) _pix = ctx.createImageData(PW, PH);
+    const px = _pix.data;
+    const pcv = document.createElement('canvas'); pcv.width = PW; pcv.height = PH;
+    const pg = pcv.getContext('2d');
+    pg.save();
+    pg.fillStyle = '#000'; pg.fillRect(0, 0, PW, PH);
+    if ('filter' in pg) pg.filter = filterStr(PH);
+    pg.translate(PW / 2, PH / 2);
+    pg.rotate(rot * Math.PI / 180);
+    pg.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+    const s = Math.max(PW / sw, PH / sh);
+    pg.drawImage(video, -vw * s / 2, -vh * s / 2, vw * s, vh * s);
+    pg.restore();
+    try {
+      const src = pg.getImageData(0, 0, PW, PH);
+      const out = (CE[ceFx] || CE.toon)(src.data, PW, PH);
+      px.set(out);
+    } catch (e) { console.error('kartun fx', e); }
+    const ocv = document.createElement('canvas'); ocv.width = PW; ocv.height = PH;
+    ocv.getContext('2d').putImageData(_pix, 0, 0);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, OW, OH);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, OW, OH);
+    ctx.drawImage(ocv, 0, 0, OW, OH);
+    ctx.restore();
+  }
   applyVignette(ctx, OW, OH);
   drawOverlayText(ctx, OW, OH);
 }
@@ -218,25 +335,195 @@ function applyVignette(g, OW, OH) {
   gr.addColorStop(1, `rgba(0,0,0,${(v / 100 * 0.85).toFixed(3)})`);
   g.save(); g.fillStyle = gr; g.fillRect(0, 0, OW, OH); g.restore();
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  🎨 KESAN KARTUN BINGKAI-DEMI-BINGKAI
+// ═══════════════════════════════════════════════════════════════
+function _gray(r, g, b) { return r * 0.299 + g * 0.587 + b * 0.114; }
+function _boxBlurU8(src, W, H, r, passes) {
+  passes = passes || 2;
+  let cur = new Uint8ClampedArray(src), tmp = new Uint8ClampedArray(src.length);
+  for (let p = 0; p < passes; p++) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let sr = 0, sg = 0, sb = 0, n = 0;
+      for (let k = -r; k <= r; k++) { const i = (y * W + Math.max(0, Math.min(W - 1, x + k))) * 4; sr += cur[i]; sg += cur[i + 1]; sb += cur[i + 2]; n++; }
+      const i = (y * W + x) * 4; tmp[i] = sr / n; tmp[i + 1] = sg / n; tmp[i + 2] = sb / n; tmp[i + 3] = 255;
+    }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let sr = 0, sg = 0, sb = 0, n = 0;
+      for (let k = -r; k <= r; k++) { const i = (Math.max(0, Math.min(H - 1, y + k)) * W + x) * 4; sr += tmp[i]; sg += tmp[i + 1]; sb += tmp[i + 2]; n++; }
+      const i = (y * W + x) * 4; cur[i] = sr / n; cur[i + 1] = sg / n; cur[i + 2] = sb / n; cur[i + 3] = 255;
+    }
+  }
+  return cur;
+}
+function _sobel(gray, W, H) {
+  const out = new Float32Array(W * H);
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x;
+    const tl = gray[i - W - 1], tc = gray[i - W], tr = gray[i - W + 1], ml = gray[i - 1], mr = gray[i + 1], bl = gray[i + W - 1], bc = gray[i + W], br = gray[i + W + 1];
+    out[i] = Math.sqrt((tr + 2 * mr + br - tl - 2 * ml - bl) ** 2 + (bl + 2 * bc + br - tl - 2 * tc - tr) ** 2);
+  }
+  return out;
+}
+function _ceP() { return { eT: Number($('ceEdge').value) || 35, lvls: Math.max(2, Number($('ceLevels').value) || 7), sm: Math.max(1, Number($('ceSmooth').value) || 3) }; }
+function _opaque(o) { for (let i = 3; i < o.length; i += 4) o[i] = 255; return o; }
+
+const CE = {
+  toon(d, W, H) {
+    const p = _ceP(), bl = _boxBlurU8(d, W, H, p.sm, 1), step = 255 / p.lvls, out = new Uint8ClampedArray(d.length), N = W * H;
+    const gary = new Float32Array(N); for (let i = 0; i < N; i++) gary[i] = _gray(bl[i * 4], bl[i * 4 + 1], bl[i * 4 + 2]);
+    const ed = _sobel(gary, W, H);
+    for (let i = 0; i < N; i++) { const o = i * 4;
+      if (ed[i] > p.eT) { out[o] = out[o + 1] = out[o + 2] = 20; }
+      else { for (let c = 0; c < 3; c++) out[o + c] = Math.min(255, Math.floor(bl[o + c] / step) * step + step * 0.5);
+        const lv = _gray(out[o], out[o + 1], out[o + 2]);
+        out[o] = lv + (out[o] - lv) * 1.35; out[o + 1] = lv + (out[o + 1] - lv) * 1.35; out[o + 2] = lv + (out[o + 2] - lv) * 1.35; } }
+    return _opaque(out);
+  },
+  comic(d, W, H) {
+    const p = _ceP(), bl = _boxBlurU8(d, W, H, p.sm, 2), step = 255 / p.lvls, out = new Uint8ClampedArray(d.length), N = W * H;
+    const gary = new Float32Array(N); for (let i = 0; i < N; i++) gary[i] = _gray(bl[i * 4], bl[i * 4 + 1], bl[i * 4 + 2]);
+    const ed = _sobel(gary, W, H);
+    for (let i = 0; i < N; i++) { const o = i * 4;
+      if (ed[i] > p.eT) { out[o] = out[o + 1] = out[o + 2] = 15; }
+      else for (let c = 0; c < 3; c++) out[o + c] = Math.min(255, Math.floor(bl[o + c] / step) * step + step * 0.5); }
+    return _opaque(out);
+  },
+  sketch(d, W, H) {
+    const p = _ceP(), N = W * H, gary = new Float32Array(N); for (let i = 0; i < N; i++) gary[i] = _gray(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+    const r = Math.max(3, p.sm * 2), bl = _boxBlurU8(d, W, H, r, 1), out = new Uint8ClampedArray(d.length);
+    for (let i = 0; i < N; i++) { const o = i * 4;
+      const blurInv = Math.max(0, Math.min(255, 255 - _gray(bl[o], bl[o + 1], bl[o + 2])));
+      const val = blurInv >= 254 ? 255 : Math.min(255, Math.max(0, gary[i] * 255 / (255 - blurInv)));
+      out[o] = out[o + 1] = out[o + 2] = val; }
+    return _opaque(out);
+  },
+  oil(d, W, H) {
+    const p = _ceP(), r = Math.max(1, p.sm - 1), lvls = 20, out = new Uint8ClampedArray(d.length);
+    const cnt = new Uint32Array(lvls), rs = new Float64Array(lvls), gs = new Float64Array(lvls), bs = new Float64Array(lvls);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      cnt.fill(0); rs.fill(0); gs.fill(0); bs.fill(0);
+      for (let ky = -r; ky <= r; ky++) for (let kx = -r; kx <= r; kx++) {
+        const nx = Math.max(0, Math.min(W - 1, x + kx)), ny = Math.max(0, Math.min(H - 1, y + ky));
+        const si = (ny * W + nx) * 4, lv = Math.min(lvls - 1, (_gray(d[si], d[si + 1], d[si + 2])) * lvls / 256) | 0;
+        cnt[lv]++; rs[lv] += d[si]; gs[lv] += d[si + 1]; bs[lv] += d[si + 2]; }
+      let best = 0; for (let l = 1; l < lvls; l++) if (cnt[l] > cnt[best]) best = l;
+      const n = cnt[best] || 1, oi = (y * W + x) * 4;
+      out[oi] = rs[best] / n; out[oi + 1] = gs[best] / n; out[oi + 2] = bs[best] / n; out[oi + 3] = 255; }
+    return out;
+  },
+  pop(d, W, H) {
+    const p = _ceP(), PAL = [[255, 0, 80], [255, 170, 0], [0, 220, 255], [80, 255, 100], [0, 80, 220]], N = W * H;
+    const gary = new Float32Array(N); for (let i = 0; i < N; i++) gary[i] = _gray(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+    const ed = _sobel(gary, W, H), out = new Uint8ClampedArray(d.length);
+    for (let i = 0; i < N; i++) { const o = i * 4, lv = Math.min(PAL.length - 1, (gary[i] / (255 / PAL.length)) | 0);
+      if (ed[i] > p.eT) { out[o] = out[o + 1] = out[o + 2] = 10; } else { out[o] = PAL[lv][0]; out[o + 1] = PAL[lv][1]; out[o + 2] = PAL[lv][2]; } }
+    return _opaque(out);
+  },
+  anime(d, W, H) {
+    const p = _ceP(), bl = _boxBlurU8(d, W, H, Math.max(1, p.sm - 1), 2), step = 255 / Math.max(4, p.lvls + 3), out = new Uint8ClampedArray(d.length), N = W * H;
+    const gary = new Float32Array(N); for (let i = 0; i < N; i++) gary[i] = _gray(bl[i * 4], bl[i * 4 + 1], bl[i * 4 + 2]);
+    const ed = _sobel(gary, W, H);
+    for (let i = 0; i < N; i++) { const o = i * 4;
+      if (ed[i] > p.eT) { out[o] = out[o + 1] = out[o + 2] = 22; }
+      else { const r = Math.min(255, (Math.floor(bl[o] / step) * step + step * 0.5) * 1.06) | 0;
+        const g = Math.min(255, (Math.floor(bl[o + 1] / step) * step + step * 0.5) * 0.98) | 0;
+        const b = Math.min(255, (Math.floor(bl[o + 2] / step) * step + step * 0.5) * 1.14) | 0;
+        out[o] = r; out[o + 1] = g; out[o + 2] = b; } }
+    return _opaque(out);
+  },
+  water(d, W, H) {
+    const p = _ceP(), r = Math.max(3, p.sm * 3), bl1 = _boxBlurU8(d, W, H, r, 2), bl2 = _boxBlurU8(bl1, W, H, Math.max(6, r * 2), 2), out = new Uint8ClampedArray(d.length), N = W * H;
+    const gary = new Float32Array(N); for (let i = 0; i < N; i++) gary[i] = _gray(bl2[i * 4], bl2[i * 4 + 1], bl2[i * 4 + 2]);
+    const ed = _sobel(gary, W, H);
+    for (let i = 0; i < N; i++) { const o = i * 4, ea = Math.min(1, ed[i] / Math.max(30, p.eT)), avg = (bl2[o] + bl2[o + 1] + bl2[o + 2]) / 3;
+      for (let c = 0; c < 3; c++) out[o + c] = Math.min(255, bl2[o + c] * 0.72 + avg * 0.28 * (1 - ea) + 22 * ea); }
+    return _opaque(out);
+  },
+  pixel(d, W, H) {
+    const p = _ceP(), cell = Math.max(2, p.sm * 2), out = new Uint8ClampedArray(d.length), step = 255 / Math.max(3, p.lvls);
+    for (let cy = 0; cy < H; cy += cell) for (let cx = 0; cx < W; cx += cell) {
+      let sr = 0, sg = 0, sb = 0, n = 0;
+      for (let y = cy; y < Math.min(H, cy + cell); y++) for (let x = cx; x < Math.min(W, cx + cell); x++) { const o = (y * W + x) * 4; sr += d[o]; sg += d[o + 1]; sb += d[o + 2]; n++; }
+      const r = Math.min(255, Math.floor((sr / n) / step) * step + step * 0.5), g = Math.min(255, Math.floor((sg / n) / step) * step + step * 0.5), b = Math.min(255, Math.floor((sb / n) / step) * step + step * 0.5);
+      for (let y = cy; y < Math.min(H, cy + cell); y++) for (let x = cx; x < Math.min(W, cx + cell); x++) { const o = (y * W + x) * 4; out[o] = r; out[o + 1] = g; out[o + 2] = b; }
+    }
+    return _opaque(out);
+  },
+  half(d, W, H) {
+    const p = _ceP(), cell = Math.max(3, p.sm + 2), out = new Uint8ClampedArray(d.length);
+    for (let cy = 0; cy < H; cy += cell) for (let cx = 0; cx < W; cx += cell) {
+      let sr = 0, sg = 0, sb = 0, n = 0;
+      for (let y = cy; y < Math.min(H, cy + cell); y++) for (let x = cx; x < Math.min(W, cx + cell); x++) { const o = (y * W + x) * 4; sr += d[o]; sg += d[o + 1]; sb += d[o + 2]; n++; }
+      const ar = sr / n, ag = sg / n, ab = sb / n, lum = _gray(ar, ag, ab) / 255, rr = (1 - lum) * cell * 0.58;
+      for (let y = cy; y < Math.min(H, cy + cell); y++) for (let x = cx; x < Math.min(W, cx + cell); x++) {
+        const o = (y * W + x) * 4, dx = x - (cx + cell / 2), dy = y - (cy + cell / 2);
+        if (dx * dx + dy * dy <= rr * rr) { out[o] = ar; out[o + 1] = ag; out[o + 2] = ab; } else { out[o] = 250; out[o + 1] = 250; out[o + 2] = 245; }
+      }
+    }
+    return _opaque(out);
+  }
+};
+
+function setCE(key) {
+  ceFx = key || '';
+  ['ceOff','ceToon','ceComic','ceSketch','ceOil','cePop','ceAnime','ceWater','cePixel','ceHalf'].forEach(id => $(id).classList.toggle('on', (id === 'ceOff' && !ceFx) || ('ce' + ceFx.charAt(0).toUpperCase() + ceFx.slice(1)) === id));
+  $('stateLbl').textContent = ceFx ? ('kartun: ' + ceFx) : (recording ? 'merakam…' : 'sedia');
+}
+{
+  const map = { ceOff:'', ceToon:'toon', ceComic:'comic', ceSketch:'sketch', ceOil:'oil', cePop:'pop', ceAnime:'anime', ceWater:'water', cePixel:'pixel', ceHalf:'half' };
+  Object.keys(map).forEach(id => { $(id).onclick = () => setCE(map[id]); });
+}
+['ceEdge','ceLevels','ceSmooth'].forEach(id => { $(id).addEventListener('input', () => { $(id).nextElementSibling.textContent = $(id).value; }); });
+
+// ── Tukar tab ──
+document.querySelectorAll('.tab-btn').forEach(b => { b.onclick = () => {
+  document.querySelectorAll('.tab-btn').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('on', p.dataset.tab === b.dataset.tab));
+}; });
+
+let vTextPillOn = false;
+$('vTextPill').onclick = () => {
+  vTextPillOn = !vTextPillOn;
+  $('vTextPill').classList.toggle('on', vTextPillOn);
+};
+
 function drawOverlayText(g, OW, OH) {
   const t = $('vText').value; if (!t) return;
   const px = Math.max(12, Number($('vTextSize').value) / 100 * OH);
+  const yMap = { top: 0.12, center: 0.5, bottom: 0.88 };
+  const tx = OW / 2, ty = (yMap[$('vTextPos').value] || 0.88) * OH;
+
   g.save();
   g.font = `800 ${px}px system-ui,"Segoe UI",Roboto,sans-serif`;
   g.textAlign = 'center'; g.textBaseline = 'middle';
+
+  if (vTextPillOn) {
+    const m = g.measureText(t);
+    const pw = m.width + px * 0.8, ph = px * 1.4;
+    g.fillStyle = 'rgba(0,0,0,0.75)';
+    g.beginPath();
+    g.roundRect(tx - pw / 2, ty - ph / 2, pw, ph, px * 0.25);
+    g.fill();
+  }
+
   g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = px * 0.18; g.fillStyle = $('vTextColor').value;
-  const yMap = { top: 0.12, center: 0.5, bottom: 0.88 };
-  g.fillText(t, OW / 2, (yMap[$('vTextPos').value] || 0.88) * OH);
+  g.fillText(t, tx, ty);
   g.restore();
 }
 
-// ── Loop rAF: render sentiasa supaya perubahan kontrol serta-merta kelihatan ──
+// ── Loop rAF: render sentiasa ──
 (function loop() {
   if (ready) { render(); if (!scrubbing) { $('scrub').value = video.currentTime; $('curT').textContent = fmt(video.currentTime); } }
   requestAnimationFrame(loop);
 })();
 
-// ── Playback / scrub ──
+// ── Playback & Step 1-Frame ──
+const FRAME_TIME = 1 / 30;
+$('stepBackBtn').onclick = () => { if (ready) { video.currentTime = Math.max(0, video.currentTime - FRAME_TIME); } };
+$('stepFwdBtn').onclick = () => { if (ready) { video.currentTime = Math.min(video.duration || 0, video.currentTime + FRAME_TIME); } };
+
 function setPlay(on) {
   if (!ready) return;
   if (on) {
@@ -256,6 +543,36 @@ window.addEventListener('pointerup', () => scrubbing = false);
 $('scrub').addEventListener('input', (e) => { if (ready) { video.currentTime = Number(e.target.value); $('curT').textContent = fmt(video.currentTime); } });
 $('speedSel').onchange = (e) => { video.playbackRate = Number(e.target.value); };
 
+// ── Audio Volume & Gain ──
+let gainNode = null;
+let isMuted = false;
+function ensureAudioGain() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (!mediaSrc) {
+    try {
+      mediaSrc = audioCtx.createMediaElementSource(video);
+      gainNode = audioCtx.createGain();
+      mediaSrc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+    } catch(e) {}
+  }
+}
+$('v-vol').addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  e.target.nextElementSibling.textContent = v + '%';
+  ensureAudioGain();
+  if (gainNode) gainNode.gain.value = isMuted ? 0 : (v / 100);
+});
+$('muteBtn').onclick = () => {
+  isMuted = !isMuted;
+  $('muteBtn').classList.toggle('on', isMuted);
+  $('muteBtn').textContent = isMuted ? '🔇 Audio Dibisukan' : '🔊 Audio Hidup';
+  ensureAudioGain();
+  if (gainNode) gainNode.gain.value = isMuted ? 0 : (Number($('v-vol').value) / 100);
+  video.muted = isMuted;
+};
+
 function updateInOut() { $('inOutLbl').textContent = `In: ${inPoint.toFixed(1)}s · Out: ${outPoint ? outPoint.toFixed(1) + 's' : '—'}`; }
 $('inBtn').onclick = () => { if (!ready) return; inPoint = video.currentTime; if (outPoint <= inPoint) outPoint = video.duration; updateInOut(); };
 $('outBtn').onclick = () => { if (!ready) return; outPoint = video.currentTime; if (outPoint <= inPoint) inPoint = Math.max(0, outPoint - 0.1); updateInOut(); };
@@ -268,7 +585,7 @@ document.querySelectorAll('[data-aspect]').forEach((b) => {
   b.onclick = () => { aspect = Number(b.dataset.aspect) || 0; document.querySelectorAll('[data-aspect]').forEach((x) => x.classList.toggle('on', x === b)); };
 });
 
-// ── Penapis UI ──
+// ── Penapis UI & Presets ──
 const SLIDER_MAP = { 'v-bright': 'bright', 'v-contrast': 'contrast', 'v-saturate': 'saturate', 'v-sepia': 'sepia', 'v-gray': 'gray', 'v-hue': 'hue', 'v-blur': 'blur', 'v-vig': 'vig' };
 for (const [id, key] of Object.entries(SLIDER_MAP)) {
   const el = $(id);
@@ -280,8 +597,12 @@ $('preNone').onclick = () => preset({});
 $('preMono').onclick = () => preset({ gray: 100, contrast: 115 });
 $('preWarm').onclick = () => preset({ sepia: 35, saturate: 120, bright: 105 });
 $('preCool').onclick = () => preset({ hue: 190, saturate: 110, bright: 102 });
+$('preTeal').onclick = () => preset({ hue: 175, saturate: 140, contrast: 120, vig: 20 });
+$('preCyber').onclick = () => preset({ hue: 140, saturate: 170, contrast: 135, vig: 30 });
+$('preRetro').onclick = () => preset({ sepia: 40, bright: 108, contrast: 95, saturate: 110, vig: 25 });
+$('preGold').onclick = () => preset({ sepia: 20, bright: 105, saturate: 130, contrast: 115, vig: 15 });
 
-// ── Snapshot bingkai (PNG segera) ──
+// ── Snapshot bingkai (PNG) ──
 function downloadBlob(blob, name) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 8000); }
 $('snapBtn').onclick = () => {
   if (!ready) { toast('Muat video dahulu.'); return; }
@@ -309,15 +630,14 @@ $('exportBtn').onclick = async () => {
   try { video.currentTime = start; await seeked(); } catch { /* abai */ }
 
   const stream = cvs.captureStream(fps);
-  // Sambung audio video → MediaStreamDestination (sekali sahaja createMediaElementSource per elemen)
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    await audioCtx.resume();
-    if (!mediaSrc) mediaSrc = audioCtx.createMediaElementSource(video);
-    const dst = audioCtx.createMediaStreamDestination();
-    mediaSrc.connect(dst); mediaSrc.connect(audioCtx.destination);
-    dst.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
-  } catch (e) { /* video tanpa audio / sudah bersambung — rakam senyap */ }
+  ensureAudioGain();
+  if (gainNode) {
+    try {
+      const dst = audioCtx.createMediaStreamDestination();
+      gainNode.connect(dst);
+      dst.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+    } catch(e) {}
+  }
 
   let rec;
   try { rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 }); }
@@ -363,7 +683,43 @@ stage.addEventListener('drop', (e) => {
   if (f) loadFile(f); else toast('Seret fail video (mp4/webm/ogg).');
 });
 
-document.addEventListener('keydown', (e) => { if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); setPlay(video.paused); } });
+// Auto-buka file picker jika datang dari Studio dropzone
+try {
+  if (sessionStorage.getItem('tukuk-video-autopen')) {
+    sessionStorage.removeItem('tukuk-video-autopen');
+    setTimeout(() => $('fileInput').click(), 400);
+  }
+} catch(e) {}
+
+// Auto-muat ?src=<url> atau fail dari Studio dropin
+try {
+  const _p = new URLSearchParams(location.search).get('src');
+  if (_p) { $('urlInput').value = _p; $('urlBtn').click(); }
+} catch(e) {}
+
+// Modal & Pintasan Kekunci
+const modal = $('shortcutsModal');
+function hideModal() { modal.hidden = true; modal.style.display = 'none'; }
+function showModal() { modal.hidden = false; modal.style.display = 'flex'; }
+
+$('shortcutsBtn').onclick = showModal;
+$('closeModalBtn').onclick = hideModal;
+modal.onclick = (e) => { if (e.target === modal) hideModal(); };
+
+document.addEventListener('keydown', (e) => {
+  const isTyping = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+  if (isTyping) return;
+
+  if (e.code === 'Space') { e.preventDefault(); setPlay(video.paused); }
+  if (e.key === '[') { e.preventDefault(); $('inBtn').click(); }
+  if (e.key === ']') { e.preventDefault(); $('outBtn').click(); }
+  if (e.key.toLowerCase() === 'm') { e.preventDefault(); $('muteBtn').click(); }
+  if (e.key.toLowerCase() === 's') { e.preventDefault(); $('snapBtn').click(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - (e.shiftKey ? 1 : FRAME_TIME)); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); video.currentTime = Math.min(video.duration || 0, video.currentTime + (e.shiftKey ? 1 : FRAME_TIME)); }
+  if (e.key === '?') { e.preventDefault(); if (modal.hidden || modal.style.display === 'none') showModal(); else hideModal(); }
+  if (e.key === 'Escape') { hideModal(); }
+});
 })();
 </script>
 </body>

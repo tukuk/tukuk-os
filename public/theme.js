@@ -198,3 +198,25 @@
     (document.head || document.documentElement).appendChild(s);
   } catch (e) {}
 })();
+
+/* Microsoft Clarity — di-inject HANYA bila pentadbir benarkan & letak Project ID.
+   No-op selamat bila clarityEnabled=false / clarityId kosong (tiada permintaan luar). */
+(function () {
+  try {
+    if (/^\/admin/.test(location.pathname)) return;
+    if (!window.fetch) return;
+    fetch('/api/public/settings', { cache: 'no-cache' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s || !s.clarityEnabled || !s.clarityId || window.clarity) return;
+        var id = String(s.clarityId).trim();
+        if (!/^[A-Za-z0-9]+$/.test(id)) return;
+        (function (c, l, a, r, i, t, y) {
+          c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); };
+          t = l.createElement(r); t.async = 1; t.src = 'https://www.clarity.ms/tag/' + i;
+          y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+        })(window, document, 'clarity', 'script', id);
+      })
+      .catch(function () {});
+  } catch (e) {}
+})();

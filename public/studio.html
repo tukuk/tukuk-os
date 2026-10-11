@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ms">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Studio — Free Online Tools &mdash; Tukuk-OS</title>
-<meta name="description" content="Tukuk Studio: free image editor that runs in your browser — filters, crop, rotate, text overlays and PNG/JPG export. No uploads, no accounts.">
+<title>Tukuk Studio Pro — Pusat Penyuntingan Media Modern — Tukuk-OS</title>
+<meta name="description" content="Tukuk Studio Pro: Suite penyuntingan gambar, video, pelekat, collage & buang latar belakang serba canggih dalam pelayar tanpa pendaftaran. 100% pemprosesan lokal.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
-<meta property="og:title" content="Tukuk Studio — Free Online Tools">
-<meta property="og:description" content="Edit images right in your browser: filters, crop, text, export. Part of Tukuk-OS.">
+<meta property="og:title" content="Tukuk Studio Pro — Modern Web Studio">
+<meta property="og:description" content="Suite alat kreatif penyuntingan gambar & video berasaskan pelayar. Pantas, percuma & privasi 100%.">
 <meta property="og:url" content="https://tukuk.org/studio">
 <link rel="canonical" href="https://tukuk.org/studio">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -16,81 +16,392 @@
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
 <style>
-  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  .wrap { max-width:980px; margin:0 auto; padding:0 20px; }
-  header { padding:46px 0 10px; text-align:center; }
-  h1 { margin:0; font-size:2.1rem; }
-  h1 .accent { color:var(--accent); }
-  .tagline { color:var(--muted); margin:10px 0 26px; }
-  nav.top { display:flex; justify-content:center; flex-wrap:wrap; gap:16px; font-size:.92rem; margin-bottom:26px; }
-  nav.top a { color:var(--muted); text-decoration:none; }
-  nav.top a:hover { color:var(--accent); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:26px 0 40px; }
-  .tool-card { display:block; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; text-decoration:none; color:var(--text); transition:border-color .18s, transform .18s; }
-  .tool-card:hover { border-color:var(--accent); transform:translateY(-2px); }
-  .tool-card .icon { font-size:2rem; }
-  .tool-card h2 { margin:10px 0 6px; font-size:1.12rem; }
-  .tool-card p { margin:0; color:var(--muted); font-size:.88rem; line-height:1.5; }
-  .tool-card .go { display:inline-block; margin-top:12px; color:var(--accent); font-weight:600; font-size:.9rem; }
-  .tool-card.soon { opacity:.5; cursor:not-allowed; }
-  .tool-card.soon .go { color:var(--muted); }
-  .note { text-align:center; color:var(--muted); font-size:.85rem; margin:0 0 40px; }
-  footer { border-top:1px solid var(--line); color:var(--muted); text-align:center; font-size:.88rem; padding:22px 0 34px; margin-top:20px; }
-  footer a { color:var(--accent); text-decoration:none; margin:0 8px; }
+  :root {
+    --bg-dark: #090c15;
+    --panel-glass: rgba(18, 24, 38, 0.72);
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --accent-glow: #4c8dff;
+    --neon-pink: #ff3b81;
+    --neon-green: #30d158;
+    --text-bright: #f0f4fc;
+    --muted: #8b99b5;
+  }
+
+  body {
+    margin: 0;
+    background: radial-gradient(circle at 50% 10%, #151d33 0%, var(--bg-dark) 70%);
+    color: var(--text-bright);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  header { text-align: center; padding: 20px 0 30px; }
+  .badge-pro {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(76,141,255,0.2), rgba(255,59,129,0.2));
+    border: 1px solid var(--accent-glow);
+    color: #8bb3ff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 { margin: 0; font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em; }
+  h1 span.accent {
+    background: linear-gradient(135deg, #4c8dff, #a76fff, #ff3b81);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tagline { color: var(--muted); margin: 10px 0 24px; font-size: 1.05rem; }
+
+  nav.top { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 30px; }
+  nav.top a {
+    color: var(--muted);
+    text-decoration: none;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--panel-border);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    transition: all 0.2s;
+  }
+  nav.top a:hover { color: #fff; border-color: var(--accent-glow); background: rgba(76,141,255,0.12); }
+
+  /* Combined suite pillars (Canva + Adobe + Blender) */
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
+  .pillar { position: relative; display: block; text-decoration: none; color: var(--text-bright); border-radius: 18px; padding: 22px; overflow: hidden; border: 1px solid var(--panel-border); background: var(--panel-glass); backdrop-filter: blur(14px); transition: all .22s ease; }
+  .pillar:hover { transform: translateY(-4px); box-shadow: 0 14px 40px rgba(0,0,0,.4); }
+  .pillar .em { font-size: 2.2rem; }
+  .pillar .pk { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; opacity: .8; margin-top: 10px; }
+  .pillar h2 { margin: 2px 0 6px; font-size: 1.15rem; }
+  .pillar p { margin: 0; color: var(--muted); font-size: .84rem; line-height: 1.45; }
+  .pillar.canva { border-color: rgba(76,141,255,.4); background: linear-gradient(160deg, rgba(76,141,255,.16), rgba(167,111,255,.10)); }
+  .pillar.adobe { border-color: rgba(255,59,129,.4); background: linear-gradient(160deg, rgba(255,59,129,.16), rgba(255,120,60,.08)); }
+  .pillar.blender { border-color: rgba(242,193,78,.45); background: linear-gradient(160deg, rgba(242,193,78,.16), rgba(224,100,91,.08)); }
+  @media (max-width:720px){ .pillars { grid-template-columns: 1fr; } }
+
+  /* Universal Smart Dropzone */
+  .smart-dropzone {
+    background: var(--panel-glass);
+    backdrop-filter: blur(16px);
+    border: 2px dashed rgba(76, 141, 255, 0.4);
+    border-radius: 20px;
+    padding: 36px 20px;
+    text-align: center;
+    margin-bottom: 40px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .smart-dropzone:hover, .smart-dropzone.dragover {
+    border-color: var(--accent-glow);
+    background: rgba(76, 141, 255, 0.12);
+    transform: translateY(-2px);
+  }
+  .smart-dropzone .icon-group { font-size: 2.8rem; margin-bottom: 10px; }
+  .smart-dropzone h2 { margin: 0 0 6px; font-size: 1.3rem; font-weight: 700; }
+  .smart-dropzone p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+  /* Quick Template Presets */
+  .presets-section { margin-bottom: 40px; }
+  .section-title { font-size: 1.05rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .preset-card {
+    background: var(--panel-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 16px;
+    text-decoration: none;
+    color: var(--text-bright);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .preset-card:hover { border-color: var(--accent-glow); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(76,141,255,0.18); }
+  .preset-card .ratio-badge { font-size: 0.72rem; font-weight: 700; color: var(--accent-glow); background: rgba(76,141,255,0.12); padding: 3px 8px; border-radius: 6px; width: fit-content; margin-bottom: 10px; }
+  .preset-card h3 { margin: 0 0 4px; font-size: 0.96rem; font-weight: 600; }
+  .preset-card p { margin: 0; font-size: 0.78rem; color: var(--muted); }
+
+  /* Main Tools Grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px; margin-bottom: 40px; }
+  .tool-card {
+    display: block;
+    background: var(--panel-glass);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    padding: 24px;
+    text-decoration: none;
+    color: var(--text-bright);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.22s ease;
+  }
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .tool-card:hover {
+    border-color: rgba(76,141,255,0.5);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.4), 0 0 20px rgba(76,141,255,0.15);
+  }
+  .tool-card:hover::before { opacity: 1; }
+  .tool-card .tag { position: absolute; top: 18px; right: 18px; font-size: 0.7rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; }
+  .tag.blue { background: rgba(76,141,255,0.18); color: #7cb0ff; border: 1px solid rgba(76,141,255,0.3); }
+  .tag.pink { background: rgba(255,59,129,0.18); color: #ff85b3; border: 1px solid rgba(255,59,129,0.3); }
+  .tag.green { background: rgba(48,209,88,0.18); color: #7ce898; border: 1px solid rgba(48,209,88,0.3); }
+  .tool-card .icon { font-size: 2.4rem; margin-bottom: 12px; }
+  .tool-card h2 { margin: 0 0 8px; font-size: 1.2rem; font-weight: 700; }
+  .tool-card p { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+  .tool-card .go { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; color: var(--accent-glow); font-weight: 700; font-size: 0.9rem; }
+
+  /* Draft Restoration */
+  .draft-box {
+    background: rgba(76,141,255,0.08);
+    border: 1px solid rgba(76,141,255,0.25);
+    border-radius: 16px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .draft-info { display: flex; align-items: center; gap: 12px; }
+  .draft-info .icon { font-size: 1.6rem; }
+  .draft-info h4 { margin: 0; font-size: 0.95rem; font-weight: 700; }
+  .draft-info p { margin: 2px 0 0; font-size: 0.8rem; color: var(--muted); }
+  .btn-action { background: var(--accent-glow); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-decoration: none; }
+  .btn-action:hover { opacity: 0.92; }
+  .btn-clear { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--panel-border); border-radius: 10px; padding: 10px 18px; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: all 0.18s; }
+  .btn-clear:hover { color: #fff; background: rgba(255,59,129,0.16); border-color: var(--neon-pink); }
+  .draft-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  footer { border-top: 1px solid var(--panel-border); color: var(--muted); text-align: center; font-size: 0.86rem; padding: 26px 0; margin-top: 40px; }
+  footer a { color: var(--accent-glow); text-decoration: none; margin: 0 8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>🎛 Tukuk <span class="accent">Studio</span></h1>
-    <p class="tagline">Free tools that run right in your browser — no uploads, no accounts, no watermarks.</p>
+    <span class="badge-pro">Tukuk Studio Pro 3.0 Suite</span>
+    <h1>🎛️ Tukuk <span class="accent">Studio</span></h1>
+    <p class="tagline">Satu suite kreatif yang menggabungkan <b>Canva</b> (reka bentuk), <b>Adobe</b> (gambar &amp; video) dan <b>Blender</b> (3D) — 100% dalam pelayar, percuma, tanpa muat naik ke awan, privasi terjamin.</p>
     <nav class="top">
-      <a href="/">Home</a><a href="/blog">Blog</a><a href="/learn">Learn</a><a href="/explore">Explore</a><a href="/docs">Docs</a>
+      <a href="/">⌕ Enjin Carian</a>
+      <a href="/design">🎨 Reka Bentuk</a>
+      <a href="/editor">✂️ Editor Gambar</a>
+      <a href="/editor-video">🎬 Editor Video</a>
+      <a href="/3d">🧊 Model 3D</a>
+      <a href="/bg-remover">🪄 Buang Latar</a>
+      <a href="/collage">🧩 Collage</a>
     </nav>
   </header>
 
-  <div class="grid">
-    <a class="tool-card" href="/editor">
-      <div class="icon">✂️</div>
-      <h2>Image Editor</h2>
-      <p>Filters &amp; temperature, vignette, pen/line/arrow/rectangle/ellipse annotation, freehand brush, emoji stickers, straighten, sharpen, mosaic, ratio-locked crop, borders, resize, text overlays, batch filters and rounded-corner PNG/JPG export — all client-side.</p>
-      <span class="go">Open editor →</span>
+  <!-- Combined suite: Canva + Adobe + Blender -->
+  <div class="pillars">
+    <a class="pillar canva" href="/design">
+      <div class="em">🎨</div>
+      <div class="pk">≡ Canva</div>
+      <h2>Reka Bentuk</h2>
+      <p>Templat, teks, bentuk &amp; sticker pada artboard. Poster, kapsyen IG, kad bisnes &amp; thumbnail — eksport PNG/JPG.</p>
     </a>
-
-    <a class="tool-card" href="/?mode=images">
-      <div class="icon">🖼️</div>
-      <h2>Find images to edit</h2>
-      <p>Search millions of indexed pages, click any image to zoom it full-size, then hit “Edit in Studio” to jump straight here.</p>
-      <span class="go">Search images →</span>
+    <a class="pillar adobe" href="/editor">
+      <div class="em">🖼️</div>
+      <div class="pk">≡ Adobe</div>
+      <h2>Gambar &amp; Video</h2>
+      <p>Sunting foto pro (LUT, curves, objek, Kesan Pro) &amp; video sinematik (trim, kartun, teks, WebM).</p>
     </a>
-
-    <a class="tool-card" href="/editor-video">
-      <div class="icon">🎬</div>
-      <h2>Video Editor</h2>
-      <p>Trim in/out, 8 color filters + vignette, rotate/flip, aspect presets (1:1 / 9:16 / 16:9 / 4:3 / 4:5), speed, burned-in captions and a PNG frame snapshot — recorded to WebM right in your browser.</p>
-      <span class="go">Open video editor →</span>
-    </a>
-
-    <a class="tool-card" href="/bg-remover">
-      <div class="icon">🪄</div>
-      <h2>Background Remover</h2>
-      <p>One-click subject cutout with a colour-tolerance flood fill, a manual erase/restore brush and transparent PNG export — all on-device.</p>
-      <span class="go">Remove background →</span>
-    </a>
-
-    <a class="tool-card" href="/collage">
-      <div class="icon">🧩</div>
-      <h2>Collage Maker</h2>
-      <p>Combine multiple photos into a grid collage with adjustable cell size, spacing and background, then export a PNG.</p>
-      <span class="go">Make a collage →</span>
+    <a class="pillar blender" href="/3d">
+      <div class="em">🧊</div>
+      <div class="pk">≡ Blender</div>
+      <h2>Model &amp; 3D</h2>
+      <p>Bina adegan 3D dengan primitive, bahan &amp; cahaya. Orbit kamera, ubah bentuk &amp; render PNG — terus dalam pelayar.</p>
     </a>
   </div>
 
-  <p class="note">Your images never leave your device — everything here is processed locally in your browser.</p>
+  <!-- Universal Dropzone -->
+  <div class="smart-dropzone" id="universalDropzone">
+    <input type="file" id="universalFileInput" accept="image/*,video/*" hidden>
+    <div class="icon-group">📁 ⚡</div>
+    <h2>Drop Sebarang Gambar atau Video di Sini</h2>
+    <p>Pelayar akan mengesan jenis fail secara automatik dan membuka Editor Gambar atau Editor Video yang sesuai.</p>
+  </div>
+
+  <!-- Draft Restoration Box -->
+  <div class="draft-box" id="draftBox" hidden>
+    <div class="draft-info">
+      <div class="icon">💾</div>
+      <div>
+        <h4 id="draftTitle">Draft Projek Terakhir Ditemui</h4>
+        <p id="draftTime">Disimpan automatik dalam pelayar anda.</p>
+      </div>
+    </div>
+    <div class="draft-btns">
+      <a href="/editor" class="btn-action">Sambung Sunting →</a>
+      <button id="clearDraftBtn" class="btn-clear">🗑️ Buang Draft</button>
+    </div>
+  </div>
+
+  <!-- Quick Template Presets -->
+  <div class="presets-section">
+    <div class="section-title">✨ Template & Canvas Presets Pantas</div>
+    <div class="preset-grid">
+      <a class="preset-card" href="/editor">
+        <span class="ratio-badge">4:5 / 1:1</span>
+        <h3>📱 IG Post & Portrait</h3>
+        <p>Saiz kanvas standard Instagram & media sosial.</p>
+      </a>
+      <a class="preset-card" href="/editor">
+        <span class="ratio-badge">9:16</span>
+        <h3>📲 Story & Reel Cover</h3>
+        <p>Potret penuh TikTok, IG Story & Shorts.</p>
+      </a>
+      <a class="preset-card" href="/editor">
+        <span class="ratio-badge">16:9</span>
+        <h3>🖼️ YouTube Thumbnail</h3>
+        <p>Reka thumbnail video HD dengan teks & pelekat.</p>
+      </a>
+      <a class="preset-card" href="/editor-video">
+        <span class="ratio-badge">WebM HD</span>
+        <h3>🎬 Video Clips & Reels</h3>
+        <p>Trim, penapis warna, kelajuan & subtajuk video.</p>
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Tools Grid -->
+  <div class="grid">
+    <a class="tool-card" href="/editor">
+      <span class="tag blue">4K Canvas</span>
+      <div class="icon">✂️</div>
+      <h2>Editor Gambar Pro</h2>
+      <p>Pelaras kecerahan, kontras, suhu, vignette, bucu bulat, lukisan pen/panah, pelekat emoji, teks bermodular, auto-perbaik & penapis gaya LUTs.</p>
+      <span class="go">Buka Editor Gambar →</span>
+    </a>
+
+    <a class="tool-card" href="/editor-video">
+      <span class="tag pink">WebM 60FPS</span>
+      <div class="icon">🎬</div>
+      <h2>Editor Video Sinematik</h2>
+      <p>Potong In/Out, kawalan volume audio (200%), navigasi presisi 1-bingkai, putar/flip, kelajuan 0.25x-2x, subtajuk petak & rakaman masa nyata.</p>
+      <span class="go">Buka Editor Video →</span>
+    </a>
+
+    <a class="tool-card" href="/bg-remover">
+      <span class="tag green">AI Local</span>
+      <div class="icon">🪄</div>
+      <h2>Buang Latar Belakang</h2>
+      <p>Pemotongan subjek auto berdasarkan warna latar, berus pemadam/pemulih manual, dan eksport PNG lutsinar segera.</p>
+      <span class="go">Buka Buang Latar →</span>
+    </a>
+
+    <a class="tool-card" href="/collage">
+      <span class="tag blue">Pro Grid</span>
+      <div class="icon">🧩</div>
+      <h2>Collage Maker</h2>
+      <p>Gabungkan pelbagai foto ke dalam grid dengan kawalan ruang, border, warna latar dan eksport gambar tunggal.</p>
+      <span class="go">Cipta Collage →</span>
+    </a>
+
+    <a class="tool-card" href="/design">
+      <span class="tag green">Gaya Canva</span>
+      <div class="icon">🎨</div>
+      <h2>Reka Bentuk (Design)</h2>
+      <p>Bina poster, kapsyen IG, kad bisnes & thumbnail daripada templat. Seret teks, bentuk, imej & sticker — ubah saiz, putar, lapis, eksport PNG/JPG.</p>
+      <span class="go">Buka Reka Bentuk →</span>
+    </a>
+
+    <a class="tool-card" href="/3d">
+      <span class="tag green">WebGL 3D</span>
+      <div class="icon">🧊</div>
+      <h2>Model &amp; Render 3D</h2>
+      <p>Gaya Blender: tambah kiub/sfera/silinder/kon/torus/satah, tetapkan bahan &amp; cahaya, orbit kamera, ubah posisi/pusingan/saiz &amp; render PNG. Semua WebGL lokal.</p>
+      <span class="go">Buka Editor 3D →</span>
+    </a>
+
+    <a class="tool-card" href="/?mode=images">
+      <span class="tag pink">Direct Search</span>
+      <div class="icon">🖼️</div>
+      <h2>Cari Imej Untuk Disunting</h2>
+      <p>Cari berjuta-juta imej web terindeks, tekan mana-mana gambar dan pilih “Edit in Studio” untuk terus sunting.</p>
+      <span class="go">Cari Imej Sekarang →</span>
+    </a>
+  </div>
 
   <footer>
-    &copy; 2026 Tukuk-OS — <a href="/">Search</a> <a href="/studio">Studio</a> <a href="/about">About</a> <a href="/privacy">Privacy</a>
+    &copy; 2026 Tukuk-OS — <a href="/">Carian</a> <a href="/studio">Studio Pro</a> <a href="/about">Mengenai</a> <a href="/privacy">Privasi</a>
   </footer>
 </div>
+
+<script>
+(() => {
+  const dropzone = document.getElementById('universalDropzone');
+  const fileInput = document.getElementById('universalFileInput');
+  const draftBox = document.getElementById('draftBox');
+  const draftTime = document.getElementById('draftTime');
+
+  // Check saved draft
+  try {
+    const saved = localStorage.getItem('tukuk-studio-project');
+    if (saved) {
+      const p = JSON.parse(saved);
+      if (p && p.savedAt) {
+        draftBox.hidden = false;
+        const d = new Date(p.savedAt);
+        draftTime.textContent = `Projek disimpan pada: ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+      }
+    }
+  } catch(e) {}
+
+  // Clear draft button
+  document.getElementById('clearDraftBtn').onclick = () => {
+    try { localStorage.removeItem('tukuk-studio-project'); } catch(e) {}
+    draftBox.hidden = true;
+  };
+
+  dropzone.onclick = () => fileInput.click();
+
+  function handleFile(f) {
+    if (!f) return;
+    if (f.type.startsWith('video/')) {
+      try { sessionStorage.setItem('tukuk-video-autopen', '1'); } catch(e) {}
+      location.href = '/editor-video';
+    } else if (f.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { sessionStorage.setItem('tukuk-studio-dropin', reader.result); } catch(e) {}
+        location.href = '/editor';
+      };
+      reader.onerror = () => { location.href = '/editor'; };
+      reader.readAsDataURL(f);
+    }
+  }
+
+  fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+  dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
+  dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+  dropzone.ondrop = (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  };
+})();
+</script>
 </body>
 </html>

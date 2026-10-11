@@ -530,6 +530,21 @@ Type a command below or click a quick action.
             </div>
           </div>
           
+          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">Microsoft Clarity (Analitik usage)</h3>
+          <div class="form-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="clarityEnabled">
+              <span class="slider"></span>
+              <span><strong>Enable Microsoft Clarity</strong></span>
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label for="clarityId">Clarity Project ID</label>
+            <input type="text" id="clarityId" placeholder="e.g. abc1def234">
+            <div class="help-text">Dapatkan ID dari <a href="https://clarity.microsoft.com" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>. Ia hanya dimuat bila diaktifkan (lihat /api/public/settings).</div>
+          </div>
+
           <button type="submit" class="btn btn-primary" style="margin-top:16px;">💾 Save Ad Settings</button>
           <span id="adsSavedBadge" class="badge badge-success" style="margin-left:12px;" hidden>Settings Saved!</span>
         </form>
@@ -990,6 +1005,10 @@ Type a command below or click a quick action.
       document.getElementById('msAdsSlotTop').value = s.msAdsSlotTop || '';
       document.getElementById('msAdsSlotBottom').value = s.msAdsSlotBottom || '';
       
+      // Microsoft Clarity
+      document.getElementById('clarityEnabled').checked = Boolean(s.clarityEnabled);
+      document.getElementById('clarityId').value = s.clarityId || '';
+      
       // UI & Wallpaper
       document.getElementById('siteTitle').value = s.siteTitle || 'Tukuk-OS';
       document.getElementById('siteTagline').value = s.siteTagline || '';
@@ -1029,7 +1048,9 @@ Type a command below or click a quick action.
       msAdsEnabled: document.getElementById('msAdsEnabled').checked,
       msAdsTagId: document.getElementById('msAdsTagId').value.trim(),
       msAdsSlotTop: document.getElementById('msAdsSlotTop').value.trim(),
-      msAdsSlotBottom: document.getElementById('msAdsSlotBottom').value.trim()
+      msAdsSlotBottom: document.getElementById('msAdsSlotBottom').value.trim(),
+      clarityEnabled: document.getElementById('clarityEnabled').checked,
+      clarityId: document.getElementById('clarityId').value.trim()
     };
     await fetch('/api/admin/settings', {
       method: 'POST',
