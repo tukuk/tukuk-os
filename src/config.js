@@ -85,14 +85,19 @@ module.exports = {
     fallbackOnEmpty: bool(process.env.SEARCH_FALLBACK_ON_EMPTY, true)
   },
 
-  // Neural re-ranking (cross-encoder ONNX, dijalankan sepenuhnya dalam Node).
-  // Lalai MATI supaya /search tak berubah sehingga model Kaggle di-deploy.
+  // Neural re-ranking. DUA backend:
+  //   1) tempatan  — cross-encoder ONNX (perlukan model Kaggle; lalai MATI).
+  //   2) cloud     — embeddings Workers AI (bi-encoder). Aktif AUTOMATIK bila
+  //                  CLOUDFLARE_API_TOKEN (keizinan Workers AI) wujud; no-op
+  //                  selamat bila tiada. Tiada had keras — latensi dipagari.
   rerank: {
     enabled: bool(process.env.RERANK_ENABLED, false),
     modelDir: process.env.RERANK_MODEL_DIR || path.join(__dirname, '..', 'models', 'tukuk-reranker'),
     quantized: bool(process.env.RERANK_QUANTIZED, false),
     candidates: Math.min(num(process.env.RERANK_CANDIDATES, 40), 100),
-    timeoutMs: num(process.env.RERANK_TIMEOUT_MS, 2500)
+    timeoutMs: num(process.env.RERANK_TIMEOUT_MS, 2500),
+    cloud: bool(process.env.RERANK_CLOUD, true),
+    embedModel: process.env.RERANK_EMBED_MODEL || '@cf/baai/bge-base-en-v1.5'
   },
 
   rateLimit: {

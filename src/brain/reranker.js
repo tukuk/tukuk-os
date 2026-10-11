@@ -29,6 +29,7 @@ let engine = null; // { tokenizer, model }
 let loadPromise = null;
 const status = {
   enabled: Boolean(config.rerank.enabled),
+  backend: 'none', // 'local' | 'cloud' | 'none'
   ready: false,
   attempted: false,
   modelDir: null,
@@ -96,13 +97,40 @@ function docText(hit) {
 /**
  * Susun semula `hits` ikut relevansi kepada `query`.
  * Pulangkan array asal jika rerank tidak tersedia (selamat).
+ * Keutamaan: model ONNX tempatan → embeddings Workers AI cloud → input asal.
  */
 async function rerank(query, hits, { topN } = {}) {
   const list = Array.isArray(hits) ? hits : [];
-  if (!config.rerank.enabled || list.length === 0) return list;
-  const eng = await loadOnce();
-  if (!eng) return list;
+  if (list.length < 2) return list;
+  if (!config.rerank.enabled && !config.rerank.cloud) return list;
 
+  // 1) Model cross-encoder tempatan (pilihan utama jika didayakan & di-deploy).
+  if (config.rerank.enabled) {
+    const eng = await loadOnce();
+    if (eng) return localRerank(eng, query, list, topN);
+  }
+
+  // 2) Cloud — embeddings Workers AI (bi-encoder kosine). No-op jika tiada cred.
+  if (config.rerank.cloud) {
+    try {
+      // Pagar keras: walaupun fetch menggantung, jangan tahan /search.
+      const guard = new Promise((_, rej) =>
+        setTimeout(() => rej(new Error('cloud-timeout')), config.rerank.timeoutMs + 800)
+      );
+      return await Promise.race([cloudRerank(query, list, topN), guard]);
+    } catch (err) {
+      // Kekalkan isyarat "tiada cred" yang lebih tepat jika sudah diletak.
+      if (status.error !== 'cloud-no-creds' && status.error !== 'cloud-no-account') {
+        status.error = 'cloud:' + (err && err.message ? err.message : String(err));
+      }
+      return list; // selamat: jangan pecahkan /search
+    }
+  }
+  return list;
+}
+
+/** Rerank dengan model ONNX tempatan (logit mentah cross-encoder). */
+async function localRerank(eng, query, list, topN) {
   const started = Date.now();
   const work = (async () => {
     const queries = list.map(() => String(query || ''));
@@ -132,6 +160,7 @@ async function rerank(query, hits, { topN } = {}) {
   try {
     const out = await Promise.race([work, guard]);
     if (out === null) { status.error = 'timeout'; return list; }
+    status.backend = 'local';
     status.lastTookMs = Date.now() - started;
     status.lastCount = out.length;
     return out;
@@ -141,4 +170,96 @@ async function rerank(query, hits, { topN } = {}) {
   }
 }
 
-module.exports = { rerank, status, looksDeployed };
+// ── Backend cloud: embeddings Workers AI (bi-encoder kosine) ────────────
+// Token: env (CLOUDFLARE_AI_TOKEN/API_TOKEN) ATAU Admin→AI Settings
+// (aiProvider=cloudflare + aiApiKey), selari dengan provider.js. Account id
+// boleh env atau auto-temui daripada token (/accounts).
+function CF_TOKEN() {
+  let t = config.brain.cloudflareAiToken || '';
+  if (!t) {
+    try {
+      const s = require('../store');
+      if (String(s.getSetting('aiProvider', '') || '').toLowerCase() === 'cloudflare') {
+        t = String(s.getSetting('aiApiKey', '') || '');
+      }
+    } catch { /* store belum sedia */ }
+  }
+  return t;
+}
+let acctCache = '';
+let acctTried = false;
+
+async function resolveAccount() {
+  if (acctCache) return acctCache;
+  if (acctTried) return acctCache;
+  acctTried = true;
+  const token = CF_TOKEN();
+  if (!token) return '';
+  try {
+    const r = await fetch('https://api.cloudflare.com/client/v4/accounts', {
+      headers: { Authorization: 'Bearer ' + token },
+      signal: AbortSignal.timeout(6000)
+    });
+    const j = await r.json().catch(() => ({}));
+    acctCache = (j.result && j.result[0] && j.result[0].id) || '';
+  } catch {
+    acctCache = '';
+  }
+  return acctCache;
+}
+
+function cosine(a, b) {
+  const n = Math.min(a.length, b.length);
+  let d = 0, na = 0, nb = 0;
+  for (let i = 0; i < n; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return d / ((Math.sqrt(na) * Math.sqrt(nb)) || 1);
+}
+
+async function embedBatch(token, account, texts) {
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${config.rerank.embedModel}`,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: texts }),
+      signal: AbortSignal.timeout(config.rerank.timeoutMs)
+    }
+  );
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.result || !Array.isArray(j.result.data)) {
+    const detail = (j.errors && j.errors[0] && j.errors[0].message) || JSON.stringify(j).slice(0, 120);
+    throw new Error('embed ' + res.status + ': ' + String(detail).slice(0, 160));
+  }
+  return j.result.data;
+}
+
+async function cloudRerank(query, list, topN) {
+  const token = CF_TOKEN();
+  if (!token) { status.error = 'cloud-no-creds'; return list; }
+  const account = config.brain.cloudflareAccountId || (await resolveAccount());
+  if (!account) { status.error = 'cloud-no-account'; return list; }
+
+  const started = Date.now();
+  const texts = [String(query || ''), ...list.map((h) => docText(h))];
+  const vecs = await embedBatch(token, account, texts);
+  if (!Array.isArray(vecs) || vecs.length !== texts.length) throw new Error('embed-count');
+  const qv = vecs[0];
+  const scored = list.map((hit, i) => ({ hit, s: cosine(qv, vecs[i + 1]) }));
+  scored.sort((a, b) => b.s - a.s);
+  const sliced = scored.slice(0, topN == null ? scored.length : topN);
+  status.backend = 'cloud';
+  status.ready = true;
+  status.error = null;
+  status.lastTookMs = Date.now() - started;
+  status.lastCount = sliced.length;
+  return sliced.map((x) => Object.assign({}, x.hit, { _relevance: Number(x.s.toFixed(4)) }));
+}
+
+/** Adakah sebarang backend rerank benar-benar tersedia (jimatkan query berganda). */
+function available() {
+  if (config.rerank.enabled && looksDeployed(resolveModelDir())) return true;
+  if (config.rerank.cloud && CF_TOKEN()) return true;
+  return false;
+}
+
+module.exports = { rerank, status, looksDeployed, available };

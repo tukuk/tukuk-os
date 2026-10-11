@@ -228,7 +228,7 @@ app.use('/satu-kata', express.static(GENERATED_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'studio', 'apps', 'bg-remover', 'collage'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'design', '3d', 'studio', 'apps', 'bg-remover', 'collage'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
@@ -1056,6 +1056,7 @@ app.get('/health', async (req, res) => {
       uptimeSeconds: Math.round(process.uptime()),
       meilisearch: meiliHealth.status,
       documents: serverStats.numberOfDocuments,
+      rerank: reranker.status,
       crawler: crawler.snapshot()
     });
   } catch (error) {
@@ -1169,8 +1170,8 @@ app.get('/search', limiter.search, async (req, res) => {
     const wantedLimit = params.limit;
     let result = await target.search(qq, params);
     // Rerank neural (hanya mod relevansi, halaman pertama). Selamat: no-op jika
-    // RERANK_ENABLED=false atau model belum di-deploy.
-    if (config.rerank.enabled && !params.sort && (params.offset || 0) === 0 && result.hits.length > 1) {
+    // tiada backend tersedia (model tempatan belum di-deploy & tiada cred cloud).
+    if (reranker.available() && !params.sort && (params.offset || 0) === 0 && result.hits.length > 1) {
       if (wantedLimit < config.rerank.candidates) {
         params.limit = Math.min(config.rerank.candidates, config.search.maxLimit);
         result = await target.search(qq, params);
@@ -1965,6 +1966,8 @@ app.get('/api/public/settings', (req, res) => {
     adsSlotBottom: store.getSetting('adsSlotBottom', ''),
     msAdsEnabled: Boolean(store.getSetting('msAdsEnabled', false)),
     msAdsTagId: store.getSetting('msAdsTagId', ''),
+    clarityEnabled: Boolean(store.getSetting('clarityEnabled', false)),
+    clarityId: String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || '') || ''),
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
     siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
@@ -1986,6 +1989,9 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     msAdsTagId: store.getSetting('msAdsTagId', ''),
     msAdsSlotTop: store.getSetting('msAdsSlotTop', ''),
     msAdsSlotBottom: store.getSetting('msAdsSlotBottom', ''),
+    // Microsoft Clarity (analytics)
+    clarityEnabled: Boolean(store.getSetting('clarityEnabled', false)),
+    clarityId: String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || '') || ''),
     // Custom Themes & Wallpaper
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
@@ -2017,6 +2023,9 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   if (typeof b.msAdsTagId !== 'undefined') store.setSetting('msAdsTagId', String(b.msAdsTagId));
   if (typeof b.msAdsSlotTop !== 'undefined') store.setSetting('msAdsSlotTop', String(b.msAdsSlotTop));
   if (typeof b.msAdsSlotBottom !== 'undefined') store.setSetting('msAdsSlotBottom', String(b.msAdsSlotBottom));
+  // Microsoft Clarity
+  if (typeof b.clarityEnabled !== 'undefined') store.setSetting('clarityEnabled', Boolean(b.clarityEnabled));
+  if (typeof b.clarityId !== 'undefined') store.setSetting('clarityId', String(b.clarityId).trim());
   // Themes & Custom Background
   if (typeof b.bgMode !== 'undefined') store.setSetting('bgMode', String(b.bgMode));
   if (typeof b.customBgUrl !== 'undefined') store.setSetting('customBgUrl', String(b.customBgUrl));
