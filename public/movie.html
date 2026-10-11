@@ -101,6 +101,9 @@
   <input type="file" id="fileInput" accept="video/*,image/*" multiple hidden>
   <button id="musicBtn" title="Tambah trek muzik latar">🎵 Muzik</button>
   <input type="file" id="musicInput" accept="audio/*" hidden>
+  <button id="saveProjectBtn" title="Simpan projek (struktur + teks + keyframe) sebagai fail .json">💾 Simpan</button>
+  <button id="openProjectBtn" title="Buka projek .json — fail media perlu dipilih semula">📂 Buka</button>
+  <input type="file" id="projectInput" accept="application/json,.json" hidden>
   <span class="spacer"></span>
   <button id="toStart" title="Ke awal (Home)">⏮</button>
   <button id="playBtn" title="Main / Jeda (Space)">▶ Main</button>
@@ -232,6 +235,7 @@ let lastTs = 0;
 let scrubbing = false;
 let history = [], future = [];
 let selTitleId = null;   // teks terpilih untuk sunting/keyframe
+let pendingProj = null;  // projek .json yang menunggu relink media
 
 // ── Utiliti ──
 function fmt(s) { s = Math.max(0, s || 0); const m = Math.floor(s / 60); const ss = Math.floor(s % 60); return m + ':' + String(ss).padStart(2, '0'); }
@@ -307,13 +311,13 @@ async function addFiles(list) {
     const id = 'c' + (uid++);
     if (isImg) {
       const img = new Image(); img.src = url; await img.decode().catch(() => {});
-      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: true, thumb: url, trans: 0 };
+      const c = { id, kind: 'image', name: f.name, url, el: img, w: img.naturalWidth, h: img.naturalHeight, in: 0, out: 0, dur: 3, srcDur: 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: true, thumb: url, trans: 0, transType: 'dissolve' };
       elMap[id] = img; clips.push(c); addedFirst = addedFirst || false;
     } else {
       const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous'; v.muted = false;
       await new Promise((res) => { const h = () => { v.removeEventListener('loadedmetadata', h); res(); }; v.addEventListener('loadedmetadata', h); setTimeout(res, 4000); });
       if (!addedFirst && v.videoWidth) { const sc = Math.min(1, 1280 / v.videoWidth); cvs.width = Math.round(v.videoWidth * sc); cvs.height = Math.round(v.videoHeight * sc); addedFirst = true; }
-      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: false, thumb: null, trans: 0 };
+      const c = { id, kind: 'video', name: f.name, url, el: v, w: v.videoWidth, h: v.videoHeight, in: 0, out: v.duration || 0, dur: 0, srcDur: v.duration || 0, speed: 1, vol: 1, muted: false, fade: 0.4, rot: 0, flipH: false, flipV: false, aspect: 0, filt: defaultFilt(), kb: false, thumb: null, trans: 0, transType: 'dissolve' };
       elMap[id] = v; document.body.appendChild(v); clips.push(c); genThumb(c);
     }
     selId = id;
@@ -358,12 +362,16 @@ function syncActive(t) {
     try { c.el.playbackRate = c.speed || 1; } catch (e) {}
     if (Math.abs(c.el.currentTime - exp) > 0.35) { try { c.el.currentTime = exp; } catch (e) {} }
     if (playing && c.el.paused) { try { c.el.play().catch(() => {}); } catch (e) {} }
+    if (c._gain) { let vm = 1; const i = cc.index; const len = clipLen(c);
+      if (i > 0) { const ov = (starts[i - 1] + clipLen(clips[i - 1])) - starts[i]; if (ov > 0 && cc.local < ov) vm *= (cc.local / ov); }
+      if (i < clips.length - 1) { const ov = starts[i] + len - starts[i + 1]; if (ov > 0 && (len - cc.local) < ov) vm *= ((len - cc.local) / ov); }
+      try { c._gain.gain.value = (c.muted ? 0 : (c.vol || 0)) * vm; } catch (e) {} }
   }
   activeId = cov.length ? cov[cov.length - 1].clip.id : null;
 }
 
 // ── Lukis satu sumber ke canvas ──
-function drawSource(c, cw, ch, local, alphaOverride) {
+function drawSource(c, cw, ch, local, alphaOverride, dx, tscale) {
   const el = c.el; if (!el) return;
   const sw = c.w || el.videoWidth || el.naturalWidth || cw;
   const sh = c.h || el.videoHeight || el.naturalHeight || ch;
@@ -382,8 +390,9 @@ function drawSource(c, cw, ch, local, alphaOverride) {
   const scale = cover ? Math.max(cw / sw, ch / sh) : Math.min(cw / sw, ch / sh);
   let kb = 1, ox = 0, oy = 0;
   if (c.kb && len > 0) { const p = Math.min(1, Math.max(0, local / len)); kb = 1 + 0.14 * p; ox = (p - 0.5) * cw * 0.06; oy = (p - 0.5) * ch * 0.03; }
-  const dw = sw * scale * kb, dh = sh * scale * kb;
-  try { g.drawImage(el, -dw / 2 + ox, -dh / 2 + oy, dw, dh); } catch (e) {}
+  const ksz = (tscale || 1);
+  const dw = sw * scale * kb * ksz, dh = sh * scale * kb * ksz;
+  try { g.drawImage(el, -dw / 2 + ox + (dx || 0), -dh / 2 + oy, dw, dh); } catch (e) {}
   g.restore();
   g.filter = 'none';
 }
@@ -430,9 +439,13 @@ function renderAt(t) {
   if (!cov.length) { const A = findAt(t); if (A) cov.push(A); }
   cov.sort((x, y) => x.start - y.start);
   for (const cc of cov) {
-    const c = cc.clip; let a = edgeAlpha(c, cc.local);
-    if (cc.index > 0) { const prevEnd = starts[cc.index - 1] + clipLen(clips[cc.index - 1]); const ov = prevEnd - starts[cc.index]; if (ov > 0 && cc.local < ov) a *= (cc.local / ov); }
-    drawSource(c, cw, ch, cc.local, a);
+    const c = cc.clip; const i = cc.index; const len = clipLen(c);
+    let a = edgeAlpha(c, cc.local), dx = 0, tscale = 1;
+    if (i > 0) { const prev = clips[i - 1]; const ov = (starts[i - 1] + clipLen(prev)) - starts[i]; const tt = prev.transType || 'dissolve';
+      if (ov > 0 && cc.local < ov) { const p = cc.local / ov; if (tt === 'slide') dx = (1 - p) * cw; else if (tt === 'zoom') { a *= (0.35 + 0.65 * p); tscale = 1.28 - 0.28 * p; } else a *= p; } }
+    if (i < clips.length - 1) { const ov = starts[i] + len - starts[i + 1]; const tt = c.transType || 'dissolve';
+      if (ov > 0 && (len - cc.local) < ov) { const p = (len - cc.local) / ov; if (tt === 'slide') dx = -(1 - p) * cw; else if (tt === 'zoom') { a *= (0.35 + 0.65 * p); tscale = 1.28 - 0.28 * p; } } }
+    drawSource(c, cw, ch, cc.local, a, dx, tscale);
   }
   drawTitles(t);
 }
@@ -498,7 +511,7 @@ function renderTrack() {
     b.style.width = Math.max(20, Math.round(clipLen(c) * PPS)) + 'px';
     if (c.thumb) { b.style.backgroundColor = '#0d1424'; b.style.backgroundImage = 'linear-gradient(180deg, rgba(8,12,24,0) 55%, rgba(8,12,24,.65)), url(' + JSON.stringify(c.thumb) + ')'; b.style.backgroundSize = '100% 100%, ' + (c.kind === 'image' ? 'cover' : '100% 100%'); b.style.backgroundPosition = 'center, center'; b.style.backgroundRepeat = 'no-repeat, no-repeat'; }
     let inner = '<span class="lbl">' + escapeHtml(c.name || (c.kind === 'video' ? 'klip' : 'gambar')) + '</span>';
-    if (i < clips.length - 1 && (c.trans || 0) > 0) inner += '<span class="transBadge">\u21c4 ' + fmt1(c.trans) + 's</span>';
+    if (i < clips.length - 1 && (c.trans || 0) > 0) { const gl = ({ slide: '\u2192', zoom: '\u25ce' })[c.transType] || '\u21c4'; inner += '<span class="transBadge">' + gl + ' ' + fmt1(c.trans) + 's</span>'; }
     b.innerHTML = inner;
     b.title = (c.name || '') + ' \u00b7 ' + fmt1(clipLen(c)) + 's' + (i < clips.length - 1 && (c.trans || 0) > 0 ? ' \u00b7 transisi ' + fmt1(c.trans) + 's' : '');
     track.appendChild(b);
@@ -590,9 +603,10 @@ function renderClipPanel() {
     </div>
     <h3>🔀 Transisi ke klip berikut</h3>
     <div class="grp">
-      <div class="slider"><label>Dissolve</label><input type="range" id="c-trans" min="0" max="1.5" step="0.05" value="${c.trans || 0}"><output>${fmt1(c.trans || 0)}s</output></div>
+      <div class="slider"><label>Transisi</label><input type="range" id="c-trans" min="0" max="1.5" step="0.05" value="${c.trans || 0}"><output>${fmt1(c.trans || 0)}s</output></div>
+      <div class="row"><select id="c-transType" style="flex:1">${['dissolve', 'slide', 'zoom'].map((tt) => `<option value="${tt}" ${(c.transType || 'dissolve') === tt ? 'selected' : ''}>${{ dissolve: 'Larut (cross-dissolve)', slide: 'Geser (slide)', zoom: 'Zum (zoom)' }[tt]}</option>`).join('')}</select></div>
       <div class="row"><button id="c-trans0" style="flex:1">Cut</button><button id="c-trans5" style="flex:1">0.5s</button><button id="c-trans10" style="flex:1">1.0s</button></div>
-      <div style="color:var(--muted);font-size:.7rem;">${isLast ? 'Klip terakhir — transisi tidak terpakai.' : 'Klip ini akan larut (cross-dissolve) ke klip berikutnya.'}</div>
+      <div style="color:var(--muted);font-size:.7rem;">${isLast ? 'Klip terakhir — transisi tidak terpakai.' : 'Klip ini beralih ke klip berikutnya mengikut gaya terpilih.'}</div>
     </div>
     ${isImg ? '' : `<h3>✂ Trim & Kelajuan</h3>
     <div class="grp">
@@ -632,6 +646,7 @@ function bindClipPanel(c, isImg) {
   $('c-trans0').onclick = () => { saveHistory(); setTrans(0); };
   $('c-trans5').onclick = () => { saveHistory(); setTrans(0.5); };
   $('c-trans10').onclick = () => { saveHistory(); setTrans(1.0); };
+  const trt = $('c-transType'); if (trt) trt.onchange = (e) => { saveHistory(); c.transType = e.target.value; renderTrack(); };
   if (!isImg) {
     $('setIn').onclick = () => { saveHistory(); c.in = Math.max(0, Math.min(c.srcDur - 0.05, clockSrc(c))); if (c.out <= c.in) c.out = Math.min(c.srcDur, c.in + 0.2); buildTimeline(); renderClipPanel(); };
     $('setOut').onclick = () => { saveHistory(); c.out = Math.max(c.in + 0.05, Math.min(c.srcDur, clockSrc(c))); buildTimeline(); renderClipPanel(); };
@@ -833,9 +848,58 @@ async function finishRecording() {
   toast('Dieksport sebagai ' + ext.toUpperCase() + ' (' + fmt(total) + ', ' + cvs.width + '×' + cvs.height + ').');
 }
 
+// ── Simpan / Buka projek (.json; media perlu dipilih semula) ──
+function projectJSON() {
+  return {
+    v: 1, res: [cvs.width, cvs.height],
+    clips: clips.map((c, i) => ({ id: c.id, kind: c.kind, name: c.name, in: c.in, out: c.out, dur: c.dur, srcDur: c.srcDur, speed: c.speed, vol: c.vol, muted: c.muted, fade: c.fade, rot: c.rot, flipH: c.flipH, flipV: c.flipV, aspect: c.aspect, kb: c.kb, trans: c.trans, transType: c.transType, filt: c.filt, start: starts[i] })),
+    titles: titles.map((t) => ({ id: t.id, text: t.text, start: t.start, dur: t.dur, size: t.size, color: t.color, pos: t.pos, x: t.x, y: t.y, scale: t.scale, alpha: t.alpha, kfs: (t.kfs || []).map((k) => Object.assign({}, k)) })),
+    music: music ? { name: music.name } : null
+  };
+}
+function applyProjectSettings(data) {
+  saveHistory();
+  const store = data.clips || []; const matched = []; const used = new Set();
+  store.forEach((dc, di) => {
+    let c = clips.find((x) => x.name === dc.name && !used.has(x.id));
+    if (!c) c = (clips[di] && !used.has(clips[di].id)) ? clips[di] : null;
+    if (c) { used.add(c.id); matched.push({ c, dc }); }
+  });
+  matched.forEach((m) => {
+    const c = m.c, dc = m.dc;
+    c.in = dc.in || 0; c.speed = dc.speed || 1; c.vol = dc.vol != null ? dc.vol : 1; c.muted = !!dc.muted;
+    c.fade = dc.fade != null ? dc.fade : 0.4; c.rot = dc.rot || 0; c.flipH = !!dc.flipH; c.flipV = !!dc.flipV;
+    c.aspect = dc.aspect || 0; c.kb = !!dc.kb; c.trans = dc.trans || 0; c.transType = dc.transType || 'dissolve';
+    c.filt = Object.assign(defaultFilt(), dc.filt || {});
+    if (c.kind === 'image') { c.dur = dc.dur || 3; }
+    else { c.srcDur = (c.el && c.el.duration) || dc.srcDur || 0; if (!c.out || c.out > c.srcDur) c.out = c.srcDur; if (c.in >= c.out) c.in = 0; }
+  });
+  const ordered = matched.map((m) => m.c);
+  clips = ordered.concat(clips.filter((c) => !ordered.includes(c)));
+  titles = (data.titles || []).map((t) => Object.assign({}, t, { kfs: (t.kfs || []).map((k) => Object.assign({}, k)) }));
+  if (data.res && data.res[0]) { cvs.width = data.res[0]; cvs.height = data.res[1]; }
+  selId = clips.length ? clips[0].id : null; selTitleId = null; clock = 0;
+  buildTimeline(); renderClipPanel(); renderTitleList(); loadControls(null);
+  $('dropHint').hidden = clips.length > 0;
+}
+$('saveProjectBtn').onclick = () => {
+  if (!clips.length && !titles.length) { toast('Tiada apa untuk disimpan.'); return; }
+  try { const blob = new Blob([JSON.stringify(projectJSON(), null, 1)], { type: 'application/json' }); downloadBlob(blob, 'tukuk-movie-' + Date.now() + '.json'); toast('Projek disimpan. Bila dibuka, pilih semula fail media yang sama.'); } catch (e) { toast('Gagal simpan: ' + e.message); }
+};
+$('openProjectBtn').onclick = () => $('projectInput').click();
+$('projectInput').onchange = async (e) => {
+  const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+  let data; try { data = JSON.parse(await f.text()); } catch (err) { toast('Fail projek tidak sah.'); return; }
+  const need = (data.clips || []).length;
+  if (need) {
+    clips = []; titles = []; selId = null; selTitleId = null; clock = 0; buildTimeline(); renderTitleList();
+    pendingProj = data; toast('Pilih fail media untuk ' + need + ' klip (nama sepadan otomatis).'); $('fileInput').click();
+  } else { applyProjectSettings(data); toast('Projek dibuka (tiada klip media).'); }
+};
+
 // ── Wiring header/transport ──
 $('addBtn').onclick = () => $('fileInput').click();
-$('fileInput').onchange = (e) => { if (e.target.files && e.target.files.length) addFiles([...e.target.files]); e.target.value = ''; };
+$('fileInput').onchange = async (e) => { const arr = e.target.files ? [...e.target.files] : []; e.target.value = ''; if (!arr.length) return; await addFiles(arr); if (pendingProj) { const d = pendingProj; pendingProj = null; applyProjectSettings(d); toast('Projek dipulihkan.'); } };
 $('playBtn').onclick = () => { playing ? pause() : play(); };
 $('toStart').onclick = () => seekTo(0);
 $('toEnd').onclick = () => seekTo(total);
