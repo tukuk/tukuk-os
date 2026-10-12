@@ -225,7 +225,8 @@ const TYPES = {
   reaction:{ ic:'⚡', name:'Masa Tindak Balas', make:()=>({type:'reaction'}) },
   guess:{ ic:'🔢', name:'Teka Nombor', make:()=>({type:'guess', max:100}) },
   br:{ ic:'🔫', name:'Battle Royale', make:()=>({type:'br', enemies:5, zoneSpeed:10, mapSize:600}) },
-  fps:{ ic:'🕹️', name:'FPS Arena 3D', make:()=>({type:'fps', enemies:4, zoneSpeed:25}) }
+  fps:{ ic:'🕹️', name:'FPS Arena 3D', make:()=>({type:'fps', enemies:4, zoneSpeed:25}) },
+  runner:{ ic:'🏃', name:'Lari Tanpa Hujung', make:()=>({type:'runner'}) }
 };
 
 // Templat awal — setiap satu muat set widget + tema + nama (id dijana semasa dimuat).
@@ -277,6 +278,11 @@ const TEMPLATES = {
     {type:'heading', text:'🕹️ FPS Arena 3D', level:2, align:'center'},
     {type:'text', text:'W/S+AD atau Joystik sentuh · Elak zone merah!', align:'center'},
     {type:'fps', enemies:4, zoneSpeed:25}
+  ]},
+  runtpl:{ label:'🏃 Lari Tanpa Hujung', appName:'Runner', theme:{accent:'#ffcf3c',bg:'#0e1626',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🏃 Lari Tanpa Hujung', level:2, align:'center'},
+    {type:'text', text:'Klik / Sentuh / Space untuk lompat · Elak halangan!', align:'center'},
+    {type:'runner'}
   ]}
 };
 </script>
@@ -304,6 +310,7 @@ function initGames(root){
       else if(kind==='guess') gGuess(box,acc);
       else if(kind==='br') gBR(box,acc);
       else if(kind==='fps') gFPS(box,acc);
+      else if(kind==='runner') gRunner(box,acc);
     }catch(err){ if(window.console) console.warn('game', err); }
   });
 
@@ -362,15 +369,20 @@ function initGames(root){
     ctx.restore();
   }
 
+  // Skor terbaik (localStorage). Selamat dalam sandbox opaque-origin → degredasi senyap.
+  function ls(){ try{ return window.localStorage; }catch(e){ return null; } }
+  function getBest(k){ var s=ls(); if(!s)return null; try{ var v=s.getItem('tukuk-best-'+k); return v==null?null:Number(v); }catch(e){ return null; } }
+  function setBest(k,val){ var s=ls(); if(!s||!isFinite(val))return false; try{ var c=getBest(k); if(c==null||val>c){ s.setItem('tukuk-best-'+k,String(val)); return true; } }catch(e){} return false; }
+
   function gTTT(box,acc){
     box.innerHTML='';
-    var cells=[], b=Array(9).fill(''), turn='X', over=false;
+    var cells=[], b=Array(9).fill(''), turn='X', over=false, sfx=makeSfx();
     var stat=el('div','font-size:13px;color:#666','Giliran: X');
     var grid=el('div','display:grid;grid-template-columns:repeat(3,58px);gap:6px;margin:8px 0');
     function win(a){ var L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(var k=0;k<L.length;k++){ var x=L[k]; if(a[x[0]]&&a[x[0]]===a[x[1]]&&a[x[1]]===a[x[2]]) return true; } return false; }
     for(var i=0;i<9;i++){ (function(idx){ var c=el('button','width:58px;height:58px;font-size:26px;font-weight:800;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer','');
-      c.onclick=function(){ if(over||b[idx])return; b[idx]=turn; c.textContent=turn; c.style.color=turn==='X'?acc:'#e5484d';
-        if(win(b)){ over=true; stat.textContent='Menang: '+turn+' 🎉'; } else if(b.every(function(x){return x;})){ over=true; stat.textContent='Seri!'; } else { turn=turn==='X'?'O':'X'; stat.textContent='Giliran: '+turn; } };
+      c.onclick=function(){ if(over||b[idx])return; b[idx]=turn; c.textContent=turn; c.style.color=turn==='X'?acc:'#e5484d'; sfx.shoot();
+        if(win(b)){ over=true; stat.textContent='Menang: '+turn+' 🎉'; sfx.win(); } else if(b.every(function(x){return x;})){ over=true; stat.textContent='Seri!'; } else { turn=turn==='X'?'O':'X'; stat.textContent='Giliran: '+turn; } };
       grid.appendChild(c); cells.push(c); })(i); }
     var rst=el('button','padding:6px 12px;border:1px solid #ccc;border-radius:8px;background:#f3f5fb;cursor:pointer','Reset');
     rst.onclick=function(){ b=Array(9).fill(''); turn='X'; over=false; cells.forEach(function(x){ x.textContent=''; x.style.color=''; }); stat.textContent='Giliran: X'; };
@@ -383,63 +395,63 @@ function initGames(root){
     var set=['🍎','🍌','🍇','🍒','🍊','🍉','🥝','🍍','📷','🚗','⭐','🔥'];
     var chosen=set.slice(0,Math.min(pairs,set.length)); var deck=[]; chosen.forEach(function(em){ deck.push(em,em); });
     for(var i=deck.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=deck[i]; deck[i]=deck[j]; deck[j]=t; }
-    box.innerHTML=''; var open=[], matched=0, moves=0, lock=false;
+    box.innerHTML=''; var open=[], matched=0, moves=0, lock=false, sfx=makeSfx();
     var stat=el('div','font-size:13px;color:#666');
     var grid=el('div','display:grid;grid-template-columns:repeat(4,52px);gap:6px;margin:8px 0');
     deck.forEach(function(em){ var c=el('button','width:52px;height:52px;font-size:22px;border:1px solid #ccc;border-radius:8px;cursor:pointer','?'); c.style.background=acc; c.style.color=acc;
       c.onclick=function(){ if(lock||c.__o||c.__d)return; c.textContent=em; c.style.background='#fff'; c.style.color='#111'; c.__o=true; open.push({c:c,em:em});
         if(open.length===2){ moves++; lock=true; var a=open[0], bb=open[1];
-          setTimeout(function(){ if(a.em===bb.em){ a.c.__d=1; bb.c.__d=1; a.c.style.background='#d7f7dd'; bb.c.style.background='#d7f7dd'; matched++; stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length+(matched===chosen.length?'  ✅ Selesai!':''); } else { [a,bb].forEach(function(o){ o.c.textContent='?'; o.c.style.background=acc; o.c.style.color=acc; }); stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length; } open=[]; lock=false; }, 550); } };
+          setTimeout(function(){ if(a.em===bb.em){ a.c.__d=1; bb.c.__d=1; a.c.style.background='#d7f7dd'; bb.c.style.background='#d7f7dd'; matched++; sfx.kill(); if(matched===chosen.length)sfx.win(); stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length+(matched===chosen.length?'  ✅ Selesai!':''); } else { sfx.hurt(); [a,bb].forEach(function(o){ o.c.textContent='?'; o.c.style.background=acc; o.c.style.color=acc; }); stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length; } open=[]; lock=false; }, 550); } };
       grid.appendChild(c); });
     box.appendChild(el('div','font-size:13px;color:#666','Cari pasangan yang sama.'));
     box.appendChild(grid); box.appendChild(stat); stat.textContent='Gerak: 0  •  Padan: 0/'+chosen.length;
   }
 
   function gMole(box,acc){
-    box.innerHTML=''; var cells=[], score=0, left=0, playing=false, spawn=null, tick=null;
+    box.innerHTML=''; var cells=[], score=0, left=0, playing=false, spawn=null, tick=null, sfx=makeSfx();
     var stat=el('div','font-size:13px;color:#666','Skor: 0');
     var grid=el('div','display:grid;grid-template-columns:repeat(3,60px);gap:8px;margin:8px 0');
     function pop(){ if(!playing)return; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); var m=cells[Math.floor(Math.random()*cells.length)]; m.__m=true; m.textContent='🐹'; }
     for(var i=0;i<9;i++){ (function(){ var h=el('div','width:60px;height:60px;border-radius:50%;background:#e7e0d6;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer','');
-      h.onclick=function(){ if(playing&&h.__m){ score++; h.__m=false; h.textContent=''; stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; } }; grid.appendChild(h); cells.push(h); })(); }
+      h.onclick=function(){ if(playing&&h.__m){ score++; sfx.hit(); h.__m=false; h.textContent=''; stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; } }; grid.appendChild(h); cells.push(h); })(); }
     var start=el('button','padding:6px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Mula');
-    start.onclick=function(){ if(playing)return; playing=true; score=0; left=Number(box.getAttribute('data-duration'))||20; stat.textContent='Skor: 0  •  Masa: '+left+'s'; pop();
-      tick=setInterval(function(){ left--; if(left<=0){ clearInterval(tick); clearInterval(spawn); playing=false; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); stat.textContent='⏱ Tamat! Skor: '+score; } else stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; }, 1000);
+    start.onclick=function(){ if(playing)return; sfx.shoot(); playing=true; score=0; left=Number(box.getAttribute('data-duration'))||20; stat.textContent='Skor: 0  •  Masa: '+left+'s'; pop();
+      tick=setInterval(function(){ left--; if(left<=0){ clearInterval(tick); clearInterval(spawn); playing=false; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); stat.textContent='⏱ Tamat! Skor: '+score; sfx.win(); } else stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; }, 1000);
       spawn=setInterval(pop, 850); };
     box.appendChild(el('div','font-size:13px;color:#666','Klik tikus sebaik ia muncul.'));
     box.appendChild(grid); var ctl=el('div','display:flex;align-items:center;gap:10px;margin-top:6px'); ctl.appendChild(stat); ctl.appendChild(start); box.appendChild(ctl);
   }
 
   function gRPS(box,acc){
-    box.innerHTML=''; var opts=[['🪨','Batu'],['📄','Kertas'],['✂️','Gunting']]; var you=0, cpu=0;
+    box.innerHTML=''; var opts=[['🪨','Batu'],['📄','Kertas'],['✂️','Gunting']]; var you=0, cpu=0, sfx=makeSfx();
     var res=el('div','font-size:15px;margin:6px 0','Pilih satu:'); var sc=el('div','font-size:13px;color:#666','Skor — Kau: 0, Komputer: 0');
     var row=el('div','display:flex;gap:8px;margin:8px 0');
     opts.forEach(function(o){ var b=el('button','width:52px;height:52px;font-size:22px;border:1px solid #ccc;border-radius:12px;background:#fff;cursor:pointer',o[0]);
-      b.onclick=function(){ var ci=Math.floor(Math.random()*3); var yi=opts.indexOf(o); var d=(yi-ci+3)%3; var r;
-        if(d===0) r='Seri '+o[0]+' vs '+opts[ci][0]; else if(d===1){ you++; r='Menang! '+o[0]+' vs '+opts[ci][0]; } else { cpu++; r='Kalah '+o[0]+' vs '+opts[ci][0]; }
+      b.onclick=function(){ sfx.shoot(); var ci=Math.floor(Math.random()*3); var yi=opts.indexOf(o); var d=(yi-ci+3)%3; var r;
+        if(d===0){ r='Seri '+o[0]+' vs '+opts[ci][0]; sfx.hurt(); } else if(d===1){ you++; r='Menang! '+o[0]+' vs '+opts[ci][0]; sfx.win(); } else { cpu++; r='Kalah '+o[0]+' vs '+opts[ci][0]; sfx.lose(); }
         res.textContent=r; sc.textContent='Skor — Kau: '+you+', Komputer: '+cpu; }; row.appendChild(b); });
     box.appendChild(el('div','font-size:13px;color:#666','Batu • Kertas • Gunting lawan komputer.'));
     box.appendChild(row); box.appendChild(res); box.appendChild(sc);
   }
 
   function gReaction(box,acc){
-    box.innerHTML=''; var state=0, t0=0, timer=null, best=null;
+    box.innerHTML=''; var state=0, t0=0, timer=null, best=null, sfx=makeSfx();
     var msg=el('div','text-align:center;padding:22px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none','Klik untuk mula'); msg.style.background='#f3c6c6';
-    msg.onclick=function(){ if(state===0){ state=1; msg.textContent='Tunggu hijau…'; msg.style.background='#e6a4a4'; timer=setTimeout(function(){ state=2; msg.textContent='KLIK SEKARANG!'; msg.style.background='#d7f7dd'; t0=Date.now(); }, 900+Math.random()*3000); }
-      else if(state===1){ clearTimeout(timer); state=0; msg.textContent='Terlalu awal! Klik untuk cuba lagi'; msg.style.background='#f3c6c6'; }
-      else if(state===2){ var ms=Date.now()-t0; state=0; if(best==null||ms<best)best=ms; msg.textContent=ms+' ms  (terbaik: '+best+' ms) — klik untuk ulang'; msg.style.background='#eaf0ff'; } };
+    msg.onclick=function(){ sfx.resume(); if(state===0){ state=1; msg.textContent='Tunggu hijau…'; msg.style.background='#e6a4a4'; timer=setTimeout(function(){ state=2; msg.textContent='KLIK SEKARANG!'; msg.style.background='#d7f7dd'; t0=Date.now(); sfx.hit(); }, 900+Math.random()*3000); }
+      else if(state===1){ clearTimeout(timer); state=0; msg.textContent='Terlalu awal! Klik untuk cuba lagi'; msg.style.background='#f3c6c6'; sfx.lose(); }
+      else if(state===2){ var ms=Date.now()-t0; state=0; var rec=best==null||ms<best; if(rec)best=ms; msg.textContent=ms+' ms  (terbaik: '+best+' ms) — klik untuk ulang'; msg.style.background='#eaf0ff'; if(rec)sfx.win(); else sfx.kill(); } };
     box.appendChild(el('div','font-size:13px;color:#666','Klik sebaik warna bertukar hijau.'));
     box.appendChild(msg);
   }
 
   function gGuess(box,acc){
-    box.innerHTML=''; var max=Number(box.getAttribute('data-max'))||100; var secret=1+Math.floor(Math.random()*max), tries=0;
+    box.innerHTML=''; var max=Number(box.getAttribute('data-max'))||100; var secret=1+Math.floor(Math.random()*max), tries=0, sfx=makeSfx();
     var res=el('div','font-size:14px;margin-top:6px','');
     var inp=el('input','flex:1;padding:8px;border:1px solid #ccd;border-radius:8px;font:inherit',''); inp.type='number'; inp.min='1'; inp.max=String(max);
     var chk=el('button','padding:8px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Teka');
     function go(){ var v=Number(inp.value); if(!v){ res.textContent='Masukkan nombor.'; return; } tries++;
-      if(v===secret){ res.textContent='🎉 Betul dalam '+tries+' tekaan!'; secret=1+Math.floor(Math.random()*max); tries=0; inp.value=''; }
-      else res.textContent = v<secret ? 'Lebih tinggi ⬆️' : 'Lebih rendah ⬇️'; }
+      if(v===secret){ res.textContent='🎉 Betul dalam '+tries+' tekaan!'; sfx.win(); secret=1+Math.floor(Math.random()*max); tries=0; inp.value=''; }
+      else { res.textContent = v<secret ? 'Lebih tinggi ⬆️' : 'Lebih rendah ⬇️'; sfx.hurt(); } }
     chk.onclick=go; inp.addEventListener('keydown', function(e){ if(e.key==='Enter') go(); });
     box.appendChild(el('div','font-size:13px;color:#666','Aku fikir nombor 1–'+max+'. Cuba teka!'));
     var row=el('div','display:flex;gap:6px;margin:8px 0'); row.appendChild(inp); row.appendChild(chk); box.appendChild(row); box.appendChild(res);
@@ -457,10 +469,13 @@ function initGames(root){
     box.appendChild(cvs);box.tabIndex=0;box.style.outline='none';
     var ctx=cvs.getContext('2d');
     var state='menu',keys={},lastFire=0,lastT=0,startedAt=0;
-    var player,enemies,bullets,zone;
+    var player,enemies,bullets,zone,obstacles;
     var sfx=makeSfx(),ctrl={};attachTouch(cvs,ctrl);ctrl.wake=function(){sfx.resume();};
+    function blocked(x,y,r){ if(!obstacles)return false; r=r||0; for(var i=0;i<obstacles.length;i++){var o=obstacles[i]; if(x+r>=o.x&&x-r<=o.x+o.w&&y+r>=o.y&&y-r<=o.y+o.h)return true;} return false; }
+    function losBlocked(x1,y1,x2,y2){ if(!obstacles||!obstacles.length)return false; var dd=Math.hypot(x2-x1,y2-y1),steps=Math.max(2,Math.ceil(dd/8)); for(var s=1;s<steps;s++){ var t=s/steps; if(blocked(x1+(x2-x1)*t,y1+(y2-y1)*t,0))return true; } return false; }
+    function brRecord(){ if(setBest('br',player.kills))player.record=true; }
     function reset(){
-      player={x:MS/2,y:MS/2,hp:100,kills:0,aim:0,r:14};
+      player={x:MS/2,y:MS/2,hp:100,kills:0,aim:0,r:14,record:false};
       enemies=[];
       for(var i=0;i<NE;i++){
         var ex,ey,t=0;
@@ -469,6 +484,16 @@ function initGames(root){
         enemies.push({x:ex,y:ey,hp:100,r:14,ang:Math.random()*Math.PI*2,fcd:2+Math.random()*3,alive:true});
       }
       bullets=[];
+      obstacles=[];
+      var no=Math.max(4,Math.round(MS/95));
+      for(var oi=0;oi<no;oi++){
+        var ow=34+Math.random()*54,oh=34+Math.random()*54,ox=0,oy=0,ok=false,ot=0;
+        while(!ok&&ot<40){ ox=Math.random()*(MS-ow);oy=Math.random()*(MS-oh);ot++;
+          if(Math.hypot(ox+ow/2-MS/2,oy+oh/2-MS/2)<MS*0.2){ok=false;continue;}
+          ok=true; for(var qi=0;qi<obstacles.length;qi++){var q=obstacles[qi]; if(ox<q.x+q.w+24&&ox+ow+24>q.x&&oy<q.y+q.h+24&&oy+oh+24>q.y){ok=false;break;}}
+        }
+        if(ok)obstacles.push({x:ox,y:oy,w:ow,h:oh});
+      }
       zone={r:MS*0.48,min:MS*0.04,drain:(MS*0.48-MS*0.04)/(ZS*60)};
       startedAt=Date.now();state='play';
     }
@@ -498,11 +523,12 @@ function initGames(root){
     }
     function update(dt){
       var sp=2.6*dt;
-      if(keys['KeyW']||keys['ArrowUp'])player.y=Math.max(0,player.y-sp);
-      if(keys['KeyS']||keys['ArrowDown'])player.y=Math.min(MS,player.y+sp);
-      if(keys['KeyA']||keys['ArrowLeft'])player.x=Math.max(0,player.x-sp);
-      if(keys['KeyD']||keys['ArrowRight'])player.x=Math.min(MS,player.x+sp);
-      if(ctrl.mvx||ctrl.mvy){player.x=Math.max(0,Math.min(MS,player.x+ctrl.mvx*sp));player.y=Math.max(0,Math.min(MS,player.y+ctrl.mvy*sp));}
+      function brMove(dx,dy){ var nx=Math.max(0,Math.min(MS,player.x+dx)); if(!blocked(nx,player.y,player.r))player.x=nx; var ny=Math.max(0,Math.min(MS,player.y+dy)); if(!blocked(player.x,ny,player.r))player.y=ny; }
+      if(keys['KeyW']||keys['ArrowUp'])brMove(0,-sp);
+      if(keys['KeyS']||keys['ArrowDown'])brMove(0,sp);
+      if(keys['KeyA']||keys['ArrowLeft'])brMove(-sp,0);
+      if(keys['KeyD']||keys['ArrowRight'])brMove(sp,0);
+      if(ctrl.mvx||ctrl.mvy)brMove(ctrl.mvx*sp,ctrl.mvy*sp);
       var mx=(cvs._mx||W/2)-W/2,my=(cvs._my||H/2)-H/2;
       if(mx!==0||my!==0)player.aim=Math.atan2(my,mx);
       if(ctrl.rightDown){var amx=ctrl.rx-W/2,amy=ctrl.ry-H/2;if(amx||amy)player.aim=Math.atan2(amy,amx);firePlayer();}
@@ -512,16 +538,14 @@ function initGames(root){
         if(!en.alive)return;
         var ed=Math.hypot(en.x-MS/2,en.y-MS/2);
         if(ed>zone.r){en.hp-=0.4*dt;if(en.hp<=0){en.alive=false;return;}}
-        if(ed>zone.r*0.65){
-          var ta=Math.atan2(MS/2-en.y,MS/2-en.x);
-          en.x+=Math.cos(ta)*1.8*dt;en.y+=Math.sin(ta)*1.8*dt;
-        }else{
-          if(Math.random()<0.018)en.ang=Math.random()*Math.PI*2;
-          en.x+=Math.cos(en.ang)*0.9*dt;en.y+=Math.sin(en.ang)*0.9*dt;
-        }
-        en.x=Math.max(0,Math.min(MS,en.x));en.y=Math.max(0,Math.min(MS,en.y));
+        var emx,emy;
+        if(ed>zone.r*0.65){ var ta=Math.atan2(MS/2-en.y,MS/2-en.x); emx=Math.cos(ta)*1.8*dt; emy=Math.sin(ta)*1.8*dt; }
+        else{ if(Math.random()<0.018)en.ang=Math.random()*Math.PI*2; emx=Math.cos(en.ang)*0.9*dt; emy=Math.sin(en.ang)*0.9*dt; }
+        var enx=Math.max(0,Math.min(MS,en.x+emx)),eny=Math.max(0,Math.min(MS,en.y+emy));
+        if(!blocked(enx,en.y,en.r))en.x=enx;
+        if(!blocked(en.x,eny,en.r))en.y=eny;
         en.fcd-=dt;
-        if(en.fcd<=0&&Math.hypot(player.x-en.x,player.y-en.y)<150){
+        if(en.fcd<=0&&Math.hypot(player.x-en.x,player.y-en.y)<150&&!losBlocked(en.x,en.y,player.x,player.y)){
           var fa=Math.atan2(player.y-en.y,player.x-en.x)+(Math.random()-0.5)*0.35;
           bullets.push({x:en.x,y:en.y,vx:Math.cos(fa)*4.5,vy:Math.sin(fa)*4.5,life:70,hostile:true});
           en.fcd=2.5+Math.random()*3;
@@ -530,6 +554,7 @@ function initGames(root){
       bullets=bullets.filter(function(b){
         b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
         if(b.life<=0)return false;
+        if(blocked(b.x,b.y,0))return false;
         if(b.hostile){
           if(Math.hypot(player.x-b.x,player.y-b.y)<player.r+3){player.hp=Math.max(0,player.hp-14);sfx.hurt();return false;}
         }else{
@@ -540,8 +565,8 @@ function initGames(root){
         }
         return true;
       });
-      if(!enemies.some(function(en){return en.alive;})){state='win';sfx.win();}
-      else if(player.hp<=0){player.hp=0;state='lose';sfx.lose();}
+      if(!enemies.some(function(en){return en.alive;})){state='win';brRecord();sfx.win();}
+      else if(player.hp<=0){player.hp=0;brRecord();state='lose';sfx.lose();}
     }
     function draw(){
       var ox=W/2-(player?player.x:MS/2),oy=H/2-(player?player.y:MS/2);
@@ -551,6 +576,7 @@ function initGames(root){
       for(var gx=((ox%gs)+gs)%gs;gx<W;gx+=gs){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
       for(var gy=((oy%gs)+gs)%gs;gy<H;gy+=gs){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
       ctx.strokeStyle='#2a3a55';ctx.lineWidth=2;ctx.strokeRect(ox,oy,MS,MS);
+      if(obstacles)obstacles.forEach(function(o){ ctx.fillStyle='#243247'; ctx.fillRect(ox+o.x,oy+o.y,o.w,o.h); ctx.strokeStyle='#3a5070'; ctx.lineWidth=2; ctx.strokeRect(ox+o.x,oy+o.y,o.w,o.h); });
       if(zone){
         ctx.beginPath();ctx.arc(ox+MS/2,oy+MS/2,zone.r,0,Math.PI*2);
         ctx.fillStyle='rgba(76,141,255,0.05)';ctx.fill();
@@ -590,14 +616,17 @@ function initGames(root){
           ctx.font='12px system-ui';ctx.fillStyle='#ccc';ctx.fillText('WASD+Mouse · atau Sentuh (telefon)',W/2,H/2+2);
           ctx.fillStyle='#aaa';ctx.font='11px system-ui';ctx.fillText('Kalahkan '+NE+' AI · Elak zone biru!',W/2,H/2+18);
           ctx.fillStyle='#4c8dff';ctx.font='13px system-ui';ctx.fillText('Klik untuk mula',W/2,H/2+38);
+          ctx.fillStyle='#ffd700';ctx.font='11px system-ui';ctx.fillText('Rekod terbaik: '+(getBest('br')||0)+' kill',W/2,H/2+54);
         }else if(state==='win'){
           ctx.font='bold 22px system-ui';ctx.fillStyle='#ffd700';ctx.fillText('#1 Winner Winner Chicken Dinner! 🎉',W/2,H/2-14);
           ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' · Masa: '+Math.round((Date.now()-startedAt)/1000)+'s',W/2,H/2+12);
-          ctx.fillStyle='#ccc';ctx.fillText('Klik untuk main lagi',W/2,H/2+30);
+          if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+28);}
+          ctx.fillStyle='#ccc';ctx.fillText('Klik untuk main lagi',W/2,H/2+(player&&player.record?44:30));
         }else{
           ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Anda Tumbang',W/2,H/2-14);
           ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' · Sisa: '+rem,W/2,H/2+12);
-          ctx.fillStyle='#ccc';ctx.fillText('Klik untuk cuba lagi',W/2,H/2+30);
+          if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru '+player.kills+' kill!',W/2,H/2+28);}
+          ctx.fillStyle='#ccc';ctx.fillText('Klik untuk cuba lagi',W/2,H/2+(player&&player.record?44:30));
         }
         ctx.textAlign='left';
       }
@@ -621,6 +650,7 @@ function initGames(root){
     for(var wi=0;wi<W;wi++)wallD.push(999);
     var FOV=1.2;
     var sfx=makeSfx(),ctrl={};attachTouch(cvs,ctrl);ctrl.wake=function(){sfx.resume();};
+    function fpsRecord(){ if(setBest('fps',player.kills))player.record=true; }
     function genMap(){
       map=[];
       for(var r=0;r<SZ;r++){map[r]=[];for(var c=0;c<SZ;c++)map[r][c]=(r===0||r===SZ-1||c===0||c===SZ-1)?1:(Math.random()<0.2?1:0);}
@@ -631,7 +661,7 @@ function initGames(root){
     function reset(){
       genMap();
       var mid=SZ/2+0.5;
-      player={x:mid,y:mid,a:Math.PI*0.25,hp:100,kills:0};
+      player={x:mid,y:mid,a:Math.PI*0.25,hp:100,kills:0,record:false};
       enemies=[];
       for(var i=0;i<NE;i++){
         var ex,ey,t=0;
@@ -712,8 +742,8 @@ function initGames(root){
         }
       });
       if(gunKick>0)gunKick=Math.max(0,gunKick-dt*0.5);
-      if(!enemies.some(function(en){return en.alive;})){state='win';sfx.win();}
-      else if(player.hp<=0){player.hp=0;state='lose';sfx.lose();}
+      if(!enemies.some(function(en){return en.alive;})){state='win';fpsRecord();sfx.win();}
+      else if(player.hp<=0){player.hp=0;fpsRecord();state='lose';sfx.lose();}
     }
     function render(){
       var halfH=H/2|0;
@@ -788,16 +818,19 @@ function initGames(root){
         ctx.font='11px system-ui';ctx.fillStyle='#aaa';
         ctx.fillText('W/S+AD atau Joystik sentuh · Klik/Space=tembak',W/2,H/2+18);
         ctx.fillText('Bunuh '+NE+' musuh · Elak zona merah · Peta 3D',W/2,H/2+32);
+        ctx.fillStyle='#ffd700';ctx.fillText('Rekod terbaik: '+(getBest('fps')||0)+' kill',W/2,H/2+46);
       }else if(state==='win'){
         ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);
         ctx.font='bold 22px system-ui';ctx.fillStyle='#ffd700';ctx.fillText('#1 Chicken Dinner! 🎉',W/2,H/2-12);
         ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' Masa: '+Math.round((Date.now()-startedAt)/1000)+'s',W/2,H/2+14);
-        ctx.fillStyle='#ccc';ctx.fillText('Klik untuk main lagi',W/2,H/2+30);
+        if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+28);}
+        ctx.fillStyle='#ccc';ctx.fillText('Klik untuk main lagi',W/2,H/2+(player&&player.record?44:30));
       }else if(state==='lose'){
         ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);
         ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Anda Tumbang',W/2,H/2-12);
         ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0),W/2,H/2+14);
-        ctx.fillStyle='#ccc';ctx.fillText('Klik untuk cuba lagi',W/2,H/2+30);
+        if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru '+player.kills+' kill!',W/2,H/2+28);}
+        ctx.fillStyle='#ccc';ctx.fillText('Klik untuk cuba lagi',W/2,H/2+(player&&player.record?44:30));
       }
       ctx.textAlign='left';
     }
@@ -810,6 +843,50 @@ function initGames(root){
       requestAnimationFrame(loop);
     }
     drawOverlay();requestAnimationFrame(loop);
+  }
+
+  // ── Lari Tanpa Hujung (endless runner, Canvas2D) ─────────────────────────
+  function gRunner(box,acc){
+    box.innerHTML='';
+    var W=Math.min(540,box.offsetWidth||540),H=Math.round(W*0.5);
+    var cvs=document.createElement('canvas');cvs.width=W;cvs.height=H;
+    cvs.style.cssText='display:block;max-width:100%;border-radius:8px;background:#0e1626;touch-action:none;cursor:pointer';
+    box.appendChild(cvs);box.tabIndex=0;box.style.outline='none';
+    var ctx=cvs.getContext('2d');
+    var sfx=makeSfx();
+    var GROUND=H-22,grav=0.6,state='menu',py=GROUND,vy=0,obs=[],speed=3,dist=0,score=0,ground=0,record=false,lastT=0;
+    function reset(){ py=GROUND;vy=0;obs=[];speed=3;dist=0;score=0;record=false;state='play'; }
+    function jump(){ if(state==='play'&&py>=GROUND-0.5){ vy=-10; sfx.shoot(); } }
+    function tap(){ sfx.resume(); if(state==='menu'){reset();return;} if(state==='lose'){state='menu';return;} jump(); }
+    cvs.addEventListener('mousedown',tap);
+    cvs.addEventListener('touchstart',function(e){e.preventDefault();tap();},{passive:false});
+    box.addEventListener('keydown',function(e){ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); tap(); } });
+    function loop(ts){ if(!lastT)lastT=ts; var dt=Math.min((ts-lastT)/16.67,3);lastT=ts; if(state==='play')update(dt); draw(); requestAnimationFrame(loop); }
+    function update(dt){
+      vy+=grav*dt; py+=vy*dt; if(py>GROUND){py=GROUND;vy=0;}
+      dist+=speed*dt; score=Math.floor(dist/12); speed=Math.min(10,3+dist/700); ground=(ground+speed*dt)%26;
+      for(var i=0;i<obs.length;i++)obs[i].x-=speed*dt;
+      obs=obs.filter(function(o){return o.x+o.w>-10;});
+      var last=obs[obs.length-1];
+      if(!last||last.x<W-(150+Math.random()*160)) obs.push({x:W+8,w:(16+Math.random()*18)|0,h:(18+Math.random()*28)|0});
+      var px1=30,px2=52,py2=py;
+      for(var j=0;j<obs.length;j++){ var o=obs[j]; if(px2>o.x&&px1<o.x+o.w&&py2>GROUND-o.h){ state='lose'; if(setBest('runner',score))record=true; sfx.lose(); break; } }
+    }
+    function draw(){
+      var sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#0e1626');sky.addColorStop(1,'#16233b');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(255,255,255,0.06)';for(var s=0;s<6;s++){var sx=(s*97+((state==='play')?dist*0.2:0))%W;ctx.fillRect(W-sx,16+(s*13%40),2,2);}
+      ctx.strokeStyle='#2a3a55';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,GROUND+0.5);ctx.lineTo(W,GROUND+0.5);ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.12)';for(var g=0;g<W;g+=26)ctx.fillRect((g-ground)|0,GROUND+6,14,2);
+      ctx.fillStyle='#30d158';if(obs)obs.forEach(function(o){ ctx.fillRect(o.x,GROUND-o.h,o.w,o.h); });
+      if(state!=='menu'){ ctx.fillStyle='#ffcf3c';ctx.fillRect(30,py-26,22,26); ctx.fillStyle='#16181d';ctx.fillRect(44,py-21,4,4); }
+      ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(0,0,W,22);ctx.font='bold 12px system-ui';ctx.textBaseline='middle';ctx.textAlign='left';
+      ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,8,12);ctx.textAlign='right';ctx.fillStyle='#ffd700';ctx.fillText('Rekod: '+(getBest('runner')||0),W-8,12);ctx.textBaseline='alphabetic';ctx.textAlign='left';
+      if(state!=='play'){ ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,0.72)';ctx.fillRect(0,0,W,H);
+        if(state==='menu'){ ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🏃 Lari Tanpa Hujung',W/2,H/2-8);ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Klik / Sentuh / Space untuk lompat',W/2,H/2+14); }
+        else { ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Tamat!',W/2,H/2-14);ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,W/2,H/2+6); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+22);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Klik untuk main lagi',W/2,H/2+(record?40:26)); }
+        ctx.textAlign='left'; }
+    }
+    draw();requestAnimationFrame(loop);
   }
 }
 </script>
@@ -863,6 +940,7 @@ function widgetMarkup(w){
     case 'guess': return gameBox('guess','🔢 Teka Nombor', w, ' data-max="'+(Number(w.max)||100)+'"');
     case 'br': return gameBox('br','🔫 Battle Royale', w, ' data-enemies="'+(Number(w.enemies)||5)+'" data-zonespeed="'+(Number(w.zoneSpeed)||10)+'" data-mapsize="'+(Number(w.mapSize)||600)+'"');
     case 'fps': return gameBox('fps','🕹️ FPS Arena', w, ' data-enemies="'+(Number(w.enemies)||4)+'" data-zonespeed="'+(Number(w.zoneSpeed)||25)+'"');
+    case 'runner': return gameBox('runner','🏃 Lari Tanpa Hujung', w, '');
     default: return '';
   }
 }
@@ -921,6 +999,7 @@ function widgetFields(w){
     case 'guess': F.push(field('Nombor maksimum',inNum('max',w.max,1,9999))); break;
     case 'br': F.push(field('Musuh AI (1-15)',inNum('enemies',w.enemies,1,15))); F.push(field('Tempoh zone (5-60s)',inNum('zoneSpeed',w.zoneSpeed,5,60))); F.push(field('Saiz peta (200-1400)',inNum('mapSize',w.mapSize,200,1400))); break;
     case 'fps': F.push(field('Musuh AI (1-10)',inNum('enemies',w.enemies,1,10))); F.push(field('Tempoh zone (10-60s)',inNum('zoneSpeed',w.zoneSpeed,10,60))); break;
+    case 'runner': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Klik / Sentuh / Space untuk lompat. Skor = jarak.</div>')); break;
   }
   return F.join('');
 }
