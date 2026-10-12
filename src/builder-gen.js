@@ -115,12 +115,15 @@ function parseGenJson(text) {
 }
 
 // Bina deterministik tanpa AI — sentiasa hasilnya app lengkap + satu game.
-function heuristicBuild(idea) {
+// `salt` memutar palet & genre game untuk hasilkan VARIAN berbeza (calon serentak).
+function buildOne(idea, salt) {
+  const s = salt || 0;
   const clean = (String(idea || '').trim().replace(/\s+/g, ' ').slice(0, 40)) || 'Aplikasi';
   const key = clean.toLowerCase();
   const name = clean.charAt(0).toUpperCase() + clean.slice(1);
-  const pal = PALETTES[h32(key) % PALETTES.length];
-  const game = pickGame(key);
+  const pal = PALETTES[(h32(key) + s) % PALETTES.length];
+  const baseGame = pickGame(key);
+  const game = GAMES[(GAMES.indexOf(baseGame) + s + GAMES.length) % GAMES.length]; // salt 0 → padan kata kunci
   const widgets = [
     { type: 'heading', text: name, level: 2, align: 'center' },
     { type: 'text', text: `Semua tentang ${clean} — pantas, ringkas & menyeronokkan.`, align: 'center' },
@@ -135,6 +138,15 @@ function heuristicBuild(idea) {
     widgets
   });
 }
+function heuristicBuild(idea) { return buildOne(idea, 0); }
+
+// N calon heuristik berbeza (palet + game berputar) — sentiasa berbeza antara satu sama lain.
+function heuristicVariants(idea, n) {
+  const count = Math.max(1, Math.min(6, Number(n) || 1));
+  const out = [];
+  for (let i = 0; i < count; i++) out.push(buildOne(idea, i));
+  return out;
+}
 
 // Arahan sistem untuk LLM — paksa JSON sah sahaja + types yang dibenarkan.
 const SYSTEM_PROMPT = [
@@ -145,4 +157,4 @@ const SYSTEM_PROMPT = [
   '4-8 widget sahaja. Semua teks singkat. Tiada HTML/skrip mentah dalam nilai.'
 ].join(' ');
 
-module.exports = { KNOWN, GAMES, SYSTEM_PROMPT, parseGenJson, sanitizeApp, heuristicBuild, pickGame, clipWidget };
+module.exports = { KNOWN, GAMES, SYSTEM_PROMPT, parseGenJson, sanitizeApp, heuristicBuild, heuristicVariants, buildOne, pickGame, clipWidget };

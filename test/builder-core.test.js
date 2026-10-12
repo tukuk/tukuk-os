@@ -408,3 +408,13 @@ test('Jana auto: input/butang + fetch /api/builder/generate + applyGenerated tap
   assert.ok(code.includes('renderStage()') && code.includes('applyTheme()'), 'render selepas jana');
   new Function(code); // parse sah
 });
+
+test('Jana auto: banyak calon (apps[]) + kad Pakai/Terbitkan + Auto-terbit', () => {
+  assert.ok(html.includes('id="genAutoPub"'), 'checkbox auto-terbit wujud');
+  assert.ok(html.includes('Array.isArray(res.j.apps)'), 'baca apps[] daripada respons');
+  assert.ok(html.includes("dataset.gact === 'pub'"), 'butang Publish memicu pubBtn');
+  const card = extractFn(html, 'genCardHtml');
+  assert.ok(card.includes('data-gact="use"') && card.includes('data-gact="pub"'), 'kad ada Pakai & Terbitkan');
+  assert.ok(card.includes('GAME_SET'), 'khusus game ditandakan pada kad');
+  new Function(card); // parse sah
+});

@@ -1920,27 +1920,37 @@ const builderGenLimiter = config.rateLimit.enabled
 app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const idea = truncate(String((req.body && req.body.idea) || '').trim(), 160);
   if (!idea) return res.status(400).json({ error: 'Taip satu idea atau kata dahulu.' });
-  let out = null, source = 'auto';
+  const want = Math.min(3, Math.max(1, Number(req.body && req.body.count) || 3));
+  const apps = [];
+  const seen = new Set();
+  // Tandatangan untuk elak kad pendua (nama + aksen + set game).
+  const sigOf = (a) => a.appName + '|' + (a.theme && a.theme.accent) + '|' + a.widgets.filter((w) => builderGen.GAMES.includes(w.type)).map((w) => w.type).join(',');
+  const pushApp = (a) => { if (!a || !Array.isArray(a.widgets) || !a.widgets.length) return; const k = sigOf(a); if (seen.has(k)) return; seen.add(k); apps.push(a); };
+  let aiHit = false;
   if (config.brain.enabled) {
     try {
       let text = '';
       try {
-        const r = await brain.generateCloudRotation(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, temperature: 0.7, maxTokens: 700 });
+        const r = await brain.generateCloudRotation(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, temperature: 0.85, maxTokens: 900 });
         text = (r && r.response) || '';
       } catch { /* cuba ollama */ }
       if (!text) {
         try {
-          const r = await brain.generate(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, numPredict: 700, temperature: 0.7 });
+          const r = await brain.generate(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, numPredict: 900, temperature: 0.85 });
           text = (r && r.response) || '';
         } catch { /* jatuh ke heuristik */ }
       }
       const parsed = builderGen.parseGenJson(text);
-      if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) { out = s; source = 'ai'; } }
+      if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) { pushApp(s); aiHit = true; } }
     } catch { /* noop — heuristik di bawah */ }
   }
-  if (!out) out = builderGen.heuristicBuild(idea);
-  store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source });
-  res.json({ ok: true, source, app: out });
+  // Lengkapkan hingga `want` dengan varian heuristik (palet + game berbeza).
+  if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want)) pushApp(v);
+  const finalApps = apps.slice(0, want);
+  if (!finalApps.length) finalApps.push(builderGen.heuristicBuild(idea)); // sentiasa ada >=1
+  const source = aiHit ? 'ai' : 'auto';
+  store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source, count: finalApps.length });
+  res.json({ ok: true, source, apps: finalApps, app: finalApps[0] });
 });
 
 // Indeks /a — senarai aplikasi yang diterbitkan komuniti (pautan sahaja, nama disanitasi).

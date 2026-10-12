@@ -137,10 +137,11 @@
 
 <div class="grid3">
   <div class="col left">
-    <div class="genbar" style="display:flex;gap:6px;margin:0 0 12px">
+    <div class="genbar" style="display:flex;gap:6px;margin:0 0 6px">
       <input id="genIdea" placeholder="✨ Jana app/game — taip kata/idea" maxlength="80" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #2a3040;border-radius:9px;background:transparent;color:inherit">
       <button id="genBtn" class="primary" title="Jana aplikasi + game automatik daripada idea" style="padding:8px 12px;border-radius:9px;white-space:nowrap">✨ Jana</button>
     </div>
+    <label title="Abaikan kad — Jana terus pakai calon pertama & terbitkan" style="display:flex;align-items:center;gap:5px;margin:0 0 12px;font-size:12px;color:#9aa3b2;cursor:pointer"><input type="checkbox" id="genAutoPub"> Auto-terbit</label>
     <h4>Tambah widget</h4>
     <div class="palette" id="palette"></div>
     <div class="hint">Klik untuk tambah ke bawah. Seret blok pada kanvas untuk susun semula. Guna <b>Mod Cuba</b> untuk uji interaksi.</div>
@@ -1157,6 +1158,14 @@ $('tpl').addEventListener('change',(e)=>{ const v=e.target.value; if(v) loadTemp
 function loadTemplate(name){ const t=TEMPLATES[name]; if(!t) return; pushH(); $('appName').value=t.appName||'Aplikasi'; theme=Object.assign({},DEF_THEME,t.theme||{}); widgets=(t.widgets||[]).map((r)=>Object.assign({id:'w'+(uid++)},r)); selId=null; renderStage(); applyTheme(); renderInspector(); toast('🗂 Templat dimuat: '+t.label); }
 
 // ── ✨ Jana auto: idea → app + game (AI bila tersedia, heuristik sebagai fallback) ──
+const GAME_SET = ['ttt','memory','mole','rps','reaction','guess','br','fps','runner'];
+function genCardHtml(a, i){
+  const th = a.theme || {}; const bg = esc(th.bg || '#0f1116'); const acc = esc(th.accent || '#4c8dff');
+  const game = (a.widgets || []).find((w) => GAME_SET.includes(w.type));
+  const gic = game ? ((TYPES[game.type] && TYPES[game.type].ic) || '🎮') : '—';
+  const chips = (a.widgets || []).slice(0, 7).map((w) => (TYPES[w.type] && TYPES[w.type].ic) || '•').join(' ');
+  return `<div class="gencard" data-i="${i}" style="border:1px solid #262b36;border-radius:12px;padding:12px;margin:8px 0"><div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;flex:none;background:${bg};border:2px solid ${acc};display:inline-block"></span><div style="flex:1;min-width:0"><b style="color:${acc}">${esc(a.appName || 'Aplikasi')}</b><div style="font-size:12px;color:#88909f">${esc(chips)} · 🎮 ${esc(gic)}</div></div></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-gact="use" data-i="${i}">📥 Pakai</button><button class="btn primary" data-gact="pub" data-i="${i}">🚀 Pakai &amp; Terbitkan</button></div></div>`;
+}
 function applyGenerated(a, source){
   if(!a || !Array.isArray(a.widgets)) return;
   pushH();
@@ -1172,7 +1181,16 @@ $('genBtn').onclick = function(){
   const b = this; const old = b.textContent; b.disabled = true; b.textContent = '⏳ Menjana…';
   fetch('/api/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idea }) })
     .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: false, j: { error: 'Respons bukan JSON' } })))
-    .then((res) => { if(!res.ok || !res.j || !res.j.app) throw new Error((res.j && res.j.error) || 'tiada hasil'); applyGenerated(res.j.app, res.j.source); })
+    .then((res) => {
+      if(!res.ok || !res.j) throw new Error((res.j && res.j.error) || 'tiada hasil');
+      const apps = Array.isArray(res.j.apps) ? res.j.apps : (res.j.app ? [res.j.app] : []);
+      if(!apps.length) throw new Error('tiada hasil');
+      const src = res.j.source;
+      if($('genAutoPub') && $('genAutoPub').checked){ applyGenerated(apps[0], src); toast('🔁 Auto-terbit…'); $('pubBtn').click(); return; }
+      const cards = apps.map((a, i) => genCardHtml(a, i)).join('');
+      openModal('✨ ' + apps.length + ' cadangan · ' + idea, '<div style="max-height:60vh;overflow:auto">' + cards + '</div><div class="hint" style="margin-top:8px">Pilih satu untuk muat ke kanvas, atau terus terbitkan. Masih boleh sunting selepas Pakai.</div>');
+      $('modal').querySelectorAll('[data-gact]').forEach((btn) => { btn.onclick = () => { const idx = Number(btn.dataset.i); applyGenerated(apps[idx], src); closeModal(); if(btn.dataset.gact === 'pub') $('pubBtn').click(); }; });
+    })
     .catch((err) => toast('⚠ Jana gagal: ' + ((err && err.message) || err)))
     .then(() => { b.disabled = false; b.textContent = old; });
 };

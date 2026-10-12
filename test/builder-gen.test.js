@@ -80,3 +80,17 @@ test('SYSTEM_PROMPT: nyatakan JSON sahaja + ada senarai types & game', () => {
   assert.ok(g.SYSTEM_PROMPT.includes('JSON'));
   for (const t of ['heading', 'quiz', 'br', 'fps', 'runner']) assert.ok(g.SYSTEM_PROMPT.includes(t), 'prompt sebut ' + t);
 });
+
+test('heuristicVariants: N calon berbeza (palet+game); salt 0 = heuristicBuild; tiap satu 1 game', () => {
+  const vs = g.heuristicVariants('kopi', 3);
+  assert.equal(vs.length, 3);
+  assert.deepEqual(vs[0], g.heuristicBuild('kopi'), 'varian pertama sama dengan heuristicBuild');
+  const accents = new Set(vs.map((v) => v.theme.accent));
+  const games = new Set(vs.map((v) => (v.widgets.find((w) => g.GAMES.includes(w.type)) || {}).type));
+  assert.ok(accents.size >= 2, 'palet berbeza antara varian');
+  assert.ok(games.size >= 2, 'game berbeza antara varian');
+  for (const v of vs) assert.equal(v.widgets.filter((w) => g.GAMES.includes(w.type)).length, 1, 'tepat satu game per calon');
+  // clamp count
+  assert.equal(g.heuristicVariants('x', 0).length, 1);
+  assert.equal(g.heuristicVariants('x', 99).length, 6);
+});
