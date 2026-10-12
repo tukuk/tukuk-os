@@ -1393,10 +1393,14 @@ $('zipBtn').onclick=exportZip;
 
 // ── Terbitan satu-klik ke pautan awam (/a/<slug>) ──
 function publishHtml(){ return (document.body.classList.contains('code') && typeof window.builderAssemble==='function') ? window.builderAssemble() : buildExport(); }
+// Kategori Store (/store): 'game' jika kanvas hanya game (+hiasan seperti tajuk/teks) — selainnya 'app'.
+const GAME_TYPES=['ttt','memory','mole','rps','reaction','guess','br','fps','runner'];
+const DECOR_TYPES=['heading','text','divider','spacer','image','card','faq','steps'];
+function inferKind(){ const g=widgets.filter((w)=>GAME_TYPES.includes(w.type)).length; if(!g) return 'app'; const other=widgets.filter((w)=>!GAME_TYPES.includes(w.type)&&!DECOR_TYPES.includes(w.type)).length; return other?'app':'game'; }
 $('pubBtn').onclick=function(){
   const btn=$('pubBtn'); const orig=btn.textContent; btn.disabled=true; btn.textContent='⏳ Menerbitkan…';
   const html=publishHtml();
-  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'Aplikasi', slug:($('pubSlug').value||'').trim().toLowerCase()||undefined, source:window._pubSource||undefined, html }) })
+  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'Aplikasi', slug:($('pubSlug').value||'').trim().toLowerCase()||undefined, source:window._pubSource||undefined, kind:inferKind(), html }) })
     .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
     .then((res)=>{
       if(!res.ok || !res.j || !res.j.url) throw new Error((res.j&&res.j.error)||'Gagal terbit');
@@ -1428,7 +1432,7 @@ function removeMyApp(slug){ saveMyApps(myApps().filter((x)=>x.slug!==slug)); }
 
 function doUpdate(app, done){
   const html=publishHtml();
-  fetch('/api/publish/update',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:app.slug, editKey:app.editKey, html }) })
+  fetch('/api/publish/update',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:app.slug, editKey:app.editKey, kind:inferKind(), html }) })
     .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
     .then((res)=>{
       if(!res.ok||!res.j||!res.j.url){ toast('⚠ Kemas kini gagal: '+((res.j&&res.j.error)||'pautan lama mungkin telah dibuang')); return; }
@@ -1529,6 +1533,8 @@ let _asv=null; function autoSave(){ const s=$('saveState'); if(s) s.textContent=
 const _renderStage=renderStage; renderStage=function(){ _renderStage(); autoSave(); };
 
 renderStage(); applyTheme(); renderInspector(); pushH();
+// Deep-link dari /store (Arked): /builder?tpl=<templat> → muat templat & terus ke Mod Cuba.
+try{ const tp=new URLSearchParams(location.search).get('tpl'); if(tp && TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } }catch(err){}
 if(resumed==='storage') toast('✓ Projek terakhir dipulihkan dari pelayar ini');
 if(resumed==='link') toast('🔗 Projek daripada pautan kongsi dimuat');
 document.addEventListener('keydown',(e)=>{

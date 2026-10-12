@@ -230,7 +230,7 @@ app.use('/satu-kata', express.static(GENERATED_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'builder', 'studio', 'apps', 'bg-remover', 'collage', 'converter'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'builder', 'studio', 'store', 'apps', 'bg-remover', 'collage', 'converter'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
@@ -1798,7 +1798,9 @@ app.post('/api/publish', publishLimiter, (req, res) => {
     fs.writeFileSync(tmp, html, 'utf8');
     fs.renameSync(tmp, path.join(PUBLISH_DIR, `${slug}.html`));
     const editKey = newEditKey();
-    writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(body.name || ''), 80)), created: Date.now(), updated: Date.now() });
+    // kind: 'game' hanya bila dihantar eksplisit (Pembina tahu kandungan kanvas); selainnya 'app'.
+    const kind = String(body.kind || '').toLowerCase() === 'game' ? 'game' : 'app';
+    writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(body.name || ''), 80)), created: Date.now(), updated: Date.now(), kind });
     const url = `${publish.publicOrigin(req)}/a/${slug}`;
     const srcTag = truncate(String(body.source || '').replace(/[^a-z0-9_-]/g, ''), 24);
     store.event('publish', `Aplikasi diterbitkan: /a/${slug}${srcTag ? ' [' + srcTag + ']' : ''}`, { name: truncate(String(body.name || ''), 120), bytes: html.length, source: srcTag || 'manual' });
@@ -1829,6 +1831,7 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
     fs.renameSync(tmp, file);
     meta.title = publish.extractTitle(html, meta.title || 'Aplikasi');
     meta.updated = Date.now();
+    if (body.kind === 'game' || body.kind === 'app') meta.kind = String(body.kind);
     writeMeta(slug, meta);
     store.event('publish', `Aplikasi dikemas kini: /a/${slug}`, { bytes: html.length });
     res.json({ ok: true, slug, url: `${publish.publicOrigin(req)}/a/${slug}` });
@@ -1855,25 +1858,109 @@ app.post('/api/publish/delete', publishLimiter, (req, res) => {
   }
 });
 
-// Senarai app awam (slug terbaru) — ringan, untuk indeks /a.
+// Kiraan "dilihat" untuk /store — in-memory, disatukan ke fail dengan debounce supaya
+// setiap permintaan /a/<slug> hanya tulis cakera sekali sekala (bukan setiap hit).
+const VIEWS_PATH = path.join(path.dirname(config.store.path), 'publish-views.json');
+let pubViews = {};
+try { pubViews = JSON.parse(fs.readFileSync(VIEWS_PATH, 'utf8')) || {}; } catch { pubViews = {}; }
+let viewsTimer = null;
+function flushViews() { viewsTimer = null; try { fs.writeFileSync(VIEWS_PATH, JSON.stringify(pubViews)); } catch { /* best-effort */ } }
+function bumpViews(slug) {
+  pubViews[slug] = (pubViews[slug] || 0) + 1;
+  if (!viewsTimer) { viewsTimer = setTimeout(flushViews, 5000); if (viewsTimer.unref) viewsTimer.unref(); }
+}
+
+// Kata kunci game untuk terbitan klasik (meta tanpa kind) — tekaan berdasarkan tajuk.
+const GAME_TITLE_RE = /tic[- ]?tac|arked|battle[- ]?royale|\bfps\b|runner|padanan[- ]memori|tikus[- ]pukul|teka[- ]nombor|batu[- ]kertas|lari[- ]tanpa|\bgame\b/i;
+
+// Senarai app awam (slug terbaru) — ringan, untuk indeks /a + katalog /store.
 function listPublished(limit = 200) {
   try {
     return fs.readdirSync(PUBLISH_DIR)
       .filter((f) => f.endsWith('.html'))
       .map((f) => {
         const s = f.slice(0, -5); let t = 0; try { t = fs.statSync(path.join(PUBLISH_DIR, f)).mtimeMs; } catch {}
-        const meta = readMeta(s); return { slug: s, t, title: (meta && meta.title) ? meta.title : s };
+        const meta = readMeta(s);
+        const title = (meta && meta.title) ? meta.title : s;
+        const kind = (meta && meta.kind) ? meta.kind : (GAME_TITLE_RE.test(title) ? 'game' : 'app');
+        return { slug: s, t, title, kind, created: (meta && meta.created) || t, views: pubViews[s] || 0 };
       })
       .sort((a, b) => b.t - a.t)
       .slice(0, limit);
   } catch { return []; }
 }
 
-// JSON senarai app awam — untuk panel "Pameran" dalam /builder.
+// JSON senarai app awam — untuk panel "Pameran" dalam /builder + katalog /store.
 app.get('/api/published', (req, res) => {
   const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 60));
-  const items = listPublished(limit).map((x) => ({ slug: x.slug, title: truncate(x.title, 80), url: `/a/${x.slug}`, updated: x.t }));
+  const items = listPublished(limit).map((x) => ({ slug: x.slug, title: truncate(x.title, 80), url: `/a/${x.slug}`, updated: x.t, created: x.created, kind: x.kind, views: x.views }));
   res.json({ ok: true, count: items.length, items });
+});
+
+// ── Tukuk Store (/store): katalog 4 sumber — Bawaan + Satu Kata + Arked + Komuniti. ────
+// Bawaan = app mini di public/apps (hanya yang failnya benar-benar wujud supaya /store
+// tak benjol pautan 404 — lapan pernah diiklankan, dua sahaja yang dibina).
+const STORE_APP_META = {
+  notes: { ic: '📝', title: 'Notes', desc: 'Nota lokal dengan autosave, tag & carian — tiada apa keluar dari peranti.' },
+  calc: { ic: '🧮', title: 'Kalkulator', desc: 'Kalkulator saintifik dengan sejarah, kurungan & salin hasil.' },
+  todo: { ic: '✅', title: 'To-Do', desc: 'Senarai tugas dengan keutamaan, penapis & penyimpanan lokal.' },
+  convert: { ic: '📐', title: 'Penukar Unit', desc: 'Tukar panjang, jisim, suhu, isipadu, kelajuan & banyak lagi.' },
+  timer: { ic: '⏱️', title: 'Timer & Pomodoro', desc: 'Jam randik, pemasa & rehat berjadual dengan bunyi.' },
+  color: { ic: '🎨', title: 'Pemilih Warna', desc: 'HEX/RGB/HSL, tona/nada, palet pelengkap & nisbah kontras.' },
+  password: { ic: '🔐', title: 'Penjana Kata Laluan', desc: 'Kata laluan rawak kriptografik + frasa sukar diteka.' },
+  text: { ic: '🔡', title: 'Alat Teks', desc: 'Kira perkataan, tukar kes, Base64, susun, dedupe & URL encode.' }
+};
+// Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
+const STORE_ARCADE = [
+  { tpl: 'arcade', ic: '🕹️', title: 'Arked Mini', desc: 'Tic-Tac-Toe + Padanan Memori + Tikus Pukul + Masa Tindak Balas dalam satu halaman.' },
+  { tpl: 'tttpl', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'Dua pemain klasik — jajar tiga menang.' },
+  { tpl: 'brtpl', ic: '🔫', title: 'Arena Battle Royale', desc: 'WASD/mouse atau joystik sentuh — elak zone biru, kekalkan nyawa.' },
+  { tpl: 'fpstpl', ic: '🎯', title: 'FPS Arena 3D', desc: 'Penembak first-person 3D ringan, terus dalam pelayar.' },
+  { tpl: 'runtpl', ic: '🏃', title: 'Lari Tanpa Hujung', desc: 'Klik / sentuh / Space untuk lompat — elak halangan sejauh mungkin.' }
+];
+function storeBawaan() {
+  return Object.entries(STORE_APP_META)
+    .filter(([name]) => fs.existsSync(path.join(PUBLIC_DIR, 'apps', `${name}.html`)))
+    .map(([name, m]) => ({ id: 'bv-' + name, kind: 'app', src: 'bawaan', icon: m.ic, title: m.title, desc: m.desc, url: `/apps/${name}`, updated: 0 }));
+}
+// Satu Kata = pasangan app+game dijana CI (generated/manifest.json → /satu-kata/<slug>/{app,game}/).
+// Dikache ikut mtime manifest; fail HTML disahkan wujud sebelum disenaraikan.
+const SK_DIR = path.join(__dirname, '..', 'generated');
+let skCache = { mtime: -1, entries: [] };
+function storeSatuKata() {
+  let mtime = 0;
+  try { mtime = fs.statSync(path.join(SK_DIR, 'manifest.json')).mtimeMs; } catch { return []; }
+  if (skCache.mtime !== mtime) {
+    skCache = { mtime, entries: [] };
+    try {
+      const raw = JSON.parse(fs.readFileSync(path.join(SK_DIR, 'manifest.json'), 'utf8'));
+      skCache.entries = (Array.isArray(raw.entries) ? raw.entries : [])
+        .filter((e) => e && e.slug && publish.isSlug(String(e.slug)) && String(e.word || '').trim());
+    } catch { /* manifest rosak → katalog tetap hidup tanpa Satu Kata */ }
+  }
+  const out = [];
+  for (const e of skCache.entries) {
+    const dir = path.join(SK_DIR, 'public', e.slug);
+    const t = Date.parse(e.createdAt) || 0;
+    const word = String(e.word).trim();
+    if (fs.existsSync(path.join(dir, 'app', 'index.html'))) out.push({ id: 'sk-' + e.slug, kind: 'app', src: 'satukata', icon: e.emoji || '⚡', title: 'App ' + word, desc: `Aplikasi satu-kata «${word}» — ${e.tagline || 'dijana automatik'}`, url: `/satu-kata/${e.slug}/app/`, updated: t });
+    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', icon: '🎮', title: 'Game ' + word, desc: `Game «${word}» (${e.genre || 'arkade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
+  }
+  return out;
+}
+function storeCatalog() {
+  const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl, updated: 0 }));
+  const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Terbitan komuniti melalui Pembina Studio.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
+  return storeBawaan().concat(storeSatuKata(), arked, komuniti);
+}
+app.get('/api/store', (req, res) => {
+  try {
+    const items = storeCatalog();
+    res.setHeader('Cache-Control', 'public, max-age=30');
+    res.json({ ok: true, count: items.length, items });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal menjana katalog', details: safeError(error) });
+  }
 });
 
 // ── Papan pendahulu komuniti (skor game terbitan). Data AWAM, tanpa pengesahan, had-kadar.
@@ -2043,6 +2130,7 @@ app.get('/a/:slug', (req, res) => {
   let html;
   try { html = fs.readFileSync(file, 'utf8'); }
   catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>Tiada — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>Aplikasi <code>/${escapeHtml(slug)}</code> tiada atau telah dibuang.</p><p><a href="/a">← Semua aplikasi</a> · <a href="/builder">Bina sendiri</a></p></body></html>`); }
+  bumpViews(slug); // kiraan "dilihat" untuk katalog /store
   res.setHeader('Content-Security-Policy', publish.publishCspFor(req.get('host'), (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : 'http'));
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'no-referrer');

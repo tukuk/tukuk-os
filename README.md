@@ -147,6 +147,7 @@ Soalan kendiri ("apa itu tukuk-os", "endpoint", dll.) dijawab dari pengetahuan t
 - **`/cc?q=...`** — API carian aset **Creative Commons** (Wikimedia Commons, tiada kunci) → `{title,thumb,full,license,author}`; dipaparkan pada tab **"🧩 CC Aset"** dan boleh terus dibuka di `/editor?img=`.
 - **`/api/image?url=`** — proksi imej **same-origin** supaya canvas tidak "tainted" (penting untuk eksport/lightbox/edit gambar luar).
 - **`studio.html`** = hub alat; tile paparan ada pada dashboard `/`.
+- **`/store`** (`public/store.html`) — **Tukuk Store**: katalog aplikasi & game dari **4 sumber** (`GET /api/store` → `storeCatalog()`): **🏠 Bawaan** (app mini `public/apps/*.html` — hanya yang failnya benar-benar wujud, `storeBawaan()`), **⚡ Satu Kata** (pasangan app+game dari `generated/manifest.json`, cache ikut mtime, `storeSatuKata()`), **🕹️ Arked** (templat game Pembina → pautan `/builder?tpl=<nama>`; Pembina muat templat & terus ke Mod Cuba) dan **👥 Komuniti** (terbitan `/a/<slug>`). Tab **Semua / Aplikasi / Game** + penapis sumber + carian + susun (terbaharu / paling dilihat / A–Z), kiraan **dilihat** (`publish-views.json`, debounce 5s pada hit `/a/<slug>`), `Cache-Control: public, max-age=30`. Kategori `kind` dihantar Pembina semasa terbit (`inferKind()`: kanvas hanya game → `game`; fallback klasik = regex tajuk `GAME_TITLE_RE`) dan disimpan dalam `.meta.json`. Item komuniti dibuka dalam sandbox `/a/<slug>`.
 
 ---
 
