@@ -283,3 +283,56 @@ test('buildZip: tandatangan PK + nama fail + eocd hadir', () => {
   assert.ok(s.includes('a.txt'), 'nama fail tertanam');
   const e = bytes.length - 22; assert.deepEqual([bytes[e], bytes[e+1], bytes[e+2], bytes[e+3]], [0x50, 0x4b, 0x05, 0x06], 'EOCD signature (22 bait terakhir)');
 });
+
+// ── Kemudahan: auto-check, kongsi base64, meta SEO, sunting terus ──
+const checkProject = new Function(
+  extractFn(html, 'hexLum') + '\n' + extractFn(html, 'contrast') + '\n' + extractFn(html, 'checkProject') + '; return checkProject;'
+)();
+const contrastFn = new Function(extractFn(html, 'hexLum') + '\n' + extractFn(html, 'contrast') + '; return contrast;')();
+const encodeProj = new Function(extractFn(html, 'encodeProj') + '; return encodeProj;')();
+const decodeProj = new Function(extractFn(html, 'decodeProj') + '; return decodeProj;')();
+
+test('checkProject: imej tanpa alt + pautan butang tak sah dikesan (dengan id widget)', () => {
+  const iss = checkProject([{ id:'w1', type:'image', src:'data:x', alt:'' }, { id:'w2', type:'button', href:'javascript:x' }], { bg:'#ffffff', fg:'#000000' }, 'App');
+  assert.ok(iss.some((x)=>x.id==='w1' && /alt/.test(x.msg)), 'alt hilang dikesan');
+  assert.ok(iss.some((x)=>x.id==='w2' && /Pautan/.test(x.msg)), 'href tak sah dikesan');
+});
+
+test('checkProject: nama kosong + kontras rendah + projek kemas', () => {
+  assert.ok(checkProject([], { bg:'#ffffff', fg:'#eeeeee' }, '').length >= 2, 'nama kosong + kontras rendah');
+  const clean = checkProject([{ id:'w1', type:'heading', text:'Hi' }], { bg:'#ffffff', fg:'#000000' }, 'Ok');
+  assert.equal(clean.length, 0, 'projik bersih → tiada isu');
+});
+
+test('contrast: hitam/putih ≈ 21; warna sama = 1', () => {
+  assert.ok(contrastFn('#000000', '#ffffff') > 20.5, 'kontras maksimum');
+  assert.equal(contrastFn('#777777', '#777777'), 1);
+});
+
+test('encodeProj/decodeProj: pusingan lengkap projek (unicode selamat)', () => {
+  const obj = { appName:'Accióné 中文', theme:{ accent:'#abc' }, widgets:[{ id:'w1', type:'text', text:'hai' }] };
+  assert.deepEqual(decodeProj(encodeProj(obj)), obj);
+});
+
+test('buildDoc: sisip meta description + og:title/og:description untuk SEO', () => {
+  const T2 = { dark:false, bg:'#fff', fg:'#111', font:'x', accent:'#abc', sub:'ss', desc:'penerangan saya' };
+  const bd = new Function('esc','theme', extractFn(html,'buildDoc') + '; return buildDoc;')(esc, T2);
+  const doc = bd('<p>x</p>', '.y{}', 'z=1;', 'Nama');
+  assert.ok(doc.startsWith('<!DOCTYPE html>'));
+  assert.ok(doc.includes('name="description" content="penerangan saya"'), 'meta description');
+  assert.ok(doc.includes('property="og:title" content="Nama"'), 'og:title');
+  assert.ok(doc.includes('property="og:description"'), 'og:description');
+});
+
+test('widgetMarkup: tanda data-edit hadir untuk suntingan terus (heading/text/card)', () => {
+  assert.ok(markup({ type:'heading', text:'T', level:2, align:'left' }).includes('data-edit="text"'));
+  assert.ok(markup({ type:'text', text:'x', align:'left' }).includes('data-edit="text"'));
+  const card = markup({ type:'card', title:'tt', body:'bb' });
+  assert.ok(card.includes('data-edit="title"') && card.includes('data-edit="body"'));
+});
+
+test('UI kemudahan: butang + modal + penunjuk simpan wujud dalam DOM', () => {
+  for (const id of ['shareBtn','auditBtn','keysBtn','saveState','modal'])
+    assert.ok(html.includes('id="' + id + '"'), 'elemen hilang: #' + id);
+  assert.ok(html.includes('class="insSel"') || html.includes('insSel'), 'selit ＋ (insSel) perlu ada');
+});

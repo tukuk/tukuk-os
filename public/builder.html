@@ -82,6 +82,32 @@
   #edPre .c { color:#5f6b85; font-style:italic; } #edPre .s { color:#9ce6a0; } #edPre .t { color:#7cc4ff; } #edPre .k { color:#ff9ecd; }
   #edPreview { flex:1; min-width:0; border:1px solid var(--line); border-radius:12px; background:#fff; width:100%; height:100%; }
   @media (max-width:1000px){ .codesplit{ flex-direction:column; } }
+  /* ── Kemudahan: selit, sunting terus, modals, penunjuk simpan, amaran ── */
+  .insrow { display:flex; justify-content:center; height:0; overflow:visible; }
+  .insrow select { opacity:0; height:22px; font-size:11px; padding:1px 6px; border-radius:8px; border:1px dashed var(--acc); background:rgba(76,141,255,.08); color:var(--fg); cursor:pointer; transition:opacity .15s; width:150px; }
+  .frame:hover .insrow select { opacity:.75; }
+  .insrow select:hover { opacity:1 !important; }
+  body.edit .w [data-edit] { outline:1px dashed rgba(76,141,255,.5); outline-offset:2px; border-radius:4px; cursor:text; }
+  body.edit .w [data-edit]:focus { outline:2px solid var(--acc); }
+  .w .wb { display:none; position:absolute; top:-8px; left:6px; font-size:11px; background:#ffcf5c; color:#3a2b00; border-radius:8px; padding:0 6px; font-weight:800; font-style:normal; cursor:help; }
+  body.edit .w.warn .wb { display:inline-block; }
+  .saveState { font-size:11px; color:var(--muted); align-self:center; min-width:74px; text-align:right; }
+  .modal { position:fixed; inset:0; background:rgba(4,8,18,.6); display:none; align-items:center; justify-content:center; z-index:30; }
+  .modal.show { display:flex; }
+  .mcard { background:#0e1424; border:1px solid var(--line); border-radius:16px; width:min(520px,92vw); max-height:80vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .mh { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--line); font-weight:800; }
+  .mx { padding:2px 10px; }
+  .mb { padding:14px 16px; font-size:13px; line-height:1.6; }
+  .mb .kb { display:inline-block; min-width:34px; text-align:center; background:rgba(255,255,255,.08); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:1px 7px; font-family:ui-monospace,monospace; font-size:12px; }
+  .mb .ai { padding:8px 10px; border:1px solid var(--line); border-radius:10px; margin-bottom:6px; cursor:pointer; }
+  .mb .ai:hover { background:rgba(255,255,255,.06); }
+  .mb .ar { display:flex; justify-content:space-between; gap:12px; padding:4px 0; border-bottom:1px dashed var(--line); }
+  .socialcard { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; color:#111; }
+  .socialcard .sc-img { background:linear-gradient(135deg,var(--acc),#7cc4ff); color:#fff; padding:20px; font-weight:800; font-size:14px; }
+  .socialcard .sc-body { padding:10px 12px; }
+  .socialcard .sc-dom { font-size:11px; color:#888; text-transform:uppercase; }
+  .socialcard .sc-t { font-weight:700; font-size:14px; margin:2px 0; }
+  .socialcard .sc-d { font-size:12px; color:#555; }
 </style>
 </head>
 <body class="edit">
@@ -95,10 +121,14 @@
   <button id="viewCode" class="ghost" title="Editor Kod + pratonton langsung (tanpa AI)">&lt;/&gt; Kod</button>
   <button id="undo" title="Undo">↶</button>
   <button id="redo" title="Redo">↷</button>
+  <button id="shareBtn" title="Jana pautan kongsi (projek tersimpan dalam URL)">🔗 Kongsi</button>
+  <button id="auditBtn" title="Semak aksesibiliti / kontras / pautan">🩺 Semak</button>
+  <button id="keysBtn" title="Pintasan papan kekunci (?)">⌨</button>
   <button id="openBtn" title="Buka projek .json">📂 Buka</button>
   <button id="saveBtn" title="Simpan projek .json">💾 JSON</button>
   <button id="exportBtn" class="primary" title="Eksport HTML berdiri sendiri">⬇️ Eksport HTML</button>
   <button id="zipBtn" class="primary" title="Muat turun ZIP (index.html + projek + README)">🗜 ZIP</button>
+  <span id="saveState" class="saveState" title="Status jimat automatik"></span>
 </header>
 
 <div class="grid3">
@@ -153,12 +183,13 @@
 <input type="file" id="fileIn" accept="application/json" hidden>
 <input type="file" id="imgIn" accept="image/*" hidden>
 <div class="toast" id="toast"></div>
+<div id="modal" class="modal"><div class="mcard"><div class="mh"><span class="mt"></span><button class="mx ghost" title="Tutup (Esc)">✕</button></div><div class="mb"></div></div></div>
 
 <script>
 'use strict';
 // ── Model & util ────────────────────────────────────────────────────────────
 let uid = 1;
-const DEF_THEME = { accent:'#4c8dff', bg:'#ffffff', fg:'#16181d', dark:false, radius:14, font:"system-ui, Segoe UI, Roboto, sans-serif", sub:'Dibina dengan Tukuk Studio' };
+const DEF_THEME = { accent:'#4c8dff', bg:'#ffffff', fg:'#16181d', dark:false, radius:14, font:"system-ui, Segoe UI, Roboto, sans-serif", sub:'Dibina dengan Tukuk Studio', desc:'Aplikasi kecil yang dibina dengan Tukuk Studio.' };
 let theme = { ...DEF_THEME };
 let widgets = [];           // [{id,type,...props}]
 let selId = null;
@@ -355,8 +386,8 @@ window.builderGames = initGames;
 function widgetMarkup(w){
   const t = theme;
   switch(w.type){
-    case 'heading': return `<h${w.level||2} style="text-align:${w.align};margin:.3em 0">${esc(w.text)}</h${w.level||2}>`;
-    case 'text': return `<p style="text-align:${w.align};margin:.3em 0;line-height:1.5">${esc(w.text)}</p>`;
+    case 'heading': return `<h${w.level||2} data-edit="text" style="text-align:${w.align};margin:.3em 0">${esc(w.text)}</h${w.level||2}>`;
+    case 'text': return `<p data-edit="text" style="text-align:${w.align};margin:.3em 0;line-height:1.5">${esc(w.text)}</p>`;
     case 'button': {
       const css=`display:inline-block;background:${t.accent};color:#fff;border:none;padding:10px 16px;border-radius:${t.radius}px;font:inherit;font-weight:700;${w.fullWidth?'display:block;text-align:center;width:100%':''}`;
       return w.href
@@ -364,7 +395,7 @@ function widgetMarkup(w){
         : `<button data-interactive data-act="noop" style="${css}">${esc(w.label)}</button>`;
     }
     case 'image': return w.src
-      ? `<figure style="margin:0"><img src="${esc(w.src)}" alt="${esc(w.alt)}" style="width:100%;display:block;border-radius:${w.radius}px"><figcaption style="font-size:12px;color:#777;margin-top:4px">${esc(w.caption)}</figcaption></figure>`
+      ? `<figure style="margin:0"><img src="${esc(w.src)}" alt="${esc(w.alt)}" style="width:100%;display:block;border-radius:${w.radius}px"><figcaption data-edit="caption" style="font-size:12px;color:#777;margin-top:4px">${esc(w.caption)}</figcaption></figure>`
       : `<div style="border:2px dashed #bbb;border-radius:${w.radius}px;padding:22px;text-align:center;color:#999">Imej (belum dipilih)</div>`;
     case 'input': return `<label style="display:block;font-size:13px;margin-bottom:8px">${esc(w.label)}<input data-interactive type="${w.kind}" placeholder="${esc(w.placeholder)}" style="width:100%;margin-top:4px;padding:9px 10px;border:1px solid #ccd;border-radius:${w.type==='input'?8:8}px;font:inherit"></label>`;
     case 'counter': return `<div data-interactive data-w="${w.id}" data-step="${Number(w.step)||1}" style="display:flex;align-items:center;gap:12px"><span>${esc(w.label)}</span><button data-act="dec" style="width:36px;height:36px;border-radius:10px;border:1px solid #ccc;background:#f3f5fb;font-size:18px">−</button><b data-val style="min-width:24px;text-align:center;font-size:18px">${Number(w.value)||0}</b><button data-act="inc" style="width:36px;height:36px;border-radius:10px;border:1px solid #ccc;background:#f3f5fb;font-size:18px">+</button></div>`;
@@ -374,7 +405,7 @@ function widgetMarkup(w){
       const add=w.allowAdd?`<form data-interactive data-list style="display:flex;gap:6px;margin-top:8px"><input placeholder="Tambah…" style="flex:1;padding:8px;border:1px solid #ccd;border-radius:8px"><button class="ladd" style="background:${theme.accent};color:#fff;border:none;border-radius:8px;padding:8px 12px">Tambah</button></form>`:'';
       return `<ul style="list-style:none;margin:0;padding:0">${lis||'<li style="color:#999">Kosong</li>'}</ul>${add}`;
     }
-    case 'card': return `<div style="background:#f5f7fb;border:1px solid #e6e9f2;border-radius:${theme.radius}px;padding:14px"><h4 style="margin:0 0 6px">${esc(w.title)}</h4><p style="margin:0;color:#444;line-height:1.5">${esc(w.body)}</p></div>`;
+    case 'card': return `<div style="background:#f5f7fb;border:1px solid #e6e9f2;border-radius:${theme.radius}px;padding:14px"><h4 data-edit="title" style="margin:0 0 6px">${esc(w.title)}</h4><p data-edit="body" style="margin:0;color:#444;line-height:1.5">${esc(w.body)}</p></div>`;
     case 'divider': return `<hr style="border:none;border-top:1px solid #e3e3e3;margin:14px 0">`;
     case 'spacer': return `<div style="height:${Number(w.height)||24}px"></div>`;
     case 'faq': {
@@ -403,12 +434,19 @@ function widgetMarkup(w){
 function renderStage(){
   const f = $('frame');
   f.className = 'frame' + (device==='tablet'?' tablet':device==='desktop'?' desktop':'');
-  const body = widgets.map((w)=>`<div class="w${w.id===selId?' sel':''}" data-id="${w.id}" draggable="${mode==='edit'}"><span class="tag">${(TYPES[w.type]||{}).name||w.type}</span>${widgetMarkup(w)}</div>`).join('');
-  const inner = widgets.length ? body : `<div class="empty">Belum ada widget.<br>Tambah dari panel kiri →</div>`;
+  let warnIds = {};
+  if(mode==='edit'){ try{ (typeof checkProject==='function'?checkProject(widgets,theme,$('appName').value):[]).forEach((x)=>{ if(x.id) warnIds[x.id]=x.msg; }); }catch(e){} }
+  const block = (w)=>`<div class="w${w.id===selId?' sel':''}${warnIds[w.id]?' warn':''}" data-id="${w.id}" draggable="${mode==='edit'}"><span class="tag">${(TYPES[w.type]||{}).name||w.type}</span>${warnIds[w.id]?`<i class="wb" title="${esc(warnIds[w.id])}">⚠</i>`:''}${widgetMarkup(w)}</div>`;
+  const insrow = (i)=>`<div class="insrow"><select class="insSel" data-ins="${i}" tabindex="-1">${insertOptions()}</select></div>`;
+  let inner;
+  if(!widgets.length){ inner = (mode==='edit'?insrow(0):'') + `<div class="empty">Belum ada widget.<br>Klik <b>＋ tambah</b>, pilih dari panel kiri, atau muat <b>templat</b>.</div>`; }
+  else { inner = (mode==='edit'?insrow(0):'') + widgets.map((w,idx)=>block(w)+(mode==='edit'?insrow(idx+1):'')).join(''); }
   f.innerHTML = `<div class="appbar" style="color:${theme.accent}">${esc($('appName').value||'Aplikasi')}</div><div class="sub">${esc(theme.sub||'')}</div><div>${inner}</div>`;
+  if(mode==='edit'){ Array.prototype.forEach.call(f.querySelectorAll('[data-edit]'),function(el){ el.setAttribute('contenteditable','true'); el.setAttribute('spellcheck','false'); }); }
   if(mode==='preview' && typeof initGames==='function'){ try{ initGames(f); }catch(err){} }
   try{ if(typeof autoSave==='function') autoSave(); }catch{}
 }
+function insertOptions(){ return '<option value="">＋ tambah di sini</option>' + Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.ic} ${v.name}</option>`).join(''); }
 
 // ── Selection + properties ──────────────────────────────────────────────────
 function select(id){ selId=id; renderStage(); renderInspector(); }
@@ -475,7 +513,13 @@ function themeFields(){
     field('Bulat (radius)',inNum('radius',theme.radius,0,28))+
     field('Sub-tajuk',inTxt('sub',theme.sub))+
     field('',inChk('dark',theme.dark)+' <span style="font-size:12px">Mod gelap</span>')+
-    field('Huruf',inSel('font',theme.font,[["system-ui, Segoe UI, Roboto, sans-serif","Sistem"],["Georgia, serif","Serif"],["Courier New, monospace","Monospace"],["Impact, sans-serif","Impact"]]));
+    field('Huruf',inSel('font',theme.font,[["system-ui, Segoe UI, Roboto, sans-serif","Sistem"],["Georgia, serif","Serif"],["Courier New, monospace","Monospace"],["Impact, sans-serif","Impact"]]))+
+    field('Penerangan (SEO / kongsi sosial)',`<textarea data-key="desc" rows="2">${esc(theme.desc||'')}</textarea>`)+
+    socialPreview();
+}
+function socialPreview(){
+  const name=esc($('appName').value||'Aplikasi'); const d=esc((theme.desc||'').slice(0,140)||'—');
+  return `<h4 style="margin-top:14px">Pratonton bila dikongsi</h4><div class="socialcard"><div class="sc-img">${name}</div><div class="sc-body"><div class="sc-dom">tukuk.org</div><div class="sc-t">${name}</div><div class="sc-d">${d}</div></div></div>`;
 }
 
 function applyTheme(){
@@ -508,7 +552,7 @@ function setProp(key,val){ const w=byId(selId); if(!w) return;
 // ── Interaksi kanvas (delegasi) ─────────────────────────────────────────────
 $('frame').addEventListener('click',(e)=>{
   const wEl=e.target.closest('.w'); if(!wEl) return;
-  if(mode==='edit'){ const id=wEl.dataset.id; if(id) select(id); e.preventDefault(); return; }
+  if(mode==='edit'){ const id=wEl.dataset.id; if(e.target.closest('[data-edit]') && id===selId) return; if(id) select(id); e.preventDefault(); return; }
   // preview: jalankan tindakan interaktif
   const act=e.target.closest('[data-act]'); if(!act) return;
   const a=act.dataset.act;
@@ -555,6 +599,17 @@ let dragId=null;
 $('frame').addEventListener('dragstart',(e)=>{ const el=e.target.closest('.w'); if(!el||mode!=='edit'){ e.preventDefault(); return; } dragId=el.dataset.id; });
 $('frame').addEventListener('dragover',(e)=>{ if(mode!=='edit')return; e.preventDefault(); const over=e.target.closest('.w'); if(!over||!dragId||over.dataset.id===dragId)return; const from=widgets.findIndex(w=>w.id===dragId); const to=widgets.findIndex(w=>w.id===over.dataset.id); if(from<0||to<0)return; const [m]=widgets.splice(from,1); widgets.splice(to,0,m); if(from!==to) renderStage(); });
 $('frame').addEventListener('dragend',()=>{ if(dragId){ pushH(); dragId=null; renderStage(); } });
+
+// ── Sunting teks terus pada kanvas (contenteditable, tanpa panel) ──
+$('frame').addEventListener('focusout',(e)=>{
+  if(mode!=='edit') return; const el=e.target.closest('[data-edit]'); if(!el) return;
+  const wEl=el.closest('.w'); const w=byId(wEl&&wEl.dataset.id); if(!w) return;
+  const key=el.dataset.edit; const val=el.textContent;
+  if(String(w[key]||'')!==val){ pushH(); w[key]=val; renderStage(); renderInspector(); }
+});
+// ── Selit widget pada kedudukan (＋ tambah di sini) ──
+function insertWidgetAt(type,idx){ pushH(); const w={ id:'w'+(uid++), ...(TYPES[type]||{make:()=>({type})}).make() }; idx=Math.max(0,Math.min(idx,widgets.length)); widgets.splice(idx,0,w); selId=w.id; commit(); }
+$('frame').addEventListener('change',(e)=>{ if(mode!=='edit') return; const sel=e.target.closest('.insSel'); if(!sel||!sel.value) return; insertWidgetAt(sel.value, Number(sel.dataset.ins)); });
 </script>
 
 <script>
@@ -606,7 +661,7 @@ function exportCSS(){
   return `:root{color-scheme:${theme.dark?'dark':'light'}}*{box-sizing:border-box}body{margin:0;background:${theme.bg};color:${theme.fg};font-family:${theme.font};padding:20px;max-width:${device==='desktop'?880:device==='tablet'?680:480}px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}.appbar{font-weight:800;font-size:20px;color:${theme.accent};margin-bottom:2px}.sub{color:#888;font-size:13px;margin-bottom:16px}button,.btn{font:inherit}`;
 }
 function exportBody(){ return widgets.map(widgetMarkup).join('\n'); }
-function buildDoc(body, css, js, name){ return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${js}<\/script></body></html>`; }
+function buildDoc(body, css, js, name){ return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><meta name="description" content="${esc(theme.desc||'')}"><meta property="og:title" content="${esc(name)}"><meta property="og:description" content="${esc(theme.desc||'')}"><meta property="og:type" content="website"><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${js}<\/script></body></html>`; }
 function buildExport(){ return buildDoc(exportBody(), exportCSS(), runtimeJS(), $('appName').value||'Aplikasi'); }
 function download(text, filename, mime){ const b=new Blob([text],{type:mime}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),8000); }
 const safe=(s)=>String(s||'app').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'app';
@@ -640,17 +695,79 @@ $('saveBtn').onclick=()=>{ const proj={ v:1, appName:$('appName').value, theme, 
 $('openBtn').onclick=()=> $('fileIn').click();
 $('fileIn').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); pushH(); $('appName').value=o.appName||'Aplikasi'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; uid=Date.now(); selId=null; renderStage(); applyTheme(); renderInspector(); toast('📂 Projek dibuka.'); }catch(err){ toast('Fail JSON tidak sah.'); } }; r.readAsText(f); e.target.value=''; });
 
-// ── Sampel awal + auto-save lokal ───────────────────────────────────────────
+// ── Pemeriksaan automatik (aksesibiliti / kontras / pautan) ──
+function hexLum(hex){ let m=String(hex||'').replace('#','').trim(); if(/^[0-9a-fA-F]{3}$/.test(m)) m=m.split('').map((c)=>c+c).join(''); if(!/^[0-9a-fA-F]{6}$/.test(m)) return 0; const r=parseInt(m.substr(0,2),16)/255,g=parseInt(m.substr(2,2),16)/255,b=parseInt(m.substr(4,2),16)/255; const f=(c)=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4); return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b); }
+function contrast(a,b){ const L1=hexLum(a),L2=hexLum(b); const hi=Math.max(L1,L2),lo=Math.min(L1,L2); return (hi+0.05)/(lo+0.05); }
+function checkProject(ws, th, appName){
+  const out=[]; const list=Array.isArray(ws)?ws:[]; const t=th||{};
+  if(!appName || !String(appName).trim()) out.push({ id:null, msg:'Nama aplikasi kosong — tajuk & pautan jadi umum.' });
+  const ratio=contrast(t.bg||'#ffffff', t.fg||'#000000');
+  if(ratio < 4.5) out.push({ id:null, msg:'Kontras teks/latar rendah ('+ratio.toFixed(1)+':1) — sukar dibaca.' });
+  list.forEach((w)=>{
+    if(w.type==='image'){ if(!w.src||!String(w.src).trim()) out.push({ id:w.id, msg:'Imej belum ada sumber (placeholder sahaja).' }); else if(!w.alt||!String(w.alt).trim()) out.push({ id:w.id, msg:'Imej tiada teks alt (aksesibiliti).' }); }
+    if((w.type==='heading'||w.type==='text') && (!w.text||!String(w.text).trim())) out.push({ id:w.id, msg:'Teks widget ini kosong.' });
+    if(w.type==='button' && w.href && !/^(https?:|mailto:|tel:|#|\/)/.test(w.href)) out.push({ id:w.id, msg:'Pautan butang mungkin tak sah: '+w.href });
+  });
+  return out;
+}
+// ── Kongsi: projek → base64 dalam URL (tanpa server) ──
+function encodeProj(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
+function decodeProj(s){ return JSON.parse(decodeURIComponent(escape(atob(s)))); }
+function copyText(text, okmsg){ const done=()=>toast(okmsg||'📋 Disalin ke papan klip'); function fb(){ const ta2=document.createElement('textarea'); ta2.value=text; document.body.appendChild(ta2); ta2.select(); try{ document.execCommand('copy'); }catch(err){} ta2.remove(); done(); } try{ navigator.clipboard.writeText(text).then(done,fb); }catch(err){ fb(); } }
+// ── Modal (bantuan & hasil semakan) ──
+const HELP_HTML = [
+  ['Sunting teks','Klik pada tajuk/teks lalu taip terus'],
+  ['Selit di kedudukan','Guna ＋ tambah di sini (hover celah blok)'],
+  ['Duplikasi','Ctrl / ⌘ + D'],
+  ['Buang widget','Delete / Backspace'],
+  ['Gerak widget','↑ / ↓'],
+  ['Undo / Redo','Ctrl / ⌘ + Z · Ctrl / ⌘ + Y'],
+  ['Batal pilih / tutup','Esc'],
+  ['Papan bantuan ini','?']
+].map((r)=>`<div class="ar"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+function openModal(title, bodyHtml){ const m=$('modal'); m.querySelector('.mt').textContent=title; m.querySelector('.mb').innerHTML=bodyHtml; m.classList.add('show'); }
+function closeModal(){ $('modal').classList.remove('show'); }
+function toggleHelp(){ if($('modal').classList.contains('show')) return closeModal(); openModal('⌨ Pintasan & cara guna', HELP_HTML); }
+
+$('shareBtn').onclick=()=>{ const proj={ appName:$('appName').value, theme, widgets }; let b64=''; try{ b64=encodeURIComponent(encodeProj(proj)); }catch(err){ toast('Projek terlalu besar untuk pautan — guna ZIP/JSON.'); return; } const frag='#p='+b64; try{ history.replaceState(null,'', frag); }catch(err){ location.hash=frag; } copyText(location.origin+location.pathname+frag,'🔗 Pautan kongsi disalin — sesiapa boleh buka & teruskan.'); };
+$('auditBtn').onclick=()=>{ const iss=checkProject(widgets,theme,$('appName').value); if(!iss.length){ toast('✅ Tiada isu ditemui — nampak kemas!'); return; } const rows=iss.map((x)=>`<div class="ai" data-wid="${x.id||''}">${x.id?'🎯 ':'ℹ️ '}${esc(x.msg)}</div>`).join(''); openModal('🩺 Pemeriksaan projek — '+iss.length+' penambahbaikan', rows); };
+$('keysBtn').onclick=toggleHelp;
+$('modal').addEventListener('click',(e)=>{ if(e.target.id==='modal'||e.target.closest('.mx')){ closeModal(); return; } const ai=e.target.closest('.ai'); if(ai){ closeModal(); if(ai.dataset.wid){ if(mode!=='edit'){ mode='edit'; document.body.classList.add('edit'); $('modeBtn').textContent='✏️ Edit'; $('modeBtn').classList.add('active'); } tab='widget'; select(ai.dataset.wid); } } });
+
+// ── Sampel awal + pulih (pautan / auto-save lokal) ──────────────────────────
 function seed(){ widgets=[ {id:'w'+(uid++),...TYPES.heading.make(),text:'Selamat Datang'}, {id:'w'+(uid++),...TYPES.text.make(),text:'Ini demo pembina aplikasi. Tukar widget, tema, lalu Eksport HTML.'}, {id:'w'+(uid++),...TYPES.counter.make(),label:'Klik'}, {id:'w'+(uid++),...TYPES.button.make()} ]; }
-try{ const raw=localStorage.getItem('tukuk-builder'); if(raw){ const o=JSON.parse(raw); $('appName').value=o.appName||'Aplikasi Saya'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; selId=null; } else seed(); }catch{ seed(); }
-let _asv=null; function autoSave(){ clearTimeout(_asv); _asv=setTimeout(()=>{ try{ localStorage.setItem('tukuk-builder',JSON.stringify({ appName:$('appName').value, theme, widgets })); }catch{} },500); }
+function loadState(o){ $('appName').value=o.appName||'Aplikasi Saya'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; selId=null; if(widgets.length) uid=Date.now(); }
+let resumed='';
+try{
+  const h=location.hash||'';
+  if(h.indexOf('#p=')===0){ try{ loadState(decodeProj(decodeURIComponent(h.slice(3)))); resumed='link'; }catch(err){ seed(); } }
+  else { const raw=localStorage.getItem('tukuk-builder'); if(raw){ loadState(JSON.parse(raw)); resumed='storage'; } else seed(); }
+}catch(err){ seed(); }
+let _asv=null; function autoSave(){ const s=$('saveState'); if(s) s.textContent='● Menyimpan…'; clearTimeout(_asv); _asv=setTimeout(()=>{ try{ localStorage.setItem('tukuk-builder',JSON.stringify({ appName:$('appName').value, theme, widgets })); if(s) s.textContent='✓ Tersimpan'; }catch(err){ if(s) s.textContent='⚠ Gagal simpan'; } },500); }
 const _renderStage=renderStage; renderStage=function(){ _renderStage(); autoSave(); };
 
 renderStage(); applyTheme(); renderInspector(); pushH();
-document.addEventListener('keydown',(e)=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); } if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); } });
+if(resumed==='storage') toast('✓ Projek terakhir dipulihkan dari pelayar ini');
+if(resumed==='link') toast('🔗 Projek daripada pautan kongsi dimuat');
+document.addEventListener('keydown',(e)=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  const typing = tag==='input'||tag==='textarea'||tag==='select'|| e.target.isContentEditable;
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); return; }
+  if(typing) return;
+  if($('modal').classList.contains('show')){ if(e.key==='Escape') closeModal(); return; }
+  if(mode!=='edit' || document.body.classList.contains('code')) return;
+  const w=byId(selId);
+  if(e.key==='Delete'||e.key==='Backspace'){ if(w){ pushH(); widgets=widgets.filter((x)=>x.id!==w.id); selId=null; commit(); toast('Widget dibuang.'); } e.preventDefault(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){ if(w){ pushH(); const c=JSON.parse(JSON.stringify(w)); c.id='w'+(uid++); widgets.splice(widgets.indexOf(w)+1,0,c); selId=c.id; commit(); toast('⧉ Widget diduplikasi.'); } e.preventDefault(); return; }
+  if(e.key==='Escape'){ if(selId){ selId=null; renderStage(); renderInspector(); } return; }
+  if(e.key==='ArrowUp'||e.key==='ArrowDown'){ if(w){ const i=widgets.indexOf(w); const j=e.key==='ArrowUp'?i-1:i+1; if(j>=0&&j<widgets.length){ pushH(); widgets.splice(j,0,widgets.splice(i,1)[0]); commit(); } } e.preventDefault(); return; }
+  if(e.key==='?'){ toggleHelp(); e.preventDefault(); }
+});
 window.builderExport = buildExport;   // dieksport untuk ujian unit
 window.builderWidgetMarkup = widgetMarkup;
 window.builderExportCSS = exportCSS; window.builderExportBody = exportBody; window.builderDoc = buildDoc;
+window.builderCheck = checkProject; window.builderContrast = contrast; window.builderEncode = encodeProj; window.builderDecode = decodeProj;
 </script>
 
 <script>
