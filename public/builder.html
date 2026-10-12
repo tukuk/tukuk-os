@@ -98,6 +98,7 @@
   <button id="openBtn" title="Buka projek .json">📂 Buka</button>
   <button id="saveBtn" title="Simpan projek .json">💾 JSON</button>
   <button id="exportBtn" class="primary" title="Eksport HTML berdiri sendiri">⬇️ Eksport HTML</button>
+  <button id="zipBtn" class="primary" title="Muat turun ZIP (index.html + projek + README)">🗜 ZIP</button>
 </header>
 
 <div class="grid3">
@@ -184,7 +185,13 @@ const TYPES = {
   spacer:{ ic:'↕️', name:'Ruang', make:()=>({type:'spacer', height:24}) },
   faq:{ ic:'❓', name:'FAQ', make:()=>({type:'faq', items:[{q:'Ini soalan?',a:'Ini jawapan.'},{q:'Satu lagi?',a:'Baik, ini contoh.'}]}) },
   steps:{ ic:'🔢', name:'Cara-cara', make:()=>({type:'steps', title:'Langkah', items:['Buka aplikasi','Pilih pilihan','Selesai']}) },
-  quiz:{ ic:'🎯', name:'Kuiz', make:()=>({type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0}) }
+  quiz:{ ic:'🎯', name:'Kuiz', make:()=>({type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0}) },
+  ttt:{ ic:'⭕', name:'Tic-Tac-Toe', make:()=>({type:'ttt'}) },
+  memory:{ ic:'🧠', name:'Padanan Memori', make:()=>({type:'memory', pairs:6}) },
+  mole:{ ic:'🐹', name:'Tikus Pukul', make:()=>({type:'mole', duration:20}) },
+  rps:{ ic:'✊', name:'Batu-Kertas-Gunting', make:()=>({type:'rps'}) },
+  reaction:{ ic:'⚡', name:'Masa Tindak Balas', make:()=>({type:'reaction'}) },
+  guess:{ ic:'🔢', name:'Teka Nombor', make:()=>({type:'guess', max:100}) }
 };
 
 // Templat awal — setiap satu muat set widget + tema + nama (id dijana semasa dimuat).
@@ -214,8 +221,132 @@ const TEMPLATES = {
     {type:'heading', text:'Kuiz Ringkas', level:2, align:'center'},
     {type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0},
     {type:'text', text:'Pilih satu jawapan. Hijau = betul, merah = salah.', align:'center'}
+  ]},
+  arcade:{ label:'🎮 Arked Mini', appName:'Arked Mini', theme:{accent:'#ff5ea8',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🎮 Arked Mini', level:2, align:'center'},
+    {type:'text', text:'Klik Mod Cuba, kemudian main setiap game di bawah.', align:'center'},
+    {type:'ttt'},
+    {type:'memory', pairs:6},
+    {type:'mole', duration:20},
+    {type:'reaction'}
+  ]},
+  ttttpl:{ label:'⭕ Tic-Tac-Toe', appName:'Tic-Tac-Toe', theme:{accent:'#30d158'}, widgets:[
+    {type:'heading', text:'Tic-Tac-Toe', level:2, align:'center'},
+    {type:'ttt'}
   ]}
 };
+</script>
+
+<script>
+'use strict';
+// ── Enjin permainan (tanpa AI). widgetMarkup hasilkan 'shell'; initGames bina UI & logik.
+// Fungsi yang sama dipakai untuk pratonton (renderStage panggil initGames) dan eksport
+// (runtimeJS menyertai initGames.toString()). Maka tiada pendua logik. ────────────────
+function gameBox(kind,label,w,extra){ return `<div data-game="${kind}" data-acc="${esc(theme.accent)}"${extra||''}><div style="border:2px dashed #ccc;border-radius:12px;padding:18px;text-align:center;color:#888">${esc(label)} — tukar ke <b>Mod Cuba</b> untuk main</div></div>`; }
+
+function initGames(root){
+  root = root || document;
+  var boxes = root.querySelectorAll('[data-game]');
+  Array.prototype.forEach.call(boxes, function(box){
+    if(box.__g) return; box.__g = true;
+    var acc = box.getAttribute('data-acc') || '#4c8dff';
+    var kind = box.getAttribute('data-game');
+    try{
+      if(kind==='ttt') gTTT(box,acc);
+      else if(kind==='memory') gMemory(box,acc);
+      else if(kind==='mole') gMole(box,acc);
+      else if(kind==='rps') gRPS(box,acc);
+      else if(kind==='reaction') gReaction(box,acc);
+      else if(kind==='guess') gGuess(box,acc);
+    }catch(err){ if(window.console) console.warn('game', err); }
+  });
+
+  function el(tag,css,txt){ var e=document.createElement(tag); if(css)e.style.cssText=css; if(txt!=null)e.textContent=txt; return e; }
+
+  function gTTT(box,acc){
+    box.innerHTML='';
+    var cells=[], b=Array(9).fill(''), turn='X', over=false;
+    var stat=el('div','font-size:13px;color:#666','Giliran: X');
+    var grid=el('div','display:grid;grid-template-columns:repeat(3,58px);gap:6px;margin:8px 0');
+    function win(a){ var L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(var k=0;k<L.length;k++){ var x=L[k]; if(a[x[0]]&&a[x[0]]===a[x[1]]&&a[x[1]]===a[x[2]]) return true; } return false; }
+    for(var i=0;i<9;i++){ (function(idx){ var c=el('button','width:58px;height:58px;font-size:26px;font-weight:800;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer','');
+      c.onclick=function(){ if(over||b[idx])return; b[idx]=turn; c.textContent=turn; c.style.color=turn==='X'?acc:'#e5484d';
+        if(win(b)){ over=true; stat.textContent='Menang: '+turn+' 🎉'; } else if(b.every(function(x){return x;})){ over=true; stat.textContent='Seri!'; } else { turn=turn==='X'?'O':'X'; stat.textContent='Giliran: '+turn; } };
+      grid.appendChild(c); cells.push(c); })(i); }
+    var rst=el('button','padding:6px 12px;border:1px solid #ccc;border-radius:8px;background:#f3f5fb;cursor:pointer','Reset');
+    rst.onclick=function(){ b=Array(9).fill(''); turn='X'; over=false; cells.forEach(function(x){ x.textContent=''; x.style.color=''; }); stat.textContent='Giliran: X'; };
+    box.appendChild(el('div','font-size:13px;color:#666','Dua pemain. Jajaran 3 menang.'));
+    box.appendChild(grid); box.appendChild(stat); box.appendChild(rst);
+  }
+
+  function gMemory(box,acc){
+    var pairs=Number(box.getAttribute('data-pairs'))||6;
+    var set=['🍎','🍌','🍇','🍒','🍊','🍉','🥝','🍍','📷','🚗','⭐','🔥'];
+    var chosen=set.slice(0,Math.min(pairs,set.length)); var deck=[]; chosen.forEach(function(em){ deck.push(em,em); });
+    for(var i=deck.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=deck[i]; deck[i]=deck[j]; deck[j]=t; }
+    box.innerHTML=''; var open=[], matched=0, moves=0, lock=false;
+    var stat=el('div','font-size:13px;color:#666');
+    var grid=el('div','display:grid;grid-template-columns:repeat(4,52px);gap:6px;margin:8px 0');
+    deck.forEach(function(em){ var c=el('button','width:52px;height:52px;font-size:22px;border:1px solid #ccc;border-radius:8px;cursor:pointer','?'); c.style.background=acc; c.style.color=acc;
+      c.onclick=function(){ if(lock||c.__o||c.__d)return; c.textContent=em; c.style.background='#fff'; c.style.color='#111'; c.__o=true; open.push({c:c,em:em});
+        if(open.length===2){ moves++; lock=true; var a=open[0], bb=open[1];
+          setTimeout(function(){ if(a.em===bb.em){ a.c.__d=1; bb.c.__d=1; a.c.style.background='#d7f7dd'; bb.c.style.background='#d7f7dd'; matched++; stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length+(matched===chosen.length?'  ✅ Selesai!':''); } else { [a,bb].forEach(function(o){ o.c.textContent='?'; o.c.style.background=acc; o.c.style.color=acc; }); stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length; } open=[]; lock=false; }, 550); } };
+      grid.appendChild(c); });
+    box.appendChild(el('div','font-size:13px;color:#666','Cari pasangan yang sama.'));
+    box.appendChild(grid); box.appendChild(stat); stat.textContent='Gerak: 0  •  Padan: 0/'+chosen.length;
+  }
+
+  function gMole(box,acc){
+    box.innerHTML=''; var cells=[], score=0, left=0, playing=false, spawn=null, tick=null;
+    var stat=el('div','font-size:13px;color:#666','Skor: 0');
+    var grid=el('div','display:grid;grid-template-columns:repeat(3,60px);gap:8px;margin:8px 0');
+    function pop(){ if(!playing)return; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); var m=cells[Math.floor(Math.random()*cells.length)]; m.__m=true; m.textContent='🐹'; }
+    for(var i=0;i<9;i++){ (function(){ var h=el('div','width:60px;height:60px;border-radius:50%;background:#e7e0d6;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer','');
+      h.onclick=function(){ if(playing&&h.__m){ score++; h.__m=false; h.textContent=''; stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; } }; grid.appendChild(h); cells.push(h); })(); }
+    var start=el('button','padding:6px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Mula');
+    start.onclick=function(){ if(playing)return; playing=true; score=0; left=Number(box.getAttribute('data-duration'))||20; stat.textContent='Skor: 0  •  Masa: '+left+'s'; pop();
+      tick=setInterval(function(){ left--; if(left<=0){ clearInterval(tick); clearInterval(spawn); playing=false; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); stat.textContent='⏱ Tamat! Skor: '+score; } else stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; }, 1000);
+      spawn=setInterval(pop, 850); };
+    box.appendChild(el('div','font-size:13px;color:#666','Klik tikus sebaik ia muncul.'));
+    box.appendChild(grid); var ctl=el('div','display:flex;align-items:center;gap:10px;margin-top:6px'); ctl.appendChild(stat); ctl.appendChild(start); box.appendChild(ctl);
+  }
+
+  function gRPS(box,acc){
+    box.innerHTML=''; var opts=[['🪨','Batu'],['📄','Kertas'],['✂️','Gunting']]; var you=0, cpu=0;
+    var res=el('div','font-size:15px;margin:6px 0','Pilih satu:'); var sc=el('div','font-size:13px;color:#666','Skor — Kau: 0, Komputer: 0');
+    var row=el('div','display:flex;gap:8px;margin:8px 0');
+    opts.forEach(function(o){ var b=el('button','width:52px;height:52px;font-size:22px;border:1px solid #ccc;border-radius:12px;background:#fff;cursor:pointer',o[0]);
+      b.onclick=function(){ var ci=Math.floor(Math.random()*3); var yi=opts.indexOf(o); var d=(yi-ci+3)%3; var r;
+        if(d===0) r='Seri '+o[0]+' vs '+opts[ci][0]; else if(d===1){ you++; r='Menang! '+o[0]+' vs '+opts[ci][0]; } else { cpu++; r='Kalah '+o[0]+' vs '+opts[ci][0]; }
+        res.textContent=r; sc.textContent='Skor — Kau: '+you+', Komputer: '+cpu; }; row.appendChild(b); });
+    box.appendChild(el('div','font-size:13px;color:#666','Batu • Kertas • Gunting lawan komputer.'));
+    box.appendChild(row); box.appendChild(res); box.appendChild(sc);
+  }
+
+  function gReaction(box,acc){
+    box.innerHTML=''; var state=0, t0=0, timer=null, best=null;
+    var msg=el('div','text-align:center;padding:22px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none','Klik untuk mula'); msg.style.background='#f3c6c6';
+    msg.onclick=function(){ if(state===0){ state=1; msg.textContent='Tunggu hijau…'; msg.style.background='#e6a4a4'; timer=setTimeout(function(){ state=2; msg.textContent='KLIK SEKARANG!'; msg.style.background='#d7f7dd'; t0=Date.now(); }, 900+Math.random()*3000); }
+      else if(state===1){ clearTimeout(timer); state=0; msg.textContent='Terlalu awal! Klik untuk cuba lagi'; msg.style.background='#f3c6c6'; }
+      else if(state===2){ var ms=Date.now()-t0; state=0; if(best==null||ms<best)best=ms; msg.textContent=ms+' ms  (terbaik: '+best+' ms) — klik untuk ulang'; msg.style.background='#eaf0ff'; } };
+    box.appendChild(el('div','font-size:13px;color:#666','Klik sebaik warna bertukar hijau.'));
+    box.appendChild(msg);
+  }
+
+  function gGuess(box,acc){
+    box.innerHTML=''; var max=Number(box.getAttribute('data-max'))||100; var secret=1+Math.floor(Math.random()*max), tries=0;
+    var res=el('div','font-size:14px;margin-top:6px','');
+    var inp=el('input','flex:1;padding:8px;border:1px solid #ccd;border-radius:8px;font:inherit',''); inp.type='number'; inp.min='1'; inp.max=String(max);
+    var chk=el('button','padding:8px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Teka');
+    function go(){ var v=Number(inp.value); if(!v){ res.textContent='Masukkan nombor.'; return; } tries++;
+      if(v===secret){ res.textContent='🎉 Betul dalam '+tries+' tekaan!'; secret=1+Math.floor(Math.random()*max); tries=0; inp.value=''; }
+      else res.textContent = v<secret ? 'Lebih tinggi ⬆️' : 'Lebih rendah ⬇️'; }
+    chk.onclick=go; inp.addEventListener('keydown', function(e){ if(e.key==='Enter') go(); });
+    box.appendChild(el('div','font-size:13px;color:#666','Aku fikir nombor 1–'+max+'. Cuba teka!'));
+    var row=el('div','display:flex;gap:6px;margin:8px 0'); row.appendChild(inp); row.appendChild(chk); box.appendChild(row); box.appendChild(res);
+  }
+}
+window.builderGames = initGames;
 </script>
 
 <script>
@@ -259,6 +390,12 @@ function widgetMarkup(w){
       const opts=(w.options||[]).map((o,i)=>`<button data-interactive data-act="quiz" data-i="${i}" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border:1px solid #ccd;border-radius:${theme.radius}px;background:#fff;color:#111;font:inherit;cursor:pointer">${esc(o)}</button>`).join('');
       return `<p style="font-weight:700;margin:.3em 0">${esc(w.q)}</p><div data-interactive data-quiz data-answer="${Number(w.answer)||0}">${opts}</div>`;
     }
+    case 'ttt': return gameBox('ttt','⭕ Tic-Tac-Toe', w, '');
+    case 'memory': return gameBox('memory','🧠 Padanan Memori', w, ' data-pairs="'+(Number(w.pairs)||6)+'"');
+    case 'mole': return gameBox('mole','🐹 Tikus Pukul', w, ' data-duration="'+(Number(w.duration)||20)+'"');
+    case 'rps': return gameBox('rps','✊ Batu-Kertas-Gunting', w, '');
+    case 'reaction': return gameBox('reaction','⚡ Masa Tindak Balas', w, '');
+    case 'guess': return gameBox('guess','🔢 Teka Nombor', w, ' data-max="'+(Number(w.max)||100)+'"');
     default: return '';
   }
 }
@@ -269,6 +406,7 @@ function renderStage(){
   const body = widgets.map((w)=>`<div class="w${w.id===selId?' sel':''}" data-id="${w.id}" draggable="${mode==='edit'}"><span class="tag">${(TYPES[w.type]||{}).name||w.type}</span>${widgetMarkup(w)}</div>`).join('');
   const inner = widgets.length ? body : `<div class="empty">Belum ada widget.<br>Tambah dari panel kiri →</div>`;
   f.innerHTML = `<div class="appbar" style="color:${theme.accent}">${esc($('appName').value||'Aplikasi')}</div><div class="sub">${esc(theme.sub||'')}</div><div>${inner}</div>`;
+  if(mode==='preview' && typeof initGames==='function'){ try{ initGames(f); }catch(err){} }
   try{ if(typeof autoSave==='function') autoSave(); }catch{}
 }
 
@@ -301,6 +439,12 @@ function widgetFields(w){
     case 'steps': F.push(field('Tajuk (optional)',inTxt('title',w.title))); F.push(field('Langkah (satu per baris)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); break;
     case 'quiz': F.push(field('Soalan',inTxt('q',w.q))); F.push(field('Pilihan (satu per baris)',`<textarea data-key="__options" rows="4">${esc((w.options||[]).join('\n'))}</textarea>`)); F.push(field('Jawapan betul',inSel('answer',w.answer,(w.options||[]).map((o,i)=>[i,(i+1)+'. '+o])))); break;
     case 'divider': break;
+    case 'ttt': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Tukar ke <b>Mod Cuba</b> untuk main dua pemain.</div>')); break;
+    case 'rps': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Main lawan komputer.</div>')); break;
+    case 'reaction': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Uji masa tindak balas.</div>')); break;
+    case 'memory': F.push(field('Bilangan pasangan',inNum('pairs',w.pairs,2,12))); break;
+    case 'mole': F.push(field('Tempoh (saat)',inNum('duration',w.duration,5,60))); break;
+    case 'guess': F.push(field('Nombor maksimum',inNum('max',w.max,1,9999))); break;
   }
   return F.join('');
 }
@@ -456,7 +600,7 @@ document.addEventListener('submit',function(e){
   var sp=document.createElement('span'); sp.style.flex='1'; sp.textContent=t;
   var bt=document.createElement('button'); bt.textContent='\u2715'; bt.setAttribute('data-act','listdel'); bt.style.cssText='border:none;background:none;color:#e5484d;cursor:pointer';
   li.appendChild(sp); li.appendChild(bt); ul.appendChild(li); inp.value='';
-});`;
+});` + '\n;(' + initGames.toString() + ')(document);';
 }
 function exportCSS(){
   return `:root{color-scheme:${theme.dark?'dark':'light'}}*{box-sizing:border-box}body{margin:0;background:${theme.bg};color:${theme.fg};font-family:${theme.font};padding:20px;max-width:${device==='desktop'?880:device==='tablet'?680:480}px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}.appbar{font-weight:800;font-size:20px;color:${theme.accent};margin-bottom:2px}.sub{color:#888;font-size:13px;margin-bottom:16px}button,.btn{font:inherit}`;
@@ -466,6 +610,30 @@ function buildDoc(body, css, js, name){ return `<!DOCTYPE html><html lang="ms"><
 function buildExport(){ return buildDoc(exportBody(), exportCSS(), runtimeJS(), $('appName').value||'Aplikasi'); }
 function download(text, filename, mime){ const b=new Blob([text],{type:mime}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),8000); }
 const safe=(s)=>String(s||'app').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'app';
+// ── ZIP (kaedah STORE, tanpa perpustakaan luar) ──
+function crc32(bytes){ var t=[],c,n,k; for(n=0;n<256;n++){ c=n; for(k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c; } var crc=0xFFFFFFFF; for(n=0;n<bytes.length;n++) crc=t[(crc^bytes[n])&0xFF]^(crc>>>8); return (crc^0xFFFFFFFF)>>>0; }
+function buildZip(entries){
+  var enc=new TextEncoder(); var parts=[]; var central=[]; var off=0;
+  function u16(x){ return [x&255,(x>>>8)&255]; }
+  function u32(x){ return [x&255,(x>>>8)&255,(x>>>16)&255,(x>>>24)&255]; }
+  entries.forEach(function(en){
+    var nb=enc.encode(en.name); var db=(en.data instanceof Uint8Array)?en.data:enc.encode(String(en.data));
+    var crc=crc32(db); var sz=db.length;
+    var head=[0x50,0x4b,0x03,0x04].concat(u16(20),u16(0),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(sz),u32(sz),u16(nb.length),u16(0));
+    var hb=new Uint8Array(head); parts.push(hb, nb, db);
+    var co=off; off+=hb.length+nb.length+db.length;
+    var cd=[0x50,0x4b,0x01,0x02].concat(u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(sz),u32(sz),u16(nb.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(co));
+    central.push(new Uint8Array(cd), nb);
+  });
+  var cstart=off, csize=0; central.forEach(function(c){ csize+=c.length; parts.push(c); });
+  var eocd=[0x50,0x4b,0x05,0x06].concat(u16(0),u16(0),u16(entries.length),u16(entries.length),u32(csize),u32(cstart),u16(0));
+  parts.push(new Uint8Array(eocd));
+  var total=0; parts.forEach(function(p){ total+=p.length; });
+  var out=new Uint8Array(total); var p=0; parts.forEach(function(x){ out.set(x,p); p+=x.length; });
+  return out;
+}
+function exportZip(){ var name=safe($('appName').value); var bytes=buildZip([ {name:'index.html',data:buildExport()}, {name:'project.json',data:JSON.stringify({v:1,appName:$('appName').value,theme,widgets},null,2)}, {name:'README.md',data:'# '+($('appName').value||'Aplikasi')+'\nDijana dengan Tukuk Studio — Pembina Aplikasi. Buka index.html dalam pelayar.'} ]); download(bytes, name+'-tukuk.zip','application/zip'); toast('🗜 ZIP dimuat turun (index.html + project.json + README).'); }
+$('zipBtn').onclick=exportZip;
 
 $('exportBtn').onclick=()=>{ download(buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport — buka di mana-mana.'); };
 $('saveBtn').onclick=()=>{ const proj={ v:1, appName:$('appName').value, theme, widgets }; download(JSON.stringify(proj,null,2), safe($('appName').value)+'.json','application/json'); toast('💾 Projek disimpan (.json).'); };
@@ -531,9 +699,11 @@ window.builderExportCSS = exportCSS; window.builderExportBody = exportBody; wind
   function applyKey(text,s,e,key){
     const PAIRS={'(':')','[':']','{':'}','"':'"',"'":"'",'`':'`','<':'>'};
     const CLOSERS={')':'(',']':'[','}':'{','"':'"',"'":"'",'`':'`','>':'<'};
+    const VOID=['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'];
     if(PAIRS[key] && e>s){ const inner=text.slice(s,e); const nt=text.slice(0,s)+key+inner+PAIRS[key]+text.slice(e); return {text:nt, caret:s+1, selEnd:s+1+inner.length}; }
     if(PAIRS[key]){ const nt=text.slice(0,s)+key+PAIRS[key]+text.slice(e); return {text:nt, caret:s+1, selEnd:s+1}; }
     if(CLOSERS[key] && e===s && text[s]===key){ return {text, caret:s+1, selEnd:s+1}; }
+    if(key==='>' && e===s){ const before=text.slice(0,s); const m=before.match(/<([a-zA-Z][\w-]*)((?:"[^"]*"|'[^']*'|[^>])*)$/); if(m && !/\/\s*$/.test(m[2]) && VOID.indexOf(m[1].toLowerCase())<0){ const tag=m[1]; const nt=before+'>'+('</'+tag+'>')+text.slice(e); const c=s+1; return {text:nt, caret:c, selEnd:c}; } }
     if(key==='Enter'){
       const before=text.slice(0,s), after=text.slice(e), prev=before.slice(-1), next=after.slice(0,1);
       const indent=(before.match(/[^\n]*$/)||[''])[0].match(/^\s*/)[0];

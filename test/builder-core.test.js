@@ -40,17 +40,20 @@ function extractObj(src, decl) {
 
 const codeMarkup = extractFn(html, 'widgetMarkup');
 const codeRuntime = extractFn(html, 'runtimeJS');
+const codeGameBox = extractFn(html, 'gameBox');
 const esc = new Function(extractLine(html, 'const esc =') + '; return esc;')();
 const TYPES = new Function(extractObj(html, 'const TYPES = {') + '; return TYPES;')();
 
 const THEME = { accent:'#4c8dff', bg:'#ffffff', fg:'#111111', dark:false, radius:14, font:'system-ui', sub:'s' };
 
-// Bind widgetMarkup pada tema tertentu (theme & esc disuntik sebagai param).
+// Bind widgetMarkup pada tema (theme, esc, gameBox disuntik sebagai param).
 function markup(w, theme = THEME) {
-  const f = new Function('theme', 'esc', codeMarkup + '; return widgetMarkup;');
-  return f(theme, esc)(w);
+  const gb = new Function('esc', 'theme', codeGameBox + '; return gameBox;')(esc, theme);
+  const f = new Function('theme', 'esc', 'gameBox', codeMarkup + '; return widgetMarkup;');
+  return f(theme, esc, gb)(w);
 }
-function runtime() { return new Function(codeRuntime + '; return runtimeJS;')()(); }
+// runtimeJS merujuk initGames (global); suntik stub agar boleh diuji tanpa enjin penuh.
+function runtime() { return new Function('initGames', codeRuntime + '; return runtimeJS;')(function initGames(){})(); }
 
 test('esc: escape HTML (tiada XSS tembus ke eksport)', () => {
   assert.equal(esc('<b>&"x"'), '&lt;b&gt;&amp;&quot;x&quot;');
@@ -137,9 +140,9 @@ test('runtimeJS: parse bersih & urus kaunter/list-del/faq/quiz/submit', () => {
   assert.ok(js.includes("addEventListener('submit'"));
 });
 
-test('TYPES: 14 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
+test('TYPES: 20 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
   const keys = Object.keys(TYPES);
-  assert.equal(keys.length, 14);
+  assert.equal(keys.length, 20);
   for (const t of keys) assert.equal(TYPES[t].make().type, t);
 });
 
@@ -185,6 +188,17 @@ test('applyKey: taip penutup bersebelahan → skip-over (tiada sisipan)', () => 
   assert.equal(r.caret, 2);
 });
 
+test('applyKey: taip > pada tag buka → auto-tutup penuh', () => {
+  const r = ak('<div', 4, 4, '>');
+  assert.equal(r.text, '<div></div>');
+  assert.equal(r.caret, 5);
+});
+
+test('applyKey: tag void / self-closing > → tiada auto-tutup (null)', () => {
+  assert.equal(ak('<input', 6, 6, '>'), null);
+  assert.equal(ak('<br/', 4, 4, '>'), null);
+});
+
 test('applyKey: ada pilihan + taip petik → balut pilihan, inner kekal terpilih', () => {
   const r = ak('hello', 0, 5, '"');
   assert.equal(r.text, '"hello"');
@@ -223,4 +237,49 @@ test('exportCSS/buildDoc: komposisi fail berdiri sendiri sah & parameter dipatuh
   assert.ok(doc.includes('<div class="appbar">Namaku</div>'), 'appbar guna nama');
   assert.ok(doc.includes('<p>HI</p>'), 'body disisip mentah');
   assert.ok(doc.includes('<script>var a=1;<') && doc.includes('/script></body></html>'), 'js disisip dalam <script>');
+});
+
+// ── Enjin permainan + ZIP ──
+test('widgetMarkup: shell permainan benar (data-game + config)', () => {
+  assert.ok(markup({ type:'ttt' }).includes('data-game="ttt"'));
+  const mem = markup({ type:'memory', pairs:8 });
+  assert.ok(mem.includes('data-game="memory"') && mem.includes('data-pairs="8"'));
+  assert.ok(markup({ type:'guess', max:50 }).includes('data-max="50"'));
+  assert.ok(markup({ type:'mole', duration:15 }).includes('data-duration="15"'));
+});
+
+test('gameBox: placeholder Mod Cuba + data-acc tema', () => {
+  const out = markup({ type:'rps' });
+  assert.ok(out.includes('Mod Cuba'), 'perlua petunjuk Mod Cuba');
+  assert.ok(out.includes('data-acc="' + THEME.accent + '"'), 'accent tema tertanam');
+});
+
+test('initGames: parse bersih + 6 cabang game', () => {
+  const code = extractFn(html, 'initGames');
+  new Function(code); // mesti JS sah
+  for (const g of ['gTTT','gMemory','gMole','gRPS','gReaction','gGuess'])
+    assert.ok(code.includes(g), 'cabang game hilang: ' + g);
+});
+
+test('runtimeJS: sertai enjin game (initGames) ke dalam eksport', () => {
+  const js = runtime();
+  new Function(js);
+  assert.ok(js.includes('initGames'), 'runtime perlu muat initGames');
+  assert.ok(js.includes('(document)'), 'initGames dipanggil atas document');
+});
+
+test('crc32: nilai piawai "123456789" = 0xCBF43926', () => {
+  const crc = new Function(extractFn(html, 'crc32') + '; return crc32;')();
+  assert.equal(crc(new TextEncoder().encode('123456789')), 0xCBF43926);
+});
+
+test('buildZip: tandatangan PK + nama fail + eocd hadir', () => {
+  const crc = new Function(extractFn(html, 'crc32') + '; return crc32;')();
+  const bz = new Function('crc32', extractFn(html, 'buildZip') + '; return buildZip;')(crc);
+  const bytes = bz([{ name:'a.txt', data:'hello' }]);
+  assert.ok(bytes instanceof Uint8Array);
+  assert.deepEqual([bytes[0], bytes[1], bytes[2], bytes[3]], [0x50, 0x4b, 0x03, 0x04], 'LFH signature');
+  const s = new TextDecoder().decode(bytes);
+  assert.ok(s.includes('a.txt'), 'nama fail tertanam');
+  const e = bytes.length - 22; assert.deepEqual([bytes[e], bytes[e+1], bytes[e+2], bytes[e+3]], [0x50, 0x4b, 0x05, 0x06], 'EOCD signature (22 bait terakhir)');
 });
