@@ -138,10 +138,18 @@
 <div class="grid3">
   <div class="col left">
     <div class="genbar" style="display:flex;gap:6px;margin:0 0 6px">
-      <input id="genIdea" placeholder="✨ Jana app/game — taip kata/idea" maxlength="80" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #2a3040;border-radius:9px;background:transparent;color:inherit">
-      <button id="genBtn" class="primary" title="Jana aplikasi + game automatik daripada idea" style="padding:8px 12px;border-radius:9px;white-space:nowrap">✨ Jana</button>
+      <textarea id="genIdea" rows="2" placeholder="✨ Taip idea / huraian app atau game… (Ctrl+Enter untuk jana)" maxlength="160" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #2a3040;border-radius:9px;background:transparent;color:inherit;resize:vertical;font:inherit"></textarea>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button id="genBtn" class="primary" title="Jana aplikasi + game automatik" style="padding:8px 12px;border-radius:9px;white-space:nowrap">✨ Jana</button>
+        <button id="genDice" class="ghost" title="Isi idea rawak" style="padding:6px 12px;border-radius:9px;white-space:nowrap">🎲 Rambang</button>
+      </div>
     </div>
-    <label title="Abaikan kad — Jana terus pakai calon pertama & terbitkan" style="display:flex;align-items:center;gap:5px;margin:0 0 12px;font-size:12px;color:#9aa3b2;cursor:pointer"><input type="checkbox" id="genAutoPub"> Auto-terbit</label>
+    <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap">
+      <select id="genStyle" title="Gaya visual" style="padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
+        <option value="">Gaya: auto</option><option value="minimalis">Minimalis</option><option value="cerah">Ceria</option><option value="gelap">Gelap</option><option value="retro">Retro</option>
+      </select>
+      <label title="Terus pakai calon AI (jika ada) &amp; terbitkan selepas semak slug" style="display:flex;align-items:center;gap:5px;font-size:12px;color:#9aa3b2;cursor:pointer"><input type="checkbox" id="genAutoPub"> Auto-terbit</label>
+    </div>
     <h4>Tambah widget</h4>
     <div class="palette" id="palette"></div>
     <div class="hint">Klik untuk tambah ke bawah. Seret blok pada kanvas untuk susun semula. Guna <b>Mod Cuba</b> untuk uji interaksi.</div>
@@ -1184,28 +1192,76 @@ function applyGenerated(a, source){
   selId = null; renderStage(); applyTheme(); renderInspector();
   toast((source === 'ai' ? '🤖 Dijana AI · ' : '✨ Dijana auto · ') + widgets.length + ' widget — sunting & terbitkan.');
 }
-$('genBtn').onclick = function(){
-  const idea = $('genIdea').value.trim();
+// Idea rawak untuk 🎲 Rambang.
+const RANDOM_IDEAS = ['resepi nasi lemak','penjejak kewangan','kad ucapan hari jadi','kuiz sejarah melayu','tugas harian','pembelalah haiwan peliharaan','teka kata','kad perniagaan','kalendar solat','pemasa tomato','panduan melancong','arked retro','kuiz sains','senarai buku','resipi smoothie','penjejak hujan'];
+let genState = { idea:'', apps:[], src:'', seed:0 };
+// Pratonton INTERAKTIF — doc penuh + runtimeJS (game jalan). Hanya dimuat bila kad kelihatan.
+function liveDoc(app){
+  const th = Object.assign({}, DEF_THEME, app.theme || {});
+  const _t = theme; theme = th;
+  let body = ''; try { body = (app.widgets || []).map(widgetMarkup).join('\n'); } finally { theme = _t; }
+  const css = ':root{color-scheme:' + (th.dark ? 'dark' : 'light') + '}*{box-sizing:border-box}body{margin:0;background:' + th.bg + ';color:' + th.fg + ';font-family:' + th.font + ';padding:12px;max-width:420px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}button,.btn{font:inherit}.appbar{font-weight:800;font-size:18px;color:' + th.accent + ';margin-bottom:8px}';
+  return '<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body><div class="appbar">' + esc(app.appName || 'Aplikasi') + '</div>' + body + '<scr' + 'ipt>' + runtimeJS() + '</scr' + 'ipt></body></html>';
+}
+let genIO = null;
+function disconnectIO(){ if(genIO){ try { genIO.disconnect(); } catch (e) {} genIO = null; } }
+// Lazy: statik sebagai placeholder; tukar ke interaktif hanya bila iframe >=50% kelihatan, dan mati semula bila keluar skrin (elak 3 rAF serentak).
+function mountPreviews(apps){
+  const frames = Array.prototype.slice.call($('modal').querySelectorAll('iframe.gpre'));
+  const safeMini = (a) => { try { return miniDoc(a); } catch (e) { return ''; } };
+  const safeLive = (a) => { try { return liveDoc(a); } catch (e) { return safeMini(a); } };
+  frames.forEach((f) => { const idx = Number(f.getAttribute('data-i')); f.setAttribute('sandbox', ''); f.srcdoc = safeMini(apps[idx]); });
+  disconnectIO();
+  if(!('IntersectionObserver' in window)) return;
+  const root = $('modal').querySelector('.glist') || null;
+  genIO = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      const f = e.target; const idx = Number(f.getAttribute('data-i')); const a = apps[idx]; if(!a) return;
+      if(e.isIntersecting && e.intersectionRatio >= 0.5){ f.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups'); f.srcdoc = safeLive(a); }
+      else if(!e.isIntersecting){ f.setAttribute('sandbox', ''); f.srcdoc = safeMini(a); }
+    });
+  }, { root: root, threshold: [0, 0.5, 1] });
+  frames.forEach((f) => genIO.observe(f));
+}
+function renderCandidates(idea, apps, src){
+  const cards = apps.map((a, i) => genCardHtml(a, i)).join('');
+  openModal('✨ ' + apps.length + ' cadangan · ' + idea, '<div class="glist" style="max-height:64vh;overflow:auto">' + cards + '</div><button class="btn" id="genRegen" style="margin-top:8px">🔄 Jana semula</button><div class="hint" style="margin-top:8px">Pratonton di atas app sebenar & interaktif (game main bila kelihatan). Pilih satu untuk muat ke kanvas, atau terus terbitkan.</div>');
+  mountPreviews(apps);
+  const rg = $('genRegen'); if(rg) rg.onclick = () => runGenerate(idea, genState.seed + 1);
+  $('modal').querySelectorAll('[data-gact]').forEach((btn) => { btn.onclick = () => { const idx = Number(btn.dataset.i); disconnectIO(); applyGenerated(apps[idx], apps[idx]._src || src); closeModal(); if(btn.dataset.gact === 'pub') reviewAndPublish(apps[idx]); }; });
+}
+// Auto-terbit lebih selamat: sahkan nama & pautan pendek (slug) dahulu, baru terbit.
+function reviewAndPublish(app){
+  const suggest = safe(app && app.appName);
+  const nm = esc(($('appName') && $('appName').value) || (app && app.appName) || 'Aplikasi');
+  openModal('🚀 Sah & terbitkan', '<p style="margin:0 0 8px">Semak nama & pautan pendek sebelum terbit.</p><label style="display:block;font-size:12px;color:#9aa3b2;margin:6px 0 4px">Nama aplikasi</label><input id="rvName" maxlength="40" value="' + nm + '" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Slug (pilihan) — <code>/a/' + esc(suggest) + '</code></label><input id="rvSlug" maxlength="40" placeholder="' + esc(suggest) + '" value="' + esc(suggest) + '" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="rvCancel">Batal</button><button class="btn primary" id="rvGo">🚀 Terbitkan</button></div>');
+  $('rvName').oninput = () => { $('appName').value = $('rvName').value; renderStage(); };
+  $('rvCancel').onclick = () => closeModal();
+  $('rvGo').onclick = () => { $('pubSlug').value = ($('rvSlug').value || '').trim().toLowerCase(); closeModal(); $('pubBtn').click(); };
+}
+function runGenerate(idea, seed){
+  idea = String(idea || '').trim();
   if(!idea){ toast('Taip satu idea/kata dahulu.'); $('genIdea').focus(); return; }
-  const b = this; const old = b.textContent; b.disabled = true; b.textContent = '⏳ Menjana…';
-  fetch('/api/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idea }) })
+  const style = ($('genStyle') && $('genStyle').value) || '';
+  const useSeed = Math.max(0, Math.floor(Number(seed) || 0));
+  const b = $('genBtn'); const old = b.textContent; b.disabled = true; b.textContent = '⏳ Menjana…';
+  fetch('/api/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idea, style, seed: useSeed }) })
     .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: false, j: { error: 'Respons bukan JSON' } })))
     .then((res) => {
       if(!res.ok || !res.j) throw new Error((res.j && res.j.error) || 'tiada hasil');
       const apps = Array.isArray(res.j.apps) ? res.j.apps : (res.j.app ? [res.j.app] : []);
       if(!apps.length) throw new Error('tiada hasil');
       const src = res.j.source;
-      if($('genAutoPub') && $('genAutoPub').checked){ const pick = apps.find((a) => a._src === 'ai') || apps[0]; applyGenerated(pick, pick._src || src); toast('🔁 Auto-terbit…'); $('pubBtn').click(); return; }
-      const cards = apps.map((a, i) => genCardHtml(a, i)).join('');
-      openModal('✨ ' + apps.length + ' cadangan · ' + idea, '<div style="max-height:64vh;overflow:auto">' + cards + '</div><div class="hint" style="margin-top:8px">Pratonton mini di atas ialah app sebenar (statis). Pilih satu untuk muat ke kanvas, atau terus terbitkan.</div>');
-      const prevs = apps.map((a) => { try { return miniDoc(a); } catch (e) { return ''; } });
-      $('modal').querySelectorAll('iframe.gpre').forEach((f) => { const idx = Number(f.getAttribute('data-i')); f.srcdoc = prevs[idx] || ''; });
-      $('modal').querySelectorAll('[data-gact]').forEach((btn) => { btn.onclick = () => { const idx = Number(btn.dataset.i); applyGenerated(apps[idx], apps[idx]._src || src); closeModal(); if(btn.dataset.gact === 'pub') $('pubBtn').click(); }; });
+      genState = { idea: idea, apps: apps, src: src, seed: useSeed };
+      if($('genAutoPub') && $('genAutoPub').checked){ const pick = apps.find((a) => a._src === 'ai') || apps[0]; applyGenerated(pick, pick._src || src); toast('🔁 Auto-terbit — sahkan slug…'); reviewAndPublish(pick); return; }
+      renderCandidates(idea, apps, src);
     })
     .catch((err) => toast('⚠ Jana gagal: ' + ((err && err.message) || err)))
     .then(() => { b.disabled = false; b.textContent = old; });
-};
-$('genIdea').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); $('genBtn').click(); } });
+}
+$('genBtn').onclick = () => runGenerate($('genIdea').value, 0);
+if($('genDice')) $('genDice').onclick = () => { $('genIdea').value = RANDOM_IDEAS[Math.floor(Math.random() * RANDOM_IDEAS.length)]; $('genIdea').focus(); };
+$('genIdea').addEventListener('keydown', (e) => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $('genBtn').click(); } });
 
 document.querySelectorAll('.devs [data-dev]').forEach((b)=>b.onclick=()=>{ device=b.dataset.dev; document.querySelectorAll('.devs [data-dev]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderStage(); });
 

@@ -115,13 +115,22 @@ function parseGenJson(text) {
 }
 
 // Bina deterministik tanpa AI — sentiasa hasilnya app lengkap + satu game.
-// `salt` memutar palet & genre game untuk hasilkan VARIAN berbeza (calon serentak).
-function buildOne(idea, salt) {
+// `salt` memutar palet & genre game (varian/seed); `style` membias palet gelap/cerah.
+const DARK = PALETTES.filter((p) => p.dark);
+const LIGHT = PALETTES.filter((p) => !p.dark);
+function poolFor(style) {
+  const s = String(style || '').toLowerCase();
+  if (/gelap|dark|black|neon|midnight|malam/.test(s)) return DARK;
+  if (/cerah|light|putih|white|minimalis|minimal|clean|pastel/.test(s)) return LIGHT.length ? LIGHT : PALETTES;
+  return PALETTES;
+}
+function buildOne(idea, salt, style) {
   const s = salt || 0;
   const clean = (String(idea || '').trim().replace(/\s+/g, ' ').slice(0, 40)) || 'Aplikasi';
   const key = clean.toLowerCase();
   const name = clean.charAt(0).toUpperCase() + clean.slice(1);
-  const pal = PALETTES[(h32(key) + s) % PALETTES.length];
+  const pool = poolFor(style);
+  const pal = pool[(h32(key) + s) % pool.length];
   const baseGame = pickGame(key);
   const game = GAMES[(GAMES.indexOf(baseGame) + s + GAMES.length) % GAMES.length]; // salt 0 → padan kata kunci
   const widgets = [
@@ -138,13 +147,14 @@ function buildOne(idea, salt) {
     widgets
   });
 }
-function heuristicBuild(idea) { return buildOne(idea, 0); }
+function heuristicBuild(idea, style) { return buildOne(idea, 0, style); }
 
-// N calon heuristik berbeza (palet + game berputar) — sentiasa berbeza antara satu sama lain.
-function heuristicVariants(idea, n) {
+// N calon heuristik berbeza (palet + game berputar). `offset` menggeser salt → "Jana semula" berbeza.
+function heuristicVariants(idea, n, style, offset) {
   const count = Math.max(1, Math.min(6, Number(n) || 1));
+  const base = Math.max(0, Math.floor(Number(offset) || 0));
   const out = [];
-  for (let i = 0; i < count; i++) out.push(buildOne(idea, i));
+  for (let i = 0; i < count; i++) out.push(buildOne(idea, i + base, style));
   return out;
 }
 

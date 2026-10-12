@@ -419,15 +419,48 @@ test('Jana auto: banyak calon (apps[]) + kad Pakai/Terbitkan + Auto-terbit', () 
   new Function(card); // parse sah
 });
 
-test('Jana auto: pratonton mini (miniDoc + iframe srcdoc) + badge 🤖 AI + Auto-terbit pilih AI', () => {
+test('Jana auto: pratonton mini statik (miniDoc) + badge 🤖 AI + Auto-terbit pilih AI', () => {
   assert.ok(html.includes('function miniDoc(app)'), 'miniDoc wujud');
   const md = extractFn(html, 'miniDoc');
   assert.ok(md.includes('widgetMarkup'), 'miniDoc guna penanda widget sebenar');
-  assert.ok(md.includes('sandbox') || html.includes('sandbox=""'), 'iframe pratonton sandboxed (tanpa skrip)');
-  assert.ok(html.includes('f.srcdoc = prevs[idx]'), 'srcdoc ditetapkan kepada kad');
   const card = extractFn(html, 'genCardHtml');
-  assert.ok(card.includes('iframe class=\"gpre\"'), 'kad mengandungi iframe pratonton');
+  assert.ok(card.includes('iframe class="gpre"'), 'kad mengandungi iframe pratonton');
   assert.ok(card.includes("a._src === 'ai'"), 'badge 🤖 AI berdasarkan _src');
   assert.ok(html.includes("apps.find((a) => a._src === 'ai')"), 'Auto-terbit utamakan calon AI');
   new Function(md); // parse sah
+});
+
+test('Jana auto: hantar style+seed; Medan gaya & 🎲 Rambang', () => {
+  assert.ok(html.includes('id="genStyle"'), 'select gaya wujud');
+  assert.ok(html.includes('id="genDice"'), 'butang Rambang wujud');
+  assert.ok(html.includes('RANDOM_IDEAS'), 'senarai idea rawak wujud');
+  const gen = extractFn(html, 'runGenerate');
+  assert.ok(gen.includes('JSON.stringify({ idea, style, seed: useSeed })'), 'fetch hantar idea+style+seed');
+  assert.ok(gen.includes("$('genStyle')"), 'baca nilai gaya');
+  assert.ok(html.includes("$('genDice').onclick"), 'handler Rambang dipasang');
+  new Function(gen);
+});
+
+test('Jana auto: pratonton interaktif lazy (liveDoc + IntersectionObserver + allow-scripts)', () => {
+  assert.ok(html.includes('function liveDoc(app)'), 'liveDoc wujud');
+  const ld = extractFn(html, 'liveDoc');
+  assert.ok(ld.includes('runtimeJS()'), 'liveDoc sertakan runtime (game jalan)');
+  const mp = extractFn(html, 'mountPreviews');
+  assert.ok(mp.includes('IntersectionObserver'), 'guna IO untuk lazy');
+  assert.ok(mp.includes("'allow-scripts"), 'upgrade sandbox ke allow-scripts bila kelihatan');
+  assert.ok(mp.includes('f.srcdoc = safeLive'), 'muat pratonton interaktif');
+  assert.ok(mp.includes("f.srcdoc = safeMini"), 'fallback statik');
+  new Function(ld); new Function(mp);
+});
+
+test('Jana auto: 🔄 Jana semula (genRegen + offset) + Auto-terbit sahkan slug', () => {
+  assert.ok(html.includes('id="genRegen"'), 'butang Jana semula dalam modal');
+  const rc = extractFn(html, 'renderCandidates');
+  assert.ok(rc.includes('runGenerate(idea, genState.seed + 1)'), 'Jana semula naikkan seed/offset');
+  assert.ok(html.includes('function reviewAndPublish(app)'), 'semak-slug sebelum terbit');
+  const rv = extractFn(html, 'reviewAndPublish');
+  assert.ok(rv.includes('id="rvSlug"') || rv.includes('rvSlug'), 'medan slug');
+  assert.ok(rv.includes("$('pubBtn').click()"), 'terbit selepas sahkan');
+  assert.ok(rv.includes("$('pubSlug').value"), 'Slug ditulis ke medan pubSlug');
+  new Function(rc); new Function(rv);
 });

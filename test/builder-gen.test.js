@@ -94,3 +94,25 @@ test('heuristicVariants: N calon berbeza (palet+game); salt 0 = heuristicBuild; 
   assert.equal(g.heuristicVariants('x', 0).length, 1);
   assert.equal(g.heuristicVariants('x', 99).length, 6);
 });
+
+test('style: gelap/dark → hanya palet gelap; cerah/minimalis → palet cerah', () => {
+  for (let i = 0; i < 4; i++) {
+    const d = g.buildOne('kopi', i, 'gelap');
+    assert.ok(d.theme.dark === true || parseInt(String(d.theme.bg).slice(1, 3), 16) < 0x60, 'gelap → bg gelap (varian ' + i + ')');
+  }
+  for (let i = 0; i < 2; i++) {
+    const l = g.buildOne('kopi', i, 'minimalis');
+    assert.equal(l.theme.dark, false, 'minimalis → cerah (dark=false)');
+  }
+  // gaya kosong = tingkah laku asal (tak rosuh)
+  assert.deepEqual(g.buildOne('kopi', 0, ''), g.heuristicBuild('kopi'));
+});
+
+test('heuristicVariants offset: Jana semula beri calon berbeza (salt beralih)', () => {
+  const first = g.heuristicVariants('kopi', 3, '', 0);
+  const next = g.heuristicVariants('kopi', 3, '', 1);
+  const accA = first.map((v) => v.theme.accent).join(',');
+  const accB = next.map((v) => v.theme.accent).join(',');
+  assert.notEqual(accA, accB, 'offset mengubah set palet');
+  assert.equal(next.length, 3);
+});

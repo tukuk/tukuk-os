@@ -1920,6 +1920,9 @@ const builderGenLimiter = config.rateLimit.enabled
 app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const idea = truncate(String((req.body && req.body.idea) || '').trim(), 160);
   if (!idea) return res.status(400).json({ error: 'Taip satu idea atau kata dahulu.' });
+  const style = truncate(String((req.body && req.body.style) || '').replace(/\s+/g, ' ').trim(), 40);
+  const seed = Math.max(0, Math.floor(Number(req.body && req.body.seed) || 0));
+  const brief = `Idea aplikasi: ${idea}${style ? ', gaya ' + style : ''}`;
   const want = Math.min(3, Math.max(1, Number(req.body && req.body.count) || 3));
   const apps = [];
   const seen = new Set();
@@ -1931,12 +1934,12 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
     try {
       let text = '';
       try {
-        const r = await brain.generateCloudRotation(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, temperature: 0.85, maxTokens: 900 });
+        const r = await brain.generateCloudRotation(brief, { system: builderGen.SYSTEM_PROMPT, temperature: 0.85, maxTokens: 900 });
         text = (r && r.response) || '';
       } catch { /* cuba ollama */ }
       if (!text) {
         try {
-          const r = await brain.generate(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, numPredict: 900, temperature: 0.85 });
+          const r = await brain.generate(brief, { system: builderGen.SYSTEM_PROMPT, numPredict: 900, temperature: 0.85 });
           text = (r && r.response) || '';
         } catch { /* jatuh ke heuristik */ }
       }
@@ -1945,9 +1948,9 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
     } catch { /* noop — heuristik di bawah */ }
   }
   // Lengkapkan hingga `want` dengan varian heuristik (palet + game berbeza).
-  if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want)) pushApp(v, 'auto');
+  if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want, style, seed)) pushApp(v, 'auto');
   const finalApps = apps.slice(0, want);
-  if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea); fb._src = 'auto'; finalApps.push(fb); } // sentiasa ada >=1
+  if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea, style); fb._src = 'auto'; finalApps.push(fb); } // sentiasa ada >=1
   const source = aiHit ? 'ai' : 'auto';
   store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source, count: finalApps.length });
   res.json({ ok: true, source, apps: finalApps, app: finalApps[0] });
