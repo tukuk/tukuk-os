@@ -1782,7 +1782,16 @@ app.post('/api/publish', publishLimiter, (req, res) => {
   if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Bukan dokumen HTML yang sah' });
   try {
     fs.mkdirSync(PUBLISH_DIR, { recursive: true });
-    const slug = uniqueSlug(publish.slugify(body.name || body.slug || 'app'));
+    // Slug: hormati permintaan eksplisit pengguna (jika sah & kosong), jika tidak jana unik daripada nama.
+    let slug;
+    const want = String(body.slug || '').trim().toLowerCase();
+    if (want) {
+      if (!publish.isSlug(want)) return res.status(400).json({ error: 'Slug tidak sah — guna huruf kecil/angka/nego, 3–40 aksara' });
+      if (fs.existsSync(path.join(PUBLISH_DIR, `${want}.html`))) return res.status(409).json({ error: 'Pautan itu sudah dipakai — cuba nama lain' });
+      slug = want;
+    } else {
+      slug = uniqueSlug(publish.slugify(body.name || 'app'));
+    }
     if (!slug) return res.status(500).json({ error: 'Gagal menjana pautan unik' });
     const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
     fs.writeFileSync(tmp, html, 'utf8');
@@ -1823,6 +1832,24 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
     res.json({ ok: true, slug, url: `${publish.publicOrigin(req)}/a/${slug}` });
   } catch (error) {
     res.status(500).json({ error: 'Gagal mengemas kini', details: safeError(error) });
+  }
+});
+
+// Buang/nyahterbit app secara selamat (bukti pemilikan via editKey). Fail .html + .meta dipadam.
+app.post('/api/publish/delete', publishLimiter, (req, res) => {
+  const body = req.body || {};
+  const slug = String(body.slug || '');
+  if (!publish.isSlug(slug)) return res.status(400).json({ error: 'Slug tidak sah' });
+  if (!publish.isEditKey(body.editKey)) return res.status(400).json({ error: 'Kunci edit tidak sah' });
+  const meta = readMeta(slug);
+  if (!meta || !verifyKey(meta.key, body.editKey)) return res.status(403).json({ error: 'Tidak dibenarkan — kunci edit tidak sepadan' });
+  try {
+    fs.rmSync(path.join(PUBLISH_DIR, `${slug}.html`), { force: true });
+    fs.rmSync(metaPath(slug), { force: true });
+    store.event('publish', `Aplikasi dibuang: /a/${slug}`, {});
+    res.json({ ok: true, slug });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal membuang', details: safeError(error) });
   }
 });
 

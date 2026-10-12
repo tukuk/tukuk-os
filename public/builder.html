@@ -128,8 +128,9 @@
   <button id="saveBtn" title="Simpan projek .json">💾 JSON</button>
   <button id="exportBtn" class="primary" title="Eksport HTML berdiri sendiri">⬇️ Eksport HTML</button>
   <button id="zipBtn" class="primary" title="Muat turun ZIP (index.html + projek + README)">🗜 ZIP</button>
+  <input id="pubSlug" title="Pilih pautan pendek (pilihan): /a/nama-anda" placeholder="🔗 slug" maxlength="40" autocomplete="off" spellcheck="false" style="width:96px;padding:6px 8px;border:1px solid #262b36;border-radius:8px;background:#0b0f1a;color:#e6e9ef;font-size:13px">
   <button id="pubBtn" class="primary" title="Terbitkan ke pautan awam tukuk.org/a/…">🚀 Terbitkan</button>
-  <button id="updBtn" class="primary" title="Kemas kini pautan awam yang sedia ada (slug sama)" hidden>🔄 Kemas kini</button>
+  <button id="myBtn" title="Urus aplikasi yang anda terbitkan (kemas kini / buang)">📦 Aplikasi Saya</button>
   <button id="galBtn" title="Lihat aplikasi komuniti yang diterbitkan">🌐 Pameran</button>
   <span id="saveState" class="saveState" title="Status jimat automatik"></span>
 </header>
@@ -1180,7 +1181,7 @@ function exportCSS(){
   return `:root{color-scheme:${theme.dark?'dark':'light'}}*{box-sizing:border-box}body{margin:0;background:${theme.bg};color:${theme.fg};font-family:${theme.font};padding:20px;max-width:${device==='desktop'?880:device==='tablet'?680:480}px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}.appbar{font-weight:800;font-size:20px;color:${theme.accent};margin-bottom:2px}.sub{color:#888;font-size:13px;margin-bottom:16px}button,.btn{font:inherit}`;
 }
 function exportBody(){ return widgets.map(widgetMarkup).join('\n'); }
-function buildDoc(body, css, js, name){ return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><meta name="description" content="${esc(theme.desc||'')}"><meta property="og:title" content="${esc(name)}"><meta property="og:description" content="${esc(theme.desc||'')}"><meta property="og:type" content="website"><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${js}<\/script></body></html>`; }
+function buildDoc(body, css, js, name){ const base=(typeof location!=='undefined'&&/^https?:/.test(location.origin||''))?location.origin:''; const ogimg=base?base+'/og.png':''; return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><meta name="description" content="${esc(theme.desc||'')}"><meta property="og:title" content="${esc(name)}"><meta property="og:description" content="${esc(theme.desc||'')}"><meta property="og:type" content="website">${ogimg?`<meta property="og:image" content="${esc(ogimg)}">`:''}<meta name="twitter:card" content="summary"><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${js}<\/script></body></html>`; }
 function buildExport(){ return buildDoc(exportBody(), exportCSS(), runtimeJS(), $('appName').value||'Aplikasi'); }
 function download(text, filename, mime){ const b=new Blob([text],{type:mime}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),8000); }
 const safe=(s)=>String(s||'app').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'app';
@@ -1214,38 +1215,69 @@ function publishHtml(){ return (document.body.classList.contains('code') && type
 $('pubBtn').onclick=function(){
   const btn=$('pubBtn'); const orig=btn.textContent; btn.disabled=true; btn.textContent='⏳ Menerbitkan…';
   const html=publishHtml();
-  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'Aplikasi', html }) })
+  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'Aplikasi', slug:($('pubSlug').value||'').trim().toLowerCase()||undefined, html }) })
     .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
     .then((res)=>{
       if(!res.ok || !res.j || !res.j.url) throw new Error((res.j&&res.j.error)||'Gagal terbit');
       const url=esc(res.j.url);
       openModal('🚀 Berjaya diterbitkan','<p>Aplikasi anda kini awam di:</p><p><input readonly value="'+url+'" style="width:100%" onclick="this.select()"></p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><a class="btn primary" target="_blank" rel="noopener" href="'+url+'">🌐 Buka</a><button id="pubCopy" class="btn">📋 Salin pautan</button></div><div class="hint" style="margin-top:10px">Dilihat dalam sandbox (asal berasingan) demi keselamatan. Pautan kekal awam selama dihos.</div>');
       const cp=$('pubCopy'); if(cp) cp.onclick=()=>copyText(res.j.url,'🔗 Pautan disalin');
-      setPubState({ slug:res.j.slug, editKey:res.j.editKey });
+      addMyApp({ slug:res.j.slug, editKey:res.j.editKey, title:($('appName').value||'Aplikasi'), url:res.j.url });
       toast('🚀 Terbit! '+res.j.url);
     })
     .catch((err)=>{ toast('⚠ '+((err&&err.message)?err.message:'Gagal terbit — cuba ZIP/JSON')); })
     .then(()=>{ btn.disabled=false; btn.textContent=orig; });
 };
 
-// ── Keadaan penerbitan (slug + kunci edit) untuk "Kemas kini" ke slug sama ──
-function pubState(){ try{ return JSON.parse(localStorage.getItem('tukuk-pub')||'null'); }catch(e){ return null; } }
-function setPubState(o){ try{ localStorage.setItem('tukuk-pub',JSON.stringify(o)); }catch(e){} if(o&&o.slug){ const u=$('updBtn'); if(u)u.hidden=false; } }
+// ── Aplikasi Saya: senarai penerbitan {slug,editKey,title,url} yang tersimpan pada pelayar ini ──
+// (opaque-origin sandbox tak menghalang builder — ia berjalan di asal utama, jadi localStorage OK.)
+function myApps(){
+  try{
+    let a=JSON.parse(localStorage.getItem('tukuk-pubs')||'null');
+    if(!Array.isArray(a)){ // migrasi daripada slot tunggal lama 'tukuk-pub'
+      let o=null; try{ const p=JSON.parse(localStorage.getItem('tukuk-pub')||'null'); o=(p&&p.slug)?{slug:p.slug,editKey:p.editKey,title:p.slug,url:null}:null; }catch(e){}
+      a=o?[o]:[];
+    }
+    return a;
+  }catch(e){ return []; }
+}
+function saveMyApps(list){ try{ localStorage.setItem('tukuk-pubs',JSON.stringify(list.slice(0,50))); }catch(e){} }
+function addMyApp(o){ const l=myApps().filter((x)=>x.slug!==o.slug); l.unshift(o); saveMyApps(l); }
+function removeMyApp(slug){ saveMyApps(myApps().filter((x)=>x.slug!==slug)); }
 
-$('updBtn').onclick=function(){
-  const st=pubState(); if(!st||!st.slug||!st.editKey){ toast('Tiada pautan untuk dikemas kini — terbitkan dulu.'); return; }
-  const btn=this,orig=btn.textContent; btn.disabled=true; btn.textContent='⏳ Mengemas kini…';
+function doUpdate(app, done){
   const html=publishHtml();
-  fetch('/api/publish/update',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:st.slug, editKey:st.editKey, html }) })
+  fetch('/api/publish/update',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:app.slug, editKey:app.editKey, html }) })
     .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
     .then((res)=>{
-      if(!res.ok || !res.j || !res.j.url){ toast('⚠ Tak dapat kemas kini (pautan lama mungkin dibuang) — menerbitkan salinan baru…'); return $('pubBtn').onclick(); }
-      const url=esc(res.j.url);
-      openModal('🔄 Dikemas kini','<p>Pautan sama, kandungan terkini:</p><p><input readonly value="'+url+'" style="width:100%" onclick="this.select()"></p><div style="display:flex;gap:8px;margin-top:10px"><a class="btn primary" target="_blank" rel="noopener" href="'+url+'">🌐 Buka</a></div>');
-      toast('🔄 Dikemas kini '+res.j.url);
+      if(!res.ok||!res.j||!res.j.url){ toast('⚠ Kemas kini gagal: '+((res.j&&res.j.error)||'pautan lama mungkin telah dibuang')); return; }
+      app.title=$('appName').value||app.title; if(!app.url)app.url=res.j.url; addMyApp(app);
+      toast('🔄 Dikemas kini '+res.j.url); if(done)done();
     })
-    .catch((err)=>{ toast('⚠ '+((err&&err.message)?err.message:'Gagal kemas kini')); })
-    .then(()=>{ btn.disabled=false; btn.textContent=orig; });
+    .catch((err)=>toast('⚠ '+((err&&err.message)?err.message:'Gagal kemas kini')));
+}
+function doDelete(app, done){
+  if(!confirm('Buang selamanya /a/'+app.slug+'? Tindakan ini tidak boleh dibatalkan.')) return;
+  fetch('/api/publish/delete',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:app.slug, editKey:app.editKey }) })
+    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
+    .then((res)=>{
+      if(!res.ok){ toast('⚠ Buang gagal: '+((res.j&&res.j.error)||'')); return; }
+      removeMyApp(app.slug); toast('🗑 Dibuang /a/'+app.slug); if(done)done();
+    })
+    .catch((err)=>toast('⚠ '+((err&&err.message)?err.message:'Gagal buang')));
+}
+
+$('myBtn').onclick=function(){
+  const apps=myApps();
+  if(!apps.length){ openModal('📦 Aplikasi Saya','<div class="hint">Belum ada aplikasi yang anda terbitkan dari pelayar ini. Tekan 🚀 Terbitkan untuk mula. (Kunci edit hanya tersimpan pada pelayar ini.)</div>'); return; }
+  const rows=apps.map((a)=>{ const url=a.url||('/a/'+a.slug); return `<div class="myrow" data-slug="${esc(a.slug)}" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #262b36;border-radius:10px;margin:6px 0;flex-wrap:wrap"><div style="flex:1;min-width:140px"><b style="color:#4c8dff">${esc(a.title||a.slug)}</b><div style="font-size:12px;color:#777">${esc(url)}</div></div><a class="btn" target="_blank" rel="noopener" href="${esc(url)}">🌐 Buka</a><button class="btn" data-mact="upd">🔄 Kemas kini</button><button class="btn" data-mact="del">🗑 Buang</button></div>`; }).join('');
+  openModal('📦 Aplikasi Saya — '+apps.length, '<div style="max-height:55vh;overflow:auto">'+rows+'</div><div class="hint" style="margin-top:10px">“Kemas kini” menulis kandungan kanvas SEMASA ke pautan itu. “Buang” memadamnya secara kekal.</div>');
+  $('modal').querySelectorAll('.myrow').forEach((row)=>{
+    const slug=row.getAttribute('data-slug'); const app=apps.find((x)=>x.slug===slug)||{ slug };
+    const u=row.querySelector('[data-mact="upd"]'); const dl=row.querySelector('[data-mact="del"]');
+    if(u)u.onclick=()=>{ u.disabled=true; u.textContent='⏳…'; doUpdate(app,()=>{ $('myBtn').onclick(); }); };
+    if(dl)dl.onclick=()=>{ dl.disabled=true; doDelete(app,()=>{ $('myBtn').onclick(); }); };
+  });
 };
 
 $('galBtn').onclick=function(){
@@ -1257,7 +1289,7 @@ $('galBtn').onclick=function(){
     openModal('🌐 Pameran komuniti — '+items.length, '<div style="max-height:50vh;overflow:auto">'+cards+'</div><div class="hint" style="margin-top:10px">Dilihat dalam sandbox (asal berasingan).</div>');
   }).catch(()=>openModal('🌐 Pameran komuniti','<div class="hint">Gagal memuat senarai.</div>'));
 };
-const _ps=pubState(); if(_ps&&_ps.slug){ const u=$('updBtn'); if(u)u.hidden=false; }
+// (butang 📦 Aplikasi Saya sentiasa kelihatan — urus kemas kini/buang di dalamnya)
 
 $('exportBtn').onclick=()=>{ download(buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport — buka di mana-mana.'); };
 $('saveBtn').onclick=()=>{ const proj={ v:1, appName:$('appName').value, theme, widgets }; download(JSON.stringify(proj,null,2), safe($('appName').value)+'.json','application/json'); toast('💾 Projek disimpan (.json).'); };

@@ -327,6 +327,7 @@ test('buildDoc: sisip meta description + og:title/og:description untuk SEO', () 
   assert.ok(doc.includes('name="description" content="penerangan saya"'), 'meta description');
   assert.ok(doc.includes('property="og:title" content="Nama"'), 'og:title');
   assert.ok(doc.includes('property="og:description"'), 'og:description');
+  assert.ok(doc.includes('name="twitter:card" content="summary"'), 'twitter:card untuk pratonton sosial');
 });
 
 test('widgetMarkup: tanda data-edit hadir untuk suntingan terus (heading/text/card)', () => {
@@ -342,9 +343,14 @@ test('UI kemudahan: butang + modal + penunjuk simpan wujud dalam DOM', () => {
   assert.ok(html.includes('class="insSel"') || html.includes('insSel'), 'selit ＋ (insSel) perlu ada');
 });
 
-test('Terbitan: butang 🚀 + POST /api/publish + hormati builderAssemble', () => {
+test('Terbitan: butang 🚀 + slug pilihan + 📦 Aplikasi Saya (kemas kini/buang) + hormati builderAssemble', () => {
   assert.ok(html.includes('id="pubBtn"'), 'butang Terbitkan wujud');
+  assert.ok(html.includes('id="pubSlug"'), 'input slug pilihan wujud');
+  assert.ok(html.includes("slug:($('pubSlug').value||'').trim().toLowerCase()||undefined"), 'pubBtn hantar body.slug');
+  assert.ok(html.includes('id="myBtn"'), 'butang Aplikasi Saya wujud');
   assert.ok(html.includes("fetch('/api/publish'"), 'handler POST ke /api/publish');
+  assert.ok(html.includes("fetch('/api/publish/update'"), 'kemas kini ke slug sama');
+  assert.ok(html.includes("fetch('/api/publish/delete'"), 'buang/nyahterbit');
   assert.ok(html.includes('window.builderAssemble=assemble'), 'paparan Kod dedahkan assemble untuk terbitan');
 });
 
