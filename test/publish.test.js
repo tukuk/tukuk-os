@@ -68,3 +68,46 @@ test('publishCspFor: tambah connect-src host-sendiri, kekal opaque-origin (tiada
   assert.match(http, /connect-src http:\/\/192\.168\.8\.100:3000/, 'skema http + port dikekalkan');
   assert.equal(publish.publishCspFor('', 'https'), publish.PUBLISH_CSP, 'tiada host → CSP asal tanpa connect-src');
 });
+
+// ── Papan komen: sanitasi MURNI + suntik UI (tiada pelayan) ──
+test('cmtSlug: slug sah lulus, tak sah → kosong', () => {
+  assert.equal(publish.cmtSlug('my-app-9'), 'my-app-9');
+  for (const bad of ['ab', 'A-bc', '-abc', 'a b', '../../etc', '', null, undefined]) assert.equal(publish.cmtSlug(bad), '', 'tolak: ' + bad);
+});
+
+test('cmtName: buang baru baru/tab, pangkas 20, kosong → Anon', () => {
+  assert.equal(publish.cmtName('Ali\nBin\tQasim'), 'Ali Bin Qasim');
+  assert.equal(publish.cmtName('   ').length, 4, 'kosong → Anon');
+  assert.equal(publish.cmtName('x'.repeat(50)).length, 20, 'had 20 aksara');
+});
+
+test('cmtText: buang tag HTML, ringkas ruang, pangkas 300', () => {
+  assert.equal(publish.cmtText('<script>alert(1)<\/script> halo'), 'alert(1) halo', 'tag dibuang, teks kekal');
+  assert.equal(publish.cmtText('a   b\n\nc'), 'a b c', 'runung ruang/baris diringkas');
+  assert.ok(publish.cmtText('<b>x</b>').indexOf('<') === -1, 'tiada kurungan sudu tembus');
+  assert.equal(publish.cmtText('y'.repeat(500)).length, 300, 'had 300 aksara');
+});
+
+test('commentsWidget: rujuk /api/comments + borang + SLUG ditanam selamat', () => {
+  const w = publish.commentsWidget('app-1');
+  assert.ok(w.includes('/api/comments'), 'skrip fetch /api/comments');
+  assert.ok(w.includes('id="tc-form"'), 'borang wujud');
+  assert.ok(w.includes('var SLUG="app-1"'), 'slug ditanam sebagai literal');
+  assert.ok(w.includes('</' + 'script>'), 'blok skrip ditutup dengan betul');
+  // Cubaan pecah keluar dari skrip → hanya alfanumerik/nego kekal, petikan & simbol dibuang.
+  const evil = publish.commentsWidget('a";alert(1);//');
+  assert.ok(evil.includes('var SLUG="aalert1"'), 'slug disanitasi kepada alfanumerik sahaja');
+  assert.ok(!evil.includes('alert(1)'), 'ranjang kod tidak tembus sebagai teks mentah');
+  assert.ok(!evil.includes('var SLUG="a"'), 'petikan penutup tidak boleh memecahkan literal');
+});
+
+test('injectComments: sisip sebelum </body> terakhir; tampal jika tiada', () => {
+  const doc = '<html><body><h1>App</h1><script>var x=1;<' + '/script></body></html>';
+  const out = publish.injectComments(doc, 'app-1');
+  const iBody = out.lastIndexOf('</body>');
+  assert.ok(out.indexOf('id="tukuk-comments"') < iBody, 'widget sebelum </body>');
+  assert.ok(out.includes('<h1>App</h1>'), 'kandungan asal dikekalkan');
+  assert.ok(out.includes('</html>'), 'struktur penutup kekal');
+  const frag = publish.injectComments('<div>tiada body</div>', 'zz-1');
+  assert.ok(frag.includes('id="tukuk-comments"'), 'tiada </body> → tampal di hujung');
+});

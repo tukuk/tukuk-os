@@ -1275,7 +1275,7 @@ function reviewAndPublish(app){
   $('rvGo').onclick = () => {
     const sel = $('rvUpdate'); const ui = (sel && sel.value !== '') ? mine[Number(sel.value)] : null;
     if(ui){ closeModal(); doUpdate(ui); return; }
-    $('pubSlug').value = ($('rvSlug').value || '').trim().toLowerCase(); closeModal(); $('pubBtn').click();
+    $('pubSlug').value = ($('rvSlug').value || '').trim().toLowerCase(); window._pubSource = 'jana-auto'; closeModal(); $('pubBtn').click();
   };
 }
 function runGenerate(idea, seed){
@@ -1396,7 +1396,7 @@ function publishHtml(){ return (document.body.classList.contains('code') && type
 $('pubBtn').onclick=function(){
   const btn=$('pubBtn'); const orig=btn.textContent; btn.disabled=true; btn.textContent='⏳ Menerbitkan…';
   const html=publishHtml();
-  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'Aplikasi', slug:($('pubSlug').value||'').trim().toLowerCase()||undefined, html }) })
+  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'Aplikasi', slug:($('pubSlug').value||'').trim().toLowerCase()||undefined, source:window._pubSource||undefined, html }) })
     .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
     .then((res)=>{
       if(!res.ok || !res.j || !res.j.url) throw new Error((res.j&&res.j.error)||'Gagal terbit');
@@ -1407,7 +1407,7 @@ $('pubBtn').onclick=function(){
       toast('🚀 Terbit! '+res.j.url);
     })
     .catch((err)=>{ toast('⚠ '+((err&&err.message)?err.message:'Gagal terbit — cuba ZIP/JSON')); })
-    .then(()=>{ btn.disabled=false; btn.textContent=orig; });
+    .then(()=>{ btn.disabled=false; btn.textContent=orig; window._pubSource=''; });
 };
 
 // ── Aplikasi Saya: senarai penerbitan {slug,editKey,title,url} yang tersimpan pada pelayar ini ──

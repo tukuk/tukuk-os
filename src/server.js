@@ -1800,7 +1800,8 @@ app.post('/api/publish', publishLimiter, (req, res) => {
     const editKey = newEditKey();
     writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(body.name || ''), 80)), created: Date.now(), updated: Date.now() });
     const url = `${publish.publicOrigin(req)}/a/${slug}`;
-    store.event('publish', `Aplikasi diterbitkan: /a/${slug}`, { name: truncate(String(body.name || ''), 120), bytes: html.length });
+    const srcTag = truncate(String(body.source || '').replace(/[^a-z0-9_-]/g, ''), 24);
+    store.event('publish', `Aplikasi diterbitkan: /a/${slug}${srcTag ? ' [' + srcTag + ']' : ''}`, { name: truncate(String(body.name || ''), 120), bytes: html.length, source: srcTag || 'manual' });
     notifyIndexNow(url); // pautan awam → indeks (opt-in)
     res.json({ ok: true, slug, url, editKey });
   } catch (error) {
@@ -1910,6 +1911,47 @@ app.get('/api/scores', (req, res) => {
   res.json({ ok: true, game: g, items });
 });
 
+// ── Papan komen komuniti (app terbitan /a/<slug>). Data AWAM, tanpa pengesahan,
+//    had-kadar lebih ketat daripada skor (teks = risiko salah guna lebih tinggi).
+//    Corak sama: connect-src host-sendiri (publishCspFor) benarkan app dalam sandbox
+//    baca/tulis; opaque-origin = tiada cookie dihantar. UI disuntik pada /a/:slug.
+const COMMENTS_PATH = path.join(path.dirname(config.store.path), 'comments.json');
+const commentLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: 'cmt:' })
+  : (req, res, next) => next();
+function readComments() { try { return JSON.parse(fs.readFileSync(COMMENTS_PATH, 'utf8')) || {}; } catch { return {}; } }
+function writeComments(o) { try { fs.writeFileSync(COMMENTS_PATH, JSON.stringify(o)); } catch { /* best-effort */ } }
+const cmtSlug = publish.cmtSlug, cmtName = publish.cmtName, cmtText = publish.cmtText;
+
+app.get('/api/comments', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  const slug = cmtSlug(req.query.slug);
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 30));
+  const db = slug ? readComments() : {};
+  const items = slug && Array.isArray(db[slug]) ? db[slug] : [];
+  res.json({ ok: true, slug, items: items.slice(0, limit).map((x) => ({ n: truncate(String(x.n), 20), c: truncate(String(x.c), 300), t: Number(x.t) || 0 })) });
+});
+
+app.post('/api/comments', commentLimiter, (req, res) => {
+  const body = req.body || {};
+  const slug = cmtSlug(body.slug);
+  if (!slug) return res.status(400).json({ error: 'Slug tidak sah' });
+  if (!fs.existsSync(path.join(PUBLISH_DIR, `${slug}.html`))) return res.status(404).json({ error: 'Aplikasi tidak ditemui' });
+  const text = cmtText(body.text);
+  if (text.length < 2) return res.status(400).json({ error: 'Komen terlalu pendek' });
+  try {
+    const db = readComments(); const arr = Array.isArray(db[slug]) ? db[slug] : [];
+    arr.unshift({ n: cmtName(body.name), c: text, t: Date.now() });
+    db[slug] = arr.slice(0, 100); writeComments(db);
+    store.event('comment', `Komen baharu: /a/${slug}`, { slug, len: text.length });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal simpan komen', details: safeError(error) });
+  }
+});
+
+
 // ── Jana auto: SATU kata/huraian → app + game (/builder ✨ Jana). ──────────────
 // AI bila brain tersedia (rotasi cloud → ollama); JATUH kepada heuristik deterministik
 // supaya sentiasa ada hasil walau AI tak dikonfigurasi/tiada rangkaian. Output disanitasi.
@@ -2006,7 +2048,7 @@ app.get('/a/:slug', (req, res) => {
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.setHeader('Cache-Control', 'public, max-age=300');
-  res.type('html').send(html);
+  res.type('html').send(publish.injectComments(html, slug));
 });
 
 // Explore: sains & geografi (data terbuka, tanpa kunci API)

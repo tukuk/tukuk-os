@@ -501,3 +501,19 @@ test('Jana auto: 🔄 Jana semula (genRegen + offset) + Auto-terbit sahkan slug'
   assert.ok(rv.includes("$('pubSlug').value"), 'Slug ditulis ke medan pubSlug');
   new Function(rc); new Function(rv);
 });
+
+test('Jana auto: Auto-terbit log sumber jana-auto ke badan /api/publish', () => {
+  const rv = extractFn(html, 'reviewAndPublish');
+  assert.ok(rv.includes("window._pubSource = 'jana-auto'") || rv.includes("window._pubSource='jana-auto'"), 'tanda sumber sebelum klik terbit');
+  assert.ok(html.includes('source:window._pubSource||undefined'), 'pubBtn hantar body.source');
+  assert.ok(html.includes("window._pubSource=''"), 'sumber dibersihkan selepas terbit');
+});
+
+test('Papan komen: pelayan suntik widget + endpoint /api/comments wujud', () => {
+  const srv = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
+  assert.ok(srv.includes("app.get('/api/comments'") && srv.includes("app.post('/api/comments'") , 'GET+POST /api/comments');
+  assert.ok(srv.includes('publish.injectComments(html, slug)'), '/a/:slug suntik komen');
+  assert.ok(srv.includes("keyPrefix: 'cmt:'") && /max:\s*30/.test(srv), 'had-kadar komen lebih ketat (max 30)');
+  assert.ok(srv.includes("fs.existsSync(path.join(PUBLISH_DIR, `${slug}.html`))"), 'komen hanya pada app wujud');
+  assert.ok(/store\.event\('comment'/.test(srv), 'komen dicatat ke log peristiwa');
+});
