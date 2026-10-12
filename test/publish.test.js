@@ -45,3 +45,17 @@ test('publicOrigin: hormat x-forwarded-proto https + host', () => {
 test('PUBLISH_MAX_BYTES: berada di bawah had body JSON pelayan (2MB)', () => {
   assert.ok(publish.PUBLISH_MAX_BYTES > 0 && publish.PUBLISH_MAX_BYTES <= 2 * 1024 * 1024);
 });
+
+test('isEditKey: terima 32 aksara hex sah, tolak lain', () => {
+  assert.ok(publish.isEditKey('0'.repeat(32)));
+  assert.ok(publish.isEditKey('a1b2c3d4e5f60718293a4b5c6d7e8f90'), 'hex kecil 32');
+  assert.ok(publish.isEditKey('ABCDEF0123456789ABCDEF0123456789'), 'hex besar diterima');
+  for (const bad of ['', 'z'.repeat(32), 'f'.repeat(31), 'f'.repeat(33), 'abc', null, undefined]) assert.ok(!publish.isEditKey(bad), 'tolak: ' + bad);
+});
+
+test('extractTitle: baca <title>, sanitasi ruang, fallback & had 80', () => {
+  assert.equal(publish.extractTitle('<!DOCTYPE html><html><head><title>App Saya</title></head>'), 'App Saya');
+  assert.equal(publish.extractTitle('<TITLE>  Banyak   Ruang  </TITLE>'), 'Banyak Ruang', 'case-insensitive + ruang diringkas');
+  assert.equal(publish.extractTitle('<html>tiada tajuk</html>', 'Aplikasi'), 'Aplikasi', 'fallback bila tiada <title>');
+  assert.equal(publish.extractTitle('<title>' + 'x'.repeat(120) + '</title>').length, 80, 'had 80 aksara');
+});

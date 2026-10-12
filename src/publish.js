@@ -58,4 +58,17 @@ function looksLikeHtml(html) {
   return /^\s*<!doctype\s+html/i.test(html) || /^\s*<html[\s>]/i.test(html);
 }
 
-module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml };
+// Kunci edit: token acak 32 aksara hex (bukti pemilikan untuk terbit semula).
+const EDIT_KEY_RE = /^[0-9a-f]{32}$/i;
+function isEditKey(k) {
+  return EDIT_KEY_RE.test(String(k || ''));
+}
+
+// `extractTitle` — baca <title> dokumen HTML untuk senarai awam (sanitasi ringan).
+function extractTitle(html, fallback = 'Aplikasi') {
+  const m = String(html || '').match(/<title[^>]*>([^<]*)<\/title>/i);
+  const t = m ? m[1].replace(/\s+/g, ' ').trim() : '';
+  return (t || fallback).slice(0, 80);
+}
+
+module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml, isEditKey, extractTitle };

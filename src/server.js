@@ -1748,6 +1748,23 @@ const publishLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: 'publish:' })
   : (req, res, next) => next();
 
+// Meta pemilikan per-app (kunci edit + tajuk) — fail berasingan, TIDAK dilayan web.
+function metaPath(slug) { return path.join(PUBLISH_DIR, `${slug}.meta.json`); }
+function readMeta(slug) {
+  if (!publish.isSlug(slug)) return null;
+  try { return JSON.parse(fs.readFileSync(metaPath(slug), 'utf8')); } catch { return null; }
+}
+function writeMeta(slug, obj) {
+  try { fs.writeFileSync(metaPath(slug), JSON.stringify(obj), 'utf8'); } catch { /* meta best-effort */ }
+}
+function newEditKey() { return require('crypto').randomBytes(16).toString('hex'); }
+function verifyKey(stored, provided) {
+  try {
+    const a = Buffer.from(String(stored || '')), b = Buffer.from(String(provided || ''));
+    return a.length === b.length && require('crypto').timingSafeEqual(a, b);
+  } catch { return false; }
+}
+
 function uniqueSlug(pref) {
   let s = pref;
   for (let i = 0; i < 200; i++) {
@@ -1770,12 +1787,42 @@ app.post('/api/publish', publishLimiter, (req, res) => {
     const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
     fs.writeFileSync(tmp, html, 'utf8');
     fs.renameSync(tmp, path.join(PUBLISH_DIR, `${slug}.html`));
+    const editKey = newEditKey();
+    writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(body.name || ''), 80)), created: Date.now(), updated: Date.now() });
     const url = `${publish.publicOrigin(req)}/a/${slug}`;
     store.event('publish', `Aplikasi diterbitkan: /a/${slug}`, { name: truncate(String(body.name || ''), 120), bytes: html.length });
     notifyIndexNow(url); // pautan awam → indeks (opt-in)
-    res.json({ ok: true, slug, url });
+    res.json({ ok: true, slug, url, editKey });
   } catch (error) {
     res.status(500).json({ error: 'Gagal menerbitkan', details: safeError(error) });
+  }
+});
+
+// Terbit semula ke slug yang sama (bukti pemilikan via editKey).
+app.post('/api/publish/update', publishLimiter, (req, res) => {
+  const body = req.body || {};
+  const slug = String(body.slug || '');
+  const html = String(body.html || '');
+  if (!publish.isSlug(slug)) return res.status(400).json({ error: 'Slug tidak sah' });
+  if (!publish.isEditKey(body.editKey)) return res.status(400).json({ error: 'Kunci edit tidak sah' });
+  if (!html) return res.status(400).json({ error: 'Tiada kandungan untuk diterbitkan' });
+  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'Aplikasi terlalu besar (maks ~1.5MB)' });
+  if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Bukan dokumen HTML yang sah' });
+  const meta = readMeta(slug);
+  if (!meta || !verifyKey(meta.key, body.editKey)) return res.status(403).json({ error: 'Tidak dibenarkan — kunci edit tidak sepadan' });
+  const file = path.join(PUBLISH_DIR, `${slug}.html`);
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Aplikasi tidak ditemui' });
+  try {
+    const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
+    fs.writeFileSync(tmp, html, 'utf8');
+    fs.renameSync(tmp, file);
+    meta.title = publish.extractTitle(html, meta.title || 'Aplikasi');
+    meta.updated = Date.now();
+    writeMeta(slug, meta);
+    store.event('publish', `Aplikasi dikemas kini: /a/${slug}`, { bytes: html.length });
+    res.json({ ok: true, slug, url: `${publish.publicOrigin(req)}/a/${slug}` });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal mengemas kini', details: safeError(error) });
   }
 });
 
@@ -1784,17 +1831,27 @@ function listPublished(limit = 200) {
   try {
     return fs.readdirSync(PUBLISH_DIR)
       .filter((f) => f.endsWith('.html'))
-      .map((f) => { const s = f.slice(0, -5); let t = 0; try { t = fs.statSync(path.join(PUBLISH_DIR, f)).mtimeMs; } catch {} return { slug: s, t }; })
+      .map((f) => {
+        const s = f.slice(0, -5); let t = 0; try { t = fs.statSync(path.join(PUBLISH_DIR, f)).mtimeMs; } catch {}
+        const meta = readMeta(s); return { slug: s, t, title: (meta && meta.title) ? meta.title : s };
+      })
       .sort((a, b) => b.t - a.t)
       .slice(0, limit);
   } catch { return []; }
 }
 
+// JSON senarai app awam — untuk panel "Pameran" dalam /builder.
+app.get('/api/published', (req, res) => {
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 60));
+  const items = listPublished(limit).map((x) => ({ slug: x.slug, title: truncate(x.title, 80), url: `/a/${x.slug}`, updated: x.t }));
+  res.json({ ok: true, count: items.length, items });
+});
+
 // Indeks /a — senarai aplikasi yang diterbitkan komuniti (pautan sahaja, nama disanitasi).
 app.get('/a', (req, res) => {
   const items = listPublished();
   const rows = items.length
-    ? items.map((x) => `<li><a href="/a/${encodeURIComponent(x.slug)}">/${escapeHtml(x.slug)}</a></li>`).join('\n')
+    ? items.map((x) => `<li><a href="/a/${encodeURIComponent(x.slug)}">${escapeHtml(x.title)}</a> <span style="color:#6b7280">/ ${escapeHtml(x.slug)}</span></li>`).join('\n')
     : '<li>Belum ada aplikasi. Bina satu di <a href="/builder">Pembina</a> lalu tekan 🚀 Terbitkan.</li>';
   res.type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aplikasi Terbitan — Tukuk Studio</title><meta name="robots" content="noindex"><style>body{font:16px/1.6 system-ui;margin:0;padding:40px 20px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}main{max-width:720px;margin:0 auto}h1{font-size:1.6rem}ul{list-style:none;padding:0}li{padding:6px 0;border-bottom:1px solid #262b36}</style></head><body><main><h1>🧩 Aplikasi Terbitan</h1><p style="color:#9aa3b2">Dijana dengan Tukuk Studio — Pembina. Dilihat dalam sandbox (asal berasingan).</p><ul>\n${rows}\n</ul><p style="margin-top:24px"><a href="/builder">→ Buka Pembina</a></p></main></body></html>`);
 });

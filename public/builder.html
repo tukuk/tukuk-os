@@ -129,6 +129,8 @@
   <button id="exportBtn" class="primary" title="Eksport HTML berdiri sendiri">⬇️ Eksport HTML</button>
   <button id="zipBtn" class="primary" title="Muat turun ZIP (index.html + projek + README)">🗜 ZIP</button>
   <button id="pubBtn" class="primary" title="Terbitkan ke pautan awam tukuk.org/a/…">🚀 Terbitkan</button>
+  <button id="updBtn" class="primary" title="Kemas kini pautan awam yang sedia ada (slug sama)" hidden>🔄 Kemas kini</button>
+  <button id="galBtn" title="Lihat aplikasi komuniti yang diterbitkan">🌐 Pameran</button>
   <span id="saveState" class="saveState" title="Status jimat automatik"></span>
 </header>
 
@@ -1219,11 +1221,43 @@ $('pubBtn').onclick=function(){
       const url=esc(res.j.url);
       openModal('🚀 Berjaya diterbitkan','<p>Aplikasi anda kini awam di:</p><p><input readonly value="'+url+'" style="width:100%" onclick="this.select()"></p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><a class="btn primary" target="_blank" rel="noopener" href="'+url+'">🌐 Buka</a><button id="pubCopy" class="btn">📋 Salin pautan</button></div><div class="hint" style="margin-top:10px">Dilihat dalam sandbox (asal berasingan) demi keselamatan. Pautan kekal awam selama dihos.</div>');
       const cp=$('pubCopy'); if(cp) cp.onclick=()=>copyText(res.j.url,'🔗 Pautan disalin');
+      setPubState({ slug:res.j.slug, editKey:res.j.editKey });
       toast('🚀 Terbit! '+res.j.url);
     })
     .catch((err)=>{ toast('⚠ '+((err&&err.message)?err.message:'Gagal terbit — cuba ZIP/JSON')); })
     .then(()=>{ btn.disabled=false; btn.textContent=orig; });
 };
+
+// ── Keadaan penerbitan (slug + kunci edit) untuk "Kemas kini" ke slug sama ──
+function pubState(){ try{ return JSON.parse(localStorage.getItem('tukuk-pub')||'null'); }catch(e){ return null; } }
+function setPubState(o){ try{ localStorage.setItem('tukuk-pub',JSON.stringify(o)); }catch(e){} if(o&&o.slug){ const u=$('updBtn'); if(u)u.hidden=false; } }
+
+$('updBtn').onclick=function(){
+  const st=pubState(); if(!st||!st.slug||!st.editKey){ toast('Tiada pautan untuk dikemas kini — terbitkan dulu.'); return; }
+  const btn=this,orig=btn.textContent; btn.disabled=true; btn.textContent='⏳ Mengemas kini…';
+  const html=publishHtml();
+  fetch('/api/publish/update',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:st.slug, editKey:st.editKey, html }) })
+    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
+    .then((res)=>{
+      if(!res.ok || !res.j || !res.j.url){ toast('⚠ Tak dapat kemas kini (pautan lama mungkin dibuang) — menerbitkan salinan baru…'); return $('pubBtn').onclick(); }
+      const url=esc(res.j.url);
+      openModal('🔄 Dikemas kini','<p>Pautan sama, kandungan terkini:</p><p><input readonly value="'+url+'" style="width:100%" onclick="this.select()"></p><div style="display:flex;gap:8px;margin-top:10px"><a class="btn primary" target="_blank" rel="noopener" href="'+url+'">🌐 Buka</a></div>');
+      toast('🔄 Dikemas kini '+res.j.url);
+    })
+    .catch((err)=>{ toast('⚠ '+((err&&err.message)?err.message:'Gagal kemas kini')); })
+    .then(()=>{ btn.disabled=false; btn.textContent=orig; });
+};
+
+$('galBtn').onclick=function(){
+  openModal('🌐 Pameran komuniti','<div class="hint">Memuatkan…</div>');
+  fetch('/api/published?limit=60').then((r)=>r.json()).then((d)=>{
+    const items=(d&&d.items)||[];
+    if(!items.length){ openModal('🌐 Pameran komuniti','<div class="hint">Belum ada aplikasi awam. Jadilah yang pertama — tekan 🚀 Terbitkan!</div>'); return; }
+    const cards=items.map((x)=>`<a target="_blank" rel="noopener" href="${esc(x.url)}" style="display:block;padding:10px 12px;border:1px solid #262b36;border-radius:10px;margin:6px 0;text-decoration:none"><b style="color:#4c8dff">${esc(x.title)}</b><div style="font-size:12px;color:#777">/${esc(x.slug)}</div></a>`).join('');
+    openModal('🌐 Pameran komuniti — '+items.length, '<div style="max-height:50vh;overflow:auto">'+cards+'</div><div class="hint" style="margin-top:10px">Dilihat dalam sandbox (asal berasingan).</div>');
+  }).catch(()=>openModal('🌐 Pameran komuniti','<div class="hint">Gagal memuat senarai.</div>'));
+};
+const _ps=pubState(); if(_ps&&_ps.slug){ const u=$('updBtn'); if(u)u.hidden=false; }
 
 $('exportBtn').onclick=()=>{ download(buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport — buka di mana-mana.'); };
 $('saveBtn').onclick=()=>{ const proj={ v:1, appName:$('appName').value, theme, widgets }; download(JSON.stringify(proj,null,2), safe($('appName').value)+'.json','application/json'); toast('💾 Projek disimpan (.json).'); };
