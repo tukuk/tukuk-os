@@ -79,6 +79,7 @@
 
     var live = !!st.live;
     var loop = false;
+    var autoNext = st.auto !== false; // ikut togol Auto‑next bar index (lalai: berterusan)
     var wantPlay = true;
     var resumePending = true;
     var retries = 0;
@@ -105,7 +106,7 @@
       write({
         src: c.src, title: c.title, live: live, playing: !!playing,
         pos: live ? 0 : (audio.currentTime || 0),
-        queue: queue, qi: qi, ts: Date.now()
+        queue: queue, qi: qi, auto: autoNext, ts: Date.now()
       });
     }
 
@@ -144,7 +145,7 @@
       retries++;
       // Radio: cuba sambung semula panjang (stesen hidup lagi); muzik: skip cepat bila mati.
       var maxTry = live ? 25 : 3;
-      if (retries > maxTry) { live ? softStop() : next(); return; }
+      if (retries > maxTry) { (live || !autoNext) ? softStop() : next(); return; }
       retryTimer = setTimeout(function () {
         retryTimer = null;
         if (!wantPlay) return;
@@ -203,7 +204,9 @@
       if (Date.now() - startedAt < 3000) { reconnect(); return; } // klip rosak — jangan lompat serta-merta
       if (live) { reconnect(); return; }                          // radio terputus → sambung, bukan tukar stesen
       if (loop) { audio.currentTime = 0; audio.play().catch(reconnect); return; }
-      if (queue.length > 1) next(); else { softStop(); }
+      // Auto‑next MATI → berhenti (hanya tindakan pengguna menyambung); HIDUP → sambung trek.
+      if (!autoNext) { softStop(); return; }
+      if (queue.length > 1) { next(); } else { audio.currentTime = 0; audio.play().catch(reconnect); }
     });
     var tick = 0;
     audio.addEventListener('timeupdate', function () {
@@ -217,6 +220,7 @@
       if (e.key !== KEY) return;
       if (!e.newValue) { stopAll(); return; }
       var ns = null; try { ns = JSON.parse(e.newValue); } catch (err) { return; }
+      if (ns && typeof ns.auto !== 'undefined') autoNext = !!ns.auto; // ikut togol Auto‑next dari tab lain
       if (ns && ns.src && ns.src !== cur().src) {
         queue = ns.queue && ns.queue.length ? ns.queue.slice(0, 60) : queue;
         qi = Math.max(0, Math.min(queue.length - 1, ns.qi || 0));

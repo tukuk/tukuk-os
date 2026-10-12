@@ -626,7 +626,7 @@
   <button type="button" id="audioPlayPause" class="ab-btn ab-pp" aria-label="Play or pause" aria-pressed="false">⏯</button>
   <button type="button" id="audioNext" class="ab-btn" aria-label="Next track">⏭</button>
   <span class="ab-title" id="audioBarTitle"></span>
-  <label class="ab-auto" title="Lagu habis → main lagu seterusnya"><input type="checkbox" id="audioAuto"> Auto‑next</label>
+  <label class="ab-auto" title="Lagu habis → auto main lagu seterusnya. Matikan untuk berhenti selepas satu lagu."><input type="checkbox" id="audioAuto" checked> Auto‑next</label>
   <button type="button" id="audioBarStop" class="ab-btn" aria-label="Stop player">⏹</button>
 </div>
 
@@ -1532,7 +1532,7 @@ function savePlayerState(playing) {
     localStorage.setItem(PLAYER_STATE_KEY, JSON.stringify({
       src: currentSrc, title: audioBarTitle.textContent, live: currentLive,
       playing: !!playing, pos: currentLive ? 0 : (mediaAudio.currentTime || 0),
-      queue, qi, ts: Date.now()
+      queue, qi, auto: audioAutoEl ? audioAutoEl.checked : true, ts: Date.now()
     }));
   } catch (e) {}
 }
@@ -1712,6 +1712,7 @@ document.addEventListener('click', (e) => {
   const src = normAudioSrc(st.src);
   if (!src) return;
   currentSrc = src; currentLive = !!st.live; wantPlay = true; retryCount = 0; playToken++;
+  if (audioAutoEl) audioAutoEl.checked = st.auto !== false; // pulih preferensi Auto‑next (lalai: berterusan)
   audioBarTitle.textContent = st.title || '';
   audioBar.hidden = false;
   mediaAudio.src = currentSrc;
