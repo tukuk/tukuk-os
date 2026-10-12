@@ -13,6 +13,7 @@ const rag = require('./brain/rag');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
 const reranker = require('./brain/reranker');
+const builderGen = require('./builder-gen');
 const news = require('./news');
 const queries = require('./queries');
 const answer = require('./answer');
@@ -1907,6 +1908,39 @@ app.get('/api/scores', (req, res) => {
   const db = readLB();
   const items = (Array.isArray(db[g]) ? db[g] : []).slice(0, limit).map((x) => ({ n: truncate(String(x.n), 20), s: Number(x.s) || 0 }));
   res.json({ ok: true, game: g, items });
+});
+
+// ── Jana auto: SATU kata/huraian → app + game (/builder ✨ Jana). ──────────────
+// AI bila brain tersedia (rotasi cloud → ollama); JATUH kepada heuristik deterministik
+// supaya sentiasa ada hasil walau AI tak dikonfigurasi/tiada rangkaian. Output disanitasi.
+const builderGenLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 60 * 60 * 1000, max: 40, keyPrefix: 'bgen:' })
+  : (req, res, next) => next();
+
+app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
+  const idea = truncate(String((req.body && req.body.idea) || '').trim(), 160);
+  if (!idea) return res.status(400).json({ error: 'Taip satu idea atau kata dahulu.' });
+  let out = null, source = 'auto';
+  if (config.brain.enabled) {
+    try {
+      let text = '';
+      try {
+        const r = await brain.generateCloudRotation(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, temperature: 0.7, maxTokens: 700 });
+        text = (r && r.response) || '';
+      } catch { /* cuba ollama */ }
+      if (!text) {
+        try {
+          const r = await brain.generate(`Idea aplikasi: ${idea}`, { system: builderGen.SYSTEM_PROMPT, numPredict: 700, temperature: 0.7 });
+          text = (r && r.response) || '';
+        } catch { /* jatuh ke heuristik */ }
+      }
+      const parsed = builderGen.parseGenJson(text);
+      if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) { out = s; source = 'ai'; } }
+    } catch { /* noop — heuristik di bawah */ }
+  }
+  if (!out) out = builderGen.heuristicBuild(idea);
+  store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source });
+  res.json({ ok: true, source, app: out });
 });
 
 // Indeks /a — senarai aplikasi yang diterbitkan komuniti (pautan sahaja, nama disanitasi).

@@ -137,6 +137,10 @@
 
 <div class="grid3">
   <div class="col left">
+    <div class="genbar" style="display:flex;gap:6px;margin:0 0 12px">
+      <input id="genIdea" placeholder="✨ Jana app/game — taip kata/idea" maxlength="80" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #2a3040;border-radius:9px;background:transparent;color:inherit">
+      <button id="genBtn" class="primary" title="Jana aplikasi + game automatik daripada idea" style="padding:8px 12px;border-radius:9px;white-space:nowrap">✨ Jana</button>
+    </div>
     <h4>Tambah widget</h4>
     <div class="palette" id="palette"></div>
     <div class="hint">Klik untuk tambah ke bawah. Seret blok pada kanvas untuk susun semula. Guna <b>Mod Cuba</b> untuk uji interaksi.</div>
@@ -1151,6 +1155,28 @@ $('palette').addEventListener('click',(e)=>{ const b=e.target.closest('[data-add
 $('tpl').innerHTML = '<option value="">🗂 Templat…</option>' + Object.entries(TEMPLATES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
 $('tpl').addEventListener('change',(e)=>{ const v=e.target.value; if(v) loadTemplate(v); e.target.value=''; });
 function loadTemplate(name){ const t=TEMPLATES[name]; if(!t) return; pushH(); $('appName').value=t.appName||'Aplikasi'; theme=Object.assign({},DEF_THEME,t.theme||{}); widgets=(t.widgets||[]).map((r)=>Object.assign({id:'w'+(uid++)},r)); selId=null; renderStage(); applyTheme(); renderInspector(); toast('🗂 Templat dimuat: '+t.label); }
+
+// ── ✨ Jana auto: idea → app + game (AI bila tersedia, heuristik sebagai fallback) ──
+function applyGenerated(a, source){
+  if(!a || !Array.isArray(a.widgets)) return;
+  pushH();
+  $('appName').value = a.appName || 'Aplikasi';
+  theme = Object.assign({}, DEF_THEME, a.theme || {});
+  widgets = a.widgets.filter((w) => w && TYPES[w.type]).map((w) => Object.assign({ id: 'w' + (uid++) }, w));
+  selId = null; renderStage(); applyTheme(); renderInspector();
+  toast((source === 'ai' ? '🤖 Dijana AI · ' : '✨ Dijana auto · ') + widgets.length + ' widget — sunting & terbitkan.');
+}
+$('genBtn').onclick = function(){
+  const idea = $('genIdea').value.trim();
+  if(!idea){ toast('Taip satu idea/kata dahulu.'); $('genIdea').focus(); return; }
+  const b = this; const old = b.textContent; b.disabled = true; b.textContent = '⏳ Menjana…';
+  fetch('/api/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idea }) })
+    .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: false, j: { error: 'Respons bukan JSON' } })))
+    .then((res) => { if(!res.ok || !res.j || !res.j.app) throw new Error((res.j && res.j.error) || 'tiada hasil'); applyGenerated(res.j.app, res.j.source); })
+    .catch((err) => toast('⚠ Jana gagal: ' + ((err && err.message) || err)))
+    .then(() => { b.disabled = false; b.textContent = old; });
+};
+$('genIdea').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); $('genBtn').click(); } });
 
 document.querySelectorAll('.devs [data-dev]').forEach((b)=>b.onclick=()=>{ device=b.dataset.dev; document.querySelectorAll('.devs [data-dev]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderStage(); });
 

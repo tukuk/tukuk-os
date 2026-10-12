@@ -397,3 +397,14 @@ test('Templat brtpl + fpstpl + runtpl ada widget br/fps/runner sah', () => {
   assert.ok(T.fpstpl && T.fpstpl.widgets.some((w)=>w.type==='fps'), 'fpstpl ada widget fps');
   assert.ok(T.runtpl && T.runtpl.widgets.some((w)=>w.type==='runner'), 'runtpl ada widget runner');
 });
+
+// ── ✨ Jana auto (idea → app+game) ──
+test('Jana auto: input/butang + fetch /api/builder/generate + applyGenerated tapis types', () => {
+  assert.ok(html.includes('id="genIdea"'), 'input idea wujud');
+  assert.ok(html.includes('id="genBtn"'), 'butang Jana wujud');
+  assert.ok(html.includes("fetch('/api/builder/generate'"), 'panggil endpoint jana');
+  const code = extractFn(html, 'applyGenerated');
+  assert.ok(code.includes('TYPES[w.type]'), 'buang types tak diketahui');
+  assert.ok(code.includes('renderStage()') && code.includes('applyTheme()'), 'render selepas jana');
+  new Function(code); // parse sah
+});
