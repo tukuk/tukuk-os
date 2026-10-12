@@ -84,8 +84,8 @@
   @media (max-width:1000px){ .codesplit{ flex-direction:column; } }
   /* ── Kemudahan: selit, sunting terus, modals, penunjuk simpan, amaran ── */
   .insrow { display:flex; justify-content:center; height:0; overflow:visible; }
-  .insrow select { opacity:0; height:22px; font-size:11px; padding:1px 6px; border-radius:8px; border:1px dashed var(--acc); background:rgba(76,141,255,.08); color:var(--fg); cursor:pointer; transition:opacity .15s; width:150px; }
-  .frame:hover .insrow select { opacity:.75; }
+  .insrow select { opacity:0; height:20px; font-size:11px; font-weight:700; padding:0 12px; border-radius:999px; border:1px solid rgba(76,141,255,.45); background:rgba(76,141,255,.12); color:var(--acc); cursor:pointer; transition:opacity .15s; width:auto; }
+  .frame:hover .insrow select { opacity:.5; }
   .insrow select:hover { opacity:1 !important; }
   body.edit .w [data-edit] { outline:1px dashed rgba(76,141,255,.5); outline-offset:2px; border-radius:4px; cursor:text; }
   body.edit .w [data-edit]:focus { outline:2px solid var(--acc); }
@@ -123,7 +123,7 @@
   <button id="redo" title="Redo">↷</button>
   <button id="shareBtn" title="Jana pautan kongsi (projek tersimpan dalam URL)">🔗 Kongsi</button>
   <button id="auditBtn" title="Semak aksesibiliti / kontras / pautan">🩺 Semak</button>
-  <button id="keysBtn" title="Pintasan papan kekunci (?)">⌨</button>
+  <button id="keysBtn" title="Pintasan papan kekunci (?)">⌨️ Pintasan</button>
   <button id="openBtn" title="Buka projek .json">📂 Buka</button>
   <button id="saveBtn" title="Simpan projek .json">💾 JSON</button>
   <button id="exportBtn" class="primary" title="Eksport HTML berdiri sendiri">⬇️ Eksport HTML</button>
@@ -446,7 +446,7 @@ function renderStage(){
   if(mode==='preview' && typeof initGames==='function'){ try{ initGames(f); }catch(err){} }
   try{ if(typeof autoSave==='function') autoSave(); }catch{}
 }
-function insertOptions(){ return '<option value="">＋ tambah di sini</option>' + Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.ic} ${v.name}</option>`).join(''); }
+function insertOptions(){ return '<option value="">＋ Tambah</option>' + Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.ic} ${v.name}</option>`).join(''); }
 
 // ── Selection + properties ──────────────────────────────────────────────────
 function select(id){ selId=id; renderStage(); renderInspector(); }
@@ -717,7 +717,7 @@ function copyText(text, okmsg){ const done=()=>toast(okmsg||'📋 Disalin ke pap
 // ── Modal (bantuan & hasil semakan) ──
 const HELP_HTML = [
   ['Sunting teks','Klik pada tajuk/teks lalu taip terus'],
-  ['Selit di kedudukan','Guna ＋ tambah di sini (hover celah blok)'],
+  ['Selit di kedudukan','Guna ＋ Tambah (hover celah blok)'],
   ['Duplikasi','Ctrl / ⌘ + D'],
   ['Buang widget','Delete / Backspace'],
   ['Gerak widget','↑ / ↓'],
