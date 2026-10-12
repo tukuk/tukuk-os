@@ -70,6 +70,9 @@
   body.code #codeView { display:flex; }
   .codebar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .codebar label { font-size:12px; color:var(--muted); display:flex; gap:4px; align-items:center; }
+  .codetabs { display:flex; gap:4px; margin-right:6px; }
+  .codetabs button { padding:6px 14px; font-weight:700; }
+  .codetabs button.on { background:var(--acc); color:#04101f; }
   .codesplit { display:flex; gap:10px; flex:1; min-height:0; }
   .edWrap { position:relative; flex:1; min-width:0; background:#0b0f1a; border:1px solid var(--line); border-radius:12px; display:flex; overflow:hidden; }
   .gutter { width:40px; flex:none; padding:12px 8px 12px 0; text-align:right; color:#4a5570; background:rgba(255,255,255,.03); font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; white-space:pre; overflow:hidden; user-select:none; }
@@ -113,12 +116,18 @@
     <div class="frame" id="frame"></div>
     <div id="codeView">
       <div class="codebar">
+        <div class="codetabs">
+          <button data-ctab="html" class="on">HTML</button>
+          <button data-ctab="css">CSS</button>
+          <button data-ctab="js">JS</button>
+        </div>
         <button id="codeRegen" title="Jana semula kod daripada blok Rekaan">↺ Jana dari Rekaan</button>
-        <button id="codeCopy" title="Salin kod ke papan klip">📋 Salin</button>
-        <button id="codeDl" title="Muat turun HTML ini">⬇️ Muat turun</button>
+        <button id="codeFmt" title="Format / indent kod">✨ Format</button>
+        <button id="codeCopy" title="Salin tab aktif ke papan klip">📋 Salin</button>
+        <button id="codeDl" title="Muat turun HTML penuh">⬇️ Muat turun</button>
         <button id="codeRun" title="Jalankan pratonton">▶️ Jalankan</button>
         <label><input type="checkbox" id="codeRunChk" checked> Auto</label>
-        <span class="hint" style="margin:0">Kod dijana daripada blok. Suntingan manual terpakai untuk pratonton/muat turun sahaja — tak kembali ke blok.</span>
+        <span class="hint" style="margin:0">Tiga tab HTML/CSS/JS — pratonton menggabungkan semuanya. Suntingan manual terpakai untuk pratonton/muat turun/eksport sahaja.</span>
       </div>
       <div class="codesplit">
         <div class="edWrap">
@@ -449,12 +458,12 @@ document.addEventListener('submit',function(e){
   li.appendChild(sp); li.appendChild(bt); ul.appendChild(li); inp.value='';
 });`;
 }
-function buildExport(){
-  const name=$('appName').value||'Aplikasi';
-  const body=widgets.map(widgetMarkup).join('\n');
-  const css=`:root{color-scheme:${theme.dark?'dark':'light'}}*{box-sizing:border-box}body{margin:0;background:${theme.bg};color:${theme.fg};font-family:${theme.font};padding:20px;max-width:${device==='desktop'?880:device==='tablet'?680:480}px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}.appbar{font-weight:800;font-size:20px;color:${theme.accent};margin-bottom:2px}.sub{color:#888;font-size:13px;margin-bottom:16px}button,.btn{font:inherit}`;
-  return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${runtimeJS()}<\/script></body></html>`;
+function exportCSS(){
+  return `:root{color-scheme:${theme.dark?'dark':'light'}}*{box-sizing:border-box}body{margin:0;background:${theme.bg};color:${theme.fg};font-family:${theme.font};padding:20px;max-width:${device==='desktop'?880:device==='tablet'?680:480}px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}.appbar{font-weight:800;font-size:20px;color:${theme.accent};margin-bottom:2px}.sub{color:#888;font-size:13px;margin-bottom:16px}button,.btn{font:inherit}`;
 }
+function exportBody(){ return widgets.map(widgetMarkup).join('\n'); }
+function buildDoc(body, css, js, name){ return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${js}<\/script></body></html>`; }
+function buildExport(){ return buildDoc(exportBody(), exportCSS(), runtimeJS(), $('appName').value||'Aplikasi'); }
 function download(text, filename, mime){ const b=new Blob([text],{type:mime}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),8000); }
 const safe=(s)=>String(s||'app').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'app';
 
@@ -473,6 +482,7 @@ renderStage(); applyTheme(); renderInspector(); pushH();
 document.addEventListener('keydown',(e)=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); } if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); } });
 window.builderExport = buildExport;   // dieksport untuk ujian unit
 window.builderWidgetMarkup = widgetMarkup;
+window.builderExportCSS = exportCSS; window.builderExportBody = exportBody; window.builderDoc = buildDoc;
 </script>
 
 <script>
@@ -493,27 +503,46 @@ window.builderWidgetMarkup = widgetMarkup;
     }
     return out+escHtml(c.slice(last));
   }
+  // ── Tiga tab: setiap satu menyimpan buffer sendiri; pratonton gabungkan semua ──
+  const panes={ html:'', css:'', js:'' };
+  let codeTab='html';
+  function regen(){ panes.html=exportBody(); panes.css=exportCSS(); panes.js=runtimeJS(); }
+  function assemble(){ return buildDoc(panes.html, panes.css, panes.js, $('appName').value||'Aplikasi'); }
+  function commit(){ panes[codeTab]=ta.value; }
+  function load(){ ta.value=panes[codeTab]; document.querySelectorAll('.codetabs [data-ctab]').forEach((b)=>b.classList.toggle('on', b.dataset.ctab===codeTab)); renderEditor(); }
+  function setTab(t){ commit(); codeTab=t; load(); runPreview(); }
   function renderEditor(){ const v=ta.value; codeEl.innerHTML=highlight(v)+'\n'; let g=''; const n=v.split('\n').length; for(let i=1;i<=n;i++) g+=i+'\n'; gutter.textContent=g; syncScroll(); }
   function syncScroll(){ preWrap.scrollTop=ta.scrollTop; preWrap.scrollLeft=ta.scrollLeft; gutter.scrollTop=ta.scrollTop; }
-  function runPreview(){ preview.srcdoc=ta.value; }
+  function runPreview(){ preview.srcdoc=assemble(); }
   let rt; function autoRun(){ clearTimeout(rt); rt=setTimeout(runPreview,400); }
-  function refresh(){ renderEditor(); if($('codeRunChk').checked) autoRun(); }
+  function refresh(){ commit(); renderEditor(); if($('codeRunChk').checked) autoRun(); }
   function setView(v){ const code=v==='code'; document.body.classList.toggle('code',code); $('viewCode').classList.toggle('active',code); $('viewDesign').classList.toggle('active',!code); }
-  function toCode(){ ta.value=buildExport(); setView('code'); renderEditor(); runPreview(); }
+  function toCode(){ regen(); codeTab='html'; setView('code'); load(); runPreview(); }
+  // Format/indent ringkas ikut tab: sisip baris baru selepas tag/}/;.
+  function formatCode(){
+    let v=ta.value;
+    if(codeTab==='css') v=v.replace(/\}/g,'}\n');
+    else if(codeTab==='html') v=v.replace(/(<\/(?:div|p|h1|h2|h3|section|ul|figure|label|form)>)/g,'$1\n');
+    else if(codeTab==='js') v=v.replace(/;\s*/g,';\n');
+    { const NL=String.fromCharCode(10); const out=[]; for(const raw of v.split(NL)){ const l=raw.replace(/ +$/,''); if(l===''&&(!out.length||out[out.length-1]==='')) continue; out.push(l); } v=out.join(NL).trim(); }
+    ta.value=v; refresh(); runPreview(); toast('✨ Kod diformat');
+  }
 
   $('viewCode').onclick=toCode;
   $('viewDesign').onclick=()=>setView('design');
-  $('codeRegen').onclick=()=>{ ta.value=buildExport(); refresh(); toast('↺ Kod dijana semula daripada Rekaan'); };
+  document.querySelectorAll('.codetabs [data-ctab]').forEach((b)=>b.onclick=()=>setTab(b.dataset.ctab));
+  $('codeRegen').onclick=()=>{ regen(); load(); runPreview(); toast('↺ Kod dijana semula daripada Rekaan'); };
+  $('codeFmt').onclick=formatCode;
   $('codeRun').onclick=()=>{ runPreview(); toast('▶️ Pratonton disegar semula'); };
-  $('codeDl').onclick=()=>{ download(ta.value, safe($('appName').value)+'.html','text/html'); toast('⬇️ HTML dimuat turun'); };
-  $('codeCopy').onclick=()=>{ const ok=()=>toast('📋 Kod disalin'); function fb(){ ta.focus(); ta.select(); try{ document.execCommand('copy'); }catch{} ok(); } try{ navigator.clipboard.writeText(ta.value).then(ok,fb); }catch{ fb(); } };
+  $('codeDl').onclick=()=>{ download(assemble(), safe($('appName').value)+'.html','text/html'); toast('⬇️ HTML dimuat turun'); };
+  $('codeCopy').onclick=()=>{ const ok=()=>toast('📋 '+codeTab.toUpperCase()+' disalin'); function fb(){ ta.focus(); ta.select(); try{ document.execCommand('copy'); }catch{} ok(); } try{ navigator.clipboard.writeText(ta.value).then(ok,fb); }catch{ fb(); } };
 
   ta.addEventListener('input',refresh);
   ta.addEventListener('scroll',syncScroll);
   ta.addEventListener('keydown',(e)=>{ if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(en); ta.selectionStart=ta.selectionEnd=s+2; refresh(); } });
 
-  // Eksport menghormati mod: dalam Kod → guna kod semasa (termasuk suntingan manual).
-  $('exportBtn').onclick=()=>{ const code=document.body.classList.contains('code'); download(code?ta.value:buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport'+(code?' (kod)':'')+' — buka di mana-mana.'); };
+  // Eksport menghormati mod: dalam Kod → gabung ketiga-tiga tab (termasuk suntingan manual).
+  $('exportBtn').onclick=()=>{ const code=document.body.classList.contains('code'); download(code?assemble():buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport'+(code?' (kod)':'')+' — buka di mana-mana.'); };
 
   window.builderCodeOpen=()=>document.body.classList.contains('code');
 })();

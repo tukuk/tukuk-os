@@ -159,7 +159,28 @@ test('highlight: escape HTML (tiada tembus) & balut token dengan span kelas', ()
 });
 
 test('codeView: editor + pratonton + butang ada dalam DOM builder', () => {
-  for (const id of ['codeView','edTA','edPre','edCode','edGutter','edPreview','viewCode','viewDesign','codeRegen','codeCopy','codeDl','codeRun','codeRunChk'])
+  for (const id of ['codeView','edTA','edPre','edCode','edGutter','edPreview','viewCode','viewDesign','codeRegen','codeCopy','codeDl','codeRun','codeRunChk','codeFmt'])
     assert.ok(html.includes('id="' + id + '"'), 'elemen hilang: #' + id);
   assert.ok(/iframe[^>]*sandbox="allow-scripts/.test(html), 'iframe pratonton mesti sandboxed');
+});
+
+test('codetabs: tiga tab HTML/CSS/JS wujud', () => {
+  for (const t of ['html','css','js'])
+    assert.ok(html.includes('data-ctab="' + t + '"'), 'tab hilang: ' + t);
+});
+
+test('exportCSS/buildDoc: komposisi fail berdiri sendiri sah & parameter dipatuhi', () => {
+  const T = { dark:false, bg:'#fff', fg:'#111', font:'x', accent:'#abc', sub:'ss' };
+  const exportCSS = new Function('theme','device', extractFn(html,'exportCSS') + '; return exportCSS;')(T,'phone')();
+  assert.ok(exportCSS.includes('color-scheme:light'));
+  assert.ok(exportCSS.includes('max-width:480px'), 'telefon max-width 480');
+  const cssDesktop = new Function('theme','device', extractFn(html,'exportCSS') + '; return exportCSS;')(T,'desktop')();
+  assert.ok(cssDesktop.includes('max-width:880px'), 'desktop max-width 880');
+  const buildDoc = new Function('esc','theme', extractFn(html,'buildDoc') + '; return buildDoc;')(esc, T);
+  const doc = buildDoc('<p>HI</p>', '.x{}', 'var a=1;', 'Namaku');
+  assert.ok(doc.startsWith('<!DOCTYPE html>'));
+  assert.ok(doc.includes('<style>.x{}</style>'), 'css disisip dalam <style>');
+  assert.ok(doc.includes('<div class="appbar">Namaku</div>'), 'appbar guna nama');
+  assert.ok(doc.includes('<p>HI</p>'), 'body disisip mentah');
+  assert.ok(doc.includes('<script>var a=1;<') && doc.includes('/script></body></html>'), 'js disisip dalam <script>');
 });
