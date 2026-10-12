@@ -418,3 +418,16 @@ test('Jana auto: banyak calon (apps[]) + kad Pakai/Terbitkan + Auto-terbit', () 
   assert.ok(card.includes('GAME_SET'), 'khusus game ditandakan pada kad');
   new Function(card); // parse sah
 });
+
+test('Jana auto: pratonton mini (miniDoc + iframe srcdoc) + badge 🤖 AI + Auto-terbit pilih AI', () => {
+  assert.ok(html.includes('function miniDoc(app)'), 'miniDoc wujud');
+  const md = extractFn(html, 'miniDoc');
+  assert.ok(md.includes('widgetMarkup'), 'miniDoc guna penanda widget sebenar');
+  assert.ok(md.includes('sandbox') || html.includes('sandbox=""'), 'iframe pratonton sandboxed (tanpa skrip)');
+  assert.ok(html.includes('f.srcdoc = prevs[idx]'), 'srcdoc ditetapkan kepada kad');
+  const card = extractFn(html, 'genCardHtml');
+  assert.ok(card.includes('iframe class=\"gpre\"'), 'kad mengandungi iframe pratonton');
+  assert.ok(card.includes("a._src === 'ai'"), 'badge 🤖 AI berdasarkan _src');
+  assert.ok(html.includes("apps.find((a) => a._src === 'ai')"), 'Auto-terbit utamakan calon AI');
+  new Function(md); // parse sah
+});

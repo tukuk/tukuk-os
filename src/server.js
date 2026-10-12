@@ -1925,7 +1925,7 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const seen = new Set();
   // Tandatangan untuk elak kad pendua (nama + aksen + set game).
   const sigOf = (a) => a.appName + '|' + (a.theme && a.theme.accent) + '|' + a.widgets.filter((w) => builderGen.GAMES.includes(w.type)).map((w) => w.type).join(',');
-  const pushApp = (a) => { if (!a || !Array.isArray(a.widgets) || !a.widgets.length) return; const k = sigOf(a); if (seen.has(k)) return; seen.add(k); apps.push(a); };
+  const pushApp = (a, src) => { if (!a || !Array.isArray(a.widgets) || !a.widgets.length) return; const k = sigOf(a); if (seen.has(k)) return; seen.add(k); a._src = src || 'auto'; apps.push(a); };
   let aiHit = false;
   if (config.brain.enabled) {
     try {
@@ -1941,13 +1941,13 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
         } catch { /* jatuh ke heuristik */ }
       }
       const parsed = builderGen.parseGenJson(text);
-      if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) { pushApp(s); aiHit = true; } }
+      if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) { pushApp(s, 'ai'); aiHit = true; } }
     } catch { /* noop — heuristik di bawah */ }
   }
   // Lengkapkan hingga `want` dengan varian heuristik (palet + game berbeza).
-  if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want)) pushApp(v);
+  if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want)) pushApp(v, 'auto');
   const finalApps = apps.slice(0, want);
-  if (!finalApps.length) finalApps.push(builderGen.heuristicBuild(idea)); // sentiasa ada >=1
+  if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea); fb._src = 'auto'; finalApps.push(fb); } // sentiasa ada >=1
   const source = aiHit ? 'ai' : 'auto';
   store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source, count: finalApps.length });
   res.json({ ok: true, source, apps: finalApps, app: finalApps[0] });
