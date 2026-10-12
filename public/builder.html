@@ -288,7 +288,7 @@ const TEMPLATES = {
     {type:'mole', duration:20},
     {type:'reaction'}
   ]},
-  ttttpl:{ label:'⭕ Tic-Tac-Toe', appName:'Tic-Tac-Toe', theme:{accent:'#30d158'}, widgets:[
+  tttpl:{ label:'⭕ Tic-Tac-Toe', appName:'Tic-Tac-Toe', theme:{accent:'#30d158'}, widgets:[
     {type:'heading', text:'Tic-Tac-Toe', level:2, align:'center'},
     {type:'ttt'}
   ]},
@@ -1534,7 +1534,7 @@ const _renderStage=renderStage; renderStage=function(){ _renderStage(); autoSave
 
 renderStage(); applyTheme(); renderInspector(); pushH();
 // Deep-link dari /store (Arked): /builder?tpl=<templat> → muat templat & terus ke Mod Cuba.
-try{ const tp=new URLSearchParams(location.search).get('tpl'); if(tp && TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } }catch(err){ if(window.console) console.warn('deep-link tpl', err); }
+try{ const tp=new URLSearchParams(location.search).get('tpl'); if(tp){ if(TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } else if(window.console) console.warn('deep-link tpl: kunci tak dikenali:', tp); } }catch(err){ if(window.console) console.warn('deep-link tpl', err); }
 if(resumed==='storage') toast('✓ Projek terakhir dipulihkan dari pelayar ini');
 if(resumed==='link') toast('🔗 Projek daripada pautan kongsi dimuat');
 document.addEventListener('keydown',(e)=>{
