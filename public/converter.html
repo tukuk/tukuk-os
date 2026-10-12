@@ -161,7 +161,10 @@ const CDN = {
   // Worker kelas ffmpeg (dibina `new Worker(new URL('814.ffmpeg.js'))` secara silang-asal
   // → Chrome tolak "Failed to construct 'Worker'"). KENA dijadikan blob same-origin.
   classWorker: 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js',
-  coreBase: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd'
+  // core pakai build ESM: dalam kelas-worker (blob), `importScripts` classic DITOLAK,
+  // tetapi `import()` dinamik merentas-asal LULUS (unpkg hantar ACAO:*). LALUAN
+  // fallback 814.ffmpeg.js ambil ESM ini → `(await import(coreURL)).default` = createFFmpegCore.
+  coreBase: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
 };
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -183,8 +186,13 @@ async function ensureEngine(onStatus) {
     const ff = new FFmpeg();
     onStatus && onStatus('Memuatkan enjin (~30 MB, sekali sahaja)…');
     await ff.load({
-      coreURL: await toBlobURL(CDN.coreBase + '/ffmpeg-core.js', 'text/javascript'),
-      wasmURL: await toBlobURL(CDN.coreBase + '/ffmpeg-core.wasm', 'application/wasm'),
+      // coreURL/wasmURL = ESM https MENTAH (lihat CDN.coreBase). Kelas-worker cuba
+      // `importScripts(coreURL)` → gagal (modul ESM bukan classic script) lalu jatuh ke
+      // fallback `(await import(coreURL)).default` yang LULUS rentas-asal (CORS unpkg).
+      // Jangan diblob-kan: blob UMD → import() tiada `.default` → "failed to import".
+      // Hanya classWorker MESTI blob (konstruksi `new Worker` menolak cross-origin).
+      coreURL: CDN.coreBase + '/ffmpeg-core.js',
+      wasmURL: CDN.coreBase + '/ffmpeg-core.wasm',
       classWorkerURL: await toBlobURL(CDN.classWorker, 'text/javascript')
     });
     _ff = ff; return ff;

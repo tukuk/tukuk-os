@@ -88,6 +88,12 @@ test('converter.html: pemacu ffmpeg.wasm + argpenyahkod + lazy-load + UI', () =>
   // Regresi: worker kelas ffmpeg MESTI dijadikan blob same-origin (classWorkerURL) — jika
   // tidak, Chrome tolak new Worker silang-asal → penukaran gagal pada runtime.
   assert.ok(html.includes('classWorkerURL') && html.includes('814.ffmpeg.js'), "classWorkerURL blob (elak 'Failed to construct Worker')");
+  // Regresi punca 'failed to import ffmpeg-core.js': core/wasm = build ESM MENTAH (bukan blob,
+  // bukan UMD). importScripts ditolak dlm worker-blob → fallback `import(esm).default` yang lulus.
+  assert.ok(/coreBase:\s*'https:\/\/unpkg\.com\/@ffmpeg\/core@[\d.]+\/dist\/esm'/.test(html), 'coreBase = /dist/esm (dynamic-import jalan)');
+  assert.ok(/coreURL:\s*CDN\.coreBase \+ '\/ffmpeg-core\.js'/.test(html), 'coreURL = https mentah (bukan blob)');
+  assert.ok(/wasmURL:\s*CDN\.coreBase \+ '\/ffmpeg-core\.wasm'/.test(html), 'wasmURL = https mentah (bukan blob)');
+  assert.ok(!/coreURL:\s*await toBlobURL/.test(html), 'coreURL TIDAK diblob-kan (punca ESM-import fallback)');
   // Regresi UI: [hidden] mesti menang ke atas .opt{display:flex} (pilihan MP4 tak bocor ke MP3).
   assert.ok(html.includes('[hidden] { display:none !important; }'), 'aturan [hidden] display:none !important');
   // Regresi CDN: fail UMD @ffmpeg/util sebenar = index.js; util.js → 404 (punca ENGINE_FAIL).
