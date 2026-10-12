@@ -412,7 +412,7 @@ test('Jana auto: input/butang + fetch /api/builder/generate + applyGenerated tap
 test('Jana auto: banyak calon (apps[]) + kad Pakai/Terbitkan + Auto-terbit', () => {
   assert.ok(html.includes('id="genAutoPub"'), 'checkbox auto-terbit wujud');
   assert.ok(html.includes('Array.isArray(res.j.apps)'), 'baca apps[] daripada respons');
-  assert.ok(html.includes("dataset.gact === 'pub'"), 'butang Publish memicu pubBtn');
+  assert.ok(html.includes("act === 'pub'") || html.includes("dataset.gact === 'pub'"), 'butang Publish memicu reviewAndPublish');
   const card = extractFn(html, 'genCardHtml');
   assert.ok(card.includes('data-gact="use"') && card.includes('data-gact="pub"'), 'kad ada Pakai & Terbitkan');
   assert.ok(card.includes('GAME_SET'), 'khusus game ditandakan pada kad');
@@ -430,15 +430,52 @@ test('Jana auto: pratonton mini statik (miniDoc) + badge 🤖 AI + Auto-terbit p
   new Function(md); // parse sah
 });
 
-test('Jana auto: hantar style+seed; Medan gaya & 🎲 Rambang', () => {
-  assert.ok(html.includes('id="genStyle"'), 'select gaya wujud');
+test('Jana auto: hantar style+color+lang+seed; Medan gaya/warna/bahasa', () => {
+  assert.ok(html.includes('id="genStyle"'), 'medan gaya wujud');
+  assert.ok(html.includes('id="genColor"'), 'pilih warna wujud');
+  assert.ok(html.includes('id="genLang"'), 'pilih bahasa wujud');
   assert.ok(html.includes('id="genDice"'), 'butang Rambang wujud');
-  assert.ok(html.includes('RANDOM_IDEAS'), 'senarai idea rawak wujud');
   const gen = extractFn(html, 'runGenerate');
-  assert.ok(gen.includes('JSON.stringify({ idea, style, seed: useSeed })'), 'fetch hantar idea+style+seed');
-  assert.ok(gen.includes("$('genStyle')"), 'baca nilai gaya');
-  assert.ok(html.includes("$('genDice').onclick"), 'handler Rambang dipasang');
+  assert.ok(gen.includes('JSON.stringify({ idea, style, seed: useSeed, color, lang })'), 'fetch hantar idea+style+seed+color+lang');
+  assert.ok(gen.includes("$('genColor')") && gen.includes("$('genLang')"), 'baca nilai warna & bahasa');
   new Function(gen);
+});
+
+test('Jana auto: 🎲 Rambang + cadangan kata + tag gaya dari words.txt', () => {
+  assert.ok(html.includes("fetch('/api/builder/dice'"), 'dice panggil endpoint kata rawak');
+  assert.ok(html.includes("fetch('/api/builder/suggest"), 'cadangan panggil endpoint suggest');
+  assert.ok(html.includes('id="genSug"'), 'bekas cadangan wujud');
+  assert.ok(html.includes('id="genTags"'), 'bekas tag pantas wujud');
+  assert.ok(html.includes('STYLE_TAGS'), 'senarai tag gaya wujud');
+  assert.ok(html.includes("suggestFor(e.target.value)"), 'sugestian dipicu semasa taip');
+});
+
+test('Jana auto: 🆚 Bandingkan + 🔍 pratonton penuh', () => {
+  assert.ok(html.includes('function openCompare(apps, idxs)'), 'openCompare wujud');
+  assert.ok(html.includes('function openFull(app)'), 'openFull wujud');
+  const oc = extractFn(html, 'openCompare');
+  assert.ok(oc.includes('liveDoc'), 'bandingkan guna pratonton interaktif');
+  assert.ok(oc.includes('data-cmpuse'), 'butang Pakai dalam mod banding');
+  const card = extractFn(html, 'genCardHtml');
+  assert.ok(card.includes('data-gact="cmp"') && card.includes('data-gact="full"'), 'kad ada butang 🆚 & 🔍');
+  new Function(oc); new Function(card);
+});
+
+test('Jana auto: pratonton interaktif — hanya satu live pada satu masa', () => {
+  const mp = extractFn(html, 'mountPreviews');
+  assert.ok(mp.includes('setLive'), 'fungsi setLive wujud');
+  assert.ok(mp.includes('=== best'), 'hanya kad paling nampak (best) dijadikan live');
+  assert.ok(mp.includes('__live'), 'tanda live untuk elak muat semula');
+  new Function(mp);
+});
+
+test('Jana auto: Auto-terbit slug auto-unik + tawar kemas kini app sedia ada', () => {
+  const rv = extractFn(html, 'reviewAndPublish');
+  assert.ok(rv.includes('myApps()'), 'baca senarai app saya');
+  assert.ok(rv.includes('id="rvUpdate"'), 'dropdown kemas kini wujud');
+  assert.ok(rv.includes('doUpdate(ui)'), 'pilih app sedia ada → doUpdate');
+  assert.ok(/id="rvSlug"[^>]*value=""/.test(rv) || rv.includes('value=\"\"'), 'slug lalai kosong (auto-unik)');
+  new Function(rv);
 });
 
 test('Jana auto: pratonton interaktif lazy (liveDoc + IntersectionObserver + allow-scripts)', () => {

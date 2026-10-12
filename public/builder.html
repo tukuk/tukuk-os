@@ -144,11 +144,18 @@
         <button id="genDice" class="ghost" title="Isi idea rawak" style="padding:6px 12px;border-radius:9px;white-space:nowrap">🎲 Rambang</button>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap">
-      <select id="genStyle" title="Gaya visual" style="padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
-        <option value="">Gaya: auto</option><option value="minimalis">Minimalis</option><option value="cerah">Ceria</option><option value="gelap">Gelap</option><option value="retro">Retro</option>
+    <div style="display:flex;align-items:center;gap:6px;margin:0 0 6px;flex-wrap:wrap">
+      <input id="genStyle" list="genStyleList" placeholder="Gaya (bebas)… cth neon/retro" maxlength="40" style="flex:1;min-width:120px;padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
+      <datalist id="genStyleList"><option value="minimalis"></option><option value="cerah"></option><option value="gelap"></option><option value="neon"></option><option value="retro"></option><option value="pastel"></option></datalist>
+      <input type="color" id="genColor" title="Warna utama" value="#4c8dff" style="width:34px;height:30px;border:1px solid #2a3040;border-radius:8px;background:transparent;padding:2px;cursor:pointer">
+      <select id="genLang" title="Bahasa kandungan" style="padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
+        <option value="">Bahasa: auto</option><option value="Melayu">Melayu</option><option value="English">English</option><option value="Indonesia">Indonesia</option>
       </select>
-      <label title="Terus pakai calon AI (jika ada) &amp; terbitkan selepas semak slug" style="display:flex;align-items:center;gap:5px;font-size:12px;color:#9aa3b2;cursor:pointer"><input type="checkbox" id="genAutoPub"> Auto-terbit</label>
+    </div>
+    <div id="genSug" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap">
+      <span id="genTags" style="display:flex;gap:4px;flex-wrap:wrap"></span>
+      <label title="Pakai calon AI (jika ada) &amp; buka semak slug/nama sebelum terbit" style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:#9aa3b2;cursor:pointer"><input type="checkbox" id="genAutoPub"> Auto-terbit</label>
     </div>
     <h4>Tambah widget</h4>
     <div class="palette" id="palette"></div>
@@ -1181,7 +1188,7 @@ function genCardHtml(a, i){
   const gic = game ? ((TYPES[game.type] && TYPES[game.type].ic) || '🎮') : '—';
   const chips = (a.widgets || []).slice(0, 7).map((w) => (TYPES[w.type] && TYPES[w.type].ic) || '•').join(' ');
   const badge = a._src === 'ai' ? '<span style="background:' + acc + ';color:#041024;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px">🤖 AI</span>' : '';
-  return `<div class="gencard" data-i="${i}" style="border:1px solid #262b36;border-radius:12px;padding:12px;margin:8px 0"><div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;flex:none;background:${bg};border:2px solid ${acc};display:inline-block"></span><div style="flex:1;min-width:0"><b style="color:${acc}">${esc(a.appName || 'Aplikasi')}</b>${badge}<div style="font-size:12px;color:#88909f">${esc(chips)} · 🎮 ${esc(gic)}</div></div></div><iframe class="gpre" data-i="${i}" sandbox="" title="Pratonton" style="width:100%;height:170px;border:1px solid #262b36;border-radius:8px;background:#0b0f1a;margin:10px 0 0"></iframe><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-gact="use" data-i="${i}">📥 Pakai</button><button class="btn primary" data-gact="pub" data-i="${i}">🚀 Pakai &amp; Terbitkan</button></div></div>`;
+  return `<div class="gencard" data-i="${i}" style="border:1px solid #262b36;border-radius:12px;padding:12px;margin:8px 0"><div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;flex:none;background:${bg};border:2px solid ${acc};display:inline-block"></span><div style="flex:1;min-width:0"><b style="color:${acc}">${esc(a.appName || 'Aplikasi')}</b>${badge}<div style="font-size:12px;color:#88909f">${esc(chips)} · 🎮 ${esc(gic)}</div></div></div><iframe class="gpre" data-i="${i}" sandbox="" title="Pratonton" style="width:100%;height:170px;border:1px solid #262b36;border-radius:8px;background:#0b0f1a;margin:10px 0 0"></iframe><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-gact="use" data-i="${i}">📥 Pakai</button><button class="btn primary" data-gact="pub" data-i="${i}">🚀 Pakai &amp; Terbitkan</button><button class="btn ghost" data-gact="cmp" data-i="${i}" title="Tandakan untuk bandingkan">🆚<span class="cmpmk" style="display:none">✓</span></button><button class="btn ghost" data-gact="full" data-i="${i}" title="Buka pratonton penuh">🔍</button></div></div>`;
 }
 function applyGenerated(a, source){
   if(!a || !Array.isArray(a.widgets)) return;
@@ -1195,6 +1202,7 @@ function applyGenerated(a, source){
 // Idea rawak untuk 🎲 Rambang.
 const RANDOM_IDEAS = ['resepi nasi lemak','penjejak kewangan','kad ucapan hari jadi','kuiz sejarah melayu','tugas harian','pembelalah haiwan peliharaan','teka kata','kad perniagaan','kalendar solat','pemasa tomato','panduan melancong','arked retro','kuiz sains','senarai buku','resipi smoothie','penjejak hujan'];
 let genState = { idea:'', apps:[], src:'', seed:0 };
+let genCompare = new Set();
 // Pratonton INTERAKTIF — doc penuh + runtimeJS (game jalan). Hanya dimuat bila kad kelihatan.
 function liveDoc(app){
   const th = Object.assign({}, DEF_THEME, app.theme || {});
@@ -1210,42 +1218,75 @@ function mountPreviews(apps){
   const frames = Array.prototype.slice.call($('modal').querySelectorAll('iframe.gpre'));
   const safeMini = (a) => { try { return miniDoc(a); } catch (e) { return ''; } };
   const safeLive = (a) => { try { return liveDoc(a); } catch (e) { return safeMini(a); } };
-  frames.forEach((f) => { const idx = Number(f.getAttribute('data-i')); f.setAttribute('sandbox', ''); f.srcdoc = safeMini(apps[idx]); });
+  frames.forEach((f) => { const idx = Number(f.getAttribute('data-i')); f.setAttribute('sandbox', ''); f.srcdoc = safeMini(apps[idx]); f.__live = false; });
   disconnectIO();
-  if(!('IntersectionObserver' in window)) return;
+  if(!('IntersectionObserver' in window) || !frames.length) return;
   const root = $('modal').querySelector('.glist') || null;
-  genIO = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      const f = e.target; const idx = Number(f.getAttribute('data-i')); const a = apps[idx]; if(!a) return;
-      if(e.isIntersecting && e.intersectionRatio >= 0.5){ f.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups'); f.srcdoc = safeLive(a); }
-      else if(!e.isIntersecting){ f.setAttribute('sandbox', ''); f.srcdoc = safeMini(a); }
-    });
-  }, { root: root, threshold: [0, 0.5, 1] });
+  const ratio = new Map();
+  const setLive = (f, on) => { const a = apps[Number(f.getAttribute('data-i'))]; if(!a) return; if(!!f.__live === !!on) return; f.__live = !!on; if(on){ f.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups'); f.srcdoc = safeLive(a); } else { f.setAttribute('sandbox', ''); f.srcdoc = safeMini(a); } };
+  // Hanya satu kad 'live' pada satu masa — yang paling nampak (ratio≥0.5, maksimum); yang lain statik.
+  const pick = () => { let best = null, bv = 0.5; frames.forEach((f) => { const r = ratio.get(f) || 0; if(r >= bv){ bv = r; best = f; } }); frames.forEach((f) => setLive(f, f === best)); };
+  genIO = new IntersectionObserver((entries) => { entries.forEach((e) => ratio.set(e.target, e.isIntersecting ? e.intersectionRatio : 0)); pick(); }, { root: root, threshold: [0, 0.5, 1] });
   frames.forEach((f) => genIO.observe(f));
 }
 function renderCandidates(idea, apps, src){
+  genCompare = new Set();
   const cards = apps.map((a, i) => genCardHtml(a, i)).join('');
-  openModal('✨ ' + apps.length + ' cadangan · ' + idea, '<div class="glist" style="max-height:64vh;overflow:auto">' + cards + '</div><button class="btn" id="genRegen" style="margin-top:8px">🔄 Jana semula</button><div class="hint" style="margin-top:8px">Pratonton di atas app sebenar & interaktif (game main bila kelihatan). Pilih satu untuk muat ke kanvas, atau terus terbitkan.</div>');
+  openModal('✨ ' + apps.length + ' cadangan · ' + idea, '<div class="glist" style="max-height:64vh;overflow:auto">' + cards + '</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" id="genRegen">🔄 Jana semula</button><button class="btn" id="genCmpBtn" disabled>🆚 Bandingkan (0)</button></div><div class="hint" style="margin-top:8px">Pratonton interaktif: hanya satu kad live pada satu masa (jimat CPU). 🆚 tanda ≤2 kad untuk sisi-ke-sisi; 🔍 buka penuh.</div>');
   mountPreviews(apps);
   const rg = $('genRegen'); if(rg) rg.onclick = () => runGenerate(idea, genState.seed + 1);
-  $('modal').querySelectorAll('[data-gact]').forEach((btn) => { btn.onclick = () => { const idx = Number(btn.dataset.i); disconnectIO(); applyGenerated(apps[idx], apps[idx]._src || src); closeModal(); if(btn.dataset.gact === 'pub') reviewAndPublish(apps[idx]); }; });
+  const cmpBtn = $('genCmpBtn');
+  const syncCmp = () => { if(cmpBtn){ cmpBtn.textContent = '🆚 Bandingkan (' + genCompare.size + ')'; cmpBtn.disabled = genCompare.size < 2; } };
+  if(cmpBtn) cmpBtn.onclick = () => { if(genCompare.size >= 2) openCompare(apps, Array.from(genCompare).slice(0, 2)); };
+  $('modal').querySelectorAll('[data-gact]').forEach((btn) => {
+    btn.onclick = () => {
+      const idx = Number(btn.dataset.i); const act = btn.dataset.gact;
+      if(act === 'cmp'){ if(genCompare.has(idx)) genCompare.delete(idx); else { if(genCompare.size >= 2) genCompare.delete(genCompare.values().next().value); genCompare.add(idx); } const mk = btn.querySelector('.cmpmk'); if(mk) mk.style.display = genCompare.has(idx) ? 'inline' : 'none'; syncCmp(); return; }
+      if(act === 'full'){ disconnectIO(); openFull(apps[idx]); return; }
+      disconnectIO(); applyGenerated(apps[idx], apps[idx]._src || src); closeModal(); if(act === 'pub') reviewAndPublish(apps[idx]);
+    };
+  });
 }
-// Auto-terbit lebih selamat: sahkan nama & pautan pendek (slug) dahulu, baru terbit.
+// 🆚 Bandingkan dua calon bersebelahan (kedua-duanya interaktif, terhad kepada 2).
+function openCompare(apps, idxs){
+  const two = idxs.map((i) => apps[i]).filter(Boolean); if(two.length < 2){ toast('Pilih 2 calon.'); return; }
+  let d = ['', '']; try { d[0] = liveDoc(two[0]); } catch (e) {} try { d[1] = liveDoc(two[1]); } catch (e) {}
+  const col = (a, i) => '<div style="flex:1;min-width:220px"><div style="font-weight:700;color:' + esc((a.theme && a.theme.accent) || '#4c8dff') + ';margin-bottom:6px">' + esc(a.appName || 'App') + (a._src === 'ai' ? ' 🤖' : '') + '</div><iframe sandbox="allow-scripts allow-forms allow-popups" title="Banding ' + (i + 1) + '" style="width:100%;height:52vh;border:1px solid #262b36;border-radius:10px;background:#0b0f1a"></iframe><div style="margin-top:8px"><button class="btn" data-cmpuse="' + i + '">📥 Pakai</button></div></div>';
+  disconnectIO();
+  openModal('🆚 Bandingkan', '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">' + col(two[0], 0) + col(two[1], 1) + '</div>');
+  const fs = $('modal').querySelectorAll('iframe'); if(fs[0]) fs[0].srcdoc = d[0]; if(fs[1]) fs[1].srcdoc = d[1];
+  $('modal').querySelectorAll('[data-cmpuse]').forEach((b) => { b.onclick = () => { const a = two[Number(b.dataset.cmpuse)]; closeModal(); applyGenerated(a, a._src || genState.src); }; });
+}
+// 🔍 Pratonton penuh — buka doc interaktif dalam tab baharu (asal utama, bukan sandboxopaque).
+function openFull(app){
+  if(!app) return; let html = ''; try { html = liveDoc(app); } catch (e) { toast('Gagal buka penuh'); return; }
+  const w = window.open('', '_blank'); if(!w){ toast('Pelayar menyekat popup — benarkan popup.'); return; }
+  try { w.document.open(); w.document.write(html); w.document.close(); } catch (e) { toast('Gagal tulis pratonton'); }
+}
+// Auto-terbit lebih selamat: sahkan nama & slug (auto-unik jika kosong) + tawar kemas kini app sedia ada.
 function reviewAndPublish(app){
   const suggest = safe(app && app.appName);
   const nm = esc(($('appName') && $('appName').value) || (app && app.appName) || 'Aplikasi');
-  openModal('🚀 Sah & terbitkan', '<p style="margin:0 0 8px">Semak nama & pautan pendek sebelum terbit.</p><label style="display:block;font-size:12px;color:#9aa3b2;margin:6px 0 4px">Nama aplikasi</label><input id="rvName" maxlength="40" value="' + nm + '" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Slug (pilihan) — <code>/a/' + esc(suggest) + '</code></label><input id="rvSlug" maxlength="40" placeholder="' + esc(suggest) + '" value="' + esc(suggest) + '" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="rvCancel">Batal</button><button class="btn primary" id="rvGo">🚀 Terbitkan</button></div>');
+  const mine = myApps();
+  const upd = mine.length ? '<label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Kemas kini app sedia ada (pilihan)</label><select id="rvUpdate" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><option value="">— Terbit sebagai app BAHARU —</option>' + mine.map((m, i) => '<option value="' + i + '">' + esc(m.title || m.slug) + ' · /a/' + esc(m.slug) + '</option>').join('') + '</select>' : '';
+  openModal('🚀 Sah & terbitkan', '<p style="margin:0 0 8px">Semak nama & pautan. <b>Biarkan slug kosong</b> untuk auto-unik.</p><label style="display:block;font-size:12px;color:#9aa3b2;margin:6px 0 4px">Nama aplikasi</label><input id="rvName" maxlength="40" value="' + nm + '" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Slug (pilihan) — cadangan <code>/a/' + esc(suggest) + '</code></label><input id="rvSlug" maxlength="40" placeholder="' + esc(suggest) + '" value="" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">' + upd + '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="rvCancel">Batal</button><button class="btn primary" id="rvGo">🚀 Terbitkan</button></div>');
   $('rvName').oninput = () => { $('appName').value = $('rvName').value; renderStage(); };
   $('rvCancel').onclick = () => closeModal();
-  $('rvGo').onclick = () => { $('pubSlug').value = ($('rvSlug').value || '').trim().toLowerCase(); closeModal(); $('pubBtn').click(); };
+  $('rvGo').onclick = () => {
+    const sel = $('rvUpdate'); const ui = (sel && sel.value !== '') ? mine[Number(sel.value)] : null;
+    if(ui){ closeModal(); doUpdate(ui); return; }
+    $('pubSlug').value = ($('rvSlug').value || '').trim().toLowerCase(); closeModal(); $('pubBtn').click();
+  };
 }
 function runGenerate(idea, seed){
   idea = String(idea || '').trim();
   if(!idea){ toast('Taip satu idea/kata dahulu.'); $('genIdea').focus(); return; }
   const style = ($('genStyle') && $('genStyle').value) || '';
+  const color = ($('genColor') && $('genColor').value) || '';
+  const lang = ($('genLang') && $('genLang').value) || '';
   const useSeed = Math.max(0, Math.floor(Number(seed) || 0));
   const b = $('genBtn'); const old = b.textContent; b.disabled = true; b.textContent = '⏳ Menjana…';
-  fetch('/api/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idea, style, seed: useSeed }) })
+  fetch('/api/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idea, style, seed: useSeed, color, lang }) })
     .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: false, j: { error: 'Respons bukan JSON' } })))
     .then((res) => {
       if(!res.ok || !res.j) throw new Error((res.j && res.j.error) || 'tiada hasil');
@@ -1260,8 +1301,28 @@ function runGenerate(idea, seed){
     .then(() => { b.disabled = false; b.textContent = old; });
 }
 $('genBtn').onclick = () => runGenerate($('genIdea').value, 0);
-if($('genDice')) $('genDice').onclick = () => { $('genIdea').value = RANDOM_IDEAS[Math.floor(Math.random() * RANDOM_IDEAS.length)]; $('genIdea').focus(); };
+// 🎲 Rambang: baca kata rawak daripada words.txt (fallback ke RANDOM_IDEAS jika gagal).
+const STYLE_TAGS = ['minimalis', 'cerah', 'gelap', 'neon', 'retro', 'pastel'];
+function fillDice(w){ $('genIdea').value = (w && (w.word || w.idea)) || RANDOM_IDEAS[Math.floor(Math.random() * RANDOM_IDEAS.length)]; $('genIdea').focus(); suggestFor($('genIdea').value); }
+if($('genDice')) $('genDice').onclick = () => { fetch('/api/builder/dice').then((r) => r.json()).then((j) => fillDice(j && j.word ? j : null)).catch(() => fillDice(null)); };
 $('genIdea').addEventListener('keydown', (e) => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $('genBtn').click(); } });
+// Tag pantas gaya (tetapkan #genStyle) + padanan warna/cerah-gelap.
+if($('genTags')) $('genTags').innerHTML = STYLE_TAGS.map((t) => '<button class="btn ghost" data-tag="' + esc(t) + '" style="padding:3px 8px;font-size:12px;border-radius:7px">' + esc(t) + '</button>').join('');
+if($('genTags')) $('genTags').addEventListener('click', (e) => { const b = e.target.closest('[data-tag]'); if(!b) return; $('genStyle').value = ($('genStyle').value === b.dataset.tag) ? '' : b.dataset.tag; });
+// Cadangan kata kunci berdasarkan idea (debounced) → klik untuk isi idea.
+let _sugT = null;
+function suggestFor(q){
+  const box = $('genSug'); if(!box) return; q = String(q || '').trim();
+  if(q.length < 2){ box.innerHTML = ''; return; }
+  clearTimeout(_sugT); _sugT = setTimeout(() => {
+    fetch('/api/builder/suggest?idea=' + encodeURIComponent(q)).then((r) => r.json()).then((j) => {
+      const items = (j && Array.isArray(j.items)) ? j.items : [];
+      box.innerHTML = items.map((it) => '<button class="btn ghost" data-sug="' + esc(it.word) + '" title="' + esc(it.tagline || '') + '" style="padding:3px 8px;font-size:12px;border-radius:7px">' + esc(it.emoji || '💡') + ' ' + esc(it.word) + '</button>').join('');
+    }).catch(() => { box.innerHTML = ''; });
+  }, 350);
+}
+if($('genIdea')) $('genIdea').addEventListener('input', (e) => suggestFor(e.target.value));
+if($('genSug')) $('genSug').addEventListener('click', (e) => { const b = e.target.closest('[data-sug]'); if(!b) return; $('genIdea').value = b.dataset.sug; $('genSug').innerHTML = ''; $('genIdea').focus(); });
 
 document.querySelectorAll('.devs [data-dev]').forEach((b)=>b.onclick=()=>{ device=b.dataset.dev; document.querySelectorAll('.devs [data-dev]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderStage(); });
 

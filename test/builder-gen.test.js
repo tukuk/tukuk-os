@@ -116,3 +116,31 @@ test('heuristicVariants offset: Jana semula beri calon berbeza (salt beralih)', 
   assert.notEqual(accA, accB, 'offset mengubah set palet');
   assert.equal(next.length, 3);
 });
+
+test('opts.color: warna utama memaksa aksen + bg ikut luminans; hex jahat diabaikan', () => {
+  const bright = g.buildOne('kopi', 0, '', { color: '#ffee66' }); // terang → bg gelap
+  assert.equal(bright.theme.accent, '#ffee66');
+  assert.equal(bright.theme.dark, true, 'aksen terang → latar gelap');
+  const dark = g.buildOne('kopi', 0, '', { color: '#1133aa' }); // gelap → bg cerah
+  assert.equal(dark.theme.accent, '#1133aa');
+  assert.equal(dark.theme.dark, false, 'aksen gelap → latar cerah');
+  const bad = g.buildOne('kopi', 0, '', { color: 'red' }); // bukan hex → abai, ikut palet asal
+  assert.notEqual(bad.theme.accent, 'red');
+  assert.deepEqual(bad, g.buildOne('kopi', 0, ''));
+});
+
+test('opts.lang: english → teks Inggeris; lain → Melayu', () => {
+  const en = g.buildOne('kopi', 0, '', { lang: 'English' });
+  assert.match(en.widgets.find((w) => w.type === 'text').text, /All about/);
+  const id = g.buildOne('kopi', 0, '', { lang: 'Indonesia' });
+  assert.match(id.widgets.find((w) => w.type === 'text').text, /Semua tentang/, 'bukan EN → Melayu');
+});
+
+test('matchWords: saring berkaitan dua hala; kosong → []; cap n', () => {
+  const list = [{ word: 'kopi' }, { word: 'roket' }, { word: 'kucing' }, { word: 'awan' }];
+  assert.deepEqual(g.matchWords(list, 'kopi', 6).map((x) => x.word), ['kopi']);
+  const ko = g.matchWords(list, 'ko', 6).map((x) => x.word);
+  assert.ok(ko.includes('kopi') && !ko.includes('roket'), 'hanya yang mengandungi "ko"');
+  assert.deepEqual(g.matchWords(list, '', 6), [], 'kuari kosong → []');
+  assert.equal(g.matchWords(list, 'a', 1).length <= 1, true, 'cap dipatuhi');
+});

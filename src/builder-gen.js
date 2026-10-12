@@ -124,37 +124,72 @@ function poolFor(style) {
   if (/cerah|light|putih|white|minimalis|minimal|clean|pastel/.test(s)) return LIGHT.length ? LIGHT : PALETTES;
   return PALETTES;
 }
-function buildOne(idea, salt, style) {
+// Warna hex → RGB + luminans (putuskan bg gelap/cerah ikut 'warna utama' pilihan).
+function hexRgb(h) {
+  let x = String(h || '').trim().replace('#', '');
+  if (x.length === 3) x = x.split('').map((c) => c + c).join('');
+  if (x.length !== 6 || /[^0-9a-fA-F]/.test(x)) return null;
+  const n = parseInt(x, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function lum(h) {
+  const rgb = hexRgb(h); if (!rgb) return null;
+  const c = rgb.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+function isHexColor(v) { return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(v || '').trim()); }
+// Padanan kata berkaitan untuk cadangan idea (MURNI — senarai masuk sebagai arg).
+function matchWords(list, query, n) {
+  const q = String(query || '').toLowerCase().trim(); if (!q) return [];
+  const cap = Math.max(1, Math.min(12, Number(n) || 6));
+  const toks = q.split(/\s+/).filter((t) => t.length >= 3);
+  const out = [];
+  for (const it of (Array.isArray(list) ? list : [])) {
+    const w = String((it && it.word) || '').toLowerCase(); if (!w) continue;
+    if (q.includes(w) || w.includes(q) || toks.some((t) => w.includes(t))) out.push(it);
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+function buildOne(idea, salt, style, opts) {
   const s = salt || 0;
+  const o = opts && typeof opts === 'object' ? opts : {};
   const clean = (String(idea || '').trim().replace(/\s+/g, ' ').slice(0, 40)) || 'Aplikasi';
   const key = clean.toLowerCase();
   const name = clean.charAt(0).toUpperCase() + clean.slice(1);
   const pool = poolFor(style);
-  const pal = pool[(h32(key) + s) % pool.length];
+  const pal = Object.assign({}, pool[(h32(key) + s) % pool.length]);
+  // 'warna utama' eksplisit → paksa aksen; bg diputuskan ikut luminans aksen.
+  if (isHexColor(o.color)) {
+    pal.accent = String(o.color).trim();
+    const L = lum(pal.accent);
+    if (L != null && L > 0.5) { pal.bg = '#0b0f1a'; pal.fg = '#eaf0ff'; pal.dark = true; }
+    else if (L != null) { pal.bg = '#ffffff'; pal.fg = '#16181d'; pal.dark = false; }
+  }
   const baseGame = pickGame(key);
   const game = GAMES[(GAMES.indexOf(baseGame) + s + GAMES.length) % GAMES.length]; // salt 0 → padan kata kunci
+  const en = /english|inggeris|\ben\b/i.test(String(o.lang || ''));
   const widgets = [
     { type: 'heading', text: name, level: 2, align: 'center' },
-    { type: 'text', text: `Semua tentang ${clean} — pantas, ringkas & menyeronokkan.`, align: 'center' },
+    { type: 'text', text: en ? `All about ${clean} — fast, simple & fun.` : `Semua tentang ${clean} — pantas, ringkas & menyeronokkan.`, align: 'center' },
     clipWidget(game, {}),
-    { type: 'list', items: [`Contoh ${name}: satu`, 'Contoh: dua', 'Contoh: tiga'], allowAdd: true },
-    { type: 'counter', label: `Kira ${name}`, value: 0, step: 1 },
-    { type: 'button', label: `Kongsi ${name}`, href: 'https://tukuk.org', variant: 'primary', fullWidth: false }
+    { type: 'list', items: en ? [`Example ${name}: one`, 'Example: two', 'Example: three'] : [`Contoh ${name}: satu`, 'Contoh: dua', 'Contoh: tiga'], allowAdd: true },
+    { type: 'counter', label: en ? `Count ${name}` : `Kira ${name}`, value: 0, step: 1 },
+    { type: 'button', label: en ? `Share ${name}` : `Kongsi ${name}`, href: 'https://tukuk.org', variant: 'primary', fullWidth: false }
   ];
   return sanitizeApp({
     appName: name,
-    theme: { accent: pal.accent, bg: pal.bg, fg: pal.fg, dark: pal.dark, sub: `Dibina auto · ${name}`, desc: `Aplikasi ${clean} — dibina automatik dengan Tukuk Studio.` },
+    theme: { accent: pal.accent, bg: pal.bg, fg: pal.fg, dark: pal.dark, sub: (en ? 'Built auto · ' : 'Dibina auto · ') + name, desc: en ? `${clean} app — auto-built with Tukuk Studio.` : `Aplikasi ${clean} — dibina automatik dengan Tukuk Studio.` },
     widgets
   });
 }
-function heuristicBuild(idea, style) { return buildOne(idea, 0, style); }
+function heuristicBuild(idea, style, opts) { return buildOne(idea, 0, style, opts); }
 
 // N calon heuristik berbeza (palet + game berputar). `offset` menggeser salt → "Jana semula" berbeza.
-function heuristicVariants(idea, n, style, offset) {
+function heuristicVariants(idea, n, style, offset, opts) {
   const count = Math.max(1, Math.min(6, Number(n) || 1));
   const base = Math.max(0, Math.floor(Number(offset) || 0));
   const out = [];
-  for (let i = 0; i < count; i++) out.push(buildOne(idea, i + base, style));
+  for (let i = 0; i < count; i++) out.push(buildOne(idea, i + base, style, opts));
   return out;
 }
 
@@ -167,4 +202,4 @@ const SYSTEM_PROMPT = [
   '4-8 widget sahaja. Semua teks singkat. Tiada HTML/skrip mentah dalam nilai.'
 ].join(' ');
 
-module.exports = { KNOWN, GAMES, SYSTEM_PROMPT, parseGenJson, sanitizeApp, heuristicBuild, heuristicVariants, buildOne, pickGame, clipWidget };
+module.exports = { KNOWN, GAMES, SYSTEM_PROMPT, parseGenJson, sanitizeApp, heuristicBuild, heuristicVariants, buildOne, pickGame, clipWidget, matchWords, isHexColor, lum };

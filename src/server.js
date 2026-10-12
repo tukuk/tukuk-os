@@ -1922,7 +1922,11 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   if (!idea) return res.status(400).json({ error: 'Taip satu idea atau kata dahulu.' });
   const style = truncate(String((req.body && req.body.style) || '').replace(/\s+/g, ' ').trim(), 40);
   const seed = Math.max(0, Math.floor(Number(req.body && req.body.seed) || 0));
-  const brief = `Idea aplikasi: ${idea}${style ? ', gaya ' + style : ''}`;
+  const color = builderGen.isHexColor(req.body && req.body.color) ? String(req.body.color).trim() : '';
+  const lang = truncate(String((req.body && req.body.lang) || '').replace(/\s+/g, ' ').trim(), 24);
+  const opts = { color, lang };
+  const brief = `Idea aplikasi: ${idea}${style ? ', gaya ' + style : ''}${color ? ', warna utama ' + color : ''}`;
+  const sysPrompt = builderGen.SYSTEM_PROMPT + (lang ? ` Bahasa kandungan: ${lang}.` : '');
   const want = Math.min(3, Math.max(1, Number(req.body && req.body.count) || 3));
   const apps = [];
   const seen = new Set();
@@ -1934,12 +1938,12 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
     try {
       let text = '';
       try {
-        const r = await brain.generateCloudRotation(brief, { system: builderGen.SYSTEM_PROMPT, temperature: 0.85, maxTokens: 900 });
+        const r = await brain.generateCloudRotation(brief, { system: sysPrompt, temperature: 0.85, maxTokens: 900 });
         text = (r && r.response) || '';
       } catch { /* cuba ollama */ }
       if (!text) {
         try {
-          const r = await brain.generate(brief, { system: builderGen.SYSTEM_PROMPT, numPredict: 900, temperature: 0.85 });
+          const r = await brain.generate(brief, { system: sysPrompt, numPredict: 900, temperature: 0.85 });
           text = (r && r.response) || '';
         } catch { /* jatuh ke heuristik */ }
       }
@@ -1948,12 +1952,36 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
     } catch { /* noop — heuristik di bawah */ }
   }
   // Lengkapkan hingga `want` dengan varian heuristik (palet + game berbeza).
-  if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want, style, seed)) pushApp(v, 'auto');
+  if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want, style, seed, opts)) pushApp(v, 'auto');
   const finalApps = apps.slice(0, want);
-  if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea, style); fb._src = 'auto'; finalApps.push(fb); } // sentiasa ada >=1
+  if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea, style, opts); fb._src = 'auto'; finalApps.push(fb); } // sentiasa ada >=1
   const source = aiHit ? 'ai' : 'auto';
   store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source, count: finalApps.length });
   res.json({ ok: true, source, apps: finalApps, app: finalApps[0] });
+});
+
+// Senarai kata satu-kata untuk 🎲 Rambang + cadangan idea (/builder). Dimuat sekali, ringan.
+const WORDS_PATH = path.join(__dirname, '..', 'scripts', 'satu-kata', 'words.txt');
+function loadBuilderWords() {
+  try {
+    return fs.readFileSync(WORDS_PATH, 'utf8').split(/\r?\n/).map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#'))
+      .map((l) => { const p = l.split('|').map((x) => (x || '').trim()); return { word: p[0], emoji: p[1] || '✨', tagline: p[2] || '' }; })
+      .filter((w) => w.word);
+  } catch { return []; }
+}
+const BUILDER_WORDS = loadBuilderWords();
+
+app.get('/api/builder/dice', (req, res) => {
+  if (!BUILDER_WORDS.length) return res.json({ ok: true, word: null });
+  const w = BUILDER_WORDS[Math.floor(Math.random() * BUILDER_WORDS.length)];
+  res.json({ ok: true, word: w.word, emoji: w.emoji, tagline: w.tagline });
+});
+
+app.get('/api/builder/suggest', (req, res) => {
+  const idea = truncate(String(req.query.idea || '').trim(), 60);
+  const items = builderGen.matchWords(BUILDER_WORDS, idea, 6).map((w) => ({ word: w.word, emoji: w.emoji, tagline: truncate(w.tagline, 80) }));
+  res.json({ ok: true, items });
 });
 
 // Indeks /a — senarai aplikasi yang diterbitkan komuniti (pautan sahaja, nama disanitasi).
