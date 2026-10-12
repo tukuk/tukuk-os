@@ -380,6 +380,16 @@ test('gRunner: fungsi wujud + graviti/lompat/skor tertinggi (parse sah)', () => 
   new Function(code);
 });
 
+test('Papan pendahulu: helper submit/top/draw + dipanggil untuk br/fps/runner', () => {
+  const code = extractFn(html, 'initGames');
+  assert.ok(code.includes('function lbSubmit'), 'helper hantar skor');
+  assert.ok(code.includes('function lbTop'), 'helper baca papan');
+  assert.ok(code.includes('function drawLb'), 'helper gamabar papan');
+  for (const g of ['br', 'fps', 'runner']) assert.ok(code.includes("lbSubmit('" + g + "'"), 'submit dipanggil untuk ' + g);
+  assert.ok(code.includes('/api/scores'), 'baca daripada /api/scores');
+  new Function(code);
+});
+
 test('Templat brtpl + fpstpl + runtpl ada widget br/fps/runner sah', () => {
   const tplSrc = extractObj(html, 'const TEMPLATES = {');
   const T = new Function('TYPES','DEF_THEME', tplSrc + '; return TEMPLATES;')(TYPES,{});

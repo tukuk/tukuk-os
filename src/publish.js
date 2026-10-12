@@ -53,6 +53,16 @@ const PUBLISH_CSP = [
 // Had saiz dokumen terbitan (bayt). Body JSON pelayan pagari ~2MB; ini pagari HTML.
 const PUBLISH_MAX_BYTES = 1.5 * 1024 * 1024;
 
+// CSP terbitan + `connect-src` DIPASANGKAN kepada host yang menyajikan halaman sahaja —
+// membenarkan app dalam sandbox membaca papan pendahulu (/api/scores) & menghantar skor
+// daripada origin yang sama. opaque-origin (tiada allow-same-origin) = cookie TIDAK dihantar,
+// jadi hanya endpoint awam boleh diakses; tiada laluan keluar ke host luar (eksfiltrasi kekal tertutup).
+function publishCspFor(host, proto) {
+  const scheme = (proto === 'https') ? 'https' : 'http';
+  const extra = host ? ` connect-src ${scheme}://${host};` : '';
+  return PUBLISH_CSP + extra;
+}
+
 // Semakan kelayakan awal HTML: mesti dokumen HTML penuh & dalam had saiz.
 function looksLikeHtml(html) {
   return /^\s*<!doctype\s+html/i.test(html) || /^\s*<html[\s>]/i.test(html);
@@ -71,4 +81,4 @@ function extractTitle(html, fallback = 'Aplikasi') {
   return (t || fallback).slice(0, 80);
 }
 
-module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml, isEditKey, extractTitle };
+module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml, isEditKey, extractTitle, publishCspFor };

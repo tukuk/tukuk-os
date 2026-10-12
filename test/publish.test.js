@@ -59,3 +59,12 @@ test('extractTitle: baca <title>, sanitasi ruang, fallback & had 80', () => {
   assert.equal(publish.extractTitle('<html>tiada tajuk</html>', 'Aplikasi'), 'Aplikasi', 'fallback bila tiada <title>');
   assert.equal(publish.extractTitle('<title>' + 'x'.repeat(120) + '</title>').length, 80, 'had 80 aksara');
 });
+
+test('publishCspFor: tambah connect-src host-sendiri, kekal opaque-origin (tiada allow-same-origin)', () => {
+  const csp = publish.publishCspFor('tukuk.org', 'https');
+  assert.match(csp, /connect-src https:\/\/tukuk\.org/, 'connect-src dipasangkan ke host https');
+  assert.ok(!csp.includes('allow-same-origin'), 'mesti kekal opaque-origin');
+  const http = publish.publishCspFor('192.168.8.100:3000', 'http');
+  assert.match(http, /connect-src http:\/\/192\.168\.8\.100:3000/, 'skema http + port dikekalkan');
+  assert.equal(publish.publishCspFor('', 'https'), publish.PUBLISH_CSP, 'tiada host → CSP asal tanpa connect-src');
+});

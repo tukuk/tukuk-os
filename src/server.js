@@ -1874,6 +1874,41 @@ app.get('/api/published', (req, res) => {
   res.json({ ok: true, count: items.length, items });
 });
 
+// ── Papan pendahulu komuniti (skor game terbitan). Data AWAM, tanpa pengesahan, had-kadar.
+//    Games dalam sandbox hantar skor (GET /api/score) & baca (GET /api/scores) melalui
+//    connect-src host-sendiri (lihat publishCspFor). opaque-origin = tiada cookie dihantar.
+const LB_PATH = path.join(path.dirname(config.store.path), 'leaderboard.json');
+const scoreLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 60 * 60 * 1000, max: 200, keyPrefix: 'score:' })
+  : (req, res, next) => next();
+function readLB() { try { return JSON.parse(fs.readFileSync(LB_PATH, 'utf8')) || {}; } catch { return {}; } }
+function writeLB(o) { try { fs.writeFileSync(LB_PATH, JSON.stringify(o)); } catch { /* best-effort */ } }
+function lbKey(g) { const s = String(g || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24); return s || 'br'; }
+function lbName(n) { return truncate(String(n || '').replace(/[\r\n\t]/g, ' ').trim(), 20) || 'Anon'; }
+
+app.get('/api/score', scoreLimiter, (req, res) => {
+  try {
+    const g = lbKey(req.query.g); const n = lbName(req.query.n);
+    let s = Math.round(Number(req.query.s)); if (!isFinite(s) || s < 0) s = 0; if (s > 1e9) s = 1e9;
+    const db = readLB(); const arr = Array.isArray(db[g]) ? db[g] : [];
+    const entry = { n, s, t: Date.now() }; arr.push(entry);
+    arr.sort((a, b) => b.s - a.s); db[g] = arr.slice(0, 100); writeLB(db);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal simpan skor', details: safeError(error) });
+  }
+});
+
+app.get('/api/scores', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  const g = lbKey(req.query.g);
+  const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 5));
+  const db = readLB();
+  const items = (Array.isArray(db[g]) ? db[g] : []).slice(0, limit).map((x) => ({ n: truncate(String(x.n), 20), s: Number(x.s) || 0 }));
+  res.json({ ok: true, game: g, items });
+});
+
 // Indeks /a — senarai aplikasi yang diterbitkan komuniti (pautan sahaja, nama disanitasi).
 app.get('/a', (req, res) => {
   const items = listPublished();
@@ -1891,7 +1926,7 @@ app.get('/a/:slug', (req, res) => {
   let html;
   try { html = fs.readFileSync(file, 'utf8'); }
   catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>Tiada — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>Aplikasi <code>/${escapeHtml(slug)}</code> tiada atau telah dibuang.</p><p><a href="/a">← Semua aplikasi</a> · <a href="/builder">Bina sendiri</a></p></body></html>`); }
-  res.setHeader('Content-Security-Policy', publish.PUBLISH_CSP);
+  res.setHeader('Content-Security-Policy', publish.publishCspFor(req.get('host'), (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : 'http'));
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
