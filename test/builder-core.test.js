@@ -140,9 +140,9 @@ test('runtimeJS: parse bersih & urus kaunter/list-del/faq/quiz/submit', () => {
   assert.ok(js.includes("addEventListener('submit'"));
 });
 
-test('TYPES: 20 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
+test('TYPES: 22 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
   const keys = Object.keys(TYPES);
-  assert.equal(keys.length, 20);
+  assert.equal(keys.length, 22);
   for (const t of keys) assert.equal(TYPES[t].make().type, t);
 });
 
@@ -246,6 +246,10 @@ test('widgetMarkup: shell permainan benar (data-game + config)', () => {
   assert.ok(mem.includes('data-game="memory"') && mem.includes('data-pairs="8"'));
   assert.ok(markup({ type:'guess', max:50 }).includes('data-max="50"'));
   assert.ok(markup({ type:'mole', duration:15 }).includes('data-duration="15"'));
+  const br = markup({ type:'br', enemies:8, zoneSpeed:12, mapSize:900 });
+  assert.ok(br.includes('data-game="br"') && br.includes('data-enemies="8"') && br.includes('data-zonespeed="12"') && br.includes('data-mapsize="900"'), 'br shell attrs');
+  const fps = markup({ type:'fps', enemies:5, zoneSpeed:30 });
+  assert.ok(fps.includes('data-game="fps"') && fps.includes('data-enemies="5"') && fps.includes('data-zonespeed="30"'), 'fps shell attrs');
 });
 
 test('gameBox: placeholder Mod Cuba + data-acc tema', () => {
@@ -254,10 +258,10 @@ test('gameBox: placeholder Mod Cuba + data-acc tema', () => {
   assert.ok(out.includes('data-acc="' + THEME.accent + '"'), 'accent tema tertanam');
 });
 
-test('initGames: parse bersih + 6 cabang game', () => {
+test('initGames: parse bersih + 8 cabang game', () => {
   const code = extractFn(html, 'initGames');
   new Function(code); // mesti JS sah
-  for (const g of ['gTTT','gMemory','gMole','gRPS','gReaction','gGuess'])
+  for (const g of ['gTTT','gMemory','gMole','gRPS','gReaction','gGuess','gBR','gFPS'])
     assert.ok(code.includes(g), 'cabang game hilang: ' + g);
 });
 
@@ -341,4 +345,30 @@ test('Terbitan: butang 🚀 + POST /api/publish + hormati builderAssemble', () =
   assert.ok(html.includes('id="pubBtn"'), 'butang Terbitkan wujud');
   assert.ok(html.includes("fetch('/api/publish'"), 'handler POST ke /api/publish');
   assert.ok(html.includes('window.builderAssemble=assemble'), 'paparan Kod dedahkan assemble untuk terbitan');
+});
+
+// ── Game baru: Battle Royale + FPS Arena ──
+test('gBR: fungsi wujud + raycast/canvas/DOM sah (parse sah sahaja)', () => {
+  const code = extractFn(html, 'initGames');
+  assert.ok(code.includes('function gBR'), 'gBR dalam initGames');
+  assert.ok(code.includes("gBR(box,acc)"), 'dispatch gBR ada');
+  assert.ok(code.includes("cvs.addEventListener('click'"), 'gBR guna canvas click');
+  new Function(code); // parse sah (tiada syntax error)
+});
+
+test('gFPS: fungsi wujud + castRay/wallD/DOM sah (parse sah sahaja)', () => {
+  const code = extractFn(html, 'initGames');
+  assert.ok(code.includes('function gFPS'), 'gFPS dalam initGames');
+  assert.ok(code.includes('function castRay'), 'castRay helper dalam gFPS');
+  assert.ok(code.includes('wallD'), 'wallD untuk oklusi sprite');
+  new Function(code);
+});
+
+test('Templat brtpl + fpstpl ada widget br/fps sah', () => {
+  const tplSrc = extractObj(html, 'const TEMPLATES = {');
+  const T = new Function('TYPES','DEF_THEME', tplSrc + '; return TEMPLATES;')(TYPES,{});
+  assert.ok(T.brtpl, 'brtpl wujud');
+  assert.ok(T.brtpl.widgets.some((w)=>w.type==='br'), 'brtpl ada widget br');
+  assert.ok(T.fpstpl, 'fpstpl wujud');
+  assert.ok(T.fpstpl.widgets.some((w)=>w.type==='fps'), 'fpstpl ada widget fps');
 });
