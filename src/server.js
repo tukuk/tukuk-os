@@ -27,6 +27,7 @@ const { safeError, truncate, escapeHtml } = require('./util');
 const { assertPublicUrl } = require('./util');
 const auth = require('./auth');
 const blogRedirects = require('./blog-redirects');
+const publish = require('./publish');
 const { exec } = require('child_process');
 
 const index = client.index(config.indexName);
@@ -1736,6 +1737,82 @@ app.post('/api/js-error', jsErrorLimiter, (req, res) => {
 app.get('/api/js-error', requireApiKey, (req, res) => {
   const list = loadJsErrors();
   res.json({ total: list.length, errors: list.slice(0, Math.min(Number(req.query.limit) || 100, 300)) });
+});
+
+// ── Terbitan /builder: satu-klik ke pautan awam (tukuk.org/a/<slug>) ─────────
+// HTML berdiri sendiri yang dijana pembina disimpan pada cakera & dihidangkan di
+// /a/<slug> DALAM SANDBOX opaque-origin (lihat src/publish.js) — skrip app berjalan
+// tapi tak boleh sentuh cookie/fetch/storage domain utama. Anti-XSS/phishing rentas-asal.
+const PUBLISH_DIR = path.join(path.dirname(config.store.path), 'published');
+const publishLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: 'publish:' })
+  : (req, res, next) => next();
+
+function uniqueSlug(pref) {
+  let s = pref;
+  for (let i = 0; i < 200; i++) {
+    if (publish.isSlug(s) && !fs.existsSync(path.join(PUBLISH_DIR, `${s}.html`))) return s;
+    s = `${pref}-${Math.random().toString(36).slice(2, 6)}`.replace(/-/g, '-').slice(0, 40);
+  }
+  return null;
+}
+
+app.post('/api/publish', publishLimiter, (req, res) => {
+  const body = req.body || {};
+  const html = String(body.html || '');
+  if (!html) return res.status(400).json({ error: 'Tiada kandungan untuk diterbitkan' });
+  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'Aplikasi terlalu besar (maks ~1.5MB)' });
+  if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Bukan dokumen HTML yang sah' });
+  try {
+    fs.mkdirSync(PUBLISH_DIR, { recursive: true });
+    const slug = uniqueSlug(publish.slugify(body.name || body.slug || 'app'));
+    if (!slug) return res.status(500).json({ error: 'Gagal menjana pautan unik' });
+    const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
+    fs.writeFileSync(tmp, html, 'utf8');
+    fs.renameSync(tmp, path.join(PUBLISH_DIR, `${slug}.html`));
+    const url = `${publish.publicOrigin(req)}/a/${slug}`;
+    store.event('publish', `Aplikasi diterbitkan: /a/${slug}`, { name: truncate(String(body.name || ''), 120), bytes: html.length });
+    notifyIndexNow(url); // pautan awam → indeks (opt-in)
+    res.json({ ok: true, slug, url });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal menerbitkan', details: safeError(error) });
+  }
+});
+
+// Senarai app awam (slug terbaru) — ringan, untuk indeks /a.
+function listPublished(limit = 200) {
+  try {
+    return fs.readdirSync(PUBLISH_DIR)
+      .filter((f) => f.endsWith('.html'))
+      .map((f) => { const s = f.slice(0, -5); let t = 0; try { t = fs.statSync(path.join(PUBLISH_DIR, f)).mtimeMs; } catch {} return { slug: s, t }; })
+      .sort((a, b) => b.t - a.t)
+      .slice(0, limit);
+  } catch { return []; }
+}
+
+// Indeks /a — senarai aplikasi yang diterbitkan komuniti (pautan sahaja, nama disanitasi).
+app.get('/a', (req, res) => {
+  const items = listPublished();
+  const rows = items.length
+    ? items.map((x) => `<li><a href="/a/${encodeURIComponent(x.slug)}">/${escapeHtml(x.slug)}</a></li>`).join('\n')
+    : '<li>Belum ada aplikasi. Bina satu di <a href="/builder">Pembina</a> lalu tekan 🚀 Terbitkan.</li>';
+  res.type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aplikasi Terbitan — Tukuk Studio</title><meta name="robots" content="noindex"><style>body{font:16px/1.6 system-ui;margin:0;padding:40px 20px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}main{max-width:720px;margin:0 auto}h1{font-size:1.6rem}ul{list-style:none;padding:0}li{padding:6px 0;border-bottom:1px solid #262b36}</style></head><body><main><h1>🧩 Aplikasi Terbitan</h1><p style="color:#9aa3b2">Dijana dengan Tukuk Studio — Pembina. Dilihat dalam sandbox (asal berasingan).</p><ul>\n${rows}\n</ul><p style="margin-top:24px"><a href="/builder">→ Buka Pembina</a></p></main></body></html>`);
+});
+
+// Hidangkan satu app terbitan dalam sandbox opaque-origin.
+app.get('/a/:slug', (req, res) => {
+  const slug = String(req.params.slug || '');
+  if (!publish.isSlug(slug)) return res.status(400).type('html').send('Slug tidak sah');
+  const file = path.join(PUBLISH_DIR, `${slug}.html`);
+  let html;
+  try { html = fs.readFileSync(file, 'utf8'); }
+  catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>Tiada — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>Aplikasi <code>/${escapeHtml(slug)}</code> tiada atau telah dibuang.</p><p><a href="/a">← Semua aplikasi</a> · <a href="/builder">Bina sendiri</a></p></body></html>`); }
+  res.setHeader('Content-Security-Policy', publish.PUBLISH_CSP);
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.type('html').send(html);
 });
 
 // Explore: sains & geografi (data terbuka, tanpa kunci API)

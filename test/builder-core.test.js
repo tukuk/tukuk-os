@@ -336,3 +336,9 @@ test('UI kemudahan: butang + modal + penunjuk simpan wujud dalam DOM', () => {
     assert.ok(html.includes('id="' + id + '"'), 'elemen hilang: #' + id);
   assert.ok(html.includes('class="insSel"') || html.includes('insSel'), 'selit ＋ (insSel) perlu ada');
 });
+
+test('Terbitan: butang 🚀 + POST /api/publish + hormati builderAssemble', () => {
+  assert.ok(html.includes('id="pubBtn"'), 'butang Terbitkan wujud');
+  assert.ok(html.includes("fetch('/api/publish'"), 'handler POST ke /api/publish');
+  assert.ok(html.includes('window.builderAssemble=assemble'), 'paparan Kod dedahkan assemble untuk terbitan');
+});
