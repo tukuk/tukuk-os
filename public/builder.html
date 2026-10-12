@@ -527,6 +527,26 @@ window.builderExportCSS = exportCSS; window.builderExportBody = exportBody; wind
     { const NL=String.fromCharCode(10); const out=[]; for(const raw of v.split(NL)){ const l=raw.replace(/ +$/,''); if(l===''&&(!out.length||out[out.length-1]==='')) continue; out.push(l); } v=out.join(NL).trim(); }
     ta.value=v; refresh(); runPreview(); toast('✨ Kod diformat');
   }
+  // Auto-lengkap pasangan kurung/tanda petik/tag + Enter ber-indent + Backspace padam pasangan.
+  function applyKey(text,s,e,key){
+    const PAIRS={'(':')','[':']','{':'}','"':'"',"'":"'",'`':'`','<':'>'};
+    const CLOSERS={')':'(',']':'[','}':'{','"':'"',"'":"'",'`':'`','>':'<'};
+    if(PAIRS[key] && e>s){ const inner=text.slice(s,e); const nt=text.slice(0,s)+key+inner+PAIRS[key]+text.slice(e); return {text:nt, caret:s+1, selEnd:s+1+inner.length}; }
+    if(PAIRS[key]){ const nt=text.slice(0,s)+key+PAIRS[key]+text.slice(e); return {text:nt, caret:s+1, selEnd:s+1}; }
+    if(CLOSERS[key] && e===s && text[s]===key){ return {text, caret:s+1, selEnd:s+1}; }
+    if(key==='Enter'){
+      const before=text.slice(0,s), after=text.slice(e), prev=before.slice(-1), next=after.slice(0,1);
+      const indent=(before.match(/[^\n]*$/)||[''])[0].match(/^\s*/)[0];
+      if(prev==='{' && next==='}'){ const nt=before+'\n'+indent+'  \n'+indent+after; const c=before.length+1+indent.length+2; return {text:nt, caret:c, selEnd:c}; }
+      const OB=String.fromCharCode(123); const extra=prev===OB?'  ':''; const nt=before+'\n'+indent+extra+after; const c=before.length+1+indent.length+extra.length; return {text:nt, caret:c, selEnd:c};
+    }
+    if(key==='Backspace'){
+      if(e===s && s>0){ const p=text[s-1], n=text[s]; for(const o in PAIRS){ if(o===p && PAIRS[o]===n) return {text:text.slice(0,s-1)+text.slice(s+1), caret:s-1, selEnd:s-1}; } }
+      return null;
+    }
+    return null;
+  }
+  window.builderApplyKey=applyKey;
 
   $('viewCode').onclick=toCode;
   $('viewDesign').onclick=()=>setView('design');
@@ -539,7 +559,12 @@ window.builderExportCSS = exportCSS; window.builderExportBody = exportBody; wind
 
   ta.addEventListener('input',refresh);
   ta.addEventListener('scroll',syncScroll);
-  ta.addEventListener('keydown',(e)=>{ if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(en); ta.selectionStart=ta.selectionEnd=s+2; refresh(); } });
+  // Auto-lengkap pasangan + Enter indent + Backspace padam pasangan (gaya IDE).
+  ta.addEventListener('keydown',(e)=>{
+    if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(en); ta.selectionStart=ta.selectionEnd=s+2; refresh(); return; }
+    const r=applyKey(ta.value, ta.selectionStart, ta.selectionEnd, e.key);
+    if(r){ e.preventDefault(); ta.value=r.text; ta.selectionStart=r.caret; ta.selectionEnd=(r.selEnd==null?r.caret:r.selEnd); refresh(); }
+  });
 
   // Eksport menghormati mod: dalam Kod → gabung ketiga-tiga tab (termasuk suntingan manual).
   $('exportBtn').onclick=()=>{ const code=document.body.classList.contains('code'); download(code?assemble():buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport'+(code?' (kod)':'')+' — buka di mana-mana.'); };

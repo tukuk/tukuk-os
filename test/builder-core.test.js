@@ -169,6 +169,46 @@ test('codetabs: tiga tab HTML/CSS/JS wujud', () => {
     assert.ok(html.includes('data-ctab="' + t + '"'), 'tab hilang: ' + t);
 });
 
+// ── Auto-lengkap pasangan `applyKey()` (murni, diuji headless) ──
+const NL = String.fromCharCode(10);
+const ak = new Function(extractFn(html, 'applyKey') + '; return applyKey;')();
+
+test('applyKey: buka pasangan → sisip penutup, caret di tengah', () => {
+  const r = ak('ab', 1, 1, '(');
+  assert.equal(r.text, 'a()b');
+  assert.equal(r.caret, 2);
+});
+
+test('applyKey: taip penutup bersebelahan → skip-over (tiada sisipan)', () => {
+  const r = ak('()', 1, 1, ')');
+  assert.equal(r.text, '()');
+  assert.equal(r.caret, 2);
+});
+
+test('applyKey: ada pilihan + taip petik → balut pilihan, inner kekal terpilih', () => {
+  const r = ak('hello', 0, 5, '"');
+  assert.equal(r.text, '"hello"');
+  assert.equal(r.caret, 1);
+  assert.equal(r.selEnd, 6);
+});
+
+test('applyKey: Enter dalam {} → blok ber-indent, caret di baris tengah', () => {
+  const r = ak('{}', 1, 1, 'Enter');
+  assert.equal(r.text, '{' + NL + '  ' + NL + '}');
+  assert.equal(r.caret, 4);
+});
+
+test('applyKey: Backspace antara pasangan → padam kedua-dua', () => {
+  const r = ak('()', 1, 1, 'Backspace');
+  assert.equal(r.text, '');
+  assert.equal(r.caret, 0);
+});
+
+test('applyKey: aksara biasa / Backspace tak berpasangan → null (biar default)', () => {
+  assert.equal(ak('a', 1, 1, 'x'), null);
+  assert.equal(ak('ab', 1, 1, 'Backspace'), null);
+});
+
 test('exportCSS/buildDoc: komposisi fail berdiri sendiri sah & parameter dipatuhi', () => {
   const T = { dark:false, bg:'#fff', fg:'#111', font:'x', accent:'#abc', sub:'ss' };
   const exportCSS = new Function('theme','device', extractFn(html,'exportCSS') + '; return exportCSS;')(T,'phone')();
