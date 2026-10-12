@@ -65,7 +65,7 @@ class Play extends Phaser.Scene {
     if (this.cursors && this.cursors.left.isDown) this.player.x -= 6;
     if (this.cursors && this.cursors.right.isDown) this.player.x += 6;
     this.player.x = Phaser.Math.Clamp(this.player.x, 24, W - 24);
-    this.items.getChildren.forEach((it) => {
+    this.items.getChildren().forEach((it) => {
       it.y += it.getData('vy');
       if (Math.abs(it.y - this.player.y) < 30 && Math.abs(it.x - this.player.x) < 34) {
         setScore(state.score + 1); it.destroy();

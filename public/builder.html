@@ -318,6 +318,7 @@ const TEMPLATES = {
 function gameBox(kind,label,w,extra){ return `<div data-game="${kind}" data-acc="${esc(theme.accent)}"${extra||''}><div style="border:2px dashed #ccc;border-radius:12px;padding:18px;text-align:center;color:#888">${esc(label)} — tukar ke <b>Mod Cuba</b> untuk main</div></div>`; }
 
 function initGames(root){
+  var _lb={}; // papan pendahulu mesti wujud sebelum game boot — draw() pertama ialah sinkron (dalam forEach).
   root = root || document;
   var boxes = root.querySelectorAll('[data-game]');
   Array.prototype.forEach.call(boxes, function(box){
@@ -398,7 +399,6 @@ function initGames(root){
   function setBest(k,val){ var s=ls(); if(!s||!isFinite(val))return false; try{ var c=getBest(k); if(c==null||val>c){ s.setItem('tukuk-best-'+k,String(val)); return true; } }catch(e){} return false; }
 
   // Papan pendahulu komuniti (hanya bila rangkaian boleh; senyap jika CSP/sandbox menyekat).
-  var _lb={};
   function playerName(){ var s=ls(); var n=null; try{ if(s)n=s.getItem('tukuk-name'); }catch(e){} if(n==null){ n=(String(window.prompt('Nama untuk papan pendahulu:')||'').trim().slice(0,20))||'Anon'; try{ if(s)s.setItem('tukuk-name',n); }catch(e){} } return n; }
   function lbSubmit(game,score){ try{ if(!isFinite(score)||score<=0)return; var u='/api/score?g='+encodeURIComponent(game)+'&n='+encodeURIComponent(playerName())+'&s='+Math.round(score); fetch(u,{cache:'no-store',mode:'no-cors'}); }catch(e){} }
   function lbTop(game,force){ if(!force&&_lb[game]!=null)return; _lb[game]=_lb[game]||[]; try{ fetch('/api/scores?g='+encodeURIComponent(game)+'&limit=5',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){ _lb[game]=(d&&d.items)||[]; }).catch(function(){}); }catch(e){} }
@@ -1534,7 +1534,7 @@ const _renderStage=renderStage; renderStage=function(){ _renderStage(); autoSave
 
 renderStage(); applyTheme(); renderInspector(); pushH();
 // Deep-link dari /store (Arked): /builder?tpl=<templat> → muat templat & terus ke Mod Cuba.
-try{ const tp=new URLSearchParams(location.search).get('tpl'); if(tp && TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } }catch(err){}
+try{ const tp=new URLSearchParams(location.search).get('tpl'); if(tp && TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } }catch(err){ if(window.console) console.warn('deep-link tpl', err); }
 if(resumed==='storage') toast('✓ Projek terakhir dipulihkan dari pelayar ini');
 if(resumed==='link') toast('🔗 Projek daripada pautan kongsi dimuat');
 document.addEventListener('keydown',(e)=>{
