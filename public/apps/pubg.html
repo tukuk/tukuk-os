@@ -136,7 +136,7 @@
     feed = []; state = 'menu'; time = 0; shake = 0; hitFlash = 0;
     updBest();
   }
-  function startRun() { reset(); state = 'plane'; planeT = 4; engT = 0; }
+  function startRun() { reset(); state = 'plane'; planeT = 7; engT = 0; }
   function jump() { if (state !== 'plane') return; state = 'fall'; fallT = 2.8;
     const pa = P.a + Math.PI / 2, off = (Math.random() - 0.5) * 5; //_drift lateral ala PUBG
     dropX = P.x + Math.cos(pa) * off; dropY = P.y + Math.sin(pa) * off;
@@ -239,8 +239,7 @@
     for (const b of bots) { if (!b.alive) continue; const d = Math.hypot(b.x - g.x, b.y - g.y);
       if (d < 2.8) { const dealt = botHit(b, Math.round((2.8 - d) * 45));
         dmgNums.push({ x: b.x, y: b.y, h: 1.5, v: dealt, t: time, c: '#ff9f43' });
-        if (b.hp <= 0 && b.alive) { b.alive = false; P.kills++; hitMark = time; say('💥 Awah → ' + b.name + '  [Lembing]');
-          if (aliveBots() === 0 && state === 'play') { state = 'win'; if (P.kills > best) { best = P.kills; localStorage.setItem('tukuk-best-pubg', String(best)); } sfx.win(); } } } }
+        if (b.hp <= 0 && b.alive) { b.alive = false; P.kills++; hitMark = time; say('💥 Awah → ' + b.name + '  [Lembing]'); declareWin(); } } }
     const dp = Math.hypot(P.x - g.x, P.y - g.y);
     if (dp < 2.8) hurtPlayer(Math.round((2.8 - dp) * 30), g.x, g.y); } // boleh mencederakan diri sendiri — hati-hati!
 
@@ -252,7 +251,7 @@
     if (ads) ms *= 0.55; if (P.boost > 50) ms *= 1.07;
     const sp = ms * dt;
     if (keys['w'] || keys['arrowup']) my -= 1; if (keys['s'] || keys['arrowdown']) my += 1;
-    if (keys['a'] || keys['arrowleft']) mx -= 1; if (keys['d'] || keys['arrowright']) mx += 1;
+    if (keys['a']) mx -= 1; if (keys['d']) mx += 1; // arrow kiri/kanan = pusing kamera, bukan strafing
     if (joy) { mx = joy.x; my = joy.y; }
     P.moved = mx !== 0 || my !== 0;
     if (!P.moved) return;
@@ -282,10 +281,19 @@
     if (bi >= 0) { const b = bots[bi]; const dealt = botHit(b, w.dmg); sfx.hitB(); hitFlash = 0.1; hitMark = time;
       dmgNums.push({ x: b.x, y: b.y, h: 1.5, v: dealt, t: time, c: w.tier >= 3 ? '#4cc9f0' : '#ffd166' });
       if (b.hp <= 0) { b.alive = false; P.kills++; say('💀 Awah → ' + b.name + '  [' + w.n + ']'); tone(900, 0.15, 'triangle', 0.07, 300); tone(300, 0.25, 'sawtooth', 0.06, 90); // jeritan mangsa
-        if (aliveBots() === 0) { state = 'win'; if (P.kills > best) { best = P.kills; localStorage.setItem('tukuk-best-pubg', String(best)); } sfx.win(); } } }
+        if (aliveBots() === 0) declareWin(); } }
   }
   function botHit(b, dmg) { const ab = Math.min(b.ap, dmg * 0.4); b.ap -= ab; const dealt = Math.round(dmg - ab); b.hp -= dealt; b.flash = 0.15; b.alert = 2.5; return dealt; }
   const aliveBots = () => bots.filter((b) => b.alive).length;
+  // Kemenangan perlukan ≥1 kill — bot lain mati sesama sendiri pun belum cukup (ala PUBG: kau mesti bunuh sendiri)
+  function declareWin() {
+    if (state !== 'play') return;
+    if (P.kills > 0) { state = 'win'; if (P.kills > best) { best = P.kills; localStorage.setItem('tukuk-best-pubg', String(best)); updBest(); } sfx.win(); return; }
+    // tiada kill → hidupkan bot penamat supaya pemain perlu selesaikan sendiri
+    const q = randOpen(9, P);
+    bots.push({ x: q.x, y: q.y, a: Math.random() * 6.28, hp: 100, ap: 20, name: 'Penamat', alive: true, cool: 1.5, turn: 0, flash: 0, muz: 0, alert: 0, mode: 'wander', tgt: null });
+    say('🔫 Bot penamat masuk — MENANG perlukan 1 kill!'); tone(420, 0.35, 'sawtooth', 0.06, 140);
+  }
 
   // ─── AI bot ───
   function botAI(dt) {
@@ -328,10 +336,10 @@
         if (dd < 8 && canSee(b.x, b.y, b.tgt.x, b.tgt.y)) { b.muz = 0.08; gun(Math.max(0.015, 0.12 - dd * 0.012), 0.9, 0.1);
           if (Math.random() < 0.3) { const dealt = botHit(b.tgt, 8 + Math.random() * 10);
             if (b.tgt.hp <= 0 && b.tgt.alive) { b.tgt.alive = false; say('☠️ ' + b.name + ' → ' + b.tgt.name + '  [UMP45]'); tone(280, 0.2, 'sawtooth', 0.04, 90);
-              if (aliveBots() === 0 && state === 'play') { state = 'win'; if (P.kills > best) { best = P.kills; localStorage.setItem('tukuk-best-pubg', String(best)); } sfx.win(); } } } } }
+              if (aliveBots() === 0) declareWin(); } } } }
       // kerosakan zon ke atas bot
       if (outZone) { b.hp -= zoneDps() * dt * 1.3;
-        if (b.hp <= 0) { b.alive = false; say('☠️ Zon → ' + b.name); if (aliveBots() === 0 && state === 'play') { state = 'win'; if (P.kills > best) { best = P.kills; localStorage.setItem('tukuk-best-pubg', String(best)); } sfx.win(); } } } }
+        if (b.hp <= 0) { b.alive = false; say('☠️ Zon → ' + b.name); if (aliveBots() === 0) declareWin(); } } }
   }
   function hurtPlayer(dmg, sx, sy) {
     const ab = Math.min(P.ap, dmg * 0.5); P.ap -= ab; P.hp -= dmg - ab;
@@ -569,10 +577,11 @@
     cx.fillStyle = '#ffd700'; cx.fillText('💀 Kill: ' + P.kills, 18, 44);
     const zt = zone.state === 'shrink' ? '⬇ MENGECIL' : (zone.pi < 0 ? '🔵 Zon stabil' : '⏳ Fasa ' + (zone.pi + 1));
     cx.fillStyle = zone.state === 'shrink' ? '#4cc9f0' : '#cfe1ff'; cx.fillText(zt + '  ' + Math.max(0, Math.ceil(zone.timer)) + 's', 18, 58);
-    // feed
+    // feed — teks cerah + bayang supaya terbaca atas dunia gelap
     cx.font = '11px system-ui'; let fy = 78;
-    for (const f of feed) { if (time - f.t > 9) continue; cx.fillStyle = 'rgba(0,0,0,' + Math.max(0.15, 0.6 - (time - f.t) * 0.05) + ')';
-      cx.fillText(f.m, 18, fy); fy += 15; }
+    for (const f of feed) { if (time - f.t > 9) continue; cx.globalAlpha = Math.max(0.35, 1 - (time - f.t) / 9);
+      cx.shadowColor = 'rgba(0,0,0,0.9)'; cx.shadowBlur = 3; cx.fillStyle = '#eef3fa'; cx.fillText(f.m, 18, fy);
+      cx.shadowBlur = 0; cx.globalAlpha = 1; fy += 15; }
     // minimap
     const MM = 120, mx0 = W - MM - 12, my0 = 10, sc = MM / MS;
     cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(mx0 - 2, my0 - 2, MM + 4, MM + 4);
@@ -680,10 +689,10 @@
     cx.restore();
     if (showMap && state === 'play') bigMap();
     if (state === 'menu') overlay('🪂 MEDAN BATTLE ROYALE', '9 penerjun · 1 pemenang · scope · airdrop Groza · zon maut', '#ffd700');
-    else if (state === 'plane') { const px3 = -30 + (4 - Math.max(0, planeT)) / 4 * (W + 60); // sepanduk kapal penerjun
+    else if (state === 'plane') { const px3 = -30 + (7 - Math.max(0, planeT)) / 7 * (W + 60); // sepanduk kapal penerjun
       cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(0, H / 2 - 42, W, 84);
       cx.textAlign = 'center'; cx.font = 'bold 20px system-ui'; cx.fillStyle = '#ffd700'; cx.fillText('✈️ KAPAL PENERJUN · ALT 450m', W / 2, H / 2 - 8);
-      cx.font = '13px system-ui'; cx.fillStyle = '#fff'; cx.fillText('Klik / SPACE untuk LOMPAT', W / 2, H / 2 + 18); cx.textAlign = 'left';
+      cx.font = '13px system-ui'; cx.fillStyle = '#fff'; cx.fillText('Klik / SPACE untuk LOMPAT (' + Math.max(0, Math.ceil(planeT)) + 's)', W / 2, H / 2 + 18); cx.textAlign = 'left';
       cx.font = '26px system-ui'; cx.fillText('✈️', px3, 44); }
     else if (state === 'win') overlay('🏆 WINNER WINNER CHICKEN DINNER!', 'Singkir semua bot — ' + P.kills + ' kill!', '#ffd700');
     else if (state === 'dead') overlay('💀 ANDA TUMBANG', 'Kedudukan #' + (aliveBots() + 1) + ' · ' + P.kills + ' kill', '#e5484d');
