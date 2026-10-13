@@ -197,6 +197,17 @@
       "game": true,
       "createdAt": "2026-10-13T00:43:27.465Z",
       "palette": "karat"
+    },
+    {
+      "word": "oud",
+      "slug": "oud",
+      "emoji": "🎼",
+      "tagline": "Muzik tradisional: susun nota.",
+      "genre": "tap",
+      "theme": "karat",
+      "game": true,
+      "createdAt": "2026-10-13T22:47:28.635Z",
+      "palette": "karat"
     }
   ]
 }
