@@ -1928,8 +1928,8 @@ const STORE_ARCADE = [
   { tpl: 'rpstpl', ic: '✊', title: 'Batu-Kertas-Gunting', desc: 'Pilih tangan anda, lawan CPU secara langsung.' },
   { tpl: 'reacttpl', ic: '⚡', title: 'Masa Tindak Balas', desc: 'Tunggu hijau, klik secepat mungkin — ukur milisaat anda.' },
   { tpl: 'guesstpl', ic: '🔢', title: 'Teka Nombor', desc: 'Nombor 1–100 telah dipilih — teka dengan petanda tinggi/rendah.' },
-  { tpl: 'quiztpl', ic: '🎯', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' },
-  { tpl: 'tpl2048', ic: '🔢', title: '2048', desc: 'Gabung nombor sama — capai jubin 2048 sebelum papan penuh.' },
+  { tpl: 'quiztpl', ic: '💡', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' },
+  { tpl: 'tpl2048', ic: '🧊', title: '2048', desc: 'Gabung nombor sama — capai jubin 2048 sebelum papan penuh.' },
   { tpl: 'snktpl', ic: '🐍', title: 'Ular', desc: 'Klasik zaman Nokia — makan, membesar, makin laju, jangan langgar.' },
   { tpl: 'bktpl', ic: '🧱', title: 'Breakout', desc: 'Pantul bola dengan padel, hancurkan semua batu bata dengan 3 nyawa.' },
   { tpl: 'bloktpl', ic: '🧩', title: 'Blok Jatuh', desc: 'Susun blok yang jatuh, jajar baris penuh — makin laju setiap paras.' },
@@ -1962,7 +1962,7 @@ function storeSatuKata() {
     const t = Date.parse(e.createdAt) || 0;
     const word = String(e.word).trim();
     if (fs.existsSync(path.join(dir, 'app', 'index.html'))) out.push({ id: 'sk-' + e.slug, kind: 'app', src: 'satukata', icon: e.emoji || '⚡', title: 'App ' + word, desc: `Aplikasi satu-kata «${word}» — ${e.tagline || 'dijana automatik'}`, url: `/satu-kata/${e.slug}/app/`, updated: t });
-    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', icon: '🎮', title: 'Game ' + word, desc: `Game «${word}» (${e.genre || 'arkade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
+    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', icon: e.emoji || '🎮', title: 'Game ' + word, desc: `Game «${word}» (${e.genre || 'arkade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
   }
   return out;
 }

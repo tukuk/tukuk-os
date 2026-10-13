@@ -38,7 +38,7 @@ const GAMES = {
   rps:      { em: '✊', c1: '#4cc9f0', c2: '#4361ee' },
   reaction: { em: '⚡', c1: '#ffd166', c2: '#f77f00' },
   guess:    { em: '🔢', c1: '#06d6a0', c2: '#0a9c6e' },
-  quiz:     { em: '❓', c1: '#4c8dff', c2: '#2b5cd9' },
+  quiz:     { em: '💡', c1: '#4c8dff', c2: '#2b5cd9' },
   br:       { em: '🔫', c1: '#8d99ae', c2: '#3d4451' },
   fps:      { em: '🎯', c1: '#ef233c', c2: '#8d1420' },
   runner:   { em: '🏃', c1: '#30d158', c2: '#1a7f3c' },

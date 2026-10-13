@@ -240,7 +240,7 @@ const TYPES = {
   spacer:{ ic:'↕️', name:'Ruang', make:()=>({type:'spacer', height:24}) },
   faq:{ ic:'❓', name:'FAQ', make:()=>({type:'faq', items:[{q:'Ini soalan?',a:'Ini jawapan.'},{q:'Satu lagi?',a:'Baik, ini contoh.'}]}) },
   steps:{ ic:'🔢', name:'Cara-cara', make:()=>({type:'steps', title:'Langkah', items:['Buka aplikasi','Pilih pilihan','Selesai']}) },
-  quiz:{ ic:'🎯', name:'Kuiz', make:()=>({type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0}) },
+  quiz:{ ic:'💡', name:'Kuiz', make:()=>({type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0}) },
   ttt:{ ic:'⭕', name:'Tic-Tac-Toe', make:()=>({type:'ttt'}) },
   memory:{ ic:'🧠', name:'Padanan Memori', make:()=>({type:'memory', pairs:6}) },
   mole:{ ic:'🐹', name:'Tikus Pukul', make:()=>({type:'mole', duration:20}) },
@@ -248,9 +248,9 @@ const TYPES = {
   reaction:{ ic:'⚡', name:'Masa Tindak Balas', make:()=>({type:'reaction'}) },
   guess:{ ic:'🔢', name:'Teka Nombor', make:()=>({type:'guess', max:100}) },
   br:{ ic:'🔫', name:'Battle Royale', make:()=>({type:'br', enemies:5, zoneSpeed:10, mapSize:600}) },
-  fps:{ ic:'🕹️', name:'FPS Arena 3D', make:()=>({type:'fps', enemies:4, zoneSpeed:25}) },
+  fps:{ ic:'🎯', name:'FPS Arena 3D', make:()=>({type:'fps', enemies:4, zoneSpeed:25}) },
   runner:{ ic:'🏃', name:'Lari Tanpa Hujung', make:()=>({type:'runner'}) },
-  s2048:{ ic:'🔢', name:'2048', make:()=>({type:'s2048'}) },
+  s2048:{ ic:'🧊', name:'2048', make:()=>({type:'s2048'}) },
   snake:{ ic:'🐍', name:'Ular', make:()=>({type:'snake', speed:1}) },
   breakout:{ ic:'🧱', name:'Breakout', make:()=>({type:'breakout', rows:5}) },
   blox:{ ic:'🧩', name:'Blok Jatuh', make:()=>({type:'blox'}) },
@@ -281,13 +281,13 @@ const TEMPLATES = {
     {type:'button', label:'Beli Sekarang', href:'https://tukuk.org', variant:'primary', fullWidth:true},
     {type:'faq', items:[{q:'Ada waranti?',a:'Ya, 30 hari.'},{q:'Bila sampai?',a:'1-3 hari bekerja.'}]}
   ]},
-  quiztpl:{ label:'🎯 Kuiz Pantas', appName:'Uji Diri', theme:{accent:'#4c8dff'}, widgets:[
+  quiztpl:{ label:'💡 Kuiz Pantas', appName:'Uji Diri', theme:{accent:'#4c8dff'}, widgets:[
     {type:'heading', text:'Kuiz Ringkas', level:2, align:'center'},
     {type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0},
     {type:'text', text:'Pilih satu jawapan. Hijau = betul, merah = salah.', align:'center'}
   ]},
-  arcade:{ label:'🎮 Arked Mini', appName:'Arked Mini', theme:{accent:'#ff5ea8',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'🎮 Arked Mini', level:2, align:'center'},
+  arcade:{ label:'🕹️ Arked Mini', appName:'Arked Mini', theme:{accent:'#ff5ea8',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🕹️ Arked Mini', level:2, align:'center'},
     {type:'text', text:'Klik Mod Cuba, kemudian main setiap game di bawah.', align:'center'},
     {type:'ttt'},
     {type:'memory', pairs:6},
@@ -303,8 +303,8 @@ const TEMPLATES = {
     {type:'text', text:'WASD+Mouse atau Sentuh (joystik) · Elak zone biru!', align:'center'},
     {type:'br', enemies:6, zoneSpeed:10, mapSize:700}
   ]},
-  fpstpl:{ label:'🕹️ FPS Arena 3D', appName:'FPS Arena', theme:{accent:'#ff5e3a',bg:'#0a0d12',fg:'#e8edf5',dark:true}, widgets:[
-    {type:'heading', text:'🕹️ FPS Arena 3D', level:2, align:'center'},
+  fpstpl:{ label:'🎯 FPS Arena 3D', appName:'FPS Arena', theme:{accent:'#ff5e3a',bg:'#0a0d12',fg:'#e8edf5',dark:true}, widgets:[
+    {type:'heading', text:'🎯 FPS Arena 3D', level:2, align:'center'},
     {type:'text', text:'W/S+AD atau Joystik sentuh · Elak zone merah!', align:'center'},
     {type:'fps', enemies:4, zoneSpeed:25}
   ]},
@@ -338,8 +338,8 @@ const TEMPLATES = {
     {type:'text', text:'Nombor rawak telah dipilih — cuba teka dengan petanda tinggi/rendah.', align:'center'},
     {type:'guess'}
   ]},
-  tpl2048:{ label:'🔢 2048', appName:'2048', theme:{accent:'#f2b179',bg:'#131a26',fg:'#f2ecdf',dark:true}, widgets:[
-    {type:'heading', text:'🔢 2048', level:2, align:'center'},
+  tpl2048:{ label:'🧊 2048', appName:'2048', theme:{accent:'#f2b179',bg:'#131a26',fg:'#f2ecdf',dark:true}, widgets:[
+    {type:'heading', text:'🧊 2048', level:2, align:'center'},
     {type:'text', text:'Geser untuk gabung nombor sama — dua 2 jadi 4, dua 4 jadi 8…', align:'center'},
     {type:'s2048'}
   ]},
@@ -923,7 +923,7 @@ function initGames(root){
       ctx.textAlign='center';
       if(state==='menu'){
         ctx.fillStyle='#0a0e1a';ctx.fillRect(0,0,W,H);
-        ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🕹️ FPS Arena 3D',W/2,H/2-26);
+        ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🎯 FPS Arena 3D',W/2,H/2-26);
         ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Klik / Sentuh untuk mula',W/2,H/2+2);
         ctx.font='11px system-ui';ctx.fillStyle='#aaa';
         ctx.fillText('W/S+AD atau Joystik sentuh · Klik/Space=tembak',W/2,H/2+18);
@@ -1398,9 +1398,9 @@ function widgetMarkup(w){
     case 'reaction': return gameBox('reaction','⚡ Masa Tindak Balas', w, '');
     case 'guess': return gameBox('guess','🔢 Teka Nombor', w, ' data-max="'+(Number(w.max)||100)+'"');
     case 'br': return gameBox('br','🔫 Battle Royale', w, ' data-enemies="'+(Number(w.enemies)||5)+'" data-zonespeed="'+(Number(w.zoneSpeed)||10)+'" data-mapsize="'+(Number(w.mapSize)||600)+'"');
-    case 'fps': return gameBox('fps','🕹️ FPS Arena', w, ' data-enemies="'+(Number(w.enemies)||4)+'" data-zonespeed="'+(Number(w.zoneSpeed)||25)+'"');
+    case 'fps': return gameBox('fps','🎯 FPS Arena', w, ' data-enemies="'+(Number(w.enemies)||4)+'" data-zonespeed="'+(Number(w.zoneSpeed)||25)+'"');
     case 'runner': return gameBox('runner','🏃 Lari Tanpa Hujung', w, '');
-    case 's2048': return gameBox('s2048','🔢 2048', w, '');
+    case 's2048': return gameBox('s2048','🧊 2048', w, '');
     case 'snake': return gameBox('snake','🐍 Ular', w, ' data-speed="'+(Number(w.speed)||1)+'"');
     case 'breakout': return gameBox('breakout','🧱 Breakout', w, ' data-rows="'+(Number(w.rows)||5)+'"');
     case 'blox': return gameBox('blox','🧩 Blok Jatuh', w, '');
