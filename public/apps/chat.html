@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tukuk Chat — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, bersembang di bilik Am atau mesej peribadi 1-ke-1. Reply, reaction, edit, carian, wallpaper.">
+<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1. Reply, reaction, edit, profil, carian, wallpaper.">
 <link rel="canonical" href="https://tukuk.org/apps/chat">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg">
@@ -57,17 +57,20 @@
   .chatrow .end { text-align:right; flex:none; }
   .chatrow .tm { font-size:.68rem; color:var(--muted); }
   .badge { display:inline-block; min-width:18px; padding:1px 5px; border-radius:9px; background:var(--accent); color:#fff; font-size:.68rem; font-weight:700; margin-top:4px; }
-  #me { display:flex; align-items:center; gap:8px; padding:9px 12px; border-top:1px solid var(--line); font-size:.82rem; }
+  #me { display:flex; align-items:center; gap:8px; padding:9px 12px; border-top:1px solid var(--line); font-size:.82rem; cursor:pointer; }
   #me .ava { width:30px; height:30px; font-size:.8rem; }
   #me b { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #me button { background:none; border:1px solid var(--line); color:var(--muted); border-radius:7px; padding:4px 8px; cursor:pointer; font-size:.76rem; }
   #me button:hover { color:var(--danger); border-color:var(--danger); }
+  #me .idno { flex:none; font-size:.68rem; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:2px 6px; letter-spacing:.02em; }
 
   /* ─── Chat area ─── */
   #main { flex:1; display:flex; flex-direction:column; min-width:0; }
   #top { display:flex; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--line); background:var(--panel); }
   #top .ava { width:38px; height:38px; font-size:.95rem; }
   #top .who { flex:1; min-width:0; }
+  #top .who#whoBox { cursor:pointer; }
+  #top .who#whoBox:hover b { color:var(--accent); }
   #top .who b { font-size:.92rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #top .who span { font-size:.74rem; color:var(--muted); }
   #top .who span.on { color:var(--success); }
@@ -134,6 +137,10 @@
   .mbox .rowm .ava { width:34px; height:34px; font-size:.9rem; }
   .mbox .rowm b { font-size:.88rem; }
   .mbox .rowm small { color:var(--muted); font-size:.74rem; display:block; }
+  .mbox .rowm .grow { flex:1; min-width:0; }
+  .mbox .rowm .idf { font-size:.72rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .mbox .rowm .card { background:none; border:1px solid var(--line); color:var(--muted); border-radius:7px; padding:3px 7px; cursor:pointer; font-size:.78rem; flex:none; }
+  .mbox .rowm .card:hover { color:var(--accent); border-color:var(--accent); }
   .mbox input { width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:8px 12px; font:inherit; font-size:.86rem; margin-bottom:10px; outline:none; }
   .mbox label { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:.86rem; padding:8px 0; border-bottom:1px solid var(--line); }
   .mbox .walls { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
@@ -143,6 +150,13 @@
   .mbox .mbtns button { background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:7px 14px; cursor:pointer; font:inherit; font-size:.84rem; }
   .mbox .mbtns .prim { background:var(--accent); border-color:var(--accent); color:#fff; }
   mark { background:#ffd54a; color:#111; border-radius:3px; padding:0 2px; }
+  .pfhead { display:flex; gap:12px; align-items:center; margin-bottom:10px; }
+  .pfhead .ava { width:52px; height:52px; font-size:1.25rem; }
+  .pfhead b { font-size:1rem; display:block; }
+  .idchip { display:inline-flex; align-items:center; gap:5px; margin-top:4px; font-size:.78rem; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:3px 9px; cursor:pointer; font-variant-numeric:tabular-nums; }
+  .idchip:hover { color:var(--accent); border-color:var(--accent); }
+  .pfmeta { font-size:.81rem; color:var(--muted); line-height:1.6; }
+  .mbox .pflabel { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:12px 0 4px; }
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#1c2230; color:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 16px; font-size:.84rem; z-index:90; display:none; box-shadow:0 6px 22px rgba(0,0,0,.4); }
 
   @media (max-width:760px) {
@@ -179,6 +193,7 @@
     Daftar satu nama + kata laluan. Kata laluan disimpan sebagai <i>hash</i> scrypt di pelayan — kami tak boleh baca asalnya.
     Selepas masuk, anda terus berada dalam bilik <b>🌍 Am</b> untuk bersembang dengan semua orang dalam talian.
     Tekan <b>➕</b> untuk cari pengguna lain dan buka mesej peribadi (DM) 1-ke-1.<br>
+    <b>Tukuk ID:</b> setiap akaun dapat nombor kekal (contoh <b>100042</b>). Kawan boleh cari anda ikut nombor itu walaupun anda tukar nama — DM dan mesej lama takkan putus.<br>
     <b>Nasib baik:</b> guna kata laluan yang anda tak pakai di tempat lain — pemulihan akaun belum tersedia.
   </div>
 </div>
@@ -191,13 +206,13 @@
       <input id="q" placeholder="Cari sembang atau mesej…" autocomplete="off">
     </div>
     <div id="chats"></div>
-    <div id="me"><div class="ava" id="meAva">?</div><b id="meName"></b><button id="outBtn">Keluar</button></div>
+    <div id="me" title="Profil & Tukuk ID saya"><div class="ava" id="meAva">?</div><b id="meName"></b><span class="idno" id="meIdBtn">#—</span><button id="outBtn">Keluar</button></div>
   </aside>
   <main id="main">
     <div id="top">
       <button id="backBtn" title="Kembali">←</button>
       <div class="ava" id="tAva">🌍</div>
-      <div class="who"><b id="tName">—</b><span id="tStatus"></span></div>
+      <div class="who" id="whoBox" title="Buka profil pasangan"><b id="tName">—</b><span id="tStatus"></span></div>
       <button id="setBtn" title="Tetapan">⚙️</button>
     </div>
     <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Bilik masih kosong. Sapa dulu! 👋</div></div>
@@ -215,8 +230,9 @@
 
 <div class="modal" id="peopleModal"><div class="mbox">
   <h3>👥 Cari pengguna</h3>
-  <input id="pq" placeholder="Taip nama…">
+  <input id="pq" placeholder="Nama atau Tukuk ID (cth. 100002)…" autocomplete="off" maxlength="20">
   <div id="plist"></div>
+  <div class="pfmeta" style="margin-top:6px">Tekan <b>Enter</b> selepas taip 6 angka untuk tahu siapa punya ID itu.</div>
   <div class="mbtns"><button class="prim" id="pclose">Tutup</button></div>
 </div></div>
 
@@ -242,6 +258,16 @@
   <div class="mbtns"><button class="prim" id="stClose">Tutup</button></div>
 </div></div>
 
+<div class="modal" id="profModal"><div class="mbox">
+  <h3>🪪 Profil</h3>
+  <div id="pfHead"></div>
+  <div class="mbtns">
+    <button id="pfClose">Tutup</button>
+    <button id="pfDm">📨 Hantar DM</button>
+    <button class="prim" id="pfSave">Simpan</button>
+  </div>
+</div></div>
+
 <script>
 (() => {
   const $ = s => document.getElementById(s);
@@ -254,7 +280,8 @@
   let token = localStorage.getItem(TKEY) || '';
   let me = localStorage.getItem(NKEY) || '';
   let rooms = [], cur = localStorage.getItem(RKEY + ':' + me.toLowerCase()) || 'global_am';
-  let cache = {}, people = [], tick = 0;
+  let cache = {}, people = [], pById = {}, pByName = {}, tick = 0;
+  let myId = 0, myBio = '', myJoined = null;   // Tukuk ID akaun yang sedang login
   let replyTo = null, editing = null, lastTypingPing = 0;
   let roomsSig = '', roomsSigCur = null, msgSig = '';
   let pref = { sound: true, wall: 1, font: 15 };
@@ -321,6 +348,18 @@
   const initials = s => String(s || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
   const colorOf = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return CCOL[h % CCOL.length]; };
   const isMe = n => String(n).toLowerCase() === me.toLowerCase();
+  // Nama paparan sentiasa disuai ikut Tukuk ID (fid); nama simpanan hanya rekod lama.
+  function indexPeople(list) {
+    if (!list) return;
+    people = list; pById = {}; pByName = {};
+    for (const p of people) { if (p.id) pById[p.id] = p; if (p.name) pByName[String(p.name).toLowerCase()] = p; }
+  }
+  const personOf = (fid, from) => (fid && pById[fid]) || pByName[String(from || '').toLowerCase()] || null;
+  const nameOf = m => { const p = personOf(m && m.fid, m && m.from); return p ? p.name : ((m && m.from) || '?'); };
+  const mineAuthor = (fid, from) => (fid != null && fid !== 0) ? fid === myId : isMe(from);
+  const mineOf = m => mineAuthor(m && m.fid, m && m.from);
+  const isMeP = p => (p && p.id) ? p.id === myId : isMe(p && p.name);
+  function dateLabel(ts) { const d = new Date(ts); return d.getDate() + ' ' + BULAN[d.getMonth()] + ' ' + d.getFullYear(); }
   let toastT = null;
   function toast(m) { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { t.style.display = 'none'; }, 2600); }
 
@@ -343,7 +382,7 @@
     $('aGo').disabled = true;
     try {
       const j = await call('/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify({ name, pass }) });
-      token = j.token; me = j.name;
+      token = j.token; me = j.name; myId = j.id || 0;
       localStorage.setItem(TKEY, token); localStorage.setItem(NKEY, me);
       cur = localStorage.getItem(rkey()) || 'global_am'; // bilik terakhir akaun ini, bukan akaun sebelumnya
       enterApp();
@@ -362,18 +401,30 @@
   }
   function enterApp() {
     $('auth').hidden = true; $('app').hidden = false;
-    $('meName').textContent = me;
-    $('meAva').textContent = initials(me); $('meAva').style.background = colorOf(me);
+    paintMe();
     if (innerWidth > 760) $('app').dataset.open = '1';
-    loadRooms(true); loadPeople();
+    loadRooms(true); loadPeople(); refreshMe();
     clearInterval(window.__ct); clearInterval(window.__rt);
     window.__ct = setInterval(pollMsgs, POLL_MSG);
     window.__rt = setInterval(() => { loadRooms(false); }, POLL_ROOM);
     pollMsgs();
   }
+  function paintMe() {
+    $('meName').textContent = me;
+    $('meAva').textContent = initials(me); $('meAva').style.background = colorOf(me);
+    $('meIdBtn').textContent = myId ? '#' + myId : '#—';
+  }
+  async function refreshMe() {
+    try {
+      const j = await call('/me'); if (!j.name) return;
+      me = j.name; myId = j.id || myId; myBio = j.bio || ''; myJoined = j.joined || null;
+      localStorage.setItem(NKEY, me); paintMe();
+    } catch { /* sesi mungkin luput — poll akan handle */ }
+  }
   $('outBtn').onclick = async () => {
     try { await post('/logout'); } catch {}
-    token = ''; me = ''; localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
+    token = ''; me = ''; myId = 0; myBio = ''; myJoined = null;
+    localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
     clearInterval(window.__ct); clearInterval(window.__rt);
     cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
     setMode('login'); showAuth('Anda sudah keluar.');
@@ -393,7 +444,7 @@
     if (!token) return; // sudah keluar — jangan tindih mesej "anda sudah keluar"
     clearInterval(window.__ct); clearInterval(window.__rt);
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
-    token = ''; cache = {}; rooms = []; tick = 0; $('q').value = '';
+    token = ''; myId = 0; myBio = ''; myJoined = null; cache = {}; rooms = []; tick = 0; $('q').value = '';
     setMode('login'); showAuth('Sesi luput — sila masuk semula.');
   }
   function excerpt(text, q) {
@@ -416,14 +467,14 @@
     const rows = rooms.map(r => {
       const c = cache[r.id];
       const m = (c && c.msgs) || [];
-      let pv = r.last ? (r.last.t == null ? '<i>mesej dipadam</i>' : esc((isMe(r.last.from) ? 'Anda: ' : r.kind === 'global' ? r.last.from + ': ' : '') + norm(r.last.t).slice(0, 48))) : '<i style="color:var(--muted)">Tiada mesej</i>';
+      let pv = r.last ? (r.last.t == null ? '<i>mesej dipadam</i>' : esc((mineAuthor(r.last.fid, r.last.from) ? 'Anda: ' : r.kind === 'global' ? r.last.from + ': ' : '') + norm(r.last.t).slice(0, 48))) : '<i style="color:var(--muted)">Tiada mesej</i>';
       let tm = r.last ? listTime(r.last.ts) : '';
       let show = true, score = r.last ? r.last.ts : 0;
       if (local) {
         const inName = r.title.toLowerCase().includes(q.toLowerCase());
         const hit = m.find(x => String(x.t).toLowerCase().includes(q.toLowerCase()));
         show = inName || !!hit;
-        if (hit && !inName) { pv = '<span style="color:var(--muted)">' + (isMe(hit.from) ? 'Anda: ' : '') + '</span>' + excerpt(hit.t, q) + '…'; tm = listTime(hit.ts); score = Math.max(score, 1); }
+        if (hit && !inName) { pv = '<span style="color:var(--muted)">' + (mineAuthor(hit.fid, hit.from) ? 'Anda: ' : '') + '</span>' + excerpt(hit.t, q) + '…'; tm = listTime(hit.ts); score = Math.max(score, 1); }
       }
       if (!show) return null;
       const dm = r.kind === 'dm';
@@ -457,7 +508,7 @@
       const j = await call('/messages?room=' + encodeURIComponent(id) + '&full=1');
       const b = box(r || { id });
       b.msgs = j.msgs || []; b.seq = j.seq || 0;
-      people = j.people || people;
+      indexPeople(j.people);
       renderMsgs();
       if (shown()) post('/read', { room: id }).catch(() => {});
     } catch (e) { if (e.status === 401) return expire(); else toast(e.message); }
@@ -469,8 +520,15 @@
     if (!r) return;
     const tp = (cache[r.id] && cache[r.id].typing || []).filter(n => n !== me.toLowerCase());
     if (tp.length) { st.textContent = tp.length === 1 ? tp[0] + ' menaip…' : 'beberapa orang menaip…'; st.className = 'typing'; return; }
-    if (r.kind === 'global') { const n = people.filter(p => p.online).length; st.textContent = 'bilik umum · ' + n + ' dalam talian'; st.className = n ? 'on' : ''; }
-    else { const p = people.find(x => x.name.toLowerCase() === r.title.toLowerCase()); st.textContent = p && p.online ? 'dalam talian' : 'luar talian'; st.className = p && p.online ? 'on' : ''; }
+    if (r.kind === 'global') {
+      const n = typeof r.online === 'number' ? r.online : people.filter(p => p.online).length;
+      st.textContent = 'bilik umum · ' + n + ' dalam talian'; st.className = n ? 'on' : '';
+    }
+    else {
+      const p = people.find(x => r.peerId ? x.id === r.peerId : String(x.name).toLowerCase() === r.title.toLowerCase()) ||
+        (r.peer || r.online ? { id: r.peerId, name: r.title, online: !!r.online } : null);
+      st.textContent = p && p.online ? 'dalam talian' : 'luar talian'; st.className = p && p.online ? 'on' : '';
+    }
   }
 
   // ─── Poll mesej ───
@@ -482,7 +540,7 @@
     const b = box(r);
     try {
       const j = await call('/messages?room=' + encodeURIComponent(cur) + (full ? '&full=1' : '&after=' + (b.seq || 0)) + (shown() ? '&read=1' : ''));
-      people = j.people || people;
+      indexPeople(j.people);
       const pend = b.msgs.filter(m => String(m.id).startsWith('tmp'));
       if (full) {
         b.msgs = j.msgs || [];
@@ -492,7 +550,7 @@
         // buang mesej yang sudah dipaparkan sebagai optimistic temp — elak berganda
         const baru = j.msgs.filter(x => !b.msgs.some(p => String(p.id).startsWith('tmp') && p.from === x.from && norm(p.t) === norm(x.t)));
         b.msgs = b.msgs.concat(baru).slice(-200);
-        if (baru.some(m => !isMe(m.from))) sndIn();
+        if (baru.some(m => !mineOf(m))) sndIn();
       }
       b.seq = Math.max(b.seq || 0, j.seq || 0);
       b.typing = j.typing || [];
@@ -510,15 +568,16 @@
     let html = '', lastDay = 0, lastFrom = null;
     for (const msg of m) {
       if (!sameDay(msg.ts, lastDay)) { lastDay = msg.ts; html += '<div class="daysep"><span>' + dayLabel(msg.ts) + '</span></div>'; lastFrom = null; }
-      const mine = isMe(msg.from);
-      const showWho = !mine && r.kind === 'global' && lastFrom !== msg.from;
-      lastFrom = msg.from;
+      const mine = mineOf(msg);
+      const disp = nameOf(msg);
+      const showWho = !mine && r.kind === 'global' && lastFrom !== disp;
+      lastFrom = disp;
       const rx = Object.keys(msg.rx || {});
       const rxHtml = rx.length ? '<div class="reactions">' + rx.map(k => '<button data-react="' + esc(k) + '">' + esc(k) + ' ' + msg.rx[k] + '</button>').join('') + '</div>' : '';
       const quoted = msg.to && byId[msg.to] ? byId[msg.to] : null;
-      const q = quoted ? '<div class="quotecard" data-goto="' + esc(quoted.id) + '"><b>' + esc(quoted.from) + '</b><span>' + esc(norm(quoted.t).slice(0, 80)) + '</span></div>' : '';
+      const q = quoted ? '<div class="quotecard" data-goto="' + esc(quoted.id) + '"><b>' + esc(nameOf(quoted)) + '</b><span>' + esc(norm(quoted.t).slice(0, 80)) + '</span></div>' : '';
       html += '<div class="row ' + (mine ? 'me' : 'them') + '" data-id="' + esc(msg.id) + '"><div class="bub">' +
-        (showWho ? '<div class="who2" style="color:' + colorOf(msg.from) + '">' + esc(msg.from) + '</div>' : '') +
+        (showWho ? '<div class="who2" style="color:' + colorOf(disp) + '">' + esc(disp) + '</div>' : '') +
         q + esc(msg.t) +
         (msg.edited ? ' <span class="edited">(diubah)</span>' : '') +
         '<span class="meta">' + hhmm(msg.ts) + '</span>' + rxHtml + '</div></div>';
@@ -560,7 +619,7 @@
     const menu = $('ctx');
     let h = '<div class="reacts">' + REACTS.map(r => '<button data-r="' + r + '">' + r + '</button>').join('') + '</div>' +
       '<div data-a="reply">↩️ Balas</div><div data-a="copy">🧑 Salin teks</div><div data-a="fwd">➡️ Teruskan</div>';
-    if (isMe(msg.from) && !String(msg.id).startsWith('tmp')) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Padam</div>';
+    if (mineOf(msg) && !String(msg.id).startsWith('tmp')) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Padam</div>';
     menu.innerHTML = h;
     menu.style.display = 'block';
     menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 8) + 'px';
@@ -573,7 +632,7 @@
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     hideCtx();
-    ['peopleModal', 'fwdModal', 'setModal'].forEach(id => $(id).classList.remove('open'));
+    ['peopleModal', 'fwdModal', 'setModal', 'profModal'].forEach(id => $(id).classList.remove('open'));
     if (replyTo || editing) closeReplyEdit();
   });
 
@@ -588,7 +647,7 @@
   function doAction(a, msg) {
     if (a === 'reply') {
       if (String(msg.id).startsWith('tmp')) { toast('Mesej belum tentu sampai — balas selepas ia dihantar.'); return; }
-      replyTo = msg.id; $('rbName').textContent = msg.from; $('rbText').textContent = msg.t; $('replyBar').style.display = 'block'; $('inp').focus();
+      replyTo = msg.id; $('rbName').textContent = nameOf(msg); $('rbText').textContent = msg.t; $('replyBar').style.display = 'block'; $('inp').focus();
     }
     else if (a === 'copy') { try { navigator.clipboard.writeText(msg.t); toast('Disalin.'); } catch { toast('Salin gagal.'); } }
     else if (a === 'fwd') openFwd(msg);
@@ -616,7 +675,7 @@
     }
     const r = room(cur), b = box(r);
     const rt = replyTo; // ditutup oleh closeReplyEdit() di bawah, jadi simpan dulu
-    const temp = { id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, t: text, ts: Date.now(), to: rt || null, rx: {} };
+    const temp = { id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {} };
     b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
     try {
       const j = await post('/messages', { room: cur, text, replyTo: rt });
@@ -625,7 +684,7 @@
       b.msgs = b.msgs.filter(x => x.id !== temp.id && x.id !== j.msg.id);
       b.msgs.splice(at >= 0 ? at : b.msgs.length, 0, j.msg);
       b.seq = Math.max(b.seq || 0, j.seq || 0);
-      if (r) r.last = { from: me, t: text, ts: Date.now() };
+      if (r) r.last = { from: me, fid: myId || null, t: text, ts: Date.now() };
       renderMsgs(); renderRooms();
     } catch (e) {
       b.msgs = b.msgs.filter(x => x.id !== temp.id);
@@ -653,7 +712,7 @@
     for (const el of $('fwdList').querySelectorAll('.rowm')) el.onclick = async () => {
       $('fwdModal').classList.remove('open');
       const target = el.dataset.r, b = box(room(target) || { id: target });
-      const temp = { id: 'tmp' + Date.now(), seq: 0, from: me, t: fwdMsg.t, ts: Date.now(), to: null, rx: {} };
+      const temp = { id: 'tmp' + Date.now(), seq: 0, from: me, fid: myId || null, t: fwdMsg.t, ts: Date.now(), to: null, rx: {} };
       b.msgs.push(temp);
       try { const j = await post('/messages', { room: target, text: fwdMsg.t });
         const at = b.msgs.findIndex(x => x.id === temp.id);
@@ -668,25 +727,89 @@
 
   // ─── Directory pengguna ───
   async function loadPeople() {
-    try { const j = await call('/people'); people = j.people || people; renderStatus(); renderPeople($('pq') ? $('pq').value.trim() : ''); } catch {}
+    try { const j = await call('/people'); indexPeople(j.people); renderStatus(); renderPeople($('pq') ? $('pq').value.trim() : ''); } catch {}
   }
   function renderPeople(q) {
-    const list = people.filter(p => !isMe(p.name) && (!q || p.name.toLowerCase().includes(q.toLowerCase())));
+    const s = String(q || '').trim().toLowerCase();
+    const list = people.filter(p => !isMeP(p) && (!s || String(p.name).toLowerCase().includes(s) || String(p.id) === s));
     $('plist').innerHTML = list.length ? list.map(p =>
-      '<div class="rowm" data-n="' + esc(p.name) + '"><div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div><div><b>' + esc(p.name) + '</b><small>' + (p.online ? 'dalam talian' : 'luar talian') + '</small></div></div>').join('')
-      : '<p style="color:var(--muted);font-size:.84rem">' + (people.length > 1 ? 'Tiada padanan.' : 'Belum ada pengguna lain. Jemput kawan daftar!') + '</p>';
-    for (const el of $('plist').querySelectorAll('.rowm')) el.onclick = async () => {
-      try {
-        const j = await post('/room', { peer: el.dataset.n });
-        $('peopleModal').classList.remove('open');
-        await loadRooms(false);
-        openRoom(j.room.id);
-      } catch (e) { toast(e.message); }
-    };
+      '<div class="rowm" data-id="' + p.id + '"><div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div>' +
+      '<div class="grow"><b>' + hilite(p.name, s) + '</b><small><span class="idf">#' + p.id + '</span> · ' + (p.online ? 'dalam talian' : 'luar talian') + (p.bio ? ' · ' + esc(String(p.bio).slice(0, 34)) : '') + '</small></div>' +
+      '<button class="card" data-card="' + p.id + '" title="Siapa punya ID ini?">🪪</button></div>').join('')
+      : '<p style="color:var(--muted);font-size:.84rem">' + (s && /^\d{6}$/.test(s) ? 'Tiada akaun dengan ID ' + esc(s) + '.' : (people.length > 1 ? 'Tiada padanan.' : 'Belum ada pengguna lain. Jemput kawan daftar!')) + '</p>';
+    for (const el of $('plist').querySelectorAll('.rowm')) {
+      const p = pById[+el.dataset.id]; if (!p) continue;
+      el.onclick = e => { if (e.target && e.target.dataset.card) return; startDm(p.id); };   // laju: terus buka DM
+      const c = el.querySelector('.card');
+      if (c) c.onclick = () => openProf(p, false);                                          // 🪪: siapa punya ID ini
+    }
   }
   $('newBtn').onclick = () => { renderPeople($('pq').value = ''); $('peopleModal').classList.add('open'); $('pq').focus(); };
   $('pq').addEventListener('input', e => renderPeople(e.target.value));
+  $('pq').addEventListener('keydown', async e => {
+    if (e.key !== 'Enter') return;
+    const q = e.target.value.trim();
+    if (!/^\d{6}$/.test(q)) return;
+    try { const j = await call('/user?q=' + encodeURIComponent(q)); openProf(j.profile, false); }
+    catch (err) { toast(err.status === 404 ? 'Tiada akaun dengan ID ' + q + '.' : err.message); }
+  });
   $('pclose').onclick = () => $('peopleModal').classList.remove('open');
+
+  // ─── Profil / "siapa punya ID ini?" ───
+  function myProfile() { return { id: myId, name: me, bio: myBio, joined: myJoined, online: true }; }
+  function copyText(v) { try { navigator.clipboard.writeText(String(v)); toast('Disalin: ' + v); } catch { toast('Salin gagal.'); } }
+  function openProf(p, self) {
+    if (!p || !p.id) return;
+    const shared = self ? -1 : rooms.filter(r => r.kind === 'dm' && r.peerId === p.id).length;
+    const edit = self ? '<div class="pflabel">Nama paparan</div><input id="pfName" maxlength="20" value="' + esc(p.name) + '">' +
+      '<div class="pflabel">Bio (pilihan)</div><input id="pfBio" maxlength="120" placeholder="Satu baris tentang anda" value="' + esc(p.bio || '') + '">' : '';
+    $('pfHead').innerHTML = '<div class="pfhead"><div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div>' +
+      '<div><b>' + esc(p.name) + '</b><span class="idchip" id="pfCopy" title="Salin Tukuk ID">🆔 ' + p.id + ' ⧉</span></div></div>' +
+      '<div class="pfmeta">' + (p.bio ? esc(p.bio) + '<br>' : (self ? '' : '<i>Tiada bio.</i><br>')) +
+      (p.joined ? 'Sertai ' + dateLabel(p.joined) + '<br>' : '') +
+      (self ? 'Nombor ini kekal seumur akaun — hanya nama yang boleh ditukar. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.'
+            : (shared > 0 ? 'Sudah ' + shared + ' sembang DM bersama.' : 'Belum ada sembang DM dengan orang ini.')) +
+      '</div>' + edit;
+    $('pfSave').style.display = self ? '' : 'none';
+    $('pfDm').style.display = self ? 'none' : '';
+    $('pfDm').textContent = shared > 0 ? '📨 Buka sembang' : '📨 Hantar DM';
+    $('pfCopy').onclick = () => copyText(p.id);
+    $('pfDm').onclick = () => startDm(p.id, self ? null : p);
+    $('profModal').classList.add('open');
+    if (self) { const f = $('pfName'); if (f) f.focus(); }
+  }
+  async function startDm(peer, prof) {
+    try {
+      const j = await post('/room', { peer });
+      $('profModal').classList.remove('open'); $('peopleModal').classList.remove('open');
+      if (prof) indexPeople(people.some(x => x.id === prof.id) ? null : people.concat([prof]));
+      await loadRooms(false);
+      openRoom(j.room.id);
+    } catch (e) { toast(e.message); }
+  }
+  async function saveProf() {
+    const name = $('pfName') ? $('pfName').value.trim() : me;
+    const bio = $('pfBio') ? $('pfBio').value.trim() : myBio;
+    try {
+      const j = await post('/profile', { name, bio });
+      const p = j.profile || {};
+      if (p.name && p.name !== me) {
+        me = p.name; localStorage.setItem(NKEY, me);
+        localStorage.setItem(rkey(), cur);   // bilik terakhir ikut nama baharu
+      }
+      myId = p.id || myId; myBio = p.bio || ''; myJoined = p.joined || myJoined;
+      paintMe(); $('profModal').classList.remove('open'); toast('Profil disimpan.');
+      loadPeople(); loadRooms(false);
+    } catch (e) { toast(e.message); }
+  }
+  $('me').onclick = e => { if (e.target && e.target.id === 'outBtn') return; openProf(myProfile(), true); };
+  $('whoBox').onclick = () => {
+    const r = room(cur);
+    if (!r || r.kind !== 'dm' || !r.peerId) return;
+    openProf({ id: r.peerId, name: r.title, bio: r.peer ? r.peer.bio : '', online: !!r.online }, false);
+  };
+  $('pfClose').onclick = () => $('profModal').classList.remove('open');
+  $('pfSave').onclick = saveProf;
 
   // ─── Carian + navigasi ───
   $('q').addEventListener('input', renderRooms);
@@ -714,7 +837,7 @@
   applyPref();
   (async () => {
     if (!token) return showAuth('');
-    try { const j = await call('/me'); if (!j.name) return showAuth(''); me = j.name; enterApp(); }
+    try { const j = await call('/me'); if (!j.name) return showAuth(''); me = j.name; myId = j.id || 0; myBio = j.bio || ''; myJoined = j.joined || null; enterApp(); }
     catch { showAuth(''); }
   })();
 })();

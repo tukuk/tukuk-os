@@ -220,3 +220,35 @@
       .catch(function () {});
   } catch (e) {}
 })();
+
+/* Tukuk ID — satu identitas untuk semua app di tukuk.org.
+   Tukuk Chat memberi setiap akaun nombor kekal (contoh 100042). Token sesi chat
+   disimpan dalam localStorage pada origin yang sama, jadi mana-mana app boleh
+   tanya "siapa yang log masuk?" tanpa form login baharu.
+   Kedua-dua fungsi ini HANYA menghantar permintaan bila dipanggil oleh app —
+   tiada panggilan automatik semasa halaman dimuat. */
+window.tukukWhoami = function (force) {
+  if (!force && window.__tukukWho) return Promise.resolve(window.__tukukWho);
+  var kosong = { id: null, name: null, bio: '', joined: null }, tk = '';
+  try { tk = localStorage.getItem('tukuk-chat-token') || ''; } catch (e) {}
+  if (!tk || !window.fetch) return Promise.resolve(kosong);
+  return fetch('/api/whoami', { headers: { Authorization: 'Bearer ' + tk }, cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      var out = (j && j.id) ? { id: j.id, name: j.name, bio: j.bio || '', joined: j.joined || null } : kosong;
+      window.__tukukWho = out;
+      return out;
+    })
+    .catch(function () { return kosong; });
+};
+
+/* "Siapa punya ID/nama ini?" — carian direktori Tukuk Chat (perlukan sesi chat). */
+window.tukukLookup = function (q) {
+  var tk = '';
+  try { tk = localStorage.getItem('tukuk-chat-token') || ''; } catch (e) {}
+  if (!tk || !window.fetch || !q) return Promise.resolve(null);
+  return fetch('/api/chat/user?q=' + encodeURIComponent(q), { headers: { Authorization: 'Bearer ' + tk }, cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { return j && j.profile ? j.profile : null; })
+    .catch(function () { return null; });
+};

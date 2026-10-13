@@ -221,3 +221,105 @@ test('eqHex: perbandingan masa-tetap, panjang berbeza selamat', () => {
   assert.ok(!chat.eqHex('ab', 'abcd'), 'panjang beza → false, tidak lempar');
   assert.ok(!chat.eqHex('xyz', 'abcd'), 'hex tidak sah → false, tidak lempar');
 });
+
+// ─── Tukuk ID (identiti kekal) ───
+test('id: setiap akaun dapat nombor kekal bermula 100001', () => {
+  fresh();
+  const a = chat.register('Ana', 'pass1').user;
+  const b = chat.register('Ben', 'pass2').user;
+  assert.equal(a.id, 100001);
+  assert.equal(b.id, 100002, 'nombor naik secara monotik');
+  assert.equal(chat.byId(100001).name, 'Ana');
+  assert.equal(chat.findUser('100002').name, 'Ben', 'ID berbentuk teks pun ditemui');
+  assert.equal(chat.findUser('999999'), null);
+});
+
+test('id: nama 6 angka ditolak — rantau itu milik Tukuk ID', () => {
+  fresh();
+  assert.ok(chat.register('123456', 'pass1').error, 'daftar nama 6 angka ditolak');
+  chat.register('Ana', 'pass1');
+  assert.ok(chat.rename('Ana', '123456').error, 'rename ke 6 angka ditolak');
+});
+
+test('DM dikunci pada ID: rename tidak memutuskan perhubungan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  assert.equal(dm.id, 'dm_100001~100002', 'id bilik ikut nombor, bukan nama');
+  chat.send('Ben', dm.id, 'halo ana');
+  const tok = chat.issueSession('Ben');
+  assert.ok(chat.rename('Ben', 'BenBaru').ok);
+  assert.ok(chat.roomsFor('Ana').some(r => r.id === dm.id), 'Ana masih nampak bilik itu');
+  assert.ok(chat.canRead('BenBaru', dm.id), 'nama baharu masih ahli');
+  assert.ok(!chat.canRead('Ben', dm.id), 'nama lama bukan lagi identiti');
+  assert.equal(chat.roomTitle(dm, 'Ana'), 'BenBaru', 'tajuk ikut nama terkini');
+  assert.equal(chat.unread('Ana')[dm.id], 1, 'belum-dibaca kekal selepas rename');
+  assert.equal(chat.userOf(tok).name, 'BenBaru', 'sesi lama kekal hidup');
+});
+
+test('rename: nama pendua ditolak, nama sama bukan ralat', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  assert.ok(chat.rename('Ana', 'ben').error, 'nama sudah digunakan (tak kira huruf)');
+  const same = chat.rename('Ana', 'Ana');
+  assert.ok(same.ok && same.changed === false, 'tukar ke nama sendiri = tiada perubahan');
+  assert.ok(chat.rename('tiada', 'Cinz').error, 'akaun tak wujud → ralat');
+});
+
+test('profile: "siapa punya ID ini?" → nama, bio, kehadiran', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  chat.setBio('Ana', 'suka   membina bot');
+  assert.equal(chat.profile(100001).name, 'Ana');
+  assert.equal(chat.profile('ana').bio, 'suka membina bot', 'bio dirapatkan satu baris');
+  assert.equal(chat.profile('tiada'), null);
+  assert.deepEqual(chat.people('100001').map(p => p.name), ['Ana'], 'direktori boleh cari ikut nombor');
+});
+
+test('fid: karangan mesej ikut ID, paparan ikut nama terkini', () => {
+  fresh();
+  const a = chat.register('Ana', 'pass1').user;
+  const m = chat.send('Ana', 'global_am', 'hai').msg;
+  assert.equal(m.fid, a.id, 'mesej memuat id penghantar');
+  chat.rename('Ana', 'Anna');
+  assert.equal(chat.authorName(m), 'Anna', 'nama terkini disuai dari id');
+  assert.equal(m.from, 'Ana', 'nama ketika dihantar kekal sebagai rekod');
+  assert.ok(chat.edit('Anna', 'global_am', m.id, 'dibetulkan').ok, 'hak tulis ikut id');
+  assert.ok(chat.remove('Anna', 'global_am', m.id).ok);
+});
+
+test('ensureDm: pasangan belum daftar → null (tiada DM hantu)', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  assert.equal(chat.ensureDm('Ana', 'Tiada'), null);
+  assert.equal(chat.ensureDm('Ana', 'Ana'), null, 'diri sendiri ditolak');
+});
+
+test('migrasi: data lama (bilik ikut nama, tiada id) naik taraf tanpa hilang mesej', () => {
+  const dir = fresh();
+  const file = path.join(dir, 'chat.json');
+  fs.writeFileSync(file, JSON.stringify({
+    users: {
+      ana: { name: 'Ana', k: 'ana', salt: 's', hash: 'h', createdAt: 1, lastSeen: 0 },
+      ben: { name: 'Ben', k: 'ben', salt: 's', hash: 'h', createdAt: 2, lastSeen: 0 },
+    },
+    sessions: {},
+    rooms: {
+      global_am: { id: 'global_am', kind: 'global', title: '🌍 Am', members: ['*'], createdBy: 'sistem', createdAt: 1, seq: 1,
+        list: [{ id: 'm1', seq: 1, from: 'Ana', t: 'lama', ts: 1, to: null, rx: {}, edited: false, del: false }] },
+      'dm_ana~ben': { id: 'dm_ana~ben', kind: 'dm', title: null, members: ['Ana', 'Ben'], createdBy: 'Ana', createdAt: 1, seq: 1,
+        list: [{ id: 'm2', seq: 1, from: 'Ana', t: 'dm lama', ts: 1, to: null, rx: {}, edited: false, del: false }] },
+    },
+    msgs: {}, seen: { 'dm_ana~ben|ben': 0 }, typing: {},
+  }));
+  chat.setPath(file);
+  const s = chat.load();
+  assert.equal(s.users.ana.id, 100001, 'akaun lama dapat id');
+  assert.ok(s.rooms['dm_100001~100002'], 'bilik DM dinombor semula');
+  assert.ok(!s.rooms['dm_ana~ben'], 'kunci lama dibuang');
+  assert.equal(s.rooms['dm_100001~100002'].list[0].t, 'dm lama', 'sejarah mesej selamat');
+  assert.equal(s.seen['dm_100001~100002|ben'], 0, 'titik dibaca dipindahkan');
+  assert.ok(chat.canRead('Ben', 'dm_100001~100002'));
+  assert.equal(chat.roomTitle(s.rooms['dm_100001~100002'], 'Ben'), 'Ana');
+  assert.equal(chat.roomsFor('Ana').length, 2);
+});
