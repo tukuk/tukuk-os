@@ -137,7 +137,7 @@
     updBest();
   }
   function startRun() { reset(); state = 'plane'; planeT = 7; engT = 0; }
-  function jump() { if (state !== 'plane') return; state = 'fall'; fallT = 2.8;
+  function jump() { if (state !== 'plane') return; state = 'fall'; fallT = 4;
     const pa = P.a + Math.PI / 2, off = (Math.random() - 0.5) * 5; //_drift lateral ala PUBG
     dropX = P.x + Math.cos(pa) * off; dropY = P.y + Math.sin(pa) * off;
     if (!openAt(dropX, dropY) || dropX < 1.5 || dropY < 1.5 || dropX > MS - 2 || dropY > MS - 2) { dropX = P.x; dropY = P.y; }
@@ -211,7 +211,7 @@
   $('duckBtn').addEventListener('touchstart', (e) => { e.preventDefault(); touchDuck = !touchDuck; }, { passive: false });
   $('nadeBtn').addEventListener('touchstart', (e) => { e.preventDefault(); throwNade(); }, { passive: false });
   $('mapBtn').addEventListener('touchstart', (e) => { e.preventDefault(); showMap = !showMap; }, { passive: false });
-  $('restart').onclick = () => startRun();
+  $('restart').onclick = () => { document.exitPointerLock(); startRun(); };
   $('mute').onclick = () => { muted = !muted; $('mute').textContent = muted ? '🔇 Bunyi: Off' : '🔊 Bunyi: On'; };
 
   const curW = () => WPN[P.slots[P.cur] >= 0 ? P.slots[P.cur] : 0];
@@ -409,7 +409,7 @@
   // ─── Enjin raycasting ───
   const zbuf = new Float32Array(W);
   function render() {
-    const pf = state === 'fall' ? 0.66 + 0.32 * Math.max(0, fallT) / 2.8 : (ads ? 0.32 : 0.66); // FOV lebar di udara; scope mengecil = zum
+    const pf = state === 'fall' ? 0.66 + 0.32 * Math.max(0, fallT) / 4 : (ads ? 0.32 : 0.66); // FOV lebar di udara; scope mengecil = zum
     const z = 0.66 / pf;           // faktor zum seragam (menegak mengikut melintang)
     const dirX = Math.cos(P.a), dirY = Math.sin(P.a), plX = -dirY * pf, plY = dirX * pf;
     // siling + lantai (gradien murah)
@@ -493,7 +493,7 @@
         if (visMid && ty < 9 && b.hp < 100) { cx.fillStyle = 'rgba(0,0,0,.55)'; cx.fillRect(scrx - wdt / 2, y1 - hgt - 12, wdt, 5);
           cx.fillStyle = '#e5484d'; cx.fillRect(scrx - wdt / 2, y1 - hgt - 12, wdt * Math.max(0, b.hp) / 100, 5); }
         if (visMid && ty < 9 && b.ap > 0) { cx.fillStyle = '#9aa3b5'; cx.fillRect(scrx - wdt / 2, y1 - hgt - 6, wdt * b.ap / 100, 2); } }
-      else if (e.k === 'i') { const it = e.o, s2 = sz * 0.26, y1 = H / 2 + s2 + Math.sin(time * 3 + it.x) * s2 * 0.12; // loot melayang berirama
+      else if (e.k === 'i') { const it = e.o, s2 = Math.min(sz * 0.26, 60), y1 = H / 2 + s2 + Math.sin(time * 3 + it.x) * s2 * 0.12; // loot melayang berirama
         const col = it.t <= 5 ? WPN[it.t].rar : it.t === 6 ? '#e8e8e8' : it.t === 7 ? '#8d9aa8' : it.t === 8 ? '#ffd166' : it.t === 10 ? '#4a5540' : '#ef476f';
         for (let sx2 = Math.max(0, (scrx - s2 / 2) | 0), xe = Math.min(W - 1, (scrx + s2 / 2) | 0); sx2 <= xe; sx2++) {
           if (zbuf[sx2] <= ty) continue;
@@ -626,7 +626,7 @@
       cx.strokeStyle = 'rgba(235,235,235,0.75)'; cx.lineWidth = 1; cx.beginPath();
       for (const off of [-168, -84, 84, 168]) { cx.moveTo(W / 2 + sw + off, H - 26); cx.lineTo(W / 2, H / 2 + 42); } cx.stroke();
       cx.fillStyle = '#fff'; cx.font = 'bold 13px system-ui'; cx.textAlign = 'center';
-      cx.fillText('🪂 ALT ' + Math.max(0, Math.round(fallT / 2.8 * 130)) + ' m · A/D kawal arah', W / 2, 24); cx.textAlign = 'left'; }
+      cx.fillText('🪂 ALT ' + Math.max(0, Math.round(fallT / 4 * 450)) + ' m · A/D kawal arah', W / 2, 24); cx.textAlign = 'left'; }
     cx.textAlign = 'left';
   }
 
@@ -667,6 +667,7 @@
     if (P.reload > 0) { P.reload -= dt; if (P.reload <= 0) { P.mag = curW().mag; tone(660, 0.05, 'triangle', 0.05); } }
     if (state === 'play') {
       movePlayer(dt);
+      if (keys['arrowleft']) P.a -= 2.4 * dt; if (keys['arrowright']) P.a += 2.4 * dt;
       if (firing) shoot();
       botAI(dt); zoneUpdate(dt); loot(); updateNades(dt);
       if (P.boost > 0) { P.boost = Math.max(0, P.boost - 0.9 * dt); // boost terbakar perlahan + regen HP
@@ -675,7 +676,7 @@
       if (engT <= 0) { engT = 0.55; tone(95, 0.6, 'sawtooth', 0.04, 68); }
       if (planeT <= 0) jump(); } // tak melompat juga? jatuh macam batu — auto-lompat
     else if (state === 'fall') { fallT -= dt;
-      const prog = 1 - Math.max(0, fallT) / 2.8; let steer = 0;
+      const prog = 1 - Math.max(0, fallT) / 4; let steer = 0;
       if (keys['a'] || keys['arrowleft']) steer -= 1; if (keys['d'] || keys['arrowright']) steer += 1;
       P.a += steer * dt * 0.9; if (joy) P.a += joy.x * dt * 0.9;
       const gl = Math.min(1, dt * (0.9 + prog * 2.8)); // menghampiri titik pendaratan secara lancar
@@ -698,7 +699,7 @@
     else if (state === 'dead') overlay('💀 ANDA TUMBANG', 'Kedudukan #' + (aliveBots() + 1) + ' · ' + P.kills + ' kill', '#e5484d');
     requestAnimationFrame(loop); }
 
-  cv.addEventListener('click', () => { if (state === 'win' || state === 'dead') { reset(); state = 'play'; } });
+  // klik canvas untuk mula semula selepas mati/menang sudah dilayan oleh mousedown → startRun()
 
   reset(); requestAnimationFrame(loop);
 })();
