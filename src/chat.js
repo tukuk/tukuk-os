@@ -150,7 +150,6 @@ function send(name, roomId, text, replyTo) {
   r.list.push(msg);
   if (r.list.length > KEEP) r.list.splice(0, r.list.length - KEEP);
   delete s.typing[key(name) + '|' + roomId];
-  s.seen[roomId + '|' + key(name)] = r.seq; // mesej sendiri tidak dikira "belum dibaca"
   touch();
   return { ok: true, msg, room: r };
 }
@@ -159,9 +158,6 @@ function since(name, roomId, after) {
   const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
   const a = Math.max(0, Number(after) || 0);
   const msgs = (r.list || []).filter(m => m.seq > a);
-  const seenKey = roomId + '|' + key(name);
-  if (r.seq) s.seen[seenKey] = r.seq;
-  touch();
   return { ok: true, msgs, seq: r.seq || 0 };
 }
 function markSeen(name, roomId) {
@@ -173,7 +169,8 @@ function unread(name) {
   for (const r of Object.values(s.rooms)) {
     if (!canRead(name, r.id)) continue;
     const last = s.seen[r.id + '|' + key(name)] || 0;
-    out[r.id] = Math.max(0, (r.seq || 0) - last);
+    // hanya mesej orang lain yang melebihi titik baca dikira belum-dibaca
+    out[r.id] = (r.list || []).filter(m => m.seq > last && key(m.from) !== key(name)).length;
   }
   return out;
 }
@@ -297,7 +294,7 @@ function mount(app, deps) {
         id: r.id, kind: r.kind, title: roomTitle(r, u.name),
         members: r.members, unread: un[r.id] || 0, seq: r.seq || 0,
         last: last ? { from: last.from, t: last.del ? null : last.t, ts: last.ts } : null,
-        online: r.kind === 'global' ? Object.values(on).filter(Boolean).length : r.members.some(m => on[key(m)]),
+        online: r.kind === 'global' ? Object.values(on).filter(Boolean).length : r.members.some(m => key(m) !== key(u.name) && on[key(m)]),
       };
     }).sort((a, b) => (b.last ? b.last.ts : 0) - (a.last ? a.last.ts : 0));
     res.json({ ok: true, rooms });
@@ -307,6 +304,8 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const room = String(req.query.room || '');
     if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
+    // hanya tandakan "dibaca" bila kliennya memang paparkan bilik itu (elak badge hilang di mobile)
+    if (req.query.read === '1') markSeen(u.name, room);
     if (req.query.full === '1') { const r = state.rooms[room]; return res.json({ ok: true, msgs: (r.list || []).slice(-KEEP), seq: r.seq || 0, typing: typingIn(room), people: people(null).slice(0, 50) }); }
     const out = since(u.name, room, req.query.after);
     res.json({ ok: true, msgs: out.msgs, seq: out.seq, typing: typingIn(room), people: people(null).slice(0, 50) });

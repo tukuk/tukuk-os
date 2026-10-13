@@ -110,6 +110,17 @@ test('since(after): hanya mesej baharu, untuk poll', () => {
   assert.equal(chat.since('Ana', 'global_am', 0).msgs.length, 2);
 });
 
+test('since: bacaan sahaja — tidak memadam belum-dibaca (markSeen eksplisit)', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.send('Ben', dm.id, 'untuk ana');
+  chat.since('Ana', dm.id, 0); // poll tanpa read=1
+  assert.equal(chat.unread('Ana')[dm.id], 1, 'badge kekal sampai bila benar-benar dibuka');
+  chat.markSeen('Ana', dm.id);
+  assert.equal(chat.unread('Ana')[dm.id], 0);
+});
+
 test('unread + markSeen berfungsi per bilik', () => {
   fresh();
   chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
@@ -131,6 +142,9 @@ test('unread: mesej sendiri tidak menjadi belum-untuk penghantar', () => {
   assert.equal(chat.unread('Ben')[dm.id], 1, 'penerima nampak 1');
   chat.send('Ben', dm.id, 'balas');
   assert.equal(chat.unread('Ana')[dm.id], 1, 'hanya mesej Ben belum dibaca Ana');
+  chat.send('Ben', dm.id, 'cheguj');
+  chat.send('Ana', dm.id, 'saya balas sekarang');
+  assert.equal(chat.unread('Ana')[dm.id], 2, 'menghantar mesej sendiri tidak memadam unread orang');
 });
 
 test('react: togol — tekan dua kali buang reaksi', () => {

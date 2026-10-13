@@ -103,7 +103,7 @@
   #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
 
   /* ─── Composer ─── */
-  #replyBar, #editBar { display:none; max-width:760px; margin:0 auto; width:100%; background:var(--panel); border-top:1px solid var(--line); padding:6px 12px; font-size:.78rem; }
+  #replyBar, #editBar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; background:var(--panel); border-top:1px solid var(--line); padding:6px 12px; font-size:.78rem; }
   #replyBar .rb, #editBar .rb { display:flex; align-items:center; gap:8px; }
   #replyBar b, #editBar b { color:var(--accent); }
   #replyBar span, #editBar span { flex:1; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -253,13 +253,16 @@
 
   let token = localStorage.getItem(TKEY) || '';
   let me = localStorage.getItem(NKEY) || '';
-  let rooms = [], cur = localStorage.getItem(RKEY) || 'global_am';
+  let rooms = [], cur = localStorage.getItem(RKEY + ':' + me.toLowerCase()) || 'global_am';
   let cache = {}, people = [], tick = 0;
   let replyTo = null, editing = null, lastTypingPing = 0;
+  let roomsSig = '', roomsSigCur = null, msgSig = '';
   let pref = { sound: true, wall: 1, font: 15 };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
   const box = r => r ? (cache[r.id] = cache[r.id] || { msgs: [], seq: 0 }) : null;
+  // bilik dianggap "dibaca" hanya bila panelnya benar-benar terpapar (desktop, atau mobile selepas dibuka)
+  const shown = () => innerWidth > 760 || $('app').dataset.open === '1';
 
   // ─── Panggilan API ───
   async function call(p, opt) {
@@ -423,7 +426,10 @@
         '<div class="mid"><div class="nm">' + hilite(r.title, q) + '</div><div class="pv">' + pv + '</div></div>' +
         '<div class="end"><div class="tm">' + tm + '</div>' + (r.unread && cur !== r.id ? '<span class="badge">' + r.unread + '</span>' : '') + '</div></div>' };
     }).filter(Boolean).sort((a, b) => b.score - a.score);
-    $('chats').innerHTML = rows.map(x => x.html).join('') || '<p style="padding:20px;color:var(--muted);font-size:.85rem">Tiada hasil.</p>';
+    const html = rows.map(x => x.html).join('') || '<p style="padding:20px;color:var(--muted);font-size:.85rem">Tiada hasil.</p>';
+    if (html === roomsSig && cur === roomsSigCur) return; // jangan bina semula DOM yang sedang diklik
+    roomsSig = html; roomsSigCur = cur;
+    $('chats').innerHTML = html;
     for (const el of $('chats').querySelectorAll('.chatrow')) {
       el.classList.toggle('sel', el.dataset.r === cur);
       el.onclick = () => { openRoom(el.dataset.r); loadRooms(false); };
@@ -431,9 +437,9 @@
   }
   // ─── Buka bilik ───
   async function openRoom(id, silent) {
-    cur = id; localStorage.setItem(RKEY, id);
+    cur = id; localStorage.setItem(RKEY + ':' + me.toLowerCase(), id); // bilik terakhir per-akaun
     closeReplyEdit();
-    $('app').dataset.open = '1';
+    if (!silent) $('app').dataset.open = '1';
     const r = room(id);
     $('tName').textContent = r ? r.title : id;
     if (r && r.kind === 'dm') { $('tAva').textContent = initials(r.title); $('tAva').style.background = colorOf(r.title); }
@@ -446,7 +452,7 @@
       b.msgs = j.msgs || []; b.seq = j.seq || 0;
       people = j.people || people;
       renderMsgs();
-      post('/read', { room: id }).catch(() => {});
+      if (shown()) post('/read', { room: id }).catch(() => {});
     } catch (e) { if (e.status === 401) return expire(); else toast(e.message); }
     if (!silent && innerWidth > 760) $('inp').focus();
   }
@@ -468,13 +474,14 @@
     const full = tick % FULL_EVERY === 0;
     const b = box(r);
     try {
-      const j = await call('/messages?room=' + encodeURIComponent(cur) + (full ? '&full=1' : '&after=' + (b.seq || 0)));
+      const j = await call('/messages?room=' + encodeURIComponent(cur) + (full ? '&full=1' : '&after=' + (b.seq || 0)) + (shown() ? '&read=1' : ''));
       people = j.people || people;
       const pend = b.msgs.filter(m => String(m.id).startsWith('tmp'));
       if (full) {
         b.msgs = j.msgs || [];
         // jangan hilangkan mesej yang masih dalam perjalanan semasa refresh penuh
-        for (const p of pend) if (!b.msgs.some(x => x.from === p.from && x.t === p.t)) b.msgs.push(p);
+        const norm = s => String(s).replace(/\s+/g, ' ').trim(); // pelayan rata-kan baris baharu
+        for (const p of pend) if (!b.msgs.some(x => x.from === p.from && norm(x.t) === norm(p.t))) b.msgs.push(p);
       } else if (j.msgs && j.msgs.length) {
         b.msgs = b.msgs.concat(j.msgs).slice(-200);
         if (b.msgs.some(m => !isMe(m.from))) sndIn();
@@ -508,8 +515,7 @@
         (msg.edited ? ' <span class="edited">(diubah)</span>' : '') +
         '<span class="meta">' + hhmm(msg.ts) + '</span>' + rxHtml + '</div></div>';
     }
-    $('msgs').innerHTML = html;
-    wireMsgs();
+    if (html !== msgSig) { msgSig = html; $('msgs').innerHTML = html; wireMsgs(); }
     if (atBottom) scrollBottom();
   }
   function scrollBottom() { const w = $('msgsWrap'); w.scrollTop = w.scrollHeight; }
@@ -546,7 +552,7 @@
     const menu = $('ctx');
     let h = '<div class="reacts">' + REACTS.map(r => '<button data-r="' + r + '">' + r + '</button>').join('') + '</div>' +
       '<div data-a="reply">↩️ Balas</div><div data-a="copy">🧑 Salin teks</div><div data-a="fwd">➡️ Teruskan</div>';
-    if (isMe(msg.from)) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Padam</div>';
+    if (isMe(msg.from) && !String(msg.id).startsWith('tmp')) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Padam</div>';
     menu.innerHTML = h;
     menu.style.display = 'block';
     menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 8) + 'px';
@@ -566,7 +572,10 @@
     catch (e) { toast(e.message); }
   }
   function doAction(a, msg) {
-    if (a === 'reply') { replyTo = msg.id; $('rbName').textContent = msg.from; $('rbText').textContent = msg.t; $('replyBar').style.display = 'block'; $('inp').focus(); }
+    if (a === 'reply') {
+      if (String(msg.id).startsWith('tmp')) { toast('Mesej belum tentu sampai — balas selepas ia dihantar.'); return; }
+      replyTo = msg.id; $('rbName').textContent = msg.from; $('rbText').textContent = msg.t; $('replyBar').style.display = 'block'; $('inp').focus();
+    }
     else if (a === 'copy') { try { navigator.clipboard.writeText(msg.t); toast('Disalin.'); } catch { toast('Salin gagal.'); } }
     else if (a === 'fwd') openFwd(msg);
     else if (a === 'edit') { editing = msg.id; $('editBar').style.display = 'block'; $('inp').value = msg.t; grow(); $('inp').focus(); }
