@@ -49,8 +49,8 @@
     <button id="mute">🔊 Bunyi: On</button>
     <span class="stat" id="best" style="margin:0"></span>
   </div>
-  <p class="stat"><b>Kawalan:</b> Klik kanvas → WASD gerak · Tetikus pandang · Klik = tembak · <b>Klik kanan (tahan) = scope</b> · Ctrl = menunduk · Shift = lari · 1/2/3 = slot senjata · Q = tukar · R = muat semula · <b>G = baling grenad</b> · <b>M = peta besar</b>.
-  Mobil: joystik kiri, seret kanan pandang, 🔥 tembak, 🔭 scope, ⤓ tunduk, 💣 grenad, 🗺️ peta. <b>Misi:</b> singkirkan 8 bot — kutip loot (UMP45/M416/AKM/Kar98k ikut rariti warna), rom & medkit, jaga bar boost. <b style="color:#e5484d">Airdrop Groza</b> jatuh selepas Fasa 1 — ikut turus cahaya merah! Bot juga <b>perang sesama sendiri</b> — dengar tembakan, cari mangsa. Zon makin kecil & makin sakit.</p>
+  <p class="stat"><b>Kawalan:</b> Klik kanvas → mula · <b>SPACE/klik = lompat dari kapal</b> · A/D semasa jatuh = arah · WASD gerak · Tetikus pandang · Klik = tembak · <b>Klik kanan (tahan) = scope</b> · Ctrl = menunduk · Shift = lari · 1/2/3 = slot · Q = tukar · R = muat · <b>G = grenad</b> · <b>M = peta besar</b>.
+  Mobil: sentuh = lompat/tembak, joystik kiri, 🔭 scope, ⤓ tunduk, 💣 grenad, 🗺️ peta. <b>Misi:</b> singkirkan 8 bot — kutip loot rariti, rom & medkit, jaga boost. <b style="color:#e5484d">Airdrop Groza</b> selepas Fasa 1. Bot <b>perang sesama sendiri</b> — dengar tembakan, cari mangsa. Ikut <b style="color:#4cc9f0">dinding tenaga biru</b> bila zon mengecil!</p>
 </div>
 <script>
 (() => {
@@ -60,8 +60,11 @@
   // ─── Peta 48×48: 1 = dinding, 0 = kosong. Bangunan dijana rawak; minimap pra-dija ke kanvas ───
   const MS = 48, map = new Uint8Array(MS * MS);
   const mmC = document.createElement('canvas'); mmC.width = mmC.height = MS; const mmX = mmC.getContext('2d');
+  const veg = []; // 0 = pokok (halang gerakan), 1 = semak (hiasan)
   const cell = (x, y) => (x < 0 || y < 0 || x >= MS || y >= MS) ? 1 : map[(y | 0) * MS + (x | 0)];
-  function openAt(x, y) { return cell(x, y) === 0; }
+  function openAt(x, y) { if (cell(x, y)) return false; // pokok juga menghalang (buku tron lebar 0.4 sel)
+    for (const v of veg) if (v.k === 0 && (x - v.x) ** 2 + (y - v.y) ** 2 < 0.16) return false;
+    return true; }
   function buildMap() {
     map.fill(0);
     for (let i = 0; i < MS; i++) { map[i] = 1; map[(MS - 1) * MS + i] = 1; map[i * MS] = 1; map[i * MS + MS - 1] = 1; }
@@ -81,6 +84,11 @@
         map[py * MS + px] = 0;
       }
     }
+    veg.length = 0; // padang tak lagi kosong — pokok & semak meriakan peta
+    for (let i = 0; i < 260 && veg.filter((v) => v.k === 0).length < 24; i++) { const vx = 1.5 + Math.random() * (MS - 3), vy = 1.5 + Math.random() * (MS - 3);
+      if (!cell(vx, vy) && veg.every((v) => (v.x - vx) ** 2 + (v.y - vy) ** 2 > 3.2)) veg.push({ x: vx, y: vy, k: 0 }); }
+    for (let i = 0; i < 260 && veg.filter((v) => v.k === 1).length < 38; i++) { const vx = 1.5 + Math.random() * (MS - 3), vy = 1.5 + Math.random() * (MS - 3);
+      if (!cell(vx, vy) && veg.every((v) => (v.x - vx) ** 2 + (v.y - vy) ** 2 > 1.1)) veg.push({ x: vx, y: vy, k: 1 }); }
     mmX.clearRect(0, 0, MS, MS); mmX.fillStyle = '#5a6478';
     for (let y2 = 0; y2 < MS; y2++) for (let x2 = 0; x2 < MS; x2++) if (map[y2 * MS + x2]) mmX.fillRect(x2, y2, 1, 1);
   }
@@ -101,6 +109,7 @@
   let P, bots, items, zone, feed, state, time, shake, hitFlash;
   let adrop = null, ads = false, touchDuck = false, botActive = 0;
   let nades = [], dmgNums = [], hitMark = -9, showMap = false;
+  let planeT = 0, fallT = 0, dropX = 0, dropY = 0, engT = 0, nextStepT = 0;
   let muted = false, best = Number(localStorage.getItem('tukuk-best-pubg') || 0);
 
   function rnd(n) { return (Math.random() * n) | 0; }
@@ -127,6 +136,12 @@
     feed = []; state = 'menu'; time = 0; shake = 0; hitFlash = 0;
     updBest();
   }
+  function startRun() { reset(); state = 'plane'; planeT = 4; engT = 0; }
+  function jump() { if (state !== 'plane') return; state = 'fall'; fallT = 2.8;
+    const pa = P.a + Math.PI / 2, off = (Math.random() - 0.5) * 5; //_drift lateral ala PUBG
+    dropX = P.x + Math.cos(pa) * off; dropY = P.y + Math.sin(pa) * off;
+    if (!openAt(dropX, dropY) || dropX < 1.5 || dropY < 1.5 || dropX > MS - 2 || dropY > MS - 2) { dropX = P.x; dropY = P.y; }
+    gun(0.06, 0.5, 0.5); say('🪂 LOMPAT! A/D = kawal arah semasa jatuh'); }
   function updBest() { $('best').textContent = best ? '🏆 Rekod: ' + best + ' kill' : ''; }
   function say(msg) { feed.unshift({ m: msg, t: time }); if (feed.length > 4) feed.pop(); }
 
@@ -160,6 +175,8 @@
   // ─── Input papan kekunci / tetikus / sentuh ───
   const keys = {};
   addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true;
+    if (e.code === 'Space') { e.preventDefault();
+      if (state === 'plane') jump(); else if (state === 'menu' || state === 'dead' || state === 'win') startRun(); }
     if (e.key === '1') swapSlot(0); if (e.key === '2') swapSlot(1); if (e.key === '3') swapSlot(2);
     if (e.key.toLowerCase() === 'q') cycleWeapon();
     if (e.key.toLowerCase() === 'g') throwNade();
@@ -168,7 +185,8 @@
   addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
   let firing = false;
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
-  cv.addEventListener('mousedown', (e) => { if (state === 'menu') state = 'play';
+  cv.addEventListener('mousedown', (e) => { if (state === 'plane') { jump(); return; }
+    if (state === 'menu' || state === 'dead' || state === 'win') { startRun(); return; }
     if (e.button === 2) { if (state === 'play') ads = true; return; }
     if (state === 'play' && cv.requestPointerLock && document.pointerLockElement !== cv) cv.requestPointerLock();
     firing = true; });
@@ -178,7 +196,7 @@
   let joy = null, look = null; const touchUI = 'ontouchstart' in window;
   if (touchUI) { for (const id of ['fireBtn', 'swapBtn', 'adsBtn', 'duckBtn', 'nadeBtn', 'mapBtn']) $(id).classList.remove('hidden'); }
   function stageXY(t) { const r = cv.getBoundingClientRect(); return { x: (t.clientX - r.left) * (W / r.width), y: (t.clientY - r.top) * (H / r.height) }; }
-  cv.addEventListener('touchstart', (e) => { e.preventDefault(); if (state !== 'play' && state !== 'menu') { reset(); state = 'play'; return; } if (state === 'menu') { state = 'play'; }
+  cv.addEventListener('touchstart', (e) => { e.preventDefault(); if (state === 'plane') { jump(); return; } if (state === 'menu' || state === 'dead' || state === 'win') { startRun(); return; }
     for (const t of e.changedTouches) { const p = stageXY(t);
       if (p.x < W / 2) joy = { id: t.identifier, ox: p.x, oy: p.y, x: 0, y: 0 }; else look = { id: t.identifier, lx: p.x }; } }, { passive: false });
   cv.addEventListener('touchmove', (e) => { e.preventDefault();
@@ -193,7 +211,7 @@
   $('duckBtn').addEventListener('touchstart', (e) => { e.preventDefault(); touchDuck = !touchDuck; }, { passive: false });
   $('nadeBtn').addEventListener('touchstart', (e) => { e.preventDefault(); throwNade(); }, { passive: false });
   $('mapBtn').addEventListener('touchstart', (e) => { e.preventDefault(); showMap = !showMap; }, { passive: false });
-  $('restart').onclick = () => { reset(); state = 'play'; };
+  $('restart').onclick = () => startRun();
   $('mute').onclick = () => { muted = !muted; $('mute').textContent = muted ? '🔇 Bunyi: Off' : '🔊 Bunyi: On'; };
 
   const curW = () => WPN[P.slots[P.cur] >= 0 ? P.slots[P.cur] : 0];
@@ -241,6 +259,7 @@
     const d = Math.hypot(mx, my) || 1, cos = Math.cos(P.a), sin = Math.sin(P.a);
     const vx = (mx * cos - my * sin) / d * sp, vy = (mx * sin + my * cos) / d * sp; // gerakan relatif kamera
     tryMove(vx, vy); P.bob += sp * 9;
+    if (time > nextStepT) { nextStepT = time + (keys['shift'] ? 0.26 : 0.38); gun(0.018, 2.3, 0.03); } // tapak kaki
   }
   function tryMove(vx, vy) { const R = 0.22;
     if (openAt(P.x + vx + Math.sign(vx) * R, P.y) && openAt(P.x + vx + Math.sign(vx) * R, P.y + R) && openAt(P.x + vx + Math.sign(vx) * R, P.y - R)) P.x += vx;
@@ -262,7 +281,7 @@
       if (Math.abs(ang) < tol && d < bd && canSee(P.x, P.y, b.x, b.y)) { bi = i; bd = d; } }
     if (bi >= 0) { const b = bots[bi]; const dealt = botHit(b, w.dmg); sfx.hitB(); hitFlash = 0.1; hitMark = time;
       dmgNums.push({ x: b.x, y: b.y, h: 1.5, v: dealt, t: time, c: w.tier >= 3 ? '#4cc9f0' : '#ffd166' });
-      if (b.hp <= 0) { b.alive = false; P.kills++; say('💀 Awah → ' + b.name + '  [' + w.n + ']'); tone(900, 0.15, 'triangle', 0.07, 300);
+      if (b.hp <= 0) { b.alive = false; P.kills++; say('💀 Awah → ' + b.name + '  [' + w.n + ']'); tone(900, 0.15, 'triangle', 0.07, 300); tone(300, 0.25, 'sawtooth', 0.06, 90); // jeritan mangsa
         if (aliveBots() === 0) { state = 'win'; if (P.kills > best) { best = P.kills; localStorage.setItem('tukuk-best-pubg', String(best)); } sfx.win(); } } }
   }
   function botHit(b, dmg) { const ab = Math.min(b.ap, dmg * 0.4); b.ap -= ab; const dealt = Math.round(dmg - ab); b.hp -= dealt; b.flash = 0.15; b.alert = 2.5; return dealt; }
@@ -308,7 +327,7 @@
         const dd = Math.hypot(b.tgt.x - b.x, b.tgt.y - b.y);
         if (dd < 8 && canSee(b.x, b.y, b.tgt.x, b.tgt.y)) { b.muz = 0.08; gun(Math.max(0.015, 0.12 - dd * 0.012), 0.9, 0.1);
           if (Math.random() < 0.3) { const dealt = botHit(b.tgt, 8 + Math.random() * 10);
-            if (b.tgt.hp <= 0 && b.tgt.alive) { b.tgt.alive = false; say('☠️ ' + b.name + ' → ' + b.tgt.name + '  [UMP45]');
+            if (b.tgt.hp <= 0 && b.tgt.alive) { b.tgt.alive = false; say('☠️ ' + b.name + ' → ' + b.tgt.name + '  [UMP45]'); tone(280, 0.2, 'sawtooth', 0.04, 90);
               if (aliveBots() === 0 && state === 'play') { state = 'win'; if (P.kills > best) { best = P.kills; localStorage.setItem('tukuk-best-pubg', String(best)); } sfx.win(); } } } } }
       // kerosakan zon ke atas bot
       if (outZone) { b.hp -= zoneDps() * dt * 1.3;
@@ -382,7 +401,7 @@
   // ─── Enjin raycasting ───
   const zbuf = new Float32Array(W);
   function render() {
-    const pf = ads ? 0.32 : 0.66; // FOV mengecil bila scope = zum
+    const pf = state === 'fall' ? 0.66 + 0.32 * Math.max(0, fallT) / 2.8 : (ads ? 0.32 : 0.66); // FOV lebar di udara; scope mengecil = zum
     const z = 0.66 / pf;           // faktor zum seragam (menegak mengikut melintang)
     const dirX = Math.cos(P.a), dirY = Math.sin(P.a), plX = -dirY * pf, plY = dirX * pf;
     // siling + lantai (gradien murah)
@@ -417,10 +436,22 @@
         if (mat === 1 && lh > 70 && wallX > 0.28 && wallX < 0.7) {
           cx.fillStyle = 'rgba(14,20,32,' + Math.min(0.85, 0.4 + 0.4 * shade) + ')'; cx.fillRect(x, y0 + lh * 0.16, 1, lh * 0.24); } }
       if (hit === 2) { cx.fillStyle = 'rgba(0,0,0,0.5)'; cx.fillRect(x, y0, 1, lh); } }
+    // dinding tenaga ZON BIRU — langsir separa lutsinar di persilangan sempadan zon (ikonik PUBG)
+    const zdx = P.x - zone.x, zdy = P.y - zone.y, bq = zdx * zdx + zdy * zdy - zone.r * zone.r;
+    for (let x = 0; x < W; x++) { const cam = 2 * x / W - 1, rdx2 = dirX + plX * cam, rdy2 = dirY + plY * cam;
+      const a2 = rdx2 * rdx2 + rdy2 * rdy2, b2 = 2 * (rdx2 * zdx + rdy2 * zdy), disc = b2 * b2 - 4 * a2 * bq;
+      if (disc <= 0) continue; const sq = Math.sqrt(disc);
+      const t1 = (-b2 - sq) / (2 * a2), t2 = (-b2 + sq) / (2 * a2);
+      const tHit = t1 > 0.2 ? t1 : (t2 > 0.2 ? t2 : 0);
+      if (!tHit || tHit >= zbuf[x] || tHit > 42) continue;
+      const lh2 = Math.min(H * 3, H * z / tHit) | 0, y2 = (H - lh2) / 2 | 0;
+      cx.fillStyle = 'rgba(55,120,255,' + (0.13 + 0.05 * Math.sin(time * 4 + x * 0.03) + Math.min(0.3, 2.2 / tHit)).toFixed(3) + ')'; cx.fillRect(x, y2, 1, lh2);
+      cx.fillStyle = 'rgba(160,205,255,0.45)'; cx.fillRect(x, y2 + (lh2 * 0.02 | 0), 1, 2); }
     // sprite (bot + item) — pelukis urutan jauh→dekat
     const ents = [];
     for (const b of bots) if (b.alive) ents.push({ x: b.x, y: b.y, k: 'b', o: b });
     for (const it of items) if (!it.taken) ents.push({ x: it.x, y: it.y, k: 'i', o: it });
+    for (const v of veg) ents.push({ x: v.x, y: v.y, k: 'v', o: v });
     for (const g of nades) ents.push({ x: g.x, y: g.y, k: 'g', o: g });
     if (adrop) ents.push({ x: adrop.x, y: adrop.y, k: 'a', o: adrop });
     ents.forEach((e) => { e.d = (e.x - P.x) ** 2 + (e.y - P.y) ** 2; });
@@ -460,6 +491,19 @@
           if (zbuf[sx2] <= ty) continue;
           cx.fillStyle = col; cx.fillRect(sx2, y1 - s2, 1, s2);
           if (it.t === 6) { cx.fillStyle = '#2ecc40'; cx.fillRect(sx2, y1 - s2 * 0.62, 1, s2 * 0.2); } } }
+      else if (e.k === 'v') { const v = e.o, yb = H / 2 + sz * 0.5, shd = Math.max(0.15, 1 - ty / 16);
+        if (v.k === 1) { const bw = sz * 0.55, bh = sz * 0.22; // semak rendah — hiasan padang
+          for (let sx2 = Math.max(0, (scrx - bw / 2) | 0), xe = Math.min(W - 1, (scrx + bw / 2) | 0); sx2 <= xe; sx2++) { if (zbuf[sx2] <= ty) continue;
+            const hf = Math.max(0.12, Math.sqrt(Math.max(0, 1 - ((sx2 - scrx) / (bw / 2)) ** 2)));
+            cx.fillStyle = 'rgb(' + (34 * shd | 0) + ',' + ((96 + ((v.x * 7 + v.y * 13) % 3) * 14) * shd | 0) + ',' + (40 * shd | 0) + ')'; cx.fillRect(sx2, yb - bh * hf, 1, bh * hf); } }
+        else { const sway = Math.sin(time * 0.8 + v.x * 3) * sz * 0.02; // pokok: tron + kubah bergoyang angin
+          const tw = Math.max(1, sz * 0.08), th = sz * 0.72;
+          for (let sx2 = Math.max(0, (scrx - tw / 2) | 0), xe = Math.min(W - 1, (scrx + tw / 2) | 0); sx2 <= xe; sx2++) { if (zbuf[sx2] <= ty) continue;
+            cx.fillStyle = 'rgb(' + (66 * shd | 0) + ',' + (48 * shd | 0) + ',' + (30 * shd | 0) + ')'; cx.fillRect(sx2, yb - th, 1, th); }
+          const cw = sz * 0.95, ch = sz * 0.72, cy3 = yb - th - ch * 0.3;
+          for (let sx2 = Math.max(0, (scrx - cw / 2 + sway) | 0), xe = Math.min(W - 1, (scrx + cw / 2 + sway) | 0); sx2 <= xe; sx2++) { if (zbuf[sx2] <= ty) continue;
+            const hf = Math.sqrt(Math.max(0, 1 - ((sx2 - scrx - sway) / (cw / 2)) ** 2)); if (hf <= 0.02) continue;
+            cx.fillStyle = 'rgb(' + (28 * shd | 0) + ',' + ((118 + ((v.x * 11 + v.y * 5) % 4) * 16) * shd | 0) + ',' + (34 * shd | 0) + ')'; cx.fillRect(sx2, cy3 - ch * hf / 2, 1, ch * hf); } } }
       else if (e.k === 'g') { const g = e.o; const cG = Math.max(0, Math.min(W - 1, scrx | 0));
         if (zbuf[cG] > ty) { const s4 = Math.max(3, sz * 0.11), cy4 = H / 2 + sz * (0.5 - g.z); // grenad melompat ikut ketinggian z
           cx.fillStyle = '#39412f'; cx.beginPath(); cx.arc(scrx, cy4, s4 / 2, 0, 6.283); cx.fill();
@@ -534,6 +578,7 @@
     cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(mx0 - 2, my0 - 2, MM + 4, MM + 4);
     cx.fillStyle = '#223'; cx.fillRect(mx0, my0, MM, MM);
     cx.imageSmoothingEnabled = false; cx.drawImage(mmC, mx0, my0, MM, MM); cx.imageSmoothingEnabled = true;
+    cx.fillStyle = 'rgba(46,102,46,0.6)'; for (const v of veg) if (v.k === 0) cx.fillRect(mx0 + v.x * sc - 1, my0 + v.y * sc - 1, 2, 2); // pokok di minimap
     cx.strokeStyle = 'rgba(255,255,255,0.18)'; cx.lineWidth = 1; cx.beginPath(); // grid sektor gaya peta
     for (let g = 8; g < MS; g += 8) { cx.moveTo(mx0 + g * sc, my0); cx.lineTo(mx0 + g * sc, my0 + MM); cx.moveTo(mx0, my0 + g * sc); cx.lineTo(mx0 + MM, my0 + g * sc); } cx.stroke();
     cx.strokeStyle = '#4cc9f0'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(mx0 + zone.x * sc, my0 + zone.y * sc, zone.r * sc, 0, 6.283); cx.stroke();
@@ -566,6 +611,13 @@
     // kesan luar zon / kena tembak
     if (Math.hypot(P.x - zone.x, P.y - zone.y) > zone.r) { cx.fillStyle = 'rgba(40,110,220,' + (0.12 + 0.06 * Math.sin(time * 6)) + ')'; cx.fillRect(0, 0, W, H); }
     if (hitFlash > 0) { cx.fillStyle = 'rgba(255,30,30,' + hitFlash * 0.5 + ')'; cx.fillRect(0, 0, W, H); }
+    if (state === 'fall') { const sw = Math.sin(time * 2) * 10; // kanopi parachute + altimeter
+      cx.fillStyle = '#d9dee8'; cx.beginPath(); cx.ellipse(W / 2 + sw, H + 48, 190, 84, 0, 0, 6.283); cx.fill();
+      cx.fillStyle = 'rgba(125,135,155,0.45)'; for (let i = -2; i <= 2; i++) { cx.beginPath(); cx.ellipse(W / 2 + sw + i * 74, H + 48, 36, 84, 0, 0, 6.283); cx.fill(); }
+      cx.strokeStyle = 'rgba(235,235,235,0.75)'; cx.lineWidth = 1; cx.beginPath();
+      for (const off of [-168, -84, 84, 168]) { cx.moveTo(W / 2 + sw + off, H - 26); cx.lineTo(W / 2, H / 2 + 42); } cx.stroke();
+      cx.fillStyle = '#fff'; cx.font = 'bold 13px system-ui'; cx.textAlign = 'center';
+      cx.fillText('🪂 ALT ' + Math.max(0, Math.round(fallT / 2.8 * 130)) + ' m · A/D kawal arah', W / 2, 24); cx.textAlign = 'left'; }
     cx.textAlign = 'left';
   }
 
@@ -610,6 +662,17 @@
       botAI(dt); zoneUpdate(dt); loot(); updateNades(dt);
       if (P.boost > 0) { P.boost = Math.max(0, P.boost - 0.9 * dt); // boost terbakar perlahan + regen HP
         if (P.hp > 0 && P.hp < 100) P.hp = Math.min(100, P.hp + (P.boost > 50 ? 3.2 : 1.6) * dt); } }
+    else if (state === 'plane') { planeT -= dt; engT -= dt; // kapal penerjun lalu di atas, enjin berdesing
+      if (engT <= 0) { engT = 0.55; tone(95, 0.6, 'sawtooth', 0.04, 68); }
+      if (planeT <= 0) jump(); } // tak melompat juga? jatuh macam batu — auto-lompat
+    else if (state === 'fall') { fallT -= dt;
+      const prog = 1 - Math.max(0, fallT) / 2.8; let steer = 0;
+      if (keys['a'] || keys['arrowleft']) steer -= 1; if (keys['d'] || keys['arrowright']) steer += 1;
+      P.a += steer * dt * 0.9; if (joy) P.a += joy.x * dt * 0.9;
+      const gl = Math.min(1, dt * (0.9 + prog * 2.8)); // menghampiri titik pendaratan secara lancar
+      P.x += (dropX - P.x) * gl; P.y += (dropY - P.y) * gl;
+      if (Math.random() < dt * 2.5) gun(0.03, 0.35, 0.4); // desing angin
+      if (fallT <= 0) { state = 'play'; shake = 0.35; tone(60, 0.3, 'sine', 0.14, 38); } }
     else { P.crouch = false; if (state === 'menu') P.a += dt * 0.22; } // kamera menu berpusing perlahan
     cx.save();
     if (shake > 0) cx.translate((Math.random() - 0.5) * shake * 14, (Math.random() - 0.5) * shake * 14);
@@ -617,6 +680,11 @@
     cx.restore();
     if (showMap && state === 'play') bigMap();
     if (state === 'menu') overlay('🪂 MEDAN BATTLE ROYALE', '9 penerjun · 1 pemenang · scope · airdrop Groza · zon maut', '#ffd700');
+    else if (state === 'plane') { const px3 = -30 + (4 - Math.max(0, planeT)) / 4 * (W + 60); // sepanduk kapal penerjun
+      cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(0, H / 2 - 42, W, 84);
+      cx.textAlign = 'center'; cx.font = 'bold 20px system-ui'; cx.fillStyle = '#ffd700'; cx.fillText('✈️ KAPAL PENERJUN · ALT 450m', W / 2, H / 2 - 8);
+      cx.font = '13px system-ui'; cx.fillStyle = '#fff'; cx.fillText('Klik / SPACE untuk LOMPAT', W / 2, H / 2 + 18); cx.textAlign = 'left';
+      cx.font = '26px system-ui'; cx.fillText('✈️', px3, 44); }
     else if (state === 'win') overlay('🏆 WINNER WINNER CHICKEN DINNER!', 'Singkir semua bot — ' + P.kills + ' kill!', '#ffd700');
     else if (state === 'dead') overlay('💀 ANDA TUMBANG', 'Kedudukan #' + (aliveBots() + 1) + ' · ' + P.kills + ' kill', '#e5484d');
     requestAnimationFrame(loop); }
