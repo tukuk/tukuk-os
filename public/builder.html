@@ -386,6 +386,7 @@ function initGames(root){
     if(box.__g) return; box.__g = true;
     var acc = box.getAttribute('data-acc') || '#4c8dff';
     var kind = box.getAttribute('data-game');
+    setFav(kind); // favicon ikut game — tab buku tanda & skrin utama boleh bezakan game
     try{
       if(kind==='ttt') gTTT(box,acc);
       else if(kind==='memory') gMemory(box,acc);
@@ -406,6 +407,17 @@ function initGames(root){
   });
 
   function el(tag,css,txt){ var e=document.createElement(tag); if(css)e.style.cssText=css; if(txt!=null)e.textContent=txt; return e; }
+
+  // Favicon data-URI berasaskan emoji game — berfungsi luar tali daring & tanpa fail tambahan.
+  function setFav(kind){
+    try{
+      var ic = (typeof TYPES !== 'undefined' && TYPES[kind]) ? TYPES[kind].ic : '🎮';
+      var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">' + ic + '</text></svg>';
+      var l = document.querySelector('link[rel="icon"][type="image/svg+xml"]');
+      if (!l) { l = document.createElement('link'); l.rel = 'icon'; l.type = 'image/svg+xml'; document.head.appendChild(l); }
+      l.href = 'data:image/svg+xml,' + encodeURIComponent(s);
+    }catch(e){}
+  }
 
   // Bunyi (Web Audio, tanpa fail). AudioContext dibuka pada gesture pertama.
   function makeSfx(){
