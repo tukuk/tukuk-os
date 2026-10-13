@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandala Spiro — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Spirograph beranimasi dengan simetri mandala — kawal radius, pen, pekali simetri, kitar rona dan eksport PNG resolusi tinggi.">
+<link rel="canonical" href="https://tukuk.org/apps/spiro">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:680px; margin:0 auto; padding:16px; }
+  #cv { display:block; width:100%; max-width:560px; margin:0 auto; border:1px solid var(--line); border-radius:14px; background:#06080f; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; margin:14px 0 6px; font-size:.82rem; }
+  .grid label { display:flex; flex-direction:column; gap:3px; color:var(--muted); }
+  .grid output { color:var(--text); font-weight:700; }
+  input[type=range] { accent-color:var(--accent); width:100%; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
+  .bar button, .bar select { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:8px 12px; font:inherit; font-size:.85rem; cursor:pointer; }
+  .bar button.on { border-color:var(--accent); color:var(--accent); font-weight:700; }
+  input[type=color] { width:40px; height:36px; border:1px solid var(--line); border-radius:8px; background:var(--panel); padding:2px; cursor:pointer; }
+  .stat { color:var(--muted); font-size:.78rem; text-align:center; margin-top:10px; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>🌀 Mandala Spiro</h1></header>
+<div class="wrap">
+  <canvas id="cv" width="560" height="560"></canvas>
+  <div class="grid">
+    <label>Lingkaran tetap R <input type="range" id="R" min="60" max="160" value="120"><output id="oR"></output></label>
+    <label>Lingkaran bergolek r <input type="range" id="r" min="4" max="95" value="33"><output id="or"></output></label>
+    <label>Jarak pen d <input type="range" id="d" min="4" max="140" value="70"><output id="od"></output></label>
+    <label>Simetri (kelopak) <input type="range" id="n" min="1" max="16" value="6"><output id="on"></output></label>
+    <label>Keluk <input type="range" id="sp" min="1" max="10" value="4"><output id="osp"></output></label>
+    <label>Tebal garis <input type="range" id="lw" min="1" max="6" value="2"><output id="olw"></output></label>
+  </div>
+  <div class="bar">
+    <button id="play">⏸ Rehat</button>
+    <button id="new">✶ Lukis Baru</button>
+    <button id="cycle" class="on">🌈 Rona: On</button>
+    <input type="color" id="col" value="#4c8dff">
+    <select id="preset">
+      <option value="">🎛 Preset…</option>
+      <option value="0">Bunga Rimba</option>
+      <option value="1">Bintang Laut</option>
+      <option value="2">Roda Kabut</option>
+      <option value="3">Nebula</option>
+      <option value="4">Pusaran</option>
+    </select>
+    <button id="png">⬇ PNG</button>
+  </div>
+  <div class="stat" id="stat"></div>
+</div>
+<script>
+(() => {
+  const $ = (s) => document.getElementById(s);
+  const cv = $('cv'), cx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const PRESETS = [[120,33,70,6,4,2],[150,47,96,8,3,2],[80,17,52,12,6,1],[140,91,130,5,5,2],[110,7,110,9,7,1]];
+  let R = 120, r = 33, d = 70, n = 6, sp = 4, lw = 2;
+  let t = 0, done = false, playing = true, hue = 200, cycOn = true, prev = null, total = 0;
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  function clear(){ cx.fillStyle = '#06080f'; cx.fillRect(0, 0, W, H); }
+  function reset(){ t = 0; done = false; total = 0; prev = null; hue = 200; clear(); stat(); }
+  function stat(){ $('stat').textContent = done ? 'Lukisan lengkap (' + Math.round(total) + ' langkah) — ubah parameter atau tekan ✶.' : 'Tang lungsur: ' + Math.round(Math.min(1, total / steps()) * 100) + '% · pusingan penuh = ' + revs() + '×2π'; }
+  function revs(){ return r / gcd(Math.round(R), Math.round(r)); }
+  function steps(){ return revs() * 628; } // ~2π×100 langkah per radian pusingan asas
+  function point(tt){ const k = R - r; return [k * Math.cos(tt) + d * Math.cos((k / r) * tt), k * Math.sin(tt) - d * Math.sin((k / r) * tt)]; }
+  function tick(){
+    if (!playing || done) return;
+    cx.lineWidth = lw; cx.lineCap = 'round';
+    const per = Math.max(1, Math.round(sp * 2));
+    for (let s = 0; s < per; s++) {
+      t += 0.016; total++;
+      const [x, y] = point(t);
+      for (let q = 0; q < n; q++) {
+        const a = q * Math.PI * 2 / n, ca = Math.cos(a), sa = Math.sin(a);
+        const px = W / 2 + x * ca - y * sa, py = H / 2 + x * sa + y * ca;
+        const pk = prev && prev[q];
+        if (pk) { cx.strokeStyle = cycOn ? 'hsl(' + (hue % 360) + ',85%,62%)' : $('col').value;
+          cx.beginPath(); cx.moveTo(pk[0], pk[1]); cx.lineTo(px, py); cx.stroke(); }
+        (prev || (prev = []))[q] = [px, py];
+      }
+      hue += 0.35;
+      if (t >= Math.PI * 2 * revs()) { done = true; break; }
+    }
+    stat();
+  }
+  (function loop(){ tick(); requestAnimationFrame(loop); })();
+  // Kawalan slider — setiap perubahan mula lukisan baru
+  const bind = (id, out, set) => { const el = $(id), o = $(out);
+    o.textContent = el.value;
+    el.addEventListener('input', () => { o.textContent = el.value; set(Number(el.value)); reset(); }); };
+  bind('R', 'oR', (v) => R = v); bind('r', 'or', (v) => r = v); bind('d', 'od', (v) => d = v);
+  bind('n', 'on', (v) => n = v); bind('sp', 'osp', (v) => sp = v); bind('lw', 'olw', (v) => lw = v);
+  $('play').onclick = () => { playing = !playing; $('play').textContent = playing ? '⏸ Rehat' : '▶ Teruskan'; };
+  $('new').onclick = reset;
+  $('cycle').onclick = () => { cycOn = !cycOn; $('cycle').classList.toggle('on', cycOn); $('cycle').textContent = '🌈 Rona: ' + (cycOn ? 'On' : 'Off'); };
+  $('preset').onchange = (e) => { const p = PRESETS[Number(e.target.value)]; if (!p) return;
+    ['R', 'r', 'd', 'n', 'sp', 'lw'].forEach((id, i) => { $(id).value = p[i]; $(['oR', 'or', 'od', 'on', 'osp', 'olw'][i]).textContent = p[i]; });
+    [R, r, d, n, sp, lw] = p; reset(); };
+  $('png').onclick = () => { // eksport 2× supaya garis kekal halus di skrin besar
+    const o = document.createElement('canvas'); o.width = W * 2; o.height = H * 2;
+    const oc = o.getContext('2d'); oc.fillStyle = '#06080f'; oc.fillRect(0, 0, o.width, o.height);
+    oc.drawImage(cv, 0, 0, o.width, o.height);
+    const a = document.createElement('a'); a.download = 'mandala-' + Date.now() + '.png'; a.href = o.toDataURL('image/png'); a.click(); };
+  reset();
+})();
+</script>
+</body>
+</html>

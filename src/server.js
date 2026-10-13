@@ -240,7 +240,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -1899,7 +1899,7 @@ app.get('/api/published', (req, res) => {
 
 // ── Tukuk Store (/store): katalog 4 sumber — Bawaan + Satu Kata + Arked + Komuniti. ────
 // Bawaan = app mini di public/apps (hanya yang failnya benar-benar wujud supaya /store
-// tak benjol pautan 404 — lapan pernah diiklankan, dua sahaja yang dibina).
+// tak benjol pautan 404 — tambah fail HTML baru + entri meta, ia muncul sendiri).
 const STORE_APP_META = {
   notes: { ic: '📝', title: 'Notes', desc: 'Nota lokal dengan autosave, tag & carian — tiada apa keluar dari peranti.' },
   calc: { ic: '🧮', title: 'Kalkulator', desc: 'Kalkulator saintifik dengan sejarah, kurungan & salin hasil.' },
@@ -1908,7 +1908,10 @@ const STORE_APP_META = {
   timer: { ic: '⏱️', title: 'Timer & Pomodoro', desc: 'Jam randik, pemasa & rehat berjadual dengan bunyi.' },
   color: { ic: '🎨', title: 'Pemilih Warna', desc: 'HEX/RGB/HSL, tona/nada, palet pelengkap & nisbah kontras.' },
   password: { ic: '🔐', title: 'Penjana Kata Laluan', desc: 'Kata laluan rawak kriptografik + frasa sukar diteka.' },
-  text: { ic: '🔡', title: 'Alat Teks', desc: 'Kira perkataan, tukar kes, Base64, susun, dedupe & URL encode.' }
+  text: { ic: '🔡', title: 'Alat Teks', desc: 'Kira perkataan, tukar kes, Base64, susun, dedupe & URL encode.' },
+  pixel: { ic: '🟩', title: 'Studio Piksel', desc: 'Lukar piksel art 16×16 dengan palet, bald dan eksport PNG — dalam pelayar.' },
+  piano: { ic: '🎹', title: 'Piano Sintetis', desc: 'Main 2 oktaf dengan papan kekunci, 4 bentuk gelombang & rakam audio.' },
+  spiro: { ic: '🌀', title: 'Mandala Spiro', desc: 'Lukisan spirograph beranimasi dengan simetri — kawal parameter, eksport PNG.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [
@@ -1922,7 +1925,10 @@ const STORE_ARCADE = [
   { tpl: 'rpstpl', ic: '✊', title: 'Batu-Kertas-Gunting', desc: 'Pilih tangan anda, lawan CPU secara langsung.' },
   { tpl: 'reacttpl', ic: '⚡', title: 'Masa Tindak Balas', desc: 'Tunggu hijau, klik secepat mungkin — ukur milisaat anda.' },
   { tpl: 'guesstpl', ic: '🔢', title: 'Teka Nombor', desc: 'Nombor 1–100 telah dipilih — teka dengan petanda tinggi/rendah.' },
-  { tpl: 'quiztpl', ic: '🎯', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' }
+  { tpl: 'quiztpl', ic: '🎯', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' },
+  { tpl: 'tpl2048', ic: '🔢', title: '2048', desc: 'Gabung nombor sama — capai jubin 2048 sebelum papan penuh.' },
+  { tpl: 'snktpl', ic: '🐍', title: 'Ular', desc: 'Klasik zaman Nokia — makan, membesar, makin laju, jangan langgar.' },
+  { tpl: 'bktpl', ic: '🧱', title: 'Breakout', desc: 'Pantul bola dengan padel, hancurkan semua batu bata dengan 3 nyawa.' }
 ];
 function storeBawaan() {
   return Object.entries(STORE_APP_META)
