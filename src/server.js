@@ -27,6 +27,7 @@ const { rateLimit, requireApiKey } = require('./middleware');
 const { safeError, truncate, escapeHtml } = require('./util');
 const { assertPublicUrl } = require('./util');
 const auth = require('./auth');
+const chat = require('./chat');
 const blogRedirects = require('./blog-redirects');
 const publish = require('./publish');
 const { exec } = require('child_process');
@@ -1915,7 +1916,7 @@ const STORE_APP_META = {
   orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
   fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
   drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' },
-  chat: { ic: '✈️', title: 'Tukuk Chat', desc: 'Aplikasi chat Tukuk Chat dalam pelayar — reply, forward, reaction, edit, carian global, wallpaper & bunyi. Semua data simpan tempatan.' }
+  chat: { ic: '✈️', title: 'Tukuk Chat', desc: 'Aplikasi chat Tukuk Chat sebenar — daftar nama + kata laluan, bilik Am dan DM 1-ke-1, reply, reaction, edit, carian, wallpaper & bunyi.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [
@@ -2055,6 +2056,15 @@ app.post('/api/comments', commentLimiter, (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Gagal simpan komen', details: safeError(error) });
   }
+});
+
+// ── Tukuk Chat: akaun + bilik/DM multi-pengguna untuk app /apps/chat. ─────────
+// Data awam berdaftar (nama + hash scrypt, tiada e-mel), disimpan di data/chat.json.
+// Had-kadar per-IP pada daftar/login/kiriman; poll mesej = bacaan ringan sahaja.
+chat.mount(app, {
+  rateLimit: config.rateLimit.enabled ? rateLimit : null,
+  store,
+  path: path.join(path.dirname(config.store.path), 'chat.json'),
 });
 
 
