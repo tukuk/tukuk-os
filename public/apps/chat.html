@@ -483,12 +483,20 @@
 
   // ─── Interaksi mesej ───
   let ctxMsg = null;
+  let lastTap = { id:null, t:0 };
   function wireMsgs(){
     for (const row of $('msgs').querySelectorAll('.row')) {
       const id = row.dataset.id;
       const bub = row.querySelector('.bub');
       bub.addEventListener('contextmenu', e => { e.preventDefault(); openCtx(e.clientX, e.clientY, id); });
-      bub.addEventListener('dblclick', e => { e.preventDefault(); openCtx(e.clientX, e.clientY, id); });
+      bub.addEventListener('dblclick', e => { e.preventDefault(); lastTap={id:null,t:0}; openCtx(e.clientX, e.clientY, id); });
+      // fallback ketuk-kembar berasaskan masa (sentuh/automasi) + tekan-tahan
+      bub.addEventListener('click', e => { const now=Date.now();
+        if (lastTap.id===id && now-lastTap.t<400) { e.preventDefault(); openCtx(e.clientX, e.clientY, id); }
+        lastTap = { id, t:now }; });
+      let pressTimer=null;
+      bub.addEventListener('pointerdown', e => { pressTimer=setTimeout(()=>openCtx(e.clientX, e.clientY, id), 550); });
+      ['pointerup','pointermove','pointercancel'].forEach(ev=>bub.addEventListener(ev, ()=>clearTimeout(pressTimer)));
       const goto = bub.querySelector('.quotecard[data-goto]');
       if (goto) goto.onclick = () => jumpTo(goto.dataset.goto);
       for (const rb of bub.querySelectorAll('.reactions button')) {
