@@ -15,7 +15,7 @@ canvas{display:block;margin:0 auto;image-rendering:pixelated;cursor:none;max-wid
 #btns{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:8px}
 button{background:#1e2a3a;color:#eef3fa;border:1px solid #334;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:.85rem}
 button:hover{background:#2a3f55}
-#buy{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;color:#fff}
+#buy{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(8,12,20,.96);border:1px solid #2a4060;border-radius:12px;padding:20px;z-index:20;display:none;flex-direction:column;align-items:center;gap:4px;color:#fff;max-width:480px;width:90%;box-shadow:0 0 40px rgba(0,0,0,.8)}
 #buy h2{color:#ffd700;margin-bottom:4px;font-size:1.4rem}
 #buy .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:480px;width:100%}
 .bbtn{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#1a2535;border:1px solid #2a4060;border-radius:5px;cursor:pointer;font-size:.82rem;color:#d0e0f0}
@@ -144,7 +144,7 @@ button:hover{background:#2a3f55}
     const sp = SPAWN_CT[0];
     P = { x:sp.x, y:sp.y, a:Math.PI/2, hp:100, ap:0, nade:0, cur:1,
       slots:[-1,1,-1], mag:WPN[1].mag, cool:0, reload:0, bob:0, moved:false, crouch:false,
-      dmgSrc:0, dmgT:-9, kills:0 };
+      dmgSrc:0, dmgT:-9, kills:0, alive:true };
     // CT bots (allies)
     ctBots = SPAWN_CT.slice(1).map((sp,i)=>mkBot(sp.x,sp.y,CT_NAMES[i+1],'CT',i<2?4:1));
     // T bots (enemies)
@@ -167,6 +167,8 @@ button:hover{background:#2a3f55}
 
   function startLive(){
     state='live'; showBuyUI(false);
+    const sp2 = SPAWN_CT[0];
+    P.x=sp2.x; P.y=sp2.y; P.alive=true; P.hp=100; P.cool=0; P.reload=0; P.crouch=false;
     // Bots buy
     ctBots.forEach(b=>{ if(money>=3100&&Math.random()<.7) b.wpnId=4; if(money>=2700&&Math.random()<.3) b.wpnId=5; });
     ctBots.forEach(b=>{ b.x=SPAWN_CT[ctBots.indexOf(b)+1]?.x||b.x; b.y=SPAWN_CT[ctBots.indexOf(b)+1]?.y||b.y; b.hp=100; b.alive=true; b.cool=0; b.mode='wander'; b.tgt=null; b.ap=b.wpnId>=4?100:0; });
@@ -606,7 +608,7 @@ button:hover{background:#2a3f55}
   addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
   cv.addEventListener('contextmenu',e=>e.preventDefault());
   cv.addEventListener('mousedown',e=>{
-    if(state==='menu'||state==='gameover'){ state='live'; newRound(); return; }
+    if(state==='menu'||state==='gameover'){ if(state==='gameover'){money=800;scoreCT=0;scoreT=0;roundNum=0;} newRound(); return; }
     if(state==='buy'){ showBuy=!showBuy; showBuyUI(showBuy); return; }
     if(e.button===2){ if(state==='live'&&curW().tier>=4) ads=true; return; }
     if(e.button===0&&state==='live'){ if(cv.requestPointerLock&&document.pointerLockElement!==cv) cv.requestPointerLock(); firing=true; } });
@@ -633,7 +635,8 @@ button:hover{background:#2a3f55}
     }
     // render
     cx.save(); if(shake>0) cx.translate((Math.random()-.5)*shake*14,(Math.random()-.5)*shake*14);
-    if(state!=='menu'&&state!=='gameover') render();
+    if(state==='menu') P.a+=dt*0.22; // kamera menu berpusing perlahan
+    if(state!=='gameover') render();
     if(state==='live'||state==='buy') hud();
     cx.restore();
     if(state==='menu') overlay('🎯 COUNTER STRIKE','5v5 Tactical · Bomb Defusal · Spray & Pray · AWP Quickscope','#4cc9f0');
@@ -642,9 +645,11 @@ button:hover{background:#2a3f55}
     requestAnimationFrame(loop); }
 
   // ─── Init ───
-  P={alive:true}; // placeholder before newRound
-  state='menu'; time=0;
-  newRound(); state='menu';
+  buildMap();
+  bots=[]; ctBots=[]; feed=[]; dmgNums=[];
+  P={x:SPAWN_CT[0].x,y:SPAWN_CT[0].y,a:0,alive:true};
+  state='menu'; time=0; scoreCT=0; scoreT=0; roundNum=0; money=800;
+  showBuyUI(false);
   requestAnimationFrame(loop);
 })();
 </script>
