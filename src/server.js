@@ -240,7 +240,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'pubg'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'pubg', 'cs'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -1915,7 +1915,8 @@ const STORE_APP_META = {
   orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
   fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
   drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' },
-  pubg: { ic: '🪂', title: 'Medan Battle Royale', desc: 'FPS BR 3D peta 48×48 — scope ADS, grenad, airdrop Groza, bot AI perang sesama sendiri, zon biru & peta besar.' }
+  pubg: { ic: '🪂', title: 'Medan Battle Royale', desc: 'FPS BR 3D peta 48×48 — scope ADS, grenad, airdrop Groza, bot AI perang sesama sendiri, zon biru & peta besar.' },
+  cs: { ic: '🎯', title: 'Counter Strike', desc: 'Tactical FPS 5v5 round-based — buy menu, spray recoil, headshot one-tap, AWP quickscope, bomb defusal di A/B site.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [
