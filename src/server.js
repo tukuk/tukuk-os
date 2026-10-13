@@ -1916,7 +1916,7 @@ const STORE_APP_META = {
   orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
   fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
   drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' },
-  chat: { ic: '✈️', title: 'Tukuk Chat', desc: 'Aplikasi chat Tukuk Chat sebenar — daftar nama + kata laluan, Tukuk ID kekal, bilik Am dan DM 1-ke-1, reply, reaction, edit, profil, carian, wallpaper & bunyi.' }
+  chat: { ic: '✈️', title: 'Tukuk Chat', desc: 'Aplikasi chat Tukuk Chat sebenar — daftar nama + kata laluan, Tukuk ID kekal, bilik Am dan DM 1-ke-1, hantar gambar & video, reply, reaction, edit, profil, carian, wallpaper & bunyi.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [

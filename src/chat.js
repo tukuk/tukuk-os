@@ -1,7 +1,7 @@
 // Tukuk Chat — backend multi-pengguna untuk app /apps/chat.
 // Akaun (scrypt), sesi bearer-token, bilik global + DM 1-ke-1, mesej dengan
-// reply/reaction/edit/padam, kehadiran (online/menaip). Semua dalam satu fail
-// JSON di data/chat.json (direpok → tidak boleh dihantar oleh auto-update).
+// reply/reaction/edit/padam, lampiran gambar & video, kehadiran (online/menaip).
+// Metadata dalam satu fail JSON di data/chat.json; fail media di data/chat-media/.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -12,8 +12,17 @@ const KEEP = 200;           // mesej terakhir per bilik
 const SESSION_TTL = 30 * 24 * 3600e3;
 const ONLINE_MS = 90e3;     // dianggap dalam talian
 const TYPING_MS = 4e3;      // paparan "menaip…"
+const MAX_IMG = 8 * 1024 * 1024;            // had fail gambar (selepas mampat klien)
+const MAX_VID = 64 * 1024 * 1024;           // had fail video
+const MAX_PER_MSG = 4;                      // media satu mesej (album)
+const QUOTA_FILES = 40;                     // fail per jam per pengguna
+const QUOTA_BYTES = 512 * 1024 * 1024;      // saiz per jam per pengguna
+const QUOTA_WIN = 3600e3;
+const STORE_CAP = 3 * 1024 * 1024 * 1024;   // jumlah stor media seluruh tapak
+const ORPHAN_TTL = 3600e3;                  // muat naik tak dihantar → buang
 
 let FILE = DEFAULT_PATH;
+let MEDIA = path.join(path.dirname(DEFAULT_PATH), 'chat-media');
 let state = null;
 let writeTimer = null;
 let dirty = false;
@@ -21,7 +30,7 @@ let dirty = false;
 // ─── Simpanan ───
 const FIRST_ID = 100001;    // Tukuk ID pertama (nombor kekal, bukan nama)
 function blank() {
-  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, nextId: FIRST_ID };
+  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID };
 }
 function load() {
   if (state) return state;
@@ -80,7 +89,7 @@ function touch() {
   if (writeTimer) return;
   writeTimer = setTimeout(() => { writeTimer = null; flush(); }, 400);
 }
-function setPath(p) { FILE = p; state = null; load(); }
+function setPath(p) { FILE = p; MEDIA = path.join(path.dirname(p), 'chat-media'); state = null; load(); }
 
 // ─── Pengesahan ───
 function hashPass(pass, salt) {
@@ -130,6 +139,174 @@ function findUser(q) {
 const uid = (who) => { const u = (who && typeof who === 'object') ? who : findUser(who); return u && u.id ? u.id : null; };
 const uname = (who) => { const u = (who && typeof who === 'object') ? who : findUser(who); return (u && u.name) || (who && who.name) || String(who || ''); };
 const isOnline = (u) => Date.now() - (u.lastSeen || 0) < ONLINE_MS;
+
+// ─── Media (gambar + video) ───
+// Fail mentah disimpan di data/chat-media/<id>.<ext>; metadata dalam JSON. Jenis
+// ditentukan daripada bait ajaib (magic bytes), BUKAN header Content-Type klien.
+function sniff(b) {
+  if (!b || b.length < 16) return null;
+  const at = (o, n) => b.toString('latin1', o, o + n);
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { ext: 'jpg', mime: 'image/jpeg' };
+  if (b[0] === 0x89 && at(1, 3) === 'PNG') return { ext: 'png', mime: 'image/png' };
+  if (at(0, 4) === 'GIF8') return { ext: 'gif', mime: 'image/gif' };
+  if (at(0, 4) === 'RIFF' && at(8, 4) === 'WEBP') return { ext: 'webp', mime: 'image/webp' };
+  if (at(4, 4) === 'ftyp') {
+    const brand = at(8, 4);
+    if (/^(avif|avis)$/.test(brand)) return { ext: 'avif', mime: 'image/avif' };
+    if (/^(hei[ctsm]|mif1|msf1|iso8)$/.test(brand)) return { ext: 'heic', mime: 'image/heic' };
+    if (/^qt/.test(brand)) return { ext: 'mov', mime: 'video/quicktime' };
+    return { ext: 'mp4', mime: 'video/mp4' };
+  }
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return { ext: 'webm', mime: 'video/webm' };
+  return null;
+}
+const isImage = (mime) => String(mime).startsWith('image/');
+function mediaFile(rec) { return path.join(MEDIA, rec.id + '.' + rec.ext); }
+function num(v, max) { const n = Math.round(Number(v) || 0); return n > 0 && n <= max ? n : 0; }
+// Pautan media TIDAK boleh membawa token sesi (token masuk log pelayan), jadi
+// setiap URL ditandatangani HMAC dengan tarikh luput. <img>/<video> boleh hantar
+// terus dan sokong julat bayaran (Range) untuk lompat video.
+const MEDIA_TTL = 6 * 3600e3;
+function mediaSecret() {
+  const s = load();
+  if (!s.mediaKey) { s.mediaKey = crypto.randomBytes(32).toString('hex'); dirty = true; }
+  return s.mediaKey;
+}
+const mac = (id, exp) => crypto.createHmac('sha256', mediaSecret()).update(id + '.' + exp).digest('hex').slice(0, 32);
+// Tarikh luput dijana pada sempadan tempoh (bukan "sekarang + 6 jam") supaya URL
+// yang sama kekal stabil — jika tidak, setiap poll menghasilkan pautan baharu dan
+// pelayar memuat turun semula gambar/video yang sama.
+function mediaUrl(id) {
+  const exp = (Math.floor(Date.now() / MEDIA_TTL) + 2) * MEDIA_TTL;
+  return '/api/chat/media/' + id + '?k=' + exp + '.' + mac(id, exp);
+}
+function mediaAllowed(id, k) {
+  if (!/^[a-f0-9]{12}$/.test(String(id))) return false;
+  const p = String(k || '').split('.');
+  if (p.length !== 2) return false;
+  const exp = Number(p[0]);
+  if (!Number.isFinite(exp) || exp < Date.now()) return false;
+  const a = Buffer.from(mac(id, exp)), b = Buffer.from(p[1]);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+// Rekod media untuk paparan (jalan hanya dengan tandatangan yang sah).
+function mediaSrc(id) {
+  const rec = (load().media || {})[/^[a-f0-9]{12}$/.test(String(id)) ? String(id) : ''];
+  if (!rec || !fs.existsSync(mediaFile(rec))) return null;
+  return rec;
+}
+
+function quotaCheck(u, size) {
+  const s = load(); const now = Date.now();
+  s.quota = s.quota || {};
+  const q = s.quota[u.k] || { t: now, n: 0, b: 0 };
+  if (now - q.t > QUOTA_WIN) { q.t = now; q.n = 0; q.b = 0; }
+  if (q.n >= QUOTA_FILES) return { error: 'Terlalu banyak fail jam ini — cuba lagi sebentar.' };
+  if (q.b + size > QUOTA_BYTES) return { error: 'Muat naik anda bulan ini sudah sampai had.' };
+  if ((s.mediaBytes || 0) + size > STORE_CAP) return { error: 'Stor media tapak sudah penuh.' };
+  q.n++; q.b += size; s.quota[u.k] = q;
+  return { ok: true };
+}
+function addMedia(user, buf, meta) {
+  const s = load();
+  const t = sniff(buf);
+  if (!t) return { error: 'Fail itu bukan gambar atau video yang disokong.', status: 415 };
+  const img = isImage(t.mime);
+  if (buf.length > (img ? MAX_IMG : MAX_VID)) return { error: img ? 'Gambar terlalu besar (had 8MB).' : 'Video terlalu besar (had 64MB).', status: 413 };
+  const q = quotaCheck(user, buf.length);
+  if (q.error) return { error: q.error, status: 429 };
+  const id = crypto.randomBytes(6).toString('hex');
+  const rec = {
+    id, ext: t.ext, mime: t.mime, kind: img ? 'image' : 'video', size: buf.length,
+    uid: user.id || null, by: user.k, ts: Date.now(), rooms: [], msgs: [],
+  };
+  const w = num(meta && meta.w, 10000), h = num(meta && meta.h, 10000), dur = num(meta && meta.dur, 3600);
+  if (w && h) { rec.w = w; rec.h = h; }
+  if (!img && dur) rec.dur = dur;
+  try {
+    fs.mkdirSync(MEDIA, { recursive: true });
+    fs.writeFileSync(mediaFile(rec), buf);
+  } catch { return { error: 'Gagal menyimpan fail di pelayan.', status: 500 }; }
+  s.media = s.media || {};
+  s.media[id] = rec;
+  s.mediaBytes = (s.mediaBytes || 0) + buf.length;
+  touch();
+  return { ok: true, media: rec };
+}
+// Ringkasan yang disemat dalam mesej (supaya paparan tak perlu satu lagi GET).
+function projectMedia(rec) {
+  const out = { id: rec.id, kind: rec.kind, ext: rec.ext };
+  if (rec.w && rec.h) { out.w = rec.w; out.h = rec.h; }
+  if (rec.dur) out.dur = rec.dur;
+  if (rec.size) out.size = rec.size;
+  return out;
+}
+// Tandatangan dijana semula setiap kali dihantar — jadi mesej yang disimpan
+// tidak pernah mengandungi URL yang boleh luput.
+function hydrate(m) {
+  if (!m || !m.media || !m.media.length) return m;
+  const out = Object.assign({}, m);
+  out.media = m.media.map(x => Object.assign({}, x, { url: mediaUrl(x.id) }));
+  return out;
+}
+const hydrateAll = (list) => (list || []).map(hydrate);
+// Lampirkan fail yang sudah dimuat naik pada mesej bilik ini. Hak = pemilik muat
+// naik, atau sesiapa yang boleh baca bilik yang sudah memaparkan fail itu (membolehkan
+// "teruskan" gambar kawan tanpa menyalin fail di disk).
+function ownsMedia(user, rec) {
+  if (user.k && rec.by === user.k) return true;
+  if (!user.name) return false;
+  return (rec.rooms || []).some(rid => canRead(user.name, rid));
+}
+function attachMedia(user, roomId, ids, msgId) {
+  const s = load();
+  const out = [];
+  for (const raw of ids || []) {
+    const id = String(raw && raw.id ? raw.id : raw);
+    const rec = (s.media || {})[/^[a-f0-9]{12}$/.test(id) ? id : ''];
+    if (!rec || !fs.existsSync(mediaFile(rec))) continue;
+    if (!ownsMedia(user, rec)) continue;
+    if (!rec.msgs.includes(msgId)) rec.msgs.push(msgId);
+    if (!rec.rooms.includes(roomId)) rec.rooms.push(roomId);
+    out.push(projectMedia(rec));
+    if (out.length >= MAX_PER_MSG) break;
+  }
+  return out;
+}
+function dropMedia(id) {
+  const s = load(); const rec = (s.media || {})[id];
+  if (!rec) return;
+  try { fs.unlinkSync(mediaFile(rec)); } catch { /* sudah tiada */ }
+  s.mediaBytes = Math.max(0, (s.mediaBytes || 0) - (rec.size || 0));
+  delete s.media[id];
+  touch();
+}
+// Buang rujukan mesej; fail dipadam bila tiada lagi mesej yang memakainya.
+function releaseMedia(items, msgId) {
+  const s = load();
+  for (const it of items || []) {
+    const rec = (s.media || {})[it && it.id];
+    if (!rec) continue;
+    rec.msgs = (rec.msgs || []).filter(x => x !== msgId);
+    if (!rec.msgs.length) dropMedia(rec.id);
+  }
+}
+// Pembaca badan mentah — muat naik gambar/video bukan JSON, jadi tak guna
+// express.json. Had saiz dikuatkuasakan sendiri supaya ralat boleh difahami.
+function readRaw(req, max) {
+  return new Promise((resolve, reject) => {
+    const parts = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > max) { reject(new Error('Fail terlalu besar.')); req.destroy(); return; }
+      parts.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(parts)));
+    req.on('aborted', () => reject(new Error('Muat naik dibatalkan.')));
+    req.on('error', () => reject(new Error('Muat naik gagal.')));
+  });
+}
 
 function register(name, pass) {
   const s = load();
@@ -254,22 +431,32 @@ function authorName(m) {
   const nm = m.fid ? nameOfUser(m.fid) : null;
   return nm || m.from || null;
 }
-function send(name, roomId, text, replyTo) {
+function send(name, roomId, text, replyTo, media) {
   const s = load();
   const r = s.rooms[roomId];
   if (!r) return { error: 'Bilik tidak ditemui.' };
   if (!r.list) r.list = [];
   if (!r.seq) r.seq = 0;
-  const t = cleanText(text);
-  if (!t) return { error: 'Mesej kosong.' };
-  if (replyTo && !r.list.find(m => m.id === replyTo)) replyTo = null;
   const su = findUser(name);
-  const msg = { id: crypto.randomBytes(6).toString('hex'), seq: ++r.seq, from: su ? su.name : name, fid: su ? su.id : null, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false };
+  const msgId = crypto.randomBytes(6).toString('hex');
+  const att = media && media.length ? attachMedia(su || { k: key(name) }, roomId, media, msgId) : [];
+  if (media && media.length && !att.length) return { error: 'Lampiran tidak dapat digunakan — muat naik semula.' };
+  const t = cleanText(text);
+  if (!t && !att.length) return { error: 'Mesej kosong.' };
+  if (replyTo && !r.list.find(m => m.id === replyTo)) replyTo = null;
+  const msg = { id: msgId, seq: ++r.seq, from: su ? su.name : name, fid: su ? su.id : null, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false };
+  if (att.length) msg.media = att;
   r.list.push(msg);
-  if (r.list.length > KEEP) r.list.splice(0, r.list.length - KEEP);
+  trimRoom(r);
   delete s.typing[key(name) + '|' + roomId];
   touch();
-  return { ok: true, msg, room: r };
+  return { ok: true, msg: hydrate(msg), room: r };
+}
+// Simpan hanya KEEP mesej terakhir; fail yang keluar dari senarai dibuang.
+function trimRoom(r) {
+  if (r.list.length <= KEEP) return;
+  const out = r.list.splice(0, r.list.length - KEEP);
+  for (const m of out) releaseMedia(m.media, m.id);
 }
 function since(name, roomId, after) {
   const s = load();
@@ -299,7 +486,7 @@ function react(name, roomId, msgId, emo) {
   m.rx = m.rx || {};
   if (m.rx[e]) { delete m.rx[e]; } else { m.rx[e] = 1; }
   touch();
-  return { ok: true, msg: m };
+  return { ok: true, msg: hydrate(m) };
 }
 function edit(name, roomId, msgId, text) {
   const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
@@ -309,14 +496,16 @@ function edit(name, roomId, msgId, text) {
   const t = cleanText(text);
   if (!t) return { error: 'Mesej kosong.' };
   m.t = t; m.edited = true; touch();
-  return { ok: true, msg: m };
+  return { ok: true, msg: hydrate(m) };
 }
 function remove(name, roomId, msgId) {
   const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
   const i = (r.list || []).findIndex(x => x.id === msgId);
   if (i < 0) return { error: 'Mesej tidak ditemui.' };
   if (!sameAuthor(r.list[i], name)) return { error: 'Hanya mesej sendiri boleh dipadam.' };
-  r.list.splice(i, 1); touch();
+  const [gone] = r.list.splice(i, 1);
+  releaseMedia(gone.media, gone.id);
+  touch();
   return { ok: true };
 }
 function setTyping(name, roomId) {
@@ -398,6 +587,12 @@ function sweep() {
   const s = load(); const now = Date.now();
   for (const [tok, sess] of Object.entries(s.sessions)) if (!sess || sess.exp < now) delete s.sessions[tok];
   for (const [k, ts] of Object.entries(s.typing)) if (now - ts > TYPING_MS * 2) delete s.typing[k];
+  // Muat naik yang tak pernah jadi mesej (tab ditutup) + fail tanpa rujukan → buang.
+  for (const [id, rec] of Object.entries(s.media || {})) {
+    if (rec.msgs && rec.msgs.length) continue;
+    if (now - (rec.ts || 0) > ORPHAN_TTL) dropMedia(id);
+  }
+  for (const [k, q] of Object.entries(s.quota || {})) if (now - q.t > QUOTA_WIN * 4) delete s.quota[k];
   touch();
 }
 setInterval(sweep, 10 * 60e3).unref?.();
@@ -466,7 +661,7 @@ function mount(app, deps) {
         id: r.id, kind: r.kind, title: roomTitle(r, u),
         members: r.members, peerId: pid, unread: un[r.id] || 0, seq: r.seq || 0,
         peer: peer ? { id: peer.id, name: peer.name, bio: peer.bio || '' } : null,
-        last: last ? { from: authorName(last), fid: last.fid || null, t: last.del ? null : last.t, ts: last.ts } : null,
+        last: last ? { from: authorName(last), fid: last.fid || null, t: last.del ? null : last.t, mt: last.media && last.media.length ? last.media[0].kind : null, n: (last.media || []).length, ts: last.ts } : null,
         online: r.kind === 'global' ? Object.values(on).filter(Boolean).length : !!(peer && isOnline(peer)),
       };
     }).sort((a, b) => (b.last ? b.last.ts : 0) - (a.last ? a.last.ts : 0));
@@ -480,9 +675,9 @@ function mount(app, deps) {
     // hanya tandakan "dibaca" bila kliennya memang paparkan bilik itu (elak badge hilang di mobile)
     if (req.query.read === '1') markSeen(u.name, room);
     // Senarai pengguna hanya dihantar pada refresh penuh — elak poll 2.5s membazir bandwidth.
-    if (req.query.full === '1') { const r = state.rooms[room]; return res.json({ ok: true, msgs: (r.list || []).slice(-KEEP), seq: r.seq || 0, typing: typingIn(room), people: people(null, 300) }); }
+    if (req.query.full === '1') { const r = state.rooms[room]; return res.json({ ok: true, msgs: hydrateAll((r.list || []).slice(-KEEP)), seq: r.seq || 0, typing: typingIn(room), people: people(null, 300) }); }
     const out = since(u.name, room, req.query.after);
-    res.json({ ok: true, msgs: out.msgs, seq: out.seq, typing: typingIn(room) });
+    res.json({ ok: true, msgs: hydrateAll(out.msgs), seq: out.seq, typing: typingIn(room) });
   });
 
   app.post('/api/chat/messages', lim({ windowMs: 60e3, max: 40, keyPrefix: 'chmsg:' }), (req, res) => {
@@ -490,9 +685,63 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const room = String(b.room || '');
     if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
-    const r = send(u.name, room, b.text, b.replyTo);
+    if (b.media != null && !Array.isArray(b.media)) return res.status(400).json({ error: 'Lampiran mesti senarai.' });
+    if (Array.isArray(b.media) && b.media.length > MAX_PER_MSG) return res.status(400).json({ error: 'Maksimum ' + MAX_PER_MSG + ' fail satu mesej.' });
+    const r = send(u.name, room, b.text, b.replyTo, b.media);
     if (r.error) return res.status(400).json({ error: r.error });
     res.json({ ok: true, msg: r.msg, seq: r.room.seq });
+  });
+
+  // Muat naik gambar/video: badan MENTAH (bukan JSON) + bilik dalam query.
+  app.post('/api/chat/media', lim({ windowMs: 60e3, max: 40, keyPrefix: 'chmedia:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const room = String(req.query.room || '');
+    if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
+    const cl = Number(req.headers['content-length'] || 0);
+    if (cl > MAX_VID) { req.resume(); return res.status(413).json({ error: 'Video terlalu besar (had 64MB).' }); }
+    readRaw(req, MAX_VID + 64 * 1024).then((buf) => {
+      const meta = { w: req.query.w, h: req.query.h, dur: req.query.dur };
+      const r = addMedia(u, buf, meta);
+      if (r.error) return res.status(r.status || 400).json({ error: r.error });
+      event('Media dimuat naik: ' + r.media.kind + ' ' + Math.round(r.media.size / 1024) + 'KB', { id: u.id });
+      res.json({ ok: true, media: Object.assign(projectMedia(r.media), { url: mediaUrl(r.media.id) }) });
+    }).catch((e) => res.status(413).json({ error: e.message }));
+  });
+
+  // Hidangan media: tandatangan sahaja (tiada token sesi dalam URL) + sokong
+  // julat bayaran supaya video boleh dilompat tanpa muat turun semua.
+  app.get('/api/chat/media/:id', (req, res) => {
+    const id = String(req.params.id);
+    if (!mediaAllowed(id, req.query.k)) return res.status(403).json({ error: 'Pautan media sudah luput.' });
+    const rec = mediaSrc(id);
+    if (!rec) return res.status(404).json({ error: 'Fail sudah dibuang.' });
+    const file = mediaFile(rec);
+    fs.stat(file, (err, st) => {
+      if (err) { dropMedia(id); return res.status(404).json({ error: 'Fail sudah dibuang.' }); }
+      const total = st.size;
+      const head = {
+        'Content-Type': rec.mime,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'private, max-age=86400',
+        'Cross-Origin-Resource-Policy': 'same-origin',
+        'Last-Modified': new Date(rec.ts || Date.now()).toUTCString(),
+      };
+      let from = 0, to = total - 1, partial = false;
+      const rg = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
+      if (rg && (rg[1] || rg[2])) {
+        from = rg[1] ? Number(rg[1]) : Math.max(0, total - Number(rg[2]));
+        if (rg[1] && rg[2]) to = Math.min(Number(rg[2]), total - 1);
+        if (from >= total || from > to) {
+          head['Content-Range'] = 'bytes */' + total;
+          res.writeHead(416, head); return res.end();
+        }
+        partial = true;
+      }
+      if (partial) { head['Content-Range'] = 'bytes ' + from + '-' + to + '/' + total; head['Content-Length'] = String(to - from + 1); res.writeHead(206, head); }
+      else { head['Content-Length'] = String(total); res.writeHead(200, head); }
+      if (req.method === 'HEAD') return res.end();
+      fs.createReadStream(file, { start: from, end: to }).pipe(res);
+    });
   });
 
   app.post('/api/chat/room', (req, res) => {
@@ -577,4 +826,8 @@ module.exports = {
   react, edit, remove, setTyping, typingIn, people, onlineMap, setPath, load, flush,
   byId, findUser, nameOfUser, peerId, isMember, sameAuthor, authorName,
   profile, rename, setBio, isOnline, cleanText,
+  sniff, addMedia, attachMedia, mediaUrl, mediaAllowed, mediaSrc, mediaFile, projectMedia,
+  hydrate, releaseMedia, dropMedia, readRaw, quotaCheck, trimRoom,
+  MAX_IMG, MAX_VID, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
+  get mediaDir() { return MEDIA; },
 };

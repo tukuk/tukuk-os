@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tukuk Chat — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1. Reply, reaction, edit, profil, carian, wallpaper.">
+<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1, hantar gambar & video. Reply, reaction, edit, profil, carian, wallpaper.">
 <link rel="canonical" href="https://tukuk.org/apps/chat">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg">
@@ -106,6 +106,47 @@
   .reactions button:hover { background:rgba(0,0,0,.4); }
   #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
 
+  /* ─── Lampiran gambar / video ─── */
+  .media { display:grid; gap:3px; margin:-3px -6px 4px; border-radius:11px; overflow:hidden; background:#0b1120; }
+  .media.n2, .media.n3, .media.n4 { grid-template-columns:1fr 1fr; }
+  .media.n3 .mcell:first-child { grid-column:1 / span 2; }
+  .mcell { position:relative; overflow:hidden; background:#0b1120; min-height:70px; }
+  .media.n2 .mcell, .media.n4 .mcell, .media.n3 .mcell { aspect-ratio:1; }
+  .media.n3 .mcell:first-child { aspect-ratio:2; }
+  .mcell img, .mcell video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  /* Satu gambar sahaja: biarkan nisbah asli, jangan pangkas */
+  .media.n1 { display:block; }
+  .media.n1 .mcell { display:flex; align-items:center; justify-content:center; min-height:0; }
+  .media.n1 img, .media.n1 video { position:static; width:auto; height:auto; max-width:100%; max-height:62vh; object-fit:contain; }
+  .media.n1 img { cursor:zoom-in; }
+  .media.n1 .brk { position:static; padding:26px 14px; }
+  .mcell video { background:#000; }
+  .mcell .dur { position:absolute; right:5px; bottom:5px; background:rgba(0,0,0,.7); color:#fff; font-size:.66rem; padding:2px 6px; border-radius:6px; font-variant-numeric:tabular-nums; pointer-events:none; }
+  .mcell .brk { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#9fb0cc; font-size:.72rem; background:#111a2b; }
+  .bub .cap { padding:0 2px; }
+  /* Rakaman sementara sebelum dihantar */
+  #tray { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; gap:8px; padding:9px 12px 0; flex-wrap:wrap; background:var(--panel); border-top:1px solid var(--line); }
+  #tray.on { display:flex; }
+  .tcell { position:relative; width:74px; height:74px; border-radius:9px; overflow:hidden; background:#0b1120; border:1px solid var(--line); flex:none; }
+  .tcell img, .tcell video { width:100%; height:100%; object-fit:cover; display:block; }
+  .tcell .x { position:absolute; top:3px; right:3px; background:rgba(0,0,0,.65); color:#fff; border:none; border-radius:6px; width:20px; height:20px; cursor:pointer; font-size:.72rem; line-height:1; padding:0; }
+  .tcell .x:hover { background:var(--danger); }
+  .tcell .pr { position:absolute; left:0; bottom:0; height:3px; width:0; background:var(--accent); transition:width .18s; }
+  .tcell .st { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(6,10,20,.72); color:#fff; font-size:.66rem; text-align:center; padding:2px; }
+  .tcell.err .st { background:rgba(180,60,60,.85); }
+  #clipBtn { width:40px; height:40px; flex:none; border-radius:50%; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:1.05rem; cursor:pointer; }
+  #clipBtn:hover { border-color:var(--accent); color:var(--accent); }
+  #main.dragging { outline:2px dashed var(--accent); outline-offset:-8px; }
+  /* Paparan penuh gambar */
+  #view { position:fixed; inset:0; background:rgba(4,7,14,.95); display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; z-index:95; }
+  #view.on { display:flex; }
+  #view .stage { display:flex; align-items:center; justify-content:center; max-width:96vw; max-height:78vh; }
+  #view .stage img { max-width:96vw; max-height:78vh; border-radius:6px; }
+  #view .cap { color:#d8e1f0; font-size:.86rem; max-width:92vw; text-align:center; white-space:pre-wrap; }
+  #view .bar { display:flex; gap:8px; align-items:center; }
+  #view .bar button { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#fff; border-radius:8px; padding:6px 12px; cursor:pointer; font:inherit; font-size:.82rem; }
+  #view .bar button:hover { background:rgba(255,255,255,.22); }
+
   /* ─── Composer ─── */
   #replyBar, #editBar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; background:var(--panel); border-top:1px solid var(--line); padding:6px 12px; font-size:.78rem; }
   #replyBar .rb, #editBar .rb { display:flex; align-items:center; gap:8px; }
@@ -194,6 +235,7 @@
     Daftar satu nama + kata laluan. Kata laluan disimpan sebagai <i>hash</i> scrypt di pelayan — kami tak boleh baca asalnya.
     Selepas masuk, anda terus berada dalam bilik <b>🌍 Am</b> untuk bersembang dengan semua orang dalam talian.
     Tekan <b>➕</b> untuk cari pengguna lain dan buka mesej peribadi (DM) 1-ke-1.<br>
+    <b>Gambar &amp; video:</b> tekan 📎 (atau tampal/seret fail) untuk hantar media — gambar dimampat dalam pelayar dulu supaya laju, video sehingga 64MB.<br>
     <b>Tukuk ID:</b> setiap akaun dapat nombor kekal (contoh <b>100042</b>). Kawan boleh cari anda ikut nombor itu walaupun anda tukar nama — DM dan mesej lama takkan putus.<br>
     <b>Nasib baik:</b> guna kata laluan yang anda tak pakai di tempat lain — pemulihan akaun belum tersedia.
   </div>
@@ -219,15 +261,19 @@
     <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Bilik masih kosong. Sapa dulu! 👋</div></div>
     <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Batal">✕</button></div></div>
     <div id="editBar"><div class="rb">✏️ <b>Mengedit mesej</b><span></span><button id="edCancel" title="Batal">✕</button></div></div>
+    <div id="tray"></div>
     <div id="compose">
+      <button id="clipBtn" title="Lampirkan gambar atau video">📎</button>
       <div class="cin"><textarea id="inp" rows="1" placeholder="Tulis mesej…"></textarea></div>
       <button id="send" title="Hantar">➤</button>
+      <input type="file" id="file" accept="image/*,video/*" multiple style="display:none">
     </div>
   </main>
 </div>
 
 <div id="ctx"></div>
 <div id="toast"></div>
+<div id="view"><div class="stage" id="vStage"></div><div class="cap" id="vCap"></div><div class="bar"><button id="vPrev">←</button><button id="vSave">⬇️ Simpan</button><button id="vClose">✕ Tutup</button><button id="vNext">→</button></div></div>
 
 <div class="modal" id="peopleModal"><div class="mbox">
   <h3>👥 Cari pengguna</h3>
@@ -285,6 +331,7 @@
   let myId = 0, myBio = '', myJoined = null;   // Tukuk ID akaun yang sedang login
   let replyTo = null, editing = null, lastTypingPing = 0;
   let roomsSig = '', roomsSigCur = null, msgSig = '';
+  let pending = [], seqKey = 1, busy = false;   // lampiran menunggu dihantar
   let pref = { sound: true, wall: 1, font: 15 };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
@@ -294,6 +341,9 @@
   // bilik terakhir disimpan per-akaun supaya login akaun lain tidak dibuka ke bilik orang
   const rkey = () => RKEY + ':' + (me || '').toLowerCase();
   const norm = s => String(s).replace(/\s+/g, ' ').trim();
+  // Tandatangan ringkas untuk senarai lampiran — guna semasa memadankan mesej
+  // sementara dengan salinan pelayan (gambar berbeza, teks sama → bukan duplikat).
+  const msig = m => (m && m.media || []).map(x => x.kind + (x.w || 0) + 'x' + (x.h || 0) + (x.dur || 0)).join(',');
 
   // ─── Panggilan API ───
   async function call(p, opt) {
@@ -364,6 +414,149 @@
   let toastT = null;
   function toast(m) { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { t.style.display = 'none'; }, 2600); }
 
+  // ─── Lampiran gambar / video ───
+  const MAX_MEDIA = 4, IMG_CAP = 8 * 1048576, VID_CAP = 64 * 1048576, IMG_SIDE = 1600;
+  const mbytes = n => (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
+  function mmss(sec) { const s = Math.max(0, Math.round(sec)); return Math.floor(s / 60) + ':' + pad2(s % 60); }
+  const kindOf = f => String(f.type || '').startsWith('video/') ? 'video' : String(f.type || '').startsWith('image/') ? 'image' : null;
+  function mediaLabel(list) {
+    if (!list || !list.length) return '';
+    const one = list[0].kind === 'video' ? '🎬 Video' : '🖼 Gambar';
+    return list.length > 1 ? one + ' (+' + (list.length - 1) + ')' : one;
+  }
+  const msgLabel = m => (m && m.t && m.t.trim()) ? m.t : (mediaLabel(m && m.media) || '(kosong)');
+  const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : '🖼 Gambar') + (n > 1 ? ' +' + (n - 1) : '');
+  // Grid mesej: 1 besar (ikut nisbah asli), 2–4 sekata seperti Telegram.
+  function mediaGrid(msg) {
+    const list = (msg.media || []).slice(0, MAX_MEDIA);
+    if (!list.length) return '';
+    return '<div class="media n' + list.length + '">' + list.map((x, i) => {
+      const body = !x.url ? '<div class="brk">' + (x.kind === 'video' ? '🎬 Video' : '🖼 Gambar') + ' sudah dibuang</div>'
+        : x.kind === 'video'
+          ? '<video src="' + esc(x.url) + '" preload="metadata" playsinline controls></video>' + (x.dur ? '<span class="dur">' + mmss(x.dur) + '</span>' : '')
+          : '<img src="' + esc(x.url) + '" alt="gambar dilampirkan" loading="lazy">';
+      return '<div class="mcell' + (x.kind === 'video' ? ' vid' : '') + '" ' +
+        (x.kind === 'video' ? 'data-v="' + i + '"' : 'data-z="' + i + '"') + '>' + body + '</div>';
+    }).join('') + '</div>';
+  }
+  function probeImage(url) {
+    return new Promise((resolve) => {
+      const i = new Image();
+      i.onload = () => resolve({ w: i.naturalWidth, h: i.naturalHeight });
+      i.onerror = () => resolve({});
+      i.src = url;
+    });
+  }
+  function probeVideo(url) {
+    return new Promise((resolve) => {
+      const v = document.createElement('video');
+      let done = false;
+      const fin = (m) => { if (done) return; done = true; clearTimeout(t); v.removeAttribute('src'); v.load(); resolve(m); };
+      const t = setTimeout(() => fin({}), 8000);
+      v.onloadedmetadata = () => fin({ w: v.videoWidth, h: v.videoHeight, dur: Math.round(v.duration || 0) });
+      v.onerror = () => fin({});
+      v.preload = 'metadata'; v.muted = true; v.src = url;
+    });
+  }
+  // Gambar dimampat di klien: pelayar tak boleh hantar 12MP mentah dengan laju.
+  // GIF dibiarkan asli (canvas akan membunuh animasi), fail kecil pun dibiarkan.
+  async function shrinkImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = () => rej(new Error('Pelayar tidak dapat baca gambar itu — format HEIC/RAW perlu ditukar ke JPEG.'));
+        i.src = url;
+      });
+      const w0 = img.naturalWidth, h0 = img.naturalHeight;
+      const side = Math.max(w0, h0);
+      if (file.size <= 400 * 1024 && side <= IMG_SIDE) return { blob: file, w: w0, h: h0 };
+      const k = side > IMG_SIDE ? IMG_SIDE / side : 1;
+      const w = Math.max(1, Math.round(w0 * k)), h = Math.max(1, Math.round(h0 * k));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(img, 0, 0, w, h);
+      const blob = await new Promise(res => c.toBlob(b => res(b), 'image/jpeg', 0.82));
+      if (!blob || blob.size >= file.size) return { blob: file, w: w0, h: h0 };
+      return { blob, w, h };
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function addFiles(list) {
+    const all = Array.from(list || []);
+    const files = all.filter(kindOf);
+    if (all.length && files.length !== all.length) toast('Hanya gambar atau video boleh dilampirkan.');
+    for (const f of files) {
+      if (pending.length >= MAX_MEDIA) { toast('Maksimum ' + MAX_MEDIA + ' fail satu mesej.'); break; }
+      const kind = kindOf(f);
+      if (f.size > (kind === 'video' ? VID_CAP : IMG_CAP)) { toast((kind === 'video' ? 'Video' : 'Gambar') + ' terlalu besar (' + mbytes(f.size) + ').'); continue; }
+      const p = { key: seqKey++, kind, blob: f, url: URL.createObjectURL(f), status: 'wait', pct: 0 };
+      pending.push(p); renderTray();
+      try {
+        if (kind === 'video') Object.assign(p, await probeVideo(p.url));
+        else if (/gif/i.test(f.type)) Object.assign(p, await probeImage(p.url));
+        else {
+          const r = await shrinkImage(f);
+          p.blob = r.blob; p.w = r.w; p.h = r.h;
+          if (r.blob !== f) { URL.revokeObjectURL(p.url); p.url = URL.createObjectURL(r.blob); }
+        }
+        const cap = kind === 'video' ? VID_CAP : IMG_CAP;
+        if (p.blob.size > cap) { failItem(p, 'Masih terlalu besar (' + mbytes(p.blob.size) + ').'); continue; }
+        p.status = 'ready';
+      } catch (e) { failItem(p, e.message); }
+      renderTray();
+    }
+    if (pending.length) $('inp').focus();
+  }
+  function failItem(p, why) { p.status = 'err'; p.err = why; renderTray(); toast(why); }
+  function renderTray() {
+    const t = $('tray');
+    if (!pending.length) { t.classList.remove('on'); t.innerHTML = ''; return; }
+    t.classList.add('on');
+    t.innerHTML = pending.map(p =>
+      '<div class="tcell' + (p.status === 'err' ? ' err' : '') + '" data-k="' + p.key + '">' +
+      (p.kind === 'video' ? '<video src="' + esc(p.url) + '" muted playsinline preload="metadata"></video>' : '<img src="' + esc(p.url) + '" alt="">') +
+      (p.status === 'up' ? '<div class="pr" style="width:' + p.pct + '%"></div>' : '') +
+      (p.status !== 'ready' ? '<div class="st">' + (p.status === 'up' ? p.pct + '%' : p.status === 'wait' ? '…' : esc(String(p.err || 'gagal').slice(0, 26))) + '</div>' : '') +
+      '<button class="x" title="Buang">✕</button></div>').join('');
+    for (const el of t.querySelectorAll('.tcell')) {
+      const p = pending.find(x => x.key === +el.dataset.k); if (!p) continue;
+      el.querySelector('.x').onclick = () => dropPending(p);
+    }
+  }
+  function dropPending(p) {
+    if (p.xhr) { try { p.xhr.abort(); } catch {} }
+    try { URL.revokeObjectURL(p.url); } catch {}
+    pending = pending.filter(x => x !== p);
+    renderTray();
+  }
+  function clearPending() { pending.slice().forEach(p => dropPending(p)); pending = []; }
+  // XHR (bukan fetch) sebab perlu peratusan muat naik.
+  function uploadOne(p) {
+    return new Promise((resolve, reject) => {
+      if (p.media && p.media.id) return resolve(p.media);   // sudah naik — jangan ulang
+      const q = '?room=' + encodeURIComponent(cur) +
+        (p.w ? '&w=' + Math.round(p.w) + '&h=' + Math.round(p.h) : '') + (p.dur ? '&dur=' + Math.round(p.dur) : '');
+      const x = new XMLHttpRequest();
+      p.xhr = x;
+      x.open('POST', API + '/media' + q, true);
+      x.setRequestHeader('Authorization', 'Bearer ' + token);
+      x.setRequestHeader('Content-Type', (p.blob && p.blob.type) || 'application/octet-stream');
+      x.upload.onprogress = e => { if (e.lengthComputable) { p.pct = Math.round(e.loaded / e.total * 100); renderTray(); } };
+      x.onload = () => {
+        p.xhr = null;
+        let j = {};
+        try { j = JSON.parse(x.responseText || '{}'); } catch { j = { error: 'Respons pelayan tidak sah (' + x.status + ').' }; }
+        if (x.status >= 200 && x.status < 300 && !j.error) { p.media = j.media; p.id = j.media.id; resolve(j.media); }
+        else reject(new Error(j.error || 'Muat naik gagal (' + x.status + ').'));
+      };
+      x.onerror = () => { p.xhr = null; reject(new Error('Rangkaian terputus — muat naik gagal.')); };
+      x.onabort = () => { p.xhr = null; reject(new Error('Muat naik dibatalkan.')); };
+      x.send(p.blob);
+    });
+  }
+
   // ─── Auth ───
   let mode = 'login';
   function setMode(m) {
@@ -427,6 +620,7 @@
     token = ''; me = ''; myId = 0; myBio = ''; myJoined = null;
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
     clearInterval(window.__ct); clearInterval(window.__rt);
+    clearPending();
     cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
     setMode('login'); showAuth('Anda sudah keluar.');
   };
@@ -445,7 +639,7 @@
     if (!token) return; // sudah keluar — jangan tindih mesej "anda sudah keluar"
     clearInterval(window.__ct); clearInterval(window.__rt);
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
-    token = ''; myId = 0; myBio = ''; myJoined = null; cache = {}; rooms = []; tick = 0; $('q').value = '';
+    token = ''; myId = 0; myBio = ''; myJoined = null; clearPending(); cache = {}; rooms = []; tick = 0; $('q').value = '';
     setMode('login'); showAuth('Sesi luput — sila masuk semula.');
   }
   function excerpt(text, q) {
@@ -468,7 +662,10 @@
     const rows = rooms.map(r => {
       const c = cache[r.id];
       const m = (c && c.msgs) || [];
-      let pv = r.last ? (r.last.t == null ? '<i>mesej dipadam</i>' : esc((mineAuthor(r.last.fid, r.last.from) ? 'Anda: ' : r.kind === 'global' ? r.last.from + ': ' : '') + norm(r.last.t).slice(0, 48))) : '<i style="color:var(--muted)">Tiada mesej</i>';
+      let pv = !r.last ? '<i style="color:var(--muted)">Tiada mesej</i>'
+        : (r.last.t == null ? '<i>mesej dipadam</i>'
+        : esc((mineAuthor(r.last.fid, r.last.from) ? 'Anda: ' : r.kind === 'global' ? r.last.from + ': ' : '') +
+          (norm(r.last.t) ? norm(r.last.t).slice(0, 48) : mediaWord(r.last.mt, r.last.n || 1))));
       let tm = r.last ? listTime(r.last.ts) : '';
       let show = true, score = r.last ? r.last.ts : 0;
       if (local) {
@@ -496,6 +693,7 @@
   }
   // ─── Buka bilik ───
   async function openRoom(id, silent) {
+    if (id !== cur) clearPending();   // lampiran menunggu milik bilik lama
     cur = id; localStorage.setItem(rkey(), id); // bilik terakhir per-akaun
     closeReplyEdit();
     if (!silent) $('app').dataset.open = '1';
@@ -546,10 +744,10 @@
       if (full) {
         b.msgs = j.msgs || [];
         // jangan hilangkan mesej yang masih dalam perjalanan semasa refresh penuh
-        for (const p of pend) if (!b.msgs.some(x => x.from === p.from && norm(x.t) === norm(p.t))) b.msgs.push(p);
+        for (const p of pend) if (!b.msgs.some(x => x.from === p.from && norm(x.t) === norm(p.t) && msig(x) === msig(p))) b.msgs.push(p);
       } else if (j.msgs && j.msgs.length) {
         // buang mesej yang sudah dipaparkan sebagai optimistic temp — elak berganda
-        const baru = j.msgs.filter(x => !b.msgs.some(p => String(p.id).startsWith('tmp') && p.from === x.from && norm(p.t) === norm(x.t)));
+        const baru = j.msgs.filter(x => !b.msgs.some(p => String(p.id).startsWith('tmp') && p.from === x.from && norm(p.t) === norm(x.t) && msig(p) === msig(x)));
         b.msgs = b.msgs.concat(baru).slice(-200);
         if (baru.some(m => !mineOf(m))) sndIn();
       }
@@ -576,10 +774,12 @@
       const rx = Object.keys(msg.rx || {});
       const rxHtml = rx.length ? '<div class="reactions">' + rx.map(k => '<button data-react="' + esc(k) + '">' + esc(k) + ' ' + msg.rx[k] + '</button>').join('') + '</div>' : '';
       const quoted = msg.to && byId[msg.to] ? byId[msg.to] : null;
-      const q = quoted ? '<div class="quotecard" data-goto="' + esc(quoted.id) + '"><b>' + esc(nameOf(quoted)) + '</b><span>' + esc(norm(quoted.t).slice(0, 80)) + '</span></div>' : '';
+      const q = quoted ? '<div class="quotecard" data-goto="' + esc(quoted.id) + '"><b>' + esc(nameOf(quoted)) + '</b><span>' + esc(norm(msgLabel(quoted)).slice(0, 80)) + '</span></div>' : '';
+      const hasMedia = !!(msg.media && msg.media.length);
+      const body = hasMedia ? mediaGrid(msg) + (msg.t ? '<div class="cap">' + esc(msg.t) + '</div>' : '') : esc(msg.t);
       html += '<div class="row ' + (mine ? 'me' : 'them') + '" data-id="' + esc(msg.id) + '"><div class="bub">' +
         (showWho ? '<div class="who2" style="color:' + colorOf(disp) + '">' + esc(disp) + '</div>' : '') +
-        q + esc(msg.t) +
+        q + body +
         (msg.edited ? ' <span class="edited">(diubah)</span>' : '') +
         '<span class="meta">' + hhmm(msg.ts) + '</span>' + rxHtml + '</div></div>';
     }
@@ -604,6 +804,18 @@
       const goto = bub.querySelector('.quotecard[data-goto]');
       if (goto) goto.onclick = () => jumpTo(goto.dataset.goto);
       for (const rb of bub.querySelectorAll('.reactions button')) rb.onclick = () => doReact(id, rb.dataset.react);
+      // Lampiran: gambar buka paparan penuh, video main inline — dua-dua tak
+      // boleh tercetus sekali dengan menu mesej (tekan dua kali / tahan).
+      for (const cell of bub.querySelectorAll('.mcell[data-z]')) {
+        cell.onclick = e => { e.stopPropagation(); openView(msg, +cell.dataset.z); };
+        const im = cell.querySelector('img');
+        if (im) im.onerror = () => { cell.innerHTML = '<div class="brk">🖼 Gambar sudah dibuang</div>'; };
+      }
+      for (const cell of bub.querySelectorAll('.mcell[data-v]')) {
+        cell.onclick = e => e.stopPropagation();   // lera/kekawal video bukan menu mesej
+        const v = cell.querySelector('video');
+        if (v) { v.onclick = e => e.stopPropagation(); v.onerror = () => { cell.innerHTML = '<div class="brk">🎬 Video sudah dibuang</div>'; }; }
+      }
     }
   }
   function jumpTo(id) {
@@ -614,12 +826,57 @@
   }
   function findMsg(id) { const r = room(cur); return r ? ((cache[r.id] || {}).msgs || []).find(x => x.id === id) : null; }
 
+  // ─── Paparan penuh gambar ───
+  let viewMsg = null, viewList = [], viewIdx = 0;
+  function openView(msg, idx) {
+    const all = msg.media || [];
+    const imgs = all.filter(x => x.kind === 'image' && x.url);
+    if (!imgs.length) { const v = all.find(x => x.url); if (v) saveMedia(v); return; }
+    let pos = 0;
+    for (let i = 0; i < idx && i < all.length; i++) if (all[i].kind === 'image' && all[i].url) pos++;
+    viewMsg = msg; viewList = imgs; viewIdx = Math.min(pos, imgs.length - 1);
+    sndTap(); paintView();
+  }
+  function paintView() {
+    const x = viewList[viewIdx];
+    if (!x) return closeView();
+    const stage = $('vStage');
+    stage.innerHTML = '';
+    const im = document.createElement('img');
+    im.alt = 'gambar'; im.src = x.url;
+    im.onerror = () => { stage.innerHTML = '<div class="cap">Gambar ini sudah dibuang.</div>'; };
+    stage.appendChild(im);
+    $('vCap').textContent = (viewMsg && viewMsg.t ? viewMsg.t : '') + (viewList.length > 1 ? '   (' + (viewIdx + 1) + '/' + viewList.length + ')' : '');
+    $('vPrev').style.visibility = viewIdx > 0 ? '' : 'hidden';
+    $('vNext').style.visibility = viewIdx < viewList.length - 1 ? '' : 'hidden';
+    $('vSave').onclick = () => saveMedia(x);
+    $('view').classList.add('on');
+  }
+  function stepView(d) { const n = viewIdx + d; if (n < 0 || n >= viewList.length) return closeView(); viewIdx = n; paintView(); }
+  function closeView() { $('view').classList.remove('on'); $('vStage').innerHTML = ''; viewMsg = null; viewList = []; }
+  // Simpan ke peralatan: perlu fetch (blob) supaya nama fail boleh ditetapkan.
+  async function saveMedia(x) {
+    try {
+      const res = await fetch(x.url, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!res.ok) throw new Error('Muat turun gagal (' + res.status + ').');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tukuk-' + x.id + '.' + (x.ext || (x.kind === 'video' ? 'mp4' : 'jpg'));
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast('Disimpan: ' + a.download);
+    } catch (e) { toast(e.message); }
+  }
+
   function openCtx(x, y, id) {
     const msg = findMsg(id); if (!msg) return;
     sndTap();
     const menu = $('ctx');
     let h = '<div class="reacts">' + REACTS.map(r => '<button data-r="' + r + '">' + r + '</button>').join('') + '</div>' +
-      '<div data-a="reply">↩️ Balas</div><div data-a="copy">🧑 Salin teks</div><div data-a="fwd">➡️ Teruskan</div>';
+      '<div data-a="reply">↩️ Balas</div>' +
+      (msg.media && msg.media.length ? '<div data-a="save">⬇️ Simpan media</div>' : '<div data-a="copy">🧑 Salin teks</div>') +
+      '<div data-a="fwd">➡️ Teruskan</div>';
     if (mineOf(msg) && !String(msg.id).startsWith('tmp')) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Padam</div>';
     menu.innerHTML = h;
     menu.style.display = 'block';
@@ -631,6 +888,12 @@
   function hideCtx() { $('ctx').style.display = 'none'; }
   document.addEventListener('click', e => { const m = $('ctx'); if (m.style.display === 'block' && !m.contains(e.target)) hideCtx(); });
   document.addEventListener('keydown', e => {
+    if ($('view').classList.contains('on')) {
+      if (e.key === 'Escape') closeView();
+      else if (e.key === 'ArrowRight') stepView(1);
+      else if (e.key === 'ArrowLeft') stepView(-1);
+      return;
+    }
     if (e.key !== 'Escape') return;
     hideCtx();
     ['peopleModal', 'fwdModal', 'setModal', 'profModal'].forEach(id => $(id).classList.remove('open'));
@@ -648,9 +911,10 @@
   function doAction(a, msg) {
     if (a === 'reply') {
       if (String(msg.id).startsWith('tmp')) { toast('Mesej belum tentu sampai — balas selepas ia dihantar.'); return; }
-      replyTo = msg.id; $('rbName').textContent = nameOf(msg); $('rbText').textContent = msg.t; $('replyBar').style.display = 'block'; $('inp').focus();
+      replyTo = msg.id; $('rbName').textContent = nameOf(msg); $('rbText').textContent = msgLabel(msg); $('replyBar').style.display = 'block'; $('inp').focus();
     }
     else if (a === 'copy') { try { navigator.clipboard.writeText(msg.t); toast('Disalin.'); } catch { toast('Salin gagal.'); } }
+    else if (a === 'save') { if ((msg.media || []).length > 1) openView(msg, 0); else saveMedia(msg.media[0]); }
     else if (a === 'fwd') openFwd(msg);
     else if (a === 'edit') { editing = msg.id; $('editBar').style.display = 'block'; $('inp').value = msg.t; grow(); $('inp').focus(); }
     else if (a === 'del') delMsg(msg);
@@ -667,31 +931,49 @@
   const inp = $('inp');
   function grow() { inp.style.height = 'auto'; inp.style.height = Math.min(130, inp.scrollHeight) + 'px'; }
   async function doSend() {
-    const text = inp.value.trim(); if (!text) return;
+    if (busy) { toast('Masih menghantar…'); return; }
+    const text = inp.value.trim();
     if (editing) {
+      if (!text) return;
       const msg = findMsg(editing); if (msg) { msg.t = text; msg.edited = true; }
       const id = editing; closeReplyEdit(); inp.value = ''; grow(); renderMsgs();
       try { await post('/edit', { room: cur, id, text }); } catch (e) { toast(e.message); }
       return;
     }
+    if (!text && !pending.length) return;
+    const bad = pending.filter(p => p.status === 'err');
+    if (bad.length) { toast('Ada fail gagal — tekan ✕ untuk buang.'); return; }
     const r = room(cur), b = box(r);
     const rt = replyTo; // ditutup oleh closeReplyEdit() di bawah, jadi simpan dulu
-    const temp = { id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {} };
+    const shots = pending.slice();
+    const temp = {
+      id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {},
+      media: shots.map(p => ({ id: 'tmpm' + p.key, kind: p.kind, url: p.url, w: p.w, h: p.h, dur: p.dur, ext: '' })),
+    };
     b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
+    busy = true; $('send').disabled = true;
     try {
-      const j = await post('/messages', { room: cur, text, replyTo: rt });
+      const ids = [];
+      for (const p of shots) {
+        p.status = 'up'; p.pct = 0; renderTray();
+        const m = await uploadOne(p);
+        p.status = 'done'; ids.push(m.id);
+      }
+      const j = await post('/messages', { room: cur, text, replyTo: rt, media: ids });
+      clearPending();
       // ganti temp ikut id — poll mungkin sudah sisip salinan pelayan (elak berganda seketika)
       const at = b.msgs.findIndex(x => x.id === temp.id);
       b.msgs = b.msgs.filter(x => x.id !== temp.id && x.id !== j.msg.id);
       b.msgs.splice(at >= 0 ? at : b.msgs.length, 0, j.msg);
       b.seq = Math.max(b.seq || 0, j.seq || 0);
-      if (r) r.last = { from: me, fid: myId || null, t: text, ts: Date.now() };
+      if (r) r.last = { from: me, fid: myId || null, t: text, mt: j.msg.media && j.msg.media.length ? j.msg.media[0].kind : null, n: (j.msg.media || []).length, ts: Date.now() };
       renderMsgs(); renderRooms();
     } catch (e) {
       b.msgs = b.msgs.filter(x => x.id !== temp.id);
       toast(e.status === 429 ? 'Terlalu laju — tunggu sedikit.' : e.message);
-      renderMsgs();
-    }
+      for (const p of pending) if (p.status !== 'err') p.status = p.media ? 'done' : 'ready';
+      renderMsgs(); renderTray();
+    } finally { busy = false; $('send').disabled = false; }
   }
   inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
   inp.addEventListener('input', () => {
@@ -713,9 +995,11 @@
     for (const el of $('fwdList').querySelectorAll('.rowm')) el.onclick = async () => {
       $('fwdModal').classList.remove('open');
       const target = el.dataset.r, b = box(room(target) || { id: target });
-      const temp = { id: 'tmp' + Date.now(), seq: 0, from: me, fid: myId || null, t: fwdMsg.t, ts: Date.now(), to: null, rx: {} };
+      const media = (fwdMsg.media || []).map(x => ({ id: x.id, kind: x.kind, url: x.url, w: x.w, h: x.h, dur: x.dur, ext: x.ext }));
+      const temp = { id: 'tmp' + Date.now(), seq: 0, from: me, fid: myId || null, t: fwdMsg.t, ts: Date.now(), to: null, rx: {}, media };
       b.msgs.push(temp);
-      try { const j = await post('/messages', { room: target, text: fwdMsg.t });
+      // Fail asal dirujuk sahaja (tidak disalin ke disk) — pemilik asal sudah ada hak.
+      try { const j = await post('/messages', { room: target, text: fwdMsg.t, media: (fwdMsg.media || []).map(x => x.id) });
         const at = b.msgs.findIndex(x => x.id === temp.id);
         b.msgs = b.msgs.filter(x => x.id !== temp.id && x.id !== j.msg.id);
         b.msgs.splice(at >= 0 ? at : b.msgs.length, 0, j.msg);
@@ -841,6 +1125,30 @@
     $('msgsWrap').dataset.wall = pref.wall;
     $('msgs').style.setProperty('--fs', pref.font + 'px');
   }
+
+  // ─── Lampiran: pemilih fail, seret-lepas, tampal ───
+  $('clipBtn').onclick = () => $('file').click();
+  $('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+  $('vClose').onclick = closeView;
+  $('vPrev').onclick = () => stepView(-1);
+  $('vNext').onclick = () => stepView(1);
+  $('view').onclick = e => { if (e.target.id === 'view' || e.target.id === 'vStage') closeView(); };
+  const hasFiles = e => !!e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') >= 0;
+  ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => {
+    if ($('app').hidden || !hasFiles(e)) return;
+    e.preventDefault(); $('main').classList.add('dragging');
+  }));
+  document.addEventListener('dragleave', e => { if (!e.relatedTarget) $('main').classList.remove('dragging'); });
+  document.addEventListener('drop', e => {
+    $('main').classList.remove('dragging');
+    if ($('app').hidden || !e.dataTransfer || !e.dataTransfer.files.length) return;
+    e.preventDefault(); addFiles(e.dataTransfer.files);
+  });
+  document.addEventListener('paste', e => {
+    if ($('app').hidden || busy) return;
+    const f = e.clipboardData && e.clipboardData.files;
+    if (f && f.length) { e.preventDefault(); addFiles(f); }
+  });
 
   // ─── Boot ───
   applyPref();

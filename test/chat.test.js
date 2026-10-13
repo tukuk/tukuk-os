@@ -323,3 +323,157 @@ test('migrasi: data lama (bilik ikut nama, tiada id) naik taraf tanpa hilang mes
   assert.equal(chat.roomTitle(s.rooms['dm_100001~100002'], 'Ben'), 'Ana');
   assert.equal(chat.roomsFor('Ana').length, 2);
 });
+
+// ─── Media (gambar + video) ───
+const pad = (head, n) => Buffer.concat([head, Buffer.alloc(n || 40, 7)]);
+const JPG = pad(Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
+const PNG = pad(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+const GIF = pad(Buffer.from('GIF89a', 'latin1'));
+const WEBP = pad(Buffer.concat([Buffer.from('RIFF', 'latin1'), Buffer.from([9, 0, 0, 0]), Buffer.from('WEBP', 'latin1')]));
+const MP4 = pad(Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypisom', 'latin1')]).slice(0, 8 + 4));
+const WEBM = pad(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+const GAGG = pad(Buffer.from('mari baca buku')); // bukan fail media
+
+const pickK = (url) => String(url).split('?k=')[1];
+
+function upload(user, buf, meta) { return chat.addMedia(user, buf, meta || {}); }
+
+test('sniff: jenis ditentukan daripada bait ajaib, bukan nama fail', () => {
+  assert.equal(chat.sniff(JPG).mime, 'image/jpeg');
+  assert.equal(chat.sniff(PNG).ext, 'png');
+  assert.equal(chat.sniff(GIF).mime, 'image/gif');
+  assert.equal(chat.sniff(WEBP).ext, 'webp');
+  assert.equal(chat.sniff(MP4).mime, 'video/mp4');
+  assert.equal(chat.sniff(WEBM).ext, 'webm');
+  assert.equal(chat.sniff(GAGG), null, 'fail bukan media ditolak');
+  assert.equal(chat.sniff(Buffer.alloc(4)), null, 'terlalu pendek → null');
+});
+
+test('media: muat naik + hantar mesej gambar (teks boleh kosong)', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const r = upload(ana, JPG, { w: 1600, h: 900 });
+  assert.ok(r.ok);
+  assert.ok(fs.existsSync(chat.mediaFile(r.media)), 'fail ditulis ke disk');
+  assert.equal(r.media.kind, 'image');
+  const sent = chat.send('Ana', 'global_am', '', null, [r.media.id]);
+  assert.ok(sent.ok, 'gambar sahaja tanpa teks dibenarkan');
+  assert.equal(sent.msg.media.length, 1);
+  assert.equal(sent.msg.media[0].w, 1600);
+  assert.ok(sent.msg.media[0].url.startsWith('/api/chat/media/'), 'url ditandatangani dihantar');
+  assert.ok(chat.send('Ana', 'global_am', 'hanya teks').ok);
+  assert.ok(chat.send('Ana', 'global_am', '', null, []).error, 'kosong tanpa media tetap ditolak');
+});
+
+test('media: pautan hanya lulus kalau tandatangan sah dan belum luput', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const rec = upload(ana, PNG).media;
+  const url = chat.mediaUrl(rec.id);
+  assert.ok(chat.mediaAllowed(rec.id, pickK(url)));
+  assert.ok(!chat.mediaAllowed(rec.id, pickK(url) + 'x'), 'tandatangan dikawal → ditolak');
+  assert.ok(!chat.mediaAllowed('deadbeefcafe', pickK(url)), 'id lain tak boleh pakai k orang');
+  assert.ok(!chat.mediaAllowed(rec.id, String(Date.now() + 9e9) + '.aa'), 'tarikh belum luput tapi mac salah');
+  assert.ok(chat.mediaSrc(rec.id), 'rekod ditemui untuk hidangan');
+  assert.ok(!chat.mediaSrc('aaaaaaaaaaaa'), 'id karut → null, tiada baca disk');
+});
+
+test('media: hak lampiran — orang lain, id karut, dan kiraan rujukan', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  chat.register('Ben', 'pass2');
+  const ben = chat.findUser('Ben');
+  const rec = upload(ana, JPG).media;
+  assert.deepEqual(chat.attachMedia(ben, 'global_am', [rec.id], 'x1'), [], 'belum jadi mesej → orang lain tak boleh pakai');
+  assert.equal(chat.attachMedia(ana, 'global_am', [rec.id], 'x1').length, 1);
+  assert.deepEqual(chat.attachMedia(ana, 'global_am', ['deadbeefcafe'], 'x2'), [], 'id karut disaring');
+  assert.equal(chat.attachMedia(ana, 'global_am', [rec.id], 'x1').length, 1, 'mesej sama → rujukan tak berganda');
+  assert.equal(chat.load().media[rec.id].msgs.length, 1);
+  assert.equal(chat.attachMedia(ana, 'global_am', [rec.id], 'x2').length, 1, 'gambar sama dihantar dua kali dibenarkan');
+  assert.equal(chat.load().media[rec.id].msgs.length, 2);
+  assert.deepEqual(chat.load().media[rec.id].rooms, ['global_am']);
+});
+
+test('media: teruskan gambar ke bilik lain guna rujukan yang sama (tiada salinan)', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const ben = chat.register('Ben', 'pass2').user;
+  const dm = chat.ensureDm(ana, ben);
+  const rec = upload(ana, JPG).media;
+  const a = chat.send('Ana', 'global_am', 'tengok ni', null, [rec.id]);
+  const b = chat.send('Ana', dm.id, '', null, [rec.id]);
+  assert.ok(b.ok, 'pemilik boleh hantar failnya ke bilik lain');
+  assert.equal(b.msg.media[0].id, rec.id);
+  assert.deepEqual(chat.load().media[rec.id].rooms.slice().sort(), ['global_am', dm.id].sort());
+  const f = chat.send('Ben', dm.id, 'terusan juga', null, [rec.id]);
+  assert.ok(f.ok, 'Ben sudah nampak gambar itu di bilik Am → boleh teruskan');
+  chat.remove('Ana', 'global_am', a.msg.id);
+  assert.ok(chat.mediaSrc(rec.id), 'masih dipakai DM → fail selamat');
+  assert.ok(chat.remove('Ana', dm.id, f.msg.id).error, 'mesej Ben bukan milik Ana');
+  chat.remove('Ben', dm.id, f.msg.id);
+  assert.ok(chat.mediaSrc(rec.id), 'mesej Ana dalam DM masih ada');
+  chat.remove('Ana', dm.id, b.msg.id);
+  assert.ok(!chat.mediaSrc(rec.id), 'tiada bilik tinggal → fail dibuang');
+});
+
+test('media: had 4 fail satu mesej + album dipapar ikut senarai', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const ids = [];
+  for (let i = 0; i < 6; i++) ids.push(upload(ana, JPG).media.id);
+  const sent = chat.send('Ana', 'global_am', 'album', null, ids);
+  assert.ok(sent.ok);
+  assert.equal(sent.msg.media.length, chat.MAX_PER_MSG, 'lebih had dibuang');
+});
+
+test('media: saiz berlebihan + kouta muat naik disekat', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const big = pad(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chat.MAX_IMG + 10);
+  const over = chat.addMedia(ana, big);
+  assert.equal(over.status, 413);
+  assert.match(over.error, /terlalu besar/i);
+  assert.equal(chat.addMedia(ana, GAGG).status, 415, 'jenis tidak disokong → 415');
+  for (let i = 0; i < chat.QUOTA_FILES; i++) assert.ok(upload(ana, GIF).ok, 'fail ke-' + (i + 1) + ' masih dibenarkan');
+  const last = upload(ana, GIF);
+  assert.equal(last.status, 429, 'kouta fail sejam → 429');
+  assert.match(last.error, /Terlalu banyak fail/);
+});
+
+test('media: padam mesej membuang fail, dan mesej keluar dari simpanan juga dibuang', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const rec = upload(ana, WEBM).media;
+  const sent = chat.send('Ana', 'global_am', 'video pendek', null, [rec.id]);
+  const file = chat.mediaFile(rec);
+  assert.ok(fs.existsSync(file));
+  assert.ok(chat.remove('Ana', 'global_am', sent.msg.id).ok);
+  assert.ok(!fs.existsSync(file), 'fail dipadam bersama mesej');
+  assert.ok(!chat.mediaSrc(rec.id));
+  assert.equal(chat.load().mediaBytes, 0, 'jumlah saiz disuai');
+  // mesej lama terguling keluar daripada KEEP → failnya juga dibuang
+  const first = upload(ana, JPG).media;
+  chat.load().rooms.global_am.list = [];  // kosongkan supaya kiraan KEEP bermula bersih
+  chat.load().rooms.global_am.seq = 0;
+  const keep = chat.KEEP - 1;
+  for (let i = 0; i < keep; i++) chat.send('Ana', 'global_am', 'p' + i);
+  const a = chat.send('Ana', 'global_am', 'gambar awal', null, [first.id]);
+  const b = upload(ana, JPG).media;
+  for (let i = 0; i < keep; i++) chat.send('Ana', 'global_am', 'q' + i);
+  chat.send('Ana', 'global_am', 'gambar akhir', null, [b.id]);
+  assert.ok(!chat.mediaSrc(a.msg.media[0].id), 'mesej terguling → fail dikuras');
+  assert.ok(chat.mediaSrc(b.id), 'mesej terakhir selamat');
+});
+
+test('media: hydrate tidak mengubah mesej yang disimpan', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const rec = upload(ana, PNG, { w: 100, h: 80 }).media;
+  chat.send('Ana', 'global_am', 'ada gambar', null, [rec.id]);
+  const stored = chat.load().rooms.global_am.list[0];
+  assert.ok(!stored.media[0].url, 'url tidak disimpan (ia boleh luput)');
+  const shown = chat.hydrate(stored);
+  assert.ok(shown.media[0].url.includes(rec.id));
+  assert.ok(!stored.media[0].url, 'objek asal masih bersih selepas hydrate');
+  assert.deepEqual(chat.hydrate({ id: 'x' }).media, undefined, 'mesej biasa tidak berubah');
+});
