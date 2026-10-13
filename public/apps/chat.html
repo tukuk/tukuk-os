@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telegram Chat — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Aplikasi chat gaya Telegram yang berfungsi sepenuhnya dalam pelayar — senarai sembang, reply, forward, reaction, edit, carian global, wallpaper chat dan bunyi. Semua data disimpan tempatan.">
+<link rel="canonical" href="https://tukuk.org/apps/chat">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:12px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.15rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+
+  #app { display:flex; height:calc(100vh - 53px); max-width:1100px; margin:0 auto; position:relative; }
+
+  /* ─── Sidebar ─── */
+  #side { width:330px; min-width:260px; border-right:1px solid var(--line); display:flex; flex-direction:column; background:var(--panel); }
+  #sideTop { display:flex; gap:8px; padding:10px; border-bottom:1px solid var(--line); }
+  #logoBtn { width:38px; height:38px; border-radius:50%; border:none; background:linear-gradient(135deg,#4c8dff,#1f6feb); color:#fff; font-size:1.15rem; cursor:pointer; flex:none; display:flex; align-items:center; justify-content:center; }
+  #logoBtn:hover { filter:brightness(1.15); }
+  #q { flex:1; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:18px; padding:8px 14px; font:inherit; font-size:.88rem; outline:none; }
+  #q:focus { border-color:var(--accent); }
+  #chats { flex:1; overflow-y:auto; }
+  .chatrow { display:flex; gap:10px; padding:10px 12px; cursor:pointer; align-items:center; border-left:3px solid transparent; }
+  .chatrow:hover { background:color-mix(in srgb, var(--accent) 8%, transparent); }
+  .chatrow.sel { background:color-mix(in srgb, var(--accent) 14%, transparent); border-left-color:var(--accent); }
+  .ava { width:44px; height:44px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; font-size:1.25rem; color:#fff; }
+  .chatrow .mid { flex:1; min-width:0; }
+  .chatrow .nm { font-size:.9rem; font-weight:650; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chatrow .pv { font-size:.78rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .chatrow .end { text-align:right; flex:none; }
+  .chatrow .tm { font-size:.68rem; color:var(--muted); }
+  .badge { display:inline-block; min-width:18px; padding:1px 5px; border-radius:9px; background:var(--accent); color:#fff; font-size:.68rem; font-weight:700; margin-top:4px; }
+
+  /* ─── Chat area ─── */
+  #main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  @media (max-width:760px) { #main { display:none; } }
+  #top { display:flex; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--line); background:var(--panel); }
+  #top .ava { width:38px; height:38px; font-size:1.05rem; }
+  #top .who { flex:1; min-width:0; }
+  #top .who b { font-size:.92rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #top .who span { font-size:.74rem; color:var(--muted); }
+  #top .who span.on { color:var(--success); }
+  #top .who span.typing { color:var(--accent); font-style:italic; }
+  #backBtn, #setBtn { background:none; border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px 9px; cursor:pointer; font-size:.9rem; }
+  #backBtn { display:none; }
+
+  #msgsWrap { flex:1; overflow-y:auto; --w1:#172033; --w2:#101627; background:linear-gradient(160deg,var(--w1),var(--w2)); }
+  #msgsWrap[data-wall="1"] { --w1:#172033; --w2:#101627; }
+  #msgsWrap[data-wall="2"] { --w1:#241a2e; --w2:#160f1e; }
+  #msgsWrap[data-wall="3"] { --w1:#12261e; --w2:#0a1812; }
+  #msgsWrap[data-wall="4"] { --w1:#2b2114; --w2:#1b1409; }
+  #msgsWrap[data-wall="5"] { --w1:#39c1f5; --w2:#a7dcf5; }
+  #msgsWrap[data-wall="6"] { --w1:var(--panel); --w2:var(--bg); }
+  #msgs { max-width:760px; margin:0 auto; padding:16px 14px 8px; }
+
+  .daysep { text-align:center; margin:10px 0 6px; }
+  .daysep span { background:rgba(0,0,0,.35); color:#fff; font-size:.7rem; padding:3px 10px; border-radius:10px; }
+  .row { display:flex; margin:3px 0; }
+  .row.me { justify-content:flex-end; }
+  .bub { max-width:72%; padding:7px 10px 5px; border-radius:14px; font-size:var(--fs,15px); line-height:1.35; position:relative; word-wrap:break-word; overflow-wrap:anywhere; white-space:pre-wrap; box-shadow:0 1px 1px rgba(0,0,0,.25); }
+  .row.them .bub { background:#222d44; color:#e9edf5; border-bottom-left-radius:5px; }
+  .row.me .bub { background:linear-gradient(135deg,var(--accent-fill,#2a6edb),var(--accent,#4c8dff)); color:#fff; border-bottom-right-radius:5px; }
+  #msgsWrap[data-wall="5"] .row.them .bub, #msgsWrap[data-wall="6"] .row.them .bub { background:var(--panel); color:var(--text); }
+  .bub .from { font-size:.72rem; font-weight:700; margin-bottom:2px; }
+  .bub .meta { float:right; margin:6px 0 -2px 8px; font-size:.66rem; opacity:.75; user-select:none; white-space:nowrap; }
+  .bub .edited { font-style:italic; opacity:.7; }
+  .quotecard { border-left:3px solid #ffd54a; background:rgba(255,255,255,.07); border-radius:6px; padding:3px 8px; margin-bottom:4px; font-size:.78rem; cursor:pointer; }
+  .quotecard b { display:block; color:#ffd54a; font-size:.72rem; }
+  .row.me .quotecard { background:rgba(0,0,0,.18); }
+  .reactions { margin-top:4px; display:flex; gap:4px; flex-wrap:wrap; }
+  .reactions button { background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.14); color:inherit; border-radius:10px; font-size:.72rem; padding:1px 7px; cursor:pointer; }
+  .reactions button:hover { background:rgba(0,0,0,.4); }
+  .row.them .reactions button { background:rgba(255,255,255,.1); }
+
+  #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
+
+  /* ─── Composer ─── */
+  #replyBar, #editBar { display:none; max-width:760px; margin:0 auto; width:100%; background:var(--panel); border-top:1px solid var(--line); padding:6px 12px; font-size:.78rem; }
+  #replyBar .rb, #editBar .rb { display:flex; align-items:center; gap:8px; }
+  #replyBar b, #editBar b { color:var(--accent); }
+  #replyBar span, #editBar span { flex:1; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #replyBar button, #editBar button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; }
+  #compose { display:flex; gap:8px; align-items:flex-end; padding:10px 12px; background:var(--panel); border-top:1px solid var(--line); }
+  #compose .cin { flex:1; max-width:760px; margin:0 auto; }
+  #inp { width:100%; box-sizing:border-box; resize:none; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:18px; padding:10px 14px; font:inherit; font-size:.92rem; outline:none; max-height:130px; }
+  #inp:focus { border-color:var(--accent); }
+  #send { width:44px; height:44px; border-radius:50%; border:none; background:var(--accent); color:#fff; font-size:1.2rem; cursor:pointer; flex:none; }
+  #send:hover { filter:brightness(1.1); }
+
+  /* ─── Overlays ─── */
+  #ctx { position:fixed; display:none; background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.45); z-index:60; overflow:hidden; min-width:170px; }
+  #ctx div { padding:9px 14px; font-size:.84rem; cursor:pointer; }
+  #ctx div:hover { background:color-mix(in srgb, var(--accent) 18%, transparent); }
+  #ctx div.dgr { color:var(--danger); }
+  #ctx .reacts { display:flex; gap:2px; padding:6px; justify-content:space-between; border-bottom:1px solid var(--line); }
+  #ctx .reacts button { background:none; border:none; font-size:1.25rem; cursor:pointer; border-radius:8px; padding:2px 4px; }
+  #ctx .reacts button:hover { background:color-mix(in srgb, var(--accent) 25%, transparent); transform:scale(1.15); }
+
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:70; }
+  .modal.open { display:flex; }
+  .mbox { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; width:min(420px,92vw); max-height:80vh; overflow:auto; }
+  .mbox h3 { margin:0 0 10px; font-size:1rem; }
+  .mbox .rowm { display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; cursor:pointer; }
+  .mbox .rowm:hover { background:color-mix(in srgb, var(--accent) 12%, transparent); }
+  .mbox label { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:.86rem; padding:8px 0; border-bottom:1px solid var(--line); }
+  .mbox .walls { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+  .mbox .walls button { width:44px; height:32px; border-radius:8px; border:2px solid var(--line); cursor:pointer; }
+  .mbox .walls button.sel { border-color:var(--accent); }
+  .mbox .mbtns { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+  .mbox .mbtns button { background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:7px 14px; cursor:pointer; font:inherit; font-size:.84rem; }
+  .mbox .mbtns .prim { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .mbox .mbtns .dgr { background:var(--danger); border-color:var(--danger); color:#fff; }
+
+  mark { background:#ffd54a; color:#111; border-radius:3px; padding:0 2px; }
+
+  @media (max-width:760px) {
+    #side { width:100%; position:absolute; inset:0; z-index:5; }
+    #main { display:none; }
+    #app[data-open="1"] #side { display:none; }
+    #app[data-open="1"] #main { display:flex; }
+    #backBtn { display:block; }
+    .bub { max-width:85%; }
+    header h1 { font-size:1rem; }
+  }
+</style>
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>✈️ Telegram Chat</h1></header>
+<div id="app">
+  <aside id="side">
+    <div id="sideTop">
+      <button id="logoBtn" title="Tukuk Chat">✈️</button>
+      <input id="q" placeholder="Cari sembang atau mesej…" autocomplete="off">
+    </div>
+    <div id="chats"></div>
+  </aside>
+  <main id="main">
+    <div id="top">
+      <button id="backBtn" title="Kembali">←</button>
+      <div class="ava" id="tAva">👤</div>
+      <div class="who"><b id="tName">—</b><span id="tStatus"></span></div>
+      <button id="setBtn" title="Tetapan">⚙️</button>
+    </div>
+    <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Tiada mesej. Cakap dulu! 👋</div></div>
+    <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Batal">✕</button></div></div>
+    <div id="editBar"><div class="rb">✏️ <b>Mengedit mesej</b><span></span><button id="edCancel" title="Batal">✕</button></div></div>
+    <div id="compose">
+      <div class="cin"><textarea id="inp" rows="1" placeholder="Tulis mesej…"></textarea></div>
+      <button id="send" title="Hantar">➤</button>
+    </div>
+  </main>
+</div>
+<div id="ctx"></div>
+
+<div class="modal" id="fwdModal"><div class="mbox">
+  <h3>➡️ Teruskan mesej</h3>
+  <div id="fwdList"></div>
+  <div class="mbtns"><button id="fwdCancel">Batal</button></div>
+</div></div>
+
+<div class="modal" id="setModal"><div class="mbox">
+  <h3>⚙️ Tetapan</h3>
+  <label>Bunyi <input type="checkbox" id="stSound" checked></label>
+  <label>Saiz teks mesej <input type="range" id="stFont" min="13" max="19" value="15"></label>
+  <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
+  <div class="walls" id="stWalls">
+    <button data-w="1" style="background:linear-gradient(160deg,#172033,#101627)"></button>
+    <button data-w="2" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
+    <button data-w="3" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
+    <button data-w="4" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
+    <button data-w="5" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
+    <button data-w="6" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
+  </div>
+  <div class="mbtns">
+    <button class="dgr" id="stReset">🗆 Set semula data</button>
+    <button class="prim" id="stClose">Tutup</button>
+  </div>
+</div></div>
+
+<script>
+(() => {
+  const $ = s => document.getElementById(s);
+  const KEY = 'tukuk-chat-v1';
+  const REACTS = ['❤️','👍','😂','😮','😢','🔥'];
+  const CCOL = ['#e17076','#65aadd','#7bc862','#a584cf','#ecb84a','#65c5db'];
+
+  // ─── Kenalan & persona ───
+  const CONTACTS = [
+    { id:'aisyah', name:'Aisyah 🌸', emoji:'👩🏻', bio:'kawan baik · suka makan', seed:0 },
+    { id:'firdaus', name:'Firdaus (Bos)', emoji:'💼', bio:'Flexwork Sdn Bhd', seed:1 },
+    { id:'mak', name:'Mak ❤️', emoji:'🧕', bio:'keluarga', seed:2 },
+    { id:'hafiz', name:'hafiz_g', emoji:'🎮', bio:'gaming partner', seed:3 },
+    { id:'tips', name:'Tukuk Tips', emoji:'📡', bio:'saluran · pengumuman', seed:4 },
+  ];
+  const PERSONA = {
+    aisyah: { opener:['Eh faham!','Haha betul tu','Alahai bestnya','Okay okay!'], vague:['Citer sikit lagi dong','Haha ok ok','Bagus tu 😄','Eh betul ke tu?'],
+      food:['Wahhh jom! Aku terliur dah ni 🤤','Kat mana tu? Harga okay?','Jom! Tapi lepas zoh ya','Aku join! Tapi bawa aku 😤🍜'],
+      work:['Alah kerja kerja… cuti mana?','Semangat! Jangan lupa makan','Haha sabar ya 🥲'],
+      game:['Aku tak main lah tapi okay tu','Haha kau main la sorang','Janji tak ketagih ya 😄'],
+      thanks:['Sama nehh 🥰','Alah biasa je','Tu pun nak thank you? Haha'],
+      bye:['Okay bye! Jumpa esok 👋','Hmm okay, hati2 driving','Bye bye! Jangan lupa dinner 😤'] },
+    firdaus: { opener:['Baik, noted.','Okay, saya setuju.','Bagus. Teruskan.','Baik, kita proceed.'], vague:['Boleh kita bincang nanti. Ada mesyuarat 3ptg.','Saya perlu lihat data dahulu.','Sila emel butiran kepada saya.'],
+      food:['Makan? Boleh, tapi bajet team building sahaja ya.','Kafe office sahaja, jangan lebih RM15.','Okay, tapi selepas laporan dihantar.'],
+      work:['Report semalam sudah saya baca. Kerja bagus.','Deadline Jumaat — boleh commit?','Sila siapkan slide sebelum mesyuarat 9am.','Kalau resource kurang, bagitahu awal-awal.'],
+      game:['Main game boleh, asalkan KPI capai.','Haha, LAN hari Jumat terakhir bulan?'],
+      thanks:['Terima kasih kembali. Profesional sedikit ya.','Sama-sama. Prestasi kekal mengekalkan.'],
+      bye:['Baik. Sampai jumpa esok.','Okay, jangan lupa follow up email itu.'] },
+    mak: { opener:['Alhamdulillah, syukur 😊','Baiklah sayang','Mak gembira dengar tu','Yalah, hati-hati ya'], vague:['Jangan lupa makan sayang','Sudah solat tu?','Mak faham, sabar ya 🤲','Doa banyak-banyak'],
+      food:['Mak Masak Ayam Resepi Kamu Nanti 🍗','Jangan Makan Luar Selalu, Mahal','Mak Masak Sup Tulang, Pulang La','Sayur Jangan Lupakan Sayur'],
+      work:['Kerja Rajin-Rajin, Tapi Jangan Lupa Ibadah','Mak Doakan Rezeki Kamu','Kalau Penat, Balik Lah Rumah'],
+      game:['Main Apa Tu? Jangan Lupa Waktu Solat','Mak Tak Faham Game Tapi Mak Sokong 😊'],
+      thanks:['Sama-sama sayang, mak sayang kamu ❤️','Yalah, Jaga Diri Ya'],
+      bye:['Okay sayang, hati-hati di jalan 🤲','Pulang Bila Luang, Mak Masak Daging'] },
+    hafiz: { opener:['wlcm bro','haha same lah','gas lah tu','noted 🫡'], vague:['aku ske','gasske','sah ni','wkwk ok'],
+      food:['makan dulu bro lapar','member semua dah kat mamak ni','tee 20 sen je order la'],
+      work:['kerja kerja kerja 😭','deadline esok ni tolong','bos marah lagi td'],
+      game:['ranked tak malam ni? aku carry','aku 16kd hari ni best gila','join scrims 9mlm jgn lupa','mati 0-10 tu bukan aku 🤫'],
+      thanks:['ok bro','s2l','nice 🔥'],
+      bye:['ghai bro','ok cya','nanti pm aku'] },
+    tips: { opener:['Good question. Here is a quick take:','Noted — sharing a tip on that:','Interesting! Related tip below:'], vague:['More details in today’s digest.','That’s a common one — see our pinned tips.'],
+      food:['Fun fact: meal prep on Sunday saves 5 hours a week.'],
+      work:['Tip: keep a “done log” beside your todo list — motivation fuel.'],
+      game:['Tip: 20 minutes of deliberate practice beats 2 hours of grinding.'],
+      thanks:['You’re welcome! Subscribe for daily tips ✨'],
+      bye:['See you in the next broadcast 📡'] },
+  };
+  const INTENTS = [
+    { k:'food', re:/\b(makan|makanan|lapar|nasi|kahwin|resep|resipi|mamak|kedai|coffee|kopi|teh|sarapan|dinner|lunch|brekfast|puasa|jajan|goreng|sup|ayam|burger|pizza|masak)/i },
+    { k:'work', re:/\b(kerja|bos|ofis|office|meeting|mesyuarat|deadline|report|laporan|gaji|pekerja|projek|project|klien|client|email|emel|slide|commit|perusahaan|bisnes|business)/i },
+    { k:'game', re:/\b(game|gaming|main|ranked|pubg|ml|dota|valorant|steam|konsol|console|scrims|kd|nohud|server|mabar)/i },
+    { k:'thanks', re:/\b(terima kasih|thank|thx|tq|thanks|appreciate|syukran|arigato)/i },
+    { k:'bye', re:/\b(bye|selamat tinggal|sampai jumpa|ghai|cya|pamit|tidur dulu|esok kita|nanti kita)/i },
+    { k:'greet', re:/\b(hai|hello|hi|assalam|salam|pagi|tengok|petang|malam|halo|hey|apa khabar|whatup|sup|woi|eh|ok|okay|bro|kak|mak|abah)/i },
+  ];
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function replyFor(cid, text){
+    const p = PERSONA[cid]; if(!p) return ['🙂'];
+    const low = text.toLowerCase();
+    for (const it of INTENTS) {
+      if (it.re.test(low)) {
+        const pool = p[it.k] || p.vague;
+        return [pick(pool)];
+      }
+    }
+    return [pick(p.vague)];
+  }
+
+  // ─── Keadaan + simpanan ───
+  let db = load();
+  let cur = db.last || CONTACTS[0].id;
+  let replyTo = null, editing = null, typingTimer = null, statusTimer = null;
+  function load(){
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) { const d = JSON.parse(raw); if (d && d.chats) return d; }
+    } catch { /* rosak → semai semula */ }
+    return seed();
+  }
+  function save(){ try { db.last = cur; localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* penuh/inert */ } }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+  function seed(){
+    const H = 3600e3, D = 24*H, now = Date.now();
+    const mk = (me, t, ago, st) => ({ id:uid(), me, t, t0:now-ago, st:st||(me?'✓✓':''), rx:{} });
+    const d = { settings:{ sound:true, wall:1, font:15 }, unread:{}, chats:{} };
+    d.chats.aisyah = [
+      mk(false,'Eh kau tengok tak video kucing jatuh tu 😂😂', 2*D+3*H),
+      mk(true,'Hahaha tengok! Tiga kali aku ulang', 2*D+3*H-8*60e3),
+      mk(false,'Kau makan tengah hari nanti? Aku lapar sangat dah ni', 2*D+2*H),
+      mk(true,'Boleh. Mamak kat corner tu? Nasi goreng special', 2*D+2*H-5*60e3),
+      mk(false,'Suidee! 12.30 ya. Bawa duit lebih, aku nak teh tarik 🍜', D-30*60e3,'✓✓'),
+      mk(true,'Ok 👍', D-29*60e3,'✓✓'),
+    ];
+    d.unread.aisyah = 1;
+    d.chats.firdaus = [
+      mk(false,'Selamat pagi. Boleh update status laporan triwira itu?', 2*D+5*H),
+      mk(true,'Pagi bos. 80% siap. Petang ini saya hantar draf.', 2*D+5*H-10*60e3),
+      mk(false,'Baik. Ingat deadline Jumaat. Kalau resource kurang, bagitahu awal-awal.', D+4*H),
+      mk(true,'Noted 🫡', D+4*H-3*60e3),
+      mk(false,'Slide mesyuarat 9 pagi esok jangan lupa. Saya perlukan angka 3 bulan terakhir.', 6*H),
+    ];
+    d.unread.firdaus = 1;
+    d.chats.mak = [
+      mk(false,'Sayang, dah makan belum? Mak masak sup tulang hari ini 🍲', 3*D),
+      mk(true,'Dah mak, don’t worry 😊', 3*D-20*60e3),
+      mk(false,'Kalau penat, pulang lah rumah. Mak rindu. Jangan kerja sampai lewat malam', D+6*H),
+    ];
+    d.chats.hafiz = [
+      mk(false,'bro ranked tak malam ni? aku need 1 lg win nak emas 🎮', D-2*H),
+      mk(true,'jom 9 mlm. aku online', D-2*H+5*60e3),
+      mk(false,'suide. ajak si zulfakar juga, dia free hari ni', D-2*H+9*60e3),
+    ];
+    d.chats.tips = [
+      mk(false,'💡 Tip #1: Format fail search-engine-friendly — gunakan tajuk yang jelas, paragraf pendek, dan pautan dalaman. Laman anda ialah dokumen yang dibaca dua kali: oleh manusia & oleh perayap.', 3*D),
+      mk(false,'💡 Tip #2: Simpan 3 perkara “selesai” setiap hari di hujung minggu. Laporan kecil yang konsisten mengalahkan big log yang jarang.', 2*D),
+      mk(false,'💡 Tip #3: Backup 3-2-1 — 3 salinan, 2 media berbeza, 1 luar lokasi. Baru bila anda perlukan, bukan jika.', 9*H),
+    ];
+    return d;
+  }
+  function migrate(){
+    for (const c of CONTACTS) if (!db.chats[c.id]) db.chats[c.id] = [];
+    for (const k of Object.keys(db.unread||{})) if (!db.chats[k]) delete db.unread[k];
+    if (!db.settings) db.settings = { sound:true, wall:1, font:15 };
+  }
+  migrate();
+
+  const chatOf = id => db.chats[id] || [];
+  const contact = id => CONTACTS.find(c => c.id === id);
+
+  // ─── Bunyi (WebAudio) ───
+  let ac;
+  function actx(){ if(!ac) ac = new (window.AudioContext||window.webkitAudioContext)(); return ac; }
+  function tone(f, dur, vol, type, slide){
+    if (!db.settings.sound) return;
+    try {
+      const a = actx(), o = a.createOscillator(), g = a.createGain();
+      o.type = type||'sine'; o.frequency.setValueAtTime(f, a.currentTime);
+      if (slide) o.frequency.linearRampToValueAtTime(Math.max(30,f+slide), a.currentTime+dur);
+      g.gain.setValueAtTime(vol||.06, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(.0001, a.currentTime+dur);
+      o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+dur+.03);
+    } catch { /* audio blocked */ }
+  }
+  const sndIn = () => { tone(523,.09,.05); setTimeout(()=>tone(659,.12,.05),70); };
+  const sndOut = () => { tone(659,.08,.04); setTimeout(()=>tone(880,.1,.045),60); };
+  const sndTap = () => tone(440,.05,.03,'triangle');
+  const sndDel = () => tone(220,.12,.05,'sawtooth',-60);
+
+  // ─── Format masa ───
+  function pad2(n){ return n<10?'0'+n:''+n; }
+  function hhmm(ts){ const d=new Date(ts); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+  function sameDay(a,b){ const x=new Date(a),y=new Date(b); return x.toDateString()===y.toDateString(); }
+  function listTime(ts){ const n=Date.now();
+    if (sameDay(ts,n)) return hhmm(ts);
+    const y = new Date(n-86400e3);
+    if (sameDay(ts,y.getTime())) return 'Semalam';
+    const d=new Date(ts); return pad2(d.getDate())+'/'+pad2(d.getMonth()+1); }
+  function dayLabel(ts){
+    const n=Date.now();
+    if (sameDay(ts,n)) return 'Hari ini';
+    if (sameDay(ts,n-86400e3)) return 'Semalam';
+    const d=new Date(ts);
+    return ['Ahad','Isnin','Selasa','Rabu','Khamis','Jumaat','Sabtu'][d.getDay()]+' '+d.getDate()+' '+
+      ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'][d.getMonth()]; }
+
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ─── Render senarai sembang ───
+  let query = '';
+  function chatPreview(c){
+    const m = chatOf(c.id); const last = m[m.length-1];
+    if (!last) return '<i style="color:var(--muted)">Tiada mesej</i>';
+    return (last.me?'Anda: ':'') + esc(last.t).slice(0,60);
+  }
+  function hilite(text, q){
+    if (!q) return esc(text);
+    const i = text.toLowerCase().indexOf(q.toLowerCase());
+    if (i<0) return esc(text);
+    return esc(text.slice(0,i))+'<mark>'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length));
+  }
+  function renderChatList(){
+    const q = query.trim();
+    const rows = CONTACTS.map(c => {
+      const m = chatOf(c.id); const last = m[m.length-1];
+      let score = last ? last.t0 : 0;
+      let pvHtml = chatPreview(c);
+      if (q) {
+        const inName = c.name.toLowerCase().includes(q.toLowerCase());
+        const hitMsg = m.find(x => x.t.toLowerCase().includes(q.toLowerCase()));
+        if (!inName && !hitMsg) return null;
+        if (hitMsg && !inName) { pvHtml = '<span style="color:var(--muted)">'+esc((hitMsg.me?'Anda: ':''))+hilite(hitMsg.t,q)+'</span>'; }
+      }
+      const un = db.unread[c.id]||0;
+      const idx = CONTACTS.indexOf(c);
+      return { html:
+        '<div class="chatrow" data-cid="'+c.id+'">'+
+        '<div class="ava" style="background:'+CCOL[idx%CCOL.length]+'">'+c.emoji+'</div>'+
+        '<div class="mid"><div class="nm">'+hilite(c.name,q)+'</div><div class="pv">'+pvHtml+'</div></div>'+
+        '<div class="end"><div class="tm">'+(last?listTime(last.t0):'')+'</div>'+(un?'<span class="badge">'+un+'</span>':'')+'</div></div>',
+        score };
+    }).filter(Boolean).sort((a,b)=>b.score-a.score);
+    $('chats').innerHTML = rows.map(r=>r.html).join('') || '<p style="padding:20px;color:var(--muted);font-size:.85rem">Tiada hasil untuk «'+esc(q)+'».</p>';
+    for (const el of $('chats').querySelectorAll('.chatrow')) {
+      el.classList.toggle('sel', el.dataset.cid === cur);
+      el.onclick = () => openChat(el.dataset.cid);
+    }
+  }
+
+  // ─── Render sembang ───
+  function statusLine(){
+    const c = contact(cur); if (!c) return '';
+    if (c.id==='tips') return 'saluran · 12,403 langganan';
+    return 'dalam talian · ' + c.bio;
+  }
+  function renderChat(){
+    const c = contact(cur); if (!c) return;
+    const idx = CONTACTS.indexOf(c);
+    $('tAva').textContent = c.emoji; $('tAva').style.background = CCOL[idx%CCOL.length];
+    $('tName').textContent = c.name;
+    const st = $('tStatus'); st.textContent = statusLine(); st.className = 'on';
+    const wrap = $('msgsWrap'); wrap.dataset.wall = db.settings.wall;
+    $('msgs').style.setProperty('--fs', db.settings.font+'px');
+    const m = chatOf(cur);
+    $('empty').style.display = m.length ? 'none' : 'block';
+    let html = '', lastDay = 0;
+    for (const msg of m) {
+      if (!sameDay(msg.t0, lastDay)) { lastDay = msg.t0; html += '<div class="daysep"><span>'+dayLabel(msg.t0)+'</span></div>'; }
+      const rxKeys = Object.keys(msg.rx||{}).filter(k=>msg.rx[k]);
+      const rxHtml = rxKeys.length ? '<div class="reactions">'+rxKeys.map(k=>'<button data-react="'+k+'">'+k+' '+msg.rx[k]+'</button>').join('')+'</div>' : '';
+      const q = msg.reply ? '<div class="quotecard" data-goto="'+msg.reply+'"><b>'+(msg.replyMe?'Anda':esc(c?c.name:'…'))+'</b><span>'+esc(replyTextOf(msg.reply)).slice(0,80)+'</span></div>' : '';
+      const fw = msg.fw ? '<div style="font-size:.7rem;opacity:.75;margin-bottom:2px">➡️ Diteruskan dari '+esc(msg.fw)+'</div>' : '';
+      html += '<div class="row '+(msg.me?'me':'them')+'" data-id="'+msg.id+'">'+
+        '<div class="bub">'+
+        q+fw+esc(msg.t)+
+        (msg.edited?' <span class="edited"> (diubah)</span>':'')+
+        '<span class="meta">'+hhmm(msg.t0)+(msg.me?' <span class="ticks">'+esc(msg.st||'✓')+'</span>':'')+'</span>'+
+        rxHtml+'</div></div>';
+    }
+    $('msgs').innerHTML = html;
+    wireMsgs();
+    scrollBottom();
+    if (db.unread[cur]) { db.unread[cur]=0; save(); renderChatList(); }
+  }
+  function replyTextOf(id){
+    const m = chatOf(cur).find(x=>x.id===id);
+    return m ? m.t.slice(0,60) : '…';
+  }
+  function scrollBottom(){ const w=$('msgsWrap'); w.scrollTop = w.scrollHeight; }
+
+  // ─── Hantar & terima ───
+  function sendText(text, opts){
+    const msg = { id:uid(), me:true, t:text, t0:Date.now(), st:'✓', rx:{} };
+    if (opts && opts.reply) { msg.reply = opts.reply; msg.replyMe = true; }
+    if (opts && opts.fw) msg.fw = opts.fw;
+    chatOf(cur).push(msg);
+    save(); renderChatList(); renderChat();
+    sndOut();
+    scheduleReply(text);
+  }
+  function scheduleReply(userText){
+    const cid = cur;
+    clearTimeout(typingTimer); clearTimeout(statusTimer);
+    const c = contact(cid); if (!c) return;
+    if (cid==='tips') {
+      if (chatOf(cid).filter(x=>!x.me).length <= 3) {
+        typingTimer = setTimeout(() => {
+          chatOf(cid).push({ id:uid(), me:false, t:'💡 Tip tambahan dihantar ke anda: tulis ringkas, hantar kerap. Mesej pendek lebih mudah dibalas 📡', t0:Date.now(), st:'', rx:{} });
+          if (cur===cid) renderChat(); else db.unread[cid]=(db.unread[cid]||0)+1;
+          save(); renderChatList(); sndIn();
+        }, 1500);
+      }
+      return;
+    }
+    const pre = userText.toLowerCase().match(/\b(hai|hello|hi|salam|apa khabar|bro|mak)\b/i) ? 0 : 1;
+    typingTimer = setTimeout(() => {
+      const st = $('tStatus');
+      if (cur===cid) { st.textContent='menaip…'; st.className='typing'; }
+      // tanda sudah dibaca
+      const m = chatOf(cid); for (let i=Math.max(0,m.length-4); i<m.length; i++) if (m[i].me && m[i].st==='✓') m[i].st='✓✓';
+      const delay = 1200 + Math.random()*1600 + Math.min(2500, userText.length*22);
+      statusTimer = setTimeout(() => {
+        const replies = replyFor(cid, userText);
+        for (const t of replies) chatOf(cid).push({ id:uid(), me:false, t, t0:Date.now(), st:'', rx:{} });
+        if (cur===cid) { renderChat(); }
+        else { db.unread[cid]=(db.unread[cid]||0)+1; }
+        save(); renderChatList();
+        if (cur===cid) { $('tStatus').textContent=statusLine(); $('tStatus').className='on'; }
+        sndIn();
+      }, delay);
+    }, 600+pre*300);
+  }
+
+  // ─── Interaksi mesej ───
+  let ctxMsg = null;
+  function wireMsgs(){
+    for (const row of $('msgs').querySelectorAll('.row')) {
+      const id = row.dataset.id;
+      const bub = row.querySelector('.bub');
+      bub.addEventListener('contextmenu', e => { e.preventDefault(); openCtx(e.clientX, e.clientY, id); });
+      bub.addEventListener('dblclick', e => { e.preventDefault(); openCtx(e.clientX, e.clientY, id, true); });
+      const goto = bub.querySelector('.quotecard[data-goto]');
+      if (goto) goto.onclick = () => jumpTo(goto.dataset.goto);
+      for (const rb of bub.querySelectorAll('.reactions button')) {
+        rb.onclick = () => { const msg=findMsg(id); if(!msg) return;
+          msg.rx = msg.rx||{}; const k=rb.dataset.react;
+          if (msg.rx[k]) delete msg.rx[k];
+          save(); renderChat(); };
+      }
+    }
+  }
+  function findMsg(id, cid){
+    cid = cid || cur;
+    return chatOf(cid).find(x=>x.id===id);
+  }
+  function jumpTo(id){
+    const el = $('msgs').querySelector('.row[data-id="'+id+'"]');
+    if (!el) return;
+    el.scrollIntoView({ behavior:'smooth', block:'center' });
+    const b = el.querySelector('.bub');
+    b.style.outline = '2px solid #ffd54a';
+    setTimeout(()=>{ b.style.outline=''; }, 1200);
+  }
+
+  function openCtx(x, y, id, onlyReacts){
+    const msg = findMsg(id); if (!msg) return;
+    ctxMsg = msg; sndTap();
+    const menu = $('ctx');
+    let h = '<div class="reacts">'+REACTS.map(r=>'<button data-r="'+r+'">'+r+'</button>').join('')+'</div>';
+    if (!onlyReacts) h +=
+      '<div data-a="reply">↩️ Balas</div>'+
+      '<div data-a="copy">🧑 Salin teks</div>'+
+      '<div data-a="fwd">➡️ Teruskan</div>';
+    if (msg.me && !onlyReacts) h += '<div data-a="edit">✏️ Edit</div>';
+    h += '<div class="dgr" data-a="del">🗑 Padam</div>';
+    menu.innerHTML = h;
+    menu.style.display = 'block';
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.left = Math.min(x, innerWidth-mw-8)+'px';
+    menu.style.top = Math.min(y, innerHeight-mh-8)+'px';
+    for (const b of menu.querySelectorAll('.reacts button')) b.onclick = () => { addReact(msg, b.dataset.r); hideCtx(); };
+    for (const b of menu.querySelectorAll('div[data-a]')) b.onclick = () => { doAction(b.dataset.a, msg); hideCtx(); };
+  }
+  function hideCtx(){ $('ctx').style.display='none'; ctxMsg=null; }
+  function addReact(msg, r){
+    msg.rx = msg.rx||{};
+    if (!msg.rx[r]) { msg.rx[r]=1; sndTap(); }
+    else { msg.rx[r]++; }
+    save(); renderChat();
+  }
+  function doAction(a, msg){
+    if (a==='reply') { replyTo = msg.id; $('rbName').textContent = msg.me?'Anda':contact(cur).name; $('rbText').textContent = msg.t; $('replyBar').style.display='block'; $('inp').focus(); }
+    else if (a==='copy') { try { navigator.clipboard.writeText(msg.t); } catch {} }
+    else if (a==='fwd') openFwd(msg);
+    else if (a==='edit') { editing = msg.id; $('editBar').style.display='block'; $('inp').value = msg.t; grow(); $('inp').focus(); }
+    else if (a==='del') { const m=chatOf(cur); const i=m.indexOf(msg); if(i>=0){ m.splice(i,1); sndDel(); save(); renderChatList(); renderChat(); } }
+  }
+  function closeReplyEdit(){ replyTo=null; editing=null; $('replyBar').style.display='none'; $('editBar').style.display='none'; }
+
+  // ─── Forward ───
+  let fwdMsg = null;
+  function openFwd(msg){
+    fwdMsg = msg;
+    $('fwdList').innerHTML = CONTACTS.map((c,i)=>
+      '<div class="rowm" data-cid="'+c.id+'"><div class="ava" style="width:34px;height:34px;font-size:1rem;background:'+CCOL[i%CCOL.length]+'">'+c.emoji+'</div><div><b style="font-size:.88rem">'+esc(c.name)+'</b></div></div>').join('');
+    for (const el of $('fwdList').querySelectorAll('.rowm')) el.onclick = () => {
+      const cid = el.dataset.cid;
+      chatOf(cid).push({ id:uid(), me:true, t:fwdMsg.t, t0:Date.now(), st:'✓', rx:{}, fw:contact(cur).name });
+      save(); $('fwdModal').classList.remove('open'); sndOut(); renderChatList();
+      if (cid===cur) renderChat();
+    };
+    $('fwdModal').classList.add('open');
+  }
+
+  // ─── Composer ───
+  const inp = $('inp');
+  function grow(){ inp.style.height='auto'; inp.style.height=Math.min(130, inp.scrollHeight)+'px'; }
+  function doSend(){
+    const text = inp.value.trim(); if (!text) return;
+    if (editing) { const msg=findMsg(editing); if(msg){ msg.t=text; msg.edited=true; } editing=null; $('editBar').style.display='none'; save(); renderChatList(); renderChat(); sndTap(); inp.value=''; grow(); return; }
+    sendText(text, replyTo ? { reply:replyTo } : null);
+    closeReplyEdit(); inp.value=''; grow();
+  }
+  inp.addEventListener('keydown', e => {
+    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+  });
+  inp.addEventListener('input', grow);
+  $('send').onclick = doSend;
+  $('rbCancel').onclick = closeReplyEdit;
+  $('edCancel').onclick = () => { closeReplyEdit(); inp.value=''; grow(); };
+
+  // ─── Navigasi ───
+  function openChat(cid){
+    cur = cid; save();
+    closeReplyEdit();
+    clearTimeout(typingTimer); clearTimeout(statusTimer);
+    $('app').dataset.open = '1';
+    renderChatList(); renderChat(); inp.focus();
+  }
+  $('backBtn').onclick = () => { $('app').dataset.open='0'; renderChatList(); };
+  $('logoBtn').onclick = () => {
+    const m = chatOf(cur); if (!m.length) return;
+    const last = m[m.length-1];
+    $('logoBtn').textContent='✈️';
+    // gegaran logo comel bila klik
+    $('logoBtn').animate([{transform:'rotate(0)'},{transform:'rotate(-18deg)'},{transform:'rotate(10deg)'},{transform:'rotate(0)'}],{duration:350});
+    if (last.me) { replyTo=null; scheduleReply(last.t); }
+  };
+  $('q').addEventListener('input', e => { query = e.target.value; renderChatList(); });
+  document.addEventListener('click', e => {
+    const menu = $('ctx');
+    if (menu.style.display==='block' && !menu.contains(e.target)) hideCtx();
+  });
+
+  // ─── Tetapan ───
+  $('setBtn').onclick = () => {
+    $('stSound').checked = !!db.settings.sound;
+    $('stFont').value = db.settings.font||15;
+    for (const b of $('stWalls').querySelectorAll('button')) b.classList.toggle('sel', +b.dataset.w === (+db.settings.wall));
+    $('setModal').classList.add('open');
+  };
+  $('stClose').onclick = () => {
+    db.settings.sound = $('stSound').checked;
+    db.settings.font = +$('stFont').value;
+    save(); renderChat(); $('setModal').classList.remove('open');
+  };
+  for (const b of $('stWalls').querySelectorAll('button')) b.onclick = () => {
+    db.settings.wall = +b.dataset.w;
+    for (const x of $('stWalls').querySelectorAll('button')) x.classList.toggle('sel', x===b);
+    $('msgsWrap').dataset.wall = db.settings.wall; save();
+  };
+  $('stReset').onclick = () => {
+    if (!confirm('Set semula akan memadam semua sembang anda dan memulakan data contoh. Teruskan?')) return;
+    localStorage.removeItem(KEY); db = seed(); migrate(); cur = CONTACTS[0].id;
+    $('setModal').classList.remove('open'); renderChatList(); renderChat();
+  };
+
+  // ─── Boot ───
+  $('app').dataset.open = '0';
+  renderChatList();
+  renderChat();
+})();
+</script>
+</body>
+</html>
