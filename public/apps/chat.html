@@ -61,8 +61,9 @@
   #me .ava { width:30px; height:30px; font-size:.8rem; }
   #me b { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #me button { background:none; border:1px solid var(--line); color:var(--muted); border-radius:7px; padding:4px 8px; cursor:pointer; font-size:.76rem; }
-  #me button:hover { color:var(--danger); border-color:var(--danger); }
-  #me .idno { flex:none; font-size:.68rem; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:2px 6px; letter-spacing:.02em; }
+  #me #outBtn:hover { color:var(--danger); border-color:var(--danger); }
+  #me .idno { flex:none; font-size:.68rem; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:2px 6px; letter-spacing:.02em; font-variant-numeric:tabular-nums; }
+  #me .idno:hover { color:var(--accent); border-color:var(--accent); }
 
   /* ─── Chat area ─── */
   #main { flex:1; display:flex; flex-direction:column; min-width:0; }
@@ -206,7 +207,7 @@
       <input id="q" placeholder="Cari sembang atau mesej…" autocomplete="off">
     </div>
     <div id="chats"></div>
-    <div id="me" title="Profil & Tukuk ID saya"><div class="ava" id="meAva">?</div><b id="meName"></b><span class="idno" id="meIdBtn">#—</span><button id="outBtn">Keluar</button></div>
+    <div id="me" title="Profil & Tukuk ID saya"><div class="ava" id="meAva">?</div><b id="meName"></b><button class="idno" id="meIdBtn" title="Buka profil saya">#—</button><button id="outBtn">Keluar</button></div>
   </aside>
   <main id="main">
     <div id="top">
@@ -756,10 +757,12 @@
   $('pclose').onclick = () => $('peopleModal').classList.remove('open');
 
   // ─── Profil / "siapa punya ID ini?" ───
+  let profCur = 0;
   function myProfile() { return { id: myId, name: me, bio: myBio, joined: myJoined, online: true }; }
   function copyText(v) { try { navigator.clipboard.writeText(String(v)); toast('Disalin: ' + v); } catch { toast('Salin gagal.'); } }
   function openProf(p, self) {
     if (!p || !p.id) return;
+    profCur = p.id;
     const shared = self ? -1 : rooms.filter(r => r.kind === 'dm' && r.peerId === p.id).length;
     const edit = self ? '<div class="pflabel">Nama paparan</div><input id="pfName" maxlength="20" value="' + esc(p.name) + '">' +
       '<div class="pflabel">Bio (pilihan)</div><input id="pfBio" maxlength="120" placeholder="Satu baris tentang anda" value="' + esc(p.bio || '') + '">' : '';
@@ -777,6 +780,12 @@
     $('pfDm').onclick = () => startDm(p.id, self ? null : p);
     $('profModal').classList.add('open');
     if (self) { const f = $('pfName'); if (f) f.focus(); }
+    // Header DM/direktori tak bawa tarikh sertai → tambatkan daripada pelayan bila sempat.
+    if (!self && p.joined == null) {
+      call('/user?q=' + encodeURIComponent(p.id))
+        .then(j => { if (j && j.profile && j.profile.id === profCur) openProf(j.profile, false); })
+        .catch(() => {});
+    }
   }
   async function startDm(peer, prof) {
     try {
