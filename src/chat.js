@@ -150,6 +150,7 @@ function send(name, roomId, text, replyTo) {
   r.list.push(msg);
   if (r.list.length > KEEP) r.list.splice(0, r.list.length - KEEP);
   delete s.typing[key(name) + '|' + roomId];
+  s.seen[roomId + '|' + key(name)] = r.seq; // mesej sendiri tidak dikira "belum dibaca"
   touch();
   return { ok: true, msg, room: r };
 }

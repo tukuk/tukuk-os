@@ -122,6 +122,17 @@ test('unread + markSeen berfungsi per bilik', () => {
   assert.equal(chat.unread('Ana')[dm.id], 1);
 });
 
+test('unread: mesej sendiri tidak menjadi belum-untuk penghantar', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.send('Ana', dm.id, 'saya hantar');
+  assert.equal(chat.unread('Ana')[dm.id], 0, 'penghantar nampak 0');
+  assert.equal(chat.unread('Ben')[dm.id], 1, 'penerima nampak 1');
+  chat.send('Ben', dm.id, 'balas');
+  assert.equal(chat.unread('Ana')[dm.id], 1, 'hanya mesej Ben belum dibaca Ana');
+});
+
 test('react: togol — tekan dua kali buang reaksi', () => {
   fresh();
   chat.register('Ana', 'pass1');
