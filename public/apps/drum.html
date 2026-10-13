@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mesin Rentak — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Drum machine 16-langkah dalam pelayar: kick, snare, hihat dan clap disintesis sepenuhnya dengan WebAudio — BPM, swing, rawak, jana rentak & simpan pola.">
+<link rel="canonical" href="https://tukuk.org/apps/drum">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:760px; margin:0 auto; padding:16px; }
+  .pad { display:grid; grid-template-columns:88px repeat(16, 1fr); gap:4px; align-items:center; }
+  .lab { font-size:.78rem; color:var(--muted); display:flex; align-items:center; gap:5px; white-space:nowrap; }
+  .cell { aspect-ratio:1; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer; min-width:0; }
+  .cell.on { background:var(--accent); border-color:var(--accent); box-shadow:0 0 8px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .cell.beat { border-color:#6b7488; }
+  .cell.now { outline:2px solid #fff; outline-offset:1px; }
+  .rowhead { display:flex; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:16px; font-size:.84rem; }
+  .bar button, .bar select { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:8px 12px; font:inherit; font-size:.84rem; cursor:pointer; }
+  .bar button.on { border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .bar label { display:flex; gap:6px; align-items:center; color:var(--muted); }
+  input[type=range] { accent-color:var(--accent); width:110px; }
+  .stat { color:var(--muted); font-size:.78rem; margin-top:12px; text-align:center; }
+  .hint { color:var(--muted); font-size:.78rem; margin-top:8px; text-align:center; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>🥁 Mesin Rentak</h1></header>
+<div class="wrap">
+  <div class="pad" id="pad"></div>
+  <div class="bar">
+    <button id="play">▶ Main</button>
+    <label>BPM <input type="range" id="bpm" min="60" max="180" value="110"><b id="obpm">110</b></label>
+    <label>Swing <input type="range" id="sw" min="0" max="60" value="0"></label>
+    <select id="groove">
+      <option value="">🎛 Pola siap…</option>
+      <option value="rock">Rock asas</option>
+      <option value="hiphop">Hip-hop</option>
+      <option value="house">House 4-on-floor</option>
+      <option value="dub">Dub / reggae</option>
+      <option value="break">Breakbeat</option>
+    </select>
+    <button id="rand">🎲 Rawak</button>
+    <button id="clear">🗑 Kosong</button>
+    <button id="mute">🔊 Bunyi</button>
+  </div>
+  <div class="stat" id="stat"></div>
+  <p class="hint">Klik pad untuk togol nota · 4 instrumen disintesis secara langsung (tiada fail audio) · pola disimpan automatik dalam pelayar anda.</p>
+</div>
+<script>
+(() => {
+  const $ = (s) => document.getElementById(s);
+  const TRACKS = [
+    { id: 'kick',  ic: '🦵', name: 'Kick' },
+    { id: 'snare', ic: '🪘', name: 'Snare' },
+    { id: 'hihat', ic: '🎩', name: 'Hi-hat' },
+    { id: 'clap',  ic: '👏', name: 'Clap' },
+  ];
+  const STEPS = 16;
+  const GROOVES = {
+    rock:   { kick: [0,10], snare: [4,12], hihat: [0,2,4,6,8,10,12,14], clap: [] },
+    hiphop: { kick: [0,7,10], snare: [4,12], hihat: [0,2,4,6,8,10,12,13,14,15], clap: [12] },
+    house:  { kick: [0,4,8,12], snare: [], hihat: [2,6,10,14], clap: [4,12] },
+    dub:    { kick: [0,8], snare: [10], hihat: [2,6,10,14], clap: [] },
+    break:  { kick: [0,10,11], snare: [4,7,12,15], hihat: [0,3,6,8,11,14], clap: [8] },
+  };
+  let pattern; // muat dari localStorage
+  try { pattern = JSON.parse(localStorage.getItem('tukuk-drum')) || null; } catch (e) {}
+  if (!pattern) pattern = { kick: [], snare: [], hihat: [], clap: [] };
+  TRACKS.forEach((t) => { if (!Array.isArray(pattern[t.id])) pattern[t.id] = []; for (let i = 0; i < STEPS; i++) pattern[t.id][i] = pattern[t.id][i] ? 1 : 0; });
+  function save() { localStorage.setItem('tukuk-drum', JSON.stringify(pattern)); }
+  // Bina grid pad
+  const pad = $('pad'), cells = {};
+  TRACKS.forEach((t) => {
+    const lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = t.ic + ' ' + t.name; pad.appendChild(lab);
+    cells[t.id] = [];
+    for (let i = 0; i < STEPS; i++) {
+      const c = document.createElement('div'); c.className = 'cell' + (i % 4 === 0 ? ' beat' : '') + (pattern[t.id][i] ? ' on' : '');
+      c.onclick = () => { pattern[t.id][i] ^= 1; c.classList.toggle('on', !!pattern[t.id][i]); toggleSound(t.id); save(); };
+      pad.appendChild(c); cells[t.id].push(c);
+    }
+  });
+  // ── WebAudio: setiap bunyi disintesis langsung ──
+  let A = null, master, mOff = false, noiseBuf = null;
+  function ctx() { if (!A) { A = new (window.AudioContext || window.webkitAudioContext)();
+      master = A.createGain(); master.gain.value = 0.8; master.connect(A.destination); }
+    if (A.state === 'suspended') A.resume(); return A; }
+  function noise() { const c = ctx(); if (noiseBuf) return noiseBuf;
+    noiseBuf = c.createBuffer(1, c.sampleRate, c.sampleRate); const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return noiseBuf; }
+  function kick(t) { const c = ctx(), o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.11);
+    g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.32); }
+  function snare(t) { const c = ctx();
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = noise(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.7;
+    g.gain.setValueAtTime(0.7, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + 0.18);
+    const o = c.createOscillator(), g2 = c.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(190, t);
+    g2.gain.setValueAtTime(0.5, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    o.connect(g2); g2.connect(master); o.start(t); o.stop(t + 0.1); }
+  function hihat(t) { const c = ctx(), s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = noise(); f.type = 'highpass'; f.frequency.value = 7000;
+    g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + 0.08); }
+  function clap(t) { const c = ctx();
+    for (let k = 0; k < 3; k++) { const tt = t + k * 0.011, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = noise(); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 1.4;
+      g.gain.setValueAtTime(0.4, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + (k === 2 ? 0.13 : 0.03));
+      s.connect(f); f.connect(g); g.connect(master); s.start(tt); s.stop(tt + 0.15); } }
+  const SYNTH = { kick, snare, hihat, clap };
+  function toggleSound(id) { if (mOff) return; const c = ctx(); SYNTH[id](c.currentTime + 0.02); }
+  $('mute').onclick = () => { mOff = !mOff; $('mute').textContent = mOff ? '🔇 Senyap' : '🔊 Bunyi'; $('mute').classList.toggle('on', mOff); };
+  // ── Penjadual lookahead — grid 1/16, swing lewatkan langkah ganjil (kaun "dan") ──
+  let playing = false, nextT = 0, stepIdx = 0, timer = null;
+  let drawnStep = -1, drawQ = [];
+  function schedule() { const c = ctx();
+    while (nextT < c.currentTime + 0.12) {
+      const spb = 60 / Number($('bpm').value) / 4; // saat per 1/16
+      const sw = (Number($('sw').value) / 100) * spb * (stepIdx % 2 === 1 ? 1 : 0);
+      const t = nextT + sw;
+      if (!mOff) TRACKS.forEach((tr) => { if (pattern[tr.id][stepIdx]) SYNTH[tr.id](t); });
+      drawQ.push({ i: stepIdx, t });
+      nextT += spb; stepIdx = (stepIdx + 1) % STEPS;
+    } }
+  function paint() { const c = ctx();
+    while (drawQ.length && drawQ[0].t <= c.currentTime + 0.03) {
+      if (drawnStep >= 0) TRACKS.forEach((tr) => cells[tr.id][drawnStep].classList.remove('now'));
+      drawnStep = drawQ.shift().i;
+      TRACKS.forEach((tr) => cells[tr.id][drawnStep].classList.add('now'));
+      $('stat').textContent = 'Langkah ' + (drawnStep + 1) + '/16 · ' + $('bpm').value + ' BPM · ' + countNotes() + ' nota'; }
+    if (playing) requestAnimationFrame(paint); }
+  function countNotes() { let n = 0; TRACKS.forEach((t) => pattern[t.id].forEach((v) => n += v)); return n; }
+  function start() { const c = ctx(); playing = true; nextT = c.currentTime + 0.06; stepIdx = 0; drawQ = [];
+    timer = setInterval(schedule, 25); requestAnimationFrame(paint);
+    $('play').textContent = '⏹ Berhenti'; $('play').classList.add('on'); }
+  function stop() { playing = false; clearInterval(timer); timer = null;
+    if (drawnStep >= 0) TRACKS.forEach((tr) => cells[tr.id][drawnStep].classList.remove('now'));
+    drawnStep = -1; $('play').textContent = '▶ Main'; $('play').classList.remove('on');
+    $('stat').textContent = 'Dihenti · ' + countNotes() + ' nota dalam pola'; }
+  $('play').onclick = () => playing ? stop() : start();
+  $('bpm').oninput = (e) => { $('obpm').textContent = e.target.value; };
+  $('groove').onchange = (e) => { const g = GROOVES[e.target.value]; if (!g) return;
+    TRACKS.forEach((t) => pattern[t.id] = Array(STEPS).fill(0).map((_, i) => g[t.id].includes(i) ? 1 : 0));
+    refreshCells(); save(); };
+  $('rand').onclick = () => { // rawak kebarangkalian ikut peran
+    const P = { kick: 0.22, snare: 0.16, hihat: 0.42, clap: 0.1 };
+    TRACKS.forEach((t) => pattern[t.id] = Array(STEPS).fill(0).map((_, i) => (i % 4 === 0 && t.id === 'kick' ? Math.random() < 0.7 : Math.random() < P[t.id]) ? 1 : 0));
+    refreshCells(); save(); };
+  $('clear').onclick = () => { TRACKS.forEach((t) => pattern[t.id] = Array(STEPS).fill(0)); refreshCells(); save(); };
+  function refreshCells() { TRACKS.forEach((t) => cells[t.id].forEach((c, i) => c.classList.toggle('on', !!pattern[t.id][i]))); idleStat(); }
+  function idleStat() { $('stat').textContent = countNotes() + ' nota dalam pola · tekan ▶ Main untuk mula'; }
+  idleStat();
+})();
+</script>
+</body>
+</html>

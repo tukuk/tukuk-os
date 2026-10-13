@@ -6,8 +6,8 @@
 
 // Types widget yang DIBENARKAN — padan tepat dengan `TYPES` dalam public/builder.html.
 // Sebarang types lain dibuang semasa sanitasi (anti suntikan skrip/widget tak diketahui).
-const KNOWN = new Set(['heading', 'text', 'button', 'image', 'input', 'counter', 'toggle', 'list', 'card', 'divider', 'spacer', 'faq', 'steps', 'quiz', 'ttt', 'memory', 'mole', 'rps', 'reaction', 'guess', 'br', 'fps', 'runner', 's2048', 'snake', 'breakout']);
-const GAMES = ['ttt', 'memory', 'mole', 'rps', 'reaction', 'guess', 'br', 'fps', 'runner', 's2048', 'snake', 'breakout'];
+const KNOWN = new Set(['heading', 'text', 'button', 'image', 'input', 'counter', 'toggle', 'list', 'card', 'divider', 'spacer', 'faq', 'steps', 'quiz', 'ttt', 'memory', 'mole', 'rps', 'reaction', 'guess', 'br', 'fps', 'runner', 's2048', 'snake', 'breakout', 'blox', 'astro', 'mines']);
+const GAMES = ['ttt', 'memory', 'mole', 'rps', 'reaction', 'guess', 'br', 'fps', 'runner', 's2048', 'snake', 'breakout', 'blox', 'astro', 'mines'];
 
 const PALETTES = [
   { accent: '#f59e0b', bg: '#0f172a', fg: '#e2e8ff', dark: true },

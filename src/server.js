@@ -240,7 +240,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -1911,7 +1911,10 @@ const STORE_APP_META = {
   text: { ic: '🔡', title: 'Alat Teks', desc: 'Kira perkataan, tukar kes, Base64, susun, dedupe & URL encode.' },
   pixel: { ic: '🟩', title: 'Studio Piksel', desc: 'Lukar piksel art 16×16 dengan palet, bald dan eksport PNG — dalam pelayar.' },
   piano: { ic: '🎹', title: 'Piano Sintetis', desc: 'Main 2 oktaf dengan papan kekunci, 4 bentuk gelombang & rakam audio.' },
-  spiro: { ic: '🌀', title: 'Mandala Spiro', desc: 'Lukisan spirograph beranimasi dengan simetri — kawal parameter, eksport PNG.' }
+  spiro: { ic: '🌀', title: 'Mandala Spiro', desc: 'Lukisan spirograph beranimasi dengan simetri — kawal parameter, eksport PNG.' },
+  orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
+  fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
+  drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [
@@ -1928,7 +1931,10 @@ const STORE_ARCADE = [
   { tpl: 'quiztpl', ic: '🎯', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' },
   { tpl: 'tpl2048', ic: '🔢', title: '2048', desc: 'Gabung nombor sama — capai jubin 2048 sebelum papan penuh.' },
   { tpl: 'snktpl', ic: '🐍', title: 'Ular', desc: 'Klasik zaman Nokia — makan, membesar, makin laju, jangan langgar.' },
-  { tpl: 'bktpl', ic: '🧱', title: 'Breakout', desc: 'Pantul bola dengan padel, hancurkan semua batu bata dengan 3 nyawa.' }
+  { tpl: 'bktpl', ic: '🧱', title: 'Breakout', desc: 'Pantul bola dengan padel, hancurkan semua batu bata dengan 3 nyawa.' },
+  { tpl: 'bloktpl', ic: '🧩', title: 'Blok Jatuh', desc: 'Susun blok yang jatuh, jajar baris penuh — makin laju setiap paras.' },
+  { tpl: 'astrotpl', ic: '☄️', title: 'Asteroid', desc: 'Vektor klasik: pusing, pecut, tembak — asteroid besar berpecah dua.' },
+  { tpl: 'minstpl', ic: '💣', title: 'Rambang Minda', desc: '9×9, 10 ranjau — klik buka, tahan/bendera tandai. Klik pertama sentiasa selamat.' }
 ];
 function storeBawaan() {
   return Object.entries(STORE_APP_META)

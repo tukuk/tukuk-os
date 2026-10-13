@@ -140,9 +140,9 @@ test('runtimeJS: parse bersih & urus kaunter/list-del/faq/quiz/submit', () => {
   assert.ok(js.includes("addEventListener('submit'"));
 });
 
-test('TYPES: 26 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
+test('TYPES: 29 jenis, setiap make() kembalikan objek ber-`type` padan', () => {
   const keys = Object.keys(TYPES);
-  assert.equal(keys.length, 26);
+  assert.equal(keys.length, 29);
   for (const t of keys) assert.equal(TYPES[t].make().type, t);
 });
 
@@ -259,10 +259,10 @@ test('gameBox: placeholder Mod Cuba + data-acc tema', () => {
   assert.ok(out.includes('data-acc="' + THEME.accent + '"'), 'accent tema tertanam');
 });
 
-test('initGames: parse bersih + 12 cabang game', () => {
+test('initGames: parse bersih + 15 cabang game', () => {
   const code = extractFn(html, 'initGames');
   new Function(code); // mesti JS sah
-  for (const g of ['gTTT','gMemory','gMole','gRPS','gReaction','gGuess','gBR','gFPS','gRunner','g2048','gSnake','gBreakout'])
+  for (const g of ['gTTT','gMemory','gMole','gRPS','gReaction','gGuess','gBR','gFPS','gRunner','g2048','gSnake','gBreakout','gBlox','gAstro','gMines'])
     assert.ok(code.includes(g), 'cabang game hilang: ' + g);
 });
 

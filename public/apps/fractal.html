@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Penjelajah Fraktal — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Penjelajah Mandelbrot dalam pelayar: zum tanpa batas (10¹⁴×) dengan render berperingkat, seret untuk pan, 4 palet warna, kawalan iterasi dan eksport PNG.">
+<link rel="canonical" href="https://tukuk.org/apps/fractal">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:760px; margin:0 auto; padding:16px; }
+  #cv { display:block; width:100%; border:1px solid var(--line); border-radius:14px; background:#000; touch-action:none; cursor:crosshair; image-rendering:pixelated; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; font-size:.84rem; }
+  .bar button, .bar select { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:7px 11px; font:inherit; font-size:.84rem; cursor:pointer; }
+  .bar button.on { border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .bar label { display:flex; gap:6px; align-items:center; color:var(--muted); }
+  input[type=range] { accent-color:var(--accent); width:120px; }
+  .stat { color:var(--muted); font-size:.78rem; margin-top:10px; text-align:center; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>🔮 Penjelajah Fraktal</h1></header>
+<div class="wrap">
+  <canvas id="cv" width="720" height="480"></canvas>
+  <div class="bar">
+    <select id="pal">
+      <option value="0">Palet: Gelombang</option>
+      <option value="1">Palet: Arang</option>
+      <option value="2">Palet: Ember</option>
+      <option value="3">Palet: Elektro</option>
+    </select>
+    <label>Kasar <input type="range" id="it" min="60" max="1200" step="20" value="240"></label>
+    <button id="zin">🔍＋ Zum masuk</button>
+    <button id="zout">🔍− Zum keluar</button>
+    <button id="home">⌂ Awal</button>
+    <button id="png">⬇ PNG</button>
+  </div>
+  <div class="stat" id="stat"></div>
+  <p class="stat">Klik = zum masuk · <b>Shift+klik</b> atau cubit = zum keluar · seret untuk bergerak. Render berperingkat: kasar dahulu, halus ikut masa. Zum sehingga ~10¹⁴× sebelum piksel mencair.</p>
+</div>
+<script>
+(() => {
+  const $ = (s) => document.getElementById(s);
+  const cv = $('cv'), cx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const HOME = { cx: -0.6, cy: 0, w: 3.2 }; // lebar domain kompleks di skrin
+  let view = { ...HOME }, itMax = 240, palId = 0;
+  let scale = Math.min(W, H) / view.w; // piksel per unit
+  let img = cx.createImageData(W, H), buf = new Uint32Array(img.data.buffer);
+  // Palet — fungsi t∈[0,1] → [r,g,b]
+  const PALS = [
+    (t) => [Math.round(9 * (1 - t) * t * t * t * 255), Math.round(10 * (1 - t) * (1 - t) * t * t * 255 + 40 * t), Math.round((1 - t) * 120 + 135 * t * t)], // gelombang
+    (t) => { const v = Math.round(t * 255); return [v, v, Math.min(255, v + 30)]; },  // arang
+    (t) => [Math.round(255 * Math.min(1, t * 2.2)), Math.round(140 * t * t), Math.round(30 + 60 * t * t * t)],  // ember
+    (t) => [Math.round(120 * Math.sin(t * 6.28) ** 2), Math.round(60 + 190 * Math.sin(t * 6.28 + 2) ** 2 * t), Math.round(255 * Math.sin(t * 3.14) ** 2)],  // elektro
+  ];
+  function color(v, it) { // v = iterasi licin (smooth iteration), it = maksimum
+    if (it >= itMax) return 0xFF000000;
+    const t = Math.sqrt(v / itMax); const p = PALS[palId](t);
+    return 0xFF000000 | (p[2] << 16) | (p[1] << 8) | p[0];
+  }
+  function mandel(px, py) {
+    const c0x = view.cx + (px - W / 2) / scale, c0y = view.cy + (py - H / 2) / scale;
+    let x = 0, y = 0, i = 0;
+    while (i < itMax) {
+      const x2 = x * x, y2 = y * y;
+      if (x2 + y2 > 4) { const smooth = i + 1 - Math.log2(Math.log(Math.sqrt(x2 + y2))); return [i, smooth]; }
+      y = 2 * x * y + c0y; x = x2 - y2 + c0x; i++;
+    }
+    return [itMax, -1]; // dalam set — hitam
+  }
+  // Render berperingkat: langkah 8 → 4 → 2 → 1, setiap sesi menambah ketajaman
+  let job = null, pass = null;
+  function startPass(s) {
+    pass = { s, row: 0 };
+    if (job) cancelAnimationFrame(job);
+    job = requestAnimationFrame(runPass);
+  }
+  function runPass() {
+    const s = pass.s; let rowsThisFrame = 0;
+    while (pass.row < H && rowsThisFrame < Math.max(1, Math.ceil(48 / s))) {
+      const y0 = pass.row;
+      for (let py = y0; py < Math.min(H, y0 + s); py++)
+        for (let px = ((y0 * 7) % s); px < W; px += s) { // anjakan baris → corak kurang berjalur
+          const [i, sm] = mandel(px, py);
+          const c = color(sm >= 0 ? Math.max(0, sm) : 0, i);
+          if (s === 1) buf[py * W + px] = c;
+          else for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) {
+            const xx = px + dx, yy = py + dy; if (yy < H && xx < W) buf[yy * W + xx] = c; }
+        }
+      pass.row += s; rowsThisFrame++;
+    }
+    if (pass.row >= H) pass = null;
+    cx.putImageData(img, 0, 0);
+    stat();
+    if (!pass) { if (s > 1) startPass(s === 2 ? 1 : (s > 4 ? s >> 1 : 2)); }
+    else job = requestAnimationFrame(runPass);
+  }
+  function stat() { $('stat').textContent = 'Zum ' + fmtScale(3.2 / view.w) + '× · pusat (' + view.cx.toFixed(10) + ', ' + view.cy.toFixed(10) + ') · kasar ' + itMax + ' iterasi' + (pass ? ' · merender…' : ' · selesai'); }
+  function fmtScale(v) { const e = Math.floor(Math.log(v) / Math.LN10); return e >= 4 ? (v / 10 ** e).toFixed(1) + 'e' + e : v.toFixed(e > 0 ? 0 : 2); }
+  function recenter() { scale = Math.min(W, H) / view.w; startPass(8); }
+  function zoomAt(px, py, factor) {
+    const ax = view.cx + (px - W / 2) / scale, ay = view.cy + (py - H / 2) / scale;
+    view.w /= factor; view.cx = ax + (view.cx - ax) / factor; view.cy = ay + (view.cy - ay) / factor;
+    recenter();
+  }
+  cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect();
+    zoomAt((e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height), e.deltaY < 0 ? 1.35 : 1 / 1.35); }, { passive: false });
+  // Seret = pan · klik = zum · shift+klik = zum keluar
+  let down = null, moved = 0;
+  cv.addEventListener('pointerdown', (e) => { const r = cv.getBoundingClientRect();
+    down = { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height), vx: view.cx, vy: view.cy }; moved = 0;
+    cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', (e) => { if (!down) return; const r = cv.getBoundingClientRect();
+    const px = (e.clientX - r.left) * (W / r.width), py = (e.clientY - r.top) * (H / r.height);
+    const dx = px - down.x, dy = py - down.y; moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+    if (moved > 4) { view.cx = down.vx - dx / scale; view.cy = down.vy - dy / scale;
+      recenterFast(); } });
+  cv.addEventListener('pointerup', (e) => { if (!down) return; const d = down; down = null;
+    if (moved <= 4) zoomAt(d.x, d.y, e.shiftKey ? 1 / 2 : 2); else recenterFast(); });
+  // Pan → render kasar sahaja (langkah 8) supaya lancar; klik/zum penuh bermula dari 4
+  function recenterFast() { scale = Math.min(W, H) / view.w; startPass(8); }
+  $('zin').onclick = () => zoomAt(W / 2, H / 2, 2);
+  $('zout').onclick = () => zoomAt(W / 2, H / 2, 1 / 2);
+  $('home').onclick = () => { view = { ...HOME }; recenter(); };
+  $('pal').onchange = (e) => { palId = Number(e.target.value); startPass(4); };
+  $('it').oninput = (e) => { itMax = Number(e.target.value); startPass(4); };
+  $('png').onclick = () => { const a = document.createElement('a'); a.download = 'fraktal-' + Date.now() + '.png'; a.href = cv.toDataURL('image/png'); a.click(); };
+  recenter();
+})();
+</script>
+</body>
+</html>
