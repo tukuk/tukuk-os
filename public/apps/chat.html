@@ -375,7 +375,11 @@
         const inName = c.name.toLowerCase().includes(q.toLowerCase());
         const hitMsg = m.find(x => x.t.toLowerCase().includes(q.toLowerCase()));
         if (!inName && !hitMsg) return null;
-        if (hitMsg && !inName) { pvHtml = '<span style="color:var(--muted)">'+esc((hitMsg.me?'Anda: ':''))+hilite(hitMsg.t,q)+'</span>'; }
+        if (hitMsg && !inName) {
+          const mi = hitMsg.t.toLowerCase().indexOf(q.toLowerCase());
+          const ex = hitMsg.t.slice(Math.max(0, mi-14), mi+q.length+30);
+          pvHtml = '<span style="color:var(--muted)">'+esc((hitMsg.me?'Anda: ':''))+'…'+hilite(ex,q)+'…</span>';
+        }
       }
       const un = db.unread[c.id]||0;
       const idx = CONTACTS.indexOf(c);
@@ -484,7 +488,7 @@
       const id = row.dataset.id;
       const bub = row.querySelector('.bub');
       bub.addEventListener('contextmenu', e => { e.preventDefault(); openCtx(e.clientX, e.clientY, id); });
-      bub.addEventListener('dblclick', e => { e.preventDefault(); openCtx(e.clientX, e.clientY, id, true); });
+      bub.addEventListener('dblclick', e => { e.preventDefault(); openCtx(e.clientX, e.clientY, id); });
       const goto = bub.querySelector('.quotecard[data-goto]');
       if (goto) goto.onclick = () => jumpTo(goto.dataset.goto);
       for (const rb of bub.querySelectorAll('.reactions button')) {
@@ -508,16 +512,15 @@
     setTimeout(()=>{ b.style.outline=''; }, 1200);
   }
 
-  function openCtx(x, y, id, onlyReacts){
+  function openCtx(x, y, id){
     const msg = findMsg(id); if (!msg) return;
     ctxMsg = msg; sndTap();
     const menu = $('ctx');
-    let h = '<div class="reacts">'+REACTS.map(r=>'<button data-r="'+r+'">'+r+'</button>').join('')+'</div>';
-    if (!onlyReacts) h +=
+    let h = '<div class="reacts">'+REACTS.map(r=>'<button data-r="'+r+'">'+r+'</button>').join('')+'</div>'+
       '<div data-a="reply">↩️ Balas</div>'+
       '<div data-a="copy">🧑 Salin teks</div>'+
       '<div data-a="fwd">➡️ Teruskan</div>';
-    if (msg.me && !onlyReacts) h += '<div data-a="edit">✏️ Edit</div>';
+    if (msg.me) h += '<div data-a="edit">✏️ Edit</div>';
     h += '<div class="dgr" data-a="del">🗑 Padam</div>';
     menu.innerHTML = h;
     menu.style.display = 'block';
