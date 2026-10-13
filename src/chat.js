@@ -65,6 +65,15 @@ function normalizeName(value) {
   return s;
 }
 const key = (name) => String(name || '').toLowerCase();
+// Mesej boleh berbilang baris: kekalkan \n, buang aksara kawalan lain.
+function cleanText(v) {
+  return String(v || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim()
+    .slice(0, MAX_MSG);
+}
 
 function register(name, pass) {
   const s = load();
@@ -143,7 +152,7 @@ function send(name, roomId, text, replyTo) {
   if (!r) return { error: 'Bilik tidak ditemui.' };
   if (!r.list) r.list = [];
   if (!r.seq) r.seq = 0;
-  const t = String(text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, MAX_MSG);
+  const t = cleanText(text);
   if (!t) return { error: 'Mesej kosong.' };
   if (replyTo && !r.list.find(m => m.id === replyTo)) replyTo = null;
   const msg = { id: crypto.randomBytes(6).toString('hex'), seq: ++r.seq, from: name, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false };
@@ -188,7 +197,7 @@ function edit(name, roomId, msgId, text) {
   const m = (r.list || []).find(x => x.id === msgId);
   if (!m) return { error: 'Mesej tidak ditemui.' };
   if (key(m.from) !== key(name)) return { error: 'Hanya mesej sendiri boleh diubah.' };
-  const t = String(text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, MAX_MSG);
+  const t = cleanText(text);
   if (!t) return { error: 'Mesej kosong.' };
   m.t = t; m.edited = true; touch();
   return { ok: true, msg: m };

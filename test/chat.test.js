@@ -82,6 +82,16 @@ test('send: jujukan (seq) menaik, kosong ditolak, panjang dipotong', () => {
   assert.equal(long.msg.t.length, 500, 'potong pada MAX_MSG');
 });
 
+test('send: mesej berbilang baris dikekalkan, aksara kawalan lain dibuang', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const a = chat.send('Ana', 'global_am', 'baris satu\nbaris dua').msg;
+  assert.equal(a.t, 'baris satu\nbaris dua', '\n tidak dimusnahkan');
+  assert.equal(chat.send('Ana', 'global_am', 'x\r\ny').msg.t, 'x\ny', 'CRLF diseragam');
+  assert.ok(chat.send('Ana', 'global_am', '\n\n').error, 'hanya baris kosong = mesej kosong');
+  assert.equal(chat.send('Ana', 'global_am', 'a\u0000b\u0007c').msg.t, 'a b c', 'nul/bel jadi spasi');
+});
+
 test('send: replyTo ke mesej tidak wujud dibuang, bukan dirosakkan', () => {
   fresh();
   chat.register('Ana', 'pass1');
