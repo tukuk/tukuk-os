@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alat Teks — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Kira perkataan, tukar kes, Base64, URL encode, susun &amp; dedupe baris — alat teks lengkap dalam pelayar.">
+<link rel="canonical" href="https://tukuk.org/apps/text">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:640px; margin:0 auto; padding:16px; }
+  textarea { width:100%; min-height:180px; box-sizing:border-box; padding:13px; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--text); font-family:ui-monospace,monospace; font-size:.9rem; outline:none; resize:vertical; }
+  textarea:focus { border-color:var(--accent); }
+  .stats { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:.82rem; margin:10px 2px 14px; }
+  .stats b { color:var(--text); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+  .grid button { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px 8px; font-size:.83rem; cursor:pointer; }
+  .grid button:hover { border-color:var(--accent); color:var(--accent); }
+  .sep { height:1px; background:var(--line); margin:16px 0; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>🔡 Alat Teks</h1></header>
+<div class="wrap">
+  <textarea id="ta" placeholder="Tampal atau taip teks di sini…" spellcheck="false"></textarea>
+  <div class="stats" id="stats"></div>
+  <div class="grid">
+    <button data-op="upper">HURUF BESAR</button>
+    <button data-op="lower">huruf kecil</button>
+    <button data-op="title">Huruf Pertama</button>
+    <button data-op="sentence">Ayat biasa.</button>
+    <button data-op="trim">Buang ruang</button>
+    <button data-op="dedupe">Dedupe baris</button>
+    <button data-op="sortA">Susun A→Z</button>
+    <button data-op="sortZ">Susun Z→A</button>
+    <button data-op="reverseLines">Songsang baris</button>
+    <button data-op="reverseChars">Songsang aksara</button>
+    <button data-op="b64e">Base64 → encode</button>
+    <button data-op="b64d">Base64 ← decode</button>
+    <button data-op="urle">URL encode</button>
+    <button data-op="urlr">URL decode</button>
+    <button data-op="slug">Jadikan slug</button>
+    <button data-op="copy">📋 Salin hasil</button>
+  </div>
+  <div class="sep"></div>
+  <div class="stats"><span id="msg"></span></div>
+</div>
+<script>
+(() => {
+  const $=(s)=>document.querySelector(s);
+  const ta=()=>$('#ta');
+  function stats(){
+    const t=$('#ta').value;
+    const words=(t.match(/\S+/g)||[]).length;
+    const lines=t?t.split('\n').length:0;
+    const chars=t.length, nospace=t.replace(/\s/g,'').length;
+    const read=Math.max(1,Math.round(words/200));
+    $('#stats').innerHTML=`<span><b>${words}</b> perkataan</span><span><b>${chars}</b> aksara</span><span><b>${nospace}</b> tanpa ruang</span><span><b>${lines}</b> baris</span><span>≈ <b>${read}</b> min baca</span>`;
+  }
+  function say(m){ $('#msg').textContent=m; setTimeout(()=>{ if($('#msg').textContent===m)$('#msg').textContent=''; },2500); }
+  const OPS={
+    upper:(t)=>t.toUpperCase(),
+    lower:(t)=>t.toLowerCase(),
+    title:(t)=>t.replace(/\w\S*/g,(w)=>w[0].toUpperCase()+w.slice(1).toLowerCase()),
+    sentence:(t)=>t.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g,(c)=>c.toUpperCase()),
+    trim:(t)=>t.split('\n').map((l)=>l.trim()).filter(Boolean).join('\n'),
+    dedupe:(t)=>{ const s=new Set(); return t.split('\n').filter((l)=>{ const k=l.trim().toLowerCase(); if(s.has(k))return false; s.add(k); return true; }).join('\n'); },
+    sortA:(t)=>t.split('\n').sort((a,b)=>a.localeCompare(b,'ms')).join('\n'),
+    sortZ:(t)=>t.split('\n').sort((a,b)=>b.localeCompare(a,'ms')).join('\n'),
+    reverseLines:(t)=>t.split('\n').reverse().join('\n'),
+    reverseChars:(t)=>[...t].reverse().join(''),
+    b64e:(t)=>{ try{ return btoa(unescape(encodeURIComponent(t))); }catch(e){ return null; } },
+    b64d:(t)=>{ try{ return decodeURIComponent(escape(atob(t.trim()))); }catch(e){ return null; } },
+    urle:(t)=>encodeURIComponent(t),
+    urlr:(t)=>{ try{ return decodeURIComponent(t.replace(/\+/g,' ')); }catch(e){ return null; } },
+    slug:(t)=>t.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/[\s_-]+/g,'-').replace(/^-+|-+$/g,'')
+  };
+  document.querySelectorAll('.grid button').forEach((b)=>b.onclick=async ()=>{
+    const op=b.dataset.op;
+    if(op==='copy'){ try{ await navigator.clipboard.writeText(ta().value); say('✓ Disalin ke papan klip'); }catch(e){ say('Gagal salin — pilih teks secara manual.'); } return; }
+    const r=OPS[op](ta().value);
+    if(r===null){ say('⚠ Input tidak sah untuk decode.'); return; }
+    $('#ta').value=r; stats(); say('✓ ' + b.textContent + ' siap');
+  });
+  $('#ta').addEventListener('input',stats);
+  stats();
+})();
+</script>
+</body>
+</html>

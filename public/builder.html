@@ -306,6 +306,31 @@ const TEMPLATES = {
     {type:'heading', text:'🏃 Lari Tanpa Hujung', level:2, align:'center'},
     {type:'text', text:'Klik / Sentuh / Space untuk lompat · Elak halangan!', align:'center'},
     {type:'runner'}
+  ]},
+  memtpl:{ label:'🧠 Padanan Memori', appName:'Padanan Memori', theme:{accent:'#a259ff',bg:'#0d0f1c',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🧠 Padanan Memori', level:2, align:'center'},
+    {type:'text', text:'Balik kad dan jodohkan semua pasangan secepat mungkin.', align:'center'},
+    {type:'memory', pairs:6}
+  ]},
+  moletpl:{ label:'🐹 Tikus Pukul', appName:'Tikus Pukul', theme:{accent:'#ff8a3c',bg:'#161008',fg:'#ffedd8',dark:true}, widgets:[
+    {type:'heading', text:'🐹 Tikus Pukul', level:2, align:'center'},
+    {type:'text', text:'Pukul tikus yang muncul secepat boleh — 20 saat sahaja!', align:'center'},
+    {type:'mole', duration:20}
+  ]},
+  rpstpl:{ label:'✊ Batu-Kertas-Gunting', appName:'BKG Lawan CPU', theme:{accent:'#30d158'}, widgets:[
+    {type:'heading', text:'✊ Batu-Kertas-Gunting', level:2, align:'center'},
+    {type:'text', text:'Pilih tangan anda — CPU pilih secara rawak.', align:'center'},
+    {type:'rps'}
+  ]},
+  reacttpl:{ label:'⚡ Masa Tindak Balas', appName:'Masa Tindak Balas', theme:{accent:'#4c8dff',bg:'#0a0e18',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'⚡ Masa Tindak Balas', level:2, align:'center'},
+    {type:'text', text:'Tunggu hijau… lalu klik secepat mungkin. purata ms anda?', align:'center'},
+    {type:'reaction'}
+  ]},
+  guesstpl:{ label:'🔢 Teka Nombor', appName:'Teka Nombor', theme:{accent:'#f2c14e'}, widgets:[
+    {type:'heading', text:'🔢 Teka Nombor 1–100', level:2, align:'center'},
+    {type:'text', text:'Nombor rawak telah dipilih — cuba teka dengan petanda tinggi/rendah.', align:'center'},
+    {type:'guess'}
   ]}
 };
 </script>

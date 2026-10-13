@@ -1916,7 +1916,13 @@ const STORE_ARCADE = [
   { tpl: 'tttpl', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'Dua pemain klasik — jajar tiga menang.' },
   { tpl: 'brtpl', ic: '🔫', title: 'Arena Battle Royale', desc: 'WASD/mouse atau joystik sentuh — elak zone biru, kekalkan nyawa.' },
   { tpl: 'fpstpl', ic: '🎯', title: 'FPS Arena 3D', desc: 'Penembak first-person 3D ringan, terus dalam pelayar.' },
-  { tpl: 'runtpl', ic: '🏃', title: 'Lari Tanpa Hujung', desc: 'Klik / sentuh / Space untuk lompat — elak halangan sejauh mungkin.' }
+  { tpl: 'runtpl', ic: '🏃', title: 'Lari Tanpa Hujung', desc: 'Klik / sentuh / Space untuk lompat — elak halangan sejauh mungkin.' },
+  { tpl: 'memtpl', ic: '🧠', title: 'Padanan Memori', desc: 'Balik kad dan jodohkan semua pasangan secepat mungkin.' },
+  { tpl: 'moletpl', ic: '🐹', title: 'Tikus Pukul', desc: '20 sahaja — pukul tikus yang muncul secepat boleh.' },
+  { tpl: 'rpstpl', ic: '✊', title: 'Batu-Kertas-Gunting', desc: 'Pilih tangan anda, lawan CPU secara langsung.' },
+  { tpl: 'reacttpl', ic: '⚡', title: 'Masa Tindak Balas', desc: 'Tunggu hijau, klik secepat mungkin — ukur milisaat anda.' },
+  { tpl: 'guesstpl', ic: '🔢', title: 'Teka Nombor', desc: 'Nombor 1–100 telah dipilih — teka dengan petanda tinggi/rendah.' },
+  { tpl: 'quiztpl', ic: '🎯', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' }
 ];
 function storeBawaan() {
   return Object.entries(STORE_APP_META)

@@ -76,6 +76,116 @@
       "game": true,
       "createdAt": "2026-10-11T22:00:33.023Z",
       "palette": "hijau"
+    },
+    {
+      "word": "moonsarung",
+      "slug": "moonsarung",
+      "emoji": "🌙",
+      "tagline": "Kumpul bulan sabit setiap malam.",
+      "genre": "memory",
+      "theme": "hijau",
+      "game": true,
+      "createdAt": "2026-10-12T23:52:12.899Z",
+      "palette": "hijau"
+    },
+    {
+      "word": "keretapi",
+      "slug": "keretapi",
+      "emoji": "🚂",
+      "tagline": "Landasan: kutip penumpang di stesen.",
+      "genre": "catch",
+      "theme": "ungu",
+      "game": true,
+      "createdAt": "2026-10-12T23:52:13.481Z",
+      "palette": "ungu"
+    },
+    {
+      "word": "cili",
+      "slug": "cili",
+      "emoji": "🌶️",
+      "tagline": "Pedas! Elak biji, kumpul cudang.",
+      "genre": "tap",
+      "theme": "minta",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:01.632Z",
+      "palette": "minta"
+    },
+    {
+      "word": "nelayan",
+      "slug": "nelayan",
+      "emoji": "🎣",
+      "tagline": "Tangkap ikan, lepas yang kecik.",
+      "genre": "tap",
+      "theme": "hijau",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:02.195Z",
+      "palette": "hijau"
+    },
+    {
+      "word": "durian",
+      "slug": "durian",
+      "emoji": "🥭",
+      "tagline": "Musim buah: kumpul durian jatuh.",
+      "genre": "runner",
+      "theme": "minta",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:02.845Z",
+      "palette": "minta"
+    },
+    {
+      "word": "robin",
+      "slug": "robin",
+      "emoji": "🐦",
+      "tagline": "Burong: terbang, hindari dawai.",
+      "genre": "runner",
+      "theme": "ungu",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:03.374Z",
+      "palette": "ungu"
+    },
+    {
+      "word": "kompas",
+      "slug": "kompas",
+      "emoji": "🧭",
+      "tagline": "Arah utara: kumpul mata angin.",
+      "genre": "catch",
+      "theme": "solar",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:03.908Z",
+      "palette": "solar"
+    },
+    {
+      "word": "gitar",
+      "slug": "gitar",
+      "emoji": "🎸",
+      "tagline": "Ritma: sentuh not yang betul.",
+      "genre": "runner",
+      "theme": "mawar",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:04.446Z",
+      "palette": "mawar"
+    },
+    {
+      "word": "bintang",
+      "slug": "bintang",
+      "emoji": "⭐",
+      "tagline": "Kumpul bintang di langit malam.",
+      "genre": "memory",
+      "theme": "mawar",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:05.015Z",
+      "palette": "mawar"
+    },
+    {
+      "word": "kelapa",
+      "slug": "kelapa",
+      "emoji": "🥥",
+      "tagline": "Tebuk kelapa, kumpul isi.",
+      "genre": "catch",
+      "theme": "minta",
+      "game": true,
+      "createdAt": "2026-10-12T23:53:05.593Z",
+      "palette": "minta"
     }
   ]
 }

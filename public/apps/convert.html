@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Penukar Unit — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Tukar unit panjang, jisim, suhu, isipadu, kelajuan, masa, data dan luas terus dalam pelayar — tanpa internet.">
+<link rel="canonical" href="https://tukuk.org/apps/convert">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:520px; margin:0 auto; padding:16px; }
+  .cats { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  .cats button { background:var(--panel); border:1px solid var(--line); color:var(--muted); border-radius:9px; padding:7px 12px; font-size:.82rem; cursor:pointer; font-weight:600; }
+  .cats button.on { border-color:var(--accent); color:var(--accent); background:rgba(76,141,255,.08); }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .urow { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+  .urow input { flex:1; min-width:0; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); font-size:1.25rem; outline:none; }
+  .urow input:focus { border-color:var(--accent); }
+  select { padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); font-size:.9rem; min-width:130px; }
+  .swap { display:block; margin:2px auto 12px; background:var(--bg); border:1px solid var(--line); color:var(--accent); border-radius:10px; padding:8px 18px; cursor:pointer; font-size:1rem; font-weight:700; }
+  .out { font-size:1.7rem; font-weight:700; word-break:break-all; }
+  .hint { color:var(--muted); font-size:.8rem; margin-top:8px; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>📐 Penukar Unit</h1></header>
+<div class="wrap">
+  <div class="cats" id="cats"></div>
+  <div class="panel">
+    <div class="urow"><input type="number" id="val" value="1" step="any"><select id="from"></select></div>
+    <button class="swap" id="swap" title="Tukar arah">⇅</button>
+    <div class="urow"><input type="number" id="res" readonly style="background:var(--panel)"><select id="to"></select></div>
+    <p class="out" id="line"></p>
+    <p class="hint">Kekosongan → 0. Suhu tiada faktor — formula khas C/F/K digunakan.</p>
+  </div>
+</div>
+<script>
+(() => {
+  const CATS = {
+    'Panjang': { base:'m', u:{ 'mm':0.001,'cm':0.01,'m':1,'km':1000,'in':0.0254,'ft':0.3048,'yd':0.9144,'mi':1609.344 } },
+    'Jisim': { base:'kg', u:{ 'mg':0.000001,'g':0.001,'kg':1,'tan':1000,'oz':0.0283485,'lb':0.453592 } },
+    'Suhu': { special:true, u:{ '°C':1,'°F':1,'K':1 } },
+    'Isipadu': { base:'L', u:{ 'mL':0.001,'L':1,'m³':1000,'gal(AS)':3.78541,'qt':0.946353,'cup':0.24 } },
+    'Kelajuan': { base:'m/s', u:{ 'm/s':1,'km/j':0.277778,'mph':0.44704,'kn':0.514444 } },
+    'Masa': { base:'s', u:{ 'ms':0.001,'s':1,'min':60,'j':3600,'hari':86400,'minggu':604800,'tahun':31557600 } },
+    'Data': { base:'B', u:{ 'bit':0.125,'B':1,'KB':1024,'MB':1048576,'GB':1073741824,'TB':1099511627776 } },
+    'Luas': { base:'m²', u:{ 'm²':1,'km²':1000000,'ha':10000,'ekar':4046.86,'ft²':0.092903 } }
+  };
+  const toC=(v,u)=>u==='°C'?v:u==='°F'?(v-32)*5/9:v-273.15;
+  const fromC=(c,u)=>u==='°C'?c:u==='°F'?c*9/5+32:c+273.15;
+  const $=(s)=>document.querySelector(s);
+  let cur='Panjang';
+  const fmt=(x)=>{ if(!isFinite(x))return '—'; const a=Math.abs(x); if(a!==0&&(a<1e-6||a>=1e12))return x.toExponential(6); return String(Math.round(x*1e8)/1e8); };
+  function fillCats(){ $('#cats').innerHTML=Object.keys(CATS).map((k)=>`<button data-c="${k}" class="${k===cur?'on':''}">${k}</button>`).join(''); }
+  function fillUnits(){ const u=Object.keys(CATS[cur].u); $('#from').innerHTML=$('#to').innerHTML=u.map((x)=>`<option>${x}</option>`).join(''); $('#to').selectedIndex=Math.min(1,u.length-1); }
+  function calc(){
+    const v=parseFloat($('#val').value)||0, f=$('#from').value, t=$('#to').value;
+    let r;
+    if(CATS[cur].special) r=fromC(toC(v,f),t);
+    else { const c=CATS[cur]; r=v*c.u[f]/c.u[t]; }
+    $('#res').value=fmt(r);
+    $('#line').textContent=`${fmt(v)} ${f} = ${fmt(r)} ${t}`;
+  }
+  fillCats(); fillUnits(); calc();
+  $('#cats').addEventListener('click',(e)=>{ const b=e.target.closest('button[data-c]'); if(!b)return; cur=b.dataset.c; fillCats(); fillUnits(); calc(); });
+  $('#val').addEventListener('input',calc);
+  $('#from').addEventListener('change',calc);
+  $('#to').addEventListener('change',calc);
+  $('#swap').onclick=()=>{ const a=$('#from').value; $('#from').value=$('#to').value; $('#to').value=a; calc(); };
+})();
+</script>
+</body>
+</html>
