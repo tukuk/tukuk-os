@@ -30,6 +30,7 @@ const APPS = {
   orbit:    { em: '🪐', c1: '#ffd166', c2: '#ef476f' },
   fractal:  { em: '🔮', c1: '#a259ff', c2: '#4c8dff' },
   drum:     { em: '🥁', c1: '#ff9f43', c2: '#ef233c' },
+  pubg:     { em: '🪂', c1: '#7d9c5b', c2: '#3f5232' },
 };
 const GAMES = {
   ttt:      { em: '⭕', c1: '#ef476f', c2: '#b91c44' },
