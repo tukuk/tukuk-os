@@ -11,6 +11,7 @@ const chat = require('../src/chat');
 function fresh() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tukuk-chat-'));
   chat.setPath(path.join(dir, 'chat.json'));
+  chat.clearSinks();  // yuran ujian lepas tidak boleh merembes ke ujian ini
   return dir;
 }
 
@@ -595,4 +596,135 @@ test('migrate: akaun lama tanpa friends/blocked diisi kosong', () => {
   assert.deepEqual(u.blocked, [], 'blocked diisi ketika migrate');
   assert.ok(chat.addFriend('Ana', 'Ana').error, 'diri sendiri tetap ditolak');
   assert.equal(chat.people(null, 50, 'Ana').length, 1);
+});
+
+// ─── Yuran langsung (SSE) ───
+// Sink palsu mencatat bingkai [event, data]. Setiap ujian wajib melepas semua
+// yuran sebelum tamat — peta yuran adalah keadaan global modul.
+function spy(tok) {
+  const log = [];
+  return { log, snk: { tok: tok || 'tok', send: (ev, data) => log.push([ev, data]), ping: () => {}, close: () => log.push([':closed', {}]) } };
+}
+const idOf = (name) => chat.findUser(name).id;
+function release(...flat) { for (let i = 0; i + 1 < flat.length; i += 2) chat.detachSink(flat[i], flat[i + 1]); }
+
+test('yuran: mesej bilik global untuk semua, DM hanya ahlinya', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cin', 'pass3');
+  const a = spy(), b = spy(), c = spy();
+  assert.ok(chat.attachSink(idOf('Ana'), a.snk), 'yuran diterima');
+  chat.attachSink(idOf('Ben'), b.snk);
+  chat.attachSink(idOf('Cin'), c.snk);
+  const dm = chat.ensureDm('Ana', 'Ben');
+  assert.equal(a.log[0][0], 'room', 'DM baharu diberitahu kepada ahli');
+  assert.equal(b.log[0][0], 'room');
+  assert.equal(c.log.length, 0, 'orang luar tidak tahu-menahu pasal DM');
+  a.log.length = 0; b.log.length = 0;
+  chat.send('Ana', dm.id, 'psst');
+  assert.deepEqual(a.log.map(x => x[0]), ['msg'], 'penghantar juga dapat (tab kedua)');
+  assert.equal(a.log[0][1].msg.t, 'psst');
+  assert.equal(a.log[0][1].room, dm.id);
+  assert.equal(b.log.length, 1, 'pasangan menerima serta-merta');
+  assert.equal(c.log.length, 0, 'isi DM tidak bocor ke orang lain');
+  chat.send('Ana', 'global_am', 'halo');
+  assert.equal(c.log.length, 1, 'bilik global untuk semua yang bersambung');
+  assert.equal(b.log.length, 2);
+  release(idOf('Ana'), a.snk, idOf('Ben'), b.snk, idOf('Cin'), c.snk);
+});
+
+test('yuran: sunting, reaksi dan padam disiarkan kepada ahli bilik', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const a = spy(), b = spy();
+  chat.attachSink(idOf('Ana'), a.snk); chat.attachSink(idOf('Ben'), b.snk);
+  const dm = chat.ensureDm('Ana', 'Ben');
+  const id = chat.send('Ana', dm.id, 'asal').msg.id;
+  a.log.length = 0; b.log.length = 0;
+  chat.react('Ben', dm.id, id, '👍');
+  assert.deepEqual(b.log.map(x => x[0]), ['react'], 'reaksi sampai ke tab lain');
+  assert.equal(b.log[0][1].msg.rx['👍'], 1);
+  assert.equal(chat.edit('Ana', dm.id, id, 'dibetulkan').ok, true);
+  assert.deepEqual(a.log.map(x => x[0]).slice(-1), ['edit'], 'penghantar dapat salinan terbaru');
+  assert.equal(a.log[a.log.length - 1][1].msg.t, 'dibetulkan');
+  a.log.length = 0; b.log.length = 0;
+  chat.remove('Ana', dm.id, id);
+  assert.deepEqual(b.log, [['del', { room: dm.id, id }]], 'padam dibawa id + bilik');
+  assert.equal(a.log.length, 1);
+  release(idOf('Ana'), a.snk, idOf('Ben'), b.snk);
+});
+
+test('yuran: typing menghantar senarai semasa, mesej menghentikannya', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const a = spy(), b = spy();
+  chat.attachSink(idOf('Ana'), a.snk); chat.attachSink(idOf('Ben'), b.snk);
+  const dm = chat.ensureDm('Ana', 'Ben');
+  a.log.length = 0; b.log.length = 0;
+  chat.setTyping('Ben', dm.id);
+  assert.equal(a.log[0][0], 'typing', 'Ana nampak Ben menaip serta-merta');
+  assert.deepEqual(a.log[0][1].typing, ['ben'], 'forma sama dengan poll');
+  assert.equal(b.log[0][1].typing[0], 'ben', 'tab penghantar juga terima senarai yang sama');
+  chat.send('Ben', dm.id, 'selesai');
+  const senarai = a.log.filter(x => x[0] === 'typing').pop();
+  assert.deepEqual(senarai[1].typing, [], 'kiriman clears typing');
+  assert.equal(a.log.filter(x => x[0] === 'msg').length, 1, 'mesej hanya satu bingkai');
+  release(idOf('Ana'), a.snk, idOf('Ben'), b.snk);
+});
+
+test('yuran: perubahan sosial hanya diberitahu kepada pemilik tab', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const a = spy(), b = spy();
+  chat.attachSink(idOf('Ana'), a.snk); chat.attachSink(idOf('Ben'), b.snk);
+  chat.addFriend('Ana', 'Ben');
+  assert.deepEqual(a.log.map(x => x[0]), ['social'], 'tab Ana dimuat semula');
+  assert.equal(b.log.length, 0, 'Ben tidak diberitahu jadi kawan');
+  chat.blockUser('Ana', 'Ben');
+  assert.equal(b.log.length, 0, 'mangsa sekatan TIDAK menerima apa-apa');
+  chat.unblockUser('Ana', 'Ben');
+  assert.equal(a.log.length, 3);
+  release(idOf('Ana'), a.snk, idOf('Ben'), b.snk);
+});
+
+test('yuran: had sambungan per akaun + tendang hanya peranti lain', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const id = idOf('Ana'), spies = [];
+  for (let i = 0; i < chat.MAX_STREAMS; i++) { const s = spy('k' + i); spies.push(s); assert.ok(chat.attachSink(id, s.snk), 'yuran ' + i); }
+  const lebih = spy('lebih');
+  assert.equal(chat.attachSink(id, lebih.snk), false, 'melebihi MAX_STREAMS ditolak');
+  assert.equal(chat.kickSinks(id, 'k2'), chat.MAX_STREAMS - 1, 'token semasa ditinggalkan');
+  assert.equal(spies.filter(s => s.log.some(x => x[0] === 'kick')).length, chat.MAX_STREAMS - 1);
+  assert.equal(spies[2].log.length, 0, 'peranti semasa tidak ditendang');
+  for (const s of spies) chat.detachSink(id, s.snk);
+});
+
+test('yuran: denyut membezakan perubahan kehadiran sahaja', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const a = spy();
+  chat.attachSink(idOf('Ana'), a.snk);
+  chat.userOf(chat.issueSession('Ben'));
+  chat.tickBeat();
+  assert.equal(a.log.length, 0, 'denyut pertama hanya merekod keadaan asal');
+  chat.load().users.ben.lastSeen = Date.now() - 999e3;   // Ben senyap > ONLINE_MS
+  chat.tickBeat();
+  const ev = a.log.find(x => x[0] === 'presence');
+  assert.ok(ev, 'perubahan kehadiran diberitahu');
+  assert.deepEqual(ev[1], { id: idOf('Ben'), online: false });
+  a.log.length = 0;
+  chat.tickBeat();
+  assert.equal(a.log.filter(x => x[0] === 'presence').length, 0, 'keadaan sama → tiada bingkai');
+  release(idOf('Ana'), a.snk);
+});
+
+test('yuran: dropSink menutup hanya tab bagi token itu', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const a1 = spy('a1'), a2 = spy('a2'), b1 = spy('b1');
+  chat.attachSink(idOf('Ana'), a1.snk); chat.attachSink(idOf('Ana'), a2.snk); chat.attachSink(idOf('Ben'), b1.snk);
+  assert.equal(chat.dropSink('a1'), 1, 'satu tab sahaja ditendang');
+  assert.ok(a1.log.some(x => x[0] === ':closed'));
+  assert.equal(a2.log.length + b1.log.length, 0, 'tab lain tidak terusik');
+  release(idOf('Ana'), a2.snk, idOf('Ben'), b1.snk);
 });

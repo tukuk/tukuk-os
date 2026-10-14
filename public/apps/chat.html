@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tukuk Chat — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1, hantar gambar & video. Tetapan urus nama, kata laluan, kawan, cari orang, sekat/buka sekat. Reply, reaction, edit, carian, wallpaper.">
+<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1, hantar gambar & video. Tetapan urus nama, kata laluan, kawan, cari orang, sekat/buka sekat. Mesej tiba serta-merta melalui sambungan langsung. Reply, reaction, edit, carian, wallpaper.">
 <link rel="canonical" href="https://tukuk.org/apps/chat">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg">
@@ -78,6 +78,9 @@
   #top .who span.typing { color:var(--accent); font-style:italic; }
   #backBtn, #setBtn { background:none; border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px 9px; cursor:pointer; font-size:.9rem; }
   #backBtn { display:none; }
+  /* Penunjuk sambungan: hijau = aliran langsung terbuka, kelabu = poll sahaja. */
+  #live { flex:none; width:9px; height:9px; border-radius:50%; background:#59677f; transition:background .25s, box-shadow .25s; }
+  #live.on { background:var(--success); box-shadow:0 0 0 3px rgba(123,200,98,.18); }
 
   #msgsWrap { flex:1; overflow-y:auto; --w1:#172033; --w2:#101627; background:linear-gradient(160deg,var(--w1),var(--w2)); }
   #msgsWrap[data-wall="2"] { --w1:#241a2e; --w2:#160f1e; }
@@ -269,6 +272,7 @@
       <button id="backBtn" title="Kembali">←</button>
       <div class="ava" id="tAva">🌍</div>
       <div class="who" id="whoBox" title="Buka profil pasangan"><b id="tName">—</b><span id="tStatus"></span></div>
+      <div id="live" title="Polling — cuba sambung semula" aria-label="Polling — cuba sambung semula"></div>
       <button id="setBtn" title="Tetapan">⚙️</button>
     </div>
     <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Bilik masih kosong. Sapa dulu! 👋</div></div>
@@ -384,6 +388,8 @@
   const REACTS = ['❤️','👍','😂','😮','😢','🔥'];
   const CCOL = ['#e17076','#65aadd','#7bc862','#a584cf','#ecb8a0','#65c5db'];
   const POLL_MSG = 2500, POLL_ROOM = 7000, FULL_EVERY = 10;
+  // Bila aliran langsung hidup, poll jadi pemeriksaan keselamatan sahaja (bukan sumber mesej).
+  const LIVE_MSG = 20000, LIVE_ROOM = 30000;
 
   let token = localStorage.getItem(TKEY) || '';
   let me = localStorage.getItem(NKEY) || '';
@@ -393,6 +399,7 @@
   let replyTo = null, editing = null, lastTypingPing = 0;
   let roomsSig = '', roomsSigCur = null, msgSig = '';
   let pending = [], seqKey = 1, busy = false;   // lampiran menunggu dihantar
+  let liveOn = false, liveCtl = null, liveTimer = null, liveRetry = 0, tpClear = null;   // aliran langsung
   let pref = { sound: true, wall: 1, font: 15 };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
@@ -405,6 +412,8 @@
   // Tandatangan ringkas untuk senarai lampiran — guna semasa memadankan mesej
   // sementara dengan salinan pelayan (gambar berbeza, teks sama → bukan duplikat).
   const msig = m => (m && m.media || []).map(x => x.kind + (x.w || 0) + 'x' + (x.h || 0) + (x.dur || 0)).join(',');
+  // Padanan sementara↔sebenar: teks + pengarang + tandatangan lampiran.
+  const samePair = (p, x) => p.from === x.from && norm(p.t) === norm(x.t) && msig(p) === msig(x);
 
   // ─── Panggilan API ───
   async function call(p, opt) {
@@ -659,9 +668,8 @@
     paintMe();
     if (innerWidth > 760) $('app').dataset.open = '1';
     loadRooms(true); loadPeople(); refreshMe(); loadSocial();
-    clearInterval(window.__ct); clearInterval(window.__rt);
-    window.__ct = setInterval(pollMsgs, POLL_MSG);
-    window.__rt = setInterval(() => { loadRooms(false); }, POLL_ROOM);
+    restartPollers();
+    stopStream(); openStream();
     pollMsgs();
   }
   function paintMe() {
@@ -680,7 +688,7 @@
     try { await post('/logout'); } catch {}
     token = ''; me = ''; myId = 0; myBio = ''; myJoined = null;
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
-    clearInterval(window.__ct); clearInterval(window.__rt);
+    stopStream(); restartPollers();
     clearPending();
     cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
     resetSocial(); $('aName').value = ''; $('aPass').value = '';   // jangan tinggalkan jejak akaun sebelumnya
@@ -694,14 +702,14 @@
       rooms = j.rooms || [];
       if (select && !rooms.find(r => r.id === cur)) cur = rooms.length ? rooms[0].id : 'global_am';
       renderRooms();
-      if (select) openRoom(cur, true);
+      if (select) await openRoom(cur, true);
     } catch (e) { if (e.status === 401) return expire(); }
   }
   async function expire() {
     if (!token) return; // sudah keluar — jangan tindih mesej "anda sudah keluar"
-    clearInterval(window.__ct); clearInterval(window.__rt);
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
     token = ''; myId = 0; myBio = ''; myJoined = null; clearPending(); cache = {}; rooms = []; tick = 0; $('q').value = '';
+    stopStream(); restartPollers();   // token sudah kosong → tiada poller yang dihidupkan semula
     resetSocial(); $('aPass').value = '';
     setMode('login'); showAuth('Sesi luput — sila masuk semula.');
   }
@@ -810,8 +818,10 @@
         // jangan hilangkan mesej yang masih dalam perjalanan semasa refresh penuh
         for (const p of pend) if (!b.msgs.some(x => x.from === p.from && norm(x.t) === norm(p.t) && msig(x) === msig(p))) b.msgs.push(p);
       } else if (j.msgs && j.msgs.length) {
-        // buang mesej yang sudah dipaparkan sebagai optimistic temp — elak berganda
-        const baru = j.msgs.filter(x => !b.msgs.some(p => String(p.id).startsWith('tmp') && p.from === x.from && norm(p.t) === norm(x.t) && msig(p) === msig(x)));
+        // buang yang sudah terpapar: salinan aliran langsung (id sama) atau gelembung
+        // optimistik sementara yang belum diganti — elak mesej berganda.
+        const ada = x => b.msgs.some(p => p.id === x.id || (String(p.id).startsWith('tmp') && samePair(p, x)));
+        const baru = j.msgs.filter(x => !ada(x));
         b.msgs = b.msgs.concat(baru).slice(-200);
         if (baru.some(m => !mineOf(m))) sndIn();
       }
@@ -820,6 +830,127 @@
       renderMsgs(); renderStatus(); renderRooms();
     } catch (e) { if (e.status === 401) return expire(); }
   }
+
+  // ─── Aliran langsung (SSE) ───
+  // Satu sambungan panjang menerima bingkai msg/typing/edit/del/react/room/social/
+  // presence/kick. Polling dengan selang panjang tetap berjalan sebagai penyelarasan
+  // — kalau aliran putus, tiada mesej hilang, cuma jadi lebih lambat.
+  function paintLive() {
+    const el = $('live'); if (!el) return;
+    el.classList.toggle('on', liveOn);
+    const txt = liveOn ? 'Langsung — mesej sampai serta-merta' : 'Polling — cuba sambung semula';
+    el.title = txt; el.setAttribute('aria-label', txt);
+  }
+  function restartPollers() {
+    clearInterval(window.__ct); clearInterval(window.__rt);
+    if (!token) return;
+    window.__ct = setInterval(pollMsgs, liveOn ? LIVE_MSG : POLL_MSG);
+    window.__rt = setInterval(() => { loadRooms(false); }, liveOn ? LIVE_ROOM : POLL_ROOM);
+  }
+  function stopStream() {
+    liveOn = false; paintLive();
+    clearTimeout(tpClear);
+    if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+    liveRetry = 0;
+    if (liveCtl) { try { liveCtl.abort(); } catch { /* sudah tamat */ } liveCtl = null; }
+  }
+  async function openStream() {
+    if (!token || liveCtl) return;
+    const ctl = new AbortController();
+    liveCtl = ctl;
+    try {
+      const res = await fetch(API + '/stream', { headers: { Authorization: 'Bearer ' + token }, signal: ctl.signal, cache: 'no-store' });
+      if (!res.ok || !res.body) throw new Error('stream ' + res.status);
+      liveRetry = 0;
+      setLive(true);
+      const rd = res.body.getReader(), dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const chunk = await rd.read();
+        if (chunk.done) break;
+        buf += dec.decode(chunk.value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\n\n')) >= 0) { const fr = buf.slice(0, i); buf = buf.slice(i + 2); if (fr.trim()) onFrame(fr); }
+        if (buf.length > 32768) buf = '';   // bingkai rosak jangan mengumpul tanpa had
+      }
+    } catch { /* rangkaian putus, tab ditutup, atau sesi mati */ }
+    if (liveCtl !== ctl) return;            // sudah diganti/dihenti — jangan sentuh keadaan
+    liveCtl = null;
+    setLive(false);
+    if (!token) return;
+    liveRetry = Math.min(15000, liveRetry * 2 + 1000);   // backoff: 1s, 3s, 7s … 15s
+    liveTimer = setTimeout(openStream, liveRetry);
+  }
+  function setLive(on) {
+    if (on === liveOn) return;
+    liveOn = on; paintLive(); restartPollers();
+  }
+  function onFrame(fr) {
+    let ev = 'message', data = '';
+    for (const line of fr.split('\n')) {
+      if (line.startsWith('event:')) ev = line.slice(6).trim();
+      else if (line.startsWith('data:')) data += line.slice(5).trim();
+    }
+    if (!data || ev === 'ping') return;
+    let j = null;
+    try { j = JSON.parse(data); } catch { return; }
+    applyFrame(ev, j);
+  }
+  function applyFrame(ev, j) {
+    if (ev === 'hello') { loadRooms(false); return; }   // selaraskan yang terlepas semasa putus
+    if (ev === 'kick') { toast('Sesi anda ditamatkan — kata laluan atau sesi telah diubah di tempat lain.'); expire(); return; }
+    if (ev === 'presence') {
+      const p = pById[j.id];
+      if (p) p.online = !!j.online;
+      for (const r of rooms) if (r.kind === 'dm' && r.peerId === j.id) r.online = !!j.online;
+      renderRooms(); renderStatus();
+      if ($('peopleModal').classList.contains('open')) renderPeople($('pq').value.trim());
+      return;
+    }
+    if (ev === 'social') { loadSocial(); loadPeople(); return; }
+    if (ev === 'room') { loadRooms(false); return; }
+    if (!j || !j.room) return;
+    const r = room(j.room);
+    if (!r) { loadRooms(false); return; }   // bilik belum diketahui — ambil senarai
+    const b = box(r);
+    if (ev === 'typing') {
+      b.typing = j.typing || [];
+      clearTimeout(tpClear); tpClear = setTimeout(() => { b.typing = []; renderStatus(); }, 6000);
+      renderStatus(); return;
+    }
+    if (ev === 'del') {
+      b.msgs = (b.msgs || []).filter(x => x.id !== j.id);
+      renderMsgs(); loadRooms(false); return;
+    }
+    const m = j.msg;
+    if (!m) return;
+    if (ev === 'edit' || ev === 'react') {
+      const at = (b.msgs || []).findIndex(x => x.id === m.id);
+      if (at < 0) { pollMsgs(); return; }   // tiada di sini — selaraskan ikut poll
+      Object.assign(b.msgs[at], m);
+      renderMsgs(); renderRooms(); return;
+    }
+    if (ev !== 'msg' || (b.msgs || []).some(x => x.id === m.id)) return;
+    // ganti gelembung optimistik penghantar (jika ada) dengan salinan pelayan
+    b.msgs = (b.msgs || []).filter(x => !(String(x.id).startsWith('tmp') && samePair(x, m))).concat([m]).slice(-200);
+    b.seq = Math.max(b.seq || 0, j.seq || 0);
+    r.last = { from: m.from, fid: m.fid || null, t: m.t, mt: m.media && m.media.length ? m.media[0].kind : null, n: (m.media || []).length, ts: m.ts };
+    if (!mineOf(m)) {
+      if (r.id === cur && shown()) post('/read', { room: r.id }).catch(() => {});
+      else r.unread = (r.unread || 0) + 1;
+      sndIn();
+    }
+    renderMsgs(); renderRooms(); renderStatus();
+  }
+  // Tab yang kembali ke latar perlu serta-merta: selarangkan + cuba aliran baru.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !token) return;
+    pollMsgs(); loadRooms(false);
+    if (!liveCtl) {
+      if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+      liveRetry = 0; openStream();
+    }
+  });
 
   // ─── Render mesej ───
   function renderMsgs() {

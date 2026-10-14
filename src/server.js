@@ -190,7 +190,13 @@ app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 // Gzip: semua teks (HTML/JSON) dipampatkan — halaman ~32KB jadi ~8KB.
-app.use(compression());
+// Aliran SSE (/api/chat/stream) tidak boleh dimampat — mampat menyimpan bingkai
+// daripada dihantar serta-merta, jadi terus kecualikan jenis kandungan itu.
+app.use(compression({
+  filter: (req, res) => (String(res.getHeader('Content-Type') || '').includes('text/event-stream')
+    ? false
+    : compression.filter(req, res)),
+}));
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -1916,7 +1922,7 @@ const STORE_APP_META = {
   orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
   fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
   drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' },
-  chat: { ic: '✈️', title: 'Tukuk Chat', desc: 'Aplikasi chat Tukuk Chat sebenar — daftar nama + kata laluan, Tukuk ID kekal, bilik Am dan DM 1-ke-1, hantar gambar & video, senarai kawan, cari orang ikut ID, sekat/buka sekat, tukar kata laluan, reply, reaction, edit, wallpaper & bunyi.' }
+  chat: { ic: '✈️', title: 'Tukuk Chat', desc: 'Aplikasi chat Tukuk Chat sebenar — daftar nama + kata laluan, Tukuk ID kekal, bilik Am dan DM 1-ke-1, hantar gambar & video, senarai kawan, cari orang ikut ID, sekat/buka sekat, tukar kata laluan, mesej sampai serta-merta melalui sambungan langsung, reply, reaction, edit, wallpaper & bunyi.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [

@@ -395,6 +395,7 @@ function ensureDm(a, b) {
   if (!r) {
     r = s.rooms[id] = { id, kind: 'dm', title: null, memberIds: pair, members: pair.map(nameOfUser), createdBy: ua.name, createdAt: Date.now() };
     touch();
+    pubRoom(r, 'room', { room: r.id });   // pasangan terus nampak bilik baharu
     return r;
   }
   if (!r.memberIds || r.memberIds.length !== 2) { r.memberIds = pair; touch(); }
@@ -460,9 +461,14 @@ function send(name, roomId, text, replyTo, media) {
   if (att.length) msg.media = att;
   r.list.push(msg);
   trimRoom(r);
+  const wasTyping = !!s.typing[key(name) + '|' + roomId];
   delete s.typing[key(name) + '|' + roomId];
   touch();
-  return { ok: true, msg: hydrate(msg), room: r };
+  const out = hydrate(msg);
+  pubRoom(r, 'msg', { room: r.id, seq: r.seq, msg: out });
+  // Penunjuk menaip perlu habis serta-merta pada tab lain, bukan tunggu poll.
+  if (wasTyping) pubRoom(r, 'typing', { room: r.id, typing: [] });
+  return { ok: true, msg: out, room: r };
 }
 // Simpan hanya KEEP mesej terakhir; fail yang keluar dari senarai dibuang.
 function trimRoom(r) {
@@ -498,7 +504,9 @@ function react(name, roomId, msgId, emo) {
   m.rx = m.rx || {};
   if (m.rx[e]) { delete m.rx[e]; } else { m.rx[e] = 1; }
   touch();
-  return { ok: true, msg: hydrate(m) };
+  const out = hydrate(m);
+  pubRoom(r, 'react', { room: r.id, msg: out });
+  return { ok: true, msg: out };
 }
 function edit(name, roomId, msgId, text) {
   const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
@@ -508,7 +516,9 @@ function edit(name, roomId, msgId, text) {
   const t = cleanText(text);
   if (!t) return { error: 'Mesej kosong.' };
   m.t = t; m.edited = true; touch();
-  return { ok: true, msg: hydrate(m) };
+  const out = hydrate(m);
+  pubRoom(r, 'edit', { room: r.id, msg: out });
+  return { ok: true, msg: out };
 }
 function remove(name, roomId, msgId) {
   const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
@@ -518,12 +528,14 @@ function remove(name, roomId, msgId) {
   const [gone] = r.list.splice(i, 1);
   releaseMedia(gone.media, gone.id);
   touch();
+  pubRoom(r, 'del', { room: r.id, id: msgId });
   return { ok: true };
 }
 function setTyping(name, roomId) {
   const s = load();
   if (!s.rooms[roomId]) return;
   s.typing[key(name) + '|' + roomId] = Date.now(); touch();
+  pubRoom(s.rooms[roomId], 'typing', { room: roomId, typing: typingIn(roomId) });
 }
 function typingIn(roomId) {
   const s = load(); const now = Date.now(); const out = [];
@@ -636,6 +648,7 @@ function addFriend(name, q) {
   if (friendsOf(u).length >= MAX_FRIENDS) return { error: 'Senarai kawan sudah sampai had ' + MAX_FRIENDS + '.' };
   (u.friends = friendsOf(u)).push(t.peer.id);
   touch();
+  pub('social', {}, [u.id]);
   return { ok: true, user: u, peer: t.peer };
 }
 function delFriend(name, q) {
@@ -645,6 +658,7 @@ function delFriend(name, q) {
   if (t.error) return t;
   u.friends = friendsOf(u).filter((i) => i !== t.peer.id); // sejarah DM tidak diusik
   touch();
+  pub('social', {}, [u.id]);
   return { ok: true, user: u, peer: t.peer };
 }
 function blockUser(name, q) {
@@ -658,6 +672,7 @@ function blockUser(name, q) {
   u.friends = friendsOf(u).filter((i) => i !== t.peer.id);
   t.peer.friends = friendsOf(t.peer).filter((i) => i !== u.id); // persahabatan dua arah dibuang
   touch();
+  pub('social', {}, [u.id]);   // hanya penyekat diberitahu — mangsa tidak tahu
   return { ok: true, user: u, peer: t.peer };
 }
 function unblockUser(name, q) {
@@ -667,6 +682,7 @@ function unblockUser(name, q) {
   if (t.error) return t;
   u.blocked = blockedOf(u).filter((i) => i !== t.peer.id);
   touch();
+  pub('social', {}, [u.id]);
   return { ok: true, user: u, peer: t.peer };
 }
 // Senarai untuk skrin Tetapan. Kawan bawa `dm` (id bilik sedia ada / null).
@@ -732,6 +748,76 @@ function sweep() {
 }
 setInterval(sweep, 10 * 60e3).unref?.();
 
+// ─── Yuran langsung (SSE) ───
+// Satu sambungan HTTP panjang per tab supaya mesej sampai serta-merta. Poll
+// (since/markSeen) kekal sumber kebenaran — stream hanya memendekkan latensi,
+// jadi sambungan yang PUTUS tidak menghilangkan apa-apa.
+const MAX_STREAMS = 6;          // sambungan serentak untuk seorang pengguna
+const BEAT_MS = 20e3;           // denyut: halang edge/terowong daripada idling
+const sinks = new Map();        // userId -> Set(sink)
+let beat = null, lastOn = null;
+
+function attachSink(uid, snk) {
+  const set = sinks.get(uid) || new Set();
+  if (set.size >= MAX_STREAMS) return false;
+  set.add(snk); sinks.set(uid, set);
+  if (!beat) { beat = setInterval(tickBeat, BEAT_MS); if (beat.unref) beat.unref(); }
+  return true;
+}
+function detachSink(uid, snk) {
+  const set = sinks.get(uid);
+  if (!set) return;
+  set.delete(snk);
+  if (!set.size) sinks.delete(uid);
+  if (!sinks.size && beat) { clearInterval(beat); beat = null; lastOn = null; }
+}
+// `ids` kosong = semua yang bersambung (hanya maklumat AWAM seperti kehadiran).
+// Khalayak DM ialah ahlinya sahaja — mesej tidak pernah disiarkan orang lain.
+function pub(ev, data, ids) {
+  const targets = ids && ids.length ? [].concat(ids) : Array.from(sinks.keys());
+  for (const id of targets) {
+    const set = sinks.get(id);
+    if (!set) continue;
+    for (const snk of set) { try { snk.send(ev, data); } catch { /* sambungan sedang mati */ } }
+  }
+}
+function pubRoom(r, ev, data) { pub(ev, data, r && r.kind === 'dm' ? (r.memberIds || []) : null); }
+// Tutup stream peranti lain (kata laluan tukar / keluar semua sesi) selepas
+// sesi-sesi itu diluputkan — klien akan logout sendiri bila dapat 'kick'.
+function kickSinks(uid, keepTok) {
+  const set = sinks.get(uid); if (!set) return 0;
+  let n = 0;
+  for (const snk of Array.from(set)) {
+    if (keepTok && snk.tok === keepTok) continue;
+    try { snk.send('kick', {}); snk.close(); } catch { /* noop */ }
+    n++;
+  }
+  return n;
+}
+function dropSink(tok) {
+  let n = 0;
+  for (const [uid, set] of Array.from(sinks)) {
+    for (const snk of Array.from(set)) if (snk.tok === tok) { try { snk.close(); } catch { /* noop */ } detachSink(uid, snk); n++; }
+  }
+  return n;
+}
+// Denyut + pengesanan perubahan kehadiran (ONLINE_MS 90s) untuk semua tab.
+function tickBeat() {
+  const s = load();
+  for (const set of sinks.values()) for (const snk of set) { try { snk.ping(); } catch { /* noop */ } }
+  const on = {};
+  for (const u of Object.values(s.users)) on[u.id] = isOnline(u);
+  if (lastOn) for (const [id, v] of Object.entries(on)) if (lastOn[id] !== v) pub('presence', { id: Number(id), online: v });
+  lastOn = on;
+}
+// Buang semua yuran (dipakai ujian — keadaan modul tidak boleh merembes).
+function clearSinks() {
+  for (const set of Array.from(sinks.values())) for (const snk of set) { try { snk.close(); } catch { /* noop */ } }
+  sinks.clear();
+  if (beat) { clearInterval(beat); beat = null; }
+  lastOn = null;
+}
+
 // ─── Pembantu HTTP ───
 function bearer(req) {
   const h = req.headers.authorization || '';
@@ -770,7 +856,40 @@ function mount(app, deps) {
     res.json({ ok: true, token: issueSession(r.user.name), name: r.user.name, id: r.user.id });
   });
 
-  app.post('/api/chat/logout', (req, res) => { revoke(bearer(req)); res.json({ ok: true }); });
+  app.post('/api/chat/logout', (req, res) => {
+    const tok = bearer(req);
+    const u = userOf(tok);
+    revoke(tok);
+    if (u) dropSink(tok);   // tab peranti ini berhenti menerima terus
+    res.json({ ok: true });
+  });
+
+  // Aliran langsung (SSE) satu sambungan panjang per tab. Token melalui header
+  // Bearer (fetch-stream), jadi tiada kredensial masuk ke URL atau log pelayan.
+  app.get('/api/chat/stream', (req, res) => {
+    const tok = bearer(req);
+    const u = authOf(req, res); if (!u) return;
+    let snk = null;
+    const bye = () => { if (snk) { detachSink(u.id, snk); snk = null; } };
+    snk = {
+      tok,
+      send: (ev, data) => { res.write('event: ' + ev + '\ndata: ' + JSON.stringify(data || {}) + '\n\n'); },
+      ping: () => { res.write(': t\n\n'); },
+      close: () => { bye(); try { res.end(); } catch { /* sudah tertutup */ } },
+    };
+    // Had yuran per akaun. Header belum ditulis lagi supaya 429 kekal JSON bersih.
+    if (!attachSink(u.id, snk)) { bye(); return res.status(429).json({ error: 'Terlalu banyak tab terbuka pada akaun ini.' }); }
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    if (res.flushHeaders) res.flushHeaders();
+    if (req.socket) { req.socket.setTimeout(0); req.socket.setNoDelay(true); }
+    snk.send('hello', { id: u.id, name: u.name, ts: Date.now() });
+    req.on('close', bye); req.on('error', bye); res.on('error', bye);
+  });
 
   app.get('/api/chat/me', (req, res) => {
     const u = userOf(bearer(req));
@@ -962,6 +1081,7 @@ function mount(app, deps) {
     const r = setPass(u.name, b.old, b.next);
     if (r.error) return res.status(r.status || 400).json({ error: r.error });
     const n = logoutAll(u.name, tok);
+    kickSinks(u.id, tok);
     event('Kata laluan ditukar: ' + u.name, { id: u.id, revoked: n.revoked });
     res.json({ ok: true, revoked: n.revoked, message: 'Kata laluan tukar. Peranti lain perlu login semula.' });
   });
@@ -971,6 +1091,7 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const r = logoutAll(u.name, tok);
     if (r.error) return res.status(400).json({ error: r.error });
+    kickSinks(u.id, tok);
     res.json({ ok: true, revoked: r.revoked });
   });
 
@@ -1013,6 +1134,7 @@ module.exports = {
   profile, rename, setBio, isOnline, cleanText,
   addFriend, delFriend, blockUser, unblockUser, socialLists, socialTarget, setPass, logoutAll,
   friendsOf, blockedOf, dmFrozen, MAX_FRIENDS, MAX_BLOCKS,
+  pub, pubRoom, attachSink, detachSink, kickSinks, dropSink, tickBeat, clearSinks, MAX_STREAMS,
   sniff, addMedia, attachMedia, mediaUrl, mediaAllowed, mediaSrc, mediaFile, projectMedia,
   hydrate, releaseMedia, dropMedia, readRaw, quotaCheck, trimRoom,
   MAX_IMG, MAX_VID, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
