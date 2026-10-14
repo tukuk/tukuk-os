@@ -222,7 +222,7 @@
 })();
 
 /* Tukuk ID — satu identitas untuk semua app di tukuk.org.
-   Tukuk Chat memberi setiap akaun nombor kekal (contoh 100042). Token sesi chat
+   T Chat memberi setiap akaun nombor kekal (contoh 100042). Token sesi chat
    disimpan dalam localStorage pada origin yang sama, jadi mana-mana app boleh
    tanya "siapa yang log masuk?" tanpa form login baharu.
    Kedua-dua fungsi ini HANYA menghantar permintaan bila dipanggil oleh app —
@@ -242,7 +242,7 @@ window.tukukWhoami = function (force) {
     .catch(function () { return kosong; });
 };
 
-/* "Siapa punya ID/nama ini?" — carian direktori Tukuk Chat (perlukan sesi chat). */
+/* "Siapa punya ID/nama ini?" — carian direktori T Chat (perlukan sesi chat). */
 window.tukukLookup = function (q) {
   var tk = '';
   try { tk = localStorage.getItem('tukuk-chat-token') || ''; } catch (e) {}

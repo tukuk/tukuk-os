@@ -1,4 +1,4 @@
-// Tukuk Chat — backend multi-pengguna untuk app /apps/chat.
+// T Chat — backend multi-pengguna untuk app /apps/chat.
 // Akaun (scrypt), sesi bearer-token, bilik global + DM 1-ke-1, mesej dengan
 // reply/reaction/edit/padam, lampiran gambar & video, kehadiran (online/menaip).
 // Metadata dalam satu fail JSON di data/chat.json; fail media di data/chat-media/.
@@ -632,7 +632,7 @@ const dmFrozen = (a, b) => { const ua = asUser(a), ub = asUser(b); return iBlock
 // Sasaran sosial: mesti wujud dan bukan akaun sendiri.
 function socialTarget(u, q) {
   const t = findUser(q);
-  if (!t) return { error: normalizeName(q) ? 'Pengguna itu belum mendaftar di Tukuk Chat.' : 'Tiada ID atau nama begitu.' };
+  if (!t) return { error: normalizeName(q) ? 'Pengguna itu belum mendaftar di T Chat.' : 'Tiada ID atau nama begitu.' };
   if (t.id === u.id) return { error: 'Itu akaun anda sendiri.' };
   return { ok: true, peer: t };
 }
@@ -1012,7 +1012,7 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const raw = cleanBody(req.body).peer;
     const peer = findUser(raw);   // boleh Tukuk ID (nombor) atau nama
-    if (!peer) return res.status(400).json({ error: normalizeName(raw) ? 'Pengguna itu belum mendaftar di Tukuk Chat.' : 'Tiada ID atau nama begitu.' });
+    if (!peer) return res.status(400).json({ error: normalizeName(raw) ? 'Pengguna itu belum mendaftar di T Chat.' : 'Tiada ID atau nama begitu.' });
     if (peer.id === u.id) return res.status(400).json({ error: 'Tidak boleh DM diri sendiri.' });
     if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Tidak dapat memulakan sembang dengan pengguna ini.' });
     const r = ensureDm(u, peer);

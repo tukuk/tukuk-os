@@ -1,5 +1,5 @@
 'use strict';
-// Ujian backend Tukuk Chat (src/chat.js) — logik murni, tiada pelayan HTTP.
+// Ujian backend T Chat (src/chat.js) — logik murni, tiada pelayan HTTP.
 // Setiap ujian bermula dengan storan JSON baharu di direktori sementara.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
