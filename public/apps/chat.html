@@ -399,7 +399,8 @@
   let replyTo = null, editing = null, lastTypingPing = 0;
   let roomsSig = '', roomsSigCur = null, msgSig = '';
   let pending = [], seqKey = 1, busy = false;   // lampiran menunggu dihantar
-  let liveOn = false, liveCtl = null, liveTimer = null, liveRetry = 0, tpClear = null;   // aliran langsung
+  let liveOn = false, liveCtl = null, liveTimer = null, liveWatch = null, liveAt = 0,
+      liveRetry = 0, tpClear = null;   // aliran langsung
   let pref = { sound: true, wall: 1, font: 15 };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
@@ -851,34 +852,43 @@
     liveOn = false; paintLive();
     clearTimeout(tpClear);
     if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+    if (liveWatch) { clearInterval(liveWatch); liveWatch = null; }
     liveRetry = 0;
     if (liveCtl) { try { liveCtl.abort(); } catch { /* sudah tamat */ } liveCtl = null; }
   }
   async function openStream() {
     if (!token || liveCtl) return;
     const ctl = new AbortController();
-    liveCtl = ctl;
+    liveCtl = ctl; liveAt = Date.now();
+    let capped = false;
     try {
       const res = await fetch(API + '/stream', { headers: { Authorization: 'Bearer ' + token }, signal: ctl.signal, cache: 'no-store' });
-      if (!res.ok || !res.body) throw new Error('stream ' + res.status);
+      if (!res.ok || !res.body) { capped = res.status === 429; throw new Error('stream ' + res.status); }
       liveRetry = 0;
       setLive(true);
+      // Socket separa-mati: edge boleh mati tanpa hantar reset, jadi bacaan akan
+      // menunggu selamanya. Denyut pelayan tiba tiap 20s — tiada bait 35s = sudah mati.
+      liveWatch = setInterval(() => {
+        if (liveCtl === ctl && Date.now() - liveAt > 35000) { try { ctl.abort(); } catch { /* sudah tamat */ } }
+      }, 8000);
       const rd = res.body.getReader(), dec = new TextDecoder();
       let buf = '';
       for (;;) {
-        const chunk = await rd.read();
-        if (chunk.done) break;
+        const chunk = await rd.read(); if (chunk.done) break;
+        liveAt = Date.now();
         buf += dec.decode(chunk.value, { stream: true });
         let i;
         while ((i = buf.indexOf('\n\n')) >= 0) { const fr = buf.slice(0, i); buf = buf.slice(i + 2); if (fr.trim()) onFrame(fr); }
         if (buf.length > 32768) buf = '';   // bingkai rosak jangan mengumpul tanpa had
       }
     } catch { /* rangkaian putus, tab ditutup, atau sesi mati */ }
+    if (liveWatch) { clearInterval(liveWatch); liveWatch = null; }
     if (liveCtl !== ctl) return;            // sudah diganti/dihenti — jangan sentuh keadaan
     liveCtl = null;
     setLive(false);
     if (!token) return;
-    liveRetry = Math.min(15000, liveRetry * 2 + 1000);   // backoff: 1s, 3s, 7s … 15s
+    // 429 = had tab dicapai; slot tidak akan bebas dengan cepat, jadi tunggu lebih lama.
+    liveRetry = capped ? 30000 : Math.min(15000, liveRetry * 2 + 1000);   // backoff: 1s, 3s, 7s … 15s
     liveTimer = setTimeout(openStream, liveRetry);
   }
   function setLive(on) {

@@ -728,3 +728,18 @@ test('yuran: dropSink menutup hanya tab bagi token itu', () => {
   assert.equal(a2.log.length + b1.log.length, 0, 'tab lain tidak terusik');
   release(idOf('Ana'), a2.snk, idOf('Ben'), b1.snk);
 });
+
+test('yuran: sink yang gagal menulis dibuang ketika denyut', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const id = idOf('Ana');
+  let closed = 0;
+  const rosong = { tok: 'rosong', send: () => { throw new Error('stream dimusnahkan'); }, ping: () => { throw new Error('stream dimusnahkan'); }, close: () => { closed++; } };
+  assert.ok(chat.attachSink(id, rosong), 'sink rosong diterima pada mulanya');
+  chat.tickBeat();
+  assert.equal(closed, 1, 'sink rosong ditutup selepas denyut');
+  const penuh = [];
+  for (let i = 0; i < chat.MAX_STREAMS; i++) { const s = spy('p' + i); assert.ok(chat.attachSink(id, s.snk), 'slot ' + i + ' bebas semula'); penuh.push(s); }
+  assert.equal(chat.attachSink(id, spy('lebih').snk), false, 'had MAX_STREAMS masih dihormati');
+  for (const s of penuh) chat.detachSink(id, s.snk);
+});

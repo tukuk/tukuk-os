@@ -804,7 +804,16 @@ function dropSink(tok) {
 // Denyut + pengesanan perubahan kehadiran (ONLINE_MS 90s) untuk semua tab.
 function tickBeat() {
   const s = load();
-  for (const set of sinks.values()) for (const snk of set) { try { snk.ping(); } catch { /* noop */ } }
+  // Write yang terlepas (stream sudah dimusnahkan tapi 'close' belum sampai ke sini)
+  // akan membangkitkan ralat — buang sink itu segera supaya slot tidak terperangkap.
+  for (const [uid, set] of Array.from(sinks)) {
+    for (const snk of Array.from(set)) {
+      try { snk.ping(); } catch {
+        try { snk.close(); } catch { /* sudah tertutup */ }
+        detachSink(uid, snk);
+      }
+    }
+  }
   const on = {};
   for (const u of Object.values(s.users)) on[u.id] = isOnline(u);
   if (lastOn) for (const [id, v] of Object.entries(on)) if (lastOn[id] !== v) pub('presence', { id: Number(id), online: v });
