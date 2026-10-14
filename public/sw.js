@@ -34,6 +34,13 @@ self.addEventListener('fetch', (event) => {
   // Luar domain: biar pelayar urus sendiri (iklan, CDN imej, dsb.)
   if (url.origin !== self.location.origin) return;
 
+  // API & aliran SSE: jangan sentuh langsung. `response.clone()` + `cache.put()`
+  // pada respons yang tidak pernah tamat (/api/chat/stream) akan membuat tee
+  // tertahan — bingkai tidak sampai ke halaman dan ingatan SW membengkak.
+  // Data API pula memang tiada gunanya bila luar talian.
+  if (url.pathname.startsWith('/api/')) return;
+  if (event.request.headers.get('accept') || '').includes('text/event-stream')) return;
+
   if (event.request.mode === 'navigate') {
     // HTML: rangkaian dulu supaya pelanggan sentiasa dapat versi terkini.
     // Cache hanya digunakan bila rangkaian gagal (offline).

@@ -862,7 +862,7 @@
     liveCtl = ctl; liveAt = Date.now();
     let capped = false;
     try {
-      const res = await fetch(API + '/stream', { headers: { Authorization: 'Bearer ' + token }, signal: ctl.signal, cache: 'no-store' });
+      const res = await fetch(API + '/stream', { headers: { Authorization: 'Bearer ' + token, Accept: 'text/event-stream' }, signal: ctl.signal, cache: 'no-store' });
       if (!res.ok || !res.body) { capped = res.status === 429; throw new Error('stream ' + res.status); }
       liveRetry = 0;
       setLive(true);
