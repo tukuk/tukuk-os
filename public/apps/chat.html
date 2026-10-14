@@ -199,8 +199,9 @@
   .idchip:hover { color:var(--accent); border-color:var(--accent); }
   .pfmeta { font-size:.81rem; color:var(--muted); line-height:1.6; }
   .mbox .pflabel { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:12px 0 4px; }
-  #setModal .tabs { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
-  #setModal .tabs button { background:none; border:1px solid transparent; color:var(--muted); border-radius:7px; padding:5px 8px; cursor:pointer; font:inherit; font-size:.76rem; }
+  #setModal .tabs { display:flex; gap:4px; flex-wrap:nowrap; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none; }
+  #setModal .tabs::-webkit-scrollbar { display:none; }
+  #setModal .tabs button { background:none; border:1px solid transparent; color:var(--muted); border-radius:7px; padding:5px 8px; cursor:pointer; font:inherit; font-size:.74rem; white-space:nowrap; flex:none; }
   #setModal .tabs button.on { color:var(--text); background:color-mix(in srgb, var(--accent) 16%, transparent); border-color:color-mix(in srgb, var(--accent) 40%, transparent); }
   #setModal .tabs button b { font-variant-numeric:tabular-nums; opacity:.75; }
   .rowm .idf { flex:none; margin-right:2px; }
@@ -344,7 +345,7 @@
     <div class="mbtns"><button class="prim" id="stSavePass">Tukar kata laluan</button></div>
     <div class="pflabel">Peranti &amp; sesi</div>
     <div class="pfmeta">Keluarkan sesi lain — hanya peranti ini kekal login.</div>
-    <div class="mbtns"><button class="warn" id="stKick">🚪 Keluarkan peranti lain</button></div>
+    <div class="mbtns"><button class="warn" id="stKick">Keluarkan peranti lain</button></div>
   </div>
 
   <div class="tab" id="tabDsp" hidden>
@@ -352,12 +353,12 @@
     <label>Saiz teks mesej <input type="range" id="stFont" min="13" max="19"></label>
     <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
     <div class="walls" id="stWalls">
-      <button data-w="1" style="background:linear-gradient(160deg,#172033,#101627)"></button>
-      <button data-w="2" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
-      <button data-w="3" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
-      <button data-w="4" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
-      <button data-w="5" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
-      <button data-w="6" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
+      <button data-w="1" aria-label="Wallpaper gelap (laluan)" title="Gelap (laluan)" style="background:linear-gradient(160deg,#172033,#101627)"></button>
+      <button data-w="2" aria-label="Wallpaper ungu" title="Ungu" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
+      <button data-w="3" aria-label="Wallpaper hijau" title="Hijau" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
+      <button data-w="4" aria-label="Wallpaper amber" title="Amber" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
+      <button data-w="5" aria-label="Wallpaper biru cerah" title="Biru cerah" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
+      <button data-w="6" aria-label="Wallpaper putih" title="Putih" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
     </div>
   </div>
 
@@ -682,6 +683,7 @@
     clearInterval(window.__ct); clearInterval(window.__rt);
     clearPending();
     cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
+    resetSocial(); $('aName').value = ''; $('aPass').value = '';   // jangan tinggalkan jejak akaun sebelumnya
     setMode('login'); showAuth('Anda sudah keluar.');
   };
 
@@ -700,6 +702,7 @@
     clearInterval(window.__ct); clearInterval(window.__rt);
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
     token = ''; myId = 0; myBio = ''; myJoined = null; clearPending(); cache = {}; rooms = []; tick = 0; $('q').value = '';
+    resetSocial(); $('aPass').value = '';
     setMode('login'); showAuth('Sesi luput — sila masuk semula.');
   }
   function excerpt(text, q) {
@@ -991,7 +994,12 @@
 
   // ─── Hantar ───
   const inp = $('inp');
-  function grow() { inp.style.height = 'auto'; inp.style.height = Math.min(130, inp.scrollHeight) + 'px'; }
+  function grow() {
+    inp.style.height = 'auto';
+    const h = Math.min(130, inp.scrollHeight);
+    inp.style.height = h + 'px';
+    inp.style.overflowY = inp.scrollHeight > 130 ? 'auto' : 'hidden';   // elak palang tanpa sebab
+  }
   async function doSend() {
     if (busy) { toast('Masih menghantar…'); return; }
     const text = inp.value.trim();
@@ -1137,7 +1145,7 @@
   async function startDm(peer, prof) {
     try {
       const j = await post('/room', { peer });
-      $('profModal').classList.remove('open'); $('peopleModal').classList.remove('open');
+      $('profModal').classList.remove('open'); $('peopleModal').classList.remove('open'); $('setModal').classList.remove('open');
       if (prof) indexPeople(people.some(x => x.id === prof.id) ? null : people.concat([prof]));
       await loadRooms(false);
       openRoom(j.room.id);
@@ -1172,6 +1180,15 @@
 
   // ─── Tetapan: profil, kawan, sekatan, keselamatan, paparan ───
   let social = { friends: [], blocked: [] }, socialPool = {}, findQ = '';
+  // Bersihkan data + medan Tetapan apabila akaun ditukar atau sesi luput —
+  // jangan tinggalkan senarai kawan/sekatan milik orang lain di skrin.
+  function resetSocial() {
+    social = { friends: [], blocked: [] }; socialPool = {}; findQ = '';
+    $('stFind').value = ''; $('stName').value = ''; $('stBio').value = '';
+    $('stOld').value = $('stP1').value = $('stP2').value = '';
+    $('stFound').innerHTML = ''; $('stPalList').innerHTML = ''; $('stBlkList').innerHTML = '';
+    $('nPal').textContent = '0'; $('nBlk').textContent = '0';
+  }
   const isPal = id => social.friends.some(x => x.id === id);
   const isBlk = id => social.blocked.some(x => x.id === id);
   const pool = list => { for (const p of list || []) socialPool[p.id] = p; return list || []; };
@@ -1258,7 +1275,7 @@
       'Nombor ini kekal seumur akaun. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.</div>';
     $('stCopy').onclick = () => copyText(myId);
     $('stSound').checked = !!pref.sound; $('stFont').value = pref.font;
-    for (const b of $('stWalls').querySelectorAll('button')) b.classList.toggle('sel', +b.dataset.w === +pref.wall);
+    markWalls();
     $('stOld').value = $('stP1').value = $('stP2').value = '';
     showTab(tab || 'Prof');
     $('setModal').classList.add('open');
@@ -1296,9 +1313,17 @@
   $('stClose').onclick = () => {
     pref.sound = $('stSound').checked; pref.font = +$('stFont').value; savePref(); applyPref(); $('setModal').classList.remove('open');
   };
+  // Paparan disimpan serta-merta — Esc atau ✕ tidak boleh hilang pilihan.
+  $('stSound').onchange = e => { pref.sound = e.target.checked; savePref(); };
+  $('stFont').oninput = e => { pref.font = +e.target.value; savePref(); applyPref(); };
+  function markWalls() {
+    for (const b of $('stWalls').querySelectorAll('button')) {
+      const on = +b.dataset.w === +pref.wall;
+      b.classList.toggle('sel', on); b.setAttribute('aria-pressed', String(on));
+    }
+  }
   for (const b of $('stWalls').querySelectorAll('button')) b.onclick = () => {
-    pref.wall = +b.dataset.w; savePref(); applyPref();
-    for (const x of $('stWalls').querySelectorAll('button')) x.classList.toggle('sel', x === b);
+    pref.wall = +b.dataset.w; savePref(); applyPref(); markWalls();
   };
   function applyPref() {
     $('msgsWrap').dataset.wall = pref.wall;
