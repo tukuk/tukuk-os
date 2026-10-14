@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tukuk Chat — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1, hantar gambar & video. Reply, reaction, edit, profil, carian, wallpaper.">
+<meta name="description" content="Tukuk Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1, hantar gambar & video. Tetapan urus nama, kata laluan, kawan, cari orang, sekat/buka sekat. Reply, reaction, edit, carian, wallpaper.">
 <link rel="canonical" href="https://tukuk.org/apps/chat">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg">
@@ -199,6 +199,17 @@
   .idchip:hover { color:var(--accent); border-color:var(--accent); }
   .pfmeta { font-size:.81rem; color:var(--muted); line-height:1.6; }
   .mbox .pflabel { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:12px 0 4px; }
+  #setModal .tabs { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  #setModal .tabs button { background:none; border:1px solid transparent; color:var(--muted); border-radius:7px; padding:5px 8px; cursor:pointer; font:inherit; font-size:.76rem; }
+  #setModal .tabs button.on { color:var(--text); background:color-mix(in srgb, var(--accent) 16%, transparent); border-color:color-mix(in srgb, var(--accent) 40%, transparent); }
+  #setModal .tabs button b { font-variant-numeric:tabular-nums; opacity:.75; }
+  .rowm .idf { flex:none; margin-right:2px; }
+  .rowm .card.on { color:#e17076; border-color:#e17076; }
+  .mbtns button.warn { color:#e17076; }
+  .mbtns button:disabled { opacity:.5; cursor:default; }
+  #blockBar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; padding:7px 14px; font-size:.78rem; color:#f0b6b9; background:#2a1b20; border-top:1px solid #4a2b31; }
+  #blockBar.on { display:block; }
+  #blockBar button { background:none; border:1px solid #4a2b31; color:#f0b6b9; border-radius:6px; padding:2px 8px; cursor:pointer; font:inherit; font-size:.74rem; margin-left:8px; }
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#1c2230; color:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 16px; font-size:.84rem; z-index:100; display:none; box-shadow:0 6px 22px rgba(0,0,0,.4); }
 
   @media (max-width:760px) {
@@ -237,6 +248,7 @@
     Tekan <b>➕</b> untuk cari pengguna lain dan buka mesej peribadi (DM) 1-ke-1.<br>
     <b>Gambar &amp; video:</b> tekan 📎 (atau tampal/seret fail) untuk hantar media — gambar dimampat dalam pelayar dulu supaya laju, video sehingga 64MB.<br>
     <b>Tukuk ID:</b> setiap akaun dapat nombor kekal (contoh <b>100042</b>). Kawan boleh cari anda ikut nombor itu walaupun anda tukar nama — DM dan mesej lama takkan putus.<br>
+    <b>Tetapan (⚙️):</b> tukar nama &amp; bio, tukar kata laluan, senarai kawan, cari orang, sekat/buka sekat, dan keluarkan sesi peranti lain.<br>
     <b>Nasib baik:</b> guna kata laluan yang anda tak pakai di tempat lain — pemulihan akaun belum tersedia.
   </div>
 </div>
@@ -261,6 +273,7 @@
     <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Bilik masih kosong. Sapa dulu! 👋</div></div>
     <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Batal">✕</button></div></div>
     <div id="editBar"><div class="rb">✏️ <b>Mengedit mesej</b><span></span><button id="edCancel" title="Batal">✕</button></div></div>
+    <div id="blockBar">🚫 Anda menyekat orang ini — DM dibekukan. <button id="blkOpen">Buka sekat</button></div>
     <div id="tray"></div>
     <div id="compose">
       <button id="clipBtn" title="Lampirkan gambar atau video">📎</button>
@@ -291,17 +304,63 @@
 
 <div class="modal" id="setModal"><div class="mbox">
   <h3>⚙️ Tetapan</h3>
-  <label>Bunyi <input type="checkbox" id="stSound"></label>
-  <label>Saiz teks mesej <input type="range" id="stFont" min="13" max="19"></label>
-  <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
-  <div class="walls" id="stWalls">
-    <button data-w="1" style="background:linear-gradient(160deg,#172033,#101627)"></button>
-    <button data-w="2" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
-    <button data-w="3" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
-    <button data-w="4" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
-    <button data-w="5" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
-    <button data-w="6" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
+  <div class="tabs" id="stTabs">
+    <button data-t="Prof" class="on">🪪 Profil</button>
+    <button data-t="Pal">👥 Kawan <b id="nPal">0</b></button>
+    <button data-t="Blk">🚫 Sekat <b id="nBlk">0</b></button>
+    <button data-t="Sec">🔒 Keselamatan</button>
+    <button data-t="Dsp">🎨 Paparan</button>
   </div>
+
+  <div class="tab" id="tabProf">
+    <div id="stMe"></div>
+    <div class="pflabel">Nama paparan</div><input id="stName" maxlength="20" autocomplete="off">
+    <div class="pflabel">Bio (pilihan)</div><input id="stBio" maxlength="120" placeholder="Satu baris tentang anda" autocomplete="off">
+    <div class="pfmeta">Tukuk ID anda bersifat kekal — hanya nama yang boleh ditukar.</div>
+    <div class="mbtns"><button class="prim" id="stSaveProf">Simpan profil</button></div>
+  </div>
+
+  <div class="tab" id="tabPal" hidden>
+    <input id="stFind" maxlength="20" placeholder="Cari kawan: nama atau Tukuk ID (6 angka)…" autocomplete="off">
+    <div id="stFound"></div>
+    <div class="pflabel">Senarai kawan</div>
+    <div id="stPalList"></div>
+    <div class="pfmeta" style="margin-top:8px">Kawan disimpan sebagai Tukuk ID, jadi nama bertukar pun persahabatan tidak hilang.</div>
+  </div>
+
+  <div class="tab" id="tabBlk" hidden>
+    <div class="pfmeta">Orang yang disekat tidak dapat menghantar DM kepada anda — dan anda juga tidak dapat membalas sehingga sekat dibuka. Sejarah sembang tetap boleh dibaca. Mereka tidak diberitahu, dan tidak muncul dalam carian mereka.</div>
+    <div class="pflabel">Senarai sekat</div>
+    <div id="stBlkList"></div>
+  </div>
+
+  <div class="tab" id="tabSec" hidden>
+    <div class="pflabel">Kata laluan semasa</div>
+    <input id="stOld" type="password" autocomplete="current-password">
+    <div class="pflabel">Kata laluan baharu (min. 4 aksara)</div>
+    <input id="stP1" type="password" autocomplete="new-password">
+    <div class="pflabel">Ulang kata laluan baharu</div>
+    <input id="stP2" type="password" autocomplete="new-password">
+    <div class="mbtns"><button class="prim" id="stSavePass">Tukar kata laluan</button></div>
+    <div class="pflabel">Peranti &amp; sesi</div>
+    <div class="pfmeta">Keluarkan sesi lain — hanya peranti ini kekal login.</div>
+    <div class="mbtns"><button class="warn" id="stKick">🚪 Keluarkan peranti lain</button></div>
+  </div>
+
+  <div class="tab" id="tabDsp" hidden>
+    <label>Bunyi <input type="checkbox" id="stSound"></label>
+    <label>Saiz teks mesej <input type="range" id="stFont" min="13" max="19"></label>
+    <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
+    <div class="walls" id="stWalls">
+      <button data-w="1" style="background:linear-gradient(160deg,#172033,#101627)"></button>
+      <button data-w="2" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
+      <button data-w="3" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
+      <button data-w="4" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
+      <button data-w="5" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
+      <button data-w="6" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
+    </div>
+  </div>
+
   <div class="mbtns"><button class="prim" id="stClose">Tutup</button></div>
 </div></div>
 
@@ -310,8 +369,9 @@
   <div id="pfHead"></div>
   <div class="mbtns">
     <button id="pfClose">Tutup</button>
-    <button id="pfDm">📨 Hantar DM</button>
-    <button class="prim" id="pfSave">Simpan</button>
+    <button id="pfPal">➕ Kawan</button>
+    <button id="pfBlock">🚫 Sekat</button>
+    <button class="prim" id="pfDm">📨 Hantar DM</button>
   </div>
 </div></div>
 
@@ -597,7 +657,7 @@
     $('auth').hidden = true; $('app').hidden = false;
     paintMe();
     if (innerWidth > 760) $('app').dataset.open = '1';
-    loadRooms(true); loadPeople(); refreshMe();
+    loadRooms(true); loadPeople(); refreshMe(); loadSocial();
     clearInterval(window.__ct); clearInterval(window.__rt);
     window.__ct = setInterval(pollMsgs, POLL_MSG);
     window.__rt = setInterval(() => { loadRooms(false); }, POLL_ROOM);
@@ -716,6 +776,7 @@
   const room = id => rooms.find(r => r.id === id);
   function renderStatus() {
     const r = room(cur), st = $('tStatus');
+    $('blockBar').classList.toggle('on', !!(r && r.blocked));
     if (!r) return;
     const tp = (cache[r.id] && cache[r.id].typing || []).filter(n => n !== me.toLowerCase());
     if (tp.length) { st.textContent = tp.length === 1 ? tp[0] + ' menaip…' : 'beberapa orang menaip…'; st.className = 'typing'; return; }
@@ -1043,32 +1104,33 @@
 
   // ─── Profil / "siapa punya ID ini?" ───
   let profCur = 0;
-  function myProfile() { return { id: myId, name: me, bio: myBio, joined: myJoined, online: true }; }
   function copyText(v) { try { navigator.clipboard.writeText(String(v)); toast('Disalin: ' + v); } catch { toast('Salin gagal.'); } }
-  function openProf(p, self) {
+  // Paparan profil orang lain — editing akaun sendiri berada dalam Tetapan.
+  function openProf(p) {
     if (!p || !p.id) return;
     profCur = p.id;
-    const shared = self ? -1 : rooms.filter(r => r.kind === 'dm' && r.peerId === p.id).length;
-    const edit = self ? '<div class="pflabel">Nama paparan</div><input id="pfName" maxlength="20" value="' + esc(p.name) + '">' +
-      '<div class="pflabel">Bio (pilihan)</div><input id="pfBio" maxlength="120" placeholder="Satu baris tentang anda" value="' + esc(p.bio || '') + '">' : '';
+    const shared = rooms.filter(r => r.kind === 'dm' && r.peerId === p.id).length;
+    const pal = isPal(p.id), blk = !!p.blocked || isBlk(p.id);
+    socialPool[p.id] = Object.assign({}, socialPool[p.id] || {}, p, { friend: pal, blocked: blk });
     $('pfHead').innerHTML = '<div class="pfhead"><div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div>' +
       '<div><b>' + esc(p.name) + '</b><span class="idchip" id="pfCopy" title="Salin Tukuk ID">🆔 ' + p.id + ' ⧉</span></div></div>' +
-      '<div class="pfmeta">' + (p.bio ? esc(p.bio) + '<br>' : (self ? '' : '<i>Tiada bio.</i><br>')) +
+      '<div class="pfmeta">' + (p.bio ? esc(p.bio) + '<br>' : '<i>Tiada bio.</i><br>') +
       (p.joined ? 'Sertai ' + dateLabel(p.joined) + '<br>' : '') +
-      (self ? 'Nombor ini kekal seumur akaun — hanya nama yang boleh ditukar. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.'
-            : (shared > 0 ? 'Sudah ' + shared + ' sembang DM bersama.' : 'Belum ada sembang DM dengan orang ini.')) +
-      '</div>' + edit;
-    $('pfSave').style.display = self ? '' : 'none';
-    $('pfDm').style.display = self ? 'none' : '';
+      (shared > 0 ? 'Sudah ' + shared + ' sembang DM bersama.' : 'Belum ada sembang DM dengan orang ini.') +
+      (blk ? '<br><b style="color:#e17076">Anda menyekat orang ini — DM dibekukan.</b>' : (pal ? '<br>Sudah dalam senarai kawan anda.' : '')) +
+      '</div>';
+    $('pfPal').textContent = pal ? '✓ Kawan' : '➕ Kawan';
+    $('pfBlock').textContent = blk ? '🚫 Buka sekat' : '🚫 Sekat';
     $('pfDm').textContent = shared > 0 ? '📨 Buka sembang' : '📨 Hantar DM';
     $('pfCopy').onclick = () => copyText(p.id);
-    $('pfDm').onclick = () => startDm(p.id, self ? null : p);
+    $('pfDm').onclick = () => startDm(p.id, p);
+    $('pfPal').onclick = () => doSocial(pal ? 'rm' : 'add', p.id);
+    $('pfBlock').onclick = () => doSocial(blk ? 'unblk' : 'blk', p.id);
     $('profModal').classList.add('open');
-    if (self) { const f = $('pfName'); if (f) f.focus(); }
     // Header DM/direktori tak bawa tarikh sertai → tambatkan daripada pelayan bila sempat.
-    if (!self && p.joined == null) {
+    if (p.joined == null) {
       call('/user?q=' + encodeURIComponent(p.id))
-        .then(j => { if (j && j.profile && j.profile.id === profCur) openProf(j.profile, false); })
+        .then(j => { if (j && j.profile && j.profile.id === profCur) openProf(j.profile); })
         .catch(() => {});
     }
   }
@@ -1081,9 +1143,8 @@
       openRoom(j.room.id);
     } catch (e) { toast(e.message); }
   }
-  async function saveProf() {
-    const name = $('pfName') ? $('pfName').value.trim() : me;
-    const bio = $('pfBio') ? $('pfBio').value.trim() : myBio;
+  // Simpan nama/bio — dipakai oleh skrin Tetapan (profil modal kini bacaan sahaja).
+  async function applyProfile(name, bio) {
     try {
       const j = await post('/profile', { name, bio });
       const p = j.profile || {};
@@ -1092,28 +1153,145 @@
         localStorage.setItem(rkey(), cur);   // bilik terakhir ikut nama baharu
       }
       myId = p.id || myId; myBio = p.bio || ''; myJoined = p.joined || myJoined;
-      paintMe(); $('profModal').classList.remove('open'); toast('Profil disimpan.');
-      loadPeople(); loadRooms(false);
-    } catch (e) { toast(e.message); }
+      paintMe(); toast('Profil disimpan.');
+      loadPeople(); loadRooms(false); loadSocial();
+      return p;
+    } catch (e) { toast(e.message); return null; }
   }
-  $('me').onclick = e => { if (e.target && e.target.id === 'outBtn') return; openProf(myProfile(), true); };
+  $('me').onclick = e => { if (e.target && e.target.id === 'outBtn') return; openSettings('Prof'); };
   $('whoBox').onclick = () => {
     const r = room(cur);
     if (!r || r.kind !== 'dm' || !r.peerId) return;
-    openProf({ id: r.peerId, name: r.title, bio: r.peer ? r.peer.bio : '', online: !!r.online }, false);
+    openProf({ id: r.peerId, name: r.title, bio: r.peer ? r.peer.bio : '', online: !!r.online, blocked: !!r.blocked });
   };
   $('pfClose').onclick = () => $('profModal').classList.remove('open');
-  $('pfSave').onclick = saveProf;
 
   // ─── Carian + navigasi ───
   $('q').addEventListener('input', renderRooms);
   $('backBtn').onclick = () => { $('app').dataset.open = '0'; renderRooms(); };
 
-  // ─── Tetapan ───
-  $('setBtn').onclick = () => {
+  // ─── Tetapan: profil, kawan, sekatan, keselamatan, paparan ───
+  let social = { friends: [], blocked: [] }, socialPool = {}, findQ = '';
+  const isPal = id => social.friends.some(x => x.id === id);
+  const isBlk = id => social.blocked.some(x => x.id === id);
+  const pool = list => { for (const p of list || []) socialPool[p.id] = p; return list || []; };
+  const scard = (card, label, on) => '<button class="card' + (on ? ' on' : '') + '" data-card="' + card + '">' + label + '</button>';
+  function srow(p, acts) {
+    return '<div class="rowm" data-id="' + p.id + '"><div class="ava" style="background:' + colorOf(p.name) + '">' +
+      esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div>' +
+      '<div class="grow"><b>' + esc(p.name) + '</b><small>' + esc(p.bio || (p.online ? 'Dalam talian' : 'Luar talian')) + '</small></div>' +
+      '<span class="idf">' + p.id + '</span>' + (acts || '') + '</div>';
+  }
+  function wireRows(root) {
+    for (const el of root.querySelectorAll('.rowm')) {
+      el.onclick = e => {
+        const card = e.target && e.target.dataset ? e.target.dataset.card : null;
+        if (card) return doSocial(card, +el.dataset.id);
+        openProf(socialPool[+el.dataset.id]);
+      };
+    }
+  }
+  async function loadSocial() {
+    if (!token) return;
+    try {
+      const j = await call('/social');
+      social = { friends: j.friends || [], blocked: j.blocked || [] };
+      renderSocial();
+    } catch (e) { if (e.status === 401) expire(); }
+  }
+  function renderSocial() {
+    $('nPal').textContent = social.friends.length;
+    $('nBlk').textContent = social.blocked.length;
+    const pal = pool(social.friends).map(p => srow(p,
+      scard('dm', '💬') + scard(isPal(p.id) ? 'rm' : 'add', isPal(p.id) ? '✓ Kawan' : '➕ Kawan') + scard('blk', '🚫', isBlk(p.id)))).join('');
+    $('stPalList').innerHTML = pal || '<div class="pfmeta">Belum ada kawan — cari nama atau Tukuk ID di atas.</div>';
+    const blk = pool(social.blocked).map(p => srow(p, scard('unblk', 'Buka sekat'))).join('');
+    $('stBlkList').innerHTML = blk || '<div class="pfmeta">Tiada sesiapa yang disekat.</div>';
+    wireRows($('stPalList')); wireRows($('stBlkList'));
+  }
+  // Satu fungsi untuk semua butang sosial (dalam senarai mahupun modal profil).
+  async function doSocial(card, id) {
+    if (card === 'dm') return startDm(id, socialPool[id]);
+    sndTap();
+    const blocky = card === 'blk' || card === 'unblk';
+    const body = { peer: id };
+    if (card === 'rm' || card === 'unblk') body.remove = 1;
+    try {
+      const j = await post(blocky ? '/block' : '/friend', body);
+      social = { friends: (j.social && j.social.friends) || [], blocked: (j.social && j.social.blocked) || [] };
+      renderSocial();
+      if (findQ) doFind(findQ);
+      const p = socialPool[id];
+      if (p) { p.friend = isPal(id); p.blocked = isBlk(id); }
+      if ($('profModal').classList.contains('open') && p) openProf(p);
+      loadPeople();
+      await loadRooms(false);
+      renderStatus();
+      toast(card === 'add' ? 'Kawan ditambah.' : card === 'rm' ? 'Kawan dibuang — sembang kekal.'
+        : card === 'blk' ? 'Disekat. DM dibekukan dua-dua arah.' : 'Sekat dibuka. Boleh membalas semula.');
+    } catch (e) { toast(e.message); }
+  }
+  // "Cari kawan": pelayan yang menapis (orang yang menyekat anda tidak muncul).
+  async function doFind(q) {
+    findQ = String(q || '').trim();
+    const root = $('stFound');
+    if (findQ.length < 2) { root.innerHTML = ''; return; }
+    try {
+      const j = await call('/people?q=' + encodeURIComponent(findQ));
+      const res = pool((j.people || []).filter(p => p.id !== myId));
+      root.innerHTML = res.length ? res.slice(0, 8).map(p => srow(p,
+        (p.blocked ? scard('unblk', 'Buka sekat') : p.friend ? scard('rm', '✓ Kawan') : scard('add', '➕ Kawan')) +
+        scard('blk', '🚫', p.blocked || isBlk(p.id)))).join('')
+        : '<div class="pfmeta">Tiada padanan untuk “' + esc(findQ) + '”.</div>';
+      wireRows(root);
+    } catch (e) { root.innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; }
+  }
+  function showTab(t) {
+    for (const b of $('stTabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.t === t);
+    for (const el of $('setModal').querySelectorAll('.tab')) el.hidden = el.id !== 'tab' + t;
+  }
+  function openSettings(tab) {
+    $('stName').value = me; $('stBio').value = myBio;
+    $('stMe').innerHTML = '<div class="pfhead"><div class="ava" style="background:' + colorOf(me) + '">' + esc(initials(me)) + '<span class="dot"></span></div>' +
+      '<div><b>' + esc(me) + '</b><span class="idchip" id="stCopy" title="Salin Tukuk ID">🆔 ' + myId + ' ⧉</span></div></div>' +
+      '<div class="pfmeta">' + (myJoined ? 'Sertai ' + dateLabel(myJoined) + '<br>' : '') +
+      'Nombor ini kekal seumur akaun. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.</div>';
+    $('stCopy').onclick = () => copyText(myId);
     $('stSound').checked = !!pref.sound; $('stFont').value = pref.font;
     for (const b of $('stWalls').querySelectorAll('button')) b.classList.toggle('sel', +b.dataset.w === +pref.wall);
+    $('stOld').value = $('stP1').value = $('stP2').value = '';
+    showTab(tab || 'Prof');
     $('setModal').classList.add('open');
+    loadSocial();
+    if (tab === 'Pal') setTimeout(() => $('stFind').focus(), 60);
+  }
+  $('setBtn').onclick = () => openSettings('Prof');
+  $('blkOpen').onclick = () => openSettings('Blk');
+  for (const b of $('stTabs').querySelectorAll('button')) b.onclick = () => { sndTap(); showTab(b.dataset.t); if (b.dataset.t === 'Pal') $('stFind').focus(); };
+  $('stFind').addEventListener('input', e => {
+    clearTimeout(window.__ft);
+    window.__ft = setTimeout(() => doFind(e.target.value), 260);
+  });
+  $('stFind').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(window.__ft); doFind(e.target.value); } });
+  $('stSaveProf').onclick = () => applyProfile($('stName').value.trim(), $('stBio').value.trim());
+  $('stSavePass').onclick = async () => {
+    const lama = $('stOld').value, p1 = $('stP1').value, p2 = $('stP2').value;
+    if (!lama) return toast('Isi kata laluan semasa.');
+    if (p1.length < 4) return toast('Kata laluan baharu sekurang-kurangnya 4 aksara.');
+    if (p1 !== p2) return toast('Kata laluan baharu tidak sama.');
+    $('stSavePass').disabled = true;
+    try {
+      const j = await post('/password', { old: lama, next: p1 });
+      $('stOld').value = $('stP1').value = $('stP2').value = '';
+      toast(j.revoked ? 'Kata laluan tukar. ' + j.revoked + ' sesi lain dikeluarkan.' : 'Kata laluan tukar.');
+    } catch (e) { toast(e.message); }
+    $('stSavePass').disabled = false;
+  };
+  $('stKick').onclick = async () => {
+    try {
+      const j = await post('/logout-all', {});
+      toast(j.revoked ? j.revoked + ' sesi lain dikeluarkan.' : 'Tiada sesi lain untuk dikeluarkan.');
+    } catch (e) { toast(e.message); }
   };
   $('stClose').onclick = () => {
     pref.sound = $('stSound').checked; pref.font = +$('stFont').value; savePref(); applyPref(); $('setModal').classList.remove('open');

@@ -477,3 +477,122 @@ test('media: hydrate tidak mengubah mesej yang disimpan', () => {
   assert.ok(!stored.media[0].url, 'objek asal masih bersih selepas hydrate');
   assert.deepEqual(chat.hydrate({ id: 'x' }).media, undefined, 'mesej biasa tidak berubah');
 });
+
+// ─── Kawan, sekatan, kata laluan ───
+test('kawan: tambah, senarai, buang + ralat asas', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  chat.register('Ben', 'pass2');
+  assert.ok(chat.addFriend('Ana', 'tiada').error, 'sasaran tidak wujud');
+  assert.ok(chat.addFriend('Ana', ana.id).error, 'diri sendiri ditolak');
+  assert.ok(chat.addFriend('Ana', 'Ben').ok);
+  assert.ok(chat.addFriend('Ana', 'Ben').already, 'dua kali = already');
+  const s = chat.socialLists('Ana');
+  assert.equal(s.friends.length, 1);
+  assert.equal(s.friends[0].id, 100002, 'kawan disimpan sebagai Tukuk ID');
+  assert.equal(s.friends[0].dm, null, 'belum ada bilik DM');
+  chat.ensureDm('Ana', 'Ben');
+  assert.equal(chat.socialLists('Ana').friends[0].dm, chat.dmId(ana.id, 100002), 'ada bilik → dm diisi');
+  assert.ok(chat.delFriend('Ana', 'Ben').ok);
+  assert.equal(chat.socialLists('Ana').friends.length, 0);
+});
+
+test('kawan: pertukaran nama tidak merosakkan senarai', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  chat.addFriend('Ana', 'Ben');
+  chat.rename('Ben', 'Citra');
+  const f = chat.socialLists('Ana').friends;
+  assert.equal(f.length, 1);
+  assert.equal(f[0].name, 'Citra', 'paparan nama ikut ID semasa');
+  assert.ok(chat.delFriend('Ana', 'Citra').ok, 'buang ikut nama baharu jalan');
+});
+
+test('sekat: DM dibekukan dua-dua arah, baca masih boleh, buka sekat pulih', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  assert.ok(chat.send('Ana', dm.id, 'hai').ok, 'sebelum sekat boleh hantar');
+  assert.ok(chat.blockUser('Ana', 'Ben').ok);
+  assert.ok(chat.send('Ana', dm.id, 'masih boleh?').error, 'penyekat juga tidak boleh hantar');
+  assert.ok(chat.send('Ben', dm.id, 'sapa tu?').error, 'pihak disekat turut dibekukan');
+  const seen = chat.since('Ben', dm.id, 0);
+  assert.equal(seen.msgs.length, 1, 'sejarah masih boleh dibaca');
+  assert.ok(chat.unblockUser('Ana', 'Ben').ok);
+  assert.ok(chat.send('Ana', dm.id, 'ok balik').ok, 'lepas buka sekat boleh hantar');
+});
+
+test('sekat: buang persahabatan dua arah + tak boleh tambah kawan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  chat.addFriend('Ana', 'Ben'); chat.addFriend('Ben', 'Ana');
+  chat.blockUser('Ana', 'Ben');
+  assert.equal(chat.socialLists('Ana').friends.length, 0, 'kawan saya dibuang');
+  assert.equal(chat.socialLists('Ben').friends.length, 0, 'kawan dua arah turut dibuang');
+  assert.ok(chat.addFriend('Ana', 'Ben').error, 'tidak boleh kawan sementara tersekat');
+  assert.ok(chat.blockUser('Ana', 'Ben').already);
+  chat.unblockUser('Ana', 'Ben');
+  assert.ok(chat.addFriend('Ana', 'Ben').ok, 'boleh kawan semula selepas dibuka');
+});
+
+test('sekat: mangsa tidak diberitahu — senarai & profil menyembunyi penyekat', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  chat.register('Ben', 'pass2');
+  chat.register('Citra', 'pass3');
+  chat.blockUser('Ana', 'Ben');
+  assert.ok(!chat.people(null, 50, 'Ben').some(p => p.id === ana.id), 'Ben tidak nampak Ana');
+  assert.equal(chat.profile(ana.id, 'Ben'), null, 'profil Ana seolah tiada untuk Ben');
+  const asCitra = chat.people(null, 50, 'Citra');
+  assert.ok(asCitra.some(p => p.id === ana.id), 'orang lain masih nampak Ana');
+  const b = chat.people(null, 50, 'Ana').find(p => p.id === 100002);
+  assert.equal(b.blocked, true, 'penyekat tahu siapa yang dia sekat');
+  assert.equal(b.friend, false);
+});
+
+test('setPass: wajib kata laluan lama, salt baru, yang lama mati', () => {
+  fresh();
+  chat.register('Ana', 'lama123');
+  assert.ok(chat.setPass('Ana', 'silap', 'baru123').error);
+  assert.ok(chat.setPass('Ana', 'lama123', '123').error, 'terlalu pendek');
+  assert.ok(chat.setPass('Ana', 'lama123', 'lama123').error, 'sama dengan yang lama');
+  const before = chat.load().users.ana.hash;
+  assert.ok(chat.setPass('Ana', 'lama123', 'baru123').ok);
+  const u = chat.load().users.ana;
+  assert.notEqual(u.hash, before, 'hash berubah');
+  assert.ok(chat.login('Ana', 'baru123').ok);
+  assert.ok(chat.login('Ana', 'lama123').error, 'kata laluan lama tidak lagi guna');
+  assert.equal(chat.setPass('Tiada', 'a', 'b').error.includes('Akaun'), true);
+});
+
+test('logoutAll: sesi lain mati, token semasa kekal hidup', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const lama = chat.issueSession('Ana');
+  const kini = chat.issueSession('Ana');
+  const lain = chat.issueSession('Ben');
+  chat.register('Ben', 'pass2');
+  const r = chat.logoutAll('Ana', kini);
+  assert.equal(r.revoked, 1, 'hanya sesi Ana yang lain diluput');
+  assert.equal(chat.userOf(lama), null);
+  assert.ok(chat.userOf(kini), 'peranti semasa tidak ditendang sendiri');
+  assert.ok(chat.userOf(lain), 'sesi orang lain tidak terjejas');
+});
+
+test('migrate: akaun lama tanpa friends/blocked diisi kosong', () => {
+  const dir = fresh();
+  chat.register('Ana', 'pass1');
+  chat.flush();
+  const file = path.join(dir, 'chat.json');
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  delete raw.users.ana.friends;
+  delete raw.users.ana.blocked;
+  fs.writeFileSync(file, JSON.stringify(raw));
+  chat.setPath(file); // baca semula → migrate berjalan ke atas data lama
+  const u = chat.load().users.ana;
+  assert.deepEqual(u.friends, [], 'friends diisi ketika migrate');
+  assert.deepEqual(u.blocked, [], 'blocked diisi ketika migrate');
+  assert.ok(chat.addFriend('Ana', 'Ana').error, 'diri sendiri tetap ditolak');
+  assert.equal(chat.people(null, 50, 'Ana').length, 1);
+});

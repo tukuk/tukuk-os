@@ -51,7 +51,13 @@ function migrate() {
   const s = state;
   if (!s.nextId) s.nextId = FIRST_ID;
   let changed = false;
-  for (const u of Object.values(s.users)) if (!u.id) { u.id = s.nextId++; changed = true; }
+  for (const u of Object.values(s.users)) {
+    if (!u.id) { u.id = s.nextId++; changed = true; }
+    // Akaun lama belum punya senarai kawan/sekat — kosongkan supaya kod lain
+    // tidak perlu memeriksa kewujudannya setiap masa.
+    if (!Array.isArray(u.friends)) { u.friends = []; changed = true; }
+    if (!Array.isArray(u.blocked)) { u.blocked = []; changed = true; }
+  }
   for (const [id, r] of Object.entries(s.rooms)) {
     if (r.kind !== 'dm') continue;
     if (!r.memberIds) {
@@ -316,7 +322,7 @@ function register(name, pass) {
   if (s.users[key(clean)]) return { error: 'Nama sudah digunakan. Cuba login.' };
   if (/^\d{6}$/.test(key(clean))) return { error: 'Nama tidak boleh berupa 6 angka (format Tukuk ID).' };
   const salt = crypto.randomBytes(16).toString('hex');
-  s.users[key(clean)] = { name: clean, k: key(clean), id: s.nextId++, salt, hash: hashPass(pass, salt), createdAt: Date.now(), lastSeen: 0, bio: '' };
+  s.users[key(clean)] = { name: clean, k: key(clean), id: s.nextId++, salt, hash: hashPass(pass, salt), createdAt: Date.now(), lastSeen: 0, bio: '', friends: [], blocked: [] };
   touch();
   return { ok: true, user: s.users[key(clean)] };
 }
@@ -438,6 +444,12 @@ function send(name, roomId, text, replyTo, media) {
   if (!r.list) r.list = [];
   if (!r.seq) r.seq = 0;
   const su = findUser(name);
+  // DM yang salah seorang anggotanya menyekat dibekukan dua-dua arah: masih
+  // boleh dibaca, tetapi tak seorang pun boleh menghantar mesej baharu.
+  if (r.kind === 'dm') {
+    const pid = peerId(r, su ? su.id : uid(name));
+    if (pid && dmFrozen(su || name, byId(pid))) return { error: 'Mesej tidak dapat dihantar ke bilik ini.' };
+  }
   const msgId = crypto.randomBytes(6).toString('hex');
   const att = media && media.length ? attachMedia(su || { k: key(name) }, roomId, media, msgId) : [];
   if (media && media.length && !att.length) return { error: 'Lampiran tidak dapat digunakan — muat naik semula.' };
@@ -522,21 +534,37 @@ function typingIn(roomId) {
   }
   return out;
 }
-function people(query, limit) {
+// Direktori pengguna. `viewer` (pilihan) menapis mereka yang MENYEKAT penonton
+// dan menanda status kawan/sekat supaya klien tak perlu teka.
+function people(query, limit, viewer) {
   const s = load();
   const q = String(query == null ? '' : query).trim().toLowerCase();
   const qid = Number(q);
+  const me = viewer ? findUser(viewer) : null;
+  const blockers = me ? new Set(Object.values(s.users).filter(v => blockedOf(v).includes(me.id)).map(v => v.id)) : new Set();
   return Object.values(s.users)
     .filter(u => !q || u.name.toLowerCase().includes(q) || (Number.isInteger(qid) && qid >= FIRST_ID && u.id === qid))
-    .map(u => ({ id: u.id, name: u.name, bio: u.bio || '', online: isOnline(u) }))
+    .filter(u => !me || u.id === me.id || !blockers.has(u.id))
+    .map(u => ({
+      id: u.id, name: u.name, bio: u.bio || '', online: isOnline(u),
+      friend: !!me && friendsOf(me).includes(u.id),
+      blocked: !!me && blockedOf(me).includes(u.id),
+    }))
     .sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name))
     .slice(0, limit || 50);
 }
 // Paparan awam: "siapa punya ID/nama ini?" — nama, bio, tarikh sertai, kehadiran.
-function profile(query) {
+// Jika orang itu menyekat penonton, kami berpura dia tiada (tiada kebocoran).
+function profile(query, viewer) {
   const u = findUser(query);
   if (!u) return null;
-  return { id: u.id, name: u.name, bio: u.bio || '', joined: u.createdAt || null, online: isOnline(u) };
+  const me = viewer ? findUser(viewer) : null;
+  if (me && u.id !== me.id && blockedOf(u).includes(me.id)) return null;
+  return {
+    id: u.id, name: u.name, bio: u.bio || '', joined: u.createdAt || null, online: isOnline(u),
+    friend: !!me && friendsOf(me).includes(u.id),
+    blocked: !!me && blockedOf(me).includes(u.id),
+  };
 }
 function setBio(name, bio) {
   const u = findUser(name);
@@ -575,6 +603,113 @@ function rename(name, next) {
   }
   touch();
   return { ok: true, user: u, changed: true };
+}
+// ─── Kawan & sekatan ───
+// Kedua-dua senarai menyimpan Tukuk ID (bukan nama) supaya pertukaran nama
+// tidak merosakkannya. Sekatan membekukan DM dua-dua arah: tiada pihak boleh
+// menghantar mesej, tetapi sejarah masih boleh dibaca. Mesej ralat disengajakan
+// generik — pihak yang disekat tidak boleh mengesahkan keadaan itu.
+const MAX_FRIENDS = 500, MAX_BLOCKS = 200;
+const friendsOf = (u) => (u && Array.isArray(u.friends) ? u.friends : []);
+const blockedOf = (u) => (u && Array.isArray(u.blocked) ? u.blocked : []);
+const asUser = (who) => ((who && typeof who === 'object') ? who : findUser(who));
+const iBlock = (a, b) => !!a && !!b && blockedOf(a).includes(b.id);
+const otherBlock = (a, b) => !!a && !!b && blockedOf(b).includes(a.id);
+const dmFrozen = (a, b) => { const ua = asUser(a), ub = asUser(b); return iBlock(ua, ub) || otherBlock(ua, ub); };
+
+// Sasaran sosial: mesti wujud dan bukan akaun sendiri.
+function socialTarget(u, q) {
+  const t = findUser(q);
+  if (!t) return { error: normalizeName(q) ? 'Pengguna itu belum mendaftar di Tukuk Chat.' : 'Tiada ID atau nama begitu.' };
+  if (t.id === u.id) return { error: 'Itu akaun anda sendiri.' };
+  return { ok: true, peer: t };
+}
+
+function addFriend(name, q) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  const t = socialTarget(u, q);
+  if (t.error) return t;
+  if (blockedOf(u).includes(t.peer.id)) return { error: 'Buang sekat dahulu sebelum menjadikannya kawan.' };
+  if (blockedOf(t.peer).includes(u.id)) return { error: 'Pengguna itu tidak dapat ditemui.' };
+  if (friendsOf(u).includes(t.peer.id)) return { ok: true, user: u, peer: t.peer, already: true };
+  if (friendsOf(u).length >= MAX_FRIENDS) return { error: 'Senarai kawan sudah sampai had ' + MAX_FRIENDS + '.' };
+  (u.friends = friendsOf(u)).push(t.peer.id);
+  touch();
+  return { ok: true, user: u, peer: t.peer };
+}
+function delFriend(name, q) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  const t = socialTarget(u, q);
+  if (t.error) return t;
+  u.friends = friendsOf(u).filter((i) => i !== t.peer.id); // sejarah DM tidak diusik
+  touch();
+  return { ok: true, user: u, peer: t.peer };
+}
+function blockUser(name, q) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  const t = socialTarget(u, q);
+  if (t.error) return t;
+  if (blockedOf(u).includes(t.peer.id)) return { ok: true, user: u, peer: t.peer, already: true };
+  if (blockedOf(u).length >= MAX_BLOCKS) return { error: 'Senarai sekat sudah sampai had ' + MAX_BLOCKS + '.' };
+  (u.blocked = blockedOf(u)).push(t.peer.id);
+  u.friends = friendsOf(u).filter((i) => i !== t.peer.id);
+  t.peer.friends = friendsOf(t.peer).filter((i) => i !== u.id); // persahabatan dua arah dibuang
+  touch();
+  return { ok: true, user: u, peer: t.peer };
+}
+function unblockUser(name, q) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  const t = socialTarget(u, q);
+  if (t.error) return t;
+  u.blocked = blockedOf(u).filter((i) => i !== t.peer.id);
+  touch();
+  return { ok: true, user: u, peer: t.peer };
+}
+// Senarai untuk skrin Tetapan. Kawan bawa `dm` (id bilik sedia ada / null).
+function socialLists(name) {
+  const s = load();
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  const wrap = (ids, withDm) => ids.map((id) => {
+    const p = byId(id);
+    if (!p) return null;
+    const out = { id: p.id, name: p.name, bio: p.bio || '', online: isOnline(p) };
+    if (withDm) { const rid = dmId(u.id, p.id); out.dm = s.rooms[rid] ? rid : null; }
+    return out;
+  }).filter(Boolean).sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
+  return { ok: true, friends: wrap(friendsOf(u), true), blocked: wrap(blockedOf(u), false) };
+}
+
+// Tukar kata laluan: wajib sah yang lama, salt baru, dan sesi lain diluputkan
+// (peranti lain perlu login semula; token yang sedang dipakai kekal hidup).
+function setPass(name, oldPass, nextPass) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!eqHex(u.hash, hashPass(String(oldPass == null ? '' : oldPass), u.salt))) return { error: 'Kata laluan semasa salah.', status: 401 };
+  const p = String(nextPass == null ? '' : nextPass);
+  if (p.length < 4) return { error: 'Kata laluan baharu sekurang-kurangnya 4 aksara.' };
+  if (p.length > 200) return { error: 'Kata laluan baharu terlalu panjang.' };
+  if (eqHex(u.hash, hashPass(p, u.salt))) return { error: 'Kata laluan baharu sama dengan yang lama.' };
+  u.salt = crypto.randomBytes(16).toString('hex');
+  u.hash = hashPass(p, u.salt);
+  touch();
+  return { ok: true, user: u };
+}
+function logoutAll(name, keep) {
+  const s = load();
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  let n = 0;
+  for (const [tok, sess] of Object.entries(s.sessions)) {
+    if (tok === keep) continue;
+    if ((sess.uid && sess.uid === u.id) || key(sess.name) === u.k) { delete s.sessions[tok]; n++; }
+  }
+  touch();
+  return { ok: true, revoked: n };
 }
 function onlineMap() {
   const s = load(); const out = {}; const now = Date.now();
@@ -661,6 +796,7 @@ function mount(app, deps) {
         id: r.id, kind: r.kind, title: roomTitle(r, u),
         members: r.members, peerId: pid, unread: un[r.id] || 0, seq: r.seq || 0,
         peer: peer ? { id: peer.id, name: peer.name, bio: peer.bio || '' } : null,
+        blocked: !!(pid && blockedOf(u).includes(pid)),
         last: last ? { from: authorName(last), fid: last.fid || null, t: last.del ? null : last.t, mt: last.media && last.media.length ? last.media[0].kind : null, n: (last.media || []).length, ts: last.ts } : null,
         online: r.kind === 'global' ? Object.values(on).filter(Boolean).length : !!(peer && isOnline(peer)),
       };
@@ -675,7 +811,7 @@ function mount(app, deps) {
     // hanya tandakan "dibaca" bila kliennya memang paparkan bilik itu (elak badge hilang di mobile)
     if (req.query.read === '1') markSeen(u.name, room);
     // Senarai pengguna hanya dihantar pada refresh penuh — elak poll 2.5s membazir bandwidth.
-    if (req.query.full === '1') { const r = state.rooms[room]; return res.json({ ok: true, msgs: hydrateAll((r.list || []).slice(-KEEP)), seq: r.seq || 0, typing: typingIn(room), people: people(null, 300) }); }
+    if (req.query.full === '1') { const r = state.rooms[room]; return res.json({ ok: true, msgs: hydrateAll((r.list || []).slice(-KEEP)), seq: r.seq || 0, typing: typingIn(room), people: people(null, 300, u.name) }); }
     const out = since(u.name, room, req.query.after);
     res.json({ ok: true, msgs: hydrateAll(out.msgs), seq: out.seq, typing: typingIn(room) });
   });
@@ -750,14 +886,15 @@ function mount(app, deps) {
     const peer = findUser(raw);   // boleh Tukuk ID (nombor) atau nama
     if (!peer) return res.status(400).json({ error: normalizeName(raw) ? 'Pengguna itu belum mendaftar di Tukuk Chat.' : 'Tiada ID atau nama begitu.' });
     if (peer.id === u.id) return res.status(400).json({ error: 'Tidak boleh DM diri sendiri.' });
+    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Tidak dapat memulakan sembang dengan pengguna ini.' });
     const r = ensureDm(u, peer);
     if (!r) return res.status(400).json({ error: 'Tiada ID atau nama begitu.' });
-    res.json({ ok: true, room: { id: r.id, kind: r.kind, title: roomTitle(r, u), members: r.members, peerId: peer.id, seq: r.seq || 0 }, profile: profile(peer) });
+    res.json({ ok: true, room: { id: r.id, kind: r.kind, title: roomTitle(r, u), members: r.members, peerId: peer.id, seq: r.seq || 0 }, profile: profile(peer, u.name) });
   });
 
   app.get('/api/chat/user', (req, res) => {
     const u = authOf(req, res); if (!u) return;
-    const p = profile(req.query.q);
+    const p = profile(req.query.q, u.name);
     if (!p) return res.status(404).json({ error: 'Pengguna tidak ditemui.' });
     res.json({ ok: true, profile: p });
   });
@@ -786,7 +923,55 @@ function mount(app, deps) {
 
   app.get('/api/chat/people', (req, res) => {
     const u = authOf(req, res); if (!u) return;
-    res.json({ ok: true, people: people(req.query.q, 50) });
+    res.json({ ok: true, people: people(req.query.q, 50, u.name) });
+  });
+
+  // ─── Tetapan: kawan, sekatan, kata laluan, sesi ───
+  app.get('/api/chat/social', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const r = socialLists(u.name);
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json(r);
+  });
+
+  const socialEdit = (res, r, code) => { if (r.error) return res.status(code || 400).json({ error: r.error }); return true; };
+
+  app.post('/api/chat/friend', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chpal:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = b.remove ? delFriend(u.name, b.peer) : addFriend(u.name, b.peer);
+    if (!socialEdit(res, r)) return;
+    if (r.already && !b.remove) return res.status(400).json({ error: 'Sudah ada dalam senarai kawan anda.' });
+    res.json({ ok: true, added: !b.remove && !r.already, social: socialLists(u.name) });
+  });
+
+  app.post('/api/chat/block', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chblk:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = b.remove ? unblockUser(u.name, b.peer) : blockUser(u.name, b.peer);
+    if (!socialEdit(res, r)) return;
+    if (r.already && !b.remove) return res.status(400).json({ error: 'Sudah disekat.' });
+    event((b.remove ? 'Nyahsekat' : 'Sekat') + ' @' + ((r.peer && r.peer.name) || b.peer) + ' oleh ' + u.name, { id: r.peer && r.peer.id });
+    res.json({ ok: true, blocked: !b.remove && !r.already, social: socialLists(u.name) });
+  });
+
+  app.post('/api/chat/password', lim({ windowMs: 3600e3, max: 10, keyPrefix: 'chpass:' }), (req, res) => {
+    const tok = bearer(req);
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = setPass(u.name, b.old, b.next);
+    if (r.error) return res.status(r.status || 400).json({ error: r.error });
+    const n = logoutAll(u.name, tok);
+    event('Kata laluan ditukar: ' + u.name, { id: u.id, revoked: n.revoked });
+    res.json({ ok: true, revoked: n.revoked, message: 'Kata laluan tukar. Peranti lain perlu login semula.' });
+  });
+
+  app.post('/api/chat/logout-all', (req, res) => {
+    const tok = bearer(req);
+    const u = authOf(req, res); if (!u) return;
+    const r = logoutAll(u.name, tok);
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true, revoked: r.revoked });
   });
 
   app.post('/api/chat/react', (req, res) => {
@@ -826,6 +1011,8 @@ module.exports = {
   react, edit, remove, setTyping, typingIn, people, onlineMap, setPath, load, flush,
   byId, findUser, nameOfUser, peerId, isMember, sameAuthor, authorName,
   profile, rename, setBio, isOnline, cleanText,
+  addFriend, delFriend, blockUser, unblockUser, socialLists, socialTarget, setPass, logoutAll,
+  friendsOf, blockedOf, dmFrozen, MAX_FRIENDS, MAX_BLOCKS,
   sniff, addMedia, attachMedia, mediaUrl, mediaAllowed, mediaSrc, mediaFile, projectMedia,
   hydrate, releaseMedia, dropMedia, readRaw, quotaCheck, trimRoom,
   MAX_IMG, MAX_VID, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
