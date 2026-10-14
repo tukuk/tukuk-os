@@ -431,10 +431,18 @@
   // ─── Bunyi ───
   let ac;
   const actx = () => (ac || (ac = new (window.AudioContext || window.webkitAudioContext)()));
+  // Pelayan tidak benarkan AudioContext berjalan sebelum isyarat pengguna. Tanpa
+  // pemulihan ini, bunyi mesej masuk (yang datang melalui aliran langsung) akan
+  // senyap sahaja sehingga pengguna menekan sesuatu.
+  const wakeAudio = () => { try { const a = actx(); if (a && a.state === 'suspended') a.resume(); } catch { /* audio disekat */ } };
+  addEventListener('pointerdown', wakeAudio, { passive: true });
+  addEventListener('keydown', wakeAudio);
   function tone(f, dur, vol, type, slide) {
     if (!pref.sound) return;
     try {
-      const a = actx(), o = a.createOscillator(), g = a.createGain();
+      const a = actx();
+      if (a.state === 'suspended') a.resume();
+      const o = a.createOscillator(), g = a.createGain();
       o.type = type || 'sine'; o.frequency.setValueAtTime(f, a.currentTime);
       if (slide) o.frequency.linearRampToValueAtTime(Math.max(30, f + slide), a.currentTime + dur);
       g.gain.setValueAtTime(vol || .06, a.currentTime);
