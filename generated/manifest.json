@@ -208,6 +208,17 @@
       "game": true,
       "createdAt": "2026-10-13T22:47:28.635Z",
       "palette": "karat"
+    },
+    {
+      "word": "bayt",
+      "slug": "bayt",
+      "emoji": "🏠",
+      "tagline": "Bina rumah: kumpul bahan binaan.",
+      "genre": "runner",
+      "theme": "hijau",
+      "game": true,
+      "createdAt": "2026-10-14T21:43:30.658Z",
+      "palette": "hijau"
     }
   ]
 }
