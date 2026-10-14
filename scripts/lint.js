@@ -29,9 +29,39 @@ for (const file of all) {
   catch (err) { failures.push({ file, msg: String(err.stderr || err.message).split('\n').slice(0, 3).join(' ') }); }
 }
 
+// Langkah kedua: semak skrip SEBARIS dalam HTML + rantaian skop semua fail JS.
+// `node --check` buta terhadap kedua-duanya — ralat seperti pemboleh ubah di
+// luar skop hanya muncul apabila pengguna menekan butang di pelayar.
+function* htmlFiles(dir) {
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) { if (e.name !== 'node_modules') yield* htmlFiles(full); }
+    else if (e.name.endsWith('.html')) yield full;
+  }
+}
+const scopeTargets = [...htmlFiles('public'), ...all];
+let scopeOut = '', scopeFail = null, scopeSkipped = false;
+try {
+  scopeOut = execFileSync(process.execPath, ['scripts/lint-inline.js', ...scopeTargets], { stdio: 'pipe' }).toString().trim();
+} catch (err) {
+  const msg = String(err.stderr || err.message || '');
+  if (/Cannot find module/.test(msg) && /acorn|eslint-scope/.test(msg)) scopeSkipped = true;
+  else scopeFail = (err.stdout ? err.stdout.toString() : '') + msg;
+}
+
 if (failures.length) {
   console.error(`✗ lint gagal — ${failures.length}/${all.length} fail mempunyai ralat sintaks:`);
   for (const f of failures) console.error(`  ${f.file}: ${f.msg}`);
   process.exit(1);
 }
+if (scopeFail) {
+  console.error('✗ semakan skop gagal:');
+  console.error(scopeFail);
+  process.exit(1);
+}
+if (scopeSkipped) console.log('- skop dilangkau (acorn/eslint-scope tidak dipasang)');
+else console.log(`✓ skop OK — ${scopeTargets.length} fail (skrip sebaris + pemboleh ubah) disemak`);
+if (scopeOut && !/^BERSIH/.test(scopeOut)) console.log('  ' + scopeOut);
 console.log(`✓ lint OK — ${checked} fail .js disemak (sintaks)`);

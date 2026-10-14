@@ -107,7 +107,7 @@
   #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
 
   /* ─── Lampiran gambar / video ─── */
-  .media { display:grid; gap:3px; margin:-3px -6px 4px; border-radius:11px; overflow:hidden; background:#0b1120; }
+  .media { display:grid; gap:3px; margin:-3px -6px 6px; border-radius:11px; overflow:hidden; background:#0b1120; }
   .media.n2, .media.n3, .media.n4 { grid-template-columns:1fr 1fr; }
   .media.n3 .mcell:first-child { grid-column:1 / span 2; }
   .mcell { position:relative; overflow:hidden; background:#0b1120; min-height:70px; }
@@ -807,7 +807,7 @@
       // Lampiran: gambar buka paparan penuh, video main inline — dua-dua tak
       // boleh tercetus sekali dengan menu mesej (tekan dua kali / tahan).
       for (const cell of bub.querySelectorAll('.mcell[data-z]')) {
-        cell.onclick = e => { e.stopPropagation(); openView(msg, +cell.dataset.z); };
+        cell.onclick = e => { e.stopPropagation(); openView(findMsg(id), +cell.dataset.z); };
         const im = cell.querySelector('img');
         if (im) im.onerror = () => { cell.innerHTML = '<div class="brk">🖼 Gambar sudah dibuang</div>'; };
       }
@@ -829,6 +829,7 @@
   // ─── Paparan penuh gambar ───
   let viewMsg = null, viewList = [], viewIdx = 0;
   function openView(msg, idx) {
+    if (!msg || !msg.media) return;
     const all = msg.media || [];
     const imgs = all.filter(x => x.kind === 'image' && x.url);
     if (!imgs.length) { const v = all.find(x => x.url); if (v) saveMedia(v); return; }

@@ -248,7 +248,8 @@
     if (passed) {
       sessionStorage.removeItem('tukuk_bg_input');
       const img = new Image();
-      img.onload = () => loadImg(img);
+      img.onload = () => showCanvas(img);
+      img.onerror = () => { /* sumber rosak — biarkan skrin seret & lepas seperti biasa */ };
       img.src = passed;
     }
   } catch (e) {}
