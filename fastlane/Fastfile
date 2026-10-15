@@ -9,8 +9,12 @@ platform :android do
   # internal. Tukar :track ke "internal" | "alpha" | "beta" | "production".
   desc "Hantar AAB + metadata ke Google Play (track internal)"
   lane :upload do
-    gradle(task: "bundle", flavor: "release", build_type: "Release") unless File.exist?("public/downloads/tukuk-chat.aab")
-    aab = File.exist?("public/downloads/tukuk-chat.aab") ? "public/downloads/tukuk-chat.aab" : "app/build/outputs/bundle/release/app-release.aab"
+    # Projek ini TIDAK punya Gradle — AAB dijana scripts/build-apk.sh (aapt2 proto).
+    sh("bash scripts/build-apk.sh") unless File.exist?("public/downloads/tukuk-chat.aab")
+    aab = "public/downloads/tukuk-chat.aab"
+    unless File.exist?(aab)
+      UI.user_error!("#{aab} tiada selepas build-apk.sh — semak skrip/bundletool.")
+    end
     supply(
       aab: aab,
       track: "internal",

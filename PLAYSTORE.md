@@ -30,9 +30,8 @@ Kunci signing **upload key** sedia ada: `apk/tukuk-chat-release.jks`
 
 Ini tidak boleh dilakukan dari kod/saya — perlu tindakan anda:
 
-1. **Akaun Developer Play** — https://play.google.com/console → daftar, bayar
-   **USD 25 sekali**, verifikasi identiti (ID/kad + alamat). Peribadi atau
-   organisasi (organisasi perlukan kunci D-U-N-S).
+1. **Akaun Developer Play** — ✅ **SELESAI**: akaun Peribadi didaftar & identiti
+   disahkan (ID akaun pembangun ada pada Play Console). Bayaran USD 25 dibuat.
 2. **Borang di Console** (sekali setiap apl): kategori, e-mel & laman
    hubungan, **penilaian kandungan** (IARD), **keselamatan data** (data safety),
    dasar privasi, negara sasaran, harga. Semuanya borang web — saya tak boleh
@@ -94,9 +93,10 @@ di Console. `versionName` bebas.
 1. Sediakan **service account** di Google Cloud → buka akses *Google Play
    Android Developer API* → muat turun JSON → simpan sebagai
    `google-cloud-key.json` (sudah di-`gitignore`, **jangan commit**).
-2. `gem install fastlane` (atau `bundle install` bila Gemfile ditambah).
-3. `fastlane android upload` → `supply` hantar AAB + metadata ke track internal
-   sebagai **draft**.
+2. `bundle install` (Gemfile sudah wujud) atau `gem install fastlane`.
+3. `bundle exec fastlane android upload` → jalankan `scripts/build-apk.sh` untuk
+   AAB (tiada Gradle), kemudian `supply` hantar AAB + metadata ke track internal
+   sebagai **draft**. (Butuh `google-cloud-key.json` dari langkah 1.)
 
 ---
 
