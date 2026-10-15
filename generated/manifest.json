@@ -219,6 +219,17 @@
       "game": true,
       "createdAt": "2026-10-14T21:43:30.658Z",
       "palette": "hijau"
+    },
+    {
+      "word": "kicik",
+      "slug": "kicik",
+      "emoji": "🐤",
+      "tagline": "Anak ayam: makan, membesar, lari.",
+      "genre": "runner",
+      "theme": "ungu",
+      "game": true,
+      "createdAt": "2026-10-15T21:25:38.249Z",
+      "palette": "ungu"
     }
   ]
 }
