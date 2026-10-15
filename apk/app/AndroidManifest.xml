@@ -5,10 +5,10 @@
      (lampiran). Ia dibina terus dengan aapt2/d8/apksigner (tiada Gradle). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.tukuk.chat"
-    android:versionCode="1"
-    android:versionName="1.0-beta.1">
+    android:versionCode="2"
+    android:versionName="1.0.0">
 
-  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
+  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
 
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

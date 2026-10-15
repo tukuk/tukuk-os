@@ -88,5 +88,44 @@ mkdir -p "$(dirname "$OUT")"
 "$APKSIGNER" sign --ks "$KS" --ks-type JKS --ks-key-alias "$ALIAS" \
   --ks-pass "pass:$PASS" --key-pass "pass:$KEYPASS" --out "$OUT" "$WORK/app.aligned.apk"
 "$APKSIGNER" verify --print-certs "$OUT" >/dev/null
-
 echo "build-apk: ✓ $OUT ($(du -h "$OUT" | cut -f1)) — dibina $(date -Is)"
+
+# ============================================================================
+# AAB (Android App Bundle) untuk Google Play — dihantar sebagai .aab, BUKAN APK
+# mentah (polisi Play: apl baru wajib AAB). Google Play yang menandatangani
+# AAB ini (Play App Signing) — jadi TiADA apksigner di sini. Perlu bundletool;
+# jika tiada, APK di atas tetap jadi dan arahan pasang dicetak.
+# ----------------------------------------------------------------------------
+AAB=public/downloads/tukuk-chat.aab
+BUNDLETOOL="${BUNDLETOOL:-}"
+if [ -z "$BUNDLETOOL" ]; then
+  if command -v bundletool >/dev/null 2>&1; then BUNDLETOOL="bundletool"
+  elif [ -f "$SDK/build-tools/$BT/bundletool.jar" ]; then BUNDLETOOL="java -jar $SDK/build-tools/$BT/bundletool.jar"
+  fi
+fi
+if [ -n "$BUNDLETOOL" ]; then
+  echo "build-apk: membina AAB dengan bundletool…"
+  set +e   # kegagalan AAB tidak sepatutnya menggagalkan build APK yang sudah siap
+  B="$WORK/bundle"; rm -rf "$B"; mkdir -p "$B/base/manifest" "$B/base/dex"
+  # (a) link format-proto → zip mentah (AndroidManifest.xml proto, resources.pb, res/)
+  "$AAPT2" link --proto-format -o "$WORK/proto.zip" \
+    --manifest "$SRC/AndroidManifest.xml" -I "$PLATFORM" \
+    "$WORK/res/ic.zip" "$WORK/res/val.zip" --auto-add-overlay
+  ( cd "$B/base" && unzip -oq "$OLDPWD/$WORK/proto.zip" )
+  # proto.zip letak manifest di root; AAB mahu di base/manifest/
+  [ -f "$B/base/AndroidManifest.xml" ] && mv "$B/base/AndroidManifest.xml" "$B/base/manifest/AndroidManifest.xml"
+  cp "$WORK/dex/classes.dex" "$B/base/dex/classes.dex"
+  ( cd "$B" && zip -qr "$OLDPWD/$AAB" base )
+  if $BUNDLETOOL validate --bundle="$AAB" >/dev/null 2>&1; then
+    echo "build-apk: ✓ $AAB ($(du -h "$AAB" | cut -f1)) — disahkan bundletool, sedia untuk Play Console."
+  else
+    echo "build-apk: ⚠ $AAB dibina tetapi bundletool validate GAGAL — semak struktur base/ sebelum hantar."
+  fi
+  set -e
+else
+  echo "build-apk: bundletool TIADA — AAB dilangkau (APK $OUT tetap siap)."
+  echo "           Untuk AAB Play Store: pasang bundletool, contoh"
+  echo "             curl -L -o bundletool.jar https://github.com/google/bundletool/releases/latest/download/bundletool-all.jar"
+  echo "           kemudian jalankan semula skrip ini (BUNDLETOOL=\"java -jar bundletool.jar\"), ATAU"
+  echo "           import modul apk/ ke Android Studio → Build → Generate Signed Bundle (.aab)."
+fi

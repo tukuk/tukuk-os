@@ -1,0 +1,21 @@
+# Fastfile — automasi penghantaran T Chat ke Google Play.
+# Guna: `fastlane android upload` (perlukan fastlane + google-cloud-key.json).
+# Alternatif tanpa CLI: hantar AAB + tampal teks metadata secara manual di
+# Play Console — lihat PLAYSTORE.md.
+default_platform(:android)
+
+platform :android do
+  # Muat naik AAB + semua metadata (title/desc/keywords/changelog) ke track
+  # internal. Tukar :track ke "internal" | "alpha" | "beta" | "production".
+  desc "Hantar AAB + metadata ke Google Play (track internal)"
+  lane :upload do
+    gradle(task: "bundle", flavor: "release", build_type: "Release") unless File.exist?("public/downloads/tukuk-chat.aab")
+    aab = File.exist?("public/downloads/tukuk-chat.aab") ? "public/downloads/tukuk-chat.aab" : "app/build/outputs/bundle/release/app-release.aab"
+    supply(
+      aab: aab,
+      track: "internal",
+      release_status: "draft",
+      metadata_path: "fastlane/metadata/android"
+    )
+  end
+end

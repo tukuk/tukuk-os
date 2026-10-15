@@ -1,0 +1,21 @@
+T Chat is a real, multi-user messenger that runs fast on any connection — from fibre to a single bar of 2G.
+
+WHAT YOU CAN DO
+• Chat one-on-one, in groups, and in public rooms.
+• Send text, photos, videos, voice messages and any file. Images are compressed on your device before upload so they send quickly.
+• Video & voice calls, peer-to-peer over WebRTC, with caller identification (TukuCaller) that shows who is calling before you answer.
+• Status — post a short emoji + text mood that expires on its own (30 minutes up to 7 days).
+• Stories that last 24 hours, and a social feed with posts, reactions, reposts and comments.
+• Reactions, replies, forwarding, message editing, in-chat search, read receipts and typing indicators.
+• Friends list, blocking, and a permanent numeric Tukuk ID so contacts survive name changes.
+• Big emoji stickers, polls, wallpapers, sounds and notification badges.
+
+BUILT FOR SLOW NETWORKS
+• Data-saver mode for 2G/3G/GPRS — no streaming, media loads only when you tap.
+• Offline outbox: queued messages are resent automatically when you reconnect.
+• Works as an installed app (PWA) with the session kept locally.
+
+PRIVACY
+Sign up with just a name and password — no phone number required. Your session uses a bearer token stored on your device, not cookies. You can delete your entire account and all its data from inside the app at any time.
+
+This is the official T Chat companion app from tukuk.org. Feedback and questions are welcome via the contact page on tukuk.org.

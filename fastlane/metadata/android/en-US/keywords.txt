@@ -1,0 +1,1 @@
+messenger,chat,video call,voice call,group,stories,status,webrtc,offline,2g

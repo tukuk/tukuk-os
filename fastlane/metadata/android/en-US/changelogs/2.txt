@@ -1,0 +1,7 @@
+First release on Google Play.
+
+• DM, group and public-room messenger.
+• WebRTC video/voice calls with TukuCaller caller ID.
+• Status (mood) with TTL, 24-hour stories, social feed.
+• 2G/3G data-saver mode + offline outbox.
+• Target API 36 (Android 16), required for Play listing.

@@ -61,3 +61,10 @@ apk/build/
 apk/*.jks
 apk/keystore.env
 public/downloads/*.idsig
+# AAB hanya untuk muat naik Play (tak di-host umum) — boleh dibina semula
+public/downloads/*.aab
+# Kunci service-account Google Cloud utk fastlane supply — RAHSIA, jangan commit
+google-cloud-key.json
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
