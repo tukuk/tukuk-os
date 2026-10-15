@@ -51,6 +51,7 @@ public class MainActivity extends Activity {
   protected void onCreate(Bundle saved) {
     super.onCreate(saved);
     requestWindowFeature(Window.FEATURE_NO_TITLE);
+    try { WebView.setWebContentsDebuggingEnabled(true); } catch (Throwable ignore) { }
     try {
       getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
       getWindow().setStatusBarColor(Color.parseColor("#0f1115"));
@@ -60,7 +61,14 @@ public class MainActivity extends Activity {
     root = new FrameLayout(this);
     root.setBackgroundColor(Color.parseColor("#0f1115"));
 
-    web = new WebView(this);
+    try {
+      web = new WebView(this);
+    } catch (Throwable t) {
+      // Sesetengah ROM membuang/mematikan enjin WebView → `new WebView` terus
+      // crash. Ubah crash senyap menjadi arahan yang boleh difahami pengguna.
+      showFatalNoWebView(t);
+      return;
+    }
     root.addView(web, new FrameLayout.LayoutParams(-1, -1));
 
     bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -226,6 +234,20 @@ public class MainActivity extends Activity {
         + "<button onclick='location.reload()' style='margin-top:18px;padding:10px 24px;border-radius:10px;"
         + "border:none;background:#65aadd;color:#08101f;font-size:1rem;font-weight:600'>Cuba lagi</button></div>";
     web.loadDataWithBaseURL(START_URL, html, "text/html", "utf-8", null);
+  }
+
+  // Papar arahan bila enjin WebView langsung tiada/gagal — elak skrin kosong/crash.
+  private void showFatalNoWebView(Throwable t) {
+    android.widget.TextView tv = new android.widget.TextView(this);
+    tv.setTextColor(Color.parseColor("#e8edf5"));
+    tv.setBackgroundColor(Color.parseColor("#0f1115"));
+    tv.setPadding(dp(28), dp(28), dp(28), dp(28));
+    tv.setTextSize(15);
+    tv.setText("T Chat memerlukan enjin WebView Android untuk berfungsi.\n\n"
+        + "Sila pasang atau kemas kini \u201cAndroid System WebView\u201d daripada Google Play, "
+        + "kemudian buka semula aplikasi ini.\n\n"
+        + "Butiran: " + (t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage()));
+    setContentView(tv);
   }
 
   @Override
