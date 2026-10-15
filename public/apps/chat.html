@@ -2443,9 +2443,10 @@
     grow();
     pref.recent = [em, ...(pref.recent || []).filter(x => x !== em)].slice(0, 24);
     savePref();
+    if (eCat === '🕑 Baru') renderEmoji();  // kemas kini senarai terkini serta-merta
   }
   renderEmoji();
-  $('emojiBtn').onclick = () => { const on = $('emojiPop').classList.toggle('on'); $('emojiBtn').classList.toggle('on', on); };
+  $('emojiBtn').onclick = () => { const on = $('emojiPop').classList.toggle('on'); $('emojiBtn').classList.toggle('on', on); if (on) renderEmoji(); };
   document.addEventListener('click', e => {
     if (!e.target.closest('#emojiPop') && !e.target.closest('#emojiBtn')) {
       $('emojiPop').classList.remove('on'); $('emojiBtn').classList.remove('on');
