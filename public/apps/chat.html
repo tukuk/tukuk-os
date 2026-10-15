@@ -1828,7 +1828,6 @@
   let fxFx = null, fxFrames = 0, fxParts = [];
   const FXCOL = ['#e17076', '#65aadd', '#7bc862', '#a584cf', '#ffd54a', '#f7a35c', '#65c5db'];
   function celebrate(text) {
-    if (!pref.sound || document.hidden) return;
     const t = String(text || '');
     if (t.includes('🎁')) { showGift('🎁'); fireConfetti(); }
     else if (/🎉|🎊|🥳|🎂/.test(t)) fireConfetti();
@@ -3733,7 +3732,7 @@
   $('cpFile').onclick = () => { $('clipPop').hidden = true; $('file').click(); };
   $('cpFolder').onclick = () => { $('clipPop').hidden = true; $('folder').click(); };
   document.addEventListener('click', e => { const cp = $('clipPop'); if (!cp.hidden && !cp.contains(e.target)) cp.hidden = true; });
-  document.addEventListener('click', e => { const sp = $('stkPop'); if (!sp.hidden && !sp.contains(e.target) && e.target.id !== 'clipBtn') sp.hidden = true; });
+  document.addEventListener('click', e => { const sp = $('stkPop'); if (!sp.hidden && !sp.contains(e.target) && e.target.id !== 'clipBtn' && e.target.id !== 'cpStiker') sp.hidden = true; });
   $('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
   $('folder').onchange = e => { sendFolder(e.target.files); e.target.value = ''; };
   $('vClose').onclick = closeView;
