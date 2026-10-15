@@ -1,8 +1,11 @@
 [Unit]
 Description=Backup data T Chat (chat.json + media) ke Cloudflare R2
 
+# Nota: setup-all.sh menulis unit ini secara automatik dengan $INSTALL_DIR yang
+# betul (di VPS: /opt/tukuk-os). Fail ini rujukan sahaja — elak double-backup,
+# pasang manual hanya jika TIDAK menggunakan setup-all.sh.
 [Service]
 Type=oneshot
-WorkingDirectory=/home/tukuk/tukuk-os
+WorkingDirectory=/opt/tukuk-os
 EnvironmentFile=/home/tukuk/.config/tukuk-os/r2.env
-ExecStart=/home/tukuk/tukuk-os/scripts/backup-chat.sh
+ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-chat.sh
