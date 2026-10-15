@@ -941,6 +941,21 @@
 </div>
 
 <script>
+// Penangkap ralat global: jika skrip mati (cth. storan diblok WebView), paparkan
+// sebabnya supaya "skrin kosong" jadi terbaca dan bukan senyap.
+window.addEventListener('error', (e) => {
+  try {
+    const d = document.createElement('div');
+    d.setAttribute('role', 'alert');
+    d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#5c1a1a;color:#fff;font:12px/1.45 system-ui;padding:8px 12px;white-space:pre-wrap;border-top:2px solid #e17076';
+    const f = (e.filename || '').split('/').pop();
+    d.textContent = '⚠ Ralat: ' + (e.message || 'tidak diketahui') + (f ? (' (' + f + ':' + e.lineno + ')') : '');
+    (document.body || document.documentElement).appendChild(d);
+    setTimeout(() => { d.remove(); }, 9000);
+  } catch {}
+});
+</script>
+<script>
 (() => {
   const $ = s => document.getElementById(s);
   const API = '/api/chat';
@@ -953,9 +968,12 @@
   // Mod jimat data (2G/3G): tiada SSE, poll jarang, media hanya dimuat bila diketuk.
   const LITE_MSG = 12000, LITE_ROOM = 30000;
 
-  let token = localStorage.getItem(TKEY) || '';
-  let me = localStorage.getItem(NKEY) || '';
-  let rooms = [], cur = localStorage.getItem(RKEY + ':' + me.toLowerCase()) || 'global_am';
+  // Baca selamat — localStorage boleh lempar SecurityError pada sesetengah
+  // WebView/ap; jangan benarkan ia membunuh keseluruhan skrip (skrin kosong).
+  const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+  let token = lsGet(TKEY) || '';
+  let me = lsGet(NKEY) || '';
+  let rooms = [], cur = lsGet(RKEY + ':' + me.toLowerCase()) || 'global_am';
   let cache = {}, people = [], pById = {}, pByName = {}, tick = 0;
   let myId = 0, myBio = '', myJoined = null;   // Tukuk ID akaun yang sedang login
   let replyTo = null, editing = null, lastTypingPing = 0;
