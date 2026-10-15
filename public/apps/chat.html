@@ -964,6 +964,8 @@
   // ─── Lampiran gambar / video ───
   const MAX_MEDIA = 4, IMG_CAP = 8 * 1048576, VID_CAP = 64 * 1048576, DOC_CAP = 32 * 1048576, IMG_SIDE = 1600;
   const mbytes = n => (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
+  // Saiz mesra-manusia untuk kad fail: B/KB/MB ikut kecilnya fail.
+  const humanSize = n => n < 1024 ? n + ' B' : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + 'KB' : mbytes(n);
   function mmss(sec) { const s = Math.max(0, Math.round(sec)); return Math.floor(s / 60) + ':' + pad2(s % 60); }
   // Gambar/video diproses khas; semua yang lain (dokumen, muzik, zip…) pergi
   // sebagai lampiran fail umum — pelayan simpan nama asal + paksa muat turun.
@@ -982,7 +984,7 @@
   function fileCard(x) {
     const ext = String(x.ext || '').toLowerCase();
     const nm = x.name || ('tukuk-' + x.id + '.' + (ext || 'bin'));
-    const meta = [ext ? ext.toUpperCase() : '', x.size ? mbytes(x.size) : ''].filter(Boolean).join(' · ');
+    const meta = [ext ? ext.toUpperCase() : '', x.size ? humanSize(x.size) : ''].filter(Boolean).join(' · ');
     const dl = x.url ? '<a class="fd" href="' + esc(x.url) + '" download="' + esc(nm) + '" title="Muat turun">⬇️</a>' : '';
     // Muzik boleh main terus (pelayan hidang audio/* inline); lain-lain muat turun.
     const player = (x.url && AUDIO_EXT.includes(ext)) ? '<audio class="maudio" src="' + esc(x.url) + '" controls preload="none"></audio>' : '';
