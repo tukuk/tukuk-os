@@ -172,15 +172,15 @@
   #cCtrl { position:relative; z-index:2; display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center; }
   #cCtrl button { width:64px; height:64px; border-radius:50%; border:none; background:rgba(255,255,255,.15); color:#fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font:inherit; }
   #cCtrl button span { font-size:1.3rem; line-height:1.1; }
-  #cCtrl button i { font-style:normal; font-size:.58rem; opacity:.9; }
+  #cCtrl button i { font-style:normal; font-size:.58rem; opacity:.9; white-space:nowrap; }
   #cCtrl button:hover { background:rgba(255,255,255,.26); }
   #cAccept { background:#2ea44f !important; }
   #cEnd { background:#e5534b !important; }
   #cCtrl button.off { background:#e5534b !important; }
   #cBlock { position:relative; z-index:2; background:none; border:1px solid rgba(255,255,255,.3); color:#ffd7d3; border-radius:20px; padding:7px 14px; font:inherit; font-size:.78rem; cursor:pointer; }
   #cBlock:hover { border-color:#e5534b; color:#fff; }
-  #top .cbtn { background:none; border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px 8px; cursor:pointer; font-size:.92rem; }
-  #top .cbtn:hover { border-color:var(--accent); color:var(--accent); }
+  #top .cbtn { background:none; border:1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); color:var(--accent); border-radius:8px; padding:6px 8px; cursor:pointer; font-size:.92rem; }
+  #top .cbtn:hover { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); }
   #prankBtn { width:40px; height:40px; flex:none; border-radius:50%; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:1.05rem; cursor:pointer; }
   #prankBtn:hover { border-color:var(--accent); color:var(--accent); }
   #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
@@ -278,7 +278,7 @@
   .idchip:hover { color:var(--accent); border-color:var(--accent); }
   .pfmeta { font-size:.81rem; color:var(--muted); line-height:1.6; }
   .mbox .pflabel { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:12px 0 4px; }
-  #setModal .tabs { display:flex; gap:4px; flex-wrap:nowrap; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none; }
+  #setModal .tabs { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
   #setModal .tabs::-webkit-scrollbar { display:none; }
   #setModal .tabs button { background:none; border:1px solid transparent; color:var(--muted); border-radius:7px; padding:5px 8px; cursor:pointer; font:inherit; font-size:.74rem; white-space:nowrap; flex:none; }
   #setModal .tabs button.on { color:var(--text); background:color-mix(in srgb, var(--accent) 16%, transparent); border-color:color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -386,7 +386,7 @@
     <button id="cAccept" title="Terima panggilan"><span>📞</span><i>Terima</i></button>
     <button id="cMute" title="Bisukan mikrofon"><span>🎙️</span><i>Bisu</i></button>
     <button id="cCam" title="Matikan kamera"><span>🎥</span><i>Kamera</i></button>
-    <button id="cEnd" title="Tamatkan panggilan"><span>📵</span><i>Tamatkan</i></button>
+    <button id="cEnd" title="Tamatkan panggilan"><span>📵</span><i>Tamat</i></button>
   </div>
   <button id="cBlock">🚫 Sekat pemanggil</button>
 </div>
@@ -640,7 +640,7 @@
   const isMeP = p => (p && p.id) ? p.id === myId : isMe(p && p.name);
   function dateLabel(ts) { const d = new Date(ts); return d.getDate() + ' ' + BULAN[d.getMonth()] + ' ' + d.getFullYear(); }
   let toastT = null;
-  function toast(m) { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { t.style.display = 'none'; }, 2600); }
+  function toast(m, ms) { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { t.style.display = 'none'; }, ms || 2600); }
 
   // ─── Lampiran gambar / video ───
   const MAX_MEDIA = 4, IMG_CAP = 8 * 1048576, VID_CAP = 64 * 1048576, IMG_SIDE = 1600;
@@ -922,7 +922,9 @@
     $('chats').innerHTML = html;
     for (const el of $('chats').querySelectorAll('.chatrow')) {
       el.classList.toggle('sel', el.dataset.r === cur);
+      el.tabIndex = 0;   // senarai sembang boleh dicapai papan kekunci, bukan tetikus sahaja
       el.onclick = () => { openRoom(el.dataset.r); loadRooms(false); };
+      el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRoom(el.dataset.r); loadRooms(false); } };
     }
   }
   // ─── Buka bilik ───
@@ -1447,13 +1449,23 @@
     paintCaller(pById[peer.id] || null, kind, peer.name);
     $('cStat').textContent = 'Memanggil…';
     callPaint('out');
-    try { C.local = await getMedia(kind); }
+    // Pelindung: dialog kebenaran kamera/mikrofon boleh diabaikan dan promise tidak
+    // pernah selesai — tanpanya skrin penuh tersekat pada "Memanggil…" selamanya.
+    const sess = C;
+    sess.ringT = setTimeout(() => {
+      if (C !== sess) return;
+      toast('Kamera/mikrofon tiada respons — panggilan dibatalkan.');
+      endCall(true);
+    }, 25000);
+    try { sess.local = await getMedia(kind); }
     catch (e) {
-      if (!C) return;
+      if (C !== sess) return;
+      clearTimeout(sess.ringT);
       const why = e && e.name === 'NotAllowedError' ? 'Benarkan kamera & mikrofon untuk memanggil.' : 'Peranti panggilan tidak tersedia.';
       C = null; callHide(); return toast(why);
     }
-    if (!C) return;   // sesi tamat semasa kebenaran diminta
+    if (C !== sess) return;   // dibatalkan semasa kebenaran diminta
+    clearTimeout(sess.ringT);
     $('cLocal').srcObject = C.local;
     callEl().classList.add('vid');
     C.pc = newPC(peer.id);
@@ -1472,9 +1484,13 @@
     if (!C || C.state !== 'in') return;
     const c = C;
     clearTimeout(c.ringT); stopRing();
+    // Sama seperti pemanggil: jangan tunggu kebenaran tanpa had. Dering tamat
+    // di pihak pemanggil (RING_WAIT) jika kita gagal menyahut.
+    c.ringT = setTimeout(() => { if (C === c) { sig(c.peer.id, 'reject', {}); endCall(true); toast('Kamera/mikrofon tiada respons.'); } }, 25000);
     try { c.local = await getMedia(c.kind); }
-    catch { sig(c.peer.id, 'reject', {}); endCall(true); return toast('Benarkan kamera & mikrofon untuk menyahut.'); }
+    catch { clearTimeout(c.ringT); sig(c.peer.id, 'reject', {}); endCall(true); return toast('Benarkan kamera & mikrofon untuk menyahut.'); }
     if (!C || C !== c) return;
+    clearTimeout(c.ringT);
     $('cLocal').srcObject = c.local;
     callEl().classList.add('vid');
     c.pc = newPC(c.peer.id);
@@ -1565,7 +1581,7 @@
     C.iv = setInterval(() => { if (!C) return; const s = Math.floor((Date.now() - C.t0) / 1000); $('cStat').textContent = pad2(Math.floor(s / 60)) + ':' + pad2(s % 60); }, 1000);
     setTimeout(() => {
       if (!C || !C.prank || C.state !== 'on') return;
-      const lines = ['Ceeeih! Anda kena prank!', 'Haha, itu panggilan prank dari T Chat.', 'Prank! Rupa-rupanya kawan anda yang panggil.'];
+      const lines = ['Ceeeh! Anda kena prank!', 'Haha, itu panggilan prank dari T Chat.', 'Prank! Rupa-rupanya kawan anda yang panggil.'];
       try {
         if ('speechSynthesis' in window) {
           const u = new SpeechSynthesisUtterance(lines[Math.floor(Math.random() * lines.length)]);
@@ -1573,7 +1589,7 @@
           speechSynthesis.speak(u);
         }
       } catch { /* tiada TTS */ }
-      toast('🎭 Prank! Tiada panggilan sebenar dibuat.');
+      toast('🎭 Prank! Tiada panggilan sebenar dibuat.', 5200);
       vibrate([120, 60, 120, 60, 400]);
     }, 1500);
   }
