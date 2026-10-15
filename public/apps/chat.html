@@ -66,7 +66,11 @@
   #me .idno:hover { color:var(--accent); border-color:var(--accent); }
 
   /* ─── Chat area ─── */
-  #main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #main { flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
+  /* Butang lompat ke mesej terkini — muncul bila pengguna skrol ke atas */
+  #jump { position:absolute; right:16px; bottom:104px; display:none; align-items:center; gap:6px; background:var(--accent); color:#fff; border:none; border-radius:20px; padding:8px 14px; font:inherit; font-size:.82rem; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.35); z-index:8; }
+  #jump.on { display:flex; }
+  #jump:hover { filter:brightness(1.08); }
   #top { display:flex; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--line); background:var(--panel); }
   #top .ava { width:38px; height:38px; font-size:.95rem; }
   #top .who { flex:1; min-width:0; }
@@ -276,6 +280,7 @@
       <button id="setBtn" title="Tetapan">⚙️</button>
     </div>
     <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Bilik masih kosong. Sapa dulu! 👋</div></div>
+    <button id="jump" title="Lompat ke mesej terkini">↓ Mesej baharu</button>
     <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Batal">✕</button></div></div>
     <div id="editBar"><div class="rb">✏️ <b>Mengedit mesej</b><span></span><button id="edCancel" title="Batal">✕</button></div></div>
     <div id="blockBar">🚫 Anda menyekat orang ini — DM dibekukan. <button id="blkOpen">Buka sekat</button></div>
@@ -354,6 +359,7 @@
 
   <div class="tab" id="tabDsp" hidden>
     <label>Bunyi <input type="checkbox" id="stSound"></label>
+    <label>Notifikasi DM <input type="checkbox" id="stNotif"></label>
     <label>Saiz teks mesej <input type="range" id="stFont" min="13" max="19"></label>
     <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
     <div class="walls" id="stWalls">
@@ -401,7 +407,7 @@
   let pending = [], seqKey = 1, busy = false;   // lampiran menunggu dihantar
   let liveOn = false, liveCtl = null, liveTimer = null, liveWatch = null, liveAt = 0,
       liveRetry = 0, tpClear = null;   // aliran langsung
-  let pref = { sound: true, wall: 1, font: 15 };
+  let pref = { sound: true, notif: false, wall: 1, font: 15 };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
   const box = r => r ? (cache[r.id] = cache[r.id] || { msgs: [], seq: 0 }) : null;
@@ -701,7 +707,7 @@
     clearPending();
     cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
     resetSocial(); $('aName').value = ''; $('aPass').value = '';   // jangan tinggalkan jejak akaun sebelumnya
-    setMode('login'); showAuth('Anda sudah keluar.');
+    updateBadge(); setMode('login'); showAuth('Anda sudah keluar.');
   };
 
   // ─── Senarai bilik ───
@@ -720,7 +726,7 @@
     token = ''; myId = 0; myBio = ''; myJoined = null; clearPending(); cache = {}; rooms = []; tick = 0; $('q').value = '';
     stopStream(); restartPollers();   // token sudah kosong → tiada poller yang dihidupkan semula
     resetSocial(); $('aPass').value = '';
-    setMode('login'); showAuth('Sesi luput — sila masuk semula.');
+    updateBadge(); setMode('login'); showAuth('Sesi luput — sila masuk semula.');
   }
   function excerpt(text, q) {
     if (!q) return esc(String(text).slice(0, 70));
@@ -763,6 +769,7 @@
         '<div class="end"><div class="tm">' + tm + '</div>' + (r.unread && cur !== r.id ? '<span class="badge">' + r.unread + '</span>' : '') + '</div></div>' };
     }).filter(Boolean).sort((a, b) => b.score - a.score);
     const html = rows.map(x => x.html).join('') || '<p style="padding:20px;color:var(--muted);font-size:.85rem">Tiada hasil.</p>';
+    updateBadge();
     if (html === roomsSig && cur === roomsSigCur) return; // jangan bina semula DOM yang sedang diklik
     roomsSig = html; roomsSigCur = cur;
     $('chats').innerHTML = html;
@@ -789,6 +796,7 @@
       b.msgs = j.msgs || []; b.seq = j.seq || 0;
       indexPeople(j.people);
       renderMsgs();
+      scrollBottom();
       if (shown()) post('/read', { room: id }).catch(() => {});
     } catch (e) { if (e.status === 401) return expire(); else toast(e.message); }
     if (!silent && innerWidth > 760) $('inp').focus();
@@ -832,7 +840,8 @@
         const ada = x => b.msgs.some(p => p.id === x.id || (String(p.id).startsWith('tmp') && samePair(p, x)));
         const baru = j.msgs.filter(x => !ada(x));
         b.msgs = b.msgs.concat(baru).slice(-200);
-        if (baru.some(m => !mineOf(m))) sndIn();
+        const masuk = baru.filter(m => !mineOf(m));
+        if (masuk.length) { sndIn(); notify(masuk[masuk.length - 1], r); }
       }
       b.seq = Math.max(b.seq || 0, j.seq || 0);
       b.typing = j.typing || [];
@@ -956,7 +965,7 @@
     if (!mineOf(m)) {
       if (r.id === cur && shown()) post('/read', { room: r.id }).catch(() => {});
       else r.unread = (r.unread || 0) + 1;
-      sndIn();
+      sndIn(); notify(m, r);
     }
     renderMsgs(); renderRooms(); renderStatus();
   }
@@ -997,9 +1006,35 @@
         '<span class="meta">' + hhmm(msg.ts) + '</span>' + rxHtml + '</div></div>';
     }
     if (html !== msgSig) { msgSig = html; $('msgs').innerHTML = html; wireMsgs(); }
-    if (atBottom) scrollBottom();
+    if (atBottom) scrollBottom(); else checkJump();
   }
-  function scrollBottom() { const w = $('msgsWrap'); w.scrollTop = w.scrollHeight; }
+  function scrollBottom() { const w = $('msgsWrap'); w.scrollTop = w.scrollHeight; checkJump(); }
+  // ─── Lencana belum-baca di tajuk tab / app badge ───
+  const TAB_TITLE = 'T Chat — Tukuk Apps — Tukuk-OS';
+  function updateBadge() {
+    let n = 0; for (const r of rooms) if (r.id !== cur) n += (r.unread || 0);
+    document.title = (n > 0 ? '(' + (n > 99 ? '99+' : n) + ') ' : '') + TAB_TITLE;
+    if (navigator.setAppBadge) { try { n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge(); } catch { /* PWA tidak dipasang */ } }
+  }
+  // ─── Notifikasi desktop (DM sahaja, bila tab di latar) ───
+  function notify(m, r) {
+    if (!pref.notif || !m || !r || r.kind !== 'dm' || mineOf(m)) return;
+    if (!document.hidden) return;                 // hanya bila pelayar tidak kelihatan
+    if (!(window.Notification && Notification.permission === 'granted')) return;
+    const prev = (m.media && m.media.length) ? mediaWord(m.media[0].kind, m.media.length) : norm(m.t || '');
+    try {
+      const nt = new Notification(nameOf(m), { body: prev.slice(0, 120) || '(mesej)', tag: 'chat-' + r.id, icon: '/icons/apps/chat.svg', silent: true });
+      nt.onclick = () => { try { window.focus(); openRoom(r.id); } catch { /* noop */ } nt.close(); };
+    } catch { /* Notification API ditolak */ }
+  }
+  // ─── Butang lompat ke mesej terkini ───
+  function checkJump() {
+    const w = $('msgsWrap'); const has = !!$('msgs').innerHTML;
+    const nearBottom = w.scrollHeight - w.scrollTop - w.clientHeight < 140;
+    $('jump').classList.toggle('on', has && !nearBottom);
+  }
+  $('jump').onclick = () => scrollBottom();
+  $('msgsWrap').addEventListener('scroll', checkJump, { passive: true });
 
   // ─── Menu mesej ───
   let lastTap = { id: null, t: 0 };
@@ -1424,6 +1459,7 @@
       'Nombor ini kekal seumur akaun. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.</div>';
     $('stCopy').onclick = () => copyText(myId);
     $('stSound').checked = !!pref.sound; $('stFont').value = pref.font;
+    $('stNotif').checked = !!pref.notif;
     markWalls();
     $('stOld').value = $('stP1').value = $('stP2').value = '';
     showTab(tab || 'Prof');
@@ -1464,6 +1500,15 @@
   };
   // Paparan disimpan serta-merta — Esc atau ✕ tidak boleh hilang pilihan.
   $('stSound').onchange = e => { pref.sound = e.target.checked; savePref(); };
+  // Notifikasi DM: perlu kebenaran pelayar. Jika ditolak, jangan simpan pilihan.
+  $('stNotif').onchange = async e => {
+    if (!e.target.checked) { pref.notif = false; savePref(); return; }
+    if (!window.Notification) { toast('Pelayar ini tidak menyokong notifikasi.'); e.target.checked = false; return; }
+    let p = Notification.permission;
+    if (p === 'default') { try { p = await Notification.requestPermission(); } catch { p = 'denied'; } }
+    if (p !== 'granted') { toast('Kebenaran notifikasi ditolak — benarkan dalam tetapan pelayar.'); e.target.checked = false; return; }
+    pref.notif = true; savePref(); toast('Notifikasi DM diaktifkan.');
+  };
   $('stFont').oninput = e => { pref.font = +e.target.value; savePref(); applyPref(); };
   function markWalls() {
     for (const b of $('stWalls').querySelectorAll('button')) {
