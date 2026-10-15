@@ -127,6 +127,17 @@
   .qreact { position:absolute; top:-11px; right:8px; width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,.2); background:#222d44; color:#fff; font-size:.78rem; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; box-shadow:0 1px 5px rgba(0,0,0,.4); }
   .row.me .qreact { right:auto; left:8px; }
   .bub:hover .qreact { display:flex; }
+  /* Banner rangkaian + resit baca + media "ketuk untuk muat" (mod jimat data) */
+  #netbar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; padding:6px 14px; font-size:.76rem; text-align:center; background:#5b3a10; color:#ffd9a0; border-bottom:1px solid rgba(255,255,255,.12); }
+  #netbar.on { display:block; }
+  #netbar.rec { background:#0f3320; color:#a6f0c6; }
+  .bub .tick { font-size:.66rem; opacity:.8; margin-left:2px; }
+  .bub .tick.rd { color:#8fe3ff; opacity:1; }
+  .tvl { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:6px; background:#111a2b; color:#cfe0ff; font-size:.78rem; cursor:pointer; padding:8px; text-align:center; }
+  .media.n1 .tvl { position:static; min-height:130px; min-width:190px; border-radius:11px; }
+  .mbox .seg { display:flex; gap:6px; padding:8px 0; }
+  .mbox .seg button { flex:1; background:var(--bg); border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 0; cursor:pointer; font:inherit; font-size:.8rem; }
+  .mbox .seg button.on { color:#fff; background:var(--accent); border-color:var(--accent); }
   #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
 
   /* ─── Lampiran gambar / video ─── */
@@ -295,6 +306,7 @@
       <div id="live" title="Polling — cuba sambung semula" aria-label="Polling — cuba sambung semula"></div>
       <button id="setBtn" title="Tetapan">⚙️</button>
     </div>
+    <div id="netbar"></div>
     <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Bilik masih kosong. Sapa dulu! 👋</div></div>
     <button id="jump" title="Lompat ke mesej terkini">↓ Mesej baharu</button>
     <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Batal">✕</button></div></div>
@@ -376,6 +388,13 @@
   <div class="tab" id="tabDsp" hidden>
     <label>Bunyi <input type="checkbox" id="stSound"></label>
     <label>Notifikasi DM <input type="checkbox" id="stNotif"></label>
+    <label style="border-bottom:none;padding-bottom:2px">Jimat data <span style="color:var(--muted);font-size:.72rem">(2G/3G/GPRS)</span></label>
+    <div class="seg" id="stData">
+      <button data-d="auto">Auto</button>
+      <button data-d="on">Sentiasa</button>
+      <button data-d="off">Mati</button>
+    </div>
+    <div class="pfmeta" id="connHint">—</div>
     <label>Saiz teks mesej <input type="range" id="stFont" min="13" max="19"></label>
     <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
     <div class="walls" id="stWalls">
@@ -412,6 +431,8 @@
   const POLL_MSG = 2500, POLL_ROOM = 7000, FULL_EVERY = 10;
   // Bila aliran langsung hidup, poll jadi pemeriksaan keselamatan sahaja (bukan sumber mesej).
   const LIVE_MSG = 20000, LIVE_ROOM = 30000;
+  // Mod jimat data (2G/3G): tiada SSE, poll jarang, media hanya dimuat bila diketuk.
+  const LITE_MSG = 12000, LITE_ROOM = 30000;
 
   let token = localStorage.getItem(TKEY) || '';
   let me = localStorage.getItem(NKEY) || '';
@@ -423,7 +444,7 @@
   let pending = [], seqKey = 1, busy = false;   // lampiran menunggu dihantar
   let liveOn = false, liveCtl = null, liveTimer = null, liveWatch = null, liveAt = 0,
       liveRetry = 0, tpClear = null;   // aliran langsung
-  let pref = { sound: true, notif: false, wall: 1, font: 15 };
+  let pref = { sound: true, notif: false, wall: 1, font: 15, data: 'auto' };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
   const box = r => r ? (cache[r.id] = cache[r.id] || { msgs: [], seq: 0 }) : null;
@@ -549,9 +570,11 @@
     if (!list.length) return '';
     return '<div class="media n' + list.length + '">' + list.map((x, i) => {
       const body = !x.url ? '<div class="brk">' + (x.kind === 'video' ? '🎬 Video' : '🖼 Gambar') + ' sudah dibuang</div>'
-        : x.kind === 'video'
-          ? '<video src="' + esc(x.url) + '" preload="metadata" playsinline controls></video>' + (x.dur ? '<span class="dur">' + mmss(x.dur) + '</span>' : '')
-          : '<img src="' + esc(x.url) + '" alt="gambar dilampirkan" loading="lazy">';
+        : lite
+          ? '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="' + esc(x.kind) + '" data-i="' + i + '">' + (x.kind === 'video' ? '🎬' : '🖼') + ' Ketuk untuk muat</div>'
+          : x.kind === 'video'
+            ? '<video src="' + esc(x.url) + '" preload="metadata" playsinline controls></video>' + (x.dur ? '<span class="dur">' + mmss(x.dur) + '</span>' : '')
+            : '<img src="' + esc(x.url) + '" alt="gambar dilampirkan" loading="lazy">';
       return '<div class="mcell' + (x.kind === 'video' ? ' vid' : '') + '" ' +
         (x.kind === 'video' ? 'data-v="' + i + '"' : 'data-z="' + i + '"') + '>' + body + '</div>';
     }).join('') + '</div>';
@@ -718,6 +741,7 @@
     restartPollers();
     stopStream(); openStream();
     pollMsgs();
+    if (outbox.length) flushOutbox();   // hantar baki mesej yang tertangguh luar talian
   }
   function paintMe() {
     $('meName').textContent = me;
@@ -894,8 +918,10 @@
   function restartPollers() {
     clearInterval(window.__ct); clearInterval(window.__rt);
     if (!token) return;
-    window.__ct = setInterval(pollMsgs, liveOn ? LIVE_MSG : POLL_MSG);
-    window.__rt = setInterval(() => { loadRooms(false); }, liveOn ? LIVE_ROOM : POLL_ROOM);
+    const msgMs = lite ? LITE_MSG : (liveOn ? LIVE_MSG : POLL_MSG);
+    const roomMs = lite ? LITE_ROOM : (liveOn ? LIVE_ROOM : POLL_ROOM);
+    window.__ct = setInterval(pollMsgs, msgMs);
+    window.__rt = setInterval(() => { loadRooms(false); }, roomMs);
   }
   function stopStream() {
     liveOn = false; paintLive();
@@ -906,7 +932,7 @@
     if (liveCtl) { try { liveCtl.abort(); } catch { /* sudah tamat */ } liveCtl = null; }
   }
   async function openStream() {
-    if (!token || liveCtl) return;
+    if (!token || liveCtl || lite) return;
     const ctl = new AbortController();
     liveCtl = ctl; liveAt = Date.now();
     let capped = false;
@@ -968,6 +994,7 @@
     }
     if (ev === 'social') { loadSocial(); loadPeople(); return; }
     if (ev === 'room') { loadRooms(false); return; }
+    if (ev === 'read') { const rr = room(j.room); if (rr) { rr.peerSeen = Math.max(rr.peerSeen || 0, j.seq || 0); if (rr.id === cur) renderMsgs(); } return; }
     if (!j || !j.room) return;
     const r = room(j.room);
     if (!r) { loadRooms(false); return; }   // bilik belum diketahui — ambil senarai
@@ -1012,6 +1039,13 @@
   });
 
   // ─── Render mesej ───
+  // Tick status pada mesej sendiri: 🕓 menunggu/menghantar, ✓ dihantar, ✓✓ dibaca (DM).
+  function tickHtml(msg, r) {
+    if (msg.queued) return '<span class="tick" title="Menunggu sambungan">🕓</span>';
+    if (String(msg.id).indexOf('tmp') === 0) return '<span class="tick" title="Menghantar…">🕓</span>';
+    if (r && r.kind === 'dm') return (msg.seq && msg.seq <= (r.peerSeen || 0)) ? '<span class="tick rd" title="Dibaca">✓✓</span>' : '<span class="tick" title="Dihantar">✓</span>';
+    return '<span class="tick" title="Dihantar">✓</span>';
+  }
   function renderMsgs() {
     const r = room(cur); if (!r) return;
     const b = box(r), m = b.msgs || [];
@@ -1041,7 +1075,7 @@
         (showWho ? '<div class="who2" style="color:' + colorOf(disp) + '">' + esc(disp) + '</div>' : '') +
         q + body +
         (msg.edited ? ' <span class="edited">(diubah)</span>' : '') +
-        '<span class="meta">' + hhmm(msg.ts) + '</span>' + rxHtml +
+        '<span class="meta">' + hhmm(msg.ts) + (mine ? tickHtml(msg, r) : '') + '</span>' + rxHtml +
         '<button class="qreact" data-qr title="' + (loved ? 'Buang ❤️' : 'React ❤️') + '">' + (loved ? '❤️' : '🤍') + '</button>' +
         '</div></div>';
       prevAk = ak; prevTs = msg.ts;
@@ -1077,6 +1111,84 @@
   $('jump').onclick = () => scrollBottom();
   $('msgsWrap').addEventListener('scroll', checkJump, { passive: true });
 
+  // ─── Rangkaian: luar-talian, mod jimat data (GPRS/2G/3G/4G) & peti keluar ───
+  // T Chat mesti berfungsi pada sambungan paling teruk: bila tiada signal, mesej
+  // teks masuk peti keluar dan dihantar sendiri bila sambung; pada rangkaian laju
+  // guna SSE, pada 2G/3G tukar ke poll jarang + media hanya dimuat bila diketuk.
+  let online = (typeof navigator.onLine === 'boolean') ? navigator.onLine : true;
+  let conn = { type: null, save: false };
+  let lite = false;
+  function readConn() {
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    conn = c ? { type: c.effectiveType || null, save: !!c.saveData } : { type: null, save: false };
+  }
+  function computeLite() {
+    if (pref.data === 'on') return true;
+    if (pref.data === 'off') return false;
+    if (conn.save) return true;                       // isyarat penjimatan data sistem
+    return !!conn.type && /(^|-)(slow-2g|2g|3g)$/.test(conn.type);  // rangkaian lembap
+  }
+  function applyLite() {
+    const was = lite; lite = computeLite();
+    if (was === lite) return;
+    if (lite) stopStream();                            // GPRS: jangan pegang sambungan panjang
+    restartPollers();
+    if (me && online && !document.hidden && !lite) openStream();  // kembali ke SSE bila keluar dari lite
+    if (cur) renderMsgs();                             // media perlu dilukis semula (tap-to-load)
+    updateNetbar();
+  }
+  function updateNetbar() {
+    const bar = $('netbar'); if (!bar) return;
+    if (!online) { bar.textContent = 'Luar talian — mesej teks disimpan & dihantar bila sambungan kembali.'; bar.className = 'on'; }
+    else if (lite) { bar.textContent = 'Mod jimat data (' + (conn.type || 'rangkaian perlahan') + ') — media dimuat bila diketuk.'; bar.className = 'on rec'; }
+    else { bar.className = ''; bar.textContent = ''; }
+  }
+  function connHintText() {
+    const t = conn.type ? conn.type.toUpperCase() : 'tidak diketahui';
+    return 'Rangkaian: ' + t + (conn.save ? ' · penjimatan data sistem aktif' : '') + (lite ? ' · Mod Lite AKTIF' : ' · Mod penuh');
+  }
+  function goOnline() {
+    online = true; readConn(); applyLite(); updateNetbar();
+    if (me) { loadRooms(false); if (cur) pollMsgs(); flushOutbox(); if (!lite) openStream(); }
+  }
+  function goOffline() { online = false; stopStream(); updateNetbar(); }
+  addEventListener('online', goOnline);
+  addEventListener('offline', goOffline);
+  if (navigator.connection && navigator.connection.addEventListener) {
+    try { navigator.connection.addEventListener('change', () => { readConn(); applyLite(); updateNetbar(); }); } catch { /* tidak disokong */ }
+  }
+
+  // Peti keluar luar-talian: simpan mesej teks (+/id media yang sudah naik) dalam
+  // localStorage, hantar semula berturutan sebaik sambungan kembali.
+  const OKEY = 'tukuk-chat-outbox';
+  function loadOutbox() { try { const a = JSON.parse(localStorage.getItem(OKEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
+  function saveOutbox() { try { localStorage.setItem(OKEY, JSON.stringify(outbox)); } catch { /* penuh */ } }
+  let outbox = loadOutbox();
+  function queueOutbox(e) { outbox.push(e); saveOutbox(); }
+  async function flushOutbox() {
+    if (!me || !online || !outbox.length) return;
+    let i = 0;
+    for (; i < outbox.length; i++) {
+      const e = outbox[i];
+      try {
+        const j = await post('/messages', { room: e.room, text: e.text, replyTo: e.replyTo || null, media: e.media || null });
+        const b = cache[e.room];
+        if (b) {
+          const k = b.msgs.findIndex(m => m.id === e.cid);        // buang gelembung pending
+          if (k >= 0) b.msgs.splice(k, 1);
+          if (!b.msgs.some(x => x.id === j.msg.id)) { j.msg.mine = true; b.msgs.push(j.msg); }  // SSE mungkin dah sisip
+        }
+        if (e.room === cur) renderMsgs();
+        renderRooms();
+      } catch (err) {
+        if (!err.status) { online = false; break; }   // rangkaian masih mati — baki kekal dalam peti
+        // ralat pelayan (429/403…) — buang item ini sahaja, jangan berulang
+      }
+    }
+    outbox = outbox.slice(i);   // baki yang belum berjaya dihantar
+    saveOutbox(); updateNetbar();
+  }
+
   // ─── Menu mesej ───
   let lastTap = { id: null, t: 0 };
   function wireMsgs() {
@@ -1095,6 +1207,24 @@
       for (const rb of bub.querySelectorAll('.reactions button')) rb.onclick = () => doReact(id, rb.dataset.react);
       const qr = bub.querySelector('.qreact');
       if (qr) { qr.addEventListener('pointerdown', e => e.stopPropagation()); qr.onclick = e => { e.stopPropagation(); doReact(id, '❤️'); }; }
+      // Mod jimat data: media "ketuk untuk muat" — gantikan placeholder dengan media sebenar.
+      for (const tv of bub.querySelectorAll('.tvl')) {
+        tv.onclick = e => {
+          e.stopPropagation();
+          const url = tv.getAttribute('data-load'), kind = tv.getAttribute('data-kind'), i = +tv.getAttribute('data-i');
+          const cell = tv.closest('.mcell');
+          if (kind === 'video') {
+            const v = document.createElement('video'); v.src = url; v.controls = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
+            v.onclick = ev => ev.stopPropagation();
+            cell.innerHTML = ''; cell.appendChild(v); cell.classList.add('vid'); cell.setAttribute('data-v', i);
+          } else {
+            const im = document.createElement('img'); im.src = url; im.alt = 'gambar dilampirkan';
+            im.onerror = () => { cell.innerHTML = '<div class="brk">🖼 Gambar sudah dibuang</div>'; };
+            cell.innerHTML = ''; cell.appendChild(im); cell.setAttribute('data-z', i);
+            cell.onclick = ev => { ev.stopPropagation(); openView(findMsg(id), i); };
+          }
+        };
+      }
       // Lampiran: gambar buka paparan penuh, video main inline — dua-dua tak
       // boleh tercetus sekali dengan menu mesej (tekan dua kali / tahan).
       for (const cell of bub.querySelectorAll('.mcell[data-z]')) {
@@ -1242,6 +1372,14 @@
     if (bad.length) { toast('Ada fail gagal — tekan ✕ untuk buang.'); return; }
     const r = room(cur), b = box(r);
     const rt = replyTo; // ditutup oleh closeReplyEdit() di bawah, jadi simpan dulu
+    // Luar talian: hanya TEKS boleh dijangka (gambar/video perlukan sambungan untuk muat naik).
+    if (!online) {
+      if (pending.length) { toast('Butuh sambungan untuk hantar gambar / video.'); return; }
+      const temp = { id: 'tmp' + Date.now(), seq: 0, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {}, media: [], queued: true };
+      b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
+      queueOutbox({ cid: temp.id, room: cur, text, replyTo: rt || null });
+      return;
+    }
     const shots = pending.slice();
     const temp = {
       id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {},
@@ -1249,8 +1387,8 @@
     };
     b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
     busy = true; $('send').disabled = true;
+    const ids = [];
     try {
-      const ids = [];
       for (const p of shots) {
         p.status = 'up'; p.pct = 0; renderTray();
         const m = await uploadOne(p);
@@ -1266,10 +1404,18 @@
       if (r) r.last = { from: me, fid: myId || null, t: text, mt: j.msg.media && j.msg.media.length ? j.msg.media[0].kind : null, n: (j.msg.media || []).length, ts: Date.now() };
       renderMsgs(); renderRooms();
     } catch (e) {
-      b.msgs = b.msgs.filter(x => x.id !== temp.id);
-      toast(e.status === 429 ? 'Terlalu laju — tunggu sedikit.' : e.message);
-      for (const p of pending) if (p.status !== 'err') p.status = p.media ? 'done' : 'ready';
-      renderMsgs(); renderTray();
+      if (!e.status) {
+        // Rangkaian terputus semasa hantar — jangka dalam peti, hantar bila sambung semula.
+        temp.queued = true; temp.seq = 0;
+        queueOutbox({ cid: temp.id, room: cur, text, replyTo: rt || null, media: ids.length ? ids : null });
+        online = false; updateNetbar();
+        renderMsgs();
+      } else {
+        b.msgs = b.msgs.filter(x => x.id !== temp.id);
+        toast(e.status === 429 ? 'Terlalu laju — tunggu sedikit.' : e.message);
+        for (const p of pending) if (p.status !== 'err') p.status = p.media ? 'done' : 'ready';
+        renderMsgs(); renderTray();
+      }
     } finally { busy = false; $('send').disabled = false; }
   }
   inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
@@ -1503,6 +1649,7 @@
     $('stCopy').onclick = () => copyText(myId);
     $('stSound').checked = !!pref.sound; $('stFont').value = pref.font;
     $('stNotif').checked = !!pref.notif;
+    markData(); $('connHint').textContent = connHintText();
     markWalls();
     $('stOld').value = $('stP1').value = $('stP2').value = '';
     showTab(tab || 'Prof');
@@ -1562,6 +1709,12 @@
   for (const b of $('stWalls').querySelectorAll('button')) b.onclick = () => {
     pref.wall = +b.dataset.w; savePref(); applyPref(); markWalls();
   };
+  function markData() { for (const b of $('stData').querySelectorAll('button')) b.classList.toggle('on', b.dataset.d === pref.data); }
+  for (const b of $('stData').querySelectorAll('button')) b.onclick = () => {
+    pref.data = b.dataset.d; savePref(); markData();
+    readConn(); applyLite(); $('connHint').textContent = connHintText(); updateNetbar();
+    toast(lite ? 'Mod jimat data aktif.' : 'Mod penuh — sambungan langsung dihidupkan.');
+  };
   function applyPref() {
     $('msgsWrap').dataset.wall = pref.wall;
     $('msgs').style.setProperty('--fs', pref.font + 'px');
@@ -1593,6 +1746,7 @@
 
   // ─── Boot ───
   applyPref();
+  readConn(); lite = computeLite(); updateNetbar();   // tentukan mod rangkaian sebelum masuk app
   (async () => {
     if (!token) return showAuth('');
     try { const j = await call('/me'); if (!j.name) return showAuth(''); me = j.name; myId = j.id || 0; myBio = j.bio || ''; myJoined = j.joined || null; enterApp(); }

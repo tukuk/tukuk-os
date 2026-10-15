@@ -743,3 +743,20 @@ test('yuran: sink yang gagal menulis dibuang ketika denyut', () => {
   assert.equal(chat.attachSink(id, spy('lebih').snk), false, 'had MAX_STREAMS masih dihormati');
   for (const s of penuh) chat.detachSink(id, s.snk);
 });
+
+test('resit bacaan: markSeen DM menyiarkan read kepada pasangan sahaja', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const a = spy(), b = spy();
+  chat.attachSink(idOf('Ana'), a.snk); chat.attachSink(idOf('Ben'), b.snk);
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.send('Ana', dm.id, 'satu'); chat.send('Ana', dm.id, 'dua');
+  a.log.length = 0; b.log.length = 0;
+  chat.markSeen('Ben', dm.id);
+  const rd = a.log.find(x => x[0] === 'read');
+  assert.ok(rd, 'penghantar (Ana) terima read bila Ben membaca');
+  assert.equal(rd[1].room, dm.id);
+  assert.equal(rd[1].seq, 2, 'seq terakhir yang dibaca');
+  assert.equal(b.log.filter(x => x[0] === 'read').length, 0, 'pembaca tidak menerima read sendiri');
+  release(idOf('Ana'), a.snk, idOf('Ben'), b.snk);
+});

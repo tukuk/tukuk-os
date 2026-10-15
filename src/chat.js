@@ -485,7 +485,15 @@ function since(name, roomId, after) {
 }
 function markSeen(name, roomId) {
   const s = load(); const r = s.rooms[roomId];
-  if (r) { s.seen[roomId + '|' + key(name)] = r.seq || 0; touch(); }
+  if (!r) return;
+  const seq = r.seq || 0;
+  s.seen[roomId + '|' + key(name)] = seq; touch();
+  // DM: maklumkan pasangan sampai bila mesej mereka sudah dibaca → resit ✓✓.
+  if (r.kind === 'dm') {
+    const me = findUser(name);
+    const pid = me ? peerId(r, me.id) : null;
+    if (pid) pub('read', { room: roomId, seq }, [pid]);
+  }
 }
 function unread(name) {
   const s = load(); const out = {};
@@ -915,7 +923,7 @@ function mount(app, deps) {
 
   app.get('/api/chat/rooms', (req, res) => {
     const u = authOf(req, res); if (!u) return;
-    const un = unread(u.name); const on = onlineMap();
+    const un = unread(u.name); const on = onlineMap(); const st = load();
     const rooms = roomsFor(u.name).map(r => {
       const last = (r.list || [])[Math.max(0, (r.list || []).length - 1)];
       const pid = peerId(r, u.id);
@@ -923,6 +931,7 @@ function mount(app, deps) {
       return {
         id: r.id, kind: r.kind, title: roomTitle(r, u),
         members: r.members, peerId: pid, unread: un[r.id] || 0, seq: r.seq || 0,
+        peerSeen: (peer && st.seen[r.id + '|' + key(peer.name)]) || 0,
         peer: peer ? { id: peer.id, name: peer.name, bio: peer.bio || '' } : null,
         blocked: !!(pid && blockedOf(u).includes(pid)),
         last: last ? { from: authorName(last), fid: last.fid || null, t: last.del ? null : last.t, mt: last.media && last.media.length ? last.media[0].kind : null, n: (last.media || []).length, ts: last.ts } : null,
