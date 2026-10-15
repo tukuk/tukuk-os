@@ -1836,8 +1836,8 @@
     const cv = $('fxLayer'); cv.style.display = 'block';
     cv.width = innerWidth; cv.height = innerHeight;
     for (let i = 0; i < 110; i++) fxParts.push({
-      x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5,
-      vx: (Math.random() - .5) * 4, vy: 2 + Math.random() * 3.5,
+      x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .9,
+      vx: (Math.random() - .5) * 3, vy: 1.4 + Math.random() * 2.4,
       s: 5 + Math.random() * 5, r: Math.random() * 6.28, vr: (Math.random() - .5) * .3,
       c: FXCOL[i % FXCOL.length],
     });
@@ -1847,12 +1847,12 @@
     const cv = $('fxLayer'), x = cv.getContext('2d');
     x.clearRect(0, 0, cv.width, cv.height);
     for (const p of fxParts) {
-      p.x += p.vx; p.y += p.vy; p.vy += .05; p.r += p.vr;
+      p.x += p.vx; p.y += p.vy; p.vy += .03; p.r += p.vr;
       x.save(); x.translate(p.x, p.y); x.rotate(p.r);
       x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .62); x.restore();
     }
     fxParts = fxParts.filter(p => p.y < cv.height + 30);
-    if (fxParts.length && ++fxFrames < 320) fxFx = requestAnimationFrame(fxTick);
+    if (fxParts.length && ++fxFrames < 420) fxFx = requestAnimationFrame(fxTick);
     else { fxFx = null; fxFrames = 0; fxParts = []; cv.style.display = 'none'; }
   }
   let giftT = null;
