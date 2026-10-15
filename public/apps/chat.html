@@ -186,6 +186,24 @@
   #cPrank .sm { font-size:.86rem; color:#ffe9a8; max-width:32ch; line-height:1.55; text-shadow:0 2px 10px rgba(0,0,0,.7); }
   @keyframes pkpop { from { transform:scale(.3) rotate(-8deg); opacity:0; } to { transform:scale(1) rotate(0); opacity:1; } }
   @keyframes pkin { from { opacity:0; } to { opacity:1; } }
+  /* TukuCaller™ — parodi pengenalan pemanggil (crowd-tag gaya apl Truecaller) */
+  #cTag { display:none; margin:9px auto 0; }
+  #cTag.on { display:block; animation:tagpop .42s cubic-bezier(.2,1.5,.4,1) both; }
+  #cTag .tk-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 13px; border-radius:999px; font-size:.84rem; font-weight:800; letter-spacing:.01em; box-shadow:0 4px 16px rgba(0,0,0,.4); }
+  #cTag .tk-spam { background:#e5534b; color:#fff; }
+  #cTag .tk-warn { background:#ffc107; color:#3a2a00; }
+  #cTag .tk-info { background:#4c8dff; color:#fff; }
+  #cTag .tk-fun  { background:#a76fff; color:#fff; }
+  #cTag .tk-stats { margin-top:6px; font-size:.72rem; color:#cdd8ee; opacity:.9; }
+  #cTag .tk-cmt { margin-top:4px; font-size:.74rem; color:#ffe9a8; font-style:italic; max-width:34ch; }
+  #cTag .tk-search { display:inline-flex; align-items:center; gap:8px; font-size:.76rem; color:#cdd8ee; }
+  #cTag .tk-search .sp { width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; animation:tkspin .7s linear infinite; }
+  #cTag .tk-mark { margin-top:7px; font-size:.58rem; letter-spacing:.16em; text-transform:uppercase; color:#7f93ba; }
+  @keyframes tkspin { to { transform:rotate(360deg); } }
+  @keyframes tagpop { from { transform:scale(.5); opacity:0; } to { transform:scale(1); opacity:1; } }
+  #pkPersona { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  #pkPersona button { background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px 10px; cursor:pointer; font:inherit; font-size:.78rem; }
+  #pkPersona button.on { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); }
   #top .cbtn { background:none; border:1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); color:var(--accent); border-radius:8px; padding:6px 8px; cursor:pointer; font-size:.92rem; }
   #top .cbtn:hover { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); }
   #prankBtn { width:40px; height:40px; flex:none; border-radius:50%; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:1.05rem; cursor:pointer; }
@@ -443,7 +461,7 @@
 <div id="call">
   <video id="cRemote" autoplay playsinline></video>
   <div id="cLocalWrap"><video id="cLocal" autoplay playsinline muted></video></div>
-  <div id="cInfo"><div class="cava" id="cAva">?</div><div class="cname" id="cName"></div><div class="csub" id="cSub"></div><div class="cbio" id="cBio"></div><div class="cstat" id="cStat"></div></div>
+  <div id="cInfo"><div class="cava" id="cAva">?</div><div class="cname" id="cName"></div><div id="cTag"></div><div class="csub" id="cSub"></div><div class="cbio" id="cBio"></div><div class="cstat" id="cStat"></div></div>
   <div id="cCtrl">
     <button id="cAccept" title="Terima panggilan"><span>📞</span><i>Terima</i></button>
     <button id="cMute" title="Bisukan mikrofon"><span>🎙️</span><i>Bisu</i></button>
@@ -451,16 +469,27 @@
     <button id="cEnd" title="Tamatkan panggilan"><span>📵</span><i>Tamat</i></button>
   </div>
   <button id="cBlock">🚫 Sekat pemanggil</button>
-  <div id="cPrank"><div class="big">🎭 KENA PRANK! 😆</div><div class="sm">Tiada panggilan sebenar dibuat — ini mod prank T Chat. Tekan 📵 Tamat untuk tutup.</div></div>
+  <div id="cPrank"><div class="big">🎭 KENA PRANK! 😆</div><div class="sm">Tiada panggilan sebenar &mdash; dan &ldquo;TukuCaller&rdquo; tadi pun rekaan belaka. Ini mod prank T Chat. Tekan 📵 Tamat untuk tutup.</div></div>
 </div>
 
 <div class="modal" id="prankModal"><div class="mbox">
-  <h3>🎭 Panggilan prank</h3>
+  <h3>🎭 Panggilan prank + TukuCaller</h3>
   <div class="pflabel">Nama pemanggil palsu</div>
   <input id="pkName" maxlength="20" placeholder="Cth: Ibu, Boss, Polis…" autocomplete="off">
   <div class="pflabel">Jenis panggilan</div>
   <div class="seg" id="pkSeg"><button data-k="video" class="on">📹 Video</button><button data-k="audio">📞 Suara</button></div>
-  <div class="pfmeta">Skrin panggilan masuk palsu akan muncul penuh dengan dering &amp; getaran — sesuai untuk menakutkan kawan sebentar. Ia <b>setempat sahaja</b>: tiada panggilan sebenar dibuat dan berfungsi walaupun luar talian.</div>
+  <div class="pflabel">Tag &ldquo;TukuCaller&rdquo; (pengenalan pemanggil palsu)</div>
+  <div id="pkPersona">
+    <button data-p="none" class="on">🎲 Rawak</button>
+    <button data-p="scam">⚠️ Penipu</button>
+    <button data-p="boss">💼 Boss</button>
+    <button data-p="bank">🏦 Bank</button>
+    <button data-p="kurier">📦 Kurier</button>
+    <button data-p="ghost">👻 Alam Lain</button>
+    <button data-p="ex">💔 Bekas</button>
+    <button data-p="celeb">⭐ Artis</button>
+  </div>
+  <div class="pfmeta">Skrin panggilan masuk palsu muncul penuh dengan dering &amp; getaran. Semasa berdering, &ldquo;TukuCaller&rdquo; akan <b>mencari ID</b> lalu memaparkan tag + laporan penyamaran gaya apl pengenalan pemanggil &mdash; semuanya <b>rekaan untuk kelucuan</b>, setempat sahaja, tiada panggilan sebenar &amp; berfungsi walaupun luar talian.</div>
   <div class="mbtns"><button id="pkCancel">Batal</button><button class="prim" id="pkGo">🎭 Panggil sekarang</button></div>
 </div></div>
 
@@ -1462,7 +1491,7 @@
   // mengalir terus antara peranti. Mod prank pula langsung tidak menyentuh rangkaian.
   const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
   const RING_WAIT = 35000, CALL_TIMEOUT = 25000;
-  let C = null, ringNode = null, pkKind = 'video';
+  let C = null, ringNode = null, pkKind = 'video', pkPersona = 'none';
 
   const vibrate = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch { /* tiada getaran */ } };
   const callEl = () => $('call');
@@ -1479,6 +1508,7 @@
     const el = callEl();
     el.classList.remove('on', 'vid', 'audio', 'ringing');
     $('cPrank').classList.remove('on');
+    $('cTag').classList.remove('on');
     try { $('cRemote').srcObject = null; $('cLocal').srcObject = null; } catch { /* sudah kosong */ }
   }
 
@@ -1729,20 +1759,68 @@
     if (ev === 'end') { endCall(true); }
   }
 
-  // ── Mod prank: panggilan palsu setempat, berfungsi walaupun luar talian ──
+  // ── Mod prank + "TukuCaller": panggilan palsu setempat dengan pengenalan
+  //    pemanggil parodi (tag crowdsourced gaya apl pencari nombor). Semua rekaan.
+  const PK_TAGS = {
+    scam:   { tone: 'tk-spam', word: 'penipu', tag: '⚠️ Mungkin Penipu',        cmt: '«Jangan sesekali beri OTP anda!»' },
+    boss:   { tone: 'tk-warn', word: 'boss',   tag: '💼 Boss Anda',             cmt: '«Projek lewat lagi — jawab sekarang»' },
+    bank:   { tone: 'tk-info', word: 'bank',   tag: '🏦 Bank — Akaun Berisiko', cmt: '«Transaksi RM9,999.00 sedang diproses»' },
+    kurier: { tone: 'tk-info', word: 'kurier', tag: '📦 Kurier Penghantaran',   cmt: '«Paket anda 3 hari belum diambil»' },
+    ghost:  { tone: 'tk-fun',  word: 'hantu',  tag: '👻 Nombor Alam Lain',      cmt: '«Telefon ini berbunyi sendiri jam 3:33 pagi»' },
+    ex:     { tone: 'tk-fun',  word: 'bekas anda', tag: '💔 «Kenangan Lama»',      cmt: '«142 panggilan tak dijawab sejak 2019»' },
+    celeb: { tone: 'tk-info', word: 'artis',  tag: '⭐ Artis Tempatan',          cmt: '«Tahniah, anda dipilih untuk sesi casting!»' },
+  };
+  const PK_EXTRA = [
+    { tone: 'tk-warn', word: 'syarikat telco', tag: '🕵️ «Syarikat Telco»',   cmt: '«Bil anda tertunggak — tekan 1 untuk lunaskan»' },
+    { tone: 'tk-spam', word: 'pihak berkuasa', tag: '🚔 «Pihak Berkuasa»',   cmt: '«Anda dipanggil untuk soal siasat esok»' },
+    { tone: 'tk-fun',  word: 'kakak nasi kandar', tag: '🍔 «Nasi Kandar Akak»', cmt: '«Kari istimewa menunggu, abang»' },
+    { tone: 'tk-warn', word: 'pinjaman segera', tag: '📈 «Pinjaman Segera»',  cmt: '«RM5,000 dalam 5 minit, tanpa agihan»' },
+  ];
+  const pkAll = () => Object.keys(PK_TAGS).map(k => PK_TAGS[k]).concat(PK_EXTRA);
+  // Pilih tag: ikut persona yang dipilih, atau rawak (termasuk luaran lucu) bila "Rawak".
+  const pkPick = () => (pkPersona !== 'none' && PK_TAGS[pkPersona]) ? PK_TAGS[pkPersona]
+    : pkAll()[Math.floor(Math.random() * pkAll().length)];
+
+  // Fasa 1: skrin "mencari ID" supaya tag muncul dengan dramatik.
+  function pkSearch(sess) {
+    if (!C || C !== sess) return;
+    const t = $('cTag');
+    t.className = ''; t.innerHTML = '';
+    $('cName').textContent = sess.peer.name;
+    $('cAva').textContent = initials(sess.peer.name); $('cAva').style.background = colorOf(sess.peer.name);
+    $('cSub').textContent = (sess.kind === 'audio' ? '📞 Panggilan suara' : '📹 Panggilan video') + ' · ID ' + sess.pkId;
+    $('cBio').textContent = 'Menyambungkan panggilan…';
+    t.innerHTML = '<div class="tk-search"><span class="sp"></span>TukuCaller mencari ID pemanggil…</div>';
+    t.classList.add('on');
+    setTimeout(() => pkReveal(sess, t), 1300 + Math.floor(Math.random() * 500));
+  }
+  // Fasa 2: dedahkan "laporan" TukuCaller palsu (bukan panggilan sebenar).
+  function pkReveal(sess, t) {
+    if (!C || C !== sess || !C.prank || C.state !== 'in') return;   // sudah tamat/diterima
+    const def = sess.pkTag;
+    const reports = 40 + Math.floor(Math.random() * 2400);
+    const searches = (1 + Math.random() * 39).toFixed(1) + 'k';
+    t.className = 'on';
+    t.innerHTML =
+      '<div class="tk-badge ' + def.tone + '">' + def.tag + '</div>' +
+      '<div class="tk-stats">Dilaporkan ' + reports.toLocaleString('ms-MY') + ' orang · ' + searches + ' carian · Malaysia</div>' +
+      '<div class="tk-cmt">' + def.cmt + '</div>' +
+      '<div class="tk-mark">Powered by TukuCaller™</div>';
+    $('cBio').textContent = 'Bukan dalam senarai kawan · periksa dulu sebelum menyahut';
+    tone(660, .08, .05);
+  }
   function prankStart() {
     const nm = norm($('pkName').value).slice(0, 20) || 'Terkenalan';
     $('prankModal').classList.remove('open');
     if (C) endCall(true);
     C = { pc: null, local: null, remote: null, peer: { id: 0, name: nm }, kind: pkKind, dir: 'in', state: 'in', t0: 0, iv: null, ringT: null, iceQ: [], prank: true };
+    C.pkId = 100000 + Math.floor(Math.random() * 899999);
+    C.pkTag = pkPick();
     callEl().classList.toggle('audio', pkKind === 'audio');
-    $('cName').textContent = nm;
-    $('cAva').textContent = initials(nm); $('cAva').style.background = colorOf(nm);
-    $('cSub').textContent = (pkKind === 'audio' ? '📞 Panggilan suara' : '📹 Panggilan video') + ' · ID ' + (100000 + Math.floor(Math.random() * 899999));
-    $('cBio').textContent = 'Bukan dalam senarai kawan · tidak dikenal pasti';
     $('cStat').textContent = 'Panggilan masuk…';
     callPaint('in');
     startRing(); vibrate([600, 300, 600, 300, 900]);
+    pkSearch(C);
     C.ringT = setTimeout(() => { if (C && C.prank && C.state === 'in') { stopRing(); callHide(); C = null; } }, 22000);
   }
   function prankAccept() {
@@ -1756,7 +1834,8 @@
     C.iv = setInterval(() => { if (!C) return; const s = Math.floor((Date.now() - C.t0) / 1000); $('cStat').textContent = pad2(Math.floor(s / 60)) + ':' + pad2(s % 60); }, 1000);
     setTimeout(() => {
       if (!C || !C.prank || C.state !== 'on') return;
-      const lines = ['Ceeeh! Anda kena prank!', 'Haha, itu panggilan prank dari T Chat.', 'Prank! Rupa-rupanya kawan anda yang panggil.'];
+      const w = (C.pkTag && C.pkTag.word) || 'pemanggil misteri';
+      const lines = ['Ceeeh! Anda kena prank! Tag ' + w + ' tadi rekaan je.', 'Haha, TukuCaller tipu. Itu panggilan prank dari T Chat.', 'Prank! Tiada ' + w + ' sebenar — kawan anda yang panggil.'];
       try {
         if ('speechSynthesis' in window) {
           const u = new SpeechSynthesisUtterance(lines[Math.floor(Math.random() * lines.length)]);
@@ -1765,7 +1844,7 @@
         }
       } catch { /* tiada TTS */ }
       $('cPrank').classList.add('on');
-      toast('🎭 Prank! Tiada panggilan sebenar dibuat.', 5200);
+      toast('🎭 Prank! TukuCaller tadi pun rekaan belaka.', 5200);
       vibrate([120, 60, 120, 60, 400]);
     }, 1500);
   }
@@ -1785,10 +1864,12 @@
   $('prankBtn').onclick = () => {
     $('prankModal').classList.add('open');
     for (const b of $('pkSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.k === pkKind);
+    for (const b of $('pkPersona').querySelectorAll('button')) b.classList.toggle('on', b.dataset.p === pkPersona);
     setTimeout(() => $('pkName').focus(), 60);
   };
   $('pkCancel').onclick = () => $('prankModal').classList.remove('open');
   for (const b of $('pkSeg').querySelectorAll('button')) b.onclick = () => { pkKind = b.dataset.k; for (const x of $('pkSeg').querySelectorAll('button')) x.classList.toggle('on', x === b); };
+  for (const b of $('pkPersona').querySelectorAll('button')) b.onclick = () => { pkPersona = b.dataset.p; for (const x of $('pkPersona').querySelectorAll('button')) x.classList.toggle('on', x === b); };
   $('pkGo').onclick = prankStart;
   $('pkName').addEventListener('keydown', e => { if (e.key === 'Enter') prankStart(); });
   // Tab ditutup/diulang seawal panggilan: maklumkan pasangan supaya skrin mereka
