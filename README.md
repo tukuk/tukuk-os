@@ -151,6 +151,19 @@ Soalan kendiri ("apa itu tukuk-os", "endpoint", dll.) dijawab dari pengetahuan t
 
 ---
 
+## 💬 7½. T Chat — meshenjer multi-pengguna + aplikasi silang-OS
+
+**T Chat** (dulu "Tukuk Chat") = meshenjer sebenar dalam pelayar, bukan demo setempat. Back-end `src/chat.js` (`mount(app)` dipanggil `src/server.js`); klien satu-fail `public/apps/chat.html`; stor JSON (`generated`/`data` — `chat.json`), sesi **Bearer token di localStorage** (tiada cookie → origin terasing). UI & logo brand **"T Chat"** / **"TukuCaller™"** — jangan guna nama pihak ketiga.
+
+- **Asas:** daftar cukup nama + kata laluan → **Tukuk ID** numerik kekal (`/api/whoami`); DM/kumpulan/bilik umum, mesej teks + gambar/video/fail (📎, dimampat client-side), mesej suara (MediaRecorder), reply/forward/reaction/edit, carian dalam mesej, baca-selesai, taip-taip, sekat/buka, senarai kawan (ikut ID), stiker, undian, wallpaper & bunyi, mod jimat data 2G/3G + peti keluar luar-talian.
+- **Panggilan WebRTC:** video/suara P2P dalam DM dengan isyarat **TURN/ICE** dari pelayan; skrin masuk papar pengenalanan pemanggil gaya **TukuCaller** (nama, ID, kawan?) sebelum jawab; **mod prank** (`🎭`) — panggilan masuk palsu penuh-skrin, jalan walau luar-talian.
+- **Lapisan sosial (`📰` Suapan):** post + komen + like + **repost/petik (♻️ gaya X)** + tag boleh tapis; **cerita 24 jam** (`📕`); **status (mood sementara)** — emoji + teks ≤80 aksara dengan **TTL boleh pilih** (`STATUS_TTL`: 30 min…7 hari/kekal; `setStatus`/`effStatus` di `src/chat.js`) dipapar pada profil sendiri, profil orang, senarai kawan & komposer, luput sendiri (klien kira detik 60s); peristiwa SSE `social/kind:status` ke pengikut + diri. Rate-limit `lim(...)` setiap tulis.
+- **Domain khas `tchat.tukuk.org`** (`2e4b400`): gerbang hostname di `src/server.js` (`TCHAT_HOST`/`TCHAT_ALLOWED`/`CSP_TCHAT`) — hanya aset T Chat dilaluan, CSP ketat (tiada iklan/analitik, `frame-ancestors 'none'`), `X-Robots-Tag: noindex`, selainnya 302 → `tukuk.org`. ⚠️ Tunnel **mod TOKEN** mengabaikan `ingress:` setempat → hostname baru perlu ditambah di **dashboard Zero Trust** (lihat `.env.example` + `deploy/cloudflared/config.yml`).
+- **Aplikasi silang-OS:** APK WebView native **beta** (`public/downloads/tukuk-chat.apk`, ±65 KB, auto-dapat ciri baru tanpa build semula — dibina `scripts/build-apk.sh` tanpa Gradle); PWA (`manifest.json`/`manifest-chat.json` + `sw.js`). **Halaman `/download`** (`public/download.html`, URL bersih §8) = satu butang **auto-pilih ikut OS** pelawat: APK terus (Android/Huawei/ChromeOS), PWA `beforeinstallprompt` (Windows/Linux/macOS), atau arahan *Add to Home Screen* (iOS) + QR/pautan kongsi. Pautan ada di `/apps`, tile `/`, dan ⚙️ → Aplikasi. Versi **stabil** belum dikeluarkan (ikut arahan pengguna: beta dulu).
+- **Sandaran:** `deploy/chat-backup.service` + timer (R2 snapshot `scripts/backup-chat.sh`; `User=tukuk` supaya `$HOME` tak unbound).
+
+---
+
 ## 🧩 8. Nota Penyelenggaraan (untuk anda & AI yang edit kod ini nanti) — PENTING
 
 - **Route Express = dalam memori.** Selepas ubah `src/server.js` (tambah laluan/`STATIC_PAGES`) → **WAJIB restart** `node index.js`. Jika tidak: `public/*.html` nampak sudah berubah (dibaca setiap request), tetapi laluan baru beri **404**.
