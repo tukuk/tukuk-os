@@ -1158,3 +1158,223 @@ test('POST /api/chat/delete-account: kata laluan + sesi diperlukan', () => {
   assert.equal(r.code, 200); assert.ok(r.body.ok);
   assert.ok(!chat.findUser('Ana'));
 });
+
+// ─── Lapisan sosial: ikuti, post, cerita, notifikasi, avatar ───
+const reqGP = (tok, query, params) => ({ headers: { authorization: 'Bearer ' + tok }, body: {}, query: query || {}, params: params || {}, on() {}, socket: null });
+
+function mkJpg(user) {
+  const r = chat.addMedia(user, JPG, {});
+  assert.ok(r.ok, 'muat naik jpg untuk ujian');
+  return r.media.id;
+}
+
+test('follow: dua sisi, togol ulangi, diri sendiri & sekat ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  assert.ok(chat.followUser('Ana', 'Ben').ok);
+  assert.ok(chat.isFollowing(chat.findUser('Ana'), chat.findUser('Ben')));
+  assert.equal(chat.findUser('Ben').followers.length, 1, 'followers disegarakkan dua sisi');
+  assert.ok(chat.followUser('Ana', 'Ben').already, 'ikuti dua kali → already');
+  assert.ok(chat.followUser('Ana', 'Ana').error, 'diri sendiri ditolak');
+  assert.ok(chat.followUser('Ana', 'tiada').error, 'tidak wujud ditolak');
+  chat.blockUser('Ana', 'Ben');
+  assert.ok(chat.followUser('Ana', 'Ben').error, 'yang disekat → ditolak');
+  chat.unblockUser('Ana', 'Ben');
+  assert.ok(chat.unfollowUser('Ana', 'Ben').ok);
+  assert.equal(chat.findUser('Ben').followers.length, 0, 'buang ikuti kosongkan kedua sisi');
+});
+
+test('profile: bawa avatar, kiraan ikuti & bendera following/followsMe', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const ana = chat.findUser('Ana');
+  assert.ok(chat.setAvatar(ana, mkJpg(ana)).ok);
+  chat.followUser('Ben', 'Ana');
+  const p = chat.profile('Ana', 'Ben');
+  assert.ok(p.avatar.includes('/api/chat/avatar/'), 'avatar awam tanpa tandatangan');
+  assert.equal(p.followersCount, 1);
+  assert.equal(p.following, true, 'Ben (penonton) sudah ikuti Ana');
+  assert.equal(p.followsMe, false, 'Ana tidak ikuti Ben');
+  assert.equal(chat.profile('Ana', 'Ana').following, false, 'diri sendiri sentiasa false');
+  assert.ok(chat.removeAvatar('Ana').ok);
+  assert.equal(chat.profile('Ana').avatar, null);
+});
+
+test('setAvatar: bukan milik / bukan gambar ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const mid = mkJpg(chat.findUser('Ben'));
+  assert.ok(chat.setAvatar(chat.findUser('Ana'), mid).error, 'fail orang lain → ditolak');
+  const vid = chat.addMedia(chat.findUser('Ana'), Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(64)]), {});
+  assert.ok(chat.setAvatar(chat.findUser('Ana'), vid.media.id).error, 'video bukan gambar → ditolak');
+});
+
+test('post: create/like/komen + feed pengikut terbit, penulis blokir tidak nampak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3'); chat.register('Dan', 'pass4');
+  assert.ok(chat.createPost('Ana', '   ').error, 'post kosong ditolak');
+  const p = chat.createPost('Ana', 'halo dunia').post;
+  assert.ok(p.id && p.t === 'halo dunia');
+  assert.equal(chat.createPost('Dan', 'x'.repeat(900)).post.t.length, 500, 'potong MAX_POST');
+  chat.followUser('Ben', 'Ana');
+  const f = chat.feedFor('Ben');
+  assert.equal(f.posts.length, 1, 'pengikut nampak post');
+  assert.equal(chat.feedFor('Cia').posts.length, 0, 'orang luar tak nampak');
+  assert.equal(chat.feedFor('Ana').posts.length, 1, 'penulis nampak post sendiri');
+  assert.ok(chat.likePost('Ben', p.id).liked, 'like pertama aktif');
+  assert.equal(chat.likePost('Ben', p.id).liked, false, 'like dua kali → togol keluar');
+  assert.ok(chat.commentPost('Cia', p.id, '  ').error, 'komen kosong ditolak');
+  const c = chat.commentPost('Ben', p.id, 'mantap');
+  assert.equal(c.post.comments.length, 1);
+  assert.equal(c.post.comments[0].from, 'Ben');
+  assert.ok(chat.delPost('Ben', p.id).error, 'bukan pemilik → padam ditolak');
+  chat.blockUser('Ana', 'Ben');
+  assert.equal(chat.feedFor('Ben').posts.length, 0, 'penulis sekat → post hilang dari feed');
+});
+
+test('post media: lampiran milik sendiri sahaja + url hidrasi', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const ana = chat.findUser('Ana');
+  const mid = mkJpg(ana);
+  assert.ok(chat.createPost('Ben', 'curi', [mid]).error, 'fail orang lain tak boleh dilampirkan');
+  const p = chat.createPost('Ana', 'ada gambar', [mid]).post;
+  assert.equal(p.media.length, 1);
+  assert.ok(p.media[0].url && p.media[0].url.includes('/api/chat/media/'), 'url HMAC hadir pada paparan');
+  assert.ok(chat.delPost('Ana', p.id).ok);
+  assert.equal(chat.load().media[mid], undefined, 'post dipadam → fail dileraikan');
+});
+
+test('notif: like/komen/follow/mention sampai; blokir & sendiri tidak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const p = chat.createPost('Ana', 'projek saya').post;
+  assert.equal(chat.pushNotif('Ana', 'palsu', {}), undefined, 'jenis tidak dikenali diabaikan');
+  chat.likePost('Ben', p.id);
+  chat.commentPost('Ben', p.id, 'terbaik');
+  chat.followUser('Cia', 'Ana');
+  chat.likePost('Ana', p.id); // like sendiri → tiada notif
+  let n = chat.notifList('Ana');
+  assert.equal(n.notifs.length, 3, 'like + komen + follow');
+  assert.equal(n.unread, 3);
+  assert.ok(n.notifs.every(x => x.actorName));
+  chat.blockUser('Ben', 'Ana');
+  chat.pushNotif('Ana', 'like', { actor: chat.findUser('Ben').id, post: p.id });
+  assert.equal(chat.notifList('Ana').notifs.filter(x => x.type === 'like').length, 1, 'penyekat tidak menembusi notif');
+  chat.createPost('Cia', 'helo @Ana dan @999999');
+  assert.ok(chat.notifList('Ana').notifs.some(x => x.type === 'mention'), 'mention @nama → notif');
+  assert.ok(chat.markNotifRead('Ana').ok);
+  assert.equal(chat.notifList('Ana').unread, 0);
+  assert.ok(chat.clearNotifs('Ana').ok);
+  assert.equal(chat.notifList('Ana').notifs.length, 0);
+});
+
+test('cerita: aktif 24 jam, luput bila tamat, hanya penulis boleh padam', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  assert.ok(chat.createStory('Ana', '  ').error, 'cerita kosong ditolak');
+  const st = chat.createStory('Ana', 'pagi').story;
+  chat.followUser('Ben', 'Ana');
+  assert.equal(chat.storiesOf('Ben').length, 1, 'pengikut nampak cerita');
+  assert.equal(chat.storiesOf('Ana')[0].mine, true, 'milik sendiri ditanda');
+  assert.ok(chat.viewStory('Ben', st.id).ok);
+  assert.equal(chat.load().stories[st.id].views.length, 1);
+  assert.ok(chat.delStory('Ben', st.id).error, 'bukan pemilik → ditolak');
+  chat.load().stories[st.id].ts = Date.now() - chat.STORY_TTL - 1000;
+  chat.pruneStories();
+  assert.equal(chat.storiesOf('Ben').length, 0, 'luput selepas 24 jam');
+  assert.equal(chat.load().stories[st.id], undefined, 'rekod dibuang prune');
+});
+
+test('sweep: media cerita yang luput dileraikan daripada stor', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const mid = mkJpg(chat.findUser('Ana'));
+  const st = chat.createStory('Ana', 'gambar', [mid]).story;
+  assert.ok(chat.load().media[mid], 'media melekat pada cerita');
+  chat.load().stories[st.id].ts = Date.now() - chat.STORY_TTL - 1000;
+  chat.flush(); // jalankan pembersihan dalaman melalui sweep (setInterval sukar ditunggu)
+  // panggil prune secara terus (sweep memakainya juga)
+  chat.pruneStories();
+  assert.equal(chat.load().media[mid], undefined, 'fail cerita luput dibuang');
+});
+
+test('deleteAccount: post/cerita/notif/follow dibersihkan dua sisi', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const anaId = idOf('Ana');
+  chat.followUser('Ben', 'Ana');
+  chat.followUser('Ana', 'Cia');
+  const p = chat.createPost('Ana', 'selamat tinggal').post;
+  chat.commentPost('Ben', p.id, 'rip');
+  chat.likePost('Cia', p.id);
+  chat.createStory('Ana', 'cerita');
+  assert.ok(chat.deleteAccount('Ana', 'pass1').ok);
+  assert.equal(Object.keys(chat.load().posts).length, 0, 'post Ana tiada');
+  assert.equal(Object.keys(chat.load().stories).length, 0, 'cerita Ana tiada');
+  assert.equal(chat.findUser('Ben').followers.length, 0, 'Ana buang dari followers Ben');
+  assert.equal(chat.findUser('Cia').following.length, 0, 'Ana buang dari following Cia');
+  assert.equal(chat.notifList('Cia').notifs.length, 0, 'notif kepada Ana / oleh Ana dileraikan');
+});
+
+// ─── Laluan HTTP sosial ───
+test('P /api/chat/follow + G /feed + /posts/:id melalui laluan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const tokA = chat.issueSession('Ana'), tokB = chat.issueSession('Ben');
+  assert.equal(hit(routes, 'P /api/chat/follow', reqOf(tokB, { peer: 'Ana' })).code, 200);
+  assert.equal(hit(routes, 'P /api/chat/follow', reqOf(tokB, { peer: 'Ana' })).code, 400, 'ikuti dua kali → 400');
+  let r = hit(routes, 'P /api/chat/posts', reqOf(tokA, { text: 'halo' }));
+  assert.equal(r.code, 200);
+  const pid = r.body.post.id;
+  r = hit(routes, 'G /api/chat/feed', reqGet(tokB, {}));
+  assert.equal(r.code, 200); assert.equal(r.body.posts.length, 1);
+  r = hit(routes, 'P /api/chat/posts/like', reqOf(tokB, { id: pid }));
+  assert.equal(r.code, 200); assert.equal(r.body.liked, true);
+  r = hit(routes, 'P /api/chat/posts/comment', reqOf(tokB, { id: pid, text: 'ok' }));
+  assert.equal(r.code, 200); assert.equal(r.body.post.comments.length, 1);
+  r = hit(routes, 'G /api/chat/posts/:id', reqGP(tokB, {}, { id: pid }));
+  assert.equal(r.code, 200); assert.equal(r.body.post.id, pid);
+  r = hit(routes, 'G /api/chat/posts/:id', reqGP(tokB, {}, { id: 'xxxxxxxxxxxx' }));
+  assert.equal(r.code, 404, 'post tiada → 404');
+  r = hit(routes, 'P /api/chat/posts', reqOf(tokB, { text: 'saya ikut balik' }));
+  assert.equal(r.code, 200);
+  assert.equal(hit(routes, 'G /api/chat/notifs', reqGet(tokA, {})).body.notifs.length, 3, 'follow+like+komen masuk notif');
+});
+
+test('G /api/chat/follows + /discover: senarai dua hala + cadangan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  chat.followUser('Ana', 'Ben');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Cia');
+  let r = hit(routes, 'G /api/chat/follows', reqGet(tok, { q: 'Ben', which: 'followers' }));
+  assert.equal(r.code, 200); assert.equal(r.body.list.length, 1); assert.equal(r.body.list[0].name, 'Ana');
+  r = hit(routes, 'G /api/chat/follows', reqGet(tok, { q: 'Ana', which: 'following' }));
+  assert.equal(r.body.list.length, 1); assert.equal(r.body.list[0].name, 'Ben');
+  r = hit(routes, 'G /api/chat/discover', reqGet(tok, {}));
+  assert.equal(r.code, 200);
+  assert.equal(r.body.people.length, 2, 'Cia belum ikuti sesiapa → Ana + Ben dicadang (diri sendiri keluar)');
+  chat.followUser('Cia', 'Ana');
+  r = hit(routes, 'G /api/chat/discover', reqGet(tok, {}));
+  assert.equal(r.body.people.length, 1, 'yang sudah diikuti tidak dicadang lagi');
+  assert.equal(r.body.people[0].name, 'Ben');
+});
+
+test('P /api/chat/stories + notifs/read melalui laluan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  chat.followUser('Ben', 'Ana');
+  let r = hit(routes, 'P /api/chat/stories', reqOf(tok, { text: 'cerita hari ini' }));
+  assert.equal(r.code, 200); assert.ok(r.body.story.id);
+  r = hit(routes, 'G /api/chat/stories', reqGet(chat.issueSession('Ben'), {}));
+  assert.equal(r.body.stories.length, 1);
+  const p = hit(routes, 'P /api/chat/posts', reqOf(tok, { text: 'satu' })).body.post;
+  hit(routes, 'P /api/chat/posts/like', reqOf(chat.issueSession('Ben'), { id: p.id }));
+  r = hit(routes, 'P /api/chat/notifs/read', reqOf(tok, {}));
+  assert.equal(r.code, 200);
+  assert.equal(hit(routes, 'G /api/chat/notifs', reqGet(tok, {})).body.unread, 0);
+});

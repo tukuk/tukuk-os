@@ -364,6 +364,110 @@
   .girow .giact { background:none; border:1px solid var(--line); color:var(--muted); border-radius:6px; padding:2px 7px; cursor:pointer; font-size:.72rem; }
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#1c2230; color:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 16px; font-size:.84rem; z-index:100; display:none; box-shadow:0 6px 22px rgba(0,0,0,.4); }
 
+  /* ─── Sosial: suapan, cerita, ikuti, notifikasi, avatar ─── */
+  .ava.img { overflow:hidden; background:#2f3d5c !important; }
+  .ava.img img { width:100%; height:100%; object-fit:cover; display:block; }
+  #feedBtn, #notifBtn { width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:1rem; cursor:pointer; flex:none; position:relative; }
+  #feedBtn:hover, #notifBtn:hover { border-color:var(--accent); color:var(--accent); }
+  #notifBtn .nb, #top .tbadge { position:absolute; top:-3px; right:-3px; min-width:16px; height:16px; padding:0 4px; border-radius:9px; background:var(--danger); color:#fff; font-size:.62rem; font-weight:700; line-height:16px; text-align:center; }
+  #feedModal .mbox, #notifModal .mbox { width:min(560px,96vw); max-height:88vh; }
+  .ftabs { display:flex; gap:6px; margin-bottom:10px; border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .ftabs button { flex:1; background:var(--bg); border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:7px 0; cursor:pointer; font:inherit; font-size:.82rem; }
+  .ftabs button.on { color:var(--text); border-color:var(--accent); font-weight:700; }
+  /* Reben cerita */
+  .stories { display:flex; gap:12px; overflow-x:auto; padding:4px 2px 12px; border-bottom:1px solid var(--line); margin-bottom:10px; scrollbar-width:thin; }
+  .stories::-webkit-scrollbar { height:6px; }
+  .stoy { flex:none; width:60px; text-align:center; cursor:pointer; }
+  .stoy .ring { width:56px; height:56px; border-radius:50%; padding:3px; background:conic-gradient(var(--accent),#e17076,#a584cf,var(--accent)); margin:0 auto; }
+  .stoy.seen .ring { background:var(--line); }
+  .stoy .ring > div { width:100%; height:100%; border-radius:50%; overflow:hidden; background:#2f3d5c; border:3px solid var(--panel); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
+  .stoy .ring img { width:100%; height:100%; object-fit:cover; display:block; }
+  .stoy span { display:block; font-size:.66rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px; }
+  .stoy.add .ring > div { background:var(--bg); color:var(--accent); font-size:1.5rem; border-style:dashed; }
+  /* Kartu post */
+  .pcard { border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--bg); }
+  .phead { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .phead .ava { width:38px; height:38px; font-size:.9rem; }
+  .phead .pn { flex:1; min-width:0; }
+  .phead .pn b { font-size:.86rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+  .phead .pn b:hover { color:var(--accent); }
+  .phead .pn small { font-size:.7rem; color:var(--muted); }
+  .ptext { font-size:.9rem; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere; }
+  .pact { display:flex; gap:6px; margin-top:8px; align-items:center; }
+  .pact button { background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:4px 10px; cursor:pointer; font:inherit; font-size:.78rem; display:inline-flex; gap:5px; align-items:center; }
+  .pact button:hover { color:var(--accent); border-color:var(--accent); }
+  .pact button.liked { color:#e17076; border-color:#e17076; }
+  .pact button.del { margin-left:auto; }
+  .pact button.del:hover { color:var(--danger); border-color:var(--danger); }
+  .pcomments { margin-top:8px; border-top:1px solid var(--line); padding-top:8px; }
+  .cmt { display:flex; gap:8px; margin-bottom:7px; }
+  .cmt .ava { width:26px; height:26px; font-size:.68rem; flex:none; }
+  .cmt .cb { flex:1; min-width:0; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:5px 9px; font-size:.82rem; }
+  .cmt .cb b { color:var(--accent); font-size:.76rem; margin-right:5px; cursor:pointer; }
+  .cmt .cmedia { margin-top:4px; }
+  .cmtform { display:flex; gap:6px; margin-top:6px; }
+  .cmtform input { flex:1; margin:0; }
+  .cmtform button { background:var(--accent); border:none; color:#fff; border-radius:8px; padding:0 12px; cursor:pointer; font:inherit; font-size:.8rem; flex:none; }
+  /* Komposer post */
+  .composer { display:flex; gap:8px; align-items:flex-start; margin-bottom:10px; }
+  .composer .ava { width:38px; height:38px; font-size:.9rem; flex:none; }
+  .composer .cw { flex:1; min-width:0; }
+  .composer textarea { width:100%; box-sizing:border-box; resize:vertical; min-height:56px; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:9px 11px; font:inherit; font-size:.9rem; outline:none; }
+  .composer textarea:focus { border-color:var(--accent); }
+  .crow { display:flex; gap:8px; align-items:center; margin-top:6px; }
+  .crow .cbtns { display:flex; gap:6px; }
+  .crow .cbtns button { background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:.86rem; }
+  .crow .cbtns button:hover { color:var(--accent); border-color:var(--accent); }
+  .crow .go { margin-left:auto; background:var(--accent); border:none; color:#fff; border-radius:9px; padding:7px 16px; cursor:pointer; font:inherit; font-size:.84rem; font-weight:700; }
+  .crow .go:disabled { opacity:.5; cursor:default; }
+  .ftray { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .ftray:empty { display:none; }
+  .fcell { position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; background:#0b1120; border:1px solid var(--line); }
+  .fcell img, .fcell video { width:100%; height:100%; object-fit:cover; display:block; }
+  .fcell .x { position:absolute; top:2px; right:2px; background:rgba(0,0,0,.65); color:#fff; border:none; border-radius:6px; width:18px; height:18px; cursor:pointer; font-size:.7rem; line-height:1; padding:0; }
+  .fcell .st { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(6,10,20,.72); color:#fff; font-size:.66rem; }
+  /* Terokai / ikuti */
+  .ppl { display:flex; gap:10px; align-items:center; padding:8px; border-radius:8px; cursor:pointer; }
+  .ppl:hover { background:color-mix(in srgb, var(--accent) 12%, transparent); }
+  .ppl .ava { width:40px; height:40px; font-size:.9rem; flex:none; }
+  .ppl .pi { flex:1; min-width:0; }
+  .ppl .pi b { font-size:.88rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ppl .pi small { font-size:.72rem; color:var(--muted); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ppl .fol { background:var(--accent); border:1px solid var(--accent); color:#fff; border-radius:8px; padding:5px 12px; cursor:pointer; font:inherit; font-size:.78rem; flex:none; }
+  .ppl .fol.on { background:var(--bg); color:var(--muted); border-color:var(--line); }
+  .pstats { display:flex; gap:16px; margin:6px 0 10px; }
+  .pstats button { background:none; border:none; color:var(--text); cursor:pointer; font:inherit; padding:0; }
+  .pstats button:hover { color:var(--accent); }
+  .pstats b { display:block; font-size:.98rem; }
+  .pstats span { font-size:.72rem; color:var(--muted); }
+  /* Notifikasi */
+  .ncard { display:flex; gap:10px; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .ncard:hover { background:color-mix(in srgb, var(--accent) 10%, transparent); }
+  .ncard.unread { background:color-mix(in srgb, var(--accent) 8%, transparent); }
+  .ncard .ava { width:36px; height:36px; font-size:.82rem; flex:none; }
+  .ncard .nn { flex:1; min-width:0; font-size:.82rem; line-height:1.4; }
+  .ncard .nn b { color:var(--accent); }
+  .ncard .nn .nx { color:var(--muted); font-size:.76rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; margin-top:2px; }
+  .ncard .nt { font-size:.68rem; color:var(--muted); flex:none; align-self:flex-start; }
+  /* Papar cerita penuh */
+  #storyView { position:fixed; inset:0; background:rgba(3,6,12,.96); display:none; align-items:center; justify-content:center; flex-direction:column; z-index:98; }
+  #storyView.on { display:flex; }
+  #storyView .pbar { position:absolute; top:8px; left:12px; right:12px; display:flex; gap:5px; z-index:2; }
+  #storyView .pbar i { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,.3); }
+  #storyView .pbar i.on { background:#fff; }
+  #storyView .shead { position:absolute; top:20px; left:16px; right:16px; display:flex; align-items:center; gap:10px; z-index:2; color:#fff; }
+  #storyView .shead .ava { width:34px; height:34px; font-size:.8rem; }
+  #storyView .shead b { font-size:.88rem; }
+  #storyView .shead small { font-size:.72rem; opacity:.8; }
+  #storyView .shead .sc { margin-left:auto; background:rgba(255,255,255,.16); border:none; color:#fff; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:.78rem; }
+  #storyView .stage { max-width:96vw; max-height:80vh; display:flex; align-items:center; justify-content:center; }
+  #storyView .stage img, #storyView .stage video { max-width:96vw; max-height:80vh; border-radius:8px; }
+  #storyView .scap { color:#e7eefb; font-size:.9rem; max-width:92vw; text-align:center; margin-top:12px; white-space:pre-wrap; }
+  #storyView .snav { position:absolute; inset:0; display:flex; }
+  #storyView .snav button { flex:1; background:none; border:none; cursor:pointer; }
+  #storyView .sside { position:absolute; right:16px; bottom:20px; display:flex; gap:8px; z-index:2; }
+  #storyView .sside button { background:rgba(255,255,255,.16); border:none; color:#fff; border-radius:8px; padding:7px 12px; cursor:pointer; font-size:.8rem; }
+
   @media (max-width:760px) {
     #side { width:100%; position:absolute; inset:0; z-index:5; }
     #main { display:none; }
@@ -412,8 +516,10 @@
 <div id="app" hidden>
   <aside id="side">
     <div id="sideTop">
-      <button id="newBtn" title="Sembang baru / directory">➕</button>
+      <button id="feedBtn" title="Suapan sosial">📰</button>
+      <button id="notifBtn" title="Notifikasi">🔔</button>
       <input id="q" placeholder="Cari sembang atau mesej…" autocomplete="off">
+      <button id="newBtn" title="Sembang baru / directory">➕</button>
     </div>
     <div id="chats"></div>
     <div id="me" title="Profil & Tukuk ID saya"><div class="ava" id="meAva">?</div><b id="meName"></b><button class="idno" id="meIdBtn" title="Buka profil saya">#—</button><button id="outBtn">Keluar</button></div>
@@ -547,6 +653,10 @@
 
   <div class="tab" id="tabProf">
     <div id="stMe"></div>
+    <div class="crow" style="margin:2px 0 8px">
+      <div class="cbtns"><button id="stAvaBtn" title="Muat naik gambar profil">🤳 Gambar profil</button><button id="stAvaDel" title="Buang gambar profil">🗑 Buang gambar</button></div>
+    </div>
+    <input type="file" id="stAvaFile" accept="image/*" style="display:none">
     <div class="pflabel">Nama paparan</div><input id="stName" maxlength="20" autocomplete="off">
     <div class="pflabel">Bio (pilihan)</div><input id="stBio" maxlength="120" placeholder="Satu baris tentang anda" autocomplete="off">
     <div class="pfmeta">Tukuk ID anda bersifat kekal — hanya nama yang boleh ditukar.</div>
@@ -628,13 +738,67 @@
 <div class="modal" id="profModal"><div class="mbox">
   <h3>🪪 Profil</h3>
   <div id="pfHead"></div>
+  <div id="pfStats"></div>
+  <div id="pfPosts"></div>
   <div class="mbtns">
     <button id="pfClose">Tutup</button>
+    <button id="pfFollow" hidden>➕ Ikuti</button>
     <button id="pfPal">➕ Kawan</button>
     <button id="pfBlock">🚫 Sekat</button>
     <button class="prim" id="pfDm">📨 Hantar DM</button>
   </div>
 </div></div>
+
+<!-- ─── Suapan sosial (cerita + post + terokai) ─── -->
+<div class="modal" id="feedModal"><div class="mbox">
+  <h3>📰 Suapan</h3>
+  <div class="ftabs" id="fTabs">
+    <button data-t="Feed" class="on">📰 Suapan</button>
+    <button data-t="Explore">🧭 Terokai</button>
+  </div>
+  <div id="tabFeed">
+    <div class="stories" id="storyStrip"></div>
+    <div class="composer">
+      <div class="ava" id="cAva">?</div>
+      <div class="cw">
+        <textarea id="postText" rows="2" maxlength="500" placeholder="Apa yang sedang anda fikirkan? (@nama untuk sebut orang)"></textarea>
+        <div class="ftray" id="postTray"></div>
+        <div class="crow">
+          <div class="cbtns">
+            <button id="postImg" title="Lampirkan gambar/video">🖼</button>
+            <button id="postStory" title="Tambah cerita (24 jam)">📕</button>
+          </div>
+          <button class="go" id="postGo">Siarkan</button>
+        </div>
+      </div>
+    </div>
+    <div id="postList"></div>
+  </div>
+  <div id="tabExplore" hidden>
+    <div class="pflabel" id="expLabel">Ikuti yang aktif</div>
+    <div id="expList"></div>
+  </div>
+  <div class="mbtns"><button class="prim" id="feedClose">Tutup</button></div>
+  <input type="file" id="postFile" accept="image/*,video/*" multiple style="display:none">
+  <input type="file" id="storyFile" accept="image/*,video/*" multiple style="display:none">
+</div></div>
+
+<!-- ─── Notifikasi ─── -->
+<div class="modal" id="notifModal"><div class="mbox">
+  <h3>🔔 Notifikasi</h3>
+  <div id="notifList"></div>
+  <div class="mbtns"><button id="notifClear">🗑 Kosongkan</button><button class="prim" id="notifClose">Tutup</button></div>
+</div></div>
+
+<!-- ─── Paparan cerita penuh ─── -->
+<div id="storyView">
+  <div class="pbar" id="svBar"></div>
+  <div class="shead" id="svHead"></div>
+  <div class="stage" id="svStage"></div>
+  <div class="scap" id="svCap"></div>
+  <div class="snav"><button id="svPrevZone"></button><button id="svNextZone"></button></div>
+  <div class="sside"><button id="svDel" hidden>🗑</button><button id="svClose">✕ Tutup</button></div>
+</div>
 
 <script>
 (() => {
@@ -658,6 +822,10 @@
   const roomsSigInit = '';
   let roomsSig = roomsSigInit, roomsSigCur = null, msgSig = '';
   let pending = [], seqKey = 1, busy = false;   // lampiran menunggu dihantar
+  // Keadaan sosial: avatar saya, lencana notifikasi, suapan + komposer + cerita.
+  let myAvatar = null, notifUnread = 0;
+  let feedPosts = [], feedStories = [], feedFiles = [], feedSeq = 1, feedBusy = false, feedTab = 'Feed';
+  let storyQueue = [], storyIdx = 0, storyTimer = null;
   let liveOn = false, liveCtl = null, liveTimer = null, liveWatch = null, liveAt = 0,
       liveRetry = 0, tpClear = null;   // aliran langsung
   let serverResults = [], searchTimer = null;   // hasil carian pelayan
@@ -969,7 +1137,7 @@
     $('auth').hidden = true; $('app').hidden = false;
     paintMe();
     if (innerWidth > 760) $('app').dataset.open = '1';
-    loadRooms(true); loadPeople(); refreshMe(); loadSocial();
+    loadRooms(true); loadPeople(); refreshMe(); loadSocial(); paintNotifBadge();
     restartPollers();
     stopStream(); openStream();
     pollMsgs();
@@ -977,14 +1145,16 @@
   }
   function paintMe() {
     $('meName').textContent = me;
-    $('meAva').textContent = initials(me); $('meAva').style.background = colorOf(me);
+    setAvaEl($('meAva'), me, myAvatar);
+    const ca = $('cAva'); if (ca) setAvaEl(ca, me, myAvatar);
     $('meIdBtn').textContent = myId ? '#' + myId : '#—';
   }
   async function refreshMe() {
     try {
       const j = await call('/me'); if (!j.name) return;
       me = j.name; myId = j.id || myId; myBio = j.bio || ''; myJoined = j.joined || null;
-      localStorage.setItem(NKEY, me); paintMe();
+      myAvatar = j.avatar || null; notifUnread = j.notifUnread || 0;
+      localStorage.setItem(NKEY, me); paintNotifBadge(); paintMe();
     } catch { /* sesi mungkin luput — poll akan handle */ }
   }
   $('outBtn').onclick = async () => {
@@ -1260,7 +1430,12 @@
       if ($('peopleModal').classList.contains('open')) renderPeople($('pq').value.trim());
       return;
     }
-    if (ev === 'social') { loadSocial(); loadPeople(); return; }
+    if (ev === 'social') { loadSocial(); loadPeople(); if ($('feedModal').classList.contains('open')) loadFeed(); return; }
+    if (ev === 'post') { mergeFeedPost(j.post); if ($('profModal').classList.contains('open') && profCur && j.post && j.post.fid === profCur) loadProfPosts(profCur); return; }
+    if (ev === 'postdel') { feedPosts = feedPosts.filter(p => p.id !== j.id); if ($('feedModal').classList.contains('open')) renderFeed(); return; }
+    if (ev === 'story') { mergeFeedStory(j.story); if ($('feedModal').classList.contains('open')) renderStories(); return; }
+    if (ev === 'storydel') { feedStories = feedStories.filter(s => s.id !== j.id); if ($('feedModal').classList.contains('open')) renderStories(); return; }
+    if (ev === 'notif') { onNotifIn(j.notif); return; }
     if (ev === 'room') { loadRooms(false); return; }
     if (ev === 'delroom') {
       rooms = rooms.filter(x => x.id !== j.room);
@@ -2009,6 +2184,12 @@
   function hideCtx() { $('ctx').style.display = 'none'; }
   document.addEventListener('click', e => { const m = $('ctx'); if (m.style.display === 'block' && !m.contains(e.target)) hideCtx(); });
   document.addEventListener('keydown', e => {
+    if ($('storyView').classList.contains('on')) {
+      if (e.key === 'Escape') closeStory();
+      else if (e.key === 'ArrowRight') nextStory();
+      else if (e.key === 'ArrowLeft') prevStory();
+      return;
+    }
     if ($('view').classList.contains('on')) {
       if (e.key === 'Escape') closeView();
       else if (e.key === 'ArrowRight') stepView(1);
@@ -2017,7 +2198,7 @@
     }
     if (e.key !== 'Escape') return;
     hideCtx();
-    ['peopleModal', 'groupModal', 'fwdModal', 'setModal', 'profModal', 'prankModal', 'grpInfoModal'].forEach(id => $(id).classList.remove('open'));
+    ['peopleModal', 'groupModal', 'fwdModal', 'setModal', 'profModal', 'prankModal', 'grpInfoModal', 'feedModal', 'notifModal'].forEach(id => $(id).classList.remove('open'));
     if (replyTo || editing) closeReplyEdit();
   });
 
@@ -2325,7 +2506,7 @@
     const shared = rooms.filter(r => r.kind === 'dm' && r.peerId === p.id).length;
     const pal = isPal(p.id), blk = !!p.blocked || isBlk(p.id);
     socialPool[p.id] = Object.assign({}, socialPool[p.id] || {}, p, { friend: pal, blocked: blk });
-    $('pfHead').innerHTML = '<div class="pfhead"><div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div>' +
+    $('pfHead').innerHTML = '<div class="pfhead">' + avHtml(p.name, p.avatar, p.online) +
       '<div><b>' + esc(p.name) + '</b><span class="idchip" id="pfCopy" title="Salin Tukuk ID">🆔 ' + p.id + ' ⧉</span></div></div>' +
       '<div class="pfmeta">' + (p.bio ? esc(p.bio) + '<br>' : '<i>Tiada bio.</i><br>') +
       (p.joined ? 'Sertai ' + dateLabel(p.joined) + '<br>' : '') +
@@ -2339,13 +2520,13 @@
     $('pfDm').onclick = () => startDm(p.id, p);
     $('pfPal').onclick = () => doSocial(pal ? 'rm' : 'add', p.id);
     $('pfBlock').onclick = () => doSocial(blk ? 'unblk' : 'blk', p.id);
+    patchProf(p);
+    loadProfPosts(p.id);
     $('profModal').classList.add('open');
-    // Header DM/direktori tak bawa tarikh sertai → tambatkan daripada pelayan bila sempat.
-    if (p.joined == null) {
-      call('/user?q=' + encodeURIComponent(p.id))
-        .then(j => { if (j && j.profile && j.profile.id === profCur) openProf(j.profile); })
-        .catch(() => {});
-    }
+    // Header DM/direktori tak bawa kiraan penuh → selaraskan daripada pelayan bila sempat.
+    call('/user?q=' + encodeURIComponent(p.id))
+      .then(j => { if (j && j.profile && j.profile.id === profCur) { socialPool[p.id] = Object.assign(socialPool[p.id] || {}, j.profile); patchProf(j.profile); } })
+      .catch(() => {});
   }
   async function startDm(peer, prof) {
     try {
@@ -2488,7 +2669,7 @@
   }
   function openSettings(tab) {
     $('stName').value = me; $('stBio').value = myBio;
-    $('stMe').innerHTML = '<div class="pfhead"><div class="ava" style="background:' + colorOf(me) + '">' + esc(initials(me)) + '<span class="dot"></span></div>' +
+    $('stMe').innerHTML = '<div class="pfhead">' + avHtml(me, myAvatar, true) +
       '<div><b>' + esc(me) + '</b><span class="idchip" id="stCopy" title="Salin Tukuk ID">🆔 ' + myId + ' ⧉</span></div></div>' +
       '<div class="pfmeta">' + (myJoined ? 'Sertai ' + dateLabel(myJoined) + '<br>' : '') +
       'Nombor ini kekal seumur akaun. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.</div>';
@@ -2666,6 +2847,408 @@
   };
   $('stApkPwa').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
 
+  // ─── Sosial: avatar, ikuti, post, cerita, notifikasi ───
+  const FEED_MAX = 4;   // fail satu post (sepadan MAX_POST_MEDIA pelayan)
+  let notifsCache = [], postCache = {};
+
+  function avHtml(name, avatar, online) {
+    const dot = online ? '<span class="dot"></span>' : '';
+    if (avatar) return '<div class="ava img"><img src="' + esc(avatar) + '" alt="">' + dot + '</div>';
+    return '<div class="ava" style="background:' + colorOf(name) + '">' + esc(initials(name)) + dot + '</div>';
+  }
+  function setAvaEl(el, name, avatar) {
+    if (!el) return;
+    if (avatar) { el.className = 'ava img'; el.innerHTML = '<img src="' + esc(avatar) + '" alt="">'; }
+    else { el.className = 'ava'; el.style.background = colorOf(name); el.textContent = initials(name); }
+  }
+  function timeAgo(ts) {
+    const d = Date.now() - (ts || 0);
+    if (d < 60000) return 'baru sahaja';
+    if (d < 3600000) return Math.floor(d / 60000) + 'm';
+    if (d < 86400000) return Math.floor(d / 3600000) + 'j';
+    return Math.floor(d / 86400000) + 'h';
+  }
+  function paintNotifBadge() {
+    const btn = $('notifBtn'); if (!btn) return;
+    let b = btn.querySelector('.nb');
+    if (notifUnread > 0) { if (!b) { b = document.createElement('span'); b.className = 'nb'; btn.appendChild(b); } b.textContent = notifUnread > 99 ? '99+' : notifUnread; }
+    else if (b) b.remove();
+  }
+
+  // Muat naik satu blob mentah ke stor media sosial (flag: 'post' | 'avatar').
+  function uploadBlob(flag, blob, meta) {
+    meta = meta || {};
+    return new Promise((resolve, reject) => {
+      const q = '?' + flag + '=1' + (meta.w ? '&w=' + Math.round(meta.w) + '&h=' + Math.round(meta.h) : '') + (meta.dur ? '&dur=' + Math.round(meta.dur) : '');
+      const x = new XMLHttpRequest();
+      x.open('POST', API + '/media' + q, true);
+      x.setRequestHeader('Authorization', 'Bearer ' + token);
+      x.setRequestHeader('Content-Type', (blob && blob.type) || 'application/octet-stream');
+      x.onload = () => { let o = {}; try { o = JSON.parse(x.responseText || '{}'); } catch { o = { error: 'Respons tidak sah (' + x.status + ').' }; } if (x.status >= 200 && x.status < 300 && !o.error) resolve(o); else reject(new Error(o.error || 'Muat naik gagal (' + x.status + ').')); };
+      x.onerror = () => reject(new Error('Rangkaian terputus — muat naik gagal.'));
+      x.send(blob);
+    });
+  }
+  async function uploadSocialMedia(flag, file) {
+    const kind = kindOf(file);
+    if (!kind) throw new Error('Fail bukan gambar atau video.');
+    if (kind === 'video') { const u = URL.createObjectURL(file); const pr = await probeVideo(u); URL.revokeObjectURL(u); return uploadBlob(flag, file, { w: pr.w, h: pr.h, dur: pr.dur }); }
+    const pr = await shrinkImage(file);
+    return uploadBlob(flag, pr.blob, { w: pr.w, h: pr.h });
+  }
+
+  // ── Komposer post (lampiran diproses awal, dimuat naik semasa siar) ──
+  async function addFeedFiles(list) {
+    for (const f of Array.from(list || [])) {
+      const kind = kindOf(f);
+      if (!kind) { toast('Hanya gambar atau video boleh dilampirkan.'); continue; }
+      if (feedFiles.length >= FEED_MAX) { toast('Maksimum ' + FEED_MAX + ' fail satu post.'); break; }
+      if (f.size > (kind === 'video' ? VID_CAP : IMG_CAP)) { toast('Fail terlalu besar (' + mbytes(f.size) + ').'); continue; }
+      const it = { key: feedSeq++, kind, blob: f, url: URL.createObjectURL(f), status: 'wait' };
+      feedFiles.push(it); renderFeedTray();
+      try {
+        if (kind === 'video') { const pr = await probeVideo(it.url); it.w = pr.w; it.h = pr.h; it.dur = pr.dur; }
+        else { const pr = await shrinkImage(f); it.blob = pr.blob; it.w = pr.w; it.h = pr.h; if (pr.blob !== f) { URL.revokeObjectURL(it.url); it.url = URL.createObjectURL(pr.blob); } }
+        it.status = 'ready';
+      } catch (e) { it.status = 'err'; it.err = e.message; }
+      renderFeedTray();
+    }
+  }
+  function renderFeedTray() {
+    const t = $('postTray'); if (!t) return;
+    t.innerHTML = feedFiles.map(it =>
+      '<div class="fcell" data-k="' + it.key + '">' +
+      (it.kind === 'video' ? '<video src="' + esc(it.url) + '" muted></video>' : '<img src="' + esc(it.url) + '" alt="">') +
+      (it.status !== 'ready' ? '<div class="st">' + (it.status === 'err' ? esc(String(it.err || 'gagal').slice(0, 20)) : '…') + '</div>' : '') +
+      '<button class="x" title="Buang">✕</button></div>').join('');
+    for (const el of t.querySelectorAll('.fcell')) el.querySelector('.x').onclick = () => {
+      const it = feedFiles.find(x => x.key === +el.dataset.k);
+      if (it) { try { URL.revokeObjectURL(it.url); } catch { /* noop */ } }
+      feedFiles = feedFiles.filter(x => x !== it); renderFeedTray();
+    };
+  }
+  function clearFeedFiles() { feedFiles.forEach(it => { try { URL.revokeObjectURL(it.url); } catch { /* noop */ } }); feedFiles = []; renderFeedTray(); }
+  async function submitPost() {
+    if (feedBusy) return;
+    const text = $('postText').value.trim();
+    if (feedFiles.some(x => x.status === 'err')) return toast('Ada fail gagal — buang dahulu.');
+    if (!text && !feedFiles.length) return toast('Post kosong.');
+    if (feedFiles.some(x => x.status !== 'ready')) return toast('Tunggu fail siap diproses.');
+    feedBusy = true; $('postGo').disabled = true;
+    try {
+      const ids = [];
+      for (const it of feedFiles) {
+        if (it.media && it.media.id) { ids.push({ id: it.media.id }); continue; }
+        const j = await uploadBlob('post', it.blob, { w: it.w, h: it.h, dur: it.dur });
+        it.media = j.media; ids.push({ id: j.media.id });
+      }
+      const r = await post('/posts', { text, media: ids });
+      if (r.post) { remember([r.post]); mergeFeedPost(r.post); }
+      $('postText').value = ''; clearFeedFiles();
+      toast('Post disiarkan.');
+    } catch (e) { toast(e.message); }
+    feedBusy = false; $('postGo').disabled = false;
+  }
+
+  // ── Suapan: senarai post + reben cerita ──
+  function remember(list) { for (const p of list || []) if (p && p.id) postCache[p.id] = p; }
+  function cmtHtml(c, pid) {
+    const media = (c.media && c.media.length) ? '<div class="cmedia">' + mediaGrid(c) + '</div>' : '';
+    return '<div class="cmt" data-cid="' + esc(c.id) + '" data-pid="' + esc(pid) + '">' + avHtml(c.from, c.avatar, false) +
+      '<div class="cb"><b data-uid="' + c.fid + '">' + esc(c.from) + '</b>' + renderText(c.t || '') + media + '</div></div>';
+  }
+  function renderPostHtml(p) {
+    remember([p]);
+    const liked = p.likes && p.likes[myId];
+    const lc = p.likes ? Object.keys(p.likes).length : 0;
+    const cc = (p.comments || []).length;
+    const mine = p.fid === myId;
+    const media = (p.media && p.media.length) ? mediaGrid(p) : '';
+    const comments = cc ? '<div class="pcomments">' + p.comments.map(c => cmtHtml(c, p.id)).join('') + '</div>' : '';
+    return '<div class="pcard" data-pid="' + esc(p.id) + '">' +
+      '<div class="phead">' + avHtml(p.from, p.avatar, false) +
+      '<div class="pn"><b data-uid="' + p.fid + '">' + esc(p.from) + '</b><small>#' + (p.fid || '') + ' · ' + timeAgo(p.ts) + '</small></div></div>' +
+      (p.t ? '<div class="ptext">' + renderText(p.t) + '</div>' : '') + media +
+      '<div class="pact">' +
+      '<button data-act="like" class="' + (liked ? 'liked' : '') + '">' + (liked ? '❤️' : '🤍') + ' <span>' + lc + '</span></button>' +
+      '<button data-act="cmt">💬 <span>' + cc + '</span></button>' +
+      (mine ? '<button data-act="del" class="del" title="Padam post">🗑</button>' : '') +
+      '</div>' + comments +
+      '<div class="cmtform"><input data-cmtin maxlength="200" placeholder="Tulis komen…"><button data-act="cmtgo">Komen</button></div>' +
+      '</div>';
+  }
+  function wirePostRoot(root) {
+    if (!root) return;
+    for (const card of root.querySelectorAll('.pcard')) {
+      const pid = card.dataset.pid, p = postCache[pid]; if (!p) continue;
+      for (const b of card.querySelectorAll('[data-act]')) b.onclick = e => {
+        e.stopPropagation();
+        const a = b.dataset.act;
+        if (a === 'like') doLike(pid);
+        else if (a === 'del') doDelPost(pid);
+        else if (a === 'cmt') { const i = card.querySelector('[data-cmtin]'); if (i) i.focus(); }
+        else if (a === 'cmtgo') doComment(pid, card);
+      };
+      const cin = card.querySelector('[data-cmtin]');
+      if (cin) cin.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doComment(pid, card); } });
+      for (const w of card.querySelectorAll('[data-uid]')) w.onclick = e => { e.stopPropagation(); openProf({ id: +w.dataset.uid, name: w.textContent }); };
+      for (const cell of card.querySelectorAll('.mcell[data-z]')) cell.onclick = e => {
+        e.stopPropagation();
+        const cmEl = cell.closest('.cmt');
+        const src = cmEl ? ((p.comments || []).find(x => x.id === cmEl.dataset.cid) || p) : p;
+        openView(src, +cell.dataset.z);
+      };
+    }
+  }
+  function emptyFeedHtml() {
+    return '<div class="pfmeta" style="padding:18px;text-align:center">Belum ada post. Ikuti orang di tab <b>🧭 Terokai</b>, atau siarkan sesuatu sendiri!</div>';
+  }
+  function renderFeed() {
+    renderStories();
+    $('postList').innerHTML = feedPosts.length ? feedPosts.map(renderPostHtml).join('') : emptyFeedHtml();
+    wirePostRoot($('postList'));
+  }
+  function updateCard(pid) {
+    const p = postCache[pid]; if (!p) return;
+    const html = renderPostHtml(p);
+    for (const root of [$('postList'), $('pfPosts')]) {
+      const el = root && root.querySelector('.pcard[data-pid="' + pid + '"]');
+      if (el) el.outerHTML = html;
+    }
+    wirePostRoot($('postList')); wirePostRoot($('pfPosts'));
+  }
+  function renderStories() {
+    const byA = {}, order = [];
+    for (const s of feedStories) { if (!byA[s.fid]) { byA[s.fid] = { from: s.from, avatar: s.avatar, mine: s.mine, list: [] }; order.push(s.fid); } byA[s.fid].list.push(s); }
+    let h = '<div class="stoy add" id="stoyAdd"><div class="ring"><div>＋</div></div><span>Cerita</span></div>';
+    for (const fid of order) {
+      const g = byA[fid], first = g.list[0];
+      const seen = first.views && first.views.indexOf(myId) >= 0;
+      h += '<div class="stoy' + (seen ? ' seen' : '') + '" data-fid="' + fid + '"><div class="ring"><div>' +
+        (g.avatar ? '<img src="' + esc(g.avatar) + '" alt="">' : esc(initials(g.from))) + '</div></div><span>' + esc(g.mine ? 'Anda' : g.from) + '</span></div>';
+    }
+    $('storyStrip').innerHTML = h;
+    $('stoyAdd').onclick = () => $('storyFile').click();
+    for (const el of $('storyStrip').querySelectorAll('.stoy[data-fid]')) el.onclick = () => { const g = byA[+el.dataset.fid]; openStory(g.list); };
+  }
+  function mergeFeedPost(p) {
+    if (!p) return; remember([p]);
+    const i = feedPosts.findIndex(x => x.id === p.id);
+    if (i >= 0) feedPosts[i] = p; else { feedPosts.unshift(p); feedPosts.sort((a, b) => b.ts - a.ts); }
+    if ($('feedModal').classList.contains('open') && feedTab === 'Feed') renderFeed();
+  }
+  function mergeFeedStory(s) {
+    if (!s) return;
+    const i = feedStories.findIndex(x => x.id === s.id);
+    if (i >= 0) feedStories[i] = s; else { feedStories.unshift(s); feedStories.sort((a, b) => b.ts - a.ts); }
+    if ($('feedModal').classList.contains('open') && feedTab === 'Feed') renderStories();
+  }
+  async function loadFeed() {
+    try { const j = await call('/feed'); feedPosts = j.posts || []; feedStories = j.stories || []; remember(feedPosts); renderFeed(); }
+    catch (e) { if (e.status === 401) expire(); else $('postList').innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; }
+  }
+  async function doLike(pid) {
+    sndTap();
+    try { const j = await post('/posts/like', { id: pid }); if (j.post) { mergeFeedPost(j.post); updateCard(pid); } }
+    catch (e) { toast(e.message); }
+  }
+  async function doComment(pid, card) {
+    const inp = card.querySelector('[data-cmtin]'); const text = (inp && inp.value || '').trim();
+    if (!text) return;
+    if (inp) inp.value = '';
+    try { const j = await post('/posts/comment', { id: pid, text }); if (j.post) { mergeFeedPost(j.post); updateCard(pid); } }
+    catch (e) { toast(e.message); }
+  }
+  async function doDelPost(pid) {
+    if (!confirm('Padam post ini? Tindakan kekal.')) return;
+    try { await post('/posts/delete', { id: pid }); feedPosts = feedPosts.filter(p => p.id !== pid); delete postCache[pid]; renderFeed(); if ($('profModal').classList.contains('open')) loadProfPosts(profCur); }
+    catch (e) { toast(e.message); }
+  }
+
+  // ── Paparan cerita penuh ──
+  function openStory(list) { storyQueue = (list || []).slice(); storyIdx = 0; $('storyView').classList.add('on'); paintStory(); }
+  function paintStory() {
+    const s = storyQueue[storyIdx]; if (!s) return closeStory();
+    $('svBar').innerHTML = storyQueue.map((x, i) => '<i class="' + (i <= storyIdx ? 'on' : '') + '"></i>').join('');
+    $('svHead').innerHTML = avHtml(s.from, s.avatar, false) + '<div style="flex:1;min-width:0"><b>' + esc(s.mine ? 'Anda' : s.from) + '</b><br><small>' + timeAgo(s.ts) + '</small></div>';
+    const stage = $('svStage'); stage.innerHTML = ''; clearTimeout(storyTimer);
+    const m = (s.media || [])[0];
+    if (m && m.url) {
+      if (m.kind === 'video') { const v = document.createElement('video'); v.src = m.url; v.controls = true; v.autoplay = true; v.setAttribute('playsinline', ''); v.onended = nextStory; stage.appendChild(v); }
+      else { const im = document.createElement('img'); im.src = m.url; im.onerror = () => { stage.innerHTML = '<div class="scap">🖼 Gambar sudah dibuang</div>'; }; stage.appendChild(im); storyTimer = setTimeout(nextStory, 5000); }
+    } else if (m) { stage.innerHTML = '<div class="scap">' + (m.kind === 'video' ? '🎬 Video' : '🖼 Gambar') + ' sudah dibuang</div>'; }
+    $('svCap').textContent = s.t || '';
+    $('svDel').hidden = !s.mine;
+    post('/stories/view', { id: s.id }).catch(() => {});
+  }
+  function nextStory() { clearTimeout(storyTimer); if (storyIdx < storyQueue.length - 1) { storyIdx++; paintStory(); } else closeStory(); }
+  function prevStory() { clearTimeout(storyTimer); if (storyIdx > 0) { storyIdx--; paintStory(); } }
+  function closeStory() { clearTimeout(storyTimer); $('storyView').classList.remove('on'); $('svStage').innerHTML = ''; storyQueue = []; }
+
+  // ── Terokai / senarai ikuti ──
+  function rowHtml(p) {
+    socialPool[p.id] = Object.assign(socialPool[p.id] || {}, p);
+    const foll = !!p.following;
+    const bits = ['#' + p.id];
+    if (p.followers) bits.push(p.followers + ' pengikut');
+    if (p.mutual) bits.push(p.mutual + ' kenalan bersama');
+    if (p.followsMe) bits.push('mengikuti anda');
+    return '<div class="ppl" data-fid="' + p.id + '">' + avHtml(p.name, p.avatar, p.online) +
+      '<div class="pi"><b>' + esc(p.name) + '</b><small>' + esc(bits.join(' · ')) + (p.bio ? ' · ' + esc(String(p.bio).slice(0, 30)) : '') + '</small></div>' +
+      (p.id !== myId ? '<button class="fol' + (foll ? ' on' : '') + '" data-fol="1">' + (foll ? '✓ Mengikuti' : 'Ikuti') + '</button>' : '') + '</div>';
+  }
+  function renderPeopleRows(list) {
+    const root = $('expList');
+    if (!list.length) { root.innerHTML = '<div class="pfmeta">Tiada sesiapa di sini.</div>'; return; }
+    root.innerHTML = list.map(rowHtml).join('');
+    for (const el of root.querySelectorAll('.ppl')) {
+      const id = +el.dataset.fid;
+      el.onclick = e => { if (e.target && e.target.dataset && e.target.dataset.fol) return; openProf({ id, name: el.querySelector('b').textContent }); };
+      const fb = el.querySelector('.fol');
+      if (fb) fb.onclick = e => { e.stopPropagation(); doFollow(id, fb.classList.contains('on')); };
+    }
+  }
+  async function loadDiscover() {
+    $('expLabel').textContent = 'Ikuti yang aktif';
+    try { const j = await call('/discover'); renderPeopleRows(j.people || []); }
+    catch (e) { $('expList').innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; }
+  }
+  function openFollowList(q, which) {
+    showFeedTab('Explore'); $('feedModal').classList.add('open');
+    $('expLabel').textContent = which === 'followers' ? 'Pengikut' : 'Yang diikuti';
+    call('/follows?q=' + encodeURIComponent(q) + '&which=' + which)
+      .then(j => renderPeopleRows(j.list || []))
+      .catch(e => { $('expList').innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; });
+  }
+  async function doFollow(id, unfollow) {
+    sndTap();
+    try {
+      const j = await post('/follow', { peer: id, remove: unfollow ? 1 : 0 });
+      if (j.profile) socialPool[id] = Object.assign(socialPool[id] || {}, j.profile);
+      if ($('profModal').classList.contains('open') && profCur === id && j.profile) patchProf(j.profile);
+      if ($('feedModal').classList.contains('open') && feedTab === 'Explore') {
+        if ($('expLabel').textContent === 'Ikuti yang aktif') loadDiscover();
+        else { const m = /Pengikut/.test($('expLabel').textContent) ? 'followers' : 'following'; openFollowList(profCur || me, m); }
+      }
+      toast(unfollow ? 'Berhenti mengikuti.' : 'Mulai mengikuti.');
+    } catch (e) { toast(e.message); }
+  }
+
+  // ── Notifikasi ──
+  function nHtml(n) {
+    const icon = n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : n.type === 'follow' ? '➕' : n.type === 'mention' ? '@' : '📕';
+    const verb = n.type === 'like' ? ' ♥ menyukai post anda' : n.type === 'comment' ? ' 💬 mengomen' : n.type === 'follow' ? ' ➕ mulai mengikuti anda' : n.type === 'mention' ? ' @ menyebut anda' : ' 📕 menambah cerita';
+    const extra = (n.text && (n.type === 'comment' || n.type === 'mention')) ? '<span class="nx">' + esc(String(n.text).slice(0, 80)) + '</span>' : '';
+    return '<div class="ncard' + (n.read ? '' : ' unread') + '" data-nid="' + esc(n.id) + '">' + avHtml(n.actorName, n.actorAvatar, false) +
+      '<div class="nn"><b>' + esc(n.actorName) + '</b>' + verb + extra + '</div><span class="nt">' + timeAgo(n.ts) + '</span></div>';
+  }
+  function renderNotifs() {
+    if (!notifsCache.length) { $('notifList').innerHTML = '<div class="pfmeta">Belum ada notifikasi.</div>'; return; }
+    $('notifList').innerHTML = notifsCache.map(nHtml).join('');
+    for (const el of $('notifList').querySelectorAll('.ncard')) el.onclick = () => {
+      const n = notifsCache.find(x => String(x.id) === el.dataset.nid); if (!n) return;
+      if (n.type === 'follow') openProf({ id: n.actor, name: n.actorName });
+      else if (n.post) { $('notifModal').classList.remove('open'); openFeed(); }
+      else if (n.actor) openProf({ id: n.actor, name: n.actorName });
+    };
+  }
+  async function loadNotifs() {
+    try {
+      const j = await call('/notifs'); notifsCache = j.notifs || []; renderNotifs();
+      notifUnread = 0; paintNotifBadge(); post('/notifs/read', {}).catch(() => {});
+    } catch (e) { $('notifList').innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; }
+  }
+  function onNotifIn(n) {
+    if (!n) return;
+    if ($('notifModal').classList.contains('open')) { notifsCache = [n].concat(notifsCache); renderNotifs(); }
+    else { notifUnread++; paintNotifBadge(); }
+    sndIn();
+  }
+  function openNotifs() { $('notifModal').classList.add('open'); loadNotifs(); }
+
+  // ── Profil: ikuti + kiraan + post ──
+  function pfStatsHtml(p) {
+    return '<div class="pstats">' +
+      '<button data-ps="posts"><b>' + (p.postCount || 0) + '</b><span>Post</span></button>' +
+      '<button data-ps="following"><b>' + (p.followingCount || 0) + '</b><span>Mengikuti</span></button>' +
+      '<button data-ps="followers"><b>' + (p.followersCount || 0) + '</b><span>Pengikut</span></button></div>';
+  }
+  function wirePfStats(p) {
+    for (const b of $('pfStats').querySelectorAll('[data-ps]')) b.onclick = () => {
+      const w = b.dataset.ps;
+      if (w === 'following') openFollowList(p.id, 'following');
+      else if (w === 'followers') openFollowList(p.id, 'followers');
+      else if (w === 'posts' && $('pfPosts').scrollIntoView) $('pfPosts').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  }
+  function patchProf(p) {
+    const self = p.id === myId, fb = $('pfFollow');
+    fb.hidden = self;
+    if (!self) { fb.textContent = p.following ? '✓ Mengikuti' : '➕ Ikuti'; fb.onclick = () => doFollow(p.id, !!p.following); }
+    $('pfStats').innerHTML = self ? '' : pfStatsHtml(p);
+    if (!self) wirePfStats(p);
+  }
+  async function loadProfPosts(q) {
+    try { const j = await call('/posts?q=' + encodeURIComponent(q)); renderProfPosts(j.posts || []); }
+    catch (e) { const el = $('pfPosts'); if (el) el.innerHTML = ''; }
+  }
+  function renderProfPosts(list) {
+    remember(list);
+    $('pfPosts').innerHTML = list.length ? '<div class="pflabel">Post terkini</div>' + list.map(renderPostHtml).join('') : '';
+    wirePostRoot($('pfPosts'));
+  }
+
+  // ── Papan: tab suapan ──
+  function showFeedTab(t) {
+    feedTab = t;
+    for (const b of $('fTabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.t === t);
+    $('tabFeed').hidden = t !== 'Feed'; $('tabExplore').hidden = t !== 'Explore';
+  }
+  function openFeed() { $('feedModal').classList.add('open'); showFeedTab('Feed'); loadFeed(); }
+  function loadFeedSoft() { if ($('feedModal').classList.contains('open') && feedTab === 'Feed') loadFeed(); }
+  function updateStMe() { const el = $('stMe') && $('stMe').querySelector('.ava'); if (el) setAvaEl(el, me, myAvatar); }
+
+  // Pengikat acara sosial.
+  $('feedBtn').onclick = () => { sndTap(); openFeed(); };
+  $('notifBtn').onclick = () => { sndTap(); openNotifs(); };
+  $('feedClose').onclick = () => $('feedModal').classList.remove('open');
+  $('notifClose').onclick = () => $('notifModal').classList.remove('open');
+  $('notifClear').onclick = async () => { try { await post('/notifs/clear', {}); notifsCache = []; notifUnread = 0; paintNotifBadge(); renderNotifs(); } catch (e) { toast(e.message); } };
+  for (const b of $('fTabs').querySelectorAll('button')) b.onclick = () => { sndTap(); showFeedTab(b.dataset.t); if (b.dataset.t === 'Explore') loadDiscover(); };
+  $('postImg').onclick = () => $('postFile').click();
+  $('postFile').onchange = e => { addFeedFiles(e.target.files); e.target.value = ''; };
+  $('postGo').onclick = submitPost;
+  $('storyFile').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    if (!kindOf(f)) return toast('Pilih gambar atau video.');
+    try { const j = await uploadSocialMedia('post', f); await post('/stories', { media: [{ id: j.media.id }] }); toast('Cerita ditambah.'); loadFeed(); }
+    catch (err) { toast(err.message); }
+  };
+  $('svPrevZone').onclick = prevStory;
+  $('svNextZone').onclick = nextStory;
+  $('svClose').onclick = closeStory;
+  $('svDel').onclick = async () => {
+    const s = storyQueue[storyIdx]; if (!s) return;
+    if (!confirm('Padam cerita ini?')) return;
+    try { await post('/stories/delete', { id: s.id }); feedStories = feedStories.filter(x => x.id !== s.id); closeStory(); renderStories(); }
+    catch (e) { toast(e.message); }
+  };
+  $('stAvaBtn').onclick = () => $('stAvaFile').click();
+  $('stAvaFile').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    if (!/^image\//i.test(f.type)) return toast('Avatar mesti gambar.');
+    $('stAvaBtn').disabled = true;
+    try { const j = await uploadSocialMedia('avatar', f); myAvatar = j.url || null; paintMe(); updateStMe(); loadPeople(); loadFeedSoft(); toast('Gambar profil dikemas kini.'); }
+    catch (err) { toast(err.message); }
+    $('stAvaBtn').disabled = false;
+  };
+  $('stAvaDel').onclick = async () => {
+    try { await post('/avatar/remove', {}); myAvatar = null; paintMe(); updateStMe(); loadPeople(); loadFeedSoft(); toast('Gambar profil dibuang.'); }
+    catch (e) { toast(e.message); }
+  };
+
   // ─── Emoji picker ───
   // Intl.Segmenter memisahkan grafem (emoji ZWJ + variation selector) dengan betul.
   // Array.from hanya memisahkan kod titik — ❤️ (U+2764 U+FE0F) masih terbahagi.
@@ -2813,7 +3396,7 @@
     e.preventDefault(); addFiles(e.dataTransfer.files);
   });
   document.addEventListener('paste', e => {
-    if ($('app').hidden || busy) return;
+    if ($('app').hidden || busy || document.querySelector('.modal.open')) return;
     const f = e.clipboardData && e.clipboardData.files;
     if (f && f.length) { e.preventDefault(); addFiles(f); }
   });
