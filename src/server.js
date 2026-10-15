@@ -200,6 +200,60 @@ app.use(compression({
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
+// ── Domain khas T Chat: tchat.tukuk.org ─────────────────────────────────────
+// Ruang terpencil untuk messenger: hanya aset yang T Chat guna dilaluan;
+// CSP lebih ketat (frame-ancestors 'none', tanpa iklan/analitik), X-Robots-Tag
+// noindex supaya mesej/katalog tidak terindeks, dan mana-mana path lain → 302
+// ke tukuk.org supaya pelawat tidak tersesat ke enjin carian/iklan. Sesi (Bearer
+// token di localStorage) terasing ikut origin — cookie tukuk.org tidak mengalir
+// ke sini, dan sebaliknya.
+const TCHAT_HOST = String(process.env.TCHAT_HOST || 'tchat.tukuk.org').trim().toLowerCase();
+const TCHAT_ALLOWED = [
+  /^\/apps\/chat(\.html)?\/?$/,                   // path asal applikasi (pautan sedia ada)
+  /^\/api\/chat(\/.*)?$/,                     // root + semua endpoint chat (SSE, media, dsb.)
+  /^\/csp-report$/,                                // pelapor CSP (dipakai CSP report-uri)
+  /^\/sw\.js$/,                                     // service worker (skop root host ini)
+  /^\/manifest-chat\.json$/,                      // PWA install
+  /^\/theme\.(?:css|js)$/,                         // tema global
+  /^\/icons\/[A-Za-z0-9._/-]+$/,                  // logo + ikon apl (chat.svg, chat-192.png, ...)
+  /^\/(?:favicon\.ico|apple-touch-icon\.png|og\.png|icon\.svg|logo\.png|logo-mark\.svg)$/,
+  /^\/downloads\/tukuk-chat\.apk$/,               // muat turun APK beta
+];
+const CSP_TCHAT = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",              // chat.html memang inline <script> + atribut onclick
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' data: blob:",                    // rakaman suara + lampiran (blob URL)
+  "connect-src 'self' data: blob: wss: turn: stun: stuns:",  // SSE + WebRTC + muat naik
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "frame-src 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",                          // anti-clickjacking mutlak untuk messenger
+  "base-uri 'self'",
+  "form-action 'self'",
+  "report-uri /csp-report",
+].join('; ') + ';';
+app.use((req, res, next) => {
+  if (!TCHAT_HOST) return next();
+  if (String(req.hostname || '').toLowerCase() !== TCHAT_HOST) return next();
+  // Header ruang-khas (timpa nilai global dari blok security-headers di atas).
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
+  res.setHeader('Content-Security-Policy', CSP_TCHAT);
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  // Root host tchat → hidang chat.html secara terus (URL kekal tchat.tukuk.org/).
+  if (req.path === '/' || req.path === '/index.html') {
+    return res.sendFile(path.join(PUBLIC_DIR, 'apps', 'chat.html'), (err) => {
+      if (err) res.status(503).type('txt').send('T Chat tidak dapat dimuatkan sekarang.');
+    });
+  }
+  for (const re of TCHAT_ALLOWED) if (re.test(req.path)) return next();
+  // Selainnya: bawa pelawat ke ruang utama (kekalkan query string & path asal).
+  return res.redirect(302, 'https://tukuk.org' + req.originalUrl);
+});
+
 // Akses global: beritahu Tor Browser tentang onion mirror automatik
 // (header Onion-Location → Tor Browser tawar buka laman via onion).
 const ONION_HOST = process.env.ONION_HOST || 'd33axv7iaq4sp5hlwjn7i2tovkuxmxc53xl2drjhve7mboitsoicdfid.onion';
@@ -2763,4 +2817,4 @@ app.use((error, req, res, next) => {
   res.status(error.statusCode || 500).json({ error: 'Server error', details: safeError(error) });
 });
 
-module.exports = { app };
+module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT };

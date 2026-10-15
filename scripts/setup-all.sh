@@ -401,6 +401,17 @@ else
   warn "Server belum respons — semak: journalctl -u tukuk-os -n 30"
 fi
 
+# Domain khas T Chat (tchat.tukuk.org) — semak sama ada hostname sudah dikonfigur.
+TCHAT_H="$(get_env TCHAT_HOST)"; TCHAT_H="${TCHAT_H:-tchat.tukuk.org}"
+TCHAT_CODE=$(curl -s -m6 -o /dev/null -w '%{http_code}' "https://$TCHAT_H/" 2>/dev/null || echo 000)
+if [[ "$TCHAT_CODE" == "200" ]]; then
+  ok "Domain khas T Chat aktif di https://$TCHAT_H (HTTP 200)."
+elif [[ "$TCHAT_CODE" == "000" ]]; then
+  warn "https://$TCHAT_H belum resolve DNS — tambah public hostname di Cloudflare Zero Trust → Networks → Routes (panduan penuh dalam .env.example)."
+else
+  warn "https://$TCHAT_H balas HTTP $TCHAT_CODE — semak laluan tunnel + gerbang TCHAT_HOST di src/server.js."
+fi
+
 echo -e "${BLUE}========================================================${NC}"
 echo -e "${GREEN}  SELESAI. Panel admin: /admin — login e-mel + passkey.${NC}"
 echo -e "  Server: $INSTALL_DIR | Log: journalctl -u tukuk-os -f"

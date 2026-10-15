@@ -829,6 +829,7 @@
       <div><b>🍎 iPhone &amp; iPad (iOS)</b><span>Safari → butang <i>Kongsi</i> → <i>Tambah ke Skrin Utama</i>. (Pemasangan automatik hanya tersedia di Chrome/Edge.)</span></div>
       <div><b>🪟 Windows &amp; 🐧 Linux</b><span>Edge atau Chrome → ikon <i>Pasang</i> di bar alamat, atau <i>⋮ → Aplikasi → Pasang aplikasi ini</i>.</span></div>
       <div><b>📦 Muat turun APK (Android · Beta)</b><span>Mahu pasang tanpa store? Muat turun <b>T Chat.apk</b> terus — pembungkus native (Android 6.0+) yang membuka aplikasi ini penuh-skrin, termasuk panggilan kamera/mikrofon &amp; lampiran. Ini <b>versi beta</b> — ciri sedang dicuba dan mungkin berubah; versi stabil menyusul. Buka fail →benarkan &ldquo;sumber tak diketahui&rdquo;→ Pasang.</span></div>
+      <div><b>🔒 Domain khas T Chat</b><span id="tchatNote">Ruang khusus tanpa enjin carian atau iklan: <a href="https://tchat.tukuk.org/" target="_blank" rel="noopener"><b>tchat.tukuk.org</b></a>. Sesi, notifikasi dan PWA anda di sini <b>berasing</b> daripada tukuk.org — lebih kemas dan lebih selamat. Anda masih di <b id="tchatHere">tukuk.org</b>.</span></div>
     </div>
     <div class="mbtns"><button class="prim" id="stApk">📥 Muat turun T Chat.apk (Beta)</button><button id="stApkPwa">🌐 Jana sendiri (PWA Builder)</button></div>
     <div class="pfmeta">Selepas dipasang, T Chat membuka tanpa bar pelayar, mengekalkan sesi, dan boleh membaca sembang serta menghantar mesej ke peti keluar walaupun luar talian.</div>
@@ -3278,6 +3279,18 @@
     toast('Memuat turun T Chat.apk (beta) — buka fail untuk pasang (Android 6+).', 4200);
   };
   $('stApkPwa').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
+
+  // Domain khas: sesuaikan nota & pautan bila apl dibuka di tchat.tukuk.org.
+  const IS_TCHAT = /(^|\.)tchat\./i.test(location.hostname) || location.hostname === 'tchat.tukuk.org';
+  const back = document.querySelector('header .back');
+  if (IS_TCHAT) {
+    // Pautan "← Apps" bawa balik ke tukuk.org (jangan lalu gerbang 302).
+    if (back) { back.href = 'https://tukuk.org/apps'; back.textContent = '← Tukuk.org'; }
+    const here = $('tchatHere');
+    if (here) here.textContent = 'tchat.tukuk.org';
+    const note = $('tchatNote');
+    if (note) note.innerHTML = 'Anda sedang berada di <b>ruang khas T Chat</b> — tanpa enjin carian, tanpa iklan, CSP ketat dan sesi berasingan daripada tukuk.org. Tukuk ID &amp; kata laluan anda tetap sama.';
+  }
 
   // ─── Sosial: avatar, ikuti, post, cerita, notifikasi ───
   const FEED_MAX = 4;   // fail satu post (sepadan MAX_POST_MEDIA pelayan)

@@ -6,6 +6,10 @@
 #   MOD TOKEN (disyorkan, portabel): setup-all menukar baris `credentials-file:`
 #     kepada `token: <CF_TUNNEL_TOKEN>` — TIADA fail .json diperlukan, jadi
 #     pelayan baru cukup CF_TUNNEL_TOKEN + CF_TUNNEL_ID dalam .env → terus hidup.
+#     ⚠ PENTING: dalam mod TOKEN, cloudflared MENGABAIKAN seksyen `ingress:`
+#     setempat — laluan hostname dibaca dari dashboard Cloudflare. Untuk tambah
+#     hostname baru (cth. tchat.tukuk.org), buka Zero Trust → Networks → Routes
+#     → Add public hostname, atau pakai API dengan token yang ada lesen Tunnel.
 #   MOD JSON (fallback): <TUNNEL_ID>.json mesti wujud di /etc/cloudflared/.
 #
 # PENTING (kesilapan biasa):
@@ -26,6 +30,9 @@ ingress:
   - hostname: www.tukuk.org
     service: http://localhost:3000
   - hostname: dashboard.tukuk.org
+    service: http://localhost:3000
+  # Ruang khas T Chat (pelayan sama, host berbeza — src/server.js gate TCHAT_HOST).
+  - hostname: tchat.tukuk.org
     service: http://localhost:3000
   # Wajib: rule padanan terakhir
   - service: http_status:404
