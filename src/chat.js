@@ -5,6 +5,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 const DEFAULT_PATH = path.join(__dirname, '..', 'data', 'chat.json');
 const MAX_MSG = 500;        // panjang mesej
@@ -30,7 +31,7 @@ let dirty = false;
 // ─── Simpanan ───
 const FIRST_ID = 100001;    // Tukuk ID pertama (nombor kekal, bukan nama)
 function blank() {
-  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID };
+  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID, pushSubs: {}, vapid: null };
 }
 function load() {
   if (state) return state;
@@ -407,8 +408,54 @@ function peerId(r, mine) {
   const m = uid(mine);
   return r.memberIds.find(i => i !== m) || null;
 }
+// ─── Bilik kumpulan ───
+function createGroup(creatorName, title, memberIds) {
+  const s = load();
+  const t = String(title || '').trim().slice(0, 40);
+  if (!t) return { error: 'Nama kumpulan diperlukan.' };
+  const creator = findUser(creatorName);
+  if (!creator) return { error: 'Pengguna tidak ditemui.' };
+  const members = [creator];
+  for (const id of (memberIds || [])) {
+    const u = byId(id);
+    if (u && u.id !== creator.id && !members.some(m => m.id === u.id)) members.push(u);
+  }
+  if (members.length < 2) return { error: 'Perlukan sekurang-kurangnya seorang ahli lain.' };
+  if (members.length > 50) return { error: 'Melebihi 50 ahli.' };
+  const id = 'grp_' + crypto.randomBytes(6).toString('hex');
+  const r = { id, kind: 'group', title: t, memberIds: members.map(u => u.id), members: members.map(u => u.name), createdBy: creator.name, createdAt: Date.now(), seq: 0, list: [] };
+  s.rooms[id] = r; touch();
+  pubRoom(r, 'room', { room: id });
+  return { ok: true, room: r };
+}
+function addToGroup(name, roomId, memberId) {
+  const s = load(); const r = s.rooms[roomId];
+  if (!r || r.kind !== 'group') return { error: 'Kumpulan tidak ditemui.' };
+  if (!isMember(r, name)) return { error: 'Anda bukan ahli kumpulan ini.' };
+  const u = byId(memberId);
+  if (!u) return { error: 'Pengguna tidak ditemui.' };
+  if (r.memberIds.includes(u.id)) return { ok: true, already: true };
+  if (r.memberIds.length >= 50) return { error: 'Kumpulan sudah penuh (50 ahli).' };
+  r.memberIds.push(u.id);
+  r.members = r.memberIds.map(id2 => nameOfUser(id2));
+  touch();
+  pubRoom(r, 'room', { room: roomId });
+  return { ok: true };
+}
+function leaveGroup(name, roomId) {
+  const s = load(); const r = s.rooms[roomId];
+  if (!r || r.kind !== 'group') return { error: 'Kumpulan tidak ditemui.' };
+  const u = findUser(name);
+  if (!u || !r.memberIds.includes(u.id)) return { error: 'Anda bukan ahli kumpulan ini.' };
+  r.memberIds = r.memberIds.filter(i => i !== u.id);
+  r.members = r.memberIds.map(i => nameOfUser(i));
+  touch();
+  pubRoom(r, 'room', { room: roomId });
+  return { ok: true };
+}
 function roomTitle(r, viewer) {
   if (!r || r.kind === 'global') return (r && r.title) || '🌍 Am';
+  if (r.kind === 'group') return r.title || '👥 Kumpulan';
   const v = (viewer && typeof viewer === 'object') ? viewer : findUser(viewer);
   if (r.memberIds && v && v.id) {
     const nm = nameOfUser(r.memberIds.find(i => i !== v.id));
@@ -466,6 +513,7 @@ function send(name, roomId, text, replyTo, media) {
   touch();
   const out = hydrate(msg);
   pubRoom(r, 'msg', { room: r.id, seq: r.seq, msg: out });
+  maybePush(r, out).catch(() => {});
   // Penunjuk menaip perlu habis serta-merta pada tab lain, bukan tunggu poll.
   if (wasTyping) pubRoom(r, 'typing', { room: r.id, typing: [] });
   return { ok: true, msg: out, room: r };
@@ -571,6 +619,81 @@ function searchMsgs(name, query) {
     if (out.length >= 60) break;
   }
   return out.sort((a, b) => b.ts - a.ts).slice(0, 30);
+}
+
+// ─── Web Push (VAPID) ───
+// Tanpa pakej luar: kunci EC P-256 dijana sekali dan disimpan dalam JSON state.
+// Push dihantar dengan badan kosong — SW memaparkan notifikasi generik.
+function initVapid() {
+  const s = load();
+  if (s.vapid) return;
+  try {
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', {
+      namedCurve: 'prime256v1',
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+    s.vapid = { pub: publicKey, priv: privateKey };
+    touch();
+  } catch { /* crypto tidak tersedia */ }
+}
+function vapidPubB64() {
+  initVapid();
+  const s = load();
+  if (!s.vapid) return null;
+  try {
+    const jwk = crypto.createPublicKey(s.vapid.pub).export({ format: 'jwk' });
+    return Buffer.concat([
+      Buffer.from([4]),
+      Buffer.from(jwk.x, 'base64url'),
+      Buffer.from(jwk.y, 'base64url'),
+    ]).toString('base64url');
+  } catch { return null; }
+}
+// Tukar tandatangan DER (crypto.sign) kepada mentah 64-bait ES256.
+function derSigToRaw(der) {
+  let pos = 2;
+  if (der[1] & 0x80) pos += (der[1] & 0x7f);
+  const rLen = der[pos + 1];
+  let r = der.slice(pos + 2, pos + 2 + rLen);
+  if (r[0] === 0x00) r = r.slice(1);
+  r = Buffer.concat([Buffer.alloc(32 - r.length, 0), r], 32);
+  const sTag = pos + 2 + rLen;
+  const sLen = der[sTag + 1];
+  let sv = der.slice(sTag + 2, sTag + 2 + sLen);
+  if (sv[0] === 0x00) sv = sv.slice(1);
+  sv = Buffer.concat([Buffer.alloc(32 - sv.length, 0), sv], 32);
+  return Buffer.concat([r, sv]);
+}
+async function doSendPush(sub, vapid) {
+  const url = new URL(sub.endpoint);
+  const aud = url.origin;
+  const iat = Math.floor(Date.now() / 1000);
+  const b64u = o => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const hdr = b64u({ typ: 'JWT', alg: 'ES256' });
+  const pl = b64u({ aud, exp: iat + 43200, sub: 'mailto:admin@tukuk.org', iat });
+  const input = hdr + '.' + pl;
+  const der = crypto.sign('sha256', Buffer.from(input), crypto.createPrivateKey(vapid.priv));
+  const jwt = input + '.' + derSigToRaw(der).toString('base64url');
+  const k = vapidPubB64();
+  if (!k) return;
+  await axios.put(sub.endpoint, '', {
+    headers: { Authorization: 'vapid t=' + jwt + ', k=' + k, TTL: '3600', Urgency: 'normal', 'Content-Length': '0' },
+    timeout: 10000,
+  });
+}
+// Hantar push untuk ahli DM/kumpulan yang tiada sink SSE aktif.
+async function maybePush(room, msg) {
+  if (!room || room.kind === 'global') return;
+  const s = load();
+  if (!s.vapid) return;
+  for (const uid of (room.memberIds || [])) {
+    if (uid === msg.fid) continue;
+    if (sinks.has(uid)) continue;
+    for (const sub of (s.pushSubs[String(uid)] || [])) {
+      try { await doSendPush(sub, s.vapid); } catch { /* perkhidmatan push mati */ }
+    }
+  }
 }
 // Direktori pengguna. `viewer` (pilihan) menapis mereka yang MENYEKAT penonton
 // dan menanda status kawan/sekat supaya klien tak perlu teka.
@@ -807,7 +930,9 @@ function pub(ev, data, ids) {
     for (const snk of set) { try { snk.send(ev, data); } catch { /* sambungan sedang mati */ } }
   }
 }
-function pubRoom(r, ev, data) { pub(ev, data, r && r.kind === 'dm' ? (r.memberIds || []) : null); }
+function pubRoom(r, ev, data) {
+  pub(ev, data, r && (r.kind === 'dm' || r.kind === 'group') ? (r.memberIds || []) : null);
+}
 // Tutup stream peranti lain (kata laluan tukar / keluar semua sesi) selepas
 // sesi-sesi itu diluputkan — klien akan logout sendiri bila dapat 'kick'.
 function kickSinks(uid, keepTok) {
@@ -949,11 +1074,14 @@ function mount(app, deps) {
       return {
         id: r.id, kind: r.kind, title: roomTitle(r, u),
         members: r.members, peerId: pid, unread: un[r.id] || 0, seq: r.seq || 0,
+        memberCount: r.kind === 'group' ? (r.memberIds || []).length : null,
         peerSeen: (peer && st.seen[r.id + '|' + key(peer.name)]) || 0,
         peer: peer ? { id: peer.id, name: peer.name, bio: peer.bio || '' } : null,
         blocked: !!(pid && blockedOf(u).includes(pid)),
         last: last ? { from: authorName(last), fid: last.fid || null, t: last.del ? null : last.t, mt: last.media && last.media.length ? last.media[0].kind : null, n: (last.media || []).length, ts: last.ts } : null,
-        online: r.kind === 'global' ? Object.values(on).filter(Boolean).length : !!(peer && isOnline(peer)),
+        online: r.kind === 'global' ? Object.values(on).filter(Boolean).length
+          : r.kind === 'group' ? (r.memberIds || []).filter(i => on[i]).length
+          : !!(peer && isOnline(peer)),
       };
     }).sort((a, b) => (b.last ? b.last.ts : 0) - (a.last ? a.last.ts : 0));
     res.json({ ok: true, rooms });
@@ -1193,6 +1321,60 @@ function mount(app, deps) {
     if (q.length < 2) return res.json({ ok: true, results: [] });
     res.json({ ok: true, results: searchMsgs(u.name, q) });
   });
+
+  // ─── Bilik kumpulan ───
+  app.post('/api/chat/group', lim({ windowMs: 3600e3, max: 20, keyPrefix: 'chgrp:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = createGroup(u.name, b.title, b.memberIds);
+    if (r.error) return res.status(400).json({ error: r.error });
+    event('Kumpulan baharu: ' + r.room.title + ' oleh ' + u.name, { id: u.id });
+    res.json({ ok: true, room: { id: r.room.id, kind: r.room.kind, title: r.room.title, members: r.room.members, memberCount: r.room.memberIds.length, seq: 0 } });
+  });
+
+  app.post('/api/chat/group/invite', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chgrpinv:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = addToGroup(u.name, String(b.room || ''), b.memberId);
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true, already: !!r.already });
+  });
+
+  app.post('/api/chat/group/leave', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const r = leaveGroup(u.name, String(cleanBody(req.body).room || ''));
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true });
+  });
+
+  // ─── Web Push (VAPID) ───
+  app.get('/api/chat/vapid-public-key', (req, res) => {
+    initVapid();
+    const k = vapidPubB64();
+    if (!k) return res.status(500).json({ error: 'VAPID tidak tersedia.' });
+    res.json({ ok: true, key: k });
+  });
+
+  app.post('/api/chat/push-subscribe', lim({ windowMs: 3600e3, max: 20, keyPrefix: 'chpush:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    if (!b.endpoint || !b.keys) return res.status(400).json({ error: 'Langganan tidak sah.' });
+    const s = load();
+    s.pushSubs = s.pushSubs || {};
+    const arr = s.pushSubs[String(u.id)] = s.pushSubs[String(u.id)] || [];
+    if (!arr.some(x => x.endpoint === b.endpoint)) { arr.push(b); touch(); }
+    res.json({ ok: true });
+  });
+
+  app.post('/api/chat/push-unsubscribe', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const s = load();
+    const arr = (s.pushSubs || {})[String(u.id)] || [];
+    s.pushSubs[String(u.id)] = arr.filter(x => x.endpoint !== b.endpoint);
+    touch();
+    res.json({ ok: true });
+  });
 }
 
 module.exports = {
@@ -1206,6 +1388,7 @@ module.exports = {
   pub, pubRoom, attachSink, detachSink, kickSinks, dropSink, tickBeat, clearSinks, MAX_STREAMS,
   sniff, addMedia, attachMedia, mediaUrl, mediaAllowed, mediaSrc, mediaFile, projectMedia,
   hydrate, releaseMedia, dropMedia, readRaw, quotaCheck, trimRoom,
+  createGroup, addToGroup, leaveGroup, initVapid, vapidPubB64, derSigToRaw, doSendPush, maybePush,
   MAX_IMG, MAX_VID, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
   get mediaDir() { return MEDIA; },
 };

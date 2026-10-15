@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tukuk-os-v4';
+const CACHE_NAME = 'tukuk-os-v5';
 const ASSETS = [
   '/',
   '/index.html',
@@ -76,5 +76,36 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => caches.match(event.request))
+  );
+});
+
+// ─── Web Push ───
+// Push dihantar dengan badan kosong — SW memaparkan notifikasi generik. Klik pada
+// notifikasi akan membuka/menfokos aplikasi T Chat.
+self.addEventListener('push', (event) => {
+  const title = 'T Chat';
+  const body = event.data
+    ? event.data.text()
+    : 'Anda menerima mesej baru.';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/apps/chat-192.png',
+      badge: '/icons/apps/chat-192.png',
+      tag: 'tukuk-chat',
+      data: { url: '/apps/chat' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) return c.focus();
+      }
+      return self.clients.openWindow(event.notification.data?.url || '/apps/chat');
+    })
   );
 });

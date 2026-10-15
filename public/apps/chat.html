@@ -307,6 +307,12 @@
   .rowm .card.on { color:#e17076; border-color:#e17076; }
   .mbtns button.warn { color:#e17076; }
   .mbtns button:disabled { opacity:.5; cursor:default; }
+  .gmembers { max-height:220px; overflow-y:auto; border:1px solid var(--line); border-radius:9px; margin-bottom:4px; }
+  .gmrow { display:flex; align-items:center; gap:9px; padding:7px 10px; cursor:pointer; border-bottom:1px solid var(--line); }
+  .gmrow:last-child { border-bottom:none; }
+  .gmrow:hover { background:color-mix(in srgb, var(--accent) 10%, transparent); }
+  .gmrow input { accent-color:var(--accent); flex:none; width:16px; height:16px; cursor:pointer; }
+  .gmrow .ava { width:30px; height:30px; font-size:.8rem; flex:none; }
   #blockBar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; padding:7px 14px; font-size:.78rem; color:#f0b6b9; background:#2a1b20; border-top:1px solid #4a2b31; }
   #blockBar.on { display:block; }
   #blockBar button { background:none; border:1px solid #4a2b31; color:#f0b6b9; border-radius:6px; padding:2px 8px; cursor:pointer; font:inherit; font-size:.74rem; margin-left:8px; }
@@ -432,7 +438,29 @@
   <input id="pq" placeholder="Nama atau Tukuk ID (cth. 100002)…" autocomplete="off" maxlength="20">
   <div id="plist"></div>
   <div class="pfmeta" style="margin-top:6px">Tekan <b>Enter</b> selepas taip 6 angka untuk tahu siapa punya ID itu.</div>
-  <div class="mbtns"><button class="prim" id="pclose">Tutup</button></div>
+  <div class="mbtns"><button id="gmOpen">👥+ Kumpulan Baru</button><button class="prim" id="pclose">Tutup</button></div>
+</div></div>
+
+<div class="modal" id="groupModal"><div class="mbox">
+  <h3 id="gmH">👥+ Kumpulan Baru</h3>
+  <div class="pflabel" id="gmNameLabel">Nama kumpulan</div>
+  <input id="gmTitle" maxlength="40" placeholder="cth. Kawan-kawan Kelas…" autocomplete="off">
+  <div class="pflabel" id="gmMemberLabel">Ahli (pilih min. 1)</div>
+  <input id="gmQ" maxlength="20" placeholder="Cari nama atau ID…" autocomplete="off" style="margin-bottom:6px">
+  <div id="gmList" class="gmembers"></div>
+  <div class="pfmeta" id="gmCount" style="margin-top:4px">0 dipilih</div>
+  <div class="mbtns"><button id="gmCancel">Batal</button><button class="prim" id="gmCreate">👥 Cipta Kumpulan</button></div>
+</div></div>
+
+<div class="modal" id="grpInfoModal"><div class="mbox">
+  <h3 id="giTitle">👥 Kumpulan</h3>
+  <div class="pflabel">Ahli</div>
+  <div id="giMembers"></div>
+  <div class="mbtns">
+    <button id="giLeave" class="warn">Keluar Kumpulan</button>
+    <button id="giInvite">➕ Jemput</button>
+    <button class="prim" id="giClose">Tutup</button>
+  </div>
 </div></div>
 
 <div class="modal" id="fwdModal"><div class="mbox">
@@ -490,6 +518,8 @@
   <div class="tab" id="tabDsp" hidden>
     <label>Bunyi <input type="checkbox" id="stSound"></label>
     <label>Notifikasi DM <input type="checkbox" id="stNotif"></label>
+    <label>Push latar-belakang <input type="checkbox" id="stPush"></label>
+    <div class="pfmeta" id="pushHint" style="margin:-6px 0 4px">Menerima notifikasi walaupun aplikasi ditutup. Perlukan Pelayan Service + HTTPS.</div>
     <label style="border-bottom:none;padding-bottom:2px">Jimat data <span style="color:var(--muted);font-size:.72rem">(2G/3G/GPRS)</span></label>
     <div class="seg" id="stData">
       <button data-d="auto">Auto</button>
@@ -563,7 +593,7 @@
       liveRetry = 0, tpClear = null;   // aliran langsung
   let serverResults = [], searchTimer = null;   // hasil carian pelayan
   let jumpAfter = null;   // id mesej untuk dilompat selepas bilik dibuka
-  let pref = { sound: true, notif: false, wall: 1, font: 15, data: 'auto' };
+  let pref = { sound: true, notif: false, push: false, wall: 1, font: 15, data: 'auto', recent: [] };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
   const box = r => r ? (cache[r.id] = cache[r.id] || { msgs: [], seq: 0 }) : null;
@@ -926,7 +956,7 @@
       const m = (c && c.msgs) || [];
       let pv = !r.last ? '<i style="color:var(--muted)">Tiada mesej</i>'
         : (r.last.t == null ? '<i>mesej dipadam</i>'
-        : esc((mineAuthor(r.last.fid, r.last.from) ? 'Anda: ' : r.kind === 'global' ? r.last.from + ': ' : '') +
+        : esc((mineAuthor(r.last.fid, r.last.from) ? 'Anda: ' : (r.kind === 'global' || r.kind === 'group') ? r.last.from + ': ' : '') +
           (norm(r.last.t) ? norm(r.last.t).slice(0, 48) : mediaWord(r.last.mt, r.last.n || 1))));
       let tm = r.last ? listTime(r.last.ts) : '';
       let show = true, score = r.last ? r.last.ts : 0;
@@ -938,10 +968,14 @@
       }
       if (!show) return null;
       const dm = r.kind === 'dm';
+      const grp = r.kind === 'group';
       const ava = dm ? '<div class="ava" style="background:' + colorOf(r.title) + '">' + esc(initials(r.title)) + (r.online ? '<span class="dot"></span>' : '') + '</div>'
+        : grp ? '<div class="ava" style="background:#3a4f6e">👥' + (typeof r.online === 'number' && r.online > 0 ? '<span class="dot"></span>' : '') + '</div>'
         : '<div class="ava" style="background:#2f3d5c">🌍</div>';
       return { score, html: '<div class="chatrow" data-r="' + esc(r.id) + '">' + ava +
-        '<div class="mid"><div class="nm">' + hilite(r.title, q) + '</div><div class="pv">' + pv + '</div></div>' +
+        '<div class="mid"><div class="nm">' + hilite(r.title, q) + '</div>' +
+        (grp ? '<div style="font-size:.65rem;color:var(--muted);margin-bottom:1px">' + (r.memberCount || 0) + ' ahli</div>' : '') +
+        '<div class="pv">' + pv + '</div></div>' +
         '<div class="end"><div class="tm">' + tm + '</div>' + (r.unread && cur !== r.id ? '<span class="badge">' + r.unread + '</span>' : '') + '</div></div>' };
     }).filter(Boolean).sort((a, b) => b.score - a.score);
     // Bahagian hasil carian mesej pelayan — di bawah bilik yang sepadan nama.
@@ -952,7 +986,9 @@
           '<div class="chatrow srch" data-r="' + esc(m.room) + '" data-mid="' + esc(m.id) + '">' +
           (m.roomKind === 'dm'
             ? '<div class="ava" style="background:' + colorOf(m.roomTitle) + '">' + esc(initials(m.roomTitle)) + '</div>'
-            : '<div class="ava" style="background:#2f3d5c">\ud83c\udf0d</div>') +
+            : m.roomKind === 'group'
+            ? '<div class="ava" style="background:#3a4f6e">👥</div>'
+            : '<div class="ava" style="background:#2f3d5c">🌍</div>') +
           '<div class="mid"><div style="font-size:.68rem;color:var(--muted);margin-bottom:1px">' + esc(m.roomTitle) + ' \u00b7 ' + esc(m.from) + '</div>' +
           '<div class="pv">' + excerpt(m.t, q) + '</div></div>' +
           '<div class="end"><div class="tm">' + listTime(m.ts) + '</div></div></div>').join('');
@@ -982,6 +1018,7 @@
     const r = room(id);
     $('tName').textContent = r ? r.title : id;
     if (r && r.kind === 'dm') { $('tAva').textContent = initials(r.title); $('tAva').style.background = colorOf(r.title); }
+    else if (r && r.kind === 'group') { $('tAva').textContent = '👥'; $('tAva').style.background = '#3a4f6e'; }
     else { $('tAva').textContent = '🌍'; $('tAva').style.background = '#2f3d5c'; }
     // Butang panggilan hanya masuk akal untuk DM yang tidak dibekukan.
     $('cAud').hidden = $('cVid').hidden = !(r && r.kind === 'dm' && r.peerId && !r.blocked);
@@ -1008,6 +1045,11 @@
     if (r.kind === 'global') {
       const n = typeof r.online === 'number' ? r.online : people.filter(p => p.online).length;
       st.textContent = 'bilik umum · ' + n + ' dalam talian'; st.className = n ? 'on' : '';
+    }
+    else if (r.kind === 'group') {
+      const cnt = r.memberCount || 0;
+      const on = typeof r.online === 'number' ? r.online : 0;
+      st.textContent = cnt + ' ahli · ' + on + ' dalam talian'; st.className = on ? 'on' : '';
     }
     else {
       const p = people.find(x => r.peerId ? x.id === r.peerId : String(x.name).toLowerCase() === r.title.toLowerCase()) ||
@@ -1803,7 +1845,7 @@
     }
     if (e.key !== 'Escape') return;
     hideCtx();
-    ['peopleModal', 'fwdModal', 'setModal', 'profModal', 'prankModal'].forEach(id => $(id).classList.remove('open'));
+    ['peopleModal', 'groupModal', 'fwdModal', 'setModal', 'profModal', 'prankModal', 'grpInfoModal'].forEach(id => $(id).classList.remove('open'));
     if (replyTo || editing) closeReplyEdit();
   });
 
@@ -1918,7 +1960,7 @@
   function openFwd(msg) {
     fwdMsg = msg;
     $('fwdList').innerHTML = rooms.map(r =>
-      '<div class="rowm" data-r="' + esc(r.id) + '"><div class="ava" style="background:' + (r.kind === 'dm' ? colorOf(r.title) : '#2f3d5c') + '">' + (r.kind === 'dm' ? esc(initials(r.title)) : '🌍') + '</div><div><b>' + esc(r.title) + '</b></div></div>').join('')
+      '<div class="rowm" data-r="' + esc(r.id) + '"><div class="ava" style="background:' + (r.kind === 'dm' ? colorOf(r.title) : r.kind === 'group' ? '#3a4f6e' : '#2f3d5c') + '">' + (r.kind === 'dm' ? esc(initials(r.title)) : r.kind === 'group' ? '👥' : '🌍') + '</div><div><b>' + esc(r.title) + '</b></div></div>').join('')
       || '<p style="color:var(--muted);font-size:.84rem">Tiada bilik.</p>';
     for (const el of $('fwdList').querySelectorAll('.rowm')) el.onclick = async () => {
       $('fwdModal').classList.remove('open');
@@ -1967,6 +2009,87 @@
     catch (err) { toast(err.status === 404 ? 'Tiada akaun dengan ID ' + q + '.' : err.message); }
   });
   $('pclose').onclick = () => $('peopleModal').classList.remove('open');
+
+  // ─── Pembentukan kumpulan ───
+  let groupSel = new Set();
+  function renderGroupList(filter) {
+    const s = String(filter || '').trim().toLowerCase();
+    const list = people.filter(p => !isMeP(p) && (!s || String(p.name).toLowerCase().includes(s) || String(p.id) === s));
+    $('gmList').innerHTML = list.length ? list.map(p =>
+      '<label class="gmrow"><input type="checkbox" data-id="' + p.id + '"' + (groupSel.has(p.id) ? ' checked' : '') + '>' +
+      '<div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + '</div>' +
+      '<div style="flex:1;min-width:0"><b style="font-size:.88rem">' + esc(p.name) + '</b>' +
+      '<span style="font-size:.72rem;color:var(--muted);margin-left:6px">#' + p.id + '</span></div></label>').join('')
+      : '<p style="color:var(--muted);font-size:.84rem;padding:10px">' + (s ? 'Tiada padanan.' : 'Belum ada pengguna lain.') + '</p>';
+    for (const inp2 of $('gmList').querySelectorAll('input[data-id]')) {
+      inp2.onchange = () => { const id = +inp2.dataset.id; if (inp2.checked) groupSel.add(id); else groupSel.delete(id); $('gmCount').textContent = groupSel.size + ' dipilih'; };
+    }
+    $('gmCount').textContent = groupSel.size + ' dipilih';
+  }
+  $('gmOpen').onclick = () => {
+    $('peopleModal').classList.remove('open');
+    groupSel = new Set(); $('gmTitle').value = ''; $('gmQ').value = '';
+    // Reset ke mod cipta
+    $('gmH').textContent = '👥+ Kumpulan Baru';
+    $('gmNameLabel').style.display = ''; $('gmTitle').style.display = '';
+    $('gmMemberLabel').textContent = 'Ahli (pilih min. 1)';
+    $('gmCreate').textContent = '👥 Cipta Kumpulan'; $('gmCreate').dataset.invite = '';
+    renderGroupList('');
+    $('groupModal').classList.add('open'); $('gmTitle').focus();
+  };
+  $('gmQ').addEventListener('input', e => renderGroupList(e.target.value));
+  $('gmCancel').onclick = () => $('groupModal').classList.remove('open');
+  $('gmCreate').onclick = async () => {
+    const inviteRoomId = $('gmCreate').dataset.invite;
+    if (inviteRoomId) {
+      if (groupSel.size < 1) return toast('Pilih sekurang-kurangnya seorang.');
+      $('gmCreate').disabled = true;
+      try {
+        for (const id of groupSel) await post('/group/invite', { room: inviteRoomId, memberId: id });
+        $('groupModal').classList.remove('open');
+        await loadRooms(false); toast('Ahli dijemput.');
+      } catch (err2) { toast(err2.message); }
+      $('gmCreate').disabled = false; $('gmCreate').dataset.invite = ''; $('gmCreate').textContent = '👥 Cipta Kumpulan';
+    } else {
+      const title = $('gmTitle').value.trim();
+      if (!title) return toast('Isi nama kumpulan.');
+      if (groupSel.size < 1) return toast('Pilih sekurang-kurangnya seorang ahli.');
+      $('gmCreate').disabled = true;
+      try {
+        const j = await post('/group', { title, memberIds: [...groupSel] });
+        $('groupModal').classList.remove('open');
+        await loadRooms(false); openRoom(j.room.id);
+        toast('Kumpulan “' + title + '” dicipta.');
+      } catch (e) { toast(e.message); }
+      $('gmCreate').disabled = false;
+    }
+  };
+
+  // ─── Maklumat kumpulan ───
+  function openGroupInfo(r) {
+    $('giTitle').textContent = '👥 ' + r.title;
+    $('giMembers').innerHTML = (r.members || []).map(n =>
+      '<div class="rowm"><div class="ava" style="background:' + colorOf(n) + '">' + esc(initials(n)) + '</div>' +
+      '<div class="grow"><b>' + esc(n) + '</b>' + (n === me ? ' <small>(Anda)</small>' : '') + '</div></div>').join('');
+    $('giInvite').onclick = async () => {
+      $('grpInfoModal').classList.remove('open');
+      renderGroupList(''); groupSel = new Set();
+      $('gmTitle').value = ''; $('gmQ').value = '';
+      // Tukar ke mod jemput
+      $('gmH').textContent = '➕ Jemput ke ' + r.title;
+      $('gmNameLabel').style.display = 'none'; $('gmTitle').style.display = 'none';
+      $('gmMemberLabel').textContent = 'Pilih ahli baharu';
+      $('gmCreate').textContent = '➕ Jemput'; $('gmCreate').dataset.invite = r.id;
+      $('groupModal').classList.add('open'); $('gmQ').focus();
+    };
+    $('giLeave').onclick = async () => {
+      try { await post('/group/leave', { room: r.id }); $('grpInfoModal').classList.remove('open'); await loadRooms(false); openRoom('global_am'); toast('Anda keluar dari kumpulan.'); }
+      catch (e) { toast(e.message); }
+    };
+    $('giClose').onclick = () => $('grpInfoModal').classList.remove('open');
+    $('grpInfoModal').classList.add('open');
+  }
+  // gmCreate dual-mode handled directly in onclick above.
 
   // ─── Profil / "siapa punya ID ini?" ───
   let profCur = 0;
@@ -2027,7 +2150,9 @@
   $('me').onclick = e => { if (e.target && e.target.id === 'outBtn') return; openSettings('Prof'); };
   $('whoBox').onclick = () => {
     const r = room(cur);
-    if (!r || r.kind !== 'dm' || !r.peerId) return;
+    if (!r) return;
+    if (r.kind === 'group') { openGroupInfo(r); return; }
+    if (r.kind !== 'dm' || !r.peerId) return;
     openProf({ id: r.peerId, name: r.title, bio: r.peer ? r.peer.bio : '', online: !!r.online, blocked: !!r.blocked });
   };
   $('pfClose').onclick = () => $('profModal').classList.remove('open');
@@ -2146,6 +2271,12 @@
     $('stCopy').onclick = () => copyText(myId);
     $('stSound').checked = !!pref.sound; $('stFont').value = pref.font;
     $('stNotif').checked = !!pref.notif;
+    const pushSupported = ('serviceWorker' in navigator) && ('PushManager' in window);
+    $('stPush').checked = !!pref.push;
+    $('stPush').parentElement.style.display = pushSupported ? '' : 'none';
+    $('pushHint').textContent = pushSupported
+      ? 'Menerima notifikasi walaupun aplikasi ditutup. Perlukan HTTPS + Service Worker.'
+      : 'Pelayar ini tidak menyokong Push API.';
     markData(); $('connHint').textContent = connHintText();
     markWalls(); paintAppTab();
     $('stOld').value = $('stP1').value = $('stP2').value = '';
@@ -2189,12 +2320,20 @@
   $('stSound').onchange = e => { pref.sound = e.target.checked; savePref(); };
   // Notifikasi DM: perlu kebenaran pelayar. Jika ditolak, jangan simpan pilihan.
   $('stNotif').onchange = async e => {
-    if (!e.target.checked) { pref.notif = false; savePref(); return; }
+    if (!e.target.checked) { pref.notif = false; pref.push = false; savePref(); await disablePush(); $('stPush').checked = false; return; }
     if (!window.Notification) { toast('Pelayar ini tidak menyokong notifikasi.'); e.target.checked = false; return; }
     let p = Notification.permission;
     if (p === 'default') { try { p = await Notification.requestPermission(); } catch { p = 'denied'; } }
     if (p !== 'granted') { toast('Kebenaran notifikasi ditolak — benarkan dalam tetapan pelayar.'); e.target.checked = false; return; }
     pref.notif = true; savePref(); toast('Notifikasi DM diaktifkan.');
+  };
+  // Push latar-belakang: perlu Notification diaktifkan dulu.
+  $('stPush').onchange = async e => {
+    if (!e.target.checked) { pref.push = false; savePref(); await disablePush(); return; }
+    if (!pref.notif) { toast('Sila aktifkan Notifikasi DM dahulu.'); e.target.checked = false; return; }
+    const ok = await enablePush();
+    if (ok) { toast('Push latar-belakang diaktifkan.'); }
+    else { e.target.checked = false; toast('Push tidak dapat diaktifkan. Pastikan pelayar menyokong Push API.'); }
   };
   $('stFont').oninput = e => { pref.font = +e.target.value; savePref(); applyPref(); };
   function markWalls() {
@@ -2215,6 +2354,34 @@
   function applyPref() {
     $('msgsWrap').dataset.wall = pref.wall;
     $('msgs').style.setProperty('--fs', pref.font + 'px');
+  }
+
+  // ─── Web Push (VAPID) ───
+  function urlB64ToU8(b64url) {
+    const pad = '='.repeat((4 - b64url.length % 4) % 4);
+    const b64 = (b64url + pad).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(b64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+  async function enablePush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { toast('Pelayar ini tidak menyokong Push.'); return false; }
+    if (Notification.permission !== 'granted') return false;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const j = await call('/vapid-public-key');
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(j.key) });
+      await post('/push-subscribe', sub.toJSON());
+      pref.push = true; savePref(); return true;
+    } catch { return false; }
+  }
+  async function disablePush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) { await post('/push-unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+      pref.push = false; savePref();
+    } catch { /* noop */ }
   }
 
   // ─── PWA: pasang sebagai aplikasi (Android/iOS/Windows/Linux/Huawei) + Jana APK ───
@@ -2259,9 +2426,13 @@
   };
   let eCat = Object.keys(EMOJIS)[0];
   function renderEmoji() {
-    $('eCatTabs').innerHTML = Object.keys(EMOJIS).map(k =>
+    const cats = ['🕑 Baru', ...Object.keys(EMOJIS)];
+    $('eCatTabs').innerHTML = cats.map(k =>
       '<button data-c="' + k + '" class="' + (k === eCat ? 'on' : '') + '">' + k.split(' ')[0] + ' ' + k.split(' ').slice(1).join(' ') + '</button>').join('');
-    $('eGrid').innerHTML = (EMOJIS[eCat] || []).map(e => '<button>' + e + '</button>').join('');
+    const items = eCat === '🕑 Baru' ? (pref.recent || []) : (EMOJIS[eCat] || []);
+    $('eGrid').innerHTML = items.length ? items.map(e => '<button>' + e + '</button>').join('')
+      : eCat === '🕑 Baru' ? '<p style="color:var(--muted);font-size:.82rem;padding:8px;grid-column:1/-1">Tiada emoji digunakan lagi. Tekan emoji lain untuk mula mengumpul!</p>'
+      : '';
     for (const b of $('eCatTabs').querySelectorAll('button')) b.onclick = () => { eCat = b.dataset.c; renderEmoji(); };
     for (const b of $('eGrid').querySelectorAll('button')) b.onclick = () => insertEmoji(b.textContent);
   }
@@ -2270,6 +2441,8 @@
     ta.value = ta.value.slice(0, pos) + em + ta.value.slice(ta.selectionEnd || pos);
     ta.focus(); ta.selectionStart = ta.selectionEnd = pos + em.length;
     grow();
+    pref.recent = [em, ...(pref.recent || []).filter(x => x !== em)].slice(0, 24);
+    savePref();
   }
   renderEmoji();
   $('emojiBtn').onclick = () => { const on = $('emojiPop').classList.toggle('on'); $('emojiBtn').classList.toggle('on', on); };

@@ -879,3 +879,129 @@ test('search: newest dulu dan ada roomTitle + from', () => {
   assert.ok(list[0].roomTitle, 'ada roomTitle');
   assert.equal(list[0].from, 'Ana', 'ada nama penghantar');
 });
+
+// ─── Bilik kumpulan ───
+test('createGroup: cipta bilik dengan ahli yang betul', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const r = chat.createGroup('Ana', 'Kelas 5A', [idOf('Ben'), idOf('Cia')]);
+  assert.ok(r.ok);
+  assert.equal(r.room.kind, 'group');
+  assert.equal(r.room.title, 'Kelas 5A');
+  assert.equal(r.room.memberIds.length, 3, 'Ana + Ben + Cia');
+  assert.ok(r.room.memberIds.includes(idOf('Ana')));
+});
+
+test('createGroup: tanpa nama atau < 2 ahli ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  assert.ok(chat.createGroup('Ana', '', [idOf('Ben')]).error, 'tiada nama');
+  assert.ok(chat.createGroup('Ana', 'X', []).error, 'tiada ahli lain');
+});
+
+test('canRead + roomTitle: ahli sahaja boleh baca, nama dipulangkan terus', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const grp = chat.createGroup('Ana', 'Kedai Kopi', [idOf('Ben')]).room;
+  assert.ok(chat.canRead('Ana', grp.id));
+  assert.ok(chat.canRead('Ben', grp.id));
+  assert.ok(!chat.canRead('Cia', grp.id), 'bukan ahli');
+  assert.equal(chat.roomTitle(grp, 'Ana'), 'Kedai Kopi');
+});
+
+test('send dalam kumpulan: mesej muncul untuk semua ahli', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const grp = chat.createGroup('Ana', 'Kumpulan', [idOf('Ben')]).room;
+  const r = chat.send('Ana', grp.id, 'hai semua');
+  assert.ok(r.ok);
+  const list = chat.since('Ben', grp.id, 0).msgs;
+  assert.equal(list.length, 1);
+  assert.equal(list[0].t, 'hai semua');
+});
+
+test('addToGroup: tambah ahli, ahli sedia ada → already, luar kumpulan → ralat', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3'); chat.register('Din', 'pass4');
+  const grp = chat.createGroup('Ana', 'Kumpulan', [idOf('Ben')]).room;
+  assert.ok(chat.addToGroup('Ana', grp.id, idOf('Cia')).ok);
+  assert.equal(grp.memberIds.length, 3);
+  assert.ok(chat.addToGroup('Ana', grp.id, idOf('Ben')).already, 'sudah ahli → already');
+  assert.ok(chat.addToGroup('Din', grp.id, idOf('Cia')).error, 'Din bukan ahli → ditolak');
+});
+
+test('leaveGroup: ahli boleh keluar sendiri, bukan ahli → ralat', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const grp = chat.createGroup('Ana', 'Kumpulan', [idOf('Ben'), idOf('Cia')]).room;
+  assert.ok(chat.leaveGroup('Cia', grp.id).ok);
+  assert.ok(!grp.memberIds.includes(idOf('Cia')), 'Cia sudah keluar');
+  assert.ok(chat.leaveGroup('Cia', grp.id).error, 'bukan ahli lagi');
+});
+
+test('POST /api/chat/group: endpoint pulangkan room, tolak badan tidak sah', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const r = hit(routes, 'P /api/chat/group', reqOf(tok, { title: 'Test', memberIds: [idOf('Ben')] }));
+  assert.equal(r.code, 200);
+  assert.ok(r.body.ok);
+  assert.equal(r.body.room.kind, 'group');
+  assert.equal(r.body.room.memberCount, 2);
+  const r2 = hit(routes, 'P /api/chat/group', reqOf(tok, { title: '', memberIds: [idOf('Ben')] }));
+  assert.equal(r2.code, 400, 'tiada nama → 400');
+  assert.equal(hit(routes, 'P /api/chat/group', reqOf('palsu', { title: 'X', memberIds: [idOf('Ben')] })).code, 401);
+});
+
+// ─── Web Push ───
+test('vapid key: GET /api/chat/vapid-public-key pulangkan kunci base64url', () => {
+  fresh();
+  const routes = mountRoutes();
+  const r = hit(routes, 'G /api/chat/vapid-public-key', reqGet('x', {}));
+  assert.equal(r.code, 200);
+  assert.ok(typeof r.body.key === 'string' && r.body.key.length > 40);
+});
+
+test('push-subscribe: simpan langganan, 401 tanpa token', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const sub = { endpoint: 'https://example.com/push/abc', keys: { p256dh: 'x', auth: 'y' } };
+  const r = hit(routes, 'P /api/chat/push-subscribe', reqOf(tok, sub));
+  assert.equal(r.code, 200);
+  assert.ok(r.body.ok);
+  assert.equal(hit(routes, 'P /api/chat/push-subscribe', reqOf('palsu', sub)).code, 401);
+  assert.equal(hit(routes, 'P /api/chat/push-subscribe', reqOf(tok, {})).code, 400, 'tiada endpoint → 400');
+});
+
+test('push-unsubscribe: buang langganan ikut endpoint', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const ep = 'https://example.com/push/xyz';
+  hit(routes, 'P /api/chat/push-subscribe', reqOf(tok, { endpoint: ep, keys: { p256dh: 'a', auth: 'b' } }));
+  const r = hit(routes, 'P /api/chat/push-unsubscribe', reqOf(tok, { endpoint: ep }));
+  assert.equal(r.code, 200);
+  const s = chat.load();
+  const uid = String(idOf('Ana'));
+  assert.ok(!(s.pushSubs[uid] || []).find(x => x.endpoint === ep), 'sudah dibuang');
+});
+
+test('derSigToRaw: tandatangan EC P-256 → 64 bait', () => {
+  const crypto = require('crypto');
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', {
+    namedCurve: 'prime256v1',
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  });
+  const der = crypto.sign('sha256', Buffer.from('test'), privateKey);
+  const raw = chat.derSigToRaw(der);
+  assert.equal(raw.length, 64, 'ES256 = 64 bait');
+  assert.ok(Buffer.isBuffer(raw));
+  // Verify r || s round-trip is correct
+  const verified = crypto.verify('sha256', Buffer.from('test'), { key: publicKey, dsaEncoding: 'ieee-p1363' }, raw);
+  assert.ok(verified, 'signature raw sah — verify lulus');
+});
