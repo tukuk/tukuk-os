@@ -898,7 +898,7 @@ function people(query, limit, viewer) {
     .filter(u => !q || u.name.toLowerCase().includes(q) || (Number.isInteger(qid) && qid >= FIRST_ID && u.id === qid))
     .filter(u => !me || u.id === me.id || !blockers.has(u.id))
     .map(u => ({
-      id: u.id, name: u.name, bio: u.bio || '', online: isOnline(u), avatar: avatarUrl(u),
+      id: u.id, name: u.name, bio: u.bio || '', online: isOnline(u), avatar: avatarUrl(u), status: effStatus(u),
       following: !!me && isFollowing(me, u),
       friend: !!me && friendsOf(me).includes(u.id),
       blocked: !!me && blockedOf(me).includes(u.id),
@@ -915,7 +915,7 @@ function profile(query, viewer) {
   if (me && u.id !== me.id && blockedOf(u).includes(me.id)) return null;
   return {
     id: u.id, name: u.name, bio: u.bio || '', joined: u.createdAt || null, online: isOnline(u),
-    avatar: avatarUrl(u),
+    avatar: avatarUrl(u), status: effStatus(u),
     followingCount: followingOf(u).length, followersCount: followersOf(u).length,
     postCount: Object.values(load().posts || {}).filter(p => p.fid === u.id).length,
     following: !!me && u.id !== me.id && isFollowing(me, u),
@@ -930,6 +930,44 @@ function setBio(name, bio) {
   u.bio = String(bio == null ? '' : bio).replace(/\s+/g, ' ').trim().slice(0, 120);
   touch();
   return { ok: true, user: u };
+}
+// ─── Status (mood sementara) ────────────────────────────────────────────
+// Beza dengan bio (kekal, 120 aksara) dan cerita (24 jam, media): status
+// ialah teks pendek + emoji dengan tamat-lupa pilihan. Papar di profil,
+// senarai kawan/ikut, header DM & suapan sosial.
+const STATUS_T_MAX = 80;
+const STATUS_E_MAX = 8;   // had kod-emoji (bait bukan aksara supaya keluarga emoji tak pecah)
+// Pilihan TTL: 'off' = kekal sehingga diganti/dibuang.
+const STATUS_TTL = { off: 0, '30m': 1800e3, '1h': 3600e3, '4h': 14400e3, '8h': 28800e3, '12h': 43200e3, '24h': 86400e3, '7d': 604800e3 };
+// Kembalikan null bila tiada / sudah luput. Simpanan mentah masih ada sampai
+// penulis ganti/dibuang (supaya klien boleh papar baki masa tanpa jana 0).
+function effStatus(u) {
+  const st = u && u.status;
+  if (!st || typeof st !== 'object') return null;
+  if (st.exp && Date.now() > st.exp) return null;
+  if (!st.t && !st.e) return null;
+  return { t: String(st.t || ''), e: String(st.e || ''), at: st.at || null, exp: st.exp || null };
+}
+function setStatus(name, body) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  const b = body || {};
+  const raw = String(b.text == null ? '' : b.text).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const emo = String(b.emoji == null ? '' : b.emoji).trim();
+  const key = String(b.expiresIn == null ? 'off' : b.expiresIn).toLowerCase();
+  if (b.expiresIn != null && !Object.prototype.hasOwnProperty.call(STATUS_TTL, key)) {
+    return { error: 'Pilihan tempoh status tidak dikenali.' };
+  }
+  // Buang: kedua-dua teks & emoji kosong → status dikosongkan.
+  if (!raw && !emo) { u.status = null; touch(); return { ok: true, status: null }; }
+  if (raw.length > STATUS_T_MAX) return { error: 'Status terlalu panjang (had ' + STATUS_T_MAX + ' aksara).' };
+  const eb = Buffer.from(emo, 'utf8');
+  if (eb.length > STATUS_E_MAX * 4) return { error: 'Emoji terlalu besar (pilih satu sahaja).' };
+  const ttl = STATUS_TTL[key] || 0;
+  const now = Date.now();
+  u.status = { t: raw, e: emo, at: now, exp: ttl ? now + ttl : null };
+  touch();
+  return { ok: true, status: effStatus(u) };
 }
 // Tukar nama paparan. Tukuk ID kekal → bilik DM, mesej dan unread tidak rosak.
 function rename(name, next) {
@@ -1039,7 +1077,7 @@ function socialLists(name) {
   const wrap = (ids, withDm) => ids.map((id) => {
     const p = byId(id);
     if (!p) return null;
-    const out = { id: p.id, name: p.name, bio: p.bio || '', online: isOnline(p) };
+    const out = { id: p.id, name: p.name, bio: p.bio || '', online: isOnline(p), status: effStatus(p) };
     if (withDm) { const rid = dmId(u.id, p.id); out.dm = s.rooms[rid] ? rid : null; }
     return out;
   }).filter(Boolean).sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
@@ -1883,7 +1921,7 @@ function mount(app, deps) {
     if (!u) return res.json({ ok: true, name: null });
     const st = load();
     const nu = ((st.notif || {})[String(u.id)] || []).filter(n => !n.read).length;
-    res.json({ ok: true, name: u.name, id: u.id, bio: u.bio || '', joined: u.createdAt || null, online: true, avatar: avatarUrl(u), notifUnread: nu, followingCount: followingOf(u).length, followersCount: followersOf(u).length });
+    res.json({ ok: true, name: u.name, id: u.id, bio: u.bio || '', joined: u.createdAt || null, online: true, avatar: avatarUrl(u), status: effStatus(u), notifUnread: nu, followingCount: followingOf(u).length, followersCount: followersOf(u).length });
   });
 
   // Boleh dipanggil mana-mana app di tukuk.org — token chat yang sama = identitas sama.
@@ -2064,6 +2102,20 @@ function mount(app, deps) {
     }
     event('Profil dikemas kini: ' + u.name, { id: u.id });
     res.json({ ok: true, name: u.name, id: u.id, profile: profile(u.name) });
+  });
+
+  // Status (mood sementara) — teks pendek + emoji dengan TTL pilihan.
+  // Kosongkan dengan hantar { text:'', emoji:'' } (atau keduanya null).
+  app.post('/api/chat/status', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chst:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = setStatus(u.name, { text: b.text, emoji: b.emoji, expiresIn: b.expiresIn });
+    if (r.error) return res.status(400).json({ error: r.error });
+    // Beritahu diri sendiri (tab lain) + pengikut supaya senarai/paparan segar.
+    const audience = followersOf(u).concat([u.id]);
+    pub('social', { kind: 'status', by: u.id }, audience);
+    event('Status dikemas kini: ' + u.name + (r.status ? ' — ' + (r.status.e || '') + ' ' + r.status.t : ' — dikosongkan'), { id: u.id });
+    res.json({ ok: true, status: r.status });
   });
 
   app.post('/api/chat/typing', (req, res) => {
@@ -2498,6 +2550,7 @@ module.exports = {
   react, edit, remove, setTyping, typingIn, searchMsgs, people, onlineMap, setPath, load, flush,
   byId, findUser, nameOfUser, peerId, isMember, sameAuthor, authorName,
   profile, rename, setBio, isOnline, cleanText,
+  setStatus, effStatus, STATUS_TTL, STATUS_T_MAX, STATUS_E_MAX,
   addFriend, delFriend, blockUser, unblockUser, socialLists, socialTarget, setPass, logoutAll,
   friendsOf, blockedOf, dmFrozen, MAX_FRIENDS, MAX_BLOCKS,
   pub, pubRoom, attachSink, detachSink, kickSinks, dropSink, tickBeat, clearSinks, MAX_STREAMS,

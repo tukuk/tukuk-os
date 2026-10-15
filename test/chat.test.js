@@ -1647,6 +1647,63 @@ test('P /api/chat/recovery/generate perlu login; /reset tanpa login pulangkan to
   assert.equal(hit(routes, 'G /api/chat/recovery/status', reqGet(rr.body.token, {})).body.remaining, 4);
 });
 
+// ─── Status (mood sementara) ───
+test('setStatus: simpan teks+emoji dengan TTL sah; effStatus papar baki', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  const r = chat.setStatus('Ana', { text: 'Fokus kerja', emoji: '🎧', expiresIn: '4h' });
+  assert.ok(r.ok); assert.ok(r.status);
+  assert.equal(r.status.t, 'Fokus kerja'); assert.equal(r.status.e, '🎧');
+  assert.ok(r.status.exp > Date.now() + 3 * 3600e3 && r.status.exp <= Date.now() + 4 * 3600e3 + 1000, 'exp ≈ 4 jam dari sekarang');
+  assert.deepEqual(chat.effStatus(chat.findUser('Ana')), r.status);
+});
+test('setStatus: expiresIn off → tanpa luput; tamat bila kedua-dua kosong', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  const k = chat.setStatus('Ana', { text: 'Kekal', emoji: '', expiresIn: 'off' });
+  assert.equal(k.status.exp, null);
+  const c = chat.setStatus('Ana', { text: '  ', emoji: '', expiresIn: 'off' });
+  assert.equal(c.status, null, 'teks+emoji kosong → status dibuang');
+  assert.equal(chat.effStatus(chat.findUser('Ana')), null);
+});
+test('setStatus: teks terlalu panjang & TTL tidak dikenali ditolak', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  assert.ok(chat.setStatus('Ana', { text: 'x'.repeat(81), emoji: '🙂', expiresIn: 'off' }).error, 'teks > 80 ditolak');
+  assert.ok(chat.setStatus('Ana', { text: 'ok', emoji: '🙂', expiresIn: '99j' }).error, 'TTL tak dikenal pasti');
+});
+test('setStatus: exp lampau → effStatus null (tidak papar)', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  chat.setStatus('Ana', { text: 'Semalam', emoji: '😴', expiresIn: 'off' });
+  // manipulasi terus ke stor untuk set exp ke masa lampau
+  const u = chat.findUser('Ana');
+  u.status.exp = Date.now() - 1000; chat.flush();
+  assert.equal(chat.effStatus(u), null);
+});
+test('people() & profile() sertakan status aktif', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123'); chat.register('Ben', 'rahasia123');
+  chat.setStatus('Ana', { text: 'Sibuk', emoji: '💼', expiresIn: '4h' });
+  const ana = chat.findUser('Ana');
+  const list = chat.people('Ana', 50, 'Ben');
+  const row = list.find(p => p.id === ana.id);
+  assert.ok(row && row.status && row.status.t === 'Sibuk', 'people → status');
+  const prof = chat.profile('Ana', 'Ben');
+  assert.equal(prof.status.t, 'Sibuk');
+});
+test('P /api/chat/status: perlu login; kosongkan body → status null', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  assert.equal(hit(routes, 'P /api/chat/status', reqOf('palsu', { text: 'x' })).code, 401, 'perlu login');
+  const r = hit(routes, 'P /api/chat/status', reqOf(tok, { text: 'Fokus', emoji: '🎧', expiresIn: '1h' }));
+  assert.equal(r.code, 200); assert.equal(r.body.status.t, 'Fokus');
+  const c = hit(routes, 'P /api/chat/status', reqOf(tok, { text: '', emoji: '', expiresIn: 'off' }));
+  assert.equal(c.code, 200); assert.equal(c.body.status, null);
+});
+
 // ─── Undian ───
 test('createPoll: cipta undian dalam bilik global dengan soalan + pilihan', () => {
   fresh();
