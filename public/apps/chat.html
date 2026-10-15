@@ -2414,15 +2414,19 @@
   $('stApk').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
 
   // ─── Emoji picker ───
+  // Intl.Segmenter memisahkan grafem (emoji ZWJ + variation selector) dengan betul.
+  // Array.from hanya memisahkan kod titik — ❤️ (U+2764 U+FE0F) masih terbahagi.
+  const _sg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('en', { granularity: 'grapheme' }) : null;
+  const segEmoji = s => _sg ? [..._sg.segment(s)].map(x => x.segment) : Array.from(s);
   const EMOJIS = {
-    '😀 Wajah': '😀😃😄😁😆😅😂🤣🥲😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕'.split(''),
-    '👋 Isyarat': '👋🤚✋🖐️✌️🤟🤘👌🤌👍👎✊👊🤛🤜👏🙌👐🤲🙏✍️💅🤳💪🦵🦶👂👃🧠🫀🫁👁️🗣️👤👥🫂👶🧒👦👧🧑👩👨👩‍🦱👨‍🦱👩‍🦰👨‍🦰👱‍♀️👱👩‍🦳👨‍🦳🧔👲👳‍♀️👳🧕👮‍♀️👮👷‍♀️👷💂‍♀️💂🕵️‍♀️🕵️👩‍⚕️👨‍⚕️👩‍🌾👨‍🌾'.split(''),
-    '❤️ Hati': '❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉️☸️✡️🔯🕎☯️☦️🛐⛎♈♉♊♋♌♍♎♏♐♑♒♓🆔⚛️🉑☢️☣️📴📳🈶🈚🈸🈺🈷️✴️🆚💮🉐'.split(''),
-    '🐶 Haiwan': '🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐒🐔🐧🐦🐤🐣🐥🦆🦅🦉🦇🐺🐗🐴🦄🐝🪱🐛🦋🐌🐞🐜🪰🪲🪳🕷️🕸️🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🦧🦣🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈‍⬛🐈📦🐕‍🦺'.split(''),
-    '🍕 Makanan': '🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶️🫑🌽🥕🫒🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🍔🍟🍕🌭🥪🌮🌯🫔🥙🧆🍖🍗🦴🥩🍘🍙🍚🍛🍜🍝🍠🍢🍣🍤🍥🥮🍡🥟🥠🥡🦪🍦🍧🍨🍩🍪🎂🍰🧁🥧🍫🍬🍭🍮🍯🍼🥛☕🫖🍵🍶🍾🍷🍸🍹🍺🍻🥂🥃'.split(''),
-    '⚽ Aktiviti': '⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🪀🪁🏓🏸🏒🏑🥍🏏🥅⛳🪩🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸️🥌🎿⛷️🏂🪂🏋️‍♀️🏋️🤼‍♀️🤼🤸‍♀️🤸⛹️‍♀️⛹️🤺🤾‍♀️🤾🏌️‍♀️🏌️🏇🧘‍♀️🧘🏄‍♀️🏄🏊‍♀️🏊🚣‍♀️🚣🧗‍♀️🧗🚵‍♀️🚵🚴‍♀️🚴🏆🥇🥈🥉🏅🎖️🏵️🎗️🎫🎟️🎪🤹‍♀️🤹🎭🩰🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🪗🎸🪕🎻'.split(''),
-    '🚗 Objek': '⌚📱💻⌨️🖥️🖨️🖱️🖲️💽💾💿📀📷📸📹🎥📽️🎞️📞☎️📟📠📺📻🧭⏰🕰️⌛⏳📡🔋🪫🔌💡🔦🕯️🪔🧯🛢️💸💵💴💶💷🪙💰💳💎⚖️🪜🧰🪛🔧🔨⚒️🛠️⛏️🪚🔩⚙️🪤🧱⛓️🧲🔫💣🧨🪓🔪🗡️⚔️🛡️🚬⚰️🪦⚱️🏺🔮📿🧿💈⚗️🔭🔬🕳️🩹🩺💊💉🩸🧬🦠🧫🧪🌡️🧹🪠🧺🧻'.split(''),
-    '🌍 Alam': '🌍🌎🌏🪐💫⭐🌟✨⚡☄️💥🔥🌪️🌈☀️🌤️⛅🌥️☁️🌦️🌧️⛈️🌩️🌨️❄️☃️⛄🌬️💨🌫️🌊💧💦☔☂️🧊🌸🌹🥀🌺🌻🌼🌷🌱🪴🌲🌳🌴🌵🌾☘️🍀🍁🍂🍃🪹🍄🌰🦀🐚🪸🌞🌝🌛🌜🌚🌕🌖🌗🌘🌑🌒🌓🌔🌙🌎🍋‍🟩🍅'.split(''),
+    '😀 Wajah': segEmoji('😀😃😄😁😆😅😂🤣🥲😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕'),
+    '👋 Isyarat': segEmoji('👋🤚✋🖐️✌️🤟🤘👌🤌👍👎✊👊🤛🤜👏🙌👐🤲🙏✍️💅🤳💪🦵🦶👂👃🧠🫀🫁👁️🗣️👤👥🫂👶🧒👦👧🧑👩👨👩‍🦱👨‍🦱👩‍🦰👨‍🦰👱‍♀️👱👩‍🦳👨‍🦳🧔👲👳‍♀️👳🧕👮‍♀️👮👷‍♀️👷💂‍♀️💂🕵️‍♀️🕵️👩‍⚕️👨‍⚕️👩‍🌾👨‍🌾'),
+    '❤️ Hati': segEmoji('❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉️☸️✡️🔯🕎☯️☦️🛐⛎♈♉♊♋♌♍♎♏♐♑♒♓🆔⚛️🉑☢️☣️📴📳🈶🈚🈸🈺🈷️✴️🆚💮🉐'),
+    '🐶 Haiwan': segEmoji('🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐒🐔🐧🐦🐤🐣🐥🦆🦅🦉🦇🐺🐗🐴🦄🐝🪱🐛🦋🐌🐞🐜🪰🪲🪳🕷️🕸️🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🦧🦣🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈‍⬛🐈📦🐕‍🦺'),
+    '🍕 Makanan': segEmoji('🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶️🫑🌽🥕🫒🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🍔🍟🍕🌭🥪🌮🌯🫔🥙🧆🍖🍗🦴🥩🍘🍙🍚🍛🍜🍝🍠🍢🍣🍤🍥🥮🍡🥟🥠🥡🦪🍦🍧🍨🍩🍪🎂🍰🧁🥧🍫🍬🍭🍮🍯🍼🥛☕🫖🍵🍶🍾🍷🍸🍹🍺🍻🥂🥃'),
+    '⚽ Aktiviti': segEmoji('⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🪀🪁🏓🏸🏒🏑🥍🏏🥅⛳🪩🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸️🥌🎿⛷️🏂🪂🏋️‍♀️🏋️🤼‍♀️🤼🤸‍♀️🤸⛹️‍♀️⛹️🤺🤾‍♀️🤾🏌️‍♀️🏌️🏇🧘‍♀️🧘🏄‍♀️🏄🏊‍♀️🏊🚣‍♀️🚣🧗‍♀️🧗🚵‍♀️🚵🚴‍♀️🚴🏆🥇🥈🥉🏅🎖️🏵️🎗️🎫🎟️🎪🤹‍♀️🤹🎭🩰🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🪗🎸🪕🎻'),
+    '🚗 Objek': segEmoji('⌚📱💻⌨️🖥️🖨️🖱️🖲️💽💾💿📀📷📸📹🎥📽️🎞️📞☎️📟📠📺📻🧭⏰🕰️⌛⏳📡🔋🪫🔌💡🔦🕯️🪔🧯🛢️💸💵💴💶💷🪙💰💳💎⚖️🪜🧰🪛🔧🔨⚒️🛠️⛏️🪚🔩⚙️🪤🧱⛓️🧲🔫💣🧨🪓🔪🗡️⚔️🛡️🚬⚰️🪦⚱️🏺🔮📿🧿💈⚗️🔭🔬🕳️🩹🩺💊💉🩸🧬🦠🧫🧪🌡️🧹🪠🧺🧻'),
+    '🌍 Alam': segEmoji('🌍🌎🌏🪐💫⭐🌟✨⚡☄️💥🔥🌪️🌈☀️🌤️⛅🌥️☁️🌦️🌧️⛈️🌩️🌨️❄️☃️⛄🌬️💨🌫️🌊💧💦☔☂️🧊🌸🌹🥀🌺🌻🌼🌷🌱🪴🌲🌳🌴🌵🌾☘️🍀🍁🍂🍃🪹🍄🌰🦀🐚🪸🌞🌝🌛🌜🌚🌕🌖🌗🌘🌑🌒🌓🌔🌙🌎🍋‍🟩🍅'),
   };
   let eCat = Object.keys(EMOJIS)[0];
   function renderEmoji() {
@@ -2448,6 +2452,10 @@
   renderEmoji();
   $('emojiBtn').onclick = () => { const on = $('emojiPop').classList.toggle('on'); $('emojiBtn').classList.toggle('on', on); if (on) renderEmoji(); };
   document.addEventListener('click', e => {
+    // renderEmoji() menggantikan innerHTML; butang yang diklik boleh jadi sudah
+    // tanggal dari DOM (isConnected=false) sebelum event sampai ke document —
+    // jangan anggapnya klik di luar dan tutup popup serta-merta.
+    if (!e.target || !e.target.isConnected) return;
     if (!e.target.closest('#emojiPop') && !e.target.closest('#emojiBtn')) {
       $('emojiPop').classList.remove('on'); $('emojiBtn').classList.remove('on');
     }
