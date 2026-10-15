@@ -246,6 +246,19 @@
   #send { width:44px; height:44px; border-radius:50%; border:none; background:var(--accent); color:#fff; font-size:1.2rem; cursor:pointer; flex:none; }
   #send:hover { filter:brightness(1.1); }
   #send[disabled] { opacity:.5; cursor:default; }
+  /* ─── Emoji picker ─── */
+  #emojiBtn { width:40px; height:40px; flex:none; border-radius:50%; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:1.05rem; cursor:pointer; }
+  #emojiBtn:hover, #emojiBtn.on { border-color:var(--accent); color:var(--accent); }
+  #compose { position:relative; }
+  #emojiPop { position:absolute; bottom:100%; left:8px; right:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px 14px 0 0; box-shadow:0 -6px 22px rgba(0,0,0,.42); display:none; flex-direction:column; z-index:12; max-width:760px; margin:0 auto; }
+  #emojiPop.on { display:flex; }
+  #emojiPop .ecats { display:flex; gap:3px; padding:7px 9px 5px; border-bottom:1px solid var(--line); overflow-x:auto; flex:none; scrollbar-width:none; }
+  #emojiPop .ecats::-webkit-scrollbar { display:none; }
+  #emojiPop .ecats button { background:none; border:1px solid transparent; color:var(--muted); border-radius:6px; padding:4px 8px; cursor:pointer; font:inherit; font-size:.72rem; white-space:nowrap; flex:none; }
+  #emojiPop .ecats button.on { color:var(--text); background:color-mix(in srgb, var(--accent) 14%, transparent); border-color:color-mix(in srgb, var(--accent) 35%, transparent); }
+  #emojiPop .eegrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(38px,1fr)); gap:2px; padding:9px 10px 11px; max-height:190px; overflow-y:auto; }
+  #emojiPop .eegrid button { background:none; border:none; font-size:1.3rem; cursor:pointer; border-radius:8px; padding:5px 2px; line-height:1; transition:background .1s,transform .1s; }
+  #emojiPop .eegrid button:hover { background:color-mix(in srgb, var(--accent) 18%, transparent); transform:scale(1.18); }
 
   /* ─── Overlays ─── */
   #ctx { position:fixed; display:none; background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.45); z-index:60; overflow:hidden; min-width:170px; }
@@ -371,6 +384,11 @@
     <div id="blockBar">🚫 Anda menyekat orang ini — DM dibekukan. <button id="blkOpen">Buka sekat</button></div>
     <div id="tray"></div>
     <div id="compose">
+      <div id="emojiPop">
+        <div class="ecats" id="eCatTabs"></div>
+        <div class="eegrid" id="eGrid"></div>
+      </div>
+      <button id="emojiBtn" title="Sisip emoji">😊</button>
       <button id="clipBtn" title="Lampirkan gambar atau video">📎</button>
       <button id="prankBtn" title="Panggilan prank (setempat, boleh luar talian)">🎭</button>
       <div class="cin"><textarea id="inp" rows="1" placeholder="Tulis mesej…"></textarea></div>
@@ -2195,6 +2213,40 @@
     } catch { /* dialog sudah digunakan/tidak tersedia */ }
   };
   $('stApk').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
+
+  // ─── Emoji picker ───
+  const EMOJIS = {
+    '😀 Wajah': '😀😃😄😁😆😅😂🤣🥲😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕'.split(''),
+    '👋 Isyarat': '👋🤚✋🖐️✌️🤟🤘👌🤌👍👎✊👊🤛🤜👏🙌👐🤲🙏✍️💅🤳💪🦵🦶👂👃🧠🫀🫁👁️🗣️👤👥🫂👶🧒👦👧🧑👩👨👩‍🦱👨‍🦱👩‍🦰👨‍🦰👱‍♀️👱👩‍🦳👨‍🦳🧔👲👳‍♀️👳🧕👮‍♀️👮👷‍♀️👷💂‍♀️💂🕵️‍♀️🕵️👩‍⚕️👨‍⚕️👩‍🌾👨‍🌾'.split(''),
+    '❤️ Hati': '❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉️☸️✡️🔯🕎☯️☦️🛐⛎♈♉♊♋♌♍♎♏♐♑♒♓🆔⚛️🉑☢️☣️📴📳🈶🈚🈸🈺🈷️✴️🆚💮🉐'.split(''),
+    '🐶 Haiwan': '🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐒🐔🐧🐦🐤🐣🐥🦆🦅🦉🦇🐺🐗🐴🦄🐝🪱🐛🦋🐌🐞🐜🪰🪲🪳🕷️🕸️🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🦧🦣🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈‍⬛🐈📦🐕‍🦺'.split(''),
+    '🍕 Makanan': '🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶️🫑🌽🥕🫒🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🍔🍟🍕🌭🥪🌮🌯🫔🥙🧆🍖🍗🦴🥩🍘🍙🍚🍛🍜🍝🍠🍢🍣🍤🍥🥮🍡🥟🥠🥡🦪🍦🍧🍨🍩🍪🎂🍰🧁🥧🍫🍬🍭🍮🍯🍼🥛☕🫖🍵🍶🍾🍷🍸🍹🍺🍻🥂🥃'.split(''),
+    '⚽ Aktiviti': '⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🪀🪁🏓🏸🏒🏑🥍🏏🥅⛳🪩🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸️🥌🎿⛷️🏂🪂🏋️‍♀️🏋️🤼‍♀️🤼🤸‍♀️🤸⛹️‍♀️⛹️🤺🤾‍♀️🤾🏌️‍♀️🏌️🏇🧘‍♀️🧘🏄‍♀️🏄🏊‍♀️🏊🚣‍♀️🚣🧗‍♀️🧗🚵‍♀️🚵🚴‍♀️🚴🏆🥇🥈🥉🏅🎖️🏵️🎗️🎫🎟️🎪🤹‍♀️🤹🎭🩰🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🪗🎸🪕🎻'.split(''),
+    '🚗 Objek': '⌚📱💻⌨️🖥️🖨️🖱️🖲️💽💾💿📀📷📸📹🎥📽️🎞️📞☎️📟📠📺📻🧭⏰🕰️⌛⏳📡🔋🪫🔌💡🔦🕯️🪔🧯🛢️💸💵💴💶💷🪙💰💳💎⚖️🪜🧰🪛🔧🔨⚒️🛠️⛏️🪚🔩⚙️🪤🧱⛓️🧲🔫💣🧨🪓🔪🗡️⚔️🛡️🚬⚰️🪦⚱️🏺🔮📿🧿💈⚗️🔭🔬🕳️🩹🩺💊💉🩸🧬🦠🧫🧪🌡️🧹🪠🧺🧻'.split(''),
+    '🌍 Alam': '🌍🌎🌏🪐💫⭐🌟✨⚡☄️💥🔥🌪️🌈☀️🌤️⛅🌥️☁️🌦️🌧️⛈️🌩️🌨️❄️☃️⛄🌬️💨🌫️🌊💧💦☔☂️🧊🌸🌹🥀🌺🌻🌼🌷🌱🪴🌲🌳🌴🌵🌾☘️🍀🍁🍂🍃🪹🍄🌰🦀🐚🪸🌞🌝🌛🌜🌚🌕🌖🌗🌘🌑🌒🌓🌔🌙🌎🍋‍🟩🍅'.split(''),
+  };
+  let eCat = Object.keys(EMOJIS)[0];
+  function renderEmoji() {
+    $('eCatTabs').innerHTML = Object.keys(EMOJIS).map(k =>
+      '<button data-c="' + k + '" class="' + (k === eCat ? 'on' : '') + '">' + k.split(' ')[0] + ' ' + k.split(' ').slice(1).join(' ') + '</button>').join('');
+    $('eGrid').innerHTML = (EMOJIS[eCat] || []).map(e => '<button>' + e + '</button>').join('');
+    for (const b of $('eCatTabs').querySelectorAll('button')) b.onclick = () => { eCat = b.dataset.c; renderEmoji(); };
+    for (const b of $('eGrid').querySelectorAll('button')) b.onclick = () => insertEmoji(b.textContent);
+  }
+  function insertEmoji(em) {
+    const ta = $('inp'), pos = ta.selectionStart || ta.value.length;
+    ta.value = ta.value.slice(0, pos) + em + ta.value.slice(ta.selectionEnd || pos);
+    ta.focus(); ta.selectionStart = ta.selectionEnd = pos + em.length;
+    grow();
+  }
+  renderEmoji();
+  $('emojiBtn').onclick = () => { const on = $('emojiPop').classList.toggle('on'); $('emojiBtn').classList.toggle('on', on); };
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#emojiPop') && !e.target.closest('#emojiBtn')) {
+      $('emojiPop').classList.remove('on'); $('emojiBtn').classList.remove('on');
+    }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('emojiPop').classList.remove('on'); $('emojiBtn').classList.remove('on'); } });
 
   // ─── Lampiran: pemilih fail, seret-lepas, tampal ───
   $('clipBtn').onclick = () => $('file').click();
