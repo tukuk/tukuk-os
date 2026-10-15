@@ -759,7 +759,7 @@
   <div id="tabFeed">
     <div class="stories" id="storyStrip"></div>
     <div class="composer">
-      <div class="ava" id="cAva">?</div>
+      <div class="ava" id="fcAva">?</div>
       <div class="cw">
         <textarea id="postText" rows="2" maxlength="500" placeholder="Apa yang sedang anda fikirkan? (@nama untuk sebut orang)"></textarea>
         <div class="ftray" id="postTray"></div>
@@ -1146,7 +1146,7 @@
   function paintMe() {
     $('meName').textContent = me;
     setAvaEl($('meAva'), me, myAvatar);
-    const ca = $('cAva'); if (ca) setAvaEl(ca, me, myAvatar);
+    const ca = $('fcAva'); if (ca) setAvaEl(ca, me, myAvatar);
     $('meIdBtn').textContent = myId ? '#' + myId : '#—';
   }
   async function refreshMe() {
@@ -3020,16 +3020,21 @@
   function renderStories() {
     const byA = {}, order = [];
     for (const s of feedStories) { if (!byA[s.fid]) { byA[s.fid] = { from: s.from, avatar: s.avatar, mine: s.mine, list: [] }; order.push(s.fid); } byA[s.fid].list.push(s); }
-    let h = '<div class="stoy add" id="stoyAdd"><div class="ring"><div>＋</div></div><span>Cerita</span></div>';
+    let h = '<div class="stoy add" id="stoyAdd" role="button" tabindex="0"><div class="ring"><div>＋</div></div><span>Cerita</span></div>';
     for (const fid of order) {
       const g = byA[fid], first = g.list[0];
       const seen = first.views && first.views.indexOf(myId) >= 0;
-      h += '<div class="stoy' + (seen ? ' seen' : '') + '" data-fid="' + fid + '"><div class="ring"><div>' +
+      h += '<div class="stoy' + (seen ? ' seen' : '') + '" data-fid="' + fid + '" role="button" tabindex="0"><div class="ring"><div>' +
         (g.avatar ? '<img src="' + esc(g.avatar) + '" alt="">' : esc(initials(g.from))) + '</div></div><span>' + esc(g.mine ? 'Anda' : g.from) + '</span></div>';
     }
     $('storyStrip').innerHTML = h;
+    const openStoy = el => { const g = byA[+el.dataset.fid]; if (g) openStory(g.list); };
     $('stoyAdd').onclick = () => $('storyFile').click();
-    for (const el of $('storyStrip').querySelectorAll('.stoy[data-fid]')) el.onclick = () => { const g = byA[+el.dataset.fid]; openStory(g.list); };
+    for (const el of $('storyStrip').querySelectorAll('.stoy[data-fid]')) {
+      el.onclick = () => openStoy(el);
+      // Enter/Space membuka cerita — boleh dicapai dengan papan kekunci.
+      el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStoy(el); } };
+    }
   }
   function mergeFeedPost(p) {
     if (!p) return; remember([p]);
