@@ -449,6 +449,22 @@
   .pact button.liked { color:#e17076; border-color:#e17076; }
   .pact button.del { margin-left:auto; }
   .pact button.del:hover { color:var(--danger); border-color:var(--danger); }
+  /* Serlah @sini/@semua dalam teks mesej/post */
+  .atml { background:color-mix(in srgb, var(--accent) 25%, transparent); color:var(--accent); border-radius:5px; padding:0 4px; font-weight:700; }
+  /* Gaya X: krip tag, kotak repost/petik, bar penapis suapan */
+  .tagrow { display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+  .tagchip { background:color-mix(in srgb, var(--accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); color:var(--accent); border-radius:999px; padding:2px 10px; cursor:pointer; font:inherit; font-size:.74rem; }
+  .tagchip:hover { background:color-mix(in srgb, var(--accent) 24%, transparent); }
+  .tagbar { display:flex; align-items:center; gap:8px; margin:0 0 10px; padding:7px 11px; border:1px dashed var(--accent); border-radius:10px; font-size:.8rem; }
+  .tagbar b { color:var(--accent); }
+  .tagbar button { margin-left:auto; background:none; border:1px solid var(--line); color:var(--muted); border-radius:7px; padding:2px 9px; cursor:pointer; font:inherit; font-size:.74rem; }
+  .tagbar button:hover { color:var(--danger); border-color:var(--danger); }
+  .rpbox { border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-top:8px; background:var(--panel); }
+  .rpbox .rphead { display:flex; align-items:center; gap:6px; font-size:.74rem; color:var(--muted); margin-bottom:5px; }
+  .rpbox .rphead b { color:var(--text); cursor:pointer; }
+  .rpbox .rphead b:hover { color:var(--accent); }
+  .rpbox .ptext { font-size:.84rem; }
+  .pact button.rped { color:#3ba55d; border-color:#3ba55d; }
   .pcomments { margin-top:8px; border-top:1px solid var(--line); padding-top:8px; }
   .cmt { display:flex; gap:8px; margin-bottom:7px; }
   .cmt .ava { width:26px; height:26px; font-size:.68rem; flex:none; }
@@ -899,6 +915,7 @@
   // Keadaan sosial: avatar saya, lencana notifikasi, suapan + komposer + cerita.
   let myAvatar = null, notifUnread = 0;
   let feedPosts = [], feedStories = [], feedFiles = [], feedSeq = 1, feedBusy = false, feedTab = 'Feed';
+  let feedTag = null;   // penapis tag suapan (gaya X) — null = semua
   let storyQueue = [], storyIdx = 0, storyTimer = null;
   let liveOn = false, liveCtl = null, liveTimer = null, liveWatch = null, liveAt = 0,
       liveRetry = 0, tpClear = null;   // aliran langsung
@@ -964,6 +981,9 @@
   // Auto-pautan: buang aksara dahulu (selamat daripada XSS), kemudian bungkus
   // URL (http/https/www atau domain bertitik) dalam <a> yang buka tab baru.
   const URLRE = /\b(?:https?:\/\/|www\.)[^\s<]+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/\S*)?/gi;
+  // Serlah sebutan bilik @sini/@semua (gaya Google Chat) — selamat kerana token
+  // ini tidak mungkin muncul dalam URL yang sudah dibungkus pautan.
+  const markAt = h => String(h).replace(/(^|[\s(,;"])(@sini|@semua)\b/gi, '$1<span class="atml">$2</span>');
   function renderText(s) {
     s = String(s == null ? '' : s);
     let out = '', last = 0, m;
@@ -975,7 +995,7 @@
       out += '<a class="mlink" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer nofollow">' + esc(tok) + '</a>';
       last = m.index + tok.length;
     }
-    return out + esc(s.slice(last));
+    return markAt(out + esc(s.slice(last)));
   }
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
   function hhmm(ts) { const d = new Date(ts); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
@@ -3309,14 +3329,19 @@
     const cc = (p.comments || []).length;
     const mine = p.fid === myId;
     const media = (p.media && p.media.length) ? mediaGrid(p) : '';
+    // Kad bersarang untuk repost/petik gaya X — salinan post asal (rpOf).
+    const rp = p.rpOf ? '<div class="rpbox"><div class="rphead">♻️ Repost daripada <b data-uid="' + p.rpOf.fid + '">' + esc(p.rpOf.from) + '</b><span>· ' + timeAgo(p.rpOf.ts) + '</span></div>' +
+      (p.rpOf.t ? '<div class="ptext">' + renderText(p.rpOf.t) + '</div>' : '') + (p.rpOf.media && p.rpOf.media.length ? mediaGrid({ media: p.rpOf.media }) : '') + '</div>' : '';
+    const tagrow = (p.tags && p.tags.length) ? '<div class="tagrow">' + p.tags.map(t => '<button class="tagchip" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '';
     const comments = cc ? '<div class="pcomments">' + p.comments.map(c => cmtHtml(c, p.id)).join('') + '</div>' : '';
     return '<div class="pcard" data-pid="' + esc(p.id) + '">' +
       '<div class="phead">' + avHtml(p.from, p.avatar, false) +
       '<div class="pn"><b data-uid="' + p.fid + '">' + esc(p.from) + '</b><small>#' + (p.fid || '') + ' · ' + timeAgo(p.ts) + '</small></div></div>' +
-      (p.t ? '<div class="ptext">' + renderText(p.t) + '</div>' : '') + media +
+      (p.t ? '<div class="ptext">' + renderText(p.t) + '</div>' : '') + media + rp + tagrow +
       '<div class="pact">' +
       '<button data-act="like" class="' + (liked ? 'liked' : '') + '">' + (liked ? '❤️' : '🤍') + ' <span>' + lc + '</span></button>' +
       '<button data-act="cmt">💬 <span>' + cc + '</span></button>' +
+      '<button data-act="rp" title="Repost atau petik">♻️</button>' +
       (mine ? '<button data-act="del" class="del" title="Padam post">🗑</button>' : '') +
       '</div>' + comments +
       '<div class="cmtform"><input data-cmtin maxlength="200" placeholder="Tulis komen…"><button data-act="cmtgo">Komen</button></div>' +
@@ -3331,9 +3356,12 @@
         const a = b.dataset.act;
         if (a === 'like') doLike(pid);
         else if (a === 'del') doDelPost(pid);
+        else if (a === 'rp') doRepost(pid);
         else if (a === 'cmt') { const i = card.querySelector('[data-cmtin]'); if (i) i.focus(); }
         else if (a === 'cmtgo') doComment(pid, card);
       };
+      // Krip tag → tapis suapan ikut tag (#gayaX); klik nama dalam rpbox → profil.
+      for (const tc of card.querySelectorAll('[data-tag]')) tc.onclick = e => { e.stopPropagation(); setFeedTag(tc.dataset.tag); };
       const cin = card.querySelector('[data-cmtin]');
       if (cin) cin.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doComment(pid, card); } });
       for (const w of card.querySelectorAll('[data-uid]')) w.onclick = e => { e.stopPropagation(); openProf({ id: +w.dataset.uid, name: w.textContent }); };
@@ -3350,7 +3378,11 @@
   }
   function renderFeed() {
     renderStories();
-    $('postList').innerHTML = feedPosts.length ? feedPosts.map(renderPostHtml).join('') : emptyFeedHtml();
+    const bar = feedTag ? '<div class="tagbar">🔖 Menapis tag <b>#' + esc(feedTag) + '</b><button id="tagClr">✕ Bersihkan tap</button></div>' : '';
+    const list = feedPosts.filter(p => !feedTag || (p.tags || []).includes(feedTag));
+    $('postList').innerHTML = bar + (list.length ? list.map(renderPostHtml).join('')
+      : feedTag ? '<div class="pfmeta" style="padding:18px;text-align:center">Tiada post bertag <b>#' + esc(feedTag) + '</b> lagi. Jadilah yang pertama!</div>' : emptyFeedHtml());
+    const cl = $('tagClr'); if (cl) cl.onclick = () => { feedTag = null; loadFeed(); };
     wirePostRoot($('postList'));
   }
   function updateCard(pid) {
@@ -3394,9 +3426,11 @@
     if ($('feedModal').classList.contains('open') && feedTab === 'Feed') renderStories();
   }
   async function loadFeed() {
-    try { const j = await call('/feed'); feedPosts = j.posts || []; feedStories = j.stories || []; remember(feedPosts); renderFeed(); }
+    try { const j = await call('/feed' + (feedTag ? '?tag=' + encodeURIComponent(feedTag) : '')); feedPosts = j.posts || []; feedStories = j.stories || []; remember(feedPosts); renderFeed(); }
     catch (e) { if (e.status === 401) expire(); else $('postList').innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; }
   }
+  // Tetapkan penapis tag lalu muat suapan dari pelayan (sudah ditapis di sana).
+  function setFeedTag(tag) { sndTap(); feedTag = String(tag || '').toLowerCase(); if ($('feedModal').classList.contains('open')) loadFeed(); else openFeed(); }
   async function doLike(pid) {
     sndTap();
     try { const j = await post('/posts/like', { id: pid }); if (j.post) { mergeFeedPost(j.post); updateCard(pid); } }
@@ -3413,6 +3447,17 @@
     if (!confirm('Padam post ini? Tindakan kekal.')) return;
     try { await post('/posts/delete', { id: pid }); feedPosts = feedPosts.filter(p => p.id !== pid); delete postCache[pid]; renderFeed(); if ($('profModal').classList.contains('open')) loadProfPosts(profCur); }
     catch (e) { toast(e.message); }
+  }
+  // Repost gaya X: kosong = repost terus, ada teks = repost + petikan.
+  async function doRepost(pid) {
+    sndTap();
+    const q = prompt('Repost post ini. Taip petikan jika mahu, atau kosong untuk repost terus.', '');
+    if (q === null) return;
+    try {
+      const r = await post('/posts', { text: q.trim().slice(0, 500), repost: pid });
+      if (r.post) { remember([r.post]); mergeFeedPost(r.post); }
+      toast(q.trim() ? 'Petikan direpost.' : 'Direpost.');
+    } catch (e) { toast(e.message); }
   }
 
   // ── Paparan cerita penuh ──
@@ -3486,9 +3531,9 @@
 
   // ── Notifikasi ──
   function nHtml(n) {
-    const icon = n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : n.type === 'follow' ? '➕' : n.type === 'mention' ? '@' : '📕';
-    const verb = n.type === 'like' ? ' ♥ menyukai post anda' : n.type === 'comment' ? ' 💬 mengomen' : n.type === 'follow' ? ' ➕ mulai mengikuti anda' : n.type === 'mention' ? ' @ menyebut anda' : ' 📕 menambah cerita';
-    const extra = (n.text && (n.type === 'comment' || n.type === 'mention')) ? '<span class="nx">' + esc(String(n.text).slice(0, 80)) + '</span>' : '';
+    const icon = n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : n.type === 'follow' ? '➕' : n.type === 'mention' ? '@' : n.type === 'repost' ? '♻️' : '📕';
+    const verb = n.type === 'like' ? ' ♥ menyukai post anda' : n.type === 'comment' ? ' 💬 mengomen' : n.type === 'follow' ? ' ➕ mulai mengikuti anda' : n.type === 'mention' ? ' @ menyebut anda' : n.type === 'repost' ? ' ♻️ merepost post anda' : ' 📕 menambah cerita';
+    const extra = (n.text && (n.type === 'comment' || n.type === 'mention' || n.type === 'repost')) ? '<span class="nx">' + esc(String(n.text).slice(0, 80)) + '</span>' : '';
     return '<div class="ncard' + (n.read ? '' : ' unread') + '" data-nid="' + esc(n.id) + '">' + avHtml(n.actorName, n.actorAvatar, false) +
       '<div class="nn"><b>' + esc(n.actorName) + '</b>' + verb + extra + '</div><span class="nt">' + timeAgo(n.ts) + '</span></div>';
   }
@@ -3499,6 +3544,7 @@
       const n = notifsCache.find(x => String(x.id) === el.dataset.nid); if (!n) return;
       if (n.type === 'follow') openProf({ id: n.actor, name: n.actorName });
       else if (n.post) { $('notifModal').classList.remove('open'); openFeed(); }
+      else if (n.room) { $('notifModal').classList.remove('open'); openRoom(String(n.room)); }
       else if (n.actor) openProf({ id: n.actor, name: n.actorName });
     };
   }

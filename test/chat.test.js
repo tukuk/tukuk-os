@@ -1443,6 +1443,108 @@ test('P /api/chat/messages: stiker diterima, mesej kosong masih ditolak', () => 
   assert.equal(hit(routes, 'P /api/chat/messages', reqOf(tok, { room: 'global_am', text: '' })).code, 400, 'kosong sebenar → 400');
 });
 
+// ─── Hashtag & repost (gaya X) ───
+test('hashtag: tag dipecah, dinormalkan, dan feed boleh ditapis ikut tag', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const p1 = chat.createPost('Ana', 'cuaca hari ini #Sukan dan #sukan serta #makan').post;
+  assert.deepEqual(p1.tags, ['sukan', 'makan'], 'tag lowercase + buang berulang');
+  const many = chat.createPost('Ana', Array.from({ length: 12 }, (_, i) => '#tag' + i).join(' ')).post;
+  assert.equal(many.tags.length, 8, 'had 8 tag satu post');
+  const p2 = chat.createPost('Ana', 'post tanpa token #12x masih #Valid').post;
+  assert.deepEqual(p2.tags, ['valid'], 'tag bermula angka / terlalu pendek diabaikan');
+  chat.followUser('Ana', 'Ana');
+  const f = chat.feedFor('Ana', null, '#SUKAN');
+  assert.equal(f.posts.length, 1, 'tapem tag #SUKAN → hanya post 1');
+  assert.equal(f.posts[0].id, p1.id);
+  assert.equal(chat.feedFor('Ana', null, 'tiada').posts.length, 0, 'tag tak padan → kosong');
+  assert.ok(chat.feedFor('Ana').posts.length >= 3, 'tanpa tap → semua kembali');
+});
+
+test('repost/quote: salin post asal + notif, repost-of-repost & lampiran ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const orig = chat.createPost('Ana', 'berita baik #penting').post;
+  const rp = chat.createPost('Ben', 'worth dibaca', [], { rp: orig.id });
+  assert.ok(rp.ok);
+  assert.equal(rp.post.t, 'worth dibaca');
+  assert.ok(rp.post.rpOf, 'salinan post asal melekat');
+  assert.equal(rp.post.rpOf.from, 'Ana');
+  assert.equal(rp.post.rpOf.t, 'berita baik #penting');
+  assert.ok(chat.notifList('Ana').notifs.some(n => n.type === 'repost'), 'penulis asal dapat notif repost');
+  assert.ok(chat.createPost('Ben', 'x', [], { rp: rp.post.id }).error, 'repost atas repost → ditolak');
+  assert.ok(chat.createPost('Ben', '', [], { rp: 'tiada' }).error, 'post asal tidak wujud → ditolak');
+  const jpg = chat.addMedia(chat.findUser('Ben'), JPG, {});
+  assert.ok(chat.createPost('Ben', '', [jpg.media.id], { rp: orig.id }).error, 'repost + lampiran → ditolak');
+  // post asal boleh Like/komen seperti biasa; repost muncul dalam feed pengikut Ben
+  chat.followUser('Ana', 'Ben');
+  assert.ok(chat.feedFor('Ana').posts.some(p => p.id === rp.post.id && p.rpOf), 'feed membawa rpOf');
+});
+
+test('repost: padam post asal → repost turut dibuang (tiada yatim)', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const orig = chat.createPost('Ana', 'sumber').post;
+  const rp = chat.createPost('Ben', 'kutipan', [], { rp: orig.id }).post;
+  assert.ok(chat.delPost('Ana', orig.id).ok);
+  assert.equal(chat.load().posts[rp.id], undefined, 'repost yatim dibuang sekali');
+  assert.ok(chat.createPost('Ben', 'lagi', [], { rp: orig.id }).error, 'asap sudah tiada → repost ditolak');
+});
+
+test('P /api/chat/posts + G /api/chat/feed?tag= melalui laluan HTTP', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const r = hit(routes, 'P /api/chat/posts', reqOf(tok, { text: 'meriah #pesta2026' }));
+  assert.equal(r.code, 200); assert.deepEqual(r.body.post.tags, ['pesta2026']);
+  const orig = r.body.post.id;
+  const q = hit(routes, 'P /api/chat/posts', reqOf(tok, { text: 'quote ni', repost: orig }));
+  assert.equal(q.code, 200); assert.ok(q.body.post.rpOf, 'rpOf kembali melalui laluan');
+  const f = hit(routes, 'G /api/chat/feed', reqGet(tok, { tag: '#Pesta2026' }));
+  assert.equal(f.code, 200); assert.equal(f.body.posts.length, 1, 'tapen tag berfungsi (case-insensitive)');
+  assert.equal(f.body.posts[0].id, orig);
+});
+
+// ─── Sebutan bilik @sini/@semua (gaya Google Chat) ───
+test('@sini/@semua: ahli bilik kumpulan dapat notif, penulis tidak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const ben = chat.findUser('Ben');
+  const g = chat.createGroup('Ana', 'Projek', [ben.id]);
+  assert.ok(g.ok || g.room, 'kumpulan tercipta');
+  const rid = g.room.id;
+  chat.send('Ana', rid, 'mesyuarat bermula sekarang @semua');
+  const bn = chat.notifList('Ben').notifs.filter(x => x.type === 'mention' && x.room === rid);
+  assert.equal(bn.length, 1, 'Ben dapat notif sebutan bilik');
+  assert.equal(chat.notifList('Ana').notifs.filter(x => x.room === rid).length, 0, 'penulis tidak notify diri sendiri');
+  // 'semuanya' bukan token — tidak layak dibangunkan
+  const before = chat.notifList('Ben').notifs.length;
+  chat.send('Ana', rid, 'itu semuanya salah faham');
+  assert.equal(chat.notifList('Ben').notifs.length, before, '@semuanya (bukan token) diabaikan');
+});
+
+test('@sini: sejuk 10 minit — sebutan kedua bilik sama tidak menghantar notif', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const ben = chat.findUser('Ben');
+  const g = chat.createGroup('Ana', 'Projek', [ben.id]);
+  chat.send('Ana', g.room.id, 'panggilan @sini');
+  chat.send('Ana', g.room.id, 'panggilan lagi @sini');
+  const n = chat.notifList('Ben').notifs.filter(x => x.type === 'mention' && x.room === g.room.id);
+  assert.equal(n.length, 1, 'sebutan kedua dalam tempang sejuk → senyap');
+});
+
+test('@semua bilik global: hanya pengguna online yang dapat notif', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  chat.load().users.ben.lastSeen = Date.now();           // Ben aktif
+  chat.load().users.cia.lastSeen = Date.now() - 999e3;   // Cia sudah lama senyap
+  chat.send('Ana', 'global_am', 'pengumuman @semua');
+  assert.ok(chat.notifList('Ben').notifs.some(x => x.type === 'mention' && x.room === 'global_am'), 'Ben (online) dapat');
+  assert.equal(chat.notifList('Cia').notifs.filter(x => x.room === 'global_am').length, 0, 'Cia (offline) tidak diganggu');
+});
+
 // ─── Undian ───
 test('createPoll: cipta undian dalam bilik global dengan soalan + pilihan', () => {
   fresh();

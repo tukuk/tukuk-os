@@ -645,6 +645,8 @@ function send(name, roomId, text, replyTo, media, extra) {
   const out = hydrate(msg);
   pubRoom(r, 'msg', { room: r.id, seq: r.seq, msg: out });
   maybePush(r, out).catch(() => {});
+  // Google Chat-style mention: @sini/@semua membangunkan satu bilik (terhad, anti-spam).
+  if (su && /@sini\b|@semua\b/i.test(t)) notifyAtAll(su, r, t);
   // Penunjuk menaip perlu habis serta-merta pada tab lain, bukan tunggu poll.
   if (wasTyping) pubRoom(r, 'typing', { room: r.id, typing: [] });
   return { ok: true, msg: out, room: r };
@@ -1056,7 +1058,17 @@ const STORY_TTL = 24 * 3600e3; // cerita luput selepas 24 jam
 const MAX_NOTIF = 100;         // notifikasi disimpan per pengguna
 const MAX_FOLLOWING = 2000;    // had mengikuti
 const MAX_FOLLOWERS = 10000;   // had pengikut
-const NOTIF_TYPES = new Set(['like', 'comment', 'follow', 'mention', 'story']);
+const NOTIF_TYPES = new Set(['like', 'comment', 'follow', 'mention', 'story', 'repost']);
+const MAX_TAGS = 8;
+// Ciri gaya X: #tag pada post (Unicode-selamat, huruf pertama bukan angka).
+const HASH_RE = /(^|[\s(\[{"])#([\p{L}][\p{L}\p{N}_]{1,29})/gu; // tag mesti bermula huruf, min 2 aksara
+const parseTags = (t) => {
+  const out = [];
+  let m;
+  HASH_RE.lastIndex = 0;
+  while ((m = HASH_RE.exec(String(t || '')))) { const tag = m[2].toLowerCase(); if (!out.includes(tag)) out.push(tag); if (out.length >= MAX_TAGS) break; }
+  return out;
+};
 
 const followingOf = (u) => (u && Array.isArray(u.following) ? u.following : []);
 const followersOf = (u) => (u && Array.isArray(u.followers) ? u.followers : []);
@@ -1080,13 +1092,24 @@ function avatarUrl(u) {
   if (!rec || !rec.avatar || !fs.existsSync(mediaFile(rec))) return null;
   return '/api/chat/avatar/' + rec.id;
 }
-function hydratePost(p) {
+function hydratePost(p, viewer) {
   if (!p) return p;
   const a = byId(p.fid);
   const out = hydrate(p);
   out.from = (a && a.name) || p.from;
   out.avatar = avatarUrl(a);
   if (out.comments) out.comments = out.comments.map(hydrate);
+  // Salinan post asal untuk gaya "repost/quote" — url ditandatangani semula.
+  if (p.rp) {
+    const o = (load().posts || {})[p.rp];
+    if (o) {
+      const oa = byId(o.fid);
+      if (!viewer || !oa || (!blockedOf(viewer).includes(o.fid) && !blockedOf(oa).includes(viewer.id))) {
+        const oo = hydratePost(o, viewer);
+        out.rpOf = { id: o.id, fid: o.fid, from: (oa && oa.name) || o.from, avatar: avatarUrl(oa), t: o.t, media: oo.media || [], likes: o.likes || {}, comments: o.comments || [], ts: o.ts };
+      }
+    }
+  }
   return out;
 }
 // Post hanya boleh dilampirkan oleh PEMILIK muat naik (berbeza dengan mesej bilik
@@ -1118,23 +1141,38 @@ function releaseSocialMedia(items, holder) {
     if (!rec.msgs.length) dropMedia(rec.id);
   }
 }
-function createPost(name, text, media) {
+function createPost(name, text, media, opts) {
   const s = load();
   const u = findUser(name);
   if (!u) return { error: 'Akaun tidak ditemui.' };
+  const o = opts || {};
   const t = String(text == null ? '' : text).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ').replace(/\r\n?/g, '\n').trim().slice(0, MAX_POST);
   const pid = crypto.randomBytes(6).toString('hex');
+  let orig = null;
   const att = media && media.length ? attachPostMedia(u, media, pid, MAX_POST_MEDIA) : [];
   if (media && media.length && !att.length) return { error: 'Lampiran tidak dapat digunakan — muat naik semula.' };
-  if (!t && !att.length) return { error: 'Post kosong.' };
+  if (o.rp) {
+    // Repost/quote: teks petikan sahaja dibenarkan tanpa lampiran (post asal
+    // sudah membawa medianya) dan ia mesti wujud serta boleh dilihat penulis.
+    if (att.length) return { error: 'Repost tidak boleh ada lampiran sendiri.' };
+    orig = (s.posts || {})[String(o.rp)];
+    if (!orig) return { error: 'Post asal tidak ditemui.' };
+    if (orig.rp) return { error: 'Repost tidak boleh diisi ulang repost.' };
+    const oa = byId(orig.fid);
+    if (oa && (blockedOf(u).includes(oa.id) || blockedOf(oa).includes(u.id))) return { error: 'Post asal tidak ditemui.' };
+  } else if (!t && !att.length) return { error: 'Post kosong.' };
   s.posts = s.posts || {};
   const post = { id: pid, fid: u.id, from: u.name, t, ts: Date.now(), likes: {}, comments: [] };
+  const tags = parseTags(t);
+  if (tags.length) post.tags = tags;
+  if (o.rp) post.rp = String(o.rp);
   if (att.length) post.media = att;
   s.posts[pid] = post;
   touch();
-  const out = hydratePost(post);
+  const out = hydratePost(post, u);
   pub('post', { post: out }, audience(u.id));
   notifyMentions(u, t, pid);
+  if (orig && orig.fid !== u.id) pushNotif(orig.fid, 'repost', { actor: u.id, post: orig.id, text: t.slice(0, 120) });
   return { ok: true, post: out };
 }
 // Buang post milik penulis sahaja; media + komen (termasuk komen orang lain)
@@ -1149,12 +1187,16 @@ function delPost(name, pid) {
   for (const c of p.comments || []) releaseSocialMedia(c.media, c.id);
   releaseSocialMedia(p.media, p.id);
   delete s.posts[p.id];
+  // Repost yang merujuk post ini dibuang sekali (tiada media sendiri untuk dileraikan).
+  const rps = Object.values(s.posts || {}).filter(x => x.rp === p.id);
+  for (const x of rps) delete s.posts[x.id];
   for (const [k, list] of Object.entries(s.notif || {})) {
     const kept = list.filter(n => n.post !== p.id);
     if (kept.length !== list.length) { if (kept.length) s.notif[k] = kept; else delete s.notif[k]; }
   }
   touch();
   pub('postdel', { id: p.id }, audience(u.id));
+  for (const x of rps) pub('postdel', { id: x.id }, audience(x.fid));
   return { ok: true };
 }
 function getPost(pid, viewer) {
@@ -1207,7 +1249,7 @@ function commentPost(name, pid, text, media) {
 }
 // Feed = post saya + post semua yang saya ikuti, terbaru dahulu. Penulis yang
 // menyekat saya, atau yang saya sekat, ditapis keluar.
-function feedFor(name, limit) {
+function feedFor(name, limit, tag) {
   const s = load();
   const u = findUser(name);
   if (!u) return { error: 'Akaun tidak ditemui.' };
@@ -1215,11 +1257,13 @@ function feedFor(name, limit) {
   const blockSet = new Set(blockedOf(u));
   const outBlock = new Set(Object.values(s.users).filter(v => blockedOf(v).includes(u.id)).map(v => v.id));
   const ok = new Set(followingOf(u).concat([u.id]));
+  const wantTag = String(tag || '').trim().toLowerCase().replace(/^#/, '');
   const list = Object.values(s.posts || {})
     .filter(p => ok.has(p.fid) && !blockSet.has(p.fid) && !outBlock.has(p.fid))
+    .filter(p => !wantTag || (p.tags || []).includes(wantTag))
     .sort((a, b) => b.ts - a.ts)
     .slice(0, Math.min(Number(limit) || MAX_FEED, MAX_FEED));
-  return { ok: true, posts: list.map(hydratePost), stories: storiesOf(name) };
+  return { ok: true, posts: list.map(p => hydratePost(p, u)), stories: storiesOf(name) };
 }
 function userPosts(q, viewer) {
   const s = load();
@@ -1228,7 +1272,7 @@ function userPosts(q, viewer) {
   const v = viewer ? findUser(viewer) : null;
   if (v && t.id !== v.id && (blockedOf(t).includes(v.id) || (v && blockedOf(v).includes(t.id)))) return { error: 'Pengguna tidak ditemui.' };
   const list = Object.values(s.posts || {}).filter(p => p.fid === t.id).sort((a, b) => b.ts - a.ts).slice(0, MAX_FEED);
-  return { ok: true, posts: list.map(hydratePost) };
+  return { ok: true, posts: list.map(p => hydratePost(p, v || undefined)) };
 }
 
 // ─── Cerita (24 jam) ───
@@ -1385,7 +1429,7 @@ function pushNotif(toId, type, data) {
   s.notif = s.notif || {};
   const arr = s.notif[String(toId)] = s.notif[String(toId)] || [];
   const n = { id: crypto.randomBytes(5).toString('hex'), to: toId, type, actor: actor.id, actorName: actor.name,
-    actorAvatar: avatarUrl(actor), post: (data && data.post) || null, text: (data && data.text) || '', ts: Date.now(), read: false };
+    actorAvatar: avatarUrl(actor), post: (data && data.post) || null, room: (data && data.room) || null, text: (data && data.text) || '', ts: Date.now(), read: false };
   arr.push(n);
   if (arr.length > MAX_NOTIF) arr.splice(0, arr.length - MAX_NOTIF);
   touch();
@@ -1466,6 +1510,26 @@ function notifyMentions(author, text, postId) {
     const t = findUser(m[1]);
     if (t && t.id !== author.id && !seen.has(t.id)) { seen.add(t.id); pushNotif(t.id, 'mention', { actor: author.id, post: postId, text: String(text).slice(0, 120) }); n++; }
   }
+}
+// @sini / @semua (gaya Google Chat) dalam bilik → notif kepada ahli. Bilik global
+// hanya menyasarkan yang sedang online supaya tidak tenggelam dalam spam; had 10
+// minit satu pengguna satu bilik.
+const ATALL_COOLDOWN = 10 * 60e3;
+function notifyAtAll(author, room, text) {
+  const s = load();
+  s.atall = s.atall || {};
+  const ck = author.id + '|' + room.id;
+  if (Date.now() - (s.atall[ck] || 0) < ATALL_COOLDOWN) return 0;
+  const here = room.kind === 'global';
+  const ids = here ? Object.values(s.users).filter(isOnline).map(u => u.id) : (room.memberIds || []);
+  let n = 0;
+  for (const id of ids) {
+    if (id === author.id) continue;
+    const t = byId(id);
+    if (t) { pushNotif(id, 'mention', { actor: author.id, room: room.id, text: String(text).slice(0, 120) }); n++; }
+  }
+  if (n) { s.atall[ck] = Date.now(); touch(); }
+  return n;
 }
 
 // Tukar kata laluan: wajib sah yang lama, salt baru, dan sesi lain diluputkan
@@ -2066,7 +2130,7 @@ function mount(app, deps) {
 
   app.get('/api/chat/feed', (req, res) => {
     const u = authOf(req, res); if (!u) return;
-    const r = feedFor(u.name, req.query.limit);
+    const r = feedFor(u.name, req.query.limit, req.query.tag);
     if (r.error) return res.status(400).json({ error: r.error });
     res.json(r);
   });
@@ -2076,10 +2140,10 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     if (b.media != null && !Array.isArray(b.media)) return res.status(400).json({ error: 'Lampiran mesti senarai.' });
     if (Array.isArray(b.media) && b.media.length > MAX_POST_MEDIA) return res.status(400).json({ error: 'Maksimum ' + MAX_POST_MEDIA + ' fail satu post.' });
-    const r = createPost(u.name, b.text, b.media);
-    if (r.error) return res.status(400).json({ error: r.error });
+    const cr = createPost(u.name, b.text, b.media, { rp: b.repost ? String(b.repost) : null });
+    if (cr.error) return res.status(400).json({ error: cr.error });
     event('Post baharu oleh ' + u.name, { id: u.id });
-    res.json({ ok: true, post: r.post });
+    res.json({ ok: true, post: cr.post });
   });
 
   app.get('/api/chat/posts', (req, res) => {
@@ -2115,7 +2179,7 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const p = getPost(String(req.params.id), u.name);
     if (!p) return res.status(404).json({ error: 'Post tidak ditemui.' });
-    res.json({ ok: true, post: hydratePost(p) });
+    res.json({ ok: true, post: hydratePost(p, u) });
   });
 
   app.post('/api/chat/stories', lim({ windowMs: 3600e3, max: 20, keyPrefix: 'chstoy:' }), (req, res) => {
@@ -2357,7 +2421,7 @@ module.exports = {
   createGroup, addToGroup, leaveGroup, renameGroup, kickFromGroup, addAdmin, dissolveBy, isGroupAdmin, adminsOf, pinMsg, deleteAccount, initVapid, vapidPubB64, derSigToRaw, doSendPush, maybePush,
   followUser, unfollowUser, isFollowing, followingOf, followersOf, audience, createPost, delPost, getPost, likePost, commentPost, feedFor, userPosts,
   createStory, storiesOf, viewStory, delStory, pruneStories, STORY_TTL,
-  pushNotif, notifList, markNotifRead, clearNotifs, setAvatar, removeAvatar, avatarUrl, hydratePost, notifyMentions, followList, discover, releaseSocialMedia,
+  pushNotif, notifList, markNotifRead, clearNotifs, setAvatar, removeAvatar, avatarUrl, hydratePost, notifyMentions, notifyAtAll, followList, discover, releaseSocialMedia,
   MAX_POST, MAX_POST_MEDIA, MAX_COMMENT, MAX_COMMENTS, MAX_FEED, MAX_STORIES, MAX_NOTIF, MAX_FOLLOWING, MAX_FOLLOWERS,
   MAX_IMG, MAX_VID, MAX_AUDIO, MAX_DOC, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
   createPoll, votePoll, projectPoll, MAX_POLL_Q, MAX_POLL_OPT, MAX_POLL_OPTS,
