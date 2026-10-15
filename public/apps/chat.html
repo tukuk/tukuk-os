@@ -501,6 +501,7 @@
   .fcell .st { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(6,10,20,.72); color:#fff; font-size:.66rem; }
   /* Status (mood sementara) */
   .myStatus { display:flex; align-items:center; gap:8px; background:color-mix(in srgb, var(--accent) 12%, transparent); border:1px solid var(--line); border-radius:10px; padding:6px 10px; margin:0 0 8px; font-size:.82rem; }
+  .myStatus[hidden] { display:none; }   /* flex menindih atribut hidden lalai pelayar */
   .myStatus .ms-txt { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .myStatus .ms-txt small { color:var(--muted); margin-left:6px; }
   .myStatus .ms-act { display:flex; gap:4px; flex:none; }
@@ -1418,14 +1419,24 @@
   function renderMyStatus() {
     const el = $('myStatus'); if (!el) return;
     const live = myStatus && (!myStatus.exp || myStatus.exp > Date.now());
-    if (!live) { el.hidden = true; el.innerHTML = ''; return; }
-    el.hidden = false;
-    el.innerHTML = '<span class="ms-txt">' + (myStatus.e ? myStatus.e + ' ' : '') +
-      esc(myStatus.t || '(tanpa teks)') + '<small>· ' + timeLeft(myStatus.exp) + '</small></span>' +
-      '<span class="ms-act"><button id="msEdit" title="Ubah status">✏️</button><button id="msClear" title="Buang status">✕</button></span>';
-    $('msEdit').onclick = openStatusModal;
-    $('msClear').onclick = clearMyStatus;
+    if (!live) { el.hidden = true; el.innerHTML = ''; el.dataset.sig = ''; return; }
+    const sig = (myStatus.e || '') + '|' + (myStatus.t || '');
+    if (el.dataset.sig !== sig) {   // bina semula hanya bila struktur berubah — bukan setiap detik
+      el.hidden = false;
+      el.innerHTML = '<span class="ms-txt">' + (myStatus.e ? myStatus.e + ' ' : '') +
+        esc(myStatus.t || '(tanpa teks)') + '<small id="msTime">· ' + timeLeft(myStatus.exp) + '</small></span>' +
+        '<span class="ms-act"><button id="msEdit" title="Ubah status">✏️</button><button id="msClear" title="Buang status">✕</button></span>';
+      el.dataset.sig = sig;
+    } else el.hidden = false;
+    const t = $('msTime'); if (t) t.textContent = '· ' + timeLeft(myStatus.exp);
   }
+  // Delegasi sekali pada bekas — butang tidak perlu diikat semula setiap paparan.
+  $('myStatus').addEventListener('click', e => {
+    const b = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    if (b.id === 'msEdit') openStatusModal();
+    else if (b.id === 'msClear') clearMyStatus();
+  });
   function openStatusModal() {
     stEmoji = myStatus ? (myStatus.e || '') : '';
     $('stText').value = myStatus ? (myStatus.t || '') : '';
@@ -3191,6 +3202,7 @@
     $('stName').value = me; $('stBio').value = myBio;
     $('stMe').innerHTML = '<div class="pfhead">' + avHtml(me, myAvatar, true) +
       '<div><b>' + esc(me) + '</b><span class="idchip" id="stCopy" title="Salin Tukuk ID">🆔 ' + myId + ' ⧉</span></div></div>' +
+      (myStatus ? statusLine(myStatus) : '') +
       '<div class="pfmeta">' + (myJoined ? 'Sertai ' + dateLabel(myJoined) + '<br>' : '') +
       'Nombor ini kekal seumur akaun. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.</div>';
     $('stCopy').onclick = () => copyText(myId);
