@@ -562,6 +562,7 @@
   let liveOn = false, liveCtl = null, liveTimer = null, liveWatch = null, liveAt = 0,
       liveRetry = 0, tpClear = null;   // aliran langsung
   let serverResults = [], searchTimer = null;   // hasil carian pelayan
+  let jumpAfter = null;   // id mesej untuk dilompat selepas bilik dibuka
   let pref = { sound: true, notif: false, wall: 1, font: 15, data: 'auto' };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
@@ -965,8 +966,11 @@
     for (const el of $('chats').querySelectorAll('.chatrow')) {
       el.classList.toggle('sel', el.dataset.r === cur);
       el.tabIndex = 0;   // senarai sembang boleh dicapai papan kekunci, bukan tetikus sahaja
-      el.onclick = () => { openRoom(el.dataset.r); loadRooms(false); };
-      el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRoom(el.dataset.r); loadRooms(false); } };
+      el.onclick = () => {
+        if (el.dataset.mid) jumpAfter = el.dataset.mid;
+        openRoom(el.dataset.r); loadRooms(false);
+      };
+      el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.onclick(); } };
     }
   }
   // ─── Buka bilik ───
@@ -989,7 +993,7 @@
       b.msgs = j.msgs || []; b.seq = j.seq || 0;
       indexPeople(j.people);
       renderMsgs();
-      scrollBottom();
+      if (jumpAfter) { jumpTo(jumpAfter); jumpAfter = null; } else scrollBottom();
       if (shown()) post('/read', { room: id }).catch(() => {});
     } catch (e) { if (e.status === 401) return expire(); else toast(e.message); }
     if (!silent && innerWidth > 760) $('inp').focus();
