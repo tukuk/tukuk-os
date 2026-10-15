@@ -554,6 +554,24 @@ function typingIn(roomId) {
   }
   return out;
 }
+// Carian mesej merentas semua bilik yang boleh dibaca.  Min 2 aksara, maks 30 hasil.
+function searchMsgs(name, query) {
+  const s = load();
+  const q = String(query == null ? '' : query).trim().toLowerCase();
+  if (q.length < 2) return [];
+  const out = [];
+  for (const r of Object.values(s.rooms)) {
+    if (!canRead(name, r.id)) continue;
+    for (const m of (r.list || [])) {
+      if (m.del || !m.t) continue;
+      if (!String(m.t).toLowerCase().includes(q)) continue;
+      out.push({ id: m.id, room: r.id, roomKind: r.kind, roomTitle: roomTitle(r, name), from: authorName(m), fid: m.fid, t: String(m.t).slice(0, 200), ts: m.ts });
+      if (out.length >= 60) break;
+    }
+    if (out.length >= 60) break;
+  }
+  return out.sort((a, b) => b.ts - a.ts).slice(0, 30);
+}
 // Direktori pengguna. `viewer` (pilihan) menapis mereka yang MENYEKAT penonton
 // dan menanda status kawan/sekat supaya klien tak perlu teka.
 function people(query, limit, viewer) {
@@ -1167,12 +1185,20 @@ function mount(app, deps) {
     markSeen(u.name, String(cleanBody(req.body).room || ''));
     res.json({ ok: true });
   });
+
+  // Carian mesej merentas bilik — min 2 aksara, max 30 hasil, newest first.
+  app.get('/api/chat/search', lim({ windowMs: 60e3, max: 30, keyPrefix: 'chrch:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return res.json({ ok: true, results: [] });
+    res.json({ ok: true, results: searchMsgs(u.name, q) });
+  });
 }
 
 module.exports = {
   mount, register, login, issueSession, userOf, revoke, normalizeName, hashPass, eqHex,
   dmId, ensureDm, roomsFor, roomTitle, send, since, markSeen, unread, canRead,
-  react, edit, remove, setTyping, typingIn, people, onlineMap, setPath, load, flush,
+  react, edit, remove, setTyping, typingIn, searchMsgs, people, onlineMap, setPath, load, flush,
   byId, findUser, nameOfUser, peerId, isMember, sameAuthor, authorName,
   profile, rename, setBio, isOnline, cleanText,
   addFriend, delFriend, blockUser, unblockUser, socialLists, socialTarget, setPass, logoutAll,

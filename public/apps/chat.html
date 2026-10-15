@@ -556,10 +556,12 @@
   let cache = {}, people = [], pById = {}, pByName = {}, tick = 0;
   let myId = 0, myBio = '', myJoined = null;   // Tukuk ID akaun yang sedang login
   let replyTo = null, editing = null, lastTypingPing = 0;
-  let roomsSig = '', roomsSigCur = null, msgSig = '';
+  const roomsSigInit = '';
+  let roomsSig = roomsSigInit, roomsSigCur = null, msgSig = '';
   let pending = [], seqKey = 1, busy = false;   // lampiran menunggu dihantar
   let liveOn = false, liveCtl = null, liveTimer = null, liveWatch = null, liveAt = 0,
       liveRetry = 0, tpClear = null;   // aliran langsung
+  let serverResults = [], searchTimer = null;   // hasil carian pelayan
   let pref = { sound: true, notif: false, wall: 1, font: 15, data: 'auto' };
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
@@ -941,10 +943,24 @@
         '<div class="mid"><div class="nm">' + hilite(r.title, q) + '</div><div class="pv">' + pv + '</div></div>' +
         '<div class="end"><div class="tm">' + tm + '</div>' + (r.unread && cur !== r.id ? '<span class="badge">' + r.unread + '</span>' : '') + '</div></div>' };
     }).filter(Boolean).sort((a, b) => b.score - a.score);
-    const html = rows.map(x => x.html).join('') || '<p style="padding:20px;color:var(--muted);font-size:.85rem">Tiada hasil.</p>';
+    // Bahagian hasil carian mesej pelayan — di bawah bilik yang sepadan nama.
+    let shtml = '';
+    if (local && serverResults.length) {
+      shtml = '<div style="padding:7px 12px 4px;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-top:1px solid var(--line);margin-top:4px">🔍 Dalam mesej</div>' +
+        serverResults.map(m =>
+          '<div class="chatrow srch" data-r="' + esc(m.room) + '" data-mid="' + esc(m.id) + '">' +
+          (m.roomKind === 'dm'
+            ? '<div class="ava" style="background:' + colorOf(m.roomTitle) + '">' + esc(initials(m.roomTitle)) + '</div>'
+            : '<div class="ava" style="background:#2f3d5c">\ud83c\udf0d</div>') +
+          '<div class="mid"><div style="font-size:.68rem;color:var(--muted);margin-bottom:1px">' + esc(m.roomTitle) + ' \u00b7 ' + esc(m.from) + '</div>' +
+          '<div class="pv">' + excerpt(m.t, q) + '</div></div>' +
+          '<div class="end"><div class="tm">' + listTime(m.ts) + '</div></div></div>').join('');
+    }
+    const html = rows.map(x => x.html).join('') + shtml || '<p style="padding:20px;color:var(--muted);font-size:.85rem">Tiada hasil.</p>';
     updateBadge();
-    if (html === roomsSig && cur === roomsSigCur) return; // jangan bina semula DOM yang sedang diklik
-    roomsSig = html; roomsSigCur = cur;
+    const newsig = html + '|' + serverResults.length;
+    if (newsig === roomsSig && cur === roomsSigCur) return; // jangan bina semula DOM yang sedang diklik
+    roomsSig = newsig; roomsSigCur = cur;
     $('chats').innerHTML = html;
     for (const el of $('chats').querySelectorAll('.chatrow')) {
       el.classList.toggle('sel', el.dataset.r === cur);
@@ -2013,7 +2029,19 @@
   $('pfClose').onclick = () => $('profModal').classList.remove('open');
 
   // ─── Carian + navigasi ───
-  $('q').addEventListener('input', renderRooms);
+  $('q').addEventListener('input', () => {
+    renderRooms();
+    clearTimeout(searchTimer);
+    const q = $('q').value.trim();
+    if (q.length < 2) { serverResults = []; renderRooms(); return; }
+    searchTimer = setTimeout(async () => {
+      try {
+        const j = await call('/search?q=' + encodeURIComponent(q));
+        serverResults = j.results || [];
+        renderRooms();
+      } catch { /* abai ralat rangkaian */ }
+    }, 350);
+  });
   $('backBtn').onclick = () => { $('app').dataset.open = '0'; renderRooms(); };
 
   // ─── Tetapan: profil, kawan, sekatan, keselamatan, paparan ───

@@ -778,6 +778,7 @@ function hit(routes, key, req) {
   return res;
 }
 const reqOf = (tok, body) => ({ headers: { authorization: 'Bearer ' + tok }, body: body || {}, query: {}, on() {}, socket: null });
+const reqGet = (tok, query) => ({ headers: { authorization: 'Bearer ' + tok }, body: {}, query: query || {}, on() {}, socket: null });
 
 test('call: isyarat diteruskan ke pasangan sahaja + tolak salah guna', () => {
   fresh();
@@ -818,4 +819,63 @@ test('call: delivered=false bila pasangan tiada yuran (luar talian)', () => {
   assert.equal(r.code, 200);
   assert.equal(r.body.delivered, false, 'Ben tiada sambungan');
   release(idOf('Ana'), a.snk);
+});
+
+// ─── Carian mesej (history search) ───
+test('search: hasil kosong untuk query < 2 aksara', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const r = hit(routes, 'G /api/chat/search', reqGet(tok, { q: 'a' }));
+  assert.equal(r.code, 200);
+  assert.deepEqual(r.body.results, [], '1 aksara → tiada hasil');
+});
+
+test('search: 401 tanpa token sah', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const r = hit(routes, 'G /api/chat/search', reqGet('palsu', { q: 'hello' }));
+  assert.equal(r.code, 401);
+});
+
+test('search:jumpa mesej dalam bilik global ikut kueri (case-insensitive)', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  chat.send('Ana', 'global_am', 'Projek Tukuk-OS hampir siap');
+  chat.send('Ben', 'global_am', 'Projek lain juga berjalan');
+  chat.send('Ana', 'global_am', 'Sesi programming malam ini');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ben');
+  const r = hit(routes, 'G /api/chat/search', reqGet(tok, { q: 'PROJEK' }));
+  assert.equal(r.code, 200);
+  assert.equal(r.body.results.length, 2, 'dua mesej mengandungi "projek"');
+  assert.ok(r.body.results.every(x => /projek/i.test(x.t)));
+});
+
+test('search: tak kembalikan mesej DM yang bukan ahli', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const dm = chat.ensureDm(chat.findUser('Ana'), chat.findUser('Ben'));
+  chat.send('Ana', dm.id, 'rahsia antara ana dan ben');
+  const routes = mountRoutes();
+  const r = hit(routes, 'G /api/chat/search', reqGet(chat.issueSession('Cia'), { q: 'rahsia' }));
+  assert.equal(r.code, 200);
+  assert.equal(r.body.results.length, 0, 'Cia bukan ahli DM — tak nampak');
+});
+
+test('search: newest dulu dan ada roomTitle + from', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  chat.send('Ana', 'global_am', 'hello lama');
+  chat.send('Ana', 'global_am', 'hello baru');
+  const routes = mountRoutes();
+  const r = hit(routes, 'G /api/chat/search', reqGet(chat.issueSession('Ana'), { q: 'hello' }));
+  assert.equal(r.code, 200);
+  const list = r.body.results;
+  assert.ok(list.length >= 2);
+  assert.ok(list[0].ts >= list[1].ts, 'terbaru dahulu');
+  assert.ok(list[0].roomTitle, 'ada roomTitle');
+  assert.equal(list[0].from, 'Ana', 'ada nama penghantar');
 });
