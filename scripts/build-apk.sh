@@ -43,6 +43,10 @@ WORK=apk/build
 KS=apk/tukuk-chat-release.jks          # kekunci edaran (self-signed); git-ignored
 ALIAS=tukuk-chat
 PASS=tukukchat
+DNAME="CN=Tukuk-OS, OU=T Chat, O=tukuk.org, L=Kuala Lumpur, C=MY"
+# Kata laluan + DN signing SEJATI disimpan di fail ini (git-ignored — rahsia,
+# JANGAN di-commit). Sumberkan untuk menimpa nilai bawaan di atas.
+if [ -f apk/keystore.env ]; then . apk/keystore.env; fi
 ICON=public/icons/apps/chat-512.png    # ikon pelancaran (512×512)
 OUT=public/downloads/tukuk-chat.apk
 
@@ -76,7 +80,7 @@ cp "$WORK/base.apk" "$WORK/app.unsigned.apk"
 [ -f "$KS" ] || "$KEYTOOL" -genkeypair -v -keystore "$KS" -alias "$ALIAS" \
   -keyalg RSA -keysize 2048 -validity 10000 \
   -storepass "$PASS" -keypass "$PASS" \
-  -dname "CN=Tukuk-OS, OU=T Chat, O=tukuk.org, L=Kuala Lumpur, C=MY"
+  -dname "$DNAME"
 
 mkdir -p "$(dirname "$OUT")"
 "$APKSIGNER" sign --ks "$KS" --ks-key-alias "$ALIAS" \
