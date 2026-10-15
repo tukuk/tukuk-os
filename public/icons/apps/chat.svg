@@ -1,11 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#1f6feb"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b9bff"/><stop offset="1" stop-color="#1f6feb"/>
     </linearGradient>
+    <linearGradient id="plane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dcebff"/>
+    </linearGradient>
+    <filter id="sh" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#0a2350" flood-opacity="0.4"/>
+    </filter>
   </defs>
-  <rect width="128" height="128" rx="28" fill="url(#g)"/>
-  <path d="M108 30 20 62l26 10 8 26 14-18 22 16z" fill="#fff" opacity=".95"/>
-  <path d="M46 72 108 30 68 80z" fill="#cfe3ff"/>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <circle cx="40" cy="26" r="62" fill="#ffffff" opacity="0.10"/>
+  <g filter="url(#sh)">
+    <path d="M108 30 20 62l26 10 8 26 14-18 22 16z" fill="url(#plane)"/>
+    <path d="M46 72 108 30 68 80z" fill="#a9ccff"/>
+  </g>
+  <circle cx="96" cy="96" r="12" fill="#3fd06a" stroke="#fff" stroke-width="4"/>
+  <rect x="6" y="6" width="116" height="116" rx="24" fill="none" stroke="#000000" stroke-opacity="0.16"/>
 </svg>
