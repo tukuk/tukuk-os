@@ -33,7 +33,7 @@ let dirty = false;
 // ─── Simpanan ───
 const FIRST_ID = 100001;    // Tukuk ID pertama (nombor kekal, bukan nama)
 function blank() {
-  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID, pushSubs: {}, vapid: null, posts: {}, stories: {}, notif: {} };
+  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID, pushSubs: {}, vapid: null, posts: {}, stories: {}, notif: {}, polls: {} };
 }
 function load() {
   if (state) return state;
@@ -304,9 +304,11 @@ function projectMedia(rec) {
 // Tandatangan dijana semula setiap kali dihantar — jadi mesej yang disimpan
 // tidak pernah mengandungi URL yang boleh luput.
 function hydrate(m) {
-  if (!m || !m.media || !m.media.length) return m;
+  if (!m) return m;
+  if (!m.media && !m.pollId) return m;
   const out = Object.assign({}, m);
-  out.media = m.media.map(x => Object.assign({}, x, { url: mediaUrl(x.id) }));
+  if (m.media && m.media.length) out.media = m.media.map(x => Object.assign({}, x, { url: mediaUrl(x.id) }));
+  if (m.pollId) { const p = (load().polls || {})[m.pollId]; if (p) out.pollData = projectPoll(p); }
   return out;
 }
 const hydrateAll = (list) => (list || []).map(hydrate);
@@ -608,7 +610,7 @@ function authorName(m) {
   const nm = m.fid ? nameOfUser(m.fid) : null;
   return nm || m.from || null;
 }
-function send(name, roomId, text, replyTo, media) {
+function send(name, roomId, text, replyTo, media, extra) {
   const s = load();
   const r = s.rooms[roomId];
   if (!r) return { error: 'Bilik tidak ditemui.' };
@@ -625,10 +627,16 @@ function send(name, roomId, text, replyTo, media) {
   const att = media && media.length ? attachMedia(su || { k: key(name) }, roomId, media, msgId) : [];
   if (media && media.length && !att.length) return { error: 'Lampiran tidak dapat digunakan — muat naik semula.' };
   const t = cleanText(text);
-  if (!t && !att.length) return { error: 'Mesej kosong.' };
+  if (!t && !att.length && !(extra && (extra.sticker || extra.pollId))) return { error: 'Mesej kosong.' };
   if (replyTo && !r.list.find(m => m.id === replyTo)) replyTo = null;
   const msg = { id: msgId, seq: ++r.seq, from: su ? su.name : name, fid: su ? su.id : null, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false, pinned: false };
   if (att.length) msg.media = att;
+  // Meta tambahan (pollId, sticker) disimpan terus pada mesej; tidak mengubah
+  // semantik sedia ada kerana semua pemanggil lain tidak menghantar `extra`.
+  if (typeof extra === 'object' && extra) {
+    if (extra.pollId) msg.pollId = extra.pollId;
+    if (extra.sticker) msg.sticker = String(extra.sticker).slice(0, 8);
+  }
   r.list.push(msg);
   trimRoom(r);
   const wasTyping = !!s.typing[key(name) + '|' + roomId];
@@ -726,6 +734,50 @@ function setTyping(name, roomId) {
   if (!s.rooms[roomId]) return;
   s.typing[key(name) + '|' + roomId] = Date.now(); touch();
   pubRoom(s.rooms[roomId], 'typing', { room: roomId, typing: typingIn(roomId) });
+}
+
+// ─── Undian (poll) ───
+// Satu undian dikunci pada satu bilik; satu undi setiap ahli (boleh ubah). Data
+// dikekalkan dalam JSON supaya keputusan langsung muncul pada semua tab melalui SSE.
+const MAX_POLL_Q = 200, MAX_POLL_OPT = 80, MAX_POLL_OPTS = 6;
+function projectPoll(p) {
+  const total = Object.keys(p.votes).length;
+  const counts = p.opts.map((_, i) => Object.values(p.votes).filter(v => v === i).length);
+  return { id: p.id, q: p.q, opts: p.opts, counts, total, ts: p.ts, by: p.by, voters: p.votes };
+}
+function createPoll(name, roomId, text, opts) {
+  const s = load(); const r = s.rooms[roomId];
+  if (!r) return { error: 'Bilik tidak ditemui.' };
+  const q = cleanText(text).slice(0, MAX_POLL_Q);
+  if (!q) return { error: 'Soalan undian kosong.' };
+  const list = (Array.isArray(opts) ? opts : [])
+    .map(o => cleanText(o).slice(0, MAX_POLL_OPT))
+    .filter(Boolean);
+  if (list.length < 2) return { error: 'Sediakan sekurang-kurangnya 2 pilihan.' };
+  if (list.length > MAX_POLL_OPTS) return { error: 'Maksimum ' + MAX_POLL_OPTS + ' pilihan.' };
+  const su = findUser(name); if (!su) return { error: 'Pengguna tidak ditemui.' };
+  const id = crypto.randomBytes(6).toString('hex');
+  s.polls = s.polls || {};
+  s.polls[id] = { id, room: roomId, q, opts: list, votes: {}, by: su.name, bid: su.id, ts: Date.now() };
+  touch();
+  return { ok: true, poll: s.polls[id] };
+}
+function votePoll(name, pollId, optIdx) {
+  const s = load();
+  const p = (s.polls || {})[String(pollId)];
+  if (!p) return { error: 'Undian tidak ditemui.' };
+  const r = s.rooms[p.room]; if (!r) return { error: 'Bilik tidak ditemui.' };
+  if (!canRead(name, p.room)) return { error: 'Anda bukan ahli bilik ini.' };
+  const su = findUser(name); if (!su) return { error: 'Pengguna tidak ditemui.' };
+  const i = Number(optIdx);
+  if (!Number.isInteger(i) || i < -1 || i >= p.opts.length) return { error: 'Pilihan tidak sah.' };
+  const k = String(su.id);
+  if (i === -1) delete p.votes[k];
+  else p.votes[k] = i;
+  touch();
+  const proj = projectPoll(p);
+  pubRoom(r, 'poll', { room: p.room, id: p.id, poll: proj });
+  return { ok: true, poll: proj };
 }
 function typingIn(roomId) {
   const s = load(); const now = Date.now(); const out = [];
@@ -1767,7 +1819,7 @@ function mount(app, deps) {
     if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
     if (b.media != null && !Array.isArray(b.media)) return res.status(400).json({ error: 'Lampiran mesti senarai.' });
     if (Array.isArray(b.media) && b.media.length > MAX_PER_MSG) return res.status(400).json({ error: 'Maksimum ' + MAX_PER_MSG + ' fail satu mesej.' });
-    const r = send(u.name, room, b.text, b.replyTo, b.media);
+    const r = send(u.name, room, b.text, b.replyTo, b.media, { sticker: b.sticker });
     if (r.error) return res.status(400).json({ error: r.error });
     res.json({ ok: true, msg: r.msg, seq: r.room.seq });
   });
@@ -1897,6 +1949,28 @@ function mount(app, deps) {
     const u = userOf(bearer(req)); if (!u) return res.json({ ok: true });
     setTyping(u.name, String(cleanBody(req.body).room || ''));
     res.json({ ok: true });
+  });
+
+  // ─── Undian dalam bilik ───
+  app.post('/api/chat/poll', lim({ windowMs: 60e3, max: 10, keyPrefix: 'chpoll:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const room = String(b.room || '');
+    if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
+    const cr = createPoll(u.name, room, b.q, b.opts);
+    if (cr.error) return res.status(400).json({ error: cr.error });
+    const r = send(u.name, room, '📊 ' + cr.poll.q, b.replyTo || null, null, { pollId: cr.poll.id });
+    if (r.error) return res.status(400).json({ error: r.error });
+    event('Undian dibuat: ' + cr.poll.q.slice(0, 60), { id: u.id });
+    res.json({ ok: true, msg: r.msg, seq: r.room.seq, poll: projectPoll(cr.poll) });
+  });
+
+  app.post('/api/chat/poll/vote', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = votePoll(u.name, String(b.id || ''), Number(b.opt));
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true, poll: r.poll });
   });
 
   app.get('/api/chat/people', (req, res) => {
@@ -2286,5 +2360,6 @@ module.exports = {
   pushNotif, notifList, markNotifRead, clearNotifs, setAvatar, removeAvatar, avatarUrl, hydratePost, notifyMentions, followList, discover, releaseSocialMedia,
   MAX_POST, MAX_POST_MEDIA, MAX_COMMENT, MAX_COMMENTS, MAX_FEED, MAX_STORIES, MAX_NOTIF, MAX_FOLLOWING, MAX_FOLLOWERS,
   MAX_IMG, MAX_VID, MAX_AUDIO, MAX_DOC, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
+  createPoll, votePoll, projectPoll, MAX_POLL_Q, MAX_POLL_OPT, MAX_POLL_OPTS,
   get mediaDir() { return MEDIA; },
 };

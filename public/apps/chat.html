@@ -401,6 +401,39 @@
   #clipPop[hidden] { display:none; }
   #clipPop button { background:none; border:none; color:var(--text); font:inherit; font-size:.85rem; text-align:left; border-radius:7px; padding:8px 14px; cursor:pointer; white-space:nowrap; }
   #clipPop button:hover { background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  /* ── Panel stiker ── */
+  #stkPop { position:absolute; bottom:100%; left:8px; right:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px 14px 0 0; padding:8px 10px; z-index:35; max-height:230px; overflow-y:auto; box-shadow:0 -6px 22px rgba(0,0,0,.42); max-width:760px; margin:0 auto; }
+  #stkPop[hidden] { display:none; }
+  #stkTabs { display:flex; gap:6px; margin-bottom:8px; }
+  #stkTabs button { font-size:.75rem; padding:3px 12px; border-radius:8px; border:1px solid var(--line); background:none; color:var(--muted); cursor:pointer; font:inherit; }
+  #stkTabs button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .stk-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; }
+  .stk-grid button { background:none; border:none; font-size:2.2rem; cursor:pointer; padding:5px; border-radius:10px; line-height:1; transition:transform .12s; }
+  .stk-grid button:hover { background:color-mix(in srgb,var(--accent) 18%,transparent); transform:scale(1.18); }
+  .stk-grid img { width:100%; aspect-ratio:1; object-fit:contain; border-radius:8px; cursor:pointer; }
+  .stk-grid img:hover { outline:2px solid var(--accent); }
+  .stkc { position:relative; }
+  .stkx { position:absolute; top:-2px; right:-2px; width:18px; height:18px; border-radius:6px; border:none; background:rgba(0,0,0,.65); color:#fff; font-size:.66rem; line-height:1; cursor:pointer; padding:0; display:none; }
+  .stkc:hover .stkx { display:block; }
+  .mbox input.plopt { margin-bottom:5px; }
+  /* Mesej stiker besar — gelembong tanpa latar */
+  .stk-big { font-size:3.5rem; line-height:1.1; padding:4px 10px 8px; }
+  /* ── Kad undian ── */
+  .poll-card { min-width:180px; }
+  .poll-q { font-weight:700; font-size:.85rem; margin-bottom:8px; line-height:1.3; }
+  .poll-opt { position:relative; display:flex; align-items:center; gap:7px; padding:6px 10px; margin:4px 0; border-radius:10px; border:1px solid var(--line); cursor:pointer; font-size:.82rem; overflow:hidden; transition:border-color .15s; }
+  .poll-opt:hover { border-color:var(--accent); }
+  .poll-opt.voted { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,transparent); }
+  .poll-bar { position:absolute; left:0; top:0; height:100%; background:color-mix(in srgb,var(--accent) 22%,transparent); transition:width .5s; }
+  .poll-lbl { flex:1; z-index:1; position:relative; }
+  .poll-n { font-size:.72rem; color:var(--muted); z-index:1; min-width:22px; text-align:right; position:relative; }
+  .poll-total { font-size:.7rem; color:var(--muted); margin-top:6px; }
+  /* ── Kesan konfeti penuh skrin ── */
+  #fxLayer { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9998; display:none; }
+  #giftOv { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:9999; pointer-events:none; opacity:0; transition:opacity .18s; }
+  #giftOv.on { opacity:1; }
+  #giftOv .gemoji { font-size:7rem; animation: gpop .65s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes gpop { 0%{transform:scale(.3) rotate(-15deg);opacity:0}60%{transform:scale(1.3) rotate(5deg);opacity:1}100%{transform:scale(1);opacity:1}}
   /* Kartu post */
   .pcard { border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--bg); }
   .phead { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
@@ -574,6 +607,13 @@
       <div id="clipPop" hidden>
         <button id="cpFile">📄 Gambar / video / fail</button>
         <button id="cpFolder">📁 Satu folder penuh</button>
+        <button id="cpStiker">😊 Stiker besar</button>
+        <button id="cpPoll">📊 Undian</button>
+      </div>
+      <div id="stkPop" hidden>
+        <div id="stkTabs"><button class="on" data-t="emo">😊 Emoji besar</button><button data-t="mine">🖼 Stiker saya</button></div>
+        <div id="stkGrid" class="stk-grid"></div>
+        <input type="file" id="stkFile" accept="image/*" style="display:none">
       </div>
       <input type="file" id="file" accept="*/*" multiple style="display:none">
       <input type="file" id="folder" webkitdirectory directory multiple style="display:none">
@@ -583,6 +623,8 @@
 
 <div id="ctx"></div>
 <div id="toast"></div>
+<canvas id="fxLayer"></canvas>
+<div id="giftOv"><div class="gemoji" id="giftEmoji"></div></div>
 <div id="view"><div class="stage" id="vStage"></div><div class="cap" id="vCap"></div><div class="bar"><button id="vPrev">←</button><button id="vSave">⬇️ Simpan</button><button id="vClose">✕ Tutup</button><button id="vNext">→</button></div></div>
 
 <!-- ─── Skrin panggilan (video/audio WebRTC + prank) ─── -->
@@ -660,6 +702,16 @@
   <h3>➡️ Teruskan mesej</h3>
   <div id="fwdList"></div>
   <div class="mbtns"><button id="fwdCancel">Batal</button></div>
+</div></div>
+
+<div class="modal" id="pollModal"><div class="mbox">
+  <h3>📊 Cipta Undian</h3>
+  <div class="pflabel">Soalan</div>
+  <input id="plQ" maxlength="200" placeholder="Cth.: Makan tengah hari di mana?" autocomplete="off">
+  <div class="pflabel" style="margin-top:8px">Pilihan <span style="color:var(--muted);font-size:.72rem">(2–6)</span></div>
+  <div id="plOpts"><input class="plopt" maxlength="80" placeholder="Pilihan 1" autocomplete="off"><input class="plopt" maxlength="80" placeholder="Pilihan 2" autocomplete="off"></div>
+  <button id="plAdd" style="font-size:.78rem;padding:4px 10px;margin-top:5px">+ Tambah pilihan</button>
+  <div class="mbtns"><button id="plCancel">Batal</button><button class="prim" id="plGo">📊 Hantar undian</button></div>
 </div></div>
 
 <div class="modal" id="setModal"><div class="mbox">
@@ -997,7 +1049,7 @@
     const one = k === 'video' ? '🎬 Video' : k === 'audio' ? '🎙️ Suara' : k === 'file' ? '📎 Fail' : '🖼 Gambar';
     return list.length > 1 ? one + ' (+' + (list.length - 1) + ')' : one;
   }
-  const msgLabel = m => (m && m.t && m.t.trim()) ? m.t : (mediaLabel(m && m.media) || '(kosong)');
+  const msgLabel = m => m && m.sticker ? m.sticker + ' Stiker' : m && m.pollData ? '📊 ' + m.pollData.q : (m && m.t && m.t.trim()) ? m.t : (mediaLabel(m && m.media) || '(kosong)');
   const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : kind === 'audio' ? '🎙️ Suara' : kind === 'file' ? '📎 Fail' : '🖼 Gambar') + (n > 1 ? ' +' + (n - 1) : '');
   // Sel pemain suara: bar pasif (estetik) + butang main/jeda + durasi.
   function audioCell(x, i) {
@@ -1548,6 +1600,12 @@
       b.msgs[at].pinned = !!j.pinned;
       renderMsgs(); return;
     }
+    if (ev === 'poll') {           // keputusan undian berubah — segerak semua kad dalam bilik ini
+      let ada = false;
+      for (const x of (b.msgs || [])) if (x.pollId === j.id && x.pollData) { x.pollData = j.poll; ada = true; }
+      if (ada) renderMsgs(); else pollMsgs();
+      return;
+    }
     const m = j.msg;
     if (!m) return;
     if (ev === 'edit' || ev === 'react') {
@@ -1557,6 +1615,8 @@
       renderMsgs(); renderRooms(); return;
     }
     if (ev !== 'msg' || (b.msgs || []).some(x => x.id === m.id)) return;
+    // Kesan sambutan: mesej mengandungi emoji hadiah/pesta mencetus konfeti penuh skrin.
+    if (!mineOf(m) && !lite) celebrate(m.t);
     // ganti gelembung optimistik penghantar (jika ada) dengan salinan pelayan
     b.msgs = (b.msgs || []).filter(x => !(String(x.id).startsWith('tmp') && samePair(x, m))).concat([m]).slice(-200);
     b.seq = Math.max(b.seq || 0, j.seq || 0);
@@ -1607,7 +1667,12 @@
       const quoted = msg.to && byId[msg.to] ? byId[msg.to] : null;
       const q = quoted ? '<div class="quotecard" data-goto="' + esc(quoted.id) + '"><b>' + esc(nameOf(quoted)) + '</b><span>' + esc(norm(msgLabel(quoted)).slice(0, 80)) + '</span></div>' : '';
       const hasMedia = !!(msg.media && msg.media.length);
-      const body = hasMedia ? mediaGrid(msg) + (msg.t ? '<div class="cap">' + renderText(msg.t) + '</div>' : '') : renderText(msg.t);
+      const isStk = !!msg.sticker;
+      const isPoll = !!msg.pollData;
+      const body = isStk ? '<div class="stk-big">' + esc(msg.sticker) + '</div>'
+        : isPoll ? pollCard(msg)
+        : hasMedia ? mediaGrid(msg) + (msg.t ? '<div class="cap">' + renderText(msg.t) + '</div>' : '')
+        : renderText(msg.t);
       const loved = !!(msg.rx && msg.rx['❤️']);
       html += '<div class="row ' + (mine ? 'me' : 'them') + (cont ? ' cont' : '') + '" data-id="' + esc(msg.id) + '">' +
         (mine ? '' : '<div class="bava" style="background:' + colorOf(disp) + '">' + esc(initials(disp)) + '</div>') +
@@ -1639,6 +1704,190 @@
       (canManage ? '<button class="pincl" title="Buka pin">✕</button>' : '');
     bar.onclick = e => { if (e.target.classList.contains('pincl')) { doPin(last); return; } jumpTo(last.id); };
   }
+
+  // ─── Stiker besar, undian & kesan sambutan ───
+  const STK_EMO = {
+    greet: ['😀','😂','🥰','😎','🤩','🥳','😇','🤪','😍','🙄','🤗','😴'],
+    love: ['❤️','🧡','💛','💚','💙','💜','🖤','💖','💘','💝','🌹','😻'],
+    party: ['🎉','🎊','🎂','🎁','🍕','☕','🏆','⚽','🎸','🚀','⭐','🌈'],
+  };
+  const SKEY = 'tukuk-chat-stickers';
+  const myStks = () => { try { return JSON.parse(localStorage.getItem(SKEY) || '[]'); } catch { return []; } };
+  const stkTab = { t: 'emo' };
+  function renderStkGrid() {
+    const g = $('stkGrid');
+    for (const t of $('stkTabs').querySelectorAll('button')) t.classList.toggle('on', t.dataset.t === stkTab.t);
+    if (stkTab.t === 'emo') {
+      g.innerHTML = STK_EMO.greet.concat(STK_EMO.love, STK_EMO.party)
+        .map(e => '<button data-semo="' + e + '">' + e + '</button>').join('');
+      for (const b of g.querySelectorAll('button')) b.onclick = () => { $('stkPop').hidden = true; sendSticker(b.dataset.semo); };
+    } else {
+      const s = myStks();
+      g.innerHTML = (s.length ? s.map((d, i) => '<div class="stkc"><img data-i="' + i + '" src="' + d + '" alt="stiker saya"><button class="stkx" data-x="' + i + '" title="Buang stiker">✕</button></div>').join('')
+        : '<div style="grid-column:1/-1;color:var(--muted);font-size:.78rem;padding:8px">Belum ada stiker sendiri. Tekan ✚ dan pilih gambar — latar putih dibuang automatik.</div>')
+        + '<div class="stkc"><button id="stkAdd" title="Cipta stiker daripada gambar" style="width:100%;aspect-ratio:1;border:1px dashed var(--line);border-radius:8px;background:none;color:var(--muted);font-size:1.5rem;cursor:pointer">✚</button></div>';
+      const add = $('stkAdd');
+      if (add) add.onclick = () => $('stkFile').click();
+      for (const im of g.querySelectorAll('img[data-i]')) im.onclick = () => { $('stkPop').hidden = true; sendStickerImage(s[+im.dataset.i]); };
+      for (const x of g.querySelectorAll('.stkx')) x.onclick = () => { s.splice(+x.dataset.x, 1); localStorage.setItem(SKEY, JSON.stringify(s)); renderStkGrid(); };
+    }
+  }
+  // Pembuat stiker setempat: gambar → buang latar (banjir warna dari tepi) → PNG kecil → localStorage.
+  async function makeSticker(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      const W = 200, H = Math.max(1, Math.round(200 * img.height / img.width)) || 200;
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0, W, H);
+      const im = x.getImageData(0, 0, W, H), d = im.data;
+      const dist = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+      const corners = [[d[0], d[1], d[2]], [d[3], d[4], d[5]]];
+      const seen = new Uint8Array(W * H), st = [];
+      for (let px = 0; px < W; px++) { st.push(px, (H - 1) * W + px); }
+      for (let py = 0; py < H; py++) { st.push(py * W, py * W + W - 1); }
+      while (st.length) {
+        const qx = st.pop(), qy = st.pop(), pi = qy * W + qx;
+        if (qx < 0 || qx >= W || qy < 0 || qy >= H || seen[pi]) continue;
+        seen[pi] = 1;
+        const i4 = pi * 4;
+        if (corners.some(cc => dist([d[i4], d[i4 + 1], d[i4 + 2]], cc) < 96)) {
+          d[i4 + 3] = 0;
+          st.push(qx + 1, qy, qx - 1, qy, qx, qy + 1, qx, qy - 1);
+        }
+      }
+      x.putImageData(im, 0, 0);
+      const out = c.toDataURL('image/png');
+      const s = myStks(); s.unshift(out); if (s.length > 24) s.length = 24;
+      localStorage.setItem(SKEY, JSON.stringify(s));
+      renderStkGrid(); toast('Stiker disimpan! Ketuk untuk hantar.');
+    } catch { toast('Gagal — gambar tidak dapat dibaca.'); }
+    finally { URL.revokeObjectURL(url); }
+  }
+  async function sendSticker(emo) {
+    if (!online) { toast('Stiker butuh sambungan.'); return; }
+    try {
+      const j = await post('/messages', { room: cur, text: '', sticker: emo });
+      const b2 = box(room(cur));
+      b2.msgs = (b2.msgs || []).filter(x => x.id !== j.msg.id).concat([j.msg]).slice(-200);
+      b2.seq = Math.max(b2.seq || 0, j.seq || 0);
+      const rr = room(cur); if (rr) rr.last = { from: me, fid: myId || null, t: j.msg.t, mt: 'sticker', n: 0, ts: Date.now() };
+      renderMsgs(); renderRooms(); sndOut();
+    } catch (e) { toast(e.message); }
+  }
+  async function sendStickerImage(dataUrl) {
+    if (!online) { toast('Stiker butuh sambungan.'); return; }
+    const r = room(cur), b = box(r);
+    const temp = { id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, fid: myId || null, t: '', ts: Date.now(), to: null, rx: {}, media: [{ id: 'tmpm' + Date.now(), kind: 'image', url: dataUrl }] };
+    b.msgs.push(temp); renderMsgs(); scrollBottom();
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const p = { key: seqKey++, kind: 'image', blob, url: dataUrl, status: 'up', pct: 0 };
+      const m = await uploadOne(p);
+      const j = await post('/messages', { room: cur, text: '', media: [m.id] });
+      const at = b.msgs.findIndex(x => x.id === temp.id);
+      b.msgs = b.msgs.filter(x => x.id !== temp.id && x.id !== j.msg.id);
+      b.msgs.splice(at >= 0 ? at : b.msgs.length, 0, j.msg);
+      b.seq = Math.max(b.seq || 0, j.seq || 0);
+      r.last = { from: me, fid: myId || null, t: 'Stiker', mt: 'image', n: 1, ts: Date.now() };
+      renderMsgs(); renderRooms(); sndOut();
+    } catch (e) {
+      b.msgs = b.msgs.filter(x => x.id !== temp.id);
+      toast(e.message || 'Gagal hantar stiker.'); renderMsgs();
+    }
+  }
+  // Kad undian — pilihan boleh diketuk untuk mengundi (boleh ubah undian).
+  // Kunci pengundi ialah Tukuk ID (bukan nama) — sama seperti di pelayan.
+  function pollCard(msg) {
+    const p = msg.pollData; if (!p) return '';
+    const myPick = Object.prototype.hasOwnProperty.call(p.voters || {}, String(myId)) ? p.voters[String(myId)] : -1;
+    const opts = p.opts.map((o, i) => {
+      const pc = p.total ? Math.round(p.counts[i] / p.total * 100) : 0;
+      return '<div class="poll-opt' + (i === myPick ? ' voted' : '') + '" data-pid="' + esc(p.id) + '" data-popt="' + i + '">' +
+        '<span class="poll-bar" style="width:' + pc + '%"></span>' +
+        '<span class="poll-lbl">' + (i === myPick ? '✓ ' : '') + esc(o) + '</span>' +
+        '<span class="poll-n">' + p.counts[i] + (p.total ? ' · ' + pc + '%' : '') + '</span></div>';
+    }).join('');
+    return '<div class="poll-card"><div class="poll-q">📊 ' + esc(p.q) + '</div>' + opts +
+      '<div class="poll-total">' + p.total + ' undi · ketuk untuk undi</div></div>';
+  }
+  async function doVote(pid, idx) {
+    if (!online) { toast('Undi perlukan sambungan.'); return; }
+    try {
+      const j = await post('/poll/vote', { id: pid, opt: idx });
+      const r = room(cur); if (!r) return;
+      const b = box(r);
+      let berubah = false;
+      for (const x of (b.msgs || [])) if (x.pollId === pid && x.pollData) { x.pollData = j.poll; berubah = true; }
+      if (berubah) renderMsgs(); else pollMsgs();
+    } catch (e) { toast(e.message); }
+  }
+  // Konfeti di kanvas penuh skrin (pointer-events:none) + emoji hadiah besar.
+  let fxFx = null, fxFrames = 0, fxParts = [];
+  const FXCOL = ['#e17076', '#65aadd', '#7bc862', '#a584cf', '#ffd54a', '#f7a35c', '#65c5db'];
+  function celebrate(text) {
+    if (!pref.sound || document.hidden) return;
+    const t = String(text || '');
+    if (t.includes('🎁')) { showGift('🎁'); fireConfetti(); }
+    else if (/🎉|🎊|🥳|🎂/.test(t)) fireConfetti();
+  }
+  function fireConfetti() {
+    const cv = $('fxLayer'); cv.style.display = 'block';
+    cv.width = innerWidth; cv.height = innerHeight;
+    for (let i = 0; i < 110; i++) fxParts.push({
+      x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5,
+      vx: (Math.random() - .5) * 4, vy: 2 + Math.random() * 3.5,
+      s: 5 + Math.random() * 5, r: Math.random() * 6.28, vr: (Math.random() - .5) * .3,
+      c: FXCOL[i % FXCOL.length],
+    });
+    if (!fxFx) fxFx = requestAnimationFrame(fxTick);
+  }
+  function fxTick() {
+    const cv = $('fxLayer'), x = cv.getContext('2d');
+    x.clearRect(0, 0, cv.width, cv.height);
+    for (const p of fxParts) {
+      p.x += p.vx; p.y += p.vy; p.vy += .05; p.r += p.vr;
+      x.save(); x.translate(p.x, p.y); x.rotate(p.r);
+      x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .62); x.restore();
+    }
+    fxParts = fxParts.filter(p => p.y < cv.height + 30);
+    if (fxParts.length && ++fxFrames < 320) fxFx = requestAnimationFrame(fxTick);
+    else { fxFx = null; fxFrames = 0; fxParts = []; cv.style.display = 'none'; }
+  }
+  let giftT = null;
+  function showGift(emo) {
+    $('giftEmoji').textContent = emo;
+    $('giftOv').classList.add('on');
+    clearTimeout(giftT); giftT = setTimeout(() => $('giftOv').classList.remove('on'), 1300);
+  }
+  $('plAdd').onclick = () => {
+    const n = $('plOpts').querySelectorAll('input').length;
+    if (n >= 6) { toast('Maksimum 6 pilihan.'); return; }
+    const el = document.createElement('input'); el.className = 'plopt'; el.maxLength = 80;
+    el.placeholder = 'Pilihan ' + (n + 1); el.autocomplete = 'off';
+    $('plOpts').appendChild(el); el.focus();
+  };
+  $('plCancel').onclick = () => $('pollModal').classList.remove('open');
+  $('plGo').onclick = async () => {
+    const q = $('plQ').value.trim();
+    const opts = Array.from($('plOpts').querySelectorAll('input')).map(i => i.value.trim()).filter(Boolean);
+    if (!q) { toast('Isi soalan undian.'); return; }
+    if (opts.length < 2) { toast('Perlu sekurang-kurangnya 2 pilihan.'); return; }
+    try {
+      await post('/poll', { room: cur, q, opts });
+      $('pollModal').classList.remove('open');
+      $('plQ').value = ''; Array.from($('plOpts').querySelectorAll('input')).forEach(i => { i.value = ''; });
+      toast('Undian dihantar 📊');
+      pollMsgs(); loadRooms(false);
+    } catch (e) { toast(e.message); }
+  };
+  $('stkFile').onchange = e => { if (e.target.files[0]) makeSticker(e.target.files[0]); e.target.value = ''; };
+  $('cpStiker').onclick = () => { $('clipPop').hidden = true; $('stkPop').hidden = true; renderStkGrid(); $('stkPop').hidden = false; };
+  $('cpPoll').onclick = () => { $('clipPop').hidden = true; $('pollModal').classList.add('open'); $('plQ').focus(); };
+  for (const t of $('stkTabs').querySelectorAll('button')) t.onclick = () => { stkTab.t = t.dataset.t; renderStkGrid(); };
+
   function scrollBottom() { const w = $('msgsWrap'); w.scrollTop = w.scrollHeight; checkJump(); }
   // ─── Lencana belum-baca di tajuk tab / app badge ───
   const TAB_TITLE = 'T Chat — Tukuk Apps — Tukuk-OS';
@@ -2158,6 +2407,10 @@
       for (const rb of bub.querySelectorAll('.reactions button')) rb.onclick = () => doReact(id, rb.dataset.react);
       const qr = bub.querySelector('.qreact');
       if (qr) { qr.addEventListener('pointerdown', e => e.stopPropagation()); qr.onclick = e => { e.stopPropagation(); doReact(id, '❤️'); }; }
+      // Kad undian: ketuk pilihan untuk mengundi.
+      for (const po of bub.querySelectorAll('.poll-opt')) {
+        po.onclick = e => { e.stopPropagation(); doVote(po.dataset.pid, +po.dataset.popt); };
+      }
       // Mod jimat data: media "ketuk untuk muat" — gantikan placeholder dengan media sebenar.
       for (const tv of bub.querySelectorAll('.tvl')) {
         tv.onclick = e => {
@@ -2283,6 +2536,7 @@
     if (e.key !== 'Escape') return;
     hideCtx();
     $('clipPop').hidden = true;
+    $('stkPop').hidden = true;
     ['peopleModal', 'groupModal', 'fwdModal', 'setModal', 'profModal', 'prankModal', 'grpInfoModal', 'feedModal', 'notifModal'].forEach(id => $(id).classList.remove('open'));
     if (replyTo || editing) closeReplyEdit();
   });
@@ -2360,6 +2614,7 @@
       media: shots.map(p => ({ id: 'tmpm' + p.key, kind: p.kind, url: p.url, w: p.w, h: p.h, dur: p.dur, ext: '', name: p.name, size: (p.blob && p.blob.size) || 0 })),
     };
     b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
+    celebrate(text);   // penghantar juga meraikan mesej hadiah/pesta mereka sendiri
     busy = true; $('send').disabled = true;
     const ids = [];
     try {
@@ -3478,6 +3733,7 @@
   $('cpFile').onclick = () => { $('clipPop').hidden = true; $('file').click(); };
   $('cpFolder').onclick = () => { $('clipPop').hidden = true; $('folder').click(); };
   document.addEventListener('click', e => { const cp = $('clipPop'); if (!cp.hidden && !cp.contains(e.target)) cp.hidden = true; });
+  document.addEventListener('click', e => { const sp = $('stkPop'); if (!sp.hidden && !sp.contains(e.target) && e.target.id !== 'clipBtn') sp.hidden = true; });
   $('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
   $('folder').onchange = e => { sendFolder(e.target.files); e.target.value = ''; };
   $('vClose').onclick = closeView;

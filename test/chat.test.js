@@ -1411,3 +1411,124 @@ test('P /api/chat/stories + notifs/read melalui laluan', () => {
   assert.equal(r.code, 200);
   assert.equal(hit(routes, 'G /api/chat/notifs', reqGet(tok, {})).body.unread, 0);
 });
+
+test('P /api/chat/poll + /poll/vote melalui laluan: mesej 📊 + keputusan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  assert.equal(hit(routes, 'P /api/chat/poll', reqOf('palsu', { room: 'global_am', q: 'X', opts: ['a', 'b'] })).code, 401, 'perlu login');
+  const r = hit(routes, 'P /api/chat/poll', reqOf(tok, { room: 'global_am', q: 'Pilih warna', opts: ['Merah', 'Biru'] }));
+  assert.equal(r.code, 200);
+  assert.equal(r.body.msg.t, '📊 Pilih warna', 'mesej undian ada teks 📊');
+  assert.equal(r.body.msg.pollId, r.body.poll.id, 'pollId melekat pada mesej');
+  const tokB = chat.issueSession('Ben');
+  const v = hit(routes, 'P /api/chat/poll/vote', reqOf(tokB, { id: r.body.poll.id, opt: 0 }));
+  assert.equal(v.code, 200); assert.deepEqual(v.body.poll.counts, [1, 0]);
+  assert.equal(hit(routes, 'P /api/chat/poll/vote', reqOf(tok, { id: 'tiada', opt: 0 })).code, 400, 'undi id palsu → 400');
+  // baca semula — mesej undian perlu membawa pollData melalui hydrate
+  const g = hit(routes, 'G /api/chat/messages', reqGet(tok, { room: 'global_am', after: 0 }));
+  const pm = g.body.msgs.find(m => m.pollId === r.body.poll.id);
+  assert.ok(pm && pm.pollData, 'pollData diisi semasa baca');
+  assert.deepEqual(pm.pollData.counts, [1, 0]);
+});
+
+test('P /api/chat/messages: stiker diterima, mesej kosong masih ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const r = hit(routes, 'P /api/chat/messages', reqOf(tok, { room: 'global_am', text: '', sticker: '🥳' }));
+  assert.equal(r.code, 200); assert.equal(r.body.msg.sticker, '🥳');
+  assert.equal(hit(routes, 'P /api/chat/messages', reqOf(tok, { room: 'global_am', text: '' })).code, 400, 'kosong sebenar → 400');
+});
+
+// ─── Undian ───
+test('createPoll: cipta undian dalam bilik global dengan soalan + pilihan', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const r = chat.createPoll('Ana', 'global_am', 'Pilih warna favoured', ['Merah', 'Biru', 'Hijau']);
+  assert.ok(r.ok, 'undian berjaya dibuat');
+  assert.equal(r.poll.opts.length, 3);
+  assert.equal(r.poll.q, 'Pilih warna favoured');
+});
+
+test('createPoll: soalan kosong / pilihan tunggal / melebihi had ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  assert.ok(chat.createPoll('Ana', 'global_am', '', ['A', 'B']).error, 'soalan kosong');
+  assert.ok(chat.createPoll('Ana', 'global_am', 'X', ['A']).error, 'kurang 2 pilihan');
+  assert.ok(chat.createPoll('Ana', 'global_am', 'X', ['A','B','C','D','E','F','G']).error, 'melebihi 6 pilihan');
+});
+
+test('votePoll: satu undi setiap ahli + boleh ubah + kiraan betul', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const p = chat.createPoll('Ana', 'global_am', 'Suka kucing atau anjing?', ['Kucing', 'Anjing']).poll;
+  chat.register('Cia', 'pass3');
+  assert.ok(chat.votePoll('Ana', p.id, 0).ok, 'Ana pilih Kucing');
+  assert.ok(chat.votePoll('Ben', p.id, 1).ok, 'Ben pilih Anjing');
+  const r = chat.votePoll('Cia', p.id, 0);
+  assert.ok(r.ok);
+  assert.deepEqual(r.poll.counts, [2, 1], '2 kucing, 1 anjing');
+  // ubah undian
+  const r2 = chat.votePoll('Cia', p.id, 1);
+  assert.deepEqual(r2.poll.counts, [1, 2], 'Cia tukar ke anjing');
+  // undian tidak wujud
+  assert.ok(chat.votePoll('Ana', 'tidak-wujud', 0).error);
+});
+
+test('votePoll: bukan ahli bilik ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const dm = chat.ensureDm(chat.findUser('Ana'), chat.findUser('Ben'));
+  const p = chat.createPoll('Ana', dm.id, 'Makan? Ya/Tidak', ['Ya', 'Tidak']).poll;
+  assert.ok(chat.votePoll('Cia', p.id, 0).error, 'Cia bukan ahli DM');
+});
+
+test('hydrate: mesej ber-pollData diisi semasa baca', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const p = chat.createPoll('Ana', 'global_am', 'Soalan', ['A', 'B']).poll;
+  chat.votePoll('Ana', p.id, 1);
+  // hantar mesej dengan pollId (sama seperti dilakukan laluan /api/chat/poll)
+  chat.send('Ana', 'global_am', '📊 Soalan', null, null, { pollId: p.id });
+  const out = chat.since('Ana', 'global_am', 0);
+  const pm = out.msgs.find(m => m.pollId === p.id);
+  assert.ok(pm, 'mesej ber-pollId wujud');
+  const h = chat.hydrate(pm);
+  assert.ok(h.pollData, 'pollData diisi ketika hydrate');
+  assert.deepEqual(h.pollData.counts, [0, 1], 'Ana undi B');
+});
+
+test('route P /api/chat/poll: cipta + undi betul-betul melalui HTTP', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  let r = hit(routes, 'P /api/chat/poll', reqOf(tok, { room: 'global_am', q: 'Pilihan raya', opts: ['A', 'B'] }));
+  assert.equal(r.code, 200);
+  assert.ok(r.body.poll && r.body.poll.opts.length === 2);
+  const pid = r.body.poll.id;
+  r = hit(routes, 'P /api/chat/poll/vote', reqOf(chat.issueSession('Ben'), { id: pid, opt: 1 }));
+  assert.equal(r.code, 200);
+  assert.deepEqual(r.body.poll.counts, [0, 1]);
+});
+
+// ─── Stiker ───
+test('send: sticker disimpan pada mesej, tidak menjejaskan text', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const m = chat.send('Ana', 'global_am', '👍', null, null, { sticker: '👍' }).msg;
+  assert.equal(m.sticker, '👍', 'sticker disimpan');
+  assert.equal(m.t, '👍', 'text asal dikekalkan');
+});
+
+test('send: sticker > 8 aksara dipotong, sticker=null tiada masalah', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const m = chat.send('Ana', 'global_am', 'x', null, null, { sticker: 'a'.repeat(20) }).msg;
+  assert.equal(m.sticker.length, 8, 'dipotong pada 8 aksara');
+  const m2 = chat.send('Ana', 'global_am', 'y').msg;
+  assert.ok(!m2.sticker, 'tiada sticker field');
+});
