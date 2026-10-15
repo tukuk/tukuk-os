@@ -94,8 +94,8 @@
   #msgsWrap[data-wall="6"] { --w1:var(--panel); --w2:var(--bg); }
   #msgs { max-width:760px; margin:0 auto; padding:16px 14px 8px; }
 
-  .daysep { text-align:center; margin:10px 0 6px; }
-  .daysep span { background:rgba(0,0,0,.35); color:#fff; font-size:.7rem; padding:3px 10px; border-radius:10px; }
+  .daysep { text-align:center; margin:10px 0 6px; position:sticky; top:4px; z-index:3; }
+  .daysep span { background:rgba(0,0,0,.35); color:#fff; font-size:.7rem; padding:3px 10px; border-radius:10px; backdrop-filter:blur(3px); }
   .row { display:flex; margin:3px 0; }
   .row.me { justify-content:flex-end; }
   .bub { max-width:72%; padding:7px 10px 5px; border-radius:14px; font-size:var(--fs,15px); line-height:1.35; position:relative; word-wrap:break-word; overflow-wrap:anywhere; white-space:pre-wrap; box-shadow:0 1px 1px rgba(0,0,0,.25); }
@@ -111,6 +111,20 @@
   .reactions { margin-top:4px; display:flex; gap:4px; flex-wrap:wrap; }
   .reactions button { background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.14); color:inherit; border-radius:10px; font-size:.72rem; padding:1px 7px; cursor:pointer; }
   .reactions button:hover { background:rgba(0,0,0,.4); }
+  /* Avatar penghantar + grouping + pautan + reaksi pantas (bila hover) */
+  .bava { width:30px; height:30px; border-radius:50%; flex:none; align-self:flex-end; margin:0 7px 3px 0; display:flex; align-items:center; justify-content:center; font-size:.72rem; color:#fff; font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+  .row.cont { margin-top:-1px; }
+  .row.cont .bava { visibility:hidden; }
+  .row.cont .bub { border-top-left-radius:6px; }
+  .row.me.cont .bub { border-top-right-radius:6px; border-top-left-radius:14px; }
+  .mlink { color:#6fb6ff; text-decoration:underline; text-underline-offset:2px; word-break:break-word; }
+  .mlink:hover { color:#9ed0ff; }
+  #msgsWrap[data-wall="5"] .row.them .mlink, #msgsWrap[data-wall="6"] .row.them .mlink { color:#1f6feb; }
+  .row.me .mlink { color:#eaf4ff; }
+  .row.me .mlink:hover { color:#fff; }
+  .qreact { position:absolute; top:-11px; right:8px; width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,.2); background:#222d44; color:#fff; font-size:.78rem; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; box-shadow:0 1px 5px rgba(0,0,0,.4); }
+  .row.me .qreact { right:auto; left:8px; }
+  .bub:hover .qreact { display:flex; }
   #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
 
   /* ─── Lampiran gambar / video ─── */
@@ -463,6 +477,22 @@
 
   // ─── Util ───
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // Auto-pautan: buang aksara dahulu (selamat daripada XSS), kemudian bungkus
+  // URL (http/https/www atau domain bertitik) dalam <a> yang buka tab baru.
+  const URLRE = /\b(?:https?:\/\/|www\.)[^\s<]+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/\S*)?/gi;
+  function renderText(s) {
+    s = String(s == null ? '' : s);
+    let out = '', last = 0, m;
+    URLRE.lastIndex = 0;
+    while ((m = URLRE.exec(s))) {
+      const tok = m[0];
+      out += esc(s.slice(last, m.index));
+      const href = /^(https?:)/i.test(tok) ? tok : 'https://' + tok;
+      out += '<a class="mlink" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer nofollow">' + esc(tok) + '</a>';
+      last = m.index + tok.length;
+    }
+    return out + esc(s.slice(last));
+  }
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
   function hhmm(ts) { const d = new Date(ts); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
   function sameDay(a, b) { return new Date(a).toDateString() === new Date(b).toDateString(); }
@@ -987,10 +1017,13 @@
     const atBottom = $('msgsWrap').scrollHeight - $('msgsWrap').scrollTop - $('msgsWrap').clientHeight < 140;
     const byId = {}; for (const x of m) byId[x.id] = x;
     let html = '', lastDay = 0, lastFrom = null;
+    let prevAk = null, prevTs = 0;
     for (const msg of m) {
-      if (!sameDay(msg.ts, lastDay)) { lastDay = msg.ts; html += '<div class="daysep"><span>' + dayLabel(msg.ts) + '</span></div>'; lastFrom = null; }
+      if (!sameDay(msg.ts, lastDay)) { lastDay = msg.ts; html += '<div class="daysep"><span>' + dayLabel(msg.ts) + '</span></div>'; lastFrom = null; prevAk = null; }
       const mine = mineOf(msg);
       const disp = nameOf(msg);
+      const ak = (msg.fid != null && msg.fid !== 0) ? 'i' + msg.fid : 'n' + String(msg.from || '').toLowerCase();
+      const cont = ak === prevAk && (msg.ts - prevTs) < 120000;
       const showWho = !mine && r.kind === 'global' && lastFrom !== disp;
       lastFrom = disp;
       const rx = Object.keys(msg.rx || {});
@@ -998,12 +1031,18 @@
       const quoted = msg.to && byId[msg.to] ? byId[msg.to] : null;
       const q = quoted ? '<div class="quotecard" data-goto="' + esc(quoted.id) + '"><b>' + esc(nameOf(quoted)) + '</b><span>' + esc(norm(msgLabel(quoted)).slice(0, 80)) + '</span></div>' : '';
       const hasMedia = !!(msg.media && msg.media.length);
-      const body = hasMedia ? mediaGrid(msg) + (msg.t ? '<div class="cap">' + esc(msg.t) + '</div>' : '') : esc(msg.t);
-      html += '<div class="row ' + (mine ? 'me' : 'them') + '" data-id="' + esc(msg.id) + '"><div class="bub">' +
+      const body = hasMedia ? mediaGrid(msg) + (msg.t ? '<div class="cap">' + renderText(msg.t) + '</div>' : '') : renderText(msg.t);
+      const loved = !!(msg.rx && msg.rx['❤️']);
+      html += '<div class="row ' + (mine ? 'me' : 'them') + (cont ? ' cont' : '') + '" data-id="' + esc(msg.id) + '">' +
+        (mine ? '' : '<div class="bava" style="background:' + colorOf(disp) + '">' + esc(initials(disp)) + '</div>') +
+        '<div class="bub">' +
         (showWho ? '<div class="who2" style="color:' + colorOf(disp) + '">' + esc(disp) + '</div>' : '') +
         q + body +
         (msg.edited ? ' <span class="edited">(diubah)</span>' : '') +
-        '<span class="meta">' + hhmm(msg.ts) + '</span>' + rxHtml + '</div></div>';
+        '<span class="meta">' + hhmm(msg.ts) + '</span>' + rxHtml +
+        '<button class="qreact" data-qr title="' + (loved ? 'Buang ❤️' : 'React ❤️') + '">' + (loved ? '❤️' : '🤍') + '</button>' +
+        '</div></div>';
+      prevAk = ak; prevTs = msg.ts;
     }
     if (html !== msgSig) { msgSig = html; $('msgs').innerHTML = html; wireMsgs(); }
     if (atBottom) scrollBottom(); else checkJump();
@@ -1052,6 +1091,8 @@
       const goto = bub.querySelector('.quotecard[data-goto]');
       if (goto) goto.onclick = () => jumpTo(goto.dataset.goto);
       for (const rb of bub.querySelectorAll('.reactions button')) rb.onclick = () => doReact(id, rb.dataset.react);
+      const qr = bub.querySelector('.qreact');
+      if (qr) { qr.addEventListener('pointerdown', e => e.stopPropagation()); qr.onclick = e => { e.stopPropagation(); doReact(id, '❤️'); }; }
       // Lampiran: gambar buka paparan penuh, video main inline — dua-dua tak
       // boleh tercetus sekali dengan menu mesej (tekan dua kali / tahan).
       for (const cell of bub.querySelectorAll('.mcell[data-z]')) {

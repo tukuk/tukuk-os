@@ -36,6 +36,14 @@
   .app-card p { margin:0; color:var(--muted); font-size:.86rem; line-height:1.5; }
   .app-card .go { margin-top:auto; color:var(--accent); font-weight:600; font-size:.86rem; }
   .badge { display:inline-block; font-size:.72rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .app-card.feature { grid-column:1 / -1; flex-direction:row; align-items:center; gap:22px; padding:22px 24px; border-color:var(--accent); background:linear-gradient(135deg, rgba(76,141,255,.14), rgba(31,111,235,.05)), var(--panel); }
+  .app-card.feature .icon { font-size:3.1rem; flex:none; }
+  .app-card.feature .hero { flex:1; min-width:0; }
+  .app-card.feature h2 { font-size:1.35rem; }
+  .app-card.feature p { font-size:.9rem; margin:6px 0 10px; }
+  .app-card.feature .tag { display:inline-block; font-size:.72rem; font-weight:700; color:#fff; background:var(--accent); border-radius:999px; padding:3px 10px; }
+  .app-card.feature .cta { flex:none; align-self:center; text-align:center; background:var(--accent); color:#fff; border-radius:10px; padding:11px 18px; font-weight:700; font-size:.92rem; }
+  @media (max-width:560px){ .app-card.feature { flex-direction:column; align-items:flex-start; gap:12px; } .app-card.feature .cta { align-self:stretch; } }
   footer { border-top:1px solid var(--line); color:var(--muted); text-align:center; font-size:.88rem; padding:22px 0 34px; margin-top:20px; }
   footer a { color:var(--accent); text-decoration:none; margin:0 8px; }
 </style>
@@ -51,6 +59,7 @@
   <div class="search"><input id="q" type="search" placeholder="Search apps…" aria-label="Search apps"></div>
 
   <div class="shelf" id="shelf">
+    <a class="app-card feature" href="/apps/chat"><div class="icon">✈️</div><div class="hero"><span class="tag">★ Most popular · Live messenger</span><h2>T Chat</h2><p>A real multi-user messenger that runs in your browser. Messages arrive instantly over a live connection (polling as the safety net), with a permanent Tukuk ID so DMs survive name changes. Photo &amp; video messages, reply, forward, reactions, edit, search, friends &amp; blocking, wallpapers, sounds, desktop notifications and unread badges. Sign up with just a name and password.</p><span class="badge">Live delivery · Global room + DMs · Media · Blocking</span></div><span class="cta">Open T Chat →</span></a>
     <a class="app-card" href="/apps/notes"><div class="icon">📝</div><h2>Notes</h2><p>Plain notes with local autosave, tags, search and Markdown-style formatting. Stored in your browser.</p><span class="badge">Local-first</span><span class="go">Open →</span></a>
     <a class="app-card" href="/apps/calc"><div class="icon">🧮</div><h2>Calculator</h2><p>Keyboard-friendly calculator with scientific mode, history, parentheses and copy result.</p><span class="badge">Offline</span><span class="go">Open →</span></a>
     <a class="app-card" href="/apps/todo"><div class="icon">✅</div><h2>To-Do</h2><p>Simple task list with priorities, filters, and localStorage persistence. Nothing leaves your device.</p><span class="badge">Local-first</span><span class="go">Open →</span></a>
@@ -65,7 +74,6 @@
     <a class="app-card" href="/apps/orbit"><div class="icon">🪐</div><h2>Orbit Simulator</h2><p>Real N-body gravity — drag to launch planets, binary-star and tandem-orbit presets, collisions merge with momentum.</p><span class="badge">Physics</span><span class="go">Open →</span></a>
     <a class="app-card" href="/apps/fractal"><div class="icon">🔮</div><h2>Fractal Explorer</h2><p>Zoom the Mandelbrot set up to 10¹⁴× with progressive rendering, pan, four palettes and PNG export.</p><span class="badge">Infinite zoom</span><span class="go">Open →</span></a>
     <a class="app-card" href="/apps/drum"><div class="icon">🥁</div><h2>Drum Machine</h2><p>16-step sequencer with synthesised kick, snare, hi-hat and clap — BPM, swing, ready grooves, saved patterns.</p><span class="badge">Web Audio</span><span class="go">Open →</span></a>
-    <a class="app-card" href="/apps/chat"><div class="icon">✈️</div><h2>T Chat</h2><p>A real multi-user messenger — messages arrive instantly over a live connection, with polling as the safety net. Permanent Tukuk ID per account so DMs survive name changes, plus photo and video messages. A settings sheet handles name, password, friends, and blocking. Global room, 1-to-1 chats, reply, forward, reactions, edit, search, wallpapers and sounds.</p><span class="badge">Live delivery + friends &amp; blocking</span><span class="go">Open →</span></a>
   </div>
 
   <p class="tagline" style="margin-top:6px;">New apps are being added — check back soon.</p>
