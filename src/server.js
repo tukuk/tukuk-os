@@ -216,9 +216,10 @@ app.use(express.static(PUBLIC_DIR, {
   redirect: false,   // jangan redirect /apps → /apps/ — biar lalu ke STATIC_PAGES
   setHeaders(res, filePath) {
     // APK native T Chat — hidang sebagai muat turun dengan nama fail mesra Android.
+    // Versi SEMASA ialah BETA (ciri masih dicuba); versi stabil belum dikeluarkan.
     if (filePath.endsWith('.apk')) {
       res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-      res.setHeader('Content-Disposition', 'attachment; filename="Tukuk-Chat.apk"');
+      res.setHeader('Content-Disposition', 'attachment; filename="Tukuk-Chat-Beta.apk"');
       res.setHeader('Cache-Control', 'no-cache');
       return;
     }
@@ -1929,7 +1930,7 @@ const STORE_APP_META = {
   orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
   fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
   drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' },
-  chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'Messenger sebenar dalam pelayar yang terus berfungsi pada rangkaian lemah (2G/3G/4G/GPRS). Pasang sebagai aplikasi di Android, iOS, Windows, Linux & Huawei, atau muat turun APK Android native terus. Daftar nama + kata laluan, Tukuk ID kekal, bilik Am, DM 1-ke-1 dan kumpulan, panggilan video & suara (WebRTC) dengan pengenalan pemanggil gaya TukuCaller, mod prank panggilan palsu (tiada rangkaian diperlukan), mesej suara, peti keluar luar-talian (auto-hantar semula), mod jimat data (media ketuk-untuk-muat), resit baca ✓✓, hantar gambar & video, reply, forward, reaction, edit, pin mesej, carian, kawan & sekat, wallpaper & bunyi.' }
+  chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'Messenger sebenar dalam pelayar yang terus berfungsi pada rangkaian lemah (2G/3G/4G/GPRS). Pasang sebagai aplikasi di Android, iOS, Windows, Linux & Huawei, atau muat turun APK Android native terus (versi beta — stabil menyusul). Daftar nama + kata laluan, Tukuk ID kekal, bilik Am, DM 1-ke-1 dan kumpulan, panggilan video & suara (WebRTC) dengan pengenalan pemanggil gaya TukuCaller, mod prank panggilan palsu (tiada rangkaian diperlukan), mesej suara, peti keluar luar-talian (auto-hantar semula), mod jimat data (media ketuk-untuk-muat), resit baca ✓✓, hantar gambar & video, reply, forward, reaction, edit, pin mesej, carian, kawan & sekat, wallpaper & bunyi.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [

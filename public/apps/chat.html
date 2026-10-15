@@ -575,7 +575,7 @@
     <b>Tetapan (⚙️):</b> tukar nama &amp; bio, tukar kata laluan, senarai kawan, cari orang, sekat/buka sekat, dan keluarkan sesi peranti lain.<br>
     <b>📹 Panggilan:</b> dalam DM, tekan 📹 atau 📞 untuk panggilan video/suara terus antara peranti — skrin masuk menunjukkan <i>siapa</i> pemanggil (nama, Tukuk ID, kawan atau tidak) sebelum anda jawab.<br>
     <b>🎭 Prank:</b> tekan butang topeng di bar penghantar untuk paparkan panggilan masuk palsu penuh-skrin dengan nama bebas — berjalan walaupun luar talian.<br>
-    <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau muat turun APK Android terus.<br>
+    <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau muat turun APK Android terus (versi beta — sedang dicuba).<br>
     <b>Nasib baik:</b> guna kata laluan yang anda tak pakai di tempat lain — pemulihan akaun belum tersedia.
   </div>
 </div>
@@ -818,9 +818,9 @@
       <div><b>🤖 Android &amp; Huawei (HarmonyOS)</b><span>Chrome atau Petal Browser → menu <i>⋮</i> → <i>Pasang aplikasi</i> / <i>Hantar ke Skrin Utama</i>.</span></div>
       <div><b>🍎 iPhone &amp; iPad (iOS)</b><span>Safari → butang <i>Kongsi</i> → <i>Tambah ke Skrin Utama</i>. (Pemasangan automatik hanya tersedia di Chrome/Edge.)</span></div>
       <div><b>🪟 Windows &amp; 🐧 Linux</b><span>Edge atau Chrome → ikon <i>Pasang</i> di bar alamat, atau <i>⋮ → Aplikasi → Pasang aplikasi ini</i>.</span></div>
-      <div><b>📦 Muat turun APK (Android)</b><span>Mahu pasang tanpa store? Muat turun <b>T Chat.apk</b> terus — pembungkus native (Android 6.0+) yang membuka aplikasi ini penuh-skrin, termasuk panggilan kamera/mikrofon &amp; lampiran. Buka fail →benarkan &ldquo;sumber tak diketahui&rdquo;→ Pasang.</span></div>
+      <div><b>📦 Muat turun APK (Android · Beta)</b><span>Mahu pasang tanpa store? Muat turun <b>T Chat.apk</b> terus — pembungkus native (Android 6.0+) yang membuka aplikasi ini penuh-skrin, termasuk panggilan kamera/mikrofon &amp; lampiran. Ini <b>versi beta</b> — ciri sedang dicuba dan mungkin berubah; versi stabil menyusul. Buka fail →benarkan &ldquo;sumber tak diketahui&rdquo;→ Pasang.</span></div>
     </div>
-    <div class="mbtns"><button class="prim" id="stApk">📥 Muat turun T Chat.apk</button><button id="stApkPwa">🌐 Jana sendiri (PWA Builder)</button></div>
+    <div class="mbtns"><button class="prim" id="stApk">📥 Muat turun T Chat.apk (Beta)</button><button id="stApkPwa">🌐 Jana sendiri (PWA Builder)</button></div>
     <div class="pfmeta">Selepas dipasang, T Chat membuka tanpa bar pelayar, mengekalkan sesi, dan boleh membaca sembang serta menghantar mesej ke peti keluar walaupun luar talian.</div>
   </div>
 
@@ -3205,12 +3205,13 @@
     } catch { /* dialog sudah digunakan/tidak tersedia */ }
   };
   $('stApk').onclick = () => {
-    // Muat turun APK native yang sebenar dan sudah ditandatangani (fail statik).
+    // Muat turun APK native beta yang ditandatangani (fail statik) — versi
+    // stabil belum dikeluarkan sebab ciri masih dalam percobaan.
     const a = document.createElement('a');
     a.href = '/downloads/tukuk-chat.apk';
-    a.download = 'Tukuk-Chat.apk';
+    a.download = 'Tukuk-Chat-Beta.apk';
     document.body.appendChild(a); a.click(); a.remove();
-    toast('Memuat turun T Chat.apk — buka fail untuk pasang (Android 6+).', 4200);
+    toast('Memuat turun T Chat.apk (beta) — buka fail untuk pasang (Android 6+).', 4200);
   };
   $('stApkPwa').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
 

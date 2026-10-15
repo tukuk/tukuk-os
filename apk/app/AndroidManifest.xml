@@ -6,7 +6,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.tukuk.chat"
     android:versionCode="1"
-    android:versionName="1.0">
+    android:versionName="1.0-beta.1">
 
   <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
 
