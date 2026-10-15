@@ -6,6 +6,7 @@ Description=Backup data T Chat (chat.json + media) ke Cloudflare R2
 # pasang manual hanya jika TIDAK menggunakan setup-all.sh.
 [Service]
 Type=oneshot
+User=tukuk
 WorkingDirectory=/opt/tukuk-os
 EnvironmentFile=/home/tukuk/.config/tukuk-os/r2.env
 ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-chat.sh

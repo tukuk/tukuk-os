@@ -337,6 +337,7 @@ After=tukuk-os.service
 
 [Service]
 Type=oneshot
+User=tukuk
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=-$INSTALL_DIR/.env
 ExecStart=/bin/bash $INSTALL_DIR/scripts/backup-chat.sh

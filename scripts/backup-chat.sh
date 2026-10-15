@@ -17,6 +17,9 @@
 
 set -euo pipefail
 
+# HOME boleh tak wujud bila dijalankan root di bawah systemd (EnvironmentFile
+# sudah membekalkan nilai utama, jadi fail r2.env cuma tambahan).
+HOME="${HOME:-/home/tukuk}"
 if [ -f "${HOME}/.config/tukuk-os/r2.env" ]; then
   set -a
   # shellcheck disable=SC1091
@@ -24,7 +27,9 @@ if [ -f "${HOME}/.config/tukuk-os/r2.env" ]; then
   set +a
 fi
 
-APP_DIR="${APP_DIR:-/home/tukuk/tukuk-os}"
+# APP_DIR: nilai env → lokasi skrip ini (paling boleh harap) → lalai lama.
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+APP_DIR="${APP_DIR:-$SELF_DIR}"
 SNAP_DIR="${SNAP_DIR:-$APP_DIR/snapshots}"
 DATA_DIR="${DATA_DIR:-$APP_DIR/data}"
 R2_BUCKET="${R2_BUCKET:-tukuk-os-backups}"
