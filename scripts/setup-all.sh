@@ -327,6 +327,37 @@ else
   warn "CLOUDFLARE_API_TOKEN tiada — langkah edge dilangkau (fallback www tidak aktif)."
 fi
 
+# ── Backup T Chat (chat.json + chat-media) → R2, setiap 6 jam ──
+if [ -f "$INSTALL_DIR/scripts/backup-chat.sh" ]; then
+  chmod +x "$INSTALL_DIR/scripts/backup-chat.sh" 2>/dev/null || true
+  cat > /etc/systemd/system/chat-backup.service << EOF
+[Unit]
+Description=Backup data T Chat (chat.json + media)
+After=tukuk-os.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=$INSTALL_DIR
+EnvironmentFile=-$INSTALL_DIR/.env
+ExecStart=/bin/bash $INSTALL_DIR/scripts/backup-chat.sh
+EOF
+  cat > /etc/systemd/system/chat-backup.timer << 'EOF'
+[Unit]
+Description=Backup data T Chat setiap 6 jam
+
+[Timer]
+OnCalendar=*-*-* 01,07,13,19:15:00
+Persistent=true
+Unit=chat-backup.service
+
+[Install]
+WantedBy=timers.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now chat-backup.timer >/dev/null 2>&1 || true
+  ok "Timer backup T Chat 6 jam aktif (chat-backup.timer)."
+fi
+
 # Auto-update harian: git pull → npm install (postinstall → setup-all) → servis
 # & worker & snapshot ikut berkemas. Padam dengan GIT_AUTO_UPDATE=0 dalam .env.
 if [[ "$(get_env GIT_AUTO_UPDATE)" != "0" ]]; then

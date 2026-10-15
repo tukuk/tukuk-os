@@ -1,0 +1,8 @@
+[Unit]
+Description=Backup data T Chat (chat.json + media) ke Cloudflare R2
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/tukuk/tukuk-os
+EnvironmentFile=/home/tukuk/.config/tukuk-os/r2.env
+ExecStart=/home/tukuk/tukuk-os/scripts/backup-chat.sh

@@ -647,6 +647,9 @@ function send(name, roomId, text, replyTo, media, extra) {
   maybePush(r, out).catch(() => {});
   // Google Chat-style mention: @sini/@semua membangunkan satu bilik (terhad, anti-spam).
   if (su && /@sini\b|@semua\b/i.test(t)) notifyAtAll(su, r, t);
+  // @nama biasa dalam bilik kumpulan/global → notif kepada yang disebut (DM sudah
+  // dimaklumkan melalui maybePush kepada pasangan).
+  if (su && (r.kind === 'group' || r.kind === 'global')) notifyMentions(su, t, null, r.id);
   // Penunjuk menaip perlu habis serta-merta pada tab lain, bukan tunggu poll.
   if (wasTyping) pubRoom(r, 'typing', { room: r.id, typing: [] });
   return { ok: true, msg: out, room: r };
@@ -1500,15 +1503,16 @@ function removeAvatar(name) {
   pub('social', {}, [u.id]);
   return { ok: true };
 }
-// Sebut nama (@nama / @ID) dalam post → notif kepada yang disebut (max 8).
-function notifyMentions(author, text, postId) {
+// Sebut nama (@nama / @ID) dalam post/DP-bilik → notif kepada yang disebut (max 8).
+// `roomId` dihantar supaya klik notif terus membuka bilik (bukan post).
+function notifyMentions(author, text, postId, roomId) {
   const s = load();
   const seen = new Set();
   const re = /@([\p{L}\p{N}._-]{2,20}|\d{6})/gu;
   let m, n = 0;
   while ((m = re.exec(String(text || ''))) && n < 8) {
     const t = findUser(m[1]);
-    if (t && t.id !== author.id && !seen.has(t.id)) { seen.add(t.id); pushNotif(t.id, 'mention', { actor: author.id, post: postId, text: String(text).slice(0, 120) }); n++; }
+    if (t && t.id !== author.id && !seen.has(t.id)) { seen.add(t.id); pushNotif(t.id, 'mention', { actor: author.id, post: postId || undefined, room: roomId || undefined, text: String(text).slice(0, 120) }); n++; }
   }
 }
 // @sini / @semua (gaya Google Chat) dalam bilik → notif kepada ahli. Bilik global
@@ -1746,6 +1750,59 @@ function clearSinks() {
   sinks.clear();
   if (beat) { clearInterval(beat); beat = null; }
   lastOn = null;
+}
+
+// ─── ICE / TURN (konfigurasi WebRTC) ───
+// Pelayan hanya STUN awam jika TURN belum dikonfigur. Untuk relay tembus-NAT,
+// pasang coturn (lihat deploy/coturn/ *) dan set env TURN_HOST (IP/domain awam),
+// TURN_PORT (default 3478), TURN_SECRET (rahsia "use-auth-secret" coturn),
+// TURN_TTL (tempoh sah credit, default 3600s). Kredensial ikut mekanisme REST
+// coturn: username "<exp>:<rand>", credential = base64(HMAC-SHA1(secret,user)).
+const STUN_URLS = ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'];
+function iceConfig() {
+  const out = { iceServers: [{ urls: STUN_URLS }], turn: false };
+  const host = process.env.TURN_HOST, secret = process.env.TURN_SECRET;
+  if (!host || !secret) return out;
+  const port = Number(process.env.TURN_PORT || 3478);
+  const ttl = Number(process.env.TURN_TTL || 3600);
+  const user = Math.floor(Date.now() / 1000 + ttl) + ':tukuk' + crypto.randomBytes(3).toString('hex');
+  const credential = crypto.createHmac('sha1', secret).update(user).digest('base64');
+  const base = 'turn:' + host + ':' + port;
+  out.iceServers.push({ urls: [base, base + '?transport=udp', base + '?transport=tcp'], username: user, credential });
+  out.turn = true;
+  return out;
+}
+
+// ─── Pemulihan akaun (kod darurat sekali-pakai) ───
+// Dulu lupa kata laluan = akaun hilang kekal. Kini pengguna jana 5 kod darurat
+// (dipapar sekali sahaja; disimpan sebagai hash SHA-256). Mana-mana kod menetapkan
+// semula kata laluan tanpa login; kod itu dimusnahkan dan semua sesi lama dibuang.
+const RECOVERY_N = 5;
+const recHash = (c) => crypto.createHash('sha256').update(String(c).trim().toUpperCase()).digest('hex');
+function recoveryGenerate(name) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  u.rec = u.rec || [];
+  if (u.rec.length >= RECOVERY_N * 2) return { error: 'Terlalu banyak kod aktif — guna sebahagian sebelum jana baharu.' };
+  const codes = [];
+  for (let i = 0; i < RECOVERY_N; i++) { const c = crypto.randomBytes(5).toString('hex').toUpperCase(); codes.push(c); u.rec.push(recHash(c)); }
+  touch();
+  return { ok: true, codes, remaining: u.rec.length };
+}
+function recoveryReset(name, code, newPass) {
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun atau kod pemulihan tidak sah.' };
+  const idx = (u.rec || []).indexOf(recHash(code));
+  if (idx < 0) return { error: 'Akaun atau kod pemulihan tidak sah.' };
+  const p = String(newPass == null ? '' : newPass);
+  if (p.length < 4) return { error: 'Kata laluan baharu sekurang-kurangnya 4 aksara.' };
+  if (p.length > 200) return { error: 'Kata laluan baharu terlalu panjang.' };
+  u.rec.splice(idx, 1);            // sekali-pakai: musnahkan kod ini
+  u.salt = crypto.randomBytes(16).toString('hex');
+  u.hash = hashPass(p, u.salt);
+  logoutAll(u.name, null);         // singkirkan semua sesi sedia ada
+  touch();
+  return { ok: true, user: u };
 }
 
 // ─── Pembantu HTTP ───
@@ -2065,6 +2122,34 @@ function mount(app, deps) {
     pub('call', { from: u.id, fromName: u.name, to: peer.id, ev, data }, [peer.id]);
     if (ev === 'ring') event('Panggilan ' + (data.kind === 'audio' ? 'suara' : 'video') + ': ' + u.name + ' → ' + peer.name, { id: u.id, peer: peer.id });
     res.json({ ok: true, delivered: !!(set && set.size), online: isOnline(peer) });
+  });
+
+  // Konfigurasi ICE untuk WebRTC — STUN sentiasa; TURN hanya bila dikonfigur.
+  app.get('/api/chat/ice', (req, res) => {
+    if (!userOf(bearer(req))) return res.status(401).json({ error: 'Sesi luput. Sila login semula.' });
+    res.json(Object.assign({ ok: true }, iceConfig()));
+  });
+
+  // Pemulihan akaun: jana kod darurat (perlu login) + semak baki kod aktif.
+  app.post('/api/chat/recovery/generate', lim({ windowMs: 3600e3, max: 10, keyPrefix: 'chrecgen:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const r = recoveryGenerate(u.name);
+    if (r.error) return res.status(400).json({ error: r.error });
+    event('Kod pemulihan dijana: ' + u.name, { id: u.id });
+    res.json(r);
+  });
+  app.get('/api/chat/recovery/status', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    res.json({ ok: true, remaining: ((findUser(u.name) || {}).rec || []).length });
+  });
+  // Tetapkan semula kata laluan guna kod darurat — TIADA login diperlukan (had yuran
+  // ketat kerana ia laluan tanpa kredential).
+  app.post('/api/chat/recovery/reset', lim({ windowMs: 3600e3, max: 6, keyPrefix: 'chrec:' }), (req, res) => {
+    const b = cleanBody(req.body);
+    const r = recoveryReset(b.name, b.code, b.pass);
+    if (r.error) return res.status(400).json({ error: r.error });
+    event('Kata laluan ditetapkan semula via kod pemulihan: ' + r.user.name, { id: r.user.id });
+    res.json({ ok: true, token: issueSession(r.user.name), name: r.user.name, id: r.user.id, remaining: (r.user.rec || []).length });
   });
 
   // ─── Tetapan: kawan, sekatan, kata laluan, sesi ───
@@ -2422,6 +2507,7 @@ module.exports = {
   followUser, unfollowUser, isFollowing, followingOf, followersOf, audience, createPost, delPost, getPost, likePost, commentPost, feedFor, userPosts,
   createStory, storiesOf, viewStory, delStory, pruneStories, STORY_TTL,
   pushNotif, notifList, markNotifRead, clearNotifs, setAvatar, removeAvatar, avatarUrl, hydratePost, notifyMentions, notifyAtAll, followList, discover, releaseSocialMedia,
+  iceConfig, recoveryGenerate, recoveryReset, RECOVERY_N, STUN_URLS, recHash,
   MAX_POST, MAX_POST_MEDIA, MAX_COMMENT, MAX_COMMENTS, MAX_FEED, MAX_STORIES, MAX_NOTIF, MAX_FOLLOWING, MAX_FOLLOWERS,
   MAX_IMG, MAX_VID, MAX_AUDIO, MAX_DOC, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
   createPoll, votePoll, projectPoll, MAX_POLL_Q, MAX_POLL_OPT, MAX_POLL_OPTS,

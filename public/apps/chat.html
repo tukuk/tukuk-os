@@ -42,6 +42,11 @@
   #auth input:focus { border-color:var(--accent); }
   #auth .go { width:100%; background:var(--accent); border:1px solid var(--accent); color:#fff; border-radius:10px; padding:11px; font:inherit; font-size:.95rem; font-weight:700; cursor:pointer; }
   #auth .go:hover { filter:brightness(1.08); }
+  #auth .reclink { text-align:center; margin:-2px 0 4px; }
+  #auth .reclink button { background:none; border:none; color:var(--muted); font:inherit; font-size:.78rem; cursor:pointer; text-decoration:underline; }
+  #auth .reclink button:hover { color:var(--accent); }
+  .recgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin:8px 0 4px; }
+  .reccode { background:rgba(255,255,255,.05); border:1px solid var(--line); border-radius:8px; padding:8px 6px; font-family:ui-monospace,SFMono-Regular,monospace; font-size:.86rem; letter-spacing:.08em; text-align:center; user-select:all; cursor:text; }
   #auth .err { color:var(--danger); font-size:.82rem; min-height:18px; margin:6px 0; }
   #auth .note { color:var(--muted); font-size:.76rem; line-height:1.5; margin-top:16px; border-top:1px solid var(--line); padding-top:12px; }
   #auth .note b { color:var(--text); }
@@ -565,6 +570,7 @@
   <input id="aPass" type="password" placeholder="Kata laluan (min 4)" autocomplete="current-password">
   <div class="err" id="aErr"></div>
   <button class="go" id="aGo">Masuk</button>
+  <div class="reclink"><button id="aRec">🔑 Lupa kata laluan? Guna kod pemulihan</button></div>
   <div class="note">
     <b>Macam mana ia berfungsi?</b><br>
     Daftar satu nama + kata laluan. Kata laluan disimpan sebagai <i>hash</i> scrypt di pelayan — kami tak boleh baca asalnya.
@@ -576,7 +582,7 @@
     <b>📹 Panggilan:</b> dalam DM, tekan 📹 atau 📞 untuk panggilan video/suara terus antara peranti — skrin masuk menunjukkan <i>siapa</i> pemanggil (nama, Tukuk ID, kawan atau tidak) sebelum anda jawab.<br>
     <b>🎭 Prank:</b> tekan butang topeng di bar penghantar untuk paparkan panggilan masuk palsu penuh-skrin dengan nama bebas — berjalan walaupun luar talian.<br>
     <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau muat turun APK Android terus (versi beta — sedang dicuba).<br>
-    <b>Nasib baik:</b> guna kata laluan yang anda tak pakai di tempat lain — pemulihan akaun belum tersedia.
+    <b>Selamat:</b> guna kata laluan yang anda tak pakai di tempat lain, dan jana <b>kod pemulihan</b> dalam ⚙️ Keselamatan — satu kod boleh tetapkan semula akses jika anda lupa kata laluan.
   </div>
 </div>
 
@@ -777,6 +783,10 @@
     <div class="pflabel">Ulang kata laluan baharu</div>
     <input id="stP2" type="password" autocomplete="new-password">
     <div class="mbtns"><button class="prim" id="stSavePass">Tukar kata laluan</button></div>
+    <div class="pflabel" style="margin-top:16px">Kod pemulihan akaun</div>
+    <div class="pfmeta">Jika lupa kata laluan, mana-mana satu kod ini boleh tetapkan semula akses anda — <b>sekali pakai</b>, jadi simpan di tempat selamat. <span id="recCount">Belum disemak.</span></div>
+    <div class="mbtns"><button id="stRecGen">🔑 Jana 5 kod pemulihan</button></div>
+    <div id="recOut" class="recgrid" hidden></div>
     <div class="pflabel">Peranti &amp; sesi</div>
     <div class="pfmeta">Keluarkan sesi lain — hanya peranti ini kekal login.</div>
     <div class="mbtns"><button class="warn" id="stKick">Keluarkan peranti lain</button></div>
@@ -1264,6 +1274,7 @@
     $('aGo').textContent = m === 'login' ? 'Masuk' : 'Daftar & Masuk';
     $('aPass').autocomplete = m === 'login' ? 'current-password' : 'new-password';
     $('aErr').textContent = '';
+    const rl = $('aRec'); if (rl) rl.style.display = m === 'login' ? '' : 'none';
   }
   $('tabLogin').onclick = () => setMode('login');
   $('tabReg').onclick = () => setMode('reg');
@@ -1285,6 +1296,26 @@
   $('aGo').onclick = doAuth;
   $('aPass').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
   $('aName').addEventListener('keydown', e => { if (e.key === 'Enter') $('aPass').focus(); });
+  // Pemulihan akaun guna kod darurat: nama + kod + kata laluan baharu (tanpa login).
+  async function doRecover() {
+    $('aErr').textContent = '';
+    const name = ($('aName').value.trim() || (prompt('Nama akaun anda:') || '')).trim();
+    if (!name) return;
+    const code = (prompt('Kod pemulihan (contoh A1B2C3D4E5):') || '').trim();
+    if (!code) return;
+    const np = prompt('Kata laluan BAHARU (min 4 aksara):');
+    if (!np) return;
+    $('aGo').disabled = true;
+    try {
+      const j = await call('/recovery/reset', { method: 'POST', body: JSON.stringify({ name, code, pass: np }) });
+      token = j.token; me = j.name; myId = j.id || 0;
+      localStorage.setItem(TKEY, token); localStorage.setItem(NKEY, me);
+      cur = localStorage.getItem(rkey()) || 'global_am';
+      enterApp(); toast('Kata laluan ditetapkan semula — kod ini sudah diguna.');
+    } catch (e) { $('aErr').textContent = e.message; }
+    finally { $('aGo').disabled = false; }
+  }
+  $('aRec').onclick = doRecover;
 
   function showAuth(msg) {
     $('app').hidden = true; $('auth').hidden = false;
@@ -2019,6 +2050,15 @@
   // Isyarat (SDP/ICE/kawalan) dihantar melalui yuran SSE yang sedia ada; media
   // mengalir terus antara peranti. Mod prank pula langsung tidak menyentuh rangkaian.
   const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+  // Konfigurasi ICE boleh disuai daripada pelayan (/api/chat/ice) supaya TURN relay
+  // dipakai bila ia dikonfigur; STUN awam kekal fallback jika pelayan tak tersedia.
+  let ICE_CFG = RTC_CFG;
+  let iceT0 = 0;
+  async function refreshIce(force) {
+    if (!force && Date.now() - iceT0 < 30 * 60e3) return;   // caj 30 minit
+    try { const j = await call('/ice'); if (j && Array.isArray(j.iceServers) && j.iceServers.length) { ICE_CFG = { iceServers: j.iceServers }; iceT0 = Date.now(); } }
+    catch { ICE_CFG = RTC_CFG; }
+  }
   const RING_WAIT = 35000, CALL_TIMEOUT = 25000;
   let C = null, ringNode = null, pkKind = 'video', pkPersona = 'none';
 
@@ -2091,7 +2131,7 @@
   const sig = (to, ev, data) => (!to ? Promise.resolve() : post('/call', { to, ev, data: data || {} }).catch(() => {}));
 
   function newPC(peerId) {
-    const pc = new RTCPeerConnection(RTC_CFG);
+    const pc = new RTCPeerConnection(ICE_CFG);
     pc.onicecandidate = e => { if (e.candidate) sig(peerId, 'ice', { c: e.candidate }); };
     pc.ontrack = e => {
       if (!C) return;
@@ -2200,6 +2240,7 @@
     clearTimeout(sess.ringT);
     $('cLocal').srcObject = C.local;
     callEl().classList.add('vid');
+    await refreshIce();
     C.pc = newPC(peer.id);
     for (const t of C.local.getTracks()) C.pc.addTrack(t, C.local);
     C.ringT = setTimeout(() => { if (C && C.state === 'out') { missedCall(C.peer.name, 'tidak menjawab'); endCall(true); } }, RING_WAIT);
@@ -2225,6 +2266,7 @@
     clearTimeout(c.ringT);
     $('cLocal').srcObject = c.local;
     callEl().classList.add('vid');
+    await refreshIce();
     c.pc = newPC(c.peer.id);
     for (const t of c.local.getTracks()) c.pc.addTrack(t, c.local);
     c.state = 'wait';
@@ -3052,6 +3094,8 @@
     markData(); $('connHint').textContent = connHintText();
     markWalls(); paintAppTab();
     $('stOld').value = $('stP1').value = $('stP2').value = '';
+    const ro = $('recOut'); if (ro) { ro.hidden = true; ro.innerHTML = ''; }
+    if ((tab || 'Prof') === 'Sec') updRecCount();
     showTab(tab || 'Prof');
     $('setModal').classList.add('open');
     loadSocial();
@@ -3059,7 +3103,7 @@
   }
   $('setBtn').onclick = () => openSettings('Prof');
   $('blkOpen').onclick = () => openSettings('Blk');
-  for (const b of $('stTabs').querySelectorAll('button')) b.onclick = () => { sndTap(); showTab(b.dataset.t); if (b.dataset.t === 'Pal') $('stFind').focus(); };
+  for (const b of $('stTabs').querySelectorAll('button')) b.onclick = () => { sndTap(); showTab(b.dataset.t); if (b.dataset.t === 'Pal') $('stFind').focus(); if (b.dataset.t === 'Sec') updRecCount(); };
   $('stFind').addEventListener('input', e => {
     clearTimeout(window.__ft);
     window.__ft = setTimeout(() => doFind(e.target.value), 260);
@@ -3084,6 +3128,26 @@
       const j = await post('/logout-all', {});
       toast(j.revoked ? j.revoked + ' sesi lain dikeluarkan.' : 'Tiada sesi lain untuk dikeluarkan.');
     } catch (e) { toast(e.message); }
+  };
+  // Pemulihan akaun: semak baki kod + jana set kod darurat (sekali-pakai).
+  async function updRecCount() {
+    const el = $('recCount'); if (!el) return;
+    try { const j = await call('/recovery/status'); el.innerHTML = j.remaining ? ('Kod aktif sekarang: <b>' + j.remaining + '</b>.') : 'Belum ada kod aktif.'; }
+    catch { el.textContent = 'Belum disemak.'; }
+  }
+  $('stRecGen').onclick = async () => {
+    if (!window.confirm('Jana 5 kod pemulihan BAHARU? Kod lama kekal sah. Kod ini hanya dipapar SEKALI — salin & simpan di tempat selamat.')) return;
+    $('stRecGen').disabled = true;
+    try {
+      const j = await post('/recovery/generate', {});
+      const out = $('recOut');
+      out.hidden = false;
+      out.innerHTML = (j.codes || []).map(c => '<div class="reccode" title="Tekan untuk salin">' + esc(c) + '</div>').join('');
+      for (const el of out.querySelectorAll('.reccode')) el.onclick = () => copyText(el.textContent);
+      toast('Kod pemulihan dijana — salin & simpan sekarang.', 5200);
+      updRecCount();
+    } catch (e) { toast(e.message); }
+    $('stRecGen').disabled = false;
   };
   // Padam akaun: hapus semua data pengguna di pelayan, kemudian keluar penuh
   // di klien (kosongkan token/storage, hentikan stream, bersihkan kesan akaun).

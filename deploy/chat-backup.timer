@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup data T Chat setiap 6 jam
+
+[Timer]
+OnCalendar=*-*-* 01,07,13,19:15:00
+Persistent=true
+Unit=chat-backup.service
+
+[Install]
+WantedBy=timers.target

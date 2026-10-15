@@ -1545,6 +1545,108 @@ test('@semua bilik global: hanya pengguna online yang dapat notif', () => {
   assert.equal(chat.notifList('Cia').notifs.filter(x => x.room === 'global_am').length, 0, 'Cia (offline) tidak diganggu');
 });
 
+// ─── @nama dalam mesej bilik (bukan post) ───
+test('@nama dalam bilik kumpulan → notif mention dengan room', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const g = chat.createGroup('Ana', 'Projek', [chat.findUser('Ben').id]);
+  const rid = g.room.id;
+  chat.send('Ana', rid, 'tolong review @Ben');
+  const bn = chat.notifList('Ben').notifs.filter(x => x.type === 'mention' && x.room === rid);
+  assert.equal(bn.length, 1, 'Ben disebut → notif bilik');
+  assert.equal(bn[0].actor, chat.findUser('Ana').id, 'actor = Ana');
+  chat.send('Ben', rid, 'oke @Ana');
+  assert.ok(chat.notifList('Ana').notifs.some(x => x.type === 'mention' && x.room === rid && x.actor === chat.findUser('Ben').id), 'Ana dibalas');
+});
+
+test('@nama dalam bilik global → notif; nama rekaan diabaikan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  chat.send('Ana', 'global_am', 'hai @Ben dan @bukanuser123');
+  const mn = chat.notifList('Ben').notifs.filter(x => x.type === 'mention' && x.room === 'global_am');
+  assert.equal(mn.length, 1, 'Ben (guna sebenar) dapat notif bilik global');
+});
+
+test('@nama dalam DM tidak berganda (hanya group/global diproses)', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.send('Ana', dm.id, 'rahsia @Ben');
+  assert.equal(chat.notifList('Ben').notifs.filter(x => x.type === 'mention' && x.room === dm.id).length, 0, 'DM tak guna notif mention bilik');
+});
+
+// ─── ICE / TURN ───
+test('iceConfig: STUN sahaja tanpa env; TURN + kredensial REST bila dikonfigur', () => {
+  fresh();
+  const crypto = require('crypto');
+  const saved = { h: process.env.TURN_HOST, s: process.env.TURN_SECRET, p: process.env.TURN_PORT };
+  const restore = (k, v) => { if (v === undefined) delete process.env[k]; else process.env[k] = v; };
+  delete process.env.TURN_HOST; delete process.env.TURN_SECRET;
+  let cfg = chat.iceConfig();
+  assert.equal(cfg.turn, false, 'tanpa env → tiada TURN');
+  assert.equal(cfg.iceServers.length, 1);
+  assert.ok(String(cfg.iceServers[0].urls[0]).startsWith('stun:'));
+  process.env.TURN_HOST = '203.0.113.9'; process.env.TURN_SECRET = 'rahasia123'; process.env.TURN_PORT = '3478';
+  cfg = chat.iceConfig();
+  assert.equal(cfg.turn, true, 'dengan env → TURN dihidup');
+  assert.equal(cfg.iceServers.length, 2, 'STUN + TURN');
+  const turn = cfg.iceServers[1];
+  assert.ok(turn.urls.some(u => /^turn:203\.0\.113\.9:3478/.test(u)), 'URL TURN ada host+port');
+  assert.match(turn.username, /^\d+:tukuk[0-9a-f]+$/, 'username "<exp>:tukuk<rand>"');
+  const exp = Number(turn.username.split(':')[0]);
+  assert.ok(exp > Math.floor(Date.now() / 1000), 'expiry di masa hadapan');
+  assert.equal(turn.credential, crypto.createHmac('sha1', 'rahasia123').update(turn.username).digest('base64'), 'kredential ikut mekanisme REST coturn');
+  restore('TURN_HOST', saved.h); restore('TURN_SECRET', saved.s); restore('TURN_PORT', saved.p);
+});
+
+test('G /api/chat/ice: 401 tanpa token; dengan login → senarai iceServers', () => {
+  fresh(); chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  assert.equal(hit(routes, 'G /api/chat/ice', reqGet('palsu', {})).code, 401);
+  const r = hit(routes, 'G /api/chat/ice', reqGet(chat.issueSession('Ana'), {}));
+  assert.equal(r.code, 200);
+  assert.ok(Array.isArray(r.body.iceServers) && r.body.iceServers.length >= 1);
+});
+
+// ─── Pemulihan akaun (kod darurat sekali-pakai) ───
+test('recoveryGenerate/Reset: 5 kod, sekali-pakai, kata laluan baru, sesi diluputkan', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  const g = chat.recoveryGenerate('Ana');
+  assert.ok(g.ok); assert.equal(g.codes.length, 5); assert.equal(g.remaining, 5);
+  const tok = chat.issueSession('Ana');
+  const code = g.codes[0];
+  assert.ok(chat.recoveryReset('Ana', code, 'kobil1234').ok);
+  assert.ok(chat.recoveryReset('Ana', code, 'lainlagi').error, 'kod sekali-pakai → guna semula ditolak');
+  assert.ok(chat.login('Ana', 'kobil1234').ok, 'kata laluan baharu berfungsi');
+  assert.ok(chat.login('Ana', 'rahasia123').error, 'kata laluan lama mati');
+  assert.equal(chat.userOf(tok), null, 'semua sesi lama disingkirkan');
+  assert.equal(chat.load().users.ana.rec.length, 4, 'baki kod tinggal 4');
+});
+
+test('recoveryReset: kod/nama salah + kata laluan pendek ditolak', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  chat.recoveryGenerate('Ana');
+  assert.ok(chat.recoveryReset('Ana', 'ZZZZZZZZZZ', 'baru1234').error, 'kod salah');
+  assert.ok(chat.recoveryReset('Tiada', 'A1B2C3D4E5', 'baru1234').error, 'nama tiada');
+  const g = chat.recoveryGenerate('Ana').codes[0];
+  assert.ok(chat.recoveryReset('Ana', g, '123').error, 'kata laluan < 4 aksara');
+});
+
+test('P /api/chat/recovery/generate perlu login; /reset tanpa login pulangkan token', () => {
+  fresh();
+  chat.register('Ana', 'rahasia123');
+  const routes = mountRoutes();
+  assert.equal(hit(routes, 'P /api/chat/recovery/generate', reqOf('palsu', {})).code, 401, 'jana perlu login');
+  const g = hit(routes, 'P /api/chat/recovery/generate', reqOf(chat.issueSession('Ana'), {}));
+  assert.equal(g.code, 200); assert.equal(g.body.codes.length, 5);
+  assert.equal(hit(routes, 'G /api/chat/recovery/status', reqGet(chat.issueSession('Ana'), {})).body.remaining, 5);
+  const rr = hit(routes, 'P /api/chat/recovery/reset', reqOf('', { name: 'Ana', code: g.body.codes[0], pass: 'barubaru' }));
+  assert.equal(rr.code, 200); assert.ok(rr.body.token, 'token sesi baru diberikan');
+  assert.equal(hit(routes, 'G /api/chat/recovery/status', reqGet(rr.body.token, {})).body.remaining, 4);
+});
+
 // ─── Undian ───
 test('createPoll: cipta undian dalam bilik global dengan soalan + pilihan', () => {
   fresh();
