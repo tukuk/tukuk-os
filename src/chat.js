@@ -1063,6 +1063,31 @@ function mount(app, deps) {
     res.json({ ok: true, people: people(req.query.q, 50, u.name) });
   });
 
+  // ─── Panggilan video/audio: isyarat P2P (WebRTC) ───
+  // Pelayan HANYA meneruskan paket isyarat (SDP/ICE/kawalan) kepada sasaran melalui
+  // yuran SSE yang sedia ada; media mengalir terus antara peranti (peer-to-peer),
+  // jadi tiada audio/video disimpan atau dilalukan di pelayan. `delivered` memaklumkan
+  // pemanggil sama ada pasangan benar-benar bersambung sekarang (untuk "luar talian").
+  const CALL_EV = new Set(['ring', 'accept', 'reject', 'busy', 'offer', 'answer', 'ice', 'end', 'cancel']);
+  app.post('/api/chat/call', lim({ windowMs: 60e3, max: 120, keyPrefix: 'chcall:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const ev = String(b.ev || '');
+    if (!CALL_EV.has(ev)) return res.status(400).json({ error: 'Isyarat panggilan tidak dikenali.' });
+    const peer = byId(b.to);
+    if (!peer) return res.status(400).json({ error: 'Pengguna tidak ditemui.' });
+    if (peer.id === u.id) return res.status(400).json({ error: 'Tidak boleh memanggil diri sendiri.' });
+    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Tidak dapat memanggil pengguna ini.' });
+    let data = b.data && typeof b.data === 'object' ? b.data : {};
+    if (JSON.stringify(data).length > 16384) return res.status(413).json({ error: 'Paket isyarat terlalu besar.' });
+    // 'kind' hanya relevan pada 'ring' — kekalkan kecil & normalisasi.
+    if (ev === 'ring') data = Object.assign({ kind: data.kind === 'audio' ? 'audio' : 'video' }, data);
+    const set = sinks.get(peer.id);
+    pub('call', { from: u.id, fromName: u.name, to: peer.id, ev, data }, [peer.id]);
+    if (ev === 'ring') event('Panggilan ' + (data.kind === 'audio' ? 'suara' : 'video') + ': ' + u.name + ' → ' + peer.name, { id: u.id, peer: peer.id });
+    res.json({ ok: true, delivered: !!(set && set.size), online: isOnline(peer) });
+  });
+
   // ─── Tetapan: kawan, sekatan, kata laluan, sesi ───
   app.get('/api/chat/social', (req, res) => {
     const u = authOf(req, res); if (!u) return;

@@ -33,6 +33,7 @@ const GLOBALS = new Set((`window document console localStorage sessionStorage na
   FormData Headers Request Response Cache caches serviceWorker serviceWorkers navigator
   HTMLElement Element Node NodeList HTMLImageElement HTMLCanvasElement HTMLVideoElement HTMLInputElement SVGElement
   CanvasRenderingContext2D Path2D OffscreenCanvas AudioContext webkitAudioContext RTCPeerConnection
+  RTCSessionDescription RTCIceCandidate MediaStream speechSynthesis SpeechSynthesisUtterance
   atob btoa onload onerror structuredClone cloneNode Intl BigInt localeCompare THREE L GoogleAnalytics
   ga dataLayer fbq chrome browser self top parent frames addEventListener removeEventListener dispatchEvent
   event clients windowWidth windowHeight origin location`).split(/\s+/));

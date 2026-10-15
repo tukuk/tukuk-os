@@ -760,3 +760,62 @@ test('resit bacaan: markSeen DM menyiarkan read kepada pasangan sahaja', () => {
   assert.equal(b.log.filter(x => x[0] === 'read').length, 0, 'pembaca tidak menerima read sendiri');
   release(idOf('Ana'), a.snk, idOf('Ben'), b.snk);
 });
+
+// ─── Isyarat panggilan video/audio (WebRTC) ───
+// Mount pada Express palsu: kumpul pemegang lalu panggil rantaian middleware.
+function mountRoutes() {
+  const routes = {};
+  const app = { get: (p, ...h) => { routes['G ' + p] = h; }, post: (p, ...h) => { routes['P ' + p] = h; } };
+  chat.mount(app, {});
+  return routes;
+}
+function hit(routes, key, req) {
+  const hs = routes[key] || [];
+  const res = { code: 200, body: null, status(c) { this.code = c; return this; }, json(o) { this.body = o; return this; } };
+  let i = 0;
+  const next = () => { const h = hs[i++]; if (h) h(req, res, next); };
+  next();
+  return res;
+}
+const reqOf = (tok, body) => ({ headers: { authorization: 'Bearer ' + tok }, body: body || {}, query: {}, on() {}, socket: null });
+
+test('call: isyarat diteruskan ke pasangan sahaja + tolak salah guna', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const a = spy(), b = spy();
+  chat.attachSink(idOf('Ana'), a.snk); chat.attachSink(idOf('Ben'), b.snk);
+  const tok = chat.issueSession('Ana');
+
+  let r = hit(routes, 'P /api/chat/call', reqOf(tok, { to: idOf('Ben'), ev: 'ring', data: { kind: 'video' } }));
+  assert.equal(r.code, 200);
+  assert.equal(r.body.delivered, true, 'pasangan bersambung → delivered');
+  const got = b.log.find(x => x[0] === 'call');
+  assert.ok(got, 'Ben terima isyarat panggilan');
+  assert.equal(got[1].ev, 'ring');
+  assert.equal(got[1].from, idOf('Ana'));
+  assert.equal(got[1].data.kind, 'video', 'jenis panggilan dibawa serta');
+  assert.equal(a.log.filter(x => x[0] === 'call').length, 0, 'pemanggil tidak menerima sendiri');
+
+  assert.equal(hit(routes, 'P /api/chat/call', reqOf(tok, { to: idOf('Ben'), ev: 'hack' })).code, 400, 'isyarat tak dikenali');
+  assert.equal(hit(routes, 'P /api/chat/call', reqOf(tok, { to: idOf('Ana'), ev: 'ring' })).code, 400, 'panggil diri sendiri');
+  assert.equal(hit(routes, 'P /api/chat/call', reqOf(tok, { to: 999999, ev: 'ring' })).code, 400, 'pengguna tak wujud');
+  assert.equal(hit(routes, 'P /api/chat/call', reqOf('palsu', { to: idOf('Ben'), ev: 'ring' })).code, 401, 'kena login');
+  assert.equal(hit(routes, 'P /api/chat/call', reqOf(tok, { to: idOf('Ben'), ev: 'ice', data: { big: 'x'.repeat(20000) } })).code, 413, 'paket terlalu besar');
+
+  chat.blockUser('Ben', 'Ana');
+  assert.equal(hit(routes, 'P /api/chat/call', reqOf(tok, { to: idOf('Ben'), ev: 'ring' })).code, 403, 'disekat → ditolak');
+  release(idOf('Ana'), a.snk, idOf('Ben'), b.snk);
+});
+
+test('call: delivered=false bila pasangan tiada yuran (luar talian)', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const a = spy();
+  chat.attachSink(idOf('Ana'), a.snk);
+  const r = hit(routes, 'P /api/chat/call', reqOf(chat.issueSession('Ana'), { to: idOf('Ben'), ev: 'ring' }));
+  assert.equal(r.code, 200);
+  assert.equal(r.body.delivered, false, 'Ben tiada sambungan');
+  release(idOf('Ana'), a.snk);
+});
