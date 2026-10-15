@@ -1922,7 +1922,7 @@ const STORE_APP_META = {
   orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
   fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
   drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' },
-  chat: { ic: '✈️', title: 'T Chat', desc: 'Messenger sebenar dalam pelayar yang terus berfungsi pada rangkaian lemah (2G/3G/4G/GPRS). Daftar nama + kata laluan, Tukuk ID kekal, bilik Am dan DM 1-ke-1, mesej sampai serta-merta melalui sambungan langsung, peti keluar luar-talian (auto-hantar semula), mod jimat data (media ketuk-untuk-muat), resit baca ✓✓, hantar gambar & video, reply, reaction, edit, carian, kawan & sekat, wallpaper & bunyi.' }
+  chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'Messenger sebenar dalam pelayar yang terus berfungsi pada rangkaian lemah (2G/3G/4G/GPRS). Daftar nama + kata laluan, Tukuk ID kekal, bilik Am dan DM 1-ke-1, mesej sampai serta-merta melalui sambungan langsung, peti keluar luar-talian (auto-hantar semula), mod jimat data (media ketuk-untuk-muat), resit baca ✓✓, hantar gambar & video, reply, reaction, edit, carian, kawan & sekat, wallpaper & bunyi.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 const STORE_ARCADE = [

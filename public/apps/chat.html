@@ -7,7 +7,14 @@
 <meta name="description" content="T Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1, hantar gambar & video. Tetapan urus nama, kata laluan, kawan, cari orang, sekat/buka sekat. Mesej tiba serta-merta melalui sambungan langsung. Reply, reaction, edit, carian, wallpaper.">
 <link rel="canonical" href="https://tukuk.org/apps/chat">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
-<link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg?v=2">
+<link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg?v=3">
+<link rel="apple-touch-icon" href="/icons/apps/chat-192.png">
+<link rel="manifest" href="/manifest-chat.json">
+<meta name="theme-color" content="#1f6feb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="T Chat">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
 <style>
@@ -138,6 +145,13 @@
   .mbox .seg { display:flex; gap:6px; padding:8px 0; }
   .mbox .seg button { flex:1; background:var(--bg); border:1px solid var(--line); color:var(--muted); border-radius:8px; padding:6px 0; cursor:pointer; font:inherit; font-size:.8rem; }
   .mbox .seg button.on { color:#fff; background:var(--accent); border-color:var(--accent); }
+  /* Tab "Aplikasi": arahan pasang per-OS */
+  .inst { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-top:6px; }
+  .inst > div { display:flex; flex-direction:column; gap:2px; padding:9px 11px; border-bottom:1px solid var(--line); }
+  .inst > div:last-child { border-bottom:none; }
+  .inst b { font-size:.82rem; }
+  .inst span { font-size:.76rem; color:var(--muted); line-height:1.45; }
+  .inst i { color:var(--text); font-style:normal; font-weight:600; }
   #empty { text-align:center; color:var(--muted); font-size:.85rem; padding:60px 20px; }
 
   /* ─── Lampiran gambar / video ─── */
@@ -259,12 +273,12 @@
 </style>
 </head>
 <body>
-<header><a class="back" href="/apps">← Apps</a><h1><img class="hlogo" src="/icons/apps/chat.svg?v=2" alt=""> T Chat</h1></header>
+<header><a class="back" href="/apps">← Apps</a><h1><img class="hlogo" src="/icons/apps/chat.svg?v=3" alt=""> T Chat</h1></header>
 
 <!-- ─── Skrin daftar / login ─── -->
 <div id="auth">
   <div class="brand">
-    <div class="logo"><img src="/icons/apps/chat.svg?v=2" alt="Logo T Chat"></div>
+    <div class="logo"><img src="/icons/apps/chat.svg?v=3" alt="Logo T Chat"></div>
     <h2>T Chat</h2>
     <p>Chat sebenar dalam pelayar — tanpa e-mel, tanpa aplikasi.</p>
   </div>
@@ -348,6 +362,7 @@
     <button data-t="Blk">🚫 Sekat <b id="nBlk">0</b></button>
     <button data-t="Sec">🔒 Keselamatan</button>
     <button data-t="Dsp">🎨 Paparan</button>
+    <button data-t="App">📲 Aplikasi</button>
   </div>
 
   <div class="tab" id="tabProf">
@@ -405,6 +420,20 @@
       <button data-w="5" aria-label="Wallpaper biru cerah" title="Biru cerah" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
       <button data-w="6" aria-label="Wallpaper putih" title="Putih" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
     </div>
+  </div>
+
+  <div class="tab" id="tabApp" hidden>
+    <div class="pfmeta" id="appStatus">—</div>
+    <div class="mbtns" style="padding-top:2px"><button class="prim" id="stInstall">📲 Pasang T Chat di peranti ini</button></div>
+    <div class="pflabel">Arahan ikut peranti / OS</div>
+    <div class="inst">
+      <div><b>🤖 Android &amp; Huawei (HarmonyOS)</b><span>Chrome atau Petal Browser → menu <i>⋮</i> → <i>Pasang aplikasi</i> / <i>Hantar ke Skrin Utama</i>.</span></div>
+      <div><b>🍎 iPhone &amp; iPad (iOS)</b><span>Safari → butang <i>Kongsi</i> → <i>Tambah ke Skrin Utama</i>. (Pemasangan automatik hanya tersedia di Chrome/Edge.)</span></div>
+      <div><b>🪟 Windows &amp; 🐧 Linux</b><span>Edge atau Chrome → ikon <i>Pasang</i> di bar alamat, atau <i>⋮ → Aplikasi → Pasang aplikasi ini</i>.</span></div>
+      <div><b>📦 Muat turun APK</b><span>Perlu fail APK untuk dikongsi/dipasang terus? Jana APK daripada aplikasi web ini di PWA Builder — aplikasi yang sama, dibungkus untuk Android/Huawei.</span></div>
+    </div>
+    <div class="mbtns"><button class="warn" id="stApk">📥 Jana APK (PWA Builder)</button></div>
+    <div class="pfmeta">Selepas dipasang, T Chat membuka tanpa bar pelayar, mengekalkan sesi, dan boleh membaca sembang serta menghantar mesej ke peti keluar walaupun luar talian.</div>
   </div>
 
   <div class="mbtns"><button class="prim" id="stClose">Tutup</button></div>
@@ -1098,7 +1127,7 @@
     if (!(window.Notification && Notification.permission === 'granted')) return;
     const prev = (m.media && m.media.length) ? mediaWord(m.media[0].kind, m.media.length) : norm(m.t || '');
     try {
-      const nt = new Notification(nameOf(m), { body: prev.slice(0, 120) || '(mesej)', tag: 'chat-' + r.id, icon: '/icons/apps/chat.svg?v=2', silent: true });
+      const nt = new Notification(nameOf(m), { body: prev.slice(0, 120) || '(mesej)', tag: 'chat-' + r.id, icon: '/icons/apps/chat.svg?v=3', silent: true });
       nt.onclick = () => { try { window.focus(); openRoom(r.id); } catch { /* noop */ } nt.close(); };
     } catch { /* Notification API ditolak */ }
   }
@@ -1650,7 +1679,7 @@
     $('stSound').checked = !!pref.sound; $('stFont').value = pref.font;
     $('stNotif').checked = !!pref.notif;
     markData(); $('connHint').textContent = connHintText();
-    markWalls();
+    markWalls(); paintAppTab();
     $('stOld').value = $('stP1').value = $('stP2').value = '';
     showTab(tab || 'Prof');
     $('setModal').classList.add('open');
@@ -1720,6 +1749,35 @@
     $('msgs').style.setProperty('--fs', pref.font + 'px');
   }
 
+  // ─── PWA: pasang sebagai aplikasi (Android/iOS/Windows/Linux/Huawei) + Jana APK ───
+  let bip = null;   // peristiwa pasang yang ditangguhkan pelayar
+  const isStandalone = () => {
+    try { if (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches) return true; } catch { /* pelayar lama */ }
+    return navigator.standalone === true;   // iOS Safari
+  };
+  function paintAppTab() {
+    const st = $('appStatus'), btn = $('stInstall');
+    if (!st || !btn) return;
+    if (isStandalone()) { st.textContent = '✓ Sedang berjalan sebagai aplikasi yang dipasang.'; btn.hidden = true; return; }
+    btn.hidden = false;
+    st.textContent = bip
+      ? 'Sedia untuk dipasang — aplikasi penuh tanpa bar pelayar, ikon di Skrin Utama/Desktop.'
+      : 'Pelayar ini tidak menyokong butang pasang automatik. Ikut arahan manual di bawah.';
+    btn.textContent = bip ? '📲 Pasang T Chat sekarang' : '📲 Tunjuk cara pasang';
+  }
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); bip = e; paintAppTab(); });
+  addEventListener('appinstalled', () => { bip = null; paintAppTab(); const st = $('appStatus'); if (st) st.textContent = '✓ T Chat berjaya dipasang pada peranti ini.'; toast('T Chat dipasang.'); });
+  $('stInstall').onclick = async () => {
+    if (!bip) { toast('Guna arahan manual ikut OS di bawah.'); return; }
+    try {
+      await bip.prompt();
+      const c = await bip.userChoice;
+      if (c && c.outcome === 'accepted') { bip = null; toast('Sedang dipasang…'); }
+      paintAppTab();
+    } catch { /* dialog sudah digunakan/tidak tersedia */ }
+  };
+  $('stApk').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
+
   // ─── Lampiran: pemilih fail, seret-lepas, tampal ───
   $('clipBtn').onclick = () => $('file').click();
   $('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
@@ -1746,6 +1804,10 @@
 
   // ─── Boot ───
   applyPref();
+  // Daftar SW di halaman app supaya pemasangan PWA berfungsi walaupun pengguna
+  // terus ke /apps/chat tanpa melalui halaman utama.
+  if ('serviceWorker' in navigator) addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
+  paintAppTab();
   readConn(); lite = computeLite(); updateNetbar();   // tentukan mod rangkaian sebelum masuk app
   (async () => {
     if (!token) return showAuth('');

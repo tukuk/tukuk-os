@@ -120,6 +120,7 @@
     border: 1px solid var(--panel-border);
   }
   .item.game .appicon { background: linear-gradient(150deg, rgba(255,59,129,.35), rgba(255,140,60,.25)); }
+  .appicon img { width: 100%; height: 100%; border-radius: 14px; display: block; object-fit: cover; }
   .item .tt { min-width: 0; }
   .item h3 { margin: 0; font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item .sub { font-size: 0.74rem; color: var(--muted); }
@@ -233,6 +234,11 @@
 
   const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
+  // Ikon: laluan /... → gambar (logo asli app); selain itu emoji biasa.
+  const iconHtml = (x) => /^\//.test(String(x.icon || ''))
+    ? `<img src="${esc(x.icon)}" alt="" width="52" height="52" loading="lazy">`
+    : (esc(x.icon) || (x.kind === 'game' ? '🎮' : '📱'));
+
   function ago(t) {
     if (!t) return '';
     const d = Math.floor((Date.now() - t) / 86400000);
@@ -271,7 +277,7 @@
       <article class="item ${x.kind}">
         <span class="kbadge ${x.kind}">${x.kind === 'game' ? '🎮 Game' : '📱 App'}</span>
         <div class="row">
-          <div class="appicon">${esc(x.icon) || (x.kind === 'game' ? '🎮' : '📱')}</div>
+          <div class="appicon">${iconHtml(x)}</div>
           <div class="tt">
             <h3 title="${esc(x.title)}">${esc(x.title)}</h3>
             <div class="sub">${esc(x.url)}</div>

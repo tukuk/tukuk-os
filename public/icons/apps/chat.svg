@@ -4,8 +4,11 @@
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#5b9bff"/><stop offset="1" stop-color="#1f6feb"/>
     </linearGradient>
-    <linearGradient id="plane" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dcebff"/>
+    </linearGradient>
+    <linearGradient id="t" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b6fe0"/><stop offset="1" stop-color="#1552b5"/>
     </linearGradient>
     <filter id="sh" x="-25%" y="-25%" width="150%" height="150%">
       <feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#0a2350" flood-opacity="0.4"/>
@@ -14,8 +17,11 @@
   <rect width="128" height="128" rx="28" fill="url(#bg)"/>
   <circle cx="40" cy="26" r="62" fill="#ffffff" opacity="0.10"/>
   <g filter="url(#sh)">
-    <path d="M108 30 20 62l26 10 8 26 14-18 22 16z" fill="url(#plane)"/>
-    <path d="M46 72 108 30 68 80z" fill="#a9ccff"/>
+    <path d="M45 80 33 106l28-12z" fill="url(#w)"/>
+    <rect x="21" y="24" width="86" height="60" rx="23" fill="url(#w)"/>
   </g>
+  <rect x="45" y="41" width="38" height="10" rx="5" fill="url(#t)"/>
+  <rect x="59" y="41" width="10" height="32" rx="5" fill="url(#t)"/>
+  <circle cx="93" cy="36" r="4" fill="#3fd06a"/>
   <rect x="6" y="6" width="116" height="116" rx="24" fill="none" stroke="#000000" stroke-opacity="0.16"/>
 </svg>

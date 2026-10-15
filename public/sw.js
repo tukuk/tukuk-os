@@ -1,10 +1,16 @@
-const CACHE_NAME = 'tukuk-os-v3';
+const CACHE_NAME = 'tukuk-os-v4';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/manifest-chat.json',
+  '/apps/chat',
   '/build/icon-192.png',
-  '/build/icon-512.png'
+  '/build/icon-512.png',
+  '/icons/apps/chat.svg',
+  '/icons/apps/chat-192.png',
+  '/icons/apps/chat-512.png',
+  '/icons/apps/chat-maskable-512.png'
 ];
 
 self.addEventListener('install', (event) => {

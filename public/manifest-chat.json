@@ -1,0 +1,21 @@
+{
+  "id": "/apps/chat",
+  "name": "T Chat — Messenger Tukuk",
+  "short_name": "T Chat",
+  "description": "Messenger yang berfungsi pada 2G/3G/4G/GPRS: peti keluar luar-talian, mod jimat data, panggilan video & suara, ID pemanggil dan mod prank.",
+  "start_url": "/apps/chat",
+  "scope": "/apps/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0f1115",
+  "theme_color": "#1f6feb",
+  "icons": [
+    { "src": "/icons/apps/chat.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/apps/chat-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/apps/chat-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/apps/chat-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "categories": ["social", "communication", "productivity"],
+  "lang": "ms",
+  "dir": "ltr"
+}
