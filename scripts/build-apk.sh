@@ -110,17 +110,28 @@ B="$WORK/bundle"; rm -rf "$B"; mkdir -p "$B/base/manifest" "$B/base/dex"
 # proto.zip letak manifest di root; AAB mahu di base/manifest/
 [ -f "$B/base/AndroidManifest.xml" ] && mv "$B/base/AndroidManifest.xml" "$B/base/manifest/AndroidManifest.xml"
 cp "$WORK/dex/classes.dex" "$B/base/dex/classes.dex"
-rm -f "$AAB"; ( cd "$B" && zip -qrX "$OLDPWD/$AAB" base )
+
+# BundleConfig.pb WAJIB di root AAB — bundletool/Play MENOLAK bundle tanpa fail
+# ini. Kandungan protobuf: {bundletool:{version:"<v>"}}. Bina bait kecil terus:
+#   0A <len>          field 1 = bundletool (sub-mesej, panjang-prefiks)
+#     12 <vlen> <v>     field 2 = version (string)
+BV="${BUNDLETOOL_VERSION:-1.17.2}"; VLEN=${#BV}
+{ printf '\012'; printf "\\$(printf '%03o' $((VLEN + 2)))"; printf '\022'; printf "\\$(printf '%03o' "$VLEN")"; printf '%s' "$BV"; } > "$B/BundleConfig.pb"
+
+# AAB = zip TANPA entri direktori (bundletool menolak 'base/' dsb.) — hanya fail.
+rm -f "$AAB"; ( cd "$B" && zip -qrXD "$OLDPWD/$AAB" base BundleConfig.pb )
 
 # ── Pengesahan struktur AAB (bebas-bundletool) ──
 MISS=""
-for need in base/manifest/AndroidManifest.xml base/dex/classes.dex base/resources.pb; do
+for need in base/manifest/AndroidManifest.xml base/dex/classes.dex base/resources.pb BundleConfig.pb; do
   unzip -l "$AAB" 2>/dev/null | grep -q "[[:space:]]$need\$" || MISS="$MISS $need"
 done
 # res/ mesti wujud dalam bundle (ikon/string dalam bentuk proto)
 unzip -l "$AAB" 2>/dev/null | grep -q "base/res/" || MISS="$MISS base/res/"
+# entri direktori (nama berakhir '/') tidak dibenarkan dalam AAB
+if unzip -l "$AAB" 2>/dev/null | awk '{print $4}' | grep -qE '/$'; then MISS="$MISS [entri-direktori]"; fi
 if [ -z "$MISS" ]; then
-  echo "build-apk: ✓ $AAB ($(du -h "$AAB" | cut -f1)) — entri wajib lengkap (manifest proto + dex + resources.pb + res/)."
+  echo "build-apk: ✓ $AAB ($(du -h "$AAB" | cut -f1)) — entri wajib lengkap (manifest proto + dex + resources.pb + BundleConfig.pb, tiada direktori)."
 else
   echo "build-apk: ⚠ $AAB RUGI entri:$MISS — JANGAN hantar ke Play sehingga betul."
 fi
