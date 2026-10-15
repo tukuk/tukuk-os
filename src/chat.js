@@ -16,6 +16,7 @@ const TYPING_MS = 4e3;      // paparan "menaip…"
 const MAX_IMG = 8 * 1024 * 1024;            // had fail gambar (selepas mampat klien)
 const MAX_VID = 64 * 1024 * 1024;           // had fail video
 const MAX_AUDIO = 8 * 1024 * 1024;          // had mesej suara (opus/webm/ogg)
+const MAX_DOC = 32 * 1024 * 1024;           // had fail umum (dokumen/zip/muzik)
 const MAX_PER_MSG = 4;                      // media satu mesej (album)
 const QUOTA_FILES = 40;                     // fail per jam per pengguna
 const QUOTA_BYTES = 512 * 1024 * 1024;      // saiz per jam per pengguna
@@ -180,6 +181,11 @@ function sniff(b) {
 }
 const isImage = (mime) => String(mime).startsWith('image/');
 const isAudio = (mime) => String(mime).startsWith('audio/');
+// Nama fail selamat: buang aksara Laluan/sepadan Windows + aksara kawalan.
+const safeFileName = (n) => {
+  const x = String(n || '').replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, '_').trim().slice(0, 120);
+  return x || 'fail';
+};
 function mediaFile(rec) { return path.join(MEDIA, rec.id + '.' + rec.ext); }
 function num(v, max) { const n = Math.round(Number(v) || 0); return n > 0 && n <= max ? n : 0; }
 // Pautan media TIDAK boleh membawa token sesi (token masuk log pelayan), jadi
@@ -229,7 +235,7 @@ function quotaCheck(u, size) {
 function addMedia(user, buf, meta) {
   const s = load();
   const t = sniff(buf);
-  if (!t) return { error: 'Fail itu bukan gambar, video atau suara yang disokong.', status: 415 };
+  if (!t) return addGenericFile(user, buf, meta);
   const img = isImage(t.mime);
   // Klien boleh menanda mesej suara (audio=1); ogg/opus juga dikesan menerusi
   // bait ajaib. WebM audio mempunyai magic byte sama seperti video → bergantung
@@ -258,12 +264,41 @@ function addMedia(user, buf, meta) {
   touch();
   return { ok: true, media: rec };
 }
+// Lampiran fail umum (dokumen, zip, muzik .mp3, apa sahaja yang tidak dikesan
+// sebagai gambar/video/suara). Sentiasa disimpan dengan nama asal; hidangan
+// dipaksa muat turun supaya pelayar tidak pernah menjalankan kandungan.
+function addGenericFile(user, buf, meta) {
+  const s = load();
+  if (buf.length > MAX_DOC) return { error: 'Fail terlalu besar (had ' + Math.round(MAX_DOC / 1048576) + 'MB).', status: 413 };
+  const q = quotaCheck(user, buf.length);
+  if (q.error) return { error: q.error, status: 429 };
+  const id = crypto.randomBytes(6).toString('hex');
+  const name = safeFileName(meta && meta.name);
+  let ext = name.includes('.') ? String(name.split('.').pop()).toLowerCase() : '';
+  ext = ext.replace(/[^a-z0-9]/g, '').slice(0, 8) || 'bin';
+  const omime = String((meta && meta.mime) || '').replace(/[^a-z0-9.+-\/]/gi, '').slice(0, 64);
+  const rec = {
+    id, ext, mime: 'application/octet-stream', omime, kind: 'file', size: buf.length, name,
+    uid: user.id || null, by: user.k, ts: Date.now(), rooms: [], msgs: [],
+  };
+  try {
+    fs.mkdirSync(MEDIA, { recursive: true });
+    fs.writeFileSync(mediaFile(rec), buf);
+  } catch { return { error: 'Gagal menyimpan fail di pelayan.', status: 500 }; }
+  s.media = s.media || {};
+  s.media[id] = rec;
+  s.mediaBytes = (s.mediaBytes || 0) + buf.length;
+  touch();
+  return { ok: true, media: rec };
+}
 // Ringkasan yang disemat dalam mesej (supaya paparan tak perlu satu lagi GET).
 function projectMedia(rec) {
   const out = { id: rec.id, kind: rec.kind, ext: rec.ext };
   if (rec.w && rec.h) { out.w = rec.w; out.h = rec.h; }
   if (rec.dur) out.dur = rec.dur;
   if (rec.size) out.size = rec.size;
+  if (rec.name) out.name = rec.name;
+  if (rec.omime) out.mime = rec.omime;
   return out;
 }
 // Tandatangan dijana semula setiap kali dihantar — jadi mesej yang disimpan
@@ -1748,12 +1783,13 @@ function mount(app, deps) {
       if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
     }
     const cl = Number(req.headers['content-length'] || 0);
-    if (cl > MAX_VID) { req.resume(); return res.status(413).json({ error: 'Video terlalu besar (had 64MB).' }); }
+    if (cl > MAX_VID) { req.resume(); return res.status(413).json({ error: 'Fail terlalu besar (had 64MB).' }); }
     readRaw(req, MAX_VID + 64 * 1024).then((buf) => {
-      const meta = { w: req.query.w, h: req.query.h, dur: req.query.dur, audio: req.query.audio };
+      const meta = { w: req.query.w, h: req.query.h, dur: req.query.dur, audio: req.query.audio, name: req.query.name, mime: req.query.mime };
       const r = addMedia(u, buf, meta);
       if (r.error) return res.status(r.status || 400).json({ error: r.error });
       if (String(req.query.avatar || '') === '1') {
+        if (r.media.kind === 'file') { dropMedia(r.media.id); return res.status(400).json({ error: 'Gambar profil mestilah gambar sebenar.' }); }
         r.media.avatar = true;
         const av = setAvatar(u, r.media.id);
         if (av.error) { dropMedia(r.media.id); return res.status(400).json({ error: av.error }); }
@@ -1796,6 +1832,14 @@ function mount(app, deps) {
         'Cross-Origin-Resource-Policy': 'same-origin',
         'Last-Modified': new Date(rec.ts || Date.now()).toUTCString(),
       };
+      if (rec.kind === 'file') {
+        // Fail umum: muzik/video/pdf boleh main/pratinjau langsung (mime asal
+        // selamat); semua yang lain dipaksa muat turun + nosniff.
+        const inline = /^(audio|video)\//.test(rec.omime || '') || rec.omime === 'application/pdf';
+        head['Content-Type'] = inline ? rec.omime : 'application/octet-stream';
+        head['X-Content-Type-Options'] = 'nosniff';
+        if (!inline) head['Content-Disposition'] = 'attachment; filename="' + String(rec.name || rec.id).replace(/["\\\r\n]/g, '_') + '"';
+      }
       let from = 0, to = total - 1, partial = false;
       const rg = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
       if (rg && (rg[1] || rg[2])) {
@@ -2241,6 +2285,6 @@ module.exports = {
   createStory, storiesOf, viewStory, delStory, pruneStories, STORY_TTL,
   pushNotif, notifList, markNotifRead, clearNotifs, setAvatar, removeAvatar, avatarUrl, hydratePost, notifyMentions, followList, discover, releaseSocialMedia,
   MAX_POST, MAX_POST_MEDIA, MAX_COMMENT, MAX_COMMENTS, MAX_FEED, MAX_STORIES, MAX_NOTIF, MAX_FOLLOWING, MAX_FOLLOWERS,
-  MAX_IMG, MAX_VID, MAX_AUDIO, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
+  MAX_IMG, MAX_VID, MAX_AUDIO, MAX_DOC, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
   get mediaDir() { return MEDIA; },
 };

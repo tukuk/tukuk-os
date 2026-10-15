@@ -434,11 +434,44 @@ test('media: saiz berlebihan + kouta muat naik disekat', () => {
   const over = chat.addMedia(ana, big);
   assert.equal(over.status, 413);
   assert.match(over.error, /terlalu besar/i);
-  assert.equal(chat.addMedia(ana, GAGG).status, 415, 'jenis tidak disokong → 415');
+  const bigdoc = Buffer.concat([Buffer.from('DOCX'), Buffer.alloc(chat.MAX_DOC + 10, 1)]);
+  assert.equal(chat.addMedia(ana, bigdoc, { name: 'besar.docx' }).status, 413, 'fail umum terlalu besar → 413');
   for (let i = 0; i < chat.QUOTA_FILES; i++) assert.ok(upload(ana, GIF).ok, 'fail ke-' + (i + 1) + ' masih dibenarkan');
   const last = upload(ana, GIF);
   assert.equal(last.status, 429, 'kouta fail sejam → 429');
   assert.match(last.error, /Terlalu banyak fail/);
+});
+
+test('media: fail umum (dokumen/muzik) diterima + nama asal + dinormalkan', () => {
+  fresh();
+  const ana = chat.register('Ana', 'pass1').user;
+  const pdf = Buffer.from('%PDF-1.4 laporan sulit\n');
+  const r = upload(ana, pdf, { name: 'laporan.pdf', mime: 'application/pdf' });
+  assert.ok(r.ok, 'dokumen kini diterima sebagai lampiran umum');
+  assert.equal(r.media.kind, 'file');
+  assert.equal(r.media.ext, 'pdf');
+  assert.equal(r.media.name, 'laporan.pdf');
+  const pr = chat.projectMedia(r.media);
+  assert.equal(pr.name, 'laporan.pdf');
+  assert.equal(pr.mime, 'application/pdf');
+  assert.equal(pr.size, pdf.length);
+  const sent = chat.send('Ana', 'global_am', 'dokumen untuk anda', null, [r.media.id]);
+  assert.ok(sent.ok);
+  assert.equal(sent.msg.media[0].kind, 'file');
+  // nama karut dinormalkan; tanpa nama → ext 'bin'
+  const zip = upload(ana, GAGG, { name: '../../etc/pass"wd.zip', mime: 'application/zip' });
+  assert.ok(zip.ok);
+  assert.equal(zip.media.ext, 'zip');
+  assert.ok(!zip.media.name.includes('/'), 'laluan dibuang daripada nama');
+  const nope = upload(ana, GAGG, {});
+  assert.ok(nope.ok);
+  assert.equal(nope.media.ext, 'bin');
+  assert.equal(nope.media.name, 'fail');
+  // mp3 (bait ajaib bukan media) pergi sebagai fail + mime asal untuk main inline
+  const mp3 = upload(ana, Buffer.concat([Buffer.from('ID3'), Buffer.alloc(64, 3)]), { name: 'lagu.mp3', mime: 'audio/mpeg' });
+  assert.ok(mp3.ok);
+  assert.equal(mp3.media.ext, 'mp3');
+  assert.equal(chat.projectMedia(mp3.media).mime, 'audio/mpeg');
 });
 
 test('media: padam mesej membuang fail, dan mesej keluar dari simpanan juga dibuang', () => {

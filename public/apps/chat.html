@@ -384,6 +384,23 @@
   .stoy .ring img { width:100%; height:100%; object-fit:cover; display:block; }
   .stoy span { display:block; font-size:.66rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px; }
   .stoy.add .ring > div { background:var(--bg); color:var(--accent); font-size:1.5rem; border-style:dashed; }
+  /* ─── Kad fail umum (dokumen/muzik/zip — apa sahaja boleh hantar) ─── */
+  #compose { position:relative; }
+  .media .mcell.file { display:flex; align-items:center; }
+  .fcard { display:flex; align-items:center; gap:9px; background:#222d44; border-radius:11px; padding:9px 11px; min-width:210px; max-width:280px; }
+  .fcard .fi { font-size:1.5rem; flex:none; }
+  .fcard .fn { flex:1; min-width:0; }
+  .fcard .fn b { display:block; font-size:.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fcard .fn span { font-size:.7rem; color:var(--muted); }
+  .fcard .fd { flex:none; text-decoration:none; font-size:1rem; background:rgba(255,255,255,.1); border-radius:8px; padding:4px 8px; }
+  .fcard .fd:hover { background:rgba(255,255,255,.22); }
+  .maudio { width:100%; max-width:280px; margin-top:6px; }
+  .tcell .fic { display:flex; align-items:center; justify-content:center; height:100%; font-size:1.5rem; background:var(--bg); }
+  .tcell .fna { position:absolute; left:0; right:0; bottom:0; font-size:.6rem; background:rgba(0,0,0,.6); color:#fff; padding:2px 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #clipPop { position:absolute; bottom:58px; left:50px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:6px; display:flex; flex-direction:column; gap:4px; z-index:30; box-shadow:0 8px 22px rgba(0,0,0,.4); }
+  #clipPop[hidden] { display:none; }
+  #clipPop button { background:none; border:none; color:var(--text); font:inherit; font-size:.85rem; text-align:left; border-radius:7px; padding:8px 14px; cursor:pointer; white-space:nowrap; }
+  #clipPop button:hover { background:color-mix(in srgb, var(--accent) 14%, transparent); }
   /* Kartu post */
   .pcard { border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--bg); }
   .phead { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
@@ -549,12 +566,17 @@
         <div class="eegrid" id="eGrid"></div>
       </div>
       <button id="emojiBtn" title="Sisip emoji">😊</button>
-      <button id="clipBtn" title="Lampirkan gambar atau video">📎</button>
+      <button id="clipBtn" title="Lampirkan gambar, video atau fail">📎</button>
       <button id="micBtn" title="Rakam mesej suara">🎙️</button>
       <button id="prankBtn" title="Panggilan prank (setempat, boleh luar talian)">🎭</button>
       <div class="cin"><textarea id="inp" rows="1" placeholder="Tulis mesej…"></textarea></div>
       <button id="send" title="Hantar">➤</button>
-      <input type="file" id="file" accept="image/*,video/*" multiple style="display:none">
+      <div id="clipPop" hidden>
+        <button id="cpFile">📄 Gambar / video / fail</button>
+        <button id="cpFolder">📁 Satu folder penuh</button>
+      </div>
+      <input type="file" id="file" accept="*/*" multiple style="display:none">
+      <input type="file" id="folder" webkitdirectory directory multiple style="display:none">
     </div>
   </main>
 </div>
@@ -831,6 +853,7 @@
   let serverResults = [], searchTimer = null;   // hasil carian pelayan
   let jumpAfter = null;   // id mesej untuk dilompat selepas bilik dibuka
   let pref = { sound: true, notif: false, push: false, wall: 1, font: 15, data: 'auto', recent: [] };
+  const chatQuotaFiles = 40;   // sepad dengan QUOTA_FILES pelayan (fail per jam)
   try { pref = Object.assign(pref, JSON.parse(localStorage.getItem(PK) || '{}')); } catch {}
   const savePref = () => { try { localStorage.setItem(PK, JSON.stringify(pref)); } catch {} };
   const box = r => r ? (cache[r.id] = cache[r.id] || { msgs: [], seq: 0 }) : null;
@@ -939,18 +962,41 @@
   function toast(m, ms) { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { t.style.display = 'none'; }, ms || 2600); }
 
   // ─── Lampiran gambar / video ───
-  const MAX_MEDIA = 4, IMG_CAP = 8 * 1048576, VID_CAP = 64 * 1048576, IMG_SIDE = 1600;
+  const MAX_MEDIA = 4, IMG_CAP = 8 * 1048576, VID_CAP = 64 * 1048576, DOC_CAP = 32 * 1048576, IMG_SIDE = 1600;
   const mbytes = n => (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + 'MB';
   function mmss(sec) { const s = Math.max(0, Math.round(sec)); return Math.floor(s / 60) + ':' + pad2(s % 60); }
-  const kindOf = f => String(f.type || '').startsWith('video/') ? 'video' : String(f.type || '').startsWith('image/') ? 'image' : null;
+  // Gambar/video diproses khas; semua yang lain (dokumen, muzik, zip…) pergi
+  // sebagai lampiran fail umum — pelayan simpan nama asal + paksa muat turun.
+  const kindOf = f => String(f.type || '').startsWith('video/') ? 'video' : String(f.type || '').startsWith('image/') ? 'image' : 'file';
+  const AUDIO_EXT = ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac', 'opus', 'amr', 'aiff', 'mid', 'midi'];
+  const VID_EXT = ['mkv', 'avi', 'mov', 'wmv', 'flv', '3gp', 'mpg', 'mpeg', 'ogv'];
+  const IMG_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'heic', 'svg'];
+  const DOC_ICON = { zip:'📦', rar:'📦', '7z':'📦', tar:'📦', gz:'📦', pdf:'📕', doc:'📄', docx:'📄', txt:'📃', xls:'📊', xlsx:'📊', csv:'📊', ppt:'📙', pptx:'📙', apk:'📱', exe:'⚙️', dmg:'⚙️', iso:'💿', js:'📜', py:'📜', html:'📜', json:'📜' };
+  function fileEmoji(ext) {
+    ext = String(ext || '').toLowerCase();
+    if (AUDIO_EXT.includes(ext)) return '🎵';
+    if (VID_EXT.includes(ext)) return '🎬';
+    if (IMG_EXT.includes(ext)) return '🖼';
+    return DOC_ICON[ext] || '📎';
+  }
+  function fileCard(x) {
+    const ext = String(x.ext || '').toLowerCase();
+    const nm = x.name || ('tukuk-' + x.id + '.' + (ext || 'bin'));
+    const meta = [ext ? ext.toUpperCase() : '', x.size ? mbytes(x.size) : ''].filter(Boolean).join(' · ');
+    const dl = x.url ? '<a class="fd" href="' + esc(x.url) + '" download="' + esc(nm) + '" title="Muat turun">⬇️</a>' : '';
+    // Muzik boleh main terus (pelayan hidang audio/* inline); lain-lain muat turun.
+    const player = (x.url && AUDIO_EXT.includes(ext)) ? '<audio class="maudio" src="' + esc(x.url) + '" controls preload="none"></audio>' : '';
+    return '<div class="fcard" title="' + esc(nm) + '"><div class="fi">' + fileEmoji(ext) + '</div>' +
+      '<div class="fn"><b>' + esc(nm) + '</b>' + (meta ? '<span>' + esc(meta) + '</span>' : '') + '</div>' + dl + '</div>' + player;
+  }
   function mediaLabel(list) {
     if (!list || !list.length) return '';
     const k = list[0].kind;
-    const one = k === 'video' ? '🎬 Video' : k === 'audio' ? '🎙️ Suara' : '🖼 Gambar';
+    const one = k === 'video' ? '🎬 Video' : k === 'audio' ? '🎙️ Suara' : k === 'file' ? '📎 Fail' : '🖼 Gambar';
     return list.length > 1 ? one + ' (+' + (list.length - 1) + ')' : one;
   }
   const msgLabel = m => (m && m.t && m.t.trim()) ? m.t : (mediaLabel(m && m.media) || '(kosong)');
-  const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : kind === 'audio' ? '🎙️ Suara' : '🖼 Gambar') + (n > 1 ? ' +' + (n - 1) : '');
+  const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : kind === 'audio' ? '🎙️ Suara' : kind === 'file' ? '📎 Fail' : '🖼 Gambar') + (n > 1 ? ' +' + (n - 1) : '');
   // Sel pemain suara: bar pasif (estetik) + butang main/jeda + durasi.
   function audioCell(x, i) {
     if (!x.url) return '<div class="brk">🎙️ Suara sudah dibuang</div>';
@@ -966,6 +1012,7 @@
     if (!list.length) return '';
     return '<div class="media n' + list.length + '">' + list.map((x, i) => {
       if (x.kind === 'audio') return '<div class="mcell audio">' + audioCell(x, i) + '</div>';
+      if (x.kind === 'file') return '<div class="mcell file">' + fileCard(x) + '</div>';
       const body = !x.url ? '<div class="brk">' + (x.kind === 'video' ? '🎬 Video' : '🖼 Gambar') + ' sudah dibuang</div>'
         : lite
           ? '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="' + esc(x.kind) + '" data-i="' + i + '">' + (x.kind === 'video' ? '🎬' : '🖼') + ' Ketuk untuk muat</div>'
@@ -1020,25 +1067,26 @@
       return { blob, w, h };
     } finally { URL.revokeObjectURL(url); }
   }
+  // Semua jenis fail boleh dihantar: gambar dimampat, video diprobe,
+  // selebihnya (dokumen, muzik, zip…) pergi terus sebagai lampiran umum.
   async function addFiles(list) {
-    const all = Array.from(list || []);
-    const files = all.filter(kindOf);
-    if (all.length && files.length !== all.length) toast('Hanya gambar atau video boleh dilampirkan.');
-    for (const f of files) {
+    for (const f of Array.from(list || [])) {
       if (pending.length >= MAX_MEDIA) { toast('Maksimum ' + MAX_MEDIA + ' fail satu mesej.'); break; }
       const kind = kindOf(f);
-      if (f.size > (kind === 'video' ? VID_CAP : IMG_CAP)) { toast((kind === 'video' ? 'Video' : 'Gambar') + ' terlalu besar (' + mbytes(f.size) + ').'); continue; }
-      const p = { key: seqKey++, kind, blob: f, url: URL.createObjectURL(f), status: 'wait', pct: 0 };
+      const cap = kind === 'video' ? VID_CAP : kind === 'image' ? IMG_CAP : DOC_CAP;
+      if (f.size > cap) { toast((kind === 'video' ? 'Video' : kind === 'image' ? 'Gambar' : 'Fail') + ' terlalu besar (' + mbytes(f.size) + ').'); continue; }
+      const p = { key: seqKey++, kind, name: f.name, blob: f, url: kind === 'file' ? '' : URL.createObjectURL(f), status: 'wait', pct: 0 };
       pending.push(p); renderTray();
       try {
         if (kind === 'video') Object.assign(p, await probeVideo(p.url));
-        else if (/gif/i.test(f.type)) Object.assign(p, await probeImage(p.url));
-        else {
-          const r = await shrinkImage(f);
-          p.blob = r.blob; p.w = r.w; p.h = r.h;
-          if (r.blob !== f) { URL.revokeObjectURL(p.url); p.url = URL.createObjectURL(r.blob); }
+        else if (kind === 'image') {
+          if (/gif/i.test(f.type)) Object.assign(p, await probeImage(p.url));
+          else {
+            const r = await shrinkImage(f);
+            p.blob = r.blob; p.w = r.w; p.h = r.h;
+            if (r.blob !== f) { URL.revokeObjectURL(p.url); p.url = URL.createObjectURL(r.blob); }
+          }
         }
-        const cap = kind === 'video' ? VID_CAP : IMG_CAP;
         if (p.blob.size > cap) { failItem(p, 'Masih terlalu besar (' + mbytes(p.blob.size) + ').'); continue; }
         p.status = 'ready';
       } catch (e) { failItem(p, e.message); }
@@ -1055,6 +1103,7 @@
       '<div class="tcell' + (p.status === 'err' ? ' err' : '') + '" data-k="' + p.key + '">' +
       (p.kind === 'video' ? '<video src="' + esc(p.url) + '" muted playsinline preload="metadata"></video>'
         : p.kind === 'audio' ? '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.4rem">🎙️</div>'
+        : p.kind === 'file' ? '<div class="fic" title="' + esc(p.name || 'fail') + '">' + fileEmoji(String(p.name || '').split('.').pop()) + '</div><div class="fna">' + esc(p.name || 'fail') + '</div>'
         : '<img src="' + esc(p.url) + '" alt="">') +
       (p.status === 'up' ? '<div class="pr" style="width:' + p.pct + '%"></div>' : '') +
       (p.status !== 'ready' ? '<div class="st">' + (p.status === 'up' ? p.pct + '%' : p.status === 'wait' ? '…' : esc(String(p.err || 'gagal').slice(0, 26))) + '</div>' : '') +
@@ -1077,7 +1126,8 @@
       if (p.media && p.media.id) return resolve(p.media);   // sudah naik — jangan ulang
       const q = '?room=' + encodeURIComponent(cur) +
         (p.w ? '&w=' + Math.round(p.w) + '&h=' + Math.round(p.h) : '') + (p.dur ? '&dur=' + Math.round(p.dur) : '') +
-        (p.kind === 'audio' ? '&audio=1' : '');
+        (p.kind === 'audio' ? '&audio=1' : '') +
+        (p.kind === 'file' ? '&name=' + encodeURIComponent(p.name || 'fail') + '&mime=' + encodeURIComponent((p.blob && p.blob.type) || '') : '');
       const x = new XMLHttpRequest();
       p.xhr = x;
       x.open('POST', API + '/media' + q, true);
@@ -1095,6 +1145,38 @@
       x.onabort = () => { p.xhr = null; reject(new Error('Muat naik dibatalkan.')); };
       x.send(p.blob);
     });
+  }
+  // ─── Hantar satu folder penuh ───
+  // Fail dipecah kepada beberapa mesej (4 fail setiap mesej) berlabel nama
+  // folder + nombor bahagian, supaya struktur mudah difahami penerima.
+  let folderBusy = false;
+  async function sendFolder(list) {
+    if (folderBusy) { toast('Folder sedang dihantar…'); return; }
+    if (!online) { toast('Butuh sambungan untuk hantar fail.'); return; }
+    const raw = Array.from(list || []).filter(f => f.size > 0 && f.size <= DOC_CAP);
+    if (!raw.length) { toast('Folder itu tiada fail yang boleh dihantar (kosong atau melebihi 32MB).'); return; }
+    const all = raw.slice(0, chatQuotaFiles);
+    if (raw.length > all.length) toast('Ambil ' + chatQuotaFiles + ' fail pertama sahaja (had sejam).');
+    const fname = String((all[0].webkitRelativePath || '').split('/')[0] || 'Folder');
+    const parts = Math.ceil(all.length / MAX_MEDIA);
+    folderBusy = true;
+    try {
+      for (let i = 0; i < all.length; i += MAX_MEDIA) {
+        const chunk = all.slice(i, i + MAX_MEDIA);
+        const ids = [];
+        for (const f of chunk) {
+          const p = { kind: 'file', name: f.name, blob: f, status: 'up', pct: 0 };
+          try { const m = await uploadOne(p); ids.push(m.id); }
+          catch (e) { toast(e.message); break; }
+        }
+        if (!ids.length) break;
+        const label = '📁 ' + fname + (parts > 1 ? ' — bahagian ' + (Math.floor(i / MAX_MEDIA) + 1) + '/' + parts : '') + ' (' + ids.length + ' fail)';
+        await post('/messages', { room: cur, text: label, media: ids });
+        toast('Dihantar ' + Math.min(i + MAX_MEDIA, all.length) + '/' + all.length + ' fail…');
+        pollMsgs(); loadRooms(false);
+      }
+    } catch (e) { toast(e.message); }
+    folderBusy = false;
   }
 
   // ─── Auth ───
@@ -2155,7 +2237,7 @@
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'tukuk-' + x.id + '.' + (x.ext || (x.kind === 'video' ? 'mp4' : 'jpg'));
+      a.download = x.name || ('tukuk-' + x.id + '.' + (x.ext || (x.kind === 'video' ? 'mp4' : 'jpg')));
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
       toast('Disimpan: ' + a.download);
@@ -2198,6 +2280,7 @@
     }
     if (e.key !== 'Escape') return;
     hideCtx();
+    $('clipPop').hidden = true;
     ['peopleModal', 'groupModal', 'fwdModal', 'setModal', 'profModal', 'prankModal', 'grpInfoModal', 'feedModal', 'notifModal'].forEach(id => $(id).classList.remove('open'));
     if (replyTo || editing) closeReplyEdit();
   });
@@ -2263,7 +2346,7 @@
     const rt = replyTo; // ditutup oleh closeReplyEdit() di bawah, jadi simpan dulu
     // Luar talian: hanya TEKS boleh dijangka (gambar/video perlukan sambungan untuk muat naik).
     if (!online) {
-      if (pending.length) { toast('Butuh sambungan untuk hantar gambar / video.'); return; }
+      if (pending.length) { toast('Butuh sambungan untuk hantar gambar / video / fail.'); return; }
       const temp = { id: 'tmp' + Date.now(), seq: 0, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {}, media: [], queued: true };
       b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
       queueOutbox({ cid: temp.id, room: cur, text, replyTo: rt || null });
@@ -2272,7 +2355,7 @@
     const shots = pending.slice();
     const temp = {
       id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {},
-      media: shots.map(p => ({ id: 'tmpm' + p.key, kind: p.kind, url: p.url, w: p.w, h: p.h, dur: p.dur, ext: '' })),
+      media: shots.map(p => ({ id: 'tmpm' + p.key, kind: p.kind, url: p.url, w: p.w, h: p.h, dur: p.dur, ext: '', name: p.name, size: (p.blob && p.blob.size) || 0 })),
     };
     b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
     busy = true; $('send').disabled = true;
@@ -2891,7 +2974,7 @@
   }
   async function uploadSocialMedia(flag, file) {
     const kind = kindOf(file);
-    if (!kind) throw new Error('Fail bukan gambar atau video.');
+    if (kind === 'file') throw new Error('Fail bukan gambar atau video.');
     if (kind === 'video') { const u = URL.createObjectURL(file); const pr = await probeVideo(u); URL.revokeObjectURL(u); return uploadBlob(flag, file, { w: pr.w, h: pr.h, dur: pr.dur }); }
     const pr = await shrinkImage(file);
     return uploadBlob(flag, pr.blob, { w: pr.w, h: pr.h });
@@ -2901,7 +2984,7 @@
   async function addFeedFiles(list) {
     for (const f of Array.from(list || [])) {
       const kind = kindOf(f);
-      if (!kind) { toast('Hanya gambar atau video boleh dilampirkan.'); continue; }
+      if (kind === 'file') { toast('Post hanya boleh lampir gambar atau video.'); continue; }
       if (feedFiles.length >= FEED_MAX) { toast('Maksimum ' + FEED_MAX + ' fail satu post.'); break; }
       if (f.size > (kind === 'video' ? VID_CAP : IMG_CAP)) { toast('Fail terlalu besar (' + mbytes(f.size) + ').'); continue; }
       const it = { key: feedSeq++, kind, blob: f, url: URL.createObjectURL(f), status: 'wait' };
@@ -3382,9 +3465,13 @@
   }
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-aud]'); if (b) toggleAud(b); });
 
-  // ─── Lampiran: pemilih fail, seret-lepas, tampal ───
-  $('clipBtn').onclick = () => $('file').click();
+  // ─── Lampiran: pemilih fail, folder, seret-lepas, tampal ───
+  $('clipBtn').onclick = e => { e.stopPropagation(); const cp = $('clipPop'); cp.hidden = !cp.hidden; };
+  $('cpFile').onclick = () => { $('clipPop').hidden = true; $('file').click(); };
+  $('cpFolder').onclick = () => { $('clipPop').hidden = true; $('folder').click(); };
+  document.addEventListener('click', e => { const cp = $('clipPop'); if (!cp.hidden && !cp.contains(e.target)) cp.hidden = true; });
   $('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+  $('folder').onchange = e => { sendFolder(e.target.files); e.target.value = ''; };
   $('vClose').onclick = closeView;
   $('vPrev').onclick = () => stepView(-1);
   $('vNext').onclick = () => stepView(1);
