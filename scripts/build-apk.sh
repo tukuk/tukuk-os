@@ -43,10 +43,12 @@ WORK=apk/build
 KS=apk/tukuk-chat-release.jks          # kekunci edaran (self-signed); git-ignored
 ALIAS=tukuk-chat
 PASS=tukukchat
+KEYPASS=""                              # kosong => ikut PASS (ditetapkan di bawah)
 DNAME="CN=Tukuk-OS, OU=T Chat, O=tukuk.org, L=Kuala Lumpur, C=MY"
 # Kata laluan + DN signing SEJATI disimpan di fail ini (git-ignored — rahsia,
 # JANGAN di-commit). Sumberkan untuk menimpa nilai bawaan di atas.
 if [ -f apk/keystore.env ]; then . apk/keystore.env; fi
+KEYPASS="${KEYPASS:-$PASS}"             # kata laluan kunci; jika tak ditetapkan = PASS
 ICON=public/icons/apps/chat-512.png    # ikon pelancaran (512×512)
 OUT=public/downloads/tukuk-chat.apk
 
@@ -77,14 +79,14 @@ cp "$WORK/base.apk" "$WORK/app.unsigned.apk"
 ( cd "$WORK/dex" && "$ZIP" -q "$OLDPWD/$WORK/app.unsigned.apk" classes.dex )
 "$ZIPALIGN" -f -p 4 "$WORK/app.unsigned.apk" "$WORK/app.aligned.apk"
 
-[ -f "$KS" ] || "$KEYTOOL" -genkeypair -v -keystore "$KS" -alias "$ALIAS" \
+[ -f "$KS" ] || "$KEYTOOL" -genkeypair -v -keystore "$KS" -storetype JKS -alias "$ALIAS" \
   -keyalg RSA -keysize 2048 -validity 10000 \
-  -storepass "$PASS" -keypass "$PASS" \
+  -storepass "$PASS" -keypass "$KEYPASS" \
   -dname "$DNAME"
 
 mkdir -p "$(dirname "$OUT")"
-"$APKSIGNER" sign --ks "$KS" --ks-key-alias "$ALIAS" \
-  --ks-pass "pass:$PASS" --key-pass "pass:$PASS" --out "$OUT" "$WORK/app.aligned.apk"
+"$APKSIGNER" sign --ks "$KS" --ks-type JKS --ks-key-alias "$ALIAS" \
+  --ks-pass "pass:$PASS" --key-pass "pass:$KEYPASS" --out "$OUT" "$WORK/app.aligned.apk"
 "$APKSIGNER" verify --print-certs "$OUT" >/dev/null
 
 echo "build-apk: ✓ $OUT ($(du -h "$OUT" | cut -f1)) — dibina $(date -Is)"
