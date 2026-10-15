@@ -17,6 +17,5 @@
     <path d="M108 30 20 62l26 10 8 26 14-18 22 16z" fill="url(#plane)"/>
     <path d="M46 72 108 30 68 80z" fill="#a9ccff"/>
   </g>
-  <circle cx="96" cy="96" r="12" fill="#3fd06a" stroke="#fff" stroke-width="4"/>
   <rect x="6" y="6" width="116" height="116" rx="24" fill="none" stroke="#000000" stroke-opacity="0.16"/>
 </svg>

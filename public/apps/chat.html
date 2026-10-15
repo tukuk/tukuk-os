@@ -7,7 +7,7 @@
 <meta name="description" content="T Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am atau mesej peribadi 1-ke-1, hantar gambar & video. Tetapan urus nama, kata laluan, kawan, cari orang, sekat/buka sekat. Mesej tiba serta-merta melalui sambungan langsung. Reply, reaction, edit, carian, wallpaper.">
 <link rel="canonical" href="https://tukuk.org/apps/chat">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
-<link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg">
+<link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg?v=2">
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
 <style>
@@ -248,12 +248,12 @@
 </style>
 </head>
 <body>
-<header><a class="back" href="/apps">← Apps</a><h1><img class="hlogo" src="/icons/apps/chat.svg" alt=""> T Chat</h1></header>
+<header><a class="back" href="/apps">← Apps</a><h1><img class="hlogo" src="/icons/apps/chat.svg?v=2" alt=""> T Chat</h1></header>
 
 <!-- ─── Skrin daftar / login ─── -->
 <div id="auth">
   <div class="brand">
-    <div class="logo"><img src="/icons/apps/chat.svg" alt="Logo T Chat"></div>
+    <div class="logo"><img src="/icons/apps/chat.svg?v=2" alt="Logo T Chat"></div>
     <h2>T Chat</h2>
     <p>Chat sebenar dalam pelayar — tanpa e-mel, tanpa aplikasi.</p>
   </div>
@@ -1064,7 +1064,7 @@
     if (!(window.Notification && Notification.permission === 'granted')) return;
     const prev = (m.media && m.media.length) ? mediaWord(m.media[0].kind, m.media.length) : norm(m.t || '');
     try {
-      const nt = new Notification(nameOf(m), { body: prev.slice(0, 120) || '(mesej)', tag: 'chat-' + r.id, icon: '/icons/apps/chat.svg', silent: true });
+      const nt = new Notification(nameOf(m), { body: prev.slice(0, 120) || '(mesej)', tag: 'chat-' + r.id, icon: '/icons/apps/chat.svg?v=2', silent: true });
       nt.onclick = () => { try { window.focus(); openRoom(r.id); } catch { /* noop */ } nt.close(); };
     } catch { /* Notification API ditolak */ }
   }
