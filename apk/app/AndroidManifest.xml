@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- T Chat — pembungkus WebView native untuk Android/Huawei.
+     Aplikasi ini HANYA memuat https://tukuk.org/apps/chat dalam WebView,
+     dengan kebenaran kamera/mikrofon (panggilan WebRTC) + pemilihan fail
+     (lampiran). Ia dibina terus dengan aapt2/d8/apksigner (tiada Gradle). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.tukuk.chat"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
+
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+  <uses-permission android:name="android.permission.VIBRATE" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <!-- Kamera & mikrofon diguna untuk panggilan, tetapi tidak wajib — aplikasi
+       masih boleh dipasang pada peranti tanpa kamera untuk bersembang sahaja. -->
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+  <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+  <application
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:theme="@android:style/Theme.Material.NoActionBar"
+      android:hardwareAccelerated="true"
+      android:usesCleartextTraffic="false"
+      android:allowBackup="true"
+      android:supportsRtl="true">
+
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTask"
+        android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode|density"
+        android:windowSoftInputMode="adjustResize">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      <!-- Pautan terus https://tukuk.org/apps/chat dibuka dalam aplikasi ini. -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" android:host="tukuk.org" android:pathPrefix="/apps/chat" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

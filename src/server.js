@@ -215,6 +215,13 @@ app.use(express.static(PUBLIC_DIR, {
   maxAge: '1h',
   redirect: false,   // jangan redirect /apps → /apps/ — biar lalu ke STATIC_PAGES
   setHeaders(res, filePath) {
+    // APK native T Chat — hidang sebagai muat turun dengan nama fail mesra Android.
+    if (filePath.endsWith('.apk')) {
+      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+      res.setHeader('Content-Disposition', 'attachment; filename="Tukuk-Chat.apk"');
+      res.setHeader('Cache-Control', 'no-cache');
+      return;
+    }
     // Service worker: JANGAN sekali cache — pelanggan mesti dapat versi terkini terus.
     if (filePath.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-store');
     // HTML: biar revalidate setiap kali supaya kemas-kini segera kelihatan.

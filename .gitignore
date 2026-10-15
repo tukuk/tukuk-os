@@ -55,3 +55,8 @@ models/
 # ─── Python bytecode (Kaggle kernels) ───
 __pycache__/
 *.pyc
+
+# APK build (scripts/build-apk.sh) — kekunci edaran self-signed +_work temp; hanya APK final di public/downloads di-commit
+apk/build/
+apk/*.jks
+public/downloads/*.idsig

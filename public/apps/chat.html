@@ -403,7 +403,7 @@
     <b>Tetapan (⚙️):</b> tukar nama &amp; bio, tukar kata laluan, senarai kawan, cari orang, sekat/buka sekat, dan keluarkan sesi peranti lain.<br>
     <b>📹 Panggilan:</b> dalam DM, tekan 📹 atau 📞 untuk panggilan video/suara terus antara peranti — skrin masuk menunjukkan <i>siapa</i> pemanggil (nama, Tukuk ID, kawan atau tidak) sebelum anda jawab.<br>
     <b>🎭 Prank:</b> tekan butang topeng di bar penghantar untuk paparkan panggilan masuk palsu penuh-skrin dengan nama bebas — berjalan walaupun luar talian.<br>
-    <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau jana fail APK.<br>
+    <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau muat turun APK Android terus.<br>
     <b>Nasib baik:</b> guna kata laluan yang anda tak pakai di tempat lain — pemulihan akaun belum tersedia.
   </div>
 </div>
@@ -616,9 +616,9 @@
       <div><b>🤖 Android &amp; Huawei (HarmonyOS)</b><span>Chrome atau Petal Browser → menu <i>⋮</i> → <i>Pasang aplikasi</i> / <i>Hantar ke Skrin Utama</i>.</span></div>
       <div><b>🍎 iPhone &amp; iPad (iOS)</b><span>Safari → butang <i>Kongsi</i> → <i>Tambah ke Skrin Utama</i>. (Pemasangan automatik hanya tersedia di Chrome/Edge.)</span></div>
       <div><b>🪟 Windows &amp; 🐧 Linux</b><span>Edge atau Chrome → ikon <i>Pasang</i> di bar alamat, atau <i>⋮ → Aplikasi → Pasang aplikasi ini</i>.</span></div>
-      <div><b>📦 Muat turun APK</b><span>Perlu fail APK untuk dikongsi/dipasang terus? Jana APK daripada aplikasi web ini di PWA Builder — aplikasi yang sama, dibungkus untuk Android/Huawei.</span></div>
+      <div><b>📦 Muat turun APK (Android)</b><span>Mahu pasang tanpa store? Muat turun <b>T Chat.apk</b> terus — pembungkus native (Android 6.0+) yang membuka aplikasi ini penuh-skrin, termasuk panggilan kamera/mikrofon &amp; lampiran. Buka fail →benarkan &ldquo;sumber tak diketahui&rdquo;→ Pasang.</span></div>
     </div>
-    <div class="mbtns"><button class="warn" id="stApk">📥 Jana APK (PWA Builder)</button></div>
+    <div class="mbtns"><button class="prim" id="stApk">📥 Muat turun T Chat.apk</button><button id="stApkPwa">🌐 Jana sendiri (PWA Builder)</button></div>
     <div class="pfmeta">Selepas dipasang, T Chat membuka tanpa bar pelayar, mengekalkan sesi, dan boleh membaca sembang serta menghantar mesej ke peti keluar walaupun luar talian.</div>
   </div>
 
@@ -2656,7 +2656,15 @@
       paintAppTab();
     } catch { /* dialog sudah digunakan/tidak tersedia */ }
   };
-  $('stApk').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
+  $('stApk').onclick = () => {
+    // Muat turun APK native yang sebenar dan sudah ditandatangani (fail statik).
+    const a = document.createElement('a');
+    a.href = '/downloads/tukuk-chat.apk';
+    a.download = 'Tukuk-Chat.apk';
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Memuat turun T Chat.apk — buka fail untuk pasang (Android 6+).', 4200);
+  };
+  $('stApkPwa').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
 
   // ─── Emoji picker ───
   // Intl.Segmenter memisahkan grafem (emoji ZWJ + variation selector) dengan betul.
