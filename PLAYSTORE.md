@@ -17,7 +17,7 @@ artefak + salinan stor sudah diuruskan di sini supaya anda tinggal hantar.
 | Build APK + **AAB** | `scripts/build-apk.sh` | APK untuk muat turun langsung; **`.aab` untuk Play** dijana bila `bundletool` ada (kalau tiada, skrip cetak arahan pasang) |
 | Salinan stor (EN + MS) | `fastlane/metadata/android/{en-US,ms}/*` | title (≤30), short desc (≤80), full desc (≤4000), keywords, changelog `2.txt` |
 | Automasi upload | `fastlane/{Appfile,Fastfile}` | `fastlane android upload` (pilihan) jika anda letak `google-cloud-key.json` |
-| Senarai aset gambar | `fastlane/metadata/android/images-README.md` | ikon 512, **feature graphic 1024×500**, ≥2 skrin telefon |
+| Aset gambar stor | `fastlane/metadata/android/{en-US,ms}/images/` | ✅ **ikon 512, feature graphic 1024×500, 4 skrin telefon 1080×1920** sudah dijana & diletak |
 | Polisi privasi (wajib) | https://tukuk.org/privacy | sudah live — letak URL ini di Console |
 
 Kunci signing **upload key** sedia ada: `apk/tukuk-chat-release.jks`
@@ -37,7 +37,7 @@ Ini tidak boleh dilakukan dari kod/saya — perlu tindakan anda:
    hubungan, **penilaian kandungan** (IARD), **keselamatan data** (data safety),
    dasar privasi, negara sasaran, harga. Semuanya borang web — saya tak boleh
    isi untuk anda.
-3. **Muat naik AAB** ke Console (seret-faizal) ATAU via `fastlane supply`
+3. **Muat naik AAB** ke Console (seret-lepas) ATAU via `fastlane supply`
    dengan *service account key* yang anda cipta.
 
 ---
