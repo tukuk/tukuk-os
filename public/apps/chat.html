@@ -1165,12 +1165,12 @@
     try {
       for (let i = 0; i < all.length; i += MAX_MEDIA) {
         const chunk = all.slice(i, i + MAX_MEDIA);
-        const ids = [];
-        for (const f of chunk) {
+        // Selari dalam satu bahagian; mesej tetap dihantar ikut urutan bahagian.
+        const ups = await Promise.all(chunk.map(f => {
           const p = { kind: 'file', name: f.name, blob: f, status: 'up', pct: 0 };
-          try { const m = await uploadOne(p); ids.push(m.id); }
-          catch (e) { toast(e.message); break; }
-        }
+          return uploadOne(p).then(m => m.id, () => null);
+        }));
+        const ids = ups.filter(Boolean);
         if (!ids.length) break;
         const label = '📁 ' + fname + (parts > 1 ? ' — bahagian ' + (Math.floor(i / MAX_MEDIA) + 1) + '/' + parts : '') + ' (' + ids.length + ' fail)';
         await post('/messages', { room: cur, text: label, media: ids });
@@ -2363,11 +2363,17 @@
     busy = true; $('send').disabled = true;
     const ids = [];
     try {
-      for (const p of shots) {
-        p.status = 'up'; p.pct = 0; renderTray();
-        const m = await uploadOne(p);
-        p.status = 'done'; ids.push(m.id);
+      // Muat naik SELARI — semua fail dihantar serentak (lebih laju), tetapi id
+      // disusun ikut urutan tetamu supaya paparan mesej kekal sama seperti sedia kala.
+      for (const p of shots) { p.status = 'up'; p.pct = 0; }
+      renderTray();
+      const ups = await Promise.allSettled(shots.map(p => uploadOne(p)));
+      let alasan = null;
+      for (let k = 0; k < shots.length; k++) {
+        if (ups[k].status === 'fulfilled') { shots[k].status = 'done'; ids.push(ups[k].value.id); }
+        else if (!alasan) alasan = ups[k].reason;
       }
+      if (alasan) throw alasan; // ralat pertama dinaikkan — tangkapan di bawah kekal sama
       const j = await post('/messages', { room: cur, text, replyTo: rt, media: ids });
       clearPending();
       // ganti temp ikut id — poll mungkin sudah sisip salinan pelayan (elak berganda seketika)
