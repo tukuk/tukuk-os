@@ -186,7 +186,7 @@
   #cPrank .sm { font-size:.86rem; color:#ffe9a8; max-width:32ch; line-height:1.55; text-shadow:0 2px 10px rgba(0,0,0,.7); }
   @keyframes pkpop { from { transform:scale(.3) rotate(-8deg); opacity:0; } to { transform:scale(1) rotate(0); opacity:1; } }
   @keyframes pkin { from { opacity:0; } to { opacity:1; } }
-  /* TukuCaller™ — parodi pengenalan pemanggil (crowd-tag gaya apl Truecaller) */
+  /* TukuCaller™ — parodi pengenalan pemanggil (tag crowd-reported gaya apl pencari nombor) */
   #cTag { display:none; margin:9px auto 0; }
   #cTag.on { display:block; animation:tagpop .42s cubic-bezier(.2,1.5,.4,1) both; }
   #cTag .tk-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 13px; border-radius:999px; font-size:.84rem; font-weight:800; letter-spacing:.01em; box-shadow:0 4px 16px rgba(0,0,0,.4); }
@@ -1533,7 +1533,7 @@
     ringNode = null;
   }
 
-  // ── ID pemanggil (gaya Truecaller): kenal pasti siapa sebelum menyahut ──
+  // ── ID pemanggil (gaya TukuCaller): kenal pasti siapa sebelum menyahut ──
   async function identify(id) {
     if (pById[id]) return pById[id];
     try { const j = await call('/user?q=' + encodeURIComponent(id)); return j.profile || null; } catch { return null; }
