@@ -43,6 +43,7 @@
   .app-card.feature p { font-size:.9rem; margin:6px 0 10px; }
   .app-card.feature .tag { display:inline-block; font-size:.72rem; font-weight:700; color:#fff; background:var(--accent); border-radius:999px; padding:3px 10px; }
   .app-card.feature .cta { flex:none; align-self:center; text-align:center; background:var(--accent); color:#fff; border-radius:10px; padding:11px 18px; font-weight:700; font-size:.92rem; }
+  .app-card.feature .cta.apkbtn { background:transparent; color:var(--accent); border:1px solid var(--accent); cursor:pointer; }
   @media (max-width:560px){ .app-card.feature { flex-direction:column; align-items:flex-start; gap:12px; } .app-card.feature .cta { align-self:stretch; } }
   footer { border-top:1px solid var(--line); color:var(--muted); text-align:center; font-size:.88rem; padding:22px 0 34px; margin-top:20px; }
   footer a { color:var(--accent); text-decoration:none; margin:0 8px; }
@@ -59,7 +60,7 @@
   <div class="search"><input id="q" type="search" placeholder="Search apps…" aria-label="Search apps"></div>
 
   <div class="shelf" id="shelf">
-    <a class="app-card feature" href="/apps/chat"><div class="icon"><img src="/icons/apps/chat.svg?v=3" alt="T Chat" width="58" height="58" style="border-radius:15px;display:block;box-shadow:0 6px 18px rgba(31,111,235,.35)"></div><div class="hero"><span class="tag">★ Most popular · Live messenger</span><h2>T Chat</h2><p>A real multi-user messenger that runs in your browser — and keeps working on the worst connections. Install it as a full app on Android, iOS, Windows, Linux and Huawei, or download the native Android APK directly (currently a <strong>beta</strong> build — the stable release is still in testing; with a one-tap data-saver mode for 2G/3G/GPRS, an offline outbox that resends queued texts on reconnect, and media that loads only when you tap it). Make <strong>video and voice calls</strong> peer-to-peer over WebRTC, with TukuCaller™-style caller identification before you answer, read receipts, and a <strong>prank call mode</strong> that fakes a full-screen incoming call — no network needed. Photo &amp; video messages, reply, forward, reactions, edit, search, friends &amp; blocking, wallpapers and sounds. Sign up with just a name and password.</p><span class="badge">Installable on every OS · Native Android APK (Beta) · Video &amp; voice calls · Caller ID · Prank calls · Works on 2G/3G/GPRS · Offline outbox</span></div><span class="cta">Open T Chat →</span></a>
+    <a class="app-card feature" href="/apps/chat"><div class="icon"><img src="/icons/apps/chat.svg?v=3" alt="T Chat" width="58" height="58" style="border-radius:15px;display:block;box-shadow:0 6px 18px rgba(31,111,235,.35)"></div><div class="hero"><span class="tag">★ Most popular · Live messenger</span><h2>T Chat</h2><p>A real multi-user messenger that runs in your browser — and keeps working on the worst connections. Install it as a full app on Android, iOS, Windows, Linux and Huawei, or download the native Android APK directly (currently a <strong>beta</strong> build — the stable release is still in testing; with a one-tap data-saver mode for 2G/3G/GPRS, an offline outbox that resends queued texts on reconnect, and media that loads only when you tap it). Make <strong>video and voice calls</strong> peer-to-peer over WebRTC, with TukuCaller™-style caller identification before you answer, read receipts, and a <strong>prank call mode</strong> that fakes a full-screen incoming call — no network needed. Photo &amp; video messages, reply, forward, reactions, edit, search, friends &amp; blocking, wallpapers and sounds. Sign up with just a name and password.</p><span class="badge">Installable on every OS · Native Android APK (Beta) · Video &amp; voice calls · Caller ID · Prank calls · Works on 2G/3G/GPRS · Offline outbox</span></div><span style="display:flex;flex-direction:column;gap:10px;flex:none;align-self:center"><span class="cta">Open T Chat →</span><span class="cta apkbtn" id="dlApk" role="link" tabindex="0">📲 Download APK</span></span></a>
     <a class="app-card" href="/apps/notes"><div class="icon">📝</div><h2>Notes</h2><p>Plain notes with local autosave, tags, search and Markdown-style formatting. Stored in your browser.</p><span class="badge">Local-first</span><span class="go">Open →</span></a>
     <a class="app-card" href="/apps/calc"><div class="icon">🧮</div><h2>Calculator</h2><p>Keyboard-friendly calculator with scientific mode, history, parentheses and copy result.</p><span class="badge">Offline</span><span class="go">Open →</span></a>
     <a class="app-card" href="/apps/todo"><div class="icon">✅</div><h2>To-Do</h2><p>Simple task list with priorities, filters, and localStorage persistence. Nothing leaves your device.</p><span class="badge">Local-first</span><span class="go">Open →</span></a>
@@ -96,6 +97,12 @@
       c.style.display = text.includes(query) ? '' : 'none';
     });
   });
+  // Satu tekan → halaman muat turun sejagat (auto-pilih APK/PWA ikut OS).
+  // preventDefault perlu sebab span ini berada dalam <a> kad induk.
+  const dl = document.getElementById('dlApk');
+  const goDl = e => { e.preventDefault(); e.stopPropagation(); location.href = '/download'; };
+  dl.addEventListener('click', goDl);
+  dl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goDl(e); } });
 })();
 </script>
 </body>

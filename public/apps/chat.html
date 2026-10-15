@@ -596,7 +596,7 @@
     <b>Tetapan (⚙️):</b> tukar nama &amp; bio, tukar kata laluan, senarai kawan, cari orang, sekat/buka sekat, dan keluarkan sesi peranti lain.<br>
     <b>📹 Panggilan:</b> dalam DM, tekan 📹 atau 📞 untuk panggilan video/suara terus antara peranti — skrin masuk menunjukkan <i>siapa</i> pemanggil (nama, Tukuk ID, kawan atau tidak) sebelum anda jawab.<br>
     <b>🎭 Prank:</b> tekan butang topeng di bar penghantar untuk paparkan panggilan masuk palsu penuh-skrin dengan nama bebas — berjalan walaupun luar talian.<br>
-    <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau muat turun APK Android terus (versi beta — sedang dicuba).<br>
+    <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau tekan <b>🌐 Muat turun (semua OS)</b> untuk halaman auto-pilih: APK terus di Android/Huawei/ChromeOS, PWA di Windows/Linux/macOS, Add to Home Screen di iOS.<br>
     <b>Selamat:</b> guna kata laluan yang anda tak pakai di tempat lain, dan jana <b>kod pemulihan</b> dalam ⚙️ Keselamatan — satu kod boleh tetapkan semula akses jika anda lupa kata laluan.
   </div>
 </div>
@@ -846,7 +846,7 @@
       <div><b>📦 Muat turun APK (Android · Beta)</b><span>Mahu pasang tanpa store? Muat turun <b>T Chat.apk</b> terus — pembungkus native (Android 6.0+) yang membuka aplikasi ini penuh-skrin, termasuk panggilan kamera/mikrofon &amp; lampiran. Ini <b>versi beta</b> — ciri sedang dicuba dan mungkin berubah; versi stabil menyusul. Buka fail →benarkan &ldquo;sumber tak diketahui&rdquo;→ Pasang.</span></div>
       <div><b>🔒 Domain khas T Chat</b><span id="tchatNote">Ruang khusus tanpa enjin carian atau iklan: <a href="https://tchat.tukuk.org/" target="_blank" rel="noopener"><b>tchat.tukuk.org</b></a>. Sesi, notifikasi dan PWA anda di sini <b>berasing</b> daripada tukuk.org — lebih kemas dan lebih selamat. Anda masih di <b id="tchatHere">tukuk.org</b>.</span></div>
     </div>
-    <div class="mbtns"><button class="prim" id="stApk">📥 Muat turun T Chat.apk (Beta)</button><button id="stApkPwa">🌐 Jana sendiri (PWA Builder)</button></div>
+    <div class="mbtns"><button class="prim" id="stApk">📥 Muat turun T Chat.apk (Beta)</button><button id="stUniversal">🌐 Muat turun (semua OS)</button><button id="stApkPwa">🌐 Jana sendiri (PWA Builder)</button></div>
     <div class="pfmeta">Selepas dipasang, T Chat membuka tanpa bar pelayar, mengekalkan sesi, dan boleh membaca sembang serta menghantar mesej ke peti keluar walaupun luar talian.</div>
   </div>
 
@@ -3401,6 +3401,9 @@
     toast('Memuat turun T Chat.apk (beta) — buka fail untuk pasang (Android 6+).', 4200);
   };
   $('stApkPwa').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
+  // Halaman muat turun sejagat — auto-pilih APK (Android/Huawei/ChromeOS), PWA
+  // (Windows/Linux/macOS) atau Add to Home Screen (iOS) ikut OS pelawat.
+  $('stUniversal').onclick = () => { location.href = '/download'; };
 
   // Domain khas: sesuaikan nota & pautan bila apl dibuka di tchat.tukuk.org.
   const IS_TCHAT = /(^|\.)tchat\./i.test(location.hostname) || location.hostname === 'tchat.tukuk.org';

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muat Turun T Chat — Semua OS — Tukuk-OS</title>
+<meta name="description" content="Satu tekan untuk memuat turun T Chat: APK Android/Huawei/ChromeOS, pasang sebagai aplikasi PWA di Windows/Linux/macOS, atau Add to Home Screen di iOS. Berjalan di semua sistem pengoperasian.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="Muat Turun T Chat — Semua OS">
+<meta property="og:description" content="Tekan Download APK — T Chat boleh dipasang di Android, Huawei, iOS, Windows, Linux, macOS, ChromeOS dan semua OS.">
+<meta property="og:url" content="https://tukuk.org/download">
+<link rel="canonical" href="https://tukuk.org/download">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:48px 20px 80px; }
+  header { text-align:center; }
+  .mark { width:92px; height:92px; border-radius:22px; box-shadow:0 10px 30px rgba(31,111,235,.35); }
+  h1 { margin:16px 0 6px; font-size:2rem; letter-spacing:-.5px; }
+  h1 .accent { color:var(--accent); }
+  .tagline { color:var(--muted); margin:0 0 26px; font-size:1.02rem; }
+  .hero { text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:26px 20px; }
+  .osbadge { display:inline-block; font-size:.8rem; color:var(--accent); border:1px solid var(--accent); border-radius:999px; padding:3px 12px; margin-bottom:14px; }
+  button.big { display:inline-block; background:var(--accent); color:#fff; border:none; border-radius:12px; padding:14px 28px; font-size:1.05rem; font-weight:600; cursor:pointer; }
+  button.big:hover { filter:brightness(1.1); }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); border-radius:12px; padding:13px 22px; font-size:.98rem; cursor:pointer; }
+  .sub { color:var(--muted); font-size:.84rem; margin-top:10px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-top:22px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; font-size:.88rem; }
+  .card b { display:block; margin-bottom:6px; font-size:.95rem; }
+  .card span { color:var(--muted); line-height:1.5; }
+  .card.on { outline:2px solid var(--accent); }
+  .sect { margin:34px 0 10px; color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; text-align:center; }
+  .share { display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:14px; }
+  .share input { width:min(340px,100%); padding:9px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:.88rem; }
+  #qrBox { text-align:center; margin-top:14px; }
+  #qrBox img { background:#fff; border-radius:10px; padding:6px; }
+  #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#1c2740; color:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 16px; font-size:.88rem; opacity:0; pointer-events:none; transition:opacity .25s; }
+  #toast.show { opacity:1; }
+  nav.top { display:flex; justify-content:center; flex-wrap:wrap; gap:14px; font-size:.86rem; margin-top:36px; }
+  nav.top a { color:var(--muted); text-decoration:none; }
+  nav.top a:hover { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img class="mark" src="/icons/apps/chat.svg" alt="Ikon T Chat" width="92" height="92">
+    <h1>T <span class="accent">Chat</span></h1>
+    <p class="tagline">Meshenjer + panggilan video/suara — boleh dipasang di <b>semua OS</b>. Satu tekan sahaja.</p>
+  </header>
+
+  <div class="hero">
+    <div class="osbadge" id="osBadge">Mengesan peranti anda…</div>
+    <div id="primary">
+      <button class="big" id="mainBtn">📲 Muat turun &amp; pasang</button>
+    </div>
+    <div id="hint" class="sub"></div>
+    <div class="share">
+      <input id="linkInput" readonly value="">
+      <button class="ghost" id="copyBtn">⧉ Salin pautan</button>
+    </div>
+    <div id="qrBox"></div>
+    <p class="sub">Buka pautan ini di peranti lain (contoh: telefon) untuk pasang di sana.</p>
+  </div>
+
+  <div class="sect">Cara pasang ikut sistem pengoperasian</div>
+  <div class="cards" id="cards">
+    <div class="card" data-os="android"><b>🤖 Android</b><span>Tekan <i>Download APK</i> → benarkan “sumber tidak diketahui” → Pasang. APK beta 1.0, Android 6.0+, ±65 KB.</span></div>
+    <div class="card" data-os="huawei"><b>📱 Huawei (HarmonyOS)</b><span>Sama seperti Android — muat turun APK terus dan pasang. Atau Chrome → ⋮ → <i>Pasang aplikasi</i>.</span></div>
+    <div class="card" data-os="chromeos"><b>💻 ChromeOS</b><span>Kebanyakan Chromebook menyokong APK (Google Play). Jika tiada, guna butang <i>Pasang aplikasi</i> (PWA).</span></div>
+    <div class="card" data-os="windows"><b>🪟 Windows</b><span>Edge/Chrome → ikon <i>Pasang</i> di bar alamat — T Chat jadi aplikasi desktop penuh. Mod gelap, notifikasi, work offline.</span></div>
+    <div class="card" data-os="linux"><b>🐧 Linux</b><span>Chrome/Chromium/Firefox ⚠ (Chromium: ⋮ → Aplikasi → <i>Pasang aplikasi ini</i>). Jadi aplikasi desktop seperti native.</span></div>
+    <div class="card" data-os="macos"><b>🍎 macOS</b><span>Safari/Chrome → <i>Fail → Tambah ke Dock</i> (Chrome: ⋮ → Aplikasi → Pasang). Nampak seperti aplikasi biasa.</span></div>
+    <div class="card" data-os="ios"><b>📱 iOS / iPadOS</b><span>Buka di Safari → kongsi (ikon □↑) → <i>Add to Home Screen</i>. Berjalan seperti aplikasi, tanpa App Store.</span></div>
+    <div class="card" data-os="other"><b>🌐 OS lain</b><span>T Chat ialah aplikasi web (PWA) — apa-apa pelayar moden boleh gunakan dan pasang. Android-like (Fire OS, Ubuntu Touch…) → APK terus.</span></div>
+  </div>
+
+  <nav class="top">
+    <a href="/apps/chat">Buka T Chat web</a>
+    <a href="/apps">Semua aplikasi</a>
+    <a href="/store">Store</a>
+    <a href="/">tukuk.org</a>
+  </nav>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var UA = navigator.userAgent || '';
+  var APK = '/downloads/tukuk-chat.apk';
+  var PAGE = location.origin + '/download';
+  var bip = null;
+
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._tm); t._tm = setTimeout(function () { t.classList.remove('show'); }, 2400);
+  }
+  function detect() {
+    if (/Android/.test(UA)) {
+      if (/Huawei|HONOR|HarmonyOS|HMSCore/i.test(UA)) return 'huawei';
+      return 'android';
+    }
+    if (/CrOS/.test(UA)) return 'chromeos';
+    if (/iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+    if (/Macintosh|Mac OS X/.test(UA)) return 'macos';
+    if (/Windows/.test(UA)) return 'windows';
+    if (/Linux|X11/.test(UA)) return 'linux';
+    return 'other';
+  }
+  var OS_LABELS = {
+    android: '🤖 Android', huawei: '📱 Huawei / HarmonyOS', chromeos: '💻 ChromeOS',
+    windows: '🪟 Windows', linux: '🐧 Linux', macos: '🍎 macOS', ios: '📱 iOS', other: '🌐 Peranti anda'
+  };
+  function downloadApk() {
+    var a = document.createElement('a');
+    a.href = APK; a.download = 'Tukuk-Chat-Beta.apk';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function buildPrimary(os) {
+    $('osBadge').textContent = 'Dikesan: ' + (OS_LABELS[os] || OS_LABELS.other);
+    var btn = $('mainBtn'), hint = $('hint');
+    for (var el of document.querySelectorAll('.card')) el.classList.toggle('on', el.dataset.os === os);
+    if (os === 'android' || os === 'huawei') {
+      btn.textContent = '📥 Download APK';
+      hint.innerHTML = 'Fail <b>Tukuk-Chat-Beta.apk</b> (±65 KB, Android 6.0+) akan dimuat serta-merta. Buka → Pasang.';
+      btn.onclick = function () { downloadApk(); toast('APK dimuat turun — buka fail untuk pasang.'); };
+      return;
+    }
+    if (os === 'chromeos') {
+      btn.textContent = '📥 Download APK';
+      hint.innerHTML = 'Kebanyakan Chromebook pasang APK terus. Chromebook anda tiada Google Play? Guna <b>⋮ → Aplikasi → Pasang aplikasi ini</b> (PWA).';
+      btn.onclick = function () { downloadApk(); toast('APK dimuat turun.'); };
+      return;
+    }
+    if (os === 'windows' || os === 'linux' || os === 'macos') {
+      if (bip) {
+        btn.textContent = '📲 Pasang aplikasi sekarang (PWA)';
+        hint.innerHTML = 'T Chat dipasang sebagai aplikasi desktop penuh — tanpa bar pelayar. Mahu APK? <button class="ghost" id="apkAlt" style="padding:4px 12px;font-size:.85rem">📥 APK untuk telefon</button>';
+        btn.onclick = function () { bip.prompt(); };
+        $('apkAlt').onclick = function () { downloadApk(); toast('APK dimuat turun — pindahkan ke telefon anda.'); };
+      } else {
+        btn.textContent = '📲 Pasang sebagai aplikasi (PWA)';
+        hint.innerHTML = 'Cari ikon <b>Pasang</b> di bar alamat pelayar anda, atau menu <b>⋮ → Aplikasi → Pasang aplikasi ini</b>. Perlu APK (Windows 11 / telefon)? <button class="ghost" id="apkAlt" style="padding:4px 12px;font-size:.85rem">📥 Download APK</button>';
+        btn.onclick = function () { toast('Buka menu ⋮ pelayar → Aplikasi → Pasang aplikasi ini.'); };
+        $('apkAlt').onclick = function () { downloadApk(); toast('APK dimuat turun.'); };
+      }
+      return;
+    }
+    if (os === 'ios') {
+      btn.textContent = '📱 Cara pasang di iPhone / iPad';
+      hint.innerHTML = 'Buka <b>Safari</b> → tekan ikon kongsi <b>□↑</b> → <i>Add to Home Screen</i>. T Chat akan berjalan seperti aplikasi biasa. (APK Android tidak jalan di iOS — guna PWA.)';
+      btn.onclick = function () { toast('Safari → kongsi □↑ → Add to Home Screen.'); };
+      return;
+    }
+    btn.textContent = '📥 Download APK';
+    hint.innerHTML = 'Peranti anda? APK untuk Android/Huawei/ChromeOS. OS lain (FreeBSD, Haiku…): T Chat ialah PWA — pasang dari apa-apa pelayar moden.';
+    btn.onclick = function () { downloadApk(); };
+  }
+  $('copyBtn').onclick = function () {
+    var i = $('linkInput'); i.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(PAGE) : document.execCommand('copy'))
+      .then(function () { toast('Pautan disalin — buka di peranti lain.'); })
+      .catch(function () { toast('Pautan: ' + PAGE); });
+  };
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); bip = e; buildPrimary(detect()); });
+  $('linkInput').value = PAGE;
+  var qr = document.createElement('img');
+  qr.width = 168; qr.height = 168; qr.alt = 'Kod QR untuk buka halaman muat turun T Chat';
+  qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=168x168&data=' + encodeURIComponent(PAGE);
+  qr.onerror = function () { $('qrBox').innerHTML = ''; };
+  $('qrBox').appendChild(qr);
+  buildPrimary(detect());
+})();
+</script>
+</body>
+</html>
