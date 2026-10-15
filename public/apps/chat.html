@@ -316,6 +316,34 @@
   #blockBar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; padding:7px 14px; font-size:.78rem; color:#f0b6b9; background:#2a1b20; border-top:1px solid #4a2b31; }
   #blockBar.on { display:block; }
   #blockBar button { background:none; border:1px solid #4a2b31; color:#f0b6b9; border-radius:6px; padding:2px 8px; cursor:pointer; font:inherit; font-size:.74rem; margin-left:8px; }
+  /* Bar pin mesej — muncul di atas senarai bila ada mesej terpin */
+  #pinBar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; padding:6px 14px; font-size:.78rem; background:var(--panel); border-top:1px solid var(--line); cursor:pointer; }
+  #pinBar.on { display:flex; align-items:center; gap:8px; }
+  #pinBar .pinico { color:var(--accent); font-size:1rem; flex:none; }
+  #pinBar .pintx { flex:1; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #pinBar .pincl { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; flex:none; }
+  .bub .pintag { font-size:.66rem; color:var(--accent); background:rgba(101,170,221,.12); border-radius:6px; padding:1px 7px; margin:0 0 4px; display:inline-block; }
+  /* Sel mesej suara dalam gelembung */
+  .mcell.audio { min-height:0; }
+  .audio-wave { display:flex; align-items:center; gap:10px; padding:6px 4px; min-width:min(230px,68vw); }
+  .audio-wave button { background:var(--accent); border:none; color:#08101f; width:38px; height:38px; border-radius:50%; font-size:1rem; cursor:pointer; flex:none; display:flex; align-items:center; justify-content:center; }
+  .audio-wave .aw-bar { flex:1; display:flex; align-items:center; gap:2px; height:30px; }
+  .audio-wave .aw-bar i { flex:1; background:#3a4a68; border-radius:2px; min-height:5px; display:block; }
+  .audio-wave .aw-dur { font-size:.72rem; color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
+  /* UI rakaman suara */
+  #recBar { display:none; max-width:760px; margin:0 auto; width:100%; box-sizing:border-box; background:var(--panel); border-top:1px solid var(--line); padding:8px 14px; font-size:.82rem; }
+  #recBar.on { display:flex; align-items:center; gap:10px; }
+  #recBar .rdot { width:11px; height:11px; border-radius:50%; background:#e17076; flex:none; animation:recpulse 1s infinite; }
+  @keyframes recpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  #recBar .rts { flex:1; color:var(--muted); font-variant-numeric:tabular-nums; }
+  #recBar button { background:none; border:1px solid var(--line); color:#fff; border-radius:8px; padding:5px 12px; cursor:pointer; font:inherit; font-size:.8rem; }
+  #recBar .rsend { background:var(--accent); color:#08101f; border-color:var(--accent); }
+  /* Baris ahli dalam modal kumpulan */
+  .girow { display:flex; align-items:center; gap:8px; padding:6px 2px; border-bottom:1px solid var(--line); }
+  .girow .ava { width:30px; height:30px; font-size:.72rem; flex:none; }
+  .girow b { flex:1; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .girow .giad { font-size:.62rem; color:var(--accent); background:rgba(101,170,221,.14); border-radius:5px; padding:1px 5px; }
+  .girow .giact { background:none; border:1px solid var(--line); color:var(--muted); border-radius:6px; padding:2px 7px; cursor:pointer; font-size:.72rem; }
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#1c2230; color:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 16px; font-size:.84rem; z-index:100; display:none; box-shadow:0 6px 22px rgba(0,0,0,.4); }
 
   @media (max-width:760px) {
@@ -388,6 +416,8 @@
     <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Batal">✕</button></div></div>
     <div id="editBar"><div class="rb">✏️ <b>Mengedit mesej</b><span></span><button id="edCancel" title="Batal">✕</button></div></div>
     <div id="blockBar">🚫 Anda menyekat orang ini — DM dibekukan. <button id="blkOpen">Buka sekat</button></div>
+    <div id="pinBar"></div>
+    <div id="recBar"><span class="rdot"></span><b>Merakam…</b><span class="rts" id="recTime">0:00</span><button id="recCancel">Batal</button><button id="recStop">⏹ Berhenti</button><button id="recSend" class="rsend">➤ Hantar</button></div>
     <div id="tray"></div>
     <div id="compose">
       <div id="emojiPop">
@@ -396,6 +426,7 @@
       </div>
       <button id="emojiBtn" title="Sisip emoji">😊</button>
       <button id="clipBtn" title="Lampirkan gambar atau video">📎</button>
+      <button id="micBtn" title="Rakam mesej suara">🎙️</button>
       <button id="prankBtn" title="Panggilan prank (setempat, boleh luar talian)">🎭</button>
       <div class="cin"><textarea id="inp" rows="1" placeholder="Tulis mesej…"></textarea></div>
       <button id="send" title="Hantar">➤</button>
@@ -454,11 +485,16 @@
 
 <div class="modal" id="grpInfoModal"><div class="mbox">
   <h3 id="giTitle">👥 Kumpulan</h3>
-  <div class="pflabel">Ahli</div>
+  <div id="giAdmin" hidden>
+    <div class="pflabel">Nama kumpulan</div>
+    <div style="display:flex;gap:8px;align-items:center"><input id="giName" maxlength="40" autocomplete="off" style="flex:1;margin:0"><button id="giRename">Simpan nama</button></div>
+  </div>
+  <div class="pflabel">Ahli <span id="giCount" style="color:var(--muted)"></span></div>
   <div id="giMembers"></div>
   <div class="mbtns">
     <button id="giLeave" class="warn">Keluar Kumpulan</button>
     <button id="giInvite">➕ Jemput</button>
+    <button id="giDissolve" class="warn" hidden>🗑 Bubarkan</button>
     <button class="prim" id="giClose">Tutup</button>
   </div>
 </div></div>
@@ -513,6 +549,10 @@
     <div class="pflabel">Peranti &amp; sesi</div>
     <div class="pfmeta">Keluarkan sesi lain — hanya peranti ini kekal login.</div>
     <div class="mbtns"><button class="warn" id="stKick">Keluarkan peranti lain</button></div>
+    <div class="pflabel" style="margin-top:16px">Padam akaun</div>
+    <div class="pfmeta">Tindakan <b>kekal dan tidak boleh dibatalkan</b>. Semua DM, media dan keanggotaan kumpulan anda dibuang serta-merta. Masukkan kata laluan untuk mengesahkan.</div>
+    <input id="stDelPass" type="password" autocomplete="new-password" placeholder="Kata laluan anda">
+    <div class="mbtns"><button class="warn" id="stDelete">🗑 Padam akaun saya</button></div>
   </div>
 
   <div class="tab" id="tabDsp" hidden>
@@ -708,16 +748,27 @@
   const kindOf = f => String(f.type || '').startsWith('video/') ? 'video' : String(f.type || '').startsWith('image/') ? 'image' : null;
   function mediaLabel(list) {
     if (!list || !list.length) return '';
-    const one = list[0].kind === 'video' ? '🎬 Video' : '🖼 Gambar';
+    const k = list[0].kind;
+    const one = k === 'video' ? '🎬 Video' : k === 'audio' ? '🎙️ Suara' : '🖼 Gambar';
     return list.length > 1 ? one + ' (+' + (list.length - 1) + ')' : one;
   }
   const msgLabel = m => (m && m.t && m.t.trim()) ? m.t : (mediaLabel(m && m.media) || '(kosong)');
-  const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : '🖼 Gambar') + (n > 1 ? ' +' + (n - 1) : '');
+  const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : kind === 'audio' ? '🎙️ Suara' : '🖼 Gambar') + (n > 1 ? ' +' + (n - 1) : '');
+  // Sel pemain suara: bar pasif (estetik) + butang main/jeda + durasi.
+  function audioCell(x, i) {
+    if (!x.url) return '<div class="brk">🎙️ Suara sudah dibuang</div>';
+    if (lite) return '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="audio" data-i="' + i + '">🎙️ Ketuk untuk muat</div>';
+    let bars = '';
+    for (let k = 0; k < 22; k++) bars += '<i style="height:' + (22 + ((k * 41) % 68)) + '%"></i>';
+    return '<div class="audio-wave"><button data-aud="' + esc(x.url) + '" title="Main">▶</button>' +
+      '<div class="aw-bar">' + bars + '</div><span class="aw-dur">' + (x.dur ? mmss(x.dur) : '0:00') + '</span></div>';
+  }
   // Grid mesej: 1 besar (ikut nisbah asli), 2–4 sekata seperti Telegram.
   function mediaGrid(msg) {
     const list = (msg.media || []).slice(0, MAX_MEDIA);
     if (!list.length) return '';
     return '<div class="media n' + list.length + '">' + list.map((x, i) => {
+      if (x.kind === 'audio') return '<div class="mcell audio">' + audioCell(x, i) + '</div>';
       const body = !x.url ? '<div class="brk">' + (x.kind === 'video' ? '🎬 Video' : '🖼 Gambar') + ' sudah dibuang</div>'
         : lite
           ? '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="' + esc(x.kind) + '" data-i="' + i + '">' + (x.kind === 'video' ? '🎬' : '🖼') + ' Ketuk untuk muat</div>'
@@ -805,7 +856,9 @@
     t.classList.add('on');
     t.innerHTML = pending.map(p =>
       '<div class="tcell' + (p.status === 'err' ? ' err' : '') + '" data-k="' + p.key + '">' +
-      (p.kind === 'video' ? '<video src="' + esc(p.url) + '" muted playsinline preload="metadata"></video>' : '<img src="' + esc(p.url) + '" alt="">') +
+      (p.kind === 'video' ? '<video src="' + esc(p.url) + '" muted playsinline preload="metadata"></video>'
+        : p.kind === 'audio' ? '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.4rem">🎙️</div>'
+        : '<img src="' + esc(p.url) + '" alt="">') +
       (p.status === 'up' ? '<div class="pr" style="width:' + p.pct + '%"></div>' : '') +
       (p.status !== 'ready' ? '<div class="st">' + (p.status === 'up' ? p.pct + '%' : p.status === 'wait' ? '…' : esc(String(p.err || 'gagal').slice(0, 26))) + '</div>' : '') +
       '<button class="x" title="Buang">✕</button></div>').join('');
@@ -826,7 +879,8 @@
     return new Promise((resolve, reject) => {
       if (p.media && p.media.id) return resolve(p.media);   // sudah naik — jangan ulang
       const q = '?room=' + encodeURIComponent(cur) +
-        (p.w ? '&w=' + Math.round(p.w) + '&h=' + Math.round(p.h) : '') + (p.dur ? '&dur=' + Math.round(p.dur) : '');
+        (p.w ? '&w=' + Math.round(p.w) + '&h=' + Math.round(p.h) : '') + (p.dur ? '&dur=' + Math.round(p.dur) : '') +
+        (p.kind === 'audio' ? '&audio=1' : '');
       const x = new XMLHttpRequest();
       p.xhr = x;
       x.open('POST', API + '/media' + q, true);
@@ -1036,6 +1090,8 @@
     if (!silent && innerWidth > 760) $('inp').focus();
   }
   const room = id => rooms.find(r => r.id === id);
+  const roomIsGroup = id => { const r = room(id); return !!(r && r.kind === 'group'); };
+  const myAdminOf = id => { const r = room(id); return !!(r && r.myAdmin); };
   function renderStatus() {
     const r = room(cur), st = $('tStatus');
     $('blockBar').classList.toggle('on', !!(r && r.blocked));
@@ -1177,6 +1233,12 @@
     }
     if (ev === 'social') { loadSocial(); loadPeople(); return; }
     if (ev === 'room') { loadRooms(false); return; }
+    if (ev === 'delroom') {
+      rooms = rooms.filter(x => x.id !== j.room);
+      delete cache[j.room];
+      if (cur === j.room) { cur = 'global_am'; localStorage.removeItem(rkey()); openRoom('global_am'); }
+      renderRooms(); return;
+    }
     if (ev === 'read') { const rr = room(j.room); if (rr) { rr.peerSeen = Math.max(rr.peerSeen || 0, j.seq || 0); if (rr.id === cur) renderMsgs(); } return; }
     if (ev === 'call') { handleCall(j); return; }   // isyarat panggilan tidak mempunyai `room`
     if (!j || !j.room) return;
@@ -1191,6 +1253,12 @@
     if (ev === 'del') {
       b.msgs = (b.msgs || []).filter(x => x.id !== j.id);
       renderMsgs(); loadRooms(false); return;
+    }
+    if (ev === 'pin') {
+      const at = (b.msgs || []).findIndex(x => x.id === j.id);
+      if (at < 0) { pollMsgs(); return; }
+      b.msgs[at].pinned = !!j.pinned;
+      renderMsgs(); return;
     }
     const m = j.msg;
     if (!m) return;
@@ -1257,6 +1325,7 @@
         (mine ? '' : '<div class="bava" style="background:' + colorOf(disp) + '">' + esc(initials(disp)) + '</div>') +
         '<div class="bub">' +
         (showWho ? '<div class="who2" style="color:' + colorOf(disp) + '">' + esc(disp) + '</div>' : '') +
+        (msg.pinned ? '<div class="pintag" title="Mesej dipin">📌 Dipin</div>' : '') +
         q + body +
         (msg.edited ? ' <span class="edited">(diubah)</span>' : '') +
         '<span class="meta">' + hhmm(msg.ts) + (mine ? tickHtml(msg, r) : '') + '</span>' + rxHtml +
@@ -1265,7 +1334,22 @@
       prevAk = ak; prevTs = msg.ts;
     }
     if (html !== msgSig) { msgSig = html; $('msgs').innerHTML = html; wireMsgs(); }
+    renderPinBar(r, m);
     if (atBottom) scrollBottom(); else checkJump();
+  }
+  // Bar pin di atas mesej: pratonton mesej terpin terakhir + lompat / buka pin.
+  function renderPinBar(r, m) {
+    const bar = $('pinBar');
+    const pinned = (m || []).filter(x => x.pinned);
+    if (!pinned.length || !r) { bar.className = ''; bar.innerHTML = ''; bar.onclick = null; return; }
+    const last = pinned[pinned.length - 1];
+    const canManage = mineOf(last) || (r.kind === 'group' && r.myAdmin) || r.kind === 'global';
+    bar.className = 'on';
+    bar.innerHTML = '<span class="pinico">📌</span><div style="flex:1;min-width:0">' +
+      '<div style="color:var(--accent);font-size:.7rem">' + (pinned.length > 1 ? pinned.length + ' dipin · ' : '') + esc(nameOf(last)) + '</div>' +
+      '<div class="pintx">' + esc(norm(msgLabel(last))) + '</div></div>' +
+      (canManage ? '<button class="pincl" title="Buka pin">✕</button>' : '');
+    bar.onclick = e => { if (e.target.classList.contains('pincl')) { doPin(last); return; } jumpTo(last.id); };
   }
   function scrollBottom() { const w = $('msgsWrap'); w.scrollTop = w.scrollHeight; checkJump(); }
   // ─── Lencana belum-baca di tajuk tab / app badge ───
@@ -1740,7 +1824,11 @@
           e.stopPropagation();
           const url = tv.getAttribute('data-load'), kind = tv.getAttribute('data-kind'), i = +tv.getAttribute('data-i');
           const cell = tv.closest('.mcell');
-          if (kind === 'video') {
+          if (kind === 'audio') {
+            const m = findMsg(id), x = ((m && m.media) || [])[i] || { url };
+            cell.classList.add('audio'); cell.innerHTML = audioCell(x, i);
+            cell.onclick = e => e.stopPropagation();
+          } else if (kind === 'video') {
             const v = document.createElement('video'); v.src = url; v.controls = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
             v.onclick = ev => ev.stopPropagation();
             cell.innerHTML = ''; cell.appendChild(v); cell.classList.add('vid'); cell.setAttribute('data-v', i);
@@ -1826,6 +1914,9 @@
       '<div data-a="reply">↩️ Balas</div>' +
       (msg.media && msg.media.length ? '<div data-a="save">⬇️ Simpan media</div>' : '<div data-a="copy">🧑 Salin teks</div>') +
       '<div data-a="fwd">➡️ Teruskan</div>';
+    // Pin: pemilik pada bila-bila bilik; admin pada mana-mana mesej kumpulan.
+    const canPin = mineOf(msg) || (roomIsGroup(cur) && myAdminOf(cur));
+    if (canPin && !String(msg.id).startsWith('tmp')) h += '<div data-a="pin">' + (msg.pinned ? '📌 Buka pin' : '📌 Pin mesej') + '</div>';
     if (mineOf(msg) && !String(msg.id).startsWith('tmp')) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Padam</div>';
     menu.innerHTML = h;
     menu.style.display = 'block';
@@ -1865,6 +1956,7 @@
     else if (a === 'copy') { try { navigator.clipboard.writeText(msg.t); toast('Disalin.'); } catch { toast('Salin gagal.'); } }
     else if (a === 'save') { if ((msg.media || []).length > 1) openView(msg, 0); else saveMedia(msg.media[0]); }
     else if (a === 'fwd') openFwd(msg);
+    else if (a === 'pin') doPin(msg);
     else if (a === 'edit') { editing = msg.id; $('editBar').style.display = 'block'; $('inp').value = msg.t; grow(); $('inp').focus(); }
     else if (a === 'del') delMsg(msg);
   }
@@ -1873,6 +1965,14 @@
     b.msgs = b.msgs.filter(x => x.id !== msg.id);
     sndDel(); renderMsgs();
     try { await post('/delete', { room: cur, id: msg.id }); } catch (e) { toast(e.message); b.msgs.push(msg); renderMsgs(); }
+  }
+  // Pin/unpin. Optimis pada mesej sebenar (bukan tmp); pelayan sahkan & siarkan 'pin'.
+  async function doPin(msg) {
+    if (!msg || String(msg.id).startsWith('tmp')) { toast('Mesej belum tentu sampai.'); return; }
+    const want = !msg.pinned;
+    try { const j = await post('/pin', { room: cur, id: msg.id, pinned: want }); msg.pinned = !!j.pinned; }
+    catch (e) { toast(e.message); return; }
+    renderMsgs(); toast(want ? 'Mesej di-pin.' : 'Pin dibuka.');
   }
   function closeReplyEdit() { replyTo = null; editing = null; $('replyBar').style.display = 'none'; $('editBar').style.display = 'none'; }
 
@@ -2066,11 +2166,54 @@
   };
 
   // ─── Maklumat kumpulan ───
+  async function reloadGroupInfo(rId) {
+    await loadRooms(false);
+    const rr = room(rId);
+    if (!rr) { $('grpInfoModal').classList.remove('open'); openRoom('global_am'); return; }
+    openGroupInfo(rr);
+  }
   function openGroupInfo(r) {
+    const isAdmin = !!r.myAdmin;
     $('giTitle').textContent = '👥 ' + r.title;
-    $('giMembers').innerHTML = (r.members || []).map(n =>
-      '<div class="rowm"><div class="ava" style="background:' + colorOf(n) + '">' + esc(initials(n)) + '</div>' +
-      '<div class="grow"><b>' + esc(n) + '</b>' + (n === me ? ' <small>(Anda)</small>' : '') + '</div></div>').join('');
+    $('giAdmin').hidden = !isAdmin;
+    $('giDissolve').hidden = !isAdmin;
+    $('giName').value = r.title || '';
+    const ids = r.memberIds || [], names = r.members || [], ons = r.memberOnline || [];
+    const adminSet = new Set(r.admins || []);
+    $('giCount').textContent = '(' + (ids.length || names.length || 0) + ')';
+    $('giMembers').innerHTML = ids.map((id, i) => {
+      const nm = names[i] || ('#' + id);
+      const admin = adminSet.has(id), self = id === myId;
+      const acts = isAdmin && !self
+        ? '<button class="giact" data-adm="' + id + '" data-on="' + (admin ? 1 : 0) + '">' + (admin ? 'Nyahadmin' : 'Jadikan admin') + '</button>' +
+          '<button class="giact" data-kick="' + id + '">Buang</button>'
+        : '';
+      return '<div class="girow"><div class="ava" style="background:' + colorOf(nm) + '">' + esc(initials(nm)) + (ons[i] ? '<span class="dot" style="position:absolute;right:-1px;bottom:-1px"></span>' : '') + '</div>' +
+        '<b>' + esc(nm) + (self ? ' <small>(Anda)</small>' : '') + '</b>' +
+        (admin ? '<span class="giad">admin</span>' : '') + acts + '</div>';
+    }).join('');
+    for (const b of $('giMembers').querySelectorAll('[data-kick]')) b.onclick = async () => {
+      const id = +b.dataset.kick;
+      if (!confirm('Buang ahli ini dari kumpulan?')) return;
+      try { await post('/group/kick', { room: r.id, memberId: id }); await reloadGroupInfo(r.id); toast('Ahli dibuang.'); }
+      catch (e) { toast(e.message); }
+    };
+    for (const b of $('giMembers').querySelectorAll('[data-adm]')) b.onclick = async () => {
+      const id = +b.dataset.adm, remove = b.dataset.on === '1';
+      try { await post('/group/admin', { room: r.id, memberId: id, remove: remove ? 1 : 0 }); await reloadGroupInfo(r.id); toast(remove ? 'Admin dinyah.' : 'Dijadikan admin.'); }
+      catch (e) { toast(e.message); }
+    };
+    $('giRename').onclick = async () => {
+      const t = $('giName').value.trim();
+      if (!t) return toast('Isi nama kumpulan.');
+      try { await post('/group/rename', { room: r.id, title: t }); await reloadGroupInfo(r.id); toast('Nama dikemas kini.'); }
+      catch (e) { toast(e.message); }
+    };
+    $('giDissolve').onclick = async () => {
+      if (!confirm('Bubarkan kumpulan ini untuk semua ahli? Tindakan ini kekal.')) return;
+      try { await post('/group/dissolve', { room: r.id }); $('grpInfoModal').classList.remove('open'); await loadRooms(false); if (cur === r.id) { cur = 'global_am'; openRoom('global_am'); } renderRooms(); toast('Kumpulan dibubarkan.'); }
+      catch (e) { toast(e.message); }
+    };
     $('giInvite').onclick = async () => {
       $('grpInfoModal').classList.remove('open');
       renderGroupList(''); groupSel = new Set();
@@ -2313,6 +2456,27 @@
       toast(j.revoked ? j.revoked + ' sesi lain dikeluarkan.' : 'Tiada sesi lain untuk dikeluarkan.');
     } catch (e) { toast(e.message); }
   };
+  // Padam akaun: hapus semua data pengguna di pelayan, kemudian keluar penuh
+  // di klien (kosongkan token/storage, hentikan stream, bersihkan kesan akaun).
+  $('stDelete').onclick = async () => {
+    const pass = $('stDelPass').value;
+    if (!pass) return toast('Isi kata laluan anda untuk mengesahkan.');
+    if (!window.confirm('Padam akaun «' + me + '» secara PERMANEN? Semua mesej, bilik dan media anda akan dibuang. Tindakan ini tidak boleh dibatalkan.')) return;
+    $('stDelete').disabled = true;
+    try {
+      await post('/delete-account', { pass });
+      $('stOld').value = $('stP1').value = $('stP2').value = $('stDelPass').value = '';
+      $('setModal').classList.remove('open');
+      if (C) endCall(true);
+      token = ''; me = ''; myId = 0; myBio = ''; myJoined = null;
+      localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
+      stopStream(); restartPollers(); clearPending();
+      cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
+      resetSocial(); $('aName').value = ''; $('aPass').value = '';
+      updateBadge(); setMode('login'); showAuth('Akaun anda telah dipadamkan.');
+    } catch (e) { toast(e.message); }
+    $('stDelete').disabled = false;
+  };
   $('stClose').onclick = () => {
     pref.sound = $('stSound').checked; pref.font = +$('stFont').value; savePref(); applyPref(); $('setModal').classList.remove('open');
   };
@@ -2461,6 +2625,85 @@
     }
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('emojiPop').classList.remove('on'); $('emojiBtn').classList.remove('on'); } });
+
+  // ─── Rakaman mesej suara (MediaRecorder) ───
+  // Klien merakam ke webm/ogg, hantar sebagai media audio=1 → pelayan tanda
+  // kind='audio'. Durasi diambil daripada jam rakaman (metadata webm selalunya
+  // tiada), dipaparkan sebagai bar statik + butang main/jeda.
+  const AUDIO_CAP = 8 * 1048576;
+  let rec = null, recChunks = [], recTimer = null, recStart = 0, recBlob = null;
+  const recFmt = ms => Math.floor(ms / 60000) + ':' + pad2(Math.floor(ms / 1000) % 60);
+  function probeAudio(url) {
+    return new Promise(res => {
+      const a = new Audio(); let d = false;
+      const fin = v => { if (d) return; d = true; clearTimeout(t); a.removeAttribute('src'); res(v); };
+      const t = setTimeout(() => fin(0), 6000);
+      a.onloadedmetadata = () => { const x = a.duration; fin(Number.isFinite(x) ? Math.round(x) : 0); };
+      a.onerror = () => fin(0); a.preload = 'metadata'; a.src = url;
+    });
+  }
+  const resetRecUI = () => { $('recBar').classList.remove('on'); $('micBtn').classList.remove('on'); };
+  function pickMime() {
+    const cs = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+    for (const m of cs) { try { if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; } catch { /* lanjut */ } }
+    return '';
+  }
+  async function startRec() {
+    if (rec) return;
+    if (!navigator.mediaDevices || !window.MediaRecorder) { toast('Pelayar ini tidak menyokong rakaman suara.'); return; }
+    if (pending.length >= MAX_MEDIA) { toast('Maksimum ' + MAX_MEDIA + ' fail satu mesej.'); return; }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch { toast('Kebenaran mikrofon ditolak.'); return; }
+    recBlob = null; recChunks = [];
+    let mr;
+    try { const mt = pickMime(); mr = mt ? new MediaRecorder(stream, { mimeType: mt }) : new MediaRecorder(stream); }
+    catch { stream.getTracks().forEach(t2 => t2.stop()); toast('Rakaman tidak disokong pelayar ini.'); return; }
+    rec = mr;
+    mr.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
+    mr.onstop = () => { stream.getTracks().forEach(t2 => t2.stop()); recBlob = new Blob(recChunks, { type: (mr.mimeType || 'audio/webm').split(';')[0] }); };
+    try { mr.start(); } catch { stream.getTracks().forEach(t2 => t2.stop()); rec = null; toast('Rakaman gagal dimulakan.'); return; }
+    recStart = Date.now(); $('recTime').textContent = '0:00'; $('recSend').disabled = true;
+    $('recBar').classList.add('on'); $('micBtn').classList.add('on');
+    if (recTimer) clearInterval(recTimer);
+    recTimer = setInterval(() => { $('recTime').textContent = recFmt(Date.now() - recStart); }, 250);
+  }
+  function cancelRec() {
+    if (recTimer) { clearInterval(recTimer); recTimer = null; }
+    if (rec && rec.state !== 'inactive') { try { rec.stop(); } catch { /* sudah berhenti */ } }
+    rec = null; recBlob = null; resetRecUI();
+  }
+  async function finishRec(sendNow) {
+    if (!rec) { if (sendNow) doSend(); return; }
+    const elapsed = Math.round((Date.now() - recStart) / 1000);
+    if (recTimer) { clearInterval(recTimer); recTimer = null; }
+    try { rec.stop(); } catch { /* sudah berhenti */ }
+    await new Promise(r => setTimeout(r, 120));   // tunggu onstop kumpulkan blob
+    const blob = recBlob; rec = null; resetRecUI();
+    if (!blob || !blob.size) { toast('Rakaman kosong.'); return; }
+    if (blob.size > AUDIO_CAP) { toast('Rakaman terlalu besar (had 8MB).'); return; }
+    const p = { key: seqKey++, kind: 'audio', blob, url: URL.createObjectURL(blob), status: 'wait', pct: 0 };
+    pending.push(p); renderTray();
+    p.dur = elapsed || (await probeAudio(p.url)) || 0;
+    p.status = 'ready'; renderTray();
+    if (sendNow) doSend();
+  }
+  $('micBtn').onclick = () => { if (rec) finishRec(true); else startRec(); };
+  $('recStop').onclick = () => finishRec(false);
+  $('recSend').onclick = () => finishRec(true);
+  $('recCancel').onclick = cancelRec;
+  // Pemain suara: satu bunyi pada satu masa; delegasi dokumen supaya tidak perlu
+  // dinyalakan semula setiap kali mesej dilukis semula.
+  let curAud = null, curAudBtn = null;
+  function toggleAud(btn) {
+    if (curAud && curAudBtn === btn) { curAud.pause(); curAud = null; if (curAudBtn) curAudBtn.textContent = '▶'; curAudBtn = null; return; }
+    if (curAud) { curAud.pause(); if (curAudBtn) curAudBtn.textContent = '▶'; }
+    const a = new Audio(btn.dataset.aud); curAud = a; curAudBtn = btn; btn.textContent = '⏸';
+    a.onended = () => { if (curAudBtn === btn) btn.textContent = '▶'; curAud = null; curAudBtn = null; };
+    a.onerror = () => { btn.textContent = '▶'; toast('Audio tidak dapat dimuat.'); };
+    a.play().catch(() => { btn.textContent = '▶'; });
+  }
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-aud]'); if (b) toggleAud(b); });
 
   // ─── Lampiran: pemilih fail, seret-lepas, tampal ───
   $('clipBtn').onclick = () => $('file').click();

@@ -15,6 +15,7 @@ const ONLINE_MS = 90e3;     // dianggap dalam talian
 const TYPING_MS = 4e3;      // paparan "menaip…"
 const MAX_IMG = 8 * 1024 * 1024;            // had fail gambar (selepas mampat klien)
 const MAX_VID = 64 * 1024 * 1024;           // had fail video
+const MAX_AUDIO = 8 * 1024 * 1024;          // had mesej suara (opus/webm/ogg)
 const MAX_PER_MSG = 4;                      // media satu mesej (album)
 const QUOTA_FILES = 40;                     // fail per jam per pengguna
 const QUOTA_BYTES = 512 * 1024 * 1024;      // saiz per jam per pengguna
@@ -60,6 +61,11 @@ function migrate() {
     if (!Array.isArray(u.blocked)) { u.blocked = []; changed = true; }
   }
   for (const [id, r] of Object.entries(s.rooms)) {
+    if (r.kind === 'group') {
+      if (!Array.isArray(r.admins)) { r.admins = r.memberIds && r.memberIds.length ? [r.memberIds[0]] : []; changed = true; }
+      if (r.createdById == null) { const cu = Object.values(s.users).find(u => u.name === r.createdBy); r.createdById = cu ? cu.id : (r.admins[0] || null); changed = true; }
+      continue;
+    }
     if (r.kind !== 'dm') continue;
     if (!r.memberIds) {
       const us = [];
@@ -165,9 +171,11 @@ function sniff(b) {
     return { ext: 'mp4', mime: 'video/mp4' };
   }
   if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return { ext: 'webm', mime: 'video/webm' };
+  if (at(0, 4) === 'OggS') return { ext: 'ogg', mime: 'audio/ogg' };
   return null;
 }
 const isImage = (mime) => String(mime).startsWith('image/');
+const isAudio = (mime) => String(mime).startsWith('audio/');
 function mediaFile(rec) { return path.join(MEDIA, rec.id + '.' + rec.ext); }
 function num(v, max) { const n = Math.round(Number(v) || 0); return n > 0 && n <= max ? n : 0; }
 // Pautan media TIDAK boleh membawa token sesi (token masuk log pelayan), jadi
@@ -217,14 +225,20 @@ function quotaCheck(u, size) {
 function addMedia(user, buf, meta) {
   const s = load();
   const t = sniff(buf);
-  if (!t) return { error: 'Fail itu bukan gambar atau video yang disokong.', status: 415 };
+  if (!t) return { error: 'Fail itu bukan gambar, video atau suara yang disokong.', status: 415 };
   const img = isImage(t.mime);
-  if (buf.length > (img ? MAX_IMG : MAX_VID)) return { error: img ? 'Gambar terlalu besar (had 8MB).' : 'Video terlalu besar (had 64MB).', status: 413 };
+  // Klien boleh menanda mesej suara (audio=1); ogg/opus juga dikesan menerusi
+  // bait ajaib. WebM audio mempunyai magic byte sama seperti video → bergantung
+  // pada flag klien untuk membezakan jenis paparan.
+  const audio = !img && (String((meta && meta.audio)) === '1' || isAudio(t.mime));
+  const cap = img ? MAX_IMG : audio ? MAX_AUDIO : MAX_VID;
+  if (buf.length > cap) return { error: img ? 'Gambar terlalu besar (had 8MB).' : audio ? 'Rekod suara terlalu besar (had 8MB).' : 'Video terlalu besar (had 64MB).', status: 413 };
   const q = quotaCheck(user, buf.length);
   if (q.error) return { error: q.error, status: 429 };
   const id = crypto.randomBytes(6).toString('hex');
+  const mime = audio && t.mime === 'video/webm' ? 'audio/webm' : t.mime;
   const rec = {
-    id, ext: t.ext, mime: t.mime, kind: img ? 'image' : 'video', size: buf.length,
+    id, ext: t.ext, mime, kind: img ? 'image' : audio ? 'audio' : 'video', size: buf.length,
     uid: user.id || null, by: user.k, ts: Date.now(), rooms: [], msgs: [],
   };
   const w = num(meta && meta.w, 10000), h = num(meta && meta.h, 10000), dur = num(meta && meta.dur, 3600);
@@ -423,7 +437,7 @@ function createGroup(creatorName, title, memberIds) {
   if (members.length < 2) return { error: 'Perlukan sekurang-kurangnya seorang ahli lain.' };
   if (members.length > 50) return { error: 'Melebihi 50 ahli.' };
   const id = 'grp_' + crypto.randomBytes(6).toString('hex');
-  const r = { id, kind: 'group', title: t, memberIds: members.map(u => u.id), members: members.map(u => u.name), createdBy: creator.name, createdAt: Date.now(), seq: 0, list: [] };
+  const r = { id, kind: 'group', title: t, memberIds: members.map(u => u.id), members: members.map(u => u.name), admins: [creator.id], createdBy: creator.name, createdById: creator.id, createdAt: Date.now(), seq: 0, list: [] };
   s.rooms[id] = r; touch();
   pubRoom(r, 'room', { room: id });
   return { ok: true, room: r };
@@ -442,6 +456,24 @@ function addToGroup(name, roomId, memberId) {
   pubRoom(r, 'room', { room: roomId });
   return { ok: true };
 }
+const adminsOf = (r) => (r && Array.isArray(r.admins) ? r.admins : []);
+const isGroupAdmin = (r, name) => adminsOf(r).includes(uid(name));
+// Buang satu ID daripada senarai admin; jika tiada baki, promosikan ahli terakhir
+// supaya kumpulan tidak pernah kehilangan pentadbir.
+function promoteAdmin(r) {
+  r.admins = (r.admins || []).filter(id => r.memberIds.includes(id));
+  if (!r.admins.length && r.memberIds.length) r.admins = [r.memberIds[0]];
+}
+function dissolveGroup(roomId) {
+  const s = load(); const r = s.rooms[roomId];
+  if (!r || r.kind !== 'group') return;
+  for (const m of (r.list || [])) releaseMedia(m.media, m.id);
+  delete s.rooms[roomId];
+  for (const k of Object.keys(s.seen)) if (k.startsWith(roomId + '|')) delete s.seen[k];
+  for (const k of Object.keys(s.typing)) if (k.endsWith('|' + roomId)) delete s.typing[k];
+  touch();
+  pubRoom(r, 'delroom', { room: roomId });
+}
 function leaveGroup(name, roomId) {
   const s = load(); const r = s.rooms[roomId];
   if (!r || r.kind !== 'group') return { error: 'Kumpulan tidak ditemui.' };
@@ -449,9 +481,61 @@ function leaveGroup(name, roomId) {
   if (!u || !r.memberIds.includes(u.id)) return { error: 'Anda bukan ahli kumpulan ini.' };
   r.memberIds = r.memberIds.filter(i => i !== u.id);
   r.members = r.memberIds.map(i => nameOfUser(i));
+  if (!r.memberIds.length) { dissolveGroup(roomId); return { ok: true, dissolved: true }; }
+  promoteAdmin(r);
   touch();
   pubRoom(r, 'room', { room: roomId });
   return { ok: true };
+}
+// ─── Pentadbiran kumpulan (hanya admin) ───
+function groupAdmin(name, roomId) {
+  const s = load(); const r = s.rooms[roomId];
+  if (!r || r.kind !== 'group') return { error: 'Kumpulan tidak ditemui.' };
+  if (!isMember(r, name)) return { error: 'Anda bukan ahli kumpulan ini.' };
+  if (!isGroupAdmin(r, name)) return { error: 'Hanya admin boleh melakukan ini.' };
+  return { ok: true, room: r };
+}
+function renameGroup(name, roomId, title) {
+  const g = groupAdmin(name, roomId); if (g.error) return g;
+  const t = String(title || '').trim().slice(0, 40);
+  if (!t) return { error: 'Nama kumpulan diperlukan.' };
+  g.room.title = t; touch();
+  pubRoom(g.room, 'room', { room: roomId });
+  return { ok: true, title: t };
+}
+function kickFromGroup(name, roomId, memberId) {
+  const g = groupAdmin(name, roomId); if (g.error) return g;
+  const r = g.room; const u = byId(memberId);
+  if (!u || !r.memberIds.includes(u.id)) return { error: 'Pengguna itu bukan ahli.' };
+  if (u.id === uid(name)) return { error: 'Gunakan "keluar" untuk buang diri sendiri.' };
+  r.memberIds = r.memberIds.filter(i => i !== u.id);
+  r.members = r.memberIds.map(i => nameOfUser(i));
+  promoteAdmin(r);
+  if (r.memberIds.length <= 1) { dissolveGroup(roomId); return { ok: true, dissolved: true }; }
+  touch();
+  pubRoom(r, 'room', { room: roomId });
+  return { ok: true };
+}
+function addAdmin(name, roomId, memberId, remove) {
+  const g = groupAdmin(name, roomId); if (g.error) return g;
+  const r = g.room; const u = byId(memberId);
+  if (!u || !r.memberIds.includes(u.id)) return { error: 'Pengguna itu bukan ahli.' };
+  r.admins = adminsOf(r);
+  if (remove) r.admins = r.admins.filter(i => i !== u.id);
+  else if (!r.admins.includes(u.id)) r.admins.push(u.id);
+  if (!r.admins.length) r.admins = [uid(name)];
+  touch();
+  pubRoom(r, 'room', { room: roomId });
+  return { ok: true, admins: r.admins };
+}
+function dissolveBy(name, roomId) {
+  const g = groupAdmin(name, roomId); if (g.error) return g;
+  const r = g.room;
+  // Hanya pencipta boleh bubarkan — kecuali pencipta sudah tiada dalam kumpulan,
+  // maka admin yang tinggal mengambil alih hak itu.
+  if (r.createdById && r.createdById !== uid(name) && (r.memberIds || []).includes(r.createdById)) return { error: 'Hanya pencipta boleh membubarkan kumpulan ini.' };
+  dissolveGroup(roomId);
+  return { ok: true, dissolved: true };
 }
 function roomTitle(r, viewer) {
   if (!r || r.kind === 'global') return (r && r.title) || '🌍 Am';
@@ -504,7 +588,7 @@ function send(name, roomId, text, replyTo, media) {
   const t = cleanText(text);
   if (!t && !att.length) return { error: 'Mesej kosong.' };
   if (replyTo && !r.list.find(m => m.id === replyTo)) replyTo = null;
-  const msg = { id: msgId, seq: ++r.seq, from: su ? su.name : name, fid: su ? su.id : null, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false };
+  const msg = { id: msgId, seq: ++r.seq, from: su ? su.name : name, fid: su ? su.id : null, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false, pinned: false };
   if (att.length) msg.media = att;
   r.list.push(msg);
   trimRoom(r);
@@ -586,6 +670,17 @@ function remove(name, roomId, msgId) {
   touch();
   pubRoom(r, 'del', { room: r.id, id: msgId });
   return { ok: true };
+}
+// Pin/unpin. Dalam bilik global & kumpulan: hanya admin (atau pemilik mesej pada
+// bilik global) boleh pin. DM: kedua-dua ahli boleh. Pinned disimpan pada mesej.
+function pinMsg(name, roomId, msgId, pinned) {
+  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
+  const m = (r.list || []).find(x => x.id === msgId); if (!m) return { error: 'Mesej tidak ditemui.' };
+  if (r.kind === 'group' && !isGroupAdmin(r, name)) return { error: 'Hanya admin boleh pin mesej.' };
+  m.pinned = !!pinned; touch();
+  const out = hydrate(m);
+  pubRoom(r, 'pin', { room: r.id, id: msgId, pinned: m.pinned, msg: out });
+  return { ok: true, msg: out, pinned: m.pinned };
 }
 function setTyping(name, roomId) {
   const s = load();
@@ -876,6 +971,45 @@ function logoutAll(name, keep) {
   touch();
   return { ok: true, revoked: n };
 }
+// Padam akaun serta-merta dan tanpa boleh dibatalkan. Kata laluan wajib sah.
+// Buang pengguna, sesi, langganan push, keanggotaan bilik (DM dibuang, kumpulan
+// dibubarkan jika dia pencipta atau admin dipromosikan jika tidak), lihat/typing,
+// serta media yang dimilikinya. Mesej dalam bilik kekal atas nama lama (sejarah).
+function deleteAccount(name, pass) {
+  const s = load();
+  const u = findUser(name);
+  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!eqHex(u.hash, hashPass(String(pass == null ? '' : pass), u.salt))) return { error: 'Kata laluan salah.', status: 401 };
+  const id = u.id, k = u.k;
+  // 1) Sesi & langganan push
+  for (const [tok, sess] of Object.entries(s.sessions)) if ((sess.uid && sess.uid === id) || key(sess.name) === k) delete s.sessions[tok];
+  if (s.pushSubs) delete s.pushSubs[String(id)];
+  // 2) Bilik
+  for (const [rid, r] of Object.entries(s.rooms)) {
+    if (r.kind === 'group') {
+      if (r.createdById === id) { for (const m of (r.list || [])) releaseMedia(m.media, m.id); delete s.rooms[rid]; continue; }
+      if (!r.memberIds || !r.memberIds.includes(id)) continue;
+      r.memberIds = r.memberIds.filter(i => i !== id);
+      r.members = r.memberIds.map(i => nameOfUser(i));
+      r.admins = adminsOf(r).filter(i => i !== id);
+      if (!r.memberIds.length) { delete s.rooms[rid]; continue; }
+      promoteAdmin(r);
+    } else if (r.kind === 'dm') {
+      if (!r.memberIds || !r.memberIds.includes(id)) continue;
+      for (const m of (r.list || [])) releaseMedia(m.media, m.id);
+      delete s.rooms[rid];
+    }
+  }
+  // 3) Lihat & menaip milik pengguna ini
+  for (const sk of Object.keys(s.seen)) if (sk.endsWith('|' + k)) delete s.seen[sk];
+  for (const tk of Object.keys(s.typing)) if (tk.startsWith(k + '|')) delete s.typing[tk];
+  // 4) Media milik pengguna
+  for (const [mid, rec] of Object.entries(s.media || {})) if (rec.by === k) dropMedia(mid);
+  // 5) Akaun
+  delete s.users[k];
+  touch();
+  return { ok: true, id };
+}
 function onlineMap() {
   const s = load(); const out = {}; const now = Date.now();
   for (const u of Object.values(s.users)) out[key(u.name)] = now - (u.lastSeen || 0) < ONLINE_MS;
@@ -1075,6 +1209,11 @@ function mount(app, deps) {
         id: r.id, kind: r.kind, title: roomTitle(r, u),
         members: r.members, peerId: pid, unread: un[r.id] || 0, seq: r.seq || 0,
         memberCount: r.kind === 'group' ? (r.memberIds || []).length : null,
+        memberIds: r.kind === 'group' ? (r.memberIds || []) : undefined,
+        admins: r.kind === 'group' ? adminsOf(r) : undefined,
+        myAdmin: r.kind === 'group' ? adminsOf(r).includes(u.id) : undefined,
+        createdById: r.kind === 'group' ? (r.createdById || null) : undefined,
+        memberOnline: r.kind === 'group' ? (r.memberIds || []).map(i => !!on[i]) : undefined,
         peerSeen: (peer && st.seen[r.id + '|' + key(peer.name)]) || 0,
         peer: peer ? { id: peer.id, name: peer.name, bio: peer.bio || '' } : null,
         blocked: !!(pid && blockedOf(u).includes(pid)),
@@ -1119,7 +1258,7 @@ function mount(app, deps) {
     const cl = Number(req.headers['content-length'] || 0);
     if (cl > MAX_VID) { req.resume(); return res.status(413).json({ error: 'Video terlalu besar (had 64MB).' }); }
     readRaw(req, MAX_VID + 64 * 1024).then((buf) => {
-      const meta = { w: req.query.w, h: req.query.h, dur: req.query.dur };
+      const meta = { w: req.query.w, h: req.query.h, dur: req.query.dur, audio: req.query.audio };
       const r = addMedia(u, buf, meta);
       if (r.error) return res.status(r.status || 400).json({ error: r.error });
       event('Media dimuat naik: ' + r.media.kind + ' ' + Math.round(r.media.size / 1024) + 'KB', { id: u.id });
@@ -1284,6 +1423,19 @@ function mount(app, deps) {
     res.json({ ok: true, revoked: r.revoked });
   });
 
+  // Padam akaun: kata laluan wajib, semua data dileraikan, semua sesi + stream
+  // ditutup (termasuk tab ini — klien akan logout sebaik dapat respons).
+  app.post('/api/chat/delete-account', lim({ windowMs: 24 * 3600e3, max: 3, keyPrefix: 'chdelacct:' }), (req, res) => {
+    const tok = bearer(req);
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = deleteAccount(u.name, b.pass);
+    if (r.error) return res.status(r.status || 400).json({ error: r.error });
+    event('Akaun dipadam: ' + u.name, { id: u.id });
+    kickSinks(u.id);
+    res.json({ ok: true });
+  });
+
   app.post('/api/chat/react', (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
@@ -1306,6 +1458,14 @@ function mount(app, deps) {
     const r = remove(u.name, String(b.room), String(b.id));
     if (r.error) return res.status(400).json({ error: r.error });
     res.json({ ok: true });
+  });
+
+  app.post('/api/chat/pin', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = pinMsg(u.name, String(b.room), String(b.id), b.pinned !== false);
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true, pinned: r.pinned, msg: r.msg });
   });
 
   app.post('/api/chat/read', (req, res) => {
@@ -1344,7 +1504,41 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const r = leaveGroup(u.name, String(cleanBody(req.body).room || ''));
     if (r.error) return res.status(400).json({ error: r.error });
-    res.json({ ok: true });
+    res.json({ ok: true, dissolved: !!r.dissolved });
+  });
+
+  app.post('/api/chat/group/rename', lim({ windowMs: 3600e3, max: 30, keyPrefix: 'chgrprn:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = renameGroup(u.name, String(b.room || ''), b.title);
+    if (r.error) return res.status(400).json({ error: r.error });
+    event('Kumpulan dinam semula: ' + r.title + ' oleh ' + u.name, { id: u.id });
+    res.json({ ok: true, title: r.title });
+  });
+
+  app.post('/api/chat/group/kick', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chgrpkick:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = kickFromGroup(u.name, String(b.room || ''), b.memberId);
+    if (r.error) return res.status(400).json({ error: r.error });
+    event('Ahli dibuang dari kumpulan oleh ' + u.name, { id: u.id });
+    res.json({ ok: true, dissolved: !!r.dissolved });
+  });
+
+  app.post('/api/chat/group/admin', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chgrpadmin:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = addAdmin(u.name, String(b.room || ''), b.memberId, !!b.remove);
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true, admins: r.admins });
+  });
+
+  app.post('/api/chat/group/dissolve', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const r = dissolveBy(u.name, String(cleanBody(req.body).room || ''));
+    if (r.error) return res.status(400).json({ error: r.error });
+    event('Kumpulan dibubarkan oleh ' + u.name, { id: u.id });
+    res.json({ ok: true, dissolved: true });
   });
 
   // ─── Web Push (VAPID) ───
@@ -1388,7 +1582,7 @@ module.exports = {
   pub, pubRoom, attachSink, detachSink, kickSinks, dropSink, tickBeat, clearSinks, MAX_STREAMS,
   sniff, addMedia, attachMedia, mediaUrl, mediaAllowed, mediaSrc, mediaFile, projectMedia,
   hydrate, releaseMedia, dropMedia, readRaw, quotaCheck, trimRoom,
-  createGroup, addToGroup, leaveGroup, initVapid, vapidPubB64, derSigToRaw, doSendPush, maybePush,
-  MAX_IMG, MAX_VID, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
+  createGroup, addToGroup, leaveGroup, renameGroup, kickFromGroup, addAdmin, dissolveBy, isGroupAdmin, adminsOf, pinMsg, deleteAccount, initVapid, vapidPubB64, derSigToRaw, doSendPush, maybePush,
+  MAX_IMG, MAX_VID, MAX_AUDIO, MAX_PER_MSG, QUOTA_FILES, STORE_CAP, FIRST_ID, KEEP,
   get mediaDir() { return MEDIA; },
 };

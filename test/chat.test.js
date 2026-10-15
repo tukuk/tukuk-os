@@ -1005,3 +1005,156 @@ test('derSigToRaw: tandatangan EC P-256 → 64 bait', () => {
   const verified = crypto.verify('sha256', Buffer.from('test'), { key: publicKey, dsaEncoding: 'ieee-p1363' }, raw);
   assert.ok(verified, 'signature raw sah — verify lulus');
 });
+
+// ─── Mesej suara (audio) ───
+test('addMedia: ogg dikesan sebagai audio tanpa flag klien', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const u = chat.findUser('Ana');
+  const ogg = Buffer.concat([Buffer.from('OggS', 'latin1'), Buffer.alloc(24)]);
+  const r = chat.addMedia(u, ogg, {});
+  assert.ok(r.ok);
+  assert.equal(r.media.kind, 'audio');
+  assert.equal(r.media.mime, 'audio/ogg');
+});
+
+test('addMedia: webm + flag audio=1 → audio; tanpa flag → video', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const u = chat.findUser('Ana');
+  const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(24)]);
+  const a = chat.addMedia(u, webm, { audio: '1' });
+  assert.equal(a.media.kind, 'audio', 'flag klien menentukan jenis');
+  assert.equal(a.media.mime, 'audio/webm', 'mime video/webm ditukar jadi audio/webm');
+  const v = chat.addMedia(u, webm, {});
+  assert.equal(v.media.kind, 'video', 'tanpa flag → video');
+});
+
+// ─── Pin mesej ───
+test('pinMsg: togol pin di bilik global + mesej tak wujud → ralat', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const id = chat.send('Ana', 'global_am', 'penting').msg.id;
+  assert.equal(chat.pinMsg('Ana', 'global_am', id, true).pinned, true);
+  assert.equal(chat.pinMsg('Ana', 'global_am', id, false).pinned, false);
+  assert.ok(chat.pinMsg('Ana', 'global_am', 'tak-wujud', true).error);
+});
+
+test('pinMsg: dalam kumpulan hanya admin boleh pin', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const grp = chat.createGroup('Ana', 'Kumpulan', [idOf('Ben')]).room;
+  const id = chat.send('Ben', grp.id, 'biasa').msg.id;
+  assert.ok(chat.pinMsg('Ben', grp.id, id, true).error, 'bukan admin → ditolak');
+  assert.ok(chat.pinMsg('Ana', grp.id, id, true).ok, 'admin → lulus');
+});
+
+// ─── Pentadbiran kumpulan ───
+test('renameGroup: admin boleh tukar nama, bukan admin + nama kosong ditolak', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const grp = chat.createGroup('Ana', 'Lama', [idOf('Ben')]).room;
+  assert.ok(chat.renameGroup('Ben', grp.id, 'Hack').error, 'bukan admin');
+  assert.equal(chat.renameGroup('Ana', grp.id, 'Baharu').title, 'Baharu');
+  assert.ok(chat.renameGroup('Ana', grp.id, '   ').error, 'nama kosong');
+});
+
+test('addAdmin + kickFromGroup: naik/turun admin, buang ahli', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const grp = chat.createGroup('Ana', 'Kumpulan', [idOf('Ben'), idOf('Cia')]).room;
+  assert.ok(!chat.isGroupAdmin(grp, 'Ben'));
+  chat.addAdmin('Ana', grp.id, idOf('Ben'), false);
+  assert.ok(chat.isGroupAdmin(grp, 'Ben'), 'Ben jadi admin');
+  chat.addAdmin('Ana', grp.id, idOf('Ben'), true);
+  assert.ok(!chat.isGroupAdmin(grp, 'Ben'), 'Ben diturunkan');
+  assert.ok(chat.kickFromGroup('Ana', grp.id, idOf('Cia')).ok);
+  assert.ok(!grp.memberIds.includes(idOf('Cia')), 'Cia dibuang');
+  assert.ok(chat.kickFromGroup('Ana', grp.id, idOf('Ana')).error, 'buang diri sendiri → guna keluar');
+});
+
+test('leaveGroup: admin keluar → promosi ahli lain; semua keluar → bubar', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const grp = chat.createGroup('Ana', 'Kumpulan', [idOf('Ben')]).room;
+  const r = chat.leaveGroup('Ana', grp.id);
+  assert.ok(r.ok && !r.dissolved, 'Ben masih ada → bukan bubar');
+  assert.ok(chat.isGroupAdmin(grp, 'Ben'), 'Ben dipromosikan admin');
+  const r2 = chat.leaveGroup('Ben', grp.id);
+  assert.ok(r2.ok && r2.dissolved, 'ahli terakhir → dibubarkan');
+  assert.ok(!chat.load().rooms[grp.id], 'bilik sudah tiada');
+});
+
+test('dissolveBy: hanya pencipta boleh bubarkan selagi pencipta ada', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const grp = chat.createGroup('Ana', 'K', [idOf('Ben')]).room;
+  chat.addAdmin('Ana', grp.id, idOf('Ben'), false);   // Ben admin tapi bukan pencipta
+  assert.ok(chat.dissolveBy('Ben', grp.id).error, 'bukan pencipta → ditolak');
+  const r = chat.dissolveBy('Ana', grp.id);
+  assert.ok(r.ok && r.dissolved);
+  assert.ok(!chat.load().rooms[grp.id], 'kumpulan dibubarkan');
+});
+
+// ─── Padam akaun ───
+test('deleteAccount: kata laluan salah ditolak; betul → akaun + DM dihapus', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.send('Ana', dm.id, 'halo');
+  assert.ok(chat.deleteAccount('Ana', 'salah').error, 'kata laluan salah');
+  assert.ok(chat.deleteAccount('Ana', 'pass1').ok);
+  assert.ok(!chat.findUser('Ana'), 'Ana tiada lagi');
+  assert.ok(!chat.load().rooms[dm.id], 'DM dibuang');
+});
+
+test('deleteAccount: kumpulan miliknya dibubarkan, keanggotaan lain dibersihkan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
+  const anaId = idOf('Ana');
+  const own = chat.createGroup('Ana', 'Milik Ana', [idOf('Ben')]).room;
+  const other = chat.createGroup('Ben', 'Milik Ben', [anaId, idOf('Cia')]).room;
+  assert.ok(chat.deleteAccount('Ana', 'pass1').ok);
+  assert.ok(!chat.load().rooms[own.id], 'kumpulan milik Ana dibubarkan');
+  assert.ok(chat.load().rooms[other.id], 'kumpulan orang lain kekal');
+  assert.ok(!other.memberIds.includes(anaId), 'Ana dibuang dari ahli');
+});
+
+// ─── Laluan HTTP baharu ───
+test('POST /api/chat/pin: perlu login + togol pin', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const id = chat.send('Ana', 'global_am', 'x').msg.id;
+  assert.equal(hit(routes, 'P /api/chat/pin', reqOf('palsu', { room: 'global_am', id })).code, 401);
+  const r = hit(routes, 'P /api/chat/pin', reqOf(tok, { room: 'global_am', id, pinned: true }));
+  assert.equal(r.code, 200);
+  assert.equal(r.body.pinned, true);
+});
+
+test('POST group/rename + admin + kick melalui laluan', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  const grp = chat.createGroup('Ana', 'Lama', [idOf('Ben')]).room;
+  let r = hit(routes, 'P /api/chat/group/rename', reqOf(tok, { room: grp.id, title: 'Baharu' }));
+  assert.equal(r.code, 200); assert.equal(r.body.title, 'Baharu');
+  r = hit(routes, 'P /api/chat/group/admin', reqOf(tok, { room: grp.id, memberId: idOf('Ben') }));
+  assert.equal(r.code, 200); assert.ok(r.body.admins.includes(idOf('Ben')));
+  r = hit(routes, 'P /api/chat/group/kick', reqOf(tok, { room: grp.id, memberId: idOf('Ben') }));
+  assert.equal(r.code, 200); assert.ok(r.body.dissolved, 'tinggal seorang → bubar');
+});
+
+test('POST /api/chat/delete-account: kata laluan + sesi diperlukan', () => {
+  fresh();
+  chat.register('Ana', 'pass1');
+  const routes = mountRoutes();
+  const tok = chat.issueSession('Ana');
+  assert.equal(hit(routes, 'P /api/chat/delete-account', reqOf(tok, { pass: 'salah' })).code, 401, 'kata laluan salah → 401');
+  assert.equal(hit(routes, 'P /api/chat/delete-account', reqOf('palsu', { pass: 'pass1' })).code, 401, 'tiada sesi → 401');
+  const r = hit(routes, 'P /api/chat/delete-account', reqOf(tok, { pass: 'pass1' }));
+  assert.equal(r.code, 200); assert.ok(r.body.ok);
+  assert.ok(!chat.findUser('Ana'));
+});
