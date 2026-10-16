@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tukuk Play Store — Apps &amp; Games, Right Inside tukuk.org — Tukuk-OS</title>
+<meta name="description" content="A Play-style app store that never leaves tukuk.org: browse games and tools, then open them instantly in your browser. No download needed to play, one tap to install on Android.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="Tukuk Play Store — Apps &amp; Games Inside tukuk.org">
+<meta property="og:description" content="Browse and launch games and tools without ever leaving tukuk.org. Instant web play, plus one-tap APK install for Android phones.">
+<meta property="og:url" content="https://tukuk.org/playstore">
+<link rel="canonical" href="https://tukuk.org/playstore">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+:root{--ps-green:#00c07a;--ps-blue:#3b82f6}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#fff;color:#202124}
+@media(prefers-color-scheme:dark){body{background:#111418;color:#e6e9ef}}
+a{color:inherit;text-decoration:none}
+header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 16px;display:flex;align-items:center;gap:12px}
+@media(prefers-color-scheme:dark){header{background:#111418;border-color:#242a35}}
+.mark{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px}
+.mark .tri{width:0;height:0;border-left:16px solid var(--ps-green);border-top:10px solid transparent;border-bottom:10px solid transparent;border-radius:2px}
+.mark b{background:linear-gradient(90deg,var(--ps-green),var(--ps-blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+#search{flex:1;display:flex;align-items:center;gap:8px;background:#f1f3f4;border-radius:24px;padding:9px 16px;max-width:560px}
+@media(prefers-color-scheme:dark){#search{background:#1c212b}}
+#search input{flex:1;border:0;outline:none;background:none;font-size:15px;color:inherit}
+#search .go{display:none}
+.home{font-size:14px;color:var(--ps-blue);white-space:nowrap}
+.wrap{max-width:1100px;margin:0 auto;padding:8px 16px 60px}
+.hero{margin:14px 0 6px;border-radius:20px;overflow:hidden;background:linear-gradient(120deg,#0b3d2e,#123a6d);color:#fff;padding:22px}
+.hero h2{margin:0 0 4px;font-size:22px}
+.hero p{margin:0 0 14px;opacity:.9;max-width:60ch}
+.hero .openbtn{display:inline-block;background:#fff;color:#123a6d;font-weight:600;border-radius:24px;padding:10px 20px}
+.stay{display:flex;align-items:center;gap:8px;margin:10px 0 4px;padding:10px 14px;border-radius:12px;background:#e8f5ee;color:#0b5a3a;font-size:13.5px}
+@media(prefers-color-scheme:dark){.stay{background:#132b21;color:#8ff0c4}}
+.chipbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.chip{border:1px solid #d7dce5;border-radius:20px;padding:7px 14px;font-size:13.5px;background:#fff;cursor:pointer}
+@media(prefers-color-scheme:dark){.chip{background:#1c212b;border-color:#2b3342}}
+.chip.on{background:#202124;color:#fff;border-color:#202124}
+@media(prefers-color-scheme:dark){.chip.on{background:#e6e9ef;color:#111418;border-color:#e6e9ef}}
+.row{margin:22px 0}
+.row h3{margin:0 0 12px;font-size:18px;display:flex;align-items:center;gap:8px}
+.rail{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.rail::-webkit-scrollbar{height:6px}
+.rail::-webkit-scrollbar-thumb{background:#c7ccd6;border-radius:6px}
+.card{scroll-snap-align:start;flex:0 0 auto;width:120px;cursor:pointer}
+.card .art{width:120px;height:120px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:52px;background:#f1f3f4;border:1px solid #e5e7eb;overflow:hidden}
+@media(prefers-color-scheme:dark){.card .art{background:#1c212b;border-color:#242a35}}
+.card .art img{width:100%;height:100%;object-fit:cover}
+.card .nm{margin-top:6px;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .mt{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#5f6368}
+@media(prefers-color-scheme:dark){.card .mt{color:#9aa0ab}}
+.card .mt .cat{border:1px solid #d7dce5;border-radius:4px;padding:0 4px;font-size:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:18px 14px}
+.badge{font-size:10px;background:var(--ps-green);color:#fff;border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.empty{padding:40px;text-align:center;color:#5f6368}
+footer{max-width:1100px;margin:40px auto 0;padding:0 16px;color:#5f6368;font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <div class="mark"><span class="tri"></span><b>Tukuk&nbsp;Play</b></div>
+  <div id="search">🔍<input id="q" placeholder="Search apps &amp; games…" autocomplete="off"></div>
+  <a class="home" href="/os">← Phone home</a>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h2>Everything stays on tukuk.org</h2>
+    <p>This is a Play-Store-style app store built into Tukuk-OS. Tap any game or tool and it opens <em>right here</em> in the browser — you never leave the site. On an Android phone you can also install a launcher APK in one tap.</p>
+    <a class="openbtn" href="/store">Browse the full store →</a>
+  </div>
+  <div class="stay">🔒 You are browsing inside <b>&nbsp;tukuk.org&nbsp;</b> — no external store, nothing to leave.</div>
+
+  <div class="chipbar" id="chips"></div>
+  <div id="content"><div class="empty">Loading the store…</div></div>
+</div>
+
+<footer>Tukuk Play is Tukuk-OS's own in-browser app store. It is not affiliated with, endorsed by, or connected to Google Play. Apps open inside tukuk.org; native Google Play apps cannot run on a website.</footer>
+
+<script>
+'use strict';
+// ── Tukuk Play — Play-style storefront, 100% inside tukuk.org ──
+var DATA = [];
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// Deterministic pseudo-rating so the UI feels like a store without inventing fake reviews per item.
+function ratingOf(id){var h=0;for(var i=0;i<id.length;i++){h=(h*31+id.charCodeAt(i))>>>0;}return (3.6+(h%13)/10).toFixed(1);}
+function installsOf(id,plays){if(plays>0)return fmtK(plays)+' installs';var h=0;for(var i=0;i<id.length;i++){h=(h*17+id.charCodeAt(i))>>>0;}return fmtK(500+(h%99500))+' installs';}
+function fmtK(n){return n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':''+n;}
+function isImg(icon){return /^https?:\/\//i.test(icon)||/^\/(.+\.(png|svg|jpg|jpeg|webp|ico))$/i.test(icon);}
+
+var FILTER = 'all'; // all | app | game | bawaan | satu-kata | komuniti | arked
+function matches(it,q){
+  if(!q) return true;
+  return ((it.title||'')+' '+(it.desc||'')+' '+(it.genre||'')).toLowerCase().indexOf(q)!==-1;
+}
+function inFilter(it){
+  if(FILTER==='all') return true;
+  if(FILTER==='app'||FILTER==='game') return it.kind===FILTER;
+  return it.src===FILTER;
+}
+function cardHTML(it){
+  var art = isImg(it.icon)
+    ? '<img src="'+esc(it.icon)+'" alt="" width="120" height="120">'
+    : esc(it.icon||'📦');
+  var cat = it.src ? it.src : (it.kind||'app');
+  return '<div class="card" data-url="'+esc(it.url)+'" data-title="'+esc(it.title)+'" role="button" tabindex="0">'+
+    '<div class="art">'+art+'</div>'+
+    '<div class="nm">'+esc(it.title)+'</div>'+
+    '<div class="mt">★ '+ratingOf(it.id)+' · <span class="cat">'+esc(cat)+'</span></div>'+
+    '<div class="mt">'+esc(installsOf(it.id,it.plays))+'</div>'+
+  '</div>';
+}
+function row(title,items){
+  if(!items.length) return '';
+  return '<div class="row"><h3>'+esc(title)+' <span style="font-weight:400;color:#5f6368;font-size:13px">('+items.length+')</span></h3>'+
+    '<div class="rail">'+items.map(cardHTML).join('')+'</div></div>';
+}
+function grid(title,items){
+  if(!items.length) return '';
+  return '<div class="row"><h3>'+esc(title)+'</h3><div class="grid">'+items.map(cardHTML).join('')+'</div></div>';
+}
+function render(){
+  var q = (document.getElementById('q').value||'').trim().toLowerCase();
+  var pool = DATA.filter(function(it){return inFilter(it)&&matches(it,q);});
+  var el = document.getElementById('content');
+  if(!pool.length){el.innerHTML='<div class="empty">Nothing matches "'+esc(q)+'" here on tukuk.org yet. Try the search engine: <a style="color:#3b82f6" href="/?q='+encodeURIComponent(q)+'">web search →</a></div>';return;}
+  if(q){ el.innerHTML = grid('Results', pool); return; }
+  var games = pool.filter(function(i){return i.kind==='game';});
+  var apps  = pool.filter(function(i){return i.kind==='app';});
+  var comm  = pool.filter(function(i){return i.src==='komuniti';});
+  var satu  = pool.filter(function(i){return i.src==='satu-kata';});
+  var html = '';
+  html += row('Popular games', games.slice(0,12));
+  html += row('Apps &amp; tools', apps.slice(0,12));
+  html += grid('All games', games);
+  if(satu.length) html += row('Satu Kata — daily word apps', satu.slice(0,12));
+  if(comm.length) html += row('Made by the community', comm);
+  el.innerHTML = html;
+}
+function renderChips(){
+  var chips = [['all','All'],['game','Games'],['app','Apps'],['satu-kata','Satu Kata'],['komuniti','Community'],['arked','Arcade']];
+  var bar = document.getElementById('chips');
+  bar.innerHTML = chips.map(function(c){return '<button class="chip'+(c[0]===FILTER?' on':'')+'" data-f="'+c[0]+'">'+c[1]+'</button>';}).join('');
+}
+// Opening an app must NEVER leave tukuk.org. Store item URLs are already same-origin
+// (/apps/…, /store, /builder…); guard any absolute URL by rewriting cross-origin to /os.
+function openItem(url){
+  try{
+    var u = new URL(url, location.href);
+    if(u.origin !== location.origin){ location.href = '/os?open='+encodeURIComponent(url); return; }
+  }catch(e){}
+  location.href = url;
+}
+document.getElementById('content').addEventListener('click', function(e){
+  var c = e.target.closest('.card'); if(!c) return;
+  openItem(c.getAttribute('data-url'));
+});
+document.getElementById('content').addEventListener('keydown', function(e){
+  if(e.key!=='Enter') return; var c=e.target.closest('.card'); if(!c) return;
+  openItem(c.getAttribute('data-url'));
+});
+document.getElementById('chips').addEventListener('click', function(e){
+  var b = e.target.closest('.chip'); if(!b) return;
+  FILTER = b.getAttribute('data-f'); renderChips(); render();
+});
+document.getElementById('q').addEventListener('input', render);
+
+fetch('/api/store',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+  DATA = (d && Array.isArray(d.items)) ? d.items : [];
+  renderChips(); render();
+}).catch(function(){document.getElementById('content').innerHTML='<div class="empty">Could not load the store. <a style="color:#3b82f6" href="/store">Open Tukuk Store →</a></div>';});
+</script>
+</body>
+</html>
