@@ -1,7 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // app/build.gradle — Tukuk-OS Android wrapper catalogue
 //
-// Reads apk/catalog.json and creates one productFlavour per item (43 total).
+// Reads apk/catalog.json and creates one productFlavour per item (99 total —
+// resync with the live store via `node scripts/sync-store-catalog.js`).
+// Per-flavour launcher icons live in src/<slug>/res/mipmap-*/ (auto-merged).
 // In Android Studio open the apk/ folder, pick any flavour in
 // Build Variants panel, then Run ▶ to launch it on an emulator or device.
 //

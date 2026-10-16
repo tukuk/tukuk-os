@@ -1,48 +1,953 @@
 {
   "_comment": "Sumber tunggal untuk katalog store tukuk.org (= APKPure sendiri). Setiap apl boleh dipasang sebagai PWA dan dimuat turun sebagai APK pembungkus WebView yang membuka laman web hidup apl itu. `pkg` ialah pakej Android — TIDAK BOLEH diubah selepas APK dipakai/di-upload (kekal). `media:true` tambah kebenaran kamera/mikrofon (hanya perlu untuk WebRTC/panggilan). `icon` pilihan; jika tiada, penjana pakai apk/launcher/<slug>.png (dijana dari SVG).",
   "apps": [
-    { "slug": "chat",     "label": "T Chat Beta",     "pkg": "org.tukuk.chat",     "url": "https://tukuk.org/apps/chat",     "media": true,  "icon": "public/icons/apps/chat-512.png", "vc": 3, "vn": "1.0.1" },
-    { "slug": "notes",    "label": "Tukuk Notes",     "pkg": "org.tukuk.notes",    "url": "https://tukuk.org/apps/notes",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "calc",     "label": "Tukuk Calc",      "pkg": "org.tukuk.calc",     "url": "https://tukuk.org/apps/calc",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "todo",     "label": "Tukuk To-Do",     "pkg": "org.tukuk.todo",     "url": "https://tukuk.org/apps/todo",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "convert",  "label": "Tukuk Convert",   "pkg": "org.tukuk.convert",  "url": "https://tukuk.org/apps/convert",  "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "timer",    "label": "Tukuk Timer",     "pkg": "org.tukuk.timer",    "url": "https://tukuk.org/apps/timer",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "color",    "label": "Tukuk Warna",     "pkg": "org.tukuk.color",    "url": "https://tukuk.org/apps/color",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "password", "label": "Tukuk Password",  "pkg": "org.tukuk.password", "url": "https://tukuk.org/apps/password", "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "text",     "label": "Tukuk Text",      "pkg": "org.tukuk.text",     "url": "https://tukuk.org/apps/text",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "pixel",    "label": "Pixel Studio",    "pkg": "org.tukuk.pixel",    "url": "https://tukuk.org/apps/pixel",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "piano",    "label": "Synth Piano",     "pkg": "org.tukuk.piano",    "url": "https://tukuk.org/apps/piano",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "spiro",    "label": "Spiro Mandala",   "pkg": "org.tukuk.spiro",    "url": "https://tukuk.org/apps/spiro",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "orbit",    "label": "Orbit Sim",       "pkg": "org.tukuk.orbit",    "url": "https://tukuk.org/apps/orbit",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "fractal",  "label": "Fractal Explorer","pkg": "org.tukuk.fractal",  "url": "https://tukuk.org/apps/fractal",  "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "drum",     "label": "Drum Machine",    "pkg": "org.tukuk.drum",     "url": "https://tukuk.org/apps/drum",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "calendar", "label": "Tukuk Calendar",  "pkg": "org.tukuk.calendar", "url": "https://tukuk.org/apps/calendar", "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "dice",     "label": "Tukuk Dice",      "pkg": "org.tukuk.dice",     "url": "https://tukuk.org/apps/dice",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "tip",      "label": "Tukuk Tip Split", "pkg": "org.tukuk.tip",      "url": "https://tukuk.org/apps/tip",      "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "bmi",      "label": "Tukuk BMI",       "pkg": "org.tukuk.bmi",      "url": "https://tukuk.org/apps/bmi",      "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "candy",     "label": "Candy Blast",      "pkg": "org.tukuk.candy",      "url": "https://tukuk.org/apps/candy",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "flappy",    "label": "Flappy Dash",      "pkg": "org.tukuk.flappy",     "url": "https://tukuk.org/apps/flappy",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "subway",    "label": "Subway Dash",      "pkg": "org.tukuk.subway",     "url": "https://tukuk.org/apps/subway",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "slice",     "label": "Fruit Slice",      "pkg": "org.tukuk.slice",      "url": "https://tukuk.org/apps/slice",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "roadhop",   "label": "Road Hop",         "pkg": "org.tukuk.roadhop",    "url": "https://tukuk.org/apps/roadhop",   "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "bubble",    "label": "Bubble Pop",       "pkg": "org.tukuk.bubble",     "url": "https://tukuk.org/apps/bubble",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "ludo",      "label": "Tukuk Ludo",       "pkg": "org.tukuk.ludo",       "url": "https://tukuk.org/apps/ludo",      "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "solitaire", "label": "Solitaire",        "pkg": "org.tukuk.solitaire",  "url": "https://tukuk.org/apps/solitaire", "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "number2048","label": "Tukuk 2048",       "pkg": "org.tukuk.number2048", "url": "https://tukuk.org/apps/number2048","media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "blockdrop", "label": "Block Drop",       "pkg": "org.tukuk.blockdrop",  "url": "https://tukuk.org/apps/blockdrop", "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "snake",     "label": "Tukuk Snake",      "pkg": "org.tukuk.snake",      "url": "https://tukuk.org/apps/snake",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "mines",     "label": "Minesweeper",      "pkg": "org.tukuk.mines",      "url": "https://tukuk.org/apps/mines",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "connect4",  "label": "Connect Four",     "pkg": "org.tukuk.connect4",   "url": "https://tukuk.org/apps/connect4",  "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "breakout",  "label": "Tukuk Breakout",   "pkg": "org.tukuk.breakout",   "url": "https://tukuk.org/apps/breakout",  "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "invaders",  "label": "Space Invaders",   "pkg": "org.tukuk.invaders",   "url": "https://tukuk.org/apps/invaders",  "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "doodle",    "label": "Doodle Jump",      "pkg": "org.tukuk.doodle",     "url": "https://tukuk.org/apps/doodle",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "pong",      "label": "Tukuk Pong",       "pkg": "org.tukuk.pong",       "url": "https://tukuk.org/apps/pong",      "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "stack",     "label": "Stack Tower",      "pkg": "org.tukuk.stack",      "url": "https://tukuk.org/apps/stack",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "simon",     "label": "Simon Tones",      "pkg": "org.tukuk.simon",      "url": "https://tukuk.org/apps/simon",     "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "muncher",   "label": "Maze Muncher",     "pkg": "org.tukuk.muncher",    "url": "https://tukuk.org/apps/muncher",   "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "puzzle15",  "label": "Slide 15",         "pkg": "org.tukuk.puzzle15",   "url": "https://tukuk.org/apps/puzzle15",  "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "tictactoe", "label": "Tic-Tac-Toe",      "pkg": "org.tukuk.tictactoe",  "url": "https://tukuk.org/apps/tictactoe", "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "memory",    "label": "Memory Match",     "pkg": "org.tukuk.memory",     "url": "https://tukuk.org/apps/memory",    "media": false, "vc": 1, "vn": "1.0.0" },
-    { "slug": "whack",     "label": "Whack-a-Mole",     "pkg": "org.tukuk.whack",      "url": "https://tukuk.org/apps/whack",     "media": false, "vc": 1, "vn": "1.0.0" }
+    {
+      "slug": "chat",
+      "label": "T Chat Beta",
+      "pkg": "org.tukuk.chat",
+      "url": "https://tukuk.org/apps/chat",
+      "media": true,
+      "icon": "public/icons/apps/chat-512.png",
+      "vc": 3,
+      "vn": "1.0.1"
+    },
+    {
+      "slug": "notes",
+      "label": "Tukuk Notes",
+      "pkg": "org.tukuk.notes",
+      "url": "https://tukuk.org/apps/notes",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "calc",
+      "label": "Tukuk Calc",
+      "pkg": "org.tukuk.calc",
+      "url": "https://tukuk.org/apps/calc",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "todo",
+      "label": "Tukuk To-Do",
+      "pkg": "org.tukuk.todo",
+      "url": "https://tukuk.org/apps/todo",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "convert",
+      "label": "Tukuk Convert",
+      "pkg": "org.tukuk.convert",
+      "url": "https://tukuk.org/apps/convert",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "timer",
+      "label": "Tukuk Timer",
+      "pkg": "org.tukuk.timer",
+      "url": "https://tukuk.org/apps/timer",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "color",
+      "label": "Tukuk Warna",
+      "pkg": "org.tukuk.color",
+      "url": "https://tukuk.org/apps/color",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "password",
+      "label": "Tukuk Password",
+      "pkg": "org.tukuk.password",
+      "url": "https://tukuk.org/apps/password",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "text",
+      "label": "Tukuk Text",
+      "pkg": "org.tukuk.text",
+      "url": "https://tukuk.org/apps/text",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "pixel",
+      "label": "Pixel Studio",
+      "pkg": "org.tukuk.pixel",
+      "url": "https://tukuk.org/apps/pixel",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "piano",
+      "label": "Synth Piano",
+      "pkg": "org.tukuk.piano",
+      "url": "https://tukuk.org/apps/piano",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "spiro",
+      "label": "Spiro Mandala",
+      "pkg": "org.tukuk.spiro",
+      "url": "https://tukuk.org/apps/spiro",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "orbit",
+      "label": "Orbit Sim",
+      "pkg": "org.tukuk.orbit",
+      "url": "https://tukuk.org/apps/orbit",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "fractal",
+      "label": "Fractal Explorer",
+      "pkg": "org.tukuk.fractal",
+      "url": "https://tukuk.org/apps/fractal",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "drum",
+      "label": "Drum Machine",
+      "pkg": "org.tukuk.drum",
+      "url": "https://tukuk.org/apps/drum",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "calendar",
+      "label": "Tukuk Calendar",
+      "pkg": "org.tukuk.calendar",
+      "url": "https://tukuk.org/apps/calendar",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "dice",
+      "label": "Tukuk Dice",
+      "pkg": "org.tukuk.dice",
+      "url": "https://tukuk.org/apps/dice",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "tip",
+      "label": "Tukuk Tip Split",
+      "pkg": "org.tukuk.tip",
+      "url": "https://tukuk.org/apps/tip",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "bmi",
+      "label": "Tukuk BMI",
+      "pkg": "org.tukuk.bmi",
+      "url": "https://tukuk.org/apps/bmi",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "candy",
+      "label": "Candy Blast",
+      "pkg": "org.tukuk.candy",
+      "url": "https://tukuk.org/apps/candy",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "flappy",
+      "label": "Flappy Dash",
+      "pkg": "org.tukuk.flappy",
+      "url": "https://tukuk.org/apps/flappy",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "subway",
+      "label": "Subway Dash",
+      "pkg": "org.tukuk.subway",
+      "url": "https://tukuk.org/apps/subway",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "slice",
+      "label": "Fruit Slice",
+      "pkg": "org.tukuk.slice",
+      "url": "https://tukuk.org/apps/slice",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "roadhop",
+      "label": "Road Hop",
+      "pkg": "org.tukuk.roadhop",
+      "url": "https://tukuk.org/apps/roadhop",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "bubble",
+      "label": "Bubble Pop",
+      "pkg": "org.tukuk.bubble",
+      "url": "https://tukuk.org/apps/bubble",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "ludo",
+      "label": "Tukuk Ludo",
+      "pkg": "org.tukuk.ludo",
+      "url": "https://tukuk.org/apps/ludo",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "solitaire",
+      "label": "Solitaire",
+      "pkg": "org.tukuk.solitaire",
+      "url": "https://tukuk.org/apps/solitaire",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "number2048",
+      "label": "Tukuk 2048",
+      "pkg": "org.tukuk.number2048",
+      "url": "https://tukuk.org/apps/number2048",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "blockdrop",
+      "label": "Block Drop",
+      "pkg": "org.tukuk.blockdrop",
+      "url": "https://tukuk.org/apps/blockdrop",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "snake",
+      "label": "Tukuk Snake",
+      "pkg": "org.tukuk.snake",
+      "url": "https://tukuk.org/apps/snake",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "mines",
+      "label": "Minesweeper",
+      "pkg": "org.tukuk.mines",
+      "url": "https://tukuk.org/apps/mines",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "connect4",
+      "label": "Connect Four",
+      "pkg": "org.tukuk.connect4",
+      "url": "https://tukuk.org/apps/connect4",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "breakout",
+      "label": "Tukuk Breakout",
+      "pkg": "org.tukuk.breakout",
+      "url": "https://tukuk.org/apps/breakout",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "invaders",
+      "label": "Space Invaders",
+      "pkg": "org.tukuk.invaders",
+      "url": "https://tukuk.org/apps/invaders",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "doodle",
+      "label": "Doodle Jump",
+      "pkg": "org.tukuk.doodle",
+      "url": "https://tukuk.org/apps/doodle",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "pong",
+      "label": "Tukuk Pong",
+      "pkg": "org.tukuk.pong",
+      "url": "https://tukuk.org/apps/pong",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "stack",
+      "label": "Stack Tower",
+      "pkg": "org.tukuk.stack",
+      "url": "https://tukuk.org/apps/stack",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "simon",
+      "label": "Simon Tones",
+      "pkg": "org.tukuk.simon",
+      "url": "https://tukuk.org/apps/simon",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "muncher",
+      "label": "Maze Muncher",
+      "pkg": "org.tukuk.muncher",
+      "url": "https://tukuk.org/apps/muncher",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "puzzle15",
+      "label": "Slide 15",
+      "pkg": "org.tukuk.puzzle15",
+      "url": "https://tukuk.org/apps/puzzle15",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "tictactoe",
+      "label": "Tic-Tac-Toe",
+      "pkg": "org.tukuk.tictactoe",
+      "url": "https://tukuk.org/apps/tictactoe",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "memory",
+      "label": "Memory Match",
+      "pkg": "org.tukuk.memory",
+      "url": "https://tukuk.org/apps/memory",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "whack",
+      "label": "Whack-a-Mole",
+      "pkg": "org.tukuk.whack",
+      "url": "https://tukuk.org/apps/whack",
+      "media": false,
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skrain",
+      "label": "App rain",
+      "pkg": "org.tukuk.skrain",
+      "url": "https://tukuk.org/satu-kata/rain/app/",
+      "media": false,
+      "icon": "public/icons/apps/skrain-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgrain",
+      "label": "Game rain",
+      "pkg": "org.tukuk.skgrain",
+      "url": "https://tukuk.org/satu-kata/rain/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgrain-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skcoffee",
+      "label": "App coffee",
+      "pkg": "org.tukuk.skcoffee",
+      "url": "https://tukuk.org/satu-kata/coffee/app/",
+      "media": false,
+      "icon": "public/icons/apps/skcoffee-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgcoffee",
+      "label": "Game coffee",
+      "pkg": "org.tukuk.skgcoffee",
+      "url": "https://tukuk.org/satu-kata/coffee/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgcoffee-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skbook",
+      "label": "App book",
+      "pkg": "org.tukuk.skbook",
+      "url": "https://tukuk.org/satu-kata/book/app/",
+      "media": false,
+      "icon": "public/icons/apps/skbook-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgbook",
+      "label": "Game book",
+      "pkg": "org.tukuk.skgbook",
+      "url": "https://tukuk.org/satu-kata/book/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgbook-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skrocket",
+      "label": "App rocket",
+      "pkg": "org.tukuk.skrocket",
+      "url": "https://tukuk.org/satu-kata/rocket/app/",
+      "media": false,
+      "icon": "public/icons/apps/skrocket-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgrocket",
+      "label": "Game rocket",
+      "pkg": "org.tukuk.skgrocket",
+      "url": "https://tukuk.org/satu-kata/rocket/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgrocket-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skfish",
+      "label": "App fish",
+      "pkg": "org.tukuk.skfish",
+      "url": "https://tukuk.org/satu-kata/fish/app/",
+      "media": false,
+      "icon": "public/icons/apps/skfish-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgfish",
+      "label": "Game fish",
+      "pkg": "org.tukuk.skgfish",
+      "url": "https://tukuk.org/satu-kata/fish/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgfish-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skcloud",
+      "label": "App cloud",
+      "pkg": "org.tukuk.skcloud",
+      "url": "https://tukuk.org/satu-kata/cloud/app/",
+      "media": false,
+      "icon": "public/icons/apps/skcloud-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgcloud",
+      "label": "Game cloud",
+      "pkg": "org.tukuk.skgcloud",
+      "url": "https://tukuk.org/satu-kata/cloud/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgcloud-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skflower",
+      "label": "App flower",
+      "pkg": "org.tukuk.skflower",
+      "url": "https://tukuk.org/satu-kata/flower/app/",
+      "media": false,
+      "icon": "public/icons/apps/skflower-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgflower",
+      "label": "Game flower",
+      "pkg": "org.tukuk.skgflower",
+      "url": "https://tukuk.org/satu-kata/flower/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgflower-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skcrescent",
+      "label": "App crescent",
+      "pkg": "org.tukuk.skcrescent",
+      "url": "https://tukuk.org/satu-kata/crescent/app/",
+      "media": false,
+      "icon": "public/icons/apps/skcrescent-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgcrescent",
+      "label": "Game crescent",
+      "pkg": "org.tukuk.skgcrescent",
+      "url": "https://tukuk.org/satu-kata/crescent/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgcrescent-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "sktrain",
+      "label": "App train",
+      "pkg": "org.tukuk.sktrain",
+      "url": "https://tukuk.org/satu-kata/train/app/",
+      "media": false,
+      "icon": "public/icons/apps/sktrain-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgtrain",
+      "label": "Game train",
+      "pkg": "org.tukuk.skgtrain",
+      "url": "https://tukuk.org/satu-kata/train/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgtrain-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skchili",
+      "label": "App chili",
+      "pkg": "org.tukuk.skchili",
+      "url": "https://tukuk.org/satu-kata/chili/app/",
+      "media": false,
+      "icon": "public/icons/apps/skchili-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgchili",
+      "label": "Game chili",
+      "pkg": "org.tukuk.skgchili",
+      "url": "https://tukuk.org/satu-kata/chili/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgchili-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skfisherman",
+      "label": "App fisherman",
+      "pkg": "org.tukuk.skfisherman",
+      "url": "https://tukuk.org/satu-kata/fisherman/app/",
+      "media": false,
+      "icon": "public/icons/apps/skfisherman-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgfisherman",
+      "label": "Game fisherman",
+      "pkg": "org.tukuk.skgfisherman",
+      "url": "https://tukuk.org/satu-kata/fisherman/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgfisherman-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skdurian",
+      "label": "App durian",
+      "pkg": "org.tukuk.skdurian",
+      "url": "https://tukuk.org/satu-kata/durian/app/",
+      "media": false,
+      "icon": "public/icons/apps/skdurian-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgdurian",
+      "label": "Game durian",
+      "pkg": "org.tukuk.skgdurian",
+      "url": "https://tukuk.org/satu-kata/durian/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgdurian-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skrobin",
+      "label": "App robin",
+      "pkg": "org.tukuk.skrobin",
+      "url": "https://tukuk.org/satu-kata/robin/app/",
+      "media": false,
+      "icon": "public/icons/apps/skrobin-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgrobin",
+      "label": "Game robin",
+      "pkg": "org.tukuk.skgrobin",
+      "url": "https://tukuk.org/satu-kata/robin/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgrobin-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skcompass",
+      "label": "App compass",
+      "pkg": "org.tukuk.skcompass",
+      "url": "https://tukuk.org/satu-kata/compass/app/",
+      "media": false,
+      "icon": "public/icons/apps/skcompass-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgcompass",
+      "label": "Game compass",
+      "pkg": "org.tukuk.skgcompass",
+      "url": "https://tukuk.org/satu-kata/compass/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgcompass-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skguitar",
+      "label": "App guitar",
+      "pkg": "org.tukuk.skguitar",
+      "url": "https://tukuk.org/satu-kata/guitar/app/",
+      "media": false,
+      "icon": "public/icons/apps/skguitar-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgguitar",
+      "label": "Game guitar",
+      "pkg": "org.tukuk.skgguitar",
+      "url": "https://tukuk.org/satu-kata/guitar/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgguitar-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skstar",
+      "label": "App star",
+      "pkg": "org.tukuk.skstar",
+      "url": "https://tukuk.org/satu-kata/star/app/",
+      "media": false,
+      "icon": "public/icons/apps/skstar-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgstar",
+      "label": "Game star",
+      "pkg": "org.tukuk.skgstar",
+      "url": "https://tukuk.org/satu-kata/star/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgstar-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skcoconut",
+      "label": "App coconut",
+      "pkg": "org.tukuk.skcoconut",
+      "url": "https://tukuk.org/satu-kata/coconut/app/",
+      "media": false,
+      "icon": "public/icons/apps/skcoconut-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgcoconut",
+      "label": "Game coconut",
+      "pkg": "org.tukuk.skgcoconut",
+      "url": "https://tukuk.org/satu-kata/coconut/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgcoconut-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skumbrella",
+      "label": "App umbrella",
+      "pkg": "org.tukuk.skumbrella",
+      "url": "https://tukuk.org/satu-kata/umbrella/app/",
+      "media": false,
+      "icon": "public/icons/apps/skumbrella-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgumbrella",
+      "label": "Game umbrella",
+      "pkg": "org.tukuk.skgumbrella",
+      "url": "https://tukuk.org/satu-kata/umbrella/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgumbrella-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skoud",
+      "label": "App oud",
+      "pkg": "org.tukuk.skoud",
+      "url": "https://tukuk.org/satu-kata/oud/app/",
+      "media": false,
+      "icon": "public/icons/apps/skoud-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgoud",
+      "label": "Game oud",
+      "pkg": "org.tukuk.skgoud",
+      "url": "https://tukuk.org/satu-kata/oud/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgoud-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skhome",
+      "label": "App home",
+      "pkg": "org.tukuk.skhome",
+      "url": "https://tukuk.org/satu-kata/home/app/",
+      "media": false,
+      "icon": "public/icons/apps/skhome-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skghome",
+      "label": "Game home",
+      "pkg": "org.tukuk.skghome",
+      "url": "https://tukuk.org/satu-kata/home/game/",
+      "media": false,
+      "icon": "public/icons/apps/skghome-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skchick",
+      "label": "App chick",
+      "pkg": "org.tukuk.skchick",
+      "url": "https://tukuk.org/satu-kata/chick/app/",
+      "media": false,
+      "icon": "public/icons/apps/skchick-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgchick",
+      "label": "Game chick",
+      "pkg": "org.tukuk.skgchick",
+      "url": "https://tukuk.org/satu-kata/chick/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgchick-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skwave",
+      "label": "App wave",
+      "pkg": "org.tukuk.skwave",
+      "url": "https://tukuk.org/satu-kata/wave/app/",
+      "media": false,
+      "icon": "public/icons/apps/skwave-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "skgwave",
+      "label": "Game wave",
+      "pkg": "org.tukuk.skgwave",
+      "url": "https://tukuk.org/satu-kata/wave/game/",
+      "media": false,
+      "icon": "public/icons/apps/skgwave-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "arcade",
+      "label": "Mini Arcade",
+      "pkg": "org.tukuk.arcade",
+      "url": "https://tukuk.org/builder?tpl=arcade&play=1",
+      "media": false,
+      "icon": "public/icons/apps/arcade-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "tttpl",
+      "label": "Tic-Tac-Toe",
+      "pkg": "org.tukuk.tttpl",
+      "url": "https://tukuk.org/builder?tpl=tttpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/tttpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "brtpl",
+      "label": "Battle Royale Arena",
+      "pkg": "org.tukuk.brtpl",
+      "url": "https://tukuk.org/builder?tpl=brtpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/brtpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "fpstpl",
+      "label": "FPS Arena 3D",
+      "pkg": "org.tukuk.fpstpl",
+      "url": "https://tukuk.org/builder?tpl=fpstpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/fpstpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "runtpl",
+      "label": "Endless Runner",
+      "pkg": "org.tukuk.runtpl",
+      "url": "https://tukuk.org/builder?tpl=runtpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/runtpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "memtpl",
+      "label": "Memory Match",
+      "pkg": "org.tukuk.memtpl",
+      "url": "https://tukuk.org/builder?tpl=memtpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/memtpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "moletpl",
+      "label": "Whack-a-Mole",
+      "pkg": "org.tukuk.moletpl",
+      "url": "https://tukuk.org/builder?tpl=moletpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/moletpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "rpstpl",
+      "label": "Rock-Paper-Scissors",
+      "pkg": "org.tukuk.rpstpl",
+      "url": "https://tukuk.org/builder?tpl=rpstpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/rpstpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "reacttpl",
+      "label": "Reaction Time",
+      "pkg": "org.tukuk.reacttpl",
+      "url": "https://tukuk.org/builder?tpl=reacttpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/reacttpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "guesstpl",
+      "label": "Number Guess",
+      "pkg": "org.tukuk.guesstpl",
+      "url": "https://tukuk.org/builder?tpl=guesstpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/guesstpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "quiztpl",
+      "label": "Quick Quiz",
+      "pkg": "org.tukuk.quiztpl",
+      "url": "https://tukuk.org/builder?tpl=quiztpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/quiztpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    },
+    {
+      "slug": "astrotpl",
+      "label": "Asteroids",
+      "pkg": "org.tukuk.astrotpl",
+      "url": "https://tukuk.org/builder?tpl=astrotpl&play=1",
+      "media": false,
+      "icon": "public/icons/apps/astrotpl-512.png",
+      "vc": 1,
+      "vn": "1.0.0"
+    }
   ]
 }
