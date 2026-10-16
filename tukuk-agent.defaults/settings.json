@@ -1,0 +1,17 @@
+{
+  "//": "Tukuk Agent — templat tetapan pengguna VS Code. Disalin ke <user-data>/User/settings.json oleh scripts/build-tukuk-agent.sh.",
+
+  "telemetry.telemetryLevel": "off",
+  "update.mode": "none",
+  "extensions.autoCheckUpdates": false,
+  "extensions.autoUpdate": false,
+
+  "//trust": "Workspace sudah terkurung di /var/lib/tukuk-agent/projects di belakang auth + sandbox systemd, jadi buka tanpa prompt.",
+  "security.workspace.trust.enabled": false,
+
+  "workbench.startupEditor": "none",
+  "files.autoSave": "afterDelay",
+  "editor.inlineSuggest.enabled": true,
+
+  "//cline": "Tetapan provider Cline (OpenAI-compatible base URL / API key / model) dan tog auto-approve disimpan dalam globalState Cline, BUKAN di sini. Ia di-seed oleh scripts/build-tukuk-agent.sh ke state.vscdb; approval KEKAL menyala secara lalai (tiap arahan shell perlu konfirmasi pengguna)."
+}

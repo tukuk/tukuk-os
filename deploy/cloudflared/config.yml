@@ -34,5 +34,12 @@ ingress:
   # Ruang khas T Chat (pelayan sama, host berbeza — src/server.js gate TCHAT_HOST).
   - hostname: tchat.tukuk.org
     service: http://localhost:3000
+  # Tukuk Agent (editor code-server + AI build-agent). Pelayan BERBEZA
+  # (tukuk-agent.service, port 8443). Hostname asing elak perlanggaran CSP/laluan
+  # dengan aplikasi tukuk.org utama. Dalam MOD TOKEN, laluan ini juga MESTI
+  # ditambah dalam dashboard Cloudflare (Zero Trust → Networks → Routes) —
+  # cloudflared mod token MENGABAIKAN seksyen ingress setempat.
+  - hostname: agent.tukuk.org
+    service: http://127.0.0.1:8443
   # Wajib: rule padanan terakhir
   - service: http_status:404

@@ -181,6 +181,16 @@ module.exports = {
     cloudOrder: process.env.LLM_CLOUD_ORDER || 'gemini,groq,openrouter,huggingface,xai,cloudflare,ollama-cloud,openai'
   },
 
+  // Tukuk Agent (editor AI) — OpenAI-compatible tool-calling proxy + headless build.
+  // AGENT_TOKEN protects /api/agent/* (apart from admin passkey). agentOrigin is the
+  // code-server/Tukuk Agent origin allowed by CORS. agentTimeoutMs caps upstream calls.
+  agent: {
+    token: process.env.AGENT_TOKEN || '',
+    origin: process.env.AGENT_ORIGIN || '',
+    timeoutMs: num(process.env.AGENT_TIMEOUT_MS, 120000),
+    maxPerMin: num(process.env.AGENT_RATE_PER_MIN, 30)
+  },
+
   net: {
     checkIntervalMs: num(process.env.NET_CHECK_INTERVAL, 30000),
     probeUrl: process.env.NET_PROBE_URL || 'https://cloudflare.com/cdn-cgi/trace',

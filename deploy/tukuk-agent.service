@@ -1,0 +1,84 @@
+[Unit]
+Description=Tukuk Agent (code-server editor + AI build-agent)
+Documentation=https://tukuk.org
+After=network-online.target tukuk-os.service
+Wants=network-online.target
+# Tukuk Agent memerlukan enjin Tukuk-OS (proksi /api/agent + MCP), tetapi BUKAN
+# Requires/PartOf — jika enjin carian mati, editor MESTI tetap boleh dibuka
+# (guna LLM awam terus) supaya pengguna tidak terkunci di luar workspace.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# Release berat VS Code dibina di LAPTOP lalu di-rsync ke sini (code-server
+# di-gitignore; ia artefak, bukan source). VPS hanya menjalankan binaan siap.
+User=tukuk-agent
+Group=tukuk-agent
+# StateDirectory=tukuk-agent → /var/lib/tukuk-agent wujud + dimiliki User di atas.
+StateDirectory=tukuk-agent
+StateDirectoryMode=0750
+
+# /var/lib/tukuk-agent/extensions   → pelanjutan (Cline) + config Seed dari
+#                                      scripts/build-tukuk-agent.sh
+# /var/lib/tukuk-agent/user-data     → tetapan/workspace VS Code (per-pengguna)
+# /var/lib/tukuk-agent/projects       → workspace terkurung tempat Cline menulis/melari
+# NOTE: fork ini membina ke `release/` (KEEP_MODULES=1 → bin/tukuk-agent + node
+# bawaan). Ia di-rsync ke /opt/tukuk-agent/release. Bukan `release-standalone/`.
+ExecStart=/opt/tukuk-agent/release/bin/tukuk-agent \
+  --bind-addr 127.0.0.1:8443 \
+  --auth password \
+  --extensions-dir /var/lib/tukuk-agent/extensions \
+  --user-data-dir /var/lib/tukuk-agent/user-data \
+  /var/lib/tukuk-agent/projects
+
+# Kata laluan editor dibaca dari EnvironmentFile (--auth password mencarik
+# fail .password dalam user-data; lihat catatan di bawah). AGENT_TOKEN juga di sini
+# supaya pelanjutan Cline (Base URL https://tukuk.org/api/agent/v1) boleh auth.
+EnvironmentFile=-/home/tukuk/.config/tukuk-os/env
+Environment=NODE_ENV=production
+# Asal pelanjutan yang dibenarkan memanggil tukuk.org (CORS pada /api/agent/v1).
+Environment=AGENT_ORIGIN=https://agent.tukuk.org
+
+# --- Jangan pernah mati kekal ---
+Restart=always
+RestartSec=5
+
+# --- Had sumber (tiada Docker; native systemd sahaja, seperti polisi tukuk-os) ---
+MemoryMax=1500M
+TasksMax=1024
+CPUQuota=150%
+# VS Code menelan FD (watcher fail); beri headroom tetapi tetap terkurung.
+LimitNOFILE=8192
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tukuk-agent
+
+# --- hardening (longgar sedikit dari tukuk-os: editor tulis workspace & ext) ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+# read-only (BUKAN true): pelanjutan Cline spawn `node /home/tukuk/tukuk-os/mcp/server.js`
+# (stdio MCP). Ia MESTI boleh BACA source + node_modules Tukuk-OS itu, tetapi tidak
+# perlu menulis ke sana (search/ask panggil Meilisearch atas HTTP localhost:7700;
+# scaffold/review pulangkan teks). Jadi /home dibuka READ-ONLY sahaja.
+ProtectHome=read-only
+ReadWritePaths=/var/lib/tukuk-agent
+# Cline melari shell TERKURUNG kepada workspace; tak perlu akses sistem luas.
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
+
+# NOTA DEPLOY (lihat plan Phase 3):
+#  1. Pasang user rendah-hak:  sudo useradd --system --home /var/lib/tukuk-agent --shell /usr/sbin/nologin tukuk-agent
+#  2. letak release:           sudo mkdir -p /opt/tukuk-agent && rsync release/ ke /opt/tukuk-agent/release (chown tukuk-agent)
+#  3. kata laluan editor:      code-server `--auth password` tulis/Baca
+#     /var/lib/tukuk-agent/user-data/.password — set sekali (lihat docs) atau
+#     guna `--auth none` DI BALIK tunnel cloudflared jika authentikasi di tepi.
+#  4. Tunnel: ingress cloudflared agent.tukuk.org → http://127.0.0.1:8443
+#     (PITFALL: mod token abai edits ingress tempatan — tambah hostname dalam
+#      dashboard Cloudflare / config tunnel, kemudian reload).

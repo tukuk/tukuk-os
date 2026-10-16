@@ -365,5 +365,8 @@ function currentModel() {
 
 module.exports = {
   generate, generateCloud, generateCloudRotation, health, availableModels, pickModel,
-  currentModel, activeBackend, ollamaReachable, listCloudProviders, isLocalFirst
+  currentModel, activeBackend, ollamaReachable, listCloudProviders, isLocalFirst,
+  // Used by src/brain/openai-compat.js (the agent tool-calling proxy) to reuse the
+  // SAME rotation + quota-cooling state as /ask, without re-implementing it.
+  markCooling, coolingRemaining, isQuotaError, quotaCooldownMs, cloudModel, CLOUD_PROVIDERS
 };

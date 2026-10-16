@@ -1,0 +1,20 @@
+{
+  "//": "Tukuk Agent — tetapan pelayan MCP untuk Cline. Disalin ke direktori globalStorage Cline oleh scripts/build-tukuk-agent.sh. Pelayan MCP Tukuk-OS ialah stdio JSON-RPC (mcp/server.js) yang berjalan dalam proses Tukuk-OS dan mendedah tukuk_search/ask/plan/scaffold/review/agent.",
+
+  "mcpServers": {
+    "tukuk-os": {
+      "//command": "node sistem (/usr/bin/node, node 20) menjalankan mcp/server.js — BUKAN node bawaan release tukuk-agent (node 24). Tukuk-OS source + node_modules dibaca read-only (lihat ProtectHome=read-only pada service).",
+      "command": "/usr/bin/node",
+      "args": ["/home/tukuk/tukuk-os/mcp/server.js"],
+      "alwaysAllow": [
+        "tukuk_search",
+        "tukuk_ask",
+        "tukuk_plan",
+        "tukuk_scaffold",
+        "tukuk_review",
+        "tukuk_agent"
+      ],
+      "disabled": false
+    }
+  }
+}

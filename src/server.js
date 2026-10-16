@@ -32,6 +32,7 @@ const { assertPublicUrl } = require('./util');
 const auth = require('./auth');
 const chat = require('./chat');
 const sms = require('./sms');
+const agent = require('./agent');
 const blogRedirects = require('./blog-redirects');
 const publish = require('./publish');
 const { exec } = require('child_process');
@@ -2681,6 +2682,15 @@ sms.mount(app, {
   auth,
   rateLimit: config.rateLimit.enabled ? rateLimit : null,
   path: path.join(path.dirname(config.store.path), 'sms.json'),
+});
+
+// Tukuk Agent: proksi OpenAI-compatible (tool-calling) untuk pelanjutan agen Cline
+// dalam code-server + build API kepala-tanpa (/api/agent/build).
+agent.mount(app, {
+  auth,
+  rateLimit: config.rateLimit.enabled ? rateLimit : null,
+  config,
+  store,
 });
 
 
