@@ -19,7 +19,7 @@ const { analyze } = (() => { try { return require('eslint-scope'); } catch { ret
 // Global pelayar yang sah — senarai panjang sengaja, lebih baik terlepas
 // satu amaran daripada menenggelamkan isyarat sebenar.
 const GLOBALS = new Set((`window document console localStorage sessionStorage navigator location history fetch XMLHttpRequest
-  Image Audio Blob File FileList FileReader URL URLSearchParams ImageData MediaRecorder DataView ArrayBuffer SharedArrayBuffer
+  Image Audio Blob File FileList FileReader URL URLSearchParams ImageData MediaRecorder DataView ArrayBuffer SharedArrayBuffer createImageBitmap
   Uint8Array Uint8ClampedArray Uint16Array Uint32Array Int8Array Int16Array Int32Array Float32Array Float64Array BigInt
   Math JSON Date RegExp Promise Error TypeError RangeError SyntaxError Object Array String Number Boolean Symbol Map Set
   WeakMap WeakSet Proxy Reflect globalThis Infinity NaN undefined isNaN isFinite parseInt parseFloat

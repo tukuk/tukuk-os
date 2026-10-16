@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cyber Security Hub — 2FA, Hashes, Phishing Checker, IP/CIDR, DNS — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Everyone's cyber-safety hub inside Tukuk OS: file & text hashing (MD5/SHA/CRC32), Base32/Base64/Hex codecs, classic ciphers, IPv4/CIDR/IPv6/MAC calculators, DNS-over-HTTPS lookups, password strength + leaked-password check (HIBP), a local TOTP authenticator (2FA), phishing link triage, email header analysis (SPF/DKIM/DMARC), JWT decoder, port reference, random generators, regex tester and a personal cyber-safety checklist. Everything runs on your device — no scanning, no exploits, no tracking.">
+<meta name="description" content="Everyone's cyber-safety hub inside Tukuk OS: file & text hashing (MD5/SHA/CRC32), Base32/Base64/Hex codecs, classic ciphers, IPv4/CIDR/IPv6/MAC tools, DNS-over-HTTPS + RDAP/WHOIS domain intelligence, my-public-IP lookup, password strength + HIBP breach check + crack-time math, a local TOTP authenticator (2FA), phishing link triage, email header analysis (SPF/DKIM/DMARC), JWT decoder, port reference, browser-leak fingerprint check, EXIF viewer with photo GPS cleaner, diceware passphrases, random generators, regex tester and a personal cyber-safety checklist. All on-device — no scanning, no exploits, no tracking.">
 <link rel="canonical" href="https://tukuk.org/apps/netsec">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <script src="/theme.js"></script>
@@ -83,6 +83,9 @@
     <div class="out" id="v6out">—</div>
     <div class="row2"><button class="btn" id="macgo">Generate random MAC</button><button class="btn" id="macgen2">Another</button></div>
     <div class="out" id="macout">—</div>
+    <label>My public IP (what the internet sees)</label>
+    <div class="row2"><button class="btn" id="ipgo">Lookup my IP</button></div>
+    <div class="out" id="pintout">—</div>
   </section>
 
   <section class="panel" data-t="dns">
@@ -111,6 +114,9 @@
     <label>Random string</label>
     <div class="row2"><input type="text" id="rlen" value="16" style="width:70px"><button class="btn" id="rstr">String</button><button class="btn" id="rguid">UUID (v4)</button></div>
     <div class="out" id="rout">—</div>
+    <label>Passphrase (diceware)</label>
+    <div class="row2"><select id="dcnt"><option>4</option><option>5</option><option selected>6</option><option>7</option><option>8</option></select><button class="btn" id="dgo">Generate</button></div>
+    <div class="out" id="dout">—</div>
   </section>
 
   <section class="panel" data-t="regex">
@@ -172,6 +178,29 @@
     <div id="slist"></div>
   </section>
 
+  <section class="panel" data-t="rdap">
+    <h2>Domain intelligence (RDAP / WHOIS)</h2>
+    <p>Read-only registration data over HTTPS — registrar, expiry, status, nameservers. Never touches raw ports.</p>
+    <label>Domain</label>
+    <div class="row2"><input type="text" id="wq" placeholder="example.com" style="flex:1 1 200px"><button class="btn" id="wgo">Query</button></div>
+    <div class="out" id="wout">—</div>
+  </section>
+
+  <section class="panel" data-t="fp">
+    <h2>Browser leak check</h2>
+    <p>See what trackers can read from your browser right now — canvas fingerprint, WebGL, timezone, hardware hints.</p>
+    <div class="row2"><button class="btn" id="fpgen">Scan my browser</button></div>
+    <div id="fpout" class="out" style="white-space:normal">—</div>
+  </section>
+
+  <section class="panel" data-t="exif">
+    <h2>Photo metadata (EXIF) — view &amp; clean</h2>
+    <p>Photos often hide GPS + device + timestamps. Inspect any photo locally, then download a clean copy. Nothing is uploaded.</p>
+    <input type="file" id="ein" accept="image/*" style="font-size:.8rem; background:var(--card,#121826); border:1px solid var(--line); border-radius:8px; padding:8px; width:100%; box-sizing:border-box">
+    <div class="out" id="eiout">—</div>
+    <div class="row2"><button class="btn" id="eclean" style="display:none">Download clean copy</button></div>
+  </section>
+
   <p class="note">🔒 Private by design: hashes, 2FA codes, breach checks and link triage all compute <em>on your device</em>; only DNS lookups use public read-over HTTPS DoH and the breach check sends just 5 hash characters (k-anonymity). Deliberately <b>no</b> port-scanning, brute-forcing or exploit frameworks — attacking systems you don't own is illegal and against our terms. Use on your own assets or with written permission.</p>
 </div>
 <script>
@@ -179,7 +208,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const TABS = [['hash','🧬 hash'],['codec','🔤 codec'],['cipher','🔐 cipher'],['ip','🌐 ip'],['dns','🛰 dns'],['pass','🔑 pass'],['totp','🕐 2fa'],['url','🔗 url'],['mail','📧 mail'],['file','📁 file'],['jwt','🧾 jwt'],['ports','🚪 ports'],['safety','🛡 safety'],['random','🎲 random'],['regex','🔎 regex']];
+  const TABS = [['hash','🧬 hash'],['codec','🔤 codec'],['cipher','🔐 cipher'],['ip','🌐 ip'],['dns','🛰 dns'],['rdap','🌍 whois'],['fp','🕵️ leaks'],['exif','🖼️ exif'],['pass','🔑 pass'],['totp','🕐 2fa'],['url','🔗 url'],['mail','📧 mail'],['file','📁 file'],['jwt','🧾 jwt'],['ports','🚪 ports'],['safety','🛡 safety'],['random','🎲 random'],['regex','🔎 regex']];
   const bar = $('tabs');
   bar.innerHTML = TABS.map((t, i) => '<button data-t="' + t[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + t[1] + '</button>').join('');
   function show(key) {
@@ -320,7 +349,8 @@
 
   // ── password ──
   function strength(p) { let pool = 0; if (/[a-z]/.test(p)) pool += 26; if (/[A-Z]/.test(p)) pool += 26; if (/[0-9]/.test(p)) pool += 10; if (/[^A-Za-z0-9]/.test(p)) pool += 33; const bits = p.length && pool ? Math.round(p.length * Math.log2(pool)) : 0; const label = bits < 28 ? 'weak' : bits < 36 ? 'fair' : bits < 60 ? 'good' : bits < 100 ? 'strong' : 'excellent'; return { bits, label }; }
-  $('pwin').addEventListener('input', () => { const s = strength($('pwin').value); $('pwbar').style.width = Math.min(100, s.bits) + '%'; $('pwout').textContent = (s.bits) + ' bits · ' + s.label; });
+  function humanize(sec) { if (!isFinite(sec)) return 'longer than the heat death of the universe'; if (sec < 1) return '<1 sec'; if (sec < 60) return sec.toFixed(0) + ' sec'; if (sec < 3600) return (sec / 60).toFixed(1) + ' min'; if (sec < 86400) return (sec / 3600).toFixed(1) + ' hours'; if (sec < 31536000) return (sec / 86400).toFixed(1) + ' days'; const y = sec / 31536000; return y > 1e9 ? 'billions of years' : y.toFixed(y < 100 ? 1 : 0) + ' years'; }
+  $('pwin').addEventListener('input', () => { const s = strength($('pwin').value); $('pwbar').style.width = Math.min(100, s.bits) + '%'; const half = Math.pow(2, Math.max(0, s.bits - 1)); $('pwout').textContent = s.bits + ' bits · ' + s.label + '\nIf the hash database leaks (GPU 10^10 guesses/s): ' + humanize(half / 1e10) + '\nSlow online guessing (1000/s, locked accounts aside): ' + humanize(half / 1e3); });
   $('pwgen').addEventListener('click', () => { let set = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'; if ($('pwdig').checked) set += '23456789'; if ($('pwsym').checked) set += '!@#$%^&*-_=+'; if ($('pwup').checked) set += 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; const len = Math.max(4, Math.min(128, parseInt($('pwlen').value, 10) || 16)); const a = new Uint32Array(len); crypto.getRandomValues(a); let out = ''; for (let i = 0; i < len; i++) out += set[a[i] % set.length]; $('pwgenout').textContent = out; });
 
   // ── random ──
@@ -513,6 +543,131 @@
     sdone[parseInt(b.getAttribute('data-i'), 10)] = b.checked;
     try { localStorage.setItem(SKEY, JSON.stringify(sdone)); } catch (err) { /* private mode — in-memory only */ }
     renderSafety();
+  });
+
+  // ── Domain intelligence: RDAP over HTTPS (safe stand-in for whois — port 43 is raw TCP, browsers can't) ──
+  async function doRdap() {
+    const q = $('wq').value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[/?].*$/, '').replace(/^www\./, '');
+    if (!/^([a-z0-9-]+\.)+[a-z]{2,}$/.test(q)) { $('wout').textContent = 'Enter a domain, e.g. example.com'; return; }
+    $('wout').textContent = 'Querying rdap.org …';
+    try {
+      const r = await fetch('https://rdap.org/domain/' + encodeURIComponent(q));
+      if (!r.ok) { $('wout').textContent = 'No RDAP data (HTTP ' + r.status + ') — this TLD may not publish RDAP.'; return; }
+      const d = await r.json();
+      const reg = (d.entities || []).map((e) => { const v = ((e.vcardArray || [])[1] || []).find((x) => x[0] === 'fn'); return v && v[1]; }).filter(Boolean).join(', ');
+      const ev = (d.events || []).map((e) => '· ' + e.eventAction + ': ' + (e.eventDate || '?')).join('\n');
+      const ns = (d.nameservers || []).map((n) => '· ' + (n.ldhName || n.pointerName || '?')).join('\n');
+      $('wout').textContent = 'Domain : ' + q + (reg ? '\nRegistrar: ' + reg : '') + (ev ? '\n' + ev : '') + (d.status && d.status.length ? '\nStatus : ' + d.status.join(', ') : '') + (ns ? '\nNameservers:\n' + ns : '');
+    } catch (e) { $('wout').textContent = 'RDAP lookup failed (offline or blocked).'; }
+  }
+  $('wgo').addEventListener('click', doRdap);
+  $('wq').addEventListener('keydown', (e) => { if (e.key === 'Enter') doRdap(); });
+
+  // ── My public IP — the address the internet actually sees (curl ifconfig.me equivalent) ──
+  $('ipgo').addEventListener('click', async () => {
+    $('pintout').textContent = 'Querying…';
+    try {
+      const r = await fetch('https://ipapi.co/json/'); const d = await r.json();
+      $('pintout').textContent = 'IP     ' + (d.ip || '?') + '\nASN      ' + (d.org || '?') + '\nCity     ' + (d.city || '?') + ', ' + (d.region || '?') + ' · ' + (d.country_name || d.country || '') + '\nNote     this is your network exit IP (ISP level), not your house address.';
+    } catch (e) { $('pintout').textContent = 'Lookup failed (offline or provider blocked).'; }
+  });
+
+  // ── Browser leak check — what trackers can derive from this device, computed locally ──
+  function canvasHash() { try { const c = document.createElement('canvas'); const g = c.getContext('2d'); if (!g) return 'n/a'; g.textBaseline = 'top'; g.font = '16px Arial'; g.fillText('tukuk-fp-test', 2, 2); return c.toDataURL().slice(-24); } catch (e) { return 'blocked'; } }
+  function webglInfo() { try { const c = document.createElement('canvas'); const gl = c.getContext('webgl') || c.getContext('experimental-webgl'); if (!gl) return 'none'; const ex = gl.getExtension('WEBGL_debug_renderer_info'); return ex ? String(gl.getParameter(ex.UNMASKED_RENDERER_WEBGL)) : 'hidden'; } catch (e) { return 'error'; } }
+  $('fpgen').addEventListener('click', () => {
+    const n = navigator;
+    const rows = [
+      ['User-Agent', n.userAgent], ['Platform', n.platform || '?'], ['Languages', (n.languages || []).join(', ')],
+      ['Screen', screen.width + '×' + screen.height + ' @ ' + (n.devicePixelRatio || 1) + 'x'], ['Viewport', innerWidth + '×' + innerHeight],
+      ['Timezone', Intl.DateTimeFormat().resolvedOptions().timeZone], ['CPU threads', String(n.hardwareConcurrency || '?')],
+      ['RAM (approx)', (n.deviceMemory || '?') + ' GB'], ['Touch points', String(n.maxTouchPoints)], ['Color depth', screen.colorDepth + ' bit'],
+      ['WebGL renderer', webglInfo()], ['Canvas fingerprint tail', canvasHash()],
+      ['Do Not Track', n.doNotTrack || 'unset'], ['Global Privacy Control', n.globalPrivacyControl === true ? 'ON' : 'off / unsupported'], ['Online', String(n.onLine)],
+    ];
+    $('fpout').innerHTML = '<table><tr><th>Signal</th><th>What sites can read</th></tr>' + rows.map((r) => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>').join('') + '</table><p class="note">Canvas + WebGL + fonts + timezone combine into a near-unique tracking ID even with cookies off. To shrink it: Firefox/Brave strict protection, or a separate browser profile for sensitive accounts.</p>';
+  });
+
+  // ── EXIF viewer + photo cleaner (exiftool-equivalent for privacy, 100% on-device) ──
+  let exifImg = null;
+  function readExif(buf) {
+    const dv = new DataView(buf);
+    if (dv.byteLength < 4 || dv.getUint16(0) !== 0xFFD8) return null;
+    let off = 2;
+    while (off + 6 < dv.byteLength) {
+      const m = dv.getUint16(off);
+      if ((m & 0xFF00) !== 0xFF00 || m === 0xFFDA || m === 0xFFD9) return null;
+      const size = dv.getUint16(off + 2);
+      if (m === 0xFFE1 && size >= 14 && dv.getUint32(off + 4) === 0x45786966) { const t = parseTiff(dv, off + 10); if (t) return t; }
+      off += 2 + size;
+    }
+    return null;
+  }
+  function parseTiff(dv, t) {
+    const le = dv.getUint16(t) === 0x4949;
+    const g16 = (o) => dv.getUint16(o, le), g32 = (o) => dv.getUint32(o, le);
+    if (g16(t + 2) !== 42) return null;
+    const out = {};
+    const ifd = t + g32(t + 4); const n = g16(ifd);
+    function rdStr(e) { const cnt = g32(e + 4); const start = (cnt > 4 && g16(e + 2) === 2) ? t + g32(e + 8) : e + 8; let s = ''; for (let i = 0; i < cnt; i++) { const c = dv.getUint8(start + i); if (!c) break; s += String.fromCharCode(c); } return s; }
+    function rational(o) { const num = g32(o), den = g32(o + 4); return den ? num / den : 0; }
+    function deg(e) { const o = t + g32(e + 8); return rational(o) + rational(o + 8) / 60 + rational(o + 16) / 3600; }
+    function readGps(g) {
+      const gn = g16(g); let latRef = '', lonRef = '', lat = 0, lon = 0;
+      for (let i = 0; i < gn; i++) { const e = g + 2 + i * 12; const tag = g16(e);
+        if (tag === 1) latRef = String.fromCharCode(dv.getUint8(e + 8));
+        else if (tag === 2) lat = deg(e);
+        else if (tag === 3) lonRef = String.fromCharCode(dv.getUint8(e + 8));
+        else if (tag === 4) lon = deg(e);
+      }
+      if (latRef === 'S') lat = -lat; if (lonRef === 'W') lon = -lon;
+      if ((lat || lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return 'GPS: ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '  →  https://maps.google.com/?q=' + lat + ',' + lon;
+      return null;
+    }
+    for (let i = 0; i < n; i++) {
+      const e = ifd + 2 + i * 12; const tag = g16(e);
+      if (tag === 0x010F) out.Make = rdStr(e);
+      else if (tag === 0x0110) out.Model = rdStr(e);
+      else if (tag === 0x0132) out.DateTime = rdStr(e);
+      else if (tag === 0x013B) out.Software = rdStr(e);
+      else if (tag === 0x8825) { const loc = readGps(t + g32(e + 8)); if (loc) out.GPS = loc; }
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  $('ein').addEventListener('change', async () => {
+    const f = $('ein').files[0];
+    if (!f) { $('eiout').textContent = '—'; $('eclean').style.display = 'none'; return; }
+    exifImg = f;
+    $('eiout').textContent = 'Reading ' + f.name + ' …';
+    try {
+      const x = readExif(await f.arrayBuffer());
+      const body = x ? Object.entries(x).map(([k, v]) => '· ' + k + ': ' + v).join('\n')
+        : (/\.(jpe?g|tiff?)$/i.test(f.name) ? 'No EXIF block found — file is already metadata-light.' : 'Not a JPEG/TIFF — PNG & WebP rarely carry EXIF.');
+      $('eiout').textContent = f.name + ' (' + (f.size / 1024).toFixed(0) + ' KB)\n' + body
+        + (x && x.GPS ? '\n⚠ This photo GEO-TAGS your exact location!' : '')
+        + '\n\n“Download clean” re-encodes the pixels on this device and strips ALL metadata.';
+      $('eclean').style.display = 'inline-block';
+    } catch (e) { $('eiout').textContent = 'Parse failed: ' + e.message; }
+  });
+  $('eclean').addEventListener('click', async () => {
+    if (!exifImg) return;
+    try {
+      const bmp = await createImageBitmap(exifImg);
+      const c = document.createElement('canvas');
+      const sc = Math.min(1, 4096 / Math.max(bmp.width, bmp.height));
+      c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      c.toBlob((b) => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = (exifImg.name.replace(/\.[a-z]+$/i, '') || 'photo') + '-clean.jpg'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, 'image/jpeg', 0.92);
+    } catch (e) { $('eiout').textContent += '\nClean re-encode failed: ' + e.message; }
+  });
+
+  // ── Diceware passphrase (local wordlist; entropy = words × log2(list)) ──
+  const DICE_WORDS = ('anchor river maple bright cotton ember falcon garden harbor iron jewel kite lantern meadow noble orchard pillar quartz ripple saffron timber velvet walnut zephyr amber basalt canyon dawn echo flare granite hollow inlet jasper kelp lumen moraine nectar oasis prairie quiver ridge summit tidal upland valley willow zenith agave bramble cinder dune fathom gilder hover indigo juniper kismet lattice mirth otter quench rafter splinter thistle urchin wander xenon youth acorn breeze canopy delta epoch fringe gust mistral opal prism quill spindrift torrent vignette wren xylem almanac beacon chronicle daisy glyph igloo jersey karma latch medal nexus orbit pixel relay signal tablet unity vault wonder yacht zebra cipher domain energy field gnome horizon ivory jigsaw lagoon meridian north olive quasar suntide vessel baguette cassette deadline eclipse firefly genesis haven impulse journal keyboard liquid magnet nominal output puzzle refund spreadsheet upgrade vector widget').split(' ');
+  $('dgo').addEventListener('click', () => {
+    const cnt = parseInt($('dcnt').value, 10) || 6;
+    const a = new Uint32Array(cnt); crypto.getRandomValues(a);
+    const per = Math.log2(DICE_WORDS.length);
+    $('dout').textContent = Array.from(a, (x) => DICE_WORDS[x % DICE_WORDS.length]).join('-') + '\n≈ ' + Math.round(cnt * per) + ' bits (' + cnt + ' words × ' + per.toFixed(1) + ') — memorable, and strong against online guessing';
   });
   renderSafety();
 })();
