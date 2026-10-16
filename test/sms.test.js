@@ -52,9 +52,9 @@ async function get(base, p, headers) {
 test('loopback penuh: pair -> send -> outbox -> report -> inbox -> baca', async () => {
   const { base, close } = await startServer();
   try {
-    // Sebelum pasangan: hujung peranti balas 503.
+    // Sebelum pasangan: hujung peranti balas 409 (bukan 5xx — elak topeng mod sandaran tepi).
     const pre = await post(base, '/api/sms/device/outbox', {});
-    assert.equal(pre.status, 503, 'tiada peranti dipasangkan lagi');
+    assert.equal(pre.status, 409, 'tiada peranti dipasangkan lagi');
 
     // Admin jana token pasangan.
     const rot = await post(base, '/api/sms/device/rotate', {});

@@ -130,7 +130,9 @@ function deviceTokenOf(req) {
 }
 function requireDevice(req, res, next) {
   const s = load();
-  if (!s.device || !s.device.token) return res.status(503).json({ error: 'No SMS device paired yet. Generate a pairing token in the admin panel.' });
+  // 409 (bukan 503) — worker tepi tukuk.org menafsir sebarang 5xx asal sebagai
+  // "pelayan mati" dan ganti dengan mod sandaran; 4xx lalu utuh sampai klien.
+  if (!s.device || !s.device.token) return res.status(409).json({ error: 'No SMS device paired yet. Generate a pairing token in the admin panel.' });
   if (!eqToken(deviceTokenOf(req), s.device.token)) return res.status(401).json({ error: 'Invalid device token.' });
   s.device.lastSeenAt = Date.now();
   touch();
