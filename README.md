@@ -1,6 +1,6 @@
 # Tukuk-OS v2 — Panduan Rujukan Pantas (Cheat Sheet & README)
 
-Enjin carian web bebas, ringan, dan berkuasa tinggi yang dioptimumkan untuk pelayan RAM rendah (2GB) dan integrasi awan (Cloudflare, Google AdSense, Microsoft Ads).
+Portal internet bahasa kita — enjin carian web + jawapan AI + stor aplikasi & game dalam pelayar + builder no-code + T Chat 2G + radio + studio — dibina ringan dan berkuasa tinggi untuk pelayan RAM rendah (2GB) dan integrasi awan (Cloudflare, Google AdSense, Microsoft Ads). Percuma, tanpa akaun, berfungsi walaupun pada rangkaian lemah.
 
 > **Ini satu-satunya projek yang difokuskan.** Jangan pecah tumpuan ke repo lain.
 

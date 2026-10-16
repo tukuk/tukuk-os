@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ms">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk-OS — Web Search Engine</title>
-<meta name="description" content="Tukuk-OS is a free web search engine that indexes websites and delivers statistics. Search fast with snippets, filters and facets.">
-<meta name="keywords" content="search engine, web search, tukuk, inverted index, meilisearch">
+<title>Tukuk-OS — Portal Internet Bahasa Kita: Carian, AI, Aplikasi &amp; Game</title>
+<meta name="description" content="Portal internet tanpa akaun &amp; tanpa bayaran: enjin carian + jawapan AI, stor aplikasi &amp; game dalam pelayar, T Chat 2G, radio dunia, studio kreatif. Dibina untuk bahasa kita — berfungsi walaupun pada rangkaian lemah.">
+<meta name="keywords" content="enjin carian, carian web, tukuk, AI bahasa melayu, stor aplikasi, game dalam pelayar, T Chat, radio, tanpa akaun, meilisearch">
 <link rel="canonical" href="https://tukuk.org/">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
-<meta property="og:title" content="Tukuk-OS — Web Search Engine">
-<meta property="og:description" content="Free web search engine with snippets, filters and facets.">
+<meta property="og:title" content="Tukuk-OS — Portal Internet Bahasa Kita">
+<meta property="og:description" content="Carian + AI + stor aplikasi &amp; game + T Chat 2G + radio + studio — percuma, tanpa akaun, berfungsi walaupun pada rangkaian lemah.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tukuk.org/">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Tukuk-OS — Web Search Engine">
-<meta name="twitter:description" content="Tukuk-OS is a free web search engine that indexes websites and delivers statistics. Search fast with snippets, filters and facets.">
+<meta name="twitter:title" content="Tukuk-OS — Portal Internet Bahasa Kita">
+<meta name="twitter:description" content="Carian + AI + stor aplikasi &amp; game + T Chat 2G + radio + studio — percuma, tanpa akaun, berfungsi walaupun pada rangkaian lemah.">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -129,6 +129,14 @@
     background: var(--panel);
     color: var(--text);
   }
+  .pillars { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:20px; max-width:660px; }
+  .pillars a {
+    display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:999px;
+    border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:.86rem; font-weight:500;
+    transition:all .18s;
+  }
+  .pillars a:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; transform:translateY(-1px); }
+  .pillars[hidden] { display:none; }
   .tabs button.on {
     background: var(--accent-fill, #2a6edb);
     color: #fff;
@@ -531,22 +539,32 @@
   </span>
 </nav>
 <header class="wrap google-header" style="padding-top:8vh;">
-  <h1 class="logo"><a href="/" aria-label="Tukuk OS — home"><img src="logo.png" alt="Tukuk OS — Web Search Engine" width="1000" height="200" fetchpriority="high" decoding="async"></a></h1>
-  <p class="tagline">Free web search engine — inverted index, word highlighting, faceted filters</p>
+  <h1 class="logo"><a href="/" aria-label="Tukuk OS — home"><img src="logo.png" alt="Tukuk OS — Portal Internet Bahasa Kita" width="1000" height="200" fetchpriority="high" decoding="async"></a></h1>
+  <p class="tagline">Carian, AI, aplikasi &amp; game untuk bahasa kita — berfungsi walaupun pada 2G, tanpa akaun, tanpa bayaran.</p>
   <form id="form" class="search-box suggest" autocomplete="off">
-    <input type="search" id="q" name="q" placeholder="Search the web&hellip;" aria-label="Search keywords" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list" required>
+    <input type="search" id="q" name="q" placeholder="Cari apa sahaja di web&hellip;" aria-label="Kata kunci carian" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list" required>
     <div class="suggest-list" id="suggest" role="listbox" aria-label="Search suggestions" hidden></div>
-    <button type="submit" id="go">Search</button>
+    <button type="submit" id="go">Cari</button>
   </form>
   <div class="tabs" id="tabs">
     <button type="button" data-mode="web" class="on">Web</button>
-    <button type="button" data-mode="images">Images</button>
+    <button type="button" data-mode="images">Imej</button>
     <button type="button" data-mode="cc">🧩 CC Aset</button>
-    <button type="button" data-mode="videos">Videos</button>
-    <button type="button" data-mode="news">News</button>
-    <button type="button" data-mode="music">Music</button>
+    <button type="button" data-mode="videos">Video</button>
+    <button type="button" data-mode="news">Berita</button>
+    <button type="button" data-mode="music">Muzik</button>
     <button type="button" data-mode="radio">Radio</button>
   </div>
+  <nav class="pillars" id="pillars" hidden aria-label="Pilar Tukuk-OS">
+    <a href="/store">🎮 Stor &amp; Game</a>
+    <a href="/builder">🧱 Bina App</a>
+    <a href="/apps/chat">💬 T Chat</a>
+    <a href="/cari?mode=radio">📻 Radio Dunia</a>
+    <a href="/studio">🎛 Studio</a>
+    <a href="/explore">🧭 Jelajah</a>
+    <a href="/nasa">🚀 NASA</a>
+    <a href="/blog">📝 Blog</a>
+  </nav>
 </header>
 
 <!-- Dashboard Studio — hanya di / (kandungan original; permukaan iklan yang selamat) -->
@@ -607,7 +625,7 @@
     <a href="/stats">Statistics</a>
     <a href="/admin">⚙️ Admin Control</a>
   </div>
-  <p style="margin:8px 0 0; color:var(--muted); font-size:0.88rem;">&copy; 2026 Tukuk-OS &mdash; All Rights Reserved. Free &amp; Open Web Search Engine.</p>
+  <p style="margin:8px 0 0; color:var(--muted); font-size:0.88rem;">&copy; 2026 Tukuk-OS &mdash; Portal internet bahasa kita: carian, AI, aplikasi &amp; game. Percuma, tanpa akaun.</p>
 </footer>
 
 <button class="chat-fab" id="chatFab" title="Chat AI" aria-label="Open AI chat">&#128172;</button>
@@ -1406,6 +1424,8 @@ if (!IS_RESULTS) {
   const area = document.querySelector('main.results-area');
   if (dash) dash.hidden = false;
   if (area) area.hidden = true;
+  const pillars = document.getElementById('pillars');
+  if (pillars) pillars.hidden = false; // chips pilar hanya di beranda, bukan di halaman hasil
   if (query) {
     // Pautan lama `/?q=...` → alih ke /cari supaya hasil sentiasa di URL bebas-iklan.
     location.replace(`${RESULT_PATH}?${new URLSearchParams(location.search)}`);

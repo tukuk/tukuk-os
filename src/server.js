@@ -2860,7 +2860,7 @@ app.get('/api/public/settings', (req, res) => {
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
     siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
-    siteTagline: store.getSetting('siteTagline', 'Free web search engine — inverted index, word highlighting, faceted filters')
+    siteTagline: store.getSetting('siteTagline', 'Carian, AI, aplikasi & game untuk bahasa kita — tanpa akaun, berfungsi walaupun pada rangkaian lemah')
   });
 });
 
@@ -2902,7 +2902,7 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     ollamaModel: store.getSetting('ollamaModel', 'llama3.2'),
     // Website Branding
     siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
-    siteTagline: store.getSetting('siteTagline', 'Free web search engine — inverted index, word highlighting, faceted filters'),
+    siteTagline: store.getSetting('siteTagline', 'Carian, AI, aplikasi & game untuk bahasa kita — tanpa akaun, berfungsi walaupun pada rangkaian lemah'),
     defaultTheme: store.getSetting('defaultTheme', 'dark'),
     defaultAccent: store.getSetting('defaultAccent', 'blue')
   });
@@ -3133,12 +3133,12 @@ app.use((req, res) => {
   const wantsJson = req.path.startsWith('/api') || /\.(json|xml)$/i.test(req.path) || !isHtmlRequest(req);
   if (wantsJson) return res.status(404).json({ error: 'Route not found', path: req.originalUrl });
   res.status(404).send(`<!DOCTYPE html>
-<html lang="en">
+<html lang="ms">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 — Page Not Found — Tukuk-OS</title>
-<meta name="description" content="The page you were looking for on Tukuk-OS could not be found. Search the web or browse the blog instead.">
+<title>404 — Halaman tidak dijumpai — Tukuk-OS</title>
+<meta name="description" content="Halaman yang anda cari di Tukuk-OS tidak ditemui. Cuba carian, lawati stor game, atau balik ke beranda.">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://tukuk.org/">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -3148,8 +3148,11 @@ app.use((req, res) => {
   .oops .code { font-size:5rem; font-weight:800; color:var(--accent); line-height:1; letter-spacing:-2px; }
   .hint { color:var(--muted); margin:6px 0 26px; }
   .actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:24px 0; }
-  .actions a { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 20px; text-decoration:none; color:var(--text); }
+  .actions a { background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:10px 18px; text-decoration:none; color:var(--text); font-size:.92rem; }
   .actions a:hover { border-color:var(--accent); color:var(--accent); }
+  .oops form { margin:0 auto 6px; max-width:420px; display:flex; gap:8px; }
+  .oops form input { flex:1; padding:10px 14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--text); }
+  .oops form button { padding:10px 18px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
@@ -3158,17 +3161,22 @@ app.use((req, res) => {
 <div class="wrap">
   <div class="oops">
     <div class="code">404</div>
-    <h1>Page not found</h1>
-    <p class="hint">Sorry — <code>${escapeHtml(req.path)}</code> doesn't exist, or has moved.</p>
+    <h1>Halaman ini tidak ditemui</h1>
+    <p class="hint"><code>${escapeHtml(req.path)}</code> tidak wujud — mungkin alamatnya salah atau telah dipindahkan.</p>
+    <form action="/cari" method="get" role="search">
+      <input type="search" name="q" placeholder="Cari apa sahaja di web…" aria-label="Kata kunci carian" required>
+      <button type="submit">Cari</button>
+    </form>
     <div class="actions">
-      <a href="/">🔍 Search the web</a>
-      <a href="/blog">📝 Read the blog</a>
-      <a href="/explore">🌍 Explore</a>
-      <a href="/nasa">🚀 NASA</a>
-      <a href="/contact">✉️ Contact us</a>
+      <a href="/">🏠 Beranda</a>
+      <a href="/store">🎮 Stor &amp; Game</a>
+      <a href="/builder">🧱 Bina App</a>
+      <a href="/apps/chat">💬 T Chat</a>
+      <a href="/blog">📝 Blog</a>
+      <a href="/contact">✉️ Hubungi Kami</a>
     </div>
   </div>
-  <footer><p>&copy; 2026 Tukuk-OS &mdash; A free and open web search engine. <a href="/">Home</a> <a href="/about">About</a> <a href="/privacy">Privacy</a></p></footer>
+  <footer><p>&copy; 2026 Tukuk-OS &mdash; Portal internet bahasa kita: carian, AI, aplikasi &amp; game. <a href="/">Beranda</a> <a href="/about">Tentang</a> <a href="/privacy">Privasi</a></p></footer>
 </div>
 </body>
 </html>`);
