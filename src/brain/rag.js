@@ -33,6 +33,22 @@ const TUUK_PATTERNS = [
   /\bapi\b/i
 ];
 
+// Soalan IDENTITI AI → jawab serta-merta dari pengetahuan (tiada carian/LLM).
+// Tanpa ini, "siapakah kamu" pergi ke carian + panggilan cloud 30s lalu return
+// definisi kamus — perlahan DAN bodoh. Corak ini menangkap siapa/apa/boleh-buat.
+const IDENTITY_PATTERNS = [
+  /\b(siapakah|siapa)\s+(kamu|kau|anda|awak|engko|kamu\s+ini|ni)\b/i,
+  /\b(kamu|anda|awak|kau)\s+siapa\b/i,
+  /\bwho\s+are\s+you\b/i,
+  /\bwhat\s+are\s+you\b/i,
+  /\bare\s+you\s+(an?\s*)?(ai|bot|assistant|real)\b/i,
+  /\b(perkenalkan|mengenalkan|ceritakan)\s+(diri(kamu|anda)?|tentang\s+diri)\b/i,
+  /\bapa\s+(yang\s+)?(kamu|anda|awak|kau)\s+(boleh|bisa|dapat|nak)\s+(buat|bantu|tolong|erbuat)\b/i,
+  /\bbisa\s+(bantu|tolong)\s+(saya|aku|apa)\b/i,
+  /\bapa\s+itu\s+(tukuk|ai\s+tukuk)\b/i,
+  /\b(tugasmu|kebolehanmu|fungsi\s+awak)\b/i
+];
+
 /** Cache jawapan supaya model tidak dipanggil semula untuk soalan yang sama. */
 const answerCache = new Map();
 const CACHE_TTL = 10 * 60 * 1000;
@@ -115,7 +131,8 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
 }
 
 function isSelfQuestion(query) {
-  return TUUK_PATTERNS.some((pattern) => pattern.test(query));
+  return TUUK_PATTERNS.some((pattern) => pattern.test(query))
+    || IDENTITY_PATTERNS.some((pattern) => pattern.test(query));
 }
 
 function isKnowledgeQuestion(query) {
@@ -290,6 +307,11 @@ async function ask(question, { limit } = {}) {
   let method = 'llm';
   let rejected = [];
 
+  // BAJET INTERAKTIF: fasa LLM (cloud+ollama) tidak boleh melebihi budgetMs dari
+  // mula. Lewat itu → berhenti & guna ekstraktif serta-merta (instan, berpunca).
+  // Ini menutup 37s/60s. Cloud laju (groq/gemini) masih menang dalam bajet.
+  const deadline = startedAt + (config.brain.budgetMs || config.brain.timeout);
+
   const backend = await provider.activeBackend();
   // Ekstraktif serta-merta bila: tiada LLM langsung, ATAU Ollama + mod laju.
   // Cloud SENTIASA dicuba (cepat & murah) — fastMode hanya penggalang ollama/none.
@@ -306,7 +328,7 @@ async function ask(question, { limit } = {}) {
     // 1) Rotasi cloud — cuba setiap pembekal, langkau yang baru habis kuota (cooling).
     if (backend.kind === 'cloud') {
       const out = await provider.generateCloud(backend, prompt, {
-        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP
+        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP, deadline
       });
       const text = String(out?.response || '').trim();
       if (text && !isEcho(text, prompt)) {
@@ -324,9 +346,11 @@ async function ask(question, { limit } = {}) {
     const wantOllama = backend.kind !== 'cloud' || task.selfContained;
     if (!answer && wantOllama && (await provider.ollamaReachable())) {
       for (const candidate of config.brain.chain) {
+        const left = deadline - Date.now();
+        if (left < 1500) { rejected.push({ model: candidate, reason: 'interactive budget reached' }); break; }
         let output;
         try {
-          output = await provider.generate(prompt, { system, temperature: config.brain.temperature, numPredict, model: candidate });
+          output = await provider.generate(prompt, { system, temperature: config.brain.temperature, numPredict, model: candidate, timeout: left });
         } catch (error) {
           rejected.push({ model: candidate, reason: error.message });
           continue;
@@ -345,7 +369,7 @@ async function ask(question, { limit } = {}) {
     //    → BARU panggil rotasi cloud. Langkah ini tidak berjalan bila cloud utama.
     if (!answer && backend.kind === 'ollama' && backend.cloudFallback && backend.cloudFallback.length) {
       const out = await provider.generateCloudRotation(prompt, {
-        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP
+        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP, deadline
       });
       const text = String(out?.response || '').trim();
       if (text && !isEcho(text, prompt)) { answer = text; model = `${out._provider}:${out._model}`; }

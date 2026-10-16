@@ -88,7 +88,7 @@ async function pickModel() {
   throw new Error(`No model in LLM_CHAIN / ${config.brain.chain.join(', ')}. Available: ${names.join(', ') || '(none)'}`);
 }
 
-async function generate(prompt, { system, numPredict, temperature, model: forceModel, extraOptions } = {}) {
+async function generate(prompt, { system, numPredict, temperature, model: forceModel, extraOptions, timeout } = {}) {
   const target = forceModel || activeModel || (await pickModel());
   if (!forceModel) activeModel = target;
 
@@ -110,7 +110,7 @@ async function generate(prompt, { system, numPredict, temperature, model: forceM
   const result = await request('/api/generate', {
     method: 'POST',
     body,
-    timeout: config.brain.timeout
+    timeout: timeout ? Math.min(timeout, config.brain.timeout) : config.brain.timeout
   });
   result._model = target;
   return result;
@@ -147,7 +147,7 @@ const CLOUD_PROVIDERS = {
   // 5-jam/harian → cooldown automatik bila 429, serve model besar bila quota ada.
   'ollama-cloud': { defaultModel: 'gpt-oss:20b', kind: 'ollama-native', baseUrl: 'https://api.ollama.com' }
 };
-const DEFAULT_ORDER = ['gemini', 'groq', 'openrouter', 'huggingface', 'xai', 'cloudflare', 'ollama-cloud', 'openai'];
+const DEFAULT_ORDER = ['groq', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai'];
 
 function cloudKey(name) {
   const b = config.brain;
@@ -246,11 +246,14 @@ async function activeBackend() {
 
 // Satu panggilan ke SATU pembekal. Ralat HTTP dinaikkan dengan .status supaya
 // rotasi dapat bezakan kuota (429) daripada ralat sementara.
-async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {}) {
+async function callCloud(p, prompt, { system, temperature, maxTokens, topP, timeout } = {}) {
   const t = temperature ?? config.brain.temperature;
   const mt = maxTokens ?? config.brain.maxTokens;
   const tp = topP ?? config.brain.topP;
-  const signal = AbortSignal.timeout(config.brain.timeout);
+  // Per-panggilan timeout boleh DITEKAN (bajet interaktif rag.ask) — kalau tiada,
+  // guna config.brain.timeout. Signal AbortSignal membunuh stream tepat pada masa.
+  const capMs = Math.max(1000, Math.min(timeout || config.brain.timeout, config.brain.timeout));
+  const signal = AbortSignal.timeout(capMs);
 
   if (p.kind === 'gemini') {
     // gemini-*-latest ialah model "thinking": tanpa budget, token akal dalan
@@ -301,11 +304,17 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {
 // _model, _provider } jaya, atau { response:'', rejected:[...] } bila semua habis/gagal.
 async function generateCloudRotation(prompt, opts = {}) {
   const rejected = [];
+  // Batas masa KESELURUhan (timestamp ms). Pemanggil interaktif (rag.ask) hantar
+  // deadline = kini + bajet; bila tiba, berhenti merotasi pembekal lambat & guna
+  // ekstraktif serta-merta. Tiada deadline → guna timeout config sebagai silap.
+  const deadline = opts.deadline || (Date.now() + config.brain.timeout);
   for (const p of listCloudProviders()) {
     const rem = coolingRemaining(p.name);
     if (rem) { rejected.push({ provider: p.name, reason: `cooling (quota exhausted; retry in ${Math.ceil(rem / 1000)}s)` }); continue; }
+    const left = deadline - Date.now();
+    if (left < 1500) { rejected.push({ provider: p.name, reason: 'interactive budget reached' }); break; }
     try {
-      const out = await callCloud(p, prompt, opts);
+      const out = await callCloud(p, prompt, { ...opts, timeout: left });
       return { ...out, _provider: p.name };
     } catch (err) {
       if (isQuotaError(err)) markCooling(p.name, quotaCooldownMs(err));
@@ -320,15 +329,17 @@ async function generateCloudRotation(prompt, opts = {}) {
 // panggilannya. Jika `backend` ialah satu pembekal eksplisit (ada .key), cuba dia
 // dahulu; bila ia gagal/habis, sambung rotasi pembekal lain.
 async function generateCloud(b, prompt, opts = {}) {
+  const deadline = opts.deadline || (Date.now() + config.brain.timeout);
   if (b && b.key && b.name && CLOUD_PROVIDERS[b.name]) {
     const single = {
       name: b.name, kind: CLOUD_PROVIDERS[b.name].kind, key: b.key,
       model: b.model || cloudModel(b.name), baseUrl: CLOUD_PROVIDERS[b.name].baseUrl,
       account: b.name === 'cloudflare' ? cloudAccountId() : undefined
     };
-    if (!coolingRemaining(single.name)) {
+    const left = deadline - Date.now();
+    if (!coolingRemaining(single.name) && left >= 1500) {
       try {
-        const out = await callCloud(single, prompt, opts);
+        const out = await callCloud(single, prompt, { ...opts, timeout: left });
         return { ...out, _provider: single.name };
       } catch (err) {
         if (isQuotaError(err)) markCooling(single.name, quotaCooldownMs(err));

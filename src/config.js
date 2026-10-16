@@ -156,7 +156,11 @@ module.exports = {
     cloudMaxTokens: num(process.env.LLM_CLOUD_MAX_TOKENS, 512),
     contextWindow: num(process.env.LLM_CONTEXT_WINDOW, 2048),
     seed: num(process.env.LLM_SEED, 42),
-    timeout: num(process.env.LLM_TIMEOUT, 30000),
+    timeout: num(process.env.LLM_TIMEOUT, 15000),
+    // BAJET INTERAKTIF: had MASA KESELURUhan bagi fasa LLM /ask (cloud+ollama).
+    // Rotasi cuba pembekal satu-satu; bila melebihi bajet ini → berhenti & guna
+    // ekstraktif serta-merta. Ini MENAMAT kes 37s/60s: pengguna tak menunggu.
+    budgetMs: num(process.env.BRAIN_BUDGET_MS, 9000),
     retrievalLimit: num(process.env.BRAIN_RETRIEVAL_LIMIT, 4),
     snippetChars: num(process.env.BRAIN_SNIPPET_CHARS, 700),
     minConfidence: Number(process.env.BRAIN_MIN_CONFIDENCE ?? 0.5),
@@ -177,8 +181,10 @@ module.exports = {
     cloudflareAiToken: process.env.CLOUDFLARE_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '',
     cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
     ollamaCloudApiKey: process.env.OLLAMA_CLOUD_API_KEY || '',
-    // Susunan rotasi cloud (kiri→kanan). Override menerusi LLM_CLOUD_ORDER.
-    cloudOrder: process.env.LLM_CLOUD_ORDER || 'gemini,groq,openrouter,huggingface,xai,cloudflare,ollama-cloud,openai'
+    // Susunan rotasi cloud (kiri→kanan). PALING LAJU DULU: groq (LPU ~1s) & gemini-flash
+    // mendahului; cloudflare scout (lambat ~30s+) dihantar ke belakang supaya bajet
+    // interaktif jarang perlu menunggu pembekal lambat. Override LLM_CLOUD_ORDER.
+    cloudOrder: process.env.LLM_CLOUD_ORDER || 'groq,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai'
   },
 
   // Tukuk Agent (editor AI) — OpenAI-compatible tool-calling proxy + headless build.
