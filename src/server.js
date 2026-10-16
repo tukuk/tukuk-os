@@ -25,6 +25,7 @@ const { client, health } = require('./meili');
 const crawler = require('./crawler');
 const fallback = require('./fallback');
 const nasa = require('./nasa');
+const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
 const { safeError, truncate, escapeHtml } = require('./util');
@@ -1644,6 +1645,17 @@ app.get('/websearch', limiter.search, async (req, res) => {
   }
 });
 
+// Social finder — semak kewujudan nama akaun AWAM di platform publik (status
+// HTTP profil awam sahaja; tiada login, tiada data peribadi). Diproksikan di
+// pelayan kerana pelayar tidak boleh membaca respons silang-asal.
+app.get('/api/social', limiter.search, async (req, res) => {
+  try {
+    res.json(await social.lookup(String(req.query.u || '')));
+  } catch (error) {
+    res.status(500).json({ error: 'Social lookup failed', details: safeError(error) });
+  }
+});
+
 app.get('/images', limiter.search, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -2386,7 +2398,7 @@ const STORE_APP_META = {
   password: { ic: '🔐', title: 'Password Generator', desc: 'Cryptographic random passwords + hard-to-guess passphrases.' },
   text: { ic: '🔡', title: 'Text Tools', desc: 'Word count, case conversion, Base64, sort, dedupe & URL encode.' },
   linux: { ic: '🐧', title: 'Linux Utils', desc: 'Safe terminal toolbox in the browser: htop-style system monitor, sha256sum, base64, jq-style JSON formatter, grep-style regex tester, uuidgen & a chmod calculator. Runs fully offline — no server, no shell.' },
-  netsec: { ic: '🛡️', title: 'Cyber Security', desc: 'Everyone\'s cyber-safety hub with Kali-style safe tools: hashing & file digests, codecs, ciphers, IP/CIDR/IPv6/MAC, DNS-over-HTTPS, RDAP/WHOIS, my-IP, password strength + HIBP breach check + crack-time math, local TOTP 2FA, phishing link triage, email header SPF/DKIM/DMARC, JWT decoder, port guide, browser-leak scan, EXIF photo cleaner, diceware passphrases & a safety checklist. All on-device — no scanning, no exploits.' },
+  netsec: { ic: '🛡️', title: 'Cyber Security', desc: 'Everyone\'s cyber-safety hub with Kali-style safe tools: hashing & file digests, codecs, ciphers, IP/CIDR/IPv6/MAC + any-IP geolocation, phone number finder, public username finder (trace fake accounts), DNS-over-HTTPS, RDAP/WHOIS, password strength + HIBP breach check + crack-time math, local TOTP 2FA, phishing link triage, email header SPF/DKIM/DMARC, JWT decoder, port guide, browser-leak scan, EXIF photo cleaner, diceware passphrases & a safety checklist. All on-device — no scanning, no exploits.' },
   map: { ic: '🗺️', title: 'Map', desc: 'Full world map inside Tukuk OS — OpenStreetMap powered, no API key. Search any place, switch to satellite, drop pins, get live GPS position and measure distances.' },
   pixel: { ic: '🟩', title: 'Pixel Studio', desc: 'Draw 16×16 pixel art with palette, buckets and PNG export — in the browser.' },
   piano: { ic: '🎹', title: 'Synth Piano', desc: 'Play 2 octaves with keyboard, 4 waveforms & audio recording.' },

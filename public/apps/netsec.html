@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cyber Security Hub — 2FA, Hashes, Phishing Checker, IP/CIDR, DNS — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Everyone's cyber-safety hub inside Tukuk OS: file & text hashing (MD5/SHA/CRC32), Base32/Base64/Hex codecs, classic ciphers, IPv4/CIDR/IPv6/MAC tools, DNS-over-HTTPS + RDAP/WHOIS domain intelligence, my-public-IP lookup, password strength + HIBP breach check + crack-time math, a local TOTP authenticator (2FA), phishing link triage, email header analysis (SPF/DKIM/DMARC), JWT decoder, port reference, browser-leak fingerprint check, EXIF viewer with photo GPS cleaner, diceware passphrases, random generators, regex tester and a personal cyber-safety checklist. All on-device — no scanning, no exploits, no tracking.">
+<meta name="description" content="Everyone's cyber-safety hub inside Tukuk OS: file & text hashing (MD5/SHA/CRC32), Base32/Base64/Hex codecs, classic ciphers, IPv4/CIDR/IPv6/MAC tools + any-IP geolocation finder, DNS-over-HTTPS + RDAP/WHOIS domain intelligence, my-public-IP lookup, phone number finder (country & validity parsing), public social-media username finder for tracing fake accounts, password strength + HIBP breach check + crack-time math, a local TOTP authenticator (2FA), phishing link triage, email header analysis (SPF/DKIM/DMARC), JWT decoder, port reference, browser-leak fingerprint check, EXIF viewer with photo GPS cleaner, diceware passphrases, random generators, regex tester and a personal cyber-safety checklist. All on-device — no scanning, no exploits, no tracking.">
 <link rel="canonical" href="https://tukuk.org/apps/netsec">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <script src="/theme.js"></script>
@@ -86,6 +86,16 @@
     <label>My public IP (what the internet sees)</label>
     <div class="row2"><button class="btn" id="ipgo">Lookup my IP</button></div>
     <div class="out" id="pintout">—</div>
+    <label>Find any public IP (geolocation + network owner)</label>
+    <div class="row2"><input type="text" id="geoip" placeholder="8.8.8.8" style="flex:1 1 200px"><button class="btn" id="geoipgo">Locate</button></div>
+    <div class="out" id="geoipout">—</div>
+  </section>
+
+  <section class="panel" data-t="phone">
+    <h2>Phone number finder</h2>
+    <p>Parse an international number — country, dialling code, validity check. Analysed <em>locally</em>; the number never leaves your device. (No service can legally reveal an owner or GPS position from a number — beware sites claiming otherwise.)</p>
+    <label>Number (e.g. +60123456789)</label><input type="text" id="phin" placeholder="+62 812-3456-7890">
+    <div class="out" id="phout">—</div>
   </section>
 
   <section class="panel" data-t="dns">
@@ -186,6 +196,13 @@
     <div class="out" id="wout">—</div>
   </section>
 
+  <section class="panel" data-t="social">
+    <h2>Social media username finder</h2>
+    <p>Check whether a username <b>exists publicly</b> across platforms — useful to trace scammers and fake accounts. Only public profile pages are queried (HTTP status); no logins, no private data, no messaging.</p>
+    <div class="row2"><input type="text" id="su" placeholder="username (without @)" style="flex:1 1 200px"><button class="btn" id="sugo">Search</button></div>
+    <div id="ssout" class="out" style="white-space:normal">—</div>
+  </section>
+
   <section class="panel" data-t="fp">
     <h2>Browser leak check</h2>
     <p>See what trackers can read from your browser right now — canvas fingerprint, WebGL, timezone, hardware hints.</p>
@@ -201,14 +218,14 @@
     <div class="row2"><button class="btn" id="eclean" style="display:none">Download clean copy</button></div>
   </section>
 
-  <p class="note">🔒 Private by design: hashes, 2FA codes, breach checks and link triage all compute <em>on your device</em>; only DNS lookups use public read-over HTTPS DoH and the breach check sends just 5 hash characters (k-anonymity). Deliberately <b>no</b> port-scanning, brute-forcing or exploit frameworks — attacking systems you don't own is illegal and against our terms. Use on your own assets or with written permission.</p>
+  <p class="note">🔒 Private by design: hashes, 2FA codes, phone parsing, breach checks and link triage all compute <em>on your device</em>; lookups (DNS, RDAP, IP geolocation, public username check) send only the value you searched to public read-over-HTTPS services, and the breach check sends just 5 hash characters (k-anonymity). Deliberately <b>no</b> port-scanning, brute-forcing or exploit frameworks — attacking systems you don't own is illegal and against our terms. Use on your own assets or with written permission.</p>
 </div>
 <script>
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const TABS = [['hash','🧬 hash'],['codec','🔤 codec'],['cipher','🔐 cipher'],['ip','🌐 ip'],['dns','🛰 dns'],['rdap','🌍 whois'],['fp','🕵️ leaks'],['exif','🖼️ exif'],['pass','🔑 pass'],['totp','🕐 2fa'],['url','🔗 url'],['mail','📧 mail'],['file','📁 file'],['jwt','🧾 jwt'],['ports','🚪 ports'],['safety','🛡 safety'],['random','🎲 random'],['regex','🔎 regex']];
+  const TABS = [['hash','🧬 hash'],['codec','🔤 codec'],['cipher','🔐 cipher'],['ip','🌐 ip'],['phone','📱 phone'],['dns','🛰 dns'],['rdap','🌍 whois'],['social','🕶️ social'],['fp','🕵️ leaks'],['exif','🖼️ exif'],['pass','🔑 pass'],['totp','🕐 2fa'],['url','🔗 url'],['mail','📧 mail'],['file','📁 file'],['jwt','🧾 jwt'],['ports','🚪 ports'],['safety','🛡 safety'],['random','🎲 random'],['regex','🔎 regex']];
   const bar = $('tabs');
   bar.innerHTML = TABS.map((t, i) => '<button data-t="' + t[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + t[1] + '</button>').join('');
   function show(key) {
@@ -669,6 +686,73 @@
     const per = Math.log2(DICE_WORDS.length);
     $('dout').textContent = Array.from(a, (x) => DICE_WORDS[x % DICE_WORDS.length]).join('-') + '\n≈ ' + Math.round(cnt * per) + ' bits (' + cnt + ' words × ' + per.toFixed(1) + ') — memorable, and strong against online guessing';
   });
+
+  // ── IP finder — geolokasi IP awam mana-mana (baca-sahaja; anggaran bandar ISP) ──
+  function looksLikeIP(s) {
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(s) && s.split('.').every((p) => Number(p) <= 255)) return true;
+    return s.includes(':') && /^[0-9a-fA-F:]+$/.test(s);
+  }
+  async function doGeoIp() {
+    const ip = $('geoip').value.trim();
+    if (!looksLikeIP(ip)) { $('geoipout').textContent = 'Enter a public IPv4/IPv6 address, e.g. 8.8.8.8'; return; }
+    $('geoipout').textContent = 'Locating…';
+    try {
+      const r = await fetch('https://ipapi.co/' + encodeURIComponent(ip) + '/json/'); const d = await r.json();
+      if (d.error) { $('geoipout').textContent = 'No data for this IP: ' + (d.reason || d.error) + (d.reason === 'reserved_ip_v4' ? ' (private/reserved addresses have no public location)' : ''); return; }
+      $('geoipout').textContent = 'IP     ' + (d.ip || ip) + '\nOwner  ' + (d.org || d.asn || 'unknown network') + '\nWhere  ' + (d.city || '?') + ', ' + (d.region || '?') + ' · ' + (d.country_name || d.country || '?') + '\nTZ     ' + (d.timezone || '?') + '\nNote   city-level estimate from registry data — NOT a street address; VPN/proxy users show their exit point.';
+    } catch (e) { $('geoipout').textContent = 'Locate failed (offline or provider blocked).'; }
+  }
+  $('geoipgo').addEventListener('click', doGeoIp);
+  $('geoip').addEventListener('keydown', (e) => { if (e.key === 'Enter') doGeoIp(); });
+
+  // ── Phone finder — parser E.164 lokal (country code → negara). Tiada rangkaian. ──
+  const CC = [['1','United States / Canada'],['7','Russia / Kazakhstan'],['20','Egypt'],['27','South Africa'],['30','Greece'],['31','Netherlands'],['32','Belgium'],['33','France'],['34','Spain'],['36','Hungary'],['39','Italy'],['40','Romania'],['41','Switzerland'],['43','Austria'],['44','United Kingdom'],['45','Denmark'],['46','Sweden'],['47','Norway'],['48','Poland'],['49','Germany'],['51','Peru'],['52','Mexico'],['53','Cuba'],['54','Argentina'],['55','Brazil'],['56','Chile'],['57','Colombia'],['58','Venezuela'],['60','Malaysia'],['61','Australia'],['62','Indonesia'],['63','Philippines'],['64','New Zealand'],['65','Singapore'],['66','Thailand'],['81','Japan'],['82','South Korea'],['84','Vietnam'],['86','China'],['90','Turkey'],['91','India'],['92','Pakistan'],['93','Afghanistan'],['94','Sri Lanka'],['95','Myanmar'],['98','Iran'],['212','Morocco'],['213','Algeria'],['216','Tunisia'],['218','Libya'],['220','Mauritania'],['221','Senegal'],['233','Ghana'],['234','Nigeria'],['254','Kenya'],['255','Tanzania'],['256','Uganda'],['258','Mozambique'],['260','Zambia'],['263','Zimbabwe'],['351','Portugal'],['352','Luxembourg'],['353','Ireland'],['354','Iceland'],['355','Albania'],['356','Malta'],['357','Cyprus'],['358','Finland'],['359','Bulgaria'],['370','Lithuania'],['371','Latvia'],['372','Estonia'],['375','Belarus'],['380','Ukraine'],['381','Serbia'],['385','Croatia'],['386','Slovenia'],['420','Czechia'],['421','Slovakia'],['423','Liechtenstein'],['506','Costa Rica'],['591','Bolivia'],['593','Ecuador'],['595','Paraguay'],['598','Uruguay'],['675','Papua New Guinea'],['676','Tonga'],['679','Fiji'],['850','North Korea'],['852','Hong Kong'],['853','Macau'],['855','Cambodia'],['856','Laos'],['880','Bangladesh'],['886','Taiwan'],['960','Maldives'],['961','Lebanon'],['962','Jordan'],['963','Syria'],['964','Iraq'],['965','Kuwait'],['966','Saudi Arabia'],['967','Yemen'],['968','Oman'],['970','Palestine'],['971','United Arab Emirates'],['972','Israel'],['973','Bahrain'],['974','Qatar'],['975','Bhutan'],['976','Mongolia'],['977','Nepal'],['992','Tajikistan'],['993','Turkmenistan'],['994','Azerbaijan'],['995','Georgia'],['996','Kyrgyzstan'],['998','Uzbekistan']];
+  function parsePhone(raw) {
+    let s = String(raw || '').replace(/[()\s.\-–]/g, '');
+    if (!s) return null;
+    if (s.startsWith('00')) s = '+' + s.slice(2);
+    if (!/^\+?[0-9]{7,15}$/.test(s)) return { err: 'Not a valid number — digits only, 7–15 of them, e.g. +60123456789' };
+    const intl = s.startsWith('+');
+    const digits = intl ? s.slice(1) : s;
+    let best = null;
+    for (const e of CC) if (digits.startsWith(e[0]) && (!best || e[0].length > best[0].length)) best = e;
+    if (!intl) {
+      return { warn: 'No country code — this looks like a LOCAL format (leading 0 means trunk dialling).', country: best ? 'possibly ' + best[1] : 'country unknown', e164: 'add + and the country code, e.g. +60' + digits.replace(/^0/, '') };
+    }
+    if (!best) return { err: 'Unknown country code — check the prefix.' };
+    const national = digits.slice(best[0].length);
+    if (national.length < 4) return { err: 'Country code +' + best[0] + ' matched but the subscriber number is too short.' };
+    return { country: best[1], cc: '+' + best[0], national, e164: '+' + digits };
+  }
+  function renderPhone() {
+    const p = parsePhone($('phin').value);
+    if (!p) { $('phout').textContent = '—'; return; }
+    if (p.err) { $('phout').textContent = '✖ ' + p.err; return; }
+    $('phout').textContent = (p.warn ? '⚠ ' + p.warn + '\n' : '')
+      + 'Country  ' + p.country + (p.cc ? '\nCode     ' + p.cc + '\nNational ' + p.national : '') + '\nE.164    ' + p.e164
+      + '\n\nWhat a number CAN tell: country + validity (above). What it cannot: the owner\u2019s name or location — no legal tool gives that, so treat any \u201cphone tracker\u201d site that claims it as a scam.'
+      + (p.e164 && /^\+/.test(p.e164) ? '\n\nTip: paste the E.164 into the Social tab to check linked public accounts, or WhatsApp: https://wa.me/' + p.e164.slice(1) : '');
+  }
+  $('phin').addEventListener('input', renderPhone);
+
+  // ── Social finder — nama akaun awam rentas platform (proksi /api/social) ──
+  async function doSocial() {
+    const u = $('su').value.trim().replace(/^@+/, '');
+    if (!u) { $('ssout').textContent = 'Enter a username, e.g. tokai_scammer_99'; return; }
+    $('ssout').textContent = 'Checking public profiles…';
+    try {
+      const r = await fetch('/api/social?u=' + encodeURIComponent(u)); const d = await r.json();
+      if (d.error) { $('ssout').textContent = '✖ ' + d.error; return; }
+      const badge = (st) => st === 'found' ? '✅ account page exists' : st === 'notfound' ? '✖ no public account' : '❓ login-walled / blocked — open & check yourself';
+      $('ssout').innerHTML = 'Username <b>' + esc(d.username) + '</b>' + (d.cached ? ' <span style="opacity:.6">(cached 15m)</span>' : '')
+        + '<table><tr><th>Platform</th><th>Public status</th><th></th></tr>'
+        + d.results.map((x) => '<tr><td>' + esc(x.platform) + '</td><td>' + badge(x.state) + '</td><td><a href="' + esc(x.url) + '" target="_blank" rel="noopener">open</a></td></tr>').join('')
+        + '</table><p class="note">Existence ≠ identity: anyone can register a name. Cross-check profile photos, join dates and post history before trusting or accusing — and never harass account owners.</p>';
+    } catch (e) { $('ssout').textContent = 'Search failed (offline or server busy).'; }
+  }
+  $('sugo').addEventListener('click', doSocial);
+  $('su').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSocial(); });
+
   renderSafety();
 })();
 </script>
