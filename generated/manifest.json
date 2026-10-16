@@ -241,6 +241,17 @@
       "game": true,
       "createdAt": "2026-10-16T14:25:42.257Z",
       "palette": "mawar"
+    },
+    {
+      "word": "mushroom",
+      "slug": "mushroom",
+      "emoji": "🍄",
+      "tagline": "Collect mushrooms, avoid the poisonous ones.",
+      "genre": "memory",
+      "theme": "ungu",
+      "game": true,
+      "createdAt": "2026-10-16T21:12:37.551Z",
+      "palette": "ungu"
     }
   ]
 }
