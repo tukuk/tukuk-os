@@ -778,7 +778,7 @@ app.get('/models', (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/models', '/datacenter', '/os', '/rekomendasi'];
+  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/models', '/datacenter', '/os', '/rekomendasi', '/builder', '/editor', '/editor-video', '/movie', '/design', '/3d', '/bg-remover', '/collage', '/converter'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
