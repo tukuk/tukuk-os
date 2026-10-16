@@ -40,6 +40,11 @@ const TOOLS = [
   ['nasa', '/nasa', '🛰️', 'NASA APOD', 'nasa space photo astronomy angkasa planet bintang star'],
   ['store', '/store', '🛒', 'Tukuk Store', 'store apps download apk install aplikasi gedai kedai'],
   ['os', '/os', '📱', 'Tukuk OS (web phone)', 'phone android os sistem web home screen operating telefon perisian'],
+  ['blog', '/blog', '📝', 'Blog & Articles', 'blog article artikel baca reading tulisan'],
+  ['learn', '/learn', '🎓', 'Learn 0 → Hero', 'learn belajar course kelas curriculum tutorial beginner asas'],
+  ['radio', '/cari?mode=radio', '📻', 'World Radio', 'radio stesen station dengar siaran live'],
+  ['news', '/cari?mode=news', '📰', 'News Search', 'news berita headline terkini'],
+  ['music', '/cari?mode=music', '🎵', 'Music Search', 'music song lagu muzik listen dengar'],
   ['games', '/store?genre=arkad', '🕹️', 'Arcade Games', 'game main gaming permainan'],
 ];
 // Genre arkad → pautan penapis /store (sepadan label STORE_ARCADE/server).

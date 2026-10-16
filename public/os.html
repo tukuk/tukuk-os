@@ -200,7 +200,13 @@ var APPS = [
   ['chat','T Chat','💬','/apps/chat','SYSTEM'],['store','Tukuk Store','🛒','/store','SYSTEM'],
   ['search','Web Search','🔍','/','SYSTEM'],['explore','Explore','🧭','/explore','SYSTEM'],
   ['datacenter','Data Center','🏢','/datacenter','SYSTEM'],['models','AI Models','🧠','/models','SYSTEM'],
-  ['docs','Docs','📚','/docs','SYSTEM'],
+  ['docs','Docs','📚','/docs','SYSTEM'],['admin','Admin','🛠️','/admin','SYSTEM'],
+  ['blog','Blog','📝','/blog','PORTAL'],['learn','Learn 0→Hero','🎓','/learn','PORTAL'],
+  ['about','About','ℹ️','/about','PORTAL'],['contact','Contact','✉️','/contact','PORTAL'],
+  ['health','Health','❤️','/health','PORTAL'],['stats','Statistics','📊','/stats','PORTAL'],
+  ['radio','World Radio','📻','/cari?mode=radio','PORTAL'],['news','News','📰','/cari?mode=news','PORTAL'],
+  ['music','Music Search','🎵','/cari?mode=music','PORTAL'],['images','Image Search','🖼️','/cari?mode=images','PORTAL'],
+  ['ccassets','CC Assets','🧩','/cari?mode=cc','PORTAL'],
   ['candy','Candy Blast','🍬','/apps/candy','GAMES'],['flappy','Flappy Dash','🐦','/apps/flappy','GAMES'],
   ['subway','Subway Dash','🚇','/apps/subway','GAMES'],['slice','Fruit Slice','🍉','/apps/slice','GAMES'],
   ['roadhop','Road Hop','🐸','/apps/roadhop','GAMES'],['bubble','Bubble Pop','🫧','/apps/bubble','GAMES'],
@@ -337,7 +343,7 @@ function longPress(a) {
 
 // ── drawer ──
 function renderDrawer() {
-  var cats = ['TOOLS', 'MEDIA', 'SYSTEM', 'GAMES'];
+  var cats = ['TOOLS', 'MEDIA', 'PORTAL', 'SYSTEM', 'GAMES'];
   var html = '';
   cats.forEach(function (c) {
     var list = APPS.filter(function (a) { return a[4] === c; });

@@ -45,14 +45,15 @@ test('route: maksimum 3 cadangan, disusun ikut skor menurun', () => {
   for (let i = 1; i < apps.length; i++) assert.ok(apps[i - 1].score >= apps[i].score);
 });
 
-test('katalog: setiap laluan padanan fail HTML yang benar-benar wujud', () => {
+test('katalog: setiap laluan padanan fail HTML atau route server yang wujud', () => {
+  const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
   for (const [name, url, , title] of approuter.CATALOG) {
-    if (url.includes('?')) continue; // penapis /store — failnya store.html sendiri
+    if (url.includes('?')) continue; // penapis /store & mod /cari — failnya halaman sendiri
     let file;
     if (url.startsWith('/apps/')) file = path.join(PUBLIC, 'apps', name + '.html');
-    else file = path.join(PUBLIC, name.replace(/-/g, '-') + '.html');
-    // 'games' → /store?genre=arkad (diprekatu di atas); 'store' → public/store.html
-    assert.ok(fs.existsSync(file), `fail aplikasi wujud untuk ${title} (${url}) → ${file}`);
+    else file = path.join(PUBLIC, name + '.html');
+    const routed = serverSrc.includes(`app.get('/${name}'`);
+    assert.ok(fs.existsSync(file) || routed, `fail/route wujud untuk ${title} (${url})`);
   }
 });
 
