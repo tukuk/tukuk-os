@@ -5,9 +5,12 @@
   "r2_buckets": [
     {
       "binding": "BACKUPS",
-      "bucket_name": "tukuk-os-backups"
+      // Bucket cermin + sandaran: worker fallback (www.tukuk.org) baca dari sini,
+      // jadi backup data/ & snapshot mesti tulis ke bucket yang sama.
+      "bucket_name": "tukuk-fallback"
     }
   ],
+  "workers_dev": true,
   "observability": {
     "enabled": true
   }

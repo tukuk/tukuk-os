@@ -32,8 +32,11 @@ export default {
 				url.searchParams.get('key') ||
 				request.headers.get('x-object-key') ||
 				`meili-${new Date().toISOString().replace(/[:.]/g, '-')}.json.gz`;
+			// Content-type boleh dinyatakan (worker fallback www membaca metadata ini);
+			// kosong → application/gzip (laluan lama: eksport meili/snapshot .gz).
+			const ct = request.headers.get('x-content-type') || 'application/gzip';
 			await env.BACKUPS.put(key, body, {
-				httpMetadata: { contentType: 'application/gzip' },
+				httpMetadata: { contentType: ct },
 			});
 			return Response.json({ ok: true, key, bytes: body.byteLength });
 		}

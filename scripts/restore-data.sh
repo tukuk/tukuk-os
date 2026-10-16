@@ -13,6 +13,8 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 
 BUCKET="${R2_BUCKET:-tukuk-fallback}"
+WURL="${BACKUP_WORKER_URL:-}"
+WSEC="${BACKUP_UPLOAD_SECRET:-}"
 SLOT="${1:-$(date -u +%u%H)}"
 KEY="backups/tukuk-data-${SLOT}.tar.gz"
 [[ "$SLOT" =~ ^[0-9]{3}$ || "$SLOT" =~ ^[0-9]{4}$ ]] || { echo "Slot perlu 3-4 digit (hari+jam), contoh: 314"; exit 1; }
@@ -21,9 +23,13 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 echo "[restore] mengambil $KEY dari $BUCKET ..."
-npx --yes wrangler r2 object get "$BUCKET/$KEY" --file "$TMP/data.tar.gz" --remote || {
-  echo "[restore] RALAT: salinan tiada / muat gagal" >&2; exit 1;
-}
+if [[ -n "$WURL" && -n "$WSEC" ]]; then
+  curl -fsS --max-time 120 -H "Authorization: Bearer $WSEC" "$WURL/?key=$KEY" -o "$TMP/data.tar.gz" || {
+    echo "[restore] RALAT: salinan tiada / muat gagal (worker)" >&2; exit 1;
+  }
+elif ! npx --yes wrangler r2 object get "$BUCKET/$KEY" --file "$TMP/data.tar.gz" --remote; then
+  echo "[restore] RALAT: salinan tiada / muat gagal" >&2; exit 1
+fi
 
 TS="$(date +%Y%m%d-%H%M%S)"
 if [[ -d "$ROOT/data" ]]; then

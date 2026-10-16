@@ -11,16 +11,29 @@ cd "$(dirname "$0")/.."
 
 BUCKET="${R2_BUCKET:-tukuk-fallback}"
 BASE="${TUKUK_LOCAL_BASE:-http://127.0.0.1:3000}"
+WURL="${BACKUP_WORKER_URL:-}"
+WSEC="${BACKUP_UPLOAD_SECRET:-}"
+FAILS=0
 
-[[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || { echo "CLOUDFLARE_API_TOKEN tiada — skip snapshot."; exit 0; }
+# Token VPS tidak ada skop R2 — tanpa laluan worker, snapshot pasti gagal senyap.
+if [[ -z "$WURL" || -z "$WSEC" ]]; then
+  [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || { echo "Tiada BACKUP_WORKER_URL/SECRET & tiada token — skip snapshot."; exit 0; }
+fi
 
 put() { # put <key> <fail> [content-type]
   local key="$1" file="$2" ct="${3:-}"
+  if [[ -n "$WURL" && -n "$WSEC" ]]; then
+    local args=(-fsS --max-time 60 -X POST -H "Authorization: Bearer $WSEC" --data-binary "@$file")
+    [[ -n "$ct" ]] && args+=(-H "x-content-type: $ct")
+    curl "${args[@]}" "$WURL/?key=$key" >/dev/null 2>&1 \
+      && echo "  ✓ $key" || { echo "  ! gagal $key"; FAILS=$((FAILS+1)); }
+    return
+  fi
   if [[ -n "$ct" ]]; then
     npx --yes wrangler r2 object put "$BUCKET/$key" --file "$file" --content-type "$ct" --remote >/dev/null 2>&1
   else
     npx --yes wrangler r2 object put "$BUCKET/$key" --file "$file" --remote >/dev/null 2>&1
-  fi && echo "  ✓ $key" || echo "  ! gagal $key"
+  fi && echo "  ✓ $key" || { echo "  ! gagal $key"; FAILS=$((FAILS+1)); }
 }
 
 TMP="$(mktemp -d)"
@@ -63,4 +76,8 @@ for f in public/*.css public/*.js public/*.svg public/*.png public/*.ico public/
   put "$(basename "$f")" "$f"
 done
 
+if (( FAILS > 0 )); then
+  echo "[snapshot] AMARAN: $FAILS muat naik gagal — cermin www TIDAK segar." >&2
+  exit 1
+fi
 echo "[snapshot] selesai. Cermin www.tukuk.org kini segar."
