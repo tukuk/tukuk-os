@@ -910,6 +910,27 @@ function thirdPartyAdTag() {
 function pageAdScript() {
   return thirdPartyAdTag() || adsenseLoader();
 }
+// Microsoft Clarity (analitik penggunaan) — sudah didedahkan dalam /privacy. ID projek
+// Clarity bersifat awam (tersemat dalam URL tag), jadi fallback lalai selamat. Togel
+// Admin `clarityEnabled` (lalai HIDUP) mematikannya serta-merta pada semua halaman.
+const DEFAULT_CLARITY_ID = 'ytshvg0zer';
+function clarityIdValue() {
+  return String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || DEFAULT_CLARITY_ID) || '').trim();
+}
+function clarityEnabledValue() {
+  // Lalai HIDUP (sudah didedahkan dalam /privacy); boleh dimatikan melalui
+  // env CLARITY_ENABLED atau togel Admin (yang menyimpan store `clarityEnabled`).
+  const envDefault = typeof process.env.CLARITY_ENABLED !== 'undefined'
+    ? /^(1|true|yes|on)$/i.test(process.env.CLARITY_ENABLED)
+    : true;
+  return Boolean(store.getSetting('clarityEnabled', envDefault));
+}
+function clarityScript() {
+  if (!clarityEnabledValue()) return '';
+  const id = clarityIdValue();
+  if (!/^[a-z0-9]+$/i.test(id)) return '';
+  return `<script async src="https://www.clarity.ms/tag/${escapeHtml(id)}"></script>`;
+}
 // Unit dalam-kandungan: jika third-party ON, jangan susun <ins> AdSense pada halaman sama.
 function adUnitGuarded(slot, label) {
   return thirdPartyAdTag() ? '' : adUnit(slot, label);
@@ -974,7 +995,7 @@ app.get('/blog', (req, res) => {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}
+${pageAdScript()}${clarityScript()}
 </head>
 <body>
 <div class="wrap">
@@ -1355,7 +1376,7 @@ app.get('/blog/:slug', (req, res) => {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}
+${pageAdScript()}${clarityScript()}
 </head>
 <body>
 <div class="wrap">
@@ -3084,8 +3105,8 @@ app.get('/api/public/settings', (req, res) => {
     thirdPartyAdEnabled: Boolean(store.getSetting('thirdPartyAdEnabled', false)),
     thirdPartyAdSrc: store.getSetting('thirdPartyAdSrc', ''),
     affiliateProducts: store.getSetting('affiliateProducts', DEFAULT_AFFILIATE),
-    clarityEnabled: Boolean(store.getSetting('clarityEnabled', false)),
-    clarityId: String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || '') || ''),
+    clarityEnabled: clarityEnabledValue(),
+    clarityId: clarityIdValue(),
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
     siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
@@ -3117,8 +3138,8 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     msAdsSnippetInArticle: store.getSetting('msAdsSnippetInArticle', ''),
     msAdsSnippetBottom: store.getSetting('msAdsSnippetBottom', ''),
     // Microsoft Clarity (analytics)
-    clarityEnabled: Boolean(store.getSetting('clarityEnabled', false)),
-    clarityId: String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || '') || ''),
+    clarityEnabled: clarityEnabledValue(),
+    clarityId: clarityIdValue(),
     // Custom Themes & Wallpaper
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
