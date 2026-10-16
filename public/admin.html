@@ -566,6 +566,20 @@ Type a command below or click a quick action.
             <div class="help-text">Dapatkan ID dari <a href="https://clarity.microsoft.com" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>. Ia hanya dimuat bila diaktifkan (lihat /api/public/settings).</div>
           </div>
 
+          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">⚡ Rangkaian Iklan Pantas (Adsterra / PropellerAds / dll)</h3>
+          <div class="form-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="thirdPartyAdEnabled">
+              <span class="slider"></span>
+              <span><strong>Aktifkan Rangkaian Pantas</strong></span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="thirdPartyAdSrc">URL Skrip Universal (satu <code>&lt;script src&gt;</code>)</label>
+            <input type="url" id="thirdPartyAdSrc" placeholder="https://pl1234.example.com/p/1234.js">
+            <div class="help-text" style="color:#ff8a8a;">⚠️ Bila <strong>ON</strong>, rangkaian ini <strong>menggantikan AdSense</strong> pada setiap halaman (tidak dicampur — elak akaun AdSense di-BAN). <strong>Matikan togel ini sebaik AdSense anda mula serve iklan.</strong> Ambil URL dari dashboard (Adsterra/PropellerAds → Zone → Universal/Smart Code → copy <code>src</code>).</div>
+          </div>
+
           <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">🛒 Produk Afiliasi (Rekomendasi)</h3>
           <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Dipaparkan di <a href="/rekomendasi" target="_blank" rel="noopener">/rekomendasi</a>. Format: JSON array. Ganti <code>url</code> dengan <strong>pautan affiliate sebenar</strong> anda (Shopee/Amazon/Hostinger/NordVPN dll). Kosongkan = guna senarai default.</p>
           <div class="form-group">
@@ -1037,6 +1051,8 @@ Type a command below or click a quick action.
       document.getElementById('msAdsSnippetBottom').value = s.msAdsSnippetBottom || '';
       document.getElementById('msAdsUsmSrc').value = s.msAdsUsmSrc || '';
       document.getElementById('affiliateProducts').value = s.affiliateProducts || '';
+      document.getElementById('thirdPartyAdEnabled').checked = Boolean(s.thirdPartyAdEnabled);
+      document.getElementById('thirdPartyAdSrc').value = s.thirdPartyAdSrc || '';
       
       // Microsoft Clarity
       document.getElementById('clarityEnabled').checked = Boolean(s.clarityEnabled);
@@ -1087,6 +1103,8 @@ Type a command below or click a quick action.
       msAdsSnippetBottom: document.getElementById('msAdsSnippetBottom').value,
       msAdsUsmSrc: document.getElementById('msAdsUsmSrc').value.trim(),
       affiliateProducts: document.getElementById('affiliateProducts').value,
+      thirdPartyAdEnabled: document.getElementById('thirdPartyAdEnabled').checked,
+      thirdPartyAdSrc: document.getElementById('thirdPartyAdSrc').value.trim(),
       clarityEnabled: document.getElementById('clarityEnabled').checked,
       clarityId: document.getElementById('clarityId').value.trim()
     };

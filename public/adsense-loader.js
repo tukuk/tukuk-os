@@ -15,6 +15,19 @@
       .then(function (s) {
         if (!s) return;
         var head = document.head || document.documentElement;
+        // Rangkaian iklan PANTAS (Adsterra / PropellerAds / dll) — bila aktif, ia
+        // GANTIKAN AdSense pada halaman yang sama (elak "mixed networks" → lindungi
+        // akaun AdSense daripada ban). AdSense auto-resume bila togel ini dimatikan.
+        if (s.thirdPartyAdEnabled) {
+          var t = String(s.thirdPartyAdSrc || '');
+          if (/^https:\/\/[a-z0-9.-]+\//i.test(t)) {
+            var tp = document.createElement('script');
+            tp.async = true;
+            tp.src = t;
+            head.appendChild(tp);
+            return;
+          }
+        }
         // Google AdSense auto-ads
         if (s.adsEnabled) {
           var c = String(s.adsClient || '');

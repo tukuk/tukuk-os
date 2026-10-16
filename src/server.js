@@ -704,6 +704,25 @@ function adsenseLoader() {
   return `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`;
 }
 
+// Rangkaian iklan PANTAS (Adsterra / PropellerAds / HilltopAds, dll): Admin tampal
+// SATU URL skrip universal + aktifkan togel. Bila aktif, ia GANTIKAN AdSense pada
+// halaman yang sama — elak "mixed/competing ad networks" yang boleh buat akaun
+// AdSense di-BAN. AdSense auto-resume bila togel ini dimatikan.
+function thirdPartyAdTag() {
+  if (!store.getSetting('thirdPartyAdEnabled', false)) return '';
+  const src = String(store.getSetting('thirdPartyAdSrc', '')).trim();
+  if (!/^https:\/\/[a-z0-9.-]+\//i.test(src)) return '';
+  return `<script async src="${escapeHtml(src)}"></script>`;
+}
+// Skrip <head> untuk halaman dilayar pelayan (blog/artikel): third-party ATAU AdSense.
+function pageAdScript() {
+  return thirdPartyAdTag() || adsenseLoader();
+}
+// Unit dalam-kandungan: jika third-party ON, jangan susun <ins> AdSense pada halaman sama.
+function adUnitGuarded(slot, label) {
+  return thirdPartyAdTag() ? '' : adUnit(slot, label);
+}
+
 // Microsoft Ads / rangkaian lain: Admin tampal snippet HTML/JS penuh dari
 // pembekal (mis. Microsoft monetizenow). Kita inject APA ADANYA bila msAdsEnabled.
 // Reka bentuk ini elak daripada aku mereka markup MS yang mungkin salah.
@@ -763,7 +782,7 @@ app.get('/blog', (req, res) => {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${adsenseLoader()}
+${pageAdScript()}
 </head>
 <body>
 <div class="wrap">
@@ -793,7 +812,7 @@ ${adsenseLoader()}
       </span>
     </nav>
   </header>
-  <main>${adUnit(config.adsense.slotTop, 'top')}${msAdUnit('top')}`;
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}`;
 
   for (const post of posts) {
     const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -807,7 +826,7 @@ ${adsenseLoader()}
   }
 
   html += `
-  ${adUnit(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
   <footer>
     <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. A free and open web search engine.</p>
@@ -1144,7 +1163,7 @@ app.get('/blog/:slug', (req, res) => {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${adsenseLoader()}
+${pageAdScript()}
 </head>
 <body>
 <div class="wrap">
@@ -1175,13 +1194,13 @@ ${adsenseLoader()}
     </nav>
   </header>
   <main>
-    ${adUnit(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     <article>
       ${renderedContent}
-      ${adUnit(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+      ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
       ${post.tags && post.tags.length ? `<div class="tags" style="margin-top:28px; padding-top:16px; border-top:1px solid var(--line);">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
     </article>
-    ${adUnit(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
   <footer>
     <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. A free and open web search engine.</p>
@@ -2700,6 +2719,8 @@ app.get('/api/public/settings', (req, res) => {
     msAdsEnabled: Boolean(store.getSetting('msAdsEnabled', false)),
     msAdsTagId: store.getSetting('msAdsTagId', ''),
     msAdsUsmSrc: store.getSetting('msAdsUsmSrc', ''),
+    thirdPartyAdEnabled: Boolean(store.getSetting('thirdPartyAdEnabled', false)),
+    thirdPartyAdSrc: store.getSetting('thirdPartyAdSrc', ''),
     affiliateProducts: store.getSetting('affiliateProducts', DEFAULT_AFFILIATE),
     clarityEnabled: Boolean(store.getSetting('clarityEnabled', false)),
     clarityId: String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || '') || ''),
@@ -2727,6 +2748,8 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     msAdsUsmSrc: store.getSetting('msAdsUsmSrc', ''),
     // Produk afiliasi (JSON array) untuk halaman /rekomendasi
     affiliateProducts: store.getSetting('affiliateProducts', DEFAULT_AFFILIATE),
+    thirdPartyAdEnabled: Boolean(store.getSetting('thirdPartyAdEnabled', false)),
+    thirdPartyAdSrc: store.getSetting('thirdPartyAdSrc', ''),
     // Snippet penuh (HTML/JS) ditampal dari pembekal. Renderer inject apa adanya.
     msAdsSnippetTop: store.getSetting('msAdsSnippetTop', ''),
     msAdsSnippetInArticle: store.getSetting('msAdsSnippetInArticle', ''),
@@ -2778,6 +2801,8 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   if (typeof b.msAdsSnippetBottom !== 'undefined') store.setSetting('msAdsSnippetBottom', String(b.msAdsSnippetBottom));
   if (typeof b.msAdsUsmSrc !== 'undefined') store.setSetting('msAdsUsmSrc', String(b.msAdsUsmSrc).trim());
   if (typeof b.affiliateProducts !== 'undefined') store.setSetting('affiliateProducts', String(b.affiliateProducts).trim());
+  if (typeof b.thirdPartyAdEnabled !== 'undefined') store.setSetting('thirdPartyAdEnabled', Boolean(b.thirdPartyAdEnabled));
+  if (typeof b.thirdPartyAdSrc !== 'undefined') store.setSetting('thirdPartyAdSrc', String(b.thirdPartyAdSrc).trim());
   // Microsoft Clarity
   if (typeof b.clarityEnabled !== 'undefined') store.setSetting('clarityEnabled', Boolean(b.clarityEnabled));
   if (typeof b.clarityId !== 'undefined') store.setSetting('clarityId', String(b.clarityId).trim());
