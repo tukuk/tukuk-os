@@ -340,7 +340,7 @@ function renderHome() {
 }
 function cell(a) {
   var b = document.createElement('button'); b.className = 'cell';
-  b.innerHTML = '<span class="ic">' + a[2] + '</span><span>' + a[1] + '</span>';
+  b.innerHTML = '<span class="ic">' + escH(a[2]) + '</span><span>' + escH(a[1]) + '</span>';
   b.addEventListener('click', function () { launch(a); });
   var lt = null;
   b.addEventListener('pointerdown', function () { lt = setTimeout(function () { lt = 'FIRE'; longPress(a); }, 550); });
@@ -361,14 +361,14 @@ function longPress(a) {
 
 // ── drawer ──
 function renderDrawer() {
-  var cats = ['TOOLS', 'MEDIA', 'PORTAL', 'SYSTEM', 'GAMES'];
+  var cats = ['TOOLS', 'MEDIA', 'PORTAL', 'SYSTEM', 'GAMES', 'STORE'];
   var html = '';
   cats.forEach(function (c) {
     var list = APPS.filter(function (a) { return a[4] === c; });
     if (!list.length) return;
     html += '<h4>' + c + ' (' + list.length + ')</h4><div class="grid">';
     list.forEach(function (a) {
-      html += '<button class="cell" data-app="' + a[0] + '"><span class="ic">' + a[2] + '</span><span>' + a[1] + '</span></button>';
+      html += '<button class="cell" data-app="' + escH(a[0]) + '"><span class="ic">' + escH(a[2]) + '</span><span>' + escH(a[1]) + '</span></button>';
     });
     html += '</div>';
   });
@@ -381,6 +381,33 @@ $('drawerBody').addEventListener('click', function (e) {
 });
 $('dDrawer').addEventListener('click', function () { $('drawer').classList.add('open'); });
 $('drawerX').addEventListener('click', function () { $('drawer').classList.remove('open'); });
+
+// ── SINKRON GEDUNG: "semua apl" seperti Android → gabung katalog /api/store
+//    (Satu Kata + Arked + Komuniti) ke dalam APPS ketika boot. Array statik di
+//    atas tidak disentuh supaya ujian kontrak (test/os-core.test.js) tetap sah;
+//    item luar yang URL-nya sudah wujud dalam teras dilangkau supaya tiada duplikat.
+var STORE_CAT = { app: 'STORE', game: 'GAMES' };
+function syncStore() {
+  return fetch('/api/store').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || !Array.isArray(d.items)) return 0;
+    var seenUrl = {}; var seenLabel = {};
+    APPS.forEach(function (a) { seenUrl[a[3]] = 1; seenLabel[(a[1] + '|' + a[4]).toLowerCase()] = 1; });
+    var added = 0;
+    d.items.forEach(function (it) {
+      if (!it || !it.url || !it.title) return;
+      var cat = STORE_CAT[it.kind] || 'STORE';
+      if (seenUrl[it.url]) return;
+      if (seenLabel[(it.title + '|' + cat).toLowerCase()]) return; // Arked/Bawaan duplikat tajuk
+      var name = String(it.id || '').toLowerCase().replace(/[^a-z0-9_-]/g, '-') || ('store-' + added);
+      if (appByName(name)) name = name + '-' + added;
+      seenUrl[it.url] = 1; seenLabel[(it.title + '|' + cat).toLowerCase()] = 1;
+      APPS.push([name, it.title, it.icon || '📦', it.url, cat]);
+      added++;
+    });
+    if (added) { renderDrawer(); renderHome(); notify('🛒 Store synced — ' + added + ' more apps added to your phone (' + APPS.length + ' total).'); }
+    return added;
+  }).catch(function () { toast('⚠️ Store unreachable — showing built-in apps only.'); return 0; });
+}
 
 // ── pelancaran: tetingkap (desktop) / aktiviti (telefon) ──
 function launch(a) {
@@ -405,9 +432,9 @@ function openWindow(a) {
   el.style.left = (40 + n * 34) + 'px'; el.style.top = (30 + n * 26) + 'px';
   el.style.width = Math.min(860, window.innerWidth - 90) + 'px';
   el.style.height = Math.min(600, window.innerHeight - 140) + 'px';
-  el.innerHTML = '<div class="tbar"><span>' + a[2] + '</span><b>' + a[1] + '</b>' +
+  el.innerHTML = '<div class="tbar"><span>' + escH(a[2]) + '</span><b>' + escH(a[1]) + '</b>' +
     '<button data-act="min" title="Minimize">—</button><button data-act="max" title="Maximize">▢</button><button data-act="x" title="Close">✕</button></div>' +
-    '<iframe src="' + a[3] + '" title="' + a[1] + '"></iframe>';
+    '<iframe src="' + escH(a[3]) + '" title="' + escH(a[1]) + '"></iframe>';
   $('windows').appendChild(el);
   var w = { el: el, app: a }; wins.set(a[0], w);
   focusWin(w); bumpRecent(a);
@@ -442,7 +469,7 @@ function dropRecent(name) { recents = recents.filter(function (r) { return r.n !
 function renderRecents() {
   var html = '';
   recents.forEach(function (r) {
-    html += '<div class="card" data-n="' + r.n + '"><button class="x">✕</button><span class="ic">' + r.i + '</span><b>' + r.t + '</b></div>';
+    html += '<div class="card" data-n="' + escH(r.n) + '"><button class="x">✕</button><span class="ic">' + escH(r.i) + '</span><b>' + escH(r.t) + '</b></div>';
   });
   $('rcards').innerHTML = html || '<p style="color:var(--muted)">No recent apps</p>';
 }
@@ -590,7 +617,7 @@ function boot() {
   var fast = sessionStorage.getItem('tkos_fast');
   setTimeout(function () { $('boot').style.opacity = '0'; setTimeout(function () { $('boot').remove(); }, 450); }, fast ? 150 : 950);
   sessionStorage.setItem('tkos_fast', '1');
-  setTimeout(function () { notify('👋 Welcome to Tukuk OS — ' + APPS.length + ' apps loaded. Ask the ✦ assistant “open snake” or anything else.'); }, 1400);
+  setTimeout(function () { notify('👋 Welcome to Tukuk OS — ' + APPS.length + ' core apps. Syncing the full store like Android…'); syncStore(); }, 1400);
 }
 boot();
 </script>
