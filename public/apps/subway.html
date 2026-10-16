@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subway Dash — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="The famous 3-lane endless runner: swipe left/right to change lanes, up to jump, down to slide. Dodge trains and barriers, grab coins, run forever.">
+<link rel="canonical" href="https://tukuk.org/apps/subway">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:460px; margin:0 auto; padding:14px; }
+  .hud { display:flex; gap:10px; justify-content:space-between; margin-bottom:8px; font-size:.85rem; color:var(--muted); }
+  .hud b { color:var(--text); font-size:1rem; }
+  canvas { display:block; width:100%; border-radius:12px; background:#2b3346; touch-action:none; }
+  .hint { color:var(--muted); font-size:.78rem; margin-top:10px; text-align:center; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🚇 Subway Dash</h1></header>
+<div class="wrap">
+  <div class="hud"><span>Score <b id="score">0</b></span><span>Coins <b id="coins">0</b></span><span>Best <b id="best">0</b></span></div>
+  <canvas id="cv" width="420" height="640"></canvas>
+  <p class="hint">Swipe / arrow keys: ← → change lane · ↑ or Space jump · ↓ slide. Avoid trains and barriers.</p>
+</div>
+<script>
+(() => {
+  const cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const W = cv.width, H = cv.height, LANES = [W * 0.22, W * 0.5, W * 0.78], PY = H - 120;
+  const BEST_KEY = 'subway-best';
+  let mode = 'ready', dist, coinsN, speed, player, obs, coinsArr, parts, best = Number(localStorage.getItem(BEST_KEY) || 0);
+
+  function reset() {
+    dist = 0; coinsN = 0; speed = 5;
+    player = { lane: 1, x: LANES[1], y: PY, jumpT: -1, slideT: -1 };
+    obs = []; coinsArr = []; parts = [];
+  }
+  reset();
+
+  function start() { if (mode === 'dead') reset(); mode = 'play'; }
+  function jump() { if (mode === 'play' && player.jumpT < 0 && player.slideT < 0) player.jumpT = 0; }
+  function slide() { if (mode === 'play' && player.jumpT < 0) player.slideT = 0; }
+  function moveLane(d) { if (mode === 'play') player.lane = Math.max(0, Math.min(2, player.lane + d)); }
+
+  cv.addEventListener('pointerdown', (e) => {
+    if (mode !== 'play') { start(); return; }
+    const t = e.currentTarget.getBoundingClientRect();
+    cv._sx = e.clientX - t.left; cv._sy = e.clientY - t.top;
+  });
+  cv.addEventListener('pointerup', (e) => {
+    if (cv._sx == null) return;
+    const t = e.currentTarget.getBoundingClientRect();
+    const dx = (e.clientX - t.left) - cv._sx, dy = (e.clientY - t.top) - cv._sy;
+    cv._sx = null;
+    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) { jump(); return; }
+    if (Math.abs(dx) > Math.abs(dy)) moveLane(dx > 0 ? 1 : -1);
+    else if (dy < 0) jump(); else slide();
+  });
+  window.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (mode !== 'play' && (k === ' ' || k === 'Enter')) { start(); return; }
+    if (k === 'ArrowLeft' || k === 'a') moveLane(-1);
+    else if (k === 'ArrowRight' || k === 'd') moveLane(1);
+    else if (k === 'ArrowUp' || k === ' ' || k === 'w') { e.preventDefault(); jump(); }
+    else if (k === 'ArrowDown' || k === 's') slide();
+  });
+
+  let tick = 0;
+  function spawnRow() {
+    const freeLane = Math.floor(Math.random() * 3);
+    const kinds = ['train', 'low', 'high'];
+    for (let l = 0; l < 3; l++) {
+      if (l === freeLane) continue;
+      if (Math.random() < 0.62) {
+        const kind = kinds[Math.floor(Math.random() * 3)];
+        obs.push({ lane: l, y: -220, kind, h: kind === 'train' ? 190 : 60 });
+      }
+    }
+    if (Math.random() < 0.75) {
+      const cl = freeLane, n = 3 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < n; i++) coinsArr.push({ lane: cl, y: -60 - i * 60 });
+    }
+  }
+
+  function step() {
+    if (mode !== 'play') { tick++; return; }
+    tick++;
+    speed = Math.min(13, 5 + dist / 1600);
+    dist += speed;
+    if (tick % Math.max(38, 70 - Math.floor(speed * 3)) === 0) spawnRow();
+    // lane easing
+    player.x += (LANES[player.lane] - player.x) * 0.35;
+    if (player.jumpT >= 0) { player.jumpT++; if (player.jumpT > 34) player.jumpT = -1; }
+    if (player.slideT >= 0) { player.slideT++; if (player.slideT > 30) player.slideT = -1; }
+    const pyOff = player.jumpT >= 0 ? -Math.sin(player.jumpT / 34 * Math.PI) * 90 : 0;
+    for (const o of obs) o.y += speed;
+    for (const c of coinsArr) c.y += speed;
+    obs = obs.filter((o) => o.y < H + 60);
+    coinsArr = coinsArr.filter((c) => {
+      if (c.y > PY - 26 && c.y < PY + 30 && Math.abs(LANES[c.lane] - player.x) < 40 && player.jumpT < 18) {
+        coinsN++; burst(LANES[c.lane], PY, '#ffd54a'); hud(); return false;
+      }
+      return c.y < H + 30;
+    });
+    // collisions
+    for (const o of obs) {
+      if (o.lane !== player.lane || Math.abs(o.y + o.h / 2 - (PY + pyOff)) > o.h / 2 + 26) continue;
+      if (o.kind === 'low' && player.jumpT >= 8) continue;      // jumped over
+      if (o.kind === 'high' && player.slideT >= 0) continue;    // slid under
+      return gameOver();
+    }
+    parts = parts.filter((p) => { p.x += p.vx; p.y += p.vy + speed * 0.4; p.life--; return p.life > 0; });
+    hud();
+  }
+  function burst(x, y, col) {
+    for (let i = 0; i < 8; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 3, life: 18 + Math.random() * 10, col });
+  }
+  function gameOver() {
+    mode = 'dead';
+    const sc = Math.floor(dist / 10) + coinsN * 5;
+    if (sc > best) { best = sc; localStorage.setItem(BEST_KEY, String(best)); }
+    hud();
+  }
+  function hud() {
+    document.getElementById('score').textContent = Math.floor(dist / 10);
+    document.getElementById('coins').textContent = coinsN;
+    document.getElementById('best').textContent = best;
+  }
+
+  function draw() {
+    g.fillStyle = '#2b3346'; g.fillRect(0, 0, W, H);
+    // track sides
+    g.fillStyle = '#3a4458'; g.fillRect(W * 0.06, 0, W * 0.88, H);
+    // lane lines (scrolling dashes)
+    g.strokeStyle = '#5a6478'; g.lineWidth = 4; g.setLineDash([30, 26]);
+    g.lineDashOffset = -(dist % 56);
+    for (const x of [W * 0.06, W * 0.94]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+    for (const lx of [(LANES[0] + LANES[1]) / 2, (LANES[1] + LANES[2]) / 2]) {
+      g.beginPath(); g.moveTo(lx, 0); g.lineTo(lx, H); g.stroke();
+    }
+    g.setLineDash([]);
+    // coins
+    for (const c of coinsArr) {
+      g.fillStyle = '#ffd54a'; g.beginPath(); g.arc(LANES[c.lane], c.y, 11, 0, 7); g.fill();
+      g.fillStyle = '#b8860b'; g.font = 'bold 12px system-ui'; g.textAlign = 'center'; g.fillText('$', LANES[c.lane], c.y + 4);
+    }
+    // obstacles
+    for (const o of obs) {
+      const x = LANES[o.lane];
+      if (o.kind === 'train') {
+        g.fillStyle = '#d84343'; roundRect(x - 42, o.y, 84, o.h, 12);
+        g.fillStyle = '#ffde8a'; g.fillRect(x - 30, o.y + 12, 60, 26);
+        g.fillStyle = '#8c2b2b'; g.fillRect(x - 42, o.y + o.h - 14, 84, 14);
+      } else if (o.kind === 'low') {
+        g.fillStyle = '#f2a63b'; roundRect(x - 40, o.y, 80, 26, 6);
+        g.fillStyle = '#7a4d10'; g.fillRect(x - 34, o.y + 8, 68, 4);
+      } else {
+        g.fillStyle = '#77839a'; g.fillRect(x - 44, o.y, 88, 12);
+        g.fillStyle = '#77839a'; g.fillRect(x - 44, o.y, 8, 58); g.fillRect(x + 36, o.y, 8, 58);
+      }
+    }
+    // particles
+    for (const p of parts) { g.globalAlpha = p.life / 24; g.fillStyle = p.col; g.fillRect(p.x - 2, p.y - 2, 4, 4); }
+    g.globalAlpha = 1;
+    // player
+    const pyOff = player.jumpT >= 0 ? -Math.sin(player.jumpT / 34 * Math.PI) * 90 : 0;
+    const sliding = player.slideT >= 0;
+    if (player.jumpT >= 0) { g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(player.x, PY + 24, 22, 7, 0, 0, 7); g.fill(); }
+    g.save(); g.translate(player.x, PY + pyOff);
+    g.fillStyle = '#4c8dff'; g.beginPath(); g.arc(0, sliding ? -12 : -30, 13, 0, 7); g.fill();      // head
+    g.fillStyle = '#2f6fd0'; roundRectAt(-14, sliding ? -6 : -18, 28, sliding ? 22 : 40, 8);        // body
+    g.fillStyle = '#ffcf9e'; g.beginPath(); g.arc(0, sliding ? -13 : -31, 9, 0, 7); g.fill();        // face
+    g.restore();
+    // overlays
+    if (mode !== 'play') {
+      g.fillStyle = 'rgba(10,14,22,.62)'; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#fff'; g.textAlign = 'center';
+      g.font = 'bold 34px system-ui';
+      g.fillText(mode === 'ready' ? 'Subway Dash' : 'You crashed!', W / 2, H / 2 - 60);
+      g.font = 'bold 22px system-ui';
+      if (mode === 'dead') g.fillText('Score ' + (Math.floor(dist / 10) + coinsN * 5) + ' · Coins ' + coinsN, W / 2, H / 2 - 18);
+      g.fillStyle = '#9fb4ff'; g.font = '18px system-ui';
+      g.fillText(mode === 'ready' ? 'Tap / press Space to run' : 'Tap to run again', W / 2, H / 2 + 30);
+    }
+  }
+  function roundRect(x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+    g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
+    g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y);
+    g.closePath(); g.fill();
+  }
+  function roundRectAt(x, y, w, h, r) { roundRect(x, y, w, h, r); }
+
+  (function loop() { step(); draw(); requestAnimationFrame(loop); })();
+})();
+</script>
+</body>
+</html>

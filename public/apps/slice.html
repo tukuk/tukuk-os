@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fruit Slice — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="Swipe to slice the flying fruit, avoid the bombs. Classic ninja-fruit arcade action with combos, 3 lives and a local high score.">
+<link rel="canonical" href="https://tukuk.org/apps/slice">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:560px; margin:0 auto; padding:14px; }
+  .hud { display:flex; gap:10px; justify-content:space-between; margin-bottom:8px; font-size:.85rem; color:var(--muted); }
+  .hud b { color:var(--text); font-size:1rem; }
+  canvas { display:block; width:100%; border-radius:12px; background:#1d1430; touch-action:none; cursor:crosshair; }
+  .hint { color:var(--muted); font-size:.78rem; margin-top:10px; text-align:center; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🍉 Fruit Slice</h1></header>
+<div class="wrap">
+  <div class="hud"><span>Score <b id="score">0</b></span><span>Best <b id="best">0</b></span><span id="lives">❤️❤️❤️</span></div>
+  <canvas id="cv" width="560" height="520"></canvas>
+  <p class="hint">Hold and drag (mouse or finger) to cut the fruit — never touch a bomb. Miss three fruits and it is over.</p>
+</div>
+<script>
+(() => {
+  const cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const W = cv.width, H = cv.height, BEST_KEY = 'slice-best';
+  const FRUITS = [
+    { name: 'watermelon', R: 34, skin: '#2e7d32', flesh: '#ff5b5b', juice: '#ff5b5b' },
+    { name: 'orange', R: 26, skin: '#ff9800', flesh: '#ffd25e', juice: '#ffb300' },
+    { name: 'apple', R: 24, skin: '#c62828', flesh: '#ffe9a8', juice: '#e57373' },
+    { name: 'kiwi', R: 22, skin: '#6d4c41', flesh: '#aed581', juice: '#9ccc65' },
+    { name: 'mango', R: 28, skin: '#f9a825', flesh: '#ffe082', juice: '#fbc02d' },
+  ];
+  let mode = 'ready', fruits, halves, parts, blade, score, lives, best = Number(localStorage.getItem(BEST_KEY) || 0), spawnT, frame = 0;
+
+  function reset() {
+    fruits = []; halves = []; parts = []; blade = []; score = 0; lives = 3; spawnT = 0;
+  }
+  reset();
+
+  cv.addEventListener('pointerdown', (e) => {
+    if (mode !== 'play') { if (mode === 'dead') reset(); mode = 'play'; return; }
+    cv._drag = true; blade.push(pt(e));
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (mode === 'play' && cv._drag) { blade.push(pt(e)); if (blade.length > 10) blade.shift(); checkSlice(); }
+  });
+  window.addEventListener('pointerup', () => { cv._drag = false; });
+  function pt(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height, t: frame };
+  }
+
+  function spawn() {
+    const bomb = Math.random() < Math.min(0.2, 0.06 + score / 900);
+    const f = bomb ? { bomb: true, R: 26 } : Object.assign({}, FRUITS[Math.floor(Math.random() * FRUITS.length)]);
+    f.x = 40 + Math.random() * (W - 80);
+    f.y = H + 30;
+    f.vx = (W / 2 - f.x) * 0.004 + (Math.random() - 0.5) * 2.4;
+    f.vy = -(9.5 + Math.random() * 3.5);
+    f.rot = Math.random() * 6; f.vr = (Math.random() - 0.5) * 0.2;
+    f.sliced = false;
+    fruits.push(f);
+  }
+
+  function checkSlice() {
+    if (blade.length < 2) return;
+    const a = blade[blade.length - 2], b = blade[blade.length - 1];
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 8) return; // need real speed
+    let cutNow = 0;
+    for (const f of fruits) {
+      if (f.sliced) continue;
+      if (segCircle(a, b, f.x, f.y, f.R)) {
+        f.sliced = true; cutNow++;
+        if (f.bomb) return gameOver();
+        score += 1;
+        splitFruit(f);
+      }
+    }
+    if (cutNow > 1) score += cutNow; // combo bonus
+    hud();
+  }
+  function segCircle(a, b, cx, cy, r) {
+    const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+    if (!L2) return false;
+    let t = ((cx - a.x) * dx + (cy - a.y) * dy) / L2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(a.x + t * dx - cx, a.y + t * dy - cy) < r;
+  }
+  function splitFruit(f) {
+    const ang = Math.atan2(f.vy, f.vx);
+    for (const s of [-1, 1]) {
+      halves.push({ x: f.x, y: f.y, R: f.R, skin: f.skin, flesh: f.flesh, rot: f.rot,
+        vx: f.vx + Math.cos(ang + Math.PI / 2 * s) * 2.2, vy: f.vy * 0.4 - 1.5, vr: f.vr + 0.1 * s, life: 70 });
+    }
+    for (let i = 0; i < 12; i++) parts.push({ x: f.x, y: f.y, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 4, life: 26 + Math.random() * 14, col: f.juice });
+  }
+  function gameOver() {
+    mode = 'dead';
+    if (score > best) { best = score; localStorage.setItem(BEST_KEY, String(best)); }
+    hud();
+  }
+  function hud() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('best').textContent = best;
+    document.getElementById('lives').textContent = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(3 - Math.max(0, lives));
+  }
+
+  function step() {
+    frame++;
+    blade = blade.filter((p) => frame - p.t < 9);
+    if (mode !== 'play') return;
+    if (--spawnT <= 0) { spawn(); spawnT = Math.max(22, 55 - score / 4); if (Math.random() < 0.4) spawn(); }
+    for (const f of fruits) { f.x += f.vx; f.y += f.vy; f.vy += 0.22; f.rot += f.vr; }
+    fruits = fruits.filter((f) => {
+      if (f.y > H + 60 && !f.sliced) {
+        if (!f.bomb) { lives--; hud(); if (lives <= 0) gameOver(); }
+        return false;
+      }
+      return f.y < H + 80;
+    });
+    for (const h of halves) { h.x += h.vx; h.y += h.vy; h.vy += 0.25; h.rot += h.vr; h.life--; }
+    halves = halves.filter((h) => h.life > 0 && h.y < H + 60);
+    for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life--; }
+    parts = parts.filter((p) => p.life > 0);
+  }
+
+  function circle(x, y, r, col) { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+  function drawFruit(f) {
+    g.save(); g.translate(f.x, f.y); g.rotate(f.rot);
+    if (f.bomb) {
+      circle(0, 0, f.R, '#263238'); circle(0, 0, f.R - 4, '#37474f');
+      g.strokeStyle = '#ff5252'; g.lineWidth = 3; g.beginPath(); g.arc(0, -f.R - 4, 7, 0.4, 2.6); g.stroke();
+      g.fillStyle = '#ffca28'; g.font = 'bold 14px system-ui'; g.textAlign = 'center'; g.fillText('✕', 0, 5);
+    } else {
+      circle(0, 0, f.R, f.skin);
+      g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(-f.R / 3, -f.R / 3, f.R / 2.6, f.R / 4, 0.8, 0, 7); g.fill();
+    }
+    g.restore();
+  }
+  function draw() {
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#1d1430'); grad.addColorStop(1, '#301d47');
+    g.fillStyle = grad; g.fillRect(0, 0, W, H);
+    for (const p of parts) { g.globalAlpha = Math.min(1, p.life / 18); circle(p.x, p.y, 3.4, p.col); }
+    g.globalAlpha = 1;
+    for (const h of halves) {
+      g.save(); g.translate(h.x, h.y); g.rotate(h.rot);
+      g.beginPath(); g.arc(0, 0, h.R, 0, Math.PI); g.closePath();
+      g.fillStyle = h.skin; g.fill();
+      g.beginPath(); g.arc(0, 0, h.R - 5, 0, Math.PI); g.closePath();
+      g.fillStyle = h.flesh; g.fill();
+      g.restore();
+    }
+    for (const f of fruits) if (!f.sliced) drawFruit(f);
+    if (blade.length > 1) {
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 5;
+      g.beginPath(); g.moveTo(blade[0].x, blade[0].y);
+      for (const p of blade) g.lineTo(p.x, p.y);
+      g.stroke();
+      g.strokeStyle = 'rgba(120,200,255,.45)'; g.lineWidth = 12; g.stroke();
+    }
+    if (mode !== 'play') {
+      g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = 'bold 34px system-ui';
+      g.fillText(mode === 'ready' ? 'Fruit Slice' : 'Boom! Game Over', W / 2, H / 2 - 46);
+      g.font = '20px system-ui'; g.fillStyle = '#cbb8ff';
+      g.fillText(mode === 'ready' ? 'Drag across the screen to slice' : 'Score ' + score + ' · Best ' + best, W / 2, H / 2);
+      g.fillText(mode === 'ready' ? 'Tap to start' : 'Tap to play again', W / 2, H / 2 + 44);
+    }
+  }
+
+  hud();
+  (function loop() { step(); draw(); requestAnimationFrame(loop); })();
+})();
+</script>
+</body>
+</html>

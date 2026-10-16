@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ludo — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="The classic four-player board game famous on Android: roll the dice, run your tokens home, capture enemies. You play Red against three computers.">
+<link rel="canonical" href="https://tukuk.org/apps/ludo">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:480px; margin:0 auto; padding:14px; }
+  #board { position:relative; width:100%; aspect-ratio:1; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.35); }
+  .cell { position:absolute; width:calc(100%/15); height:calc(100%/15); box-sizing:border-box; border:1px solid #cfd6dd; }
+  .tok { position:absolute; width:calc(100%/15*0.72); height:calc(100%/15*0.72); border-radius:50%;
+    border:2px solid rgba(0,0,0,.35); box-shadow:0 2px 5px rgba(0,0,0,.35); transition:left .28s, top .28s; z-index:5; }
+  .tok::after { content:''; display:block; width:36%; height:36%; background:rgba(255,255,255,.75); border-radius:50%; margin:18% auto; }
+  .bar { display:flex; gap:12px; align-items:center; margin-top:14px; }
+  #dice { font-size:2.6rem; width:64px; height:64px; border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    color:var(--text); cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,.3); }
+  #dice:disabled { opacity:.45; cursor:progress; }
+  #status { flex:1; font-size:.92rem; color:var(--muted); }
+  .legend { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; font-size:.8rem; color:var(--muted); }
+  .legend i { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:4px; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🎲 Ludo</h1></header>
+<div class="wrap">
+  <div id="board"></div>
+  <div class="bar">
+    <button id="dice" title="Roll the dice">⚄</button>
+    <div id="status">Your turn (Red) — tap the dice to roll.</div>
+  </div>
+  <div class="legend">
+    <span><i style="background:#e53935"></i>You (Red)</span>
+    <span><i style="background:#43a047"></i>Green CPU</span>
+    <span><i style="background:#fdd835"></i>Yellow CPU</span>
+    <span><i style="background:#1e88e5"></i>Blue CPU</span>
+  </div>
+  <p class="hint" style="color:var(--muted);font-size:.78rem;margin-top:10px">Roll a 6 to send a token out of the base. Landing on an enemy token (except on a ⭐ safe cell) sends it home. A 6 or a capture gives an extra roll.</p>
+</div>
+<script>
+(() => {
+  const P = 100 / 15; // one cell in %
+  const COLORS = {
+    red:    { c: '#e53935', soft: '#f8bcbc', start: 0,  base: [[1.7,1.7],[1.7,3.3],[3.3,1.7],[3.3,3.3]], lane: [[7,1],[7,2],[7,3],[7,4],[7,5]] },
+    green:  { c: '#43a047', soft: '#bfe6bf', start: 13, base: [[1.7,10.3],[1.7,11.9],[3.3,10.3],[3.3,11.9]], lane: [[1,7],[2,7],[3,7],[4,7],[5,7]] },
+    yellow: { c: '#fdd835', soft: '#faf3bd', start: 26, base: [[10.3,10.3],[10.3,11.9],[11.9,10.3],[11.9,11.9]], lane: [[7,13],[7,12],[7,11],[7,10],[7,9]] },
+    blue:   { c: '#1e88e5', soft: '#bcdcf5', start: 39, base: [[10.3,1.7],[10.3,3.3],[11.9,1.7],[11.9,3.3]], lane: [[13,7],[12,7],[11,7],[10,7],[9,7]] },
+  };
+  const ORDER = ['red', 'green', 'yellow', 'blue'];
+  // 52-cell main circuit, clockwise, [row, col]
+  const TRACK = [
+    [6,1],[6,2],[6,3],[6,4],[6,5],
+    [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
+    [0,7],
+    [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],
+    [6,9],[6,10],[6,11],[6,12],[6,13],[6,14],
+    [7,14],
+    [8,14],[8,13],[8,12],[8,11],[8,10],[8,9],
+    [9,8],[10,8],[11,8],[12,8],[13,8],[14,8],
+    [14,7],
+    [14,6],[13,6],[12,6],[11,6],[10,6],[9,6],
+    [8,5],[8,4],[8,3],[8,2],[8,1],[8,0],
+    [7,0],
+    [6,0],
+  ];
+  const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+  const LAST = 50;                 // last main-track step (inclusive) before home lane
+  const board = document.getElementById('board');
+  const diceBtn = document.getElementById('dice');
+  const statusEl = document.getElementById('status');
+  let turn = 0, dice = 0, rolled = false, winner = null, tokens = {}, tokEls = {};
+
+  function posOf(color, step) { // -> [row, col] centre
+    const C = COLORS[color];
+    if (step === -1) { const i = tokens[color].indexOf(step); const b = C.base[Math.max(0, i)]; return [b[0], b[1]]; }
+    if (step <= LAST) return TRACK[(C.start + step) % 52];
+    if (step <= 55) return C.lane[step - 51] || C.lane[4];
+    return [7, 7]; // finished
+  }
+  // NOTE: base slots need the token index; handled separately below.
+  function absIdx(color, step) { return step >= 0 && step <= LAST ? (COLORS[color].start + step) % 52 : null; }
+
+  function buildBoard() {
+    const put = (r, c, bg, extra) => {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      d.style.left = c * P + '%'; d.style.top = r * P + '%';
+      if (bg) d.style.background = bg;
+      if (extra) d.style.borderColor = extra;
+      board.appendChild(d);
+      return d;
+    };
+    // quadrant bases
+    for (const col of ORDER) {
+      const C = COLORS[col];
+      const r0 = C.base[0][0] < 6 ? (col === 'red' ? 0 : col === 'green' ? 0 : 9) : 9;
+      const c0 = col === 'red' ? 0 : col === 'green' ? 9 : col === 'blue' ? 0 : 9;
+      const box = document.createElement('div');
+      box.style.cssText = `position:absolute;left:${c0 * P}%;top:${r0 * P}%;width:${6 * P}%;height:${6 * P}%;background:${C.soft};border:2px solid ${C.c};box-sizing:border-box;`;
+      board.appendChild(box);
+      for (const [br, bc] of C.base) {
+        const s = document.createElement('div');
+        s.style.cssText = `position:absolute;left:${(bc + 0.5) * P}%;top:${(br + 0.5) * P}%;width:${2.1 * P}%;height:${2.1 * P}%;border:2px solid ${C.c};border-radius:50%;box-sizing:border-box;background:#fff;`;
+        board.appendChild(s);
+      }
+    }
+    // track cells
+    TRACK.forEach(([r, c], i) => {
+      const d = put(r, c, SAFE.has(i) ? '#e8edf3' : '#fff');
+      if (SAFE.has(i)) { d.textContent = '⭐'; d.style.fontSize = `${P * 0.5}vh`; d.style.fontSize = ''; d.style.display = 'flex'; d.style.alignItems = 'center'; d.style.justifyContent = 'center'; d.style.fontSize = 'calc(' + P + '% * 0.55)'; d.style.fontSize = 'clamp(8px, 2.2vw, 16px)'; d.style.color = '#90a4ae'; }
+    });
+    // start cells colourised
+    for (const col of ORDER) {
+      const [r, c] = TRACK[COLORS[col].start];
+      const cell = [...board.children].find((el) => el.style.left === c * P + '%' && el.style.top === r * P + '%');
+      if (cell) cell.style.background = COLORS[col].c;
+    }
+    // home lanes
+    for (const col of ORDER) for (const [r, c] of COLORS[col].lane) put(r, c, COLORS[col].c);
+    // centre
+    const z = document.createElement('div');
+    z.style.cssText = `position:absolute;left:${6 * P}%;top:${6 * P}%;width:${3 * P}%;height:${3 * P}%;background:conic-gradient(#fdd835 0 25%,#1e88e5 0 50%,#e53935 0 75%,#43a047 0);`;
+    board.appendChild(z);
+  }
+
+  function renderTokens() {
+    for (const col of ORDER) {
+      tokens[col].forEach((step, i) => {
+        const key = col + i;
+        let el = tokEls[key];
+        if (!el) {
+          el = document.createElement('div');
+          el.className = 'tok'; el.style.background = COLORS[col].c;
+          board.appendChild(el); tokEls[key] = el;
+        }
+        let rc;
+        if (step === -1) { const b = COLORS[col].base[i]; rc = [b[0] + 0.65, b[1] + 0.65]; }
+        else if (step > LAST && step < 56) { const [r, c] = posOf(col, step); rc = [r + 0.14, c + 0.14]; }
+        else if (step === 56) { rc = [7 + (ORDER.indexOf(col) % 2) * 0.3, 7 + Math.floor(ORDER.indexOf(col) / 2) * 0.3]; }
+        else { const [r, c] = posOf(col, step); rc = [r + 0.14, c + 0.14]; }
+        el.style.left = rc[1] * P + '%';
+        el.style.top = rc[0] * P + '%';
+      });
+    }
+  }
+
+  function movable(color, d) {
+    return tokens[color].map((s, i) => ({ i, s }))
+      .filter(({ s }) => (s === -1 && d === 6) || (s >= 0 && s < 56 && s + d <= 56));
+  }
+  function applyMove(color, i, d) {
+    const t = tokens[color];
+    if (t[i] === -1) t[i] = 0; else t[i] += d;
+    let captured = false;
+    const a = absIdx(color, t[i]);
+    if (a !== null && !SAFE.has(a)) {
+      for (const other of ORDER) if (other !== color) {
+        tokens[other].forEach((s, j) => {
+          if (absIdx(other, s) === a) { tokens[other][j] = -1; captured = true; }
+        });
+      }
+    }
+    if (t[i] === 56) statusEl.textContent = cap(color) + ' sent a token home!';
+    return captured || d === 6 || t[i] === 56;
+  }
+  const cap = (c) => c[0].toUpperCase() + c.slice(1);
+  const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+  function roll() {
+    if (rolled || winner) return;
+    rolled = true; diceBtn.disabled = true;
+    dice = 1 + Math.floor(Math.random() * 6);
+    diceBtn.textContent = DICE_FACES[dice - 1];
+    const col = ORDER[turn];
+    const opts = movable(col, dice);
+    if (!opts.length) {
+      statusEl.textContent = cap(col) + ' rolled ' + dice + ' — no legal move. Passing…';
+      return setTimeout(nextTurn, 900);
+    }
+    if (col === 'red') {
+      statusEl.textContent = 'You rolled ' + dice + ' — tap one of your tokens to move it.';
+      enableTokenClicks(opts);
+    } else {
+      setTimeout(() => {
+        const pick = cpuPick(col, opts);
+        const extra = applyMove(col, pick.i, dice);
+        renderTokens();
+        finishMove(col, extra, opts);
+      }, 650);
+    }
+  }
+  function cpuPick(col, opts) {
+    // prefer capture, then exit base, then farthest token
+    for (const o of opts) {
+      if (o.s >= 0) {
+        const ns = o.s + dice, a = absIdx(col, ns);
+        if (a !== null && !SAFE.has(a)) {
+          const hit = ORDER.some((x) => x !== col && tokens[x].some((s) => absIdx(x, s) === a));
+          if (hit) return o;
+        }
+      }
+    }
+    const exits = opts.filter((o) => o.s === -1);
+    if (exits.length && Math.random() < 0.75) return exits[0];
+    return opts.reduce((a, b) => (b.s > a.s ? b : a));
+  }
+  function enableTokenClicks(opts) {
+    const handler = (e) => {
+      const el = e.target;
+      const key = [...document.querySelectorAll('.tok')].indexOf(el);
+      if (key < 0) return;
+      const col = ORDER[Math.floor(key / 4)], i = key % 4;
+      if (col !== 'red' || !opts.some((o) => o.i === i)) { statusEl.textContent = 'That token cannot move — pick a highlighted one.'; return; }
+      cleanup();
+      diceBtn.disabled = true;
+      const extra = applyMove('red', i, dice);
+      renderTokens();
+      finishMove('red', extra, opts);
+    };
+    const cleanup = () => { board.removeEventListener('click', handler); opts.forEach((o) => tokEls['red' + o.i] && (tokEls['red' + o.i].style.outline = '')); };
+    opts.forEach((o) => tokEls['red' + o.i] && (tokEls['red' + o.i].style.outline = '3px solid #fff'));
+    board.addEventListener('click', handler);
+    board._cleanup = cleanup;
+  }
+  function finishMove(col, extra) {
+    if (tokens[col].every((s) => s === 56)) { winner = col; statusEl.textContent = cap(col) + (col === 'red' ? ' win! 🎉 You beat all three computers!' : ' wins — the computers beat you this time.'); return; }
+    if (extra) {
+      statusEl.textContent += ' Extra roll!';
+      rolled = false; diceBtn.disabled = col === 'red' ? false : true;
+      if (col !== 'red') setTimeout(roll, 700);
+      return;
+    }
+    nextTurn();
+  }
+  function nextTurn() {
+    if (board._cleanup) board._cleanup();
+    if (winner) return;
+    turn = (turn + 1) % 4;
+    rolled = false;
+    const col = ORDER[turn];
+    if (col === 'red') {
+      diceBtn.disabled = false;
+      statusEl.textContent = 'Your turn (Red) — tap the dice to roll.';
+    } else {
+      diceBtn.disabled = true;
+      statusEl.textContent = cap(col) + ' is thinking…';
+      setTimeout(roll, 800);
+    }
+  }
+
+  buildBoard();
+  tokens = { red: [-1, -1, -1, -1], green: [-1, -1, -1, -1], yellow: [-1, -1, -1, -1], blue: [-1, -1, -1, -1] };
+  renderTokens();
+  diceBtn.addEventListener('click', roll);
+})();
+</script>
+</body>
+</html>

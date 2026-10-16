@@ -314,7 +314,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -2115,10 +2115,10 @@ function bumpPlays(id) {
 
 // Genre game (gaya web-games.io) — chip /store & kad berkaitan /play dibina daripada
 // nilai ini sahaja. Store arked guna genre eksplisit; sumber lain dinormalisasi/tekaan.
-const GAME_GENRES = new Set(['arkad', 'teki-teki', 'refleks', 'kuiz', 'tindakan', 'penembakan', 'santai', 'kereta', 'sukan', 'klik', 'io']);
-const GENRE_SYNONYM = { arkade: 'arkad', arcade: 'arkad', action: 'tindakan', shooter: 'penembakan', puzzle: 'teki-teki', reflex: 'refleks', casual: 'santai', racing: 'kereta', car: 'kereta', sport: 'sukan', clicker: 'klik', quiz: 'kuiz' };
+const GAME_GENRES = new Set(['arkad', 'teki-teki', 'refleks', 'kuiz', 'tindakan', 'penembakan', 'santai', 'kereta', 'sukan', 'klik', 'io', 'board', 'cards']);
+const GENRE_SYNONYM = { arkade: 'arkad', arcade: 'arkad', action: 'tindakan', shooter: 'penembakan', puzzle: 'teki-teki', reflex: 'refleks', casual: 'santai', racing: 'kereta', car: 'kereta', sport: 'sukan', clicker: 'klik', quiz: 'kuiz', board: 'board', card: 'cards', cards: 'cards' };
 // Display labels for internal (Malay-keyed) genres — user-facing surfaces are English.
-const GENRE_UI = { arkad: 'Arcade', 'teki-teki': 'Puzzle', refleks: 'Reflex', kuiz: 'Quiz', tindakan: 'Action', penembakan: 'Shooter', santai: 'Casual', kereta: 'Racing', sukan: 'Sports', klik: 'Clicker', io: 'IO' };
+const GENRE_UI = { arkad: 'Arcade', 'teki-teki': 'Puzzle', refleks: 'Reflex', kuiz: 'Quiz', tindakan: 'Action', penembakan: 'Shooter', santai: 'Casual', kereta: 'Racing', sukan: 'Sports', klik: 'Clicker', io: 'IO', board: 'Board', cards: 'Cards' };
 function normalizeGenre(g) {
   const s = String(g || '').trim().toLowerCase().replace(/\s+/g, '-');
   if (GAME_GENRES.has(s)) return s;
@@ -2183,6 +2183,15 @@ const STORE_APP_META = {
   orbit: { ic: '🪐', title: 'Orbit Simulator', desc: 'Real gravity physics — drag to launch planets, binary-star & chaotic-system presets.' },
   fractal: { ic: '🔮', title: 'Fractal Explorer', desc: 'Limitless Mandelbrot zoom with progressive rendering, 4 palettes & PNG export.' },
   drum: { ic: '🥁', title: 'Rhythm Machine', desc: '16-step drum machine: WebAudio-synthesised kick/snare/hihat/clap, play & record patterns.' },
+  // ── Hit game ports (Android classics rebuilt as in-browser HTML5) ──
+  candy: { ic: '🍬', title: 'Candy Blast', desc: 'The famous match-3 puzzle: swap sweets, break cascades, chain combos for a high score.', game: true, genre: 'teki-teki' },
+  flappy: { ic: '🐦', title: 'Flappy Dash', desc: 'The legendary one-tap flying game — squeeze the bird through endless pipes.', game: true, genre: 'refleks' },
+  subway: { ic: '🚇', title: 'Subway Dash', desc: '3-lane endless runner: swipe to dodge trains, jump barriers, slide under signs, grab coins.', game: true, genre: 'arkad' },
+  slice: { ic: '🍉', title: 'Fruit Slice', desc: 'Ninja swipe action — slice the flying fruit, dodge the bombs, chase combo cuts.', game: true, genre: 'refleks' },
+  roadhop: { ic: '🐸', title: 'Road Hop', desc: 'Hop across endless traffic and rivers — the cozy crossing puzzle that took over mobile.', game: true, genre: 'santai' },
+  bubble: { ic: '🫧', title: 'Bubble Pop', desc: 'Classic bubble shooter — match 3+ colours, drop orphan clusters before the ceiling reaches you.', game: true, genre: 'teki-teki' },
+  ludo: { ic: '🎲', title: 'Ludo', desc: 'The four-color board game famous on Android — you (Red) vs three computers. Roll, capture, race home.', game: true, genre: 'board' },
+  solitaire: { ic: '🃏', title: 'Solitaire', desc: 'Klondike — the card game that ships with every phone. Tap to move, auto-finish when you can.', game: true, genre: 'cards' },
   chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'A real messenger in your browser that keeps working on weak networks (2G/3G/4G/GPRS). Install as an app on Android, iOS, Windows, Linux & Huawei, or download the native Android APK directly (beta — stable coming soon). Name + password signup, permanent Tukuk ID, public room, 1-to-1 DMs and groups, video & voice calls (WebRTC) with TukuCaller-style caller ID, fake-call prank mode (no network needed), voice messages, offline outbox (auto-resend), data-saving mode (tap-to-load media), read receipts ✓✓, photo & video sending, reply, forward, reactions, edit, pin messages, search, friends & blocking, wallpapers & sounds.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
@@ -2209,7 +2218,7 @@ const STORE_ARCADE = [
 function storeBawaan() {
   return Object.entries(STORE_APP_META)
     .filter(([name]) => fs.existsSync(path.join(PUBLIC_DIR, 'apps', `${name}.html`)))
-    .map(([name, m]) => ({ id: 'bv-' + name, kind: 'app', src: 'bawaan', icon: m.ic, title: m.title, desc: m.desc, url: `/apps/${name}`, updated: 0 }));
+    .map(([name, m]) => ({ id: 'bv-' + name, kind: m.game ? 'game' : 'app', src: 'bawaan', genre: m.game ? m.genre : null, icon: m.ic, title: m.title, desc: m.desc, url: `/apps/${name}`, updated: 0 }));
 }
 // Satu Kata = pasangan app+game dijana CI (generated/manifest.json → /satu-kata/<slug>/{app,game}/).
 // Dikache ikut mtime manifest; fail HTML disahkan wujud sebelum disenaraikan.
