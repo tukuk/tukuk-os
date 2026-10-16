@@ -1488,6 +1488,14 @@ chatForm.addEventListener('submit', async (e) => {
       }
       html += '</div>';
     }
+    // Data center routing: server cadangkan aplikasi yang boleh menindaklanjut soalan.
+    if (data.apps && data.apps.length) {
+      html += '<div class="sources">';
+      for (const a of data.apps) {
+        html += '<a href="' + a.url + '">' + a.ic + ' ' + a.title + '</a>';
+      }
+      html += '</div>';
+    }
     chatAnswer.innerHTML = html;
   } catch (err) {
     chatAnswer.innerHTML = '<p>Error: ' + err.message + '</p>';

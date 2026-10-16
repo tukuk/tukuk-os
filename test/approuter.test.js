@@ -1,0 +1,75 @@
+// ═══ Tests: approuter — gabungan brain ↔ aplikasi (tool-use ringan) ═══════════
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const approuter = require('../src/brain/approuter');
+
+const PUBLIC = path.join(__dirname, '..', 'public');
+
+test('route: memadankan maksud ke aplikasi yang betul', () => {
+  const cases = [
+    ['remove background from my photo', 'bg-remover'],
+    ['convert this song to mp3', 'converter'],
+    ['saya nak buang latar belakang gambar', 'bg-remover'],
+    ['generate a strong random password', 'password'],
+    ['buat senarai kerja untuk esok', 'todo'],
+    ['what is the cpu load average formula', null], // soalan umum → jangan paksa app
+    ['', null],
+  ];
+  for (const [q, expect] of cases) {
+    const { apps } = approuter.route(q);
+    if (expect === null) {
+      assert.equal(apps.length, 0, `kosong untuk: ${q}`);
+    } else {
+      assert.ok(apps.length > 0, `apps untuk: ${q}`);
+      assert.equal(apps[0].name, expect, `jangka ${expect} dpt ${apps[0].name} untuk: ${q}`);
+    }
+  }
+});
+
+test('route: gate — skor separuh seorang tak cukup, dua separuh cukup', () => {
+  // 'colouring' awalan 'colour' (0.5) seorang sahaja → tak layak;
+  // 'colouring page' masih 0.5 → kosong.
+  assert.equal(approuter.route('colouring').apps.length, 0);
+  // dua isyarat separuh → ≥1.0 → layak.
+  const r = approuter.route('colouring hex');
+  assert.ok(r.apps.length > 0);
+  assert.equal(r.apps[0].name, 'color');
+});
+
+test('route: maksimum 3 cadangan, disusun ikut skor menurun', () => {
+  const { apps } = approuter.route('convert video audio mp3 wav format tukar fail');
+  assert.ok(apps.length <= 3);
+  for (let i = 1; i < apps.length; i++) assert.ok(apps[i - 1].score >= apps[i].score);
+});
+
+test('katalog: setiap laluan padanan fail HTML yang benar-benar wujud', () => {
+  for (const [name, url, , title] of approuter.CATALOG) {
+    if (url.includes('?')) continue; // penapis /store — failnya store.html sendiri
+    let file;
+    if (url.startsWith('/apps/')) file = path.join(PUBLIC, 'apps', name + '.html');
+    else file = path.join(PUBLIC, name.replace(/-/g, '-') + '.html');
+    // 'games' → /store?genre=arkad (diprekatu di atas); 'store' → public/store.html
+    assert.ok(fs.existsSync(file), `fail aplikasi wujud untuk ${title} (${url}) → ${file}`);
+  }
+});
+
+test('katalog: utiliti sepadan dengan senarai APPS + fail public/apps', () => {
+  const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
+  const m = serverSrc.match(/const APPS = \[([^\]]*)\]/);
+  assert.ok(m, 'APPS array dijumpai dalam server.js');
+  const appList = m[1].split(',').map((s) => s.trim().replace(/'/g, '')).filter(Boolean);
+  for (const [name, url] of approuter.UTILITIES) {
+    assert.equal(url, `/apps/${name}`, `url utiliti ${name} konsisten`);
+    assert.ok(appList.includes(name), `${name} juga dalam APPS server`);
+  }
+});
+
+test('laluan: /ask forms — apps sentiasa array (tiada undefined bocor)', () => {
+  const ok1 = approuter.route('hello there');
+  assert.ok(Array.isArray(ok1.apps));
+  const ok2 = approuter.route(null);
+  assert.ok(Array.isArray(ok2.apps));
+});

@@ -11,6 +11,8 @@ const store = require('./store');
 const brain = require('./brain/provider');
 const rag = require('./brain/rag');
 const taskrouter = require('./brain/taskrouter');
+const approuter = require('./brain/approuter');
+const os = require('os');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
 const reranker = require('./brain/reranker');
@@ -550,6 +552,9 @@ app.get('/ask', limiter.search, async (req, res) => {
       cached: Boolean(answer.cached),
       offline,
       warning: answer.warning,
+      // Gabungan brain ↔ aplikasi: soalan pengguna juga dipadankan dengan
+      // katalog app server ("buang background gambar" → /bg-remover).
+      apps: approuter.route(question).apps,
       // Debug diagonal: `?debug=1` mendedahkan model yang dicuba-tolak (sebab
       // qwen dilangkau, ralat ollama, dsb.) dan status local-first.
       ...(req.query.debug
@@ -597,11 +602,11 @@ app.get('/network', async (req, res) => {
 });
 
 // ── AI Data Center: inventori model AI yang berjalan di server ini ─────────
-app.get('/api/models', async (req, res) => {
+async function modelsInventory() {
   const health = await brain.health();
   let ollamaModels = [];
   try { ollamaModels = await brain.availableModels(); } catch { /* ollama offline */ }
-  res.json({
+  return {
     dataCenter: 'Tukuk-OS AI',
     backend: {
       provider: health.cloud ? health.provider : (health.online ? 'ollama' : 'extractive'),
@@ -620,7 +625,97 @@ app.get('/api/models', async (req, res) => {
       cloudEmbed: config.rerank.cloud && Boolean(process.env.CLOUDFLARE_API_TOKEN)
     },
     answerCache: rag.cacheStats()
-  });
+  };
+}
+app.get('/api/models', async (req, res) => {
+  res.json(await modelsInventory());
+});
+
+// ── App Router API: padankan teks bebas → aplikasi server ("tool use" ringan) ──
+app.get('/api/apps/route', (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.status(400).json({ error: 'q parameter required' });
+  res.json({ ok: true, query: q, apps: approuter.route(q).apps });
+});
+
+// ── /datacenter: papan pemuka operasi — semua aplikasi + AI dalam satu pandang ──
+app.get('/api/datacenter', async (req, res) => {
+  try {
+    const models = await modelsInventory();
+    const cpus = os.cpus();
+    res.json({
+      dataCenter: 'Tukuk-OS AI Data Center',
+      cpu: {
+        name: (cpus[0] && cpus[0].model) || 'unknown',
+        cores: cpus.length,
+        arch: os.arch(),
+        loadAvg: os.loadavg().map((x) => Math.round(x * 100) / 100),
+        uptimeSec: Math.round(os.uptime())
+      },
+      memory: { totalMb: Math.round(os.totalmem() / 1048576), freeMb: Math.round(os.freemem() / 1048576) },
+      models,
+      apps: {
+        routerEntries: approuter.CATALOG.length,
+        storeItems: storeCatalog().length,
+        catalog: approuter.CATALOG.map((e) => ({ name: e[0], url: e[1], ic: e[2], title: e[3] }))
+      },
+      activity: { ...store.stats(), answerCache: models.answerCache },
+      network: net.snapshot().status,
+      offline: !net.snapshot().internet
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Data center snapshot failed', details: safeError(error) });
+  }
+});
+
+app.get('/datacenter', (req, res) => {
+  res.type('html').send(`<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Data Center - Tukuk-OS</title>
+<meta name="description" content="Live operations dashboard of the Tukuk-OS CPU AI data center: models, apps, routing, resources and activity.">
+<link rel="canonical" href="https://tukuk.org/datacenter">
+<style>${COMMON_CSS}</style>
+</head><body><div class="wrap">
+<header><h1>🏢 Tukuk-OS AI Data Center</h1>
+<p class="tagline">Every application and every AI model on this CPU server — unified, live.</p></header>
+<a class="back-link" href="/models">← Model inventory</a>
+<div id="app"><p>Loading data center telemetry…</p></div>
+<script>
+(function () {
+  var el = document.getElementById('app');
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function fmt(n) { return Number(n || 0).toLocaleString('en'); }
+  function secs(s) { var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600); return (d ? d + 'd ' : '') + h + 'h'; }
+  fetch('/api/datacenter').then(function (r) { return r.json(); }).then(function (d) {
+    var m = d.models || {}, b = m.backend || {}, html = '';
+    html += '<div class="post-card"><h2>⚙️ Compute</h2>';
+    html += '<p><strong>' + esc(d.cpu.name) + '</strong> — ' + d.cpu.cores + ' cores · ' + esc(d.cpu.arch) + '</p>';
+    var pct = Math.min(100, Math.round(d.cpu.loadAvg[1] / d.cpu.cores * 100));
+    html += '<p>CPU load (5 min): ' + d.cpu.loadAvg.join(' / ') + ' — <strong>' + pct + '% busy</strong></p>';
+    html += '<div style="background:var(--line);border-radius:6px;height:10px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:#4c8dff"></div></div>';
+    var rpct = Math.round((1 - d.memory.freeMb / d.memory.totalMb) * 100);
+    html += '<p>Memory: ' + fmt(d.memory.totalMb - d.memory.freeMb) + ' / ' + fmt(d.memory.totalMb) + ' MB used (' + rpct + '%) · Uptime ' + secs(d.cpu.uptimeSec) + '</p>';
+    html += '<p>Network: <strong>' + esc(d.network) + '</strong>' + (d.offline ? ' — brain runs in offline mode' : '') + '</p></div>';
+    html += '<div class="post-card"><h2>🧠 AI stack</h2>';
+    html += '<p>Provider: <strong>' + esc(b.provider) + '</strong>' + (b.localFirst ? ' · local-first' : '') + '</p>';
+    html += '<p>Chain: ' + (b.chain || []).map(esc).join(' → ') + ' → cloud: ' + (((b.cloudFallback || []).length) ? b.cloudFallback.map(esc).join(', ') : 'none') + '</p>';
+    html += '<p>Own model: ' + (m.ownModel && m.ownModel.loaded ? '<strong>' + esc(m.ownModel.name) + '</strong> (rescues ' + esc(m.ownModel.regexGapsRescued || '') + ' regex gaps)' : 'not trained yet') + '</p>';
+    html += '<p>Local LLMs: ' + ((m.ollamaModels || []).length ? m.ollamaModels.map(function (x) { return esc(x.name); }).join(', ') : 'ollama offline') + '</p>';
+    html += '<p>Reranker: ' + (m.reranker && m.reranker.enabled ? 'enabled' : 'off') + ' · Answer cache: ' + fmt((m.answerCache || {}).entries) + ' entries</p></div>';
+    html += '<div class="post-card"><h2>📊 Activity</h2>';
+    html += '<p>Searches: ' + fmt(d.activity.searches) + ' · Questions asked: ' + fmt(d.activity.asks) + ' · Crawls: ' + fmt(d.activity.crawls) + ' · Events: ' + fmt(d.activity.events) + '</p></div>';
+    html += '<div class="post-card"><h2>📱 Unified app fabric (' + d.apps.routerEntries + ' routable surfaces · ' + fmt(d.apps.storeItems) + ' store items)</h2><div style="display:flex;flex-wrap:wrap;gap:8px">';
+    d.apps.catalog.forEach(function (a) {
+      html += '<a href="' + esc(a.url) + '" style="display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">' + esc(a.ic) + ' ' + esc(a.title) + '</a>';
+    });
+    html += '</div><p style="color:var(--muted);margin-top:10px">Ask anything on <a href="/">the search page</a> — answers arrive with the app that can act on them. Example: <a href="/api/apps/route?q=remove+background+from+photo">remove background from photo</a>.</p></div>';
+    el.innerHTML = html;
+  }).catch(function () { el.innerHTML = '<p>Could not load /api/datacenter.</p>'; });
+})();
+</script>
+<footer>Tukuk-OS · AI Data Center · <a href="/models">models</a> · <a href="/store">store</a> · <a href="/docs">docs</a></footer>
+</div></body></html>`);
 });
 
 app.get('/models', (req, res) => {
@@ -681,7 +776,7 @@ app.get('/models', (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/models', '/rekomendasi'];
+  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/models', '/datacenter', '/rekomendasi'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
