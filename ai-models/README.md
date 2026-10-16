@@ -143,3 +143,29 @@ AVX2) ambil BERBULAN. Softmax di atas data sendiri pula: detik sahaja, dan
 untuk lapisan ROUTING ia benar-benar lebih baik daripada regex statik.
 "Sangat pintar" pada CPU = pembahagian tugas: LLM kecil + router neural
 milik sendiri + RAG berlandaskan sumber + kalkulator deterministik.
+
+## ⚡ Pengiraan kelajuan sebenar CPU (RX-427BB / Kaveri)
+
+Ukur pada server (prompt RAG 1600 aksara, 80 token keluar):
+
+| Model | Kelajuan | Nota |
+|---|---|---|
+| `qwen2.5-coder:0.5b` | **~10 tok/s → ±20-24s** | OTAK UTAMA sekarang (rantai kepala) |
+| `qwen2.5:1.5b` | ~4 tok/s → ±46s | fallback pandai; kerap langgar timeout |
+| `smollm:135m` | ~30 tok/s → ±8s | laju tapi kerap echo → dibuang gate isEcho |
+
+Perkara yang TIDAK boleh "di-unlock": AVX2 bukan pada silikon Kaveri
+(Steamroller = AVX1 + FMA4 + XOP sahaja) — tiada microcode/BIOS boleh
+cipta arahan yang tiada. Yang BOLEH dan SUDAH dimatikan:
+
+- Ollama AUTOMATIK memilih `libggml-cpu-piledriver.so` (kernel AVX1+FMA4
+  khas AMD) — disahkan dalam journal: `loaded CPU backend ... piledriver`.
+- `OLLAMA_KEEP_ALIVE=30m` (dahulunya 1m → model diagkut balik +3.2s setiap
+  soalan). Jangan kecilkan nilai ini.
+- `CPUQuota=400%` (dahulunya 300% — 1 teras terkurung).
+- Vulkan iGPU R7 (gfx704) TIDAK digunakan: ggml-vulkan perlukan ciri
+  16-bit/GCN≥ gfx8 dan memori iGPU berkongsi DDR — cubaan gagal; CPU lebih
+  pantas untuk model ≤1.5B pada cip ini.
+- Naik taraf sebenar satu-satunya "AVX2 unlock" = cip Ryzen/Cannonlake+.
+
+Keputusan gabungan: /ask cache-cold ±20s, warm ±11s (dahulunya 43-47s).
