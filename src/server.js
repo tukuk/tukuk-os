@@ -319,7 +319,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'linux', 'netsec', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle', 'pong', 'stack', 'simon', 'muncher', 'puzzle15', 'tictactoe', 'memory', 'whack', 'calendar', 'dice', 'tip', 'bmi'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'linux', 'netsec', 'map', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle', 'pong', 'stack', 'simon', 'muncher', 'puzzle15', 'tictactoe', 'memory', 'whack', 'calendar', 'dice', 'tip', 'bmi'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -2387,6 +2387,7 @@ const STORE_APP_META = {
   text: { ic: '🔡', title: 'Text Tools', desc: 'Word count, case conversion, Base64, sort, dedupe & URL encode.' },
   linux: { ic: '🐧', title: 'Linux Utils', desc: 'Safe terminal toolbox in the browser: htop-style system monitor, sha256sum, base64, jq-style JSON formatter, grep-style regex tester, uuidgen & a chmod calculator. Runs fully offline — no server, no shell.' },
   netsec: { ic: '🛡️', title: 'NetSec Toolkit', desc: 'Browser-only security & networking toolkit: MD5/SHA/CRC32 hashes, Base32/Base64/Hex codecs, classic ciphers, IPv4-CIDR/IPv6/MAC calculators, DNS-over-HTTPS lookups, password strength and random generators. No scanning, no exploits — everything runs locally.' },
+  map: { ic: '🗺️', title: 'Map', desc: 'Full world map inside Tukuk OS — OpenStreetMap powered, no API key. Search any place, switch to satellite, drop pins, get live GPS position and measure distances.' },
   pixel: { ic: '🟩', title: 'Pixel Studio', desc: 'Draw 16×16 pixel art with palette, buckets and PNG export — in the browser.' },
   piano: { ic: '🎹', title: 'Synth Piano', desc: 'Play 2 octaves with keyboard, 4 waveforms & audio recording.' },
   spiro: { ic: '🌀', title: 'Spiro Mandala', desc: 'Animated symmetric spirograph art — tune parameters, export PNG.' },

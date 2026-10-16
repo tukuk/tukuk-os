@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map — OpenStreetMap with search, satellite, GPS &amp; measure — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="A full map inside Tukuk OS: search any place (Nominatim), switch between street and satellite layers, drop pins, read live GPS position, measure distances and share coordinates — powered by OpenStreetMap, no API key, no tracking.">
+<link rel="canonical" href="https://tukuk.org/apps/map">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<style>
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; display:flex; flex-direction:column; }
+  .bar { display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .bar .back { font-size:.85rem; color:var(--muted); text-decoration:none; white-space:nowrap; }
+  .bar .back:hover { color:var(--accent); }
+  .bar h1 { margin:0; font-size:1rem; white-space:nowrap; }
+  #q { flex:1 1 180px; min-width:140px; font:inherit; font-size:.85rem; background:#0c1017; color:#e8f2ff; border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+  .btn { font:inherit; font-size:.78rem; background:#1f6f43; color:#fff; border:0; border-radius:8px; padding:6px 10px; cursor:pointer; white-space:nowrap; }
+  .btn.alt { background:var(--card,#161c2b); color:var(--muted); border:1px solid var(--line); }
+  .btn.on { background:#b7791f; }
+  #map { flex:1 1 auto; min-height:200px; }
+  #status { padding:6px 12px; font-size:.72rem; color:var(--muted); border-top:1px solid var(--line); min-height:1.4em; background:var(--bg); }
+  #results { position:absolute; z-index:1000; top:58px; left:12px; right:12px; max-width:340px; margin:0 auto; background:var(--card,#121826); border:1px solid var(--line); border-radius:10px; max-height:40vh; overflow:auto; display:none; }
+  #results button { display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--line); color:var(--text); font:inherit; font-size:.8rem; padding:9px 12px; cursor:pointer; }
+  #results button:hover { background:rgba(127,200,150,.12); }
+  #results button small { display:block; color:var(--muted); font-size:.68rem; }
+  .leaflet-container { background:#0c1017; }
+  .pop { font-size:.78rem; word-break:break-all; }
+  .pop b { color:#1a5c38; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <a class="back" href="/store">← Store</a>
+  <h1>🗺️ Map</h1>
+  <input id="q" type="text" placeholder="Search place, address, coords… (Enter)" autocomplete="off">
+  <button class="btn" id="goBtn">Cari</button>
+  <button class="btn alt" id="gpsBtn">📍 Saya</button>
+  <button class="btn alt" id="layerBtn">🛰 Satelit</button>
+  <button class="btn alt" id="measureBtn">📏 Ukur</button>
+  <div id="results"></div>
+</div>
+<div id="map"></div>
+<div id="status">Kuasa OpenStreetMap — tiles peta & carian perlu internet. Tiada kunci API, tiada penjejakan.</div>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status');
+  const say = (t) => { statusEl.textContent = t; };
+  if (typeof L === 'undefined') { say('Leaflet gagal dimuat (tiada internet / CDN sekatan). Map perlukan CDN sekali sahaja.'); return; }
+
+  const map = L.map('map', { zoomControl: true }).setView([3.139, 101.6869], 6); // Malaysia default
+  const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap contributors', crossOrigin: true,
+  }).addTo(map);
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics',
+  });
+  let satOn = false;
+  $('layerBtn').addEventListener('click', () => {
+    satOn = !satOn;
+    if (satOn) { map.removeLayer(street); sat.addTo(map); $('layerBtn').textContent = '🛣 Jalan'; }
+    else { map.removeLayer(sat); street.addTo(map); $('layerBtn').textContent = '🛰 Satelit'; }
+  });
+
+  // Pin + coordinates on click
+  const pins = L.layerGroup().addTo(map);
+  map.on('click', (e) => {
+    if (measuring) { measureAdd(e.latlng); return; }
+    L.marker(e.latlng, { pane: 'overlayPane' }).addTo(pins)
+      .bindPopup('<div class="pop"><b>Pin</b><br>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '<br><button class="btn" style="margin-top:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + e.latlng.lat.toFixed(6) + ',' + e.latlng.lng.toFixed(6) + '\')">Salin koordinat</button></div>')
+      .openPopup();
+    say('Pin: ' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6));
+  });
+
+  // Live coordinate readout while moving
+  map.on('mousemove', (e) => { if (!measuring) say(e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5) + '  ·  zoom ' + map.getZoom()); });
+  map.on('moveend', () => { const c = map.getCenter(); location.hash = 'z=' + map.getZoom() + '&lat=' + c.lat.toFixed(5) + '&lng=' + c.lng.toFixed(5); });
+
+  // Restore from hash
+  (function boot() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    if (h.get('lat') && h.get('lng') && h.get('z')) {
+      map.setView([parseFloat(h.get('lat')), parseFloat(h.get('lng'))], parseInt(h.get('z'), 10));
+    }
+  })();
+
+  // GPS
+  let meMarker = null, accCircle = null;
+  $('gpsBtn').addEventListener('click', () => {
+    if (!navigator.geolocation) { say('Peranti ini tiada sokongan geolocation.'); return; }
+    say('Mencari posisi GPS…');
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const ll = [pos.coords.latitude, pos.coords.longitude];
+      if (meMarker) { meMarker.setLatLng(ll); if (accCircle) accCircle.setLatLng(ll); }
+      else {
+        meMarker = L.circleMarker(ll, { radius: 7, color: '#1f6f43', fillColor: '#37d67a', fillOpacity: 1 }).addTo(map).bindPopup('📍 Posisi anda');
+        accCircle = L.circle(ll, { radius: Math.max(10, pos.coords.accuracy), color: '#37d67a', weight: 1, fillOpacity: 0.08 }).addTo(map);
+      }
+      map.setView(ll, Math.max(map.getZoom(), 15));
+      say('GPS: ' + ll[0].toFixed(6) + ', ' + ll[1].toFixed(6) + ' ±' + Math.round(pos.coords.accuracy) + ' m');
+    }, (err) => { say('GPS gagal: ' + err.message + ' (perlu kebenaran + HTTPS)'); }, { enableHighAccuracy: true, timeout: 12000 });
+  });
+
+  // Search — Nominatim (OSM)
+  const results = $('results');
+  async function doSearch() {
+    const q = $('q').value.trim(); if (!q) return;
+    results.style.display = 'none';
+    say('Mencari "' + q + '"…');
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&q=' + encodeURIComponent(q), { headers: { accept: 'application/json' } });
+      const d = await r.json();
+      if (!d.length) { say('Tiada hasil untuk "' + q + '".'); return; }
+      results.innerHTML = d.map((x, i) => '<button data-i="' + i + '">' + esc(x.display_name.split(',')[0]) + '<small>' + esc(x.display_name) + '</small></button>').join('');
+      results.style.display = 'block';
+      results.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+        const x = d[parseInt(b.getAttribute('data-i'), 10)];
+        const ll = [parseFloat(x.lat), parseFloat(x.lon)];
+        const zoom = x.boundingbox ? Math.min(17, 17 - Math.round(Math.log2(parseFloat(x.boundingbox[1]) - parseFloat(x.boundingbox[0])))) : (x.place_type === 'city' ? 12 : 16);
+        map.setView(ll, zoom);
+        pins.clearLayers();
+        L.marker(ll).addTo(pins).bindPopup('<div class="pop"><b>' + esc(x.display_name.split(',')[0]) + '</b><br>' + esc(x.display_name) + '</div>').openPopup();
+        results.style.display = 'none';
+        say('Hasil: ' + x.display_name.split(',')[0]);
+      }));
+      say(d.length + ' hasil — pilih satu di senarai.');
+    } catch (e) { say('Carian gagal (offline atau Nominatim sibuk): ' + e.message); }
+  }
+  $('goBtn').addEventListener('click', doSearch);
+  $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#results') && !e.target.closest('#q')) results.style.display = 'none'; });
+
+  // Measure mode — tap points, shows cumulative distance
+  let measuring = false, mPts = [], mLine = null, mMarkers = null, mTotal = 0;
+  function measureReset() { mPts = []; mTotal = 0; if (mLine) { map.removeLayer(mLine); mLine = null; } if (mMarkers) { map.removeLayer(mMarkers); mMarkers = null; } }
+  function measureAdd(ll) {
+    mPts.push(ll);
+    if (!mMarkers) mMarkers = L.layerGroup().addTo(map);
+    L.circleMarker(ll, { radius: 4, color: '#b7791f', fillColor: '#f2a63b', fillOpacity: 1 }).addTo(mMarkers);
+    if (mPts.length > 1) {
+      const linePts = mPts.map((p) => [p.lat, p.lng]);
+      if (mLine) mLine.setLatLngs(linePts); else mLine = L.polyline(linePts, { color: '#f2a63b', weight: 3, dashArray: '6 6' }).addTo(map);
+      mTotal += mPts[mPts.length - 2].distanceTo(mPts[mPts.length - 1]);
+    }
+    const km = mTotal / 1000;
+    say('Ukur: ' + mPts.length + ' titik · ' + (km < 1 ? Math.round(mTotal) + ' m' : km.toFixed(2) + ' km') + ' — klik “Ukur” lagi untuk keluar/reset');
+  }
+  $('measureBtn').addEventListener('click', () => {
+    measuring = !measuring;
+    $('measureBtn').classList.toggle('on', measuring);
+    if (!measuring) { measureReset(); say('Mod ukur ditutup.'); }
+    else { measureReset(); say('Mod ukur: klik titik pada peta untuk ukuran jarak terkumpul.'); }
+  });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+})();
+</script>
+</body>
+</html>
