@@ -27,12 +27,15 @@ fs.mkdirSync(LAUNCH, { recursive: true });
     if (fs.existsSync(png512)) { skip++; continue; }
     const svg = path.join(ICONS, `${a.slug}.svg`);
     if (!fs.existsSync(svg)) { miss.push(a.slug); continue; }
-    const out = path.join(LAUNCH, `${a.slug}.png`);
     // Render SVG pada DPI tinggi, padkan ke kanvas 512 dengan latar gelap (logo penuh).
-    await sharp(svg, { density: 300 })
+    const pngBuf = await sharp(svg, { density: 300 })
       .resize(512, 512, { fit: 'contain', background: '#0f1115' })
       .png()
-      .toFile(out);
+      .toBuffer();
+    // Simpan ke apk/launcher/ (dipakai build-store-apks.sh) DAN public/icons/apps/
+    // (dipakai apkSpec() untuk on-demand APK supaya game dapat ikon khusus).
+    await sharp(pngBuf).toFile(path.join(LAUNCH, `${a.slug}.png`));
+    await sharp(pngBuf).toFile(png512);
     made++;
   }
   console.log(`gen-launcher-icons: ${made} dijana, ${skip} guna PNG khas, ${miss.length} tiada SVG${miss.length ? ' → ' + miss.join(', ') : ''}`);
