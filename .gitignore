@@ -75,3 +75,5 @@ google-cloud-key.json
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
+# Tukuk Agent = fork code-server berhistory sendiri (repo nested, upstream detached)
+code-server/
