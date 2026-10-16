@@ -153,6 +153,7 @@
   .srcbadge.satukata { background: rgba(242,193,78,.14); color: #f2c14e; border: 1px solid rgba(242,193,78,.3); }
   .srcbadge.arked { background: rgba(167,111,255,.16); color: #b892ff; border: 1px solid rgba(167,111,255,.32); }
   .srcbadge.komuniti { background: rgba(76,141,255,.14); color: #7cb0ff; border: 1px solid rgba(76,141,255,.3); }
+  .meta .sign { color: #7ce898; font-weight: 700; }
 
   /* Keadaan kosong / muat / ralat */
   .state { text-align: center; padding: 50px 20px; color: var(--muted); }
@@ -294,6 +295,7 @@
         <span class="srcbadge ${esc(x.src)}">${SRC_LABEL[x.src] || esc(x.src)}</span>
         <p class="desc">${esc(x.desc)}</p>
         <div class="meta">
+          ${CAN_APK ? '<span class="sign" title="APK gedung ini ditandatangani dengan satu kunci pembangun Tukuk yang sama">🔒 Ditandatangani Tukuk</span>' : ''}
           ${x.views != null ? `<span>👁️ ${x.views.toLocaleString('ms-MY')}</span>` : ''}
           ${x.updated ? `<span>🕒 ${esc(ago(x.updated))}</span>` : ''}
         </div>
