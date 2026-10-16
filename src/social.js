@@ -14,20 +14,20 @@ const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minit — nama sama tak dibom berulan
 const CACHE_MAX = 200;
 
 // `probe: true` = status HTTP boleh dipercayai untuk pengesanan automatik.
-// `negative` = regex penafian dalam badan halaman bila server kekal hantar 200.
+// Susunan = keutamaan paparan: auto-detect dulu, manual-check selepas.
 const PLATFORMS = [
-  { name: 'GitHub', probe: true, url: (u) => `https://github.com/${u}` },
+  { name: 'GitHub', ic: '🐙', probe: true, url: (u) => `https://github.com/${u}` },
+  { name: 'YouTube', ic: '▶️', probe: true, url: (u) => `https://www.youtube.com/@${u}` },
+  { name: 'Reddit', ic: '👾', probe: false, url: (u) => `https://www.reddit.com/user/${u}` }, // API awam & halaman diblok 403 dari pelayan → semak manual
+  { name: 'X', ic: '🐦', probe: false, url: (u) => `https://x.com/${u}` }, // bertembok login + API follow-button lama telah mati → semak manual
   // t.me sentiasa hantar 200 + halaman pratinjau walaupun nama tidak wujud →
   // status HTTP tak boleh dipercayai; dipapar sebagai 'check' (semak manual).
-  { name: 'Telegram', probe: false, url: (u) => `https://t.me/${u}` },
-  { name: 'YouTube', probe: true, url: (u) => `https://www.youtube.com/@${u}` },
-  { name: 'Reddit', probe: true, json: true, url: (u) => `https://www.reddit.com/user/${u}/about.json` },
-  { name: 'TikTok', probe: false, url: (u) => `https://www.tiktok.com/@${u}` }, // soft-404: 200 untuk nama tak wujud
-  { name: 'Pinterest', probe: false, url: (u) => `https://www.pinterest.com/${u}/` }, // soft-404 juga
-  { name: 'Twitch', probe: false, url: (u) => `https://www.twitch.tv/${u}` },
-  { name: 'Instagram', probe: false, url: (u) => `https://www.instagram.com/${u}/` },
-  { name: 'X (Twitter)', probe: false, url: (u) => `https://x.com/${u}` },
-  { name: 'Facebook', probe: false, url: (u) => `https://www.facebook.com/${u}` }
+  { name: 'Telegram', ic: '✈️', probe: false, url: (u) => `https://t.me/${u}` },
+  { name: 'TikTok', ic: '🎵', probe: false, url: (u) => `https://www.tiktok.com/@${u}` }, // soft-404: 200 untuk nama tak wujud
+  { name: 'Instagram', ic: '📸', probe: false, url: (u) => `https://www.instagram.com/${u}/` },
+  { name: 'Facebook', ic: '📘', probe: false, url: (u) => `https://www.facebook.com/${u}` },
+  { name: 'Pinterest', ic: '📌', probe: false, url: (u) => `https://www.pinterest.com/${u}/` }, // soft-404 juga
+  { name: 'Twitch', ic: '🎮', probe: false, url: (u) => `https://www.twitch.tv/${u}` } // SPA: shellsama untuk wujud/tidak → semak manual
 ];
 
 // Nama pengguna yang sah untuk ditempel ke templat URL — huruf/nombor/. _ -,
@@ -45,12 +45,12 @@ async function probe(p, u) {
     const r = await fetch(url, {
       signal: ctl.signal,
       redirect: 'follow',
-      headers: { 'User-Agent': UA, Accept: p.json ? 'application/json' : 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8' }
+      headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8' }
     });
     if (r.status === 404) return { state: 'notfound', url };
     if (!r.ok) return { state: 'check', url };
     if (p.negative) {
-      const body = (await r.text()).slice(0, 4000);
+      const body = (await r.text()).slice(0, 20000);
       if (p.negative.test(body)) return { state: 'notfound', url };
     }
     return { state: 'found', url };
@@ -72,9 +72,12 @@ async function lookup(raw) {
   }
   const results = await Promise.all(PLATFORMS.map((p) =>
     (p.probe
-      ? probe(p, u).then((r) => ({ platform: p.name, state: r.state, url: r.url }))
-      : Promise.resolve({ platform: p.name, state: 'check', url: p.url(u) }))
+      ? probe(p, u).then((r) => ({ platform: p.name, ic: p.ic, state: r.state, url: r.url }))
+      : Promise.resolve({ platform: p.name, ic: p.ic, state: 'check', url: p.url(u) }))
   ));
+  // found dahulu, then notfound, then manual-check — hasil penting tak tenggelim.
+  const rank = { found: 0, notfound: 1, check: 2 };
+  results.sort((a, b) => rank[a.state] - rank[b.state]);
   if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
   cache.set(u, { at: Date.now(), results });
   return { username: u, results };

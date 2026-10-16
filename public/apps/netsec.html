@@ -43,6 +43,17 @@
   .chk { display:flex; gap:8px; align-items:flex-start; padding:7px 4px; border-bottom:1px solid var(--line); font-size:.82rem; }
   .chk input { margin-top:3px; width:auto; flex:0 0 auto; }
   .chk small { display:block; color:var(--muted); font-size:.7rem; margin-top:2px; }
+  /* Social finder — grid kad gaya app-store (bukan jadual teks) */
+  .pgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; margin-top:12px; }
+  .pcard { display:flex; flex-direction:column; align-items:center; gap:5px; padding:12px 6px; background:#0c1017; border:1px solid var(--line); border-radius:12px; text-decoration:none; color:inherit; text-align:center; transition:border-color .15s, transform .15s; }
+  .pcard:hover { border-color:#1f6f43; transform:translateY(-2px); }
+  .pcard .pic { font-size:1.5rem; line-height:1; }
+  .pcard .pn { font-size:.72rem; font-weight:600; }
+  .pcard .ps { font-size:.6rem; padding:2px 7px; border-radius:9px; }
+  .pcard.ok { border-color:rgba(46,204,113,.55); } .pcard.ok .ps { background:rgba(46,204,113,.16); color:#7ce898; }
+  .pcard.no .ps { background:rgba(192,57,43,.16); color:#f5a093; }
+  .pcard.man { opacity:.62; } .pcard.man .ps { background:rgba(242,166,59,.12); color:#f2c67b; }
+  .psum { font-size:.9rem; margin-top:2px; }
 </style>
 </head>
 <body>
@@ -198,7 +209,7 @@
 
   <section class="panel" data-t="social">
     <h2>Social media username finder</h2>
-    <p>Check whether a username <b>exists publicly</b> across platforms — useful to trace scammers and fake accounts. Only public profile pages are queried (HTTP status); no logins, no private data, no messaging.</p>
+    <p>Check whether a username <b>exists publicly</b> across platforms — useful to trace scammers and fake accounts. GitHub &amp; YouTube are verified automatically (real HTTP status); for platforms that block bots, each card is a one-tap link so you can glance and confirm yourself. No logins, no private data, no messaging.</p>
     <div class="row2"><input type="text" id="su" placeholder="username (without @)" style="flex:1 1 200px"><button class="btn" id="sugo">Search</button></div>
     <div id="ssout" class="out" style="white-space:normal">—</div>
   </section>
@@ -739,15 +750,26 @@
   async function doSocial() {
     const u = $('su').value.trim().replace(/^@+/, '');
     if (!u) { $('ssout').textContent = 'Enter a username, e.g. tokai_scammer_99'; return; }
-    $('ssout').textContent = 'Checking public profiles…';
+    $('ssout').innerHTML = '<span style="opacity:.65">Scanning public profiles…</span>';
     try {
       const r = await fetch('/api/social?u=' + encodeURIComponent(u)); const d = await r.json();
       if (d.error) { $('ssout').textContent = '✖ ' + d.error; return; }
-      const badge = (st) => st === 'found' ? '✅ account page exists' : st === 'notfound' ? '✖ no public account' : '❓ login-walled / blocked — open & check yourself';
-      $('ssout').innerHTML = 'Username <b>' + esc(d.username) + '</b>' + (d.cached ? ' <span style="opacity:.6">(cached 15m)</span>' : '')
-        + '<table><tr><th>Platform</th><th>Public status</th><th></th></tr>'
-        + d.results.map((x) => '<tr><td>' + esc(x.platform) + '</td><td>' + badge(x.state) + '</td><td><a href="' + esc(x.url) + '" target="_blank" rel="noopener">open</a></td></tr>').join('')
-        + '</table><p class="note">Existence ≠ identity: anyone can register a name. Cross-check profile photos, join dates and post history before trusting or accusing — and never harass account owners.</p>';
+      const nFound = d.results.filter((x) => x.state === 'found').length;
+      const nFree = d.results.filter((x) => x.state === 'notfound').length;
+      const chip = { found: ['ok', '✓ exists'], notfound: ['no', '✕ no account'], check: ['man', 'open & check'] };
+      const cards = d.results.map((x) => {
+        const c = chip[x.state] || chip.check;
+        return '<a class="pcard ' + c[0] + '" href="' + esc(x.url) + '" target="_blank" rel="noopener" title="' + esc(x.platform) + ': ' + c[1] + '">' +
+          '<span class="pic">' + esc(x.ic || '🌐') + '</span><span class="pn">' + esc(x.platform) + '</span><span class="ps">' + c[1] + '</span></a>';
+      }).join('');
+      $('ssout').innerHTML =
+        '<div class="psum">🔎 <b>@' + esc(d.username) + '</b> — ' +
+        (nFound ? '<span style="color:#7ce898">✓ ' + nFound + ' found</span> · ' : '') +
+        (nFree ? '<span style="color:#f5a093">✕ ' + nFree + ' no account</span> · ' : '') +
+        '<span style="color:var(--muted)">' + (d.results.length - nFound - nFree) + ' open to check</span>' +
+        (d.cached ? ' <span style="opacity:.5">(cached)</span>' : '') + '</div>' +
+        '<div class="pgrid">' + cards + '</div>' +
+        '<p class="note">Existence ≠ identity: anyone can register a name. Cross-check profile photos, join dates and post history before trusting or accusing — and never harass account owners.</p>';
     } catch (e) { $('ssout').textContent = 'Search failed (offline or server busy).'; }
   }
   $('sugo').addEventListener('click', doSocial);
