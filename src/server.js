@@ -674,7 +674,12 @@ function adsenseClient() {
   return /^ca-pub-\d+$/.test(c) ? c : '';
 }
 function adsenseOn() {
-  return config.adsense.enabled && adsenseClient();
+  // Togel Admin (`adsEnabled`) menjadi tuan bila pernah disentuh; jika belum,
+  // ikut config/env (default ON). Ini memastikan halaman utama (klien) & blog/app
+  // (pelayan) memakai SATU punca kebenaran yang sama.
+  const toggle = store.getSetting('adsEnabled', null);
+  const enabled = (toggle === null) ? config.adsense.enabled : Boolean(toggle);
+  return enabled && adsenseClient();
 }
 function realSlot(slot) {
   const s = String(slot || '').trim();
@@ -2676,7 +2681,7 @@ app.get('/api/admin/status', auth.requireAdmin, async (req, res) => {
 
 app.get('/api/public/settings', (req, res) => {
   res.json({
-    adsEnabled: Boolean(store.getSetting('adsEnabled', false)),
+    adsEnabled: Boolean(adsenseOn()),
     adsClient: store.getSetting('adsClient', 'ca-pub-8954948214333501'),
     adsSlotTop: store.getSetting('adsSlotTop', ''),
     adsSlotBottom: store.getSetting('adsSlotBottom', ''),
@@ -2695,7 +2700,7 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
   const rawKey = String(store.getSetting('aiApiKey', '') || '');
   res.json({
     // Google Ads
-    adsEnabled: Boolean(store.getSetting('adsEnabled', false)),
+    adsEnabled: Boolean(adsenseOn()),
     adsClient: store.getSetting('adsClient', 'ca-pub-8954948214333501'),
     adsSlotTop: store.getSetting('adsSlotTop', ''),
     adsSlotInArticle: store.getSetting('adsSlotInArticle', ''),
