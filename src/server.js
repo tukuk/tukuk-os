@@ -314,7 +314,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -2192,6 +2192,14 @@ const STORE_APP_META = {
   bubble: { ic: '🫧', title: 'Bubble Pop', desc: 'Classic bubble shooter — match 3+ colours, drop orphan clusters before the ceiling reaches you.', game: true, genre: 'teki-teki' },
   ludo: { ic: '🎲', title: 'Ludo', desc: 'The four-color board game famous on Android — you (Red) vs three computers. Roll, capture, race home.', game: true, genre: 'board' },
   solitaire: { ic: '🃏', title: 'Solitaire', desc: 'Klondike — the card game that ships with every phone. Tap to move, auto-finish when you can.', game: true, genre: 'cards' },
+  number2048: { ic: '🧊', title: '2048', desc: 'The legendary sliding-tile puzzle: swipe to merge matching numbers and reach the 2048 tile.', game: true, genre: 'teki-teki' },
+  blockdrop: { ic: '🧩', title: 'Block Drop', desc: 'The timeless falling-block game — slide, rotate and clear rows before the stack tops out.', game: true, genre: 'teki-teki' },
+  snake: { ic: '🐍', title: 'Snake', desc: 'The Nokia-era classic that never dies: steer, eat, grow longer and don\'t crash into yourself.', game: true, genre: 'arkad' },
+  mines: { ic: '💣', title: 'Minesweeper', desc: 'The pre-installed puzzle: open every safe square and flag the hidden mines. Tap to open, hold to flag.', game: true, genre: 'teki-teki' },
+  connect4: { ic: '🔴', title: 'Connect Four', desc: 'The famous drop-disc game — line up four before the computer blocks you and wins.', game: true, genre: 'board' },
+  breakout: { ic: '🧱', title: 'Breakout', desc: 'The original brick-breaker: bounce the ball, smash every block across faster levels.', game: true, genre: 'arkad' },
+  invaders: { ic: '👾', title: 'Space Invaders', desc: 'The arcade shooter legend — blast the descending alien formation and dodge their bombs.', game: true, genre: 'penembakan' },
+  doodle: { ic: '🦘', title: 'Doodle Jump', desc: 'One of the most-downloaded phone games ever: auto-bounce upward and steer onto every platform.', game: true, genre: 'refleks' },
   chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'A real messenger in your browser that keeps working on weak networks (2G/3G/4G/GPRS). Install as an app on Android, iOS, Windows, Linux & Huawei, or download the native Android APK directly (beta — stable coming soon). Name + password signup, permanent Tukuk ID, public room, 1-to-1 DMs and groups, video & voice calls (WebRTC) with TukuCaller-style caller ID, fake-call prank mode (no network needed), voice messages, offline outbox (auto-resend), data-saving mode (tap-to-load media), read receipts ✓✓, photo & video sending, reply, forward, reactions, edit, pin messages, search, friends & blocking, wallpapers & sounds.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
@@ -2208,12 +2216,7 @@ const STORE_ARCADE = [
   { tpl: 'reacttpl', genre: 'refleks', ic: '⚡', title: 'Reaction Time', desc: 'Wait for green, click as fast as possible — measure your milliseconds.' },
   { tpl: 'guesstpl', genre: 'teki-teki', ic: '🔢', title: 'Number Guess', desc: 'A number 1–100 has been picked — guess it with higher/lower hints.' },
   { tpl: 'quiztpl', genre: 'kuiz', ic: '💡', title: 'Quick Quiz', desc: 'Multiple-choice questions with instant green/red answers.' },
-  { tpl: 'tpl2048', genre: 'teki-teki', ic: '🧊', title: '2048', desc: 'Merge matching numbers — reach the 2048 tile before the board fills.' },
-  { tpl: 'snktpl', genre: 'arkad', ic: '🐍', title: 'Snake', desc: 'The Nokia-era classic — eat, grow, speed up, don\'t crash.' },
-  { tpl: 'bktpl', genre: 'arkad', ic: '🧱', title: 'Breakout', desc: 'Bounce the ball with the paddle, smash every brick with 3 lives.' },
-  { tpl: 'bloktpl', genre: 'teki-teki', ic: '🧩', title: 'Block Drop', desc: 'Arrange falling blocks, complete rows — faster every level.' },
-  { tpl: 'astrotpl', genre: 'penembakan', ic: '☄️', title: 'Asteroids', desc: 'Vector classic: turn, thrust, shoot — big asteroids split in two.' },
-  { tpl: 'minstpl', genre: 'teki-teki', ic: '💣', title: 'Mine Sweeper', desc: '9×9, 10 mines — click to open, hold/flag to mark. First click is always safe.' }
+  { tpl: 'astrotpl', genre: 'penembakan', ic: '☄️', title: 'Asteroids', desc: 'Vector classic: turn, thrust, shoot — big asteroids split in two.' }
 ];
 function storeBawaan() {
   return Object.entries(STORE_APP_META)

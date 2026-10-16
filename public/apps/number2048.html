@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2048 — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="The legendary sliding-tile puzzle that took over phones: swipe to merge matching numbers and reach the 2048 tile before the board fills up.">
+<link rel="canonical" href="https://tukuk.org/apps/number2048">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:460px; margin:0 auto; padding:14px; }
+  .bar { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+  .score { flex:1; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px; }
+  .score .lab { display:block; font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .score b { font-size:1.3rem; }
+  #new { background:var(--accent); color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer; font:inherit; }
+  #grid { position:relative; width:100%; aspect-ratio:1; background:#bbada0; border-radius:12px; padding:12px; box-sizing:border-box; touch-action:none; }
+  .cell { position:absolute; width:calc((100% - 24px - 30px)/4); height:calc((100% - 24px - 30px)/4); background:rgba(238,228,218,.35); border-radius:8px; }
+  .tile { position:absolute; display:flex; align-items:center; justify-content:center; border-radius:8px; font-weight:800; transition:left .12s ease, top .12s ease; }
+  .tile.pop { animation:pop .16s ease; }
+  @keyframes pop { 0%{transform:scale(.6)} 100%{transform:scale(1)} }
+  .msg { text-align:center; margin-top:12px; min-height:1.3em; font-size:.9rem; color:var(--muted); }
+  .hint { text-align:center; color:var(--muted); font-size:.78rem; margin-top:6px; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🧊 2048</h1></header>
+<div class="wrap">
+  <div class="bar">
+    <div class="score"><span class="lab">Score</span><b id="score">0</b></div>
+    <div class="score"><span class="lab">Best</span><b id="best">0</b></div>
+    <button id="new">New game</button>
+  </div>
+  <div id="grid"></div>
+  <div class="msg" id="msg"></div>
+  <p class="hint">Swipe (or use arrow keys) to slide every tile. Matching numbers merge — reach 2048!</p>
+</div>
+<script>
+(() => {
+  const N = 4, gap = 10, pad = 12;
+  const grid = document.getElementById('grid');
+  const scoreEl = document.getElementById('score'), bestEl = document.getElementById('best'), msgEl = document.getElementById('msg');
+  let board, score = 0, best = Number(localStorage.getItem('2048-best') || 0), over = false;
+  const PAL = {2:'#eee4da',4:'#ede0c8',8:'#f2b179',16:'#f59563',32:'#f67c5f',64:'#f65e3b',128:'#edcf72',256:'#edcc61',512:'#edc85e',1024:'#edc53d',2048:'#edc22e'};
+  const fontSize = (v) => v < 100 ? 'clamp(20px,9vw,40px)' : v < 1000 ? 'clamp(17px,7.5vw,32px)' : 'clamp(14px,6.5vw,28px)';
+
+  function geom() {
+    const w = grid.clientWidth || 400;
+    const inner = w - pad * 2;
+    const size = (inner - gap * (N - 1)) / N;
+    return { size };
+  }
+  function posPx(i) { const { size } = geom(); return pad + i * (size + gap); }
+
+  function buildCells() {
+    grid.querySelectorAll('.cell').forEach((e) => e.remove());
+    const { size } = geom();
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      const d = document.createElement('div'); d.className = 'cell';
+      d.style.left = posPx(c) + 'px'; d.style.top = posPx(r) + 'px';
+      d.style.width = size + 'px'; d.style.height = size + 'px';
+      d.style.background = 'rgba(238,228,218,.35)';
+      grid.appendChild(d);
+    }
+  }
+
+  function newGame() {
+    board = Array.from({ length: N }, () => Array(N).fill(0));
+    score = 0; over = false; msgEl.textContent = '';
+    addRandom(); addRandom();
+    render(); updateHud();
+  }
+  function addRandom() {
+    const empty = [];
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!board[r][c]) empty.push([r, c]);
+    if (!empty.length) return;
+    const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+    board[r][c] = Math.random() < 0.9 ? 2 : 4;
+  }
+
+  // Pure slide on a row (leftward): returns {row, gained}
+  function slide(row) {
+    const nums = row.filter((v) => v);
+    const out = []; let gained = 0;
+    for (let i = 0; i < nums.length; i++) {
+      if (nums[i] === nums[i + 1]) { const m = nums[i] * 2; out.push(m); gained += m; i++; }
+      else out.push(nums[i]);
+    }
+    while (out.length < N) out.push(0);
+    return { row: out, gained };
+  }
+  function rotate(grid2d) { // transpose then reverse rows = rotate CW; we use it to face dirs
+    const t = grid2d[0].map((_, c) => grid2d.map((row) => row[c]));
+    return t;
+  }
+  function move(dir) { // dir: 0 left,1 up,2 right,3 down
+    if (over) return false;
+    let g = board.map((r) => r.slice());
+    if (dir === 1 || dir === 3) g = rotate(g);        // transpose -> columns become rows
+    if (dir === 2 || dir === 3) g = g.map((r) => r.slice().reverse()); // right/down: reverse
+    let moved = false, gained = 0;
+    const res = g.map((row) => { const s = slide(row); if (s.row.join() !== row.join()) moved = true; gained += s.gained; return s.row; });
+    let back = res;
+    if (dir === 2 || dir === 3) back = back.map((r) => r.slice().reverse());
+    if (dir === 1 || dir === 3) back = rotate(back);
+    board = back;
+    if (moved) { score += gained; addRandom(); render(); updateHud(); checkState(); }
+    return moved;
+  }
+  function checkState() {
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      if (!board[r][c]) return;
+      if (c + 1 < N && board[r][c] === board[r][c + 1]) return;
+      if (r + 1 < N && board[r][c] === board[r + 1][c]) return;
+    }
+    over = true; msgEl.textContent = 'No moves left — game over. Press New game.';
+  }
+
+  function render() {
+    grid.querySelectorAll('.tile').forEach((e) => e.remove());
+    const { size } = geom();
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      const v = board[r][c]; if (!v) continue;
+      const t = document.createElement('div'); t.className = 'tile pop';
+      t.style.left = posPx(c) + 'px'; t.style.top = posPx(r) + 'px';
+      t.style.width = size + 'px'; t.style.height = size + 'px';
+      t.style.background = PAL[v] || '#3c3a32';
+      t.style.color = v <= 4 ? '#776e65' : '#f9f6f2';
+      t.style.fontSize = fontSize(v);
+      t.textContent = v;
+      grid.appendChild(t);
+    }
+  }
+  function updateHud() {
+    scoreEl.textContent = score;
+    if (score > best) { best = score; localStorage.setItem('2048-best', String(best)); }
+    bestEl.textContent = best;
+  }
+
+  // input: swipe + keys
+  let sx = 0, sy = 0, swiping = false;
+  grid.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; swiping = true; });
+  grid.addEventListener('pointerup', (e) => {
+    if (!swiping) return; swiping = false;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 2 : 0) : (dy > 0 ? 3 : 1));
+  });
+  window.addEventListener('keydown', (e) => {
+    const map = { ArrowLeft: 0, ArrowUp: 1, ArrowRight: 2, ArrowDown: 3 };
+    if (e.key in map) { e.preventDefault(); move(map[e.key]); }
+  });
+  document.getElementById('new').addEventListener('click', newGame);
+  window.addEventListener('resize', () => { buildCells(); render(); });
+
+  buildCells(); newGame();
+})();
+</script>
+</body>
+</html>
