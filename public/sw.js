@@ -1,9 +1,12 @@
-const CACHE_NAME = 'tukuk-os-v5';
+const CACHE_NAME = 'tukuk-os-v6';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/manifest-chat.json',
+  '/manifest-os.json',
+  '/os',
+  '/os.html',
   '/apps/chat',
   '/build/icon-192.png',
   '/build/icon-512.png',

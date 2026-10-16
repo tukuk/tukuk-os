@@ -39,6 +39,7 @@ const TOOLS = [
   ['movie', '/movie', '🎥', 'Movie Player', 'movie filem watch nonton video player'],
   ['nasa', '/nasa', '🛰️', 'NASA APOD', 'nasa space photo astronomy angkasa planet bintang star'],
   ['store', '/store', '🛒', 'Tukuk Store', 'store apps download apk install aplikasi gedai kedai'],
+  ['os', '/os', '📱', 'Tukuk OS (web phone)', 'phone android os sistem web home screen operating telefon perisian'],
   ['games', '/store?genre=arkad', '🕹️', 'Arcade Games', 'game main gaming permainan'],
 ];
 // Genre arkad → pautan penapis /store (sepadan label STORE_ARCADE/server).
