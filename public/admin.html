@@ -530,6 +530,12 @@ Type a command below or click a quick action.
             </div>
           </div>
           
+          <div class="form-group">
+            <label for="msAdsUsmSrc">Microsoft USM — Universal Script URL</label>
+            <input type="url" id="msAdsUsmSrc" placeholder="https://c.bing.com/.../usm.js">
+            <div class="help-text">Alternatif "Auto ads" Microsoft. Tampal <strong>satu URL skrip</strong> yang diberikan dashboard Microsoft (monetize/usm) di sini. Loader akan suntik ke head semua halaman selamat-iklan bila <em>Enable Microsoft Advertising</em> diaktifkan. Kosong = tiada USM.</div>
+          </div>
+
           <h3 style="margin-top:28px; font-size:1.02rem; border-bottom:1px solid var(--panel-border); padding-bottom:6px;">Snippet Penuh Microsoft Ads (HTML/JS)</h3>
           <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Microsoft (monetizenow) selalunya beri snippet HTML/JS penuh untuk setiap unit. Tampal di sini. Renderer akan inject apa adanya bila Microsoft Ads diaktifkan. Kosongkan = tiada paparan.</p>
           <div class="form-group">
@@ -558,6 +564,13 @@ Type a command below or click a quick action.
             <label for="clarityId">Clarity Project ID</label>
             <input type="text" id="clarityId" placeholder="e.g. abc1def234">
             <div class="help-text">Dapatkan ID dari <a href="https://clarity.microsoft.com" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>. Ia hanya dimuat bila diaktifkan (lihat /api/public/settings).</div>
+          </div>
+
+          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">🛒 Produk Afiliasi (Rekomendasi)</h3>
+          <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Dipaparkan di <a href="/rekomendasi" target="_blank" rel="noopener">/rekomendasi</a>. Format: JSON array. Ganti <code>url</code> dengan <strong>pautan affiliate sebenar</strong> anda (Shopee/Amazon/Hostinger/NordVPN dll). Kosongkan = guna senarai default.</p>
+          <div class="form-group">
+            <textarea id="affiliateProducts" rows="8" style="font-family:monospace; font-size:.85rem;" placeholder='[{"name":"Hostinger","blurb":"Hosting murah","price":"RM10/bln","url":"https://affiliate-link-anda","cta":"Lihat Pakej"}]'></textarea>
+            <div class="help-text">Medan tersedia: <code>name</code>, <code>blurb</code>, <code>price</code>, <code>url</code>, <code>cta</code>. Pautan keluar automatik diberi <code>rel="sponsored nofollow"</code> (patuh Google).</div>
           </div>
 
           <button type="submit" class="btn btn-primary" style="margin-top:16px;">💾 Save Ad Settings</button>
@@ -1022,6 +1035,8 @@ Type a command below or click a quick action.
       document.getElementById('msAdsSnippetTop').value = s.msAdsSnippetTop || '';
       document.getElementById('msAdsSnippetInArticle').value = s.msAdsSnippetInArticle || '';
       document.getElementById('msAdsSnippetBottom').value = s.msAdsSnippetBottom || '';
+      document.getElementById('msAdsUsmSrc').value = s.msAdsUsmSrc || '';
+      document.getElementById('affiliateProducts').value = s.affiliateProducts || '';
       
       // Microsoft Clarity
       document.getElementById('clarityEnabled').checked = Boolean(s.clarityEnabled);
@@ -1070,6 +1085,8 @@ Type a command below or click a quick action.
       msAdsSnippetTop: document.getElementById('msAdsSnippetTop').value,
       msAdsSnippetInArticle: document.getElementById('msAdsSnippetInArticle').value,
       msAdsSnippetBottom: document.getElementById('msAdsSnippetBottom').value,
+      msAdsUsmSrc: document.getElementById('msAdsUsmSrc').value.trim(),
+      affiliateProducts: document.getElementById('affiliateProducts').value,
       clarityEnabled: document.getElementById('clarityEnabled').checked,
       clarityId: document.getElementById('clarityId').value.trim()
     };

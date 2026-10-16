@@ -299,7 +299,7 @@ app.use('/satu-kata', express.static(GENERATED_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'builder', 'studio', 'store', 'apps', 'bg-remover', 'collage', 'converter', 'download'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'builder', 'studio', 'store', 'apps', 'bg-remover', 'collage', 'converter', 'download', 'rekomendasi'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
@@ -586,7 +586,7 @@ app.get('/network', async (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio'];
+  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/rekomendasi'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2681,6 +2681,16 @@ app.get('/api/admin/status', auth.requireAdmin, async (req, res) => {
   }
 });
 
+// Produk disyorkan (afiliasi) — default supaya /rekomendasi tak kosong. Admin ganti
+// dengan link affiliate sebenar (Shopee/Amazon/Hostinger/NordVPN dll). JSON array.
+const DEFAULT_AFFILIATE = JSON.stringify([
+  { name: 'Hostinger', blurb: 'Hosting web murah & laju untuk projek side-project anda.', price: 'dari RM10/bln', url: 'https://www.hostinger.com', cta: 'Lihat Pakej' },
+  { name: 'Namecheap', blurb: 'Dapatkan domain .com untuk brand peribadi anda.', price: 'dari $5.98', url: 'https://www.namecheap.com', cta: 'Semak Domain' },
+  { name: 'NordVPN', blurb: 'Lindungi privasi anda ketika menguri.', price: 'diskaun 2 tahun', url: 'https://nordvpn.com', cta: 'Ambil Diskaun' },
+  { name: 'Vultr Cloud VPS', blurb: 'VPS untuk hosting apl, bot & laman anda.', price: 'dari $6/bln', url: 'https://www.vultr.com', cta: 'Buka Akaun' },
+  { name: 'Papan Kekunci Mekanikal', blurb: 'Gear menulis/pengaturcara yang lebih selesa.', price: 'RM60+', url: 'https://shopee.com.my/search?keyword=mechanical%20keyboard', cta: 'Beli di Shopee' }
+]);
+
 app.get('/api/public/settings', (req, res) => {
   res.json({
     adsEnabled: Boolean(adsenseOn()),
@@ -2689,6 +2699,8 @@ app.get('/api/public/settings', (req, res) => {
     adsSlotBottom: store.getSetting('adsSlotBottom', ''),
     msAdsEnabled: Boolean(store.getSetting('msAdsEnabled', false)),
     msAdsTagId: store.getSetting('msAdsTagId', ''),
+    msAdsUsmSrc: store.getSetting('msAdsUsmSrc', ''),
+    affiliateProducts: store.getSetting('affiliateProducts', DEFAULT_AFFILIATE),
     clarityEnabled: Boolean(store.getSetting('clarityEnabled', false)),
     clarityId: String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || '') || ''),
     bgMode: store.getSetting('bgMode', 'default'),
@@ -2712,6 +2724,9 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     msAdsTagId: store.getSetting('msAdsTagId', ''),
     msAdsSlotTop: store.getSetting('msAdsSlotTop', ''),
     msAdsSlotBottom: store.getSetting('msAdsSlotBottom', ''),
+    msAdsUsmSrc: store.getSetting('msAdsUsmSrc', ''),
+    // Produk afiliasi (JSON array) untuk halaman /rekomendasi
+    affiliateProducts: store.getSetting('affiliateProducts', DEFAULT_AFFILIATE),
     // Snippet penuh (HTML/JS) ditampal dari pembekal. Renderer inject apa adanya.
     msAdsSnippetTop: store.getSetting('msAdsSnippetTop', ''),
     msAdsSnippetInArticle: store.getSetting('msAdsSnippetInArticle', ''),
@@ -2739,6 +2754,14 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
 
 app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   const b = req.body || {};
+  // Validas awal: produk afiliasi mesti JSON array yang sah (atau kosong).
+  if (typeof b.affiliateProducts !== 'undefined') {
+    const raw = String(b.affiliateProducts).trim();
+    if (raw) {
+      try { const parsed = JSON.parse(raw); if (!Array.isArray(parsed)) throw new Error('not array'); }
+      catch { return res.status(400).json({ error: 'Produk afiliasi mestilah JSON array yang sah (cth: [{"name":"...","url":"https://..."}])' }); }
+    }
+  }
   // Google Ads
   if (typeof b.adsEnabled !== 'undefined') store.setSetting('adsEnabled', Boolean(b.adsEnabled));
   if (typeof b.adsClient !== 'undefined') store.setSetting('adsClient', String(b.adsClient));
@@ -2753,6 +2776,8 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   if (typeof b.msAdsSnippetTop !== 'undefined') store.setSetting('msAdsSnippetTop', String(b.msAdsSnippetTop));
   if (typeof b.msAdsSnippetInArticle !== 'undefined') store.setSetting('msAdsSnippetInArticle', String(b.msAdsSnippetInArticle));
   if (typeof b.msAdsSnippetBottom !== 'undefined') store.setSetting('msAdsSnippetBottom', String(b.msAdsSnippetBottom));
+  if (typeof b.msAdsUsmSrc !== 'undefined') store.setSetting('msAdsUsmSrc', String(b.msAdsUsmSrc).trim());
+  if (typeof b.affiliateProducts !== 'undefined') store.setSetting('affiliateProducts', String(b.affiliateProducts).trim());
   // Microsoft Clarity
   if (typeof b.clarityEnabled !== 'undefined') store.setSetting('clarityEnabled', Boolean(b.clarityEnabled));
   if (typeof b.clarityId !== 'undefined') store.setSetting('clarityId', String(b.clarityId).trim());
