@@ -31,6 +31,7 @@ const { safeError, truncate, escapeHtml } = require('./util');
 const { assertPublicUrl } = require('./util');
 const auth = require('./auth');
 const chat = require('./chat');
+const sms = require('./sms');
 const blogRedirects = require('./blog-redirects');
 const publish = require('./publish');
 const { exec } = require('child_process');
@@ -307,7 +308,7 @@ app.use('/satu-kata', express.static(GENERATED_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'builder', 'studio', 'store', 'apps', 'bg-remover', 'collage', 'converter', 'download', 'rekomendasi', 'os'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'builder', 'studio', 'store', 'apps', 'bg-remover', 'collage', 'converter', 'download', 'rekomendasi', 'os', 'sms'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
@@ -2673,6 +2674,13 @@ chat.mount(app, {
   rateLimit: config.rateLimit.enabled ? rateLimit : null,
   store,
   path: path.join(path.dirname(config.store.path), 'chat.json'),
+});
+
+// Gerbang SMS (paired-Android relay, dua hala + inbox). Admin di /sms.
+sms.mount(app, {
+  auth,
+  rateLimit: config.rateLimit.enabled ? rateLimit : null,
+  path: path.join(path.dirname(config.store.path), 'sms.json'),
 });
 
 
