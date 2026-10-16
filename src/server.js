@@ -317,7 +317,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle', 'pong', 'stack', 'simon', 'muncher', 'puzzle15', 'tictactoe', 'memory', 'whack', 'calendar', 'dice', 'tip', 'bmi'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -2385,6 +2385,18 @@ const STORE_APP_META = {
   breakout: { ic: '🧱', title: 'Breakout', desc: 'The original brick-breaker: bounce the ball, smash every block across faster levels.', game: true, genre: 'arkad' },
   invaders: { ic: '👾', title: 'Space Invaders', desc: 'The arcade shooter legend — blast the descending alien formation and dodge their bombs.', game: true, genre: 'penembakan' },
   doodle: { ic: '🦘', title: 'Doodle Jump', desc: 'One of the most-downloaded phone games ever: auto-bounce upward and steer onto every platform.', game: true, genre: 'refleks' },
+  pong: { ic: '🏓', title: 'Pong', desc: 'The original 1972 duel: drag your paddle, out-rally the CPU to 7. Rally speeds up every hit.', game: true, genre: 'arkad' },
+  stack: { ic: '🗼', title: 'Stack Tower', desc: 'The viral one-tap tower: time each drop, shave the overhang, chain PERFECTs. How high?', game: true, genre: 'santai' },
+  simon: { ic: '🎼', title: 'Simon Tones', desc: 'Watch the colour-tone sequence, echo it back. Every round adds one more — how far does your memory go?', game: true, genre: 'teki-teki' },
+  muncher: { ic: '🟡', title: 'Maze Muncher', desc: 'Munch every dot while a ghost hunts you; power pellets turn the hunter into prey.', game: true, genre: 'arkad' },
+  puzzle15: { ic: '🔢', title: 'Slide 15', desc: 'The classic 4×4 sliding-number puzzle — always solvable, count your moves.', game: true, genre: 'teki-teki' },
+  tictactoe: { ic: '❎', title: 'Tic-Tac-Toe', desc: 'Three-in-a-row against a minimax CPU with Easy/Medium/Unbeatable levels.', game: true, genre: 'board' },
+  memory: { ic: '🧠', title: 'Memory Match', desc: 'Flip and match eight emoji pairs on the 4×4 board in as few moves as you can.', game: true, genre: 'teki-teki' },
+  whack: { ic: '🔨', title: 'Whack-a-Mole', desc: '25 seconds, nine holes: moles +1, golden +3, bombs −5. Faster every second.', game: true, genre: 'refleks' },
+  calendar: { ic: '📅', title: 'Calendar', desc: 'Month view with today highlighted, ISO week numbers and quick month hopping — fully offline.' },
+  dice: { ic: '🪙', title: 'Dice & Coin', desc: 'Crypto-random d4–d100 dice, coin flips and a who-pays decider. No internet needed.' },
+  tip: { ic: '💵', title: 'Tip Split', desc: 'Bill, tip percent and heads-count — instant per-person split at the dinner table.' },
+  bmi: { ic: '⚖️', title: 'BMI Check', desc: 'Body mass index with colour gauge and healthy-weight range, metric or imperial.' },
   chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'A real messenger in your browser that keeps working on weak networks (2G/3G/4G/GPRS). Install as an app on Android, iOS, Windows, Linux & Huawei, or download the native Android APK directly (beta — stable coming soon). Name + password signup, permanent Tukuk ID, public room, 1-to-1 DMs and groups, video & voice calls (WebRTC) with TukuCaller-style caller ID, fake-call prank mode (no network needed), voice messages, offline outbox (auto-resend), data-saving mode (tap-to-load media), read receipts ✓✓, photo & video sending, reply, forward, reactions, edit, pin messages, search, friends & blocking, wallpapers & sounds.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.

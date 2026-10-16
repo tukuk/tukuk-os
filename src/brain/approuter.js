@@ -45,6 +45,10 @@ const TOOLS = [
   ['radio', '/cari?mode=radio', '📻', 'World Radio', 'radio stesen station dengar siaran live'],
   ['news', '/cari?mode=news', '📰', 'News Search', 'news berita headline terkini'],
   ['music', '/cari?mode=music', '🎵', 'Music Search', 'music song lagu muzik listen dengar'],
+  ['calendar', '/apps/calendar', '📅', 'Calendar', 'calendar kalendar tarikh date today hari bulan'],
+  ['dice', '/apps/dice', '🪙', 'Dice & Coin', 'dice dadu dobak coin syiling random rawak julat'],
+  ['tip', '/apps/tip', '💵', 'Tip Split', 'tip bil bill split bahaga waiter restaurant'],
+  ['bmi', '/apps/bmi', '⚖️', 'BMI Check', 'bmi berat weight ideal diet tubuh index'],
   ['games', '/store?genre=arkad', '🕹️', 'Arcade Games', 'game main gaming permainan'],
 ];
 // Genre arkad → pautan penapis /store (sepadan label STORE_ARCADE/server).

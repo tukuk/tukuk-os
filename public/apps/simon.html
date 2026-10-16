@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simon Tones — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="The classic memory-tone game: watch the colour sequence, echo it back. Every round adds one more.">
+<link rel="canonical" href="https://tukuk.org/apps/simon">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:420px; margin:0 auto; padding:12px; text-align:center; }
+  .hud { display:flex; gap:8px; justify-content:space-between; margin-bottom:14px; font-size:.82rem; }
+  .hud .stat { flex:1; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px; }
+  .hud .lab { display:block; color:var(--muted); font-size:.66rem; text-transform:uppercase; }
+  .pad { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:min(340px, 88vw); margin:0 auto; aspect-ratio:1; }
+  .sq { border:0; border-radius:16px; cursor:pointer; opacity:.45; transition:opacity .08s, transform .08s; }
+  .sq.on { opacity:1; transform:scale(1.04); }
+  .sq[data-i="0"] { background:#2ecc71; } .sq[data-i="1"] { background:#e74c3c; }
+  .sq[data-i="2"] { background:#f1c40f; } .sq[data-i="3"] { background:#3498db; }
+  #msg { min-height:1.4em; margin-top:12px; font-weight:600; }
+  #start { margin-top:6px; background:var(--accent); color:#fff; border:0; border-radius:10px; padding:11px 26px; font-weight:700; cursor:pointer; font:inherit; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🎼 Simon Tones</h1></header>
+<main class="wrap">
+  <div class="hud">
+    <div class="stat"><span class="lab">Round</span><b id="hRound">0</b></div>
+    <div class="stat"><span class="lab">Best</span><b id="hBest">0</b></div>
+  </div>
+  <div class="pad" id="pad">
+    <button class="sq" data-i="0" aria-label="green"></button>
+    <button class="sq" data-i="1" aria-label="red"></button>
+    <button class="sq" data-i="2" aria-label="yellow"></button>
+    <button class="sq" data-i="3" aria-label="blue"></button>
+  </div>
+  <p id="msg">Press Start, then repeat the pattern.</p>
+  <button id="start">Start</button>
+</main>
+<script>
+(function () {
+  'use strict';
+  var FREQ = [329.6, 261.6, 392, 220]; // E4 G4 G3? distinct pleasant tones per pad
+  var sqs = Array.prototype.slice.call(document.querySelectorAll('.sq'));
+  var msg = document.getElementById('msg'), hRound = document.getElementById('hRound');
+  var best = +(localStorage.getItem('tksimon-best') || 0);
+  document.getElementById('hBest').textContent = best;
+  var AC, seq = [], step = 0, accepting = false, playing = false;
+
+  function audio() { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); return AC; }
+  function tone(i, ms) {
+    var ac = audio(), o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.value = FREQ[i]; o.type = 'triangle';
+    g.gain.setValueAtTime(0.001, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + 0.02);
+    o.connect(g); g.connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + ms / 1000);
+    sqs[i].classList.add('on');
+    setTimeout(function () { sqs[i].classList.remove('on'); }, ms - 40);
+  }
+  function bad() {
+    accepting = false;
+    msg.textContent = 'Wrong! Round ' + seq.length + ' — best ' + best + '. Press Start to retry.';
+    var ac = audio(), o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sawtooth'; o.frequency.value = 110;
+    g.gain.setValueAtTime(0.2, ac.currentTime); o.connect(g); g.connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + 0.35);
+  }
+  function next(extra) {
+    if (extra) seq.push(Math.floor(Math.random() * 4));
+    hRound.textContent = seq.length;
+    if (seq.length - 1 > best) { best = seq.length - 1; localStorage.setItem('tksimon-best', best); document.getElementById('hBest').textContent = best; }
+    playing = true; accepting = false; msg.textContent = 'Watch…';
+    var d = Math.max(260, 620 - seq.length * 24);
+    seq.forEach(function (v, k) { setTimeout(function () { tone(v, d * 0.62); }, k * d); });
+    setTimeout(function () { playing = false; accepting = true; step = 0; msg.textContent = 'Your turn!'; }, seq.length * d + 120);
+  }
+  sqs.forEach(function (b, i) {
+    b.addEventListener('pointerdown', function () {
+      if (!accepting || playing) return;
+      tone(i, 240);
+      if (i !== seq[step]) { bad(); return; }
+      step++;
+      if (step === seq.length) { accepting = false; setTimeout(function () { next(true); }, 500); }
+    });
+  });
+  document.getElementById('start').addEventListener('click', function () { seq = []; next(true); });
+})();
+</script>
+</body>
+</html>
