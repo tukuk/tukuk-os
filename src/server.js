@@ -1386,7 +1386,8 @@ app.get('/radio', limiter.search, async (req, res) => {
     const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
     const country = String(req.query.country || '').trim();
     const tag = String(req.query.tag || '').trim();
-    res.json(await mediaSearch.searchRadio(String(req.query.q || ''), { skip, country, tag }));
+    const region = String(req.query.region || '').trim().toLowerCase();
+    res.json(await mediaSearch.searchRadio(String(req.query.q || ''), { skip, country, tag, region }));
   } catch (error) {
     res.status(500).json({ error: 'Radio search failed', details: safeError(error) });
   }

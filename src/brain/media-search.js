@@ -328,7 +328,56 @@ async function fetchRadioJson(path) {
 }
 
 // q = nama, country = nama penuh negara, tag = genre. Semua ini filter radio-browser.
-async function searchRadioStations(q, skip = 0, { country = '', tag = '' } = {}) {
+// kawasan (region) = gabungan beberapa ISO countrycode. radio-browser TIDAK
+// menerima senarai koma pada `countrycode` (pulang 0), jadi kami serikan
+// setiap negara secara selari lalu gabuang & buang pendua ikut populariti.
+const RADIO_REGIONS = {
+  asia: ['MY','ID','TH','PH','SG','VN','IN','JP','KR','CN','TW','HK','MM','KH','LK','BD'],
+  'asia-tenggara': ['MY','ID','TH','PH','SG','VN','MM','KH','LA','BN','TL'],
+  'asia-timur': ['JP','KR','CN','TW','HK','MN'],
+  'asia-selatan': ['IN','PK','BD','LK','NP','BT','MV'],
+  'timur-tengah': ['SA','AE','EG','TR','IQ','IR','QA','KW','JO','LB','OM','BH'],
+};
+
+// Tukar array stesen mentah radio-browser kepada objek hit kami (buang tanpa URL).
+function mapRadioStations(arr) {
+  return arr.map((s) => ({
+    type: 'radio',
+    title: s.name || 'Radio',
+    url: s.url_resolved || s.url || '',
+    favicon: /^https:\/\//.test(s.favicon || '') ? s.favicon : '',
+    country: s.country || '',
+    codec: s.codec || '',
+    bitrate: s.bitrate || 0,
+    tags: String(s.tags || '').split(',').filter(Boolean).slice(0, 3),
+    votes: s.votes || 0,
+    clicks: s.clickcount || 0,
+    uuid: s.stationuuid || s.url || (s.name || '') + (s.url_resolved || ''),
+    source: 'radio-browser.info',
+    description: [s.country, s.codec, s.bitrate ? `${s.bitrate} kbps` : ''].filter(Boolean).join(' \u00b7 ')
+  })).filter((h) => h.url);
+}
+
+async function searchRadioStations(q, skip = 0, { country = '', tag = '', region = '' } = {}) {
+  const codes = region && RADIO_REGIONS[String(region).toLowerCase()];
+  if (codes) {
+    // Satu permintaan kecil setiap negara, gabung, buang pendua, ikut paling popular.
+    const per = Math.max(1, Math.ceil(48 / codes.length));
+    const results = await Promise.all(codes.map((code) => {
+      const p = new URLSearchParams({ countrycode: code, hidebroken: 'true', is_https: 'true', limit: String(per), order: 'clickcount', reverse: 'true' });
+      if (tag) p.set('tag_exact', tag.toLowerCase());
+      if (q) p.set('name', q);
+      return fetchRadioJson(`/json/stations/search?${p}`).catch(() => null);
+    }));
+    const merged = mapRadioStations(results.filter(Array.isArray).flat());
+    if (!merged.length) throw new Error('radio-browser tidak dapat dihubungi');
+    const seen = new Set();
+    const dedup = merged.filter((h) => !seen.has(h.uuid) && seen.add(h.uuid));
+    dedup.sort((a, b) => (b.clicks - a.clicks) || (b.votes - a.votes));
+    const hits = dedup.slice(skip, skip + 40);
+    const nextSkip = dedup.length > skip + 40 ? skip + 40 : 0;
+    return { hits, nextSkip };
+  }
   let path;
   if (tag || country) {
     const params = new URLSearchParams({ hidebroken: 'true', is_https: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
@@ -343,19 +392,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '' } = {})
   }
   const data = await fetchRadioJson(path);
   if (!Array.isArray(data)) throw new Error('radio-browser tidak dapat dihubungi');
-  const hits = data.map((s) => ({
-    type: 'radio',
-    title: s.name || 'Radio',
-    url: s.url_resolved || s.url || '',
-    favicon: /^https:\/\//.test(s.favicon || '') ? s.favicon : '',
-    country: s.country || '',
-    codec: s.codec || '',
-    bitrate: s.bitrate || 0,
-    tags: String(s.tags || '').split(',').filter(Boolean).slice(0, 3),
-    votes: s.votes || 0,
-    source: 'radio-browser.info',
-    description: [s.country, s.codec, s.bitrate ? `${s.bitrate} kbps` : ''].filter(Boolean).join(' \u00b7 ')
-  })).filter((h) => h.url);
+  const hits = mapRadioStations(data);
   const nextSkip = data.length === 40 ? skip + 40 : 0;
   return { hits, nextSkip };
 }
@@ -377,6 +414,9 @@ async function listRadioCountries() {
 }
 
 const FALLBACK_STATIONS = [
+  { type: 'radio', title: 'Radio Malaysia (Klasik)', url: 'https://20543.live.streamtheworld.com/SARAWAKFM.mp3', country: 'Malaysia', codec: 'MP3', bitrate: 128, tags: ['malaysia', 'classic', 'malay'], description: 'Malaysia · MP3 · 128 kbps · malaysia, malay' },
+  { type: 'radio', title: 'ERA FM', url: 'https://rcm.radiosinaran.com/radio/8020/stream/1/', country: 'Malaysia', codec: 'MP3', bitrate: 64, tags: ['malaysia', 'malay', 'talk'], description: 'Malaysia · MP3 · 64 kbps · malaysia, malay' },
+  { type: 'radio', title: 'Elmas TV Radio (ID)', url: 'https://23853.live.streamtheworld.com/TRILIKUILAKE_MP3.aac', country: 'Indonesia', codec: 'AAC', bitrate: 128, tags: ['indonesia', 'pop', 'asia'], description: 'Indonesia · AAC · 128 kbps · indonesia, pop' },
   { type: 'radio', title: 'BBC World Service', url: 'https://stream.live.vc.bbcwebcast.co.uk/bbc_world_service', country: 'United Kingdom', codec: 'MP3', bitrate: 128, tags: ['news', 'global', 'talk'], description: 'United Kingdom · MP3 · 128 kbps · news, global' },
   { type: 'radio', title: 'Jazz Radio', url: 'https://jazz-webradio.net/jazz', country: 'France', codec: 'MP3', bitrate: 192, tags: ['jazz', 'smooth', 'classic'], description: 'France · MP3 · 192 kbps · jazz, smooth' },
   { type: 'radio', title: 'Classical Piano', url: 'https://stream.classicalradio.com/classical_piano', country: 'United States', codec: 'MP3', bitrate: 128, tags: ['classical', 'piano', 'relax'], description: 'United States · MP3 · 128 kbps · classical, piano' },
@@ -419,16 +459,16 @@ async function searchMusic(query, { offset = 0 } = {}) {
   return result;
 }
 
-async function searchRadio(query, { skip = 0, country = '', tag = '' } = {}) {
+async function searchRadio(query, { skip = 0, country = '', tag = '', region = '' } = {}) {
   const q = String(query || '').trim();
-  const key = `radio:${q}:${country}:${tag}:${skip}`;
+  const key = `radio:${q}:${country}:${tag}:${region}:${skip}`;
   const cached = CACHE.get(key);
   if (cached && Date.now() - cached.at <= CACHE_TTL) return cached.value;
 
   let hits = [];
   let nextSkip = 0;
   try {
-    const res = await searchRadioStations(q, skip, { country, tag });
+    const res = await searchRadioStations(q, skip, { country, tag, region });
     hits = res.hits;
     nextSkip = res.nextSkip;
   } catch {
@@ -439,7 +479,7 @@ async function searchRadio(query, { skip = 0, country = '', tag = '' } = {}) {
     hits = FALLBACK_STATIONS;
   }
 
-  const result = { hits, total: hits.length, query: q, country, tag, provider: 'radio-browser/fallback', nextSkip };
+  const result = { hits, total: hits.length, query: q, country, tag, region, provider: 'radio-browser/fallback', nextSkip };
   if (hits.length >= 3) CACHE.set(key, { at: Date.now(), value: result });
   return result;
 }

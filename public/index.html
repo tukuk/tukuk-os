@@ -758,7 +758,7 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let query = '', offset = 0, mode = 'web', corpus = '', timer = null, sugIdx = -1;
-let radioTag = '', radioCountry = '';   // penapis pelayaran radio dunia (genre/negara)
+let radioTag = '', radioCountry = '', radioRegion = '';   // penapis pelayaran radio dunia (genre/negara/kawasan)
 
 // Pemisahan URL: `/` = dashboard (kandungan original, boleh ada iklan),
 // `/cari` = halaman hasil (SPA sama, TIADA iklan). Mematuhi dasar AdSense.
@@ -863,7 +863,7 @@ function pushURL(extra = {}) {
 
 function setMode(m, push = true) {
   mode = m;
-  if (m !== 'radio') { radioTag = ''; radioCountry = ''; }
+  if (m !== 'radio') { radioTag = ''; radioCountry = ''; radioRegion = ''; }
   document.querySelectorAll('#tabs button').forEach((b) => {
     b.classList.toggle('on', b.dataset.mode === m);
   });
@@ -892,7 +892,7 @@ async function run() {
     const isWeb = mode === 'web';
     const isRadio = mode === 'radio';
     const url = isWeb ? base : isRadio
-      ? `/radio?q=${encodeURIComponent(query)}&tag=${encodeURIComponent(radioTag)}&country=${encodeURIComponent(radioCountry)}`
+      ? `/radio?q=${encodeURIComponent(query)}&tag=${encodeURIComponent(radioTag)}&country=${encodeURIComponent(radioCountry)}&region=${encodeURIComponent(radioRegion)}`
       : `/${mode}?q=${encodeURIComponent(query)}`;
     let data;
     if (isWeb) {
@@ -1077,7 +1077,7 @@ async function loadMoreMedia() {
       : m0 === 'music'
         ? `/music?q=${encodeURIComponent(mediaState.q)}&offset=${encodeURIComponent(mediaState.sp || 0)}`
         : m0 === 'radio'
-          ? `/radio?q=${encodeURIComponent(mediaState.q)}&skip=${encodeURIComponent(mediaState.sp || 0)}&tag=${encodeURIComponent(radioTag)}&country=${encodeURIComponent(radioCountry)}`
+          ? `/radio?q=${encodeURIComponent(mediaState.q)}&skip=${encodeURIComponent(mediaState.sp || 0)}&tag=${encodeURIComponent(radioTag)}&country=${encodeURIComponent(radioCountry)}&region=${encodeURIComponent(radioRegion)}`
           : m0 === 'news'
             ? `/news?q=${encodeURIComponent(mediaState.q)}&offset=${encodeURIComponent(mediaState.sp || 0)}`
             : `/videos?q=${encodeURIComponent(mediaState.q)}&sp=${encodeURIComponent(mediaState.sp)}`;
@@ -1100,21 +1100,36 @@ async function loadMoreMedia() {
   }
 }
 
-// ── Pelayaran Radio Dunia: genre + pemilih negara (radio-browser, ±50k stesen) ──
+// ── Pelayaran Radio Dunia: kawasan + genre + pemilih negara (radio-browser, ±50k stesen) ──
 const RADIO_GENRES = ['Pop', 'Rock', 'Hip Hop', 'Jazz', 'Classical', 'Electronic', 'News', 'Talk', 'Latin', 'Country', 'Metal', 'Reggae', 'Ambient', 'Chill', 'Oldies', 'Dance', 'Sports', 'Kids'];
+// Kawasan pantas — 'asia' jadi tumpuan utama (permintaan pengguna), lain-lain bonus.
+const RADIO_REGIONS_UI = [
+  ['asia', '\ud83c\udf0f Asia'],
+  ['asia-tenggara', 'Asia Tenggara'],
+  ['asia-timur', 'Asia Timur'],
+  ['asia-selatan', 'Asia Selatan'],
+  ['timur-tengah', '\ud83d\udd4c Timur Tengah'],
+];
 const _ACCENT = 'var(--accent,#3b82f6)';
 function _rChip(label, active) {
   const st = active ? `border-color:${_ACCENT};color:${_ACCENT};font-weight:600;` : '';
   return `<button type="button" class="chip" style="${st}" data-rtag="${esc(label)}">${esc(label)}</button>`;
 }
+function _rRegionChip(key, label, active) {
+  const st = active ? `border-color:${_ACCENT};color:${_ACCENT};font-weight:600;background:color-mix(in srgb,${_ACCENT} 12%,transparent);` : '';
+  return `<button type="button" class="chip" style="${st}" data-rrgn="${esc(key)}">${esc(label)}</button>`;
+}
 function radioBrowseBarHtml() {
   const chips = RADIO_GENRES.map(g => _rChip(g, radioTag === g)).join('');
-  const topActive = !radioTag && !radioCountry;
+  const regions = RADIO_REGIONS_UI.map(([k, l]) => _rRegionChip(k, l, radioRegion === k)).join('');
+  const topActive = !radioTag && !radioCountry && !radioRegion;
   const selStyle = 'padding:6px 10px;border-radius:8px;border:1px solid var(--line,#262b36);background:var(--bg,#0b0d12);color:var(--text,#e6e6e6);max-width:220px;';
   return `<div class="radio-browse" id="radioBrowse" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line,#262b36);border-radius:12px;">
-    <strong style="margin-right:2;">&#127758; Radio seluruh dunia</strong>
+    <strong style="margin-right:2;">&#127760; Radio seluruh dunia</strong>
     <select id="radioCountrySel" style="${selStyle}" aria-label="Pilih negara"><option value="">Semua negara&#8230;</option></select>
     <button type="button" class="chip" style="${topActive ? `border-color:${_ACCENT};color:${_ACCENT};font-weight:600;` : ''}" data-rclear>&#128293; Popular</button>
+    <span style="flex-basis:100%;height:0;"></span>
+    <strong style="margin-right:2;font-size:.82rem;opacity:.8;">Kawasan:</strong>${regions}
     <span style="flex-basis:100%;height:0;"></span>
     ${chips}
   </div>`;
@@ -1128,12 +1143,18 @@ function wireRadioBrowse() {
     $('q').value = '';
     run();
   }));
+  bar.querySelectorAll('[data-rrgn]').forEach(b => b.addEventListener('click', () => {
+    radioRegion = (radioRegion === b.dataset.rrgn) ? '' : b.dataset.rrgn;
+    radioCountry = '';   // kawasan & negara ialah penapis geografi — jangan bertindih
+    $('q').value = '';
+    run();
+  }));
   const clear = bar.querySelector('[data-rclear]');
-  if (clear) clear.addEventListener('click', () => { radioTag = ''; radioCountry = ''; $('q').value = ''; run(); });
+  if (clear) clear.addEventListener('click', () => { radioTag = ''; radioCountry = ''; radioRegion = ''; $('q').value = ''; run(); });
   const sel = document.getElementById('radioCountrySel');
   if (sel) {
     sel.value = radioCountry;
-    sel.addEventListener('change', () => { radioCountry = sel.value; $('q').value = ''; run(); });
+    sel.addEventListener('change', () => { radioCountry = sel.value; radioRegion = ''; $('q').value = ''; run(); });
     if (!_radioCountriesLoaded) {
       _radioCountriesLoaded = true;
       fetch('/radio/countries').then(r => (r.ok ? r.json() : null)).then(d => {
