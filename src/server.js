@@ -319,7 +319,7 @@ for (const name of STATIC_PAGES) {
 }
 
 // Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle', 'pong', 'stack', 'simon', 'muncher', 'puzzle15', 'tictactoe', 'memory', 'whack', 'calendar', 'dice', 'tip', 'bmi'];
+const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'linux', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle', 'pong', 'stack', 'simon', 'muncher', 'puzzle15', 'tictactoe', 'memory', 'whack', 'calendar', 'dice', 'tip', 'bmi'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -2385,6 +2385,7 @@ const STORE_APP_META = {
   color: { ic: '🎨', title: 'Color Picker', desc: 'HEX/RGB/HSL, shades/tints, complementary palettes & contrast ratios.' },
   password: { ic: '🔐', title: 'Password Generator', desc: 'Cryptographic random passwords + hard-to-guess passphrases.' },
   text: { ic: '🔡', title: 'Text Tools', desc: 'Word count, case conversion, Base64, sort, dedupe & URL encode.' },
+  linux: { ic: '🐧', title: 'Linux Utils', desc: 'Safe terminal toolbox in the browser: htop-style system monitor, sha256sum, base64, jq-style JSON formatter, grep-style regex tester, uuidgen & a chmod calculator. Runs fully offline — no server, no shell.' },
   pixel: { ic: '🟩', title: 'Pixel Studio', desc: 'Draw 16×16 pixel art with palette, buckets and PNG export — in the browser.' },
   piano: { ic: '🎹', title: 'Synth Piano', desc: 'Play 2 octaves with keyboard, 4 waveforms & audio recording.' },
   spiro: { ic: '🌀', title: 'Spiro Mandala', desc: 'Animated symmetric spirograph art — tune parameters, export PNG.' },
@@ -2394,7 +2395,7 @@ const STORE_APP_META = {
   // ── Hit game ports (Android classics rebuilt as in-browser HTML5) ──
   candy: { ic: '🍬', title: 'Candy Blast', desc: 'The famous match-3 puzzle: swap sweets, break cascades, chain combos for a high score.', game: true, genre: 'teki-teki' },
   flappy: { ic: '🐦', title: 'Flappy Dash', desc: 'The legendary one-tap flying game — squeeze the bird through endless pipes.', game: true, genre: 'refleks' },
-  subway: { ic: '🚇', title: 'Subway Dash', desc: '3-lane endless runner: swipe to dodge trains, jump barriers, slide under signs, grab coins.', game: true, genre: 'arkad' },
+  subway: { ic: '🚇', title: 'Subway Dash 3D', desc: 'A premium pseudo-3D endless runner: swipe to dodge trains, jump hurdles, slide under signs, grab coin combos, ride hoverboards, magnets & jetpacks. Speed multiplier, day/night runs and a global high-score leaderboard.', game: true, genre: 'arkad' },
   slice: { ic: '🍉', title: 'Fruit Slice', desc: 'Ninja swipe action — slice the flying fruit, dodge the bombs, chase combo cuts.', game: true, genre: 'refleks' },
   roadhop: { ic: '🐸', title: 'Road Hop', desc: 'Hop across endless traffic and rivers — the cozy crossing puzzle that took over mobile.', game: true, genre: 'santai' },
   bubble: { ic: '🫧', title: 'Bubble Pop', desc: 'Classic bubble shooter — match 3+ colours, drop orphan clusters before the ceiling reaches you.', game: true, genre: 'teki-teki' },
