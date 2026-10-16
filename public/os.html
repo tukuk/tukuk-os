@@ -116,6 +116,36 @@ input{font:inherit;color:inherit}
 .pins{display:flex;flex-wrap:wrap;gap:6px}
 .pin{border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:12.5px;background:var(--card)}
 .pin.on{border-color:var(--accent);color:var(--accent)}
+/* keyguard (lock screen) gaya Android */
+#lock{position:absolute;inset:0;z-index:45;background:var(--wall);background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform .34s ease,opacity .34s;touch-action:none}
+#lock[hidden]{display:none}
+#lock.gone{transform:translateY(-102%);opacity:0}
+#lock .lc-clock{font-size:74px;font-weight:200;letter-spacing:2px;text-shadow:0 4px 30px rgba(0,0,0,.45)}
+#lock .lc-date{font-size:14px;color:var(--muted);margin-bottom:20px}
+#lock .lc-notifs{display:flex;flex-direction:column;gap:8px;width:min(430px,88%);margin-bottom:18px}
+#lock .lc-hint{font-size:13px;opacity:.8;animation:bob 1.6s infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+#lock .lc-sugs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:16px;max-width:92%}
+#lock .lc-apps{display:flex;gap:22px;margin-top:22px;font-size:22px}
+#lock .lc-apps button{width:52px;height:52px;border-radius:16px;background:color-mix(in srgb,var(--card) 75%,transparent);border:1px solid var(--line);font-size:22px}
+/* widget At a Glance */
+#glance{display:flex;align-items:baseline;gap:12px;padding:8px 6px 0;width:min(560px,100%);margin:0 auto;cursor:pointer}
+#glance b{font-size:28px;font-weight:500}
+#glance span{font-size:12.5px;color:var(--muted)}
+#glance .r{margin-left:auto}
+/* overlay kecerahan */
+#dim{position:fixed;inset:0;background:#000;pointer-events:none;z-index:97;opacity:0;transition:opacity .2s}
+/* lencana notifikasi pada 🔔 */
+#notifIco{position:relative}
+#notifIco.badge::after{content:attr(data-n);position:absolute;top:-7px;right:-11px;background:#ff5a5a;color:#fff;font-size:9.5px;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+/* button buang notifikasi + slide kecerahan */
+.note .ndis{margin-left:auto;color:var(--muted);padding:2px 8px;border-radius:8px;font-size:12px}
+.note .ndis:hover{color:#ff6b6b;background:var(--line)}
+.qrow{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:15px}
+#dimRange{flex:1;accent-color:var(--accent)}
+/* animasi pelancaran aktiviti (gaya Android scale-in) */
+@keyframes actin{from{transform:scale(.93);opacity:.4}to{transform:none;opacity:1}}
+#activity.open{animation:actin .16s ease-out}
 /* toasts */
 #toasts{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 84px);z-index:60;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
 .toast{background:color-mix(in srgb,var(--card) 94%,transparent);border:1px solid var(--line);border-radius:22px;padding:9px 16px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.35);animation:tin .2s}
@@ -138,10 +168,13 @@ input{font:inherit;color:inherit}
       <button class="qtile" id="qtWall">🌈 Wallpaper</button>
       <button class="qtile" id="qtDc">🏢 Data Center</button>
       <button class="qtile" id="qtClear">🧹 Clear</button>
+      <button class="qtile" id="qtLock">🔒 Lock</button>
     </div>
+    <div class="qrow">☀️<input type="range" id="dimRange" min="25" max="100"><span id="dimPct" style="font-size:12px;color:var(--muted)">100%</span></div>
   </div>
 
   <main id="home">
+    <div id="glance"><b id="gClock">--:--</b><span id="gDate"></span><span class="r" id="gStat"></span></div>
     <div id="goo">🔍<input id="gooQ" placeholder="Search apps, ask AI… (&quot;open calculator&quot;)" autocomplete="off"><button class="mic" id="micBtn" title="Voice">🎤</button></div>
     <div id="grid"></div>
   </main>
@@ -174,8 +207,21 @@ input{font:inherit;color:inherit}
     <h3>SYSTEM</h3>
     <div class="set-row"><span>Storage used by this OS (localStorage)</span><b id="setUsage"></b></div>
     <div class="set-row"><span>AI models &amp; apps fabric</span><a href="/datacenter" style="color:var(--accent)">/datacenter →</a></div>
-    <div class="set-row"><span>Version</span><b>Tukuk OS 1.0</b></div>
+    <h3>ABOUT THIS PHONE</h3>
+    <div class="set-row"><span>Device</span><b>Tukuk One · Web Edition</b></div>
+    <div class="set-row"><span>Tukuk OS version</span><b>2.0 “Android-class”</b></div>
+    <div class="set-row"><span>Network</span><b id="setNet">—</b></div>
   </div>
+
+  <div id="lock" hidden>
+    <div class="lc-clock" id="lcClock">--:--</div>
+    <div class="lc-date" id="lcDate"></div>
+    <div class="lc-notifs" id="lcNotifs"></div>
+    <div class="lc-hint">⌃ Swipe up to unlock</div>
+    <div class="lc-sugs" id="lcSugs"></div>
+    <div class="lc-apps"><button id="lcCam" title="Camera">📷</button><button id="lcNotes" title="Notes">📝</button></div>
+  </div>
+  <div id="dim"></div>
 
   <div id="toasts"></div>
 </div>
@@ -296,22 +342,40 @@ var notifications = [];
 var zTop = 100;
 
 // ── jam / rangkaian / bateri ──
-function tick() { $('clock').textContent = timeFmt(new Date()); }
+var batTxt = '';
+function tick() {
+  var d = new Date(); var t = timeFmt(d);
+  $('clock').textContent = t;
+  if (!$('lock').hidden) $('lcClock').textContent = t;
+  paintGlance(d);
+}
 tick(); setInterval(tick, 10000);
+function paintGlance(d) {
+  d = d || new Date();
+  $('gClock').textContent = timeFmt(d);
+  $('gDate').textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  $('gStat').textContent = (navigator.onLine ? '📶' : '📡') + ' ' + batTxt;
+  if (!$('lock').hidden) $('lcDate').textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+}
+$('glance').addEventListener('click', function () { var a = appByName('calendar'); if (a) launch(a); else openAssist(); });
 function netTick() {
   var on = navigator.onLine;
   $('netDot').className = 'net' + (on ? '' : ' off');
+  var sn = $('setNet'); if (sn) sn.textContent = on ? 'Online — tukuk.org' : 'Offline';
+  paintGlance();
   if (!on) notify('📡 You are offline — installed apps still open, AI needs a connection.');
 }
 function notify(text) {
   notifications.unshift({ t: Date.now(), text: text });
   notifications = notifications.slice(0, 12);
+  unread++; paintBadge();
   renderShade();
+  renderLockNotifs();
   toast(text);
 }
 window.addEventListener('online', netTick); window.addEventListener('offline', netTick);
 if (navigator.getBattery) navigator.getBattery().then(function (b) {
-  function bt() { $('batt').textContent = '🔋' + Math.round(b.level * 100) + '%'; }
+  function bt() { batTxt = '🔋' + Math.round(b.level * 100) + '%'; $('batt').textContent = batTxt; paintGlance(); }
   bt(); b.addEventListener('levelchange', bt);
 }).catch(function () {});
 function toast(text) {
@@ -321,9 +385,12 @@ function toast(text) {
 }
 function renderShade() {
   $('notes').innerHTML = notifications.length ? '' : '<div class="note">No notifications. Your phone is calm. 😌</div>';
-  notifications.forEach(function (n) {
+  notifications.forEach(function (n, i) {
     var d = document.createElement('div'); d.className = 'note';
-    d.textContent = n.text;
+    var s = document.createElement('span'); s.textContent = n.text; d.appendChild(s);
+    var x = document.createElement('button'); x.className = 'ndis'; x.textContent = '✕'; x.title = 'Dismiss';
+    x.addEventListener('click', function () { notifications.splice(i, 1); renderShade(); });
+    d.appendChild(x);
     $('notes').appendChild(d);
   });
 }
@@ -489,11 +556,92 @@ document.addEventListener('keydown', function (e) {
 });
 
 // ── shade ──
-$('status').addEventListener('click', function () { $('shade').classList.toggle('open'); });
+$('status').addEventListener('click', function () {
+  $('shade').classList.toggle('open');
+  if ($('shade').classList.contains('open')) { unread = 0; paintBadge(); }
+});
 $('qtTheme').addEventListener('click', toggleTheme);
 $('qtWall').addEventListener('click', function () { $('shade').classList.remove('open'); openSettings(); });
 $('qtDc').addEventListener('click', function () { $('shade').classList.remove('open'); launch(appByName('datacenter')); });
-$('qtClear').addEventListener('click', function () { notifications = []; renderShade(); });
+$('qtClear').addEventListener('click', function () { notifications = []; renderShade(); renderLockNotifs(); });
+
+// ── KEYGUARD: skrin kunci + gestur tarikh seperti Android ──
+var locked = false, unread = 0;
+function showLock() {
+  locked = true;
+  var l = $('lock'); l.hidden = false; l.classList.remove('gone');
+  renderLockNotifs(); tick();
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+function unlock() {
+  if (!locked) return;
+  locked = false;
+  var l = $('lock'); l.classList.add('gone');
+  setTimeout(function () { l.hidden = true; }, 340);
+  if (navigator.vibrate) navigator.vibrate(10);
+}
+function renderLockNotifs() {
+  var box = $('lcNotifs'); if (!box) return;
+  box.innerHTML = '';
+  notifications.slice(0, 3).forEach(function (n) {
+    var d = document.createElement('div'); d.className = 'note'; d.textContent = n.text; box.appendChild(d);
+  });
+}
+function paintBadge() {
+  var el = $('notifIco');
+  el.classList.toggle('badge', unread > 0);
+  el.setAttribute('data-n', String(Math.min(unread, 99)));
+}
+var lkY = null;
+$('lock').addEventListener('pointerdown', function (e) { lkY = e.clientY; });
+$('lock').addEventListener('pointerup', function (e) { if (lkY != null && lkY - e.clientY > 50) unlock(); lkY = null; });
+$('lock').addEventListener('pointercancel', function () { lkY = null; });
+document.addEventListener('keydown', function (e) { if (locked && e.key === 'Enter') unlock(); });
+$('qtLock').addEventListener('click', function () { $('shade').classList.remove('open'); showLock(); });
+$('lcCam').addEventListener('click', function () { unlock(); setTimeout(function () { launch(appByName('bg-remover')); }, 380); });
+$('lcNotes').addEventListener('click', function () { unlock(); setTimeout(function () { launch(appByName('notes')); }, 380); });
+// Kad cadangan di keyguard: AI memilih 3 apl mengikut masa hari + katalog store.
+function suggestChips() {
+  var pool = APPS.filter(function (a) { return a[0] !== 'settings' && a[3]; });
+  var bucket = new Date().getHours() < 12 ? 'GAMES' : (new Date().getHours() < 18 ? 'MEDIA' : 'PORTAL');
+  var pick = pool.filter(function (a) { return a[4] === bucket; })
+    .concat(pool).filter(function (a, i, arr) { return arr.indexOf(a) === i; }).slice(0, 40);
+  var box = $('lcSugs'); box.innerHTML = '';
+  for (var i = 0; i < 3 && pick.length; i++) {
+    var a = pick.splice(Math.floor(Math.random() * pick.length), 1)[0];
+    var b = document.createElement('button'); b.className = 'lc-sug';
+    b.textContent = a[2] + ' ' + a[1];
+    b.addEventListener('click', function (app) { return function () { unlock(); setTimeout(function () { launch(app); }, 380); }; }(a));
+    box.appendChild(b);
+  }
+}
+suggestChips();
+
+// ── kecerahan: overlay gelap (berfungsi pada semua peranti, tanpa kebenaran) ──
+function applyDim() {
+  var v = lsGet('dim', 100);
+  $('dim').style.opacity = String((100 - v) / 130);
+  $('dimRange').value = v; $('dimPct').textContent = v + '%';
+}
+$('dimRange').addEventListener('input', function () { lsSet('dim', Number(this.value)); applyDim(); });
+
+// ── gestur navigasi sentuh: tepi atas → shade; tepi bawah → home ──
+var tsY = null;
+document.addEventListener('touchstart', function (e) { var t = e.touches[0]; tsY = t ? t.clientY : null; }, { passive: true });
+document.addEventListener('touchend', function (e) {
+  if (tsY == null) { return; }
+  var t = e.changedTouches[0]; var dy = t.clientY - tsY;
+  if (!locked && tsY < 28 && dy > 60 && !$('shade').classList.contains('open')) {
+    $('shade').classList.add('open'); unread = 0; paintBadge();
+  }
+  if (locked && tsY > window.innerHeight - 60 && dy < -50) unlock();
+  if (!locked && window.innerHeight - tsY < 36 && dy < -60) goHome();
+  tsY = null;
+}, { passive: true });
+function goHome() {
+  closeActivity();
+  ['drawer', 'recents', 'assist', 'shade'].forEach(function (id) { $(id).classList.remove('open'); });
+}
 
 // ── tetapan & penampilan ──
 function applyTheme() {
@@ -611,13 +759,17 @@ window.addEventListener('beforeinstallprompt', function (e) {
   notify('💡 You can install Tukuk OS as an app from your browser menu.');
 });
 function boot() {
-  applyTheme(); renderHome(); renderDrawer(); renderShade();
-  netTick();
+  applyTheme(); applyDim(); renderHome(); renderDrawer(); renderShade();
+  netTick(); paintBadge();
   $('os').hidden = false;
+  showLock();
   var fast = sessionStorage.getItem('tkos_fast');
   setTimeout(function () { $('boot').style.opacity = '0'; setTimeout(function () { $('boot').remove(); }, 450); }, fast ? 150 : 950);
   sessionStorage.setItem('tkos_fast', '1');
-  setTimeout(function () { notify('👋 Welcome to Tukuk OS — ' + APPS.length + ' core apps. Syncing the full store like Android…'); syncStore(); }, 1400);
+  setTimeout(function () {
+    notify('👋 Welcome to Tukuk OS — ' + APPS.length + ' core apps. Swipe up on the lock screen to enter.');
+    syncStore().then(suggestChips);
+  }, 1400);
 }
 boot();
 </script>
