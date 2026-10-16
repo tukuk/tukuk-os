@@ -279,7 +279,8 @@ var APPS = [
   ['editor','Image Editor','✂️','/editor','TOOLS'],['editor-video','Video Editor','🎞️','/editor-video','TOOLS'],
   ['movie','Movie Player','🎥','/movie','MEDIA'],['studio','Tukuk Studio','🎬','/studio','MEDIA'],
   ['builder','App Builder','🏗️','/builder','TOOLS'],['nasa','NASA APOD','🛰️','/nasa','MEDIA'],
-  ['chat','T Chat','💬','/apps/chat','SYSTEM'],['store','Tukuk Store','🛒','/store','SYSTEM'],
+  ['chat','T Chat','💬','/apps/chat','SYSTEM'],
+  ['playstore','Play Store','▶️','https://play.google.com/store/apps?hl=en','SYSTEM'],['store','Tukuk Store','🛒','/store','SYSTEM'],
   ['search','Web Search','🔍','/','SYSTEM'],['explore','Explore','🧭','/explore','SYSTEM'],
   ['datacenter','Data Center','🏢','/datacenter','SYSTEM'],['models','AI Models','🧠','/models','SYSTEM'],
   ['docs','Docs','📚','/docs','SYSTEM'],['admin','Admin','🛠️','/admin','SYSTEM'],
@@ -322,7 +323,7 @@ var WALLS = [
   ['Grape','linear-gradient(160deg,#2b1055 0%,#0f1115 55%,#7597de55 100%)'],
   ['Volcano','linear-gradient(160deg,#3d1010 0%,#0f1115 60%,#5b247a 100%)']
 ];
-var DEFAULT_PINS = ['notes','calc','todo','chat','bg-remover','converter','collage','store','nasa','snake','candy','settings'];
+var DEFAULT_PINS = ['notes','calc','todo','chat','bg-remover','converter','collage','store','playstore','nasa','snake','candy','settings'];
 
 // ── penyimpanan ──
 function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem('tkos:' + k)); return v == null ? d : v; } catch (e) { return d; } }
