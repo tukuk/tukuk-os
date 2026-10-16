@@ -235,7 +235,7 @@ None of it needs payment at small scale. Here is the list + where each is set:
 ## 💰 11. Google AdSense — Status & Honest Answer: "will it pass?"
 
 **Infrastructure ALREADY ready (✓):**
-- Real `ads.txt`: `ca-pub-8954948214333501` + Microsoft.
+- Real `ads.txt`: `ca-pub-8954948214333501` (Google, verified). Microsoft line removed until a real Monetize/Xandr (`appnexus.com, <memberId>, DIRECT, f5ab79cb980f11d1`) account ID is available.
 - `ADSENSE_ENABLED=true`, client `ca-pub-8954948214333501` (`src/config.js`); slots placed **only on content/blog pages** (`server.js:822`), **not** on `/cari` (search results) → policy compliant (no ads on third-party content).
 - `sitemap.xml` (route exists), correct `robots.txt` (allows Googlebot/AdsBot), **48 original articles** (28 blog + 20 archive), Privacy/About/Contact/Terms pages present, HTTPS, mobile-friendly.
 
