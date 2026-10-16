@@ -549,6 +549,11 @@ app.get('/ask', limiter.search, async (req, res) => {
       cached: Boolean(answer.cached),
       offline,
       warning: answer.warning,
+      // Debug diagonal: `?debug=1` mendedahkan model yang dicuba-tolak (sebab
+      // qwen dilangkau, ralat ollama, dsb.) dan status local-first.
+      ...(req.query.debug
+        ? { rejected: answer.rejectedModels || [], localFirst: Boolean(health.localFirst), cloudFallback: health.cloudFallback || [] }
+        : {}),
       network: net.snapshot().status
     });
   } catch (error) {
@@ -562,6 +567,8 @@ app.get('/brain', async (req, res) => {
     enabled: config.brain.enabled,
     provider: health.cloud ? health.provider : (health.online ? 'ollama' : 'extractive'),
     cloud: Boolean(health.cloud),
+    localFirst: Boolean(health.localFirst),
+    cloudFallback: health.cloudFallback || [],
     extractiveOnly: Boolean(health.extractiveOnly),
     host: config.brain.ollamaHost,
     chain: config.brain.chain,

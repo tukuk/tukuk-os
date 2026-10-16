@@ -60,6 +60,11 @@ function isEcho(answer, prompt) {
   // Cth. "[1] tajuk\nURL: ...\nLaman: ...\nIsi: ..."
   if (/^\s*\[\d+\]\s/.test(answer) && answer.split('\n').length >= 4) return true;
 
+  // Prompt echo: model menyalin rangka prompt RAG dan bukannya menjawab.
+  // Label templat ("QUESTION:", "SOURCES:") bukan bahasa jawapan sebenar —
+  // model kecil (smollm/qwen) kerap mulakan output dengan meniru label ini.
+  if (/(?:^|\n)\s*(QUESTION|SOURCES)\s*:/i.test(answer)) return true;
+
   // perkataan yang sama berulang kali — bilangan aksara untuk skrip tanpa-ruang
   const words = normalized.split(/\s+/).filter((w) => [...w].length > 4);
   if (words.length >= 12) {
