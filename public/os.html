@@ -44,7 +44,15 @@ input{font:inherit;color:inherit}
 .qtile.on{border-color:var(--accent);color:var(--accent)}
 /* home */
 #home{flex:1;display:flex;flex-direction:column;padding:6px 14px 0;overflow:hidden;min-height:0}
-#goo{margin:6px auto 14px;width:min(560px,100%);display:flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--card) 80%,transparent);border:1px solid var(--line);border-radius:24px;padding:9px 14px;backdrop-filter:blur(10px)}
+#goo{width:100%;display:flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--card) 80%,transparent);border:1px solid var(--line);border-radius:24px;padding:9px 14px;backdrop-filter:blur(10px)}
+#goowrap{position:relative;margin:6px auto 14px;width:min(560px,100%);z-index:25}
+#gdrop{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 44px rgba(0,0,0,.5);overflow:hidden;overflow-y:auto;max-height:340px}
+#gdrop .gi{display:grid;grid-template-columns:24px 1fr;gap:0 10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
+#gdrop .gi:last-child{border-bottom:none}
+#gdrop .gi .giic{grid-row:1/3;font-size:15px;opacity:.85}
+#gdrop .gi .git{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gdrop .gi .giu{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gdrop .gi:hover,#gdrop .gi.gsel{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 #goo input{flex:1;background:none;border:0;outline:none;font-size:14.5px}
 #goo .mic{font-size:16px}
 #grid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px 4px;align-content:start;padding-bottom:8px}
@@ -194,7 +202,10 @@ input{font:inherit;color:inherit}
 
   <main id="home">
     <div id="glance"><b id="gClock">--:--</b><span id="gDate"></span><span class="r" id="gStat"></span></div>
-    <div id="goo">🔍<input id="gooQ" placeholder="Search apps, ask AI… (&quot;open calculator&quot;)" autocomplete="off"><button class="mic" id="micBtn" title="Voice">🎤</button></div>
+    <div id="goowrap">
+      <div id="goo">🔍<input id="gooQ" placeholder="Search apps, ask AI, search the web… (&quot;open calculator&quot;)" autocomplete="off"><button class="mic" id="micBtn" title="Voice">🎤</button></div>
+      <div id="gdrop" hidden></div>
+    </div>
     <div id="grid"></div>
   </main>
 
@@ -784,7 +795,17 @@ function usage() {
 $('dAssist').addEventListener('click', openAssist);
 $('aClose').addEventListener('click', function () { $('assist').classList.remove('open'); });
 $('goo').addEventListener('click', function (e) { if (e.target.id !== 'gooQ') openAssist($('gooQ').value); });
-$('gooQ').addEventListener('keydown', function (e) { if (e.key === 'Enter') { openAssist(e.target.value); } });
+$('gooQ').addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { gdClose(); return; }
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !$('gdrop').hidden && gdItems.length) {
+    gdSel = (gdSel + (e.key === 'ArrowDown' ? 1 : gdItems.length - 1)) % gdItems.length;
+    paintGdSel(); e.preventDefault(); return;
+  }
+  if (e.key === 'Enter') {
+    if (gdSel >= 0 && gdItems[gdSel]) { var it = gdItems[gdSel]; gdClose(); $('gooQ').value = ''; it.open(); return; }
+    gdClose(); openAssist(e.target.value);
+  }
+});
 function openAssist(text) {
   $('assist').classList.add('open');
   if (typeof text === 'string' && text.trim()) { $('aQ').value = text; sendAsk(); }
@@ -798,7 +819,7 @@ function feedBub(cls, html) {
 function escH(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function sendAsk() {
   var q = $('aQ').value.trim(); if (!q) return;
-  $('aQ').value = ''; $('gooQ').value = '';
+  $('aQ').value = ''; $('gooQ').value = ''; gdClose();
   feedBub('me', escH(q));
   if (/^(open |launch |buka )?(android studio|app studio|developer studio|install app|sideload)/i.test(q)) { openStudio(); feedBub('ai', 'Opening 🅰️ Android Studio — build or install any app here.'); return; }
   var cmd = parseCommand(q);
@@ -834,6 +855,67 @@ function askAI(q) {
   }).catch(function () { bub.innerHTML = '⚠️ Could not reach the AI backend. Try when connected.'; });
 }
 $('aform').addEventListener('submit', function (e) { e.preventDefault(); sendAsk(); });
+
+// ── INSTANT WEB SEARCH: taip di bar goole → dropdown hasil web seperti Google ──
+//    Data dari /search (indeks Meilisearch kita sendiri — halaman sebenar
+//    terhasil dari web yang dilangkau). Tekan Enter tanpa pilihan → assistant AI.
+var gdItems = [];   // { open: function }
+var gdSel = -1;
+var gdTimer = null;
+function stripTags(s) { return String(s || '').replace(/<[^>]*>/g, ''); }
+function hostOf(u) { try { return new URL(u, location.href).hostname.replace(/^www\./, ''); } catch (e) { return 'web'; } }
+function gdClose() { $('gdrop').hidden = true; $('gdrop').innerHTML = ''; gdItems = []; gdSel = -1; }
+function paintGdSel() {
+  var els = $('gdrop').querySelectorAll('.gi');
+  for (var i = 0; i < els.length; i++) els[i].classList.toggle('gsel', i === gdSel);
+}
+function gdRow(ic, title, sub) {
+  var n = gdItems.length;
+  return '<div class="gi" data-gi="' + n + '"><span class="giic">' + ic + '</span><span class="git">' + title + '</span><span class="giu">' + sub + '</span></div>';
+}
+function gdFetch(q) {
+  q = String(q || '').trim();
+  if (q.length < 2) { gdClose(); return; }
+  clearTimeout(gdTimer);
+  gdTimer = setTimeout(function () {
+    fetch('/search?q=' + encodeURIComponent(q) + '&limit=5&facets=false&attributes=title,url,description')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (String($('gooQ').value).trim().toLowerCase() !== q.toLowerCase()) return; // sudah taip lain → buang
+        gdRender(q, Array.isArray(d.hits) ? d.hits : []);
+      })
+      .catch(gdClose);
+  }, 300);
+}
+function gdRender(q, hits) {
+  gdItems = [];
+  var html = '';
+  var ap = findApp(q);
+  if (ap) {
+    gdItems.push({ open: function () { launch(ap); } });
+    html += gdRow('📲', 'Open app — ' + escH(ap[1]), escH(ap[3] || 'system'));
+  }
+  gdItems.push({ open: function () { launch(['search', 'Web Search', '🔍', '/cari?q=' + encodeURIComponent(q), 'SYSTEM']); } });
+  html += gdRow('🔍', 'Search the web for “' + escH(q) + '”', 'tukuk.org/cari — all results');
+  hits.forEach(function (h) {
+    var url = String((h && h.url) || '');
+    var title = stripTags((h._formatted && h._formatted.title) || h.title) || hostOf(url);
+    var desc = stripTags((h._formatted && h._formatted.description) || h.description || '').slice(0, 90);
+    gdItems.push({ open: function () { launch(['web-' + hostOf(url), title, '🌐', url, 'SYSTEM']); } });
+    html += gdRow('🌐', escH(title), escH(hostOf(url) + (desc ? ' — ' + desc : '')));
+  });
+  $('gdrop').innerHTML = html;
+  $('gdrop').hidden = false;
+  gdSel = -1;
+}
+$('gooQ').addEventListener('input', function (e) { gdFetch(e.target.value); });
+$('gdrop').addEventListener('mousedown', function (e) { e.preventDefault(); });
+$('gdrop').addEventListener('click', function (e) {
+  var el = e.target.closest('[data-gi]'); if (!el) return;
+  var it = gdItems[Number(el.getAttribute('data-gi'))];
+  if (it) { gdClose(); $('gooQ').value = ''; it.open(); }
+});
+document.addEventListener('click', function (e) { if (!$('goowrap').contains(e.target)) gdClose(); });
 // Voice input (bila pelayar sokong) — Web Speech API, tiada pelayan diperlukan.
 $('micBtn').addEventListener('click', function () { startVoice(); });
 var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
