@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Store — Aplikasi &amp; Game — Tukuk-OS</title>
-<meta name="description" content="Tukuk Store: katalog aplikasi dan game Tukuk Studio — app mini bawaan, pasangan app+game Satu Kata, arked Pembina, dan terbitan komuniti. Buka terus dalam pelayar, percuma.">
+<title>Tukuk Store — Game &amp; Aplikasi Dalam Pelayar — Tukuk-OS</title>
+<meta name="description" content="Tukuk Store: main game terus dalam pelayar — tanpa muat turun, tanpa daftar. Arked, teka-teki, refleks, kuiz & banyak lagi, plus aplikasi mini dan terbitan komuniti. Percuma, ada sahaja yang baharu.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
-<meta property="og:title" content="Tukuk Store — Aplikasi & Game">
-<meta property="og:description" content="Katalog aplikasi dan game Tukuk Studio — bawaan, Satu Kata, Arked & Komuniti. Buka terus dalam pelayar.">
+<meta property="og:title" content="Tukuk Store — Main Game Terus Dalam Pelayar">
+<meta property="og:description" content="Game arked, teka-teki, refleks & kuiz — main serta-merta, tanpa pasang. Plus aplikasi mini dan terbitan komuniti.">
 <meta property="og:url" content="https://tukuk.org/store">
 <link rel="canonical" href="https://tukuk.org/store">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -25,6 +25,7 @@
     --accent-glow: #4c8dff;
     --neon-pink: #ff3b81;
     --neon-green: #30d158;
+    --play-green: #22c55e;
     --text-bright: #f0f4fc;
     --muted: #8b99b5;
   }
@@ -37,7 +38,7 @@
     min-height: 100vh;
   }
 
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 30px 20px 60px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 30px 20px 60px; }
 
   header { text-align: center; padding: 20px 0 24px; }
   .badge-pro {
@@ -60,6 +61,7 @@
     -webkit-text-fill-color: transparent;
   }
   .tagline { color: var(--muted); margin: 10px 0 20px; font-size: 1.05rem; }
+  .tagline b { color: var(--text-bright); }
 
   nav.top { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
   nav.top a {
@@ -74,7 +76,7 @@
   }
   nav.top a:hover { color: #fff; border-color: var(--accent-glow); background: rgba(76,141,255,0.12); }
 
-  /* Bar carian + tab kategori + penapis sumber */
+  /* Bar tab + carian + genre (gaya web-games.io: genre menggantikan penapis sumber) */
   .storebar {
     display: flex; flex-direction: column; gap: 12px;
     background: var(--panel-glass); backdrop-filter: blur(16px);
@@ -83,13 +85,13 @@
   }
   .barrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-  .tabs button, .srcs button {
+  .tabs button, .genres button {
     background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border);
     color: var(--muted); font-weight: 700; font-size: 0.84rem;
     padding: 7px 14px; border-radius: 10px; cursor: pointer; transition: all .18s;
   }
-  .tabs button:hover, .srcs button:hover { color: #fff; border-color: var(--accent-glow); }
-  .tabs button.on, .srcs button.on { background: rgba(76,141,255,0.18); border-color: var(--accent-glow); color: #9cc2ff; }
+  .tabs button:hover, .genres button:hover { color: #fff; border-color: var(--accent-glow); }
+  .tabs button.on, .genres button.on { background: rgba(76,141,255,0.18); border-color: var(--accent-glow); color: #9cc2ff; }
   .searchbox { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 8px; }
   .searchbox input {
     width: 100%; padding: 9px 13px; border: 1px solid var(--panel-border); border-radius: 10px;
@@ -101,11 +103,69 @@
     background: rgba(255,255,255,0.04); color: var(--text-bright); font-size: 0.85rem;
   }
   .sortbox select option { background: #12182a; }
+  .genres { display: none; gap: 8px; flex-wrap: wrap; }
+  .genres.show { display: flex; }
 
   .stats { color: var(--muted); font-size: 0.84rem; margin: 0 4px 18px; display: flex; gap: 14px; flex-wrap: wrap; }
   .stats b { color: var(--text-bright); }
 
-  /* Grid kedai */
+  /* Bahagian mendatar (Trending / Baharu / Baru Dimainkan) */
+  .sec { margin: 26px 0 8px; }
+  .sec h2 { margin: 0 0 14px; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  .sec h2 .more { margin-left: auto; font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; }
+  .sec h2 .more:hover { color: var(--accent-glow); }
+  .rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+
+  /* Jubin game gaya web-games.io — thumbnail besar, warna ikut genre */
+  .tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .tile .thumb {
+    position: relative; display: block; aspect-ratio: 3 / 2; border-radius: 16px;
+    border: 1px solid var(--panel-border); overflow: hidden; text-decoration: none;
+    background: linear-gradient(150deg, #1b2b55, #101a33); transition: all .2s ease;
+  }
+  .tile .thumb:hover { transform: translateY(-3px); border-color: rgba(76,141,255,.55); box-shadow: 0 12px 28px rgba(0,0,0,.45); }
+  .tile .thumb:hover .playov { opacity: 1; }
+  .tile .thumb:hover .playov span { transform: scale(1.12); }
+  .ticon { position: absolute; inset: 0; display: grid; place-items: center; font-size: 3.2rem; }
+  .ticon img { width: 84px; height: 84px; border-radius: 18px; object-fit: cover; }
+  .playov {
+    position: absolute; inset: 0; display: grid; place-items: center; opacity: 0;
+    background: rgba(6,9,18,.45); transition: opacity .18s;
+  }
+  .playov span {
+    display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%;
+    background: var(--play-green); color: #fff; font-size: 1.4rem; padding-left: 4px;
+    box-shadow: 0 6px 20px rgba(34,197,94,.5); transition: transform .18s;
+  }
+  .playsbadge {
+    position: absolute; left: 10px; bottom: 8px; z-index: 2;
+    background: rgba(6,9,18,.66); backdrop-filter: blur(4px); color: #cfe0ff;
+    font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 12px;
+  }
+  .gbadge {
+    position: absolute; right: 10px; top: 8px; z-index: 2;
+    background: rgba(6,9,18,.55); color: #e8ecf7; font-size: .64rem; font-weight: 800;
+    padding: 3px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .tile h3 { margin: 2px 2px 0; font-size: .92rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile h3 a { color: var(--text-bright); text-decoration: none; }
+  .tile h3 a:hover { color: #9cc2ff; }
+  .tile .footrow { display: flex; gap: 6px; padding: 0 2px; }
+  /* Gradasi thumbnail ikut genre — pembeza visual pantas macam web-games.io */
+  .g-arkad      .thumb { background: linear-gradient(150deg, #34246b, #12142e); }
+  .g-teki-teki  .thumb { background: linear-gradient(150deg, #103d52, #0d1f33); }
+  .g-refleks    .thumb { background: linear-gradient(150deg, #4b3a12, #201a0b); }
+  .g-kuiz       .thumb { background: linear-gradient(150deg, #14442b, #0c2418); }
+  .g-tindakan   .thumb { background: linear-gradient(150deg, #5a1436, #260d20); }
+  .g-penembakan .thumb { background: linear-gradient(150deg, #5c1d12, #24100c); }
+  .g-santai     .thumb { background: linear-gradient(150deg, #12503f, #0b2620); }
+  .g-kereta     .thumb { background: linear-gradient(150deg, #57320f, #23160a); }
+  .g-sukan      .thumb { background: linear-gradient(150deg, #1d4a14, #10240c); }
+  .g-klik       .thumb { background: linear-gradient(150deg, #4a1b52, #220f28); }
+  .g-io         .thumb { background: linear-gradient(150deg, #0f4a5c, #0a2430); }
+  .g-app        .thumb { background: linear-gradient(150deg, #1b2b55, #101a33); }
+
+  /* Kad aplikasi — gaya lama senarai (maklumat penuh lebih penting untuk app) */
   .shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
   .item {
     display: flex; flex-direction: column; gap: 10px;
@@ -121,7 +181,6 @@
     background: linear-gradient(150deg, rgba(76,141,255,.35), rgba(167,111,255,.25));
     border: 1px solid var(--panel-border);
   }
-  .item.game .appicon { background: linear-gradient(150deg, rgba(255,59,129,.35), rgba(255,140,60,.25)); }
   .appicon img { width: 100%; height: 100%; border-radius: 14px; display: block; object-fit: cover; }
   .item .tt { min-width: 0; }
   .item h3 { margin: 0; font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -129,7 +188,6 @@
   .item .desc { margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.4em; }
   .kbadge { position: absolute; top: 14px; right: 14px; font-size: 0.66rem; font-weight: 800; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .05em; }
   .kbadge.app { background: rgba(76,141,255,0.18); color: #7cb0ff; border: 1px solid rgba(76,141,255,0.3); }
-  .kbadge.game { background: rgba(255,59,129,0.18); color: #ff85b3; border: 1px solid rgba(255,59,129,0.3); }
   .meta { display: flex; gap: 12px; color: var(--muted); font-size: 0.76rem; flex-wrap: wrap; }
   .footrow { display: flex; gap: 8px; margin-top: auto; }
   .openbtn {
@@ -138,24 +196,23 @@
     border-radius: 10px; padding: 10px 14px; transition: opacity .18s;
   }
   .openbtn:hover { opacity: .9; }
-  .item.game .openbtn { background: linear-gradient(135deg, #ff3b81, #ff8a3c); }
   .copybtn {
     background: rgba(255,255,255,0.07); border: 1px solid var(--panel-border); color: var(--muted);
-    border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; cursor: pointer; transition: all .18s;
+    border-radius: 10px; padding: 7px 10px; font-size: 0.8rem; cursor: pointer; transition: all .18s;
   }
   .copybtn:hover { color: #fff; border-color: var(--accent-glow); }
   .apkbtn {
     background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.4); color: #7ce898;
-    border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all .18s;
+    border-radius: 10px; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all .18s;
   }
   .apkbtn:hover { background: rgba(48,209,88,0.2); color: #b6f2c6; }
   .apkbtn:disabled { opacity: .6; cursor: progress; }
+  .tile .apkbtn, .tile .copybtn { padding: 5px 9px; font-size: .74rem; }
   .srcbadge { font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; width: fit-content; }
   .srcbadge.bawaan { background: rgba(48,209,88,.14); color: #7ce898; border: 1px solid rgba(48,209,88,.3); }
   .srcbadge.satukata { background: rgba(242,193,78,.14); color: #f2c14e; border: 1px solid rgba(242,193,78,.3); }
   .srcbadge.arked { background: rgba(167,111,255,.16); color: #b892ff; border: 1px solid rgba(167,111,255,.32); }
   .srcbadge.komuniti { background: rgba(76,141,255,.14); color: #7cb0ff; border: 1px solid rgba(76,141,255,.3); }
-  .meta .sign { color: #7ce898; font-weight: 700; }
 
   /* Keadaan kosong / muat / ralat */
   .state { text-align: center; padding: 50px 20px; color: var(--muted); }
@@ -178,8 +235,8 @@
 <div class="wrap">
   <header>
     <span class="badge-pro">Tukuk Studio Store</span>
-    <h1>🛍️ Tukuk <span class="accent">Store</span></h1>
-    <p class="tagline">Aplikasi &amp; game Tukuk Studio — <b>bawaan</b>, <b>Satu Kata</b>, <b>Arked Pembina</b> &amp; <b>terbitan komuniti</b>. Terus dibuka dalam pelayar (sandbox selamat), percuma, tanpa pemasangan.</p>
+    <h1>🎮 Tukuk <span class="accent">Store</span></h1>
+    <p class="tagline"><b>Main terus dalam pelayar</b> — tanpa muat turun, tanpa daftar. Arked, teka-teki, refleks &amp; kuiz percuma, ada sahaja yang baharu. Plus aplikasi mini &amp; terbitan komuniti.</p>
     <nav class="top">
       <a href="/studio">◂ Studio Suite</a>
       <a href="/builder">🧱 Bina App/Game</a>
@@ -191,31 +248,40 @@
   <div class="storebar">
     <div class="barrow">
       <div class="tabs" id="tabs">
-        <button data-cat="all" class="on">🌐 Semua</button>
+        <button data-cat="game" class="on">🎮 Game</button>
         <button data-cat="app">📱 Aplikasi</button>
-        <button data-cat="game">🎮 Game</button>
       </div>
-      <div class="searchbox">🔎<input id="q" type="search" placeholder="Cari app atau game…"></div>
+      <div class="searchbox">🔎<input id="q" type="search" placeholder="Cari game atau aplikasi…"></div>
       <div class="sortbox">
         <select id="sort" title="Susun katalog">
+          <option value="plays">🔥 Popular</option>
           <option value="new">Terbaharu</option>
-          <option value="views">Paling dilihat</option>
           <option value="name">A – Z</option>
         </select>
       </div>
     </div>
-    <div class="barrow srcs" id="srcs">
-      <button data-src="all" class="on">📚 Semua Sumber</button>
-      <button data-src="bawaan">🏠 Bawaan</button>
-      <button data-src="satukata">⚡ Satu Kata</button>
-      <button data-src="arked">🕹️ Arked</button>
-      <button data-src="komuniti">👥 Komuniti</button>
-    </div>
+    <div class="barrow genres" id="genres"></div>
   </div>
 
   <p class="stats" id="stats"></p>
 
-  <div id="grid" class="shop" aria-live="polite"></div>
+  <section class="sec" id="recentSec" hidden>
+    <h2>🕒 Baru Dimainkan <a class="more" href="#" id="clearRecent">Kosongkan</a></h2>
+    <div class="rail" id="recentRail"></div>
+  </section>
+  <section class="sec" id="trendSec" hidden>
+    <h2>🔥 Trending — Paling Main</h2>
+    <div class="rail" id="trendRail"></div>
+  </section>
+  <section class="sec" id="newSec" hidden>
+    <h2>🆕 Baharu</h2>
+    <div class="rail" id="newRail"></div>
+  </section>
+
+  <section class="sec" id="allSec">
+    <h2 id="allTitle">Semua Game</h2>
+    <div id="grid" class="shop" aria-live="polite"></div>
+  </section>
   <div id="state" class="state" hidden></div>
 
   <a class="cta" href="/builder">🧱 Tiada yang anda cari? <b>Bina app &amp; game anda sendiri</b> dengan Pembina Studio — tiada kod diperlukan, terbitkan dengan satu klik ke kedai ini.</a>
@@ -234,21 +300,29 @@
   const qEl = document.getElementById('q');
   const sortEl = document.getElementById('sort');
   const tabs = document.getElementById('tabs');
-  const srcs = document.getElementById('srcs');
+  const genresEl = document.getElementById('genres');
   const SRC_LABEL = { bawaan: '🏠 Bawaan', satukata: '⚡ Satu Kata', arked: '🕹️ Arked', komuniti: '👥 Komuniti' };
-  const SRC_RANK = { bawaan: 0, satukata: 1, arked: 2, komuniti: 3 };
+  // Label paparan genre — order ini juga tertib chip (pailiter: chip hanya muncul bila ada game).
+  const GENRE_LABEL = {
+    'arkad': '🕹️ Arkad', 'teki-teki': '🧩 Teka-Teki', 'refleks': '⚡ Refleks', 'kuiz': '💡 Kuiz',
+    'tindakan': '🔥 Tindakan', 'penembakan': '🎯 Penembakan', 'santai': '😌 Santai',
+    'kereta': '🏎️ Kereta', 'sukan': '⚽ Sukan', 'klik': '🖱️ Klik', 'io': '🌐 .io'
+  };
   // APK berjalan pada Android/Huawei/ChromeOS; bukan iOS (APK tak pasang di iPhone) → sembunyi butang.
   const CAN_APK = !/iPhone|iPad|iPod/.test(navigator.userAgent || '');
+  const RECENT_KEY = 'tukuk-recent';
   let items = [];
-  let cat = 'all';
-  let src = 'all';
+  let cat = 'game';      // game-first (gaya web-games.io); aplikasi satu tab berasingan
+  let genre = 'all';
 
   const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
   // Ikon: laluan /... → gambar (logo asli app); selain itu emoji biasa.
   const iconHtml = (x) => /^\//.test(String(x.icon || ''))
-    ? `<img src="${esc(x.icon)}" alt="" width="52" height="52" loading="lazy">`
-    : (esc(x.icon) || (x.kind === 'game' ? '🎮' : '📱'));
+    ? `<img src="${esc(x.icon)}" alt="" loading="lazy">`
+    : esc(x.icon) || (x.kind === 'game' ? '🎮' : '📱');
+
+  const fmtPlays = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n || 0);
 
   function ago(t) {
     if (!t) return '';
@@ -260,33 +334,37 @@
     return Math.floor(d / 365) + ' tahun lalu';
   }
 
-  function current() {
-    const term = qEl.value.trim().toLowerCase();
-    let list = items.filter((x) =>
-      (cat === 'all' || x.kind === cat) &&
-      (src === 'all' || x.src === src) &&
-      (!term || (x.title + ' ' + x.desc + ' ' + x.url).toLowerCase().includes(term))
-    );
-    const by = sortEl.value;
-    if (by === 'views') list = list.slice().sort((a, b) => (b.views || 0) - (a.views || 0) || b.updated - a.updated);
-    else if (by === 'name') list = list.slice().sort((a, b) => a.title.localeCompare(b.title, 'ms'));
-    else list = list.slice().sort((a, b) => (b.updated - a.updated) || (SRC_RANK[a.src] - SRC_RANK[b.src]) || a.title.localeCompare(b.title, 'ms'));
-    return list;
+  // Riwayat main (localStorage — ditulis halaman /play) → senarai id terkini dahulu.
+  function readRecent() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      return Array.isArray(raw) ? raw.filter((x) => typeof x === 'string') : [];
+    } catch { return []; }
   }
 
-  function render() {
-    const list = current();
-    const apps = items.filter((x) => x.kind === 'app').length;
-    const games = items.filter((x) => x.kind === 'game').length;
-    const views = items.reduce((s, x) => s + (x.views || 0), 0);
-    statsEl.innerHTML = items.length
-      ? `<span>📱 <b>${apps}</b> aplikasi</span><span>🎮 <b>${games}</b> game</span>` +
-        (views ? `<span>👁️ <b>${views.toLocaleString('ms-MY')}</b> jumlah dilihat</span>` : '') +
-        `<span>Memaparkan <b>${list.length}</b> daripada ${items.length}</span>`
-      : '';
-    grid.innerHTML = list.map((x) => `
-      <article class="item ${x.kind}">
-        <span class="kbadge ${x.kind}">${x.kind === 'game' ? '🎮 Game' : '📱 App'}</span>
+  // ── Kad jubin game (thumb 3:2 + butang main → /play/<id>) ──
+  function tileHtml(x) {
+    return `
+      <article class="tile g-${esc(x.genre || 'arkad')}">
+        <a class="thumb" href="/play/${encodeURIComponent(x.id)}" aria-label="Main ${esc(x.title)}">
+          <span class="gbadge">${esc((GENRE_LABEL[x.genre] || '🕹️ Arkad').replace(/^\S+\s/, ''))}</span>
+          <span class="ticon">${iconHtml(x)}</span>
+          ${x.plays ? `<span class="playsbadge">▶ ${fmtPlays(x.plays)} main</span>` : ''}
+          <span class="playov"><span>▶</span></span>
+        </a>
+        <h3><a href="/play/${encodeURIComponent(x.id)}">${esc(x.title)}</a></h3>
+        <div class="footrow">
+          ${CAN_APK ? `<button class="apkbtn" data-apk="${esc(x.id)}" title="Jana & muat turun APK Android (pembungkus game ini)">⬇ APK</button>` : ''}
+          <button class="copybtn" data-copy="${location.origin}/play/${encodeURIComponent(x.id)}" title="Salin pautan main">📋</button>
+        </div>
+      </article>`;
+  }
+
+  // ── Kad aplikasi (kekal gaya lama: deskripsi penuh + buka terus) ──
+  function appCardHtml(x) {
+    return `
+      <article class="item app">
+        <span class="kbadge app">📱 App</span>
         <div class="row">
           <div class="appicon">${iconHtml(x)}</div>
           <div class="tt">
@@ -297,23 +375,108 @@
         <span class="srcbadge ${esc(x.src)}">${SRC_LABEL[x.src] || esc(x.src)}</span>
         <p class="desc">${esc(x.desc)}</p>
         <div class="meta">
-          ${CAN_APK ? '<span class="sign" title="APK gedung ini ditandatangani dengan satu kunci pembangun Tukuk yang sama">🔒 Ditandatangani Tukuk</span>' : ''}
-          ${x.views != null ? `<span>👁️ ${x.views.toLocaleString('ms-MY')}</span>` : ''}
+          ${CAN_APK ? '<span class="sign" title="APK gedung ini ditandatangani dengan satu kunci pembangun Tukuk yang sama" style="color:#7ce898;font-weight:700">🔒 Ditandatangani Tukuk</span>' : ''}
+          ${x.plays ? `<span>▶ ${fmtPlays(x.plays)} main/dilihat</span>` : ''}
           ${x.updated ? `<span>🕒 ${esc(ago(x.updated))}</span>` : ''}
         </div>
         <div class="footrow">
-          <a class="openbtn" href="${esc(x.url)}" target="_blank" rel="noopener">${x.kind === 'game' ? '▶ Main' : '▶ Buka'}</a>
+          <a class="openbtn" href="${esc(x.url)}" target="_blank" rel="noopener">▶ Buka</a>
           ${CAN_APK ? `<button class="apkbtn" data-apk="${esc(x.id)}" title="Jana & muat turun APK Android (pembungkus apl ini)">⬇ APK</button>` : ''}
           <button class="copybtn" data-copy="${location.origin}${esc(x.url)}" title="Salin pautan">📋</button>
         </div>
-      </article>`).join('');
-    stateEl.hidden = items.length > 0 && list.length > 0;
-    if (items.length && !list.length) stateEl.innerHTML = '<div class="big">🔎</div><p>Tiada padanan untuk carian/penapis itu. Cuba kata lain atau tukar kategori.</p>';
-    else if (!items.length) { stateEl.hidden = false; stateEl.innerHTML = '<div class="big">🏪</div><p>Katalog gagal dimuat. <button class="copybtn" id="reloadBtn" type="button">🔄 Muat semula</button></p>'; bindReload(); }
+      </article>`;
+  }
+
+  const games = () => items.filter((x) => x.kind === 'game');
+  const apps = () => items.filter((x) => x.kind === 'app');
+
+  // Bina chip genre dinamik — hanya genre yang benar-benar ada dalam katalog.
+  function buildGenreChips() {
+    const present = new Set(games().map((x) => x.genre).filter(Boolean));
+    const order = Object.keys(GENRE_LABEL).filter((g) => present.has(g));
+    genresEl.innerHTML = `<button data-genre="all" class="on">🌐 Semua Genre</button>` +
+      order.map((g) => `<button data-genre="${esc(g)}">${GENRE_LABEL[g]}</button>`).join('');
+    genresEl.classList.toggle('show', cat === 'game');
+  }
+
+  function currentGames() {
+    const term = qEl.value.trim().toLowerCase();
+    return games().filter((x) =>
+      (genre === 'all' || x.genre === genre) &&
+      (!term || (x.title + ' ' + x.desc).toLowerCase().includes(term))
+    );
+  }
+  function currentApps() {
+    const term = qEl.value.trim().toLowerCase();
+    return apps().filter((x) => !term || (x.title + ' ' + x.desc + ' ' + x.url).toLowerCase().includes(term));
+  }
+  function sortList(list) {
+    const by = sortEl.value;
+    if (by === 'plays') return list.slice().sort((a, b) => (b.plays || 0) - (a.plays || 0) || b.updated - a.updated);
+    if (by === 'name') return list.slice().sort((a, b) => a.title.localeCompare(b.title, 'ms'));
+    return list.slice().sort((a, b) => (b.updated - a.updated) || (b.plays || 0) - (a.plays || 0));
+  }
+
+  function railHtml(el, list) {
+    el.innerHTML = list.map(tileHtml).join('');
+    el.closest('.sec').hidden = !list.length;
+  }
+
+  function render() {
+    buildGenreChips();
+    const term = qEl.value.trim().toLowerCase();
+    const showSections = cat === 'game' && genre === 'all' && !term;
+    document.getElementById('recentSec').hidden = true;
+    document.getElementById('trendSec').hidden = true;
+    document.getElementById('newSec').hidden = true;
+
+    if (cat === 'game') {
+      const list = sortList(currentGames());
+      grid.className = 'shop';
+      grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+      grid.innerHTML = list.map(tileHtml).join('');
+      document.getElementById('allTitle').textContent = genre === 'all' ? 'Semua Game' : (GENRE_LABEL[genre] || 'Game');
+
+      if (showSections) {
+        // Baru Dimainkan — id daripada localStorage yang masih wujud dalam katalog.
+        const byId = new Map(games().map((x) => [x.id, x]));
+        const recent = readRecent().map((id) => byId.get(id)).filter(Boolean).slice(0, 8);
+        railHtml(document.getElementById('recentRail'), recent);
+        // Trending: paling main (fallback ikut tarikh kalau semua 0 supaya rail tak kosong).
+        const trend = games().slice().sort((a, b) => (b.plays - a.plays) || (b.updated - a.updated)).slice(0, 8);
+        railHtml(document.getElementById('trendRail'), trend.filter((x) => x.plays > 0).length ? trend : sortList(games()).slice(0, 8));
+        // Baharu: hanya item dengan tarikh sebenar (Satu Kata + komuniti = kandungan segar mingguan).
+        railHtml(document.getElementById('newRail'), games().filter((x) => x.updated).sort((a, b) => b.updated - a.updated).slice(0, 8));
+      }
+      stateEl.hidden = list.length > 0;
+      if (!list.length) stateEl.innerHTML = items.length
+        ? '<div class="big">🔎</div><p>Tiada padanan untuk carian/genre itu. Cuba kata lain atau tukar genre.</p>'
+        : '<div class="big">🏪</div><p>Katalog kosong / gagal dimuat. <button class="copybtn" id="reloadBtn" type="button">🔄 Muat semula</button></p>';
+      bindReload();
+    } else {
+      const list = sortList(currentApps());
+      grid.className = 'shop';
+      grid.style.gridTemplateColumns = '';
+      grid.innerHTML = list.map(appCardHtml).join('');
+      document.getElementById('allTitle').textContent = 'Semua Aplikasi';
+      stateEl.hidden = list.length > 0;
+      if (!list.length) stateEl.innerHTML = items.length
+        ? '<div class="big">🔎</div><p>Tiada padanan untuk carian itu.</p>'
+        : '<div class="big">🏪</div><p>Katalog kosong / gagal dimuat. <button class="copybtn" id="reloadBtn" type="button">🔄 Muat semula</button></p>';
+      bindReload();
+    }
+
+    const apps_n = apps().length, games_n = games().length;
+    const plays = items.reduce((s, x) => s + (x.plays || 0), 0);
+    statsEl.innerHTML = items.length
+      ? `<span>🎮 <b>${games_n}</b> game</span><span>📱 <b>${apps_n}</b> aplikasi</span>` +
+        (plays ? `<span>▶ <b>${fmtPlays(plays)}</b> sesi main</span>` : '')
+      : '';
   }
   function bindReload(){ const rb = document.getElementById('reloadBtn'); if (rb) rb.onclick = () => location.reload(); }
 
-  grid.addEventListener('click', (e) => {
+  // Delegasi pada .wrap — butang salin juga ada pada rail Trending/Baharu/Baru Dimainkan.
+  document.querySelector('.wrap').addEventListener('click', (e) => {
     const b = e.target.closest('[data-copy]');
     if (!b) return;
     const text = b.getAttribute('data-copy');
@@ -322,7 +485,7 @@
   });
 
   // ⬇ APK — jana APK atas-permintaan (server bina sekali, kemudian hidang cache) lalu muat turun.
-  grid.addEventListener('click', async (e) => {
+  document.querySelector('.wrap').addEventListener('click', async (e) => {
     const a = e.target.closest('.apkbtn');
     if (!a) return;
     e.preventDefault();
@@ -351,11 +514,16 @@
     tabs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
     render();
   });
-  srcs.addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-src]');
+  genresEl.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-genre]');
     if (!b) return;
-    src = b.getAttribute('data-src');
-    srcs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    genre = b.getAttribute('data-genre');
+    genresEl.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    render();
+  });
+  document.getElementById('clearRecent').addEventListener('click', (e) => {
+    e.preventDefault();
+    try { localStorage.removeItem(RECENT_KEY); } catch { /* noop */ }
     render();
   });
   qEl.addEventListener('input', render);
@@ -371,6 +539,8 @@
           title: String(x.title || 'Item'), desc: String(x.desc || ''),
           url: String(x.url || '/'), icon: String(x.icon || ''),
           views: Number.isFinite(Number(x.views)) && x.views != null ? Number(x.views) : null,
+          plays: Number(x.plays) || 0,
+          genre: x.genre ? String(x.genre) : '',
           updated: Number(x.updated) || 0,
           kind: x.kind === 'game' ? 'game' : 'app',
           src: ['bawaan', 'satukata', 'arked', 'komuniti'].includes(x.src) ? x.src : 'komuniti'

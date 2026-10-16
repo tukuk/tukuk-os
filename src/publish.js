@@ -57,10 +57,14 @@ const PUBLISH_MAX_BYTES = 1.5 * 1024 * 1024;
 // membenarkan app dalam sandbox membaca papan pendahulu (/api/scores) & menghantar skor
 // daripada origin yang sama. opaque-origin (tiada allow-same-origin) = cookie TIDAK dihantar,
 // jadi hanya endpoint awam boleh diakses; tiada laluan keluar ke host luar (eksfiltrasi kekal tertutup).
-function publishCspFor(host, proto) {
+// `embed` (halaman /a/<slug>?embed=1): frame-ancestors ditukar 'none' → 'self' supaya
+// pemain /play kita sendiri boleh menempek game; laman luar TETAP disekat (anti-clickjacking
+// silang-origin tidak berubah — 'self' hanya membenarkan dokumen dalam host yang sama).
+function publishCspFor(host, proto, embed) {
   const scheme = (proto === 'https') ? 'https' : 'http';
   const extra = host ? ` connect-src ${scheme}://${host};` : '';
-  return PUBLISH_CSP + extra;
+  const csp = embed ? PUBLISH_CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'") : PUBLISH_CSP;
+  return csp + extra;
 }
 
 // Semakan kelayakan awal HTML: mesti dokumen HTML penuh & dalam had saiz.

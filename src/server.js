@@ -2101,6 +2101,44 @@ function bumpViews(slug) {
 // Kata kunci game untuk terbitan klasik (meta tanpa kind) — tekaan berdasarkan tajuk.
 const GAME_TITLE_RE = /tic[- ]?tac|arked|battle[- ]?royale|\bfps\b|runner|padanan[- ]memori|tikus[- ]pukul|teka[- ]nombor|batu[- ]kertas|lari[- ]tanpa|\bgame\b/i;
 
+// Kiraan "main" untuk halaman /play (gaya web-games.io) — sama corak dengan publish-views:
+// in-memory + tulis cakera berdebounce supaya setiap sesi main tidak menulis fail seorang.
+const PLAYS_PATH = path.join(path.dirname(config.store.path), 'plays.json');
+let playsMap = {};
+try { playsMap = JSON.parse(fs.readFileSync(PLAYS_PATH, 'utf8')) || {}; } catch { playsMap = {}; }
+let playsTimer = null;
+function flushPlays() { playsTimer = null; try { fs.writeFileSync(PLAYS_PATH, JSON.stringify(playsMap)); } catch { /* best-effort */ } }
+function bumpPlays(id) {
+  playsMap[id] = (playsMap[id] || 0) + 1;
+  if (!playsTimer) { playsTimer = setTimeout(flushPlays, 5000); if (playsTimer.unref) playsTimer.unref(); }
+}
+
+// Genre game (gaya web-games.io) — chip /store & kad berkaitan /play dibina daripada
+// nilai ini sahaja. Store arked guna genre eksplisit; sumber lain dinormalisasi/tekaan.
+const GAME_GENRES = new Set(['arkad', 'teki-teki', 'refleks', 'kuiz', 'tindakan', 'penembakan', 'santai', 'kereta', 'sukan', 'klik', 'io']);
+const GENRE_SYNONYM = { arkade: 'arkad', arcade: 'arkad', action: 'tindakan', shooter: 'penembakan', puzzle: 'teki-teki', reflex: 'refleks', casual: 'santai', racing: 'kereta', car: 'kereta', sport: 'sukan', clicker: 'klik', quiz: 'kuiz' };
+function normalizeGenre(g) {
+  const s = String(g || '').trim().toLowerCase().replace(/\s+/g, '-');
+  if (GAME_GENRES.has(s)) return s;
+  return GAME_GENRES.has(GENRE_SYNONYM[s]) ? GENRE_SYNONYM[s] : null;
+}
+// Tebakan genre berasaskan kata kunci (komuniti / satu kata) — default 'arkad' supaya
+// setiap game pasti ada genre (tiada kad tersesat dari penapis chip).
+function guessGameGenre(text) {
+  const t = ' ' + String(text || '').toLowerCase() + ' ';
+  if (/\.io\b|\bio\b/.test(t)) return 'io';
+  if (/(kereta|\bcar\b|racing|lumba|drift)/.test(t)) return 'kereta';
+  if (/(sukan|footbal|bola|basket|sokker)/.test(t)) return 'sukan';
+  if (/(klik|clicker|idle)/.test(t)) return 'klik';
+  if (/(penembak|tembak|shooter|shooting|\bfps\b)/.test(t)) return 'penembakan';
+  if (/(tindakan|action|battle|royale|\brpg\b)/.test(t)) return 'tindakan';
+  if (/(kuiz|quiz|trivia)/.test(t)) return 'kuiz';
+  if (/(refleks|reflex|reaksi|tikus|\bmola\b)/.test(t)) return 'refleks';
+  if (/(teki|puzzle|memori|2048|sudoku|jigsaw|ambang|rambau|blok|jajar)/.test(t)) return 'teki-teki';
+  if (/(santai|casual|lari|runner)/.test(t)) return 'santai';
+  return 'arkad';
+}
+
 // Senarai app awam (slug terbaru) — ringan, untuk indeks /a + katalog /store.
 function listPublished(limit = 200) {
   try {
@@ -2146,24 +2184,25 @@ const STORE_APP_META = {
   chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'Messenger sebenar dalam pelayar yang terus berfungsi pada rangkaian lemah (2G/3G/4G/GPRS). Pasang sebagai aplikasi di Android, iOS, Windows, Linux & Huawei, atau muat turun APK Android native terus (versi beta — stabil menyusul). Daftar nama + kata laluan, Tukuk ID kekal, bilik Am, DM 1-ke-1 dan kumpulan, panggilan video & suara (WebRTC) dengan pengenalan pemanggil gaya TukuCaller, mod prank panggilan palsu (tiada rangkaian diperlukan), mesej suara, peti keluar luar-talian (auto-hantar semula), mod jimat data (media ketuk-untuk-muat), resit baca ✓✓, hantar gambar & video, reply, forward, reaction, edit, pin mesej, carian, kawan & sekat, wallpaper & bunyi.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
+// genre = label penapis /store (gaya web-games.io).
 const STORE_ARCADE = [
-  { tpl: 'arcade', ic: '🕹️', title: 'Arked Mini', desc: 'Tic-Tac-Toe + Padanan Memori + Tikus Pukul + Masa Tindak Balas dalam satu halaman.' },
-  { tpl: 'tttpl', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'Dua pemain klasik — jajar tiga menang.' },
-  { tpl: 'brtpl', ic: '🔫', title: 'Arena Battle Royale', desc: 'WASD/mouse atau joystik sentuh — elak zone biru, kekalkan nyawa.' },
-  { tpl: 'fpstpl', ic: '🎯', title: 'FPS Arena 3D', desc: 'Penembak first-person 3D ringan, terus dalam pelayar.' },
-  { tpl: 'runtpl', ic: '🏃', title: 'Lari Tanpa Hujung', desc: 'Klik / sentuh / Space untuk lompat — elak halangan sejauh mungkin.' },
-  { tpl: 'memtpl', ic: '🧠', title: 'Padanan Memori', desc: 'Balik kad dan jodohkan semua pasangan secepat mungkin.' },
-  { tpl: 'moletpl', ic: '🐹', title: 'Tikus Pukul', desc: '20 sahaja — pukul tikus yang muncul secepat boleh.' },
-  { tpl: 'rpstpl', ic: '✊', title: 'Batu-Kertas-Gunting', desc: 'Pilih tangan anda, lawan CPU secara langsung.' },
-  { tpl: 'reacttpl', ic: '⚡', title: 'Masa Tindak Balas', desc: 'Tunggu hijau, klik secepat mungkin — ukur milisaat anda.' },
-  { tpl: 'guesstpl', ic: '🔢', title: 'Teka Nombor', desc: 'Nombor 1–100 telah dipilih — teka dengan petanda tinggi/rendah.' },
-  { tpl: 'quiztpl', ic: '💡', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' },
-  { tpl: 'tpl2048', ic: '🧊', title: '2048', desc: 'Gabung nombor sama — capai jubin 2048 sebelum papan penuh.' },
-  { tpl: 'snktpl', ic: '🐍', title: 'Ular', desc: 'Klasik zaman Nokia — makan, membesar, makin laju, jangan langgar.' },
-  { tpl: 'bktpl', ic: '🧱', title: 'Breakout', desc: 'Pantul bola dengan padel, hancurkan semua batu bata dengan 3 nyawa.' },
-  { tpl: 'bloktpl', ic: '🧩', title: 'Blok Jatuh', desc: 'Susun blok yang jatuh, jajar baris penuh — makin laju setiap paras.' },
-  { tpl: 'astrotpl', ic: '☄️', title: 'Asteroid', desc: 'Vektor klasik: pusing, pecut, tembak — asteroid besar berpecah dua.' },
-  { tpl: 'minstpl', ic: '💣', title: 'Rambang Minda', desc: '9×9, 10 ranjau — klik buka, tahan/bendera tandai. Klik pertama sentiasa selamat.' }
+  { tpl: 'arcade', genre: 'arkad', ic: '🕹️', title: 'Arked Mini', desc: 'Tic-Tac-Toe + Padanan Memori + Tikus Pukul + Masa Tindak Balas dalam satu halaman.' },
+  { tpl: 'tttpl', genre: 'teki-teki', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'Dua pemain klasik — jajar tiga menang.' },
+  { tpl: 'brtpl', genre: 'tindakan', ic: '🔫', title: 'Arena Battle Royale', desc: 'WASD/mouse atau joystik sentuh — elak zone biru, kekalkan nyawa.' },
+  { tpl: 'fpstpl', genre: 'penembakan', ic: '🎯', title: 'FPS Arena 3D', desc: 'Penembak first-person 3D ringan, terus dalam pelayar.' },
+  { tpl: 'runtpl', genre: 'santai', ic: '🏃', title: 'Lari Tanpa Hujung', desc: 'Klik / sentuh / Space untuk lompat — elak halangan sejauh mungkin.' },
+  { tpl: 'memtpl', genre: 'teki-teki', ic: '🧠', title: 'Padanan Memori', desc: 'Balik kad dan jodohkan semua pasangan secepat mungkin.' },
+  { tpl: 'moletpl', genre: 'refleks', ic: '🐹', title: 'Tikus Pukul', desc: '20 sahaja — pukul tikus yang muncul secepat boleh.' },
+  { tpl: 'rpstpl', genre: 'teki-teki', ic: '✊', title: 'Batu-Kertas-Gunting', desc: 'Pilih tangan anda, lawan CPU secara langsung.' },
+  { tpl: 'reacttpl', genre: 'refleks', ic: '⚡', title: 'Masa Tindak Balas', desc: 'Tunggu hijau, klik secepat mungkin — ukur milisaat anda.' },
+  { tpl: 'guesstpl', genre: 'teki-teki', ic: '🔢', title: 'Teka Nombor', desc: 'Nombor 1–100 telah dipilih — teka dengan petanda tinggi/rendah.' },
+  { tpl: 'quiztpl', genre: 'kuiz', ic: '💡', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' },
+  { tpl: 'tpl2048', genre: 'teki-teki', ic: '🧊', title: '2048', desc: 'Gabung nombor sama — capai jubin 2048 sebelum papan penuh.' },
+  { tpl: 'snktpl', genre: 'arkad', ic: '🐍', title: 'Ular', desc: 'Klasik zaman Nokia — makan, membesar, makin laju, jangan langgar.' },
+  { tpl: 'bktpl', genre: 'arkad', ic: '🧱', title: 'Breakout', desc: 'Pantul bola dengan padel, hancurkan semua batu bata dengan 3 nyawa.' },
+  { tpl: 'bloktpl', genre: 'teki-teki', ic: '🧩', title: 'Blok Jatuh', desc: 'Susun blok yang jatuh, jajar baris penuh — makin laju setiap paras.' },
+  { tpl: 'astrotpl', genre: 'penembakan', ic: '☄️', title: 'Asteroid', desc: 'Vektor klasik: pusing, pecut, tembak — asteroid besar berpecah dua.' },
+  { tpl: 'minstpl', genre: 'teki-teki', ic: '💣', title: 'Rambang Minda', desc: '9×9, 10 ranjau — klik buka, tahan/bendera tandai. Klik pertama sentiasa selamat.' }
 ];
 function storeBawaan() {
   return Object.entries(STORE_APP_META)
@@ -2191,14 +2230,18 @@ function storeSatuKata() {
     const t = Date.parse(e.createdAt) || 0;
     const word = String(e.word).trim();
     if (fs.existsSync(path.join(dir, 'app', 'index.html'))) out.push({ id: 'sk-' + e.slug, kind: 'app', src: 'satukata', icon: e.emoji || '⚡', title: 'App ' + word, desc: `Aplikasi satu-kata «${word}» — ${e.tagline || 'dijana automatik'}`, url: `/satu-kata/${e.slug}/app/`, updated: t });
-    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', icon: e.emoji || '🎮', title: 'Game ' + word, desc: `Game «${word}» (${e.genre || 'arkade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
+    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', genre: normalizeGenre(e.genre) || guessGameGenre(word + ' ' + (e.genre || '')), icon: e.emoji || '🎮', title: 'Game ' + word, desc: `Game «${word}» (${e.genre || 'arkade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
   }
   return out;
 }
 function storeCatalog() {
-  const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl, updated: 0 }));
-  const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Terbitan komuniti melalui Pembina Studio.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
-  return storeBawaan().concat(storeSatuKata(), arked, komuniti);
+  const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', genre: g.genre, icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl + '&play=1', updated: 0 }));
+  const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Terbitan komuniti melalui Pembina Studio.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
+  const items = storeBawaan().concat(storeSatuKata(), arked, komuniti);
+  // Kiraan "main" — komuniti belum ada riwayat main → jatuh kepada "dilihat" supaya
+  // bahagian Trending kekal bermakna sejak hari pertama.
+  for (const it of items) it.plays = playsMap[it.id] || (it.src === 'komuniti' ? (it.views || 0) : 0);
+  return items;
 }
 app.get('/api/store', (req, res) => {
   try {
@@ -2208,6 +2251,34 @@ app.get('/api/store', (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Gagal menjana katalog', details: safeError(error) });
   }
+});
+
+// Kiraan sesi main — dipanggil sekali setiap kali game dimuat dalam /play. Data awam
+// ringan (seperti skor); had-kadar longgar tapi cukup untuk elak pembaziran tulis fail.
+const playLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 60 * 60 * 1000, max: 300, keyPrefix: 'play:' })
+  : (req, res, next) => next();
+app.post('/api/play/:id', playLimiter, (req, res) => {
+  try {
+    const known = storeCatalog().some((x) => x.id === String(req.params.id));
+    if (!known) return res.status(404).json({ error: 'Item store tidak dikenali' });
+    bumpPlays(String(req.params.id));
+    res.json({ ok: true, plays: playsMap[String(req.params.id)] });
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal mengira sesi main', details: safeError(error) });
+  }
+});
+
+// Halaman pemain /play/<item-id> (gaya web-games.io) — fail statik yang sama untuk semua
+// id; JS halaman cari item dalam /api/store & menempek URL-nya. Hanya id WUJUD dilayan.
+app.get('/play/:id', (req, res) => {
+  const item = storeCatalog().find((x) => x.id === String(req.params.id));
+  if (!item) {
+    return res.status(404).type('html').send('<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>Tiada — Tukuk Store</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>Item store itu tidak wujud.</p><p><a href="/store">← Kembali ke Store</a></p></body></html>');
+  }
+  res.sendFile(path.join(PUBLIC_DIR, 'play.html'), (error) => {
+    if (error) res.status(404).json({ error: 'Halaman pemain tidak dijumpai', path: req.originalUrl });
+  });
 });
 
 // ── APK atas-permintaan (tukuk.org = gedung apl, gaya APKPure) ─────────────────
@@ -2486,7 +2557,10 @@ app.get('/a/:slug', (req, res) => {
   try { html = fs.readFileSync(file, 'utf8'); }
   catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>Tiada — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>Aplikasi <code>/${escapeHtml(slug)}</code> tiada atau telah dibuang.</p><p><a href="/a">← Semua aplikasi</a> · <a href="/builder">Bina sendiri</a></p></body></html>`); }
   bumpViews(slug); // kiraan "dilihat" untuk katalog /store
-  res.setHeader('Content-Security-Policy', publish.publishCspFor(req.get('host'), (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : 'http'));
+  // ?embed=1 → dibenarkan menempek dalam pemain /play kita (frame-ancestors 'self');
+  // laman luar tetap disekat 'none' seperti sebelumnya (anti-clickjacking silang-origin).
+  const embed = req.query.embed === '1';
+  res.setHeader('Content-Security-Policy', publish.publishCspFor(req.get('host'), (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : 'http', embed));
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');

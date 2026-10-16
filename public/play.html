@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main — Tukuk Store</title>
+<meta name="description" content="Main game terus dalam pelayar — tanpa muat turun, tanpa daftar. Pemain penuh skrin Tukuk Store.">
+<meta property="og:type" content="game">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<script src="/adsense-loader.js" defer></script>
+<style>
+  :root {
+    --bg-dark: #090c15;
+    --panel-glass: rgba(18, 24, 38, 0.72);
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --accent-glow: #4c8dff;
+    --play-green: #22c55e;
+    --text-bright: #f0f4fc;
+    --muted: #8b99b5;
+  }
+  body {
+    margin: 0; background: var(--bg-dark); color: var(--text-bright);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden;
+  }
+
+  /* Bar atas nipis — balik, tajuk, kiraan main, alat main */
+  .topbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 12px; background: var(--panel-glass); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--panel-border); z-index: 5;
+  }
+  .topbar .back {
+    color: #9cc2ff; text-decoration: none; font-weight: 700; font-size: .86rem;
+    border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 12px;
+    background: rgba(255,255,255,0.05); white-space: nowrap;
+  }
+  .topbar .back:hover { border-color: var(--accent-glow); color: #fff; }
+  .topbar .ttl { min-width: 0; display: flex; flex-direction: column; }
+  .topbar .ttl h1 { margin: 0; font-size: 1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .ttl .sub { font-size: .7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .plays {
+    background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.35); color: #7ce898;
+    font-size: .74rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; white-space: nowrap;
+  }
+  .topbar .sp { flex: 1; }
+  .tbtn {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: var(--muted);
+    border-radius: 10px; padding: 6px 11px; font-size: .82rem; font-weight: 700; cursor: pointer;
+    text-decoration: none; white-space: nowrap; transition: all .18s;
+  }
+  .tbtn:hover { color: #fff; border-color: var(--accent-glow); }
+  .tbtn.prim { background: var(--play-green); border-color: var(--play-green); color: #fff; }
+
+  /* Pentas main — iframe mengisi baki viewport */
+  .stage { flex: 1; min-height: 0; position: relative; background: #05070d; }
+  .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .stage .loadmsg {
+    position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted);
+    font-size: .95rem; background: #05070d; z-index: 2; transition: opacity .3s;
+  }
+  .stage .loadmsg.gone { opacity: 0; pointer-events: none; }
+  /* Petua pusing skrin (telefon, potret) — boleh tutup */
+  .rotate {
+    position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 4;
+    background: var(--panel-glass); border: 1px solid var(--panel-border); border-radius: 12px;
+    color: #cfe0ff; font-size: .78rem; padding: 7px 14px; display: none; align-items: center; gap: 8px;
+    backdrop-filter: blur(12px);
+  }
+  .rotate.show { display: flex; }
+  .rotate button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: .9rem; }
+
+  /* Galeri berkaitan — rentetan mendatar di bawah */
+  .relbar {
+    border-top: 1px solid var(--panel-border); background: var(--panel-glass);
+    padding: 8px 12px 10px; display: flex; gap: 10px; align-items: center; overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .relbar .rl { color: var(--muted); font-size: .74rem; font-weight: 800; white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; }
+  .rcard {
+    flex: none; width: 108px; text-decoration: none; color: var(--text-bright); display: block;
+  }
+  .rcard .rthumb {
+    position: relative; aspect-ratio: 3/2; border-radius: 10px; border: 1px solid var(--panel-border);
+    display: grid; place-items: center; font-size: 1.7rem; overflow: hidden; transition: all .18s;
+  }
+  .rcard:hover .rthumb { border-color: var(--accent-glow); transform: translateY(-2px); }
+  .rcard .rt { font-size: .72rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+  .bg-arkad { background: linear-gradient(150deg, #34246b, #12142e); }
+  .bg-teki-teki { background: linear-gradient(150deg, #103d52, #0d1f33); }
+  .bg-refleks { background: linear-gradient(150deg, #4b3a12, #201a0b); }
+  .bg-kuiz { background: linear-gradient(150deg, #14442b, #0c2418); }
+  .bg-tindakan { background: linear-gradient(150deg, #5a1436, #260d20); }
+  .bg-penembakan { background: linear-gradient(150deg, #5c1d12, #24100c); }
+  .bg-santai { background: linear-gradient(150deg, #12503f, #0b2620); }
+  .bg-kereta { background: linear-gradient(150deg, #57320f, #23160a); }
+  .bg-sukan { background: linear-gradient(150deg, #1d4a14, #10240c); }
+  .bg-klik { background: linear-gradient(150deg, #4a1b52, #220f28); }
+  .bg-io { background: linear-gradient(150deg, #0f4a5c, #0a2430); }
+  .bg-app { background: linear-gradient(150deg, #1b2b55, #101a33); }
+
+  /* Keadaan ralat */
+  .oops { flex: 1; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 30px; }
+  .oops .big { font-size: 3rem; margin-bottom: 10px; }
+  .oops a { color: var(--accent-glow); font-weight: 700; text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .topbar .ttl h1 { font-size: .9rem; }
+    .topbar .plays { display: none; }
+    .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar" id="topbar" hidden>
+  <a class="back" href="/store">← Store</a>
+  <div class="ttl">
+    <h1 id="gTitle">…</h1>
+    <div class="sub" id="gSub"></div>
+  </div>
+  <span class="plays" id="gPlays"></span>
+  <span class="sp"></span>
+  <a class="tbtn hide-sm" id="rawLink" href="#" target="_blank" rel="noopener" title="Buka game asli dalam tab baharu">↗</a>
+  <button class="tbtn" id="copyBtn" title="Salin pautan main">📋</button>
+  <button class="tbtn prim" id="fsBtn" title="Skrin penuh">⛶ Skrin Penuh</button>
+</div>
+
+<div class="stage" id="stage" hidden>
+  <div class="loadmsg" id="loadMsg">⏳ Memuatkan game…</div>
+  <iframe id="frame" title="Game" allow="fullscreen; autoplay; gamepad; accelerometer; gyroscope; clipboard-write"></iframe>
+  <div class="rotate" id="rotateHint">🔄 Pusing peranti ke landskap untuk mainan terbaik <button id="rotClose" aria-label="Tutup">✕</button></div>
+</div>
+
+<div class="relbar" id="relbar" hidden><span class="rl">Seterusnya ▸</span><div id="relCards" style="display:contents"></div></div>
+
+<div class="oops" id="oops" hidden>
+  <div>
+    <div class="big">🕳️</div>
+    <p id="oopsMsg">Game itu tidak ditemui dalam katalog.</p>
+    <p><a href="/store">← Kembali ke Store</a></p>
+  </div>
+</div>
+
+<script>
+(() => {
+  const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const GENRE_LABEL = { 'arkad': 'Arkad', 'teki-teki': 'Teka-Teki', 'refleks': 'Refleks', 'kuiz': 'Kuiz', 'tindakan': 'Tindakan', 'penembakan': 'Penembakan', 'santai': 'Santai', 'kereta': 'Kereta', 'sukan': 'Sukan', 'klik': 'Klik', 'io': '.io' };
+  const SRC_LABEL = { bawaan: 'Bawaan', satukata: 'Satu Kata', arked: 'Arked', komuniti: 'Komuniti' };
+  const fmtPlays = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n || 0);
+  const RECENT_KEY = 'tukuk-recent';
+
+  // Id item daripada laluan /play/<id> (server sahkan id wujud sebelum hidang halaman ini).
+  const m = location.pathname.match(/^\/play\/([^/]+)\/?$/);
+  const id = m ? decodeURIComponent(m[1]) : '';
+
+  const topbar = document.getElementById('topbar');
+  const stage = document.getElementById('stage');
+  const frame = document.getElementById('frame');
+  const loadMsg = document.getElementById('loadMsg');
+  const relbar = document.getElementById('relbar');
+  const oops = document.getElementById('oops');
+  let counted = false;
+
+  function fail(msg) {
+    oops.hidden = false;
+    document.getElementById('oopsMsg').textContent = msg || 'Game itu tidak ditemui dalam katalog.';
+    topbar.hidden = true; stage.hidden = true; relbar.hidden = true;
+  }
+
+  // Senarai main terkini → localStorage (dibaca /store "Baru Dimainkan"); cap 12.
+  function pushRecent(itemId) {
+    try {
+      let arr = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      if (!Array.isArray(arr)) arr = [];
+      arr = [itemId].concat(arr.filter((x) => x !== itemId)).slice(0, 12);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(arr));
+    } catch { /* penyimpanan penuh / mod privasi — abaikan */ }
+  }
+
+  // Sekali sahaja per sesi main — kira + naikkan paparan.
+  function countPlay(item) {
+    if (counted) return;
+    counted = true;
+    pushRecent(item.id);
+    fetch('/api/play/' + encodeURIComponent(item.id), { method: 'POST' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d && Number.isFinite(d.plays)) document.getElementById('gPlays').textContent = '▶ ' + fmtPlays(d.plays) + ' main'; })
+      .catch(() => { /* kiraan bukan kritikal */ });
+  }
+
+  fetch('/api/store', { cache: 'no-store' })
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then((d) => {
+      const items = (d && d.items) || [];
+      const item = items.find((x) => String(x.id) === id);
+      if (!item) return fail('Game itu tiada dalam katalog — mungkin telah dibuang.');
+
+      // Kepala bar + SEO dinamik.
+      document.title = 'Main ' + item.title + ' — Tukuk Store';
+      let og = document.querySelector('meta[property="og:title"]');
+      if (!og) { og = document.createElement('meta'); og.setAttribute('property', 'og:title'); document.head.appendChild(og); }
+      og.setAttribute('content', 'Main ' + item.title + ' — percuma, terus dalam pelayar');
+      document.getElementById('gTitle').textContent = item.title;
+      document.getElementById('gSub').textContent = (GENRE_LABEL[item.genre] || '') + (item.src ? (item.genre ? ' · ' : '') + (SRC_LABEL[item.src] || item.src) : '');
+      document.getElementById('gPlays').textContent = '▶ ' + fmtPlays(item.plays) + ' main';
+      const raw = document.getElementById('rawLink');
+      raw.href = item.url;
+
+      // Tempek — URL SENTIASA daripada katalog pelayan (asal sama; tiada input pengguna).
+      // Komuniti (/a/<slug>) perlu ?embed=1 supaya CSP frame-ancestors 'self' diguna.
+      let src = String(item.url || '/');
+      if (item.src === 'komuniti') src += (src.includes('?') ? '&' : '?') + 'embed=1';
+      frame.addEventListener('load', () => { loadMsg.classList.add('gone'); countPlay(item); });
+      frame.src = src;
+
+      // Kad berkaitan: genre sama dahulu, kemudian paling main — 8 bijilah.
+      const rel = items
+        .filter((x) => x.kind === 'game' && x.id !== item.id)
+        .sort((a, b) => (
+          ((b.genre === item.genre) - (a.genre === item.genre)) ||
+          ((b.plays || 0) - (a.plays || 0)) ||
+          (b.updated - a.updated)
+        ))
+        .slice(0, 8);
+      if (rel.length) {
+        document.getElementById('relCards').innerHTML = rel.map((x) => `
+          <a class="rcard" href="/play/${encodeURIComponent(x.id)}">
+            <span class="rthumb bg-${esc(x.genre || 'arkad')}">${/^\//.test(String(x.icon || '')) ? `<img src="${esc(x.icon)}" alt="" width="44" height="44" loading="lazy" style="border-radius:8px">` : esc(x.icon) || '🎮'}</span>
+            <div class="rt">${esc(x.title)}</div>
+          </a>`).join('');
+        relbar.hidden = false;
+      }
+
+      topbar.hidden = false;
+      stage.hidden = false;
+
+      // Petua orientasi (telefon potret) — boleh tutup, tidak menggangu.
+      const rot = document.getElementById('rotateHint');
+      if (matchMedia('(pointer: coarse)').matches && matchMedia('(orientation: portrait)').matches) rot.classList.add('show');
+      document.getElementById('rotClose').addEventListener('click', () => rot.classList.remove('show'));
+    })
+    .catch(() => fail('Katalog gagal dimuat. Cuba muat semula.'));
+
+  // Skrin penuh pada pentas (iframe ikut serta) — butang ⛶ atau klik-dua pentas.
+  function toggleFs() {
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    const el = stage.requestFullscreen ? stage : document.documentElement;
+    el.requestFullscreen({ navigationUI: 'hide' }).catch(() => { /* boleh jadi ditolak */ });
+  }
+  document.getElementById('fsBtn').addEventListener('click', toggleFs);
+  stage.addEventListener('dblclick', toggleFs);
+
+  document.getElementById('copyBtn').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    const done = () => { b.textContent = '✓'; setTimeout(() => { b.textContent = '📋'; }, 1200); };
+    try { navigator.clipboard.writeText(location.href).then(done, done); } catch { done(); }
+  });
+})();
+</script>
+</body>
+</html>
