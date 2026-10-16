@@ -137,7 +137,7 @@ EOF
   "$WORK/res/ic.zip" "$WORK/res/val.zip" --auto-add-overlay
 
 # ── 3) javac → d8 → suntik dex → align → sign ──
-"$JAVAC" -source 11 -target 11 -classpath "$PLATFORM" -d "$WORK/obj" $(find "$SRC/src" -name '*.java')
+"$JAVAC" -source 11 -target 11 -classpath "$PLATFORM" -d "$WORK/obj" $(find "$SRC/src/org" -name '*.java')
 "$D8" --min-api 23 --lib "$PLATFORM" --output "$WORK/dex" $(find "$WORK/obj" -name '*.class')
 cp "$WORK/base.apk" "$WORK/app.unsigned.apk"
 ( cd "$WORK/dex" && "$ZIP" -q "$OLDPWD/$WORK/app.unsigned.apk" classes.dex )

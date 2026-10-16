@@ -1,0 +1,102 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// app/build.gradle — Tukuk-OS Android wrapper catalogue
+//
+// Reads apk/catalog.json and creates one productFlavour per item (43 total).
+// In Android Studio open the apk/ folder, pick any flavour in
+// Build Variants panel, then Run ▶ to launch it on an emulator or device.
+//
+// The non-Gradle build pipeline (scripts/build-apk.sh) is unaffected:
+// it keeps using apk/app/AndroidManifest.xml + apk/app/src/org/ as its
+// template, while Gradle uses apk/app/src/main/ (standard layout).
+// ─────────────────────────────────────────────────────────────────────────────
+import groovy.json.JsonSlurper
+
+plugins {
+    id 'com.android.application'
+}
+
+// ── Parse catalog.json once; feed values into flavours below ──
+def catalogFile = file("$rootDir/catalog.json")
+def catalog = new JsonSlurper().parse(catalogFile)
+// Strip "apps" wrapper; filter out the _comment key
+def apps = catalog instanceof Map ? catalog.apps : catalog
+
+android {
+    namespace 'org.tukuk.app'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    // BuildConfig class gives every flavour its own START_URL / USE_MEDIA.
+    buildFeatures {
+        buildConfig true
+        resValues true
+    }
+
+    flavorDimensions 'apps'
+
+    productFlavors {
+        apps.each { a ->
+            create(a.slug) {
+                dimension 'apps'
+                // applicationId = final APK package (may differ from namespace)
+                applicationId "org.tukuk.${a.slug}"
+                versionCode a.vc ?: 1
+                versionName a.vn ?: "1.0.0"
+
+                // Injected into BuildConfig.java → read by MainActivity
+                buildConfigField "String", "START_URL", "\"${a.url}\""
+                buildConfigField "boolean", "USE_MEDIA", "${a.media ?: false}"
+
+                // resValue overrides strings.xml per-flavour (Android Studio label)
+                resValue "string", "app_name", "\"${a.label}\""
+
+                // Deep-link pathPrefix = URL path without domain or query string
+                def prefix = a.url
+                    .replaceFirst(/.*:\/\/[^\/]+/, '')   // strip scheme+host
+                    .replaceAll(/[?#].*/, '')             // strip ?query and #frag
+                manifestPlaceholders['deeplinkPath'] = prefix ?: '/'
+
+                // Chat keeps versionCode 3 (already live on Play)
+                if (a.slug == 'chat') {
+                    versionCode 3
+                    versionName "1.0.1"
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            // Android Studio Run ▶ uses this automatically (debug signing key)
+        }
+        release {
+            minifyEnabled false
+            // For Play Store release: use scripts/build-apk.sh (non-Gradle pipeline)
+            // which signs with apk/tukuk-chat-release.jks. Gradle release here is
+            // only for local testing / emulator profiling.
+        }
+    }
+
+    // Per-flavour resource overrides (chat/AndroidManifest.xml adds camera/mic).
+    // Other flavours inherit only src/main/AndroidManifest.xml.
+    sourceSets {
+        chat {
+            manifest.srcFile 'src/chat/AndroidManifest.xml'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+// Pure framework WebView wrapper — no AndroidX / third-party deps needed.
+dependencies {
+}

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Generic Tukuk-OS WebView wrapper manifest for all product flavours.
+
+  Per-flavour overrides:
+    • ${deeplinkPath}  — injected via manifestPlaceholders from build.gradle
+    • ${applicationId} — set per flavour in build.gradle (org.tukuk.<slug>)
+
+  Camera/microphone permissions are NOT here; they live in
+  src/chat/AndroidManifest.xml and merge in only for the `chat` flavour.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.VIBRATE" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:theme="@android:style/Theme.Material.NoActionBar"
+      android:hardwareAccelerated="true"
+      android:usesCleartextTraffic="false"
+      android:allowBackup="true"
+      android:supportsRtl="true">
+
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTask"
+        android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode|density"
+        android:windowSoftInputMode="adjustResize">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      <!-- Deep-link: open this activity when the user taps a tukuk.org URL. -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data
+            android:scheme="https"
+            android:host="tukuk.org"
+            android:pathPrefix="${deeplinkPath}" />
+      </intent-filter>
+    </activity>
+  </application>
+
+</manifest>

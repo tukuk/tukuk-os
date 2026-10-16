@@ -63,6 +63,10 @@ apk/build-*/
 apk/launcher/
 apk/*.jks
 apk/keystore.env
+# Gradle Android Studio project — build artefacts and machine-local SDK path
+apk/app/build/
+apk/local.properties
+apk/.gradle/
 public/downloads/*.idsig
 # AAB hanya untuk muat naik Play (tak di-host umum) — boleh dibina semula
 public/downloads/*.aab

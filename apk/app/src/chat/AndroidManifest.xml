@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  chat/AndroidManifest.xml — overlay applied ONLY to the `chat` flavour.
+  Merged on top of src/main/AndroidManifest.xml by AGP's manifest merger,
+  adding camera + microphone permissions required for WebRTC calls.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+  <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+</manifest>

@@ -1,0 +1,7 @@
+// Tukuk-OS Android app build — root project.
+// Open this `apk/` folder in Android Studio to build/run any of the 43 catalog
+// items (tools + games) as a WebView wrapper on an emulator or real device.
+// Select the desired flavour from Build Variants → Run ▶.
+plugins {
+    id 'com.android.application' version '9.4.0' apply false
+}
