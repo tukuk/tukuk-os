@@ -146,6 +146,25 @@ input{font:inherit;color:inherit}
 /* animasi pelancaran aktiviti (gaya Android scale-in) */
 @keyframes actin{from{transform:scale(.93);opacity:.4}to{transform:none;opacity:1}}
 #activity.open{animation:actin .16s ease-out}
+/* Android Studio hub — cipta & "install apa sahaja" */
+#studio{position:absolute;inset:0;z-index:26;background:var(--bg);display:none;flex-direction:column;overflow:auto;padding:calc(env(safe-area-inset-top) + 46px) 16px 30px}
+#studio.open{display:flex}
+#studio .close{position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:14px;padding:6px 12px;border:1px solid var(--line);border-radius:12px}
+#studio h3{font-size:12px;letter-spacing:1.4px;color:var(--muted);margin:18px 0 8px}
+#studio .sub{font-size:13px;color:var(--muted);line-height:1.5}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.sgrid button{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:13.5px;text-align:left;line-height:1.35}
+.sgrid button small{display:block;color:var(--muted);font-size:11.5px;margin-top:4px}
+.sform{display:flex;flex-wrap:wrap;gap:8px}
+.sform input{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none;font-size:13.5px;flex:1;min-width:110px}
+.sform #saUrl{flex-basis:100%}
+.sform #saIcon{max-width:64px;text-align:center}
+.sform button{background:var(--accent);color:#fff;border-radius:12px;padding:10px 18px;font-weight:600;flex:0 0 auto}
+.hint2{font-size:11.5px;color:var(--muted);margin-top:8px}
+.wapp{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:20px;padding:5px 6px 5px 12px;font-size:12.5px;background:var(--card)}
+.wapp .x{color:var(--muted);padding:2px 8px;border-radius:8px}
+.wapp .x:hover{color:#ff6b6b;background:var(--line)}
+#drawerStudio{position:absolute;top:calc(env(safe-area-inset-top) + 6px);left:14px;font-size:12.5px;padding:6px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);z-index:2}
 /* toasts */
 #toasts{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 84px);z-index:60;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
 .toast{background:color-mix(in srgb,var(--card) 94%,transparent);border:1px solid var(--line);border-radius:22px;padding:9px 16px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.35);animation:tin .2s}
@@ -183,12 +202,13 @@ input{font:inherit;color:inherit}
     <button class="cell" id="dAssist"><span class="ic">✦</span><span>Assistant</span></button>
     <button class="cell" id="dChat"><span class="ic">💬</span><span>Chat</span></button>
     <button class="cell" id="dStore"><span class="ic">🛒</span><span>Store</span></button>
+    <button class="cell" id="dStudio"><span class="ic">🅰️</span><span>Studio</span></button>
     <button class="cell" id="dRecents"><span class="ic">⧉</span><span>Recent</span></button>
     <button class="cell" id="dDrawer"><span class="ic">▤</span><span>Apps</span></button>
   </nav>
   <div class="hint">Tukuk OS · tap 🔍 bar to command the AI · long-press an icon for options</div>
 
-  <div id="drawer"><button class="close" id="drawerX">✕</button><div id="drawerBody"></div></div>
+  <div id="drawer"><button class="close" id="drawerX">✕</button><button id="drawerStudio">🅰️ Android Studio</button><div id="drawerBody"></div></div>
   <div id="windows"></div>
   <div id="activity"><div class="abar"><button id="actBack">← Back</button><b id="actTitle"></b><button id="actX">✕</button></div><iframe id="actFrame" title="App"></iframe></div>
   <div id="recents"><div class="rc" id="rcards"></div><button class="clr" id="rcClose">✕ Clear all</button></div>
@@ -211,6 +231,20 @@ input{font:inherit;color:inherit}
     <div class="set-row"><span>Device</span><b>Tukuk One · Web Edition</b></div>
     <div class="set-row"><span>Tukuk OS version</span><b>2.0 “Android-class”</b></div>
     <div class="set-row"><span>Network</span><b id="setNet">—</b></div>
+  </div>
+
+  <div id="studio"><button class="close" id="studioX">✕</button>
+    <h3>ANDROID STUDIO · INSTALL ANYTHING</h3>
+    <p class="sub">Tukuk OS tidak dapat menjalankan Android Studio desktop dalam pelayar (ia perlu Gradle + Android SDK + emulator). Tapi anda boleh <b>cipta dan pasang apa sahaja apl</b> ke telefon web ini dari sini.</p>
+    <div class="sgrid">
+      <button id="stBuild">🏗️ Build a new app<small>App Builder tanpa kod — reka, Jana AI, terbit → auto-install.</small></button>
+      <button id="stAI">🌐 Paste any URL<small>Install web app sedia ada ke skrin utama.</small></button>
+      <button id="stStore">🛒 Store &amp; APK<small>Ambil apl &amp; pakej APK untuk telefon sebenar.</small></button>
+    </div>
+    <h3>INSTALL A WEB APP (ANY URL)</h3>
+    <div class="sform"><input id="saTitle" placeholder="App name (e.g. Wikipedia)" maxlength="40"><input id="saIcon" placeholder="🌐" maxlength="4"><input id="saUrl" placeholder="https://example.com"><button id="saAdd">Install</button></div>
+    <div class="hint2">Apl luar yang menghalang embed akan dibuka di tab baru — sama seperti pintasan web-app Android.</div>
+    <h3>YOUR INSTALLED APPS</h3><div class="pins" id="webList"></div>
   </div>
 
   <div id="lock" hidden>
@@ -428,7 +462,7 @@ function longPress(a) {
 
 // ── drawer ──
 function renderDrawer() {
-  var cats = ['TOOLS', 'MEDIA', 'PORTAL', 'SYSTEM', 'GAMES', 'STORE'];
+  var cats = ['TOOLS', 'MEDIA', 'PORTAL', 'SYSTEM', 'GAMES', 'STORE', 'INSTALLED'];
   var html = '';
   cats.forEach(function (c) {
     var list = APPS.filter(function (a) { return a[4] === c; });
@@ -476,10 +510,72 @@ function syncStore() {
   }).catch(function () { toast('⚠️ Store unreachable — showing built-in apps only.'); return 0; });
 }
 
+// ── ANDROID STUDIO: hub cipta & "install apa sahaja" ke telefon web ──
+//    Apl yang dibina pengguna disimpan di localStorage (per-peranti, seperti
+//    pasang Android sebenar) lalu digabung ke APPS ketika boot. Apl luar yang
+//    menghalang frame dibuka di tab baru (kelakuan Custom Tab Android).
+function getWebApps() { return lsGet('webapps', []); }
+function saveWebApps(list) { lsSet('webapps', list); }
+function IS_EXTERNAL(url) { try { var u = new URL(String(url), location.href); return u.origin !== location.origin; } catch (e) { return false; } }
+function slugId(t) { var s = String(t || '').toLowerCase().replace(/[^a-z0-9]+/, '-').replace(/^-+|-+$/g, '').slice(0, 30); return s || ('app-' + Date.now().toString(36)); }
+function loadWebApps() {
+  getWebApps().forEach(function (w) {
+    if (!w || !w.url || appByName(w.id)) return;
+    APPS.push([w.id, w.title || 'Web App', w.icon || '🌐', w.url, 'INSTALLED']);
+  });
+}
+function addWebApp(title, url, icon) {
+  title = String(title || '').trim().slice(0, 40);
+  icon = (String(icon || '').trim().slice(0, 4)) || '🌐';
+  url = String(url || '').trim();
+  if (!title) { toast('Enter an app name'); return false; }
+  if (!/^https?:\/\//i.test(url)) { toast('URL must start with http:// or https://'); return false; }
+  var list = getWebApps();
+  var id = slugId(title); while (appByName(id)) id = slugId(title) + '-' + Math.floor(Math.random() * 90 + 10);
+  list.unshift({ id: id, title: title, icon: icon, url: url });
+  saveWebApps(list.slice(0, 60));
+  APPS.push([id, title, icon, url, 'INSTALLED']);
+  renderDrawer(); renderHome(); renderStudio();
+  toast('✅ Installed ' + title + ' — open it from your apps');
+  return true;
+}
+function removeWebApp(id) {
+  saveWebApps(getWebApps().filter(function (w) { return w.id !== id; }));
+  var i = -1; for (var j = 0; j < APPS.length; j++) { if (APPS[j][0] === id) { i = j; break; } }
+  if (i !== -1) APPS.splice(i, 1);
+  pins = pins.filter(function (x) { return x !== id; }); lsSet('pins', pins);
+  dropRecent(id); renderDrawer(); renderHome(); renderStudio();
+}
+function openStudio() { $('studio').classList.add('open'); renderStudio(); }
+function openAppInstall() { $('studio').classList.add('open'); renderStudio(); var u = $('saUrl'); if (u) { u.scrollIntoView({ block: 'center' }); u.focus(); } }
+function renderStudio() {
+  var box = $('webList'); if (!box) return;
+  var list = getWebApps();
+  box.innerHTML = '';
+  if (!list.length) { box.innerHTML = '<span style="color:var(--muted);font-size:12.5px">Nothing installed yet — add a web app above or build one.</span>'; return; }
+  list.forEach(function (w) {
+    var chip = document.createElement('span'); chip.className = 'wapp';
+    chip.appendChild(document.createTextNode(w.icon + ' ' + w.title));
+    var open = document.createElement('button'); open.textContent = 'Open'; open.style.cssText = 'font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:10px;margin-left:6px';
+    open.addEventListener('click', function () { launch(appByName(w.id) || [w.id, w.title, w.icon, w.url, 'INSTALLED']); });
+    var x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.title = 'Uninstall';
+    x.addEventListener('click', function () { if (confirm('Uninstall ' + w.title + '?')) removeWebApp(w.id); });
+    chip.appendChild(open); chip.appendChild(x); box.appendChild(chip);
+  });
+}
+$('dStudio').addEventListener('click', openStudio);
+$('drawerStudio').addEventListener('click', openStudio);
+$('studioX').addEventListener('click', function () { $('studio').classList.remove('open'); });
+$('stBuild').addEventListener('click', function () { $('studio').classList.remove('open'); launch(appByName('builder')); });
+$('stAI').addEventListener('click', function () { $('studio').classList.remove('open'); openAppInstall(); });
+$('stStore').addEventListener('click', function () { $('studio').classList.remove('open'); launch(appByName('store')); });
+$('saAdd').addEventListener('click', function () { if (addWebApp($('saTitle').value, $('saUrl').value, $('saIcon').value)) { $('saTitle').value = ''; $('saUrl').value = ''; $('saIcon').value = ''; } });
+
 // ── pelancaran: tetingkap (desktop) / aktiviti (telefon) ──
 function launch(a) {
   if (!a) return;
   if (a[0] === 'settings') { openSettings(); return; }
+  if (IS_EXTERNAL(a[3])) { window.open(a[3], '_blank', 'noopener'); bumpRecent(a); toast('🌐 Opening ' + a[1] + ' (external web app)'); return; }
   if (!IS_PHONE()) return openWindow(a);
   openActivity(a);
 }
@@ -546,12 +642,12 @@ $('rcards').addEventListener('click', function (e) {
   if (e.target.closest('.x')) { killWin(n); renderRecents(); return; }
   $('recents').classList.remove('open');
   var a = appByName(n); if (!a) return;
-  if (!IS_PHONE()) openWindow(a); else openActivity(a);
+  launch(a);
 });
 $('rcClose').addEventListener('click', function () { closeAll(); recents = []; lsSet('recents', recents); renderRecents(); $('recents').classList.remove('open'); });
 $('dRecents').addEventListener('click', function () { renderRecents(); $('recents').classList.toggle('open'); });
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') { $('drawer').classList.remove('open'); $('recents').classList.remove('open'); $('assist').classList.remove('open'); $('shade').classList.remove('open'); $('settings').classList.remove('open'); }
+  if (e.key === 'Escape') { $('drawer').classList.remove('open'); $('recents').classList.remove('open'); $('assist').classList.remove('open'); $('shade').classList.remove('open'); $('settings').classList.remove('open'); $('studio').classList.remove('open'); }
   if (e.altKey && e.key === 'r') { $('recents').classList.toggle('open'); renderRecents(); e.preventDefault(); }
 });
 
@@ -640,7 +736,7 @@ document.addEventListener('touchend', function (e) {
 }, { passive: true });
 function goHome() {
   closeActivity();
-  ['drawer', 'recents', 'assist', 'shade'].forEach(function (id) { $(id).classList.remove('open'); });
+  ['drawer', 'recents', 'assist', 'shade', 'studio'].forEach(function (id) { $(id).classList.remove('open'); });
 }
 
 // ── tetapan & penampilan ──
@@ -703,6 +799,7 @@ function sendAsk() {
   var q = $('aQ').value.trim(); if (!q) return;
   $('aQ').value = ''; $('gooQ').value = '';
   feedBub('me', escH(q));
+  if (/^(open |launch |buka )?(android studio|app studio|developer studio|install app|sideload)/i.test(q)) { openStudio(); feedBub('ai', 'Opening 🅰️ Android Studio — build or install any app here.'); return; }
   var cmd = parseCommand(q);
   if (cmd.action === 'open') { feedBub('ai', 'Opening <b>' + escH(cmd.app[1]) + '</b> 📲'); launch(cmd.app); return; }
   if (cmd.action === 'close') { killWin(cmd.app[0]); feedBub('ai', 'Closed ' + escH(cmd.app[1])); return; }
@@ -759,6 +856,7 @@ window.addEventListener('beforeinstallprompt', function (e) {
   notify('💡 You can install Tukuk OS as an app from your browser menu.');
 });
 function boot() {
+  loadWebApps();
   applyTheme(); applyDim(); renderHome(); renderDrawer(); renderShade();
   netTick(); paintBadge();
   $('os').hidden = false;
