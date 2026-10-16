@@ -295,7 +295,7 @@ async function ask(question, { limit } = {}) {
   // Cloud SENTIASA dicuba (cepat & murah) — fastMode hanya penggalang ollama/none.
   // Tugasan self-contained (aritmetik/kod) WAJIB lalu LLM — ekstraktif tak boleh mengira/menjana kod.
   const useExtractive = backend.kind === 'none'
-    || (backend.kind === 'ollama' && config.brain.fastMode && !selfQuestion && !task.selfContained);
+    || (backend.kind === 'ollama' && config.brain.fastMode && !backend.localFirst && !selfQuestion && !task.selfContained);
 
   if (useExtractive) {
     const extracted = hits.length > 0 ? extractiveAnswer(query, hits) : { answer: '', method: 'none' };
@@ -340,6 +340,17 @@ async function ask(question, { limit } = {}) {
         answer = text;
         break;
       }
+    }
+    // 3) LOCAL-FIRST kecemasan: model lokal tak beri jawapan (ralat/blip/tiada model)
+    //    → BARU panggil rotasi cloud. Langkah ini tidak berjalan bila cloud utama.
+    if (!answer && backend.kind === 'ollama' && backend.cloudFallback && backend.cloudFallback.length) {
+      const out = await provider.generateCloudRotation(prompt, {
+        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP
+      });
+      const text = String(out?.response || '').trim();
+      if (text && !isEcho(text, prompt)) { answer = text; model = `${out._provider}:${out._model}`; }
+      else if (text) rejected.push({ model: out._provider, reason: 'output not coherent (repeating the prompt)' });
+      for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
     }
   }
 

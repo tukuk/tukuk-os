@@ -126,6 +126,15 @@ function setting(key, fb) {
   try { return require('../store').getSetting(key, fb); } catch { return fb; }
 }
 
+// LOCAL-FIRST dihidupkan oleh env BRAIN_LOCAL_FIRST (1/true/yes/on) ATAU setting
+// admin `aiLocalFirst=1` (boleh toggle dari /admin tanpa deploy). Bila ON, Ollama
+// tempatan menjadi otak utama; cloud API hanya dipanggil sebagai kecemasan.
+function isLocalFirst() {
+  if (config.brain.localFirst) return true;
+  if (['1', 'true', 'yes', 'on'].includes(String(process.env.BRAIN_LOCAL_FIRST || '').toLowerCase())) return true;
+  return String(setting('aiLocalFirst', '')) === '1';
+}
+
 const CLOUD_PROVIDERS = {
   gemini: { defaultModel: 'gemini-flash-latest', kind: 'gemini' },
   groq: { defaultModel: 'openai/gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
@@ -221,6 +230,10 @@ async function activeBackend() {
   const pref = String(setting('aiProvider', '') || '').toLowerCase();
   if (pref === 'ollama') {
     return (await ollamaReachable()) ? { kind: 'ollama' } : { kind: 'none' };
+  }
+  // LOCAL-FIRST: Ollama ialah otak utama; senaraikan cloud sebagai pelarian kecemasan.
+  if (isLocalFirst() && (await ollamaReachable())) {
+    return { kind: 'ollama', localFirst: true, cloudFallback: listCloudProviders().map((p) => p.name) };
   }
   const providers = listCloudProviders();
   if (providers.length) {
@@ -338,7 +351,7 @@ async function health() {
   if (b.kind === 'ollama') {
     try {
       const models = await availableModels();
-      return { online: true, cloud: false, provider: 'ollama', model: activeModel, models, wanted: config.brain.chain, satisfied: config.brain.chain.some((n) => models.some((m) => m.name === n)) };
+      return { online: true, cloud: false, localFirst: Boolean(b.localFirst), cloudFallback: b.cloudFallback || [], provider: 'ollama', model: activeModel, models, wanted: config.brain.chain, satisfied: config.brain.chain.some((n) => models.some((m) => m.name === n)) };
     } catch (error) {
       return { online: false, provider: 'ollama', model: null, error: error.message };
     }
@@ -352,5 +365,5 @@ function currentModel() {
 
 module.exports = {
   generate, generateCloud, generateCloudRotation, health, availableModels, pickModel,
-  currentModel, activeBackend, ollamaReachable, listCloudProviders
+  currentModel, activeBackend, ollamaReachable, listCloudProviders, isLocalFirst
 };
