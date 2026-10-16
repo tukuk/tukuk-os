@@ -1,0 +1,8 @@
+[Unit]
+Description=Backup data/ runtime Tukuk-OS (chat, leaderboard, terbitan) ke R2
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tukuk-os
+EnvironmentFile=-/opt/tukuk-os/.env
+ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-data.sh

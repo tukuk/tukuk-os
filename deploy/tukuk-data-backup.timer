@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup data Tukuk-OS ke R2 setiap jam (rotak 168 slot / 7 hari)
+
+[Timer]
+OnCalendar=*-*-* *:10:00
+Persistent=true
+Unit=tukuk-data-backup.service
+
+[Install]
+WantedBy=timers.target
