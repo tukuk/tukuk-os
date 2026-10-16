@@ -374,7 +374,7 @@ const PLANETARY_RADIO = [
 async function searchRadioStations(q, skip = 0, { country = '', tag = '', region = '' } = {}) {
   // Pseudo-kawasan 'angkasa': gabung rakaman planet curated + stesen langsung tag 'space'.
   if (String(region).toLowerCase() === 'angkasa') {
-    const p = new URLSearchParams({ tag_exact: 'space', hidebroken: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
+    const p = new URLSearchParams({ tag: 'space', hidebroken: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
     const data = await fetchRadioJson(`/json/stations/search?${p}`);
     const live = Array.isArray(data) ? mapRadioStations(data) : [];
     const hits = skip === 0 ? [...PLANETARY_RADIO, ...live] : live;
@@ -390,7 +390,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
     const per = Math.max(1, Math.ceil(48 / list.length));
     const results = await Promise.all(list.map((code) => {
       const p = new URLSearchParams({ countrycode: code, hidebroken: 'true', limit: String(per), order: 'clickcount', reverse: 'true' });
-      if (tag) p.set('tag_exact', tag.toLowerCase());
+      if (tag) p.set('tag', tag.toLowerCase());
       if (q) p.set('name', q);
       return fetchRadioJson(`/json/stations/search?${p}`).catch(() => null);
     }));
@@ -406,7 +406,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
   let path;
   if (tag || country) {
     const params = new URLSearchParams({ hidebroken: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
-    if (tag) params.set('tag_exact', tag.toLowerCase());
+    if (tag) params.set('tag', tag.toLowerCase());
     if (country) params.set('country', country);
     if (q) params.set('name', q);
     path = `/json/stations/search?${params}`;
