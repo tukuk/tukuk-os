@@ -754,6 +754,7 @@ app.get('/blog', (req, res) => {
 <meta name="twitter:description" content="Articles, tutorials and analysis on search engine technology, data privacy and artificial intelligence from Tukuk-OS.">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 <link rel="canonical" href="https://tukuk.org/blog">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
 <script type="application/ld+json">${jsonLdBlog}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -1135,6 +1136,7 @@ app.get('/blog/:slug', (req, res) => {
 <meta name="twitter:image" content="${ogImage}">
 <link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
 <link rel="canonical" href="https://tukuk.org/blog/${encodeURIComponent(post.slug)}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
