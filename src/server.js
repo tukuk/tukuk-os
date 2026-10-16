@@ -31,6 +31,7 @@ const chat = require('./chat');
 const blogRedirects = require('./blog-redirects');
 const publish = require('./publish');
 const { exec } = require('child_process');
+const { Readable } = require('stream');
 
 const index = client.index(config.indexName);
 
@@ -193,9 +194,13 @@ app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 // Aliran SSE (/api/chat/stream) tidak boleh dimampat — mampat menyimpan bingkai
 // daripada dihantar serta-merta, jadi terus kecualikan jenis kandungan itu.
 app.use(compression({
-  filter: (req, res) => (String(res.getHeader('Content-Type') || '').includes('text/event-stream')
-    ? false
-    : compression.filter(req, res)),
+  filter: (req, res) => {
+    const ct = String(res.getHeader('Content-Type') || '');
+    // Jangan mampat aliran langsung (SSE) maupun audio/video radio — mampat
+    // menyimpan bingkai/byte daripada dihantar serta-merta (stream jadi tersekat).
+    if (/text\/event-stream|audio\/|video\/|application\/octet-stream/i.test(ct)) return false;
+    return compression.filter(req, res);
+  },
 }));
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -1498,6 +1503,60 @@ app.get('/radio/countries', limiter.search, async (req, res) => {
     res.json({ countries: await mediaSearch.listRadioCountries() });
   } catch (error) {
     res.status(502).json({ error: 'Radio countries failed', details: safeError(error) });
+  }
+});
+
+// ── Proksi aliran radio sama-asal (same-origin) ─────────────────────────────
+// Pelayar BLOK stream http:// pada halaman https:// ("mixed content"), dan sesetengah
+// stesen Asia memblok ikut Referrer/CORS. Muncul ralat "Mixed Content or CORS" semasa main
+// Radio. Endpoint ini fetch upstream (HTTP atau HTTPS) di PELAYAN lalu pipe balik byte
+// mentah sebagai https://tukuk.org same-origin — selesaikan mixed-content + CORS +
+// hotlink-referrer serentak. Tiada ICY metadata dipinta (audio tulen, mudah di-pipe).
+// Aliran HIDUP (tak tamat) — jadi tiada timeout body; hanya timeout sambungan + abort
+// bila klien putuskan hubungan.
+app.get('/radio/stream', limiter.search, async (req, res) => {
+  const target = String(req.query.url || '').trim();
+  if (!/^https?:\/\//i.test(target)) return res.status(400).end();
+  let upstreamUrl;
+  try {
+    upstreamUrl = await assertPublicUrl(target); // sekat SSRF alamat dalaman
+  } catch {
+    return res.status(400).end();
+  }
+  const controller = new AbortController();
+  const abort = () => { try { controller.abort(); } catch { /* sudah tamat */ } };
+  req.on('close', abort);
+  res.on('close', abort);
+  const connectTimer = setTimeout(abort, 10000); // hanya had masa SAMBUNG, bukan body
+  try {
+    const upstream = await fetch(upstreamUrl.href, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Referer': upstreamUrl.origin + '/',
+        'Accept': '*/*',
+      },
+    });
+    clearTimeout(connectTimer); // kepala diterima — jangan bunuh badan stream hidup
+    if (!upstream.ok && upstream.status !== 200 && upstream.status !== 206) {
+      if (!res.headersSent) res.status(502).end();
+      return;
+    }
+    const ct = upstream.headers.get('content-type') || 'audio/mpeg';
+    res.status(200);
+    res.setHeader('Content-Type', ct);
+    res.setHeader('Cache-Control', 'no-store, no-transform');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Accel-Buffering', 'no'); // matikan buffering nginx/edge jika ada
+    if (!upstream.body) { res.end(); return; }
+    const nodeStream = Readable.fromWeb(upstream.body);
+    nodeStream.on('error', () => { try { res.end(); } catch { /* sudah tamat */ } });
+    nodeStream.pipe(res);
+  } catch (err) {
+    clearTimeout(connectTimer);
+    if (!res.headersSent) res.status(502).end();
+    else { try { res.end(); } catch { /* sudah tamat */ } }
   }
 });
 

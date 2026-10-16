@@ -31,13 +31,14 @@ function extractFn(src, name) {
 const normAudioSrc = extractFn(html, 'normAudioSrc');
 const savePlayerState = extractFn(html, 'savePlayerState');
 
-// ── normAudioSrc: hanya http(s), naik taraf http→https pada halaman https ──
-test('normAudioSrc: tolak non-http, naik taraf http→https bila halaman https', () => {
+// ── normAudioSrc: hanya http(s); stream http diproksi sama-asal pada halaman https ──
+test('normAudioSrc: tolak non-http, proksi http→/radio/stream bila halaman https', () => {
   const load = (proto) => new Function('window', `${normAudioSrc}\nreturn normAudioSrc;`)({ location: { protocol: proto } });
   const https = load('https:'); const http = load('http:');
-  assert.equal(https('https://a.com/x.m4a'), 'https://a.com/x.m4a', 'https kekal');
-  assert.equal(https('http://a.com/x.m4a'), 'https://a.com/x.m4a', 'http→https di halaman https (elak mixed-content)');
-  assert.equal(http('http://a.com/x.m4a'), 'http://a.com/x.m4a', 'http dibiarkan di halaman http');
+  assert.equal(https('https://a.com/x.m4a'), 'https://a.com/x.m4a', 'https kekal (main terus)');
+  assert.equal(https('http://a.com/x.m4a'), '/radio/stream?url=' + encodeURIComponent('http://a.com/x.m4a'), 'http→proksi sama-asal di halaman https (elak mixed-content)');
+  assert.equal(http('http://a.com/x.m4a'), 'http://a.com/x.m4a', 'http dibiarkan di halaman http (tiada mixed-content)');
+  assert.equal(https('/radio/stream?url=http%3A%2F%2Fa'), '/radio/stream?url=http%3A%2F%2Fa', 'sudah diproksi → idempotent');
   assert.equal(https(''), '', 'kosong ditolak');
   assert.equal(https('ftp://a/x'), '', 'skema bukan-http ditolak');
   assert.equal(https('  https://a/y  '), 'https://a/y', 'whitespace trim');

@@ -1579,8 +1579,15 @@ function updatePpLabel() {
 
 function normAudioSrc(raw) {
   let src = String(raw || '').trim();
+  if (!src) return '';
+  if (src.indexOf('/radio/stream?') !== -1) return src; // sudah diproksi — idempotent (elak normalisasi berganda)
   if (!src.startsWith('http')) return '';
-  if (window.location.protocol === 'https:' && src.startsWith('http://')) src = src.replace('http://', 'https://');
+  // Halaman https:// BLOK stream http:// (mixed content). Paksa tukar ke https://
+  // selalunya 404 kerana stesen Asia tiada endpoint HTTPS. Halakan melalui proksi
+  // sama-asal pelayan (/radio/stream) yang fetch upstream (http/https) & pipe balik.
+  if (window.location.protocol === 'https:' && src.startsWith('http://')) {
+    return '/radio/stream?url=' + encodeURIComponent(src);
+  }
   return src;
 }
 function resetOwnerBtn() {
