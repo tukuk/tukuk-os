@@ -1577,15 +1577,17 @@ function updatePpLabel() {
   audioPlayPauseEl.setAttribute('aria-pressed', playing ? 'true' : 'false');
 }
 
-function normAudioSrc(raw) {
+function normAudioSrc(raw, proxy) {
   let src = String(raw || '').trim();
   if (!src) return '';
   if (src.indexOf('/radio/stream?') !== -1) return src; // sudah diproksi — idempotent (elak normalisasi berganda)
   if (!src.startsWith('http')) return '';
-  // Halaman https:// BLOK stream http:// (mixed content). Paksa tukar ke https://
-  // selalunya 404 kerana stesen Asia tiada endpoint HTTPS. Halakan melalui proksi
-  // sama-asal pelayan (/radio/stream) yang fetch upstream (http/https) & pipe balik.
-  if (window.location.protocol === 'https:' && src.startsWith('http://')) {
+  // Radio (langsung) pada halaman https://: banyak stesen HTTPS tetapi redirect ke
+  // stream http (penurunan mixed-content) ATAU blok ikut Referrer/hotlink → "diblock".
+  // Untuk radio, halakan SEMUA stream melalui proksi sama-asal pelayan (/radio/stream)
+  // yang fetch upstream (http/https, ikut redirect) & pipe balik — bunuh mixed-content
+  // + CORS + hotlink serentak. Muzik (pratinjau iTunes, https bersih) main terus.
+  if (proxy || (window.location.protocol === 'https:' && src.startsWith('http://'))) {
     return '/radio/stream?url=' + encodeURIComponent(src);
   }
   return src;
@@ -1628,7 +1630,7 @@ function markPlaying(pBtn, title) {
 }
 
 function beginPlay(rawSrc, title, pBtn, opts = {}) {
-  const audioSrc = normAudioSrc(rawSrc);
+  const audioSrc = normAudioSrc(rawSrc, opts.live);
   if (!audioSrc) return;
   if (audioOwner && audioOwner !== pBtn) resetOwnerBtn();
   currentSrc = audioSrc;
@@ -1730,7 +1732,7 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('.card-actions a')) return;
 
   e.preventDefault();
-  const audioSrc = normAudioSrc(target.dataset.audio);
+  const audioSrc = normAudioSrc(target.dataset.audio, mode === 'radio');
   if (!audioSrc) return;
   const pBtn = card ? card.querySelector('.play-btn') : btn;
   const title = target.dataset.title || (card && card.dataset.title) || '';
@@ -1746,7 +1748,7 @@ document.addEventListener('click', (e) => {
   let st = null;
   try { st = JSON.parse(localStorage.getItem(PLAYER_STATE_KEY) || 'null'); } catch (e) { return; }
   if (!st || !st.src || !st.playing || Date.now() - (st.ts || 0) > 12 * 3600 * 1000) return;
-  const src = normAudioSrc(st.src);
+  const src = normAudioSrc(st.src, st.live);
   if (!src) return;
   currentSrc = src; currentLive = !!st.live; wantPlay = true; retryCount = 0; playToken++;
   if (audioAutoEl) audioAutoEl.checked = st.auto !== false; // pulih preferensi Auto‑next (lalai: berterusan)
