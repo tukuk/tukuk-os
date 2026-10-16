@@ -337,6 +337,10 @@ const RADIO_REGIONS = {
   'asia-timur': ['JP','KR','CN','TW','HK','MN'],
   'asia-selatan': ['IN','PK','BD','LK','NP','BT','MV'],
   'timur-tengah': ['SA','AE','EG','TR','IQ','IR','QA','KW','JO','LB','OM','BH'],
+  eropa: ['GB','DE','FR','IT','ES','NL','PL','SE','PT','BE','CH','AT','UA','RO'],
+  amerika: ['US','CA','MX','BR','AR','CO','CL','PE','VE','EC','CU','DO'],
+  afrika: ['ZA','NG','EG','KE','MA','ET','GH','DZ','TN','UG','TZ','SN'],
+  oseania: ['AU','NZ','FJ','PG'],
 };
 
 // Tukar array stesen mentah radio-browser kepada objek hit kami (buang tanpa URL).
@@ -361,9 +365,11 @@ function mapRadioStations(arr) {
 async function searchRadioStations(q, skip = 0, { country = '', tag = '', region = '' } = {}) {
   const codes = region && RADIO_REGIONS[String(region).toLowerCase()];
   if (codes) {
-    // Satu permintaan kecil setiap negara, gabung, buang pendua, ikut paling popular.
-    const per = Math.max(1, Math.ceil(48 / codes.length));
-    const results = await Promise.all(codes.map((code) => {
+    // Satu permintaan kecil setiap negara (cap 14 utk elak too much fan-out),
+    // gabung, buang pendua, ikut paling popular.
+    const list = codes.slice(0, 14);
+    const per = Math.max(1, Math.ceil(48 / list.length));
+    const results = await Promise.all(list.map((code) => {
       const p = new URLSearchParams({ countrycode: code, hidebroken: 'true', is_https: 'true', limit: String(per), order: 'clickcount', reverse: 'true' });
       if (tag) p.set('tag_exact', tag.toLowerCase());
       if (q) p.set('name', q);
