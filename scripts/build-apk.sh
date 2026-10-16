@@ -27,7 +27,10 @@ APP_VC="${APP_VC:-3}"
 APP_VN="${APP_VN:-1.0.1}"
 BUILD_AAB="${BUILD_AAB:-1}"
 # pathPrefix untuk deep-link = laluan selepas origin, dengan satu slash awal.
+# Buang query (# dan ?) — pathPrefix manifest tidak boleh mengandungi aksara itu
+# (cth. arked /builder?tpl=x → START_URL penuh dipelihara, pathPrefix jadi /builder).
 APP_PATH="/${APP_URL#*://}"; APP_PATH="/${APP_PATH#*/}"; APP_PATH="${APP_PATH%/}"
+APP_PATH="${APP_PATH%%\?*}"; APP_PATH="${APP_PATH%%#*}"
 PKG_DIR="${APP_PKG##*.}"              # segmen terakhir pakej → nama direktori src
 
 # ── Cari SDK + JDK ──

@@ -2051,6 +2051,105 @@ app.get('/api/store', (req, res) => {
   }
 });
 
+// ── APK atas-permintaan (tukuk.org = gedung apl, gaya APKPure) ─────────────────
+//   Setiap item katalog /store (bawaan / arked / satu kata / komuniti) boleh
+//   dijadikan APK pembungkus WebView yang membuka URL apl itu. Pembina memanggil
+//   scripts/build-apk.sh (aapt2/d8/apksigner) dengan env per-apl. Semua APK
+//   ditandatangani dengan kunci Tukuk yang sama (apk/tukuk-chat-release.jks) supaya
+//   satu pengenal-penerbit & kemas kini berjalan lancar. Output dikache di
+//   public/downloads — permintaan seterusnya hidang fail cache (tiada bina semula).
+//   Keselamatan: hanya id yang WUJUD dalam storeCatalog dilayan (URL sentiasa milik
+//   tukuk.org sendiri — tiada SSRF/pembungkusan laman luar); label & slug disanitasi.
+const APK_ORIGIN = process.env.APK_ORIGIN || 'https://tukuk.org';
+const APK_REPO = path.join(__dirname, '..');
+const APK_OUT_DIR = path.join(APK_REPO, 'public', 'downloads');
+const APK_BUILD_SH = path.join(APK_REPO, 'scripts', 'build-apk.sh');
+const APK_ICON_DEFAULT = 'public/icons/launcher-default.png';
+const apkBuildLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 60 * 1000, max: 6, keyPrefix: 'apkbuild:' })
+  : (req, res, next) => next();
+
+// Slug paket/fail stabil & sah (alfanumerik kecil, bermula huruf) daripada id item.
+// bv-/ak- buang tag sumber → padan APK statik sedia ada (tukuk-calc.apk, org.tukuk.calc);
+// sk-/skg-/km- kekalkan prefix → tiada pertindihan silang-sumber (km-chat ≠ chat).
+function apkSlug(id) {
+  const s = String(id || '');
+  let base = s;
+  if (s.startsWith('bv-')) base = s.slice(3);
+  else if (s.startsWith('ak-')) base = s.slice(3);
+  const cleaned = base.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (!cleaned) return 'app';
+  return (/^[a-z]/.test(cleaned) ? cleaned : 'a' + cleaned).slice(0, 40);
+}
+// Label selamat untuk heredoc strings.xml: buang aksara shell (<>&"'`$\) & XML.
+function apkLabel(title) {
+  const clean = String(title || '').replace(/[<>&"'`$\\]/g, '').replace(/\s+/g, ' ').trim();
+  return (clean || 'Tukuk App').slice(0, 30);
+}
+// SDK untuk proses anak (root tiada $HOME/Android/Sdk pada VPS → cari calon).
+function findAndroidSdk() {
+  const cands = [process.env.ANDROID_HOME, process.env.ANDROID_SDK_ROOT,
+    '/home/tukuk/Android/Sdk', path.join(process.env.HOME || '/root', 'Android/Sdk'), '/root/Android/Sdk'];
+  for (const c of cands) { if (c && fs.existsSync(path.join(c, 'build-tools'))) return c; }
+  return null;
+}
+// id item store → spesifikasi binaan, atau null jika tak dikenali.
+function apkSpec(id) {
+  const item = storeCatalog().find((x) => x.id === id);
+  if (!item) return null;
+  const slug = apkSlug(item.id);
+  const rel = String(item.url || '/');
+  const url = APK_ORIGIN + (rel.startsWith('/') ? rel : '/' + rel);
+  const isChat = item.id === 'bv-chat';
+  let icon = APK_ICON_DEFAULT;
+  if (item.src === 'bawaan') {
+    const name = rel.replace(/^\/apps\//, '');
+    const special = path.join(APK_REPO, 'public', 'icons', 'apps', `${name}-512.png`);
+    if (fs.existsSync(special)) icon = `public/icons/apps/${name}-512.png`;
+  }
+  return { id: item.id, slug, pkg: `org.tukuk.${slug}`, label: apkLabel(item.title),
+    url, icon, media: isChat ? 1 : 0, vc: isChat ? 3 : 1, vn: isChat ? '1.0.1' : '1.0.0',
+    file: `tukuk-${slug}.apk` };
+}
+
+// Bina APK (kunci in-flight per-slug supaya permintaan serentak tak bina berganda).
+const apkInflight = new Map();
+function buildApk(spec) {
+  const absOut = path.join(APK_OUT_DIR, spec.file);
+  if (fs.existsSync(absOut)) return Promise.resolve({ ok: true, cached: true });
+  if (apkInflight.has(spec.slug)) return apkInflight.get(spec.slug);
+  const sdk = findAndroidSdk();
+  if (!sdk) return Promise.resolve({ ok: false, error: 'Android SDK (build-tools) tidak dijumpai pada pelayan' });
+  const env = { ...process.env, ANDROID_HOME: sdk,
+    APP_SLUG: spec.slug, APP_PKG: spec.pkg, APP_LABEL: spec.label, APP_URL: spec.url,
+    APP_ICON: spec.icon, APP_MEDIA: String(spec.media), APP_VC: String(spec.vc),
+    APP_VN: spec.vn, BUILD_AAB: '0' };
+  const p = new Promise((resolve) => {
+    require('child_process').execFile('bash', [APK_BUILD_SH],
+      { env, cwd: APK_REPO, timeout: 90000, maxBuffer: 8 * 1024 * 1024 }, (err) => {
+        apkInflight.delete(spec.slug);
+        if (err) return resolve({ ok: false, error: String(err.stderr || err.message || 'bina gagal').slice(0, 400) });
+        if (!fs.existsSync(absOut)) return resolve({ ok: false, error: 'APK tidak dihasilkan' });
+        resolve({ ok: true, cached: false });
+      });
+  });
+  apkInflight.set(spec.slug, p);
+  return p;
+}
+
+// GET /api/apk/<item-id> → jana atau ambil cache APK, lalu alihkan ke fail muat turun.
+app.get('/api/apk/:id', apkBuildLimiter, async (req, res) => {
+  try {
+    const spec = apkSpec(req.params.id);
+    if (!spec) return res.status(404).json({ error: 'Item store tidak dikenali' });
+    const r = await buildApk(spec);
+    if (!r.ok) return res.status(500).json({ error: 'Gagal menjana APK', details: r.error });
+    return res.redirect(302, '/downloads/' + spec.file);
+  } catch (error) {
+    res.status(500).json({ error: 'APK atas-permintaan gagal', details: safeError(error) });
+  }
+});
+
 // ── Papan pendahulu komuniti (skor game terbitan). Data AWAM, tanpa pengesahan, had-kadar.
 //    Games dalam sandbox hantar skor (GET /api/score) & baca (GET /api/scores) melalui
 //    connect-src host-sendiri (lihat publishCspFor). opaque-origin = tiada cookie dihantar.

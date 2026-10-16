@@ -142,6 +142,12 @@
     border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; cursor: pointer; transition: all .18s;
   }
   .copybtn:hover { color: #fff; border-color: var(--accent-glow); }
+  .apkbtn {
+    background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.4); color: #7ce898;
+    border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all .18s;
+  }
+  .apkbtn:hover { background: rgba(48,209,88,0.2); color: #b6f2c6; }
+  .apkbtn:disabled { opacity: .6; cursor: progress; }
   .srcbadge { font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; width: fit-content; }
   .srcbadge.bawaan { background: rgba(48,209,88,.14); color: #7ce898; border: 1px solid rgba(48,209,88,.3); }
   .srcbadge.satukata { background: rgba(242,193,78,.14); color: #f2c14e; border: 1px solid rgba(242,193,78,.3); }
@@ -228,6 +234,8 @@
   const srcs = document.getElementById('srcs');
   const SRC_LABEL = { bawaan: '🏠 Bawaan', satukata: '⚡ Satu Kata', arked: '🕹️ Arked', komuniti: '👥 Komuniti' };
   const SRC_RANK = { bawaan: 0, satukata: 1, arked: 2, komuniti: 3 };
+  // APK berjalan pada Android/Huawei/ChromeOS; bukan iOS (APK tak pasang di iPhone) → sembunyi butang.
+  const CAN_APK = !/iPhone|iPad|iPod/.test(navigator.userAgent || '');
   let items = [];
   let cat = 'all';
   let src = 'all';
@@ -291,6 +299,7 @@
         </div>
         <div class="footrow">
           <a class="openbtn" href="${esc(x.url)}" target="_blank" rel="noopener">${x.kind === 'game' ? '▶ Main' : '▶ Buka'}</a>
+          ${CAN_APK ? `<button class="apkbtn" data-apk="${esc(x.id)}" title="Jana & muat turun APK Android (pembungkus apl ini)">⬇ APK</button>` : ''}
           <button class="copybtn" data-copy="${location.origin}${esc(x.url)}" title="Salin pautan">📋</button>
         </div>
       </article>`).join('');
@@ -306,6 +315,29 @@
     const text = b.getAttribute('data-copy');
     const done = () => { b.textContent = '✓'; setTimeout(() => { b.textContent = '📋'; }, 1200); };
     try { navigator.clipboard.writeText(text).then(done, done); } catch { done(); }
+  });
+
+  // ⬇ APK — jana APK atas-permintaan (server bina sekali, kemudian hidang cache) lalu muat turun.
+  grid.addEventListener('click', async (e) => {
+    const a = e.target.closest('.apkbtn');
+    if (!a) return;
+    e.preventDefault();
+    const old = a.textContent;
+    a.disabled = true; a.textContent = '⏳ Jana…';
+    try {
+      const r = await fetch('/api/apk/' + encodeURIComponent(a.getAttribute('data-apk')));
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j && j.error ? j.error : ('HTTP ' + r.status)); }
+      const blob = await r.blob();
+      const name = (r.url.split('/').pop() || 'tukuk-app.apk').replace(/[^a-z0-9._-]/gi, '') || 'tukuk-app.apk';
+      const objUrl = URL.createObjectURL(blob);
+      const dl = document.createElement('a'); dl.href = objUrl; dl.download = name;
+      document.body.appendChild(dl); dl.click(); dl.remove();
+      setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
+      a.textContent = '✓ Selesai';
+    } catch (err) {
+      a.textContent = '⚠ ' + String(err.message || 'gagal').slice(0, 14);
+    }
+    setTimeout(() => { a.textContent = old; a.disabled = false; }, 2600);
   });
 
   tabs.addEventListener('click', (e) => {
