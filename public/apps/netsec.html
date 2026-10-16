@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NetSec Toolkit — Hashes, Ciphers, IP/CIDR, DNS — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="A safe, browser-only security & networking toolbox in the spirit of a Linux toolkit: hashing (MD5/SHA1/SHA-256/SHA-512/CRC32), Base32/Base64/Hex/Binary codecs, classic ciphers, IPv4/CIDR/IPv6/MAC calculators, DNS-over-HTTPS lookups, password strength, random generators and a regex tester. Everything runs on your device — no remote scanning.">
+<title>Cyber Security Hub — 2FA, Hashes, Phishing Checker, IP/CIDR, DNS — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Everyone's cyber-safety hub inside Tukuk OS: file & text hashing (MD5/SHA/CRC32), Base32/Base64/Hex codecs, classic ciphers, IPv4/CIDR/IPv6/MAC calculators, DNS-over-HTTPS lookups, password strength + leaked-password check (HIBP), a local TOTP authenticator (2FA), phishing link triage, email header analysis (SPF/DKIM/DMARC), JWT decoder, port reference, random generators, regex tester and a personal cyber-safety checklist. Everything runs on your device — no scanning, no exploits, no tracking.">
 <link rel="canonical" href="https://tukuk.org/apps/netsec">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <script src="/theme.js"></script>
@@ -40,10 +40,13 @@
   th { color:var(--muted); font-weight:600; }
   mark { background:#3a5a2a; color:#eaffea; }
   .note { font-size:.72rem; color:var(--muted); margin-top:12px; }
+  .chk { display:flex; gap:8px; align-items:flex-start; padding:7px 4px; border-bottom:1px solid var(--line); font-size:.82rem; }
+  .chk input { margin-top:3px; width:auto; flex:0 0 auto; }
+  .chk small { display:block; color:var(--muted); font-size:.7rem; margin-top:2px; }
 </style>
 </head>
 <body>
-<header><a class="back" href="/store">← Store</a><h1>🛡️ NetSec Toolkit</h1></header>
+<header><a class="back" href="/store">← Store</a><h1>🛡️ Cyber Security</h1></header>
 <div class="wrap">
   <div class="tabs" id="tabs"></div>
 
@@ -97,6 +100,9 @@
     <label>Generate</label>
     <div class="row2"><input type="text" id="pwlen" value="20" style="width:70px"><label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pwsym" checked style="width:auto">symbols</label><label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pwdig" checked style="width:auto">digits</label><label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pwup" checked style="width:auto">upper</label><button class="btn" id="pwgen">Generate</button></div>
     <div class="out" id="pwgenout">—</div>
+    <label>Leaked check</label>
+    <div class="row2"><button class="btn" id="leakgo">Check breached passwords (HIBP)</button></div>
+    <div class="out" id="leakout">—</div>
   </section>
 
   <section class="panel" data-t="random">
@@ -115,14 +121,65 @@
     <div class="out" id="xout">Matches highlighted here.</div>
   </section>
 
-  <p class="note">🔒 Safety: every tool here runs on <em>your</em> device or uses public read-only DNS. Deliberately <b>no</b> port-scanning, brute-forcing or exploit frameworks — attacking systems you don't own is illegal and against our terms. Use on your own assets or with written permission.</p>
+  <section class="panel" data-t="file">
+    <h2>File digests</h2>
+    <p>Hash a file <em>on your device</em> (never uploaded) — compare against a publisher's checksum to verify downloads.</p>
+    <input type="file" id="filein" style="font-size:.8rem; background:var(--card,#121826); border:1px solid var(--line); border-radius:8px; padding:8px; width:100%; box-sizing:border-box">
+    <div class="out" id="fileout">—</div>
+  </section>
+
+  <section class="panel" data-t="totp">
+    <h2>Authenticator (TOTP / 2FA)</h2>
+    <p>Turn a Base32 secret into rolling 6-digit codes — a real authenticator app, computed offline on your device.</p>
+    <label>Secret (Base32, no spaces needed)</label><input type="text" id="tsec" placeholder="JBSWY3DPEHPK3PXP">
+    <div class="row2"><button class="btn" id="tgo">Start</button><span id="tnext" style="font-size:.75rem;color:var(--muted)"></span></div>
+    <div class="out" id="tout" style="font-size:1.6rem;text-align:center;letter-spacing:.25em">—</div>
+  </section>
+
+  <section class="panel" data-t="url">
+    <h2>Link / phishing checker</h2>
+    <p>Heuristic triage of a URL — the link is <b>never opened or requested</b>, only analysed locally.</p>
+    <label>Link</label><input type="text" id="uin" placeholder="https://example.com/login">
+    <div class="out" id="uout">—</div>
+  </section>
+
+  <section class="panel" data-t="mail">
+    <h2>Email header analysis</h2>
+    <p>Paste raw headers (Gmail: ⋮ → “Show original”) — SPF/DKIM/DMARC verdicts and mismatches summarised locally.</p>
+    <textarea id="mein" style="min-height:110px" placeholder="Received: …&#10;Authentication-Results: …&#10;From: …"></textarea>
+    <div class="row2"><button class="btn" id="mgo">Analyze</button></div>
+    <div class="out" id="mout">—</div>
+  </section>
+
+  <section class="panel" data-t="jwt">
+    <h2>JWT decoder</h2>
+    <p>Inspect a token's header &amp; payload (and expiry). Decode only — the signature is not verified.</p>
+    <div class="row2"><input type="text" id="jin" placeholder="eyJhbGciOi…" style="flex:1 1 220px"><button class="btn" id="jgo">Decode</button></div>
+    <div class="out" id="jout">—</div>
+  </section>
+
+  <section class="panel" data-t="ports">
+    <h2>Port reference</h2>
+    <p>Well-known ports, what runs on them and whether they should ever face the internet.</p>
+    <label>Search (name or number)</label><input type="text" id="qin" placeholder="ssh, 443, rdp…">
+    <div class="out" id="qout">—</div>
+  </section>
+
+  <section class="panel" data-t="safety">
+    <h2>Personal cyber-safety checklist</h2>
+    <p>For everyone in the family — tick what you already do. Saved on this device only.</p>
+    <div class="bar"><i id="sbar"></i></div><div class="out" id="shead">—</div>
+    <div id="slist"></div>
+  </section>
+
+  <p class="note">🔒 Private by design: hashes, 2FA codes, breach checks and link triage all compute <em>on your device</em>; only DNS lookups use public read-over HTTPS DoH and the breach check sends just 5 hash characters (k-anonymity). Deliberately <b>no</b> port-scanning, brute-forcing or exploit frameworks — attacking systems you don't own is illegal and against our terms. Use on your own assets or with written permission.</p>
 </div>
 <script>
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const TABS = [['hash','🧬 hash'],['codec','🔤 codec'],['cipher','🔐 cipher'],['ip','🌐 ip'],['dns','🛰 dns'],['pass','🔑 pass'],['random','🎲 random'],['regex','🔎 regex']];
+  const TABS = [['hash','🧬 hash'],['codec','🔤 codec'],['cipher','🔐 cipher'],['ip','🌐 ip'],['dns','🛰 dns'],['pass','🔑 pass'],['totp','🕐 2fa'],['url','🔗 url'],['mail','📧 mail'],['file','📁 file'],['jwt','🧾 jwt'],['ports','🚪 ports'],['safety','🛡 safety'],['random','🎲 random'],['regex','🔎 regex']];
   const bar = $('tabs');
   bar.innerHTML = TABS.map((t, i) => '<button data-t="' + t[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + t[1] + '</button>').join('');
   function show(key) {
@@ -159,7 +216,7 @@
       return [a,b,c,d];
     }
     function str2blks(s){
-      const bytes=new TextEncoder().encode(s), len=bytes.length;
+      const bytes=(s instanceof Uint8Array)?s:new TextEncoder().encode(s), len=bytes.length;
       const blks=new Array((((len+8)>>6)+1)*16).fill(0);
       for(let i=0;i<len;i++){ blks[i>>2]|=bytes[i]<<((i%4)*8); }
       blks[len>>2]|=0x80<<((len%4)*8);
@@ -174,7 +231,7 @@
   let CRC_T = null;
   function crc32(str) {
     if (!CRC_T) { CRC_T = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC_T[n] = c; } }
-    const bytes = new TextEncoder().encode(str); let crc = -1;
+    const bytes = (str instanceof Uint8Array) ? str : new TextEncoder().encode(str); let crc = -1;
     for (let i = 0; i < bytes.length; i++) crc = (crc >>> 8) ^ CRC_T[(crc ^ bytes[i]) & 0xFF];
     return ((crc ^ -1) >>> 0).toString(16).padStart(8, '0');
   }
@@ -283,6 +340,181 @@
     } catch (e) { $('xout').textContent = 'Bad regex: ' + e.message; }
   }
   $('xpat').addEventListener('input', runRegex); $('xflag').addEventListener('input', runRegex); $('xsub').addEventListener('input', runRegex);
+
+  // ── File digests (computed locally, never uploaded) ──
+  $('filein').addEventListener('change', async () => {
+    const f = $('filein').files[0];
+    if (!f) { $('fileout').textContent = '—'; return; }
+    $('fileout').textContent = 'Reading ' + f.name + ' …';
+    try {
+      const buf = await f.arrayBuffer(); const u8 = new Uint8Array(buf);
+      const rows = ['File   ' + f.name, 'Size   ' + f.size.toLocaleString() + ' bytes', 'MD5    ' + md5(u8), 'CRC32  ' + crc32(u8)];
+      for (const algo of ['SHA-1', 'SHA-256', 'SHA-512']) {
+        try { const h = await crypto.subtle.digest(algo, buf); rows.push(algo.padEnd(6) + '  ' + Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('')); } catch (e) { rows.push(algo + '  (unavailable — needs https)'); }
+      }
+      $('fileout').textContent = rows.join('\n');
+    } catch (e) { $('fileout').textContent = 'Read failed: ' + e.message; }
+  });
+
+  // ── Breach check via HIBP Pwned Passwords (k-anonymity: only 5 hash chars leave the device) ──
+  $('leakgo').addEventListener('click', async () => {
+    const p = $('pwin').value; if (!p) { $('leakout').textContent = 'Type a password above first — only the first 5 SHA-1 characters are sent.'; return; }
+    $('leakout').textContent = 'Checking…';
+    try {
+      const h = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(p)))).map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+      const r = await fetch('https://api.pwnedpasswords.com/range/' + h.slice(0, 5));
+      const txt = await r.text();
+      const line = txt.split(/\r?\n/).find((l) => l.toUpperCase().startsWith(h.slice(5)));
+      $('leakout').textContent = line ? '⚠ LEAKED — seen in ' + line.split(':')[1].trim() + ' breaches. Change this password everywhere, now.' : '✔ Not in the breach corpus. (Your password itself never left this device.)';
+    } catch (e) { $('leakout').textContent = 'Check failed (offline or API busy) — password stays local.'; }
+  });
+
+  // ── TOTP authenticator (RFC 6238, HMAC-SHA1 via Web Crypto) ──
+  function b32ToBytes(s) { s = s.toUpperCase().replace(/[\s=]/g, ''); const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = 0, val = 0; const out = []; for (const ch of s) { const idx = A.indexOf(ch); if (idx < 0) continue; val = (val << 5) | idx; bits += 5; if (bits >= 8) { out.push((val >>> (bits - 8)) & 255); bits -= 8; } } return new Uint8Array(out); }
+  async function totp(secret, ms) {
+    const keyBytes = b32ToBytes(secret); if (!keyBytes.length) return null;
+    const counter = Math.floor(ms / 30000);
+    const kb = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const cb = new Uint8Array(8); const view = new DataView(cb.buffer);
+    view.setUint32(0, Math.floor(counter / 4294967296)); view.setUint32(4, counter >>> 0);
+    const sig = new Uint8Array(await crypto.subtle.sign('HMAC', kb, cb));
+    const off = sig[sig.length - 1] & 0x0f;
+    const bin = ((sig[off] & 0x7f) << 24 | sig[off + 1] << 16 | sig[off + 2] << 8 | sig[off + 3]) % 1000000;
+    return String(bin).padStart(6, '0');
+  }
+  let totpTimer = null;
+  async function tickTotp() {
+    const s = $('tsec').value.trim();
+    if (!s) { $('tout').textContent = '—'; $('tnext').textContent = ''; }
+    else {
+      try { $('tout').textContent = (await totp(s, Date.now())) || '(secret not valid Base32)'; } catch (e) { $('tout').textContent = 'TOTP needs https + Web Crypto'; }
+      $('tnext').textContent = 'rotates in ' + (30 - Math.floor(Date.now() / 1000) % 30) + 's';
+    }
+  }
+  $('tgo').addEventListener('click', () => { if (totpTimer) clearInterval(totpTimer); totpTimer = setInterval(tickTotp, 1000); tickTotp(); });
+
+  // ── Link / phishing triage — analyses the string only, never requests it ──
+  const SUS_TLD = ['zip', 'mov', 'top', 'tk', 'ml', 'cf', 'gq', 'ga', 'xyz', 'click', 'link', 'rest', 'sbs', 'cyou'];
+  const SHORTENERS = ['bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'cutt.ly', 'rb.gy', 'shorturl.at'];
+  const TRAPWORDS = ['login', 'signin', 'verify', 'password', 'secure', 'account', 'update', 'confirm', 'banking', 'wallet', 'invoice'];
+  const BRANDS = ['paypal', 'google', 'apple', 'facebook', 'instagram', 'netflix', 'amazon', 'shopee', 'lazada', 'microsoft', 'maybank', 'cimb'];
+  function scanUrl(raw) {
+    let u; try { u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : 'http://' + raw); } catch (e) { return ['Not a valid URL.']; }
+    const w = []; const host = u.hostname.toLowerCase();
+    if (u.protocol === 'http:') w.push('Plain HTTP — connection is not encrypted');
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) w.push('Raw IP address instead of a domain');
+    if (host.includes('xn--')) w.push('Punycode (xn--) — possible look-alike character spoof');
+    if (/[^\x00-\x7f]/.test(host)) w.push('Non-ASCII characters in the hostname');
+    if (raw.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split(/[/?#]/)[0].includes('@')) w.push('“@” in the link — everything before it is decoy text; the real host follows @');
+    if (host.split('.').length > 5) w.push('Unusually deep subdomain structure');
+    const tld = host.split('.').pop(); if (SUS_TLD.includes(tld)) w.push('Cheap/abuse-prone domain ending .' + tld);
+    if (SHORTENERS.includes(host)) w.push('Link shortener — the final destination is hidden until expanded');
+    if ((host.match(/-/g) || []).length >= 3) w.push('Hyphen-heavy domain (typo-squat pattern)');
+    for (const b of BRANDS) { if (host.includes(b) && !host.startsWith(b + '.')) { w.push('Brand name “' + b + '” buried in the domain — official sites put it first'); break; } }
+    const path = u.pathname.toLowerCase(); if (TRAPWORDS.some((t) => path.includes(t))) w.push('Login/verify-style keywords in the path');
+    if (u.port && u.port !== '80' && u.port !== '443') w.push('Non-standard port :' + u.port);
+    return w.length ? w : ['No heuristics triggered — still verify the sender, and prefer typing the site yourself.'];
+  }
+  $('uin').addEventListener('input', () => { const v = $('uin').value.trim(); $('uout').textContent = v ? scanUrl(v).join('\n') : '—'; });
+
+  // ── Email header analysis ──
+  function analyzeMail(raw) {
+    const get = (h) => { const m = raw.match(new RegExp('^' + h + ': *(.*)', 'im')); return m ? m[1] : ''; };
+    const al = raw.split(/\r?\n/); let auth = '';
+    for (let i = 0; i < al.length; i++) { if (/^authentication-results:/i.test(al[i])) { auth = al[i]; for (let j = i + 1; j < al.length && /^[ \t]/.test(al[j]); j++) auth += ' ' + al[j]; break; } }
+    const verdict = (n) => { const m = auth.match(new RegExp(n + '=([^ ;]+)', 'i')); return m ? m[1].toLowerCase() : 'not-reported'; };
+    const bad = ['fail', 'softfail', 'none', 'not-reported'];
+    const rows = [];
+    const spf = verdict('spf'), dkim = verdict('dkim'), dmarc = verdict('dmarc');
+    rows.push((bad.includes(spf) ? '✘' : '✔') + ' SPF    = ' + spf);
+    rows.push((bad.includes(dkim) ? '✘' : '✔') + ' DKIM   = ' + dkim);
+    rows.push((bad.includes(dmarc) ? '✘' : '✔') + ' DMARC  = ' + dmarc);
+    rows.push('· ' + (raw.match(/^received:/gim) || []).length + ' mail-server hops (Received lines)');
+    if (!auth) rows.push('⚠ No Authentication-Results header found — the receiving server did not report checks');
+    const fd = (get('From').match(/@([a-z0-9.-]+)/i) || [])[1], rd = (get('Return-Path').match(/@([a-z0-9.-]+)/i) || [])[1];
+    if (fd && rd && fd.toLowerCase() !== rd.toLowerCase()) rows.push('⚠ Return-Path domain (' + rd + ') differs from From (' + fd + ') — possible spoof or forwarder');
+    if (/dmarc=none/i.test(auth)) rows.push('⚠ Sender domain has no DMARC policy — easy to impersonate');
+    const xmk = get('X-Mailer'); if (xmk && /php|mass|sender/i.test(xmk)) rows.push('· X-Mailer: ' + xmk + ' (bulk-sender tooling)');
+    return rows.join('\n');
+  }
+  $('mgo').addEventListener('click', () => { const v = $('mein').value.trim(); $('mout').textContent = v ? analyzeMail(v) : 'Paste raw headers first.'; });
+
+  // ── JWT decoder ──
+  function decB64u(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return new TextDecoder().decode(Uint8Array.from(atob(s), (c) => c.charCodeAt(0))); }
+  $('jgo').addEventListener('click', () => {
+    const p = $('jin').value.trim().split('.');
+    if (p.length !== 3) { $('jout').textContent = 'A JWT has 3 dot-separated parts: header.payload.signature'; return; }
+    try {
+      const head = JSON.parse(decB64u(p[0])), body = JSON.parse(decB64u(p[1]));
+      let out = 'Header : ' + JSON.stringify(head) + '\nPayload:\n' + JSON.stringify(body, null, 2);
+      if (body.exp) out += '\n\nexp → ' + new Date(body.exp * 1000).toISOString() + (Date.now() / 1000 > body.exp ? '  ⚠ EXPIRED' : '  (still valid)');
+      if (body.iat) out += '\niat → ' + new Date(body.iat * 1000).toISOString();
+      out += '\n\nNote: decoder only — signature (alg=' + head.alg + ') is NOT verified.';
+      $('jout').textContent = out;
+    } catch (e) { $('jout').textContent = 'Decode failed: ' + e.message; }
+  });
+
+  // ── Port reference ──
+  const PORTS = [
+    ['21', 'tcp', 'FTP — plaintext; prefer SFTP/SCP', 'never anonymous'],
+    ['22', 'tcp', 'SSH — key auth + fail2ban', 'keys only if public'],
+    ['23', 'tcp', 'Telnet — plaintext remote shell', 'replace with SSH'],
+    ['25', 'tcp', 'SMTP mail', 'no open relay'],
+    ['53', 'udp', 'DNS', 'specialist only'],
+    ['80', 'tcp', 'HTTP', 'redirect to 443'],
+    ['443', 'tcp', 'HTTPS — your public front door', 'ok'],
+    ['137-139', 'both', 'NetBIOS file sharing', 'never public'],
+    ['445', 'tcp', 'SMB file shares (WannaCry route)', 'never public'],
+    ['1433', 'tcp', 'MSSQL', 'LAN only'],
+    ['3306', 'tcp', 'MySQL/MariaDB', 'LAN only'],
+    ['3389', 'tcp', 'RDP remote desktop', 'VPN + NLA, never raw'],
+    ['5432', 'tcp', 'PostgreSQL', 'LAN only'],
+    ['5900', 'tcp', 'VNC — often weak/no password', 'never public'],
+    ['6379', 'tcp', 'Redis — no auth by default', 'LAN only'],
+    ['8080', 'tcp', 'HTTP-alt panels/routers', 'put auth in front'],
+    ['8443', 'tcp', 'HTTPS-alt admin panels', 'put auth in front'],
+    ['9200', 'tcp', 'Elasticsearch — no auth by default', 'LAN only'],
+    ['11211', 'tcp', 'Memcached (amplification abuse)', 'never public'],
+    ['27017', 'tcp', 'MongoDB', 'LAN only']
+  ];
+  function renderPorts() {
+    const q = $('qin').value.trim().toLowerCase();
+    const hit = PORTS.filter((r) => !q || r.join(' ').toLowerCase().includes(q));
+    $('qout').textContent = hit.length ? hit.map((r) => r[0] + '/' + r[1] + '  ' + r[2] + '\n        → ' + r[3]).join('\n\n') : 'No matching port.';
+  }
+  $('qin').addEventListener('input', renderPorts); renderPorts();
+
+  // ── Personal cyber-safety checklist (stored on this device only) ──
+  const CHECKS = [
+    ['Unique password for every important account (use a manager)', 'Password reuse turns one breach into all your accounts.'],
+    ['Long master passphrase (14+ characters)', 'Length beats symbols — and it is easier to remember.'],
+    ['2FA on email + bank — authenticator/passkey beats SMS', 'The 🕐 2FA tab in this app holds rolling codes offline.'],
+    ['Backups: 3 copies, 2 media, 1 offsite (photos + documents)', 'Ransomware and lost phones are the two biggest data killers.'],
+    ['Screen lock + find-my-device on every phone', 'Physical theft is the most common breach.'],
+    ['OS, browser & apps update automatically', 'Most real intrusions use holes that were already patched.'],
+    ['Install only from the official store — never APK links from SMS/Telegram', 'Sideloaded “antivirus” is usually the malware.'],
+    ['Review app permissions: mic, location, contacts, overlay', 'A calculator that asks for SMS is lying to you.'],
+    ['Log out of shared devices; avoid saved passwords there', 'The cafe laptop keeps your session alive.'],
+    ['Urgent payment/parcel/bank messages: verify inside the official app', 'Urgency is the scammer\u2019s main weapon.'],
+    ['Public Wi-Fi: no banking without a trusted VPN', 'Evil-twin hotspots sniff unencrypted traffic.'],
+    ['Once a year: revoke old sessions, close dead accounts', 'Digital hygiene — short daily habits, deep yearly clean.']
+  ];
+  const SKEY = 'cyber-safety-v1';
+  let sdone = [];
+  try { sdone = JSON.parse(localStorage.getItem(SKEY)) || []; } catch (e) { sdone = []; }
+  function renderSafety() {
+    $('slist').innerHTML = CHECKS.map((c, i) => '<label class="chk"><input type="checkbox" data-i="' + i + '"' + (sdone[i] ? ' checked' : '') + '><span>' + esc(c[0]) + '<small>' + esc(c[1]) + '</small></span></label>').join('');
+    const n = sdone.filter(Boolean).length;
+    $('sbar').style.width = Math.round((n / CHECKS.length) * 100) + '%';
+    $('shead').textContent = n + ' / ' + CHECKS.length + ' done — ' + (n >= 10 ? 'excellent — you are harder to hack than most' : n >= 6 ? 'good, keep going down the list' : 'start at the top — each tick takes only minutes');
+  }
+  $('slist').addEventListener('change', (e) => {
+    const b = e.target.closest('input[data-i]'); if (!b) return;
+    sdone[parseInt(b.getAttribute('data-i'), 10)] = b.checked;
+    try { localStorage.setItem(SKEY, JSON.stringify(sdone)); } catch (err) { /* private mode — in-memory only */ }
+    renderSafety();
+  });
+  renderSafety();
 })();
 </script>
 </body>
