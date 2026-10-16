@@ -26,6 +26,7 @@
   .grid button:hover { border-color:var(--accent); color:var(--accent); }
   .sep { height:1px; background:var(--line); margin:16px 0; }
 </style>
+  <link rel="manifest" href="/manifest-text.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>🔡 Alat Teks</h1></header>
@@ -94,5 +95,7 @@
   stats();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

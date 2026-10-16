@@ -1,0 +1,20 @@
+{
+  "_comment": "Sumber tunggal untuk katalog store tukuk.org (= APKPure sendiri). Setiap apl boleh dipasang sebagai PWA dan dimuat turun sebagai APK pembungkus WebView yang membuka laman web hidup apl itu. `pkg` ialah pakej Android — TIDAK BOLEH diubah selepas APK dipakai/di-upload (kekal). `media:true` tambah kebenaran kamera/mikrofon (hanya perlu untuk WebRTC/panggilan). `icon` pilihan; jika tiada, penjana pakai apk/launcher/<slug>.png (dijana dari SVG).",
+  "apps": [
+    { "slug": "chat",     "label": "T Chat Beta",     "pkg": "org.tukuk.chat",     "url": "https://tukuk.org/apps/chat",     "media": true,  "icon": "public/icons/apps/chat-512.png", "vc": 3, "vn": "1.0.1" },
+    { "slug": "notes",    "label": "Tukuk Notes",     "pkg": "org.tukuk.notes",    "url": "https://tukuk.org/apps/notes",    "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "calc",     "label": "Tukuk Calc",      "pkg": "org.tukuk.calc",     "url": "https://tukuk.org/apps/calc",     "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "todo",     "label": "Tukuk To-Do",     "pkg": "org.tukuk.todo",     "url": "https://tukuk.org/apps/todo",     "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "convert",  "label": "Tukuk Convert",   "pkg": "org.tukuk.convert",  "url": "https://tukuk.org/apps/convert",  "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "timer",    "label": "Tukuk Timer",     "pkg": "org.tukuk.timer",    "url": "https://tukuk.org/apps/timer",    "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "color",    "label": "Tukuk Warna",     "pkg": "org.tukuk.color",    "url": "https://tukuk.org/apps/color",    "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "password", "label": "Tukuk Password",  "pkg": "org.tukuk.password", "url": "https://tukuk.org/apps/password", "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "text",     "label": "Tukuk Text",      "pkg": "org.tukuk.text",     "url": "https://tukuk.org/apps/text",     "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "pixel",    "label": "Pixel Studio",    "pkg": "org.tukuk.pixel",    "url": "https://tukuk.org/apps/pixel",    "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "piano",    "label": "Synth Piano",     "pkg": "org.tukuk.piano",    "url": "https://tukuk.org/apps/piano",    "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "spiro",    "label": "Spiro Mandala",   "pkg": "org.tukuk.spiro",    "url": "https://tukuk.org/apps/spiro",    "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "orbit",    "label": "Orbit Sim",       "pkg": "org.tukuk.orbit",    "url": "https://tukuk.org/apps/orbit",    "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "fractal",  "label": "Fractal Explorer","pkg": "org.tukuk.fractal",  "url": "https://tukuk.org/apps/fractal",  "media": false, "vc": 1, "vn": "1.0.0" },
+    { "slug": "drum",     "label": "Drum Machine",    "pkg": "org.tukuk.drum",     "url": "https://tukuk.org/apps/drum",     "media": false, "vc": 1, "vn": "1.0.0" }
+  ]
+}

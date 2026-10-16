@@ -35,6 +35,12 @@
   .app-card h2 { margin:0; font-size:1.05rem; }
   .app-card p { margin:0; color:var(--muted); font-size:.86rem; line-height:1.5; }
   .app-card .go { margin-top:auto; color:var(--accent); font-weight:600; font-size:.86rem; }
+  .app-card .acts { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .app-card .acts span { font-size:.82rem; font-weight:600; border-radius:9px; padding:7px 12px; cursor:pointer; user-select:none; }
+  .app-card .acts .apk { background:var(--accent); color:#fff; }
+  .app-card .acts .apk:hover { filter:brightness(1.1); }
+  .app-card .acts .ins { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .app-card .acts .ins:hover { background:color-mix(in srgb, var(--accent) 12%, transparent); }
   .badge { display:inline-block; font-size:.72rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
   .app-card.feature { grid-column:1 / -1; flex-direction:row; align-items:center; gap:22px; padding:22px 24px; border-color:var(--accent); background:linear-gradient(135deg, rgba(76,141,255,.14), rgba(31,111,235,.05)), var(--panel); }
   .app-card.feature .icon { font-size:3.1rem; flex:none; }
@@ -89,20 +95,38 @@
   const q = document.getElementById('q');
   const cards = [...document.querySelectorAll('.app-card')];
   const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  q.addEventListener('input', () => {
+  if (q) q.addEventListener('input', () => {
     const query = norm(q.value.trim());
-    if (!query) { cards.forEach(c => c.style.display = ''); return; }
-    cards.forEach(c => {
-      const text = norm(c.textContent);
-      c.style.display = text.includes(query) ? '' : 'none';
-    });
+    cards.forEach(c => { c.style.display = (!query || norm(c.textContent).includes(query)) ? '' : 'none'; });
   });
-  // Satu tekan → halaman muat turun sejagat (auto-pilih APK/PWA ikut OS).
-  // preventDefault perlu sebab span ini berada dalam <a> kad induk.
+
+  const UA = navigator.userAgent || '';
+  const androidish = /Android|Huawei|HONOR|HarmonyOS|CrOS/i.test(UA);
+  const slugOf = card => { const m = /\/apps\/([a-z0-9-]+)/i.exec(card.getAttribute('href') || ''); return m ? m[1] : null; };
+  const stop = e => { e.preventDefault(); e.stopPropagation(); };
+
+  // Chat sudah ada butang sendiri (.apkbtn) — jangan ganda.
+  cards.forEach(card => {
+    if (card.querySelector('.apkbtn')) return;
+    const slug = slugOf(card); if (!slug) return;
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    const apk = document.createElement('span'); apk.className = 'apk'; apk.textContent = '📥 APK';
+    const ins = document.createElement('span'); ins.className = 'ins'; ins.textContent = '📲 Install';
+    // APK → muat turun terus (gaya APKPure). Install → halaman panduan auto-OS.
+    apk.addEventListener('click', e => { stop(e); const a=document.createElement('a'); a.href='/downloads/tukuk-'+slug+'.apk'; a.download='tukuk-'+slug+'.apk'; document.body.appendChild(a); a.click(); a.remove(); });
+    ins.addEventListener('click', e => { stop(e); location.href = '/download?app=' + slug; });
+    acts.append(androidish ? apk : ins, androidish ? ins : apk);
+    card.append(acts);
+  });
+
+  // Kad ciri T Chat: satu tekan → halaman muat turun sejagat (auto-pilih APK/PWA ikut OS).
   const dl = document.getElementById('dlApk');
-  const goDl = e => { e.preventDefault(); e.stopPropagation(); location.href = '/download'; };
-  dl.addEventListener('click', goDl);
-  dl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goDl(e); } });
+  if (dl) {
+    const goDl = e => { e.preventDefault(); e.stopPropagation(); location.href = '/download'; };
+    dl.addEventListener('click', goDl);
+    dl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goDl(e); } });
+  }
 })();
 </script>
 </body>

@@ -32,6 +32,7 @@
   .ok { color:#7ce898; } .no { color:#ff85b3; }
   .note { color:var(--muted); font-size:.78rem; margin-top:10px; }
 </style>
+  <link rel="manifest" href="/manifest-color.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>🎨 Pemilih Warna</h1></header>
@@ -76,5 +77,7 @@
   render();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

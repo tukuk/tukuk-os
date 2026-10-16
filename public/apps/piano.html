@@ -31,6 +31,7 @@
   a.down { color:var(--accent); }
   .note { color:var(--muted); font-size:.78rem; margin-top:8px; text-align:center; }
 </style>
+  <link rel="manifest" href="/manifest-piano.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>🎹 Piano Sintetis</h1></header>
@@ -119,5 +120,7 @@
   ctx();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

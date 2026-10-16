@@ -1,0 +1,29 @@
+{
+  "id": "/apps/text",
+  "name": "Tukuk Text",
+  "short_name": "Text",
+  "description": "Tukuk Text — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "start_url": "/apps/text",
+  "scope": "/apps/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#1f6feb",
+  "icons": [
+    {
+      "src": "/icons/apps/text-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/apps/text-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/apps/text-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

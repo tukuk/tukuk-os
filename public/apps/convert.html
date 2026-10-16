@@ -29,6 +29,7 @@
   .out { font-size:1.7rem; font-weight:700; word-break:break-all; }
   .hint { color:var(--muted); font-size:.8rem; margin-top:8px; }
 </style>
+  <link rel="manifest" href="/manifest-convert.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>📐 Penukar Unit</h1></header>
@@ -77,5 +78,7 @@
   $('#swap').onclick=()=>{ const a=$('#from').value; $('#from').value=$('#to').value; $('#to').value=a; calc(); };
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

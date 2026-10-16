@@ -57,7 +57,10 @@ __pycache__/
 *.pyc
 
 # APK build (scripts/build-apk.sh) — kekunci edaran self-signed +_work temp; hanya APK final di public/downloads di-commit
+# apk/build-<slug>/ ialah direktori kerja sementara pembina store; apk/launcher/ dijana gen-launcher-icons.js
 apk/build/
+apk/build-*/
+apk/launcher/
 apk/*.jks
 apk/keystore.env
 public/downloads/*.idsig

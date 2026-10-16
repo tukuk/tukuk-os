@@ -25,6 +25,7 @@
   input[type=range] { accent-color:var(--accent); width:110px; }
   .stat { color:var(--muted); font-size:.78rem; margin-top:10px; text-align:center; }
 </style>
+  <link rel="manifest" href="/manifest-orbit.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>🪐 Simulator Orbit</h1></header>
@@ -136,5 +137,7 @@
   preset('sys'); requestAnimationFrame(loop);
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

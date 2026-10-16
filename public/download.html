@@ -51,7 +51,7 @@
   <header>
     <img class="mark" src="/icons/apps/chat.svg" alt="Ikon T Chat" width="92" height="92">
     <h1>T <span class="accent">Chat</span></h1>
-    <p class="tagline">Meshenjer + panggilan video/suara — boleh dipasang di <b>semua OS</b>. Satu tekan sahaja.</p>
+    <p class="tagline">Boleh dipasang di <b>semua OS</b> sebagai aplikasi — satu tekan sahaja.</p>
   </header>
 
   <div class="hero">
@@ -81,7 +81,7 @@
   </div>
 
   <nav class="top">
-    <a href="/apps/chat">Buka T Chat web</a>
+    <a href="/apps/chat" id="openWeb">Buka aplikasi web</a>
     <a href="/apps">Semua aplikasi</a>
     <a href="/store">Store</a>
     <a href="/">tukuk.org</a>
@@ -92,9 +92,23 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var UA = navigator.userAgent || '';
-  var APK = '/downloads/tukuk-chat.apk';
-  var PAGE = location.origin + '/download';
+  var params = new URLSearchParams(location.search);
+  var q = params.get('app') || '';
+  var SLUG = /^[a-z0-9-]+$/.test(q) ? q : 'chat';
+  var APK = '/downloads/tukuk-' + SLUG + '.apk';
+  var FILENAME = 'tukuk-' + SLUG + '.apk';
+  var PAGE = location.origin + '/download' + (SLUG === 'chat' ? '' : '?app=' + SLUG);
   var bip = null;
+
+  // Label & ikon daripada manifest apl (sumber tunggal); fallback nama kemas.
+  function pretty(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  fetch('/manifest-' + SLUG + '.json').then(function(r){ return r.ok ? r.json() : null; }).then(function(m){
+    var name = (m && m.name) || pretty(SLUG);
+    document.title = 'Muat Turun ' + name + ' — Semua OS — Tukuk-OS';
+    var h1 = document.querySelector('header h1'); if (h1) h1.textContent = name;
+    var mark = document.querySelector('.mark'); if (mark) { mark.src = '/icons/apps/' + SLUG + '.svg'; mark.alt = 'Ikon ' + name; }
+    var open = document.getElementById('openWeb'); if (open) open.href = '/apps/' + SLUG;
+  }).catch(function(){});
 
   function toast(msg) {
     var t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -118,7 +132,7 @@
   };
   function downloadApk() {
     var a = document.createElement('a');
-    a.href = APK; a.download = 'Tukuk-Chat-Beta.apk';
+    a.href = APK; a.download = FILENAME;
     document.body.appendChild(a); a.click(); a.remove();
   }
   function buildPrimary(os) {
@@ -127,7 +141,7 @@
     for (var el of document.querySelectorAll('.card')) el.classList.toggle('on', el.dataset.os === os);
     if (os === 'android' || os === 'huawei') {
       btn.textContent = '📥 Download APK';
-      hint.innerHTML = 'Fail <b>Tukuk-Chat-Beta.apk</b> (±65 KB, Android 6.0+) akan dimuat serta-merta. Buka → Pasang.';
+      hint.innerHTML = 'Fail <b>' + FILENAME + '</b> (Android 6.0+, ±44–68 KB) akan dimuat serta-merta. Buka → Pasang.';
       btn.onclick = function () { downloadApk(); toast('APK dimuat turun — buka fail untuk pasang.'); };
       return;
     }

@@ -25,6 +25,7 @@
   input[type=range] { accent-color:var(--accent); width:120px; }
   .stat { color:var(--muted); font-size:.78rem; margin-top:10px; text-align:center; }
 </style>
+  <link rel="manifest" href="/manifest-fractal.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>🔮 Penjelajah Fraktal</h1></header>
@@ -136,5 +137,7 @@
   recenter();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

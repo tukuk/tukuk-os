@@ -1,0 +1,29 @@
+{
+  "id": "/apps/convert",
+  "name": "Tukuk Convert",
+  "short_name": "Convert",
+  "description": "Tukuk Convert — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "start_url": "/apps/convert",
+  "scope": "/apps/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#1f6feb",
+  "icons": [
+    {
+      "src": "/icons/apps/convert-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/apps/convert-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/apps/convert-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

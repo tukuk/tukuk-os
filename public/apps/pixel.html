@@ -29,6 +29,7 @@
   input[type=color] { width:44px; height:38px; border:1px solid var(--line); border-radius:9px; background:var(--panel); cursor:pointer; padding:3px; }
   .note { color:var(--muted); font-size:.78rem; text-align:center; margin-top:10px; }
 </style>
+  <link rel="manifest" href="/manifest-pixel.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>🟩 Studio Piksel</h1></header>
@@ -110,5 +111,7 @@
   load(); draw(); markPal();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

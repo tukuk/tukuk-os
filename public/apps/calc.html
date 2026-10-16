@@ -39,6 +39,7 @@
   .hist .row .r { font-variant-numeric:tabular-nums; }
   .hint { color:var(--muted); font-size:.78rem; margin-top:10px; text-align:center; }
 </style>
+  <link rel="manifest" href="/manifest-calc.json">
 </head>
 <body>
 <header>
@@ -150,5 +151,7 @@ document.addEventListener('keydown',ev=>{
 
 buildKeys(); renderHist(); render('',cur);
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

@@ -32,6 +32,7 @@
   .presets button.on { border-color:var(--accent); color:var(--accent); }
   .round { color:var(--muted); font-size:.85rem; margin-bottom:4px; }
 </style>
+  <link rel="manifest" href="/manifest-timer.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>⏱️ Timer &amp; Pomodoro</h1></header>
@@ -85,5 +86,7 @@
   label();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

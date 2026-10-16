@@ -32,14 +32,21 @@ function die(msg) { console.error('✗ ' + msg); process.exit(1); }
 let google;
 try { ({ google } = await import('googleapis')); }
 catch { die('googleapis belum dipasang — jalankan: npm install googleapis'); }
-if (!fs.existsSync(KEY)) die(`tiada ${path.relative(ROOT, KEY)} — ikut prasyarat di kepala fail ini.`);
+if (!fs.existsSync(KEY) && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  // Tiada fail kunci — kita akan cuba ADC (gcloud application-default login) di bawah.
+  console.log('· (tiada google-cloud-key.json — akan guna ADC jika ada)');
+}
 if (!fs.existsSync(AAB)) die(`tiada ${path.relative(ROOT, AAB)} — jalankan: bash scripts/build-apk.sh`);
 
-const creds = JSON.parse(fs.readFileSync(KEY, 'utf8'));
-const auth = new google.auth.GoogleAuth({
-  credentials: creds,
-  scopes: ['https://www.googleapis.com/auth/androidpublisher'],
-});
+const SCOPES = ['https://www.googleapis.com/auth/androidpublisher'];
+let auth;
+if (fs.existsSync(KEY)) {
+  auth = new google.auth.GoogleAuth({ credentials: JSON.parse(fs.readFileSync(KEY, 'utf8')), scopes: SCOPES });
+  console.log('· auth: service account (google-cloud-key.json)');
+} else {
+  auth = new google.auth.GoogleAuth({ scopes: SCOPES }); // ADC: gcloud auth application-default login
+  console.log('· auth: Application Default Credentials (login gcloud anda)');
+}
 const api = google.androidpublisher({ version: 'v3', auth });
 
 // Baca teks metadata untuk satu bahasa (jangan hantar bahasa tanpa fail).
@@ -83,5 +90,5 @@ try {
 } catch (e) {
   try { await api.edits.delete({ packageName: PKG, editId: id }); } catch { /* abaikan */ }
   const detail = e?.response?.data?.error?.message || e?.message || String(e);
-  die('Gagal: ' + detail + '\n   (Pastikan service account diundang di Play Console dgn kebenaran internal testing.)');
+  die('Gagal: ' + detail + '\n   (ADC: jalankan `gcloud auth application-default login --scopes=https://www.googleapis.com/auth/androidpublisher`.\n    Service account: pastikan diundang di Play Console dgn kebenaran internal testing.)');
 }

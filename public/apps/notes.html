@@ -41,6 +41,7 @@
   .btn.danger { background:#e03030; }
   button { cursor:inherit; }
 </style>
+  <link rel="manifest" href="/manifest-notes.json">
 </head>
 <body>
 <header>
@@ -149,5 +150,7 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s; re
 
 load(); updateCount(); renderList(); renderEditor();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

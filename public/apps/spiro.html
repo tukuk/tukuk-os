@@ -28,6 +28,7 @@
   input[type=color] { width:40px; height:36px; border:1px solid var(--line); border-radius:8px; background:var(--panel); padding:2px; cursor:pointer; }
   .stat { color:var(--muted); font-size:.78rem; text-align:center; margin-top:10px; }
 </style>
+  <link rel="manifest" href="/manifest-spiro.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>🌀 Mandala Spiro</h1></header>
@@ -113,5 +114,7 @@
   reset();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>

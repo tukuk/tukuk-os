@@ -38,6 +38,7 @@
   .stat { color:var(--muted); font-size:.82rem; margin:12px 2px; display:flex; justify-content:space-between; }
   .stat button { background:none; border:0; color:var(--accent); cursor:pointer; font-size:.82rem; }
 </style>
+  <link rel="manifest" href="/manifest-todo.json">
 </head>
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1>✅ To-Do</h1></header>
@@ -82,5 +83,7 @@
   render();
 })();
 </script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
 </body>
 </html>
