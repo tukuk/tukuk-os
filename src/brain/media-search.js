@@ -362,7 +362,26 @@ function mapRadioStations(arr) {
   })).filter((h) => h.url);
 }
 
+// Radio "Angkasa / Planet" — bukan stesen Bumi: rakaman SEBENAR emisi radio
+// planet & Voyager Golden Record (NASA) yang ditukar kepada audio, plus stesen
+// langsung bertag 'space' dari radio-browser. Setiap URL disahkan mengalir
+// melalui proksi /radio/stream (bait audio tulen). Diurus sebagai pseudo-kawasan 'angkasa'.
+const PLANETARY_RADIO = [
+  { type: 'radio', title: '\ud83e\ude90 Emisi Radio Planet — Aliran Tenang (Space Meditation)', url: 'https://archive.org/download/01-rainshadow/05_ThoughtsOfFloatingStreams.mp3', favicon: '', country: 'Angkasa', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'ambient', 'tenang'], votes: 0, clicks: 0, uuid: 'planet-radio-meditation', source: 'NASA / Internet Archive', description: 'Emisi radio angkasa ditukar kepada audio tenang — untuk semua benda hidup.' },
+  { type: 'radio', title: '\ud83d\udef0 Voyager Golden Record — Salam Bumi untuk Planet Lain', url: 'https://archive.org/download/voyager-golden-record/voyager golden record.mp3', favicon: '', country: 'Angkasa (Voyager)', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'voyager', 'golden record'], votes: 0, clicks: 0, uuid: 'planet-radio-voyager', source: 'NASA Voyager / Internet Archive', description: 'Rakaman "Golden Record" yang dihantar Voyager ke dunia luar — muzik & bunyi Bumi.' },
+];
+
 async function searchRadioStations(q, skip = 0, { country = '', tag = '', region = '' } = {}) {
+  // Pseudo-kawasan 'angkasa': gabung rakaman planet curated + stesen langsung tag 'space'.
+  if (String(region).toLowerCase() === 'angkasa') {
+    const p = new URLSearchParams({ tag_exact: 'space', hidebroken: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
+    const data = await fetchRadioJson(`/json/stations/search?${p}`);
+    const live = Array.isArray(data) ? mapRadioStations(data) : [];
+    const hits = skip === 0 ? [...PLANETARY_RADIO, ...live] : live;
+    const nextSkip = Array.isArray(data) && data.length === 40 ? skip + 40 : 0;
+    if (!hits.length) throw new Error('radio-browser tidak dapat dihubungi');
+    return { hits, nextSkip };
+  }
   const codes = region && RADIO_REGIONS[String(region).toLowerCase()];
   if (codes) {
     // Satu permintaan kecil setiap negara (cap 14 utk elak too much fan-out),
@@ -370,7 +389,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
     const list = codes.slice(0, 14);
     const per = Math.max(1, Math.ceil(48 / list.length));
     const results = await Promise.all(list.map((code) => {
-      const p = new URLSearchParams({ countrycode: code, hidebroken: 'true', is_https: 'true', limit: String(per), order: 'clickcount', reverse: 'true' });
+      const p = new URLSearchParams({ countrycode: code, hidebroken: 'true', limit: String(per), order: 'clickcount', reverse: 'true' });
       if (tag) p.set('tag_exact', tag.toLowerCase());
       if (q) p.set('name', q);
       return fetchRadioJson(`/json/stations/search?${p}`).catch(() => null);
@@ -386,15 +405,15 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
   }
   let path;
   if (tag || country) {
-    const params = new URLSearchParams({ hidebroken: 'true', is_https: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
+    const params = new URLSearchParams({ hidebroken: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
     if (tag) params.set('tag_exact', tag.toLowerCase());
     if (country) params.set('country', country);
     if (q) params.set('name', q);
     path = `/json/stations/search?${params}`;
   } else if (q) {
-    path = `/json/stations/search?name=${encodeURIComponent(q)}&is_https=true&hidebroken=true&order=votes&reverse=true&limit=40&skip=${skip}`;
+    path = `/json/stations/search?name=${encodeURIComponent(q)}&hidebroken=true&order=votes&reverse=true&limit=40&skip=${skip}`;
   } else {
-    path = `/json/stations/topvote/40?is_https=true&hidebroken=true&offset=${skip}`;
+    path = `/json/stations/topvote/40?hidebroken=true&offset=${skip}`;
   }
   const data = await fetchRadioJson(path);
   if (!Array.isArray(data)) throw new Error('radio-browser tidak dapat dihubungi');
