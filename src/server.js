@@ -10,6 +10,7 @@ const net = require('./net');
 const store = require('./store');
 const brain = require('./brain/provider');
 const rag = require('./brain/rag');
+const taskrouter = require('./brain/taskrouter');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
 const reranker = require('./brain/reranker');
@@ -595,10 +596,92 @@ app.get('/network', async (req, res) => {
   res.json(await net.check());
 });
 
+// ── AI Data Center: inventori model AI yang berjalan di server ini ─────────
+app.get('/api/models', async (req, res) => {
+  const health = await brain.health();
+  let ollamaModels = [];
+  try { ollamaModels = await brain.availableModels(); } catch { /* ollama offline */ }
+  res.json({
+    dataCenter: 'Tukuk-OS AI',
+    backend: {
+      provider: health.cloud ? health.provider : (health.online ? 'ollama' : 'extractive'),
+      localFirst: Boolean(health.localFirst),
+      cloudFallback: health.cloudFallback || [],
+      chain: config.brain.chain,
+      online: health.online,
+      timeout: config.brain.timeout
+    },
+    ollamaModels,
+    // Model AI MILIK SENDIRI — dilatih di sini oleh scripts/train-brain.js.
+    ownModel: taskrouter.modelInfo(),
+    reranker: {
+      enabled: config.rerank.enabled,
+      modelDir: config.rerank.modelDir,
+      cloudEmbed: config.rerank.cloud && Boolean(process.env.CLOUDFLARE_API_TOKEN)
+    },
+    answerCache: rag.cacheStats()
+  });
+});
+
+app.get('/models', (req, res) => {
+  res.type('html').send(`<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Data Center - Tukuk-OS</title>
+<meta name="description" content="Inventory of AI models running on this Tukuk-OS server: local LLMs, the self-trained intent model, and fallback providers.">
+<link rel="canonical" href="https://tukuk.org/models">
+<style>${COMMON_CSS}</style>
+</head><body><div class="wrap">
+<header><h1>🧠 AI Data Center</h1>
+<p class="tagline">Every AI model this server runs — local inference, the self-trained brain, and emergency fallbacks.</p></header>
+<a class="back-link" href="/">← Back to search</a>
+<div id="app"><p>Loading model inventory…</p></div>
+<script>
+(function () {
+  var el = document.getElementById('app');
+  fetch('/api/models').then(function (r) { return r.json(); }).then(function (d) {
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    var html = '';
+    html += '<div class="post-card"><h2>Self-trained model</h2>';
+    if (d.ownModel && d.ownModel.loaded) {
+      var m = d.ownModel;
+      html += '<p><strong>' + esc(m.name) + ' ' + esc(m.version) + '</strong> — ' + esc(m.purpose) + '</p>';
+      html += '<p>Classes: ' + (m.classes || []).map(esc).join(', ') + '</p>';
+      if (m.accuracy != null) html += '<p>Holdout accuracy: ' + (m.accuracy * 100).toFixed(1) + '%' + (m.probeAccuracy != null ? ' · unseen-phrase probe: ' + (m.probeAccuracy * 100).toFixed(0) + '%' : '') + (m.regexGapsRescued ? ' · regex gaps rescued: ' + esc(m.regexGapsRescued) : '') + '</p>';
+      html += '<p>Trained: ' + esc(m.trainedAt || '').slice(0, 10) + ' on <code>' + esc(m.host || '') + '</code> from ' + (m.sources ? (m.sources.seed + ' curated + ' + m.sources.productionLog + ' production-log samples') : 'local data') + '</p>';
+      html += '<p style="color:var(--muted)">Retrain any time: <code>node scripts/train-brain.js</code></p>';
+    } else {
+      html += '<p>No self-trained model found. Run <code>node scripts/train-brain.js</code> on the server, then restart the service.</p>';
+    }
+    html += '</div>';
+    html += '<div class="post-card"><h2>Local LLMs (Ollama)</h2>';
+    if ((d.ollamaModels || []).length) {
+      html += '<table style="width:100%;border-collapse:collapse">';
+      d.ollamaModels.forEach(function (mo) {
+        html += '<tr><td style="padding:6px 0;border-bottom:1px solid var(--line)">' + esc(mo.name) + '</td>'
+          + '<td style="border-bottom:1px solid var(--line)">' + esc(mo.parameters || '') + '</td>'
+          + '<td style="border-bottom:1px solid var(--line)">' + mo.sizeMb + ' MB</td></tr>';
+      });
+      html += '</table>';
+    } else { html += '<p>Ollama offline — no local models reachable.</p>'; }
+    html += '</div>';
+    html += '<div class="post-card"><h2>Routing</h2>';
+    html += '<p>Active provider: <strong>' + esc(d.backend.provider) + '</strong>' + (d.backend.localFirst ? ' (local-first)' : '') + '</p>';
+    html += '<p>Chain order: ' + (d.backend.chain || []).map(esc).join(' → ') + '</p>';
+    html += '<p>Emergency cloud: ' + ((d.backend.cloudFallback || []).length ? d.backend.cloudFallback.map(esc).join(', ') : 'none configured') + '</p>';
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(function () { el.innerHTML = '<p>Could not load /api/models.</p>'; });
+})();
+</script>
+<footer>Tukuk-OS · AI Data Center · <a href="/docs">docs</a> · <a href="/about">about</a></footer>
+</div></body></html>`);
+});
+
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/rekomendasi'];
+  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/models', '/rekomendasi'];
   const posts = store.getAllPosts(200);
   
   const urls = [];

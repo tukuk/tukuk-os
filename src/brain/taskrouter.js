@@ -93,9 +93,75 @@ const GUIDANCE = {
     'Answer directly and completely in 2-4 sentences, using only the sources.',
 };
 
+const path = require('path');
+
+/**
+ * Model AI milik sendiri ("Tukuk-Brain Mini") — softmax dilatih
+ * scripts/train-brain.js pada data carian/soalan server ini. Regex di atas
+ * ialah GURU berketepatan tinggi; model hanya MELAPISKAN CELAH: bila semua
+ * regex terlepas (calon 'general'), model yang yakin boleh tukar kelas.
+ * Fail: data/tukuk-brain-v1.json (atau env BRAIN_MODEL_FILE). Tiada fail →
+ * tingkah laku lama sama sekali (regex-only).
+ */
+const MODEL_FILE = () => process.env.BRAIN_MODEL_FILE
+  || path.join(__dirname, '..', '..', 'data', 'tukuk-brain-v1.json');
+let brainCache = null; // { mm, m } | { none: true }
+function brainModel() {
+  if (!brainCache) {
+    try {
+      const mm = require('./minimodel');
+      const m = mm.load(MODEL_FILE());
+      brainCache = { mm, m };
+    } catch {
+      brainCache = { none: true };
+    }
+  }
+  return brainCache.none ? null : brainCache;
+}
+
+// Uji-sahaja: paksa muat semula model (contoh selepas train baru).
+function _resetModelCache() { brainCache = null; }
+
+/** Maklumat model untuk paparan /api/models (Data Center). */
+function modelInfo() {
+  const b = brainModel();
+  if (!b) return { loaded: false, file: MODEL_FILE() };
+  const meta = b.m.meta || {};
+  return {
+    loaded: true,
+    name: meta.name || 'Tukuk-Brain Mini',
+    version: meta.version || '?',
+    purpose: meta.purpose || 'intent classifier',
+    trainedAt: meta.trainedAt || b.m.savedAt,
+    accuracy: meta.accuracy,
+    probeAccuracy: meta.probeAccuracy,
+    regexGapsRescued: meta.regexGapsRescued,
+    classes: b.m.classes,
+    sources: meta.sources,
+    host: meta.host
+  };
+}
+
 /** Kelas utama + cadangan guidance + token tambahan (untuk math/code yang perlu ruang). */
 function classify(query) {
   const q = String(query || '');
+  const regex = classifyRawRegex(q);
+  if (regex.kind !== 'general') return regex;
+  // Semua regex terlepas → BIAR MODEL NEURAL yang memutuskan (kalau yakin).
+  const b = brainModel();
+  if (b) {
+    const r = b.mm.predict(b.m, q);
+    if (r.label !== 'general' && r.p >= 0.5 && r.margin >= 0.2) {
+      // code hasil model TIDAK dianggap self-contained (tiada bukti niat kukuh
+      // seperti regex) → cuma bentuk jawapan (guidance) ditukar.
+      return finalize(r.label);
+    }
+  }
+  return regex;
+}
+
+/** Hanya lapisan regex (tanpa model) — dipakai train-brain.js utk ukur celah. */
+function classifyRawRegex(q) {
   // Arithmetik: jika boleh dinilai sebagai ekspresi numeric bersih, kira DETERMINISTIK
   // (kalkulator) — jauh lebih tepat daripada model 1.5B. Jika ada perkataan lain
   // (masalah cerita / julat tarikh) → kekal math BERGROUNDED, jangan kira buta.
@@ -184,4 +250,4 @@ function computeArithmetic(query) {
   return { expression: s, value };
 }
 
-module.exports = { classify, computeArithmetic };
+module.exports = { classify, classifyRawRegex, computeArithmetic, modelInfo, _resetModelCache };

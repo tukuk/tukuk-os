@@ -29,6 +29,16 @@ fi
 BRANCH="$(grep -E '^GIT_BRANCH=' .env 2>/dev/null | head -1 | cut -d= -f2- || true)"
 BRANCH="${BRANCH:-main}"
 
+# Model AI milik sendiri (Tukuk-Brain Mini): latih semula daripada log
+# produksi terkini. Gagal LEMBUT — taskrouter kekal regex-only jika tiada fail.
+train_brain() {
+  if node scripts/train-brain.js >/tmp/train-brain.log 2>&1; then
+    grep -E 'probe luar|simpan' /tmp/train-brain.log | sed 's/^/[auto-update] /'
+  else
+    echo "[auto-update] amaran: train-brain gagal — model lama/regex-only terus."
+  fi
+}
+
 echo "[auto-update] $(date -Is) — tarik origin/$BRANCH ..."
 OLD="$(git rev-parse HEAD)"
 git fetch origin "$BRANCH" || { echo "[auto-update] git fetch gagal (jaringan?) — langkau kitaran ini."; exit 0; }
@@ -40,6 +50,8 @@ NEW="$(git rev-parse HEAD)"
 
 if [[ "$OLD" == "$NEW" ]]; then
   echo "[auto-update] tiada kemas kini baharu (pada $OLD) — langkau npm & restart."
+  # Tetap LATIH model otak — log produksi (tanya/cari) makin banyak hari ini.
+  train_brain
   exit 0
 fi
 echo "[auto-update] kemas kini $OLD → $NEW."
@@ -56,6 +68,8 @@ fi
 
 # Kod sumber mungkin berubah → restart supaya proses muat logik baru (Express
 # route dalam memori, mount statik, indeks blog). Unit/tunnel sudah sedia ada.
+# Latih model DULU — restart pertama sekali membawa otak + fail model terbaru.
+train_brain
 echo "[auto-update] restart tukuk-os ..."
 systemctl restart tukuk-os
 

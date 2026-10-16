@@ -113,3 +113,33 @@ OLLAMA_HOST=http://127.0.0.1:11434
 - Model ini **free**, tidak perlukan API key
 - Jalankan di server tempatan (localhost:11434)
 - GPU tidak diperlukan, CPU cukup
+
+## 🧠 AI Data Center & Model Milik Sendiri (Tukuk-Brain Mini)
+
+Papan inventori semua AI server: **https://tukuk.org/models** (JSON: `/api/models`).
+
+Selain LLM orang (Ollama/cloud), Tukuk-OS kini punya **model AI sendiri** yang
+DILATIH DI SERVER INI pada CPU sahaja:
+
+- **Apa**: `Tukuk-Brain Mini` — multinomial logistic regression (softmax) ke atas
+  ciri hashed (unigram + bigram + trigram aksara, 8192 bucket). Fail:
+  `src/brain/minimodel.js`. Muat serta-merta, inferens ~0.1ms CPU.
+- **Untuk apa**: pengelasan NIAT soalan (math/code/compare/list/howto/define/general).
+  Regex `taskrouter` ialah guru berketepatan tinggi; model mengisi CELAH: frasa
+  santai yang regex terlepas ("makna kata berlapang dada" → define) dengan
+  gate keyakinan (p≥0.5, margin≥0.2) — bila ragu ia diam, tiada kerosakan.
+- **Latih semula** (guna data produksi server — makin banyak soalan, makin pintar):
+  ```bash
+  node scripts/train-brain.js            # default: tri=60 l2=0.003 epochs=200
+  sudo systemctl restart tukuk-os        # muat model baru
+  ```
+  Output `data/tukuk-brain-v1.json` (gitignore — artifak milik server).
+  Ada `--epochs --lr --l2 --tri --seed` untuk talaan.
+- **Realiti lokal-first**: `BRAIN_LOCAL_FIRST=1` → Ollama qwen2.5:1.5b otak
+  utama (±45s/soalan baru, cache 10 min), cloud hanya kecemasan.
+
+Kenapa tidak LLM dari-sifar? Latih 1B+ parameter pada CPU AMD Kaveri (tiada
+AVX2) ambil BERBULAN. Softmax di atas data sendiri pula: detik sahaja, dan
+untuk lapisan ROUTING ia benar-benar lebih baik daripada regex statik.
+"Sangat pintar" pada CPU = pembahagian tugas: LLM kecil + router neural
+milik sendiri + RAG berlandaskan sumber + kalkulator deterministik.
