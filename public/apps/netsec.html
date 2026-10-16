@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetSec Toolkit — Hashes, Ciphers, IP/CIDR, DNS — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="A safe, browser-only security & networking toolbox in the spirit of a Linux toolkit: hashing (MD5/SHA1/SHA-256/SHA-512/CRC32), Base32/Base64/Hex/Binary codecs, classic ciphers, IPv4/CIDR/IPv6/MAC calculators, DNS-over-HTTPS lookups, password strength, random generators and a regex tester. Everything runs on your device — no remote scanning.">
+<link rel="canonical" href="https://tukuk.org/apps/netsec">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.05rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:680px; margin:0 auto; padding:14px; }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .tabs button { font:inherit; font-size:.78rem; border:1px solid var(--line); background:var(--card,#161c2b); color:var(--muted); border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .tabs button.on { background:#1f6f43; color:#fff; border-color:#1f6f43; }
+  .panel { display:none; background:var(--card,#121826); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .panel.on { display:block; }
+  .panel h2 { margin:0 0 6px; font-size:1rem; color:#7cf0c0; }
+  .panel p { color:var(--muted); font-size:.8rem; margin:0 0 12px; }
+  label { display:block; font-size:.72rem; color:var(--muted); margin:10px 0 4px; }
+  textarea, input[type=text], select { width:100%; box-sizing:border-box; font:inherit; font-size:.85rem; background:#0c1017; color:#d6ffe0; border:1px solid var(--line); border-radius:8px; padding:8px; }
+  textarea { min-height:74px; resize:vertical; }
+  .row2 { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  .row2 > * { flex:0 0 auto; width:auto; }
+  .btn { font:inherit; font-size:.8rem; background:#1f6f43; color:#fff; border:0; border-radius:8px; padding:7px 12px; cursor:pointer; }
+  .out { white-space:pre-wrap; word-break:break-all; background:#0c1017; border:1px solid var(--line); border-radius:8px; padding:10px; font-size:.82rem; margin-top:10px; color:#d6ffe0; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  .cell { background:#0c1017; border:1px solid var(--line); border-radius:8px; padding:8px; font-size:.76rem; }
+  .cell b { display:block; color:var(--muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+  .bar { height:14px; background:#0c1017; border:1px solid var(--line); border-radius:7px; overflow:hidden; margin:6px 0; }
+  .bar > i { display:block; height:100%; background:linear-gradient(90deg,#c0392b,#f2a63b,#2ecc71); width:0; transition:width .3s; }
+  table { width:100%; border-collapse:collapse; font-size:.76rem; margin-top:10px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); word-break:break-all; }
+  th { color:var(--muted); font-weight:600; }
+  mark { background:#3a5a2a; color:#eaffea; }
+  .note { font-size:.72rem; color:var(--muted); margin-top:12px; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🛡️ NetSec Toolkit</h1></header>
+<div class="wrap">
+  <div class="tabs" id="tabs"></div>
+
+  <section class="panel" data-t="hash">
+    <h2>Hashing</h2>
+    <p>One-way digests of your text — computed locally (MD5/CRC32 in JS, SHA via Web Crypto).</p>
+    <label>Input</label><textarea id="hin" placeholder="text to hash…"></textarea>
+    <div class="out" id="hout">—</div>
+  </section>
+
+  <section class="panel" data-t="codec">
+    <h2>Codecs</h2>
+    <p>Live encodings of your text. Pick a format to decode back to text.</p>
+    <label>Text</label><textarea id="cin" placeholder="hello">hello world</textarea>
+    <div class="grid2" id="cenc"></div>
+    <label>Decode</label>
+    <div class="row2"><select id="cdfmt"><option value="hex">Hex</option><option value="b64">Base64</option><option value="b64u">Base64url</option><option value="b32">Base32</option><option value="bin">Binary</option></select><input type="text" id="cdec" placeholder="paste encoded…" style="flex:1 1 160px"><button class="btn" id="cdecgo">Decode</button></div>
+    <div class="out" id="cout">—</div>
+  </section>
+
+  <section class="panel" data-t="cipher">
+    <h2>Classic ciphers</h2>
+    <label>Text</label><input type="text" id="pin" placeholder="attack at dawn">
+    <div class="row2"><select id="calgo"><option value="caesar">Caesar</option><option value="vig">Vigenère</option><option value="rot13">ROT13</option><option value="atbash">Atbash</option></select><input type="text" id="ckey" placeholder="key / shift (e.g. 3 or secret)" style="flex:1 1 140px"><button class="btn" id="penc">Encrypt</button><button class="btn" id="pdec">Decrypt</button></div>
+    <div class="out" id="pout">—</div>
+  </section>
+
+  <section class="panel" data-t="ip">
+    <h2>IP · CIDR · MAC</h2>
+    <label>CIDR / IPv4 (e.g. 192.168.1.0/24)</label><input type="text" id="ipin" value="192.168.1.10/24">
+    <div class="grid2" id="ipout"></div>
+    <label>IPv6 (expand / compress)</label>
+    <div class="row2"><input type="text" id="v6in" placeholder="fe80::1" style="flex:1 1 200px"><button class="btn" id="v6go">Go</button></div>
+    <div class="out" id="v6out">—</div>
+    <div class="row2"><button class="btn" id="macgo">Generate random MAC</button><button class="btn" id="macgen2">Another</button></div>
+    <div class="out" id="macout">—</div>
+  </section>
+
+  <section class="panel" data-t="dns">
+    <h2>DNS lookup (DNS-over-HTTPS)</h2>
+    <p>A read-only <code>dig</code>-style resolver using public DNS-over-HTTPS. Resolves records — it never scans or touches ports.</p>
+    <label>Domain</label>
+    <div class="row2"><input type="text" id="dnsname" placeholder="example.com" style="flex:1 1 200px"><select id="dnstype"><option>A</option><option>AAAA</option><option>CNAME</option><option>MX</option><option>TXT</option><option>NS</option><option>SOA</option></select><button class="btn" id="dnsgo">Resolve</button></div>
+    <div class="out" id="dnsout">—</div>
+  </section>
+
+  <section class="panel" data-t="pass">
+    <h2>Password strength &amp; generator</h2>
+    <label>Guess a password</label><input type="text" id="pwin" placeholder="type to measure entropy" >
+    <div class="bar"><i id="pwbar"></i></div><div class="out" id="pwout">—</div>
+    <label>Generate</label>
+    <div class="row2"><input type="text" id="pwlen" value="20" style="width:70px"><label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pwsym" checked style="width:auto">symbols</label><label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pwdig" checked style="width:auto">digits</label><label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pwup" checked style="width:auto">upper</label><button class="btn" id="pwgen">Generate</button></div>
+    <div class="out" id="pwgenout">—</div>
+  </section>
+
+  <section class="panel" data-t="random">
+    <h2>Random generators</h2>
+    <div class="row2"><input type="text" id="rlo" value="1" style="width:70px"><input type="text" id="rhi" value="100" style="width:70px"><button class="btn" id="rnum">Number</button><button class="btn" id="rport">Random port</button></div>
+    <label>Random string</label>
+    <div class="row2"><input type="text" id="rlen" value="16" style="width:70px"><button class="btn" id="rstr">String</button><button class="btn" id="rguid">UUID (v4)</button></div>
+    <div class="out" id="rout">—</div>
+  </section>
+
+  <section class="panel" data-t="regex">
+    <h2>Regex tester (grep -E)</h2>
+    <label>Pattern</label><input type="text" id="xpat" placeholder="\b\w+@\w+\.\w+\b">
+    <label>Flags</label><input type="text" id="xflag" value="g" placeholder="g, i, m">
+    <label>Subject</label><textarea id="xsub" placeholder="text to search…"></textarea>
+    <div class="out" id="xout">Matches highlighted here.</div>
+  </section>
+
+  <p class="note">🔒 Safety: every tool here runs on <em>your</em> device or uses public read-only DNS. Deliberately <b>no</b> port-scanning, brute-forcing or exploit frameworks — attacking systems you don't own is illegal and against our terms. Use on your own assets or with written permission.</p>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const TABS = [['hash','🧬 hash'],['codec','🔤 codec'],['cipher','🔐 cipher'],['ip','🌐 ip'],['dns','🛰 dns'],['pass','🔑 pass'],['random','🎲 random'],['regex','🔎 regex']];
+  const bar = $('tabs');
+  bar.innerHTML = TABS.map((t, i) => '<button data-t="' + t[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + t[1] + '</button>').join('');
+  function show(key) {
+    bar.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.getAttribute('data-t') === key));
+    document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('on', p.getAttribute('data-t') === key));
+  }
+  bar.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.getAttribute('data-t')); });
+  show('hash');
+
+  // ── MD5 (canonical compact implementation — hashes UTF-8 bytes of the input) ──
+  function md5(str) {
+    function bitRol(n, c) { return (n << c) | (n >>> (32 - c)); }
+    function safeAdd(x, y) { const lsw = (x & 0xFFFF) + (y & 0xFFFF); const msw = (x >> 16) + (y >> 16) + (lsw >> 16); return (msw << 16) | (lsw & 0xFFFF); }
+    function cmn(q, a, b, x, s, t) { return safeAdd(bitRol(safeAdd(safeAdd(a, q), safeAdd(x, t)), s), b); }
+    function core(x){
+      const K=[]; for(let i=0;i<64;i++) K[i]=Math.floor(Math.abs(Math.sin(i+1))*4294967296);
+      const SH=[[7,12,17,22],[5,9,14,20],[4,11,16,23],[6,10,15,21]];
+      let a=1732584193,b=-271733879,c=-1732584194,d=271733878;
+      for(let off=0;off<x.length;off+=16){
+        const M=[]; for(let j=0;j<16;j++) M[j]=x[off+j]|0;
+        const oa=a,ob=b,oc=c,od=d;
+        for(let i=0;i<64;i++){
+          let f,g,grp;
+          if(i<16){f=(b&c)|(~b&d); g=i; grp=0;}
+          else if(i<32){f=(d&b)|(~d&c); g=(5*i+1)%16; grp=1;}
+          else if(i<48){f=b^c^d; g=(3*i+5)%16; grp=2;}
+          else {f=c^(b|~d); g=(7*i)%16; grp=3;}
+          const s=SH[grp][i%4];
+          const fr=safeAdd(safeAdd(f,a), safeAdd(M[g],K[i]));
+          a=d; d=c; c=b; b=safeAdd(b, bitRol(fr,s));
+        }
+        a=safeAdd(a,oa);b=safeAdd(b,ob);c=safeAdd(c,oc);d=safeAdd(d,od);
+      }
+      return [a,b,c,d];
+    }
+    function str2blks(s){
+      const bytes=new TextEncoder().encode(s), len=bytes.length;
+      const blks=new Array((((len+8)>>6)+1)*16).fill(0);
+      for(let i=0;i<len;i++){ blks[i>>2]|=bytes[i]<<((i%4)*8); }
+      blks[len>>2]|=0x80<<((len%4)*8);
+      blks[(((len+8)>>6)<<4)+14]=(len*8);
+      return blks;
+    }
+    function hexw(n){ const hx='0123456789abcdef'; let o=''; for(let i=0;i<4;i++){ o+=hx.charAt((n>>(i*8+4))&0x0F)+hx.charAt((n>>(i*8))&0x0F); } return o; }
+    return core(str2blks(str)).map(hexw).join('');
+  }
+
+  // ── CRC32 ──
+  let CRC_T = null;
+  function crc32(str) {
+    if (!CRC_T) { CRC_T = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC_T[n] = c; } }
+    const bytes = new TextEncoder().encode(str); let crc = -1;
+    for (let i = 0; i < bytes.length; i++) crc = (crc >>> 8) ^ CRC_T[(crc ^ bytes[i]) & 0xFF];
+    return ((crc ^ -1) >>> 0).toString(16).padStart(8, '0');
+  }
+
+  async function runHash() {
+    const txt = $('hin').value; if (!txt) { $('hout').textContent = '—'; return; }
+    const rows = ['MD5    ' + md5(txt), 'CRC32  ' + crc32(txt)];
+    for (const algo of ['SHA-1', 'SHA-256', 'SHA-512']) {
+      try { const buf = await crypto.subtle.digest(algo, new TextEncoder().encode(txt)); rows.unshift(algo.padEnd(6) + '  ' + Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('')); } catch (e) { rows.push(algo + '  (unavailable — needs https)'); }
+    }
+    $('hout').textContent = rows.join('\n');
+  }
+  $('hin').addEventListener('input', runHash); runHash();
+
+  // ── codecs ──
+  const B32A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  function b32(s) { const bytes = new TextEncoder().encode(s); let bits = 0, val = 0, out = ''; for (const b of bytes) { val = (val << 8) | b; bits += 8; while (bits >= 5) { out += B32A[(val >>> (bits - 5)) & 31]; bits -= 5; } } if (bits > 0) out += B32A[(val << (5 - bits)) & 31]; return out; }
+  function b32dec(s) { s = s.toUpperCase().replace(/=+$/, '').replace(/[^A-Z2-7]/g, ''); let bits = 0, val = 0; const bytes = []; for (const ch of s) { val = (val << 5) | B32A.indexOf(ch); bits += 5; if (bits >= 8) { bytes.push((val >>> (bits - 8)) & 255); bits -= 8; } } return new TextDecoder().decode(new Uint8Array(bytes)); }
+  function hex(s) { return Array.from(new TextEncoder().encode(s)).map((b) => b.toString(16).padStart(2, '0')).join(''); }
+  function hexdec(s) { s = s.replace(/[^0-9a-fA-F]/g, ''); const bytes = []; for (let i = 0; i < s.length; i += 2) bytes.push(parseInt(s.substr(i, 2), 16)); return new TextDecoder().decode(new Uint8Array(bytes)); }
+  function bin(s) { return Array.from(new TextEncoder().encode(s)).map((b) => b.toString(2).padStart(8, '0')).join(' '); }
+  function bindec(s) { const parts = s.trim().split(/\s+/).filter(Boolean); const bytes = parts.map((p) => parseInt(p, 2)); return new TextDecoder().decode(new Uint8Array(bytes)); }
+  function b64(s) { return btoa(String.fromCharCode.apply(null, Array.from(new TextEncoder().encode(s)))); }
+  function b64u(s) { return b64(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function b64udec(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return new TextDecoder().decode(Uint8Array.from(atob(s), (c) => c.charCodeAt(0))); }
+  function liveCodec() {
+    const t = $('cin').value;
+    $('cenc').innerHTML = [['Hex', hex(t)], ['Base64', b64(t)], ['Base64url', b64u(t)], ['Base32', b32(t)], ['Binary', bin(t)], ['URL', encodeURIComponent(t)]]
+      .map((r) => '<div class="cell"><b>' + r[0] + '</b>' + esc(r[1]) + '</div>').join('');
+  }
+  $('cin').addEventListener('input', liveCodec); liveCodec();
+  $('cdecgo').addEventListener('click', () => {
+    const f = $('cdfmt').value, v = $('cdec').value;
+    try { const map = { hex: hexdec, b64: (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/=+$/, '').padEnd((s.length + 3) & ~3, '='), (c) => c.charCodeAt(0)))), b64u: b64udec, b32: b32dec, bin: bindec }; $('cout').textContent = map[f](v); } catch (e) { $('cout').textContent = 'Decode error: ' + e.message; }
+  });
+
+  // ── ciphers ──
+  function caesar(txt, shift, dec) { const s = dec ? -shift : shift; return txt.replace(/[a-z]/gi, (c) => { const base = c <= 'Z' ? 65 : 97; return String.fromCharCode(((c.charCodeAt(0) - base + s + 26 * 10) % 26) + base); }); }
+  function atbash(t) { return t.replace(/[a-z]/gi, (c) => { const base = c <= 'Z' ? 65 : 97; return String.fromCharCode(base + 25 - (c.charCodeAt(0) - base)); }); }
+  function vigenere(txt, key, dec) { if (!key) return '(needs a key)'; key = key.toLowerCase().replace(/[^a-z]/g, ''); if (!key) return '(key must contain letters)'; let ki = 0; return txt.replace(/[a-z]/gi, (c) => { const base = c <= 'Z' ? 65 : 97; const k = key.charCodeAt(ki++ % key.length) - 97; const sh = ((c.charCodeAt(0) - base) + (dec ? -k : k) + 26 * 10) % 26; return String.fromCharCode(sh + base); }); }
+  function runCipher(dec) {
+    const t = $('pin').value, algo = $('calgo').value, key = $('ckey').value;
+    if (algo === 'caesar') $('pout').textContent = caesar(t, parseInt(key, 10) || 3, dec);
+    else if (algo === 'rot13') $('pout').textContent = caesar(t, 13, dec);
+    else if (algo === 'atbash') $('pout').textContent = atbash(t);
+    else $('pout').textContent = vigenere(t, key, dec);
+  }
+  $('penc').addEventListener('click', () => runCipher(false));
+  $('pdec').addEventListener('click', () => runCipher(true));
+
+  // ── IP / CIDR / MAC / IPv6 ──
+  function ipToInt(s) { const p = s.split('.').map(Number); if (p.length !== 4 || p.some((x) => !(x >= 0 && x <= 255))) throw new Error('bad IPv4'); return ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]) >>> 0; }
+  function intToIp(n) { return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.'); }
+  function cell(k, v) { return '<div class="cell"><b>' + k + '</b>' + esc(v) + '</div>'; }
+  function runCidr() {
+    const raw = $('ipin').value.trim();
+    try {
+      const [ip, bitsStr] = raw.split('/'); const bits = bitsStr == null ? 32 : parseInt(bitsStr, 10);
+      const i = ipToInt(ip); const mask = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0; const netmask = mask >>> 0, wild = (~mask) >>> 0;
+      const net = (i & netmask) >>> 0, bcast = (net | wild) >>> 0;
+      const total = Math.pow(2, 32 - bits); const usable = bits >= 31 ? total : Math.max(0, total - 2);
+      $('ipout').innerHTML = cell('Address', intToIp(i)) + cell('Prefix', '/' + bits) + cell('Network', intToIp(net)) + cell('Broadcast', intToIp(bcast)) + cell('Netmask', intToIp(netmask)) + cell('Wildcard', intToIp(wild)) + cell('Total IPs', String(total)) + cell('Usable hosts', String(usable));
+    } catch (e) { $('ipout').innerHTML = cell('Error', e.message); }
+  }
+  $('ipin').addEventListener('input', runCidr); runCidr();
+  function v6expand(s) {
+    if (s.indexOf('::') !== -1) { const [head, tail] = s.split('::'); const h = head ? head.split(':') : []; const t = tail ? tail.split(':') : []; const fill = Array(Math.max(0, 8 - h.length - t.length)).fill('0'); return h.concat(fill, t).map((g) => g.padStart(4, '0')).join(':'); }
+    return s.split(':').map((g) => g.padStart(4, '0')).join(':');
+  }
+  $('v6go').addEventListener('click', () => { const v = $('v6in').value.trim(); if (!v) { $('v6out').textContent = '—'; return; } try { const exp = v6expand(v); const groups = exp.split(':'); let best = -1, len = 0, cur = -1, cl = 0; groups.forEach((g, i) => { if (g === '0000') { if (cur < 0) cur = i; cl++; if (cl > len) { len = cl; best = cur; } } else { cur = -1; cl = 0; } }); let out; if (len >= 2) { const a = groups.slice(0, best).map((g) => g.replace(/^0+/, '') || '0'); const b = groups.slice(best + len).map((g) => g.replace(/^0+/, '') || '0'); out = a.join(':') + '::' + b.join(':'); } else { out = groups.map((g) => g.replace(/^0+/, '') || '0').join(':'); } $('v6out').textContent = 'Expanded: ' + exp + '\nCompressed: ' + out; } catch (e) { $('v6out').textContent = 'Bad IPv6'; } });
+  function genMac() { const b = new Uint8Array(6); crypto.getRandomValues(b); b[0] = (b[0] & 0xFE) | 0x02; return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(':'); }
+  function showMac() { $('macout').textContent = genMac() + '  (locally-administered, unicast)'; }
+  $('macgo').addEventListener('click', showMac); $('macgen2').addEventListener('click', showMac);
+
+  // ── DNS over HTTPS (read-only) ──
+  $('dnsgo').addEventListener('click', () => {
+    const name = $('dnsname').value.trim(), type = $('dnstype').value;
+    if (!name) { $('dnsout').textContent = 'Enter a domain.'; return; }
+    $('dnsout').textContent = 'Resolving…';
+    fetch('https://dns.google/resolve?name=' + encodeURIComponent(name) + '&type=' + encodeURIComponent(type), { headers: { accept: 'application/dns-json' } })
+      .then((r) => r.json()).then((d) => {
+        const ans = (d.Answer || []).map((a) => '<tr><td>' + esc(a.name) + '</td><td>' + esc(a.type) + '</td><td>' + esc(a.TTL) + '</td><td>' + esc(a.data) + '</td></tr>').join('');
+        $('dnsout').innerHTML = d.Status === 0 && ans ? '<table><tr><th>Name</th><th>Type</th><th>TTL</th><th>Data</th></tr>' + ans + '</table>' : 'No answer (status ' + (d.Status || 0) + ').';
+      }).catch(() => { $('dnsout').textContent = 'Lookup failed (offline or DoH blocked).'; });
+  });
+
+  // ── password ──
+  function strength(p) { let pool = 0; if (/[a-z]/.test(p)) pool += 26; if (/[A-Z]/.test(p)) pool += 26; if (/[0-9]/.test(p)) pool += 10; if (/[^A-Za-z0-9]/.test(p)) pool += 33; const bits = p.length && pool ? Math.round(p.length * Math.log2(pool)) : 0; const label = bits < 28 ? 'weak' : bits < 36 ? 'fair' : bits < 60 ? 'good' : bits < 100 ? 'strong' : 'excellent'; return { bits, label }; }
+  $('pwin').addEventListener('input', () => { const s = strength($('pwin').value); $('pwbar').style.width = Math.min(100, s.bits) + '%'; $('pwout').textContent = (s.bits) + ' bits · ' + s.label; });
+  $('pwgen').addEventListener('click', () => { let set = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'; if ($('pwdig').checked) set += '23456789'; if ($('pwsym').checked) set += '!@#$%^&*-_=+'; if ($('pwup').checked) set += 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; const len = Math.max(4, Math.min(128, parseInt($('pwlen').value, 10) || 16)); const a = new Uint32Array(len); crypto.getRandomValues(a); let out = ''; for (let i = 0; i < len; i++) out += set[a[i] % set.length]; $('pwgenout').textContent = out; });
+
+  // ── random ──
+  function rin() { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0]; }
+  $('rnum').addEventListener('click', () => { const lo = parseInt($('rlo').value, 10) || 0, hi = parseInt($('rhi').value, 10) || 100; const mn = Math.min(lo, hi), mx = Math.max(lo, hi); $('rout').textContent = String(mn + (rin() % (mx - mn + 1))); });
+  $('rport').addEventListener('click', () => { $('rout').textContent = String(1 + (rin() % 65535)); });
+  $('rstr').addEventListener('click', () => { const set = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'; const len = Math.max(1, Math.min(256, parseInt($('rlen').value, 10) || 16)); const a = new Uint32Array(len); crypto.getRandomValues(a); $('rout').textContent = Array.from(a, (x) => set[x % set.length]).join(''); });
+  $('rguid').addEventListener('click', () => { if (crypto.randomUUID) { $('rout').textContent = crypto.randomUUID(); return; } const b = new Uint8Array(16); crypto.getRandomValues(b); b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80; const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(''); $('rout').textContent = h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20); });
+
+  // ── regex ──
+  function runRegex() {
+    const pat = $('xpat').value, sub = $('xsub').value, flags = $('xflag').value || 'g';
+    if (!pat) { $('xout').textContent = 'Enter a pattern.'; return; }
+    try { const re = new RegExp(pat, flags.indexOf('g') >= 0 ? flags : flags + 'g'); let m, last = 0, html = '', guard = 0;
+      while ((m = re.exec(sub)) !== null && guard++ < 5000) { html += esc(sub.slice(last, m.index)) + '<mark>' + esc(m[0]) + '</mark>'; last = m.index + m[0].length; if (m[0].length === 0) re.lastIndex++; }
+      html += esc(sub.slice(last)); $('xout').innerHTML = html || '<span style="color:var(--muted)">No matches.</span>';
+    } catch (e) { $('xout').textContent = 'Bad regex: ' + e.message; }
+  }
+  $('xpat').addEventListener('input', runRegex); $('xflag').addEventListener('input', runRegex); $('xsub').addEventListener('input', runRegex);
+})();
+</script>
+</body>
+</html>
