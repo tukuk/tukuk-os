@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>T Chat — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="T Chat — aplikasi chat sebenar dalam pelayar. Daftar nama + kata laluan, dapat Tukuk ID kekal, bersembang di bilik Am, mesej peribadi 1-ke-1 atau kumpulan, hantar gambar & video serta mesej suara. Panggilan video & suara (WebRTC) dengan pengenalan pemanggil, mod prank panggilan palsu, peti keluar luar-talian, mod jimat data 2G/3G/GPRS, resit baca, dan boleh dipasang sebagai aplikasi di Android, iOS, Windows, Linux & Huawei atau muat turun APK Android native. Reply, forward, reaction, edit, pin, carian, wallpaper.">
+<meta name="description" content="T Chat — a real chat app in the browser. Register with name + password, get a permanent Tukuk ID, chat in the General room, 1-on-1 or group DMs, send images, video & voice messages. Video & voice calls (WebRTC) with caller ID, fake prank-call mode, offline outbox, 2G/3G/GPRS data-saver mode, read receipts, and installable on Android, iOS, Windows, Linux & Huawei or download the native Android APK. Reply, forward, reaction, edit, pin, search, wallpaper.">
 <link rel="canonical" href="https://tukuk.org/apps/chat">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg?v=3">
@@ -577,91 +577,91 @@
 <body>
 <header><a class="back" href="/apps">← Apps</a><h1><img class="hlogo" src="/icons/apps/chat.svg?v=3" alt=""> T Chat</h1></header>
 
-<!-- ─── Skrin daftar / login ─── -->
+<!-- ─── Register / login screen ─── -->
 <div id="auth">
   <div class="card">
     <div class="brand">
       <div class="logo"><img src="/icons/apps/chat.svg?v=3" alt="Logo T Chat"></div>
       <h2>T Chat</h2>
-      <p>Chat sebenar dalam pelayar — tanpa e-mel, tanpa aplikasi.</p>
+      <p>Real chat in the browser — no e-mail, no app.</p>
     </div>
     <div class="tabs">
-      <button id="tabLogin" class="on">Masuk</button>
-      <button id="tabReg">Daftar Baru</button>
+      <button id="tabLogin" class="on">Login</button>
+      <button id="tabReg">Sign Up</button>
     </div>
-    <input id="aName" placeholder="Nama pengguna" maxlength="20" autocomplete="username">
-    <input id="aPass" type="password" placeholder="Kata laluan (min 4)" autocomplete="current-password">
+    <input id="aName" placeholder="Username" maxlength="20" autocomplete="username">
+    <input id="aPass" type="password" placeholder="Password (min 4)" autocomplete="current-password">
     <div class="err" id="aErr"></div>
-    <button class="go" id="aGo">Masuk</button>
-    <div class="reclink"><button id="aRec">Lupa kata laluan? Guna kod pemulihan</button></div>
+    <button class="go" id="aGo">Login</button>
+    <div class="reclink"><button id="aRec">Forgot password? Use a recovery code</button></div>
   </div>
   <details class="note">
-    <summary>Ciri &amp; cara ia berfungsi</summary>
+    <summary>Features &amp; how it works</summary>
     <div style="margin-top:8px">
-    Daftar satu nama + kata laluan. Kata laluan disimpan sebagai <i>hash</i> scrypt di pelayan — kami tak boleh baca asalnya.
-    Selepas masuk, anda terus berada dalam bilik <b>🌍 Am</b> untuk bersembang dengan semua orang dalam talian.
-    Tekan <b>➕</b> untuk cari pengguna lain dan buka mesej peribadi (DM) 1-ke-1.<br>
-    <b>Gambar &amp; video:</b> tekan 📎 (atau tampal/seret fail) untuk hantar media — gambar dimampat dalam pelayar dulu supaya laju, video sehingga 64MB.<br>
-    <b>Tukuk ID:</b> setiap akaun dapat nombor kekal (contoh <b>100042</b>). Kawan boleh cari anda ikut nombor itu walaupun anda tukar nama — DM dan mesej lama takkan putus.<br>
-    <b>Tetapan (⚙️):</b> tukar nama &amp; bio, tukar kata laluan, senarai kawan, cari orang, sekat/buka sekat, dan keluarkan sesi peranti lain.<br>
-    <b>📹 Panggilan:</b> dalam DM, tekan 📹 atau 📞 untuk panggilan video/suara terus antara peranti — skrin masuk menunjukkan <i>siapa</i> pemanggil (nama, Tukuk ID, kawan atau tidak) sebelum anda jawab.<br>
-    <b>🎭 Prank:</b> tekan butang topeng di bar penghantar untuk paparkan panggilan masuk palsu penuh-skrin dengan nama bebas — berjalan walaupun luar talian.<br>
-    <b>📲 Pasang:</b> ⚙️ → Aplikasi untuk pasang T Chat di Android/iOS/Windows/Linux/Huawei, atau tekan <b>🌐 Muat turun (semua OS)</b> untuk halaman auto-pilih: APK terus di Android/Huawei/ChromeOS, PWA di Windows/Linux/macOS, Add to Home Screen di iOS.<br>
-    <b>Selamat:</b> guna kata laluan yang anda tak pakai di tempat lain, dan jana <b>kod pemulihan</b> dalam ⚙️ Keselamatan — satu kod boleh tetapkan semula akses jika anda lupa kata laluan.
+    Register with one name + password. Passwords are stored as a server-side <i>scrypt hash</i> — we can't read the original.
+    After login you land straight in the <b>🌍 General</b> room to chat with everyone online.
+    Press <b>➕</b> to find other users and open 1-on-1 direct messages (DM).<br>
+    <b>Images &amp; video:</b> press 📎 (or paste/drag files) to send media — images are compressed in the browser first for speed, video up to 64MB.<br>
+    <b>Tukuk ID:</b> every account gets a permanent number (example <b>100042</b>). Friends can find you by that number even if you change your name — DMs and old messages never break.<br>
+    <b>Settings (⚙️):</b> change name &amp; bio, change password, friend list, find people, block/unblock, and sign out other devices.<br>
+    <b>📹 Calls:</b> in a DM, press 📹 or 📞 for direct video/voice calls between devices — the incoming screen shows <i>who</i> is calling (name, Tukuk ID, friend or not) before you answer.<br>
+    <b>🎭 Prank:</b> press the mask button in the send bar to show a fake fullscreen incoming call with a custom name — works even offline.<br>
+    <b>📲 Install:</b> ⚙️ → App to install T Chat on Android/iOS/Windows/Linux/Huawei, or press <b>🌐 Download (all OS)</b> for the auto-pick page: APK directly on Android/Huawei/ChromeOS, PWA on Windows/Linux/macOS, Add to Home Screen on iOS.<br>
+    <b>Safety:</b> use a password you don't use elsewhere, and generate <b>recovery codes</b> in ⚙️ Security — one code can reset access if you forget the password.
     </div>
   </details>
 </div>
 
-<!-- ─── Antara muka chat ─── -->
+<!-- ─── Chat UI ─── -->
 <div id="app" hidden>
   <aside id="side">
     <div id="sideTop">
-      <button id="feedBtn" title="Suapan sosial">📰</button>
-      <button id="notifBtn" title="Notifikasi">🔔</button>
-      <input id="q" placeholder="Cari sembang atau mesej…" autocomplete="off">
-      <button id="newBtn" title="Sembang baru / directory">➕</button>
+      <button id="feedBtn" title="Social feed">📰</button>
+      <button id="notifBtn" title="Notifications">🔔</button>
+      <input id="q" placeholder="Search chats or messages…" autocomplete="off">
+      <button id="newBtn" title="New chat / directory">➕</button>
     </div>
     <div id="chats"></div>
-    <div id="me" title="Profil & Tukuk ID saya"><div class="ava" id="meAva">?</div><b id="meName"></b><button class="idno" id="meIdBtn" title="Buka profil saya">#—</button><button id="outBtn">Keluar</button></div>
+    <div id="me" title="My profile & Tukuk ID"><div class="ava" id="meAva">?</div><b id="meName"></b><button class="idno" id="meIdBtn" title="Open my profile">#—</button><button id="outBtn">Logout</button></div>
   </aside>
   <main id="main">
     <div id="top">
-      <button id="backBtn" title="Kembali">←</button>
+      <button id="backBtn" title="Back">←</button>
       <div class="ava" id="tAva">🌍</div>
-      <div class="who" id="whoBox" title="Buka profil pasangan"><b id="tName">—</b><span id="tStatus"></span></div>
-      <button class="cbtn" id="cAud" title="Panggilan suara" hidden>📞</button>
-      <button class="cbtn" id="cVid" title="Panggilan video" hidden>📹</button>
-      <div id="live" title="Polling — cuba sambung semula" aria-label="Polling — cuba sambung semula"></div>
-      <button id="setBtn" title="Tetapan">⚙️</button>
+      <div class="who" id="whoBox" title="Open partner profile"><b id="tName">—</b><span id="tStatus"></span></div>
+      <button class="cbtn" id="cAud" title="Voice call" hidden>📞</button>
+      <button class="cbtn" id="cVid" title="Video call" hidden>📹</button>
+      <div id="live" title="Polling — try to reconnect" aria-label="Polling — try to reconnect"></div>
+      <button id="setBtn" title="Settings">⚙️</button>
     </div>
     <div id="netbar"></div>
-    <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">Bilik masih kosong. Sapa dulu! 👋</div></div>
-    <button id="jump" title="Lompat ke mesej terkini">↓ Mesej baharu</button>
-    <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Batal">✕</button></div></div>
-    <div id="editBar"><div class="rb">✏️ <b>Mengedit mesej</b><span></span><button id="edCancel" title="Batal">✕</button></div></div>
-    <div id="blockBar">🚫 Anda menyekat orang ini — DM dibekukan. <button id="blkOpen">Buka sekat</button></div>
+    <div id="msgsWrap" data-wall="1"><div id="msgs"></div><div id="empty" style="display:none">The room is still empty. Say hi first! 👋</div></div>
+    <button id="jump" title="Jump to latest messages">↓ New messages</button>
+    <div id="replyBar"><div class="rb">↩️ <b id="rbName"></b><span id="rbText"></span><button id="rbCancel" title="Cancel">✕</button></div></div>
+    <div id="editBar"><div class="rb">✏️ <b>Editing message</b><span></span><button id="edCancel" title="Cancel">✕</button></div></div>
+    <div id="blockBar">🚫 You blocked this person — DM is frozen. <button id="blkOpen">Unblock</button></div>
     <div id="pinBar"></div>
-    <div id="recBar"><span class="rdot"></span><b>Merakam…</b><span class="rts" id="recTime">0:00</span><button id="recCancel">Batal</button><button id="recStop">⏹ Berhenti</button><button id="recSend" class="rsend">➤ Hantar</button></div>
+    <div id="recBar"><span class="rdot"></span><b>Recording…</b><span class="rts" id="recTime">0:00</span><button id="recCancel">Cancel</button><button id="recStop">⏹ Stop</button><button id="recSend" class="rsend">➤ Send</button></div>
     <div id="tray"></div>
     <div id="compose">
       <div id="emojiPop">
         <div class="ecats" id="eCatTabs"></div>
         <div class="eegrid" id="eGrid"></div>
       </div>
-      <button id="emojiBtn" title="Sisip emoji">😊</button>
-      <button id="clipBtn" title="Lampirkan gambar, video atau fail">📎</button>
-      <button id="micBtn" title="Rakam mesej suara">🎙️</button>
-      <button id="prankBtn" title="Panggilan prank (setempat, boleh luar talian)">🎭</button>
-      <div class="cin"><textarea id="inp" rows="1" placeholder="Tulis mesej…"></textarea></div>
-      <button id="send" title="Hantar">➤</button>
+      <button id="emojiBtn" title="Insert emoji">😊</button>
+      <button id="clipBtn" title="Attach image, video or file">📎</button>
+      <button id="micBtn" title="Record voice message">🎙️</button>
+      <button id="prankBtn" title="Prank call (local, works offline)">🎭</button>
+      <div class="cin"><textarea id="inp" rows="1" placeholder="Write a message…"></textarea></div>
+      <button id="send" title="Send">➤</button>
       <div id="clipPop" hidden>
-        <button id="cpFile">📄 Gambar / video / fail</button>
-        <button id="cpFolder">📁 Satu folder penuh</button>
-        <button id="cpStiker">😊 Stiker besar</button>
-        <button id="cpPoll">📊 Undian</button>
+        <button id="cpFile">📄 Image / video / file</button>
+        <button id="cpFolder">📁 A whole folder</button>
+        <button id="cpStiker">😊 Big sticker</button>
+        <button id="cpPoll">📊 Poll</button>
       </div>
       <div id="stkPop" hidden>
-        <div id="stkTabs"><button class="on" data-t="emo">😊 Emoji besar</button><button data-t="mine">🖼 Stiker saya</button></div>
+        <div id="stkTabs"><button class="on" data-t="emo">😊 Big emoji</button><button data-t="mine">🖼 My stickers</button></div>
         <div id="stkGrid" class="stk-grid"></div>
         <input type="file" id="stkFile" accept="image/*" style="display:none">
       </div>
@@ -675,215 +675,215 @@
 <div id="toast"></div>
 <canvas id="fxLayer"></canvas>
 <div id="giftOv"><div class="gemoji" id="giftEmoji"></div></div>
-<div id="view"><div class="stage" id="vStage"></div><div class="cap" id="vCap"></div><div class="bar"><button id="vPrev">←</button><button id="vSave">⬇️ Simpan</button><button id="vClose">✕ Tutup</button><button id="vNext">→</button></div></div>
+<div id="view"><div class="stage" id="vStage"></div><div class="cap" id="vCap"></div><div class="bar"><button id="vPrev">←</button><button id="vSave">⬇️ Save</button><button id="vClose">✕ Close</button><button id="vNext">→</button></div></div>
 
-<!-- ─── Skrin panggilan (video/audio WebRTC + prank) ─── -->
+<!-- ─── Call screen (video/audio WebRTC + prank) ─── -->
 <div id="call">
   <video id="cRemote" autoplay playsinline></video>
   <div id="cLocalWrap"><video id="cLocal" autoplay playsinline muted></video></div>
   <div id="cInfo"><div class="cava" id="cAva">?</div><div class="cname" id="cName"></div><div id="cTag"></div><div class="csub" id="cSub"></div><div class="cbio" id="cBio"></div><div class="cstat" id="cStat"></div></div>
   <div id="cCtrl">
-    <button id="cAccept" title="Terima panggilan"><span>📞</span><i>Terima</i></button>
-    <button id="cMute" title="Bisukan mikrofon"><span>🎙️</span><i>Bisu</i></button>
-    <button id="cCam" title="Matikan kamera"><span>🎥</span><i>Kamera</i></button>
-    <button id="cEnd" title="Tamatkan panggilan"><span>📵</span><i>Tamat</i></button>
+    <button id="cAccept" title="Accept call"><span>📞</span><i>Accept</i></button>
+    <button id="cMute" title="Mute microphone"><span>🎙️</span><i>Mute</i></button>
+    <button id="cCam" title="Turn camera off"><span>🎥</span><i>Camera</i></button>
+    <button id="cEnd" title="End call"><span>📵</span><i>End</i></button>
   </div>
-  <button id="cBlock">🚫 Sekat pemanggil</button>
-  <div id="cPrank"><div class="big">🎭 KENA PRANK! 😆</div><div class="sm">Tiada panggilan sebenar &mdash; dan &ldquo;TukuCaller&rdquo; tadi pun rekaan belaka. Ini mod prank T Chat. Tekan 📵 Tamat untuk tutup.</div></div>
+  <button id="cBlock">🚫 Block caller</button>
+  <div id="cPrank"><div class="big">🎭 PRANKED! 😆</div><div class="sm">No real call &mdash; and that &ldquo;TukuCaller&rdquo; was made up too. This is T Chat's prank mode. Press 📵 End to close.</div></div>
 </div>
 
 <div class="modal" id="prankModal"><div class="mbox">
-  <h3>🎭 Panggilan prank + TukuCaller</h3>
-  <div class="pflabel">Nama pemanggil palsu</div>
-  <input id="pkName" maxlength="20" placeholder="Cth: Ibu, Boss, Polis…" autocomplete="off">
-  <div class="pflabel">Jenis panggilan</div>
-  <div class="seg" id="pkSeg"><button data-k="video" class="on">📹 Video</button><button data-k="audio">📞 Suara</button></div>
-  <div class="pflabel">Tag &ldquo;TukuCaller&rdquo; (pengenalan pemanggil palsu)</div>
+  <h3>🎭 Prank call + TukuCaller</h3>
+  <div class="pflabel">Fake caller name</div>
+  <input id="pkName" maxlength="20" placeholder="E.g.: Mom, Boss, Police…" autocomplete="off">
+  <div class="pflabel">Call type</div>
+  <div class="seg" id="pkSeg"><button data-k="video" class="on">📹 Video</button><button data-k="audio">📞 Voice</button></div>
+  <div class="pflabel">&ldquo;TukuCaller&rdquo; tag (fake caller-ID lookup)</div>
   <div id="pkPersona">
-    <button data-p="none" class="on">🎲 Rawak</button>
-    <button data-p="scam">⚠️ Penipu</button>
+    <button data-p="none" class="on">🎲 Random</button>
+    <button data-p="scam">⚠️ Scammer</button>
     <button data-p="boss">💼 Boss</button>
     <button data-p="bank">🏦 Bank</button>
-    <button data-p="kurier">📦 Kurier</button>
-    <button data-p="ghost">👻 Alam Lain</button>
-    <button data-p="ex">💔 Bekas</button>
-    <button data-p="celeb">⭐ Artis</button>
+    <button data-p="kurier">📦 Courier</button>
+    <button data-p="ghost">👻 Otherworld</button>
+    <button data-p="ex">💔 Ex</button>
+    <button data-p="celeb">⭐ Celebrity</button>
   </div>
-  <div class="pfmeta">Skrin panggilan masuk palsu muncul penuh dengan dering &amp; getaran. Semasa berdering, &ldquo;TukuCaller&rdquo; akan <b>mencari ID</b> lalu memaparkan tag + laporan penyamaran gaya apl pengenalan pemanggil &mdash; semuanya <b>rekaan untuk kelucuan</b>, setempat sahaja, tiada panggilan sebenar &amp; berfungsi walaupun luar talian.</div>
-  <div class="mbtns"><button id="pkCancel">Batal</button><button class="prim" id="pkGo">🎭 Panggil sekarang</button></div>
+  <div class="pfmeta">A fake incoming-call screen appears fullscreen with ringtone &amp; vibration. While ringing, &ldquo;TukuCaller&rdquo; will <b>look up the ID</b> then show a tag + disguise report in the style of caller-ID apps &mdash; all <b>made up for laughs</b>, local only, no real call &amp; works even offline.</div>
+  <div class="mbtns"><button id="pkCancel">Cancel</button><button class="prim" id="pkGo">🎭 Call now</button></div>
 </div></div>
 
 <div class="modal" id="peopleModal"><div class="mbox">
-  <h3>👥 Cari pengguna</h3>
-  <input id="pq" placeholder="Nama atau Tukuk ID (cth. 100002)…" autocomplete="off" maxlength="20">
+  <h3>👥 Find users</h3>
+  <input id="pq" placeholder="Name or Tukuk ID (e.g. 100002)…" autocomplete="off" maxlength="20">
   <div id="plist"></div>
-  <div class="pfmeta" style="margin-top:6px">Tekan <b>Enter</b> selepas taip 6 angka untuk tahu siapa punya ID itu.</div>
-  <div class="mbtns"><button id="gmOpen">👥+ Kumpulan Baru</button><button class="prim" id="pclose">Tutup</button></div>
+  <div class="pfmeta" style="margin-top:6px">Press <b>Enter</b> after typing 6 digits to see who owns that ID.</div>
+  <div class="mbtns"><button id="gmOpen">👥+ New Group</button><button class="prim" id="pclose">Close</button></div>
 </div></div>
 
 <div class="modal" id="groupModal"><div class="mbox">
-  <h3 id="gmH">👥+ Kumpulan Baru</h3>
-  <div class="pflabel" id="gmNameLabel">Nama kumpulan</div>
-  <input id="gmTitle" maxlength="40" placeholder="cth. Kawan-kawan Kelas…" autocomplete="off">
-  <div class="pflabel" id="gmMemberLabel">Ahli (pilih min. 1)</div>
-  <input id="gmQ" maxlength="20" placeholder="Cari nama atau ID…" autocomplete="off" style="margin-bottom:6px">
+  <h3 id="gmH">👥+ New Group</h3>
+  <div class="pflabel" id="gmNameLabel">Group name</div>
+  <input id="gmTitle" maxlength="40" placeholder="e.g. Class Friends…" autocomplete="off">
+  <div class="pflabel" id="gmMemberLabel">Members (pick at least 1)</div>
+  <input id="gmQ" maxlength="20" placeholder="Search name or ID…" autocomplete="off" style="margin-bottom:6px">
   <div id="gmList" class="gmembers"></div>
-  <div class="pfmeta" id="gmCount" style="margin-top:4px">0 dipilih</div>
-  <div class="mbtns"><button id="gmCancel">Batal</button><button class="prim" id="gmCreate">👥 Cipta Kumpulan</button></div>
+  <div class="pfmeta" id="gmCount" style="margin-top:4px">0 selected</div>
+  <div class="mbtns"><button id="gmCancel">Cancel</button><button class="prim" id="gmCreate">👥 Create Group</button></div>
 </div></div>
 
 <div class="modal" id="grpInfoModal"><div class="mbox">
-  <h3 id="giTitle">👥 Kumpulan</h3>
+  <h3 id="giTitle">👥 Group</h3>
   <div id="giAdmin" hidden>
-    <div class="pflabel">Nama kumpulan</div>
-    <div style="display:flex;gap:8px;align-items:center"><input id="giName" maxlength="40" autocomplete="off" style="flex:1;margin:0"><button id="giRename">Simpan nama</button></div>
+    <div class="pflabel">Group name</div>
+    <div style="display:flex;gap:8px;align-items:center"><input id="giName" maxlength="40" autocomplete="off" style="flex:1;margin:0"><button id="giRename">Save name</button></div>
   </div>
-  <div class="pflabel">Ahli <span id="giCount" style="color:var(--muted)"></span></div>
+  <div class="pflabel">Members <span id="giCount" style="color:var(--muted)"></span></div>
   <div id="giMembers"></div>
   <div class="mbtns">
-    <button id="giLeave" class="warn">Keluar Kumpulan</button>
-    <button id="giInvite">➕ Jemput</button>
-    <button id="giDissolve" class="warn" hidden>🗑 Bubarkan</button>
-    <button class="prim" id="giClose">Tutup</button>
+    <button id="giLeave" class="warn">Leave Group</button>
+    <button id="giInvite">➕ Invite</button>
+    <button id="giDissolve" class="warn" hidden>🗑 Dissolve</button>
+    <button class="prim" id="giClose">Close</button>
   </div>
 </div></div>
 
 <div class="modal" id="fwdModal"><div class="mbox">
-  <h3>➡️ Teruskan mesej</h3>
+  <h3>➡️ Forward message</h3>
   <div id="fwdList"></div>
-  <div class="mbtns"><button id="fwdCancel">Batal</button></div>
+  <div class="mbtns"><button id="fwdCancel">Cancel</button></div>
 </div></div>
 
 <div class="modal" id="pollModal"><div class="mbox">
-  <h3>📊 Cipta Undian</h3>
-  <div class="pflabel">Soalan</div>
-  <input id="plQ" maxlength="200" placeholder="Cth.: Makan tengah hari di mana?" autocomplete="off">
-  <div class="pflabel" style="margin-top:8px">Pilihan <span style="color:var(--muted);font-size:.72rem">(2–6)</span></div>
-  <div id="plOpts"><input class="plopt" maxlength="80" placeholder="Pilihan 1" autocomplete="off"><input class="plopt" maxlength="80" placeholder="Pilihan 2" autocomplete="off"></div>
-  <button id="plAdd" style="font-size:.78rem;padding:4px 10px;margin-top:5px">+ Tambah pilihan</button>
-  <div class="mbtns"><button id="plCancel">Batal</button><button class="prim" id="plGo">📊 Hantar undian</button></div>
+  <h3>📊 Create Poll</h3>
+  <div class="pflabel">Question</div>
+  <input id="plQ" maxlength="200" placeholder="E.g.: Where for lunch?" autocomplete="off">
+  <div class="pflabel" style="margin-top:8px">Options <span style="color:var(--muted);font-size:.72rem">(2–6)</span></div>
+  <div id="plOpts"><input class="plopt" maxlength="80" placeholder="Option 1" autocomplete="off"><input class="plopt" maxlength="80" placeholder="Option 2" autocomplete="off"></div>
+  <button id="plAdd" style="font-size:.78rem;padding:4px 10px;margin-top:5px">+ Add option</button>
+  <div class="mbtns"><button id="plCancel">Cancel</button><button class="prim" id="plGo">📊 Send poll</button></div>
 </div></div>
 
 <div class="modal" id="setModal"><div class="mbox">
-  <h3>⚙️ Tetapan</h3>
+  <h3>⚙️ Settings</h3>
   <div class="tabs" id="stTabs">
-    <button data-t="Prof" class="on">🪪 Profil</button>
-    <button data-t="Pal">👥 Kawan <b id="nPal">0</b></button>
-    <button data-t="Blk">🚫 Sekat <b id="nBlk">0</b></button>
-    <button data-t="Sec">🔒 Keselamatan</button>
-    <button data-t="Dsp">🎨 Paparan</button>
-    <button data-t="App">📲 Aplikasi</button>
+    <button data-t="Prof" class="on">🪪 Profile</button>
+    <button data-t="Pal">👥 Friends <b id="nPal">0</b></button>
+    <button data-t="Blk">🚫 Blocked <b id="nBlk">0</b></button>
+    <button data-t="Sec">🔒 Security</button>
+    <button data-t="Dsp">🎨 Display</button>
+    <button data-t="App">📲 App</button>
   </div>
 
   <div class="tab" id="tabProf">
     <div id="stMe"></div>
     <div class="crow" style="margin:2px 0 8px">
-      <div class="cbtns"><button id="stAvaBtn" title="Muat naik gambar profil">🤳 Gambar profil</button><button id="stAvaDel" title="Buang gambar profil">🗑 Buang gambar</button></div>
+      <div class="cbtns"><button id="stAvaBtn" title="Upload profile picture">🤳 Profile picture</button><button id="stAvaDel" title="Remove profile picture">🗑 Remove picture</button></div>
     </div>
     <input type="file" id="stAvaFile" accept="image/*" style="display:none">
-    <div class="pflabel">Nama paparan</div><input id="stName" maxlength="20" autocomplete="off">
-    <div class="pflabel">Bio (pilihan)</div><input id="stBio" maxlength="120" placeholder="Satu baris tentang anda" autocomplete="off">
-    <div class="pfmeta">Tukuk ID anda bersifat kekal — hanya nama yang boleh ditukar.</div>
-    <div class="mbtns"><button class="prim" id="stSaveProf">Simpan profil</button></div>
+    <div class="pflabel">Display name</div><input id="stName" maxlength="20" autocomplete="off">
+    <div class="pflabel">Bio (optional)</div><input id="stBio" maxlength="120" placeholder="One line about you" autocomplete="off">
+    <div class="pfmeta">Your Tukuk ID is permanent — only the name can be changed.</div>
+    <div class="mbtns"><button class="prim" id="stSaveProf">Save profile</button></div>
   </div>
 
   <div class="tab" id="tabPal" hidden>
-    <input id="stFind" maxlength="20" placeholder="Cari kawan: nama atau Tukuk ID (6 angka)…" autocomplete="off">
+    <input id="stFind" maxlength="20" placeholder="Find friends: name or Tukuk ID (6 digits)…" autocomplete="off">
     <div id="stFound"></div>
-    <div class="pflabel">Senarai kawan</div>
+    <div class="pflabel">Friend list</div>
     <div id="stPalList"></div>
-    <div class="pfmeta" style="margin-top:8px">Kawan disimpan sebagai Tukuk ID, jadi nama bertukar pun persahabatan tidak hilang.</div>
+    <div class="pfmeta" style="margin-top:8px">Friends are stored as Tukuk IDs, so friendship survives name changes.</div>
   </div>
 
   <div class="tab" id="tabBlk" hidden>
-    <div class="pfmeta">Orang yang disekat tidak dapat menghantar DM kepada anda — dan anda juga tidak dapat membalas sehingga sekat dibuka. Sejarah sembang tetap boleh dibaca. Mereka tidak diberitahu, dan tidak muncul dalam carian mereka.</div>
-    <div class="pflabel">Senarai sekat</div>
+    <div class="pfmeta">Blocked people can't send you DMs — and you can't reply either until the block is lifted. Chat history stays readable. They aren't notified, and don't appear in their searches.</div>
+    <div class="pflabel">Block list</div>
     <div id="stBlkList"></div>
   </div>
 
   <div class="tab" id="tabSec" hidden>
-    <div class="pflabel">Kata laluan semasa</div>
+    <div class="pflabel">Current password</div>
     <input id="stOld" type="password" autocomplete="current-password">
-    <div class="pflabel">Kata laluan baharu (min. 4 aksara)</div>
+    <div class="pflabel">New password (min. 4 characters)</div>
     <input id="stP1" type="password" autocomplete="new-password">
-    <div class="pflabel">Ulang kata laluan baharu</div>
+    <div class="pflabel">Repeat new password</div>
     <input id="stP2" type="password" autocomplete="new-password">
-    <div class="mbtns"><button class="prim" id="stSavePass">Tukar kata laluan</button></div>
-    <div class="pflabel" style="margin-top:16px">Kod pemulihan akaun</div>
-    <div class="pfmeta">Jika lupa kata laluan, mana-mana satu kod ini boleh tetapkan semula akses anda — <b>sekali pakai</b>, jadi simpan di tempat selamat. <span id="recCount">Belum disemak.</span></div>
-    <div class="mbtns"><button id="stRecGen">🔑 Jana 5 kod pemulihan</button></div>
+    <div class="mbtns"><button class="prim" id="stSavePass">Change password</button></div>
+    <div class="pflabel" style="margin-top:16px">Account recovery codes</div>
+    <div class="pfmeta">If you forget the password, any one of these codes can reset your access — <b>single-use</b>, so store them somewhere safe. <span id="recCount">Not checked yet.</span></div>
+    <div class="mbtns"><button id="stRecGen">🔑 Generate 5 recovery codes</button></div>
     <div id="recOut" class="recgrid" hidden></div>
-    <div class="pflabel">Peranti &amp; sesi</div>
-    <div class="pfmeta">Keluarkan sesi lain — hanya peranti ini kekal login.</div>
-    <div class="mbtns"><button class="warn" id="stKick">Keluarkan peranti lain</button></div>
-    <div class="pflabel" style="margin-top:16px">Padam akaun</div>
-    <div class="pfmeta">Tindakan <b>kekal dan tidak boleh dibatalkan</b>. Semua DM, media dan keanggotaan kumpulan anda dibuang serta-merta. Masukkan kata laluan untuk mengesahkan.</div>
-    <input id="stDelPass" type="password" autocomplete="new-password" placeholder="Kata laluan anda">
-    <div class="mbtns"><button class="warn" id="stDelete">🗑 Padam akaun saya</button></div>
+    <div class="pflabel">Devices &amp; sessions</div>
+    <div class="pfmeta">Sign out other sessions — only this device stays logged in.</div>
+    <div class="mbtns"><button class="warn" id="stKick">Sign out other devices</button></div>
+    <div class="pflabel" style="margin-top:16px">Delete account</div>
+    <div class="pfmeta"><b>Permanent and irreversible</b>. All your DMs, media and group memberships are removed immediately. Enter your password to confirm.</div>
+    <input id="stDelPass" type="password" autocomplete="new-password" placeholder="Your password">
+    <div class="mbtns"><button class="warn" id="stDelete">🗑 Delete my account</button></div>
   </div>
 
   <div class="tab" id="tabDsp" hidden>
-    <label>Bunyi <input type="checkbox" id="stSound"></label>
-    <label>Notifikasi DM <input type="checkbox" id="stNotif"></label>
-    <label>Push latar-belakang <input type="checkbox" id="stPush"></label>
-    <div class="pfmeta" id="pushHint" style="margin:-6px 0 4px">Menerima notifikasi walaupun aplikasi ditutup. Perlukan Pelayan Service + HTTPS.</div>
-    <label style="border-bottom:none;padding-bottom:2px">Jimat data <span style="color:var(--muted);font-size:.72rem">(2G/3G/GPRS)</span></label>
+    <label>Sound <input type="checkbox" id="stSound"></label>
+    <label>DM notifications <input type="checkbox" id="stNotif"></label>
+    <label>Background push <input type="checkbox" id="stPush"></label>
+    <div class="pfmeta" id="pushHint" style="margin:-6px 0 4px">Receive notifications even when the app is closed. Requires Service Worker + HTTPS.</div>
+    <label style="border-bottom:none;padding-bottom:2px">Data saver <span style="color:var(--muted);font-size:.72rem">(2G/3G/GPRS)</span></label>
     <div class="seg" id="stData">
       <button data-d="auto">Auto</button>
-      <button data-d="on">Sentiasa</button>
-      <button data-d="off">Mati</button>
+      <button data-d="on">Always</button>
+      <button data-d="off">Off</button>
     </div>
     <div class="pfmeta" id="connHint">—</div>
-    <label>Saiz teks mesej <input type="range" id="stFont" min="13" max="19"></label>
+    <label>Message text size <input type="range" id="stFont" min="13" max="19"></label>
     <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
     <div class="walls" id="stWalls">
-      <button data-w="1" aria-label="Wallpaper gelap (laluan)" title="Gelap (laluan)" style="background:linear-gradient(160deg,#172033,#101627)"></button>
-      <button data-w="2" aria-label="Wallpaper ungu" title="Ungu" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
-      <button data-w="3" aria-label="Wallpaper hijau" title="Hijau" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
-      <button data-w="4" aria-label="Wallpaper amber" title="Amber" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
-      <button data-w="5" aria-label="Wallpaper biru cerah" title="Biru cerah" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
-      <button data-w="6" aria-label="Wallpaper putih" title="Putih" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
+      <button data-w="1" aria-label="Dark wallpaper (default)" title="Dark (default)" style="background:linear-gradient(160deg,#172033,#101627)"></button>
+      <button data-w="2" aria-label="Purple wallpaper" title="Purple" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
+      <button data-w="3" aria-label="Green wallpaper" title="Green" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
+      <button data-w="4" aria-label="Amber wallpaper" title="Amber" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
+      <button data-w="5" aria-label="Bright blue wallpaper" title="Bright blue" style="background:linear-gradient(160deg,#39c1f5,#a7dcf5)"></button>
+      <button data-w="6" aria-label="White wallpaper" title="White" style="background:linear-gradient(160deg,#ffffff,#dfe4ec)"></button>
     </div>
   </div>
 
   <div class="tab" id="tabApp" hidden>
     <div class="pfmeta" id="appStatus">—</div>
-    <div class="mbtns" style="padding-top:2px"><button class="prim" id="stInstall">📲 Pasang T Chat di peranti ini</button></div>
-    <div class="pflabel">Arahan ikut peranti / OS</div>
+    <div class="mbtns" style="padding-top:2px"><button class="prim" id="stInstall">📲 Install T Chat on this device</button></div>
+    <div class="pflabel">Steps by device / OS</div>
     <div class="inst">
-      <div><b>🤖 Android &amp; Huawei (HarmonyOS)</b><span>Chrome atau Petal Browser → menu <i>⋮</i> → <i>Pasang aplikasi</i> / <i>Hantar ke Skrin Utama</i>.</span></div>
-      <div><b>🍎 iPhone &amp; iPad (iOS)</b><span>Safari → butang <i>Kongsi</i> → <i>Tambah ke Skrin Utama</i>. (Pemasangan automatik hanya tersedia di Chrome/Edge.)</span></div>
-      <div><b>🪟 Windows &amp; 🐧 Linux</b><span>Edge atau Chrome → ikon <i>Pasang</i> di bar alamat, atau <i>⋮ → Aplikasi → Pasang aplikasi ini</i>.</span></div>
-      <div><b>📦 Muat turun APK (Android · Beta)</b><span>Mahu pasang tanpa store? Muat turun <b>T Chat.apk</b> terus — pembungkus native (Android 6.0+) yang membuka aplikasi ini penuh-skrin, termasuk panggilan kamera/mikrofon &amp; lampiran. Ini <b>versi beta</b> — ciri sedang dicuba dan mungkin berubah; versi stabil menyusul. Buka fail →benarkan &ldquo;sumber tak diketahui&rdquo;→ Pasang.</span></div>
-      <div><b>🔒 Domain khas T Chat</b><span id="tchatNote">Ruang khusus tanpa enjin carian atau iklan: <a href="https://tchat.tukuk.org/" target="_blank" rel="noopener"><b>tchat.tukuk.org</b></a>. Sesi, notifikasi dan PWA anda di sini <b>berasing</b> daripada tukuk.org — lebih kemas dan lebih selamat. Anda masih di <b id="tchatHere">tukuk.org</b>.</span></div>
+      <div><b>🤖 Android &amp; Huawei (HarmonyOS)</b><span>Chrome or Petal Browser → <i>⋮</i> menu → <i>Install app</i> / <i>Send to Home screen</i>.</span></div>
+      <div><b>🍎 iPhone &amp; iPad (iOS)</b><span>Safari → <i>Share</i> button → <i>Add to Home Screen</i>. (Automatic install is only available in Chrome/Edge.)</span></div>
+      <div><b>🪟 Windows &amp; 🐧 Linux</b><span>Edge or Chrome → the <i>Install</i> icon in the address bar, or <i>⋮ → Apps → Install this site as an app</i>.</span></div>
+      <div><b>📦 Download APK (Android · Beta)</b><span>Want to install without a store? Download <b>T Chat.apk</b> directly — a native wrapper (Android 6.0+) that opens this app fullscreen, including camera/mic calls &amp; attachments. This is a <b>beta version</b> — features are being tested and may change; a stable release follows. Open the file → allow &ldquo;unknown sources&rdquo; → Install.</span></div>
+      <div><b>🔒 Dedicated T Chat domain</b><span id="tchatNote">A special space without search engines or ads: <a href="https://tchat.tukuk.org/" target="_blank" rel="noopener"><b>tchat.tukuk.org</b></a>. Your sessions, notifications and PWA here are <b>separate</b> from tukuk.org — tidier and safer. You are currently on <b id="tchatHere">tukuk.org</b>.</span></div>
     </div>
-    <div class="mbtns"><button class="prim" id="stApk">📥 Muat turun T Chat.apk (Beta)</button><button id="stUniversal">🌐 Muat turun (semua OS)</button><button id="stApkPwa">🌐 Jana sendiri (PWA Builder)</button></div>
-    <div class="pfmeta">Selepas dipasang, T Chat membuka tanpa bar pelayar, mengekalkan sesi, dan boleh membaca sembang serta menghantar mesej ke peti keluar walaupun luar talian.</div>
+    <div class="mbtns"><button class="prim" id="stApk">📥 Download T Chat.apk (Beta)</button><button id="stUniversal">🌐 Download (all OS)</button><button id="stApkPwa">🌐 Build your own (PWA Builder)</button></div>
+    <div class="pfmeta">Once installed, T Chat opens without a browser bar, keeps your session, and can read chats and queue messages for the outbox even offline.</div>
   </div>
 
-  <div class="mbtns"><button class="prim" id="stClose">Tutup</button></div>
+  <div class="mbtns"><button class="prim" id="stClose">Close</button></div>
 </div></div>
 
 <div class="modal" id="profModal"><div class="mbox">
-  <h3>🪪 Profil</h3>
+  <h3>🪪 Profile</h3>
   <div id="pfHead"></div>
   <div id="pfStats"></div>
   <div id="pfPosts"></div>
   <div class="mbtns">
-    <button id="pfClose">Tutup</button>
-    <button id="pfFollow" hidden>➕ Ikuti</button>
-    <button id="pfPal">➕ Kawan</button>
-    <button id="pfBlock">🚫 Sekat</button>
-    <button class="prim" id="pfDm">📨 Hantar DM</button>
+    <button id="pfClose">Close</button>
+    <button id="pfFollow" hidden>➕ Follow</button>
+    <button id="pfPal">➕ Friend</button>
+    <button id="pfBlock">🚫 Block</button>
+    <button class="prim" id="pfDm">📨 Send DM</button>
   </div>
 </div></div>
 
-<!-- ─── Suapan sosial (cerita + post + terokai) ─── -->
+<!-- ─── Social feed (stories + posts + explore) ─── -->
 <div class="modal" id="feedModal"><div class="mbox">
-  <h3>📰 Suapan</h3>
+  <h3>📰 Feed</h3>
   <div class="ftabs" id="fTabs">
-    <button data-t="Feed" class="on">📰 Suapan</button>
-    <button data-t="Explore">🧭 Terokai</button>
+    <button data-t="Feed" class="on">📰 Feed</button>
+    <button data-t="Explore">🧭 Explore</button>
   </div>
   <div id="tabFeed">
     <div class="stories" id="storyStrip"></div>
@@ -891,76 +891,76 @@
       <div class="ava" id="fcAva">?</div>
       <div class="cw">
         <div class="myStatus" id="myStatus" hidden></div>
-        <textarea id="postText" rows="2" maxlength="500" placeholder="Apa yang sedang anda fikirkan? (@nama untuk sebut orang)"></textarea>
+        <textarea id="postText" rows="2" maxlength="500" placeholder="What are you thinking about? (@name to mention someone)"></textarea>
         <div class="ftray" id="postTray"></div>
         <div class="crow">
           <div class="cbtns">
-            <button id="postImg" title="Lampirkan gambar/video">🖼</button>
-            <button id="postStory" title="Tambah cerita (24 jam)">📕</button>
-            <button id="postStatus" title="Tetapkan status (emoji + teks sementara)">😊</button>
+            <button id="postImg" title="Attach image/video">🖼</button>
+            <button id="postStory" title="Add story (24 hours)">📕</button>
+            <button id="postStatus" title="Set a status (emoji + temporary text)">😊</button>
           </div>
-          <button class="go" id="postGo">Siarkan</button>
+          <button class="go" id="postGo">Post</button>
         </div>
       </div>
     </div>
     <div id="postList"></div>
   </div>
   <div id="tabExplore" hidden>
-    <div class="pflabel" id="expLabel">Ikuti yang aktif</div>
+    <div class="pflabel" id="expLabel">Follow the active ones</div>
     <div id="expList"></div>
   </div>
-  <div class="mbtns"><button class="prim" id="feedClose">Tutup</button></div>
+  <div class="mbtns"><button class="prim" id="feedClose">Close</button></div>
   <input type="file" id="postFile" accept="image/*,video/*" multiple style="display:none">
   <input type="file" id="storyFile" accept="image/*,video/*" multiple style="display:none">
 </div></div>
 
-<!-- ─── Notifikasi ─── -->
+<!-- ─── Notifications ─── -->
 <div class="modal" id="notifModal"><div class="mbox">
-  <h3>🔔 Notifikasi</h3>
+  <h3>🔔 Notifications</h3>
   <div id="notifList"></div>
-  <div class="mbtns"><button id="notifClear">🗑 Kosongkan</button><button class="prim" id="notifClose">Tutup</button></div>
+  <div class="mbtns"><button id="notifClear">🗑 Clear all</button><button class="prim" id="notifClose">Close</button></div>
 </div></div>
 
-<!-- ─── Status (mood sementara) ─── -->
+<!-- ─── Status (temporary mood) ─── -->
 <div class="modal" id="statusModal"><div class="mbox">
   <h3>😊 Status</h3>
-  <div class="pfmeta">Teks pendek + emoji yang dipaparkan pada profil &amp; senarai kawan. Ia <b>sementara</b> — berbeza daripada bio kekal dan cerita 24 jam.</div>
+  <div class="pfmeta">Short text + emoji shown on your profile &amp; friends list. It is <b>temporary</b> — different from the permanent bio and 24-hour stories.</div>
   <div class="emoreel" id="stEmo"></div>
-  <textarea id="stText" rows="2" maxlength="80" placeholder="Contoh: Fokus kerja 🎧 / Sakit tekak 🤒 / Balik kampung 🏠"></textarea>
-  <div class="pflabel" style="margin-top:8px">Tamat selepas</div>
+  <textarea id="stText" rows="2" maxlength="80" placeholder="Example: Deep at work 🎧 / Sore throat 🤒 / Heading home 🏠"></textarea>
+  <div class="pflabel" style="margin-top:8px">Expires after</div>
   <div class="ttlrow" id="stTtl">
     <button data-t="30m">30 min</button>
-    <button data-t="1h">1 jam</button>
-    <button data-t="4h">4 jam</button>
-    <button data-t="8h">8 jam</button>
-    <button data-t="12h">12 jam</button>
-    <button data-t="24h">24 jam</button>
-    <button data-t="7d">7 hari</button>
-    <button data-t="off">Kekal</button>
+    <button data-t="1h">1 hour</button>
+    <button data-t="4h">4 hours</button>
+    <button data-t="8h">8 hours</button>
+    <button data-t="12h">12 hours</button>
+    <button data-t="24h">24 hours</button>
+    <button data-t="7d">7 days</button>
+    <button data-t="off">Permanent</button>
   </div>
-  <div class="mbtns"><button id="stCancel">Batal</button><button id="stClear" hidden>🗑 Buang status</button><button class="prim" id="stSave">Simpan</button></div>
+  <div class="mbtns"><button id="stCancel">Cancel</button><button id="stClear" hidden>🗑 Remove status</button><button class="prim" id="stSave">Save</button></div>
 </div></div>
 
-<!-- ─── Paparan cerita penuh ─── -->
+<!-- ─── Fullscreen story viewer ─── -->
 <div id="storyView">
   <div class="pbar" id="svBar"></div>
   <div class="shead" id="svHead"></div>
   <div class="stage" id="svStage"></div>
   <div class="scap" id="svCap"></div>
-  <div class="snav"><button id="svPrevZone" aria-label="Cerita sebelumnya"></button><button id="svNextZone" aria-label="Cerita seterusnya"></button></div>
-  <div class="sside"><button id="svDel" hidden>🗑</button><button id="svClose">✕ Tutup</button></div>
+  <div class="snav"><button id="svPrevZone" aria-label="Previous story"></button><button id="svNextZone" aria-label="Next story"></button></div>
+  <div class="sside"><button id="svDel" hidden>🗑</button><button id="svClose">✕ Close</button></div>
 </div>
 
 <script>
-// Penangkap ralat global: jika skrip mati (cth. storan diblok WebView), paparkan
-// sebabnya supaya "skrin kosong" jadi terbaca dan bukan senyap.
+// Global error catcher: if the script dies (e.g. storage blocked in a WebView),
+// show the reason so a "blank screen" becomes readable instead of silent.
 window.addEventListener('error', (e) => {
   try {
     const d = document.createElement('div');
     d.setAttribute('role', 'alert');
     d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#5c1a1a;color:#fff;font:12px/1.45 system-ui;padding:8px 12px;white-space:pre-wrap;border-top:2px solid #e17076';
     const f = (e.filename || '').split('/').pop();
-    d.textContent = '⚠ Ralat: ' + (e.message || 'tidak diketahui') + (f ? (' (' + f + ':' + e.lineno + ')') : '');
+    d.textContent = '⚠ Error: ' + (e.message || 'unknown') + (f ? (' (' + f + ':' + e.lineno + ')') : '');
     (document.body || document.documentElement).appendChild(d);
     setTimeout(() => { d.remove(); }, 9000);
   } catch {}
@@ -1024,7 +1024,7 @@ window.addEventListener('error', (e) => {
     o.headers = Object.assign({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, o.headers || {});
     const res = await fetch(API + p, o);
     let j = {};
-    try { j = await res.json(); } catch { j = { error: 'Respons pelayan tidak sah.' }; }
+    try { j = await res.json(); } catch { j = { error: 'Invalid server response.' }; }
     if (!res.ok || j.error) { const e = new Error(j.error || ('HTTP ' + res.status)); e.status = res.status; throw e; }
     return j;
   }
@@ -1064,7 +1064,7 @@ window.addEventListener('error', (e) => {
   const URLRE = /\b(?:https?:\/\/|www\.)[^\s<]+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/\S*)?/gi;
   // Serlah sebutan bilik @sini/@semua (gaya Google Chat) — selamat kerana token
   // ini tidak mungkin muncul dalam URL yang sudah dibungkus pautan.
-  const markAt = h => String(h).replace(/(^|[\s(,;"])(@sini|@semua)\b/gi, '$1<span class="atml">$2</span>');
+  const markAt = h => String(h).replace(/(^|[\s(,;"])(@here|@all)\b/gi, '$1<span class="atml">$2</span>');
   function renderText(s) {
     s = String(s == null ? '' : s);
     let out = '', last = 0, m;
@@ -1084,15 +1084,15 @@ window.addEventListener('error', (e) => {
   function listTime(ts) {
     const n = Date.now();
     if (sameDay(ts, n)) return hhmm(ts);
-    if (sameDay(ts, n - 86400e3)) return 'Semalam';
+    if (sameDay(ts, n - 86400e3)) return 'Yesterday';
     const d = new Date(ts); return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
   }
-  const HARI = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
-  const BULAN = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+  const HARI = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const BULAN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   function dayLabel(ts) {
     const n = Date.now();
-    if (sameDay(ts, n)) return 'Hari ini';
-    if (sameDay(ts, n - 86400e3)) return 'Semalam';
+    if (sameDay(ts, n)) return 'Today';
+    if (sameDay(ts, n - 86400e3)) return 'Yesterday';
     const d = new Date(ts);
     return HARI[d.getDay()] + ' ' + d.getDate() + ' ' + BULAN[d.getMonth()];
   }
@@ -1138,7 +1138,7 @@ window.addEventListener('error', (e) => {
     const ext = String(x.ext || '').toLowerCase();
     const nm = x.name || ('tukuk-' + x.id + '.' + (ext || 'bin'));
     const meta = [ext ? ext.toUpperCase() : '', x.size ? humanSize(x.size) : ''].filter(Boolean).join(' · ');
-    const dl = x.url ? '<a class="fd" href="' + esc(x.url) + '" download="' + esc(nm) + '" title="Muat turun">⬇️</a>' : '';
+    const dl = x.url ? '<a class="fd" href="' + esc(x.url) + '" download="' + esc(nm) + '" title="Download">⬇️</a>' : '';
     // Muzik boleh main terus (pelayan hidang audio/* inline); lain-lain muat turun.
     const player = (x.url && AUDIO_EXT.includes(ext)) ? '<audio class="maudio" src="' + esc(x.url) + '" controls preload="none"></audio>' : '';
     return '<div class="fcard" title="' + esc(nm) + '"><div class="fi">' + fileEmoji(ext) + '</div>' +
@@ -1147,18 +1147,18 @@ window.addEventListener('error', (e) => {
   function mediaLabel(list) {
     if (!list || !list.length) return '';
     const k = list[0].kind;
-    const one = k === 'video' ? '🎬 Video' : k === 'audio' ? '🎙️ Suara' : k === 'file' ? '📎 Fail' : '🖼 Gambar';
+    const one = k === 'video' ? '🎬 Video' : k === 'audio' ? '🎙️ Voice' : k === 'file' ? '📎 File' : '🖼 Image';
     return list.length > 1 ? one + ' (+' + (list.length - 1) + ')' : one;
   }
-  const msgLabel = m => m && m.sticker ? m.sticker + ' Stiker' : m && m.pollData ? '📊 ' + m.pollData.q : (m && m.t && m.t.trim()) ? m.t : (mediaLabel(m && m.media) || '(kosong)');
-  const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : kind === 'audio' ? '🎙️ Suara' : kind === 'file' ? '📎 Fail' : '🖼 Gambar') + (n > 1 ? ' +' + (n - 1) : '');
+  const msgLabel = m => m && m.sticker ? m.sticker + ' Sticker' : m && m.pollData ? '📊 ' + m.pollData.q : (m && m.t && m.t.trim()) ? m.t : (mediaLabel(m && m.media) || '(empty)');
+  const mediaWord = (kind, n) => (kind === 'video' ? '🎬 Video' : kind === 'audio' ? '🎙️ Voice' : kind === 'file' ? '📎 File' : '🖼 Image') + (n > 1 ? ' +' + (n - 1) : '');
   // Sel pemain suara: bar pasif (estetik) + butang main/jeda + durasi.
   function audioCell(x, i) {
-    if (!x.url) return '<div class="brk">🎙️ Suara sudah dibuang</div>';
-    if (lite) return '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="audio" data-i="' + i + '">🎙️ Ketuk untuk muat</div>';
+    if (!x.url) return '<div class="brk">🎙️ Voice removed</div>';
+    if (lite) return '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="audio" data-i="' + i + '">🎙️ Tap to load</div>';
     let bars = '';
     for (let k = 0; k < 22; k++) bars += '<i style="height:' + (22 + ((k * 41) % 68)) + '%"></i>';
-    return '<div class="audio-wave"><button data-aud="' + esc(x.url) + '" title="Main">▶</button>' +
+    return '<div class="audio-wave"><button data-aud="' + esc(x.url) + '" title="Play">▶</button>' +
       '<div class="aw-bar">' + bars + '</div><span class="aw-dur">' + (x.dur ? mmss(x.dur) : '0:00') + '</span></div>';
   }
   // Grid mesej: 1 besar (ikut nisbah asli), 2–4 sekata seperti Telegram.
@@ -1168,12 +1168,12 @@ window.addEventListener('error', (e) => {
     return '<div class="media n' + list.length + '">' + list.map((x, i) => {
       if (x.kind === 'audio') return '<div class="mcell audio">' + audioCell(x, i) + '</div>';
       if (x.kind === 'file') return '<div class="mcell file">' + fileCard(x) + '</div>';
-      const body = !x.url ? '<div class="brk">' + (x.kind === 'video' ? '🎬 Video' : '🖼 Gambar') + ' sudah dibuang</div>'
+      const body = !x.url ? '<div class="brk">' + (x.kind === 'video' ? '🎬 Video' : '🖼 Image') + ' removed</div>'
         : lite
-          ? '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="' + esc(x.kind) + '" data-i="' + i + '">' + (x.kind === 'video' ? '🎬' : '🖼') + ' Ketuk untuk muat</div>'
+          ? '<div class="tvl" data-load="' + esc(x.url) + '" data-kind="' + esc(x.kind) + '" data-i="' + i + '">' + (x.kind === 'video' ? '🎬' : '🖼') + ' Tap to load</div>'
           : x.kind === 'video'
             ? '<video src="' + esc(x.url) + '" preload="metadata" playsinline controls></video>' + (x.dur ? '<span class="dur">' + mmss(x.dur) + '</span>' : '')
-            : '<img src="' + esc(x.url) + '" alt="gambar dilampirkan" loading="lazy">';
+            : '<img src="' + esc(x.url) + '" alt="attached image" loading="lazy">';
       return '<div class="mcell' + (x.kind === 'video' ? ' vid' : '') + '" ' +
         (x.kind === 'video' ? 'data-v="' + i + '"' : 'data-z="' + i + '"') + '>' + body + '</div>';
     }).join('') + '</div>';
@@ -1205,7 +1205,7 @@ window.addEventListener('error', (e) => {
       const img = await new Promise((res, rej) => {
         const i = new Image();
         i.onload = () => res(i);
-        i.onerror = () => rej(new Error('Pelayar tidak dapat baca gambar itu — format HEIC/RAW perlu ditukar ke JPEG.'));
+        i.onerror = () => rej(new Error('The browser cannot read that image — HEIC/RAW must be converted to JPEG.'));
         i.src = url;
       });
       const w0 = img.naturalWidth, h0 = img.naturalHeight;
@@ -1226,10 +1226,10 @@ window.addEventListener('error', (e) => {
   // selebihnya (dokumen, muzik, zip…) pergi terus sebagai lampiran umum.
   async function addFiles(list) {
     for (const f of Array.from(list || [])) {
-      if (pending.length >= MAX_MEDIA) { toast('Maksimum ' + MAX_MEDIA + ' fail satu mesej.'); break; }
+      if (pending.length >= MAX_MEDIA) { toast('Maximum ' + MAX_MEDIA + ' files per message.'); break; }
       const kind = kindOf(f);
       const cap = kind === 'video' ? VID_CAP : kind === 'image' ? IMG_CAP : DOC_CAP;
-      if (f.size > cap) { toast((kind === 'video' ? 'Video' : kind === 'image' ? 'Gambar' : 'Fail') + ' terlalu besar (' + mbytes(f.size) + ').'); continue; }
+      if (f.size > cap) { toast((kind === 'video' ? 'Video' : kind === 'image' ? 'Image' : 'File') + ' too large (' + mbytes(f.size) + ').'); continue; }
       const p = { key: seqKey++, kind, name: f.name, blob: f, url: kind === 'file' ? '' : URL.createObjectURL(f), status: 'wait', pct: 0 };
       pending.push(p); renderTray();
       try {
@@ -1242,7 +1242,7 @@ window.addEventListener('error', (e) => {
             if (r.blob !== f) { URL.revokeObjectURL(p.url); p.url = URL.createObjectURL(r.blob); }
           }
         }
-        if (p.blob.size > cap) { failItem(p, 'Masih terlalu besar (' + mbytes(p.blob.size) + ').'); continue; }
+        if (p.blob.size > cap) { failItem(p, 'Still too large (' + mbytes(p.blob.size) + ').'); continue; }
         p.status = 'ready';
       } catch (e) { failItem(p, e.message); }
       renderTray();
@@ -1258,11 +1258,11 @@ window.addEventListener('error', (e) => {
       '<div class="tcell' + (p.status === 'err' ? ' err' : '') + '" data-k="' + p.key + '">' +
       (p.kind === 'video' ? '<video src="' + esc(p.url) + '" muted playsinline preload="metadata"></video>'
         : p.kind === 'audio' ? '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.4rem">🎙️</div>'
-        : p.kind === 'file' ? '<div class="fic" title="' + esc(p.name || 'fail') + '">' + fileEmoji(String(p.name || '').split('.').pop()) + '</div><div class="fna">' + esc(p.name || 'fail') + '</div>'
+        : p.kind === 'file' ? '<div class="fic" title="' + esc(p.name || 'file') + '">' + fileEmoji(String(p.name || '').split('.').pop()) + '</div><div class="fna">' + esc(p.name || 'file') + '</div>'
         : '<img src="' + esc(p.url) + '" alt="">') +
       (p.status === 'up' ? '<div class="pr" style="width:' + p.pct + '%"></div>' : '') +
-      (p.status !== 'ready' ? '<div class="st">' + (p.status === 'up' ? p.pct + '%' : p.status === 'wait' ? '…' : esc(String(p.err || 'gagal').slice(0, 26))) + '</div>' : '') +
-      '<button class="x" title="Buang">✕</button></div>').join('');
+      (p.status !== 'ready' ? '<div class="st">' + (p.status === 'up' ? p.pct + '%' : p.status === 'wait' ? '…' : esc(String(p.err || 'failed').slice(0, 26))) + '</div>' : '') +
+      '<button class="x" title="Remove">✕</button></div>').join('');
     for (const el of t.querySelectorAll('.tcell')) {
       const p = pending.find(x => x.key === +el.dataset.k); if (!p) continue;
       el.querySelector('.x').onclick = () => dropPending(p);
@@ -1282,7 +1282,7 @@ window.addEventListener('error', (e) => {
       const q = '?room=' + encodeURIComponent(cur) +
         (p.w ? '&w=' + Math.round(p.w) + '&h=' + Math.round(p.h) : '') + (p.dur ? '&dur=' + Math.round(p.dur) : '') +
         (p.kind === 'audio' ? '&audio=1' : '') +
-        (p.kind === 'file' ? '&name=' + encodeURIComponent(p.name || 'fail') + '&mime=' + encodeURIComponent((p.blob && p.blob.type) || '') : '');
+        (p.kind === 'file' ? '&name=' + encodeURIComponent(p.name || 'file') + '&mime=' + encodeURIComponent((p.blob && p.blob.type) || '') : '');
       const x = new XMLHttpRequest();
       p.xhr = x;
       x.open('POST', API + '/media' + q, true);
@@ -1292,12 +1292,12 @@ window.addEventListener('error', (e) => {
       x.onload = () => {
         p.xhr = null;
         let j = {};
-        try { j = JSON.parse(x.responseText || '{}'); } catch { j = { error: 'Respons pelayan tidak sah (' + x.status + ').' }; }
+        try { j = JSON.parse(x.responseText || '{}'); } catch { j = { error: 'Invalid server response (' + x.status + ').' }; }
         if (x.status >= 200 && x.status < 300 && !j.error) { p.media = j.media; p.id = j.media.id; resolve(j.media); }
-        else reject(new Error(j.error || 'Muat naik gagal (' + x.status + ').'));
+        else reject(new Error(j.error || 'Upload failed (' + x.status + ').'));
       };
-      x.onerror = () => { p.xhr = null; reject(new Error('Rangkaian terputus — muat naik gagal.')); };
-      x.onabort = () => { p.xhr = null; reject(new Error('Muat naik dibatalkan.')); };
+      x.onerror = () => { p.xhr = null; reject(new Error('Network lost — upload failed.')); };
+      x.onabort = () => { p.xhr = null; reject(new Error('Upload cancelled.')); };
       x.send(p.blob);
     });
   }
@@ -1306,12 +1306,12 @@ window.addEventListener('error', (e) => {
   // folder + nombor bahagian, supaya struktur mudah difahami penerima.
   let folderBusy = false;
   async function sendFolder(list) {
-    if (folderBusy) { toast('Folder sedang dihantar…'); return; }
-    if (!online) { toast('Butuh sambungan untuk hantar fail.'); return; }
+    if (folderBusy) { toast('Folder is being sent…'); return; }
+    if (!online) { toast('Sending files needs a connection.'); return; }
     const raw = Array.from(list || []).filter(f => f.size > 0 && f.size <= DOC_CAP);
-    if (!raw.length) { toast('Folder itu tiada fail yang boleh dihantar (kosong atau melebihi 32MB).'); return; }
+    if (!raw.length) { toast('That folder has no sendable files (empty or over 32MB).'); return; }
     const all = raw.slice(0, chatQuotaFiles);
-    if (raw.length > all.length) toast('Ambil ' + chatQuotaFiles + ' fail pertama sahaja (had sejam).');
+    if (raw.length > all.length) toast('Taking only the first ' + chatQuotaFiles + ' files (hourly limit).');
     const fname = String((all[0].webkitRelativePath || '').split('/')[0] || 'Folder');
     const parts = Math.ceil(all.length / MAX_MEDIA);
     folderBusy = true;
@@ -1325,9 +1325,9 @@ window.addEventListener('error', (e) => {
         }));
         const ids = ups.filter(Boolean);
         if (!ids.length) break;
-        const label = '📁 ' + fname + (parts > 1 ? ' — bahagian ' + (Math.floor(i / MAX_MEDIA) + 1) + '/' + parts : '') + ' (' + ids.length + ' fail)';
+        const label = '📁 ' + fname + (parts > 1 ? ' — part ' + (Math.floor(i / MAX_MEDIA) + 1) + '/' + parts : '') + ' (' + ids.length + ' files)';
         await post('/messages', { room: cur, text: label, media: ids });
-        toast('Dihantar ' + Math.min(i + MAX_MEDIA, all.length) + '/' + all.length + ' fail…');
+        toast('Sent ' + Math.min(i + MAX_MEDIA, all.length) + '/' + all.length + ' files…');
         pollMsgs(); loadRooms(false);
       }
     } catch (e) { toast(e.message); }
@@ -1340,7 +1340,7 @@ window.addEventListener('error', (e) => {
     mode = m;
     $('tabLogin').classList.toggle('on', m === 'login');
     $('tabReg').classList.toggle('on', m === 'reg');
-    $('aGo').textContent = m === 'login' ? 'Masuk' : 'Daftar & Masuk';
+    $('aGo').textContent = m === 'login' ? 'Log in' : 'Sign up & log in';
     $('aPass').autocomplete = m === 'login' ? 'current-password' : 'new-password';
     $('aErr').textContent = '';
     const rl = $('aRec'); if (rl) rl.style.display = m === 'login' ? '' : 'none';
@@ -1350,7 +1350,7 @@ window.addEventListener('error', (e) => {
   async function doAuth() {
     const name = $('aName').value.trim(), pass = $('aPass').value;
     $('aErr').textContent = '';
-    if (!name || !pass) { $('aErr').textContent = 'Isi nama dan kata laluan.'; return; }
+    if (!name || !pass) { $('aErr').textContent = 'Fill in name and password.'; return; }
     $('aGo').disabled = true;
     try {
       const j = await call('/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify({ name, pass }) });
@@ -1368,11 +1368,11 @@ window.addEventListener('error', (e) => {
   // Pemulihan akaun guna kod darurat: nama + kod + kata laluan baharu (tanpa login).
   async function doRecover() {
     $('aErr').textContent = '';
-    const name = ($('aName').value.trim() || (prompt('Nama akaun anda:') || '')).trim();
+    const name = ($('aName').value.trim() || (prompt('Your account name:') || '')).trim();
     if (!name) return;
-    const code = (prompt('Kod pemulihan (contoh A1B2C3D4E5):') || '').trim();
+    const code = (prompt('Recovery code (e.g. A1B2C3D4E5):') || '').trim();
     if (!code) return;
-    const np = prompt('Kata laluan BAHARU (min 4 aksara):');
+    const np = prompt('NEW password (min 4 chars):');
     if (!np) return;
     $('aGo').disabled = true;
     try {
@@ -1380,7 +1380,7 @@ window.addEventListener('error', (e) => {
       token = j.token; me = j.name; myId = j.id || 0;
       localStorage.setItem(TKEY, token); localStorage.setItem(NKEY, me);
       cur = localStorage.getItem(rkey()) || 'global_am';
-      enterApp(); toast('Kata laluan ditetapkan semula — kod ini sudah diguna.');
+      enterApp(); toast('Password reset — this code is now used.');
     } catch (e) { $('aErr').textContent = e.message; }
     finally { $('aGo').disabled = false; }
   }
@@ -1424,25 +1424,25 @@ window.addEventListener('error', (e) => {
     clearPending();
     cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
     resetSocial(); $('aName').value = ''; $('aPass').value = '';   // jangan tinggalkan jejak akaun sebelumnya
-    updateBadge(); setMode('login'); showAuth('Anda sudah keluar.');
+    updateBadge(); setMode('login'); showAuth('You are signed out.');
   };
 
   // ─── Status (mood sementara) ───
   const STATUS_EMO = ['😀','😎','🥳','😴','🤒','🙏','💼','🎧','📚','☕','🏃','❤️','🔥','✨','😂','🤔'];
   let stEmoji = '', stTtl = '4h';
   function timeLeft(exp) {
-    if (!exp) return 'kekal';
+    if (!exp) return 'permanent';
     const ms = exp - Date.now();
-    if (ms <= 0) return 'tamat';
-    if (ms < 60e3) return '<1 min lagi';
-    if (ms < 3600e3) return Math.round(ms / 60e3) + ' min lagi';
-    if (ms < 86400e3) { const h = Math.round(ms / 3600e3); return h + ' jam lagi'; }
-    return Math.round(ms / 86400e3) + ' hari lagi';
+    if (ms <= 0) return 'ended';
+    if (ms < 60e3) return '<1 min left';
+    if (ms < 3600e3) return Math.round(ms / 60e3) + ' min left';
+    if (ms < 86400e3) { const h = Math.round(ms / 3600e3); return h + ' hr left'; }
+    return Math.round(ms / 86400e3) + ' days left';
   }
   function statusLine(s) {
     if (!s) return '';
     const e = s.e ? esc(s.e) + ' ' : '';
-    const t = s.t ? esc(s.t) : '(tanpa teks)';
+    const t = s.t ? esc(s.t) : '(no text)';
     return '<span class="stline">' + e + t + ' · ' + timeLeft(s.exp) + '</span>';
   }
   function renderMyStatus() {
@@ -1453,8 +1453,8 @@ window.addEventListener('error', (e) => {
     if (el.dataset.sig !== sig) {   // bina semula hanya bila struktur berubah — bukan setiap detik
       el.hidden = false;
       el.innerHTML = '<span class="ms-txt">' + (myStatus.e ? myStatus.e + ' ' : '') +
-        esc(myStatus.t || '(tanpa teks)') + '<small id="msTime">· ' + timeLeft(myStatus.exp) + '</small></span>' +
-        '<span class="ms-act"><button id="msEdit" title="Ubah status">✏️</button><button id="msClear" title="Buang status">✕</button></span>';
+        esc(myStatus.t || '(no text)') + '<small id="msTime">· ' + timeLeft(myStatus.exp) + '</small></span>' +
+        '<span class="ms-act"><button id="msEdit" title="Edit status">✏️</button><button id="msClear" title="Remove status">✕</button></span>';
       el.dataset.sig = sig;
     } else el.hidden = false;
     const t = $('msTime'); if (t) t.textContent = '· ' + timeLeft(myStatus.exp);
@@ -1483,7 +1483,7 @@ window.addEventListener('error', (e) => {
   async function clearMyStatus() {
     try {
       const j = await post('/status', { text: '', emoji: '', expiresIn: 'off' });
-      myStatus = j.status || null; renderMyStatus(); toast('Status dibuang.'); loadPeople();
+      myStatus = j.status || null; renderMyStatus(); toast('Status removed.'); loadPeople();
       if ($('statusModal').classList.contains('open')) $('statusModal').classList.remove('open');
     } catch (e) { toast(e.message); }
   }
@@ -1500,7 +1500,7 @@ window.addEventListener('error', (e) => {
     try {
       const j = await post('/status', { text: $('stText').value, emoji: stEmoji, expiresIn: stTtl });
       myStatus = j.status || null;
-      renderMyStatus(); $('statusModal').classList.remove('open'); toast('Status disimpan.');
+      renderMyStatus(); $('statusModal').classList.remove('open'); toast('Status saved.');
       loadPeople();
     } catch (e) { toast(e.message); }
   };
@@ -1524,7 +1524,7 @@ window.addEventListener('error', (e) => {
     token = ''; myId = 0; myBio = ''; myJoined = null; myStatus = null; renderMyStatus(); clearPending(); cache = {}; rooms = []; tick = 0; $('q').value = '';
     stopStream(); restartPollers();   // token sudah kosong → tiada poller yang dihidupkan semula
     resetSocial(); $('aPass').value = '';
-    updateBadge(); setMode('login'); showAuth('Sesi luput — sila masuk semula.');
+    updateBadge(); setMode('login'); showAuth('Session expired — please log in again.');
   }
   function excerpt(text, q) {
     if (!q) return esc(String(text).slice(0, 70));
@@ -1546,9 +1546,9 @@ window.addEventListener('error', (e) => {
     const rows = rooms.map(r => {
       const c = cache[r.id];
       const m = (c && c.msgs) || [];
-      let pv = !r.last ? '<i style="color:var(--muted)">Tiada mesej</i>'
-        : (r.last.t == null ? '<i>mesej dipadam</i>'
-        : esc((mineAuthor(r.last.fid, r.last.from) ? 'Anda: ' : (r.kind === 'global' || r.kind === 'group') ? r.last.from + ': ' : '') +
+      let pv = !r.last ? '<i style="color:var(--muted)">No messages</i>'
+        : (r.last.t == null ? '<i>message deleted</i>'
+        : esc((mineAuthor(r.last.fid, r.last.from) ? 'You: ' : (r.kind === 'global' || r.kind === 'group') ? r.last.from + ': ' : '') +
           (norm(r.last.t) ? norm(r.last.t).slice(0, 48) : mediaWord(r.last.mt, r.last.n || 1))));
       let tm = r.last ? listTime(r.last.ts) : '';
       let show = true, score = r.last ? r.last.ts : 0;
@@ -1556,7 +1556,7 @@ window.addEventListener('error', (e) => {
         const inName = r.title.toLowerCase().includes(q.toLowerCase());
         const hit = m.find(x => String(x.t).toLowerCase().includes(q.toLowerCase()));
         show = inName || !!hit;
-        if (hit && !inName) { pv = '<span style="color:var(--muted)">' + (mineAuthor(hit.fid, hit.from) ? 'Anda: ' : '') + '</span>' + excerpt(hit.t, q) + '…'; tm = listTime(hit.ts); score = Math.max(score, 1); }
+        if (hit && !inName) { pv = '<span style="color:var(--muted)">' + (mineAuthor(hit.fid, hit.from) ? 'You: ' : '') + '</span>' + excerpt(hit.t, q) + '…'; tm = listTime(hit.ts); score = Math.max(score, 1); }
       }
       if (!show) return null;
       const dm = r.kind === 'dm';
@@ -1566,14 +1566,14 @@ window.addEventListener('error', (e) => {
         : '<div class="ava" style="background:#2f3d5c">🌍</div>';
       return { score, html: '<div class="chatrow" data-r="' + esc(r.id) + '">' + ava +
         '<div class="mid"><div class="nm">' + hilite(r.title, q) + '</div>' +
-        (grp ? '<div style="font-size:.65rem;color:var(--muted);margin-bottom:1px">' + (r.memberCount || 0) + ' ahli</div>' : '') +
+        (grp ? '<div style="font-size:.65rem;color:var(--muted);margin-bottom:1px">' + (r.memberCount || 0) + ' members</div>' : '') +
         '<div class="pv">' + pv + '</div></div>' +
         '<div class="end"><div class="tm">' + tm + '</div>' + (r.unread && cur !== r.id ? '<span class="badge">' + r.unread + '</span>' : '') + '</div></div>' };
     }).filter(Boolean).sort((a, b) => b.score - a.score);
     // Bahagian hasil carian mesej pelayan — di bawah bilik yang sepadan nama.
     let shtml = '';
     if (local && serverResults.length) {
-      shtml = '<div style="padding:7px 12px 4px;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-top:1px solid var(--line);margin-top:4px">🔍 Dalam mesej</div>' +
+      shtml = '<div style="padding:7px 12px 4px;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-top:1px solid var(--line);margin-top:4px">🔍 In messages</div>' +
         serverResults.map(m =>
           '<div class="chatrow srch" data-r="' + esc(m.room) + '" data-mid="' + esc(m.id) + '">' +
           (m.roomKind === 'dm'
@@ -1585,7 +1585,7 @@ window.addEventListener('error', (e) => {
           '<div class="pv">' + excerpt(m.t, q) + '</div></div>' +
           '<div class="end"><div class="tm">' + listTime(m.ts) + '</div></div></div>').join('');
     }
-    const html = rows.map(x => x.html).join('') + shtml || '<p style="padding:20px;color:var(--muted);font-size:.85rem">Tiada hasil.</p>';
+    const html = rows.map(x => x.html).join('') + shtml || '<p style="padding:20px;color:var(--muted);font-size:.85rem">No results.</p>';
     updateBadge();
     const newsig = html + '|' + serverResults.length;
     if (newsig === roomsSig && cur === roomsSigCur) return; // jangan bina semula DOM yang sedang diklik
@@ -1635,20 +1635,20 @@ window.addEventListener('error', (e) => {
     $('blockBar').classList.toggle('on', !!(r && r.blocked));
     if (!r) return;
     const tp = (cache[r.id] && cache[r.id].typing || []).filter(n => n !== me.toLowerCase());
-    if (tp.length) { st.textContent = tp.length === 1 ? tp[0] + ' menaip…' : 'beberapa orang menaip…'; st.className = 'typing'; return; }
+    if (tp.length) { st.textContent = tp.length === 1 ? tp[0] + ' typing…' : 'several people are typing…'; st.className = 'typing'; return; }
     if (r.kind === 'global') {
       const n = typeof r.online === 'number' ? r.online : people.filter(p => p.online).length;
-      st.textContent = 'bilik umum · ' + n + ' dalam talian'; st.className = n ? 'on' : '';
+      st.textContent = 'general room · ' + n + ' online'; st.className = n ? 'on' : '';
     }
     else if (r.kind === 'group') {
       const cnt = r.memberCount || 0;
       const on = typeof r.online === 'number' ? r.online : 0;
-      st.textContent = cnt + ' ahli · ' + on + ' dalam talian'; st.className = on ? 'on' : '';
+      st.textContent = cnt + ' members · ' + on + ' online'; st.className = on ? 'on' : '';
     }
     else {
       const p = people.find(x => r.peerId ? x.id === r.peerId : String(x.name).toLowerCase() === r.title.toLowerCase()) ||
         (r.peer || r.online ? { id: r.peerId, name: r.title, online: !!r.online } : null);
-      st.textContent = p && p.online ? 'dalam talian' : 'luar talian'; st.className = p && p.online ? 'on' : '';
+      st.textContent = p && p.online ? 'online' : 'offline'; st.className = p && p.online ? 'on' : '';
     }
   }
 
@@ -1689,7 +1689,7 @@ window.addEventListener('error', (e) => {
   function paintLive() {
     const el = $('live'); if (!el) return;
     el.classList.toggle('on', liveOn);
-    const txt = liveOn ? 'Langsung — mesej sampai serta-merta' : 'Polling — cuba sambung semula';
+    const txt = liveOn ? 'Live — messages arrive instantly' : 'Polling — trying to reconnect';
     el.title = txt; el.setAttribute('aria-label', txt);
   }
   function restartPollers() {
@@ -1760,7 +1760,7 @@ window.addEventListener('error', (e) => {
   }
   function applyFrame(ev, j) {
     if (ev === 'hello') { loadRooms(false); return; }   // selaraskan yang terlepas semasa putus
-    if (ev === 'kick') { toast('Sesi anda ditamatkan — kata laluan atau sesi telah diubah di tempat lain.'); expire(); return; }
+    if (ev === 'kick') { toast('Your session was ended — password or session changed elsewhere.'); expire(); return; }
     if (ev === 'presence') {
       const p = pById[j.id];
       if (p) p.online = !!j.online;
@@ -1844,10 +1844,10 @@ window.addEventListener('error', (e) => {
   // ─── Render mesej ───
   // Tick status pada mesej sendiri: 🕓 menunggu/menghantar, ✓ dihantar, ✓✓ dibaca (DM).
   function tickHtml(msg, r) {
-    if (msg.queued) return '<span class="tick" title="Menunggu sambungan">🕓</span>';
-    if (String(msg.id).indexOf('tmp') === 0) return '<span class="tick" title="Menghantar…">🕓</span>';
-    if (r && r.kind === 'dm') return (msg.seq && msg.seq <= (r.peerSeen || 0)) ? '<span class="tick rd" title="Dibaca">✓✓</span>' : '<span class="tick" title="Dihantar">✓</span>';
-    return '<span class="tick" title="Dihantar">✓</span>';
+    if (msg.queued) return '<span class="tick" title="Waiting for connection">🕓</span>';
+    if (String(msg.id).indexOf('tmp') === 0) return '<span class="tick" title="Sending…">🕓</span>';
+    if (r && r.kind === 'dm') return (msg.seq && msg.seq <= (r.peerSeen || 0)) ? '<span class="tick rd" title="Read">✓✓</span>' : '<span class="tick" title="Sent">✓</span>';
+    return '<span class="tick" title="Sent">✓</span>';
   }
   function renderMsgs() {
     const r = room(cur); if (!r) return;
@@ -1881,11 +1881,11 @@ window.addEventListener('error', (e) => {
         (mine ? '' : '<div class="bava" style="background:' + colorOf(disp) + '">' + esc(initials(disp)) + '</div>') +
         '<div class="bub">' +
         (showWho ? '<div class="who2" style="color:' + colorOf(disp) + '">' + esc(disp) + '</div>' : '') +
-        (msg.pinned ? '<div class="pintag" title="Mesej dipin">📌 Dipin</div>' : '') +
+        (msg.pinned ? '<div class="pintag" title="Pinned message">📌 Pinned</div>' : '') +
         q + body +
-        (msg.edited ? ' <span class="edited">(diubah)</span>' : '') +
+        (msg.edited ? ' <span class="edited">(edited)</span>' : '') +
         '<span class="meta">' + hhmm(msg.ts) + (mine ? tickHtml(msg, r) : '') + '</span>' + rxHtml +
-        '<button class="qreact" data-qr title="' + (loved ? 'Buang ❤️' : 'React ❤️') + '">' + (loved ? '❤️' : '🤍') + '</button>' +
+        '<button class="qreact" data-qr title="' + (loved ? 'Remove ❤️' : 'React ❤️') + '">' + (loved ? '❤️' : '🤍') + '</button>' +
         '</div></div>';
       prevAk = ak; prevTs = msg.ts;
     }
@@ -1902,9 +1902,9 @@ window.addEventListener('error', (e) => {
     const canManage = mineOf(last) || (r.kind === 'group' && r.myAdmin) || r.kind === 'global';
     bar.className = 'on';
     bar.innerHTML = '<span class="pinico">📌</span><div style="flex:1;min-width:0">' +
-      '<div style="color:var(--accent);font-size:.7rem">' + (pinned.length > 1 ? pinned.length + ' dipin · ' : '') + esc(nameOf(last)) + '</div>' +
+      '<div style="color:var(--accent);font-size:.7rem">' + (pinned.length > 1 ? pinned.length + ' pinned · ' : '') + esc(nameOf(last)) + '</div>' +
       '<div class="pintx">' + esc(norm(msgLabel(last))) + '</div></div>' +
-      (canManage ? '<button class="pincl" title="Buka pin">✕</button>' : '');
+      (canManage ? '<button class="pincl" title="Unpin">✕</button>' : '');
     bar.onclick = e => { if (e.target.classList.contains('pincl')) { doPin(last); return; } jumpTo(last.id); };
   }
 
@@ -1926,9 +1926,9 @@ window.addEventListener('error', (e) => {
       for (const b of g.querySelectorAll('button')) b.onclick = () => { $('stkPop').hidden = true; sendSticker(b.dataset.semo); };
     } else {
       const s = myStks();
-      g.innerHTML = (s.length ? s.map((d, i) => '<div class="stkc"><img data-i="' + i + '" src="' + d + '" alt="stiker saya"><button class="stkx" data-x="' + i + '" title="Buang stiker">✕</button></div>').join('')
-        : '<div style="grid-column:1/-1;color:var(--muted);font-size:.78rem;padding:8px">Belum ada stiker sendiri. Tekan ✚ dan pilih gambar — latar putih dibuang automatik.</div>')
-        + '<div class="stkc"><button id="stkAdd" title="Cipta stiker daripada gambar" style="width:100%;aspect-ratio:1;border:1px dashed var(--line);border-radius:8px;background:none;color:var(--muted);font-size:1.5rem;cursor:pointer">✚</button></div>';
+      g.innerHTML = (s.length ? s.map((d, i) => '<div class="stkc"><img data-i="' + i + '" src="' + d + '" alt="my stickers"><button class="stkx" data-x="' + i + '" title="Remove sticker">✕</button></div>').join('')
+        : '<div style="grid-column:1/-1;color:var(--muted);font-size:.78rem;padding:8px">No custom stickers yet. Press ✚ and pick an image — the white background is removed automatically.</div>')
+        + '<div class="stkc"><button id="stkAdd" title="Create sticker from image" style="width:100%;aspect-ratio:1;border:1px dashed var(--line);border-radius:8px;background:none;color:var(--muted);font-size:1.5rem;cursor:pointer">✚</button></div>';
       const add = $('stkAdd');
       if (add) add.onclick = () => $('stkFile').click();
       for (const im of g.querySelectorAll('img[data-i]')) im.onclick = () => { $('stkPop').hidden = true; sendStickerImage(s[+im.dataset.i]); };
@@ -1965,12 +1965,12 @@ window.addEventListener('error', (e) => {
       const out = c.toDataURL('image/png');
       const s = myStks(); s.unshift(out); if (s.length > 24) s.length = 24;
       localStorage.setItem(SKEY, JSON.stringify(s));
-      renderStkGrid(); toast('Stiker disimpan! Ketuk untuk hantar.');
-    } catch { toast('Gagal — gambar tidak dapat dibaca.'); }
+      renderStkGrid(); toast('Sticker saved! Tap to send.');
+    } catch { toast('Failed — image could not be read.'); }
     finally { URL.revokeObjectURL(url); }
   }
   async function sendSticker(emo) {
-    if (!online) { toast('Stiker butuh sambungan.'); return; }
+    if (!online) { toast('Stickers need a connection.'); return; }
     try {
       const j = await post('/messages', { room: cur, text: '', sticker: emo });
       const b2 = box(room(cur));
@@ -1981,7 +1981,7 @@ window.addEventListener('error', (e) => {
     } catch (e) { toast(e.message); }
   }
   async function sendStickerImage(dataUrl) {
-    if (!online) { toast('Stiker butuh sambungan.'); return; }
+    if (!online) { toast('Stickers need a connection.'); return; }
     const r = room(cur), b = box(r);
     const temp = { id: 'tmp' + Date.now(), seq: (b.seq || 0) + 0.5, from: me, fid: myId || null, t: '', ts: Date.now(), to: null, rx: {}, media: [{ id: 'tmpm' + Date.now(), kind: 'image', url: dataUrl }] };
     b.msgs.push(temp); renderMsgs(); scrollBottom();
@@ -1994,11 +1994,11 @@ window.addEventListener('error', (e) => {
       b.msgs = b.msgs.filter(x => x.id !== temp.id && x.id !== j.msg.id);
       b.msgs.splice(at >= 0 ? at : b.msgs.length, 0, j.msg);
       b.seq = Math.max(b.seq || 0, j.seq || 0);
-      r.last = { from: me, fid: myId || null, t: 'Stiker', mt: 'image', n: 1, ts: Date.now() };
+      r.last = { from: me, fid: myId || null, t: 'Sticker', mt: 'image', n: 1, ts: Date.now() };
       renderMsgs(); renderRooms(); sndOut();
     } catch (e) {
       b.msgs = b.msgs.filter(x => x.id !== temp.id);
-      toast(e.message || 'Gagal hantar stiker.'); renderMsgs();
+      toast(e.message || 'Failed to send sticker.'); renderMsgs();
     }
   }
   // Kad undian — pilihan boleh diketuk untuk mengundi (boleh ubah undian).
@@ -2014,10 +2014,10 @@ window.addEventListener('error', (e) => {
         '<span class="poll-n">' + p.counts[i] + (p.total ? ' · ' + pc + '%' : '') + '</span></div>';
     }).join('');
     return '<div class="poll-card"><div class="poll-q">📊 ' + esc(p.q) + '</div>' + opts +
-      '<div class="poll-total">' + p.total + ' undi · ketuk untuk undi</div></div>';
+      '<div class="poll-total">' + p.total + ' votes · tap to vote</div></div>';
   }
   async function doVote(pid, idx) {
-    if (!online) { toast('Undi perlukan sambungan.'); return; }
+    if (!online) { toast('Voting needs a connection.'); return; }
     try {
       const j = await post('/poll/vote', { id: pid, opt: idx });
       const r = room(cur); if (!r) return;
@@ -2066,22 +2066,22 @@ window.addEventListener('error', (e) => {
   }
   $('plAdd').onclick = () => {
     const n = $('plOpts').querySelectorAll('input').length;
-    if (n >= 6) { toast('Maksimum 6 pilihan.'); return; }
+    if (n >= 6) { toast('Maximum 6 options.'); return; }
     const el = document.createElement('input'); el.className = 'plopt'; el.maxLength = 80;
-    el.placeholder = 'Pilihan ' + (n + 1); el.autocomplete = 'off';
+    el.placeholder = 'Option ' + (n + 1); el.autocomplete = 'off';
     $('plOpts').appendChild(el); el.focus();
   };
   $('plCancel').onclick = () => $('pollModal').classList.remove('open');
   $('plGo').onclick = async () => {
     const q = $('plQ').value.trim();
     const opts = Array.from($('plOpts').querySelectorAll('input')).map(i => i.value.trim()).filter(Boolean);
-    if (!q) { toast('Isi soalan undian.'); return; }
-    if (opts.length < 2) { toast('Perlu sekurang-kurangnya 2 pilihan.'); return; }
+    if (!q) { toast('Fill in the poll question.'); return; }
+    if (opts.length < 2) { toast('Need at least 2 options.'); return; }
     try {
       await post('/poll', { room: cur, q, opts });
       $('pollModal').classList.remove('open');
       $('plQ').value = ''; Array.from($('plOpts').querySelectorAll('input')).forEach(i => { i.value = ''; });
-      toast('Undian dihantar 📊');
+      toast('Poll sent 📊');
       pollMsgs(); loadRooms(false);
     } catch (e) { toast(e.message); }
   };
@@ -2105,7 +2105,7 @@ window.addEventListener('error', (e) => {
     if (!(window.Notification && Notification.permission === 'granted')) return;
     const prev = (m.media && m.media.length) ? mediaWord(m.media[0].kind, m.media.length) : norm(m.t || '');
     try {
-      const nt = new Notification(nameOf(m), { body: prev.slice(0, 120) || '(mesej)', tag: 'chat-' + r.id, icon: '/icons/apps/chat.svg?v=3', silent: true });
+      const nt = new Notification(nameOf(m), { body: prev.slice(0, 120) || '(message)', tag: 'chat-' + r.id, icon: '/icons/apps/chat.svg?v=3', silent: true });
       nt.onclick = () => { try { window.focus(); openRoom(r.id); } catch { /* noop */ } nt.close(); };
     } catch { /* Notification API ditolak */ }
   }
@@ -2146,13 +2146,13 @@ window.addEventListener('error', (e) => {
   }
   function updateNetbar() {
     const bar = $('netbar'); if (!bar) return;
-    if (!online) { bar.textContent = 'Luar talian — mesej teks disimpan & dihantar bila sambungan kembali.'; bar.className = 'on'; }
-    else if (lite) { bar.textContent = 'Mod jimat data (' + (conn.type || 'rangkaian perlahan') + ') — media dimuat bila diketuk.'; bar.className = 'on rec'; }
+    if (!online) { bar.textContent = 'Offline — text messages are queued & sent when the connection returns.'; bar.className = 'on'; }
+    else if (lite) { bar.textContent = 'Data saver mode (' + (conn.type || 'slow network') + ') — media loads on tap.'; bar.className = 'on rec'; }
     else { bar.className = ''; bar.textContent = ''; }
   }
   function connHintText() {
-    const t = conn.type ? conn.type.toUpperCase() : 'tidak diketahui';
-    return 'Rangkaian: ' + t + (conn.save ? ' · penjimatan data sistem aktif' : '') + (lite ? ' · Mod Lite AKTIF' : ' · Mod penuh');
+    const t = conn.type ? conn.type.toUpperCase() : 'unknown';
+    return 'Network: ' + t + (conn.save ? ' · system data saver on' : '') + (lite ? ' · Lite Mode ON' : ' · Full mode');
   }
   function goOnline() {
     online = true; readConn(); applyLite(); updateNetbar();
@@ -2258,23 +2258,23 @@ window.addEventListener('error', (e) => {
     try { const j = await call('/user?q=' + encodeURIComponent(id)); return j.profile || null; } catch { return null; }
   }
   function paintCaller(p, kind, name) {
-    const nm = (p && p.name) || name || 'Tidak dikenali';
+    const nm = (p && p.name) || name || 'Unknown';
     $('cName').textContent = nm;
     $('cAva').textContent = initials(nm);
     $('cAva').style.background = colorOf(nm);
-    const bits = [kind === 'audio' ? '📞 Panggilan suara' : '📹 Panggilan video'];
+    const bits = [kind === 'audio' ? '📞 Voice call' : '📹 Video call'];
     if (p && p.id) bits.push('Tukuk ID ' + p.id);
-    bits.push(p && p.friend ? '✓ kawan anda' : (p && p.id ? 'bukan dalam senarai kawan' : 'tidak dikenal pasti'));
-    if (p && p.online) bits.push('dalam talian');
+    bits.push(p && p.friend ? '✓ your friend' : (p && p.id ? 'not in your friends list' : 'not identified'));
+    if (p && p.online) bits.push('online');
     $('cSub').textContent = bits.join(' · ');
     $('cBio').textContent = (p && p.bio) ? p.bio
-      : (p && p.joined) ? 'Akaun sejak ' + dateLabel(p.joined)
-      : 'Tiada dalam senarai anda — periksa profil dulu sebelum menyahut.';
+      : (p && p.joined) ? 'Account since ' + dateLabel(p.joined)
+      : 'Not in your list — check the profile first before answering.';
   }
 
   // ── Peranti + RTCPeerConnection ──
   function getMedia(kind) {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.reject(new Error('Pelayar perlu HTTPS untuk kamera/mikrofon.'));
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.reject(new Error('The browser needs HTTPS for camera/microphone.'));
     const c = kind === 'audio' ? { audio: true } : { audio: true, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } };
     return navigator.mediaDevices.getUserMedia(c);
   }
@@ -2293,7 +2293,7 @@ window.addEventListener('error', (e) => {
       if (!C || !C.pc || C.state === 'end') return;
       const s = C.pc.connectionState;
       if (s === 'connected') callConnected();
-      else if (s === 'failed' || s === 'closed') { toast('Panggilan terputus — rangkaian mungkin disekat (NAT).'); endCall(true); }
+      else if (s === 'failed' || s === 'closed') { toast('Call dropped — the network may be blocked (NAT).'); endCall(true); }
     };
     return pc;
   }
@@ -2303,7 +2303,7 @@ window.addEventListener('error', (e) => {
       const o = await C.pc.createOffer();
       await C.pc.setLocalDescription(o);
       sig(C.peer.id, 'offer', { sdp: { type: o.type, sdp: o.sdp } });
-    } catch { toast('Gagal menyediakan panggilan.'); endCall(true); }
+    } catch { toast('Failed to set up the call.'); endCall(true); }
   }
   async function drainIce() {
     const q = (C && C.iceQ) || [];
@@ -2318,7 +2318,7 @@ window.addEventListener('error', (e) => {
       const a = await C.pc.createAnswer();
       await C.pc.setLocalDescription(a);
       sig(C.peer.id, 'answer', { sdp: { type: a.type, sdp: a.sdp } });
-    } catch { toast('Panggilan tidak dapat disambung.'); endCall(true); }
+    } catch { toast('The call could not be connected.'); endCall(true); }
   }
   async function gotAnswer(data) {
     if (!C || !C.pc || !data.sdp) return;
@@ -2356,34 +2356,34 @@ window.addEventListener('error', (e) => {
     if (c.pc) { try { c.pc.close(); } catch { /* sudah tertutup */ } }
     if (c.state === 'on' && c.t0) {
       const s = Math.floor((Date.now() - c.t0) / 1000);
-      toast('Panggilan dengan ' + (c.peer.name || '?') + ' tamat · ' + pad2(Math.floor(s / 60)) + ':' + pad2(s % 60));
+      toast('Call with ' + (c.peer.name || '?') + ' ended · ' + pad2(Math.floor(s / 60)) + ':' + pad2(s % 60));
     }
     callHide();
   }
 
   // ── Panggilan sebenar ──
   async function startCall(peer, kind) {
-    if (C) return toast('Sudah ada panggilan berjalan.');
-    if (!window.RTCPeerConnection) return toast('Pelayar ini tidak menyokong panggilan WebRTC.');
-    if (!online) return toast('Luar talian — panggilan sebenar perlukan internet. Guna 🎭 untuk prank.');
+    if (C) return toast('A call is already running.');
+    if (!window.RTCPeerConnection) return toast('This browser does not support WebRTC calls.');
+    if (!online) return toast('Offline — real calls need internet. Use 🎭 for a prank.');
     C = { pc: null, local: null, remote: null, peer, kind, dir: 'out', state: 'out', t0: 0, iv: null, ringT: null, iceQ: [], prank: false };
     callEl().classList.toggle('audio', kind === 'audio');
     paintCaller(pById[peer.id] || null, kind, peer.name);
-    $('cStat').textContent = 'Memanggil…';
+    $('cStat').textContent = 'Calling…';
     callPaint('out');
     // Pelindung: dialog kebenaran kamera/mikrofon boleh diabaikan dan promise tidak
     // pernah selesai — tanpanya skrin penuh tersekat pada "Memanggil…" selamanya.
     const sess = C;
     sess.ringT = setTimeout(() => {
       if (C !== sess) return;
-      toast('Kamera/mikrofon tiada respons — panggilan dibatalkan.');
+      toast('Camera/microphone not responding — call cancelled.');
       endCall(true);
     }, 25000);
     try { sess.local = await getMedia(kind); }
     catch (e) {
       if (C !== sess) return;
       clearTimeout(sess.ringT);
-      const why = e && e.name === 'NotAllowedError' ? 'Benarkan kamera & mikrofon untuk memanggil.' : 'Peranti panggilan tidak tersedia.';
+      const why = e && e.name === 'NotAllowedError' ? 'Allow camera & microphone to call.' : 'Call devices unavailable.';
       C = null; callHide(); return toast(why);
     }
     if (C !== sess) return;   // dibatalkan semasa kebenaran diminta
@@ -2393,15 +2393,15 @@ window.addEventListener('error', (e) => {
     await refreshIce();
     C.pc = newPC(peer.id);
     for (const t of C.local.getTracks()) C.pc.addTrack(t, C.local);
-    C.ringT = setTimeout(() => { if (C && C.state === 'out') { missedCall(C.peer.name, 'tidak menjawab'); endCall(true); } }, RING_WAIT);
+    C.ringT = setTimeout(() => { if (C && C.state === 'out') { missedCall(C.peer.name, 'no answer'); endCall(true); } }, RING_WAIT);
     try {
       const j = await post('/call', { to: peer.id, ev: 'ring', data: { kind } });
       if (C && j && !j.delivered) {
-        $('cStat').textContent = 'Pasangan luar talian…';
+        $('cStat').textContent = 'Partner offline…';
         clearTimeout(C.ringT);
         C.ringT = setTimeout(() => { if (C && C.state === 'out') endCall(true); }, 4000);
       }
-    } catch (e) { if (C) { toast(e.message || 'Gagal memanggil.'); endCall(true); } }
+    } catch (e) { if (C) { toast(e.message || 'Failed to call.'); endCall(true); } }
   }
   async function acceptCall() {
     if (!C || C.state !== 'in') return;
@@ -2409,9 +2409,9 @@ window.addEventListener('error', (e) => {
     clearTimeout(c.ringT); stopRing();
     // Sama seperti pemanggil: jangan tunggu kebenaran tanpa had. Dering tamat
     // di pihak pemanggil (RING_WAIT) jika kita gagal menyahut.
-    c.ringT = setTimeout(() => { if (C === c) { sig(c.peer.id, 'reject', {}); endCall(true); toast('Kamera/mikrofon tiada respons.'); } }, 25000);
+    c.ringT = setTimeout(() => { if (C === c) { sig(c.peer.id, 'reject', {}); endCall(true); toast('Camera/microphone not responding.'); } }, 25000);
     try { c.local = await getMedia(c.kind); }
-    catch { clearTimeout(c.ringT); sig(c.peer.id, 'reject', {}); endCall(true); return toast('Benarkan kamera & mikrofon untuk menyahut.'); }
+    catch { clearTimeout(c.ringT); sig(c.peer.id, 'reject', {}); endCall(true); return toast('Allow camera & microphone to answer.'); }
     if (!C || C !== c) return;
     clearTimeout(c.ringT);
     $('cLocal').srcObject = c.local;
@@ -2421,15 +2421,15 @@ window.addEventListener('error', (e) => {
     for (const t of c.local.getTracks()) c.pc.addTrack(t, c.local);
     c.state = 'wait';
     callPaint('wait');
-    $('cStat').textContent = 'Menyambung…';
+    $('cStat').textContent = 'Connecting…';
     sig(c.peer.id, 'accept', {});
   }
   function dmCall(kind) {
     const r = room(cur);
-    if (!r || r.kind !== 'dm') return toast('Panggilan hanya tersedia dalam mesej peribadi (DM).');
-    if (r.blocked) return toast('Perbualan ini dibekukan — buka sekat dahulu.');
-    if (!r.peerId) return toast('Pasangan tidak dikenali.');
-    if (lite && kind === 'video') toast('Mod jimat data aktif — video mungkin tersekat, cuba 📞 suara.');
+    if (!r || r.kind !== 'dm') return toast('Calls are only available in direct messages (DM).');
+    if (r.blocked) return toast('This chat is frozen — unblock first.');
+    if (!r.peerId) return toast('Unknown partner.');
+    if (lite && kind === 'video') toast('Data saver mode on — video may stutter, try 📞 voice.');
     startCall({ id: r.peerId, name: r.title }, kind);
   }
   function toggleMute() {
@@ -2442,15 +2442,15 @@ window.addEventListener('error', (e) => {
   function toggleCam() {
     if (!C || !C.local) return;
     const ts = C.local.getVideoTracks();
-    if (!ts.length) return toast('Panggilan ini tiada video.');
+    if (!ts.length) return toast('This call has no video.');
     C.camOff = !C.camOff;
     for (const t of ts) t.enabled = !C.camOff;
     $('cCam').classList.toggle('off', C.camOff);
     $('cCam').querySelector('span').textContent = C.camOff ? '🚫' : '🎥';
   }
   function missedCall(name, verb) {
-    toast('📞 ' + (name || 'Seseorang') + ' ' + (verb || 'tidak menjawab') + '.');
-    if (pref.notif) { try { new Notification('Panggilan tidak dijawab', { body: (name || 'Seseorang') + ' cuba memanggil anda', icon: '/icons/apps/chat.svg?v=3', tag: 'call-miss' }); } catch { /* dinafikan */ } }
+    toast('📞 ' + (name || 'Someone') + ' ' + (verb || 'no answer') + '.');
+    if (pref.notif) { try { new Notification('Missed call', { body: (name || 'Someone') + ' tried to call you', icon: '/icons/apps/chat.svg?v=3', tag: 'call-miss' }); } catch { /* dinafikan */ } }
   }
   // Bingkai 'call' daripada SSE — dipanggil oleh applyFrame.
   function handleCall(j) {
@@ -2458,44 +2458,44 @@ window.addEventListener('error', (e) => {
     if (!from || from === myId) return;
     if (ev === 'ring') {
       if (C) { sig(from, 'busy', {}); return; }
-      C = { pc: null, local: null, remote: null, peer: { id: from, name: j.fromName || 'Seseorang' }, kind: data.kind === 'audio' ? 'audio' : 'video', dir: 'in', state: 'in', t0: 0, iv: null, ringT: null, iceQ: [], prank: false };
+      C = { pc: null, local: null, remote: null, peer: { id: from, name: j.fromName || 'Someone' }, kind: data.kind === 'audio' ? 'audio' : 'video', dir: 'in', state: 'in', t0: 0, iv: null, ringT: null, iceQ: [], prank: false };
       callEl().classList.toggle('audio', C.kind === 'audio');
       paintCaller(pById[from] || null, C.kind, C.peer.name);
-      $('cStat').textContent = 'Panggilan masuk…';
+      $('cStat').textContent = 'Incoming call…';
       callPaint('in');
       startRing(); vibrate([500, 350, 500, 350, 800]);
-      if (document.hidden && pref.notif) { try { new Notification('📞 Panggilan masuk', { body: C.peer.name + ' memanggil anda', icon: '/icons/apps/chat.svg?v=3', tag: 'call-in' }); } catch { /* dinafikan */ } }
+      if (document.hidden && pref.notif) { try { new Notification('📞 Incoming call', { body: C.peer.name + ' is calling you', icon: '/icons/apps/chat.svg?v=3', tag: 'call-in' }); } catch { /* dinafikan */ } }
       identify(from).then(p => { if (C && C.dir === 'in' && C.peer.id === from) { if (p && p.name) C.peer.name = p.name; paintCaller(p, C.kind, C.peer.name); } });
       C.ringT = setTimeout(() => { if (C && C.state === 'in') { missedCall(C.peer.name); sig(from, 'cancel', {}); endCall(true); } }, CALL_TIMEOUT);
       return;
     }
     if (!C || !C.peer || C.peer.id !== from) return;
-    if (ev === 'accept') { clearTimeout(C.ringT); stopRing(); $('cStat').textContent = 'Menyambung…'; callPaint('wait'); makeOffer(); return; }
+    if (ev === 'accept') { clearTimeout(C.ringT); stopRing(); $('cStat').textContent = 'Connecting…'; callPaint('wait'); makeOffer(); return; }
     if (ev === 'offer') { gotOffer(data); return; }
     if (ev === 'answer') { gotAnswer(data); return; }
     if (ev === 'ice') { gotIce(from, data); return; }
-    if (ev === 'reject') { toast(C.peer.name + ' menolak panggilan.'); endCall(true); return; }
-    if (ev === 'busy') { toast(C.peer.name + ' sedang dalam panggilan lain.'); endCall(true); return; }
-    if (ev === 'cancel') { toast(C.peer.name + ' membatalkan panggilan.'); endCall(true); return; }
+    if (ev === 'reject') { toast(C.peer.name + ' declined the call.'); endCall(true); return; }
+    if (ev === 'busy') { toast(C.peer.name + ' is in another call.'); endCall(true); return; }
+    if (ev === 'cancel') { toast(C.peer.name + ' cancelled the call.'); endCall(true); return; }
     if (ev === 'end') { endCall(true); }
   }
 
   // ── Mod prank + "TukuCaller": panggilan palsu setempat dengan pengenalan
   //    pemanggil parodi (tag crowdsourced gaya apl pencari nombor). Semua rekaan.
   const PK_TAGS = {
-    scam:   { tone: 'tk-spam', word: 'penipu', tag: '⚠️ Mungkin Penipu',        cmt: '«Jangan sesekali beri OTP anda!»' },
-    boss:   { tone: 'tk-warn', word: 'boss',   tag: '💼 Boss Anda',             cmt: '«Projek lewat lagi — jawab sekarang»' },
-    bank:   { tone: 'tk-info', word: 'bank',   tag: '🏦 Bank — Akaun Berisiko', cmt: '«Transaksi RM9,999.00 sedang diproses»' },
-    kurier: { tone: 'tk-info', word: 'kurier', tag: '📦 Kurier Penghantaran',   cmt: '«Paket anda 3 hari belum diambil»' },
-    ghost:  { tone: 'tk-fun',  word: 'hantu',  tag: '👻 Nombor Alam Lain',      cmt: '«Telefon ini berbunyi sendiri jam 3:33 pagi»' },
-    ex:     { tone: 'tk-fun',  word: 'bekas anda', tag: '💔 «Kenangan Lama»',      cmt: '«142 panggilan tak dijawab sejak 2019»' },
-    celeb: { tone: 'tk-info', word: 'artis',  tag: '⭐ Artis Tempatan',          cmt: '«Tahniah, anda dipilih untuk sesi casting!»' },
+    scam:   { tone: 'tk-spam', word: 'scammer', tag: '⚠️ Likely Scammer',        cmt: '«Never give out your OTP!»' },
+    boss:   { tone: 'tk-warn', word: 'boss',   tag: '💼 Your Boss',              cmt: '«The project is late again — answer now»' },
+    bank:   { tone: 'tk-info', word: 'bank',   tag: '🏦 Bank — At-Risk Account', cmt: '«Transaction RM9,999.00 is being processed»' },
+    kurier: { tone: 'tk-info', word: 'courier', tag: '📦 Delivery Courier',     cmt: '«Your parcel has sat unclaimed for 3 days»' },
+    ghost:  { tone: 'tk-fun',  word: 'ghost',  tag: '👻 Otherworldly Number',   cmt: '«This phone rings by itself at 3:33 AM»' },
+    ex:     { tone: 'tk-fun',  word: 'your ex', tag: '💔 «Old Memories»',       cmt: '«142 missed calls since 2019»' },
+    celeb: { tone: 'tk-info', word: 'celebrity', tag: '⭐ Local Celebrity',     cmt: '«Congratulations, you are picked for a casting session!»' },
   };
   const PK_EXTRA = [
-    { tone: 'tk-warn', word: 'syarikat telco', tag: '🕵️ «Syarikat Telco»',   cmt: '«Bil anda tertunggak — tekan 1 untuk lunaskan»' },
-    { tone: 'tk-spam', word: 'pihak berkuasa', tag: '🚔 «Pihak Berkuasa»',   cmt: '«Anda dipanggil untuk soal siasat esok»' },
-    { tone: 'tk-fun',  word: 'kakak nasi kandar', tag: '🍔 «Nasi Kandar Akak»', cmt: '«Kari istimewa menunggu, abang»' },
-    { tone: 'tk-warn', word: 'pinjaman segera', tag: '📈 «Pinjaman Segera»',  cmt: '«RM5,000 dalam 5 minit, tanpa agihan»' },
+    { tone: 'tk-warn', word: 'telco company', tag: '🕵️ «Telco Company»',   cmt: '«Your bill is overdue — press 1 to pay»' },
+    { tone: 'tk-spam', word: 'the authorities', tag: '🚔 «The Authorities»',   cmt: '«You are summoned for questioning tomorrow»' },
+    { tone: 'tk-fun',  word: 'nasi kandar seller', tag: '🍔 «Nasi Kandar Sis»', cmt: '«Special curry is waiting, brother»' },
+    { tone: 'tk-warn', word: 'instant loan', tag: '📈 «Instant Loan»',  cmt: '«RM5,000 in 5 minutes, no installments»' },
   ];
   const pkAll = () => Object.keys(PK_TAGS).map(k => PK_TAGS[k]).concat(PK_EXTRA);
   // Pilih tag: ikut persona yang dipilih, atau rawak (termasuk luaran lucu) bila "Rawak".
@@ -2509,9 +2509,9 @@ window.addEventListener('error', (e) => {
     t.className = ''; t.innerHTML = '';
     $('cName').textContent = sess.peer.name;
     $('cAva').textContent = initials(sess.peer.name); $('cAva').style.background = colorOf(sess.peer.name);
-    $('cSub').textContent = (sess.kind === 'audio' ? '📞 Panggilan suara' : '📹 Panggilan video') + ' · ID ' + sess.pkId;
-    $('cBio').textContent = 'Menyambungkan panggilan…';
-    t.innerHTML = '<div class="tk-search"><span class="sp"></span>TukuCaller mencari ID pemanggil…</div>';
+    $('cSub').textContent = (sess.kind === 'audio' ? '📞 Voice call' : '📹 Video call') + ' · ID ' + sess.pkId;
+    $('cBio').textContent = 'Connecting the call…';
+    t.innerHTML = '<div class="tk-search"><span class="sp"></span>TukuCaller is looking up the caller ID…</div>';
     t.classList.add('on');
     setTimeout(() => pkReveal(sess, t), 1300 + Math.floor(Math.random() * 500));
   }
@@ -2524,21 +2524,21 @@ window.addEventListener('error', (e) => {
     t.className = 'on';
     t.innerHTML =
       '<div class="tk-badge ' + def.tone + '">' + def.tag + '</div>' +
-      '<div class="tk-stats">Dilaporkan ' + reports.toLocaleString('ms-MY') + ' orang · ' + searches + ' carian · Malaysia</div>' +
+      '<div class="tk-stats">Reported by ' + reports.toLocaleString('en-US') + ' people · ' + searches + ' searches · Malaysia</div>' +
       '<div class="tk-cmt">' + def.cmt + '</div>' +
       '<div class="tk-mark">Powered by TukuCaller™</div>';
-    $('cBio').textContent = 'Bukan dalam senarai kawan · periksa dulu sebelum menyahut';
+    $('cBio').textContent = 'Not in your friends list · check first before answering';
     tone(660, .08, .05);
   }
   function prankStart() {
-    const nm = norm($('pkName').value).slice(0, 20) || 'Terkenalan';
+    const nm = norm($('pkName').value).slice(0, 20) || 'Acquaintance';
     $('prankModal').classList.remove('open');
     if (C) endCall(true);
     C = { pc: null, local: null, remote: null, peer: { id: 0, name: nm }, kind: pkKind, dir: 'in', state: 'in', t0: 0, iv: null, ringT: null, iceQ: [], prank: true };
     C.pkId = 100000 + Math.floor(Math.random() * 899999);
     C.pkTag = pkPick();
     callEl().classList.toggle('audio', pkKind === 'audio');
-    $('cStat').textContent = 'Panggilan masuk…';
+    $('cStat').textContent = 'Incoming call…';
     callPaint('in');
     startRing(); vibrate([600, 300, 600, 300, 900]);
     pkSearch(C);
@@ -2555,17 +2555,17 @@ window.addEventListener('error', (e) => {
     C.iv = setInterval(() => { if (!C) return; const s = Math.floor((Date.now() - C.t0) / 1000); $('cStat').textContent = pad2(Math.floor(s / 60)) + ':' + pad2(s % 60); }, 1000);
     setTimeout(() => {
       if (!C || !C.prank || C.state !== 'on') return;
-      const w = (C.pkTag && C.pkTag.word) || 'pemanggil misteri';
-      const lines = ['Ceeeh! Anda kena prank! Tag ' + w + ' tadi rekaan je.', 'Haha, TukuCaller tipu. Itu panggilan prank dari T Chat.', 'Prank! Tiada ' + w + ' sebenar — kawan anda yang panggil.'];
+      const w = (C.pkTag && C.pkTag.word) || 'mystery caller';
+      const lines = ['Gotcha! You got pranked! That ' + w + ' tag was totally made up.', 'Haha, TukuCaller lied. That was a prank call from T Chat.', 'Prank! No real ' + w + ' — it was your friend calling.'];
       try {
         if ('speechSynthesis' in window) {
           const u = new SpeechSynthesisUtterance(lines[Math.floor(Math.random() * lines.length)]);
-          u.lang = 'ms-MY'; u.rate = 1.02; u.pitch = 1.25;
+          u.lang = 'en-US'; u.rate = 1.02; u.pitch = 1.25;
           speechSynthesis.speak(u);
         }
       } catch { /* tiada TTS */ }
       $('cPrank').classList.add('on');
-      toast('🎭 Prank! TukuCaller tadi pun rekaan belaka.', 5200);
+      toast('🎭 Prank! That TukuCaller was made up too.', 5200);
       vibrate([120, 60, 120, 60, 400]);
     }, 1500);
   }
@@ -2580,7 +2580,7 @@ window.addEventListener('error', (e) => {
     if (!C || C.prank) return;
     const id = C.peer.id;
     endCall(true);
-    try { await post('/block', { peer: id }); toast('Pemanggil disekat.'); loadSocial(); loadRooms(false); } catch (e) { toast(e.message); }
+    try { await post('/block', { peer: id }); toast('Caller blocked.'); loadSocial(); loadRooms(false); } catch (e) { toast(e.message); }
   };
   $('prankBtn').onclick = () => {
     $('prankModal').classList.add('open');
@@ -2639,8 +2639,8 @@ window.addEventListener('error', (e) => {
             v.onclick = ev => ev.stopPropagation();
             cell.innerHTML = ''; cell.appendChild(v); cell.classList.add('vid'); cell.setAttribute('data-v', i);
           } else {
-            const im = document.createElement('img'); im.src = url; im.alt = 'gambar dilampirkan';
-            im.onerror = () => { cell.innerHTML = '<div class="brk">🖼 Gambar sudah dibuang</div>'; };
+            const im = document.createElement('img'); im.src = url; im.alt = 'attached image';
+            im.onerror = () => { cell.innerHTML = '<div class="brk">🖼 Image removed</div>'; };
             cell.innerHTML = ''; cell.appendChild(im); cell.setAttribute('data-z', i);
             cell.onclick = ev => { ev.stopPropagation(); openView(findMsg(id), i); };
           }
@@ -2651,12 +2651,12 @@ window.addEventListener('error', (e) => {
       for (const cell of bub.querySelectorAll('.mcell[data-z]')) {
         cell.onclick = e => { e.stopPropagation(); openView(findMsg(id), +cell.dataset.z); };
         const im = cell.querySelector('img');
-        if (im) im.onerror = () => { cell.innerHTML = '<div class="brk">🖼 Gambar sudah dibuang</div>'; };
+        if (im) im.onerror = () => { cell.innerHTML = '<div class="brk">🖼 Image removed</div>'; };
       }
       for (const cell of bub.querySelectorAll('.mcell[data-v]')) {
         cell.onclick = e => e.stopPropagation();   // lera/kekawal video bukan menu mesej
         const v = cell.querySelector('video');
-        if (v) { v.onclick = e => e.stopPropagation(); v.onerror = () => { cell.innerHTML = '<div class="brk">🎬 Video sudah dibuang</div>'; }; }
+        if (v) { v.onclick = e => e.stopPropagation(); v.onerror = () => { cell.innerHTML = '<div class="brk">🎬 Video removed</div>'; }; }
       }
     }
   }
@@ -2686,8 +2686,8 @@ window.addEventListener('error', (e) => {
     const stage = $('vStage');
     stage.innerHTML = '';
     const im = document.createElement('img');
-    im.alt = 'gambar'; im.src = x.url;
-    im.onerror = () => { stage.innerHTML = '<div class="cap">Gambar ini sudah dibuang.</div>'; };
+    im.alt = 'image'; im.src = x.url;
+    im.onerror = () => { stage.innerHTML = '<div class="cap">This image was removed.</div>'; };
     stage.appendChild(im);
     $('vCap').textContent = (viewMsg && viewMsg.t ? viewMsg.t : '') + (viewList.length > 1 ? '   (' + (viewIdx + 1) + '/' + viewList.length + ')' : '');
     $('vPrev').style.visibility = viewIdx > 0 ? '' : 'hidden';
@@ -2701,14 +2701,14 @@ window.addEventListener('error', (e) => {
   async function saveMedia(x) {
     try {
       const res = await fetch(x.url, { headers: { 'Authorization': 'Bearer ' + token } });
-      if (!res.ok) throw new Error('Muat turun gagal (' + res.status + ').');
+      if (!res.ok) throw new Error('Download failed (' + res.status + ').');
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = x.name || ('tukuk-' + x.id + '.' + (x.ext || (x.kind === 'video' ? 'mp4' : 'jpg')));
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-      toast('Disimpan: ' + a.download);
+      toast('Saved: ' + a.download);
     } catch (e) { toast(e.message); }
   }
 
@@ -2717,13 +2717,13 @@ window.addEventListener('error', (e) => {
     sndTap();
     const menu = $('ctx');
     let h = '<div class="reacts">' + REACTS.map(r => '<button data-r="' + r + '">' + r + '</button>').join('') + '</div>' +
-      '<div data-a="reply">↩️ Balas</div>' +
-      (msg.media && msg.media.length ? '<div data-a="save">⬇️ Simpan media</div>' : '<div data-a="copy">🧑 Salin teks</div>') +
-      '<div data-a="fwd">➡️ Teruskan</div>';
+      '<div data-a="reply">↩️ Reply</div>' +
+      (msg.media && msg.media.length ? '<div data-a="save">⬇️ Save media</div>' : '<div data-a="copy">🧑 Copy text</div>') +
+      '<div data-a="fwd">➡️ Forward</div>';
     // Pin: pemilik pada bila-bila bilik; admin pada mana-mana mesej kumpulan.
     const canPin = mineOf(msg) || (roomIsGroup(cur) && myAdminOf(cur));
-    if (canPin && !String(msg.id).startsWith('tmp')) h += '<div data-a="pin">' + (msg.pinned ? '📌 Buka pin' : '📌 Pin mesej') + '</div>';
-    if (mineOf(msg) && !String(msg.id).startsWith('tmp')) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Padam</div>';
+    if (canPin && !String(msg.id).startsWith('tmp')) h += '<div data-a="pin">' + (msg.pinned ? '📌 Unpin' : '📌 Pin message') + '</div>';
+    if (mineOf(msg) && !String(msg.id).startsWith('tmp')) h += '<div data-a="edit">✏️ Edit</div><div class="dgr" data-a="del">🗑 Delete</div>';
     menu.innerHTML = h;
     menu.style.display = 'block';
     menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 8) + 'px';
@@ -2764,10 +2764,10 @@ window.addEventListener('error', (e) => {
   }
   function doAction(a, msg) {
     if (a === 'reply') {
-      if (String(msg.id).startsWith('tmp')) { toast('Mesej belum tentu sampai — balas selepas ia dihantar.'); return; }
+      if (String(msg.id).startsWith('tmp')) { toast('Message not confirmed yet — reply after it is sent.'); return; }
       replyTo = msg.id; $('rbName').textContent = nameOf(msg); $('rbText').textContent = msgLabel(msg); $('replyBar').style.display = 'block'; $('inp').focus();
     }
-    else if (a === 'copy') { try { navigator.clipboard.writeText(msg.t); toast('Disalin.'); } catch { toast('Salin gagal.'); } }
+    else if (a === 'copy') { try { navigator.clipboard.writeText(msg.t); toast('Copied.'); } catch { toast('Copy failed.'); } }
     else if (a === 'save') { if ((msg.media || []).length > 1) openView(msg, 0); else saveMedia(msg.media[0]); }
     else if (a === 'fwd') openFwd(msg);
     else if (a === 'pin') doPin(msg);
@@ -2782,11 +2782,11 @@ window.addEventListener('error', (e) => {
   }
   // Pin/unpin. Optimis pada mesej sebenar (bukan tmp); pelayan sahkan & siarkan 'pin'.
   async function doPin(msg) {
-    if (!msg || String(msg.id).startsWith('tmp')) { toast('Mesej belum tentu sampai.'); return; }
+    if (!msg || String(msg.id).startsWith('tmp')) { toast('Message not confirmed yet.'); return; }
     const want = !msg.pinned;
     try { const j = await post('/pin', { room: cur, id: msg.id, pinned: want }); msg.pinned = !!j.pinned; }
     catch (e) { toast(e.message); return; }
-    renderMsgs(); toast(want ? 'Mesej di-pin.' : 'Pin dibuka.');
+    renderMsgs(); toast(want ? 'Message pinned.' : 'Unpinned.');
   }
   function closeReplyEdit() { replyTo = null; editing = null; $('replyBar').style.display = 'none'; $('editBar').style.display = 'none'; }
 
@@ -2799,7 +2799,7 @@ window.addEventListener('error', (e) => {
     inp.style.overflowY = inp.scrollHeight > 130 ? 'auto' : 'hidden';   // elak palang tanpa sebab
   }
   async function doSend() {
-    if (busy) { toast('Masih menghantar…'); return; }
+    if (busy) { toast('Still sending…'); return; }
     const text = inp.value.trim();
     if (editing) {
       if (!text) return;
@@ -2810,12 +2810,12 @@ window.addEventListener('error', (e) => {
     }
     if (!text && !pending.length) return;
     const bad = pending.filter(p => p.status === 'err');
-    if (bad.length) { toast('Ada fail gagal — tekan ✕ untuk buang.'); return; }
+    if (bad.length) { toast('Some files failed — press ✕ to remove them.'); return; }
     const r = room(cur), b = box(r);
     const rt = replyTo; // ditutup oleh closeReplyEdit() di bawah, jadi simpan dulu
     // Luar talian: hanya TEKS boleh dijangka (gambar/video perlukan sambungan untuk muat naik).
     if (!online) {
-      if (pending.length) { toast('Butuh sambungan untuk hantar gambar / video / fail.'); return; }
+      if (pending.length) { toast('Sending images / video / files needs a connection.'); return; }
       const temp = { id: 'tmp' + Date.now(), seq: 0, from: me, fid: myId || null, t: text, ts: Date.now(), to: rt || null, rx: {}, media: [], queued: true };
       b.msgs.push(temp); inp.value = ''; grow(); closeReplyEdit(); renderMsgs(); scrollBottom(); sndOut();
       queueOutbox({ cid: temp.id, room: cur, text, replyTo: rt || null });
@@ -2860,7 +2860,7 @@ window.addEventListener('error', (e) => {
         renderMsgs();
       } else {
         b.msgs = b.msgs.filter(x => x.id !== temp.id);
-        toast(e.status === 429 ? 'Terlalu laju — tunggu sedikit.' : e.message);
+        toast(e.status === 429 ? 'Too fast — wait a moment.' : e.message);
         for (const p of pending) if (p.status !== 'err') p.status = p.media ? 'done' : 'ready';
         renderMsgs(); renderTray();
       }
@@ -2882,7 +2882,7 @@ window.addEventListener('error', (e) => {
     fwdMsg = msg;
     $('fwdList').innerHTML = rooms.map(r =>
       '<div class="rowm" data-r="' + esc(r.id) + '"><div class="ava" style="background:' + (r.kind === 'dm' ? colorOf(r.title) : r.kind === 'group' ? '#3a4f6e' : '#2f3d5c') + '">' + (r.kind === 'dm' ? esc(initials(r.title)) : r.kind === 'group' ? '👥' : '🌍') + '</div><div><b>' + esc(r.title) + '</b></div></div>').join('')
-      || '<p style="color:var(--muted);font-size:.84rem">Tiada bilik.</p>';
+      || '<p style="color:var(--muted);font-size:.84rem">No rooms.</p>';
     for (const el of $('fwdList').querySelectorAll('.rowm')) el.onclick = async () => {
       $('fwdModal').classList.remove('open');
       const target = el.dataset.r, b = box(room(target) || { id: target });
@@ -2894,7 +2894,7 @@ window.addEventListener('error', (e) => {
         const at = b.msgs.findIndex(x => x.id === temp.id);
         b.msgs = b.msgs.filter(x => x.id !== temp.id && x.id !== j.msg.id);
         b.msgs.splice(at >= 0 ? at : b.msgs.length, 0, j.msg);
-        if (target === cur) renderMsgs(); loadRooms(false); sndOut(); toast('Diteruskan ke ' + (room(target) || {}).title); }
+        if (target === cur) renderMsgs(); loadRooms(false); sndOut(); toast('Forwarded to ' + (room(target) || {}).title); }
       catch (e) { b.msgs = b.msgs.filter(x => x !== temp); toast(e.message); }
     };
     $('fwdModal').classList.add('open');
@@ -2910,9 +2910,9 @@ window.addEventListener('error', (e) => {
     const list = people.filter(p => !isMeP(p) && (!s || String(p.name).toLowerCase().includes(s) || String(p.id) === s));
     $('plist').innerHTML = list.length ? list.map(p =>
       '<div class="rowm" data-id="' + p.id + '"><div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div>' +
-      '<div class="grow"><b>' + hilite(p.name, s) + '</b><small><span class="idf">#' + p.id + '</span> · ' + (p.online ? 'dalam talian' : 'luar talian') + (p.status ? ' · ' + esc((p.status.e || '') + ' ' + (p.status.t || '')).trim() : (p.bio ? ' · ' + esc(String(p.bio).slice(0, 34)) : '')) + '</small></div>' +
-      '<button class="card" data-card="' + p.id + '" title="Siapa punya ID ini?">🪪</button></div>').join('')
-      : '<p style="color:var(--muted);font-size:.84rem">' + (s && /^\d{6}$/.test(s) ? 'Tiada akaun dengan ID ' + esc(s) + '.' : (people.length > 1 ? 'Tiada padanan.' : 'Belum ada pengguna lain. Jemput kawan daftar!')) + '</p>';
+      '<div class="grow"><b>' + hilite(p.name, s) + '</b><small><span class="idf">#' + p.id + '</span> · ' + (p.online ? 'online' : 'offline') + (p.status ? ' · ' + esc((p.status.e || '') + ' ' + (p.status.t || '')).trim() : (p.bio ? ' · ' + esc(String(p.bio).slice(0, 34)) : '')) + '</small></div>' +
+      '<button class="card" data-card="' + p.id + '" title="Whose ID is this?">🪪</button></div>').join('')
+      : '<p style="color:var(--muted);font-size:.84rem">' + (s && /^\d{6}$/.test(s) ? 'No account with ID ' + esc(s) + '.' : (people.length > 1 ? 'No matches.' : 'No other users yet. Invite friends to register!')) + '</p>';
     for (const el of $('plist').querySelectorAll('.rowm')) {
       const p = pById[+el.dataset.id]; if (!p) continue;
       el.onclick = e => { if (e.target && e.target.dataset.card) return; startDm(p.id); };   // laju: terus buka DM
@@ -2927,7 +2927,7 @@ window.addEventListener('error', (e) => {
     const q = e.target.value.trim();
     if (!/^\d{6}$/.test(q)) return;
     try { const j = await call('/user?q=' + encodeURIComponent(q)); openProf(j.profile, false); }
-    catch (err) { toast(err.status === 404 ? 'Tiada akaun dengan ID ' + q + '.' : err.message); }
+    catch (err) { toast(err.status === 404 ? 'No account with ID ' + q + '.' : err.message); }
   });
   $('pclose').onclick = () => $('peopleModal').classList.remove('open');
 
@@ -2941,20 +2941,20 @@ window.addEventListener('error', (e) => {
       '<div class="ava" style="background:' + colorOf(p.name) + '">' + esc(initials(p.name)) + '</div>' +
       '<div style="flex:1;min-width:0"><b style="font-size:.88rem">' + esc(p.name) + '</b>' +
       '<span style="font-size:.72rem;color:var(--muted);margin-left:6px">#' + p.id + '</span></div></label>').join('')
-      : '<p style="color:var(--muted);font-size:.84rem;padding:10px">' + (s ? 'Tiada padanan.' : 'Belum ada pengguna lain.') + '</p>';
+      : '<p style="color:var(--muted);font-size:.84rem;padding:10px">' + (s ? 'No matches.' : 'No other users yet.') + '</p>';
     for (const inp2 of $('gmList').querySelectorAll('input[data-id]')) {
-      inp2.onchange = () => { const id = +inp2.dataset.id; if (inp2.checked) groupSel.add(id); else groupSel.delete(id); $('gmCount').textContent = groupSel.size + ' dipilih'; };
+      inp2.onchange = () => { const id = +inp2.dataset.id; if (inp2.checked) groupSel.add(id); else groupSel.delete(id); $('gmCount').textContent = groupSel.size + ' selected'; };
     }
-    $('gmCount').textContent = groupSel.size + ' dipilih';
+    $('gmCount').textContent = groupSel.size + ' selected';
   }
   $('gmOpen').onclick = () => {
     $('peopleModal').classList.remove('open');
     groupSel = new Set(); $('gmTitle').value = ''; $('gmQ').value = '';
     // Reset ke mod cipta
-    $('gmH').textContent = '👥+ Kumpulan Baru';
+    $('gmH').textContent = '👥+ New Group';
     $('gmNameLabel').style.display = ''; $('gmTitle').style.display = '';
-    $('gmMemberLabel').textContent = 'Ahli (pilih min. 1)';
-    $('gmCreate').textContent = '👥 Cipta Kumpulan'; $('gmCreate').dataset.invite = '';
+    $('gmMemberLabel').textContent = 'Members (pick at least 1)';
+    $('gmCreate').textContent = '👥 Create Group'; $('gmCreate').dataset.invite = '';
     renderGroupList('');
     $('groupModal').classList.add('open'); $('gmTitle').focus();
   };
@@ -2963,24 +2963,24 @@ window.addEventListener('error', (e) => {
   $('gmCreate').onclick = async () => {
     const inviteRoomId = $('gmCreate').dataset.invite;
     if (inviteRoomId) {
-      if (groupSel.size < 1) return toast('Pilih sekurang-kurangnya seorang.');
+      if (groupSel.size < 1) return toast('Pick at least one person.');
       $('gmCreate').disabled = true;
       try {
         for (const id of groupSel) await post('/group/invite', { room: inviteRoomId, memberId: id });
         $('groupModal').classList.remove('open');
-        await loadRooms(false); toast('Ahli dijemput.');
+        await loadRooms(false); toast('Members invited.');
       } catch (err2) { toast(err2.message); }
-      $('gmCreate').disabled = false; $('gmCreate').dataset.invite = ''; $('gmCreate').textContent = '👥 Cipta Kumpulan';
+      $('gmCreate').disabled = false; $('gmCreate').dataset.invite = ''; $('gmCreate').textContent = '👥 Create Group';
     } else {
       const title = $('gmTitle').value.trim();
-      if (!title) return toast('Isi nama kumpulan.');
-      if (groupSel.size < 1) return toast('Pilih sekurang-kurangnya seorang ahli.');
+      if (!title) return toast('Fill in the group name.');
+      if (groupSel.size < 1) return toast('Pick at least one member.');
       $('gmCreate').disabled = true;
       try {
         const j = await post('/group', { title, memberIds: [...groupSel] });
         $('groupModal').classList.remove('open');
         await loadRooms(false); openRoom(j.room.id);
-        toast('Kumpulan “' + title + '” dicipta.');
+        toast('Group “' + title + '” created.');
       } catch (e) { toast(e.message); }
       $('gmCreate').disabled = false;
     }
@@ -3006,33 +3006,33 @@ window.addEventListener('error', (e) => {
       const nm = names[i] || ('#' + id);
       const admin = adminSet.has(id), self = id === myId;
       const acts = isAdmin && !self
-        ? '<button class="giact" data-adm="' + id + '" data-on="' + (admin ? 1 : 0) + '">' + (admin ? 'Nyahadmin' : 'Jadikan admin') + '</button>' +
-          '<button class="giact" data-kick="' + id + '">Buang</button>'
+        ? '<button class="giact" data-adm="' + id + '" data-on="' + (admin ? 1 : 0) + '">' + (admin ? 'Demote' : 'Make admin') + '</button>' +
+          '<button class="giact" data-kick="' + id + '">Remove</button>'
         : '';
       return '<div class="girow"><div class="ava" style="background:' + colorOf(nm) + '">' + esc(initials(nm)) + (ons[i] ? '<span class="dot" style="position:absolute;right:-1px;bottom:-1px"></span>' : '') + '</div>' +
-        '<b>' + esc(nm) + (self ? ' <small>(Anda)</small>' : '') + '</b>' +
+        '<b>' + esc(nm) + (self ? ' <small>(You)</small>' : '') + '</b>' +
         (admin ? '<span class="giad">admin</span>' : '') + acts + '</div>';
     }).join('');
     for (const b of $('giMembers').querySelectorAll('[data-kick]')) b.onclick = async () => {
       const id = +b.dataset.kick;
-      if (!confirm('Buang ahli ini dari kumpulan?')) return;
-      try { await post('/group/kick', { room: r.id, memberId: id }); await reloadGroupInfo(r.id); toast('Ahli dibuang.'); }
+      if (!confirm('Remove this member from the group?')) return;
+      try { await post('/group/kick', { room: r.id, memberId: id }); await reloadGroupInfo(r.id); toast('Member removed.'); }
       catch (e) { toast(e.message); }
     };
     for (const b of $('giMembers').querySelectorAll('[data-adm]')) b.onclick = async () => {
       const id = +b.dataset.adm, remove = b.dataset.on === '1';
-      try { await post('/group/admin', { room: r.id, memberId: id, remove: remove ? 1 : 0 }); await reloadGroupInfo(r.id); toast(remove ? 'Admin dinyah.' : 'Dijadikan admin.'); }
+      try { await post('/group/admin', { room: r.id, memberId: id, remove: remove ? 1 : 0 }); await reloadGroupInfo(r.id); toast(remove ? 'Admin removed.' : 'Made admin.'); }
       catch (e) { toast(e.message); }
     };
     $('giRename').onclick = async () => {
       const t = $('giName').value.trim();
-      if (!t) return toast('Isi nama kumpulan.');
-      try { await post('/group/rename', { room: r.id, title: t }); await reloadGroupInfo(r.id); toast('Nama dikemas kini.'); }
+      if (!t) return toast('Fill in the group name.');
+      try { await post('/group/rename', { room: r.id, title: t }); await reloadGroupInfo(r.id); toast('Name updated.'); }
       catch (e) { toast(e.message); }
     };
     $('giDissolve').onclick = async () => {
-      if (!confirm('Bubarkan kumpulan ini untuk semua ahli? Tindakan ini kekal.')) return;
-      try { await post('/group/dissolve', { room: r.id }); $('grpInfoModal').classList.remove('open'); await loadRooms(false); if (cur === r.id) { cur = 'global_am'; openRoom('global_am'); } renderRooms(); toast('Kumpulan dibubarkan.'); }
+      if (!confirm('Dissolve this group for all members? This is permanent.')) return;
+      try { await post('/group/dissolve', { room: r.id }); $('grpInfoModal').classList.remove('open'); await loadRooms(false); if (cur === r.id) { cur = 'global_am'; openRoom('global_am'); } renderRooms(); toast('Group dissolved.'); }
       catch (e) { toast(e.message); }
     };
     $('giInvite').onclick = async () => {
@@ -3040,14 +3040,14 @@ window.addEventListener('error', (e) => {
       renderGroupList(''); groupSel = new Set();
       $('gmTitle').value = ''; $('gmQ').value = '';
       // Tukar ke mod jemput
-      $('gmH').textContent = '➕ Jemput ke ' + r.title;
+      $('gmH').textContent = '➕ Invite to ' + r.title;
       $('gmNameLabel').style.display = 'none'; $('gmTitle').style.display = 'none';
-      $('gmMemberLabel').textContent = 'Pilih ahli baharu';
-      $('gmCreate').textContent = '➕ Jemput'; $('gmCreate').dataset.invite = r.id;
+      $('gmMemberLabel').textContent = 'Pick new members';
+      $('gmCreate').textContent = '➕ Invite'; $('gmCreate').dataset.invite = r.id;
       $('groupModal').classList.add('open'); $('gmQ').focus();
     };
     $('giLeave').onclick = async () => {
-      try { await post('/group/leave', { room: r.id }); $('grpInfoModal').classList.remove('open'); await loadRooms(false); openRoom('global_am'); toast('Anda keluar dari kumpulan.'); }
+      try { await post('/group/leave', { room: r.id }); $('grpInfoModal').classList.remove('open'); await loadRooms(false); openRoom('global_am'); toast('You left the group.'); }
       catch (e) { toast(e.message); }
     };
     $('giClose').onclick = () => $('grpInfoModal').classList.remove('open');
@@ -3057,7 +3057,7 @@ window.addEventListener('error', (e) => {
 
   // ─── Profil / "siapa punya ID ini?" ───
   let profCur = 0;
-  function copyText(v) { try { navigator.clipboard.writeText(String(v)); toast('Disalin: ' + v); } catch { toast('Salin gagal.'); } }
+  function copyText(v) { try { navigator.clipboard.writeText(String(v)); toast('Copied: ' + v); } catch { toast('Copy failed.'); } }
   // Paparan profil orang lain — editing akaun sendiri berada dalam Tetapan.
   function openProf(p) {
     if (!p || !p.id) return;
@@ -3066,16 +3066,16 @@ window.addEventListener('error', (e) => {
     const pal = isPal(p.id), blk = !!p.blocked || isBlk(p.id);
     socialPool[p.id] = Object.assign({}, socialPool[p.id] || {}, p, { friend: pal, blocked: blk });
     $('pfHead').innerHTML = '<div class="pfhead">' + avHtml(p.name, p.avatar, p.online) +
-      '<div><b>' + esc(p.name) + '</b><span class="idchip" id="pfCopy" title="Salin Tukuk ID">🆔 ' + p.id + ' ⧉</span></div></div>' +
+      '<div><b>' + esc(p.name) + '</b><span class="idchip" id="pfCopy" title="Copy Tukuk ID">🆔 ' + p.id + ' ⧉</span></div></div>' +
       '<div class="pfmeta">' + (p.status ? statusLine(p.status) + '<br>' : '') +
-      (p.bio ? esc(p.bio) + '<br>' : '<i>Tiada bio.</i><br>') +
-      (p.joined ? 'Sertai ' + dateLabel(p.joined) + '<br>' : '') +
-      (shared > 0 ? 'Sudah ' + shared + ' sembang DM bersama.' : 'Belum ada sembang DM dengan orang ini.') +
-      (blk ? '<br><b style="color:#e17076">Anda menyekat orang ini — DM dibekukan.</b>' : (pal ? '<br>Sudah dalam senarai kawan anda.' : '')) +
+      (p.bio ? esc(p.bio) + '<br>' : '<i>No bio.</i><br>') +
+      (p.joined ? 'Joined ' + dateLabel(p.joined) + '<br>' : '') +
+      (shared > 0 ? 'You already have ' + shared + ' DM chats together.' : 'No DM chats with this person yet.') +
+      (blk ? '<br><b style="color:#e17076">You blocked this person — DM is frozen.</b>' : (pal ? '<br>Already in your friends list.' : '')) +
       '</div>';
-    $('pfPal').textContent = pal ? '✓ Kawan' : '➕ Kawan';
-    $('pfBlock').textContent = blk ? '🚫 Buka sekat' : '🚫 Sekat';
-    $('pfDm').textContent = shared > 0 ? '📨 Buka sembang' : '📨 Hantar DM';
+    $('pfPal').textContent = pal ? '✓ Friend' : '➕ Friend';
+    $('pfBlock').textContent = blk ? '🚫 Unblock' : '🚫 Block';
+    $('pfDm').textContent = shared > 0 ? '📨 Open chat' : '📨 Send DM';
     $('pfCopy').onclick = () => copyText(p.id);
     $('pfDm').onclick = () => startDm(p.id, p);
     $('pfPal').onclick = () => doSocial(pal ? 'rm' : 'add', p.id);
@@ -3107,7 +3107,7 @@ window.addEventListener('error', (e) => {
         localStorage.setItem(rkey(), cur);   // bilik terakhir ikut nama baharu
       }
       myId = p.id || myId; myBio = p.bio || ''; myJoined = p.joined || myJoined;
-      paintMe(); toast('Profil disimpan.');
+      paintMe(); toast('Profile saved.');
       loadPeople(); loadRooms(false); loadSocial();
       return p;
     } catch (e) { toast(e.message); return null; }
@@ -3156,7 +3156,7 @@ window.addEventListener('error', (e) => {
   function srow(p, acts) {
     return '<div class="rowm" data-id="' + p.id + '"><div class="ava" style="background:' + colorOf(p.name) + '">' +
       esc(initials(p.name)) + (p.online ? '<span class="dot"></span>' : '') + '</div>' +
-      '<div class="grow"><b>' + esc(p.name) + '</b><small>' + (p.status ? esc((p.status.e || '') + ' ' + (p.status.t || '')).trim() : esc(p.bio || (p.online ? 'Dalam talian' : 'Luar talian'))) + '</small></div>' +
+      '<div class="grow"><b>' + esc(p.name) + '</b><small>' + (p.status ? esc((p.status.e || '') + ' ' + (p.status.t || '')).trim() : esc(p.bio || (p.online ? 'Online' : 'Offline'))) + '</small></div>' +
       '<span class="idf">' + p.id + '</span>' + (acts || '') + '</div>';
   }
   function wireRows(root) {
@@ -3180,10 +3180,10 @@ window.addEventListener('error', (e) => {
     $('nPal').textContent = social.friends.length;
     $('nBlk').textContent = social.blocked.length;
     const pal = pool(social.friends).map(p => srow(p,
-      scard('dm', '💬') + scard(isPal(p.id) ? 'rm' : 'add', isPal(p.id) ? '✓ Kawan' : '➕ Kawan') + scard('blk', '🚫', isBlk(p.id)))).join('');
-    $('stPalList').innerHTML = pal || '<div class="pfmeta">Belum ada kawan — cari nama atau Tukuk ID di atas.</div>';
-    const blk = pool(social.blocked).map(p => srow(p, scard('unblk', 'Buka sekat'))).join('');
-    $('stBlkList').innerHTML = blk || '<div class="pfmeta">Tiada sesiapa yang disekat.</div>';
+      scard('dm', '💬') + scard(isPal(p.id) ? 'rm' : 'add', isPal(p.id) ? '✓ Friend' : '➕ Friend') + scard('blk', '🚫', isBlk(p.id)))).join('');
+    $('stPalList').innerHTML = pal || '<div class="pfmeta">No friends yet — search a name or Tukuk ID above.</div>';
+    const blk = pool(social.blocked).map(p => srow(p, scard('unblk', 'Unblock'))).join('');
+    $('stBlkList').innerHTML = blk || '<div class="pfmeta">Nobody is blocked.</div>';
     wireRows($('stPalList')); wireRows($('stBlkList'));
   }
   // Satu fungsi untuk semua butang sosial (dalam senarai mahupun modal profil).
@@ -3204,8 +3204,8 @@ window.addEventListener('error', (e) => {
       loadPeople();
       await loadRooms(false);
       renderStatus();
-      toast(card === 'add' ? 'Kawan ditambah.' : card === 'rm' ? 'Kawan dibuang — sembang kekal.'
-        : card === 'blk' ? 'Disekat. DM dibekukan dua-dua arah.' : 'Sekat dibuka. Boleh membalas semula.');
+      toast(card === 'add' ? 'Friend added.' : card === 'rm' ? 'Friend removed — chat remains.'
+        : card === 'blk' ? 'Blocked. DM is frozen both ways.' : 'Unblocked. You can reply again.');
     } catch (e) { toast(e.message); }
   }
   // "Cari kawan": pelayan yang menapis (orang yang menyekat anda tidak muncul).
@@ -3217,9 +3217,9 @@ window.addEventListener('error', (e) => {
       const j = await call('/people?q=' + encodeURIComponent(findQ));
       const res = pool((j.people || []).filter(p => p.id !== myId));
       root.innerHTML = res.length ? res.slice(0, 8).map(p => srow(p,
-        (p.blocked ? scard('unblk', 'Buka sekat') : p.friend ? scard('rm', '✓ Kawan') : scard('add', '➕ Kawan')) +
+        (p.blocked ? scard('unblk', 'Unblock') : p.friend ? scard('rm', '✓ Friend') : scard('add', '➕ Friend')) +
         scard('blk', '🚫', p.blocked || isBlk(p.id)))).join('')
-        : '<div class="pfmeta">Tiada padanan untuk “' + esc(findQ) + '”.</div>';
+        : '<div class="pfmeta">No matches for “' + esc(findQ) + '”.</div>';
       wireRows(root);
     } catch (e) { root.innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; }
   }
@@ -3230,10 +3230,10 @@ window.addEventListener('error', (e) => {
   function openSettings(tab) {
     $('stName').value = me; $('stBio').value = myBio;
     $('stMe').innerHTML = '<div class="pfhead">' + avHtml(me, myAvatar, true) +
-      '<div><b>' + esc(me) + '</b><span class="idchip" id="stCopy" title="Salin Tukuk ID">🆔 ' + myId + ' ⧉</span></div></div>' +
+      '<div><b>' + esc(me) + '</b><span class="idchip" id="stCopy" title="Copy Tukuk ID">🆔 ' + myId + ' ⧉</span></div></div>' +
       (myStatus ? statusLine(myStatus) : '') +
-      '<div class="pfmeta">' + (myJoined ? 'Sertai ' + dateLabel(myJoined) + '<br>' : '') +
-      'Nombor ini kekal seumur akaun. App lain di tukuk.org boleh kenali anda melalui <b>/api/whoami</b>.</div>';
+      '<div class="pfmeta">' + (myJoined ? 'Joined ' + dateLabel(myJoined) + '<br>' : '') +
+      'This number is permanent for the life of the account. Other apps on tukuk.org can recognize you via <b>/api/whoami</b>.</div>';
     $('stCopy').onclick = () => copyText(myId);
     $('stSound').checked = !!pref.sound; $('stFont').value = pref.font;
     $('stNotif').checked = !!pref.notif;
@@ -3241,8 +3241,8 @@ window.addEventListener('error', (e) => {
     $('stPush').checked = !!pref.push;
     $('stPush').parentElement.style.display = pushSupported ? '' : 'none';
     $('pushHint').textContent = pushSupported
-      ? 'Menerima notifikasi walaupun aplikasi ditutup. Perlukan HTTPS + Service Worker.'
-      : 'Pelayar ini tidak menyokong Push API.';
+      ? 'Receive notifications even when the app is closed. Requires HTTPS + Service Worker.'
+      : 'This browser does not support the Push API.';
     markData(); $('connHint').textContent = connHintText();
     markWalls(); paintAppTab();
     $('stOld').value = $('stP1').value = $('stP2').value = '';
@@ -3264,39 +3264,39 @@ window.addEventListener('error', (e) => {
   $('stSaveProf').onclick = () => applyProfile($('stName').value.trim(), $('stBio').value.trim());
   $('stSavePass').onclick = async () => {
     const lama = $('stOld').value, p1 = $('stP1').value, p2 = $('stP2').value;
-    if (!lama) return toast('Isi kata laluan semasa.');
-    if (p1.length < 4) return toast('Kata laluan baharu sekurang-kurangnya 4 aksara.');
-    if (p1 !== p2) return toast('Kata laluan baharu tidak sama.');
+    if (!lama) return toast('Fill in the current password.');
+    if (p1.length < 4) return toast('New password must be at least 4 characters.');
+    if (p1 !== p2) return toast('New passwords do not match.');
     $('stSavePass').disabled = true;
     try {
       const j = await post('/password', { old: lama, next: p1 });
       $('stOld').value = $('stP1').value = $('stP2').value = '';
-      toast(j.revoked ? 'Kata laluan tukar. ' + j.revoked + ' sesi lain dikeluarkan.' : 'Kata laluan tukar.');
+      toast(j.revoked ? 'Password changed. ' + j.revoked + ' other sessions signed out.' : 'Password changed.');
     } catch (e) { toast(e.message); }
     $('stSavePass').disabled = false;
   };
   $('stKick').onclick = async () => {
     try {
       const j = await post('/logout-all', {});
-      toast(j.revoked ? j.revoked + ' sesi lain dikeluarkan.' : 'Tiada sesi lain untuk dikeluarkan.');
+      toast(j.revoked ? j.revoked + ' other sessions signed out.' : 'No other sessions to sign out.');
     } catch (e) { toast(e.message); }
   };
   // Pemulihan akaun: semak baki kod + jana set kod darurat (sekali-pakai).
   async function updRecCount() {
     const el = $('recCount'); if (!el) return;
-    try { const j = await call('/recovery/status'); el.innerHTML = j.remaining ? ('Kod aktif sekarang: <b>' + j.remaining + '</b>.') : 'Belum ada kod aktif.'; }
-    catch { el.textContent = 'Belum disemak.'; }
+    try { const j = await call('/recovery/status'); el.innerHTML = j.remaining ? ('Active codes now: <b>' + j.remaining + '</b>.') : 'No active codes yet.'; }
+    catch { el.textContent = 'Not checked yet.'; }
   }
   $('stRecGen').onclick = async () => {
-    if (!window.confirm('Jana 5 kod pemulihan BAHARU? Kod lama kekal sah. Kod ini hanya dipapar SEKALI — salin & simpan di tempat selamat.')) return;
+    if (!window.confirm('Generate 5 NEW recovery codes? Old codes remain valid. These codes are shown ONCE only — copy & store them somewhere safe.')) return;
     $('stRecGen').disabled = true;
     try {
       const j = await post('/recovery/generate', {});
       const out = $('recOut');
       out.hidden = false;
-      out.innerHTML = (j.codes || []).map(c => '<div class="reccode" title="Tekan untuk salin">' + esc(c) + '</div>').join('');
+      out.innerHTML = (j.codes || []).map(c => '<div class="reccode" title="Tap to copy">' + esc(c) + '</div>').join('');
       for (const el of out.querySelectorAll('.reccode')) el.onclick = () => copyText(el.textContent);
-      toast('Kod pemulihan dijana — salin & simpan sekarang.', 5200);
+      toast('Recovery codes generated — copy & save them now.', 5200);
       updRecCount();
     } catch (e) { toast(e.message); }
     $('stRecGen').disabled = false;
@@ -3305,8 +3305,8 @@ window.addEventListener('error', (e) => {
   // di klien (kosongkan token/storage, hentikan stream, bersihkan kesan akaun).
   $('stDelete').onclick = async () => {
     const pass = $('stDelPass').value;
-    if (!pass) return toast('Isi kata laluan anda untuk mengesahkan.');
-    if (!window.confirm('Padam akaun «' + me + '» secara PERMANEN? Semua mesej, bilik dan media anda akan dibuang. Tindakan ini tidak boleh dibatalkan.')) return;
+    if (!pass) return toast('Fill in your password to confirm.');
+    if (!window.confirm('Permanently DELETE the account «' + me + '»? All your messages, rooms and media will be removed. This cannot be undone.')) return;
     $('stDelete').disabled = true;
     try {
       await post('/delete-account', { pass });
@@ -3318,7 +3318,7 @@ window.addEventListener('error', (e) => {
       stopStream(); restartPollers(); clearPending();
       cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
       resetSocial(); $('aName').value = ''; $('aPass').value = '';
-      updateBadge(); setMode('login'); showAuth('Akaun anda telah dipadamkan.');
+      updateBadge(); setMode('login'); showAuth('Your account has been deleted.');
     } catch (e) { toast(e.message); }
     $('stDelete').disabled = false;
   };
@@ -3330,19 +3330,19 @@ window.addEventListener('error', (e) => {
   // Notifikasi DM: perlu kebenaran pelayar. Jika ditolak, jangan simpan pilihan.
   $('stNotif').onchange = async e => {
     if (!e.target.checked) { pref.notif = false; pref.push = false; savePref(); await disablePush(); $('stPush').checked = false; return; }
-    if (!window.Notification) { toast('Pelayar ini tidak menyokong notifikasi.'); e.target.checked = false; return; }
+    if (!window.Notification) { toast('This browser does not support notifications.'); e.target.checked = false; return; }
     let p = Notification.permission;
     if (p === 'default') { try { p = await Notification.requestPermission(); } catch { p = 'denied'; } }
-    if (p !== 'granted') { toast('Kebenaran notifikasi ditolak — benarkan dalam tetapan pelayar.'); e.target.checked = false; return; }
-    pref.notif = true; savePref(); toast('Notifikasi DM diaktifkan.');
+    if (p !== 'granted') { toast('Notification permission denied — allow it in browser settings.'); e.target.checked = false; return; }
+    pref.notif = true; savePref(); toast('DM notifications enabled.');
   };
   // Push latar-belakang: perlu Notification diaktifkan dulu.
   $('stPush').onchange = async e => {
     if (!e.target.checked) { pref.push = false; savePref(); await disablePush(); return; }
-    if (!pref.notif) { toast('Sila aktifkan Notifikasi DM dahulu.'); e.target.checked = false; return; }
+    if (!pref.notif) { toast('Please enable DM notifications first.'); e.target.checked = false; return; }
     const ok = await enablePush();
-    if (ok) { toast('Push latar-belakang diaktifkan.'); }
-    else { e.target.checked = false; toast('Push tidak dapat diaktifkan. Pastikan pelayar menyokong Push API.'); }
+    if (ok) { toast('Background push enabled.'); }
+    else { e.target.checked = false; toast('Push could not be enabled. Make sure the browser supports the Push API.'); }
   };
   $('stFont').oninput = e => { pref.font = +e.target.value; savePref(); applyPref(); };
   function markWalls() {
@@ -3358,7 +3358,7 @@ window.addEventListener('error', (e) => {
   for (const b of $('stData').querySelectorAll('button')) b.onclick = () => {
     pref.data = b.dataset.d; savePref(); markData();
     readConn(); applyLite(); $('connHint').textContent = connHintText(); updateNetbar();
-    toast(lite ? 'Mod jimat data aktif.' : 'Mod penuh — sambungan langsung dihidupkan.');
+    toast(lite ? 'Data saver mode on.' : 'Full mode — live stream enabled.');
   };
   function applyPref() {
     $('msgsWrap').dataset.wall = pref.wall;
@@ -3373,7 +3373,7 @@ window.addEventListener('error', (e) => {
     return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
   }
   async function enablePush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { toast('Pelayar ini tidak menyokong Push.'); return false; }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { toast('This browser does not support Push.'); return false; }
     if (Notification.permission !== 'granted') return false;
     try {
       const reg = await navigator.serviceWorker.ready;
@@ -3402,21 +3402,21 @@ window.addEventListener('error', (e) => {
   function paintAppTab() {
     const st = $('appStatus'), btn = $('stInstall');
     if (!st || !btn) return;
-    if (isStandalone()) { st.textContent = '✓ Sedang berjalan sebagai aplikasi yang dipasang.'; btn.hidden = true; return; }
+    if (isStandalone()) { st.textContent = '✓ Running as an installed app.'; btn.hidden = true; return; }
     btn.hidden = false;
     st.textContent = bip
-      ? 'Sedia untuk dipasang — aplikasi penuh tanpa bar pelayar, ikon di Skrin Utama/Desktop.'
-      : 'Pelayar ini tidak menyokong butang pasang automatik. Ikut arahan manual di bawah.';
-    btn.textContent = bip ? '📲 Pasang T Chat sekarang' : '📲 Tunjuk cara pasang';
+      ? 'Ready to install — full app without a browser bar, icon on the Home Screen/Desktop.'
+      : 'This browser does not support the automatic install button. Follow the manual steps below.';
+    btn.textContent = bip ? '📲 Install T Chat now' : '📲 Show me how to install';
   }
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); bip = e; paintAppTab(); });
-  addEventListener('appinstalled', () => { bip = null; paintAppTab(); const st = $('appStatus'); if (st) st.textContent = '✓ T Chat berjaya dipasang pada peranti ini.'; toast('T Chat dipasang.'); });
+  addEventListener('appinstalled', () => { bip = null; paintAppTab(); const st = $('appStatus'); if (st) st.textContent = '✓ T Chat was successfully installed on this device.'; toast('T Chat installed.'); });
   $('stInstall').onclick = async () => {
-    if (!bip) { toast('Guna arahan manual ikut OS di bawah.'); return; }
+    if (!bip) { toast('Use the manual steps per OS below.'); return; }
     try {
       await bip.prompt();
       const c = await bip.userChoice;
-      if (c && c.outcome === 'accepted') { bip = null; toast('Sedang dipasang…'); }
+      if (c && c.outcome === 'accepted') { bip = null; toast('Installing…'); }
       paintAppTab();
     } catch { /* dialog sudah digunakan/tidak tersedia */ }
   };
@@ -3427,7 +3427,7 @@ window.addEventListener('error', (e) => {
     a.href = '/downloads/tukuk-chat.apk';
     a.download = 'Tukuk-Chat-Beta.apk';
     document.body.appendChild(a); a.click(); a.remove();
-    toast('Memuat turun T Chat.apk (beta) — buka fail untuk pasang (Android 6+).', 4200);
+    toast('Downloading T Chat.apk (beta) — open the file to install (Android 6+).', 4200);
   };
   $('stApkPwa').onclick = () => window.open('https://www.pwabuilder.com/?url=' + encodeURIComponent(location.origin + '/apps/chat'), '_blank', 'noopener');
   // Halaman muat turun sejagat — auto-pilih APK (Android/Huawei/ChromeOS), PWA
@@ -3443,7 +3443,7 @@ window.addEventListener('error', (e) => {
     const here = $('tchatHere');
     if (here) here.textContent = 'tchat.tukuk.org';
     const note = $('tchatNote');
-    if (note) note.innerHTML = 'Anda sedang berada di <b>ruang khas T Chat</b> — tanpa enjin carian, tanpa iklan, CSP ketat dan sesi berasingan daripada tukuk.org. Tukuk ID &amp; kata laluan anda tetap sama.';
+    if (note) note.innerHTML = 'You are on the <b>dedicated T Chat space</b> — no search engine, no ads, strict CSP and a session separate from tukuk.org. Your Tukuk ID &amp; password stay the same.';
   }
 
   // ─── Sosial: avatar, ikuti, post, cerita, notifikasi ───
@@ -3462,10 +3462,10 @@ window.addEventListener('error', (e) => {
   }
   function timeAgo(ts) {
     const d = Date.now() - (ts || 0);
-    if (d < 60000) return 'baru sahaja';
+    if (d < 60000) return 'just now';
     if (d < 3600000) return Math.floor(d / 60000) + 'm';
-    if (d < 86400000) return Math.floor(d / 3600000) + 'j';
-    return Math.floor(d / 86400000) + 'h';
+    if (d < 86400000) return Math.floor(d / 3600000) + 'h';
+    return Math.floor(d / 86400000) + 'd';
   }
   function paintNotifBadge() {
     const btn = $('notifBtn'); if (!btn) return;
@@ -3483,14 +3483,14 @@ window.addEventListener('error', (e) => {
       x.open('POST', API + '/media' + q, true);
       x.setRequestHeader('Authorization', 'Bearer ' + token);
       x.setRequestHeader('Content-Type', (blob && blob.type) || 'application/octet-stream');
-      x.onload = () => { let o = {}; try { o = JSON.parse(x.responseText || '{}'); } catch { o = { error: 'Respons tidak sah (' + x.status + ').' }; } if (x.status >= 200 && x.status < 300 && !o.error) resolve(o); else reject(new Error(o.error || 'Muat naik gagal (' + x.status + ').')); };
-      x.onerror = () => reject(new Error('Rangkaian terputus — muat naik gagal.'));
+      x.onload = () => { let o = {}; try { o = JSON.parse(x.responseText || '{}'); } catch { o = { error: 'Invalid response (' + x.status + ').' }; } if (x.status >= 200 && x.status < 300 && !o.error) resolve(o); else reject(new Error(o.error || 'Upload failed (' + x.status + ').')); };
+      x.onerror = () => reject(new Error('Network lost — upload failed.'));
       x.send(blob);
     });
   }
   async function uploadSocialMedia(flag, file) {
     const kind = kindOf(file);
-    if (kind === 'file') throw new Error('Fail bukan gambar atau video.');
+    if (kind === 'file') throw new Error('That file is not an image or video.');
     if (kind === 'video') { const u = URL.createObjectURL(file); const pr = await probeVideo(u); URL.revokeObjectURL(u); return uploadBlob(flag, file, { w: pr.w, h: pr.h, dur: pr.dur }); }
     const pr = await shrinkImage(file);
     return uploadBlob(flag, pr.blob, { w: pr.w, h: pr.h });
@@ -3500,9 +3500,9 @@ window.addEventListener('error', (e) => {
   async function addFeedFiles(list) {
     for (const f of Array.from(list || [])) {
       const kind = kindOf(f);
-      if (kind === 'file') { toast('Post hanya boleh lampir gambar atau video.'); continue; }
-      if (feedFiles.length >= FEED_MAX) { toast('Maksimum ' + FEED_MAX + ' fail satu post.'); break; }
-      if (f.size > (kind === 'video' ? VID_CAP : IMG_CAP)) { toast('Fail terlalu besar (' + mbytes(f.size) + ').'); continue; }
+      if (kind === 'file') { toast('Posts can only attach images or videos.'); continue; }
+      if (feedFiles.length >= FEED_MAX) { toast('Maximum ' + FEED_MAX + ' files per post.'); break; }
+      if (f.size > (kind === 'video' ? VID_CAP : IMG_CAP)) { toast('File too large (' + mbytes(f.size) + ').'); continue; }
       const it = { key: feedSeq++, kind, blob: f, url: URL.createObjectURL(f), status: 'wait' };
       feedFiles.push(it); renderFeedTray();
       try {
@@ -3518,8 +3518,8 @@ window.addEventListener('error', (e) => {
     t.innerHTML = feedFiles.map(it =>
       '<div class="fcell" data-k="' + it.key + '">' +
       (it.kind === 'video' ? '<video src="' + esc(it.url) + '" muted></video>' : '<img src="' + esc(it.url) + '" alt="">') +
-      (it.status !== 'ready' ? '<div class="st">' + (it.status === 'err' ? esc(String(it.err || 'gagal').slice(0, 20)) : '…') + '</div>' : '') +
-      '<button class="x" title="Buang">✕</button></div>').join('');
+      (it.status !== 'ready' ? '<div class="st">' + (it.status === 'err' ? esc(String(it.err || 'failed').slice(0, 20)) : '…') + '</div>' : '') +
+      '<button class="x" title="Remove">✕</button></div>').join('');
     for (const el of t.querySelectorAll('.fcell')) el.querySelector('.x').onclick = () => {
       const it = feedFiles.find(x => x.key === +el.dataset.k);
       if (it) { try { URL.revokeObjectURL(it.url); } catch { /* noop */ } }
@@ -3530,9 +3530,9 @@ window.addEventListener('error', (e) => {
   async function submitPost() {
     if (feedBusy) return;
     const text = $('postText').value.trim();
-    if (feedFiles.some(x => x.status === 'err')) return toast('Ada fail gagal — buang dahulu.');
-    if (!text && !feedFiles.length) return toast('Post kosong.');
-    if (feedFiles.some(x => x.status !== 'ready')) return toast('Tunggu fail siap diproses.');
+    if (feedFiles.some(x => x.status === 'err')) return toast('Some files failed — remove them first.');
+    if (!text && !feedFiles.length) return toast('Empty post.');
+    if (feedFiles.some(x => x.status !== 'ready')) return toast('Wait for the files to finish processing.');
     feedBusy = true; $('postGo').disabled = true;
     try {
       const ids = [];
@@ -3544,7 +3544,7 @@ window.addEventListener('error', (e) => {
       const r = await post('/posts', { text, media: ids });
       if (r.post) { remember([r.post]); mergeFeedPost(r.post); }
       $('postText').value = ''; clearFeedFiles();
-      toast('Post disiarkan.');
+      toast('Post published.');
     } catch (e) { toast(e.message); }
     feedBusy = false; $('postGo').disabled = false;
   }
@@ -3564,7 +3564,7 @@ window.addEventListener('error', (e) => {
     const mine = p.fid === myId;
     const media = (p.media && p.media.length) ? mediaGrid(p) : '';
     // Kad bersarang untuk repost/petik gaya X — salinan post asal (rpOf).
-    const rp = p.rpOf ? '<div class="rpbox"><div class="rphead">♻️ Repost daripada <b data-uid="' + p.rpOf.fid + '">' + esc(p.rpOf.from) + '</b><span>· ' + timeAgo(p.rpOf.ts) + '</span></div>' +
+    const rp = p.rpOf ? '<div class="rpbox"><div class="rphead">♻️ Repost from <b data-uid="' + p.rpOf.fid + '">' + esc(p.rpOf.from) + '</b><span>· ' + timeAgo(p.rpOf.ts) + '</span></div>' +
       (p.rpOf.t ? '<div class="ptext">' + renderText(p.rpOf.t) + '</div>' : '') + (p.rpOf.media && p.rpOf.media.length ? mediaGrid({ media: p.rpOf.media }) : '') + '</div>' : '';
     const tagrow = (p.tags && p.tags.length) ? '<div class="tagrow">' + p.tags.map(t => '<button class="tagchip" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '';
     const comments = cc ? '<div class="pcomments">' + p.comments.map(c => cmtHtml(c, p.id)).join('') + '</div>' : '';
@@ -3575,10 +3575,10 @@ window.addEventListener('error', (e) => {
       '<div class="pact">' +
       '<button data-act="like" class="' + (liked ? 'liked' : '') + '">' + (liked ? '❤️' : '🤍') + ' <span>' + lc + '</span></button>' +
       '<button data-act="cmt">💬 <span>' + cc + '</span></button>' +
-      '<button data-act="rp" title="Repost atau petik">♻️</button>' +
-      (mine ? '<button data-act="del" class="del" title="Padam post">🗑</button>' : '') +
+      '<button data-act="rp" title="Repost or quote">♻️</button>' +
+      (mine ? '<button data-act="del" class="del" title="Delete post">🗑</button>' : '') +
       '</div>' + comments +
-      '<div class="cmtform"><input data-cmtin maxlength="200" placeholder="Tulis komen…"><button data-act="cmtgo">Komen</button></div>' +
+      '<div class="cmtform"><input data-cmtin maxlength="200" placeholder="Write a comment…"><button data-act="cmtgo">Comment</button></div>' +
       '</div>';
   }
   function wirePostRoot(root) {
@@ -3608,14 +3608,14 @@ window.addEventListener('error', (e) => {
     }
   }
   function emptyFeedHtml() {
-    return '<div class="pfmeta" style="padding:18px;text-align:center">Belum ada post. Ikuti orang di tab <b>🧭 Terokai</b>, atau siarkan sesuatu sendiri!</div>';
+    return '<div class="pfmeta" style="padding:18px;text-align:center">No posts yet. Follow people on the <b>🧭 Explore</b> tab, or publish something yourself!</div>';
   }
   function renderFeed() {
     renderStories();
-    const bar = feedTag ? '<div class="tagbar">🔖 Menapis tag <b>#' + esc(feedTag) + '</b><button id="tagClr">✕ Bersihkan tap</button></div>' : '';
+    const bar = feedTag ? '<div class="tagbar">🔖 Filtering tag <b>#' + esc(feedTag) + '</b><button id="tagClr">✕ Clear filter</button></div>' : '';
     const list = feedPosts.filter(p => !feedTag || (p.tags || []).includes(feedTag));
     $('postList').innerHTML = bar + (list.length ? list.map(renderPostHtml).join('')
-      : feedTag ? '<div class="pfmeta" style="padding:18px;text-align:center">Tiada post bertag <b>#' + esc(feedTag) + '</b> lagi. Jadilah yang pertama!</div>' : emptyFeedHtml());
+      : feedTag ? '<div class="pfmeta" style="padding:18px;text-align:center">No posts tagged <b>#' + esc(feedTag) + '</b> yet. Be the first!</div>' : emptyFeedHtml());
     const cl = $('tagClr'); if (cl) cl.onclick = () => { feedTag = null; loadFeed(); };
     wirePostRoot($('postList'));
   }
@@ -3631,12 +3631,12 @@ window.addEventListener('error', (e) => {
   function renderStories() {
     const byA = {}, order = [];
     for (const s of feedStories) { if (!byA[s.fid]) { byA[s.fid] = { from: s.from, avatar: s.avatar, mine: s.mine, list: [] }; order.push(s.fid); } byA[s.fid].list.push(s); }
-    let h = '<div class="stoy add" id="stoyAdd" role="button" tabindex="0"><div class="ring"><div>＋</div></div><span>Cerita</span></div>';
+    let h = '<div class="stoy add" id="stoyAdd" role="button" tabindex="0"><div class="ring"><div>＋</div></div><span>Story</span></div>';
     for (const fid of order) {
       const g = byA[fid], first = g.list[0];
       const seen = first.views && first.views.indexOf(myId) >= 0;
       h += '<div class="stoy' + (seen ? ' seen' : '') + '" data-fid="' + fid + '" role="button" tabindex="0"><div class="ring"><div>' +
-        (g.avatar ? '<img src="' + esc(g.avatar) + '" alt="">' : esc(initials(g.from))) + '</div></div><span>' + esc(g.mine ? 'Anda' : g.from) + '</span></div>';
+        (g.avatar ? '<img src="' + esc(g.avatar) + '" alt="">' : esc(initials(g.from))) + '</div></div><span>' + esc(g.mine ? 'You' : g.from) + '</span></div>';
     }
     $('storyStrip').innerHTML = h;
     const openStoy = el => { const g = byA[+el.dataset.fid]; if (g) openStory(g.list); };
@@ -3678,19 +3678,19 @@ window.addEventListener('error', (e) => {
     catch (e) { toast(e.message); }
   }
   async function doDelPost(pid) {
-    if (!confirm('Padam post ini? Tindakan kekal.')) return;
+    if (!confirm('Delete this post? This is permanent.')) return;
     try { await post('/posts/delete', { id: pid }); feedPosts = feedPosts.filter(p => p.id !== pid); delete postCache[pid]; renderFeed(); if ($('profModal').classList.contains('open')) loadProfPosts(profCur); }
     catch (e) { toast(e.message); }
   }
   // Repost gaya X: kosong = repost terus, ada teks = repost + petikan.
   async function doRepost(pid) {
     sndTap();
-    const q = prompt('Repost post ini. Taip petikan jika mahu, atau kosong untuk repost terus.', '');
+    const q = prompt('Repost this post. Type a quote if you want, or leave empty to repost directly.', '');
     if (q === null) return;
     try {
       const r = await post('/posts', { text: q.trim().slice(0, 500), repost: pid });
       if (r.post) { remember([r.post]); mergeFeedPost(r.post); }
-      toast(q.trim() ? 'Petikan direpost.' : 'Direpost.');
+      toast(q.trim() ? 'Quote reposted.' : 'Reposted.');
     } catch (e) { toast(e.message); }
   }
 
@@ -3699,13 +3699,13 @@ window.addEventListener('error', (e) => {
   function paintStory() {
     const s = storyQueue[storyIdx]; if (!s) return closeStory();
     $('svBar').innerHTML = storyQueue.map((x, i) => '<i class="' + (i <= storyIdx ? 'on' : '') + '"></i>').join('');
-    $('svHead').innerHTML = avHtml(s.from, s.avatar, false) + '<div style="flex:1;min-width:0"><b>' + esc(s.mine ? 'Anda' : s.from) + '</b><br><small>' + timeAgo(s.ts) + '</small></div>';
+    $('svHead').innerHTML = avHtml(s.from, s.avatar, false) + '<div style="flex:1;min-width:0"><b>' + esc(s.mine ? 'You' : s.from) + '</b><br><small>' + timeAgo(s.ts) + '</small></div>';
     const stage = $('svStage'); stage.innerHTML = ''; clearTimeout(storyTimer);
     const m = (s.media || [])[0];
     if (m && m.url) {
       if (m.kind === 'video') { const v = document.createElement('video'); v.src = m.url; v.controls = true; v.autoplay = true; v.setAttribute('playsinline', ''); v.onended = nextStory; stage.appendChild(v); }
-      else { const im = document.createElement('img'); im.src = m.url; im.onerror = () => { stage.innerHTML = '<div class="scap">🖼 Gambar sudah dibuang</div>'; }; stage.appendChild(im); storyTimer = setTimeout(nextStory, 5000); }
-    } else if (m) { stage.innerHTML = '<div class="scap">' + (m.kind === 'video' ? '🎬 Video' : '🖼 Gambar') + ' sudah dibuang</div>'; }
+      else { const im = document.createElement('img'); im.src = m.url; im.onerror = () => { stage.innerHTML = '<div class="scap">🖼 Image removed</div>'; }; stage.appendChild(im); storyTimer = setTimeout(nextStory, 5000); }
+    } else if (m) { stage.innerHTML = '<div class="scap">' + (m.kind === 'video' ? '🎬 Video' : '🖼 Image') + ' removed</div>'; }
     $('svCap').textContent = s.t || '';
     $('svDel').hidden = !s.mine;
     post('/stories/view', { id: s.id }).catch(() => {});
@@ -3719,16 +3719,16 @@ window.addEventListener('error', (e) => {
     socialPool[p.id] = Object.assign(socialPool[p.id] || {}, p);
     const foll = !!p.following;
     const bits = ['#' + p.id];
-    if (p.followers) bits.push(p.followers + ' pengikut');
-    if (p.mutual) bits.push(p.mutual + ' kenalan bersama');
-    if (p.followsMe) bits.push('mengikuti anda');
+    if (p.followers) bits.push(p.followers + ' followers');
+    if (p.mutual) bits.push(p.mutual + ' mutual friends');
+    if (p.followsMe) bits.push('follows you');
     return '<div class="ppl" data-fid="' + p.id + '">' + avHtml(p.name, p.avatar, p.online) +
       '<div class="pi"><b>' + esc(p.name) + '</b><small>' + esc(bits.join(' · ')) + (p.bio ? ' · ' + esc(String(p.bio).slice(0, 30)) : '') + '</small></div>' +
-      (p.id !== myId ? '<button class="fol' + (foll ? ' on' : '') + '" data-fol="1">' + (foll ? '✓ Mengikuti' : 'Ikuti') + '</button>' : '') + '</div>';
+      (p.id !== myId ? '<button class="fol' + (foll ? ' on' : '') + '" data-fol="1">' + (foll ? '✓ Following' : 'Follow') + '</button>' : '') + '</div>';
   }
   function renderPeopleRows(list) {
     const root = $('expList');
-    if (!list.length) { root.innerHTML = '<div class="pfmeta">Tiada sesiapa di sini.</div>'; return; }
+    if (!list.length) { root.innerHTML = '<div class="pfmeta">Nobody here.</div>'; return; }
     root.innerHTML = list.map(rowHtml).join('');
     for (const el of root.querySelectorAll('.ppl')) {
       const id = +el.dataset.fid;
@@ -3738,13 +3738,13 @@ window.addEventListener('error', (e) => {
     }
   }
   async function loadDiscover() {
-    $('expLabel').textContent = 'Ikuti yang aktif';
+    $('expLabel').textContent = 'Follow the active ones';
     try { const j = await call('/discover'); renderPeopleRows(j.people || []); }
     catch (e) { $('expList').innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; }
   }
   function openFollowList(q, which) {
     showFeedTab('Explore'); $('feedModal').classList.add('open');
-    $('expLabel').textContent = which === 'followers' ? 'Pengikut' : 'Yang diikuti';
+    $('expLabel').textContent = which === 'followers' ? 'Followers' : 'Following';
     call('/follows?q=' + encodeURIComponent(q) + '&which=' + which)
       .then(j => renderPeopleRows(j.list || []))
       .catch(e => { $('expList').innerHTML = '<div class="pfmeta">' + esc(e.message) + '</div>'; });
@@ -3756,23 +3756,23 @@ window.addEventListener('error', (e) => {
       if (j.profile) socialPool[id] = Object.assign(socialPool[id] || {}, j.profile);
       if ($('profModal').classList.contains('open') && profCur === id && j.profile) patchProf(j.profile);
       if ($('feedModal').classList.contains('open') && feedTab === 'Explore') {
-        if ($('expLabel').textContent === 'Ikuti yang aktif') loadDiscover();
-        else { const m = /Pengikut/.test($('expLabel').textContent) ? 'followers' : 'following'; openFollowList(profCur || me, m); }
+        if ($('expLabel').textContent === 'Follow the active ones') loadDiscover();
+        else { const m = /Followers/.test($('expLabel').textContent) ? 'followers' : 'following'; openFollowList(profCur || me, m); }
       }
-      toast(unfollow ? 'Berhenti mengikuti.' : 'Mulai mengikuti.');
+      toast(unfollow ? 'Unfollowed.' : 'Started following.');
     } catch (e) { toast(e.message); }
   }
 
   // ── Notifikasi ──
   function nHtml(n) {
     const icon = n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : n.type === 'follow' ? '➕' : n.type === 'mention' ? '@' : n.type === 'repost' ? '♻️' : '📕';
-    const verb = n.type === 'like' ? ' ♥ menyukai post anda' : n.type === 'comment' ? ' 💬 mengomen' : n.type === 'follow' ? ' ➕ mulai mengikuti anda' : n.type === 'mention' ? ' @ menyebut anda' : n.type === 'repost' ? ' ♻️ merepost post anda' : ' 📕 menambah cerita';
+    const verb = n.type === 'like' ? ' ♥ liked your post' : n.type === 'comment' ? ' 💬 commented' : n.type === 'follow' ? ' ➕ started following you' : n.type === 'mention' ? ' @ mentioned you' : n.type === 'repost' ? ' ♻️ reposted your post' : ' 📕 added a story';
     const extra = (n.text && (n.type === 'comment' || n.type === 'mention' || n.type === 'repost')) ? '<span class="nx">' + esc(String(n.text).slice(0, 80)) + '</span>' : '';
     return '<div class="ncard' + (n.read ? '' : ' unread') + '" data-nid="' + esc(n.id) + '">' + avHtml(n.actorName, n.actorAvatar, false) +
       '<div class="nn"><b>' + esc(n.actorName) + '</b>' + verb + extra + '</div><span class="nt">' + timeAgo(n.ts) + '</span></div>';
   }
   function renderNotifs() {
-    if (!notifsCache.length) { $('notifList').innerHTML = '<div class="pfmeta">Belum ada notifikasi.</div>'; return; }
+    if (!notifsCache.length) { $('notifList').innerHTML = '<div class="pfmeta">No notifications yet.</div>'; return; }
     $('notifList').innerHTML = notifsCache.map(nHtml).join('');
     for (const el of $('notifList').querySelectorAll('.ncard')) el.onclick = () => {
       const n = notifsCache.find(x => String(x.id) === el.dataset.nid); if (!n) return;
@@ -3800,8 +3800,8 @@ window.addEventListener('error', (e) => {
   function pfStatsHtml(p) {
     return '<div class="pstats">' +
       '<button data-ps="posts"><b>' + (p.postCount || 0) + '</b><span>Post</span></button>' +
-      '<button data-ps="following"><b>' + (p.followingCount || 0) + '</b><span>Mengikuti</span></button>' +
-      '<button data-ps="followers"><b>' + (p.followersCount || 0) + '</b><span>Pengikut</span></button></div>';
+      '<button data-ps="following"><b>' + (p.followingCount || 0) + '</b><span>Following</span></button>' +
+      '<button data-ps="followers"><b>' + (p.followersCount || 0) + '</b><span>Followers</span></button></div>';
   }
   function wirePfStats(p) {
     for (const b of $('pfStats').querySelectorAll('[data-ps]')) b.onclick = () => {
@@ -3814,7 +3814,7 @@ window.addEventListener('error', (e) => {
   function patchProf(p) {
     const self = p.id === myId, fb = $('pfFollow');
     fb.hidden = self;
-    if (!self) { fb.textContent = p.following ? '✓ Mengikuti' : '➕ Ikuti'; fb.onclick = () => doFollow(p.id, !!p.following); }
+    if (!self) { fb.textContent = p.following ? '✓ Following' : '➕ Follow'; fb.onclick = () => doFollow(p.id, !!p.following); }
     $('pfStats').innerHTML = self ? '' : pfStatsHtml(p);
     if (!self) wirePfStats(p);
   }
@@ -3824,7 +3824,7 @@ window.addEventListener('error', (e) => {
   }
   function renderProfPosts(list) {
     remember(list);
-    $('pfPosts').innerHTML = list.length ? '<div class="pflabel">Post terkini</div>' + list.map(renderPostHtml).join('') : '';
+    $('pfPosts').innerHTML = list.length ? '<div class="pflabel">Latest posts</div>' + list.map(renderPostHtml).join('') : '';
     wirePostRoot($('pfPosts'));
   }
 
@@ -3851,8 +3851,8 @@ window.addEventListener('error', (e) => {
   $('storyFile').onchange = async e => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
-    if (!kindOf(f)) return toast('Pilih gambar atau video.');
-    try { const j = await uploadSocialMedia('post', f); await post('/stories', { media: [{ id: j.media.id }] }); toast('Cerita ditambah.'); loadFeed(); }
+    if (!kindOf(f)) return toast('Pick an image or video.');
+    try { const j = await uploadSocialMedia('post', f); await post('/stories', { media: [{ id: j.media.id }] }); toast('Story added.'); loadFeed(); }
     catch (err) { toast(err.message); }
   };
   $('svPrevZone').onclick = prevStory;
@@ -3860,7 +3860,7 @@ window.addEventListener('error', (e) => {
   $('svClose').onclick = closeStory;
   $('svDel').onclick = async () => {
     const s = storyQueue[storyIdx]; if (!s) return;
-    if (!confirm('Padam cerita ini?')) return;
+    if (!confirm('Delete this story?')) return;
     try { await post('/stories/delete', { id: s.id }); feedStories = feedStories.filter(x => x.id !== s.id); closeStory(); renderStories(); }
     catch (e) { toast(e.message); }
   };
@@ -3868,14 +3868,14 @@ window.addEventListener('error', (e) => {
   $('stAvaFile').onchange = async e => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
-    if (!/^image\//i.test(f.type)) return toast('Avatar mesti gambar.');
+    if (!/^image\//i.test(f.type)) return toast('Avatar must be an image.');
     $('stAvaBtn').disabled = true;
-    try { const j = await uploadSocialMedia('avatar', f); myAvatar = j.url || null; paintMe(); updateStMe(); loadPeople(); loadFeedSoft(); toast('Gambar profil dikemas kini.'); }
+    try { const j = await uploadSocialMedia('avatar', f); myAvatar = j.url || null; paintMe(); updateStMe(); loadPeople(); loadFeedSoft(); toast('Profile picture updated.'); }
     catch (err) { toast(err.message); }
     $('stAvaBtn').disabled = false;
   };
   $('stAvaDel').onclick = async () => {
-    try { await post('/avatar/remove', {}); myAvatar = null; paintMe(); updateStMe(); loadPeople(); loadFeedSoft(); toast('Gambar profil dibuang.'); }
+    try { await post('/avatar/remove', {}); myAvatar = null; paintMe(); updateStMe(); loadPeople(); loadFeedSoft(); toast('Profile picture removed.'); }
     catch (e) { toast(e.message); }
   };
 
@@ -3885,23 +3885,23 @@ window.addEventListener('error', (e) => {
   const _sg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('en', { granularity: 'grapheme' }) : null;
   const segEmoji = s => _sg ? [..._sg.segment(s)].map(x => x.segment) : Array.from(s);
   const EMOJIS = {
-    '😀 Wajah': segEmoji('😀😃😄😁😆😅😂🤣🥲😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕'),
-    '👋 Isyarat': segEmoji('👋🤚✋🖐️✌️🤟🤘👌🤌👍👎✊👊🤛🤜👏🙌👐🤲🙏✍️💅🤳💪🦵🦶👂👃🧠🫀🫁👁️🗣️👤👥🫂👶🧒👦👧🧑👩👨👩‍🦱👨‍🦱👩‍🦰👨‍🦰👱‍♀️👱👩‍🦳👨‍🦳🧔👲👳‍♀️👳🧕👮‍♀️👮👷‍♀️👷💂‍♀️💂🕵️‍♀️🕵️👩‍⚕️👨‍⚕️👩‍🌾👨‍🌾'),
-    '❤️ Hati': segEmoji('❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉️☸️✡️🔯🕎☯️☦️🛐⛎♈♉♊♋♌♍♎♏♐♑♒♓🆔⚛️🉑☢️☣️📴📳🈶🈚🈸🈺🈷️✴️🆚💮🉐'),
-    '🐶 Haiwan': segEmoji('🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐒🐔🐧🐦🐤🐣🐥🦆🦅🦉🦇🐺🐗🐴🦄🐝🪱🐛🦋🐌🐞🐜🪰🪲🪳🕷️🕸️🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🦧🦣🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈‍⬛🐈🐕‍🦺'),
-    '🍕 Makanan': segEmoji('🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶️🫑🌽🥕🫒🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🍔🍟🍕🌭🥪🌮🌯🫔🥙🧆🍖🍗🦴🥩🍘🍙🍚🍛🍜🍝🍠🍢🍣🍤🍥🥮🍡🥟🥠🥡🦪🍦🍧🍨🍩🍪🎂🍰🧁🥧🍫🍬🍭🍮🍯🍼🥛☕🫖🍵🍶🍾🍷🍸🍹🍺🍻🥂🥃'),
-    '⚽ Aktiviti': segEmoji('⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🪀🪁🏓🏸🏒🏑🥍🏏🥅⛳🪩🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸️🥌🎿⛷️🏂🪂🏋️‍♀️🏋️🤼‍♀️🤼🤸‍♀️🤸⛹️‍♀️⛹️🤺🤾‍♀️🤾🏌️‍♀️🏌️🏇🧘‍♀️🧘🏄‍♀️🏄🏊‍♀️🏊🚣‍♀️🚣🧗‍♀️🧗🚵‍♀️🚵🚴‍♀️🚴🏆🥇🥈🥉🏅🎖️🏵️🎗️🎫🎟️🎪🤹‍♀️🤹🎭🩰🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🪗🎸🪕🎻'),
-    '🚗 Objek': segEmoji('⌚📱💻⌨️🖥️🖨️🖱️🖲️💽💾💿📀📷📸📹🎥📽️🎞️📞☎️📟📠📺📻🧭⏰🕰️⌛⏳📡🔋🪫🔌💡🔦🕯️🪔🧯🛢️💸💵💴💶💷🪙💰💳💎⚖️🪜🧰🪛🔧🔨⚒️🛠️⛏️🪚🔩⚙️🪤🧱⛓️🧲🔫💣🧨🪓🔪🗡️⚔️🛡️🚬⚰️🪦⚱️🏺🔮📿🧿💈⚗️🔭🔬🕳️🩹🩺💊💉🩸🧬🦠🧫🧪🌡️🧹🪠🧺🧻📦'),
-    '🌍 Alam': segEmoji('🌍🌎🌏🪐💫⭐🌟✨⚡☄️💥🔥🌪️🌈☀️🌤️⛅🌥️☁️🌦️🌧️⛈️🌩️🌨️❄️☃️⛄🌬️💨🌫️🌊💧💦☔☂️🧊🌸🌹🥀🌺🌻🌼🌷🌱🪴🌲🌳🌴🌵🌾☘️🍀🍁🍂🍃🪹🍄🌰🦀🐚🪸🌞🌝🌛🌜🌚🌕🌖🌗🌘🌑🌒🌓🌔🌙🌎🍋‍🟩🍅'),
+    '😀 Faces': segEmoji('😀😃😄😁😆😅😂🤣🥲😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕'),
+    '👋 Gestures': segEmoji('👋🤚✋🖐️✌️🤟🤘👌🤌👍👎✊👊🤛🤜👏🙌👐🤲🙏✍️💅🤳💪🦵🦶👂👃🧠🫀🫁👁️🗣️👤👥🫂👶🧒👦👧🧑👩👨👩‍🦱👨‍🦱👩‍🦰👨‍🦰👱‍♀️👱👩‍🦳👨‍🦳🧔👲👳‍♀️👳🧕👮‍♀️👮👷‍♀️👷💂‍♀️💂🕵️‍♀️🕵️👩‍⚕️👨‍⚕️👩‍🌾👨‍🌾'),
+    '❤️ Hearts': segEmoji('❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉️☸️✡️🔯🕎☯️☦️🛐⛎♈♉♊♋♌♍♎♏♐♑♒♓🆔⚛️🉑☢️☣️📴📳🈶🈚🈸🈺🈷️✴️🆚💮🉐'),
+    '🐶 Animals': segEmoji('🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐒🐔🐧🐦🐤🐣🐥🦆🦅🦉🦇🐺🐗🐴🦄🐝🪱🐛🦋🐌🐞🐜🪰🪲🪳🕷️🕸️🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🦧🦣🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈‍⬛🐈🐕‍🦺'),
+    '🍕 Food': segEmoji('🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶️🫑🌽🥕🫒🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🍔🍟🍕🌭🥪🌮🌯🫔🥙🧆🍖🍗🦴🥩🍘🍙🍚🍛🍜🍝🍠🍢🍣🍤🍥🥮🍡🥟🥠🥡🦪🍦🍧🍨🍩🍪🎂🍰🧁🥧🍫🍬🍭🍮🍯🍼🥛☕🫖🍵🍶🍾🍷🍸🍹🍺🍻🥂🥃'),
+    '⚽ Activity': segEmoji('⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🪀🪁🏓🏸🏒🏑🥍🏏🥅⛳🪩🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸️🥌🎿⛷️🏂🪂🏋️‍♀️🏋️🤼‍♀️🤼🤸‍♀️🤸⛹️‍♀️⛹️🤺🤾‍♀️🤾🏌️‍♀️🏌️🏇🧘‍♀️🧘🏄‍♀️🏄🏊‍♀️🏊🚣‍♀️🚣🧗‍♀️🧗🚵‍♀️🚵🚴‍♀️🚴🏆🥇🥈🥉🏅🎖️🏵️🎗️🎫🎟️🎪🤹‍♀️🤹🎭🩰🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🪗🎸🪕🎻'),
+    '🚗 Objects': segEmoji('⌚📱💻⌨️🖥️🖨️🖱️🖲️💽💾💿📀📷📸📹🎥📽️🎞️📞☎️📟📠📺📻🧭⏰🕰️⌛⏳📡🔋🪫🔌💡🔦🕯️🪔🧯🛢️💸💵💴💶💷🪙💰💳💎⚖️🪜🧰🪛🔧🔨⚒️🛠️⛏️🪚🔩⚙️🪤🧱⛓️🧲🔫💣🧨🪓🔪🗡️⚔️🛡️🚬⚰️🪦⚱️🏺🔮📿🧿💈⚗️🔭🔬🕳️🩹🩺💊💉🩸🧬🦠🧫🧪🌡️🧹🪠🧺🧻📦'),
+    '🌍 Nature': segEmoji('🌍🌎🌏🪐💫⭐🌟✨⚡☄️💥🔥🌪️🌈☀️🌤️⛅🌥️☁️🌦️🌧️⛈️🌩️🌨️❄️☃️⛄🌬️💨🌫️🌊💧💦☔☂️🧊🌸🌹🥀🌺🌻🌼🌷🌱🪴🌲🌳🌴🌵🌾☘️🍀🍁🍂🍃🪹🍄🌰🦀🐚🪸🌞🌝🌛🌜🌚🌕🌖🌗🌘🌑🌒🌓🌔🌙🌎🍋‍🟩🍅'),
   };
   let eCat = Object.keys(EMOJIS)[0];
   function renderEmoji() {
-    const cats = ['🕑 Baru', ...Object.keys(EMOJIS)];
+    const cats = ['🕑 Recent', ...Object.keys(EMOJIS)];
     $('eCatTabs').innerHTML = cats.map(k =>
       '<button data-c="' + k + '" class="' + (k === eCat ? 'on' : '') + '">' + k.split(' ')[0] + ' ' + k.split(' ').slice(1).join(' ') + '</button>').join('');
-    const items = eCat === '🕑 Baru' ? (pref.recent || []) : (EMOJIS[eCat] || []);
+    const items = eCat === '🕑 Recent' ? (pref.recent || []) : (EMOJIS[eCat] || []);
     $('eGrid').innerHTML = items.length ? items.map(e => '<button>' + e + '</button>').join('')
-      : eCat === '🕑 Baru' ? '<p style="color:var(--muted);font-size:.82rem;padding:8px;grid-column:1/-1">Tiada emoji digunakan lagi. Tekan emoji lain untuk mula mengumpul!</p>'
+      : eCat === '🕑 Recent' ? '<p style="color:var(--muted);font-size:.82rem;padding:8px;grid-column:1/-1">No emojis used yet. Tap other emojis to start collecting!</p>'
       : '';
     for (const b of $('eCatTabs').querySelectorAll('button')) b.onclick = () => { eCat = b.dataset.c; renderEmoji(); };
     for (const b of $('eGrid').querySelectorAll('button')) b.onclick = () => insertEmoji(b.textContent);
@@ -3913,7 +3913,7 @@ window.addEventListener('error', (e) => {
     grow();
     pref.recent = [em, ...(pref.recent || []).filter(x => x !== em)].slice(0, 24);
     savePref();
-    if (eCat === '🕑 Baru') renderEmoji();  // kemas kini senarai terkini serta-merta
+    if (eCat === '🕑 Recent') renderEmoji();  // kemas kini senarai terkini serta-merta
   }
   renderEmoji();
   $('emojiBtn').onclick = () => { const on = $('emojiPop').classList.toggle('on'); $('emojiBtn').classList.toggle('on', on); if (on) renderEmoji(); };
@@ -3952,19 +3952,19 @@ window.addEventListener('error', (e) => {
   }
   async function startRec() {
     if (rec) return;
-    if (!navigator.mediaDevices || !window.MediaRecorder) { toast('Pelayar ini tidak menyokong rakaman suara.'); return; }
-    if (pending.length >= MAX_MEDIA) { toast('Maksimum ' + MAX_MEDIA + ' fail satu mesej.'); return; }
+    if (!navigator.mediaDevices || !window.MediaRecorder) { toast('This browser does not support voice recording.'); return; }
+    if (pending.length >= MAX_MEDIA) { toast('Maximum ' + MAX_MEDIA + ' files per message.'); return; }
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch { toast('Kebenaran mikrofon ditolak.'); return; }
+    catch { toast('Microphone permission denied.'); return; }
     recBlob = null; recChunks = [];
     let mr;
     try { const mt = pickMime(); mr = mt ? new MediaRecorder(stream, { mimeType: mt }) : new MediaRecorder(stream); }
-    catch { stream.getTracks().forEach(t2 => t2.stop()); toast('Rakaman tidak disokong pelayar ini.'); return; }
+    catch { stream.getTracks().forEach(t2 => t2.stop()); toast('Recording is not supported by this browser.'); return; }
     rec = mr;
     mr.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
     mr.onstop = () => { stream.getTracks().forEach(t2 => t2.stop()); recBlob = new Blob(recChunks, { type: (mr.mimeType || 'audio/webm').split(';')[0] }); };
-    try { mr.start(); } catch { stream.getTracks().forEach(t2 => t2.stop()); rec = null; toast('Rakaman gagal dimulakan.'); return; }
+    try { mr.start(); } catch { stream.getTracks().forEach(t2 => t2.stop()); rec = null; toast('Failed to start recording.'); return; }
     recStart = Date.now(); $('recTime').textContent = '0:00'; $('recSend').disabled = true;
     $('recBar').classList.add('on'); $('micBtn').classList.add('on');
     if (recTimer) clearInterval(recTimer);
@@ -3982,8 +3982,8 @@ window.addEventListener('error', (e) => {
     try { rec.stop(); } catch { /* sudah berhenti */ }
     await new Promise(r => setTimeout(r, 120));   // tunggu onstop kumpulkan blob
     const blob = recBlob; rec = null; resetRecUI();
-    if (!blob || !blob.size) { toast('Rakaman kosong.'); return; }
-    if (blob.size > AUDIO_CAP) { toast('Rakaman terlalu besar (had 8MB).'); return; }
+    if (!blob || !blob.size) { toast('Empty recording.'); return; }
+    if (blob.size > AUDIO_CAP) { toast('Recording too large (8MB limit).'); return; }
     const p = { key: seqKey++, kind: 'audio', blob, url: URL.createObjectURL(blob), status: 'wait', pct: 0 };
     pending.push(p); renderTray();
     p.dur = elapsed || (await probeAudio(p.url)) || 0;
@@ -4002,7 +4002,7 @@ window.addEventListener('error', (e) => {
     if (curAud) { curAud.pause(); if (curAudBtn) curAudBtn.textContent = '▶'; }
     const a = new Audio(btn.dataset.aud); curAud = a; curAudBtn = btn; btn.textContent = '⏸';
     a.onended = () => { if (curAudBtn === btn) btn.textContent = '▶'; curAud = null; curAudBtn = null; };
-    a.onerror = () => { btn.textContent = '▶'; toast('Audio tidak dapat dimuat.'); };
+    a.onerror = () => { btn.textContent = '▶'; toast('Audio could not be loaded.'); };
     a.play().catch(() => { btn.textContent = '▶'; });
   }
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-aud]'); if (b) toggleAud(b); });

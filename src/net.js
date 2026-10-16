@@ -86,10 +86,10 @@ function snapshot() {
     transitions: state.transitions,
     checks: state.checks,
     note: state.status === 'limited'
-      ? 'DNS berfungsi tetapi tiada laluan HTTP keluar — crawler luar tidak dapat berfungsi.'
+      ? 'DNS works but there is no outbound HTTP path — external crawling cannot function.'
       : state.status === 'offline'
-        ? 'Tiada internet. Carian dan otak kekal berfungsi untuk dokumen yang sudah diindeks.'
-        : 'Internet tersedia. Carian luar dan crawl tersedia.'
+        ? 'No internet. Search and the brain keep working for documents already indexed.'
+        : 'Internet available. External search and crawling are available.'
   };
 }
 

@@ -1,26 +1,26 @@
 SLUG: buang-background-imej-online
-TITLE: Buang Background Imej Online Dalam Satu Klik (Percuma, Tanpa Photoshop)
-EXCERPT: Perlu latar putih untuk produk, atau transparent untuk reka bentuk? Penghapus latar Tukuk buat dalam pelayar — muat naik, tunggu sekejap, muat turun PNG.
-TAGS: imej, background, png, design, percuma
+TITLE: Remove an Image Background Online in One Click (Free, No Photoshop)
+EXCERPT: Need a white backdrop for products, or transparency for design? The Tukuk background remover does it in the browser — upload, wait a moment, download a PNG.
+TAGS: image, background, png, design, free
 
-## Masalah paling menyusahkan: potong latar
+## The most annoying problem: cutting out the background
 
-Dulu, buang background gambar bermakna buka Photoshop, trace manual dengan pen tool, atau daftar perisian yang mahal. Untuk orang yang cuma perlu satu gambar produk dengan latar putih, itu overkill. **Penghapus Latar Tukuk** (`tukuk.org/bg-remover`) ringkaskan semuanya: muat naik imej, sistem kesan tepi objek, dan anda dapat fail **PNG dengan latar lutsinar** (transparent).
+Used to be, removing an image background meant opening Photoshop, tracing manually with the pen tool, or signing up for expensive software. For someone who just needs one product photo on a white background, that is overkill. The **Tukuk Background Remover** (`tukuk.org/bg-remover`) boils it all down: upload an image, the system detects the object's edges, and you get a **PNG with a transparent background**.
 
-## Cara kerja
+## How it works
 
-1. Buka halaman, seret gambar anda (portret, produk, sticker).
-2. Tunggu sebentar — alat mengenal pasti subjek dan membuang latar.
-3. Muat turun hasilnya sebagai PNG transparent, atau tukar latar kepada warna baharu (putih untuk kedai dalam talian, warna jenama untuk poster).
+1. Open the page, drag in your picture (portrait, product, sticker).
+2. Wait a moment — the tool identifies the subject and removes the background.
+3. Download the result as a transparent PNG, or swap the background to a new color (white for online shops, brand color for posters).
 
-Semasa berjalan di pelayar, gambar anda tak perlu dihantar ke pelayan jauh untuk langkah asas — bagus untuk privasi dan juga untuk kelajuan pada talian biasa.
+Because it runs in the browser, your picture does not need to be sent to a remote server for the basic steps — good for privacy, and also for speed on an ordinary connection.
 
-## Bila guna
+## When to use it
 
-- **Penjual online**: gambar produk latar putih ikut keperluan marketplace.
-- **Pereka & guru**: potong subjek untuk slide, poster, atau kolaj (ada juga **Kolaj** (`tukuk.org/collage`) untuk susun banyak gambar serentak).
-- **Konten media sosial**: avatar dan sticker dengan tepi bersih.
+- **Online sellers**: white-background product shots that meet marketplace requirements.
+- **Designers & teachers**: cut out subjects for slides, posters, or collages (there is also **Collage** (`tukuk.org/collage`) for arranging many photos at once).
+- **Social media content**: avatars and stickers with clean edges.
 
-## Satu tab, banyak alat gambar
+## One tab, many image tools
 
-Penghapus latar ini satu daripada sekumpulan alat visual Tukuk — ada editor imej penuh, penukar format, dan studio reka bentuk. Semuanya **percuma, tanpa daftar, dan boleh dipasang** sebagai PWA di telefon anda. Jadi kalau soalan anda "macam mana buang background tanpa software?", jawapannya kini: cukup satu pautan.
+This background remover is one of a set of Tukuk visual tools — there is a full image editor, a format converter, and a design studio. All of them are **free, no sign-up, and installable** as a PWA on your phone. So if your question is "how do I remove a background without software?", the answer now is: one link is enough.

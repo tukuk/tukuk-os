@@ -129,7 +129,7 @@ function flush() {
     fs.renameSync(temporary, config.store.path);
     dirty = false;
   } catch (error) {
-    console.error('[store] gagal tulis:', error.message);
+    console.error('[store] write failed:', error.message);
   }
 }
 

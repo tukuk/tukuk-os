@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Penukar Unit — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Tukar unit panjang, jisim, suhu, isipadu, kelajuan, masa, data dan luas terus dalam pelayar — tanpa internet.">
+<title>Unit Converter — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Convert length, mass, temperature, volume, speed, time, data and area units right in the browser — no internet needed.">
 <link rel="canonical" href="https://tukuk.org/apps/convert">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/convert.svg">
@@ -32,33 +32,33 @@
   <link rel="manifest" href="/manifest-convert.json">
 </head>
 <body>
-<header><a class="back" href="/apps">← Apps</a><h1>📐 Penukar Unit</h1></header>
+<header><a class="back" href="/apps">← Apps</a><h1>📐 Unit Converter</h1></header>
 <div class="wrap">
   <div class="cats" id="cats"></div>
   <div class="panel">
     <div class="urow"><input type="number" id="val" value="1" step="any"><select id="from"></select></div>
-    <button class="swap" id="swap" title="Tukar arah">⇅</button>
+    <button class="swap" id="swap" title="Swap direction">⇅</button>
     <div class="urow"><input type="number" id="res" readonly style="background:var(--panel)"><select id="to"></select></div>
     <p class="out" id="line"></p>
-    <p class="hint">Kekosongan → 0. Suhu tiada faktor — formula khas C/F/K digunakan.</p>
+    <p class="hint">Empty → 0. Temperature has no factor — a special C/F/K formula is used.</p>
   </div>
 </div>
 <script>
 (() => {
   const CATS = {
-    'Panjang': { base:'m', u:{ 'mm':0.001,'cm':0.01,'m':1,'km':1000,'in':0.0254,'ft':0.3048,'yd':0.9144,'mi':1609.344 } },
-    'Jisim': { base:'kg', u:{ 'mg':0.000001,'g':0.001,'kg':1,'tan':1000,'oz':0.0283485,'lb':0.453592 } },
-    'Suhu': { special:true, u:{ '°C':1,'°F':1,'K':1 } },
-    'Isipadu': { base:'L', u:{ 'mL':0.001,'L':1,'m³':1000,'gal(AS)':3.78541,'qt':0.946353,'cup':0.24 } },
-    'Kelajuan': { base:'m/s', u:{ 'm/s':1,'km/j':0.277778,'mph':0.44704,'kn':0.514444 } },
-    'Masa': { base:'s', u:{ 'ms':0.001,'s':1,'min':60,'j':3600,'hari':86400,'minggu':604800,'tahun':31557600 } },
+    'Length': { base:'m', u:{ 'mm':0.001,'cm':0.01,'m':1,'km':1000,'in':0.0254,'ft':0.3048,'yd':0.9144,'mi':1609.344 } },
+    'Mass': { base:'kg', u:{ 'mg':0.000001,'g':0.001,'kg':1,'t':1000,'oz':0.0283485,'lb':0.453592 } },
+    'Temperature': { special:true, u:{ '°C':1,'°F':1,'K':1 } },
+    'Volume': { base:'L', u:{ 'mL':0.001,'L':1,'m³':1000,'gal(US)':3.78541,'qt':0.946353,'cup':0.24 } },
+    'Speed': { base:'m/s', u:{ 'm/s':1,'km/h':0.277778,'mph':0.44704,'kn':0.514444 } },
+    'Time': { base:'s', u:{ 'ms':0.001,'s':1,'min':60,'h':3600,'day':86400,'week':604800,'year':31557600 } },
     'Data': { base:'B', u:{ 'bit':0.125,'B':1,'KB':1024,'MB':1048576,'GB':1073741824,'TB':1099511627776 } },
-    'Luas': { base:'m²', u:{ 'm²':1,'km²':1000000,'ha':10000,'ekar':4046.86,'ft²':0.092903 } }
+    'Area': { base:'m²', u:{ 'm²':1,'km²':1000000,'ha':10000,'acre':4046.86,'ft²':0.092903 } }
   };
   const toC=(v,u)=>u==='°C'?v:u==='°F'?(v-32)*5/9:v-273.15;
   const fromC=(c,u)=>u==='°C'?c:u==='°F'?c*9/5+32:c+273.15;
   const $=(s)=>document.querySelector(s);
-  let cur='Panjang';
+  let cur='Length';
   const fmt=(x)=>{ if(!isFinite(x))return '—'; const a=Math.abs(x); if(a!==0&&(a<1e-6||a>=1e12))return x.toExponential(6); return String(Math.round(x*1e8)/1e8); };
   function fillCats(){ $('#cats').innerHTML=Object.keys(CATS).map((k)=>`<button data-c="${k}" class="${k===cur?'on':''}">${k}</button>`).join(''); }
   function fillUnits(){ const u=Object.keys(CATS[cur].u); $('#from').innerHTML=$('#to').innerHTML=u.map((x)=>`<option>${x}</option>`).join(''); $('#to').selectedIndex=Math.min(1,u.length-1); }

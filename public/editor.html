@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Studio — Editor Gambar</title>
-<meta name="description" content="Editor gambar dalam pelayar: pencahayaan, auto-perbaik pintar, lengkung (curves), histogram, terkan air, potongan, teks, lukisan berus, batch proses, exports PNG/JPG. Sebahagian daripada Tukuk-OS.">
+<title>Tukuk Studio — Image Editor</title>
+<meta name="description" content="In-browser image editor: lighting, smart auto-fix, curves, histogram, watermark, crop, text, brush drawing, batch processing, PNG/JPG exports. Part of Tukuk-OS.">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <script src="/theme.js"></script>
@@ -91,203 +91,203 @@
 </head>
 <body>
 <header>
-  <span class="logo">✂ Tukuk Studio <small>editor gambar</small></span>
-  <button id="openBtn">📂 Buka fail</button>
+  <span class="logo">✂ Tukuk Studio <small>image editor</small></span>
+  <button id="openBtn">📂 Open file</button>
   <input type="file" id="fileInput" accept="image/*" hidden>
-  <input type="url" id="urlInput" placeholder="Tampal URL imej…">
-  <button id="urlBtn">Muat URL</button>
+  <input type="url" id="urlInput" placeholder="Paste image URL…">
+  <button id="urlBtn">Load URL</button>
   <span class="spacer"></span>
-  <button id="shortcutsBtn" title="Pintasan papan kekunci (?)">⌨️ Pintasan</button>
-  <button id="bgRemoveBtn" title="Buang latar belakang gambar ini di Tukuk Background Remover">🪄 Buang Latar</button>
+  <button id="shortcutsBtn" title="Keyboard shortcuts (?)">⌨️ Shortcuts</button>
+  <button id="bgRemoveBtn" title="Remove this image's background in Tukuk Background Remover">🪄 BG Remover</button>
   <button id="undoBtn" title="Ctrl+Z">⟲ Undo</button>
   <button id="redoBtn" title="Ctrl+Y">⟳ Redo</button>
   <button id="resetBtn">↺ Reset</button>
-  <button id="viewOriginal" title="Tahan untuk banding dengan gambar asal">👁 Asal</button>
-  <button id="projSave" title="Muat turun fail projek (.json) — boleh dibuka semula nanti">💾 Projek</button>
-  <button id="projOpen" title="Buka fail projek yang pernah disimpan">📂 Buka Projek</button>
+  <button id="viewOriginal" title="Hold to compare with the original">👁 Original</button>
+  <button id="projSave" title="Download a project file (.json) — can be reopened later">💾 Project</button>
+  <button id="projOpen" title="Open a previously saved project file">📂 Open Project</button>
   <input type="file" id="projInput" accept=".json,application/json" hidden>
   <input type="file" id="batchInput" accept="image/*" multiple hidden>
-  <button id="batchBtn" title="Amaikan penapis sekarang ke banyak gambar sekaligus, muat turun semua">⚡ Batch</button>
+  <button id="batchBtn" title="Apply the current filters to many images at once and download them all">⚡ Batch</button>
   <button id="exportPng" class="primary">⬇ PNG</button>
   <button id="exportJpg" class="primary">⬇ JPG</button>
-  <a class="btn" href="/design" title="Reka bentuk gaya Canva">🎨 Design</a>
-  <a class="btn" href="/3d" title="Model & render 3D">🧊 3D</a>
-  <a class="btn" href="/editor-video" title="Editor video — trim, penapis, teks, eksport WebM">🎬 Video</a>
+  <a class="btn" href="/design" title="Canva-style design">🎨 Design</a>
+  <a class="btn" href="/3d" title="3D modeling &amp; render">🧊 3D</a>
+  <a class="btn" href="/editor-video" title="Video editor — trim, filters, text, WebM export">🎬 Video</a>
   <a class="btn" href="/studio" title="Tukuk Studio Suite">◂ Suite</a>
-  <a class="btn" href="/" title="Back to search">⌕ Carian</a>
+  <a class="btn" href="/" title="Back to search">⌕ Search</a>
 </header>
 
 <main>
   <aside>
     <div class="tabs">
-      <button class="tab-btn on" data-tab="asas"  title="Suai aras &amp; alat pintar"><span class="ti">🎚</span>Asas</button>
-      <button class="tab-btn"    data-tab="geo"   title="Geometri &amp; crop"><span class="ti">✂</span>Geo</button>
-      <button class="tab-btn"    data-tab="kanvas" title="Teks, lukisan, watermark"><span class="ti">🖌</span>Kanvas</button>
-      <button class="tab-btn"    data-tab="fail"  title="Bingkai, eksport, lapisan"><span class="ti">📂</span>Fail</button>
-      <button class="tab-btn"    data-tab="gaya"  title="Pra-set &amp; kartun"><span class="ti">🎨</span>Gaya</button>
-      <button class="tab-btn"    data-tab="pro"   title="Alat canggih &amp; Kesan Pro"><span class="ti">⚡</span>Pro</button>
+      <button class="tab-btn on" data-tab="asas"  title="Adjustments &amp; smart tools"><span class="ti">🎚</span>Basics</button>
+      <button class="tab-btn"    data-tab="geo"   title="Geometry &amp; crop"><span class="ti">✂</span>Geo</button>
+      <button class="tab-btn"    data-tab="kanvas" title="Text, drawing, watermark"><span class="ti">🖌</span>Canvas</button>
+      <button class="tab-btn"    data-tab="fail"  title="Border, export, layers"><span class="ti">📂</span>File</button>
+      <button class="tab-btn"    data-tab="gaya"  title="Presets &amp; cartoon"><span class="ti">🎨</span>Style</button>
+      <button class="tab-btn"    data-tab="pro"   title="Advanced tools &amp; Pro effects"><span class="ti">⚡</span>Pro</button>
     </div>
     <div class="tab-panel on" data-tab="asas">
-    <h3>Suai aras</h3>
-    <div class="slider"><label>Kecerahan</label><input type="range" id="f-bright" min="20" max="200" value="100"><output>100</output></div>
-    <div class="slider"><label>Kontras</label><input type="range" id="f-contrast" min="20" max="200" value="100"><output>100</output></div>
-    <div class="slider"><label>Saturasi</label><input type="range" id="f-saturate" min="0" max="250" value="100"><output>100</output></div>
+    <h3>Adjustments</h3>
+    <div class="slider"><label>Brightness</label><input type="range" id="f-bright" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Contrast</label><input type="range" id="f-contrast" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Saturation</label><input type="range" id="f-saturate" min="0" max="250" value="100"><output>100</output></div>
     <div class="slider"><label>Sepia</label><input type="range" id="f-sepia" min="0" max="100" value="0"><output>0</output></div>
     <div class="slider"><label>Grayscale</label><input type="range" id="f-gray" min="0" max="100" value="0"><output>0</output></div>
     <div class="slider"><label>Hue</label><input type="range" id="f-hue" min="0" max="360" value="0"><output>0</output></div>
     <div class="slider"><label>Blur</label><input type="range" id="f-blur" min="0" max="12" value="0"><output>0</output></div>
     <div class="slider"><label>Invert</label><input type="range" id="f-invert" min="0" max="100" value="0"><output>0</output></div>
-    <div class="slider"><label>Suhu</label><input type="range" id="f-temp" min="-100" max="100" value="0"><output>0</output></div>
+    <div class="slider"><label>Temperature</label><input type="range" id="f-temp" min="-100" max="100" value="0"><output>0</output></div>
     <div class="slider"><label>Vignette</label><input type="range" id="f-vig" min="0" max="100" value="0"><output>0</output></div>
     <div class="slider"><label>Grain</label><input type="range" id="f-grain" min="0" max="100" value="0"><output>0</output></div>
-    <div class="row"><button id="presetNone">Original</button><button id="presetMono">Hitam putih</button><button id="presetWarm">Hangat</button><button id="presetCool">Sejuk</button></div>
+    <div class="row"><button id="presetNone">Original</button><button id="presetMono">Black &amp; white</button><button id="presetWarm">Warm</button><button id="presetCool">Cool</button></div>
 
-    <h3>Pintar</h3>
-    <div class="row"><button id="btnAuto" title="Imbangan putih + tahap hitam/putih auto">🪄 Auto-Perbaik</button><button id="btnHist" title="Histogram masa nyata (RGB + tono)">📊 Histogram</button></div>
+    <h3>Smart</h3>
+    <div class="row"><button id="btnAuto" title="Auto white balance + black/white levels">🪄 Auto-fix</button><button id="btnHist" title="Real-time histogram (RGB + tones)">📊 Histogram</button></div>
     <canvas id="histCv" width="226" height="64" hidden style="width:100%;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--panel2)"></canvas>
-    <div class="row"><button id="btnCurve" style="width:100%" title="Editor lengkung tono (curves)">🎚 Lengkung (Curves)</button></div>
+    <div class="row"><button id="btnCurve" style="width:100%" title="Tone curves editor">🎚 Curves</button></div>
     <div id="curvePanel" hidden style="margin-bottom:8px;">
       <canvas id="curveCv" width="200" height="200" style="width:100%;touch-action:none;border:1px solid var(--line);border-radius:8px;background:var(--panel2);cursor:crosshair"></canvas>
-      <div class="row" style="margin-top:6px;"><button data-curve="s">Kontras</button><button data-curve="fade">Pudar</button><button data-curve="light">Cerah</button><button data-curve="dark">Gelap</button><button id="curveReset" title="Set titik ke tengah">↺</button></div>
-      <div class="row"><button id="curveApply" class="primary">✓ Guna lengkung</button></div>
+      <div class="row" style="margin-top:6px;"><button data-curve="s">Contrast</button><button data-curve="fade">Fade</button><button data-curve="light">Bright</button><button data-curve="dark">Dark</button><button id="curveReset" title="Set titik ke tengah">↺</button></div>
+      <div class="row"><button id="curveApply" class="primary">✓ Apply curve</button></div>
     </div>
     </div>
 
     <div class="tab-panel" data-tab="geo">
-    <h3>Geometri</h3>
+    <h3>Geometry</h3>
     <div class="row"><button id="rotL">⟲ 90°</button><button id="rotR">90° ⟳</button></div>
     <div class="row"><button id="flipH">↔ Flip</button><button id="flipV">↕ Flip</button></div>
-    <div class="slider"><label>Luruskan°</label><input type="range" id="straight" min="-45" max="45" value="0"><output>0</output></div>
-    <div class="row"><button id="straightApply">✓ Guna pusingan</button></div>
-    <div class="row"><button id="cropToggle">✂ Crop</button><button id="cropApply" hidden>✓ Guna crop</button></div>
-    <h3>Nisbah crop</h3>
-    <div class="row"><button data-ratio="0" class="on">Bebas</button><button data-ratio="1">1:1</button><button data-ratio="0.75">4:5</button><button data-ratio="0.5625">9:16</button></div>
-    <div class="row"><button data-ratio="1.3333">4:3</button><button data-ratio="1.7778">16:9</button><button id="cropClear" hidden>✕ Kosongkan</button></div>
+    <div class="slider"><label>Straighten°</label><input type="range" id="straight" min="-45" max="45" value="0"><output>0</output></div>
+    <div class="row"><button id="straightApply">✓ Apply rotation</button></div>
+    <div class="row"><button id="cropToggle">✂ Crop</button><button id="cropApply" hidden>✓ Apply crop</button></div>
+    <h3>Crop ratio</h3>
+    <div class="row"><button data-ratio="0" class="on">Free</button><button data-ratio="1">1:1</button><button data-ratio="0.75">4:5</button><button data-ratio="0.5625">9:16</button></div>
+    <div class="row"><button data-ratio="1.3333">4:3</button><button data-ratio="1.7778">16:9</button><button id="cropClear" hidden>✕ Clear</button></div>
 
     </div>
     <div class="tab-panel" data-tab="kanvas">
-    <h3>Teks & Gaya Font</h3>
-    <input type="text" id="textInput" placeholder="Teks baharu…" style="width:100%; margin-bottom:6px;">
+    <h3>Text &amp; Font Style</h3>
+    <input type="text" id="textInput" placeholder="New text…" style="width:100%; margin-bottom:6px;">
     <select id="textFont" style="width:100%; margin-bottom:6px; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px; font-size:.85rem;">
-      <option value="sans">Sans-Serif (Moden Standard)</option>
-      <option value="serif">Serif (Elegan Playfair)</option>
+      <option value="sans">Sans-Serif (Modern Standard)</option>
+      <option value="serif">Serif (Elegant Playfair)</option>
       <option value="mono">Monospace (Code Retro)</option>
       <option value="impact">Display (Meme Bold)</option>
-      <option value="script">Handwriting (Santai Script)</option>
+      <option value="script">Handwriting (Casual Script)</option>
     </select>
     <div class="row" style="align-items:center;">
-      <input type="color" id="textColor" value="#ffffff" title="Warna" style="width:44px; padding:2px;">
-      <div class="slider" style="flex:1; margin:0;"><label style="width:34px;">Saiz</label><input type="range" id="textSize" min="2" max="18" value="7"></div>
+      <input type="color" id="textColor" value="#ffffff" title="Color" style="width:44px; padding:2px;">
+      <div class="slider" style="flex:1; margin:0;"><label style="width:34px;">Size</label><input type="range" id="textSize" min="2" max="18" value="7"></div>
     </div>
-    <div class="row"><button id="textAdd">＋ Tambah teks</button><button id="textDel">🗑 Buang</button></div>
-    <div class="row"><button id="textOutline" title="Garisan luar gelap pada teks">◌ Outline</button><button id="textPill" title="Latar belakang bertumpuk (pill background)">⬛ Latar Petak</button></div>
-    <div class="foot-status">Seret teks pada kanvas untuk alihkan. Klik teks untuk pilih.</div>
+    <div class="row"><button id="textAdd">＋ Add text</button><button id="textDel">🗑 Remove</button></div>
+    <div class="row"><button id="textOutline" title="Dark outline on text">◌ Outline</button><button id="textPill" title="Boxed background (pill background)">⬛ Box BG</button></div>
+    <div class="foot-status">Drag text on the canvas to move it. Click text to select.</div>
 
-    <h3>Akses Zoom Kanvas</h3>
+    <h3>Canvas Zoom</h3>
     <div class="row"><button id="zoomOut">🔍 -</button><button id="zoomFit" class="on">Fit Stage</button><button id="zoom100">100%</button><button id="zoomIn">🔍 +</button></div>
 
-    <h3>Lukisan & Anotasi ✏️</h3>
+    <h3>Drawing &amp; Annotation ✏️</h3>
     <div class="row">
       <button data-tool="pen" class="on">✏️ Pen</button>
-      <button data-tool="line">─ Garis</button>
-      <button data-tool="arrow">➤ Panah</button>
+      <button data-tool="line">─ Line</button>
+      <button data-tool="arrow">➤ Arrow</button>
     </div>
     <div class="row">
-      <button data-tool="rect">▭ Segi</button>
-      <button data-tool="ellipse">◯ Elips</button>
-      <button id="shapeFill" title="Isi bentuk dengan warna">▨ Isi</button>
+      <button data-tool="rect">▭ Rectangle</button>
+      <button data-tool="ellipse">◯ Ellipse</button>
+      <button id="shapeFill" title="Fill shapes with color">▨ Fill</button>
     </div>
-    <div class="row"><button id="brushToggle">✏️ Aktifkan lukis</button><button id="brushClear">🗑 Padam lukisan</button></div>
+    <div class="row"><button id="brushToggle">✏️ Enable drawing</button><button id="brushClear">🗑 Clear drawing</button></div>
     <div class="row" style="align-items:center;">
-      <input type="color" id="brushColor" value="#ff3b30" title="Warna berus" style="width:44px; padding:2px;">
-      <div class="slider" style="flex:1; margin:0;"><label style="width:34px;">Saiz</label><input type="range" id="brushSize" min="1" max="24" value="4"></div>
+      <input type="color" id="brushColor" value="#ff3b30" title="Brush color" style="width:44px; padding:2px;">
+      <div class="slider" style="flex:1; margin:0;"><label style="width:34px;">Size</label><input type="range" id="brushSize" min="1" max="24" value="4"></div>
     </div>
     <div class="sticker-row" id="emojiRow"></div>
-    <div class="foot-status">Pilih alat → “Aktifkan lukis” → seret pada gambar. Goresan &amp; bentuk kekal ketika eksport.</div>
+    <div class="foot-status">Pick a tool → “Enable drawing” → drag on the image. Strokes &amp; shapes persist on export.</div>
 
-    <h3>Terkan air</h3>
-    <input type="text" id="wmText" placeholder="Teks terkan air… (mis. © Tukuk)" style="width:100%; margin-bottom:6px;">
-    <div class="slider"><label>Saiz</label><input type="range" id="wmSize" min="2" max="14" value="6"><output>6</output></div>
-    <div class="slider"><label>Ketaksaan</label><input type="range" id="wmOp" min="5" max="100" value="18"><output>18</output></div>
-    <div class="slider"><label>Sudut°</label><input type="range" id="wmAng" min="-60" max="60" value="-30"><output>-30</output></div>
-    <div class="slider"><label>Jarak</label><input type="range" id="wmGap" min="1" max="8" value="3"><output>3</output></div>
-    <div class="row"><button id="wmApply" style="width:100%">💧 Terapkan terkan</button></div>
+    <h3>Watermark</h3>
+    <input type="text" id="wmText" placeholder="Watermark text… (e.g. © Tukuk)" style="width:100%; margin-bottom:6px;">
+    <div class="slider"><label>Size</label><input type="range" id="wmSize" min="2" max="14" value="6"><output>6</output></div>
+    <div class="slider"><label>Opacity</label><input type="range" id="wmOp" min="5" max="100" value="18"><output>18</output></div>
+    <div class="slider"><label>Angle°</label><input type="range" id="wmAng" min="-60" max="60" value="-30"><output>-30</output></div>
+    <div class="slider"><label>Spacing</label><input type="range" id="wmGap" min="1" max="8" value="3"><output>3</output></div>
+    <div class="row"><button id="wmApply" style="width:100%">💧 Apply watermark</button></div>
 
-    <h3>Kesan pantas</h3>
-    <div class="row"><button id="fxSharpen" title="Konvolusi penajaman">🔆 Tajamkan</button><button id="fxPixel" title="Mosaik/pikselatkan gambar">▦ Mosaik</button></div>
+    <h3>Quick effects</h3>
+    <div class="row"><button id="fxSharpen" title="Sharpen convolution">🔆 Sharpen</button><button id="fxPixel" title="Mosaic / pixelate the image">▦ Mosaic</button></div>
 
     </div>
     <div class="tab-panel" data-tab="fail">
-    <h3>Bingkai &amp; Saiz</h3>
+    <h3>Border &amp; Size</h3>
     <div class="row" style="align-items:center;">
-      <div class="slider" style="flex:1; margin:0;"><label style="width:44px;">Lebar</label><input type="range" id="borderW" min="0" max="300" value="0"><output>0</output></div>
-      <input type="color" id="borderC" value="#ffffff" title="Warna bingkai" style="width:44px; padding:2px;">
+      <div class="slider" style="flex:1; margin:0;"><label style="width:44px;">Width</label><input type="range" id="borderW" min="0" max="300" value="0"><output>0</output></div>
+      <input type="color" id="borderC" value="#ffffff" title="Border color" style="width:44px; padding:2px;">
     </div>
-    <div class="row"><button id="borderApply">🖼 Tambah bingkai</button></div>
+    <div class="row"><button id="borderApply">🖼 Add border</button></div>
     <div class="row" style="align-items:center;">
-      <input type="number" id="rw" placeholder="Lebar px" style="flex:1;" min="1">
-      <input type="number" id="rh" placeholder="Tinggi px" style="flex:1;" min="1">
+      <input type="number" id="rw" placeholder="Width px" style="flex:1;" min="1">
+      <input type="number" id="rh" placeholder="Height px" style="flex:1;" min="1">
     </div>
-    <div class="row"><button id="resizeApply">⤢ Saiz semula</button><button id="resizeHalf">➖ 50%</button><button id="fillDims">↺ Ikut asal</button></div>
+    <div class="row"><button id="resizeApply">⤢ Resize</button><button id="resizeHalf">➖ 50%</button><button id="fillDims">↺ Original</button></div>
 
-    <h3>Eksport</h3>
-    <div class="slider"><label>Bucu bulat</label><input type="range" id="exportCorner" min="0" max="50" value="0"><output>0</output></div>
-    <div class="slider"><label>Kualiti JPG</label><input type="range" id="jpgQ" min="50" max="100" value="93"><output>93</output></div>
-    <div class="row"><button id="shapeCircle" style="width:100%" title="Topeng bentuk bulat/oval pada eksport">⬤ Bentuk bulat</button></div>
+    <h3>Export</h3>
+    <div class="slider"><label>Rounded corners</label><input type="range" id="exportCorner" min="0" max="50" value="0"><output>0</output></div>
+    <div class="slider"><label>JPG quality</label><input type="range" id="jpgQ" min="50" max="100" value="93"><output>93</output></div>
+    <div class="row"><button id="shapeCircle" style="width:100%" title="Circle/oval mask on export">⬤ Circle shape</button></div>
 
-    <h3>📂 Lapisan (Layers)</h3>
+    <h3>📂 Layers</h3>
     <div id="layersList" class="layers-box"></div>
     </div>
     <div class="tab-panel" data-tab="gaya">
-    <h3>Pra-set Gaya &amp; LUTs</h3>
+    <h3>Style Presets &amp; LUTs</h3>
     <div class="row"><button id="presetDrama">Drama</button><button id="presetVivid">Vivid</button><button id="presetFaded">Faded</button><button id="presetNoir">Noir</button></div>
     <div class="row"><button id="presetCyber">Cyberpunk</button><button id="presetFilm">Film 35mm</button><button id="presetPolaroid">Polaroid</button><button id="presetHdr">HDR Pop</button></div>
 
-    <h3>🎨 Kartun & Gaya Artistik</h3>
-    <div class="slider"><label>Tepi</label><input type="range" id="cartEdge" min="5" max="120" value="35"><output>35</output></div>
-    <div class="slider"><label>Tahap</label><input type="range" id="cartLevels" min="2" max="20" value="7"><output>7</output></div>
-    <div class="slider"><label>Licinkan</label><input type="range" id="cartSmooth" min="1" max="10" value="4"><output>4</output></div>
-    <div class="row"><button id="fxComic">🖌 Komik</button><button id="fxSketch">✏️ Sketsa</button><button id="fxOil">🎨 Cat Minyak</button></div>
-    <div class="row"><button id="fxPop">🎭 Pop Art</button><button id="fxAnime">🌸 Anime</button><button id="fxWater">💧 Cat Air</button></div>
+    <h3>🎨 Cartoon &amp; Artistic Styles</h3>
+    <div class="slider"><label>Edges</label><input type="range" id="cartEdge" min="5" max="120" value="35"><output>35</output></div>
+    <div class="slider"><label>Levels</label><input type="range" id="cartLevels" min="2" max="20" value="7"><output>7</output></div>
+    <div class="slider"><label>Smoothing</label><input type="range" id="cartSmooth" min="1" max="10" value="4"><output>4</output></div>
+    <div class="row"><button id="fxComic">🖌 Comic</button><button id="fxSketch">✏️ Sketch</button><button id="fxOil">🎨 Oil Paint</button></div>
+    <div class="row"><button id="fxPop">🎭 Pop Art</button><button id="fxAnime">🌸 Anime</button><button id="fxWater">💧 Watercolor</button></div>
 
     </div>
     <div class="tab-panel" data-tab="pro">
-    <h3>🔧 Sunting Objek</h3>
-    <div class="slider"><label>Saiz Alat</label><input type="range" id="objSize" min="5" max="200" value="40"><output>40</output></div>
-    <div class="row"><button id="btnClone">📌 Cap Klon</button><button id="btnHeal">🩹 Sembuh</button><button id="btnRemove">🗑 Buang</button></div>
-    <div class="row"><button id="btnObjOff" style="width:100%">✕ Nyahaktif Alat Objek</button></div>
+    <h3>🔧 Object Editing</h3>
+    <div class="slider"><label>Tool Size</label><input type="range" id="objSize" min="5" max="200" value="40"><output>40</output></div>
+    <div class="row"><button id="btnClone">📌 Clone Stamp</button><button id="btnHeal">🩹 Heal</button><button id="btnRemove">🗑 Remove</button></div>
+    <div class="row"><button id="btnObjOff" style="width:100%">✕ Deactivate object tool</button></div>
 
-    <h3>🧊 Transformasi 3D</h3>
-    <div class="row"><button id="btnPerspToggle" style="width:100%">🔲 Warp Perspektif 4-Bucu</button></div>
-    <div id="perspApplyRow" hidden><div class="row"><button id="btnPerspApply" class="primary" style="flex:2">✓ Terapkan</button><button id="btnPerspResetS" style="flex:1">↺ Reset</button></div></div>
-    <div class="slider"><label>Condong X°</label><input type="range" id="tiltX" min="-45" max="45" value="0"><output>0</output></div>
-    <div class="slider"><label>Condong Y°</label><input type="range" id="tiltY" min="-45" max="45" value="0"><output>0</output></div>
-    <div class="slider"><label>Jarak</label><input type="range" id="tiltDist" min="20" max="300" value="100"><output>100</output></div>
-    <div class="row"><button id="btnTiltApply" style="width:100%">🧊 Terapkan Condong Perspektif</button></div>
+    <h3>🧊 3D Transform</h3>
+    <div class="row"><button id="btnPerspToggle" style="width:100%">🔲 4-Corner Perspective Warp</button></div>
+    <div id="perspApplyRow" hidden><div class="row"><button id="btnPerspApply" class="primary" style="flex:2">✓ Apply</button><button id="btnPerspResetS" style="flex:1">↺ Reset</button></div></div>
+    <div class="slider"><label>Tilt X°</label><input type="range" id="tiltX" min="-45" max="45" value="0"><output>0</output></div>
+    <div class="slider"><label>Tilt Y°</label><input type="range" id="tiltY" min="-45" max="45" value="0"><output>0</output></div>
+    <div class="slider"><label>Distance</label><input type="range" id="tiltDist" min="20" max="300" value="100"><output>100</output></div>
+    <div class="row"><button id="btnTiltApply" style="width:100%">🧊 Apply perspective tilt</button></div>
 
-    <h3>💡 Penajaman &amp; HDR</h3>
-    <div class="slider"><label>Kekuatan</label><input type="range" id="clrAmt" min="0" max="120" value="55"><output>55</output></div>
+    <h3>💡 Sharpening &amp; HDR</h3>
+    <div class="slider"><label>Strength</label><input type="range" id="clrAmt" min="0" max="120" value="55"><output>55</output></div>
     <div class="slider"><label>Radius</label><input type="range" id="clrRad" min="1" max="40" value="12"><output>12</output></div>
-    <div class="row"><button id="btnClarity" title="Kontras setempat (unsharp radius besar)">◐ Clarity</button><button id="btnDehaze" title="Buang kabus / tingkat kejernihan">🌫 Dehaze</button><button id="btnHdr" title="Boost detail tono tempatan">☀ HDR</button></div>
-    <div class="foot-status">Kekal: kalau guna 🪄 Wand, penajaman hanya kena kawasan terpilih.</div>
+    <div class="row"><button id="btnClarity" title="Local contrast (large unsharp radius)">◐ Clarity</button><button id="btnDehaze" title="Remove haze / boost clarity">🌫 Dehaze</button><button id="btnHdr" title="Boost local tone detail">☀ HDR</button></div>
+    <div class="foot-status">Note: if you use 🪄 Wand, sharpening only affects the selected area.</div>
 
-    <h3>🔍 Pilihan &amp; Eyedropper</h3>
-    <div class="slider"><label>Toleransi</label><input type="range" id="wandTol" min="4" max="140" value="42"><output>42</output></div>
-    <div class="row"><button id="btnWand" title="Klik gambar untuk pilih kawasan warna serupa">🪄 Magic Wand</button><button id="btnPicker" title="Klik gambar untuk ambil warna">💉 Eyedropper</button></div>
-    <div class="row"><button id="btnSelClear" style="width:100%">✕ Kosongkan Pilihan</button></div>
-    <div class="foot-status">Pilihan (tindan biru) mengekang Clarity/HDR/Dehaze/Ganti Warna supaya hanya kawasan itu berubah.</div>
+    <h3>🔍 Selection &amp; Eyedropper</h3>
+    <div class="slider"><label>Tolerance</label><input type="range" id="wandTol" min="4" max="140" value="42"><output>42</output></div>
+    <div class="row"><button id="btnWand" title="Click the image to select areas of similar color">🪄 Magic Wand</button><button id="btnPicker" title="Click the image to pick a color">💉 Eyedropper</button></div>
+    <div class="row"><button id="btnSelClear" style="width:100%">✕ Clear selection</button></div>
+    <div class="foot-status">The selection (blue overlay) constrains Clarity/HDR/Dehaze/Color Replace so only that area changes.</div>
 
-    <h3>🎯 Ganti Warna Selective</h3>
+    <h3>🎯 Selective Color Replace</h3>
     <div class="row" style="align-items:center;">
-      <input type="color" id="crFrom" value="#2b6cff" title="Warna asal" style="width:44px;padding:2px;">
+      <input type="color" id="crFrom" value="#2b6cff" title="Source color" style="width:44px;padding:2px;">
       <span style="color:var(--muted)">→</span>
-      <input type="color" id="crTo" value="#ff3b30" title="Warna ganti" style="width:44px;padding:2px;">
-      <button id="btnCrPickFrom" title="Set warna asal daripada eyedropper terakhir" style="flex:1">💉 Ambil</button>
+      <input type="color" id="crTo" value="#ff3b30" title="Replacement color" style="width:44px;padding:2px;">
+      <button id="btnCrPickFrom" title="Set the source color from the last eyedropper pick" style="flex:1">💉 Grab</button>
     </div>
-    <div class="slider"><label>Toleransi</label><input type="range" id="crTol" min="8" max="180" value="70"><output>70</output></div>
-    <div class="row"><button id="btnCrApply" style="width:100%">🎨 Guna Ganti Warna</button></div>
+    <div class="slider"><label>Tolerance</label><input type="range" id="crTol" min="8" max="180" value="70"><output>70</output></div>
+    <div class="row"><button id="btnCrApply" style="width:100%">🎨 Apply color replace</button></div>
 
-    <h3>🌈 Gradasi Overlay</h3>
+    <h3>🌈 Gradient Overlay</h3>
     <div class="row" style="align-items:center;">
       <select id="gradType" style="flex:1;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px;">
         <option value="linear">Linear</option><option value="radial">Radial</option>
@@ -297,34 +297,34 @@
       </select>
     </div>
     <div class="row" style="align-items:center;">
-      <input type="color" id="gradC1" value="#1e3c72" title="Warna 1" style="width:44px;padding:2px;">
-      <input type="color" id="gradC2" value="#2a5298" title="Warna 2" style="width:44px;padding:2px;">
+      <input type="color" id="gradC1" value="#1e3c72" title="Color 1" style="width:44px;padding:2px;">
+      <input type="color" id="gradC2" value="#2a5298" title="Color 2" style="width:44px;padding:2px;">
     </div>
-    <div class="slider"><label>Sudut°</label><input type="range" id="gradAng" min="0" max="360" value="90"><output>90</output></div>
-    <div class="slider"><label>Ketaksaan</label><input type="range" id="gradOp" min="5" max="100" value="45"><output>45</output></div>
-    <div class="row"><button id="btnGradToggle" style="width:100%">🌈 Hidup/Mati Gradasi</button></div>
-    <div class="foot-status">Gradasi ialah pratonton langsung — ia turut terbawa ketika eksport PNG/JPG.</div>
+    <div class="slider"><label>Angle°</label><input type="range" id="gradAng" min="0" max="360" value="90"><output>90</output></div>
+    <div class="slider"><label>Opacity</label><input type="range" id="gradOp" min="5" max="100" value="45"><output>45</output></div>
+    <div class="row"><button id="btnGradToggle" style="width:100%">🌈 Toggle gradient on/off</button></div>
+    <div class="foot-status">The gradient is a live preview — it is included when exporting PNG/JPG.</div>
 
-    <h3>⚡ Kesan Pro (Canggih)</h3>
-    <div class="slider"><label>Kekuatan</label><input type="range" id="proAmt" min="5" max="100" value="40"><output>40</output></div>
-    <div class="row"><button id="btnChroma" title="Sisihan saluran RGB di tepi bingkai (gaya anamorfik)">🌪 Chromatic Aberration</button><button id="btnBloom" title="Glow lembut pada kawasan terang">✨ Bloom</button></div>
-    <div class="row"><button id="btnTilt" title="Focus sempit + saturasi tinggi (miniature effect)">🏙 Tilt-Shift</button><button id="btnGlitch" title="Displace slice rawak + sisihan saluran (datamosh)">📺 Glitch RGB</button></div>
-    <div class="foot-status">Kesemua effect pro menghormati pilihan 🪄 Wand — hanya kawasan terpilih akan berubah.</div>
+    <h3>⚡ Pro Effects (Advanced)</h3>
+    <div class="slider"><label>Strength</label><input type="range" id="proAmt" min="5" max="100" value="40"><output>40</output></div>
+    <div class="row"><button id="btnChroma" title="RGB channel shift at frame edges (anamorphic style)">🌪 Chromatic Aberration</button><button id="btnBloom" title="Soft glow on bright areas">✨ Bloom</button></div>
+    <div class="row"><button id="btnTilt" title="Narrow focus + high saturation (miniature effect)">🏙 Tilt-Shift</button><button id="btnGlitch" title="Random slice displacement + channel shift (datamosh)">📺 Glitch RGB</button></div>
+    <div class="foot-status">All pro effects respect the 🪄 Wand selection — only the selected area changes.</div>
     </div>
   </aside>
 
   <div class="stage" id="stage">
     <div class="floating-toolbar" id="floatingToolbar">
-      <button id="floatCrop" title="Crop Gambar">✂ Crop</button>
-      <button id="floatBrush" title="Alat Lukis / Berus">✏️ Lukis</button>
-      <button id="floatText" title="Fokus Teks">🔤 Teks</button>
-      <button id="floatBg" title="Buang Latar di BG Remover">🪄 Buang Latar</button>
-      <button id="floatClone" title="Cap Klon — Alt+klik set sumber">📌 Klon</button>
-      <button id="floatHeal" title="Berus Sembuh">🩹 Sembuh</button>
-      <button id="floatPersp" title="Warp Perspektif 4-Bucu">🔲 Perspektif</button>
-      <button id="floatWand" title="Magic Wand — pilih warna serupa">🪄 Wand</button>
-      <button id="floatPick" title="Eyedropper — ambil warna gambar">💉 Warna</button>
-      <button id="floatOrig" title="Tahan untuk Banding Asal">👁 Asal</button>
+      <button id="floatCrop" title="Crop image">✂ Crop</button>
+      <button id="floatBrush" title="Paint / brush tool">✏️ Draw</button>
+      <button id="floatText" title="Text tools">🔤 Text</button>
+      <button id="floatBg" title="Remove background in BG Remover">🪄 BG</button>
+      <button id="floatClone" title="Clone Stamp — Alt+click to set source">📌 Clone</button>
+      <button id="floatHeal" title="Healing brush">🩹 Heal</button>
+      <button id="floatPersp" title="4-corner perspective warp">🔲 Perspective</button>
+      <button id="floatWand" title="Magic Wand — select similar colors">🪄 Wand</button>
+      <button id="floatPick" title="Eyedropper — pick an image color">💉 Color</button>
+      <button id="floatOrig" title="Hold to compare with original">👁 Original</button>
     </div>
     <div id="objBanner" hidden></div>
     <div id="perspOverlay" hidden></div>
@@ -332,32 +332,32 @@
     <div id="cropLayer" hidden><div id="cropRect"></div></div>
     <div class="drop-hint" id="dropHint">
       <div class="big">🖼️</div>
-      <div>Drag &amp; jatuh gambar ke sini, atau <b>📂 Buka fail</b> / tampal URL di atas.</div>
-      <div class="foot-status">Semua suntingan berlaku dalam pelayar anda — tiada gambar dihantar ke mana-mana.</div>
+      <div>Drag &amp; drop an image here, or <b>📂 Open file</b> / paste a URL above.</div>
+      <div class="foot-status">All editing happens in your browser — no images are sent anywhere.</div>
     </div>
   </div>
 </main>
 
 <div class="modal-bg" id="shortcutsModal" hidden>
   <div class="modal-card">
-    <h2>⌨️ Pintasan Papan Kekunci</h2>
+    <h2>⌨️ Keyboard Shortcuts</h2>
     <table>
       <tr><td>Undo / Redo</td><td><kbd>Ctrl + Z</kbd> / <kbd>Ctrl + Y</kbd></td></tr>
-      <tr><td>Mod Crop</td><td><kbd>C</kbd></td></tr>
-      <tr><td>Mod Berus / Lukis</td><td><kbd>B</kbd></td></tr>
-      <tr><td>Tambah Teks</td><td><kbd>T</kbd></td></tr>
-      <tr><td>Padam Teks Terpilih</td><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td></tr>
-      <tr><td>Simpan Projek (.json)</td><td><kbd>Ctrl + S</kbd></td></tr>
-      <tr><td>Warp Perspektif</td><td><kbd>P</kbd></td></tr>
-      <tr><td>Eyedropper (ambil warna)</td><td><kbd>I</kbd></td></tr>
-      <tr><td>Magic Wand (pilih warna)</td><td><kbd>V</kbd></td></tr>
-      <tr><td>Kosongkan Pilihan</td><td><kbd>Esc</kbd> (jika tiada dialog)</td></tr>
-      <tr><td>Cap Klon / Sembuh / Buang</td><td><kbd>Alt + Klik</kbd> set sumber · <kbd>Seret</kbd> cat</td></tr>
-      <tr><td>Paparkan Pintasan ini</td><td><kbd>?</kbd></td></tr>
-      <tr><td>Tutup Dialog</td><td><kbd>Esc</kbd></td></tr>
+      <tr><td>Crop mode</td><td><kbd>C</kbd></td></tr>
+      <tr><td>Brush / Draw mode</td><td><kbd>B</kbd></td></tr>
+      <tr><td>Add text</td><td><kbd>T</kbd></td></tr>
+      <tr><td>Delete selected text</td><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td></tr>
+      <tr><td>Save project (.json)</td><td><kbd>Ctrl + S</kbd></td></tr>
+      <tr><td>Perspective warp</td><td><kbd>P</kbd></td></tr>
+      <tr><td>Eyedropper (pick color)</td><td><kbd>I</kbd></td></tr>
+      <tr><td>Magic Wand (select color)</td><td><kbd>V</kbd></td></tr>
+      <tr><td>Clear selection</td><td><kbd>Esc</kbd> (if no dialog open)</td></tr>
+      <tr><td>Clone Stamp / Heal / Remove</td><td><kbd>Alt + Click</kbd> set source · <kbd>Drag</kbd> to paint</td></tr>
+      <tr><td>Show these shortcuts</td><td><kbd>?</kbd></td></tr>
+      <tr><td>Close dialog</td><td><kbd>Esc</kbd></td></tr>
     </table>
     <div style="text-align:right; margin-top:14px;">
-      <button class="primary" id="closeModalBtn">✓ Faham</button>
+      <button class="primary" id="closeModalBtn">✓ Got it</button>
     </div>
   </div>
 </div>
@@ -424,9 +424,9 @@ function loadImageFromSrc(src, label) {
     cv.hidden = false; $('dropHint').style.display = 'none';
     draw();
     fillDims();
-    toast(`${label || 'Imej'} dimuat: ${c.width}×${c.height}`);
+    toast(`${label || 'Image'} loaded: ${c.width}×${c.height}`);
   };
-  img.onerror = () => toast('Gagal memuat imej — cuba melalui pautan /api/image atau fail lokal.');
+  img.onerror = () => toast('Failed to load image — try the /api/image proxy link or a local file.');
   img.src = src;
 }
 
@@ -470,7 +470,7 @@ function updateLayersUI() {
 
   const baseEl = document.createElement('div');
   baseEl.className = 'layer-item selected';
-  baseEl.innerHTML = `<span>🖼️ Gambar Asas (${bitmap ? bitmap.width + '×' + bitmap.height : 'Kosong'})</span>`;
+  baseEl.innerHTML = `<span>🖼️ Base image (${bitmap ? bitmap.width + '×' + bitmap.height : 'Empty'})</span>`;
   container.appendChild(baseEl);
 
   texts.forEach((t) => {
@@ -479,7 +479,7 @@ function updateLayersUI() {
     const txtName = t.text.length > 14 ? t.text.slice(0, 14) + '…' : t.text;
     el.innerHTML = `
       <span>🔤 Teks: "${txtName}"</span>
-      <button onclick="event.stopPropagation(); window._deleteTextLayer(${t.id})" title="Padam Teks">🗑</button>
+      <button onclick="event.stopPropagation(); window._deleteTextLayer(${t.id})" title="Delete text">🗑</button>
     `;
     el.onclick = () => { selectedText = t.id; draw(); };
     container.appendChild(el);
@@ -490,7 +490,7 @@ function updateLayersUI() {
     strokeEl.className = 'layer-item';
     strokeEl.innerHTML = `
       <span>✏️ Lukisan &amp; Shape (${strokes.length})</span>
-      <button onclick="event.stopPropagation(); window._clearStrokesLayer()" title="Padam Lukisan">🗑</button>
+      <button onclick="event.stopPropagation(); window._clearStrokesLayer()" title="Delete drawing">🗑</button>
     `;
     container.appendChild(strokeEl);
   }
@@ -716,7 +716,7 @@ function straighten(deg) {
   bake((g) => { g.translate(ow / 2, oh / 2); g.rotate(rad); g.drawImage(bitmap, -w / 2, -h / 2); }, ow, oh);
   strokes = []; texts = []; selectedText = null; draw(); // overlay tak selari selepas pusing — buang
   $('straight').value = 0; $('straight').nextElementSibling.textContent = '0';
-  toast(`Diluruskan ${deg}°.`);
+  toast(`Straightened ${deg}°.`);
 }
 
 // Tajamkan: konvolusi unsharp. Dimensi kekal — overlay dibiarkan.
@@ -725,7 +725,7 @@ function sharpen() {
   const w = bitmap.width, h = bitmap.height;
   let src;
   try { src = bitmap.getContext('2d').getImageData(0, 0, w, h); }
-  catch { toast('Tak boleh baca piksel (canvas dikunci).'); return; }
+  catch { toast('Cannot read pixels (canvas is tainted).'); return; }
   const s = src.data, out = new Uint8ClampedArray(s);
   const k = [0, -0.75, 0, -0.75, 4.0, -0.75, 0, -0.75, 0];
   for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -736,7 +736,7 @@ function sharpen() {
     }
   }
   bake((g, c2) => g.putImageData(new ImageData(out, c2.width, c2.height), 0, 0), w, h);
-  toast('Ditajamkan.');
+  toast('Sharpened.');
 }
 
 // Mosaik: kecilkan lalu besarkan tanpa smoothing (blok piksel).
@@ -747,34 +747,34 @@ function pixelate() {
   small.width = Math.max(1, Math.round(w / 18)); small.height = Math.max(1, Math.round(h / 18));
   small.getContext('2d').drawImage(bitmap, 0, 0, small.width, small.height);
   bake((g) => { g.imageSmoothingEnabled = false; g.drawImage(small, 0, 0, w, h); }, w, h);
-  toast('Dipikselatkan (mosaik).');
+  toast('Pixelated (mosaic).');
 }
 
 // Bingkai: tambah pad mengelilingi gambar (dimensi berubah → overlay dibuang).
 function addBorder() {
   if (!bitmap) return;
   const px = Number($('borderW').value) || 0;
-  if (px <= 0) { toast('Naikkan slider lebar bingkai dahulu.'); return; }
+  if (px <= 0) { toast('Raise the border width slider first.'); return; }
   const color = $('borderC').value, w = bitmap.width, h = bitmap.height;
   bake((g) => { g.fillStyle = color; g.fillRect(0, 0, w + px * 2, h + px * 2); g.drawImage(bitmap, px, px); }, w + px * 2, h + px * 2);
   strokes = []; texts = []; selectedText = null; draw();
-  toast(`Bingkai ${px}px ditambah.`);
+  toast(`Border ${px}px added.`);
 }
 
 function doResize(nw, nh) {
   if (!bitmap) return;
   nw = Math.round(nw); nh = Math.round(nh);
-  if (!nw || !nh || nw < 1 || nh < 1) { toast('Masuk lebar & tinggi yang sah.'); return; }
+  if (!nw || !nh || nw < 1 || nh < 1) { toast('Enter a valid width & height.'); return; }
   nw = Math.min(EXPORT_CAP, nw); nh = Math.min(EXPORT_CAP, nh);
   bake((g) => g.drawImage(bitmap, 0, 0, nw, nh), nw, nh);
   strokes = []; texts = []; selectedText = null; draw();
   fillDims();
-  toast(`Disaizkan ke ${nw}×${nh}.`);
+  toast(`Resized to ${nw}×${nh}.`);
 }
 function fillDims() { if (bitmap) { $('rw').value = bitmap.width; $('rh').value = bitmap.height; } }
 
 function addEmoji(ch) {
-  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
+  if (!bitmap) { toast('Load an image first.'); return; }
   pushHistory();
   const t = { id: textId++, text: ch, color: '#ffffff', sizeN: 14, x: 0.5, y: 0.5, outline: true };
   texts.push(t); selectedText = t.id; draw();
@@ -828,14 +828,14 @@ cropLayer.addEventListener('pointermove', (e) => { if (cropStart) cropPointer(e,
 cropLayer.addEventListener('pointerup', (e) => { cropPointer(e, 'move'); cropStart = null; });
 function applyCrop() {
   const sel = cropRect._sel;
-  if (!sel || sel.w < 6 || sel.h < 6 || !bitmap) { toast('Seret segi empat crop dahulu.'); return; }
+  if (!sel || sel.w < 6 || sel.h < 6 || !bitmap) { toast('Drag a crop rectangle first.'); return; }
   const sx = sel.l / sel.baseW * bitmap.width, sy = sel.t / sel.baseH * bitmap.height;
   const sw = sel.w / sel.baseW * bitmap.width, sh = sel.h / sel.baseH * bitmap.height;
   bake((g) => g.drawImage(bitmap, sx, sy, sw, sh, 0, 0, Math.round(sw), Math.round(sh)),
        Math.round(sw), Math.round(sh));
   texts = []; strokes = []; selectedText = null;
   setCropMode(false);
-  toast('Crop digunakan.');
+  toast('Crop applied.');
 }
 
 // ── Teks: pilih/seret pada kanvas ──
@@ -868,7 +868,7 @@ cv.addEventListener('pointerup', () => { dragText = null; });
 let textId = 1;
 function addText() {
   const val = $('textInput').value.trim();
-  if (!val || !bitmap) { toast(bitmap ? 'Taip teks dahulu.' : 'Muat gambar dahulu.'); return; }
+  if (!val || !bitmap) { toast(bitmap ? 'Type some text first.' : 'Load an image first.'); return; }
   pushHistory();
   const t = { id: textId++, text: val, color: $('textColor').value, font: $('textFont').value, sizeN: Number($('textSize').value), x: 0.5, y: 0.88, outline: textOutlineOn, pill: textPillOn };
   texts.push(t); selectedText = t.id;
@@ -957,7 +957,7 @@ function scheduleLocal() {
 function openProject(text) {
   try {
     const p = JSON.parse(text);
-    if (!p || !p.base || !(p.v >= 1 && p.v <= 3)) { toast('Fail projek tidak dikenali.'); return; }
+    if (!p || !p.base || !(p.v >= 1 && p.v <= 3)) { toast('Unrecognized project file.'); return; }
     const img = new Image();
     img.onload = () => {
       pushHistory();
@@ -975,11 +975,11 @@ function openProject(text) {
       cv.hidden = false; $('dropHint').style.display = 'none';
       if (p.filter) Object.assign(F, p.filter); // pulih nilai slider sebenar (termasuk temp/vig)
       applyPreset(p.filter || {});
-      toast('Hasil kerja dimuat semula. ⬇ PNG/JPG untuk muat turun.');
+      toast('Workspace restored. ⬇ PNG/JPG to download.');
     };
-    img.onerror = () => toast('Imagen dalam projek rosak.');
+    img.onerror = () => toast('Image inside the project is broken.');
     img.src = p.base;
-  } catch (e) { toast('Fail projek tidak sah: ' + e.message); }
+  } catch (e) { toast('Invalid project file: ' + e.message); }
 }
 
 // ── Export ──
@@ -993,7 +993,7 @@ function triggerDownload(href, filename) {
   a.remove();
 }
 function exportImage(type) {
-  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
+  if (!bitmap) { toast('Load an image first.'); return; }
   const ext = type === 'image/jpeg' ? 'jpg' : 'png';
   const q = type === 'image/jpeg' ? Math.min(1, Math.max(0.3, (Number($('jpgQ').value) || 93) / 100)) : undefined;
   const filename = `tukuk-studio-${Date.now()}.${ext}`;
@@ -1032,7 +1032,7 @@ function exportImage(type) {
     applyCornerMask(g, out.width, out.height);
     applyShapeMask(g, out.width, out.height);
   } catch (e) {
-    toast('Eksport gagal (canvas dikunci): ' + e.message);
+    toast('Export failed (canvas is tainted): ' + e.message);
     return;
   }
   const finish = (blob) => {
@@ -1040,15 +1040,15 @@ function exportImage(type) {
       const href = URL.createObjectURL(blob);
       triggerDownload(href, filename);
       setTimeout(() => URL.revokeObjectURL(href), 8000);
-      toast(`Dieksport sebagai ${ext.toUpperCase()} (${out.width}×${out.height}).`);
+      toast(`Exported as ${ext.toUpperCase()} (${out.width}×${out.height}).`);
       return;
     }
     // toBlob null = canvas tainted (gambar luar) atau format tak disokong → dataURL fallback
     try {
       triggerDownload(out.toDataURL(type, q == null ? 0.93 : q), filename);
-      toast(`Dieksport (${ext.toUpperCase()}) via dataURL — jika gagal, benarkan download di bar alamat.`);
+      toast(`Exported (${ext.toUpperCase()}) via dataURL — if it fails, allow downloads in the address bar.`);
     } catch (e) {
-      toast('Eksport gagal: gambar luar perlu dimuat melalui URL proksi (automatik). ' + e.message);
+      toast('Export failed: external images must load through the proxy URL (automatic). ' + e.message);
     }
   };
   try {
@@ -1095,11 +1095,11 @@ $('undoBtn').onclick = undo;
 $('redoBtn').onclick = redo;
 $('projSave').onclick = () => {
   const j = projectJSON();
-  if (!j) { toast('Muat gambar dahulu.'); return; }
+  if (!j) { toast('Load an image first.'); return; }
   const url = URL.createObjectURL(new Blob([j], { type: 'application/json' }));
   triggerDownload(url, 'tukuk-studio-projek.json');
   setTimeout(() => URL.revokeObjectURL(url), 8000);
-  toast('Hasil kerja disimpan sebagai fail projek — buka semula dengan 📂 Buka Projek.');
+  toast('Workspace saved as a project file — reopen it with 📂 Open Project.');
 };
 $('projOpen').onclick = () => $('projInput').click();
 $('projInput').onchange = (e) => {
@@ -1109,7 +1109,7 @@ $('projInput').onchange = (e) => {
   r.readAsText(f);
   e.target.value = '';
 };
-$('resetBtn').onclick = () => { resetFilters(); toast('Penapis set semula.'); };
+$('resetBtn').onclick = () => { resetFilters(); toast('Filters reset.'); };
 $('exportPng').onclick = () => exportImage('image/png');
 $('exportJpg').onclick = () => exportImage('image/jpeg');
 
@@ -1151,8 +1151,8 @@ function setBrushMode(on) {
 }
 $('brushToggle').onclick = () => setBrushMode(!brushMode);
 $('brushClear').onclick = () => {
-  if (!strokes.length) { toast('Tiada lukisan untuk dibuang.'); return; }
-  pushHistory(); strokes = []; draw(); toast('Lukisan dibuang (Ctrl+Z untuk kembalikan).');
+  if (!strokes.length) { toast('No drawing to clear.'); return; }
+  pushHistory(); strokes = []; draw(); toast('Drawing cleared (Ctrl+Z to undo).');
 };
 $('exportCorner').addEventListener('input', () => {
   $('exportCorner').nextElementSibling.textContent = $('exportCorner').value;
@@ -1176,14 +1176,14 @@ $('viewOriginal').addEventListener('pointerleave', () => { if (bitmap) draw(); }
 
 // ── Batch: penapis + teks + berus sekarang → banyak gambar sekaligus ──
 $('batchBtn').onclick = () => {
-  if (!bitmap) { toast('Muat satu gambar sebagai rujukan dahulu (penapis/teks/berus akan dictrip).'); return; }
+  if (!bitmap) { toast('Load one image as a reference first (filters/text/brush will be copied).'); return; }
   $('batchInput').click();
 };
 $('batchInput').onchange = async (e) => {
   const files = [...e.target.files].filter((f) => f.type.startsWith('image/'));
   e.target.value = '';
   if (!files.length) return;
-  toast(`Batch: memproses ${files.length} gambar…`);
+  toast(`Batch: processing ${files.length} images…`);
   const cfg = { filter: { ...F }, texts: texts.map((t) => ({ ...t })), strokes: strokes.map(cloneStroke), corner: Number($('exportCorner').value) || 0, shape: shapeCircle };
   let done = 0;
   for (const f of files) {
@@ -1236,7 +1236,7 @@ $('batchInput').onchange = async (e) => {
       }
     }
   }
-  toast(`Batch selesai: ${done}/${files.length} gambar dieksport dengan gaya semasa.`);
+  toast(`Batch done: ${done}/${files.length} images exported with the current style.`);
 };
 
 // ── Pintar: bentuk bulat, histogram, auto-perbaik, lengkung, terkan air ──
@@ -1254,7 +1254,7 @@ $('shapeCircle').onclick = () => {
   shapeCircle = !shapeCircle;
   $('shapeCircle').classList.toggle('on', shapeCircle);
   draw();
-  toast(shapeCircle ? 'Bentuk eksport: bulat/oval.' : 'Bentuk eksport: empat penjuru.');
+  toast(shapeCircle ? 'Export shape: circle/oval.' : 'Export shape: square corners.');
 };
 
 function updateHistogram() {
@@ -1287,11 +1287,11 @@ $('btnHist').onclick = () => {
 
 // Auto-perbaik: imbangan putih gray-world + tahap auto (potong 0.4% ekor histogram) + sedikit saturasi.
 function autoEnhance() {
-  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
+  if (!bitmap) { toast('Load an image first.'); return; }
   const w = bitmap.width, h = bitmap.height;
   let imgd;
   try { imgd = bitmap.getContext('2d').getImageData(0, 0, w, h); }
-  catch { toast('Tak boleh baca piksel (canvas dikunci).'); return; }
+  catch { toast('Cannot read pixels (canvas is tainted).'); return; }
   const s = imgd.data;
   const step = Math.max(4, Math.floor(Math.sqrt(w * h / 250000)) * 4);
   const hist = [new Int32Array(256), new Int32Array(256), new Int32Array(256)];
@@ -1314,7 +1314,7 @@ function autoEnhance() {
   bake((g, c2) => g.putImageData(imgd, 0, 0), w, h);
   F.saturate = Math.min(170, Math.round(F.saturate * 1.1));
   $('f-saturate').value = F.saturate; $('f-saturate').nextElementSibling.textContent = F.saturate;
-  toast('Auto-perbaik: imbangan putih + tahap + sedikit saturasi (Ctrl+Z untuk batal).');
+  toast('Auto-fix: white balance + levels + a little saturation (Ctrl+Z to undo).');
 }
 $('btnAuto').onclick = autoEnhance;
 
@@ -1351,18 +1351,18 @@ $('btnCurve').onclick = () => {
 $('curveReset').onclick = () => { curveP = { x: 0.5, y: 0.5 }; drawCurve(); };
 document.querySelectorAll('[data-curve]').forEach((b) => { b.onclick = () => { curveP = { ...CURVE_PRESETS[b.dataset.curve] }; drawCurve(); }; });
 $('curveApply').onclick = () => {
-  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
-  if (Math.abs(curveP.x - 0.5) < 0.01 && Math.abs(curveP.y - 0.5) < 0.01) { toast('Lengkung masih linear — seret titik atau pilih pra-set dahulu.'); return; }
+  if (!bitmap) { toast('Load an image first.'); return; }
+  if (Math.abs(curveP.x - 0.5) < 0.01 && Math.abs(curveP.y - 0.5) < 0.01) { toast('Curve is still linear — drag the point or pick a preset first.'); return; }
   const lut = new Uint8ClampedArray(256);
   for (let v = 0; v < 256; v++) lut[v] = Math.round(curveT(v / 255) * 255);
   const w = bitmap.width, h = bitmap.height;
   let imgd;
   try { imgd = bitmap.getContext('2d').getImageData(0, 0, w, h); }
-  catch { toast('Tak boleh baca piksel (canvas dikunci).'); return; }
+  catch { toast('Cannot read pixels (canvas is tainted).'); return; }
   const s = imgd.data;
   for (let i = 0; i < s.length; i += 4) { s[i] = lut[s[i]]; s[i + 1] = lut[s[i + 1]]; s[i + 2] = lut[s[i + 2]]; }
   bake((g, c2) => g.putImageData(imgd, 0, 0), w, h);
-  toast('Lengkung diterapkan (Ctrl+Z untuk batal).');
+  toast('Curve applied (Ctrl+Z to undo).');
 };
 (() => {
   const c = $('curveCv'); let drag = false;
@@ -1379,9 +1379,9 @@ $('curveApply').onclick = () => {
 
 // Terkan air: teks berulang berpola (jarak baris ganjil dioffset) pada seluruh kanvas.
 function applyWatermark() {
-  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
+  if (!bitmap) { toast('Load an image first.'); return; }
   const txt = $('wmText').value.trim();
-  if (!txt) { toast('Taip teks terkan air dahulu.'); return; }
+  if (!txt) { toast('Type the watermark text first.'); return; }
   const w = bitmap.width, h = bitmap.height;
   const px = Math.max(8, Number($('wmSize').value) / 100 * Math.min(w, h));
   const op = Math.min(1, Math.max(0.03, Number($('wmOp').value) / 100));
@@ -1400,7 +1400,7 @@ function applyWatermark() {
     }
     g.restore();
   }, w, h);
-  toast('Terkan air diterapkan ke gambar.');
+  toast('Watermark applied to the image.');
 }
 $('wmApply').onclick = applyWatermark;
 $('wmText').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyWatermark(); });
@@ -1411,7 +1411,7 @@ $('textOutline').onclick = () => {
   textOutlineOn = !textOutlineOn;
   $('textOutline').classList.toggle('on', textOutlineOn);
   if (selectedText != null) updateSelected({ outline: textOutlineOn });
-  else toast(textOutlineOn ? 'Outline diaktifkan untuk teks baharu.' : 'Outline dimatikan.');
+  else toast(textOutlineOn ? 'Outline enabled for new text.' : 'Outline disabled.');
 };
 
 // Slider output (bukan penapis F)
@@ -1421,11 +1421,11 @@ $('textOutline').onclick = () => {
 
 // Background Remover Trigger
 $('bgRemoveBtn').onclick = () => {
-  if (!bitmap) { toast('Muat gambar dahulu.'); return; }
+  if (!bitmap) { toast('Load an image first.'); return; }
   try {
     sessionStorage.setItem('tukuk_bg_input', bitmap.toDataURL('image/png'));
     location.href = '/bg-remover';
-  } catch (e) { toast('Imej terlalu besar untuk dipindahkan: ' + e.message); }
+  } catch (e) { toast('Image too large to transfer: ' + e.message); }
 };
 
 // Modal Pintasan
@@ -1454,7 +1454,7 @@ document.addEventListener('keydown', (e) => {
     if ((e.key === 'Delete' || e.key === 'Backspace') && selectedText != null) {
       e.preventDefault();
       texts = texts.filter((t) => t.id !== selectedText); selectedText = null; draw();
-      toast('Teks dipadam.');
+      toast('Text deleted.');
     }
   }
 });
@@ -1547,14 +1547,14 @@ function _dist(a,b){return Math.hypot(b.x-a.x,b.y-a.y);}
 //  🎨 KESAN KARTUN & GAYA ARTISTIK
 // ══════════════════════════════════════════════════════════════════════════
 function _getSrcData(){
-  if(!bitmap){toast('Muat gambar dahulu.');return null;}
+  if(!bitmap){toast('Load an image first.');return null;}
   try{return bitmap.getContext('2d').getImageData(0,0,bitmap.width,bitmap.height);}catch{toast('Canvas dikuki (CORS).');return null;}}
 
 function fxComic(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
   const s=src.data,eT=Number($('cartEdge').value)||35,lvls=Math.max(2,Number($('cartLevels').value)||7),smR=Math.max(1,Number($('cartSmooth').value)||4);
-  toast('Memproses Komik…');
+  toast('Processing comic…');
   setTimeout(()=>{
     const bl=_boxBlurU8(s,W,H,smR,3);
     const gray=new Float32Array(W*H);for(let i=0;i<W*H;i++)gray[i]=_gray(bl[i*4],bl[i*4+1],bl[i*4+2]);
@@ -1563,24 +1563,24 @@ function fxComic(){
       if(edges[i]>eT){out[i*4]=out[i*4+1]=out[i*4+2]=15;}
       else{for(let ch=0;ch<3;ch++)out[i*4+ch]=Math.min(255,(Math.floor(bl[i*4+ch]/step)*step+step*0.5)|0);}
       out[i*4+3]=255;}
-    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Kesan Komik diterapkan.');},20);}
+    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Comic effect applied.');},20);}
 
 function fxSketch(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
-  const s=src.data;toast('Memproses Sketsa…');
+  const s=src.data;toast('Processing sketch…');
   setTimeout(()=>{
     const gray=new Float32Array(W*H);for(let i=0;i<W*H;i++)gray[i]=_gray(s[i*4],s[i*4+1],s[i*4+2]);
     const inv=new Float32Array(W*H);for(let i=0;i<W*H;i++)inv[i]=255-gray[i];
     const bl=_boxBlurF32(inv,W,H,14,5),out=new Uint8ClampedArray(W*H*4);
     for(let i=0;i<W*H;i++){const b=bl[i];out[i*4]=out[i*4+1]=out[i*4+2]=b>=254?255:Math.min(255,gray[i]*255/(255-b));out[i*4+3]=255;}
-    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Kesan Sketsa diterapkan.');},20);}
+    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Sketch effect applied.');},20);}
 
 function fxOil(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
   const s=src.data,r=Math.max(2,Number($('cartSmooth').value)||4),lvls=20;
-  toast('Memproses Cat Minyak…');
+  toast('Processing oil paint…');
   setTimeout(()=>{
     const out=new Uint8ClampedArray(W*H*4),cnt=new Uint32Array(lvls),rs=new Float64Array(lvls),gs=new Float64Array(lvls),bs=new Float64Array(lvls);
     for(let y=0;y<H;y++)for(let x=0;x<W;x++){
@@ -1592,13 +1592,13 @@ function fxOil(){
       let best=0;for(let l=1;l<lvls;l++)if(cnt[l]>cnt[best])best=l;
       const n=cnt[best]||1,oi=(y*W+x)*4;
       out[oi]=rs[best]/n;out[oi+1]=gs[best]/n;out[oi+2]=bs[best]/n;out[oi+3]=255;}
-    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Kesan Cat Minyak diterapkan.');},20);}
+    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Oil paint effect applied.');},20);}
 
 function fxPopArt(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
   const s=src.data,PAL=[[255,0,80],[255,160,0],[0,220,255],[80,255,100],[0,80,220]];
-  toast('Memproses Pop Art…');
+  toast('Processing pop art…');
   setTimeout(()=>{
     const gray=new Float32Array(W*H);for(let i=0;i<W*H;i++)gray[i]=_gray(s[i*4],s[i*4+1],s[i*4+2]);
     const edges=_sobel(gray,W,H),out=new Uint8ClampedArray(W*H*4);
@@ -1607,12 +1607,12 @@ function fxPopArt(){
       if(edges[i]>55){out[i*4]=out[i*4+1]=out[i*4+2]=10;}
       else{out[i*4]=PAL[lv][0];out[i*4+1]=PAL[lv][1];out[i*4+2]=PAL[lv][2];}
       out[i*4+3]=255;}
-    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Kesan Pop Art diterapkan.');},20);}
+    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Pop Art effect applied.');},20);}
 
 function fxAnime(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
-  const s=src.data;toast('Memproses Anime…');
+  const s=src.data;toast('Processing anime…');
   setTimeout(()=>{
     const sm=_boxBlurU8(s,W,H,3,4);
     const gray=new Float32Array(W*H);for(let i=0;i<W*H;i++)gray[i]=_gray(sm[i*4],sm[i*4+1],sm[i*4+2]);
@@ -1624,19 +1624,19 @@ function fxAnime(){
             const b=Math.min(255,(Math.floor(sm[i*4+2]/step)*step+step*0.5)*1.12)|0;
             out[i*4]=r;out[i*4+1]=g;out[i*4+2]=b;}
       out[i*4+3]=255;}
-    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Kesan Anime diterapkan.');},20);}
+    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Anime effect applied.');},20);}
 
 function fxWatercolor(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
-  const s=src.data;toast('Memproses Cat Air…');
+  const s=src.data;toast('Processing watercolor…');
   setTimeout(()=>{
     const bl1=_boxBlurU8(s,W,H,10,2),bl2=_boxBlurU8(bl1,W,H,22,3);
     const gray=new Float32Array(W*H);for(let i=0;i<W*H;i++)gray[i]=_gray(bl2[i*4],bl2[i*4+1],bl2[i*4+2]);
     const edges=_sobel(gray,W,H),out=new Uint8ClampedArray(W*H*4);
     for(let i=0;i<W*H;i++){const ea=Math.min(1,edges[i]/70),avg=(bl2[i*4]+bl2[i*4+1]+bl2[i*4+2])/3;
       for(let ch=0;ch<3;ch++)out[i*4+ch]=Math.min(255,bl2[i*4+ch]*0.72+avg*0.28*(1-ea)+18*ea);out[i*4+3]=255;}
-    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Kesan Cat Air diterapkan.');},20);}
+    bake((g,c2)=>g.putImageData(new ImageData(out,c2.width,c2.height),0,0),W,H);toast('Watercolor effect applied.');},20);}
 
 // ══════════════════════════════════════════════════════════════════════════
 //  🔧 SUNTING OBJEK — Cap Klon, Berus Sembuh, Buang
@@ -1661,11 +1661,11 @@ function setObjMode(mode){
   $('floatWand').classList.toggle('on',mode==='wand');
   $('floatPick').classList.toggle('on',mode==='pick');
   const b=$('objBanner');b.hidden=!mode;
-  if(mode==='clone')b.textContent='📌 Cap Klon — Alt+klik set sumber · seret untuk cat';
-  else if(mode==='heal')b.textContent='🩹 Sembuh — Seret kawasan untuk halus & gabung';
-  else if(mode==='remove')b.textContent='🗑 Buang — Seret segi empat objek untuk dibuang';
-  else if(mode==='wand')b.textContent='🪄 Magic Wand — klik gambar untuk pilih kawasan warna serupa';
-  else if(mode==='pick')b.textContent='💉 Eyedropper — klik gambar untuk ambil warna berus/teks';
+  if(mode==='clone')b.textContent='📌 Clone Stamp — Alt+click to set source · drag to paint';
+  else if(mode==='heal')b.textContent='🩹 Heal — drag an area to blend & merge';
+  else if(mode==='remove')b.textContent='🗑 Remove — drag a rectangle over the object to remove';
+  else if(mode==='wand')b.textContent='🪄 Magic Wand — click the image to select similar-color areas';
+  else if(mode==='pick')b.textContent='💉 Eyedropper — click the image to pick a brush/text color';
   cv.className=mode?'obj-'+mode:'';}
 
 function objBmpPt(ev){const r=cv.getBoundingClientRect();return[(ev.clientX-r.left)/r.width*bitmap.width,(ev.clientY-r.top)/r.height*bitmap.height];}
@@ -1702,7 +1702,7 @@ function _applyRemove(x1,y1,x2,y2){
   const ctx=bitmap.getContext('2d'),W=bitmap.width,H=bitmap.height;
   const rx=Math.max(0,Math.min(x1,x2)|0),ry=Math.max(0,Math.min(y1,y2)|0);
   const rw=Math.abs((x2-x1)|0),rh=Math.abs((y2-y1)|0);
-  if(rw<2||rh<2){toast('Seret kawasan yang lebih besar.');return;}
+  if(rw<2||rh<2){toast('Drag a larger area.');return;}
   const margin=Math.max(20,Math.max(rw,rh));
   const sx=Math.max(0,rx-margin)|0,sy=Math.max(0,ry-margin)|0;
   const sw=Math.min(W-sx,rw+margin*2)|0,sh=Math.min(H-sy,rh+margin*2)|0;
@@ -1712,7 +1712,7 @@ function _applyRemove(x1,y1,x2,y2){
   for(let y=0;y<rh;y++)for(let x=0;x<rw;x++){
     const si=((y+ry-sy)*sw+(x+rx-sx))*4,di=(y*rw+x)*4;
     sel.data[di]=bl[si];sel.data[di+1]=bl[si+1];sel.data[di+2]=bl[si+2];sel.data[di+3]=255;}
-  ctx.putImageData(sel,rx,ry);draw();toast('Objek dibuang.');}
+  ctx.putImageData(sel,rx,ry);draw();toast('Object removed.');}
 
 cv.addEventListener('pointerdown',(e)=>{
   if(!bitmap||!objMode||brushMode||cropMode||perspActive)return;
@@ -1727,8 +1727,8 @@ cv.addEventListener('pointerdown',(e)=>{
       cloneDot=document.createElement('div');cloneDot.className='clone-src-dot';
       cloneDot.style.left=(bx/bitmap.width*cr.width+cr.left-sr.left)+'px';
       cloneDot.style.top=(by/bitmap.height*cr.height+cr.top-sr.top)+'px';
-      stage.appendChild(cloneDot);toast('Sumber klon ditetapkan.');return;}
-    if(cloneSrcX===null){toast('Alt+klik untuk tetapkan sumber klon dahulu.');return;}
+      stage.appendChild(cloneDot);toast('Clone source set.');return;}
+    if(cloneSrcX===null){toast('Alt+click to set the clone source first.');return;}
     cloneOffX=cloneSrcX-bx;cloneOffY=cloneSrcY-by;
     pushHistory();_applyClone(bx,by);objPainting=true;}
   else if(objMode==='heal'){pushHistory();_applyHeal(bx,by);objPainting=true;}
@@ -1760,7 +1760,7 @@ cv.addEventListener('pointerup',(e)=>{
 let perspActive=false,perspCorners=[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}],perspDragI=-1;
 
 function showPerspOverlay(){
-  if(!bitmap){toast('Muat gambar dahulu.');return;}
+  if(!bitmap){toast('Load an image first.');return;}
   if(objMode)setObjMode(null);setBrushMode(false);setCropMode(false);
   perspActive=true;perspCorners=[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}];
   const ov=$('perspOverlay');ov.innerHTML='';ov.hidden=false;$('perspApplyRow').hidden=false;
@@ -1821,15 +1821,15 @@ function applyPerspWarp(){
   const srcPts=perspCorners.map(c=>({x:c.x*W,y:c.y*H}));
   const avgW=Math.round((_dist(srcPts[0],srcPts[1])+_dist(srcPts[3],srcPts[2]))/2);
   const avgH=Math.round((_dist(srcPts[0],srcPts[3])+_dist(srcPts[1],srcPts[2]))/2);
-  if(avgW<4||avgH<4){toast('Sudut terlalu kecil.');return;}
+  if(avgW<4||avgH<4){toast('Corners too close together.');return;}
   const dstPts=[{x:0,y:0},{x:avgW,y:0},{x:avgW,y:avgH},{x:0,y:avgH}];
-  const h=_computeH(srcPts,dstPts);if(!h){toast('Pengiraan homografi gagal.');return;}
-  toast('Mengira perspektif…');
+  const h=_computeH(srcPts,dstPts);if(!h){toast('Homography calculation failed.');return;}
+  toast('Computing perspective…');
   setTimeout(()=>{
-    const out=_warp(bitmap,h,avgW,avgH);if(!out){toast('Warp gagal.');return;}
+    const out=_warp(bitmap,h,avgW,avgH);if(!out){toast('Warp failed.');return;}
     bake((g)=>g.drawImage(out,0,0),avgW,avgH);
     texts=[];strokes=[];selectedText=null;draw();fillDims();
-    hidePerspOverlay();toast(`Perspektif diterapkan → ${avgW}×${avgH}.`);},20);}
+    hidePerspOverlay();toast(`Perspective applied → ${avgW}×${avgH}.`);},20);}
 
 function applyTilt(){
   if(!bitmap)return;
@@ -1843,11 +1843,11 @@ function applyTilt(){
     let x2=x1,y2=y1*Math.cos(ax)-z1*Math.sin(ax),z2=y1*Math.sin(ax)+z1*Math.cos(ax);
     const s=d/(d+z2);return{x:x2*s+W/2,y:y2*s+H/2};});
   const srcR=[{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
-  const h=_computeH(srcR,proj);if(!h){toast('Pengiraan 3D gagal.');return;}
-  toast('Mengira 3D tilt…');
+  const h=_computeH(srcR,proj);if(!h){toast('3D calculation failed.');return;}
+  toast('Computing 3D tilt…');
   setTimeout(()=>{
-    const out=_warp(bitmap,h,W,H);if(!out){toast('Transformasi 3D gagal.');return;}
-    bake((g)=>g.drawImage(out,0,0),W,H);texts=[];strokes=[];selectedText=null;draw();toast('Condong 3D diterapkan.');},20);}
+    const out=_warp(bitmap,h,W,H);if(!out){toast('3D transform failed.');return;}
+    bake((g)=>g.drawImage(out,0,0),W,H);texts=[];strokes=[];selectedText=null;draw();toast('3D tilt applied.');},20);}
 
 // ══════════════════════════════════════════════════════════════════════════
 //  🎛️ EVENT WIRING — baharu
@@ -1881,7 +1881,7 @@ function _hex2rgb(h){h=(h||'').replace('#','');if(h.length===3)h=h.split('').map
 function _makeClarity(amt,radius,boostSat){
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
   const s=src.data,out=Uint8ClampedArray.from(s),bl=_boxBlurU8(s,W,H,Math.max(1,radius|0),2),a=amt/100;
-  toast('Memproses…');
+  toast('Processing…');
   setTimeout(()=>{
     for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,oi=i*4;
       if(!_effAt(i)){out[oi]=s[oi];out[oi+1]=s[oi+1];out[oi+2]=s[oi+2];continue;}
@@ -1890,13 +1890,13 @@ function _makeClarity(amt,radius,boostSat){
       out[oi]=r;out[oi+1]=g;out[oi+2]=b;}
     bake((g,c)=>g.putImageData(new ImageData(out,c.width,c.height),0,0),W,H);},20);
 }
-function fxClarity(){if(!bitmap)return toast('Muat gambar dahulu.');_makeClarity(Number($('clrAmt').value),Number($('clrRad').value),1.02);toast('Clarity diterapkan.');}
-function fxHDR(){if(!bitmap)return toast('Muat gambar dahulu.');_makeClarity(Number($('clrAmt').value)*0.6,Math.max(3,Number($('clrRad').value)),1.12);toast('HDR Boost diterapkan.');}
+function fxClarity(){if(!bitmap)return toast('Load an image first.');_makeClarity(Number($('clrAmt').value),Number($('clrRad').value),1.02);toast('Clarity applied.');}
+function fxHDR(){if(!bitmap)return toast('Load an image first.');_makeClarity(Number($('clrAmt').value)*0.6,Math.max(3,Number($('clrRad').value)),1.12);toast('HDR Boost applied.');}
 function fxDehaze(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
   const s=src.data,out=Uint8ClampedArray.from(s),amt=Number($('clrAmt').value)/100;
-  toast('Memproses Dehaze…');
+  toast('Processing Dehaze…');
   setTimeout(()=>{
     const bins=new Uint32Array(256);
     for(let i=0;i<W*H;i++){const oi=i*4,mn=Math.min(s[oi],s[oi+1],s[oi+2]);out[oi+3]=mn;bins[mn]++;}
@@ -1906,23 +1906,23 @@ function fxDehaze(){
     for(let i=0;i<W*H;i++){const oi=i*4;if(!_effAt(i)){out[oi+3]=255;continue;}
       const dc=(out[oi+3]-q0)/range,sub=dc*amt*255;
       out[oi]=s[oi]-sub;out[oi+1]=s[oi+1]-sub;out[oi+2]=s[oi+2]-sub;out[oi+3]=255;}
-    bake((g,c)=>g.putImageData(new ImageData(out,c.width,c.height),0,0),W,H);toast('Dehaze diterapkan.');},20);
+    bake((g,c)=>g.putImageData(new ImageData(out,c.width,c.height),0,0),W,H);toast('Dehaze applied.');},20);
 }
 
 // ── 💉 Eyedropper (baca daripada pratonton terfilter) ──
 function _pickColorAt(ev){
   const r=cv.getBoundingClientRect();
   const px=Math.floor((ev.clientX-r.left)/r.width*cv.width),py=Math.floor((ev.clientY-r.top)/r.height*cv.height);
-  let d;try{d=ctx.getImageData(Math.max(0,Math.min(cv.width-1,px)),Math.max(0,Math.min(cv.height-1,py)),1,1).data;}catch{return toast('Canvas dikunci (CORS) — tak boleh baca warna.');}
+  let d;try{d=ctx.getImageData(Math.max(0,Math.min(cv.width-1,px)),Math.max(0,Math.min(cv.height-1,py)),1,1).data;}catch{return toast('Canvas is locked (CORS) — cannot read the color.');}
   const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
   _lastPick=hex;$('brushColor').value=hex;$('textColor').value=hex;
-  if(_crFromPick){$('crFrom').value=hex;_crFromPick=false;toast('Warna asal diganti warna → '+hex);}
-  else toast('Warna diambil: '+hex+' (berus & teks diset).');
+  if(_crFromPick){$('crFrom').value=hex;_crFromPick=false;toast('Source color set to → '+hex);}
+  else toast('Color picked: '+hex+' (brush & text updated).');
 }
 
 // ── 🪄 Magic Wand — flood fill berdasarkan warna serupa (4-ketersambungan) ──
 function _wandSelect(seedX,seedY){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
   if(seedX<0||seedY<0||seedX>=W||seedY>=H)return;
   const s=src.data,si=(seedY*W+seedX)*4,tr=s[si],tg=s[si+1],tb=s[si+2];
@@ -1939,9 +1939,9 @@ function _wandSelect(seedX,seedY){
     if(x+1<W)stack.push(idx+1);if(x-1>=0)stack.push(idx-1);
     if(y+1<H)stack.push(idx+W);if(y-1>=0)stack.push(idx-W);
   }
-  if(!_selCount){toast('Tiada kawasan sepadan — naikkan toleransi.');return;}
+  if(!_selCount){toast('No matching area — raise the tolerance.');return;}
   rebuildSelOverlay();_updateSelBadge();draw();
-  toast('Dipilih '+Math.round(_selCount/(W*H)*100)+'% gambar.');
+  toast('Selected '+Math.round(_selCount/(W*H)*100)+'% of the image.');
 }
 function rebuildSelOverlay(){
   if(!selMask||!bitmap||selMask.length!==bitmap.width*bitmap.height){_selOverlayCv=null;return;}
@@ -1958,27 +1958,27 @@ function _updateSelBadge(){
   if(!_selActive()){if(badge)badge.remove();return;}
   if(!badge){badge=document.createElement('div');badge.className='sel-badge';stage.appendChild(badge);}
   const pct=Math.round(_selCount/(bitmap.width*bitmap.height)*100);
-  badge.textContent='🔍 Pilihan aktif — '+pct+'% · '+_selCount.toLocaleString()+' px';
+  badge.textContent='🔍 Selection active — '+pct+'% · '+_selCount.toLocaleString()+' px';
 }
 function clearSelection(){selMask=null;_selCount=0;_selOverlayCv=null;const b=document.querySelector('.sel-badge');if(b)b.remove();draw();}
 
 // ── 🎯 Ganti Warna Selective (anjakan warna, kekalkan tekstur) ──
 function colorReplace(){
-  if(!bitmap)return toast('Muat gambar dahulu.');
+  if(!bitmap)return toast('Load an image first.');
   const W=bitmap.width,H=bitmap.height,src=_getSrcData();if(!src)return;
   const s=src.data,out=Uint8ClampedArray.from(s);
   const from=_hex2rgb($('crFrom').value),to=_hex2rgb($('crTo').value),tol=Math.max(1,Number($('crTol').value));
   const dR=to[0]-from[0],dG=to[1]-from[1],dB=to[2]-from[2],t2=tol*tol;
-  let changed=0;toast('Mengganti warna…');
+  let changed=0;toast('Replacing color…');
   setTimeout(()=>{
     for(let i=0;i<W*H;i++){const oi=i*4;if(!_effAt(i)){continue;}
       const dr=s[oi]-from[0],dg=s[oi+1]-from[1],db=s[oi+2]-from[2],dd=dr*dr+dg*dg+db*db;
       if(dd>t2)continue;
       const str=1-Math.sqrt(dd)/tol;
       out[oi]=s[oi]+dR*str;out[oi+1]=s[oi+1]+dG*str;out[oi+2]=s[oi+2]+dB*str;changed++;}
-    if(!changed){toast(_selActive()?'Tiada padanan dalam pilihan — cuba naikkan toleransi.':'Tiada padanan warna — cuba naikkan toleransi.');return;}
+    if(!changed){toast(_selActive()?'No match inside the selection — try raising the tolerance.':'No color match — try raising the tolerance.');return;}
     bake((g,c)=>g.putImageData(new ImageData(out,c.width,c.height),0,0),W,H);
-    toast('Ganti warna ke '+changed.toLocaleString()+' piksel.');},20);
+    toast('Replaced color in '+changed.toLocaleString()+' pixels.');},20);
 }
 
 // ── 🌈 Gradasi: selaras kawalan → GRAD + pratonton ──
@@ -2001,11 +2001,11 @@ $('btnPicker').onclick=()=>setObjMode('pick');
 $('floatPick').onclick=()=>setObjMode('pick');
 $('btnSelClear').onclick=clearSelection;
 $('btnCrApply').onclick=colorReplace;
-$('btnCrPickFrom').onclick=()=>{_crFromPick=true;if(objMode!=='pick')setObjMode('pick');toast('Klik gambar untuk ambil warna asal…');};
+$('btnCrPickFrom').onclick=()=>{_crFromPick=true;if(objMode!=='pick')setObjMode('pick');toast('Click the image to grab the source color…');};
 $('gradType').onchange=$('gradBlend').onchange=$('gradC1').onchange=$('gradC2').onchange=syncGrad;
 $('gradAng').addEventListener('input',syncGrad);
 $('gradOp').addEventListener('input',syncGrad);
-$('btnGradToggle').onclick=()=>{GRAD.on=!GRAD.on;$('btnGradToggle').classList.toggle('on',GRAD.on);draw();toast(GRAD.on?'Gradasi hidup (bawa ke eksport).':'Gradasi mati.');};
+$('btnGradToggle').onclick=()=>{GRAD.on=!GRAD.on;$('btnGradToggle').classList.toggle('on',GRAD.on);draw();toast(GRAD.on?'Gradient on (included in export).':'Gradient off.');};
 
 // ── Auto-muat: fail dari Studio dropzone > ?img= > projek tersimpan.
 const _dropin = sessionStorage.getItem('tukuk-studio-dropin');
@@ -2014,7 +2014,7 @@ if (_dropin) {
   loadImageFromSrc(_dropin, 'Studio dropzone');
 } else {
   const p = new URLSearchParams(location.search).get('img');
-  if (p) { $('urlInput').value = p; loadImageFromSrc(proxySrc(p), 'Hasil carian'); }
+  if (p) { $('urlInput').value = p; loadImageFromSrc(proxySrc(p), 'Search result'); }
   else {
     try {
       const saved = localStorage.getItem(LS_KEY);

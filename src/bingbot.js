@@ -34,13 +34,13 @@ function getJson(url, ms = 8000) {
       res.setEncoding('utf8');
       res.on('data', (chunk) => {
         body += chunk;
-        if (body.length > 2e6) req.destroy(new Error('respons terlalu besar'));
+        if (body.length > 2e6) req.destroy(new Error('response too large'));
       });
       res.on('end', () => {
         try { resolve(JSON.parse(body)); } catch (error) { reject(error); }
       });
     });
-    req.on('timeout', () => req.destroy(new Error('masa tamat')));
+    req.on('timeout', () => req.destroy(new Error('timeout')));
     req.on('error', reject);
   });
 }
@@ -66,7 +66,7 @@ async function loadIpList() {
     const data = await getJson(IP_LIST_URL);
     const out = { v4: [], v6: [] };
     collectCidrs(data, out);
-    if (!out.v4.length && !out.v6.length) throw new Error('senarai kosong');
+    if (!out.v4.length && !out.v6.length) throw new Error('empty list');
     listCache = { at: Date.now(), v4: out.v4, v6: out.v6, status: 'ok' };
   } catch (error) {
     listCache = { ...listCache, at: Date.now(), status: listCache.status === 'ok' ? 'stale' : 'failed' };
@@ -135,7 +135,7 @@ async function verify(rawIp) {
   if (!net.isIP(ip)) {
     return {
       valid: false,
-      error: 'IP tidak sah — contoh: 157.55.39.212 atau 2603:1020:200::5'
+      error: 'Invalid IP — example: 157.55.39.212 or 2603:1020:200::5'
     };
   }
 
@@ -155,19 +155,19 @@ async function verify(rawIp) {
   let why;
   if (matched.length && forward.ok) {
     verdict = 'verified';
-    why = 'rDNS berakhir .search.msn.com dan forward-confirm sepadan';
+    why = 'rDNS ends with .search.msn.com and forward-confirm matches';
   } else if (matched.length && !forward.ok) {
     verdict = 'mismatch';
-    why = 'hostname rDNS sepadan suffix tetapi resolve balik bukan kepada IP ini';
+    why = 'rDNS hostname matches the suffix but reverse resolution is not this IP';
   } else if (published === true) {
     verdict = 'verified';
-    why = 'tiada rDNS tetapi IP tersenarai dalam senarai rasmi bingbot.json';
+    why = 'no rDNS but the IP is listed in the official bingbot.json list';
   } else if (published === false) {
     verdict = 'not-bingbot';
-    why = 'tiada rDNS search.msn.com dan IP tidak dalam senarai rasmi';
+    why = 'no rDNS from search.msn.com and the IP is not in the official list';
   } else {
     verdict = 'inconclusive';
-    why = 'tiada rDNS dan senarai IP rasmi tidak dapat dimuat';
+    why = 'no rDNS and the official IP list could not be loaded';
   }
 
   const { label } = verdictText(verdict, why);

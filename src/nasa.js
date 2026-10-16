@@ -247,7 +247,7 @@ async function getAPOD({ date, count, force } = {}) {
           if (!date && !count) writeApodFallback(res.data);
           return res.data;
         }
-        lastError = new Error('payload APOD tidak sah dari API NASA');
+        lastError = new Error('invalid APOD payload from the NASA API');
         if (process.env.NASA_DEBUG === '1') console.error('[apod] attempt' , attempt, 'tak sah:', JSON.stringify(res.data).slice(0, 120));
       } catch (err) {
         lastError = err;
@@ -276,7 +276,7 @@ async function getAPOD({ date, count, force } = {}) {
   }
 
   if (count) {
-    throw lastError || new Error('NASA APOD API tidak tersedia buat masa ini');
+    throw lastError || new Error('NASA APOD API temporarily unavailable');
   }
 
   // Sandaran A: arkib rasmi science.nasa.gov (tarikh diminta, kemudian semalam)
@@ -300,7 +300,7 @@ async function getAPOD({ date, count, force } = {}) {
     return { ...stored, stale: true, staleNote: 'NASA APOD services are offline — showing the last successful picture.' };
   }
 
-  throw lastError || new Error('NASA APOD tidak tersedia buat masa ini');
+  throw lastError || new Error('NASA APOD temporarily unavailable');
 }
 
 let apodRefreshTimer = null;
@@ -832,7 +832,7 @@ async function getCrew() {
         ...disk.result,
         stale: true,
         savedAt: disk.savedAt,
-        note: 'Suapan langsung sedang sesak — memaparkan krew terakhir yang dibaca pada ' + new Date(disk.savedAt).toUTCString()
+        note: 'Live feed is congested — showing the last crew read on ' + new Date(disk.savedAt).toUTCString()
       };
       setCache('crew:live', stale, 2 * 60 * 1000); // cache pendek, cuba segar semula lepas 2 min
       // Cuba lagi di latar belakang supaya permintaan seterusnya dapat data segar.

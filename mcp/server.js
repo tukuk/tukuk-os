@@ -2,16 +2,16 @@
 /**
  * Tukuk-OS MCP Server (stdio).
  *
- * MCP = Model Context Protocol. Protokol ini membolehkan pelanggan AI
- * (Kilo, Claude Desktop, dll.) memanggil kebolehan Tukuk-OS sebagai "tools".
+ * MCP = Model Context Protocol. This protocol lets AI clients
+ * (Kilo, Claude Desktop, etc.) call Tukuk-OS capabilities as "tools".
  *
- * Protokol: JSON-RPC 2.0 ke atas stdin/stdout. Setiap baris = satu requestsatu.
+ * Protocol: JSON-RPC 2.0 over stdin/stdout. Each line = one request.
  *
- * Jalankan:
+ * Run:
  *   node mcp/server.js
  *   tukuk-os mcp
  *
- * Fail config Kilo:
+ * Config file for Kilo:
  *   ~/.config/kilo/kilo.jsonc
  *   { "mcp": { "tukuk-os": { "type": "local", "command": ["tukuk-os", "mcp"] } } }
  */
@@ -54,8 +54,8 @@ function text(value, extra = {}) {
   };
 }
 
-// Panggil LLM aktif (cloud → Ollama) untuk memperkasa rancangan/kod. Pulangkan
-// { text:null, kind:'none' } bila tiada LLM — pemanggil wajib urus mod templat.
+// Call the active LLM (cloud → Ollama) to enrich plans/code. Returns
+// { text:null, kind:'none' } when no LLM exists — callers must handle template mode.
 async function llm(prompt, { system, temperature, numPredict } = {}) {
   try {
     const backend = await brain.activeBackend();
@@ -77,15 +77,15 @@ const TOOLS = [
   {
     name: 'tukuk_search',
     description:
-      'Cari web melalui enjin Tukuk-OS. Sokong penapis host, bahasa, jenis, susunan, facet. ' +
-      'Guna alat ini apabila pengguna tanya tentang topik yang mungkin ada dalam index.',
+      'Search the web through the Tukuk-OS engine. Supports host, language, type, sort and facet filters. ' +
+      'Use this tool when the user asks about topics that may exist in the index.',
     inputSchema: {
       type: 'object',
       properties: {
-        q: { type: 'string', description: 'Kata kunci carian' },
+        q: { type: 'string', description: 'Search keywords' },
         limit: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
-        host: { type: 'string', description: 'Tapis satu domain' },
-        lang: { type: 'string', description: 'Tapis bahasa, cth. ms, en' },
+        host: { type: 'string', description: 'Filter to one domain' },
+        lang: { type: 'string', description: 'Filter by language, e.g. en' },
         sort: { type: 'string', enum: ['newest', 'oldest', 'longest', 'shortest'] }
       },
       required: ['q']
@@ -94,51 +94,51 @@ const TOOLS = [
   {
     name: 'tukuk_ask',
     description:
-      'Tanya soalan dalam Bahasa Melayu. Otak Tukuk-OS akan retrieve dokumen daripada index ' +
-      'lalu jana jawapan yang bersumber. Sentiasa semak medan "sources".',
+      'Ask a question in English. The Tukuk-OS brain retrieves documents from the index ' +
+      'then generates a sourced answer. Always check the "sources" field.',
     inputSchema: {
       type: 'object',
-      properties: { question: { type: 'string', description: 'Soalan untuk dijawab' } },
+      properties: { question: { type: 'string', description: 'Question to answer' } },
       required: ['question']
     }
   },
   {
     name: 'tukuk_crawl',
-    description: 'Rantau (crawl) satu URL dan indekskan kandungannya. Hormati robots.txt.',
+    description: 'Crawl one URL and index its content. Respects robots.txt.',
     inputSchema: {
       type: 'object',
-      properties: { url: { type: 'string', description: 'URL untuk dirantau' } },
+      properties: { url: { type: 'string', description: 'URL to crawl' } },
       required: ['url']
     }
   },
   {
     name: 'tukuk_stats',
-    description: 'Statistik Tukuk-OS: bilangan dokumen, status otak, status internet, tetapan.',
+    description: 'Tukuk-OS statistics: document count, brain status, internet status, settings.',
     inputSchema: { type: 'object', properties: {} }
   },
   {
     name: 'tukuk_knowledge',
-    description: 'Dapatkan rekod pengetahuan kendiri tentang Tukuk-OS (laluan, konfigurasi, had).',
+    description: 'Get the self-knowledge record about Tukuk-OS (routes, configuration, limits).',
     inputSchema: {
       type: 'object',
-      properties: { section: { type: 'string', description: 'Seksyen tertentu, cth. routes' } }
+      properties: { section: { type: 'string', description: 'Specific section, e.g. routes' } }
     }
   },
   {
     name: 'tukuk_offline_status',
-    description: 'Status sambungan internet dan sama ada mod offline aktif.',
+    description: 'Internet connection status and whether offline mode is active.',
     inputSchema: { type: 'object', properties: {} }
   },
   {
     name: 'tukuk_plan',
     description:
-      'Hasilkan RANCANGAN berstruktur (senarai fail + langkah) untuk membina app/game/tool. '
-      + 'Jenis: game|app|node|cli|html. Jika LLM (cloud/Ollama) aktif, plan turut diperkaya nota khusus matlamat.',
+      'Produce a structured PLAN (file list + steps) for building an app/game/tool. '
+      + 'Kinds: game|app|node|cli|html. If an LLM (cloud/Ollama) is active, the plan is enriched with goal-specific notes.',
     inputSchema: {
       type: 'object',
       properties: {
-        goal: { type: 'string', description: 'Apa yang nak dibina' },
-        kind: { type: 'string', enum: ['game', 'app', 'node', 'cli', 'html'], description: 'Jenis projek (lalai: app)' }
+        goal: { type: 'string', description: 'What to build' },
+        kind: { type: 'string', enum: ['game', 'app', 'node', 'cli', 'html'], description: 'Project kind (default: app)' }
       },
       required: ['goal']
     }
@@ -146,13 +146,13 @@ const TOOLS = [
   {
     name: 'tukuk_scaffold',
     description:
-      'Jana KOD pemula yang benar-benar boleh jalan (templat disahkan `node --check`/`node --test`). '
-      + 'Pulangkan fail + arahan menjalankan. LLM (jika ada) menambah serampang khusus matlamat.',
+      'Generate runnable starter CODE (templates validated with `node --check`/`node --test`). '
+      + 'Returns files + run instructions. An LLM (if available) adds goal-specific polish.',
     inputSchema: {
       type: 'object',
       properties: {
         kind: { type: 'string', enum: ['game', 'app', 'node', 'cli', 'html'] },
-        goal: { type: 'string', description: 'Konteks matlamat (pilihan)' }
+        goal: { type: 'string', description: 'Goal context (optional)' }
       },
       required: ['kind']
     }
@@ -160,11 +160,11 @@ const TOOLS = [
   {
     name: 'tukuk_review',
     description:
-      'Semak kod: sahkan sintaks (JS/MJS guna `node --check`) + nota gaya/keselamatan ringkas. lang: js|mjs|html|txt.',
+      'Review code: verify syntax (JS/MJS via `node --check`) + brief style/security notes. lang: js|mjs|html|txt.',
     inputSchema: {
       type: 'object',
       properties: {
-        code: { type: 'string', description: 'Kandungan kod yang hendak disemak' },
+        code: { type: 'string', description: 'Code content to review' },
         lang: { type: 'string', enum: ['js', 'mjs', 'html', 'txt'], default: 'js' }
       },
       required: ['code']
@@ -173,14 +173,14 @@ const TOOLS = [
   {
     name: 'tukuk_agent',
     description:
-      'Agen Tukuk Code: satu pusingan plan -> scaffold -> review -> penambahbaikan LLM (jika aktif) '
-      + 'bagi sesuatu matlamat. Pulangkan fail siap + laporan sintaks. Terbaik dengan LLM cloud/Ollama; '
-      + 'tanpa LLM, tetap keluarkan templat yang berfungsi.',
+      'Tukuk Code agent: one round of plan -> scaffold -> review -> LLM improvements (if active) '
+      + 'for a goal. Returns ready files + a syntax report. Best with a cloud/Ollama LLM; '
+      + 'without an LLM it still outputs working templates.',
     inputSchema: {
       type: 'object',
       properties: {
-        goal: { type: 'string', description: 'Matlamat projek' },
-        kind: { type: 'string', enum: ['game', 'app', 'node', 'cli', 'html'], description: 'Jenis (lalai: app)' }
+        goal: { type: 'string', description: 'Project goal' },
+        kind: { type: 'string', enum: ['game', 'app', 'node', 'cli', 'html'], description: 'Kind (default: app)' }
       },
       required: ['goal']
     }
@@ -210,7 +210,7 @@ async function handle(name, args = {}) {
           : hit.description || '';
         return `[${position + 1}] ${hit.title}\n    ${hit.url}\n    ${snippet.slice(0, 200)}`;
       });
-      const header = `${found.estimatedTotalHits ?? found.hits.length} hasil untuk "${args.q}" (${found.processingTimeMs}ms)`;
+      const header = `${found.estimatedTotalHits ?? found.hits.length} results for "${args.q}" (${found.processingTimeMs}ms)`;
       return text([header, ...lines].join('\n'), {
         structuredContent: {
           total: found.estimatedTotalHits ?? found.hits.length,
@@ -225,7 +225,7 @@ async function handle(name, args = {}) {
       const answer = await rag.ask(args.question);
       const sources = answer.sources.map((source) => `[${source.ref}] ${source.title} — ${source.url}`).join('\n');
       return text(
-        [`${answer.answer}`, '', sources ? `SUMBER:\n${sources}` : 'SUMBER: (tiada)', '', `mod: ${answer.mode} | model: ${answer.model} | ${answer.tookMs}ms`].join('\n'),
+        [`${answer.answer}`, '', sources ? `SOURCES:\n${sources}` : 'SOURCES: (none)', '', `mode: ${answer.mode} | model: ${answer.model} | ${answer.tookMs}ms`].join('\n'),
         { structuredContent: { answer: answer.answer, mode: answer.mode, sources: answer.sources } }
       );
     }
@@ -234,7 +234,7 @@ async function handle(name, args = {}) {
       crawler.setIndex(index);
       const [outcome] = await crawler.crawlBatch([String(args.url)]);
       if (outcome.status === 'failed') {
-        return text(`Gagal merayau: ${outcome.error}`, { isError: true });
+        return text(`Crawl failed: ${outcome.error}`, { isError: true });
       }
       return text(`Status: ${outcome.status}\nURL: ${outcome.url || args.url}\nID: ${outcome.id || '-'}`);
     }
@@ -269,39 +269,39 @@ async function handle(name, args = {}) {
       const kind = codegen.normalizeKind(args.kind);
       const plan = codegen.planFor(kind, args.goal);
       const gen = await llm(
-        `Kamu perancang perisian. Matlamat: "${args.goal || ''}" (jenis ${kind}). ` +
-        'Senaraikan 3-6 langkah TERPENTING & idea fail tambahan secara ringkas dalam Bahasa Melayu.',
+        `You are a software planner. Goal: "${args.goal || ''}" (kind ${kind}). ` +
+        'List the 3-6 MOST IMPORTANT steps & extra file ideas concisely in English.',
         { numPredict: 220, temperature: 0.3 }
       );
       const body = [
-        `RENCANA (${kind}) — ${plan.goal}`,
-        'FAIL:',
+        `PLAN (${kind}) — ${plan.goal}`,
+        'FILES:',
         ...plan.files.map((f) => `  - ${f.path}: ${f.purpose}`),
-        'LANGKAH:',
+        'STEPS:',
         ...plan.steps.map((s, i) => `  ${i + 1}. ${s}`)
       ].join('\n');
-      const note = gen.text ? `\n\nNOTA LLM (${gen.model}):\n${gen.text}` : '\n\n(tiada LLM aktif — rancangan templat sahaja)';
+      const note = gen.text ? `\n\nLLM NOTE (${gen.model}):\n${gen.text}` : '\n\n(no active LLM — template plan only)';
       return text(body + note, { structuredContent: plan });
     }
 
     case 'tukuk_scaffold': {
       const s = codegen.scaffoldFor(args.kind, args.goal);
       const gen = await llm(
-        `Matlamat: "${args.goal || ''}" (jenis ${s.kind}). Beri 1-2 idea penambahbaikan konkrit ke atas templat. Bahasa Melayu, ringkas.`,
+        `Goal: "${args.goal || ''}" (kind ${s.kind}). Give 1-2 concrete improvement ideas for the template. English, concise.`,
         { numPredict: 120, temperature: 0.4 }
       );
       const blocks = s.files.map((f) => `--- ${f.path} ---\n${f.contents}`).join('\n\n');
-      const hint = gen.text ? `\n\nIDEA LLM (${gen.model}):\n${gen.text}` : '';
-      return text(`JENIS: ${s.kind}\nJALANKAN: ${s.run}\n\n${blocks}${hint}`, {
+      const hint = gen.text ? `\n\nLLM IDEAS (${gen.model}):\n${gen.text}` : '';
+      return text(`KIND: ${s.kind}\nRUN: ${s.run}\n\n${blocks}${hint}`, {
         structuredContent: { kind: s.kind, run: s.run, files: s.files }
       });
     }
 
     case 'tukuk_review': {
       const r = await codegen.review(args.code, args.lang || 'js');
-      const tips = r.hints && r.hints.length ? `\nPETUNJUK:\n- ${r.hints.join('\n- ')}` : '';
-      if (r.ok) return text(`SINTAKS OK (${r.lang})${tips}`, { structuredContent: r });
-      return text(`SINTAKS RALAT:\n${r.error}${tips}`, { isError: true, structuredContent: r });
+      const tips = r.hints && r.hints.length ? `\nHINTS:\n- ${r.hints.join('\n- ')}` : '';
+      if (r.ok) return text(`SYNTAX OK (${r.lang})${tips}`, { structuredContent: r });
+      return text(`SYNTAX ERROR:\n${r.error}${tips}`, { isError: true, structuredContent: r });
     }
 
     case 'tukuk_agent': {
@@ -316,22 +316,22 @@ async function handle(name, args = {}) {
       }
       const allOk = reviews.every((x) => x.ok);
       const gen = await llm(
-        `Matlamat: "${args.goal || ''}". Jenis: ${kind}. Beri 2-4 cadangan penambahbaikan konkrit supaya scaffold lebih dekat dengan matlamat. Bahasa Melayu, ringkas.`,
+        `Goal: "${args.goal || ''}". Kind: ${kind}. Give 2-4 concrete improvement suggestions so the scaffold gets closer to the goal. English, concise.`,
         { numPredict: 180, temperature: 0.4 }
       );
       const blocks = scaffold.files.map((f) => `--- ${f.path} ---\n${f.contents}`).join('\n\n');
       const header = [
         `TUKUK CODE AGENT — ${kind}`,
-        `MATLAMAT: ${plan.goal}`,
-        `STATUS SINTAKS: ${allOk ? 'SEMUA FAIL OK' : 'ADA RALAT'}`,
+        `GOAL: ${plan.goal}`,
+        `SYNTAX STATUS: ${allOk ? 'ALL FILES OK' : 'ERRORS FOUND'}`,
         `LLM: ${gen.kind}${gen.model ? ' (' + gen.model + ')' : ''}`,
         '',
-        'LANGKAH RANCANGAN:',
+        'PLAN STEPS:',
         ...plan.steps.map((s, i) => `  ${i + 1}. ${s}`),
         '',
-        gen.text ? `CADANGAN LLM:\n${gen.text}` : 'CADANGAN LLM: (tiada LLM aktif — templat dasar sahaja)',
+        gen.text ? `LLM SUGGESTIONS:\n${gen.text}` : 'LLM SUGGESTIONS: (no active LLM — basic templates only)',
         '',
-        `JALANKAN: ${scaffold.run}`,
+        `RUN: ${scaffold.run}`,
         '',
         blocks
       ].join('\n');
@@ -347,7 +347,7 @@ async function handle(name, args = {}) {
     }
 
     default:
-      return text(`Alat tidak dikenali: ${name}`, { isError: true });
+      return text(`Unknown tool: ${name}`, { isError: true });
   }
 }
 
@@ -374,7 +374,7 @@ async function dispatch(message) {
       const payload = await handle(params?.name, params?.arguments);
       return result(id, payload);
     } catch (error) {
-      return result(id, text(`Ralat: ${error.message}`, { isError: true }));
+      return result(id, text(`Error: ${error.message}`, { isError: true }));
     }
   }
 
@@ -382,11 +382,11 @@ async function dispatch(message) {
 
   if (method === 'ping') return result(id, {});
 
-  return failure(id, -32601, `Kaedah tidak disokong: ${method}`);
+  return failure(id, -32601, `Unsupported method: ${method}`);
 }
 
 function main() {
-  logToStderr(`dimulakan — versi ${SERVER_INFO.version}, ${TOOLS.length} alat`);
+  logToStderr(`started — version ${SERVER_INFO.version}, ${TOOLS.length} tools`);
 
   const rl = readline.createInterface({ input: process.stdin, terminal: false });
   let pending = 0;
@@ -400,7 +400,7 @@ function main() {
       if (message.id !== undefined) failure(message.id, -32603, error.message);
     } finally {
       pending -= 1;
-      // Jangan keluar sehingga semua request selesai.
+      // Do not exit until all requests are done.
       if (closing && pending === 0) process.exit(0);
     }
   }
@@ -413,14 +413,14 @@ function main() {
     try {
       message = JSON.parse(trimmed);
     } catch {
-      return failure(null, -32700, 'JSON tidak sah');
+      return failure(null, -32700, 'Invalid JSON');
     }
 
     pending += 1;
     finish(message);
   });
 
-  // Tunggu request yang sedang berjalan sebelum tutup.
+  // Wait for in-flight requests before closing.
   rl.on('close', () => {
     closing = true;
     if (pending === 0) process.exit(0);

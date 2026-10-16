@@ -25,39 +25,39 @@ function normalizeKind(kind) {
 
 /** Rancangan berstruktur (fail + langkah) bagi sesuatu jenis projek. */
 function planFor(kind, goal) {
-  const g = String(goal || 'aplikasi kecil').slice(0, 200);
+  const g = String(goal || 'small app').slice(0, 200);
   const g2 = normalizeKind(kind);
   const plans = {
     game: {
       files: [
-        { path: 'index.html', purpose: 'Kanvas + gelung + skor' },
-        { path: 'game.js', purpose: 'Logika entiti, input, collision' }
+        { path: 'index.html', purpose: 'Canvas + loop + score' },
+        { path: 'game.js', purpose: 'Entity logic, input, collision' }
       ],
       steps: [
-        'Sediakan <canvas> + requestAnimationFrame loop',
-        'Input keyboard/touch (kiri/kanan, R untuk restart)',
-        'Spawn objek + pengesanan collision',
-        'Skor, keadaan Game Over, polish visual'
+        'Set up <canvas> + requestAnimationFrame loop',
+        'Keyboard/touch input (left/right, R to restart)',
+        'Spawn objects + collision detection',
+        'Score, Game Over state, visual polish'
       ]
     },
     app: {
-      files: [{ path: 'index.html', purpose: 'SPA satu fail dengan localStorage' }],
-      steps: ['Struktur HTML + CSS ringkas', 'State di localStorage', 'CRUD minimum (add / list / delete)', 'Render semula selepas setiap tindakan']
+      files: [{ path: 'index.html', purpose: 'Single-file SPA with localStorage' }],
+      steps: ['Simple HTML + CSS structure', 'State in localStorage', 'Minimum CRUD (add / list / delete)', 'Re-render after every action']
     },
     node: {
       files: [
-        { path: 'index.mjs', purpose: 'Fungsi tulen (export)' },
-        { path: 'index.test.mjs', purpose: 'Ujian node:test' }
+        { path: 'index.mjs', purpose: 'Pure functions (export)' },
+        { path: 'index.test.mjs', purpose: 'node:test tests' }
       ],
-      steps: ['Tulis fungsi sebagai ESM export', 'Ujian dengan `node --test`', 'Pisahkan logika daripada I/O supaya boleh diuji']
+      steps: ['Write functions as ESM exports', 'Test with `node --test`', 'Separate logic from I/O so it can be tested']
     },
     cli: {
-      files: [{ path: 'cli.mjs', purpose: 'Parser argv + subcommand' }],
-      steps: ['Baca process.argv', 'Dispatch subcommand (hello/sum/...)', 'Output jelas + exit code']
+      files: [{ path: 'cli.mjs', purpose: 'argv parser + subcommands' }],
+      steps: ['Read process.argv', 'Dispatch subcommands (hello/sum/...)', 'Clear output + exit code']
     },
     html: {
-      files: [{ path: 'index.html', purpose: 'Halaman statik responsif' }],
-      steps: ['Meta viewport + CSS', 'Kandungan semantik', 'Accessible (fokus, kontras)']
+      files: [{ path: 'index.html', purpose: 'Responsive static page' }],
+      steps: ['Viewport meta + CSS', 'Semantic content', 'Accessible (focus, contrast)']
     }
   };
   return { goal: g, kind: g2, ...plans[g2] };
@@ -120,7 +120,7 @@ function step() {
     }
     x.fillStyle = '#e6e9ef'; x.font = '16px system-ui'; x.fillText('Score: ' + score, 10, 22);
     x.fillStyle = '#34d399'; x.beginPath(); x.arc(player.x, player.y, player.r, 0, 7); x.fill();
-    if (dead) { x.fillStyle = '#fb7185'; x.font = '24px system-ui'; x.fillText('Game Over - tekan R', 120, H / 2); }
+    if (dead) { x.fillStyle = '#fb7185'; x.font = '24px system-ui'; x.fillText('Game Over - press R', 120, H / 2); }
   }
   requestAnimationFrame(step);
 }
@@ -157,7 +157,7 @@ const APP_HTML = `<!DOCTYPE html>
     var u = document.getElementById('u'); u.innerHTML = '';
     items.forEach(function (t, n) {
       var li = document.createElement('li'); li.textContent = t;
-      li.title = 'Klik untuk buang';
+      li.title = 'Click to remove';
       li.onclick = function () { items.splice(n, 1); save(); render(); };
       u.appendChild(li);
     });
@@ -220,8 +220,8 @@ const HTML_PAGE = `<!DOCTYPE html>
 </head>
 <body>
 <main>
-  <h1>Halo Tukuk</h1>
-  <p>Halaman responsif asas. Edit kandungan ini untuk memulakan.</p>
+  <h1>Hello Tukuk</h1>
+  <p>A basic responsive page. Edit this content to get started.</p>
 </main>
 </body>
 </html>`;
@@ -245,7 +245,7 @@ function scaffoldFor(kind, goal) {
     goal: String(goal || '').slice(0, 200),
     files: filesFor(k),
     run: k === 'game' || k === 'app' || k === 'html'
-      ? 'Buka index.html dalam pelayar (atau muat naik ke Studio).'
+      ? 'Open index.html in the browser (or upload it to Studio).'
       : k === 'node'
         ? 'node --test index.test.mjs'
         : 'node cli.mjs hello Tukuk'
@@ -257,9 +257,9 @@ function review(code, lang) {
   const src = String(code || '');
   const l = String(lang || 'js').toLowerCase();
   const hints = [];
-  if (/\beval\s*\(/.test(src)) hints.push('elakkan eval() — risiko keselamatan.');
-  if (/document\.write\s*\(/.test(src)) hints.push('document.write boleh lambat — guna DOM API.');
-  if (/<script>/.test(src) && !/charset/i.test(src)) hints.push('Tambah <meta charset="utf-8">.');
+  if (/\beval\s*\(/.test(src)) hints.push('avoid eval() — security risk.');
+  if (/document\.write\s*\(/.test(src)) hints.push('document.write can be slow — use DOM APIs.');
+  if (/<script>/.test(src) && !/charset/i.test(src)) hints.push('Add <meta charset="utf-8">.');
 
   const isJs = /^(js|mjs|cjs|javascript)$/.test(l);
   if (!isJs) {
@@ -270,7 +270,7 @@ function review(code, lang) {
     try {
       fs.writeFileSync(file, src);
     } catch (e) {
-      return resolve({ ok: false, lang: l, error: 'gagal tulis fail tmp: ' + e.message, hints });
+      return resolve({ ok: false, lang: l, error: 'failed to write tmp file: ' + e.message, hints });
     }
     execFile(process.execPath, ['--check', file], (err, _so, stderr) => {
       try { fs.unlinkSync(file); } catch { /* abaikan */ }

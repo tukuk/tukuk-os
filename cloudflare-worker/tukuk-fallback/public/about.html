@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tentang &mdash; Tukuk-OS</title>
-<meta name="description" content="Mengenal pasti Tukuk-OS: enjin carian web untuk tukuk.org, reka bentuk dan ciri.">
-<link rel="canonical" href="/tentang">
+<title>About &mdash; Tukuk-OS</title>
+<meta name="description" content="Who and what Tukuk-OS is: a web search engine for tukuk.org, its design and features.">
+<link rel="canonical" href="/about">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128269;</text></svg>">
 <style>
   :root { --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef; --muted:#9aa3b2; --accent:#4c8dff; }
@@ -31,46 +31,46 @@
 </head>
 <body>
 <header class="wrap">
-  <h1>Tentang</h1>
-  <p class="updated">Kemas kini: 5 Oktober 2026 &middot; tukuk.org</p>
+  <h1>About</h1>
+  <p class="updated">Updated: October 5, 2026 &middot; tukuk.org</p>
   <nav>
-    <a href="/">Carian</a><a href="/about">Tentang</a><a href="/privacy">Privasi</a>
-    <a href="/terms">Terma</a><a href="/contact">Hubungi</a><a href="/api">API</a>
+    <a href="/">Search</a><a href="/about">About</a><a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a><a href="/contact">Contact</a><a href="/api">API</a>
   </nav>
 </header>
 <main class="wrap">
-<p>Tukuk-OS ialah enjin carian web untuk domain <strong>tukuk.org</strong>. Ia dibina untuk mencari halaman web awam dalam Bahasa Melayu dan Inggeris, dengan keutamaan pada kualiti jawapan dan ketelusan sumber.</p>
+<p>Tukuk-OS is a web search engine for the <strong>tukuk.org</strong> domain. It is built to search public web pages, with priority on answer quality and source transparency.</p>
 
-<h2>Bagaimana ia berfungsi</h2>
+<h2>How it works</h2>
 <table>
-  <tr><th>Lapis</th><th>Peranan</th></tr>
-  <tr><td>Meilisearch</td><td>Menyimpan dan menokia indeks terbalik. Berjalan pada port 7700.</td></tr>
-  <tr><td>Pelayan API</td><td>Node.js + Express, port 8000. Menyediakan carian, crawler, dan API.</td></tr>
-  <tr><td>Crawler</td><td>Kod sendiri. Menghormati robots.txt, mengelakkan alamat dalaman.</td></tr>
-  <tr><td>Otak</td><td>Model bahasa kecil melalui Ollama. Membina jawapan daripada sumber yang dijumpai.</td></tr>
+  <tr><th>Layer</th><th>Role</th></tr>
+  <tr><td>Meilisearch</td><td>Stores and scores the inverted index. Runs on port 7700.</td></tr>
+  <tr><td>API server</td><td>Node.js + Express, port 8000. Serves search, the crawler, and the API.</td></tr>
+  <tr><td>Crawler</td><td>Custom code. Respects robots.txt, avoids internal addresses.</td></tr>
+  <tr><td>Brain</td><td>A small language model via Ollama. Builds answers from the sources it finds.</td></tr>
 </table>
 
-<h2>Ciri carian</h2>
+<h2>Search features</h2>
 <ul>
-  <li>Sorotan kata dan ringkasan dengan konteks</li>
-  <li>Toleransi silap ejaan automatik</li>
-  <li>Sinonim Bahasa Melayu (cari, carian, pencarian, geledah)</li>
-  <li>Facet: laman, bahasa, jenis kandungan</li>
-  <li>Penapis masa, bilangan perkataan, domain</li>
-  <li>Cadangan autolengkap</li>
+  <li>Word highlighting and summaries with context</li>
+  <li>Automatic typo tolerance</li>
+  <li>Malay &amp; English synonyms (cari, carian, pencarian, geledah)</li>
+  <li>Facets: site, language, content type</li>
+  <li>Filters by time, word count, and domain</li>
+  <li>Autocomplete suggestions</li>
 </ul>
 
-<h2>Privasi dan ketelusan</h2>
-<p>Setiap jawapan daripada otak menyertakan senarai URL sumber. Jika tiada sumber mencukupi, sistem bertindak jujur dan mengatakan ia tidak tahu — ia tidak mengarang fakta.</p>
+<h2>Privacy and transparency</h2>
+<p>Every answer from the brain includes a list of source URLs. If no sources are sufficient, the system behaves honestly and says it does not know — it does not invent facts.</p>
 
-<h2>Kod sumber</h2>
+<h2>Source code</h2>
 <div class="box">
-<p>Kod ini tersedia di bawah lesen ISC.</p>
+<p>This code is available under the ISC license.</p>
 </div>
 
-<h2>Hubungi</h2>
-<p>Untuk pertanyaan dan laporan pepijat: <a href="/contact">hubungi kami</a>.</p>
+<h2>Contact</h2>
+<p>For questions and bug reports: <a href="/contact">contact us</a>.</p>
 </main>
-<footer class="wrap">Tukuk-OS &middot; lesen ISC &middot; <a href="/">enjin carian</a></footer>
+<footer class="wrap">Tukuk-OS &middot; ISC license &middot; <a href="/">search engine</a></footer>
 </body>
 </html>

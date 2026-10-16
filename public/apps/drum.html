@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mesin Rentak — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Drum machine 16-langkah dalam pelayar: kick, snare, hihat dan clap disintesis sepenuhnya dengan WebAudio — BPM, swing, rawak, jana rentak & simpan pola.">
+<title>Beat Machine — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="16-step drum machine in the browser: kick, snare, hi-hat and clap fully synthesized with WebAudio — BPM, swing, random, beat generator & saved patterns.">
 <link rel="canonical" href="https://tukuk.org/apps/drum">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/drum.svg">
@@ -35,27 +35,27 @@
   <link rel="manifest" href="/manifest-drum.json">
 </head>
 <body>
-<header><a class="back" href="/apps">← Apps</a><h1>🥁 Mesin Rentak</h1></header>
+<header><a class="back" href="/apps">← Apps</a><h1>🥁 Beat Machine</h1></header>
 <div class="wrap">
   <div class="pad" id="pad"></div>
   <div class="bar">
-    <button id="play">▶ Main</button>
+    <button id="play">▶ Play</button>
     <label>BPM <input type="range" id="bpm" min="60" max="180" value="110"><b id="obpm">110</b></label>
     <label>Swing <input type="range" id="sw" min="0" max="60" value="0"></label>
     <select id="groove">
-      <option value="">🎛 Pola siap…</option>
-      <option value="rock">Rock asas</option>
+      <option value="">🎛 Preset patterns…</option>
+      <option value="rock">Basic rock</option>
       <option value="hiphop">Hip-hop</option>
       <option value="house">House 4-on-floor</option>
       <option value="dub">Dub / reggae</option>
       <option value="break">Breakbeat</option>
     </select>
-    <button id="rand">🎲 Rawak</button>
-    <button id="clear">🗑 Kosong</button>
-    <button id="mute">🔊 Bunyi</button>
+    <button id="rand">🎲 Random</button>
+    <button id="clear">🗑 Clear</button>
+    <button id="mute">🔊 Sound</button>
   </div>
   <div class="stat" id="stat"></div>
-  <p class="hint">Klik pad untuk togol nota · 4 instrumen disintesis secara langsung (tiada fail audio) · pola disimpan automatik dalam pelayar anda.</p>
+  <p class="hint">Click a pad to toggle a note · 4 instruments synthesized live (no audio files) · pattern auto-saves in your browser.</p>
 </div>
 <script>
 (() => {
@@ -74,12 +74,12 @@
     dub:    { kick: [0,8], snare: [10], hihat: [2,6,10,14], clap: [] },
     break:  { kick: [0,10,11], snare: [4,7,12,15], hihat: [0,3,6,8,11,14], clap: [8] },
   };
-  let pattern; // muat dari localStorage
+  let pattern; // load from localStorage
   try { pattern = JSON.parse(localStorage.getItem('tukuk-drum')) || null; } catch (e) {}
   if (!pattern) pattern = { kick: [], snare: [], hihat: [], clap: [] };
   TRACKS.forEach((t) => { if (!Array.isArray(pattern[t.id])) pattern[t.id] = []; for (let i = 0; i < STEPS; i++) pattern[t.id][i] = pattern[t.id][i] ? 1 : 0; });
   function save() { localStorage.setItem('tukuk-drum', JSON.stringify(pattern)); }
-  // Bina grid pad
+  // Build pad grid
   const pad = $('pad'), cells = {};
   TRACKS.forEach((t) => {
     const lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = t.ic + ' ' + t.name; pad.appendChild(lab);
@@ -90,7 +90,7 @@
       pad.appendChild(c); cells[t.id].push(c);
     }
   });
-  // ── WebAudio: setiap bunyi disintesis langsung ──
+  // ── WebAudio: every sound is synthesized live ──
   let A = null, master, mOff = false, noiseBuf = null;
   function ctx() { if (!A) { A = new (window.AudioContext || window.webkitAudioContext)();
       master = A.createGain(); master.gain.value = 0.8; master.connect(A.destination); }
@@ -121,13 +121,13 @@
       s.connect(f); f.connect(g); g.connect(master); s.start(tt); s.stop(tt + 0.15); } }
   const SYNTH = { kick, snare, hihat, clap };
   function toggleSound(id) { if (mOff) return; const c = ctx(); SYNTH[id](c.currentTime + 0.02); }
-  $('mute').onclick = () => { mOff = !mOff; $('mute').textContent = mOff ? '🔇 Senyap' : '🔊 Bunyi'; $('mute').classList.toggle('on', mOff); };
-  // ── Penjadual lookahead — grid 1/16, swing lewatkan langkah ganjil (kaun "dan") ──
+  $('mute').onclick = () => { mOff = !mOff; $('mute').textContent = mOff ? '🔇 Muted' : '🔊 Sound'; $('mute').classList.toggle('on', mOff); };
+  // ── Lookahead scheduler — 1/16 grid, swing delays odd steps (the "and" count) ──
   let playing = false, nextT = 0, stepIdx = 0, timer = null;
   let drawnStep = -1, drawQ = [];
   function schedule() { const c = ctx();
     while (nextT < c.currentTime + 0.12) {
-      const spb = 60 / Number($('bpm').value) / 4; // saat per 1/16
+      const spb = 60 / Number($('bpm').value) / 4; // seconds per 1/16 step
       const sw = (Number($('sw').value) / 100) * spb * (stepIdx % 2 === 1 ? 1 : 0);
       const t = nextT + sw;
       if (!mOff) TRACKS.forEach((tr) => { if (pattern[tr.id][stepIdx]) SYNTH[tr.id](t); });
@@ -139,28 +139,28 @@
       if (drawnStep >= 0) TRACKS.forEach((tr) => cells[tr.id][drawnStep].classList.remove('now'));
       drawnStep = drawQ.shift().i;
       TRACKS.forEach((tr) => cells[tr.id][drawnStep].classList.add('now'));
-      $('stat').textContent = 'Langkah ' + (drawnStep + 1) + '/16 · ' + $('bpm').value + ' BPM · ' + countNotes() + ' nota'; }
+      $('stat').textContent = 'Step ' + (drawnStep + 1) + '/16 · ' + $('bpm').value + ' BPM · ' + countNotes() + ' notes'; }
     if (playing) requestAnimationFrame(paint); }
   function countNotes() { let n = 0; TRACKS.forEach((t) => pattern[t.id].forEach((v) => n += v)); return n; }
   function start() { const c = ctx(); playing = true; nextT = c.currentTime + 0.06; stepIdx = 0; drawQ = [];
     timer = setInterval(schedule, 25); requestAnimationFrame(paint);
-    $('play').textContent = '⏹ Berhenti'; $('play').classList.add('on'); }
+    $('play').textContent = '⏹ Stop'; $('play').classList.add('on'); }
   function stop() { playing = false; clearInterval(timer); timer = null;
     if (drawnStep >= 0) TRACKS.forEach((tr) => cells[tr.id][drawnStep].classList.remove('now'));
-    drawnStep = -1; $('play').textContent = '▶ Main'; $('play').classList.remove('on');
-    $('stat').textContent = 'Dihenti · ' + countNotes() + ' nota dalam pola'; }
+    drawnStep = -1; $('play').textContent = '▶ Play'; $('play').classList.remove('on');
+    $('stat').textContent = 'Stopped · ' + countNotes() + ' notes in pattern'; }
   $('play').onclick = () => playing ? stop() : start();
   $('bpm').oninput = (e) => { $('obpm').textContent = e.target.value; };
   $('groove').onchange = (e) => { const g = GROOVES[e.target.value]; if (!g) return;
     TRACKS.forEach((t) => pattern[t.id] = Array(STEPS).fill(0).map((_, i) => g[t.id].includes(i) ? 1 : 0));
     refreshCells(); save(); };
-  $('rand').onclick = () => { // rawak kebarangkalian ikut peran
+  $('rand').onclick = () => { // randomize with per-role probability
     const P = { kick: 0.22, snare: 0.16, hihat: 0.42, clap: 0.1 };
     TRACKS.forEach((t) => pattern[t.id] = Array(STEPS).fill(0).map((_, i) => (i % 4 === 0 && t.id === 'kick' ? Math.random() < 0.7 : Math.random() < P[t.id]) ? 1 : 0));
     refreshCells(); save(); };
   $('clear').onclick = () => { TRACKS.forEach((t) => pattern[t.id] = Array(STEPS).fill(0)); refreshCells(); save(); };
   function refreshCells() { TRACKS.forEach((t) => cells[t.id].forEach((c, i) => c.classList.toggle('on', !!pattern[t.id][i]))); idleStat(); }
-  function idleStat() { $('stat').textContent = countNotes() + ' nota dalam pola · tekan ▶ Main untuk mula'; }
+  function idleStat() { $('stat').textContent = countNotes() + ' notes in pattern · press ▶ Play to start'; }
   idleStat();
 })();
 </script>

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Store — Game &amp; Aplikasi Dalam Pelayar — Tukuk-OS</title>
-<meta name="description" content="Tukuk Store: main game terus dalam pelayar — tanpa muat turun, tanpa daftar. Arked, teka-teki, refleks, kuiz & banyak lagi, plus aplikasi mini dan terbitan komuniti. Percuma, ada sahaja yang baharu.">
+<title>Tukuk Store — Browser Games &amp; Apps — Tukuk-OS</title>
+<meta name="description" content="Tukuk Store: play games right in the browser — no download, no sign-up. Arcade, puzzle, reflex, quiz and many more, plus mini apps and community publishes. Free, with something new all the time.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
-<meta property="og:title" content="Tukuk Store — Main Game Terus Dalam Pelayar">
-<meta property="og:description" content="Game arked, teka-teki, refleks & kuiz — main serta-merta, tanpa pasang. Plus aplikasi mini dan terbitan komuniti.">
+<meta property="og:title" content="Tukuk Store — Play Games Instantly in Your Browser">
+<meta property="og:description" content="Arcade, puzzle, reflex & quiz games — play now, no install. Plus mini apps and community publishes.">
 <meta property="og:url" content="https://tukuk.org/store">
 <link rel="canonical" href="https://tukuk.org/store">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -236,12 +236,12 @@
   <header>
     <span class="badge-pro">Tukuk Studio Store</span>
     <h1>🎮 Tukuk <span class="accent">Store</span></h1>
-    <p class="tagline"><b>Main terus dalam pelayar</b> — tanpa muat turun, tanpa daftar. Arked, teka-teki, refleks &amp; kuiz percuma, ada sahaja yang baharu. Plus aplikasi mini &amp; terbitan komuniti.</p>
+    <p class="tagline"><b>Play right in your browser</b> — no download, no sign-up. Free arcade, puzzle, reflex &amp; quiz games, with something new all the time. Plus mini apps &amp; community publishes.</p>
     <nav class="top">
       <a href="/studio">◂ Studio Suite</a>
-      <a href="/builder">🧱 Bina App/Game</a>
-      <a href="/">⌕ Enjin Carian</a>
-      <a href="/a">📃 Indeks Mentah</a>
+      <a href="/builder">🧱 Build an App/Game</a>
+      <a href="/">⌕ Search Engine</a>
+      <a href="/a">📃 Raw Index</a>
     </nav>
   </header>
 
@@ -249,13 +249,13 @@
     <div class="barrow">
       <div class="tabs" id="tabs">
         <button data-cat="game" class="on">🎮 Game</button>
-        <button data-cat="app">📱 Aplikasi</button>
+        <button data-cat="app">📱 Apps</button>
       </div>
-      <div class="searchbox">🔎<input id="q" type="search" placeholder="Cari game atau aplikasi…"></div>
+      <div class="searchbox">🔎<input id="q" type="search" placeholder="Search games or apps…"></div>
       <div class="sortbox">
-        <select id="sort" title="Susun katalog">
+        <select id="sort" title="Sort catalog">
           <option value="plays">🔥 Popular</option>
-          <option value="new">Terbaharu</option>
+          <option value="new">Newest</option>
           <option value="name">A – Z</option>
         </select>
       </div>
@@ -266,29 +266,29 @@
   <p class="stats" id="stats"></p>
 
   <section class="sec" id="recentSec" hidden>
-    <h2>🕒 Baru Dimainkan <a class="more" href="#" id="clearRecent">Kosongkan</a></h2>
+    <h2>🕒 Recently Played <a class="more" href="#" id="clearRecent">Clear</a></h2>
     <div class="rail" id="recentRail"></div>
   </section>
   <section class="sec" id="trendSec" hidden>
-    <h2>🔥 Trending — Paling Main</h2>
+    <h2>🔥 Trending — Most Played</h2>
     <div class="rail" id="trendRail"></div>
   </section>
   <section class="sec" id="newSec" hidden>
-    <h2>🆕 Baharu</h2>
+    <h2>🆕 New</h2>
     <div class="rail" id="newRail"></div>
   </section>
 
   <section class="sec" id="allSec">
-    <h2 id="allTitle">Semua Game</h2>
+    <h2 id="allTitle">All Games</h2>
     <div id="grid" class="shop" aria-live="polite"></div>
   </section>
   <div id="state" class="state" hidden></div>
 
-  <a class="cta" href="/builder">🧱 Tiada yang anda cari? <b>Bina app &amp; game anda sendiri</b> dengan Pembina Studio — tiada kod diperlukan, terbitkan dengan satu klik ke kedai ini.</a>
+  <a class="cta" href="/builder">🧱 Can't find what you want? <b>Build your own apps &amp; games</b> with the Studio Builder — no code needed, one-click publish to this store.</a>
 
   <footer>
-    &copy; 2026 Tukuk-OS — <a href="/studio">Studio</a> <a href="/builder">Pembina</a> <a href="/about">Mengenai</a> <a href="/privacy">Privasi</a>
-    <p style="margin:8px 0 0;font-size:.76rem">Item komuniti dibuka dalam sandbox asal berasingan demi keselamatan. Arked membuka Pembina dengan templat pramuat.</p>
+    &copy; 2026 Tukuk-OS — <a href="/studio">Studio</a> <a href="/builder">Builder</a> <a href="/about">About</a> <a href="/privacy">Privacy</a>
+    <p style="margin:8px 0 0;font-size:.76rem">Community items open in a sandboxed separate origin for safety. Arcade opens the Builder with a preloaded template.</p>
   </footer>
 </div>
 
@@ -301,12 +301,12 @@
   const sortEl = document.getElementById('sort');
   const tabs = document.getElementById('tabs');
   const genresEl = document.getElementById('genres');
-  const SRC_LABEL = { bawaan: '🏠 Bawaan', satukata: '⚡ Satu Kata', arked: '🕹️ Arked', komuniti: '👥 Komuniti' };
-  // Label paparan genre — order ini juga tertib chip (pailiter: chip hanya muncul bila ada game).
+  const SRC_LABEL = { bawaan: '🏠 Built-in', satukata: '⚡ One-Word', arked: '🕹️ Arcade', komuniti: '👥 Community' };
+  // Genre display labels — key order also sets chip order (filter: chips only show when games exist).
   const GENRE_LABEL = {
-    'arkad': '🕹️ Arkad', 'teki-teki': '🧩 Teka-Teki', 'refleks': '⚡ Refleks', 'kuiz': '💡 Kuiz',
-    'tindakan': '🔥 Tindakan', 'penembakan': '🎯 Penembakan', 'santai': '😌 Santai',
-    'kereta': '🏎️ Kereta', 'sukan': '⚽ Sukan', 'klik': '🖱️ Klik', 'io': '🌐 .io'
+    'arkad': '🕹️ Arcade', 'teki-teki': '🧩 Puzzle', 'refleks': '⚡ Reflex', 'kuiz': '💡 Quiz',
+    'tindakan': '🔥 Action', 'penembakan': '🎯 Shooter', 'santai': '😌 Casual',
+    'kereta': '🏎️ Racing', 'sukan': '⚽ Sports', 'klik': '🖱️ Clicker', 'io': '🌐 .io'
   };
   // APK berjalan pada Android/Huawei/ChromeOS; bukan iOS (APK tak pasang di iPhone) → sembunyi butang.
   const CAN_APK = !/iPhone|iPad|iPod/.test(navigator.userAgent || '');
@@ -327,11 +327,11 @@
   function ago(t) {
     if (!t) return '';
     const d = Math.floor((Date.now() - t) / 86400000);
-    if (d <= 0) return 'hari ini';
-    if (d === 1) return 'semalam';
-    if (d < 30) return d + ' hari lalu';
-    if (d < 365) return Math.floor(d / 30) + ' bulan lalu';
-    return Math.floor(d / 365) + ' tahun lalu';
+    if (d <= 0) return 'today';
+    if (d === 1) return 'yesterday';
+    if (d < 30) return d + ' days ago';
+    if (d < 365) return Math.floor(d / 30) + ' months ago';
+    return Math.floor(d / 365) + ' years ago';
   }
 
   // Riwayat main (localStorage — ditulis halaman /play) → senarai id terkini dahulu.
@@ -346,16 +346,16 @@
   function tileHtml(x) {
     return `
       <article class="tile g-${esc(x.genre || 'arkad')}">
-        <a class="thumb" href="/play/${encodeURIComponent(x.id)}" aria-label="Main ${esc(x.title)}">
-          <span class="gbadge">${esc((GENRE_LABEL[x.genre] || '🕹️ Arkad').replace(/^\S+\s/, ''))}</span>
+        <a class="thumb" href="/play/${encodeURIComponent(x.id)}" aria-label="Play ${esc(x.title)}">
+          <span class="gbadge">${esc((GENRE_LABEL[x.genre] || '🕹️ Arcade').replace(/^\S+\s/, ''))}</span>
           <span class="ticon">${iconHtml(x)}</span>
-          ${x.plays ? `<span class="playsbadge">▶ ${fmtPlays(x.plays)} main</span>` : ''}
+          ${x.plays ? `<span class="playsbadge">▶ ${fmtPlays(x.plays)} plays</span>` : ''}
           <span class="playov"><span>▶</span></span>
         </a>
         <h3><a href="/play/${encodeURIComponent(x.id)}">${esc(x.title)}</a></h3>
         <div class="footrow">
-          ${CAN_APK ? `<button class="apkbtn" data-apk="${esc(x.id)}" title="Jana & muat turun APK Android (pembungkus game ini)">⬇ APK</button>` : ''}
-          <button class="copybtn" data-copy="${location.origin}/play/${encodeURIComponent(x.id)}" title="Salin pautan main">📋</button>
+          ${CAN_APK ? `<button class="apkbtn" data-apk="${esc(x.id)}" title="Generate & download an Android APK (wraps this game)">⬇ APK</button>` : ''}
+          <button class="copybtn" data-copy="${location.origin}/play/${encodeURIComponent(x.id)}" title="Copy play link">📋</button>
         </div>
       </article>`;
   }
@@ -375,14 +375,14 @@
         <span class="srcbadge ${esc(x.src)}">${SRC_LABEL[x.src] || esc(x.src)}</span>
         <p class="desc">${esc(x.desc)}</p>
         <div class="meta">
-          ${CAN_APK ? '<span class="sign" title="APK gedung ini ditandatangani dengan satu kunci pembangun Tukuk yang sama" style="color:#7ce898;font-weight:700">🔒 Ditandatangani Tukuk</span>' : ''}
-          ${x.plays ? `<span>▶ ${fmtPlays(x.plays)} main/dilihat</span>` : ''}
+          ${CAN_APK ? '<span class="sign" title="Store APKs are signed with the same single Tukuk developer key" style="color:#7ce898;font-weight:700">🔒 Tukuk-signed</span>' : ''}
+          ${x.plays ? `<span>▶ ${fmtPlays(x.plays)} plays/views</span>` : ''}
           ${x.updated ? `<span>🕒 ${esc(ago(x.updated))}</span>` : ''}
         </div>
         <div class="footrow">
-          <a class="openbtn" href="${esc(x.url)}" target="_blank" rel="noopener">▶ Buka</a>
-          ${CAN_APK ? `<button class="apkbtn" data-apk="${esc(x.id)}" title="Jana & muat turun APK Android (pembungkus apl ini)">⬇ APK</button>` : ''}
-          <button class="copybtn" data-copy="${location.origin}${esc(x.url)}" title="Salin pautan">📋</button>
+          <a class="openbtn" href="${esc(x.url)}" target="_blank" rel="noopener">▶ Open</a>
+          ${CAN_APK ? `<button class="apkbtn" data-apk="${esc(x.id)}" title="Generate & download an Android APK (wraps this app)">⬇ APK</button>` : ''}
+          <button class="copybtn" data-copy="${location.origin}${esc(x.url)}" title="Copy link">📋</button>
         </div>
       </article>`;
   }
@@ -394,7 +394,7 @@
   function buildGenreChips() {
     const present = new Set(games().map((x) => x.genre).filter(Boolean));
     const order = Object.keys(GENRE_LABEL).filter((g) => present.has(g));
-    genresEl.innerHTML = `<button data-genre="all" class="on">🌐 Semua Genre</button>` +
+    genresEl.innerHTML = `<button data-genre="all" class="on">🌐 All Genres</button>` +
       order.map((g) => `<button data-genre="${esc(g)}">${GENRE_LABEL[g]}</button>`).join('');
     genresEl.classList.toggle('show', cat === 'game');
   }
@@ -413,7 +413,7 @@
   function sortList(list) {
     const by = sortEl.value;
     if (by === 'plays') return list.slice().sort((a, b) => (b.plays || 0) - (a.plays || 0) || b.updated - a.updated);
-    if (by === 'name') return list.slice().sort((a, b) => a.title.localeCompare(b.title, 'ms'));
+    if (by === 'name') return list.slice().sort((a, b) => a.title.localeCompare(b.title, 'en'));
     return list.slice().sort((a, b) => (b.updated - a.updated) || (b.plays || 0) - (a.plays || 0));
   }
 
@@ -435,7 +435,7 @@
       grid.className = 'shop';
       grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
       grid.innerHTML = list.map(tileHtml).join('');
-      document.getElementById('allTitle').textContent = genre === 'all' ? 'Semua Game' : (GENRE_LABEL[genre] || 'Game');
+      document.getElementById('allTitle').textContent = genre === 'all' ? 'All Games' : (GENRE_LABEL[genre] || 'Games');
 
       if (showSections) {
         // Baru Dimainkan — id daripada localStorage yang masih wujud dalam katalog.
@@ -450,27 +450,27 @@
       }
       stateEl.hidden = list.length > 0;
       if (!list.length) stateEl.innerHTML = items.length
-        ? '<div class="big">🔎</div><p>Tiada padanan untuk carian/genre itu. Cuba kata lain atau tukar genre.</p>'
-        : '<div class="big">🏪</div><p>Katalog kosong / gagal dimuat. <button class="copybtn" id="reloadBtn" type="button">🔄 Muat semula</button></p>';
+        ? '<div class="big">🔎</div><p>No matches for that search/genre. Try another word or switch genre.</p>'
+        : '<div class="big">🏪</div><p>Catalog empty / failed to load. <button class="copybtn" id="reloadBtn" type="button">🔄 Reload</button></p>';
       bindReload();
     } else {
       const list = sortList(currentApps());
       grid.className = 'shop';
       grid.style.gridTemplateColumns = '';
       grid.innerHTML = list.map(appCardHtml).join('');
-      document.getElementById('allTitle').textContent = 'Semua Aplikasi';
+      document.getElementById('allTitle').textContent = 'All Apps';
       stateEl.hidden = list.length > 0;
       if (!list.length) stateEl.innerHTML = items.length
-        ? '<div class="big">🔎</div><p>Tiada padanan untuk carian itu.</p>'
-        : '<div class="big">🏪</div><p>Katalog kosong / gagal dimuat. <button class="copybtn" id="reloadBtn" type="button">🔄 Muat semula</button></p>';
+        ? '<div class="big">🔎</div><p>No matches for that search.</p>'
+        : '<div class="big">🏪</div><p>Catalog empty / failed to load. <button class="copybtn" id="reloadBtn" type="button">🔄 Reload</button></p>';
       bindReload();
     }
 
     const apps_n = apps().length, games_n = games().length;
     const plays = items.reduce((s, x) => s + (x.plays || 0), 0);
     statsEl.innerHTML = items.length
-      ? `<span>🎮 <b>${games_n}</b> game</span><span>📱 <b>${apps_n}</b> aplikasi</span>` +
-        (plays ? `<span>▶ <b>${fmtPlays(plays)}</b> sesi main</span>` : '')
+      ? `<span>🎮 <b>${games_n}</b> games</span><span>📱 <b>${apps_n}</b> apps</span>` +
+        (plays ? `<span>▶ <b>${fmtPlays(plays)}</b> play sessions</span>` : '')
       : '';
   }
   function bindReload(){ const rb = document.getElementById('reloadBtn'); if (rb) rb.onclick = () => location.reload(); }
@@ -490,7 +490,7 @@
     if (!a) return;
     e.preventDefault();
     const old = a.textContent;
-    a.disabled = true; a.textContent = '⏳ Jana…';
+    a.disabled = true; a.textContent = '⏳ Building…';
     try {
       const r = await fetch('/api/apk/' + encodeURIComponent(a.getAttribute('data-apk')));
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j && j.error ? j.error : ('HTTP ' + r.status)); }
@@ -500,9 +500,9 @@
       const dl = document.createElement('a'); dl.href = objUrl; dl.download = name;
       document.body.appendChild(dl); dl.click(); dl.remove();
       setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
-      a.textContent = '✓ Selesai';
+      a.textContent = '✓ Done';
     } catch (err) {
-      a.textContent = '⚠ ' + String(err.message || 'gagal').slice(0, 14);
+      a.textContent = '⚠ ' + String(err.message || 'failed').slice(0, 14);
     }
     setTimeout(() => { a.textContent = old; a.disabled = false; }, 2600);
   });
@@ -550,7 +550,7 @@
       .catch(() => {
         if (attempt < 2) { setTimeout(() => load(attempt + 1), 1200 * (attempt + 1)); return; }
         stateEl.hidden = false;
-        stateEl.innerHTML = '<div class="big">⚠️</div><p>Gagal memuat katalog. <button class="copybtn" id="reloadBtn" type="button">🔄 Muat semula</button> atau cuba lagi sebentar.</p>';
+        stateEl.innerHTML = '<div class="big">⚠️</div><p>Failed to load the catalog. <button class="copybtn" id="reloadBtn" type="button">🔄 Reload</button> or try again shortly.</p>';
         bindReload();
       });
   }

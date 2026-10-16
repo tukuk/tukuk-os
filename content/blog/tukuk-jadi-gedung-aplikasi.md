@@ -1,26 +1,26 @@
 SLUG: tukuk-jadi-gedung-aplikasi
-TITLE: Tukuk-OS Jadi Gedung Aplikasi Sendiri — Gaya APKPure
-EXCERPT: Setiap apl di Tukuk-OS kini boleh dimuat turun sebagai APK Android yang ditandatangani, terus dari pelayan — tanpa Google Play, tanpa store pihak ketiga.
+TITLE: Tukuk-OS Becomes Its Own App Store — APKPure Style
+EXCERPT: Every app on Tukuk-OS can now be downloaded as a signed Android APK, straight from the server — no Google Play, no third-party store.
 TAGS: tukuk, apk, app-store, android, pwa
 
-## Kenapa gedung aplikasi sendiri?
+## Why build your own app store?
 
-Kebanyakan orang tahu APKPure atau F-Droid sebagai tempat muat turun apl Android yang tak ada di Google Play. Idea kami serupa, tetapi untuk ekosistem Tukuk: **kenapa hantar pengguna ke tempat lain**, sedangkan tukuk.org sendiri boleh jadi gedungnya? Jadi kami bina satu halaman `/store` yang memaparkan semua aplikasi Tukuk — bawaan, arked, Satu Kata, dan sumbangan komuniti — setiap satu dengan butang **Install**, **⬇ APK**, dan lencana **🔒 Ditandatangani Tukuk**.
+Most people know APKPure or F-Droid as places to download Android apps that are not on Google Play. Our idea is similar, but for the Tukuk ecosystem: **why send users somewhere else**, when tukuk.org itself can be the store? So we built a `/store` page that lists every Tukuk app — built-ins, arcade, Satu Kata, and community contributions — each with an **Install** button, an **⬇ APK** button, and a **🔒 Signed by Tukuk** badge.
 
-## APK dijana atas permintaan
+## APKs generated on demand
 
-Ini bahagian paling menarik: bukan kami bina 15 APK siap dan simpan kaku. Pelayan **membina APK secara atas-permintaan**. Bila anda tekan ⬇ APK pada mana-mana kad, `/api/apk/:id` akan:
+This is the most interesting part: we do not pre-build 15 APKs and store them statically. The server **builds APKs on-demand**. When you press ⬇ APK on any card, `/api/apk/:id` will:
 
-1. Kenal pasti item dari katalog gedung (hanya id yang sah — ini sempadan keselamatan supaya tiada URL luar boleh diseludup).
-2. Pangkahuluan alat bina Android yang memang terpasang pada pelayan: `aapt2` untuk kompil & paut sumber, `javac` untuk kod Java pembungkus WebView, `d8` untuk tukar `.class` kepada `dex`, kemudian `zip`, `zipalign`, dan `apksigner`.
-3. Simpan hasilnya di `public/downloads/tukuk-<slug>.apk`. Kalau sudah ada, ia dilayan serta-merta (~0.5 saat); kalau belum, ia dibina (~5–8 saat).
+1. Identify the item from the store catalog (only valid ids — this is the security boundary so no external URL can be smuggled in).
+2. Chain together the Android build tools actually installed on the server: `aapt2` to compile & link resources, `javac` for the WebView-wrapper Java code, `d8` to convert `.class` to `dex`, then `zip`, `zipalign`, and `apksigner`.
+3. Save the result to `public/downloads/tukuk-<slug>.apk`. If it already exists it is served instantly (~0.5s); if not, it gets built (~5–8s).
 
-Apl pembungkus itu sendiri hanya satu `WebView` yang membuka URL hidup di tukuk.org. Ini bermakna **isi apl boleh dikemas kini lewat web tanpa anda perlu muat turun APK baharu** — versi APK kekal, kandungan di belakangnya sentiasa segar.
+The wrapper app itself is just one `WebView` that opens the live URL on tukuk.org. This means **the app's content can be updated over the web without you ever downloading a new APK** — the APK version stays, the content behind it is always fresh.
 
-## Satu kunci, satu identiti
+## One key, one identity
 
-Semua APK ditandatangani dengan **satu keystore Tukuk yang sama**. Kepentingannya: apabila anda naik taraf, Android mengecam kunci yang sama dan membenarkan pemasangan di atas versi lama (kemas kini setempat, bukan buang-pasang-semula). Identiti penerbit yang konsisten juga membina kepercayaan. Yang perlu difahami: ini tanda tangan **swa-tandatangan** — sah untuk pemasangan terus, tetapi bukan "diverifikasi Google" (itu hanya datang menerusi Play Store).
+All APKs are signed with **the same Tukuk keystore**. Why it matters: when you upgrade, Android recognizes the same key and allows installing over the old version (a local update, not remove-and-reinstall). A consistent publisher identity also builds trust. What you should understand: this is a **self-signed** signature — valid for direct installation, but not "Google verified" (that only comes through the Play Store).
 
-## PWA pula untuk iPhone
+## PWA for iPhone instead
 
-APK hanya untuk Android. Untuk iPhone/iPad, setiap apl turut menyokong **Pemasangan PWA** (Progressive Web App) — anda boleh "Add to Home Screen" dan ia dibuka seperti apl asal dengan ikon sendiri. Justeru setiap apl kami ada dua pintu pasang: **APK untuk Android, PWA untuk semua**. Gedung ini kini hidup di `https://tukuk.org/store` — Cuba tekan ⬇ APK pada mana-mana apl dan lihat sendiri ia dibina depan mata anda.
+APKs are Android-only. For iPhone/iPad, every app also supports **PWA installation** (Progressive Web App) — you can "Add to Home Screen" and it opens like a native app with its own icon. So every one of our apps has two install doors: **APK for Android, PWA for everything else**. The store now lives at `https://tukuk.org/store` — try pressing ⬇ APK on any app and watch it get built right in front of you.

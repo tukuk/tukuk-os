@@ -78,7 +78,7 @@ test('button: dengan href → <a target=_blank>; tanpa href → <button noop>', 
 });
 
 test('image: src kosong → placeholder; src dataURL → <img> + radius', () => {
-  assert.ok(markup({ type:'image', src:'', alt:'a', radius:12, caption:'' }).includes('Imej (belum dipilih)'));
+  assert.ok(markup({ type:'image', src:'', alt:'a', radius:12, caption:'' }).includes('Image (not chosen yet)'));
   const real = markup({ type:'image', src:'data:image/png;base64,AAAA', alt:'kucing', radius:20, caption:'saya' });
   assert.ok(real.includes('<img src="data:image/png;base64,AAAA"'));
   assert.ok(real.includes('border-radius:20px'));
@@ -255,7 +255,7 @@ test('widgetMarkup: shell permainan benar (data-game + config)', () => {
 
 test('gameBox: placeholder Mod Cuba + data-acc tema', () => {
   const out = markup({ type:'rps' });
-  assert.ok(out.includes('Mod Cuba'), 'perlua petunjuk Mod Cuba');
+  assert.ok(out.includes('Play mode'), 'perlua petunjuk Play mode');
   assert.ok(out.includes('data-acc="' + THEME.accent + '"'), 'accent tema tertanam');
 });
 
@@ -300,7 +300,7 @@ const decodeProj = new Function(extractFn(html, 'decodeProj') + '; return decode
 test('checkProject: imej tanpa alt + pautan butang tak sah dikesan (dengan id widget)', () => {
   const iss = checkProject([{ id:'w1', type:'image', src:'data:x', alt:'' }, { id:'w2', type:'button', href:'javascript:x' }], { bg:'#ffffff', fg:'#000000' }, 'App');
   assert.ok(iss.some((x)=>x.id==='w1' && /alt/.test(x.msg)), 'alt hilang dikesan');
-  assert.ok(iss.some((x)=>x.id==='w2' && /Pautan/.test(x.msg)), 'href tak sah dikesan');
+  assert.ok(iss.some((x)=>x.id==='w2' && /link/i.test(x.msg)), 'href tak sah dikesan');
 });
 
 test('checkProject: nama kosong + kontras rendah + projek kemas', () => {

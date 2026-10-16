@@ -131,7 +131,7 @@ function bearer(req) {
 function requireAdmin(req, res, next) {
   const session = readSession(bearer(req));
   if (!session) {
-    return res.status(401).json({ error: 'Pentadbir tidak disahkan. Sila login semula.' });
+    return res.status(401).json({ error: 'Administrator not authenticated. Please log in again.' });
   }
   req.admin = session;
   return next();
@@ -140,9 +140,9 @@ function requireAdmin(req, res, next) {
 /** Middleware: tolak melainkan e-mel padan dengan e-mel pemilik yang dibenarkan. */
 function requireAllowedEmail(req, res, next) {
   const email = normalizeEmail(req.body && req.body.email);
-  if (!email) return res.status(400).json({ error: 'E-mel diperlukan' });
+  if (!email) return res.status(400).json({ error: 'Email required' });
   if (!isAllowedEmail(email)) {
-    return res.status(403).json({ error: 'E-mel ini tidak berkuasa mengakses pentadbir.' });
+    return res.status(403).json({ error: 'This email is not authorized to access the admin panel.' });
   }
   return next();
 }
@@ -195,7 +195,7 @@ async function startRegistration(email) {
 async function finishRegistration(email, credential, reqOrigin) {
   const expectedChallenge = takeChallenge(normalizeEmail(email), 'register');
   if (!expectedChallenge) {
-    throw Object.assign(new Error('Cabaran tidak sah atau telah luput. Cuba lagi.'), { statusCode: 400 });
+    throw Object.assign(new Error('Challenge is invalid or expired. Try again.'), { statusCode: 400 });
   }
   const verification = await verifyRegistrationResponse({
     response: credential,
@@ -204,7 +204,7 @@ async function finishRegistration(email, credential, reqOrigin) {
     expectedRPID: RP_ID
   });
   if (!verification.verified || !verification.registrationInfo) {
-    throw Object.assign(new Error('Passkey tidak dapat disahkan.'), { statusCode: 400 });
+    throw Object.assign(new Error('Passkey could not be verified.'), { statusCode: 400 });
   }
   const info = verification.registrationInfo;
   const credentialId = info.credentialID || info.credential?.id;
@@ -243,12 +243,12 @@ async function startAuthentication(email) {
 async function finishAuthentication(email, credential, reqOrigin) {
   const expectedChallenge = takeChallenge(normalizeEmail(email), 'authenticate');
   if (!expectedChallenge) {
-    throw Object.assign(new Error('Cabaran tidak sah atau telah luput. Cuba lagi.'), { statusCode: 400 });
+    throw Object.assign(new Error('Challenge is invalid or expired. Try again.'), { statusCode: 400 });
   }
   const keys = passkeys();
   const stored = keys.find((k) => k.id === credential.id);
   if (!stored) {
-    throw Object.assign(new Error('Passkey ini tidak didaftarkan pada pelayan.'), { statusCode: 401 });
+    throw Object.assign(new Error('This passkey is not registered on the server.'), { statusCode: 401 });
   }
   // v8 API: parameter `authenticator` (bukan `credential`) dengan field
   // `credentialID`/`credentialPublicKey` sebagai Uint8Array; keputusan dibaca
@@ -265,7 +265,7 @@ async function finishAuthentication(email, credential, reqOrigin) {
     }
   });
   if (!verification.verified) {
-    throw Object.assign(new Error('Pengesahan passkey gagal.'), { statusCode: 401 });
+    throw Object.assign(new Error('Passkey verification failed.'), { statusCode: 401 });
   }
   // Simpan counter baharu (anti-replay untuk authenticator FIDO2 yangincrements).
   const idx = keys.findIndex((k) => k.id === credential.id);

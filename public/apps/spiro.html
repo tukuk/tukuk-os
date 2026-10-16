@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mandala Spiro — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Spirograph beranimasi dengan simetri mandala — kawal radius, pen, pekali simetri, kitar rona dan eksport PNG resolusi tinggi.">
+<meta name="description" content="Animated spirograph with mandala symmetry — control radius, pen, symmetry coefficient, hue cycle and high-resolution PNG export.">
 <link rel="canonical" href="https://tukuk.org/apps/spiro">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/spiro.svg">
@@ -35,25 +35,25 @@
 <div class="wrap">
   <canvas id="cv" width="560" height="560"></canvas>
   <div class="grid">
-    <label>Lingkaran tetap R <input type="range" id="R" min="60" max="160" value="120"><output id="oR"></output></label>
-    <label>Lingkaran bergolek r <input type="range" id="r" min="4" max="95" value="33"><output id="or"></output></label>
-    <label>Jarak pen d <input type="range" id="d" min="4" max="140" value="70"><output id="od"></output></label>
-    <label>Simetri (kelopak) <input type="range" id="n" min="1" max="16" value="6"><output id="on"></output></label>
-    <label>Keluk <input type="range" id="sp" min="1" max="10" value="4"><output id="osp"></output></label>
-    <label>Tebal garis <input type="range" id="lw" min="1" max="6" value="2"><output id="olw"></output></label>
+    <label>Fixed circle R <input type="range" id="R" min="60" max="160" value="120"><output id="oR"></output></label>
+    <label>Rolling circle r <input type="range" id="r" min="4" max="95" value="33"><output id="or"></output></label>
+    <label>Pen distance d <input type="range" id="d" min="4" max="140" value="70"><output id="od"></output></label>
+    <label>Symmetry (petals) <input type="range" id="n" min="1" max="16" value="6"><output id="on"></output></label>
+    <label>Loops <input type="range" id="sp" min="1" max="10" value="4"><output id="osp"></output></label>
+    <label>Line width <input type="range" id="lw" min="1" max="6" value="2"><output id="olw"></output></label>
   </div>
   <div class="bar">
-    <button id="play">⏸ Rehat</button>
-    <button id="new">✶ Lukis Baru</button>
-    <button id="cycle" class="on">🌈 Rona: On</button>
+    <button id="play">⏸ Pause</button>
+    <button id="new">✶ Redraw</button>
+    <button id="cycle" class="on">🌈 Hue: On</button>
     <input type="color" id="col" value="#4c8dff">
     <select id="preset">
       <option value="">🎛 Preset…</option>
-      <option value="0">Bunga Rimba</option>
-      <option value="1">Bintang Laut</option>
-      <option value="2">Roda Kabut</option>
+      <option value="0">Jungle Flower</option>
+      <option value="1">Starfish</option>
+      <option value="2">Fog Wheel</option>
       <option value="3">Nebula</option>
-      <option value="4">Pusaran</option>
+      <option value="4">Whirl</option>
     </select>
     <button id="png">⬇ PNG</button>
   </div>
@@ -69,7 +69,7 @@
   const gcd = (a, b) => b ? gcd(b, a % b) : a;
   function clear(){ cx.fillStyle = '#06080f'; cx.fillRect(0, 0, W, H); }
   function reset(){ t = 0; done = false; total = 0; prev = null; hue = 200; clear(); stat(); }
-  function stat(){ $('stat').textContent = done ? 'Lukisan lengkap (' + Math.round(total) + ' langkah) — ubah parameter atau tekan ✶.' : 'Tang lungsur: ' + Math.round(Math.min(1, total / steps()) * 100) + '% · pusingan penuh = ' + revs() + '×2π'; }
+  function stat(){ $('stat').textContent = done ? 'Drawing complete (' + Math.round(total) + ' steps) — change parameters or press ✶.' : 'Progress: ' + Math.round(Math.min(1, total / steps()) * 100) + '% · full cycle = ' + revs() + '×2π'; }
   function revs(){ return r / gcd(Math.round(R), Math.round(r)); }
   function steps(){ return revs() * 628; } // ~2π×100 langkah per radian pusingan asas
   function point(tt){ const k = R - r; return [k * Math.cos(tt) + d * Math.cos((k / r) * tt), k * Math.sin(tt) - d * Math.sin((k / r) * tt)]; }
@@ -94,19 +94,19 @@
     stat();
   }
   (function loop(){ tick(); requestAnimationFrame(loop); })();
-  // Kawalan slider — setiap perubahan mula lukisan baru
+  // Slider controls — every change starts a new drawing
   const bind = (id, out, set) => { const el = $(id), o = $(out);
     o.textContent = el.value;
     el.addEventListener('input', () => { o.textContent = el.value; set(Number(el.value)); reset(); }); };
   bind('R', 'oR', (v) => R = v); bind('r', 'or', (v) => r = v); bind('d', 'od', (v) => d = v);
   bind('n', 'on', (v) => n = v); bind('sp', 'osp', (v) => sp = v); bind('lw', 'olw', (v) => lw = v);
-  $('play').onclick = () => { playing = !playing; $('play').textContent = playing ? '⏸ Rehat' : '▶ Teruskan'; };
+  $('play').onclick = () => { playing = !playing; $('play').textContent = playing ? '⏸ Pause' : '▶ Resume'; };
   $('new').onclick = reset;
-  $('cycle').onclick = () => { cycOn = !cycOn; $('cycle').classList.toggle('on', cycOn); $('cycle').textContent = '🌈 Rona: ' + (cycOn ? 'On' : 'Off'); };
+  $('cycle').onclick = () => { cycOn = !cycOn; $('cycle').classList.toggle('on', cycOn); $('cycle').textContent = '🌈 Hue: ' + (cycOn ? 'On' : 'Off'); };
   $('preset').onchange = (e) => { const p = PRESETS[Number(e.target.value)]; if (!p) return;
     ['R', 'r', 'd', 'n', 'sp', 'lw'].forEach((id, i) => { $(id).value = p[i]; $(['oR', 'or', 'od', 'on', 'osp', 'olw'][i]).textContent = p[i]; });
     [R, r, d, n, sp, lw] = p; reset(); };
-  $('png').onclick = () => { // eksport 2× supaya garis kekal halus di skrin besar
+  $('png').onclick = () => { // export at 2× so lines stay smooth on big screens
     const o = document.createElement('canvas'); o.width = W * 2; o.height = H * 2;
     const oc = o.getContext('2d'); oc.fillStyle = '#06080f'; oc.fillRect(0, 0, o.width, o.height);
     oc.drawImage(cv, 0, 0, o.width, o.height);

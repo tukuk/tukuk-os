@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Studio — Pembina Aplikasi (No-Code) — Tukuk-OS</title>
-<meta name="description" content="Bina aplikasi/web kecil tanpa kod: seret widget, pratonton langsung pada bingkai telefon, lalu eksport satu fail HTML berdiri sendiri. 100% dalam pelayar, tanpa pendaftaran.">
+<title>Tukuk Studio — No-Code App Builder — Tukuk-OS</title>
+<meta name="description" content="Build small apps/sites with no code: drag widgets, preview live in a phone frame, then export a single standalone HTML file. 100% in the browser, no registration.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
-<meta property="og:title" content="Tukuk Studio — Pembina Aplikasi No-Code">
-<meta property="og:description" content="Reka aplikasi kecil secara visual dan eksport HTML siap guna. Percuma & privasi 100%.">
+<meta property="og:title" content="Tukuk Studio — No-Code App Builder">
+<meta property="og:description" content="Design small apps visually and export ready-to-use HTML. Free & 100% private.">>
 <link rel="canonical" href="https://tukuk.org/builder">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -122,59 +122,59 @@
 </head>
 <body class="edit">
 <header>
-  <span class="logo">🧩 Tukuk Studio · Pembina Aplikasi</span>
-  <input id="appName" class="name" placeholder="Nama aplikasi" value="Aplikasi Saya">
+  <span class="logo">🧩 Tukuk Studio · App Builder</span>
+  <input id="appName" class="name" placeholder="App name" value="My App">
   <div class="sp"></div>
-  <select id="tpl" class="name" title="Muat templat awal"><option value="">🗂 Templat…</option></select>
-  <button id="modeBtn" class="ghost active" title="Tukar antara menyunting & mencuba interaktif">✏️ Edit</button>
-  <button id="viewDesign" class="ghost active" title="Paparan blok visual">🧱 Rekaan</button>
-  <button id="viewCode" class="ghost" title="Editor Kod + pratonton langsung (tanpa AI)">&lt;/&gt; Kod</button>
+  <select id="tpl" class="name" title="Load starter template"><option value="">🗂 Templates…</option></select>
+  <button id="modeBtn" class="ghost active" title="Switch between editing and interactive preview">✏️ Edit</button>
+  <button id="viewDesign" class="ghost active" title="Visual block view">🧱 Design</button>
+  <button id="viewCode" class="ghost" title="Code Editor + live preview (no AI)">&lt;/&gt; Code</button>
   <button id="undo" title="Undo">↶</button>
   <button id="redo" title="Redo">↷</button>
-  <button id="shareBtn" title="Jana pautan kongsi (projek tersimpan dalam URL)">🔗 Kongsi</button>
-  <button id="auditBtn" title="Semak aksesibiliti / kontras / pautan">🩺 Semak</button>
-  <button id="keysBtn" title="Pintasan papan kekunci (?)">⌨️ Pintasan</button>
-  <button id="openBtn" title="Buka projek .json">📂 Buka</button>
-  <button id="saveBtn" title="Simpan projek .json">💾 JSON</button>
-  <button id="exportBtn" class="primary" title="Eksport HTML berdiri sendiri">⬇️ Eksport HTML</button>
-  <button id="zipBtn" class="primary" title="Muat turun ZIP (index.html + projek + README)">🗜 ZIP</button>
-  <input id="pubSlug" title="Pilih pautan pendek (pilihan): /a/nama-anda" placeholder="🔗 slug" maxlength="40" autocomplete="off" spellcheck="false" style="width:96px;padding:6px 8px;border:1px solid #262b36;border-radius:8px;background:#0b0f1a;color:#e6e9ef;font-size:13px">
-  <button id="pubBtn" class="primary" title="Terbitkan ke pautan awam tukuk.org/a/…">🚀 Terbitkan</button>
-  <button id="myBtn" title="Urus aplikasi yang anda terbitkan (kemas kini / buang)">📦 Aplikasi Saya</button>
-  <button id="galBtn" title="Lihat aplikasi komuniti yang diterbitkan">🌐 Pameran</button>
-  <span id="saveState" class="saveState" title="Status jimat automatik"></span>
+  <button id="shareBtn" title="Generate share link (project stored in URL)">🔗 Share</button>
+  <button id="auditBtn" title="Check accessibility / contrast / links">🩺 Audit</button>
+  <button id="keysBtn" title="Keyboard shortcuts (?)">⌨️ Shortcuts</button>
+  <button id="openBtn" title="Open .json project">📂 Open</button>
+  <button id="saveBtn" title="Save .json project">💾 JSON</button>
+  <button id="exportBtn" class="primary" title="Export standalone HTML">⬇️ Export HTML</button>
+  <button id="zipBtn" class="primary" title="Download ZIP (index.html + project + README)">🗜 ZIP</button>
+  <input id="pubSlug" title="Pick a short link (optional): /a/your-name" placeholder="🔗 slug" maxlength="40" autocomplete="off" spellcheck="false" style="width:96px;padding:6px 8px;border:1px solid #262b36;border-radius:8px;background:#0b0f1a;color:#e6e9ef;font-size:13px">
+  <button id="pubBtn" class="primary" title="Publish to a public tukuk.org/a/… link">🚀 Publish</button>
+  <button id="myBtn" title="Manage apps you published (update / delete)">📦 My Apps</button>
+  <button id="galBtn" title="Browse community-published apps">🌐 Gallery</button>
+  <span id="saveState" class="saveState" title="Autosave status"></span>
 </header>
 
 <div class="grid3">
   <div class="col left">
     <div class="genbar" style="display:flex;gap:6px;margin:0 0 6px">
-      <textarea id="genIdea" rows="2" placeholder="✨ Taip idea / huraian app atau game… (Ctrl+Enter untuk jana)" maxlength="160" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #2a3040;border-radius:9px;background:transparent;color:inherit;resize:vertical;font:inherit"></textarea>
+      <textarea id="genIdea" rows="2" placeholder="✨ Type an idea / description for an app or game… (Ctrl+Enter to generate)" maxlength="160" style="flex:1;min-width:0;padding:8px 10px;border:1px solid #2a3040;border-radius:9px;background:transparent;color:inherit;resize:vertical;font:inherit"></textarea>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <button id="genBtn" class="primary" title="Jana aplikasi + game automatik" style="padding:8px 12px;border-radius:9px;white-space:nowrap">✨ Jana</button>
-        <button id="genDice" class="ghost" title="Isi idea rawak" style="padding:6px 12px;border-radius:9px;white-space:nowrap">🎲 Rambang</button>
+        <button id="genBtn" class="primary" title="Auto-generate app + game" style="padding:8px 12px;border-radius:9px;white-space:nowrap">✨ Generate</button>
+        <button id="genDice" class="ghost" title="Fill a random idea" style="padding:6px 12px;border-radius:9px;white-space:nowrap">🎲 Random</button>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin:0 0 6px;flex-wrap:wrap">
-      <input id="genStyle" list="genStyleList" placeholder="Gaya (bebas)… cth neon/retro" maxlength="40" style="flex:1;min-width:120px;padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
-      <datalist id="genStyleList"><option value="minimalis"></option><option value="cerah"></option><option value="gelap"></option><option value="neon"></option><option value="retro"></option><option value="pastel"></option></datalist>
-      <input type="color" id="genColor" title="Warna utama" value="#4c8dff" style="width:34px;height:30px;border:1px solid #2a3040;border-radius:8px;background:transparent;padding:2px;cursor:pointer">
-      <select id="genLang" title="Bahasa kandungan" style="padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
-        <option value="">Bahasa: auto</option><option value="Melayu">Melayu</option><option value="English">English</option><option value="Indonesia">Indonesia</option>
+      <input id="genStyle" list="genStyleList" placeholder="Style (freeform)… e.g. neon/retro" maxlength="40" style="flex:1;min-width:120px;padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
+      <datalist id="genStyleList"><option value="minimal"></option><option value="light"></option><option value="dark"></option><option value="neon"></option><option value="retro"></option><option value="pastel"></option></datalist>
+      <input type="color" id="genColor" title="Accent color" value="#4c8dff" style="width:34px;height:30px;border:1px solid #2a3040;border-radius:8px;background:transparent;padding:2px;cursor:pointer">
+      <select id="genLang" title="Content language" style="padding:6px 8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">
+        <option value="">Language: auto</option><option value="Melayu">Malay</option><option value="English">English</option><option value="Indonesia">Indonesian</option>
       </select>
     </div>
     <div id="genSug" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px"></div>
     <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap">
       <span id="genTags" style="display:flex;gap:4px;flex-wrap:wrap"></span>
-      <label title="Pakai calon AI (jika ada) &amp; buka semak slug/nama sebelum terbit" style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:#9aa3b2;cursor:pointer"><input type="checkbox" id="genAutoPub"> Auto-terbit</label>
+      <label title="Use the AI candidate (if any) &amp; skip the slug/name check before publishing" style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:#9aa3b2;cursor:pointer"><input type="checkbox" id="genAutoPub"> Auto-publish</label>
     </div>
-    <h4>Tambah widget</h4>
+    <h4>Add widget</h4>
     <div class="palette" id="palette"></div>
-    <div class="hint">Klik untuk tambah ke bawah. Seret blok pada kanvas untuk susun semula. Guna <b>Mod Cuba</b> untuk uji interaksi.</div>
+    <div class="hint">Click to append at the bottom. Drag blocks on the canvas to reorder. Use <b>Play mode</b> to test interactions.</div>
   </div>
 
   <div class="col stage">
     <div class="devs">
-      <button data-dev="phone" class="ghost active">📱 Telefon</button>
+      <button data-dev="phone" class="ghost active">📱 Phone</button>
       <button data-dev="tablet" class="ghost">📟 Tablet</button>
       <button data-dev="desktop" class="ghost">🖥 Desktop</button>
     </div>
@@ -186,13 +186,13 @@
           <button data-ctab="css">CSS</button>
           <button data-ctab="js">JS</button>
         </div>
-        <button id="codeRegen" title="Jana semula kod daripada blok Rekaan">↺ Jana dari Rekaan</button>
-        <button id="codeFmt" title="Format / indent kod">✨ Format</button>
-        <button id="codeCopy" title="Salin tab aktif ke papan klip">📋 Salin</button>
-        <button id="codeDl" title="Muat turun HTML penuh">⬇️ Muat turun</button>
-        <button id="codeRun" title="Jalankan pratonton">▶️ Jalankan</button>
+        <button id="codeRegen" title="Regenerate code from Design blocks">↺ Generate from Design</button>
+        <button id="codeFmt" title="Format / indent code">✨ Format</button>
+        <button id="codeCopy" title="Copy active tab to clipboard">📋 Copy</button>
+        <button id="codeDl" title="Download full HTML">⬇️ Download</button>
+        <button id="codeRun" title="Run preview">▶️ Run</button>
         <label><input type="checkbox" id="codeRunChk" checked> Auto</label>
-        <span class="hint" style="margin:0">Tiga tab HTML/CSS/JS — pratonton menggabungkan semuanya. Suntingan manual terpakai untuk pratonton/muat turun/eksport sahaja.</span>
+        <span class="hint" style="margin:0">Three HTML/CSS/JS tabs — the preview merges them all. Manual edits apply to preview/download/export only.</span>
       </div>
       <div class="codesplit">
         <div class="edWrap">
@@ -208,23 +208,23 @@
   <div class="col right">
     <div class="tabs">
       <button id="tabWidget" class="on">Widget</button>
-      <button id="tabTheme">Tema</button>
+      <button id="tabTheme">Theme</button>
     </div>
     <div id="insp"></div>
   </div>
 </div>
 
 <input type="file" id="fileIn" accept="application/json" hidden>
-<button id="playFs" title="Skrin penuh">⛶ Skrin Penuh</button>
+<button id="playFs" title="Fullscreen">⛶ Fullscreen</button>
 <input type="file" id="imgIn" accept="image/*" hidden>
 <div class="toast" id="toast"></div>
-<div id="modal" class="modal"><div class="mcard"><div class="mh"><span class="mt"></span><button class="mx ghost" title="Tutup (Esc)">✕</button></div><div class="mb"></div></div></div>
+<div id="modal" class="modal"><div class="mcard"><div class="mh"><span class="mt"></span><button class="mx ghost" title="Close (Esc)">✕</button></div><div class="mb"></div></div></div>
 
 <script>
 'use strict';
 // ── Model & util ────────────────────────────────────────────────────────────
 let uid = 1;
-const DEF_THEME = { accent:'#4c8dff', bg:'#ffffff', fg:'#16181d', dark:false, radius:14, font:"system-ui, Segoe UI, Roboto, sans-serif", sub:'Dibina dengan Tukuk Studio', desc:'Aplikasi kecil yang dibina dengan Tukuk Studio.' };
+const DEF_THEME = { accent:'#4c8dff', bg:'#ffffff', fg:'#16181d', dark:false, radius:14, font:"system-ui, Segoe UI, Roboto, sans-serif", sub:'Built with Tukuk Studio', desc:'A small app built with Tukuk Studio.' };
 let theme = { ...DEF_THEME };
 let widgets = [];           // [{id,type,...props}]
 let selId = null;
@@ -238,68 +238,68 @@ const byId = (id) => widgets.find((w) => w.id === id) || null;
 function toast(m){ if(document.body.classList.contains('play')) return; const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); }
 
 const TYPES = {
-  heading:{ ic:'🅃', name:'Tajuk', make:()=>({type:'heading', text:'Tajuk Aplikasi', level:2, align:'left'}) },
-  text:{ ic:'¶', name:'Teks', make:()=>({type:'text', text:'Letakkan penerangan atau isi here di sini.', align:'left'}) },
-  button:{ ic:'🔘', name:'Butang', make:()=>({type:'button', label:'Klik saya', href:'', variant:'primary', fullWidth:false}) },
-  image:{ ic:'🖼️', name:'Imej', make:()=>({type:'image', src:'', alt:'gambar', radius:12, caption:''}) },
-  input:{ ic:'⌨️', name:'Input', make:()=>({type:'input', label:'Nama', placeholder:'Taip di sini…', kind:'text'}) },
-  counter:{ ic:'➕', name:'Kaunter', make:()=>({type:'counter', label:'Bilangan', value:0, step:1}) },
-  toggle:{ ic:'🔀', name:'Togol', make:()=>({type:'toggle', label:'Aktifkan', on:false}) },
-  list:{ ic:'📝', name:'Senarai', make:()=>({type:'list', items:['Beli barang','Buang sampah'], allowAdd:true}) },
-  card:{ ic:'🗃️', name:'Kad', make:()=>({type:'card', title:'Nota', body:'Kandungan ringkas dalam kad.'}) },
-  divider:{ ic:'➖', name:'Pemisah', make:()=>({type:'divider'}) },
-  spacer:{ ic:'↕️', name:'Ruang', make:()=>({type:'spacer', height:24}) },
-  faq:{ ic:'❓', name:'FAQ', make:()=>({type:'faq', items:[{q:'Ini soalan?',a:'Ini jawapan.'},{q:'Satu lagi?',a:'Baik, ini contoh.'}]}) },
-  steps:{ ic:'🔢', name:'Cara-cara', make:()=>({type:'steps', title:'Langkah', items:['Buka aplikasi','Pilih pilihan','Selesai']}) },
-  quiz:{ ic:'💡', name:'Kuiz', make:()=>({type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0}) },
+  heading:{ ic:'🅃', name:'Heading', make:()=>({type:'heading', text:'App Title', level:2, align:'left'}) },
+  text:{ ic:'¶', name:'Text', make:()=>({type:'text', text:'Put your description or content here.', align:'left'}) },
+  button:{ ic:'🔘', name:'Button', make:()=>({type:'button', label:'Click me', href:'', variant:'primary', fullWidth:false}) },
+  image:{ ic:'🖼️', name:'Image', make:()=>({type:'image', src:'', alt:'image', radius:12, caption:''}) },
+  input:{ ic:'⌨️', name:'Input', make:()=>({type:'input', label:'Name', placeholder:'Type here…', kind:'text'}) },
+  counter:{ ic:'➕', name:'Counter', make:()=>({type:'counter', label:'Count', value:0, step:1}) },
+  toggle:{ ic:'🔀', name:'Toggle', make:()=>({type:'toggle', label:'Enable', on:false}) },
+  list:{ ic:'📝', name:'List', make:()=>({type:'list', items:['Buy groceries','Take out trash'], allowAdd:true}) },
+  card:{ ic:'🗃️', name:'Card', make:()=>({type:'card', title:'Note', body:'Short content inside a card.'}) },
+  divider:{ ic:'➖', name:'Divider', make:()=>({type:'divider'}) },
+  spacer:{ ic:'↕️', name:'Spacer', make:()=>({type:'spacer', height:24}) },
+  faq:{ ic:'❓', name:'FAQ', make:()=>({type:'faq', items:[{q:'Is this a question?',a:'Yes, this is an answer.'},{q:'One more?',a:'Sure, another example.'}]}) },
+  steps:{ ic:'🔢', name:'How-to', make:()=>({type:'steps', title:'Steps', items:['Open the app','Pick an option','Done']}) },
+  quiz:{ ic:'💡', name:'Quiz', make:()=>({type:'quiz', q:'Capital of Malaysia?', options:['Kuala Lumpur','Singapore','Bangkok'], answer:0}) },
   ttt:{ ic:'⭕', name:'Tic-Tac-Toe', make:()=>({type:'ttt'}) },
-  memory:{ ic:'🧠', name:'Padanan Memori', make:()=>({type:'memory', pairs:6}) },
-  mole:{ ic:'🐹', name:'Tikus Pukul', make:()=>({type:'mole', duration:20}) },
-  rps:{ ic:'✊', name:'Batu-Kertas-Gunting', make:()=>({type:'rps'}) },
-  reaction:{ ic:'⚡', name:'Masa Tindak Balas', make:()=>({type:'reaction'}) },
-  guess:{ ic:'🔢', name:'Teka Nombor', make:()=>({type:'guess', max:100}) },
+  memory:{ ic:'🧠', name:'Memory Match', make:()=>({type:'memory', pairs:6}) },
+  mole:{ ic:'🐹', name:'Whack-a-Mole', make:()=>({type:'mole', duration:20}) },
+  rps:{ ic:'✊', name:'Rock-Paper-Scissors', make:()=>({type:'rps'}) },
+  reaction:{ ic:'⚡', name:'Reaction Time', make:()=>({type:'reaction'}) },
+  guess:{ ic:'🔢', name:'Number Guess', make:()=>({type:'guess', max:100}) },
   br:{ ic:'🔫', name:'Battle Royale', make:()=>({type:'br', enemies:5, zoneSpeed:10, mapSize:600}) },
   fps:{ ic:'🎯', name:'FPS Arena 3D', make:()=>({type:'fps', enemies:4, zoneSpeed:25}) },
-  runner:{ ic:'🏃', name:'Lari Tanpa Hujung', make:()=>({type:'runner'}) },
+  runner:{ ic:'🏃', name:'Endless Runner', make:()=>({type:'runner'}) },
   s2048:{ ic:'🧊', name:'2048', make:()=>({type:'s2048'}) },
-  snake:{ ic:'🐍', name:'Ular', make:()=>({type:'snake', speed:1}) },
+  snake:{ ic:'🐍', name:'Snake', make:()=>({type:'snake', speed:1}) },
   breakout:{ ic:'🧱', name:'Breakout', make:()=>({type:'breakout', rows:5}) },
-  blox:{ ic:'🧩', name:'Blok Jatuh', make:()=>({type:'blox'}) },
-  astro:{ ic:'☄️', name:'Asteroid', make:()=>({type:'astro'}) },
-  mines:{ ic:'💣', name:'Rambang', make:()=>({type:'mines'}) }
+  blox:{ ic:'🧩', name:'Block Drop', make:()=>({type:'blox'}) },
+  astro:{ ic:'☄️', name:'Asteroids', make:()=>({type:'astro'}) },
+  mines:{ ic:'💣', name:'Minesweeper', make:()=>({type:'mines'}) }
 };
 
 // Templat awal — setiap satu muat set widget + tema + nama (id dijana semasa dimuat).
 const TEMPLATES = {
-  todo:{ label:'✅ To-Do', appName:'Senarai Tugas', theme:{accent:'#30d158'}, widgets:[
-    {type:'heading', text:'Tugasan Hari Ini', level:2, align:'left'},
-    {type:'list', items:['Semak e-mel','Mesyuarat 10:00','Beli barang'], allowAdd:true},
-    {type:'text', text:'Guna Mod Cuba untuk tambah item baharu.', align:'left'}
+  todo:{ label:'✅ To-Do', appName:'Task List', theme:{accent:'#30d158'}, widgets:[
+    {type:'heading', text:"Today's Tasks", level:2, align:'left'},
+    {type:'list', items:['Check e-mail','Meeting at 10:00','Buy groceries'], allowAdd:true},
+    {type:'text', text:'Use Play mode to add new items.', align:'left'}
   ]},
-  linkbio:{ label:'🔗 Link-in-bio', appName:'Rangkaian Saya', theme:{accent:'#a259ff',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
+  linkbio:{ label:'🔗 Link-in-bio', appName:'My Links', theme:{accent:'#a259ff',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
     {type:'image', src:'', alt:'logo', radius:40, caption:''},
-    {type:'heading', text:'Nama Anda', level:2, align:'center'},
-    {type:'text', text:'Pembangun • Pereka • Penulis', align:'center'},
+    {type:'heading', text:'Your Name', level:2, align:'center'},
+    {type:'text', text:'Developer • Designer • Writer', align:'center'},
     {type:'button', label:'Instagram', href:'https://instagram.com', variant:'primary', fullWidth:true},
     {type:'button', label:'YouTube', href:'https://youtube.com', variant:'primary', fullWidth:true},
-    {type:'button', label:'Hubungi', href:'mailto:anda@contoh.com', variant:'primary', fullWidth:true}
+    {type:'button', label:'Contact', href:'mailto:you@example.com', variant:'primary', fullWidth:true}
   ]},
-  product:{ label:'🛍️ Halaman Produk', appName:'Produk Hebat', theme:{accent:'#ff8a3c'}, widgets:[
-    {type:'heading', text:'Kenapa produk ini?', level:2, align:'left'},
-    {type:'image', src:'', alt:'produk', radius:16, caption:'Gambar produk'},
-    {type:'text', text:'Reka bentuk minimalis, tahan lama, dan mesra alam.', align:'left'},
-    {type:'card', title:'Ciri utama', body:'Penghantaran percuma • Jaminan 30 hari • Sokongan 24/7'},
-    {type:'button', label:'Beli Sekarang', href:'https://tukuk.org', variant:'primary', fullWidth:true},
-    {type:'faq', items:[{q:'Ada waranti?',a:'Ya, 30 hari.'},{q:'Bila sampai?',a:'1-3 hari bekerja.'}]}
+  product:{ label:'🛍️ Product Page', appName:'Awesome Product', theme:{accent:'#ff8a3c'}, widgets:[
+    {type:'heading', text:'Why this product?', level:2, align:'left'},
+    {type:'image', src:'', alt:'product', radius:16, caption:'Product image'},
+    {type:'text', text:'Minimalist design, durable, and eco-friendly.', align:'left'},
+    {type:'card', title:'Key features', body:'Free shipping • 30-day guarantee • 24/7 support'},
+    {type:'button', label:'Buy Now', href:'https://tukuk.org', variant:'primary', fullWidth:true},
+    {type:'faq', items:[{q:'Is there a warranty?',a:'Yes, 30 days.'},{q:'When will it arrive?',a:'1-3 business days.'}]}
   ]},
-  quiztpl:{ label:'💡 Kuiz Pantas', appName:'Uji Diri', theme:{accent:'#4c8dff'}, widgets:[
-    {type:'heading', text:'Kuiz Ringkas', level:2, align:'center'},
-    {type:'quiz', q:'Ibukota Malaysia?', options:['Kuala Lumpur','Singapura','Bangkok'], answer:0},
-    {type:'text', text:'Pilih satu jawapan. Hijau = betul, merah = salah.', align:'center'}
+  quiztpl:{ label:'💡 Quick Quiz', appName:'Test Yourself', theme:{accent:'#4c8dff'}, widgets:[
+    {type:'heading', text:'Simple Quiz', level:2, align:'center'},
+    {type:'quiz', q:'Capital of Malaysia?', options:['Kuala Lumpur','Singapore','Bangkok'], answer:0},
+    {type:'text', text:'Pick one answer. Green = right, red = wrong.', align:'center'}
   ]},
-  arcade:{ label:'🕹️ Arked Mini', appName:'Arked Mini', theme:{accent:'#ff5ea8',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'🕹️ Arked Mini', level:2, align:'center'},
-    {type:'text', text:'Klik Mod Cuba, kemudian main setiap game di bawah.', align:'center'},
+  arcade:{ label:'🕹️ Mini Arcade', appName:'Mini Arcade', theme:{accent:'#ff5ea8',bg:'#0b0f1a',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🕹️ Mini Arcade', level:2, align:'center'},
+    {type:'text', text:'Switch to Play mode, then try each game below.', align:'center'},
     {type:'ttt'},
     {type:'memory', pairs:6},
     {type:'mole', duration:20},
@@ -311,72 +311,72 @@ const TEMPLATES = {
   ]},
   brtpl:{ label:'🔫 Battle Royale', appName:'Arena BR', theme:{accent:'#ff5e3a',bg:'#0a0d12',fg:'#e8edf5',dark:true}, widgets:[
     {type:'heading', text:'🔫 Arena Battle Royale', level:2, align:'center'},
-    {type:'text', text:'WASD+Mouse atau Sentuh (joystik) · Elak zone biru!', align:'center'},
+    {type:'text', text:'WASD+Mouse or Touch (joystick) · Avoid the blue zone!', align:'center'},
     {type:'br', enemies:6, zoneSpeed:10, mapSize:700}
   ]},
   fpstpl:{ label:'🎯 FPS Arena 3D', appName:'FPS Arena', theme:{accent:'#ff5e3a',bg:'#0a0d12',fg:'#e8edf5',dark:true}, widgets:[
     {type:'heading', text:'🎯 FPS Arena 3D', level:2, align:'center'},
-    {type:'text', text:'W/S+AD atau Joystik sentuh · Elak zone merah!', align:'center'},
+    {type:'text', text:'W/S+AD or touch joystick · Avoid the red zone!', align:'center'},
     {type:'fps', enemies:4, zoneSpeed:25}
   ]},
-  runtpl:{ label:'🏃 Lari Tanpa Hujung', appName:'Runner', theme:{accent:'#ffcf3c',bg:'#0e1626',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'🏃 Lari Tanpa Hujung', level:2, align:'center'},
-    {type:'text', text:'Klik / Sentuh / Space untuk lompat · Elak halangan!', align:'center'},
+  runtpl:{ label:'🏃 Endless Runner', appName:'Runner', theme:{accent:'#ffcf3c',bg:'#0e1626',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🏃 Endless Runner', level:2, align:'center'},
+    {type:'text', text:'Click / Tap / Space to jump · Avoid obstacles!', align:'center'},
     {type:'runner'}
   ]},
-  memtpl:{ label:'🧠 Padanan Memori', appName:'Padanan Memori', theme:{accent:'#a259ff',bg:'#0d0f1c',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'🧠 Padanan Memori', level:2, align:'center'},
-    {type:'text', text:'Balik kad dan jodohkan semua pasangan secepat mungkin.', align:'center'},
+  memtpl:{ label:'🧠 Memory Match', appName:'Memory Match', theme:{accent:'#a259ff',bg:'#0d0f1c',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🧠 Memory Match', level:2, align:'center'},
+    {type:'text', text:'Flip cards and match all pairs as fast as you can.', align:'center'},
     {type:'memory', pairs:6}
   ]},
-  moletpl:{ label:'🐹 Tikus Pukul', appName:'Tikus Pukul', theme:{accent:'#ff8a3c',bg:'#161008',fg:'#ffedd8',dark:true}, widgets:[
-    {type:'heading', text:'🐹 Tikus Pukul', level:2, align:'center'},
-    {type:'text', text:'Pukul tikus yang muncul secepat boleh — 20 saat sahaja!', align:'center'},
+  moletpl:{ label:'🐹 Whack-a-Mole', appName:'Whack-a-Mole', theme:{accent:'#ff8a3c',bg:'#161008',fg:'#ffedd8',dark:true}, widgets:[
+    {type:'heading', text:'🐹 Whack-a-Mole', level:2, align:'center'},
+    {type:'text', text:'Whack the moles as fast as you can — only 20 seconds!', align:'center'},
     {type:'mole', duration:20}
   ]},
-  rpstpl:{ label:'✊ Batu-Kertas-Gunting', appName:'BKG Lawan CPU', theme:{accent:'#30d158'}, widgets:[
-    {type:'heading', text:'✊ Batu-Kertas-Gunting', level:2, align:'center'},
-    {type:'text', text:'Pilih tangan anda — CPU pilih secara rawak.', align:'center'},
+  rpstpl:{ label:'✊ Rock-Paper-Scissors', appName:'RPS vs CPU', theme:{accent:'#30d158'}, widgets:[
+    {type:'heading', text:'✊ Rock-Paper-Scissors', level:2, align:'center'},
+    {type:'text', text:'Pick your hand — the CPU picks randomly.', align:'center'},
     {type:'rps'}
   ]},
-  reacttpl:{ label:'⚡ Masa Tindak Balas', appName:'Masa Tindak Balas', theme:{accent:'#4c8dff',bg:'#0a0e18',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'⚡ Masa Tindak Balas', level:2, align:'center'},
-    {type:'text', text:'Tunggu hijau… lalu klik secepat mungkin. purata ms anda?', align:'center'},
+  reacttpl:{ label:'⚡ Reaction Time', appName:'Reaction Time', theme:{accent:'#4c8dff',bg:'#0a0e18',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'⚡ Reaction Time', level:2, align:'center'},
+    {type:'text', text:'Wait for green… then click as fast as possible. Your average ms?', align:'center'},
     {type:'reaction'}
   ]},
-  guesstpl:{ label:'🔢 Teka Nombor', appName:'Teka Nombor', theme:{accent:'#f2c14e'}, widgets:[
-    {type:'heading', text:'🔢 Teka Nombor 1–100', level:2, align:'center'},
-    {type:'text', text:'Nombor rawak telah dipilih — cuba teka dengan petanda tinggi/rendah.', align:'center'},
+  guesstpl:{ label:'🔢 Number Guess', appName:'Number Guess', theme:{accent:'#f2c14e'}, widgets:[
+    {type:'heading', text:'🔢 Number Guess 1–100', level:2, align:'center'},
+    {type:'text', text:'A random number is chosen — guess it with high/low hints.', align:'center'},
     {type:'guess'}
   ]},
   tpl2048:{ label:'🧊 2048', appName:'2048', theme:{accent:'#f2b179',bg:'#131a26',fg:'#f2ecdf',dark:true}, widgets:[
     {type:'heading', text:'🧊 2048', level:2, align:'center'},
-    {type:'text', text:'Geser untuk gabung nombor sama — dua 2 jadi 4, dua 4 jadi 8…', align:'center'},
+    {type:'text', text:'Slide to merge equal numbers — two 2s make 4, two 4s make 8…', align:'center'},
     {type:'s2048'}
   ]},
-  snktpl:{ label:'🐍 Ular', appName:'Ular', theme:{accent:'#30d158',bg:'#0e1626',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'🐍 Ular', level:2, align:'center'},
-    {type:'text', text:'Makan bulat merah, jangan langgar dinding atau badan sendiri!', align:'center'},
+  snktpl:{ label:'🐍 Snake', appName:'Snake', theme:{accent:'#30d158',bg:'#0e1626',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🐍 Snake', level:2, align:'center'},
+    {type:'text', text:'Eat the red dots, don\'t hit the walls or yourself!', align:'center'},
     {type:'snake', speed:1}
   ]},
   bktpl:{ label:'🧱 Breakout', appName:'Breakout', theme:{accent:'#4c8dff',bg:'#0a0e18',fg:'#eaf0ff',dark:true}, widgets:[
     {type:'heading', text:'🧱 Breakout', level:2, align:'center'},
-    {type:'text', text:'Gerak padel dengan tetikus/jari · Klik/Space untuk lepas bola.', align:'center'},
+    {type:'text', text:'Move the paddle with mouse/finger · Click/Space to launch the ball.', align:'center'},
     {type:'breakout', rows:5}
   ]},
-  bloktpl:{ label:'🧩 Blok Jatuh', appName:'Blok Jatuh', theme:{accent:'#a259ff',bg:'#0d1220',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'🧩 Blok Jatuh', level:2, align:'center'},
-    {type:'text', text:'Susun blok yang jatuh, jajar satu baris penuh untuk menghapusnya.', align:'center'},
+  bloktpl:{ label:'🧩 Block Drop', appName:'Block Drop', theme:{accent:'#a259ff',bg:'#0d1220',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'🧩 Block Drop', level:2, align:'center'},
+    {type:'text', text:'Arrange the falling blocks, complete a full row to clear it.', align:'center'},
     {type:'blox'}
   ]},
-  astrotpl:{ label:'☄️ Asteroid', appName:'Asteroid', theme:{accent:'#26c6da',bg:'#05070d',fg:'#eaf0ff',dark:true}, widgets:[
-    {type:'heading', text:'☄️ Asteroid', level:2, align:'center'},
-    {type:'text', text:'Pusing, pecut dan tembak — semua orang tahu, tapi bolehkah anda bertahan?', align:'center'},
+  astrotpl:{ label:'☄️ Asteroids', appName:'Asteroid', theme:{accent:'#26c6da',bg:'#05070d',fg:'#eaf0ff',dark:true}, widgets:[
+    {type:'heading', text:'☄️ Asteroids', level:2, align:'center'},
+    {type:'text', text:'Spin, boost and shoot — everyone knows the game, but can you survive?', align:'center'},
     {type:'astro'}
   ]},
-  minstpl:{ label:'💣 Rambang', appName:'Rambang Minda', theme:{accent:'#ff9f43'}, widgets:[
-    {type:'heading', text:'💣 Rambang Minda', level:2, align:'center'},
-    {type:'text', text:'9×9, 10 ranjau tersembunyi. Klik untuk buka, klik-kanan/tahan untuk bendera.', align:'center'},
+  minstpl:{ label:'💣 Minesweeper', appName:'Mind Mines', theme:{accent:'#ff9f43'}, widgets:[
+    {type:'heading', text:'💣 Minesweeper', level:2, align:'center'},
+    {type:'text', text:'9×9, 10 hidden mines. Click to reveal, right-click/hold for a flag.', align:'center'},
     {type:'mines'}
   ]}
 };
@@ -387,7 +387,7 @@ const TEMPLATES = {
 // ── Enjin permainan (tanpa AI). widgetMarkup hasilkan 'shell'; initGames bina UI & logik.
 // Fungsi yang sama dipakai untuk pratonton (renderStage panggil initGames) dan eksport
 // (runtimeJS menyertai initGames.toString()). Maka tiada pendua logik. ────────────────
-function gameBox(kind,label,w,extra){ return `<div data-game="${kind}" data-acc="${esc(theme.accent)}"${extra||''}><div style="border:2px dashed #ccc;border-radius:12px;padding:18px;text-align:center;color:#888">${esc(label)} — tukar ke <b>Mod Cuba</b> untuk main</div></div>`; }
+function gameBox(kind,label,w,extra){ return `<div data-game="${kind}" data-acc="${esc(theme.accent)}"${extra||''}><div style="border:2px dashed #ccc;border-radius:12px;padding:18px;text-align:center;color:#888">${esc(label)} — switch to <b>Play mode</b> to play</div></div>`; }
 
 function initGames(root){
   var _lb={}; // papan pendahulu mesti wujud sebelum game boot — draw() pertama ialah sinkron (dalam forEach).
@@ -489,24 +489,24 @@ function initGames(root){
   function setBest(k,val){ var s=ls(); if(!s||!isFinite(val))return false; try{ var c=getBest(k); if(c==null||val>c){ s.setItem('tukuk-best-'+k,String(val)); return true; } }catch(e){} return false; }
 
   // Papan pendahulu komuniti (hanya bila rangkaian boleh; senyap jika CSP/sandbox menyekat).
-  function playerName(){ var s=ls(); var n=null; try{ if(s)n=s.getItem('tukuk-name'); }catch(e){} if(n==null){ n=(String(window.prompt('Nama untuk papan pendahulu:')||'').trim().slice(0,20))||'Anon'; try{ if(s)s.setItem('tukuk-name',n); }catch(e){} } return n; }
+  function playerName(){ var s=ls(); var n=null; try{ if(s)n=s.getItem('tukuk-name'); }catch(e){} if(n==null){ n=(String(window.prompt('Name for the leaderboard:')||'').trim().slice(0,20))||'Anon'; try{ if(s)s.setItem('tukuk-name',n); }catch(e){} } return n; }
   function lbSubmit(game,score){ try{ if(!isFinite(score)||score<=0)return; var u='/api/score?g='+encodeURIComponent(game)+'&n='+encodeURIComponent(playerName())+'&s='+Math.round(score); fetch(u,{cache:'no-store',mode:'no-cors'}); }catch(e){} }
   function lbTop(game,force){ if(!force&&_lb[game]!=null)return; _lb[game]=_lb[game]||[]; try{ fetch('/api/scores?g='+encodeURIComponent(game)+'&limit=5',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){ _lb[game]=(d&&d.items)||[]; }).catch(function(){}); }catch(e){} }
-  function drawLb(ctx,game,cx,y){ var arr=_lb[game]; if(!arr||!arr.length)return; var ta=ctx.textAlign; ctx.textAlign='center'; ctx.font='bold 11px system-ui'; ctx.fillStyle='#7fb2ff'; ctx.fillText('🌐 Papan pendahulu',cx,y); ctx.font='11px system-ui'; ctx.fillStyle='#cfe1ff'; for(var i=0;i<Math.min(5,arr.length);i++){ ctx.fillText((i+1)+'. '+arr[i].n+' — '+arr[i].s,cx,y+13+i*13); } ctx.textAlign=ta; }
+  function drawLb(ctx,game,cx,y){ var arr=_lb[game]; if(!arr||!arr.length)return; var ta=ctx.textAlign; ctx.textAlign='center'; ctx.font='bold 11px system-ui'; ctx.fillStyle='#7fb2ff'; ctx.fillText('🌐 Leaderboard',cx,y); ctx.font='11px system-ui'; ctx.fillStyle='#cfe1ff'; for(var i=0;i<Math.min(5,arr.length);i++){ ctx.fillText((i+1)+'. '+arr[i].n+' — '+arr[i].s,cx,y+13+i*13); } ctx.textAlign=ta; }
 
   function gTTT(box,acc){
     box.innerHTML='';
     var cells=[], b=Array(9).fill(''), turn='X', over=false, sfx=makeSfx();
-    var stat=el('div','font-size:13px;color:#666','Giliran: X');
+    var stat=el('div','font-size:13px;color:#666','Turn: X');
     var grid=el('div','display:grid;grid-template-columns:repeat(3,58px);gap:6px;margin:8px 0');
     function win(a){ var L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(var k=0;k<L.length;k++){ var x=L[k]; if(a[x[0]]&&a[x[0]]===a[x[1]]&&a[x[1]]===a[x[2]]) return true; } return false; }
     for(var i=0;i<9;i++){ (function(idx){ var c=el('button','width:58px;height:58px;font-size:26px;font-weight:800;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer','');
       c.onclick=function(){ if(over||b[idx])return; b[idx]=turn; c.textContent=turn; c.style.color=turn==='X'?acc:'#e5484d'; sfx.shoot();
-        if(win(b)){ over=true; stat.textContent='Menang: '+turn+' 🎉'; sfx.win(); } else if(b.every(function(x){return x;})){ over=true; stat.textContent='Seri!'; } else { turn=turn==='X'?'O':'X'; stat.textContent='Giliran: '+turn; } };
+        if(win(b)){ over=true; stat.textContent='Wins: '+turn+' 🎉'; sfx.win(); } else if(b.every(function(x){return x;})){ over=true; stat.textContent='Draw!'; } else { turn=turn==='X'?'O':'X'; stat.textContent='Turn: '+turn; } };
       grid.appendChild(c); cells.push(c); })(i); }
     var rst=el('button','padding:6px 12px;border:1px solid #ccc;border-radius:8px;background:#f3f5fb;cursor:pointer','Reset');
-    rst.onclick=function(){ b=Array(9).fill(''); turn='X'; over=false; cells.forEach(function(x){ x.textContent=''; x.style.color=''; }); stat.textContent='Giliran: X'; };
-    box.appendChild(el('div','font-size:13px;color:#666','Dua pemain. Jajaran 3 menang.'));
+    rst.onclick=function(){ b=Array(9).fill(''); turn='X'; over=false; cells.forEach(function(x){ x.textContent=''; x.style.color=''; }); stat.textContent='Turn: X'; };
+    box.appendChild(el('div','font-size:13px;color:#666','Two players. Three in a row wins.'));
     box.appendChild(grid); box.appendChild(stat); box.appendChild(rst);
   }
 
@@ -521,46 +521,46 @@ function initGames(root){
     deck.forEach(function(em){ var c=el('button','width:52px;height:52px;font-size:22px;border:1px solid #ccc;border-radius:8px;cursor:pointer','?'); c.style.background=acc; c.style.color=acc;
       c.onclick=function(){ if(lock||c.__o||c.__d)return; c.textContent=em; c.style.background='#fff'; c.style.color='#111'; c.__o=true; open.push({c:c,em:em});
         if(open.length===2){ moves++; lock=true; var a=open[0], bb=open[1];
-          setTimeout(function(){ if(a.em===bb.em){ a.c.__d=1; bb.c.__d=1; a.c.style.background='#d7f7dd'; bb.c.style.background='#d7f7dd'; matched++; sfx.kill(); if(matched===chosen.length)sfx.win(); stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length+(matched===chosen.length?'  ✅ Selesai!':''); } else { sfx.hurt(); [a,bb].forEach(function(o){ o.c.textContent='?'; o.c.style.background=acc; o.c.style.color=acc; }); stat.textContent='Gerak: '+moves+'  •  Padan: '+matched+'/'+chosen.length; } open=[]; lock=false; }, 550); } };
+          setTimeout(function(){ if(a.em===bb.em){ a.c.__d=1; bb.c.__d=1; a.c.style.background='#d7f7dd'; bb.c.style.background='#d7f7dd'; matched++; sfx.kill(); if(matched===chosen.length)sfx.win(); stat.textContent='Moves: '+moves+'  •  Matches: '+matched+'/'+chosen.length+(matched===chosen.length?'  ✅ Done!':''); } else { sfx.hurt(); [a,bb].forEach(function(o){ o.c.textContent='?'; o.c.style.background=acc; o.c.style.color=acc; }); stat.textContent='Moves: '+moves+'  •  Matches: '+matched+'/'+chosen.length; } open=[]; lock=false; }, 550); } };
       grid.appendChild(c); });
-    box.appendChild(el('div','font-size:13px;color:#666','Cari pasangan yang sama.'));
-    box.appendChild(grid); box.appendChild(stat); stat.textContent='Gerak: 0  •  Padan: 0/'+chosen.length;
+    box.appendChild(el('div','font-size:13px;color:#666','Find the matching pairs.'));
+    box.appendChild(grid); box.appendChild(stat); stat.textContent='Moves: 0  •  Matches: 0/'+chosen.length;
   }
 
   function gMole(box,acc){
     box.innerHTML=''; var cells=[], score=0, left=0, playing=false, spawn=null, tick=null, sfx=makeSfx();
-    var stat=el('div','font-size:13px;color:#666','Skor: 0');
+    var stat=el('div','font-size:13px;color:#666','Score: 0');
     var grid=el('div','display:grid;grid-template-columns:repeat(3,60px);gap:8px;margin:8px 0');
     function pop(){ if(!playing)return; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); var m=cells[Math.floor(Math.random()*cells.length)]; m.__m=true; m.textContent='🐹'; }
     for(var i=0;i<9;i++){ (function(){ var h=el('div','width:60px;height:60px;border-radius:50%;background:#e7e0d6;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer','');
-      h.onclick=function(){ if(playing&&h.__m){ score++; sfx.hit(); h.__m=false; h.textContent=''; stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; } }; grid.appendChild(h); cells.push(h); })(); }
-    var start=el('button','padding:6px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Mula');
-    start.onclick=function(){ if(playing)return; sfx.shoot(); playing=true; score=0; left=Number(box.getAttribute('data-duration'))||20; stat.textContent='Skor: 0  •  Masa: '+left+'s'; pop();
-      tick=setInterval(function(){ left--; if(left<=0){ clearInterval(tick); clearInterval(spawn); playing=false; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); stat.textContent='⏱ Tamat! Skor: '+score; sfx.win(); } else stat.textContent='Skor: '+score+'  •  Masa: '+left+'s'; }, 1000);
+      h.onclick=function(){ if(playing&&h.__m){ score++; sfx.hit(); h.__m=false; h.textContent=''; stat.textContent='Score: '+score+'  •  Time: '+left+'s'; } }; grid.appendChild(h); cells.push(h); })(); }
+    var start=el('button','padding:6px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Start');
+    start.onclick=function(){ if(playing)return; sfx.shoot(); playing=true; score=0; left=Number(box.getAttribute('data-duration'))||20; stat.textContent='Score: 0  •  Time: '+left+'s'; pop();
+      tick=setInterval(function(){ left--; if(left<=0){ clearInterval(tick); clearInterval(spawn); playing=false; cells.forEach(function(c){ c.__m=false; c.textContent=''; }); stat.textContent='⏱ Time up! Score: '+score; sfx.win(); } else stat.textContent='Score: '+score+'  •  Time: '+left+'s'; }, 1000);
       spawn=setInterval(pop, 850); };
-    box.appendChild(el('div','font-size:13px;color:#666','Klik tikus sebaik ia muncul.'));
+    box.appendChild(el('div','font-size:13px;color:#666','Click the mole as soon as it appears.'));
     box.appendChild(grid); var ctl=el('div','display:flex;align-items:center;gap:10px;margin-top:6px'); ctl.appendChild(stat); ctl.appendChild(start); box.appendChild(ctl);
   }
 
   function gRPS(box,acc){
-    box.innerHTML=''; var opts=[['🪨','Batu'],['📄','Kertas'],['✂️','Gunting']]; var you=0, cpu=0, sfx=makeSfx();
-    var res=el('div','font-size:15px;margin:6px 0','Pilih satu:'); var sc=el('div','font-size:13px;color:#666','Skor — Kau: 0, Komputer: 0');
+    box.innerHTML=''; var opts=[['🪨','Rock'],['📄','Paper'],['✂️','Scissors']]; var you=0, cpu=0, sfx=makeSfx();
+    var res=el('div','font-size:15px;margin:6px 0','Pick one:'); var sc=el('div','font-size:13px;color:#666','Score — You: 0, CPU: 0');
     var row=el('div','display:flex;gap:8px;margin:8px 0');
     opts.forEach(function(o){ var b=el('button','width:52px;height:52px;font-size:22px;border:1px solid #ccc;border-radius:12px;background:#fff;cursor:pointer',o[0]);
       b.onclick=function(){ sfx.shoot(); var ci=Math.floor(Math.random()*3); var yi=opts.indexOf(o); var d=(yi-ci+3)%3; var r;
-        if(d===0){ r='Seri '+o[0]+' vs '+opts[ci][0]; sfx.hurt(); } else if(d===1){ you++; r='Menang! '+o[0]+' vs '+opts[ci][0]; sfx.win(); } else { cpu++; r='Kalah '+o[0]+' vs '+opts[ci][0]; sfx.lose(); }
-        res.textContent=r; sc.textContent='Skor — Kau: '+you+', Komputer: '+cpu; }; row.appendChild(b); });
-    box.appendChild(el('div','font-size:13px;color:#666','Batu • Kertas • Gunting lawan komputer.'));
+        if(d===0){ r='Draw '+o[0]+' vs '+opts[ci][0]; sfx.hurt(); } else if(d===1){ you++; r='You win! '+o[0]+' vs '+opts[ci][0]; sfx.win(); } else { cpu++; r='You lose '+o[0]+' vs '+opts[ci][0]; sfx.lose(); }
+        res.textContent=r; sc.textContent='Score — You: '+you+', CPU: '+cpu; }; row.appendChild(b); });
+    box.appendChild(el('div','font-size:13px;color:#666','Rock • Paper • Scissors vs the computer.'));
     box.appendChild(row); box.appendChild(res); box.appendChild(sc);
   }
 
   function gReaction(box,acc){
     box.innerHTML=''; var state=0, t0=0, timer=null, best=null, sfx=makeSfx();
-    var msg=el('div','text-align:center;padding:22px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none','Klik untuk mula'); msg.style.background='#f3c6c6';
-    msg.onclick=function(){ sfx.resume(); if(state===0){ state=1; msg.textContent='Tunggu hijau…'; msg.style.background='#e6a4a4'; timer=setTimeout(function(){ state=2; msg.textContent='KLIK SEKARANG!'; msg.style.background='#d7f7dd'; t0=Date.now(); sfx.hit(); }, 900+Math.random()*3000); }
-      else if(state===1){ clearTimeout(timer); state=0; msg.textContent='Terlalu awal! Klik untuk cuba lagi'; msg.style.background='#f3c6c6'; sfx.lose(); }
-      else if(state===2){ var ms=Date.now()-t0; state=0; var rec=best==null||ms<best; if(rec)best=ms; msg.textContent=ms+' ms  (terbaik: '+best+' ms) — klik untuk ulang'; msg.style.background='#eaf0ff'; if(rec)sfx.win(); else sfx.kill(); } };
-    box.appendChild(el('div','font-size:13px;color:#666','Klik sebaik warna bertukar hijau.'));
+    var msg=el('div','text-align:center;padding:22px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none','Click to start'); msg.style.background='#f3c6c6';
+    msg.onclick=function(){ sfx.resume(); if(state===0){ state=1; msg.textContent='Wait for green…'; msg.style.background='#e6a4a4'; timer=setTimeout(function(){ state=2; msg.textContent='CLICK NOW!'; msg.style.background='#d7f7dd'; t0=Date.now(); sfx.hit(); }, 900+Math.random()*3000); }
+      else if(state===1){ clearTimeout(timer); state=0; msg.textContent='Too early! Click to try again'; msg.style.background='#f3c6c6'; sfx.lose(); }
+      else if(state===2){ var ms=Date.now()-t0; state=0; var rec=best==null||ms<best; if(rec)best=ms; msg.textContent=ms+' ms  (best: '+best+' ms) — click to go again'; msg.style.background='#eaf0ff'; if(rec)sfx.win(); else sfx.kill(); } };
+    box.appendChild(el('div','font-size:13px;color:#666','Click as soon as the color turns green.'));
     box.appendChild(msg);
   }
 
@@ -568,12 +568,12 @@ function initGames(root){
     box.innerHTML=''; var max=Number(box.getAttribute('data-max'))||100; var secret=1+Math.floor(Math.random()*max), tries=0, sfx=makeSfx();
     var res=el('div','font-size:14px;margin-top:6px','');
     var inp=el('input','flex:1;padding:8px;border:1px solid #ccd;border-radius:8px;font:inherit',''); inp.type='number'; inp.min='1'; inp.max=String(max);
-    var chk=el('button','padding:8px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Teka');
-    function go(){ var v=Number(inp.value); if(!v){ res.textContent='Masukkan nombor.'; return; } tries++;
-      if(v===secret){ res.textContent='🎉 Betul dalam '+tries+' tekaan!'; sfx.win(); secret=1+Math.floor(Math.random()*max); tries=0; inp.value=''; }
-      else { res.textContent = v<secret ? 'Lebih tinggi ⬆️' : 'Lebih rendah ⬇️'; sfx.hurt(); } }
+    var chk=el('button','padding:8px 14px;background:'+acc+';color:#fff;border:none;border-radius:8px;cursor:pointer','Guess');
+    function go(){ var v=Number(inp.value); if(!v){ res.textContent='Enter a number.'; return; } tries++;
+      if(v===secret){ res.textContent='🎉 Correct in '+tries+' guesses!'; sfx.win(); secret=1+Math.floor(Math.random()*max); tries=0; inp.value=''; }
+      else { res.textContent = v<secret ? 'Go higher ⬆️' : 'Go lower ⬇️'; sfx.hurt(); } }
     chk.onclick=go; inp.addEventListener('keydown', function(e){ if(e.key==='Enter') go(); });
-    box.appendChild(el('div','font-size:13px;color:#666','Aku fikir nombor 1–'+max+'. Cuba teka!'));
+    box.appendChild(el('div','font-size:13px;color:#666','I am thinking of a number 1–'+max+'. Take a guess!'));
     var row=el('div','display:flex;gap:6px;margin:8px 0'); row.appendChild(inp); row.appendChild(chk); box.appendChild(row); box.appendChild(res);
   }
 
@@ -727,27 +727,27 @@ function initGames(root){
       var rem=enemies?enemies.filter(function(en){return en.alive;}).length:0;
       if(state==='play'&&player){
         var zt=zone?Math.round(Math.max(0,zone.r-zone.min)/Math.max(0.001,zone.drain)/60):0;
-        ctx.fillStyle='#fff';ctx.fillText('HP:'+Math.round(player.hp)+' Kill:'+player.kills+' Sisa:'+rem+' Zone:'+zt+'s',8,15);
+        ctx.fillStyle='#fff';ctx.fillText('HP:'+Math.round(player.hp)+' Kill:'+player.kills+' Left:'+rem+' Zone:'+zt+'s',8,15);
       }
       if(state!=='play'){
         ctx.textBaseline='alphabetic';ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
         if(state==='menu'){
           ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🔫 Battle Royale',W/2,H/2-26);
-          ctx.font='12px system-ui';ctx.fillStyle='#ccc';ctx.fillText('WASD+Mouse · atau Sentuh (telefon)',W/2,H/2+2);
-          ctx.fillStyle='#aaa';ctx.font='11px system-ui';ctx.fillText('Kalahkan '+NE+' AI · Elak zone biru!',W/2,H/2+18);
-          ctx.fillStyle='#4c8dff';ctx.font='13px system-ui';ctx.fillText('Klik untuk mula',W/2,H/2+38);
-          ctx.fillStyle='#ffd700';ctx.font='11px system-ui';ctx.fillText('Rekod terbaik: '+(getBest('br')||0)+' kill',W/2,H/2+54);
+          ctx.font='12px system-ui';ctx.fillStyle='#ccc';ctx.fillText('WASD+Mouse · or Touch (phone)',W/2,H/2+2);
+          ctx.fillStyle='#aaa';ctx.font='11px system-ui';ctx.fillText('Defeat '+NE+' AI bots · Avoid the blue zone!',W/2,H/2+18);
+          ctx.fillStyle='#4c8dff';ctx.font='13px system-ui';ctx.fillText('Click to start',W/2,H/2+38);
+          ctx.fillStyle='#ffd700';ctx.font='11px system-ui';ctx.fillText('Best: '+(getBest('br')||0)+' kills',W/2,H/2+54);
           lbTop('br');drawLb(ctx,'br',W/2,H/2+72);
         }else if(state==='win'){
           ctx.font='bold 22px system-ui';ctx.fillStyle='#ffd700';ctx.fillText('#1 Winner Winner Chicken Dinner! 🎉',W/2,H/2-14);
-          ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' · Masa: '+Math.round((Date.now()-startedAt)/1000)+'s',W/2,H/2+12);
-          if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+28);}
-          ctx.fillStyle='#ccc';ctx.fillText('Klik untuk main lagi',W/2,H/2+(player&&player.record?44:30));
+          ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' · Time: '+Math.round((Date.now()-startedAt)/1000)+'s',W/2,H/2+12);
+          if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record!',W/2,H/2+28);}
+          ctx.fillStyle='#ccc';ctx.fillText('Click to play again',W/2,H/2+(player&&player.record?44:30));
         }else{
-          ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Anda Tumbang',W/2,H/2-14);
-          ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' · Sisa: '+rem,W/2,H/2+12);
-          if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru '+player.kills+' kill!',W/2,H/2+28);}
-          ctx.fillStyle='#ccc';ctx.fillText('Klik untuk cuba lagi',W/2,H/2+(player&&player.record?44:30));
+          ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 You were eliminated',W/2,H/2-14);
+          ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' · Left: '+rem,W/2,H/2+12);
+          if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record '+player.kills+' kills!',W/2,H/2+28);}
+          ctx.fillStyle='#ccc';ctx.fillText('Click to try again',W/2,H/2+(player&&player.record?44:30));
         }
         ctx.textAlign='left';
       }
@@ -935,24 +935,24 @@ function initGames(root){
       if(state==='menu'){
         ctx.fillStyle='#0a0e1a';ctx.fillRect(0,0,W,H);
         ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🎯 FPS Arena 3D',W/2,H/2-26);
-        ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Klik / Sentuh untuk mula',W/2,H/2+2);
+        ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Click / Tap to start',W/2,H/2+2);
         ctx.font='11px system-ui';ctx.fillStyle='#aaa';
-        ctx.fillText('W/S+AD atau Joystik sentuh · Klik/Space=tembak',W/2,H/2+18);
-        ctx.fillText('Bunuh '+NE+' musuh · Elak zona merah · Peta 3D',W/2,H/2+32);
-        ctx.fillStyle='#ffd700';ctx.fillText('Rekod terbaik: '+(getBest('fps')||0)+' kill',W/2,H/2+46);
+        ctx.fillText('W/S+AD or touch joystick · Click/Space=shoot',W/2,H/2+18);
+        ctx.fillText('Kill '+NE+' enemies · Avoid the red zone · 3D map',W/2,H/2+32);
+        ctx.fillStyle='#ffd700';ctx.fillText('Best: '+(getBest('fps')||0)+' kills',W/2,H/2+46);
         lbTop('fps');drawLb(ctx,'fps',W/2,H/2+62);
       }else if(state==='win'){
         ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);
         ctx.font='bold 22px system-ui';ctx.fillStyle='#ffd700';ctx.fillText('#1 Chicken Dinner! 🎉',W/2,H/2-12);
-        ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' Masa: '+Math.round((Date.now()-startedAt)/1000)+'s',W/2,H/2+14);
-        if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+28);}
-        ctx.fillStyle='#ccc';ctx.fillText('Klik untuk main lagi',W/2,H/2+(player&&player.record?44:30));
+        ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0)+' Time: '+Math.round((Date.now()-startedAt)/1000)+'s',W/2,H/2+14);
+        if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record!',W/2,H/2+28);}
+        ctx.fillStyle='#ccc';ctx.fillText('Click to play again',W/2,H/2+(player&&player.record?44:30));
       }else if(state==='lose'){
         ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);
-        ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Anda Tumbang',W/2,H/2-12);
+        ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 You were eliminated',W/2,H/2-12);
         ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Kill: '+(player?player.kills:0),W/2,H/2+14);
-        if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru '+player.kills+' kill!',W/2,H/2+28);}
-        ctx.fillStyle='#ccc';ctx.fillText('Klik untuk cuba lagi',W/2,H/2+(player&&player.record?44:30));
+        if(player&&player.record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record '+player.kills+' kills!',W/2,H/2+28);}
+        ctx.fillStyle='#ccc';ctx.fillText('Click to try again',W/2,H/2+(player&&player.record?44:30));
       }
       ctx.textAlign='left';
     }
@@ -1002,10 +1002,10 @@ function initGames(root){
       ctx.fillStyle='#30d158';if(obs)obs.forEach(function(o){ ctx.fillRect(o.x,GROUND-o.h,o.w,o.h); });
       if(state!=='menu'){ ctx.fillStyle='#ffcf3c';ctx.fillRect(30,py-26,22,26); ctx.fillStyle='#16181d';ctx.fillRect(44,py-21,4,4); }
       ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(0,0,W,22);ctx.font='bold 12px system-ui';ctx.textBaseline='middle';ctx.textAlign='left';
-      ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,8,12);ctx.textAlign='right';ctx.fillStyle='#ffd700';ctx.fillText('Rekod: '+(getBest('runner')||0),W-8,12);ctx.textBaseline='alphabetic';ctx.textAlign='left';
+      ctx.fillStyle='#fff';ctx.fillText('Score: '+score,8,12);ctx.textAlign='right';ctx.fillStyle='#ffd700';ctx.fillText('Best: '+(getBest('runner')||0),W-8,12);ctx.textBaseline='alphabetic';ctx.textAlign='left';
       if(state!=='play'){ ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,0.72)';ctx.fillRect(0,0,W,H);
-        if(state==='menu'){ ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🏃 Lari Tanpa Hujung',W/2,H/2-8);ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Klik / Sentuh / Space untuk lompat',W/2,H/2+14); lbTop('runner'); drawLb(ctx,'runner',W/2,H/2+34); }
-        else { ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Tamat!',W/2,H/2-14);ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,W/2,H/2+6); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+22);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Klik untuk main lagi',W/2,H/2+(record?40:26)); }
+        if(state==='menu'){ ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🏃 Endless Runner',W/2,H/2-8);ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Click / Tap / Space to jump',W/2,H/2+14); lbTop('runner'); drawLb(ctx,'runner',W/2,H/2+34); }
+        else { ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Game Over!',W/2,H/2-14);ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Score: '+score,W/2,H/2+6); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record!',W/2,H/2+22);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Click to play again',W/2,H/2+(record?40:26)); }
         ctx.textAlign='left'; }
     }
     draw();requestAnimationFrame(loop);
@@ -1016,11 +1016,11 @@ function initGames(root){
     box.innerHTML=''; box.tabIndex=0; box.style.outline='none';
     var N=4, b=Array(16).fill(0), score=0, over=false, sfx=makeSfx();
     var COL={2:'#ede0c8',4:'#f2b179',8:'#f59563',16:'#f67c5f',32:'#f65e3b',64:'#edcf72',128:'#edcc61',256:'#edc850',512:'#edc53f',1024:'#edc22e',2048:'#b891ff'};
-    var stat=el('div','font-size:13px;color:#666','Skor: 0');
+    var stat=el('div','font-size:13px;color:#666','Score: 0');
     var wrap=el('div','display:grid;grid-template-columns:repeat(4,60px);gap:6px;margin:8px 0;touch-action:none');
     var cells=[];
     for(var i=0;i<16;i++){ cells.push(el('div','width:60px;height:60px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;background:rgba(128,128,160,0.15);color:#333','')); wrap.appendChild(cells[i]); }
-    function draw(){ for(var i=0;i<16;i++){ var v=b[i],c=cells[i]; c.textContent=v||''; c.style.background=v?(COL[v]||'#624eaf'):'rgba(128,128,160,0.15)'; c.style.color=v>=2048?'#ffd700':v>=32?'#fff':'#333'; c.style.fontSize=v>=1024?'15px':v>=128?'18px':'20px'; } stat.textContent='Skor: '+score+(over?' — Tamat!':''); }
+    function draw(){ for(var i=0;i<16;i++){ var v=b[i],c=cells[i]; c.textContent=v||''; c.style.background=v?(COL[v]||'#624eaf'):'rgba(128,128,160,0.15)'; c.style.color=v>=2048?'#ffd700':v>=32?'#fff':'#333'; c.style.fontSize=v>=1024?'15px':v>=128?'18px':'20px'; } stat.textContent='Score: '+score+(over?' — Game Over!':''); }
     function slide(row){ var a=row.filter(function(x){return x;}),out=[];
       for(var i=0;i<a.length;i++){ if(a[i]===a[i+1]){ out.push(a[i]*2); score+=a[i]*2; i++; } else out.push(a[i]); }
       while(out.length<N)out.push(0);
@@ -1035,7 +1035,7 @@ function initGames(root){
     function spawn(){ var e=[]; for(var i=0;i<16;i++)if(!b[i])e.push(i); if(e.length)b[e[Math.floor(Math.random()*e.length)]]=Math.random()<0.9?2:4; }
     function dead(){ for(var i=0;i<16;i++){ if(!b[i])return false; if(i%4<3&&b[i]===b[i+1])return false; if(i<12&&b[i]===b[i+4])return false; } return true; }
     function after(moved){ if(!moved)return; spawn(); draw();
-      if(dead()){ over=true; sfx.lose(); if(score>0){ var rec=setBest('2048',score); lbSubmit('2048',score); draw(); if(rec)stat.textContent+=' 🏆 Rekod baru!'; } } else sfx.hit(); }
+      if(dead()){ over=true; sfx.lose(); if(score>0){ var rec=setBest('2048',score); lbSubmit('2048',score); draw(); if(rec)stat.textContent+=' 🏆 New record!'; } } else sfx.hit(); }
     function turn(d){ sfx.resume(); if(over){ reset(); return; } after(move(d)); }
     box.addEventListener('keydown',function(e){ var m={ArrowLeft:0,ArrowRight:1,ArrowUp:2,ArrowDown:3}[e.key]; if(m==null)return; e.preventDefault(); turn(m); });
     var tx=0,ty=0;
@@ -1048,7 +1048,7 @@ function initGames(root){
     pad.appendChild(el('div','')); pad.appendChild(pbtn('▲',2)); pad.appendChild(el('div',''));
     pad.appendChild(pbtn('◀',0)); pad.appendChild(pbtn('▼',3)); pad.appendChild(pbtn('▶',1));
     function reset(){ b=Array(16).fill(0); score=0; over=false; spawn(); spawn(); draw(); }
-    box.appendChild(el('div','font-size:13px;color:#666','Gabung nombor sama hingga 2048 — anak panah, leret atau butang.'));
+    box.appendChild(el('div','font-size:13px;color:#666','Merge equal tiles up to 2048 — arrows, swipe or buttons.'));
     box.appendChild(stat); box.appendChild(wrap); box.appendChild(pad);
     reset();
   }
@@ -1059,7 +1059,7 @@ function initGames(root){
     var W=Math.min(420,box.offsetWidth||420),CS=Math.max(14,Math.round(W/17)),COLS=Math.floor(W/CS),ROWS=Math.floor(W*0.8/CS),H=ROWS*CS;
     var cvs=document.createElement('canvas');cvs.width=W;cvs.height=H;
     cvs.style.cssText='display:block;max-width:100%;border-radius:8px;background:#0e1626;touch-action:none;cursor:pointer';
-    box.appendChild(cvs);box.appendChild(el('div','font-size:12px;color:#888','Anak panah / WASD / leret · klik untuk mula.'));
+    box.appendChild(cvs);box.appendChild(el('div','font-size:12px;color:#888','Arrows / WASD / swipe · click to start.'));
     var ctx=cvs.getContext('2d'),sfx=makeSfx();
     var sp=Math.max(0.5,Math.min(3,Number(box.getAttribute('data-speed'))||1));
     var sn,dir,pend,food,score=0,state='menu',accT=0,lastT=0,record=false;
@@ -1097,11 +1097,11 @@ function initGames(root){
         if(k===0){ ctx.globalAlpha=1;ctx.fillStyle='#0e1626';ctx.fillRect(s.x*CS+CS*0.28,s.y*CS+CS*0.3,3,3);ctx.fillRect(s.x*CS+CS*0.62,s.y*CS+CS*0.3,3,3); }
         ctx.globalAlpha=1; }
       ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(0,0,W,22);ctx.font='bold 12px system-ui';ctx.textBaseline='middle';
-      ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,8,12);
-      ctx.textAlign='right';ctx.fillStyle='#ffd700';ctx.fillText('Rekod: '+(getBest('snake')||0),W-8,12);ctx.textBaseline='alphabetic';ctx.textAlign='left';
+      ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('Score: '+score,8,12);
+      ctx.textAlign='right';ctx.fillStyle='#ffd700';ctx.fillText('Best: '+(getBest('snake')||0),W-8,12);ctx.textBaseline='alphabetic';ctx.textAlign='left';
       if(state!=='play'){ ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,0.72)';ctx.fillRect(0,0,W,H);
-        if(state==='menu'){ ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🐍 Ular',W/2,H/2-10);ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Klik / Space untuk mula',W/2,H/2+12); lbTop('snake'); drawLb(ctx,'snake',W/2,H/2+34); }
-        else { ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Tamat!',W/2,H/2-26-(record?14:0));ctx.font='14px system-ui';ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+18);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Klik untuk main lagi',W/2,H/2+(record?38:26)); drawLb(ctx,'snake',W/2,H/2+(record?58:46)); }
+        if(state==='menu'){ ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🐍 Snake',W/2,H/2-10);ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Click / Space to start',W/2,H/2+12); lbTop('snake'); drawLb(ctx,'snake',W/2,H/2+34); }
+        else { ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Game Over!',W/2,H/2-26-(record?14:0));ctx.font='14px system-ui';ctx.fillStyle='#fff';ctx.fillText('Score: '+score,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record!',W/2,H/2+18);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Click to play again',W/2,H/2+(record?38:26)); drawLb(ctx,'snake',W/2,H/2+(record?58:46)); }
         ctx.textAlign='left'; } }
     function loop(ts){ if(!lastT)lastT=ts; var dt=Math.min((ts-lastT)/16.67,3);lastT=ts; if(state==='play')upd(dt); render(); requestAnimationFrame(loop); }
     sn=[{x:COLS>>1,y:ROWS>>1}];dir={x:1,y:0};pend=dir;place();
@@ -1114,7 +1114,7 @@ function initGames(root){
     var W=Math.min(480,box.offsetWidth||480),H=Math.round(W*0.72);
     var cvs=document.createElement('canvas');cvs.width=W;cvs.height=H;
     cvs.style.cssText='display:block;max-width:100%;border-radius:8px;background:#0a0e18;touch-action:none;cursor:pointer';
-    box.appendChild(cvs);box.appendChild(el('div','font-size:12px;color:#888','Gerak tetikus/jari · Klik/Space lepas bola · ←→ juga boleh.'));
+    box.appendChild(cvs);box.appendChild(el('div','font-size:12px;color:#888','Move mouse/finger · Click/Space release ball · ←→ also works.'));
     var ctx=cvs.getContext('2d'),sfx=makeSfx();
     var ROWS=Math.max(3,Math.min(7,Number(box.getAttribute('data-rows'))||5));
     var LC=['#ff5e5e','#ff9f43','#f2c14e','#30d158','#4c8dff','#a259ff'];
@@ -1152,14 +1152,14 @@ function initGames(root){
         ctx.fillStyle='rgba(255,255,255,0.18)';ctx.fillRect(br.x,br.y,br.w,3); }
       ctx.fillStyle=acc;ctx.fillRect(px-pw/2,H-24,pw,10);
       ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx,by,5,0,Math.PI*2);ctx.fill();
-      if(clay&&state==='play'){ ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText('Klik / Space untuk lepas',W/2,H-44);ctx.textAlign='left'; }
+      if(clay&&state==='play'){ ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText('Click / Space to release',W/2,H-44);ctx.textAlign='left'; }
       ctx.fillStyle='rgba(0,0,0,0.45)';ctx.fillRect(0,0,W,24);ctx.font='bold 12px system-ui';ctx.textBaseline='middle';
-      ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,8,13);
+      ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('Score: '+score,8,13);
       ctx.textAlign='center';ctx.fillStyle='#ff8585';ctx.fillText('♥'.repeat(Math.max(0,lives)),W/2,13);
-      ctx.textAlign='right';ctx.fillStyle='#ffd700';ctx.fillText('Rekod: '+(getBest('breakout')||0),W-8,13);ctx.textBaseline='alphabetic';ctx.textAlign='left';
+      ctx.textAlign='right';ctx.fillStyle='#ffd700';ctx.fillText('Best: '+(getBest('breakout')||0),W-8,13);ctx.textBaseline='alphabetic';ctx.textAlign='left';
       if(state!=='play'){ ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,0.74)';ctx.fillRect(0,0,W,H);
-        if(state==='menu'){ ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🧱 Breakout',W/2,H/2-10);ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Klik untuk mula',W/2,H/2+12); lbTop('breakout'); drawLb(ctx,'breakout',W/2,H/2+34); }
-        else { ctx.font='bold 22px system-ui';ctx.fillStyle=state==='win'?'#30d158':'#e5484d';ctx.fillText(state==='win'?'🎉 Bersih!':'💀 Tamat!',W/2,H/2-26-(record?14:0));ctx.font='14px system-ui';ctx.fillStyle='#fff';ctx.fillText('Skor: '+score,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+18);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Klik untuk main lagi',W/2,H/2+(record?38:26)); drawLb(ctx,'breakout',W/2,H/2+(record?58:46)); }
+        if(state==='menu'){ ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.fillText('🧱 Breakout',W/2,H/2-10);ctx.font='13px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Click to start',W/2,H/2+12); lbTop('breakout'); drawLb(ctx,'breakout',W/2,H/2+34); }
+        else { ctx.font='bold 22px system-ui';ctx.fillStyle=state==='win'?'#30d158':'#e5484d';ctx.fillText(state==='win'?'🎉 Cleared!':'💀 Game Over!',W/2,H/2-26-(record?14:0));ctx.font='14px system-ui';ctx.fillStyle='#fff';ctx.fillText('Score: '+score,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record!',W/2,H/2+18);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Click to play again',W/2,H/2+(record?38:26)); drawLb(ctx,'breakout',W/2,H/2+(record?58:46)); }
         ctx.textAlign='left'; } }
     function loop(ts){ if(!lastT)lastT=ts; var dt=Math.min((ts-lastT)/16.67,3);lastT=ts; if(state==='play')upd(dt); render(); requestAnimationFrame(loop); }
     cvs.addEventListener('mousemove',function(e){ var r=cvs.getBoundingClientRect(); tgx=(e.clientX-r.left)*(W/r.width); });
@@ -1221,14 +1221,14 @@ function initGames(root){
       if(cur&&bd&&state==='play') for(var r=0;r<cur.m.length;r++)for(var c=0;c<cur.m[r].length;c++) if(cur.m[r][c]&&cur.y+r>=0) sq(cur.x+c,cur.y+r,cur.c);
       var px2=OX+CS*COLS+12; ctx.textBaseline='alphabetic';
       ctx.fillStyle='rgba(255,255,255,0.88)';ctx.font='bold 12px system-ui';
-      ctx.fillText('Skor: '+(sc||0),px2,20);ctx.fillText('Lv: '+(lv||0),px2,38);ctx.fillText('Baris: '+(ln||0),px2,56);
-      ctx.fillStyle='#ffd700';ctx.fillText('Rekod: '+(getBest('blox')||0),px2,74);
-      ctx.fillStyle='#8fa3c8';ctx.fillText('Seterusnya',px2,102);
+      ctx.fillText('Score: '+(sc||0),px2,20);ctx.fillText('Lv: '+(lv||0),px2,38);ctx.fillText('Lines: '+(ln||0),px2,56);
+      ctx.fillStyle='#ffd700';ctx.fillText('Best: '+(getBest('blox')||0),px2,74);
+      ctx.fillStyle='#8fa3c8';ctx.fillText('Next',px2,102);
       if(next){ var m2=next.m; for(var r2=0;r2<m2.length;r2++)for(var c2=0;c2<m2[r2].length;c2++) if(m2[r2][c2]){
         ctx.fillStyle=next.c; ctx.fillRect(px2+c2*(CS-3),110+r2*(CS-3),CS-5,CS-5); } }
       if(state!=='play'){ ctx.textAlign='center';ctx.fillStyle='rgba(3,6,14,0.84)';ctx.fillRect(0,0,W,H);
-        if(state==='menu'){ ctx.font='bold 20px system-ui';ctx.fillStyle='#fff';ctx.fillText('🧩 Blok Jatuh',W/2,H/2-10);ctx.font='12px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Klik / Space untuk mula · ←→↓↑ · ↑ pusing',W/2,H/2+12); lbTop('blox'); drawLb(ctx,'blox',W/2,H/2+34); }
-        else { ctx.font='bold 20px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Tamat!',W/2,H/2-26-(record?14:0));ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Skor: '+sc,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+16);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Klik untuk main lagi',W/2,H/2+(record?36:22)); drawLb(ctx,'blox',W/2,H/2+(record?54:42)); }
+        if(state==='menu'){ ctx.font='bold 20px system-ui';ctx.fillStyle='#fff';ctx.fillText('🧩 Block Drop',W/2,H/2-10);ctx.font='12px system-ui';ctx.fillStyle='#ccc';ctx.fillText('Click / Space to start · ←→↓↑ · ↑ rotate',W/2,H/2+12); lbTop('blox'); drawLb(ctx,'blox',W/2,H/2+34); }
+        else { ctx.font='bold 20px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Game Over!',W/2,H/2-26-(record?14:0));ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Score: '+sc,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record!',W/2,H/2+16);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Click to play again',W/2,H/2+(record?36:22)); drawLb(ctx,'blox',W/2,H/2+(record?54:42)); }
         ctx.textAlign='left'; } }
     function loop(ts){ if(state==='play'){ var gap=Math.max(110,520-lv*45); if(!lastDrop)lastDrop=ts; if(ts-lastDrop>=gap){ lastDrop=ts; step(); } } render(); requestAnimationFrame(loop); }
     bd=[]; for(var y0=0;y0<ROWS;y0++)bd.push(Array(COLS).fill(0)); sc=0;lv=0;ln=0;
@@ -1287,11 +1287,11 @@ function initGames(root){
         if(keys.ArrowUp&&state==='play'){ ctx.strokeStyle='#ff9f43';ctx.beginPath();ctx.moveTo(-6,4);ctx.lineTo(-13-((Math.random()*5)|0),0);ctx.lineTo(-6,-4);ctx.stroke(); }
         ctx.restore(); }
       ctx.fillStyle='rgba(0,0,0,0.45)';ctx.fillRect(0,0,W,22);ctx.font='bold 12px system-ui';ctx.textBaseline='middle';
-      ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('Skor: '+(sc||0),8,12); ctx.textAlign='center';ctx.fillStyle='#8fa3c8';ctx.fillText('Gelombang '+(wave||1),W/2,12);
+      ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('Score: '+(sc||0),8,12); ctx.textAlign='center';ctx.fillStyle='#8fa3c8';ctx.fillText('Wave '+(wave||1),W/2,12);
       ctx.textAlign='right';ctx.fillStyle='#ff8585';ctx.fillText('♥'.repeat(Math.max(0,lives==null?3:lives)),W-8,12);ctx.textBaseline='alphabetic';ctx.textAlign='left';
       if(state!=='play'){ ctx.textAlign='center';ctx.fillStyle='rgba(2,4,9,0.8)';ctx.fillRect(0,0,W,H);
-        if(state==='menu'){ ctx.font='bold 22px system-ui';ctx.fillStyle='#fff';ctx.fillText('☄️ Asteroid',W/2,H/2-10);ctx.font='12px system-ui';ctx.fillStyle='#ccc';ctx.fillText('←→ pusing · ↑ pecut · Space tembak · klik untuk mula',W/2,H/2+14); lbTop('astro'); drawLb(ctx,'astro',W/2,H/2+36); }
-        else { ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Hancur!',W/2,H/2-26-(record?14:0));ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Skor: '+sc+' · Gelombang '+wave,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 Rekod baru!',W/2,H/2+16);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Klik untuk main lagi',W/2,H/2+(record?36:22)); drawLb(ctx,'astro',W/2,H/2+(record?54:42)); }
+        if(state==='menu'){ ctx.font='bold 22px system-ui';ctx.fillStyle='#fff';ctx.fillText('☄️ Asteroids',W/2,H/2-10);ctx.font='12px system-ui';ctx.fillStyle='#ccc';ctx.fillText('←→ turn · ↑ boost · Space shoot · click to start',W/2,H/2+14); lbTop('astro'); drawLb(ctx,'astro',W/2,H/2+36); }
+        else { ctx.font='bold 22px system-ui';ctx.fillStyle='#e5484d';ctx.fillText('💀 Destroyed!',W/2,H/2-26-(record?14:0));ctx.font='13px system-ui';ctx.fillStyle='#fff';ctx.fillText('Score: '+sc+' · Wave '+wave,W/2,H/2); if(record){ctx.fillStyle='#ffd700';ctx.fillText('🏆 New record!',W/2,H/2+16);} ctx.fillStyle='#ccc';ctx.font='12px system-ui';ctx.fillText('Click to play again',W/2,H/2+(record?36:22)); drawLb(ctx,'astro',W/2,H/2+(record?54:42)); }
         ctx.textAlign='left'; } }
     box.addEventListener('keydown',function(e){ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].indexOf(e.code)>=0)e.preventDefault();
       sfx.resume(); if(e.code==='Space'){ if(state!=='play'){reset();return;} fire(); } if(state==='play')keys[e.code]=true; });
@@ -1305,7 +1305,7 @@ function initGames(root){
     ctl.appendChild(hbtn('↺','ArrowLeft')); ctl.appendChild(hbtn('↻','ArrowRight')); ctl.appendChild(hbtn('▲','ArrowUp'));
     var fb=el('button','flex:1;height:42px;border:1px solid #ccc;border-radius:8px;background:#f3f5fb;font-size:15px;cursor:pointer','🔥');
     fb.onclick=function(){ sfx.resume(); if(state!=='play'){reset();return;} fire(); }; ctl.appendChild(fb);
-    box.appendChild(ctl); box.appendChild(el('div','font-size:12px;color:#888;margin-top:4px','←→ pusing · ↑ pecut · Space/click tembak · asteroid besar berpecah dua.'));
+    box.appendChild(ctl); box.appendChild(el('div','font-size:12px;color:#888;margin-top:4px','←→ turn · ↑ boost · Space/click shoot · big asteroids split in two.'));
     ship={x:W/2,y:H/2,vx:0,vy:0,a:-Math.PI/2,inv:0}; bs=[];rocks=[];sc=0;lives=3;wave=1;
     lbTop('astro'); render();
     var lastT=0;
@@ -1319,8 +1319,8 @@ function initGames(root){
     var head=el('div','display:flex;gap:12px;align-items:center;font-size:14px;margin:4px 0;flex-wrap:wrap');
     var face=el('button','width:42px;height:42px;font-size:22px;border:1px solid #ccc;border-radius:8px;background:#f3f5fb;cursor:pointer','😎');
     var cMine=el('span','','💣 '+M), cTime=el('span','','⏱ 0s');
-    var fmBtn=el('button','padding:6px 10px;border:1px solid #ccc;border-radius:8px;background:#f3f5fb;cursor:pointer;font:inherit;font-size:13px','🚩 Bendera: Off');
-    fmBtn.onclick=function(){ fm=!fm; fmBtn.textContent='🚩 Bendera: '+(fm?'On':'Off'); fmBtn.style.borderColor=fm?'#e5484d':'#ccc'; };
+    var fmBtn=el('button','padding:6px 10px;border:1px solid #ccc;border-radius:8px;background:#f3f5fb;cursor:pointer;font:inherit;font-size:13px','🚩 Flag: Off');
+    fmBtn.onclick=function(){ fm=!fm; fmBtn.textContent='🚩 Flag: '+(fm?'On':'Off'); fmBtn.style.borderColor=fm?'#e5484d':'#ccc'; };
     head.appendChild(face);head.appendChild(cMine);head.appendChild(cTime);head.appendChild(fmBtn);
     var grid=el('div','display:grid;grid-template-columns:repeat('+N+',34px);gap:3px;margin:8px 0');
     function nb(i){ var x=i%N,y=(i/N)|0,out=[]; for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){ if(!dx&&!dy)continue;
@@ -1354,7 +1354,7 @@ function initGames(root){
       c.addEventListener('touchend',function(){ if(lt){ clearTimeout(lt); lt=null; } });
       grid.appendChild(c); cells.push(c); })(i); }
     face.onclick=function(){ sfx.resume(); reset(); };
-    box.appendChild(el('div','font-size:13px;color:#666','Buka semua sel tanpa ranjau. Klik-kanan / butang 🚩 / tahan lama = bendera.'));
+    box.appendChild(el('div','font-size:13px;color:#666','Reveal all cells without mines. Right-click / 🚩 button / long press = flag.'));
     box.appendChild(head); box.appendChild(grid);
     reset();
   }
@@ -1377,21 +1377,21 @@ function widgetMarkup(w){
     }
     case 'image': return w.src
       ? `<figure style="margin:0"><img src="${esc(w.src)}" alt="${esc(w.alt)}" style="width:100%;display:block;border-radius:${w.radius}px"><figcaption data-edit="caption" style="font-size:12px;color:#777;margin-top:4px">${esc(w.caption)}</figcaption></figure>`
-      : `<div style="border:2px dashed #bbb;border-radius:${w.radius}px;padding:22px;text-align:center;color:#999">Imej (belum dipilih)</div>`;
+      : `<div style="border:2px dashed #bbb;border-radius:${w.radius}px;padding:22px;text-align:center;color:#999">Image (not chosen yet)</div>`;
     case 'input': return `<label style="display:block;font-size:13px;margin-bottom:8px">${esc(w.label)}<input data-interactive type="${w.kind}" placeholder="${esc(w.placeholder)}" style="width:100%;margin-top:4px;padding:9px 10px;border:1px solid #ccd;border-radius:${w.type==='input'?8:8}px;font:inherit"></label>`;
     case 'counter': return `<div data-interactive data-w="${w.id}" data-step="${Number(w.step)||1}" style="display:flex;align-items:center;gap:12px"><span>${esc(w.label)}</span><button data-act="dec" style="width:36px;height:36px;border-radius:10px;border:1px solid #ccc;background:#f3f5fb;font-size:18px">−</button><b data-val style="min-width:24px;text-align:center;font-size:18px">${Number(w.value)||0}</b><button data-act="inc" style="width:36px;height:36px;border-radius:10px;border:1px solid #ccc;background:#f3f5fb;font-size:18px">+</button></div>`;
     case 'toggle': return `<label data-interactive style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" ${w.on?'checked':''} style="width:20px;height:20px">${esc(w.label)}</label>`;
     case 'list': {
       const lis=(w.items||[]).map((it,i)=>`<li data-i="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eee"><span style="flex:1">${esc(it)}</span><button data-interactive data-act="listdel" data-i="${i}" style="border:none;background:none;color:#e5484d;cursor:pointer">✕</button></li>`).join('');
-      const add=w.allowAdd?`<form data-interactive data-list style="display:flex;gap:6px;margin-top:8px"><input placeholder="Tambah…" style="flex:1;padding:8px;border:1px solid #ccd;border-radius:8px"><button class="ladd" style="background:${theme.accent};color:#fff;border:none;border-radius:8px;padding:8px 12px">Tambah</button></form>`:'';
-      return `<ul style="list-style:none;margin:0;padding:0">${lis||'<li style="color:#999">Kosong</li>'}</ul>${add}`;
+      const add=w.allowAdd?`<form data-interactive data-list style="display:flex;gap:6px;margin-top:8px"><input placeholder="Add…" style="flex:1;padding:8px;border:1px solid #ccd;border-radius:8px"><button class="ladd" style="background:${theme.accent};color:#fff;border:none;border-radius:8px;padding:8px 12px">Add</button></form>`:'';
+      return `<ul style="list-style:none;margin:0;padding:0">${lis||'<li style="color:#999">Empty</li>'}</ul>${add}`;
     }
     case 'card': return `<div style="background:#f5f7fb;border:1px solid #e6e9f2;border-radius:${theme.radius}px;padding:14px"><h4 data-edit="title" style="margin:0 0 6px">${esc(w.title)}</h4><p data-edit="body" style="margin:0;color:#444;line-height:1.5">${esc(w.body)}</p></div>`;
     case 'divider': return `<hr style="border:none;border-top:1px solid #e3e3e3;margin:14px 0">`;
     case 'spacer': return `<div style="height:${Number(w.height)||24}px"></div>`;
     case 'faq': {
       const one=(f)=>`<div style="border-bottom:1px solid #eee;padding:6px 0"><button data-interactive data-act="faq" style="width:100%;text-align:left;background:none;border:none;font:inherit;font-weight:700;cursor:pointer;padding:0">▸ ${esc(f.q)}</button><div class="ans" style="display:none;padding:6px 0;color:#555;line-height:1.5">${esc(f.a)}</div></div>`;
-      return (w.items||[]).map(one).join('') || `<div style="color:#999">Tiada FAQ</div>`;
+      return (w.items||[]).map(one).join('') || `<div style="color:#999">No FAQ</div>`;
     }
     case 'steps': {
       const title=w.title?`<h4 style="margin:.3em 0">${esc(w.title)}</h4>`:'';
@@ -1403,20 +1403,20 @@ function widgetMarkup(w){
       return `<p style="font-weight:700;margin:.3em 0">${esc(w.q)}</p><div data-interactive data-quiz data-answer="${Number(w.answer)||0}">${opts}</div>`;
     }
     case 'ttt': return gameBox('ttt','⭕ Tic-Tac-Toe', w, '');
-    case 'memory': return gameBox('memory','🧠 Padanan Memori', w, ' data-pairs="'+(Number(w.pairs)||6)+'"');
-    case 'mole': return gameBox('mole','🐹 Tikus Pukul', w, ' data-duration="'+(Number(w.duration)||20)+'"');
-    case 'rps': return gameBox('rps','✊ Batu-Kertas-Gunting', w, '');
-    case 'reaction': return gameBox('reaction','⚡ Masa Tindak Balas', w, '');
-    case 'guess': return gameBox('guess','🔢 Teka Nombor', w, ' data-max="'+(Number(w.max)||100)+'"');
+    case 'memory': return gameBox('memory','🧠 Memory Match', w, ' data-pairs="'+(Number(w.pairs)||6)+'"');
+    case 'mole': return gameBox('mole','🐹 Whack-a-Mole', w, ' data-duration="'+(Number(w.duration)||20)+'"');
+    case 'rps': return gameBox('rps','✊ Rock-Paper-Scissors', w, '');
+    case 'reaction': return gameBox('reaction','⚡ Reaction Time', w, '');
+    case 'guess': return gameBox('guess','🔢 Number Guess', w, ' data-max="'+(Number(w.max)||100)+'"');
     case 'br': return gameBox('br','🔫 Battle Royale', w, ' data-enemies="'+(Number(w.enemies)||5)+'" data-zonespeed="'+(Number(w.zoneSpeed)||10)+'" data-mapsize="'+(Number(w.mapSize)||600)+'"');
     case 'fps': return gameBox('fps','🎯 FPS Arena', w, ' data-enemies="'+(Number(w.enemies)||4)+'" data-zonespeed="'+(Number(w.zoneSpeed)||25)+'"');
-    case 'runner': return gameBox('runner','🏃 Lari Tanpa Hujung', w, '');
+    case 'runner': return gameBox('runner','🏃 Endless Runner', w, '');
     case 's2048': return gameBox('s2048','🧊 2048', w, '');
-    case 'snake': return gameBox('snake','🐍 Ular', w, ' data-speed="'+(Number(w.speed)||1)+'"');
+    case 'snake': return gameBox('snake','🐍 Snake', w, ' data-speed="'+(Number(w.speed)||1)+'"');
     case 'breakout': return gameBox('breakout','🧱 Breakout', w, ' data-rows="'+(Number(w.rows)||5)+'"');
-    case 'blox': return gameBox('blox','🧩 Blok Jatuh', w, '');
-    case 'astro': return gameBox('astro','☄️ Asteroid', w, '');
-    case 'mines': return gameBox('mines','💣 Rambang', w, '');
+    case 'blox': return gameBox('blox','🧩 Block Drop', w, '');
+    case 'astro': return gameBox('astro','☄️ Asteroids', w, '');
+    case 'mines': return gameBox('mines','💣 Minesweeper', w, '');
     default: return '';
   }
 }
@@ -1429,14 +1429,14 @@ function renderStage(){
   const block = (w)=>`<div class="w${w.id===selId?' sel':''}${warnIds[w.id]?' warn':''}" data-id="${w.id}" draggable="${mode==='edit'}"><span class="tag">${(TYPES[w.type]||{}).name||w.type}</span>${warnIds[w.id]?`<i class="wb" title="${esc(warnIds[w.id])}">⚠</i>`:''}${widgetMarkup(w)}</div>`;
   const insrow = (i)=>`<div class="insrow"><select class="insSel" data-ins="${i}" tabindex="-1">${insertOptions()}</select></div>`;
   let inner;
-  if(!widgets.length){ inner = (mode==='edit'?insrow(0):'') + `<div class="empty">Belum ada widget.<br>Klik <b>＋ tambah</b>, pilih dari panel kiri, atau muat <b>templat</b>.</div>`; }
+  if(!widgets.length){ inner = (mode==='edit'?insrow(0):'') + `<div class="empty">No widgets yet.<br>Click <b>＋ add</b>, pick from the left panel, or load a <b>template</b>.</div>`; }
   else { inner = (mode==='edit'?insrow(0):'') + widgets.map((w,idx)=>block(w)+(mode==='edit'?insrow(idx+1):'')).join(''); }
-  f.innerHTML = `<div class="appbar" style="color:${theme.accent}">${esc($('appName').value||'Aplikasi')}</div><div class="sub">${esc(theme.sub||'')}</div><div>${inner}</div>`;
+  f.innerHTML = `<div class="appbar" style="color:${theme.accent}">${esc($('appName').value||'App')}</div><div class="sub">${esc(theme.sub||'')}</div><div>${inner}</div>`;
   if(mode==='edit'){ Array.prototype.forEach.call(f.querySelectorAll('[data-edit]'),function(el){ el.setAttribute('contenteditable','true'); el.setAttribute('spellcheck','false'); }); }
   if(mode==='preview' && typeof initGames==='function'){ try{ initGames(f); }catch(err){} }
   try{ if(typeof autoSave==='function') autoSave(); }catch{}
 }
-function insertOptions(){ return '<option value="">＋ Tambah</option>' + Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.ic} ${v.name}</option>`).join(''); }
+function insertOptions(){ return '<option value="">＋ Add</option>' + Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.ic} ${v.name}</option>`).join(''); }
 
 // ── Selection + properties ──────────────────────────────────────────────────
 function select(id){ selId=id; renderStage(); renderInspector(); }
@@ -1453,39 +1453,39 @@ function inBtn(key,label){ return `<button data-act="${key}" class="btn" style="
 function widgetFields(w){
   const F=[];
   switch(w.type){
-    case 'heading': F.push(field('Teks',inArea('text',w.text))); F.push(field('Tahap',inSel('level',w.level,[[1,'H1'],[2,'H2'],[3,'H3']]))); F.push(field('Jajar',alignSel(w.align))); break;
-    case 'text': F.push(field('Teks',inArea('text',w.text))); F.push(field('Jajar',alignSel(w.align))); break;
-    case 'button': F.push(field('Label',inTxt('label',w.label))); F.push(field('Pautan (optional, kosong=interaktif)',inTxt('href',w.href))); F.push(field('Gaya',inSel('variant',w.variant,[['primary','Utama'],['ghost','Kosong']]))); F.push(field('',inChk('fullWidth',w.fullWidth)+' <span style="font-size:12px">Lebar penuh</span>')); break;
-    case 'image': F.push(field('Alt',inTxt('alt',w.alt))); F.push(field('Keterangan',inTxt('caption',w.caption))); F.push(field('Bulat',inNum('radius',w.radius,0,50))); F.push(field('',inBtn('pickimg', w.src?'🖼️ Tukar imej':'⬆️ Muat naik imej'))); if(w.src) F.push(field('',inBtn('clearimg','🗑 Kosongkan imej'))); break;
-    case 'input': F.push(field('Label',inTxt('label',w.label))); F.push(field('Placeholder',inTxt('placeholder',w.placeholder))); F.push(field('Jenis',inSel('kind',w.kind,[['text','Teks'],['number','Nombor'],['email','E-mel'],['tel','Tel'],['date','Tarikh']]))); break;
-    case 'counter': F.push(field('Label',inTxt('label',w.label))); F.push(field('Nilai mula',inNum('value',w.value,-100000,100000))); F.push(field('Langkah',inNum('step',w.step,1,1000))); break;
-    case 'toggle': F.push(field('Label',inTxt('label',w.label))); F.push(field('',inChk('on',w.on)+' <span style="font-size:12px">Mula ON</span>')); break;
-    case 'list': F.push(field('Item (satu per baris)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); F.push(field('',inChk('allowAdd',w.allowAdd)+' <span style="font-size:12px">Benar tambah</span>')); break;
-    case 'card': F.push(field('Tajuk',inTxt('title',w.title))); F.push(field('Isi',inArea('body',w.body))); break;
-    case 'spacer': F.push(field('Tinggi (px)',inNum('height',w.height,4,200))); break;
-    case 'faq': F.push(field('Soalan :: Jawapan (satu per baris)',`<textarea data-key="__faq" rows="5">${esc((w.items||[]).map((x)=>x.q+' :: '+x.a).join('\n'))}</textarea>`)); break;
-    case 'steps': F.push(field('Tajuk (optional)',inTxt('title',w.title))); F.push(field('Langkah (satu per baris)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); break;
-    case 'quiz': F.push(field('Soalan',inTxt('q',w.q))); F.push(field('Pilihan (satu per baris)',`<textarea data-key="__options" rows="4">${esc((w.options||[]).join('\n'))}</textarea>`)); F.push(field('Jawapan betul',inSel('answer',w.answer,(w.options||[]).map((o,i)=>[i,(i+1)+'. '+o])))); break;
+    case 'heading': F.push(field('Text',inArea('text',w.text))); F.push(field('Level',inSel('level',w.level,[[1,'H1'],[2,'H2'],[3,'H3']]))); F.push(field('Align',alignSel(w.align))); break;
+    case 'text': F.push(field('Text',inArea('text',w.text))); F.push(field('Align',alignSel(w.align))); break;
+    case 'button': F.push(field('Label',inTxt('label',w.label))); F.push(field('Link (optional, empty = interactive)',inTxt('href',w.href))); F.push(field('Style',inSel('variant',w.variant,[['primary','Primary'],['ghost','Ghost']]))); F.push(field('',inChk('fullWidth',w.fullWidth)+' <span style="font-size:12px">Full width</span>')); break;
+    case 'image': F.push(field('Alt',inTxt('alt',w.alt))); F.push(field('Caption',inTxt('caption',w.caption))); F.push(field('Roundness',inNum('radius',w.radius,0,50))); F.push(field('',inBtn('pickimg', w.src?'🖼️ Change image':'⬆️ Upload image'))); if(w.src) F.push(field('',inBtn('clearimg','🗑 Clear image'))); break;
+    case 'input': F.push(field('Label',inTxt('label',w.label))); F.push(field('Placeholder',inTxt('placeholder',w.placeholder))); F.push(field('Type',inSel('kind',w.kind,[['text','Text'],['number','Number'],['email','Email'],['tel','Tel'],['date','Date']]))); break;
+    case 'counter': F.push(field('Label',inTxt('label',w.label))); F.push(field('Start value',inNum('value',w.value,-100000,100000))); F.push(field('Step',inNum('step',w.step,1,1000))); break;
+    case 'toggle': F.push(field('Label',inTxt('label',w.label))); F.push(field('',inChk('on',w.on)+' <span style="font-size:12px">Starts ON</span>')); break;
+    case 'list': F.push(field('Items (one per line)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); F.push(field('',inChk('allowAdd',w.allowAdd)+' <span style="font-size:12px">Allow adding</span>')); break;
+    case 'card': F.push(field('Title',inTxt('title',w.title))); F.push(field('Content',inArea('body',w.body))); break;
+    case 'spacer': F.push(field('Height (px)',inNum('height',w.height,4,200))); break;
+    case 'faq': F.push(field('Question :: Answer (one per line)',`<textarea data-key="__faq" rows="5">${esc((w.items||[]).map((x)=>x.q+' :: '+x.a).join('\n'))}</textarea>`)); break;
+    case 'steps': F.push(field('Title (optional)',inTxt('title',w.title))); F.push(field('Steps (one per line)',`<textarea data-key="__items" rows="4">${esc((w.items||[]).join('\n'))}</textarea>`)); break;
+    case 'quiz': F.push(field('Question',inTxt('q',w.q))); F.push(field('Options (one per line)',`<textarea data-key="__options" rows="4">${esc((w.options||[]).join('\n'))}</textarea>`)); F.push(field('Correct answer',inSel('answer',w.answer,(w.options||[]).map((o,i)=>[i,(i+1)+'. '+o])))); break;
     case 'divider': break;
-    case 'ttt': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Tukar ke <b>Mod Cuba</b> untuk main dua pemain.</div>')); break;
-    case 'rps': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Main lawan komputer.</div>')); break;
-    case 'reaction': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Uji masa tindak balas.</div>')); break;
-    case 'memory': F.push(field('Bilangan pasangan',inNum('pairs',w.pairs,2,12))); break;
-    case 'mole': F.push(field('Tempoh (saat)',inNum('duration',w.duration,5,60))); break;
-    case 'guess': F.push(field('Nombor maksimum',inNum('max',w.max,1,9999))); break;
-    case 'br': F.push(field('Musuh AI (1-15)',inNum('enemies',w.enemies,1,15))); F.push(field('Tempoh zone (5-60s)',inNum('zoneSpeed',w.zoneSpeed,5,60))); F.push(field('Saiz peta (200-1400)',inNum('mapSize',w.mapSize,200,1400))); break;
-    case 'fps': F.push(field('Musuh AI (1-10)',inNum('enemies',w.enemies,1,10))); F.push(field('Tempoh zone (10-60s)',inNum('zoneSpeed',w.zoneSpeed,10,60))); break;
-    case 'runner': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Klik / Sentuh / Space untuk lompat. Skor = jarak.</div>')); break;
-    case 's2048': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. Anak panah / leret / butang untuk gabung nombor.</div>')); break;
-    case 'snake': F.push(field('Kelajuan (×)',inNum('speed',w.speed,0.5,3,0.5))); break;
-    case 'breakout': F.push(field('Baris batu bata (3-7)',inNum('rows',w.rows,3,7))); break;
-    case 'blox': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. ←→ gerak · ↑ pusing · ↓ turun · Space jatuh.</div>')); break;
-    case 'astro': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. ←→ pusing · ↑ pecut · Space tembak.</div>')); break;
-    case 'mines': F.push(field('','<div class="hint" style="margin:0">Tiada tetapan. 9×9 dengan 10 ranjau — klik-kanan/tahan lama untuk bendera.</div>')); break;
+    case 'ttt': F.push(field('','<div class="hint" style="margin:0">No settings. Switch to <b>Play mode</b> for two-player.</div>')); break;
+    case 'rps': F.push(field('','<div class="hint" style="margin:0">No settings. Play against the computer.</div>')); break;
+    case 'reaction': F.push(field('','<div class="hint" style="margin:0">No settings. Test your reaction time.</div>')); break;
+    case 'memory': F.push(field('Number of pairs',inNum('pairs',w.pairs,2,12))); break;
+    case 'mole': F.push(field('Duration (seconds)',inNum('duration',w.duration,5,60))); break;
+    case 'guess': F.push(field('Maximum number',inNum('max',w.max,1,9999))); break;
+    case 'br': F.push(field('AI enemies (1-15)',inNum('enemies',w.enemies,1,15))); F.push(field('Zone period (5-60s)',inNum('zoneSpeed',w.zoneSpeed,5,60))); F.push(field('Map size (200-1400)',inNum('mapSize',w.mapSize,200,1400))); break;
+    case 'fps': F.push(field('AI enemies (1-10)',inNum('enemies',w.enemies,1,10))); F.push(field('Zone period (10-60s)',inNum('zoneSpeed',w.zoneSpeed,10,60))); break;
+    case 'runner': F.push(field('','<div class="hint" style="margin:0">No settings. Click / Tap / Space to jump. Score = distance.</div>')); break;
+    case 's2048': F.push(field('','<div class="hint" style="margin:0">No settings. Arrows / swipe / buttons to merge tiles.</div>')); break;
+    case 'snake': F.push(field('Speed (×)',inNum('speed',w.speed,0.5,3,0.5))); break;
+    case 'breakout': F.push(field('Brick rows (3-7)',inNum('rows',w.rows,3,7))); break;
+    case 'blox': F.push(field('','<div class="hint" style="margin:0">No settings. ←→ move · ↑ rotate · ↓ soft drop · Space hard drop.</div>')); break;
+    case 'astro': F.push(field('','<div class="hint" style="margin:0">No settings. ←→ turn · ↑ boost · Space shoot.</div>')); break;
+    case 'mines': F.push(field('','<div class="hint" style="margin:0">No settings. 9×9 with 10 mines — right-click/long press to flag.</div>')); break;
   }
   return F.join('');
 }
-function alignSel(a){ return inSel('align',a,[['left','Kiri'],['center','Tengah'],['right','Kanan']]); }
+function alignSel(a){ return inSel('align',a,[['left','Left'],['center','Center'],['right','Right']]); }
 
 let tab='widget';
 function renderInspector(){
@@ -1494,31 +1494,31 @@ function renderInspector(){
   $('tabTheme').classList.toggle('on',tab==='theme');
   if(tab==='theme'){ host.innerHTML = themeFields(); return; }
   const w=byId(selId);
-  if(!w){ host.innerHTML='<div class="hint">Pilih satu widget pada kanvas untuk menyunting propertinya, atau tambah daripada panel kiri.</div>'; return; }
+  if(!w){ host.innerHTML='<div class="hint">Select a widget on the canvas to edit its properties, or add one from the left panel.</div>'; return; }
   const idx=widgets.indexOf(w);
   host.innerHTML = `<h4>${(TYPES[w.type]||{}).ic||''} ${(TYPES[w.type]||{}).name||w.type}</h4>${widgetFields(w)}
     <div class="insp-actions">
       <div class="movedis"><button data-act="up" ${idx<=0?'disabled':''}>▲</button><button data-act="down" ${idx>=widgets.length-1?'disabled':''}>▼</button></div>
-      <button data-act="dup">⧉ Duplikasi</button>
-      <button data-act="del" style="color:#e5484d">🗑 Buang</button>
+      <button data-act="dup">⧉ Duplicate</button>
+      <button data-act="del" style="color:#e5484d">🗑 Remove</button>
     </div>`;
 }
 
 function themeFields(){
-  return `<h4>🎨 Tema aplikasi</h4>`+
-    field('Aksen',inColor('accent',theme.accent))+
-    field('Warna latar',inColor('bg',theme.bg))+
-    field('Warna teks',inColor('fg',theme.fg))+
-    field('Bulat (radius)',inNum('radius',theme.radius,0,28))+
-    field('Sub-tajuk',inTxt('sub',theme.sub))+
-    field('',inChk('dark',theme.dark)+' <span style="font-size:12px">Mod gelap</span>')+
-    field('Huruf',inSel('font',theme.font,[["system-ui, Segoe UI, Roboto, sans-serif","Sistem"],["Georgia, serif","Serif"],["Courier New, monospace","Monospace"],["Impact, sans-serif","Impact"]]))+
-    field('Penerangan (SEO / kongsi sosial)',`<textarea data-key="desc" rows="2">${esc(theme.desc||'')}</textarea>`)+
+  return `<h4>🎨 App theme</h4>`+
+    field('Accent',inColor('accent',theme.accent))+
+    field('Background',inColor('bg',theme.bg))+
+    field('Text color',inColor('fg',theme.fg))+
+    field('Roundness (radius)',inNum('radius',theme.radius,0,28))+
+    field('Subtitle',inTxt('sub',theme.sub))+
+    field('',inChk('dark',theme.dark)+' <span style="font-size:12px">Dark mode</span>')+
+    field('Font',inSel('font',theme.font,[["system-ui, Segoe UI, Roboto, sans-serif","System"],["Georgia, serif","Serif"],["Courier New, monospace","Monospace"],["Impact, sans-serif","Impact"]]))+
+    field('Description (SEO / social share)',`<textarea data-key="desc" rows="2">${esc(theme.desc||'')}</textarea>`)+
     socialPreview();
 }
 function socialPreview(){
-  const name=esc($('appName').value||'Aplikasi'); const d=esc((theme.desc||'').slice(0,140)||'—');
-  return `<h4 style="margin-top:14px">Pratonton bila dikongsi</h4><div class="socialcard"><div class="sc-img">${name}</div><div class="sc-body"><div class="sc-dom">tukuk.org</div><div class="sc-t">${name}</div><div class="sc-d">${d}</div></div></div>`;
+  const name=esc($('appName').value||'App'); const d=esc((theme.desc||'').slice(0,140)||'—');
+  return `<h4 style="margin-top:14px">Share preview</h4><div class="socialcard"><div class="sc-img">${name}</div><div class="sc-body"><div class="sc-dom">tukuk.org</div><div class="sc-t">${name}</div><div class="sc-d">${d}</div></div></div>`;
 }
 
 function applyTheme(){
@@ -1556,7 +1556,7 @@ $('frame').addEventListener('click',(e)=>{
   const act=e.target.closest('[data-act]'); if(!act) return;
   const a=act.dataset.act;
   if(a==='inc'||a==='dec'){ const box=act.closest('[data-w]'); const w=byId(box.dataset.w); if(!w)return; const step=Number(w.step)||1; w.value=(Number(w.value)||0)+(a==='inc'?step:-step); const v=box.querySelector('[data-val]'); if(v) v.textContent=w.value; e.preventDefault(); }
-  if(a==='noop'){ toast('Butang contoh ✨'); e.preventDefault(); }
+  if(a==='noop'){ toast('Example button ✨'); e.preventDefault(); }
   if(a==='faq'){ const ans=act.parentElement.querySelector('.ans'); if(ans){ const open=ans.style.display!=='none'; ans.style.display=open?'none':'block'; act.textContent=(open?'▸ ':'▾ ')+act.textContent.replace(/^[▸▾]\s/,''); } e.preventDefault(); }
   if(a==='quiz'){ const box=act.closest('[data-quiz]'); const correct=Number(box.dataset.answer); const os=box.querySelectorAll('[data-act="quiz"]'); os.forEach((o)=>{ o.style.background='#fff'; o.style.borderColor='#ccd'; }); const ok=Number(act.dataset.i)===correct; act.style.background=ok?'#d7f7dd':'#fde0e0'; act.style.borderColor=ok?'#30d158':'#e5484d'; e.preventDefault(); }
 });
@@ -1581,7 +1581,7 @@ $('insp').addEventListener('click',(e)=>{
   if(a==='up'&&idx>0){ pushH(); widgets.splice(idx-1,0,widgets.splice(idx,1)[0]); commit(); }
   if(a==='down'&&idx>=0&&idx<widgets.length-1){ pushH(); widgets.splice(idx+1,0,widgets.splice(idx,1)[0]); commit(); }
   if(a==='dup'&&w){ pushH(); const c=JSON.parse(JSON.stringify(w)); c.id='w'+(uid++); widgets.splice(idx+1,0,c); selId=c.id; commit(); }
-  if(a==='del'&&w){ pushH(); widgets=widgets.filter(x=>x.id!==w.id); selId=null; commit(); toast('Widget dibuang.'); }
+  if(a==='del'&&w){ pushH(); widgets=widgets.filter(x=>x.id!==w.id); selId=null; commit(); toast('Widget removed.'); }
   if(a==='pickimg'){ $('imgIn').dataset.for=w.id; $('imgIn').click(); }
   if(a==='clearimg'&&w){ pushH(); w.src=''; commit(); }
 });
@@ -1589,7 +1589,7 @@ $('insp').addEventListener('click',(e)=>{
 // ── Muat naik imej → dataURL (mandiri dalam eksport) ────────────────────────
 $('imgIn').addEventListener('change',(e)=>{
   const f=e.target.files[0]; if(!f) return; const r=new FileReader();
-  r.onload=()=>{ const w=byId($('imgIn').dataset.for); if(w){ pushH(); w.src=r.result; commit(); toast('Imej dimuat naik.'); } };
+  r.onload=()=>{ const w=byId($('imgIn').dataset.for); if(w){ pushH(); w.src=r.result; commit(); toast('Image uploaded.'); } };
   r.readAsDataURL(f); e.target.value='';
 });
 
@@ -1618,9 +1618,9 @@ $('palette').innerHTML = Object.entries(TYPES).map(([k,v])=>`<button class="pal"
 $('palette').addEventListener('click',(e)=>{ const b=e.target.closest('[data-add]'); if(b) addWidget(b.dataset.add); });
 
 // Templat awal: populasikan dropdown + muat apabila dipilih.
-$('tpl').innerHTML = '<option value="">🗂 Templat…</option>' + Object.entries(TEMPLATES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+$('tpl').innerHTML = '<option value="">🗂 Templates…</option>' + Object.entries(TEMPLATES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
 $('tpl').addEventListener('change',(e)=>{ const v=e.target.value; if(v) loadTemplate(v); e.target.value=''; });
-function loadTemplate(name){ const t=TEMPLATES[name]; if(!t) return; pushH(); $('appName').value=t.appName||'Aplikasi'; theme=Object.assign({},DEF_THEME,t.theme||{}); widgets=(t.widgets||[]).map((r)=>Object.assign({id:'w'+(uid++)},r)); selId=null; renderStage(); applyTheme(); renderInspector(); toast('🗂 Templat dimuat: '+t.label); }
+function loadTemplate(name){ const t=TEMPLATES[name]; if(!t) return; pushH(); $('appName').value=t.appName||'App'; theme=Object.assign({},DEF_THEME,t.theme||{}); widgets=(t.widgets||[]).map((r)=>Object.assign({id:'w'+(uid++)},r)); selId=null; renderStage(); applyTheme(); renderInspector(); toast('🗂 Template loaded: '+t.label); }
 
 // ── ✨ Jana auto: idea → app + game (AI bila tersedia, heuristik sebagai fallback) ──
 const GAME_SET = ['ttt','memory','mole','rps','reaction','guess','br','fps','runner'];
@@ -1630,7 +1630,7 @@ function miniDoc(app){
   const _t = theme; theme = th;
   let body = ''; try { body = (app.widgets || []).map(widgetMarkup).join('\n'); } finally { theme = _t; }
   const css = ':root{color-scheme:' + (th.dark ? 'dark' : 'light') + '}*{box-sizing:border-box}body{margin:0;background:' + th.bg + ';color:' + th.fg + ';font-family:' + th.font + ';padding:12px;max-width:420px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}button,.btn{font:inherit}.appbar{font-weight:800;font-size:18px;color:' + th.accent + ';margin-bottom:8px}';
-  return '<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body><div class="appbar">' + esc(app.appName || 'Aplikasi') + '</div>' + body + '</body></html>';
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body><div class="appbar">' + esc(app.appName || 'App') + '</div>' + body + '</body></html>';
 }
 function genCardHtml(a, i){
   const th = a.theme || {}; const bg = esc(th.bg || '#0f1116'); const acc = esc(th.accent || '#4c8dff');
@@ -1638,19 +1638,19 @@ function genCardHtml(a, i){
   const gic = game ? ((TYPES[game.type] && TYPES[game.type].ic) || '🎮') : '—';
   const chips = (a.widgets || []).slice(0, 7).map((w) => (TYPES[w.type] && TYPES[w.type].ic) || '•').join(' ');
   const badge = a._src === 'ai' ? '<span style="background:' + acc + ';color:#041024;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px">🤖 AI</span>' : '';
-  return `<div class="gencard" data-i="${i}" style="border:1px solid #262b36;border-radius:12px;padding:12px;margin:8px 0"><div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;flex:none;background:${bg};border:2px solid ${acc};display:inline-block"></span><div style="flex:1;min-width:0"><b style="color:${acc}">${esc(a.appName || 'Aplikasi')}</b>${badge}<div style="font-size:12px;color:#88909f">${esc(chips)} · 🎮 ${esc(gic)}</div></div></div><iframe class="gpre" data-i="${i}" sandbox="" title="Pratonton" style="width:100%;height:170px;border:1px solid #262b36;border-radius:8px;background:#0b0f1a;margin:10px 0 0"></iframe><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-gact="use" data-i="${i}">📥 Pakai</button><button class="btn primary" data-gact="pub" data-i="${i}">🚀 Pakai &amp; Terbitkan</button><button class="btn ghost" data-gact="cmp" data-i="${i}" title="Tandakan untuk bandingkan">🆚<span class="cmpmk" style="display:none">✓</span></button><button class="btn ghost" data-gact="full" data-i="${i}" title="Buka pratonton penuh">🔍</button></div></div>`;
+  return `<div class="gencard" data-i="${i}" style="border:1px solid #262b36;border-radius:12px;padding:12px;margin:8px 0"><div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;flex:none;background:${bg};border:2px solid ${acc};display:inline-block"></span><div style="flex:1;min-width:0"><b style="color:${acc}">${esc(a.appName || 'App')}</b>${badge}<div style="font-size:12px;color:#88909f">${esc(chips)} · 🎮 ${esc(gic)}</div></div></div><iframe class="gpre" data-i="${i}" sandbox="" title="Preview" style="width:100%;height:170px;border:1px solid #262b36;border-radius:8px;background:#0b0f1a;margin:10px 0 0"></iframe><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-gact="use" data-i="${i}">📥 Apply</button><button class="btn primary" data-gact="pub" data-i="${i}">🚀 Apply &amp; Publish</button><button class="btn ghost" data-gact="cmp" data-i="${i}" title="Mark to compare">🆚<span class="cmpmk" style="display:none">✓</span></button><button class="btn ghost" data-gact="full" data-i="${i}" title="Open full preview">🔍</button></div></div>`;
 }
 function applyGenerated(a, source){
   if(!a || !Array.isArray(a.widgets)) return;
   pushH();
-  $('appName').value = a.appName || 'Aplikasi';
+  $('appName').value = a.appName || 'App';
   theme = Object.assign({}, DEF_THEME, a.theme || {});
   widgets = a.widgets.filter((w) => w && TYPES[w.type]).map((w) => Object.assign({ id: 'w' + (uid++) }, w));
   selId = null; renderStage(); applyTheme(); renderInspector();
-  toast((source === 'ai' ? '🤖 Dijana AI · ' : '✨ Dijana auto · ') + widgets.length + ' widget — sunting & terbitkan.');
+  toast((source === 'ai' ? '🤖 AI-generated · ' : '✨ Auto-generated · ') + widgets.length + ' widgets — edit & publish.');
 }
 // Idea rawak untuk 🎲 Rambang.
-const RANDOM_IDEAS = ['resepi nasi lemak','penjejak kewangan','kad ucapan hari jadi','kuiz sejarah melayu','tugas harian','pembelalah haiwan peliharaan','teka kata','kad perniagaan','kalendar solat','pemasa tomato','panduan melancong','arked retro','kuiz sains','senarai buku','resipi smoothie','penjejak hujan'];
+const RANDOM_IDEAS = ['rice recipe','expense tracker','birthday card','history quiz','daily tasks','pet care log','word guess','business card','prayer calendar','pomodoro timer','travel guide','retro arcade','science quiz','book list','smoothie recipe','rain tracker'];
 let genState = { idea:'', apps:[], src:'', seed:0 };
 let genCompare = new Set();
 // Pratonton INTERAKTIF — doc penuh + runtimeJS (game jalan). Hanya dimuat bila kad kelihatan.
@@ -1659,7 +1659,7 @@ function liveDoc(app){
   const _t = theme; theme = th;
   let body = ''; try { body = (app.widgets || []).map(widgetMarkup).join('\n'); } finally { theme = _t; }
   const css = ':root{color-scheme:' + (th.dark ? 'dark' : 'light') + '}*{box-sizing:border-box}body{margin:0;background:' + th.bg + ';color:' + th.fg + ';font-family:' + th.font + ';padding:12px;max-width:420px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}button,.btn{font:inherit}.appbar{font-weight:800;font-size:18px;color:' + th.accent + ';margin-bottom:8px}';
-  return '<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body><div class="appbar">' + esc(app.appName || 'Aplikasi') + '</div>' + body + '<scr' + 'ipt>' + runtimeJS() + '</scr' + 'ipt></body></html>';
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body><div class="appbar">' + esc(app.appName || 'App') + '</div>' + body + '<scr' + 'ipt>' + runtimeJS() + '</scr' + 'ipt></body></html>';
 }
 let genIO = null;
 function disconnectIO(){ if(genIO){ try { genIO.disconnect(); } catch (e) {} genIO = null; } }
@@ -1682,11 +1682,11 @@ function mountPreviews(apps){
 function renderCandidates(idea, apps, src){
   genCompare = new Set();
   const cards = apps.map((a, i) => genCardHtml(a, i)).join('');
-  openModal('✨ ' + apps.length + ' cadangan · ' + idea, '<div class="glist" style="max-height:64vh;overflow:auto">' + cards + '</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" id="genRegen">🔄 Jana semula</button><button class="btn" id="genCmpBtn" disabled>🆚 Bandingkan (0)</button></div><div class="hint" style="margin-top:8px">Pratonton interaktif: hanya satu kad live pada satu masa (jimat CPU). 🆚 tanda ≤2 kad untuk sisi-ke-sisi; 🔍 buka penuh.</div>');
+  openModal('✨ ' + apps.length + ' candidates · ' + idea, '<div class="glist" style="max-height:64vh;overflow:auto">' + cards + '</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" id="genRegen">🔄 Regenerate</button><button class="btn" id="genCmpBtn" disabled>🆚 Compare (0)</button></div><div class="hint" style="margin-top:8px">Interactive preview: only one live card at a time (saves CPU). 🆚 mark ≤2 cards for side-by-side; 🔍 open full.</div>');
   mountPreviews(apps);
   const rg = $('genRegen'); if(rg) rg.onclick = () => runGenerate(idea, genState.seed + 1);
   const cmpBtn = $('genCmpBtn');
-  const syncCmp = () => { if(cmpBtn){ cmpBtn.textContent = '🆚 Bandingkan (' + genCompare.size + ')'; cmpBtn.disabled = genCompare.size < 2; } };
+  const syncCmp = () => { if(cmpBtn){ cmpBtn.textContent = '🆚 Compare (' + genCompare.size + ')'; cmpBtn.disabled = genCompare.size < 2; } };
   if(cmpBtn) cmpBtn.onclick = () => { if(genCompare.size >= 2) openCompare(apps, Array.from(genCompare).slice(0, 2)); };
   $('modal').querySelectorAll('[data-gact]').forEach((btn) => {
     btn.onclick = () => {
@@ -1699,27 +1699,27 @@ function renderCandidates(idea, apps, src){
 }
 // 🆚 Bandingkan dua calon bersebelahan (kedua-duanya interaktif, terhad kepada 2).
 function openCompare(apps, idxs){
-  const two = idxs.map((i) => apps[i]).filter(Boolean); if(two.length < 2){ toast('Pilih 2 calon.'); return; }
+  const two = idxs.map((i) => apps[i]).filter(Boolean); if(two.length < 2){ toast('Pick 2 candidates.'); return; }
   let d = ['', '']; try { d[0] = liveDoc(two[0]); } catch (e) {} try { d[1] = liveDoc(two[1]); } catch (e) {}
-  const col = (a, i) => '<div style="flex:1;min-width:220px"><div style="font-weight:700;color:' + esc((a.theme && a.theme.accent) || '#4c8dff') + ';margin-bottom:6px">' + esc(a.appName || 'App') + (a._src === 'ai' ? ' 🤖' : '') + '</div><iframe sandbox="allow-scripts allow-forms allow-popups" title="Banding ' + (i + 1) + '" style="width:100%;height:52vh;border:1px solid #262b36;border-radius:10px;background:#0b0f1a"></iframe><div style="margin-top:8px"><button class="btn" data-cmpuse="' + i + '">📥 Pakai</button></div></div>';
+  const col = (a, i) => '<div style="flex:1;min-width:220px"><div style="font-weight:700;color:' + esc((a.theme && a.theme.accent) || '#4c8dff') + ';margin-bottom:6px">' + esc(a.appName || 'App') + (a._src === 'ai' ? ' 🤖' : '') + '</div><iframe sandbox="allow-scripts allow-forms allow-popups" title="Banding ' + (i + 1) + '" style="width:100%;height:52vh;border:1px solid #262b36;border-radius:10px;background:#0b0f1a"></iframe><div style="margin-top:8px"><button class="btn" data-cmpuse="' + i + '">📥 Apply</button></div></div>';
   disconnectIO();
-  openModal('🆚 Bandingkan', '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">' + col(two[0], 0) + col(two[1], 1) + '</div>');
+  openModal('🆚 Compare', '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">' + col(two[0], 0) + col(two[1], 1) + '</div>');
   const fs = $('modal').querySelectorAll('iframe'); if(fs[0]) fs[0].srcdoc = d[0]; if(fs[1]) fs[1].srcdoc = d[1];
   $('modal').querySelectorAll('[data-cmpuse]').forEach((b) => { b.onclick = () => { const a = two[Number(b.dataset.cmpuse)]; closeModal(); applyGenerated(a, a._src || genState.src); }; });
 }
 // 🔍 Pratonton penuh — buka doc interaktif dalam tab baharu (asal utama, bukan sandboxopaque).
 function openFull(app){
-  if(!app) return; let html = ''; try { html = liveDoc(app); } catch (e) { toast('Gagal buka penuh'); return; }
-  const w = window.open('', '_blank'); if(!w){ toast('Pelayar menyekat popup — benarkan popup.'); return; }
-  try { w.document.open(); w.document.write(html); w.document.close(); } catch (e) { toast('Gagal tulis pratonton'); }
+  if(!app) return; let html = ''; try { html = liveDoc(app); } catch (e) { toast('Failed to open preview'); return; }
+  const w = window.open('', '_blank'); if(!w){ toast('Browser blocked the popup — allow popups.'); return; }
+  try { w.document.open(); w.document.write(html); w.document.close(); } catch (e) { toast('Failed to write preview'); }
 }
 // Auto-terbit lebih selamat: sahkan nama & slug (auto-unik jika kosong) + tawar kemas kini app sedia ada.
 function reviewAndPublish(app){
   const suggest = safe(app && app.appName);
-  const nm = esc(($('appName') && $('appName').value) || (app && app.appName) || 'Aplikasi');
+  const nm = esc(($('appName') && $('appName').value) || (app && app.appName) || 'App');
   const mine = myApps();
-  const upd = mine.length ? '<label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Kemas kini app sedia ada (pilihan)</label><select id="rvUpdate" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><option value="">— Terbit sebagai app BAHARU —</option>' + mine.map((m, i) => '<option value="' + i + '">' + esc(m.title || m.slug) + ' · /a/' + esc(m.slug) + '</option>').join('') + '</select>' : '';
-  openModal('🚀 Sah & terbitkan', '<p style="margin:0 0 8px">Semak nama & pautan. <b>Biarkan slug kosong</b> untuk auto-unik.</p><label style="display:block;font-size:12px;color:#9aa3b2;margin:6px 0 4px">Nama aplikasi</label><input id="rvName" maxlength="40" value="' + nm + '" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Slug (pilihan) — cadangan <code>/a/' + esc(suggest) + '</code></label><input id="rvSlug" maxlength="40" placeholder="' + esc(suggest) + '" value="" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">' + upd + '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="rvCancel">Batal</button><button class="btn primary" id="rvGo">🚀 Terbitkan</button></div>');
+  const upd = mine.length ? '<label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Update existing app (optional)</label><select id="rvUpdate" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><option value="">— Publish as a NEW app —</option>' + mine.map((m, i) => '<option value="' + i + '">' + esc(m.title || m.slug) + ' · /a/' + esc(m.slug) + '</option>').join('') + '</select>' : '';
+  openModal('🚀 Confirm & publish', '<p style="margin:0 0 8px">Check the name & link. <b>Leave the slug empty</b> for an auto-unique one.</p><label style="display:block;font-size:12px;color:#9aa3b2;margin:6px 0 4px">App name</label><input id="rvName" maxlength="40" value="' + nm + '" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit"><label style="display:block;font-size:12px;color:#9aa3b2;margin:10px 0 4px">Slug (optional) — suggestion <code>/a/' + esc(suggest) + '</code></label><input id="rvSlug" maxlength="40" placeholder="' + esc(suggest) + '" value="" style="width:100%;padding:8px;border:1px solid #2a3040;border-radius:8px;background:transparent;color:inherit">' + upd + '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="rvCancel">Cancel</button><button class="btn primary" id="rvGo">🚀 Publish</button></div>');
   $('rvName').oninput = () => { $('appName').value = $('rvName').value; renderStage(); };
   $('rvCancel').onclick = () => closeModal();
   $('rvGo').onclick = () => {
@@ -1730,29 +1730,29 @@ function reviewAndPublish(app){
 }
 function runGenerate(idea, seed){
   idea = String(idea || '').trim();
-  if(!idea){ toast('Taip satu idea/kata dahulu.'); $('genIdea').focus(); return; }
+  if(!idea){ toast('Type an idea/word first.'); $('genIdea').focus(); return; }
   const style = ($('genStyle') && $('genStyle').value) || '';
   const color = ($('genColor') && $('genColor').value) || '';
   const lang = ($('genLang') && $('genLang').value) || '';
   const useSeed = Math.max(0, Math.floor(Number(seed) || 0));
-  const b = $('genBtn'); const old = b.textContent; b.disabled = true; b.textContent = '⏳ Menjana…';
+  const b = $('genBtn'); const old = b.textContent; b.disabled = true; b.textContent = '⏳ Generating…';
   fetch('/api/builder/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idea, style, seed: useSeed, color, lang }) })
-    .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: false, j: { error: 'Respons bukan JSON' } })))
+    .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: false, j: { error: 'Non-JSON response' } })))
     .then((res) => {
-      if(!res.ok || !res.j) throw new Error((res.j && res.j.error) || 'tiada hasil');
+      if(!res.ok || !res.j) throw new Error((res.j && res.j.error) || 'no results');
       const apps = Array.isArray(res.j.apps) ? res.j.apps : (res.j.app ? [res.j.app] : []);
-      if(!apps.length) throw new Error('tiada hasil');
+      if(!apps.length) throw new Error('no results');
       const src = res.j.source;
       genState = { idea: idea, apps: apps, src: src, seed: useSeed };
-      if($('genAutoPub') && $('genAutoPub').checked){ const pick = apps.find((a) => a._src === 'ai') || apps[0]; applyGenerated(pick, pick._src || src); toast('🔁 Auto-terbit — sahkan slug…'); reviewAndPublish(pick); return; }
+      if($('genAutoPub') && $('genAutoPub').checked){ const pick = apps.find((a) => a._src === 'ai') || apps[0]; applyGenerated(pick, pick._src || src); toast('🔁 Auto-publish — confirm slug…'); reviewAndPublish(pick); return; }
       renderCandidates(idea, apps, src);
     })
-    .catch((err) => toast('⚠ Jana gagal: ' + ((err && err.message) || err)))
+    .catch((err) => toast('⚠ Generation failed: ' + ((err && err.message) || err)))
     .then(() => { b.disabled = false; b.textContent = old; });
 }
 $('genBtn').onclick = () => runGenerate($('genIdea').value, 0);
 // 🎲 Rambang: baca kata rawak daripada words.txt (fallback ke RANDOM_IDEAS jika gagal).
-const STYLE_TAGS = ['minimalis', 'cerah', 'gelap', 'neon', 'retro', 'pastel'];
+const STYLE_TAGS = ['minimal', 'light', 'dark', 'neon', 'retro', 'pastel'];
 function fillDice(w){ $('genIdea').value = (w && (w.word || w.idea)) || RANDOM_IDEAS[Math.floor(Math.random() * RANDOM_IDEAS.length)]; $('genIdea').focus(); suggestFor($('genIdea').value); }
 if($('genDice')) $('genDice').onclick = () => { fetch('/api/builder/dice').then((r) => r.json()).then((j) => fillDice(j && j.word ? j : null)).catch(() => fillDice(null)); };
 $('genIdea').addEventListener('keydown', (e) => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $('genBtn').click(); } });
@@ -1779,7 +1779,7 @@ document.querySelectorAll('.devs [data-dev]').forEach((b)=>b.onclick=()=>{ devic
 $('tabWidget').onclick=()=>{ tab='widget'; renderInspector(); };
 $('tabTheme').onclick=()=>{ tab='theme'; renderInspector(); };
 
-$('modeBtn').onclick=()=>{ mode = mode==='edit'?'preview':'edit'; document.body.classList.toggle('edit',mode==='edit'); $('modeBtn').textContent = mode==='edit'?'✏️ Edit':'▶️ Cuba'; $('modeBtn').classList.add('active'); if(mode==='preview'){ selId=null; renderStage(); renderInspector(); } };
+$('modeBtn').onclick=()=>{ mode = mode==='edit'?'preview':'edit'; document.body.classList.toggle('edit',mode==='edit'); $('modeBtn').textContent = mode==='edit'?'✏️ Edit':'▶️ Play'; $('modeBtn').classList.add('active'); if(mode==='preview'){ selId=null; renderStage(); renderInspector(); } };
 
 $('appName').addEventListener('input',()=>renderStage());
 $('appName').addEventListener('change',()=>commit());
@@ -1812,8 +1812,8 @@ function exportCSS(){
   return `:root{color-scheme:${theme.dark?'dark':'light'}}*{box-sizing:border-box}body{margin:0;background:${theme.bg};color:${theme.fg};font-family:${theme.font};padding:20px;max-width:${device==='desktop'?880:device==='tablet'?680:480}px;margin:0 auto;line-height:1.5}h1,h2,h3{margin:.3em 0}a{text-decoration:none}.appbar{font-weight:800;font-size:20px;color:${theme.accent};margin-bottom:2px}.sub{color:#888;font-size:13px;margin-bottom:16px}button,.btn{font:inherit}`;
 }
 function exportBody(){ return widgets.map(widgetMarkup).join('\n'); }
-function buildDoc(body, css, js, name){ const base=(typeof location!=='undefined'&&/^https?:/.test(location.origin||''))?location.origin:''; const ogimg=base?base+'/og.png':''; return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><meta name="description" content="${esc(theme.desc||'')}"><meta property="og:title" content="${esc(name)}"><meta property="og:description" content="${esc(theme.desc||'')}"><meta property="og:type" content="website">${ogimg?`<meta property="og:image" content="${esc(ogimg)}">`:''}<meta name="twitter:card" content="summary"><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${js}<\/script></body></html>`; }
-function buildExport(){ return buildDoc(exportBody(), exportCSS(), runtimeJS(), $('appName').value||'Aplikasi'); }
+function buildDoc(body, css, js, name){ const base=(typeof location!=='undefined'&&/^https?:/.test(location.origin||''))?location.origin:''; const ogimg=base?base+'/og.png':''; return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><meta name="description" content="${esc(theme.desc||'')}"><meta property="og:title" content="${esc(name)}"><meta property="og:description" content="${esc(theme.desc||'')}"><meta property="og:type" content="website">${ogimg?`<meta property="og:image" content="${esc(ogimg)}">`:''}<meta name="twitter:card" content="summary"><style>${css}</style></head><body><div class="appbar">${esc(name)}</div><div class="sub">${esc(theme.sub||'')}</div>${body}<script>${js}<\/script></body></html>`; }
+function buildExport(){ return buildDoc(exportBody(), exportCSS(), runtimeJS(), $('appName').value||'App'); }
 function download(text, filename, mime){ const b=new Blob([text],{type:mime}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),8000); }
 const safe=(s)=>String(s||'app').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'app';
 // ── ZIP (kaedah STORE, tanpa perpustakaan luar) ──
@@ -1838,7 +1838,7 @@ function buildZip(entries){
   var out=new Uint8Array(total); var p=0; parts.forEach(function(x){ out.set(x,p); p+=x.length; });
   return out;
 }
-function exportZip(){ var name=safe($('appName').value); var bytes=buildZip([ {name:'index.html',data:buildExport()}, {name:'project.json',data:JSON.stringify({v:1,appName:$('appName').value,theme,widgets},null,2)}, {name:'README.md',data:'# '+($('appName').value||'Aplikasi')+'\nDijana dengan Tukuk Studio — Pembina Aplikasi. Buka index.html dalam pelayar.'} ]); download(bytes, name+'-tukuk.zip','application/zip'); toast('🗜 ZIP dimuat turun (index.html + project.json + README).'); }
+function exportZip(){ var name=safe($('appName').value); var bytes=buildZip([ {name:'index.html',data:buildExport()}, {name:'project.json',data:JSON.stringify({v:1,appName:$('appName').value,theme,widgets},null,2)}, {name:'README.md',data:'# '+($('appName').value||'App')+'\nGenerated with Tukuk Studio — App Builder. Open index.html in any browser.'} ]); download(bytes, name+'-tukuk.zip','application/zip'); toast('🗜 ZIP downloaded (index.html + project.json + README).'); }
 $('zipBtn').onclick=exportZip;
 
 // ── Terbitan satu-klik ke pautan awam (/a/<slug>) ──
@@ -1848,19 +1848,19 @@ const GAME_TYPES=['ttt','memory','mole','rps','reaction','guess','br','fps','run
 const DECOR_TYPES=['heading','text','divider','spacer','image','card','faq','steps'];
 function inferKind(){ const g=widgets.filter((w)=>GAME_TYPES.includes(w.type)).length; if(!g) return 'app'; const other=widgets.filter((w)=>!GAME_TYPES.includes(w.type)&&!DECOR_TYPES.includes(w.type)).length; return other?'app':'game'; }
 $('pubBtn').onclick=function(){
-  const btn=$('pubBtn'); const orig=btn.textContent; btn.disabled=true; btn.textContent='⏳ Menerbitkan…';
+  const btn=$('pubBtn'); const orig=btn.textContent; btn.disabled=true; btn.textContent='⏳ Publishing…';
   const html=publishHtml();
-  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'Aplikasi', slug:($('pubSlug').value||'').trim().toLowerCase()||undefined, source:window._pubSource||undefined, kind:inferKind(), html }) })
-    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
+  fetch('/api/publish',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name:$('appName').value||'App', slug:($('pubSlug').value||'').trim().toLowerCase()||undefined, source:window._pubSource||undefined, kind:inferKind(), html }) })
+    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Non-JSON response' } })) )
     .then((res)=>{
-      if(!res.ok || !res.j || !res.j.url) throw new Error((res.j&&res.j.error)||'Gagal terbit');
+      if(!res.ok || !res.j || !res.j.url) throw new Error((res.j&&res.j.error)||'Publish failed');
       const url=esc(res.j.url);
-      openModal('🚀 Berjaya diterbitkan','<p>Aplikasi anda kini awam di:</p><p><input readonly value="'+url+'" style="width:100%" onclick="this.select()"></p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><a class="btn primary" target="_blank" rel="noopener" href="'+url+'">🌐 Buka</a><button id="pubCopy" class="btn">📋 Salin pautan</button></div><div class="hint" style="margin-top:10px">Dilihat dalam sandbox (asal berasingan) demi keselamatan. Pautan kekal awam selama dihos.</div>');
-      const cp=$('pubCopy'); if(cp) cp.onclick=()=>copyText(res.j.url,'🔗 Pautan disalin');
-      addMyApp({ slug:res.j.slug, editKey:res.j.editKey, title:($('appName').value||'Aplikasi'), url:res.j.url });
-      toast('🚀 Terbit! '+res.j.url);
+      openModal('🚀 Published successfully','<p>Your app is now public at:</p><p><input readonly value="'+url+'" style="width:100%" onclick="this.select()"></p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><a class="btn primary" target="_blank" rel="noopener" href="'+url+'">🌐 Open</a><button id="pubCopy" class="btn">📋 Copy link</button></div><div class="hint" style="margin-top:10px">Viewed in a sandbox (separate origin) for safety. The link stays public as long as it is hosted.</div>');
+      const cp=$('pubCopy'); if(cp) cp.onclick=()=>copyText(res.j.url,'🔗 Link copied');
+      addMyApp({ slug:res.j.slug, editKey:res.j.editKey, title:($('appName').value||'App'), url:res.j.url });
+      toast('🚀 Published! '+res.j.url);
     })
-    .catch((err)=>{ toast('⚠ '+((err&&err.message)?err.message:'Gagal terbit — cuba ZIP/JSON')); })
+    .catch((err)=>{ toast('⚠ '+((err&&err.message)?err.message:'Publish failed — try ZIP/JSON')); })
     .then(()=>{ btn.disabled=false; btn.textContent=orig; window._pubSource=''; });
 };
 
@@ -1883,30 +1883,30 @@ function removeMyApp(slug){ saveMyApps(myApps().filter((x)=>x.slug!==slug)); }
 function doUpdate(app, done){
   const html=publishHtml();
   fetch('/api/publish/update',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:app.slug, editKey:app.editKey, kind:inferKind(), html }) })
-    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
+    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Non-JSON response' } })) )
     .then((res)=>{
-      if(!res.ok||!res.j||!res.j.url){ toast('⚠ Kemas kini gagal: '+((res.j&&res.j.error)||'pautan lama mungkin telah dibuang')); return; }
+      if(!res.ok||!res.j||!res.j.url){ toast('⚠ Update failed: '+((res.j&&res.j.error)||'the old link may have been removed')); return; }
       app.title=$('appName').value||app.title; if(!app.url)app.url=res.j.url; addMyApp(app);
-      toast('🔄 Dikemas kini '+res.j.url); if(done)done();
+      toast('🔄 Updated '+res.j.url); if(done)done();
     })
-    .catch((err)=>toast('⚠ '+((err&&err.message)?err.message:'Gagal kemas kini')));
+    .catch((err)=>toast('⚠ '+((err&&err.message)?err.message:'Update failed')));
 }
 function doDelete(app, done){
-  if(!confirm('Buang selamanya /a/'+app.slug+'? Tindakan ini tidak boleh dibatalkan.')) return;
+  if(!confirm('Delete /a/'+app.slug+' forever? This cannot be undone.')) return;
   fetch('/api/publish/delete',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ slug:app.slug, editKey:app.editKey }) })
-    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Respons bukan JSON' } })) )
+    .then((r)=> r.json().then((j)=>({ ok:r.ok, j })).catch(()=>({ ok:false, j:{ error:'Non-JSON response' } })) )
     .then((res)=>{
-      if(!res.ok){ toast('⚠ Buang gagal: '+((res.j&&res.j.error)||'')); return; }
-      removeMyApp(app.slug); toast('🗑 Dibuang /a/'+app.slug); if(done)done();
+      if(!res.ok){ toast('⚠ Delete failed: '+((res.j&&res.j.error)||'')); return; }
+      removeMyApp(app.slug); toast('🗑 Deleted /a/'+app.slug); if(done)done();
     })
-    .catch((err)=>toast('⚠ '+((err&&err.message)?err.message:'Gagal buang')));
+    .catch((err)=>toast('⚠ '+((err&&err.message)?err.message:'Delete failed')));
 }
 
 $('myBtn').onclick=function(){
   const apps=myApps();
-  if(!apps.length){ openModal('📦 Aplikasi Saya','<div class="hint">Belum ada aplikasi yang anda terbitkan dari pelayar ini. Tekan 🚀 Terbitkan untuk mula. (Kunci edit hanya tersimpan pada pelayar ini.)</div>'); return; }
-  const rows=apps.map((a)=>{ const url=a.url||('/a/'+a.slug); return `<div class="myrow" data-slug="${esc(a.slug)}" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #262b36;border-radius:10px;margin:6px 0;flex-wrap:wrap"><div style="flex:1;min-width:140px"><b style="color:#4c8dff">${esc(a.title||a.slug)}</b><div style="font-size:12px;color:#777">${esc(url)}</div></div><a class="btn" target="_blank" rel="noopener" href="${esc(url)}">🌐 Buka</a><button class="btn" data-mact="upd">🔄 Kemas kini</button><button class="btn" data-mact="del">🗑 Buang</button></div>`; }).join('');
-  openModal('📦 Aplikasi Saya — '+apps.length, '<div style="max-height:55vh;overflow:auto">'+rows+'</div><div class="hint" style="margin-top:10px">“Kemas kini” menulis kandungan kanvas SEMASA ke pautan itu. “Buang” memadamnya secara kekal.</div>');
+  if(!apps.length){ openModal('📦 My Apps','<div class="hint">You have not published any apps from this browser yet. Press 🚀 Publish to start. (Edit keys are stored only in this browser.)</div>'); return; }
+  const rows=apps.map((a)=>{ const url=a.url||('/a/'+a.slug); return `<div class="myrow" data-slug="${esc(a.slug)}" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #262b36;border-radius:10px;margin:6px 0;flex-wrap:wrap"><div style="flex:1;min-width:140px"><b style="color:#4c8dff">${esc(a.title||a.slug)}</b><div style="font-size:12px;color:#777">${esc(url)}</div></div><a class="btn" target="_blank" rel="noopener" href="${esc(url)}">🌐 Open</a><button class="btn" data-mact="upd">🔄 Update</button><button class="btn" data-mact="del">🗑 Delete</button></div>`; }).join('');
+  openModal('📦 My Apps — '+apps.length, '<div style="max-height:55vh;overflow:auto">'+rows+'</div><div class="hint" style="margin-top:10px">“Update” writes the CURRENT canvas content to that link. “Delete” removes it permanently.</div>');
   $('modal').querySelectorAll('.myrow').forEach((row)=>{
     const slug=row.getAttribute('data-slug'); const app=apps.find((x)=>x.slug===slug)||{ slug };
     const u=row.querySelector('[data-mact="upd"]'); const dl=row.querySelector('[data-mact="del"]');
@@ -1916,70 +1916,70 @@ $('myBtn').onclick=function(){
 };
 
 $('galBtn').onclick=function(){
-  openModal('🌐 Pameran komuniti','<div class="hint">Memuatkan…</div>');
+  openModal('🌐 Community showcase','<div class="hint">Loading…</div>');
   fetch('/api/published?limit=60').then((r)=>r.json()).then((d)=>{
     const items=(d&&d.items)||[];
-    if(!items.length){ openModal('🌐 Pameran komuniti','<div class="hint">Belum ada aplikasi awam. Jadilah yang pertama — tekan 🚀 Terbitkan!</div>'); return; }
+    if(!items.length){ openModal('🌐 Community showcase','<div class="hint">No public apps yet. Be the first — press 🚀 Publish!</div>'); return; }
     const cards=items.map((x)=>`<a target="_blank" rel="noopener" href="${esc(x.url)}" style="display:block;padding:10px 12px;border:1px solid #262b36;border-radius:10px;margin:6px 0;text-decoration:none"><b style="color:#4c8dff">${esc(x.title)}</b><div style="font-size:12px;color:#777">/${esc(x.slug)}</div></a>`).join('');
-    openModal('🌐 Pameran komuniti — '+items.length, '<div style="max-height:50vh;overflow:auto">'+cards+'</div><div class="hint" style="margin-top:10px">Dilihat dalam sandbox (asal berasingan).</div>');
-  }).catch(()=>openModal('🌐 Pameran komuniti','<div class="hint">Gagal memuat senarai.</div>'));
+    openModal('🌐 Community showcase — '+items.length, '<div style="max-height:50vh;overflow:auto">'+cards+'</div><div class="hint" style="margin-top:10px">Viewed in a sandbox (separate origin).</div>');
+  }).catch(()=>openModal('🌐 Community showcase','<div class="hint">Failed to load the list.</div>'));
 };
 // (butang 📦 Aplikasi Saya sentiasa kelihatan — urus kemas kini/buang di dalamnya)
 
-$('exportBtn').onclick=()=>{ download(buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport — buka di mana-mana.'); };
-$('saveBtn').onclick=()=>{ const proj={ v:1, appName:$('appName').value, theme, widgets }; download(JSON.stringify(proj,null,2), safe($('appName').value)+'.json','application/json'); toast('💾 Projek disimpan (.json).'); };
+$('exportBtn').onclick=()=>{ download(buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML exported — open it anywhere.'); };
+$('saveBtn').onclick=()=>{ const proj={ v:1, appName:$('appName').value, theme, widgets }; download(JSON.stringify(proj,null,2), safe($('appName').value)+'.json','application/json'); toast('💾 Project saved (.json).'); };
 $('openBtn').onclick=()=> $('fileIn').click();
-$('fileIn').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); pushH(); $('appName').value=o.appName||'Aplikasi'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; uid=Date.now(); selId=null; renderStage(); applyTheme(); renderInspector(); toast('📂 Projek dibuka.'); }catch(err){ toast('Fail JSON tidak sah.'); } }; r.readAsText(f); e.target.value=''; });
+$('fileIn').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); pushH(); $('appName').value=o.appName||'App'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; uid=Date.now(); selId=null; renderStage(); applyTheme(); renderInspector(); toast('📂 Project loaded.'); }catch(err){ toast('Invalid JSON file.'); } }; r.readAsText(f); e.target.value=''; });
 
 // ── Pemeriksaan automatik (aksesibiliti / kontras / pautan) ──
 function hexLum(hex){ let m=String(hex||'').replace('#','').trim(); if(/^[0-9a-fA-F]{3}$/.test(m)) m=m.split('').map((c)=>c+c).join(''); if(!/^[0-9a-fA-F]{6}$/.test(m)) return 0; const r=parseInt(m.substr(0,2),16)/255,g=parseInt(m.substr(2,2),16)/255,b=parseInt(m.substr(4,2),16)/255; const f=(c)=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4); return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b); }
 function contrast(a,b){ const L1=hexLum(a),L2=hexLum(b); const hi=Math.max(L1,L2),lo=Math.min(L1,L2); return (hi+0.05)/(lo+0.05); }
 function checkProject(ws, th, appName){
   const out=[]; const list=Array.isArray(ws)?ws:[]; const t=th||{};
-  if(!appName || !String(appName).trim()) out.push({ id:null, msg:'Nama aplikasi kosong — tajuk & pautan jadi umum.' });
+  if(!appName || !String(appName).trim()) out.push({ id:null, msg:'Empty app name — title & link become generic.' });
   const ratio=contrast(t.bg||'#ffffff', t.fg||'#000000');
-  if(ratio < 4.5) out.push({ id:null, msg:'Kontras teks/latar rendah ('+ratio.toFixed(1)+':1) — sukar dibaca.' });
+  if(ratio < 4.5) out.push({ id:null, msg:'Low text/background contrast ('+ratio.toFixed(1)+':1) — hard to read.' });
   list.forEach((w)=>{
-    if(w.type==='image'){ if(!w.src||!String(w.src).trim()) out.push({ id:w.id, msg:'Imej belum ada sumber (placeholder sahaja).' }); else if(!w.alt||!String(w.alt).trim()) out.push({ id:w.id, msg:'Imej tiada teks alt (aksesibiliti).' }); }
-    if((w.type==='heading'||w.type==='text') && (!w.text||!String(w.text).trim())) out.push({ id:w.id, msg:'Teks widget ini kosong.' });
-    if(w.type==='button' && w.href && !/^(https?:|mailto:|tel:|#|\/)/.test(w.href)) out.push({ id:w.id, msg:'Pautan butang mungkin tak sah: '+w.href });
+    if(w.type==='image'){ if(!w.src||!String(w.src).trim()) out.push({ id:w.id, msg:'Image has no source yet (placeholder only).' }); else if(!w.alt||!String(w.alt).trim()) out.push({ id:w.id, msg:'Image missing alt text (accessibility).' }); }
+    if((w.type==='heading'||w.type==='text') && (!w.text||!String(w.text).trim())) out.push({ id:w.id, msg:'The text of this widget is empty.' });
+    if(w.type==='button' && w.href && !/^(https?:|mailto:|tel:|#|\/)/.test(w.href)) out.push({ id:w.id, msg:'Button link may be invalid: '+w.href });
   });
   return out;
 }
 // ── Kongsi: projek → base64 dalam URL (tanpa server) ──
 function encodeProj(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
 function decodeProj(s){ return JSON.parse(decodeURIComponent(escape(atob(s)))); }
-function copyText(text, okmsg){ const done=()=>toast(okmsg||'📋 Disalin ke papan klip'); function fb(){ const ta2=document.createElement('textarea'); ta2.value=text; document.body.appendChild(ta2); ta2.select(); try{ document.execCommand('copy'); }catch(err){} ta2.remove(); done(); } try{ navigator.clipboard.writeText(text).then(done,fb); }catch(err){ fb(); } }
+function copyText(text, okmsg){ const done=()=>toast(okmsg||'📋 Copied to clipboard'); function fb(){ const ta2=document.createElement('textarea'); ta2.value=text; document.body.appendChild(ta2); ta2.select(); try{ document.execCommand('copy'); }catch(err){} ta2.remove(); done(); } try{ navigator.clipboard.writeText(text).then(done,fb); }catch(err){ fb(); } }
 // ── Modal (bantuan & hasil semakan) ──
 const HELP_HTML = [
-  ['Sunting teks','Klik pada tajuk/teks lalu taip terus'],
-  ['Selit di kedudukan','Guna ＋ Tambah (hover celah blok)'],
-  ['Duplikasi','Ctrl / ⌘ + D'],
-  ['Buang widget','Delete / Backspace'],
-  ['Gerak widget','↑ / ↓'],
+  ['Edit text','Click a heading/text and type directly'],
+  ['Insert at position','Use ＋ Add (hover between blocks)'],
+  ['Duplicate','Ctrl / ⌘ + D'],
+  ['Remove widget','Delete / Backspace'],
+  ['Move widget','↑ / ↓'],
   ['Undo / Redo','Ctrl / ⌘ + Z · Ctrl / ⌘ + Y'],
-  ['Batal pilih / tutup','Esc'],
-  ['Papan bantuan ini','?']
+  ['Deselect / close','Esc'],
+  ['This help panel','?']
 ].map((r)=>`<div class="ar"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
 function openModal(title, bodyHtml){ const m=$('modal'); m.querySelector('.mt').textContent=title; m.querySelector('.mb').innerHTML=bodyHtml; m.classList.add('show'); }
 function closeModal(){ $('modal').classList.remove('show'); }
-function toggleHelp(){ if($('modal').classList.contains('show')) return closeModal(); openModal('⌨ Pintasan & cara guna', HELP_HTML); }
+function toggleHelp(){ if($('modal').classList.contains('show')) return closeModal(); openModal('⌨ Shortcuts & how to use', HELP_HTML); }
 
-$('shareBtn').onclick=()=>{ const proj={ appName:$('appName').value, theme, widgets }; let b64=''; try{ b64=encodeURIComponent(encodeProj(proj)); }catch(err){ toast('Projek terlalu besar untuk pautan — guna ZIP/JSON.'); return; } const frag='#p='+b64; try{ history.replaceState(null,'', frag); }catch(err){ location.hash=frag; } copyText(location.origin+location.pathname+frag,'🔗 Pautan kongsi disalin — sesiapa boleh buka & teruskan.'); };
-$('auditBtn').onclick=()=>{ const iss=checkProject(widgets,theme,$('appName').value); if(!iss.length){ toast('✅ Tiada isu ditemui — nampak kemas!'); return; } const rows=iss.map((x)=>`<div class="ai" data-wid="${x.id||''}">${x.id?'🎯 ':'ℹ️ '}${esc(x.msg)}</div>`).join(''); openModal('🩺 Pemeriksaan projek — '+iss.length+' penambahbaikan', rows); };
+$('shareBtn').onclick=()=>{ const proj={ appName:$('appName').value, theme, widgets }; let b64=''; try{ b64=encodeURIComponent(encodeProj(proj)); }catch(err){ toast('Project too large for a link — use ZIP/JSON.'); return; } const frag='#p='+b64; try{ history.replaceState(null,'', frag); }catch(err){ location.hash=frag; } copyText(location.origin+location.pathname+frag,'🔗 Share link copied — anyone can open & continue.'); };
+$('auditBtn').onclick=()=>{ const iss=checkProject(widgets,theme,$('appName').value); if(!iss.length){ toast('✅ No issues found — looks clean!'); return; } const rows=iss.map((x)=>`<div class="ai" data-wid="${x.id||''}">${x.id?'🎯 ':'ℹ️ '}${esc(x.msg)}</div>`).join(''); openModal('🩺 Project check — '+iss.length+' improvements', rows); };
 $('keysBtn').onclick=toggleHelp;
 $('modal').addEventListener('click',(e)=>{ if(e.target.id==='modal'||e.target.closest('.mx')){ closeModal(); return; } const ai=e.target.closest('.ai'); if(ai){ closeModal(); if(ai.dataset.wid){ if(mode!=='edit'){ mode='edit'; document.body.classList.add('edit'); $('modeBtn').textContent='✏️ Edit'; $('modeBtn').classList.add('active'); } tab='widget'; select(ai.dataset.wid); } } });
 
 // ── Sampel awal + pulih (pautan / auto-save lokal) ──────────────────────────
-function seed(){ widgets=[ {id:'w'+(uid++),...TYPES.heading.make(),text:'Selamat Datang'}, {id:'w'+(uid++),...TYPES.text.make(),text:'Ini demo pembina aplikasi. Tukar widget, tema, lalu Eksport HTML.'}, {id:'w'+(uid++),...TYPES.counter.make(),label:'Klik'}, {id:'w'+(uid++),...TYPES.button.make()} ]; }
-function loadState(o){ $('appName').value=o.appName||'Aplikasi Saya'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; selId=null; if(widgets.length) uid=Date.now(); }
+function seed(){ widgets=[ {id:'w'+(uid++),...TYPES.heading.make(),text:'Welcome'}, {id:'w'+(uid++),...TYPES.text.make(),text:'This is an app-builder demo. Change widgets, theme, then Export HTML.'}, {id:'w'+(uid++),...TYPES.counter.make(),label:'Clicks'}, {id:'w'+(uid++),...TYPES.button.make()} ]; }
+function loadState(o){ $('appName').value=o.appName||'My App'; theme={...DEF_THEME,...(o.theme||{})}; widgets=Array.isArray(o.widgets)?o.widgets:[]; selId=null; if(widgets.length) uid=Date.now(); }
 let resumed='';
 try{
   const h=location.hash||'';
   if(h.indexOf('#p=')===0){ try{ loadState(decodeProj(decodeURIComponent(h.slice(3)))); resumed='link'; }catch(err){ seed(); } }
   else { const raw=localStorage.getItem('tukuk-builder'); if(raw){ loadState(JSON.parse(raw)); resumed='storage'; } else seed(); }
 }catch(err){ seed(); }
-let _asv=null; function autoSave(){ if(document.body.classList.contains('play')) return; /* mod main: jangan tulis projek ke localStorage */ const s=$('saveState'); if(s) s.textContent='● Menyimpan…'; clearTimeout(_asv); _asv=setTimeout(()=>{ try{ localStorage.setItem('tukuk-builder',JSON.stringify({ appName:$('appName').value, theme, widgets })); if(s) s.textContent='✓ Tersimpan'; }catch(err){ if(s) s.textContent='⚠ Gagal simpan'; } },500); }
+let _asv=null; function autoSave(){ if(document.body.classList.contains('play')) return; /* mod main: jangan tulis projek ke localStorage */ const s=$('saveState'); if(s) s.textContent='● Saving…'; clearTimeout(_asv); _asv=setTimeout(()=>{ try{ localStorage.setItem('tukuk-builder',JSON.stringify({ appName:$('appName').value, theme, widgets })); if(s) s.textContent='✓ Saved'; }catch(err){ if(s) s.textContent='⚠ Save failed'; } },500); }
 const _renderStage=renderStage; renderStage=function(){ _renderStage(); autoSave(); };
 
 renderStage(); applyTheme(); renderInspector(); pushH();
@@ -1988,11 +1988,11 @@ renderStage(); applyTheme(); renderInspector(); pushH();
 try{
   const qs=new URLSearchParams(location.search);
   if(qs.get('play')==='1'){ document.body.classList.remove('edit'); document.body.classList.add('play'); mode='preview'; }
-  const tp=qs.get('tpl'); if(tp){ if(TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } else if(window.console) console.warn('deep-link tpl: kunci tak dikenali:', tp); }
+  const tp=qs.get('tpl'); if(tp){ if(TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } else if(window.console) console.warn('deep-link tpl: unknown key:', tp); }
 }catch(err){ if(window.console) console.warn('deep-link tpl', err); }
 $('playFs').onclick=()=>{ if(document.fullscreenElement){ document.exitFullscreen().catch(()=>{}); } else if(document.documentElement.requestFullscreen){ document.documentElement.requestFullscreen({ navigationUI:'hide' }).catch(()=>{}); } };
-if(resumed==='storage') toast('✓ Projek terakhir dipulihkan dari pelayar ini');
-if(resumed==='link') toast('🔗 Projek daripada pautan kongsi dimuat');
+if(resumed==='storage') toast('✓ Last project restored from this browser');
+if(resumed==='link') toast('🔗 Project loaded from share link');
 document.addEventListener('keydown',(e)=>{
   const tag=(e.target.tagName||'').toLowerCase();
   const typing = tag==='input'||tag==='textarea'||tag==='select'|| e.target.isContentEditable;
@@ -2002,8 +2002,8 @@ document.addEventListener('keydown',(e)=>{
   if($('modal').classList.contains('show')){ if(e.key==='Escape') closeModal(); return; }
   if(mode!=='edit' || document.body.classList.contains('code')) return;
   const w=byId(selId);
-  if(e.key==='Delete'||e.key==='Backspace'){ if(w){ pushH(); widgets=widgets.filter((x)=>x.id!==w.id); selId=null; commit(); toast('Widget dibuang.'); } e.preventDefault(); return; }
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){ if(w){ pushH(); const c=JSON.parse(JSON.stringify(w)); c.id='w'+(uid++); widgets.splice(widgets.indexOf(w)+1,0,c); selId=c.id; commit(); toast('⧉ Widget diduplikasi.'); } e.preventDefault(); return; }
+  if(e.key==='Delete'||e.key==='Backspace'){ if(w){ pushH(); widgets=widgets.filter((x)=>x.id!==w.id); selId=null; commit(); toast('Widget removed.'); } e.preventDefault(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){ if(w){ pushH(); const c=JSON.parse(JSON.stringify(w)); c.id='w'+(uid++); widgets.splice(widgets.indexOf(w)+1,0,c); selId=c.id; commit(); toast('⧉ Widget duplicated.'); } e.preventDefault(); return; }
   if(e.key==='Escape'){ if(selId){ selId=null; renderStage(); renderInspector(); } return; }
   if(e.key==='ArrowUp'||e.key==='ArrowDown'){ if(w){ const i=widgets.indexOf(w); const j=e.key==='ArrowUp'?i-1:i+1; if(j>=0&&j<widgets.length){ pushH(); widgets.splice(j,0,widgets.splice(i,1)[0]); commit(); } } e.preventDefault(); return; }
   if(e.key==='?'){ toggleHelp(); e.preventDefault(); }
@@ -2036,7 +2036,7 @@ window.builderCheck = checkProject; window.builderContrast = contrast; window.bu
   const panes={ html:'', css:'', js:'' };
   let codeTab='html';
   function regen(){ panes.html=exportBody(); panes.css=exportCSS(); panes.js=runtimeJS(); }
-  function assemble(){ return buildDoc(panes.html, panes.css, panes.js, $('appName').value||'Aplikasi'); }
+  function assemble(){ return buildDoc(panes.html, panes.css, panes.js, $('appName').value||'App'); }
   function commit(){ panes[codeTab]=ta.value; }
   function load(){ ta.value=panes[codeTab]; document.querySelectorAll('.codetabs [data-ctab]').forEach((b)=>b.classList.toggle('on', b.dataset.ctab===codeTab)); renderEditor(); }
   function setTab(t){ commit(); codeTab=t; load(); runPreview(); }
@@ -2054,7 +2054,7 @@ window.builderCheck = checkProject; window.builderContrast = contrast; window.bu
     else if(codeTab==='html') v=v.replace(/(<\/(?:div|p|h1|h2|h3|section|ul|figure|label|form)>)/g,'$1\n');
     else if(codeTab==='js') v=v.replace(/;\s*/g,';\n');
     { const NL=String.fromCharCode(10); const out=[]; for(const raw of v.split(NL)){ const l=raw.replace(/ +$/,''); if(l===''&&(!out.length||out[out.length-1]==='')) continue; out.push(l); } v=out.join(NL).trim(); }
-    ta.value=v; refresh(); runPreview(); toast('✨ Kod diformat');
+    ta.value=v; refresh(); runPreview(); toast('✨ Code formatted');
   }
   // Auto-lengkap pasangan kurung/tanda petik/tag + Enter ber-indent + Backspace padam pasangan.
   function applyKey(text,s,e,key){
@@ -2082,11 +2082,11 @@ window.builderCheck = checkProject; window.builderContrast = contrast; window.bu
   $('viewCode').onclick=toCode;
   $('viewDesign').onclick=()=>setView('design');
   document.querySelectorAll('.codetabs [data-ctab]').forEach((b)=>b.onclick=()=>setTab(b.dataset.ctab));
-  $('codeRegen').onclick=()=>{ regen(); load(); runPreview(); toast('↺ Kod dijana semula daripada Rekaan'); };
+  $('codeRegen').onclick=()=>{ regen(); load(); runPreview(); toast('↺ Code regenerated from Design'); };
   $('codeFmt').onclick=formatCode;
-  $('codeRun').onclick=()=>{ runPreview(); toast('▶️ Pratonton disegar semula'); };
-  $('codeDl').onclick=()=>{ download(assemble(), safe($('appName').value)+'.html','text/html'); toast('⬇️ HTML dimuat turun'); };
-  $('codeCopy').onclick=()=>{ const ok=()=>toast('📋 '+codeTab.toUpperCase()+' disalin'); function fb(){ ta.focus(); ta.select(); try{ document.execCommand('copy'); }catch{} ok(); } try{ navigator.clipboard.writeText(ta.value).then(ok,fb); }catch{ fb(); } };
+  $('codeRun').onclick=()=>{ runPreview(); toast('▶️ Preview refreshed'); };
+  $('codeDl').onclick=()=>{ download(assemble(), safe($('appName').value)+'.html','text/html'); toast('⬇️ HTML downloaded'); };
+  $('codeCopy').onclick=()=>{ const ok=()=>toast('📋 '+codeTab.toUpperCase()+' copied'); function fb(){ ta.focus(); ta.select(); try{ document.execCommand('copy'); }catch{} ok(); } try{ navigator.clipboard.writeText(ta.value).then(ok,fb); }catch{ fb(); } };
 
   ta.addEventListener('input',refresh);
   ta.addEventListener('scroll',syncScroll);
@@ -2098,7 +2098,7 @@ window.builderCheck = checkProject; window.builderContrast = contrast; window.bu
   });
 
   // Eksport menghormati mod: dalam Kod → gabung ketiga-tiga tab (termasuk suntingan manual).
-  $('exportBtn').onclick=()=>{ const code=document.body.classList.contains('code'); download(code?assemble():buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML dieksport'+(code?' (kod)':'')+' — buka di mana-mana.'); };
+  $('exportBtn').onclick=()=>{ const code=document.body.classList.contains('code'); download(code?assemble():buildExport(), safe($('appName').value)+'.html','text/html'); toast('📦 HTML exported'+(code?' (code)':'')+' — open it anywhere.'); };
 
   window.builderCodeOpen=()=>document.body.classList.contains('code');
   window.builderAssemble=assemble;   // dokumen penuh dari 3 tab (dipakai Terbitan)

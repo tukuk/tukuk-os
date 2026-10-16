@@ -1,284 +1,284 @@
-# Tukuk-OS v2 — Panduan Rujukan Pantas (Cheat Sheet & README)
+# Tukuk-OS v2 — Quick Reference (Cheat Sheet & README)
 
-Portal internet bahasa kita — enjin carian web + jawapan AI + stor aplikasi & game dalam pelayar + builder no-code + T Chat 2G + radio + studio — dibina ringan dan berkuasa tinggi untuk pelayan RAM rendah (2GB) dan integrasi awan (Cloudflare, Google AdSense, Microsoft Ads). Percuma, tanpa akaun, berfungsi walaupun pada rangkaian lemah.
+Our own internet portal — web search engine + AI answers + in-browser app & game store + no-code builder + T Chat 2G + radio + studio — built light and high-performance for low-RAM servers (2GB) with cloud integrations (Cloudflare, Google AdSense, Microsoft Ads). Free, no account, works even on weak networks.
 
-> **Ini satu-satunya projek yang difokuskan.** Jangan pecah tumpuan ke repo lain.
+> **This is the one focused project.** Do not split attention across other repos.
 
 ---
 
-## ⚡ TL;DR — Runbook Pantas (baca ini dulu)
+## ⚡ TL;DR — Quick Runbook (read this first)
 
-**Benda yang anda JARANG sentuh tapi SELALU perlu tahu:**
+**Things you RARELY touch but ALWAYS need to know:**
 
-| Nak buat... | Arahan / fakta |
+| Want to... | Command / fact |
 |---|---|
-| Jalankan tempatan | `npm install` → `npm start` → `http://localhost:3000` |
-| Deploy ke SERVER BARU | Bawa kod (USB/push) → `sudo bash scripts/install-from-usb.sh`. Semua auto (Node, Meili, systemd, tunnel, edge). **Tiada auth GitHub / tiada fail `.json`.** |
-| Server sedang berjalan | `192.168.8.100` (user `tukuk`). Akses admin: `ssh -L 3000:localhost:3000 tukuk@192.168.8.100` → `http://localhost:3000/admin` (e-mel + **passkey WebAuthn**). Awam: `https://dashboard.tukuk.org/admin` |
-| Ubah halaman statik (`public/*.html`) | **Hanya reload browser** — dibaca setiap request. |
-| Ubah `src/server.js` (route/`STATIC_PAGES`) | **WAJIB restart** `node index.js` — route dalam memori. |
-| Tukar config/kunci | Edit `deploy/env.defaults` (repo private) → `sudo bash scripts/setup-all.sh` (idempotent). |
-| Jana app+game dari 1 kata | `node scripts/satu-kata/generate.mjs [kata]` — CI percuma (GitHub Actions) cron harian → hub disajikan di **`tukuk.org/satu-kata/`** (Cloudflare Pages = pilihan). Lihat **§12** |
-| Semak kesihatan | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
-| Situs awam kini | ✅ `tukuk.org`, `dashboard.tukuk.org`, `www.tukuk.org` = **200** (Cloudflare Free) |
+| Run locally | `npm install` → `npm start` → `http://localhost:3000` |
+| Deploy to a NEW SERVER | Bring the code (USB/push) → `sudo bash scripts/install-from-usb.sh`. All automatic (Node, Meili, systemd, tunnel, edge). **No GitHub auth / no `.json` files.** |
+| Server running | `192.168.8.100` (user `tukuk`). Admin access: `ssh -L 3000:localhost:3000 tukuk@192.168.8.100` → `http://localhost:3000/admin` (email + **WebAuthn passkey**). Public: `https://dashboard.tukuk.org/admin` |
+| Edit static pages (`public/*.html`) | **Just reload the browser** — read on every request. |
+| Edit `src/server.js` (routes/`STATIC_PAGES`) | **MUST restart** `node index.js` — routes live in memory. |
+| Change config/keys | Edit `deploy/env.defaults` (private repo) → `sudo bash scripts/setup-all.sh` (idempotent). |
+| Generate app+game from 1 word | `node scripts/satu-kata/generate.mjs [word]` — free CI (GitHub Actions) daily cron → hub served at **`tukuk.org/satu-kata/`** (Cloudflare Pages = optional). See **§12** |
+| Check health | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
+| Public sites now | ✅ `tukuk.org`, `dashboard.tukuk.org`, `www.tukuk.org` = **200** (Cloudflare Free) |
 
-**Rangka fail kunci:** `src/server.js` (semua route) · `public/index.html` (SPA carian+dashboard) · `public/editor.html` & `public/editor-video.html` (Studio) · `src/brain/*` (AI + carian) · `scripts/setup-all.sh` (auto-setup) · `deploy/env.defaults` (kunci & config terbawa) · `deploy/cloudflared/config.yml` (templat tunnel).
+**Key file skeleton:** `src/server.js` (all routes) · `public/index.html` (search+dashboard SPA) · `public/editor.html` & `public/editor-video.html` (Studio) · `src/brain/*` (AI + search) · `scripts/setup-all.sh` (auto-setup) · `deploy/env.defaults` (shipped keys & config) · `deploy/cloudflared/config.yml` (tunnel template).
 
 ---
 
-## 🚀 1. Cara Mula Tempatan (Local Testing)
+## 🚀 1. How to Start Locally (Local Testing)
 
 ```bash
-# Pasang dependensi
+# Install dependencies
 npm install
 
-# Mulakan pelayan
+# Start the server
 npm start
 ```
-* **Enjin Carian / UI:** `http://localhost:3000`
-* **Admin Dashboard:** `http://localhost:3000/admin` (login e-mel + **WebAuthn passkey** — bukan PIN lama)
-* **Endpoint Kesihatan:** `http://localhost:3000/test`
+* **Search Engine / UI:** `http://localhost:3000`
+* **Admin Dashboard:** `http://localhost:3000/admin` (email + **WebAuthn passkey** login — not the old PIN)
+* **Health Endpoint:** `http://localhost:3000/test`
 
 ---
 
-## 🛠️ 2. Pusat Kawalan Admin (`/admin`)
+## 🛠️ 2. Admin Control Center (`/admin`)
 
-Selepas melayari `http://localhost:3000/admin` dan login (e-mel + passkey WebAuthn), anda boleh mengakses:
-- **Server & Security Monitor:** Pemantau RAM 2GB, penggunaan CPU, dan statistik dokumen terindeks (30+ dokumen asas).
-- **Web Terminal:** Jalankan arahan pelayan secara langsung (cth. `git status`, `uptime`, `npm test`).
-- **Add Web Crawl:** Masukkan URL untuk merayau dan mengindeks kandungan baharu serta-merta.
-- **Ads (Google & MS):** Tetapan ID Penerbit Google AdSense dan Microsoft Advertising.
-- **UI & Custom Theme:** Tukar tajuk laman, logo gelap/cerah, mod latar belakang, dan warna tema.
-- **Articles & Blog:** Tulis dan terbitkan artikel baharu.
-- **AI Engine & Writer:** Konfigurasi API AI (Google Gemini / Ollama).
+After visiting `http://localhost:3000/admin` and logging in (email + WebAuthn passkey), you can access:
+- **Server & Security Monitor:** 2GB RAM monitor, CPU usage, and indexed-document stats (30+ base documents).
+- **Web Terminal:** Run server commands directly (e.g. `git status`, `uptime`, `npm test`).
+- **Add Web Crawl:** Enter a URL to crawl and index new content immediately.
+- **Ads (Google & MS):** Google AdSense and Microsoft Advertising Publisher ID settings.
+- **UI & Custom Theme:** Change the site title, dark/light logo, background mode, and theme colors.
+- **Articles & Blog:** Write and publish new articles.
+- **AI Engine & Writer:** Configure the AI API (Google Gemini / Ollama).
 
 ---
 
-## 📢 3. Pengesahan Iklan (`ads.txt`)
+## 📢 3. Ad Verification (`ads.txt`)
 
-Fail [ads.txt](file:///home/fevian/AndroidStudioProjects/tukuk-os-v2/public/ads.txt) di direktori `public/` mengandungi autorisasi rasmi untuk:
+The [ads.txt](file:///home/fevian/AndroidStudioProjects/tukuk-os-v2/public/ads.txt) file in the `public/` directory contains the official authorizations for:
 - **Google AdSense:** `pub-8954948214333501`
 - **Microsoft Advertising:** `100001`
 
 ---
 
-## 💿 4. Pembinaan ISO Pelayan (Turnkey ISO untuk 2GB RAM)
+## 💿 4. Server ISO Build (Turnkey ISO for 2GB RAM)
 
-Untuk membina imej ISO but autonomi (Ubuntu 24.04 LTS Autoinstall dengan ZRAM & Node.js):
+To build a self-booting ISO image (Ubuntu 24.04 LTS Autoinstall with ZRAM & Node.js):
 ```bash
 sudo ./deploy/build-iso.sh
 ```
-* **Hasil:** `/tmp/tukuk-os-server-24.04.iso` (bakar ke USB menggunakan Rufus / BalenaEtcher).
-* **ZRAM Swap:** Dikonfigurasikan automatik pada pelayan (75% mampatan ZRAM) supaya pelayan 2GB RAM berjalan sangat lancar tanpa *crash*.
-* ⚠️ **Amaran:** langkah `late-commands` dalam autoinstall *clone* repo **private** → akan gagal tanpa GitHub token. Untuk mesin baru, **guna laluan USB di §5** (lebih mudah, tiada auth diperlukan).
+* **Output:** `/tmp/tukuk-os-server-24.04.iso` (burn to USB with Rufus / BalenaEtcher).
+* **ZRAM Swap:** Configured automatically on the server (75% ZRAM compression) so a 2GB RAM server runs very smoothly without *crashes*.
+* ⚠️ **Warning:** the `late-commands` step in the autoinstall *clones* the **private** repo → it will fail without a GitHub token. For a new machine, **use the USB path in §5** (easier, no auth needed).
 
 ---
 
-## 🌐 5. Deployment Pelayan & Cloudflare Tunnel
+## 🌐 5. Server Deployment & Cloudflare Tunnel
 
-0. **Install dari USB (paling mudah untuk server baru — tiada auth GitHub diperlukan):**
-   Repo kini **private**, jadi `git clone` di mesin baru perlu SSH key/PAT. Sebagai ganti, bawa kod pada USB dan biarkan server hanya guna internet untuk `npm install`:
+0. **Install from USB (easiest for a new server — no GitHub auth needed):**
+   The repo is now **private**, so `git clone` on a new machine needs an SSH key/PAT. Instead, carry the code on a USB and let the server use the internet only for `npm install`:
    ```bash
-   # (i) Di mesin dev — salin repo ke USB (tanpa node_modules):
+   # (i) On the dev machine — copy the repo to the USB (without node_modules):
    rsync -a --exclude node_modules --exclude meili_data --exclude .wrangler \
          ./  /media/$USER/USB/tukuk-os/
 
-   # (ii) Di SERVER — salin dari USB & jalankan SATU skrip:
+   # (ii) On the SERVER — copy from the USB & run ONE script:
    cp -r /media/$USER/USB/tukuk-os /tmp/tukuk-os
-   sudo bash /tmp/tukuk-os/scripts/install-from-usb.sh   # atau: npm run usb
+   sudo bash /tmp/tukuk-os/scripts/install-from-usb.sh   # or: npm run usb
    ```
-   Skrip menyalin ke `/opt/tukuk-os`, jana `.env` daripada `deploy/env.defaults`, dan panggil `setup-all.sh` (Node→Meili→servis→tunnel). **Server mesti ada internet** untuk langkah ini.
-   - **Offline penuh (tiada internet):** `TUKUK_KEEP_NODEMODULES=1 TUKUK_OFFLINE=1 sudo bash scripts/install-from-usb.sh` — tapi anda juga mesti bawa `node_modules` (dijana pada mesin online arch sama) + binary `node`/`cloudflared`/`meilisearch`, dan aktifkan servis systemd secara manual.
-   - **Tunnel & edge AUTOMATIK:** `deploy/env.defaults` kini sudah mengandungi `CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) dan `CLOUDFLARE_API_TOKEN` — jadi `setup-all.sh` terus hidupkan tunnel (mod TOKEN, tanpa fail `.json`) dan deploy worker/edge. **Tiada langkah manual diperlukan** pada server baru.
+   The script copies to `/opt/tukuk-os`, generates `.env` from `deploy/env.defaults`, and calls `setup-all.sh` (Node→Meili→services→tunnel). **The server must have internet** for this step.
+   - **Fully offline (no internet):** `TUKUK_KEEP_NODEMODULES=1 TUKUK_OFFLINE=1 sudo bash scripts/install-from-usb.sh` — but you must also carry `node_modules` (built on an online machine of the same arch) + the `node`/`cloudflared`/`meilisearch` binaries, and enable the systemd services manually.
+   - **Tunnel & edge AUTOMATIC:** `deploy/env.defaults` already contains `CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) and `CLOUDFLARE_API_TOKEN` — so `setup-all.sh` brings the tunnel up straight away (TOKEN mode, no `.json` files) and deploys the worker/edge. **No manual steps needed** on a new server.
 
-1. **Quick Install pada Ubuntu Server sedia ada (`192.168.8.100`):**
+1. **Quick Install on an existing Ubuntu Server (`192.168.8.100`):**
    ```bash
    sudo ./deploy/quick-install.sh
    ```
-2. **Cloudflare Tunnel (mod TOKEN — automatik, jangan create baru):**
-   Tunnel `tukuk-os-v2` (UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae`) sudah wujud & token tersimpan di `deploy/env.defaults`. `setup-all.sh` menulis `/etc/cloudflared/config.yml` (token + ingress `tukuk.org`/`www`/`dashboard`) dan unit systemd `--config ... tunnel run`. **DNS `tukuk.org`/`dashboard`/`www` sudah di-route.** Hanya perlu `sudo bash scripts/setup-all.sh` — jangan `tunnel create` baru.
+2. **Cloudflare Tunnel (TOKEN mode — automatic, do not create a new one):**
+   The tunnel `tukuk-os-v2` (UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae`) already exists & its token is stored in `deploy/env.defaults`. `setup-all.sh` writes `/etc/cloudflared/config.yml` (token + ingress `tukuk.org`/`www`/`dashboard`) and the systemd unit `--config ... tunnel run`. **DNS for `tukuk.org`/`dashboard`/`www` is already routed.** Just run `sudo bash scripts/setup-all.sh` — do NOT `tunnel create` a new one.
 
-3. **Auto-sync — `/opt/tukuk-os` kini `git clone` ASLI (deploy = push, bukan rsync):**
-   Skrip `scripts/setup-autosync.sh` menukarkan direktori pasang jadi repo git yang diautentik **SSH deploy key read-only** (`/root/.ssh/tukuk_deploy`, didaftarkan pada repo → hanya boleh `pull`, tiada token dalam URL, tiada login interaktif). Selepas itu **timer `tukuk-update.timer` (root, ~04:30)** yang dah sedia (dihidupkan `setup-all.sh` melainkan `GIT_AUTO_UPDATE=0`) betul-betul berfungsi:
+3. **Auto-sync — `/opt/tukuk-os` is now a REAL `git clone` (deploy = push, not rsync):**
+   The script `scripts/setup-autosync.sh` turns the install directory into a git repo authenticated with a **read-only SSH deploy key** (`/root/.ssh/tukuk_deploy`, registered on the repo → can only `pull`, no token in the URL, no interactive login). After that the existing **`tukuk-update.timer` (root, ~04:30)** (enabled by `setup-all.sh` unless `GIT_AUTO_UPDATE=0`) actually works:
    ```bash
-   # Kitaran auto (harian, root): fetch origin/main → merge --ff-only → npm install
-   sudo bash scripts/auto-update.sh          # atau: sudo systemctl start tukuk-update.service
-   npm run update                            # sama, tapi perlu root
+   # Automatic cycle (daily, root): fetch origin/main → merge --ff-only → npm install
+   sudo bash scripts/auto-update.sh          # or: sudo systemctl start tukuk-update.service
+   npm run update                            # same, but needs root
    ```
-   Aliran kerja baharu: **commit + push dari mesin dev → VPS self-pull** (cron, atau picu serta-merta di atas). `data/`, `.env`, `node_modules` TIDAK dilacak git (`.gitignore`) → `merge --ff-only` kekal bersih (working tree tak dicemari runtime). `git reset --hard origin/main` semasa setup mengekalkan fail untracked. ⚠️ **Jangan lagi rsync fail terlacak** ke `/opt/tukuk-os` — itu mencemarkan tree & `auto-update` akan `langkau` (demi keselamatan).
-   > **`auto-update.sh` kini cekap:** tiada commit baharu → keluar serta-merta; ada commit → `npm install` **hanya bila `package.json`/`package-lock.json` benar-benar berubah** (elak muat turun binary native berat seperti onnxruntime ~300MB yang boleh *hang* pada rangkaian perlahan), kemudian `systemctl restart tukuk-os` untuk muat kod baru. Jadi cron kata (`generated/`) & tukar kod/README **tidak** pernah pikul `npm install` harian.
+   New workflow: **commit + push from the dev machine → VPS self-pulls** (cron, or trigger it immediately as above). `data/`, `.env`, `node_modules` are NOT tracked by git (`.gitignore`) → `merge --ff-only` stays clean (working tree not polluted by runtime files). `git reset --hard origin/main` during setup keeps untracked files. ⚠️ **Do not rsync tracked files** into `/opt/tukuk-os` anymore — that dirties the tree and `auto-update` will `skip` (for safety).
+   > **`auto-update.sh` is now efficient:** no new commit → exits immediately; new commits → `npm install` **only when `package.json`/`package-lock.json` actually changed** (avoids downloading heavy native binaries like onnxruntime ~300MB that can *hang* on slow networks), then `systemctl restart tukuk-os` to load the new code. So the word cron (`generated/`) & code/README edits **never** carry a daily `npm install`.
 
 ---
 
-## 🧠 6. AI Sembang (Chat) — cara berfungsi & cara atur
+## 🧠 6. AI Chat (Ask) — how it works & how to configure
 
-Widget **"AI Sembang"** (💬 di sudut skrin pada `/`) memanggil `GET /ask?q=...`.
+The **"AI Chat"** widget (💬 at the corner of `/`) calls `GET /ask?q=...`.
 
-**Rantaian:** `/ask` (`src/server.js`) → `rag.ask()` (`src/brain/rag.js`) → `provider` (`src/brain/provider.js`).
+**Chain:** `/ask` (`src/server.js`) → `rag.ask()` (`src/brain/rag.js`) → `provider` (`src/brain/provider.js`).
 
-`provider.activeBackend()` auto-pilih backend (tiada Ollama/model wajib — sesuai **server CPU-only**):
-1. **Cloud LLM** (Gemini / OpenAI / Groq) — bila ada kunci. Server cuma buat 1 panggilan HTTP; pemprosesan di awan, CPU ≈ 0.
-2. **Ollama** lokal — bila `OLLAMA_HOST` (lalai `127.0.0.1:11434`) dapat dihubungi.
-3. **Jawapan ekstraktif** — kalau tiada kedua-duanya: kutip ayat paling relevan daripada hasil carian (`extractiveAnswer` di `src/brain/quality.js`). **0 model, 0 kos, sentiasa jalan.** (Lalai luar-kotak, sebab itu `Tiada jawapan` tidak lagi berlaku.)
+`provider.activeBackend()` picks a backend automatically (no Ollama/model required — suits a **CPU-only server**):
+1. **Cloud LLM** (Gemini / OpenAI / Groq) — when a key exists. The server makes just 1 HTTP call; processing happens in the cloud, CPU ≈ 0.
+2. **Local Ollama** — when `OLLAMA_HOST` (default `127.0.0.1:11434`) is reachable.
+3. **Extractive answer** — if neither exists: quotes the most relevant sentences from the search results (`extractiveAnswer` in `src/brain/quality.js`). **0 models, 0 cost, always on.** (Out-of-the-box default, which is why `No answer` no longer happens.)
 
-Soalan kendiri ("apa itu tukuk-os", "endpoint", dll.) dijawab dari pengetahuan tetap (`src/brain/knowledge.js`) tanpa LLM.
+Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered from fixed knowledge (`src/brain/knowledge.js`) without an LLM.
 
-**Cara atur cloud (pilih satu, kemudian restart `node index.js`):**
-- **Admin → AI Settings:** `aiProvider=gemini`, `aiApiKey=<kunci Anda>`, `aiModel=gemini-2.5-flash`; **atau**
-- **env:** `GEMINI_API_KEY=...` (juga `GROQ_API_KEY`, `OPENAI_API_KEY`). Letak di `deploy/env.defaults` (repo private) supaya `npm install` auto-provision.
+**How to configure the cloud (pick one, then restart `node index.js`):**
+- **Admin → AI Settings:** `aiProvider=gemini`, `aiApiKey=<your key>`, `aiModel=gemini-2.5-flash`; **or**
+- **env:** `GEMINI_API_KEY=...` (also `GROQ_API_KEY`, `OPENAI_API_KEY`). Put it in `deploy/env.defaults` (private repo) so `npm install` auto-provisions.
 
-**Semak / uji:** `GET /brain` → `provider` (`gemini|groq|openai|ollama|extractive`) & `online`; `GET /ask?q=soalan`.
+**Check / test:** `GET /brain` → `provider` (`gemini|groq|openai|ollama|extractive`) & `online`; `GET /ask?q=question`.
 
-**Flag:** `BRAIN_ENABLED=false` lumpuhkan `/ask` (503). `BRAIN_FAST_MODE=true` (lalai) + Ollama → ekstraktif serta-merta (langkau LLM). `LLM_CHAIN` = failover Ollama.
+**Flags:** `BRAIN_ENABLED=false` disables `/ask` (503). `BRAIN_FAST_MODE=true` (default) + Ollama → extractive immediately (skips the LLM). `LLM_CHAIN` = Ollama failover.
 
-**Internasional (semua bahasa):** `/ask` menjawab dalam bahasa soalan pada SEMUA tingkat, bukan sahaja Melayu/English:
-- Kelas tinggi (LLM): arahan prompt "SAME LANGUAGE as the QUESTION" (bahasa-agnostic).
-- Lantai rendah (fallback tanpa LLM): `src/lang.js` → `detectLocale()` kesan skrip (CJK/Jepun/Korea/Arab/Cyrillic/Devanagari/Thai/Latin-hint) + `t()` menyediakan rangkataan penolakan/senarai web/label sumber dalam 15 bahasa (en ms id ja ko zh ru ar hi bn th fr de es pt).
-- Pemotongan ayat & tokenisasi Unicode-sedar (`splitSentencesUnicode`, `tokenizeQuery`): `。！？`/`।॥`/`ฯ` dipotong betul; skrip tanpa-ruang (CJK) ditokenkan aksara demi aksara dengan ambang isEcho/skor berasingan.
-- Carian web: `looksRelevant` tidak lagi buang aksara bukan-Latin; Bing TIDAK dipaksa `setmkt=en-us` untuk query bukan Inggeris (elak decoy); Wikipedia dicari pada domain bahasa soalan (`ja.wikipedia.org` dll.).
-
----
-
-## 🎛 7. Tukuk Studio (suite alat dalam pelayar, tanpa upload)
-
-- **`/editor`** (`public/editor.html`) — editor **IMEJ** penuh: penapis + suhu/vignette/grain; **Pintar**: 🪄 auto-perbaik (imbangan putih gray-world + tahap auto), 🎚 lengkung (curves titik boleh seret + pra-set), 📊 histogram RGB+tono masa nyata; 💧 terkan air teks berulang (saiz/ketaksaan/sudut/jarak); anotasi bentuk (pen/garis/panah/segiti empat/elips + togol isi) + outline teks; berus; stiker emoji; lurus (straighten), tajamkan (konvolusi), mosaik; crop nisbah; bingkai; resize; teks boleh seret; bucu bulat + **topeng bentuk bulat/oval**; **kualiti JPG boleh laras**; batch; simpan/buka **projek .json (v3, + shape/outline)**; undo/redo. Semua client-side.
-- **`/editor-video`** (`public/editor-video.html`) — editor **VIDEO**: trim In/Out, penapis + vignette, putar/flip, nisbah aspek (1:1/16:9/9:16/4:5/4:3), kelajuan, kapsyen; **snapshot PNG** bingkai & **eksport WebM** (`canvas.captureStream` + `MediaRecorder`, rakaman **masa nyata**). Hanya fail **lokal** (URL luar mencemari canvas → eksport gagal).
-- **`/cari`** — halaman **HASIL** carian (SPA `index.html` yang sama pada URL berasingan). Permukaan **KOSONG iklan** (patuh dasar AdSense); **`/`** = dashboard kandungan original (layak iklan).
-- **`/cc?q=...`** — API carian aset **Creative Commons** (Wikimedia Commons, tiada kunci) → `{title,thumb,full,license,author}`; dipaparkan pada tab **"🧩 CC Aset"** dan boleh terus dibuka di `/editor?img=`.
-- **`/api/image?url=`** — proksi imej **same-origin** supaya canvas tidak "tainted" (penting untuk eksport/lightbox/edit gambar luar).
-- **`studio.html`** = hub alat; tile paparan ada pada dashboard `/`.
-- **`/store`** (`public/store.html`) — **Tukuk Store**: katalog aplikasi & game dari **4 sumber** (`GET /api/store` → `storeCatalog()`): **🏠 Bawaan** (app mini `public/apps/*.html` — hanya yang failnya benar-benar wujud, `storeBawaan()`), **⚡ Satu Kata** (pasangan app+game dari `generated/manifest.json`, cache ikut mtime, `storeSatuKata()`), **🕹️ Arked** (templat game Pembina → pautan `/builder?tpl=<nama>`; Pembina muat templat & terus ke Mod Cuba) dan **👥 Komuniti** (terbitan `/a/<slug>`). Tab **Semua / Aplikasi / Game** + penapis sumber + carian + susun (terbaharu / paling dilihat / A–Z), kiraan **dilihat** (`publish-views.json`, debounce 5s pada hit `/a/<slug>`), `Cache-Control: public, max-age=30`. Kategori `kind` dihantar Pembina semasa terbit (`inferKind()`: kanvas hanya game → `game`; fallback klasik = regex tajuk `GAME_TITLE_RE`) dan disimpan dalam `.meta.json`. Item komuniti dibuka dalam sandbox `/a/<slug>`.
+**International (all languages):** `/ask` answers in the language of the question at ALL layers, not just Malay/English:
+- High class (LLM): prompt instruction "SAME LANGUAGE as the QUESTION" (language-agnostic).
+- Low floor (no-LLM fallback): `src/lang.js` → `detectLocale()` detects script (CJK/Japanese/Korean/Arabic/Cyrillic/Devanagari/Thai/Latin-hint) + `t()` provides refusal/web-list/source-label strings in 15 languages (en ms id ja ko zh ru ar hi bn th fr de es pt).
+- Sentence cutting & Unicode-aware tokenization (`splitSentencesUnicode`, `tokenizeQuery`): `。！？`/`।॥`/`ฯ` cut correctly; space-less scripts (CJK) are tokenized character by character with separate isEcho/score thresholds.
+- Web search: `looksRelevant` no longer drops non-Latin characters; Bing is NOT forced to `setmkt=en-us` for non-English queries (avoids decoys); Wikipedia is searched on the query language's domain (`ja.wikipedia.org` etc.).
 
 ---
 
-## 💬 7½. T Chat — meshenjer multi-pengguna + aplikasi silang-OS
+## 🎛 7. Tukuk Studio (in-browser tool suite, no upload)
 
-**T Chat** (dulu "Tukuk Chat") = meshenjer sebenar dalam pelayar, bukan demo setempat. Back-end `src/chat.js` (`mount(app)` dipanggil `src/server.js`); klien satu-fail `public/apps/chat.html`; stor JSON (`generated`/`data` — `chat.json`), sesi **Bearer token di localStorage** (tiada cookie → origin terasing). UI & logo brand **"T Chat"** / **"TukuCaller™"** — jangan guna nama pihak ketiga.
-
-- **Asas:** daftar cukup nama + kata laluan → **Tukuk ID** numerik kekal (`/api/whoami`); DM/kumpulan/bilik umum, mesej teks + gambar/video/fail (📎, dimampat client-side), mesej suara (MediaRecorder), reply/forward/reaction/edit, carian dalam mesej, baca-selesai, taip-taip, sekat/buka, senarai kawan (ikut ID), stiker, undian, wallpaper & bunyi, mod jimat data 2G/3G + peti keluar luar-talian.
-- **Panggilan WebRTC:** video/suara P2P dalam DM dengan isyarat **TURN/ICE** dari pelayan; skrin masuk papar pengenalanan pemanggil gaya **TukuCaller** (nama, ID, kawan?) sebelum jawab; **mod prank** (`🎭`) — panggilan masuk palsu penuh-skrin, jalan walau luar-talian.
-- **Lapisan sosial (`📰` Suapan):** post + komen + like + **repost/petik (♻️ gaya X)** + tag boleh tapis; **cerita 24 jam** (`📕`); **status (mood sementara)** — emoji + teks ≤80 aksara dengan **TTL boleh pilih** (`STATUS_TTL`: 30 min…7 hari/kekal; `setStatus`/`effStatus` di `src/chat.js`) dipapar pada profil sendiri, profil orang, senarai kawan & komposer, luput sendiri (klien kira detik 60s); peristiwa SSE `social/kind:status` ke pengikut + diri. Rate-limit `lim(...)` setiap tulis.
-- **Domain khas `tchat.tukuk.org`** (`2e4b400`): gerbang hostname di `src/server.js` (`TCHAT_HOST`/`TCHAT_ALLOWED`/`CSP_TCHAT`) — hanya aset T Chat dilaluan, CSP ketat (tiada iklan/analitik, `frame-ancestors 'none'`), `X-Robots-Tag: noindex`, selainnya 302 → `tukuk.org`. ⚠️ Tunnel **mod TOKEN** mengabaikan `ingress:` setempat → hostname baru perlu ditambah di **dashboard Zero Trust** (lihat `.env.example` + `deploy/cloudflared/config.yml`).
-- **Aplikasi silang-OS:** APK WebView native **beta** (`public/downloads/tukuk-chat.apk`, ±65 KB, auto-dapat ciri baru tanpa build semula — dibina `scripts/build-apk.sh` tanpa Gradle); PWA (`manifest.json`/`manifest-chat.json` + `sw.js`). **Halaman `/download`** (`public/download.html`, URL bersih §8) = satu butang **auto-pilih ikut OS** pelawat: APK terus (Android/Huawei/ChromeOS), PWA `beforeinstallprompt` (Windows/Linux/macOS), atau arahan *Add to Home Screen* (iOS) + QR/pautan kongsi. Pautan ada di `/apps`, tile `/`, dan ⚙️ → Aplikasi. Versi **stabil** belum dikeluarkan (ikut arahan pengguna: beta dulu).
-- **Sandaran:** `deploy/chat-backup.service` + timer (R2 snapshot `scripts/backup-chat.sh`; `User=tukuk` supaya `$HOME` tak unbound).
-- **Google Play:** apl baru wajib **AAB** + **target SDK 36** (mulai 31 Ogo 2026). Manifest `apk/app/AndroidManifest.xml` sudah diset (code 2, target 36); `scripts/build-apk.sh` juga jana `.aab` bila `bundletool` ada; salinan stor EN+MS di `fastlane/metadata/android/`. Runbook penuh + pagar akaun (bayaran USD 25, Play App Signing, borang Console): **`PLAYSTORE.md`**. Rilis disyorkan bermula **Internal testing** (selaras dasar beta-dulu).
+- **`/editor`** (`public/editor.html`) — full **IMAGE** editor: filters + temperature/vignette/grain; **Smart**: 🪄 auto-fix (gray-world white balance + auto levels), 🎚 curves (draggable point curves + presets), 📊 live RGB+tonal histogram; 💧 repeating text water-mark (size/opacity/angle/spacing); shape annotations (pen/line/arrow/rectangle/ellipse + fill toggle) + text outline; brush; emoji stickers; straighten, sharpen (convolution), mosaic; ratio crop; frames; resize; draggable text; rounded corners + **round/oval shape masks**; adjustable **JPG quality**; batch; save/open **.json projects (v3, + shape/outline)**; undo/redo. All client-side.
+- **`/editor-video`** (`public/editor-video.html`) — **VIDEO** editor: In/Out trim, filters + vignette, rotate/flip, aspect ratios (1:1/16:9/9:16/4:5/4:3), speed, captions; **PNG snapshot** of a frame & **WebM export** (`canvas.captureStream` + `MediaRecorder`, **real-time** recording). **Local** files only (external URLs taint the canvas → export fails).
+- **`/cari`** — search **RESULTS** page (the same SPA `index.html` on a separate URL). **AD-FREE** surface (AdSense policy compliant); **`/`** = the original content dashboard (ad-worthy).
+- **`/cc?q=...`** — **Creative Commons** asset search API (Wikimedia Commons, no key) → `{title,thumb,full,license,author}`; shown in the **"🧩 CC Assets"** tab and can be opened directly in `/editor?img=`.
+- **`/api/image?url=`** — **same-origin** image proxy so the canvas is not "tainted" (important for export/lightbox/editing external images).
+- **`studio.html`** = tool hub; display tiles live on the `/` dashboard.
+- **`/store`** (`public/store.html`) — **Tukuk Store**: catalog of apps & games from **4 sources** (`GET /api/store` → `storeCatalog()`): **🏠 Built-in** (mini apps `public/apps/*.html` — only ones whose files actually exist, `storeBawaan()`), **⚡ Satu Kata** (app+game pairs from `generated/manifest.json`, cached by mtime, `storeSatuKata()`), **🕹️ Arcade** (Builder game templates → `/builder?tpl=<name>` links; the Builder loads the template straight into Try mode) and **👥 Community** (`/a/<slug>` publications). Tabs **All / Apps / Games** + source filter + search + sort (newest / most viewed / A–Z), **view** counts (`publish-views.json`, 5s debounce on `/a/<slug>` hits), `Cache-Control: public, max-age=30`. The `kind` category is sent by the Builder on publish (`inferKind()`: canvas-only game → `game`; classic fallback = title regex `GAME_TITLE_RE`) and stored in `.meta.json`. Community items open in the `/a/<slug>` sandbox.
 
 ---
 
-## 🧩 8. Nota Penyelenggaraan (untuk anda & AI yang edit kod ini nanti) — PENTING
+## 💬 7½. T Chat — multi-user messenger + cross-OS app
 
-- **Route Express = dalam memori.** Selepas ubah `src/server.js` (tambah laluan/`STATIC_PAGES`) → **WAJIB restart** `node index.js`. Jika tidak: `public/*.html` nampak sudah berubah (dibaca setiap request), tetapi laluan baru beri **404**.
-- **URL bersih halaman statik** didaftar melalui `STATIC_PAGES` (`src/server.js` ~L114): tambah nama (tanpa `.html`) → `/nama` serve `public/nama.html`.
-- **Setup satu perintah:** `npm install` → `scripts/setup-all.sh` (postinstall) auto-jana `.env` daripada `deploy/env.defaults`, pasang perkhidmatan & tunnel. Repo **private** → kunci boleh tinggal di `deploy/env.defaults`.
-- **Admin** = e-mel + **WebAuthn passkey** (bukan PIN). `ADMIN_EMAIL=fevianbenjo48@gmail.com`. WebAuthn hanya jalan atas **HTTPS** atau `localhost`.
-- **Bahasa:** UI **Melayu**; komen kod & penjelasan ikut harness (English). Kekal konsisten.
-- **Aset & iklan:** utamakan aset berlesen **CC**; **jangan** letak iklan pada halaman hasil carian pihak ketiga (`/cari`).
-- **Semak sintaks JS dalam HTML:** `awk '/<script>/{f=1;next}/</script>/{f=0} f' public/FILE.html > /tmp/x.js && node --check /tmp/x.js`.
-- **Git:** jangan commit/push tanpa arahan pengguna. (Setakat ini semua kerja Studio/AI/video-fix **sudah di-commit & push** ke `origin/main`.)
-- **CSP dua lapis: ENFORCED (struktur sahaja) + REPORT-ONLY (ketat penuh)** (`src/server.js`: `Content-Security-Policy-Report-Only` + endpoint `POST /csp-report`). Yang DIPAKSA sekarang = direktif struktur SAHAJA (`frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self';`) — sengaja TIDAK sertakan `default-src`/`script-src`/`style-src` supaya AdSense + inline `<script>` + `style=` TIDAK pecah, namun tetap sekat clickjacking & sisipan `<base>`/`<object>`/form luar. Dasar ketat penuh kekal REPORT-ONLY (`POST /csp-report`) sebab `index.html` ada satu `<script>` inline besar + 62 `style="…"` — `unsafe-inline` perlu dikekalkan. **Untuk enforce kelak:** ekstrak skrip inline → fail luar (`/app.js`) + nonce/hash, baru tukar header `...-Report-Only` → `Content-Security-Policy` dan buang `unsafe-inline`. SelONGgok pelanggaran masuk ke log (`CSP_REPORTS=0` utk mati). Header asal (`X-Frame-Options`, `nosniff`, HSTS, COOP, Referrer-Policy) masih DIPAKSA. **ENFORCE PENUH (script-src 'self' tanpa unsafe-inline/unsafe-eval) kini aktif** untuk halaman statik yang terbukti bersih: `/about`, `/privacy`, `/terms`, `/docs`, `/access` (+ alias BM `tentang`/`terma`/`privasi`/`dokumen`) — lihat `CSP_STRICT_PAGES`/`CSP_STRICT` di `src/server.js`. Halaman interaktif (`/`, `/apps`, `/nasa`, `/editor`, `/studio`) sengaja KEKAL struktur+report-only sahaja kerana ada `<script>` inline besar, handler inline, dan `new Function` (boleh rosak senyap tanpa QA pelayar).
-- **Dependabot:** `.github/dependabot.yml` — npm (akar + `cloudflare-worker/tukuk-fallback`) + github-actions, mingguan (Sel 03:45 MYT), minor/patch digrup, major manual, PR terhad.
-- **`public/llms.txt`:** ringkasan mesra-agen (disediakan statik di `/llms.txt`) — kemas kini bila tambah buang API/halaman besar.
+**T Chat** (formerly "Tukuk Chat") = a real messenger in the browser, not a local demo. Back end `src/chat.js` (`mount(app)` called from `src/server.js`); single-file client `public/apps/chat.html`; JSON storage (`generated`/`data` — `chat.json`), sessions are **Bearer tokens in localStorage** (no cookies → isolated origins). UI & logo brand **"T Chat"** / **"TukuCaller™"** — do not use third-party names.
+
+- **Basics:** register with just name + password → permanent numeric **Tukuk ID** (`/api/whoami`); DM/groups/public rooms, text messages + images/video/files (📎, compressed client-side), voice messages (MediaRecorder), reply/forward/reaction/edit, in-message search, read receipts, typing, block/unblock, friend list (by ID), stickers, polls, wallpaper & sounds, 2G/3G data-saver mode + offline outbox.
+- **WebRTC calls:** P2P video/voice in DMs with **TURN/ICE** signaling from the server; the incoming screen shows **TukuCaller**-style caller ID (name, ID, friend?) before answering; **prank mode** (`🎭`) — a full-screen fake incoming call, works even offline.
+- **Social layer (`📰` Feed):** posts + comments + likes + **repost/quote (X-style ♻️)** + filterable tags; **24-hour stories** (`📕`); **status (temporary mood)** — emoji + text ≤80 chars with a **selectable TTL** (`STATUS_TTL`: 30 min…7 days/forever; `setStatus`/`effStatus` in `src/chat.js`) shown on your own profile, others' profiles, the friend list & the composer, expiring automatically (client 60s tick); SSE events `social/kind:status` to followers + self. Rate limit `lim(...)` on every write.
+- **Dedicated domain `tchat.tukuk.org`** (`2e4b400`): hostname gateway in `src/server.js` (`TCHAT_HOST`/`TCHAT_ALLOWED`/`CSP_TCHAT`) — only T Chat assets are routed, strict CSP (no ads/analytics, `frame-ancestors 'none'`), `X-Robots-Tag: noindex`, everything else 302 → `tukuk.org`. ⚠️ **TOKEN-mode** tunnels ignore the local `ingress:` → new hostnames must be added in the **Zero Trust dashboard** (see `.env.example` + `deploy/cloudflared/config.yml`).
+- **Cross-OS app:** native WebView APK **beta** (`public/downloads/tukuk-chat.apk`, ±65 KB, gains new features automatically without a rebuild — built by `scripts/build-apk.sh` without Gradle); PWA (`manifest.json`/`manifest-chat.json` + `sw.js`). **The `/download` page** (`public/download.html`, clean URLs §8) = one button **auto-picked by the visitor's OS**: direct APK (Android/Huawei/ChromeOS), PWA `beforeinstallprompt` (Windows/Linux/macOS), or *Add to Home Screen* instructions (iOS) + QR/share link. Links are on `/apps`, the `/` tile, and ⚙️ → Apps. A **stable** version has not been released yet (per user instruction: beta first).
+- **Backups:** `deploy/chat-backup.service` + timer (R2 snapshot `scripts/backup-chat.sh`; `User=tukuk` so `$HOME` is not unbound).
+- **Google Play:** new apps require an **AAB** + **target SDK 36** (from Aug 31, 2026). The manifest `apk/app/AndroidManifest.xml` is already set (code 2, target 36); `scripts/build-apk.sh` also produces a `.aab` when `bundletool` exists; store copy EN in `fastlane/metadata/android/`. Full runbook + account gates (USD 25 fee, Play App Signing, Console forms): **`PLAYSTORE.md`**. Recommended release starts with **Internal testing** (consistent with the beta-first policy).
 
 ---
 
-## ☁️ 9. Cloudflare — Fakta, Audit & Peraturan (JANGAN rombak buta)
+## 🧩 8. Maintenance Notes (for you & any AI editing this code later) — IMPORTANT
 
-**Zon:** `tukuk.org` · **Plan:** *Free Website* (Cloudflare Free) · **Node bind:** `127.0.0.1:3000` (loopback-only → awam HANYA melalui tunnel).
+- **Express routes = in memory.** After editing `src/server.js` (adding a path/`STATIC_PAGES`) → **MUST restart** `node index.js`. Otherwise: `public/*.html` looks changed already (read on every request), but the new route gives **404**.
+- **Clean URLs for static pages** are registered through `STATIC_PAGES` (`src/server.js` ~L114): add a name (without `.html`) → `/name` serves `public/name.html`.
+- **One-command setup:** `npm install` → `scripts/setup-all.sh` (postinstall) auto-generates `.env` from `deploy/env.defaults`, installs services & the tunnel. Repo is **private** → keys can live in `deploy/env.defaults`.
+- **Admin** = email + **WebAuthn passkey** (not a PIN). `ADMIN_EMAIL=fevianbenjo48@gmail.com`. WebAuthn only works over **HTTPS** or `localhost`.
+- **Language:** UI is **English** (the site is English-only by owner decision); code comments and docs follow the harness (English). Stay consistent.
+- **Assets & ads:** prefer **CC**-licensed assets; do **not** place ads on third-party search result pages (`/cari`).
+- **Check JS syntax inside HTML:** `awk '/<script>/{f=1;next}/</script>/{f=0} f' public/FILE.html > /tmp/x.js && node --check /tmp/x.js`.
+- **Git:** never commit/push without user instruction. (So far all Studio/AI/video-fix work **has been committed & pushed** to `origin/main`.)
+- **Two-layer CSP: ENFORCED (structure only) + REPORT-ONLY (fully strict)** (`src/server.js`: `Content-Security-Policy-Report-Only` + endpoint `POST /csp-report`). What is ENFORCED today = structural directives ONLY (`frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self';`) — deliberately WITHOUT `default-src`/`script-src`/`style-src` so AdSense + inline `<script>` + `style=` do NOT break, while still blocking clickjacking & external `<base>`/`<object>`/form injection. The fully strict policy stays REPORT-ONLY (`POST /csp-report`) because `index.html` has one big inline `<script>` + 62 `style="…"` — `unsafe-inline` must remain. **To enforce later:** extract inline scripts → external files (`/app.js`) + nonce/hash, then switch the `...-Report-Only` header → `Content-Security-Policy` and drop `unsafe-inline`. Violation reports accumulate in logs (`CSP_REPORTS=0` to disable). The original headers (`X-Frame-Options`, `nosniff`, HSTS, COOP, Referrer-Policy) are still ENFORCED. **FULL ENFORCEMENT (script-src 'self' without unsafe-inline/unsafe-eval) is now active** for proven-clean static pages: `/about`, `/privacy`, `/terms`, `/docs`, `/access` (+ legacy aliases `tentang`/`terma`/`privasi`/`dokumen`) — see `CSP_STRICT_PAGES`/`CSP_STRICT` in `src/server.js`. Interactive pages (`/`, `/apps`, `/nasa`, `/editor`, `/studio`) deliberately stay structure+report-only because they have big inline `<script>`s, inline handlers, and `new Function` (could silently break without browser QA).
+- **Dependabot:** `.github/dependabot.yml` — npm (root + `cloudflare-worker/tukuk-fallback`) + github-actions, weekly (Tue 03:45 MYT), minor/patch grouped, major manual, limited PRs.
+- **`public/llms.txt`:** agent-friendly summary (served statically at `/llms.txt`) — update when adding/removing big APIs/pages.
 
-**Tunnel (SATU sahaja kini):** `tukuk-os-v2` · UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae` · **mod TOKEN** (tiada fail `.json`).
-- Token = `cloudflared tunnel token 87e7e77f…` (guna `~/.cloudflared/cert.pem`). Sudah disimpan dalam `deploy/env.defaults` (`CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID`).
-- `/etc/cloudflared/config.yml` ditulis `setup-all.sh` (token + ingress) + unit systemd `--config … tunnel run`. **`cloudflared service install` TOLAK config `token:`** — itu sebab unit ditulis terus.
-- **JANGAN `tunnel create` baru.** Sediakan hostname baru = tambah baris `ingress` di `deploy/cloudflared/config.yml` + `cloudflared tunnel route dns tukuk-os-v2 <subdomain>`.
+---
 
-**Inventori DNS & maksudnya (13 rekaman):**
-| Rekaman | Untuk | Padam? |
+## ☁️ 9. Cloudflare — Facts, Audit & Rules (DO NOT blindly revamp)
+
+**Zone:** `tukuk.org` · **Plan:** *Free Website* (Cloudflare Free) · **Node bind:** `127.0.0.1:3000` (loopback-only → public access ONLY through the tunnel).
+
+**Tunnel (ONE only now):** `tukuk-os-v2` · UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae` · **TOKEN mode** (no `.json` files).
+- Token = `cloudflared tunnel token 87e7e77f…` (uses `~/.cloudflared/cert.pem`). Already stored in `deploy/env.defaults` (`CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID`).
+- `/etc/cloudflared/config.yml` is written by `setup-all.sh` (token + ingress) + the systemd unit `--config … tunnel run`. **`cloudflared service install` REJECTS `token:` configs** — that is why the unit is written directly.
+- **Do NOT `tunnel create` a new one.** To serve a new hostname = add an `ingress` line in `deploy/cloudflared/config.yml` + `cloudflared tunnel route dns tukuk-os-v2 <subdomain>`.
+
+**DNS inventory & meaning (13 records):**
+| Record | For | Delete? |
 |---|---|---|
-| `CNAME @ (tukuk.org) → 87e7e77f…cfargotunnel` (proxy) | Situs utama | ❌ JANGAN |
-| `CNAME dashboard → 87e7e77f…` (proxy) | Panel/admin | ❌ JANGAN |
-| `AAAA www → 100::` (proxy) | Fallback www (Worker edge) | ❌ JANGAN |
-| `MX ×3 → route1/2/3.mx.cloudflare.net` | E-mel Cloudflare Email Routing | ❌ JANGAN |
-| `TXT @ → v=spf1 include:_spf.mx.cloudflare.net` | SPF e-mel | ❌ JANGAN |
-| `TXT cf2024-1._domainkey` (DKIM) · `TXT _dmarc` | DKIM/DMARC e-mel | ❌ JANGAN |
-| `CAA @ → 0 issue "digicert.com"` | Benarkan cert Cloudflare | ❌ JANGAN |
-| `CNAME github/gitlab/bitbucket → *.com` (proxy) | Alias selesa (bukan perlu Tukuk-OS) | ⚠️ boleh padam jika tak guna |
+| `CNAME @ (tukuk.org) → 87e7e77f…cfargotunnel` (proxy) | Main site | ❌ NEVER |
+| `CNAME dashboard → 87e7e77f…` (proxy) | Panel/admin | ❌ NEVER |
+| `AAAA www → 100::` (proxy) | www fallback (edge Worker) | ❌ NEVER |
+| `MX ×3 → route1/2/3.mx.cloudflare.net` | Cloudflare Email Routing | ❌ NEVER |
+| `TXT @ → v=spf1 include:_spf.mx.cloudflare.net` | Email SPF | ❌ NEVER |
+| `TXT cf2024-1._domainkey` (DKIM) · `TXT _dmarc` | Email DKIM/DMARC | ❌ NEVER |
+| `CAA @ → 0 issue "digicert.com"` | Allow Cloudflare certs | ❌ NEVER |
+| `CNAME github/gitlab/bitbucket → *.com` (proxy) | Convenience aliases (not needed by Tukuk-OS) | ⚠️ can delete if unused |
 
-**Sudah dibersihkan (session ini) — jangan cuba hidupkan semula:** DNS `api.tukuk.org` & `mqtt.tukuk.org` (menunjuk tunnel mati → 530) **dipadam**; tunnel mati `5ee04cc8` (cloudflare-os), `b400ad84` (iot-audit), `168a53af` (tukuk-os) **dipadam**. Tinggal 1 tunnel aktif.
+**Already cleaned (this session) — do not try to re-enable:** DNS `api.tukuk.org` & `mqtt.tukuk.org` (pointing at a dead tunnel → 530) **deleted**; dead tunnels `5ee04cc8` (cloudflare-os), `b400ad84` (iot-audit), `168a53af` (tukuk-os) **deleted**. Only 1 active tunnel remains.
 
-**Keselamatan:** `cert.pem` (`~/.cloudflared`) mengandungi `apiToken` `cfut_…` — **JANGAN commit**; keizinan 600 sahaja. Token API juga tersimpan di `deploy/env.defaults` (private) untuk auto-DNS/edge.
+**Security:** `cert.pem` (`~/.cloudflared`) contains an `apiToken` `cfut_…` — **never commit**; permissions 600 only. The API token is also kept in `deploy/env.defaults` (private) for auto-DNS/edge.
 
 ---
 
-## 🆓 10. Stack Percuma (Free Tier) — semua dah disambungkan
+## 🆓 10. Free Stack (Free Tier) — all already connected
 
-Tiada satu pun perlu dibayar untuk skala kecil. Ini senarai + tempat ia diset:
-| Perkhidmatan | Pelan percuma | Di mana / cara |
+None of it needs payment at small scale. Here is the list + where each is set:
+| Service | Free plan | Where / how |
 |---|---|---|
-| **Cloudflare DNS + Tunnel** | Free | Zon `tukuk.org`; tunnel `tukuk-os-v2` (mod token) |
-| **Cloudflare Workers** | 100k req/hari | `worker/` + `cloudflare-worker/tukuk-fallback` (cermin www) — deploy bila `CLOUDFLARE_API_TOKEN` ada |
-| **Cloudflare R2** | 10 GB simpan | Snapshot `scripts/snapshot-r2.sh` (timer 6 jam) — fail `scripts/r2.env` |
-| **Cloudflare Email Routing** | Free | MX/SPF/DKIM/DMARC aktif (hello@tukuk.org) |
-| **Cloudflare Zero Trust** | 50 pengguna free | Tunnel + akses; passkey admin |
-| **Meilisearch** | Open-source | Carian indeks (self-host, RAM rendah + ZRAM) |
-| **IndexNow** | Free (Bing/Yandex/DuckDuckGo) | `scripts/indexnow.sh` + kunci `public/bd8f0317….txt` |
-| **Google Search Console** | Free | Fail verifikasi `public/*.html` (bingbot dsb.) — daftar & submit `sitemap.xml` |
-| **Microsoft Clarity** | Free (analitik tanpa cookie) | Token pernah dikongsi — letak ID di Admin jika mahu rekod sesi |
+| **Cloudflare DNS + Tunnel** | Free | Zone `tukuk.org`; tunnel `tukuk-os-v2` (token mode) |
+| **Cloudflare Workers** | 100k req/day | `worker/` + `cloudflare-worker/tukuk-fallback` (www mirror) — deploys when `CLOUDFLARE_API_TOKEN` exists |
+| **Cloudflare R2** | 10 GB storage | Snapshots `scripts/snapshot-r2.sh` (6-hour timer) — file `scripts/r2.env` |
+| **Cloudflare Email Routing** | Free | MX/SPF/DKIM/DMARC active (hello@tukuk.org) |
+| **Cloudflare Zero Trust** | 50 users free | Tunnel + access; admin passkeys |
+| **Meilisearch** | Open-source | Index search (self-host, low RAM + ZRAM) |
+| **IndexNow** | Free (Bing/Yandex/DuckDuckGo) | `scripts/indexnow.sh` + key `public/bd8f0317….txt` |
+| **Google Search Console** | Free | Verification files `public/*.html` (bingbot etc.) — register & submit `sitemap.xml` |
+| **Microsoft Clarity** | Free (cookieless analytics) | Token once shared — put the ID in Admin if you want session recording |
 | **NASA APOD API** | Free (DEMO_KEY) | `src/nasa.js` / `public/nasa.html` |
-| **GitHub Actions** | 2,000 min/bln (private) · unlimited (public) | Otak cron + deploy `satu-kata` → `.github/workflows/satu-kata.yml` |
-| **GitLab CI** | ~400 min/bln | Mirror mingguan `satu-kata` → `.gitlab-ci.yml` |
-| **Cloudflare Pages** | Free (statis) | Hub app+game `tukuk-satu-kata` (`generated/public/`) — §12 |
-| **Google AdSense / Microsoft Ads** | Free (hasil) | `public/ads.txt` + `src/config.js:adsense` |
+| **GitHub Actions** | 2,000 min/mo (private) · unlimited (public) | Cron brain + `satu-kata` deploy → `.github/workflows/satu-kata.yml` |
+| **GitLab CI** | ~400 min/mo | Weekly `satu-kata` mirror → `.gitlab-ci.yml` |
+| **Cloudflare Pages** | Free (static) | App+game hub `tukuk-satu-kata` (`generated/public/`) — §12 |
+| **Google AdSense / Microsoft Ads** | Free (revenue) | `public/ads.txt` + `src/config.js:adsense` |
 
-**Semua ini lalai-lalai hidup sebaik `npm install`** kerana kunci tersimpan di `deploy/env.defaults` (repo private). Yang PERLU tindakan manual di dashboard (tak boleh auto): daftar Search Console, hantar AdSense, aktifkan Clarity tag.
-
----
-
-## 💰 11. Google AdSense — Status & Jawapan Jujur: "akan lulus?"
-
-**Infrastrukur SUDAH sedia (✓):**
-- `ads.txt` asli: `ca-pub-8954948214333501` + Microsoft.
-- `ADSENSE_ENABLED=true`, klien `ca-pub-8954948214333501` (`src/config.js`); slot dipasang **hanya pada halaman kandungan/blog** (`server.js:822`), **bukan** pada `/cari` (hasil carian) → patuh dasar (tiada iklan atas kandungan pihak ketiga).
-- `sitemap.xml` (route wujud), `robots.txt` betul (benarkan Googlebot/AdsBot), **48 artikel** asli (28 blog + 20 arkib), halaman Privacy/About/Contact/Terms ada, HTTPS, mesra-mobil.
-
-**Yang Google TETAPI nilai sendiri (✗ tak boleh dijamin oleh kod):**
-1. **Trafik organik asli** — perlu pelawat sebenar beberapa minggu. Site baru tanpa trafik kerap "Pending/Not ready".
-2. **Kandungan cukup & bukan salin** — 48 artikel baik, tapi pastikan tak duplicate/low-value; elakan halaman auto-jana tipis.
-3. **Navigasi jelas** — menu/pautan antara halaman (ada Studio/blog/about) mesti wujud.
-4. **Domain & sejarah** — `tukuk.org` matang + tiada penolakan sebelum ini membantu.
-5. **Slot iklan sejati** — kini `slotTop/InArticle/Bottom` sama (`2206273113` = placeholder). Lepas diluluskan, Jana **3 ad unit berbeza** di AdSense & letak ID masing-masing (atau biarkan auto).
-
-**Jawapan terus:** Peluang **BAIK** dari segi teknikal (semua syarat dasar utama sudah dipenuhi), tetapi **kelulusan tidak dijamin** — Google mahu trafik organik & usia/keaslian kandungan. **Langkah disyorkan:** (a) daftar Search Console + submit sitemap, kumpul beberapa trafik asli (IndieHackers/Reddit/produk anda), (b) pastikan pautan navigasi hidup, (c) baru mohon AdSense untuk `tukuk.org`. Jangan tampal kod AdSense sebelum akaun diluluskan (ini boleh trigger penolakan).
+**All of these come up automatically after `npm install`** because keys live in `deploy/env.defaults` (private repo). What NEEDS manual dashboard action (cannot be automated): register Search Console, submit to AdSense, enable the Clarity tag.
 
 ---
 
-## 🧩 12. Satu Kata — skills agent + CI/CD percuma (1 kata → app + game)
+## 💰 11. Google AdSense — Status & Honest Answer: "will it pass?"
 
-Ubah **satu kata** menjadi **satu web-app + satu web-game** yang siap live — **tanpa build step**. Pembinaan (generate) berjalan di runner percuma (GitHub Actions), jadi VPS tak dibebani *build*. **Hosting utama = terus dari tapak:** hub disajikan pada **`https://tukuk.org/satu-kata/`** (mount statik `generated/public` di `src/server.js`) — **tiada Cloudflare Pages atau token API diperlukan**. Cloudflare Pages (`tukuk-satu-kata`) hanya **pilihan/aksesori**.
+**Infrastructure ALREADY ready (✓):**
+- Real `ads.txt`: `ca-pub-8954948214333501` + Microsoft.
+- `ADSENSE_ENABLED=true`, client `ca-pub-8954948214333501` (`src/config.js`); slots placed **only on content/blog pages** (`server.js:822`), **not** on `/cari` (search results) → policy compliant (no ads on third-party content).
+- `sitemap.xml` (route exists), correct `robots.txt` (allows Googlebot/AdsBot), **48 original articles** (28 blog + 20 archive), Privacy/About/Contact/Terms pages present, HTTPS, mobile-friendly.
 
-**Cara guna:**
-- `node scripts/satu-kata/generate.mjs [kata] [--unity] [--dry]` — tulis `generated/public/<slug>/{app,game}/index.html`, kemas kini **hub** `generated/public/index.html` + `generated/manifest.json`.
-- **Skills agent:** `kilo satu-kata [kata]` — lihat `.kilo/command/satu-kata.md` (format sama dengan command Kilo lain).
-- Tiada kata diberi → auto-pilih kata **seterusnya** dalam `scripts/satu-kata/words.txt` yang belum ada di manifest (inilah yang cron guna setiap hari). Keluaran **idempotent** (slug → sama, kemas kini bukan duplikat).
-- App = **Preact+htm** (gaya React, HTML tunggal). Game = **Phaser** (canvas). Tema (palette + genre) **deterministik** daripada hash slug.
+**What Google still evaluates on its own (✗ code cannot guarantee):**
+1. **Real organic traffic** — needs actual visitors for a few weeks. New sites without traffic often land in "Pending/Not ready".
+2. **Enough content & not copied** — 48 articles is good, but avoid duplicate/low-value content; steer clear of thin auto-generated pages.
+3. **Clear navigation** — menus/links between pages (Studio/blog/about) must exist.
+4. **Domain & history** — a mature `tukuk.org` with no prior rejections helps.
+5. **Real ad slots** — currently `slotTop/InArticle/Bottom` are the same (`2206273113` = placeholder). After approval, create **3 distinct ad units** in AdSense & set their IDs (or leave them auto).
 
-**CI/CD — siapa buat apa:**
-| Peranan | Sumber (percuma) | Fail |
+**Straight answer:** **GOOD** odds technically (all major policy conditions are met), but **approval is not guaranteed** — Google wants organic traffic & content age/originality. **Recommended steps:** (a) register Search Console + submit the sitemap, gather some real traffic (IndieHackers/Reddit/your own products), (b) make sure navigation links work, (c) then apply for AdSense for `tukuk.org`. Do not paste AdSense code before the account is approved (it can trigger a rejection).
+
+---
+
+## 🧩 12. Satu Kata — agent skills + free CI/CD (1 word → app + game)
+
+Turn **one word** into **one web-app + one web-game** ready live — **with no build step**. Generation runs on a free runner (GitHub Actions), so the VPS is not burdened by *builds*. **Primary hosting = straight from the site:** the hub is served at **`https://tukuk.org/satu-kata/`** (static mount of `generated/public` in `src/server.js`) — **no Cloudflare Pages or API token needed**. Cloudflare Pages (`tukuk-satu-kata`) is only **optional/decorative**.
+
+**How to use:**
+- `node scripts/satu-kata/generate.mjs [word] [--unity] [--dry]` — writes `generated/public/<slug>/{app,game}/index.html`, updates the **hub** `generated/public/index.html` + `generated/manifest.json`.
+- **Agent skills:** `kilo satu-kata [word]` — see `.kilo/command/satu-kata.md` (same format as other Kilo commands).
+- No word given → auto-picks the **next** word in `scripts/satu-kata/words.txt` not yet in the manifest (this is what the cron runs daily). Output is **idempotent** (slug → same, updates rather than duplicates).
+- App = **Preact+htm** (React style, single HTML). Game = **Phaser** (canvas). Theme (palette + genre) is **deterministic** from a hash of the slug.
+
+**CI/CD — who does what:**
+| Role | Source (free) | File |
 |---|---|---|
-| Cron harian `03:15 MYT` + trigger manual | **GitHub Actions** | `.github/workflows/satu-kata.yml` |
-| Hosting + deploy | **utama: `tukuk.org/satu-kata`** (mount statik, tanpa token) · pilihan: Cloudflare Pages `tukuk-satu-kata` | `src/server.js` (`GENERATED_DIR`) |
-| Mirror mingguan (terhad) | **GitLab CI** (~400 min/bln → schedule-only, tak ubah state GitHub) | `.gitlab-ci.yml` |
-| Game "serius" (opt-in manual) | **Unity Cloud** | `scripts/satu-kata/templates/unity-GameMain.cs.tpl` |
+| Daily cron `03:15 MYT` + manual trigger | **GitHub Actions** | `.github/workflows/satu-kata.yml` |
+| Hosting + deploy | **primary: `tukuk.org/satu-kata`** (static mount, no token) · optional: Cloudflare Pages `tukuk-satu-kata` | `src/server.js` (`GENERATED_DIR`) |
+| Weekly mirror (limited) | **GitLab CI** (~400 min/mo → schedule-only, does not change GitHub state) | `.gitlab-ci.yml` |
+| "Serious" games (manual opt-in) | **Unity Cloud** | `scripts/satu-kata/templates/unity-GameMain.cs.tpl` |
 
-**Setup (sudah dibuat & disahkan hijau):** Secret `CLOUDFLARE_API_TOKEN` (token **bercakupan `Cloudflare Pages: Edit`**) + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`) sudah diset; **Workflow permissions = Read and write** sudah dihidupkan. Satu larian penuh (`workflow_dispatch`) berjaya: jana kata → **deploy Pages OK** → bot `git push` manifest semula ke `main`. cron harian `03:15 MYT` kini auto kemas kini **Cloudflare Pages (`tukuk-satu-kata.pages.dev`)** DAN commit kata seterusnya. Langkah Pages `continue-on-error: true` supaya cron kekal commit walaupun deploy Pages bermasalah. **Hosting utama `tukuk.org/satu-kata` tetap bebas-Token** (jalur kedua / redundancy). Workflow tak ada trigger `push` → tiada gelung CI. ⚠️ `generated/` (kata baharu tiap cron) kini sampai ke VPS secara **auto-git-pull** (`/opt/tukuk-os` sudah `git clone` — lihat §5#3): bot commit manifest → `tukuk-update.timer` tarik → hub `tukuk.org/satu-kata` kemas kini sendiri.
+**Setup (done & verified green):** Secrets `CLOUDFLARE_API_TOKEN` (a token scoped to **`Cloudflare Pages: Edit`**) + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`) are set; **Workflow permissions = Read and write** is enabled. One full run (`workflow_dispatch`) succeeded: generate word → **Pages deploy OK** → bot `git push`es the manifest back to `main`. The daily cron `03:15 MYT` now updates **Cloudflare Pages (`tukuk-satu-kata.pages.dev`)** AND commits the next word automatically. The Pages step is `continue-on-error: true` so the cron still commits even if the Pages deploy has trouble. **Primary hosting `tukuk.org/satu-kata` stays token-free** (second path / redundancy). The workflow has no `push` trigger → no CI loops. ⚠️ `generated/` (a new word each cron) reaches the VPS via **auto-git-pull** (`/opt/tukuk-os` is already a `git clone` — see §5#3): bot commits the manifest → `tukuk-update.timer` pulls → the `tukuk.org/satu-kata` hub updates itself.
 
-**Kenapa default bukan Unity:** Unity perlukan editor berlesen + build berat → tak sesuai untuk "1 hari 1 game" auto pada CI percuma tanpa membebankan server. Web (Phaser) = default auto; Unity kekal scaffold opt-in manual.
+**Why the default is not Unity:** Unity needs a licensed editor + heavy builds → unsuitable for "1 day 1 game" automation on free CI without burdening the server. Web (Phaser) = the automatic default; Unity stays a manual opt-in scaffold.
 
-**⚠️ Git gotcha:** push fail `.github/workflows/*` **kena** ada scope `workflow` — `gh auth refresh -h github.com -s workflow`; kalau tidak GitHub akan **reject** push (`refusing to allow an OAuth App to create or update workflow ... without workflow scope`).
+**⚠️ Git gotcha:** pushing `.github/workflows/*` files **requires** the `workflow` scope — `gh auth refresh -h github.com -s workflow`; otherwise GitHub will **reject** the push (`refusing to allow an OAuth App to create or update workflow ... without workflow scope`).
 
-**Susun kata:** sunting `scripts/satu-kata/words.txt` (`kata | emoji | tagline`). `generated/` di-commit (kecil; HTML sahaja) supaya CI tahu kata mana sudah guna.
+**Word ordering:** edit `scripts/satu-kata/words.txt` (`word | emoji | tagline`). `generated/` is committed (small; HTML only) so CI knows which words are already used.
 
 ---
 
-## 🔮 13. Pelan Masa Depan (Future Roadmap)
-- ✅ **1 Hari 1 App + Game:** **Sudah SIAP** — lihat **§12** (cron GitHub Actions jana app+game setiap kata, setiap hari, auto).
-- **Unity Cloud Games:** Scaffold opt-in sudah ada (**§12**); seterusnya = sambungkan *build* WebGL Unity (perlun lesen + minit CI berbayar/manual) ke tab permainan Tukuk-OS.
-- **Kaggle CLI:** Gunakan Kaggle CLI untuk memproses data/latihan AI berat jika RAM laptop terbatas.
+## 🔮 13. Future Roadmap
+- ✅ **1 Day 1 App + Game:** **DONE** — see **§12** (GitHub Actions cron generates an app+game for every word, every day, automatically).
+- **Unity Cloud Games:** Opt-in scaffold exists (**§12**); next = connecting a Unity WebGL *build* (needs a license + paid/manual CI minutes) into the Tukuk-OS games tab.
+- **Kaggle CLI:** Use the Kaggle CLI to process heavy AI data/training when the laptop's RAM is limited.

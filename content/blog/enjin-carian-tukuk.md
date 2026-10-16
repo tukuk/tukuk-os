@@ -1,22 +1,22 @@
 SLUG: enjin-carian-tukuk
-TITLE: Enjin Carian Tukuk — BM25, Penusunan Semula AI, dan Jawapan Ringkas
-EXCERPT: Di sebalik satu kotak carian Tukuk ada tiga lapisan: penilaian kebarangkalian, model penyusun semula neural, dan penjanaan jawapan — semuanya tanpa jejak cookie.
+TITLE: The Tukuk Search Engine — BM25, AI Reranking, and Short Answers
+EXCERPT: Behind Tukuk's single search box sit three layers: probabilistic scoring, a neural reranker model, and answer generation — all without cookie tracking.
 TAGS: search, bm25, ai, rerank, privacy
 
-## Satu kotak, tiga lapisan
+## One box, three layers
 
-Tukuk-OS bermula sebagai enjin carian, dan itu masih terasnya. Bila anda menaip dan tekan Enter, satu permintaan melintasi beberapa peringkat yang jarang kelihatan:
+Tukuk-OS started as a search engine, and that is still its core. When you type something and press Enter, one request passes through several stages that are rarely visible:
 
-**Lapisan 1 — BM25.** Penilai kebarangkalian klasik dari era 90-an yang masih jadi default di Lucene dan Elasticsearch. Ia mengira padanan terma dengan penentuan bobot: istilah yang jarang (seperti "kualiti") menyumbang lebih daripada yang kerap ("dan"), dan pengulangan berlebihan dihukum supaya dokumen tak menipu ranking dengan mengulang perkataan. Pantas dan boleh dijelaskan.
+**Layer 1 — BM25.** The classic probabilistic scorer from the 90s that is still the default inside Lucene and Elasticsearch. It scores term matches with weighting: rare terms (like "quality") contribute more than frequent ones ("and"), and excessive repetition is penalized so documents cannot game the ranking by repeating words. Fast and explainable.
 
-**Lapisan 2 — Penusunan semula (rerank).** Calon teratas dari BM25 kemudiannya disusun semula oleh model neural kecil yang memahami *semantik*, bukan sekadar padanan kata. Ini yang membezakan carian "baik" daripada carian "betul" — soalan seperti "apa sebab mata pen" boleh memulangkan artikel tentang air mata walaupun tiada satu pun kata yang sama.
+**Layer 2 — Rerank.** The top BM25 candidates are then reordered by a small neural model that understands *semantics*, not just word overlap. This is what separates a "good" search from a "correct" one — a question like "why do eyes water" can return articles about tears even when not a single word matches.
 
-**Lapisan 3 — Jawapan.** Untuk soalan yang sesuai, sistem membaca petikan terkuat dan menjana satu jawapan ringkas yang tepat, lengkap dengan sumbernya. Anda dapat inti dahulu, kemudian keputusan penuh jika mahu mendalami.
+**Layer 3 — Answer.** For suitable questions, the system reads the strongest snippet and generates one short, precise answer, complete with its sources. You get the core first, then the full results if you want to go deeper.
 
-## Pantas walaupun luar talian
+## Fast even offline
 
-Hasil carian paling kerap di-cache sampai ke tepi (edge). Ada indeks ringan yang boleh berfungsi tanpa sambungan, dan service worker menyimpan aset supaya halaman carian terasa serta-merta. Prinsip kami: **rasa laju itu ciri, bukan kebetulan** — Core Web Vitals dijaga supaya pelayan lambat pun, antara muka kekal responsif.
+The most frequent search results are cached all the way to the edge. There is a lightweight index that works without a connection, and a service worker stores assets so the search page feels instant. Our principle: **feeling fast is a feature, not an accident** — Core Web Vitals are kept under control so that even when the server is slow, the interface stays responsive.
 
-## Privasi sebagai reka bentuk
+## Privacy by design
 
-Tiada akaun. Tiada cookie penjejakan. Tiada profil iklan dibina di belakang tabir. Sejarah carian disimpan setempat dan boleh dipadam bila-bila masa. Kami percaya enjin carian yang baik tak perlu mengintai anda untuk menjadi berguna — cukup dia faham soalan anda. Itulah yang kami kejar di setiap versi, dan sebab Tukuk dibina sendiri dari kosong: kawalan penuh bermakna tanggungjawab penuh terhadap data anda.
+No accounts. No tracking cookies. No ad profiles built behind the scenes. Search history is stored locally and can be deleted at any time. We believe a good search engine does not need to watch you to be useful — it only needs to understand your question. That is what we chase in every release, and the reason Tukuk is built from scratch: full control means full responsibility for your data.

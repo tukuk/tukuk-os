@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rekomendasi &mdash; Produk &amp; Servis Pilihan Tukuk</title>
-<meta name="description" content="Senarai produk dan servis yang kami syorkan untuk pembangun & pengguna — hosting, domain, VPN, VPS dan gear. Ada pautan afiliasi.">
+<title>Recommendations &mdash; Products &amp; Services Picks by Tukuk</title>
+<meta name="description" content="The products and services we recommend for developers & users — hosting, domains, VPN, VPS and gear. Contains affiliate links.">
 <link rel="canonical" href="https://tukuk.org/rekomendasi">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
-<meta property="og:title" content="Rekomendasi — Produk & Servis Pilihan Tukuk">
-<meta property="og:description" content="Senarai produk dan servis yang kami syorkan untuk pembangun & pengguna.">
+<meta property="og:title" content="Recommendations — Products & Services Picks by Tukuk">
+<meta property="og:description" content="The products and services we recommend for developers & users.">
 <meta property="og:url" content="https://tukuk.org/rekomendasi">
 <meta property="og:image" content="https://tukuk.org/og.png">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Rekomendasi — Tukuk-OS">
-<meta name="twitter:description" content="Produk dan servis pilihan untuk pembangun & pengguna.">
+<meta name="twitter:title" content="Recommendations — Tukuk-OS">
+<meta name="twitter:description" content="Curated products and services for developers & users.">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -57,8 +57,8 @@
 </head>
 <body>
 <header class="wrap">
-  <h1>Rekomendasi</h1>
-  <p class="updated">Produk &amp; servis pilihan untuk pembangun dan pengguna &middot; tukuk.org</p>
+  <h1>Recommendations</h1>
+  <p class="updated">Curated products &amp; services for developers and users &middot; tukuk.org</p>
   <nav>
     <a href="/">Home</a>
     <a href="/explore">Explore</a>
@@ -82,27 +82,27 @@
   </nav>
 </header>
 <main class="wrap">
-  <p>Kami menggunakan banyak alat digital untuk membina Tukuk. Ini senarai produk &amp; servis yang
-     kami syorkan — hosting, domain, VPN, VPS dan gear kerja. Semua dipilih kerana guna sehari-hari,
-     bukan sekadar iklan.</p>
+  <p>We use a lot of digital tools to build Tukuk. This is the list of products &amp; services we
+     recommend — hosting, domains, VPN, VPS and work gear. All chosen from daily use,
+     not advertising.</p>
 
   <div class="disclosure">
-    <strong>Pendedahan Afiliasi:</strong> Sesetengah pautan di bawah ialah pautan afiliasi. Jika anda
-    membeli melalui pautan ini, kami mungkin mendapat komisen kecil pada harga yang sama untuk anda —
-    ini membantu menampung kos pelayan Tukuk. Ia tidak mengubah keputusan kami; kami tetap syorkan yang
-    terbaik sahaja.
+    <strong>Affiliate Disclosure:</strong> Some of the links below are affiliate links. If you
+    buy through them, we may earn a small commission at no extra cost to you —
+    this helps cover Tukuk's server costs. It does not change our decisions; we still recommend
+    only the best.
   </div>
 
   <div id="recGrid" class="grid" aria-live="polite">
-    <div class="empty">Memuatkan rekomendasi…</div>
+    <div class="empty">Loading recommendations…</div>
   </div>
 
-  <h2>Nak letak produk anda di sini?</h2>
-  <p>Untuk cadangan, kerjasama, atau penyenaraian produk/servis anda, <a href="/contact">hubungi kami</a>.</p>
+  <h2>Want your product listed here?</h2>
+  <p>For suggestions, partnerships, or product/service listings, <a href="/contact">contact us</a>.</p>
 
   <div class="ad-slot" id="ad-slot" hidden></div>
 </main>
-<footer class="wrap">Tukuk-OS &middot; <a href="/">Carian</a> &middot; <a href="/store">Stor game</a> &middot; <a href="/blog">Blog</a></footer>
+<footer class="wrap">Tukuk-OS &middot; <a href="/">Search</a> &middot; <a href="/store">Game store</a> &middot; <a href="/blog">Blog</a></footer>
 <script>
 (function () {
   'use strict';
@@ -118,7 +118,7 @@
   function render(list) {
     var grid = document.getElementById('recGrid');
     if (!Array.isArray(list) || !list.length) {
-      grid.innerHTML = '<div class="empty">Belum ada rekomendasi. Sila datang semula.</div>';
+      grid.innerHTML = '<div class="empty">No recommendations yet. Check back soon.</div>';
       return;
     }
     var html = '';
@@ -131,10 +131,10 @@
         + (it.price ? '<span class="price">' + esc(it.price) + '</span>' : '')
         + '<p class="blurb">' + esc(it.blurb || '') + '</p>'
         + '<a class="cta" href="' + esc(url) + '" target="_blank" rel="sponsored nofollow noopener">'
-        + esc(it.cta || 'Lihat') + '</a>'
+        + esc(it.cta || 'View') + '</a>'
         + '</div>';
     }
-    grid.innerHTML = html || '<div class="empty">Belum ada rekomendasi.</div>';
+    grid.innerHTML = html || '<div class="empty">No recommendations yet.</div>';
   }
   fetch('/api/public/settings', { cache: 'no-store' })
     .then(function (r) { return (r && r.ok) ? r.json() : null; })

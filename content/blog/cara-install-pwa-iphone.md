@@ -1,25 +1,25 @@
 SLUG: cara-install-pwa-iphone
-TITLE: Cara Pasang Apl Tukuk di iPhone (PWA — Tanpa App Store)
-EXCERPT: Aplikasi web boleh jadi apl sejati di skrin utama anda. Ini cara "Add to Home Screen" di iPhone dan Android, dan apa yang anda dapat selepas dipasang.
-TAGS: pwa, iphone, ios, android, pasang, panduan
+TITLE: How to Install Tukuk Apps on iPhone (PWA — No App Store)
+EXCERPT: Web apps can become real apps on your home screen. Here is how "Add to Home Screen" works on iPhone and Android, and what you get after installing.
+TAGS: pwa, iphone, ios, android, install, guide
 
-## Apa itu PWA?
+## What is a PWA?
 
-**PWA (Progressive Web App)** ialah laman web yang boleh *dipasang*. Tukuk membekalkan dua bahan: satu **manifest** (nama, ikon, warna, cara buka skrin penuh) dan satu **service worker** (menyimpan aset supaya apl terasa laju dan ada fungsi luar talian). Bila anda "pasang", iPhone atau Android cuma membuat jalan pintas yang membuka apl dalam tetingkap bersendirian — tanpa bar pelayar, dengan ikon sendiri di skrin utama. Ia nampak dan rasa seperti apl biasa, tapi tak perlu muat turun dari App Store.
+A **PWA (Progressive Web App)** is a website that can be *installed*. Tukuk supplies two ingredients: a **manifest** (name, icon, colors, full-screen mode) and a **service worker** (caches assets so the app feels fast and works offline partly). When you "install", the iPhone or Android simply creates a shortcut that opens the app in its own window — no browser bar, with its own icon on the home screen. It looks and feels like a normal app, but needs no download from the App Store.
 
-## Di iPhone / iPad (Safari)
+## On iPhone / iPad (Safari)
 
-1. Buka apl kegemaran anda di `tukuk.org` menerusi **Safari** (Chrome di iOS tak sokong pemasangan).
-2. Ketik ikon **Kongsi** (petak dengan anak panah ke atas) di bar bawah.
-3. Skrol dan pilih **Add to Home Screen** → **Tambah**.
-4. Selesai — ikon apl muncul di skrin utama. Tekannya dan ia buka skrin penuh seperti apl asli.
+1. Open your favorite app on `tukuk.org` through **Safari** (Chrome on iOS does not support installation).
+2. Tap the **Share** icon (the square with an upward arrow) in the bottom bar.
+3. Scroll and choose **Add to Home Screen** → **Add**.
+4. Done — the app icon appears on your home screen. Tap it and it opens full-screen like a native app.
 
-Tip: kalau anda nampak pertanyaan **Pasang Apl** di bar alamat, itu jalan pintas — terus tekannya.
+Tip: if you see an **Install App** prompt in the address bar, that is the shortcut — just tap it.
 
-## Di Android (Chrome)
+## On Android (Chrome)
 
-Buka `tukuk.org` di Chrome → menu **⋮** → **Add to Home screen** / **Install app**. Ada juga banner **Install** yang kadang muncul automatik. Ia sama hasilnya: ikon di skrin utama, buka skrin penuh.
+Open `tukuk.org` in Chrome → the **⋮** menu → **Add to Home screen** / **Install app**. There is also an **Install** banner that sometimes appears automatically. Same result: an icon on the home screen, full-screen opening.
 
-## Apa yang anda dapat
+## What you get
 
-Aplikasi berjalan skrin penuh dengan ikon Tukuk, terasa pantas kerana aset disimpan di peranti, dan sebahagian fungsi kekal ada walaupun talian terputus. Dan yang paling praktikal: **kemas kini berlaku sendiri di sebelah pelayan**. Lain daripada APK yang perlu dimuat turun semula, PWA sentiasa memaparkan versi paling baru sebaik anda membukanya semula. Untuk pengguna iPhone yang tak boleh pasang APK, inilah pintu utama anda ke gedung apl Tukuk.
+The app runs full-screen with its Tukuk icon, feels fast because assets are stored on the device, and some functions remain available even when the connection drops. And the most practical part: **updates happen by themselves on the server side**. Unlike an APK that must be downloaded again, a PWA always shows the newest version as soon as you reopen it. For iPhone users who cannot install APKs, this is your main door into the Tukuk app store.

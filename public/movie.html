@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Movie Studio — Editor Timeline Multi-Klip</title>
-<meta name="description" content="Editor video lanjutan dalam pelayar: susun banyak klip & gambar pada garis masa, trim, split, fade, penapis, teks & muzik latar, eksport WebM. Semua diproses lokal, tiada muat naik.">
+<title>Tukuk Movie Studio — Multi-Clip Timeline Editor</title>
+<meta name="description" content="Advanced in-browser video editor: arrange many clips & images on a timeline, trim, split, fade, filters, text & background music, WebM export. Everything processed locally, no uploads.">
 <link rel="canonical" href="https://tukuk.org/movie">
 <style>
   :root { --bg:#0f1320; --panel:#161b2c; --panel2:#1e2540; --line:#2a3350; --text:#e7ecff; --muted:#9aa6cc; --accent:#4c8dff; --video:#3aa0ff; --image:#8a6bff; --title:#f5b445; --music:#37d67a; }
@@ -98,74 +98,74 @@
 </head>
 <body>
 <header>
-  <span class="logo">🎞 Tukuk Movie Studio <small>timeline lanjutan</small></span>
-  <button id="addBtn" class="primary" title="Tambah klip video / gambar ke garis masa">＋ Tambah klip</button>
+  <span class="logo">🎞 Tukuk Movie Studio <small>advanced timeline</small></span>
+  <button id="addBtn" class="primary" title="Add video / image clips to the timeline">＋ Add clip</button>
   <input type="file" id="fileInput" accept="video/*,image/*" multiple hidden>
-  <button id="musicBtn" title="Tambah trek muzik latar">🎵 Muzik</button>
+  <button id="musicBtn" title="Add a background music track">🎵 Music</button>
   <input type="file" id="musicInput" accept="audio/*" hidden>
-  <button id="saveProjectBtn" title="Simpan projek (struktur + teks + keyframe) sebagai fail .json">💾 Simpan</button>
-  <button id="openProjectBtn" title="Buka projek .json — fail media perlu dipilih semula">📂 Buka</button>
+  <button id="saveProjectBtn" title="Save the project (structure + text + keyframes) as a .json file">💾 Save</button>
+  <button id="openProjectBtn" title="Open a .json project — media files must be re-selected">📂 Open</button>
   <input type="file" id="projectInput" accept="application/json,.json" hidden>
   <span class="spacer"></span>
-  <button id="toStart" title="Ke awal (Home)">⏮</button>
-  <button id="playBtn" title="Main / Jeda (Space)">▶ Main</button>
-  <button id="toEnd" title="Ke akhir (End)">⏭</button>
+  <button id="toStart" title="Go to start (Home)">⏮</button>
+  <button id="playBtn" title="Play / Pause (Space)">▶ Play</button>
+  <button id="toEnd" title="Go to end (End)">⏭</button>
   <span class="tcode"><span id="tCur">0:00</span> / <span id="tDur">0:00</span></span>
-  <button id="undoBtn" title="Undur (Ctrl+Z)">↶</button>
-  <button id="redoBtn" title="Buat semula (Ctrl+Y)">↷</button>
-  <button id="shortcutsBtn" title="Pintasan (?)">⌨</button>
-  <button id="exportBtn" class="primary" title="Rakam garis masa penuh &amp; muat turun WebM (masa nyata)">⬇ Eksport</button>
-  <a class="btn" href="/editor-video" title="Editor FX klip tunggal (kesan kartun)">🎬 FX</a>
+  <button id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+  <button id="redoBtn" title="Redo (Ctrl+Y)">↷</button>
+  <button id="shortcutsBtn" title="Shortcuts (?)">⌨</button>
+  <button id="exportBtn" class="primary" title="Record the full timeline &amp; download WebM (real time)">⬇ Export</button>
+  <a class="btn" href="/editor-video" title="Single-clip FX editor (cartoon effects)">🎬 FX</a>
   <a class="btn" href="/studio" title="Tukuk Studio Suite">◂ Suite</a>
-  <a class="btn" href="/" title="Kembali ke carian">⌕</a>
+  <a class="btn" href="/" title="Back to search">⌕</a>
 </header>
 
 <main>
   <aside>
     <div class="panel" id="clipPanel"></div>
 
-    <h3>🅣 Trek Teks</h3>
+    <h3>🅣 Text Track</h3>
     <div class="panel">
       <div class="grp">
-        <div class="row"><input type="text" id="titleText" placeholder="Tulis tajuk / kapsyen…"></div>
+        <div class="row"><input type="text" id="titleText" placeholder="Write a title / caption…"></div>
         <div class="row" style="align-items:center;">
-          <input type="color" id="titleColor" value="#ffffff" title="Warna teks">
-          <select id="titlePos" style="flex:1;"><option value="top">Atas</option><option value="center">Tengah</option><option value="bottom" selected>Bawah</option></select>
+          <input type="color" id="titleColor" value="#ffffff" title="Text color">
+          <select id="titlePos" style="flex:1;"><option value="top">Top</option><option value="center">Center</option><option value="bottom" selected>Bottom</option></select>
         </div>
-        <div class="slider"><label>Saiz</label><input type="range" id="titleSize" min="4" max="18" value="9"><output>9</output></div>
-        <div class="kv"><span>Mula @ playhead</span><b id="titleStartVal">0.0s</b></div>
-        <div class="slider"><label>Tempoh</label><input type="range" id="titleDur" min="0.5" max="10" step="0.1" value="3"><output>3.0s</output></div>
+        <div class="slider"><label>Size</label><input type="range" id="titleSize" min="4" max="18" value="9"><output>9</output></div>
+        <div class="kv"><span>Start @ playhead</span><b id="titleStartVal">0.0s</b></div>
+        <div class="slider"><label>Duration</label><input type="range" id="titleDur" min="0.5" max="10" step="0.1" value="3"><output>3.0s</output></div>
         <div class="slider"><label>Pos X</label><input type="range" id="tX" min="0" max="100" value="50"><output>50%</output></div>
         <div class="slider"><label>Pos Y</label><input type="range" id="tY" min="0" max="100" value="88"><output>88%</output></div>
-        <div class="slider"><label>Skala</label><input type="range" id="tScale" min="0.3" max="3" step="0.05" value="1"><output>1.00×</output></div>
-        <div class="slider"><label>Kelihatan</label><input type="range" id="tAlpha" min="0" max="100" value="100"><output>100%</output></div>
-        <div class="kv"><span>Sunting</span><b class="editingTag" id="editingTag">teks baharu</b></div>
-        <div class="row"><button id="addTitleBtn">＋ Tambah Teks</button><button id="selectNoneBtn" title="Batal pemilihan — sunting teks baharu">✳ Baharu</button></div>
-        <div class="row"><button id="addKFB" title="Rekam pose semasa sebagai keyframe pada playhead">🔑 + Keyframe</button><button id="clrKFB" title="Kosongkan animasi keyframe">🗑 Anim</button></div>
+        <div class="slider"><label>Scale</label><input type="range" id="tScale" min="0.3" max="3" step="0.05" value="1"><output>1.00×</output></div>
+        <div class="slider"><label>Visibility</label><input type="range" id="tAlpha" min="0" max="100" value="100"><output>100%</output></div>
+        <div class="kv"><span>Editing</span><b class="editingTag" id="editingTag">new text</b></div>
+        <div class="row"><button id="addTitleBtn">＋ Add Text</button><button id="selectNoneBtn" title="Clear selection — edit new text">✳ New</button></div>
+        <div class="row"><button id="addKFB" title="Record the current pose as a keyframe at the playhead">🔑 + Keyframe</button><button id="clrKFB" title="Clear keyframe animation">🗑 Anim</button></div>
         <div class="kfchips" id="kfChips"></div>
       </div>
       <div id="titleList"></div>
     </div>
 
-    <h3>🎵 Muzik Latar</h3>
+    <h3>🎵 Background Music</h3>
     <div class="panel">
       <div class="grp">
-        <div class="kv"><span>Fail</span><b id="musicName">— tiada —</b></div>
-        <div class="slider"><label>Volum</label><input type="range" id="musicVol" min="0" max="100" value="80"><output>80%</output></div>
-        <div class="row"><button id="clearMusicBtn" class="danger">🗑 Buang muzik</button></div>
-        <div class="foot-status" style="color:var(--muted);font-size:.72rem;">Muzik dimainkan bermula dari awal garis masa dan ikut terbawa dalam eksport.</div>
+        <div class="kv"><span>File</span><b id="musicName">— none —</b></div>
+        <div class="slider"><label>Volume</label><input type="range" id="musicVol" min="0" max="100" value="80"><output>80%</output></div>
+        <div class="row"><button id="clearMusicBtn" class="danger">🗑 Remove music</button></div>
+        <div class="foot-status" style="color:var(--muted);font-size:.72rem;">Music plays from the start of the timeline and is included in the export.</div>
       </div>
     </div>
 
-    <h3>ℹ Projek</h3>
+    <h3>ℹ Project</h3>
     <div class="panel">
       <div class="grp">
-        <div class="kv"><span>Klip</span><b id="statClips">0</b></div>
-        <div class="kv"><span>Jumlah durasi</span><b id="statDur">0:00</b></div>
-        <div class="kv"><span>Resolusi keluar</span><b id="statRes">—</b></div>
-        <div class="row"><button id="clearAllBtn" class="danger">🗑 Kosongkan garis masa</button></div>
+        <div class="kv"><span>Clips</span><b id="statClips">0</b></div>
+        <div class="kv"><span>Total duration</span><b id="statDur">0:00</b></div>
+        <div class="kv"><span>Output resolution</span><b id="statRes">—</b></div>
+        <div class="row"><button id="clearAllBtn" class="danger">🗑 Clear timeline</button></div>
       </div>
-      <div class="foot-status" style="color:var(--muted);font-size:.74rem;padding:0 2px;">Semua suntingan &amp; rakaman berlaku dalam pelayar — tiada video dihantar ke mana-mana. Eksport dirakam secara <b>masa nyata</b> (durasi rakaman = panjang garis masa).</div>
+      <div class="foot-status" style="color:var(--muted);font-size:.74rem;padding:0 2px;">All editing &amp; recording happens in your browser — no video is sent anywhere. Export is recorded in <b>real time</b> (recording length = timeline length).</div>
     </div>
   </aside>
 
@@ -174,8 +174,8 @@
       <canvas id="cvs" width="1280" height="720"></canvas>
       <div class="drop-hint" id="dropHint">
         <div class="big">🎞</div>
-        <div>Seret &amp; jatuh <b>video / gambar</b> ke sini, atau tekan <b>＋ Tambah klip</b>.</div>
-        <div class="foot-status">Bina filem daripada banyak klip: susun semula (seret blok), trim, split, fade, penapis warna, teks &amp; muzik — kemudian eksport satu WebM.</div>
+        <div>Drag &amp; drop <b>video / images</b> here, or press <b>＋ Add clip</b>.</div>
+        <div class="foot-status">Build a film from many clips: reorder (drag blocks), trim, split, fade, color filters, text &amp; music — then export one WebM.</div>
       </div>
     </div>
 
@@ -186,24 +186,24 @@
       <div class="ruler" id="ruler"></div>
       <div class="track" id="track"></div>
       <div class="titlelane" id="titleLane"></div>
-      <div class="waveform" id="waveform" hidden><canvas id="waveCanvas"></canvas><span class="wlabel" id="waveLabel">♪ Muzik</span><span class="wavehead" id="wavehead" style="left:0"></span></div>
+      <div class="waveform" id="waveform" hidden><canvas id="waveCanvas"></canvas><span class="wlabel" id="waveLabel">♪ Music</span><span class="wavehead" id="wavehead" style="left:0"></span></div>
     </div>
   </div>
 </main>
 
 <div class="modal-bg" id="shortcutsModal" hidden>
   <div class="modal-card">
-    <h2>⌨️ Pintasan Movie Studio</h2>
+    <h2>⌨️ Movie Studio Shortcuts</h2>
     <table>
-      <tr><td>Main / Jeda</td><td><kbd>Space</kbd></td></tr>
-      <tr><td>Ke awal / akhir</td><td><kbd>Home</kbd> / <kbd>End</kbd></td></tr>
-      <tr><td>Langkah 1 bingkai (±0.03s)</td><td><kbd>←</kbd> / <kbd>→</kbd></td></tr>
-      <tr><td>Split klip di playhead</td><td><kbd>S</kbd></td></tr>
-      <tr><td>Buang klip terpilih</td><td><kbd>Del</kbd></td></tr>
-      <tr><td>Undur / Buat semula</td><td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td></tr>
-      <tr><td>Papar pintasan / tutup</td><td><kbd>?</kbd> / <kbd>Esc</kbd></td></tr>
+      <tr><td>Play / Pause</td><td><kbd>Space</kbd></td></tr>
+      <tr><td>Go to start / end</td><td><kbd>Home</kbd> / <kbd>End</kbd></td></tr>
+      <tr><td>Step 1 frame (±0.03s)</td><td><kbd>←</kbd> / <kbd>→</kbd></td></tr>
+      <tr><td>Split clip at playhead</td><td><kbd>S</kbd></td></tr>
+      <tr><td>Remove selected clip</td><td><kbd>Del</kbd></td></tr>
+      <tr><td>Undo / Redo</td><td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td></tr>
+      <tr><td>Show shortcuts / close</td><td><kbd>?</kbd> / <kbd>Esc</kbd></td></tr>
     </table>
-    <div style="text-align:right; margin-top:14px;"><button class="primary" id="closeModalBtn">✓ Faham</button></div>
+    <div style="text-align:right; margin-top:14px;"><button class="primary" id="closeModalBtn">✓ Got it</button></div>
   </div>
 </div>
 
@@ -326,7 +326,7 @@ async function addFiles(list) {
   }
   if (clips.length) { if (clock > total) clock = 0; buildTimeline(); renderClipPanel(); }
   $('dropHint').hidden = clips.length > 0;
-  toast('Klip ditambah.');
+  toast('Clips added.');
 }
 
 // ── Audio graph (lazily, sekali per elemen) ──
@@ -498,14 +498,14 @@ function updateTransport() {
   updateWavehead();
 }
 function play() {
-  if (!total) { toast('Tiada klip pada garis masa.'); return; }
+  if (!total) { toast('No clips on the timeline.'); return; }
   ensureAudio(); if (actx && actx.state === 'suspended') actx.resume();
   if (clock >= total - 0.01) { clock = 0; if (music && music.el) { try { music.el.currentTime = 0; } catch (e) {} } }
-  playing = true; lastTs = 0; $('playBtn').textContent = '⏸ Jeda';
+  playing = true; lastTs = 0; $('playBtn').textContent = '⏸ Pause';
   if (music && music.el) { try { music.el.play().catch(() => {}); } catch (e) {} }
 }
 function pause() {
-  playing = false; $('playBtn').textContent = '▶ Main';
+  playing = false; $('playBtn').textContent = '▶ Play';
   for (const c of clips) if (c.kind === 'video' && c.el) { try { c.el.pause(); } catch (e) {} }
   if (music && music.el) { try { music.el.pause(); } catch (e) {} }
 }
@@ -531,7 +531,7 @@ function renderTrack() {
     b.style.left = Math.round(starts[i] * PPS) + 'px';
     b.style.width = Math.max(20, Math.round(clipLen(c) * PPS)) + 'px';
     if (c.thumb) { b.style.backgroundColor = '#0d1424'; b.style.backgroundImage = 'linear-gradient(180deg, rgba(8,12,24,0) 55%, rgba(8,12,24,.65)), url(' + JSON.stringify(c.thumb) + ')'; b.style.backgroundSize = '100% 100%, ' + (c.kind === 'image' ? 'cover' : '100% 100%'); b.style.backgroundPosition = 'center, center'; b.style.backgroundRepeat = 'no-repeat, no-repeat'; }
-    let inner = '<span class="lbl">' + escapeHtml(c.name || (c.kind === 'video' ? 'klip' : 'gambar')) + '</span>';
+    let inner = '<span class="lbl">' + escapeHtml(c.name || (c.kind === 'video' ? 'clip' : 'image')) + '</span>';
     if (i < clips.length - 1 && (c.trans || 0) > 0) { const gl = ({ slide: '\u2192', zoom: '\u25ce' })[c.transType] || '\u21c4'; inner += '<span class="transBadge">' + gl + ' ' + fmt1(c.trans) + 's</span>'; }
     b.innerHTML = inner;
     if (c.wave && c.wave.length) { const wc = document.createElement('canvas'); wc.className = 'clipwave'; b.appendChild(wc); drawClipWave(wc, c.wave, Math.max(20, Math.round(clipLen(c) * PPS))); }
@@ -594,7 +594,7 @@ function dupClip(c) {
   clips.splice(clips.indexOf(c) + 1, 0, n); selId = id;
   buildTimeline(); renderClipPanel();
   if (c.kind === 'video') genThumb(n);
-  toast('Klip diduplikasi.');
+  toast('Clip duplicated.');
 }
 
 // ── Ruler ──
@@ -615,7 +615,7 @@ function renderTitleLane() {
   for (const ti of titles) {
     const b = document.createElement('div'); b.className = 'titleblk';
     b.style.left = (ti.start * PPS) + 'px'; b.style.width = Math.max(30, ti.dur * PPS) + 'px';
-    b.textContent = (ti.text || 'Teks') + ((ti.kfs && ti.kfs.length) ? ' \ud83d\udd11' : ''); b.title = ti.text;
+    b.textContent = (ti.text || 'Text') + ((ti.kfs && ti.kfs.length) ? ' \ud83d\udd11' : ''); b.title = ti.text;
     if (ti.id === selTitleId) { b.style.outline = '2px solid #fff'; b.style.outlineOffset = '-2px'; }
     b.onclick = () => { selectTitle(ti.id); };
     lane.appendChild(b);
@@ -634,58 +634,58 @@ function selectClip(id) { selId = id; renderTrack(); renderClipPanel(); }
 
 function renderClipPanel() {
   const host = $('clipPanel'); const c = selClip();
-  if (!c) { host.innerHTML = '<h3>🎬 Klip</h3><div class="empty">Pilih satu blok klip pada garis masa untuk menyuntingnya.</div>'; return; }
+  if (!c) { host.innerHTML = '<h3>🎬 Clip</h3><div class="empty">Select a clip block on the timeline to edit it.</div>'; return; }
   const isImg = c.kind === 'image';
   const isLast = clips.indexOf(c) === clips.length - 1;
   host.innerHTML = `
-    <h3>🎬 Klip</h3>
-    <div class="kv"><span>Nama</span><b>${escapeHtml(c.name)}</b></div>
-    <div class="kv"><span>Jenis</span><b>${isImg ? 'Gambar' : 'Video'}</b></div>
-    <div class="kv"><span>Panjang garis masa</span><b>${fmt1(clipLen(c))}s</b></div>
+    <h3>🎬 Clip</h3>
+    <div class="kv"><span>Name</span><b>${escapeHtml(c.name)}</b></div>
+    <div class="kv"><span>Type</span><b>${isImg ? 'Image' : 'Video'}</b></div>
+    <div class="kv"><span>Timeline length</span><b>${fmt1(clipLen(c))}s</b></div>
     <div class="grp">
       <div class="row">
-        <button id="moveL" title="Gerak kiri">◀</button><button id="moveR" title="Gerak kanan">▶</button>
-        <button id="dupBtn" title="Duplikasi klip">⧉</button>
-        <button id="splitBtn" title="Belah klip di playhead">✂ Split</button>
-        <button id="delBtn" class="danger" title="Buang klip">🗑</button>
+        <button id="moveL" title="Move left">◀</button><button id="moveR" title="Move right">▶</button>
+        <button id="dupBtn" title="Duplicate clip">⧉</button>
+        <button id="splitBtn" title="Split clip at playhead">✂ Split</button>
+        <button id="delBtn" class="danger" title="Remove clip">🗑</button>
       </div>
     </div>
-    <h3>🔀 Transisi ke klip berikut</h3>
+    <h3>🔀 Transition to next clip</h3>
     <div class="grp">
-      <div class="slider"><label>Transisi</label><input type="range" id="c-trans" min="0" max="1.5" step="0.05" value="${c.trans || 0}"><output>${fmt1(c.trans || 0)}s</output></div>
-      <div class="row"><select id="c-transType" style="flex:1">${['dissolve', 'slide', 'zoom'].map((tt) => `<option value="${tt}" ${(c.transType || 'dissolve') === tt ? 'selected' : ''}>${{ dissolve: 'Larut (cross-dissolve)', slide: 'Geser (slide)', zoom: 'Zum (zoom)' }[tt]}</option>`).join('')}</select></div>
+      <div class="slider"><label>Transition</label><input type="range" id="c-trans" min="0" max="1.5" step="0.05" value="${c.trans || 0}"><output>${fmt1(c.trans || 0)}s</output></div>
+      <div class="row"><select id="c-transType" style="flex:1">${['dissolve', 'slide', 'zoom'].map((tt) => `<option value="${tt}" ${(c.transType || 'dissolve') === tt ? 'selected' : ''}>${{ dissolve: 'Dissolve (cross-dissolve)', slide: 'Slide', zoom: 'Zoom' }[tt]}</option>`).join('')}</select></div>
       <div class="row"><button id="c-trans0" style="flex:1">Cut</button><button id="c-trans5" style="flex:1">0.5s</button><button id="c-trans10" style="flex:1">1.0s</button></div>
-      <div style="color:var(--muted);font-size:.7rem;">${isLast ? 'Klip terakhir — transisi tidak terpakai.' : 'Klip ini beralih ke klip berikutnya mengikut gaya terpilih.'}</div>
+      <div style="color:var(--muted);font-size:.7rem;">${isLast ? 'Last clip — transition has no effect.' : 'This clip transitions to the next one using the chosen style.'}</div>
     </div>
-    ${isImg ? '' : `<h3>✂ Trim & Kelajuan</h3>
+    ${isImg ? '' : `<h3>✂ Trim & Speed</h3>
     <div class="grp">
-      <div class="kv"><span>In (sumber)</span><b id="inLbl">${fmt1(c.in)}s</b></div>
-      <div class="kv"><span>Out (sumber)</span><b id="outLbl">${fmt1(c.out)}s</b></div>
+      <div class="kv"><span>In (source)</span><b id="inLbl">${fmt1(c.in)}s</b></div>
+      <div class="kv"><span>Out (source)</span><b id="outLbl">${fmt1(c.out)}s</b></div>
       <div class="row"><button id="setIn" style="flex:1">⬅ Set In @playhead</button><button id="setOut" style="flex:1">Set Out @playhead ➡</button></div>
-      <div class="slider"><label>Kelajuan</label><select id="cSpeed" style="flex:1">${[0.25, 0.5, 1, 1.5, 2, 3].map((v) => `<option value="${v}" ${c.speed === v ? 'selected' : ''}>${v}×</option>`).join('')}</select></div>
+      <div class="slider"><label>Speed</label><select id="cSpeed" style="flex:1">${[0.25, 0.5, 1, 1.5, 2, 3].map((v) => `<option value="${v}" ${c.speed === v ? 'selected' : ''}>${v}×</option>`).join('')}</select></div>
     </div>`}
-    <h3>🎨 Gaya & Geometri</h3>
+    <h3>🎨 Style & Geometry</h3>
     <div class="grp">
-      <div class="slider"><label>Kecerahan</label><input type="range" id="c-bright" min="20" max="200" value="${c.filt.bright}"><output>${c.filt.bright}</output></div>
-      <div class="slider"><label>Kontras</label><input type="range" id="c-contrast" min="20" max="200" value="${c.filt.contrast}"><output>${c.filt.contrast}</output></div>
-      <div class="slider"><label>Saturasi</label><input type="range" id="c-saturate" min="0" max="250" value="${c.filt.saturate}"><output>${c.filt.saturate}</output></div>
+      <div class="slider"><label>Brightness</label><input type="range" id="c-bright" min="20" max="200" value="${c.filt.bright}"><output>${c.filt.bright}</output></div>
+      <div class="slider"><label>Contrast</label><input type="range" id="c-contrast" min="20" max="200" value="${c.filt.contrast}"><output>${c.filt.contrast}</output></div>
+      <div class="slider"><label>Saturation</label><input type="range" id="c-saturate" min="0" max="250" value="${c.filt.saturate}"><output>${c.filt.saturate}</output></div>
       <div class="slider"><label>Grayscale</label><input type="range" id="c-gray" min="0" max="100" value="${c.filt.gray}"><output>${c.filt.gray}</output></div>
       <div class="slider"><label>Sepia</label><input type="range" id="c-sepia" min="0" max="100" value="${c.filt.sepia}"><output>${c.filt.sepia}</output></div>
       <div class="slider"><label>Fade</label><input type="range" id="c-fade" min="0" max="2" step="0.1" value="${c.fade}"><output>${fmt1(c.fade)}s</output></div>
-      <div class="row"><button id="c-rot" title="Putar 90°">⟳ ${c.rot}°</button><button id="c-flipH" class="${c.flipH ? 'on' : ''}">↔ H</button><button id="c-flipV" class="${c.flipV ? 'on' : ''}">↕ V</button><button id="c-asp" class="${c.aspect === 1 ? 'on' : ''}">${c.aspect === 1 ? 'Cover' : 'Contain'}</button><button id="c-kb" class="${c.kb ? 'on' : ''}" title="Gerak Ken Burns (zoom/pan auto)">🎬 KB</button></div>
+      <div class="row"><button id="c-rot" title="Rotate 90°">⟳ ${c.rot}°</button><button id="c-flipH" class="${c.flipH ? 'on' : ''}">↔ H</button><button id="c-flipV" class="${c.flipV ? 'on' : ''}">↕ V</button><button id="c-asp" class="${c.aspect === 1 ? 'on' : ''}">${c.aspect === 1 ? 'Cover' : 'Contain'}</button><button id="c-kb" class="${c.kb ? 'on' : ''}" title="Ken Burns motion (auto zoom/pan)">🎬 KB</button></div>
     </div>
-    <h3>🔑 Animasi Klip (Keyframe)</h3>
+    <h3>🔑 Clip Animation (Keyframe)</h3>
     <div class="grp">
       <div class="slider"><label>Pos X</label><input type="range" id="kx" min="0" max="100" value="${c.kx != null ? c.kx : 50}"><output>${Math.round(c.kx != null ? c.kx : 50)}%</output></div>
       <div class="slider"><label>Pos Y</label><input type="range" id="ky" min="0" max="100" value="${c.ky != null ? c.ky : 50}"><output>${Math.round(c.ky != null ? c.ky : 50)}%</output></div>
-      <div class="slider"><label>Skala</label><input type="range" id="ks" min="0.2" max="3" step="0.05" value="${c.ks != null ? c.ks : 1}"><output>${Number(c.ks != null ? c.ks : 1).toFixed(2)}×</output></div>
-      <div class="slider"><label>Rotasi</label><input type="range" id="krot" min="-180" max="180" step="1" value="${c.krot || 0}"><output>${Math.round(c.krot || 0)}°</output></div>
-      <div class="slider"><label>Opasiti</label><input type="range" id="ka" min="0" max="100" value="${Math.round((c.ka != null ? c.ka : 1) * 100)}"><output>${Math.round((c.ka != null ? c.ka : 1) * 100)}%</output></div>
-      <div class="row"><button id="kAdd" title="Rekam pose slider pada playhead">🔑 + Keyframe</button><button id="kClr" class="danger" title="Kosongkan animasi klip">🗑 Anim</button></div>
+      <div class="slider"><label>Scale</label><input type="range" id="ks" min="0.2" max="3" step="0.05" value="${c.ks != null ? c.ks : 1}"><output>${Number(c.ks != null ? c.ks : 1).toFixed(2)}×</output></div>
+      <div class="slider"><label>Rotation</label><input type="range" id="krot" min="-180" max="180" step="1" value="${c.krot || 0}"><output>${Math.round(c.krot || 0)}°</output></div>
+      <div class="slider"><label>Opacity</label><input type="range" id="ka" min="0" max="100" value="${Math.round((c.ka != null ? c.ka : 1) * 100)}"><output>${Math.round((c.ka != null ? c.ka : 1) * 100)}%</output></div>
+      <div class="row"><button id="kAdd" title="Record the slider pose at the playhead">🔑 + Keyframe</button><button id="kClr" class="danger" title="Clear clip animation">🗑 Anim</button></div>
       <div class="kfchips" id="kChips"></div>
-      <div style="color:var(--muted);font-size:.7rem;">Tiada keyframe = klip statik ikut slider. Set keyframe pada masa berbeza untuk animasi posisi/skala/rotasi/kelihatan.</div>
+      <div style="color:var(--muted);font-size:.7rem;">No keyframes = static clip following the sliders. Set keyframes at different times for position/scale/rotation/visibility animation.</div>
     </div>
-    ${isImg ? `<h3>Tempoh gambar</h3><div class="grp"><div class="slider"><label>Saat</label><input type="range" id="c-dur" min="0.5" max="15" step="0.5" value="${c.dur}"><output>${fmt1(c.dur)}s</output></div></div>` : `<h3>🔊 Audio klip</h3><div class="grp"><div class="slider"><label>Volum</label><input type="range" id="c-vol" min="0" max="150" value="${Math.round(c.vol * 100)}"><output>${Math.round(c.vol * 100)}%</output></div><div class="row"><button id="c-mute" class="${c.muted ? 'on' : ''}" style="width:100%">${c.muted ? '🔇 Dibisukan' : '🔊 Hidup'}</button></div></div>`}
+    ${isImg ? `<h3>Image duration</h3><div class="grp"><div class="slider"><label>Seconds</label><input type="range" id="c-dur" min="0.5" max="15" step="0.5" value="${c.dur}"><output>${fmt1(c.dur)}s</output></div></div>` : `<h3>🔊 Clip audio</h3><div class="grp"><div class="slider"><label>Volume</label><input type="range" id="c-vol" min="0" max="150" value="${Math.round(c.vol * 100)}"><output>${Math.round(c.vol * 100)}%</output></div><div class="row"><button id="c-mute" class="${c.muted ? 'on' : ''}" style="width:100%">${c.muted ? '🔇 Muted' : '🔊 On'}</button></div></div>`}
   `;
   bindClipPanel(c, isImg);
 }
@@ -734,16 +734,16 @@ function bindClipPanel(c, isImg) {
     el.onchange = () => saveHistory();
   }
   const kfLocal = () => { const s = starts[clips.indexOf(c)]; if (s == null) return 0; return Math.max(0, Math.min(clipLen(c), clock - s)); };
-  $('kAdd').onclick = () => { saveHistory(); const t = kfLocal(); c.kfs = (c.kfs || []).filter((k) => Math.abs(k.t - t) > 0.08); c.kfs.push({ t, x: c.kx != null ? c.kx : 50, y: c.ky != null ? c.ky : 50, s: c.ks != null ? c.ks : 1, rot: c.krot || 0, a: c.ka != null ? c.ka : 1 }); c.kfs.sort((a, b) => a.t - b.t); renderClipKfChips(c); toast('Keyframe klip @ ' + fmt1(t) + 's.'); };
-  $('kClr').onclick = () => { saveHistory(); c.kfs = []; renderClipKfChips(c); toast('Animasi klip dikosongkan.'); };
+  $('kAdd').onclick = () => { saveHistory(); const t = kfLocal(); c.kfs = (c.kfs || []).filter((k) => Math.abs(k.t - t) > 0.08); c.kfs.push({ t, x: c.kx != null ? c.kx : 50, y: c.ky != null ? c.ky : 50, s: c.ks != null ? c.ks : 1, rot: c.krot || 0, a: c.ka != null ? c.ka : 1 }); c.kfs.sort((a, b) => a.t - b.t); renderClipKfChips(c); toast('Clip keyframe @ ' + fmt1(t) + 's.'); };
+  $('kClr').onclick = () => { saveHistory(); c.kfs = []; renderClipKfChips(c); toast('Clip animation cleared.'); };
   renderClipKfChips(c);
 }
 
 // ── Chips keyframe klip ──
 function renderClipKfChips(c) {
   const host = $('kChips'); if (!host || !c) return; const kf = c.kfs || [];
-  if (!kf.length) { host.innerHTML = '<span style="color:var(--muted);font-size:.68rem">tiada keyframe — klip statik</span>'; return; }
-  host.innerHTML = kf.map((k, i) => `<span class="chip">@${fmt1(k.t)}s<button data-ck="${i}" title="Buang">✕</button></span>`).join('');
+  if (!kf.length) { host.innerHTML = '<span style="color:var(--muted);font-size:.68rem">no keyframes — static clip</span>'; return; }
+  host.innerHTML = kf.map((k, i) => `<span class="chip">@${fmt1(k.t)}s<button data-ck="${i}" title="Remove">✕</button></span>`).join('');
   host.querySelectorAll('[data-ck]').forEach((b) => { b.onclick = () => { saveHistory(); c.kfs.splice(Number(b.dataset.ck), 1); renderClipKfChips(c); }; });
 }
 // masa sumber playhead dalam klip terpilih (untuk Set In/Out)
@@ -760,13 +760,13 @@ function delClip(id) {
 function splitClip(c) {
   const s = starts[clips.indexOf(c)]; const local = clock - s;
   const len = clipLen(c);
-  if (local <= 0.05 || local >= len - 0.05) { toast('Letakkan playhead di dalam klip untuk split.'); return; }
-  if (c.kind === 'image') { const d2 = Math.max(0.1, c.dur - local); saveHistory(); const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })), dur: d2, el: c.el }; c.dur = local; elMap[right.id] = right.el; clips.splice(clips.indexOf(c) + 1, 0, right); buildTimeline(); toast('Split gambar.'); return; }
+  if (local <= 0.05 || local >= len - 0.05) { toast('Place the playhead inside a clip to split.'); return; }
+  if (c.kind === 'image') { const d2 = Math.max(0.1, c.dur - local); saveHistory(); const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })), dur: d2, el: c.el }; c.dur = local; elMap[right.id] = right.el; clips.splice(clips.indexOf(c) + 1, 0, right); buildTimeline(); toast('Image split.'); return; }
   const cutSrc = srcTime(c, local); saveHistory();
   const right = { ...c, id: 'c' + (uid++), filt: { ...c.filt }, kfs: (c.kfs || []).map((k) => ({ ...k })), in: cutSrc, el: c.el };
   c.out = cutSrc; elMap[right.id] = right.el;
   clips.splice(clips.indexOf(c) + 1, 0, right);
-  buildTimeline(); renderClipPanel(); toast('Klip dibelah.');
+  buildTimeline(); renderClipPanel(); toast('Clip split.');
 }
 
 // ── Undo / Redo ──
@@ -790,18 +790,18 @@ function renderKfChips() {
   const host = $('kfChips'); if (!host) return;
   const ti = curTitle();
   if (!ti) { host.innerHTML = ''; return; }
-  if (!ti.kfs || !ti.kfs.length) { host.innerHTML = '<span style="color:var(--muted);font-size:.68rem">tiada keyframe — teks statik</span>'; return; }
-  host.innerHTML = ti.kfs.map((k, idx) => `<span class="chip">@${fmt1(k.t)}s<button data-kf="${idx}" title="Buang keyframe">✕</button></span>`).join('');
+  if (!ti.kfs || !ti.kfs.length) { host.innerHTML = '<span style="color:var(--muted);font-size:.68rem">no keyframes — static text</span>'; return; }
+  host.innerHTML = ti.kfs.map((k, idx) => `<span class="chip">@${fmt1(k.t)}s<button data-kf="${idx}" title="Remove keyframe">✕</button></span>`).join('');
   host.querySelectorAll('[data-kf]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); const t2 = curTitle(); if (!t2) return; saveHistory(); t2.kfs.splice(Number(b.dataset.kf), 1); renderKfChips(); renderTitleList(); }; });
 }
 function loadControls(ti) {
   if (!ti) {
-    $('editingTag').textContent = 'teks baharu'; $('titleText').value = '';
+    $('editingTag').textContent = 'new text'; $('titleText').value = '';
     $('titleColor').value = '#ffffff'; $('titlePos').value = 'bottom';
     $('titleSize').value = 9; $('titleDur').value = 3;
     $('tX').value = 50; $('tY').value = 88; $('tScale').value = 1; $('tAlpha').value = 100;
   } else {
-    $('editingTag').textContent = '✎ ' + (ti.text || 'Teks'); $('titleText').value = ti.text || '';
+    $('editingTag').textContent = '✎ ' + (ti.text || 'Text'); $('titleText').value = ti.text || '';
     $('titleColor').value = ti.color || '#ffffff'; $('titlePos').value = ti.pos || 'bottom';
     $('titleSize').value = ti.size; $('titleDur').value = ti.dur;
     $('tX').value = (ti.x != null ? ti.x : 50); $('tY').value = (ti.y != null ? ti.y : anchorY(ti.pos));
@@ -819,27 +819,27 @@ function selectTitle(id) { selTitleId = id; const ti = curTitle(); if (ti) seekT
 function newTitle() { selTitleId = null; loadControls(null); renderTitleLane(); renderTitleList(); }
 function renderTitleList() {
   const host = $('titleList'); if (!host) return;
-  if (!titles.length) { host.innerHTML = '<div class="empty">Belum ada teks.</div>'; return; }
-  host.innerHTML = titles.map((ti) => `<div class="listItem${ti.id === selTitleId ? ' sel' : ''}"><span class="nm" data-sel="${ti.id}" style="cursor:pointer">${escapeHtml(ti.text || 'Teks')} <small style="color:var(--muted)">@${fmt1(ti.start)}s +${fmt1(ti.dur)}s${(ti.kfs && ti.kfs.length) ? ' \ud83d\udd11' + ti.kfs.length : ''}</small></span><button data-edit="${ti.id}" title="Pilih & sunting">✎</button><button data-dl="${ti.id}" class="danger">✕</button></div>`).join('');
+  if (!titles.length) { host.innerHTML = '<div class="empty">No text yet.</div>'; return; }
+  host.innerHTML = titles.map((ti) => `<div class="listItem${ti.id === selTitleId ? ' sel' : ''}"><span class="nm" data-sel="${ti.id}" style="cursor:pointer">${escapeHtml(ti.text || 'Text')} <small style="color:var(--muted)">@${fmt1(ti.start)}s +${fmt1(ti.dur)}s${(ti.kfs && ti.kfs.length) ? ' \ud83d\udd11' + ti.kfs.length : ''}</small></span><button data-edit="${ti.id}" title="Select &amp; edit">✎</button><button data-dl="${ti.id}" class="danger">✕</button></div>`).join('');
   host.querySelectorAll('[data-sel],[data-edit]').forEach((el) => { el.onclick = () => selectTitle(el.dataset.sel || el.dataset.edit); });
   host.querySelectorAll('[data-dl]').forEach((b) => { b.onclick = () => { saveHistory(); titles = titles.filter((t) => t.id !== b.dataset.dl); if (selTitleId === b.dataset.dl) { selTitleId = null; loadControls(null); } renderTitleLane(); renderTitleList(); }; });
 }
 $('addTitleBtn').onclick = () => {
   const text = $('titleText').value.trim();
-  if (!text) { toast('Taip teks dahulu.'); return; }
-  if (!total) { toast('Tambah klip dahulu.'); return; }
+  if (!text) { toast('Type some text first.'); return; }
+  if (!total) { toast('Add a clip first.'); return; }
   const p = poseFromControls(); saveHistory();
   const ti = { id: 't' + (titleUid++), text, start: clock, dur: Number($('titleDur').value), size: Number($('titleSize').value), color: $('titleColor').value, pos: $('titlePos').value, x: p.x, y: p.y, scale: p.s, alpha: p.a, kfs: [], wave: null };
   titles.push(ti); selTitleId = ti.id; $('titleText').value = '';
-  loadControls(ti); renderTitleLane(); renderTitleList(); toast('Teks ditambah @ ' + fmt1(clock) + 's — kini terpilih untuk keyframe.');
+  loadControls(ti); renderTitleLane(); renderTitleList(); toast('Text added @ ' + fmt1(clock) + 's — now selected for keyframes.');
 };
 $('addKFB').onclick = () => {
-  const ti = curTitle(); if (!ti) { toast('Pilih teks dahulu (✎ pada senarai).'); return; }
+  const ti = curTitle(); if (!ti) { toast('Select a text first (✎ in the list).'); return; }
   const t = Math.max(0, Math.min(ti.dur, clock - ti.start)); const p = poseFromControls();
   saveHistory(); ti.kfs = (ti.kfs || []).filter((k) => Math.abs(k.t - t) > 0.08); ti.kfs.push({ t, x: p.x, y: p.y, s: p.s, a: p.a }); ti.kfs.sort((a, b) => a.t - b.t);
-  renderKfChips(); renderTitleList(); toast('Keyframe @ ' + fmt1(t) + 's (jumlah ' + ti.kfs.length + ').');
+  renderKfChips(); renderTitleList(); toast('Keyframe @ ' + fmt1(t) + 's (total ' + ti.kfs.length + ').');
 };
-$('clrKFB').onclick = () => { const ti = curTitle(); if (!ti) { toast('Pilih teks dahulu.'); return; } saveHistory(); ti.kfs = []; renderKfChips(); renderTitleList(); toast('Animasi keyframe dikosongkan.'); };
+$('clrKFB').onclick = () => { const ti = curTitle(); if (!ti) { toast('Select a text first.'); return; } saveHistory(); ti.kfs = []; renderKfChips(); renderTitleList(); toast('Keyframe animation cleared.'); };
 $('selectNoneBtn').onclick = newTitle;
 </script>
 
@@ -849,7 +849,7 @@ $('selectNoneBtn').onclick = newTitle;
 // ── Jalur waveform muzik ──
 async function buildWaveform(file) {
   const host = $('waveform'); if (!host) return; host.hidden = false;
-  $('waveLabel').textContent = '♪ ' + (file.name || 'Muzik');
+  $('waveLabel').textContent = '♪ ' + (file.name || 'Music');
   try {
     const AC = window.AudioContext || window.webkitAudioContext; const ctx = new AC();
     const buf = await file.arrayBuffer();
@@ -866,7 +866,7 @@ function drawWave(peaks) {
   const cv = $('waveCanvas'); const host = $('waveform'); if (!cv || !host) return;
   const dpr = Math.max(1, window.devicePixelRatio || 1); const W = host.clientWidth || 600; const H = host.clientHeight || 34;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); const cx = cv.getContext('2d'); cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, W, H);
-  if (!peaks) { cx.fillStyle = '#9aa6cc'; cx.font = '11px system-ui'; cx.fillText('  (waveform tidak tersedia — format audio gagal didekod)', 8, H / 2 + 4); return; }
+  if (!peaks) { cx.fillStyle = '#9aa6cc'; cx.font = '11px system-ui'; cx.fillText('  (waveform unavailable — audio format failed to decode)', 8, H / 2 + 4); return; }
   const mid = H / 2; const bw = W / peaks.length; cx.fillStyle = '#37d67a';
   for (let i = 0; i < peaks.length; i++) { const h = Math.max(1, peaks[i] * (H * 0.9)); cx.fillRect(i * bw, mid - h / 2, Math.max(1, bw * 0.7), h); }
 }
@@ -880,19 +880,19 @@ $('musicInput').onchange = (e) => {
   music = { el, url, name: f.name, peaks: null }; musicSrc = null;
   $('musicName').textContent = f.name;
   buildWaveform(f);
-  toast('Muzik dimuat — akan ikut semasa main/eksport.');
+  toast('Music loaded — it follows playback & export.');
 };
-$('clearMusicBtn').onclick = () => { if (music) { try { music.el.pause(); URL.revokeObjectURL(music.url); } catch (e) {} music = null; musicSrc = null; $('musicName').textContent = '— tiada —'; $('waveform').hidden = true; } };
+$('clearMusicBtn').onclick = () => { if (music) { try { music.el.pause(); URL.revokeObjectURL(music.url); } catch (e) {} music = null; musicSrc = null; $('musicName').textContent = '— none —'; $('waveform').hidden = true; } };
 $('musicVol').oninput = (e) => { e.target.nextElementSibling.textContent = e.target.value + '%'; if (musicGain) musicGain.gain.value = Number(e.target.value) / 100; };
 
 // ── Eksport WebM (rakaman masa nyata seluruh garis masa) ──
 function pickMime() { const c = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']; for (const m of c) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; return null; }
 let rec = null, recChunks = [], recMime = '', recDone = null;
 $('exportBtn').onclick = async () => {
-  if (!total) { toast('Tiada klip untuk dieksport.'); return; }
+  if (!total) { toast('No clips to export.'); return; }
   if (recording) return;
   const mime = pickMime();
-  if (!mime) { toast('Pelayar ini tak sokong MediaRecorder — guna Chrome/Edge/Firefox terbaru.'); return; }
+  if (!mime) { toast('This browser does not support MediaRecorder — use a recent Chrome/Edge/Firefox.'); return; }
   ensureAudio(); if (actx.state === 'suspended') await actx.resume();
   pause();
   clock = 0; activeId = null; if (music && music.el) { try { music.el.currentTime = 0; } catch (e) {} }
@@ -908,23 +908,23 @@ $('exportBtn').onclick = async () => {
   recChunks = []; recMime = mime;
   rec.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
   recDone = new Promise((res) => { rec.onstop = res; });
-  recording = true; $('exportBtn').disabled = true; $('playBtn').textContent = '⏺ Rakam…';
+  recording = true; $('exportBtn').disabled = true; $('playBtn').textContent = '⏺ Recording…';
   rec.start(250);
   playing = true; lastTs = 0;
   if (music && music.el) { try { music.el.play().catch(() => {}); } catch (e) {} }
   syncActive(0);
-  toast('Merakam garis masa penuh (' + fmt(total) + ') — jangan tutup tab.');
+  toast('Recording the full timeline (' + fmt(total) + ') — do not close the tab.');
 };
 async function finishRecording() {
   recording = false; pause();
   try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (e) {}
   await recDone;
-  $('exportBtn').disabled = false; $('playBtn').textContent = '▶ Main';
+  $('exportBtn').disabled = false; $('playBtn').textContent = '▶ Play';
   const blob = new Blob(recChunks, { type: (recMime.split(';')[0] || 'video/webm') });
-  if (!blob.size) { toast('Rakaman kosong — cuba lagi.'); return; }
+  if (!blob.size) { toast('Empty recording — try again.'); return; }
   const ext = recMime.includes('mp4') ? 'mp4' : 'webm';
   downloadBlob(blob, 'tukuk-movie-' + Date.now() + '.' + ext);
-  toast('Dieksport sebagai ' + ext.toUpperCase() + ' (' + fmt(total) + ', ' + cvs.width + '×' + cvs.height + ').');
+  toast('Exported as ' + ext.toUpperCase() + ' (' + fmt(total) + ', ' + cvs.width + '×' + cvs.height + ').');
 }
 
 // ── Simpan / Buka projek (.json; media perlu dipilih semula) ──
@@ -964,23 +964,23 @@ function applyProjectSettings(data) {
   $('dropHint').hidden = clips.length > 0;
 }
 $('saveProjectBtn').onclick = () => {
-  if (!clips.length && !titles.length) { toast('Tiada apa untuk disimpan.'); return; }
-  try { const blob = new Blob([JSON.stringify(projectJSON(), null, 1)], { type: 'application/json' }); downloadBlob(blob, 'tukuk-movie-' + Date.now() + '.json'); toast('Projek disimpan. Bila dibuka, pilih semula fail media yang sama.'); } catch (e) { toast('Gagal simpan: ' + e.message); }
+  if (!clips.length && !titles.length) { toast('Nothing to save yet.'); return; }
+  try { const blob = new Blob([JSON.stringify(projectJSON(), null, 1)], { type: 'application/json' }); downloadBlob(blob, 'tukuk-movie-' + Date.now() + '.json'); toast('Project saved. When opening it back, re-select the same media files.'); } catch (e) { toast('Save failed: ' + e.message); }
 };
 $('openProjectBtn').onclick = () => $('projectInput').click();
 $('projectInput').onchange = async (e) => {
   const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
-  let data; try { data = JSON.parse(await f.text()); } catch (err) { toast('Fail projek tidak sah.'); return; }
+  let data; try { data = JSON.parse(await f.text()); } catch (err) { toast('Invalid project file.'); return; }
   const need = (data.clips || []).length;
   if (need) {
     clips = []; titles = []; selId = null; selTitleId = null; clock = 0; buildTimeline(); renderTitleList();
-    pendingProj = data; toast('Pilih fail media untuk ' + need + ' klip (nama sepadan otomatis).'); $('fileInput').click();
-  } else { applyProjectSettings(data); toast('Projek dibuka (tiada klip media).'); }
+    pendingProj = data; toast('Select the media files for ' + need + ' clips (names auto-matched).'); $('fileInput').click();
+  } else { applyProjectSettings(data); toast('Project opened (no media clips).'); }
 };
 
 // ── Wiring header/transport ──
 $('addBtn').onclick = () => $('fileInput').click();
-$('fileInput').onchange = async (e) => { const arr = e.target.files ? [...e.target.files] : []; e.target.value = ''; if (!arr.length) return; await addFiles(arr); if (pendingProj) { const d = pendingProj; pendingProj = null; applyProjectSettings(d); toast('Projek dipulihkan.'); } };
+$('fileInput').onchange = async (e) => { const arr = e.target.files ? [...e.target.files] : []; e.target.value = ''; if (!arr.length) return; await addFiles(arr); if (pendingProj) { const d = pendingProj; pendingProj = null; applyProjectSettings(d); toast('Project restored.'); } };
 $('playBtn').onclick = () => { playing ? pause() : play(); };
 $('toStart').onclick = () => seekTo(0);
 $('toEnd').onclick = () => seekTo(total);
@@ -989,7 +989,7 @@ $('redoBtn').onclick = redo;
 $('clearAllBtn').onclick = () => { if (!clips.length) return; saveHistory(); clips = []; titles = []; selId = null; selTitleId = null; clock = 0; buildTimeline(); renderClipPanel(); loadControls(null); renderTitleList(); $('dropHint').hidden = false; };
 $('titleDur').oninput = (e) => { e.target.nextElementSibling.textContent = fmt1(Number(e.target.value)) + 's'; const ti = curTitle(); if (ti) { ti.dur = Number(e.target.value); renderTitleLane(); renderTitleList(); } };
 $('titleSize').oninput = (e) => { e.target.nextElementSibling.textContent = e.target.value; const ti = curTitle(); if (ti) ti.size = Number(e.target.value); };
-$('titleText').oninput = (e) => { const ti = curTitle(); if (ti) { ti.text = e.target.value; renderTitleLane(); const tag = $('editingTag'); if (tag) tag.textContent = '✎ ' + (ti.text || 'Teks'); } };
+$('titleText').oninput = (e) => { const ti = curTitle(); if (ti) { ti.text = e.target.value; renderTitleLane(); const tag = $('editingTag'); if (tag) tag.textContent = '✎ ' + (ti.text || 'Text'); } };
 $('titleColor').oninput = () => { const ti = curTitle(); if (ti) ti.color = $('titleColor').value; };
 $('titlePos').onchange = () => { const ti = curTitle(); if (ti) { ti.pos = $('titlePos').value; if (!ti.kfs || !ti.kfs.length) { ti.y = anchorY(ti.pos); $('tY').value = ti.y; $('tY').nextElementSibling.textContent = Math.round(ti.y) + '%'; } renderTitleLane(); } };
 ['tX', 'tY', 'tScale', 'tAlpha'].forEach((id) => { const el = $(id); el.oninput = () => { const v = Number(el.value); el.nextElementSibling.textContent = id === 'tScale' ? v.toFixed(2) + '×' : id === 'tAlpha' ? Math.round(v) + '%' : Math.round(v) + '%'; const ti = curTitle(); if (ti) { const p = poseFromControls(); ti.x = p.x; ti.y = p.y; ti.scale = p.s; ti.alpha = p.a; } }; el.onchange = () => { if (curTitle()) saveHistory(); }; });
@@ -1022,7 +1022,7 @@ $('track').addEventListener('drop', (e) => {
 // ── Drag & drop fail ke stage ──
 const stage = $('stage');
 stage.addEventListener('dragover', (e) => e.preventDefault());
-stage.addEventListener('drop', (e) => { e.preventDefault(); const fs = [...(e.dataTransfer.files || [])].filter((x) => x.type.startsWith('video/') || x.type.startsWith('image/')); if (fs.length) addFiles(fs); else toast('Seret fail video atau gambar.'); });
+stage.addEventListener('drop', (e) => { e.preventDefault(); const fs = [...(e.dataTransfer.files || [])].filter((x) => x.type.startsWith('video/') || x.type.startsWith('image/')); if (fs.length) addFiles(fs); else toast('Drop video or image files.'); });
 
 // ── Pintasan papan kekunci ──
 const modal = $('shortcutsModal');
@@ -1048,7 +1048,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('resize', () => { if (total) { buildTimeline(); } if (music && music.peaks) drawWave(music.peaks); });
 
 // ── Auto-muat ?src=<url> (dari Studio) ──
-try { const _p = new URLSearchParams(location.search).get('src'); if (_p) { fetch(_p).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then((b) => { if (!b || !b.size) throw new Error('empty'); const f = new File([b], _p.split('/').pop() || 'clip.mp4', { type: b.type || 'video/mp4' }); addFiles([f]); }).catch((err) => toast('Gagal muat ?src — ' + (err && err.message ? err.message : 'sumber perlukan CORS.') )); } } catch (e) {}
+try { const _p = new URLSearchParams(location.search).get('src'); if (_p) { fetch(_p).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then((b) => { if (!b || !b.size) throw new Error('empty'); const f = new File([b], _p.split('/').pop() || 'clip.mp4', { type: b.type || 'video/mp4' }); addFiles([f]); }).catch((err) => toast('Failed to load ?src — ' + (err && err.message ? err.message : 'the source needs CORS.') )); } } catch (e) {}
 
 // ── Pintasan awal: titleStart label ikut scrub ──
 const _origSeek = seekTo; seekTo = function (t) { _origSeek(t); $('titleStartVal').textContent = fmt1(clock) + 's'; };

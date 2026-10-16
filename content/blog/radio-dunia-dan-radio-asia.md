@@ -1,28 +1,28 @@
 SLUG: radio-dunia-dan-radio-asia
-TITLE: Radio Dalam Pelayar — Kini Dengan Laluan Pantas 🌏 Asia
-EXCERPT: Tukuk-OS ada radio & muzik strim langsung tanpa akaun dan tanpa iklan. Terbaru: satu sentuhan untuk stesen Asia — Malaysia, Indonesia, dan seluruh benua.
+TITLE: Radio in the Browser — Now with a 🌏 Asia Fast Lane
+EXCERPT: Tukuk-OS has live radio & music streaming with no account and no ads. New: one tap to Asian stations — Malaysia, Indonesia, and the whole continent.
 TAGS: radio, asia, media, streaming, malaysia
 
-## Radio yang menyambung di mana-mana halaman
+## Radio that keeps playing across every page
 
-Tukuk-OS sudah lama punya mod **Radio** dan **Muzik** pada halaman carian — dengar stesen radio seluruh dunia terus dalam pelayar. Keunikannya: apabila anda dengar radio sambil melompat ke halaman lain (cari, apl, blog), siaran **sambung bermain** menerusi bar pemain global. Ia juga **anti-terputus**: stream langsung yang terganggau akan cuba sambung semula automatik, bukan berhenti. Semua ini tanpa perlu daftar, tanpa kunci API, dan tanpa iklan menyelit.
+Tukuk-OS has long had **Radio** and **Music** modes on the search page — listen to radio stations from around the world right in the browser. The twist: when you are listening to radio and jump to another page (search, apps, blog), the broadcast **keeps playing** through the global player bar. It is also **anti-dropout**: a live stream that gets interrupted will try to reconnect automatically instead of just stopping. All of this with no sign-up, no API keys, and no sneaked-in ads.
 
-Sumber stesen ialah **Radio Browser** — satu pangkalan data komuniti dengan puluhan ribu stesen, disaring supaya hanya strim **HTTPS** yang paparkan (strim HTTP akan disekat pelayar pada laman selamat).
+The station source is **Radio Browser** — a community database with tens of thousands of stations, filtered so only **HTTPS** streams are shown (HTTP streams get blocked by browsers on secure sites anyway).
 
-## Masalah: "tiada radio Asia"
+## The problem: "there is no Asian radio"
 
-Antara maklum balas pertama kami: bila buka Radio, senarai teratas didominasi stesen Barat — BBC, Jazz Perancis, Klasik Amerika. Stesen Asia memang *ada*, tetapi terkubur dalam dropdown "Semua negara" yang panjang. Cari stesen Malaysia bermaksud skrol beratus nama negara. Itu bukan salah kataloqnya, cuma cara pelayaran yang tak mesra rantau kita.
+One of our first pieces of feedback: when you open Radio, the top list is dominated by Western stations — BBC, French Jazz, American Classical. Asian stations *do* exist, but they are buried in the long "All countries" dropdown. Finding a Malaysian station meant scrolling through hundreds of country names. That is not the catalog's fault, just navigation that is unfriendly to our region.
 
-## Penyelesaian: kawasan pantas
+## The fix: quick regions
 
-Kami tambah bar **Kawasan** pada pelayaran radio. Sekarang ada butang:
+We added a **Region** bar to the radio navigation. Now there are buttons:
 
-- **🌏 Asia** — gabungan stesen teratas dari seluruh benua (MY, ID, TH, PH, SG, VN, IN, JP, KR, dan banyak lagi).
-- **Asia Tenggara**, **Asia Timur**, **Asia Selatan** — susun ikut sub-rantau.
-- **🕌 Timur Tengah** — sebagai bonus.
+- **🌏 Asia** — a blend of top stations from across the continent (MY, ID, TH, PH, SG, VN, IN, JP, KR, and many more).
+- **Southeast Asia**, **East Asia**, **South Asia** — ordered by sub-region.
+- **🕌 Middle East** — as a bonus.
 
-Di belakang tabir, setiap kawasan ialah satu senarai kod negara ISO yang dihantar sebagai param `countrycode` berpisahkan koma kepada Radio Browser, diurut ikut jumlah klik (paling popular dahulu). Pilih **🌏 Asia**, dan skrin serta-merta dipenuhi stesen serantau — tanpa perlu skrol dropdown lagi.
+Behind the scenes, each region is a list of ISO country codes sent as a comma-separated `countrycode` parameter to Radio Browser, sorted by click count (most popular first). Pick **🌏 Asia** and the screen instantly fills with regional stations — no more dropdown scrolling.
 
-## Stesen Asia sebagai jaminan
+## Asian stations guaranteed
 
-Kalau Radio Browser sesekali tak dapat dihubungi, senarai simpanan (*fallback*) kami kini turut menyenaraikan stesen Malaysia & Indonesia, jadi ada sahaja radio Asia yang boleh dimainkan walaupun sumber luar bermasalah. Cuba `tukuk.org/cari?mode=radio` dan tekan **🌏 Asia** — dengar sendiri. Radio rantau kita kini ada tempatnya di Tukuk.
+If Radio Browser is occasionally unreachable, our fallback list now also includes Malaysian & Indonesian stations, so there is always some Asian radio to play even when the external source has problems. Try `tukuk.org/cari?mode=radio` and press **🌏 Asia** — hear it yourself. Our region's radio now has its place.

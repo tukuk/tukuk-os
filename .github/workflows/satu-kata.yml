@@ -18,11 +18,11 @@ on:
   workflow_dispatch:        # trigger manual; boleh isi satu kata
     inputs:
       word:
-        description: 'Kata untuk dijana (kosong = auto-pilih kata seterusnya)'
+        description: 'Word to generate (empty = auto-pick next word)'
         required: false
         type: string
       unity:
-        description: 'Sertakan scaffold Unity (opt-in)'
+        description: 'Include Unity scaffold (opt-in)'
         required: false
         type: boolean
         default: false
@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Jana app + game
+      - name: Generate app + game
         env:
           SATU_KATA_WORD: ${{ inputs.word || '' }}
         run: |
@@ -55,9 +55,9 @@ jobs:
           if [ "${{ inputs.unity }}" = "true" ]; then ARGS="$ARGS --unity"; fi
           node scripts/satu-kata/generate.mjs $ARGS
           echo "### Hub" >> "$GITHUB_STEP_SUMMARY"
-          node -e "const m=require('./generated/manifest.json');console.log(m.entries.length+' hasil · terkini: '+m.entries[m.entries.length-1].word)" >> "$GITHUB_STEP_SUMMARY"
+          node -e "const m=require('./generated/manifest.json');console.log(m.entries.length+' results · latest: '+m.entries[m.entries.length-1].word)" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Deploy ke Cloudflare Pages
+      - name: Deploy to Cloudflare Pages
         if: env.CLOUDFLARE_API_TOKEN != ''
         continue-on-error: true   # token mungkin tiada cakupan Pages; jangan hentikan cron / commit manifest
         env:
@@ -67,7 +67,7 @@ jobs:
           npx --yes wrangler@latest pages project create tukuk-satu-kata --production-branch main || true
           npx --yes wrangler@latest pages deploy generated/public --project-name tukuk-satu-kata --branch main
 
-      - name: Commit manifest + keluaran (kanan untuk cron hari esok)
+      - name: Commit manifest + output (picks next word for tomorrow's cron)
         run: |
           git config user.name  "tukuk-satu-kata[bot]"
           git config user.email "bot@tukuk.org"

@@ -433,13 +433,13 @@ test('media: saiz berlebihan + kouta muat naik disekat', () => {
   const big = pad(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chat.MAX_IMG + 10);
   const over = chat.addMedia(ana, big);
   assert.equal(over.status, 413);
-  assert.match(over.error, /terlalu besar/i);
+  assert.match(over.error, /too large/i);
   const bigdoc = Buffer.concat([Buffer.from('DOCX'), Buffer.alloc(chat.MAX_DOC + 10, 1)]);
   assert.equal(chat.addMedia(ana, bigdoc, { name: 'besar.docx' }).status, 413, 'fail umum terlalu besar → 413');
   for (let i = 0; i < chat.QUOTA_FILES; i++) assert.ok(upload(ana, GIF).ok, 'fail ke-' + (i + 1) + ' masih dibenarkan');
   const last = upload(ana, GIF);
   assert.equal(last.status, 429, 'kouta fail sejam → 429');
-  assert.match(last.error, /Terlalu banyak fail/);
+  assert.match(last.error, /Too many files/);
 });
 
 test('media: fail umum (dokumen/muzik) diterima + nama asal + dinormalkan', () => {
@@ -597,7 +597,7 @@ test('setPass: wajib kata laluan lama, salt baru, yang lama mati', () => {
   assert.notEqual(u.hash, before, 'hash berubah');
   assert.ok(chat.login('Ana', 'baru123').ok);
   assert.ok(chat.login('Ana', 'lama123').error, 'kata laluan lama tidak lagi guna');
-  assert.equal(chat.setPass('Tiada', 'a', 'b').error.includes('Akaun'), true);
+  assert.equal(chat.setPass('Tiada', 'a', 'b').error.includes('Account'), true);
 });
 
 test('logoutAll: sesi lain mati, token semasa kekal hidup', () => {
@@ -1514,7 +1514,7 @@ test('@sini/@semua: ahli bilik kumpulan dapat notif, penulis tidak', () => {
   const g = chat.createGroup('Ana', 'Projek', [ben.id]);
   assert.ok(g.ok || g.room, 'kumpulan tercipta');
   const rid = g.room.id;
-  chat.send('Ana', rid, 'mesyuarat bermula sekarang @semua');
+  chat.send('Ana', rid, 'mesyuarat bermula sekarang @all');
   const bn = chat.notifList('Ben').notifs.filter(x => x.type === 'mention' && x.room === rid);
   assert.equal(bn.length, 1, 'Ben dapat notif sebutan bilik');
   assert.equal(chat.notifList('Ana').notifs.filter(x => x.room === rid).length, 0, 'penulis tidak notify diri sendiri');
@@ -1529,8 +1529,8 @@ test('@sini: sejuk 10 minit — sebutan kedua bilik sama tidak menghantar notif'
   chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
   const ben = chat.findUser('Ben');
   const g = chat.createGroup('Ana', 'Projek', [ben.id]);
-  chat.send('Ana', g.room.id, 'panggilan @sini');
-  chat.send('Ana', g.room.id, 'panggilan lagi @sini');
+  chat.send('Ana', g.room.id, 'panggilan @here');
+  chat.send('Ana', g.room.id, 'panggilan lagi @here');
   const n = chat.notifList('Ben').notifs.filter(x => x.type === 'mention' && x.room === g.room.id);
   assert.equal(n.length, 1, 'sebutan kedua dalam tempang sejuk → senyap');
 });
@@ -1540,7 +1540,7 @@ test('@semua bilik global: hanya pengguna online yang dapat notif', () => {
   chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cia', 'pass3');
   chat.load().users.ben.lastSeen = Date.now();           // Ben aktif
   chat.load().users.cia.lastSeen = Date.now() - 999e3;   // Cia sudah lama senyap
-  chat.send('Ana', 'global_am', 'pengumuman @semua');
+  chat.send('Ana', 'global_am', 'pengumuman @all');
   assert.ok(chat.notifList('Ben').notifs.some(x => x.type === 'mention' && x.room === 'global_am'), 'Ben (online) dapat');
   assert.equal(chat.notifList('Cia').notifs.filter(x => x.room === 'global_am').length, 0, 'Cia (offline) tidak diganggu');
 });

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk-OS — Enjin Carian Web</title>
-<meta name="description" content="Tukuk-OS ialah enjin carian web bebas yang mengindeks laman web dan menyediakan statistik. Cari dengan pantas dengan sorotan, penapis dan facet.">
-<meta name="keywords" content="enjin carian, search engine, carian web, tukuk, indeks terbalik, meilisearch">
+<title>Tukuk-OS — Web Search Engine</title>
+<meta name="description" content="Tukuk-OS is a free web search engine that indexes websites and provides stats. Search fast with highlighting, filters, and facets.">
+<meta name="keywords" content="search engine, web search, tukuk, inverted index, meilisearch">
 <link rel="canonical" href="/">
-<meta property="og:title" content="Tukuk-OS — Enjin Carian Web">
-<meta property="og:description" content="Enjin carian web bebas dengan sorotan, penapis dan facet.">
+<meta property="og:title" content="Tukuk-OS — Web Search Engine">
+<meta property="og:description" content="Free web search engine with highlighting, filters, and facets.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128269;</text></svg>">
 <link rel="manifest" href="/manifest.json">
@@ -74,17 +74,17 @@
 <body>
 <header class="wrap">
   <h1>&#128269; Tukuk-OS</h1>
-  <p class="tagline">Enjin carian web bebas &mdash; indeks terbalik, sorotan kata, penapis facet</p>
+  <p class="tagline">Free web search engine &mdash; inverted index, word highlighting, facet filters</p>
   <form id="form" autocomplete="off">
     <div class="suggest" style="flex:1">
-      <input type="search" id="q" name="q" placeholder="Cari di web&hellip;" aria-label="Kata kunci carian" required>
+      <input type="search" id="q" name="q" placeholder="Search the web&hellip;" aria-label="Search keywords" required>
       <div class="suggest-list" id="suggest" hidden></div>
     </div>
-    <button type="submit" id="go">Cari</button>
+    <button type="submit" id="go">Search</button>
   </form>
   <div class="tabs" id="tabs">
     <button type="button" data-mode="web" class="on">Web</button>
-    <button type="button" data-mode="images">Imej</button>
+    <button type="button" data-mode="images">Images</button>
     <button type="button" data-mode="videos">Video</button>
   </div>
 </header>
@@ -93,22 +93,22 @@
   <div class="meta" id="meta" hidden>
     <span id="count"></span>
     <span id="took"></span>
-    <select id="sort" aria-label="Susun hasil">
-      <option value="">Relevans</option>
-      <option value="newest">Terbaharu</option>
-      <option value="longest">Terpanjang</option>
-      <option value="shortest">Terpendek</option>
+    <select id="sort" aria-label="Sort results">
+      <option value="">Relevance</option>
+      <option value="newest">Newest</option>
+      <option value="longest">Longest</option>
+      <option value="shortest">Shortest</option>
     </select>
   </div>
-  <details class="facets" id="facetBox" hidden><summary>Tapik hasil</summary><div class="facets-body" id="facets"></div></details>
+  <details class="facets" id="facetBox" hidden><summary>Filter results</summary><div class="facets-body" id="facets"></div></details>
   <section id="results" aria-live="polite"></section>
 </main>
 
 <footer class="wrap">
   <a href="/health">Health</a>
-  <a href="/stats">Statistik</a>
+  <a href="/stats">Stats</a>
   <a href="/api">API</a>
-  <p style="margin-top:14px">Tukuk-OS &middot; dibina dengan Meilisearch &middot; kod sumber terbuka (ISC)</p>
+  <p style="margin-top:14px">Tukuk-OS &middot; built with Meilisearch &middot; open-source code (ISC)</p>
 </footer>
 
 <script>
@@ -157,7 +157,7 @@ function pushURL(extra = {}) {
 async function run(append = false) {
   if (!query || busy) return;
   busy = true; $('go').disabled = true;
-  if (!append) { $('results').innerHTML = '<p class="empty">Mencari&hellip;</p>'; }
+  if (!append) { $('results').innerHTML = '<p class="empty">Searching&hellip;</p>'; }
 
   if (mode === 'web') {
     const p = new URLSearchParams({ q: query, limit: '20', offset: String(offset) });
@@ -168,10 +168,10 @@ async function run(append = false) {
       const d = await r.json();
 
       $('meta').hidden = false;
-      $('count').textContent = `${d.total ?? 0} hasil`;
+      $('count').textContent = `${d.total ?? 0} results`;
       $('took').textContent = `${d.tookMs ?? 0} ms`;
 
-      const facetNames = { host: 'Laman', lang: 'Bahasa', type: 'Jenis' };
+      const facetNames = { host: 'Site', lang: 'Language', type: 'Type' };
       const entries = Object.entries(d.facets || {}).filter(([, v]) => Object.keys(v).length);
       if (entries.length) {
         $('facetBox').hidden = false;
@@ -184,7 +184,7 @@ async function run(append = false) {
       }
 
       if (!d.hits.length) {
-        $('results').innerHTML = `<p class="empty">Tiada hasil untuk &ldquo;${esc(query)}&rdquo;.</p>`;
+        $('results').innerHTML = `<p class="empty">No results for &ldquo;${esc(query)}&rdquo;.</p>`;
       } else {
         const html = d.hits.map((h) => `
           <article class="result">
@@ -194,7 +194,7 @@ async function run(append = false) {
             <div class="tags">
               ${h.lang ? `<span>${esc(h.lang)}</span>` : ''}
               ${h.type ? `<span>${esc(h.type)}</span>` : ''}
-              ${h.wordCount ? `<span>${h.wordCount} perkataan</span>` : ''}
+              ${h.wordCount ? `<span>${h.wordCount} words</span>` : ''}
             </div>
           </article>`).join('');
         $('results').insertAdjacentHTML(append ? 'beforeend' : 'afterbegin', html);
@@ -204,13 +204,13 @@ async function run(append = false) {
         if (next < (d.total ?? 0)) {
           if (more) more.remove();
           const b = document.createElement('button');
-          b.id = 'more'; b.type = 'button'; b.textContent = `Muat lagi (${next} / ${d.total})`;
+          b.id = 'more'; b.type = 'button'; b.textContent = `Load more (${next} / ${d.total})`;
           b.onclick = () => { offset = next; pushURL(); run(true); };
           $('results').append(b);
         } else if (more) more.remove();
       }
     } catch (e) {
-      $('results').innerHTML = `<p class="empty">Ralat: ${esc(e.message)}</p>`;
+      $('results').innerHTML = `<p class="empty">Error: ${esc(e.message)}</p>`;
     } finally {
       busy = false; $('go').disabled = false;
     }
@@ -224,12 +224,12 @@ async function run(append = false) {
     const d = await r.json();
 
     $('meta').hidden = false;
-    $('count').textContent = `${d.total ?? 0} hasil`;
+    $('count').textContent = `${d.total ?? 0} results`;
     $('took').textContent = `${d.tookMs ?? 0} ms`;
     $('facetBox').hidden = true;
 
     if (!d.hits?.length) {
-      $('results').innerHTML = `<p class="empty">Tiada hasil untuk &ldquo;${esc(query)}&rdquo;.</p>`;
+      $('results').innerHTML = `<p class="empty">No results for &ldquo;${esc(query)}&rdquo;.</p>`;
     } else {
       if (mode === 'images') {
         const html = '<div class="image-grid">' + d.hits.map((h) => `
@@ -238,7 +238,7 @@ async function run(append = false) {
               <img src="${esc(h.thumbnail || h.url)}" alt="${esc(h.title || query)}" loading="lazy">
             </a>
             <div class="caption">
-              <a href="${esc(h.url)}" rel="noopener noreferrer nofollow" target="_blank">${esc(h.title || 'Imej')}</a>
+              <a href="${esc(h.url)}" rel="noopener noreferrer nofollow" target="_blank">${esc(h.title || 'Image')}</a>
               ${h.description ? `<div style="color:var(--muted);font-size:.8rem;margin-top:4px">${esc(h.description.slice(0,80))}</div>` : ''}
             </div>
           </div>`).join('') + '</div>';
@@ -256,7 +256,7 @@ async function run(append = false) {
       }
     }
   } catch (e) {
-    $('results').innerHTML = `<p class="empty">Ralat: ${esc(e.message)}</p>`;
+    $('results').innerHTML = `<p class="empty">Error: ${esc(e.message)}</p>`;
   } finally {
     busy = false; $('go').disabled = false;
   }

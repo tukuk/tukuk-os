@@ -37,33 +37,33 @@ function isPrivateAddress(ip) {
 async function assertPublicUrl(rawUrl, { allowPrivate = false } = {}) {
   const url = new URL(rawUrl);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw Object.assign(new Error('Hanya protokol http dan https dibenarkan'), { statusCode: 400 });
+    throw Object.assign(new Error('Only http and https protocols are allowed'), { statusCode: 400 });
   }
   if (!url.hostname) {
-    throw Object.assign(new Error('URL tidak sah'), { statusCode: 400 });
+    throw Object.assign(new Error('Invalid URL'), { statusCode: 400 });
   }
 
   if (allowPrivate) return url;
 
   if (net.isIP(url.hostname)) {
     if (isPrivateAddress(url.hostname)) {
-      throw Object.assign(new Error('Alamat rangkaian dalaman tidak dibenarkan'), { statusCode: 400 });
+      throw Object.assign(new Error('Internal network addresses are not allowed'), { statusCode: 400 });
     }
     return url;
   }
 
   if (/^(localhost|.*\.local|.*\.internal)$/i.test(url.hostname)) {
-    throw Object.assign(new Error('Nama hos dalaman tidak dibenarkan'), { statusCode: 400 });
+    throw Object.assign(new Error('Internal host names are not allowed'), { statusCode: 400 });
   }
 
   let records;
   try {
     records = await dns.lookup(url.hostname, { all: true });
   } catch {
-    throw Object.assign(new Error(`Tidak dapat menyelesaikan nama hos: ${url.hostname}`), { statusCode: 400 });
+    throw Object.assign(new Error(`Could not resolve host name: ${url.hostname}`), { statusCode: 400 });
   }
   if (records.some((record) => isPrivateAddress(record.address))) {
-    throw Object.assign(new Error('Nama hos menyelesaikan ke alamat dalaman'), { statusCode: 400 });
+    throw Object.assign(new Error('Host name resolves to an internal address'), { statusCode: 400 });
   }
   return url;
 }
@@ -120,10 +120,10 @@ function decodeEntities(text) {
 }
 
 function safeError(error) {
-  if (!error) return 'Ralat tidak diketahui';
+  if (!error) return 'Unknown error';
   const status = error.statusCode || error.status || error.response?.status;
   return {
-    message: error.message || 'Ralat tidak diketahui',
+    message: error.message || 'Unknown error',
     ...(status ? { status } : {})
   };
 }

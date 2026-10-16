@@ -1,26 +1,26 @@
 SLUG: cara-pasang-apk-tukuk
-TITLE: Cara Pasang APK Tukuk di Android (Langkah demi Langkah)
-EXCERPT: Panduan ringkas memuat turun dan memasang aplikasi Tukuk sebagai APK — termasuk kenapa Android memaparkan amaran dan cara menyambungnya dengan selamat.
-TAGS: apk, android, panduan, pasang, tukuk
+TITLE: How to Install Tukuk APKs on Android (Step by Step)
+EXCERPT: A short guide to downloading and installing Tukuk apps as APKs — including why Android shows a warning and how to connect safely.
+TAGS: apk, android, guide, install, tukuk
 
-## Kenapa ada amaran "sumber tidak dikenali"?
+## Why the "unknown source" warning?
 
-Setiap apl di `tukuk.org/store` ada butang **⬇ APK**. Bila anda tekannya, pelayan kami **membina APK khas untuk apl itu** (jika belum ada, ambil masa ~5–8 saat; jika sudah, terus dapat). Failnya dinamakan `tukuk-<nama>.apk` dan dimuat turun seperti fail biasa.
+Every app on `tukuk.org/store` has an **⬇ APK** button. When you press it, our server **builds an APK specifically for that app** (if it does not exist yet, it takes ~5–8s; if it does, you get it instantly). The file is named `tukuk-<name>.apk` and downloads like any ordinary file.
 
-Android kemudian akan memaparkan amaran **sumber tidak dikenali / Perlindungan Play**. Ini **normal dan bukan virus**. Sebabnya mudah: apl kami diedarkan **terus dari laman web kami**, bukan dari Google Play. Android tak pernah "kenal" penerbit luar secara default, jadi ia bertanya sekali sahaja. Kami tandatangan semua APK dengan **satu kunci Tukuk yang sama**, jadi identitinya konsisten — dan itulah yang membolehkan kemas kini setempat (tak perlu buang dan pasang semula).
+Android will then show an **unknown source / Play Protect** warning. This is **normal and not a virus**. The reason is simple: our apps are distributed **directly from our website**, not from Google Play. Android does not "know" external publishers by default, so it asks once. We sign every APK with **one shared Tukuk key**, so the identity is consistent — and that is exactly what enables local updates (no need to uninstall and reinstall).
 
-## Langkah pemasangan
+## Installation steps
 
-1. Buka `tukuk.org/store` dalam Chrome (atau pelayar lain) pada telefon Android anda.
-2. Tekan **⬇ APK** pada apl yang anda mahu. Tunggu muat turun selesai.
-3. Buka fail APK dari notifikasi atau apl Fail.
-4. Bila Android tanya, ketik **Tetapan** → hidupkan **Benarkan dari sumber ini** untuk pelayar anda (sekali sahaja), kembali dan tekan **Pasang**.
-5. Selesai — apl muncul di skrin utama anda dan berjalan seperti apl biasa.
+1. Open `tukuk.org/store` in Chrome (or another browser) on your Android phone.
+2. Press **⬇ APK** on the app you want. Wait for the download to finish.
+3. Open the APK file from the notification or the Files app.
+4. When Android asks, tap **Settings** → enable **Allow from this source** for your browser (once), go back and press **Install**.
+5. Done — the app appears on your home screen and runs like any normal app.
 
-## Untuk iPhone / iPad
+## For iPhone / iPad
 
-APK hanya untuk Android. Di iPhone, buka apl yang sama dan guna **Kongsi → Add to Home Screen**. Ia akan dipasang sebagai **PWA** — ikon di skrin utama, dibuka skrin penuh tanpa bar pelayar. Kedua-dua cara beri anda apl yang berfungsi penuh; bezanya cuma pintu masuknya.
+APKs are Android-only. On iPhone, open the same app and use **Share → Add to Home Screen**. It installs as a **PWA** — an icon on the home screen, opening full-screen without a browser bar. Both routes give you a fully working app; only the entrance differs.
 
-## Nak buang atau kemas kini?
+## Want to remove or update?
 
-Kemas kini: tekan **⬇ APK** lagi selepas kami keluar versi baharu — pasang atas yang lama, data anda selamat (tanda tangan sama). Buang: **Tetapan → Aplikasi → [nama apl] → Nyahpasang**, seperti apl Android biasa.
+Update: press **⬇ APK** again after we ship a new version — install over the old one, your data is safe (same signature). Remove: **Settings → Apps → [app name] → Uninstall**, just like any ordinary Android app.

@@ -42,9 +42,9 @@ function load() {
     state = { ...blank(), ...JSON.parse(raw) };
   } catch {
     state = blank();
-    state.rooms.global_am = { id: 'global_am', kind: 'global', title: '🌍 Am', members: ['*'], createdBy: 'sistem', createdAt: Date.now() };
+    state.rooms.global_am = { id: 'global_am', kind: 'global', title: '🌍 General', members: ['*'], createdBy: 'sistem', createdAt: Date.now() };
   }
-  if (!state.rooms.global_am) state.rooms.global_am = { id: 'global_am', kind: 'global', title: '🌍 Am', members: ['*'], createdBy: 'sistem', createdAt: Date.now() };
+  if (!state.rooms.global_am) state.rooms.global_am = { id: 'global_am', kind: 'global', title: '🌍 General', members: ['*'], createdBy: 'sistem', createdAt: Date.now() };
   migrate();
   return state;
 }
@@ -226,9 +226,9 @@ function quotaCheck(u, size) {
   s.quota = s.quota || {};
   const q = s.quota[u.k] || { t: now, n: 0, b: 0 };
   if (now - q.t > QUOTA_WIN) { q.t = now; q.n = 0; q.b = 0; }
-  if (q.n >= QUOTA_FILES) return { error: 'Terlalu banyak fail jam ini — cuba lagi sebentar.' };
-  if (q.b + size > QUOTA_BYTES) return { error: 'Muat naik anda bulan ini sudah sampai had.' };
-  if ((s.mediaBytes || 0) + size > STORE_CAP) return { error: 'Stor media tapak sudah penuh.' };
+  if (q.n >= QUOTA_FILES) return { error: 'Too many files this hour — try again shortly.' };
+  if (q.b + size > QUOTA_BYTES) return { error: 'You have reached your monthly upload quota.' };
+  if ((s.mediaBytes || 0) + size > STORE_CAP) return { error: 'Site media storage is full.' };
   q.n++; q.b += size; s.quota[u.k] = q;
   return { ok: true };
 }
@@ -242,7 +242,7 @@ function addMedia(user, buf, meta) {
   // pada flag klien untuk membezakan jenis paparan.
   const audio = !img && (String((meta && meta.audio)) === '1' || isAudio(t.mime));
   const cap = img ? MAX_IMG : audio ? MAX_AUDIO : MAX_VID;
-  if (buf.length > cap) return { error: img ? 'Gambar terlalu besar (had 8MB).' : audio ? 'Rekod suara terlalu besar (had 8MB).' : 'Video terlalu besar (had 64MB).', status: 413 };
+  if (buf.length > cap) return { error: img ? 'Image too large (limit 8MB).' : audio ? 'Voice recording too large (limit 8MB).' : 'Video too large (limit 64MB).', status: 413 };
   const q = quotaCheck(user, buf.length);
   if (q.error) return { error: q.error, status: 429 };
   const id = crypto.randomBytes(6).toString('hex');
@@ -257,7 +257,7 @@ function addMedia(user, buf, meta) {
   try {
     fs.mkdirSync(MEDIA, { recursive: true });
     fs.writeFileSync(mediaFile(rec), buf);
-  } catch { return { error: 'Gagal menyimpan fail di pelayan.', status: 500 }; }
+  } catch { return { error: 'Failed to save the file on the server.', status: 500 }; }
   s.media = s.media || {};
   s.media[id] = rec;
   s.mediaBytes = (s.mediaBytes || 0) + buf.length;
@@ -269,7 +269,7 @@ function addMedia(user, buf, meta) {
 // dipaksa muat turun supaya pelayar tidak pernah menjalankan kandungan.
 function addGenericFile(user, buf, meta) {
   const s = load();
-  if (buf.length > MAX_DOC) return { error: 'Fail terlalu besar (had ' + Math.round(MAX_DOC / 1048576) + 'MB).', status: 413 };
+  if (buf.length > MAX_DOC) return { error: 'File too large (limit ' + Math.round(MAX_DOC / 1048576) + 'MB).', status: 413 };
   const q = quotaCheck(user, buf.length);
   if (q.error) return { error: q.error, status: 429 };
   const id = crypto.randomBytes(6).toString('hex');
@@ -284,7 +284,7 @@ function addGenericFile(user, buf, meta) {
   try {
     fs.mkdirSync(MEDIA, { recursive: true });
     fs.writeFileSync(mediaFile(rec), buf);
-  } catch { return { error: 'Gagal menyimpan fail di pelayan.', status: 500 }; }
+  } catch { return { error: 'Failed to save the file on the server.', status: 500 }; }
   s.media = s.media || {};
   s.media[id] = rec;
   s.mediaBytes = (s.mediaBytes || 0) + buf.length;
@@ -361,22 +361,22 @@ function readRaw(req, max) {
     let size = 0;
     req.on('data', (c) => {
       size += c.length;
-      if (size > max) { reject(new Error('Fail terlalu besar.')); req.destroy(); return; }
+      if (size > max) { reject(new Error('File too large.')); req.destroy(); return; }
       parts.push(c);
     });
     req.on('end', () => resolve(Buffer.concat(parts)));
-    req.on('aborted', () => reject(new Error('Muat naik dibatalkan.')));
-    req.on('error', () => reject(new Error('Muat naik gagal.')));
+    req.on('aborted', () => reject(new Error('Upload cancelled.')));
+    req.on('error', () => reject(new Error('Upload failed.')));
   });
 }
 
 function register(name, pass) {
   const s = load();
   const clean = normalizeName(name);
-  if (!clean) return { error: 'Nama mesti 2–20 aksara (huruf/nombor/spasi sahaja).' };
-  if (String(pass || '').length < 4) return { error: 'Kata laluan sekurang-kurangnya 4 aksara.' };
-  if (s.users[key(clean)]) return { error: 'Nama sudah digunakan. Cuba login.' };
-  if (/^\d{6}$/.test(key(clean))) return { error: 'Nama tidak boleh berupa 6 angka (format Tukuk ID).' };
+  if (!clean) return { error: 'Name must be 2–20 characters (letters/numbers/spaces only).' };
+  if (String(pass || '').length < 4) return { error: 'Password must be at least 4 characters.' };
+  if (s.users[key(clean)]) return { error: 'Name already taken. Try logging in.' };
+  if (/^\d{6}$/.test(key(clean))) return { error: 'Name cannot be 6 digits (Tukuk ID format).' };
   const salt = crypto.randomBytes(16).toString('hex');
   s.users[key(clean)] = { name: clean, k: key(clean), id: s.nextId++, salt, hash: hashPass(pass, salt), createdAt: Date.now(), lastSeen: 0, bio: '', friends: [], blocked: [], following: [], followers: [], avatar: null };
   touch();
@@ -386,7 +386,7 @@ function register(name, pass) {
 function login(name, pass) {
   const s = load();
   const u = s.users[key(name)];
-  if (!u || !eqHex(u.hash, hashPass(pass, u.salt))) return { error: 'Nama atau kata laluan salah.' };
+  if (!u || !eqHex(u.hash, hashPass(pass, u.salt))) return { error: 'Wrong name or password.' };
   u.lastSeen = Date.now(); // login berjaya = memang hadir
   touch();
   return { ok: true, user: u };
@@ -467,16 +467,16 @@ function peerId(r, mine) {
 function createGroup(creatorName, title, memberIds) {
   const s = load();
   const t = String(title || '').trim().slice(0, 40);
-  if (!t) return { error: 'Nama kumpulan diperlukan.' };
+  if (!t) return { error: 'Group name is required.' };
   const creator = findUser(creatorName);
-  if (!creator) return { error: 'Pengguna tidak ditemui.' };
+  if (!creator) return { error: 'User not found.' };
   const members = [creator];
   for (const id of (memberIds || [])) {
     const u = byId(id);
     if (u && u.id !== creator.id && !members.some(m => m.id === u.id)) members.push(u);
   }
-  if (members.length < 2) return { error: 'Perlukan sekurang-kurangnya seorang ahli lain.' };
-  if (members.length > 50) return { error: 'Melebihi 50 ahli.' };
+  if (members.length < 2) return { error: 'At least one other member is required.' };
+  if (members.length > 50) return { error: 'Exceeds 50 members.' };
   const id = 'grp_' + crypto.randomBytes(6).toString('hex');
   const r = { id, kind: 'group', title: t, memberIds: members.map(u => u.id), members: members.map(u => u.name), admins: [creator.id], createdBy: creator.name, createdById: creator.id, createdAt: Date.now(), seq: 0, list: [] };
   s.rooms[id] = r; touch();
@@ -485,12 +485,12 @@ function createGroup(creatorName, title, memberIds) {
 }
 function addToGroup(name, roomId, memberId) {
   const s = load(); const r = s.rooms[roomId];
-  if (!r || r.kind !== 'group') return { error: 'Kumpulan tidak ditemui.' };
-  if (!isMember(r, name)) return { error: 'Anda bukan ahli kumpulan ini.' };
+  if (!r || r.kind !== 'group') return { error: 'Group not found.' };
+  if (!isMember(r, name)) return { error: 'You are not a member of this group.' };
   const u = byId(memberId);
-  if (!u) return { error: 'Pengguna tidak ditemui.' };
+  if (!u) return { error: 'User not found.' };
   if (r.memberIds.includes(u.id)) return { ok: true, already: true };
-  if (r.memberIds.length >= 50) return { error: 'Kumpulan sudah penuh (50 ahli).' };
+  if (r.memberIds.length >= 50) return { error: 'Group is full (50 members).' };
   r.memberIds.push(u.id);
   r.members = r.memberIds.map(id2 => nameOfUser(id2));
   touch();
@@ -517,9 +517,9 @@ function dissolveGroup(roomId) {
 }
 function leaveGroup(name, roomId) {
   const s = load(); const r = s.rooms[roomId];
-  if (!r || r.kind !== 'group') return { error: 'Kumpulan tidak ditemui.' };
+  if (!r || r.kind !== 'group') return { error: 'Group not found.' };
   const u = findUser(name);
-  if (!u || !r.memberIds.includes(u.id)) return { error: 'Anda bukan ahli kumpulan ini.' };
+  if (!u || !r.memberIds.includes(u.id)) return { error: 'You are not a member of this group.' };
   r.memberIds = r.memberIds.filter(i => i !== u.id);
   r.members = r.memberIds.map(i => nameOfUser(i));
   if (!r.memberIds.length) { dissolveGroup(roomId); return { ok: true, dissolved: true }; }
@@ -531,15 +531,15 @@ function leaveGroup(name, roomId) {
 // ─── Pentadbiran kumpulan (hanya admin) ───
 function groupAdmin(name, roomId) {
   const s = load(); const r = s.rooms[roomId];
-  if (!r || r.kind !== 'group') return { error: 'Kumpulan tidak ditemui.' };
-  if (!isMember(r, name)) return { error: 'Anda bukan ahli kumpulan ini.' };
-  if (!isGroupAdmin(r, name)) return { error: 'Hanya admin boleh melakukan ini.' };
+  if (!r || r.kind !== 'group') return { error: 'Group not found.' };
+  if (!isMember(r, name)) return { error: 'You are not a member of this group.' };
+  if (!isGroupAdmin(r, name)) return { error: 'Only admins can do this.' };
   return { ok: true, room: r };
 }
 function renameGroup(name, roomId, title) {
   const g = groupAdmin(name, roomId); if (g.error) return g;
   const t = String(title || '').trim().slice(0, 40);
-  if (!t) return { error: 'Nama kumpulan diperlukan.' };
+  if (!t) return { error: 'Group name is required.' };
   g.room.title = t; touch();
   pubRoom(g.room, 'room', { room: roomId });
   return { ok: true, title: t };
@@ -547,8 +547,8 @@ function renameGroup(name, roomId, title) {
 function kickFromGroup(name, roomId, memberId) {
   const g = groupAdmin(name, roomId); if (g.error) return g;
   const r = g.room; const u = byId(memberId);
-  if (!u || !r.memberIds.includes(u.id)) return { error: 'Pengguna itu bukan ahli.' };
-  if (u.id === uid(name)) return { error: 'Gunakan "keluar" untuk buang diri sendiri.' };
+  if (!u || !r.memberIds.includes(u.id)) return { error: 'That user is not a member.' };
+  if (u.id === uid(name)) return { error: 'Use "Leave" to remove yourself.' };
   r.memberIds = r.memberIds.filter(i => i !== u.id);
   r.members = r.memberIds.map(i => nameOfUser(i));
   promoteAdmin(r);
@@ -560,7 +560,7 @@ function kickFromGroup(name, roomId, memberId) {
 function addAdmin(name, roomId, memberId, remove) {
   const g = groupAdmin(name, roomId); if (g.error) return g;
   const r = g.room; const u = byId(memberId);
-  if (!u || !r.memberIds.includes(u.id)) return { error: 'Pengguna itu bukan ahli.' };
+  if (!u || !r.memberIds.includes(u.id)) return { error: 'That user is not a member.' };
   r.admins = adminsOf(r);
   if (remove) r.admins = r.admins.filter(i => i !== u.id);
   else if (!r.admins.includes(u.id)) r.admins.push(u.id);
@@ -574,13 +574,13 @@ function dissolveBy(name, roomId) {
   const r = g.room;
   // Hanya pencipta boleh bubarkan — kecuali pencipta sudah tiada dalam kumpulan,
   // maka admin yang tinggal mengambil alih hak itu.
-  if (r.createdById && r.createdById !== uid(name) && (r.memberIds || []).includes(r.createdById)) return { error: 'Hanya pencipta boleh membubarkan kumpulan ini.' };
+  if (r.createdById && r.createdById !== uid(name) && (r.memberIds || []).includes(r.createdById)) return { error: 'Only the creator can dissolve this group.' };
   dissolveGroup(roomId);
   return { ok: true, dissolved: true };
 }
 function roomTitle(r, viewer) {
-  if (!r || r.kind === 'global') return (r && r.title) || '🌍 Am';
-  if (r.kind === 'group') return r.title || '👥 Kumpulan';
+  if (!r || r.kind === 'global') return '🌍 General';
+  if (r.kind === 'group') return r.title || '👥 Group';
   const v = (viewer && typeof viewer === 'object') ? viewer : findUser(viewer);
   if (r.memberIds && v && v.id) {
     const nm = nameOfUser(r.memberIds.find(i => i !== v.id));
@@ -613,7 +613,7 @@ function authorName(m) {
 function send(name, roomId, text, replyTo, media, extra) {
   const s = load();
   const r = s.rooms[roomId];
-  if (!r) return { error: 'Bilik tidak ditemui.' };
+  if (!r) return { error: 'Room not found.' };
   if (!r.list) r.list = [];
   if (!r.seq) r.seq = 0;
   const su = findUser(name);
@@ -621,13 +621,13 @@ function send(name, roomId, text, replyTo, media, extra) {
   // boleh dibaca, tetapi tak seorang pun boleh menghantar mesej baharu.
   if (r.kind === 'dm') {
     const pid = peerId(r, su ? su.id : uid(name));
-    if (pid && dmFrozen(su || name, byId(pid))) return { error: 'Mesej tidak dapat dihantar ke bilik ini.' };
+    if (pid && dmFrozen(su || name, byId(pid))) return { error: 'Messages cannot be sent to this room.' };
   }
   const msgId = crypto.randomBytes(6).toString('hex');
   const att = media && media.length ? attachMedia(su || { k: key(name) }, roomId, media, msgId) : [];
-  if (media && media.length && !att.length) return { error: 'Lampiran tidak dapat digunakan — muat naik semula.' };
+  if (media && media.length && !att.length) return { error: 'Attachments could not be used — please upload again.' };
   const t = cleanText(text);
-  if (!t && !att.length && !(extra && (extra.sticker || extra.pollId))) return { error: 'Mesej kosong.' };
+  if (!t && !att.length && !(extra && (extra.sticker || extra.pollId))) return { error: 'Empty message.' };
   if (replyTo && !r.list.find(m => m.id === replyTo)) replyTo = null;
   const msg = { id: msgId, seq: ++r.seq, from: su ? su.name : name, fid: su ? su.id : null, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false, pinned: false };
   if (att.length) msg.media = att;
@@ -646,7 +646,7 @@ function send(name, roomId, text, replyTo, media, extra) {
   pubRoom(r, 'msg', { room: r.id, seq: r.seq, msg: out });
   maybePush(r, out).catch(() => {});
   // Google Chat-style mention: @sini/@semua membangunkan satu bilik (terhad, anti-spam).
-  if (su && /@sini\b|@semua\b/i.test(t)) notifyAtAll(su, r, t);
+  if (su && /@here\b|@all\b/i.test(t)) notifyAtAll(su, r, t);
   // @nama biasa dalam bilik kumpulan/global → notif kepada yang disebut (DM sudah
   // dimaklumkan melalui maybePush kepada pasangan).
   if (su && (r.kind === 'group' || r.kind === 'global')) notifyMentions(su, t, null, r.id);
@@ -662,7 +662,7 @@ function trimRoom(r) {
 }
 function since(name, roomId, after) {
   const s = load();
-  const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
+  const r = s.rooms[roomId]; if (!r) return { error: 'Room not found.' };
   const a = Math.max(0, Number(after) || 0);
   const msgs = (r.list || []).filter(m => m.seq > a);
   return { ok: true, msgs, seq: r.seq || 0 };
@@ -690,8 +690,8 @@ function unread(name) {
   return out;
 }
 function react(name, roomId, msgId, emo) {
-  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
-  const m = (r.list || []).find(x => x.id === msgId); if (!m) return { error: 'Mesej tidak ditemui.' };
+  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Room not found.' };
+  const m = (r.list || []).find(x => x.id === msgId); if (!m) return { error: 'Message not found.' };
   const e = String(emo).slice(0, 8);
   m.rx = m.rx || {};
   if (m.rx[e]) { delete m.rx[e]; } else { m.rx[e] = 1; }
@@ -701,22 +701,22 @@ function react(name, roomId, msgId, emo) {
   return { ok: true, msg: out };
 }
 function edit(name, roomId, msgId, text) {
-  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
+  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Room not found.' };
   const m = (r.list || []).find(x => x.id === msgId);
-  if (!m) return { error: 'Mesej tidak ditemui.' };
-  if (!sameAuthor(m, name)) return { error: 'Hanya mesej sendiri boleh diubah.' };
+  if (!m) return { error: 'Message not found.' };
+  if (!sameAuthor(m, name)) return { error: 'Only your own messages can be edited.' };
   const t = cleanText(text);
-  if (!t) return { error: 'Mesej kosong.' };
+  if (!t) return { error: 'Empty message.' };
   m.t = t; m.edited = true; touch();
   const out = hydrate(m);
   pubRoom(r, 'edit', { room: r.id, msg: out });
   return { ok: true, msg: out };
 }
 function remove(name, roomId, msgId) {
-  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
+  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Room not found.' };
   const i = (r.list || []).findIndex(x => x.id === msgId);
-  if (i < 0) return { error: 'Mesej tidak ditemui.' };
-  if (!sameAuthor(r.list[i], name)) return { error: 'Hanya mesej sendiri boleh dipadam.' };
+  if (i < 0) return { error: 'Message not found.' };
+  if (!sameAuthor(r.list[i], name)) return { error: 'Only your own messages can be deleted.' };
   const [gone] = r.list.splice(i, 1);
   releaseMedia(gone.media, gone.id);
   touch();
@@ -726,9 +726,9 @@ function remove(name, roomId, msgId) {
 // Pin/unpin. Dalam bilik global & kumpulan: hanya admin (atau pemilik mesej pada
 // bilik global) boleh pin. DM: kedua-dua ahli boleh. Pinned disimpan pada mesej.
 function pinMsg(name, roomId, msgId, pinned) {
-  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Bilik tidak ditemui.' };
-  const m = (r.list || []).find(x => x.id === msgId); if (!m) return { error: 'Mesej tidak ditemui.' };
-  if (r.kind === 'group' && !isGroupAdmin(r, name)) return { error: 'Hanya admin boleh pin mesej.' };
+  const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Room not found.' };
+  const m = (r.list || []).find(x => x.id === msgId); if (!m) return { error: 'Message not found.' };
+  if (r.kind === 'group' && !isGroupAdmin(r, name)) return { error: 'Only admins can pin messages.' };
   m.pinned = !!pinned; touch();
   const out = hydrate(m);
   pubRoom(r, 'pin', { room: r.id, id: msgId, pinned: m.pinned, msg: out });
@@ -752,15 +752,15 @@ function projectPoll(p) {
 }
 function createPoll(name, roomId, text, opts) {
   const s = load(); const r = s.rooms[roomId];
-  if (!r) return { error: 'Bilik tidak ditemui.' };
+  if (!r) return { error: 'Room not found.' };
   const q = cleanText(text).slice(0, MAX_POLL_Q);
-  if (!q) return { error: 'Soalan undian kosong.' };
+  if (!q) return { error: 'Empty poll question.' };
   const list = (Array.isArray(opts) ? opts : [])
     .map(o => cleanText(o).slice(0, MAX_POLL_OPT))
     .filter(Boolean);
-  if (list.length < 2) return { error: 'Sediakan sekurang-kurangnya 2 pilihan.' };
-  if (list.length > MAX_POLL_OPTS) return { error: 'Maksimum ' + MAX_POLL_OPTS + ' pilihan.' };
-  const su = findUser(name); if (!su) return { error: 'Pengguna tidak ditemui.' };
+  if (list.length < 2) return { error: 'Provide at least 2 options.' };
+  if (list.length > MAX_POLL_OPTS) return { error: 'Maximum ' + MAX_POLL_OPTS + ' options.' };
+  const su = findUser(name); if (!su) return { error: 'User not found.' };
   const id = crypto.randomBytes(6).toString('hex');
   s.polls = s.polls || {};
   s.polls[id] = { id, room: roomId, q, opts: list, votes: {}, by: su.name, bid: su.id, ts: Date.now() };
@@ -770,12 +770,12 @@ function createPoll(name, roomId, text, opts) {
 function votePoll(name, pollId, optIdx) {
   const s = load();
   const p = (s.polls || {})[String(pollId)];
-  if (!p) return { error: 'Undian tidak ditemui.' };
-  const r = s.rooms[p.room]; if (!r) return { error: 'Bilik tidak ditemui.' };
-  if (!canRead(name, p.room)) return { error: 'Anda bukan ahli bilik ini.' };
-  const su = findUser(name); if (!su) return { error: 'Pengguna tidak ditemui.' };
+  if (!p) return { error: 'Poll not found.' };
+  const r = s.rooms[p.room]; if (!r) return { error: 'Room not found.' };
+  if (!canRead(name, p.room)) return { error: 'You are not a member of this room.' };
+  const su = findUser(name); if (!su) return { error: 'User not found.' };
   const i = Number(optIdx);
-  if (!Number.isInteger(i) || i < -1 || i >= p.opts.length) return { error: 'Pilihan tidak sah.' };
+  if (!Number.isInteger(i) || i < -1 || i >= p.opts.length) return { error: 'Invalid option.' };
   const k = String(su.id);
   if (i === -1) delete p.votes[k];
   else p.votes[k] = i;
@@ -926,7 +926,7 @@ function profile(query, viewer) {
 }
 function setBio(name, bio) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   u.bio = String(bio == null ? '' : bio).replace(/\s+/g, ' ').trim().slice(0, 120);
   touch();
   return { ok: true, user: u };
@@ -950,19 +950,19 @@ function effStatus(u) {
 }
 function setStatus(name, body) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const b = body || {};
   const raw = String(b.text == null ? '' : b.text).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
   const emo = String(b.emoji == null ? '' : b.emoji).trim();
   const key = String(b.expiresIn == null ? 'off' : b.expiresIn).toLowerCase();
   if (b.expiresIn != null && !Object.prototype.hasOwnProperty.call(STATUS_TTL, key)) {
-    return { error: 'Pilihan tempoh status tidak dikenali.' };
+    return { error: 'Unknown status duration option.' };
   }
   // Buang: kedua-dua teks & emoji kosong → status dikosongkan.
   if (!raw && !emo) { u.status = null; touch(); return { ok: true, status: null }; }
-  if (raw.length > STATUS_T_MAX) return { error: 'Status terlalu panjang (had ' + STATUS_T_MAX + ' aksara).' };
+  if (raw.length > STATUS_T_MAX) return { error: 'Status too long (limit ' + STATUS_T_MAX + ' characters).' };
   const eb = Buffer.from(emo, 'utf8');
-  if (eb.length > STATUS_E_MAX * 4) return { error: 'Emoji terlalu besar (pilih satu sahaja).' };
+  if (eb.length > STATUS_E_MAX * 4) return { error: 'Emoji too large (pick just one).' };
   const ttl = STATUS_TTL[key] || 0;
   const now = Date.now();
   u.status = { t: raw, e: emo, at: now, exp: ttl ? now + ttl : null };
@@ -973,13 +973,13 @@ function setStatus(name, body) {
 function rename(name, next) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const clean = normalizeName(next);
-  if (!clean) return { error: 'Nama mesti 2–20 aksara (huruf/nombor/spasi sahaja).' };
-  if (/^\d{6}$/.test(clean)) return { error: 'Nama tidak boleh berupa 6 angka (format Tukuk ID).' };
+  if (!clean) return { error: 'Name must be 2–20 characters (letters/numbers/spaces only).' };
+  if (/^\d{6}$/.test(clean)) return { error: 'Name cannot be 6 digits (Tukuk ID format).' };
   const old = key(u.name);
   if (old === key(clean)) return { ok: true, user: u, changed: false };
-  if (s.users[key(clean)]) return { error: 'Nama itu sudah digunakan orang lain.' };
+  if (s.users[key(clean)]) return { error: 'That name is already taken by someone else.' };
   delete s.users[old];
   u.name = clean; u.k = key(clean);
   s.users[u.k] = u;
@@ -1016,20 +1016,20 @@ const dmFrozen = (a, b) => { const ua = asUser(a), ub = asUser(b); return iBlock
 // Sasaran sosial: mesti wujud dan bukan akaun sendiri.
 function socialTarget(u, q) {
   const t = findUser(q);
-  if (!t) return { error: normalizeName(q) ? 'Pengguna itu belum mendaftar di T Chat.' : 'Tiada ID atau nama begitu.' };
-  if (t.id === u.id) return { error: 'Itu akaun anda sendiri.' };
+  if (!t) return { error: normalizeName(q) ? 'That user has not registered on T Chat yet.' : 'No such ID or name.' };
+  if (t.id === u.id) return { error: 'That is your own account.' };
   return { ok: true, peer: t };
 }
 
 function addFriend(name, q) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const t = socialTarget(u, q);
   if (t.error) return t;
-  if (blockedOf(u).includes(t.peer.id)) return { error: 'Buang sekat dahulu sebelum menjadikannya kawan.' };
-  if (blockedOf(t.peer).includes(u.id)) return { error: 'Pengguna itu tidak dapat ditemui.' };
+  if (blockedOf(u).includes(t.peer.id)) return { error: 'Unblock them first before making them a friend.' };
+  if (blockedOf(t.peer).includes(u.id)) return { error: 'That user could not be found.' };
   if (friendsOf(u).includes(t.peer.id)) return { ok: true, user: u, peer: t.peer, already: true };
-  if (friendsOf(u).length >= MAX_FRIENDS) return { error: 'Senarai kawan sudah sampai had ' + MAX_FRIENDS + '.' };
+  if (friendsOf(u).length >= MAX_FRIENDS) return { error: 'Friend list has reached the limit of ' + MAX_FRIENDS + '.' };
   (u.friends = friendsOf(u)).push(t.peer.id);
   touch();
   pub('social', {}, [u.id]);
@@ -1037,7 +1037,7 @@ function addFriend(name, q) {
 }
 function delFriend(name, q) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const t = socialTarget(u, q);
   if (t.error) return t;
   u.friends = friendsOf(u).filter((i) => i !== t.peer.id); // sejarah DM tidak diusik
@@ -1047,11 +1047,11 @@ function delFriend(name, q) {
 }
 function blockUser(name, q) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const t = socialTarget(u, q);
   if (t.error) return t;
   if (blockedOf(u).includes(t.peer.id)) return { ok: true, user: u, peer: t.peer, already: true };
-  if (blockedOf(u).length >= MAX_BLOCKS) return { error: 'Senarai sekat sudah sampai had ' + MAX_BLOCKS + '.' };
+  if (blockedOf(u).length >= MAX_BLOCKS) return { error: 'Block list has reached the limit of ' + MAX_BLOCKS + '.' };
   (u.blocked = blockedOf(u)).push(t.peer.id);
   u.friends = friendsOf(u).filter((i) => i !== t.peer.id);
   t.peer.friends = friendsOf(t.peer).filter((i) => i !== u.id); // persahabatan dua arah dibuang
@@ -1061,7 +1061,7 @@ function blockUser(name, q) {
 }
 function unblockUser(name, q) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const t = socialTarget(u, q);
   if (t.error) return t;
   u.blocked = blockedOf(u).filter((i) => i !== t.peer.id);
@@ -1073,7 +1073,7 @@ function unblockUser(name, q) {
 function socialLists(name) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const wrap = (ids, withDm) => ids.map((id) => {
     const p = byId(id);
     if (!p) return null;
@@ -1185,23 +1185,23 @@ function releaseSocialMedia(items, holder) {
 function createPost(name, text, media, opts) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const o = opts || {};
   const t = String(text == null ? '' : text).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ').replace(/\r\n?/g, '\n').trim().slice(0, MAX_POST);
   const pid = crypto.randomBytes(6).toString('hex');
   let orig = null;
   const att = media && media.length ? attachPostMedia(u, media, pid, MAX_POST_MEDIA) : [];
-  if (media && media.length && !att.length) return { error: 'Lampiran tidak dapat digunakan — muat naik semula.' };
+  if (media && media.length && !att.length) return { error: 'Attachments could not be used — please upload again.' };
   if (o.rp) {
     // Repost/quote: teks petikan sahaja dibenarkan tanpa lampiran (post asal
     // sudah membawa medianya) dan ia mesti wujud serta boleh dilihat penulis.
-    if (att.length) return { error: 'Repost tidak boleh ada lampiran sendiri.' };
+    if (att.length) return { error: 'A repost cannot have its own attachments.' };
     orig = (s.posts || {})[String(o.rp)];
-    if (!orig) return { error: 'Post asal tidak ditemui.' };
-    if (orig.rp) return { error: 'Repost tidak boleh diisi ulang repost.' };
+    if (!orig) return { error: 'Original post not found.' };
+    if (orig.rp) return { error: 'A repost cannot re-post another repost.' };
     const oa = byId(orig.fid);
-    if (oa && (blockedOf(u).includes(oa.id) || blockedOf(oa).includes(u.id))) return { error: 'Post asal tidak ditemui.' };
-  } else if (!t && !att.length) return { error: 'Post kosong.' };
+    if (oa && (blockedOf(u).includes(oa.id) || blockedOf(oa).includes(u.id))) return { error: 'Original post not found.' };
+  } else if (!t && !att.length) return { error: 'Empty post.' };
   s.posts = s.posts || {};
   const post = { id: pid, fid: u.id, from: u.name, t, ts: Date.now(), likes: {}, comments: [] };
   const tags = parseTags(t);
@@ -1221,10 +1221,10 @@ function createPost(name, text, media, opts) {
 function delPost(name, pid) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const p = (s.posts || {})[String(pid)];
-  if (!p) return { error: 'Post tidak ditemui.' };
-  if (p.fid !== u.id) return { error: 'Hanya post sendiri boleh dipadam.' };
+  if (!p) return { error: 'Post not found.' };
+  if (p.fid !== u.id) return { error: 'Only your own posts can be deleted.' };
   for (const c of p.comments || []) releaseSocialMedia(c.media, c.id);
   releaseSocialMedia(p.media, p.id);
   delete s.posts[p.id];
@@ -1252,10 +1252,10 @@ function getPost(pid, viewer) {
 function likePost(name, pid) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const p = (s.posts || {})[String(pid)];
-  if (!p) return { error: 'Post tidak ditemui.' };
-  if (dmFrozen(u, byId(p.fid))) return { error: 'Post tidak ditemui.' };
+  if (!p) return { error: 'Post not found.' };
+  if (dmFrozen(u, byId(p.fid))) return { error: 'Post not found.' };
   p.likes = p.likes || {};
   const on = !p.likes[u.id];
   if (on) p.likes[u.id] = 1; else delete p.likes[u.id];
@@ -1268,15 +1268,15 @@ function likePost(name, pid) {
 function commentPost(name, pid, text, media) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const p = (s.posts || {})[String(pid)];
-  if (!p) return { error: 'Post tidak ditemui.' };
-  if (dmFrozen(u, byId(p.fid))) return { error: 'Post tidak ditemui.' };
+  if (!p) return { error: 'Post not found.' };
+  if (dmFrozen(u, byId(p.fid))) return { error: 'Post not found.' };
   const t = String(text == null ? '' : text).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ').trim().slice(0, MAX_COMMENT);
   const cid = crypto.randomBytes(6).toString('hex');
   const att = media && media.length ? attachPostMedia(u, media, cid, 1) : [];
-  if (media && media.length && !att.length) return { error: 'Lampiran tidak dapat digunakan — muat naik semula.' };
-  if (!t && !att.length) return { error: 'Komen kosong.' };
+  if (media && media.length && !att.length) return { error: 'Attachments could not be used — please upload again.' };
+  if (!t && !att.length) return { error: 'Empty comment.' };
   const c = { id: cid, fid: u.id, from: u.name, t, ts: Date.now() };
   if (att.length) c.media = att;
   p.comments.push(c);
@@ -1293,7 +1293,7 @@ function commentPost(name, pid, text, media) {
 function feedFor(name, limit, tag) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   pruneStories();
   const blockSet = new Set(blockedOf(u));
   const outBlock = new Set(Object.values(s.users).filter(v => blockedOf(v).includes(u.id)).map(v => v.id));
@@ -1309,9 +1309,9 @@ function feedFor(name, limit, tag) {
 function userPosts(q, viewer) {
   const s = load();
   const t = findUser(q);
-  if (!t) return { error: 'Pengguna tidak ditemui.' };
+  if (!t) return { error: 'User not found.' };
   const v = viewer ? findUser(viewer) : null;
-  if (v && t.id !== v.id && (blockedOf(t).includes(v.id) || (v && blockedOf(v).includes(t.id)))) return { error: 'Pengguna tidak ditemui.' };
+  if (v && t.id !== v.id && (blockedOf(t).includes(v.id) || (v && blockedOf(v).includes(t.id)))) return { error: 'User not found.' };
   const list = Object.values(s.posts || {}).filter(p => p.fid === t.id).sort((a, b) => b.ts - a.ts).slice(0, MAX_FEED);
   return { ok: true, posts: list.map(p => hydratePost(p, v || undefined)) };
 }
@@ -1333,14 +1333,14 @@ function pruneStories() {
 function createStory(name, text, media) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   pruneStories();
   const mine = Object.values(s.stories || {}).filter(x => x.fid === u.id);
-  if (mine.length >= MAX_STORIES) return { error: 'Cerita anda sudah penuh (had ' + MAX_STORIES + ' dalam 24 jam).' };
+  if (mine.length >= MAX_STORIES) return { error: 'Your stories are full (limit ' + MAX_STORIES + ' per 24 hours).' };
   const t = String(text == null ? '' : text).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ').trim().slice(0, MAX_POST);
   const sid = crypto.randomBytes(6).toString('hex');
   const att = media && media.length ? attachPostMedia(u, media, sid, MAX_POST_MEDIA) : [];
-  if (!t && !att.length) return { error: 'Cerita kosong.' };
+  if (!t && !att.length) return { error: 'Empty story.' };
   s.stories = s.stories || {};
   const st = { id: sid, fid: u.id, from: u.name, t, ts: Date.now(), media: att, views: [] };
   s.stories[sid] = st;
@@ -1366,8 +1366,8 @@ function viewStory(name, sid) {
   const s = load();
   const u = findUser(name);
   const st = (s.stories || {})[String(sid)];
-  if (!u || !st || storyExpired(st)) return { error: 'Cerita tidak ditemui.' };
-  if (dmFrozen(u, byId(st.fid))) return { error: 'Cerita tidak ditemui.' };
+  if (!u || !st || storyExpired(st)) return { error: 'Story not found.' };
+  if (dmFrozen(u, byId(st.fid))) return { error: 'Story not found.' };
   st.views = st.views || [];
   if (!st.views.includes(u.id)) { st.views.push(u.id); touch(); }
   return { ok: true };
@@ -1375,10 +1375,10 @@ function viewStory(name, sid) {
 function delStory(name, sid) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const st = (s.stories || {})[String(sid)];
-  if (!st) return { error: 'Cerita tidak ditemui.' };
-  if (st.fid !== u.id) return { error: 'Hanya cerita sendiri boleh dipadam.' };
+  if (!st) return { error: 'Story not found.' };
+  if (st.fid !== u.id) return { error: 'Only your own stories can be deleted.' };
   releaseSocialMedia(st.media, st.id);
   delete s.stories[st.id];
   touch();
@@ -1390,14 +1390,14 @@ function delStory(name, sid) {
 function followUser(name, q) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const t = socialTarget(u, q);
   if (t.error) return t;
-  if (blockedOf(u).includes(t.peer.id)) return { error: 'Buang sekat dahulu sebelum mengikutinya.' };
-  if (blockedOf(t.peer).includes(u.id)) return { error: 'Pengguna itu tidak dapat ditemui.' };
+  if (blockedOf(u).includes(t.peer.id)) return { error: 'Unblock them first before following.' };
+  if (blockedOf(t.peer).includes(u.id)) return { error: 'That user could not be found.' };
   if (isFollowing(u, t.peer)) return { ok: true, peer: t.peer, already: true };
-  if (followingOf(u).length >= MAX_FOLLOWING) return { error: 'Anda sudah mengikuti ' + MAX_FOLLOWING + ' pengguna.' };
-  if (followersOf(t.peer).length >= MAX_FOLLOWERS) return { error: 'Pengguna itu sudah sampai had pengikut.' };
+  if (followingOf(u).length >= MAX_FOLLOWING) return { error: 'You already follow ' + MAX_FOLLOWING + ' users.' };
+  if (followersOf(t.peer).length >= MAX_FOLLOWERS) return { error: 'That user has reached the follower limit.' };
   (u.following = followingOf(u)).push(t.peer.id);
   (t.peer.followers = followersOf(t.peer)).push(u.id);
   touch();
@@ -1407,7 +1407,7 @@ function followUser(name, q) {
 }
 function unfollowUser(name, q) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const t = socialTarget(u, q);
   if (t.error) return t;
   u.following = followingOf(u).filter(i => i !== t.peer.id);
@@ -1420,10 +1420,10 @@ function unfollowUser(name, q) {
 function followList(name, q, which) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const t = findUser(q);
-  if (!t) return { error: 'Pengguna tidak ditemui.' };
-  if (u.id !== t.id && (blockedOf(t).includes(u.id) || blockedOf(u).includes(t.id))) return { error: 'Pengguna tidak ditemui.' };
+  if (!t) return { error: 'User not found.' };
+  if (u.id !== t.id && (blockedOf(t).includes(u.id) || blockedOf(u).includes(t.id))) return { error: 'User not found.' };
   const ids = which === 'followers' ? followersOf(t) : followingOf(t);
   const blockSet = new Set(blockedOf(u));
   const outBlock = new Set(Object.values(s.users).filter(v => blockedOf(v).includes(u.id)).map(v => v.id));
@@ -1442,7 +1442,7 @@ function followList(name, q, which) {
 function discover(name, limit) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const outBlock = new Set(Object.values(s.users).filter(v => blockedOf(v).includes(u.id)).map(v => v.id));
   const skip = new Set(followingOf(u).concat([u.id], blockedOf(u), Array.from(outBlock)));
   const res = Object.values(s.users)
@@ -1479,14 +1479,14 @@ function pushNotif(toId, type, data) {
 function notifList(name) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const arr = (s.notif || {})[String(u.id)] || [];
   return { ok: true, notifs: arr.slice().reverse(), unread: arr.filter(n => !n.read).length };
 }
 function markNotifRead(name) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const arr = (s.notif || {})[String(u.id)] || [];
   let hit = false;
   for (const n of arr) if (!n.read) { n.read = true; hit = true; }
@@ -1496,7 +1496,7 @@ function markNotifRead(name) {
 function clearNotifs(name) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   if (s.notif) { delete s.notif[String(u.id)]; touch(); }
   return { ok: true };
 }
@@ -1507,13 +1507,13 @@ function clearNotifs(name) {
 function setAvatar(user, mid) {
   const s = load();
   const u = typeof user === 'string' ? findUser(user) : user;
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const id = String(mid && mid.id ? mid.id : mid || '');
-  if (!/^[a-f0-9]{12}$/.test(id)) return { error: 'Avatar tidak sah.' };
+  if (!/^[a-f0-9]{12}$/.test(id)) return { error: 'Invalid avatar.' };
   const rec = (s.media || {})[id];
-  if (!rec || !fs.existsSync(mediaFile(rec))) return { error: 'Fail tidak ditemui — muat naik semula.' };
-  if (rec.by !== u.k) return { error: 'Fail ini bukan milik anda.' };
-  if (!isImage(rec.mime)) return { error: 'Avatar mesti gambar.' };
+  if (!rec || !fs.existsSync(mediaFile(rec))) return { error: 'File not found — please upload again.' };
+  if (rec.by !== u.k) return { error: 'This file does not belong to you.' };
+  if (!isImage(rec.mime)) return { error: 'Avatar must be an image.' };
   rec.avatar = true;
   const ref = 'av:' + rec.id;
   if (rec.msgs && !rec.msgs.includes(ref)) rec.msgs.push(ref);
@@ -1530,7 +1530,7 @@ function setAvatar(user, mid) {
 function removeAvatar(name) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   const prev = u.avatar;
   if (prev) {
     const p = (s.media || {})[prev];
@@ -1578,12 +1578,12 @@ function notifyAtAll(author, room, text) {
 // (peranti lain perlu login semula; token yang sedang dipakai kekal hidup).
 function setPass(name, oldPass, nextPass) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
-  if (!eqHex(u.hash, hashPass(String(oldPass == null ? '' : oldPass), u.salt))) return { error: 'Kata laluan semasa salah.', status: 401 };
+  if (!u) return { error: 'Account not found.' };
+  if (!eqHex(u.hash, hashPass(String(oldPass == null ? '' : oldPass), u.salt))) return { error: 'Current password is wrong.', status: 401 };
   const p = String(nextPass == null ? '' : nextPass);
-  if (p.length < 4) return { error: 'Kata laluan baharu sekurang-kurangnya 4 aksara.' };
-  if (p.length > 200) return { error: 'Kata laluan baharu terlalu panjang.' };
-  if (eqHex(u.hash, hashPass(p, u.salt))) return { error: 'Kata laluan baharu sama dengan yang lama.' };
+  if (p.length < 4) return { error: 'New password must be at least 4 characters.' };
+  if (p.length > 200) return { error: 'New password is too long.' };
+  if (eqHex(u.hash, hashPass(p, u.salt))) return { error: 'New password is the same as the old one.' };
   u.salt = crypto.randomBytes(16).toString('hex');
   u.hash = hashPass(p, u.salt);
   touch();
@@ -1592,7 +1592,7 @@ function setPass(name, oldPass, nextPass) {
 function logoutAll(name, keep) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   let n = 0;
   for (const [tok, sess] of Object.entries(s.sessions)) {
     if (tok === keep) continue;
@@ -1608,8 +1608,8 @@ function logoutAll(name, keep) {
 function deleteAccount(name, pass) {
   const s = load();
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
-  if (!eqHex(u.hash, hashPass(String(pass == null ? '' : pass), u.salt))) return { error: 'Kata laluan salah.', status: 401 };
+  if (!u) return { error: 'Account not found.' };
+  if (!eqHex(u.hash, hashPass(String(pass == null ? '' : pass), u.salt))) return { error: 'Wrong password.', status: 401 };
   const id = u.id, k = u.k;
   // 1) Sesi & langganan push
   for (const [tok, sess] of Object.entries(s.sessions)) if ((sess.uid && sess.uid === id) || key(sess.name) === k) delete s.sessions[tok];
@@ -1819,9 +1819,9 @@ const RECOVERY_N = 5;
 const recHash = (c) => crypto.createHash('sha256').update(String(c).trim().toUpperCase()).digest('hex');
 function recoveryGenerate(name) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun tidak ditemui.' };
+  if (!u) return { error: 'Account not found.' };
   u.rec = u.rec || [];
-  if (u.rec.length >= RECOVERY_N * 2) return { error: 'Terlalu banyak kod aktif — guna sebahagian sebelum jana baharu.' };
+  if (u.rec.length >= RECOVERY_N * 2) return { error: 'Too many active codes — use some before generating new ones.' };
   const codes = [];
   for (let i = 0; i < RECOVERY_N; i++) { const c = crypto.randomBytes(5).toString('hex').toUpperCase(); codes.push(c); u.rec.push(recHash(c)); }
   touch();
@@ -1829,12 +1829,12 @@ function recoveryGenerate(name) {
 }
 function recoveryReset(name, code, newPass) {
   const u = findUser(name);
-  if (!u) return { error: 'Akaun atau kod pemulihan tidak sah.' };
+  if (!u) return { error: 'Invalid account or recovery code.' };
   const idx = (u.rec || []).indexOf(recHash(code));
-  if (idx < 0) return { error: 'Akaun atau kod pemulihan tidak sah.' };
+  if (idx < 0) return { error: 'Invalid account or recovery code.' };
   const p = String(newPass == null ? '' : newPass);
-  if (p.length < 4) return { error: 'Kata laluan baharu sekurang-kurangnya 4 aksara.' };
-  if (p.length > 200) return { error: 'Kata laluan baharu terlalu panjang.' };
+  if (p.length < 4) return { error: 'New password must be at least 4 characters.' };
+  if (p.length > 200) return { error: 'New password is too long.' };
   u.rec.splice(idx, 1);            // sekali-pakai: musnahkan kod ini
   u.salt = crypto.randomBytes(16).toString('hex');
   u.hash = hashPass(p, u.salt);
@@ -1860,7 +1860,7 @@ function mount(app, deps) {
 
   const authOf = (req, res) => {
     const u = userOf(bearer(req));
-    if (!u) { res.status(401).json({ error: 'Sesi luput. Sila login semula.' }); return null; }
+    if (!u) { res.status(401).json({ error: 'Session expired. Please log in again.' }); return null; }
     return u;
   };
   const event = (m, d) => { if (store && store.event) try { store.event('chat', m, d); } catch { /* noop */ } };
@@ -1870,7 +1870,7 @@ function mount(app, deps) {
     const r = register(b.name, b.pass);
     if (r.error) return res.status(400).json({ error: r.error });
     const token = issueSession(r.user.name);
-    event('Akaun chat baharu: ' + r.user.name, { name: r.user.name, id: r.user.id });
+    event('New chat account: ' + r.user.name, { name: r.user.name, id: r.user.id });
     res.json({ ok: true, token, name: r.user.name, id: r.user.id });
   });
 
@@ -1903,7 +1903,7 @@ function mount(app, deps) {
       close: () => { bye(); try { res.end(); } catch { /* sudah tertutup */ } },
     };
     // Had yuran per akaun. Header belum ditulis lagi supaya 429 kekal JSON bersih.
-    if (!attachSink(u.id, snk)) { bye(); return res.status(429).json({ error: 'Terlalu banyak tab terbuka pada akaun ini.' }); }
+    if (!attachSink(u.id, snk)) { bye(); return res.status(429).json({ error: 'Too many tabs open on this account.' }); }
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
@@ -1962,7 +1962,7 @@ function mount(app, deps) {
   app.get('/api/chat/messages', (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const room = String(req.query.room || '');
-    if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
+    if (!canRead(u.name, room)) return res.status(403).json({ error: 'This room does not belong to you.' });
     // hanya tandakan "dibaca" bila kliennya memang paparkan bilik itu (elak badge hilang di mobile)
     if (req.query.read === '1') markSeen(u.name, room);
     // Senarai pengguna hanya dihantar pada refresh penuh — elak poll 2.5s membazir bandwidth.
@@ -1975,9 +1975,9 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
     const room = String(b.room || '');
-    if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
-    if (b.media != null && !Array.isArray(b.media)) return res.status(400).json({ error: 'Lampiran mesti senarai.' });
-    if (Array.isArray(b.media) && b.media.length > MAX_PER_MSG) return res.status(400).json({ error: 'Maksimum ' + MAX_PER_MSG + ' fail satu mesej.' });
+    if (!canRead(u.name, room)) return res.status(403).json({ error: 'This room does not belong to you.' });
+    if (b.media != null && !Array.isArray(b.media)) return res.status(400).json({ error: 'Attachments must be a list.' });
+    if (Array.isArray(b.media) && b.media.length > MAX_PER_MSG) return res.status(400).json({ error: 'Maximum ' + MAX_PER_MSG + ' files per message.' });
     const r = send(u.name, room, b.text, b.replyTo, b.media, { sticker: b.sticker });
     if (r.error) return res.status(400).json({ error: r.error });
     res.json({ ok: true, msg: r.msg, seq: r.room.seq });
@@ -1991,23 +1991,23 @@ function mount(app, deps) {
     const social = String(req.query.post || '') === '1' || String(req.query.avatar || '') === '1';
     if (!social) {
       const room = String(req.query.room || '');
-      if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
+      if (!canRead(u.name, room)) return res.status(403).json({ error: 'This room does not belong to you.' });
     }
     const cl = Number(req.headers['content-length'] || 0);
-    if (cl > MAX_VID) { req.resume(); return res.status(413).json({ error: 'Fail terlalu besar (had 64MB).' }); }
+    if (cl > MAX_VID) { req.resume(); return res.status(413).json({ error: 'File too large (limit 64MB).' }); }
     readRaw(req, MAX_VID + 64 * 1024).then((buf) => {
       const meta = { w: req.query.w, h: req.query.h, dur: req.query.dur, audio: req.query.audio, name: req.query.name, mime: req.query.mime };
       const r = addMedia(u, buf, meta);
       if (r.error) return res.status(r.status || 400).json({ error: r.error });
       if (String(req.query.avatar || '') === '1') {
-        if (r.media.kind === 'file') { dropMedia(r.media.id); return res.status(400).json({ error: 'Gambar profil mestilah gambar sebenar.' }); }
+        if (r.media.kind === 'file') { dropMedia(r.media.id); return res.status(400).json({ error: 'Profile picture must be an actual image.' }); }
         r.media.avatar = true;
         const av = setAvatar(u, r.media.id);
         if (av.error) { dropMedia(r.media.id); return res.status(400).json({ error: av.error }); }
-        event('Avatar dikemas kini: ' + u.name, { id: u.id });
+        event('Avatar updated: ' + u.name, { id: u.id });
         return res.json({ ok: true, avatar: av.avatar, url: av.url });
       }
-      event('Media dimuat naik: ' + r.media.kind + ' ' + Math.round(r.media.size / 1024) + 'KB', { id: u.id });
+      event('Media uploaded: ' + r.media.kind + ' ' + Math.round(r.media.size / 1024) + 'KB', { id: u.id });
       res.json({ ok: true, media: Object.assign(projectMedia(r.media), { url: mediaUrl(r.media.id) }) });
     }).catch((e) => res.status(413).json({ error: e.message }));
   });
@@ -2016,9 +2016,9 @@ function mount(app, deps) {
   // julat bayaran supaya video boleh dilompat tanpa muat turun semua.
   app.get('/api/chat/media/:id', (req, res) => {
     const id = String(req.params.id);
-    if (!mediaAllowed(id, req.query.k)) return res.status(403).json({ error: 'Pautan media sudah luput.' });
+    if (!mediaAllowed(id, req.query.k)) return res.status(403).json({ error: 'Media link has expired.' });
     const rec = mediaSrc(id);
-    if (!rec) return res.status(404).json({ error: 'Fail sudah dibuang.' });
+    if (!rec) return res.status(404).json({ error: 'File already removed.' });
     serveMedia(req, res, rec);
   });
 
@@ -2027,14 +2027,14 @@ function mount(app, deps) {
   app.get('/api/chat/avatar/:id', (req, res) => {
     const id = String(req.params.id);
     const rec = (load().media || {})[/^[a-f0-9]{12}$/.test(id) ? id : ''];
-    if (!rec || !rec.avatar || !fs.existsSync(mediaFile(rec))) return res.status(404).json({ error: 'Fail sudah dibuang.' });
+    if (!rec || !rec.avatar || !fs.existsSync(mediaFile(rec))) return res.status(404).json({ error: 'File already removed.' });
     serveMedia(req, res, rec);
   });
 
   function serveMedia(req, res, rec) {
     const file = mediaFile(rec);
     fs.stat(file, (err, st) => {
-      if (err) { dropMedia(rec.id); return res.status(404).json({ error: 'Fail sudah dibuang.' }); }
+      if (err) { dropMedia(rec.id); return res.status(404).json({ error: 'File already removed.' }); }
       const total = st.size;
       const head = {
         'Content-Type': rec.mime,
@@ -2073,18 +2073,18 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const raw = cleanBody(req.body).peer;
     const peer = findUser(raw);   // boleh Tukuk ID (nombor) atau nama
-    if (!peer) return res.status(400).json({ error: normalizeName(raw) ? 'Pengguna itu belum mendaftar di T Chat.' : 'Tiada ID atau nama begitu.' });
-    if (peer.id === u.id) return res.status(400).json({ error: 'Tidak boleh DM diri sendiri.' });
-    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Tidak dapat memulakan sembang dengan pengguna ini.' });
+    if (!peer) return res.status(400).json({ error: normalizeName(raw) ? 'That user has not registered on T Chat yet.' : 'No such ID or name.' });
+    if (peer.id === u.id) return res.status(400).json({ error: 'You cannot DM yourself.' });
+    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Cannot start a chat with this user.' });
     const r = ensureDm(u, peer);
-    if (!r) return res.status(400).json({ error: 'Tiada ID atau nama begitu.' });
+    if (!r) return res.status(400).json({ error: 'No such ID or name.' });
     res.json({ ok: true, room: { id: r.id, kind: r.kind, title: roomTitle(r, u), members: r.members, peerId: peer.id, seq: r.seq || 0 }, profile: profile(peer, u.name) });
   });
 
   app.get('/api/chat/user', (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const p = profile(req.query.q, u.name);
-    if (!p) return res.status(404).json({ error: 'Pengguna tidak ditemui.' });
+    if (!p) return res.status(404).json({ error: 'User not found.' });
     res.json({ ok: true, profile: p });
   });
 
@@ -2100,7 +2100,7 @@ function mount(app, deps) {
       const r = setBio(u.name, b.bio);
       if (r.error) return res.status(400).json({ error: r.error });
     }
-    event('Profil dikemas kini: ' + u.name, { id: u.id });
+    event('Profile updated: ' + u.name, { id: u.id });
     res.json({ ok: true, name: u.name, id: u.id, profile: profile(u.name) });
   });
 
@@ -2114,7 +2114,7 @@ function mount(app, deps) {
     // Beritahu diri sendiri (tab lain) + pengikut supaya senarai/paparan segar.
     const audience = followersOf(u).concat([u.id]);
     pub('social', { kind: 'status', by: u.id }, audience);
-    event('Status dikemas kini: ' + u.name + (r.status ? ' — ' + (r.status.e || '') + ' ' + r.status.t : ' — dikosongkan'), { id: u.id });
+    event('Status updated: ' + u.name + (r.status ? ' — ' + (r.status.e || '') + ' ' + r.status.t : ' — cleared'), { id: u.id });
     res.json({ ok: true, status: r.status });
   });
 
@@ -2129,12 +2129,12 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
     const room = String(b.room || '');
-    if (!canRead(u.name, room)) return res.status(403).json({ error: 'Bilik bukan milik anda.' });
+    if (!canRead(u.name, room)) return res.status(403).json({ error: 'This room does not belong to you.' });
     const cr = createPoll(u.name, room, b.q, b.opts);
     if (cr.error) return res.status(400).json({ error: cr.error });
     const r = send(u.name, room, '📊 ' + cr.poll.q, b.replyTo || null, null, { pollId: cr.poll.id });
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Undian dibuat: ' + cr.poll.q.slice(0, 60), { id: u.id });
+    event('Poll created: ' + cr.poll.q.slice(0, 60), { id: u.id });
     res.json({ ok: true, msg: r.msg, seq: r.room.seq, poll: projectPoll(cr.poll) });
   });
 
@@ -2161,24 +2161,24 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
     const ev = String(b.ev || '');
-    if (!CALL_EV.has(ev)) return res.status(400).json({ error: 'Isyarat panggilan tidak dikenali.' });
+    if (!CALL_EV.has(ev)) return res.status(400).json({ error: 'Unknown call signal.' });
     const peer = byId(b.to);
-    if (!peer) return res.status(400).json({ error: 'Pengguna tidak ditemui.' });
-    if (peer.id === u.id) return res.status(400).json({ error: 'Tidak boleh memanggil diri sendiri.' });
-    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Tidak dapat memanggil pengguna ini.' });
+    if (!peer) return res.status(400).json({ error: 'User not found.' });
+    if (peer.id === u.id) return res.status(400).json({ error: 'You cannot call yourself.' });
+    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Could not call that user.' });
     let data = b.data && typeof b.data === 'object' ? b.data : {};
-    if (JSON.stringify(data).length > 16384) return res.status(413).json({ error: 'Paket isyarat terlalu besar.' });
+    if (JSON.stringify(data).length > 16384) return res.status(413).json({ error: 'Signal packet too large.' });
     // 'kind' hanya relevan pada 'ring' — kekalkan kecil & normalisasi.
     if (ev === 'ring') data = Object.assign({ kind: data.kind === 'audio' ? 'audio' : 'video' }, data);
     const set = sinks.get(peer.id);
     pub('call', { from: u.id, fromName: u.name, to: peer.id, ev, data }, [peer.id]);
-    if (ev === 'ring') event('Panggilan ' + (data.kind === 'audio' ? 'suara' : 'video') + ': ' + u.name + ' → ' + peer.name, { id: u.id, peer: peer.id });
+    if (ev === 'ring') event((data.kind === 'audio' ? 'Voice call: ' : 'Video call: ') + u.name + ' → ' + peer.name, { id: u.id, peer: peer.id });
     res.json({ ok: true, delivered: !!(set && set.size), online: isOnline(peer) });
   });
 
   // Konfigurasi ICE untuk WebRTC — STUN sentiasa; TURN hanya bila dikonfigur.
   app.get('/api/chat/ice', (req, res) => {
-    if (!userOf(bearer(req))) return res.status(401).json({ error: 'Sesi luput. Sila login semula.' });
+    if (!userOf(bearer(req))) return res.status(401).json({ error: 'Session expired. Please log in again.' });
     res.json(Object.assign({ ok: true }, iceConfig()));
   });
 
@@ -2187,7 +2187,7 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const r = recoveryGenerate(u.name);
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Kod pemulihan dijana: ' + u.name, { id: u.id });
+    event('Recovery codes generated: ' + u.name, { id: u.id });
     res.json(r);
   });
   app.get('/api/chat/recovery/status', (req, res) => {
@@ -2200,7 +2200,7 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = recoveryReset(b.name, b.code, b.pass);
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Kata laluan ditetapkan semula via kod pemulihan: ' + r.user.name, { id: r.user.id });
+    event('Password reset via recovery code: ' + r.user.name, { id: r.user.id });
     res.json({ ok: true, token: issueSession(r.user.name), name: r.user.name, id: r.user.id, remaining: (r.user.rec || []).length });
   });
 
@@ -2219,7 +2219,7 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = b.remove ? delFriend(u.name, b.peer) : addFriend(u.name, b.peer);
     if (!socialEdit(res, r)) return;
-    if (r.already && !b.remove) return res.status(400).json({ error: 'Sudah ada dalam senarai kawan anda.' });
+    if (r.already && !b.remove) return res.status(400).json({ error: 'You already have that user in your friend list.' });
     res.json({ ok: true, added: !b.remove && !r.already, social: socialLists(u.name) });
   });
 
@@ -2228,8 +2228,8 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = b.remove ? unblockUser(u.name, b.peer) : blockUser(u.name, b.peer);
     if (!socialEdit(res, r)) return;
-    if (r.already && !b.remove) return res.status(400).json({ error: 'Sudah disekat.' });
-    event((b.remove ? 'Nyahsekat' : 'Sekat') + ' @' + ((r.peer && r.peer.name) || b.peer) + ' oleh ' + u.name, { id: r.peer && r.peer.id });
+    if (r.already && !b.remove) return res.status(400).json({ error: 'Already blocked.' });
+    event((b.remove ? 'Unblock' : 'Block') + ' @' + ((r.peer && r.peer.name) || b.peer) + ' by ' + u.name, { id: r.peer && r.peer.id });
     // Sekatan turut memutuskan hubungan ikuti dua arah.
     const x = findUser(u.name), y = r.peer;
     if (x && y && !b.remove) {
@@ -2246,8 +2246,8 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = b.remove ? unfollowUser(u.name, b.peer) : followUser(u.name, b.peer);
     if (!socialEdit(res, r)) return;
-    if (r.already && !b.remove) return res.status(400).json({ error: 'Anda sudah mengikuti pengguna itu.' });
-    event((b.remove ? 'Berhenti ikuti @' : 'Ikuti @') + ((r.peer && r.peer.name) || b.peer) + ' oleh ' + u.name, { id: u.id });
+    if (r.already && !b.remove) return res.status(400).json({ error: 'You already follow that user.' });
+    event((b.remove ? 'Unfollowed @' : 'Followed @') + ((r.peer && r.peer.name) || b.peer) + ' by ' + u.name, { id: u.id });
     res.json({ ok: true, following: !b.remove && !r.already, profile: profile(r.peer, u.name) });
   });
 
@@ -2275,11 +2275,11 @@ function mount(app, deps) {
   app.post('/api/chat/posts', lim({ windowMs: 3600e3, max: 30, keyPrefix: 'chpost:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
-    if (b.media != null && !Array.isArray(b.media)) return res.status(400).json({ error: 'Lampiran mesti senarai.' });
-    if (Array.isArray(b.media) && b.media.length > MAX_POST_MEDIA) return res.status(400).json({ error: 'Maksimum ' + MAX_POST_MEDIA + ' fail satu post.' });
+    if (b.media != null && !Array.isArray(b.media)) return res.status(400).json({ error: 'Attachments must be a list.' });
+    if (Array.isArray(b.media) && b.media.length > MAX_POST_MEDIA) return res.status(400).json({ error: 'Maximum ' + MAX_POST_MEDIA + ' files per post.' });
     const cr = createPost(u.name, b.text, b.media, { rp: b.repost ? String(b.repost) : null });
     if (cr.error) return res.status(400).json({ error: cr.error });
-    event('Post baharu oleh ' + u.name, { id: u.id });
+    event('New post by ' + u.name, { id: u.id });
     res.json({ ok: true, post: cr.post });
   });
 
@@ -2315,7 +2315,7 @@ function mount(app, deps) {
   app.get('/api/chat/posts/:id', (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const p = getPost(String(req.params.id), u.name);
-    if (!p) return res.status(404).json({ error: 'Post tidak ditemui.' });
+    if (!p) return res.status(404).json({ error: 'Post not found.' });
     res.json({ ok: true, post: hydratePost(p, u) });
   });
 
@@ -2324,7 +2324,7 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = createStory(u.name, b.text, Array.isArray(b.media) ? b.media : undefined);
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Cerita baharu oleh ' + u.name, { id: u.id });
+    event('New story by ' + u.name, { id: u.id });
     res.json({ ok: true, story: r.story });
   });
 
@@ -2383,8 +2383,8 @@ function mount(app, deps) {
     if (r.error) return res.status(r.status || 400).json({ error: r.error });
     const n = logoutAll(u.name, tok);
     kickSinks(u.id, tok);
-    event('Kata laluan ditukar: ' + u.name, { id: u.id, revoked: n.revoked });
-    res.json({ ok: true, revoked: n.revoked, message: 'Kata laluan tukar. Peranti lain perlu login semula.' });
+    event('Password changed: ' + u.name, { id: u.id, revoked: n.revoked });
+    res.json({ ok: true, revoked: n.revoked, message: 'Password changed. Other devices need to log in again.' });
   });
 
   app.post('/api/chat/logout-all', (req, res) => {
@@ -2404,7 +2404,7 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = deleteAccount(u.name, b.pass);
     if (r.error) return res.status(r.status || 400).json({ error: r.error });
-    event('Akaun dipadam: ' + u.name, { id: u.id });
+    event('Account deleted: ' + u.name, { id: u.id });
     kickSinks(u.id);
     res.json({ ok: true });
   });
@@ -2461,7 +2461,7 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = createGroup(u.name, b.title, b.memberIds);
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Kumpulan baharu: ' + r.room.title + ' oleh ' + u.name, { id: u.id });
+    event('New group: ' + r.room.title + ' by ' + u.name, { id: u.id });
     res.json({ ok: true, room: { id: r.room.id, kind: r.room.kind, title: r.room.title, members: r.room.members, memberCount: r.room.memberIds.length, seq: 0 } });
   });
 
@@ -2485,7 +2485,7 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = renameGroup(u.name, String(b.room || ''), b.title);
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Kumpulan dinam semula: ' + r.title + ' oleh ' + u.name, { id: u.id });
+    event('Group renamed: ' + r.title + ' by ' + u.name, { id: u.id });
     res.json({ ok: true, title: r.title });
   });
 
@@ -2494,7 +2494,7 @@ function mount(app, deps) {
     const b = cleanBody(req.body);
     const r = kickFromGroup(u.name, String(b.room || ''), b.memberId);
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Ahli dibuang dari kumpulan oleh ' + u.name, { id: u.id });
+    event('Member removed from group by ' + u.name, { id: u.id });
     res.json({ ok: true, dissolved: !!r.dissolved });
   });
 
@@ -2510,7 +2510,7 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const r = dissolveBy(u.name, String(cleanBody(req.body).room || ''));
     if (r.error) return res.status(400).json({ error: r.error });
-    event('Kumpulan dibubarkan oleh ' + u.name, { id: u.id });
+    event('Group dissolved by ' + u.name, { id: u.id });
     res.json({ ok: true, dissolved: true });
   });
 
@@ -2518,14 +2518,14 @@ function mount(app, deps) {
   app.get('/api/chat/vapid-public-key', (req, res) => {
     initVapid();
     const k = vapidPubB64();
-    if (!k) return res.status(500).json({ error: 'VAPID tidak tersedia.' });
+    if (!k) return res.status(500).json({ error: 'VAPID is not available.' });
     res.json({ ok: true, key: k });
   });
 
   app.post('/api/chat/push-subscribe', lim({ windowMs: 3600e3, max: 20, keyPrefix: 'chpush:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
-    if (!b.endpoint || !b.keys) return res.status(400).json({ error: 'Langganan tidak sah.' });
+    if (!b.endpoint || !b.keys) return res.status(400).json({ error: 'Invalid subscription.' });
     const s = load();
     s.pushSubs = s.pushSubs || {};
     const arr = s.pushSubs[String(u.id)] = s.pushSubs[String(u.id)] || [];

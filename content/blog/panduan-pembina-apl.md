@@ -1,23 +1,23 @@
 SLUG: panduan-pembina-apl
-TITLE: Panduan Pembina Apl — Bina Aplikasi Sendiri Tanpa Tulis Kod
-EXCERPT: Dari kosong ke apl yang boleh dikongsi dalam beberapa minit. Ini cara guna Pembina (Builder) Tukuk: susun widget, jana automatik, dan terbitkan ke URL anda sendiri.
-TAGS: builder, no-code, apps, panduan, komuniti
+TITLE: The App Builder Guide — Build Your Own App Without Writing Code
+EXCERPT: From nothing to a shareable app in a few minutes. Here is how to use the Tukuk Builder: arrange widgets, auto-generate, and publish to your own URL.
+TAGS: builder, no-code, apps, guide, community
 
-## Bina tanpa coding
+## Build without coding
 
-**Pembina Apl** (`tukuk.org/builder`) ialah studio *no-code*: anda susun antara muka dengan **widget** — butang, teks, imej, senarai, kotak input — dan atur gayanya. Tiada baris kod perlu ditulis. Semua yang anda bina dihasilkan sebagai **satu fail apl** yang boleh dibuka dan dikongsi terus. Ia dibina supaya seorang yang tak pernah menatap editor pun boleh keluar dengan sesuatu yang berfungsi.
+The **App Builder** (`tukuk.org/builder`) is a *no-code* studio: you lay out the interface with **widgets** — buttons, text, images, lists, input boxes — and style them. No lines of code need to be written. Everything you build is produced as **a single app file** that can be opened and shared directly. It was built so that someone who has never stared at a code editor can walk away with something that works.
 
-## Cara kerja
+## How it works
 
-1. Buka `/builder`. Pilih cetakan (*template*) sebagai pangkal, atau mula kosong.
-2. Seret & susun widget dari palet ke kanvas. Tekan item untuk tukar label, warna, dan susun atur.
-3. Guna mod **Auto-jana** jika mahu sistem membina rangka apl untuk anda — tulis apa apl itu, dan Pembina cadangkan struktur + kandungan awal yang boleh anda suai. (Ada sandaran deterministik bila model AI tak tersedia, jadi ia tetap jadi.)
-4. Pratonton hasil secara langsung, dan bila puas hati, **Terbitkan**.
+1. Open `/builder`. Pick a *template* as a starting point, or begin from scratch.
+2. Drag & drop widgets from the palette onto the canvas. Tap an item to change its label, colors, and layout.
+3. Use **Auto-generate** mode if you want the system to build the app skeleton for you — describe what the app is, and the Builder suggests a structure + starter content you can adapt. (There is a deterministic fallback when the AI model is unavailable, so it always works.)
+4. Preview the result live, and when you are happy, **Publish**.
 
-## Terbit & sebarkan
+## Publish & share
 
-Tekan **Publish**, dan apl anda dapat URL sendiri di bawah `/a/<nama>` — boleh anda hantar ke kawan, tampal di media sosial, atau masukkan ke gedung. Setiap terbitan komuniti muncul di `tukuk.org/store`, lengkap dengan butang **Install** (PWA) dan **⬇ APK**. Jadi apl yang anda bina dengan seret-lepas tadi boleh terus dipasang di telefon — bukan sekadar pratonton di pelayar.
+Press **Publish**, and your app gets its own URL under `/a/<name>` — you can send it to a friend, paste it on social media, or submit it to the store. Every community publication shows up on `tukuk.org/store`, complete with **Install** (PWA) and **⬇ APK** buttons. So the drag-and-drop app you just built can be installed straight onto a phone — not merely a browser preview.
 
-## Kenapa guna Pembina?
+## Why use the Builder?
 
-Ia merapatkan jurang antara "ada idea" dan "ada apl". Anda tak perlu install toolchain, tak perlu server, tak perlu tahu JavaScript. Cukup tahu apa yang anda mahu bina. Dan kerana hasilnya fail tunggal, ia ringan, pantas dimuat, dan senang dikongsi — falsafah yang sama yang menggerakkan keseluruhan Tukuk-OS: **benda yang anda guna setiap hari, anda sendiri yang bina.**
+It closes the gap between "having an idea" and "having an app". You do not need to install a toolchain, no server, no JavaScript knowledge. Just know what you want to build. And because the output is a single file, it is light, loads fast, and is easy to share — the same philosophy that drives all of Tukuk-OS: **you build the things you use every day.**

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pemilih Warna — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="HEX/RGB/HSL, tona & nada, palet pelengkap/triadik dan nisbah kontras WCAG — semua dalam pelayar.">
+<title>Color Picker — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="HEX/RGB/HSL, tints & shades, complementary/triadic palettes and WCAG contrast ratios — all in the browser.">
 <link rel="canonical" href="https://tukuk.org/apps/color">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/color.svg">
@@ -35,7 +35,7 @@
   <link rel="manifest" href="/manifest-color.json">
 </head>
 <body>
-<header><a class="back" href="/apps">← Apps</a><h1>🎨 Pemilih Warna</h1></header>
+<header><a class="back" href="/apps">← Apps</a><h1>🎨 Color Picker</h1></header>
 <div class="wrap">
   <div class="hero">
     <input type="color" id="pick" value="#4c8dff">
@@ -45,11 +45,11 @@
       <div class="code"><span id="hsl"></span><button data-c="hsl">📋</button></div>
     </div>
   </div>
-  <h3>Tona &amp; Nada</h3><div class="row" id="tints"></div>
-  <h3>Palet</h3><div class="row" id="palette"></div>
-  <h3>Nisbah Kontras</h3>
-  <table><tr><td>vs Putih #fff</td><td id="cw"></td></tr><tr><td>vs Hitam #000</td><td id="cb"></td></tr></table>
-  <p class="note">Klik mana-mana kod untuk salin. WCAG: teks normal perlukan ≥ 4.5, tajuk besar ≥ 3.</p>
+  <h3>Tints &amp; Shades</h3><div class="row" id="tints"></div>
+  <h3>Palette</h3><div class="row" id="palette"></div>
+  <h3>Contrast Ratio</h3>
+  <table><tr><td>vs White #fff</td><td id="cw"></td></tr><tr><td>vs Black #000</td><td id="cb"></td></tr></table>
+  <p class="note">Click any code to copy. WCAG: normal text needs ≥ 4.5, large headings ≥ 3.</p>
 </div>
 <script>
 (() => {
@@ -65,7 +65,7 @@
     const v=$('#pick').value, [r,g,b]=parse(v), [h,s,l]=rgb2hsl(r,g,b);
     $('#hex').textContent=v.toUpperCase(); $('#rgb').textContent=`rgb(${r}, ${g}, ${b})`; $('#hsl').textContent=`hsl(${h}, ${s}%, ${l}%)`;
     $('#tints').innerHTML=[90,80,70,60,40,30,20,10].map((t)=>{ const hx=toHex(...hsl2rgb(h,s,t)); return `<div class="chip" style="background:${hx};color:${t>55?'#000':'#fff'}">${hx}</div>`; }).join('');
-    $('#palette').innerHTML=[['Pelengkap',180],['Triadik A',120],['Triadik B',240],['Analog −30',-30],['Analog +30',30]].map(([n,d])=>{ const hx=toHex(...hsl2rgb((h+d+360)%360,s,l)); return `<div class="chip" style="background:${hx};color:${l>55?'#000':'#fff'}" title="${n}">${hx}</div>`; }).join('');
+    $('#palette').innerHTML=[['Complementary',180],['Triadic A',120],['Triadic B',240],['Analog −30',-30],['Analog +30',30]].map(([n,d])=>{ const hx=toHex(...hsl2rgb((h+d+360)%360,s,l)); return `<div class="chip" style="background:${hx};color:${l>55?'#000':'#fff'}" title="${n}">${hx}</div>`; }).join('');
     const cw=ratio(v,'#ffffff'), cb=ratio(v,'#000000');
     $('#cw').innerHTML=`${cw.toFixed(2)}:1 ${cw>=4.5?'<span class="ok">✓ AA</span>':'<span class="no">✕</span>'}`;
     $('#cb').innerHTML=`${cb.toFixed(2)}:1 ${cb>=4.5?'<span class="ok">✓ AA</span>':'<span class="no">✕</span>'}`;

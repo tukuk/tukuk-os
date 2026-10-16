@@ -92,7 +92,7 @@ function hubHtml(manifest) {
   }).join('\n');
   return readTpl('hub.html')
     .replaceAll('{{COUNT}}', String(manifest.entries.length))
-    .replace('{{CARDS}}', cards || '<em>Belum ada hasil — jalankan generate.mjs.</em>');
+    .replace('{{CARDS}}', cards || '<em>No results yet — run generate.mjs.</em>');
 }
 
 function main() {
@@ -137,8 +137,8 @@ function main() {
     fs.mkdirSync(dirs.unity, { recursive: true });
     fs.writeFileSync(path.join(dirs.unity, 'GameMain.cs'), readTpl('unity-GameMain.cs.tpl').replaceAll('{{WORD}}', chosen.word));
     fs.writeFileSync(path.join(dirs.unity, 'README-UNITY.md'),
-      `# ${chosen.word} — Unity scaffold (opt-in)\n\nImport \`GameMain.cs\` ke projek Unity **manual** (editor berlesen). `
-      + `Jalur auto-harian ialah web (Phaser), BUKAN Unity — sebab Unity perlukan build berat + lesen yang tak sesuai untuk CI percuma tanpa membebankan server.\n`);
+      `# ${chosen.word} — Unity scaffold (opt-in)\n\nImport \`GameMain.cs\` into a Unity project **manually** (licensed editor). `
+      + `The automated daily path is the web build (Phaser), NOT Unity — Unity needs heavy builds + a license, which does not fit free CI without loading the server.\n`);
   }
 
   const idx = manifest.entries.findIndex((e) => e.slug === slug);

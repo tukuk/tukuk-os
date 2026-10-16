@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="Senarai tugas dengan keutamaan, penapis dan penyimpanan lokal — semua kekal dalam pelayar anda.">
+<meta name="description" content="Task list with priorities, filters and local storage — everything stays in your browser.">
 <link rel="canonical" href="https://tukuk.org/apps/todo">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/apps/todo.svg">
@@ -44,15 +44,15 @@
 <header><a class="back" href="/apps">← Apps</a><h1>✅ To-Do</h1></header>
 <div class="wrap">
   <div class="addrow">
-    <input type="text" id="txt" placeholder="Tugasan baharu…" maxlength="160">
-    <select id="pri"><option value="rendah">Rendah</option><option value="tinggi">Tinggi</option></select>
-    <button id="add">Tambah</button>
+    <input type="text" id="txt" placeholder="New task…" maxlength="160">
+    <select id="pri"><option value="rendah">Low</option><option value="tinggi">High</option></select>
+    <button id="add">Add</button>
   </div>
   <div class="filters" id="filters">
-    <button data-f="all" class="on">Semua</button><button data-f="open">Belum</button><button data-f="done">Selesai</button>
+    <button data-f="all" class="on">All</button><button data-f="open">Open</button><button data-f="done">Done</button>
   </div>
   <ul id="list"></ul>
-  <div class="stat"><span id="count"></span><button id="clearDone">Buang yang selesai</button></div>
+  <div class="stat"><span id="count"></span><button id="clearDone">Clear completed</button></div>
 </div>
 <script>
 (() => {
@@ -62,14 +62,15 @@
   const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(items)); }catch(e){} };
   const $=(s)=>document.querySelector(s);
   const esc=(s)=>String(s).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const PLBL={tinggi:'High',rendah:'Low'};
   function render(){
     const list=$('#list');
     list.innerHTML=(filter==='all'?items:items.filter((x)=>filter==='open'?!x.d:x.d)).map((x)=>{
       const i=items.indexOf(x);
-      return `<li class="${x.d?'done':''}"><input type="checkbox" data-i="${i}" ${x.d?'checked':''}><span class="t">${esc(x.t)}</span><span class="p ${x.p}">${x.p}</span><button class="x" data-d="${i}" title="Padam">✕</button></li>`;
-    }).join('')||'<p style="color:var(--muted);text-align:center;padding:24px 0">Tiada tugas di sini. Tambah satu! 🎉</p>';
+      return `<li class="${x.d?'done':''}"><input type="checkbox" data-i="${i}" ${x.d?'checked':''}><span class="t">${esc(x.t)}</span><span class="p ${x.p}">${PLBL[x.p]||x.p}</span><button class="x" data-d="${i}" title="Delete">✕</button></li>`;
+    }).join('')||'<p style="color:var(--muted);text-align:center;padding:24px 0">No tasks here. Add one! 🎉</p>';
     const done=items.filter((x)=>x.d).length;
-    $('#count').textContent=`${items.length} jumlah · ${done} selesai · ${items.length-done} aktif`;
+    $('#count').textContent=`${items.length} total · ${done} done · ${items.length-done} active`;
   }
   $('#add').onclick=()=>{ const t=$('#txt').value.trim(); if(!t)return; items.unshift({t,p:$('#pri').value,d:false}); $('#txt').value=''; save(); render(); };
   $('#txt').addEventListener('keydown',(e)=>{ if(e.key==='Enter')$('#add').click(); });

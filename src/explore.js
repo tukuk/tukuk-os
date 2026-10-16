@@ -184,7 +184,7 @@ async function getWeather({ lat, lon, days = 5 } = {}) {
   const latitude = num(lat, null);
   const longitude = num(lon, null);
   if (latitude === null || longitude === null) {
-    throw Object.assign(new Error('Parameter lat dan lon diperlukan'), { statusCode: 400 });
+    throw Object.assign(new Error('lat and lon parameters required'), { statusCode: 400 });
   }
 
   const span = Math.min(Math.max(num(days, 5), 1), 7);
@@ -234,7 +234,7 @@ async function getSunTimes({ lat, lon, date } = {}) {
   const latitude = num(lat, null);
   const longitude = num(lon, null);
   if (latitude === null || longitude === null) {
-    throw Object.assign(new Error('Parameter lat dan lon diperlukan'), { statusCode: 400 });
+    throw Object.assign(new Error('lat and lon parameters required'), { statusCode: 400 });
   }
 
   const data = await fetchJson('https://api.sunrise-sunset.org/json', {
@@ -249,7 +249,7 @@ async function getSunTimes({ lat, lon, date } = {}) {
   });
 
   if (!data || data.status !== 'OK') {
-    throw Object.assign(new Error('Sunrise-Sunset API tidak memberi respons sah'), { statusCode: 502 });
+    throw Object.assign(new Error('Sunrise-Sunset API did not return a valid response'), { statusCode: 502 });
   }
 
   return {
@@ -331,7 +331,7 @@ async function getIpInfo(ip = '') {
   const data = await fetchJson(url, { ttl: 30 * MINUTE, key: `ip:${target || 'self'}` });
 
   if (data && data.success === false) {
-    throw Object.assign(new Error(data.message || 'IP tidak dapat dikenal pasti'), { statusCode: 404 });
+    throw Object.assign(new Error(data.message || 'IP could not be identified'), { statusCode: 404 });
   }
 
   return {

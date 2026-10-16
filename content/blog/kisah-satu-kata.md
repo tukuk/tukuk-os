@@ -1,20 +1,20 @@
 SLUG: kisah-satu-kata
-TITLE: Kisah Satu Kata — Satu Kata Sehari Jadi Satu Apl dan Satu Game
-EXCERPT: Bagaimana sebuah cron harian mengambil satu patah kata — hujan, kopi, roket — dan menyulapnya menjadi aplikasi serta game yang boleh dimainkan, tanpa satu baris kod ditulis manusia.
-TAGS: satu-kata, apps, game, automasi, ci
+TITLE: The Story of Satu Kata — One Word a Day Becomes One App and One Game
+EXCERPT: How a daily cron job takes a single word — rain, coffee, rocket — and turns it into an app and a game you can play, without a human writing a single line of code.
+TAGS: satu-kata, apps, game, automation, ci
 
-## idea: satu kata, dua benda
+## The idea: one word, two things
 
-**Satu Kata** ialah eksperimen paling unik dalam Tukuk-OS: setiap hari, sebuah kerja automatik (cron) memilih **satu patah kata** — `hujan`, `kopi`, `buku`, `roket`, `ikan`, `awan`, `bunga` — dan daripada kata itu dijana **dua perkara**: sebuah **aplikasi mini** dan sebuah **game mini**. Jadi kata `kopi ☕` menjadi pengira kafein; `roket 🚀` menjadi tangkap-bahan-api-capai-orbit. Tiada yang menulis kod untuk setiap satu — semuanya lahir dari satu skrip penjana.
+**Satu Kata** is the most unusual experiment in Tukuk-OS: every day, an automated job (cron) picks **one word** — `rain`, `coffee`, `book`, `rocket`, `fish`, `cloud`, `flower` — and from that word **two things** are generated: a **mini app** and a **mini game**. So the word `coffee ☕` becomes a caffeine counter; `rocket 🚀` becomes a catch-the-fuel-reach-orbit game. Nobody writes code for any of them — everything is born from one generator script.
 
-## tanpa build step
+## No build step
 
-Falsafahnya: *"semudah membuat aplikasi, tapi tanpa pusingan bina"*. Setiap keluaran hanyalah **satu fail HTML tunggal** — aplikasi menggunakan Preact+htm, game menggunakan Phaser. Kerana ia fail statik, ia boleh dihantar terus ke tepi (edge) dan **hampir tak membebankan pelayan**: kos pada VPS sangat ringan, kira-kira 0 minit untuk CI menjalankannya.
+The philosophy: *"as easy as making an app, but without the build rounds"*. Every output is just **a single HTML file** — apps use Preact+htm, games use Phaser. Because they are static files, they can be shipped straight to the edge and **barely burden the server**: the cost on the VPS is very light, roughly 0 minutes for CI to run them.
 
-## setiap kata dapat personaliti sendiri
+## Every word gets its own personality
 
-Yang cantik: tema, warna, dan genre **dipilih secara deterministik** daripada hash kata itu. Enam palette (solar, mint, hijau, mawar, ungu, karat) dan empat genre (catch, tap, memory, runner) bermakna `durian` sentiasa dapat rupa yang sama setiap kali, tapi `cili` berbeza. Konsisten tapi pelbagai — tanpa perlu seorang pereka pun.
+The beautiful part: theme, colors, and genre are **chosen deterministically** from a hash of the word. Six palettes (solar, mint, green, rose, purple, rust) and four genres (catch, tap, memory, runner) mean `durian` always gets the same look every time, while `chili` gets something different. Consistent but varied — without needing a designer at all.
 
-## masuk ke gedung apl
+## Into the app store
 
-Setiap pasangan Satu Kata muncul di `tukuk.org/store` (sumber "satu-kata") dengan dua kad: **App «kata»** dan **Game «kata»**. Dan seperti semua apl di sini, setiap satunya boleh dimuat turun sebagai **APK Android yang ditandatangani Tukuk** — jadi kata hari ini boleh jadi aplikasi di poket anda esok. Hubnya di `tukuk.org/satu-kata`. Satu kata, satu hari, satu dunia kecil.
+Every Satu Kata pair appears in `tukuk.org/store` (the "satu-kata" source) with two cards: **App «word»** and **Game «word»**. And like every app here, each one can be downloaded as a **Tukuk-signed Android APK** — so today's word can be an app in your pocket tomorrow. The hub lives at `tukuk.org/satu-kata`. One word, one day, one small world.

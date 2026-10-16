@@ -129,11 +129,11 @@ test('opts.color: warna utama memaksa aksen + bg ikut luminans; hex jahat diabai
   assert.deepEqual(bad, g.buildOne('kopi', 0, ''));
 });
 
-test('opts.lang: english → teks Inggeris; lain → Melayu', () => {
+test('opts.lang: teks sentiasa Inggeris (laman English-sahaja)', () => {
   const en = g.buildOne('kopi', 0, '', { lang: 'English' });
   assert.match(en.widgets.find((w) => w.type === 'text').text, /All about/);
   const id = g.buildOne('kopi', 0, '', { lang: 'Indonesia' });
-  assert.match(id.widgets.find((w) => w.type === 'text').text, /Semua tentang/, 'bukan EN → Melayu');
+  assert.match(id.widgets.find((w) => w.type === 'text').text, /All about/, 'lang apa pun → Inggeris');
 });
 
 test('matchWords: saring berkaitan dua hala; kosong → []; cap n', () => {

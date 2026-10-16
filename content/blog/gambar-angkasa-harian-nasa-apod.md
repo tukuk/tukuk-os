@@ -1,23 +1,23 @@
 SLUG: gambar-angkasa-harian-nasa-apod
-TITLE: Gambar Angkasa Lepas Setiap Hari — Pusat Data NASA Dalam Tukuk
-EXCERPT: Astronomy Picture of the Day (APOD) NASA, posisi ISS secara langsung, asteroid hampir-Bumi, dan cuaca angkasa — semuanya dalam satu halaman, tanpa kunci API.
-TAGS: nasa, angkasa, apod, sains, iss
+TITLE: A Space Picture Every Day — The NASA Data Hub Inside Tukuk
+EXCERPT: NASA's Astronomy Picture of the Day (APOD), live ISS position, near-Earth asteroids, and space weather — all on one page, no API keys needed.
+TAGS: nasa, space, apod, science, iss
 
-## Langit di satu tab
+## The sky in one tab
 
-Tukuk punya sebuah **pusat data NASA** (`tukuk.org/nasa`) yang menghimpun suapan terbuka agensi angkasa itu — dan yang paling memikat ialah **APOD (Astronomy Picture of the Day)**: setiap hari NASA menerbitkan satu gambar atau imej astronomi dengan keterangan ditulis manusia. Kadang nebula, kadang aurora atas sebuah gunung, kadang potret Marikh. Kami tarik, cache, dan sajikan supaya anda boleh baca versi Bahasa ringkas tanpa ke mana-mana.
+Tukuk has a **NASA data hub** (`tukuk.org/nasa`) that gathers the agency's open feeds — and the most captivating one is **APOD (Astronomy Picture of the Day)**: every day NASA publishes one astronomical image or picture with a human-written explanation. Sometimes a nebula, sometimes an aurora over a mountain, sometimes a portrait of Mars. We fetch, cache, and serve it so the sky is one click away, right here.
 
-## Benda "hidup" yang boleh dilihat
+## "Live" things you can look at
 
-Bukan gambar statik sahaja:
+Not just static pictures:
 
-- **Kedudukan ISS langsung** — satelit mana kini melintas atas kepala anda, dipaparkan pada peta.
-- **Siapa di angkasa sekarang** — nama angkasawan yang sedang berada di Stesen Angkasa Antarabangsa.
-- **Asteroid hampir-Bumi** — senarai batu angkasa yang akan melintas (NeoWs).
-- **Cuaca angkasa** — suar matahari & tren fluks radio F10.7 beberapa hari ke belakang.
+- **Live ISS position** — which satellite is passing over your head right now, shown on a map.
+- **Who is in space right now** — the names of the astronauts currently aboard the International Space Station.
+- **Near-Earth asteroids** — a list of space rocks about to pass by (NeoWs).
+- **Space weather** — solar flares & the F10.7 radio flux trend over the last few days.
 
-Semua ini daripada sumber awam NASA/CC, jadi **tiada kunci API diperlukan** dan ia percuma sepenuhnya.
+All of this comes from NASA/CC public sources, so **no API key is needed** and it is completely free.
 
-## Kenapa ia ada di sini
+## Why it lives here
 
-Tukuk bukan sekadar enjin carian dan alat — kami mahu satu tab cukup untuk *kerja, main, dan tertanya-tanya*. APOD ialah perenggan "tertanya-tanya" itu: satu gambar sehari yang melebar pandangan anda tentang skala alam. Buka `tukuk.org/nasa`, dan biar langit jadi rehat singkat anda antara kerja.
+Tukuk is not just a search engine and tools — we wanted one tab to be enough for *work, play, and wonder*. APOD is that "wonder" paragraph: one image a day that widens your view of the scale of the universe. Open `tukuk.org/nasa`, and let the sky be your short break between tasks.

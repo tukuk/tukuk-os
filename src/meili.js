@@ -466,7 +466,7 @@ try {
     requestTimeout: config.meili.timeout
   });
 } catch (err) {
-  console.warn('[meili] pakej meilisearch gagal dimuat — guna mock sahaja:', err.message);
+  console.warn('[meili] meilisearch package failed to load — using mock only:', err.message);
 }
 
 const INDEX_METHODS = [
@@ -486,7 +486,7 @@ function wrapIndex(name) {
       try {
         return await real[method](...args);
       } catch (err) {
-        console.warn(`[meili] ${name}.${method} gagal (${err.message}) — sandaran mock`);
+        console.warn(`[meili] ${name}.${method} failed (${err.message}) — mock fallback`);
         return fb[method](...args);
       }
     };
@@ -522,7 +522,7 @@ async function ensureIndex({ logger = console } = {}) {
   const name = config.indexName;
   const idx = client.index(name);
   if (!realClient) {
-    logger.log(`[meili] index mock (tiada klien sebenar): "${name}"`);
+    logger.log(`[meili] mock index (no real client): "${name}"`);
     return idx;
   }
   try {

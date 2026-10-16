@@ -1,20 +1,20 @@
 SLUG: penukar-format-fail-online
-TITLE: Penukar Format Fail Online — Tukar Image, Audio, Video Tanpa Install
-EXCERPT: Perlu tukar HEIC ke JPG, WAV ke MP3, atau klip pendek ke GIF? Penukar format Tukuk buat dalam pelayar, fail anda diproses setempat, percuma dan tanpa daftar.
-TAGS: converter, format, fail, jpg, mp3, alat
+TITLE: Online File Format Converter — Convert Images, Audio, Video Without Installing
+EXCERPT: Need to turn HEIC into JPG, WAV into MP3, or a short clip into a GIF? The Tukuk converter does it in the browser; your file is processed locally, free and with no sign-up.
+TAGS: converter, format, file, jpg, mp3, tools
 
-## Format yang tak padan
+## Formats that do not match
 
-Kamera iPhone keluar **HEIC**, tapi laman web mahu **JPG**. Rakaman suara bentuk **WAV** tapi terlalu besar untuk dihantar — anda mahu **MP3**. Video perlu dipendekkan jadi **GIF** untuk ditempel di catatan. Masalah remeh ini selalunya butuh perisian khusus atau laman upload yang minta daftar (dan kadang menyelitkan watermark). **Penukar Format Tukuk** (`tukuk.org/converter`) menyelesaikannya dalam satu tab.
+iPhone cameras output **HEIC**, but websites want **JPG**. Your voice recording is a **WAV** but too big to send — you want an **MP3**. A video needs shortening into a **GIF** to paste into a post. These trivial problems usually need special software or an upload site that demands registration (and sometimes sneaks in a watermark). The **Tukuk Format Converter** (`tukuk.org/converter`) settles it in one tab.
 
-## Cara ia berfungsi
+## How it works
 
-Pilih fail, tentukan format sasaran, dan tukar. Kerana pemprosesan berlaku **di sebelah anda** (dalam pelayar menerusi teknologi WebCodecs/wasm untuk banyak kes), fail anda tak perlu dihantar ke pelayan jauh — lebih privasi, dan lebih laju pada fail sederhana. Sesuai untuk menukar imej antara JPG/PNG/WebP, kecilkan saiz, dan tukar audio/video asas.
+Pick a file, choose the target format, convert. Because processing happens **on your side** (in the browser via WebCodecs/wasm technology for many cases), your file never needs to go to a remote server — more private, and faster for medium-sized files. Good for converting images between JPG/PNG/WebP, shrinking sizes, and basic audio/video conversion.
 
-## Kenapa "tanpa install" penting
+## Why "no install" matters
 
-Orang bukan teknikal tak mahu memasang ffmpeg atau aplikasi konverter yang memenuhi desktop. Mereka cuma mahu *satu fail jadi format lain*. Dengan alat dalam pelayar, halangannya hilang: buka pautan, buat kerja, tutup. Bila selalu guna, anda boleh simpan sebagai **PWA** di skrin utama supaya setaraf laju dengan aplikasi pasang.
+Non-technical people do not want to install ffmpeg or converter apps that clutter the desktop. They just want *one file in another format*. With a browser tool, the barrier disappears: open the link, do the work, close it.
 
-## Satu daripada banyak alat
+## One of many tools
 
-Converter ini sebahagian suite yang sama dengan editor imej/video, penghapus latar, dan kolaj — semua bebas iklan memaksa, tanpa akaun, dan boleh dipasang. Simpan penanda halaman ini; bila kali berikutnya anda terlepas maki kerana format salah, jawapannya sudah ada satu klik jauhnya.
+This converter is part of the same suite as the image/video editors, the background remover, and the collage maker — all free of forced ads, no account needed, and installable. Bookmark this page; next time you nearly swear at a wrong file format, the answer is one click away.

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Studio — Penukar Media (MP3 / MP4)</title>
-<meta name="description" content="Penukar media percuma dalam pelayar: video ke MP3, audio mana-mana ke MP3, dan video ke MP4 (H.264). Dikuasakan ffmpeg.wasm — 100% lokal, tiada muat naik ke pelayan, fail anda tidak pernah meninggalkan peranti.">
+<title>Tukuk Studio — Media Converter (MP3 / MP4)</title>
+<meta name="description" content="Free media converter in the browser: video to MP3, any audio to MP3, and video to MP4 (H.264). Powered by ffmpeg.wasm — 100% local, no uploads to any server, your files never leave the device.">
 <link rel="canonical" href="https://tukuk.org/converter">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -63,12 +63,12 @@
 </head>
 <body>
 <header>
-  <span class="logo">🔊 Tukuk Studio <small>penukar media</small></span>
+  <span class="logo">🔊 Tukuk Studio <small>media converter</small></span>
   <span class="spacer"></span>
-  <a class="btn" href="/editor-video" title="Editor video">🎬 Video</a>
-  <a class="btn" href="/editor" title="Editor gambar">🖼 Gambar</a>
-  <a class="btn" href="/studio" title="Kembali ke Suite">◂ Suite</a>
-  <a class="btn" href="/" title="Carian">⌕ Carian</a>
+  <a class="btn" href="/editor-video" title="Video editor">🎬 Video</a>
+  <a class="btn" href="/editor" title="Image editor">🖼 Image</a>
+  <a class="btn" href="/studio" title="Back to the Suite">◂ Suite</a>
+  <a class="btn" href="/" title="Search">⌕ Search</a>
 </header>
 
 <div class="wrap">
@@ -79,8 +79,8 @@
 
   <div class="drop" id="drop">
     <div class="big" id="dropIcon">🎵</div>
-    <div id="dropText">Seret &amp; lepas fail <b>video atau audio</b> ke sini, atau klik untuk pilih.</div>
-    <div class="note" style="margin-top:8px">MP3: keluarkan/tukar audio daripada mana-mana fail (mp4, mov, wav, ogg, flac, m4a, mkv…).</div>
+    <div id="dropText">Drag &amp; drop a <b>video or audio</b> file here, or click to choose.</div>
+    <div class="note" style="margin-top:8px">MP3: extract/convert audio from almost any file (mp4, mov, wav, ogg, flac, m4a, mkv…).</div>
     <input type="file" id="fileIn" accept="audio/*,video/*" hidden>
   </div>
 
@@ -88,26 +88,26 @@
     <span>📄</span>
     <span class="nm" id="fName"></span>
     <span class="sz" id="fSize"></span>
-    <button class="x" id="fClear" title="Buang">✕</button>
+    <button class="x" id="fClear" title="Remove">✕</button>
   </div>
 
   <div class="opts" id="opts">
-    <div class="opt" id="optBitrateWrap"><label>Kadar bit audio</label>
-      <select id="bitrate"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="256">256 kbps</option><option value="320">320 kbps (terbaik)</option></select>
+    <div class="opt" id="optBitrateWrap"><label>Audio bitrate</label>
+      <select id="bitrate"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="256">256 kbps</option><option value="320">320 kbps (best)</option></select>
     </div>
-    <div class="opt" id="optPresetWrap" hidden><label>Preset (kelajuan/kualiti)</label>
+    <div class="opt" id="optPresetWrap" hidden><label>Preset (speed/quality)</label>
       <select id="preset"><option value="ultrafast">ultrafast</option><option value="veryfast" selected>veryfast</option><option value="medium">medium</option><option value="slow">slow</option></select>
     </div>
-    <div class="opt" id="optCrfWrap" hidden><label>Kualiti (CRF)</label>
-      <select id="crf"><option value="18">18 — sangat tinggi</option><option value="23" selected>23 — seimbang</option><option value="28">28 — fail kecil</option></select>
+    <div class="opt" id="optCrfWrap" hidden><label>Quality (CRF)</label>
+      <select id="crf"><option value="18">18 — very high</option><option value="23" selected>23 — balanced</option><option value="28">28 — small file</option></select>
     </div>
-    <div class="opt" id="optScaleWrap" hidden><label>Saiz video</label>
-      <select id="scale"><option value="0" selected>Kekal asal</option><option value="1280">Had 720p</option><option value="1920">Had 1080p</option></select>
+    <div class="opt" id="optScaleWrap" hidden><label>Video size</label>
+      <select id="scale"><option value="0" selected>Keep original</option><option value="1280">Cap 720p</option><option value="1920">Cap 1080p</option></select>
     </div>
   </div>
 
   <div class="act">
-    <button class="primary" id="goBtn" disabled>⚙️ Tukar</button>
+    <button class="primary" id="goBtn" disabled>⚙️ Convert</button>
     <span class="status" id="status"></span>
   </div>
 
@@ -117,10 +117,10 @@
   <div class="result" id="result">
     <div class="meta"><div id="rName"></div><small id="rSize"></small></div>
     <span class="spacer"></span>
-    <a class="btn primary" id="dlBtn" download>⬇ Muat turun</a>
+    <a class="btn primary" id="dlBtn" download>⬇ Download</a>
   </div>
 
-  <p class="note">🔒 <b>Privasi:</b> penukaran dilakukan sepenuhnya dalam pelayar anda menggunakan <code>ffmpeg.wasm</code>. Tiada fail dimuat naik ke pelayan — video/audio anda tidak pernah meninggalkan peranti. Enjin (~30&nbsp;MB) dimuat sekali sahaja apabila anda menekan Tukar; selepas itu ia di-cache. Proses tunggal-thread — video panjang/beresolusi tinggi mengambil sedikit masa.</p>
+  <p class="note">🔒 <b>Privacy:</b> conversion runs entirely in your browser using <code>ffmpeg.wasm</code>. No files are uploaded to a server — your video/audio never leaves the device. The engine (~30&nbsp;MB) loads once when you press Convert; after that it is cached. Single-threaded processing — long/high-resolution videos take a little longer.</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -170,7 +170,7 @@ const CDN = {
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script'); s.src = src; s.async = true;
-    s.onload = () => resolve(); s.onerror = () => reject(new Error('Gagal muat ' + src));
+    s.onload = () => resolve(); s.onerror = () => reject(new Error('Failed to load ' + src));
     document.head.appendChild(s);
   });
 }
@@ -180,12 +180,12 @@ async function ensureEngine(onStatus) {
   if (_ffPromise) return _ffPromise;
   _ffPromise = (async () => {
     if (!window.FFmpegWASM || !window.FFmpegUtil) {
-      onStatus && onStatus('Memuatkan pustaka ffmpeg.wasm…');
+      onStatus && onStatus('Loading ffmpeg.wasm libraries…');
       await loadScript(CDN.ffmpeg); await loadScript(CDN.util);
     }
     const { FFmpeg } = window.FFmpegWASM; const { toBlobURL } = window.FFmpegUtil;
     const ff = new FFmpeg();
-    onStatus && onStatus('Memuatkan enjin (~30 MB, sekali sahaja)…');
+    onStatus && onStatus('Loading engine (~30 MB, one time only)…');
     await ff.load({
       // coreURL/wasmURL = ESM https MENTAH (lihat CDN.coreBase). Kelas-worker cuba
       // `importScripts(coreURL)` → gagal (modul ESM bukan classic script) lalu jatuh ke
@@ -219,8 +219,8 @@ function setMode(m) {
   $('optPresetWrap').hidden = $('optCrfWrap').hidden = $('optScaleWrap').hidden = (m !== 'mp4');
   $('dropIcon').textContent = m === 'mp4' ? '🎞' : '🎵';
   $('dropText').innerHTML = m === 'mp4'
-    ? 'Seret &amp; lepas <b>video</b> (mov, webm, mkv, avi, m4v) ke sini.'
-    : 'Seret &amp; lepas fail <b>video atau audio</b> ke sini, atau klik untuk pilih.';
+    ? 'Drag &amp; drop a <b>video</b> (mov, webm, mkv, avi, m4v) here.'
+    : 'Drag &amp; drop a <b>video or audio</b> file here, or click to choose.';
   $('result').classList.remove('show');
 }
 document.querySelectorAll('#seg button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
@@ -228,14 +228,14 @@ document.querySelectorAll('#seg button').forEach((b) => b.onclick = () => setMod
 function useFile(f) {
   if (!f) return;
   if (mode === 'mp4' && !/^video\//.test(f.type || '') && !/\.(mp4|mov|webm|mkv|avi|m4v|flv|wmv)$/i.test(f.name)) {
-    toast('Untuk MP4 pilih fail video.'); return;
+    toast('For MP4 output, pick a video file.'); return;
   }
   picked = f;
   $('fName').textContent = f.name; $('fSize').textContent = fmtBytes(f.size);
   $('fileInfo').classList.add('show');
   goBtn.disabled = false;
   $('result').classList.remove('show');
-  if (f.size > 300 * 1024 * 1024) toast('Amaran: fail besar — proses mungkin perlahan/gagal memori.');
+  if (f.size > 300 * 1024 * 1024) toast('Warning: large file — processing may be slow or run out of memory.');
 }
 drop.onclick = () => fileIn.click();
 fileIn.onchange = () => useFile(fileIn.files[0]);
@@ -251,7 +251,7 @@ function currentOpts() {
 }
 
 goBtn.onclick = async () => {
-  if (!picked) { toast('Pilih fail dahulu.'); return; }
+  if (!picked) { toast('Pick a file first.'); return; }
   goBtn.disabled = true; $('result').classList.remove('show'); $('log').textContent = '';
   const inName = 'in_' + picked.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-40);
   const out = outName(picked.name, mode);
@@ -259,13 +259,13 @@ goBtn.onclick = async () => {
     const ff = await ensureEngine(setStatus);
     ff.on('log', ({ message }) => { if (message) appendLog(message.slice(0, 200)); });
     ff.on('progress', ({ progress }) => { if (isFinite(progress)) setBar(progress); });
-    setStatus('Membaca fail…'); setBar(0);
+    setStatus('Reading file…'); setBar(0);
     const buf = await picked.arrayBuffer();
     await ff.writeFile(inName, new Uint8Array(buf));
-    setStatus('Menukar (' + mode.toUpperCase() + ')… ini mengambil sedikit masa.');
+    setStatus('Converting (' + mode.toUpperCase() + ')… this takes a little while.');
     const code = await ff.exec(buildArgs(mode, currentOpts(), inName, out));
-    if (code) throw new Error('ffmpeg berhenti (kod ' + code + '). Semak log — mungkin kodek/format tidak disokong.');
-    setStatus('Menyediakan muat turun…'); setBar(1);
+    if (code) throw new Error('ffmpeg stopped (code ' + code + '). Check the log — maybe an unsupported codec/format.');
+    setStatus('Preparing download…'); setBar(1);
     const data = await ff.readFile(out);
     const blob = new Blob([data], { type: mode === 'mp4' ? 'video/mp4' : 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
@@ -273,10 +273,10 @@ goBtn.onclick = async () => {
     const dl = $('dlBtn'); dl.href = url; dl.setAttribute('download', out);
     $('result').classList.add('show'); setStatus('');
     try { await ff.deleteFile(inName); await ff.deleteFile(out); } catch (e) {}
-    toast('✅ Selesai — ' + out);
+    toast('✅ Done — ' + out);
   } catch (err) {
     setStatus(''); setBar(0);
-    const msg = (err && err.message) ? err.message : 'Penukaran gagal.';
+    const msg = (err && err.message) ? err.message : 'Conversion failed.';
     appendLog('⚠ ' + msg);
     toast('⚠ ' + msg);
   } finally {

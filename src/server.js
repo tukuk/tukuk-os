@@ -251,7 +251,7 @@ app.use((req, res, next) => {
   // Root host tchat → hidang chat.html secara terus (URL kekal tchat.tukuk.org/).
   if (req.path === '/' || req.path === '/index.html') {
     return res.sendFile(path.join(PUBLIC_DIR, 'apps', 'chat.html'), (err) => {
-      if (err) res.status(503).type('txt').send('T Chat tidak dapat dimuatkan sekarang.');
+      if (err) res.status(503).type('txt').send('T Chat cannot load right now.');
     });
   }
   for (const re of TCHAT_ALLOWED) if (re.test(req.path)) return next();
@@ -308,7 +308,7 @@ const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal',
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
-      if (error) res.status(404).json({ error: 'Halaman tidak dijumpai', path: req.originalUrl });
+      if (error) res.status(404).json({ error: 'Page not found', path: req.originalUrl });
     });
   });
 }
@@ -318,7 +318,7 @@ const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
-      if (error) res.status(404).json({ error: `App '${name}' belum wujud`, path: req.originalUrl });
+      if (error) res.status(404).json({ error: `App '${name}' does not exist yet`, path: req.originalUrl });
     });
   });
 }
@@ -330,7 +330,7 @@ const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', pri
 for (const [alias, name] of Object.entries(PAGE_ALIASES)) {
   app.get(`/${alias}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
-      if (error) res.status(404).json({ error: 'Halaman tidak dijumpai', path: req.originalUrl });
+      if (error) res.status(404).json({ error: 'Page not found', path: req.originalUrl });
     });
   });
 }
@@ -374,7 +374,7 @@ function notifyIndexNow(urls) {
 // dasar Google "no ads on web-search result pages").
 app.get('/cari', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'), (error) => {
-    if (error) res.status(404).json({ error: 'Halaman tidak dijumpai', path: req.originalUrl });
+    if (error) res.status(404).json({ error: 'Page not found', path: req.originalUrl });
   });
 });
 
@@ -383,7 +383,7 @@ app.get('/cari', (req, res) => {
 app.get('/api/image', limiter.search, async (req, res) => {
   const targetUrl = String(req.query.url || '').trim();
   if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
-    return res.status(400).json({ error: 'Parameter url (http/https) diperlukan' });
+    return res.status(400).json({ error: 'url parameter (http/https) required' });
   }
   try {
     await assertPublicUrl(targetUrl); // sekat SSRF alamat dalaman
@@ -393,14 +393,14 @@ app.get('/api/image', limiter.search, async (req, res) => {
     });
     if (!upstream.ok) return res.status(502).json({ error: `Remote responded ${upstream.status}` });
     const ct = upstream.headers.get('content-type') || '';
-    if (!/^image\//i.test(ct)) return res.status(415).json({ error: `Bukan imej (${ct || 'unknown'})` });
+    if (!/^image\//i.test(ct)) return res.status(415).json({ error: `Not an image (${ct || 'unknown'})` });
     const buf = Buffer.from(await upstream.arrayBuffer());
-    if (buf.byteLength > 15 * 1024 * 1024) return res.status(413).json({ error: 'Imej terlalu besar (max 15MB)' });
+    if (buf.byteLength > 15 * 1024 * 1024) return res.status(413).json({ error: 'Image too large (max 15MB)' });
     res.set('Content-Type', ct);
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(buf);
   } catch (error) {
-    res.status(500).json({ error: 'Gagal proksi imej', details: safeError(error) });
+    res.status(500).json({ error: 'Image proxy failed', details: safeError(error) });
   }
 });
 
@@ -552,7 +552,7 @@ app.get('/ask', limiter.search, async (req, res) => {
       network: net.snapshot().status
     });
   } catch (error) {
-    res.status(500).json({ error: 'Otak gagal menjawab', details: safeError(error) });
+    res.status(500).json({ error: 'Brain failed to answer', details: safeError(error) });
   }
 });
 
@@ -579,8 +579,8 @@ app.get('/brain', async (req, res) => {
     answerCache: rag.cacheStats(),
     network,
     note:
-      'Model 135M hanya boleh bergantung kepada sumber yang diberikan. ' +
-      'Tanpa sumber, jawapannya tidak boleh dipercayai.'
+      'The 135M model can only rely on the sources it is given. ' +
+      'Without sources, its answer cannot be trusted.'
   });
 });
 
@@ -748,9 +748,9 @@ app.get('/blog', (req, res) => {
     "@type": "Blog",
     "@id": "https://tukuk.org/blog#blog",
     "name": "Blog & Tech Knowledge Base — Tukuk-OS",
-    "description": "Article, tutorial dan analisis tentang teknologi carian, privasi web, dan aplikasi dalaman Tukuk-OS.",
+    "description": "Articles, tutorials and analysis about search technology, web privacy, and Tukuk-OS built-in apps.",
     "url": "https://tukuk.org/blog",
-    "inLanguage": "ms",
+    "inLanguage": "en",
     "publisher": { "@type": "Organization", "name": "Tukuk-OS", "url": "https://tukuk.org" },
     "blogPost": posts.slice(0, 30).map((p) => ({
       "@type": "BlogPosting",
@@ -1073,8 +1073,8 @@ app.get('/blog/rss.xml', (req, res) => {
     `  <title>Tukuk-OS — Blog &amp; Knowledge Archive</title>\n` +
     `  <link>${base}/blog</link>\n` +
     `  <atom:link href="${base}/blog/rss.xml" rel="self" type="application/rss+xml"/>\n` +
-    `  <description>Article, tutorial dan analisis tentang teknologi carian, privasi web, AI dan aplikasi Tukuk-OS.</description>\n` +
-    `  <language>ms</language>\n` +
+    `  <description>Articles, tutorials and analysis about search technology, web privacy, AI and Tukuk-OS apps.</description>\n` +
+    `  <language>en</language>\n` +
     items + `\n</channel>\n</rss>\n`
   );
 });
@@ -1107,7 +1107,7 @@ app.get('/blog/:slug', (req, res) => {
         "headline": post.title,
         "description": post.excerpt,
         "image": [ogImage],
-        "inLanguage": "ms",
+        "inLanguage": "en",
         "author": {
           "@type": "Person",
           "name": post.author || "Fevian Donald",
@@ -2006,22 +2006,22 @@ function uniqueSlug(pref) {
 app.post('/api/publish', publishLimiter, (req, res) => {
   const body = req.body || {};
   const html = String(body.html || '');
-  if (!html) return res.status(400).json({ error: 'Tiada kandungan untuk diterbitkan' });
-  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'Aplikasi terlalu besar (maks ~1.5MB)' });
-  if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Bukan dokumen HTML yang sah' });
+  if (!html) return res.status(400).json({ error: 'No content to publish' });
+  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'App too large (max ~1.5MB)' });
+  if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Not a valid HTML document' });
   try {
     fs.mkdirSync(PUBLISH_DIR, { recursive: true });
     // Slug: hormati permintaan eksplisit pengguna (jika sah & kosong), jika tidak jana unik daripada nama.
     let slug;
     const want = String(body.slug || '').trim().toLowerCase();
     if (want) {
-      if (!publish.isSlug(want)) return res.status(400).json({ error: 'Slug tidak sah — guna huruf kecil/angka/nego, 3–40 aksara' });
-      if (fs.existsSync(path.join(PUBLISH_DIR, `${want}.html`))) return res.status(409).json({ error: 'Pautan itu sudah dipakai — cuba nama lain' });
+      if (!publish.isSlug(want)) return res.status(400).json({ error: 'Invalid slug — lowercase letters/digits/hyphen, 3–40 chars' });
+      if (fs.existsSync(path.join(PUBLISH_DIR, `${want}.html`))) return res.status(409).json({ error: 'That link is already taken — try another name' });
       slug = want;
     } else {
       slug = uniqueSlug(publish.slugify(body.name || 'app'));
     }
-    if (!slug) return res.status(500).json({ error: 'Gagal menjana pautan unik' });
+    if (!slug) return res.status(500).json({ error: 'Failed to generate unique link' });
     const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
     fs.writeFileSync(tmp, html, 'utf8');
     fs.renameSync(tmp, path.join(PUBLISH_DIR, `${slug}.html`));
@@ -2035,7 +2035,7 @@ app.post('/api/publish', publishLimiter, (req, res) => {
     notifyIndexNow(url); // pautan awam → indeks (opt-in)
     res.json({ ok: true, slug, url, editKey });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal menerbitkan', details: safeError(error) });
+    res.status(500).json({ error: 'Publish failed', details: safeError(error) });
   }
 });
 
@@ -2044,15 +2044,15 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
   const body = req.body || {};
   const slug = String(body.slug || '');
   const html = String(body.html || '');
-  if (!publish.isSlug(slug)) return res.status(400).json({ error: 'Slug tidak sah' });
-  if (!publish.isEditKey(body.editKey)) return res.status(400).json({ error: 'Kunci edit tidak sah' });
-  if (!html) return res.status(400).json({ error: 'Tiada kandungan untuk diterbitkan' });
-  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'Aplikasi terlalu besar (maks ~1.5MB)' });
-  if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Bukan dokumen HTML yang sah' });
+  if (!publish.isSlug(slug)) return res.status(400).json({ error: 'Invalid slug' });
+  if (!publish.isEditKey(body.editKey)) return res.status(400).json({ error: 'Invalid edit key' });
+  if (!html) return res.status(400).json({ error: 'No content to publish' });
+  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'App too large (max ~1.5MB)' });
+  if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Not a valid HTML document' });
   const meta = readMeta(slug);
-  if (!meta || !verifyKey(meta.key, body.editKey)) return res.status(403).json({ error: 'Tidak dibenarkan — kunci edit tidak sepadan' });
+  if (!meta || !verifyKey(meta.key, body.editKey)) return res.status(403).json({ error: 'Forbidden — edit key does not match' });
   const file = path.join(PUBLISH_DIR, `${slug}.html`);
-  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Aplikasi tidak ditemui' });
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'App not found' });
   try {
     const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
     fs.writeFileSync(tmp, html, 'utf8');
@@ -2064,7 +2064,7 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
     store.event('publish', `Aplikasi dikemas kini: /a/${slug}`, { bytes: html.length });
     res.json({ ok: true, slug, url: `${publish.publicOrigin(req)}/a/${slug}` });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengemas kini', details: safeError(error) });
+    res.status(500).json({ error: 'Update failed', details: safeError(error) });
   }
 });
 
@@ -2072,17 +2072,17 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
 app.post('/api/publish/delete', publishLimiter, (req, res) => {
   const body = req.body || {};
   const slug = String(body.slug || '');
-  if (!publish.isSlug(slug)) return res.status(400).json({ error: 'Slug tidak sah' });
-  if (!publish.isEditKey(body.editKey)) return res.status(400).json({ error: 'Kunci edit tidak sah' });
+  if (!publish.isSlug(slug)) return res.status(400).json({ error: 'Invalid slug' });
+  if (!publish.isEditKey(body.editKey)) return res.status(400).json({ error: 'Invalid edit key' });
   const meta = readMeta(slug);
-  if (!meta || !verifyKey(meta.key, body.editKey)) return res.status(403).json({ error: 'Tidak dibenarkan — kunci edit tidak sepadan' });
+  if (!meta || !verifyKey(meta.key, body.editKey)) return res.status(403).json({ error: 'Forbidden — edit key does not match' });
   try {
     fs.rmSync(path.join(PUBLISH_DIR, `${slug}.html`), { force: true });
     fs.rmSync(metaPath(slug), { force: true });
     store.event('publish', `Aplikasi dibuang: /a/${slug}`, {});
     res.json({ ok: true, slug });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal membuang', details: safeError(error) });
+    res.status(500).json({ error: 'Delete failed', details: safeError(error) });
   }
 });
 
@@ -2117,6 +2117,8 @@ function bumpPlays(id) {
 // nilai ini sahaja. Store arked guna genre eksplisit; sumber lain dinormalisasi/tekaan.
 const GAME_GENRES = new Set(['arkad', 'teki-teki', 'refleks', 'kuiz', 'tindakan', 'penembakan', 'santai', 'kereta', 'sukan', 'klik', 'io']);
 const GENRE_SYNONYM = { arkade: 'arkad', arcade: 'arkad', action: 'tindakan', shooter: 'penembakan', puzzle: 'teki-teki', reflex: 'refleks', casual: 'santai', racing: 'kereta', car: 'kereta', sport: 'sukan', clicker: 'klik', quiz: 'kuiz' };
+// Display labels for internal (Malay-keyed) genres — user-facing surfaces are English.
+const GENRE_UI = { arkad: 'Arcade', 'teki-teki': 'Puzzle', refleks: 'Reflex', kuiz: 'Quiz', tindakan: 'Action', penembakan: 'Shooter', santai: 'Casual', kereta: 'Racing', sukan: 'Sports', klik: 'Clicker', io: 'IO' };
 function normalizeGenre(g) {
   const s = String(g || '').trim().toLowerCase().replace(/\s+/g, '-');
   if (GAME_GENRES.has(s)) return s;
@@ -2167,42 +2169,42 @@ app.get('/api/published', (req, res) => {
 // Bawaan = app mini di public/apps (hanya yang failnya benar-benar wujud supaya /store
 // tak benjol pautan 404 — tambah fail HTML baru + entri meta, ia muncul sendiri).
 const STORE_APP_META = {
-  notes: { ic: '📝', title: 'Notes', desc: 'Nota lokal dengan autosave, tag & carian — tiada apa keluar dari peranti.' },
-  calc: { ic: '🧮', title: 'Kalkulator', desc: 'Kalkulator saintifik dengan sejarah, kurungan & salin hasil.' },
-  todo: { ic: '✅', title: 'To-Do', desc: 'Senarai tugas dengan keutamaan, penapis & penyimpanan lokal.' },
-  convert: { ic: '📐', title: 'Penukar Unit', desc: 'Tukar panjang, jisim, suhu, isipadu, kelajuan & banyak lagi.' },
-  timer: { ic: '⏱️', title: 'Timer & Pomodoro', desc: 'Jam randik, pemasa & rehat berjadual dengan bunyi.' },
-  color: { ic: '🎨', title: 'Pemilih Warna', desc: 'HEX/RGB/HSL, tona/nada, palet pelengkap & nisbah kontras.' },
-  password: { ic: '🔐', title: 'Penjana Kata Laluan', desc: 'Kata laluan rawak kriptografik + frasa sukar diteka.' },
-  text: { ic: '🔡', title: 'Alat Teks', desc: 'Kira perkataan, tukar kes, Base64, susun, dedupe & URL encode.' },
-  pixel: { ic: '🟩', title: 'Studio Piksel', desc: 'Lukar piksel art 16×16 dengan palet, bald dan eksport PNG — dalam pelayar.' },
-  piano: { ic: '🎹', title: 'Piano Sintetis', desc: 'Main 2 oktaf dengan papan kekunci, 4 bentuk gelombang & rakam audio.' },
-  spiro: { ic: '🌀', title: 'Mandala Spiro', desc: 'Lukisan spirograph beranimasi dengan simetri — kawal parameter, eksport PNG.' },
-  orbit: { ic: '🪐', title: 'Simulator Orbit', desc: 'Fizik graviti sebenar — seret untuk melancarkan planet, preset dwibintang & sistem kacau.' },
-  fractal: { ic: '🔮', title: 'Penjelajah Fraktal', desc: 'Zum Mandelbrot tanpa batas dengan render berperingkat, 4 palet & eksport PNG.' },
-  drum: { ic: '🥁', title: 'Mesin Rentak', desc: 'Drum machine 16-langkah: kick/snare/hihat/clap disintesis WebAudio, main & rakam pola.' },
-  chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'Messenger sebenar dalam pelayar yang terus berfungsi pada rangkaian lemah (2G/3G/4G/GPRS). Pasang sebagai aplikasi di Android, iOS, Windows, Linux & Huawei, atau muat turun APK Android native terus (versi beta — stabil menyusul). Daftar nama + kata laluan, Tukuk ID kekal, bilik Am, DM 1-ke-1 dan kumpulan, panggilan video & suara (WebRTC) dengan pengenalan pemanggil gaya TukuCaller, mod prank panggilan palsu (tiada rangkaian diperlukan), mesej suara, peti keluar luar-talian (auto-hantar semula), mod jimat data (media ketuk-untuk-muat), resit baca ✓✓, hantar gambar & video, reply, forward, reaction, edit, pin mesej, carian, kawan & sekat, wallpaper & bunyi.' }
+  notes: { ic: '📝', title: 'Notes', desc: 'Local notes with autosave, tags & search — nothing ever leaves your device.' },
+  calc: { ic: '🧮', title: 'Calculator', desc: 'Scientific calculator with history, parentheses & copy result.' },
+  todo: { ic: '✅', title: 'To-Do', desc: 'Task list with priorities, filters & local storage.' },
+  convert: { ic: '📐', title: 'Unit Converter', desc: 'Convert length, mass, temperature, volume, speed & many more.' },
+  timer: { ic: '⏱️', title: 'Timer & Pomodoro', desc: 'Stopwatch, timer & scheduled breaks with sound.' },
+  color: { ic: '🎨', title: 'Color Picker', desc: 'HEX/RGB/HSL, shades/tints, complementary palettes & contrast ratios.' },
+  password: { ic: '🔐', title: 'Password Generator', desc: 'Cryptographic random passwords + hard-to-guess passphrases.' },
+  text: { ic: '🔡', title: 'Text Tools', desc: 'Word count, case conversion, Base64, sort, dedupe & URL encode.' },
+  pixel: { ic: '🟩', title: 'Pixel Studio', desc: 'Draw 16×16 pixel art with palette, buckets and PNG export — in the browser.' },
+  piano: { ic: '🎹', title: 'Synth Piano', desc: 'Play 2 octaves with keyboard, 4 waveforms & audio recording.' },
+  spiro: { ic: '🌀', title: 'Spiro Mandala', desc: 'Animated symmetric spirograph art — tune parameters, export PNG.' },
+  orbit: { ic: '🪐', title: 'Orbit Simulator', desc: 'Real gravity physics — drag to launch planets, binary-star & chaotic-system presets.' },
+  fractal: { ic: '🔮', title: 'Fractal Explorer', desc: 'Limitless Mandelbrot zoom with progressive rendering, 4 palettes & PNG export.' },
+  drum: { ic: '🥁', title: 'Rhythm Machine', desc: '16-step drum machine: WebAudio-synthesised kick/snare/hihat/clap, play & record patterns.' },
+  chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'A real messenger in your browser that keeps working on weak networks (2G/3G/4G/GPRS). Install as an app on Android, iOS, Windows, Linux & Huawei, or download the native Android APK directly (beta — stable coming soon). Name + password signup, permanent Tukuk ID, public room, 1-to-1 DMs and groups, video & voice calls (WebRTC) with TukuCaller-style caller ID, fake-call prank mode (no network needed), voice messages, offline outbox (auto-resend), data-saving mode (tap-to-load media), read receipts ✓✓, photo & video sending, reply, forward, reactions, edit, pin messages, search, friends & blocking, wallpapers & sounds.' }
 };
 // Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
 // genre = label penapis /store (gaya web-games.io).
 const STORE_ARCADE = [
-  { tpl: 'arcade', genre: 'arkad', ic: '🕹️', title: 'Arked Mini', desc: 'Tic-Tac-Toe + Padanan Memori + Tikus Pukul + Masa Tindak Balas dalam satu halaman.' },
-  { tpl: 'tttpl', genre: 'teki-teki', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'Dua pemain klasik — jajar tiga menang.' },
-  { tpl: 'brtpl', genre: 'tindakan', ic: '🔫', title: 'Arena Battle Royale', desc: 'WASD/mouse atau joystik sentuh — elak zone biru, kekalkan nyawa.' },
-  { tpl: 'fpstpl', genre: 'penembakan', ic: '🎯', title: 'FPS Arena 3D', desc: 'Penembak first-person 3D ringan, terus dalam pelayar.' },
-  { tpl: 'runtpl', genre: 'santai', ic: '🏃', title: 'Lari Tanpa Hujung', desc: 'Klik / sentuh / Space untuk lompat — elak halangan sejauh mungkin.' },
-  { tpl: 'memtpl', genre: 'teki-teki', ic: '🧠', title: 'Padanan Memori', desc: 'Balik kad dan jodohkan semua pasangan secepat mungkin.' },
-  { tpl: 'moletpl', genre: 'refleks', ic: '🐹', title: 'Tikus Pukul', desc: '20 sahaja — pukul tikus yang muncul secepat boleh.' },
-  { tpl: 'rpstpl', genre: 'teki-teki', ic: '✊', title: 'Batu-Kertas-Gunting', desc: 'Pilih tangan anda, lawan CPU secara langsung.' },
-  { tpl: 'reacttpl', genre: 'refleks', ic: '⚡', title: 'Masa Tindak Balas', desc: 'Tunggu hijau, klik secepat mungkin — ukur milisaat anda.' },
-  { tpl: 'guesstpl', genre: 'teki-teki', ic: '🔢', title: 'Teka Nombor', desc: 'Nombor 1–100 telah dipilih — teka dengan petanda tinggi/rendah.' },
-  { tpl: 'quiztpl', genre: 'kuiz', ic: '💡', title: 'Kuiz Pantas', desc: 'Soalan pilihan ganda dengan jawapan hijau/merah serta-merta.' },
-  { tpl: 'tpl2048', genre: 'teki-teki', ic: '🧊', title: '2048', desc: 'Gabung nombor sama — capai jubin 2048 sebelum papan penuh.' },
-  { tpl: 'snktpl', genre: 'arkad', ic: '🐍', title: 'Ular', desc: 'Klasik zaman Nokia — makan, membesar, makin laju, jangan langgar.' },
-  { tpl: 'bktpl', genre: 'arkad', ic: '🧱', title: 'Breakout', desc: 'Pantul bola dengan padel, hancurkan semua batu bata dengan 3 nyawa.' },
-  { tpl: 'bloktpl', genre: 'teki-teki', ic: '🧩', title: 'Blok Jatuh', desc: 'Susun blok yang jatuh, jajar baris penuh — makin laju setiap paras.' },
-  { tpl: 'astrotpl', genre: 'penembakan', ic: '☄️', title: 'Asteroid', desc: 'Vektor klasik: pusing, pecut, tembak — asteroid besar berpecah dua.' },
-  { tpl: 'minstpl', genre: 'teki-teki', ic: '💣', title: 'Rambang Minda', desc: '9×9, 10 ranjau — klik buka, tahan/bendera tandai. Klik pertama sentiasa selamat.' }
+  { tpl: 'arcade', genre: 'arkad', ic: '🕹️', title: 'Mini Arcade', desc: 'Tic-Tac-Toe + Memory Match + Whack-a-Mole + Reaction Time on one page.' },
+  { tpl: 'tttpl', genre: 'teki-teki', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'The classic two-player game — line up three to win.' },
+  { tpl: 'brtpl', genre: 'tindakan', ic: '🔫', title: 'Battle Royale Arena', desc: 'WASD/mouse or touch joystick — dodge the blue zone, stay alive.' },
+  { tpl: 'fpstpl', genre: 'penembakan', ic: '🎯', title: 'FPS Arena 3D', desc: 'Lightweight 3D first-person shooter, straight in the browser.' },
+  { tpl: 'runtpl', genre: 'santai', ic: '🏃', title: 'Endless Runner', desc: 'Click / tap / Space to jump — dodge obstacles as far as you can.' },
+  { tpl: 'memtpl', genre: 'teki-teki', ic: '🧠', title: 'Memory Match', desc: 'Flip cards and match every pair as fast as possible.' },
+  { tpl: 'moletpl', genre: 'refleks', ic: '🐹', title: 'Whack-a-Mole', desc: 'Just 20 of them — whack the moles as fast as you can.' },
+  { tpl: 'rpstpl', genre: 'teki-teki', ic: '✊', title: 'Rock-Paper-Scissors', desc: 'Pick your hand, go up against the CPU head-to-head.' },
+  { tpl: 'reacttpl', genre: 'refleks', ic: '⚡', title: 'Reaction Time', desc: 'Wait for green, click as fast as possible — measure your milliseconds.' },
+  { tpl: 'guesstpl', genre: 'teki-teki', ic: '🔢', title: 'Number Guess', desc: 'A number 1–100 has been picked — guess it with higher/lower hints.' },
+  { tpl: 'quiztpl', genre: 'kuiz', ic: '💡', title: 'Quick Quiz', desc: 'Multiple-choice questions with instant green/red answers.' },
+  { tpl: 'tpl2048', genre: 'teki-teki', ic: '🧊', title: '2048', desc: 'Merge matching numbers — reach the 2048 tile before the board fills.' },
+  { tpl: 'snktpl', genre: 'arkad', ic: '🐍', title: 'Snake', desc: 'The Nokia-era classic — eat, grow, speed up, don\'t crash.' },
+  { tpl: 'bktpl', genre: 'arkad', ic: '🧱', title: 'Breakout', desc: 'Bounce the ball with the paddle, smash every brick with 3 lives.' },
+  { tpl: 'bloktpl', genre: 'teki-teki', ic: '🧩', title: 'Block Drop', desc: 'Arrange falling blocks, complete rows — faster every level.' },
+  { tpl: 'astrotpl', genre: 'penembakan', ic: '☄️', title: 'Asteroids', desc: 'Vector classic: turn, thrust, shoot — big asteroids split in two.' },
+  { tpl: 'minstpl', genre: 'teki-teki', ic: '💣', title: 'Mine Sweeper', desc: '9×9, 10 mines — click to open, hold/flag to mark. First click is always safe.' }
 ];
 function storeBawaan() {
   return Object.entries(STORE_APP_META)
@@ -2229,14 +2231,14 @@ function storeSatuKata() {
     const dir = path.join(SK_DIR, 'public', e.slug);
     const t = Date.parse(e.createdAt) || 0;
     const word = String(e.word).trim();
-    if (fs.existsSync(path.join(dir, 'app', 'index.html'))) out.push({ id: 'sk-' + e.slug, kind: 'app', src: 'satukata', icon: e.emoji || '⚡', title: 'App ' + word, desc: `Aplikasi satu-kata «${word}» — ${e.tagline || 'dijana automatik'}`, url: `/satu-kata/${e.slug}/app/`, updated: t });
-    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', genre: normalizeGenre(e.genre) || guessGameGenre(word + ' ' + (e.genre || '')), icon: e.emoji || '🎮', title: 'Game ' + word, desc: `Game «${word}» (${e.genre || 'arkade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
+    if (fs.existsSync(path.join(dir, 'app', 'index.html'))) out.push({ id: 'sk-' + e.slug, kind: 'app', src: 'satukata', icon: e.emoji || '⚡', title: 'App ' + word, desc: `One-word app «${word}» — ${e.tagline || 'auto-generated'}`, url: `/satu-kata/${e.slug}/app/`, updated: t });
+    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', genre: normalizeGenre(e.genre) || guessGameGenre(word + ' ' + (e.genre || '')), icon: e.emoji || '🎮', title: 'Game ' + word, desc: `Game «${word}» (${GENRE_UI[e.genre] || e.genre || 'Arcade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
   }
   return out;
 }
 function storeCatalog() {
   const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', genre: g.genre, icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl + '&play=1', updated: 0 }));
-  const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Terbitan komuniti melalui Pembina Studio.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
+  const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Community publish from the Studio Builder.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
   const items = storeBawaan().concat(storeSatuKata(), arked, komuniti);
   // Kiraan "main" — komuniti belum ada riwayat main → jatuh kepada "dilihat" supaya
   // bahagian Trending kekal bermakna sejak hari pertama.
@@ -2249,7 +2251,7 @@ app.get('/api/store', (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=30');
     res.json({ ok: true, count: items.length, items });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal menjana katalog', details: safeError(error) });
+    res.status(500).json({ error: 'Failed to build catalog', details: safeError(error) });
   }
 });
 
@@ -2261,11 +2263,11 @@ const playLimiter = config.rateLimit.enabled
 app.post('/api/play/:id', playLimiter, (req, res) => {
   try {
     const known = storeCatalog().some((x) => x.id === String(req.params.id));
-    if (!known) return res.status(404).json({ error: 'Item store tidak dikenali' });
+    if (!known) return res.status(404).json({ error: 'Unknown store item' });
     bumpPlays(String(req.params.id));
     res.json({ ok: true, plays: playsMap[String(req.params.id)] });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengira sesi main', details: safeError(error) });
+    res.status(500).json({ error: 'Failed to count play sessions', details: safeError(error) });
   }
 });
 
@@ -2274,10 +2276,10 @@ app.post('/api/play/:id', playLimiter, (req, res) => {
 app.get('/play/:id', (req, res) => {
   const item = storeCatalog().find((x) => x.id === String(req.params.id));
   if (!item) {
-    return res.status(404).type('html').send('<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>Tiada — Tukuk Store</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>Item store itu tidak wujud.</p><p><a href="/store">← Kembali ke Store</a></p></body></html>');
+    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Store</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>That store item does not exist.</p><p><a href="/store">← Back to Store</a></p></body></html>');
   }
   res.sendFile(path.join(PUBLIC_DIR, 'play.html'), (error) => {
-    if (error) res.status(404).json({ error: 'Halaman pemain tidak dijumpai', path: req.originalUrl });
+    if (error) res.status(404).json({ error: 'Play page not found', path: req.originalUrl });
   });
 });
 
@@ -2349,7 +2351,7 @@ function buildApk(spec) {
   if (fs.existsSync(absOut)) return Promise.resolve({ ok: true, cached: true });
   if (apkInflight.has(spec.slug)) return apkInflight.get(spec.slug);
   const sdk = findAndroidSdk();
-  if (!sdk) return Promise.resolve({ ok: false, error: 'Android SDK (build-tools) tidak dijumpai pada pelayan' });
+  if (!sdk) return Promise.resolve({ ok: false, error: 'Android SDK (build-tools) not found on the server' });
   const env = { ...process.env, ANDROID_HOME: sdk,
     APP_SLUG: spec.slug, APP_PKG: spec.pkg, APP_LABEL: spec.label, APP_URL: spec.url,
     APP_ICON: spec.icon, APP_MEDIA: String(spec.media), APP_VC: String(spec.vc),
@@ -2358,8 +2360,8 @@ function buildApk(spec) {
     require('child_process').execFile('bash', [APK_BUILD_SH],
       { env, cwd: APK_REPO, timeout: 90000, maxBuffer: 8 * 1024 * 1024 }, (err) => {
         apkInflight.delete(spec.slug);
-        if (err) return resolve({ ok: false, error: String(err.stderr || err.message || 'bina gagal').slice(0, 400) });
-        if (!fs.existsSync(absOut)) return resolve({ ok: false, error: 'APK tidak dihasilkan' });
+        if (err) return resolve({ ok: false, error: String(err.stderr || err.message || 'build failed').slice(0, 400) });
+        if (!fs.existsSync(absOut)) return resolve({ ok: false, error: 'APK was not produced' });
         resolve({ ok: true, cached: false });
       });
   });
@@ -2371,12 +2373,12 @@ function buildApk(spec) {
 app.get('/api/apk/:id', apkBuildLimiter, async (req, res) => {
   try {
     const spec = apkSpec(req.params.id);
-    if (!spec) return res.status(404).json({ error: 'Item store tidak dikenali' });
+    if (!spec) return res.status(404).json({ error: 'Unknown store item' });
     const r = await buildApk(spec);
-    if (!r.ok) return res.status(500).json({ error: 'Gagal menjana APK', details: r.error });
+    if (!r.ok) return res.status(500).json({ error: 'Failed to build APK', details: r.error });
     return res.redirect(302, '/downloads/' + spec.file);
   } catch (error) {
-    res.status(500).json({ error: 'APK atas-permintaan gagal', details: safeError(error) });
+    res.status(500).json({ error: 'On-demand APK build failed', details: safeError(error) });
   }
 });
 
@@ -2401,7 +2403,7 @@ app.get('/api/score', scoreLimiter, (req, res) => {
     arr.sort((a, b) => b.s - a.s); db[g] = arr.slice(0, 100); writeLB(db);
     res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal simpan skor', details: safeError(error) });
+    res.status(500).json({ error: 'Failed to save score', details: safeError(error) });
   }
 });
 
@@ -2440,10 +2442,10 @@ app.get('/api/comments', (req, res) => {
 app.post('/api/comments', commentLimiter, (req, res) => {
   const body = req.body || {};
   const slug = cmtSlug(body.slug);
-  if (!slug) return res.status(400).json({ error: 'Slug tidak sah' });
-  if (!fs.existsSync(path.join(PUBLISH_DIR, `${slug}.html`))) return res.status(404).json({ error: 'Aplikasi tidak ditemui' });
+  if (!slug) return res.status(400).json({ error: 'Invalid slug' });
+  if (!fs.existsSync(path.join(PUBLISH_DIR, `${slug}.html`))) return res.status(404).json({ error: 'App not found' });
   const text = cmtText(body.text);
-  if (text.length < 2) return res.status(400).json({ error: 'Komen terlalu pendek' });
+  if (text.length < 2) return res.status(400).json({ error: 'Comment too short' });
   try {
     const db = readComments(); const arr = Array.isArray(db[slug]) ? db[slug] : [];
     arr.unshift({ n: cmtName(body.name), c: text, t: Date.now() });
@@ -2451,7 +2453,7 @@ app.post('/api/comments', commentLimiter, (req, res) => {
     store.event('comment', `Komen baharu: /a/${slug}`, { slug, len: text.length });
     res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal simpan komen', details: safeError(error) });
+    res.status(500).json({ error: 'Failed to save comment', details: safeError(error) });
   }
 });
 
@@ -2474,14 +2476,14 @@ const builderGenLimiter = config.rateLimit.enabled
 
 app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const idea = truncate(String((req.body && req.body.idea) || '').trim(), 160);
-  if (!idea) return res.status(400).json({ error: 'Taip satu idea atau kata dahulu.' });
+  if (!idea) return res.status(400).json({ error: 'Type an idea or a word first.' });
   const style = truncate(String((req.body && req.body.style) || '').replace(/\s+/g, ' ').trim(), 40);
   const seed = Math.max(0, Math.floor(Number(req.body && req.body.seed) || 0));
   const color = builderGen.isHexColor(req.body && req.body.color) ? String(req.body.color).trim() : '';
   const lang = truncate(String((req.body && req.body.lang) || '').replace(/\s+/g, ' ').trim(), 24);
   const opts = { color, lang };
-  const brief = `Idea aplikasi: ${idea}${style ? ', gaya ' + style : ''}${color ? ', warna utama ' + color : ''}`;
-  const sysPrompt = builderGen.SYSTEM_PROMPT + (lang ? ` Bahasa kandungan: ${lang}.` : '');
+  const brief = `App idea: ${idea}${style ? ', style ' + style : ''}${color ? ', main colour ' + color : ''}`;
+  const sysPrompt = builderGen.SYSTEM_PROMPT + (lang ? ` Content language: ${lang}.` : '');
   const want = Math.min(3, Math.max(1, Number(req.body && req.body.count) || 3));
   const apps = [];
   const seen = new Set();
@@ -2544,18 +2546,18 @@ app.get('/a', (req, res) => {
   const items = listPublished();
   const rows = items.length
     ? items.map((x) => `<li><a href="/a/${encodeURIComponent(x.slug)}">${escapeHtml(x.title)}</a> <span style="color:#6b7280">/ ${escapeHtml(x.slug)}</span></li>`).join('\n')
-    : '<li>Belum ada aplikasi. Bina satu di <a href="/builder">Pembina</a> lalu tekan 🚀 Terbitkan.</li>';
-  res.type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aplikasi Terbitan — Tukuk Studio</title><meta name="robots" content="noindex"><style>body{font:16px/1.6 system-ui;margin:0;padding:40px 20px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}main{max-width:720px;margin:0 auto}h1{font-size:1.6rem}ul{list-style:none;padding:0}li{padding:6px 0;border-bottom:1px solid #262b36}</style></head><body><main><h1>🧩 Aplikasi Terbitan</h1><p style="color:#9aa3b2">Dijana dengan Tukuk Studio — Pembina. Dilihat dalam sandbox (asal berasingan).</p><ul>\n${rows}\n</ul><p style="margin-top:24px"><a href="/builder">→ Buka Pembina</a></p></main></body></html>`);
+    : '<li>No apps yet. Build one in the <a href="/builder">Builder</a> and press 🚀 Publish.</li>';
+  res.type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Published Apps — Tukuk Studio</title><meta name="robots" content="noindex"><style>body{font:16px/1.6 system-ui;margin:0;padding:40px 20px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}main{max-width:720px;margin:0 auto}h1{font-size:1.6rem}ul{list-style:none;padding:0}li{padding:6px 0;border-bottom:1px solid #262b36}</style></head><body><main><h1>🧩 Published Apps</h1><p style="color:#9aa3b2">Built with Tukuk Studio — the no-code Builder. Pages run sandboxed (separate origin).</p><ul>\n${rows}\n</ul><p style="margin-top:24px"><a href="/builder">→ Open Builder</a></p></main></body></html>`);
 });
 
 // Hidangkan satu app terbitan dalam sandbox opaque-origin.
 app.get('/a/:slug', (req, res) => {
   const slug = String(req.params.slug || '');
-  if (!publish.isSlug(slug)) return res.status(400).type('html').send('Slug tidak sah');
+  if (!publish.isSlug(slug)) return res.status(400).type('html').send('Invalid slug');
   const file = path.join(PUBLISH_DIR, `${slug}.html`);
   let html;
   try { html = fs.readFileSync(file, 'utf8'); }
-  catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>Tiada — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>Aplikasi <code>/${escapeHtml(slug)}</code> tiada atau telah dibuang.</p><p><a href="/a">← Semua aplikasi</a> · <a href="/builder">Bina sendiri</a></p></body></html>`); }
+  catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>App <code>/${escapeHtml(slug)}</code> does not exist or has been removed.</p><p><a href="/a">← All apps</a> · <a href="/builder">Build your own</a></p></body></html>`); }
   bumpViews(slug); // kiraan "dilihat" untuk katalog /store
   // ?embed=1 → dibenarkan menempek dalam pemain /play kita (frame-ancestors 'self');
   // laman luar tetap disekat 'none' seperti sebelumnya (anti-clickjacking silang-origin).
@@ -2752,24 +2754,24 @@ function requestOrigin(req) {
 app.post('/api/admin/auth/register/start', adminLoginLimiter, auth.requireAllowedEmail, (req, res) => {
   const password = String((req.body && req.body.password) || '');
   if (!auth.checkBootstrapPassword(password)) {
-    return res.status(401).json({ error: 'Kata laluan bootstrap tidak sah.' });
+    return res.status(401).json({ error: 'Invalid bootstrap password.' });
   }
   auth.startRegistration(req.body.email)
     .then((options) => res.json(options))
-    .catch((error) => res.status(500).json({ error: 'Gagal memulakan pendaftaran', details: safeError(error) }));
+    .catch((error) => res.status(500).json({ error: 'Failed to start registration', details: safeError(error) }));
 });
 
 // Langkah 2 daftar: sahkan attestasi, simpan passkey, keluarkan sesi.
 app.post('/api/admin/auth/register/finish', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
   try {
     const credential = req.body && req.body.credential;
-    if (!credential) return res.status(400).json({ error: 'Kredential diperlukan' });
+    if (!credential) return res.status(400).json({ error: 'Credential required' });
     const result = await auth.finishRegistration(req.body.email, credential, requestOrigin(req));
     const token = auth.issueSession(req.body.email);
     res.json({ ok: true, registered: result, token });
   } catch (error) {
     console.error('[webauthn register/finish]', error && error.message, 'origin=', requestOrigin(req));
-    res.status(error.statusCode || 500).json({ error: 'Pendaftaran passkey gagal', details: safeError(error) });
+    res.status(error.statusCode || 500).json({ error: 'Passkey registration failed', details: safeError(error) });
   }
 });
 
@@ -2782,7 +2784,7 @@ app.post('/api/admin/auth/login/start', adminLoginLimiter, auth.requireAllowedEm
     const options = await auth.startAuthentication(req.body.email);
     res.json({ status: 'ok', options });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal memulakan login', details: safeError(error) });
+    res.status(500).json({ error: 'Failed to start login', details: safeError(error) });
   }
 });
 
@@ -2790,12 +2792,12 @@ app.post('/api/admin/auth/login/start', adminLoginLimiter, auth.requireAllowedEm
 app.post('/api/admin/auth/login/finish', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
   try {
     const credential = req.body && req.body.credential;
-    if (!credential) return res.status(400).json({ error: 'Kredential diperlukan' });
+    if (!credential) return res.status(400).json({ error: 'Credential required' });
     const token = await auth.finishAuthentication(req.body.email, credential, requestOrigin(req));
     res.json({ ok: true, token });
   } catch (error) {
     console.error('[webauthn login/finish]', error && error.message, 'origin=', requestOrigin(req));
-    res.status(error.statusCode || 500).json({ ok: false, error: 'Login passkey gagal', details: safeError(error) });
+    res.status(error.statusCode || 500).json({ ok: false, error: 'Passkey login failed', details: safeError(error) });
   }
 });
 
@@ -2812,7 +2814,7 @@ app.get('/api/admin/auth/passkeys', auth.requireAdmin, (req, res) => {
 
 app.post('/api/admin/auth/passkeys/remove', auth.requireAdmin, (req, res) => {
   const id = String((req.body && req.body.id) || '');
-  if (!id) return res.status(400).json({ error: 'id diperlukan' });
+  if (!id) return res.status(400).json({ error: 'id required' });
   res.json(auth.removePasskey(id));
 });
 
@@ -2836,11 +2838,11 @@ app.get('/api/admin/status', auth.requireAdmin, async (req, res) => {
 // Produk disyorkan (afiliasi) — default supaya /rekomendasi tak kosong. Admin ganti
 // dengan link affiliate sebenar (Shopee/Amazon/Hostinger/NordVPN dll). JSON array.
 const DEFAULT_AFFILIATE = JSON.stringify([
-  { name: 'Hostinger', blurb: 'Hosting web murah & laju untuk projek side-project anda.', price: 'dari RM10/bln', url: 'https://www.hostinger.com', cta: 'Lihat Pakej' },
-  { name: 'Namecheap', blurb: 'Dapatkan domain .com untuk brand peribadi anda.', price: 'dari $5.98', url: 'https://www.namecheap.com', cta: 'Semak Domain' },
-  { name: 'NordVPN', blurb: 'Lindungi privasi anda ketika menguri.', price: 'diskaun 2 tahun', url: 'https://nordvpn.com', cta: 'Ambil Diskaun' },
-  { name: 'Vultr Cloud VPS', blurb: 'VPS untuk hosting apl, bot & laman anda.', price: 'dari $6/bln', url: 'https://www.vultr.com', cta: 'Buka Akaun' },
-  { name: 'Papan Kekunci Mekanikal', blurb: 'Gear menulis/pengaturcara yang lebih selesa.', price: 'RM60+', url: 'https://shopee.com.my/search?keyword=mechanical%20keyboard', cta: 'Beli di Shopee' }
+  { name: 'Hostinger', blurb: 'Affordable, fast web hosting for your side projects.', price: 'from RM10/mo', url: 'https://www.hostinger.com', cta: 'View Plans' },
+  { name: 'Namecheap', blurb: 'Get a .com domain for your personal brand.', price: 'from $5.98', url: 'https://www.namecheap.com', cta: 'Check Domain' },
+  { name: 'NordVPN', blurb: 'Protect your privacy while browsing.', price: '2-year discount', url: 'https://nordvpn.com', cta: 'Get the Deal' },
+  { name: 'Vultr Cloud VPS', blurb: 'VPS for hosting your apps, bots & websites.', price: 'from $6/mo', url: 'https://www.vultr.com', cta: 'Sign Up' },
+  { name: 'Mechanical Keyboard', blurb: 'More comfortable gear for writing and coding.', price: 'RM60+', url: 'https://shopee.com.my/search?keyword=mechanical%20keyboard', cta: 'Buy on Shopee' }
 ]);
 
 app.get('/api/public/settings', (req, res) => {
@@ -2860,7 +2862,7 @@ app.get('/api/public/settings', (req, res) => {
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
     siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
-    siteTagline: store.getSetting('siteTagline', 'Carian, AI, aplikasi & game untuk bahasa kita — tanpa akaun, berfungsi walaupun pada rangkaian lemah')
+    siteTagline: store.getSetting('siteTagline', 'Search, AI, apps & games — free, no account, works even on 2G')
   });
 });
 
@@ -2902,7 +2904,7 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     ollamaModel: store.getSetting('ollamaModel', 'llama3.2'),
     // Website Branding
     siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
-    siteTagline: store.getSetting('siteTagline', 'Carian, AI, aplikasi & game untuk bahasa kita — tanpa akaun, berfungsi walaupun pada rangkaian lemah'),
+    siteTagline: store.getSetting('siteTagline', 'Search, AI, apps & games — free, no account, works even on 2G'),
     defaultTheme: store.getSetting('defaultTheme', 'dark'),
     defaultAccent: store.getSetting('defaultAccent', 'blue')
   });
@@ -2915,7 +2917,7 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
     const raw = String(b.affiliateProducts).trim();
     if (raw) {
       try { const parsed = JSON.parse(raw); if (!Array.isArray(parsed)) throw new Error('not array'); }
-      catch { return res.status(400).json({ error: 'Produk afiliasi mestilah JSON array yang sah (cth: [{"name":"...","url":"https://..."}])' }); }
+      catch { return res.status(400).json({ error: 'Affiliate products must be a valid JSON array (e.g. [{"name":"...","url":"https://..."}])' }); }
     }
   }
   // Google Ads
@@ -3133,12 +3135,12 @@ app.use((req, res) => {
   const wantsJson = req.path.startsWith('/api') || /\.(json|xml)$/i.test(req.path) || !isHtmlRequest(req);
   if (wantsJson) return res.status(404).json({ error: 'Route not found', path: req.originalUrl });
   res.status(404).send(`<!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 — Halaman tidak dijumpai — Tukuk-OS</title>
-<meta name="description" content="Halaman yang anda cari di Tukuk-OS tidak ditemui. Cuba carian, lawati stor game, atau balik ke beranda.">
+<title>404 — Page not found — Tukuk-OS</title>
+<meta name="description" content="The page you were looking for on Tukuk-OS was not found. Try a search, visit the game store, or head back home.">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://tukuk.org/">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -3161,22 +3163,22 @@ app.use((req, res) => {
 <div class="wrap">
   <div class="oops">
     <div class="code">404</div>
-    <h1>Halaman ini tidak ditemui</h1>
-    <p class="hint"><code>${escapeHtml(req.path)}</code> tidak wujud — mungkin alamatnya salah atau telah dipindahkan.</p>
+    <h1>This page doesn't exist</h1>
+    <p class="hint"><code>${escapeHtml(req.path)}</code> was not found — the address may be wrong or the page was moved.</p>
     <form action="/cari" method="get" role="search">
-      <input type="search" name="q" placeholder="Cari apa sahaja di web…" aria-label="Kata kunci carian" required>
-      <button type="submit">Cari</button>
+      <input type="search" name="q" placeholder="Search anything on the web…" aria-label="Search query" required>
+      <button type="submit">Search</button>
     </form>
     <div class="actions">
-      <a href="/">🏠 Beranda</a>
-      <a href="/store">🎮 Stor &amp; Game</a>
-      <a href="/builder">🧱 Bina App</a>
+      <a href="/">🏠 Home</a>
+      <a href="/store">🎮 Store &amp; Games</a>
+      <a href="/builder">🧱 Build an App</a>
       <a href="/apps/chat">💬 T Chat</a>
       <a href="/blog">📝 Blog</a>
-      <a href="/contact">✉️ Hubungi Kami</a>
+      <a href="/contact">✉️ Contact</a>
     </div>
   </div>
-  <footer><p>&copy; 2026 Tukuk-OS &mdash; Portal internet bahasa kita: carian, AI, aplikasi &amp; game. <a href="/">Beranda</a> <a href="/about">Tentang</a> <a href="/privacy">Privasi</a></p></footer>
+  <footer><p>&copy; 2026 Tukuk-OS &mdash; Your free, account-free internet portal: search, AI, apps &amp; games. <a href="/">Home</a> <a href="/about">About</a> <a href="/privacy">Privacy</a></p></footer>
 </div>
 </body>
 </html>`);

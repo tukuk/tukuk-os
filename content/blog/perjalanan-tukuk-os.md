@@ -1,24 +1,24 @@
 SLUG: perjalanan-tukuk-os
-TITLE: Perjalanan Tukuk-OS — Dari Satu Carian ke Sistem Operasi Web
-EXCERPT: Bagaimana sebuah enjin carian kecil membesar menjadi suite apl, gedung APK, radio, dan pangkalan data NASA — semuanya dalam pelayar, semuanya tanpa dipasang.
+TITLE: The Tukuk-OS Journey — From One Search to a Web Operating System
+EXCERPT: How a small search engine grew into an app suite, an APK store, radio, and a NASA data hub — all in the browser, all without installing anything.
 TAGS: tukuk, roadmap, apps, overview, webos
 
-## Bermula dengan "cari"
+## It started with "search"
 
-Nama "Tukuk-OS" kedengaran seperti sistem operasi besar, tetapi benihnya sederhana: satu kotak carian yang laju dan jujur. Dari situ, satu demi satu modul tumbuh. Kami sedar pengguna bukan cuma mahu *cari* — mereka mahu *buat sesuatu*. Jadi carian mendapat abang-abangnya.
+The name "Tukuk-OS" sounds like a big operating system, but its seed was humble: one fast, honest search box. From there, module after module grew. We realized users did not just want to *search* — they wanted to *get things done*. So the search engine got siblings.
 
-## Suite apl dalam pelayar
+## An app suite in the browser
 
-Hari ini, tekan menu apl dan anda jumpa ruang kerja penuh: editor imej & video, penghapus latar (bg-remover), penukar format (converter), kolaj, studio reka bentuk, editor 3D, sampai ke arked mini. Ada apl produktif (nota, kalkulator, piano, dram) dan apl pembelajaran Satu Kata — membina bahasa dengan satu kata setiap hari. Semua berjalan terus dalam pelayar; **tiada pemasangan, tiada kemas kini yang mengganggu**. Buka, guna, tutup.
+Today, tap the apps menu and you find a full workspace: image & video editors, a background remover, a file format converter, collage, a design studio, a 3D editor, even a mini arcade. There are productive apps (notes, calculator, piano, drums) and the Satu Kata learning apps — building vocabulary with one word every day. Everything runs right in the browser; **no installation, no annoying updates**. Open, use, close.
 
-## Gedung apl & APK sendiri
+## Its own app store & APKs
 
-Langkah besar terkini: Tukuk menjadi **gedung aplikasinya sendiri**. Setiap apl boleh dipasang sebagai PWA (semua peranti) atau dimuat turun sebagai **APK Android yang dijana atas permintaan dan ditandatangani Tukuk** (panduan penuh dalam catatan blog kami yang lain). Ini melengkapkan pusingan — dari "guna di web" ke "bawa ke telefon sebagai apl sejati".
+The latest big step: Tukuk became **its own application store**. Every app can be installed as a PWA (all devices) or downloaded as an **on-demand, Tukuk-signed Android APK** (full guide in one of our other blog posts). This completes the circle — from "use it on the web" to "carry it on your phone as a real app".
 
-## Bukan cuma alat, tapi juga dunia
+## Not just tools, but a world too
 
-Di luar apl produktiviti, Tukuk juga pintu kepada **radio & muzik seluruh dunia** (kini dengan laluan pantas Asia), **berita**, dan **pusat data NASA** — gambar astronomi harian, suar matahari, aliran fluks radio. Kami mahu satu tab sahaja cukup untuk hari anda: kerja, main, dan sedikit kekaguman pada langit.
+Beyond productivity apps, Tukuk is also a door to **radio & music from around the world** (now with a fast Asia route), **news**, and the **NASA data hub** — daily astronomy pictures, solar flares, radio flux streams. We want one tab to be enough for your day: work, play, and a little wonder at the sky.
 
-## Falsafah kecil
+## A small philosophy
 
-Satu prinsip mengikat semua ini: **bina sendiri apa yang anda guna setiap hari**, jadi anda kawal privasi, kelajuan, dan arahnya. Tukuk-OS mungkin kedengaran ambisius untuk satu projek, tapi ia sekadar nama untuk satu tab pelayar yang enggan jadi terikat pada store, pada iklan, atau pada siapa pun selain anda. Perjalanan masih panjang — dan setiap catatan blog ini adalah penanda langkah. Terima kasih kerana ikut serta.
+One principle binds all of this: **build yourself the things you use every day**, so you control the privacy, the speed, and the direction. Tukuk-OS may sound ambitious for a single project, but it is just a name for one browser tab that refuses to be tied to a store, to ads, or to anyone but you. The journey is still long — and each of these blog posts is a milestone marker. Thank you for coming along.

@@ -229,7 +229,7 @@ async function searchImages(query, { page = 1 } = {}) {
       thumbnail: url,
       image: url,
       source: hostOf(url),
-      description: `Imej untuk "${q}" dari carian web.`
+      description: `Images for "${q}" from web search.`
     }));
 
     const result = { hits, total: hits.length, query: q, provider: webResults.provider || 'web' };
@@ -269,7 +269,7 @@ async function searchVideos(query, { sp = '' } = {}) {
       url,
       thumbnail: '',
       source: hostOf(url),
-      description: `Video untuk "${q}" dari carian web.`
+      description: `Videos for "${q}" from web search.`
     }));
 
     const result = { hits, total: hits.length, query: q, provider: webResults.provider || 'web' };
@@ -370,8 +370,8 @@ function mapRadioStations(arr) {
 // langsung bertag 'space' dari radio-browser. Setiap URL disahkan mengalir
 // melalui proksi /radio/stream (bait audio tulen). Diurus sebagai pseudo-kawasan 'angkasa'.
 const PLANETARY_RADIO = [
-  { type: 'radio', title: '\ud83e\ude90 Emisi Radio Planet — Aliran Tenang (Space Meditation)', url: 'https://archive.org/download/01-rainshadow/05_ThoughtsOfFloatingStreams.mp3', favicon: '', country: 'Angkasa', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'ambient', 'tenang'], votes: 0, clicks: 0, uuid: 'planet-radio-meditation', source: 'NASA / Internet Archive', description: 'Emisi radio angkasa ditukar kepada audio tenang — untuk semua benda hidup.' },
-  { type: 'radio', title: '\ud83d\udef0 Voyager Golden Record — Salam Bumi untuk Planet Lain', url: 'https://archive.org/download/voyager-golden-record/voyager golden record.mp3', favicon: '', country: 'Angkasa (Voyager)', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'voyager', 'golden record'], votes: 0, clicks: 0, uuid: 'planet-radio-voyager', source: 'NASA Voyager / Internet Archive', description: 'Rakaman "Golden Record" yang dihantar Voyager ke dunia luar — muzik & bunyi Bumi.' },
+  { type: 'radio', title: '\ud83e\ude90 Planet Radio Emissions — Calm Stream (Space Meditation)', url: 'https://archive.org/download/01-rainshadow/05_ThoughtsOfFloatingStreams.mp3', favicon: '', country: 'Space', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'ambient', 'tenang'], votes: 0, clicks: 0, uuid: 'planet-radio-meditation', source: 'NASA / Internet Archive', description: 'Space radio emissions converted into calm audio — for all living things.' },
+  { type: 'radio', title: '\ud83d\udef0 Voyager Golden Record — A Greeting from Earth to Other Planets', url: 'https://archive.org/download/voyager-golden-record/voyager golden record.mp3', favicon: '', country: 'Space (Voyager)', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'voyager', 'golden record'], votes: 0, clicks: 0, uuid: 'planet-radio-voyager', source: 'NASA Voyager / Internet Archive', description: 'The "Golden Record" Voyager sent to the outer world — music & sounds of Earth.' },
 ];
 
 async function searchRadioStations(q, skip = 0, { country = '', tag = '', region = '' } = {}) {
@@ -382,7 +382,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
     const live = Array.isArray(data) ? mapRadioStations(data) : [];
     const hits = skip === 0 ? [...PLANETARY_RADIO, ...live] : live;
     const nextSkip = Array.isArray(data) && data.length === 40 ? skip + 40 : 0;
-    if (!hits.length) throw new Error('radio-browser tidak dapat dihubungi');
+    if (!hits.length) throw new Error('radio-browser unreachable');
     return { hits, nextSkip };
   }
   const codes = region && RADIO_REGIONS[String(region).toLowerCase()];
@@ -398,7 +398,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
       return fetchRadioJson(`/json/stations/search?${p}`).catch(() => null);
     }));
     const merged = mapRadioStations(results.filter(Array.isArray).flat());
-    if (!merged.length) throw new Error('radio-browser tidak dapat dihubungi');
+    if (!merged.length) throw new Error('radio-browser unreachable');
     const seen = new Set();
     const dedup = merged.filter((h) => !seen.has(h.uuid) && seen.add(h.uuid));
     dedup.sort((a, b) => (b.clicks - a.clicks) || (b.votes - a.votes));
@@ -419,7 +419,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
     path = `/json/stations/topvote/40?hidebroken=true&offset=${skip}`;
   }
   const data = await fetchRadioJson(path);
-  if (!Array.isArray(data)) throw new Error('radio-browser tidak dapat dihubungi');
+  if (!Array.isArray(data)) throw new Error('radio-browser unreachable');
   const hits = mapRadioStations(data);
   const nextSkip = data.length === 40 ? skip + 40 : 0;
   return { hits, nextSkip };

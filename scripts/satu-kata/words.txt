@@ -1,49 +1,49 @@
-# satu-kata — senarai kata tema untuk jana app+game harian.
-# Format:  kata | emoji | tagline  (emoji & tagline opsiional)
-# Cron GitHub Actions pilih baris belum-jana (ikut manifest), satu setiap hari.
-hujan | 🌧️ | Kumpul titis hujan sebelum jatuh ke tanah.
-kopi | ☕ | Satu teguk setiap sentuhan — pengira kafein.
-buku | 📚 | Kekalkan rentetan halaman yang dibaca.
-roket | 🚀 | Tangkap bahan api, capai orbit.
-ikan | 🐟 | Akuarium mini: kumpul ikan berwarna.
-awan | ☁️ | Pintas awan, elak kilat.
-bunga | 🌸 | Taman: kutip kelopak sebelum layu.
-moonsarung | 🌙 | Kumpul bulan sabit setiap malam.
-keretapi | 🚂 | Landasan: kutip penumpang di stesen.
-cili | 🌶️ | Pedas! Elak biji, kumpul cudang.
-nelayan | 🎣 | Tangkap ikan, lepas yang kecik.
-durian | 🥭 | Musim buah: kumpul durian jatuh.
-robin | 🐦 | Burong: terbang, hindari dawai.
-kompas | 🧭 | Arah utara: kumpul mata angin.
-gitar | 🎸 | Ritma: sentuh not yang betul.
-bintang | ⭐ | Kumpul bintang di langit malam.
-kelapa | 🥥 | Tebuk kelapa, kumpul isi.
-payung | ☂️ | Lindungi dari hujan, elak terik.
-oud | 🎼 | Muzik tradisional: susun nota.
-bayt | 🏠 | Bina rumah: kumpul bahan binaan.
-kicik | 🐤 | Anak ayam: makan, membesar, lari.
-ombak | 🌊 | Luncur ombak, tangkap spray.
-cendawan | 🍄 | Kumpul cendawan, elak yang beracun.
-lampion | 🏮 | Terangi malam dengan lampion.
-merlim | 🐢 | Kura-kura pantas: elak halangan.
-salju | ❄️ | Baling bola salju ke sasaran.
-mangga | 🥭 | Kumpul mangga masak dari pokok.
-gunting | ✂️ | Potong tali pada waktu tepat.
-nakhoda | ⚓ | Nakhoda: kumpulkan kunci kapal.
-tebing | 🏔️ | Daki tebing, pegang pijakan.
-pelita | 🕯️ | Jaga api pelita jangan padam.
-semut | 🐜 | Koloni: kumpul remah roti.
-layang | 🪁 | Terbangkan layang-layang, jaga benang.
-teratai | 🌺 | Tasik: petik bunga teratai.
-renjatan | ⚡ | Kumpul tenaga, lepas cas ke grid.
-cempaka | 🌼 | Kumpul kelopak cempaka untuk karangan.
-balon | 🎈 | Pecahkan balon, jangan letup diri.
-cengkerang | 🐚 | Pantai: kutip cengkerang unik.
-kuih | 🍮 | dapur: kumpul bahan kuih.
-meriam | 💣 | Lontar, elak serpihan.
-sagu | 🌴 | Tebang sagu, kumpul pati.
-ketupat | 🍱 | anyam daun, isi beras.
-pelangi | 🌈 | Kumpul warna pelangi.
-lang | 🦅 | Elang: burung mangsa di padang.
-tifa | 🪘 | Genderang: pukul pada irama.
-nanas | 🍍 | Ladang: petik nanas manis.
+# satu-kata — themed word list for daily app+game generation.
+# Format:  word | emoji | tagline  (emoji & tagline optional)
+# Daily GitHub Actions cron picks the next not-yet-generated word (via manifest), one every day.
+rain | 🌧️ | Collect raindrops before they hit the ground.
+coffee | ☕ | One sip per tap — a caffeine counter.
+book | 📚 | Keep the reading streak of pages turned.
+rocket | 🚀 | Grab fuel, reach orbit.
+fish | 🐟 | Mini aquarium: collect colorful fish.
+cloud | ☁️ | Zip through clouds, dodge lightning.
+flower | 🌸 | Garden: pick petals before they wilt.
+crescent | 🌙 | Collect a crescent moon every night.
+train | 🚂 | Track: pick up passengers at stations.
+chili | 🌶️ | Spicy! Avoid seeds, collect peppers.
+fisherman | 🎣 | Catch fish, release the small ones.
+durian | 🥭 | Fruit season: gather falling durians.
+robin | 🐦 | Bird: fly, avoid the wires.
+compass | 🧭 | Head north: collect the compass points.
+guitar | 🎸 | Rhythm: touch the right notes.
+star | ⭐ | Gather stars in the night sky.
+coconut | 🥥 | Drill coconuts, collect the flesh.
+umbrella | ☂️ | Shield from rain, dodge the heat.
+oud | 🎼 | Traditional music: arrange the notes.
+home | 🏠 | Build a house: gather building materials.
+chick | 🐤 | Baby chicken: eat, grow, run.
+wave | 🌊 | Surf the waves, catch the spray.
+mushroom | 🍄 | Collect mushrooms, avoid the poisonous ones.
+lantern | 🏮 | Light up the night with lanterns.
+turtle | 🐢 | Speedy turtle: dodge obstacles.
+snow | ❄️ | Throw snowballs at the target.
+mango | 🥭 | Gather ripe mangoes from the tree.
+scissors | ✂️ | Cut the rope at exactly the right time.
+captain | ⚓ | Captain: collect the ship keys.
+cliff | 🏔️ | Climb the cliff, hold the footholds.
+candle | 🕯️ | Keep the candle flame alive.
+ant | 🐜 | Colony: gather bread crumbs.
+kite | 🪁 | Fly the kite, mind the string.
+lotus | 🌺 | Lake: pick the lotus flowers.
+spark | ⚡ | Collect energy, release charge to the grid.
+jasmine | 🌼 | Gather jasmine petals for the garland.
+balloon | 🎈 | Pop balloons, don't burst yourself.
+seashell | 🐚 | Beach: collect unique seashells.
+pastry | 🍮 | Kitchen: gather cake ingredients.
+cannon | 💣 | Fire the cannon, dodge the shards.
+sago | 🌴 | Cut the sago palm, collect the starch.
+ricecake | 🍱 | Weave the leaves, fill with rice.
+rainbow | 🌈 | Gather the colors of the rainbow.
+eagle | 🦅 | Eagle: raptor of the plain.
+drum | 🪘 | Drum: hit on the beat.
+pineapple | 🍍 | Farm: pick the sweet pineapples.

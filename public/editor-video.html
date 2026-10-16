@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Studio — Editor Video</title>
-<meta name="description" content="Editor video percuma dalam pelayar: trim, penapis warna, putar, nisbah aspek, teks & eksport WebM. Tiada muat naik, semua diproses lokal.">
+<title>Tukuk Studio — Video Editor</title>
+<meta name="description" content="Free in-browser video editor: trim, color filters, rotate, aspect ratios, text & WebM export. No uploads, everything processed locally.">
 <link rel="canonical" href="https://tukuk.org/editor-video">
 <style>
   :root { --bg:#0f1320; --panel:#161b2c; --panel2:#1e2540; --line:#2a3350; --text:#e7ecff; --muted:#9aa6cc; --accent:#4c8dff; }
@@ -69,50 +69,50 @@
 </head>
 <body>
 <header>
-  <span class="logo">🎬 Tukuk Studio <small>editor video</small></span>
-  <button id="openBtn">📂 Buka video</button>
+  <span class="logo">🎬 Tukuk Studio <small>video editor</small></span>
+  <button id="openBtn">📂 Open video</button>
   <input type="file" id="fileInput" accept="video/*" hidden>
-  <input type="url" id="urlInput" placeholder="Tampal URL video (mp4/webm)…" style="flex:1;min-width:180px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:.85rem;">
-  <button id="urlBtn" title="Muat video daripada URL (perlukan CORS pada pelayar sumber)">🌐 Muat URL</button>
+  <input type="url" id="urlInput" placeholder="Paste video URL (mp4/webm)…" style="flex:1;min-width:180px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:.85rem;">
+  <button id="urlBtn" title="Load video from URL (requires CORS on the source server)">🌐 Load URL</button>
   <span class="spacer"></span>
-  <button id="shortcutsBtn" title="Pintasan papan kekunci (?)">⌨️ Pintasan</button>
-  <span class="t"><span class="rec-dot" id="recDot"></span><span id="stateLbl">sedia</span></span>
-  <button id="snapBtn" title="Simpan bingkai semasa sebagai PNG">📸 Bingkai</button>
-  <button id="exportBtn" class="primary" title="Rakam &amp; muat turun sebagai WebM (masa nyata)">⬇ Eksport WebM</button>
-  <a class="btn" href="/editor" title="Editor gambar">🖼 Gambar</a>
-  <a class="btn" href="/design" title="Reka bentuk gaya Canva">🎨 Design</a>
-  <a class="btn" href="/3d" title="Model & render 3D">🧊 3D</a>
+  <button id="shortcutsBtn" title="Keyboard shortcuts (?)">⌨️ Shortcuts</button>
+  <span class="t"><span class="rec-dot" id="recDot"></span><span id="stateLbl">ready</span></span>
+  <button id="snapBtn" title="Save the current frame as PNG">📸 Frame</button>
+  <button id="exportBtn" class="primary" title="Record &amp; download as WebM (real time)">⬇ Export WebM</button>
+  <a class="btn" href="/editor" title="Image editor">🖼 Image</a>
+  <a class="btn" href="/design" title="Canva-style design">🎨 Design</a>
+  <a class="btn" href="/3d" title="3D modeling &amp; render">🧊 3D</a>
   <a class="btn" href="/studio" title="Tukuk Studio Suite">◂ Suite</a>
-  <a class="btn" href="/" title="Kembali ke carian">⌕ Carian</a>
+  <a class="btn" href="/" title="Back to search">⌕ Search</a>
 </header>
 
 <main>
   <aside>
     <div class="tabs">
-      <button class="tab-btn on" data-tab="main"><span class="ti">▶</span>Main</button>
+      <button class="tab-btn on" data-tab="main"><span class="ti">▶</span>Play</button>
       <button class="tab-btn" data-tab="geo"><span class="ti">✂</span>Geo</button>
-      <button class="tab-btn" data-tab="gaya"><span class="ti">🎚</span>Gaya</button>
-      <button class="tab-btn" data-tab="kartun"><span class="ti">🎨</span>Kartun</button>
-      <button class="tab-btn" data-tab="teks"><span class="ti">🔤</span>Teks</button>
+      <button class="tab-btn" data-tab="gaya"><span class="ti">🎚</span>Style</button>
+      <button class="tab-btn" data-tab="kartun"><span class="ti">🎨</span>Cartoon</button>
+      <button class="tab-btn" data-tab="teks"><span class="ti">🔤</span>Text</button>
     </div>
     <div class="tab-panel on" data-tab="main">
-    <h3>Kawalan &amp; Trimming</h3>
-    <div class="row"><button id="playBtn">▶ Main</button><button id="stopBtn">⏹ Ke awal</button></div>
-    <div class="row"><button id="stepBackBtn" title="Undur 1 bingkai (~0.03s)">|◀ Bingkai</button><button id="stepFwdBtn" title="Maju 1 bingkai (~0.03s)">Bingkai ▶|</button></div>
+    <h3>Controls &amp; Trimming</h3>
+    <div class="row"><button id="playBtn">▶ Play</button><button id="stopBtn">⏹ To start</button></div>
+    <div class="row"><button id="stepBackBtn" title="Step back 1 frame (~0.03s)">|◀ Frame</button><button id="stepFwdBtn" title="Step forward 1 frame (~0.03s)">Frame ▶|</button></div>
     <div class="row"><button id="inBtn">⬅ Set In</button><button id="outBtn">Set Out ➡</button></div>
     <div class="foot-status" id="inOutLbl">In: 0.0s · Out: —</div>
-    <div class="slider" style="margin-top:6px;"><label>Kelajuan</label>
+    <div class="slider" style="margin-top:6px;"><label>Speed</label>
       <select id="speedSel" style="flex:1;"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
     </div>
 
-    <h3>Kawalan Audio 🔊</h3>
+    <h3>Audio Controls 🔊</h3>
     <div class="slider"><label>Volume</label><input type="range" id="v-vol" min="0" max="200" value="100"><output>100%</output></div>
-    <div class="row"><button id="muteBtn" style="width:100%">🔊 Audio Hidup</button></div>
+    <div class="row"><button id="muteBtn" style="width:100%">🔊 Audio On</button></div>
     </div>
     <div class="tab-panel" data-tab="geo">
-    <h3>Nisbah &amp; Putaran</h3>
+    <h3>Aspect &amp; Rotation</h3>
     <div class="row">
-      <button data-aspect="0" class="on">Asal</button>
+      <button data-aspect="0" class="on">Original</button>
       <button data-aspect="1">1:1</button>
       <button data-aspect="1.7778">16:9</button>
     </div>
@@ -121,44 +121,44 @@
       <button data-aspect="0.8">4:5</button>
       <button data-aspect="1.3333">4:3</button>
     </div>
-    <div class="row"><button id="rotBtn">⟳ Putar</button><button id="flipHBtn">↔ Flip-H</button><button id="flipVBtn">↕ Flip-V</button></div>
+    <div class="row"><button id="rotBtn">⟳ Rotate</button><button id="flipHBtn">↔ Flip-H</button><button id="flipVBtn">↕ Flip-V</button></div>
 
     </div>
     <div class="tab-panel" data-tab="gaya">
-    <h3>Penapis Warna &amp; LUTs</h3>
-    <div class="slider"><label>Kecerahan</label><input type="range" id="v-bright" min="20" max="200" value="100"><output>100</output></div>
-    <div class="slider"><label>Kontras</label><input type="range" id="v-contrast" min="20" max="200" value="100"><output>100</output></div>
-    <div class="slider"><label>Saturasi</label><input type="range" id="v-saturate" min="0" max="250" value="100"><output>100</output></div>
+    <h3>Color Filters &amp; LUTs</h3>
+    <div class="slider"><label>Brightness</label><input type="range" id="v-bright" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Contrast</label><input type="range" id="v-contrast" min="20" max="200" value="100"><output>100</output></div>
+    <div class="slider"><label>Saturation</label><input type="range" id="v-saturate" min="0" max="250" value="100"><output>100</output></div>
     <div class="slider"><label>Sepia</label><input type="range" id="v-sepia" min="0" max="100" value="0"><output>0</output></div>
     <div class="slider"><label>Grayscale</label><input type="range" id="v-gray" min="0" max="100" value="0"><output>0</output></div>
     <div class="slider"><label>Hue</label><input type="range" id="v-hue" min="0" max="360" value="0"><output>0</output></div>
     <div class="slider"><label>Blur</label><input type="range" id="v-blur" min="0" max="12" value="0"><output>0</output></div>
     <div class="slider"><label>Vignette</label><input type="range" id="v-vig" min="0" max="100" value="0"><output>0</output></div>
-    <div class="row"><button id="preNone">Original</button><button id="preMono">Hitam putih</button><button id="preWarm">Hangat</button><button id="preCool">Sejuk</button></div>
+    <div class="row"><button id="preNone">Original</button><button id="preMono">Black &amp; white</button><button id="preWarm">Warm</button><button id="preCool">Cool</button></div>
     <div class="row"><button id="preTeal">Teal/Orange</button><button id="preCyber">Cyberpunk</button><button id="preRetro">Retro 80s</button><button id="preGold">Gold</button></div>
     </div>
     <div class="tab-panel" data-tab="kartun">
-    <h3>🎨 Kesan Kartun &amp; Artistik</h3>
-    <div class="row"><button id="ceOff" class="on">✕ Matikan Kesan</button></div>
-    <div class="row"><button id="ceToon">🧸 Toon</button><button id="ceComic">🖌 Komik</button><button id="ceSketch">✏️ Sketsa</button></div>
-    <div class="row"><button id="ceOil">🎨 Cat Minyak</button><button id="cePop">🎭 Pop Art</button><button id="ceAnime">🌸 Anime</button></div>
-    <div class="row"><button id="ceWater">💧 Cat Air</button><button id="cePixel">▦ Mosaik</button><button id="ceHalf">⬤ Halftone</button></div>
-    <div class="slider"><label>Kualiti</label><select id="ceRes" style="flex:1;"><option value="256">256p (pantas)</option><option value="448" selected>448p (seimbang)</option><option value="640">640p (halus)</option><option value="900">900p (perlahankan)</option></select></div>
-    <div class="slider"><label>Tepi</label><input type="range" id="ceEdge" min="5" max="120" value="35"><output>35</output></div>
-    <div class="slider"><label>Tahap</label><input type="range" id="ceLevels" min="2" max="20" value="7"><output>7</output></div>
-    <div class="slider"><label>Licinkan</label><input type="range" id="ceSmooth" min="1" max="8" value="3"><output>3</output></div>
-    <div class="foot-status">Kesan kartun diproses bingkai-demi-bingkai dalam pelayar — turut terbawa ketika eksport WebM. Naikkan “Kualiti” untuk hasil lebih tajam, turunkan untuk FPS lebih tinggi.</div>
+    <h3>🎨 Cartoon &amp; Artistic Effects</h3>
+    <div class="row"><button id="ceOff" class="on">✕ Turn Off Effects</button></div>
+    <div class="row"><button id="ceToon">🧸 Toon</button><button id="ceComic">🖌 Comic</button><button id="ceSketch">✏️ Sketch</button></div>
+    <div class="row"><button id="ceOil">🎨 Oil Paint</button><button id="cePop">🎭 Pop Art</button><button id="ceAnime">🌸 Anime</button></div>
+    <div class="row"><button id="ceWater">💧 Watercolor</button><button id="cePixel">▦ Mosaic</button><button id="ceHalf">⬤ Halftone</button></div>
+    <div class="slider"><label>Quality</label><select id="ceRes" style="flex:1;"><option value="256">256p (fast)</option><option value="448" selected>448p (balanced)</option><option value="640">640p (fine)</option><option value="900">900p (slower)</option></select></div>
+    <div class="slider"><label>Edges</label><input type="range" id="ceEdge" min="5" max="120" value="35"><output>35</output></div>
+    <div class="slider"><label>Levels</label><input type="range" id="ceLevels" min="2" max="20" value="7"><output>7</output></div>
+    <div class="slider"><label>Smoothing</label><input type="range" id="ceSmooth" min="1" max="8" value="3"><output>3</output></div>
+    <div class="foot-status">Cartoon effects are processed frame-by-frame in the browser — they carry over into the WebM export. Raise “Quality” for sharper results, lower it for higher FPS.</div>
     </div>
     <div class="tab-panel" data-tab="teks">
-    <h3>Teks &amp; Sarkas Subtajuk</h3>
-    <input type="text" id="vText" placeholder="Teks / Subtajuk video…" style="margin-bottom:6px;">
+    <h3>Text &amp; Subtitles</h3>
+    <input type="text" id="vText" placeholder="Video text / subtitles…" style="margin-bottom:6px;">
     <div class="row" style="align-items:center;">
-      <input type="color" id="vTextColor" value="#ffffff" title="Warna">
-      <select id="vTextPos" style="flex:1;"><option value="top">Atas</option><option value="center">Tengah</option><option value="bottom" selected>Bawah</option></select>
+      <input type="color" id="vTextColor" value="#ffffff" title="Color">
+      <select id="vTextPos" style="flex:1;"><option value="top">Top</option><option value="center">Center</option><option value="bottom" selected>Bottom</option></select>
     </div>
-    <div class="slider"><label>Saiz</label><input type="range" id="vTextSize" min="3" max="16" value="8"><output>8</output></div>
-    <div class="row"><button id="vTextPill" style="width:100%" title="Tambah petak latar kontras tinggi pada teks">⬛ Latar Petak</button></div>
-    <div class="foot-status">Teks kekal tegak walaupun video diputar, dan dirakam dalam eksport.</div>
+    <div class="slider"><label>Size</label><input type="range" id="vTextSize" min="3" max="16" value="8"><output>8</output></div>
+    <div class="row"><button id="vTextPill" style="width:100%" title="Add a high-contrast background box behind the text">⬛ Box BG</button></div>
+    <div class="foot-status">Text stays upright even when the video is rotated, and is recorded in the export.</div>
     </div>
   </aside>
 
@@ -166,8 +166,8 @@
     <canvas id="cvs" width="640" height="360"></canvas>
     <div class="drop-hint" id="dropHint">
       <div class="big">🎬</div>
-      <div>Seret &amp; jatuh video ke sini, atau <b>📂 Buka video</b>.</div>
-      <div class="foot-status">Semua suntingan &amp; rakaman berlaku dalam pelayar anda — tiada video dihantar ke mana-mana.<br>Eksport WebM dirakam secara <b>masa nyata</b> (durasi rakaman = panjang klip).</div>
+      <div>Drag &amp; drop a video here, or <b>📂 Open video</b>.</div>
+      <div class="foot-status">All editing &amp; recording happens in your browser — no video is sent anywhere.<br>WebM export is recorded in <b>real time</b> (recording length = clip length).</div>
     </div>
     <div class="timeline" id="timeline" hidden>
       <button id="playTBtn" style="flex:none;">▶</button>
@@ -182,18 +182,18 @@
 
 <div class="modal-bg" id="shortcutsModal" hidden>
   <div class="modal-card">
-    <h2>⌨️ Pintasan Editor Video</h2>
+    <h2>⌨️ Video Editor Shortcuts</h2>
     <table>
-      <tr><td>Main / Jeda Video</td><td><kbd>Space</kbd></td></tr>
-      <tr><td>Langkah 1 Bingkai Undur / Maju</td><td><kbd>Left</kbd> / <kbd>Right</kbd></td></tr>
+      <tr><td>Play / Pause Video</td><td><kbd>Space</kbd></td></tr>
+      <tr><td>Step 1 Frame Back / Forward</td><td><kbd>Left</kbd> / <kbd>Right</kbd></td></tr>
       <tr><td>Set In / Set Out Point</td><td><kbd>[</kbd> / <kbd>]</kbd></td></tr>
-      <tr><td>Bisu / Buka Suara Audio</td><td><kbd>M</kbd></td></tr>
-      <tr><td>Tangkap Bingkai PNG</td><td><kbd>S</kbd></td></tr>
-      <tr><td>Paparkan Pintasan ini</td><td><kbd>?</kbd></td></tr>
-      <tr><td>Tutup Dialog Modal</td><td><kbd>Esc</kbd></td></tr>
+      <tr><td>Mute / Unmute Audio</td><td><kbd>M</kbd></td></tr>
+      <tr><td>Capture PNG Frame</td><td><kbd>S</kbd></td></tr>
+      <tr><td>Show these shortcuts</td><td><kbd>?</kbd></td></tr>
+      <tr><td>Close Modal Dialog</td><td><kbd>Esc</kbd></td></tr>
     </table>
     <div style="text-align:right; margin-top:14px;">
-      <button class="primary" id="closeModalBtn">✓ Faham</button>
+      <button class="primary" id="closeModalBtn">✓ Got it</button>
     </div>
   </div>
 </div>
@@ -239,11 +239,11 @@ function loadFile(f) {
 }
 $('urlBtn').onclick = () => {
   const u = $('urlInput').value.trim();
-  if (!u) { toast('Tmpal URL video dahulu.'); return; }
+  if (!u) { toast('Paste a video URL first.'); return; }
   video.crossOrigin = 'anonymous';
   video.src = u;
   video.load();
-  toast('Memuat video daripada URL… (mungkin gagal jika sumber tiada CORS)');
+  toast('Loading video from URL… (may fail if the source has no CORS)');
 };
 video.addEventListener('loadedmetadata', () => {
   ready = true;
@@ -255,9 +255,9 @@ video.addEventListener('loadedmetadata', () => {
   updateInOut();
   video.playbackRate = Number($('speedSel').value);
   try { video.currentTime = Math.min(0.05, (video.duration || 0.1) / 2); } catch (e) { /* abai */ }
-  toast(`Video dimuat: ${video.videoWidth}×${video.videoHeight} · ${fmt(video.duration)}`);
+  toast(`Video loaded: ${video.videoWidth}×${video.videoHeight} · ${fmt(video.duration)}`);
 });
-video.addEventListener('error', () => { if (video.src) toast('Video tidak dapat dimuat (format tidak disokong pelayar, atau CORS telah menolak).'); });
+video.addEventListener('error', () => { if (video.src) toast('Video could not be loaded (format not supported by the browser, or CORS blocked it).'); });
 
 // ── Kira saiz output ──
 function computeOut(vw, vh) {
@@ -470,7 +470,7 @@ const CE = {
 function setCE(key) {
   ceFx = key || '';
   ['ceOff','ceToon','ceComic','ceSketch','ceOil','cePop','ceAnime','ceWater','cePixel','ceHalf'].forEach(id => $(id).classList.toggle('on', (id === 'ceOff' && !ceFx) || ('ce' + ceFx.charAt(0).toUpperCase() + ceFx.slice(1)) === id));
-  $('stateLbl').textContent = ceFx ? ('kartun: ' + ceFx) : (recording ? 'merakam…' : 'sedia');
+  $('stateLbl').textContent = ceFx ? ('cartoon: ' + ceFx) : (recording ? 'recording…' : 'ready');
 }
 {
   const map = { ceOff:'', ceToon:'toon', ceComic:'comic', ceSketch:'sketch', ceOil:'oil', cePop:'pop', ceAnime:'anime', ceWater:'water', cePixel:'pixel', ceHalf:'half' };
@@ -529,16 +529,16 @@ function setPlay(on) {
   if (!ready) return;
   if (on) {
     if (outPoint && video.currentTime >= outPoint - 0.05) video.currentTime = inPoint;
-    video.play(); $('playBtn').textContent = '⏸ Jeda'; $('playTBtn').textContent = '⏸';
+    video.play(); $('playBtn').textContent = '⏸ Pause'; $('playTBtn').textContent = '⏸';
   } else {
-    video.pause(); $('playBtn').textContent = '▶ Main'; $('playTBtn').textContent = '▶';
+    video.pause(); $('playBtn').textContent = '▶ Play'; $('playTBtn').textContent = '▶';
   }
 }
 $('playBtn').onclick = () => setPlay(video.paused);
 $('playTBtn').onclick = () => setPlay(video.paused);
 $('stopBtn').onclick = () => { if (ready) video.currentTime = inPoint; };
-video.addEventListener('play', () => { $('playBtn').textContent = '⏸ Jeda'; $('playTBtn').textContent = '⏸'; });
-video.addEventListener('pause', () => { $('playBtn').textContent = '▶ Main'; $('playTBtn').textContent = '▶'; });
+video.addEventListener('play', () => { $('playBtn').textContent = '⏸ Pause'; $('playTBtn').textContent = '⏸'; });
+video.addEventListener('pause', () => { $('playBtn').textContent = '▶ Play'; $('playTBtn').textContent = '▶'; });
 $('scrub').addEventListener('pointerdown', () => scrubbing = true);
 window.addEventListener('pointerup', () => scrubbing = false);
 $('scrub').addEventListener('input', (e) => { if (ready) { video.currentTime = Number(e.target.value); $('curT').textContent = fmt(video.currentTime); } });
@@ -568,7 +568,7 @@ $('v-vol').addEventListener('input', (e) => {
 $('muteBtn').onclick = () => {
   isMuted = !isMuted;
   $('muteBtn').classList.toggle('on', isMuted);
-  $('muteBtn').textContent = isMuted ? '🔇 Audio Dibisukan' : '🔊 Audio Hidup';
+  $('muteBtn').textContent = isMuted ? '🔇 Audio Muted' : '🔊 Audio On';
   ensureAudioGain();
   if (gainNode) gainNode.gain.value = isMuted ? 0 : (Number($('v-vol').value) / 100);
   video.muted = isMuted;
@@ -606,9 +606,9 @@ $('preGold').onclick = () => preset({ sepia: 20, bright: 105, saturate: 130, con
 // ── Snapshot bingkai (PNG) ──
 function downloadBlob(blob, name) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 8000); }
 $('snapBtn').onclick = () => {
-  if (!ready) { toast('Muat video dahulu.'); return; }
+  if (!ready) { toast('Load a video first.'); return; }
   render();
-  cvs.toBlob((b) => { if (b) { downloadBlob(b, `tukuk-bingkai-${Date.now()}.png`); toast('Bingkai disimpan sebagai PNG.'); } }, 'image/png');
+  cvs.toBlob((b) => { if (b) { downloadBlob(b, `tukuk-frame-${Date.now()}.png`); toast('Frame saved as PNG.'); } }, 'image/png');
 };
 
 // ── Eksport WebM (rakaman masa nyata) ──
@@ -620,10 +620,10 @@ function pickMime() {
 function seeked() { return new Promise((r) => { const h = () => { video.removeEventListener('seeked', h); r(); }; video.addEventListener('seeked', h); }); }
 
 $('exportBtn').onclick = async () => {
-  if (!ready) { toast('Muat video dahulu.'); return; }
+  if (!ready) { toast('Load a video first.'); return; }
   if (recording) return;
   const mime = pickMime();
-  if (!mime) { toast('Pelayar ini tak sokong MediaRecorder — guna Chrome/Edge/Firefox terbaru.'); return; }
+  if (!mime) { toast('This browser does not support MediaRecorder — use a recent Chrome/Edge/Firefox.'); return; }
   const start = Math.min(inPoint, outPoint || inPoint);
   const end = outPoint > start ? outPoint : (video.duration || start + 1);
   const fps = 30;
@@ -648,7 +648,7 @@ $('exportBtn').onclick = async () => {
   const stopped = new Promise((res) => { rec.onstop = res; });
 
   recording = true;
-  $('recDot').classList.add('live'); $('stateLbl').textContent = 'merakam…';
+  $('recDot').classList.add('live'); $('stateLbl').textContent = 'recording…';
   $('exportBtn').disabled = true; $('snapBtn').disabled = true;
   video.playbackRate = Number($('speedSel').value);
   rec.start(250);
@@ -666,14 +666,14 @@ $('exportBtn').onclick = async () => {
   try { rec.stop(); } catch { /* abai */ }
   await stopped;
   recording = false;
-  $('recDot').classList.remove('live'); $('stateLbl').textContent = 'sedia';
+  $('recDot').classList.remove('live'); $('stateLbl').textContent = 'ready';
   $('exportBtn').disabled = false; $('snapBtn').disabled = false;
 
   const blob = new Blob(chunks, { type: (mime.split(';')[0] || 'video/webm') });
-  if (!blob.size) { toast('Rakaman kosong — cuba lagi.'); return; }
+  if (!blob.size) { toast('Empty recording — try again.'); return; }
   const ext = mime.includes('mp4') ? 'mp4' : 'webm';
   downloadBlob(blob, `tukuk-studio-video-${Date.now()}.${ext}`);
-  toast(`Dieksport sebagai ${ext.toUpperCase()} (~${(end - start).toFixed(1)}s, ${cvs.width}×${cvs.height}).`);
+  toast(`Exported as ${ext.toUpperCase()} (~${(end - start).toFixed(1)}s, ${cvs.width}×${cvs.height}).`);
 };
 
 // ── Drag & drop video ──
@@ -681,7 +681,7 @@ stage.addEventListener('dragover', (e) => e.preventDefault());
 stage.addEventListener('drop', (e) => {
   e.preventDefault();
   const f = [...(e.dataTransfer.files || [])].find((x) => x.type.startsWith('video/'));
-  if (f) loadFile(f); else toast('Seret fail video (mp4/webm/ogg).');
+  if (f) loadFile(f); else toast('Drop a video file (mp4/webm/ogg).');
 });
 
 // Auto-buka file picker jika datang dari Studio dropzone

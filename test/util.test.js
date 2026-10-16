@@ -66,9 +66,9 @@ test('safeError: sertakan status bila ada', () => {
 });
 
 test('assertPublicUrl: tolak protokol bukan-http, IP dalaman, localhost', async () => {
-  await assert.rejects(() => u.assertPublicUrl('ftp://example.com/x'), /protokol/);
-  await assert.rejects(() => u.assertPublicUrl('http://127.0.0.1/'), /dalaman/);
-  await assert.rejects(() => u.assertPublicUrl('http://localhost/'), /dalaman/);
+  await assert.rejects(() => u.assertPublicUrl('ftp://example.com/x'), /protocol/);
+  await assert.rejects(() => u.assertPublicUrl('http://127.0.0.1/'), /Internal/);
+  await assert.rejects(() => u.assertPublicUrl('http://localhost/'), /Internal/);
   // IP awam literal → lulus tanpa DNS lookup
   const url = await u.assertPublicUrl('http://8.8.8.8/x');
   assert.equal(url.hostname, '8.8.8.8');

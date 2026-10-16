@@ -46,7 +46,7 @@ Every HTTP response starts with a three-digit code, and clients *act* on it: bro
 ## A One-Line Sanity Check
 
 ```js
-res.status(404).json({ error: 'Halaman tidak dijumpai', path: req.originalUrl });
+res.status(404).json({ error: 'Page not found', path: req.originalUrl });
 ```
 
 The body helps humans; the **code** drives machines. Get the code right first, then write whatever message you like — caches, crawlers, and client libraries never read your prose.

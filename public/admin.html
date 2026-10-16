@@ -260,7 +260,7 @@
       <button type="submit" id="authPasskeyBtn" class="btn btn-primary" style="width:100%; justify-content:center;">🔑 Sign in with Passkey</button>
       <button type="button" id="authRegisterBtn" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:10px; display:none;">🛡️ Register Passkey</button>
       <div id="authBootstrapLink" style="margin-top:10px; text-align:center;" hidden>
-        <a href="#" id="authBootstrapToggle" style="color:var(--text-muted); font-size:0.8rem; text-decoration:underline;">Passkey pada peranti ini tidak sepadan? Daftar passkey baharu dengan kata laluan bootstrap.</a>
+        <a href="#" id="authBootstrapToggle" style="color:var(--text-muted); font-size:0.8rem; text-decoration:underline;">Passkey on this device doesn't match? Enroll a new passkey with the bootstrap password.</a>
       </div>
       <div id="authErr" style="color:var(--danger); font-size:0.85rem; margin-top:10px;" hidden></div>
       <div id="authHint" style="color:var(--text-muted); font-size:0.8rem; margin-top:10px;" hidden></div>
@@ -533,21 +533,21 @@ Type a command below or click a quick action.
           <div class="form-group">
             <label for="msAdsUsmSrc">Microsoft USM — Universal Script URL</label>
             <input type="url" id="msAdsUsmSrc" placeholder="https://c.bing.com/.../usm.js">
-            <div class="help-text">Alternatif "Auto ads" Microsoft. Tampal <strong>satu URL skrip</strong> yang diberikan dashboard Microsoft (monetize/usm) di sini. Loader akan suntik ke head semua halaman selamat-iklan bila <em>Enable Microsoft Advertising</em> diaktifkan. Kosong = tiada USM.</div>
+            <div class="help-text">Alternative to "Auto ads" from Microsoft. Paste the <strong>single script URL</strong> given by the Microsoft dashboard (monetize/usm) here. When <em>Enable Microsoft Advertising</em> is on, the loader is injected into the head of every ad-safe page. Empty = no USM.</div>
           </div>
 
-          <h3 style="margin-top:28px; font-size:1.02rem; border-bottom:1px solid var(--panel-border); padding-bottom:6px;">Snippet Penuh Microsoft Ads (HTML/JS)</h3>
-          <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Microsoft (monetizenow) selalunya beri snippet HTML/JS penuh untuk setiap unit. Tampal di sini. Renderer akan inject apa adanya bila Microsoft Ads diaktifkan. Kosongkan = tiada paparan.</p>
+          <h3 style="margin-top:28px; font-size:1.02rem; border-bottom:1px solid var(--panel-border); padding-bottom:6px;">Full Microsoft Ads Snippets (HTML/JS)</h3>
+          <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Microsoft (monetizenow) usually gives a full HTML/JS snippet per unit. Paste it here. The renderer injects it as-is when Microsoft Ads is enabled. Empty = nothing shown.</p>
           <div class="form-group">
-            <label for="msAdsSnippetTop">Header Snippet (blog + atas artikel)</label>
-            <textarea id="msAdsSnippetTop" rows="3" placeholder="&lt;script src=...&gt; atau &lt;ins ...&gt;"></textarea>
+            <label for="msAdsSnippetTop">Header Snippet (blog + top of article)</label>
+            <textarea id="msAdsSnippetTop" rows="3" placeholder="&lt;script src=...&gt; or &lt;ins ...&gt;"></textarea>
           </div>
           <div class="form-group">
-            <label for="msAdsSnippetInArticle">In-Article Snippet (tengah artikel)</label>
+            <label for="msAdsSnippetInArticle">In-Article Snippet (middle of article)</label>
             <textarea id="msAdsSnippetInArticle" rows="3"></textarea>
           </div>
           <div class="form-group">
-            <label for="msAdsSnippetBottom">Footer Snippet (bawah blog/artikel)</label>
+            <label for="msAdsSnippetBottom">Footer Snippet (bottom of blog/article)</label>
             <textarea id="msAdsSnippetBottom" rows="3"></textarea>
           </div>
           
@@ -563,10 +563,10 @@ Type a command below or click a quick action.
           <div class="form-group">
             <label for="clarityId">Clarity Project ID</label>
             <input type="text" id="clarityId" placeholder="e.g. abc1def234">
-            <div class="help-text">Dapatkan ID dari <a href="https://clarity.microsoft.com" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>. Ia hanya dimuat bila diaktifkan (lihat /api/public/settings).</div>
+            <div class="help-text">Get the ID from <a href="https://clarity.microsoft.com" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>. It only loads when enabled (see /api/public/settings).</div>
           </div>
 
-          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">⚡ Rangkaian Iklan Pantas (Adsterra / PropellerAds / dll)</h3>
+          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">⚡ Fast Ad Network (Adsterra / PropellerAds / etc)</h3>
           <div class="form-group">
             <label class="toggle-switch">
               <input type="checkbox" id="thirdPartyAdEnabled">
@@ -575,16 +575,16 @@ Type a command below or click a quick action.
             </label>
           </div>
           <div class="form-group">
-            <label for="thirdPartyAdSrc">URL Skrip Universal (satu <code>&lt;script src&gt;</code>)</label>
+            <label for="thirdPartyAdSrc">Universal script URL (one <code>&lt;script src&gt;</code>)</label>
             <input type="url" id="thirdPartyAdSrc" placeholder="https://pl1234.example.com/p/1234.js">
-            <div class="help-text" style="color:#ff8a8a;">⚠️ Bila <strong>ON</strong>, rangkaian ini <strong>menggantikan AdSense</strong> pada setiap halaman (tidak dicampur — elak akaun AdSense di-BAN). <strong>Matikan togel ini sebaik AdSense anda mula serve iklan.</strong> Ambil URL dari dashboard (Adsterra/PropellerAds → Zone → Universal/Smart Code → copy <code>src</code>).</div>
+            <div class="help-text" style="color:#ff8a8a;">⚠️ When <strong>ON</strong>, this network <strong>replaces AdSense</strong> on every page (never mixed — avoids an AdSense BAN). <strong>Turn this toggle off as soon as your AdSense starts serving ads.</strong> Get the URL from the dashboard (Adsterra/PropellerAds → Zone → Universal/Smart Code → copy <code>src</code>).</div>
           </div>
 
-          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">🛒 Produk Afiliasi (Rekomendasi)</h3>
-          <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Dipaparkan di <a href="/rekomendasi" target="_blank" rel="noopener">/rekomendasi</a>. Format: JSON array. Ganti <code>url</code> dengan <strong>pautan affiliate sebenar</strong> anda (Shopee/Amazon/Hostinger/NordVPN dll). Kosongkan = guna senarai default.</p>
+          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">🛒 Affiliate Products (Recommendations)</h3>
+          <p style="color:var(--text-muted); font-size:.85rem; margin:6px 0 12px;">Shown on <a href="/rekomendasi" target="_blank" rel="noopener">/rekomendasi</a>. Format: JSON array. Replace <code>url</code> with your <strong>real affiliate links</strong> (Shopee/Amazon/Hostinger/NordVPN etc). Empty = use the default list.</p>
           <div class="form-group">
-            <textarea id="affiliateProducts" rows="8" style="font-family:monospace; font-size:.85rem;" placeholder='[{"name":"Hostinger","blurb":"Hosting murah","price":"RM10/bln","url":"https://affiliate-link-anda","cta":"Lihat Pakej"}]'></textarea>
-            <div class="help-text">Medan tersedia: <code>name</code>, <code>blurb</code>, <code>price</code>, <code>url</code>, <code>cta</code>. Pautan keluar automatik diberi <code>rel="sponsored nofollow"</code> (patuh Google).</div>
+            <textarea id="affiliateProducts" rows="8" style="font-family:monospace; font-size:.85rem;" placeholder='[{"name":"Hostinger","blurb":"Affordable hosting","price":"from RM10/mo","url":"https://your-affiliate-link","cta":"View Plans"}]'></textarea>
+            <div class="help-text">Available fields: <code>name</code>, <code>blurb</code>, <code>price</code>, <code>url</code>, <code>cta</code>. Outbound links automatically get <code>rel="sponsored nofollow"</code> (Google-compliant).</div>
           </div>
 
           <button type="submit" class="btn btn-primary" style="margin-top:16px;">💾 Save Ad Settings</button>
@@ -606,7 +606,7 @@ Type a command below or click a quick action.
           
           <div class="form-group">
             <label for="siteTagline">Header Tagline</label>
-            <input type="text" id="siteTagline" value="Carian, AI, aplikasi &amp; game untuk bahasa kita — tanpa akaun, berfungsi walaupun pada rangkaian lemah">
+            <input type="text" id="siteTagline" value="Search, AI, apps &amp; games — free, no account, works even on 2G">
           </div>
           
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
@@ -846,7 +846,7 @@ Type a command below or click a quick action.
     authRegisterBtn.style.display = '';
     authBootstrapLinkEl.hidden = true;
     authHintEl.hidden = false;
-    authHintEl.textContent = 'Tiada passkey didaftarkan lagi. Daftar passkey pertama menggunakan e-mel + kata laluan bootstrap.';
+    authHintEl.textContent = 'No passkey registered yet. Enroll your first passkey with e-mail + bootstrap password.';
   }
   function enterLoginMode() {
     authPassEl.style.display = 'none';
@@ -918,7 +918,7 @@ Type a command below or click a quick action.
     e.preventDefault();
     showErr('');
     const email = authEmailEl.value.trim();
-    if (!email) return showErr('E-mel diperlukan');
+    if (!email) return showErr('Email required');
     try {
       const startRes = await fetch('/api/admin/auth/login/start', {
         method: 'POST',
@@ -927,7 +927,7 @@ Type a command below or click a quick action.
       });
       const start = await startRes.json();
       if (start.status === 'needs-setup') return enterSetupMode();
-      if (!start.options) return showErr(start.error || 'Gagal memulakan login.');
+      if (!start.options) return showErr(start.error || 'Failed to start login.');
       const credential = await navigator.credentials.get({ publicKey: parseAuthOptions(start.options) });
       const finishRes = await fetch('/api/admin/auth/login/finish', {
         method: 'POST',
@@ -936,9 +936,9 @@ Type a command below or click a quick action.
       });
       const finish = await finishRes.json();
       if (finish.ok && finish.token) setSession(finish.token);
-      else showErr((finish.error || 'Login passkey gagal.') + (finish.details ? ` — ${finish.details}` : ''));
+      else showErr((finish.error || 'Passkey login failed.') + (finish.details ? ` — ${finish.details}` : ''));
     } catch (err) {
-      showErr(err && err.message ? err.message : 'Pengesahan passkey dibatalkan atau gagal.');
+      showErr(err && err.message ? err.message : 'Passkey verification was cancelled or failed.');
     }
   });
 
@@ -951,7 +951,7 @@ Type a command below or click a quick action.
     authPassEl.style.display = '';
     authRegisterBtn.style.display = '';
     authHintEl.hidden = false;
-    authHintEl.textContent = 'Isi kata laluan bootstrap dan tekan Register Passkey. Passkey baharu akan ditambah; passkey lama tidak diperlukan.';
+    authHintEl.textContent = 'Fill in the bootstrap password and press Register Passkey. A new passkey will be added; old passkeys are kept.';
   });
 
   // Daftar passkey pertama (e-mel + kata laluan bootstrap)
@@ -959,8 +959,8 @@ Type a command below or click a quick action.
     showErr('');
     const email = authEmailEl.value.trim();
     const password = authPassEl.value;
-    if (!email) return showErr('E-mel diperlukan');
-    if (!password) return showErr('Kata laluan bootstrap diperlukan');
+    if (!email) return showErr('Email required');
+    if (!password) return showErr('Bootstrap password required');
     try {
       const startRes = await fetch('/api/admin/auth/register/start', {
         method: 'POST',
@@ -977,9 +977,9 @@ Type a command below or click a quick action.
       });
       const finish = await finishRes.json();
       if (finish.ok && finish.token) setSession(finish.token);
-      else showErr((finish.error || 'Pendaftaran passkey gagal.') + (finish.details ? ` — ${finish.details}` : ''));
+      else showErr((finish.error || 'Passkey registration failed.') + (finish.details ? ` — ${finish.details}` : ''));
     } catch (err) {
-      showErr(err && err.message ? err.message : 'Pendaftaran passkey dibatalkan atau gagal.');
+      showErr(err && err.message ? err.message : 'Passkey registration was cancelled or failed.');
     }
   });
 
@@ -1069,7 +1069,7 @@ Type a command below or click a quick action.
       // AI — kunci sebenar tidak dipulangkan; tunjuk status tersimpan sahaja
       document.getElementById('aiProvider').value = s.aiProvider || 'gemini';
       document.getElementById('aiApiKey').value = '';
-      document.getElementById('aiApiKey').placeholder = s.aiApiKeySet ? `✓ tersimpan (${s.aiApiKeyMasked || ''}) — kosongkan untuk kekalkan` : 'Enter API key';
+      document.getElementById('aiApiKey').placeholder = s.aiApiKeySet ? `✓ saved (${s.aiApiKeyMasked || ''}) — leave empty to keep` : 'Enter API key';
       document.getElementById('aiModel').value = s.aiModel || 'gemini-2.5-flash';
       document.getElementById('ollamaUrl').value = s.ollamaUrl || 'http://127.0.0.1:11434';
       document.getElementById('ollamaModel').value = s.ollamaModel || 'llama3.2';

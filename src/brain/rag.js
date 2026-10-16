@@ -129,7 +129,7 @@ function buildContext(hits) {
       const body = hit._formatted?.content || hit.description || '';
       const trimmed = String(body).replace(/<\/?mark>/g, '').slice(0, config.brain.snippetChars);
       const source = hit.source === 'web' ? `[WEB] ${hit.url}` : hit.url;
-      const site = hit.siteName || hit.host || (hit.source === 'web' ? new URL(hit.url).hostname : 'tidak diketahui');
+      const site = hit.siteName || hit.host || (hit.source === 'web' ? new URL(hit.url).hostname : 'unknown');
       return [
         `[${position + 1}] ${hit.title || source}`,
         `URL: ${source}`,
@@ -231,7 +231,7 @@ async function ask(question, { limit } = {}) {
     .filter((w) => w.length > 2 && !WEB_STOPWORDS.has(w));
   if (!meaningful.length && !isSelfQuestion(query)) {
     const msg = detectLocale(query) === 'ms'
-      ? 'Soalan terlalu umum. Sila tanya sesuatu yang lebih spesifik.'
+      ? 'Question too general. Please ask something more specific.'
       : 'Question too vague. Please ask something more specific.';
     return { question: query, answer: msg, method: 'refuse', model: null, tookMs: Date.now() - startedAt, sources: [], mode: 'ungrounded', warning: undefined };
   }
@@ -313,7 +313,7 @@ async function ask(question, { limit } = {}) {
         answer = text;
         model = `${out._provider}:${out._model}`;
       } else if (text) {
-        rejected.push({ model: out._provider, reason: 'output tidak koheren (mengulang arahan)' });
+        rejected.push({ model: out._provider, reason: 'output not coherent (repeating the prompt)' });
       }
       for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
     }
@@ -334,7 +334,7 @@ async function ask(question, { limit } = {}) {
         const text = String(output?.response || '').trim();
         model = candidate;
         if (isEcho(text, prompt)) {
-          rejected.push({ model: candidate, reason: 'output tidak koheren (mengulang arahan)' });
+          rejected.push({ model: candidate, reason: 'output not coherent (repeating the prompt)' });
           continue;
         }
         answer = text;

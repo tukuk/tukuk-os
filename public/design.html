@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tukuk Studio — Reka Bentuk (Design)</title>
-<meta name="description" content="Editor reka bentuk gaya Canva dalam pelayar: templat, teks, bentuk, imej, sticker, latar. Seret-lepas, eksport PNG/JPG. Semua diproses lokal.">
+<title>Tukuk Studio — Design Editor</title>
+<meta name="description" content="Canva-style design editor in the browser: templates, text, shapes, images, stickers, backgrounds. Drag & drop, export PNG/JPG. Everything processed locally.">
 <link rel="canonical" href="https://tukuk.org/design">
 <style>
   :root { --bg:#0f1320; --panel:#161b2c; --panel2:#1e2540; --line:#2a3350; --text:#e7ecff; --muted:#9aa6cc; --accent:#4c8dff; }
@@ -71,73 +71,73 @@
 </head>
 <body>
 <header>
-  <span class="logo">🎨 Tukuk Studio <small>reka bentuk</small></span>
+  <span class="logo">🎨 Tukuk Studio <small>design</small></span>
   <button id="undoBtn" title="Ctrl+Z">⟲ Undo</button>
   <button id="redoBtn" title="Ctrl+Y">⟳ Redo</button>
-  <button id="dupBtn" title="Ctrl+D">⧉ Gandakan</button>
-  <button id="delBtn" title="Delete">🗑 Buang</button>
+  <button id="dupBtn" title="Ctrl+D">⧉ Duplicate</button>
+  <button id="delBtn" title="Delete">🗑 Delete</button>
   <span class="spacer"></span>
   <span class="t" id="sizeLbl" style="font-size:.78rem;color:var(--muted)">—</span>
   <button id="exportPng" class="primary">⬇ PNG</button>
   <button id="exportJpg" class="primary">⬇ JPG</button>
-  <a class="btn" href="/3d" title="Model & render 3D (Blender)">🧊 3D</a>
-  <a class="btn" href="/editor" title="Editor gambar">🖼 Gambar</a>
-  <a class="btn" href="/editor-video" title="Editor video">🎬 Video</a>
-  <a class="btn" href="/studio" title="Suite Studio">◂ Suite</a>
-  <a class="btn" href="/" title="Carian">⌕</a>
+  <a class="btn" href="/3d" title="3D modeling & render (Blender)">🧊 3D</a>
+  <a class="btn" href="/editor" title="Image editor">🖼 Image</a>
+  <a class="btn" href="/editor-video" title="Video editor">🎬 Video</a>
+  <a class="btn" href="/studio" title="Tukuk Studio Suite">◂ Suite</a>
+  <a class="btn" href="/" title="Back to search">⌕</a>
 </header>
 
 <main>
   <div class="rail">
-    <button data-grp="tpl" class="on"><span class="ri">🗂</span>Templat</button>
-    <button data-grp="text"><span class="ri">🔤</span>Teks</button>
-    <button data-grp="shape"><span class="ri">⬛</span>Bentuk</button>
-    <button data-grp="photo"><span class="ri">🖼</span>Imej</button>
-    <button data-grp="stick"><span class="ri">😊</span>Sticker</button>
-    <button data-grp="bg"><span class="ri">🌈</span>Latar</button>
+    <button data-grp="tpl" class="on"><span class="ri">🗂</span>Templates</button>
+    <button data-grp="text"><span class="ri">🔤</span>Text</button>
+    <button data-grp="shape"><span class="ri">⬛</span>Shapes</button>
+    <button data-grp="photo"><span class="ri">🖼</span>Image</button>
+    <button data-grp="stick"><span class="ri">😊</span>Stickers</button>
+    <button data-grp="bg"><span class="ri">🌈</span>Background</button>
   </div>
 
   <div class="panel" id="panel">
     <div class="grp on" data-grp="tpl">
-      <h3>Templat</h3>
+      <h3>Templates</h3>
       <div class="tiles" id="tplList"></div>
-      <h3>Ukuran kanvas</h3>
+      <h3>Canvas sizes</h3>
       <div class="row" id="sizeList"></div>
     </div>
 
     <div class="grp" data-grp="text">
-      <h3>Teks</h3>
-      <div class="row"><button id="addH">＋ Tajuk besar</button></div>
-      <div class="row"><button id="addSub">＋ Subtajuk</button></div>
-      <div class="row"><button id="addBody">＋ Perenggan</button></div>
-      <div class="row"><button id="addLabel">＋ Label kotak</button></div>
-      <div class="foot-status" style="color:var(--muted);font-size:.72rem;">Klik dua kali teks pada kanvas untuk edit.</div>
+      <h3>Text</h3>
+      <div class="row"><button id="addH">＋ Large heading</button></div>
+      <div class="row"><button id="addSub">＋ Subtitle</button></div>
+      <div class="row"><button id="addBody">＋ Paragraph</button></div>
+      <div class="row"><button id="addLabel">＋ Pill label</button></div>
+      <div class="foot-status" style="color:var(--muted);font-size:.72rem;">Double-click text on the canvas to edit it.</div>
     </div>
 
     <div class="grp" data-grp="shape">
-      <h3>Bentuk</h3>
+      <h3>Shapes</h3>
       <div class="shapes" id="shapeList"></div>
     </div>
 
     <div class="grp" data-grp="photo">
-      <h3>Imej anda</h3>
-      <div class="row"><button id="upBtn" style="width:100%">📂 Muat naik imej</button></div>
+      <h3>Your images</h3>
+      <div class="row"><button id="upBtn" style="width:100%">📂 Upload image</button></div>
       <input type="file" id="upInput" accept="image/*" hidden>
-      <h3 style="margin-top:12px;">Nada gradasi</h3>
+      <h3 style="margin-top:12px;">Gradient tints</h3>
       <div class="bgs" id="gradTiles"></div>
-      <div class="foot-status" style="color:var(--muted);font-size:.72rem;">Imej perlu dimuat naik (fail) supaya boleh dieksport tanpa sekatan CORS.</div>
+      <div class="foot-status" style="color:var(--muted);font-size:.72rem;">Images must come from uploaded files so export works without CORS restrictions.</div>
     </div>
 
     <div class="grp" data-grp="stick">
-      <h3>Sticker emoji</h3>
+      <h3>Emoji stickers</h3>
       <div class="stickers" id="stickList"></div>
     </div>
 
     <div class="grp" data-grp="bg">
-      <h3>Latar belakang</h3>
-      <div class="field"><label>Warna</label><input type="color" id="bgSolid" value="#ffffff"></div>
-      <div class="row"><button id="bgWhite" style="width:100%">⬜ Putih bersih</button></div>
-      <h3 style="margin-top:12px;">Pilihan gradasi</h3>
+      <h3>Background</h3>
+      <div class="field"><label>Color</label><input type="color" id="bgSolid" value="#ffffff"></div>
+      <div class="row"><button id="bgWhite" style="width:100%">⬜ Clean white</button></div>
+      <h3 style="margin-top:12px;">Gradient presets</h3>
       <div class="bgs" id="bgGradTiles"></div>
     </div>
   </div>
@@ -145,12 +145,12 @@
   <div class="stage" id="stage">
     <canvas id="cv"></canvas>
     <textarea id="textEdit" spellcheck="false"></textarea>
-    <div class="hint" id="hint">Pilih templat di kiri, atau tambah teks/bentuk. Seret untuk alihkan · sudut untuk saiz · bulat atas untuk putar.</div>
+    <div class="hint" id="hint">Pick a template on the left, or add text/shapes. Drag to move · corners to resize · top dot to rotate.</div>
     <div class="zoombar">
       <button id="zOut">−</button>
       <span class="zlbl" id="zLbl">100%</span>
       <button id="zIn">＋</button>
-      <button id="zFit">Muad</button>
+      <button id="zFit">Fit</button>
     </div>
   </div>
 </main>
@@ -193,10 +193,10 @@ function baseEl(o){ return Object.assign({ id:nid++, x:S.aw/2, y:S.ah/2, w:300, 
 function addEl(e){ S.els.push(e); selId=e.id; pushHistory(); render(); syncPropPanel(); return e; }
 function newElement(kind){
   const cx=S.aw/2, cy=S.ah/2;
-  if(kind==='h') return baseEl({kind:'text', text:'Tajuk Anda', x:cx, y:cy, w:S.aw*0.8, h:1, size:Math.round(S.aw*0.09), weight:800, color:'#111826', align:'center', font:'sans', lh:1.1});
-  if(kind==='sub') return baseEl({kind:'text', text:'Subtajuk pendek di sini', x:cx, y:cy, w:S.aw*0.7, h:1, size:Math.round(S.aw*0.045), weight:600, color:'#334', align:'center', font:'sans', lh:1.2});
-  if(kind==='body') return baseEl({kind:'text', text:'Ruang untuk penerangan atau mesej anda. Klik dua kali untuk menaip teks panjang.', x:cx, y:cy, w:S.aw*0.6, h:1, size:Math.round(S.aw*0.028), weight:400, color:'#333', align:'left', font:'sans', lh:1.35});
-  if(kind==='label') return baseEl({kind:'text', text:'BARU', x:cx, y:cy, w:200, h:1, size:Math.round(S.aw*0.03), weight:800, color:'#fff', align:'center', font:'sans', lh:1.2, pill:'#ff3b30'});
+  if(kind==='h') return baseEl({kind:'text', text:'Your Title', x:cx, y:cy, w:S.aw*0.8, h:1, size:Math.round(S.aw*0.09), weight:800, color:'#111826', align:'center', font:'sans', lh:1.1});
+  if(kind==='sub') return baseEl({kind:'text', text:'Short subtitle here', x:cx, y:cy, w:S.aw*0.7, h:1, size:Math.round(S.aw*0.045), weight:600, color:'#334', align:'center', font:'sans', lh:1.2});
+  if(kind==='body') return baseEl({kind:'text', text:'Space for your description or message. Double-click to type longer text.', x:cx, y:cy, w:S.aw*0.6, h:1, size:Math.round(S.aw*0.028), weight:400, color:'#333', align:'left', font:'sans', lh:1.35});
+  if(kind==='label') return baseEl({kind:'text', text:'NEW', x:cx, y:cy, w:200, h:1, size:Math.round(S.aw*0.03), weight:800, color:'#fff', align:'center', font:'sans', lh:1.2, pill:'#ff3b30'});
   if(kind==='rect') return baseEl({kind:'rect', w:360, h:220, fill:'#4c8dff', stroke:'#00000000', sw:0, radius:18});
   if(kind==='circle') return baseEl({kind:'circle', w:260, h:260, fill:'#ff5d5d', stroke:'#00000000', sw:0});
   if(kind==='triangle') return baseEl({kind:'triangle', w:260, h:230, fill:'#ffb020', stroke:'#00000000', sw:0});
@@ -466,7 +466,7 @@ $('addBody').onclick=()=>addEl(newElement('body'));
 $('addLabel').onclick=()=>addEl(newElement('label'));
 
 const SHAPES=[['rect','▭'],['circle','◯'],['triangle','△'],['ring','◎'],['line','─'],['arrow','➤']];
-SHAPES.forEach(([k,ic])=>{ const b=document.createElement('button'); b.innerHTML=ic+' '+({rect:'Segi',circle:'Bulatan',triangle:'Segi Tiga',ring:'Cincin',line:'Garis',arrow:'Anak Panah'})[k]; b.style.fontSize='.72rem'; b.onclick=()=>addEl(newElement(k)); $('shapeList').appendChild(b); });
+SHAPES.forEach(([k,ic])=>{ const b=document.createElement('button'); b.innerHTML=ic+' '+({rect:'Rectangle',circle:'Circle',triangle:'Triangle',ring:'Ring',line:'Line',arrow:'Arrow'})[k]; b.style.fontSize='.72rem'; b.onclick=()=>addEl(newElement(k)); $('shapeList').appendChild(b); });
 
 const STICKS=['⭐','❤️','🔥','✅','🎉','✨','👍','🙌','💡','🚀','🏆','🎯','😀','😎','🥳','🤩','🌈','☀️','🌙','🍕','🎂','⚽','🎵','💬'];
 STICKS.forEach(c=>{ const b=document.createElement('button'); b.textContent=c; b.onclick=()=>{ const e=newElement('stick'); e.char=c; addEl(e); }; $('stickList').appendChild(b); });
@@ -488,58 +488,59 @@ $('upInput').onchange=ev=>{
   img.onload=()=>{ imageCache[url]=img;
     const s=Math.min(1, (Math.min(S.aw,S.ah)*0.7)/Math.max(img.naturalWidth,img.naturalHeight));
     addEl(baseEl({kind:'image', src:url, w:Math.round(img.naturalWidth*s), h:Math.round(img.naturalHeight*s), radius:0}));
-    toast('Imej ditambah.');
+    toast('Image added.');
   };
-  img.onerror=()=>toast('Gagal membaca imej.'); img.src=url;
+  img.onerror=()=>toast('Failed to read the image.'); img.src=url;
   ev.target.value='';
 };
 
 // ── sizes ──
-const SIZES=[['1:1 Post',1080,1080],['Story 9:16',1080,1920],['Portrait',1080,1350],['Landskap 16:9',1920,1080],['A4',794,1123],['Thumbnail YT',1280,720],['FB Cover',1640,856],['Kad Bisnes',1050,600]];
+const SIZES=[['1:1 Post',1080,1080],['Story 9:16',1080,1920],['Portrait',1080,1350],['Landscape 16:9',1920,1080],['A4',794,1123],['YT Thumbnail',1280,720],['FB Cover',1640,856],['Business Card',1050,600]];
 SIZES.forEach(([name,w,h])=>{ const b=document.createElement('button'); b.textContent=name; b.title=`${w}×${h}`; b.onclick=()=>{ S.aw=w; S.ah=h; fitView(); pushHistory(); }; $('sizeList').appendChild(b); });
 
 // ── templates ──
 const T={};
 T['Kosong']={aw:1080,ah:1080,bg:{kind:'solid',color:'#ffffff'},els:[]};
 T['Petikan']={aw:1080,ah:1080,bg:{kind:'grad',c1:'#667eea',c2:'#764ba2',angle:135},els:[
-  {kind:'text',text:'“Reka bentuk bukan sekadar apa yang dilihat, tetapi cara ia berfungsi.”',x:540,y:480,w:820,h:1,size:52,weight:700,color:'#fff',align:'center',font:'serif',lh:1.35,rot:0,op:1},
+  {kind:'text',text:'“Design isn’t just what it looks like, it’s how it works.”',x:540,y:480,w:820,h:1,size:52,weight:700,color:'#fff',align:'center',font:'serif',lh:1.35,rot:0,op:1},
   {kind:'text',text:'— STEVE JOBS',x:540,y:720,w:600,h:1,size:30,weight:800,color:'#e9d5ff',align:'center',font:'sans',lh:1.2,rot:0,op:1},
   {kind:'line',x:540,y:650,w:220,h:8,color:'#ffffff',sw:5,rot:0,op:.9}
 ]};
 T['Jualan']={aw:1080,ah:1350,bg:{kind:'grad',c1:'#fa709a',c2:'#fee140',angle:120},els:[
   {kind:'rect',x:540,y:250,w:900,h:180,fill:'#111827',radius:22,rot:0,op:1},
-  {kind:'text',text:'JUALAN HEBOH',x:540,y:250,w:860,h:1,size:64,weight:800,color:'#fff',align:'center',font:'impact',lh:1,rot:0,op:1},
-  {kind:'text',text:'Diskaun sehingga',x:540,y:620,w:800,h:1,size:44,weight:600,color:'#111',align:'center',font:'sans',lh:1.2,rot:0,op:1},
+  {kind:'text',text:'MEGA SALE',x:540,y:250,w:860,h:1,size:64,weight:800,color:'#fff',align:'center',font:'impact',lh:1,rot:0,op:1},
+  {kind:'text',text:'Up to',x:540,y:620,w:800,h:1,size:44,weight:600,color:'#111',align:'center',font:'sans',lh:1.2,rot:0,op:1},
   {kind:'text',text:'70%',x:540,y:860,w:800,h:1,size:230,weight:900,color:'#c0182f',align:'center',font:'impact',lh:1,rot:0,op:1},
-  {kind:'text',text:'Terhad · Hanya minggu ini',x:540,y:1140,w:800,h:1,size:36,weight:700,color:'#111',align:'center',font:'sans',lh:1.2,rot:0,op:1}
+  {kind:'text',text:'Limited · This week only',x:540,y:1140,w:800,h:1,size:36,weight:700,color:'#111',align:'center',font:'sans',lh:1.2,rot:0,op:1}
 ]};
 T['Kad Bisnes']={aw:1050,ah:600,bg:{kind:'solid',color:'#0f172a'},els:[
   {kind:'rect',x:525,y:300,w:980,h:530,fill:'#ffffff',radius:18,rot:0,op:1},
   {kind:'circle',x:160,y:170,w:130,h:130,fill:'#4c8dff',rot:0,op:1},
-  {kind:'text',text:'NAMA ANDA',x:600,y:230,w:700,h:1,size:48,weight:800,color:'#0f172a',align:'left',font:'sans',lh:1.1,rot:0,op:1},
-  {kind:'text',text:'Pengasas & Ketua Reka Bentuk',x:600,y:300,w:700,h:1,size:26,weight:500,color:'#4c8dff',align:'left',font:'sans',lh:1.2,rot:0,op:1},
+  {kind:'text',text:'YOUR NAME',x:600,y:230,w:700,h:1,size:48,weight:800,color:'#0f172a',align:'left',font:'sans',lh:1.1,rot:0,op:1},
+  {kind:'text',text:'Founder & Head of Design',x:600,y:300,w:700,h:1,size:26,weight:500,color:'#4c8dff',align:'left',font:'sans',lh:1.2,rot:0,op:1},
   {kind:'text',text:'✉ nama@tukuk.org   ☎ +60 12-345 6789',x:600,y:400,w:800,h:1,size:24,weight:400,color:'#333',align:'left',font:'sans',lh:1.3,rot:0,op:1}
 ]};
 T['Acara']={aw:1080,ah:1920,bg:{kind:'grad',c1:'#30cfd0',c2:'#330867',angle:160},els:[
-  {kind:'text',text:'MALAM',x:540,y:400,w:900,h:1,size:120,weight:900,color:'#fff',align:'center',font:'impact',lh:1,rot:0,op:1},
-  {kind:'text',text:'GALA',x:540,y:540,w:900,h:1,size:120,weight:900,color:'#ffd166',align:'center',font:'impact',lh:1,rot:0,op:1},
+  {kind:'text',text:'GALA',x:540,y:400,w:900,h:1,size:120,weight:900,color:'#fff',align:'center',font:'impact',lh:1,rot:0,op:1},
+  {kind:'text',text:'NIGHT',x:540,y:540,w:900,h:1,size:120,weight:900,color:'#ffd166',align:'center',font:'impact',lh:1,rot:0,op:1},
   {kind:'ring',x:540,y:900,w:520,h:520,color:'#fff',sw:4,rot:0,op:.85},
-  {kind:'text',text:'Sabtu · 20 Dis',x:540,y:900,w:480,h:1,size:46,weight:700,color:'#fff',align:'center',font:'serif',lh:1.3,rot:0,op:1},
-  {kind:'text',text:'Dewan Bandar · 8 Malam',x:540,y:1500,w:900,h:1,size:40,weight:500,color:'#e0e7ff',align:'center',font:'sans',lh:1.3,rot:0,op:1}
+  {kind:'text',text:'Saturday · Dec 20',x:540,y:900,w:480,h:1,size:46,weight:700,color:'#fff',align:'center',font:'serif',lh:1.3,rot:0,op:1},
+  {kind:'text',text:'City Hall · 8 PM',x:540,y:1500,w:900,h:1,size:40,weight:500,color:'#e0e7ff',align:'center',font:'sans',lh:1.3,rot:0,op:1}
 ]};
 T['Thumbnail']={aw:1280,ah:720,bg:{kind:'grad',c1:'#ff9a9e',c2:'#fad0c4',angle:90},els:[
   {kind:'rect',x:640,y:360,w:1280,h:720,fill:'#00000000',stroke:'#111',sw:16,radius:0,rot:0,op:1},
-  {kind:'text',text:'RAHSIA',x:400,y:300,w:720,h:1,size:110,weight:900,color:'#111',align:'center',font:'impact',lh:1,rot:-6,op:1},
+  {kind:'text',text:'SECRET',x:400,y:300,w:720,h:1,size:110,weight:900,color:'#111',align:'center',font:'impact',lh:1,rot:-6,op:1},
   {kind:'text',text:'DESIGN',x:400,y:430,w:720,h:1,size:110,weight:900,color:'#c0182f',align:'center',font:'impact',lh:1,rot:-6,op:1},
   {kind:'emoji',char:'🤯',x:1030,y:400,w:300,h:300,size:280,rot:12,op:1}
 ]};
+const TLBL = { 'Kosong': 'Blank', 'Petikan': 'Quote', 'Jualan': 'Sale', 'Kad Bisnes': 'Business Card', 'Acara': 'Event', 'Thumbnail': 'Thumbnail' };
 function loadTemplate(name){
   const t=T[name]; if(!t) return;
   const c=JSON.parse(JSON.stringify(t));
   const els=c.els.map(x=>baseEl(x));
   S={aw:c.aw,ah:c.ah,bg:Object.assign({kind:'solid',color:'#ffffff',c1:'#667eea',c2:'#764ba2',angle:135},c.bg),els};
   selId=null; closeTextEdit(); pushHistory(); fitView(); syncPropPanel();
-  toast('Templat '+name+' dimuat.');
+  toast('Template loaded: ' + (TLBL[name] || name));
 }
 Object.keys(T).forEach(name=>{
   const card=document.createElement('button'); card.className='tile'; card.dataset.name=name;
@@ -547,8 +548,8 @@ Object.keys(T).forEach(name=>{
   const pv=document.createElement('div'); pv.className='prev';
   pv.style.background = t.bg.kind==='grad'? `linear-gradient(135deg,${t.bg.c1},${t.bg.c2})` : t.bg.color;
   pv.style.color = (name==='Kosong'||t.bg.kind==='solid')? '#99a':'#fff';
-  pv.textContent = name==='Kosong'? 'Kosong' : t.els.filter(e=>e.kind==='text')[0]?t.els.filter(e=>e.kind==='text')[0].text.slice(0,12):'★';
-  const cap=document.createElement('div'); cap.className='cap'; cap.textContent=name;
+  pv.textContent = name==='Kosong'? 'Blank' : t.els.filter(e=>e.kind==='text')[0]?t.els.filter(e=>e.kind==='text')[0].text.slice(0,12):'★';
+  const cap=document.createElement('div'); cap.className='cap'; cap.textContent=TLBL[name]||name;
   card.append(pv,cap);
   card.onclick=()=>loadTemplate(name);
   $('tplList').appendChild(card);
@@ -579,29 +580,29 @@ function syncPropPanel(){
   let box=$('propBox'); if(!box){ box=document.createElement('div'); box.id='propBox'; box.style.cssText='border-top:1px solid var(--line);margin-top:10px;padding-top:10px;'; $('panel').appendChild(box); }
   if(!e){ box.innerHTML=''; return; }
   if(propEl && box.contains(propEl)) {} // rebuild fresh
-  box.innerHTML='<h3>Sifat elemen</h3>';
+  box.innerHTML='<h3>Element properties</h3>';
   const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column;gap:6px;';
   const mk=(html)=>{ const d=document.createElement('div'); d.innerHTML=html; box.appendChild(d); return d; };
   // position (center in artboard coords)
-  mk(`<div class="field"><label>Posisi</label><input type="number" id="p_x" value="${Math.round(e.x)}" title="X" style="width:70px"><input type="number" id="p_y" value="${Math.round(e.y)}" title="Y" style="width:70px"></div>`);
+  mk(`<div class="field"><label>Position</label><input type="number" id="p_x" value="${Math.round(e.x)}" title="X" style="width:70px"><input type="number" id="p_y" value="${Math.round(e.y)}" title="Y" style="width:70px"></div>`);
   // opacity
-  mk(`<div class="field"><label>Ketaksaan</label><input type="range" id="p_op" min="0" max="100" value="${Math.round((e.op==null?1:e.op)*100)}"><span style="font-size:.72rem;width:34px">${Math.round((e.op==null?1:e.op)*100)}</span></div>`);
+  mk(`<div class="field"><label>Opacity</label><input type="range" id="p_op" min="0" max="100" value="${Math.round((e.op==null?1:e.op)*100)}"><span style="font-size:.72rem;width:34px">${Math.round((e.op==null?1:e.op)*100)}</span></div>`);
   // rotation
-  mk(`<div class="field"><label>Putar°</label><input type="range" id="p_rot" min="-180" max="180" value="${e.rot||0}"><span style="font-size:.72rem;width:34px">${e.rot||0}</span></div>`);
+  mk(`<div class="field"><label>Rotate°</label><input type="range" id="p_rot" min="-180" max="180" value="${e.rot||0}"><span style="font-size:.72rem;width:34px">${e.rot||0}</span></div>`);
   // width
-  mk(`<div class="field"><label>Lebar</label><input type="number" id="p_w" value="${Math.round(e.w)}"></div>`);
-  if(e.kind!=='text' && e.kind!=='emoji') mk(`<div class="field"><label>Tinggi</label><input type="number" id="p_h" value="${Math.round(e.h)}"></div>`);
-  if(e.kind==='rect') mk(`<div class="field"><label>Bucu</label><input type="range" id="p_rad" min="0" max="200" value="${e.radius||0}"></div>`);
+  mk(`<div class="field"><label>Width</label><input type="number" id="p_w" value="${Math.round(e.w)}"></div>`);
+  if(e.kind!=='text' && e.kind!=='emoji') mk(`<div class="field"><label>Height</label><input type="number" id="p_h" value="${Math.round(e.h)}"></div>`);
+  if(e.kind==='rect') mk(`<div class="field"><label>Corner</label><input type="range" id="p_rad" min="0" max="200" value="${e.radius||0}"></div>`);
   if(e.kind==='text'){
-    mk(`<div class="field"><label>Saiz</label><input type="range" id="p_size" min="8" max="400" value="${e.size}"></div>`);
+    mk(`<div class="field"><label>Size</label><input type="range" id="p_size" min="8" max="400" value="${e.size}"></div>`);
     mk(`<div class="field"><label>Font</label><select id="p_font">${Object.keys(FONT).map(k=>`<option value="${k}" ${e.font===k?'selected':''}>${k}</option>`).join('')}</select></div>`);
-    mk(`<div class="field"><label>Warna</label><input type="color" id="p_color" value="${(/^#[0-9a-f]{6}$/i.test(e.color||'')?e.color:'#111111')}"><button id="p_bold" class="${(e.weight||400)>=700?'on':''}" style="flex:1">B</button><button id="p_center" class="${e.align==='center'?'on':''}" style="flex:1">≡↔</button></div>`);
+    mk(`<div class="field"><label>Color</label><input type="color" id="p_color" value="${(/^#[0-9a-f]{6}$/i.test(e.color||'')?e.color:'#111111')}"><button id="p_bold" class="${(e.weight||400)>=700?'on':''}" style="flex:1">B</button><button id="p_center" class="${e.align==='center'?'on':''}" style="flex:1">≡↔</button></div>`);
   }
-  if(['rect','circle','triangle'].includes(e.kind)) mk(`<div class="field"><label>Isi</label><input type="color" id="p_fill" value="${(/^#[0-9a-f]{6}$/i.test(e.fill||'')?e.fill:'#4c8dff')}"></div>`);
-  if(['ring','line','arrow'].includes(e.kind)) mk(`<div class="field"><label>Warna</label><input type="color" id="p_fill" value="${(/^#[0-9a-f]{6}$/i.test(e.color||'')?e.color:'#111111')}"><input type="number" id="p_sw" min="1" max="80" value="${e.sw||4}" style="width:56px" title="Ketebalan"></div>`);
+  if(['rect','circle','triangle'].includes(e.kind)) mk(`<div class="field"><label>Fill</label><input type="color" id="p_fill" value="${(/^#[0-9a-f]{6}$/i.test(e.fill||'')?e.fill:'#4c8dff')}"></div>`);
+  if(['ring','line','arrow'].includes(e.kind)) mk(`<div class="field"><label>Color</label><input type="color" id="p_fill" value="${(/^#[0-9a-f]{6}$/i.test(e.color||'')?e.color:'#111111')}"><input type="number" id="p_sw" min="1" max="80" value="${e.sw||4}" style="width:56px" title="Stroke width"></div>`);
   if(e.kind==='emoji') mk(`<div class="field"><label>Emoji</label><input type="text" id="p_char" value="${e.char}" style="flex:1;font-size:1.2rem"></div>`);
   // layer + actions
-  mk(`<div class="row"><button id="p_front">⬆ Depan</button><button id="p_back">⬇ Belakang</button></div>`);
+  mk(`<div class="row"><button id="p_front">⬆ Front</button><button id="p_back">⬇ Back</button></div>`);
   box.appendChild(wrap);
 
   const q=id=>box.querySelector('#'+id);
@@ -640,7 +641,7 @@ function exportImage(type){
   const out=renderToFile(type);
   const q=type==='image/jpeg'?0.95:undefined;
   const ext=type==='image/jpeg'?'jpg':'png';
-  const finish=blob=>{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`tukuk-design-${Date.now()}.${ext}`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),8000); toast('Dieksport sebagai '+ext.toUpperCase()+` (${out.width}×${out.height}).`); };
+  const finish=blob=>{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`tukuk-design-${Date.now()}.${ext}`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),8000); toast('Exported as '+ext.toUpperCase()+` (${out.width}×${out.height}).`); };
   if(out.toBlob) out.toBlob(b=>b&&finish(b), type, q); else finish(null);
 }
 $('exportPng').onclick=()=>exportImage('image/png');

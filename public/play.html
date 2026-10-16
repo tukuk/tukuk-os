@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Main — Tukuk Store</title>
-<meta name="description" content="Main game terus dalam pelayar — tanpa muat turun, tanpa daftar. Pemain penuh skrin Tukuk Store.">
+<title>Play — Tukuk Store</title>
+<meta name="description" content="Play games right in your browser — no download, no sign-up. Tukuk Store full-screen player.">
 <meta property="og:type" content="game">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -125,32 +125,32 @@
   </div>
   <span class="plays" id="gPlays"></span>
   <span class="sp"></span>
-  <a class="tbtn hide-sm" id="rawLink" href="#" target="_blank" rel="noopener" title="Buka game asli dalam tab baharu">↗</a>
-  <button class="tbtn" id="copyBtn" title="Salin pautan main">📋</button>
-  <button class="tbtn prim" id="fsBtn" title="Skrin penuh">⛶ Skrin Penuh</button>
+  <a class="tbtn hide-sm" id="rawLink" href="#" target="_blank" rel="noopener" title="Open the original game in a new tab">↗</a>
+  <button class="tbtn" id="copyBtn" title="Copy play link">📋</button>
+  <button class="tbtn prim" id="fsBtn" title="Fullscreen">⛶ Fullscreen</button>
 </div>
 
 <div class="stage" id="stage" hidden>
-  <div class="loadmsg" id="loadMsg">⏳ Memuatkan game…</div>
+  <div class="loadmsg" id="loadMsg">⏳ Loading game…</div>
   <iframe id="frame" title="Game" allow="fullscreen; autoplay; gamepad; accelerometer; gyroscope; clipboard-write"></iframe>
-  <div class="rotate" id="rotateHint">🔄 Pusing peranti ke landskap untuk mainan terbaik <button id="rotClose" aria-label="Tutup">✕</button></div>
+  <div class="rotate" id="rotateHint">🔄 Rotate your device to landscape for the best experience <button id="rotClose" aria-label="Close">✕</button></div>
 </div>
 
-<div class="relbar" id="relbar" hidden><span class="rl">Seterusnya ▸</span><div id="relCards" style="display:contents"></div></div>
+<div class="relbar" id="relbar" hidden><span class="rl">Up next ▸</span><div id="relCards" style="display:contents"></div></div>
 
 <div class="oops" id="oops" hidden>
   <div>
     <div class="big">🕳️</div>
-    <p id="oopsMsg">Game itu tidak ditemui dalam katalog.</p>
-    <p><a href="/store">← Kembali ke Store</a></p>
+    <p id="oopsMsg">That game was not found in the catalog.</p>
+    <p><a href="/store">← Back to Store</a></p>
   </div>
 </div>
 
 <script>
 (() => {
   const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  const GENRE_LABEL = { 'arkad': 'Arkad', 'teki-teki': 'Teka-Teki', 'refleks': 'Refleks', 'kuiz': 'Kuiz', 'tindakan': 'Tindakan', 'penembakan': 'Penembakan', 'santai': 'Santai', 'kereta': 'Kereta', 'sukan': 'Sukan', 'klik': 'Klik', 'io': '.io' };
-  const SRC_LABEL = { bawaan: 'Bawaan', satukata: 'Satu Kata', arked: 'Arked', komuniti: 'Komuniti' };
+  const GENRE_LABEL = { 'arkad': 'Arcade', 'teki-teki': 'Puzzle', 'refleks': 'Reflex', 'kuiz': 'Quiz', 'tindakan': 'Action', 'penembakan': 'Shooter', 'santai': 'Casual', 'kereta': 'Racing', 'sukan': 'Sports', 'klik': 'Clicker', 'io': '.io' };
+  const SRC_LABEL = { bawaan: 'Built-in', satukata: 'One-Word', arked: 'Arcade', komuniti: 'Community' };
   const fmtPlays = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n || 0);
   const RECENT_KEY = 'tukuk-recent';
 
@@ -168,7 +168,7 @@
 
   function fail(msg) {
     oops.hidden = false;
-    document.getElementById('oopsMsg').textContent = msg || 'Game itu tidak ditemui dalam katalog.';
+    document.getElementById('oopsMsg').textContent = msg || 'That game was not found in the catalog.';
     topbar.hidden = true; stage.hidden = true; relbar.hidden = true;
   }
 
@@ -189,7 +189,7 @@
     pushRecent(item.id);
     fetch('/api/play/' + encodeURIComponent(item.id), { method: 'POST' })
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d && Number.isFinite(d.plays)) document.getElementById('gPlays').textContent = '▶ ' + fmtPlays(d.plays) + ' main'; })
+      .then((d) => { if (d && Number.isFinite(d.plays)) document.getElementById('gPlays').textContent = '▶ ' + fmtPlays(d.plays) + ' plays'; })
       .catch(() => { /* kiraan bukan kritikal */ });
   }
 
@@ -198,16 +198,16 @@
     .then((d) => {
       const items = (d && d.items) || [];
       const item = items.find((x) => String(x.id) === id);
-      if (!item) return fail('Game itu tiada dalam katalog — mungkin telah dibuang.');
+      if (!item) return fail('That game is not in the catalog — it may have been removed.');
 
       // Kepala bar + SEO dinamik.
-      document.title = 'Main ' + item.title + ' — Tukuk Store';
+      document.title = 'Play ' + item.title + ' — Tukuk Store';
       let og = document.querySelector('meta[property="og:title"]');
       if (!og) { og = document.createElement('meta'); og.setAttribute('property', 'og:title'); document.head.appendChild(og); }
-      og.setAttribute('content', 'Main ' + item.title + ' — percuma, terus dalam pelayar');
+      og.setAttribute('content', 'Play ' + item.title + ' — free, right in your browser');
       document.getElementById('gTitle').textContent = item.title;
       document.getElementById('gSub').textContent = (GENRE_LABEL[item.genre] || '') + (item.src ? (item.genre ? ' · ' : '') + (SRC_LABEL[item.src] || item.src) : '');
-      document.getElementById('gPlays').textContent = '▶ ' + fmtPlays(item.plays) + ' main';
+      document.getElementById('gPlays').textContent = '▶ ' + fmtPlays(item.plays) + ' plays';
       const raw = document.getElementById('rawLink');
       raw.href = item.url;
 
@@ -244,7 +244,7 @@
       if (matchMedia('(pointer: coarse)').matches && matchMedia('(orientation: portrait)').matches) rot.classList.add('show');
       document.getElementById('rotClose').addEventListener('click', () => rot.classList.remove('show'));
     })
-    .catch(() => fail('Katalog gagal dimuat. Cuba muat semula.'));
+    .catch(() => fail('Failed to load the catalog. Please reload.'));
 
   // Skrin penuh pada pentas (iframe ikut serta) — butang ⛶ atau klik-dua pentas.
   function toggleFs() {

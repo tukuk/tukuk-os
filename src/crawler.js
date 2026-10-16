@@ -153,7 +153,7 @@ async function crawlOne(targetUrl) {
         const task = await index.addDocuments([result.document], { primaryKey: 'id' });
         taskUid = task.taskUid;
       } catch (indexError) {
-        stats.lastError = { url: result.url, message: `indeks gagal: ${indexError.message}` };
+        stats.lastError = { url: result.url, message: `index failed: ${indexError.message}` };
       }
       stats.indexed += 1;
       stats.crawled += 1;
@@ -170,7 +170,7 @@ async function crawlOne(targetUrl) {
 async function crawlBatch(urls, { concurrency = config.crawl.concurrency } = {}) {
   const queue = [...new Set(urls)].filter(Boolean);
   if (stats.queued + queue.length > config.crawl.queueLimit) {
-    throw Object.assign(new Error('Giliran rayuan penuh'), { statusCode: 429 });
+    throw Object.assign(new Error('Crawl request queue is full'), { statusCode: 429 });
   }
   stats.queued += queue.length;
 

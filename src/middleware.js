@@ -40,7 +40,7 @@ function rateLimit({ windowMs, max, keyPrefix = '' }) {
       const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
       res.set('Retry-After', String(retryAfter));
       return res.status(429).json({
-        error: 'Terlalu banyak permintaan',
+        error: 'Too many requests',
         retryAfterSeconds: retryAfter
       });
     }
@@ -58,7 +58,7 @@ function requireApiKey(req, res, next) {
 
   if (provided && provided === config.security.apiKey) return next();
 
-  return res.status(401).json({ error: 'API key tidak sah atau tiada' });
+  return res.status(401).json({ error: 'API key invalid or missing' });
 }
 
 module.exports = { rateLimit, requireApiKey, clientKey, buckets };

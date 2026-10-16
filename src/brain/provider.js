@@ -251,7 +251,7 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { const e = new Error(`gemini ${res.status}: ${String(data?.error?.message || '').slice(0, 160)}`); e.status = res.status; throw e; }
     const text = (data?.candidates?.[0]?.content?.parts || []).map((x) => x.text).join('') || '';
-    if (!text) { const e = new Error('gemini: respons kosong'); e.status = res.status; throw e; }
+    if (!text) { const e = new Error('gemini: empty response'); e.status = res.status; throw e; }
     return { response: text, _model: p.model };
   }
 
@@ -262,7 +262,7 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { const e = new Error(`${p.name} ${res.status}: ${String(data?.error || JSON.stringify(data)).slice(0,160)}`); e.status = res.status; throw e; }
     const text = data?.message?.content || '';
-    if (!text) { const e = new Error(`${p.name}: respons kosong`); e.status = res.status; throw e; }
+    if (!text) { const e = new Error(`${p.name}: empty response`); e.status = res.status; throw e; }
     return { response: text, _model: p.model };
   }
 
@@ -280,7 +280,7 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP } = {
     const e = new Error(`${p.name} ${res.status}: ${String(detail).slice(0, 160)}`); e.status = res.status; throw e;
   }
   const text = data?.choices?.[0]?.message?.content || '';
-  if (!text) { const e = new Error(`${p.name}: respons kosong`); e.status = res.status; throw e; }
+  if (!text) { const e = new Error(`${p.name}: empty response`); e.status = res.status; throw e; }
   return { response: text, _model: p.model };
 }
 
@@ -290,7 +290,7 @@ async function generateCloudRotation(prompt, opts = {}) {
   const rejected = [];
   for (const p of listCloudProviders()) {
     const rem = coolingRemaining(p.name);
-    if (rem) { rejected.push({ provider: p.name, reason: `cooling (habis kuota; cuba semula dlm ${Math.ceil(rem / 1000)}s)` }); continue; }
+    if (rem) { rejected.push({ provider: p.name, reason: `cooling (quota exhausted; retry in ${Math.ceil(rem / 1000)}s)` }); continue; }
     try {
       const out = await callCloud(p, prompt, opts);
       return { ...out, _provider: p.name };
@@ -343,7 +343,7 @@ async function health() {
       return { online: false, provider: 'ollama', model: null, error: error.message };
     }
   }
-  return { online: false, provider: 'none', extractiveOnly: true, model: null, note: 'Tiada LLM dikonfigurasi — /ask akan guna jawapan ekstraktif.' };
+  return { online: false, provider: 'none', extractiveOnly: true, model: null, note: 'No LLM configured — /ask will use extractive answers.' };
 }
 
 function currentModel() {

@@ -79,7 +79,7 @@ function isEditKey(k) {
 }
 
 // `extractTitle` — baca <title> dokumen HTML untuk senarai awam (sanitasi ringan).
-function extractTitle(html, fallback = 'Aplikasi') {
+function extractTitle(html, fallback = 'App') {
   const m = String(html || '').match(/<title[^>]*>([^<]*)<\/title>/i);
   const t = m ? m[1].replace(/\s+/g, ' ').trim() : '';
   return (t || fallback).slice(0, 80);
@@ -98,18 +98,18 @@ function cmtText(t) { return String(t || '').replace(/<[^>]*>/g, ' ').replace(/\
 function commentsWidget(slug) {
   const s = String(slug).replace(/[^a-z0-9-]/g, '');
   return '<section id="tukuk-comments" style="max-width:640px;margin:28px auto 8px;padding:16px 18px;font-family:system-ui,sans-serif;border-top:1px solid rgba(128,128,128,.28)">'
-    + '<h3 style="margin:0 0 10px;font-size:15px">\ud83d\udcac Komen</h3>'
+    + '<h3 style="margin:0 0 10px;font-size:15px">\ud83d\udcac Comments</h3>'
     + '<div id="tc-list" style="font-size:14px;line-height:1.5"></div>'
     + '<form id="tc-form" style="margin-top:12px;display:flex;flex-direction:column;gap:6px">'
-    + '<input id="tc-n" maxlength="20" placeholder="Nama (pilihan)" style="padding:7px 9px;border:1px solid rgba(128,128,128,.4);border-radius:8px;background:transparent;color:inherit;font:inherit">'
-    + '<textarea id="tc-c" maxlength="300" rows="2" required placeholder="Tulis komen\u2026" style="padding:7px 9px;border:1px solid rgba(128,128,128,.4);border-radius:8px;background:transparent;color:inherit;font:inherit;resize:vertical"></textarea>'
-    + '<button type="submit" style="align-self:flex-start;padding:7px 14px;border:0;border-radius:8px;background:#4c8dff;color:#fff;font:inherit;cursor:pointer">Hantar</button>'
+    + '<input id="tc-n" maxlength="20" placeholder="Name (optional)" style="padding:7px 9px;border:1px solid rgba(128,128,128,.4);border-radius:8px;background:transparent;color:inherit;font:inherit">'
+    + '<textarea id="tc-c" maxlength="300" rows="2" required placeholder="Write a comment\u2026" style="padding:7px 9px;border:1px solid rgba(128,128,128,.4);border-radius:8px;background:transparent;color:inherit;font:inherit;resize:vertical"></textarea>'
+    + '<button type="submit" style="align-self:flex-start;padding:7px 14px;border:0;border-radius:8px;background:#4c8dff;color:#fff;font:inherit;cursor:pointer">Send</button>'
     + '</form></section>'
     + '<script>(function(){var SLUG="' + s + '";var box=document.getElementById("tc-list");'
     + 'function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
-    + 'function ago(t){var d=(Date.now()-t)/1000;if(d<60)return"baru sahaja";if(d<3600)return Math.floor(d/60)+"m lalu";if(d<86400)return Math.floor(d/3600)+"j lalu";return Math.floor(d/86400)+"h lalu";}'
-    + 'function load(){fetch("/api/comments?slug="+encodeURIComponent(SLUG)+"&limit=30",{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){var it=(d&&d.items)||[];if(!it.length){box.innerHTML="<div style=\'opacity:.6\'>Belum ada komen. Jadilah yang pertama \u270d\ufe0f</div>";return;}box.innerHTML=it.map(function(x){return "<div style=\'padding:7px 0;border-bottom:1px solid rgba(128,128,128,.15)\'><b>"+esc(x.n)+"</b> <span style=\'opacity:.55;font-size:12px\'>"+ago(x.t||0)+"</span><div>"+esc(x.c)+"</div></div>";}).join("");}).catch(function(){box.innerHTML="<div style=\'opacity:.6\'>Gagal memuat komen.</div>";});}'
-    + 'document.getElementById("tc-form").addEventListener("submit",function(e){e.preventDefault();var c=document.getElementById("tc-c");var tx=(c.value||"").trim();if(tx.length<2)return;var btn=this.querySelector("button");btn.disabled=true;btn.textContent="\u23f3";fetch("/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:SLUG,name:document.getElementById("tc-n").value,text:tx})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){c.value="";load();}else{alert((d&&d.error)||"Gagal");}}).catch(function(){alert("Gagal hantar \u2014 cuba lagi.");}).then(function(){btn.disabled=false;btn.textContent="Hantar";});});'
+    + 'function ago(t){var d=(Date.now()-t)/1000;if(d<60)return"just now";if(d<3600)return Math.floor(d/60)+"m ago";if(d<86400)return Math.floor(d/3600)+"h ago";return Math.floor(d/86400)+"d ago";}'
+    + 'function load(){fetch("/api/comments?slug="+encodeURIComponent(SLUG)+"&limit=30",{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){var it=(d&&d.items)||[];if(!it.length){box.innerHTML="<div style=\'opacity:.6\'>No comments yet. Be the first \u270d\ufe0f</div>";return;}box.innerHTML=it.map(function(x){return "<div style=\'padding:7px 0;border-bottom:1px solid rgba(128,128,128,.15)\'><b>"+esc(x.n)+"</b> <span style=\'opacity:.55;font-size:12px\'>"+ago(x.t||0)+"</span><div>"+esc(x.c)+"</div></div>";}).join("");}).catch(function(){box.innerHTML="<div style=\'opacity:.6\'>Failed to load comments.</div>";});}'
+    + 'document.getElementById("tc-form").addEventListener("submit",function(e){e.preventDefault();var c=document.getElementById("tc-c");var tx=(c.value||"").trim();if(tx.length<2)return;var btn=this.querySelector("button");btn.disabled=true;btn.textContent="\u23f3";fetch("/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:SLUG,name:document.getElementById("tc-n").value,text:tx})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){c.value="";load();}else{alert((d&&d.error)||"Failed");}}).catch(function(){alert("Send failed \u2014 try again.");}).then(function(){btn.disabled=false;btn.textContent="Send";});});'
     + 'load();})();</' + 'script>';
 }
 

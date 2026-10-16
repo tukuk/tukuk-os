@@ -75,7 +75,7 @@ function clipWidget(t, w) {
 // Sanitasi penuh output (AI atau heuristic) → bentuk {appName,theme,widgets} yang selamat.
 function sanitizeApp(o) {
   const src = o && typeof o === 'object' ? o : {};
-  const appName = String(src.appName || '').trim().slice(0, 40) || 'Aplikasi';
+  const appName = String(src.appName || '').trim().slice(0, 40) || 'App';
   const th = src.theme && typeof src.theme === 'object' ? src.theme : {};
   const theme = {};
   const col = (k) => { if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(th[k] || '').trim())) theme[k] = String(th[k]).trim(); };
@@ -153,7 +153,7 @@ function matchWords(list, query, n) {
 function buildOne(idea, salt, style, opts) {
   const s = salt || 0;
   const o = opts && typeof opts === 'object' ? opts : {};
-  const clean = (String(idea || '').trim().replace(/\s+/g, ' ').slice(0, 40)) || 'Aplikasi';
+  const clean = (String(idea || '').trim().replace(/\s+/g, ' ').slice(0, 40)) || 'App';
   const key = clean.toLowerCase();
   const name = clean.charAt(0).toUpperCase() + clean.slice(1);
   const pool = poolFor(style);
@@ -167,18 +167,17 @@ function buildOne(idea, salt, style, opts) {
   }
   const baseGame = pickGame(key);
   const game = GAMES[(GAMES.indexOf(baseGame) + s + GAMES.length) % GAMES.length]; // salt 0 → padan kata kunci
-  const en = /english|inggeris|\ben\b/i.test(String(o.lang || ''));
   const widgets = [
     { type: 'heading', text: name, level: 2, align: 'center' },
-    { type: 'text', text: en ? `All about ${clean} — fast, simple & fun.` : `Semua tentang ${clean} — pantas, ringkas & menyeronokkan.`, align: 'center' },
+    { type: 'text', text: `All about ${clean} — fast, simple & fun.`, align: 'center' },
     clipWidget(game, {}),
-    { type: 'list', items: en ? [`Example ${name}: one`, 'Example: two', 'Example: three'] : [`Contoh ${name}: satu`, 'Contoh: dua', 'Contoh: tiga'], allowAdd: true },
-    { type: 'counter', label: en ? `Count ${name}` : `Kira ${name}`, value: 0, step: 1 },
-    { type: 'button', label: en ? `Share ${name}` : `Kongsi ${name}`, href: 'https://tukuk.org', variant: 'primary', fullWidth: false }
+    { type: 'list', items: [`Example ${name}: one`, 'Example: two', 'Example: three'], allowAdd: true },
+    { type: 'counter', label: `Count ${name}`, value: 0, step: 1 },
+    { type: 'button', label: `Share ${name}`, href: 'https://tukuk.org', variant: 'primary', fullWidth: false }
   ];
   return sanitizeApp({
     appName: name,
-    theme: { accent: pal.accent, bg: pal.bg, fg: pal.fg, dark: pal.dark, sub: (en ? 'Built auto · ' : 'Dibina auto · ') + name, desc: en ? `${clean} app — auto-built with Tukuk Studio.` : `Aplikasi ${clean} — dibina automatik dengan Tukuk Studio.` },
+    theme: { accent: pal.accent, bg: pal.bg, fg: pal.fg, dark: pal.dark, sub: 'Built auto · ' + name, desc: `${clean} app — auto-built with Tukuk Studio.` },
     widgets
   });
 }
@@ -195,11 +194,11 @@ function heuristicVariants(idea, n, style, offset, opts) {
 
 // Arahan sistem untuk LLM — paksa JSON sah sahaja + types yang dibenarkan.
 const SYSTEM_PROMPT = [
-  'Anda penjana aplikasi no-code. Balas HANYA dengan satu objek JSON, tanpa teks lain.',
-  'Skema: {"appName":string(<=40),"theme":{"accent":"#rrggbb","bg":"#rrggbb","fg":"#rrggbb","dark":bool,"sub":string,"desc":string},"widgets":[...]}',
-  'types widget dibenarkan: heading{text,level(1-3),align}, text{text,align}, button{label,href,variant,fullWidth}, image{alt,caption,radius}, input{label,placeholder,kind}, counter{label,value,step}, toggle{label,on}, list{items[],allowAdd}, card{title,body}, divider, spacer{height}, faq{items:[{q,a}]}, steps{title,items[]}, quiz{q,options[],answer}, dan GAME: ttt,memory{pairs},mole{duration},rps,reaction,guess{max},br{enemies,zoneSpeed,mapSize},fps{enemies,zoneSpeed},runner.',
-  'MUST sertakan TEPAT SATU widget game yang sesuai dengan idea. align dalam left|center|right. Bahasa kandungan: Melayu.',
-  '4-8 widget sahaja. Semua teks singkat. Tiada HTML/skrip mentah dalam nilai.'
+  'You are a no-code app generator. Reply ONLY with a single JSON object, no other text.',
+  'Schema: {"appName":string(<=40),"theme":{"accent":"#rrggbb","bg":"#rrggbb","fg":"#rrggbb","dark":bool,"sub":string,"desc":string},"widgets":[...]}',
+  'allowed widget types: heading{text,level(1-3),align}, text{text,align}, button{label,href,variant,fullWidth}, image{alt,caption,radius}, input{label,placeholder,kind}, counter{label,value,step}, toggle{label,on}, list{items[],allowAdd}, card{title,body}, divider, spacer{height}, faq{items:[{q,a}]}, steps{title,items[]}, quiz{q,options[],answer}, and GAME: ttt,memory{pairs},mole{duration},rps,reaction,guess{max},br{enemies,zoneSpeed,mapSize},fps{enemies,zoneSpeed},runner.',
+  'MUST include EXACTLY ONE game widget that fits the idea. align must be one of left|center|right. Content language: English.',
+  'Only 4-8 widgets. Keep all text short. No raw HTML/scripts inside values.'
 ].join(' ');
 
 module.exports = { KNOWN, GAMES, SYSTEM_PROMPT, parseGenJson, sanitizeApp, heuristicBuild, heuristicVariants, buildOne, pickGame, clipWidget, matchWords, isHexColor, lum };

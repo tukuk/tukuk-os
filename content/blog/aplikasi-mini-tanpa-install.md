@@ -1,29 +1,29 @@
 SLUG: aplikasi-mini-tanpa-install
-TITLE: 10+ Aplikasi Mini Yang Berjalan Tanpa Install (Nota, Kalkulator, Piano, Dram…)
-EXCERPT: Tak perlu penuhkan telefon dengan apl kecil. Kumpulan aplikasi Tukuk buka serta-merta dalam pelayar — guna sekali, tutup, dan datang lagi bila perlu.
-TAGS: aplikasi, mini, tools, pwa, percuma
+TITLE: 10+ Mini Apps That Run Without Installing (Notes, Calculator, Piano, Drums…)
+EXCERPT: No need to clutter your phone with tiny apps. The Tukuk app collection opens instantly in the browser — use it once, close it, and come back when you need it.
+TAGS: apps, mini, tools, pwa, free
 
-## Apl kecil yang tak perlu dipasang
+## Small apps that need no installation
 
-Setiap telefon penuh dengan aplikasi yang kita guna sekali-sekala: kalkulator, nota cepat, metronom, timer. Menyedihkan bila tiap-tiap satu makan ruang dan izin. **Kumpulan aplikasi Tukuk** (`tukuk.org/apps`) hadir untuk itu — apl mini yang **berjalan terus dalam pelayar**. Buka pautan, guna, tutup. Tiada pasang, tiada kemas kini paksa, tiada notifikasi bising.
+Every phone is full of apps we use once in a while: a calculator, quick notes, a metronome, a timer. It is sad when each one eats storage and permissions. The **Tukuk app collection** (`tukuk.org/apps`) exists for exactly that — mini apps that **run right in the browser**. Open the link, use it, close it. No install, no forced updates, no noisy notifications.
 
-## Apa ada di dalam?
+## What is inside?
 
-Antara yang boleh anda cuba serta-merta:
+Among the things you can try instantly:
 
-- **Kalkulator** — kira pantas, termasuk untuk kerja harian.
-- **Nota** — coret idea, disimpan setempat pada peranti anda.
-- **Piano & Dram** — main melodi dan rentak; ada mod pembelajaran.
-- **Penukar format** — ubah fail antara satu sama lain.
-- **Penghapus latar & Kolaj** — alat gambar ringkas.
-- **Arked mini** — game kecil untuk rehat sekejap.
+- **Calculator** — quick math, including for everyday work.
+- **Notes** — scribble ideas, stored locally on your device.
+- **Piano & Drums** — play melodies and rhythms; there is a learning mode.
+- **Format converter** — change files from one format to another.
+- **Background remover & Collage** — simple image tools.
+- **Mini arcade** — small games for a quick break.
 
-Semua satu halaman, satu gaya, dan ringan.
+All one page, one style, and lightweight.
 
-## Kalau suka, barulah pasang
+## If you like it, then install it
 
-Nak akses lebih laju? Mana-mana apl boleh **"Add to Home Screen"** sebagai PWA — ia buka skrin penuh dengan ikon sendiri, rasa seperti apl biasa. Di Android, sebahagiannya juga boleh dimuat turun sebagai **APK dari gedung** (`tukuk.org/store`). Tetapi ia pilihan: anda tak *terpaksa* pasang untuk guna.
+Want faster access? Any app can be **"Added to Home Screen"** as a PWA — it opens full-screen with its own icon, feeling like a regular app. On Android, some can also be downloaded as an **APK from the store** (`tukuk.org/store`). But it is optional: you are never *forced* to install to use.
 
-## Falsafah "buka dan pergi"
+## The "open and go" philosophy
 
-Reka bentuk ini sedaya upaya ringan: Apl yang anda tak guna tak menghantui telefon anda. Bila perlu, cari, buka, selesaikan tugas. Hidup tanpa perlu mengurus 40 aplikasi yang masing-masing cuma dipakai sekali setahun — itulah janji apl dalam pelayar, dan itulah yang kami bina.
+The design is deliberately light: apps you do not use do not haunt your phone. When needed, search, open, finish the task. A life without managing 40 apps that each get used once a year — that is the promise of browser apps, and that is what we built.

@@ -1,7 +1,0 @@
-Versi pertama di Google Play.
-
-• Meshenjer DM, kumpulan & bilik umum.
-• Panggilan video/suara WebRTC + pengenalan pemanggil TukuCaller.
-• Status (mood) dengan TTL, cerita 24 jam, suapan sosial.
-• Mod jimat data 2G/3G + peti keluar luar-talian.
-• Sasaran API 36 (Android 16), diperlukan untuk senarai Play.
