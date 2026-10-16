@@ -1033,15 +1033,22 @@ function newsCard(h) {
   </a>`;
 }
 
+function durSecOf(h) {
+  const n = Number(h.durationSec);
+  if (n > 0) return Math.round(n);
+  const m = /^(\d+):(\d\d)$/.exec(String(h.duration || ''));
+  return m ? (+m[1]) * 60 + (+m[2]) : 0;
+}
+
 function musicCard(h) {
   const audioTarget = h.preview || h.url;
-  return `<div class="video-card play-card" data-audio="${esc(audioTarget)}" data-title="${esc(h.title || 'Music')}">
-    <span class="ph art-ph">\ud83c\udfb5${h.artwork ? `<img src="${esc(h.artwork)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}<span class="play-overlay">&#9658;</span></span>
+  return `<div class="video-card play-card" data-audio="${esc(audioTarget)}" data-title="${esc(h.title || 'Music')}" data-dur="${durSecOf(h)}">`
+    + `<span class="ph art-ph">\ud83c\udfb5${h.artwork ? `<img src="${esc(h.artwork)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}<span class="play-overlay">&#9658;</span></span>
     <div class="body">
       <h3>${esc(h.title || '')}</h3>
       <div class="meta">${esc(h.description || '')}${h.duration ? ` &middot; ${esc(h.duration)}` : ''}</div>
       <div class="card-actions">
-        ${audioTarget ? `<button type="button" class="play-btn" data-audio="${esc(audioTarget)}" data-title="${esc(h.title || 'Music')}">\u25b6 Play</button>` : ''}
+        ${audioTarget ? `<button type="button" class="play-btn" data-audio="${esc(audioTarget)}" data-title="${esc(h.title || 'Music')}" data-dur="${durSecOf(h)}">\u25b6 Play</button>` : ''}
         ${h.url ? `<a class="src-link reader-link" href="${esc(h.url)}" data-title="${esc(h.title || 'Music')}">Open &#8599;</a>` : ''}
       </div>
     </div>
@@ -1547,12 +1554,14 @@ let retryTimer = null;
 let retryCount = 0;
 let playStartedAt = 0;   // bila play benar-benar mula — elak 'ended' serta-merta daripada klip rosak (cascade)
 let currentLive = false; // true = siaran langsung radio: 'ended'/stall → sambung semula, jangan tukar stesen
+let currentDur = 0;      // durasi penuh lagu (saat) dari kad — pratinjau ±30s diulang sehingga cukup
+let playedSec = 0;       // jumlah saat virtual telah dimainkan (panjang klip × ulangan) untuk lagu semasa
 
 // ── State pemain global — dibaca /player.js supaya muzik/radio sambung di halaman lain ──
 const PLAYER_STATE_KEY = 'tk-player-state';
 function currentQueueArr() {
   const cards = [...document.querySelectorAll('.play-card[data-audio]')].filter((c) => normAudioSrc(c.dataset.audio));
-  return cards.map((c) => ({ src: normAudioSrc(c.dataset.audio), title: c.dataset.title || 'Media', live: mode === 'radio' }));
+  return cards.map((c) => ({ src: normAudioSrc(c.dataset.audio), title: c.dataset.title || 'Media', live: mode === 'radio', dur: Number(c.dataset.dur) || 0 }));
 }
 function savePlayerState(playing) {
   if (!currentSrc) return;
@@ -1563,6 +1572,7 @@ function savePlayerState(playing) {
     localStorage.setItem(PLAYER_STATE_KEY, JSON.stringify({
       src: currentSrc, title: audioBarTitle.textContent, live: currentLive,
       playing: !!playing, pos: currentLive ? 0 : (mediaAudio.currentTime || 0),
+      played: currentLive ? 0 : Math.round(playedSec + (mediaAudio.currentTime || 0)),
       queue, qi, auto: audioAutoEl ? audioAutoEl.checked : true, ts: Date.now()
     }));
   } catch (e) {}
@@ -1636,6 +1646,8 @@ function beginPlay(rawSrc, title, pBtn, opts = {}) {
   if (audioOwner && audioOwner !== pBtn) resetOwnerBtn();
   currentSrc = audioSrc;
   currentLive = !!opts.live;
+  currentDur = opts.live ? 0 : (Number(opts.dur) || 0);
+  playedSec = 0;
   wantPlay = true;
   retryCount = 0;
   playToken++;
@@ -1686,7 +1698,7 @@ function queueCard(step) {
 function playQueueCard(card) {
   if (!card) return;
   beginPlay(card.dataset.audio, card.dataset.title || 'Media', card.querySelector('.play-btn') || card,
-    { live: mode === 'radio', fallback: mode !== 'radio' });
+    { live: mode === 'radio', fallback: mode !== 'radio', dur: Number(card.dataset.dur) || 0 });
 }
 function findQueueNext() { return queueCard(1); }
 function advanceQueue() {
@@ -1713,7 +1725,14 @@ mediaAudio.addEventListener('ended', () => {
   if (Date.now() - playStartedAt < 3000) { scheduleRetry(); return; }
   // Radio = siaran langsung; 'ended' biasanya ertinya terputus → sambung semula, jangan tukar stesen.
   if (currentLive) { scheduleRetry(); return; }
-  // Muzik (prabayar 30s iTunes): tukar lagu HANYA bila Auto-next dihidupkan; jika tidak, berhenti.
+  // Pratinjau iTunes ±30s: ulang klip yang sama sehingga durasi penuh yang dipaparkan
+  // pada kad (data-dur) cukup — baru bergerak ke lagu seterusnya / berhenti.
+  if (currentDur > 0) {
+    playedSec += Math.round(mediaAudio.duration) || 30;
+    if (playedSec < currentDur) { mediaAudio.currentTime = 0; mediaAudio.play().catch(() => scheduleRetry()); return; }
+    playedSec = 0; // durasi cukup → kitaran seterusnya bermula dari awal
+  }
+  // Muzik (pratinjau 30s iTunes): tukar lagu HANYA bila Auto-next dihidupkan; jika tidak, berhenti.
   if (audioAutoEl && audioAutoEl.checked) advanceQueue();
   else stopAudio();
 });
@@ -1741,7 +1760,7 @@ document.addEventListener('click', (e) => {
   // Klik track yang sedang main → berhenti.
   if ((audioOwner === pBtn || currentSrc === audioSrc) && !mediaAudio.paused && wantPlay) { stopAudio(); return; }
 
-  beginPlay(audioSrc, title, pBtn, { fallback: true, live: mode === 'radio' });
+  beginPlay(target.dataset.audio, title, pBtn, { fallback: true, live: mode === 'radio', dur: Number(target.dataset.dur) || 0 });
 });
 
 // Sambung semula automatik bila pengguna kembali ke halaman carian sambil muzik berbunyi.
@@ -1752,6 +1771,10 @@ document.addEventListener('click', (e) => {
   const src = normAudioSrc(st.src, st.live);
   if (!src) return;
   currentSrc = src; currentLive = !!st.live; wantPlay = true; retryCount = 0; playToken++;
+  // Pulihkan durasi penuh + kiraan saat virtual supaya sambung di tab ini terus ikut jadual ulang.
+  const qItem = Array.isArray(st.queue) ? st.queue.find((x) => x && x.src === src) : null;
+  currentDur = st.live ? 0 : (qItem && qItem.dur) || 0;
+  playedSec = Math.max(0, Math.round((st.played || 0) - (st.pos || 0)));
   if (audioAutoEl) audioAutoEl.checked = st.auto !== false; // pulih preferensi Auto‑next (lalai: berterusan)
   audioBarTitle.textContent = st.title || '';
   audioBar.hidden = false;

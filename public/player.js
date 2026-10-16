@@ -85,6 +85,8 @@
     var retries = 0;
     var retryTimer = null;
     var startedAt = 0;
+    // Pratinjau iTunes ±30s diulang sehingga durasi penuh lagu (queue[].dur dari kad) cukup.
+    var playedSec = Math.max(0, Math.round((st.played || 0) - (st.pos || 0)));
 
     function cur() { return queue[qi] || queue[0] || { src: st.src, title: st.title || '' }; }
 
@@ -93,7 +95,7 @@
       elTitle.textContent = c.title || 'Media';
       var playing = !audio.paused && !audio.ended;
       var sub = live ? 'Radio \u00b7 siaran langsung'
-        : 'Muzik \u00b7 ' + (queue.length > 1 ? 'senarai main' : 'pratinjau 30s');
+        : 'Muzik \u00b7 ' + (queue.length > 1 ? 'senarai main' : (cur().dur ? 'pratinjau \u00b7 ulang ikut durasi' : 'pratinjau 30s'));
       elSub.textContent = (resumePending && !playing) ? 'Tekan \u25b6 untuk sambung bermain' : sub;
       bar.classList.toggle('paused', !playing);
       btnToggle.innerHTML = playing ? '&#9208;' : '&#9654;';
@@ -106,6 +108,7 @@
       write({
         src: c.src, title: c.title, live: live, playing: !!playing,
         pos: live ? 0 : (audio.currentTime || 0),
+        played: live ? 0 : Math.round(playedSec + (audio.currentTime || 0)),
         queue: queue, qi: qi, auto: autoNext, ts: Date.now()
       });
     }
@@ -161,6 +164,7 @@
       if (queue.length < 2) { load(true); return; }
       qi = (qi + d + queue.length) % queue.length;
       st.pos = 0;
+      playedSec = 0; // lagu baharu → kiraan ulang bermula dari awal
       load(true);
     }
 
@@ -204,6 +208,13 @@
       if (Date.now() - startedAt < 3000) { reconnect(); return; } // klip rosak — jangan lompat serta-merta
       if (live) { reconnect(); return; }                          // radio terputus → sambung, bukan tukar stesen
       if (loop) { audio.currentTime = 0; audio.play().catch(reconnect); return; }
+      // Ulang klip pratinjau sehingga durasi penuh lagu yang dipaparkan cukup, baru tukar/berhenti.
+      var durSec = cur().dur || 0;
+      if (!live && durSec > 0) {
+        playedSec += Math.round(audio.duration) || 30;
+        if (playedSec < durSec) { audio.currentTime = 0; audio.play().catch(reconnect); return; }
+        playedSec = 0; // durasi cukup → kitaran seterusnya bermula dari awal
+      }
       // Auto‑next MATI → berhenti (hanya tindakan pengguna menyambung); HIDUP → sambung trek.
       if (!autoNext) { softStop(); return; }
       if (queue.length > 1) { next(); } else { audio.currentTime = 0; audio.play().catch(reconnect); }
@@ -225,7 +236,7 @@
         queue = ns.queue && ns.queue.length ? ns.queue.slice(0, 60) : queue;
         qi = Math.max(0, Math.min(queue.length - 1, ns.qi || 0));
         live = !!ns.live;
-        if (ns.playing) { st.pos = 0; load(true); } else { try { audio.pause(); } catch (err2) {} }
+        if (ns.playing) { st.pos = 0; playedSec = 0; load(true); } else { try { audio.pause(); } catch (err2) {} }
       }
     });
 

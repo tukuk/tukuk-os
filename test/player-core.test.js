@@ -50,7 +50,7 @@ function runSave(inputs) {
   const localStorage = { setItem: (k, v) => { wrote[k] = v; }, getItem: () => null, removeItem: () => {} };
   const document = { getElementById: () => null, querySelectorAll: () => [] };
   const body = `
-    const { mediaAudio, audioBarTitle, audioAutoEl, currentQueueArr, PLAYER_STATE_KEY } = inputs;
+    const { mediaAudio, audioBarTitle, audioAutoEl, currentQueueArr, PLAYER_STATE_KEY, playedSec } = inputs;
     let currentSrc = inputs.currentSrc, currentLive = inputs.currentLive;
     ${normAudioSrc}
     ${savePlayerState}
@@ -66,6 +66,7 @@ test('savePlayerState: tulis src/queue/playing + auto mencerminkan checkbox', ()
     currentSrc: 'https://a/1.m4a', currentLive: false,
     audioBarTitle: { textContent: 'Lagu X' },
     mediaAudio: { currentTime: 12.5 },
+    playedSec: 30,
     audioAutoEl: { checked: true },
     PLAYER_STATE_KEY: 'tk-player-state',
     currentQueueArr: () => [{ src: 'https://a/1.m4a', title: 'Lagu X' }, { src: 'https://a/2.m4a', title: 'Lagu Y' }],
@@ -74,6 +75,7 @@ test('savePlayerState: tulis src/queue/playing + auto mencerminkan checkbox', ()
   assert.equal(st.src, 'https://a/1.m4a');
   assert.equal(st.playing, true);
   assert.equal(st.pos, 12.5, 'pos disimpan untuk trek bukan-live');
+  assert.equal(st.played, 43, 'played = bulat(loop terkumpul + currentTime)');
   assert.equal(st.qi, 0, 'qi ialah indeks trek semasa');
   assert.equal(st.auto, true, 'auto=ON dipersist');
   assert.equal(st.queue.length, 2);
