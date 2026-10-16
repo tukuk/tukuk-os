@@ -586,7 +586,7 @@ app.get('/network', async (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download'];
+  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -714,6 +714,22 @@ function msAdUnit(label) {
 
 app.get('/blog', (req, res) => {
   const posts = store.getAllPosts(100);
+  const jsonLdBlog = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "@id": "https://tukuk.org/blog#blog",
+    "name": "Blog & Tech Knowledge Base — Tukuk-OS",
+    "description": "Article, tutorial dan analisis tentang teknologi carian, privasi web, dan aplikasi dalaman Tukuk-OS.",
+    "url": "https://tukuk.org/blog",
+    "inLanguage": "ms",
+    "publisher": { "@type": "Organization", "name": "Tukuk-OS", "url": "https://tukuk.org" },
+    "blogPost": posts.slice(0, 30).map((p) => ({
+      "@type": "BlogPosting",
+      "headline": p.title,
+      "url": `https://tukuk.org/blog/${p.slug}`,
+      "datePublished": p.createdAt
+    }))
+  }).replace(/</g, '\\u003c');
   let html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -733,6 +749,8 @@ app.get('/blog', (req, res) => {
 <meta name="twitter:description" content="Articles, tutorials and analysis on search engine technology, data privacy and artificial intelligence from Tukuk-OS.">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 <link rel="canonical" href="https://tukuk.org/blog">
+<link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
+<script type="application/ld+json">${jsonLdBlog}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -1001,6 +1019,36 @@ app.get('/learn', (req, res) => {
   res.send(html);
 });
 
+app.get('/blog/rss.xml', (req, res) => {
+  const host = req.get('host') || 'tukuk.org';
+  const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
+  const x = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const posts = store.getAllPosts(50);
+  const items = posts.map((p) => {
+    const link = `${base}/blog/${encodeURIComponent(p.slug)}`;
+    const date = (p.updatedAt || p.createdAt || new Date().toISOString());
+    return `  <item>
+    <title>${x(p.title)}</title>
+    <link>${link}</link>
+    <guid isPermaLink="true">${link}</guid>
+    <description>${x(p.excerpt || '')}</description>
+    <dc:creator>${x(p.author || 'Fevian Donald')}</dc:creator>
+    <pubDate>${new Date(date).toUTCString()}</pubDate>
+  </item>`;
+  }).join('\n');
+  res.type('application/rss+xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
+    `<channel>\n` +
+    `  <title>Tukuk-OS — Blog &amp; Knowledge Archive</title>\n` +
+    `  <link>${base}/blog</link>\n` +
+    `  <atom:link href="${base}/blog/rss.xml" rel="self" type="application/rss+xml"/>\n` +
+    `  <description>Article, tutorial dan analisis tentang teknologi carian, privasi web, AI dan aplikasi Tukuk-OS.</description>\n` +
+    `  <language>ms</language>\n` +
+    items + `\n</channel>\n</rss>\n`
+  );
+});
+
 app.get('/blog/:slug', (req, res) => {
   const post = store.getPostBySlug(req.params.slug);
   if (!post) {
@@ -1018,23 +1066,43 @@ app.get('/blog/:slug', (req, res) => {
   const eExcerptAttr = escapeHtml(post.excerpt || '');
   const eAuthor = escapeHtml(post.author || 'Fevian Donald');
 
+  const ogImage = 'https://tukuk.org/og.png';
+  const postUrl = `https://tukuk.org/blog/${post.slug}`;
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": post.title,
-    "description": post.excerpt,
-    "author": {
-      "@type": "Person",
-      "name": post.author || "Fevian Donald"
-    },
-    "datePublished": post.createdAt,
-    "dateModified": post.updatedAt || post.createdAt,
-    "mainEntityOfPage": `https://tukuk.org/blog/${post.slug}`,
-    "publisher": {
-      "@type": "Organization",
-      "name": "Tukuk-OS",
-      "url": "https://tukuk.org"
-    }
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": postUrl,
+        "headline": post.title,
+        "description": post.excerpt,
+        "image": [ogImage],
+        "inLanguage": "ms",
+        "author": {
+          "@type": "Person",
+          "name": post.author || "Fevian Donald",
+          "url": "https://tukuk.org"
+        },
+        "datePublished": post.createdAt,
+        "dateModified": post.updatedAt || post.createdAt,
+        "mainEntityOfPage": { "@type": "WebPage", "@id": postUrl },
+        "isPartOf": { "@type": "Blog", "@id": "https://tukuk.org/blog#blog" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Tukuk-OS",
+          "url": "https://tukuk.org",
+          "logo": { "@type": "ImageObject", "url": "https://tukuk.org/logo.png", "width": 512, "height": 512 }
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tukuk.org/" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://tukuk.org/blog" },
+          { "@type": "ListItem", "position": 3, "name": post.title, "item": postUrl }
+        ]
+      }
+    ]
   }).replace(/</g, '\\u003c');
 
   const html = `<!DOCTYPE html>
@@ -1049,13 +1117,18 @@ app.get('/blog/:slug', (req, res) => {
 <meta property="og:title" content="${eTitleAttr}">
 <meta property="og:description" content="${eExcerptAttr}">
 <meta property="og:url" content="https://tukuk.org/blog/${encodeURIComponent(post.slug)}">
-<meta property="og:image" content="https://tukuk.org/og.png">
+<meta property="og:image" content="${ogImage}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ms_MY">
 <meta property="article:published_time" content="${escapeHtml(post.createdAt)}">
+<meta property="article:modified_time" content="${escapeHtml(post.updatedAt || post.createdAt)}">
 <meta property="article:author" content="${eAuthor}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${eTitleAttr}">
 <meta name="twitter:description" content="${eExcerptAttr}">
-<meta name="twitter:image" content="https://tukuk.org/og.png">
+<meta name="twitter:image" content="${ogImage}">
+<link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
 <link rel="canonical" href="https://tukuk.org/blog/${encodeURIComponent(post.slug)}">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">

@@ -20,4 +20,4 @@ Tekan **Publish**, dan apl anda dapat URL sendiri di bawah `/a/<nama>` — boleh
 
 ## Kenapa guna Pembina?
 
-Ia menjuntai jurang antara "ada idea" dan "ada apl". Anda tak perlu install toolchain, tak perlu server, tak perlu tahu JavaScript. Cukup tahu apa yang anda mahu bina. Dan kerana hasilnya fail tunggal, ia ringan, pantas dimuat, dan senang dikongsi — falsafah yang sama yang menggerakkan keseluruhan Tukuk-OS: **benda yang anda guna setiap hari, anda sendiri yang bina.**
+Ia merapatkan jurang antara "ada idea" dan "ada apl". Anda tak perlu install toolchain, tak perlu server, tak perlu tahu JavaScript. Cukup tahu apa yang anda mahu bina. Dan kerana hasilnya fail tunggal, ia ringan, pantas dimuat, dan senang dikongsi — falsafah yang sama yang menggerakkan keseluruhan Tukuk-OS: **benda yang anda guna setiap hari, anda sendiri yang bina.**
