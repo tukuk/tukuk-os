@@ -167,6 +167,12 @@
 
   /* Kad aplikasi — gaya lama senarai (maklumat penuh lebih penting untuk app) */
   .shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  /* Paparan KEMAS: grid berkelompok — kepala genre/sumber + rail di dalamnya */
+  #grid.plain { display: block; }
+  .grp { margin: 26px 0 10px; font-size: 1.08rem; font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: baseline; gap: 8px; }
+  .grp:first-child { margin-top: 4px; }
+  .grp .cnt { color: var(--muted); font-weight: 600; font-size: .78rem; }
+  #grid.plain .rail, #grid.plain .shop { margin-bottom: 4px; }
   .item {
     display: flex; flex-direction: column; gap: 10px;
     background: var(--panel-glass); backdrop-filter: blur(16px);
@@ -306,7 +312,8 @@
   const GENRE_LABEL = {
     'arkad': '🕹️ Arcade', 'teki-teki': '🧩 Puzzle', 'refleks': '⚡ Reflex', 'kuiz': '💡 Quiz',
     'tindakan': '🔥 Action', 'penembakan': '🎯 Shooter', 'santai': '😌 Casual',
-    'kereta': '🏎️ Racing', 'sukan': '⚽ Sports', 'klik': '🖱️ Clicker', 'io': '🌐 .io'
+    'kereta': '🏎️ Racing', 'sukan': '⚽ Sports', 'klik': '🖱️ Clicker', 'io': '🌐 .io',
+    'board': '🎲 Board', 'cards': '🃏 Cards'
   };
   // APK berjalan pada Android/Huawei/ChromeOS; bukan iOS (APK tak pasang di iPhone) → sembunyi butang.
   const CAN_APK = !/iPhone|iPad|iPod/.test(navigator.userAgent || '');
@@ -432,10 +439,21 @@
 
     if (cat === 'game') {
       const list = sortList(currentGames());
-      grid.className = 'shop';
-      grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
-      grid.innerHTML = list.map(tileHtml).join('');
       document.getElementById('allTitle').textContent = genre === 'all' ? 'All Games' : (GENRE_LABEL[genre] || 'Games');
+      if (showSections && sortEl.value === 'plays') {
+        // KEMAS & TERSUSUN: rail ikut genre — setiap genre satu baris berkepala.
+        grid.className = 'plain'; grid.style.gridTemplateColumns = '';
+        const byG = {};
+        list.forEach((x) => { const g = x.genre || 'arkad'; (byG[g] = byG[g] || []).push(x); });
+        const known = Object.keys(GENRE_LABEL).filter((g) => byG[g]);
+        const extra = Object.keys(byG).filter((g) => !known.includes(g));
+        grid.innerHTML = known.concat(extra).map((g) =>
+          `<h3 class="grp">${GENRE_LABEL[g] || '🎮 ' + esc(g)}<span class="cnt">${byG[g].length}</span></h3><div class="rail">${byG[g].map(tileHtml).join('')}</div>`).join('');
+      } else {
+        grid.className = 'shop';
+        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+        grid.innerHTML = list.map(tileHtml).join('');
+      }
 
       if (showSections) {
         // Baru Dimainkan — id daripada localStorage yang masih wujud dalam katalog.
@@ -455,10 +473,20 @@
       bindReload();
     } else {
       const list = sortList(currentApps());
-      grid.className = 'shop';
-      grid.style.gridTemplateColumns = '';
-      grid.innerHTML = list.map(appCardHtml).join('');
       document.getElementById('allTitle').textContent = 'All Apps';
+      if (!term && sortEl.value === 'plays') {
+        // KEMAS: app dikelompokkan ikut sumber — Built-in → One-Word → Community.
+        grid.className = 'plain'; grid.style.gridTemplateColumns = '';
+        const bySrc = {};
+        list.forEach((x) => { (bySrc[x.src] = bySrc[x.src] || []).push(x); });
+        const order = ['bawaan', 'satukata', 'arked', 'komuniti'].filter((s) => bySrc[s]);
+        grid.innerHTML = order.map((s) =>
+          `<h3 class="grp">${SRC_LABEL[s] || esc(s)}<span class="cnt">${bySrc[s].length}</span></h3><div class="shop">${bySrc[s].map(appCardHtml).join('')}</div>`).join('');
+      } else {
+        grid.className = 'shop';
+        grid.style.gridTemplateColumns = '';
+        grid.innerHTML = list.map(appCardHtml).join('');
+      }
       stateEl.hidden = list.length > 0;
       if (!list.length) stateEl.innerHTML = items.length
         ? '<div class="big">🔎</div><p>No matches for that search.</p>'

@@ -479,6 +479,7 @@ function renderDrawer() {
   cats.forEach(function (c) {
     var list = APPS.filter(function (a) { return a[4] === c; });
     if (!list.length) return;
+    list.sort(function (a, b) { return String(a[1]).localeCompare(String(b[1]), 'en'); }); // A–Z dalam kategori — kemas & tersusun
     html += '<h4>' + c + ' (' + list.length + ')</h4><div class="grid">';
     list.forEach(function (a) {
       html += '<button class="cell" data-app="' + escH(a[0]) + '"><span class="ic">' + escH(a[2]) + '</span><span>' + escH(a[1]) + '</span></button>';
