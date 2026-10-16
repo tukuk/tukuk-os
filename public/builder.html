@@ -83,6 +83,15 @@
   #edPre .c { color:#5f6b85; font-style:italic; } #edPre .s { color:#9ce6a0; } #edPre .t { color:#7cc4ff; } #edPre .k { color:#ff9ecd; }
   #edPreview { flex:1; min-width:0; border:1px solid var(--line); border-radius:12px; background:#fff; width:100%; height:100%; }
   @media (max-width:1000px){ .codesplit{ flex-direction:column; } }
+  /* ── Mod MAIN (&play=1): paparan bersih untuk tempek dalam /play — semua perkakasan
+     pembina (header, panel, pemilih peranti) disembunyikan; kanvas mengisi skrin. ── */
+  body.play header, body.play .col.left, body.play .col.right, body.play .devs, body.play #codeView { display:none !important; }
+  body.play .grid3 { grid-template-columns:1fr; }
+  body.play .col.stage { padding:8px; }
+  body.play .frame { width:100%; max-width:1100px; min-height:calc(100vh - 16px); border-radius:14px; box-shadow:none; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  body.play .frame .appbar, body.play .frame .sub { display:none; }
+  #playFs { position:fixed; right:12px; bottom:12px; z-index:25; display:none; background:var(--acc); color:#04101f; font-weight:800; border:0; border-radius:12px; padding:10px 16px; box-shadow:0 8px 24px rgba(0,0,0,.45); cursor:pointer; }
+  body.play #playFs { display:block; }
   /* ── Kemudahan: selit, sunting terus, modals, penunjuk simpan, amaran ── */
   .insrow { display:flex; justify-content:center; height:0; overflow:visible; }
   .insrow select { opacity:0; height:20px; font-size:11px; font-weight:700; padding:0 12px; border-radius:999px; border:1px solid rgba(76,141,255,.45); background:rgba(76,141,255,.12); color:var(--acc); cursor:pointer; transition:opacity .15s; width:auto; }
@@ -206,6 +215,7 @@
 </div>
 
 <input type="file" id="fileIn" accept="application/json" hidden>
+<button id="playFs" title="Skrin penuh">⛶ Skrin Penuh</button>
 <input type="file" id="imgIn" accept="image/*" hidden>
 <div class="toast" id="toast"></div>
 <div id="modal" class="modal"><div class="mcard"><div class="mh"><span class="mt"></span><button class="mx ghost" title="Tutup (Esc)">✕</button></div><div class="mb"></div></div></div>
@@ -225,7 +235,7 @@ let history = [], future = [];
 const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = (id) => document.getElementById(id);
 const byId = (id) => widgets.find((w) => w.id === id) || null;
-function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); }
+function toast(m){ if(document.body.classList.contains('play')) return; const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); }
 
 const TYPES = {
   heading:{ ic:'🅃', name:'Tajuk', make:()=>({type:'heading', text:'Tajuk Aplikasi', level:2, align:'left'}) },
@@ -1969,12 +1979,18 @@ try{
   if(h.indexOf('#p=')===0){ try{ loadState(decodeProj(decodeURIComponent(h.slice(3)))); resumed='link'; }catch(err){ seed(); } }
   else { const raw=localStorage.getItem('tukuk-builder'); if(raw){ loadState(JSON.parse(raw)); resumed='storage'; } else seed(); }
 }catch(err){ seed(); }
-let _asv=null; function autoSave(){ const s=$('saveState'); if(s) s.textContent='● Menyimpan…'; clearTimeout(_asv); _asv=setTimeout(()=>{ try{ localStorage.setItem('tukuk-builder',JSON.stringify({ appName:$('appName').value, theme, widgets })); if(s) s.textContent='✓ Tersimpan'; }catch(err){ if(s) s.textContent='⚠ Gagal simpan'; } },500); }
+let _asv=null; function autoSave(){ if(document.body.classList.contains('play')) return; /* mod main: jangan tulis projek ke localStorage */ const s=$('saveState'); if(s) s.textContent='● Menyimpan…'; clearTimeout(_asv); _asv=setTimeout(()=>{ try{ localStorage.setItem('tukuk-builder',JSON.stringify({ appName:$('appName').value, theme, widgets })); if(s) s.textContent='✓ Tersimpan'; }catch(err){ if(s) s.textContent='⚠ Gagal simpan'; } },500); }
 const _renderStage=renderStage; renderStage=function(){ _renderStage(); autoSave(); };
 
 renderStage(); applyTheme(); renderInspector(); pushH();
-// Deep-link dari /store (Arked): /builder?tpl=<templat> → muat templat & terus ke Mod Cuba.
-try{ const tp=new URLSearchParams(location.search).get('tpl'); if(tp){ if(TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } else if(window.console) console.warn('deep-link tpl: kunci tak dikenali:', tp); } }catch(err){ if(window.console) console.warn('deep-link tpl', err); }
+// Deep-link dari /store (Arked): /builder?tpl=<templat>[&play=1] → muat templat & terus main.
+// &play=1 = mod main bersih (dipakai pembed iframe /play): tanpa header/panel, kanvas penuh.
+try{
+  const qs=new URLSearchParams(location.search);
+  if(qs.get('play')==='1'){ document.body.classList.remove('edit'); document.body.classList.add('play'); mode='preview'; }
+  const tp=qs.get('tpl'); if(tp){ if(TEMPLATES[tp]){ loadTemplate(tp); if(mode==='edit') $('modeBtn').click(); } else if(window.console) console.warn('deep-link tpl: kunci tak dikenali:', tp); }
+}catch(err){ if(window.console) console.warn('deep-link tpl', err); }
+$('playFs').onclick=()=>{ if(document.fullscreenElement){ document.exitFullscreen().catch(()=>{}); } else if(document.documentElement.requestFullscreen){ document.documentElement.requestFullscreen({ navigationUI:'hide' }).catch(()=>{}); } };
 if(resumed==='storage') toast('✓ Projek terakhir dipulihkan dari pelayar ini');
 if(resumed==='link') toast('🔗 Projek daripada pautan kongsi dimuat');
 document.addEventListener('keydown',(e)=>{
