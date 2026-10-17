@@ -11,6 +11,10 @@
 #
 # Perlu (sekali sahaja, di laptop):
 #   • Node 24 (nvm install 24). code-server engines: node "24".
+#   • Pustaka sistem untuk node-gyp: sudo apt install libkrb5-dev
+#     build-essential python3 pkg-config libxkbfile-dev libsecret-1-dev
+#     (kegagalan 'gssapi/gssapi.h' pada kerberos = libkrb5-dev belum ada).
+#   • Alternatif: build TERUS di pelayan → scripts/build-agent-on-server.sh.
 #   • git submodule update --init code-server/lib/vscode   (fail besar).
 #   • fail .vsix Cline. Muat dari Open VSX (pinned versi) ke
 #     code-server/vendor/extensions/cline.vsix — ATAU hantar path sebagai $1.
