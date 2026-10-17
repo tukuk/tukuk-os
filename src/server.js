@@ -278,6 +278,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// tukuk.org ROOT = hub konten (permukaan AdSense/SEO yang boleh di-crawl),
+// BUKAN portal carian. Diregister sebelum express.static supaya menang ke atas
+// public/index.html. Portal carian kekal di /cari. T Chat ada di tchat.tukuk.org.
+app.get('/', (req, res) => {
+  res.type('html').send(renderBlogListPage(req, true));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -313,7 +320,9 @@ app.use('/satu-kata', express.static(GENERATED_DIR, {
 }));
 
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'nasa', 'explore', 'access', 'bingbot', 'editor', 'editor-video', 'movie', 'design', '3d', 'builder', 'studio', 'store', 'playstore', 'apps', 'bg-remover', 'collage', 'converter', 'download', 'rekomendasi', 'os', 'sms'];
+// NOTE: halaman AI berat (nasa/explore/builder/editor/editor-video/3d/design/movie/
+// collage/converter/bg-remover/studio) + app store UI (store) telah dibuang — fokus T Chat.
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'access', 'bingbot', 'playstore', 'download', 'rekomendasi', 'os', 'sms'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
@@ -322,8 +331,8 @@ for (const name of STATIC_PAGES) {
   });
 }
 
-// Sub-page untuk setiap app: /apps/notes → public/apps/notes.html
-const APPS = ['notes', 'calc', 'todo', 'convert', 'timer', 'color', 'password', 'text', 'linux', 'netsec', 'map', 'pixel', 'piano', 'spiro', 'orbit', 'fractal', 'drum', 'chat', 'candy', 'flappy', 'subway', 'slice', 'roadhop', 'bubble', 'ludo', 'solitaire', 'number2048', 'blockdrop', 'snake', 'mines', 'connect4', 'breakout', 'invaders', 'doodle', 'pong', 'stack', 'simon', 'muncher', 'puzzle15', 'tictactoe', 'memory', 'whack', 'calendar', 'dice', 'tip', 'bmi'];
+// Sub-page untuk setiap app: /apps/chat → public/apps/chat.html (fokus chat sahaja)
+const APPS = ['chat'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
@@ -331,8 +340,9 @@ for (const name of APPS) {
     });
   });
 }
-// Alias /apps/ → sama seperti /apps
-app.get('/apps/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'apps.html')));
+// Katalog app/game (/apps, /apps/) dibuang — fokus konten+chat. /apps/ → '/' supaya
+// pautan lama tak 404. /apps/chat (chat) kekal dilayan oleh loop APPS di atas.
+app.get(['/apps', '/apps/'], (req, res) => res.redirect(301, '/'));
 
 // Alias bahasa supaya pautan sedia ada tidak 404
 const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', privasi: 'privacy', dokumen: 'docs' };
@@ -377,15 +387,10 @@ function notifyIndexNow(urls) {
   }).catch(() => {}); // senyap — pengindeksan ialah penambahbaikan, bukan kritikal
 }
 
-// Halaman HASIL carian — SPA yang sama dengan index.html, tetapi pada URL
-// berasingan. Ini memisahkan permukaan iklan: `/` = dashboard kandungan original
-// (layak AdSense), `/cari` = hasil carian pihak ketiga (KOSONG iklan, mematuhi
-// dasar Google "no ads on web-search result pages").
-app.get('/cari', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'), (error) => {
-    if (error) res.status(404).json({ error: 'Page not found', path: req.originalUrl });
-  });
-});
+// Portal carian SPA (index.html) DI-BERSARAKAN: tukuk.org kini laman konten.
+// /cari → 301 ke '/' supaya semua pautan lama & tautan dalam index.html (yang
+// menunjuk halaman dibuang) tak jadi 404, tanpa perlu bedah SPA 2000+ baris.
+app.get('/cari', (req, res) => res.redirect(301, '/'));
 
 // Proksi imej luar — untuk lightbox & Tukuk Studio (/editor).
 // Same-origin = canvas tidak "tainted", export/edge filter boleh jalan.
@@ -942,15 +947,46 @@ function msAdUnit(label) {
   return raw ? `<div class="ad-slot" data-ad-network="ms-${label}">${raw}</div>` : '';
 }
 
-app.get('/blog', (req, res) => {
+// Nav dikongsi — buang pautan halaman yang sudah dibuang (/explore, /nasa).
+function siteNav() {
+  return `
+      <a href="/">Home</a>
+      <a href="/blog">Blog</a>
+      <a href="/learn">Learn</a>
+      <a href="/docs">Docs</a>
+      <a href="/about">About</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/contact">Contact</a>
+      <span class="theme-tools">
+        <button type="button" id="theme-toggle" class="tk-btn" aria-label="Colour theme">\u25d0</button>
+        <span class="tk-accents" role="group" aria-label="Accent colour">
+          <button type="button" data-accent-set="blue" class="tk-dot" aria-label="Blue"></button>
+          <button type="button" data-accent-set="green" class="tk-dot" aria-label="Green"></button>
+          <button type="button" data-accent-set="violet" class="tk-dot" aria-label="Violet"></button>
+          <button type="button" data-accent-set="amber" class="tk-dot" aria-label="Amber"></button>
+          <button type="button" data-accent-set="rose" class="tk-dot" aria-label="Rose"></button>
+        </span>
+      </span>`;
+}
+
+// Hab konten — senarai artikel. asHome=true bila dihidang di '/' (tukuk.org = konten, bukan carian).
+function renderBlogListPage(req, asHome) {
   const posts = store.getAllPosts(100);
+  const selfUrl = asHome ? 'https://tukuk.org/' : 'https://tukuk.org/blog';
+  const titleText = asHome
+    ? 'Tukuk-OS \u2014 Articles, Guides & Tech Knowledge'
+    : 'Blog & Tech Knowledge Base \u2014 Tukuk-OS';
+  const pageDesc = asHome
+    ? 'In-depth articles, how-to guides and analysis on technology, privacy, Android, servers and the open web.'
+    : 'Articles, tutorials and analysis on search engine technology, data privacy and artificial intelligence from Tukuk-OS.';
   const jsonLdBlog = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Blog",
     "@id": "https://tukuk.org/blog#blog",
-    "name": "Blog & Tech Knowledge Base — Tukuk-OS",
-    "description": "Articles, tutorials and analysis about search technology, web privacy, and Tukuk-OS built-in apps.",
-    "url": "https://tukuk.org/blog",
+    "name": "Blog & Tech Knowledge Base \u2014 Tukuk-OS",
+    "description": pageDesc,
+    "url": selfUrl,
     "inLanguage": "en",
     "publisher": { "@type": "Organization", "name": "Tukuk-OS", "url": "https://tukuk.org" },
     "blogPost": posts.slice(0, 30).map((p) => ({
@@ -965,20 +1001,20 @@ app.get('/blog', (req, res) => {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blog &amp; Tech Knowledge Base &mdash; Tukuk-OS</title>
-<meta name="description" content="Articles, tutorials and analysis on search engine technology, data privacy and artificial intelligence from Tukuk-OS.">
+<title>${escapeHtml(titleText)}</title>
+<meta name="description" content="${escapeHtml(pageDesc)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
-<meta property="og:title" content="Blog &amp; Tech Knowledge Base — Tukuk-OS">
-<meta property="og:description" content="Articles, tutorials and analysis on search engine technology, data privacy and artificial intelligence from Tukuk-OS.">
-<meta property="og:url" content="https://tukuk.org/blog">
+<meta property="og:title" content="${escapeHtml(titleText)}">
+<meta property="og:description" content="${escapeHtml(pageDesc)}">
+<meta property="og:url" content="${selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Blog &amp; Tech Knowledge Base — Tukuk-OS">
-<meta name="twitter:description" content="Articles, tutorials and analysis on search engine technology, data privacy and artificial intelligence from Tukuk-OS.">
+<meta name="twitter:title" content="${escapeHtml(titleText)}">
+<meta name="twitter:description" content="${escapeHtml(pageDesc)}">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
-<link rel="canonical" href="https://tukuk.org/blog">
+<link rel="canonical" href="${selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
 <script type="application/ld+json">${jsonLdBlog}</script>
@@ -993,30 +1029,9 @@ ${pageAdScript()}${clarityScript()}
 <body>
 <div class="wrap">
   <header>
-    <h1>Blog &amp; Knowledge Archive</h1>
-    <p class="tagline">In-depth articles on search engine technology, cybersecurity, semantic AI and web privacy.</p>
-    <nav>
-      <a href="/">Home</a>
-      <a href="/explore">Explore</a>
-      <a href="/nasa">NASA</a>
-      <a href="/learn">Learn</a>
-      <a href="/blog">Blog</a>
-      <a href="/docs">Docs</a>
-      <a href="/about">About</a>
-      <a href="/privacy">Privacy</a>
-      <a href="/terms">Terms</a>
-      <a href="/contact">Contact</a>
-      <span class="theme-tools">
-        <button type="button" id="theme-toggle" class="tk-btn" aria-label="Colour theme">◐</button>
-        <span class="tk-accents" role="group" aria-label="Accent colour">
-          <button type="button" data-accent-set="blue" class="tk-dot" aria-label="Blue"></button>
-          <button type="button" data-accent-set="green" class="tk-dot" aria-label="Green"></button>
-          <button type="button" data-accent-set="violet" class="tk-dot" aria-label="Violet"></button>
-          <button type="button" data-accent-set="amber" class="tk-dot" aria-label="Amber"></button>
-          <button type="button" data-accent-set="rose" class="tk-dot" aria-label="Rose"></button>
-        </span>
-      </span>
-    </nav>
+    <h1>${asHome ? 'Tukuk-OS &mdash; Knowledge &amp; How-To Library' : 'Blog &amp; Knowledge Archive'}</h1>
+    <p class="tagline">${asHome ? 'Original articles and guides on technology, privacy, servers and the open web \u2014 free, no account needed.' : 'In-depth articles on search engine technology, cybersecurity, semantic AI and web privacy.'}</p>
+    <nav>${siteNav()}</nav>
   </header>
   <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}`;
 
@@ -1035,13 +1050,15 @@ ${pageAdScript()}${clarityScript()}
   ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
   <footer>
-    <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. A free and open web search engine.</p>
+    <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved.</p>
   </footer>
 </div>
 </body>
 </html>`;
-  res.send(html);
-});
+  return html;
+}
+
+app.get('/blog', (req, res) => res.type('html').send(renderBlogListPage(req, false)));
 
 // Kurikulum "Tukuk-OS 0 -> Hero": susunan pembelajaran merentas semua artikel.
 const LEARN_STAGES = [
@@ -1213,7 +1230,6 @@ app.get('/learn', (req, res) => {
       <a href="/">Home</a>
       <a href="/learn">Learn</a>
       <a href="/blog">Blog</a>
-      <a href="/explore">Explore</a>
       <a href="/docs">Docs</a>
       <a href="/about">About</a>
       <a href="/access">Global Access</a>
@@ -1379,8 +1395,6 @@ ${pageAdScript()}${clarityScript()}
     <div class="meta">Published: ${postDate} &middot; Author: ${eAuthor}</div>
     <nav>
       <a href="/">Home</a>
-      <a href="/explore">Explore</a>
-      <a href="/nasa">NASA</a>
       <a href="/blog">Blog</a>
       <a href="/docs">Docs</a>
       <a href="/about">About</a>
@@ -1566,7 +1580,7 @@ function statsPageHtml(d) {
   <header>
     <h1>Live Statistics</h1>
     <p class="tagline">A fully transparent look at how Tukuk-OS is running right now.</p>
-    <nav><a href="/">Home</a><a href="/blog">Blog</a><a href="/explore">Explore</a><a href="/nasa">NASA</a><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a></nav>
+    <nav><a href="/">Home</a><a href="/blog">Blog</a><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a></nav>
   </header>
   <main>
     <p>Tukuk-OS is a free, open web search engine. These numbers are read live from the running server — refresh the page to see them change.</p>

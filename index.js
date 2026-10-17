@@ -69,11 +69,16 @@ async function main() {
         .then((n) => { if (n > 0) console.log(`[news] ${n} item RSS sedia`); })
         .catch(() => {});
     }, 3000);
-    // Auto-update APOD: tarik gambar hari ini di latar belakang setiap beberapa minit.
-    nasa.startApodAutoUpdate();
-    console.log(`[nasa] auto-update APOD setiap ${config.nasa.apodRefreshMinutes} minit`);
-    // Backfill arkib NASA ke pangkalan data setempat (data/nasa/) setiap 6 jam.
-    nasa.startArchiveBackfill();
+    // Auto-update APOD + backfill arkib NASA — NYALI hanya bila NASA_AUTO=1.
+    // Halaman NASA sudah dibuang (fokus konten + server ringan); secara lalai
+    // dimatikan supaya tak bazir CPU/jaringan/disk pada VPS.
+    if (process.env.NASA_AUTO === '1') {
+      nasa.startApodAutoUpdate();
+      console.log(`[nasa] auto-update APOD setiap ${config.nasa.apodRefreshMinutes} minit`);
+      nasa.startArchiveBackfill();
+    } else {
+      console.log('[nasa] kerja latar dimatikan (NASA_AUTO!=1) — mod konten/ringan');
+    }
   });
 
   // WebSocket editor Tukuk Agent (/agent/...) —Upgrade lulus terus ke

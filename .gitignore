@@ -79,3 +79,6 @@ fastlane/screenshots/**/*.png
 code-server/
 # Tukuk Builder = fork bolt.diy berhistory sendiri (repo nested, remote fevian448)
 bolt.diy/
+
+# local safety-net backups (never commit)
+.backups/
