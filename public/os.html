@@ -281,6 +281,7 @@ var APPS = [
   ['timer','Timer','⏱️','/apps/timer','TOOLS'],['color','Color Picker','🎨','/apps/color','TOOLS'],
   ['password','Passwords','🔐','/apps/password','TOOLS'],['text','Text Tools','🔡','/apps/text','TOOLS'],
   ['calendar','Calendar','📅','/apps/calendar','TOOLS'],['dice','Dice & Coin','🪙','/apps/dice','TOOLS'],
+  ['map','Map','🗺️','/apps/map','TOOLS'],
   ['tip','Tip Split','💵','/apps/tip','TOOLS'],['bmi','BMI Check','⚖️','/apps/bmi','TOOLS'],
   ['pixel','Pixel Studio','🟩','/apps/pixel','MEDIA'],['piano','Synth Piano','🎹','/apps/piano','MEDIA'],
   ['spiro','Spiro Mandala','🌀','/apps/spiro','MEDIA'],['orbit','Orbit Sim','🪐','/apps/orbit','MEDIA'],
@@ -334,7 +335,7 @@ var WALLS = [
   ['Grape','linear-gradient(160deg,#2b1055 0%,#0f1115 55%,#7597de55 100%)'],
   ['Volcano','linear-gradient(160deg,#3d1010 0%,#0f1115 60%,#5b247a 100%)']
 ];
-var DEFAULT_PINS = ['notes','calc','todo','chat','bg-remover','converter','collage','store','nasa','snake','candy','settings'];
+var DEFAULT_PINS = ['notes','calc','todo','chat','bg-remover','converter','collage','store','nasa','map','snake','candy','settings'];
 
 // ── penyimpanan ──
 function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem('tkos:' + k)); return v == null ? d : v; } catch (e) { return d; } }

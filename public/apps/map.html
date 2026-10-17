@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Map — OpenStreetMap with search, satellite, GPS &amp; measure — Tukuk Apps — Tukuk-OS</title>
-<meta name="description" content="A full map inside Tukuk OS: search any place (Nominatim), switch between street and satellite layers, drop pins, read live GPS position, measure distances and share coordinates — powered by OpenStreetMap, no API key, no tracking.">
+<meta name="description" content="A full map inside Tukuk OS: search any place (Nominatim), street/satellite/dark/terrain layers, drop pins with place names, read live GPS, measure distances, fly to famous destinations — powered by OpenStreetMap, no API key, no tracking.">
 <link rel="canonical" href="https://tukuk.org/apps/map">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <script src="/theme.js"></script>
@@ -14,23 +14,44 @@
 <style>
   html, body { height:100%; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; display:flex; flex-direction:column; }
-  .bar { display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .bar { display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); flex-wrap:wrap; background:linear-gradient(180deg, color-mix(in srgb, var(--card,#161c2b) 70%, transparent), transparent); }
   .bar .back { font-size:.85rem; color:var(--muted); text-decoration:none; white-space:nowrap; }
   .bar .back:hover { color:var(--accent); }
   .bar h1 { margin:0; font-size:1rem; white-space:nowrap; }
-  #q { flex:1 1 180px; min-width:140px; font:inherit; font-size:.85rem; background:#0c1017; color:#e8f2ff; border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
-  .btn { font:inherit; font-size:.78rem; background:#1f6f43; color:#fff; border:0; border-radius:8px; padding:6px 10px; cursor:pointer; white-space:nowrap; }
+  #q { flex:1 1 180px; min-width:140px; font:inherit; font-size:.85rem; background:#0c1017; color:#e8f2ff; border:1px solid var(--line); border-radius:18px; padding:7px 12px; outline:none; }
+  #q:focus { border-color:var(--accent); }
+  .btn { font:inherit; font-size:.78rem; background:#1f6f43; color:#fff; border:0; border-radius:16px; padding:6px 12px; cursor:pointer; white-space:nowrap; transition:transform .12s, filter .12s; }
+  .btn:hover { filter:brightness(1.15); }
+  .btn:active { transform:scale(.94); }
   .btn.alt { background:var(--card,#161c2b); color:var(--muted); border:1px solid var(--line); }
-  .btn.on { background:#b7791f; }
+  .btn.alt:hover { color:var(--accent); border-color:var(--accent); }
+  .btn.on { background:#b7791f; color:#fff; }
+  /* Segmen lapisan peta — empat gaya, satu tekanan */
+  .segs { display:flex; gap:4px; background:#0c1017; border:1px solid var(--line); border-radius:16px; padding:3px; }
+  .segs button { font:inherit; font-size:.74rem; background:none; color:var(--muted); border:0; border-radius:12px; padding:4px 9px; cursor:pointer; white-space:nowrap; }
+  .segs button.on { background:var(--accent); color:#fff; }
+  /* Deretan destinasi popular — lawatan pantas ala kad muzik */
+  #chips { display:flex; gap:6px; overflow-x:auto; padding:7px 12px; border-bottom:1px solid var(--line); scrollbar-width:none; background:var(--bg); flex:none; }
+  #chips::-webkit-scrollbar { display:none; }
+  #chips button { font:inherit; font-size:.74rem; background:var(--card,#161c2b); color:var(--text); border:1px solid var(--line); border-radius:14px; padding:5px 11px; cursor:pointer; white-space:nowrap; transition:transform .12s; }
+  #chips button:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
   #map { flex:1 1 auto; min-height:200px; }
   #status { padding:6px 12px; font-size:.72rem; color:var(--muted); border-top:1px solid var(--line); min-height:1.4em; background:var(--bg); }
-  #results { position:absolute; z-index:1000; top:58px; left:12px; right:12px; max-width:340px; margin:0 auto; background:var(--card,#121826); border:1px solid var(--line); border-radius:10px; max-height:40vh; overflow:auto; display:none; }
+  #results { position:absolute; z-index:1000; top:58px; left:12px; right:12px; max-width:340px; margin:0 auto; background:var(--card,#121826); border:1px solid var(--line); border-radius:10px; max-height:40vh; overflow:auto; display:none; box-shadow:0 12px 32px rgba(0,0,0,.5); }
   #results button { display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--line); color:var(--text); font:inherit; font-size:.8rem; padding:9px 12px; cursor:pointer; }
   #results button:hover { background:rgba(127,200,150,.12); }
   #results button small { display:block; color:var(--muted); font-size:.68rem; }
   .leaflet-container { background:#0c1017; }
   .pop { font-size:.78rem; word-break:break-all; }
   .pop b { color:#1a5c38; }
+  /* Pin emoji dengan pancang berayun + denyut tiba */
+  .pinpop { font-size:26px; line-height:1; filter:drop-shadow(0 4px 6px rgba(0,0,0,.5)); transform-origin:50% 100%; animation:pindrop .45s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes pindrop { from { transform:translateY(-26px) scale(.4); opacity:0; } 60% { transform:translateY(2px) scale(1.1); } to { transform:translateY(0) scale(1); opacity:1; } }
+  .mypulse { width:18px; height:18px; border-radius:50%; background:#37d67a; border:2px solid #1f6f43; box-shadow:0 0 0 0 rgba(55,214,122,.5); animation:myp 1.8s ease-out infinite; }
+  @keyframes myp { to { box-shadow:0 0 0 16px rgba(55,214,122,0); } }
+  /* Toast kecil untuk maklum balas salin/kongsi */
+  #tin { position:fixed; left:50%; bottom:64px; transform:translateX(-50%) translateY(10px); background:#1f6f43; color:#fff; font-size:.78rem; padding:8px 16px; border-radius:16px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:1200; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+  #tin.on { opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -38,14 +59,23 @@
   <a class="back" href="/store">← Store</a>
   <h1>🗺️ Map</h1>
   <input id="q" type="text" placeholder="Search place, address, coords… (Enter)" autocomplete="off">
-  <button class="btn" id="goBtn">Cari</button>
-  <button class="btn alt" id="gpsBtn">📍 Saya</button>
-  <button class="btn alt" id="layerBtn">🛰 Satelit</button>
-  <button class="btn alt" id="measureBtn">📏 Ukur</button>
+  <button class="btn" id="goBtn">🔍 Cari</button>
+  <div class="segs" id="segs">
+    <button data-l="street" class="on">🛣 Jalan</button>
+    <button data-l="sat">🛰 Satelit</button>
+    <button data-l="dark">🌙 Gelap</button>
+    <button data-l="terrain">🏔 Timbul</button>
+  </div>
+  <button class="btn alt" id="gpsBtn" title="Position GPS saya">📍 Saya</button>
+  <button class="btn alt" id="randBtn" title="Terbang ke destinasi rawak">🎲 Rawak</button>
+  <button class="btn alt" id="shareBtn" title="Salin pautan paparan ini">🔗 Kongsi</button>
+  <button class="btn alt" id="measureBtn" title="Ukur jarak">📏 Ukur</button>
   <div id="results"></div>
 </div>
+<div id="chips"></div>
 <div id="map"></div>
-<div id="status">Kuasa OpenStreetMap — tiles peta & carian perlu internet. Tiada kunci API, tiada penjejakan.</div>
+<div id="status">Kuasa OpenStreetMap — ketik peta untuk pin · 🎲 untuk terbang rawak. Tiada kunci API, tiada penjejakan.</div>
+<div id="tin"></div>
 <script>
 (() => {
   'use strict';
@@ -54,35 +84,115 @@
   const say = (t) => { statusEl.textContent = t; };
   if (typeof L === 'undefined') { say('Leaflet gagal dimuat (tiada internet / CDN sekatan). Map perlukan CDN sekali sahaja.'); return; }
 
+  // Bunyi kecil: pancang pin & ketibaan destinasi (WebAudio, tanpa fail).
+  let ac = null;
+  function tone(f, d, v) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = f; g.gain.value = v || .04;
+      o.connect(g); g.connect(ac.destination); o.start();
+      g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d);
+      o.stop(ac.currentTime + d + .02);
+    } catch (e) { /* audio tidak kritikal */ }
+  }
+  function tin(t) {
+    const el = $('tin'); el.textContent = t; el.classList.add('on');
+    clearTimeout(tin.k); tin.k = setTimeout(() => el.classList.remove('on'), 1800);
+  }
+
   const map = L.map('map', { zoomControl: true }).setView([3.139, 101.6869], 6); // Malaysia default
-  const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '© OpenStreetMap contributors', crossOrigin: true,
-  }).addTo(map);
-  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics',
-  });
-  let satOn = false;
-  $('layerBtn').addEventListener('click', () => {
-    satOn = !satOn;
-    if (satOn) { map.removeLayer(street); sat.addTo(map); $('layerBtn').textContent = '🛣 Jalan'; }
-    else { map.removeLayer(sat); street.addTo(map); $('layerBtn').textContent = '🛰 Satelit'; }
+
+  // ── Empat lapisan gaya: jalan, satelit, gelap (CartoDB), timbul (OpenTopo) ──
+  const LAYERS = {
+    street: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors', crossOrigin: true }),
+    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics' }),
+    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd', attribution: '© OpenStreetMap © CARTO' }),
+    terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, subdomains: 'abc', attribution: '© OpenStreetMap contributors, SRTM | © OpenTopoMap (CC-BY-SA)' }),
+  };
+  let curLayer = LAYERS.street.addTo(map);
+  $('segs').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    for (const x of $('segs').querySelectorAll('button')) x.classList.toggle('on', x === b);
+    map.removeLayer(curLayer);
+    curLayer = LAYERS[b.getAttribute('data-l')].addTo(map);
+    say('Lapisan: ' + b.textContent.trim() + '.');
+    tone(520, .06, .03);
+  }));
+
+  // ── Destinasi terkenal — ketik & terbang (lawatan pantas) ──
+  const PLACES = [
+    ['🗼', 'KLCC', 'Kuala Lumpur', 3.1579, 101.7116, 16], ['🕋', 'Makkah', 'Masjidil Haram', 21.4225, 39.8262, 17],
+    ['🗼', 'Eiffel', 'Paris', 48.8584, 2.2945, 16], ['🏔', 'Everest', 'Gunung tertinggi', 27.9881, 86.925, 12],
+    ['🐫', 'Giza', 'Pokok Piramid', 29.9792, 31.1342, 15], ['🌆', 'New York', 'Statue of Liberty', 40.6892, -74.0445, 15],
+    ['🕌', 'Taj Mahal', 'Agra', 27.1751, 78.0421, 16], ['🏯', 'Kyoto', 'Kuil emas Kinkaku-ji', 35.0394, 135.7292, 16],
+    ['🏝', 'Bali', 'Pesisir Kuta', -8.7213, 115.1744, 13], ['🌉', 'Golden Gate', 'San Francisco', 37.8199, -122.4783, 14],
+    ['🏙', 'Burj Khalifa', 'Dubai', 25.1972, 55.2744, 16], ['🗽', 'Menara Condong', 'Pisa', 43.723, 10.3966, 17],
+    ['🏛', 'Colosseum', 'Rome', 41.8902, 12.4922, 17], ['🦘', 'Sydney', 'Opera House', -33.8568, 151.2153, 16],
+  ];
+  const chipBar = $('chips');
+  chipBar.innerHTML = PLACES.map((p, i) => '<button data-p="' + i + '">' + p[0] + ' ' + esc(p[1]) + '</button>').join('');
+  chipBar.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => visit(PLACES[parseInt(b.getAttribute('data-p'), 10)])));
+
+  function pinIcon(emoji) {
+    return L.divIcon({ className: '', html: '<div class="pinpop">' + emoji + '</div>', iconSize: [28, 28], iconAnchor: [14, 26], popupAnchor: [0, -24] });
+  }
+  // Terbang ke destinasi + pancang pin emoji + popup nama (sasarkan gaya slot bila hops>0)
+  let visitMarker = null;
+  async function visit(p, hops) {
+    const ll = [p[3], p[4]], zoom = p[5];
+    for (let i = 0; hops && i < hops; i++) {
+      const q = PLACES[Math.floor(Math.random() * PLACES.length)];
+      map.flyTo([q[3], q[4]], Math.max(4, zoom - 3), { duration: .5 });
+      tone(420 + i * 90, .05, .03);
+      await new Promise((r) => setTimeout(r, 560));
+    }
+    map.flyTo(ll, zoom, { duration: 1.4 });
+    setTimeout(() => {
+      if (visitMarker) map.removeLayer(visitMarker);
+      visitMarker = L.marker(ll, { icon: pinIcon(p[0]) }).addTo(map);
+      visitMarker.bindPopup('<div class="pop"><b>' + esc(p[1]) + '</b> — ' + esc(p[2]) + '<br>' + ll[0].toFixed(5) + ', ' + ll[1].toFixed(5) + '</div>').openPopup();
+      tone(880, .1, .05); setTimeout(() => tone(1175, .12, .05), 90);
+      say('Tiba di ' + p[1] + '!');
+    }, 1450);
+  }
+
+  // 🎲 Rawak: pilih destinasi yang bukan lokasi semasa, dengan hops slot
+  $('randBtn').addEventListener('click', () => {
+    if (!PLACES.length) return;
+    let idx = Math.floor(Math.random() * PLACES.length);
+    if (visitMarker) { const ll = visitMarker.getLatLng(); const near = (p) => Math.abs(p[3] - ll.lat) < .01 && Math.abs(p[4] - ll.lng) < .01; while (near(PLACES[idx])) idx = (idx + 1) % PLACES.length; }
+    $('randBtn').classList.add('on');
+    say('🎲 Memutar glob…');
+    visit(PLACES[idx], 3);
+    setTimeout(() => $('randBtn').classList.remove('on'), 3600);
   });
 
-  // Pin + coordinates on click
+  // ── Pin + nama tempat (reverse-geocode Nominatim) ──
   const pins = L.layerGroup().addTo(map);
   map.on('click', (e) => {
     if (measuring) { measureAdd(e.latlng); return; }
-    L.marker(e.latlng, { pane: 'overlayPane' }).addTo(pins)
-      .bindPopup('<div class="pop"><b>Pin</b><br>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '<br><button class="btn" style="margin-top:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + e.latlng.lat.toFixed(6) + ',' + e.latlng.lng.toFixed(6) + '\')">Salin koordinat</button></div>')
-      .openPopup();
-    say('Pin: ' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6));
+    const coord = e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6);
+    const mk = L.marker(e.latlng, { icon: pinIcon('📍') }).addTo(pins);
+    mk.bindPopup('<div class="pop"><b>Pin</b><br>' + coord + '<br><button class="btn" style="margin-top:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + coord + '\')">Salin koordinat</button></div>').openPopup();
+    tone(660, .07, .04);
+    say('Pin: ' + coord + ' — mencari nama tempat…');
+    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + e.latlng.lat + '&lon=' + e.latlng.lng + '&zoom=17&accept-language=en,ms')
+      .then((r) => r.json())
+      .then((d) => {
+        const nm = d && d.name ? d.name : (d && d.display_name ? d.display_name.split(',').slice(-2).join(',').trim() : null);
+        if (!nm) { say('Pin: ' + coord); return; }
+        mk.setPopupContent('<div class="pop"><b>' + esc(nm) + '</b><br>' + esc(d.display_name || '') + '<br>' + coord + '<br><button class="btn" style="margin-top:4px" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + coord + '\')">Salin koordinat</button></div>');
+        say('📌 ' + nm + ' · ' + coord);
+      })
+      .catch(() => say('Pin: ' + coord + ' (nama tempat gagal diambil — offline?)'));
   });
 
-  // Live coordinate readout while moving
+  // Bacaan koordinat langsung + hash kedudukan (untuk kongsi/pulih)
   map.on('mousemove', (e) => { if (!measuring) say(e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5) + '  ·  zoom ' + map.getZoom()); });
-  map.on('moveend', () => { const c = map.getCenter(); location.hash = 'z=' + map.getZoom() + '&lat=' + c.lat.toFixed(5) + '&lng=' + c.lng.toFixed(5); });
+  map.on('moveend', () => { const c = map.getCenter(); location.replace('#z=' + map.getZoom() + '&lat=' + c.lat.toFixed(5) + '&lng=' + c.lng.toFixed(5)); });
 
-  // Restore from hash
+  // Pulih daripada hash (pautan kongsi terus ke tempat yang sama)
   (function boot() {
     const h = new URLSearchParams(location.hash.slice(1));
     if (h.get('lat') && h.get('lng') && h.get('z')) {
@@ -90,7 +200,15 @@
     }
   })();
 
-  // GPS
+  // 🔗 Kongsi — salin pautan paparan sekarang
+  $('shareBtn').addEventListener('click', async () => {
+    const url = location.href;
+    try { await navigator.clipboard.writeText(url); tin('🔗 Pautan peta disalin!'); }
+    catch { prompt('Salin pautan ini:', url); }
+    tone(760, .07, .04);
+  });
+
+  // 📍 GPS — penanda berdenyut + bulat ketepatan
   let meMarker = null, accCircle = null;
   $('gpsBtn').addEventListener('click', () => {
     if (!navigator.geolocation) { say('Peranti ini tiada sokongan geolocation.'); return; }
@@ -99,15 +217,16 @@
       const ll = [pos.coords.latitude, pos.coords.longitude];
       if (meMarker) { meMarker.setLatLng(ll); if (accCircle) accCircle.setLatLng(ll); }
       else {
-        meMarker = L.circleMarker(ll, { radius: 7, color: '#1f6f43', fillColor: '#37d67a', fillOpacity: 1 }).addTo(map).bindPopup('📍 Posisi anda');
+        meMarker = L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="mypulse"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(map).bindPopup('📍 Posisi anda');
         accCircle = L.circle(ll, { radius: Math.max(10, pos.coords.accuracy), color: '#37d67a', weight: 1, fillOpacity: 0.08 }).addTo(map);
       }
-      map.setView(ll, Math.max(map.getZoom(), 15));
+      map.flyTo(ll, Math.max(map.getZoom(), 15), { duration: 1 });
       say('GPS: ' + ll[0].toFixed(6) + ', ' + ll[1].toFixed(6) + ' ±' + Math.round(pos.coords.accuracy) + ' m');
+      tone(990, .08, .05);
     }, (err) => { say('GPS gagal: ' + err.message + ' (perlu kebenaran + HTTPS)'); }, { enableHighAccuracy: true, timeout: 12000 });
   });
 
-  // Search — Nominatim (OSM)
+  // Carian — Nominatim (OSM)
   const results = $('results');
   async function doSearch() {
     const q = $('q').value.trim(); if (!q) return;
@@ -123,11 +242,12 @@
         const x = d[parseInt(b.getAttribute('data-i'), 10)];
         const ll = [parseFloat(x.lat), parseFloat(x.lon)];
         const zoom = x.boundingbox ? Math.min(17, 17 - Math.round(Math.log2(parseFloat(x.boundingbox[1]) - parseFloat(x.boundingbox[0])))) : (x.place_type === 'city' ? 12 : 16);
-        map.setView(ll, zoom);
+        map.flyTo(ll, zoom, { duration: 1.2 });
         pins.clearLayers();
-        L.marker(ll).addTo(pins).bindPopup('<div class="pop"><b>' + esc(x.display_name.split(',')[0]) + '</b><br>' + esc(x.display_name) + '</div>').openPopup();
+        L.marker(ll, { icon: pinIcon('📍') }).addTo(pins).bindPopup('<div class="pop"><b>' + esc(x.display_name.split(',')[0]) + '</b><br>' + esc(x.display_name) + '</div>').openPopup();
         results.style.display = 'none';
         say('Hasil: ' + x.display_name.split(',')[0]);
+        tone(820, .08, .04);
       }));
       say(d.length + ' hasil — pilih satu di senarai.');
     } catch (e) { say('Carian gagal (offline atau Nominatim sibuk): ' + e.message); }
@@ -136,7 +256,7 @@
   $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
   document.addEventListener('click', (e) => { if (!e.target.closest('#results') && !e.target.closest('#q')) results.style.display = 'none'; });
 
-  // Measure mode — tap points, shows cumulative distance
+  // 📏 Mod ukur — titik kumulatif
   let measuring = false, mPts = [], mLine = null, mMarkers = null, mTotal = 0;
   function measureReset() { mPts = []; mTotal = 0; if (mLine) { map.removeLayer(mLine); mLine = null; } if (mMarkers) { map.removeLayer(mMarkers); mMarkers = null; } }
   function measureAdd(ll) {
@@ -150,6 +270,7 @@
     }
     const km = mTotal / 1000;
     say('Ukur: ' + mPts.length + ' titik · ' + (km < 1 ? Math.round(mTotal) + ' m' : km.toFixed(2) + ' km') + ' — klik “Ukur” lagi untuk keluar/reset');
+    tone(500 + Math.min(6, mPts.length) * 60, .05, .03);
   }
   $('measureBtn').addEventListener('click', () => {
     measuring = !measuring;
