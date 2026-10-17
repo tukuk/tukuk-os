@@ -214,6 +214,30 @@ systemctl enable --now tukuk-os >/dev/null
 systemctl enable --now tukuk-os-watchdog.timer >/dev/null
 ok "tukuk-os + meilisearch + watchdog berjalan."
 
+# ── [6b] Tukuk Agent (editor + AI build-agent) — unit sentiasa dipasang;
+#     servis HANYA boleh start bila release siap-bina dari laptop sudah
+#     di-rsync ke /opt/tukuk-agent/release (tiada build berat di VPS). ────────
+if [[ -f "$INSTALL_DIR/deploy/tukuk-agent.service" ]]; then
+  getent passwd tukuk-agent >/dev/null 2>&1 || \
+    useradd --system --home-dir /var/lib/tukuk-agent --shell /usr/sbin/nologin tukuk-agent 2>/dev/null || true
+  install -d -m 0750 -o tukuk-agent -g tukuk-agent \
+    /var/lib/tukuk-agent/extensions /var/lib/tukuk-agent/user-data /var/lib/tukuk-agent/projects 2>/dev/null || true
+  cp "$INSTALL_DIR/deploy/tukuk-agent.service" /etc/systemd/system/tukuk-agent.service
+  systemctl daemon-reload
+  systemctl enable tukuk-agent >/dev/null 2>&1 || true
+  if [[ -x /opt/tukuk-agent/release/bin/tukuk-agent ]]; then
+    chown -R tukuk-agent:tukuk-agent /opt/tukuk-agent 2>/dev/null || true
+    systemctl restart tukuk-agent >/dev/null 2>&1 \
+      && ok "Tukuk Agent berjalan pada 127.0.0.1:8443 — https://agent.tukuk.org (melalui tunnel)." \
+      || warn "tukuk-agent gagal start — semak: journalctl -u tukuk-agent -n 30"
+  else
+    warn "Unit Tukuk Agent terpasang, tapi release belum ada di /opt/tukuk-agent/release."
+    echo "   Bina di LAPTOP:  bash scripts/build-tukuk-agent.sh"
+    echo "   Hantar ke server: bash scripts/publish-agent.sh <user@host>"
+    echo "   kemudian ulang setup-all.sh (atau: sudo systemctl restart tukuk-agent)."
+  fi
+fi
+
 # ── [7] Cloudflare Tunnel auto ────────────────────────────────────────────────
 info "[6/8] Cloudflare Tunnel..."
 if ! command -v cloudflared >/dev/null; then
