@@ -172,9 +172,9 @@ Keputusan gabungan: /ask cache-cold ±20s, warm ±11s (dahulunya 43-47s).
 
 ## 🏢 Data Center Bersatu — semua aplikasi + AI dalam satu tubuh
 
-`/datacenter` (papan pemuka langsung) + `/api/datacenter` (JSON telemetri:
-CPU/RAM/beban/model/aktiviti/katalog) + `src/brain/approuter.js` (32 permukaan
-aplikasi boleh-dirout). Setiap `/ask` kini mengembalikan `apps: [...]` —
+`/datacenter` (papan pemuka langsung) + `/api/datacenter` (JSON: model/aktiviti/
+katalog — spesifikasi perkakasan pelayan TIDAK didedahkan) + `src/brain/approuter.js`
+(32 permukaan aplikasi boleh-dirout). Setiap `/ask` kini mengembalikan `apps: [...]` —
 cadangan aplikasi server yang boleh menindaklanjuti soalan ("convert song to
 mp3" → /converter). Uji terus: `GET /api/apps/route?q=buang+latar+belakang+gambar`.
 Ini gabungan otak ↔ organ: LLM menjawab, app router menghantar ke alat yang betul.

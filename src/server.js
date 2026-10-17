@@ -12,7 +12,6 @@ const brain = require('./brain/provider');
 const rag = require('./brain/rag');
 const taskrouter = require('./brain/taskrouter');
 const approuter = require('./brain/approuter');
-const os = require('os');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
 const reranker = require('./brain/reranker');
@@ -645,17 +644,11 @@ app.get('/api/apps/route', (req, res) => {
 app.get('/api/datacenter', async (req, res) => {
   try {
     const models = await modelsInventory();
-    const cpus = os.cpus();
+    // JANGAN dedahkan spesifikasi fizikal pelayan (model CPU, teras, RAM, load,
+    // uptime) ke publik — papan pemuka ini menunjuki KEBOLEHAN (model, app,
+    // aktiviti), bukan perkakasan tempat ia berjalan.
     res.json({
       dataCenter: 'Tukuk-OS AI Data Center',
-      cpu: {
-        name: (cpus[0] && cpus[0].model) || 'unknown',
-        cores: cpus.length,
-        arch: os.arch(),
-        loadAvg: os.loadavg().map((x) => Math.round(x * 100) / 100),
-        uptimeSec: Math.round(os.uptime())
-      },
-      memory: { totalMb: Math.round(os.totalmem() / 1048576), freeMb: Math.round(os.freemem() / 1048576) },
       models,
       apps: {
         routerEntries: approuter.CATALOG.length,
@@ -676,12 +669,12 @@ app.get('/datacenter', (req, res) => {
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Data Center - Tukuk-OS</title>
-<meta name="description" content="Live operations dashboard of the Tukuk-OS CPU AI data center: models, apps, routing, resources and activity.">
+<meta name="description" content="Live operations dashboard of the Tukuk-OS AI data center: models, apps, routing and activity.">
 <link rel="canonical" href="https://tukuk.org/datacenter">
 <style>${COMMON_CSS}</style>
 </head><body><div class="wrap">
 <header><h1>🏢 Tukuk-OS AI Data Center</h1>
-<p class="tagline">Every application and every AI model on this CPU server — unified, live.</p></header>
+<p class="tagline">Every application and every AI model — unified, live.</p></header>
 <a class="back-link" href="/models">← Model inventory</a>
 <div id="app"><p>Loading data center telemetry…</p></div>
 <script>
@@ -689,23 +682,15 @@ app.get('/datacenter', (req, res) => {
   var el = document.getElementById('app');
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function fmt(n) { return Number(n || 0).toLocaleString('en'); }
-  function secs(s) { var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600); return (d ? d + 'd ' : '') + h + 'h'; }
   fetch('/api/datacenter').then(function (r) { return r.json(); }).then(function (d) {
     var m = d.models || {}, b = m.backend || {}, html = '';
-    html += '<div class="post-card"><h2>⚙️ Compute</h2>';
-    html += '<p><strong>' + esc(d.cpu.name) + '</strong> — ' + d.cpu.cores + ' cores · ' + esc(d.cpu.arch) + '</p>';
-    var pct = Math.min(100, Math.round(d.cpu.loadAvg[1] / d.cpu.cores * 100));
-    html += '<p>CPU load (5 min): ' + d.cpu.loadAvg.join(' / ') + ' — <strong>' + pct + '% busy</strong></p>';
-    html += '<div style="background:var(--line);border-radius:6px;height:10px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:#4c8dff"></div></div>';
-    var rpct = Math.round((1 - d.memory.freeMb / d.memory.totalMb) * 100);
-    html += '<p>Memory: ' + fmt(d.memory.totalMb - d.memory.freeMb) + ' / ' + fmt(d.memory.totalMb) + ' MB used (' + rpct + '%) · Uptime ' + secs(d.cpu.uptimeSec) + '</p>';
-    html += '<p>Network: <strong>' + esc(d.network) + '</strong>' + (d.offline ? ' — brain runs in offline mode' : '') + '</p></div>';
+    // Tiada kad "Compute" — maklumat perkakasan (CPU/RAM/load/uptime) tidak didedahkan.
     html += '<div class="post-card"><h2>🧠 AI stack</h2>';
     html += '<p>Provider: <strong>' + esc(b.provider) + '</strong>' + (b.localFirst ? ' · local-first' : '') + '</p>';
     html += '<p>Chain: ' + (b.chain || []).map(esc).join(' → ') + ' → cloud: ' + (((b.cloudFallback || []).length) ? b.cloudFallback.map(esc).join(', ') : 'none') + '</p>';
     html += '<p>Own model: ' + (m.ownModel && m.ownModel.loaded ? '<strong>' + esc(m.ownModel.name) + '</strong> (rescues ' + esc(m.ownModel.regexGapsRescued || '') + ' regex gaps)' : 'not trained yet') + '</p>';
     html += '<p>Local LLMs: ' + ((m.ollamaModels || []).length ? m.ollamaModels.map(function (x) { return esc(x.name); }).join(', ') : 'ollama offline') + '</p>';
-    html += '<p>Reranker: ' + (m.reranker && m.reranker.enabled ? 'enabled' : 'off') + ' · Answer cache: ' + fmt((m.answerCache || {}).entries) + ' entries</p></div>';
+    html += '<p>Reranker: ' + (m.reranker && m.reranker.enabled ? 'enabled' : 'off') + ' · Answer cache: ' + fmt((m.answerCache || {}).entries) + ' entries</p>' + (d.offline ? '<p style="color:#e0a94a">Offline — brain runs in offline mode.</p>' : '') + '</div>';
     html += '<div class="post-card"><h2>📊 Activity</h2>';
     html += '<p>Searches: ' + fmt(d.activity.searches) + ' · Questions asked: ' + fmt(d.activity.asks) + ' · Crawls: ' + fmt(d.activity.crawls) + ' · Events: ' + fmt(d.activity.events) + '</p></div>';
     html += '<div class="post-card"><h2>📱 Unified app fabric (' + d.apps.routerEntries + ' routable surfaces · ' + fmt(d.apps.storeItems) + ' store items)</h2><div style="display:flex;flex-wrap:wrap;gap:8px">';
