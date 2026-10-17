@@ -10,7 +10,7 @@
 <link rel="icon" type="image/svg+xml" href="/icons/apps/chat.svg?v=3">
 <link rel="apple-touch-icon" href="/icons/apps/chat-192.png">
 <link rel="manifest" href="/manifest-chat.json">
-<meta name="theme-color" content="#1f6feb">
+<meta name="theme-color" content="#111b21">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="T Chat">
@@ -584,6 +584,60 @@
     .bub { max-width:85%; }
     header h1 { font-size:1rem; }
   }
+
+  /* ═══ Rupa WhatsApp (palet hijau gelap) — tindih pemboleh ubah tema ═══
+     Semua gaya apl pakai var(--accent) dsb., jadi satu override di body ini
+     menukar seluruh app (butang, fokus, badge, tab) serentak. */
+  body { --accent:#00a884; --accent-fill:#008069; --panel:#111b21; --bg:#0b141a; --line:#233138; --text:#e9edef; --muted:#8696a0; }
+  #msgsWrap { --w1:#0b141a; --w2:#0a1612; --bub-in:#202c33; --bub-out:#005c4b; }
+  #msgsWrap[data-wall="5"], #msgsWrap[data-wall="6"] { --bub-in:#f0f2f5; } /* wall cerah → balon masuk putih */
+  #side { background:#111b21; }
+  #top { background:#202c33; }
+  #compose, #tray, #replyBar, #editBar, #pinBar, #recBar, #netbar { background:#202c33; }
+  #newBtn { background:linear-gradient(135deg,#00a884,#008069); }
+  .chatrow:hover { background:#1e2c34; }
+  .chatrow.sel { background:#2a3942; border-left-color:#00a884; }
+  .chatrow .pv .tick.rd { color:#53bdeb; }
+  #q, #inp { background:#2a3942; border-color:#2a3942; }
+  #q:focus, #inp:focus { border-color:#2a3942; }
+  .daysep span { background:#182229; color:#8696a0; }
+
+  /* Balon mesej gaya WhatsApp: radius 8px, warna pejal, ekor segi tiga pada
+     baris pertama grup (:not(.cont)). Ekor dijana clip-path supaya ikut warna
+     wallpaper (var(--bub-in)) tanpa menindih peraturan wall sedia ada. */
+  .bub { border-radius:8px; }
+  .row.them .bub { background:var(--bub-in); color:#e9edef; }
+  #msgsWrap[data-wall="5"] .row.them .bub, #msgsWrap[data-wall="6"] .row.them .bub { background:var(--bub-in); color:#111b21; }
+  .row.me .bub { background:var(--bub-out); color:#e9edef; }
+  .row:not(.cont) .bub::before { content:''; position:absolute; top:0; width:9px; height:14px; }
+  .row.them:not(.cont) .bub::before { left:-9px; background:var(--bub-in); clip-path:polygon(100% 0, 100% 100%, 0 0); }
+  .row.me:not(.cont) .bub::before { right:-9px; background:var(--bub-out); clip-path:polygon(0 0, 0 100%, 100% 0); }
+  .row.them:not(.cont) .bub { border-top-left-radius:0; }
+  .row.me:not(.cont) .bub { border-top-right-radius:0; }
+  .row.me.cont .bub { border-top-left-radius:8px; }
+
+  .mlink { color:#53bdeb; }
+  .mlink:hover { color:#90d9ff; }
+  #msgsWrap[data-wall="5"] .row.them .mlink, #msgsWrap[data-wall="6"] .row.them .mlink { color:#0274b2; }
+  .row.me .mlink { color:#d3f8ee; }
+  .row.me .mlink:hover { color:#fff; }
+  .bub .tick.rd { color:#53bdeb; }
+  .qreact { background:#202c33; }
+  .tvl { background:#1f2c34; color:#e9edef; }
+  .quotecard { background:rgba(0,0,0,.22); }
+  .row.me .quotecard { background:rgba(0,0,0,.28); }
+  .fcard { background:rgba(0,0,0,.18); }
+  .reactions button { background:#182229; border-color:#2a3942; }
+  #toast { background:#182229; border-color:#2a3942; }
+  .media { background:#0f1c18; }
+  #call { background:radial-gradient(120% 100% at 50% 0%, #11332c, #060a12 72%); }
+
+  /* Papan suara prank — baris TTS persona, main atas speakerphone semasa call */
+  #pkBoard { position:absolute; left:50%; transform:translateX(-50%); bottom:158px; z-index:6; display:none; flex-direction:column; gap:5px; width:min(340px,92vw); max-height:42vh; overflow-y:auto; background:rgba(9,20,16,.94); border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:10px; box-shadow:0 10px 34px rgba(0,0,0,.5); }
+  #pkBoard.on { display:flex; }
+  #pkBoard button { background:rgba(255,255,255,.1); border:none; color:#fff; border-radius:9px; padding:9px 11px; font:inherit; font-size:.8rem; cursor:pointer; text-align:left; line-height:1.35; }
+  #pkBoard button:hover { background:rgba(0,168,132,.4); }
+  #pkBoard .dialrow { background:#00a884; font-weight:700; text-align:center; }
 </style>
 </head>
 <body>
@@ -617,7 +671,7 @@
     <b>Tukuk ID:</b> every account gets a permanent number (example <b>100042</b>). Friends can find you by that number even if you change your name — DMs and old messages never break.<br>
     <b>Settings (⚙️):</b> change name &amp; bio, change password, friend list, find people, block/unblock, and sign out other devices.<br>
     <b>📹 Calls:</b> in a DM, press 📹 or 📞 for direct video/voice calls between devices — the incoming screen shows <i>who</i> is calling (name, Tukuk ID, friend or not) before you answer.<br>
-    <b>🎭 Prank:</b> press the mask button in the send bar to show a fake fullscreen incoming call with a custom name — works even offline.<br>
+    <b>🎭 Prank:</b> press the mask button in the send bar to show a fake fullscreen incoming call with a custom name — works even offline. Now with <b>direct dial</b>: enter a real phone number and T Chat opens your phone's dialer with it (call goes out from your own number), plus a 🔊 voice-line soundboard for speakerphone pranks.<br>
     <b>📲 Install:</b> ⚙️ → App to install T Chat on Android/iOS/Windows/Linux/Huawei, or press <b>🌐 Download (all OS)</b> for the auto-pick page: APK directly on Android/Huawei/ChromeOS, PWA on Windows/Linux/macOS, Add to Home Screen on iOS.<br>
     <b>Safety:</b> use a password you don't use elsewhere, and generate <b>recovery codes</b> in ⚙️ Security — one code can reset access if you forget the password.
     </div>
@@ -697,10 +751,12 @@
   <div id="cInfo"><div class="cava" id="cAva">?</div><div class="cname" id="cName"></div><div id="cTag"></div><div class="csub" id="cSub"></div><div class="cbio" id="cBio"></div><div class="cstat" id="cStat"></div></div>
   <div id="cCtrl">
     <button id="cAccept" title="Accept call"><span>📞</span><i>Accept</i></button>
+    <button id="cBoard" title="Prank soundboard" style="display:none"><span>🔊</span><i>Board</i></button>
     <button id="cMute" title="Mute microphone"><span>🎙️</span><i>Mute</i></button>
     <button id="cCam" title="Turn camera off"><span>🎥</span><i>Camera</i></button>
     <button id="cEnd" title="End call"><span>📵</span><i>End</i></button>
   </div>
+  <div id="pkBoard"></div>
   <button id="cBlock">🚫 Block caller</button>
   <div id="cPrank"><div class="big">🎭 PRANKED! 😆</div><div class="sm">No real call &mdash; and that &ldquo;TukuCaller&rdquo; was made up too. This is T Chat's prank mode. Press 📵 End to close.</div></div>
 </div>
@@ -722,8 +778,11 @@
     <button data-p="ex">💔 Ex</button>
     <button data-p="celeb">⭐ Celebrity</button>
   </div>
+  <div class="pflabel">📞 Direct dial (real phone number)</div>
+  <input id="pkPhone" type="tel" maxlength="22" inputmode="tel" placeholder="+60123456789 — optional" autocomplete="off">
+  <div class="pfmeta">Fill a number and press <b>📲 Dial &amp; prank</b>: T Chat opens your device's phone dialer with that number pre-filled (the real call goes out <b>from your own number</b> — caller-ID spoofing is illegal). The incoming screen then shows that number, and 🔊 <b>Board</b> gives one-tap voice lines for speakerphone pranks.</div>
   <div class="pfmeta">A fake incoming-call screen appears fullscreen with ringtone &amp; vibration. While ringing, &ldquo;TukuCaller&rdquo; will <b>look up the ID</b> then show a tag + disguise report in the style of caller-ID apps &mdash; all <b>made up for laughs</b>, local only, no real call &amp; works even offline.</div>
-  <div class="mbtns"><button id="pkCancel">Cancel</button><button class="prim" id="pkGo">🎭 Call now</button></div>
+  <div class="mbtns"><button id="pkCancel">Cancel</button><button id="pkDial">📲 Dial &amp; prank</button><button class="prim" id="pkGo">🎭 Call now</button></div>
 </div></div>
 
 <div class="modal" id="peopleModal"><div class="mbox">
@@ -856,7 +915,7 @@
     <label>Message text size <input type="range" id="stFont" min="13" max="19"></label>
     <div style="padding:10px 0 4px;font-size:.86rem">Wallpaper chat</div>
     <div class="walls" id="stWalls">
-      <button data-w="1" aria-label="Dark wallpaper (default)" title="Dark (default)" style="background:linear-gradient(160deg,#172033,#101627)"></button>
+      <button data-w="1" aria-label="Dark wallpaper (default)" title="Dark (default)" style="background:linear-gradient(160deg,#0b141a,#0a1612)"></button>
       <button data-w="2" aria-label="Purple wallpaper" title="Purple" style="background:linear-gradient(160deg,#241a2e,#160f1e)"></button>
       <button data-w="3" aria-label="Green wallpaper" title="Green" style="background:linear-gradient(160deg,#12261e,#0a1812)"></button>
       <button data-w="4" aria-label="Amber wallpaper" title="Amber" style="background:linear-gradient(160deg,#2b2114,#1b1409)"></button>
@@ -2274,12 +2333,15 @@ window.addEventListener('error', (e) => {
     $('cAccept').style.display = state === 'in' ? 'flex' : 'none';
     $('cMute').style.display = $('cCam').style.display = state === 'on' ? 'flex' : 'none';
     $('cBlock').style.display = (state === 'in' && C && !C.prank) ? 'inline-block' : 'none';
+    // Butang papan suara hanya untuk prank — panggilan sebenar tak perlu.
+    $('cBoard').style.display = (C && C.prank && (state === 'in' || state === 'on')) ? 'flex' : 'none';
   }
   function callHide() {
     const el = callEl();
     el.classList.remove('on', 'vid', 'audio', 'ringing', 'group');
     $('cPrank').classList.remove('on');
     $('cTag').classList.remove('on');
+    $('pkBoard').classList.remove('on');
     try { $('cRemote').srcObject = null; $('cLocal').srcObject = null; } catch { /* sudah kosong */ }
   }
 
@@ -2755,24 +2817,83 @@ window.addEventListener('error', (e) => {
   // ── Mod prank + "TukuCaller": panggilan palsu setempat dengan pengenalan
   //    pemanggil parodi (tag crowdsourced gaya apl pencari nombor). Semua rekaan.
   const PK_TAGS = {
-    scam:   { tone: 'tk-spam', word: 'scammer', tag: '⚠️ Likely Scammer',        cmt: '«Never give out your OTP!»' },
-    boss:   { tone: 'tk-warn', word: 'boss',   tag: '💼 Your Boss',              cmt: '«The project is late again — answer now»' },
-    bank:   { tone: 'tk-info', word: 'bank',   tag: '🏦 Bank — At-Risk Account', cmt: '«Transaction RM9,999.00 is being processed»' },
-    kurier: { tone: 'tk-info', word: 'courier', tag: '📦 Delivery Courier',     cmt: '«Your parcel has sat unclaimed for 3 days»' },
-    ghost:  { tone: 'tk-fun',  word: 'ghost',  tag: '👻 Otherworldly Number',   cmt: '«This phone rings by itself at 3:33 AM»' },
-    ex:     { tone: 'tk-fun',  word: 'your ex', tag: '💔 «Old Memories»',       cmt: '«142 missed calls since 2019»' },
-    celeb: { tone: 'tk-info', word: 'celebrity', tag: '⭐ Local Celebrity',     cmt: '«Congratulations, you are picked for a casting session!»' },
+    scam:   { key:'scam',   tone: 'tk-spam', word: 'scammer', tag: '⚠️ Likely Scammer',        cmt: '«Never give out your OTP!»' },
+    boss:   { key:'boss',   tone: 'tk-warn', word: 'boss',   tag: '💼 Your Boss',              cmt: '«The project is late again — answer now»' },
+    bank:   { key:'bank',   tone: 'tk-info', word: 'bank',   tag: '🏦 Bank — At-Risk Account', cmt: '«Transaction RM9,999.00 is being processed»' },
+    kurier: { key:'kurier', tone: 'tk-info', word: 'courier', tag: '📦 Delivery Courier',     cmt: '«Your parcel has sat unclaimed for 3 days»' },
+    ghost:  { key:'ghost',  tone: 'tk-fun',  word: 'ghost',  tag: '👻 Otherworldly Number',   cmt: '«This phone rings by itself at 3:33 AM»' },
+    ex:     { key:'ex',     tone: 'tk-fun',  word: 'your ex', tag: '💔 «Old Memories»',       cmt: '«142 missed calls since 2019»' },
+    celeb: { key:'celeb',  tone: 'tk-info', word: 'celebrity', tag: '⭐ Local Celebrity',     cmt: '«Congratulations, you are picked for a casting session!»' },
   };
   const PK_EXTRA = [
-    { tone: 'tk-warn', word: 'telco company', tag: '🕵️ «Telco Company»',   cmt: '«Your bill is overdue — press 1 to pay»' },
-    { tone: 'tk-spam', word: 'the authorities', tag: '🚔 «The Authorities»',   cmt: '«You are summoned for questioning tomorrow»' },
-    { tone: 'tk-fun',  word: 'nasi kandar seller', tag: '🍔 «Nasi Kandar Sis»', cmt: '«Special curry is waiting, brother»' },
-    { tone: 'tk-warn', word: 'instant loan', tag: '📈 «Instant Loan»',  cmt: '«RM5,000 in 5 minutes, no installments»' },
+    { key:'telco',   tone: 'tk-warn', word: 'telco company', tag: '🕵️ «Telco Company»',   cmt: '«Your bill is overdue — press 1 to pay»' },
+    { key:'police',  tone: 'tk-spam', word: 'the authorities', tag: '🚔 «The Authorities»',   cmt: '«You are summoned for questioning tomorrow»' },
+    { key:'kandar',  tone: 'tk-fun',  word: 'nasi kandar seller', tag: '🍔 «Nasi Kandar Sis»', cmt: '«Special curry is waiting, brother»' },
+    { key:'loan',    tone: 'tk-warn', word: 'instant loan', tag: '📈 «Instant Loan»',  cmt: '«RM5,000 in 5 minutes, no installments»' },
   ];
   const pkAll = () => Object.keys(PK_TAGS).map(k => PK_TAGS[k]).concat(PK_EXTRA);
   // Pilih tag: ikut persona yang dipilih, atau rawak (termasuk luaran lucu) bila "Rawak".
   const pkPick = () => (pkPersona !== 'none' && PK_TAGS[pkPersona]) ? PK_TAGS[pkPersona]
     : pkAll()[Math.floor(Math.random() * pkAll().length)];
+
+  // ── Papan suara prank: baris TTS ikut persona (p = pitch, r = rate) — untuk
+  //    dimainkan atas speakerphone semasa panggilan sebenar ke nombor telefon.
+  const PK_BOARD = {
+    scam:   [{ t:'Hello! Your account will be blocked in five minutes. Press 1 to confirm your OTP.', p:.6, r:.9 }, { t:'Transfer RM10,000 now to this safe account. Yes. Now.', p:.7, r:1.05 }, { t:'Kami sudah tahu PIN anda. Haha... gurau saja.', p:.5, r:.85 }],
+    boss:   [{ t:'Where are you? The meeting started ten minutes ago!', p:.65, r:1.1 }, { t:'Report on my desk before lunch. No excuses.', p:.6, r:.95 }, { t:'Your KPI is down 300 percent. Come to my office now.', p:.7, r:1 }],
+    bank:   [{ t:'This is MyBank. A suspicious transaction of RM9,999 just occurred on your card.', p:1, r:1 }, { t:'Do you authorise this transfer? Say yes, or we block your account.', p:.9, r:.95 }, { t:'Please confirm your IC number, and your ATM PIN.', p:1.1, r:1.05 }],
+    kurier: [{ t:'Parcel for you! But the delivery fee is RM480. Pay now.', p:1.2, r:1.15 }, { t:'Saya dah depan rumah ni! Turun cepat, panas ni.', p:1.1, r:1.1 }, { t:'Your online shopping arrived... total weight 40 kilos.', p:1, r:.95 }],
+    ghost:  [{ t:'Why... did you... answer... my call...', p:.4, r:.6 }, { t:'We have been waiting for you... under your bed.', p:.45, r:.7 }, { t:'Tolong... jangan letak telefon ini...', p:.4, r:.65 }],
+    ex:     [{ t:'I still have your hoodie. And your feelings.', p:1.2, r:.95 }, { t:'Aku nampak kau online, tapi tak reply mesej aku.', p:1.15, r:1 }, { t:'Congrats on the new girlfriend. She seems... nice.', p:1.1, r:.9 }],
+    celeb: [{ t:'Hello! This is Artis Papan A. You just went viral on my story!', p:1.3, r:1.1 }, { t:'We want you for an advert. Payment? One million ringgit.', p:1.25, r:1 }, { t:'Jangan lupa tekan subscribe untuk video saya seterusnya!', p:1.3, r:1.15 }],
+    telco:  [{ t:'Bill anda tertunggak RM240. Tekan 1 untuk bayar sekarang.', p:.95, r:1 }, { t:'Your internet will be cut in one hour. One hour.', p:.85, r:.95 }],
+    police: [{ t:'This is the police station. You are summoned for questioning tomorrow.', p:.6, r:.9 }, { t:'Kami dapat aduan tentang anda. Sudi datang ke balai sekarang.', p:.65, r:.95 }],
+    kandar: [{ t:'Nasi Kandar special! Kuah campur dah habis, tapi kami simpan untuk awak.', p:1.15, r:1.1 }, { t:'Abang, RM18 dulu. Terima kasih.', p:1.05, r:1 }],
+    loan:   [{ t:'RM5,000 masuk hari ini! Tanpa agunan, tanpa pertanyaan.', p:1.2, r:1.2 }, { t:'Pinjam dulu... bayar bila-bila hati anda.', p:1.1, r:1.05 }],
+    def:    [{ t:'Hello? Is anyone there? This is a mystery caller.', p:.8, r:1 }, { t:'You will never know who I am... haha!', p:.6, r:.9 }, { t:'Jawab! ... eh, salah nombor. Haha.', p:1, r:1.1 }],
+  };
+  const pkPhoneVal = () => {
+    const v = String($('pkPhone').value || '').replace(/[^\d+]/g, '');
+    return v.length >= 6 ? v : '';
+  };
+  // Pelayar tidak boleh dail sendiri — `tel:` membuka apl dail peranti dengan
+  // nombor pra-isi; panggilan keluar dari NOMBOR PENGGUNA (spoofing haram).
+  function dialReal(num) {
+    if (!num) { toast('Type a phone number first.'); return; }
+    toast('📲 Opening your dialer with ' + num + ' — press call there.', 5200);
+    setTimeout(() => { try { location.href = 'tel:' + num; } catch { /* pelayar tak sokong tel: */ } }, 350);
+  }
+  function pkSpeak(text, pitch, rate) {
+    try {
+      if (!('speechSynthesis' in window)) { toast('No text-to-speech on this device.'); return; }
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ms-MY'; u.pitch = pitch || 1; u.rate = rate || 1;
+      speechSynthesis.speak(u);
+    } catch { /* tiada TTS */ }
+  }
+  // Isi papan suara: butang dail (jika nombor ada) + baris persona + baris gotcha.
+  function pkBoardFill(sess) {
+    const b = $('pkBoard');
+    b.innerHTML = '';
+    if (sess.pkPhone) {
+      const d = document.createElement('button');
+      d.className = 'dialrow';
+      d.textContent = '📞 Dial ' + sess.pkPhone + ' (real)';
+      d.onclick = () => dialReal(sess.pkPhone);
+      b.appendChild(d);
+    }
+    for (const line of (PK_BOARD[sess.pkKey] || PK_BOARD.def)) {
+      const x = document.createElement('button');
+      x.textContent = '🔊 ' + line.t;
+      x.onclick = () => pkSpeak(line.t, line.p, line.r);
+      b.appendChild(x);
+    }
+    const g = document.createElement('button');
+    g.textContent = '🎭 Gotcha line';
+    g.onclick = () => pkSpeak('Gotcha! You got pranked by T Chat!', 1.25, 1.02);
+    b.appendChild(g);
+  }
 
   // Fasa 1: skrin "mencari ID" supaya tag muncul dengan dramatik.
   function pkSearch(sess) {
@@ -2781,7 +2902,7 @@ window.addEventListener('error', (e) => {
     t.className = ''; t.innerHTML = '';
     $('cName').textContent = sess.peer.name;
     $('cAva').textContent = initials(sess.peer.name); $('cAva').style.background = colorOf(sess.peer.name);
-    $('cSub').textContent = (sess.kind === 'audio' ? '📞 Voice call' : '📹 Video call') + ' · ID ' + sess.pkId;
+    $('cSub').textContent = (sess.kind === 'audio' ? '📞 Voice call' : '📹 Video call') + ' · ' + (sess.pkPhone || 'ID ' + sess.pkId);
     $('cBio').textContent = 'Connecting the call…';
     t.innerHTML = '<div class="tk-search"><span class="sp"></span>TukuCaller is looking up the caller ID…</div>';
     t.classList.add('on');
@@ -2809,6 +2930,9 @@ window.addEventListener('error', (e) => {
     C = { pc: null, local: null, remote: null, peer: { id: 0, name: nm }, kind: pkKind, dir: 'in', state: 'in', t0: 0, iv: null, ringT: null, iceQ: [], prank: true };
     C.pkId = 100000 + Math.floor(Math.random() * 899999);
     C.pkTag = pkPick();
+    C.pkKey = C.pkTag.key || 'def';
+    C.pkPhone = pkPhoneVal();
+    pkBoardFill(C);
     callEl().classList.toggle('audio', pkKind === 'audio');
     $('cStat').textContent = 'Incoming call…';
     callPaint('in');
@@ -2865,6 +2989,15 @@ window.addEventListener('error', (e) => {
   for (const b of $('pkPersona').querySelectorAll('button')) b.onclick = () => { pkPersona = b.dataset.p; for (const x of $('pkPersona').querySelectorAll('button')) x.classList.toggle('on', x === b); };
   $('pkGo').onclick = prankStart;
   $('pkName').addEventListener('keydown', e => { if (e.key === 'Enter') prankStart(); });
+  // 📲 Dial & prank: mula skrin prank (nombor dipaparkan), kemudian buka dail peranti.
+  $('pkDial').onclick = () => {
+    const ph = pkPhoneVal();
+    if (!ph) { toast('Type a phone number first.'); return; }
+    prankStart();
+    dialReal(ph);
+  };
+  $('pkPhone').addEventListener('keydown', e => { if (e.key === 'Enter') $('pkDial').click(); });
+  $('cBoard').onclick = () => $('pkBoard').classList.toggle('on');
   // Tab ditutup/diulang seawal panggilan: maklumkan pasangan supaya skrin mereka
   // tidak tergantung menunggu (keepalive membolehkan permintaan selesai).
   addEventListener('pagehide', () => {
