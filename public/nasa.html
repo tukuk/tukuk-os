@@ -202,7 +202,7 @@
 
 <div class="hero">
     <h1>NASA Space &amp; Astronomy Explorer</h1>
-    <p>Discover outer space through official NASA open data &mdash; interactive space experiments, 3D Interactive Live ISS Globe, Astronomy Picture of the Day, Mars Exploration, Asteroid Radar &amp; Space Audio.</p>
+    <p>Discover outer space through official NASA open data &mdash; interactive space experiments, 3D Interactive Live ISS Globe, Astronomy Picture of the Day, Mars Exploration, Asteroid Radar &amp; Space Audio. Now also: Moon &amp; Sky Tonight, Exoplanet Hunter, Planetary Defense, Live Satellite Watch &amp; the Wall of Wonders gallery.</p>
   </div>
 
   <div class="tab-bar">
@@ -218,6 +218,11 @@
     <button class="tab-btn" onclick="switchTab('search')">&#128640; Media Search</button>
     <button class="tab-btn" onclick="switchTab('history')">&#128214; NASA History</button>
     <button class="tab-btn" onclick="switchTab('topics')">&#128752; Missions &amp; Topics</button>
+    <button class="tab-btn" onclick="switchTab('moon')">&#127769; Moon &amp; Sky Tonight</button>
+    <button class="tab-btn" onclick="switchTab('exo')">&#129680; Exoplanets</button>
+    <button class="tab-btn" onclick="switchTab('sentry')">&#9732;&#65039; Planetary Defense</button>
+    <button class="tab-btn" onclick="switchTab('sats')">&#128752; Satellite Watch</button>
+    <button class="tab-btn" onclick="switchTab('gallery')">&#128444;&#65039; Wall of Wonders</button>
   </div>
 
   <!-- 1. APOD PANEL -->
@@ -480,6 +485,71 @@
     </div>
   </div>
 
+  <!-- 10. MOON & SKY TONIGHT PANEL -->
+  <div id="panel-moon" class="section-panel">
+    <div class="card">
+      <h2 style="margin-top:0;">&#127769; Moon &amp; Sky Tonight</h2>
+      <p style="color:var(--muted);">The Moon phase is computed locally from the synodic cycle (no external dependency), sunrise, sunset and the three twilight bands come from the free sunrise-sunset API, and your own coordinates are only used after you press the location button.</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+        <button class="btn" onclick="loadMoon()">&#8635; Refresh</button>
+        <button class="btn btn-secondary" onclick="loadMoon(true)">&#128205; Use my location</button>
+      </div>
+      <div id="moonContent" class="spinner">Loading tonight&rsquo;s sky&hellip;</div>
+    </div>
+  </div>
+
+  <!-- 11. EXOPLANET HUNTER PANEL -->
+  <div id="panel-exo" class="section-panel">
+    <div class="card">
+      <h2 style="margin-top:0;">&#129680; Exoplanet Hunter</h2>
+      <p style="color:var(--muted);">Every confirmed planet listed by the NASA Exoplanet Archive, sorted by distance from Earth. Filter by name, sort by distance, discovery year or orbital period, and hunt for rocky worlds two Earth-radii or smaller.</p>
+      <div class="apod-controls" style="margin-bottom:14px;">
+        <input type="text" id="exoQ" placeholder="Filter by planet name (e.g. Proxima)&hellip;" oninput="renderExo()" style="flex:1; min-width:180px;">
+        <select id="exoSort" onchange="renderExo()" aria-label="Sort">
+          <option value="dist" selected>Nearest first</option>
+          <option value="year">Latest discovery</option>
+          <option value="period">Shortest year</option>
+          <option value="radius">Smallest radius</option>
+        </select>
+        <label class="sat-chip" style="cursor:pointer;"><input type="checkbox" id="exoRocky" onchange="renderExo()"> &#127956; Rocky only (&le;2 R&#8853;)</label>
+      </div>
+      <div id="exoStats"></div>
+      <div id="exoContent" class="spinner">Loading the confirmed planet catalogue&hellip;</div>
+    </div>
+  </div>
+
+  <!-- 12. PLANETARY DEFENSE PANEL -->
+  <div id="panel-sentry" class="section-panel">
+    <div class="card">
+      <h2 style="margin-top:0;">&#9732;&#65039; Planetary Defense &mdash; Sentry Risk Table</h2>
+      <p style="color:var(--muted);">NASA JPL continuously tracks near-Earth objects and monitors their long-term impact risk with the automated Sentry system. An <strong>empty table is good news</strong> &mdash; it means no monitored object currently carries a significant impact probability.</p>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <button class="btn" onclick="loadSentry()">&#8635; Refresh risk table</button>
+      </div>
+      <div id="sentryContent" class="spinner">Reading the JPL Sentry risk table&hellip;</div>
+    </div>
+  </div>
+
+  <!-- 13. SATELLITE WATCH PANEL -->
+  <div id="panel-sats" class="section-panel">
+    <div class="card">
+      <h2 style="margin-top:0;">&#128752; Satellite Watch</h2>
+      <p style="color:var(--muted);">Live orbital element sets (TLE) from CelesTrak. Altitude and orbit period are derived here from each object&rsquo;s mean motion using Kepler&rsquo;s third law &mdash; real geometry, not a guess.</p>
+      <div class="sat-bar" id="satChips" style="margin-bottom:14px;"></div>
+      <div id="satsContent" class="spinner">Loading orbital elements&hellip;</div>
+    </div>
+  </div>
+
+  <!-- 14. WALL OF WONDERS PANEL -->
+  <div id="panel-gallery" class="section-panel">
+    <div class="card">
+      <h2 style="margin-top:0;">&#128444;&#65039; Wall of Wonders</h2>
+      <p style="color:var(--muted);">A curated wall of the NASA image &amp; video library. Pick a collection &mdash; every card is pulled live from images-api.nasa.gov. Tap any thumbnail to open it full-size.</p>
+      <div class="sat-bar" id="galChips" style="margin-bottom:14px;"></div>
+      <div id="galleryContent" class="grid-3"></div>
+    </div>
+  </div>
+
   <footer>
     <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
       <a href="/">Home</a>
@@ -553,6 +623,11 @@ function switchTab(name) {
   if (name === 'audio' && !document.getElementById('audioContent').children.length) loadSpaceAudio();
   if (name === 'history' && !document.getElementById('historyContent').children.length) loadHistory();
   if (name === 'topics' && !document.getElementById('topicsContent').children.length) loadTopics();
+  if (name === 'moon' && !window.__moonLoaded) loadMoon();
+  if (name === 'exo' && !window.__exoLoaded) loadExo();
+  if (name === 'sentry' && !window.__sentryLoaded) loadSentry();
+  if (name === 'sats' && !window.__satsLoaded) loadSats('stations');
+  if (name === 'gallery' && !window.__galLoaded) loadGallery(GAL_SETS[0].q, document.querySelector('#galChips .planet-chip'));
   if (name === 'experiments' && !experimentsStarted) {
     experimentsStarted = true;
     runAsteroidTrend();
@@ -1705,6 +1780,312 @@ function exploreTopic(i) {
   nasaSearchMediaType = t.mediaType || 'image';
   searchNASA();
 }
+
+/* ===== 10. MOON & SKY TONIGHT ===== */
+// UTC ISO → jam setempat pelayar; nilai null dipaparkan sebagai '--'
+function fmtLocal(iso) {
+  if (!iso || String(iso).toLowerCase() === 'null') return '--';
+  const d = new Date(iso);
+  return isNaN(d) ? '--' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadMoon(useGeo) {
+  const container = document.getElementById('moonContent');
+  if (useGeo && navigator.geolocation) {
+    container.innerHTML = '<div class="spinner">Asking your browser for coordinates&hellip;</div>';
+    navigator.geolocation.getCurrentPosition(
+      (p) => fetchMoon(p.coords.latitude, p.coords.longitude),
+      () => fetchMoon(),                       // ditolak / gagal → lalai KL
+      { timeout: 8000, maximumAge: 600000 }
+    );
+  } else {
+    fetchMoon();
+  }
+}
+
+async function fetchMoon(lat, lng) {
+  const container = document.getElementById('moonContent');
+  window.__moonLoaded = true;
+  try {
+    const qs = (Number.isFinite(lat) && Number.isFinite(lng)) ? `?lat=${lat.toFixed(3)}&lng=${lng.toFixed(3)}` : '';
+    const d = await safeFetchJson('/api/nasa/sky' + qs);
+    if (d.error) throw new Error(d.error);
+    const m = d.moon, s = d.sun;
+    container.innerHTML = `
+      <div style="text-align:center; padding:10px 0 2px;">
+        <div style="font-size:4.6rem; line-height:1;">${m.emoji}</div>
+        <div style="font-size:1.3rem; font-weight:700; margin-top:6px;">${esc(m.name)}</div>
+        <div style="color:var(--muted); font-size:.92rem;">${m.illum_percent}% illuminated &middot; lunar day ${m.age_days} of 29.5</div>
+        <div style="display:inline-block; width:min(320px,90%); height:8px; background:rgba(255,255,255,.12); border-radius:4px; margin-top:10px; overflow:hidden;"><div style="height:100%; width:${m.illum_percent}%; background:var(--gold); border-radius:4px;"></div></div>
+      </div>
+      ${statTiles([
+        { label: 'Next full moon', value: m.next_full_days <= 1 ? 'tonight' : `in ${m.next_full_days} days` },
+        { label: 'Next new moon', value: m.next_new_days <= 1 ? 'tonight' : `in ${m.next_new_days} days` },
+        s ? { label: 'Sunset', value: fmtLocal(s.sunset) } : null,
+        s ? { label: 'Sunrise', value: fmtLocal(s.sunrise), note: `day length ${s.day_length_hours} h` } : null
+      ])}
+      ${s ? `
+      <table style="margin-top:18px;">
+        <tr><th>Twilight band</th><th>Begins (dawn)</th><th>Ends (dusk)</th></tr>
+        <tr><td>&#127749; Civil</td><td>${fmtLocal(s.civil[0])}</td><td>${fmtLocal(s.civil[1])}</td></tr>
+        <tr><td>&#9971; Nautical</td><td>${fmtLocal(s.nautical[0])}</td><td>${fmtLocal(s.nautical[1])}</td></tr>
+        <tr><td>&#127775; Astronomical</td><td>${fmtLocal(s.astronomical[0])}</td><td>${fmtLocal(s.astronomical[1])}</td></tr>
+      </table>` : ''}
+      <p style="color:var(--muted); font-size:.8rem; margin-top:14px;">For ${d.location.lat.toFixed(2)}, ${d.location.lng.toFixed(2)} &middot; times shown in your local zone &middot; server cache 30 min &middot; ${esc(d.source)}${d.note ? ` &middot; <span style="color:var(--gold);">${esc(d.note)}</span>` : ''}</p>`;
+  } catch (err) {
+    window.__moonLoaded = false;
+    container.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Failed to load sky data: ${esc(err.message)} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadMoon()">&#8635; Retry</button></div>`;
+  }
+}
+
+/* ===== 11. EXOPLANET HUNTER ===== */
+let EXO_ALL = null;
+const EXO_LY = 3.26156; // tahun cahaya per parsec
+
+async function loadExo() {
+  const container = document.getElementById('exoContent');
+  window.__exoLoaded = true;
+  try {
+    const d = await safeFetchJson('/api/nasa/exoplanets?limit=500');
+    if (d.error) throw new Error(d.error);
+    EXO_ALL = d.planets || [];
+    renderExo();
+  } catch (err) {
+    window.__exoLoaded = false;
+    container.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Exoplanet archive unreachable: ${esc(err.message)} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadExo()">&#8635; Retry</button></div>`;
+  }
+}
+
+function renderExo() {
+  const container = document.getElementById('exoContent');
+  if (!EXO_ALL) return;
+  const q = (document.getElementById('exoQ').value || '').trim().toLowerCase();
+  const rockyOnly = document.getElementById('exoRocky').checked;
+  const sort = document.getElementById('exoSort').value;
+  let rows = EXO_ALL.filter(p => (!q || p.name.toLowerCase().includes(q)) && (!rockyOnly || (p.radius_earth != null && p.radius_earth <= 2)));
+  const key = { dist: 'dist_pc', year: 'disc_year', period: 'period_days', radius: 'radius_earth' }[sort];
+  const dir = sort === 'dist' || sort === 'period' || sort === 'radius' ? 1 : -1;
+  rows = rows.slice().sort((a, b) => {
+    const av = a[key], bv = b[key];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return (av - bv) * dir;
+  });
+  const shown = rows.slice(0, 200);
+  const rocky = EXO_ALL.filter(p => p.radius_earth != null && p.radius_earth <= 2).length;
+  const recent = EXO_ALL.reduce((m, p) => Math.max(m, p.disc_year || 0), 0);
+  document.getElementById('exoStats').innerHTML = statTiles([
+    { label: 'Nearest planets fetched', value: fmtNum(EXO_ALL.length), note: 'sorted by distance from the server catalogue' },
+    { label: 'Rocky worlds (&le;2 R&#8853;)', value: fmtNum(rocky) },
+    { label: 'Closest system', value: EXO_ALL.length ? `${(EXO_ALL[0].dist_pc * EXO_LY).toFixed(1)} ly` : '--', note: EXO_ALL.length ? esc(EXO_ALL[0].name) : '' },
+    { label: 'Latest discovery year', value: recent || '--' }
+  ]);
+  if (!shown.length) {
+    container.innerHTML = '<div style="color:var(--muted); text-align:center; padding:20px;">No planets match this filter.</div>';
+    return;
+  }
+  container.innerHTML = `
+    <table>
+      <tr><th>Planet</th><th>Distance</th><th>Radius</th><th>Orbit</th><th>Star temp</th><th>Found</th></tr>
+      ${shown.map(p => `
+        <tr>
+          <td><strong>${esc(p.name)}</strong>${p.radius_earth != null && p.radius_earth <= 2 ? ' <span class="tag" style="font-size:.7rem;">&#127956; rocky</span>' : ''}</td>
+          <td>${p.dist_pc ? `${fmtNum(Math.round(p.dist_pc * 10) / 10)} pc <span style="color:var(--muted);">(${(p.dist_pc * EXO_LY).toFixed(1)} ly)</span>` : '--'}</td>
+          <td>${p.radius_earth ? `${p.radius_earth} R&#8853;` : '--'}</td>
+          <td>${p.period_days ? `${p.period_days} d` : '--'}</td>
+          <td>${p.star_temp_k ? `${fmtNum(p.star_temp_k)} K` : '--'}</td>
+          <td>${p.disc_year || '--'}</td>
+        </tr>`).join('')}
+    </table>
+    <p style="color:var(--muted); font-size:.78rem; margin-top:10px;">Showing ${shown.length} of ${rows.length} matching &middot; ${fmtNum(EXO_ALL.length)} nearest confirmed planets cached &middot; source: NASA Exoplanet Archive</p>`;
+}
+
+/* ===== 12. PLANETARY DEFENSE (SENTRY) ===== */
+async function loadSentry() {
+  const container = document.getElementById('sentryContent');
+  window.__sentryLoaded = true;
+  try {
+    const d = await safeFetchJson('/api/nasa/sentry');
+    if (d.error) throw new Error(d.error);
+    const risks = d.risks || [];
+    if (!risks.length) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:26px;">
+          <div style="font-size:3.2rem;">&#127757;&#9989;</div>
+          <div style="font-size:1.2rem; font-weight:700; margin-top:6px;">All clear</div>
+          <p style="color:var(--muted); max-width:520px; margin:8px auto 0;">No near-Earth object on JPL&rsquo;s Sentry watch list currently carries a significant impact probability. That is exactly what we want to see.</p>
+        </div>`;
+      return;
+    }
+    const maxTorino = risks.reduce((m, r) => Math.max(m, r.torino || 0), 0);
+    container.innerHTML = `
+      ${statTiles([
+        { label: 'Objects on the watch list', value: fmtNum(risks.length) },
+        { label: 'Highest cumulative probability', value: `1 in ${fmtNum(Math.round(1 / (d.highest_prob || 1e-9)))}`, note: `${(d.highest_prob * 100).toFixed(4)}% over the next century` },
+        { label: 'Max Torino scale', value: maxTorino > 0 ? String(maxTorino) : '0 &mdash; nothing hazardous' }
+      ])}
+      <table style="margin-top:18px;">
+        <tr><th>Object</th><th>Size</th><th>Impact years</th><th>Cumulative prob.</th><th>Torino</th></tr>
+        ${risks.map(r => `
+          <tr>
+            <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a></td>
+            <td>${r.diameter_m ? `~${fmtNum(r.diameter_m)} m` : '--'}</td>
+            <td>${esc(r.impact_years) || '--'}</td>
+            <td>${r.cum_prob ? r.cum_prob.toExponential(1) : '--'}</td>
+            <td>${r.torino > 0 ? `<span style="color:var(--danger); font-weight:700;">${r.torino}</span>` : '0'}</td>
+          </tr>`).join('')}
+      </table>
+      <p style="color:var(--muted); font-size:.78rem; margin-top:10px;">Risk table read at ${esc(new Date(d.generatedAt).toLocaleString())} &middot; server cache 6 h &middot; source: ${esc(d.source)}</p>`;
+  } catch (err) {
+    window.__sentryLoaded = false;
+    container.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Sentry service unreachable: ${esc(err.message)} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadSentry()">&#8635; Retry</button></div>`;
+  }
+}
+
+/* ===== 13. SATELLITE WATCH ===== */
+const SAT_GROUPS = [
+  { key: 'stations', label: '&#128736; Space stations' },
+  { key: 'visual', label: '&#128374; Brightest (visible)' },
+  { key: 'gps-ops', label: '&#128225; GPS operational' },
+  { key: 'geostationary', label: '&#128441;&#65039; Geostationary' },
+  { key: 'resource', label: '&#127793; Earth resources' }
+];
+
+function satBarHtml() {
+  const bar = document.getElementById('satChips');
+  if (bar && !bar.children.length) {
+    bar.innerHTML = '<span style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-right:2px;">Orbit group:</span>' +
+      SAT_GROUPS.map(g => `<button type="button" class="planet-chip${g.key === 'stations' ? ' active' : ''}" data-g="${g.key}" onclick="loadSats('${g.key}')">${g.label}</button>`).join('');
+  }
+}
+
+async function loadSats(group) {
+  satBarHtml();
+  document.querySelectorAll('#satChips .planet-chip').forEach(b => b.classList.toggle('active', b.getAttribute('data-g') === group));
+  const container = document.getElementById('satsContent');
+  window.__satsLoaded = true;
+  container.innerHTML = `<div class="spinner">Fetching ${esc(group)} element sets from CelesTrak&hellip;</div>`;
+  try {
+    const d = await safeFetchJson('/api/nasa/satellites?group=' + encodeURIComponent(group));
+    if (d.error) throw new Error(d.error);
+    const sats = d.satellites || [];
+    if (!sats.length) {
+      container.innerHTML = '<div style="color:var(--muted); text-align:center; padding:20px;">CelesTrak returned no elements for this group right now.</div>';
+      return;
+    }
+    container.innerHTML = `
+      ${statTiles([
+        { label: 'Objects tracked', value: fmtNum(sats.length) },
+        {
+          label: 'Highest orbit', value: (() => {
+            const h = sats.reduce((m, s) => (!m || (s.alt_km != null && s.alt_km > m.alt_km) ? s : m), null);
+            return h ? `${fmtNum(Math.round(h.alt_km))} km` : '--';
+          })(), note: (() => { const h = sats.reduce((m, s) => (!m || (s.alt_km != null && s.alt_km > m.alt_km) ? s : m), null); return h ? esc(h.name) : ''; })()
+        },
+        {
+          label: 'Fastest orbit', value: (() => {
+            const f = sats.reduce((m, s) => (!m || (s.period_min != null && s.period_min < m.period_min) ? s : m), null);
+            return f ? `${f.period_min} min` : '--';
+          })(), note: (() => { const f = sats.reduce((m, s) => (!m || (s.period_min != null && s.period_min < m.period_min) ? s : m), null); return f ? esc(f.name) : ''; })()
+        }
+      ])}
+      <table style="margin-top:18px;">
+        <tr><th>Name</th><th>NORAD ID</th><th>Launch</th><th>Inclination</th><th>Altitude</th><th>Period</th></tr>
+        ${sats.map(s => `
+          <tr>
+            <td><strong>${esc(s.name)}</strong></td>
+            <td>${esc(s.norad)}</td>
+            <td>${esc(s.intl)}</td>
+            <td>${s.incl_deg != null ? `${s.incl_deg}&deg;` : '--'}</td>
+            <td>${s.alt_km != null ? `${fmtNum(Math.round(s.alt_km))} km` : '--'}</td>
+            <td>${s.period_min != null ? `${s.period_min} min` : '--'}</td>
+          </tr>`).join('')}
+      </table>
+      <p style="color:var(--muted); font-size:.78rem; margin-top:10px;">Element sets published ${esc(new Date(d.generatedAt).toLocaleString())} &middot; server cache 6 h &middot; source: ${esc(d.source)}</p>`;
+  } catch (err) {
+    window.__satsLoaded = false;
+    container.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">CelesTrak unreachable: ${esc(err.message)} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadSats('${esc(group)}')">&#8635; Retry</button></div>`;
+  }
+}
+
+/* ===== 14. WALL OF WONDERS (curated gallery) ===== */
+const GAL_SETS = [
+  { q: 'James Webb Space Telescope first deep field', label: '&#128752; Webb deep field' },
+  { q: 'Hubble nebula', label: '&#127756; Hubble nebulae' },
+  { q: 'Mars surface rover panorama', label: '&#129680; Mars panoramas' },
+  { q: 'Apollo Moon surface astronaut', label: '&#127769; Apollo Moon' },
+  { q: 'Earth at night from ISS', label: '&#127751; Earth at night' },
+  { q: 'Saturn Cassini', label: '&#129681; Saturn by Cassini' },
+  { q: 'rocket launch Falcon SLS liftoff', label: '&#128640; Launches' }
+];
+
+function galBarHtml() {
+  const bar = document.getElementById('galChips');
+  if (bar && !bar.children.length) {
+    bar.innerHTML = '<span style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-right:2px;">Collection:</span>' +
+      GAL_SETS.map((g, i) => `<button type="button" class="planet-chip${i === 0 ? ' active' : ''}" onclick="loadGallery('${g.q.replace(/'/g, "\\'")}', this)">${g.label}</button>`).join('');
+  }
+}
+
+async function loadGallery(query, btn) {
+  galBarHtml();
+  if (btn) document.querySelectorAll('#galChips .planet-chip').forEach(b => b.classList.toggle('active', b === btn));
+  const container = document.getElementById('galleryContent');
+  window.__galLoaded = true;
+  container.innerHTML = `<div class="spinner" style="grid-column:1/-1;">Pulling &ldquo;${esc(query)}&rdquo; from the NASA library&hellip;</div>`;
+  try {
+    const d = await safeFetchJson(`/api/nasa/search?q=${encodeURIComponent(query)}&mediaType=image`);
+    const items = (d.items || []).slice(0, 24);
+    if (!items.length) {
+      container.innerHTML = '<div style="grid-column:1/-1; color:var(--muted); text-align:center; padding:20px;">The NASA library returned nothing for this collection.</div>';
+      return;
+    }
+    container.innerHTML = items.map((it, i) => `
+      <div class="photo-card" style="cursor:pointer;" onclick="openGlBox(${i})" data-src="${esc(it.thumb || it.asset_url || '')}" data-title="${esc(it.title || '')}">
+        ${it.thumb ? `<img src="${esc(it.thumb)}" alt="${esc(it.title || '')}" loading="lazy">` : ''}
+        <div class="photo-card-body">
+          <div class="photo-card-title">${esc(it.title || '')}</div>
+          <div class="photo-card-meta">&#128197; ${it.date_created ? String(it.date_created).slice(0, 10) : ''} ${it.center ? `&middot; ${esc(it.center)}` : ''}</div>
+        </div>
+      </div>`).join('');
+    window.__galItems = items;
+  } catch (err) {
+    window.__galLoaded = false;
+    container.innerHTML = `<div style="grid-column:1/-1; color:var(--danger); text-align:center; padding:20px;">Gallery load failed: ${esc(err.message)} <button class="btn btn-secondary" style="margin-left:8px; padding:4px 10px; font-size:.8rem;" onclick="loadGallery('${query.replace(/'/g, "\\'")}', this)">&#8635; Retry</button></div>`;
+  }
+}
+
+// Lightbox imej: modal sedia ada (.vid-modal) disesuaikan untuk <img>
+function openGlBox(i) {
+  const it = (window.__galItems || [])[i];
+  if (!it) return;
+  let box = document.getElementById('glModal');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'vid-modal';
+    box.id = 'glModal';
+    box.innerHTML = `
+      <div class="vid-modal-box" style="max-width:min(1000px,94vw);">
+        <div class="vid-modal-head"><strong id="glTitle" style="font-size:.95rem;">&nbsp;</strong><button class="btn btn-secondary" onclick="closeGlBox()">&times; Close</button></div>
+        <div style="padding:10px;"><img id="glImg" alt="" style="width:100%; height:auto; border-radius:8px; display:block;"></div>
+      </div>`;
+    box.addEventListener('click', (ev) => { if (ev.target === box) closeGlBox(); });
+    document.body.appendChild(box);
+  }
+  document.getElementById('glTitle').textContent = it.title || '';
+  document.getElementById('glImg').src = it.thumb || it.asset_url || '';
+  box.classList.add('open');
+}
+
+function closeGlBox() {
+  const box = document.getElementById('glModal');
+  if (box) box.classList.remove('open');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeGlBox(); closeVidModal(); }
+});
 
 // Initial load
 loadAPOD();

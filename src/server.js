@@ -1453,6 +1453,10 @@ app.get('/api', (req, res) => {
       { method: 'GET', path: '/api/nasa/asteroids', description: 'Near-Earth asteroids (NeoWs)' },
       { method: 'GET', path: '/api/nasa/experiments/asteroid-trend', description: 'Experiment: asteroid approach trend (weeks)' },
       { method: 'GET', path: '/api/nasa/experiments/solar', description: 'Experiment: solar flares & CME (days)' },
+      { method: 'GET', path: '/api/nasa/sky', description: 'Moon phase & twilight times for lat/lng (sunrise-sunset.org + local math)' },
+      { method: 'GET', path: '/api/nasa/exoplanets', description: 'Nearest confirmed exoplanets (NASA Exoplanet Archive TAP)' },
+      { method: 'GET', path: '/api/nasa/sentry', description: 'Planetary-defense risk objects (NASA/JPL Sentry table)' },
+      { method: 'GET', path: '/api/nasa/satellites', description: 'Satellite orbital elements by group (CelesTrak TLE)' },
       { method: 'POST', path: '/api/contact', description: 'Contact form submission' },
       { method: 'GET', path: '/api/contact/messages', description: 'Read stored contact messages', auth: true },
       { method: 'POST', path: '/crawl', description: 'Crawl a single URL', auth: true },
@@ -2059,6 +2063,42 @@ app.get('/api/nasa/experiments/solar', async (req, res) => {
     res.json(await nasa.getSolarActivity({ days }));
   } catch (error) {
     res.status(500).json({ error: 'Failed to compute solar activity', details: safeError(error) });
+  }
+});
+
+// Bulan & langit malam ini — fasa bulan setempat + waktu senja ikut lokasi (lat/lng, lalai KL)
+app.get('/api/nasa/sky', async (req, res) => {
+  try {
+    res.json(await nasa.getSkyTonight({ lat: req.query.lat, lng: req.query.lng }));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to read sky data', details: safeError(error) });
+  }
+});
+
+// Pemburu eksoplanet — katalog archive NASA (had 10–500 baris paling dekat)
+app.get('/api/nasa/exoplanets', async (req, res) => {
+  try {
+    res.json(await nasa.getExoplanets({ limit: req.query.limit }));
+  } catch (error) {
+    res.status(502).json({ error: 'Exoplanet archive unreachable or busy — try again shortly', details: safeError(error) });
+  }
+});
+
+// Pertahanan planet — jadual risiko impak Sentry (JPL)
+app.get('/api/nasa/sentry', async (req, res) => {
+  try {
+    res.json(await nasa.getSentryRisk());
+  } catch (error) {
+    res.status(502).json({ error: 'JPL Sentry service unreachable — try again shortly', details: safeError(error) });
+  }
+});
+
+// Ceruk satelit — elemen orbit TLE dari CelesTrak ikut kumpulan
+app.get('/api/nasa/satellites', async (req, res) => {
+  try {
+    res.json(await nasa.getSatellites({ group: req.query.group }));
+  } catch (error) {
+    res.status(502).json({ error: 'CelesTrak unreachable — try again shortly', details: safeError(error) });
   }
 });
 

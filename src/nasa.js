@@ -1048,6 +1048,180 @@ async function getSolarActivity({ days = 30 } = {}) {
   return result;
 }
 
+/**
+ * 11. 🌙 Bulan & Langit Malam Ini — fasa bulan dikira setempat (sifar kebergantungan
+ *     API luar) + waktu senja/malam dari sunrise-sunset.org (percuma, tiada kunci).
+ *     Waktu dikembalikan dalam UTC ISO; pelayar menukar ke zon waktu pengguna.
+ */
+const SYNODIC = 29.530588853;
+const KNOWN_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // bulan baru rujukan yang terbukti
+
+function moonPhaseInfo(nowMs) {
+  const days = (nowMs - KNOWN_NEW_MOON) / 86400000;
+  const age = ((days % SYNODIC) + SYNODIC) % SYNODIC;
+  const illum = Math.round(((1 - Math.cos(2 * Math.PI * (age / SYNODIC))) / 2) * 100);
+  let name, emoji;
+  if (age < 1 || age > 28.5) { name = 'New Moon'; emoji = '🌑'; }
+  else if (age < 6.4) { name = 'Waxing Crescent'; emoji = '🌒'; }
+  else if (age < 8.5) { name = 'First Quarter'; emoji = '🌓'; }
+  else if (age < 13.8) { name = 'Waxing Gibbous'; emoji = '🌔'; }
+  else if (age < 15.8) { name = 'Full Moon'; emoji = '🌕'; }
+  else if (age < 21.1) { name = 'Waning Gibbous'; emoji = '🌖'; }
+  else if (age < 23.2) { name = 'Last Quarter'; emoji = '🌗'; }
+  else { name = 'Waning Crescent'; emoji = '🌘'; }
+  return {
+    age_days: Math.round(age * 10) / 10,
+    illum_percent: illum,
+    name,
+    emoji,
+    next_full_days: Math.round(((SYNODIC / 2) - age + SYNODIC) % SYNODIC),
+    next_new_days: Math.round((SYNODIC - age) % SYNODIC)
+  };
+}
+
+async function getSkyTonight({ lat, lng } = {}) {
+  const la = Number.isFinite(Number(lat)) ? Math.min(Math.max(Number(lat), -90), 90) : 3.139;   // lalai: Kuala Lumpur
+  const ln = Number.isFinite(Number(lng)) ? Math.min(Math.max(Number(lng), -180), 180) : 101.687;
+  const cacheKey = `sky:${la.toFixed(2)}:${ln.toFixed(2)}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  let sun = null;
+  let note = '';
+  try {
+    const res = await http.get('https://api.sunrise-sunset.org/json', {
+      params: { lat: la, lng: ln, formatted: '0' },
+      timeout: 10000
+    });
+    const r = res.data && res.data.results;
+    if (r && r.sunrise) {
+      sun = {
+        sunrise: r.sunrise, sunset: r.sunset, solar_noon: r.solar_noon,
+        day_length_hours: Math.round((Number(r.day_length) || 0) * 10) / 10,
+        civil: [r.civil_twilight_begin, r.civil_twilight_end],
+        nautical: [r.nautical_twilight_begin, r.nautical_twilight_end],
+        astronomical: [r.astronomical_twilight_begin, r.astronomical_twilight_end]
+      };
+    } else {
+      note = 'Sun-time service returned no data — moon phase is still exact (computed locally).';
+    }
+  } catch {
+    note = 'Sun-time service (sunrise-sunset.org) unreachable — moon phase is still exact (computed locally).';
+  }
+  const result = { location: { lat: la, lng: ln }, sun, moon: moonPhaseInfo(Date.now()), note, source: 'sunrise-sunset.org + local lunar math' };
+  setCache(cacheKey, result, 30 * 60 * 1000);
+  return result;
+}
+
+/**
+ * 12. 🪐 Pemburu Eksoplanet — NASA Exoplanet Archive TAP (percuma, tiada kunci).
+ *     pscomppars = parameter lalai setiap planet disahkan; susun ikut jarak paling dekat.
+ */
+async function getExoplanets({ limit = 250 } = {}) {
+  const n = Math.min(Math.max(parseInt(limit, 10) || 250, 10), 500);
+  const cacheKey = `exo:nearest:${n}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  const q = 'select pl_name,sy_dist,pl_rade,st_teff,disc_year,pl_orbper from pscomppars order by sy_dist asc';
+  const res = await http.get('https://exoplanetarchive.ipac.caltech.edu/TAP/sync', {
+    params: { query: q, format: 'json', maxrec: String(n) },
+    timeout: 25000
+  });
+  const rows = Array.isArray(res.data) ? res.data : [];
+  const planets = rows.map(r => ({
+    name: String(r.pl_name || ''),
+    dist_pc: Math.round((Number(r.sy_dist) || 0) * 1000) / 1000,
+    radius_earth: Number(r.pl_rade) ? Math.round(r.pl_rade * 100) / 100 : null,
+    star_temp_k: Math.round(Number(r.st_teff) || 0),
+    disc_year: Number(r.disc_year) || null,
+    period_days: Number(r.pl_orbper) ? Math.round(r.pl_orbper * 1000) / 1000 : null
+  })).filter(p => p.name);
+  const result = {
+    count: planets.length,
+    generatedAt: new Date().toISOString(),
+    source: 'NASA Exoplanet Archive (pscomppars)',
+    planets
+  };
+  setCache(cacheKey, result, 12 * 60 * 60 * 1000);
+  return result;
+}
+
+/**
+ * 13. ☄️ Pertahanan Planet — JPL Sentry: objek dengan risiko impak yang dikenal pasti.
+ *     Senarai kosong = berita baik (tiada objek dipantau dengan kebarangkalian impak signifikan).
+ */
+async function getSentryRisk() {
+  const cacheKey = 'defense:sentry';
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  const res = await http.get('https://ssd-api.jpl.nasa.gov/sentry.api', { timeout: 15000 });
+  const raw = Array.isArray(res.data && res.data.data) ? res.data.data : [];
+  const risks = raw.map(o => ({
+    id: o['Object Number'] || o.Code || '',
+    name: o.Name || o['Object Number'] || 'Unknown',
+    diameter_m: Number(o.Diameter) || null,
+    abs_mag: Number(o['Abs. Magnitude']) || null,
+    impact_years: o.Range || '',
+    virtual_impactors: Number(o.Count) || 0,
+    cum_prob: Number(o['Cumulative Probability']) || 0,
+    torino: Number(o.Torino) || 0,
+    url: 'https://ssd.jpl.nasa.gov/tools/sentry_data.html'
+  })).sort((a, b) => b.cum_prob - a.cum_prob).slice(0, 40);
+  const result = {
+    count: risks.length,
+    highest_prob: risks.length ? risks[0].cum_prob : 0,
+    generatedAt: new Date().toISOString(),
+    source: 'NASA/JPL Sentry Risk Table',
+    risks
+  };
+  setCache(cacheKey, result, 6 * 60 * 60 * 1000);
+  return result;
+}
+
+/**
+ * 14. 🛰 Ceruk Satelit — CelesTrak TLE (elemen orbit), percuma, tiada kunci.
+ *     TLE dibaca & dipotong di pelayan (cache 6 jam) supaya pelanggan dapat JSON ringkas.
+ */
+const SAT_GROUP_KEYS = ['stations', 'visual', 'gps-ops', 'geostationary', 'resource'];
+
+function parseTleBlocks(text, max) {
+  const lines = String(text || '').split(/\r?\n/);
+  const out = [];
+  for (let i = 0; i + 2 < lines.length && out.length < max; i += 3) {
+    const name = String(lines[i] || '').trim();
+    const l1 = String(lines[i + 1] || '').trim();
+    const l2 = String(lines[i + 2] || '').trim();
+    if (!/^1\s\d{5}/.test(l1) || !/^2\s\d{5}/.test(l2)) continue;
+    const norad = l1.slice(2, 7).trim();
+    const intl = l1.slice(7, 14).trim();
+    const incl = parseFloat(l2.slice(8, 16));
+    const mm = parseFloat(l2.slice(52, 63));
+    let alt_km = null, period_min = null;
+    if (mm > 0) {
+      period_min = Math.round((1440 / mm) * 10) / 10;
+      const tSec = 86400 / mm;
+      const aKm = Math.cbrt(398600.4418 * Math.pow(tSec / (2 * Math.PI), 2));
+      alt_km = Math.round((aKm - 6371) * 10) / 10;
+    }
+    out.push({ name, norad, intl: intl || '—', incl_deg: Number.isFinite(incl) ? Math.round(incl * 100) / 100 : null, period_min, alt_km });
+  }
+  return out;
+}
+
+async function getSatellites({ group = 'stations' } = {}) {
+  const g = SAT_GROUP_KEYS.includes(String(group)) ? String(group) : 'stations';
+  const cacheKey = `sats:${g}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  const res = await http.get('https://celestrak.org/NORAD/elements/gp.php', {
+    params: { GROUP: g, FORMAT: 'tle' },
+    timeout: 15000
+  });
+  const satellites = parseTleBlocks(res.data, 80);
+  const result = { group: g, count: satellites.length, source: 'CelesTrak (TLE elements)', generatedAt: new Date().toISOString(), satellites };
+  setCache(cacheKey, result, 6 * 60 * 60 * 1000);
+  return result;
+}
+
 module.exports = {
   getAPOD,
   startApodAutoUpdate,
@@ -1062,5 +1236,9 @@ module.exports = {
   getSpaceAudio,
   getNasaAssetUrl,
   getAsteroidTrend,
-  getSolarActivity
+  getSolarActivity,
+  getSkyTonight,
+  getExoplanets,
+  getSentryRisk,
+  getSatellites
 };
