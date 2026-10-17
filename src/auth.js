@@ -72,8 +72,8 @@ function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-// base64url (string) → Uint8Array — perlu untuk API @simplewebauthn/server v8
-// yang menerima/memulang buffer mentah, bukan string.
+// base64url (string) → Uint8Array — diperlukan untuk API @simplewebauthn/server
+// v14 yang menjangka kunci awam tersimpan sebagai bait CBOR mentah.
 function b64urlToBuf(b64url) {
   return new Uint8Array(Buffer.from(String(b64url), 'base64url'));
 }
@@ -173,12 +173,12 @@ function publicConfig() {
 // ── Registration (perlu e-mel yang dibenarkan + kata laluan bootstrap) ─────────
 async function startRegistration(email) {
   const userId = crypto.randomBytes(16);
-  // PENTING: generateRegistrationOptions ialah ASINKRON pada v8 — mesti `await`
+  // PENTING: generateRegistrationOptions ASINKRON pada v14 — mesti `await`
   // supaya `options.challenge` wujud sebelum disimpan sebagai cabaran jangka pendek.
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: RP_ID,
-    userID: Buffer.from(userId).toString('base64url'),
+    userID: userId, // v14: bait (Uint8Array) — string base64url tidak lagi diterima
     userName: ALLOWED_EMAIL,
     userDisplayName: ALLOWED_EMAIL,
     attestationType: 'none',
@@ -197,25 +197,32 @@ async function finishRegistration(email, credential, reqOrigin) {
   if (!expectedChallenge) {
     throw Object.assign(new Error('Challenge is invalid or expired. Try again.'), { statusCode: 400 });
   }
-  const verification = await verifyRegistrationResponse({
-    response: credential,
-    expectedChallenge,
-    expectedOrigin: originsFor(reqOrigin),
-    expectedRPID: RP_ID
-  });
+  let verification;
+  try {
+    verification = await verifyRegistrationResponse({
+      response: credential,
+      expectedChallenge,
+      expectedOrigin: originsFor(reqOrigin),
+      expectedRPID: RP_ID
+    });
+  } catch (error) {
+    // v14 membaling bagi kebanyakan kegagalan pengesahan (cabaran/origin/attestasi).
+    throw Object.assign(new Error(`Passkey registration could not be verified: ${error && error.message}`), { statusCode: 400 });
+  }
   if (!verification.verified || !verification.registrationInfo) {
     throw Object.assign(new Error('Passkey could not be verified.'), { statusCode: 400 });
   }
   const info = verification.registrationInfo;
-  const credentialId = info.credentialID || info.credential?.id;
-  const publicKey = info.credentialPublicKey || info.credential?.publicKey;
+  // v14: maklumat dalam `credential` (string base64url + publicKey bait); v8: medan atas.
+  const credentialId = info.credential?.id || info.credentialID;
+  const publicKey = info.credential?.publicKey || info.credentialPublicKey;
   const list = passkeys();
   const idStr = typeof credentialId === 'string' ? credentialId : Buffer.from(credentialId).toString('base64url');
   const pubStr = typeof publicKey === 'string' ? publicKey : Buffer.from(publicKey).toString('base64url');
   list.push({
     id: idStr,
     publicKey: pubStr,
-    counter: info.counter || 0,
+    counter: info.credential?.counter ?? info.counter ?? 0,
     credentialDeviceType: info.credentialDeviceType || 'singleDevice',
     credentialBackedUp: Boolean(info.credentialBackedUp),
     label: (credential.label && String(credential.label).slice(0, 40)) || `Peranti ${new Date().toLocaleDateString()}`,
@@ -228,13 +235,13 @@ async function finishRegistration(email, credential, reqOrigin) {
 // ── Authentication (passkey) ──────────────────────────────────────────────────
 async function startAuthentication(email) {
   const keys = passkeys();
-  // v8: generateAuthenticationOptions ASINKRON (mesti await), dan `allowCredentials[].id`
-  // kena Uint8Array (bukan string base64url) — kalau string, id jadi kosong.
+  // v14: `allowCredentials[].id` mesti STRING base64url — membaling jika Uint8Array
+  // (berbeza dengan v8 yang menghendaki buffer). Challenge tetap base64url string.
   const options = await generateAuthenticationOptions({
     rpID: RP_ID,
     userVerification: 'preferred',
     timeout: CHALLENGE_TTL_MS,
-    allowCredentials: keys.map((k) => ({ id: b64urlToBuf(k.id), type: 'public-key' }))
+    allowCredentials: keys.map((k) => ({ id: k.id, type: 'public-key' }))
   });
   setChallenge(normalizeEmail(email), options.challenge, 'authenticate');
   return options;
@@ -250,20 +257,24 @@ async function finishAuthentication(email, credential, reqOrigin) {
   if (!stored) {
     throw Object.assign(new Error('This passkey is not registered on the server.'), { statusCode: 401 });
   }
-  // v8 API: parameter `authenticator` (bukan `credential`) dengan field
-  // `credentialID`/`credentialPublicKey` sebagai Uint8Array; keputusan dibaca
-  // daripada `authenticationInfo` (bukan `authenticationResult`).
-  const verification = await verifyAuthenticationResponse({
-    response: credential,
-    expectedChallenge,
-    expectedOrigin: originsFor(reqOrigin),
-    expectedRPID: RP_ID,
-    authenticator: {
-      credentialID: b64urlToBuf(stored.id),
-      credentialPublicKey: b64urlToBuf(stored.publicKey),
-      counter: stored.counter || 0
-    }
-  });
+  // v14 API: parameter `credential` (bukan `authenticator`) dengan `id`/`publicKey`
+  // — id string base64url, publicKey bait CBOR; kegagalan membaling SimpleWebAuthnError.
+  let verification;
+  try {
+    verification = await verifyAuthenticationResponse({
+      response: credential,
+      expectedChallenge,
+      expectedOrigin: originsFor(reqOrigin),
+      expectedRPID: RP_ID,
+      credential: {
+        id: stored.id,
+        publicKey: b64urlToBuf(stored.publicKey),
+        counter: stored.counter || 0
+      }
+    });
+  } catch (error) {
+    throw Object.assign(new Error(`Passkey verification failed: ${error && error.message}`), { statusCode: 401 });
+  }
   if (!verification.verified) {
     throw Object.assign(new Error('Passkey verification failed.'), { statusCode: 401 });
   }
