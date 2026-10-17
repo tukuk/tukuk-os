@@ -1163,8 +1163,8 @@ async function getSentryRisk() {
     abs_mag: Number(o.h) || null,
     impact_years: o.range || '',
     virtual_impactors: Number(o.n_imp) || 0,
-    // ps_cum ialah -log10(kebarangkalian) — tukar semula kepada P
-    cum_prob: Number.isFinite(Number(o.ps_cum)) ? Math.pow(10, -Number(o.ps_cum)) : 0,
+    // ps_cum ialah eksponen terus bagi kebarangkalian: P = 10^ps_cum (cth. -6.15 → 7e-7)
+    cum_prob: (o.ps_cum != null && o.ps_cum !== '' && Number.isFinite(Number(o.ps_cum))) ? Math.pow(10, Number(o.ps_cum)) : 0,
     torino: Number(o.ts_max) || 0,
     url: 'https://ssd.jpl.nasa.gov/tools/sentry_data.html'
   })).sort((a, b) => b.cum_prob - a.cum_prob).slice(0, 40);
