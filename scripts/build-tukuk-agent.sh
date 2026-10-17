@@ -51,6 +51,11 @@ if [ ! -d "$CS/lib/vscode/Extensions" ] && [ -z "$(ls -A "$CS/lib/vscode" 2>/dev
 fi
 
 # ── 1. Bina tukuk-agent + release standalone (KEEP_MODULES=1 → bin + node) ──
+# foundry-local-sdk memuat turun OnnxRuntime ±139MB dari NuGet untuk inferens
+# AI LOKAL VS Code — kita tak pakai (AI via cloud /api/agent) dan muat turun
+# itu kerap timeout pada link perlahan. Skip rasmi (skripnya sendiri sokong).
+export FOUNDRY_LOCAL_SKIP_INSTALL=1
+
 echo "── npm ci (dalam $CS) ──"
 ( cd "$CS" && npm ci ) || { echo "✗ npm ci gagal"; exit 1; }
 
