@@ -27,6 +27,8 @@ StateDirectoryMode=0750
 ExecStart=/opt/tukuk-agent/release/bin/tukuk-agent \
   --bind-addr 127.0.0.1:8443 \
   --auth password \
+  --trust-proxy \
+  --abs-proxy-base-path /agent \
   --extensions-dir /var/lib/tukuk-agent/extensions \
   --user-data-dir /var/lib/tukuk-agent/user-data \
   /var/lib/tukuk-agent/projects
@@ -37,7 +39,9 @@ ExecStart=/opt/tukuk-agent/release/bin/tukuk-agent \
 EnvironmentFile=-/home/tukuk/.config/tukuk-os/env
 Environment=NODE_ENV=production
 # Asal pelanjutan yang dibenarkan memanggil tukuk.org (CORS pada /api/agent/v1).
-Environment=AGENT_ORIGIN=https://agent.tukuk.org
+# Editor kini dinaung di tukuk.org/agent (proxy terbalik src/agent-editor.js)
+# — LALUAN UTAMA, guna tunnel sedia ada; agent.tukuk.org hanya opsyen nanti.
+Environment=AGENT_ORIGIN=https://tukuk.org
 
 # --- Jangan pernah mati kekal ---
 Restart=always

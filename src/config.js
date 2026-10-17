@@ -198,6 +198,12 @@ module.exports = {
     maxPerMin: num(process.env.AGENT_RATE_PER_MIN, 30)
   },
 
+  // Editor Tukuk Agent (fork code-server) yang proksi ini dinaung —
+  // tukuk.org/agent → 127.0.0.1:8443 (--auth password di sisinya).
+  agentEditor: {
+    upstream: process.env.AGENT_EDITOR_UPSTREAM || 'http://127.0.0.1:8443'
+  },
+
   net: {
     checkIntervalMs: num(process.env.NET_CHECK_INTERVAL, 30000),
     probeUrl: process.env.NET_PROBE_URL || 'https://cloudflare.com/cdn-cgi/trace',

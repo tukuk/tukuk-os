@@ -1,0 +1,100 @@
+'use strict';
+// Proksi terbalik Tukuk Agent EDITOR: tukuk.org/agent/* → 127.0.0.1:8443/*.
+//
+// Kenapa bukan subdomain agent.tukuk.org? Token API di pelayan tidak punya
+// izin Cloudflare Tunnel, dan laluan dashboard tidak disentuh — jadi editor
+// dinaung dalam TUNNEL SEDIA ADA melalui applikasi ini. code-server dijalankan
+// dengan --abs-proxy-base-path /agent (prefix dikekalkan semasa penghantaran) supaya
+// semua URL aset/WS-nya sudah berimbuh /agent dan lalu melalui sini.
+//
+// autentikasi = code-server sendiri (--auth password; kuki diuruskan olehnya).
+// Gerbang admin BUKAN di sini kerana subresource pelayar (JS/CSS/WS) tidak
+// boleh memikul token Bearer — hanya kuki code-server yang berfungsi.
+//
+// WebSocket: middleware Express tidak melihat 'upgrade' — attachUpgrade()
+// dipanggil di index.js pada http server sebenar; dia cuma sentuh permintaan
+// yang berimbuh /agent dan meninggalkan upgrade lain (SSE chat dsb.) aman.
+
+const http = require('node:http');
+
+const PREFIX = '/agent';
+
+function upstreamOf(config) {
+  return String((config.agentEditor && config.agentEditor.upstream) || '');
+}
+
+/** Header untuk upstream: host ditulis semula + isyarat proxy standard. */
+function forwardHeaders(reqHeaders, target) {
+  const host = target.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return {
+    ...reqHeaders,
+    host,
+    'x-forwarded-for': reqHeaders['x-forwarded-for'] || '127.0.0.1',
+    'x-forwarded-proto': reqHeaders['x-forwarded-proto'] || 'https',
+    'x-forwarded-prefix': PREFIX
+  };
+}
+
+/**
+ * @param {import('express').Express} app
+ * @param {{config: object}} deps
+ */
+function mount(app, { config }) {
+  app.use(PREFIX, (req, res) => {
+    const target = upstreamOf(config);
+    if (!target) {
+      return res.status(503).json({ error: 'Editor agent tidak dikonfigurasi (AGENT_EDITOR_UPSTREAM).' });
+    }
+    const preq = http.request(
+      target + req.originalUrl,
+      { method: req.method, headers: forwardHeaders(req.headers, target) },
+      (up) => {
+        res.writeHead(up.statusCode || 502, up.headers);
+        up.pipe(res);
+      }
+    );
+    preq.on('error', () => {
+      // tukuk-agent belum jalan — 4xx/5xx jujur; worker tepi hanya mask 5xx utk HTML.
+      if (!res.headersSent) res.status(502).json({ error: 'Editor agent tidak bersedia — cuba lagi sebentar.' });
+      else res.end();
+    });
+    req.pipe(preq);
+  });
+}
+
+/**
+ * Proksi WebSocket 'ws' code-server (path /agent/...). Dipasang pada http
+ * server sebenar; pemanggil dapat fungsi detach untuk ujian/kebersihan.
+ * @param {import('node:http').Server} server
+ * @param {{config: object}} deps
+ */
+function attachUpgrade(server, { config }) {
+  const onUpgrade = (req, clientSocket, head) => {
+    const target = upstreamOf(config);
+    if (!target || !req.url || !req.url.startsWith(PREFIX)) return; // bukan editor — biarkan listener lain
+    const p = http.request(target + req.url, { method: req.method, headers: forwardHeaders(req.headers, target) });
+    p.on('upgrade', (pres, upSocket, upHead) => {
+      const lines = [`HTTP/1.1 ${pres.statusCode || 101} ${pres.statusMessage || 'Switching Protocols'}`];
+      for (const [k, v] of Object.entries(pres.headers)) {
+        if (k === 'transfer-encoding') continue;
+        lines.push(`${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+      }
+      clientSocket.write(Buffer.from(lines.join('\r\n') + '\r\n\r\n'));
+      if (upHead && upHead.length) clientSocket.write(upHead.slice());
+      if (head && head.length) upSocket.write(head.slice());
+      upSocket.pipe(clientSocket);
+      clientSocket.pipe(upSocket);
+      const bye = () => { upSocket.destroy(); clientSocket.destroy(); };
+      upSocket.on('error', bye);
+      clientSocket.on('error', bye);
+      upSocket.on('close', () => clientSocket.destroy());
+      clientSocket.on('close', () => upSocket.destroy());
+    });
+    p.on('error', () => clientSocket.destroy());
+    p.end();
+  };
+  server.on('upgrade', onUpgrade);
+  return () => server.off('upgrade', onUpgrade);
+}
+
+module.exports = { mount, attachUpgrade, forwardHeaders, PREFIX };

@@ -8,6 +8,7 @@ const { app } = require('./src/server');
 const news = require('./src/news');
 const queries = require('./src/queries');
 const nasa = require('./src/nasa');
+const agentEditor = require('./src/agent-editor');
 
 async function waitForMeili({ attempts = 30, delayMs = 1000 } = {}) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -72,6 +73,10 @@ async function main() {
     nasa.startApodAutoUpdate();
     console.log(`[nasa] auto-update APOD setiap ${config.nasa.apodRefreshMinutes} minit`);
   });
+
+  // WebSocket editor Tukuk Agent (/agent/...) —Upgrade lulus terus ke
+  // code-server tempatan; listener ini tak sentuh upgrade lain (chat SSE dsb.).
+  agentEditor.attachUpgrade(server, { config });
 
   const shutdown = (signal) => async () => {
     console.log(`\n[tukuk-os] menerima ${signal}, menutup dengan perlahan...`);

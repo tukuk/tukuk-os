@@ -33,6 +33,7 @@ const auth = require('./auth');
 const chat = require('./chat');
 const sms = require('./sms');
 const agent = require('./agent');
+const agentEditor = require('./agent-editor');
 const blogRedirects = require('./blog-redirects');
 const publish = require('./publish');
 const { exec } = require('child_process');
@@ -2713,6 +2714,10 @@ agent.mount(app, {
   config,
   store,
 });
+
+// Editor Tukuk Agent (code-server tempatan) dinaung di tukuk.org/agent —
+// guna tunnel sedia ada; tanpa perubahan Cloudflare. WS dipasang di index.js.
+agentEditor.mount(app, { config });
 
 
 // ── Jana auto: SATU kata/huraian → app + game (/builder ✨ Jana). ──────────────
