@@ -48,6 +48,7 @@ cat > "$TMP/kernel-metadata.json" <<EOF
   "kernel_type": "script",
   "is_private": true,
   "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
   "enable_internet": true,
   "dataset_sources": [],
   "competition_sources": [],
