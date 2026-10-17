@@ -19,12 +19,18 @@ const provider = require('./provider');
 // yang aktif pada setiap percubaan (rotasi boleh tukar pembekal/model).
 const ADVERTISED_MODEL = 'tukuk-agent';
 
+// Pembekal yang `kind:'openai'` tetapi TIDAK faham `tools`/`tool_calls`.
+// litert (gemma3-1b pinggir) menjawab 200 dengan text sahaja dan MENJAUH
+// fungsi — kalau ia masuk rotasi agen (cth bila aiProvider=admin = litert),
+// mod Agent kliennya jadi bisu tool. Klien bolt.diy/Cline perlukan tool_calls.
+const NO_TOOLS_PROVIDERS = new Set(['litert']);
+
 // Hanya pembekal `kind:'openai'` yang faham /chat/completions + tools. Gemini,
 // Cloudflare (Workers AI) dan ollama-native diLANGGAU di sini — mereka text-only.
 function openaiProviders() {
   return provider
     .listCloudProviders()
-    .filter((p) => p.kind === 'openai' && p.baseUrl);
+    .filter((p) => p.kind === 'openai' && p.baseUrl && !NO_TOOLS_PROVIDERS.has(p.name));
 }
 
 // Senarai model untuk GET /v1/models — satu ID stabil sahaja supaya klien tidak
