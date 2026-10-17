@@ -206,6 +206,9 @@ async function getApodFromScienceSite(dateStr) {
 // Semak payload APOD: API NASA pernah menghantar tajuk/logo rosak semasa penghijrahan
 function isValidApodPayload(data, acceptedDates) {
   if (!data || typeof data !== 'object') return false;
+  // Payload list (parameter count>1): NASA hantar array — sah jika sekurang-kurangnya
+  // satu entri di dalamnya sah. Tanpa cabang ini, array gagal semakan dan count rosak.
+  if (Array.isArray(data)) return data.some((e) => isValidApodPayload(e, null));
   const title = String(data.title || '').trim();
   const explanation = String(data.explanation || '').trim();
   const media = String(data.url || data.hdurl || '').trim();
@@ -1248,7 +1251,7 @@ async function backfillArchive() {
     const res = await apiHttp.get(`${config.nasa.baseUrl}/planetary/apod`, {
       params: { api_key: config.nasa.apiKey, count: 10 }, timeout: 20000
     });
-    if (Array.isArray(res.data)) hasil.apod = store.saveApod(res.data.filter(isValidApodPayload));
+    if (Array.isArray(res.data)) hasil.apod = store.saveApod(res.data.filter((e) => isValidApodPayload(e)));
   } catch { /* NASA down — arkib sedia ada masih boleh dihidang */ }
   try {
     const today = new Date().toISOString().slice(0, 10);
