@@ -165,9 +165,10 @@ module.exports = {
     snippetChars: num(process.env.BRAIN_SNIPPET_CHARS, 700),
     minConfidence: Number(process.env.BRAIN_MIN_CONFIDENCE ?? 0.5),
     fastMode: bool(process.env.BRAIN_FAST_MODE, true),
-    // LOCAL-FIRST: Ollama jadi otak utama untuk semua jawapan; cloud API hanya
-    // kecemasan bila model lokal gagal/timeout. Aktif melalui BRAIN_LOCAL_FIRST=1
-    // atau setting admin aiLocalFirst=1. Lalai mati (cloud-first seperti sedia kala).
+    // LOCAL-FIRST: aktif melalui BRAIN_LOCAL_FIRST=1 atau setting admin
+    // aiLocalFirst=1. Dalam hibrida semasa ia TIDAK menangguh cloud — cloud dan
+    // Ollama berlumba serentak; localFirst hanya membuang head-start ~1.2s cloud
+    // supaya model lokal mula menjana serta-merta. Lalai mati.
     localFirst: bool(process.env.BRAIN_LOCAL_FIRST, false),
     provider: process.env.BRAIN_PROVIDER || 'ollama',
     geminiApiKey: process.env.GEMINI_API_KEY || '',

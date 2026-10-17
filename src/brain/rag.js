@@ -309,8 +309,12 @@ async function ask(question, { limit } = {}) {
 
   // BAJET INTERAKTIF: fasa LLM (cloud+ollama) tidak boleh melebihi budgetMs dari
   // mula. Lewat itu → berhenti & guna ekstraktif serta-merta (instan, berpunca).
-  // Ini menutup 37s/60s. Cloud laju (groq/gemini) masih menang dalam bajet.
-  const deadline = startedAt + (config.brain.budgetMs || config.brain.timeout);
+  // Ini menutup 37s/60s. Lantai kecil selepas retrieve supaya websearch lambat
+  // tidak merampas seluruh bajet — cloud (groq) biasanya pulang dalam 1–2s.
+  const deadline = Math.max(
+    startedAt + (config.brain.budgetMs || config.brain.timeout),
+    Date.now() + 3000
+  );
 
   const backend = await provider.activeBackend();
   // Ekstraktif serta-merta bila: tiada LLM langsung, ATAU Ollama + mod laju.
@@ -325,57 +329,80 @@ async function ask(question, { limit } = {}) {
     method = extracted.method;
     model = 'extractive (no LLM)';
   } else {
-    // 1) Rotasi cloud — cuba setiap pembekal, langkau yang baru habis kuota (cooling).
-    if (backend.kind === 'cloud') {
-      const out = await provider.generateCloud(backend, prompt, {
-        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP, deadline
-      });
-      const text = String(out?.response || '').trim();
-      if (text && !isEcho(text, prompt)) {
-        answer = text;
-        model = `${out._provider}:${out._model}`;
-      } else if (text) {
-        rejected.push({ model: out._provider, reason: 'output not coherent (repeating the prompt)' });
-      }
-      for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
+    // HIBRIDA SERENTAK (ollama lokal + cloud dipakai bersama): rotasi cloud dan
+    // rantai Ollama berjalan SERENTAK — jawapan koheren PERTAMA menang, yang kalah
+    // dibatalkan serta-merta (AbortController) supaya token/CPU tidak dibakar.
+    // Cloud lazimnya ~1–2s (groq); model lokal mengisi jurang bila cloud cooling/
+    // blip/tiada kunci — dan tetap COBA, bukan terus jatuh ke ekstraktif.
+    const controller = new AbortController();
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    // Cloud dicuba bila backend cloud aktif ATAU localFirst dengan senarai
+    // pelarian. Admin paksa aiProvider=ollama (tiada cloudFallback) → lokal sahaja.
+    const cloudWanted = backend.kind === 'cloud'
+      || (backend.kind === 'ollama' && Array.isArray(backend.cloudFallback) && backend.cloudFallback.length > 0);
+    const attempts = [];
+
+    if (cloudWanted) {
+      attempts.push((async () => {
+        const out = await provider.generateCloud(backend, prompt, {
+          system, temperature: config.brain.temperature, maxTokens: cloudTokens,
+          topP: config.brain.topP, deadline, signal: controller.signal
+        });
+        for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
+        const text = String(out?.response || '').trim();
+        if (text && !isEcho(text, prompt)) return { text, model: `${out._provider}:${out._model}` };
+        if (text) rejected.push({ model: out._provider, reason: 'output not coherent (repeating the prompt)' });
+        return null;
+      })());
     }
-    // 2) Ollama lokal — HANYA bila tiada cloud dikonfigurasi (server CPU-only),
-    //    ATAU untuk tugasan self-contained (penjanaan kod) yang ekstraktif tak
-    //    mampu penuhi. Bila cloud ADA tapi blip (429/503/cooling), kita TIDAK
-    //    tunggu Ollama 45s — terus ke ekstraktif (instan, berpunca) di bawah.
-    const wantOllama = backend.kind !== 'cloud' || task.selfContained;
-    if (!answer && wantOllama && (await provider.ollamaReachable())) {
-      for (const candidate of config.brain.chain) {
-        const left = deadline - Date.now();
-        if (left < 1500) { rejected.push({ model: candidate, reason: 'interactive budget reached' }); break; }
-        let output;
-        try {
-          output = await provider.generate(prompt, { system, temperature: config.brain.temperature, numPredict, model: candidate, timeout: left });
-        } catch (error) {
-          rejected.push({ model: candidate, reason: error.message });
-          continue;
+
+    // Probed selepas cloud dilancarkan — supaya pusingan /api/tags tidak
+    // menangguh permulaan tier awan yang laju.
+    const wantOllama = backend.kind === 'ollama' || (await provider.ollamaReachable());
+    if (wantOllama) {
+      attempts.push((async () => {
+        // Beri cloud head-start ~1.2s supaya CPU VPS tidak berputar untuk jawapan
+        // yang sedang dalam perjalanan. Tiada cloud / localFirst → jana serta-merta.
+        if (cloudWanted && !backend.localFirst) {
+          const head = Math.min(1200, Math.max(0, deadline - Date.now() - 1500));
+          if (head > 0) await sleep(head);
         }
-        const text = String(output?.response || '').trim();
-        model = candidate;
-        if (isEcho(text, prompt)) {
-          rejected.push({ model: candidate, reason: 'output not coherent (repeating the prompt)' });
-          continue;
+        if (controller.signal.aborted) return null;
+        for (const candidate of config.brain.chain) {
+          const left = deadline - Date.now();
+          if (left < 1500) { rejected.push({ model: candidate, reason: 'interactive budget reached' }); break; }
+          let output;
+          try {
+            output = await provider.generate(prompt, {
+              system, temperature: config.brain.temperature, numPredict,
+              model: candidate, timeout: left, signal: controller.signal
+            });
+          } catch (error) {
+            if (controller.signal.aborted) return null;
+            rejected.push({ model: candidate, reason: error.message });
+            continue;
+          }
+          const text = String(output?.response || '').trim();
+          if (!text || isEcho(text, prompt)) {
+            rejected.push({ model: candidate, reason: 'output not coherent (repeating the prompt)' });
+            continue;
+          }
+          return { text, model: candidate };
         }
-        answer = text;
-        break;
-      }
+        return null;
+      })());
     }
-    // 3) LOCAL-FIRST kecemasan: model lokal tak beri jawapan (ralat/blip/tiada model)
-    //    → BARU panggil rotasi cloud. Langkah ini tidak berjalan bila cloud utama.
-    if (!answer && backend.kind === 'ollama' && backend.cloudFallback && backend.cloudFallback.length) {
-      const out = await provider.generateCloudRotation(prompt, {
-        system, temperature: config.brain.temperature, maxTokens: cloudTokens, topP: config.brain.topP, deadline
-      });
-      const text = String(out?.response || '').trim();
-      if (text && !isEcho(text, prompt)) { answer = text; model = `${out._provider}:${out._model}`; }
-      else if (text) rejected.push({ model: out._provider, reason: 'output not coherent (repeating the prompt)' });
-      for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
+
+    // Pusingan null → rejection supaya Promise.any terus menunggu racer seterusnya.
+    const guarded = attempts.map((p) => p.then((r) => r || Promise.reject(new Error('attempt yielded nothing'))));
+    try {
+      const winner = await Promise.any(guarded);
+      answer = winner.text;
+      model = winner.model;
+    } catch {
+      // Semua racer gagal — jatuh ke ekstraktif di bawah (instan, berpunca).
     }
+    controller.abort(); // bunuh racer yang belum selesai — jangan bakar token/CPU lagi
   }
 
   const sources = buildSources(hits);

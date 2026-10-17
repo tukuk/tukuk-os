@@ -117,9 +117,11 @@ The **"AI Chat"** widget (💬 at the corner of `/`) calls `GET /ask?q=...`.
 **Chain:** `/ask` (`src/server.js`) → `rag.ask()` (`src/brain/rag.js`) → `provider` (`src/brain/provider.js`).
 
 `provider.activeBackend()` picks a backend automatically (no Ollama/model required — suits a **CPU-only server**):
-1. **Cloud LLM** (Gemini / OpenAI / Groq) — when a key exists. The server makes just 1 HTTP call; processing happens in the cloud, CPU ≈ 0.
+1. **Cloud LLM** (Groq / Gemini / OpenAI / …) — when a key exists. The server makes just 1 HTTP call; processing happens in the cloud, CPU ≈ 0.
 2. **Local Ollama** — when `OLLAMA_HOST` (default `127.0.0.1:11434`) is reachable.
 3. **Extractive answer** — if neither exists: quotes the most relevant sentences from the search results (`extractiveAnswer` in `src/brain/quality.js`). **0 models, 0 cost, always on.** (Out-of-the-box default, which is why `No answer` no longer happens.)
+
+**Cloud + Ollama run CONCURRENTLY** (`rag.js` hybrid race): when both tiers exist, the cloud rotation and the local model chain generate **in parallel** and the first coherent answer wins — the loser is aborted instantly (no wasted tokens/CPU). Cloud normally wins in ~1–2s; the local model still fills the gap when every cloud provider is cooling/blipped, instead of the old sequential path that burned the whole `BRAIN_BUDGET_MS` on slow local generation and then fell to extractive with zero time left for cloud. `BRAIN_LOCAL_FIRST=1` no longer delays cloud — it only removes the ~1.2s cloud head-start so the local model begins immediately.
 
 Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered from fixed knowledge (`src/brain/knowledge.js`) without an LLM.
 
@@ -129,7 +131,7 @@ Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered 
 
 **Check / test:** `GET /brain` → `provider` (`gemini|groq|openai|ollama|extractive`) & `online`; `GET /ask?q=question`.
 
-**Flags:** `BRAIN_ENABLED=false` disables `/ask` (503). `BRAIN_FAST_MODE=true` (default) + Ollama → extractive immediately (skips the LLM). `LLM_CHAIN` = Ollama failover.
+**Flags:** `BRAIN_ENABLED=false` disables `/ask` (503). `BRAIN_FAST_MODE=true` (default) + Ollama with **no cloud key** → extractive immediately (skips the weak small model). `LLM_CHAIN` = Ollama failover list. `BRAIN_BUDGET_MS` (default 9000) = hard time budget for the whole LLM phase, after which extractive answers instantly (with a 3s floor so slow web-search retrieve can't starve the race).
 
 **International (all languages):** `/ask` answers in the language of the question at ALL layers, not just Malay/English:
 - High class (LLM): prompt instruction "SAME LANGUAGE as the QUESTION" (language-agnostic).

@@ -22,7 +22,7 @@ function baseUrl() {
   };
 }
 
-function request(path, { method = 'GET', body, timeout = config.brain.timeout } = {}) {
+function request(path, { method = 'GET', body, timeout = config.brain.timeout, signal } = {}) {
   const { hostname, port, prefix } = baseUrl();
   const payload = body === undefined ? null : Buffer.from(JSON.stringify(body));
 
@@ -60,6 +60,12 @@ function request(path, { method = 'GET', body, timeout = config.brain.timeout } 
 
     req.on('timeout', () => req.destroy(new Error('ollama timeout')));
     req.on('error', reject);
+    // Sinyal luar (racers yang kalah dibatalkan) — bunuh request serta-merta
+    // supaya Ollama berhenti menjana dan CPU tidak dibakar untuk jawapan buangan.
+    if (signal) {
+      if (signal.aborted) req.destroy(new Error('aborted'));
+      else signal.addEventListener('abort', () => req.destroy(new Error('aborted')), { once: true });
+    }
     if (payload) req.write(payload);
     req.end();
   });
@@ -88,7 +94,7 @@ async function pickModel() {
   throw new Error(`No model in LLM_CHAIN / ${config.brain.chain.join(', ')}. Available: ${names.join(', ') || '(none)'}`);
 }
 
-async function generate(prompt, { system, numPredict, temperature, model: forceModel, extraOptions, timeout } = {}) {
+async function generate(prompt, { system, numPredict, temperature, model: forceModel, extraOptions, timeout, signal } = {}) {
   const target = forceModel || activeModel || (await pickModel());
   if (!forceModel) activeModel = target;
 
@@ -110,7 +116,8 @@ async function generate(prompt, { system, numPredict, temperature, model: forceM
   const result = await request('/api/generate', {
     method: 'POST',
     body,
-    timeout: timeout ? Math.min(timeout, config.brain.timeout) : config.brain.timeout
+    timeout: timeout ? Math.min(timeout, config.brain.timeout) : config.brain.timeout,
+    signal
   });
   result._model = target;
   return result;
@@ -127,8 +134,9 @@ function setting(key, fb) {
 }
 
 // LOCAL-FIRST dihidupkan oleh env BRAIN_LOCAL_FIRST (1/true/yes/on) ATAU setting
-// admin `aiLocalFirst=1` (boleh toggle dari /admin tanpa deploy). Bila ON, Ollama
-// tempatan menjadi otak utama; cloud API hanya dipanggil sebagai kecemasan.
+// admin `aiLocalFirst=1` (boleh toggle dari /admin tanpa deploy). Dalam mod hibrid
+// semasa, localFirst TIDAK lagi menangguh cloud — ia hanya menghilangkan "head
+// start" cloud supaya Ollama mula menjana serta-merta serentak dengan awan.
 function isLocalFirst() {
   if (config.brain.localFirst) return true;
   if (['1', 'true', 'yes', 'on'].includes(String(process.env.BRAIN_LOCAL_FIRST || '').toLowerCase())) return true;
@@ -246,14 +254,17 @@ async function activeBackend() {
 
 // Satu panggilan ke SATU pembekal. Ralat HTTP dinaikkan dengan .status supaya
 // rotasi dapat bezakan kuota (429) daripada ralat sementara.
-async function callCloud(p, prompt, { system, temperature, maxTokens, topP, timeout } = {}) {
+async function callCloud(p, prompt, { system, temperature, maxTokens, topP, timeout, signal: outerSignal } = {}) {
   const t = temperature ?? config.brain.temperature;
   const mt = maxTokens ?? config.brain.maxTokens;
   const tp = topP ?? config.brain.topP;
   // Per-panggilan timeout boleh DITEKAN (bajet interaktif rag.ask) — kalau tiada,
   // guna config.brain.timeout. Signal AbortSignal membunuh stream tepat pada masa.
   const capMs = Math.max(1000, Math.min(timeout || config.brain.timeout, config.brain.timeout));
-  const signal = AbortSignal.timeout(capMs);
+  // Gabung bajet per-panggilan dengan sinyal pembatalan luar (racer yang kalah).
+  const signal = outerSignal
+    ? AbortSignal.any([AbortSignal.timeout(capMs), outerSignal])
+    : AbortSignal.timeout(capMs);
 
   if (p.kind === 'gemini') {
     // gemini-*-latest ialah model "thinking": tanpa budget, token akal dalan
