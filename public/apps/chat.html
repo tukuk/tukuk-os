@@ -648,6 +648,67 @@
   #wGot .wg button { flex:none; font-size:.76rem; padding:4px 9px; background:#00a884; border:none; border-radius:7px; color:#0b141a; font-weight:700; cursor:pointer; }
   #wGot .wg.pcard { border-color:#00a884; }
   #wGot .wprog { color:#8696a0; font-size:.8rem; padding:3px 2px; }
+
+  /* ═══ Gaya Tukuk — rentak Facebook/Messenger (lapisan tindih akhir) ═══
+     Kekal identiti sendiri (biru Tukuk) tetapi ikut rentak Facebook: neutral
+     slate gelap, balon membulat ber-ekor, composer pil, baris sidebar bulat.
+     Diletak HURUF TERAKHIR supaya menang ke atas blok WhatsApp di atas untuk
+     pemilih yang sama — tiada id/JS disentuh. */
+  body { --accent:#0a7cff; --accent-fill:#0860d4; --panel:#242526; --bg:#18191a; --line:#3a3b3c; --text:#e4e6eb; --muted:#b0b3b8; }
+  #msgsWrap { --w1:#18191a; --w2:#1b1d1f; --bub-in:#303133; --bub-out:#0a7cff; }
+  #msgsWrap[data-wall="5"], #msgsWrap[data-wall="6"] { --w1:var(--bg); --w2:var(--bg); --bub-in:#e4e6eb; }
+  #side { background:#242526; }
+  #top { background:#242526; }
+  #compose, #tray, #replyBar, #editBar, #pinBar, #recBar { background:#242526; }
+  #newBtn { background:linear-gradient(135deg,#0a7cff,#0860d4); }
+  /* Baris perbualan jadi pil membulat (ciri sidebar Messenger), bukan garis kiri. */
+  .chatrow { border-radius:12px; margin:2px 8px; padding:8px; border-left:none; }
+  .chatrow:hover { background:#3a3b3c; }
+  .chatrow.sel { background:#3a3b3c; border-left:none; }
+  .chatrow .pv .tick.rd { color:#55a9ff; }
+  /* Carian + composer sebagai pil lembut seperti kotak mesej Facebook. */
+  #q { background:#303133; border-color:#303133; border-radius:20px; }
+  #q:focus { border-color:#3a3b3c; }
+  #inp { background:#3a3b3c; border:1px solid #3a3b3c; border-radius:22px; }
+  #inp:focus { border-color:#3a3b3c; box-shadow:none; }
+  .daysep span { background:#3a3b3c; color:#b0b3b8; }
+  /* Balon mesej rentak Messenger: radius besar + ekor clip-path ikut warna balon. */
+  .bub { border-radius:18px; }
+  .row.them .bub { background:var(--bub-in); color:#e4e6eb; }
+  #msgsWrap[data-wall="5"] .row.them .bub, #msgsWrap[data-wall="6"] .row.them .bub { background:var(--bub-in); color:#18191a; }
+  .row.me .bub { background:var(--bub-out); color:#fff; }
+  .row:not(.cont) .bub::before { content:''; position:absolute; top:0; width:10px; height:16px; }
+  .row.them:not(.cont) .bub::before { left:-10px; background:var(--bub-in); clip-path:polygon(100% 0, 100% 100%, 0 0); }
+  .row.me:not(.cont) .bub::before { right:-10px; background:var(--bub-out); clip-path:polygon(0 0, 0 100%, 100% 0); }
+  .row.them:not(.cont) .bub { border-top-left-radius:0; }
+  .row.me:not(.cont) .bub { border-top-right-radius:0; }
+  .row.me.cont .bub { border-top-left-radius:18px; }
+  .mlink { color:#55a9ff; }
+  .mlink:hover { color:#8cc4ff; }
+  #msgsWrap[data-wall="5"] .row.them .mlink, #msgsWrap[data-wall="6"] .row.them .mlink { color:#0860d4; }
+  .row.me .mlink { color:#dbeeff; }
+  .row.me .mlink:hover { color:#fff; }
+  .bub .tick.rd { color:#55a9ff; }
+  .qreact { background:#303133; }
+  .tvl { background:#303133; color:#e4e6eb; }
+  .quotecard { background:rgba(255,255,255,.08); }
+  .row.me .quotecard { background:rgba(0,0,0,.2); }
+  .fcard { background:rgba(0,0,0,.2); }
+  .reactions button { background:#303133; border-color:#3a3b3c; }
+  #toast { background:#303133; border-color:#3a3b3c; }
+  .media { background:#1f1f20; }
+  #call { background:radial-gradient(120% 100% at 50% 0%, #1f2b3a, #060a12 72%); }
+  /* Butang ikon composer jadi rata (tiada garis) — gaya ikon Messenger. */
+  #emojiBtn, #clipBtn, #micBtn, #prankBtn, #waveBtn { border:none; background:transparent; color:var(--muted); font-size:1.2rem; transition:background .14s, color .14s; }
+  #emojiBtn:hover, #clipBtn:hover, #micBtn:hover, #prankBtn:hover, #waveBtn:hover, #emojiBtn.on { background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent); }
+  #send { box-shadow:0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent); }
+  /* Rupa hijau WhatsApp pada papan prank + panel Sound Wave → biru kita. */
+  #pkBoard button:hover { background:rgba(10,124,255,.4); }
+  #pkBoard .dialrow { background:#0a7cff; }
+  #wGot .wg { background:#303133; border-color:#3a3b3c; }
+  #wGot .wg b { color:#e4e6eb; }
+  #wGot .wg button { background:#0a7cff; color:#fff; }
+  #wGot .wg.pcard { border-color:#0a7cff; }
 </style>
 </head>
 <body>
