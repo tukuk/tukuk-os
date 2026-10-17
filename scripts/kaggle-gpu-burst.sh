@@ -36,16 +36,31 @@ SRC="kaggle-jobs/${JOB}.py"
 case "$KAGGLE_ID" in *REPLACE*) echo "✗ hantar KAGGLE_ID=<username-kaggle> (contoh: KAGGLE_ID=fevian448)"; exit 1;; esac
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-cp "$SRC" "$TMP/kernel.py"
+# API kernel hanya hormat GPU utk kernel_type=notebook (pembuktian komuniti
+# Ogo 2026; script .py didiamkan sahaja ke CPU) — jadi balut .py jadi .ipynb.
+python3 - "$SRC" "$TMP/kernel.ipynb" <<'PY'
+import json, sys
+src = open(sys.argv[1], encoding="utf-8").read()
+nb = {
+  "cells": [{"cell_type": "code", "source": src.splitlines(keepends=True),
+             "metadata": {}, "outputs": [], "execution_count": None}],
+  "metadata": {"accelerator": "nvidiaTeslaT4",
+               "kaggle": {"accelerator": "nvidiaTeslaT4", "isGpuEnabled": True,
+                           "isInternetEnabled": True, "language": "python",
+                           "sourceType": "script", "dataSources": []}},
+  "nbformat": 4, "nbformat_minor": 5,
+}
+json.dump(nb, open(sys.argv[2], "w", encoding="utf-8"))
+PY
 TITLE="tukuk-gpu-burst-${JOB}-$(date +%s)"
 SLUG="${KAGGLE_ID}/${TITLE}"
 cat > "$TMP/kernel-metadata.json" <<EOF
 {
   "id": "${SLUG}",
   "title": "${TITLE}",
-  "code_file": "kernel.py",
+  "code_file": "kernel.ipynb",
   "language": "python",
-  "kernel_type": "script",
+  "kernel_type": "notebook",
   "is_private": true,
   "enable_gpu": true,
   "machine_shape": "NvidiaTeslaT4",
