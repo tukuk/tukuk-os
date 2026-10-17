@@ -28,13 +28,15 @@ rsync -a --delete -e "sshpass -p $PASS ssh -o StrictHostKeyChecking=no" \
   "$SRC/" "$HOST:$DEST/"
 
 echo "[builder] pasang pnpm (sekali) + install + build di pelayan"
-ssh_run "command -v pnpm >/dev/null || npm i -g pnpm@9.15.9 --silent"
-ssh_run "cd $DEST && pnpm install --frozen-lockfile --prefer-offline 2>&1 | tail -3"
-ssh_run "cd $DEST && pnpm build 2>&1 | tail -5"
+# Semua melalui sh -c: sudo -S hanya terpakai pada perintah pertama, dan
+# `command`/`cd` builtin tidak boleh dilalukan terus ke sudo.
+ssh_run "sh -c 'corepack disable >/dev/null 2>&1 || true; command -v pnpm >/dev/null || npm i -g pnpm@9.15.9 --silent; pnpm -v'"
+ssh_run "sh -c 'cd $DEST && pnpm install --frozen-lockfile --prefer-offline 2>&1 | tail -3'"
+ssh_run "sh -c 'cd $DEST && pnpm build 2>&1 | tail -5'"
 
 echo "[builder] pasang systemd unit + restart"
 ssh_run "sh -c 'cp /opt/tukuk-os/deploy/tukuk-builder.service /etc/systemd/system/ && systemctl daemon-reload'"
-ssh_run "systemctl enable --now tukuk-builder >/dev/null 2>&1 || true"
+ssh_run "systemctl enable tukuk-builder >/dev/null 2>&1 || true"
 ssh_run "systemctl restart tukuk-builder"
 sleep 2
 ssh_run "systemctl is-active tukuk-builder && curl -s -o /dev/null -w 'http=%{http_code}\n' http://127.0.0.1:5174/"
