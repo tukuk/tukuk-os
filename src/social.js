@@ -29,10 +29,12 @@ const PLATFORMS = [
   { name: 'YouTube',    ic: '▶️', probe: true, url: (u) => `https://www.youtube.com/@${u}` },
   { name: 'npm',        ic: '📦', probe: true, url: (u) => `https://www.npmjs.com/~${u}` },
   { name: 'Mastodon',   ic: '🐘', probe: true, url: (u) => `https://mastodon.social/@${u}` },
-  // Medium: dari pelayan, kadang dapat 403 CF / kadang 200 dengan halaman
-  // "Page not found". negative tangkap kedua-dua corak supaya tak false-found.
+  // Medium: Node.js fetch dari pelayan sentiasa dapat 200 + halaman sebenar.
+  // Profil sah → og:title diisi ("nama – Medium"); nama palsu → og:title content="".
+  // negative: jika sesetengah permintaan kena Cloudflare challenge, buang false-found.
   { name: 'Medium',     ic: '📝', probe: true, url: (u) => `https://medium.com/@${u}`,
-    negative: /Just a moment\.\.\.|Page not found/i },
+    negative: /Just a moment\.\.\./i,
+    positive: /og:title" content="[^"]+"/ },
   { name: 'Patreon',    ic: '🎗️', probe: true, url: (u) => `https://www.patreon.com/${u}` },
   { name: 'Linktree',   ic: '🌳', probe: true, url: (u) => `https://linktr.ee/${u}` },
   { name: 'Dev.to',     ic: '💻', probe: true, url: (u) => `https://dev.to/${u}` },
