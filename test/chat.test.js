@@ -60,6 +60,27 @@ test('bilik DM: id deterministik dua arah + kegunaan semula', () => {
   assert.equal(r2.members.length, 2, 'ahli tidak bertambah');
 });
 
+test('hide DM: tapis roomsFor, kembali bila mesej baharu / bila dibuka', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cin', 'pass3');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.send('Ben', dm.id, 'lama');
+  assert.ok(chat.roomsFor('Ana').some(r => r.id === dm.id), 'sebelum hide: nampak');
+  assert.ok(chat.hideRoom('Ana', dm.id).ok);
+  assert.ok(!chat.roomsFor('Ana').some(r => r.id === dm.id), 'Ana: tersembunyi');
+  assert.ok(chat.roomsFor('Ben').some(r => r.id === dm.id), 'Ben: tidak terjejas');
+  chat.send('Ben', dm.id, 'baharu');
+  assert.ok(chat.roomsFor('Ana').some(r => r.id === dm.id), 'mesej baharu membuka semula');
+  chat.hideRoom('Ana', dm.id);
+  chat.unhideRoom(chat.findUser('Ana'), dm.id);   // POST /api/chat/room membuka bilik
+  assert.ok(chat.roomsFor('Ana').some(r => r.id === dm.id), 'buka semula → hilang sembunyi');
+  // Hanya DM boleh disembunyi; bukan ahli ditolak.
+  assert.ok(chat.hideRoom('Ana', 'global_am').error, 'global bukan DM');
+  assert.ok(chat.hideRoom('Cin', dm.id).error, 'bukan ahli ditolak');
+  const g = chat.createGroup('Ana', 'Kelas', [chat.findUser('Ben').id]);
+  assert.ok(chat.hideRoom('Ana', g.room.id).error, 'kumpulan guna Leave, bukan hide');
+});
+
 test('canRead: DM terhad kepada ahli, global terbuka', () => {
   fresh();
   chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cin', 'pass3');

@@ -191,6 +191,18 @@
   #cAccept { background:#2ea44f !important; }
   #cEnd { background:#e5534b !important; }
   #cCtrl button.off { background:#e5534b !important; }
+  /* Panggilan kumpulan (mesh): grid video jauh menggantikan tayangan penuh */
+  #gTiles { position:absolute; inset:0; z-index:1; display:none; grid-template-columns:repeat(2,1fr); grid-auto-rows:1fr; gap:8px; padding:12vh 10px 120px; box-sizing:border-box; }
+  #call.group #gTiles { display:grid; }
+  #call.group #cRemote { display:none; }
+  #call.group.audio #gTiles { display:none; }
+  #call.group .cava { width:60px; height:60px; font-size:1.4rem; }
+  #call.group #cInfo { margin-top:2vh; }
+  #gTiles .gt { position:relative; border-radius:12px; overflow:hidden; background:#0b1120; border:1px solid rgba(255,255,255,.14); min-height:90px; }
+  #gTiles .gt video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#05080f; }
+  #gTiles .gt b { position:absolute; left:6px; bottom:5px; font-size:.6rem; font-weight:600; background:rgba(0,0,0,.55); padding:2px 7px; border-radius:8px; max-width:86%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; z-index:1; }
+  #gTiles .gt.wait video { visibility:hidden; }
+  #gTiles .gt.wait::after { content:''; position:absolute; inset:0; margin:auto; width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; animation:tkspin .7s linear infinite; }
   #cBlock { position:relative; z-index:2; background:none; border:1px solid rgba(255,255,255,.3); color:#ffd7d3; border-radius:20px; padding:7px 14px; font:inherit; font-size:.78rem; cursor:pointer; }
   #cBlock:hover { border-color:#e5534b; color:#fff; }
   /* Paparan prank: perlu Nampak, bukan hanya didengar — TTS tiada di semua peranti. */
@@ -680,6 +692,7 @@
 <!-- ─── Call screen (video/audio WebRTC + prank) ─── -->
 <div id="call">
   <video id="cRemote" autoplay playsinline></video>
+  <div id="gTiles"></div>
   <div id="cLocalWrap"><video id="cLocal" autoplay playsinline muted></video></div>
   <div id="cInfo"><div class="cava" id="cAva">?</div><div class="cname" id="cName"></div><div id="cTag"></div><div class="csub" id="cSub"></div><div class="cbio" id="cBio"></div><div class="cstat" id="cStat"></div></div>
   <div id="cCtrl">
@@ -746,6 +759,12 @@
     <button id="giDissolve" class="warn" hidden>🗑 Dissolve</button>
     <button class="prim" id="giClose">Close</button>
   </div>
+</div></div>
+
+<div class="modal" id="delDmModal"><div class="mbox">
+  <h3>🗑 Delete chat</h3>
+  <div class="pfmeta">Chat with <b id="ddName"></b> will be removed from your list only — the history stays intact for the other person. The chat reappears automatically when a new message arrives, or when you open it again from their profile.</div>
+  <div class="mbtns"><button id="ddCancel">Cancel</button><button class="warn" id="ddGo">🗑 Delete for me</button></div>
 </div></div>
 
 <div class="modal" id="fwdModal"><div class="mbox">
@@ -1594,13 +1613,45 @@ window.addEventListener('error', (e) => {
     for (const el of $('chats').querySelectorAll('.chatrow')) {
       el.classList.toggle('sel', el.dataset.r === cur);
       el.tabIndex = 0;   // senarai sembang boleh dicapai papan kekunci, bukan tetikus sahaja
+      let lpFired = false;
       el.onclick = () => {
+        if (lpFired) { lpFired = false; return; }   // tahan lama sudah buka dialog hapus
         if (el.dataset.mid) jumpAfter = el.dataset.mid;
         openRoom(el.dataset.r); loadRooms(false);
       };
       el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.onclick(); } };
+      // DM sahaja: klik kanan (desktop) / tahan 550ms (mobile) → "hapus untuk saya".
+      const rr = room(el.dataset.r);
+      if (rr && rr.kind === 'dm') {
+        let press = null;
+        const ask = () => { lpFired = true; askHideDm(rr.id); };
+        el.addEventListener('contextmenu', e => { e.preventDefault(); ask(); });
+        el.addEventListener('pointerdown', () => { press = setTimeout(ask, 550); });
+        ['pointerup', 'pointermove', 'pointercancel'].forEach(ev => el.addEventListener(ev, () => clearTimeout(press)));
+      }
     }
   }
+  // ─── Hapus DM daripada sidebar saya (sembunyi — kembali bila mesej baharu tiba) ───
+  let hideTarget = null;
+  function askHideDm(id) {
+    const r = room(id); if (!r) return;
+    hideTarget = id;
+    $('ddName').textContent = r.title;
+    $('delDmModal').classList.add('open');
+  }
+  $('ddCancel').onclick = () => { $('delDmModal').classList.remove('open'); hideTarget = null; };
+  $('ddGo').onclick = async () => {
+    $('delDmModal').classList.remove('open');
+    if (!hideTarget) return;
+    const id = hideTarget; hideTarget = null;
+    try {
+      await post('/room/hide', { room: id });
+      rooms = rooms.filter(x => x.id !== id);
+      if (cur === id) { cur = 'global_am'; localStorage.setItem(rkey(), cur); openRoom('global_am'); }
+      renderRooms();
+      toast('Chat deleted for you — it returns when a new message arrives.');
+    } catch (e) { toast(e.message); }
+  };
   // ─── Buka bilik ───
   async function openRoom(id, silent) {
     if (id !== cur) clearPending();   // lampiran menunggu milik bilik lama
@@ -1612,8 +1663,8 @@ window.addEventListener('error', (e) => {
     if (r && r.kind === 'dm') { $('tAva').textContent = initials(r.title); $('tAva').style.background = colorOf(r.title); }
     else if (r && r.kind === 'group') { $('tAva').textContent = '👥'; $('tAva').style.background = '#3a4f6e'; }
     else { $('tAva').textContent = '🌍'; $('tAva').style.background = '#2f3d5c'; }
-    // Butang panggilan hanya masuk akal untuk DM yang tidak dibekukan.
-    $('cAud').hidden = $('cVid').hidden = !(r && r.kind === 'dm' && r.peerId && !r.blocked);
+    // Butang panggilan: DM yang tidak dibekukan + bilik kumpulan (mesh).
+    $('cAud').hidden = $('cVid').hidden = !(r && !r.blocked && (r.kind === 'group' || (r.kind === 'dm' && r.peerId)));
     renderStatus();
     renderRooms();
     try {
@@ -1777,13 +1828,14 @@ window.addEventListener('error', (e) => {
     if (ev === 'notif') { onNotifIn(j.notif); return; }
     if (ev === 'room') { loadRooms(false); return; }
     if (ev === 'delroom') {
+      if (GC && GC.roomId === j.room) gcReset(true);   // kumpulan dibubarkan → tutup panggilan
       rooms = rooms.filter(x => x.id !== j.room);
       delete cache[j.room];
       if (cur === j.room) { cur = 'global_am'; localStorage.removeItem(rkey()); openRoom('global_am'); }
       renderRooms(); return;
     }
     if (ev === 'read') { const rr = room(j.room); if (rr) { rr.peerSeen = Math.max(rr.peerSeen || 0, j.seq || 0); if (rr.id === cur) renderMsgs(); } return; }
-    if (ev === 'call') { handleCall(j); return; }   // isyarat panggilan tidak mempunyai `room`
+    if (ev === 'call') { handleCall(j); return; }   // isyarat DM tiada `room`; kumpulan dipisah dalam handleCall
     if (!j || !j.room) return;
     const r = room(j.room);
     if (!r) { loadRooms(false); return; }   // bilik belum diketahui — ambil senarai
@@ -2225,7 +2277,7 @@ window.addEventListener('error', (e) => {
   }
   function callHide() {
     const el = callEl();
-    el.classList.remove('on', 'vid', 'audio', 'ringing');
+    el.classList.remove('on', 'vid', 'audio', 'ringing', 'group');
     $('cPrank').classList.remove('on');
     $('cTag').classList.remove('on');
     try { $('cRemote').srcObject = null; $('cLocal').srcObject = null; } catch { /* sudah kosong */ }
@@ -2363,7 +2415,7 @@ window.addEventListener('error', (e) => {
 
   // ── Panggilan sebenar ──
   async function startCall(peer, kind) {
-    if (C) return toast('A call is already running.');
+    if (C || GC) return toast('A call is already running.');
     if (!window.RTCPeerConnection) return toast('This browser does not support WebRTC calls.');
     if (!online) return toast('Offline — real calls need internet. Use 🎭 for a prank.');
     C = { pc: null, local: null, remote: null, peer, kind, dir: 'out', state: 'out', t0: 0, iv: null, ringT: null, iceQ: [], prank: false };
@@ -2426,27 +2478,28 @@ window.addEventListener('error', (e) => {
   }
   function dmCall(kind) {
     const r = room(cur);
-    if (!r || r.kind !== 'dm') return toast('Calls are only available in direct messages (DM).');
+    if (r && r.kind === 'group') return groupCall(kind, r);
+    if (!r || r.kind !== 'dm') return toast('Calls are only available in chats.');
     if (r.blocked) return toast('This chat is frozen — unblock first.');
     if (!r.peerId) return toast('Unknown partner.');
     if (lite && kind === 'video') toast('Data saver mode on — video may stutter, try 📞 voice.');
     startCall({ id: r.peerId, name: r.title }, kind);
   }
   function toggleMute() {
-    if (!C || !C.local) return;
-    C.muted = !C.muted;
-    for (const t of C.local.getAudioTracks()) t.enabled = !C.muted;
-    $('cMute').classList.toggle('off', C.muted);
-    $('cMute').querySelector('span').textContent = C.muted ? '🔇' : '🎙️';
+    const s = C || GC; if (!s || !s.local) return;
+    s.muted = !s.muted;
+    for (const t of s.local.getAudioTracks()) t.enabled = !s.muted;
+    $('cMute').classList.toggle('off', s.muted);
+    $('cMute').querySelector('span').textContent = s.muted ? '🔇' : '🎙️';
   }
   function toggleCam() {
-    if (!C || !C.local) return;
-    const ts = C.local.getVideoTracks();
+    const s = C || GC; if (!s || !s.local) return;
+    const ts = s.local.getVideoTracks();
     if (!ts.length) return toast('This call has no video.');
-    C.camOff = !C.camOff;
-    for (const t of ts) t.enabled = !C.camOff;
-    $('cCam').classList.toggle('off', C.camOff);
-    $('cCam').querySelector('span').textContent = C.camOff ? '🚫' : '🎥';
+    s.camOff = !s.camOff;
+    for (const t of ts) t.enabled = !s.camOff;
+    $('cCam').classList.toggle('off', s.camOff);
+    $('cCam').querySelector('span').textContent = s.camOff ? '🚫' : '🎥';
   }
   function missedCall(name, verb) {
     toast('📞 ' + (name || 'Someone') + ' ' + (verb || 'no answer') + '.');
@@ -2454,10 +2507,11 @@ window.addEventListener('error', (e) => {
   }
   // Bingkai 'call' daripada SSE — dipanggil oleh applyFrame.
   function handleCall(j) {
+    if (j.room) { handleGroupCall(j); return; }   // isyarat panggilan kumpulan (mesh)
     const from = j.from, ev = j.ev, data = j.data || {};
     if (!from || from === myId) return;
     if (ev === 'ring') {
-      if (C) { sig(from, 'busy', {}); return; }
+      if (C || GC) { sig(from, 'busy', {}); return; }
       C = { pc: null, local: null, remote: null, peer: { id: from, name: j.fromName || 'Someone' }, kind: data.kind === 'audio' ? 'audio' : 'video', dir: 'in', state: 'in', t0: 0, iv: null, ringT: null, iceQ: [], prank: false };
       callEl().classList.toggle('audio', C.kind === 'audio');
       paintCaller(pById[from] || null, C.kind, C.peer.name);
@@ -2478,6 +2532,224 @@ window.addEventListener('error', (e) => {
     if (ev === 'busy') { toast(C.peer.name + ' is in another call.'); endCall(true); return; }
     if (ev === 'cancel') { toast(C.peer.name + ' cancelled the call.'); endCall(true); return; }
     if (ev === 'end') { endCall(true); }
+  }
+
+  // ═══ Panggilan kumpulan (mesh WebRTC) ═══
+  // GC state berasingan supaya logik DM (C) tidak diusik. Peraturan tanpa glare:
+  // ahli yang LEBIH AWAL menyertai menghantar offer kepada pendatang; pendatang
+  // menjawab (tie-break: Tukuk ID). 'ring'/'accept'/'end'/'cancel' disiarkan ke
+  // seluruh bilik oleh pelayan; 'offer'/'answer'/'ice' titik-ke-titik membawa
+  // `room` + `callId`. Media kekal peer-to-peer — had GC_MAX = 6 ahli.
+  const GC_MAX = 6;
+  let GC = null;
+  const gs = (to, ev, data) => post('/call', { to, ev, room: GC.roomId, data: Object.assign({ callId: GC.callId }, data || {}) }).catch(() => {});
+  const gcast = (ev, extra) => post('/call', { room: GC.roomId, ev, data: Object.assign({ callId: GC.callId }, extra || {}) }).catch(() => {});
+  const gcTile = id => $('gTiles').querySelector('[data-p="' + id + '"]');
+  function gcTileFor(pid, name) {
+    if (!GC || GC.kind === 'audio') return null;   // panggilan suara: tanpa jubin video
+    let t = gcTile(pid);
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'gt wait'; t.dataset.p = pid;
+      t.innerHTML = '<video autoplay playsinline muted></video><b>' + esc(name || '?') + '</b>';
+      $('gTiles').appendChild(t);
+    }
+    return t;
+  }
+  function gcPaintInfo() {
+    if (!GC) return;
+    $('cName').textContent = GC.title;
+    const n = GC.peers.size + 1;
+    $('cSub').textContent = (GC.kind === 'audio' ? '📞 Voice' : '📹 Video') + ' · group · ' + n + (n > 1 ? ' in call' : ' in call, others may join');
+  }
+  function gcEnsurePeer(pid, name, joined) {
+    let p = GC.peers.get(pid);
+    if (!p) {
+      p = { id: pid, name: name || ('#' + pid), pc: null, iceQ: [], joined: joined || 0 };
+      GC.peers.set(pid, p);
+      gcPaintInfo();
+    }
+    return p;
+  }
+  function gcPC(p) {
+    if (p.pc) return p.pc;
+    const pc = new RTCPeerConnection(ICE_CFG);
+    p.pc = pc;
+    pc.onicecandidate = e => { if (e.candidate) gs(p.id, 'ice', { c: e.candidate }); };
+    pc.ontrack = e => {
+      const t = gcTileFor(p.id, p.name);
+      if (t && e.streams && e.streams[0]) { t.querySelector('video').srcObject = e.streams[0]; t.classList.remove('wait'); }
+    };
+    pc.onconnectionstatechange = () => { if (GC) gcPaintInfo(); };
+    if (GC.local) for (const t of GC.local.getTracks()) pc.addTrack(t, GC.local);
+    return pc;
+  }
+  // Saya lebih awal daripada p? (waktu sertai; seri → ID kecil mendahului)
+  function gcEarlierThan(p) {
+    const mine = GC.joinedAt || 0, theirs = p.joined || 0;
+    return mine < theirs || (mine === theirs && myId < p.id);
+  }
+  async function gcOfferTo(pid) {
+    const p = gcEnsurePeer(pid);
+    const pc = gcPC(p);
+    try {
+      const o = await pc.createOffer();
+      await pc.setLocalDescription(o);
+      gs(pid, 'offer', { sdp: { type: o.type, sdp: o.sdp }, joined: GC.joinedAt });
+      gcTileFor(pid, p.name);
+    } catch { /* pasangan mungkin sudah keluar */ }
+  }
+  async function gcGotOffer(from, data) {
+    if (!GC || !data.sdp) return;
+    const p = gcEnsurePeer(from, null, data.joined);
+    const pc = gcPC(p);
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      for (const c of p.iceQ.splice(0)) { try { await pc.addIceCandidate(c); } catch { /* kandidat sudah tamat */ } }
+      const a = await pc.createAnswer();
+      await pc.setLocalDescription(a);
+      gs(from, 'answer', { sdp: { type: a.type, sdp: a.sdp }, joined: GC.joinedAt });
+      gcTileFor(from, p.name);
+    } catch { gcDropPeer(from); }
+  }
+  async function gcGotAnswer(from, data) {
+    const p = GC && GC.peers.get(from);
+    if (!p || !p.pc || !data.sdp) return;
+    try {
+      await p.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      for (const c of p.iceQ.splice(0)) { try { await p.pc.addIceCandidate(c); } catch { /* kandidat sudah tamat */ } }
+    } catch { gcDropPeer(from); }
+  }
+  async function gcGotIce(from, data) {
+    if (!GC || !data.c) return;
+    const p = gcEnsurePeer(from);
+    if (!p.pc || !p.pc.remoteDescription) { p.iceQ.push(data.c); return; }
+    try { await p.pc.addIceCandidate(data.c); } catch { /* kandidat sudah tamat */ }
+  }
+  function gcDropPeer(pid) {
+    if (!GC) return;
+    const p = GC.peers.get(pid);
+    if (!p) return;
+    if (p.pc) { try { p.pc.close(); } catch { /* sudah tertutup */ } }
+    GC.peers.delete(pid);
+    const t = gcTile(pid); if (t) t.remove();
+    gcPaintInfo();
+    if (GC.state === 'out') $('cStat').textContent = 'Waiting for answers…';
+  }
+  function gcTimer() {
+    clearInterval(GC.iv);
+    $('cStat').textContent = '00:00';
+    GC.iv = setInterval(() => {
+      if (!GC) return;
+      const s = Math.max(0, Math.floor((Date.now() - GC.t0) / 1000));
+      $('cStat').textContent = pad2(Math.floor(s / 60)) + ':' + pad2(s % 60);
+    }, 1000);
+  }
+  function gcReset(silent) {
+    if (!GC) { callHide(); return; }
+    const g = GC; GC = null;
+    clearTimeout(g.ringT); clearInterval(g.iv);
+    if (!silent && g.callId && token) { try { post('/call', { room: g.roomId, ev: 'end', data: { callId: g.callId } }).catch(() => {}); } catch { /* tiada pelayan */ } }
+    for (const p of g.peers.values()) { try { if (p.pc) p.pc.close(); } catch { /* sudah tertutup */ } }
+    if (g.local) for (const t of g.local.getTracks()) { try { t.stop(); } catch { /* sudah berhenti */ } }
+    if (g.state === 'on' && g.t0 && !silent) {
+      const s = Math.floor((Date.now() - g.t0) / 1000);
+      toast('Group call ended · ' + pad2(Math.floor(s / 60)) + ':' + pad2(s % 60));
+    }
+    callHide();
+    $('gTiles').innerHTML = '';
+  }
+  // ── Mula panggilan keluar (ring ke seluruh bilik) ──
+  async function groupCall(kind, r) {
+    if (C || GC) return toast('A call is already running.');
+    if (!window.RTCPeerConnection) return toast('This browser does not support WebRTC calls.');
+    if (!online) return toast('Offline — real calls need internet.');
+    if ((r.memberCount || (r.memberIds || []).length) > GC_MAX) return toast('Group calls support up to ' + GC_MAX + ' members.');
+    if (lite && kind === 'video') toast('Data saver mode on — video may stutter, try 📞 voice.');
+    let local;
+    const sess = { roomId: r.id, title: r.title || 'Group', kind, callId: '', dir: 'out', state: 'out', peers: new Map(), local: null, joinedAt: Date.now(), t0: 0, iv: null, ringT: null };
+    GC = sess;
+    try { local = await getMedia(kind); }   // kebenaran diminta sebelum ring supaya tiada tergantung
+    catch (e) {
+      if (GC !== sess) return;
+      GC = null;
+      return toast(e && e.name === 'NotAllowedError' ? 'Allow camera & microphone to call.' : 'Call devices unavailable.');
+    }
+    if (GC !== sess) return;
+    sess.local = local; sess.joinedAt = Date.now();
+    callEl().classList.add('group');
+    callEl().classList.toggle('audio', kind === 'audio');
+    $('cLocal').srcObject = local;
+    if (kind !== 'audio') callEl().classList.add('vid');
+    $('cAva').textContent = '👥'; $('cAva').style.background = '#3a4f6e'; $('cBio').textContent = '';
+    $('cStat').textContent = 'Calling group…';
+    gcPaintInfo(); callPaint('out');
+    await refreshIce();
+    try {
+      const j = await post('/call', { room: r.id, ev: 'ring', data: { kind } });
+      sess.callId = (j && j.callId) || '';
+      // Pemanggil sudah keluar sebelum callId tiba → hantar 'cancel' susulan
+      // supaya skrin ring ahli tidak tergantung pada panggilan yang tiada.
+      if (GC !== sess && sess.callId) post('/call', { room: r.id, ev: 'cancel', data: { callId: sess.callId } }).catch(() => {});
+    } catch (e) { if (GC === sess) { toast(e.message || 'Failed to call.'); gcReset(true); } }
+    // Nota: panggilan kumpulan tiada tamat ring — pemanggil boleh keluar sendiri
+    // dan penyertaan lewat tetap jalan (mesh membulat secara automatik).
+  }
+  // ── Ring masuk + sertai ──
+  function gcIncoming(j, data) {
+    if (C || GC) { post('/call', { to: j.from, room: j.room, ev: 'busy', data: { callId: data.callId || '' } }).catch(() => {}); return; }
+    const r = room(j.room);
+    GC = { roomId: j.room, title: (r && r.title) || 'Group', kind: data.kind === 'audio' ? 'audio' : 'video', callId: data.callId || '', dir: 'in', state: 'in', peers: new Map(), local: null, joinedAt: 0, t0: 0, iv: null, ringT: null };
+    callEl().classList.add('group');
+    callEl().classList.toggle('audio', GC.kind === 'audio');
+    const nm = j.fromName || 'Someone';
+    $('cAva').textContent = initials(nm); $('cAva').style.background = colorOf(nm);
+    $('cName').textContent = GC.title;
+    $('cSub').textContent = (GC.kind === 'audio' ? '📞 Voice' : '📹 Video') + ' · group call from ' + nm;
+    $('cBio').textContent = 'Accept to join everyone already on the line.';
+    $('cStat').textContent = 'Incoming call…';
+    callPaint('in');
+    startRing(); vibrate([500, 350, 500, 350, 800]);
+    if (document.hidden && pref.notif) { try { new Notification('📞 Group call', { body: nm + ' is calling ' + GC.title, icon: '/icons/apps/chat.svg?v=3', tag: 'call-in' }); } catch { /* dinafikan */ } }
+    GC.ringT = setTimeout(() => { if (GC && GC.state === 'in') gcReset(true); }, CALL_TIMEOUT);
+  }
+  async function groupAccept() {
+    if (!GC || GC.state !== 'in') return;
+    const sess = GC;
+    clearTimeout(sess.ringT); stopRing();
+    sess.ringT = setTimeout(() => { if (GC === sess && GC.state === 'in') { GC = null; callHide(); toast('Camera/microphone not responding.'); } }, 25000);
+    try { sess.local = await getMedia(sess.kind); } catch { if (GC === sess) gcReset(true); return toast('Allow camera & microphone to answer.'); }
+    if (GC !== sess) return;
+    clearTimeout(sess.ringT);
+    $('cLocal').srcObject = sess.local;
+    if (sess.kind !== 'audio') callEl().classList.add('vid');
+    await refreshIce();
+    sess.joinedAt = Date.now();
+    sess.state = 'on'; sess.t0 = Date.now();
+    callPaint('on');
+    gcPaintInfo(); gcTimer();
+    tone(880, .1, .05); setTimeout(() => tone(1175, .12, .05), 90);
+    gcast('accept', { joined: sess.joinedAt });   // ahli sedia ada akan offer kepada saya
+  }
+  // Penghalaan bingkai kumpulan (server sentiasa sertakan `room`).
+  function handleGroupCall(j) {
+    const data = j.data || {};
+    if (!j.room || !j.from || j.from === myId) return;
+    if (j.ev === 'ring') { gcIncoming(j, data); return; }
+    if (!GC) return;
+    if (GC.callId && data.callId && data.callId !== GC.callId) return;   // panggilan lain
+    if (j.ev === 'accept') {
+      if (GC.state === 'in') return;   // saya belum sertai — bingkas nanti bila Accept
+      const p = gcEnsurePeer(j.from, j.fromName, data.joined);
+      if (gcEarlierThan(p)) gcOfferTo(j.from);
+      return;
+    }
+    if (j.ev === 'offer') { gcGotOffer(j.from, data); return; }
+    if (j.ev === 'answer') { gcGotAnswer(j.from, data); return; }
+    if (j.ev === 'ice') { gcGotIce(j.from, data); return; }
+    if (j.ev === 'end') { gcDropPeer(j.from); return; }
+    if (j.ev === 'cancel') { if (GC.state === 'in') { if (GC.dir === 'in') toast('Group call cancelled.'); gcReset(true); } return; }
+    if (j.ev === 'busy') { gcDropPeer(j.from); return; }
   }
 
   // ── Mod prank + "TukuCaller": panggilan palsu setempat dengan pengenalan
@@ -2572,8 +2844,8 @@ window.addEventListener('error', (e) => {
 
   $('cAud').onclick = () => dmCall('audio');
   $('cVid').onclick = () => dmCall('video');
-  $('cEnd').onclick = () => endCall(false);
-  $('cAccept').onclick = () => { if (C) { if (C.prank) prankAccept(); else acceptCall(); } };
+  $('cEnd').onclick = () => { if (GC) gcReset(); else endCall(false); };
+  $('cAccept').onclick = () => { if (C) { if (C.prank) prankAccept(); else acceptCall(); } else if (GC && GC.state === 'in') groupAccept(); };
   $('cMute').onclick = toggleMute;
   $('cCam').onclick = toggleCam;
   $('cBlock').onclick = async () => {
@@ -2596,6 +2868,9 @@ window.addEventListener('error', (e) => {
   // Tab ditutup/diulang seawal panggilan: maklumkan pasangan supaya skrin mereka
   // tidak tergantung menunggu (keepalive membolehkan permintaan selesai).
   addEventListener('pagehide', () => {
+    try {
+      if (GC && GC.callId && token) fetch(API + '/call', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ room: GC.roomId, ev: 'end', data: { callId: GC.callId } }), keepalive: true });
+    } catch { /* pelayar sudah ditutup */ }
     if (!C || C.prank || !C.peer || !C.peer.id || !token) return;
     try {
       fetch(API + '/call', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ to: C.peer.id, ev: 'end', data: {} }), keepalive: true });

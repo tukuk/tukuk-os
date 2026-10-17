@@ -436,9 +436,21 @@ function syncNames(r) {
   if (names.some(n => !n)) return;
   if (names.join('\u0001') !== (r.members || []).join('\u0001')) { r.members = names; touch(); }
 }
+function lastMsgTs(r) {
+  const l = (r.list || [])[(r.list || []).length - 1];
+  return l ? (l.ts || 0) : (r.createdAt || 0);
+}
 function roomsFor(name) {
   const s = load();
-  return Object.values(s.rooms).filter(r => r.kind === 'global' || isMember(r, name));
+  const u = findUser(name);
+  const hide = (u && u.hide) || null;
+  return Object.values(s.rooms).filter(r => {
+    if (r.kind !== 'global' && !isMember(r, name)) return false;
+    // DM "sembunyi untuk saya": dibuang dari sidebar sehingga mesej baharu
+    // (ts melebihi waktu sembunyi) mengembalikannya — seperti archive peribadi.
+    if (hide && r.kind === 'dm' && hide[r.id] && lastMsgTs(r) < hide[r.id]) return false;
+    return true;
+  });
 }
 function ensureDm(a, b) {
   const s = load();
@@ -462,6 +474,23 @@ function peerId(r, mine) {
   if (!r || r.kind !== 'dm' || !r.memberIds) return null;
   const m = uid(mine);
   return r.memberIds.find(i => i !== m) || null;
+}
+// ─── Sembunyi DM ("delete untuk saya") ───
+// Bilik dan sejarah TIDAK dipadam — hanya senarai sisi pengguna ini ditapis.
+// Buka semula bilik (POST /api/chat/room) atau mesej baharu → ia kembali.
+function hideRoom(name, roomId) {
+  const s = load(); const r = s.rooms[roomId];
+  if (!r || r.kind !== 'dm') return { error: 'Direct chat not found.' };
+  const u = findUser(name);
+  if (!u || !isMember(r, u)) return { error: 'You are not a member of this chat.' };
+  // Stempel mesti SENTIASA selepas mesej terakhir (>=) supaya sembunyi tidak
+  // «kandas» bila hide dan mesej terakhir jatuh pada milisaat yang sama.
+  (u.hide = u.hide || {})[roomId] = Math.max(Date.now(), lastMsgTs(r) + 1);
+  touch();
+  return { ok: true };
+}
+function unhideRoom(u, roomId) {
+  if (u && u.hide && u.hide[roomId]) { delete u.hide[roomId]; touch(); }
 }
 // ─── Bilik kumpulan ───
 function createGroup(creatorName, title, memberIds) {
@@ -2078,7 +2107,17 @@ function mount(app, deps) {
     if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Cannot start a chat with this user.' });
     const r = ensureDm(u, peer);
     if (!r) return res.status(400).json({ error: 'No such ID or name.' });
+    unhideRoom(u, r.id);   // buka DM = keluar daripada senyap (symmetric dgn hide)
     res.json({ ok: true, room: { id: r.id, kind: r.kind, title: roomTitle(r, u), members: r.members, peerId: peer.id, seq: r.seq || 0 }, profile: profile(peer, u.name) });
+  });
+
+  // Sembunyi DM daripada sidebar saya sahaja — kembali bila mesej baharu tiba
+  // atau bila bilik dibuka semula melalui POST /api/chat/room.
+  app.post('/api/chat/room/hide', (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const r = hideRoom(u.name, String(cleanBody(req.body).room || ''));
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true });
   });
 
   app.get('/api/chat/user', (req, res) => {
@@ -2157,19 +2196,47 @@ function mount(app, deps) {
   // jadi tiada audio/video disimpan atau dilalukan di pelayan. `delivered` memaklumkan
   // pemanggil sama ada pasangan benar-benar bersambung sekarang (untuk "luar talian").
   const CALL_EV = new Set(['ring', 'accept', 'reject', 'busy', 'offer', 'answer', 'ice', 'end', 'cancel']);
+  const CALL_FANOUT = new Set(['ring', 'accept', 'end', 'cancel']);   // serentak ke ahli bilik
+  const MAX_GROUP_CALL = 6;   // had mesh P2P (n×(n−1)/2 sambungan)
   app.post('/api/chat/call', lim({ windowMs: 60e3, max: 120, keyPrefix: 'chcall:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
     const ev = String(b.ev || '');
     if (!CALL_EV.has(ev)) return res.status(400).json({ error: 'Unknown call signal.' });
-    const peer = byId(b.to);
-    if (!peer) return res.status(400).json({ error: 'User not found.' });
-    if (peer.id === u.id) return res.status(400).json({ error: 'You cannot call yourself.' });
-    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Could not call that user.' });
     let data = b.data && typeof b.data === 'object' ? b.data : {};
     if (JSON.stringify(data).length > 16384) return res.status(413).json({ error: 'Signal packet too large.' });
     // 'kind' hanya relevan pada 'ring' — kekalkan kecil & normalisasi.
     if (ev === 'ring') data = Object.assign({ kind: data.kind === 'audio' ? 'audio' : 'video' }, data);
+
+    // ── Panggilan kumpulan (mesh): bingkaian frames carry `room` + `callId`. ──
+    // 'ring'/'accept'/'end'/'cancel' disiarkan ke semua ahli (kecuali penghantar,
+    // dan pasangan yang saling menyekat); 'offer'/'answer'/'ice'/'reject'/'busy'
+    // tetap titik-ke-titik melalui `to` — media tidak pernah melalui pelayan.
+    if (b.room) {
+      const gr = load().rooms[String(b.room)];
+      if (!gr || gr.kind !== 'group') return res.status(400).json({ error: 'Group not found.' });
+      if (!isMember(gr, u)) return res.status(403).json({ error: 'You are not a member of this group.' });
+      if (ev === 'ring' && (gr.memberIds || []).length > MAX_GROUP_CALL) return res.status(400).json({ error: 'Group calls support up to ' + MAX_GROUP_CALL + ' members.' });
+      const callId = String(data.callId || '').slice(0, 24) || (ev === 'ring' ? 'c' + crypto.randomBytes(4).toString('hex') : '');
+      data = Object.assign({}, data, { callId });
+      if (CALL_FANOUT.has(ev)) {
+        const ids = (gr.memberIds || []).filter(i => i !== u.id && !dmFrozen(u, byId(i)));
+        pub('call', { from: u.id, fromName: u.name, room: gr.id, ev, data }, ids);
+        if (ev === 'ring') event((data.kind === 'audio' ? 'Group voice call: ' : 'Group video call: ') + u.name + ' → ' + (gr.title || 'Group'), { id: u.id });
+        return res.json({ ok: true, callId, delivered: ids.some(i => { const set = sinks.get(i); return set && set.size; }) });
+      }
+      const gp = byId(b.to);
+      if (!gp || gp.id === u.id || !(gr.memberIds || []).includes(gp.id)) return res.status(400).json({ error: 'User not found.' });
+      if (dmFrozen(u, gp)) return res.status(403).json({ error: 'Could not call that user.' });
+      const gset = sinks.get(gp.id);
+      pub('call', { from: u.id, fromName: u.name, to: gp.id, room: gr.id, ev, data }, [gp.id]);
+      return res.json({ ok: true, callId, delivered: !!(gset && gset.size) });
+    }
+
+    const peer = byId(b.to);
+    if (!peer) return res.status(400).json({ error: 'User not found.' });
+    if (peer.id === u.id) return res.status(400).json({ error: 'You cannot call yourself.' });
+    if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Could not call that user.' });
     const set = sinks.get(peer.id);
     pub('call', { from: u.id, fromName: u.name, to: peer.id, ev, data }, [peer.id]);
     if (ev === 'ring') event((data.kind === 'audio' ? 'Voice call: ' : 'Video call: ') + u.name + ' → ' + peer.name, { id: u.id, peer: peer.id });
@@ -2547,6 +2614,7 @@ function mount(app, deps) {
 module.exports = {
   mount, register, login, issueSession, userOf, revoke, normalizeName, hashPass, eqHex,
   dmId, ensureDm, roomsFor, roomTitle, send, since, markSeen, unread, canRead,
+  hideRoom, unhideRoom, lastMsgTs,
   react, edit, remove, setTyping, typingIn, searchMsgs, people, onlineMap, setPath, load, flush,
   byId, findUser, nameOfUser, peerId, isMember, sameAuthor, authorName,
   profile, rename, setBio, isOnline, cleanText,
