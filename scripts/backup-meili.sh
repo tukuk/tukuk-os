@@ -19,10 +19,10 @@
 set -euo pipefail
 
 # Muat nilai dari r2.env (gaya EnvironmentFile) jika belum ada dalam persekitaran.
-if [ -f "${HOME}/.config/tukuk-os/r2.env" ]; then
+if [ -f "${HOME:-/nonexistent}/.config/tukuk-os/r2.env" ]; then
   set -a
   # shellcheck disable=SC1091
-  . "${HOME}/.config/tukuk-os/r2.env"
+  . "${HOME:-/nonexistent}/.config/tukuk-os/r2.env"
   set +a
 fi
 
