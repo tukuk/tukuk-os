@@ -1242,17 +1242,19 @@ async function getSatellites({ group = 'stations' } = {}) {
 
 /**
  * 15. Backfill arkib — kumpul data NASA ke pangkalan data setempat secara berkala.
- *     Satu panggilan APOD count=10 + satu feed NEO sehari = ~10 entri/hari;
- *     EPIC pula menyumbang 12 imej setiap tarikan. Ralat diabaikan (cuba lagi pusingan depan).
+ *     APOD: tujuh tarikan satu-tarikh melalui getAPOD (retry + sandaran arkib sudah
+ *     terbina dalam; laluan `count` sering hidang halaman rosak "NASA Science").
+ *     NEO sehari + EPIC menyumbang baki koleksi. Ralat sehari diabaikan.
  */
 async function backfillArchive() {
   const hasil = { apod: 0, asteroids: 0, epic: 0 };
-  try {
-    const res = await apiHttp.get(`${config.nasa.baseUrl}/planetary/apod`, {
-      params: { api_key: config.nasa.apiKey, count: 10 }, timeout: 20000
-    });
-    if (Array.isArray(res.data)) hasil.apod = store.saveApod(res.data.filter((e) => isValidApodPayload(e)));
-  } catch { /* NASA down — arkib sedia ada masih boleh dihidang */ }
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    try {
+      const apod = await getAPOD({ date: d });
+      if (apod && !apod.api_down && !apod.stale && store.getApod(d)) hasil.apod += 1;
+    } catch { /* cuba hari seterusnya */ }
+  }
   try {
     const today = new Date().toISOString().slice(0, 10);
     const neo = await getNearEarthObjects({ startDate: today, endDate: today });
