@@ -25,26 +25,24 @@ export default {
 		// Try to proxy to main server first
 		try {
 			const originUrl = new URL(ORIGIN + path + url.search);
-			const originResponse = await fetch(originUrl, {
-				method: request.method,
-				headers: {
-					'Accept': request.headers.get('Accept') || 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-					'User-Agent': request.headers.get('User-Agent') || 'Mozilla/5.0',
-				},
-			});
+			// new Request(originUrl, request) forward method, body, dan semua
+			// header asal (termasuk Cookie, Authorization, Content-Type).
+			// `redirect: 'manual'` supaya 3xx tidak diikuti secara automatik.
+			const originResponse = await fetch(new Request(originUrl, request, { redirect: 'manual' }));
 
-			if (originResponse.ok) {
+			// Forward SEBARANG respons di bawah 500 (termasuk 3xx redirect).
+			// Kembalikan respons asal — semua header (Set-Cookie, Location, dll)
+			// dihantar terus ke browser tanpa penapisan.
+			// Hanya jatuh ke fallback R2 jika origin mengembalikan 5xx atau
+			// fetch gagal sepenuhnya (rangkaian terputus).
+			if (originResponse.status < 500) {
 				track(env, 'origin_ok', request.method, path, originResponse.status);
-				return new Response(originResponse.body, {
-					status: originResponse.status,
-					headers: {
-						'Content-Type': originResponse.headers.get('Content-Type') || 'text/html',
-						'Cache-Control': 'no-cache',
-					},
-				});
+				return originResponse;
 			}
+			// 5xx: origin dalam masalah — jatuh ke fallback di bawah
+			track(env, 'origin_error', request.method, path, originResponse.status);
 		} catch (e) {
-			// Server down, fall through to static fallback
+			// Server down / unreachable — fall through to static fallback
 			track(env, 'origin_error', request.method, path);
 		}
 

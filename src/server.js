@@ -2717,6 +2717,12 @@ agent.mount(app, {
   store,
 });
 
+// /login dan /logout (tanpa prefix /agent) dipaut semula ke editor.
+// Browser lama mungkin cache 302 ke '/login' daripada sebelum fix prefix.
+// Express redirect supaya pautan itu berfungsi lagi.
+app.get('/login',  (req, res) => res.redirect(302, '/agent/login' + (req._parsedUrl.search || '')));
+app.get('/logout', (req, res) => res.redirect(302, '/agent/logout' + (req._parsedUrl.search || '')));
+
 // Editor Tukuk Agent (code-server tempatan) dinaung di tukuk.org/agent —
 // guna tunnel sedia ada; tanpa perubahan Cloudflare. WS dipasang di index.js.
 agentEditor.mount(app, { config });
