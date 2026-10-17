@@ -26,10 +26,15 @@ const ADVERTISED_MODEL = 'tukuk-agent';
 const NO_TOOLS_PROVIDERS = new Set(['litert']);
 
 // Hanya pembekal `kind:'openai'` yang faham /chat/completions + tools. Gemini,
-// Cloudflare (Workers AI) dan ollama-native diLANGGAU di sini — mereka text-only.
+// Cloudflare (Workers AI) diLANGGAU di sini — mereka text-only.
+// Pengecualian: 'ollama-cloud' disimpan sebagai 'ollama-native' dalam
+// provider.js, TETAPI api.ollama.com juga menyajikan /v1/chat/completions
+// (format OpenAI) dengan sokongan tool untuk gpt-oss — jadi kita petakan ke
+// bentuk OpenAI di sini sahaja, tanpa mengubah logik /ask sedia ada.
 function openaiProviders() {
   return provider
     .listCloudProviders()
+    .map((p) => (p.name === 'ollama-cloud' && p.baseUrl ? { ...p, kind: 'openai', baseUrl: `${p.baseUrl}/v1` } : p))
     .filter((p) => p.kind === 'openai' && p.baseUrl && !NO_TOOLS_PROVIDERS.has(p.name));
 }
 
@@ -85,7 +90,7 @@ async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs 
     return {
       ok: false,
       status: 409,
-      error: 'No OpenAI-compatible agent provider configured. Set GROQ_API_KEY (or another cloud key) in .env.',
+      error: 'No tool-capable agent provider configured. Set OLLAMA_CLOUD_API_KEY or GROQ_API_KEY (etc) in .env.',
       rejected: [],
     };
   }

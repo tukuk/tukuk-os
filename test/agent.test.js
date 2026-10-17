@@ -69,6 +69,30 @@ test('chatWithRotation: semua 429 -> 429; bukan kuota -> 424', () => withProvide
   assert.ok(n.rejected.length >= 2, 'senarai rejected diisi');
 }));
 
+// ── openaiProviders(): penapisan pembekal buta-tools + pemetaan ollama-cloud ──
+test('openaiProviders: litert (buta tool) dibuang dari rotasi agen', () => withProviders([
+  groq,
+  { name: 'litert', kind: 'openai', baseUrl: 'http://127.0.0.1:8090/v1', key: 'edge', model: 'gemma3-1b' },
+], async () => {
+  const names = openai.openaiProviders().map((p) => p.name);
+  assert.deepEqual(names, ['groq'], 'litert tak boleh muncul pada /api/agent/v1');
+}));
+
+test('openaiProviders: ollama-cloud dipetakan ke bentuk OpenAI /v1', () => withProviders([
+  { name: 'ollama-cloud', kind: 'ollama-native', baseUrl: 'https://api.ollama.com', key: 'k', model: 'gpt-oss:20b' },
+], async () => {
+  const ps = openai.openaiProviders();
+  assert.equal(ps.length, 1);
+  assert.equal(ps[0].kind, 'openai');
+  assert.equal(ps[0].baseUrl, 'https://api.ollama.com/v1', 'URL ditampal /v1 demi /chat/completions');
+  const out = await openai.chatWithRotation(
+    { messages: [{ role: 'user', content: 'pakai tool' }], tools: [{ type: 'function' }] },
+    { fetchImpl: async (url) => { assert.equal(url, 'https://api.ollama.com/v1/chat/completions'); return new Response('{"choices":[]}', { status: 200 }); } }
+  );
+  assert.equal(out.ok, true);
+  assert.equal(out.provider, 'ollama-cloud');
+}));
+
 // ── Loopback HTTP penuh untuk src/agent.js ──────────────────────────────────
 function startApp({ token = 'secret-agent', patch } = {}) {
   const app = express();
