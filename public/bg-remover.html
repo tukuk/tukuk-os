@@ -151,8 +151,6 @@
   document.getElementById('newBtn').addEventListener('click', () => location.reload());
 
   // ——— One-click colour-based cutout: BFS flood fill from every border pixel ———
-  function colorDistSq(a, b, off) { const dr = a[off]-b[off], dg = a[off+1]-b[off+1], db = a[off+2]-b[off+2]; return dr*dr+dg*dg+db*db; }
-
   function autoRemove() {
     if (!original || busy) return;
     busy = true;
@@ -172,12 +170,17 @@
       push(0, 0); push(W-1, 0); push(0, H-1); push(W-1, H-1);
       const ref = [0,1,2].map(c => Math.round(corners.reduce((s,p)=>s+p[c],0)/corners.length));
 
+      // Jarak piksel kepada warna rujukan latar. `ref` ialah tripel [r,g,b], jadi ia
+      // MESTI dibandingkan dengan ref[0..2] — bukan ref[off]. Versi terdahulu
+      // (colorDistSq(src, ref, off)) membaca ref[off] yang undefined untuk off>2 →
+      // NaN → flood-fill tak pernah benih/luas → hampir TIADA latar dibuang.
+      const closeToRef = (off) => { const dr = src[off]-ref[0], dg = src[off+1]-ref[1], db = src[off+2]-ref[2]; return dr*dr+dg*dg+db*db <= thr; };
       const visited = new Uint8Array(W * H);
       const queue = new Int32Array(W * H);
       let qh = 0, qt = 0;
       const seed = (x, y) => {
         const idx = y * W + x, o = idx * 4;
-        if (colorDistSq(src, ref, o) <= thr && !visited[idx]) { visited[idx] = 1; queue[qt++] = idx; }
+        if (closeToRef(o) && !visited[idx]) { visited[idx] = 1; queue[qt++] = idx; }
       };
       for (let x = 0; x < W; x++) { seed(x, 0); seed(x, H-1); }
       for (let y = 0; y < H; y++) { seed(0, y); seed(W-1, y); }
@@ -185,12 +188,12 @@
       while (qh < qt) {
         const idx = queue[qh++];
         const o = idx * 4;
-        dst[o+3] = 0; // make transparent
+        dst[o+3] = 0; // jadikan lut sinar
         const x = idx % W, y = (idx / W) | 0;
-        if (x > 0)     { const n = idx-1;   if (!visited[n] && colorDistSq(src, ref, n*4) <= thr) { visited[n]=1; queue[qt++]=n; } }
-        if (x < W-1)   { const n = idx+1;   if (!visited[n] && colorDistSq(src, ref, n*4) <= thr) { visited[n]=1; queue[qt++]=n; } }
-        if (y > 0)     { const n = idx-W;   if (!visited[n] && colorDistSq(src, ref, n*4) <= thr) { visited[n]=1; queue[qt++]=n; } }
-        if (y < H-1)   { const n = idx+W;   if (!visited[n] && colorDistSq(src, ref, n*4) <= thr) { visited[n]=1; queue[qt++]=n; } }
+        if (x > 0)     { const n = idx-1;   if (!visited[n] && closeToRef(n*4)) { visited[n]=1; queue[qt++]=n; } }
+        if (x < W-1)   { const n = idx+1;   if (!visited[n] && closeToRef(n*4)) { visited[n]=1; queue[qt++]=n; } }
+        if (y > 0)     { const n = idx-W;   if (!visited[n] && closeToRef(n*4)) { visited[n]=1; queue[qt++]=n; } }
+        if (y < H-1)   { const n = idx+W;   if (!visited[n] && closeToRef(n*4)) { visited[n]=1; queue[qt++]=n; } }
       }
 
       ctx.putImageData(out, 0, 0);
