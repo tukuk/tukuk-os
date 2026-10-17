@@ -864,7 +864,30 @@ Type a command below or click a quick action.
       // dibuka (bocor melalui /api/admin/auth/config). Taip sendiri sekali sahaja.
       if (authConfig && !authConfig.passkeysRegistered) enterSetupMode();
       else enterLoginMode();
+      showDomainWarning();
     } catch { /* biarkan mod login */ }
+  }
+
+  // Amaran pra-kosong: passkey hanya boleh didaftarkan/diguna pada domain yang
+  // sepadan dengan rpID pelayan (dan atas HTTPS). Jika tidak, browser pasti
+  // gagalkan navigator.credentials dengan ralat teknikal yang mengelirukan —
+  // jadi beritahu pengguna alamat sebenar yang perlu dibuka sebelum mereka cuba.
+  function showDomainWarning() {
+    const rp = (authConfig && authConfig.rpID) || '';
+    if (!rp) return;
+    const host = location.hostname;
+    const suffixOk = host === rp || host.endsWith('.' + rp) || (host === 'localhost' && rp === 'localhost');
+    const secure = window.isSecureContext || host === 'localhost' || host === '127.0.0.1';
+    let msg = '';
+    if (!suffixOk) {
+      msg = '⚠️ Passkeys are tied to the domain "' + rp + '" but this page is opened at "' + host + '". '
+          + 'The browser will always refuse to create or use a passkey here. '
+          + 'Open https://' + rp + '/admin on this device instead — the panel works fully from that address.';
+    } else if (!secure) {
+      msg = '⚠️ This page is not on a secure connection (' + location.protocol + '). Browsers only allow passkeys on HTTPS. '
+          + 'Open https://' + rp + '/admin instead.';
+    }
+    if (msg) { authHintEl.hidden = false; authHintEl.textContent = msg; authHintEl.style.color = '#e0a94a'; }
   }
 
   function parseAuthOptions(o) {
