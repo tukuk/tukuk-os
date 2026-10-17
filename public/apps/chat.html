@@ -3053,23 +3053,41 @@ window.addEventListener('error', (e) => {
     src.buffer = buf; src.connect(ctx.destination);
     await new Promise(res => { src.onended = res; src.start(); });
   }
-  // Teks panjang dipecah ikut perkataan (±90 aksara/wave) dan dinomborkan
-  // [k/N] supaya peranti pendengar boleh join semula dengan tepat.
+  // Kapasiti ggwave ialah ~140 BYTE UTF-8 per gelombang (diukur: 140 ASCII, tetapi
+  // hanya ~46 CJK / ~35 emoji). Jadi pemenggalan MESTI ikut bayt, bukan aksara —
+  // ikut aksara akan MEMOTONG teks CJK/Thai/emoji panjang dalam satu gelombang.
+  // Pemisah asal dikekalkan dalam payload supaya cantuman tepat (tiada sisipan spasi),
+  // wajib untuk bahasa tanpa ruang (CJK/Thai/Khmer). Prefix [k/N] cuma penanda nombor.
+  const WAV_BYTES = 120;                 // margin selamat di bawah had ~140 (termasuk prefix)
+  const WAV_MAXPARTS = 8;                // had bilangan gelombang sesurai
+  function wBytes(s) { return new TextEncoder().encode(s).length; }
   function waveChunks(text) {
-    const words = String(text).split(/\s+/).filter(Boolean);
-    const out = []; let cur = '';
-    for (const wd of words) {
-      if (cur && (cur + ' ' + wd).length > 90) { out.push(cur); cur = wd; }
-      else cur = cur ? cur + ' ' + wd : wd;
+    const tokens = String(text).split(/(\s+)/);   // selang-seli teks & ruang; ruang tak hilang
+    const segs = [];
+    let cur = '';
+    for (const tk of tokens) {
+      if (!tk) continue;
+      if (cur && wBytes(cur + tk) > WAV_BYTES) { segs.push(cur); cur = tk; }
+      else cur += tk;
     }
-    if (cur) out.push(cur);
+    if (cur) segs.push(cur);
+    const out = [];
+    for (const s of segs) {
+      if (wBytes(s) <= WAV_BYTES) { out.push(s); continue; }
+      let piece = '';
+      for (const cp of Array.from(s)) {          // Array.from → tak pecah surrogate pair (emoji/CJK luar-BMP)
+        if (piece && wBytes(piece + cp) > WAV_BYTES) { out.push(piece); piece = cp; }
+        else piece += cp;
+      }
+      if (piece) out.push(piece);
+    }
     return out;
   }
   async function wavePlay() {
     const text = $('wText').value.trim();
     if (!text) { toast('Type a message first.'); return; }
     const parts = waveChunks(text);
-    if (parts.length > 6) { toast('Too long for waves — keep it under about 500 characters.'); return; }
+    if (parts.length > WAV_MAXPARTS) { toast('Too long for sound waves — trim it down (CJK, Thai and emoji need more room per wave).'); return; }
     const btn = $('wPlay'), old = btn.textContent;
     btn.disabled = true;
     try {
@@ -3119,12 +3137,12 @@ window.addEventListener('error', (e) => {
     const cm = /^\[(\d+)\/(\d+)\]\s([\s\S]+)$/.exec(text);
     if (cm) {
       const k = +cm[1], n = +cm[2];
-      if (n >= 2 && n <= 6 && k >= 1 && k <= n) {
+      if (n >= 2 && n <= WAV_MAXPARTS && k >= 1 && k <= n) {
         if (!wParts.has(n)) wParts.set(n, new Map());
         wParts.get(n).set(k, cm[3]);
         if (wParts.get(n).size === n) {
           let full = '';
-          for (let i = 1; i <= n; i++) full += (i > 1 ? ' ' : '') + wParts.get(n).get(i);
+          for (let i = 1; i <= n; i++) full += wParts.get(n).get(i);   // cantuman tepat — pemisah sudah dalam payload
           wParts.delete(n); waveProg(0, null);
           return waveRow(full, '🧩 ');
         }
