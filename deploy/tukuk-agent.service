@@ -27,7 +27,6 @@ StateDirectoryMode=0750
 ExecStart=/opt/tukuk-agent/release/bin/tukuk-agent \
   --bind-addr 127.0.0.1:8443 \
   --auth password \
-  --trust-proxy \
   --abs-proxy-base-path /agent \
   --extensions-dir /var/lib/tukuk-agent/extensions \
   --user-data-dir /var/lib/tukuk-agent/user-data \
