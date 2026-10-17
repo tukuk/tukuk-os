@@ -1,0 +1,46 @@
+[Unit]
+Description=LiteRT-LM OpenAI-compatible server (edge AI tier — tukuk.org internal only)
+Documentation=https://github.com/google-ai-edge/LiteRT-LM
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# Model kecil CPU-first (gemma3-1b int4 + embeddinggemma-300m) — direka untuk
+# pelayan 6.8GB kita. HANYA bind 127.0.0.1; awam tak pernah sentuh port ini.
+# Laluan utama AI kekal cloud (src/answer.js rotation); ini tier pinggir.
+User=tukuk
+Group=tukuk
+ExecStart=/home/tukuk/.local/bin/litert-lm serve --host 127.0.0.1 --port 8090
+Environment=LITERT_LM_HOME=/home/tukuk/.litert-lm
+
+# --- had sumber: node + meilisearch + tukuk-agenteditor lebih penting ---
+# RSS gemma3-1b int4 semasa inferens ±1.2–1.8GB; 4200M beri headroom selamat.
+MemoryMax=4200M
+CPUQuota=300%
+TasksMax=256
+Nice=10
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=litert-lm
+
+# --- hardening (policy native systemd, tiada Docker) ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+# Baca model + registry; tulis log sahaja (journal).
+ProtectHome=read-only
+ReadWritePaths=/home/tukuk/.litert-lm
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
+
+# NOTA: unit ini TIDAK di-enable oleh auto-update. Ia dipasang melalui
+# scripts/setup-litert-pilot.sh selepas pilot lulus benchmark — lihat fail itu.
