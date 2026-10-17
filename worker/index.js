@@ -199,7 +199,10 @@ export default {
         method: request.method,
         headers: request.headers,
         body: request.method === "GET" || request.method === "HEAD" ? null : request.body,
-        redirect: "follow"
+        // redirect: 'manual' supaya 3xx code-server (login redirect + Set-Cookie)
+        // dihantar balik ke browser. Dengan 'follow', Worker ikut sendiri dan
+        // buang Set-Cookie/Location — browser tak dapat session token.
+        redirect: "manual"
       });
 
       // Jika pelayan membalas 5xx → masuk mod sandaran sepenuhnya
