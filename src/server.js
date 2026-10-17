@@ -285,6 +285,19 @@ app.get('/', (req, res) => {
   res.type('html').send(renderBlogListPage(req, true));
 });
 
+// Halaman NASA APOD yang boleh di-index + beriklan (SEO text + ImageObject JSON-LD). Data
+// APOD = domain-awam NASA (selamat dari copyright), bahasa Inggeris (trafik global), ni‑astronomi
+// CPC sederhana → sesuai untuk AdSense. Diambil ATAS PERMINTAAN melalui nasa.getAPOD() (cache 4
+// jam + circuit-breaker sedia ada), jadi TIADA kerja latar / beban tambahan pada server.
+app.get('/nasa', async (req, res) => {
+  try {
+    const apod = await nasa.getAPOD();
+    res.type('html').send(renderNasaApodPage(req, apod));
+  } catch {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Astronomy Picture of the Day | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>Astronomy Picture of the Day</h1><p>Today\u2019s picture is briefly unavailable. Please try again shortly.</p><p><a href="/">Back to Tukuk-OS</a></p></body>');
+  }
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -776,7 +789,10 @@ app.get('/models', (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/play', '/apps', '/studio', '/models', '/datacenter', '/os', '/rekomendasi', '/builder', '/editor', '/editor-video', '/movie', '/design', '/3d', '/bg-remover', '/collage', '/converter'];
+  // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
+  // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
+  // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
+  const staticPages = ['', '/nasa', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -952,6 +968,7 @@ function siteNav() {
   return `
       <a href="/">Home</a>
       <a href="/blog">Blog</a>
+      <a href="/nasa">NASA</a>
       <a href="/learn">Learn</a>
       <a href="/docs">Docs</a>
       <a href="/about">About</a>
@@ -1056,6 +1073,92 @@ ${pageAdScript()}${clarityScript()}
 </body>
 </html>`;
   return html;
+}
+
+// Halaman NASA APOD sebagai KANDUNGAN yang boleh di-index + beriklan (bukan SPA noindex lama).
+// Teks penjelasan dihantar dari pelayan = bahan SEO sebenar; imej domain-awam = trafik gambar
+// global. Ni-astronomi ialah ceruk CPC sederhana yang sesuai untuk AdSense.
+function renderNasaApodPage(req, apod) {
+  const a = apod && typeof apod === 'object' ? apod : {};
+  const title = String(a.title || 'Astronomy Picture of the Day').trim();
+  const dateStr = String(a.date || new Date().toISOString().slice(0, 10)).trim();
+  const explanation = String(a.explanation || '').trim();
+  const mediaType = String(a.media_type || 'image').toLowerCase();
+  const selfUrl = 'https://tukuk.org/nasa';
+  const img = mediaType === 'video'
+    ? (Array.isArray(a.thumbs) && a.thumbs.length ? String(a.thumbs[a.thumbs.length - 1].url || '') : String(a.url || ''))
+    : String(a.hdurl || a.url || '');
+  const ogImage = /^https?:\/\//i.test(img) ? img : 'https://tukuk.org/og.png';
+  const desc = (explanation.replace(/\s+/g, ' ').slice(0, 155)).trim() || 'Today\u2019s Astronomy Picture of the Day \u2014 a space image and explanation from NASA, mirrored at Tukuk-OS.';
+  const dateLabel = (() => { const d = new Date(dateStr); return isNaN(d) ? dateStr : d.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }); })();
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ImageObject',
+    'name': title,
+    'caption': title,
+    'contentUrl': /^https?:\/\//i.test(img) ? img : undefined,
+    'datePublished': dateStr,
+    'creditText': 'NASA',
+    'creator': { '@type': 'Organization', 'name': 'NASA' },
+    'url': selfUrl
+  }).replace(/</g, '\\u003c');
+  const explanationHtml = explanation
+    ? explanation.split(/\n{2,}|\n/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${escapeHtml(p)}</p>`).join('\n')
+    : '<p>NASA has not published an explanation for today\u2019s picture yet.</p>';
+  const imgHtml = /^https?:\/\//i.test(img)
+    ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(title)} \u2014 Astronomy Picture of the Day" loading="eager" decoding="async" style="max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">`
+    : `<p><a href="${escapeHtml(String(a.url || selfUrl))}" rel="noopener" target="_blank">View today\u2019s media on NASA</a></p>`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)} \u2014 Astronomy Picture of the Day (${escapeHtml(dateStr)}) | Tukuk-OS</title>
+<meta name="description" content="${escapeHtml(desc)}">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(desc)}">
+<meta property="og:url" content="${selfUrl}">
+<meta property="og:image" content="${escapeHtml(ogImage)}">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(title)}">
+<meta name="twitter:description" content="${escapeHtml(desc)}">
+<meta name="twitter:image" content="${escapeHtml(ogImage)}">
+<link rel="canonical" href="${selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${jsonLd}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>${COMMON_CSS}</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>${escapeHtml(title)}</h1>
+    <p class="tagline">Astronomy Picture of the Day &middot; ${escapeHtml(dateLabel)} &middot; Image &amp; explanation courtesy of NASA (public domain).</p>
+    <nav>${siteNav()}</nav>
+  </header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    <p class="back-link"><a href="/">&larr; Back to Tukuk-OS</a></p>
+    ${imgHtml}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    <article>${explanationHtml}</article>
+    <p class="meta">Source: NASA APOD. Mirror for search &amp; reading convenience at Tukuk-OS. Explore more in the <a href="/blog">knowledge base</a>.</p>
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+  <footer>
+    <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. Astronomy content &copy; NASA.</p>
+  </footer>
+</div>
+</body>
+</html>`;
 }
 
 app.get('/blog', (req, res) => res.type('html').send(renderBlogListPage(req, false)));
