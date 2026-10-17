@@ -64,7 +64,7 @@ DEADLINE=$(( $(date +%s) + POLL_MAX_MIN * 60 ))
 while :; do
   ST="$(kaggle kernels status "$SLUG" 2>/dev/null || echo '?')"
   echo "   $(date +%H:%M:%S) $ST"
-  case "$ST" in *Complete*) break;; *Failed*|*Error*) echo "✗ kernel gagal — log: kaggle kernels output $SLUG"; exit 1;; esac
+  case "$ST" in *COMPLETE*) break;; *FAILED*|*ERROR*) echo "✗ kernel gagal — log: kaggle kernels output $SLUG"; exit 1;; esac
   [ "$(date +%s)" -lt "$DEADLINE" ] || { echo "✗ timeout ${POLL_MAX_MIN} min — kernel mungkin masih beratur; semak kemudian: kaggle kernels status $SLUG"; exit 1; }
   sleep 30
 done
