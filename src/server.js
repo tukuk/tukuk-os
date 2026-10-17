@@ -524,6 +524,9 @@ function reshape(hit, { includeContent = false } = {}) {
 }
 
 app.get('/ask', limiter.search, async (req, res) => {
+  // Jawapan AI berubah selepas setiap deploy — jangan biar browser replay
+  // respons lama (sebelum fix ranking) dan pengguna sangka masih rosak.
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
   const question = String(req.query.q || req.query.question || '').trim();
   if (!question) {
     return res.status(400).json({ error: 'Question required (parameter q)' });

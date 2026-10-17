@@ -148,7 +148,10 @@ function buildContext(hits) {
   if (hits.length === 0) return '';
   return hits
     .map((hit, position) => {
-      const body = hit._formatted?.content || hit.description || '';
+      // Utamakan `content` penuh (badan artikel dari Meilisearch), kemudian
+      // crop _formatted, kemudian description — supaya LLM dapat teks sebenar
+      // dan mudah bezakan artikel yang mana menjawab soalan.
+      const body = hit.content || hit._formatted?.content || hit.description || '';
       const trimmed = String(body).replace(/<\/?mark>/g, '').slice(0, config.brain.snippetChars);
       const source = hit.source === 'web' ? `[WEB] ${hit.url}` : hit.url;
       const site = hit.siteName || hit.host || (hit.source === 'web' ? new URL(hit.url).hostname : 'unknown');
@@ -207,7 +210,14 @@ function buildPrompt(question, hits, selfQuestion, task) {
   }
 
   if (hits.length > 0) {
-    lines.push(`SOURCES:\n${buildContext(hits)}`);
+    // Bila hasil #1 skor tinggi (≥ 0.8): tajuk/padanan sangat kuat — nyatakan
+    // kepada LLM supaya fokus pada sumber [1] dan abaikan sumber tambahan
+    // (mencegah model kecil seperti smollm/qwen jawab artikel yang salah).
+    const topScore = hits[0]._rankingScore ?? 0;
+    const srcsLabel = topScore >= 0.8
+      ? `SOURCES (source [1] is the closest match to the question — answer from [1] first):\n${buildContext(hits)}`
+      : `SOURCES:\n${buildContext(hits)}`;
+    lines.push(srcsLabel);
     // Arahan adaptif ikut JENIS tugasan (math/code/list/…) — membuatkan model
     // kecil memberi BENTUK jawapan yang betul, bukan hanya 2-4 ayat generic.
     const guidance = (task && task.guidance) || GUIDANCE_DEFAULT;

@@ -65,6 +65,12 @@ function isEcho(answer, prompt) {
   // model kecil (smollm/qwen) kerap mulakan output dengan meniru label ini.
   if (/(?:^|\n)\s*(QUESTION|SOURCES)\s*:/i.test(answer)) return true;
 
+  // Model kecil juga menghasilkan "(Sumber: ...)" atau "(Sources: ...)" di akhir
+  // jawapan — bentuk templat yang ditiru dari prompt ekstraktif, bukan jawapan
+  // LLM sebenar. Jika jawapan bermula dengan ayat dan TAMAT dengan label
+  // sumber, ia adalah echo yang perlu ditolak.
+  if (/\n\s*\((?:Sources|Sumber|Source):/i.test(answer)) return true;
+
   // perkataan yang sama berulang kali — bilangan aksara untuk skrip tanpa-ruang
   const words = normalized.split(/\s+/).filter((w) => [...w].length > 4);
   if (words.length >= 12) {
