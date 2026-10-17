@@ -94,16 +94,44 @@ fi
   || die "lib/vscode masih kosong."
 ok "Sumber tersedia: $(git -C code-server rev-parse --short HEAD) + vscode $(git -C code-server/lib/vscode rev-parse --short HEAD)"
 
-# ── [5] Build (OLLAMA REBAH sementara — cloud tier kekal jawab /ask) ─────────
+# ── [5] Build (sumber besar REBAH sementara — cloud tier kekal jawab /ask) ───
+# Pelajaran: esbuild core-ci pernah DIBUNUH OOM killer (puncak ±3.5GB seorang,
+# + pekerja node warisan heap 4GB). Lapisan selamat: swap tambahan sementara,
+# swappiness naik, heap turun ke 3072, meilisearch+ollama rehat semasa build.
 OLLAMA_WAS_ACTIVE=0
 if [ "$KEEP_OLLAMA" = 0 ] && systemctl is-active --quiet ollama 2>/dev/null; then
   systemctl stop ollama && OLLAMA_WAS_ACTIVE=1
   warn "ollama DITUTUP sementara build (/ask guna cloud seperti biasa)."
 fi
+MEILI_WAS_ACTIVE=0
+if systemctl is-active --quiet meilisearch 2>/dev/null; then
+  systemctl stop meilisearch && MEILI_WAS_ACTIVE=1
+  warn "meilisearch DITUTUP sementara build (carian /cari mungkin lambat)."
+fi
+
+TMPSWAP=/swap-agent.tmp
+ADDED_SWAP=0
+SWAP_GB=$(free -b | awk '/Swap:/{print int($2/1073741824)}')
+if [ "${SWAP_GB:-0}" -lt 12 ]; then
+  info "[5a] tambah swap sementara 6GB (jumlah kini ${SWAP_GB}GB)..."
+  dd if=/dev/zero of="$TMPSWAP" bs=1M count=6144 status=none \
+    && chmod 600 "$TMPSWAP" && mkswap "$TMPSWAP" >/dev/null && swapon "$TMPSWAP" \
+    && ADDED_SWAP=1 && ok "swap tambahan aktif."
+fi
+ORIG_SWAPPINESS=$(sysctl -n vm.swappiness 2>/dev/null || echo 60)
+sysctl -q -w vm.swappiness=90 2>/dev/null || true
+
 info "[5] build — ini ambil ~1–2 jam pada 4 teras; log: /tmp/tukuk-agent-build.log"
-export NODE_OPTIONS=--max-old-space-size=4096
+export NODE_OPTIONS=--max-old-space-size=3072
 bash scripts/build-tukuk-agent.sh 2>&1 | tee /tmp/tukuk-agent-build.log
 BUILD_RC=${PIPESTATUS[0]}
+
+# Pulihkan semua yang direhatkan, apa pun hasil build.
+sysctl -q -w vm.swappiness="$ORIG_SWAPPINESS" 2>/dev/null || true
+if [ "$ADDED_SWAP" = 1 ]; then
+  swapoff "$TMPSWAP" 2>/dev/null && rm -f "$TMPSWAP" && ok "swap sementara dibuang."
+fi
+[ "$MEILI_WAS_ACTIVE" = 1 ] && systemctl start meilisearch && ok "meilisearch dihidupkan semula."
 [ "$OLLAMA_WAS_ACTIVE" = 1 ] && systemctl start ollama && ok "ollama dihidupkan semula."
 [ "$BUILD_RC" = 0 ] || die "build gagal (rc=$BUILD_RC) — hujung log: $(tail -3 /tmp/tukuk-agent-build.log | tr '\n' ' ')"
 
@@ -127,18 +155,20 @@ else
 fi
 
 cat <<'EOF'
-════════════════════════════════════════════════════════════════════════
-Langkah akhir (tiada dalam skrip ini):
-  1. Cloudflare dashboard (mod token): tambah route
-       agent.tukuk.org → http://127.0.0.1:8443
-     (Zero Trust → Networks → Routes). Ingress tempatan diabaikan mod token.
-  2. AGENT_TOKEN dalam env Tukuk-OS (=/api/agent auth) + pastikan
-     tukuk-os di-restart supaya config.agent.token terbaca.
-  3. Buka https://agent.tukuk.org → kata laluan editor (--auth password,
-     fail .password dalam /var/lib/tukuk-agent/user-data) atau tukar unit
-     ke --auth none jika autentikasi di tepi sahaja.
+═══════════════════════════════════════════════════════════════════════
+Langkah akhir (selepas servis aktif):
+  1. Editor boleh diakses DUA cara:
+     a) https://tukuk.org/agent — proxy terbalik dalam tukuk-os (laluan
+        utama; guna tunnel sedia ada, TIADA perubahan Cloudflare), atau
+     b) agent.tukuk.org — HANYA jika sempat: route dashboard
+        (Zero Trust → Networks → Routes) → http://127.0.0.1:8443.
+        Token API semasa TIDAK punya izin tunnel; dashboard saja boleh.
+  2. Unit servis perlu baris Environment=... --abs-proxy-base-path /agent
+     untuk laluan (a) — sudah ditetapkan dalam ExecStart fork ini.
+  3. AGENT_TOKEN dalam /opt/tukuk-os/.env + restart tukuk-os (dilakukan
+     penulis melalui SSH, bukan kerja manual).
   4. Dalam Cline (jika vsix sudah dipasang kemudian): Provider OpenAI
      Compatible, Base URL https://tukuk.org/api/agent/v1, Key <AGENT_TOKEN>,
      Model tukuk-agent.
-════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════
 EOF
