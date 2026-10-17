@@ -42,9 +42,13 @@ python3 - "$SRC" "$TMP/kernel.ipynb" <<'PY'
 import json, sys
 src = open(sys.argv[1], encoding="utf-8").read()
 nb = {
-  "cells": [{"cell_type": "code", "source": src.splitlines(keepends=True),
+  "cells": [{"cell_type": "code", "id": "tukuk-job",
+             "source": src.splitlines(keepends=True),
              "metadata": {}, "outputs": [], "execution_count": None}],
   "metadata": {"accelerator": "nvidiaTeslaT4",
+               "kernelspec": {"display_name": "Python 3", "language": "python",
+                               "name": "python3"},
+               "language_info": {"name": "python", "version": "3.11"},
                "kaggle": {"accelerator": "nvidiaTeslaT4", "isGpuEnabled": True,
                            "isInternetEnabled": True, "language": "python",
                            "sourceType": "script", "dataSources": []}},
