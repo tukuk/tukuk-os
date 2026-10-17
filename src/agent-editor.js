@@ -58,7 +58,15 @@ function mount(app, { config }) {
       target + upstreamPath,
       { method: req.method, headers: forwardHeaders(req.headers, target) },
       (up) => {
-        res.writeHead(up.statusCode || 502, up.headers);
+        const headers = Object.assign({}, up.headers);
+        // code-server buat redirect ke '/' (tanpa prefix kerana route dalaman di '/').
+        // Tulis-semula Location supaya browser kekal di bawah /agent/.
+        if ([301, 302, 303, 307, 308].includes(up.statusCode) && headers.location) {
+          if (headers.location.startsWith('/')) {
+            headers.location = PREFIX + headers.location;
+          }
+        }
+        res.writeHead(up.statusCode || 502, headers);
         up.pipe(res);
       }
     );
