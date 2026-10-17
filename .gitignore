@@ -77,3 +77,5 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 # Tukuk Agent = fork code-server berhistory sendiri (repo nested, upstream detached)
 code-server/
+# Tukuk Builder = fork bolt.diy berhistory sendiri (repo nested, remote fevian448)
+bolt.diy/

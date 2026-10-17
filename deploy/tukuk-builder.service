@@ -1,0 +1,36 @@
+[Unit]
+# Tukuk Builder — fork bolt.diy: pembina aplikasi AI berjenama Tukuk.
+# HIDUP DI HOSTNAME SENDIRI (build.tukuk.org): WebContainer memerlukan header
+# COOP/COEP yang ditetapkan entry.server.tsx — di bawah tukuk.org ia akan
+# berlanggar dengan CSP sedia ada. Ingress tunnel: build.tukuk.org → 127.0.0.1:5174
+# (token-mode: tambah juga hostname di dashboard Cloudflare, editan ingress lokal diabaikan).
+Description=Tukuk Builder (fork bolt.diy — agen pembinaan aplikasi AI)
+Documentation=https://github.com/fevian448/tukuk-builder
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tukuk-builder
+EnvironmentFile=-/opt/tukuk-builder/.env.production
+Environment=NODE_ENV=production
+# Pola rasmi bolt.diy: `vite preview` menghidang SSR build (build/server) —
+# dipandu terus ke binary vite supaya tidak perlu pnpm dalam unit systemd.
+ExecStart=/usr/bin/node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5174 --strictPort
+
+Restart=always
+RestartSec=3
+# Bina & hidang SPA berat — beri ruang tapi berbatas (pelayan 6.8G jumlah).
+MemoryMax=2G
+TasksMax=1024
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tukuk-builder
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
