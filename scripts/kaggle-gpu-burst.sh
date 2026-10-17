@@ -35,6 +35,25 @@ SRC="kaggle-jobs/${JOB}.py"
 [ -f "$SRC" ] || { echo "✗ job '$JOB' tiada — sedia ada: $(ls kaggle-jobs/*.py | xargs -n1 basename | sed 's/\.py//' | tr '\n' ' ')"; exit 1; }
 case "$KAGGLE_ID" in *REPLACE*) echo "✗ hantar KAGGLE_ID=<username-kaggle> (contoh: KAGGLE_ID=fevian448)"; exit 1;; esac
 
+# ── Preflight gerbang akaun (pengalaman 7 run sia-sia): walau enable_gpu +
+# machine_shape + --accelerator + docker_image betul semua, API TETAP senyap-senyap
+# jalankan CPU jika akaun belum pernah memulakan sesi GPU pertama (hanya boleh
+# dibuka sekali lewat UI web Kaggle). quota_view SDK mendedahkan hasEverRun.
+KPY=""
+for cand in "$HOME/.local/share/pipx/venvs/kaggle/bin/python3" "$(command -v python3)"; do
+  [ -x "$cand" ] && "$cand" -c "import kaggle" 2>/dev/null && { KPY="$cand"; break; }
+done
+if [ -n "$KPY" ] && [ "${KAGGLE_FORCE:-0}" != "1" ]; then
+  HASRUN="$("$KPY" -c 'from kaggle.api.kaggle_api_extended import KaggleApi; a=KaggleApi(); a.authenticate(); q=a.quota_view(); print(str(bool(q.gpu_quota.has_ever_run)).lower())' 2>/dev/null || echo unknown)"
+  if [ "$HASRUN" = "false" ]; then
+    echo "⚠ Gerbang akaun Kaggle: belum pernah sesi GPU pertama — API akan jalankan CPU sahaja."
+    echo "  Buka sekali di pelayar: https://www.kaggle.com/code/new → Settings → Accelerator →"
+    echo "  GPU T4 x2 → Run (setuju terma / verifikasi telefon jika diminta). Lepas itu kekal auto."
+    echo "  Lompat pemeriksaan ini: KAGGLE_FORCE=1 bash scripts/kaggle-gpu-burst.sh $JOB"
+    exit 2
+  fi
+fi
+
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 # API kernel hanya hormat GPU utk kernel_type=notebook (pembuktian komuniti
 # Ogo 2026; script .py didiamkan sahaja ke CPU) — jadi balut .py jadi .ipynb.
