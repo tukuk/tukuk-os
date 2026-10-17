@@ -19,19 +19,21 @@ SRC="$(cd "$(dirname "$0")/.." && pwd)/bolt.diy"
 ssh_run() { sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$HOST" "echo $PASS | sudo -S $1"; }
 
 echo "[builder] rsync source → $DEST"
-ssh_run "mkdir -p $DEST && chown -R tukuk:tukuk $DEST" || true
+# NOTE: sudo -S HANYA terpakai pada perintah pertama — rantai && mesti dibalut sh -c.
+ssh_run "sh -c 'mkdir -p $DEST && chown -R tukuk:tukuk $DEST'" || true
 rsync -a --delete -e "sshpass -p $PASS ssh -o StrictHostKeyChecking=no" \
   --exclude .git --exclude node_modules --exclude build --exclude dist \
+  --exclude .env.local \
   --exclude benchmarks --exclude e2e-tests --exclude playwright-report \
   "$SRC/" "$HOST:$DEST/"
 
 echo "[builder] pasang pnpm (sekali) + install + build di pelayan"
-ssh_run "command -v pnpm >/dev/null || (npm i -g pnpm@10 --silent)"
+ssh_run "command -v pnpm >/dev/null || npm i -g pnpm@9.15.9 --silent"
 ssh_run "cd $DEST && pnpm install --frozen-lockfile --prefer-offline 2>&1 | tail -3"
 ssh_run "cd $DEST && pnpm build 2>&1 | tail -5"
 
 echo "[builder] pasang systemd unit + restart"
-ssh_run "cp /opt/tukuk-os/deploy/tukuk-builder.service /etc/systemd/system/ && systemctl daemon-reload"
+ssh_run "sh -c 'cp /opt/tukuk-os/deploy/tukuk-builder.service /etc/systemd/system/ && systemctl daemon-reload'"
 ssh_run "systemctl enable --now tukuk-builder >/dev/null 2>&1 || true"
 ssh_run "systemctl restart tukuk-builder"
 sleep 2
