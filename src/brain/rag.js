@@ -95,7 +95,12 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
       limit,
       attributesToCrop: ['content'],
       cropLength: 40,
-      attributesToRetrieve: ['url', 'title', 'description', 'siteName', 'host', 'lang', 'wordCount'],
+      // `content` perlu ikut serta supaya ekstraktif boleh membaca badan
+      // artikel sebenar — description (1 ayat) sering terlalu pendek & term
+      // soalan berada di luar 60 aksara → skoring hilang, artikel betul
+      // ditapis keluar sementara artikel salah (ranking lebih rendah)
+      // tersangkut kerana satu padanan awal.
+      attributesToRetrieve: ['url', 'title', 'description', 'content', 'siteName', 'host', 'lang', 'wordCount'],
       showRankingScore: true
     });
     // Tapis ikut skor relevan Meilisearch.

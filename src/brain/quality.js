@@ -128,10 +128,21 @@ function extractiveAnswer(question, hits, maxSentences = 3) {
   const spaceless = isSpacelessScript(question);
   const minScore = terms.length >= 2 ? (spaceless ? 7 : 5) : (spaceless ? 4 : 3);
   const candidates = [];
-  for (const hit of hits) {
-    const text = String(hit.content || hit.description || '');
+  for (let i = 0; i < hits.length; i += 1) {
+    const hit = hits[i];
+    // Bias ranking Meilisearch: artikel #1 mesti menang ke atas artikel #N
+    // (N>1) yang kebetulan ada satu padanan awal. Tanpa bias ini, soalan
+    // "air test" boleh pick ayat "England Test captain" (test @ pos ~8)
+    // dan buang "Volunteers breathe polluted air..." (air @ pos ~65 →
+    // hilang bonus +2, skor 3 < minScore 5 → dibuang).
+    const rankBias = Math.max(0, hits.length - i);
+    // Baca badan penuh artikel (content) jika ada — description 1-ayat
+    // sering terlalu pendek & terma soalan mungkin wujud dalam isi artikel
+    // yang mana Meilisearch dah crop ke _formatted.content.
+    const raw = String(hit.content || hit._formatted?.content || hit.description || '');
+    const text = raw.replace(/<\/?mark>/g, '');
     for (const sentence of splitSentences(text)) {
-      const score = scoreSentence(sentence, terms);
+      const score = scoreSentence(sentence, terms) + rankBias;
       if (score >= minScore) candidates.push({ sentence, score, ref: hit.url, title: hit.title });
     }
   }
