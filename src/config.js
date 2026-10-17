@@ -182,10 +182,16 @@ module.exports = {
     cloudflareAiToken: process.env.CLOUDFLARE_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '',
     cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
     ollamaCloudApiKey: process.env.OLLAMA_CLOUD_API_KEY || '',
+    // Tier pinggir LiteRT-LM: serve OpenAI-compatible (gemma3-1B int4 +
+    // EmbeddingGemma) di port 8090 pada pelayan ini. HANYA aktif bila
+    // LITERT_HOST ditetapkan eksplisit — default mati supaya CI/laptop tak
+    // cuba menghubungi port yang tiada. Model boleh dioverride LITERT_MODEL.
+    litertHost: process.env.LITERT_HOST || '',
     // Susunan rotasi cloud (kiri→kanan). PALING LAJU DULU: groq (LPU ~1s) & gemini-flash
     // mendahului; cloudflare scout (lambat ~30s+) dihantar ke belakang supaya bajet
-    // interaktif jarang perlu menunggu pembekal lambat. Override LLM_CLOUD_ORDER.
-    cloudOrder: process.env.LLM_CLOUD_ORDER || 'groq,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai'
+    // interaktif jarang perlu menunggu pembekal lambat. litert (tier pinggir lokal)
+    // paling belakang: sentiasa ada, tiada kuota, tapi paling perlahan.
+    cloudOrder: process.env.LLM_CLOUD_ORDER || 'groq,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai,litert'
   },
 
   // Tukuk Agent (editor AI) — OpenAI-compatible tool-calling proxy + headless build.

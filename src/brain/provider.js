@@ -153,9 +153,18 @@ const CLOUD_PROVIDERS = {
   cloudflare: { defaultModel: '@cf/meta/llama-4-scout-17b-16e-instruct', kind: 'cloudflare' },
   // Ollama Cloud API (format native /api/chat, bukan OpenAI). Free tier ada had
   // 5-jam/harian → cooldown automatik bila 429, serve model besar bila quota ada.
-  'ollama-cloud': { defaultModel: 'gpt-oss:20b', kind: 'ollama-native', baseUrl: 'https://api.ollama.com' }
+  'ollama-cloud': { defaultModel: 'gpt-oss:20b', kind: 'ollama-native', baseUrl: 'https://api.ollama.com' },
+  // Tier pinggir LiteRT-LM (serve tempatan OpenAI-compatible, spt port 8090).
+  // Tiada kunci sebenar — kehadiran LITERT_HOST mengaktifkannya; baseUrl dinamik
+  // via providerBaseUrl(). Tiada kuota → tiada cooling; sentiasa barisan terakhir.
+  litert: { defaultModel: 'gemma3-1b-it-int4.litertlm', kind: 'openai', baseUrl: '' }
 };
-const DEFAULT_ORDER = ['groq', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai'];
+const DEFAULT_ORDER = ['groq', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai', 'litert'];
+
+function providerBaseUrl(name) {
+  if (name === 'litert') return config.brain.litertHost;
+  return CLOUD_PROVIDERS[name] ? CLOUD_PROVIDERS[name].baseUrl : undefined;
+}
 
 function cloudKey(name) {
   const b = config.brain;
@@ -171,6 +180,9 @@ function cloudKey(name) {
   if (name === 'huggingface') return process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN || b.huggingfaceApiKey || adminKey;
   if (name === 'cloudflare') return process.env.CLOUDFLARE_AI_TOKEN || b.cloudflareAiToken || adminKey;
   if (name === 'ollama-cloud') return process.env.OLLAMA_CLOUD_API_KEY || b.ollamaCloudApiKey || adminKey;
+  // Tier pinggir LiteRT: "kunci" ialah kehadiran LITERT_HOST itu sendiri (serve
+  // lokal tanpa auth — nilai token dihantar tapi diabaikan oleh litert-lm).
+  if (name === 'litert') return b.litertHost ? 'edge-tier' : '';
   return '';
 }
 function cloudAccountId() {
@@ -202,7 +214,7 @@ function listCloudProviders() {
     kind: CLOUD_PROVIDERS[name].kind,
     key: cloudKey(name),
     model: cloudModel(name),
-    baseUrl: CLOUD_PROVIDERS[name].baseUrl,
+    baseUrl: providerBaseUrl(name),
     account: name === 'cloudflare' ? cloudAccountId() : undefined
   }));
 }
@@ -344,7 +356,7 @@ async function generateCloud(b, prompt, opts = {}) {
   if (b && b.key && b.name && CLOUD_PROVIDERS[b.name]) {
     const single = {
       name: b.name, kind: CLOUD_PROVIDERS[b.name].kind, key: b.key,
-      model: b.model || cloudModel(b.name), baseUrl: CLOUD_PROVIDERS[b.name].baseUrl,
+      model: b.model || cloudModel(b.name), baseUrl: providerBaseUrl(b.name),
       account: b.name === 'cloudflare' ? cloudAccountId() : undefined
     };
     const left = deadline - Date.now();
@@ -390,5 +402,5 @@ module.exports = {
   currentModel, activeBackend, ollamaReachable, listCloudProviders, isLocalFirst,
   // Used by src/brain/openai-compat.js (the agent tool-calling proxy) to reuse the
   // SAME rotation + quota-cooling state as /ask, without re-implementing it.
-  markCooling, coolingRemaining, isQuotaError, quotaCooldownMs, cloudModel, CLOUD_PROVIDERS
+  markCooling, coolingRemaining, isQuotaError, quotaCooldownMs, cloudModel, CLOUD_PROVIDERS, providerBaseUrl
 };
