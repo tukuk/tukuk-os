@@ -646,6 +646,8 @@
   #wGot .wg { display:flex; gap:8px; align-items:center; background:#1f2c33; border:1px solid #2a3942; border-radius:8px; padding:7px 9px; margin:6px 0; }
   #wGot .wg b { flex:1; font-weight:500; word-break:break-word; color:#e9edef; }
   #wGot .wg button { flex:none; font-size:.76rem; padding:4px 9px; background:#00a884; border:none; border-radius:7px; color:#0b141a; font-weight:700; cursor:pointer; }
+  #wGot .wg.pcard { border-color:#00a884; }
+  #wGot .wprog { color:#8696a0; font-size:.8rem; padding:3px 2px; }
 </style>
 </head>
 <body>
@@ -680,7 +682,7 @@
     <b>Settings (⚙️):</b> change name &amp; bio, change password, friend list, find people, block/unblock, and sign out other devices.<br>
     <b>📹 Calls:</b> in a DM, press 📹 or 📞 for direct video/voice calls between devices — the incoming screen shows <i>who</i> is calling (name, Tukuk ID, friend or not) before you answer.<br>
     <b>🎭 Prank:</b> press the mask button in the send bar to show a fake fullscreen incoming call with a custom name — works even offline. Now with <b>direct dial</b>: enter a real phone number and T Chat opens your phone's dialer with it (call goes out from your own number), plus a 🔊 voice-line soundboard for speakerphone pranks.<br>
-    <b>📻 Sound Wave:</b> send a short text as <i>sound</i> between two devices placed next to each other (ggwave, runs 100% locally) — works even when neither device has internet, no server or account involved.<br>
+    <b>📻 Sound Wave:</b> send a text (any length — long ones auto-split into numbered waves) as <i>sound</i> between two devices placed next to each other (ggwave, runs 100% locally) — works even when neither device has internet. 🪪 <b>My card</b> pairs Tukuk IDs by sound: the listener gets one-tap add-friend / DM buttons. Caught texts can be relayed straight into the chat with 📤.<br>
     <b>📲 Install:</b> ⚙️ → App to install T Chat on Android/iOS/Windows/Linux/Huawei, or press <b>🌐 Download (all OS)</b> for the auto-pick page: APK directly on Android/Huawei/ChromeOS, PWA on Windows/Linux/macOS, Add to Home Screen on iOS.<br>
     <b>Safety:</b> use a password you don't use elsewhere, and generate <b>recovery codes</b> in ⚙️ Security — one code can reset access if you forget the password.
     </div>
@@ -799,13 +801,13 @@
 <div class="modal" id="waveModal"><div class="mbox">
   <h3>📻 Sound Wave — text over sound</h3>
   <div class="pflabel">Message to turn into sound</div>
-  <input id="wText" maxlength="140" placeholder="E.g.: Wait at the gate — 7pm" autocomplete="off">
+  <input id="wText" maxlength="480" placeholder="E.g.: Wait at the gate — 7pm. Long texts split into numbered waves automatically." autocomplete="off">
   <div class="pflabel">Wave mode</div>
   <div class="seg" id="wSeg"><button data-k="1" class="on">🔊 Audible</button><button data-k="5">🤫 Ultrasound</button></div>
-  <div class="mbtns"><button class="prim" id="wPlay">▶ Play wave</button><button id="wListen">🎙 Listen</button><button id="wClose">✕ Close</button></div>
+  <div class="mbtns"><button class="prim" id="wPlay">▶ Play wave</button><button id="wListen">🎙 Listen</button><button id="wId" title="Wave your Tukuk ID card — the other device gets ➕ Friend / 💬 DM buttons without typing anything">🪪 My card</button><button id="wClose">✕ Close</button></div>
   <div class="pflabel">Heard by microphone</div>
   <div id="wGot"><div class="wnone">Nothing yet — press 🎙 Listen and bring another device that is playing a wave close by.</div></div>
-  <div class="pfmeta">Powered by <b>ggwave</b> (MIT, runs fully local): text → sound → text. Put <b>two devices</b> next to each other — one plays, one listens — and it works even when <b>neither has internet</b>: no server, no account, no pairing. Turn the volume up and send one sentence at a time. 🔊 Audible is reliable; 🤫 Ultrasound is nearly silent but fails more often near noisy speakers.</div>
+  <div class="pfmeta">Powered by <b>ggwave</b> (MIT, runs fully local): text → sound → text. Put <b>two devices</b> next to each other — one plays, one listens — and it works even when <b>neither has internet</b>: no server, no account, no pairing. Turn the volume up. Texts over ~90 characters are split into numbered waves and rejoined automatically with 🧩 on the listening side. 🪪 <b>My card</b> waves your Tukuk ID + name so the other device gets one-tap <b>➕ Friend</b> and <b>💬 DM</b> buttons — no typing. 🔊 Audible is reliable; 🤫 Ultrasound is nearly silent but fails more often near noisy speakers.</div>
 </div></div>
 
 <div class="modal" id="peopleModal"><div class="mbox">
@@ -3038,28 +3040,51 @@ window.addEventListener('error', (e) => {
     if (wCtx.state === 'suspended') await wCtx.resume();
     return wCtx;
   }
+  // Main satu rentak bunyi mentah melalui speaker — pangkal untuk semua hantaran.
+  async function waveTx(raw) {
+    const w = await waveLib();
+    const ctx = await wEnsureCtx();
+    w.tx.gg.initTx(raw, wProto, 40);
+    const wf = w.tx.gg.encode();
+    if (!wf || !wf.length) throw new Error('encoding failed');
+    const buf = ctx.createBuffer(1, wf.length, w.tx.rate);
+    buf.getChannelData(0).set(wf);
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.connect(ctx.destination);
+    await new Promise(res => { src.onended = res; src.start(); });
+  }
+  // Teks panjang dipecah ikut perkataan (±90 aksara/wave) dan dinomborkan
+  // [k/N] supaya peranti pendengar boleh join semula dengan tepat.
+  function waveChunks(text) {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const out = []; let cur = '';
+    for (const wd of words) {
+      if (cur && (cur + ' ' + wd).length > 90) { out.push(cur); cur = wd; }
+      else cur = cur ? cur + ' ' + wd : wd;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
   async function wavePlay() {
     const text = $('wText').value.trim();
     if (!text) { toast('Type a message first.'); return; }
+    const parts = waveChunks(text);
+    if (parts.length > 6) { toast('Too long for waves — keep it under about 500 characters.'); return; }
     const btn = $('wPlay'), old = btn.textContent;
-    btn.disabled = true; btn.textContent = '⏳ Playing…';
+    btn.disabled = true;
     try {
-      const w = await waveLib();
-      const ctx = await wEnsureCtx();
-      w.tx.gg.initTx(text, wProto, 40);
-      const wf = w.tx.gg.encode();
-      if (!wf || !wf.length) throw new Error('encoding failed');
-      const buf = ctx.createBuffer(1, wf.length, w.tx.rate);
-      buf.getChannelData(0).set(wf);
-      const src = ctx.createBufferSource();
-      src.buffer = buf; src.connect(ctx.destination);
-      await new Promise(res => { src.onended = res; src.start(); });
-      toast('📻 Wave done — the other device should have caught it.');
+      for (let k = 0; k < parts.length; k++) {
+        btn.textContent = parts.length > 1 ? '⏳ ' + (k + 1) + '/' + parts.length : '⏳ Playing…';
+        await waveTx(parts.length > 1 ? '[' + (k + 1) + '/' + parts.length + '] ' + parts[k] : parts[k]);
+        if (k < parts.length - 1) await new Promise(r => setTimeout(r, 260));
+      }
+      toast('📻 ' + (parts.length > 1 ? parts.length + ' waves played' : 'Wave played') + ' — the other device should have caught it.');
     } catch (e) { toast('Sound Wave: ' + (e && e.message ? e.message : 'failed')); }
     finally { btn.disabled = false; btn.textContent = old; }
   }
   function waveStopListen() {
     wListening = false;
+    wParts.clear(); waveProg(0, null);   // separuh tangkapan lama tidak boleh join dengan mesej baru
     try { if (wProc) wProc.disconnect(); } catch { /* sudah putus */ }
     try { if (wSrc) wSrc.disconnect(); } catch { /* sudah putus */ }
     if (wStream) for (const t of wStream.getTracks()) t.stop();
@@ -3088,19 +3113,73 @@ window.addEventListener('error', (e) => {
       toast('🎙 Listening for waves…');
     } catch (e) { toast('Microphone not available or not allowed.'); }
   }
+  // Map N → Map(k → teks cebisan) untuk penyusunan semula mesej berpecah.
+  const wParts = new Map();
   function waveGot(text) {
+    const cm = /^\[(\d+)\/(\d+)\]\s([\s\S]+)$/.exec(text);
+    if (cm) {
+      const k = +cm[1], n = +cm[2];
+      if (n >= 2 && n <= 6 && k >= 1 && k <= n) {
+        if (!wParts.has(n)) wParts.set(n, new Map());
+        wParts.get(n).set(k, cm[3]);
+        if (wParts.get(n).size === n) {
+          let full = '';
+          for (let i = 1; i <= n; i++) full += (i > 1 ? ' ' : '') + wParts.get(n).get(i);
+          wParts.delete(n); waveProg(0, null);
+          return waveRow(full, '🧩 ');
+        }
+        waveProg(n, wParts.get(n).size + '/' + n);
+        return;
+      }
+    }
+    const pm = /^TUKUKPAIR:(\d{1,12}):([\s\S]*)$/.exec(text);
+    if (pm) return wavePair(+pm[1], pm[2].trim());
+    waveRow(text, '');
+  }
+  function waveProg(n, label) {
+    const el = $('wGot').querySelector('.wprog');
+    if (!label) { if (el) el.remove(); return; }
+    const p = el || document.createElement('div');
+    if (!el) { p.className = 'wprog'; $('wGot').prepend(p); }
+    p.textContent = '🧩 Receiving long message (' + label + ')…';
+  }
+  function waveRow(text, tag) {
     sndIn();
     const box = $('wGot');
     const none = box.querySelector('.wnone'); if (none) none.remove();
     const row = document.createElement('div'); row.className = 'wg';
-    const b = document.createElement('b'); b.textContent = text;
+    const b = document.createElement('b'); b.textContent = (tag || '') + text;
     const ins = document.createElement('button'); ins.textContent = '➡️ To box';
     ins.onclick = () => {
       $('inp').value = ($('inp').value.trim() ? $('inp').value.trim() + ' ' : '') + text;
       grow(); $('waveModal').classList.remove('open'); waveStopListen(); $('inp').focus();
       toast('Dropped into the message box.');
     };
-    row.appendChild(b); row.appendChild(ins); box.prepend(row);
+    // 📤 relay: hantar terus ke bilik yang sedang dibuka — doSend guna semua
+    // laluan biasa (dalam talian POST, luar talian masuk peti keluaran).
+    const sndBtn = document.createElement('button'); sndBtn.textContent = '📤 Send';
+    sndBtn.onclick = () => {
+      $('inp').value = '📻 ' + text;
+      waveStopListen(); $('waveModal').classList.remove('open');
+      doSend();
+      toast(online ? 'Sent to this chat.' : 'Queued — will go out when the connection is back.');
+    };
+    row.appendChild(b); row.appendChild(ins); row.appendChild(sndBtn); box.prepend(row);
+  }
+  // 🪪 Kad pairing: teks khas TUKUKPAIR:<id>:<nama> → butang kawan/DM terus.
+  function wavePair(id, name) {
+    sndIn();
+    const box = $('wGot');
+    const none = box.querySelector('.wnone'); if (none) none.remove();
+    if (id === myId) { toast('🪪 That is your own ID card.'); return; }
+    const row = document.createElement('div'); row.className = 'wg pcard';
+    const b = document.createElement('b'); b.textContent = '🪪 ' + (name || 'Tukuk user') + ' · #' + id;
+    const f = document.createElement('button'); f.textContent = '➕ Friend';
+    f.onclick = () => doSocial('add', id);
+    const d = document.createElement('button'); d.textContent = '💬 DM';
+    d.onclick = () => { $('waveModal').classList.remove('open'); waveStopListen(); startDm(id); };
+    row.appendChild(b); row.appendChild(f); row.appendChild(d); box.prepend(row);
+    toast('🪪 Received ' + (name || '#' + id) + "'s card.");
   }
   $('waveBtn').onclick = () => {
     $('waveModal').classList.add('open');
@@ -3109,6 +3188,10 @@ window.addEventListener('error', (e) => {
   };
   for (const b of $('wSeg').querySelectorAll('button')) b.onclick = () => { wProto = +b.dataset.k; for (const x of $('wSeg').querySelectorAll('button')) x.classList.toggle('on', x === b); };
   $('wPlay').onclick = wavePlay;
+  $('wId').onclick = () => {
+    if (!myId) { toast('No Tukuk ID yet — log out and in again.'); return; }
+    waveTx('TUKUKPAIR:' + myId + ':' + (me || '')).then(() => toast('🪪 Card waved — hand your phone to the friend!')).catch(e => toast('Sound Wave: ' + e.message));
+  };
   $('wListen').onclick = waveListen;
   $('wClose').onclick = () => { $('waveModal').classList.remove('open'); waveStopListen(); };
   $('wText').addEventListener('keydown', e => { if (e.key === 'Enter') wavePlay(); });
