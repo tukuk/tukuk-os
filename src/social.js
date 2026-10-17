@@ -29,7 +29,10 @@ const PLATFORMS = [
   { name: 'YouTube',    ic: '▶️', probe: true, url: (u) => `https://www.youtube.com/@${u}` },
   { name: 'npm',        ic: '📦', probe: true, url: (u) => `https://www.npmjs.com/~${u}` },
   { name: 'Mastodon',   ic: '🐘', probe: true, url: (u) => `https://mastodon.social/@${u}` },
-  { name: 'Medium',     ic: '📝', probe: true, url: (u) => `https://medium.com/@${u}` },
+  // Medium: dari pelayan, kadang dapat 403 CF / kadang 200 dengan halaman
+  // "Page not found". negative tangkap kedua-dua corak supaya tak false-found.
+  { name: 'Medium',     ic: '📝', probe: true, url: (u) => `https://medium.com/@${u}`,
+    negative: /Just a moment\.\.\.|Page not found/i },
   { name: 'Patreon',    ic: '🎗️', probe: true, url: (u) => `https://www.patreon.com/${u}` },
   { name: 'Linktree',   ic: '🌳', probe: true, url: (u) => `https://linktr.ee/${u}` },
   { name: 'Dev.to',     ic: '💻', probe: true, url: (u) => `https://dev.to/${u}` },
@@ -58,15 +61,19 @@ const PLATFORMS = [
   { name: 'SoundCloud', ic: '🎧', probe: true,
     url: (u) => `https://soundcloud.com/${u}`,
     negative: /Sorry.{0,30}can.t find|error.404|Couldn.t find that/i },
-  { name: 'TikTok',     ic: '🎵', probe: true,
-    url: (u) => `https://www.tiktok.com/@${u}`,
-    negative: /"user.not.found"|"statusCode":"10202"|"statusCode":"10221"|couldn.t find this account|account.does.n.t.exist/i },
+  // TikTok: pelayan data-center dapat halaman WAF/Slardar (1.4KB, tiada isi)
+  // untuk semua nama — status 200 tetapi kandungan tak boleh dibezakan.
+  { name: 'TikTok',     ic: '🎵', probe: false, url: (u) => `https://www.tiktok.com/@${u}` },
+  // Pinterest: 200 untuk semua nama. Profil sah punya tajuk 
+  // "Pinterest (nama) - Profile | Pinterest"; nama palsu → <title></title> kosong.
   { name: 'Pinterest',  ic: '📌', probe: true,
     url: (u) => `https://www.pinterest.com/${u}/`,
-    negative: /user.not.found|This page doesn.t exist|Page Not Found|We couldn.t find/i },
+    positive: / - Profile \| Pinterest/ },
+  // Twitch: 200 untuk semua nama (SPA). Saluran sah: "<title>nama - Twitch</title>".
+  // Saluran palsu: "<title>Twitch</title>" sahaja — tiada "- Twitch" selepas nama.
   { name: 'Twitch',     ic: '🎮', probe: true,
     url: (u) => `https://www.twitch.tv/${u}`,
-    negative: /The page you.re looking for|isSpecialUser|channel.not.found|notFound/i },
+    positive: / - Twitch<\/title>/i },
   // ── Semakan manual: login wall / anti-bot sepenuhnya ──────────────────────
   { name: 'X',          ic: '🐦', probe: false, url: (u) => `https://x.com/${u}` },
   { name: 'Instagram',  ic: '📸', probe: false, url: (u) => `https://www.instagram.com/${u}/` },
