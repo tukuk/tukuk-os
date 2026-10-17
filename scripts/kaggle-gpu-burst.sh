@@ -57,7 +57,7 @@ cat > "$TMP/kernel-metadata.json" <<EOF
 EOF
 
 echo "── [1] push kernel '$JOB' (GPU) ──"
-( cd "$TMP" && kaggle kernels push ) || { echo "✗ push gagal — semak kredit/kaggle.json."; exit 1; }
+( cd "$TMP" && kaggle kernels push --accelerator NvidiaTeslaT4 ) || { echo "✗ push gagal — semak kredit/kaggle.json."; exit 1; }
 echo "✓ dihantar: $SLUG"
 
 echo "── [2] poll sehingga siap (maks ${POLL_MAX_MIN} min) ──"
