@@ -194,8 +194,10 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '64kb' }));
+// verify: simpan mentah badan (Buffer) pada req.rawBody supaya proksi /agent boleh
+// hantar semula badan POST yang tepat walaupun express.json/urlencoded sudah membacanya.
+app.use(express.json({ limit: '2mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ extended: true, limit: '64kb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 // Gzip: semua teks (HTML/JSON) dipampatkan — halaman ~32KB jadi ~8KB.
 // Aliran SSE (/api/chat/stream) tidak boleh dimampat — mampat menyimpan bingkai
 // daripada dihantar serta-merta, jadi terus kecualikan jenis kandungan itu.

@@ -67,7 +67,10 @@ function mount(app, { config }) {
       if (!res.headersSent) res.status(502).json({ error: 'Editor agent tidak bersedia — cuba lagi sebentar.' });
       else res.end();
     });
-    req.pipe(preq);
+    // express.json/urlencoded sudahconsume req — gunakan rawBody jika ada.
+    // Jika tiada (GET, HEAD, multipart, dll), pipe secara normal.
+    if (req.rawBody && req.rawBody.length) preq.end(req.rawBody);
+    else req.pipe(preq);
   });
 }
 
