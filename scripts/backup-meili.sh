@@ -13,7 +13,8 @@
 #
 #   BERSAMA: MEILI_MASTER_KEY
 #
-# Semua nilai dalam ~/.config/tukuk-os/r2.env (EnvironmentFile systemd).
+# Semua nilai datang dari EnvironmentFile unit (/opt/tukuk-os/.env) atau
+# ~/.config/tukuk-os/r2.env jika dijumpai (peninggalan laptop — masih disokong).
 
 set -euo pipefail
 
@@ -25,7 +26,7 @@ if [ -f "${HOME}/.config/tukuk-os/r2.env" ]; then
   set +a
 fi
 
-APP_DIR="${APP_DIR:-/home/tukuk/tukuk-os}"
+APP_DIR="${APP_DIR:-/opt/tukuk-os}"   # tapak deploy pelayan (unit set yang sama)
 SNAP_DIR="${SNAP_DIR:-$APP_DIR/snapshots}"
 MEILI_URL="${MEILI_URL:-http://127.0.0.1:7700}"
 MEILI_INDEX="${MEILI_INDEX:-halaman_web}"
@@ -49,7 +50,7 @@ usable() {
 usable "${R2_ACCESS_KEY_ID:-}" && usable "${R2_SECRET_ACCESS_KEY:-}" && usable "${R2_ACCOUNT_ID:-}" && S3_OK=1 || S3_OK=0
 usable "${BACKUP_WORKER_URL:-}" && usable "${BACKUP_UPLOAD_SECRET:-}" && WORKER_OK=1 || WORKER_OK=0
 
-usable "${MEILI_MASTER_KEY:-}" || fail "MEILI_MASTER_KEY kosong/placeholder (semak ~/.config/tukuk-os/r2.env)"
+usable "${MEILI_MASTER_KEY:-}" || fail "MEILI_MASTER_KEY kosong/placeholder (semak /opt/tukuk-os/.env)"
 [ "$S3_OK" = 1 ] || [ "$WORKER_OK" = 1 ] || fail "tiada laluan: isi BACKUP_WORKER_URL+BACKUP_UPLOAD_SECRET (utama) ATAU R2_* kunci S3"
 
 mkdir -p "$SNAP_DIR"

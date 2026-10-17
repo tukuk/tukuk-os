@@ -4,6 +4,9 @@ After=meilisearch.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/home/tukuk/tukuk-os
-EnvironmentFile=/home/tukuk/.config/tukuk-os/r2.env
-ExecStart=/home/tukuk/tukuk-os/scripts/backup-meili.sh
+WorkingDirectory=/opt/tukuk-os
+# Rahsia worker (BACKUP_WORKER_URL + BACKUP_UPLOAD_SECRET) + MEILI_MASTER_KEY
+# sudah ada dalam .env deployments — bukan lagi r2.env zaman laptop.
+EnvironmentFile=-/opt/tukuk-os/.env
+Environment=APP_DIR=/opt/tukuk-os
+ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-meili.sh
