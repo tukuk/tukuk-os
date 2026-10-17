@@ -73,16 +73,18 @@ ok "Node $(node -v) aktif."
 #     fevian448/tukuk-agent-editor; kalau 401: tambah PAT, atau publickan fork) ──
 if [ ! -d code-server/.git ]; then
   info "[4] clone fork → $INSTALL_DIR/code-server (±350MB)..."
-  # Gunakembali kredit yang SUDAH berfungsi untuk auto-update parent: kalau URL
-  # origin mengandungi token (https://user:token@github.com/...), inyect format
-  # yang sama pada URL fork — tiada fail kredensial baru diperlukan.
+  # Gunakembali kredit yang SUDAH berfungsi untuk auto-update parent:
+  #  • HTTPS ber-token (https://user:token@github.com/...) → token yang sama;
+  #  • SSH (git@github.com:owner/repo.git) → kunci SSH pelayan yang sama.
   ORIGIN_URL="$(git remote get-url origin 2>/dev/null || true)"
   CLONE_URL="$FORK_URL"
   if [[ "$ORIGIN_URL" == https://*@github.com/* ]]; then
     CRED="${ORIGIN_URL%%github.com/*}"
     CLONE_URL="${CRED}github.com/fevian448/tukuk-agent-editor.git"
+  elif [[ "$ORIGIN_URL" == git@github.com:* || "$ORIGIN_URL" == ssh://git@github.com/* ]]; then
+    CLONE_URL="git@github.com:fevian448/tukuk-agent-editor.git"
   fi
-  git clone --depth 1 "$CLONE_URL" code-server || die "clone gagal — jika 401/404, kredit git pelayan tak nampak fork: setup git credential untuk repo itu, atau publickan fork (kod ini MIT anyway)."
+  git clone --depth 1 "$CLONE_URL" code-server || die "clone gagal. Jika 'Permission denied (publickey)': kunci SSH pelayan ini agaknya deploy-key PER-REPO tukuk-os-v2 sahaja — tambahkan kunci yang sama sebagai SSH key AKUN fevian448 (GitHub → Settings → SSH and GPG), ATAU publickan fork tukuk-agent-editor (kod ini MIT). Jika 404 pula: fork belum wujud/dinamakan lain."
 fi
 ( cd code-server && git submodule update --init --depth 1 lib/vscode >/dev/null 2>&1 ) \
   || ( cd code-server && git submodule update --init lib/vscode ) || die "submodule lib/vscode gagal."
