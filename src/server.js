@@ -231,6 +231,7 @@ const TCHAT_ALLOWED = [
   /^\/icons\/[A-Za-z0-9._/-]+$/,                  // logo + ikon apl (chat.svg, chat-192.png, ...)
   /^\/(?:favicon\.ico|apple-touch-icon\.png|og\.png|icon\.svg|logo\.png|logo-mark\.svg)$/,
   /^\/downloads\/tukuk-chat\.apk$/,               // muat turun APK beta
+  /^\/libs\/[A-Za-z0-9._-]+$/,                    // pustaka vendored (ggwave-js utk 📻 Sound Wave)
 ];
 const CSP_TCHAT = [
   "default-src 'self'",

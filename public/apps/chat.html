@@ -638,6 +638,14 @@
   #pkBoard button { background:rgba(255,255,255,.1); border:none; color:#fff; border-radius:9px; padding:9px 11px; font:inherit; font-size:.8rem; cursor:pointer; text-align:left; line-height:1.35; }
   #pkBoard button:hover { background:rgba(0,168,132,.4); }
   #pkBoard .dialrow { background:#00a884; font-weight:700; text-align:center; }
+
+  /* 📻 Sound Wave (ggwave) — teks dihantar sebagai bunyi, langsung tanpa internet.
+     Panel "apa yang mikrofon dengar": satu baris per hasil tangkapan. */
+  #wGot { max-height:130px; overflow-y:auto; }
+  #wGot .wnone { color:var(--muted); font-size:.84rem; }
+  #wGot .wg { display:flex; gap:8px; align-items:center; background:#1f2c33; border:1px solid #2a3942; border-radius:8px; padding:7px 9px; margin:6px 0; }
+  #wGot .wg b { flex:1; font-weight:500; word-break:break-word; color:#e9edef; }
+  #wGot .wg button { flex:none; font-size:.76rem; padding:4px 9px; background:#00a884; border:none; border-radius:7px; color:#0b141a; font-weight:700; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -672,6 +680,7 @@
     <b>Settings (⚙️):</b> change name &amp; bio, change password, friend list, find people, block/unblock, and sign out other devices.<br>
     <b>📹 Calls:</b> in a DM, press 📹 or 📞 for direct video/voice calls between devices — the incoming screen shows <i>who</i> is calling (name, Tukuk ID, friend or not) before you answer.<br>
     <b>🎭 Prank:</b> press the mask button in the send bar to show a fake fullscreen incoming call with a custom name — works even offline. Now with <b>direct dial</b>: enter a real phone number and T Chat opens your phone's dialer with it (call goes out from your own number), plus a 🔊 voice-line soundboard for speakerphone pranks.<br>
+    <b>📻 Sound Wave:</b> send a short text as <i>sound</i> between two devices placed next to each other (ggwave, runs 100% locally) — works even when neither device has internet, no server or account involved.<br>
     <b>📲 Install:</b> ⚙️ → App to install T Chat on Android/iOS/Windows/Linux/Huawei, or press <b>🌐 Download (all OS)</b> for the auto-pick page: APK directly on Android/Huawei/ChromeOS, PWA on Windows/Linux/macOS, Add to Home Screen on iOS.<br>
     <b>Safety:</b> use a password you don't use elsewhere, and generate <b>recovery codes</b> in ⚙️ Security — one code can reset access if you forget the password.
     </div>
@@ -718,6 +727,7 @@
       <button id="clipBtn" title="Attach image, video or file">📎</button>
       <button id="micBtn" title="Record voice message">🎙️</button>
       <button id="prankBtn" title="Prank call (local, works offline)">🎭</button>
+      <button id="waveBtn" title="Sound Wave — send text as sound between two devices, no internet">📻</button>
       <div class="cin"><textarea id="inp" rows="1" placeholder="Write a message…"></textarea></div>
       <button id="send" title="Send">➤</button>
       <div id="clipPop" hidden>
@@ -783,6 +793,19 @@
   <div class="pfmeta">Fill a number and press <b>📲 Dial &amp; prank</b>: T Chat opens your device's phone dialer with that number pre-filled (the real call goes out <b>from your own number</b> — caller-ID spoofing is illegal). The incoming screen then shows that number, and 🔊 <b>Board</b> gives one-tap voice lines for speakerphone pranks.</div>
   <div class="pfmeta">A fake incoming-call screen appears fullscreen with ringtone &amp; vibration. While ringing, &ldquo;TukuCaller&rdquo; will <b>look up the ID</b> then show a tag + disguise report in the style of caller-ID apps &mdash; all <b>made up for laughs</b>, local only, no real call &amp; works even offline.</div>
   <div class="mbtns"><button id="pkCancel">Cancel</button><button id="pkDial">📲 Dial &amp; prank</button><button class="prim" id="pkGo">🎭 Call now</button></div>
+</div></div>
+
+<!-- ─── 📻 Sound Wave — hantar teks melalui bunyi (ggwave), langsung tanpa rangkaian ─── -->
+<div class="modal" id="waveModal"><div class="mbox">
+  <h3>📻 Sound Wave — text over sound</h3>
+  <div class="pflabel">Message to turn into sound</div>
+  <input id="wText" maxlength="140" placeholder="E.g.: Wait at the gate — 7pm" autocomplete="off">
+  <div class="pflabel">Wave mode</div>
+  <div class="seg" id="wSeg"><button data-k="1" class="on">🔊 Audible</button><button data-k="5">🤫 Ultrasound</button></div>
+  <div class="mbtns"><button class="prim" id="wPlay">▶ Play wave</button><button id="wListen">🎙 Listen</button><button id="wClose">✕ Close</button></div>
+  <div class="pflabel">Heard by microphone</div>
+  <div id="wGot"><div class="wnone">Nothing yet — press 🎙 Listen and bring another device that is playing a wave close by.</div></div>
+  <div class="pfmeta">Powered by <b>ggwave</b> (MIT, runs fully local): text → sound → text. Put <b>two devices</b> next to each other — one plays, one listens — and it works even when <b>neither has internet</b>: no server, no account, no pairing. Turn the volume up and send one sentence at a time. 🔊 Audible is reliable; 🤫 Ultrasound is nearly silent but fails more often near noisy speakers.</div>
 </div></div>
 
 <div class="modal" id="peopleModal"><div class="mbox">
@@ -2998,6 +3021,97 @@ window.addEventListener('error', (e) => {
   };
   $('pkPhone').addEventListener('keydown', e => { if (e.key === 'Enter') $('pkDial').click(); });
   $('cBoard').onclick = () => $('pkBoard').classList.toggle('on');
+
+  // ─── 📻 Sound Wave (ggwave) — teks melalui bunyi, langsung tanpa rangkaian ───
+  // Pustaka vendored di /libs/ggwave-js.min.js (pure JS, MIT) — dimuat malas
+  // hanya bila butang 📻 pertama kali ditekan, jadi page kekal ringan 2G.
+  let WV = null, wProto = 1, wListening = false, wStream = null, wProc = null, wSrc = null, wCtx = null, wLast = '';
+  async function waveLib() {
+    if (WV) return WV;
+    const m = await import('/libs/ggwave-js.min.js');
+    const mk = (mode) => { const p = m.getDefaultParameters(); p.operatingMode = mode | m.GGWAVE_OPERATING_MODE_USE_DSS; return { gg: new m.GGWave(p), rate: p.sampleRate }; };
+    WV = { tx: mk(m.GGWAVE_OPERATING_MODE_TX), rx: mk(m.GGWAVE_OPERATING_MODE_RX) };
+    return WV;
+  }
+  async function wEnsureCtx() {
+    if (!wCtx) wCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    if (wCtx.state === 'suspended') await wCtx.resume();
+    return wCtx;
+  }
+  async function wavePlay() {
+    const text = $('wText').value.trim();
+    if (!text) { toast('Type a message first.'); return; }
+    const btn = $('wPlay'), old = btn.textContent;
+    btn.disabled = true; btn.textContent = '⏳ Playing…';
+    try {
+      const w = await waveLib();
+      const ctx = await wEnsureCtx();
+      w.tx.gg.initTx(text, wProto, 40);
+      const wf = w.tx.gg.encode();
+      if (!wf || !wf.length) throw new Error('encoding failed');
+      const buf = ctx.createBuffer(1, wf.length, w.tx.rate);
+      buf.getChannelData(0).set(wf);
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.connect(ctx.destination);
+      await new Promise(res => { src.onended = res; src.start(); });
+      toast('📻 Wave done — the other device should have caught it.');
+    } catch (e) { toast('Sound Wave: ' + (e && e.message ? e.message : 'failed')); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  }
+  function waveStopListen() {
+    wListening = false;
+    try { if (wProc) wProc.disconnect(); } catch { /* sudah putus */ }
+    try { if (wSrc) wSrc.disconnect(); } catch { /* sudah putus */ }
+    if (wStream) for (const t of wStream.getTracks()) t.stop();
+    wProc = wSrc = wStream = null;
+    $('wListen').textContent = '🎙 Listen';
+  }
+  async function waveListen() {
+    if (wListening) { waveStopListen(); return; }
+    try {
+      const w = await waveLib();
+      const ctx = await wEnsureCtx();
+      wStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      wSrc = ctx.createMediaStreamSource(wStream);
+      wProc = ctx.createScriptProcessor(4096, 1, 1);
+      wProc.onaudioprocess = ev => {
+        w.rx.gg.decode(ev.inputBuffer.getChannelData(0));
+        const data = w.rx.gg.rxTakeData();
+        if (data && data.length) {
+          const text = new TextDecoder('utf-8').decode(data);
+          if (text && text !== wLast) { wLast = text; waveGot(text); }
+        }
+      };
+      wSrc.connect(wProc); wProc.connect(ctx.destination);
+      wListening = true;
+      $('wListen').textContent = '⏹ Stop';
+      toast('🎙 Listening for waves…');
+    } catch (e) { toast('Microphone not available or not allowed.'); }
+  }
+  function waveGot(text) {
+    sndIn();
+    const box = $('wGot');
+    const none = box.querySelector('.wnone'); if (none) none.remove();
+    const row = document.createElement('div'); row.className = 'wg';
+    const b = document.createElement('b'); b.textContent = text;
+    const ins = document.createElement('button'); ins.textContent = '➡️ To box';
+    ins.onclick = () => {
+      $('inp').value = ($('inp').value.trim() ? $('inp').value.trim() + ' ' : '') + text;
+      grow(); $('waveModal').classList.remove('open'); waveStopListen(); $('inp').focus();
+      toast('Dropped into the message box.');
+    };
+    row.appendChild(b); row.appendChild(ins); box.prepend(row);
+  }
+  $('waveBtn').onclick = () => {
+    $('waveModal').classList.add('open');
+    for (const b of $('wSeg').querySelectorAll('button')) b.classList.toggle('on', +b.dataset.k === wProto);
+    setTimeout(() => $('wText').focus(), 60);
+  };
+  for (const b of $('wSeg').querySelectorAll('button')) b.onclick = () => { wProto = +b.dataset.k; for (const x of $('wSeg').querySelectorAll('button')) x.classList.toggle('on', x === b); };
+  $('wPlay').onclick = wavePlay;
+  $('wListen').onclick = waveListen;
+  $('wClose').onclick = () => { $('waveModal').classList.remove('open'); waveStopListen(); };
+  $('wText').addEventListener('keydown', e => { if (e.key === 'Enter') wavePlay(); });
   // Tab ditutup/diulang seawal panggilan: maklumkan pasangan supaya skrin mereka
   // tidak tergantung menunggu (keepalive membolehkan permintaan selesai).
   addEventListener('pagehide', () => {
@@ -3158,7 +3272,8 @@ window.addEventListener('error', (e) => {
     hideCtx();
     $('clipPop').hidden = true;
     $('stkPop').hidden = true;
-    ['peopleModal', 'groupModal', 'fwdModal', 'setModal', 'profModal', 'prankModal', 'grpInfoModal', 'feedModal', 'notifModal'].forEach(id => $(id).classList.remove('open'));
+    ['peopleModal', 'groupModal', 'fwdModal', 'setModal', 'profModal', 'prankModal', 'grpInfoModal', 'feedModal', 'notifModal', 'waveModal'].forEach(id => $(id).classList.remove('open'));
+    if (wListening) waveStopListen();
     if (replyTo || editing) closeReplyEdit();
   });
 
