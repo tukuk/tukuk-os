@@ -1096,7 +1096,7 @@ async function getSkyTonight({ lat, lng } = {}) {
     if (r && r.sunrise) {
       sun = {
         sunrise: r.sunrise, sunset: r.sunset, solar_noon: r.solar_noon,
-        day_length_hours: Math.round((Number(r.day_length) || 0) * 10) / 10,
+        day_length_hours: Math.round(((Number(r.day_length) || 0) / 3600) * 10) / 10, // API sepulangkan SAAT
         civil: [r.civil_twilight_begin, r.civil_twilight_end],
         nautical: [r.nautical_twilight_begin, r.nautical_twilight_end],
         astronomical: [r.astronomical_twilight_begin, r.astronomical_twilight_end]
@@ -1154,16 +1154,18 @@ async function getSentryRisk() {
   const cached = getCache(cacheKey);
   if (cached) return cached;
   const res = await http.get('https://ssd-api.jpl.nasa.gov/sentry.api', { timeout: 15000 });
+  // Bentul medan sebenar API: des/fullname, range, n_imp, ps_cum (-log10 P), ts_max, diameter
   const raw = Array.isArray(res.data && res.data.data) ? res.data.data : [];
   const risks = raw.map(o => ({
-    id: o['Object Number'] || o.Code || '',
-    name: o.Name || o['Object Number'] || 'Unknown',
-    diameter_m: Number(o.Diameter) || null,
-    abs_mag: Number(o['Abs. Magnitude']) || null,
-    impact_years: o.Range || '',
-    virtual_impactors: Number(o.Count) || 0,
-    cum_prob: Number(o['Cumulative Probability']) || 0,
-    torino: Number(o.Torino) || 0,
+    id: o.id || '',
+    name: o.fullname || o.des || 'Unknown',
+    diameter_m: Number(o.diameter) || null,
+    abs_mag: Number(o.h) || null,
+    impact_years: o.range || '',
+    virtual_impactors: Number(o.n_imp) || 0,
+    // ps_cum ialah -log10(kebarangkalian) — tukar semula kepada P
+    cum_prob: Number.isFinite(Number(o.ps_cum)) ? Math.pow(10, -Number(o.ps_cum)) : 0,
+    torino: Number(o.ts_max) || 0,
     url: 'https://ssd.jpl.nasa.gov/tools/sentry_data.html'
   })).sort((a, b) => b.cum_prob - a.cum_prob).slice(0, 40);
   const result = {

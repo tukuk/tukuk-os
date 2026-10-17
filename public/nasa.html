@@ -1930,7 +1930,7 @@ async function loadSentry() {
         ${risks.map(r => `
           <tr>
             <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a></td>
-            <td>${r.diameter_m ? `~${fmtNum(r.diameter_m)} m` : '--'}</td>
+            <td>${r.diameter_m ? `~${r.diameter_m < 1000 ? Math.round(r.diameter_m * 100) / 100 : fmtNum(Math.round(r.diameter_m))} m` : '--'}</td>
             <td>${esc(r.impact_years) || '--'}</td>
             <td>${r.cum_prob ? r.cum_prob.toExponential(1) : '--'}</td>
             <td>${r.torino > 0 ? `<span style="color:var(--danger); font-weight:700;">${r.torino}</span>` : '0'}</td>
