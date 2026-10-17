@@ -131,3 +131,43 @@ test('send: nombor tidak sah / isi kosong ditolak', async () => {
     await close();
   }
 });
+
+// ─── Fungsi murni jambatan Chat ⇄ Sel (enqueue / isPaired / onInbound) ───
+function fresh() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tukuk-sms-'));
+  sms.setPath(path.join(dir, 'sms.json'));
+}
+
+test('isPaired: false apabila tiada peranti dipasangkan', () => {
+  fresh();
+  assert.equal(sms.isPaired(), false, 'storan kosong → tiada relay');
+});
+
+test('enqueue: nombor tak sah / isi kosong → ralat', () => {
+  fresh();
+  assert.ok(sms.enqueue('abc', 'x').error, 'nombor tidak sah');
+  assert.ok(sms.enqueue('+60123456789', '   ').error, 'isi kosong');
+});
+
+test('enqueue: sah → mesej katus keluar dinormalkan + dique (tanpa perlu peranti)', () => {
+  fresh();
+  const r = sms.enqueue('+6012-345 6789', 'salam');
+  assert.ok(r.ok, 'enqueue berjaya');
+  assert.equal(r.message.dir, 'out');
+  assert.equal(r.message.peer, '+60123456789', 'nombor dinormalkan');
+  assert.equal(r.message.body, 'salam');
+  assert.equal(r.message.status, 'queued');
+});
+
+test('enqueue: badan panjang dipotong ke MAX_BODY (±3 segmen SMS)', () => {
+  fresh();
+  const r = sms.enqueue('+60123456789', 'a'.repeat(900));
+  assert.ok(r.ok);
+  assert.equal(r.message.body.length, 480, 'potong pada 480 aksara');
+});
+
+test('onInbound: daftar pendengar (function) tanpa melempar', () => {
+  fresh();
+  assert.equal(typeof sms.onInbound(() => {}), 'function', 'pemulang fungsi didaftarkan');
+  assert.equal(sms.onInbound(null), null, 'bukan fungsi → tidak didaftarkan, tiada lempar');
+});

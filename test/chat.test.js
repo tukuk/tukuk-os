@@ -1814,3 +1814,93 @@ test('send: sticker > 8 aksara dipotong, sticker=null tiada masalah', () => {
   const m2 = chat.send('Ana', 'global_am', 'y').msg;
   assert.ok(!m2.sticker, 'tiada sticker field');
 });
+
+// ─── Jambatan Chat ⇄ Sel (gerbang SMS) ───
+test('phone: setPhone normalisasi, tolak pendua/tidak sah, boleh nyahaut', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cin', 'pass3');
+  const r = chat.setPhone('Ana', '+60 12-345 6789');
+  assert.equal(r.ok, true); assert.equal(r.phone, '+60123456789');
+  assert.equal(chat.findUserByPhone('+60123456789').name, 'Ana');
+  assert.ok(chat.setPhone('Ben', '+60 12 345 6789').error, 'nombor sudah digunakan → ditolak');
+  assert.ok(chat.setPhone('Cin', 'bukan-nombor').error, 'huruf sahaja → tidak sah');
+  const clr = chat.setPhone('Ana', '');
+  assert.equal(clr.phone, null); assert.equal(chat.findUserByPhone('+60123456789'), null);
+});
+
+test('jambatan SMS: DM kepada kawan LUAR TALIAN dengan nombor → smsSender dipanggil', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.setPhone('Ben', '+60123456789');
+  let sent = null;
+  chat.setSmsSender((p) => { sent = p; return { ok: true }; });
+  try {
+    chat.send('Ana', dm.id, 'salam');
+    assert.ok(sent, 'smsSender dipanggil');
+    assert.equal(sent.to, '+60123456789');
+    assert.equal(sent.from, 'Ana');
+    assert.match(sent.body, /^Ana: salam$/, 'badan berprefix nama penghantar');
+  } finally { chat.setSmsSender(null); }
+});
+
+test('jambatan SMS: TIADA SMS bila kawan dalam talian atau tiada nombor', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2'); chat.register('Cin', 'pass3');
+  chat.login('Ben', 'pass2');   // lastSeen kini → dalam talian
+  chat.setPhone('Ben', '+60123456789');
+  let n = 0;
+  chat.setSmsSender(() => { n++; return { ok: true }; });
+  try {
+    chat.send('Ana', chat.ensureDm('Ana', 'Ben').id, 'hi');
+    assert.equal(n, 0, 'dalam talian → tiada SMS');
+    chat.send('Ana', chat.ensureDm('Ana', 'Cin').id, 'x');  // Cin tiada nombor
+    assert.equal(n, 0, 'tiada nombor → tiada SMS');
+  } finally { chat.setSmsSender(null); }
+});
+
+test('jambatan SMS: balasan SMS masuk → DM asal; mesej berprefix; anti-gelung', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.setPhone('Ben', '+60123456789');
+  let sent = 0;
+  chat.setSmsSender(() => { sent++; return { ok: true }; });
+  try {
+    chat.send('Ana', dm.id, 'satu');
+    assert.equal(sent, 1, 'satu SMS keluar');
+    const r = chat.ingestSms('+60-12-345-6789', 'dua');   // raw → padan simpanan Ben
+    assert.equal(r.ok, true, 'ingestSms berjaya');
+    assert.equal(r.msg.from, 'Ben', 'pengarang = pemilik nombor');
+    const s = chat.since('Ana', dm.id, 0);
+    assert.equal(s.msgs.length, 2);
+    assert.equal(s.msgs[1].t, 'dua');
+    assert.equal(sent, 1, 'anti-gelung: ingest tidak hantar SMS kedua');
+  } finally { chat.setSmsSender(null); }
+});
+
+test('jambatan SMS: ingest diabaikan — nombor tak terkenal / tiada utas / beku', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  assert.equal(chat.ingestSms('+6099999999', 'x').reason, 'not-linked', 'nombor tiada akaun');
+  chat.setPhone('Ben', '+60123456789');
+  assert.equal(chat.ingestSms('+60123456789', 'y').reason, 'no-thread', 'belum ada SMS keluar → tiada utas');
+  // Bina utas lalu SMS keluar, kemudian Ana menyekat Ben → beku.
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.setSmsSender(() => ({ ok: true }));
+  chat.send('Ana', dm.id, 'hello');
+  chat.setSmsSender(null);
+  chat.blockUser('Ana', chat.findUser('Ben').id);
+  assert.equal(chat.ingestSms('+60123456789', 'balas').reason, 'frozen', 'DM beku → diabaikan');
+});
+
+test('jambatan SMS: utas hanya dicatat bila smsSender pulangan OK', () => {
+  fresh();
+  chat.register('Ana', 'pass1'); chat.register('Ben', 'pass2');
+  chat.setPhone('Ben', '+60123456789');
+  const dm = chat.ensureDm('Ana', 'Ben');
+  chat.setSmsSender(() => ({ error: 'no device' }));   // gagal → smsReply tak ditulis
+  chat.send('Ana', dm.id, 'gagal');
+  chat.setSmsSender(null);
+  assert.equal(chat.ingestSms('+60123456789', 'balas').reason, 'no-thread', 'tiada utas → diabaikan');
+});

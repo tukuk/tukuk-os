@@ -886,6 +886,8 @@
     <input type="file" id="stAvaFile" accept="image/*" style="display:none">
     <div class="pflabel">Display name</div><input id="stName" maxlength="20" autocomplete="off">
     <div class="pflabel">Bio (optional)</div><input id="stBio" maxlength="120" placeholder="One line about you" autocomplete="off">
+    <div class="pflabel">Phone — SMS fallback (optional)</div><input id="stPhone" maxlength="24" placeholder="+60123456789" autocomplete="off" inputmode="tel">
+    <div class="pfmeta">When a friend is offline, T Chat can deliver your DMs to their phone as an SMS via the paired relay — and their text replies appear back in the chat. Link your own number so replies reach you. Leave blank to unlink.</div>
     <div class="pfmeta">Your Tukuk ID is permanent — only the name can be changed.</div>
     <div class="mbtns"><button class="prim" id="stSaveProf">Save profile</button></div>
   </div>
@@ -1090,6 +1092,7 @@ window.addEventListener('error', (e) => {
   let rooms = [], cur = lsGet(RKEY + ':' + me.toLowerCase()) || 'global_am';
   let cache = {}, people = [], pById = {}, pByName = {}, tick = 0;
   let myId = 0, myBio = '', myJoined = null;   // Tukuk ID akaun yang sedang login
+  let myPhone = '';   // nombor yang ditaut untuk fallback SMS ('' = tiada)
   let replyTo = null, editing = null, lastTypingPing = 0;
   const roomsSigInit = '';
   let roomsSig = roomsSigInit, roomsSigCur = null, msgSig = '';
@@ -1514,6 +1517,7 @@ window.addEventListener('error', (e) => {
     try {
       const j = await call('/me'); if (!j.name) return;
       me = j.name; myId = j.id || myId; myBio = j.bio || ''; myJoined = j.joined || null;
+      myPhone = j.phone || '';
       myAvatar = j.avatar || null; notifUnread = j.notifUnread || 0;
       myStatus = j.status || null; renderMyStatus();
       localStorage.setItem(NKEY, me); paintNotifBadge(); paintMe();
@@ -1521,7 +1525,7 @@ window.addEventListener('error', (e) => {
   }
   $('outBtn').onclick = async () => {
     try { await post('/logout'); } catch {}
-    token = ''; me = ''; myId = 0; myBio = ''; myJoined = null; myStatus = null; renderMyStatus();
+    token = ''; me = ''; myId = 0; myBio = ''; myJoined = null; myPhone = ''; myStatus = null; renderMyStatus();
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
     stopStream(); restartPollers();
     clearPending();
@@ -1624,7 +1628,7 @@ window.addEventListener('error', (e) => {
     if (!token) return; // sudah keluar — jangan tindih mesej "anda sudah keluar"
     if (C) endCall(true);   // panggilan tidak boleh kekal selepas sesi mati
     localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
-    token = ''; myId = 0; myBio = ''; myJoined = null; myStatus = null; renderMyStatus(); clearPending(); cache = {}; rooms = []; tick = 0; $('q').value = '';
+    token = ''; myId = 0; myBio = ''; myJoined = null; myPhone = ''; myStatus = null; renderMyStatus(); clearPending(); cache = {}; rooms = []; tick = 0; $('q').value = '';
     stopStream(); restartPollers();   // token sudah kosong → tiada poller yang dihidupkan semula
     resetSocial(); $('aPass').value = '';
     updateBadge(); setMode('login'); showAuth('Session expired — please log in again.');
@@ -3852,7 +3856,7 @@ window.addEventListener('error', (e) => {
     for (const el of $('setModal').querySelectorAll('.tab')) el.hidden = el.id !== 'tab' + t;
   }
   function openSettings(tab) {
-    $('stName').value = me; $('stBio').value = myBio;
+    $('stName').value = me; $('stBio').value = myBio; $('stPhone').value = myPhone || '';
     $('stMe').innerHTML = '<div class="pfhead">' + avHtml(me, myAvatar, true) +
       '<div><b>' + esc(me) + '</b><span class="idchip" id="stCopy" title="Copy Tukuk ID">🆔 ' + myId + ' ⧉</span></div></div>' +
       (myStatus ? statusLine(myStatus) : '') +
@@ -3885,7 +3889,16 @@ window.addEventListener('error', (e) => {
     window.__ft = setTimeout(() => doFind(e.target.value), 260);
   });
   $('stFind').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(window.__ft); doFind(e.target.value); } });
-  $('stSaveProf').onclick = () => applyProfile($('stName').value.trim(), $('stBio').value.trim());
+  $('stSaveProf').onclick = async () => {
+    await applyProfile($('stName').value.trim(), $('stBio').value.trim());
+    const ph = $('stPhone').value.trim();
+    if (ph === (myPhone || '')) return;
+    try {
+      const j = await post('/phone', { phone: ph });
+      myPhone = j.phone || '';
+      toast(ph ? 'Phone linked — friends who are offline can receive your DMs by SMS.' : 'Phone unlinked.');
+    } catch (e) { toast(e.message); }
+  };
   $('stSavePass').onclick = async () => {
     const lama = $('stOld').value, p1 = $('stP1').value, p2 = $('stP2').value;
     if (!lama) return toast('Fill in the current password.');
@@ -3937,7 +3950,7 @@ window.addEventListener('error', (e) => {
       $('stOld').value = $('stP1').value = $('stP2').value = $('stDelPass').value = '';
       $('setModal').classList.remove('open');
       if (C) endCall(true);
-      token = ''; me = ''; myId = 0; myBio = ''; myJoined = null;
+      token = ''; me = ''; myId = 0; myBio = ''; myJoined = null; myPhone = '';
       localStorage.removeItem(TKEY); localStorage.removeItem(NKEY);
       stopStream(); restartPollers(); clearPending();
       cache = {}; rooms = []; cur = 'global_am'; tick = 0; $('q').value = '';
@@ -4669,7 +4682,7 @@ window.addEventListener('error', (e) => {
   readConn(); lite = computeLite(); updateNetbar();   // tentukan mod rangkaian sebelum masuk app
   (async () => {
     if (!token) return showAuth('');
-    try { const j = await call('/me'); if (!j.name) return showAuth(''); me = j.name; myId = j.id || 0; myBio = j.bio || ''; myJoined = j.joined || null; enterApp(); }
+    try { const j = await call('/me'); if (!j.name) return showAuth(''); me = j.name; myId = j.id || 0; myBio = j.bio || ''; myJoined = j.joined || null; myPhone = j.phone || ''; enterApp(); }
     catch { showAuth(''); }
   })();
 })();

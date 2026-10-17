@@ -28,6 +28,8 @@ let writeTimer = null;
 let dirty = false;
 let auth = null;
 let limiterFactory = null;
+// Pendengar SMS masuk (dipakai jambatan Chat ⇄ Sel). Daftar melalui onInbound().
+let inboundHooks = [];
 
 // ─── Simpanan ───
 function blank() {
@@ -95,6 +97,22 @@ function pushMessage(msg) {
   touch();
   return msg;
 }
+
+// Serahkan SMS ke katus keluar TANPA HTTP/autentikasi — dipakai jambatan Chat.
+// Semantik sama seperti POST /api/sms/send (sentiasa mengira, meski belum ada
+// peranti); pihak pemanggil memutuskan bila patut menghantar (lihat isPaired).
+function enqueue(toNumber, body) {
+  const peer = normalizeNumber(toNumber);
+  const clean = cleanBody(body);
+  if (!peer) return { error: 'Nombor penerima tidak sah.' };
+  if (!clean) return { error: 'Isi mesej kosong.' };
+  const msg = pushMessage({ id: idOf(), dir: 'out', peer, body: clean, status: 'queued', ts: Date.now(), updatedAt: Date.now(), read: true, error: null });
+  return { ok: true, message: msg };
+}
+// Ada peranti relay dipasangkan? Hanya bila YA penghantaran SMS benar-benar mungkin.
+function isPaired() { const s = load(); return Boolean(s && s.device && s.device.token); }
+// Daftar pendengar SMS masuk; dipanggil dengan { from, body, msg } selepas disimpan.
+function onInbound(fn) { if (typeof fn === 'function') inboundHooks.push(fn); return fn; }
 
 // Kira status katus keluar untuk paparan status pentadbir.
 function counts() {
@@ -183,12 +201,9 @@ function mount(app, deps) {
 
   // Serahkan SMS baru (masukkan katus keluar).
   app.post('/api/sms/send', auth.requireAdmin, sendLimiter, (req, res) => {
-    const peer = normalizeNumber(req.body && req.body.to);
-    const body = cleanBody(req.body && req.body.body);
-    if (!peer) return res.status(400).json({ error: 'Nombor penerima tidak sah.' });
-    if (!body) return res.status(400).json({ error: 'Isi mesej kosong.' });
-    const msg = pushMessage({ id: idOf(), dir: 'out', peer, body, status: 'queued', ts: Date.now(), updatedAt: Date.now(), read: true, error: null });
-    res.json({ ok: true, message: msg });
+    const r = enqueue(req.body && req.body.to, req.body && req.body.body);
+    if (r.error) return res.status(400).json({ error: r.error });
+    res.json({ ok: true, message: r.message });
   });
 
   // Senarai utas inbox.
@@ -263,10 +278,12 @@ function mount(app, deps) {
     const dup = s.messages.find((m) => m.dir === 'in' && m.peer === peer && m.ts === ts && m.body === body);
     if (dup) return res.json({ ok: true, duplicate: true, id: dup.id });
     const msg = pushMessage({ id: idOf(), dir: 'in', peer, body, status: 'received', ts, updatedAt: Date.now(), read: false, error: null });
+    // Salurkan ke jambatan Chat (kegagalan pendengar tidak boleh rosakkan inbox).
+    for (const fn of inboundHooks) { try { fn({ from: peer, body, msg }); } catch { /* jambatan gagal — SMS tetap tersimpan */ } }
     res.json({ ok: true, id: msg.id });
   });
 
-  return { load, setPath, counts, threads };
+  return { load, setPath, counts, threads, enqueue, isPaired, onInbound };
 }
 
-module.exports = { mount, normalizeNumber, cleanBody };
+module.exports = { mount, normalizeNumber, cleanBody, enqueue, isPaired, onInbound, setPath };

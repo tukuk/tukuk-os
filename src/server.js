@@ -2760,6 +2760,13 @@ sms.mount(app, {
   path: path.join(path.dirname(config.store.path), 'sms.json'),
 });
 
+// Jambatan Chat ⇄ Sel: DM yang diterima kawan semasa dia LUAR TALIAN (dan sudah
+// menaut nombor) dihantar sebagai SMS melalui gerbang Android yang dipasangkan;
+// balasan SMS masuk disalur kembali ke dalam DM asal. Hanya aktif bila relay
+// dipasangkan — tanpa peranti, mesej kekal dalam T Chat seperti biasa.
+chat.setSmsSender((payload) => (sms.isPaired() ? sms.enqueue(payload.to, payload.body) : { error: 'No SMS device paired.' }));
+sms.onInbound((evt) => { try { chat.ingestSms(evt.from, evt.body); } catch { /* jambatan gagal — inbox SMS tidak terjejas */ } });
+
 // Tukuk Agent: proksi OpenAI-compatible (tool-calling) untuk pelanjutan agen Cline
 // dalam code-server + build API kepala-tanpa (/api/agent/build).
 agent.mount(app, {

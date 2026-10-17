@@ -33,7 +33,7 @@ let dirty = false;
 // ─── Simpanan ───
 const FIRST_ID = 100001;    // Tukuk ID pertama (nombor kekal, bukan nama)
 function blank() {
-  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID, pushSubs: {}, vapid: null, posts: {}, stories: {}, notif: {}, polls: {} };
+  return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID, pushSubs: {}, vapid: null, posts: {}, stories: {}, notif: {}, polls: {}, smsReply: {} };
 }
 function load() {
   if (state) return state;
@@ -45,6 +45,7 @@ function load() {
     state.rooms.global_am = { id: 'global_am', kind: 'global', title: '🌍 General', members: ['*'], createdBy: 'sistem', createdAt: Date.now() };
   }
   if (!state.rooms.global_am) state.rooms.global_am = { id: 'global_am', kind: 'global', title: '🌍 General', members: ['*'], createdBy: 'sistem', createdAt: Date.now() };
+  if (!state.smsReply) state.smsReply = {};
   migrate();
   return state;
 }
@@ -64,6 +65,8 @@ function migrate() {
     if (!Array.isArray(u.following)) { u.following = []; changed = true; }
     if (!Array.isArray(u.followers)) { u.followers = []; changed = true; }
     if (u.avatar === undefined) { u.avatar = null; changed = true; }
+    // Nombor telefon (pilihan) untuk fallback SMS semasa luar talian; null = tiada.
+    if (u.phone === undefined) { u.phone = null; changed = true; }
   }
   for (const [id, r] of Object.entries(s.rooms)) {
     if (r.kind === 'group') {
@@ -681,6 +684,8 @@ function send(name, roomId, text, replyTo, media, extra) {
   if (su && (r.kind === 'group' || r.kind === 'global')) notifyMentions(su, t, null, r.id);
   // Penunjuk menaip perlu habis serta-merta pada tab lain, bukan tunggu poll.
   if (wasTyping) pubRoom(r, 'typing', { room: r.id, typing: [] });
+  // Fallback Sel: jika pasangan DM luar talian & ada nombor → hantar sebagai SMS.
+  smsFallback(su, r, t, extra);
   return { ok: true, msg: out, room: r };
 }
 // Simpan hanya KEEP mesej terakhir; fail yang keluar dari senarai dibuang.
@@ -959,6 +964,69 @@ function setBio(name, bio) {
   u.bio = String(bio == null ? '' : bio).replace(/\s+/g, ' ').trim().slice(0, 120);
   touch();
   return { ok: true, user: u };
+}
+
+// ─── Jambatan Chat ⇄ Sel (gerbang SMS) ─────────────────────────────────
+// Pelayan tiada modem GSM, jadi satu peranti Android dipasangkan sebagai radio
+// (lihat src/sms.js). Fallback: DM kepada kawan yang LUAR TALIAN & menaut nombor
+// dihantar sebagai SMS; balasan SMS masuk disalur kembali ke dalam DM yang sama.
+// Normalisasi nombor MESTI sama dengan sms.normalizeNumber — kunci padanan.
+function normPhone(value) {
+  let s = String(value || '').trim();
+  const plus = s.startsWith('+');
+  s = s.replace(/[^\d]/g, '');
+  if (!s) return null;
+  return (plus ? '+' : '') + s.slice(0, 24);
+}
+function findUserByPhone(norm) {
+  if (!norm) return null;
+  return Object.values(load().users).find((u) => u.phone === norm) || null;
+}
+function setPhone(name, phone) {
+  const u = findUser(name);
+  if (!u) return { error: 'Account not found.' };
+  if (phone === null || phone === undefined || String(phone).trim() === '') {
+    u.phone = null; touch(); return { ok: true, phone: null };
+  }
+  const norm = normPhone(phone);
+  if (!norm) return { error: 'That phone number does not look valid.' };
+  const holder = findUserByPhone(norm);
+  if (holder && holder.id !== u.id) return { error: 'That number is already linked to another account.' };
+  u.phone = norm; touch();
+  return { ok: true, phone: norm };
+}
+// Penghantar SMS disuntik dari luar (server.js) supaya chat.js tidak perlu
+// mengenal HTTP/autentikasi gerbang. Pulangkan { ok } jika berjaya dimasukkan katus.
+let smsSender = null;
+function setSmsSender(fn) { smsSender = (typeof fn === 'function') ? fn : null; }
+// Dalam send(): DM kepada kawan luar talian yang ada nombor → satu SMS keluar.
+// Dilangkau untuk mesej yang memang datang daripada SMS (extra.sms) — anti-gelung.
+function smsFallback(su, r, t, extra) {
+  if (!smsSender || !su || !t || (extra && extra.sms) || r.kind !== 'dm') return;
+  const pid = peerId(r, su.id);
+  const peer = pid ? byId(pid) : null;
+  if (!peer || !peer.phone || isOnline(peer)) return;
+  let ret = null;
+  try { ret = smsSender({ to: peer.phone, from: su.name, body: su.name + ': ' + t }); } catch { ret = null; }
+  // Simatkan nombor → penghantar supaya balasan SMS masuk tahu ke DM yang mana.
+  if (ret && ret.ok) { load().smsReply[peer.phone] = su.id; touch(); }
+}
+// SMS masuk daripada nombor yang ditaut → selur ke DM antara pemilik nombor
+// itu dengan kawan terakhir yang menghantarnya SMS. Nombor tak terkenal / tiada
+// utas dikekalkan hanya dalam inbox pentadbir (perjalanan asal gerbang).
+function ingestSms(fromPhone, body) {
+  const s = load();
+  const norm = normPhone(fromPhone);
+  if (!norm) return { ignored: true, reason: 'bad-number' };
+  const owner = findUserByPhone(norm);
+  if (!owner) return { ignored: true, reason: 'not-linked' };
+  const tid = (s.smsReply || {})[norm];
+  const target = tid ? byId(tid) : null;
+  if (!target) return { ignored: true, reason: 'no-thread' };
+  if (dmFrozen(owner, target)) return { ignored: true, reason: 'frozen' };
+  const r = ensureDm(owner, target);
+  if (!r) return { ignored: true, reason: 'no-room' };
+  return send(owner.name, r.id, body, null, null, { sms: true });
 }
 // ─── Status (mood sementara) ────────────────────────────────────────────
 // Beza dengan bio (kekal, 120 aksara) dan cerita (24 jam, media): status
@@ -1950,7 +2018,7 @@ function mount(app, deps) {
     if (!u) return res.json({ ok: true, name: null });
     const st = load();
     const nu = ((st.notif || {})[String(u.id)] || []).filter(n => !n.read).length;
-    res.json({ ok: true, name: u.name, id: u.id, bio: u.bio || '', joined: u.createdAt || null, online: true, avatar: avatarUrl(u), status: effStatus(u), notifUnread: nu, followingCount: followingOf(u).length, followersCount: followersOf(u).length });
+    res.json({ ok: true, name: u.name, id: u.id, bio: u.bio || '', joined: u.createdAt || null, online: true, avatar: avatarUrl(u), status: effStatus(u), notifUnread: nu, phone: u.phone || null, followingCount: followingOf(u).length, followersCount: followersOf(u).length });
   });
 
   // Boleh dipanggil mana-mana app di tukuk.org — token chat yang sama = identitas sama.
@@ -2141,6 +2209,17 @@ function mount(app, deps) {
     }
     event('Profile updated: ' + u.name, { id: u.id });
     res.json({ ok: true, name: u.name, id: u.id, profile: profile(u.name) });
+  });
+
+  // Taut/nyahaut nombor telefon untuk fallback DM semasa luar talian (gerbang SMS).
+  // Hantar { phone: '' } atau { phone: null } untuk menanggalkan.
+  app.post('/api/chat/phone', lim({ windowMs: 3600e3, max: 20, keyPrefix: 'chphone:' }), (req, res) => {
+    const u = authOf(req, res); if (!u) return;
+    const b = cleanBody(req.body);
+    const r = setPhone(u.name, b.phone);
+    if (r.error) return res.status(400).json({ error: r.error });
+    event(r.phone ? 'Phone linked: ' + u.name : 'Phone unlinked: ' + u.name, { id: u.id });
+    res.json({ ok: true, phone: r.phone });
   });
 
   // Status (mood sementara) — teks pendek + emoji dengan TTL pilihan.
@@ -2618,6 +2697,7 @@ module.exports = {
   react, edit, remove, setTyping, typingIn, searchMsgs, people, onlineMap, setPath, load, flush,
   byId, findUser, nameOfUser, peerId, isMember, sameAuthor, authorName,
   profile, rename, setBio, isOnline, cleanText,
+  setPhone, findUserByPhone, normPhone, setSmsSender, ingestSms,
   setStatus, effStatus, STATUS_TTL, STATUS_T_MAX, STATUS_E_MAX,
   addFriend, delFriend, blockUser, unblockUser, socialLists, socialTarget, setPass, logoutAll,
   friendsOf, blockedOf, dmFrozen, MAX_FRIENDS, MAX_BLOCKS,
