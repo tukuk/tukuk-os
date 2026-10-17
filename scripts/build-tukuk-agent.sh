@@ -62,6 +62,13 @@ echo "── npm ci (dalam $CS) ──"
 echo "── npm run build ──"
 ( cd "$CS" && npm run build ) || { echo "✗ build code-server gagal"; exit 1; }
 
+# build-code-server.sh HANYA compile wrapper (tsc). Yang menjana
+# lib/vscode-reh-web-linux-x64 (server web VS Code yang dicari release) ialah
+# build-vscode.sh — fasa gulp paling panjang (±1–2 jam) dan perlukan VERSION.
+echo "── npm run build:vscode (gulp REH web — fasa panjang) ──"
+( cd "$CS" && VERSION="$(node -p "require('./package.json').version")" MINIFY=true npm run build:vscode ) \
+  || { echo "✗ build:vscode gagal"; exit 1; }
+
 echo "── KEEP_MODULES=1 npm run release (release/ berdiri sendiri) ──"
 ( cd "$CS" && KEEP_MODULES=1 MINIFY=true npm run release ) || { echo "✗ release gagal"; exit 1; }
 

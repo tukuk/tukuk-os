@@ -49,8 +49,8 @@ info "Pratent OK: cakera ${AVAIL_GB}GB bebas, RAM ${RAM_MB}MB."
 info "[2] apt pakej pembangunan..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git curl ca-certificates build-essential python3 pkg-config \
-  libkrb5-dev libxkbfile-dev libsecret-1-dev zip unzip >/dev/null 2>&1 \
+apt-get install -y -qq git curl ca-certificates build-essential python3 pkg-config jq \
+  libkrb5-dev libxkbfile-dev libsecret-1-dev zip unzip rsync >/dev/null 2>&1 \
   || warn "sebahagian pakej gagal — sambung, tapi node-gyp mungkin ulang ralat yang sama."
 
 # ── [3] Node 24 ───────────────────────────────────────────────────────────────
