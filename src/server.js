@@ -770,7 +770,7 @@ app.get('/models', (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/apps', '/studio', '/models', '/datacenter', '/os', '/rekomendasi', '/builder', '/editor', '/editor-video', '/movie', '/design', '/3d', '/bg-remover', '/collage', '/converter'];
+  const staticPages = ['', '/nasa', '/explore', '/docs', '/about', '/privacy', '/terms', '/contact', '/blog', '/access', '/learn', '/bingbot', '/download', '/store', '/play', '/apps', '/studio', '/models', '/datacenter', '/os', '/rekomendasi', '/builder', '/editor', '/editor-video', '/movie', '/design', '/3d', '/bg-remover', '/collage', '/converter'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2507,6 +2507,14 @@ app.post('/api/play/:id', playLimiter, (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Failed to count play sessions', details: safeError(error) });
   }
+});
+
+// Landing games /play — paparan senarai (fail play.html). Tanpa ini `/play` 404
+// kerana statik tidak henti-ekstensi & `/play/:id` hanya capai id store.
+app.get('/play', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'play.html'), (error) => {
+    if (error) res.status(404).json({ error: 'Play page not found', path: req.originalUrl });
+  });
 });
 
 // Halaman pemain /play/<item-id> (gaya web-games.io) — fail statik yang sama untuk semua
