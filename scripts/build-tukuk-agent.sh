@@ -65,9 +65,34 @@ echo "── npm run build ──"
 # build-code-server.sh HANYA compile wrapper (tsc). Yang menjana
 # lib/vscode-reh-web-linux-x64 (server web VS Code yang dicari release) ialah
 # build-vscode.sh — fasa gulp paling panjang (±1–2 jam) dan perlukan VERSION.
+#
+# Tambalan longgar-Copilot: pepohon vscode pin menjalankan
+# prepareBuiltInCopilotRipgrepShim TANPA syarat semasa pembungkusan REH, tetapi
+# Microsoft rasmi mendapat copilot daripada VSIX prabina manakala build
+# dari-sumber menanggalkan @github/copilot/** ikut .moduleignore — jadi build
+# dari-sumber MATI sentiasa dengan "Copilot SDK directory not found". Tukuk
+# Agent tiada Copilot (agen = Cline melalui /api/agent); tugas itu dilonggarkan
+# kepada amaran sahaja. Idempoten — guarded oleh penanda TIADA-COPILOT-SDK.
+CS_COPILOT_TS="$CS/lib/vscode/build/lib/copilot.ts" node - <<'NODE' || { echo "✗ tambalan copilot gagal"; exit 1; }
+const fs = require('node:fs');
+const f = process.env.CS_COPILOT_TS;
+let s = fs.readFileSync(f, 'utf8');
+if (s.includes('TIADA-COPILOT-SDK')) { console.log('\u2713 copilot.ts sudah ditambal'); process.exit(0); }
+const old = 'throw new Error(`[prepareBuiltInCopilotRipgrepShim] Copilot SDK directory not found at ${copilotSdkBase}`);';
+if (!s.includes(old)) { console.error('\u2717 corak throw copilot tidak ditemui dalam ' + f + ' — semak pin vscode manual.'); process.exit(1); }
+s = s.replace(old, '/* TIADA-COPILOT-SDK: longgar utk build tanpa VSIX */ console.warn("[copilot-shim] SDK tiada — skip"); return;');
+fs.writeFileSync(f, s);
+console.log('\u2713 copilot.ts ditambal — shim REH jadi longgar (amar, bukan batal).');
+NODE
+
 echo "── npm run build:vscode (gulp REH web — fasa panjang) ──"
 ( cd "$CS" && VERSION="$(node -p "require('./package.json').version")" MINIFY=true npm run build:vscode ) \
   || { echo "✗ build:vscode gagal"; exit 1; }
+
+# Copilot dibuang terus daripada output REH: node_modules-nya sudah ditanggalkan
+# .moduleignore (dist tanpa sdk akan ralat aktifasi ketika editor mula), dan
+# kita memang tidak memakainya — agen ialah Cline.
+rm -rf "$CS/lib/vscode-reh-web-linux-x64/extensions/copilot"
 
 echo "── KEEP_MODULES=1 npm run release (release/ berdiri sendiri) ──"
 ( cd "$CS" && KEEP_MODULES=1 MINIFY=true npm run release ) || { echo "✗ release gagal"; exit 1; }
