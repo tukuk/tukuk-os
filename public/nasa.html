@@ -1922,17 +1922,18 @@ async function loadSentry() {
     container.innerHTML = `
       ${statTiles([
         { label: 'Objects on the watch list', value: fmtNum(risks.length) },
-        { label: 'Highest cumulative probability', value: `1 in ${fmtNum(Math.round(1 / (d.highest_prob || 1e-9)))}`, note: `${(d.highest_prob * 100).toFixed(4)}% over the next century` },
+        { label: 'Highest cumulative probability', value: d.highest_prob >= 1e-6 ? `1 in ${fmtNum(Math.round(1 / d.highest_prob))}` : `&lt; 1 in a million`, note: `${(d.highest_prob * 100).toPrecision(2)}% cumulative impact chance (decades to centuries)` },
         { label: 'Max Torino scale', value: maxTorino > 0 ? String(maxTorino) : '0 &mdash; nothing hazardous' }
       ])}
       <table style="margin-top:18px;">
-        <tr><th>Object</th><th>Size</th><th>Impact years</th><th>Cumulative prob.</th><th>Torino</th></tr>
+        <tr><th>Object</th><th>Size</th><th>Impact years</th><th>Cumulative prob.</th><th>Palermo</th><th>Torino</th></tr>
         ${risks.map(r => `
           <tr>
             <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a></td>
-            <td>${r.diameter_m ? `~${r.diameter_m < 1000 ? Math.round(r.diameter_m * 100) / 100 : fmtNum(Math.round(r.diameter_m))} m` : '--'}</td>
+            <td>${r.diameter_km ? `${r.diameter_km < 1 ? fmtNum(Math.round(r.diameter_km * 1000)) + ' m' : `${r.diameter_km} km`}` : '--'}</td>
             <td>${esc(r.impact_years) || '--'}</td>
             <td>${r.cum_prob ? r.cum_prob.toExponential(1) : '--'}</td>
+            <td>${r.palermo != null ? `${r.palermo.toFixed(2)}` : '--'}</td>
             <td>${r.torino > 0 ? `<span style="color:var(--danger); font-weight:700;">${r.torino}</span>` : '0'}</td>
           </tr>`).join('')}
       </table>

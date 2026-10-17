@@ -1154,20 +1154,21 @@ async function getSentryRisk() {
   const cached = getCache(cacheKey);
   if (cached) return cached;
   const res = await http.get('https://ssd-api.jpl.nasa.gov/sentry.api', { timeout: 15000 });
-  // Bentul medan sebenar API: des/fullname, range, n_imp, ps_cum (-log10 P), ts_max, diameter
+  // Medan sebenar API: ip = kebarangkalian impak kumulatif, ps_cum = skala Palermo,
+  // ts_max = skala Torino, diameter dalam KM, range = julat tahun impak, n_imp = virtual impactors.
   const raw = Array.isArray(res.data && res.data.data) ? res.data.data : [];
   const risks = raw.map(o => ({
     id: o.id || '',
     name: o.fullname || o.des || 'Unknown',
-    diameter_m: Number(o.diameter) || null,
+    diameter_km: Number(o.diameter) || null,
     abs_mag: Number(o.h) || null,
     impact_years: o.range || '',
     virtual_impactors: Number(o.n_imp) || 0,
-    // ps_cum ialah eksponen terus bagi kebarangkalian: P = 10^ps_cum (cth. -6.15 → 7e-7)
-    cum_prob: (o.ps_cum != null && o.ps_cum !== '' && Number.isFinite(Number(o.ps_cum))) ? Math.pow(10, Number(o.ps_cum)) : 0,
+    cum_prob: Number(o.ip) || 0,
+    palermo: Number(o.ps_cum) || 0,
     torino: Number(o.ts_max) || 0,
     url: 'https://ssd.jpl.nasa.gov/tools/sentry_data.html'
-  })).sort((a, b) => b.cum_prob - a.cum_prob).slice(0, 40);
+  })).filter(r => r.cum_prob > 0).sort((a, b) => b.cum_prob - a.cum_prob).slice(0, 40);
   const result = {
     count: risks.length,
     highest_prob: risks.length ? risks[0].cum_prob : 0,
