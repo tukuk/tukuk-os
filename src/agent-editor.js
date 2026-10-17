@@ -39,14 +39,23 @@ function forwardHeaders(reqHeaders, target) {
  * @param {import('express').Express} app
  * @param {{config: object}} deps
  */
+// agent-editor.js — proksi balik untuk Tukuk Agent (code-server) yang berjalan di
+// 127.0.0.1:8443 dengan --abs-proxy-base-path /agent.
+//
+// code-server hanya pakai prefix /agent untuk menjana URL dalam HTML (href, WS URL).
+// Route dalaman Express tetap di '/' — maka '/agent/login' perlu dihantar sebagai
+// '/login' ke upstream. Kita buang PREFIX sebelum forward.
+
 function mount(app, { config }) {
   app.use(PREFIX, (req, res) => {
     const target = upstreamOf(config);
     if (!target) {
       return res.status(503).json({ error: 'Editor agent tidak dikonfigurasi (AGENT_EDITOR_UPSTREAM).' });
     }
+    // req.url dalam app.use('/agent', ...) sudah tiada prefix — terus gunakan.
+    const upstreamPath = req.url || '/';
     const preq = http.request(
-      target + req.originalUrl,
+      target + upstreamPath,
       { method: req.method, headers: forwardHeaders(req.headers, target) },
       (up) => {
         res.writeHead(up.statusCode || 502, up.headers);
@@ -72,7 +81,9 @@ function attachUpgrade(server, { config }) {
   const onUpgrade = (req, clientSocket, head) => {
     const target = upstreamOf(config);
     if (!target || !req.url || !req.url.startsWith(PREFIX)) return; // bukan editor — biarkan listener lain
-    const p = http.request(target + req.url, { method: req.method, headers: forwardHeaders(req.headers, target) });
+    // Buang prefix /agent daripada URL penuh (ws URL browser bermula /agent/...).
+    const stripped = req.url.slice(PREFIX.length) || '/';
+    const p = http.request(target + stripped, { method: req.method, headers: forwardHeaders(req.headers, target) });
     p.on('upgrade', (pres, upSocket, upHead) => {
       const lines = [`HTTP/1.1 ${pres.statusCode || 101} ${pres.statusMessage || 'Switching Protocols'}`];
       for (const [k, v] of Object.entries(pres.headers)) {
