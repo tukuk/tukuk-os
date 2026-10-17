@@ -84,7 +84,9 @@ if [ ! -d code-server/.git ]; then
   elif [[ "$ORIGIN_URL" == git@github.com:* || "$ORIGIN_URL" == ssh://git@github.com/* ]]; then
     CLONE_URL="git@github.com:fevian448/tukuk-agent-editor.git"
   fi
-  git clone --depth 1 "$CLONE_URL" code-server || die "clone gagal. Jika 'Permission denied (publickey)': kunci SSH pelayan ini agaknya deploy-key PER-REPO tukuk-os-v2 sahaja — tambahkan kunci yang sama sebagai SSH key AKUN fevian448 (GitHub → Settings → SSH and GPG), ATAU publickan fork tukuk-agent-editor (kod ini MIT). Jika 404 pula: fork belum wujud/dinamakan lain."
+  git clone --depth 1 "$CLONE_URL" code-server \
+    || { warn "clone dengan URL origin gagal — cuba HTTPS anonim."; rm -rf code-server; git clone --depth 1 "$FORK_URL" code-server; } \
+    || die "clone gagal. Fork kini PUBLIC (fevian448/tukuk-agent-editor) — jika HTTPS anonim pun gagal, itu masalah jaringan GitHub dari pelayan, bukan kredit."
 fi
 ( cd code-server && git submodule update --init --depth 1 lib/vscode >/dev/null 2>&1 ) \
   || ( cd code-server && git submodule update --init lib/vscode ) || die "submodule lib/vscode gagal."
