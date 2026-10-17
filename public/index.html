@@ -609,26 +609,77 @@
   <section id="results" aria-live="polite"></section>
 </main>
 
-<footer class="wrap" style="text-align:center; padding:32px 20px 48px; border-top:1px solid var(--line); margin-top:40px;">
-  <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; font-size:0.92rem; margin-bottom:12px;">
-    <a href="/">Home</a>
-    <a href="/apps/chat">💬 T Chat</a>
-    <a href="/nasa">🚀 NASA Explorer</a>
-    <a href="/blog">Blog &amp; Articles</a>
-    <a href="/learn">Learn 0 → Hero</a>
-    <a href="/studio">🎛 Tukuk Studio</a>
-    <a href="/docs">API Docs</a>
-    <a href="/about">About</a>
-    <a href="/privacy">Privacy Policy</a>
-    <a href="/terms">Terms of Service</a>
-    <a href="/contact">Contact Us</a>
-    <a href="/access">Global Access</a>
-    <a href="/bingbot">Verify Bingbot</a>
-    <a href="/health">Health</a>
-    <a href="/stats">Statistics</a>
-    <a href="/admin">⚙️ Admin Control</a>
+<!-- Footer peta-laman: dahulu satu baris rata 16 pautan (susuri dibaca & tidak
+     lengkap). Kini berkolom ikut kategori — grid auto-fit supaya kemas pada
+     telefon (1-2 lajur) dan desktop (5 lajur) tanpa media query. -->
+<style>
+  .sitefoot { text-align:center; padding:36px 20px 40px; border-top:1px solid var(--line); margin-top:40px; }
+  .foot-cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:24px 18px; text-align:left; max-width:1100px; margin:0 auto 22px; }
+  .foot-col h4 { margin:0 0 8px; font-size:.8rem; text-transform:uppercase; letter-spacing:.07em; color:var(--text); }
+  .foot-col a { display:block; padding:3px 0; font-size:.88rem; color:var(--muted); text-decoration:none; }
+  .foot-col a:hover { color:var(--accent); }
+  .foot-bottom { margin:0 auto; padding-top:14px; border-top:1px solid var(--line); max-width:1100px; color:var(--muted); font-size:.85rem; line-height:1.6; }
+  .foot-bottom .fb-links a { color:var(--muted); margin:0 6px; }
+  .foot-bottom .fb-links a:hover { color:var(--accent); }
+</style>
+<footer class="wrap sitefoot">
+  <div class="foot-cols">
+    <div class="foot-col">
+      <h4>🔍 Search &amp; AI</h4>
+      <a href="/">🏠 Home</a>
+      <a href="/explore">🧭 Explore</a>
+      <a href="/cari?mode=radio">📻 World Radio</a>
+      <a href="/cari?mode=cc">🧩 CC Asset Search</a>
+      <a href="/models">🧠 AI Models</a>
+      <a href="/datacenter">🏗️ AI Data Center</a>
+      <a href="/docs">📄 API Docs</a>
+    </div>
+    <div class="foot-col">
+      <h4>💬 Chat &amp; Apps</h4>
+      <a href="/apps/chat">💬 T Chat</a>
+      <a href="/os">📱 Tukuk OS — web phone</a>
+      <a href="/apps">🗂️ App &amp; Game Catalog</a>
+      <a href="/store">🎮 Store &amp; Games</a>
+      <a href="/play">▶️ Play now</a>
+      <a href="/builder">🧱 Build your own app</a>
+      <a href="/download">📥 Download for every OS</a>
+    </div>
+    <div class="foot-col">
+      <h4>🎛 Tukuk Studio</h4>
+      <a href="/studio">🎛 Studio Hub</a>
+      <a href="/editor">✂️ Image Editor</a>
+      <a href="/editor-video">🎬 Video Editor</a>
+      <a href="/movie">🍿 Movie Maker</a>
+      <a href="/design">🎨 Design Artboards</a>
+      <a href="/3d">🧊 3D Editor</a>
+      <a href="/collage">🖼 Collage Maker</a>
+      <a href="/bg-remover">🪄 Background Remover</a>
+      <a href="/converter">🔁 File Converter</a>
+    </div>
+    <div class="foot-col">
+      <h4>📚 Learn &amp; Discover</h4>
+      <a href="/learn">🎓 Learn 0 → Hero</a>
+      <a href="/blog">📝 Blog &amp; Articles</a>
+      <a href="/nasa">🚀 NASA Explorer</a>
+      <a href="/rekomendasi">⭐ Recommendations</a>
+      <a href="/about">ℹ️ About</a>
+      <a href="/contact">✉️ Contact Us</a>
+    </div>
+    <div class="foot-col">
+      <h4>⚖️ Legal &amp; Status</h4>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/access">🌍 Global Access</a>
+      <a href="/health">🩺 Health</a>
+      <a href="/stats">📊 Statistics</a>
+      <a href="/bingbot">🤖 Verify Bingbot</a>
+      <a href="/sitemap.xml">🗺 Sitemap</a>
+      <a href="/admin">⚙️ Admin Control</a>
+    </div>
   </div>
-  <p style="margin:8px 0 0; color:var(--muted); font-size:0.88rem;">&copy; 2026 Tukuk-OS &mdash; Your free, account-free internet portal: search, AI, apps &amp; games.</p>
+  <p class="foot-bottom">&copy; 2026 Tukuk-OS &mdash; Your free, account-free internet portal: search, AI, apps &amp; games.
+    <span class="fb-links"><a href="/">Home</a>·<a href="/blog">Blog</a>·<a href="/privacy">Privacy</a>·<a href="/terms">Terms</a>·<a href="/contact">Contact</a></span>
+  </p>
 </footer>
 
 <button class="chat-fab" id="chatFab" title="Chat AI" aria-label="Open AI chat">&#128172;</button>
