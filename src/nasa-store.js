@@ -1,0 +1,186 @@
+// Pangkalan data arkib NASA — simpanan JSON kekal di data/nasa/ supaya data
+// Angkasa tidak hilang apabila cache memori luput atau API NASA down.
+// Koleksi: apod (ikut tarikh), asteroids (ikut id NEO), epic (ikut id imej).
+// ditulis tanpa require('./nasa') mengelakkan pusingan require (nasa.js → store).
+const fs = require('fs');
+const path = require('path');
+const config = require('./config');
+
+// Direktori boleh diuji (NASA_DB_PATH) — lalai bersebelahan fail store utama.
+const DB_DIR = process.env.NASA_DB_PATH || path.join(path.dirname(config.store.path), 'nasa');
+const APOD_FILE = path.join(DB_DIR, 'apod.json');
+const ASTERIOD_FILE = path.join(DB_DIR, 'asteroids.json');
+const EPIC_FILE = path.join(DB_DIR, 'epic.json');
+
+// Had arkib — buang rekod terlama bila penuh; APOD ~30 tahun pun cuma ~11k entri.
+const APOD_MAX = 4000;
+const ASTEROID_MAX = 3000;
+const EPIC_MAX = 500;
+
+function loadJson(file, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
+// Tulis atomik: tmp kemudian rename — elak fail separuh tulis bila proses mati.
+function saveJson(file, data) {
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = `${file}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(data));
+    fs.renameSync(tmp, file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Pengesahan ringan entri APOD (logik sama nasa.isValidApodPayload, tanpa require pusing).
+function isGoodApod(e) {
+  if (!e || typeof e !== 'object') return false;
+  const title = String(e.title || '').trim();
+  const expl = String(e.explanation || '').trim();
+  const media = String(e.url || e.hdurl || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(e.date || ''))) return false;
+  if (!title || /^(nasa science|astronomy picture of the day)$/i.test(title)) return false;
+  if (expl.length < 40) return false;
+  if (!media || /nasa-logo|logo\.(png|svg|gif|jpg)/i.test(media)) return false;
+  return true;
+}
+
+/** Simpan satu atau banyak entri APOD (payload API boleh array bila count>1). */
+function saveApod(data) {
+  const entries = Array.isArray(data) ? data : [data];
+  const db = loadJson(APOD_FILE, {});
+  let added = 0;
+  for (const e of entries) {
+    if (!isGoodApod(e)) continue;
+    if (!db[e.date]) added += 1;
+    db[e.date] = {
+      date: e.date,
+      title: String(e.title).trim(),
+      explanation: String(e.explanation || '').trim(),
+      url: e.url || e.hdurl || '',
+      hdurl: e.hdurl || '',
+      media_type: e.media_type || 'image',
+      copyright: e.copyright || '',
+      savedAt: new Date().toISOString()
+    };
+  }
+  if (!added) return 0;
+  // Buang entri terlama bila melebihi had (kekalkannya yang terbaru).
+  const dates = Object.keys(db).sort();
+  while (dates.length > APOD_MAX) delete db[dates.shift()];
+  saveJson(APOD_FILE, db);
+  return added;
+}
+
+/** Ambil satu APOD daripada arkib mengikut tarikh tepat. */
+function getApod(dateStr) {
+  const db = loadJson(APOD_FILE, {});
+  return db[String(dateStr || '').slice(0, 10)] || null;
+}
+
+/** APOD arkib paling terbaru pada/atau sebelum tarikh (fallback apabila API down). */
+function latestApod(onOrBefore) {
+  const db = loadJson(APOD_FILE, {});
+  const cutoff = String(onOrBefore || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const dates = Object.keys(db).filter((d) => d <= cutoff).sort();
+  if (!dates.length) return null;
+  return db[dates[dates.length - 1]];
+}
+
+/** Senarai APOD arkib terbaru dahulu; q menapis tajuk/penjelasan (tak kira huruf). */
+function listApod({ limit = 30, q = '' } = {}) {
+  const db = loadJson(APOD_FILE, {});
+  const needle = String(q || '').trim().toLowerCase();
+  return Object.values(db)
+    .filter((e) => !needle
+      || String(e.title || '').toLowerCase().includes(needle)
+      || String(e.explanation || '').toLowerCase().includes(needle))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+    .slice(0, Math.max(1, Math.min(Number(limit) || 30, 200)));
+}
+
+/** Simpan senarai asteroid NeoWs yang diformatkan (keys: id). */
+function saveAsteroids(list) {
+  if (!Array.isArray(list) || !list.length) return 0;
+  const db = loadJson(ASTERIOD_FILE, {});
+  let added = 0;
+  for (const a of list) {
+    if (!a || !a.id) continue;
+    if (!db[a.id]) added += 1;
+    db[a.id] = {
+      ...a,
+      lastSeen: new Date().toISOString()
+    };
+  }
+  if (!added) return 0;
+  const ids = Object.keys(db);
+  while (ids.length > ASTEROID_MAX) delete db[ids.shift()];
+  saveJson(ASTERIOD_FILE, db);
+  return added;
+}
+
+/** Cari asteroid arkib mengikut nama; bahaya dahulu, pendekatan terdekat dahulu. */
+function searchAsteroids({ q = '', limit = 20, hazardousOnly = false } = {}) {
+  const db = loadJson(ASTERIOD_FILE, {});
+  const needle = String(q || '').trim().toLowerCase();
+  return Object.values(db)
+    .filter((a) => (!needle || String(a.name || '').toLowerCase().includes(needle)))
+    .filter((a) => (hazardousOnly ? a.is_potentially_hazardous : true))
+    .sort((a, b) => (Number(b.is_potentially_hazardous) - Number(a.is_potentially_hazardous))
+      || (a.miss_distance_km || 0) - (b.miss_distance_km || 0))
+    .slice(0, Math.max(1, Math.min(Number(limit) || 20, 100)));
+}
+
+/** Simpan imej EPIC (ball Earth harian) mengikut identifier. */
+function saveEpic(items) {
+  if (!Array.isArray(items) || !items.length) return 0;
+  const db = loadJson(EPIC_FILE, {});
+  let added = 0;
+  for (const it of items) {
+    if (!it || !it.identifier) continue;
+    if (!db[it.identifier]) added += 1;
+    db[it.identifier] = { ...it, savedAt: new Date().toISOString() };
+  }
+  if (!added) return 0;
+  const ids = Object.keys(db);
+  while (ids.length > EPIC_MAX) delete db[ids.shift()];
+  saveJson(EPIC_FILE, db);
+  return added;
+}
+
+/** Senarai EPIC terbaru dahulu. */
+function listEpic({ limit = 12 } = {}) {
+  const db = loadJson(EPIC_FILE, {});
+  return Object.values(db)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+    .slice(0, Math.max(1, Math.min(Number(limit) || 12, 100)));
+}
+
+/** Kiraan ringkas untuk papan pemuka/AI. */
+function stats() {
+  return {
+    dir: DB_DIR,
+    apodEntries: Object.keys(loadJson(APOD_FILE, {})).length,
+    asteroidEntries: Object.keys(loadJson(ASTERIOD_FILE, {})).length,
+    epicEntries: Object.keys(loadJson(EPIC_FILE, {})).length
+  };
+}
+
+module.exports = {
+  DB_DIR,
+  saveApod,
+  getApod,
+  latestApod,
+  listApod,
+  saveAsteroids,
+  searchAsteroids,
+  saveEpic,
+  listEpic,
+  stats
+};

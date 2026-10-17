@@ -4,6 +4,7 @@ const https = require('https');
 const dns = require('dns');
 const path = require('path');
 const config = require('./config');
+const store = require('./nasa-store');
 
 // ——— Rotasi IP untuk api.nasa.gov ———
 // Salah satu backend LB NASA sering rosak (500/timeout); pemerhatian menunjukkan rekod A
@@ -243,6 +244,7 @@ async function getAPOD({ date, count, force } = {}) {
         const res = await apiHttp.get(url, { params, timeout: 18000 });
         if (res.data && isValidApodPayload(res.data, acceptedApiDates)) {
           apodApiDownUntil = 0;
+          store.saveApod(res.data); // kekalkan jejak ke pangkalan data arkib
           setCache(cacheKey, res.data, 4 * 60 * 60 * 1000);
           if (!date && !count) writeApodFallback(res.data);
           return res.data;
@@ -262,6 +264,7 @@ async function getAPOD({ date, count, force } = {}) {
         const fallbackRes = await apiHttp.get(url, { params: { api_key: config.nasa.apiKey, date: yesterday }, timeout: 18000 });
         if (fallbackRes.data && isValidApodPayload(fallbackRes.data, [yesterday])) {
           apodApiDownUntil = 0;
+          store.saveApod(fallbackRes.data);
           setCache(cacheKey, fallbackRes.data, 4 * 60 * 60 * 1000);
           writeApodFallback(fallbackRes.data);
           return fallbackRes.data;
@@ -285,6 +288,7 @@ async function getAPOD({ date, count, force } = {}) {
       const apod = await getApodFromScienceSite(tryDate);
       if (apod && isValidApodPayload(apod, [tryDate])) {
         const payload = { ...apod, api_down: true };
+        store.saveApod(apod); // arkib rasmi juga disimpan ke DB
         setCache(cacheKey, payload, 30 * 60 * 1000);
         if (!date) writeApodFallback(payload);
         return payload;
@@ -298,6 +302,12 @@ async function getAPOD({ date, count, force } = {}) {
   const stored = readApodFallback();
   if (stored && isValidApodPayload(stored, null)) {
     return { ...stored, stale: true, staleNote: 'NASA APOD services are offline — showing the last successful picture.' };
+  }
+
+  // Sandaran C: pangkalan data arkib setempat — entri APOD terakhir yang pernah disimpan
+  const archived = store.latestApod(targetDate);
+  if (archived) {
+    return { ...archived, stale: true, fromArchive: true, staleNote: 'NASA APOD services are offline — showing the latest archived picture.' };
   }
 
   throw lastError || new Error('NASA APOD temporarily unavailable');
@@ -465,6 +475,7 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
         source: 'nasa-neows',
         asteroids: formatted.sort((a, b) => a.miss_distance_km - b.miss_distance_km)
       };
+      store.saveAsteroids(formatted); // kumpul rekod NEO ke dalam DB arkib
       setCache(cacheKey, result, 2 * 60 * 60 * 1000);
       return result;
     }
@@ -518,6 +529,7 @@ async function getEPIC({ date } = {}) {
           dscovr_j2000_position: item.dscovr_j2000_position
         };
       });
+      store.saveEpic(formatted); // simpan bola bumi harian ke arkib
       setCache(cacheKey, formatted, 6 * 60 * 60 * 1000);
       return formatted;
     }
@@ -1225,10 +1237,53 @@ async function getSatellites({ group = 'stations' } = {}) {
   return result;
 }
 
+/**
+ * 15. Backfill arkib — kumpul data NASA ke pangkalan data setempat secara berkala.
+ *     Satu panggilan APOD count=10 + satu feed NEO sehari = ~10 entri/hari;
+ *     EPIC pula menyumbang 12 imej setiap tarikan. Ralat diabaikan (cuba lagi pusingan depan).
+ */
+async function backfillArchive() {
+  const hasil = { apod: 0, asteroids: 0, epic: 0 };
+  try {
+    const res = await apiHttp.get(`${config.nasa.baseUrl}/planetary/apod`, {
+      params: { api_key: config.nasa.apiKey, count: 10 }, timeout: 20000
+    });
+    if (Array.isArray(res.data)) hasil.apod = store.saveApod(res.data.filter(isValidApodPayload));
+  } catch { /* NASA down — arkib sedia ada masih boleh dihidang */ }
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const neo = await getNearEarthObjects({ startDate: today, endDate: today });
+    hasil.asteroids = (neo.asteroids || []).length;
+  } catch { /* skip */ }
+  try {
+    const epic = await getEPIC({});
+    hasil.epic = Array.isArray(epic) ? epic.length : 0;
+  } catch { /* skip */ }
+  return hasil;
+}
+
+let archiveTimer = null;
+
+/** Jadual backfill: kali pertama lewat 20 saat (selepas boot), kemudian setiap 6 jam. */
+function startArchiveBackfill() {
+  if (archiveTimer) return;
+  setTimeout(() => { backfillArchive().catch(() => {}); }, 20 * 1000).unref();
+  archiveTimer = setInterval(() => { backfillArchive().catch(() => {}); }, 6 * 60 * 60 * 1000);
+  archiveTimer.unref();
+}
+
+function stopArchiveBackfill() {
+  if (archiveTimer) { clearInterval(archiveTimer); archiveTimer = null; }
+}
+
 module.exports = {
   getAPOD,
   startApodAutoUpdate,
   stopApodAutoUpdate,
+  backfillArchive,
+  startArchiveBackfill,
+  stopArchiveBackfill,
+  store,
   getMarsPhotos,
   getNearEarthObjects,
   getEPIC,

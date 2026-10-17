@@ -1457,6 +1457,8 @@ app.get('/api', (req, res) => {
       { method: 'GET', path: '/api/nasa/exoplanets', description: 'Nearest confirmed exoplanets (NASA Exoplanet Archive TAP)' },
       { method: 'GET', path: '/api/nasa/sentry', description: 'Planetary-defense risk objects (NASA/JPL Sentry table)' },
       { method: 'GET', path: '/api/nasa/satellites', description: 'Satellite orbital elements by group (CelesTrak TLE)' },
+      { method: 'GET', path: '/api/nasa/archive', description: 'Local NASA archive DB: kind=apod|asteroids|epic, q, limit' },
+      { method: 'GET', path: '/api/nasa/archive/stats', description: 'Archive row counts (apod/asteroids/epic)' },
       { method: 'POST', path: '/api/contact', description: 'Contact form submission' },
       { method: 'GET', path: '/api/contact/messages', description: 'Read stored contact messages', auth: true },
       { method: 'POST', path: '/crawl', description: 'Crawl a single URL', auth: true },
@@ -2100,6 +2102,30 @@ app.get('/api/nasa/satellites', async (req, res) => {
   } catch (error) {
     res.status(502).json({ error: 'CelesTrak unreachable — try again shortly', details: safeError(error) });
   }
+});
+
+// Pangkalan data arkib NASA setempat — dibaca terus dari cakera (tanpa API NASA),
+// jadi pantas & sentiasa ada walaupun api.nasa.gov down. q menapis tajuk/penjelasan.
+app.get('/api/nasa/archive', (req, res) => {
+  const kind = String(req.query.kind || 'apod').toLowerCase();
+  if (kind === 'apod') {
+    return res.json({ source: 'local-archive', items: nasa.store.listApod({ limit: req.query.limit, q: req.query.q }) });
+  }
+  if (kind === 'asteroids') {
+    return res.json({
+      source: 'local-archive',
+      items: nasa.store.searchAsteroids({ q: req.query.q, limit: req.query.limit, hazardousOnly: req.query.hazardous === '1' })
+    });
+  }
+  if (kind === 'epic') {
+    return res.json({ source: 'local-archive', items: nasa.store.listEpic({ limit: req.query.limit }) });
+  }
+  res.status(400).json({ error: "kind must be one of: apod | asteroids | epic" });
+});
+
+// Statistik arkib (jumlah rekod setiap koleksi) untuk papan pemuka & AI.
+app.get('/api/nasa/archive/stats', (req, res) => {
+  res.json({ source: 'local-archive', ...nasa.store.stats() });
 });
 
 // Borang hubungi: simpan mesej pelawat (admin baca melalui /api/contact/messages)

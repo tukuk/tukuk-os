@@ -72,6 +72,8 @@ async function main() {
     // Auto-update APOD: tarik gambar hari ini di latar belakang setiap beberapa minit.
     nasa.startApodAutoUpdate();
     console.log(`[nasa] auto-update APOD setiap ${config.nasa.apodRefreshMinutes} minit`);
+    // Backfill arkib NASA ke pangkalan data setempat (data/nasa/) setiap 6 jam.
+    nasa.startArchiveBackfill();
   });
 
   // WebSocket editor Tukuk Agent (/agent/...) —Upgrade lulus terus ke
@@ -82,6 +84,7 @@ async function main() {
     console.log(`\n[tukuk-os] menerima ${signal}, menutup dengan perlahan...`);
     net.stop();
     nasa.stopApodAutoUpdate();
+    nasa.stopArchiveBackfill();
     store.close();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 5000).unref();
