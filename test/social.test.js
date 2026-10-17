@@ -27,7 +27,7 @@ test('lookup: nama tidak sah → error tanpa menyentuh rangkaian', async () => {
 });
 
 test('PLATFORMS: setiap entri ada nama + templat URL https', () => {
-  assert.ok(social.PLATFORMS.length >= 8);
+  assert.ok(social.PLATFORMS.length >= 21);
   for (const p of social.PLATFORMS) {
     assert.ok(p.name, 'platform perlu nama');
     assert.match(p.url('abc'), /^https:\/\//, `${p.name} URL mestilah https`);
