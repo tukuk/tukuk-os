@@ -120,6 +120,16 @@ async function loadEvent(eonetId) {
   try {
     const body = await fetchJson(`${EONET}/events/${id}`);
     if (!body || !body.id) throw new Error('tiada acara');
+    // Endpoint DETAIL guna kunci `geometry` (tunggal); senarai guna `geometries`.
+    if (!Array.isArray(body.geometries)) body.geometries = Array.isArray(body.geometry) ? body.geometry : [];
+    // Detail juga tiada created/updated — terbit daripada hujung garis masa geometri.
+    if (body.geometries.length && (body.created == null || body.updated == null)) {
+      const dates = body.geometries.map((g) => String(g.date || '')).filter(Boolean).sort();
+      if (dates.length) {
+        if (body.created == null) body.created = dates[0];
+        if (body.updated == null) body.updated = dates[dates.length - 1];
+      }
+    }
     cacheSet(key, body, TTL_ONE);
     return body;
   } catch (err) {

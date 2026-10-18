@@ -31,6 +31,8 @@ test('bencana.js: NASA EONET tanpa kunci, include=geo, id EONET_\d+ divalidasi',
   assert.ok(!/api_key|apikey|Bearer/i.test(bcSrc), 'tiada kunci API');
   assert.ok(bcSrc.includes('include=geo'), 'geometri coordinate ikut senarai');
   assert.ok(/EONET_\\d\+\$/.test(bcSrc), 'id acara divalidasi regex');
+  assert.ok(bcSrc.includes('body.geometry'), 'detail EONET: kunci `geometry` dinormal → geometries');
+  assert.ok(bcSrc.includes("body.created == null"), 'created/updated diterbitkan daripada garis masa geometri');
   assert.ok(bcSrc.includes('family: 6'), 'agent IPv6 didahulukan');
   const n = (bcSrc.match(/id: '/g) || []).length;
   assert.ok(n >= 10, `sekurang-kurangnya 10 kategori (dapat ${n})`);
