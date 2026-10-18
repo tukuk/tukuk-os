@@ -1816,7 +1816,7 @@ function renderNasaApodPage(req, apod) {
   const imgHtml = isVideo
     ? nasaVideoPlayer(a.url, title, true)
     : /^https?:\/\//i.test(img)
-    ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(title)} \u2014 Astronomy Picture of the Day" loading="eager" decoding="async" style="max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">`
+    ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(title)} \u2014 Astronomy Picture of the Day" width="1280" height="800" loading="eager" decoding="async" style="max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">`
     : `<p><a href="${escapeHtml(String(a.url || selfUrl))}" rel="noopener" target="_blank">View today\u2019s media on NASA</a></p>`;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1897,7 +1897,8 @@ function nasaSpaceNav() {
 
 function nasaImg(url, alt, eager) {
   if (!/^https?:\/\//i.test(String(url || ''))) return '';
-  return `<img class="nasa-img" src="${escapeHtml(url)}" alt="${escapeHtml(alt || 'NASA space image (public domain)')}" loading="${eager ? 'eager' : 'lazy'}" decoding="async">`;
+  // width/height + CSS height:auto → nisbah rizab (CLS); kotak sebenar tetap CSS yang tentukan.
+  return `<img class="nasa-img" src="${escapeHtml(url)}" alt="${escapeHtml(alt || 'NASA space image (public domain)')}" width="1280" height="720" loading="${eager ? 'eager' : 'lazy'}" decoding="async">`;
 }
 
 // APOD media_type=video (termasuk entri "Sonified:") — URL YouTube BUKAN untuk <img>.
@@ -1964,7 +1965,7 @@ function nasaDoc(o) {
 .nasa-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21)}
 .nasa-card h3{margin:0 0 6px;font-size:.9rem;color:var(--muted,#9aa3b2);font-weight:600}
 .nasa-card .big{font-size:1.45rem;font-weight:700}
-.nasa-img{max-width:100%;border-radius:10px;border:1px solid var(--line);display:block;margin:0 auto}
+.nasa-img{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line);display:block;margin:0 auto}
 table.nasa-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
 .nasa-table th,.nasa-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
 .nasa-table th{background:var(--panel,#171a21)}
@@ -2224,14 +2225,22 @@ function nasaAsteroidsPage(req, week, trend, sentry) {
       + `<div class="nasa-card"><h3>In lunar distances</h3><div class="big">${Number(trend.nearest.moonDistances) || 0} \u00d7 Moon</div></div></div>`
     : '';
   const dir = trend && trend.trend ? trend.trend.direction : 'flat';
+  // Kejujuran sumber: tiada nombor rekaan pernah dipaparkan — jika suapan JPL
+  // sibuk, arkib tarikan nyata hidang dengan notis yang jelas.
+  const srcNote = week && week.source === 'archive'
+    ? `<div class="nasa-ok"><h3>Live feed briefly busy — showing real archived approaches</h3><p>NASA\u2019s NeoWs endpoint is not answering this moment, so the table lists <b>genuine close approaches from the last successful JPL fetch</b>${week.archivedAt ? ` (recorded ${escapeHtml(String(week.archivedAt).slice(0, 10))})` : ''}. Nothing below is simulated; the live list repopulates automatically the moment the feed recovers.</p></div>`
+    : week && week.source === 'unavailable'
+    ? `<div class="nasa-ok"><h3>Live feed unreachable right now</h3><p>NASA\u2019s NeoWs endpoint and this server\u2019s archive are both between reads. The trend history and Sentry table below come from independent sources. We never publish invented approach numbers \u2014 check back shortly.</p></div>`
+    : '';
   const body = `<p>"Near-Earth object" means any asteroid or comet whose orbit brings it within <b>1.3 times</b> the Earth\u2013Sun distance. Almost every one passes at millions of kilometres \u2014 an "encounter" is an astronomical event, not a hazard. One lunar distance (LD) equals 384,400 km, the average Earth\u2013Moon gap.</p>`
+    + srcNote
     + `<div class="nasa-grid"><div class="nasa-card"><h3>Objects in window</h3><div class="big">${nasaFmt(trend && trend.totals ? trend.totals.asteroids : (week.element_count || 0))}</div></div>`
     + `<div class="nasa-card"><h3>Potentially hazardous</h3><div class="big">${nasaFmt(trend && trend.totals ? trend.totals.hazardous : 0)}</div></div>`
     + `<div class="nasa-card"><h3>4-week trend</h3><div class="big">${dir === 'up' ? '\u2197 rising' : dir === 'down' ? '\u2198 easing' : '\u2194 steady'} (${Number(trend && trend.trend ? trend.trend.changePercent : 0)}%)</div></div></div>`
     + nearest + sentryHtml
     + `<h2 class="section-title">Close approaches this week</h2>`
     + (rows ? `<table class="nasa-table"><tr><th>Object</th><th>Approach</th><th>Diameter</th><th>Speed</th><th>Miss distance</th><th>Hazardous</th></tr>${rows}</table>`
-      : '<p>No radar-confirmed close approaches were returned for this window \u2014 check again tomorrow, the list repopulates daily from JPL.</p>')
+      : '<p>No radar-confirmed close approaches were returned for this window \u2014 quiet weeks are normal, and the list repopulates daily from JPL.</p>')
     + `<h2 class="section-title">Activity by week</h2>${bars || '<p class="meta">Trend history is still accumulating.</p>'}`
     + `<h2 class="section-title">How Earth is defended</h2><p>NASA\u2019s <b>DART</b> mission successfully altered the orbit of the asteroid Dimorphos in 2022, proving a kinetic impactor can deflect a body given years of warning. Survey missions such as <b>NEO Surveyor</b> aim to find the dark objects still hiding inside Venus\u2019s orbit.</p>`
     + `<p class="meta">Approach data: NASA CNEOS NeoWs \u00b7 risk data: JPL Sentry \u00b7 public domain.</p>`;
@@ -2330,7 +2339,7 @@ function nasaEarthPage(req, list) {
   const slides = items.map((e, i) => ({ src: String(e.url || e.thumb), cap: String(e.caption || 'Earth \u00b7 DSCOVR EPIC').slice(0, 200), date: String(e.date || '').slice(0, 10), i })).slice(0, 12);
   const payload = JSON.stringify(slides).replace(/</g, '\\u003c');
   const strip = slides.map((s, i) => `<button type="button" data-i="${i}" class="${i === 0 ? 'on' : ''}">${escapeHtml(s.date || ('#' + (i + 1)))}</button>`).join('');
-  const player = slides.length ? `<p><img id="epicimg" class="nasa-img" src="${escapeHtml(slides[0].src)}" alt="Whole planet Earth photographed from the DSCOVR EPIC camera at the L1 point" loading="eager" decoding="async"></p>`
+  const player = slides.length ? `<p><img id="epicimg" class="nasa-img" src="${escapeHtml(slides[0].src)}" alt="Whole planet Earth photographed from the DSCOVR EPIC camera at the L1 point" width="1024" height="1024" loading="eager" decoding="async"></p>`
     + `<p class="meta" id="epiccap">${escapeHtml(slides[0].cap)}</p>`
     + `<div class="nasa-strip" id="epicstrip" role="group" aria-label="Choose an EPIC image by date">${strip}</div>`
     + `<script>(function(){var d=${payload};var im=document.getElementById('epicimg');var cp=document.getElementById('epiccap');var st=document.getElementById('epicstrip');if(!im||!st)return;`
@@ -2395,8 +2404,8 @@ function nasaExoplanetsPage(req, exo, withinPc) {
 
 // ── BUNYI ANGKASA — arkib audio NASA (domain awam) boleh main di halaman ──
 const NASA_SOUND_TOPICS = [
-  { slug: 'apollo', label: 'Apollo missions', blurb: 'Lunar surface chatter, launch control and mission audio from the 1960s\u201370s.' },
-  { slug: 'planets', label: 'Planets', blurb: 'Sonified magnetic fields and plasma waves recorded by spacecraft.' },
+  { slug: 'apollo', label: 'Apollo missions', blurb: 'Apollo-era mission audio and NASA\u2019s own historians on the landings.' },
+  { slug: 'planets', label: 'Planets', blurb: 'Planetary science in NASA\u2019s own audio \u2014 what spacecraft measured across the Solar System.' },
   { slug: 'rockets', label: 'Rocket launches', blurb: 'Lift-off acoustics \u2014 from Saturn V to SLS and commercial boosters.' },
   { slug: 'mars', label: 'Mars', blurb: 'NASA has recorded sound on another planet \u2014 Perseverance\u2019s microphones did it.' },
   { slug: 'spacewalk', label: 'Spacewalks', blurb: 'EVA radio traffic, tool clanks and breathing outside the station.' },
@@ -2460,7 +2469,7 @@ function nasaSatellitesPage(req, data, group) {
     + `<h2 class="section-title">See one yourself</h2><p>On a clear night an hour after dusk, look for a steady bright light moving steadily across the sky \u2014 that is almost always a satellite, and the brightest are the station and the Iridium-style flares. Anything moving is in orbit; anything twinkling is a star.</p>`
     + `<p class="meta">Orbital elements: CelesTrak GP data (public TLE feed) \u00b7 catalogue identifiers: USSPACECOM NORAD.</p>`;
   return nasaDoc({
-    title: `Satellites in Orbit \u2014 ${g.label} Live Orbital Elements | Tukuk-OS`,
+    title: `Satellites in Orbit \u2014 ${g.label}: Live Orbital Elements | Tukuk-OS`,
     desc: `Real orbit data for the ${g.label.toLowerCase()}: NORAD ID, inclination, period and altitude, decoded live from public TLE elements.`,
     selfUrl, heroTitle: `Orbiting Now \u00b7 ${g.label}`, heroSub: 'Decoded from public two-line elements \u00b7 refreshed on every visit',
     body,

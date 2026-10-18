@@ -81,3 +81,31 @@ test('APOD video ("Sonified:") → iframe player + poster, BUKAN <img src=youtub
   const arch = serverSrc.slice(serverSrc.indexOf('function nasaArchivePage'), serverSrc.indexOf('function nasaSkyPage'));
   assert.ok(arch.includes('nasaVideoPoster(e)'), 'thumbnail arkib papar poster video');
 });
+
+// ——— Kejujuran & kualiti data (audit Okt 2026: "jangan malukan NASA") ———
+test('asteroid: TIADA data rekaan — sandaran ialah arkib nyata + notis jujur', () => {
+  const nasaSrc = fs.readFileSync(path.join(ROOT, 'src', 'nasa.js'), 'utf8');
+  assert.ok(!nasaSrc.includes('fallbackAsteroids'), 'senarai asteroid mock mesti dipadam');
+  assert.ok(nasaSrc.includes("source: 'archive'"), 'laluan gagal hidang arkib NeoWs nyata');
+  assert.ok(nasaSrc.includes("source: 'unavailable'"), 'arkib kosong → jujur, bukan mock');
+  assert.ok(nasaSrc.includes('latestAsteroids('), 'penggetter arkib digunakan');
+  // renderer mesti ada notis source archive/unavailable
+  assert.match(serverSrc, /week\.source === 'archive'/, 'notis arkib dipaparkan');
+  assert.match(serverSrc, /week\.source === 'unavailable'/, 'notis tiada suapan dipaparkan');
+  assert.match(serverSrc, /Nothing below is simulated/, 'teks kejujuran archive');
+});
+
+test('audio: penapis kaitan topik + nyahpendua saluran liputan', () => {
+  const nasaSrc = fs.readFileSync(path.join(ROOT, 'src', 'nasa.js'), 'utf8');
+  assert.match(nasaSrc, /const AUDIO_TOPICS = \{/, 'peta topik audio ditakrif');
+  assert.ok(nasaSrc.includes('cfg.words.some'), 'kaitan kata kunci ditapis');
+  assert.ok(nasaSrc.includes('seenKey'), 'nyahpendua tajuk saluran sama');
+  assert.ok(nasaSrc.includes("reject: ['launch coverage']"), 'planets: liputan pelancaran ditolak');
+});
+
+test('imej NASA: semua <img> konten punya width/height (CLS) + CSS height:auto', () => {
+  const imgFn = serverSrc.slice(serverSrc.indexOf('function nasaImg('), serverSrc.indexOf('function nasaVideoId('));
+  assert.match(imgFn, /width="1280" height="720"/, 'nasaImg rizab nisbah');
+  assert.match(serverSrc, /\.nasa-img\{max-width:100%;height:auto/, 'CSS nasa-img height:auto');
+  assert.match(serverSrc, /id="epicimg"[^>]*width="1024" height="1024"/, 'EPIC player ada dimensi');
+});

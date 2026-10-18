@@ -125,6 +125,16 @@ function saveAsteroids(list) {
   return added;
 }
 
+/** Rekod NEO paling terkini yang benar-benar pernah berjaya ditarik dari NeoWs —
+ *  sandaran jujur apabila suapan langsung sibuk (TIADA data rekaan). */
+function latestAsteroids({ limit = 60 } = {}) {
+  const db = loadJson(ASTERIOD_FILE, {});
+  return Object.values(db)
+    .filter((a) => a && a.id && a.close_approach_date)
+    .sort((a, b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')))
+    .slice(0, Math.max(1, Math.min(Number(limit) || 60, 100)));
+}
+
 /** Cari asteroid arkib mengikut nama; bahaya dahulu, pendekatan terdekat dahulu. */
 function searchAsteroids({ q = '', limit = 20, hazardousOnly = false } = {}) {
   const db = loadJson(ASTERIOD_FILE, {});
@@ -179,6 +189,7 @@ module.exports = {
   latestApod,
   listApod,
   saveAsteroids,
+  latestAsteroids,
   searchAsteroids,
   saveEpic,
   listEpic,

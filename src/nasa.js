@@ -437,8 +437,8 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
   const end = endDate || todayStr;
   const cacheKey = `asteroids:${start}:${end}`;
   const cached = getCache(cacheKey);
-  // Keputusan sandaran tidak disimpan supaya percubaan seterusnya kekal sah
-  if (cached && cached.source !== 'fallback') return cached;
+  // Keputusan 'unavailable' tidak disimpan supaya percubaan seterusnya kekal sah
+  if (cached && cached.source !== 'unavailable') return cached;
 
   try {
     const params = {
@@ -448,7 +448,8 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
     };
 
     const res = await apiHttp.get(`${config.nasa.baseUrl}/neo/rest/v1/feed`, { params, timeout: 8000 });
-    const rawObjects = res.data?.near_earth_objects || {};
+    if (!res.data || !res.data.near_earth_objects) throw new Error('payload NeoWs tidak sah');
+    const rawObjects = res.data.near_earth_objects || {};
     const formatted = [];
 
     for (const [date, list] of Object.entries(rawObjects)) {
@@ -470,37 +471,43 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
       }
     }
 
-    if (formatted.length > 0) {
-      const result = {
-        element_count: res.data?.element_count || formatted.length,
-        start_date: start,
-        end_date: end,
-        source: 'nasa-neows',
-        asteroids: formatted.sort((a, b) => a.miss_distance_km - b.miss_distance_km)
-      };
-      store.saveAsteroids(formatted); // kumpul rekod NEO ke dalam DB arkib
-      setCache(cacheKey, result, 2 * 60 * 60 * 1000);
-      return result;
-    }
+    // Respons SAH — termasuk tingkap kosong (element_count 0) — hidang jujur;
+    // tiada pernah data rekaan.
+    if (formatted.length > 0) store.saveAsteroids(formatted); // kumpul rekod NEO ke dalam DB arkib
+    const result = {
+      element_count: res.data?.element_count || formatted.length,
+      start_date: start,
+      end_date: end,
+      source: 'nasa-neows',
+      asteroids: formatted.sort((a, b) => a.miss_distance_km - b.miss_distance_km)
+    };
+    setCache(cacheKey, result, 2 * 60 * 60 * 1000);
+    return result;
   } catch (err) {
-    // Gunakan fallback radar JPL jika pelayan NeoWs sedang sibuk
+    // Suapan langsung gagal → arkib rekod NYATA dari tarikan berjaya terakhir.
   }
 
-  const fallbackAsteroids = [
-    { id: '3605257', name: '433 Eros (NEO-1898)', nasa_jpl_url: 'https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=433', is_potentially_hazardous: false, estimated_diameter_meters: { min: 16800, max: 17000 }, close_approach_date: todayStr, velocity_kmh: 84200, miss_distance_km: 26700000 },
-    { id: '2099942', name: '99942 Apophis', nasa_jpl_url: 'https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=99942', is_potentially_hazardous: true, estimated_diameter_meters: { min: 340, max: 370 }, close_approach_date: todayStr, velocity_kmh: 107200, miss_distance_km: 31000 },
-    { id: '3542519', name: '101955 Bennu', nasa_jpl_url: 'https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=101955', is_potentially_hazardous: true, estimated_diameter_meters: { min: 490, max: 510 }, close_approach_date: todayStr, velocity_kmh: 101000, miss_distance_km: 480000 },
-    { id: '3789332', name: '2024 YR4', nasa_jpl_url: 'https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=2024YR4', is_potentially_hazardous: true, estimated_diameter_meters: { min: 45, max: 90 }, close_approach_date: todayStr, velocity_kmh: 46800, miss_distance_km: 1200000 },
-    { id: '2001862', name: '1862 Apollo', nasa_jpl_url: 'https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=1862', is_potentially_hazardous: true, estimated_diameter_meters: { min: 1400, max: 1600 }, close_approach_date: todayStr, velocity_kmh: 58000, miss_distance_km: 4200000 },
-    { id: '3200000', name: '3200 Phaethon', nasa_jpl_url: 'https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=3200', is_potentially_hazardous: true, estimated_diameter_meters: { min: 5800, max: 6200 }, close_approach_date: todayStr, velocity_kmh: 118000, miss_distance_km: 10300000 }
-  ];
+  const archived = store.latestAsteroids({ limit: 60 });
+  if (archived.length) {
+    const archivedAt = archived.map(a => String(a.lastSeen || '')).sort().pop();
+    const result = {
+      element_count: archived.length,
+      start_date: start,
+      end_date: end,
+      source: 'archive',
+      archivedAt,
+      asteroids: archived.sort((a, b) => a.miss_distance_km - b.miss_distance_km)
+    };
+    setCache(cacheKey, result, 5 * 60 * 1000); // 5 min — cuba langsung semula dengan cepat
+    return result;
+  }
 
   return {
-    element_count: fallbackAsteroids.length,
+    element_count: 0,
     start_date: start,
     end_date: end,
-    source: 'fallback',
-    asteroids: fallbackAsteroids
+    source: 'unavailable',
+    asteroids: []
   };
 }
 
@@ -546,7 +553,7 @@ async function getEPIC({ date } = {}) {
     if (earthMedia.items && earthMedia.items.length) {
       const fallbackList = earthMedia.items.slice(0, 12).map((item, idx) => ({
         identifier: item.nasa_id || `epic-earth-${idx}`,
-        caption: item.title || 'Foto Sfera Bumi Satelit DSCOVR EPIC',
+        caption: item.title || 'DSCOVR EPIC full-disc Earth photograph',
         image: item.nasa_id,
         date: item.date_created?.slice(0, 10) || '2026',
         url: item.thumb,
@@ -712,22 +719,49 @@ function safeAssetUrl(raw) {
   }
 }
 
+// Topik audio → carian + kata kunci kaitan. Carian NASA SDK kadangkala hidang
+// podcast HWHAP/NASA TV yang tidak disebut topik — hanya item yang menyebut
+// kata kuncinya dalam tajuk/penjelasan dipaparkan (kualiti > kuantiti).
+const AUDIO_TOPICS = {
+  apollo: { q: 'apollo', words: ['apollo'] },
+  planets: { q: 'planets', words: ['planet', 'sonif', 'plasma', 'magnetic'], reject: ['launch coverage'] },
+  rockets: { q: 'rocket launch', words: ['rocket', 'launch'] },
+  mars: { q: 'mars', words: ['mars'] },
+  spacewalk: { q: 'spacewalk', words: ['spacewalk', 'eva'] },
+  shuttle: { q: 'space shuttle', words: ['shuttle'] }
+};
+
 async function getSpaceAudio(query = 'apollo') {
-  const cleanQ = String(query).trim() || 'apollo';
-  const cacheKey = `nasa-audio:${cleanQ}`;
+  const slug = AUDIO_TOPICS[String(query).trim().toLowerCase()] ? String(query).trim().toLowerCase() : 'apollo';
+  const cfg = AUDIO_TOPICS[slug];
+  const cacheKey = `nasa-audio:${slug}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
 
   try {
     const res = await http.get('https://images-api.nasa.gov/search', {
-      params: { q: cleanQ, media_type: 'audio' },
+      params: { q: cfg.q, media_type: 'audio', year_start: 1960 },
       timeout: 15000
     });
 
     const rawItems = res.data?.collection?.items || [];
+    // Tapis kaitan dulu (murah — metadata sahaja), nyahpendua liputan berbilang
+    // saluran acara yang sama ("... - Pad 1 (CH1)"), baru selesaikan manifest aset.
+    const seenKey = new Map();
+    const relevant = rawItems.filter(item => {
+      const d = item.data?.[0] || {};
+      const blob = `${d.title || ''} ${d.description || ''}`.toLowerCase();
+      if (!cfg.words.some(w => blob.includes(w))) return false;
+      if ((cfg.reject || []).some(w => blob.includes(w))) return false;
+      const key = String(d.title || '').toLowerCase().split(/\s+[-–]\s+/)[0].replace(/\(.*?\)|[^a-z0-9 ]/g, '').trim().slice(0, 48);
+      const n = seenKey.get(key) || 0;
+      if (n >= 2) return false;
+      seenKey.set(key, n + 1);
+      return true;
+    }).slice(0, 12);
     const items = [];
 
-    for (const item of rawItems.slice(0, 12)) {
+    for (const item of relevant) {
       const data = item.data?.[0] || {};
       const jsonHref = safeAssetUrl(item.href);
       let audioUrl = '';
@@ -754,11 +788,11 @@ async function getSpaceAudio(query = 'apollo') {
       }
     }
 
-    const result = { query: cleanQ, items };
+    const result = { query: cfg.q, topic: slug, items };
     setCache(cacheKey, result, 6 * 60 * 60 * 1000);
     return result;
   } catch {
-    return { query: cleanQ, items: [] };
+    return { query: cfg.q, topic: slug, items: [] };
   }
 }
 
