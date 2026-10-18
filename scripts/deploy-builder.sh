@@ -40,4 +40,4 @@ ssh_run "systemctl enable tukuk-builder >/dev/null 2>&1 || true"
 ssh_run "systemctl restart tukuk-builder"
 sleep 2
 ssh_run "systemctl is-active tukuk-builder && curl -s -o /dev/null -w 'http=%{http_code}\n' http://127.0.0.1:5174/"
-echo "[builder] siap. Ingatkan: tambah hostname build.tukuk.org → http://127.0.0.1:5174 di dashboard Cloudflare (tunnel token-mode mengabaikan ingress lokal)."
+echo "[builder] siap. Hostname aktif: https://dashboard.tukuk.org (sudah diroute di remote-config tunnel; allowedHosts .tukuk.org dalam vite.config.ts). Untuk build.tukuk.org: tambah Public Hostname build.tukuk.org -> http://127.0.0.1:5174 di dashboard Cloudflare (token cfut_ tak boleh urus DNS)."
