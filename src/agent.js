@@ -83,8 +83,10 @@ function mount(app, deps) {
       }
     }
     let out;
+    // Model ID `-fast` (cth tukuk-agent-fast) → peta ke model ringan pembekal.
+    const wantFast = String((req.body && req.body.model) || '').endsWith('-fast');
     try {
-      out = await openai.chatWithRotation(req.body || {}, { timeoutMs: config.agent.timeoutMs });
+      out = await openai.chatWithRotation(req.body || {}, { timeoutMs: config.agent.timeoutMs, fast: wantFast });
     } catch (error) {
       // Ralat tak dijangka DALAM proxy → 4xx juga (jangan 500; tepi akan topeng).
       return res.status(424).json({ error: 'Agent proxy failed', details: String(error && error.message || error) });

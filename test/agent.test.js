@@ -93,6 +93,43 @@ test('openaiProviders: ollama-cloud dipetakan ke bentuk OpenAI /v1', () => withP
   assert.equal(out.provider, 'ollama-cloud');
 }));
 
+test('rotasi fast: model pembekal dipetakan ke model ringan apabila fast=true', () => withProviders([groq], async () => {
+  let seenBody;
+  const fetchImpl = async (url, opts) => {
+    seenBody = JSON.parse(opts.body);
+    return new Response('{"choices":[]}', { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const out = await openai.chatWithRotation(
+    { model: 'tukuk-agent-fast', messages: [{ role: 'user', content: 'x' }] },
+    { fetchImpl, fast: true }
+  );
+  assert.equal(out.ok, true);
+  assert.equal(seenBody.model, 'llama-3.1-8b-instant', 'groq → model kilat');
+  assert.equal(out.model, 'llama-3.1-8b-instant', 'header X-Agent-Model ikut model sebenar');
+}));
+
+test('rotasi fast: provider tolak model laju (404) → jatuh ke model biasa, bukan cooling', () => withProviders([groq], async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => {
+    const b = JSON.parse(opts.body);
+    calls.push(b.model);
+    return b.model === 'llama-3.1-8b-instant'
+      ? new Response('model not found', { status: 404 })
+      : new Response('{"choices":[]}', { status: 200 });
+  };
+  const out = await openai.chatWithRotation(
+    { model: 'tukuk-agent-fast', messages: [{ role: 'user', content: 'x' }] },
+    { fetchImpl, fast: true }
+  );
+  assert.equal(out.ok, true, 'model biasa penyelamat permintaan');
+  assert.deepEqual(calls, ['llama-3.1-8b-instant', 'openai/gpt-oss-120b']);
+}));
+
+test('/models mengiklankan tukuk-agent + tukuk-agent-fast', () => {
+  const ids = openai.listModels().map((m) => m.id);
+  assert.deepEqual(ids, ['tukuk-agent', 'tukuk-agent-fast']);
+});
+
 // ── Loopback HTTP penuh untuk src/agent.js ──────────────────────────────────
 function startApp({ token = 'secret-agent', freeToken = 'free-public', origin = '', patch } = {}) {
   const app = express();
@@ -181,6 +218,27 @@ test('CORS: subdomain tukuk.org (Builder) didengungkan walau AGENT_ORIGIN lain',
     });
     assert.equal(alien.headers.get('access-control-allow-origin'), 'https://agent.tukuk.org');
   } finally { await close(); }
+});
+
+test('route: model `-fast` sampai ke rotasi dengan flag fast=true', async () => {
+  const saved = openai.chatWithRotation;
+  let seenOpts;
+  openai.chatWithRotation = async (body, opts) => {
+    seenOpts = opts;
+    return {
+      ok: true, provider: 'groq', model: 'llama-3.1-8b-instant',
+      response: new Response('{"choices":[]}', { status: 200, headers: { 'content-type': 'application/json' } }),
+    };
+  };
+  const { base, close } = await startApp();
+  try {
+    await fetch(base + '/api/agent/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', Authorization: 'Bearer secret-agent' },
+      body: JSON.stringify({ model: 'tukuk-agent-fast', messages: [{ role: 'user', content: 'x' }] }),
+    });
+    assert.equal(seenOpts.fast, true, 'hujung `-fast` dicantum jadi flag rotasi');
+  } finally { openai.chatWithRotation = saved; await close(); }
 });
 
 test('route: /v1/chat/completions memancarkan jawapan upstream + header provider', async () => {

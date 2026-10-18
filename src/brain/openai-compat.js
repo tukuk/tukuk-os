@@ -18,6 +18,24 @@ const provider = require('./provider');
 // Model stabil yang diiklankan ke klien. Dipeta kepada model sebenar pembekal
 // yang aktif pada setiap percubaan (rotasi boleh tukar pembekal/model).
 const ADVERTISED_MODEL = 'tukuk-agent';
+// Varian CEPAT: dipeta ke model ringan setiap pembekal (lihat FAST_MODELS).
+const ADVERTISED_MODEL_FAST = 'tukuk-agent-fast';
+
+/*
+ * Peta model laju bagi tier percuma/`-fast`: pemboleh ubah
+ * AGENT_FAST_MODEL_<NAMA> menang; jika tiada, default terbukti ada di Groq
+ * (llama-3.1-8b-instant balas ±0.7s vs 3.7s gpt-oss-120b). Pembekal tanpa
+ * default hanya guna model biasa (tiada 404 model).
+ */
+const FAST_MODELS = {
+  groq: process.env.AGENT_FAST_MODEL_GROQ || 'llama-3.1-8b-instant',
+  openrouter: process.env.AGENT_FAST_MODEL_OPENROUTER || 'meta-llama/llama-3.3-70b-instruct',
+};
+
+function fastModelFor(name) {
+  const key = 'AGENT_FAST_MODEL_' + String(name).toUpperCase().replace(/[^A-Z0-9]/g, '_');
+  return process.env[key] || FAST_MODELS[String(name)] || '';
+}
 
 // Pembekal yang `kind:'openai'` tetapi TIDAK faham `tools`/`tool_calls`.
 // litert (gemma3-1b pinggir) menjawab 200 dengan text sahaja dan MENJAUH
@@ -48,13 +66,19 @@ function listModels() {
       created: Math.floor(Date.now() / 1000),
       owned_by: 'tukuk-agent',
     },
+    {
+      id: ADVERTISED_MODEL_FAST,
+      object: 'model',
+      created: Math.floor(Date.now() / 1000),
+      owned_by: 'tukuk-agent',
+    },
   ];
 }
 
 // Satu percubaan ke SATU pembekal. Body diteruskan HANYLA dengan `model`
 // dipaksa ke model pembekal (menjamin model function-calling digunakan walau
 // klien hantar ID lain). Authorization + header per-pembekal ditangani di sini.
-async function callUpstream(p, fwdBody, fetchImpl, timeoutMs) {
+async function callUpstream(p, fwdBody, fetchImpl, timeoutMs, model) {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` };
   if (p.name === 'openrouter') {
     headers['HTTP-Referer'] = 'https://tukuk.org';
@@ -64,7 +88,7 @@ async function callUpstream(p, fwdBody, fetchImpl, timeoutMs) {
   return fetchImpl(`${p.baseUrl}/chat/completions`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ ...fwdBody, model: p.model }),
+    body: JSON.stringify({ ...fwdBody, model: model || p.model }),
     signal,
   });
 }
@@ -79,7 +103,7 @@ async function callUpstream(p, fwdBody, fetchImpl, timeoutMs) {
  * mencuba pembekal seterusnya tetapi TIDAK menjejaskan cooling. Semua habis →
  * 429 (kuota) atau 424 (ralat lain). Tiada 5xx.
  */
-async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs = 120000 } = {}) {
+async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs = 120000, fast = false } = {}) {
   const messages = body && body.messages;
   if (!Array.isArray(messages) || messages.length === 0) {
     return { ok: false, status: 400, error: 'Request must include a non-empty "messages" array.', rejected: [] };
@@ -108,8 +132,9 @@ async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs 
       continue;
     }
     try {
-      const res = await callUpstream(p, rest, fetchImpl, timeoutMs);
-      if (res.ok) return { ok: true, provider: p.name, model: p.model, response: res };
+      const useModel = fast ? fastModelFor(p.name) : '';
+      const res = await callUpstream(p, rest, fetchImpl, timeoutMs, useModel);
+      if (res.ok) return { ok: true, provider: p.name, model: useModel || p.model, response: res };
 
       const detail = await res.clone().text().catch(() => '');
       const err = new Error(`${p.name} ${res.status}: ${detail.slice(0, 160)}`);
@@ -117,6 +142,17 @@ async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs 
       if (provider.isQuotaError(err)) {
         sawQuota = true;
         provider.markCooling(p.name, provider.quotaCooldownMs(err));
+      }
+      /*
+       * Model laju tak dikenal pasti (400/404) — JANGAN tandai kuota/cooling;
+       * rotasi biasa (model pembekal) masih peluang kedua yang betul.
+       */
+      if (useModel && (err.status === 400 || err.status === 404)) {
+        rejected.push({ provider: p.name, reason: `fast model ditolak: ${err.message}` });
+        try {
+          const res2 = await callUpstream(p, rest, fetchImpl, timeoutMs, p.model);
+          if (res2.ok) return { ok: true, provider: p.name, model: p.model, response: res2 };
+        } catch { /* jatuh ke bawah sebagai rejection biasa */ }
       }
       rejected.push({ provider: p.name, reason: err.message });
     } catch (err) {
@@ -136,4 +172,4 @@ async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs 
   };
 }
 
-module.exports = { ADVERTISED_MODEL, openaiProviders, listModels, chatWithRotation };
+module.exports = { ADVERTISED_MODEL, ADVERTISED_MODEL_FAST, openaiProviders, listModels, chatWithRotation, fastModelFor };
