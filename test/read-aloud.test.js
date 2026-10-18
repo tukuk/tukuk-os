@@ -19,6 +19,12 @@ test('read-aloud.js: Web Speech API asli, tanpa kunci/eval (CSP-safe)', () => {
   assert.ok(raSrc.includes("if (!synth || !window.SpeechSynthesisUtterance) return;"), 'ciri-ciri disemak dulu');
   assert.ok(raSrc.includes('armKeepAlive'), 'workaround Chrome berhenti queue panjang');
   assert.ok(raSrc.includes("'ms'") && raSrc.includes('ms-MY'), 'keutamaan suara Bahasa Melayu');
+  // Regresi 2026-10: tanpa voice TTS, onerror sinkron → speakCur() rekursif
+  // meletupkan stack (RangeError) & bacaan mati senyap. Kemajuan MESTI ditangguh.
+  assert.ok(/setTimeout\(speakCur, \d+\)/.test(raSrc), 'kemajuan queue ditangguhkan, bukan rekursi segerak');
+  assert.ok(raSrc.includes('errStreak'), 'pengawal rali berturutan (fail-out jujur)');
+  assert.ok(!/onerror = function \(\) \{[^}]*speakCur\(\);/.test(raSrc), 'onerror tak panggil speakCur terus');
+  assert.ok(raSrc.includes('novoice') && raSrc.includes('speech-dispatcher'), 'mesej jujur tiada voice (Android/Linux)');
 });
 
 test('read-aloud.js: SKIP SPA/alat, hanya halaman kandungan', () => {

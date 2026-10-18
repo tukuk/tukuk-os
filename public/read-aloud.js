@@ -16,8 +16,8 @@
 
   var LANG2 = (document.documentElement.getAttribute('lang') || 'en').slice(0, 2);
   var I18N = {
-    ms: { play: '▶ Baca', pause: '⏸ Jeda', resume: '▶ Sambung', stop: '⏹ Berhenti', title: 'Baca Kuat', hint: 'Klik ▶ Baca untuk dengar halaman ini dibacakan.', voice: 'Suara', rate: 'Kelajuan', reading: 'Membaca', done: 'Selesai', off: 'Tiada suara sintetik dalam bahasa Melayu — digunakan voice sistem.', end: 'Bacaan selesai' },
-    en: { play: '▶ Read', pause: '⏸ Pause', resume: '▶ Resume', stop: '⏹ Stop', title: 'Read Aloud', hint: 'Click ▶ Read to listen to this page.', voice: 'Voice', rate: 'Speed', reading: 'Reading', done: 'Done', off: 'No synthetic voice in your language — using the system voice.', end: 'Reading finished' }
+    ms: { play: '▶ Baca', pause: '⏸ Jeda', resume: '▶ Sambung', stop: '⏹ Berhenti', title: 'Baca Kuat', hint: 'Klik ▶ Baca untuk dengar halaman ini dibacakan.', voice: 'Suara', rate: 'Kelajuan', reading: 'Membaca', done: 'Selesai', off: 'Tiada suara sintetik dalam bahasa Melayu — digunakan voice sistem.', end: 'Bacaan selesai', novoice: 'Tiada suara sintetik dalam sistem ini. Android: Tetapan → Suara → Keluaran TTS. Linux (Chrome/Firefox): pasang pakej speech-dispatcher + espeak-ng, kemudian mula semula pelayar.', fail: 'Enjin suara sistem tidak bertindak — tiada voice TTS tersedia.' },
+    en: { play: '▶ Read', pause: '⏸ Pause', resume: '▶ Resume', stop: '⏹ Stop', title: 'Read Aloud', hint: 'Click ▶ Read to listen to this page.', voice: 'Voice', rate: 'Speed', reading: 'Reading', done: 'Done', off: 'No synthetic voice in your language — using the system voice.', end: 'Reading finished', novoice: 'No synthetic voice is installed on this device. Android: Settings → Sound → TTS output. Linux (Chrome/Firefox): install the speech-dispatcher + espeak-ng packages, then restart the browser.', fail: 'The system speech engine did not respond — no TTS voice available.' }
   };
   var T = I18N[LANG2] || I18N.en;
 
@@ -100,6 +100,12 @@
   }
   fillVoices();
   if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = fillVoices;
+  // Voice tiba lewat (Chrome/Linux): semak semula; jika kekal kosong, jujur early.
+  function recheckVoices() {
+    fillVoices();
+    if (!voices.length) statusEl.textContent = T.novoice;
+  }
+  if (!voices.length) { setTimeout(recheckVoices, 1500); setTimeout(recheckVoices, 4500); }
   try {
     var rSaved = localStorage.getItem('ra-rate');
     if (rSaved && ['0.75', '1', '1.25', '1.5'].indexOf(rSaved) > -1) selRate.value = rSaved;
@@ -116,18 +122,36 @@
   }
 
   // ── Enjin baca: satu queue ayat, indeks simpan status ──
-  var idx = 0, playing = false, keepAlive = null;
-  function reset() { idx = 0; playing = false; if (keepAlive) { clearInterval(keepAlive); keepAlive = null; } }
+  // PENTING: tanpa voice, synth.speak() melempar onerror SINKRON — kemajuan
+  // queue wajib ditangguhkan (setTimeout), jika tidak rekursi segerak
+  // meletupkan stack (RangeError) dan bacaan mati senyap.
+  var idx = 0, playing = false, keepAlive = null, errStreak = 0;
+  function reset() { idx = 0; playing = false; errStreak = 0; if (keepAlive) { clearInterval(keepAlive); keepAlive = null; } }
   function speakCur() {
     if (idx >= sentences.length) { finish(); return; }
     var u = new SpeechSynthesisUtterance(sentences[idx]);
     var v = pickVoice();
     if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = LANG2 === 'ms' ? 'ms-MY' : 'en'; }
     u.rate = Number(selRate.value) || 1;
-    u.onend = function () { if (!playing) return; idx++; speakCur(); };
-    u.onerror = function () { if (!playing) return; idx++; speakCur(); };
+    var started = false;
+    u.onstart = function () { started = true; errStreak = 0; };
+    u.onend = function () { if (!playing) return; idx++; setTimeout(speakCur, 40); };
+    u.onerror = function () {
+      if (!playing) return;
+      if (!started) errStreak++;
+      if (errStreak >= 3) { failOut(); return; }
+      idx++; setTimeout(speakCur, 40);
+    };
     synth.speak(u);
     statusEl.textContent = T.reading + ' ' + (idx + 1) + '/' + sentences.length + ': ' + sentences[idx].slice(0, 70) + '…';
+  }
+  function failOut() {
+    synth.cancel();
+    var hadVoices = voices.length > 0;
+    reset();
+    btnPlay.textContent = T.play;
+    btnStop.hidden = true;
+    statusEl.textContent = hadVoices ? T.fail : T.novoice;
   }
   function finish() {
     reset();
@@ -145,9 +169,11 @@
 
   btnPlay.addEventListener('click', function () {
     if (!playing) {
+      if (!voices.length) { statusEl.textContent = T.novoice; return; } // jujur: jangan berlakon membaca
       synth.cancel();
       if (idx === 0 || idx >= sentences.length) idx = 0;
       playing = true;
+      errStreak = 0;
       armKeepAlive();
       speakCur();
       btnPlay.textContent = T.pause;
@@ -169,7 +195,7 @@
   });
   selRate.addEventListener('change', function () {
     try { localStorage.setItem('ra-rate', selRate.value); } catch (e) {}
-    if (playing) { synth.cancel(); speakCur(); }
+    if (playing) { synth.cancel(); setTimeout(speakCur, 40); }
   });
   window.addEventListener('beforeunload', function () { synth.cancel(); });
 })();
