@@ -1698,6 +1698,7 @@ function siteHeader(active) {
       ${link('/nasa', 'NASA', 'nasa')}
       ${link('/cuaca', 'Weather', 'cuaca')}
       ${link('/learn', 'Learn', 'learn')}
+      <a href="https://build.tukuk.org" rel="noopener">Build</a>
       ${link('/docs', 'Docs', 'docs')}
       ${link('/about', 'About', 'about')}
       <span class="theme-tools">
@@ -1734,6 +1735,7 @@ function siteFooter() {
       <li><a href="/seni">Free Art Gallery — The Met</a></li>
       <li><a href="/hidupan">Wildlife Atlas — Real Photos</a></li>
       <li><a href="/docs">Docs</a></li>
+      <li><a href="https://build.tukuk.org">Tukuk Builder — build apps &amp; 3D games</a></li>
     </ul></div>
     <div><h4>NASA Space</h4><ul>
       <li><a href="/nasa">Picture of the Day</a></li>
@@ -1837,7 +1839,7 @@ ${pageAdScript()}${clarityScript()}
 ${siteHeader(asHome ? 'home' : 'blog')}
 <div class="wrap">
   ${asHome
-    ? `<section class="hero"><h1>Tukuk-OS &mdash; Knowledge &amp; How-To Library</h1><p>Original, in-depth articles and guides on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account needed.</p><div class="cta"><a class="btn primary" href="/blog">Browse all articles</a><a class="btn ghost" href="/nasa">Today\u2019s NASA picture</a></div></section>`
+    ? `<section class="hero"><h1>Tukuk-OS &mdash; Knowledge &amp; How-To Library</h1><p>Original, in-depth articles and guides on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account needed.</p><div class="cta"><a class="btn primary" href="/blog">Browse all articles</a><a class="btn ghost" href="/nasa">Today\u2019s NASA picture</a><a class="btn ghost" href="https://build.tukuk.org" rel="noopener">Build an app</a></div></section>`
     : `<header><h1>Blog &amp; Knowledge Archive</h1><p class="tagline">In-depth articles on search engine technology, cybersecurity, semantic AI and web privacy.</p></header>`}
   <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}${asHome ? '<h2 class="section-title">Latest articles</h2><div class="feed">' : ''}`;
 
