@@ -135,9 +135,11 @@ module.exports = {
   adsense: {
     enabled: bool(process.env.ADSENSE_ENABLED, true),
     client: process.env.ADSENSE_CLIENT || 'ca-pub-8954948214333501',
-    slotTop: process.env.ADSENSE_SLOT_TOP || '2206273113',
+    // Unit sebenar dalam akaun ini (konsol AdSense, Okt 2026):
+    // top=「test banner 1」, in-article=「test banner」, bottom=「test banner 2」.
+    slotTop: process.env.ADSENSE_SLOT_TOP || '4776075642',
     slotInArticle: process.env.ADSENSE_SLOT_IN_ARTICLE || '2206273113',
-    slotBottom: process.env.ADSENSE_SLOT_BOTTOM || '2206273113'
+    slotBottom: process.env.ADSENSE_SLOT_BOTTOM || '7701621880'
   },
 
   brain: {

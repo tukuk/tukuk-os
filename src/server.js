@@ -902,10 +902,9 @@ const COMMON_CSS = `
 `;
 
 // Blog routes
-// AdSense: hanya papar unit bila AKTIF + client `ca-pub-…` sah + slot numerik
-// SEBENAR. Placeholder `2206273113` dianggap belum dikonfigurasi → return ''
-// (laman kekal bersih iklan sampai ID sebenar ditampal di Admin → paste-and-go).
-const ADSENSE_PLACEHOLDER = '2206273113';
+// AdSense: hanya papar unit bila AKTIF + client `ca-pub-…` sah + slot numerik.
+// `2206273113` dah disahkan unit SEBENAR ("test banner", akaun ini) — guard
+// placeholder lama dibuang; slot kosong bukan-numerik tetap ditolak.
 function adsenseClient() {
   const c = String(store.getSetting('adsClient', config.adsense.client) || '').trim();
   return /^ca-pub-\d+$/.test(c) ? c : '';
@@ -920,7 +919,7 @@ function adsenseOn() {
 }
 function realSlot(slot) {
   const s = String(slot || '').trim();
-  return /^\d+$/.test(s) && s !== ADSENSE_PLACEHOLDER ? s : '';
+  return /^\d+$/.test(s) ? s : '';
 }
 // Slot boleh dikonfigur via Admin (store: adsSlotTop/adsSlotInArticle/adsSlotBottom)
 // dengan fallback ke env/config. `label` dari pemanggil menentukan kunci store.
