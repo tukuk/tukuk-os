@@ -1458,7 +1458,7 @@ app.get('/blog/:slug', (req, res) => {
   if (!post) {
     const redirectTo = blogRedirects[req.params.slug];
     if (redirectTo) return res.redirect(301, `/blog/${encodeURIComponent(redirectTo)}`);
-    return res.status(404).send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Article Not Found &mdash; Tukuk-OS</title><style>${COMMON_CSS}</style><script src="/theme.js"></script><link rel="stylesheet" href="/theme.css"></head><body><div class="wrap" style="padding-top:60px"><h1>404 &mdash; Article not found</h1><p>Sorry, the article you are looking for does not exist or has moved.</p><p><a href="/blog">&larr; Back to the blog</a></p></div></body></html>`);
+    return res.status(404).type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Article Not Found &mdash; Tukuk-OS</title><meta name="robots" content="noindex"><link rel="icon" href="/icon.svg" type="image/svg+xml"><style>${COMMON_CSS}</style><script src="/theme.js"></script><link rel="stylesheet" href="/theme.css"></head><body>${siteHeader('blog')}<div class="wrap"><main><h1>404 &mdash; Article not found</h1><p>Sorry, that article doesn&rsquo;t exist or has moved. Browse the <a href="/blog">full archive</a> or <a href="/">return home</a>.</p></main></div>${siteFooter()}</body></html>`);
   }
 
   const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
