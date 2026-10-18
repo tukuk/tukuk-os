@@ -30,6 +30,7 @@ const cu = require('./cuti');
 const cd = require('./cuti-dunia');
 const ng = require('./negara');
 const study = require('./study');
+const udara = require('./udara');
 const st = require('./statistik');
 const bc = require('./bencana');
 const social = require('./social');
@@ -1273,7 +1274,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1656,6 +1657,7 @@ function siteFooter() {
       <li><a href="/wiki">Wiki</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
+      <li><a href="/udara">Air & Oxygen</a></li>
       <li><a href="/docs">Docs</a></li>
     </ul></div>
     <div><h4>NASA Space</h4><ul>
@@ -4989,6 +4991,251 @@ app.get('/study/geography', async (req, res) => {
   let rows = null;
   try { rows = await ng.loadCountries(); } catch (e) { rows = null; }
   res.type('html').send(studyGeographyPage(Array.isArray(rows) && rows.length >= 20 ? rows : null));
+});
+
+// ══ KOMPLEKS UDARA /udara — bacaan AQI dunia + CO2 langsung + edukasi oksigen ══
+const UDARA_SECTIONS = [
+  { href: '/udara', icon: '\uD83C\uDF0D', name: 'World Air Ranking', blurb: 'Live air quality for 70+ cities — the cleanest and dirtiest spots on Earth right now.' },
+  { href: '/udara/carbon', icon: '\uD83D\uDDA2', name: 'Carbon Dioxide Live', blurb: 'Today\u2019s actual CO2 reading from NOAA\u2019s Mauna Loa observatory, with the 65-year climb.' },
+  { href: '/udara/oxygen', icon: '\uD83E\uDEE9', name: 'Oxygen Explained', blurb: 'Where your oxygen really comes from, why it is falling, and what altitude does to a breath.' },
+  { href: '/udara/breath', icon: '\uD83E\uDEC1', name: 'Breathing Life', blurb: 'From blue whales to houseflies: how every creature moves air, and what your own breath is doing.' },
+];
+
+function udaraNav() {
+  return `<nav aria-label="Air and oxygen sections"><h2 class="section-title">Explore the Air & Oxygen Complex</h2><div class="feed">`
+    + UDARA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+// Pelukan standard /udara — cermin studyDoc (chrome penuh + iklan berkawal).
+function udaraDoc(o) {
+  const robots = o.robots || 'index,follow';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#4c8dff">
+<style>${COMMON_CSS}
+.air-table{width:100%;border-collapse:collapse;font-size:.92rem;margin:14px 0}
+.air-table th,.air-table td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+.air-table th{background:var(--panel,#171a21)}
+.aqi-chip{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:700;font-size:.82rem;color:#0f1115}
+.aqi-chip.good{background:#3fb950}
+.aqi-chip.moderate{background:#d29922}
+.aqi-chip.usg{background:#f0883e}
+.aqi-chip.unhealthy{background:#e5534b;color:#fff}
+.aqi-chip.very{background:#a371f7;color:#fff}
+.aqi-chip.hazardous{background:#8e1f2c;color:#fff}
+.air-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
+.air-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel,#171a21);margin:0}
+.air-card h3{margin:0 0 8px;font-size:1.05rem}
+.air-card p{margin:6px 0;font-size:.95rem}
+.big-readout{font-size:3rem;font-weight:800;letter-spacing:1px;margin:12px 0 4px}
+.bar-row{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:.86rem}
+.bar-row .bl{min-width:44px;text-align:right;color:var(--muted,#9aa3b2)}
+.bar-row .bv{min-width:70px}
+.bar-row .bt{height:14px;border-radius:4px;background:var(--accent,#4c8dff);opacity:.85}
+@media(max-width:680px){.air-grid{grid-template-columns:1fr}.air-table{display:block;overflow-x:auto}.big-readout{font-size:2.2rem}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('learn')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${udaraNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+function aqiChip(v) {
+  const c = udara.aqiCategory(v);
+  if (!c) return '<span class="meta">\u2014</span>';
+  return `<span class="aqi-chip ${c.cls}">${Math.round(v)} \u00b7 ${c.label}</span>`;
+}
+function airRow(r) {
+  const n = (x, unit) => (x == null ? '\u2014' : x + (unit || ''));
+  return `<tr><td><b>${escapeHtml(r.name)}</b>, ${escapeHtml(r.country)}</td><td>${escapeHtml(r.region)}</td><td>${aqiChip(r.usAqi)}</td><td>${n(r.pm25, ' \u00b5g/m\u00b3')}</td><td>${n(r.o3, ' \u00b5g/m\u00b3')}</td><td>${n(r.no2, ' \u00b5g/m\u00b3')}</td></tr>`;
+}
+
+// ── /udara — ranking langsung; jujur dengan source:'unavailable' bila mati ──
+function udaraHubPage(air, co2) {
+  const scale = `<h2 class="section-title">Reading the scale (US AQI)</h2>
+  <table class="air-table"><thead><tr><th>Number</th><th>What it means</th></tr></thead><tbody>
+  <tr><td>0\u201350</td><td>${aqiChip(30)} \u2014 air quality satisfactory for everyone.</td></tr>
+  <tr><td>51\u2013100</td><td>${aqiChip(75)} \u2014 acceptable; unusually sensitive people should mind long outdoor effort.</td></tr>
+  <tr><td>101\u2013150</td><td>${aqiChip(130)} \u2014 children, older adults and lung/heart conditions feel it first.</td></tr>
+  <tr><td>151\u2013200</td><td>${aqiChip(170)} \u2014 everyone starts to notice; sensitive groups clearly affected.</td></tr>
+  <tr><td>201\u2013300</td><td>${aqiChip(250)} \u2014 health effects likely; postpone hard outdoor exercise.</td></tr>
+  <tr><td>301+</td><td>${aqiChip(350)} \u2014 emergency conditions; nearly everyone is affected.</td></tr>
+  </tbody></table>`;
+  const co2Card = co2 && co2.source && co2.source !== 'unavailable'
+    ? `<div class="air-card"><h3>\uD83D\uDDA2 Carbon dioxide, right now</h3><p style="font-size:1.9rem;font-weight:800">${co2.ppm.toFixed(1)} ppm</p><p class="meta">NOAA ${escapeHtml(co2.site)} reading, ${escapeHtml(co2.date)} \u00b7 <a href="/udara/carbon">the full carbon story &rarr;</a></p></div>`
+    : `<div class="air-card"><h3>\uD83D\uDDA2 Carbon dioxide, right now</h3><p style="font-size:1.9rem;font-weight:800">\u2014</p><p class="meta">The NOAA feed is briefly resting \u2014 the <a href="/udara/carbon">carbon page</a> explains and retries.</p></div>`;
+  let data = '';
+  if (air && air.rows && air.rows.length) {
+    const rows = air.rows;
+    const mid = Math.round(rows[Math.floor(rows.length / 2)].usAqi);
+    const clean = rows.slice(0, 10).map(airRow).join('');
+    const dirty = rows.slice(-10).reverse().map(airRow).join('');
+    const all = rows.map((r, i) => `<tr><td>${i + 1}</td><td><b>${escapeHtml(r.name)}</b>, ${escapeHtml(r.country)}</td><td>${escapeHtml(r.region)}</td><td>${aqiChip(r.usAqi)}</td><td>${r.pm25 == null ? '\u2014' : r.pm25 + ' \u00b5g/m\u00b3'}</td></tr>`).join('');
+    const note = air.source === 'last-known'
+      ? `<p class="meta">\u26A0 The live feed is briefly unavailable \u2014 these are the last good readings, taken ${new Date(air.staleSince || air.fetchedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC.</p>`
+      : (air.source === 'partial' ? `<p class="meta">\u26A0 ${air.failedCount} of ${udara.CITIES.length} city readings failed this round; the rest are current.</p>` : '');
+    data = `<div class="air-grid">
+      <div class="air-card"><h3>\uD83C\uDF3F Cleanest spot right now</h3><p style="font-size:1.4rem;font-weight:800">${escapeHtml(rows[0].name)}, ${escapeHtml(rows[0].country)}</p><p>${aqiChip(rows[0].usAqi)}</p></div>
+      <div class="air-card"><h3>\uD83D\uDD25 Dirtiest spot right now</h3><p style="font-size:1.4rem;font-weight:800">${escapeHtml(rows[rows.length - 1].name)}, ${escapeHtml(rows[rows.length - 1].country)}</p><p>${aqiChip(rows[rows.length - 1].usAqi)}</p></div>
+      ${co2Card}
+      <div class="air-card"><h3>Middle of the pack</h3><p style="font-size:1.4rem;font-weight:800">median AQI ${mid}</p><p class="meta">across ${rows.length} monitored world cities</p></div>
+    </div>
+    ${note}
+    <h2 class="section-title">The ten cleanest points on Earth (of our network)</h2>
+    <table class="air-table"><thead><tr><th>City</th><th>Region</th><th>US AQI</th><th>PM2.5</th><th>Ozone</th><th>NO2</th></tr></thead><tbody>${clean}</tbody></table>
+    <h2 class="section-title">The ten dirtiest</h2>
+    <table class="air-table"><thead><tr><th>City</th><th>Region</th><th>US AQI</th><th>PM2.5</th><th>Ozone</th><th>NO2</th></tr></thead><tbody>${dirty}</tbody></table>
+    <details><summary style="cursor:pointer;font-weight:600;margin:10px 0">Full ranking \u2014 all ${rows.length} cities, cleanest to dirtiest</summary>
+    <table class="air-table"><thead><tr><th>#</th><th>City</th><th>Region</th><th>US AQI</th><th>PM2.5</th></tr></thead><tbody>${all}</tbody></table></details>`;
+  } else {
+    data = `<div class="air-grid">${co2Card}</div>
+    <p class="meta">\u26A0 The live world feed is resting right now \u2014 we would rather show you nothing than show you invented numbers. Reload in a few minutes; the scale below and every explainer on this complex always work.</p>`;
+  }
+  const body = `<p class="learn-intro">Live air-quality readings for over seventy world cities, modelled by the Copernicus Atmosphere Monitoring Service and delivered through the free Open-Meteo API, refreshed on our side every 45 minutes. These are model estimates for each city\u2019s coordinates \u2014 your street can differ; treat them as a global pulse, not a personal sensor. Weather for any of these cities lives at <a href="/cuaca">World Weather</a>.</p>
+  ${data}
+  ${scale}`;
+  return udaraDoc({
+    title: 'World Air Quality Live \u2014 Cleanest and Most Polluted Places on Earth | Tukuk-OS',
+    desc: 'Live US AQI, PM2.5, ozone and NO2 readings for 70+ world cities ranked cleanest to dirtiest, plus today\u2019s real CO2 level from the NOAA Mauna Loa observatory.',
+    selfUrl: 'https://tukuk.org/udara',
+    heroTitle: 'The Air We Breathe \u2014 Live', heroSub: 'Clean spots, dirty spots and the carbon in the sky, updated from free open sources',
+    body,
+  });
+}
+
+// ── /udara/carbon — bacaan CO2 langsung NOAA ───────────────────────
+function udaraCarbonPage(co2) {
+  let readout = '';
+  if (co2 && co2.source && co2.source !== 'unavailable') {
+    const vmin = co2.annual[0] ? co2.annual[0].v - 2 : 400;
+    const vmax = co2.annual[co2.annual.length - 1] ? co2.annual[co2.annual.length - 1].v + 2 : 430;
+    const bars = co2.annual.map((a) => {
+      const w = Math.max(4, Math.round(((a.v - vmin) / (vmax - vmin)) * 100));
+      return `<div class="bar-row"><span class="bl">${a.year}</span><span class="bt" style="width:${w}%"></span><span class="bv">${a.v.toFixed(1)}</span></div>`;
+    }).join('');
+    const stale = co2.source === 'last-known' ? '<p class="meta">\u26A0 The NOAA feed is briefly unreachable \u2014 showing the last reading we successfully fetched.</p>' : '';
+    readout = `<div class="air-grid">
+      <div class="air-card"><h3>Today\u2019s reading</h3><p class="big-readout">${co2.ppm.toFixed(1)} <span style="font-size:1.1rem">ppm</span></p><p class="meta">Daily mean CO\u2082, NOAA ${escapeHtml(co2.site)} \u00b7 ${escapeHtml(co2.date)} \u00b7 refreshed every 12 h</p></div>
+      <div class="air-card"><h3>The climb per year</h3><p class="big-readout">${co2.growth == null ? '\u2014' : '+' + co2.growth} <span style="font-size:1.1rem">ppm/yr</span></p><p class="meta">Latest global annual-mean step (NOAA). A natural year is about +1; fossil years run +2 to +3.</p></div>
+    </div>
+    ${stale}
+    <h2 class="section-title">Fifteen years of the global annual mean</h2>
+    <p>Parts per million of carbon dioxide in the whole-world surface atmosphere, year by year \u2014 straight from NOAA\u2019s global monitoring averages.</p>
+    <div>${bars}</div>`;
+  } else {
+    readout = `<p class="meta">\u26A0 The NOAA carbon feed is resting right now and we keep no invented placeholder \u2014 reload in a few minutes for the real number.</p>`;
+  }
+  const body = `<p class="learn-intro">Carbon dioxide is the gas of breath and fire: every animal exhales it, every flame turns air into it, and for two centuries humans have been doing so at an industrial scale. This page shows the actual measurement \u2014 no model, no estimate: flasks and analysers at NOAA\u2019s Mauna Loa observatory in Hawaii and a global network, published freely.</p>
+  ${readout}
+  <h2 class="section-title">What the number means</h2>
+  <div class="air-grid">
+    <div class="air-card"><h3>280 \u2192 420+ in 170 years</h3><p>Before the industrial revolution the world\u2019s air held about 280 ppm of CO\u2082. NOAA\u2019s global annual means began in 1959 at roughly ${co2 && co2.base1958 ? co2.base1958.toFixed(1) : '316'} ppm and now pass 420 \u2014 a level at least three million years older than any human ancestor.</p></div>
+    <div class="air-card"><h3>Why the sawtooth is not noise</h3><p>Northern forests and grasslands inhale CO\u2082 each summer and exhale it each winter, so the curve breathes seasonally by a handful of ppm while its baseline only climbs. The trend is the fingerprint of fossil carbon; the wobble is the living planet.</p></div>
+    <div class="air-card"><h3>Your own contribution</h3><p>A person exhales air that is about 4 percent CO\u2082 \u2014 roughly 40,000 ppm against the outdoor 420. Every breath you have ever taken added carbon the food chain just captured from the air; the industrial loop is the same loop, run too fast.</p></div>
+    <div class="air-card"><h3>Where to argue with the number</h3><p>CO\u2082 itself is not a poison at outdoor levels \u2014 it is 0.04 percent of air. Its weight is radiative: more of it holds more of the Earth\u2019s outgoing heat. That physics, not toxicity, is why this dial matters to every country on the coast.</p></div>
+  </div>
+  <h2 class="section-title">Related</h2>
+  <p>How living things move this gas day by day: <a href="/udara/breath">Breathing Life</a>. The oxygen side of the same reaction: <a href="/udara/oxygen">Oxygen Explained</a>. City-by-city particulate and ozone readings: <a href="/udara">the world air ranking</a>.</p>`;
+  return udaraDoc({
+    title: 'CO2 Level Today, Live \u2014 The Real Mauna Loa Reading | Tukuk-OS',
+    desc: 'Today\u2019s actual atmospheric carbon dioxide reading from NOAA\u2019s Mauna Loa observatory and global annual means, with plain-language context on the 280-to-420 ppm climb.',
+    selfUrl: 'https://tukuk.org/udara/carbon',
+    heroTitle: 'Carbon Dioxide, Read Directly', heroSub: 'The live number from NOAA \u2014 what it says and what it does not',
+    body,
+  });
+}
+
+// ── /udara/oxygen — edukasi O2 (kurasi statik) ─────────────────────
+function udaraOxygenPage() {
+  const cards = udara.OXYGEN.map((c) => `<div class="air-card"><h3>${escapeHtml(c.h)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
+  const myths = udara.MYTHS.map((m) => `<div class="air-card"><h3>Myth: ${escapeHtml(m.m)}</h3><p>${escapeHtml(m.f)}</p></div>`).join('');
+  const body = `<p class="learn-intro">Oxygen is the most consequential chemical argument on Earth: it lets fires spread, lets animals run hot and lets brains afford to think. Below \u2014 where it comes from, where it is going, and how the planet has breathed differently across deep time. The live side of this story is the <a href="/udara">world air ranking</a> and the <a href="/udara/carbon">CO2 readout</a>.</p>
+  <div class="air-grid">${cards}</div>
+  <h2 class="section-title">Claims worth un-learning</h2>
+  <div class="air-grid">${myths}</div>`;
+  return udaraDoc({
+    title: 'Oxygen Explained \u2014 Where It Comes From and Where It Is Going | Tukuk-OS',
+    desc: 'Plain-language oxygen science: 20.9 percent air, phytoplankton as the real oxygen factory, the measured slow decline, altitude physiology and ocean oxygen minimum zones.',
+    selfUrl: 'https://tukuk.org/udara/oxygen',
+    heroTitle: 'Oxygen \u2014 The Argument Air Won', heroSub: 'The gas behind every flame, breath and giant insect in Earth history',
+    body,
+  });
+}
+
+// ── /udara/breath — pernafasan makhluk hidup ───────────────────────
+function udaraBreathPage() {
+  const human = udara.HUMAN_BREATH.map((r) => `<tr><td><b>${escapeHtml(r.k)}</b></td><td>${escapeHtml(r.v)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('');
+  const animals = udara.ANIMAL_BREATH.map((r) => `<tr><td><b>${escapeHtml(r.a)}</b></td><td>${escapeHtml(r.rr)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('');
+  const ways = udara.OTHER_WAYS.map((c) => `<div class="air-card"><h3>${escapeHtml(c.h)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
+  const indoor = udara.INDOOR_CO2.map((r) => `<tr><td><b>${escapeHtml(r.v)}</b></td><td>${escapeHtml(r.t)}</td><td>${escapeHtml(r.d)}</td></tr>`).join('');
+  const body = `<p class="learn-intro">A breath looks simple and is one of the most negotiated transactions in biology: oxygen in, carbon dioxide out, paid for in energy. Here is what your own breathing budget looks like, how the animal kingdom solved the same problem, and where the air in your room sits on that ledger. Respiratory rates below are commonly cited resting ranges \u2014 individuals, sizes and temperatures move them.</p>
+  <h2 class="section-title">Your breathing, by the numbers</h2>
+  <table class="air-table"><thead><tr><th>Measure</th><th>Typical value</th><th>The human note</th></tr></thead><tbody>${human}</tbody></table>
+  <h2 class="section-title">Resting breath across the animal kingdom</h2>
+  <table class="air-table"><thead><tr><th>Animal</th><th>Resting breaths / pattern</th><th>Why it is interesting</th></tr></thead><tbody>${animals}</tbody></table>
+  <h2 class="section-title">Other engineering for the same job</h2>
+  <div class="air-grid">${ways}</div>
+  <h2 class="section-title">The CO2 in the room you are reading this in</h2>
+  <p>Air at ~420 ppm outdoors climbs in closed rooms simply because of the occupants. If a classroom feels dim by mid-morning, the ventilation \u2014 not the lesson \u2014 is usually the suspect: crack a window and watch the room wake up.</p>
+  <table class="air-table"><thead><tr><th>Level</th><th>Where you are</th><th>What it does</th></tr></thead><tbody>${indoor}</tbody></table>`;
+  return udaraDoc({
+    title: 'How Living Things Breathe \u2014 Humans, Whales, Gills and Insects | Tukuk-OS',
+    desc: 'Breathing explained across species: human respiratory numbers, resting rates of animals, whale dives, fish gills, insect tracheae, bird lungs and indoor CO2 levels.',
+    selfUrl: 'https://tukuk.org/udara/breath',
+    heroTitle: 'Breathing Life', heroSub: 'Twenty thousand times a day, without one decision \u2014 the engineering of a breath',
+    body,
+  });
+}
+
+app.get('/udara', async (req, res) => {
+  const [air, co2] = await Promise.allSettled([udara.getAirRanking(), udara.getCo2()]);
+  res.type('html').send(udaraHubPage(air.status === 'fulfilled' ? air.value : null, co2.status === 'fulfilled' ? co2.value : null));
+});
+app.get('/udara/oxygen', (req, res) => res.type('html').send(udaraOxygenPage()));
+app.get('/udara/breath', (req, res) => res.type('html').send(udaraBreathPage()));
+app.get('/udara/carbon', async (req, res) => {
+  let co2 = null;
+  try { co2 = await udara.getCo2(); } catch (e) { co2 = null; }
+  res.type('html').send(udaraCarbonPage(co2));
 });
 
 app.get('/blog/rss.xml', (req, res) => {
