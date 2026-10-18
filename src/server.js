@@ -2123,6 +2123,20 @@ function nasaIssPage(req, iss, crew) {
   const rawVis = String((iss && iss.visibility) || 'daylight');
   const vis = rawVis === 'eclipsed' ? 'in Earth\u2019s shadow' : rawVis;
   const seenAt = new Date((Number(iss && iss.timestamp) || Math.floor(Date.now() / 1000)) * 1000).toUTCString();
+  // Titik subsolar (Matahari di zenit) → pemisah siang/malam SEBENAR pada peta.
+  let subLat = Number(iss && iss.solar_lat);
+  let subLng = Number(iss && iss.solar_lon);
+  if (!Number.isFinite(subLat) || !Number.isFinite(subLng)) {
+    const d = new Date((Number(iss && iss.timestamp) || Math.floor(Date.now() / 1000)) * 1000);
+    const utcH = d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600;
+    subLng = ((12 - utcH) * 15 + 180) % 360; if (subLng < 0) subLng += 360; subLng -= 180;
+    const doy = Math.floor((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86400000);
+    subLat = -23.44 * Math.cos((360 / 365.24) * (doy + 10) * Math.PI / 180);
+  } else {
+    subLng = ((subLng + 180) % 360 + 360) % 360 - 180; // normalisasi kepada -180..180
+  }
+  subLat = Math.round(subLat * 100) / 100;
+  subLng = Math.round(subLng * 100) / 100;
   const stations = crew && Array.isArray(crew.stations) ? crew.stations : [];
   const inSpace = Number(crew && crew.inSpace) || stations.reduce((s, x) => s + (Number(x.count) || 0), 0);
   const hemi = (v, k) => `${Math.abs(v).toFixed(2)}\u00b0 ${v >= 0 ? (k === 'ns' ? 'N' : 'E') : (k === 'ns' ? 'S' : 'W')}`;
@@ -2134,23 +2148,31 @@ function nasaIssPage(req, iss, crew) {
     + `<div class="nasa-card"><h3>Humans in space</h3><div class="big">${inSpace}</div></div>`
     + `<div class="nasa-card"><h3>Orbits per day</h3><div class="big">\u2248 15.5</div></div>`
     + `</div>`;
-  // Peta equirektangular 720x360: grid + sengkuk tanah IDEAL (kecenderungan 51.6\u00b0)
-  // + penanda semasa. Semua dilukis di pelayar dengan kanvas — tiada fail luar, tiada CDN.
-  const map = `<canvas id="issmap" width="720" height="360" class="nasa-map" role="img" `
-    + `aria-label="World map with the current position of the International Space Station at ${hemi(lat, 'ns')}, ${hemi(lng, 'ew')}"></canvas>`
+  // Peta SATELIT sebenar: NASA Blue Marble equirektangular sebagai latar, kanvas
+  // lutsinar di atas melukis grid + pemisah siang/malam (dari titik subsolar) +
+  // landasan tanah 51.6° + penanda ISS semasa. Tiada pustaka luar, tiada CDN.
+  const daymap = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/1280px-Blue_Marble_2002.png';
+  const map = `<div style="position:relative;max-width:720px;margin:16px auto;border:1px solid var(--line);border-radius:12px;overflow:hidden;line-height:0;background:#0a1020">`
+    + `<img src="${daymap}" width="1280" height="640" alt="NASA Blue Marble true-colour satellite image of the whole Earth (equirectangular world map)" loading="eager" decoding="async" style="width:100%;height:auto;display:block">`
+    + `<canvas id="issmap" width="720" height="360" role="img" aria-label="Satellite map of Earth showing the current position of the International Space Station at ${hemi(lat, 'ns')}, ${hemi(lng, 'ew')}, its ground track and the day/night terminator" style="position:absolute;left:0;top:0;width:100%;height:100%"></canvas>`
+    + `</div>`
     + `<script>(function(){var c=document.getElementById('issmap');if(!c||!c.getContext)return;`
-    + `var g=c.getContext('2d'),W=c.width,H=c.height;g.fillStyle='#0a1020';g.fillRect(0,0,W,H);`
-    + `g.strokeStyle='rgba(120,150,200,.22)';g.lineWidth=1;`
-    + `for(var x=0;x<=W;x+=60){g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();}`
-    + `for(var y=0;y<=H;y+=60){g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}`
-    + `g.strokeStyle='rgba(120,150,200,.5)';g.beginPath();g.moveTo(0,H/2);g.lineTo(W,H/2);g.stroke();`
-    + `var inc=51.6*Math.PI/180;g.strokeStyle='rgba(76,141,255,.55)';g.lineWidth=2;g.beginPath();`
-    + `for(var d=0;d<=360;d+=3){var th=d*Math.PI/180;var la=Math.asin(Math.sin(inc)*Math.sin(th))*180/Math.PI;`
-    + `var px=((d*2)%360-180+180)/360*W,py=(90-la)/180*H;if(d===0)g.moveTo(px,py);else g.lineTo(px,py);}`
-    + `g.stroke();var ix=((${lng})+180)/360*W,iy=(90-(${lat}))/180*H;`
-    + `g.fillStyle='rgba(255,183,3,.25)';g.beginPath();g.arc(ix,iy,18,0,6.2832);g.fill();`
+    + `var g=c.getContext('2d'),W=c.width,H=c.height,rad=Math.PI/180;`
+    + `var SL=${subLng},SD=${subLat},lat=${lat},lng=${lng},cd=Math.cos(SD*rad),sd=Math.sin(SD*rad);`
+    + `g.strokeStyle='rgba(255,255,255,.16)';g.lineWidth=1;`
+    + `for(var gx=0;gx<=W;gx+=W/12){g.beginPath();g.moveTo(gx,0);g.lineTo(gx,H);g.stroke();}`
+    + `for(var gy=0;gy<=H;gy+=H/6){g.beginPath();g.moveTo(0,gy);g.lineTo(W,gy);g.stroke();}`
+    + `g.fillStyle='rgba(4,8,24,.5)';`
+    + `for(var cx=0;cx<W;cx+=3){var lo=-180+(cx+1.5)/W*360,dl=(lo-SL)*rad,ft=Math.atan2(-cd*Math.cos(dl),sd)/rad,yt=(90-ft)/180*H;`
+    + `if(sd>1e-6)g.fillRect(cx,yt,3,H-yt);else if(sd<-1e-6)g.fillRect(cx,0,3,yt);else if(Math.cos(dl)<0)g.fillRect(cx,0,3,H);}`
+    + `g.strokeStyle='rgba(255,255,255,.6)';g.lineWidth=2;g.beginPath();var ic=51.6*rad;`
+    + `for(var d=0;d<=360;d+=3){var th=d*rad,la=Math.asin(Math.sin(ic)*Math.sin(th))/rad,px=((d*2)%360)/360*W,py=(90-la)/180*H;if(d===0)g.moveTo(px,py);else g.lineTo(px,py);}`
+    + `g.stroke();var ix=(lng+180)/360*W,iy=(90-lat)/180*H;`
+    + `g.fillStyle='rgba(255,183,3,.25)';g.beginPath();g.arc(ix,iy,20,0,6.2832);g.fill();`
+    + `g.fillStyle='rgba(255,183,3,.55)';g.beginPath();g.arc(ix,iy,11,0,6.2832);g.fill();`
     + `g.fillStyle='#ffb703';g.beginPath();g.arc(ix,iy,6,0,6.2832);g.fill();`
-    + `g.strokeStyle='#fff';g.lineWidth=1;g.beginPath();g.arc(ix,iy,6,0,6.2832);g.stroke();})();</script>`;
+    + `g.strokeStyle='#fff';g.lineWidth=1.5;g.beginPath();g.arc(ix,iy,6,0,6.2832);g.stroke();`
+    + `g.strokeStyle='rgba(255,183,3,.65)';g.lineWidth=1;g.beginPath();g.moveTo(ix-16,iy);g.lineTo(ix+16,iy);g.moveTo(ix,iy-16);g.lineTo(ix,iy+16);g.stroke();})();</script>`;
   const crewHtml = stations.length
     ? `<h2 class="section-title">Who is up there right now</h2>` + stations.map((st) => {
       const list = Array.isArray(st.crew) ? st.crew : [];
@@ -2158,11 +2180,11 @@ function nasaIssPage(req, iss, crew) {
         + `<p>${list.map((p) => escapeHtml(String(p.name || 'Unknown'))).join(' &middot; ') || 'Crew roster unavailable'}</p></div>`;
     }).join('')
     : '<p class="meta">The crew roster feed is briefly quiet \u2014 telemetry above is still live.</p>';
-  const body = `<p>The International Space Station has been continuously crewed since <b>2 November 2000</b>, orbiting at about 400 km altitude and travelling at ${nasaFmt(vel)} km/h \u2014 fast enough to circle the Earth every ~92 minutes, roughly <b>15.5 orbits a day</b>. The dot below is its position the moment this page was generated (${escapeHtml(seenAt)}); the blue curve is an idealised ground track for its 51.6\u00b0 inclination.</p>`
+  const body = `<p>The International Space Station has been continuously crewed since <b>2 November 2000</b>, orbiting at about 400 km altitude and travelling at ${nasaFmt(vel)} km/h \u2014 fast enough to circle the Earth every ~92 minutes, roughly <b>15.5 orbits a day</b>. The map below is real NASA Blue Marble satellite imagery of the whole planet: the glowing dot is the station\u2019s position the moment this page was generated (${escapeHtml(seenAt)}), the white curve is an idealised ground track for its 51.6\u00b0 inclination, and the dimmed half is Earth\u2019s night side computed from the live subsolar point.</p>`
     + cards + map + crewHtml
     + `<h2 class="section-title">How to see it with your own eyes</h2><p>The ISS is the <b>sixth-brightest object in the night sky</b> and needs no telescope. Best chances: within a couple of hours after dusk or before dawn, when you are in darkness but the station is still sunlit. Look for a steady, fast, non-blinking point crossing the whole sky in 3\u20136 minutes. Free pass alerts for your town are published by NASA\u2019s "Spot the Station" service.</p>`
     + `<h2 class="section-title">Why it matters</h2><p>Microgravity research aboard the ISS covers protein crystallography, combustion, fluid physics, biology and human physiology \u2014 the evidence base for every future Moon and Mars mission. It is a jointly operated laboratory by five space agencies.</p>`
-    + `<p class="meta">Position data: wheretheiss.at \u00b7 crew data: open-notify.org \u00b7 both key-free public services. Station imagery and facts courtesy of NASA.</p>`;
+    + `<p class="meta">Position and solar-terminator data: wheretheiss.at \u00b7 crew data: open-notify.org \u00b7 both key-free public services. Base map: NASA Blue Marble (public domain); station imagery and facts courtesy of NASA.</p>`;
   return nasaDoc({
     title: 'ISS Live Position \u2014 Where the Space Station Is Right Now | Tukuk-OS',
     desc: 'Where the International Space Station is at this second, how fast it is travelling, and exactly who is aboard \u2014 live, free, no app.',

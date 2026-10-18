@@ -667,9 +667,16 @@ async function getISSTelemetry() {
       altitude_km: Math.round(res.data.altitude * 10) / 10,
       velocity_kmh: Math.round(res.data.velocity),
       visibility: res.data.visibility,
-      timestamp: res.data.timestamp
+      timestamp: res.data.timestamp,
+      solar_lat: res.data.solar_lat,
+      solar_lon: res.data.solar_lon
     };
   } catch (err) {
+    const now = new Date();
+    const utcH = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+    let subLng = (12 - utcH) * 15;
+    subLng = ((subLng + 180) % 360 + 360) % 360 - 180;
+    const doy = Math.floor((now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86400000);
     return {
       name: 'iss',
       latitude: 0,
@@ -677,7 +684,9 @@ async function getISSTelemetry() {
       altitude_km: 418,
       velocity_kmh: 27600,
       visibility: 'daylight',
-      timestamp: Math.round(Date.now() / 1000)
+      timestamp: Math.round(Date.now() / 1000),
+      solar_lat: -23.44 * Math.cos((360 / 365.24) * (doy + 10) * Math.PI / 180),
+      solar_lon: subLng
     };
   }
 }
