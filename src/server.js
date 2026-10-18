@@ -27,6 +27,7 @@ const nasa = require('./nasa');
 const wx = require('./weather');
 const gp = require('./gempa');
 const cu = require('./cuti');
+const ng = require('./negara');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -626,6 +627,35 @@ app.get('/cuti/:negeri', async (req, res) => {
   }
 });
 
+// ── LALUAN KOMPLEKS NEGARA (/negara*) — world-countries + World Bank, tanpa kunci ──
+// Hab + :slug; rantau/negara divalidasi DALAM handler (ikut tertib: region →
+// country → 404). Data di-cache 30 hari, jadi permintaan susulan segera.
+app.get('/negara', async (req, res) => {
+  try {
+    const rows = await ng.loadCountries();
+    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+    res.status(200).type('html').send(negaraHubPage(req, rows));
+  } catch {
+    res.status(503).type('html').send(negaraBusy('Data negara belum sempat dimuat'));
+  }
+});
+
+app.get('/negara/:slug', async (req, res) => {
+  const slug = String(req.params.slug || '').toLowerCase();
+  let rows;
+  try {
+    rows = await ng.loadCountries();
+    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+  } catch {
+    return res.status(503).type('html').send(negaraBusy('Data negara belum sempat dimuat'));
+  }
+  const region = ng.findRegion(slug);
+  if (region) return res.status(200).type('html').send(negaraRegionPage(req, region, ng.inRegion(rows, slug)));
+  const country = ng.findCountry(rows, slug);
+  if (country) return res.status(200).type('html').send(negaraCountryPage(req, country, rows));
+  return res.status(404).type('html').send(negaraBusy(`Negara "${slug}" tidak dikenali`));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1130,7 +1160,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1233,6 +1263,25 @@ app.get('/sitemap-cuti.xml', (req, res) => {
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + special + '\n' + states + '\n</urlset>\n'
+  );
+});
+
+// ── SITEMAP NEGARA — hab + 6 rantau + ±250 negara (daripada cache gabungan) ──
+// Negara masuk sitemap hanya bila dataset berjaya dimuat; jika sumber luar lambat,
+// fallback hab + rantau sahaja supaya fail XML tetap sah & boleh diindeks.
+app.get('/sitemap-negara.xml', async (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const special = ['/negara'].concat(ng.REGIONS.map((r) => `/negara/${r.slug}`))
+    .map((p) => one(p, p === '/negara' ? '0.9' : '0.7')).join('\n');
+  let countries = '';
+  try {
+    const rows = await ng.loadCountries();
+    countries = rows.map((c) => one(`/negara/${c.slug}`, '0.6')).join('\n');
+  } catch { /* sumber lambat → hab + rantau sahaja */ }
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + special + (countries ? '\n' + countries : '') + '\n</urlset>\n'
   );
 });
 
@@ -1479,6 +1528,7 @@ function siteFooter() {
       <li><a href="/gempa/malaysia">Gempa Malaysia</a></li>
       <li><a href="/cuti">Public holidays 2026</a></li>
       <li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>
+      <li><a href="/negara">World countries</a></li>
     </ul></div>
     <div><h4>Site</h4><ul>
       <li><a href="/about">About</a></li>
@@ -2382,7 +2432,7 @@ function cuacaHubPage(req, snap) {
     + `<p>Setiap halaman bandar membawa semasa, 8 slot jam akan datang, ramalan 5\u20136 hari, kualiti udara (PM2.5), waktu matahari serta nasihat bersiap yang dijana automatik \u2014 semua daripada API OpenWeather tier percuma. Bermula dari kampung? <a href="/cuaca/serian">Cuaca hari ini di Serian</a>.</p>`
     + linkBoxes
     + `<h2 class="section-title">Kenapa cuaca penting untuk kita</h2><p>Malaysia duduk di laluan zon hujan khatulistiwa: monsun barat daya (Mei\u2013September) dan monsun timur laut (November\u2013Mac) silih berganti membawa hujan, dan jerebu rentas sempadan sesekali menentukan sama ada sekolah ditutup. Memahami bacaan \u2014 kelembapan, tekanan, kelajuan angin, indeks AQI \u2014 menukar ramalan daripada angka kepada keputusan: bila sesuai menanam, bila perlu bawa payung, bila paling bahaya memandu.</p>`
-    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS. Nak rancang percutian? Jadual penuh <a href="/cuti">cuti umum 2026 &amp; 2027</a>.</p>`;
+    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS. Nak rancang percutian? Jadual penuh <a href="/cuti">cuti umum 2026 &amp; 2027</a>. Nak kenal destinasi? Profil penuh di <a href="/negara">Kompleks Negara</a>.</p>`;
   return cuacaDoc({
     title: 'Cuaca Hari Ini \u2014 Suhu, Ramalan & Kualiti Udara Seluruh Dunia | Tukuk-OS',
     desc: 'Semak cuaca hari ini secara langsung: suhu, hujan, angin, kualiti udara PM2.5 dan ramalan 5 hari untuk Kuala Lumpur, Kuching, Singapura dan ratusan bandar lain.',
@@ -3003,7 +3053,7 @@ function cutiHubPage(req, rows26, rows27) {
     + `<h2 class="section-title">Cuti akan datang (10 terdekat)</h2>${ctTable(upcoming)}`
     + `<h2 class="section-title">Mengapa berbeza ikut negeri</h2><p>Malaysia mempunyai dua lapis kelepasan: <b>cuti persekutuan</b> (Hari Merdeka, Aidilfitri, Aidiladha, Tahun Baharu dan lain-lain) yang diwartakan untuk seluruh negara, dan <b>cuti negeri</b> seperti hari keputeraan Sultan/Raja setiap negeri. Negeri juga bebas memilih hari hujung minggu — Johor, Kedah, Kelantan dan Terengganu bercuti <b>Jumaat\u2013Sabtu</b>, manakala selebihnya <b>Sabtu\u2013Ahad</b>. Sebab itu cuti Aidilfitri 2026 (Ahad\u2013Selasa) menjadi 4 hari di Johor tetapi hanya 3 hari di Selangor.</p>`
     + `<h2 class="section-title">Negeri &amp; wilayah</h2><div class="wx-grid">${stateCards}</div>`
-    + `<p class="meta">Perlu perancangan lebih detail? Semak <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a> dan <a href="/cuti/2027">kalendar 2027</a>; untuk merancang aktiviti luar, lihat <a href="/cuaca">Kompleks Cuaca</a>; bumi bergegar? <a href="/gempa">Kompleks Gempa</a>.</p>`;
+    + `<p class="meta">Perlu perancangan lebih detail? Semak <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a> dan <a href="/cuti/2027">kalendar 2027</a>; untuk merancang aktiviti luar, lihat <a href="/cuaca">Kompleks Cuaca</a>; bumi bergegar? <a href="/gempa">Kompleks Gempa</a>; nak kenal destinasi luar negara? <a href="/negara">Kompleks Negara</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Cuti Tukuk-OS',
     description: 'Kalendar cuti umum Malaysia 2026 dan 2027 mengikut negeri, disemak terhadap dokumen rasmi kabinet.gov.my.',
@@ -3116,7 +3166,7 @@ function cutiExplainPage(req) {
     + `<h2 class="section-title">2. Dua konvensyen hujung minggu</h2><p>Johor, Kedah, Kelantan dan Terengganu (dahulu juga Perlis) menetapkan <b>Jumaat\u2013Sabtu</b> sebagai hujung minggu; selebihnya <b>Sabtu\u2013Ahad</b>. Kesan langsung: cuti yang jatuh pada Jumaat di Johor bermakna 3 hari terus; cuti pada Ahad di Kelantan pula biasanya diganti.</p>`
     + `<h2 class="section-title">3. Prinsip gantian &amp; cuti khas</h2><p>Kerajaan tidak suka cuti besar tersepit sehingga minggu kerja berpecah dua, jadi cuti yang jatuh pertengahan minggu sering disusuli <b>cuti khas</b> yang diwartakan lewat (contoh 2026: Awal Ramadan jatuh Isnin 20 Feb, berada dalam run yang sama dengan Tahun Baharu Cina 17–18 Feb sehingga menjadi 4 hari berturut di kebanyakan negeri). Entri bertanda <i>tertakluk perubahan</i> dalam jadual kami ialah cuti jenis ini — sentiasa semak gazet sebelum membeli tiket.</p>`
     + `<h2 class="section-title">4. Cuti rehat & strategi jambatan</h2><p>Perkataan <i>bridge</i> dalam perancangan cuti: ambil <b>1 hari cuti rehat</b> pada Selasa atau Khamis untuk menyambung cuti tunggal dengan hujung minggu \u2014 4 hari bercuti dengan kos 1 hari. Halaman <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a> kami mengira automatik setiap peluang ini.</p>`
-    + `<h2 class="section-title">Dari mana data kami?</h2><p>Jadual dalam kompleks ini datang daripada API awam <b>malaysia-holiday.dydxsoft.my</b> yang disemak admin terhadap dokumen rasmi <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">www.kabinet.gov.my/hari-kelepasan-am</a>; nama perayaan disenaraikan dalam Bahasa Melayu. Kami cache 30 hari dan kemas kini serta-merta bila sumber berubah. Untuk keadaan langit semasa ketika bercuti, guna <a href="/cuaca">Kompleks Cuaca</a>; tanah bergegar di destinasi? <a href="/gempa">Kompleks Gempa</a>.</p>`;
+    + `<h2 class="section-title">Dari mana data kami?</h2><p>Jadual dalam kompleks ini datang daripada API awam <b>malaysia-holiday.dydxsoft.my</b> yang disemak admin terhadap dokumen rasmi <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">www.kabinet.gov.my/hari-kelepasan-am</a>; nama perayaan disenaraikan dalam Bahasa Melayu. Kami cache 30 hari dan kemas kini serta-merta bila sumber berubah. Untuk keadaan langit semasa ketika bercuti, guna <a href="/cuaca">Kompleks Cuaca</a>; tanah bergegar di destinasi? <a href="/gempa">Kompleks Gempa</a>; belum pasti rupa destinasi itu? <a href="/negara">Kompleks Negara</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Article', name: 'Cara Kalendar Cuti Malaysia Berfungsi',
     description: 'Penjelasan Bahasa Melayu: cuti persekutuan vs negeri, konvensyen hujung minggu, gantian dan strategi cuti jambatan.',
@@ -3127,6 +3177,236 @@ function cutiExplainPage(req) {
     desc: 'Fahami perbezaan cuti persekutuan dan negeri, dua konvensyen hujung minggu (Jumaat\u2013Sabtu vs Sabtu\u2013Ahad), gantian Aidilfitri dan strategi cuti jambatan \u2014 dalam Bahasa Melayu.',
     selfUrl: 'https://tukuk.org/cuti/penjelasan',
     heroTitle: 'Cara Kalendar Cuti MY Berfungsi', heroSub: 'Empat mekanik yang menjelaskan setiap jadual kelepasan am',
+    body, ld,
+  });
+}
+
+// ── TUKUK-OS NEGARA COMPLEX — /negara* (profil ±250 negara, Bahasa Melayu) ──
+// Sumber: world-countries (jsDelivr, tanpa kunci) + World Bank Open Data (populasi,
+// KDNK, urbanisasi, jangka hayat 2023) + flagcdn.com untuk bendera. Shell resepi sama
+// cutiDoc: lang ms, 3 slot iklan, nav silang; hero biru-nelayan bezakan kompleks ini.
+
+const NEGARA_SECTIONS = [{ href: '/negara', icon: '\uD83D\uDDFA\uFE0F', name: 'Semua Negara', blurb: 'Profil setiap buah negara di dunia \u2014 ibu negara, populasi, KDNK, bendera dan jiran daratan.' }]
+  .concat(ng.REGIONS.map((r) => ({ href: `/negara/${r.slug}`, icon: '\uD83E\uDDED', name: `Negara ${r.bm}`, blurb: `Senarai lengkap negara dalam benua ${r.bm}, disusun ikut abjad.` })));
+
+function negaraNav() {
+  return `<nav aria-label="Bahagian negara"><h2 class="section-title">Jelajahi Kompleks Negara Tukuk-OS</h2><div class="feed">`
+    + NEGARA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+function negaraBusy(msg) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>Sumber data negara (world-countries / World Bank) tidak sempat menjawab. Sila cuba lagi sebentar.</p><p><a href="/negara">Kembali ke Kompleks Negara</a></p></body>`;
+}
+
+// Terjemahan subregion (skema restcountries) untuk paparan mesra pembaca MY.
+const NG_SUB_BM = {
+  'South East Asia': 'Asia Tenggara', 'East Asia': 'Asia Timur', 'South Asia': 'Asia Selatan',
+  'Central Asia': 'Asia Tengah', 'Western Asia': 'Asia Barat', 'Northern Africa': 'Afrika Utara',
+  'Western Africa': 'Afrika Barat', 'Eastern Africa': 'Afrika Timur', 'Middle Africa': 'Afrika Tengah',
+  'Southern Africa': 'Afrika Selatan', 'Northern Europe': 'Eropah Utara', 'Western Europe': 'Eropah Barat',
+  'Eastern Europe': 'Eropah Timur', 'Southern Europe': 'Eropah Selatan', 'Central Europe': 'Eropah Tengah',
+  'Caribbean': 'Karibia', 'Central America': 'Amerika Tengah', 'North America': 'Amerika Utara',
+  'Northern America': 'Amerika Utara', 'South America': 'Amerika Selatan',
+  'Australia and New Zealand': 'Australia &amp; New Zealand', 'Melanesia': 'Melanesia',
+  'Micronesia': 'Mikronesia', 'Polynesia': 'Polinesia',
+};
+
+const NG_INT = new Intl.NumberFormat('ms-MY');
+const NG_DEC = new Intl.NumberFormat('ms-MY', { maximumFractionDigits: 1 });
+function ngNum(n) { return n == null || !Number.isFinite(n) ? '—' : NG_INT.format(Math.round(n)); }
+function ngGdp(usd) { return usd == null ? '—' : `US$${NG_DEC.format(usd / 1e9)} bilion`; }
+function ngSubBm(s) { return NG_SUB_BM[s] || s || ''; }
+function ngThumb(cca2) { return `https://flagcdn.com/w160/${String(cca2 || '').toLowerCase()}.png`; }
+
+function negaraDoc(o) {
+  const robots = o.robots || 'index,follow,max-image-preview:large';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta property="og:locale" content="ms_MY">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+.wx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.wx-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21)}
+.wx-card h3{margin:0 0 6px;font-size:.95rem;color:var(--muted,#9aa3b2);font-weight:600}
+.wx-card .big{font-size:1.4rem;font-weight:700}
+.wx-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;background:linear-gradient(135deg,#123a6d 0%,#0b0d12 100%);color:#fff}
+.wx-hero .temp{font-size:2.2rem;font-weight:800;line-height:1.1}
+.wx-hero .wmeta{font-size:.92rem;opacity:.92;line-height:1.5}
+.wx-pill{display:inline-block;border-radius:999px;padding:3px 12px;font-weight:700;font-size:.85rem;color:#08121e}
+table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
+.wx-table th,.wx-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+.wx-table th{background:var(--panel,#171a21)}
+.ng-az{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.95rem;margin:6px 0 14px}
+.ng-fl{height:16px;width:auto;vertical-align:-2px;border-radius:2px;margin-right:7px;border:1px solid var(--line)}
+@media(max-width:680px){.wx-grid{grid-template-columns:1fr}.wx-hero .temp{font-size:1.7rem}table.wx-table{display:block;overflow-x:auto}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('negara')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${negaraNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// ─── HAB /negara — kiraan dunia, rantau, top-10 populasi & keluasan, grid A–Z ───
+function negaraHubPage(req, rows) {
+  const totalPop = rows.reduce((s, c) => s + (c.population || 0), 0);
+  const byPop = [...rows].filter((c) => c.population).sort((a, b) => b.population - a.population);
+  const byArea = [...rows].filter((c) => c.area).sort((a, b) => b.area - a.area);
+  const regionCards = ng.REGIONS.map((r) => {
+    const list = ng.inRegion(rows, r.slug);
+    return `<div class="wx-card"><h3><a href="/negara/${r.slug}">${escapeHtml(r.bm)}</a></h3><div class="big">${list.length}</div><div class="meta">buah negara & wilayah dalam benua ini</div></div>`;
+  }).join('');
+  const topPop = byPop.slice(0, 10).map((c, i) => `<tr><td>${i + 1}</td><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.bm)}</a></td><td>${escapeHtml(c.capital || '—')}</td><td><b>${ngNum(c.population)}</b></td></tr>`).join('');
+  const topArea = byArea.slice(0, 10).map((c) => `<tr><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.bm)}</a></td><td>${ngNum(c.area)} km²</td><td>${ngNum(c.population)}</td></tr>`).join('');
+  // Grid A–Z — hab pautan crawlable ke kesemua ±250 halaman negara.
+  const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
+  const letters = new Map();
+  for (const c of sorted) {
+    const L = c.bm.charAt(0).toUpperCase();
+    if (!letters.has(L)) letters.set(L, []);
+    letters.get(L).push(`<a href="/negara/${c.slug}">${escapeHtml(c.bm)}</a>`);
+  }
+  const az = [...letters.entries()].map(([L, links]) => `<h3>${L}</h3><div class="ng-az">${links.join('')}</div>`).join('');
+  const body = `<div class="wx-hero"><div class="temp">${rows.length} buah negara</div><div class="wmeta">Profil lengkap setiap negara dalam Bahasa Melayu \u00b7 populasi & KDNK World Bank (2023) \u00b7 bendera flagcdn \u00b7 data asas pakej open-data world-countries</div></div>`
+    + `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Jumlah populasi terhimpun</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">anggaran penduduk dunia (indikator World Bank 2023)</div></div>`
+    + `<div class="wx-card"><h3>Negara paling padat</h3><div class="big">${byPop[0] ? `<a href="/negara/${byPop[0].slug}">${escapeHtml(byPop[0].bm)}</a>` : '—'}</div><div class="meta">${byPop[0] ? ngNum(byPop[0].population) : 0} orang</div></div>`
+    + `<div class="wx-card"><h3>Negara paling luas</h3><div class="big">${byArea[0] ? `<a href="/negara/${byArea[0].slug}">${escapeHtml(byArea[0].bm)}</a>` : '—'}</div><div class="meta">${byArea[0] ? ngNum(byArea[0].area) : 0} km²</div></div>`
+    + `</div>`
+    + `<h2 class="section-title">Mengikut benua</h2><div class="wx-grid">${regionCards}</div>`
+    + `<h2 class="section-title">10 negara terbanyak penduduk</h2><table class="wx-table"><tr><th>#</th><th>Negara</th><th>Ibu negara</th><th>Populasi</th></tr>${topPop}</table>`
+    + `<h2 class="section-title">10 negara paling luas</h2><table class="wx-table"><tr><th>Negara</th><th>Keluasan</th><th>Populasi</th></tr>${topArea}</table>`
+    + `<h2 class="section-title">Senarai semua negara (A–Z)</h2>${az}`
+    + `<p class="meta">Merancang perjalanan? Semak <a href="/cuaca">Kompleks Cuaca</a> untuk keadaan langit, <a href="/gempa">Kompleks Gempa</a> untuk aktiviti tektonik dan <a href="/cuti">Kompleks Cuti</a> untuk jadual kelepasan Malaysia.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Negara Tukuk-OS',
+    description: 'Profil Bahasa Melayu untuk lebih 250 buah negara: ibu negara, populasi, KDNK, keluasan, mata wang, bahasa dan jiran.',
+    url: 'https://tukuk.org/negara', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return negaraDoc({
+    title: 'Senarai Negara & Profil Dunia — Ibu Negara, Populasi, Bendera | Tukuk-OS',
+    desc: `Profil lengkap ${rows.length} buah negara dalam Bahasa Melayu: ibu negara, populasi & KDNK World Bank, keluasan, mata wang, bahasa, kod panggilan dan negara jiran.`,
+    selfUrl: 'https://tukuk.org/negara',
+    heroTitle: 'Kompleks Negara Tukuk-OS', heroSub: `${rows.length} buah negara \u00b7 6 benua \u00b7 data World Bank & world-countries, percuma tanpa daftar`,
+    body, ld,
+  });
+}
+
+// ─── /negara/:rantau — satu benua, kad bendera + ibu + populasi ───
+function negaraRegionPage(req, region, rows) {
+  const selfUrl = `https://tukuk.org/negara/${region.slug}`;
+  const totalPop = rows.reduce((s, c) => s + (c.population || 0), 0);
+  const most = rows.filter((x) => x.population).sort((a, b) => b.population - a.population)[0];
+  const cards = rows.map((c) => `<div class="wx-card"><h3><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.bm)}</a></h3>`
+    + `<div class="meta">${escapeHtml(c.capital || 'Tiada ibu negara tetap')}${c.population ? ` \u00b7 ${ngNum(c.population)} orang` : ''}</div></div>`).join('');
+  const body = `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Jumlah entri ${escapeHtml(region.bm)}</h3><div class="big">${rows.length}</div><div class="meta">buah negara & wilayah tersenarai</div></div>`
+    + `<div class="wx-card"><h3>Populasi terhimpun</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">jumlah penduduk semua entri (World Bank 2023)</div></div>`
+    + `<div class="wx-card"><h3>Paling padat di ${escapeHtml(region.bm)}</h3><div class="big">${most ? `<a href="/negara/${most.slug}">${escapeHtml(most.bm)}</a>` : '—'}</div><div class="meta">${most ? ngNum(most.population) : 0} orang</div></div>`
+    + `</div>`
+    + `<h2 class="section-title">Semua negara di ${escapeHtml(region.bm)}</h2><div class="wx-grid">${cards || '<p>Belum ada data untuk benua ini.</p>'}</div>`
+    + `<p class="meta">Bandingkan dengan benua lain melalui <a href="/negara">senarai A–Z penuh</a>, atau semak <a href="/cuaca">cuaca</a> dan <a href="/gempa">aktiviti gempa</a> di rantau ini.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Negara di ${region.bm}`,
+    description: `Senarai ${rows.length} buah negara di benua ${region.bm} dengan ibu negara dan populasi.`,
+    url: selfUrl,
+  }).replace(/</g, '\\u003c');
+  return negaraDoc({
+    title: `Senarai Negara di ${region.bm} — Profil, Ibu Negara & Populasi | Tukuk-OS`,
+    desc: `Semua ${rows.length} buah negara di benua ${region.bm}: bendera, ibu negara dan populasi terkini (World Bank 2023), disusun ikut abjad.`,
+    selfUrl,
+    heroTitle: `Negara di ${region.bm}`, heroSub: `${rows.length} buah negara \u00b7 populasi terhimpun ${ngNum(totalPop)} orang`,
+    body, ld,
+  });
+}
+
+// ─── /negara/:slug — profil satu negara: hero bendera, jadual statistik, jiran ───
+function negaraCountryPage(req, c, rows) {
+  const selfUrl = `https://tukuk.org/negara/${c.slug}`;
+  const bmBySlug = {}; for (const x of rows) bmBySlug[x.slug] = x.bm;
+  const regionBm = ng.REGION_BM[c.region] || c.region || '';
+  const popLine = c.population ? `${ngNum(c.population)} orang${c.popRank ? ` (kedudukan ${c.popRank} dunia)` : ''}` : 'Tiada data populasi';
+  const curTxt = c.currencies.length ? c.currencies.map((x) => `${x.name}${x.symbol && x.symbol !== x.code ? ` (${x.symbol})` : ''} \u2014 ${x.code}`).join(', ') : '—';
+  const langTxt = c.languages.length ? c.languages.join(', ') : '—';
+  const hero = `<div class="wx-hero"><img src="${c.flag}" alt="Bendera ${escapeHtml(c.bm)}" width="320" loading="eager" decoding="async" style="max-width:280px;width:45%;height:auto;border-radius:8px;border:1px solid rgba(255,255,255,.25)">`
+    + `<div><div class="temp">${escapeHtml(c.bm)}</div><div class="wmeta">${escapeHtml(c.official)}<br>${escapeHtml(regionBm)}${c.subregion ? ` \u00b7 ${ngSubBm(c.subregion)}` : ''}${c.capital ? ` \u00b7 Ibu negara: <b>${escapeHtml(c.capital)}</b>` : ''}</div></div></div>`;
+  const baris = (k, v) => `<tr><th>${k}</th><td>${v}</td></tr>`;
+  const stats = `<h2 class="section-title">Maklumat ringkas ${escapeHtml(c.bm)}</h2><table class="wx-table">`
+    + baris('Nama rasmi', escapeHtml(c.official))
+    + baris('Ibu negara', c.capital ? escapeHtml(c.capital) : '—')
+    + baris('Benua & subwilayah', `${escapeHtml(regionBm)}${c.subregion ? ` \u00b7 ${ngSubBm(c.subregion)}` : ''}`)
+    + baris('Populasi', popLine)
+    + baris('Keluasan', c.area ? `${ngNum(c.area)} km²` : '—')
+    + baris('Kepadatan', c.population && c.area ? `${NG_INT.format(Math.round(c.population / c.area))} orang/km²` : '—')
+    + baris('KDNK (nominal)', ngGdp(c.gdp))
+    + baris('Urbanisasi', c.urban == null ? '—' : `${NG_DEC.format(c.urban)}% penduduk bandar`)
+    + baris('Jangka hayat', c.life == null ? '—' : `${NG_DEC.format(c.life)} tahun`)
+    + baris('Mata wang', escapeHtml(curTxt))
+    + baris('Bahasa', escapeHtml(langTxt))
+    + baris('Domain internet', c.tld ? `<code>${escapeHtml(c.tld)}</code>` : '—')
+    + baris('Kod panggilan', c.calling ? escapeHtml(c.calling) : '—')
+    + baris('Status', c.independent ? 'Negara berdaulat' : 'Wilayah bergantung')
+    + `</table>`;
+  const jiran = c.borderSlugs.length
+    ? `<h2 class="section-title">Jiran (sempadan darat)</h2><div class="ng-az">${c.borderSlugs.map((s) => `<a href="/negara/${s}">${escapeHtml(bmBySlug[s] || s)}</a>`).join('')}</div>`
+    : `<h2 class="section-title">Jiran (sempadan darat)</h2><p>Tiada sempadan darat \u2014 ${c.landlocked ? 'negara pedalan' : 'negara pulau atau wilayah terpencil'}.</p>`;
+  const coord = c.latlng && c.latlng.length === 2 && (c.latlng[0] || c.latlng[1]) ? `<p>Posisi geografi kira-kira <b>${NG_DEC.format(c.latlng[0])}\u00b0, ${NG_DEC.format(c.latlng[1])}\u00b0</b>.</p>` : '';
+  const body = hero + stats + jiran + coord
+    + `<p>Bendera: flagcdn.com; populasi, KDNK, urbanisasi & jangka hayat: <b>World Bank Open Data</b> (indikator 2023); maklumat asas: pakej open-data <b>world-countries</b> \u2014 semuanya percuma, tanpa pendaftaran.</p>`
+    + `<p class="meta">Semak juga: <a href="/cuaca">cuaca mengikut kota</a> \u00b7 <a href="/gempa">gempa terkini</a> \u00b7 <a href="/cuti">cuti umum Malaysia</a> \u00b7 <a href="/negara">senarai semua negara</a>.</p>`;
+  const descBits = [
+    c.capital ? `ibu negara ${c.capital}` : null,
+    c.population ? `populasi ${ngNum(c.population)} orang` : null,
+    c.area ? `keluasan ${ngNum(c.area)} km²` : null,
+    c.gdp != null ? `KDNK ${ngGdp(c.gdp)}` : null,
+  ].filter(Boolean).join(', ');
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Country', name: c.bm,
+    alternateName: [c.name, c.official].filter((x, i, arr) => x && arr.indexOf(x) === i),
+    description: `${c.bm} (${c.official}) — ${descBits || 'profil ringkas'}.`,
+    url: selfUrl,
+  }).replace(/</g, '\\u003c');
+  return negaraDoc({
+    title: `${c.bm} — Profil Negara: Ibu Negara, Populasi, Bendera | Tukuk-OS`,
+    desc: `${c.bm} (${c.official}): ${descBits || 'profil ringkas lengkap'} — mata wang, bahasa, kod panggilan, jiran dan data World Bank 2023.`,
+    selfUrl,
+    heroHtml: '', heroTitle: c.bm, heroSub: c.official === c.bm ? regionBm : `${escapeHtml(regionBm)} \u00b7 ${ngSubBm(c.subregion)}`.trim(),
     body, ld,
   });
 }
@@ -5800,8 +6080,8 @@ app.use((req, res) => {
     </form>
     <div class="actions">
       <a href="/">🏠 Home</a>
-      <a href="/store">🎮 Store &amp; Games</a>
-      <a href="/builder">🧱 Build an App</a>
+      <a href="/play">🎮 Play Games</a>
+      <a href="/negara">🗺️ World Countries</a>
       <a href="/apps/chat">💬 T Chat</a>
       <a href="/blog">📝 Blog</a>
       <a href="/contact">✉️ Contact</a>

@@ -17,3 +17,4 @@ Sitemap: https://tukuk.org/sitemap-nasa.xml
 Sitemap: https://tukuk.org/sitemap-cuaca.xml
 Sitemap: https://tukuk.org/sitemap-gempa.xml
 Sitemap: https://tukuk.org/sitemap-cuti.xml
+Sitemap: https://tukuk.org/sitemap-negara.xml
