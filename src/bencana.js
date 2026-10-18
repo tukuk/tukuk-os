@@ -146,4 +146,34 @@ function geoLabel(coords) {
   return { lat, lng, text: `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'U' : 'S'}, ${Math.abs(lng).toFixed(2)}°${lng >= 0 ? 'T' : 'B'}` };
 }
 
-module.exports = { CATS, findCat, loadEvents, loadAllOpen, loadEvent, geoLabel };
+// ── wikiPeek: ringkasan Wikipedia untuk kotak konteks halaman acara ────────
+// Sumber: en.wikipedia.org API — PERCUMA tanpa kunci. Dua langkah: carian
+// opensearch (nama tempat → laluan tajuk ensiklopedia), kemudian REST summary
+// (ekstrak pendek + thumbnail). Gagal mana-mana langkah → null; halaman tetap
+// sah tanpa kotak. Cache 24 jam — ringkasan Wikipedia berubah perlahan.
+async function wikiPeek(term) {
+  const q = String(term || '').trim();
+  if (!q || q.length < 3) return null;
+  const key = `wiki:${q.toLowerCase()}`;
+  const hit = cacheGet(key, TTL_ONE);
+  if (hit && !hit.stale) return hit.data;
+  try {
+    const os = await fetchJson(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=1&namespace=0&format=json`);
+    const title = os && os[1] && os[1][0];
+    if (!title) { cacheSet(key, null, TTL_ONE); return null; }
+    const sum = await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+    if (!sum || !sum.extract) { cacheSet(key, null, TTL_ONE); return null; }
+    const out = {
+      title: sum.title || title,
+      extract: sum.extract,
+      url: (sum.content_urls && sum.content_urls.desktop && sum.content_urls.desktop.page) || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
+      thumb: sum.thumbnail && sum.thumbnail.source ? sum.thumbnail.source : null,
+    };
+    cacheSet(key, out, TTL_ONE);
+    return out;
+  } catch {
+    return hit ? hit.data : null;
+  }
+}
+
+module.exports = { CATS, findCat, loadEvents, loadAllOpen, loadEvent, geoLabel, wikiPeek };

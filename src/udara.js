@@ -261,6 +261,44 @@ async function getCo2(force) {
   }
 }
 
+// ── Sungai: risiko banjir dari Open-Meteo Flood API ─────────────────────────
+// Sumber: https://flood-api.open-meteo.com — model GLOROD/GloFAS, PERCUMA tanpa
+// kunci. river_discharge dalam m³/s. Kami bandingkan reading terkini dengan
+// setahun sejarah setempat → peratusan + label konservatif. Ini model, bukan
+// ukuran sungai sebenar — halaman wajib melabelnya sebagai anggaran.
+const RIVER_TTL = 6 * 60 * 60 * 1000;
+async function getRiver(lat, lon) {
+  const key = `river:${Number(lat).toFixed(2)}:${Number(lon).toFixed(2)}`;
+  const hit = cacheGet(key);
+  if (hit && !hit.stale) return hit.data;
+  try {
+    const res = await http.get('https://flood-api.open-meteo.com/v1/flood', {
+      params: { latitude: lat, longitude: lon, daily: 'river_discharge', past_days: 365, timezone: 'UTC' },
+    });
+    const d = res.data && res.data.daily;
+    if (!d || !Array.isArray(d.time) || !Array.isArray(d.river_discharge)) throw new Error('tiada siri');
+    const rows = d.time.map((t, i) => ({ date: t, v: d.river_discharge[i] }))
+      .filter((r) => Number.isFinite(r.v));
+    if (rows.length < 30) throw new Error('siri terlalu pendek');
+    const vals = rows.map((r) => r.v).sort((a, b) => a - b);
+    const latest = rows[rows.length - 1];
+    const below = vals.filter((v) => v <= latest.v).length;
+    const pct = Math.round((below / vals.length) * 100);
+    const recent = rows.slice(-35).map((r) => Math.round(r.v * 10) / 10);
+    const data = {
+      source: 'live', date: latest.date, current: Math.round(latest.v * 10) / 10,
+      unit: 'm³/s', pctYear: pct, min: Math.round(vals[0] * 10) / 10,
+      max: Math.round(vals[vals.length - 1] * 10) / 10, median: Math.round(vals[Math.floor(vals.length / 2)] * 10) / 10,
+      series: recent, days: rows.length, fetchedAt: Date.now(),
+    };
+    cacheSet(key, data, RIVER_TTL);
+    return data;
+  } catch (err) {
+    if (hit) return Object.assign({}, hit.data, { source: 'last-known' });
+    return { source: 'unavailable', fetchedAt: Date.now() };
+  }
+}
+
 // ── Kurasi edukatif: oksigen ────────────────────────────────────────────────
 // Angka dipilih konservatif & boleh disemak; kesamaran dilabel "about".
 const OXYGEN = [
@@ -353,4 +391,4 @@ const MYTHS = [
   { m: '“Cracked oxygen means instant fire.”', f: 'Fires do spread dramatically as oxygen climbs — materials ignite more easily and burn hotter in a 35-percent world — but air is no switch; the flammable edge for ordinary materials sits well above normal levels.' },
 ];
 
-module.exports = { CITIES, aqiCategory, getAirRanking, getCo2, OXYGEN, HUMAN_BREATH, ANIMAL_BREATH, OTHER_WAYS, INDOOR_CO2, MYTHS };
+module.exports = { CITIES, aqiCategory, getAirRanking, getCo2, getRiver, OXYGEN, HUMAN_BREATH, ANIMAL_BREATH, OTHER_WAYS, INDOOR_CO2, MYTHS };

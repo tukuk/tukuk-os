@@ -1,0 +1,93 @@
+'use strict';
+// ── TUKUK-OS WORLD MONEY (/wang) — kadar pertukaran langsung ECB ────────────
+// Sumber: frankfurter.dev — data kadar Bank Pusat Eropah (40 mata wang),
+// PERCUMA tanpa kunci, tanpa pendaftaran. Dikemas kini setiap hari kerja
+// ±16:00 CET. Kontrak kejujuran: setiap payload bawa source + asOfDate;
+// kadar sentiasa dilabel "reference rate" — bukannya kadar kedai terbang.
+const axios = require('axios');
+const https = require('https');
+
+const http = axios.create({
+  timeout: 15000,
+  httpsAgent: new https.Agent({ family: 4 }), // VPS: IPv6 sukar (pitfall NOAA)
+  headers: { 'User-Agent': 'TukukOS-Money-Client/1.0 (+https://tukuk.org)' },
+});
+
+const BASE = 'https://api.frankfurter.dev/v1';
+const cache = new Map();
+function cacheGet(key) {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  return { data: hit.data, stale: Date.now() > hit.expiresAt };
+}
+function cacheSet(key, data, ttlMs) { cache.set(key, { data, expiresAt: Date.now() + ttlMs }); }
+const TTL_LATEST = 6 * 60 * 60 * 1000;         // ECB kemas kini harian
+const TTL_HIST = 7 * 24 * 60 * 60 * 1000;      // tarikh silam tidak berubah
+
+// Nota: kadar ECB ialah referensi; hanya ~30 mata wang dalam jadual ECB disenaraikan.
+const CODES = [
+  ['USD', 'US Dollar', '🇺🇸'], ['EUR', 'Euro', '🇪🇺'], ['GBP', 'British Pound', '🇬🇧'],
+  ['JPY', 'Japanese Yen', '🇯🇵'], ['MYR', 'Malaysian Ringgit', '🇲🇾'], ['SGD', 'Singapore Dollar', '🇸🇬'],
+  ['INR', 'Indian Rupee', '🇮🇳'], ['CNY', 'Chinese Yuan', '🇨🇳'], ['AUD', 'Australian Dollar', '🇦🇺'],
+  ['NZD', 'New Zealand Dollar', '🇳🇿'], ['CAD', 'Canadian Dollar', '🇨🇦'], ['CHF', 'Swiss Franc', '🇨🇭'],
+  ['KRW', 'South Korean Won', '🇰🇷'], ['BRL', 'Brazilian Real', '🇧🇷'], ['ZAR', 'South African Rand', '🇿🇦'],
+  ['TRY', 'Turkish Lira', '🇹🇷'], ['IDR', 'Indonesian Rupiah', '🇮🇩'], ['THB', 'Thai Baht', '🇹🇭'],
+  ['PHP', 'Philippine Peso', '🇵🇭'], ['SAR', 'Saudi Riyal', '🇸🇦'], ['MXN', 'Mexican Peso', '🇲🇽'],
+  ['PLN', 'Polish Zloty', '🇵🇱'], ['SEK', 'Swedish Krona', '🇸🇪'], ['NOK', 'Norwegian Krone', '🇳🇴'],
+  ['DKK', 'Danish Krone', '🇩🇰'], ['CZK', 'Czech Koruna', '🇨🇿'], ['HUF', 'Hungarian Forint', '🇭🇺'],
+  ['RON', 'Romanian Leu', '🇷🇴'], ['ILS', 'Israeli Shekel', '🇮🇱'], ['ISK', 'Icelandic Krona', '🇮🇸'],
+].filter((c) => c[1]);
+
+function isCode(x) { return /^[A-Z]{3}$/.test(String(x || '')); }
+
+// Latest rates for ONE base against every listed currency (single request).
+async function getLatest(base) {
+  const b = isCode(base) ? base : 'USD';
+  const key = `latest:${b}`;
+  const hit = cacheGet(key);
+  if (hit && !hit.stale) return hit.data;
+  try {
+    const res = await http.get(`${BASE}/latest?base=${b}`);
+    const d = res.data || {};
+    if (!d.rates) throw new Error('tiada rates');
+    const out = { source: 'live', base: d.base || b, date: d.date, rates: d.rates, fetchedAt: Date.now() };
+    cacheSet(key, out, TTL_LATEST);
+    if (hit && hit.data) cacheSet(`hist:${b}:${out.date.slice(0, 4)}`, hit.data, TTL_HIST);
+    return out;
+  } catch (err) {
+    if (hit && hit.data) return Object.assign({}, hit.data, { source: 'last-known' });
+    throw err;
+  }
+}
+
+// One day of history (for the "one year ago" comparison strip).
+async function getOnDate(base, date) {
+  const key = `ondate:${base}:${date}`;
+  const hit = cacheGet(key);
+  if (hit && !hit.stale) return hit.data;
+  try {
+    const res = await http.get(`${BASE}/${date}?base=${base}`);
+    const out = { source: 'live', base, date, rates: (res.data && res.data.rates) || {}, fetchedAt: Date.now() };
+    cacheSet(key, out, TTL_HIST);
+    return out;
+  } catch (err) {
+    if (hit && hit.data) return Object.assign({}, hit.data, { source: 'last-known' });
+    throw err;
+  }
+}
+
+// Convert any→any through the base's rate table (EUR table has USD inside it —
+// frankfurter always includes all counter-rates when no symbols= filter given).
+function convert(latest, from, to, amount) {
+  if (from === to) return { per: 1, total: Number(amount) || 0 };
+  const r = latest.rates || {};
+  // Rates are expressed as 1 {base} = x {symbol}. Cross: from→to = r[to]/r[from],
+  // with r[base]=1.0 implicit.
+  const val = (c) => (c === latest.base ? 1 : Number(r[c]));
+  const a = val(from); const b = val(to);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a === 0) return null;
+  const per = b / a;
+  return { per, total: (Number(amount) || 1) * per };
+}
+
+module.exports = { CODES, isCode, getLatest, getOnDate, convert };

@@ -32,6 +32,10 @@ const ng = require('./negara');
 const study = require('./study');
 const udara = require('./udara');
 const akad = require('./akademi');
+const wang = require('./wang');
+const seni = require('./seni');
+const hidup = require('./hidup');
+const bacaan = require('./bacaan');
 const st = require('./statistik');
 const bc = require('./bencana');
 const social = require('./social');
@@ -555,12 +559,13 @@ async function cuacaCityHandler(req, res, view) {
       const cur = await wx.getCurrent(city);
       return cuacaHtml(res, cuacaSunPage(req, city, cur));
     }
-    const [cur, fc, air] = await Promise.all([
+    const [cur, fc, air, river] = await Promise.all([
       wx.getCurrent(city),
       wx.getForecast(city).catch(() => null),
       wx.getAir(city).catch(() => null),
+      udara.getRiver(city.lat, city.lon).catch(() => null),
     ]);
-    return cuacaHtml(res, cuacaCityPage(req, city, cur, fc, air));
+    return cuacaHtml(res, cuacaCityPage(req, city, cur, fc, air, river));
   } catch {
     return cuacaHtml(res, weatherBusy(`Cuaca ${city.name} tidak sempat dimuat`), 503);
   }
@@ -765,7 +770,7 @@ app.get('/bencana/:cat/:id', async (req, res) => {
   if (!cat || !/^EONET_\d+$/.test(id)) return res.status(404).type('html').send(bencanaBusy('Halaman acara tidak dikenali'));
   try {
     const ev = await bc.loadEvent(id);
-    res.status(200).type('html').send(bencanaEventPage(req, cat, ev));
+    res.status(200).type('html').send(await bencanaEventPage(req, cat, ev));
   } catch {
     res.status(503).type('html').send(bencanaBusy(`Butiran acara ${id} tidak sempat dimuat`));
   }
@@ -1275,7 +1280,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1441,6 +1446,38 @@ app.get('/sitemap-akademi.xml', (req, res) => {
     .concat(akad.TRACKS.map((t) => one(`/akademi/${t.s}`, '0.7')))
     .concat(akad.allLessons().map((l) => one(`/akademi/${l.track.s}/${l.s}`, '0.6')))
     .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP WANG — hab + kadar + 29 halaman tukaran USD (USD→setiap kod ECB) ──
+app.get('/sitemap-wang.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/wang', '0.9'), one('/wang/kadar', '0.8')]
+    .concat(wang.CODES.map((c) => c[0]).filter((code) => code !== 'USD').map((code) => one(`/wang/tukar/USD/${code}`, '0.7')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP SENI — hab + 10 koleksi (halaman objek ditemui melalui grid) ────
+app.get('/sitemap-seni.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/seni', '0.9')].concat(seni.COLLECTIONS.map((c) => one(`/seni/koleksi/${c.slug}`, '0.7'))).join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP HIDUPAN — hab + 16 halaman spesies ───────────────────────────────
+app.get('/sitemap-hidupan.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/hidupan', '0.9')].concat(hidup.TAXA.map((t) => one(`/hidupan/${t.slug}`, '0.7'))).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
@@ -1673,6 +1710,9 @@ function siteFooter() {
       <li><a href="/study">General Knowledge</a></li>
       <li><a href="/udara">Air & Oxygen</a></li>
       <li><a href="/akademi">Academy — 50 Lessons</a></li>
+      <li><a href="/wang">World Currency — Live Rates</a></li>
+      <li><a href="/seni">Free Art Gallery — The Met</a></li>
+      <li><a href="/hidupan">Wildlife Atlas — Real Photos</a></li>
       <li><a href="/docs">Docs</a></li>
     </ul></div>
     <div><h4>NASA Space</h4><ul>
@@ -2109,6 +2149,51 @@ function nasaArchivePage(req, items, q) {
   });
 }
 
+// Peristiwa langit bertarikh tetap — kurasan setempat. (API in-the-sky.org
+// sudah mati — pelayan DNS-nya tidak dapat diselesaikan Okt 2026 — jadi kotak
+// ini dibina daripada takwim astronomi yang disemak tangan. Tarikh puncak
+// meteor bergerak ±1–2 hari antara tahun; KADAR (ZHR) ialah anggaran optimum
+// bawah langit gelap sepenuhnya, bukan apa yang pasti kelihatan.)
+const SKY_EVENTS = [
+  { y: 2027, m: 8, d: 2, icon: '🌑', name: 'Total solar eclipse', rate: 'totality up to 6m23s',
+    note: 'The biggest eclipse event of the decade — totality sweeps southern Spain, North Africa, Egypt (Luxor sits on the centre line), Saudi Arabia, Yemen and Somalia. July 2028 repeats it for Australia and New Zealand.' },
+  { m: 1, d: 3, icon: '☄️', name: 'Quadrantid meteors', rate: 'up to ~110/hr at peak',
+    note: 'The sharpest maximum of the year — a strong 24-hour spike radiating low near the old Quadrant constellation, best in the hours before dawn.' },
+  { m: 4, d: 22, icon: '☄️', name: 'Lyrid meteors', rate: '~15–20/hr',
+    note: 'An ancient shower logged for 2,700 years; short bright trains near the star Vega, with occasional outbursts.' },
+  { m: 5, d: 5, icon: '☄️', name: 'Eta Aquariid meteors', rate: '~30–50/hr',
+    note: 'Debris of Halley’s Comet’s outbound lap — fine, fast, often persistent-train meteors; best from the southern hemisphere before dawn.' },
+  { m: 7, d: 30, icon: '☄️', name: 'Delta Aquariid meteors', rate: '~25/hr',
+    note: 'A steady, unhurried shower of greenish meteors spread over nearly three weeks — the reliable warm-season display.' },
+  { m: 8, d: 12, icon: '🌠', name: 'Perseid meteors', rate: '~100/hr',
+    note: 'The famous summer shower — bright, sometimes fireball-producing, warm-weather viewing radiating near Perseus after midnight.' },
+  { m: 10, d: 21, icon: '☄️', name: 'Orionid meteors', rate: '~20/hr',
+    note: 'Halley’s inbound debris: fast meteors with lasting trains, and the rare Earth-grazing fireballs that light up whole skies.' },
+  { m: 11, d: 17, icon: '☄️', name: 'Leonid meteors', rate: '~15/hr (storm potential)',
+    note: 'Famous for periodic storms of thousands per hour — the parent comet’s dense dust trails cross our orbit in a ~33-year rhythm.' },
+  { m: 12, d: 13, icon: '🌠', name: 'Geminid meteors', rate: '~120–150/hr',
+    note: 'The richest shower of the year — slow, colourful meteors from the rocky asteroid Phaethon, good from early evening onward.' },
+  { m: 12, d: 22, icon: '☄️', name: 'Ursid meteors', rate: '~10/hr',
+    note: 'The solstice shower — modest, but fireball-rich in odd years, radiating close to the faint pole star.' },
+];
+function skyEventsBox() {
+  const now = Date.now();
+  const rows = SKY_EVENTS.map((e) => {
+    const when = e.y
+      ? { t: Date.UTC(e.y, e.m - 1, e.d), label: `${e.d} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][e.m - 1]} ${e.y}` }
+      : (() => {
+        const thisYear = Date.UTC(new Date(now).getUTCFullYear(), e.m - 1, e.d);
+        const nextYear = Date.UTC(new Date(now).getUTCFullYear() + 1, e.m - 1, e.d);
+        const t = thisYear >= now - 86400000 ? thisYear : nextYear;
+        const yr = t === thisYear ? new Date(now).getUTCFullYear() : new Date(now).getUTCFullYear() + 1;
+        return { t, label: `${e.d} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][e.m - 1]} ${yr}` };
+      })();
+    return { e, when, nights: Math.max(0, Math.ceil((when.t - now) / 86400000)) };
+  }).sort((a, b) => a.nights - b.nights).slice(0, 8);
+  const tr = rows.map((r) => `<tr><td>${r.e.icon} <b>${escapeHtml(r.e.name)}</b><br><span class="meta">${escapeHtml(r.e.note)}</span></td><td>${r.when.label}</td><td>in ${r.nights} night${r.nights === 1 ? '' : 's'}</td><td>${escapeHtml(r.e.rate)}</td></tr>`).join('');
+  return `<h2 class="section-title">The year’s fixed sky events</h2><p>Hand-picked dates worth planning around — meteor-shower maxima and eclipses. Peak nights shift by roughly a day or two between years, and shower rates below are best-case figures under fully dark skies; moonlight and light pollution reduce what you actually see. Cross-check the Moon illumination card above before committing to a trip.</p><table class="nasa-table"><tr><th>Event</th><th>Date</th><th>Countdown</th><th>Typical rate</th></tr>${tr}</table><p class="meta">Eclipse path and timings: NASA. Meteor shower parameters: International Meteor Organization summaries.</p>`;
+}
+
 function nasaSkyPage(req, sky, useQuery) {
   const m = sky.moon || {};
   const sun = sky.sun || null;
@@ -2135,7 +2220,8 @@ function nasaSkyPage(req, sky, useQuery) {
     + (sun ? `<table class="nasa-table"><tr><th>Twilight stage</th><th>Begins</th><th>Ends</th></tr>${twRows}</table><p class="meta">Day length today: ${Number(sun.day_length_hours) || 0} h. Times are UTC; your browser clock may differ.</p>` : '')
     + (sky.note ? `<p class="meta">${escapeHtml(sky.note)}</p>` : '')
     + `<h2 class="section-title">Astronomical darkness \u2014 the number that matters</h2><p>Civil twilight ends when the Sun is 6\u00b0 below the horizon (you can see Venus and Jupiter), nautical at 12\u00b0 (the horizon and bright stars appear), and <b>astronomical twilight</b> at 18\u00b0 \u2014 only after that does the sky reach true dark, letting faint galaxies, the zodiacal light and the Milky Way show themselves. Near the equator this happens fast (Malaysia gets about 90 minutes of full night all year round); at high latitudes summer can never reach it at all.</p>`
-    + `<h2 class="section-title">What to observe tonight</h2><p>Under a ${escapeHtml(m.name || '')} sky, try: the Moon\u2019s terminator line (best crater detail), Jupiter and Saturn when above the horizon after midnight, and the Milky Way core season from southern latitudes. Check the <a href="/nasa/space-weather">space-weather page</a> for aurora chances and the <a href="/nasa/iss">ISS page</a> for pass timings.</p>`;
+    + `<h2 class="section-title">What to observe tonight</h2><p>Under a ${escapeHtml(m.name || '')} sky, try: the Moon\u2019s terminator line (best crater detail), Jupiter and Saturn when above the horizon after midnight, and the Milky Way core season from southern latitudes. Check the <a href="/nasa/space-weather">space-weather page</a> for aurora chances and the <a href="/nasa/iss">ISS page</a> for pass timings.</p>`
+    + skyEventsBox();
   return nasaDoc({
     title: 'Sky Tonight \u2014 Moon Phase, Twilight & Observing Guide | Tukuk-OS',
     desc: 'Tonight\u2019s moon phase, illumination, twilight windows and what to observe \u2014 free, computed live, any coordinate on Earth.',
@@ -2708,7 +2794,7 @@ function cuacaHubPage(req, snap) {
 }
 
 // ——— Halaman kota: semasa + 8 jam + 5 hari + AQI + nasihat dijana automatik ———
-function cuacaCityPage(req, city, cur, fc, air) {
+function cuacaCityPage(req, city, cur, fc, air, river) {
   const w = (cur.weather && cur.weather[0]) || { id: 800 };
   const night = isNightNow(cur);
   const d = wx.describe(w.id, night);
@@ -2750,11 +2836,25 @@ function cuacaCityPage(req, city, cur, fc, air) {
     daysHtml = rows ? `<h2 class="section-title">Ramalan 5\u20136 hari</h2><table class="wx-table"><tr><th>Hari</th><th>Keadaan</th><th>Suhu</th><th>Kebarangkalian hujan</th><th>Anggaran hujan</th></tr>${rows}</table>` : '';
   }
   const airBox = band
-    ? `<h2 class="section-title">Kualiti udara</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} \u2014 ${escapeHtml(band.label)}</span> \u00b7 ${escapeHtml(band.advice)} <a href="/cuaca/${city.slug}/udara">Butiran PM2.5 & ramalan pencemaran \u2192</a></p>`
+    ? `<h2 class="section-title">Kualiti udara</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} — ${escapeHtml(band.label)}</span> · ${escapeHtml(band.advice)} <a href="/cuaca/${city.slug}/udara">Butiran PM2.5 & ramalan pencemaran →</a></p>`
     : '';
+  // Kad risiko sungai — model GloFAS via Open-Meteo Flood (bukan ukuran sebenar;
+  // grid 5km boleh terlepas sungai kecil — dilabel jujur dalam meta).
+  let riverBox = '';
+  if (river && river.source !== 'unavailable' && Number.isFinite(river.current)) {
+    const pct = Number(river.pctYear) || 0;
+    const lbl = pct >= 95 ? ['Sangat tinggi — aliran luar biasa bagi setahun ini', '#e5534b']
+      : pct >= 80 ? ['Tinggi — melebihi 80% hari tahun lalu', '#d29922']
+      : pct >= 20 ? ['Normal untuk musim ini', '#3fb950']
+      : ['Rendah — musim kering di grid ini', '#4c8dff'];
+    const series = (river.series || []).slice(-35);
+    const hi = Math.max(1, ...series);
+    const spark = series.map((v) => `<span title="${v} m³/s" style="display:inline-block;width:5px;margin-right:2px;height:${Math.max(2, Math.round((v / hi) * 34))}px;background:var(--accent,#4c8dff);vertical-align:bottom;border-radius:1px"></span>`).join('');
+    riverBox = `<h2 class="section-title">Model aliran sungai</h2><p><span class="wx-pill" style="background:${lbl[1]}">${lbl[0]}</span> — grid model merekod <b>${river.current} ${escapeHtml(river.unit)}</b> pada ${escapeHtml(String(river.date))}, iaitu lebih tinggi daripada ${pct}% daripada ${river.days} hari sejarah setempat (min ${river.min} · median ${river.median} · maks ${river.max} ${escapeHtml(river.unit)}).</p><p style="line-height:1">${spark}</p><p class="meta">Anggaran model hidrologi GloFAS (Open-Meteo Flood API) pada grid ±5 km — <b>bukan ukuran stesen sungai sebenar</b> dan tidak menggantikan amaran banjir rasmi Jabatan Pengairan dan Saliran atau agensi negara anda. Sumber: ${river.source === 'last-known' ? 'bacaan terakhir yang berjaya disimpan' : 'model langsung'}.</p>`;
+  }
   const advice = wx.cityAdvice(cur, air).map((t) => `<li>${escapeHtml(t)}</li>`).join('');
   const body = `<p class="back-link"><a href="/cuaca">\u2190 Semua cuaca</a> \u00b7 <a href="/cuaca/peta">Peta langsung</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Langit malam di sini (fasa bulan & senja)</a></p>`
-    + hero + cards + hourHtml + daysHtml + airBox
+    + hero + cards + hourHtml + daysHtml + airBox + riverBox
     + (advice ? `<h2 class="section-title">Sedia hari ini</h2><ul>${advice}</ul>` : '')
     + `<h2 class="section-title">Bagaimana bacaan ini diperoleh</h2><p>Angka di atas ialah cerapan model raster OpenWeather untuk koordinat ${Number(city.lat).toFixed(3)}\u00b0, ${Number(city.lon).toFixed(3)}\u00b0 \u2014 dikemas kini setiap 45 minit dan dipaparkan dalam waktu setempat ${city.name} (UTC${tz >= 0 ? '+' : '\u2212'}${Math.abs(Math.round(tz / 3600))}). Kelembapan tinggi bersama suhu \u2265 31\u00b0C menjadikan "rasa sebenar" lebih panas daripada bacaan termometer; tekanan yang menurun perlahan biasanya isyarat hujan dalam 12\u201324 jam.</p>`
     + `<h2 class="section-title">Makna ikon & kod</h2><p>Keadaan <b>${escapeHtml(d.ms)}</b> sepadan dengan kod ${Number(w.id)} OpenWeather \u2014 keseluruhan senarai kod dijelaskan di <a href="/cuaca/kod">halaman kod cuaca</a>, jenis awan di <a href="/cuaca/awan">panduan awan</a> dan kelajuan angin di <a href="/cuaca/angin">skala Beaufort</a>.</p>`
@@ -4206,7 +4306,7 @@ function bencanaCatPage(req, cat, events) {
 }
 
 // ─── /bencana/:kategori/:id — satu acara: peta SVG + garis masa koordinat ───
-function bencanaEventPage(req, cat, ev) {
+async function bencanaEventPage(req, cat, ev) {
   const selfUrl = `https://tukuk.org/bencana/${cat.slug}/${encodeURIComponent(ev.id)}`;
   const geo = (ev.geometries || []).slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
   const dots = geo.map((g) => {
@@ -4224,6 +4324,13 @@ function bencanaEventPage(req, cat, ev) {
     return `<tr><td>${bcDate(g.date)}</td><td>${loc ? escapeHtml(loc.text) : '—'}</td><td>${escapeHtml(String(g.type || 'point'))}</td></tr>`;
   }).join('');
   const srcs = (ev.sources || []).map((s) => `<li><a rel="noopener" target="_blank" href="${escapeHtml(String(s.url || '#'))}">${escapeHtml(String(s.id || 'sumber'))}</a></li>`).join('');
+  // Konteks tempat — ringkasan Wikipedia (keyless). Tajuk EONET biasanya
+  // "Jenis - Tempat", jadi cari bahagian selepas pemisah; gagal → tiada kotak.
+  const wikiTerm = String(ev.title || '').split(/\s[-\u2013\u2014]\s/).pop().trim() || String(ev.title || '');
+  const wiki = await bc.wikiPeek(wikiTerm);
+  const wikiBox = wiki
+    ? `<h2 class="section-title">Kenali lokasinya</h2><p><b>${escapeHtml(wiki.title)}</b> — ${escapeHtml(wiki.extract)} <a rel="noopener nofollow" href="${escapeHtml(wiki.url)}">Baca artikel penuh di Wikipedia →</a></p>`
+    : '';
   const desc = ev.description ? `<p>${escapeHtml(String(ev.description))}</p>` : '';
   const first = geo.length ? geo[0] : null;
   const last = geo.length ? geo[geo.length - 1] : null;
@@ -4231,6 +4338,7 @@ function bencanaEventPage(req, cat, ev) {
     + `<div class="wx-hero"><div class="temp">${cat.icon} ${escapeHtml(String(ev.title || ev.id))}</div><div class="wmeta">${escapeHtml(cat.bm)} · bermula ${bcDate(ev.created)}${last ? ` · kemas kini terakhir ${bcDate(bcLatest(ev))}` : ''} · ${geo.length} lokasi direkod</div></div>`
     + desc + map
     + (first && last && first !== last ? `<p>Peristiwa ini bermula di ${escapeHtml((bc.geoLabel(first.coordinates) || {}).text || '—')} dan kini aktif di ${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}.</p>` : (last ? `<p>Kedudukan terkini: <b>${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}</b>.</p>` : ''))
+    + wikiBox
     + (timeline ? `<h2 class="section-title">Garis masa lokasi</h2><table class="wx-table"><tr><th>Tarikh</th><th>Koordinat</th><th>Jenis</th></tr>${timeline}</table>` : '')
     + (srcs ? `<h2 class="section-title">Sumber laporan</h2><ul>${srcs}</ul>` : '')
     + `<p class="meta">Data: NASA EONET (domain awam) · ${escapeHtml(cat.blurb.split('.')[0])}. Semak keadaan langit di kawasan terjejas: <a href="/cuaca">Kompleks Cuaca</a>; aktiviti tektonik: <a href="/gempa">Kompleks Gempa</a>; negara berkenaan: <a href="/negara">Kompleks Negara</a>.</p>`;
@@ -5354,15 +5462,34 @@ function akadHubPage() {
 }
 
 // ── /akademi/:track — senarai 5 pelajaran + pautan alat hidup trek ──────────
-function akadTrackPage(t) {
+// Topik carian bacaan tambahan setiap trek (Open Library + Crossref, keyless).
+const TRACK_TOPIC = {
+  sky: 'astronomy', weather: 'weather and climate', earth: 'geology of the Earth',
+  air: 'the atmosphere and air quality', body: 'the human body', life: 'ecology and the living world',
+  numbers: 'statistics and probability', internet: 'computers and the internet',
+  things: 'engineering and invention', thinking: 'critical thinking',
+};
+async function akadTrackPage(t) {
   const lessons = akad.LESSONS[t.s] || [];
   const min = lessons.reduce((n, l) => n + l.mn, 0);
   const rows = lessons.map((l, i) => `<div class="akad-card"><h3><a href="/akademi/${t.s}/${l.s}">${i + 1}. ${escapeHtml(l.t)}</a></h3><p>${escapeHtml(l.sum)}</p><p class="meta">About ${l.mn} min · 1 quiz question</p></div>`).join('');
   const rel = `<h2 class="section-title">Try it live</h2><ul>${t.rel.map((r) => `<li><a href="${r.h}">${escapeHtml(r.l)}</a></li>`).join('')}</ul>`;
+  // Kotak bacaan — kegagalan sumber luar dibuang senyap (setiap satu catch → []).
+  const topic = TRACK_TOPIC[t.s] || t.name;
+  const [bk, pp] = await Promise.all([
+    bacaan.books(topic, 3).catch(() => []),
+    bacaan.papers(topic, 3).catch(() => []),
+  ]);
+  const bookBox = bk && bk.length
+    ? `<h2 class="section-title">Further reading</h2><p>Three real books on this track, from the Open Library catalogue — follow the links for libraries, previews and borrow options.</p><div class="akad-grid">${bk.map((b) => `<div class="akad-card" style="display:flex;gap:14px;align-items:flex-start">${b.cover ? `<img src="${escapeHtml(b.cover)}" alt="Cover of ${escapeHtml(b.title)}" loading="lazy" style="width:64px;height:96px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">` : ''}<div><h3><a rel="noopener nofollow" href="${escapeHtml(b.url)}">${escapeHtml(b.title)}</a></h3><p class="meta" style="margin:0">${escapeHtml(b.author)}${b.year ? ` · ${b.year}` : ''}</p></div></div>`).join('')}</div>`
+    : '';
+  const paperBox = pp && pp.length
+    ? `<h2 class="section-title">The research</h2><p>The most-cited Crossref-indexed papers matching the topic — a window into how professionals actually study it.</p><ul>${pp.map((p) => `<li><a rel="noopener nofollow" href="${escapeHtml(p.url)}">${escapeHtml(p.title)}</a> — ${escapeHtml(p.author)}${p.year ? ` (${p.year})` : ''}, cited ${p.cites.toLocaleString('en-US')} times</li>`).join('')}</ul>`
+    : '';
   const body = `<p class="learn-intro"><a href="/akademi">&larr; All 50 lessons</a></p>
   <p>${escapeHtml(t.blurb)} Five lessons, about ${min} minutes in total — read one at a time; each stands alone.</p>
   <div class="akad-grid">${rows}</div>
-  ${rel}`;
+  ${rel}${bookBox}${paperBox}`;
   return akadDoc({
     title: `${t.name} — 5 Lessons | Akademi Tukuk-OS`,
     desc: `${t.blurb} Five short free lessons with key takeaways and quiz questions, from Akademi Tukuk-OS.`,
@@ -5416,10 +5543,10 @@ function akadLessonPage(t, l, prev, next, no) {
 }
 
 app.get('/akademi', (req, res) => res.type('html').send(akadHubPage()));
-app.get('/akademi/:track', (req, res) => {
+app.get('/akademi/:track', async (req, res) => {
   const t = akad.findTrack(req.params.track);
   if (!t) return res.redirect('/akademi');
-  res.type('html').send(akadTrackPage(t));
+  res.type('html').send(await akadTrackPage(t));
 });
 app.get('/akademi/:track/:slug', (req, res) => {
   const t = akad.findTrack(req.params.track);
@@ -5428,6 +5555,399 @@ app.get('/akademi/:track/:slug', (req, res) => {
   const flat = akad.allLessons();
   const idx = flat.findIndex((x) => x.track.s === t.s && x.s === l.s);
   res.type('html').send(akadLessonPage(t, l, idx > 0 ? flat[idx - 1] : null, idx < flat.length - 1 ? flat[idx + 1] : null, idx + 1));
+});
+
+// ══ DUNIA TUKUK-OS — tiga kluster baharu berpunca API keyless: /wang (ECB via
+// frankfurter.dev), /seni (The Metropolitan Museum), /hidupan (iNaturalist).
+// Bahasa Inggeris untuk khalayak global; chrome penuh + 3 unit iklan seperti
+// akadDoc, nav disuntik per-kluster supaya satu pelukan menjaga tiga halaman.
+function worldDoc(o, navHtml) {
+  const robots = o.robots || 'index,follow';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="${o.ogImage || 'https://tukuk.org/og.png'}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#4c8dff">
+<style>${COMMON_CSS}
+.world-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
+.world-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel,#171a21);margin:0}
+.world-card h3{margin:0 0 8px;font-size:1.05rem}
+.world-card p{margin:6px 0;font-size:.95rem}
+.world-pill{display:inline-block;border-radius:999px;padding:3px 12px;font-size:.85rem;font-weight:700;color:#fff}
+.world-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.95rem}
+.world-table th,.world-table td{border:1px solid var(--line);padding:8px 10px;text-align:left}
+.world-table th{background:var(--panel,#171a21)}
+.wang-result{border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:10px;padding:16px 20px;margin:20px 0;background:var(--panel,#171a21)}
+.wang-result .big{font-size:1.7rem;font-weight:800;margin:4px 0}
+.wang-form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:16px 0}
+.wang-form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted,#9aa3b2)}
+.wang-form select,.wang-form input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit}
+.seni-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.seni-grid figure{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel,#171a21)}
+.seni-grid img{width:100%;height:180px;object-fit:cover;display:block}
+.seni-grid figcaption{padding:9px 11px;font-size:.84rem;line-height:1.4}
+@media(max-width:900px){.seni-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:680px){.world-grid{grid-template-columns:1fr}.seni-grid{grid-template-columns:1fr}}
+${o.css || ''}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('learn')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${navHtml}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// Kad nav kecil setiap kluster — feed card seperti akadNav.
+function worldNav(label, items) {
+  return `<nav aria-label="${escapeHtml(label)}"><h2 class="section-title">${escapeHtml(label)}</h2><div class="feed">`
+    + items.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
+    + `</div></nav>`;
+}
+const wangNav = () => worldNav('World Money — tukuk.org/wang', [
+  { href: '/wang', icon: '💱', name: 'Currency converter', blurb: 'Convert any of 30 world currencies at the latest European Central Bank reference rates — free, no account.' },
+  { href: '/wang/kadar', icon: '📊', name: 'All rates today', blurb: 'Every rate the ECB publishes, on one page, refreshed each weekday around 16:00 CET.' },
+  { href: '/wang/tukar/USD/EUR', icon: '🇺🇸', name: 'US Dollar → Euro', blurb: 'Live USD/EUR reference rate with a ready amount table and the reverse rate in one glance.' },
+  { href: '/wang/tukar/USD/MYR', icon: '🇲🇾', name: 'US Dollar → Ringgit', blurb: 'Live USD/MYR reference rate — the number travellers from Malaysia check most.' },
+  { href: '/wang/tukar/USD/INR', icon: '🇮🇳', name: 'US Dollar → Rupee', blurb: 'Live USD/INR reference rate with a ready amount table from ₹100 to ₹1,00,000.' },
+  { href: '/wang/tukar/GBP/JPY', icon: '🇬🇧', name: 'Pound → Yen', blurb: 'Cross-rate example: GBP to JPY computed from the same ECB table.' },
+]);
+const seniNav = () => worldNav('Art Gallery — free images from The Met', [{ href: '/seni', icon: '🖼️', name: 'All collections', blurb: 'Ten curated doors into the Metropolitan Museum’s open-access archive — hundreds of thousands of public-domain images.' }]
+  .concat(seni.COLLECTIONS.map((c) => ({ href: `/seni/koleksi/${c.slug}`, icon: c.icon, name: c.name, blurb: c.blurb }))));
+const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/hidupan', icon: '🦁', name: 'All species', blurb: 'Sixteen animals, each with a plain-language story and real research-grade photographs from the iNaturalist community.' }]
+  .concat(hidup.TAXA.map((t) => ({ href: `/hidupan/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
+
+// ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
+const moneyName = (code) => (wang.CODES.find((c) => c[0] === code) || ['', code])[1];
+const moneyFlag = (code) => (wang.CODES.find((c) => c[0] === code) || ['', '', '🏳️'])[2];
+const moneyFmt = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: Math.abs(Number(n)) < 1 ? 6 : 2 });
+function wangCodeSet(x) { const c = String(x || '').toUpperCase(); return wang.isCode(c) && wang.CODES.some((k) => k[0] === c) ? c : null; }
+function wangDown(note) {
+  return worldDoc({
+    title: 'World Currency — temporarily unavailable | Tukuk-OS',
+    desc: 'The European Central Bank rate feed is briefly unreachable; rates return automatically from cache.',
+    selfUrl: 'https://tukuk.org/wang',
+    robots: 'noindex,follow',
+    heroTitle: 'World Money', heroSub: 'Live ECB reference rates',
+    body: `<p>${escapeHtml(note || 'The rate feed is briefly unreachable.')} Rates are cached for six hours per base currency, so reloading usually works within a minute. For live world data hubs that never depend on one feed, see <a href="/akademi">Akademi Tukuk-OS</a> and the <a href="/statistik">world statistics complex</a>.</p>`,
+  }, wangNav());
+}
+
+function moneyConverterPage(req, latest, useQuery) {
+  const from = wangCodeSet(req.query.dari) || (useQuery ? null : 'USD');
+  const to = wangCodeSet(req.query.kepada) || (useQuery ? null : 'EUR');
+  let amount = Number(req.query.jumlah);
+  if (!Number.isFinite(amount) || Math.abs(amount) > 1e12) amount = 100;
+  if (amount === 0) amount = 100;
+  const opts = wang.CODES.map(([code, name]) => `<option value="${code}"${code === from ? ' selected':''}>${moneyFlag(code)} ${code} — ${escapeHtml(name)}</option>`).join('');
+  const optsTo = wang.CODES.map(([code, name]) => `<option value="${code}"${code === to ? ' selected':''}>${moneyFlag(code)} ${code} — ${escapeHtml(name)}</option>`).join('');
+  const form = `<form action="/wang" method="get" class="wang-form" role="search" aria-label="Currency converter">
+    <label>From<select name="dari" aria-label="From currency">${opts}</select></label>
+    <label>To<select name="kepada" aria-label="To currency">${optsTo}</select></label>
+    <label>Amount<input type="number" name="jumlah" value="${amount}" step="any" min="0" aria-label="Amount"></label>
+    <button class="btn primary" type="submit">Convert</button></form>`;
+  let resultHtml = '';
+  if (from && to) {
+    const conv = wang.convert(latest, from, to, amount);
+    if (conv) {
+      const srcLbl = latest.source === 'live'
+        ? `European Central Bank reference rate as of ${latest.date} — updated every weekday around 16:00 CET`
+        : `cached last-known ECB rate from ${latest.date} — the live feed is briefly busy`;
+      const quick = [1, 10, 100, 1000, 10000].map((q) => `<tr><td>${moneyFmt(q)} ${from}</td><td>${moneyFmt(q * conv.per)} ${to}</td></tr>`).join('');
+      resultHtml = `<div class="wang-result"><p class="meta" style="margin:0">${escapeHtml(moneyName(from))} to ${escapeHtml(moneyName(to))}</p>
+      <div class="big">${moneyFmt(amount)} ${from}&nbsp;=&nbsp;${moneyFmt(conv.total)} ${to}</div>
+      <p class="meta" style="margin:0">1 ${from} = ${moneyFmt(conv.per)} ${to} · 1 ${to} = ${moneyFmt(1 / conv.per)} ${from} · ${escapeHtml(srcLbl)}</p></div>
+      <h2 class="section-title">Quick amounts</h2><table class="world-table"><tr><th>${from}</th><th>${to}</th></tr>${quick}</table>`;
+    } else {
+      resultHtml = `<div class="wang-result"><p>That pair is not in the current ECB table — try <a href="/wang?dari=USD&kepada=${encodeURIComponent(to || 'EUR')}">US Dollar as the base</a>.</p></div>`;
+    }
+  }
+  const body = `<p>Convert over thirty world currencies instantly using the <b>European Central Bank’s own daily reference rates</b>, served key-free by frankfurter.dev. These are the mid-market benchmark rates banks and journalists quote — what a currency is worth between institutions, before any exchange counter adds its margin. That honesty matters: a airport kiosk will never give you exactly these numbers, and we say so instead of pretending to.</p>`
+    + form + resultHtml
+    + `<h2 class="section-title">How the ECB fixing works</h2><p>Every weekday the ECB surveys national central banks around 14:15 CET and publishes one fixing per currency pair. Weekends and holidays hold the last fixing — which is exactly why your Monday morning screen still shows a Saturday date. The full table of every rate is on the <a href="/wang/kadar">rates page</a>; popular pairs have permanent pages below.</p>`
+    + `<h2 class="section-title">Travel and remittance tip</h2><p>Compare any quote you receive against 1&nbsp;${escapeHtml(from || 'USD')} = ${resultHtml ? 'this page’s' : 'the live'} figure above: the gap is the dealer’s margin plus fees. Dynamic currency conversion (being charged in your home currency abroad) typically hides 3–7% inside the “convenience” — paying in the local currency is almost always cheaper.</p>`
+    + `<p class="meta">Source: ECB via frankfurter.dev (open API) · reference rates only, not a trading feed.</p>`;
+  return worldDoc({
+    title: 'Currency Converter — 30 World Currencies, Live ECB Rates | Tukuk-OS',
+    desc: 'Free currency converter using the European Central Bank’s daily reference rates — 30 currencies, mid-market numbers, updated every weekday.',
+    selfUrl: 'https://tukuk.org/wang',
+    robots: useQuery ? 'noindex,follow' : 'index,follow',
+    heroTitle: 'World Currency Converter', heroSub: `${wang.CODES.length} currencies · ECB reference rates · free, no account`,
+    body,
+  }, wangNav());
+}
+
+function moneyRatesPage(req, latest) {
+  const base = latest.base;
+  const rows = wang.CODES.filter(([code]) => code !== base).map(([code, name]) => {
+    const conv = wang.convert(latest, base, code, 1);
+    if (!conv) return '';
+    return `<tr><td>${moneyFlag(code)} <a href="/wang/tukar/${base}/${code}"><b>${code}</b> — ${escapeHtml(name)}</a></td><td>${moneyFmt(conv.per)}</td><td>${moneyFmt(1 / conv.per)}</td></tr>`;
+  }).join('');
+  const pick = wang.CODES.map(([code, name]) => `<a class="btn ghost" style="margin:3px" href="/wang/kadar?asas=${code}">${code}</a>`).join(' ');
+  const body = `<p>Every rate in the ECB’s reference table today (${latest.date}), each expressed both ways — one <b>${base}</b> in the other currency, and one other currency back in <b>${base}</b>. Rates are mid-market reference figures; <a href="/wang">the converter</a> uses the same table for any pair you choose.</p>`
+    + `<h2 class="section-title">Base currency</h2><p>${pick}</p>`
+    + `<table class="world-table"><tr><th>Currency</th><th>1 ${base} =</th><th>1 unit = ${base}</th></tr>${rows}</table>`
+    + `<p class="meta">Source: European Central Bank via frankfurter.dev · refreshed each weekday ±16:00 CET · cache ${latest.source === 'live' ? 'live' : 'last-known'}.</p>`;
+  return worldDoc({
+    title: `ECB Exchange Rates Today — All ${wang.CODES.length} Currencies | Tukuk-OS`,
+    desc: `Today’s complete European Central Bank reference-rate table in both directions, with permanent pages for every pair against ${moneyName(base)}.`,
+    selfUrl: 'https://tukuk.org/wang/kadar',
+    robots: req.query.asas ? 'noindex,follow' : 'index,follow',
+    heroTitle: `World Rates — ${base}`, heroSub: `ECB reference table of ${latest.date}`,
+    body,
+  }, wangNav());
+}
+
+function moneyPairPage(req, latest, from, to) {
+  const conv = wang.convert(latest, from, to, 1);
+  const nf = moneyName(from); const nt = moneyName(to);
+  const quick = [1, 5, 10, 50, 100, 500, 1000, 5000].map((q) => `<tr><td>${moneyFmt(q)} ${from}</td><td>${moneyFmt(q * conv.per)} ${to}</td></tr><tr><td>${moneyFmt(q)} ${to}</td><td>${moneyFmt(q / conv.per)} ${from}</td></tr>`).join('');
+  const body = `<p>The live reference rate: <b>1 ${moneyFlag(from)} ${from} = ${moneyFmt(conv.per)} ${to}</b>, and the reverse, <b>1 ${to} = ${moneyFmt(1 / conv.per)} ${from}</b>. Source: European Central Bank daily fixing (${latest.date}), key-free via frankfurter.dev. That is the mid-market benchmark — what the two currencies are worth to each other between banks, before any shop, card scheme or airport kiosk adds its margin.</p>`
+    + `<div class="wang-result"><p class="meta" style="margin:0">${escapeHtml(nf)} ⇄ ${escapeHtml(nt)}</p><div class="big">1 ${from} = ${moneyFmt(conv.per)} ${to}</div><p class="meta" style="margin:0">as of ${latest.date} · ECB reference</p></div>`
+    + `<h2 class="section-title">Amount cheat-sheet</h2><table class="world-table"><tr><th>From</th><th>To</th></tr>${quick}</table>`
+    + `<p class="back-link"><a href="/wang?dari=${from}&kepada=${to}&jumlah=100">Convert your own amount →</a> · <a href="/wang/kadar">Full rate table →</a></p>`
+    + `<h2 class="section-title">Why ${from}/${to} moves</h2><p>Pair values reprice continuously on interest-rate differences, inflation gaps, trade flows and politics. A stronger ${from} makes ${to}-priced goods and trips cheaper for holders of ${from} — and makes ${nf} exports dearer for everyone buying them. The table above is the whole truth available to the public without an account; anything a dealer quotes you is this number plus their spread.</p>`
+    + `<p class="meta">Data: ECB via frankfurter.dev · reference rates only, not dealable quotes.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'FinancialService', name: `${nf} to ${nt} — live rate`,
+    description: `Current ECB reference rate for ${from}/${to} with amount conversion tables.`,
+    url: `https://tukuk.org/wang/tukar/${from}/${to}`, areaServed: 'Worldwide',
+  }).replace(/</g, '\\u003c');
+  return worldDoc({
+    title: `${nf} to ${nt} — Live Exchange Rate & Converter | Tukuk-OS`,
+    desc: `1 ${from} = ${moneyFmt(conv.per)} ${to} today (ECB reference rate, ${latest.date}). Amount tables, reverse rate and a free converter — no sign-up.`,
+    selfUrl: `https://tukuk.org/wang/tukar/${from}/${to}`,
+    heroTitle: `${moneyFlag(from)} ${nf} → ${moneyFlag(to)} ${nt}`, heroSub: `ECB reference rate of ${latest.date} · updated daily`,
+    ld, body,
+  }, wangNav());
+}
+
+app.get('/wang', async (req, res) => {
+  const base = wangCodeSet(req.query.dari) || 'USD';
+  try {
+    const latest = await wang.getLatest(base);
+    res.type('html').send(moneyConverterPage(req, latest, Boolean(req.query.dari || req.query.kepada || req.query.jumlah)));
+  } catch { res.status(503).type('html').send(wangDown('The ECB rate feed is briefly unreachable.')); }
+});
+app.get('/wang/kadar', async (req, res) => {
+  const base = wangCodeSet(req.query.asas) || 'USD';
+  try {
+    const latest = await wang.getLatest(base);
+    res.type('html').send(moneyRatesPage(req, latest));
+  } catch { res.status(503).type('html').send(wangDown('The ECB rate feed is briefly unreachable.')); }
+});
+app.get('/wang/tukar/:from/:to', async (req, res) => {
+  const from = wangCodeSet(req.params.from); const to = wangCodeSet(req.params.to);
+  if (!from || !to || from === to) return res.redirect(302, '/wang/kadar');
+  try {
+    const latest = await wang.getLatest(from);
+    if (!wang.convert(latest, from, to, 1)) return res.redirect(302, '/wang/kadar');
+    res.type('html').send(moneyPairPage(req, latest, from, to));
+  } catch { res.status(503).type('html').send(wangDown('The ECB rate feed is briefly unreachable.')); }
+});
+
+// ── /seni — galeri The Metropolitan Museum (open access, tanpa kunci) ───────
+function seniDown(note) {
+  return worldDoc({
+    title: 'Free Art Gallery — temporarily unavailable | Tukuk-OS',
+    desc: 'The Metropolitan Museum open-access API is briefly unreachable; the gallery returns automatically.',
+    selfUrl: 'https://tukuk.org/seni', robots: 'noindex,follow',
+    heroTitle: 'The Free Art Gallery', heroSub: 'Public-domain masterpieces from The Met',
+    body: `<p>${escapeHtml(note || 'The Met collection API is briefly unreachable.')} Every grid page is cached for a week, so reloading normally works. Meanwhile the <a href="/akademi">Academy</a> has art-history lessons that need no network at all.</p>`,
+  }, seniNav());
+}
+
+function seniHubPage() {
+  const cards = seni.COLLECTIONS.map((c) => `<div class="world-card"><h3><a href="/seni/koleksi/${c.slug}">${c.icon} ${escapeHtml(c.name)}</a></h3><p>${escapeHtml(c.blurb)}</p><p class="meta">Open the wall &rarr;</p></div>`).join('');
+  const body = `<p>The Metropolitan Museum of Art has placed <b>hundreds of thousands of its works into the public domain</b> — 5,000 years of art from a dozen curatorial departments, photographed in high resolution and free to view, study and download. This gallery reads straight from the museum’s open-collection API: ten curated doors below, each a living wall of real objects.</p>
+  <div class="world-grid">${cards}</div>
+  <h2 class="section-title">Why “open access” matters</h2><p>A public-domain artwork belongs to everyone: no licence to read, no watermarked thumbnail, no permission email. Seeing a Vermeer at full resolution — brush hairs, canvas weave, the exact lead-white of a collar — is the difference between reading about art and meeting it. The Met switched this on in 2017 and has kept widening it; every image here is served from their own servers.</p>
+  <p class="meta">Images & metadata: The Metropolitan Museum of Art Collection API (public-domain works marked “Open Access”). Some non-public-domain works appear in search walls too — their pages state the status honestly.</p>`;
+  return worldDoc({
+    title: 'The Free Art Gallery — Public-Domain Masterpieces from The Met | Tukuk-OS',
+    desc: 'Ten curated galleries of real Metropolitan Museum artworks, served live from the museum’s open-access API — free to view, study and download.',
+    selfUrl: 'https://tukuk.org/seni',
+    heroTitle: 'The Free Art Gallery', heroSub: 'Public-domain masterpieces · straight from The Met’s open collection',
+    body,
+  }, seniNav());
+}
+
+function seniCollectionPage(req, c, objs, total, page) {
+  const cards = objs.map((o) => `<figure><a href="/seni/objek/${o.objectID}"><img src="${escapeHtml(o.primaryImageSmall)}" alt="${escapeHtml(o.title || 'artwork')} — ${escapeHtml(c.name)}" loading="lazy"></a><figcaption><a href="/seni/objek/${o.objectID}">${escapeHtml(String(o.title || '').slice(0, 90))}</a>${o.objectDate ? `<br><span class="meta">${escapeHtml(String(o.objectDate).slice(0, 40))}</span>` : ''}</figcaption></figure>`).join('');
+  const pager = `<p class="back-link">${page > 1 ? `<a href="/seni/koleksi/${c.slug}?muk=${page - 1}">&larr; Previous wall</a> · ` : ''}${objs.length >= 12 ? `<a href="/seni/koleksi/${c.slug}?muk=${page + 1}">Next wall &rarr;</a>` : ''}</p>`;
+  const body = `<p class="back-link"><a href="/seni">&larr; All collections</a></p>
+  <p>${escapeHtml(c.blurb)} Showing from a pool of <b>${total.toLocaleString('en-US')}</b> photographed works in The Met’s open collection — every image links to its full record.</p>
+  <div class="seni-grid">${cards || '<p>The museum returned no images for this wall right now — try the next one.</p>'}</div>
+  ${objs.length ? pager : ''}
+  <p class="meta">Source: The Metropolitan Museum of Art Collection API · wall ${page} of “${escapeHtml(c.name)}”.</p>`;
+  return worldDoc({
+    title: `${c.name} — Free Art Gallery Wall ${page > 1 ? `(page ${page}) ` : ''}| Tukuk-OS`,
+    desc: `${c.blurb} Live public-domain images from The Metropolitan Museum of Art — ${total.toLocaleString('en-US')} works in this collection.`,
+    selfUrl: `https://tukuk.org/seni/koleksi/${c.slug}`,
+    robots: page > 1 ? 'noindex,follow' : 'index,follow,max-image-preview:large',
+    heroTitle: `${c.icon} ${c.name}`, heroSub: `${total.toLocaleString('en-US')} photographed works · The Met open access`,
+    body,
+  }, seniNav());
+}
+
+function seniObjectPage(req, o) {
+  const title = String(o.objectTitle || o.title || 'Untitled work');
+  const metaRows = [
+    ['Artist / culture', [o.artistDisplayName, o.culture].filter(Boolean).join(' · ')],
+    ['Date', o.objectDate], ['Department', o.department], ['Medium', o.medium],
+    ['Dimensions', o.dimensions], ['Accession', o.objectID ? String(o.objectID) : ''],
+  ].filter((r) => r[1]).map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]).slice(0, 300))}</td></tr>`).join('');
+  const pd = o.isPublicDomain;
+  const pdHtml = pd
+    ? `<p><span class="world-pill" style="background:#3fb950">Public domain — Open Access</span> This work is free of known copyright restrictions: view it, download it, remix it, print it on a mug. <a href="${escapeHtml(String(o.primaryImage))}">Full-resolution image →</a></p>`
+    : `<p><span class="world-pill" style="background:#d29922">In copyright / restricted</span> The museum shows this record for study; the image may not be freely reusable — check <a rel="noopener nofollow" href="${escapeHtml(String(o.objectURL || 'https://www.metmuseum.org'))}">the Met’s own page</a> for terms.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'VisualArtwork', name: title, url: `https://tukuk.org/seni/objek/${o.objectID}`,
+      creator: o.artistDisplayName ? { '@type': 'Person', name: o.artistDisplayName } : undefined,
+      dateCreated: o.objectDate || undefined, artform: o.medium || undefined,
+      image: o.primaryImage || undefined,
+      license: pd ? 'https://creativecommons.org/publicdomain/zero/1.0/' : undefined,
+      provider: { '@type': 'Museum', name: 'The Metropolitan Museum of Art', url: 'https://www.metmuseum.org' } },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Art Gallery', item: 'https://tukuk.org/seni' },
+      { '@type': 'ListItem', position: 2, name: title, item: `https://tukuk.org/seni/objek/${o.objectID}` } ] },
+  ]).replace(/</g, '\\u003c');
+  const body = `<p class="back-link"><a href="/seni">&larr; The Free Art Gallery</a></p>
+  <figure style="margin:18px 0"><img src="${escapeHtml(String(o.primaryImage || o.primaryImageSmall))}" alt="${escapeHtml(title)} — ${escapeHtml(String(o.department || 'The Metropolitan Museum of Art'))}" loading="eager" style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">${o.creditLine ? `<figcaption class="meta">${escapeHtml(String(o.creditLine))}</figcaption>` : ''}</figure>
+  ${pdHtml}
+  <h2 class="section-title">Record details</h2><table class="world-table">${metaRows}</table>
+  <p class="back-link"><a rel="noopener nofollow" href="${escapeHtml(String(o.objectURL || 'https://www.metmuseum.org'))}">This object on metmuseum.org →</a></p>
+  <p class="meta">Source: The Metropolitan Museum of Art Collection API, object ${o.objectID}.</p>`;
+  return worldDoc({
+    title: `${title} — Free Art Gallery | Tukuk-OS`,
+    desc: `${title}${o.objectDate ? ` (${String(o.objectDate).slice(0, 40)})` : ''} — ${o.department || 'The Metropolitan Museum of Art'}. ${pd ? 'Public domain, free high-resolution download.' : 'Open educational record.'}`,
+    selfUrl: `https://tukuk.org/seni/objek/${o.objectID}`,
+    robots: 'index,follow,max-image-preview:large',
+    ogImage: o.primaryImageSmall || o.primaryImage || 'https://tukuk.org/og.png',
+    heroTitle: title, heroSub: [o.artistDisplayName, o.objectDate].filter(Boolean).join(' · ') || 'The Metropolitan Museum of Art',
+    ld, body,
+  }, seniNav());
+}
+
+app.get('/seni', (req, res) => res.type('html').send(seniHubPage()));
+app.get('/seni/koleksi/:slug', async (req, res) => {
+  const c = seni.findCollection(req.params.slug);
+  if (!c) return res.redirect(302, '/seni');
+  let page = Number(req.query.muk) || 1;
+  if (page < 1 || page > 50) page = 1;
+  try {
+    const s = await seni.searchIds({ q: c.q, page });
+    const objs = await seni.hydrate(s.ids, 12);
+    res.type('html').send(seniCollectionPage(req, c, objs, s.total, page));
+  } catch { res.status(503).type('html').send(seniDown('The Met collection API is briefly unreachable.')); }
+});
+app.get('/seni/objek/:id', async (req, res) => {
+  const o = await seni.getObject(req.params.id).catch(() => null);
+  if (!o || !o.primaryImage) return res.redirect(302, '/seni');
+  res.type('html').send(seniObjectPage(req, o));
+});
+
+// ── /hidupan — atlas satwa iNaturalist (foto CC komuniti, tanpa kunci) ──────
+function hidupDown(note) {
+  return worldDoc({
+    title: 'Wildlife Atlas — temporarily unavailable | Tukuk-OS',
+    desc: 'The iNaturalist API is briefly unreachable; the atlas returns automatically from cache.',
+    selfUrl: 'https://tukuk.org/hidupan', robots: 'noindex,follow',
+    heroTitle: 'Wildlife Atlas', heroSub: 'Real animals, real photographs',
+    body: `<p>${escapeHtml(note || 'The iNaturalist API is briefly unreachable.')} Species pages cache for a day, so reloading normally works. In the meantime, the <a href="/akademi/life">life track of the Academy</a> is fully local.</p>`,
+  }, hidupNav());
+}
+
+function hidupHubPage() {
+  const cards = hidup.TAXA.map((t) => `<div class="world-card"><h3><a href="/hidupan/${t.slug}">${t.icon} ${escapeHtml(t.name)}</a></h3><p>${escapeHtml(String(t.blurb).slice(0, 150))}…</p><p class="meta"><i>${escapeHtml(t.sci)}</i></p></div>`).join('');
+  const body = `<p>Sixteen animals chosen because their stories teach something real — migration without a teacher, a carnivore that eats bamboo, a fish that never grows up, a crab whose blue blood tests every injection given to humans. Each page pairs a plain-language account with <b>research-grade photographs posted by the iNaturalist community</b>, credited exactly as the photographers and their Creative Commons licences require.</p>
+  <div class="world-grid">${cards}</div>
+  <h2 class="section-title">What “research grade” means</h2><p>On iNaturalist, an observation earns research-grade status when the community independently confirms the identification — usually several qualified human eyes plus automated checks. It is the closest thing ecology has to a peer-reviewed photograph, which is why every wall below filters to it.</p>
+  <p class="meta">Photographs & records: iNaturalist (CC-licensed community observations). Population statuses follow IUCN Red List assessments as reported by the community; figures are approximate and labelled where sources differ.</p>`;
+  return worldDoc({
+    title: 'Wildlife Atlas — Real Animals, Research-Grade Photos | Tukuk-OS',
+    desc: 'Sixteen species with honest natural-history stories and Creative Commons photographs confirmed by the iNaturalist research community.',
+    selfUrl: 'https://tukuk.org/hidupan',
+    heroTitle: 'Wildlife Atlas', heroSub: 'Sixteen species · real photographs · no stock images',
+    body,
+  }, hidupNav());
+}
+
+function hidupSpeciesPage(req, t, taxon, obs) {
+  const obsCards = (obs || []).map((o) => `<figure><a href="${escapeHtml(o.uri)}" rel="noopener nofollow"><img src="${escapeHtml(o.photoUrl)}" alt="${escapeHtml(o.taxonCommon || o.taxonName || t.name)} photograph by the iNaturalist community" loading="lazy"></a><figcaption>${escapeHtml(o.date || 'undated')}${o.place ? ` · ${escapeHtml(o.place)}` : ''}<br><span class="meta">${escapeHtml(o.attribution)}${o.license ? ` · ${escapeHtml(o.license)}` : ''}</span></figcaption></figure>`).join('');
+  const facts = [
+    ['Scientific name', `<i>${escapeHtml(taxon.sci || t.sci)}</i>`],
+    ['Rank', escapeHtml(taxon.rank || 'species')],
+    ['Community photos', `${(obs || []).length} research-grade records shown`],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Article', headline: t.name, description: t.blurb,
+      url: `https://tukuk.org/hidupan/${t.slug}`, inLanguage: 'en',
+      about: { '@type': 'Species', name: taxon.sci || t.sci, commonName: t.name },
+      publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' } } ],
+  ).replace(/</g, '\\u003c');
+  const body = `<p class="back-link"><a href="/hidupan">&larr; All species</a></p>
+  <article><p>${escapeHtml(t.blurb)}</p></article>
+  ${taxon.photo ? `<figure style="margin:18px 0"><img src="${escapeHtml(taxon.photo)}" alt="${escapeHtml(t.name)} — default reference photo from iNaturalist" loading="eager" style="width:100%;max-width:640px;height:auto;border-radius:10px;border:1px solid var(--line)">${taxon.photoCredit ? `<figcaption class="meta">${escapeHtml(taxon.photoCredit)}</figcaption>` : ''}</figure>` : ''}
+  <h2 class="section-title">Record card</h2><table class="world-table">${facts}</table>
+  ${obsCards ? `<h2 class="section-title">Seen in the wild — community photographs</h2><div class="seni-grid">${obsCards}</div><p class="meta">Photographs are Creative Commons-licensed observations from iNaturalist, credited as each licence requires. Click any photo for the full research record.</p>` : ''}
+  <p class="back-link"><a rel="noopener nofollow" href="https://www.inaturalist.org/taxa/${Number(taxon.id) || 0}">All ${escapeHtml(t.name)} records on iNaturalist →</a>${taxon.wikiUrl ? ` · <a rel="noopener nofollow" href="${escapeHtml(taxon.wikiUrl)}">Encyclopedia entry (Wikipedia) →</a>` : ''}</p>
+  <p class="meta">Data: iNaturalist open API · taxa resolved by exact scientific name · observations filtered to research grade with photos.</p>`;
+  return worldDoc({
+    title: `${t.name} (${taxon.sci || t.sci}) — Facts & Real Photos | Tukuk-OS Wildlife Atlas`,
+    desc: `${t.blurb.split('.')[0]}. Research-grade community photographs, scientific name and record links — free wildlife atlas entry.`,
+    selfUrl: `https://tukuk.org/hidupan/${t.slug}`,
+    robots: 'index,follow,max-image-preview:large',
+    ogImage: taxon.photo || 'https://tukuk.org/og.png',
+    heroTitle: `${t.icon} ${t.name}`, heroSub: `${escapeHtml(taxon.sci || t.sci)} · wildlife atlas entry`,
+    ld, body,
+  }, hidupNav());
+}
+
+app.get('/hidupan', (req, res) => res.type('html').send(hidupHubPage()));
+app.get('/hidupan/:slug', async (req, res) => {
+  const t = hidup.findTaxon(req.params.slug);
+  if (!t) return res.redirect(302, '/hidupan');
+  try {
+    const taxon = await hidup.resolveTaxon(t);
+    const obs = await hidup.getObservations(taxon.id, 8).catch(() => []);
+    res.type('html').send(hidupSpeciesPage(req, t, taxon, obs));
+  } catch { res.status(503).type('html').send(hidupDown(`The iNaturalist API is briefly unreachable for ${t.name}.`)); }
 });
 
 app.get('/blog/rss.xml', (req, res) => {
