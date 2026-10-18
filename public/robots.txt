@@ -18,3 +18,5 @@ Sitemap: https://tukuk.org/sitemap-cuaca.xml
 Sitemap: https://tukuk.org/sitemap-gempa.xml
 Sitemap: https://tukuk.org/sitemap-cuti.xml
 Sitemap: https://tukuk.org/sitemap-negara.xml
+Sitemap: https://tukuk.org/sitemap-statistik.xml
+Sitemap: https://tukuk.org/sitemap-bencana.xml

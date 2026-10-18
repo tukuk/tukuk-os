@@ -28,6 +28,8 @@ const wx = require('./weather');
 const gp = require('./gempa');
 const cu = require('./cuti');
 const ng = require('./negara');
+const st = require('./statistik');
+const bc = require('./bencana');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -656,6 +658,66 @@ app.get('/negara/:slug', async (req, res) => {
   return res.status(404).type('html').send(negaraBusy(`Negara "${slug}" tidak dikenali`));
 });
 
+// ── LALUAN KOMPLEKS STATISTIK (/statistik*) — World Bank Open Data, tanpa kunci ──
+// Hab + satu halaman setiap indikator; slug divalidasi DALAM handler (TDZ selamat).
+app.get('/statistik', async (req, res) => {
+  try {
+    const rows = await ng.loadCountries();
+    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+    res.status(200).type('html').send(await statistikHubPage(req, rows));
+  } catch {
+    res.status(503).type('html').send(statistikBusy('Data statistik dunia belum sempat dimuat'));
+  }
+});
+
+app.get('/statistik/:slug', async (req, res) => {
+  const slug = String(req.params.slug || '').toLowerCase();
+  const ind = st.findIndicator(slug);
+  if (!ind) return res.status(404).type('html').send(statistikBusy(`Indikator "${slug}" tidak dikenali`));
+  try {
+    const rows = await ng.loadCountries();
+    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+    const rk = await st.loadRanking(ind, rows);
+    if (!rk.list.length) throw new Error('tiada nilai');
+    res.status(200).type('html').send(statistikIndPage(req, rk, rows));
+  } catch {
+    res.status(503).type('html').send(statistikBusy(`Data ${ind.bm} tidak sempat dimuat`));
+  }
+});
+
+// ── LALUAN KOMPLEKS BENCANA (/bencana*) — suapan acara NASA EONET, tanpa kunci ──
+app.get('/bencana', async (req, res) => {
+  try {
+    const all = await bc.loadAllOpen();
+    res.status(200).type('html').send(bencanaHubPage(req, all));
+  } catch {
+    res.status(503).type('html').send(bencanaBusy('Suapan acara NASA EONET tidak sempat dimuat'));
+  }
+});
+
+app.get('/bencana/:cat', async (req, res) => {
+  const cat = bc.findCat(String(req.params.cat || '').toLowerCase());
+  if (!cat) return res.status(404).type('html').send(bencanaBusy(`Kategori "${req.params.cat}" tidak dikenali`));
+  try {
+    const events = await bc.loadEvents(cat);
+    res.status(200).type('html').send(bencanaCatPage(req, cat, events || []));
+  } catch {
+    res.status(503).type('html').send(bencanaBusy(`Suapan ${cat.bm} tidak sempat dimuat`));
+  }
+});
+
+app.get('/bencana/:cat/:id', async (req, res) => {
+  const cat = bc.findCat(String(req.params.cat || '').toLowerCase());
+  const id = String(req.params.id || '');
+  if (!cat || !/^EONET_\d+$/.test(id)) return res.status(404).type('html').send(bencanaBusy('Halaman acara tidak dikenali'));
+  try {
+    const ev = await bc.loadEvent(id);
+    res.status(200).type('html').send(bencanaEventPage(req, cat, ev));
+  } catch {
+    res.status(503).type('html').send(bencanaBusy(`Butiran acara ${id} tidak sempat dimuat`));
+  }
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1160,7 +1222,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1282,6 +1344,36 @@ app.get('/sitemap-negara.xml', async (req, res) => {
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + special + (countries ? '\n' + countries : '') + '\n</urlset>\n'
+  );
+});
+
+// ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
+app.get('/sitemap-statistik.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/statistik', '0.9')].concat(st.INDICATORS.map((i) => one(`/statistik/${i.slug}`, '0.7'))).join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP BENCANA — hab + kategori + acara masih dibuka (had 900 URL) ──
+// Suapan langsung: jika EONET lambat, hab + kategori tetap dihantar supaya XML sah.
+app.get('/sitemap-bencana.xml', async (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/bencana', '0.9')].concat(bc.CATS.map((c) => one(`/bencana/${c.slug}`, '0.7')));
+  try {
+    const all = await bc.loadAllOpen();
+    let budget = 900;
+    for (const block of all) {
+      if (!block.events || !budget) continue;
+      for (const ev of block.events.slice(0, budget)) urls.push(one(`/bencana/${block.cat.slug}/${encodeURIComponent(ev.id)}`, '0.6'));
+      budget -= Math.min(block.events.length, budget);
+    }
+  } catch { /* suapan gagal → hab + kategori sahaja */ }
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`
   );
 });
 
@@ -1530,6 +1622,8 @@ function siteFooter() {
       <li><a href="/cuti">Public holidays 2026</a></li>
       <li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>
       <li><a href="/negara">World countries</a></li>
+      <li><a href="/statistik">World statistics</a></li>
+      <li><a href="/bencana">Live disaster watch</a></li>
     </ul></div>
     <div><h4>Site</h4><ul>
       <li><a href="/about">About</a></li>
@@ -3315,7 +3409,7 @@ function negaraHubPage(req, rows) {
     + `<h2 class="section-title">10 negara terbanyak penduduk</h2><table class="wx-table"><tr><th>#</th><th>Negara</th><th>Ibu negara</th><th>Populasi</th></tr>${topPop}</table>`
     + `<h2 class="section-title">10 negara paling luas</h2><table class="wx-table"><tr><th>Negara</th><th>Keluasan</th><th>Populasi</th></tr>${topArea}</table>`
     + `<h2 class="section-title">Senarai semua negara (A–Z)</h2>${az}`
-    + `<p class="meta">Merancang perjalanan? Semak <a href="/cuaca">Kompleks Cuaca</a> untuk keadaan langit, <a href="/gempa">Kompleks Gempa</a> untuk aktiviti tektonik dan <a href="/cuti">Kompleks Cuti</a> untuk jadual kelepasan Malaysia.</p>`;
+    + `<p class="meta">Merancang perjalanan? Semak <a href="/cuaca">Kompleks Cuaca</a> untuk keadaan langit, <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS, <a href="/bencana">Kompleks Bencana</a> untuk acara alam aktif dan <a href="/statistik">Kompleks Statistik</a> untuk ranking dunia. Jadual kelepasan Malaysia di <a href="/cuti">Kompleks Cuti</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Negara Tukuk-OS',
     description: 'Profil Bahasa Melayu untuk lebih 250 buah negara: ibu negara, populasi, KDNK, keluasan, mata wang, bahasa dan jiran.',
@@ -3391,7 +3485,7 @@ function negaraCountryPage(req, c, rows) {
   const coord = c.latlng && c.latlng.length === 2 && (c.latlng[0] || c.latlng[1]) ? `<p>Posisi geografi kira-kira <b>${NG_DEC.format(c.latlng[0])}\u00b0, ${NG_DEC.format(c.latlng[1])}\u00b0</b>.</p>` : '';
   const body = hero + stats + jiran + coord
     + `<p>Bendera: flagcdn.com; populasi, KDNK, urbanisasi & jangka hayat: <b>World Bank Open Data</b> (indikator 2023); maklumat asas: pakej open-data <b>world-countries</b> \u2014 semuanya percuma, tanpa pendaftaran.</p>`
-    + `<p class="meta">Semak juga: <a href="/cuaca">cuaca mengikut kota</a> \u00b7 <a href="/gempa">gempa terkini</a> \u00b7 <a href="/cuti">cuti umum Malaysia</a> \u00b7 <a href="/negara">senarai semua negara</a>.</p>`;
+    + `<p class="meta">Semak juga: <a href="/cuaca">cuaca mengikut kota</a> · <a href="/gempa">gempa terkini</a> · <a href="/bencana">acara alam aktif</a> · <a href="/statistik">ranking indikator dunia</a> · <a href="/cuti">cuti umum Malaysia</a> · <a href="/negara">senarai semua negara</a>.</p>`;
   const descBits = [
     c.capital ? `ibu negara ${c.capital}` : null,
     c.population ? `populasi ${ngNum(c.population)} orang` : null,
@@ -3409,6 +3503,374 @@ function negaraCountryPage(req, c, rows) {
     desc: `${c.bm} (${c.official}): ${descBits || 'profil ringkas lengkap'} — mata wang, bahasa, kod panggilan, jiran dan data World Bank 2023.`,
     selfUrl,
     heroHtml: '', heroTitle: c.bm, heroSub: c.official === c.bm ? regionBm : `${escapeHtml(regionBm)} \u00b7 ${ngSubBm(c.subregion)}`.trim(),
+    body, ld,
+  });
+}
+
+// ── TUKUK-OS STATISTIK COMPLEX — /statistik* (ranking dunia, World Bank) ──
+// Pinjam dataset + cache src/negara.js untuk nama BM/slug/bendera; indikator
+// tambahan dimuat dari World Bank Open Data (2023). Shell sama negaraDoc, hero ungu.
+
+function stFmt(ind, v) {
+  if (v == null || !Number.isFinite(v)) return '—';
+  const n = ind.dec === 0 ? NG_INT.format(Math.round(v)) : NG_DEC.format(v);
+  if (ind.unit === 'USD') return `US$${n}`;
+  if (ind.unit === '%') return `${n}%`;
+  return `${n} ${ind.unit}`;
+}
+function bestOf(ind, list) { return ind.better === 'low' ? list[list.length - 1] : list[0]; }
+function worstOf(ind, list) { return ind.better === 'low' ? list[0] : list[list.length - 1]; }
+
+const STAT_SECTIONS = [{ href: '/statistik', icon: '📊', name: 'Semua Indikator', blurb: `Ranking ${st.INDICATORS.length} indikator World Bank untuk ±200 buah negara — pop, ekonomi, kesihatan & alam.` }]
+  .concat(st.INDICATORS.map((i) => ({ href: `/statistik/${i.slug}`, icon: '📈', name: i.bm, blurb: i.intro })));
+
+function statistikNav() {
+  return `<nav aria-label="Bahagian statistik"><h2 class="section-title">Jelajahi Kompleks Statistik Tukuk-OS</h2><div class="feed">`
+    + STAT_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+function statistikBusy(msg) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>World Bank Open Data tidak sempat menjawab. Sila cuba lagi sebentar.</p><p><a href="/statistik">Kembali ke Kompleks Statistik</a></p></body>`;
+}
+
+function statistikDoc(o) {
+  const robots = o.robots || 'index,follow,max-image-preview:large';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta property="og:locale" content="ms_MY">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+.wx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.wx-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21)}
+.wx-card h3{margin:0 0 6px;font-size:.95rem;color:var(--muted,#9aa3b2);font-weight:600}
+.wx-card .big{font-size:1.4rem;font-weight:700}
+.wx-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;background:linear-gradient(135deg,#4a1d6d 0%,#0b0d12 100%);color:#fff}
+.wx-hero .temp{font-size:2rem;font-weight:800;line-height:1.1}
+.wx-hero .wmeta{font-size:.92rem;opacity:.92;line-height:1.5}
+table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
+.wx-table th,.wx-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+.wx-table th{background:var(--panel,#171a21)}
+.ng-fl{height:16px;width:auto;vertical-align:-2px;border-radius:2px;margin-right:7px;border:1px solid var(--line)}
+.st-bar{height:8px;border-radius:5px;background:linear-gradient(90deg,#8d5fd6,#4c8dff);margin-top:3px}
+.st-val{min-width:180px}
+@media(max-width:680px){.wx-grid{grid-template-columns:1fr}.wx-hero .temp{font-size:1.6rem}table.wx-table{display:block;overflow-x:auto}.st-val{min-width:90px}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('statistik')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${statistikNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// ─── HAB /statistik — kad peneraju setiap indikator + posisi Malaysia ───
+async function statistikHubPage(req, rows) {
+  const ranks = await Promise.all(st.INDICATORS.map((i) => st.loadRanking(i, rows).catch(() => null)));
+  const cards = st.INDICATORS.map((ind, k) => {
+    const rk = ranks[k];
+    const best = rk && rk.list.length ? bestOf(ind, rk.list) : null;
+    return `<div class="wx-card"><h3><a href="/statistik/${ind.slug}">${escapeHtml(ind.bm)}</a></h3>`
+      + (best ? `<div class="big">${escapeHtml(best.name)}</div><div class="meta">${stVal(ind, best.value)}</div>` : '<div class="big">—</div>')
+      + (rk ? `<div class="meta">${rk.stats.n} buah negara bernilai data</div>` : '<div class="meta">sumber belum sempat dimuat</div>') + '</div>';
+  }).join('');
+  const my = rows.find((c) => c.slug === 'malaysia');
+  let myTable = '';
+  if (my) {
+    const baris = st.INDICATORS.map((ind, k) => {
+      const rk = ranks[k];
+      const e = rk ? rk.list.find((x) => x.cca3 === my.cca3) : null;
+      return `<tr><td><a href="/statistik/${ind.slug}">${escapeHtml(ind.bm)}</a></td><td>${e ? stVal(ind, e.value) : '—'}</td><td>${e ? `#${e.rank} daripada ${rk.stats.n}` : '—'}</td></tr>`;
+    }).join('');
+    myTable = `<h2 class="section-title">Malaysia mengikut indikator</h2><table class="wx-table"><tr><th>Indikator</th><th>Nilai (2023)</th><th>Kedudukan dunia</th></tr>${baris}</table>`;
+  }
+  const okCount = ranks.filter((r) => r && r.list.length).length;
+  const body = `<div class="wx-hero"><div class="temp">${st.INDICATORS.length} indikator &middot; ±${rows.length} buah negara</div><div class="wmeta">Ranking dunia dalam Bahasa Melayu — sumber World Bank Open Data (indikator 2023), percuma tanpa pendaftaran. ${okCount} indikator siap dimuat.</div></div>`
+    + `<h2 class="section-title">Peneraju setiap indikator</h2><div class="wx-grid">${cards}</div>`
+    + myTable
+    + `<h2 class="section-title">Bagaimana data ini disusun</h2><p>World Bank mengumpulkan statistik rasmi setiap kerajaan ahli — penduduk, ekonomi, kesihatan, pendidikan dan alam sekitar — lalu menyiapkannya sebagai JSON awam tanpa kunci API. Kami memuatnya sekali sebulan, membandingkan nilai antarabangsa, dan memaparkan ranking yang paling bermakna untuk pembaca Malaysia. Nilai kosong bererti negara itu tidak melapor indikator berkenaan pada 2023.</p>`
+    + `<p class="meta">Profil penuh setiap negara ada di <a href="/negara">Kompleks Negara</a>; perbandingan hujung-minggu cuti di <a href="/cuti">Kompleks Cuti</a>; keadaan langit langsung di <a href="/cuaca">Kompleks Cuaca</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Statistik Tukuk-OS',
+    description: 'Ranking World Bank bagi populasi, KDNK, jangka hayat, internet, literasi, CO2 dan lebih 10 indikator lain untuk ±200 buah negara.',
+    url: 'https://tukuk.org/statistik',
+  }).replace(/</g, '\\u003c');
+  return statistikDoc({
+    title: 'Statistik Dunia — Ranking 14 Indikator Negara (Populasi, KDNK, CO₂) | Tukuk-OS',
+    desc: `Ranking ${st.INDICATORS.length} indikator World Bank 2023 untuk ±200 buah negara dalam Bahasa Melayu: populasi, KDNK sekepala, jangka hayat, internet, literasi, CO₂, hutan dan posisi Malaysia.`,
+    selfUrl: 'https://tukuk.org/statistik',
+    heroTitle: 'Kompleks Statistik Tukuk-OS', heroSub: 'World Bank Open Data 2023 · tanpa kunci · dikemas kini sebulan sekali',
+    body, ld,
+  });
+}
+function stVal(ind, v) { return stFmt(ind, v); }
+
+// ─── /statistik/:indikator — jadual ranking penuh + bar + statistik taburan ───
+function statistikIndPage(req, rk, rows) {
+  const ind = rk.ind; const list = rk.list; const stats = rk.stats;
+  const selfUrl = `https://tukuk.org/statistik/${ind.slug}`;
+  const best = bestOf(ind, list); const worst = worstOf(ind, list);
+  const bestLabel = ind.better === 'low' ? 'Paling rendah (baik)' : 'Paling tinggi';
+  const worstLabel = ind.better === 'low' ? 'Paling tinggi (buruk)' : 'Paling rendah';
+  const maxAbs = Math.max(Math.abs(stats.max || 0), Math.abs(stats.min || 0), 1e-9);
+  const arahTxt = ind.better === 'low' ? 'nilai yang lebih rendah dianggap lebih baik' : ind.better === 'high' ? 'nilai yang lebih tinggi dianggap lebih baik' : 'indikator neutral — kedua-dua hujung ada ceritanya';
+  const my = rows.find((c) => c.slug === 'malaysia');
+  const myEntry = my ? list.find((x) => x.cca3 === my.cca3) : null;
+  const top = list.slice(0, 50);
+  const baris = top.map((x) => `<tr><td>${x.rank}</td><td class="st-val"><a href="/negara/${x.slug}"><img class="ng-fl" src="${ngThumb(x.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(x.name)}</a><div class="st-bar" style="width:${Math.max(2, Math.round(Math.abs(x.value) / maxAbs * 100))}%"></div></td><td><b>${stVal(ind, x.value)}</b></td></tr>`).join('');
+  const myNote = myEntry && myEntry.rank > 50 ? `<p class="meta">Posisi Malaysia: <b>#${myEntry.rank}</b> daripada ${stats.n} buah negara dengan nilai ${stVal(ind, myEntry.value)} — lihat jadual penuh peneraju di bawah.</p>` : '';
+  const cards = `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>${escapeHtml(bestLabel)}</h3><div class="big">${escapeHtml(best.name)}</div><div class="meta">${stVal(ind, best.value)}</div></div>`
+    + `<div class="wx-card"><h3>Purata dunia</h3><div class="big">${stVal(ind, stats.avg)}</div><div class="meta">median ${stVal(ind, stats.median)}</div></div>`
+    + `<div class="wx-card"><h3>${escapeHtml(worstLabel)}</h3><div class="big">${escapeHtml(worst.name)}</div><div class="meta">${stVal(ind, worst.value)}</div></div>`
+    + `</div>`;
+  const body = `<div class="wx-hero"><div class="temp">${escapeHtml(best.name)}</div><div class="wmeta">Peneraju ${escapeHtml(ind.bm)} 2023 · ${stVal(ind, best.value)} · ${stats.n} buah negara dilaporkan ke World Bank</div></div>`
+    + `<p>${escapeHtml(ind.intro)}</p>`
+    + cards + myNote
+    + `<h2 class="section-title">50 negara — ${escapeHtml(ind.bm)}</h2><p class="meta">Disusun mengikut nilai tertinggi dahulu (${arahTxt}). Bendera: flagcdn; nama negara paut ke profil penuhnya.</p>`
+    + `<table class="wx-table"><tr><th>#</th><th>Negara</th><th>Nilai</th></tr>${baris}</table>`
+    + `<h2 class="section-title">Taburan global</h3><table class="wx-table"><tr><th>Statistik</th><th>Nilai</th></tr>`
+    + `<tr><th>Bilangan negara</th><td>${stats.n}</td></tr>`
+    + `<tr><th>Terendah</th><td>${stVal(ind, stats.min)} (${escapeHtml(list[list.length - 1].name)})</td></tr>`
+    + `<tr><th>Tertinggi</th><td>${stVal(ind, stats.max)} (${escapeHtml(list[0].name)})</td></tr></table>`
+    + `<p>Sumber: <b>World Bank Open Data</b>${ind.code ? ` (indikator <code>${escapeHtml(ind.code)}</code>, tahun 2023)` : ' — pinjam daripada dataset Kompleks Negara'} — data awam tanpa kunci API, dillesen CC BY 4.0. Profil penuh setiap negara: <a href="/negara">Kompleks Negara</a> · berita alam langsung: <a href="/bencana">Kompleks Bencana</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Dataset', name: `${ind.bm} — ranking dunia 2023`,
+    description: ind.intro, url: selfUrl,
+    creator: { '@type': 'Organization', name: 'World Bank', url: 'https://data.worldbank.org' },
+    temporalCoverage: '2023', license: 'https://creativecommons.org/licenses/by/4.0/',
+  }).replace(/</g, '\\u003c');
+  return statistikDoc({
+    title: `${ind.bm} — Ranking Dunia 2023 (50 Negara Teratas) | Tukuk-OS`,
+    desc: `Ranking ${ind.bm} 2023: ${escapeHtml(best.name)} di tangga pertama (${stVal(ind, best.value)}), purata dunia ${stVal(ind, stats.avg)}${myEntry ? `, Malaysia #${myEntry.rank}` : ''}. Data World Bank Open Data.`,
+    selfUrl,
+    heroTitle: `${ind.bm} — Ranking Dunia`, heroSub: `World Bank Open Data 2023 · ${stats.n} buah negara · unit: ${ind.unit}`,
+    body, ld,
+  });
+}
+
+// ── TUKUK-OS BENCANA COMPLEX — /bencana* (pemantau acara alam NASA EONET) ──
+// Shell sama, hero merah-lava; halaman kategori + setiap acara masih "open".
+
+const BENCANA_SECTIONS = [{ href: '/bencana', icon: '🚨', name: 'Semua Peristiwa', blurb: 'Pantau semua acara alam yang sedang berlaku di planet ini — langsung dari satelit NASA EONET.' }]
+  .concat(bc.CATS.map((c) => ({ href: `/bencana/${c.slug}`, icon: c.icon, name: c.bm, blurb: c.blurb })));
+
+function bencanaNav() {
+  return `<nav aria-label="Bahagian bencana"><h2 class="section-title">Jelajahi Kompleks Bencana Tukuk-OS</h2><div class="feed">`
+    + BENCANA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+function bencanaBusy(msg) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>NASA EONET tidak sempat menjawab. Suapan ini di-cache beberapa jam — sila cuba lagi sebentar.</p><p><a href="/bencana">Kembali ke Kompleks Bencana</a></p></body>`;
+}
+
+function bencanaDoc(o) {
+  const robots = o.robots || 'index,follow,max-image-preview:large';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta property="og:locale" content="ms_MY">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+.wx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.wx-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21)}
+.wx-card h3{margin:0 0 6px;font-size:.95rem;color:var(--muted,#9aa3b2);font-weight:600}
+.wx-card .big{font-size:1.4rem;font-weight:700}
+.wx-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;background:linear-gradient(135deg,#6d1f12 0%,#0b0d12 100%);color:#fff}
+.wx-hero .temp{font-size:2rem;font-weight:800;line-height:1.1}
+.wx-hero .wmeta{font-size:.92rem;opacity:.92;line-height:1.5}
+table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
+.wx-table th,.wx-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+.wx-table th{background:var(--panel,#171a21)}
+.bc-svg{width:100%;max-width:720px;height:auto;border:1px solid var(--line);border-radius:10px;display:block;margin:14px auto;background:#0a1020}
+@media(max-width:680px){.wx-grid{grid-template-columns:1fr}.wx-hero .temp{font-size:1.6rem}table.wx-table{display:block;overflow-x:auto}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('bencana')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${bencanaNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+const BC_DATE_FMT = new Intl.DateTimeFormat('ms-MY', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+function bcDate(iso) { try { return BC_DATE_FMT.format(new Date(iso)); } catch { return '—'; } }
+function bcLatest(ev) { return ev.updated || ev.created || (ev.geometries && ev.geometries.length ? ev.geometries[ev.geometries.length - 1].date : null) || null; }
+
+// ─── HAB /bencana — kiraan langsung setiap kategori + acara terkini ───
+function bencanaHubPage(req, all) {
+  const totalOpen = all.reduce((s, x) => s + (x.events ? x.events.length : 0), 0);
+  const cards = all.map((x) => {
+    const latest = x.events && x.events.length ? [...x.events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')))[0] : null;
+    return `<div class="wx-card"><h3>${x.cat.icon} <a href="/bencana/${x.cat.slug}">${escapeHtml(x.cat.bm)}</a></h3>`
+      + `<div class="big">${x.events ? x.events.length : '—'}</div>`
+      + `<div class="meta">acara masih dibuka${latest ? ` · terkini: <a href="/bencana/${x.cat.slug}/${encodeURIComponent(latest.id)}">${escapeHtml(String(latest.title || '').slice(0, 48))}</a>` : ''}</div></div>`;
+  }).join('');
+  const flat = [];
+  for (const x of all) if (x.events) for (const ev of x.events) flat.push({ cat: x.cat, ev });
+  flat.sort((a, b) => String(bcLatest(b.ev) || '').localeCompare(String(bcLatest(a.ev) || '')));
+  const rowsHtml = flat.slice(0, 15).map(({ cat, ev }) => {
+    const g = ev.geometries && ev.geometries.length ? ev.geometries[ev.geometries.length - 1] : null;
+    const loc = g ? bc.geoLabel(g.coordinates) : null;
+    return `<tr><td>${bcDate(bcLatest(ev))}</td><td>${cat.icon} <a href="/bencana/${cat.slug}">${escapeHtml(cat.bm)}</a></td><td><a href="/bencana/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${loc ? escapeHtml(loc.text) : '—'}</td></tr>`;
+  }).join('');
+  const body = `<div class="wx-hero"><div class="temp">${totalOpen} acara alam sedang berlaku</div><div class="wmeta">Dipantau 24/7 oleh NASA EONET · ${bc.CATS.length} kategori · kemas kini beberapa kali sehari · tanpa pendaftaran</div></div>`
+    + `<h2 class="section-title">Kategori pemantauan</h2><div class="wx-grid">${cards}</div>`
+    + `<h2 class="section-title">15 acara paling terkini dikemas kini</h2><table class="wx-table"><tr><th>Kemas kini</th><th>Kategori</th><th>Peristiwa</th><th>Lokasi terakhir</th></tr>${rowsHtml}</table>`
+    + `<h2 class="section-title">Apa itu EONET?</h2><p>EONET (Earth Observatory Natural Event Tracker) ialah suapan terbuka NASA yang merekod setiap peristiwa alam penting di dunia — letusan gunung berapi, taufan, kebakaran lahan, banjir, tanah runtuh dan lebih banyak lagi — dengan koordinat satelit dan laporan kurator manusia. Data ini awam, tanpa kunci API; kami memaparkannya dalam Bahasa Melayu dan memautkan setiap peristiwa ke halaman sendiri supaya boleh dirujuk.</p>`
+    + `<p class="meta">Gempa bumi langsung ada di <a href="/gempa">Kompleks Gempa (USGS)</a>; langit kota anda di <a href="/cuaca">Kompleks Cuaca</a>; profil negara terjejas di <a href="/negara">Kompleks Negara</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Bencana Tukuk-OS',
+    description: 'Pemantau langsung gunung berapi, taufan, kebakaran lahan, banjir dan acara alam lain — suapan NASA EONET dalam Bahasa Melayu.',
+    url: 'https://tukuk.org/bencana',
+  }).replace(/</g, '\\u003c');
+  return bencanaDoc({
+    title: 'Bencana Dunia Langsung — Gunung Berapi, Taufan, Kebakaran (NASA EONET) | Tukuk-OS',
+    desc: `${totalOpen} acara alam sedang berlaku di planet ini: pantau gunung berapi, taufan, kebakaran lahan, banjir, kemarau dan tanah runtuh — langsung dari NASA EONET, dalam Bahasa Melayu.`,
+    selfUrl: 'https://tukuk.org/bencana',
+    heroTitle: 'Kompleks Bencana Tukuk-OS', heroSub: `Suapan NASA EONET · ${totalOpen} acara dibuka · kemas kini ${bcDate(new Date().toISOString())}`,
+    body, ld,
+  });
+}
+
+// ─── /bencana/:kategori — semua acara dibuka dalam satu kategori ───
+function bencanaCatPage(req, cat, events) {
+  const selfUrl = `https://tukuk.org/bencana/${cat.slug}`;
+  const sorted = [...events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')));
+  const rowsHtml = sorted.map((ev) => {
+    const geo = ev.geometries || [];
+    const last = geo.length ? bc.geoLabel(geo[geo.length - 1].coordinates) : null;
+    return `<tr><td><a href="/bencana/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${bcDate(ev.created)}</td><td>${bcDate(bcLatest(ev))}</td><td>${geo.length}</td><td>${last ? escapeHtml(last.text) : '—'}</td></tr>`;
+  }).join('');
+  const body = `<div class="wx-hero"><div class="temp">${cat.icon} ${sorted.length} acara ${escapeHtml(cat.bm).toLowerCase()} sedang aktif</div><div class="wmeta">Kemas kini langsung NASA EONET · setiap acara ada halaman sendiri dengan koordinat &amp; garis masa</div></div>`
+    + `<p>${escapeHtml(cat.blurb)}</p>`
+    + (sorted.length
+      ? `<h2 class="section-title">Senarai acara dibuka</h2><table class="wx-table"><tr><th>Peristiwa</th><th>Bermula</th><th>Kemas kini</th><th>Lokasi direkod</th><th>Koordinat terakhir</th></tr>${rowsHtml}</table>`
+      : '<p>Tiada acara yang masih dibuka dalam kategori ini sekarang. Semak <a href="/bencana">hab semua kategori</a>.</p>')
+    + `<p class="meta">Data mentah: <a rel="noopener" target="_blank" href="https://eonet.gsfc.nasa.gov">eonet.gsfc.nasa.gov</a> (domain awam NASA). Cuaca semasa di kawasan terjejas: <a href="/cuaca">Kompleks Cuaca</a>; gempa tektonik: <a href="/gempa">Kompleks Gempa</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Acara ${cat.bm} — langsung`,
+    description: cat.blurb.slice(0, 200), url: selfUrl,
+  }).replace(/</g, '\\u003c');
+  return bencanaDoc({
+    title: `${cat.bm} Langsung — Acara Aktif Dunia Hari Ini | Tukuk-OS`,
+    desc: sorted.length ? `${sorted.length} acara ${cat.bm.toLowerCase()} masih dibuka sekarang — kemas kini langsung NASA EONET dengan koordinat, tarikh dan pautan sumber rasmi.` : `Pantau berita ${cat.bm.toLowerCase()} langsung daripada NASA EONET — dengan koordinat dan garis masa setiap peristiwa.`,
+    selfUrl,
+    heroTitle: `${cat.icon} ${cat.bm}`, heroSub: `Suapan langsung NASA EONET · ${sorted.length} acara dibuka · dikemas kini ${bcDate(new Date().toISOString())}`,
+    body, ld,
+  });
+}
+
+// ─── /bencana/:kategori/:id — satu acara: peta SVG + garis masa koordinat ───
+function bencanaEventPage(req, cat, ev) {
+  const selfUrl = `https://tukuk.org/bencana/${cat.slug}/${encodeURIComponent(ev.id)}`;
+  const geo = (ev.geometries || []).slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  const dots = geo.map((g) => {
+    const loc = bc.geoLabel(g.coordinates);
+    if (!loc) return '';
+    const cx = ((loc.lng + 180) / 360) * 720; const cy = ((90 - loc.lat) / 180) * 360;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#ff7043" opacity="0.85"><title>${escapeHtml(bcDate(g.date))} · ${escapeHtml(loc.text)}</title></circle>`;
+  }).join('');
+  const grid = [];
+  for (let lng = -180; lng <= 180; lng += 60) grid.push(`<line x1="${((lng + 180) / 360) * 720}" y1="0" x2="${((lng + 180) / 360) * 720}" y2="360" stroke="#243044" stroke-width="1">`);
+  for (let lat = -90; lat <= 90; lat += 30) grid.push(`<line x1="0" y1="${((90 - lat) / 180) * 360}" x2="720" y2="${((90 - lat) / 180) * 360}" stroke="#243044" stroke-width="1">`);
+  const map = geo.length ? `<svg class="bc-svg" viewBox="0 0 720 360" role="img" aria-label="Peta lokasi ${escapeHtml(String(ev.title || ''))}">${grid.join('')}${dots}</svg>` : '';
+  const timeline = geo.map((g) => {
+    const loc = bc.geoLabel(g.coordinates);
+    return `<tr><td>${bcDate(g.date)}</td><td>${loc ? escapeHtml(loc.text) : '—'}</td><td>${escapeHtml(String(g.type || 'point'))}</td></tr>`;
+  }).join('');
+  const srcs = (ev.sources || []).map((s) => `<li><a rel="noopener" target="_blank" href="${escapeHtml(String(s.url || '#'))}">${escapeHtml(String(s.id || 'sumber'))}</a></li>`).join('');
+  const desc = ev.description ? `<p>${escapeHtml(String(ev.description))}</p>` : '';
+  const first = geo.length ? geo[0] : null;
+  const last = geo.length ? geo[geo.length - 1] : null;
+  const body = `<p class="back-link"><a href="/bencana">&larr; Kompleks Bencana</a> · <a href="/bencana/${cat.slug}">${cat.icon} ${escapeHtml(cat.bm)}</a></p>`
+    + `<div class="wx-hero"><div class="temp">${cat.icon} ${escapeHtml(String(ev.title || ev.id))}</div><div class="wmeta">${escapeHtml(cat.bm)} · bermula ${bcDate(ev.created)}${last ? ` · kemas kini terakhir ${bcDate(bcLatest(ev))}` : ''} · ${geo.length} lokasi direkod</div></div>`
+    + desc + map
+    + (first && last && first !== last ? `<p>Peristiwa ini bermula di ${escapeHtml((bc.geoLabel(first.coordinates) || {}).text || '—')} dan kini aktif di ${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}.</p>` : (last ? `<p>Kedudukan terkini: <b>${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}</b>.</p>` : ''))
+    + (timeline ? `<h2 class="section-title">Garis masa lokasi</h2><table class="wx-table"><tr><th>Tarikh</th><th>Koordinat</th><th>Jenis</th></tr>${timeline}</table>` : '')
+    + (srcs ? `<h2 class="section-title">Sumber laporan</h2><ul>${srcs}</ul>` : '')
+    + `<p class="meta">Data: NASA EONET (domain awam) · ${escapeHtml(cat.blurb.split('.')[0])}. Semak keadaan langit di kawasan terjejas: <a href="/cuaca">Kompleks Cuaca</a>; aktiviti tektonik: <a href="/gempa">Kompleks Gempa</a>; negara berkenaan: <a href="/negara">Kompleks Negara</a>.</p>`;
+  const lastLoc = last ? bc.geoLabel(last.coordinates) : null;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Event', name: String(ev.title || ev.id),
+    description: String(ev.description || cat.blurb).slice(0, 300), url: selfUrl,
+    startDate: ev.created || undefined, endDate: ev.closed || undefined,
+    eventStatus: ev.closed ? 'EventCancelled' : 'EventOngoing',
+    location: lastLoc ? { '@type': 'Place', name: `${cat.bm} — ${lastLoc.text}`, geo: { '@type': 'GeoCoordinates', latitude: lastLoc.lat, longitude: lastLoc.lng } } : undefined,
+  }).replace(/</g, '\\u003c');
+  return bencanaDoc({
+    title: `${String(ev.title || ev.id)} — Status Langsung ${cat.bm} | Tukuk-OS`,
+    desc: `${ev.title || cat.bm}: koordinat, tarikh bermula dan garis masa lokasi langsung daripada NASA EONET — ${geo.length} rekod, dikemas kini ${bcDate(bcLatest(ev))}.`,
+    selfUrl,
+    heroTitle: String(ev.title || ev.id), heroSub: `${escapeHtml(cat.bm)} · suapan langsung NASA EONET`,
     body, ld,
   });
 }

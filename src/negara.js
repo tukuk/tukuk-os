@@ -68,16 +68,19 @@ function slugify(name) {
 
 // Nama common Bahasa Melayu untuk negara yang kerap dicari pembaca MY.
 const BM_NAMES = {
-  japan: 'Jepun', germany: 'Jerman', 'south korea': 'Korea Selatan', china: 'Cina',
+  japan: 'Jepun', germany: 'Jerman', 'south-korea': 'Korea Selatan', china: 'Cina',
   india: 'India', indonesia: 'Indonesia', thailand: 'Thailand', turkey: 'Turki',
-  egypt: 'Mesir', 'united states': 'Amerika Syarikat', netherlands: 'Belanda',
+  egypt: 'Mesir', 'united-states': 'Amerika Syarikat', netherlands: 'Belanda',
   france: 'Perancis', spain: 'Sepanyol', italy: 'Itali', russia: 'Rusia',
   brazil: 'Brazil', argentina: 'Argentina', australia: 'Australia',
   singapore: 'Singapura', brunei: 'Brunei', mexico: 'Mexico', canada: 'Kanada',
-  'united arab emirates': 'Emirab Arab Bersatu', 'saudi arabia': 'Arab Saudi',
+  'united-arab-emirates': 'Emirab Arab Bersatu', 'saudi-arabia': 'Arab Saudi',
   philippines: 'Filipina', cambodia: 'Kemboja', vietnam: 'Vietnam',
   pakistan: 'Pakistan', bangladesh: 'Bangladesh', nepal: 'Nepal',
-  'south africa': 'Afrika Selatan', nigeria: 'Nigeria', palestine: 'Palestin',
+  'south-africa': 'Afrika Selatan', nigeria: 'Nigeria', palestine: 'Palestin',
+  'united-kingdom': 'United Kingdom', 'new-zealand': 'New Zealand',
+  'papua-new-guinea': 'Papua New Guinea', 'east-timor': 'Timor-Leste',
+  'sri-lanka': 'Sri Lanka', 'myanmar': 'Myanmar', 'hong-kong': 'Hong Kong',
 };
 
 const REGIONS = [

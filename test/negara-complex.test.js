@@ -30,7 +30,8 @@ test('negara.js: 6 region + BM_NAMES + slug + sempadan cca3→slug dieksport', (
   for (const slug of ['asia', 'africa', 'europe', 'americas', 'oceania', 'antarctic']) {
     assert.ok(negaraSrc.includes(`slug: '${slug}'`), `region ${slug} ditakrif`);
   }
-  assert.ok(negaraSrc.includes("'south korea': 'Korea Selatan'"), 'alias BM utama wujud');
+  assert.ok(negaraSrc.includes("'south-korea': 'Korea Selatan'"), 'alias BM utama wujud (key hyphen ikut output slugify)');
+  assert.ok(negaraSrc.includes("'united-states': 'Amerika Syarikat'"), 'key BM multi-kata pakai hyphen — padan slug');
   const ex = negaraSrc.slice(negaraSrc.indexOf('module.exports'));
   for (const fn of ['loadCountries', 'findCountry', 'inRegion', 'findRegion', 'REGIONS', 'flagUrl', 'slugify']) {
     assert.ok(ex.includes(fn), `${fn} dieksport`);
