@@ -242,5 +242,16 @@ module.exports = {
     apodRefreshMinutes: num(process.env.NASA_APOD_REFRESH_MIN, 30)
   },
 
+  // OpenWeather — tier percuma (1,000 panggilan/hari, 60/min): current, forecast
+  // 5-hari/3-jam, air pollution (+forecast) dan geocoding. Peta jubin juga percuma
+  // dengan appid. Sejarah/OneCall adalah berbayar → TIDAK digunakan di sini.
+  weather: {
+    apiKey: process.env.OPENWEATHER_API_KEY || 'c5cdeb2e2261ae767890f8e3c3a651ab',
+    baseUrl: 'https://api.openweathermap.org',
+    tileBase: 'https://tile.openweathermap.org/map',
+    // Bajet harian konservatif supaya ada ruang untuk retry/manual seed.
+    dailyBudget: num(process.env.OW_DAILY_BUDGET, 950)
+  },
+
   envFile
 };
