@@ -1547,7 +1547,8 @@ function siteFooter() {
     <span>&copy; 2026 Tukuk-OS. All rights reserved.</span>
     <span>A free, open, privacy-friendly knowledge site.</span>
   </div>
-</div></footer>`;
+</div></footer>
+<script src="/read-aloud.js" defer></script>`;
 }
 
 // Hab konten — senarai artikel. asHome=true bila dihidang di '/' (tukuk.org = konten, bukan carian).
