@@ -1495,6 +1495,7 @@ function renderMarkdown(md) {
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
     .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gim, '<a href="$2">$1</a>')
     .replace(/`([^`]+)`/gim, '<code>$1</code>')
     .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
     .replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>');
