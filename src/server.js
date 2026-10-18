@@ -792,7 +792,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1004,6 +1004,7 @@ function siteHeader(active) {
     <nav class="topnav" aria-label="Primary">
       ${link('/', 'Home', 'home')}
       ${link('/blog', 'Blog', 'blog')}
+      ${link('/wiki', 'Wiki', 'wiki')}
       ${link('/nasa', 'NASA', 'nasa')}
       ${link('/learn', 'Learn', 'learn')}
       ${link('/docs', 'Docs', 'docs')}
@@ -1032,6 +1033,7 @@ function siteFooter() {
     <div><h4>Explore</h4><ul>
       <li><a href="/">Home</a></li>
       <li><a href="/blog">Blog</a></li>
+      <li><a href="/wiki">Wiki</a></li>
       <li><a href="/nasa">NASA APOD</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/docs">Docs</a></li>
@@ -1223,6 +1225,224 @@ ${siteFooter()}
 </body>
 </html>`;
 }
+
+// ── TUKUK-OS WIKI — gaya Ensiklopedia (MediaWiki-esque) ────────────────────
+// Portal pengetahuan bergaya Wikipedia: bar sisi navigasi, Jadual Kandungan (TOC)
+// auto, infobox, bar kategori & carian dalaman. Artikel wiki memaparkan semula post
+// blog sedia ada dalam rupa wiki — halaman konten yang boleh di-index + beriklan.
+// Rupa sengaja CAHAYA (tidak ikut togel tema gelap) untuk imej ensiklopedia tulen.
+const WIKI_CSS = `
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:#202122;font:15px/1.6 -apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:#3366cc;text-decoration:none}a:hover{text-decoration:underline}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+  .wiki-topbar{display:flex;align-items:center;gap:14px;border-bottom:1px solid #a2a9b1;padding:10px 0;flex-wrap:wrap}
+  .wiki-wordmark{font-family:Georgia,"Times New Roman",serif;font-size:1.3rem;color:#202122;letter-spacing:-.3px}
+  .wiki-wordmark:hover{text-decoration:none}
+  .wiki-wordmark b{font-weight:700}
+  .wiki-search{margin-left:auto;display:flex}
+  .wiki-search input{padding:7px 10px;border:1px solid #a2a9b1;border-radius:2px 0 0 2px;font:inherit;min-width:230px;background:#fff;color:#202122}
+  .wiki-search button{padding:7px 14px;border:1px solid #a2a9b1;border-left:0;border-radius:0 2px 2px 0;background:#f8f9fa;color:#202122;cursor:pointer}
+  .wiki-body{display:flex;gap:28px;margin:20px 0;align-items:flex-start}
+  .wiki-side{flex:0 0 190px;font-size:.86rem;position:sticky;top:12px}
+  .wiki-side h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;color:#54595d;margin:16px 0 6px;border-bottom:1px solid #c8ccd1;padding-bottom:4px}
+  .wiki-side ul{list-style:none;margin:0;padding:0}
+  .wiki-side li{margin:0 0 6px}
+  .wiki-content{flex:1 1 auto;min-width:0}
+  .wiki-content h1{font-family:Georgia,serif;font-weight:400;font-size:1.95rem;border-bottom:1px solid #a2a9b1;padding-bottom:6px;margin:0 0 4px}
+  .wiki-from{color:#54595d;font-size:.92rem;margin:0 0 18px}
+  .wiki-content h2{font-family:Georgia,serif;font-weight:400;font-size:1.45rem;border-bottom:1px solid #c8ccd1;padding-bottom:4px;margin:28px 0 12px}
+  .wiki-content h3{font-size:1.12rem;font-weight:700;margin:18px 0 8px}
+  .wiki-content p{line-height:1.7;margin:0 0 14px}
+  .wiki-content ul,.wiki-content ol{line-height:1.7;padding-left:26px;margin:0 0 14px}
+  .wiki-toc{background:#f8f9fa;border:1px solid #c8ccd1;padding:12px 18px;display:inline-block;min-width:240px;margin:6px 0 20px;font-size:.9rem}
+  .wiki-toc .toc-title{font-weight:700;text-align:center;display:block;margin-bottom:8px}
+  .wiki-toc ol{margin:0;padding-left:22px}
+  .wiki-toc li{margin:3px 0}
+  .infobox{float:right;clear:right;width:260px;margin:0 0 14px 22px;border:1px solid #a2a9b1;border-collapse:collapse;background:#f8f9fa;font-size:.85rem}
+  .infobox caption,.infobox .ib-title{background:#eaecf0;font-weight:700;text-align:center;padding:9px;font-size:.95rem;border-bottom:1px solid #a2a9b1}
+  .infobox th{text-align:left;color:#54595d;padding:6px 9px;border-top:1px solid #eaecf0;vertical-align:top;width:38%}
+  .infobox td{padding:6px 9px;border-top:1px solid #eaecf0}
+  .wiki-catbar{border:1px solid #c8ccd1;background:#f8f9fa;padding:9px 13px;margin-top:26px;font-size:.88rem;clear:both}
+  .wiki-catbar b{color:#54595d}
+  .wiki-featured{border:1px solid #c8ccd1;background:#f8f9fa;padding:16px 18px;margin:18px 0}
+  .wiki-featured h2{border:0;font-size:1.15rem;margin:0 0 8px}
+  .wiki-sections{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .wiki-topic{border:1px solid #c8ccd1;border-radius:3px;padding:14px 16px;background:#fff}
+  .wiki-topic h3{margin:0 0 8px;font-size:1rem}
+  .wiki-topic ul{margin:0;padding-left:18px}
+  .wiki-topic li{margin:3px 0;font-size:.92rem}
+  @media(max-width:860px){.wiki-body{flex-direction:column}.wiki-side{position:static;flex-basis:auto;width:100%}.infobox{float:none;width:100%;margin:0 0 16px}.wiki-sections{grid-template-columns:1fr}}
+`;
+
+function wikiHead(title, selfUrl, desc, jsonLd, robots) {
+  const rb = robots || 'index,follow';
+  const ld = jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : '';
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(desc)}">` +
+    `<meta name="robots" content="${rb}">` +
+    `<meta property="og:type" content="article"><meta property="og:site_name" content="Tukuk-OS Wiki">` +
+    `<meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(desc)}">` +
+    `<meta property="og:url" content="${selfUrl}"><meta property="og:image" content="https://tukuk.org/og.png">` +
+    `<link rel="canonical" href="${selfUrl}">` +
+    `<meta name="google-adsense-account" content="ca-pub-8954948214333501">` +
+    `<link rel="icon" href="/icon.svg" type="image/svg+xml">` +
+    `<link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">` +
+    ld + `<style>${WIKI_CSS}</style>${pageAdScript()}${clarityScript()}</head><body>`;
+}
+
+function wikiTopbar() {
+  return `<div class="wrap"><div class="wiki-topbar">` +
+    `<a class="wiki-wordmark" href="/wiki"><b>Tukuk-OS</b> Wiki</a>` +
+    `<form class="wiki-search" action="/wiki" method="get" role="search">` +
+    `<input type="search" name="q" placeholder="Search the wiki" aria-label="Search the wiki">` +
+    `<button type="submit">Search</button></form></div>`;
+}
+
+function wikiSidebar() {
+  const posts = store.getAllPosts(300);
+  const subjects = [...new Set(posts.flatMap((p) => p.tags || []))].slice(0, 9);
+  return `<nav class="wiki-side" aria-label="Wiki navigation">` +
+    `<h3>Navigation</h3><ul>` +
+    `<li><a href="/wiki">Main page</a></li>` +
+    `<li><a href="/wiki/random">Random article</a></li>` +
+    `<li><a href="/blog">All articles</a></li>` +
+    `<li><a href="/learn">Learning path</a></li>` +
+    `<li><a href="/about">About</a></li>` +
+    `<li><a href="/contact">Contact</a></li></ul>` +
+    `<h3>Subjects</h3><ul>` +
+    (subjects.length ? subjects.map((s) => `<li><a href="/wiki?q=${encodeURIComponent(s)}">${escapeHtml(s)}</a></li>`).join('') : '<li><a href="/wiki">General</a></li>') +
+    `</ul><h3>Tools</h3><ul>` +
+    `<li><a href="/sitemap.xml">Sitemap</a></li>` +
+    `<li><a href="/blog/rss.xml">RSS feed</a></li>` +
+    `<li><a href="/nasa">Today\u2019s NASA picture</a></li></ul></nav>`;
+}
+
+function wikiFooter() {
+  const today = new Date().toISOString().slice(0, 10);
+  return `<div class="wrap"><footer class="wiki-catbar" style="border:0;border-top:1px solid #c8ccd1;text-align:center;margin:30px 0 40px">` +
+    `<div>This page was last edited on ${today}. Written for the Tukuk-OS Wiki \u2014 free, no account needed. See our <a href="/privacy">privacy</a> &amp; <a href="/terms">terms</a>.</div>` +
+    `<div style="margin-top:8px"><a href="/">Home</a> \u00b7 <a href="/wiki">Wiki</a> \u00b7 <a href="/blog">Blog</a> \u00b7 <a href="/learn">Learn</a> \u00b7 <a href="/docs">Docs</a> \u00b7 <a href="/about">About</a></div>` +
+    `</footer></div>`;
+}
+
+// Tambah id pada <h2>/<h3> dalam HTML artikel + bina Jadual Kandungan (TOC).
+function wikiTocify(html) {
+  const headings = [];
+  let idx = 0;
+  const withIds = String(html).replace(/<(h[23])>([\s\S]*?)<\/\1>/g, (m, tag, text) => {
+    idx += 1;
+    const id = 'sec-' + idx;
+    const label = String(text).replace(/<[^>]*>/g, '').trim();
+    if (label) headings.push({ id, label });
+    return '<' + tag + ' id="' + id + '">' + text + '</' + tag + '>';
+  });
+  if (!headings.length) return { html: withIds, toc: '' };
+  const items = headings.map((h, i) => `<li><a href="#${h.id}">${i + 1}. ${escapeHtml(h.label)}</a></li>`).join('');
+  return { html: withIds, toc: `<div class="wiki-toc"><span class="toc-title">Contents</span><ol>${items}</ol></div>` };
+}
+
+function wikiMainPage(req) {
+  const posts = store.getAllPosts(300);
+  const featured = posts[0];
+  const byTag = {};
+  for (const p of posts) { const k = (p.tags && p.tags[0]) || 'General'; (byTag[k] = byTag[k] || []).push(p); }
+  const topics = Object.entries(byTag).slice(0, 8).map(([tag, list]) =>
+    `<div class="wiki-topic"><h3><a href="/wiki?q=${encodeURIComponent(tag)}">${escapeHtml(tag)}</a></h3>` +
+    `<ul>${list.slice(0, 6).map((p) => `<li><a href="/wiki/${encodeURIComponent(p.slug)}">${escapeHtml(p.title)}</a></li>`).join('')}</ul></div>`).join('');
+  const feat = featured
+    ? `<div class="wiki-featured"><h2>Featured article</h2><p><a href="/wiki/${encodeURIComponent(featured.slug)}"><b>${escapeHtml(featured.title)}</b></a> \u2014 ${escapeHtml(featured.excerpt || '')}</p></div>` : '';
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'WebSite', 'name': 'Tukuk-OS Wiki', 'url': 'https://tukuk.org/wiki',
+    'description': 'A free, wiki-style knowledge base on technology, privacy, astronomy and the open web.',
+    'publisher': { '@type': 'Organization', 'name': 'Tukuk-OS', 'url': 'https://tukuk.org' },
+    'potentialAction': { '@type': 'SearchAction', 'target': 'https://tukuk.org/wiki?q={query}', 'query-input': 'required name=query' }
+  }).replace(/</g, '&lt;');
+  return wikiHead('Tukuk-OS Wiki \u2014 the free knowledge base', 'https://tukuk.org/wiki',
+    'Encyclopedic articles on technology, privacy, servers, astronomy and the open web, in a classic wiki layout \u2014 free to read, no account needed.', jsonLd)
+    + wikiTopbar() + `<div class="wrap"><div class="wiki-body">${wikiSidebar()}<main class="wiki-content">` +
+    `<h1>Welcome to the Tukuk-OS Wiki</h1>` +
+    `<p class="wiki-from">From Tukuk-OS, the free knowledge base \u2014 ${posts.length} articles you can read without an account.</p>` +
+    `<p>The Tukuk-OS Wiki is a growing encyclopedia of practical knowledge: how search engines really work, running your own server, privacy without tracking, astronomy, programming and the open web \u2014 written in plain language and freely readable.</p>` +
+    feat + `${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}` +
+    `<h2>Subject areas</h2><div class="wiki-sections">${topics}</div>` +
+    `${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}` +
+    `</main></div>${wikiFooter()}</body></html>`;
+}
+
+function wikiArticlePage(req, post) {
+  const url = 'https://tukuk.org/wiki/' + encodeURIComponent(post.slug);
+  const tags = post.tags || [];
+  const dateLabel = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  const revised = post.updatedAt ? new Date(post.updatedAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  const t = wikiTocify(renderMarkdown(post.content));
+  const infobox = `<table class="infobox"><caption>${escapeHtml(post.title)}</caption>` +
+    `<tr><th>Type</th><td>Encyclopedia article</td></tr>` +
+    `<tr><th>Subject</th><td>${tags.length ? escapeHtml(tags[0]) : 'General knowledge'}</td></tr>` +
+    `<tr><th>Author</th><td>${escapeHtml(post.author || 'Fevian Donald')}</td></tr>` +
+    `<tr><th>Published</th><td>${dateLabel}</td></tr>` +
+    (revised ? `<tr><th>Revised</th><td>${revised}</td></tr>` : '') +
+    `<tr><th>License</th><td>Free to read &amp; cite</td></tr></table>`;
+  const related = store.getAllPosts(300)
+    .filter((p) => p.slug !== post.slug && (p.tags || []).some((tg) => tags.includes(tg)))
+    .slice(0, 6);
+  const seeAlso = related.length
+    ? `<h2>See also</h2><ul>${related.map((p) => `<li><a href="/wiki/${encodeURIComponent(p.slug)}">${escapeHtml(p.title)}</a></li>`).join('')}</ul>` : '';
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Article', 'headline': post.title, 'description': post.excerpt,
+    'author': { '@type': 'Person', 'name': post.author || 'Fevian Donald' }, 'datePublished': post.createdAt,
+    'dateModified': post.updatedAt || post.createdAt, 'inLanguage': 'en',
+    'publisher': { '@type': 'Organization', 'name': 'Tukuk-OS Wiki', 'url': 'https://tukuk.org' },
+    'mainEntityOfPage': url, 'isPartOf': { '@type': 'WebSite', 'name': 'Tukuk-OS Wiki', 'url': 'https://tukuk.org/wiki' }
+  }).replace(/</g, '&lt;');
+  return wikiHead(post.title + ' \u2014 Tukuk-OS Wiki', url, post.excerpt || post.title, jsonLd)
+    + wikiTopbar() + `<div class="wrap"><div class="wiki-body">${wikiSidebar()}<main class="wiki-content">` +
+    `<h1>${escapeHtml(post.title)}</h1>` +
+    `<p class="wiki-from">From <a href="/wiki">Tukuk-OS Wiki</a>, the free knowledge base.</p>` +
+    infobox + `<p>${escapeHtml(post.excerpt || '')}</p>${t.toc}` +
+    `${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}` +
+    t.html + seeAlso +
+    `<div class="wiki-catbar"><b>Categories:</b> ${tags.length ? tags.map((tg) => `<a href="/wiki?q=${encodeURIComponent(tg)}">${escapeHtml(tg)}</a>`).join(' \u00b7 ') : '<a href="/wiki">Knowledge</a>'}</div>` +
+    `${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}` +
+    `</main></div>${wikiFooter()}</body></html>`;
+}
+
+function wikiSearchPage(req, q) {
+  const ql = String(q).toLowerCase();
+  const hits = store.getAllPosts(400).filter((p) => (String(p.title || '') + ' ' + String(p.excerpt || '') + ' ' + (p.tags || []).join(' ')).toLowerCase().includes(ql));
+  const list = hits.length
+    ? `<ul style="line-height:1.9">${hits.slice(0, 50).map((p) => `<li><a href="/wiki/${encodeURIComponent(p.slug)}">${escapeHtml(p.title)}</a><br><span style="color:#54595d;font-size:.9rem">${escapeHtml(p.excerpt || '')}</span></li>`).join('')}</ul>`
+    : `<p>No articles match “${escapeHtml(q)}”. Try a broader term, or browse the <a href="/wiki">main page</a> and <a href="/blog">all articles</a>.</p>`;
+  return wikiHead('"' + q + '" \u2014 Search results \u2014 Tukuk-OS Wiki', 'https://tukuk.org/wiki?q=' + encodeURIComponent(q),
+    'Wiki search results.', '', 'noindex,follow')
+    + wikiTopbar() + `<div class="wrap"><div class="wiki-body">${wikiSidebar()}<main class="wiki-content">` +
+    `<h1>Search results</h1><p class="wiki-from">${hits.length} result${hits.length === 1 ? '' : 's'} for “${escapeHtml(q)}”.</p>${list}` +
+    `</main></div>${wikiFooter()}</body></html>`;
+}
+
+// ── Laluan Wiki. 'random' (literal) DIDAHULUIKAN sebelum '/wiki/:slug' ──────
+app.get('/wiki/random', (req, res) => {
+  const posts = store.getAllPosts(300);
+  if (!posts.length) return res.redirect(302, '/wiki');
+  const p = posts[Math.floor(Math.random() * posts.length)];
+  res.redirect(302, `/wiki/${encodeURIComponent(p.slug)}`);
+});
+app.get('/wiki', (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q) { res.type('html').send(wikiSearchPage(req, q)); return; }
+  res.type('html').send(wikiMainPage(req));
+});
+app.get('/wiki/:slug', (req, res) => {
+  const post = store.getPostBySlug(req.params.slug);
+  if (!post) {
+    const r = blogRedirects[req.params.slug];
+    if (r) return res.redirect(301, `/wiki/${encodeURIComponent(r)}`);
+    res.status(404).type('html').send(wikiHead('Article not found \u2014 Tukuk-OS Wiki', 'https://tukuk.org/wiki', 'Not found.', '', 'noindex,follow')
+      + wikiTopbar() + `<div class="wrap"><div class="wiki-body">${wikiSidebar()}<main class="wiki-content"><h1>Article not found</h1><p class="wiki-from">This wiki article does not exist yet.</p><p><a href="/wiki">&larr; Wiki main page</a> \u00b7 <a href="/blog">All articles</a></p></main></div>${wikiFooter()}</body></html>`);
+    return;
+  }
+  res.type('html').send(wikiArticlePage(req, post));
+});
 
 app.get('/blog', (req, res) => res.type('html').send(renderBlogListPage(req, false)));
 
