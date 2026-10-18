@@ -868,6 +868,37 @@ const COMMON_CSS = `
   li { margin-bottom:6px; }
   .back-link { display:inline-block; margin-bottom:16px; font-size:.92rem; }
   .ad-slot { margin:24px 0; overflow:hidden; }
+  /* Site chrome — bar atas penuh, hero, grid feed, footer berbilang lajur. */
+  .site-top { position:sticky; top:0; z-index:50; background:var(--panel); border-bottom:1px solid var(--line); }
+  .wrap-w { max-width:1080px; margin:0 auto; padding:0 20px; }
+  .topbar { display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:11px 0; }
+  .brand { display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:1.08rem; letter-spacing:-.3px; color:var(--text); }
+  .brand:hover { text-decoration:none; }
+  .brand .logo { width:26px; height:26px; border-radius:6px; display:block; }
+  .topnav { display:flex; gap:4px; flex-wrap:wrap; margin-left:auto; align-items:center; }
+  .topnav a { color:var(--muted); padding:7px 11px; border-radius:8px; font-weight:500; font-size:.95rem; }
+  .topnav a:hover { color:var(--text); background:var(--bg); text-decoration:none; }
+  .topnav a.active { color:var(--text); background:var(--bg); }
+  .hero { padding:44px 0 28px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,var(--panel),var(--bg)); }
+  .hero h1 { font-size:2.4rem; margin:0 0 12px; }
+  .hero p { color:var(--muted); font-size:1.12rem; max-width:64ch; margin:0; line-height:1.6; }
+  .hero .cta { margin-top:22px; display:flex; gap:12px; flex-wrap:wrap; }
+  .btn { display:inline-block; padding:10px 18px; border-radius:10px; font-weight:600; }
+  .btn.primary { background:var(--accent); color:#fff; } .btn.primary:hover { text-decoration:none; filter:brightness(1.08); }
+  .btn.ghost { border:1px solid var(--line); color:var(--text); } .btn.ghost:hover { border-color:var(--accent); text-decoration:none; }
+  .section-title { margin:34px 0 6px; font-size:1.35rem; }
+  .feed { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+  .feed .post-card { margin:0; }
+  @media (max-width:680px){ .feed { grid-template-columns:1fr; } .hero h1 { font-size:1.9rem; } }
+  .site-foot { margin-top:54px; border-top:1px solid var(--line); background:var(--panel); }
+  .foot-cols { display:grid; grid-template-columns:1.6fr repeat(3,1fr); gap:26px; padding:38px 0 22px; }
+  @media (max-width:760px){ .foot-cols { grid-template-columns:1fr 1fr; } .brand-foot { grid-column:1 / -1; } }
+  .foot-cols h4 { margin:0 0 12px; font-size:.82rem; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
+  .foot-cols ul { list-style:none; margin:0; padding:0; }
+  .foot-cols li { margin:0 0 9px; }
+  .foot-cols a { color:var(--text); opacity:.85; font-size:.94rem; } .foot-cols a:hover { opacity:1; color:var(--accent); text-decoration:none; }
+  .brand-foot p { color:var(--muted); font-size:.92rem; line-height:1.6; max-width:40ch; margin:10px 0 0; }
+  .foot-bottom { border-top:1px solid var(--line); padding:16px 0 30px; color:var(--muted); font-size:.86rem; display:flex; gap:8px; flex-wrap:wrap; justify-content:space-between; }
 `;
 
 // Blog routes
@@ -963,18 +994,20 @@ function msAdUnit(label) {
   return raw ? `<div class="ad-slot" data-ad-network="ms-${label}">${raw}</div>` : '';
 }
 
-// Nav dikongsi — buang pautan halaman yang sudah dibuang (/explore, /nasa).
-function siteNav() {
-  return `
-      <a href="/">Home</a>
-      <a href="/blog">Blog</a>
-      <a href="/nasa">NASA</a>
-      <a href="/learn">Learn</a>
-      <a href="/docs">Docs</a>
-      <a href="/about">About</a>
-      <a href="/privacy">Privacy</a>
-      <a href="/terms">Terms</a>
-      <a href="/contact">Contact</a>
+// Chrome laman dikongsi: bar atas (brand + nav + togel tema) dan footer berlapis penuh.
+// `active` menandakan pautan halaman semasa (home|blog|nasa|learn|docs|about).
+function siteHeader(active) {
+  const a = String(active || '');
+  const link = (href, label, key) => `<a href="${href}"${a === key ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
+  return `<div class="site-top"><div class="wrap-w"><div class="topbar">
+    <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="">Tukuk-OS</a>
+    <nav class="topnav" aria-label="Primary">
+      ${link('/', 'Home', 'home')}
+      ${link('/blog', 'Blog', 'blog')}
+      ${link('/nasa', 'NASA', 'nasa')}
+      ${link('/learn', 'Learn', 'learn')}
+      ${link('/docs', 'Docs', 'docs')}
+      ${link('/about', 'About', 'about')}
       <span class="theme-tools">
         <button type="button" id="theme-toggle" class="tk-btn" aria-label="Colour theme">\u25d0</button>
         <span class="tk-accents" role="group" aria-label="Accent colour">
@@ -984,7 +1017,42 @@ function siteNav() {
           <button type="button" data-accent-set="amber" class="tk-dot" aria-label="Amber"></button>
           <button type="button" data-accent-set="rose" class="tk-dot" aria-label="Rose"></button>
         </span>
-      </span>`;
+      </span>
+    </nav>
+  </div></div></div>`;
+}
+
+function siteFooter() {
+  return `<footer class="site-foot"><div class="wrap-w">
+  <div class="foot-cols">
+    <div class="brand-foot">
+      <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="">Tukuk-OS</a>
+      <p>Independent articles, guides and reference on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account required.</p>
+    </div>
+    <div><h4>Explore</h4><ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/blog">Blog</a></li>
+      <li><a href="/nasa">NASA APOD</a></li>
+      <li><a href="/learn">Learn</a></li>
+      <li><a href="/docs">Docs</a></li>
+    </ul></div>
+    <div><h4>Site</h4><ul>
+      <li><a href="/about">About</a></li>
+      <li><a href="/contact">Contact</a></li>
+      <li><a href="/download">Download</a></li>
+      <li><a href="/rekomendasi">Recommended</a></li>
+      <li><a href="/access">Global Access</a></li>
+    </ul></div>
+    <div><h4>Legal</h4><ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+    </ul></div>
+  </div>
+  <div class="foot-bottom">
+    <span>&copy; 2026 Tukuk-OS. All rights reserved.</span>
+    <span>A free, open, privacy-friendly knowledge site.</span>
+  </div>
+</div></footer>`;
 }
 
 // Hab konten — senarai artikel. asHome=true bila dihidang di '/' (tukuk.org = konten, bukan carian).
@@ -1044,13 +1112,12 @@ function renderBlogListPage(req, asHome) {
 ${pageAdScript()}${clarityScript()}
 </head>
 <body>
+${siteHeader(asHome ? 'home' : 'blog')}
 <div class="wrap">
-  <header>
-    <h1>${asHome ? 'Tukuk-OS &mdash; Knowledge &amp; How-To Library' : 'Blog &amp; Knowledge Archive'}</h1>
-    <p class="tagline">${asHome ? 'Original articles and guides on technology, privacy, servers and the open web \u2014 free, no account needed.' : 'In-depth articles on search engine technology, cybersecurity, semantic AI and web privacy.'}</p>
-    <nav>${siteNav()}</nav>
-  </header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}`;
+  ${asHome
+    ? `<section class="hero"><h1>Tukuk-OS &mdash; Knowledge &amp; How-To Library</h1><p>Original, in-depth articles and guides on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account needed.</p><div class="cta"><a class="btn primary" href="/blog">Browse all articles</a><a class="btn ghost" href="/nasa">Today\u2019s NASA picture</a></div></section>`
+    : `<header><h1>Blog &amp; Knowledge Archive</h1><p class="tagline">In-depth articles on search engine technology, cybersecurity, semantic AI and web privacy.</p></header>`}
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}${asHome ? '<h2 class="section-title">Latest articles</h2><div class="feed">' : ''}`;
 
   for (const post of posts) {
     const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1063,13 +1130,11 @@ ${pageAdScript()}${clarityScript()}
     </div>`;
   }
 
-  html += `
+  html += `${asHome ? '</div>' : ''}
   ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
-  <footer>
-    <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved.</p>
-  </footer>
 </div>
+${siteFooter()}
 </body>
 </html>`;
   return html;
@@ -1139,11 +1204,11 @@ function renderNasaApodPage(req, apod) {
 ${pageAdScript()}${clarityScript()}
 </head>
 <body>
+${siteHeader('nasa')}
 <div class="wrap">
   <header>
     <h1>${escapeHtml(title)}</h1>
     <p class="tagline">Astronomy Picture of the Day &middot; ${escapeHtml(dateLabel)} &middot; Image &amp; explanation courtesy of NASA (public domain).</p>
-    <nav>${siteNav()}</nav>
   </header>
   <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     <p class="back-link"><a href="/">&larr; Back to Tukuk-OS</a></p>
@@ -1153,10 +1218,8 @@ ${pageAdScript()}${clarityScript()}
     <p class="meta">Source: NASA APOD. Mirror for search &amp; reading convenience at Tukuk-OS. Explore more in the <a href="/blog">knowledge base</a>.</p>
     ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
-  <footer>
-    <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. Astronomy content &copy; NASA.</p>
-  </footer>
 </div>
+${siteFooter()}
 </body>
 </html>`;
 }
@@ -1324,19 +1387,12 @@ app.get('/learn', (req, res) => {
 <link rel="stylesheet" href="/theme.css">
 </head>
 <body>
+${siteHeader('learn')}
 <div class="wrap">
   <header>
     <h1>Tukuk-OS Academy<span class="badge-count" id="lesson-count"></span></h1>
     <p class="tagline">Zero to Hero: one free curriculum from your first terminal command to running, defending and growing your own search engine.</p>
-    <p class="learn-intro">Follow the stages in order — each lesson assumes only what came before it. Stuck at any point? Start at <a href="/learn">Stage 0</a> and keep the <a href="/blog">full archive</a> within reach.</p>
-    <nav>
-      <a href="/">Home</a>
-      <a href="/learn">Learn</a>
-      <a href="/blog">Blog</a>
-      <a href="/docs">Docs</a>
-      <a href="/about">About</a>
-      <a href="/access">Global Access</a>
-    </nav>
+    <p class="learn-intro">Follow the stages in order \u2014 each lesson assumes only what came before it. Stuck at any point? Start at <a href="/learn">Stage 0</a> and keep the <a href="/blog">full archive</a> within reach.</p>
   </header>
   <main>`;
 
@@ -1359,10 +1415,8 @@ app.get('/learn', (req, res) => {
 
   html += `
   </main>
-  <footer>
-    <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. A free and open web search engine.</p>
-  </footer>
 </div>
+${siteFooter()}
 <script>document.getElementById('lesson-count').textContent='${lessonNo} lessons';</script>
 </body>
 </html>`;
@@ -1491,30 +1545,12 @@ app.get('/blog/:slug', (req, res) => {
 ${pageAdScript()}${clarityScript()}
 </head>
 <body>
+${siteHeader('blog')}
 <div class="wrap">
   <header>
     <a href="/blog" class="back-link">&larr; Back to all articles</a>
     <h1>${eTitle}</h1>
     <div class="meta">Published: ${postDate} &middot; Author: ${eAuthor}</div>
-    <nav>
-      <a href="/">Home</a>
-      <a href="/blog">Blog</a>
-      <a href="/docs">Docs</a>
-      <a href="/about">About</a>
-      <a href="/privacy">Privacy</a>
-      <a href="/terms">Terms</a>
-      <a href="/contact">Contact</a>
-      <span class="theme-tools">
-        <button type="button" id="theme-toggle" class="tk-btn" aria-label="Colour theme">◐</button>
-        <span class="tk-accents" role="group" aria-label="Accent colour">
-          <button type="button" data-accent-set="blue" class="tk-dot" aria-label="Blue"></button>
-          <button type="button" data-accent-set="green" class="tk-dot" aria-label="Green"></button>
-          <button type="button" data-accent-set="violet" class="tk-dot" aria-label="Violet"></button>
-          <button type="button" data-accent-set="amber" class="tk-dot" aria-label="Amber"></button>
-          <button type="button" data-accent-set="rose" class="tk-dot" aria-label="Rose"></button>
-        </span>
-      </span>
-    </nav>
   </header>
   <main>
     ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
@@ -1525,10 +1561,8 @@ ${pageAdScript()}${clarityScript()}
     </article>
     ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
-  <footer>
-    <p>&copy; 2026 Tukuk-OS &mdash; All rights reserved. A free and open web search engine.</p>
-  </footer>
 </div>
+${siteFooter()}
 </body>
 </html>`;
   res.send(html);
