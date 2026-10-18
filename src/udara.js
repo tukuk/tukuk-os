@@ -163,8 +163,19 @@ async function getAirRanking(force) {
   const key = 'air:ranking';
   if (!force) {
     const hit = cacheGet(key);
-    if (hit && !hit.stale) return hit.data;
+    if (hit) {
+      if (!hit.stale) return hit.data;
+      // Stale-while-revalidate: saiz scrape penuh ~60 saat (50 kota × timeout 9s).
+      // Pelawat tak patut menanggung itu — hidangkan snapshot lama serta-merta,
+      // scan baharu jalan di belakang; halaman menlabel agesnya dengan jujur.
+      refreshAir().catch(() => {});
+      return Object.assign({}, hit.data, { updating: true });
+    }
   }
+  return refreshAir();
+}
+
+function refreshAir() {
   if (airInFlight) return airInFlight;
   airInFlight = (async () => {
     try {
@@ -199,6 +210,16 @@ async function getAirRanking(force) {
     }
   })();
   return airInFlight;
+}
+
+// Prewarm: selepas boot (12 d) dan setiap 40 minit — TTL ialah 45 min, jadi
+// cache tak pernah luput semasa pelayan hidup; pelawat pertama pun tak tunggu.
+// unref() supaya ujian node --test boleh tamat tanpa menunggu timer.
+{
+  const warm = setTimeout(() => { getAirRanking().catch(() => {}); }, 12000);
+  if (warm.unref) warm.unref();
+  const iv = setInterval(() => { getAirRanking().catch(() => {}); }, 40 * 60 * 1000);
+  if (iv.unref) iv.unref();
 }
 
 // ——— CO2 langsung (NOAA GML) ———

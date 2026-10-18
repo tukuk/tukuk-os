@@ -1179,27 +1179,39 @@ async function getExoplanets({ limit = 250 } = {}) {
   const cached = getCache(cacheKey);
   if (cached) return cached;
   const q = 'select pl_name,sy_dist,pl_rade,st_teff,disc_year,pl_orbper from pscomppars order by sy_dist asc';
-  const res = await http.get('https://exoplanetarchive.ipac.caltech.edu/TAP/sync', {
-    params: { query: q, format: 'json', maxrec: String(n) },
-    timeout: 25000
-  });
-  const rows = Array.isArray(res.data) ? res.data : [];
-  const planets = rows.map(r => ({
-    name: String(r.pl_name || ''),
-    dist_pc: Math.round((Number(r.sy_dist) || 0) * 1000) / 1000,
-    radius_earth: Number(r.pl_rade) ? Math.round(r.pl_rade * 100) / 100 : null,
-    star_temp_k: Math.round(Number(r.st_teff) || 0),
-    disc_year: Number(r.disc_year) || null,
-    period_days: Number(r.pl_orbper) ? Math.round(r.pl_orbper * 1000) / 1000 : null
-  })).filter(p => p.name);
-  const result = {
-    count: planets.length,
-    generatedAt: new Date().toISOString(),
-    source: 'NASA Exoplanet Archive (pscomppars)',
-    planets
-  };
-  setCache(cacheKey, result, 12 * 60 * 60 * 1000);
-  return result;
+  try {
+    const res = await http.get('https://exoplanetarchive.ipac.caltech.edu/TAP/sync', {
+      params: { query: q, format: 'json', maxrec: String(n) },
+      timeout: 25000
+    });
+    const rows = Array.isArray(res.data) ? res.data : [];
+    const planets = rows.map(r => ({
+      name: String(r.pl_name || ''),
+      dist_pc: Math.round((Number(r.sy_dist) || 0) * 1000) / 1000,
+      radius_earth: Number(r.pl_rade) ? Math.round(r.pl_rade * 100) / 100 : null,
+      star_temp_k: Math.round(Number(r.st_teff) || 0),
+      disc_year: Number(r.disc_year) || null,
+      period_days: Number(r.pl_orbper) ? Math.round(r.pl_orbper * 1000) / 1000 : null
+    })).filter(p => p.name);
+    if (!planets.length) throw new Error('arkib tidak mengembalikan sebarang baris');
+    const result = {
+      count: planets.length,
+      generatedAt: new Date().toISOString(),
+      source: 'NASA Exoplanet Archive (pscomppars)',
+      planets
+    };
+    setCache(cacheKey, result, 12 * 60 * 60 * 1000);
+    setCache('exo:last-good', result, 7 * 24 * 60 * 60 * 1000);
+    return result;
+  } catch (err) {
+    // Kontrak kejujuran: hidangkan snapshot terakhir DILABEL bila arkib NASA
+    // tidak dapat dicapai (cx_Oracle di pihak mereka pernah runtuh berjam-jam).
+    const good = cache.get('exo:last-good');
+    if (good && good.data && Array.isArray(good.data.planets) && good.data.planets.length) {
+      return Object.assign({}, good.data, { stale: true, staleAt: good.data.generatedAt });
+    }
+    throw err;
+  }
 }
 
 /**

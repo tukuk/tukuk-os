@@ -1,7 +1,8 @@
 'use strict';
-// Ujian proksi editor Tukuk Agent (src/agent-editor.js):
-// penghantaran HTTP (prefix + header proxy), ralat mesra bila upstream mati,
-// dan relay WebSocket 'upgrade' yang hanya menyentuh path /agent.
+// Ujian proksi editor Tukuk Agent (src/agent-editor.js): penghantaran HTTP
+// (prefix DIBUANG sebelum forward — code-server berjalan pada '/'; x-forwarded-prefix
+// tetap dihantar + Location ditulis semula ke /agent/*), ralat mesra bila
+// upstream mati, dan relay WebSocket 'upgrade' yang hanya menyentuh path /agent.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
@@ -64,7 +65,7 @@ test('proxy HTTP: kekalkan prefix /agent, tulis host + header proxy', async () =
   const r = await get(port, '/agent/login?windowId=_blank');
   assert.equal(r.status, 200);
   assert.equal(r.body, 'UP:GET');
-  assert.equal(r.headers['x-echo-url'], '/agent/login?windowId=_blank');
+  assert.equal(r.headers['x-echo-url'], '/login?windowId=_blank'); // prefix dibuang (kelakuan 4447109)
   assert.equal(r.headers['x-echo-host'], '127.0.0.1:' + upPort);
   assert.equal(r.headers['x-echo-prefix'], '/agent');
   assert.equal(r.headers['x-echo-xff'], '127.0.0.1');

@@ -1,72 +1,49 @@
 // ═══ Tukuk App Router ════════════════════════════════════════════════════════
 // Lapisan "tool use" untuk brain: memetakan soalan/permintaan pengguna kepada
-// APLIKASI server yang paling tepat (utiliti, alat media, game, arked). Skor
-// berasaskan kata kunci multibahasa (ms/id/en) — bebas model, deterministik,
-// dan digate supaya cadangan hanya muncul bila benar-benar relevan.
+// APLIKasi server yang paling tepat. Skor berasaskan kata kunci multibahasa
+// (ms/id/en) — bebas model, deterministik, dan digate supaya cadangan hanya
+// muncul bila benar-benar relevan.
 //
-// Sumber katalog: daftar TERTULIS di bawah (hanya fail yang wujud + laluan
-// yang sah di server). Senarai Arked & utiliti utama sepadan dengan
-// STORE_APP_META/STORE_ARCADE di server.js — test mengesekkannya.
+// Sumber katalog: hanya PERMUKAAN HIDUP — fail/route yang wujud hari ini.
+// Pivoting konten Okt 2026 (b0542e7) membuang app/store/halaman AI; katalog
+// lama memaut URL 404 — dibetulkan. Ujian (test/approuter.test.js) mengesahkan
+// setiap laluan katalogpadanan mempunyai fail HTML atau route server.
 'use strict';
 
 // ── Katalog: [nama, url, ikon, tajuk, kata kunci (ms/id/en campur, lowercase)] ──
 const UTILITIES = [
-  ['notes', '/apps/notes', '📝', 'Notes', 'note notes catatan memo menulis write down reminder reminder list idea'],
-  ['calc', '/apps/calc', '🧮', 'Calculator', 'calculate calculator kira hitung kalkulator arithmetic math maths'],
-  ['todo', '/apps/todo', '✅', 'To-Do', 'todo to-do task tugasan senarai check list checklist kerja to do'],
-  ['convert', '/apps/convert', '📐', 'Unit Converter', 'unit convert units ukur cm kg miles suhu temperature panjang berat'],
-  ['timer', '/apps/timer', '⏱️', 'Timer & Pomodoro', 'timer stopwatch pomodoro countdown masa waktu fokus focus break rehat'],
-  ['color', '/apps/color', '🎨', 'Color Picker', 'color colour warna hex rgb hsl palette pallet contrast picks picker'],
-  ['password', '/apps/password', '🔐', 'Password Generator', 'password kata laluan passphrase rawak random generate kata sandi'],
-  ['text', '/apps/text', '🔡', 'Text Tools', 'text word count base64 uppercase lowercase url encode sort dedupe case ubah huruf'],
-  ['pixel', '/apps/pixel', '🟩', 'Pixel Studio', 'pixel art piksel draw lukis 16x16 sprite'],
-  ['piano', '/apps/piano', '🎹', 'Synth Piano', 'piano piano key musical music main nota synth audio rekod'],
-  ['spiro', '/apps/spiro', '🌀', 'Spiro Mandala', 'spirograph mandala spiral seni art lukisan'],
-  ['orbit', '/apps/orbit', '🪐', 'Orbit Simulator', 'orbit planet gravity graviti simulasi angkasa space'],
-  ['fractal', '/apps/fractal', '🔮', 'Fractal Explorer', 'fractal mandelbrot zoom seni art'],
-  ['drum', '/apps/drum', '🥁', 'Rhythm Machine', 'drum beat rentak rhythm ketukan music muzik'],
-  ['chat', '/apps/chat', '💬', 'T Chat', 'chat message mesej messenger call phone bilik room bersembang'],
+  ['chat', '/apps/chat', '\uD83D\uDCAC', 'T Chat', 'chat message mesej messenger sembang room bilik call phone'],
 ];
 const TOOLS = [
-  ['converter', '/converter', '🎛️', 'Audio & Media Converter', 'convert mp3 wav ogg flac audio video tukar format extract audio tukar fail'],
-  ['bg-remover', '/bg-remover', '🪄', 'Background Remover', 'background remove buang hapus latar belakang photo gambar cutout'],
-  ['collage', '/collage', '🖼️', 'Photo Collage Maker', 'collage gabung gambar photos foto montage susun'],
-  ['design', '/design', '🎨', 'Design Studio', 'design reka poster banner logo graphic'],
-  ['builder', '/builder', '🏗️', 'Studio Builder', 'builder buat app game sendiri cipta create develop bina'],
-  ['studio', '/studio', '🎬', 'Tukuk Studio', 'studio edit video audio project'],
-  ['editor', '/editor', '✂️', 'Text & Code Editor', 'editor edit code teks tulis'],
-  ['editor-video', '/editor-video', '🎞️', 'Video Editor', 'video edit potong trim gabung clip'],
-  ['movie', '/movie', '🎥', 'Movie Player', 'movie filem watch nonton video player'],
-  ['nasa', '/nasa', '🛰️', 'NASA APOD', 'nasa space photo astronomy angkasa planet bintang star'],
-  ['store', '/store', '🛒', 'Tukuk Store', 'store apps download apk install aplikasi gedai kedai'],
-  ['os', '/os', '📱', 'Tukuk OS (web phone)', 'phone android os sistem web home screen operating telefon perisian'],
-  ['blog', '/blog', '📝', 'Blog & Articles', 'blog article artikel baca reading tulisan'],
-  ['learn', '/learn', '🎓', 'Learn 0 → Hero', 'learn belajar course kelas curriculum tutorial beginner asas'],
-  ['radio', '/cari?mode=radio', '📻', 'World Radio', 'radio stesen station dengar siaran live'],
-  ['news', '/cari?mode=news', '📰', 'News Search', 'news berita headline terkini'],
-  ['music', '/cari?mode=music', '🎵', 'Music Search', 'music song lagu muzik listen dengar'],
-  ['calendar', '/apps/calendar', '📅', 'Calendar', 'calendar kalendar tarikh date today hari bulan'],
-  ['dice', '/apps/dice', '🪙', 'Dice & Coin', 'dice dadu dobak coin syiling random rawak julat'],
-  ['tip', '/apps/tip', '💵', 'Tip Split', 'tip bil bill split bahaga waiter restaurant'],
-  ['bmi', '/apps/bmi', '⚖️', 'BMI Check', 'bmi berat weight ideal diet tubuh index'],
-  ['games', '/store?genre=arkad', '🕹️', 'Arcade Games', 'game main gaming permainan'],
-];
-// Genre arkad → pautan penapis /store (sepadan label STORE_ARCADE/server).
-const GENRE_HINTS = [
-  ['teki-teki', '/store?genre=teki-teki', '🧩', 'Puzzle Games', 'puzzle teki teki-teki sudoku match 3 tetris jigsaw'],
-  ['refleks', '/store?genre=refleks', '⚡', 'Reflex Games', 'reflex reaction laju pantas reflex'],
-  ['board', '/store?genre=board', '🎲', 'Board Games', 'board ludo catur chess card kad solitaire domino'],
-  ['penembakan', '/store?genre=penembakan', '👾', 'Shooter Games', 'shooter tembak shooting sniper fps invaders'],
-  ['santai', '/store?genre=santai', '🌿', 'Casual Games', 'casual santai relax tenang runner hopping'],
+  ['cuaca', '/cuaca', '\uD83C\uDF24\uFE0F', 'World Weather', 'weather cuaca rain hujan forecast ramalan iklim temperature suhu angin wind'],
+  ['udara', '/udara', '\uD83C\uDF2C\uFE0F', 'Air & Oxygen', 'air udara pollution pencemaran aqi quality oksigen oxygen co2 carbon'],
+  ['gempa', '/gempa', '\uD83C\uDF0B', 'World Earthquakes', 'earthquake gempa seismic quake magnitud getaran tremor'],
+  ['bencana', '/bencana', '\uD83D\uDEA8', 'Disaster Tracker', 'disaster bencana wildfire floods taufan storm cyclone letusan volcano'],
+  ['nasa', '/nasa', '\uD83D\uDEF0\uFE0F', 'NASA Space Hub', 'nasa space astronomy planet bintang star apod angkasa iss asteroid exoplanet'],
+  ['wang', '/wang', '\uD83D\uDCB1', 'World Currency', 'currency wang ringgit exchange rate usd myr euro dollar money tukar'],
+  ['seni', '/seni', '\uD83C\uDFA8', 'Free Art Gallery', 'art seni museum painting lukisan gallery masterpiece'],
+  ['hidupan', '/hidupan', '\uD83E\uDD8B', 'Wildlife Atlas', 'animal wildlife hidupan spesies species butterfly tiger bird ikan'],
+  ['akademi', '/akademi', '\uD83C\uDF93', 'Akademi Tukuk-OS', 'lesson pelajaran academy akademi quiz general knowledge ilmu'],
+  ['blog', '/blog', '\uD83D\uDCDD', 'Blog & Articles', 'blog article artikel baca reading tulisan post'],
+  ['learn', '/learn', '\uD83D\uDCBB', 'Learn 0 → Hero', 'learn belajar code programming pengaturcaraan javascript node tutorial curriculum'],
+  ['os', '/os', '\uD83D\uDCF1', 'Tukuk OS (web phone)', 'phone android os sistem web telefon operating home'],
+  ['study', '/study', '\uD83D\uDD2C', 'Study Complex', 'study science fakta facts geography sains eksperimen teka'],
+  ['wiki', '/wiki', '\uD83D\uDCDA', 'Tukuk Wiki', 'wiki ensiklopedia encyclopedia reference rujuk'],
+  ['negara', '/negara', '\uD83C\uDF0D', 'Country Profiles', 'country negara capital bendera flag population rakyat'],
+  ['cuti', '/cuti', '\uD83D\uDDD3\uFE0F', 'Public Holidays', 'holiday cuti calendar kalendar percutian long weekend'],
+  ['statistik', '/statistik', '\uD83D\uDCCA', 'World Statistics', 'statistik statistics data angka population country record'],
+  ['radio', '/cari?mode=radio', '\uD83D\uDCFB', 'World Radio', 'radio stesen station dengar siaran live muzik'],
+  ['news', '/cari?mode=news', '\uD83D\uDCF0', 'News Search', 'news berita headline terkini semasa'],
+  ['music', '/cari?mode=music', '\uD83C\uDFB5', 'Music Search', 'music song lagu muzik listen dengar'],
 ];
 
 const STOP = new Set(['the', 'a', 'an', 'is', 'are', 'to', 'of', 'for', 'and', 'or', 'in', 'on', 'i', 'my', 'me',
   'please', 'can', 'how', 'what', 'why', 'with', 'tolong', 'saya', 'nak', 'mahu', 'boleh', 'kah', 'yang',
   'satu', 'dua', 'ini', 'itu', 'dalam', 'dan', 'atau', 'untuk', 'macam', 'bagaimana', 'buat',
-  'buatkan', 'bina', 'cari', 'mainkan', 'bukakan', 'kerjakan', 'sediakan']);
+  'buatkan', 'bina', 'mainkan', 'bukakan', 'kerjakan', 'sediakan']);
 
 // ── Pembina indeks: kata kunci → [entry] (sekali sahaja, dipanggil lazily) ──
-const CATALOG = [...UTILITIES, ...TOOLS, ...GENRE_HINTS];
+const CATALOG = [...UTILITIES, ...TOOLS];
 let INDEX = null;
 function index() {
   if (INDEX) return INDEX;
@@ -94,7 +71,7 @@ function route(query) {
       scores.set(e[0], cur);
     }
   }
-  // Longgar: padankan juga awalan 4+ aksara (ingular/plural, "converts"→"convert").
+  // Longgar: padankan juga awalan 4+ aksara (singular/plural, "weathers"→"weather").
   for (const w of words) {
     if (w.length < 4) continue;
     for (const [kw, list] of idx) {

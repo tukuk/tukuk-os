@@ -8,14 +8,16 @@ const approuter = require('../src/brain/approuter');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 
-test('route: memadankan maksud ke aplikasi yang betul', () => {
+test('route: memadankan maksud ke aplikasi/hab yang betul', () => {
   const cases = [
-    ['remove background from my photo', 'bg-remover'],
-    ['convert this song to mp3', 'converter'],
-    ['saya nak buang latar belakang gambar', 'bg-remover'],
-    ['generate a strong random password', 'password'],
-    ['buat senarai kerja untuk esok', 'todo'],
-    ['what is the cpu load average formula', null], // soalan umum → jangan paksa app
+    ['saya nak chat dengan kawan', 'chat'],
+    ['cuaca tokyo hari ini', 'cuaca'],
+    ['latest earthquake mag 5', 'gempa'],
+    ['exchange rate usd to myr', 'wang'],
+    ['photosynthesis lesson for kids', 'akademi'],
+    ['remove background from my photo', null], // halaman dibuang — jangan cadang
+    ['generate a strong random password', null], // halaman dibuang — jangan cadang
+    ['what is the cpu load average formula', null], // soalan umum → jangan paksa
     ['', null],
   ];
   for (const [q, expect] of cases) {
@@ -30,17 +32,16 @@ test('route: memadankan maksud ke aplikasi yang betul', () => {
 });
 
 test('route: gate — skor separuh seorang tak cukup, dua separuh cukup', () => {
-  // 'colouring' awalan 'colour' (0.5) seorang sahaja → tak layak;
-  // 'colouring page' masih 0.5 → kosong.
-  assert.equal(approuter.route('colouring').apps.length, 0);
-  // dua isyarat separuh → ≥1.0 → layak.
-  const r = approuter.route('colouring hex');
+  // 'weatherish' hanya awalan 'weather' (0.5) seorang sahaja → tak layak.
+  assert.equal(approuter.route('weatherish').apps.length, 0);
+  // dua isyarat separuh ('weatherish' + 'forecastt') → ≥1.0 → layak.
+  const r = approuter.route('weatherish forecastt');
   assert.ok(r.apps.length > 0);
-  assert.equal(r.apps[0].name, 'color');
+  assert.equal(r.apps[0].name, 'cuaca');
 });
 
 test('route: maksimum 3 cadangan, disusun ikut skor menurun', () => {
-  const { apps } = approuter.route('convert video audio mp3 wav format tukar fail');
+  const { apps } = approuter.route('music song lagu muzik listen radio stesen dengar berita');
   assert.ok(apps.length <= 3);
   for (let i = 1; i < apps.length; i++) assert.ok(apps[i - 1].score >= apps[i].score);
 });

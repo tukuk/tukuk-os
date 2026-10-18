@@ -4,8 +4,9 @@
 // Kenapa bukan subdomain agent.tukuk.org? Token API di pelayan tidak punya
 // izin Cloudflare Tunnel, dan laluan dashboard tidak disentuh — jadi editor
 // dinaung dalam TUNNEL SEDIA ADA melalui applikasi ini. code-server dijalankan
-// dengan --abs-proxy-base-path /agent (prefix dikekalkan semasa penghantaran) supaya
-// semua URL aset/WS-nya sudah berimbuh /agent dan lalu melalui sini.
+// dengan --abs-proxy-base-path /agent. Prefix /agent DIBUANG sebelum forward ke
+// upstream (route dalaman code-server di '/'); Location redirect ditulis semula
+// supaya browser kekal di bawah /agent/.
 //
 // autentikasi = code-server sendiri (--auth password; kuki diuruskan olehnya).
 // Gerbang admin BUKAN di sini kerana subresource pelayar (JS/CSS/WS) tidak

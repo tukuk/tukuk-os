@@ -2528,6 +2528,9 @@ function nasaExoplanetsPage(req, exo, withinPc) {
     + `<div class="nasa-card"><h3>Potentially rocky</h3><div class="big">${rocky} \u2264 1.6 \u2295</div></div>`
     + `<div class="nasa-card"><h3>Source</h3><div class="big" style="font-size:1rem">NASA Exoplanet Archive</div></div></div>`
     + filters
+    + (exo && exo.stale
+      ? `<p class="meta">\u26A0 The NASA archive is briefly unreachable \u2014 this is the last snapshot we fetched, on ${escapeHtml(String(exo.staleAt || '').slice(0, 16)).replace('T', ' ')} UTC. Planet data changes only when new worlds are confirmed, so the list stays accurate for days.</p>`
+      : '')
     + (rows ? `<table class="nasa-table"><tr><th>Planet</th><th>Distance</th><th>Radius</th><th>Orbital period</th><th>Star temp</th><th>Discovered</th></tr>${rows}</table>`
       : '<p>No planets match that distance window in the nearest-sample cache \u2014 the widest list is the default page.</p>')
     + `<h2 class="section-title">How a planet gets found at all</h2><p>Nearly every planet here was detected indirectly: by the <b>transit method</b> (a star dims for hours as a world crosses it \u2014 the technique of Kepler, TESS and CHEOPS), by <b>radial velocity</b> (the star\u2019s wobble measured in Doppler shifts), or by direct imaging and microlensing for the widest orbits. What looks like an impossible measurement is now routine precision: a Jupiter-sized world dims a Sun-like star by about 1%.</p>`
@@ -5236,7 +5239,11 @@ function udaraHubPage(air, co2) {
     const all = rows.map((r, i) => `<tr><td>${i + 1}</td><td><b>${escapeHtml(r.name)}</b>, ${escapeHtml(r.country)}</td><td>${escapeHtml(r.region)}</td><td>${aqiChip(r.usAqi)}</td><td>${r.pm25 == null ? '\u2014' : r.pm25 + ' \u00b5g/m\u00b3'}</td></tr>`).join('');
     const note = air.source === 'last-known'
       ? `<p class="meta">\u26A0 The live feed is briefly unavailable \u2014 these are the last good readings, taken ${new Date(air.staleSince || air.fetchedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC.</p>`
-      : (air.source === 'partial' ? `<p class="meta">\u26A0 ${air.failedCount} of ${udara.CITIES.length} city readings failed this round; the rest are current.</p>` : '');
+      : (air.source === 'partial'
+        ? `<p class="meta">\u26A0 ${air.failedCount} of ${udara.CITIES.length} city readings failed this round; the rest are current.</p>`
+        : (air.updating
+          ? `<p class="meta">\u21BB A fresh scan is running in the background \u2014 this snapshot was taken ${new Date(air.fetchedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC.</p>`
+          : ''));
     data = `<div class="air-grid">
       <div class="air-card"><h3>\uD83C\uDF3F Cleanest spot right now</h3><p style="font-size:1.4rem;font-weight:800">${escapeHtml(rows[0].name)}, ${escapeHtml(rows[0].country)}</p><p>${aqiChip(rows[0].usAqi)}</p></div>
       <div class="air-card"><h3>\uD83D\uDD25 Dirtiest spot right now</h3><p style="font-size:1.4rem;font-weight:800">${escapeHtml(rows[rows.length - 1].name)}, ${escapeHtml(rows[rows.length - 1].country)}</p><p>${aqiChip(rows[rows.length - 1].usAqi)}</p></div>
@@ -7571,8 +7578,8 @@ app.get('/a', (req, res) => {
   const items = listPublished();
   const rows = items.length
     ? items.map((x) => `<li><a href="/a/${encodeURIComponent(x.slug)}">${escapeHtml(x.title)}</a> <span style="color:#6b7280">/ ${escapeHtml(x.slug)}</span></li>`).join('\n')
-    : '<li>No apps yet. Build one in the <a href="/builder">Builder</a> and press 🚀 Publish.</li>';
-  res.type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Published Apps — Tukuk Studio</title><meta name="robots" content="noindex"><style>body{font:16px/1.6 system-ui;margin:0;padding:40px 20px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}main{max-width:720px;margin:0 auto}h1{font-size:1.6rem}ul{list-style:none;padding:0}li{padding:6px 0;border-bottom:1px solid #262b36}</style></head><body><main><h1>🧩 Published Apps</h1><p style="color:#9aa3b2">Built with Tukuk Studio — the no-code Builder. Pages run sandboxed (separate origin).</p><ul>\n${rows}\n</ul><p style="margin-top:24px"><a href="/builder">→ Open Builder</a></p></main></body></html>`);
+    : '<li>No apps have been published yet.</li>';
+  res.type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Published Apps — Tukuk Studio</title><meta name="robots" content="noindex"><style>body{font:16px/1.6 system-ui;margin:0;padding:40px 20px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}main{max-width:720px;margin:0 auto}h1{font-size:1.6rem}ul{list-style:none;padding:0}li{padding:6px 0;border-bottom:1px solid #262b36}</style></head><body><main><h1>🧩 Published Apps</h1><p style="color:#9aa3b2">Built with Tukuk Studio — the no-code Builder. Pages run sandboxed (separate origin).</p><ul>\n${rows}\n</ul></main></body></html>`);
 });
 
 // Hidangkan satu app terbitan dalam sandbox opaque-origin.
@@ -7582,7 +7589,7 @@ app.get('/a/:slug', (req, res) => {
   const file = path.join(PUBLISH_DIR, `${slug}.html`);
   let html;
   try { html = fs.readFileSync(file, 'utf8'); }
-  catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>App <code>/${escapeHtml(slug)}</code> does not exist or has been removed.</p><p><a href="/a">← All apps</a> · <a href="/builder">Build your own</a></p></body></html>`); }
+  catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>App <code>/${escapeHtml(slug)}</code> does not exist or has been removed.</p><p><a href="/a">← All apps</a></p></body></html>`); }
   bumpViews(slug); // kiraan "dilihat" untuk katalog /store
   // ?embed=1 → dibenarkan menempek dalam pemain /play kita (frame-ancestors 'self');
   // laman luar tetap disekat 'none' seperti sebelumnya (anti-clickjacking silang-origin).
