@@ -1603,6 +1603,8 @@ app.get('/learn', (req, res) => {
 .badge-count{display:inline-block;background:rgba(76,141,255,.15);border:1px solid rgba(76,141,255,.35);color:var(--accent,#4c8dff);
   border-radius:999px;padding:2px 12px;font-size:.85rem;font-weight:600;margin-left:8px;}
 </style>
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+${pageAdScript()}${clarityScript()}
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
 </head>
