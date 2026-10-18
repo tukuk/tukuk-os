@@ -109,3 +109,22 @@ test('imej NASA: semua <img> konten punya width/height (CLS) + CSS height:auto',
   assert.match(serverSrc, /\.nasa-img\{max-width:100%;height:auto/, 'CSS nasa-img height:auto');
   assert.match(serverSrc, /id="epicimg"[^>]*width="1024" height="1024"/, 'EPIC player ada dimensi');
 });
+
+// ── ISS auto-refresh langsung (2026-10-18): poll klien 15s + penanda sumber jujur ──
+const nasaSrc = fs.readFileSync(path.join(ROOT, 'src', 'nasa.js'), 'utf8');
+
+test('ISS: laluan live.json wujud dan halaman poll setiap 15s', () => {
+  assert.ok(serverSrc.includes("app.get('/nasa/iss/live.json'"), 'laluan JSON untuk auto-refresh');
+  assert.ok(serverSrc.includes('setInterval(poll,15000)'), 'klien poll 15s');
+  assert.ok(serverSrc.includes("fetch('/nasa/iss/live.json'"), 'poll guna fetch JSON');
+  assert.ok(serverSrc.includes('id="issbase"'), 'gambar asas ada id untuk fallback chain');
+  assert.ok(serverSrc.includes('three-globe/example/img/earth-blue-marble.jpg'), 'fallback host 1 apabila Wikimedia gagal');
+});
+
+test('ISS: telemetri jujur — penanda source, TIADA posisi 0,0 rekaan', () => {
+  assert.ok(nasaSrc.includes("source: 'live'"), 'bacaan semasa ditanda live');
+  assert.ok(nasaSrc.includes("source: 'last-known'"), 'gagal → posisi nyata terakhir, bukan rekaan');
+  assert.ok(nasaSrc.includes("return { source: 'unavailable' }"), 'tiada langsung → unavailable jujur');
+  assert.ok(!/latitude: 0,/.test(nasaSrc), 'fallback 0,0 palsu telah dibuang selama-lamanya');
+  assert.ok(nasaSrc.includes("setCache('iss:last-good'"), 'last-good di-cache untuk mod sibuk');
+});

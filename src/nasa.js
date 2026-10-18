@@ -663,38 +663,37 @@ async function searchNASAMedia(query, { mediaType = 'image' } = {}) {
 
 /**
  * 7. Live ISS (International Space Station) Telemetry
+ * Cache 12s (halaman + poll live.json berkongsi); jujur tentang sumber:
+ * 'live' → bacaan semasa · 'last-known' → feed sibuk, posisi nyata terakhir
+ * (max 24 jam) · 'unavailable' → tiada data sama sekali (TIADA 0,0 rekaan).
  */
 async function getISSTelemetry() {
+  const cacheKey = 'iss:telemetry';
+  const cached = getCache(cacheKey);
+  if (cached && cached.source && cached.source !== 'unavailable') return cached;
   try {
     const res = await http.get('https://api.wheretheiss.at/v1/satellites/25544', { timeout: 6000 });
-    return {
-      name: res.data.name,
-      latitude: res.data.latitude,
-      longitude: res.data.longitude,
-      altitude_km: Math.round(res.data.altitude * 10) / 10,
-      velocity_kmh: Math.round(res.data.velocity),
-      visibility: res.data.visibility,
-      timestamp: res.data.timestamp,
-      solar_lat: res.data.solar_lat,
-      solar_lon: res.data.solar_lon
-    };
-  } catch (err) {
-    const now = new Date();
-    const utcH = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-    let subLng = (12 - utcH) * 15;
-    subLng = ((subLng + 180) % 360 + 360) % 360 - 180;
-    const doy = Math.floor((now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86400000);
-    return {
+    const d = res.data || {};
+    if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) throw new Error('payload ISS tidak sah');
+    const data = {
       name: 'iss',
-      latitude: 0,
-      longitude: 0,
-      altitude_km: 418,
-      velocity_kmh: 27600,
-      visibility: 'daylight',
-      timestamp: Math.round(Date.now() / 1000),
-      solar_lat: -23.44 * Math.cos((360 / 365.24) * (doy + 10) * Math.PI / 180),
-      solar_lon: subLng
+      latitude: d.latitude,
+      longitude: d.longitude,
+      altitude_km: Math.round(d.altitude * 10) / 10,
+      velocity_kmh: Math.round(d.velocity),
+      visibility: d.visibility || 'daylight',
+      timestamp: d.timestamp,
+      solar_lat: d.solar_lat,
+      solar_lon: d.solar_lon,
+      source: 'live',
     };
+    setCache(cacheKey, data, 12 * 1000);
+    setCache('iss:last-good', data, 24 * 60 * 60 * 1000);
+    return data;
+  } catch (err) {
+    const good = getCache('iss:last-good');
+    if (good) return Object.assign({}, good, { source: 'last-known' });
+    return { source: 'unavailable' };
   }
 }
 
