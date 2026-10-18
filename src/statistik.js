@@ -5,7 +5,8 @@
 // Modul ini hanya memuatin indikator TAMBAHAN dan menjana ranking siap-render.
 const https = require('https');
 
-const WB_IND = 'https://api.worldbank.org/v2/country/all/indicator/INDICATOR?format=json&per_page=400&date=2023';
+const WB_IND_BASE = 'https://api.worldbank.org/v2/country/all/indicator';
+const WB_YEAR_DEFAULT = 2023;
 const cache = new Map();
 const TTL = 30 * 24 * 60 * 60 * 1000; // stat 2023 sudah tetap
 
@@ -67,8 +68,8 @@ const INDICATORS = [
     intro: 'Peratus tenaga kerja yang aktif mencari pekerjaan tetapi belum mendapatkannya.' },
   { slug: 'inflasi', code: 'FP.CPI.TOTL.ZG', field: null, bm: 'Inflasi Harga Pengguna', unit: '%', dec: 1, better: 'low',
     intro: 'Perubahan tahunan indeks harga pengguna — kadar yang memacu saku rakyat setiap bulan.' },
-  { slug: 'tenaga-boleh-diperbaharui', code: 'EG.FEC.RNEW.ZS', field: null, bm: 'Tenaga Boleh Diperbaharui', unit: '%', dec: 1, better: 'high',
-    intro: 'Bahagian tenaga boleh diperbaharui (hidro, solar, angin, bio) dalam penggunaan tenaga akhir keseluruhan.' },
+  { slug: 'tenaga-boleh-diperbaharui', code: 'EG.FEC.RNEW.ZS', field: null, yr: 2021, bm: 'Tenaga Boleh Diperbaharui', unit: '%', dec: 1, better: 'high',
+    intro: 'Bahagian tenaga boleh diperbaharui (hidro, solar, angin, bio) dalam penggunaan tenaga akhir keseluruhan. World Bank baru melaporkan 2021 untuk indikator ini — ia didahulukan tahun lain.' },
   { slug: 'pelepasan-co2', code: 'EN.GHG.CO2.PC.CE.AR5', field: null, bm: 'Pelepasan CO₂ Sekepala', unit: 'tan CO₂', dec: 1, better: 'low',
     intro: 'Ton karbon dioksida dilepaskan setiap penduduk setiap tahun (tidak termasuk penggunaan tanah) — cap kaki karbon negara.' },
   { slug: 'liputan-hutan', code: 'AG.LND.FRST.ZS', field: null, bm: 'Liputan Hutan', unit: '%', dec: 1, better: 'high',
@@ -86,12 +87,13 @@ function findIndicator(slug) {
 }
 
 // Peta iso3 → nilai untuk indikator WB baharu; cache 30 hari + stale-serve.
-async function loadWbMap(code) {
-  const key = `wb:${code}`;
+async function loadWbMap(code, yr) {
+  const year = yr || WB_YEAR_DEFAULT;
+  const key = `wb:${code}:${year}`;
   const hit = cacheGet(key);
   if (hit && !hit.stale) return hit.data;
   try {
-    const body = await fetchJson(WB_IND.replace('INDICATOR', code));
+    const body = await fetchJson(`${WB_IND_BASE}/${code}?format=json&per_page=400&date=${year}`);
     const rows = {};
     for (const r of (Array.isArray(body) && body[1]) ? body[1] : []) {
       if (r && r.countryiso3code && r.value != null) rows[r.countryiso3code] = r.value;
@@ -111,7 +113,7 @@ async function loadRanking(ind, countries) {
     values = {};
     for (const c of countries) if (c[ind.field] != null) values[c.cca3] = c[ind.field];
   } else {
-    values = await loadWbMap(ind.code);
+    values = await loadWbMap(ind.code, ind.yr);
   }
   const list = [];
   for (const c of countries) {

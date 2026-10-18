@@ -3614,9 +3614,9 @@ async function statistikHubPage(req, rows) {
     const baris = st.INDICATORS.map((ind, k) => {
       const rk = ranks[k];
       const e = rk ? rk.list.find((x) => x.cca3 === my.cca3) : null;
-      return `<tr><td><a href="/statistik/${ind.slug}">${escapeHtml(ind.bm)}</a></td><td>${e ? stVal(ind, e.value) : '—'}</td><td>${e ? `#${e.rank} daripada ${rk.stats.n}` : '—'}</td></tr>`;
+      return `<tr><td><a href="/statistik/${ind.slug}">${escapeHtml(ind.bm)}</a></td><td>${e ? stVal(ind, e.value) : '—'}</td><td>${e ? `#${e.rank} daripada ${rk.stats.n}` : '—'}</td><td>${ind.yr || 2023}</td></tr>`;
     }).join('');
-    myTable = `<h2 class="section-title">Malaysia mengikut indikator</h2><table class="wx-table"><tr><th>Indikator</th><th>Nilai (2023)</th><th>Kedudukan dunia</th></tr>${baris}</table>`;
+    myTable = `<h2 class="section-title">Malaysia mengikut indikator</h2><table class="wx-table"><tr><th>Indikator</th><th>Nilai</th><th>Kedudukan dunia</th><th>Tahun data</th></tr>${baris}</table>`;
   }
   const okCount = ranks.filter((r) => r && r.list.length).length;
   const body = `<div class="wx-hero"><div class="temp">${st.INDICATORS.length} indikator &middot; ±${rows.length} buah negara</div><div class="wmeta">Ranking dunia dalam Bahasa Melayu — sumber World Bank Open Data (indikator 2023), percuma tanpa pendaftaran. ${okCount} indikator siap dimuat.</div></div>`
@@ -3642,6 +3642,7 @@ function stVal(ind, v) { return stFmt(ind, v); }
 // ─── /statistik/:indikator — jadual ranking penuh + bar + statistik taburan ───
 function statistikIndPage(req, rk, rows) {
   const ind = rk.ind; const list = rk.list; const stats = rk.stats;
+  const yr = ind.yr || 2023;
   const selfUrl = `https://tukuk.org/statistik/${ind.slug}`;
   const best = bestOf(ind, list); const worst = worstOf(ind, list);
   const bestLabel = ind.better === 'low' ? 'Paling rendah (baik)' : 'Paling tinggi';
@@ -3658,27 +3659,27 @@ function statistikIndPage(req, rk, rows) {
     + `<div class="wx-card"><h3>Purata dunia</h3><div class="big">${stVal(ind, stats.avg)}</div><div class="meta">median ${stVal(ind, stats.median)}</div></div>`
     + `<div class="wx-card"><h3>${escapeHtml(worstLabel)}</h3><div class="big">${escapeHtml(worst.name)}</div><div class="meta">${stVal(ind, worst.value)}</div></div>`
     + `</div>`;
-  const body = `<div class="wx-hero"><div class="temp">${escapeHtml(best.name)}</div><div class="wmeta">Peneraju ${escapeHtml(ind.bm)} 2023 · ${stVal(ind, best.value)} · ${stats.n} buah negara dilaporkan ke World Bank</div></div>`
+  const body = `<div class="wx-hero"><div class="temp">${escapeHtml(best.name)}</div><div class="wmeta">Peneraju ${escapeHtml(ind.bm)} ${yr} · ${stVal(ind, best.value)} · ${stats.n} buah negara dilaporkan ke World Bank</div></div>`
     + `<p>${escapeHtml(ind.intro)}</p>`
     + cards + myNote
-    + `<h2 class="section-title">50 negara — ${escapeHtml(ind.bm)}</h2><p class="meta">Disusun mengikut nilai tertinggi dahulu (${arahTxt}). Bendera: flagcdn; nama negara paut ke profil penuhnya.</p>`
+    + `<h2 class="section-title">50 negara — ${escapeHtml(ind.bm)}</h2><p class="meta">Disusun mengikut nilai tertinggi dahulu (${arahTxt}), tahun data ${yr}. Bendera: flagcdn; nama negara paut ke profil penuhnya.</p>`
     + `<table class="wx-table"><tr><th>#</th><th>Negara</th><th>Nilai</th></tr>${baris}</table>`
     + `<h2 class="section-title">Taburan global</h3><table class="wx-table"><tr><th>Statistik</th><th>Nilai</th></tr>`
     + `<tr><th>Bilangan negara</th><td>${stats.n}</td></tr>`
     + `<tr><th>Terendah</th><td>${stVal(ind, stats.min)} (${escapeHtml(list[list.length - 1].name)})</td></tr>`
     + `<tr><th>Tertinggi</th><td>${stVal(ind, stats.max)} (${escapeHtml(list[0].name)})</td></tr></table>`
-    + `<p>Sumber: <b>World Bank Open Data</b>${ind.code ? ` (indikator <code>${escapeHtml(ind.code)}</code>, tahun 2023)` : ' — pinjam daripada dataset Kompleks Negara'} — data awam tanpa kunci API, dillesen CC BY 4.0. Profil penuh setiap negara: <a href="/negara">Kompleks Negara</a> · berita alam langsung: <a href="/bencana">Kompleks Bencana</a>.</p>`;
+    + `<p>Sumber: <b>World Bank Open Data</b>${ind.code ? ` (indikator <code>${escapeHtml(ind.code)}</code>, tahun ${yr})` : ' — pinjam daripada dataset Kompleks Negara'} — data awam tanpa kunci API, dillesen CC BY 4.0. Profil penuh setiap negara: <a href="/negara">Kompleks Negara</a> · berita alam langsung: <a href="/bencana">Kompleks Bencana</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Dataset', name: `${ind.bm} — ranking dunia 2023`,
+    '@context': 'https://schema.org', '@type': 'Dataset', name: `${ind.bm} — ranking dunia ${yr}`,
     description: ind.intro, url: selfUrl,
     creator: { '@type': 'Organization', name: 'World Bank', url: 'https://data.worldbank.org' },
-    temporalCoverage: '2023', license: 'https://creativecommons.org/licenses/by/4.0/',
+    temporalCoverage: String(yr), license: 'https://creativecommons.org/licenses/by/4.0/',
   }).replace(/</g, '\\u003c');
   return statistikDoc({
-    title: `${ind.bm} — Ranking Dunia 2023 (50 Negara Teratas) | Tukuk-OS`,
-    desc: `Ranking ${ind.bm} 2023: ${escapeHtml(best.name)} di tangga pertama (${stVal(ind, best.value)}), purata dunia ${stVal(ind, stats.avg)}${myEntry ? `, Malaysia #${myEntry.rank}` : ''}. Data World Bank Open Data.`,
+    title: `${ind.bm} — Ranking Dunia ${yr} (50 Negara Teratas) | Tukuk-OS`,
+    desc: `Ranking ${ind.bm} ${yr}: ${escapeHtml(best.name)} di tangga pertama (${stVal(ind, best.value)}), purata dunia ${stVal(ind, stats.avg)}${myEntry ? `, Malaysia #${myEntry.rank}` : ''}. Data World Bank Open Data.`,
     selfUrl,
-    heroTitle: `${ind.bm} — Ranking Dunia`, heroSub: `World Bank Open Data 2023 · ${stats.n} buah negara · unit: ${ind.unit}`,
+    heroTitle: `${ind.bm} — Ranking Dunia`, heroSub: `World Bank Open Data ${yr} · ${stats.n} buah negara · unit: ${ind.unit}`,
     body, ld,
   });
 }
