@@ -1,6 +1,6 @@
 'use strict';
-// Invarian Cuti Complex: API cuti MY tanpa kunci + 16 negeri + hujung minggu
-// panjang + sitemap-cuti + pautan silang cuaca/gempa & footer.
+// Invarian Cuti Complex: hab DUNIA (Nager.Date tanpa kunci) + 5 benua + halaman
+// negara + hujung minggu panjang dunia + jadual MY 16 negeri + sitemap-cuti.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -9,6 +9,7 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const serverSrc = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
 const cutiSrc = fs.readFileSync(path.join(ROOT, 'src', 'cuti.js'), 'utf8');
+const duniaSrc = fs.readFileSync(path.join(ROOT, 'src', 'cuti-dunia.js'), 'utf8');
 const robotsTxt = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
 
 const SECTIONS = ['/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan'];
@@ -60,22 +61,24 @@ test('renderer cuti ditakrif dan dibungkus melalui cutiDoc (3 slot + nav + lang 
   assert.ok(doc.includes('ms_MY'), 'og:locale ms_MY');
 });
 
-test('CUTI_SECTIONS menyenaraikan hab + 2 tahun + hujung minggu + penjelasan + 16 negeri', () => {
+test('CUTI_SECTIONS menyenaraikan hab + 5 benua + hujung minggu + 2 tahun MY + penjelasan', () => {
   for (const p of SECTIONS) assert.ok(serverSrc.includes(`'${p}'`), `seksyen ${p} dalam nav`);
-  assert.match(serverSrc, /for \(const st of cu\.STATES\) CUTI_SECTIONS\.push/, '16 halaman negeri masuk nav');
+  assert.match(serverSrc, /for \(const rg of cd\.REGIONS\) CUTI_SECTIONS\.push/, '5 halaman benua masuk nav');
+  assert.doesNotMatch(serverSrc, /for \(const st of cu\.STATES\) CUTI_SECTIONS\.push/, 'negeri MY tidak lagi memenuhi nav dunia');
   const navIdx = serverSrc.indexOf('function cutiNav()');
-  assert.ok(navIdx > 0 && serverSrc.slice(navIdx, navIdx + 600).includes('Jelajahi Kompleks Cuti'), 'tajuk nav cuti');
+  assert.ok(navIdx > 0 && serverSrc.slice(navIdx, navIdx + 600).includes('Jelajahi Kompleks Cuti Dunia'), 'tajuk nav cuti dunia');
 });
 
 test('laluan /cuti* berdaftar ikut tertib: hub, literal, tahun regex, baru :negeri', () => {
   const hub = serverSrc.indexOf("app.get('/cuti'");
   const pen = serverSrc.indexOf("app.get('/cuti/penjelasan'");
   const lw = serverSrc.indexOf("app.get('/cuti/hujung-minggu-panjang'");
+  const dun = serverSrc.indexOf("app.get('/cuti/dunia/:slug'");
   const yr = serverSrc.indexOf('app.get(/^\\/cuti\\/');
   const reg = serverSrc.indexOf("app.get('/cuti/:negeri'");
-  assert.ok(hub > -1 && pen > hub && lw > pen && yr > lw && reg > yr, 'tertib daftar: hub < penjelasan < hujung-minggu < tahun < :negeri');
+  assert.ok(hub > -1 && pen > hub && lw > pen && yr > lw && dun > yr && reg > dun, 'tertib daftar: hub < penjelasan < hujung-minggu < tahun < dunia < :negeri');
   assert.match(serverSrc, /cu\.findState\(req\.params\.negeri\)/, 'slug negeri disahkan DALAM handler (tiada TDZ)');
-  assert.doesNotMatch(serverSrc, /for \(const st of cu\.STATES\)\s*\n?\s*app\.get\('\/cuti/, 'loop daftar-route atas STATES diharamkan');
+  assert.match(serverSrc, /cd\.findRegion\(slug\)[\s\S]*cd\.findCountryBySlug\(slug\)/, 'dunia sahkan rantau THEN negara dalam handler');
 });
 
 test('kegagalan API → 503, negeri/tahun salah → 404, dua-dua cutiBusy noindex', () => {
@@ -91,12 +94,43 @@ test('sitemap-cuti.xml + robots + footer + pautan silang cuaca/gempa↔cuti', ()
   const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-cuti.xml'"), serverSrc.indexOf("app.get('/sitemap-cuti.xml'") + 1600);
   assert.ok(sm.includes('cu.STATES.map'), 'semua negeri masuk sitemap');
   assert.ok(sm.includes('cu.YEAR_MAX'), 'versi 2027 (?)tahun masuk sitemap');
+  assert.ok(sm.includes('cd.REGIONS.map') && sm.includes('cd.COUNTRIES.map'), 'benua + negara masuk sitemap');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-cuti\.xml/, 'robots iklankan sitemap-cuti');
-  // Dasar dunia: chrome footer tidak lagi mempromosikan label MY; krew cuti kekal boleh-rujuk
-  // melalui pautan silang hab cuaca/gempa + nav sendiri + sitemap utama.
+  // Dasar dunia: chrome footer mempromosikan label dunia, BUKAN MY-spesifik.
   assert.ok(!serverSrc.includes('<li><a href="/cuti">Public holidays 2026</a></li>'), 'footer tidak lagi ada label cuti MY');
   assert.ok(!serverSrc.includes('<li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>'), 'footer tidak lagi ada Long weekends MY');
-  assert.ok(serverSrc.includes('<a href="/cuti">cuti umum 2026 &amp; 2027</a>'), 'hab cuaca paut silang ke cuti');
+  assert.ok(serverSrc.includes('<li><a href="/cuti">World public holidays</a></li>'), 'footer ada label cuti dunia');
+  assert.ok(serverSrc.includes('<a href="/cuti">cuti umum dunia</a>'), 'hab cuaca paut silang ke cuti dunia');
   assert.ok(serverSrc.includes('<a href="/cuti">jadual cuti umum</a>'), 'hab/rantau gempa paut silang ke cuti');
-  assert.ok(serverSrc.includes("'/cuti', '/cuti/2026', '/cuti/2027'"), 'sitemap utama menyenaraikan halaman cuti');
+  assert.ok(serverSrc.includes("'/cuti', ") && serverSrc.includes("'/cuti/2026', '/cuti/2027'"), 'sitemap utama menyenaraikan halaman cuti');
+});
+
+test('cuti-dunia.js: Nager.Date tanpa kunci, agent IPv6, cache 30 hari, kolam 6', () => {
+  assert.ok(duniaSrc.includes('date.nager.at/api/v3'), 'endpoint Nager.Date v3');
+  assert.doesNotMatch(duniaSrc, /apikey|api_key|appid|token/, 'Nager tanpa kunci');
+  assert.ok(duniaSrc.includes('new https.Agent({ family: 6'), 'agent IPv6-paksa');
+  assert.match(duniaSrc, /TTL = 30 \* 24 \* 60 \* 60 \* 1000/, 'cache 30 hari');
+  assert.ok(duniaSrc.includes('mapPool(COUNTRIES, 6'), 'kolam 6 negara serentak');
+  assert.ok(duniaSrc.includes('res.statusCode === 204'), '204 (tiada data) dilayak null');
+  const cd = require(path.join(ROOT, 'src', 'cuti-dunia.js'));
+  assert.ok(cd.COUNTRIES.length >= 50, 'liputan negara ramai');
+  assert.strictEqual(cd.REGIONS.length, 5, '5 benua');
+  // Negara tidak disokong Nager mesti dibuang supaya halaman tak 503 kekal.
+  for (const gone of ['India', 'Thailand', 'Israel', 'Saudi Arabia', 'Nepal', 'Malaysia'])
+    assert.ok(!cd.COUNTRIES.some(([, en]) => en === gone), `${gone} dibuang (tiada data Nager)`);
+  // Slug ASCII kami sendiri, bukan slug negara diacritic-strip.
+  assert.strictEqual(cd.findCountryBySlug('turkey').cca2, 'TR', 'turkey slug OK (bukan t-rkiye)');
+  assert.strictEqual(cd.findCountryBySlug('t-rkiye'), null, 'slug carik diacritic tidak pernah didaftar');
+});
+
+test('renderer dunia + helper + halaman 503/404 disokong server.js', () => {
+  for (const fn of ['cutiHubPage', 'cutiRegionPage', 'cutiCountryPage', 'ctWorldTable', 'ctWorldLwTable', 'ctNation', 'CT_REGION_NOTES']) {
+    assert.ok(serverSrc.includes(fn), `${fn} wujud`);
+  }
+  assert.ok(serverSrc.includes('function ctWorldLwTable'), 'ctWorldLwTable ditakrif');
+  // Nager LongWeekend beri startDate/endDate — dinormalkan ke start/end sebelum render.
+  const route = serverSrc.slice(serverSrc.indexOf("app.get('/cuti/dunia/:slug'"), serverSrc.indexOf("app.get('/cuti/:negeri'"));
+  assert.ok(route.includes('start: w.startDate') && route.includes('needBridge: !!w.needBridgeDay'), 'LW negara dinormalkan');
+  assert.ok(route.includes('cd.loadHolidays(2026'), 'halaman negara muat cuti');
+  assert.match(route, /status\(404\)[\s\S]*status\(503\)/, 'bukan liputan → 404, muat gagal → 503');
 });

@@ -27,6 +27,7 @@ const nasa = require('./nasa');
 const wx = require('./weather');
 const gp = require('./gempa');
 const cu = require('./cuti');
+const cd = require('./cuti-dunia');
 const ng = require('./negara');
 const st = require('./statistik');
 const bc = require('./bencana');
@@ -581,23 +582,29 @@ app.get('/gempa/:region', async (req, res) => {
   }
 });
 
-// ── LALUAN KOMPLEKS CUTI (/cuti*) — API cuti umum MY, literal dahulu kemudian :negeri ──
+// ── LALUAN KOMPLEKS CUTI (/cuti*) — kalendar cuti umum DUNIA + jadual negeri MY ──
+// HAB /cuti — DUNIA: kalendar cuti umum 60 negara (Nager.Date, tanpa kunci).
+// Jadual Malaysia negeri kekal di /cuti/2026, /cuti/2027 & /cuti/:negeri.
 app.get('/cuti', async (req, res) => {
   try {
-    const [rows26, rows27] = await Promise.all([cu.getHolidays(cu.YEAR_MIN), cu.getHolidays(cu.YEAR_MAX)]);
-    if (!rows26 || !rows26.length) throw new Error('jadual kosong');
-    res.status(200).type('html').send(cutiHubPage(req, rows26, rows27 || []));
+    const [world, rows] = await Promise.all([cd.loadWorld(2026), ng.loadCountries()]);
+    res.status(200).type('html').send(cutiHubPage(req, world, rows));
   } catch {
-    res.status(503).type('html').send(cutiBusy('Jadual cuti belum sempat dimuat'));
+    res.status(503).type('html').send(cutiBusy('Kalendar cuti dunia belum sempat dimuat'));
   }
 });
 
 app.get('/cuti/penjelasan', (req, res) => res.status(200).type('html').send(cutiExplainPage(req)));
 app.get('/cuti/hujung-minggu-panjang', async (req, res) => {
   try {
-    const [rows26, rows27] = await Promise.all([cu.getHolidays(cu.YEAR_MIN), cu.getHolidays(cu.YEAR_MAX)]);
-    if (!rows26 || !rows26.length) throw new Error('jadual kosong');
-    res.status(200).type('html').send(cutiLongWeekendPage(req, rows26, rows27 || []));
+    const [worldLw, rows26, rows27, ngRows] = await Promise.all([
+      cd.loadWorldLongWeekends(2026).catch(() => null),
+      cu.getHolidays(cu.YEAR_MIN).catch(() => null),
+      cu.getHolidays(cu.YEAR_MAX).catch(() => null),
+      ng.loadCountries().catch(() => []),
+    ]);
+    if (!worldLw && (!rows26 || !rows26.length)) throw new Error('jadual kosong');
+    res.status(200).type('html').send(cutiLongWeekendPage(req, rows26 || [], rows27 || [], worldLw, ngRows || []));
   } catch {
     res.status(503).type('html').send(cutiBusy('Pengiraan hujung minggu panjang tidak sempat dimuat'));
   }
@@ -612,6 +619,36 @@ app.get(/^\/cuti\/(2026|2027)$/, async (req, res, next) => {
     return res.status(200).type('html').send(cutiYearPage(req, year, rows));
   } catch {
     return res.status(503).type('html').send(cutiBusy(`Kalendar cuti ${year} tidak sempat dimuat`));
+  }
+});
+
+// /cuti/dunia — indeks lama; hab utama sudah dunia jadi 301 sahaja.
+app.get('/cuti/dunia', (req, res) => res.redirect(301, '/cuti'));
+
+// Halaman cuti negara & rantau — slug ASCII kami sendiri (bukan slug Kompleks Negara,
+// yang boleh bercacat ejaan seperti 't-rkiye'). Rantau disemak dahulu.
+app.get('/cuti/dunia/:slug', async (req, res) => {
+  const slug = String(req.params.slug || '').toLowerCase();
+  const region = cd.findRegion(slug);
+  const coun = cd.findCountryBySlug(slug);
+  if (!region && !coun) return res.status(404).type('html').send(cutiBusy(`Halaman cuti "${req.params.slug}" tiada dalam liputan`));
+  let ngRows = [];
+  try { ngRows = await ng.loadCountries(); } catch { /* nama BM sekadar pelengkap */ }
+  try {
+    if (region) {
+      const world = await cd.loadWorld(2026);
+      return res.status(200).type('html').send(cutiRegionPage(req, region, world, ngRows));
+    }
+    const [holidays, rawLw] = await Promise.all([
+      cd.loadHolidays(2026, coun.cca2),
+      cd.loadLongWeekends(2026, coun.cca2).catch(() => []),
+    ]);
+    if (!holidays || !holidays.length) return res.status(503).type('html').send(cutiBusy(`Jadual cuti ${coun.en} 2026 belum tersedia dalam sumber`));
+    // Nager beri startDate/endDate/needBridgeDay — dinormalkan ke bentuk jadual paparan.
+    const lws = (rawLw || []).map((w) => ({ start: w.startDate, end: w.endDate, dayCount: w.dayCount, needBridge: !!w.needBridgeDay, bridgeDays: w.bridgeDays || [] }));
+    return res.status(200).type('html').send(cutiCountryPage(req, coun, holidays, lws, ngRows));
+  } catch {
+    return res.status(503).type('html').send(cutiBusy(`Jadual cuti ${region ? region.bm : coun.en} tidak sempat dimuat`));
   }
 });
 
@@ -1222,7 +1259,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1316,15 +1353,18 @@ app.get('/sitemap-gempa.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP CUTI — hab + 2 tahun + hujung minggu + penjelasan + 16 negeri × 2 tahun ──
+// ── SITEMAP CUTI — hab dunia + 5 rantau + semua negara disokong + seksyen Malaysia ──
 app.get('/sitemap-cuti.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
-  const special = ['/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan']
-    .map((p) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${p === '/cuti' ? '0.9' : '0.7'}</priority>\n  </url>`).join('\n');
-  const states = cu.STATES.map((st) => `  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>\n  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}?tahun=${cu.YEAR_MAX}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`).join('\n');
+  const one = (p, prio, freq) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq || 'weekly'}</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const special = [one('/cuti', '0.9'), one('/cuti/hujung-minggu-panjang', '0.8'),
+    one(`/cuti/${cu.YEAR_MIN}`, '0.7'), one(`/cuti/${cu.YEAR_MAX}`, '0.7'), one('/cuti/penjelasan', '0.6', 'monthly')].join('\n');
+  const world = cd.REGIONS.map((r) => one(`/cuti/dunia/${r.slug}`, '0.7', 'monthly'))
+    .concat(cd.COUNTRIES.map(([cca2]) => one(`/cuti/dunia/${cd.findCountry(cca2).slug}`, '0.6', 'monthly'))).join('\n');
+  const states = cu.STATES.map((st) => `  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}?tahun=${cu.YEAR_MAX}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>`).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
-    + special + '\n' + states + '\n</urlset>\n'
+    + special + '\n' + world + '\n' + states + '\n</urlset>\n'
   );
 });
 
@@ -1623,6 +1663,7 @@ function siteFooter() {
       <li><a href="/negara">World countries</a></li>
       <li><a href="/statistik">World statistics</a></li>
       <li><a href="/bencana">Live disaster watch</a></li>
+      <li><a href="/cuti">World public holidays</a></li>
     </ul></div>
     <div><h4>Site</h4><ul>
       <li><a href="/about">About</a></li>
@@ -2571,7 +2612,7 @@ function cuacaHubPage(req, snap) {
     + `<p>Setiap halaman bandar membawa semasa, 8 slot jam akan datang, ramalan 5\u20136 hari, kualiti udara (PM2.5), waktu matahari serta nasihat bersiap yang dijana automatik \u2014 semua daripada API OpenWeather tier percuma. Cuaca dunia \u2014 Tokyo, London, New York, Makkah dan ratusan kota lain tersenarai ikut negara di bawah; permulaan popular: <a href="/cuaca/tokyo">Tokyo</a>, <a href="/cuaca/london">London</a>, <a href="/cuaca/new-york">New York</a> atau <a href="/cuaca/makkah">Makkah</a>.</p>`
     + linkBoxes
     + `<h2 class="section-title">Kenapa cuaca penting untuk kita</h2><p>Malaysia duduk di laluan zon hujan khatulistiwa: monsun barat daya (Mei\u2013September) dan monsun timur laut (November\u2013Mac) silih berganti membawa hujan, dan jerebu rentas sempadan sesekali menentukan sama ada sekolah ditutup. Memahami bacaan \u2014 kelembapan, tekanan, kelajuan angin, indeks AQI \u2014 menukar ramalan daripada angka kepada keputusan: bila sesuai menanam, bila perlu bawa payung, bila paling bahaya memandu.</p>`
-    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS. Nak rancang percutian? Jadual penuh <a href="/cuti">cuti umum 2026 &amp; 2027</a>. Nak kenal destinasi? Profil penuh di <a href="/negara">Kompleks Negara</a>.</p>`;
+    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS. Nak rancang percutian? Kalendar penuh <a href="/cuti">cuti umum dunia</a>. Nak kenal destinasi? Profil penuh di <a href="/negara">Kompleks Negara</a>.</p>`;
   return cuacaDoc({
     title: 'Cuaca Hari Ini \u2014 Suhu, Ramalan & Kualiti Udara Seluruh Dunia | Tukuk-OS',
     desc: 'Semak cuaca hari ini secara langsung: suhu, hujan, angin, kualiti udara PM2.5 dan ramalan 5 hari untuk Tokyo, London, New York, Makkah dan ratusan bandar lain di seluruh dunia.',
@@ -3058,20 +3099,21 @@ function gempaExplainPage(req) {
   });
 }
 
-// ── TUKUK-OS CUTI COMPLEX — jadual cuti umum Malaysia (API awam tanpa kunci) ──
-// Sumber data: malaysia-holiday.dydxsoft.my (disemak admin terhadap dokumen
-// rasmi kabinet.gov.my; nama perayaan Bahasa Melayu; 13 negeri + 3 wilayah).
-// Jadual jarang berubah → cache 30 hari dalam src/cuti.js; gagal → 503 noindex.
+// ── TUKUK-OS CUTI COMPLEX — kalendar cuti umum DUNIA (Nager.Date) + jadual MY ──
+// Sumber dunia: Nager.Date v3 (open data, tanpa kunci) — senarai negara disokong, cache 30 hari.
+// Sumber Malaysia: malaysia-holiday.dydxsoft.my (disemak admin terhadap dokumen
+// rasmi kabinet.gov.my; 13 negeri + 3 wilayah). Kegagalan sumber → 503 noindex.
 const CUTI_SECTIONS = [
-  { href: '/cuti', icon: '\uD83D\uDCC5', name: 'Cuti Umum 2026', blurb: 'Kalendar nasional, cuti seterusnya dan perbandingan setiap negeri.' },
-  { href: '/cuti/2027', icon: '\uD83D\uDCC6', name: 'Cuti Umum 2027', blurb: 'Pelan awal percutian tahun hadapan — semua tarikh gazet yang diketahui.' },
-  { href: '/cuti/hujung-minggu-panjang', icon: '\uD83C\uDFD6\uFE0F', name: 'Hujung Minggu Panjang', blurb: 'Kombinasi cuti + hujung minggu tanpa perlu cuti rehat — dan yang perlu 1 hari bridge.' },
+  { href: '/cuti', icon: '\uD83D\uDDD3\uFE0F', name: 'Cuti Umum Dunia 2026', blurb: `Kalendar ${cd.COUNTRIES.length} buah negara — ranking paling banyak cuti, cuti terdekat sedunia dan jadual penuh setiap negara.` },
 ];
-for (const st of cu.STATES) CUTI_SECTIONS.push({ href: `/cuti/${st.slug}`, icon: '\uD83D\uDCCD', name: `Cuti ${st.name}`, blurb: `Tarikh kelepasan am ${st.name} 2026 & 2027 — hujung minggu ${st.weekend}.` });
-CUTI_SECTIONS.push({ href: '/cuti/penjelasan', icon: '\uD83D\uDCD8', name: 'Cara Kalendar Cuti MY Berfungsi', blurb: 'Perbezaan cuti persekutuan & negeri, ganti hari Jumaat dan amalan cuti rehat.' });
+for (const rg of cd.REGIONS) CUTI_SECTIONS.push({ href: `/cuti/dunia/${rg.slug}`, icon: '\uD83C\uDF0E', name: `Cuti ${rg.bm} 2026`, blurb: `Senarai negara, jumlah kelepasan am dan cuti seterusnya di benua ${rg.bm}.` });
+CUTI_SECTIONS.push({ href: '/cuti/hujung-minggu-panjang', icon: '\uD83C\uDFD6\uFE0F', name: 'Hujung Minggu Panjang Dunia', blurb: 'Gabungan cuti + hujung minggu 4 hari atau lebih di seluruh planet — dan bila 1 hari jambatan diperlukan.' });
+CUTI_SECTIONS.push({ href: '/cuti/2026', icon: '\uD83D\uDCC5', name: 'Cuti Malaysia 2026', blurb: 'Jadual penuh 13 negeri + 3 wilayah, disemak terhadap dokumen rasmi kabinet.gov.my.' });
+CUTI_SECTIONS.push({ href: '/cuti/2027', icon: '\uD83D\uDCC6', name: 'Cuti Malaysia 2027', blurb: 'Pelan awal percutian tahun hadapan — semua tarikh gazet yang diketahui.' });
+CUTI_SECTIONS.push({ href: '/cuti/penjelasan', icon: '\uD83D\uDCD8', name: 'Cara Kalendar Cuti Berfungsi', blurb: 'Kalendar bulan, perayaan bergerak, prinsip ganti hari dan strategi cuti jambatan.' });
 
 function cutiNav() {
-  return `<nav aria-label="Bahagian cuti"><h2 class="section-title">Jelajahi Kompleks Cuti Tukuk-OS</h2><div class="feed">`
+  return `<nav aria-label="Bahagian cuti"><h2 class="section-title">Jelajahi Kompleks Cuti Dunia Tukuk-OS</h2><div class="feed">`
     + CUTI_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
     + `</div></nav>`;
 }
@@ -3122,6 +3164,7 @@ function cutiDoc(o) {
 table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
 .wx-table th,.wx-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
 .wx-table th{background:var(--panel,#171a21)}
+.ct-fl{height:13px;width:20px;vertical-align:-2px;border-radius:2px;margin-right:7px;border:1px solid var(--line);display:inline-block}
 @media(max-width:680px){.wx-grid{grid-template-columns:1fr}.wx-hero .temp{font-size:1.7rem}table.wx-table{display:block;overflow-x:auto}}
 </style>
 <script src="/theme.js"></script>
@@ -3171,41 +3214,217 @@ function ctLwHtml(list) {
     + '</table>';
 }
 
-// ——— HAB /cuti — kiraan tahun, cuti seterusnya, 10 akan datang, hujung minggu KL ———
-function cutiHubPage(req, rows26, rows27) {
+// ——— Utiliti paparan DUNIA (baris Nager.Date): nama BM, bendera, hari, jadual ———
+const CT_DOW = new Intl.DateTimeFormat('ms-MY', { weekday: 'long', timeZone: 'UTC' });
+const CT_WORLD_YEAR = 2026;
+function ctDay(dateStr) { try { return CT_DOW.format(new Date(`${dateStr}T00:00:00Z`)); } catch { return ''; } }
+function ctFlag(cca2) { return `https://flagcdn.com/w40/${String(cca2 || '').toLowerCase()}.png`; }
+function ctBm(byCca2, rec) { const c = byCca2 && byCca2.get ? byCca2.get(rec.cca2) : null; return c && c.bm ? c.bm : rec.en; }
+function ctRegionBm(region) { const r = cd.REGIONS.find((x) => x.en === region); return r ? r.bm : String(region || ''); }
+function ctCutiHref(rec) { return `/cuti/dunia/${rec.slug}`; }
+function ctNation(byCca2, rec) {
+  return `<img class="ct-fl" src="${ctFlag(rec.cca2)}" alt="" width="20" height="13" loading="lazy" decoding="async">`
+    + `<a href="${ctCutiHref(rec)}"><b>${escapeHtml(ctBm(byCca2, rec))}</b></a>`;
+}
+function ctNext(holidays, today) {
+  return (holidays || []).filter((h) => String(h.date) > today)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))[0] || null;
+}
+function ctWorldTable(holidays) {
+  if (!Array.isArray(holidays) || !holidays.length) return '<p>Belum ada rekod cuti untuk tahun ini.</p>';
+  const rows = [...holidays].sort((a, b) => String(a.date).localeCompare(String(b.date))).map((h) => {
+    const local = String(h.localName || h.name || '');
+    const en = String(h.name || '');
+    const scope = h.global
+      ? '<span class="wx-pill" style="background:#4c8dff;color:#fff">Seluruh negara</span>'
+      : `<span class="wx-pill" style="background:#2f9e63;color:#fff">${escapeHtml(Array.isArray(h.counties) && h.counties.length ? `Negeri/wilayah (${h.counties.length})` : 'Sebahagian negara')}</span>`;
+    return `<tr><td><b>${escapeHtml(String(h.date))}</b></td><td>${escapeHtml(ctDay(h.date))}</td>`
+      + `<td>${escapeHtml(local)}${en && en !== local ? ` <span class="meta">(${escapeHtml(en)})</span>` : ''}</td>`
+      + `<td>${scope}</td><td class="meta">${escapeHtml((h.types || []).join(', '))}</td></tr>`;
+  }).join('');
+  return `<table class="wx-table"><tr><th>Tarikh</th><th>Hari</th><th>Perayaan</th><th>Skop</th><th>Jenis</th></tr>${rows}</table>`;
+}
+function ctWorldLwTable(list) {
+  if (!Array.isArray(list) || !list.length) return '<p>Tiada gabungan hujung minggu panjang dilaporkan untuk tahun ini.</p>';
+  return `<table class="wx-table"><tr><th>Tempoh</th><th>Bermula</th><th>Jumlah hari</th><th>Cuti jambatan</th></tr>`
+    + list.map((w) => `<tr><td><b>${escapeHtml(ctShort(w.start))} \u2013 ${escapeHtml(ctShort(w.end))}</b></td>`
+      + `<td>${escapeHtml(ctDay(w.start))}</td><td><b>${w.dayCount} hari</b></td>`
+      + `<td>${w.needBridge ? `<span class="wx-pill" style="background:#e67e22;color:#fff">${escapeHtml((w.bridgeDays || []).join(', ') || '1 hari')}</span>` : '<span class="wx-pill" style="background:#2f9e63;color:#fff">Automatik</span>'}</td></tr>`).join('')
+    + '</table>';
+}
+// Penulisan ringkas setiap benua — supaya halaman rantau bukan sekadar jadual.
+const CT_REGION_NOTES = {
+  asia: 'Asia ialah benua kalendar paling rumit: takwim surya (1 Januari), takwim bulan Islam (Aidilfitri & Aidiladha bergerak ±11 hari setiap tahun), takwim lunisolar (Tahun Baharu Cina, Vesak, Deepavali) dan takwim kerja (1 Mei) semuanya hidup serentak. Sebab itu negara seperti Indonesia, Malaysia, Singapura dan India menyenaraikan 15–20 kelepasan setahun, dan cuti besar sering diiringi cuti ganti apabila jatuh pada hujung minggu.',
+  europe: 'Eropah bertapak pada takwim surya dengan lapisan Kristian: Good Friday, Easter Monday, Ascension dan Whit Monday bergerak mengikut Easter — bulan penuh pertama selepas ekuinoks. Kebanyakan negara Eropah Barat memberikan 10–14 cuti umum, tetapi yang menarik ialah cuti tempatan: negeri menambah hari keputeraan raja, santo pelindung atau hari penaklukan, jadi jadual Sepanyol dan Switzerland berbeza dari kota ke kota.',
+  americas: 'Amerika Latin paling padat dengan perayaan Katolik bercampur hari kebangsaan: Semana Santa, hari kemerdekaan (rangkaian 1810–1826) dan hari adat pribumi (Inti Raymi, Día de los Muertos). Negara berbahasa Inggeris lebih «hemat»: Amerika Syarikat mempunyai 11 cuti persekutuan dan Kanada 5–9 cuti statutori mengikut wilayah, dengan tabiat memindahkan cuti ke Isnin terdekat (Memorial Day, Labour Day) supaya terbentuk hujung minggu panjang.',
+  africa: 'Afrika mencampur takwim surya, Islam, Kristian dan hari kemerdekaan. Afrika Selatan ialah contoh klasik dasar ganti hari: jika cuti jatuh pada Ahad, Isnin berikutnya diganti. Nigeria dan Kenya menambah kelepasan negeri, manakala Ethiopia berjalan pada takwim sendiri (13 bulan) dengan perayaan seperti Enkutatash dan Timkat yang tidak sepadan dengan tarikh negara jiran.',
+  oceania: 'Oseania kecil bilangannya tetapi luas geografinya: Australia menganut cuti negeri — hari yang sama boleh berbeza nama dan tarikh antara New South Wales dan Western Australia. New Zealand memindahkan cuti utama ke Isnin (King\'s Birthday, Labour Day) dan mempunyai minggu Waitangi sendiri. Negara pulau Pasifik banyak menyenaraikan hari adat dan hari pembebasan tempatan.',
+};
+
+// ——— HAB /cuti — DUNIA: ranking negara, cuti terdekat, rantau, seksyen MY ———
+function cutiHubPage(req, world, rows) {
+  const byCca2 = new Map((rows || []).map((c) => [c.cca2, c]));
+  const rank = cd.worldRanking(world);
+  const tot = cd.worldTotals(world);
+  const yr = CT_WORLD_YEAR;
   const today = new Date().toISOString().slice(0, 10);
-  const nxt = cu.nextHoliday(rows26, today) || cu.nextHoliday(rows27, today);
-  const upcoming = [...rows26, ...rows27].filter((r) => String(r.date) >= today)
-    .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, 10);
-  const hero = nxt
-    ? `<div class="wx-hero"><div class="temp">${escapeHtml(nxt.name)}</div><div class="wmeta">${escapeHtml(ctDateFr(nxt.date))}<br>`
-      + `${Math.round((Date.parse(`${nxt.date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000)} hari lagi dari hari ini \u00b7 sumber: dokumen rasmi kabinet.gov.my (disemak admin).</div></div>`
-    : '<p>Tiada cuti akan datang dalam liputan data.</p>';
-  const klLw = cu.longWeekends(cu.forState(rows26, 'KUL'));
-  const stateCards = cu.STATES.map((st) => `<div class="wx-card"><h3><a href="/cuti/${st.slug}">${escapeHtml(st.name)}</a></h3><div class="meta">Hujung minggu ${escapeHtml(st.weekend)} \u00b7 ${cu.forState(rows26, st.code).length} cuti 2026</div></div>`).join('');
+  const upcoming = cd.worldUpcoming(world, 60, today);
+  const first = upcoming.length ? upcoming[0] : null;
+  const sameDay = first ? upcoming.filter((u) => u.date === first.date) : [];
+  const left = first ? Math.round((Date.parse(`${first.date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000) : 0;
+  const hero = first
+    ? `<div class="wx-hero"><div class="temp">${escapeHtml(first.name)}</div><div class="wmeta">${escapeHtml(ctDateFr(first.date))}<br>`
+      + `${sameDay.length} negara meraikan serentak \u00b7 ${left} hari lagi dari hari ini`
+      + (sameDay.length ? ` \u00b7 ${escapeHtml(sameDay.slice(0, 8).map((u) => ctBm(byCca2, u)).join(', '))}${sameDay.length > 8 ? ' dll.' : ''}` : '')
+      + '</div></div>'
+    : '<p>Tiada cuti dunia dalam liputan data pada ketika ini.</p>';
+  const cards = `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Negara berdata ${yr}</h3><div class="big">${tot.countries}</div><div class="meta">daripada ${cd.COUNTRIES.length} buah negara dalam liputan</div></div>`
+    + `<div class="wx-card"><h3>Jumlah cuti umum ${yr}</h3><div class="big">${tot.total}</div><div class="meta">kelepasan direkodkan di seluruh planet</div></div>`
+    + `<div class="wx-card"><h3>Purata setiap negara</h3><div class="big">${tot.avg.toFixed(1)}</div><div class="meta">cuti setahun${rank.length ? ` \u00b7 tertinggi ${escapeHtml(ctBm(byCca2, rank[0]))} (${rank[0].count})` : ''}</div></div>`
+    + `</div>`;
+  const rankRows = rank.map((r, i) => `<tr><td>${i + 1}</td><td>${ctNation(byCca2, r)}</td>`
+    + `<td>${escapeHtml(ctRegionBm(r.region))}</td><td><b>${r.count}</b></td><td>${r.globals}</td></tr>`).join('');
+  const upRows = upcoming.slice(0, 30).map((u) => `<tr><td><b>${escapeHtml(u.date)}</b></td><td>${escapeHtml(ctDay(u.date))}</td>`
+    + `<td>${escapeHtml(u.name)}${u.nameEn && u.nameEn !== u.name ? ` <span class="meta">(${escapeHtml(u.nameEn)})</span>` : ''}</td>`
+    + `<td>${ctNation(byCca2, u)}</td></tr>`).join('');
+  const regionCards = cd.REGIONS.map((r) => {
+    const list = cd.inRegion(world, r.slug).filter((x) => Array.isArray(x.holidays) && x.holidays.length);
+    const sum = list.reduce((s, x) => s + x.holidays.length, 0);
+    return `<div class="wx-card"><h3><a href="/cuti/dunia/${r.slug}">Cuti ${escapeHtml(r.bm)}</a></h3><div class="big">${list.length}</div><div class="meta">negara berdata \u00b7 ${sum} cuti ${yr}</div></div>`;
+  }).join('');
+  const stateCards = cu.STATES.map((st) => `<div class="wx-card"><h3><a href="/cuti/${st.slug}">${escapeHtml(st.name)}</a></h3><div class="meta">Hujung minggu ${escapeHtml(st.weekend)} \u00b7 jadual ${cu.YEAR_MIN} &amp; ${cu.YEAR_MAX}</div></div>`).join('');
   const body = hero
-    + `<div class="wx-grid">`
-    + `<div class="wx-card"><h3>Jumlah entri cuti 2026</h3><div class="big">${rows26.length}</div><div class="meta">nasional + negeri (berbilang negeri dikira sekali setiap negeri)</div></div>`
-    + `<div class="wx-card"><h3>Jumlah entri cuti 2027</h3><div class="big">${rows27.length}</div><div class="meta">pelan awal sebelum gazet rasmi terbit</div></div>`
-    + `<div class="wx-card"><h3>Hujung minggu panjang (KL/WP)</h3><div class="big">${klLw.length}</div><div class="meta">2026 \u2014 lihat halaman khas</div></div>`
-    + `</div>`
-    + `<h2 class="section-title">Cuti akan datang (10 terdekat)</h2>${ctTable(upcoming)}`
-    + `<h2 class="section-title">Mengapa berbeza ikut negeri</h2><p>Malaysia mempunyai dua lapis kelepasan: <b>cuti persekutuan</b> (Hari Merdeka, Aidilfitri, Aidiladha, Tahun Baharu dan lain-lain) yang diwartakan untuk seluruh negara, dan <b>cuti negeri</b> seperti hari keputeraan Sultan/Raja setiap negeri. Negeri juga bebas memilih hari hujung minggu — Johor, Kedah, Kelantan dan Terengganu bercuti <b>Jumaat\u2013Sabtu</b>, manakala selebihnya <b>Sabtu\u2013Ahad</b>. Sebab itu cuti Aidilfitri 2026 (Ahad\u2013Selasa) menjadi 4 hari di Johor tetapi hanya 3 hari di Selangor.</p>`
-    + `<h2 class="section-title">Negeri &amp; wilayah</h2><div class="wx-grid">${stateCards}</div>`
-    + `<p class="meta">Perlu perancangan lebih detail? Semak <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a> dan <a href="/cuti/2027">kalendar 2027</a>; untuk merancang aktiviti luar, lihat <a href="/cuaca">Kompleks Cuaca</a>; bumi bergegar? <a href="/gempa">Kompleks Gempa</a>; nak kenal destinasi luar negara? <a href="/negara">Kompleks Negara</a>.</p>`;
+    + cards
+    + `<h2 class="section-title">Negara paling banyak cuti ${yr}</h2><p>Semua ${tot.countries} negara dalam liputan, disusun dari paling banyak kelepasan am. Klik mana-mana negara untuk jadual tarikh penuh.</p>`
+    + `<table class="wx-table"><tr><th>#</th><th>Negara</th><th>Benua</th><th>Jumlah cuti</th><th>Seluruh negara</th></tr>${rankRows}</table>`
+    + `<h2 class="section-title">Cuti sedunia 60 hari akan datang</h2>`
+    + (upRows ? `<table class="wx-table"><tr><th>Tarikh</th><th>Hari</th><th>Perayaan</th><th>Negara</th></tr>${upRows}</table>` : '<p>Belum ada cuti dalam tingkap 60 hari akan datang.</p>')
+    + `<h2 class="section-title">Jelajahi ikut benua</h2><div class="wx-grid">${regionCards}</div>`
+    + `<h2 class="section-title">Mengapa kalendar cuti dunia berbeza begitu jauh</h2>`
+    + `<p>Ada empat punca utama. <b>Pertama</b>, takwim yang berlainan: negara majoriti Islam mengira Aidilfitri &amp; Aidiladha secara bulan (bergerak ±11 hari setiap tahun), India dan Asia Timur ikut takwim lunisolar, manakala dunia Barat ikut takwim surya dengan lapisan hari raya Kristian yang bergerak mengikut Easter. <b>Kedua</b>, dasar ganti hari: United Kingdom, Australia, Afrika Selatan dan Amerika Syarikat memindahkan cuti yang jatuh pada hujung minggu ke hari kerja terdekat, sementara banyak negara Asia membiarkannya «hilang». <b>Ketiga</b>, cuti tempatan: Sepanyol, Switzerland dan India mempunyai kelepasan negeri/munisipal yang tidak sama antara satu sama lain. <b>Keempat</b>, sejarah politik: negara yang meraih kemerdekaan pada abad ke-20 menandakan hari kemerdekaan, manakala Eropah Barat lebih banyak cuti keagamaan dan hari buruh.</p>`
+    + `<h2 class="section-title">Malaysia — jadual penuh ikut negeri</h2><p>Untuk pembaca yang merancang cuti di tanah air, jadual <b>${cu.YEAR_MIN} &amp; ${cu.YEAR_MAX}</b> kami semak terhadap dokumen rasmi kabinet.gov.my dan dipecahkan mengikut 13 negeri + 3 wilayah persekutuan, termasuk beza hujung minggu Jumaat\u2013Sabtu (Johor, Kedah, Kelantan, Terengganu) dan prinsip ganti hari.</p>`
+    + `<p><a href="/cuti/2026">Cuti Malaysia ${cu.YEAR_MIN}</a> \u00b7 <a href="/cuti/2027">Cuti Malaysia ${cu.YEAR_MAX}</a> \u00b7 <a href="/cuti/hujung-minggu-panjang">Hujung minggu panjang</a> \u00b7 <a href="/cuti/penjelasan">Cara kalendar cuti berfungsi</a></p>`
+    + `<div class="wx-grid">${stateCards}</div>`
+    + `<p class="meta">Sumber dunia: <a href="https://date.nager.at" rel="noopener nofollow">Nager.Date</a> (data terbuka, tanpa kunci). Rancang perjalanan ikut langit destinasi di <a href="/cuaca">Kompleks Cuaca</a>; kenal negara terlebih dahulu di <a href="/negara">Kompleks Negara</a>; bandingkan sosioekonomi di <a href="/statistik">Kompleks Statistik</a>; bencana langsung di <a href="/bencana">Kompleks Bencana</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Cuti Tukuk-OS',
-    description: 'Kalendar cuti umum Malaysia 2026 dan 2027 mengikut negeri, disemak terhadap dokumen rasmi kabinet.gov.my.',
-    url: 'https://tukuk.org/cuti', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Cuti Dunia Tukuk-OS',
+    description: `Kalendar cuti umum ${yr} untuk ${tot.countries} buah negara: ranking paling banyak kelepasan, cuti terdekat sedunia dan jadual penuh setiap negara.`,
+    url: 'https://tukuk.org/cuti', inLanguage: 'ms',
+    isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    temporalCoverage: String(yr),
   }).replace(/</g, '\\u003c');
   return cutiDoc({
-    title: 'Cuti Umum Malaysia 2026 & 2027 \u2014 Jadual Penuh Ikut Negeri | Tukuk-OS',
-    desc: 'Kalendar cuti umum Malaysia 2026 dan 2027: senarai tarikh rasmi (disemak terhadap kabinet.gov.my), kiraan hujung minggu panjang dan jadual khusus setiap negeri & wilayah persekutuan.',
+    title: `Cuti Umum Dunia ${yr} \u2014 Kalendar ${cd.COUNTRIES.length} Negara & Ranking | Tukuk-OS`,
+    desc: `Kalendar cuti umum ${yr} untuk ${cd.COUNTRIES.length} buah negara: ranking negara paling banyak kelepasan, cuti sedunia terdekat, gabungan hujung minggu panjang dan jadual tarikh penuh setiap negara.`,
     selfUrl: 'https://tukuk.org/cuti',
-    heroTitle: 'Kompleks Cuti Tukuk-OS', heroSub: 'Jadual kelepasan am 13 negeri + 3 wilayah \u00b7 sumber disemak dokumen rasmi \u00b7 percuma',
+    heroTitle: 'Kompleks Cuti Dunia Tukuk-OS', heroSub: `Kalendar kelepasan am ${cd.COUNTRIES.length} negara \u00b7 sumber data terbuka Nager.Date \u00b7 percuma`,
     body, ld,
   });
 }
+
+// ——— /cuti/dunia/:rantau — indeks negara dalam satu benua ———
+function cutiRegionPage(req, region, world, rows) {
+  const byCca2 = new Map((rows || []).map((c) => [c.cca2, c]));
+  const yr = CT_WORLD_YEAR;
+  const all = cd.inRegion(world, region.slug);
+  const list = all.filter((r) => Array.isArray(r.holidays) && r.holidays.length)
+    .sort((a, b) => String(a.en).localeCompare(String(b.en)));
+  const nodata = all.filter((r) => !Array.isArray(r.holidays) || !r.holidays.length);
+  const today = new Date().toISOString().slice(0, 10);
+  const total = list.reduce((s, r) => s + r.holidays.length, 0);
+  const top = [...list].sort((a, b) => b.holidays.length - a.holidays.length)[0] || null;
+  const rowsHtml = list.map((r) => {
+    const nxt = ctNext(r.holidays, today);
+    return `<tr><td>${ctNation(byCca2, r)}</td><td><b>${r.holidays.length}</b></td>`
+      + `<td>${nxt ? `${escapeHtml(nxt.name)} \u00b7 ${escapeHtml(ctShort(nxt.date))}` : '<span class="meta">tahun selesai</span>'}</td></tr>`;
+  }).join('');
+  const cards = `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Negara berdata</h3><div class="big">${list.length}</div><div class="meta">dalam benua ${escapeHtml(region.bm)}${nodata.length ? ` \u00b7 ${nodata.length} belum tersedia` : ''}</div></div>`
+    + `<div class="wx-card"><h3>Jumlah cuti ${yr}</h3><div class="big">${total}</div><div class="meta">purata ${(list.length ? total / list.length : 0).toFixed(1)} cuti setiap negara</div></div>`
+    + `<div class="wx-card"><h3>Paling banyak cuti</h3><div class="big">${top ? escapeHtml(ctBm(byCca2, top)) : '—'}</div><div class="meta">${top ? `${top.holidays.length} kelepasan am ${yr}` : 'tiada data'}</div></div>`
+    + `</div>`;
+  const note = CT_REGION_NOTES[region.slug] || '';
+  const otherRegions = cd.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a href="/cuti/dunia/${r.slug}">${escapeHtml(r.bm)}</a>`).join(' \u00b7 ');
+  const body = `<div class="wx-hero"><div class="temp">Cuti ${escapeHtml(region.bm)} ${yr}</div><div class="wmeta">${list.length} buah negara \u00b7 ${total} kelepasan am direkodkan \u00b7 data terbuka Nager.Date</div></div>`
+    + cards
+    + (note ? `<h2 class="section-title">Wajah kalendar ${escapeHtml(region.bm)}</h2><p>${escapeHtml(note)}</p>` : '')
+    + `<h2 class="section-title">Semua negara \u2014 ${escapeHtml(region.bm)}</h2>`
+    + `<table class="wx-table"><tr><th>Negara</th><th>Cuti ${yr}</th><th>Cuti seterusnya</th></tr>${rowsHtml}</table>`
+    + (nodata.length ? `<p class="meta">Belum tersedia dalam sumber: ${escapeHtml(nodata.map((r) => ctBm(byCca2, r)).join(', '))}.</p>` : '')
+    + `<p>Kalendar benua lain: ${otherRegions}. Kembali ke <a href="/cuti">hab cuti dunia</a> untuk ranking rentas benua dan jadual Malaysia penuh.</p>`
+    + `<p class="meta">Profil geografi setiap negara (ibu negara, populasi, bendera, jiran) ada di <a href="/negara/${region.slug}">Kompleks Negara \u2014 ${escapeHtml(region.bm)}</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Cuti Umum ${region.bm} ${yr}`,
+    description: `Senarai ${list.length} buah negara di ${region.bm} dengan jumlah cuti umum ${yr} dan tarikh kelepasan seterusnya.`,
+    url: `https://tukuk.org/cuti/dunia/${region.slug}`, inLanguage: 'ms', temporalCoverage: String(yr),
+  }).replace(/</g, '\\u003c');
+  return cutiDoc({
+    title: `Cuti Umum ${region.bm} ${yr} \u2014 Senarai Negara & Tarikh | Tukuk-OS`,
+    desc: `Kalendar cuti umum ${yr} di ${region.bm}: ${list.length} buah negara, jumlah kelepasan am, cuti seterusnya dan pautan ke jadual penuh setiap negara.`,
+    selfUrl: `https://tukuk.org/cuti/dunia/${region.slug}`,
+    heroTitle: `Cuti ${region.bm} ${yr}`, heroSub: `${list.length} buah negara \u00b7 ${total} kelepasan am \u00b7 data terbuka`,
+    body, ld,
+  });
+}
+
+// ——— /cuti/dunia/:negara — jadual tarikh penuh satu negara ———
+function cutiCountryPage(req, coun, holidays, lws, rows) {
+  const byCca2 = new Map((rows || []).map((c) => [c.cca2, c]));
+  const ngRow = byCca2.get(coun.cca2) || null;
+  const bm = ngRow && ngRow.bm ? ngRow.bm : coun.en;
+  const yr = CT_WORLD_YEAR;
+  const today = new Date().toISOString().slice(0, 10);
+  const sorted = [...holidays].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const nationals = sorted.filter((h) => h.global).length;
+  const next = ctNext(sorted, today);
+  const perMonth = {};
+  const perDay = {};
+  for (const h of sorted) {
+    const m = String(h.date).slice(5, 7); const d = new Date(`${h.date}T00:00:00Z`).getUTCDay();
+    perMonth[m] = (perMonth[m] || 0) + 1; perDay[d] = (perDay[d] || 0) + 1;
+  }
+  const busyMonth = Object.keys(perMonth).sort((a, b) => perMonth[b] - perMonth[a])[0] || null;
+  const busyLabel = busyMonth ? ctDateFr(`${yr}-${busyMonth}-01`).split(',').pop().trim() : '—';
+  const topDay = Object.keys(perDay).sort((a, b) => perDay[b] - perDay[a])[0];
+  const DAY_BM = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
+  const nextLeft = next ? Math.round((Date.parse(`${next.date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000) : 0;
+  const hero = `<div class="wx-hero"><div class="temp"><img class="ct-fl" style="height:34px;width:51px" src="${ctFlag(coun.cca2)}" alt="Bendera ${escapeHtml(bm)}">${escapeHtml(bm)}</div>`
+    + `<div class="wmeta">${sorted.length} cuti umum ${yr} \u00b7 ${nationals} untuk seluruh negara`
+    + (next ? `<br>Cuti seterusnya: <b>${escapeHtml(next.name)}</b> \u00b7 ${escapeHtml(ctDateFr(next.date))} \u00b7 ${nextLeft} hari lagi` : '<br>Tiada lagi baki cuti tahun ini')
+    + '</div></div>';
+  const cards = `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Jumlah kelepasan ${yr}</h3><div class="big">${sorted.length}</div><div class="meta">${nationals} nasional \u00b7 ${sorted.length - nationals} negeri/wilayah</div></div>`
+    + `<div class="wx-card"><h3>Bulan paling padat</h3><div class="big">${escapeHtml(busyLabel)}</div><div class="meta">${busyMonth ? perMonth[busyMonth] : 0} cuti dalam satu bulan</div></div>`
+    + `<div class="wx-card"><h3>Hari paling kerap</h3><div class="big">${topDay != null ? DAY_BM[Number(topDay)] : '—'}</div><div class="meta">${topDay != null ? `${perDay[topDay]} cuti jatuh pada hari ini` : 'tiada data'}</div></div>`
+    + `</div>`;
+  const siblings = cd.COUNTRIES
+    .filter(([cca2, , reg]) => reg === coun.region && cca2 !== coun.cca2)
+    .map(([cca2]) => cd.findCountry(cca2))
+    .map((r) => `<a href="/cuti/dunia/${r.slug}">${escapeHtml(ctBm(byCca2, r))}</a>`).join(' \u00b7 ');
+  const longest = Array.isArray(lws) && lws.length ? [...lws].sort((a, b) => b.dayCount - a.dayCount)[0] : null;
+  const body = hero
+    + cards
+    + `<h2 class="section-title">Semua cuti umum ${escapeHtml(bm)} ${yr}</h2>${ctWorldTable(sorted)}`
+    + `<h2 class="section-title">Hujung minggu panjang ${escapeHtml(bm)} ${yr}</h2>${ctWorldLwTable(lws)}`
+    + `<h2 class="section-title">Merancang cuti di ${escapeHtml(bm)}</h2><p>${escapeHtml(bm)} memberikan <b>${sorted.length}</b> kelepasan am pada ${yr}${nationals !== sorted.length ? `, termasuk ${sorted.length - nationals} yang hanya diiktiraf di negeri atau wilayah tertentu` : ' — semuanya diiktiraf di seluruh negara'}. Gabungan hujung minggu ${longest ? `terpanjang tahun ini ialah <b>${longest.dayCount} hari</b> (${escapeHtml(ctShort(longest.start))} \u2013 ${escapeHtml(ctShort(longest.end))})` : 'belum dilaporkan untuk tahun ini'}. Bulan paling padat ialah <b>${escapeHtml(busyLabel)}</b>, dan cuti paling kerap jatuh pada hari <b>${topDay != null ? DAY_BM[Number(topDay)] : '—'}</b> \u2014 dua fakta yang cukup untuk memutuskan bila tiket perlu dibeli lebih awal.</p>`
+    + `<p>Negara dengan kalendar berbilang agama biasanya mempunyai cuti «bergerak» (Aidilfitri, Easter, Tahun Baharu Cina, Diwali) yang berubah tarikh setiap tahun, jadi semak jadual setahun ke hadapan sebelum merancang cuti sekolah.</p>`
+    + `<p class="meta">Profil penuh ${escapeHtml(bm)} (ibu negara, populasi, KDNK, jiran): <a href="/negara/${ngRow ? ngRow.slug : 'dunia'}">Kompleks Negara</a>${coun.cca2 === 'MY' ? ` \u00b7 jadual terperinci ikut negeri ada di <a href="/cuti/${cu.YEAR_MIN}">Cuti Malaysia ${cu.YEAR_MIN}</a>` : ''} \u00b7 ranking sosioekonomi: <a href="/statistik">Kompleks Statistik</a> \u00b7 acara alam aktif: <a href="/bencana">Kompleks Bencana</a>.</p>`
+    + `<h2 class="section-title">Negara lain dalam ${escapeHtml(ctRegionBm(coun.region))}</h2><p>${siblings}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Cuti Umum ${bm} ${yr}`,
+    description: `Senarai penuh ${sorted.length} cuti umum ${bm} ${yr} bersama tarikh, hari, skop nasional/wilayah dan gabungan hujung minggu panjang.`,
+    url: `https://tukuk.org/cuti/dunia/${coun.slug}`, inLanguage: 'ms', temporalCoverage: String(yr),
+  }).replace(/</g, '\\u003c');
+  return cutiDoc({
+    title: `Cuti Umum ${bm} ${yr} \u2014 ${sorted.length} Tarikh Kelepasan | Tukuk-OS`,
+    desc: `Jadual penuh cuti umum ${bm} ${yr}: ${sorted.length} tarikh (${nationals} nasional), cuti seterusnya ${next ? escapeHtml(ctShort(next.date)) : '—'}, gabungan hujung minggu panjang dan bulan paling padat.`,
+    selfUrl: `https://tukuk.org/cuti/dunia/${coun.slug}`,
+    heroTitle: `Cuti Umum ${bm} ${yr}`, heroSub: `${sorted.length} kelepasan am \u00b7 data terbuka Nager.Date \u00b7 dikemas kini automatik`,
+    body, ld,
+  });
+}
+
 
 // ——— Halaman tahun (/cuti/2026, /cuti/2027) — nasional penuh + LW 4 kawasan ———
 function cutiYearPage(req, year, rows) {
@@ -3236,38 +3455,61 @@ function cutiYearPage(req, year, rows) {
   });
 }
 
-// ——— /cuti/hujung-minggu-panjang — gabungan terbaik 5 kawasan + hari bridge ———
-function cutiLongWeekendPage(req, rows26, rows27) {
+// ——— /cuti/hujung-minggu-panjang — gabungan dunia + seksyen Malaysia ———
+function cutiLongWeekendPage(req, rows26, rows27, worldLw, ngRows) {
+  const byCca2 = new Map((ngRows || []).map((c) => [c.cca2, c]));
+  const world = Array.isArray(worldLw) ? worldLw : [];
+  const yr = CT_WORLD_YEAR;
+  const big = world.filter((w) => Number(w.dayCount) >= 4);
+  const auto = world.filter((w) => !w.needBridge && Number(w.dayCount) >= 4);
+  const bridgeN = world.filter((w) => w.needBridge && Number(w.dayCount) >= 4);
+  const longest = world.length ? world[0] : null;
+  const nationCount = new Set(world.map((w) => w.cca2)).size;
+  const lwPill = (w) => (w.needBridge
+    ? `<span class="wx-pill" style="background:#e67e22;color:#fff">${escapeHtml((w.bridgeDays || []).length ? `${w.bridgeDays.length} hari jambatan` : '1 hari jambatan')}</span>`
+    : '<span class="wx-pill" style="background:#2f9e63;color:#fff">Automatik</span>');
+  const worldRows = big.slice(0, 60).map((w) => `<tr><td>${ctNation(byCca2, w)}</td>`
+    + `<td>${escapeHtml(ctRegionBm(w.region))}</td>`
+    + `<td><b>${escapeHtml(ctShort(w.start))} \u2013 ${escapeHtml(ctShort(w.end))}</b></td>`
+    + `<td>${escapeHtml(ctDay(w.start))}</td><td><b>${w.dayCount} hari</b></td><td>${lwPill(w)}</td></tr>`).join('');
+  // Bahagian Malaysia (litar lama): gabungan dikira daripada jadual negeri MY.
   const seen = new Map();
-  for (const [code, rows, year] of [['KUL', rows26, 2026], ['SGR', rows26, 2026], ['JHR', rows26, 2026], ['SBH', rows26, 2026], ['SWK', rows26, 2026], ['KUL', rows27, 2027], ['SGR', rows27, 2027], ['JHR', rows27, 2027]]) {
-    for (const w of cu.longWeekends(cu.forState(rows, code))) {
+  for (const [code, rows, year] of [['KUL', rows26, cu.YEAR_MIN], ['SGR', rows26, cu.YEAR_MIN], ['JHR', rows26, cu.YEAR_MIN], ['SBH', rows26, cu.YEAR_MIN], ['SWK', rows26, cu.YEAR_MIN], ['KUL', rows27, cu.YEAR_MAX], ['SGR', rows27, cu.YEAR_MAX], ['JHR', rows27, cu.YEAR_MAX]]) {
+    for (const w of cu.longWeekends(cu.forState(rows || [], code))) {
       const k = `${code}|${w.start}|${w.end}`;
       if (!seen.has(k)) seen.set(k, { ...w, area: code, year });
     }
   }
-  const list = [...seen.values()].sort((a, b) => String(a.start).localeCompare(String(b.start)));
-  const auto = list.filter((w) => w.auto); const bridge = list.filter((w) => !w.auto && w.bridge);
+  const myAll = [...seen.values()].sort((a, b) => String(a.start).localeCompare(String(b.start)));
+  const myAuto = myAll.filter((w) => w.auto); const myBridge = myAll.filter((w) => !w.auto && w.bridge);
   const areaName = (code) => { const st = cu.STATES.find((x) => x.code === code); return st ? st.name : code; };
-  const fmt = (w) => `<tr><td>${escapeHtml(areaName(w.area))} ${w.year}</td><td>${escapeHtml(ctShort(w.start))} \u2013 ${escapeHtml(ctShort(w.end))}</td><td><b>${w.spanDays} hari</b></td><td>${escapeHtml(w.holidays.map((h) => h.name).join(' + '))}</td></tr>`;
-  const body = `<p>Hujung minggu panjang ialah kombinasi cuti + hari tidak bekerja yang paling jimat untuk bercuti. Halaman ini menghimpunkan gabungan <b>automatik</b> (tiada cuti rehat diperlukan) dan <b>jambatan</b> (cukup <b>1 hari</b> cuti rehat untuk melanjutkan hujung minggu) bagi Kuala Lumpur, Selangor, Johor, Sabah dan Sarawak untuk 2026 &amp; 2027.</p>`
+  const fmtMy = (w) => `<tr><td>${escapeHtml(areaName(w.area))} ${w.year}</td><td>${escapeHtml(ctShort(w.start))} \u2013 ${escapeHtml(ctShort(w.end))}</td><td><b>${w.spanDays} hari</b></td><td>${escapeHtml(w.holidays.map((h) => h.name).join(' + '))}</td></tr>`;
+  const body = `<div class="wx-hero"><div class="temp">${big.length} hujung minggu panjang ${yr}</div><div class="wmeta">${auto.length} terbentuk automatik \u00b7 ${bridgeN.length} cukup 1 hari cuti rehat \u00b7 ${nationCount} negara dianalisis</div></div>`
+    + `<p>Hujung minggu panjang ialah titik di mana cuti umum bersambung dengan hari tidak bekerja. Halaman ini menghimpunkan gabungan <b>4 hari atau lebih</b> daripada kalendar ${cd.COUNTRIES.length} buah negara (Nager.Date, data terbuka), dan memisahkan yang <b>automatik</b> daripada yang memerlukan <b>hari jambatan</b> — cuti rehat yang anda ambil sendiri.</p>`
     + `<div class="wx-grid">`
-    + `<div class="wx-card"><h3>Gabung automatik</h3><div class="big">${auto.length}</div><div class="meta">3 hari atau lebih tanpa cuti rehat</div></div>`
-    + `<div class="wx-card"><h3>Perlu 1 hari jambatan</h3><div class="big">${bridge.length}</div><div class="meta">cuti tunggal Selasa/Khamis \u2014 ambil 1 hari, dapat 4</div></div>`
-    + `<div class="wx-card"><h3>Tahun liputan</h3><div class="big">${cu.YEAR_MIN}\u2013${cu.YEAR_MAX}</div><div class="meta">data rasmi gazet setakat ini</div></div></div>`
-    + `<h2 class="section-title">Gabungan automatik</h2><table class="wx-table"><tr><th>Kawasan</th><th>Tempoh</th><th>Panjang</th><th>Cuti berkaitan</th></tr>${auto.map(fmt).join('') || '<tr><td colspan="4">Tiada.</td></tr>'}</table>`
-    + `<h2 class="section-title">Gabungan jambatan (1 hari cuti rehat)</h2><table class="wx-table"><tr><th>Kawasan</th><th>Tempoh</th><th>Panjang</th><th>Cuti berkaitan</th></tr>${bridge.map(fmt).join('') || '<tr><td colspan="4">Tiada.</td></tr>'}</table>`
-    + `<p>Strategi popular: tempah inap desa atau penerbangan awal sebaik gazet tahunan terbit (biasanya Oktober\u2013November tahun sebelumnya) kerana cuti jambatan ini merebut kapasiti dengan cepat. Negeri ber-hujung-minggu Jumaat\u2013Sabtu (Johor, Kedah, Kelantan, Terengganu) mempunyai kiraan berbeza \u2014 buka halaman masing-masing.</p>`
-    + `<p class="meta">Lihat juga: <a href="/cuti/2026">kalendar 2026</a> \u00b7 <a href="/cuti/2027">kalendar 2027</a> \u00b7 <a href="/cuti/penjelasan">cara kalendar cuti berfungsi</a>.</p>`;
+    + `<div class="wx-card"><h3>Gabungan automatik</h3><div class="big">${auto.length}</div><div class="meta">4 hari atau lebih tanpa cuti rehat</div></div>`
+    + `<div class="wx-card"><h3>Perlu hari jambatan</h3><div class="big">${bridgeN.length}</div><div class="meta">ambil 1\u20132 hari cuti, dapat 4\u20135 hari</div></div>`
+    + `<div class="wx-card"><h3>Sambungan terpanjang</h3><div class="big">${longest ? `${longest.dayCount} hari` : '—'}</div><div class="meta">${longest ? `${escapeHtml(ctBm(byCca2, longest))} \u00b7 ${escapeHtml(ctShort(longest.start))} \u2013 ${escapeHtml(ctShort(longest.end))}` : 'tiada data'}</div></div>`
+    + `</div>`
+    + `<h2 class="section-title">Dunia — gabungan 4 hari atau lebih (${yr})</h2>`
+    + (worldRows ? `<table class="wx-table"><tr><th>Negara</th><th>Benua</th><th>Tempoh</th><th>Bermula</th><th>Jumlah</th><th>Keperluan</th></tr>${worldRows}</table>` : '<p>Data hujung minggu dunia belum sempat dimuat. Cuba lagi sebentar.</p>')
+    + `<p>Peraturan yang menghasilkan sambungan panjang: <b>ganti hari</b> (cuti Ahad dipindah ke Isnin — UK, Australia, Afrika Selatan, Amerika Syarikat), <b>cuti bersebelahan</b> (dua kelepasan dalam minggu yang sama, misalnya Good Friday + Easter Monday), dan <b>cuti tunggal pertengahan minggu</b> yang hanya menjadi 4 hari jika anda menambah satu hari jambatan. Negara dengan cuti keagamaan bergerak (Islam dan lunisolar) memberikan gabungan yang berbeza setiap tahun, jadi semak kalendar negara destinasi sebelum menempah tiket.</p>`
+    + `<h2 class="section-title">Malaysia — gabungan automatik</h2>`
+    + (myAuto.length ? `<table class="wx-table"><tr><th>Kawasan</th><th>Tempoh</th><th>Panjang</th><th>Cuti berkaitan</th></tr>${myAuto.map(fmtMy).join('')}</table>` : '<p>Belum ada data cuti Malaysia untuk dihitung.</p>')
+    + `<h2 class="section-title">Malaysia — gabungan jambatan (1 hari cuti rehat)</h2>`
+    + (myBridge.length ? `<table class="wx-table"><tr><th>Kawasan</th><th>Tempoh</th><th>Panjang</th><th>Cuti berkaitan</th></tr>${myBridge.map(fmtMy).join('')}</table>` : '<p>Tiada gabungan jambatan dalam data setakat ini.</p>')
+    + `<p>Negeri ber-hujung-minggu Jumaat\u2013Sabtu (Johor, Kedah, Kelantan, Terengganu) mempunyai kiraan berbeza \u2014 buka halaman negeri masing-masing di <a href="/cuti">hab cuti dunia</a>.</p>`
+    + `<p class="meta">Lihat juga: <a href="/cuti">kalendar ${cd.COUNTRIES.length} negara</a> \u00b7 <a href="/cuti/2026">Malaysia ${cu.YEAR_MIN}</a> \u00b7 <a href="/cuti/2027">Malaysia ${cu.YEAR_MAX}</a> \u00b7 <a href="/cuti/penjelasan">cara kalendar cuti berfungsi</a> \u00b7 <a href="/cuaca">cuaca destinasi</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Hujung Minggu Panjang Malaysia 2026\u20132027',
-    description: 'Kiraan cuti yang bergabung dengan hujung minggu tanpa atau dengan 1 hari cuti rehat, ikut negeri.',
-    url: 'https://tukuk.org/cuti/hujung-minggu-panjang',
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Hujung Minggu Panjang Dunia ${yr}`,
+    description: `Gabungan cuti umum dan hujung minggu 4 hari atau lebih untuk ${nationCount} negara (${yr}), serta kiraan automatik dan hari jambatan untuk Malaysia.`,
+    url: 'https://tukuk.org/cuti/hujung-minggu-panjang', inLanguage: 'ms', temporalCoverage: String(yr),
   }).replace(/</g, '\\u003c');
   return cutiDoc({
-    title: 'Hujung Minggu Panjang Malaysia 2026 & 2027 \u2014 Kiraan Cuti | Tukuk-OS',
-    desc: 'Senarai hujung minggu panjang Malaysia 2026 dan 2027 yang terbentuk automatik, serta cuti Selasa/Khamis yang cukup 1 hari cuti rehat (jambatan) \u2014 ikut KL, Selangor, Johor, Sabah, Sarawak.',
+    title: `Hujung Minggu Panjang Dunia ${yr} \u2014 Cuti Bersambung & Jambatan | Tukuk-OS`,
+    desc: `${big.length} gabungan hujung minggu panjang ${yr} di ${nationCount} negara: yang automatik 4 hari ke atas dan yang cukup 1 hari cuti rehat (jambatan), termasuk kiraan khusus Malaysia ikut negeri.`,
     selfUrl: 'https://tukuk.org/cuti/hujung-minggu-panjang',
-    heroTitle: 'Hujung Minggu Panjang', heroSub: 'Bila cuti bersambung hujung minggu \u2014 tanpa atau dengan 1 hari cuti rehat',
+    heroTitle: 'Hujung Minggu Panjang Dunia', heroSub: `Bila cuti bersambung hujung minggu di ${nationCount} negara \u2014 tanpa atau dengan 1 hari cuti rehat`,
     body, ld,
   });
 }
@@ -3298,24 +3540,26 @@ function cutiStatePage(req, st, year, rows) {
   });
 }
 
-// ——— /cuti/penjelasan — statik, pendidikan ———
+// ——— /cuti/penjelasan — statik, pendidikan (dunia + Malaysia) ———
 function cutiExplainPage(req) {
-  const body = `<p>Kalendar kelepasan am Malaysia kelihatan ringkas, tetapi ada empat mekanik yang menjadikannya berbeza setiap negeri. Memahami mekanik ini membantu anda merancang cuti dengan lebih tepat daripada iklan pakej percutian.</p>`
-    + `<h2 class="section-title">1. Dua lapis: persekutuan dan negeri</h2><p>Cuti persekutuan (Hari Merdeka 31 Ogos, Maulidur Rasul, Aidilfitri, Aidiladha, Tahun Baharu, Wesak, Deepavali, Krismas dan lain-lain) diwartakan untuk seluruh negara. Setiap negeri menambah <b>cuti keputeraan Sultan/Raja</b> dan beberapa cuti khas negeri (misalnya Hari Gawai di Sarawak, Pesta Kaamatan di Sabah, Israk Mikraj pilihan beberapa negeri). Inilah sebab jadual Kebangsaan tiada satu saiz yang muat semua.</p>`
-    + `<h2 class="section-title">2. Dua konvensyen hujung minggu</h2><p>Johor, Kedah, Kelantan dan Terengganu (dahulu juga Perlis) menetapkan <b>Jumaat\u2013Sabtu</b> sebagai hujung minggu; selebihnya <b>Sabtu\u2013Ahad</b>. Kesan langsung: cuti yang jatuh pada Jumaat di Johor bermakna 3 hari terus; cuti pada Ahad di Kelantan pula biasanya diganti.</p>`
-    + `<h2 class="section-title">3. Prinsip gantian &amp; cuti khas</h2><p>Kerajaan tidak suka cuti besar tersepit sehingga minggu kerja berpecah dua, jadi cuti yang jatuh pertengahan minggu sering disusuli <b>cuti khas</b> yang diwartakan lewat (contoh 2026: Awal Ramadan jatuh Isnin 20 Feb, berada dalam run yang sama dengan Tahun Baharu Cina 17–18 Feb sehingga menjadi 4 hari berturut di kebanyakan negeri). Entri bertanda <i>tertakluk perubahan</i> dalam jadual kami ialah cuti jenis ini — sentiasa semak gazet sebelum membeli tiket.</p>`
-    + `<h2 class="section-title">4. Cuti rehat & strategi jambatan</h2><p>Perkataan <i>bridge</i> dalam perancangan cuti: ambil <b>1 hari cuti rehat</b> pada Selasa atau Khamis untuk menyambung cuti tunggal dengan hujung minggu \u2014 4 hari bercuti dengan kos 1 hari. Halaman <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a> kami mengira automatik setiap peluang ini.</p>`
-    + `<h2 class="section-title">Dari mana data kami?</h2><p>Jadual dalam kompleks ini datang daripada API awam <b>malaysia-holiday.dydxsoft.my</b> yang disemak admin terhadap dokumen rasmi <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">www.kabinet.gov.my/hari-kelepasan-am</a>; nama perayaan disenaraikan dalam Bahasa Melayu. Kami cache 30 hari dan kemas kini serta-merta bila sumber berubah. Untuk keadaan langit semasa ketika bercuti, guna <a href="/cuaca">Kompleks Cuaca</a>; tanah bergegar di destinasi? <a href="/gempa">Kompleks Gempa</a>; belum pasti rupa destinasi itu? <a href="/negara">Kompleks Negara</a>.</p>`;
+  const body = `<p>Setiap negara mendefinisikan «hari tidak bekerja» dengan caranya sendiri. Apabila anda memahami lima mekanik di bawah, anda boleh membaca jadual cuti mana-mana negara di <a href="/cuti">kompleks ini</a> dan terus tahu bila tiket patut dibeli.</p>`
+    + `<h2 class="section-title">1. Empat jenis takwim</h2><p><b>Surya</b> (1 Januari, 1 Mei, hari kemerdekaan) jatuh pada tarikh yang sama setiap tahun. <b>Bulan Islam</b> (Aidilfitri, Aidiladha, Maulidur Rasul, Awal Ramadan) bergerak lebih kurang <b>11 hari lebih awal</b> setiap tahun Masihi — kerana tahun hijriah hanya ±354 hari. <b>Lunisolar</b> (Tahun Baharu Cina, Vesak, Deepavali) bergantung pada fasa bulan dan kedudukan matahari serentak, jadi julat tarikhnya luas (Tahun Baharu Cina sentiasa antara 21 Jan–20 Feb). <b>Movable Christian</b> (Good Friday, Easter Monday, Ascension, Whit Monday) semua terkunci pada satu tarikh ibu: bulan penuh pertama selepas ekuinoks Mac.</p>`
+    + `<h2 class="section-title">2. Dua lapis: nasional dan negeri</h2><p>Kira-kira separuh dunia mempunyai cuti bertingkat: kelepasan <b>persekutuan/nasional</b> ditambah <b>cuti negara bagian, provinsi atau munisipal</b>. Contoh ekstrem: India mengisytiharkan cuti negeri yang berbeza-beza (Pongal di Tamil Nadu, Onam di Kerala), Switzerland mempunyai cuti kanton, dan Sepanyol mempunyai cuti autonomi. Dalam jadual kami, baris bertanda <i>Sebahagian negara</i> bermaksud kelepasan itu hanya sah di wilayah tertentu.</p>`
+    + `<h2 class="section-title">3. Prinsip ganti hari (substitute/observed)</h2><p>United Kingdom, Australia, New Zealand, Afrika Selatan, Amerika Syarikat dan Korea Selatan <b>memindahkan</b> cuti yang jatuh pada hujung minggu ke hari kerja terdekat; di AS ini dipanggil <i>observed</i> — Christmas 2027 jatuh pada Sabtu, jadi cuti federal dipindahkan ke Isnin 27 Dis. Sebaliknya, banyak negara Asia Tenggara dan Timur Tengah tidak menggantikan cuti Ahad secara automatik — cuti itu «hilang». Ini sebab utama bilangan hari cuti <i>efektif</i> anda berbeza daripada angka dalam jadual.</p>`
+    + `<h2 class="section-title">4. Hujung minggu dua konvensyen</h2><p>Kebanyakan negara Islam di Timur Tengah dahulu bercuti <b>Jumaat–Sabtu</b>; sebahagian besar (termasuk UAE sejak 2022 dan Saudi Arabia untuk sektor swasta) telah bertukar ke <b>Sabtu–Ahad</b> atau <b>Ahad–Isnin</b> supaya dua hari rehat terpasang pada hujung minggu antarabangsa. Di Malaysia, Johor, Kedah, Kelantan dan Terengganu masih Jumaat–Sabtu — sebab yang sama cuti Ahad menjadi 3 hari di satu negeri tetapi hanya 2 hari di negeri lain.</p>`
+    + `<h2 class="section-title">5. Cuti rehat &amp; strategi jambatan</h2><p>Cuti tunggal pada Selasa atau Khamis ialah peluang paling menguntungkan: tambah <b>1 hari cuti rehat</b>, dapat <b>4 hari</b> bercuti. Nager.Date menandakan gabungan sedemikian sebagai <i>needBridgeDay</i> dan kami memaparkannya dalam halaman <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a>. Strategi popular: tempah tiket sejurus kalendar tahunan diwartakan (biasanya Oktober–November tahun sebelumnya) kerana cuti jambatan merebut kapasiti penerbangan dengan cepat.</p>`
+    + `<h2 class="section-title">Malaysia: dua lapis + gazet lewat</h2><p>Jadual Malaysia mempunyai cuti persekutuan (Hari Merdeka 31 Ogos, Aidilfitri, Aidiladha, Tahun Baharu, Wesak, Deepavali, Krismas) ditambah <b>cuti keputeraan Sultan/Raja</b> dan cuti khas negeri (Hari Gawai di Sarawak, Pesta Kaamatan di Sabah). Entri bertanda <i>tertakluk perubahan</i> ialah cuti khas yang masih boleh ditambah atau dipotong kerajaan — semak <a href="/cuti/${cu.YEAR_MIN}">jadual ${cu.YEAR_MIN}</a> dan <a href="/cuti/${cu.YEAR_MAX}">${cu.YEAR_MAX}</a> sebelum membeli tiket.</p>`
+    + `<h2 class="section-title">Dari mana data kami?</h2><p>Jadual dunia datang daripada <b>Nager.Date v3</b> (<a href="https://date.nager.at" rel="noopener nofollow">date.nager.at</a>) — projek sumber terbuka tanpa pendaftaran, diliputi ±180 negara; kami memilih ${cd.COUNTRIES.length} buah negara untuk halaman mendalam. Nama BM, bendera dan kedudukan negara dipinjam daripada <a href="/negara">Kompleks Negara</a> (world-countries + World Bank). Jadual Malaysia datang daripada API awam <b>malaysia-holiday.dydxsoft.my</b> yang disemak terhadap dokumen rasmi <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">kabinet.gov.my</a>. Kami cache 30 hari dan kemas kini serta-merta bila sumber berubah. Langit ketika bercuti: <a href="/cuaca">Kompleks Cuaca</a>; tanah bergegar di destinasi: <a href="/gempa">Kompleks Gempa</a>; acara alam aktif: <a href="/bencana">Kompleks Bencana</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Article', name: 'Cara Kalendar Cuti Malaysia Berfungsi',
-    description: 'Penjelasan Bahasa Melayu: cuti persekutuan vs negeri, konvensyen hujung minggu, gantian dan strategi cuti jambatan.',
+    '@context': 'https://schema.org', '@type': 'Article', name: 'Cara Kalendar Cuti Dunia Berfungsi',
+    description: 'Penjelasan Bahasa Melayu: takwim surya/bulan/lunisolar, cuti nasional vs negeri, prinsip ganti hari, konvensyen hujung minggu dan strategi cuti jambatan.',
     url: 'https://tukuk.org/cuti/penjelasan', inLanguage: 'ms', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
   }).replace(/</g, '\\u003c');
   return cutiDoc({
-    title: 'Cara Kalendar Cuti Malaysia Berfungsi \u2014 Persekutuan, Negeri & Jambatan | Tukuk-OS',
-    desc: 'Fahami perbezaan cuti persekutuan dan negeri, dua konvensyen hujung minggu (Jumaat\u2013Sabtu vs Sabtu\u2013Ahad), gantian Aidilfitri dan strategi cuti jambatan \u2014 dalam Bahasa Melayu.',
+    title: 'Cara Kalendar Cuti Berfungsi \u2014 Takwim Bulan, Ganti Hari & Jambatan | Tukuk-OS',
+    desc: 'Fahami lima mekanik kalendar cuti di seluruh dunia: takwim surya vs bulan/lunisolar, cuti nasional vs negeri, prinsip ganti hari, konvensyen hujung minggu dan strategi cuti jambatan.',
     selfUrl: 'https://tukuk.org/cuti/penjelasan',
-    heroTitle: 'Cara Kalendar Cuti MY Berfungsi', heroSub: 'Empat mekanik yang menjelaskan setiap jadual kelepasan am',
+    heroTitle: 'Cara Kalendar Cuti Berfungsi', heroSub: `Lima mekanik yang menjelaskan setiap jadual kelepasan am di ${cd.COUNTRIES.length} negara`,
     body, ld,
   });
 }
@@ -3526,9 +3770,12 @@ function negaraCountryPage(req, c, rows) {
     ? `<h2 class="section-title">Jiran (sempadan darat)</h2><div class="ng-az">${c.borderSlugs.map((s) => `<a href="/negara/${s}">${escapeHtml(bmBySlug[s] || s)}</a>`).join('')}</div>`
     : `<h2 class="section-title">Jiran (sempadan darat)</h2><p>Tiada sempadan darat \u2014 ${c.landlocked ? 'negara pedalan' : 'negara pulau atau wilayah terpencil'}.</p>`;
   const coord = c.latlng && c.latlng.length === 2 && (c.latlng[0] || c.latlng[1]) ? `<p>Posisi geografi kira-kira <b>${NG_DEC.format(c.latlng[0])}\u00b0, ${NG_DEC.format(c.latlng[1])}\u00b0</b>.</p>` : '';
+  // Pautan silang ke halaman cuti negara ini ( Complex Cuti Dunia ) jika liputan ada.
+  const cutiCoun = cd.findCountry(c.cca2);
+  const cutiLink = cutiCoun ? `<a href="/cuti/dunia/${cutiCoun.slug}">jadual cuti umum ${c.bm} ${CT_WORLD_YEAR}</a>` : '<a href="/cuti">cuti umum dunia</a>';
   const body = hero + stats + jiran + coord
     + `<p>Bendera: flagcdn.com; populasi, KDNK, urbanisasi & jangka hayat: <b>World Bank Open Data</b> (indikator 2023); maklumat asas: pakej open-data <b>world-countries</b> \u2014 semuanya percuma, tanpa pendaftaran.</p>`
-    + `<p class="meta">Semak juga: <a href="/cuaca">cuaca mengikut kota</a> · <a href="/gempa">gempa terkini</a> · <a href="/bencana">acara alam aktif</a> · <a href="/statistik">ranking indikator dunia</a> · <a href="/cuti">cuti umum Malaysia</a> · <a href="/negara">senarai semua negara</a>.</p>`;
+    + `<p class="meta">Semak juga: <a href="/cuaca">cuaca mengikut kota</a> · <a href="/gempa">gempa terkini</a> · <a href="/bencana">acara alam aktif</a> · <a href="/statistik">ranking indikator dunia</a> · ${cutiLink} · <a href="/negara">senarai semua negara</a>.</p>`;
   const descBits = [
     c.capital ? `ibu negara ${c.capital}` : null,
     c.population ? `populasi ${ngNum(c.population)} orang` : null,
