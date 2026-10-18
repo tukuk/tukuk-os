@@ -84,7 +84,11 @@ test('sitemap-cuaca.xml +robots: 6 statik + setiap kota DB ×3 URL; stats+nav bo
   // SEO kemas: /cuaca* dalam senarai sitemap utama + nav/footer header situs
   assert.ok(serverSrc.includes("const staticPages = ['', '/nasa'") && serverSrc.includes("'/cuaca/awan'"), 'sitemap utama menyenaraikan halaman /cuaca');
   assert.match(serverSrc, /link\('\/cuaca', 'Weather', 'cuaca'\)/, 'siteHeader ada pautan Weather');
-  assert.ok(serverSrc.includes('<li><a href="/cuaca/serian">Cuaca Serian</a></li>'), 'siteFooter ada pautan Cuaca Serian');
+  const footerCol = serverSrc.slice(serverSrc.indexOf('<h4>Weather</h4>'), serverSrc.indexOf('<h4>Weather</h4>') + 1200);
+  assert.ok(footerCol.includes('<li><a href="/cuaca/awan">Cloud types</a></li>'), 'siteFooter ada halaman edukatif dunia');
+  assert.ok(footerCol.includes('<li><a href="/cuaca/angin">Beaufort wind scale</a></li>'), 'siteFooter ada skala angin');
+  // Dasar: chrome situs TIDAK mempromosikan halaman kota/lokal spesifik (trafik global).
+  assert.ok(!footerCol.includes('/cuaca/kuala-lumpur') && !footerCol.includes('/cuaca/serian'), 'tiada label kota lokal dalam footer');
 });
 
 test('pautan silang NASA sky ↔ cuaca + JSON-LD Place/Dataset pada halaman kota', () => {

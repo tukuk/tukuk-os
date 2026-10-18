@@ -1615,12 +1615,11 @@ function siteFooter() {
       <li><a href="/cuaca">World Weather</a></li>
       <li><a href="/cuaca/peta">Weather map</a></li>
       <li><a href="/cuaca/ekstrem">World extremes</a></li>
-      <li><a href="/cuaca/kuala-lumpur">Cuaca Kuala Lumpur</a></li>
-      <li><a href="/cuaca/serian">Cuaca Serian</a></li>
+      <li><a href="/cuaca/awan">Cloud types</a></li>
+      <li><a href="/cuaca/angin">Beaufort wind scale</a></li>
+      <li><a href="/cuaca/kod">Weather codes</a></li>
       <li><a href="/gempa">World Earthquakes</a></li>
       <li><a href="/gempa/dunia">Major Quakes M4.5+</a></li>
-      <li><a href="/cuti">Public holidays 2026</a></li>
-      <li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>
       <li><a href="/negara">World countries</a></li>
       <li><a href="/statistik">World statistics</a></li>
       <li><a href="/bencana">Live disaster watch</a></li>
@@ -2569,13 +2568,13 @@ function cuacaHubPage(req, snap) {
     + `<button class="btn primary" type="submit" style="margin-left:8px">Cari cuaca</button></form>`
     + `<h2 class="section-title">Suhu dunia sekarang</h2><div class="wx-grid">${cards}</div>`
     + `<h2 class="section-title">Ramalan penuh ikut bandar</h2>`
-    + `<p>Setiap halaman bandar membawa semasa, 8 slot jam akan datang, ramalan 5\u20136 hari, kualiti udara (PM2.5), waktu matahari serta nasihat bersiap yang dijana automatik \u2014 semua daripada API OpenWeather tier percuma. Cuaca dunia \u2014 Tokyo, London, New York, Makkah dan ratusan kota lain tersenarai ikut negara di bawah; permulaan popular: <a href="/cuaca/kuala-lumpur">Kuala Lumpur</a>, <a href="/cuaca/kuching">Kuching</a> atau <a href="/cuaca/serian">Serian</a>.</p>`
+    + `<p>Setiap halaman bandar membawa semasa, 8 slot jam akan datang, ramalan 5\u20136 hari, kualiti udara (PM2.5), waktu matahari serta nasihat bersiap yang dijana automatik \u2014 semua daripada API OpenWeather tier percuma. Cuaca dunia \u2014 Tokyo, London, New York, Makkah dan ratusan kota lain tersenarai ikut negara di bawah; permulaan popular: <a href="/cuaca/tokyo">Tokyo</a>, <a href="/cuaca/london">London</a>, <a href="/cuaca/new-york">New York</a> atau <a href="/cuaca/makkah">Makkah</a>.</p>`
     + linkBoxes
     + `<h2 class="section-title">Kenapa cuaca penting untuk kita</h2><p>Malaysia duduk di laluan zon hujan khatulistiwa: monsun barat daya (Mei\u2013September) dan monsun timur laut (November\u2013Mac) silih berganti membawa hujan, dan jerebu rentas sempadan sesekali menentukan sama ada sekolah ditutup. Memahami bacaan \u2014 kelembapan, tekanan, kelajuan angin, indeks AQI \u2014 menukar ramalan daripada angka kepada keputusan: bila sesuai menanam, bila perlu bawa payung, bila paling bahaya memandu.</p>`
     + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS. Nak rancang percutian? Jadual penuh <a href="/cuti">cuti umum 2026 &amp; 2027</a>. Nak kenal destinasi? Profil penuh di <a href="/negara">Kompleks Negara</a>.</p>`;
   return cuacaDoc({
     title: 'Cuaca Hari Ini \u2014 Suhu, Ramalan & Kualiti Udara Seluruh Dunia | Tukuk-OS',
-    desc: 'Semak cuaca hari ini secara langsung: suhu, hujan, angin, kualiti udara PM2.5 dan ramalan 5 hari untuk Kuala Lumpur, Kuching, Singapura dan ratusan bandar lain.',
+    desc: 'Semak cuaca hari ini secara langsung: suhu, hujan, angin, kualiti udara PM2.5 dan ramalan 5 hari untuk Tokyo, London, New York, Makkah dan ratusan bandar lain di seluruh dunia.',
     selfUrl: 'https://tukuk.org/cuaca',
     heroTitle: 'Kompleks Cuaca Tukuk-OS', heroSub: 'Data langsung OpenWeather \u00b7 kemas kini setiap jam \u00b7 percuma tanpa log masuk',
     body,
@@ -2739,7 +2738,7 @@ function cuacaMapPage(req) {
     ['pressure_new', 'Tekanan udara', false],
   ];
   const payload = JSON.stringify(layers.map(([l, label, def]) => ({ layer: l, label, def, url: wx.tileTemplateUrl(l) }))).replace(/</g, '\\u003c');
-  const body = `<p>Peta langsung berlapis cuaca OpenWeather \u2014 toglayer hujan, awan dan tekanan di atas jalan raya/terrain. Jubin dimuat pada resolusi dunia; cari kota anda di mana-mana benua, atau zum ke Kuala Lumpur, Kuching atau Serian untuk melihat sel hujan petang tropika yang terkenal itu.</p>`
+  const body = `<p>Peta langsung berlapis cuaca OpenWeather \u2014 toglayer hujan, awan dan tekanan di atas jalan raya/terrain. Jubin dimuat pada resolusi dunia; cari kota anda di mana-mana benua, atau zum ke Singapura, Mumbai atau Lagos untuk melihat sel hujan petang tropika yang terkenal itu.</p>`
     + `<div id="wxmap" role="application" aria-label="Peta cuaca langsung"></div>`
     + `<noscript><p>Javascript diperlukan untuk peta interaktif. Senarai teks ada di <a href="/cuaca">hab cuaca</a> dan <a href="/cuaca/ekstrem">rekod suhu</a>.</p></noscript>`
     + `<h2 class="section-title">Cara membaca</h2><p>Lapisan hujan mengikut skala warna: biru = hujan ringan, kuning\u2013merah = lebat/ribut. Corak “bintik-bintik” kecil di daratan Borneo pada waktu petang ialah konveksi setempat \u2014 awan guruh tumbuh dari panas tanah, bukan daripada front; sebab itu ramalan tropika cepat berubah dan nilai 45 minit cache kami sengaja pendek. Lapisan tekanan pula memaparkan isobar: jarak isobar rapat = angin kencang.</p>`

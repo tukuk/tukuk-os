@@ -92,7 +92,10 @@ test('sitemap-cuti.xml + robots + footer + pautan silang cuaca/gempa↔cuti', ()
   assert.ok(sm.includes('cu.STATES.map'), 'semua negeri masuk sitemap');
   assert.ok(sm.includes('cu.YEAR_MAX'), 'versi 2027 (?)tahun masuk sitemap');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-cuti\.xml/, 'robots iklankan sitemap-cuti');
-  assert.ok(serverSrc.includes('<li><a href="/cuti">Public holidays 2026</a></li>'), 'footer ada pautan cuti');
+  // Dasar dunia: chrome footer tidak lagi mempromosikan label MY; krew cuti kekal boleh-rujuk
+  // melalui pautan silang hab cuaca/gempa + nav sendiri + sitemap utama.
+  assert.ok(!serverSrc.includes('<li><a href="/cuti">Public holidays 2026</a></li>'), 'footer tidak lagi ada label cuti MY');
+  assert.ok(!serverSrc.includes('<li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>'), 'footer tidak lagi ada Long weekends MY');
   assert.ok(serverSrc.includes('<a href="/cuti">cuti umum 2026 &amp; 2027</a>'), 'hab cuaca paut silang ke cuti');
   assert.ok(serverSrc.includes('<a href="/cuti">jadual cuti umum</a>'), 'hab/rantau gempa paut silang ke cuti');
   assert.ok(serverSrc.includes("'/cuti', '/cuti/2026', '/cuti/2027'"), 'sitemap utama menyenaraikan halaman cuti');
