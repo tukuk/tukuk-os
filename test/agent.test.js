@@ -104,8 +104,8 @@ test('rotasi fast: model pembekal dipetakan ke model ringan apabila fast=true', 
     { fetchImpl, fast: true }
   );
   assert.equal(out.ok, true);
-  assert.equal(seenBody.model, 'llama-3.1-8b-instant', 'groq → model kilat');
-  assert.equal(out.model, 'llama-3.1-8b-instant', 'header X-Agent-Model ikut model sebenar');
+  assert.equal(seenBody.model, 'openai/gpt-oss-20b', 'groq → model kilat');
+  assert.equal(out.model, 'openai/gpt-oss-20b', 'header X-Agent-Model ikut model sebenar');
 }));
 
 test('rotasi fast: provider tolak model laju (404) → jatuh ke model biasa, bukan cooling', () => withProviders([groq], async () => {
@@ -113,7 +113,7 @@ test('rotasi fast: provider tolak model laju (404) → jatuh ke model biasa, buk
   const fetchImpl = async (url, opts) => {
     const b = JSON.parse(opts.body);
     calls.push(b.model);
-    return b.model === 'llama-3.1-8b-instant'
+    return b.model === 'openai/gpt-oss-20b'
       ? new Response('model not found', { status: 404 })
       : new Response('{"choices":[]}', { status: 200 });
   };
@@ -122,7 +122,7 @@ test('rotasi fast: provider tolak model laju (404) → jatuh ke model biasa, buk
     { fetchImpl, fast: true }
   );
   assert.equal(out.ok, true, 'model biasa penyelamat permintaan');
-  assert.deepEqual(calls, ['llama-3.1-8b-instant', 'openai/gpt-oss-120b']);
+  assert.deepEqual(calls, ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']);
 }));
 
 test('/models mengiklankan tukuk-agent + tukuk-agent-fast', () => {
@@ -226,7 +226,7 @@ test('route: model `-fast` sampai ke rotasi dengan flag fast=true', async () => 
   openai.chatWithRotation = async (body, opts) => {
     seenOpts = opts;
     return {
-      ok: true, provider: 'groq', model: 'llama-3.1-8b-instant',
+      ok: true, provider: 'groq', model: 'openai/gpt-oss-20b',
       response: new Response('{"choices":[]}', { status: 200, headers: { 'content-type': 'application/json' } }),
     };
   };

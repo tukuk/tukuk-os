@@ -23,12 +23,13 @@ const ADVERTISED_MODEL_FAST = 'tukuk-agent-fast';
 
 /*
  * Peta model laju bagi tier percuma/`-fast`: pemboleh ubah
- * AGENT_FAST_MODEL_<NAMA> menang; jika tiada, default terbukti ada di Groq
- * (llama-3.1-8b-instant balas ±0.7s vs 3.7s gpt-oss-120b). Pembekal tanpa
- * default hanya guna model biasa (tiada 404 model).
+ * AGENT_FAST_MODEL_<NAMA> menang; jika tiada, default terbukti ADA + PANTAS
+ * pada akaun Groq kita (openai/gpt-oss-20b balas ±0.9s, lebih ringan daripada
+ * 120b). llama-3.1-8b-instant SUDAH DITANGGALKAN Groq (404) — jangan guna.
+ * Pembekal tanpa default hanya guna model biasa (tiada 404 model).
  */
 const FAST_MODELS = {
-  groq: process.env.AGENT_FAST_MODEL_GROQ || 'llama-3.1-8b-instant',
+  groq: process.env.AGENT_FAST_MODEL_GROQ || 'openai/gpt-oss-20b',
   openrouter: process.env.AGENT_FAST_MODEL_OPENROUTER || 'meta-llama/llama-3.3-70b-instruct',
 };
 
