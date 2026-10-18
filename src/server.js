@@ -400,10 +400,20 @@ function notifyIndexNow(urls) {
   }).catch(() => {}); // senyap — pengindeksan ialah penambahbaikan, bukan kritikal
 }
 
-// Portal carian SPA (index.html) DI-BERSARAKAN: tukuk.org kini laman konten.
-// /cari → 301 ke '/' supaya semua pautan lama & tautan dalam index.html (yang
-// menunjuk halaman dibuang) tak jadi 404, tanpa perlu bedah SPA 2000+ baris.
-app.get('/cari', (req, res) => res.redirect(301, '/'));
+// `/cari` DIHIDUPKAN: SPA carian Meilisearch lama (web/CC, images, videos, music,
+// radio, apps, NASA) — index.html yang sama, tetapi noindex + BEBAS IKLAN
+// (adsense-loader.js self-skip pada /cari; dasar Google: halaman hasil carian
+// tidak layak diiklankan). Cache string sekali; restart servis ↔ index.html baru.
+let cariHtml = null;
+app.get('/cari', (req, res) => {
+  if (!cariHtml) {
+    const raw = fs.readFileSync(path.join(PUBLIC_DIR, 'index.html'), 'utf8');
+    cariHtml = /name="robots"/i.test(raw)
+      ? raw.replace(/<meta name="robots"[^>]*>/i, '<meta name="robots" content="noindex,follow">')
+      : raw.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="robots" content="noindex,follow">');
+  }
+  res.type('html').send(cariHtml);
+});
 
 // Proksi imej luar — untuk lightbox & Tukuk Studio (/editor).
 // Same-origin = canvas tidak "tainted", export/edge filter boleh jalan.
@@ -1002,6 +1012,7 @@ function siteHeader(active) {
     <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="">Tukuk-OS</a>
     <nav class="topnav" aria-label="Primary">
       ${link('/', 'Home', 'home')}
+      ${link('/cari', 'Search', 'cari')}
       ${link('/blog', 'Blog', 'blog')}
       ${link('/wiki', 'Wiki', 'wiki')}
       ${link('/nasa', 'NASA', 'nasa')}
@@ -1031,6 +1042,7 @@ function siteFooter() {
     </div>
     <div><h4>Explore</h4><ul>
       <li><a href="/">Home</a></li>
+      <li><a href="/cari">Search</a></li>
       <li><a href="/blog">Blog</a></li>
       <li><a href="/wiki">Wiki</a></li>
       <li><a href="/nasa">NASA APOD</a></li>
@@ -1400,7 +1412,8 @@ function wikiArticlePage(req, post) {
     `<p class="wiki-from">From <a href="/wiki">Tukuk-OS Wiki</a>, the free knowledge base.</p>` +
     infobox + `<p>${escapeHtml(post.excerpt || '')}</p>${t.toc}` +
     `${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}` +
-    t.html + seeAlso +
+    t.html +
+    `${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}` + seeAlso +
     `<div class="wiki-catbar"><b>Categories:</b> ${tags.length ? tags.map((tg) => `<a href="/wiki?q=${encodeURIComponent(tg)}">${escapeHtml(tg)}</a>`).join(' \u00b7 ') : '<a href="/wiki">Knowledge</a>'}</div>` +
     `${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}` +
     `</main></div>${wikiFooter()}</body></html>`;

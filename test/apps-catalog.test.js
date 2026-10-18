@@ -33,9 +33,10 @@ test('halaman store + AI berat dibuang dari public/', () => {
   }
 });
 
-test('root hidang hub konten, /cari & /apps → 301 ke / (tiada 404 pautan lama)', () => {
-  assert.match(serverSrc, /app\.get\('\/',\s*\(req, res\) =>[\s\S]*?renderBlogListPage\(req, true\)/, "root '/' panggil renderBlogListPage(asHome=true)");
-  assert.match(serverSrc, /app\.get\('\/cari',\s*\(req, res\) => res\.redirect\(301, '\/'\)/, "/cari → 301 '/'");
+test("root hidang hub konten, /apps → 301 ke /, /cari dihidupkan semula sebagai SPA", () => {
+  assert.match(serverSrc, /app\.get\('\/\',\s*\(req, res\) =>[\s\S]*?renderBlogListPage\(req, true\)/, "root '/' panggil renderBlogListPage(asHome=true)");
+  assert.match(serverSrc, /app\.get\('\/cari',\s*\(req, res\) =>[\s\S]*?readFileSync[\s\S]*?index\.html/, "/cari hidang SPA index.html (noindex+bebas iklan)");
+  assert.doesNotMatch(serverSrc, /app\.get\('\/cari',\s*\(req, res\) => res\.redirect\(301/, '/cari bukan lagi 301');
   assert.match(serverSrc, /app\.get\(\['\/apps', '\/apps\/'\],\s*\(req, res\) => res\.redirect\(301, '\/'\)/, "/apps → 301 '/'");
 });
 
@@ -43,4 +44,11 @@ test('/nasa ialah halaman konten SSR beriklan (bukan SPA noindex lama)', () => {
   assert.match(serverSrc, /app\.get\('\/nasa'/, 'laluan /nasa wujud');
   assert.match(serverSrc, /function renderNasaApodPage/, 'renderNasaApodPage ditakrif');
   assert.match(serverSrc, /renderNasaApodPage\(req, apod\)/, 'laluan /nasa hidang renderNasaApodPage');
+});
+
+test('artikel wiki dapat unit in-article (setaraf blog: top+in-article+bottom)', () => {
+  const fn = serverSrc.slice(serverSrc.indexOf('function wikiArticlePage'), serverSrc.indexOf('function wikiSearchPage'));
+  for (const slot of ['slotTop', 'slotInArticle', 'slotBottom']) {
+    assert.ok(fn.includes(`config.adsense.${slot}`), `wikiArticlePage perlu memaparkan ${slot}`);
+  }
 });
