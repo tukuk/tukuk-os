@@ -94,14 +94,19 @@ test('openaiProviders: ollama-cloud dipetakan ke bentuk OpenAI /v1', () => withP
 }));
 
 // ── Loopback HTTP penuh untuk src/agent.js ──────────────────────────────────
-function startApp({ token = 'secret-agent', patch } = {}) {
+function startApp({ token = 'secret-agent', freeToken = 'free-public', origin = '', patch } = {}) {
   const app = express();
   app.use(express.json());
   const auth = {
     bearer: (req) => String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim(),
     requireAdmin: (req, res) => res.status(401).json({ error: 'nope' }),
   };
-  const config = { agent: { token, origin: '', timeoutMs: 5000, maxPerMin: 1000 } };
+  const config = {
+    agent: {
+      token, origin, timeoutMs: 5000, maxPerMin: 1000,
+      freeToken, freeMaxPerMin: 8, freeMaxTokens: 4096,
+    },
+  };
   agent.mount(app, { auth, rateLimit: null, config, store: { event() {} } });
   if (patch) patch();
   return new Promise((resolve) => {
@@ -117,6 +122,64 @@ test('route: /v1/models tanpa token -> 401, dengan token -> senarai tukuk-agent'
     assert.equal(ok.status, 200);
     const j = await ok.json();
     assert.equal(j.data[0].id, 'tukuk-agent');
+  } finally { await close(); }
+});
+
+test('tier percuma: freeToken diterima di /models; token salah tetap 401', async () => {
+  const { base, close } = await startApp();
+  try {
+    const free = await fetch(base + '/api/agent/v1/models', { headers: { Authorization: 'Bearer free-public' } });
+    assert.equal(free.status, 200, 'penanda free tier layak ke /models');
+    const bogus = await fetch(base + '/api/agent/v1/models', { headers: { Authorization: 'Bearer teka-pecah' } });
+    assert.equal(bogus.status, 401, 'token tidak dikenali tak lolos');
+  } finally { await close(); }
+});
+
+test('tier percuma: max_tokens klien dikekang ke freeMaxTokens sebelum rotasi', async () => {
+  const saved = openai.chatWithRotation;
+  let seenBody;
+  openai.chatWithRotation = async (body) => {
+    seenBody = body;
+    return {
+      ok: true, provider: 'groq', model: 'openai/gpt-oss-120b',
+      response: new Response('{"choices":[]}', { status: 200, headers: { 'content-type': 'application/json' } }),
+    };
+  };
+  const { base, close } = await startApp();
+  try {
+    const r = await fetch(base + '/api/agent/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', Authorization: 'Bearer free-public' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'x' }], max_tokens: 999999 }),
+    });
+    assert.equal(r.status, 200);
+    assert.equal(seenBody.max_tokens, 4096, 'clamp ke had tier percuma');
+
+    // Token penuh (admin token) TIDAK dikekang.
+    await fetch(base + '/api/agent/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', Authorization: 'Bearer secret-agent' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'x' }], max_tokens: 200000 }),
+    });
+    assert.equal(seenBody.max_tokens, 200000, 'tier penuh tak dikekang');
+  } finally { openai.chatWithRotation = saved; await close(); }
+});
+
+test('CORS: subdomain tukuk.org (Builder) didengungkan walau AGENT_ORIGIN lain', async () => {
+  const { base, close } = await startApp({ origin: 'https://agent.tukuk.org' });
+  try {
+    const pre = await fetch(base + '/api/agent/v1/models', {
+      method: 'OPTIONS',
+      headers: { Origin: 'https://build.tukuk.org', 'Access-Control-Request-Method': 'GET' },
+    });
+    assert.equal(pre.status, 204);
+    assert.equal(pre.headers.get('access-control-allow-origin'), 'https://build.tukuk.org');
+    // Asal asing bukan tukuk.org → tetap config.agent.origin (tingkah laku lama).
+    const alien = await fetch(base + '/api/agent/v1/models', {
+      method: 'OPTIONS',
+      headers: { Origin: 'https://evil.example' },
+    });
+    assert.equal(alien.headers.get('access-control-allow-origin'), 'https://agent.tukuk.org');
   } finally { await close(); }
 });
 

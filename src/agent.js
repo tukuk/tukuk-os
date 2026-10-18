@@ -8,8 +8,9 @@
  *   2. BUILD kepala-tanpa       (/api/agent/build) — satu panggilan → fail + semakan
  *      sintaks via alat `tukuk_agent` pada pelayan MCP (/builder + store boleh guna).
  *
- * CORS: asal Tukuk Agent (config.agent.origin) dibenarkan memanggil tukuk.org.
- * Auth: Bearer AGENT_TOKEN, ATAU sesi passkey admin (auth.requireAdmin).
+ * CORS: asal *.tukuk.org (Tukuk Builder) + config.agent.origin dibenarkan.
+ * Auth: Bearer AGENT_TOKEN, ATAU Bearer AGENT_FREE_TOKEN (tier percuma berlimit
+ * ketat untuk Tukuk Builder), ATAU sesi passkey admin (auth.requireAdmin).
  * KEGAGALAN sentiasa 4xx — tepi tukuk.org menukar sebarang 5xx kepada mod sandaran.
  */
 const crypto = require('crypto');
@@ -30,9 +31,20 @@ function mount(app, deps) {
     ? rateLimit({ windowMs: 60 * 1000, max: config.agent.maxPerMin, keyPrefix: 'agent:' })
     : (req, res, next) => next();
 
-  // ── CORS untuk pelanjutan agen (berbeza asal bila di-host agent.tukuk.org) ──
+  // Tier percuma (Tukuk Builder) — had kadar LEBIH ketat, pemisah kunci cache.
+  const freeLimiter = rateLimit
+    ? rateLimit({ windowMs: 60 * 1000, max: config.agent.freeMaxPerMin, keyPrefix: 'agentfree:' })
+    : (req, res, next) => next();
+
+  // Pilih limiter mengikut tier (requireAgent menetapkan req.agentFree lebih dahulu).
+  const tierLimiter = (req, res, next) => (req.agentFree ? freeLimiter : limiter)(req, res, next);
+
+  // ── CORS: asal Tukuk Agent (config.agent.origin) + mana-mana subdomain tukuk.org
+  //    (Tukuk Builder di build.tukuk.org memanggil proksi ini dari pelayar) ──
   app.use(`${PREFIX}/v1`, (req, res, next) => {
-    const allow = config.agent.origin || req.get('origin') || '';
+    const origin = req.get('origin') || '';
+    const isTukukHost = /^https?:\/\/([a-z0-9-]+\.)*tukuk\.org$/i.test(origin);
+    const allow = isTukukHost ? origin : (config.agent.origin || origin);
     if (allow) {
       res.setHeader('Access-Control-Allow-Origin', allow);
       res.setHeader('Vary', 'Origin');
@@ -43,10 +55,14 @@ function mount(app, deps) {
     next();
   });
 
-  // ── Auth: AGENT_TOKEN (bearer) atau sesi admin ──
+  // ── Auth: AGENT_TOKEN (bearer) ATAU penanda tier percuma ATAU sesi admin ──
   function requireAgent(req, res, next) {
     const token = auth.bearer(req);
     if (config.agent.token && safeEqual(token, config.agent.token)) return next();
+    if (config.agent.freeToken && safeEqual(token, config.agent.freeToken)) {
+      req.agentFree = true;
+      return next();
+    }
     // Tiada padanan token → biar pintu admin (passkey sesi) cuba; ia 401 jika gagal.
     return auth.requireAdmin(req, res, next);
   }
@@ -57,7 +73,15 @@ function mount(app, deps) {
   });
 
   // ── POST /v1/chat/completions (passthrough + rotasi + stream) ──
-  app.post(`${PREFIX}/v1/chat/completions`, requireAgent, limiter, async (req, res) => {
+  app.post(`${PREFIX}/v1/chat/completions`, requireAgent, tierLimiter, async (req, res) => {
+    // Tier percuma: kekekang max_tokens supaya satu permintaan tak menghisap
+    // kuota cloud pembekal (rotasi kita yang bayar).
+    if (req.agentFree && req.body) {
+      const cap = config.agent.freeMaxTokens;
+      if (cap && (!Number.isFinite(req.body.max_tokens) || req.body.max_tokens > cap)) {
+        req.body.max_tokens = cap;
+      }
+    }
     let out;
     try {
       out = await openai.chatWithRotation(req.body || {}, { timeoutMs: config.agent.timeoutMs });
@@ -92,7 +116,7 @@ function mount(app, deps) {
   });
 
   // ── POST /build (kepala-tanpa; alat tukuk_agent pada MCP) ──
-  app.post(`${PREFIX}/build`, requireAgent, limiter, async (req, res) => {
+  app.post(`${PREFIX}/build`, requireAgent, tierLimiter, async (req, res) => {
     const goal = String((req.body && req.body.goal) || '').trim().slice(0, 300);
     const kind = String((req.body && req.body.kind) || 'app').trim().slice(0, 20);
     if (!goal) return res.status(400).json({ error: 'Field "goal" is required.' });

@@ -203,7 +203,13 @@ module.exports = {
     token: process.env.AGENT_TOKEN || '',
     origin: process.env.AGENT_ORIGIN || '',
     timeoutMs: num(process.env.AGENT_TIMEOUT_MS, 120000),
-    maxPerMin: num(process.env.AGENT_RATE_PER_MIN, 30)
+    maxPerMin: num(process.env.AGENT_RATE_PER_MIN, 30),
+    // Tier PERCUMA untuk Tukuk Builder (build.tukuk.org): pelawat tak punya
+    // kunci. freeToken ialah penanda AWAM (sudah terbit di GitHub fork), jadi
+    // perlindungannya = had kadar ketat + kekangan max_tokens, BUKAN kerahsiaan.
+    freeToken: process.env.AGENT_FREE_TOKEN || '',
+    freeMaxPerMin: num(process.env.AGENT_FREE_RATE_PER_MIN, 8),
+    freeMaxTokens: num(process.env.AGENT_FREE_MAX_TOKENS, 16384)
   },
 
   // Editor Tukuk Agent (fork code-server) yang proksi ini dinaung —
