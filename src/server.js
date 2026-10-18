@@ -26,6 +26,7 @@ const fallback = require('./fallback');
 const nasa = require('./nasa');
 const wx = require('./weather');
 const gp = require('./gempa');
+const cu = require('./cuti');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -577,6 +578,54 @@ app.get('/gempa/:region', async (req, res) => {
   }
 });
 
+// ── LALUAN KOMPLEKS CUTI (/cuti*) — API cuti umum MY, literal dahulu kemudian :negeri ──
+app.get('/cuti', async (req, res) => {
+  try {
+    const [rows26, rows27] = await Promise.all([cu.getHolidays(cu.YEAR_MIN), cu.getHolidays(cu.YEAR_MAX)]);
+    if (!rows26 || !rows26.length) throw new Error('jadual kosong');
+    res.status(200).type('html').send(cutiHubPage(req, rows26, rows27 || []));
+  } catch {
+    res.status(503).type('html').send(cutiBusy('Jadual cuti belum sempat dimuat'));
+  }
+});
+
+app.get('/cuti/penjelasan', (req, res) => res.status(200).type('html').send(cutiExplainPage(req)));
+app.get('/cuti/hujung-minggu-panjang', async (req, res) => {
+  try {
+    const [rows26, rows27] = await Promise.all([cu.getHolidays(cu.YEAR_MIN), cu.getHolidays(cu.YEAR_MAX)]);
+    if (!rows26 || !rows26.length) throw new Error('jadual kosong');
+    res.status(200).type('html').send(cutiLongWeekendPage(req, rows26, rows27 || []));
+  } catch {
+    res.status(503).type('html').send(cutiBusy('Pengiraan hujung minggu panjang tidak sempat dimuat'));
+  }
+});
+
+// /cuti/2026, /cuti/2027 — tahun divalidasi DALAM handler (jangan lalui :negeri).
+app.get(/^\/cuti\/(2026|2027)$/, async (req, res, next) => {
+  const year = Number(req.params[0]);
+  try {
+    const rows = await cu.getHolidays(year);
+    if (!rows || !rows.length) return next(); // bukan tahun liputan → :negeri/404
+    return res.status(200).type('html').send(cutiYearPage(req, year, rows));
+  } catch {
+    return res.status(503).type('html').send(cutiBusy(`Kalendar cuti ${year} tidak sempat dimuat`));
+  }
+});
+
+// :negeri DIHURUFKAN selepas laluan literal — senarai semak dalam handler (TDZ selamat).
+app.get('/cuti/:negeri', async (req, res) => {
+  const st = cu.findState(req.params.negeri);
+  if (!st) return res.status(404).type('html').send(cutiBusy(`Negeri "${req.params.negeri}" tidak dikenali`));
+  let year = Number(req.query.tahun || cu.YEAR_MIN);
+  if (!Number.isFinite(year) || year < cu.YEAR_MIN || year > cu.YEAR_MAX) year = cu.YEAR_MIN;
+  try {
+    const rows = await cu.getStateHolidays(st.code, year);
+    res.status(200).type('html').send(cutiStatePage(req, st, year, rows || []));
+  } catch {
+    res.status(503).type('html').send(cutiBusy(`Jadual cuti ${st.name} tidak sempat dimuat`));
+  }
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1081,7 +1130,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1172,6 +1221,18 @@ app.get('/sitemap-gempa.xml', (req, res) => {
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + urls + '\n' + explain + '\n</urlset>\n'
+  );
+});
+
+// ── SITEMAP CUTI — hab + 2 tahun + hujung minggu + penjelasan + 16 negeri × 2 tahun ──
+app.get('/sitemap-cuti.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const special = ['/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan']
+    .map((p) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${p === '/cuti' ? '0.9' : '0.7'}</priority>\n  </url>`).join('\n');
+  const states = cu.STATES.map((st) => `  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>\n  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}?tahun=${cu.YEAR_MAX}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`).join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + special + '\n' + states + '\n</urlset>\n'
   );
 });
 
@@ -1416,6 +1477,8 @@ function siteFooter() {
       <li><a href="/cuaca/serian">Cuaca Serian</a></li>
       <li><a href="/gempa">Latest earthquakes</a></li>
       <li><a href="/gempa/malaysia">Gempa Malaysia</a></li>
+      <li><a href="/cuti">Public holidays 2026</a></li>
+      <li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>
     </ul></div>
     <div><h4>Site</h4><ul>
       <li><a href="/about">About</a></li>
@@ -2319,7 +2382,7 @@ function cuacaHubPage(req, snap) {
     + `<p>Setiap halaman bandar membawa semasa, 8 slot jam akan datang, ramalan 5\u20136 hari, kualiti udara (PM2.5), waktu matahari serta nasihat bersiap yang dijana automatik \u2014 semua daripada API OpenWeather tier percuma. Bermula dari kampung? <a href="/cuaca/serian">Cuaca hari ini di Serian</a>.</p>`
     + linkBoxes
     + `<h2 class="section-title">Kenapa cuaca penting untuk kita</h2><p>Malaysia duduk di laluan zon hujan khatulistiwa: monsun barat daya (Mei\u2013September) dan monsun timur laut (November\u2013Mac) silih berganti membawa hujan, dan jerebu rentas sempadan sesekali menentukan sama ada sekolah ditutup. Memahami bacaan \u2014 kelembapan, tekanan, kelajuan angin, indeks AQI \u2014 menukar ramalan daripada angka kepada keputusan: bila sesuai menanam, bila perlu bawa payung, bila paling bahaya memandu.</p>`
-    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS.</p>`;
+    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS. Nak rancang percutian? Jadual penuh <a href="/cuti">cuti umum 2026 &amp; 2027</a>.</p>`;
   return cuacaDoc({
     title: 'Cuaca Hari Ini \u2014 Suhu, Ramalan & Kualiti Udara Seluruh Dunia | Tukuk-OS',
     desc: 'Semak cuaca hari ini secara langsung: suhu, hujan, angin, kualiti udara PM2.5 dan ramalan 5 hari untuk Kuala Lumpur, Kuching, Singapura dan ratusan bandar lain.',
@@ -2764,7 +2827,7 @@ function gempaRegionPage(req, region, rows) {
     + gpTable(rows, 50)
     + (s.felt ? `<p><b>${s.felt}</b> daripada gempa tersenarai mempunyai laporan manusia yang merasakannya (butiran felt di USGS).</p>` : '')
     + `<h2 class="section-title">Apa perlu buat bila bumi bergegar</h2><p><b>Reda \u2014 Lindungi \u2014 Tahan</b>: menjatuhkan diri ke lantai, berlindung di bawah meja kukuh dan tahan sehingga gegaran berhenti. Jangan berlari ketika gegaran masih ada; jangan guna lif; selepas itu periksa wayar, paip gas dan amaran susulan. Panduan penuh dalam <a href="/gempa/penjelasan">halaman penjelasan</a>.</p>`
-    + `<p class="meta">Lihat juga: <a href="/gempa">hab gempa dunia</a> \u00b7 <a href="/gempa/malaysia">zon Malaysia</a> \u00b7 <a href="/cuaca">cuaca semasa</a>.</p>`;
+    + `<p class="meta">Lihat juga: <a href="/gempa">hab gempa dunia</a> \u00b7 <a href="/gempa/malaysia">zon Malaysia</a> \u00b7 <a href="/cuaca">cuaca semasa</a> \u00b7 <a href="/cuti">jadual cuti umum</a>.</p>`;
   return gempaDoc({
     title: `Gempa Bumi Terkini di ${region.name} — Magnitud, Lokasi & Kedalaman | Tukuk-OS`,
     desc: `Senarai langsung gempa ${region.name}: magnitud, kedalaman, lokasi dan laporan terasa — data USGS kemas kini setiap 10 minit, masa dalam Waktu Malaysia.`,
@@ -2802,6 +2865,268 @@ function gempaExplainPage(req) {
     desc: 'Fahami skala magnitud (setiap 1 = 32× tenaga), kedalaman, potensi tsunami dan protokol Reda-Lindungi-Tahan — penjelasan Bahasa Melayu untuk konteks Malaysia.',
     selfUrl: 'https://tukuk.org/gempa/penjelasan',
     heroTitle: 'Cara Baca Data Gempa', heroSub: 'Daripada angka seismograf hingga keputusan selamat dalam 60 saat',
+    body, ld,
+  });
+}
+
+// ── TUKUK-OS CUTI COMPLEX — jadual cuti umum Malaysia (API awam tanpa kunci) ──
+// Sumber data: malaysia-holiday.dydxsoft.my (disemak admin terhadap dokumen
+// rasmi kabinet.gov.my; nama perayaan Bahasa Melayu; 13 negeri + 3 wilayah).
+// Jadual jarang berubah → cache 30 hari dalam src/cuti.js; gagal → 503 noindex.
+const CUTI_SECTIONS = [
+  { href: '/cuti', icon: '\uD83D\uDCC5', name: 'Cuti Umum 2026', blurb: 'Kalendar nasional, cuti seterusnya dan perbandingan setiap negeri.' },
+  { href: '/cuti/2027', icon: '\uD83D\uDCC6', name: 'Cuti Umum 2027', blurb: 'Pelan awal percutian tahun hadapan — semua tarikh gazet yang diketahui.' },
+  { href: '/cuti/hujung-minggu-panjang', icon: '\uD83C\uDFD6\uFE0F', name: 'Hujung Minggu Panjang', blurb: 'Kombinasi cuti + hujung minggu tanpa perlu cuti rehat — dan yang perlu 1 hari bridge.' },
+];
+for (const st of cu.STATES) CUTI_SECTIONS.push({ href: `/cuti/${st.slug}`, icon: '\uD83D\uDCCD', name: `Cuti ${st.name}`, blurb: `Tarikh kelepasan am ${st.name} 2026 & 2027 — hujung minggu ${st.weekend}.` });
+CUTI_SECTIONS.push({ href: '/cuti/penjelasan', icon: '\uD83D\uDCD8', name: 'Cara Kalendar Cuti MY Berfungsi', blurb: 'Perbezaan cuti persekutuan & negeri, ganti hari Jumaat dan amalan cuti rehat.' });
+
+function cutiNav() {
+  return `<nav aria-label="Bahagian cuti"><h2 class="section-title">Jelajahi Kompleks Cuti Tukuk-OS</h2><div class="feed">`
+    + CUTI_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+function cutiBusy(msg) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>Sumber jadual cuti tidak sempat menjawab. Sila cuba lagi sebentar.</p><p><a href="/cuti">Kembali ke Kompleks Cuti</a></p></body>`;
+}
+
+// Shell sama resepi gempaDoc: lang ms, 3 slot iklan, nav silang, CSS wx-* dipakai
+// semula; hero hijau-pesta bezakan kompleks cuti daripada cuaca/gempa.
+function cutiDoc(o) {
+  const robots = o.robots || 'index,follow,max-image-preview:large';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta property="og:locale" content="ms_MY">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+.wx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.wx-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21)}
+.wx-card h3{margin:0 0 6px;font-size:.88rem;color:var(--muted,#9aa3b2);font-weight:600}
+.wx-card .big{font-size:1.4rem;font-weight:700}
+.wx-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;background:linear-gradient(135deg,#0e5b3a 0%,#06281b 100%);color:#fff}
+.wx-hero .temp{font-size:2.2rem;font-weight:800;line-height:1.1}
+.wx-hero .wmeta{font-size:.92rem;opacity:.92;line-height:1.5}
+.wx-pill{display:inline-block;border-radius:999px;padding:3px 12px;font-weight:700;font-size:.85rem;color:#08121e}
+table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
+.wx-table th,.wx-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+.wx-table th{background:var(--panel,#171a21)}
+@media(max-width:680px){.wx-grid{grid-template-columns:1fr}.wx-hero .temp{font-size:1.7rem}table.wx-table{display:block;overflow-x:auto}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('cuti')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${cutiNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// ——— Utiliti paparan: tarikh BM penuh, ringkas, badge negeri ———
+const CT_DATE_FMT = new Intl.DateTimeFormat('ms-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const CT_SHORT_FMT = new Intl.DateTimeFormat('ms-MY', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+function ctDateFr(dateStr) { return CT_DATE_FMT.format(new Date(`${dateStr}T00:00:00Z`)); }
+function ctShort(dateStr) { return CT_SHORT_FMT.format(new Date(`${dateStr}T00:00:00Z`)); }
+function ctBadge(r) {
+  if (!Array.isArray(r.state_codes)) return '<span class="wx-pill" style="background:#4c8dff;color:#fff">Persekutuan &amp; negeri</span>';
+  if (r.state_codes.length >= 14) return '<span class="wx-pill" style="background:#4c8dff;color:#fff">Kebanyakan negeri</span>';
+  const names = r.state_codes.map((c) => { const st = cu.STATES.find((x) => x.code === c); return st ? st.name : c; });
+  return `<span class="wx-pill" style="background:#2f9e63;color:#fff">${escapeHtml(names.join(', '))}</span>`;
+}
+function ctTable(rows, n) {
+  if (!rows || !rows.length) return '<p>Belum ada rekod cuti untuk tahun ini.</p>';
+  return `<table class="wx-table"><tr><th>Tarikh</th><th>Hari</th><th>Perayaan</th><th>Negeri</th></tr>`
+    + rows.slice(0, n || rows.length).map((r) => `<tr><td><b>${r.date}</b></td><td>${escapeHtml(ctDateFr(r.date).split(',')[0])}</td>`
+      + `<td>${escapeHtml(r.name)}${r.is_subject_to_change ? ' <span class="meta">(tertakluk perubahan)</span>' : ''}</td><td>${ctBadge(r)}</td></tr>`).join('')
+    + '</table>';
+}
+function ctLwHtml(list) {
+  if (!list.length) return '<p>Tiada gabungan hujung minggu panjang yang pasti dalam tahun ini.</p>';
+  return `<table class="wx-table"><tr><th>Tempoh</th><th>Jumlah hari</th><th>Cuti berkaitan</th><th>Keperluan</th></tr>`
+    + list.map((w) => `<tr><td>${escapeHtml(ctShort(w.start))} – ${escapeHtml(ctShort(w.end))}</td><td><b>${w.spanDays} hari</b></td>`
+      + `<td>${escapeHtml(w.holidays.map((h) => h.name).join(' + '))}</td>`
+      + `<td>${w.auto ? '<span class="wx-pill" style="background:#2f9e63;color:#fff">Automatik</span>' : '<span class="wx-pill" style="background:#e67e22;color:#fff">1 hari cuti rehat</span>'}</td></tr>`).join('')
+    + '</table>';
+}
+
+// ——— HAB /cuti — kiraan tahun, cuti seterusnya, 10 akan datang, hujung minggu KL ———
+function cutiHubPage(req, rows26, rows27) {
+  const today = new Date().toISOString().slice(0, 10);
+  const nxt = cu.nextHoliday(rows26, today) || cu.nextHoliday(rows27, today);
+  const upcoming = [...rows26, ...rows27].filter((r) => String(r.date) >= today)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, 10);
+  const hero = nxt
+    ? `<div class="wx-hero"><div class="temp">${escapeHtml(nxt.name)}</div><div class="wmeta">${escapeHtml(ctDateFr(nxt.date))}<br>`
+      + `${Math.round((Date.parse(`${nxt.date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000)} hari lagi dari hari ini \u00b7 sumber: dokumen rasmi kabinet.gov.my (disemak admin).</div></div>`
+    : '<p>Tiada cuti akan datang dalam liputan data.</p>';
+  const klLw = cu.longWeekends(cu.forState(rows26, 'KUL'));
+  const stateCards = cu.STATES.map((st) => `<div class="wx-card"><h3><a href="/cuti/${st.slug}">${escapeHtml(st.name)}</a></h3><div class="meta">Hujung minggu ${escapeHtml(st.weekend)} \u00b7 ${cu.forState(rows26, st.code).length} cuti 2026</div></div>`).join('');
+  const body = hero
+    + `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Jumlah entri cuti 2026</h3><div class="big">${rows26.length}</div><div class="meta">nasional + negeri (berbilang negeri dikira sekali setiap negeri)</div></div>`
+    + `<div class="wx-card"><h3>Jumlah entri cuti 2027</h3><div class="big">${rows27.length}</div><div class="meta">pelan awal sebelum gazet rasmi terbit</div></div>`
+    + `<div class="wx-card"><h3>Hujung minggu panjang (KL/WP)</h3><div class="big">${klLw.length}</div><div class="meta">2026 \u2014 lihat halaman khas</div></div>`
+    + `</div>`
+    + `<h2 class="section-title">Cuti akan datang (10 terdekat)</h2>${ctTable(upcoming)}`
+    + `<h2 class="section-title">Mengapa berbeza ikut negeri</h2><p>Malaysia mempunyai dua lapis kelepasan: <b>cuti persekutuan</b> (Hari Merdeka, Aidilfitri, Aidiladha, Tahun Baharu dan lain-lain) yang diwartakan untuk seluruh negara, dan <b>cuti negeri</b> seperti hari keputeraan Sultan/Raja setiap negeri. Negeri juga bebas memilih hari hujung minggu — Johor, Kedah, Kelantan dan Terengganu bercuti <b>Jumaat\u2013Sabtu</b>, manakala selebihnya <b>Sabtu\u2013Ahad</b>. Sebab itu cuti Aidilfitri 2026 (Ahad\u2013Selasa) menjadi 4 hari di Johor tetapi hanya 3 hari di Selangor.</p>`
+    + `<h2 class="section-title">Negeri &amp; wilayah</h2><div class="wx-grid">${stateCards}</div>`
+    + `<p class="meta">Perlu perancangan lebih detail? Semak <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a> dan <a href="/cuti/2027">kalendar 2027</a>; untuk merancang aktiviti luar, lihat <a href="/cuaca">Kompleks Cuaca</a>; bumi bergegar? <a href="/gempa">Kompleks Gempa</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Cuti Tukuk-OS',
+    description: 'Kalendar cuti umum Malaysia 2026 dan 2027 mengikut negeri, disemak terhadap dokumen rasmi kabinet.gov.my.',
+    url: 'https://tukuk.org/cuti', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return cutiDoc({
+    title: 'Cuti Umum Malaysia 2026 & 2027 \u2014 Jadual Penuh Ikut Negeri | Tukuk-OS',
+    desc: 'Kalendar cuti umum Malaysia 2026 dan 2027: senarai tarikh rasmi (disemak terhadap kabinet.gov.my), kiraan hujung minggu panjang dan jadual khusus setiap negeri & wilayah persekutuan.',
+    selfUrl: 'https://tukuk.org/cuti',
+    heroTitle: 'Kompleks Cuti Tukuk-OS', heroSub: 'Jadual kelepasan am 13 negeri + 3 wilayah \u00b7 sumber disemak dokumen rasmi \u00b7 percuma',
+    body, ld,
+  });
+}
+
+// ——— Halaman tahun (/cuti/2026, /cuti/2027) — nasional penuh + LW 4 kawasan ———
+function cutiYearPage(req, year, rows) {
+  const sorted = [...rows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const selfUrl = `https://tukuk.org/cuti/${year}`;
+  const areas = [['KUL', 'Kuala Lumpur &amp; Putrajaya'], ['SGR', 'Selangor'], ['JHR', 'Johor'], ['SBH', 'Sabah'], ['SWK', 'Sarawak']];
+  const lwBlocks = areas.map(([code, label]) => {
+    const list = cu.longWeekends(cu.forState(sorted, code));
+    return `<h2 class="section-title">Hujung minggu panjang \u2014 ${label}</h2>${ctLwHtml(list)}`;
+  }).join('');
+  const stateCards = cu.STATES.map((st) => `<li><a href="/cuti/${st.slug}?tahun=${year}">${escapeHtml(st.name)}</a></li>`).join('');
+  const body = `<p>Senarai penuh kelepasan am bagi tahun <b>${year}</b> \u2014 ${sorted.length} tarikh merentas semua negeri, disemak terhadap dokumen rasmi <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">kabinet.gov.my</a>. Entri bertanda <i>tertakluk perubahan</i> ialah cuti yang masih boleh ditambah/dipotong kerajaan (biasanya cuti khas sambutan).</p>`
+    + `<h2 class="section-title">Semua cuti ${year}</h2>${ctTable(sorted)}`
+    + lwBlocks
+    + `<h2 class="section-title">Jadual ikut negeri</h2><ul>${stateCards}</ul>`
+    + `<p class="meta">Cuti keputeraan negeri mungkin dikekalkan pada tarikh lama sehingga istana umumkan; semak halaman negeri anda. <a href="/cuti/penjelasan">Fahami cara kalendar cuti Malaysia berfungsi</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Cuti Umum Malaysia ${year}`,
+    description: `Senarai penuh cuti umum Malaysia ${year} mengikut tarikh dan negeri, dengan kiraan hujung minggu panjang.`,
+    url: selfUrl,
+  }).replace(/</g, '\\u003c');
+  return cutiDoc({
+    title: `Cuti Umum Malaysia ${year} \u2014 Senarai Penuh & Hujung Minggu Panjang | Tukuk-OS`,
+    desc: `Kalendar lengkap cuti umum ${year}: ${sorted.length} tarikh disemak terhadap dokumen rasmi kerajaan, kiraan hujung minggu panjang KL, Selangor, Johor, Sabah dan Sarawak.`,
+    selfUrl,
+    heroTitle: `Cuti Umum ${year}`, heroSub: `${sorted.length} tarikh kelepasan am \u00b7 nasional & negeri \u00b7 dikemas kini serta-merta bila gazet berubah`,
+    body, ld,
+  });
+}
+
+// ——— /cuti/hujung-minggu-panjang — gabungan terbaik 5 kawasan + hari bridge ———
+function cutiLongWeekendPage(req, rows26, rows27) {
+  const seen = new Map();
+  for (const [code, rows, year] of [['KUL', rows26, 2026], ['SGR', rows26, 2026], ['JHR', rows26, 2026], ['SBH', rows26, 2026], ['SWK', rows26, 2026], ['KUL', rows27, 2027], ['SGR', rows27, 2027], ['JHR', rows27, 2027]]) {
+    for (const w of cu.longWeekends(cu.forState(rows, code))) {
+      const k = `${code}|${w.start}|${w.end}`;
+      if (!seen.has(k)) seen.set(k, { ...w, area: code, year });
+    }
+  }
+  const list = [...seen.values()].sort((a, b) => String(a.start).localeCompare(String(b.start)));
+  const auto = list.filter((w) => w.auto); const bridge = list.filter((w) => !w.auto && w.bridge);
+  const areaName = (code) => { const st = cu.STATES.find((x) => x.code === code); return st ? st.name : code; };
+  const fmt = (w) => `<tr><td>${escapeHtml(areaName(w.area))} ${w.year}</td><td>${escapeHtml(ctShort(w.start))} \u2013 ${escapeHtml(ctShort(w.end))}</td><td><b>${w.spanDays} hari</b></td><td>${escapeHtml(w.holidays.map((h) => h.name).join(' + '))}</td></tr>`;
+  const body = `<p>Hujung minggu panjang ialah kombinasi cuti + hari tidak bekerja yang paling jimat untuk bercuti. Halaman ini menghimpunkan gabungan <b>automatik</b> (tiada cuti rehat diperlukan) dan <b>jambatan</b> (cukup <b>1 hari</b> cuti rehat untuk melanjutkan hujung minggu) bagi Kuala Lumpur, Selangor, Johor, Sabah dan Sarawak untuk 2026 &amp; 2027.</p>`
+    + `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Gabung automatik</h3><div class="big">${auto.length}</div><div class="meta">3 hari atau lebih tanpa cuti rehat</div></div>`
+    + `<div class="wx-card"><h3>Perlu 1 hari jambatan</h3><div class="big">${bridge.length}</div><div class="meta">cuti tunggal Selasa/Khamis \u2014 ambil 1 hari, dapat 4</div></div>`
+    + `<div class="wx-card"><h3>Tahun liputan</h3><div class="big">${cu.YEAR_MIN}\u2013${cu.YEAR_MAX}</div><div class="meta">data rasmi gazet setakat ini</div></div></div>`
+    + `<h2 class="section-title">Gabungan automatik</h2><table class="wx-table"><tr><th>Kawasan</th><th>Tempoh</th><th>Panjang</th><th>Cuti berkaitan</th></tr>${auto.map(fmt).join('') || '<tr><td colspan="4">Tiada.</td></tr>'}</table>`
+    + `<h2 class="section-title">Gabungan jambatan (1 hari cuti rehat)</h2><table class="wx-table"><tr><th>Kawasan</th><th>Tempoh</th><th>Panjang</th><th>Cuti berkaitan</th></tr>${bridge.map(fmt).join('') || '<tr><td colspan="4">Tiada.</td></tr>'}</table>`
+    + `<p>Strategi popular: tempah inap desa atau penerbangan awal sebaik gazet tahunan terbit (biasanya Oktober\u2013November tahun sebelumnya) kerana cuti jambatan ini merebut kapasiti dengan cepat. Negeri ber-hujung-minggu Jumaat\u2013Sabtu (Johor, Kedah, Kelantan, Terengganu) mempunyai kiraan berbeza \u2014 buka halaman masing-masing.</p>`
+    + `<p class="meta">Lihat juga: <a href="/cuti/2026">kalendar 2026</a> \u00b7 <a href="/cuti/2027">kalendar 2027</a> \u00b7 <a href="/cuti/penjelasan">cara kalendar cuti berfungsi</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Hujung Minggu Panjang Malaysia 2026\u20132027',
+    description: 'Kiraan cuti yang bergabung dengan hujung minggu tanpa atau dengan 1 hari cuti rehat, ikut negeri.',
+    url: 'https://tukuk.org/cuti/hujung-minggu-panjang',
+  }).replace(/</g, '\\u003c');
+  return cutiDoc({
+    title: 'Hujung Minggu Panjang Malaysia 2026 & 2027 \u2014 Kiraan Cuti | Tukuk-OS',
+    desc: 'Senarai hujung minggu panjang Malaysia 2026 dan 2027 yang terbentuk automatik, serta cuti Selasa/Khamis yang cukup 1 hari cuti rehat (jambatan) \u2014 ikut KL, Selangor, Johor, Sabah, Sarawak.',
+    selfUrl: 'https://tukuk.org/cuti/hujung-minggu-panjang',
+    heroTitle: 'Hujung Minggu Panjang', heroSub: 'Bila cuti bersambung hujung minggu \u2014 tanpa atau dengan 1 hari cuti rehat',
+    body, ld,
+  });
+}
+
+// ——— /cuti/:negeri — jadual satu negeri + LW ikut konvensyen hujung minggu negeri ———
+function cutiStatePage(req, st, year, rows) {
+  const sorted = [...rows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const selfUrl = `https://tukuk.org/cuti/${st.slug}${Number(year) === cu.YEAR_MIN ? '' : `?tahun=${year}`}`;
+  const lw = cu.longWeekends(sorted);
+  const next = cu.nextHoliday(sorted, new Date().toISOString().slice(0, 10));
+  const otherYear = Number(year) === cu.YEAR_MIN ? cu.YEAR_MAX : cu.YEAR_MIN;
+  const body = `<p>Jadual kelepasan am <b>${escapeHtml(st.name)}</b> tahun <b>${year}</b>: ${sorted.length} cuti. Hujung minggu rasmi ${escapeHtml(st.name)} ialah <b>${escapeHtml(st.weekend)}</b>${st.weekend === 'Jumaat\u2013Sabtu' ? ' \u2014 jadi cuti yang jatuh pada Jumaat sudah berada dalam hujung minggu negeri ini, dan cuti Ahad biasanya diganti pada Isnin.' : ''} Cuti keputeraan Sultan/Raja negeri disenaraikan di sini juga.</p>`
+    + (next ? `<div class="wx-hero"><div class="temp">${escapeHtml(next.name)}</div><div class="wmeta">Cuti ${escapeHtml(st.name)} seterusnya<br>${escapeHtml(ctDateFr(next.date))}</div></div>` : '')
+    + `<h2 class="section-title">Semua cuti ${escapeHtml(st.name)} ${year}</h2>${ctTable(sorted)}`
+    + `<h2 class="section-title">Hujung minggu panjang di ${escapeHtml(st.name)}</h2>${ctLwHtml(lw)}`
+    + `<p class="meta">Negeri ini ${sorted.length} cuti pada ${year}; bandingkan dengan <a href="/cuti/${st.slug}?tahun=${otherYear}">${otherYear}</a> atau lihat <a href="/cuti">perbandingan semua negeri</a>. Sebelum merancang aktiviti luar, semak <a href="/cuaca">cuaca ${escapeHtml(st.name)}</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Cuti Umum ${st.name} ${year}`,
+    description: `Senarai cuti umum ${st.name} ${year} bersama kiraan hujung minggu panjang mengikut hari hujung minggu negeri.`,
+    url: selfUrl,
+  }).replace(/</g, '\\u003c');
+  return cutiDoc({
+    title: `Cuti Umum ${st.name} ${year} \u2014 Jadual & Hujung Minggu Panjang | Tukuk-OS`,
+    desc: `Senarai penuh cuti umum ${st.name} ${year} (disemak terhadap dokumen kerajaan), hujung minggu ${st.weekend}, dan tarikh kelepasan berikutnya.`,
+    selfUrl,
+    heroTitle: `Cuti ${st.name} ${year}`, heroSub: `${sorted.length} kelepasan am \u00b7 hujung minggu ${st.weekend}`,
+    body, ld,
+  });
+}
+
+// ——— /cuti/penjelasan — statik, pendidikan ———
+function cutiExplainPage(req) {
+  const body = `<p>Kalendar kelepasan am Malaysia kelihatan ringkas, tetapi ada empat mekanik yang menjadikannya berbeza setiap negeri. Memahami mekanik ini membantu anda merancang cuti dengan lebih tepat daripada iklan pakej percutian.</p>`
+    + `<h2 class="section-title">1. Dua lapis: persekutuan dan negeri</h2><p>Cuti persekutuan (Hari Merdeka 31 Ogos, Maulidur Rasul, Aidilfitri, Aidiladha, Tahun Baharu, Wesak, Deepavali, Krismas dan lain-lain) diwartakan untuk seluruh negara. Setiap negeri menambah <b>cuti keputeraan Sultan/Raja</b> dan beberapa cuti khas negeri (misalnya Hari Gawai di Sarawak, Pesta Kaamatan di Sabah, Israk Mikraj pilihan beberapa negeri). Inilah sebab jadual Kebangsaan tiada satu saiz yang muat semua.</p>`
+    + `<h2 class="section-title">2. Dua konvensyen hujung minggu</h2><p>Johor, Kedah, Kelantan dan Terengganu (dahulu juga Perlis) menetapkan <b>Jumaat\u2013Sabtu</b> sebagai hujung minggu; selebihnya <b>Sabtu\u2013Ahad</b>. Kesan langsung: cuti yang jatuh pada Jumaat di Johor bermakna 3 hari terus; cuti pada Ahad di Kelantan pula biasanya diganti.</p>`
+    + `<h2 class="section-title">3. Prinsip gantian &amp; cuti khas</h2><p>Kerajaan tidak suka cuti besar tersepit sehingga minggu kerja berpecah dua, jadi cuti yang jatuh pertengahan minggu sering disusuli <b>cuti khas</b> yang diwartakan lewat (contoh 2026: Awal Ramadan jatuh Isnin 20 Feb, berada dalam run yang sama dengan Tahun Baharu Cina 17–18 Feb sehingga menjadi 4 hari berturut di kebanyakan negeri). Entri bertanda <i>tertakluk perubahan</i> dalam jadual kami ialah cuti jenis ini — sentiasa semak gazet sebelum membeli tiket.</p>`
+    + `<h2 class="section-title">4. Cuti rehat & strategi jambatan</h2><p>Perkataan <i>bridge</i> dalam perancangan cuti: ambil <b>1 hari cuti rehat</b> pada Selasa atau Khamis untuk menyambung cuti tunggal dengan hujung minggu \u2014 4 hari bercuti dengan kos 1 hari. Halaman <a href="/cuti/hujung-minggu-panjang">hujung minggu panjang</a> kami mengira automatik setiap peluang ini.</p>`
+    + `<h2 class="section-title">Dari mana data kami?</h2><p>Jadual dalam kompleks ini datang daripada API awam <b>malaysia-holiday.dydxsoft.my</b> yang disemak admin terhadap dokumen rasmi <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">www.kabinet.gov.my/hari-kelepasan-am</a>; nama perayaan disenaraikan dalam Bahasa Melayu. Kami cache 30 hari dan kemas kini serta-merta bila sumber berubah. Untuk keadaan langit semasa ketika bercuti, guna <a href="/cuaca">Kompleks Cuaca</a>; tanah bergegar di destinasi? <a href="/gempa">Kompleks Gempa</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Article', name: 'Cara Kalendar Cuti Malaysia Berfungsi',
+    description: 'Penjelasan Bahasa Melayu: cuti persekutuan vs negeri, konvensyen hujung minggu, gantian dan strategi cuti jambatan.',
+    url: 'https://tukuk.org/cuti/penjelasan', inLanguage: 'ms', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
+  }).replace(/</g, '\\u003c');
+  return cutiDoc({
+    title: 'Cara Kalendar Cuti Malaysia Berfungsi \u2014 Persekutuan, Negeri & Jambatan | Tukuk-OS',
+    desc: 'Fahami perbezaan cuti persekutuan dan negeri, dua konvensyen hujung minggu (Jumaat\u2013Sabtu vs Sabtu\u2013Ahad), gantian Aidilfitri dan strategi cuti jambatan \u2014 dalam Bahasa Melayu.',
+    selfUrl: 'https://tukuk.org/cuti/penjelasan',
+    heroTitle: 'Cara Kalendar Cuti MY Berfungsi', heroSub: 'Empat mekanik yang menjelaskan setiap jadual kelepasan am',
     body, ld,
   });
 }
