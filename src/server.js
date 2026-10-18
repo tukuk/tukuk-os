@@ -1209,9 +1209,10 @@ const COMMON_CSS = `
   .feed .post-card { margin:0; }
   @media (max-width:680px){ .feed { grid-template-columns:1fr; } .hero h1 { font-size:1.9rem; } }
   .site-foot { margin-top:54px; border-top:1px solid var(--line); background:var(--panel); }
-  .foot-cols { display:grid; grid-template-columns:1.6fr repeat(3,1fr); gap:26px; padding:38px 0 22px; }
-  @media (max-width:760px){ .foot-cols { grid-template-columns:1fr 1fr; } .brand-foot { grid-column:1 / -1; } }
+  .foot-cols { display:grid; grid-template-columns:1.5fr repeat(4,1fr); gap:26px; padding:38px 0 22px; }
+  @media (max-width:900px){ .foot-cols { grid-template-columns:1fr 1fr; } .brand-foot { grid-column:1 / -1; } }
   .foot-cols h4 { margin:0 0 12px; font-size:.82rem; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
+  .foot-cols h4 + h4, .foot-cols ul + h4 { margin-top:18px; }
   .foot-cols ul { list-style:none; margin:0; padding:0; }
   .foot-cols li { margin:0 0 9px; }
   .foot-cols a { color:var(--text); opacity:.85; font-size:.94rem; } .foot-cols a:hover { opacity:1; color:var(--accent); text-decoration:none; }
@@ -1354,17 +1355,22 @@ function siteFooter() {
       <li><a href="/cari">Search</a></li>
       <li><a href="/blog">Blog</a></li>
       <li><a href="/wiki">Wiki</a></li>
-      <li><a href="/nasa">NASA APOD</a></li>
-      <li><a href="/nasa/archive">APOD archive</a></li>
-      <li><a href="/nasa/sky">Sky tonight</a></li>
-      <li><a href="/nasa/iss">ISS live</a></li>
-      <li><a href="/nasa/asteroids">Asteroid watch</a></li>
-      <li><a href="/nasa/exoplanets">Exoplanets</a></li>
-      <li><a href="/cuaca">Weather today</a></li>
-      <li><a href="/cuaca/peta">Weather map</a></li>
-      <li><a href="/cuaca/serian">Cuaca Serian</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/docs">Docs</a></li>
+    </ul></div>
+    <div><h4>NASA Space</h4><ul>
+      <li><a href="/nasa">Picture of the Day</a></li>
+      <li><a href="/nasa/archive">APOD Archive</a></li>
+      <li><a href="/nasa/sky">Sky Tonight</a></li>
+      <li><a href="/nasa/iss">ISS Live</a></li>
+      <li><a href="/nasa/asteroids">Asteroid Watch</a></li>
+      <li><a href="/nasa/exoplanets">Exoplanets</a></li>
+    </ul></div>
+    <div><h4>Weather</h4><ul>
+      <li><a href="/cuaca">Weather today</a></li>
+      <li><a href="/cuaca/peta">Weather map</a></li>
+      <li><a href="/cuaca/ekstrem">World extremes</a></li>
+      <li><a href="/cuaca/serian">Cuaca Serian</a></li>
     </ul></div>
     <div><h4>Site</h4><ul>
       <li><a href="/about">About</a></li>
@@ -1372,8 +1378,8 @@ function siteFooter() {
       <li><a href="/download">Download</a></li>
       <li><a href="/rekomendasi">Recommended</a></li>
       <li><a href="/access">Global Access</a></li>
-    </ul></div>
-    <div><h4>Legal</h4><ul>
+    </ul>
+    <h4>Legal</h4><ul>
       <li><a href="/privacy">Privacy</a></li>
       <li><a href="/terms">Terms</a></li>
     </ul></div>
