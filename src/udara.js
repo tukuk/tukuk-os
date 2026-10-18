@@ -171,6 +171,11 @@ async function getAirRanking(force) {
       refreshAir().catch(() => {});
       return Object.assign({}, hit.data, { updating: true });
     }
+    // Tiada snapshot lagi (lawatan pertama selepas restart, sebelum prewarm
+    // sempat): pelawat tak patut tunggu scrape penuh ~2–3 minit — hidangkan
+    // keadaan 'starting' yang jujur sambil scan pertama berjalan di belakang.
+    refreshAir().catch(() => {});
+    return { source: 'starting', rows: [], failedCount: 0, asOf: '', fetchedAt: Date.now() };
   }
   return refreshAir();
 }

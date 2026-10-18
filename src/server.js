@@ -5258,8 +5258,11 @@ function udaraHubPage(air, co2) {
     <details><summary style="cursor:pointer;font-weight:600;margin:10px 0">Full ranking \u2014 all ${rows.length} cities, cleanest to dirtiest</summary>
     <table class="air-table"><thead><tr><th>#</th><th>City</th><th>Region</th><th>US AQI</th><th>PM2.5</th></tr></thead><tbody>${all}</tbody></table></details>`;
   } else {
+    const waitNote = air && air.source === 'starting'
+      ? `<p class="meta">\u21BB First air scan of this server session is running right now — reload in about a minute and the full world ranking will be here.</p>`
+      : `<p class="meta">\u26A0 The live world feed is resting right now — we would rather show you nothing than show you invented numbers. Reload in a few minutes; the scale below and every explainer on this complex always work.</p>`;
     data = `<div class="air-grid">${co2Card}</div>
-    <p class="meta">\u26A0 The live world feed is resting right now \u2014 we would rather show you nothing than show you invented numbers. Reload in a few minutes; the scale below and every explainer on this complex always work.</p>`;
+    ${waitNote}`;
   }
   const body = `<p class="learn-intro">Live air-quality readings for over seventy world cities, modelled by the Copernicus Atmosphere Monitoring Service and delivered through the free Open-Meteo API, refreshed on our side every 45 minutes. These are model estimates for each city\u2019s coordinates \u2014 your street can differ; treat them as a global pulse, not a personal sensor. Weather for any of these cities lives at <a href="/cuaca">World Weather</a>.</p>
   ${data}
