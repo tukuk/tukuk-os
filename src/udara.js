@@ -9,9 +9,13 @@
 // 'partial' | 'last-known' | 'unavailable'. TIADA data rekaan — kalau sumber mati,
 // halaman sendiri memaparkan nota rehat, bukan nombor rekaan.
 const axios = require('axios');
+const https = require('https');
 
 const http = axios.create({
   timeout: 20000,
+  // VPS kami: route IPv6 ke gml.noaa.gov mati (ETIMEDOUT segerak); curl IPv4 ok.
+  // Paksa keluarga IPv4 supaya NOAA sentiasa boleh dicapai.
+  httpsAgent: new https.Agent({ family: 4 }),
   headers: { 'User-Agent': 'TukukOS-Air-Client/1.0 (+https://tukuk.org)' },
 });
 
