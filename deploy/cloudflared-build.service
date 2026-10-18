@@ -1,0 +1,16 @@
+[Unit]
+# Connector cloudflared KEDUA — tunnel legacy build-tukuk (build.tukuk.org →
+# 127.0.0.1:5174 Tukuk Builder). Tunnel utama berjenis remote-config jadi
+# hostname baharu tak boleh ditambah lewat ingress lokal; lihat
+# deploy/cloudflared/config-build.example.yml untuk langkah provisioning.
+Description=cloudflared Tunnel kedua - build.tukuk.org (legacy mode, ingress lokal)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config-build.yml tunnel run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

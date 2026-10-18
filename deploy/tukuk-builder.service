@@ -1,11 +1,14 @@
 [Unit]
 # Tukuk Builder — fork bolt.diy: pembina aplikasi AI berjenama Tukuk.
-# HIDUP DI HOSTNAME SENDIRI (aktif: dashboard.tukuk.org — sudah wujud dalam
-# remote-config tunnel; peraturan laluan /admin & /api kekal ke port 3000).
-# build.tukuk.org juga dirancang tetapi perlu Public Hostname manual di
-# dashboard — token cfut_ tidak boleh urus DNS. WebContainer memerlukan header
-# COOP/COEP yang ditetapkan entry.server.tsx — di bawah tukuk.org ia akan
-# berlanggar dengan CSP sedia ada, sebab itu hostname berasingan.
+# HIDANG DI DUA HOSTNAME (dua-duanya live):
+#   build.tukuk.org — tunnel LEGACY kedua (cloudflared-build.service; lihat
+#     deploy/cloudflared/config-build.example.yml — tunnel utama berjenis
+#     remote-config, hostname baharu MUSTAHIL lewat ingress lokal)
+#   dashboard.tukuk.org — remote-config tunnel utama; peraturan laluan
+#     /admin & /api kekal ke port 3000.
+# WebContainer memerlukan header COOP/COEP yang ditetapkan entry.server.tsx —
+# di bawah tukuk.org ia berlanggar dengan CSP sedia ada, sebab itu hostname
+# berasingan.
 # Vite menolak Host luar senarai: preview/server.allowedHosts=['.tukuk.org']
 # dalam vite.config.ts (fork tukuk-builder commit 9e769c4) — jangan dibuang.
 Description=Tukuk Builder (fork bolt.diy — agen pembinaan aplikasi AI)
