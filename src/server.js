@@ -2163,7 +2163,7 @@ function nasaIssPage(req, iss, crew) {
     + `for(var gx=0;gx<=W;gx+=W/12){g.beginPath();g.moveTo(gx,0);g.lineTo(gx,H);g.stroke();}`
     + `for(var gy=0;gy<=H;gy+=H/6){g.beginPath();g.moveTo(0,gy);g.lineTo(W,gy);g.stroke();}`
     + `g.fillStyle='rgba(4,8,24,.5)';`
-    + `for(var cx=0;cx<W;cx+=3){var lo=-180+(cx+1.5)/W*360,dl=(lo-SL)*rad,ft=Math.atan2(-cd*Math.cos(dl),sd)/rad,yt=(90-ft)/180*H;`
+    + `for(var cx=0;cx<W;cx+=3){var lo=-180+(cx+1.5)/W*360,dl=(lo-SL)*rad,ft=Math.atan(-cd*Math.cos(dl)/sd)/rad,yt=(90-ft)/180*H;`
     + `if(sd>1e-6)g.fillRect(cx,yt,3,H-yt);else if(sd<-1e-6)g.fillRect(cx,0,3,yt);else if(Math.cos(dl)<0)g.fillRect(cx,0,3,H);}`
     + `g.strokeStyle='rgba(255,255,255,.6)';g.lineWidth=2;g.beginPath();var ic=51.6*rad;`
     + `for(var d=0;d<=360;d+=3){var th=d*rad,la=Math.asin(Math.sin(ic)*Math.sin(th))/rad,px=((d*2)%360)/360*W,py=(90-la)/180*H;if(d===0)g.moveTo(px,py);else g.lineTo(px,py);}`
