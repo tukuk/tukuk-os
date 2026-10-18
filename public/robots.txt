@@ -15,3 +15,4 @@ Allow: /
 Sitemap: https://tukuk.org/sitemap.xml
 Sitemap: https://tukuk.org/sitemap-nasa.xml
 Sitemap: https://tukuk.org/sitemap-cuaca.xml
+Sitemap: https://tukuk.org/sitemap-gempa.xml

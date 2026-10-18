@@ -25,6 +25,7 @@ const crawler = require('./crawler');
 const fallback = require('./fallback');
 const nasa = require('./nasa');
 const wx = require('./weather');
+const gp = require('./gempa');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -548,6 +549,34 @@ app.get('/cuaca/:slug/udara', (req, res) => cuacaCityHandler(req, res, 'udara'))
 app.get('/cuaca/:slug/surya', (req, res) => cuacaCityHandler(req, res, 'surya'));
 app.get('/cuaca/:slug', (req, res) => cuacaCityHandler(req, res, 'kota'));
 
+// ── LALUAN KOMPLEKS GEMPA (/gempa*) — suapan USGS, statik-dahulu, kemudian :region ──
+app.get('/gempa', async (req, res) => {
+  try {
+    const [rows, myRows] = await Promise.all([
+      gp.regionFeed(gp.findRegion('dunia')),
+      gp.regionFeed(gp.findRegion('malaysia')),
+    ]);
+    if (!rows || !rows.length) throw new Error('suapan kosong');
+    res.status(200).type('html').send(gempaHubPage(req, rows, myRows || []));
+  } catch {
+    res.status(503).type('html').send(gempaBusy('Suapan gempa belum sempat dimuat'));
+  }
+});
+
+app.get('/gempa/penjelasan', (req, res) => res.status(200).type('html').send(gempaExplainPage(req)));
+
+// :region DIHURUFKAN selepas laluan literal — senarai semak dalam handler (TDZ selamat).
+app.get('/gempa/:region', async (req, res) => {
+  const region = gp.findRegion(req.params.region);
+  if (!region) return res.status(404).type('html').send(gempaBusy(`Rantau "${req.params.region}" tidak dikenali`));
+  try {
+    const rows = await gp.regionFeed(region);
+    res.status(200).type('html').send(gempaRegionPage(req, region, rows || []));
+  } catch {
+    res.status(503).type('html').send(gempaBusy(`Data gempa ${region.name} tidak sempat dimuat`));
+  }
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1052,7 +1081,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1129,6 +1158,20 @@ app.get('/sitemap-cuaca.xml', (req, res) => {
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + special + '\n' + cities + '\n</urlset>\n'
+  );
+});
+
+// ── SITEMAP GEMPA — hub + 5 rantau (jamly) + penjelasan (bulanan) ──
+app.get('/sitemap-gempa.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = ['/gempa']
+    .concat(gp.REGIONS.map((r) => `/gempa/${r.slug}`))
+    .map((p) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>${p === '/gempa' ? '0.9' : '0.7'}</priority>\n  </url>`)
+    .join('\n');
+  const explain = `  <url>\n    <loc>https://tukuk.org/gempa/penjelasan</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>`;
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + urls + '\n' + explain + '\n</urlset>\n'
   );
 });
 
@@ -1371,6 +1414,8 @@ function siteFooter() {
       <li><a href="/cuaca/peta">Weather map</a></li>
       <li><a href="/cuaca/ekstrem">World extremes</a></li>
       <li><a href="/cuaca/serian">Cuaca Serian</a></li>
+      <li><a href="/gempa">Latest earthquakes</a></li>
+      <li><a href="/gempa/malaysia">Gempa Malaysia</a></li>
     </ul></div>
     <div><h4>Site</h4><ul>
       <li><a href="/about">About</a></li>
@@ -2274,7 +2319,7 @@ function cuacaHubPage(req, snap) {
     + `<p>Setiap halaman bandar membawa semasa, 8 slot jam akan datang, ramalan 5\u20136 hari, kualiti udara (PM2.5), waktu matahari serta nasihat bersiap yang dijana automatik \u2014 semua daripada API OpenWeather tier percuma. Bermula dari kampung? <a href="/cuaca/serian">Cuaca hari ini di Serian</a>.</p>`
     + linkBoxes
     + `<h2 class="section-title">Kenapa cuaca penting untuk kita</h2><p>Malaysia duduk di laluan zon hujan khatulistiwa: monsun barat daya (Mei\u2013September) dan monsun timur laut (November\u2013Mac) silih berganti membawa hujan, dan jerebu rentas sempadan sesekali menentukan sama ada sekolah ditutup. Memahami bacaan \u2014 kelembapan, tekanan, kelajuan angin, indeks AQI \u2014 menukar ramalan daripada angka kepada keputusan: bila sesuai menanam, bila perlu bawa payung, bila paling bahaya memandu.</p>`
-    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan.</p>`;
+    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS.</p>`;
   return cuacaDoc({
     title: 'Cuaca Hari Ini \u2014 Suhu, Ramalan & Kualiti Udara Seluruh Dunia | Tukuk-OS',
     desc: 'Semak cuaca hari ini secara langsung: suhu, hujan, angin, kualiti udara PM2.5 dan ramalan 5 hari untuk Kuala Lumpur, Kuching, Singapura dan ratusan bandar lain.',
@@ -2562,7 +2607,206 @@ function cuacaWindPage(req) {
   });
 }
 
-// ── TUKUK-OS WIKI — gaya Ensiklopedia (MediaWiki-esque) ────────────────────
+// ── TUKUK-OS GEMPA COMPLEX — halaman BM di atas suapan USGS (percuma, tanpa kunci) ──
+// Data atas permintaan melalui src/gempa.js (cache 10 minit, gagal → 503 noindex).
+// Greda magnitude, jadual terjemah, dan nasihat keselamatan — ceruk carian
+// "gempa bumi hari ini" / "gempa sabah" yang pesaing BM-nya sangat sedikit.
+const GEMPA_SECTIONS = [
+  { href: '/gempa', icon: '\uD83C\uDF0D', name: 'Gempa Bumi Terkini', blurb: 'Senarai langsung gempa seluruh dunia — data USGS, kemas kini setiap 10 minit.' },
+  { href: '/gempa/malaysia', icon: '\uD83C\uDDF9', name: 'Gempa Malaysia', blurb: 'Zon Sabah, Sarawak & sempadan — 30 hari terakhir, dari magnitude kecil.' },
+  { href: '/gempa/asia-tenggara', icon: '\uD83C\uDF34', name: 'Asia Tenggara', blurb: 'Indonesia, Filipina, PNG — lingkaran tektonik paling aktif di Asia.' },
+  { href: '/gempa/jepun', icon: '\uD83D\uDDE5', name: 'Jepun & Pasifik Barat', blurb: 'Cincin Api barat: Jepun, Guam, Kamchatka dan parit Mariana.' },
+  { href: '/gempa/pasifik-timur', icon: '\uD83C\uDFE5', name: 'Pasifik Timur', blurb: 'Pantai barat Amerika: California, Chile, Peru, Mexico, Alaska.' },
+  { href: '/gempa/dunia', icon: '\uD83D\uDD2F', name: 'Dunia M4.5+', blurb: 'Semua gempa besar 4.5 ke atas dalam tujuh hari terakhir.' },
+  { href: '/gempa/penjelasan', icon: '\uD83D\uDCD8', name: 'Cara Baca Data Gempa', blurb: 'Magnitude, kedalaman, tsunami dan apa perlu buat bila bumi bergegar.' },
+];
+
+function gempaNav() {
+  return `<nav aria-label="Bahagian gempa"><h2 class="section-title">Jelajahi Kompleks Gempa Tukuk-OS</h2><div class="feed">`
+    + GEMPA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+function gempaBusy(msg) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>Sumber data gempa (USGS) tidak sempat menjawab. Sila cuba lagi beberapa minit.</p><p><a href="/gempa">Kembali ke Kompleks Gempa</a></p></body>`;
+}
+
+// Shell sama resipi cuacaDoc: lang ms, 3 slot iklan, nav silang, CSS wx-* digunakan
+// semula supaya hab & jadual konsisten merentas kedua-dua kompleks bumi.
+function gempaDoc(o) {
+  const robots = o.robots || 'index,follow,max-image-preview:large';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta property="og:locale" content="ms_MY">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+.wx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.wx-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21)}
+.wx-card h3{margin:0 0 6px;font-size:.88rem;color:var(--muted,#9aa3b2);font-weight:600}
+.wx-card .big{font-size:1.4rem;font-weight:700}
+.wx-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;background:linear-gradient(135deg,#8a3b12 0%,#3d1a08 100%);color:#fff}
+.wx-hero .temp{font-size:2.6rem;font-weight:800;line-height:1}
+.wx-hero .wmeta{font-size:.92rem;opacity:.92;line-height:1.5}
+.wx-pill{display:inline-block;border-radius:999px;padding:3px 12px;font-weight:700;font-size:.85rem;color:#08121e}
+table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
+.wx-table th,.wx-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+.wx-table th{background:var(--panel,#171a21)}
+@media(max-width:680px){.wx-grid{grid-template-columns:1fr}.wx-hero .temp{font-size:2rem}table.wx-table{display:block;overflow-x:auto}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('gempa')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${gempaNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// ——— Utiliti paparan: masa MYT (UTC+8), cip magnitude, jadual ———
+function gpWhen(t) {
+  const p = wxParts(Math.floor(t / 1000), 8 * 3600);
+  return `${WX_DAYS[p.wday]} ${p.day} ${WX_MONTHS[p.mon].slice(0, 3)} ${String(p.h).padStart(2, '0')}:${String(p.m).padStart(2, '0')}`;
+}
+function gpChip(m) {
+  const bg = m >= 6 ? '#c0392b' : m >= 5 ? '#e67e22' : m >= 4 ? '#2980b9' : '#7f8c8d';
+  return `<span class="wx-pill" style="background:${bg};color:#fff">M ${Number(m).toFixed(1)}</span>`;
+}
+function gpTable(rows, n) {
+  if (!rows || !rows.length) return '<p>Belum ada rekod dalam tempoh ini.</p>';
+  return `<table class="wx-table"><tr><th>Bila (Waktu Malaysia)</th><th>Kuasa</th><th>Lokasi</th><th>Kedalaman</th><th>Maklum balas</th></tr>`
+    + rows.slice(0, n || rows.length).map((q) => `<tr><td>${gpWhen(q.time)}</td><td>${gpChip(q.mag)}</td>`
+      + `<td><a href="${escapeHtml(q.url)}" target="_blank" rel="noopener">${escapeHtml(q.place)}</a>${q.tsunami ? ' <b style="color:#e5534b">\u26A0 potensi tsunami</b>' : ''}${q.status === 'reviewed' ? ' <span class="meta">(disemak)</span>' : ''}</td>`
+      + `<td>${q.depth} km</td><td>${q.felt ? `${q.felt} laporan terasa` : (q.cdi ? `skala rasa ${q.cdi}` : '\u2014')}</td></tr>`).join('')
+    + '</table>';
+}
+function gpStatCards(rows, my) {
+  const s = gp.summarise(rows);
+  return `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Gempa M4.5+ (7 hari)</h3><div class="big">${s.count}</div><div class="meta">di seluruh dunia</div></div>`
+    + `<div class="wx-card"><h3>Paling kuat</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
+    + `<div class="wx-card"><h3>Gempa terdekat Malaysia</h3><div class="big">${my ? my.length : 0}</div><div class="meta">30 hari terakhir, semua magnitud</div></div>`
+    + `</div>`;
+}
+
+// ——— HAB /gempa — dunia ringkas + Malaysia penuh + kad wilayah ———
+function gempaHubPage(req, rows, myRows) {
+  const s = gp.summarise(rows);
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Gempa Tukuk-OS',
+    description: 'Senarai langsung gempa bumi seluruh dunia dan rantau Asia Tenggara daripada Survei Geologi AS (USGS).',
+    url: 'https://tukuk.org/gempa', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  const regionCards = gp.REGIONS.map((r) => `<div class="wx-card"><h3><a href="/gempa/${r.slug}">${escapeHtml(r.name)}</a></h3><div class="meta">${escapeHtml(r.blurb)}</div></div>`).join('');
+  const body = `<div class="wx-hero"><div class="temp">M ${s.max.toFixed(1)}</div><div class="wmeta">`
+    + `Gempa paling kuat seminggu terakhir \u00b7 ${escapeHtml(s.latest ? s.latest.place : '')}<br>`
+    + `${s.latest ? gpWhen(s.latest.time) + ' \u00b7 kedalaman ' + s.latest.depth + ' km' : ''} \u00b7 sumber: Survei Geologi Amerika Syarikat (USGS), data awam.</div></div>`
+    + gpStatCards(rows, myRows)
+    + `<h2 class="section-title">Sepuluh gempa terbaharu (M4.5+ dunia)</h2>${gpTable(rows, 10)}`
+    + `<h2 class="section-title">Gempa di sekitar Malaysia (30 hari)</h2>${gpTable(myRows, 20)}`
+    + `<p>Malaysia bukan di bawah Cincin Api, tetapi tidak bebas gegaran: zon seismik Sabah timur (runtuhan Lingkabau, Pitas dan Kota Belud) aktif dan pernah menggegarkan Gunung Kinabalu pada Jun 2015 (M6.0, 181 nyawa di pendakian), manakala gempa besar di Sumatera kerap terasa di Lembah Klang dan Pulau Pinang kerana tanah lembut mengampifikasi gelombang.</p>`
+    + `<h2 class="section-title">Rantau pemantauan</h2><div class="wx-grid">${regionCards}</div>`
+    + `<p class="meta">Baru nak fahami angka? Baca <a href="/gempa/penjelasan">cara baca data gempa</a>. Untuk cuaca semasa di lokasi anda, guna <a href="/cuaca">Kompleks Cuaca</a>; untuk langit malam, <a href="/nasa/sky">Langit Malam NASA</a>.</p>`;
+  return gempaDoc({
+    title: 'Gempa Bumi Hari Ini \u2014 Senarai Langsung Dunia & Malaysia | Tukuk-OS',
+    desc: 'Semak gempa bumi terkini secara langsung: magnitude, lokasi, kedalaman dan potensi tsunami daripada data awam USGS \u2014 kemas kini setiap 10 minit, termasuk zon Sabah dan Sumatera yang terasa di Malaysia.',
+    selfUrl: 'https://tukuk.org/gempa',
+    heroTitle: 'Kompleks Gempa Tukuk-OS', heroSub: 'Data langsung USGS \u00b7 kemas kini 10 minit \u00b7 percuma tanpa log masuk',
+    body, ld,
+  });
+}
+
+// ——— Halaman wilayah ———
+function gempaRegionPage(req, region, rows) {
+  const s = gp.summarise(rows);
+  const selfUrl = `https://tukuk.org/gempa/${region.slug}`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Gempa Bumi Terkini: ${region.name}`,
+    description: region.blurb, url: selfUrl,
+  }).replace(/</g, '\\u003c');
+  const body = `<p>${escapeHtml(region.blurb)} Data dikemas kini setiap 10 minit daripada Survei Geologi AS (USGS); masa dipaparkan dalam Waktu Malaysia (UTC+8).</p>`
+    + `<div class="wx-grid">`
+    + `<div class="wx-card"><h3>Jumlah dalam tempoh</h3><div class="big">${s.count}</div><div class="meta">magnitud minimum ${region.minMag.toFixed(1)}</div></div>`
+    + `<div class="wx-card"><h3>Paling kuat</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
+    + `<div class="wx-card"><h3>Dangkal (&lt;35 km)</h3><div class="big">${s.shallow}</div><div class="meta">gempa dangkal paling terasa di permukaan</div></div></div>`
+    + gpTable(rows, 50)
+    + (s.felt ? `<p><b>${s.felt}</b> daripada gempa tersenarai mempunyai laporan manusia yang merasakannya (butiran felt di USGS).</p>` : '')
+    + `<h2 class="section-title">Apa perlu buat bila bumi bergegar</h2><p><b>Reda \u2014 Lindungi \u2014 Tahan</b>: menjatuhkan diri ke lantai, berlindung di bawah meja kukuh dan tahan sehingga gegaran berhenti. Jangan berlari ketika gegaran masih ada; jangan guna lif; selepas itu periksa wayar, paip gas dan amaran susulan. Panduan penuh dalam <a href="/gempa/penjelasan">halaman penjelasan</a>.</p>`
+    + `<p class="meta">Lihat juga: <a href="/gempa">hab gempa dunia</a> \u00b7 <a href="/gempa/malaysia">zon Malaysia</a> \u00b7 <a href="/cuaca">cuaca semasa</a>.</p>`;
+  return gempaDoc({
+    title: `Gempa Bumi Terkini di ${region.name} — Magnitud, Lokasi & Kedalaman | Tukuk-OS`,
+    desc: `Senarai langsung gempa ${region.name}: magnitud, kedalaman, lokasi dan laporan terasa — data USGS kemas kini setiap 10 minit, masa dalam Waktu Malaysia.`,
+    selfUrl,
+    heroTitle: `Gempa di ${region.name}`, heroSub: `Suapan langsung USGS \u00b7 ${s.count} rekod dalam tempoh pemantauan`,
+    body, ld,
+  });
+}
+
+// ——— Halaman penjelasan (statik, pendidikan) ———
+function gempaExplainPage(req) {
+  const magRows = [
+    ['< 2.5', 'mikro', 'hanya alat seismograf dapat mengesan'],
+    ['2.5 – 5.0', 'ringan', 'kerap terasa berhampiran pusat; kerosakan kecil'],
+    ['5.0 – 6.0', 'sederhana', 'kerosakan serius di kawasan berpenduduk; Sabah 2015 = 6.0'],
+    ['6.0 – 7.0', 'kuat', 'kemusnahan meluas dalam radius ~100 km'],
+    ['7.0 – 8.0', 'besar', 'kemusnahan di kawasan luas; gempa Laut Sulawesi 2018 = 7.5 + likuifaksi + tsunami'],
+    ['> 8.0', 'dahsyat', 'melintasi seluruh rantaian gunung berapi; Aceh 2004 = 9.1, tsunami merentasi samudera'],
+  ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+  const body = `<p>Setiap baris di <a href="/gempa">kompleks gempa</a> kami berasal daripada Survei Geologi AS (USGS), agensi sains awam yang merakam >20,000 gempa setahun dengan rangkaian seismograf global. Ini yang perlu anda tahu untuk membacanya.</p>`
+    + `<h2 class="section-title">Magnitude: skala logaritma</h2><p>Setiap kenaikan 1 magnitud bermakna <b>10× amplitud</b> dan <b>~32× tenaga</b>. Gempa M6.0 melepaskan tenaga kira-kira 32 kali ganda M5.0 — sebab itu beza "6.1" dan "5.4" dalam berita bukan calang-calang.</p>`
+    + `<table class="wx-table"><tr><th>Magnitud</th><th>Kelas</th><th>Kesan tipikal</th></tr>${magRows}</table>`
+    + `<h2 class="section-title">Kedalaman: faktor penentu rasa</h2><p>Gempa 10 km jauh lebih terasa di permukaan daripada gempa 200 km yang bermagnitud sama. Zon Sabah biasanya dangkal (<20 km) sebab itu gegaran kecil pun dirasakan di Kota Kinabalu. Gempa dalam (>300 km) di bawah Laut Filipina pula jarang memudaratkan walaupun magnitudnya besar.</p>`
+    + `<h2 class="section-title">Mengapa Sabah bergegar tetapi KL biasanya tidak</h2><p>Borneo duduk di atas plat Sunda yang agak stabil, tetapi tepi timurnya dihimpit plat Sulu dan Laut Filipina — lahirlah runtuhan aktif Lingkabau, Pitas dan Tambon. Semenanjung berada pada "litar belakang": kebanyakan gegaran yang dilaporkan di Klang atau Penang adalah gelombang jauh dari Sumatera yang diperkuat lapisan tanah lembut dan bangunan tinggi.</p>`
+    + `<h2 class="section-title">Tsunami: bila amaran perlu serius</h2><p>Tanda amaran tsunami = gempa M7+ di zon sesaran laut dengan kedalaman &lt;30 km. Di Malaysia, pantai barat Sabah dan timur Sarawak paling terdedah kepada laut Sulawesi. Jika gegaran di tepi pantai bertahan lebih 20 saat, terus bergerak ke darat tinggi — jangan menunggu siren rasmi.</p>`
+    + `<h2 class="section-title">Protokol emas: Reda, Lindungi, Tahan</h2><ul><li><b>Reda</b> — jatuhkan diri ke tangan dan lutut sebelum gegaran melemparkan anda.</li><li><b>Lindungi</b> — merangkak bawah meja; lindungi kepala & leher. Tiada meja? Di sudut dalaman, jauh dari cermin.</li><li><b>Tahan</b> — pegang tempat hingga gegaran berhenti; bergerak semasa bumi masih bergegar adalah punca kecederaan paling biasa.</li></ul>`
+    + `<p class="meta">Untuk amaran rasmi Malaysia, rujuk Jabatan Meteorologi Malaysia (met.gov.my) dan Majlis Keselamatan Negara. Halaman ini untuk pendidikan & rujukan pantas — data mentah sentiasa di USGS. Semak juga <a href="/cuaca">Kompleks Cuaca</a> untuk keadaan langit semasa.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Article', name: 'Cara Baca Data Gempa Bumi',
+    description: 'Penjelasan Bahasa Melayu: magnitud, kedalaman, tsunami dan protokol Reda-Lindungi-Tahan.',
+    url: 'https://tukuk.org/gempa/penjelasan', inLanguage: 'ms', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
+  }).replace(/</g, '\\u003c');
+  return gempaDoc({
+    title: 'Cara Baca Data Gempa Bumi — Magnitud, Kedalaman & Tsunami | Tukuk-OS',
+    desc: 'Fahami skala magnitud (setiap 1 = 32× tenaga), kedalaman, potensi tsunami dan protokol Reda-Lindungi-Tahan — penjelasan Bahasa Melayu untuk konteks Malaysia.',
+    selfUrl: 'https://tukuk.org/gempa/penjelasan',
+    heroTitle: 'Cara Baca Data Gempa', heroSub: 'Daripada angka seismograf hingga keputusan selamat dalam 60 saat',
+    body, ld,
+  });
+}
+
+// ── TUKUK-OS WIKI — gaya Ensiklopedia (MediaWiki-esque)) ────────────────────
 // Portal pengetahuan bergaya Wikipedia: bar sisi navigasi, Jadual Kandungan (TOC)
 // auto, infobox, bar kategori & carian dalaman. Artikel wiki memaparkan semula post
 // blog sedia ada dalam rupa wiki — halaman konten yang boleh di-index + beriklan.
@@ -2702,6 +2946,8 @@ function wikiMainPage(req) {
     `<p>The Tukuk-OS Wiki is a growing encyclopedia of practical knowledge: how search engines really work, running your own server, privacy without tracking, astronomy, programming and the open web \u2014 written in plain language and freely readable.</p>` +
     feat + `${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}` +
     `<h2>Subject areas</h2><div class="wiki-sections">${topics}</div>` +
+    `${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}` +
+    `<h2>Good to know</h2><p>Perlu data langsung? <a href="/cuaca">Cuaca hari ini</a> untuk ratusan bandar dan <a href="/nasa">NASA Picture of the Day</a> untuk langit — kedua-duanya kemas kini automatik. Litar pembelajaran tersusun ada di <a href="/learn">Tukuk-OS Academy</a>.</p>` +
     `${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}` +
     `</main></div>${wikiFooter()}</body></html>`;
 }
