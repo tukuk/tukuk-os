@@ -75,7 +75,7 @@ footer{max-width:1100px;margin:40px auto 0;padding:0 16px;color:#5f6368;font-siz
   <div class="hero">
     <h2>Everything stays on tukuk.org</h2>
     <p>This is a Play-Store-style app store built into Tukuk-OS. Tap any game or tool and it opens <em>right here</em> in the browser — you never leave the site. On an Android phone you can also install a launcher APK in one tap.</p>
-    <a class="openbtn" href="/store">Browse the full store →</a>
+    <a class="openbtn" href="/os">Browse everything on Tukuk OS →</a>
   </div>
   <div class="stay">🔒 You are browsing inside <b>&nbsp;tukuk.org&nbsp;</b> — no external store, nothing to leave.</div>
 
@@ -176,7 +176,7 @@ document.getElementById('q').addEventListener('input', render);
 fetch('/api/store',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
   DATA = (d && Array.isArray(d.items)) ? d.items : [];
   renderChips(); render();
-}).catch(function(){document.getElementById('content').innerHTML='<div class="empty">Could not load the store. <a style="color:#3b82f6" href="/store">Open Tukuk Store →</a></div>';});
+}).catch(function(){document.getElementById('content').innerHTML='<div class="empty">Could not load the catalog. <a style="color:#3b82f6" href="/os">Open Tukuk OS →</a></div>';});
 </script>
 </body>
 </html>

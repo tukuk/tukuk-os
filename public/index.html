@@ -518,11 +518,9 @@
 <nav class="wrap" style="display:flex; justify-content:flex-end; flex-wrap:wrap; gap:16px; padding:16px 20px 0; font-size:0.92rem; align-items:center;">
   <a href="/">Home</a>
   <a href="/os" style="font-weight:600;">📱 Tukuk OS</a>
-  <a href="/explore">Explore</a>
   <a href="/nasa">NASA</a>
   <a href="/blog">Blog</a>
   <a href="/apps/chat" style="font-weight:600;">💬 T Chat</a>
-  <a href="/studio" style="font-weight:600;">🎛 Studio</a>
   <a href="/docs">Docs</a>
   <a href="/about">About</a>
   <a href="/contact">Contact</a>
@@ -557,13 +555,13 @@
     <button type="button" data-mode="radio">Radio</button>
   </div>
   <nav class="pillars" id="pillars" hidden aria-label="Tukuk-OS pillars">
-    <a href="/store">🎮 Store &amp; Games</a>
     <a href="/os">📱 Tukuk OS</a>
-    <a href="/builder">🧱 Build Apps</a>
     <a href="/apps/chat">💬 T Chat</a>
     <a href="/cari?mode=radio">📻 World Radio</a>
-    <a href="/studio">🎛 Studio</a>
-    <a href="/explore">🧭 Explore</a>
+    <a href="/wiki">📖 Wiki</a>
+    <a href="/cuaca">🌦 Weather</a>
+    <a href="/gempa">🌍 Earthquakes</a>
+    <a href="/cuti">📅 Holidays</a>
     <a href="/nasa">🚀 NASA</a>
     <a href="/blog">📝 Blog</a>
   </nav>
@@ -576,10 +574,11 @@
   <div class="d-grid">
     <a class="d-tile" href="/os"><span class="ico">📱</span><h3>Tukuk OS — the web phone</h3><p>Your whole portal as a phone-like operating system: home screen, app drawer, windows, recents and a built-in AI assistant — say “open calculator” or ask anything. Installs as an app.</p></a>
     <a class="d-tile" href="/apps/chat"><span class="ico">💬</span><h3>T Chat</h3><p>A real messenger in your browser — video &amp; voice calls with TukuCaller-style caller ID &amp; prank mode, voice messages, groups, and a 2G/3G data-saving mode. One tap <span style="color:var(--accent);text-decoration:underline">Download APK</span> — installs on every OS (Android, Huawei, iOS, Windows, Linux, macOS, ChromeOS).</p></a>
-    <a class="d-tile" href="/editor"><span class="ico">✂️</span><h3>Image Editor</h3><p>Filters, shape annotations, brushes, emoji stickers, straighten/sharpens/mosaic, frames, ratio crop, resize, text &amp; batch export. 100% local.</p></a>
-    <a class="d-tile" href="/editor-video"><span class="ico">🎬</span><h3>Video Editor</h3><p>Trim, colour filters, rotate, aspect ratio, speed &amp; captions — recorded to WebM right in the browser.</p></a>
+    <a class="d-tile" href="/wiki"><span class="ico">📖</span><h3>Encyclopedia Wiki</h3><p>Tukuk's own reference hub — encyclopedic articles across science, history &amp; everyday questions, searchable and free with no account.</p></a>
+    <a class="d-tile" href="/cuaca"><span class="ico">🌦</span><h3>Malaysian Weather</h3><p>Live forecasts, air quality, cloud &amp; wind maps and extreme-weather alerts for every Malaysian town — in Bahasa Melayu.</p></a>
+    <a class="d-tile" href="/gempa"><span class="ico">🌍</span><h3>Earthquake Watch</h3><p>Fresh USGS feed of quakes near Malaysia, Southeast Asia, Japan and the world, with magnitude tables in Malay.</p></a>
     <a class="d-tile" href="/cari?mode=cc"><span class="ico">🧩</span><h3>CC Asset Search</h3><p>Find Creative Commons images, edit on the spot — safe to reuse.</p></a>
-    <a class="d-tile" href="/studio"><span class="ico">🎛</span><h3>Studio Hub</h3><p>The catalogue of every Tukuk Studio tool in one place.</p></a>
+    <a class="d-tile" href="/cuti"><span class="ico">📅</span><h3>Public Holidays 2026–2027</h3><p>Gazette-verified holiday calendars for all 13 states &amp; federal territories, plus a long-weekend planner — in Malay.</p></a>
     <a class="d-tile" href="/learn"><span class="ico">🎓</span><h3>Learn 0 → Hero</h3><p>A free web-development &amp; search-engine curriculum.</p></a>
     <a class="d-tile" href="/blog"><span class="ico">📝</span><h3>Blog &amp; Articles</h3><p>Original writing on search, Node, privacy &amp; infrastructure.</p></a>
     <a class="d-tile" href="/nasa"><span class="ico">🚀</span><h3>NASA Explorer</h3><p>Daily astronomy pictures, Mars rovers &amp; open NASA data.</p></a>
@@ -627,7 +626,6 @@
     <div class="foot-col">
       <h4>🔍 Search &amp; AI</h4>
       <a href="/">🏠 Home</a>
-      <a href="/explore">🧭 Explore</a>
       <a href="/cari?mode=radio">📻 World Radio</a>
       <a href="/cari?mode=cc">🧩 CC Asset Search</a>
       <a href="/models">🧠 AI Models</a>
@@ -638,23 +636,17 @@
       <h4>💬 Chat &amp; Apps</h4>
       <a href="/apps/chat">💬 T Chat</a>
       <a href="/os">📱 Tukuk OS — web phone</a>
-      <a href="/apps">🗂️ App &amp; Game Catalog</a>
-      <a href="/store">🎮 Store &amp; Games</a>
       <a href="/play">▶️ Play now</a>
-      <a href="/builder">🧱 Build your own app</a>
       <a href="/download">📥 Download for every OS</a>
     </div>
     <div class="foot-col">
-      <h4>🎛 Tukuk Studio</h4>
-      <a href="/studio">🎛 Studio Hub</a>
-      <a href="/editor">✂️ Image Editor</a>
-      <a href="/editor-video">🎬 Video Editor</a>
-      <a href="/movie">🍿 Movie Maker</a>
-      <a href="/design">🎨 Design Artboards</a>
-      <a href="/3d">🧊 3D Editor</a>
-      <a href="/collage">🖼 Collage Maker</a>
-      <a href="/bg-remover">🪄 Background Remover</a>
-      <a href="/converter">🔁 File Converter</a>
+      <h4>🌦 Weather, Quakes &amp; Holidays</h4>
+      <a href="/wiki">📖 Encyclopedia Wiki</a>
+      <a href="/cuaca">🌦 Cuaca — Live Weather</a>
+      <a href="/cuaca/peta">🗺️ Weather Map</a>
+      <a href="/gempa">🌍 Gempa — Earthquakes</a>
+      <a href="/cuti">📅 Cuti — Public Holidays</a>
+      <a href="/cuti/hujung-minggu-panjang">🎪 Long Weekends</a>
     </div>
     <div class="foot-col">
       <h4>📚 Learn &amp; Discover</h4>
@@ -760,7 +752,6 @@
     </div>
     <div class="vmodal-foot" style="display:flex; align-items:center; gap:10px;">
       <span id="imgModal-foot" style="flex:1; font-size:0.82rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-      <a id="imgModal-edit" href="/editor" class="src-link" style="color:var(--accent); font-weight:600;">✂ Edit in Studio</a>
       <button type="button" class="lb-ctrl" id="lb-zoom-out" aria-label="Zoom out">−</button>
       <button type="button" class="lb-ctrl" id="lb-zoom-in" aria-label="Zoom in">＋</button>
       <button type="button" class="lb-ctrl" id="lb-zoom-reset" aria-label="Reset zoom" style="width:auto; padding:0 10px; font-size:.8rem;">1:1</button>
@@ -1989,7 +1980,6 @@ function openImageLightbox(src, title, pageUrl) {
   $('imgModal-foot').textContent = src;
   $('imgModal-download').href = downloadHrefFor(src);
   $('imgModal-source').href = pageUrl || src;
-  $('imgModal-edit').href = '/editor?img=' + encodeURIComponent(src);
   modal.hidden = false;
   document.body.style.overflow = 'hidden';
 }

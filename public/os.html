@@ -248,7 +248,7 @@ input{font:inherit;color:inherit}
     <h3>ANDROID STUDIO · INSTALL ANYTHING</h3>
     <p class="sub">Tukuk OS tidak dapat menjalankan Android Studio desktop dalam pelayar (ia perlu Gradle + Android SDK + emulator). Tapi anda boleh <b>cipta dan pasang apa sahaja apl</b> ke telefon web ini dari sini.</p>
     <div class="sgrid">
-      <button id="stBuild">🏗️ Build a new app<small>App Builder tanpa kod — reka, Jana AI, terbit → auto-install.</small></button>
+      <button id="stBuild">🎓 Learn app-building<small>Learn 0 → Hero — kurikulum web &amp; enjin carian percuma.</small></button>
       <button id="stAI">🌐 Paste any URL<small>Install web app sedia ada ke skrin utama.</small></button>
       <button id="stStore">🛒 Store &amp; APK<small>Ambil apl &amp; pakej APK untuk telefon sebenar.</small></button>
     </div>
@@ -264,7 +264,7 @@ input{font:inherit;color:inherit}
     <div class="lc-notifs" id="lcNotifs"></div>
     <div class="lc-hint">⌃ Swipe up to unlock</div>
     <div class="lc-sugs" id="lcSugs"></div>
-    <div class="lc-apps"><button id="lcCam" title="Camera">📷</button><button id="lcNotes" title="Notes">📝</button></div>
+    <div class="lc-apps"><button id="lcCam" title="Image Search">🖼️</button><button id="lcNotes" title="T Chat">💬</button></div>
   </div>
   <div id="dim"></div>
 
@@ -276,56 +276,22 @@ input{font:inherit;color:inherit}
 // ── Katalog aplikasi (fail benar-benar wujud di pelayan; senarai dipantau ujian) ──
 // [name, title, icon, url, category]
 var APPS = [
-  ['notes','Notes','📝','/apps/notes','TOOLS'],['calc','Calculator','🧮','/apps/calc','TOOLS'],
-  ['todo','To-Do','✅','/apps/todo','TOOLS'],['convert','Unit Converter','📐','/apps/convert','TOOLS'],
-  ['timer','Timer','⏱️','/apps/timer','TOOLS'],['color','Color Picker','🎨','/apps/color','TOOLS'],
-  ['password','Passwords','🔐','/apps/password','TOOLS'],['text','Text Tools','🔡','/apps/text','TOOLS'],
-  ['calendar','Calendar','📅','/apps/calendar','TOOLS'],['dice','Dice & Coin','🪙','/apps/dice','TOOLS'],
-  ['map','Map','🗺️','/apps/map','TOOLS'],
-  ['tip','Tip Split','💵','/apps/tip','TOOLS'],['bmi','BMI Check','⚖️','/apps/bmi','TOOLS'],
-  ['pixel','Pixel Studio','🟩','/apps/pixel','MEDIA'],['piano','Synth Piano','🎹','/apps/piano','MEDIA'],
-  ['spiro','Spiro Mandala','🌀','/apps/spiro','MEDIA'],['orbit','Orbit Sim','🪐','/apps/orbit','MEDIA'],
-  ['fractal','Fractals','🔮','/apps/fractal','MEDIA'],['drum','Rhythm Machine','🥁','/apps/drum','MEDIA'],
-  ['converter','Media Converter','🎛️','/converter','TOOLS'],['bg-remover','BG Remover','🪄','/bg-remover','TOOLS'],
-  ['collage','Collage Maker','🖼️','/collage','TOOLS'],['design','Design Studio','🖌️','/design','TOOLS'],
-  ['editor','Image Editor','✂️','/editor','TOOLS'],['editor-video','Video Editor','🎞️','/editor-video','TOOLS'],
-  ['movie','Movie Player','🎥','/movie','MEDIA'],['studio','Tukuk Studio','🎬','/studio','MEDIA'],
-  ['builder','App Builder','🏗️','/builder','TOOLS'],['nasa','NASA APOD','🛰️','/nasa','MEDIA'],
   ['chat','T Chat','💬','/apps/chat','SYSTEM'],
-  ['store','Tukuk Store','🛒','/store','SYSTEM'],
-  ['search','Web Search','🔍','/','SYSTEM'],['explore','Explore','🧭','/explore','SYSTEM'],
+  ['search','Web Search','🔍','/','SYSTEM'],
+  ['playstore','Tukuk Store','🛒','/playstore','SYSTEM'],
   ['datacenter','Data Center','🏢','/datacenter','SYSTEM'],['models','AI Models','🧠','/models','SYSTEM'],
   ['docs','Docs','📚','/docs','SYSTEM'],['admin','Admin','🛠️','/admin','SYSTEM'],
+  ['nasa','NASA APOD','🛰️','/nasa','MEDIA'],
+  ['cuaca','Cuaca — Weather','🌦️','/cuaca','MEDIA'],['gempa','Gempa — Earthquakes','🌍','/gempa','MEDIA'],
+  ['wiki','Encyclopedia Wiki','📖','/wiki','PORTAL'],
+  ['cuti','Cuti — Holidays','📅','/cuti','PORTAL'],
   ['blog','Blog','📝','/blog','PORTAL'],['learn','Learn 0→Hero','🎓','/learn','PORTAL'],
   ['about','About','ℹ️','/about','PORTAL'],['contact','Contact','✉️','/contact','PORTAL'],
   ['health','Health','❤️','/health','PORTAL'],['stats','Statistics','📊','/stats','PORTAL'],
   ['radio','World Radio','📻','/cari?mode=radio','PORTAL'],['news','News','📰','/cari?mode=news','PORTAL'],
   ['music','Music Search','🎵','/cari?mode=music','PORTAL'],['images','Image Search','🖼️','/cari?mode=images','PORTAL'],
   ['ccassets','CC Assets','🧩','/cari?mode=cc','PORTAL'],
-  ['candy','Candy Blast','🍬','/apps/candy','GAMES'],['flappy','Flappy Dash','🐦','/apps/flappy','GAMES'],
-  ['subway','Subway Dash 3D','🚇','/apps/subway','GAMES'],['slice','Fruit Slice','🍉','/apps/slice','GAMES'],
-  ['roadhop','Road Hop','🐸','/apps/roadhop','GAMES'],['bubble','Bubble Pop','🫧','/apps/bubble','GAMES'],
-  ['ludo','Ludo','🎲','/apps/ludo','GAMES'],['solitaire','Solitaire','🃏','/apps/solitaire','GAMES'],
-  ['number2048','2048','🧊','/apps/number2048','GAMES'],['blockdrop','Block Drop','🧩','/apps/blockdrop','GAMES'],
-  ['snake','Snake','🐍','/apps/snake','GAMES'],['mines','Minesweeper','💣','/apps/mines','GAMES'],
-  ['connect4','Connect Four','🔴','/apps/connect4','GAMES'],['breakout','Breakout','🧱','/apps/breakout','GAMES'],
-  ['invaders','Space Invaders','👾','/apps/invaders','GAMES'],['doodle','Doodle Jump','🦘','/apps/doodle','GAMES'],
-  ['pong','Pong','🏓','/apps/pong','GAMES'],['stack','Stack Tower','🗼','/apps/stack','GAMES'],
-  ['simon','Simon Tones','🎼','/apps/simon','GAMES'],['muncher','Maze Muncher','🟡','/apps/muncher','GAMES'],
-  ['puzzle15','Slide 15','🔢','/apps/puzzle15','GAMES'],['tictactoe','Tic-Tac-Toe','❎','/apps/tictactoe','GAMES'],
-  ['memory','Memory Match','🧠','/apps/memory','GAMES'],['whack','Whack-a-Mole','🔨','/apps/whack','GAMES'],
-  ['arcade','Mini Arcade','🕹️','/builder?tpl=arcade&play=1','GAMES'],
-  ['tttpl','Tic-Tac-Toe Arena','⭕','/builder?tpl=tttpl&play=1','GAMES'],
-  ['brtpl','Battle Royale','🔫','/builder?tpl=brtpl&play=1','GAMES'],
-  ['fpstpl','FPS Arena 3D','🎯','/builder?tpl=fpstpl&play=1','GAMES'],
-  ['runtpl','Endless Runner','🏃','/builder?tpl=runtpl&play=1','GAMES'],
-  ['memtpl','Memory Card Match','🧩','/builder?tpl=memtpl&play=1','GAMES'],
-  ['moletpl','Whack Mole','🐹','/builder?tpl=moletpl&play=1','GAMES'],
-  ['rpstpl','Rock Paper Scissors','✊','/builder?tpl=rpstpl&play=1','GAMES'],
-  ['reacttpl','Reaction Time','⚡','/builder?tpl=reacttpl&play=1','GAMES'],
-  ['guesstpl','Number Guess','🔢','/builder?tpl=guesstpl&play=1','GAMES'],
-  ['quiztpl','Quick Quiz','💡','/builder?tpl=quiztpl&play=1','GAMES'],
-  ['astrotpl','Asteroids','☄️','/builder?tpl=astrotpl&play=1','GAMES']
+  ['play','Play Games','🎮','/play','GAMES']
 ];
 var WALLS = [
   ['Ocean','linear-gradient(160deg,#123a6d 0%,#0f1115 60%,#1b1140 100%)'],
@@ -335,7 +301,7 @@ var WALLS = [
   ['Grape','linear-gradient(160deg,#2b1055 0%,#0f1115 55%,#7597de55 100%)'],
   ['Volcano','linear-gradient(160deg,#3d1010 0%,#0f1115 60%,#5b247a 100%)']
 ];
-var DEFAULT_PINS = ['notes','calc','todo','chat','bg-remover','converter','collage','store','nasa','map','snake','candy','settings'];
+var DEFAULT_PINS = ['chat','search','radio','nasa','cuaca','cuti','wiki','play','playstore','blog','learn','datacenter','settings'];
 
 // ── penyimpanan ──
 function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem('tkos:' + k)); return v == null ? d : v; } catch (e) { return d; } }
@@ -404,7 +370,7 @@ function paintGlance(d) {
   $('gStat').textContent = (navigator.onLine ? '📶' : '📡') + ' ' + batTxt;
   if (!$('lock').hidden) $('lcDate').textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 }
-$('glance').addEventListener('click', function () { var a = appByName('calendar'); if (a) launch(a); else openAssist(); });
+$('glance').addEventListener('click', function () { var a = appByName('cuaca'); if (a) launch(a); else openAssist(); });
 function netTick() {
   var on = navigator.onLine;
   $('netDot').className = 'net' + (on ? '' : ' off');
@@ -580,9 +546,9 @@ function renderStudio() {
 $('dStudio').addEventListener('click', openStudio);
 $('drawerStudio').addEventListener('click', openStudio);
 $('studioX').addEventListener('click', function () { $('studio').classList.remove('open'); });
-$('stBuild').addEventListener('click', function () { $('studio').classList.remove('open'); launch(appByName('builder')); });
+$('stBuild').addEventListener('click', function () { $('studio').classList.remove('open'); launch(appByName('learn')); });
 $('stAI').addEventListener('click', function () { $('studio').classList.remove('open'); openAppInstall(); });
-$('stStore').addEventListener('click', function () { $('studio').classList.remove('open'); launch(appByName('store')); });
+$('stStore').addEventListener('click', function () { $('studio').classList.remove('open'); launch(appByName('playstore')); });
 $('saAdd').addEventListener('click', function () { if (addWebApp($('saTitle').value, $('saUrl').value, $('saIcon').value)) { $('saTitle').value = ''; $('saUrl').value = ''; $('saIcon').value = ''; } });
 
 // ── pelancaran: tetingkap (desktop) / aktiviti (telefon) ──
@@ -708,8 +674,8 @@ $('lock').addEventListener('pointerup', function (e) { if (lkY != null && lkY - 
 $('lock').addEventListener('pointercancel', function () { lkY = null; });
 document.addEventListener('keydown', function (e) { if (locked && e.key === 'Enter') unlock(); });
 $('qtLock').addEventListener('click', function () { $('shade').classList.remove('open'); showLock(); });
-$('lcCam').addEventListener('click', function () { unlock(); setTimeout(function () { launch(appByName('bg-remover')); }, 380); });
-$('lcNotes').addEventListener('click', function () { unlock(); setTimeout(function () { launch(appByName('notes')); }, 380); });
+$('lcCam').addEventListener('click', function () { unlock(); setTimeout(function () { launch(appByName('images')); }, 380); });
+$('lcNotes').addEventListener('click', function () { unlock(); setTimeout(function () { launch(appByName('chat')); }, 380); });
 // Kad cadangan di keyguard: AI memilih 3 apl mengikut masa hari + katalog store.
 function suggestChips() {
   var pool = APPS.filter(function (a) { return a[0] !== 'settings' && a[3]; });
@@ -934,7 +900,7 @@ function startVoice() {
 
 // ── dock lain ──
 $('dChat').addEventListener('click', function () { launch(appByName('chat')); });
-$('dStore').addEventListener('click', function () { launch(appByName('store')); });
+$('dStore').addEventListener('click', function () { launch(appByName('playstore')); });
 
 // ── butiran pemasangan + boot ──
 window.addEventListener('beforeinstallprompt', function (e) {

@@ -30,9 +30,9 @@ const code = ['findApp', 'parseCommand', 'timeFmt'].map((n) => extractFn(html, n
 const engine = new Function('APPS', code + '\nreturn { findApp, parseCommand, timeFmt };')(APPS);
 
 test('findApp: padanan nama/tajuk biasa & sebahagian', () => {
-  assert.equal(engine.findApp('calculator')[0], 'calc');
-  assert.equal(engine.findApp('snake')[0], 'snake');
-  assert.equal(engine.findApp('background remover')[0], 'bg-remover');
+  assert.equal(engine.findApp('weather')[0], 'cuaca');
+  assert.equal(engine.findApp('holidays')[0], 'cuti');
+  assert.equal(engine.findApp('wiki')[0], 'wiki');
   assert.equal(engine.findApp('T Chat')[0], 'chat');
   assert.equal(engine.findApp('data center')[0], 'datacenter');
   assert.equal(engine.findApp('zzq unknown thing'), null);
@@ -40,11 +40,11 @@ test('findApp: padanan nama/tajuk biasa & sebahagian', () => {
 });
 
 test('parseCommand: arahan sistem dijawab OS tanpa questions ke AI', () => {
-  assert.equal(engine.parseCommand('open calculator').action, 'open');
-  assert.equal(engine.parseCommand('open calculator').app[0], 'calc');
-  assert.equal(engine.parseCommand('Open Snake!').action, 'open');
+  assert.equal(engine.parseCommand('open chat').action, 'open');
+  assert.equal(engine.parseCommand('open chat').app[0], 'chat');
+  assert.equal(engine.parseCommand('Open Wiki!').action, 'open');
   assert.equal(engine.parseCommand('close all').action, 'closeAll');
-  assert.equal(engine.parseCommand('close snake').action, 'close');
+  assert.equal(engine.parseCommand('close chat').action, 'close');
   assert.equal(engine.parseCommand('home').action, 'home');
   assert.equal(engine.parseCommand('search how to bake bread').action, 'web');
   assert.equal(engine.parseCommand('search how to bake bread').q, 'how to bake bread');
@@ -63,6 +63,20 @@ test('timeFmt: 12-jam dengan minit berpad zero', () => {
   assert.equal(engine.timeFmt(new Date(2026, 0, 1, 13, 5)), '1:05');
   assert.equal(engine.timeFmt(new Date(2026, 0, 1, 0, 30)), '12:30');
   assert.equal(engine.timeFmt(new Date(2026, 0, 1, 9, 0)), '9:00');
+});
+
+// ── Katalog aplikasi (fail benar-benar wujud di pelayan; senarai dipantau ujian) ──
+// Hanya halaman HIDUP yang boleh dilancarkan pelayar — apl/web-tool yang dibuang
+// pada pivot konten (b0542e7) mesti hilang daripada APPS, bukan sekadar disembunyi.
+test('katalog OS: hanya halaman hidup (tiada 404 known-dead)', () => {
+  const DEAD = ['/explore', '/store', '/builder', '/studio', '/editor', '/editor-video',
+    '/movie', '/design', '/3d', '/collage', '/bg-remover', '/converter', '/apps'];
+  for (const a of APPS) {
+    for (const d of DEAD) {
+      if (d !== '/apps') assert.ok(!a[3].startsWith(d), `${a[0]} → ${a[3]} ialah halaman mati`);
+      else assert.ok(a[3] === '/apps/chat' || !a[3].startsWith('/apps/'), `${a[0]} → ${a[3]} app mati`);
+    }
+  }
 });
 
 test('katalog OS: setiap URL petakan ke fail HTML atau route server yang wujud', () => {
