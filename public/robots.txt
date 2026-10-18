@@ -20,3 +20,4 @@ Sitemap: https://tukuk.org/sitemap-cuti.xml
 Sitemap: https://tukuk.org/sitemap-negara.xml
 Sitemap: https://tukuk.org/sitemap-statistik.xml
 Sitemap: https://tukuk.org/sitemap-bencana.xml
+Sitemap: https://tukuk.org/sitemap-akademi.xml

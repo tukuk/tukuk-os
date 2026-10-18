@@ -31,6 +31,7 @@ const cd = require('./cuti-dunia');
 const ng = require('./negara');
 const study = require('./study');
 const udara = require('./udara');
+const akad = require('./akademi');
 const st = require('./statistik');
 const bc = require('./bencana');
 const social = require('./social');
@@ -1274,7 +1275,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1429,6 +1430,19 @@ app.get('/sitemap-bencana.xml', async (req, res) => {
   } catch { /* suapan gagal → hab + kategori sahaja */ }
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP AKADEMI — hab + 10 trek + 50 pelajaran (dataset setempat, sentiasa sah) ──
+app.get('/sitemap-akademi.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/akademi', '0.9')]
+    .concat(akad.TRACKS.map((t) => one(`/akademi/${t.s}`, '0.7')))
+    .concat(akad.allLessons().map((l) => one(`/akademi/${l.track.s}/${l.s}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
 });
 
@@ -1658,6 +1672,7 @@ function siteFooter() {
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
       <li><a href="/udara">Air & Oxygen</a></li>
+      <li><a href="/akademi">Academy — 50 Lessons</a></li>
       <li><a href="/docs">Docs</a></li>
     </ul></div>
     <div><h4>NASA Space</h4><ul>
@@ -5236,6 +5251,183 @@ app.get('/udara/carbon', async (req, res) => {
   let co2 = null;
   try { co2 = await udara.getCo2(); } catch (e) { co2 = null; }
   res.type('html').send(udaraCarbonPage(co2));
+});
+
+// ══ AKADEMI TUKUK-OS (/akademi) — 50 mikro-pelajaran pengetahuan umum: 10 trek
+// × 5 pelajaran (src/akademi.js, kurasi setempat, Bahasa Inggeris). Berbeza dari
+// /learn (kurikulum developer) — ini ilmu dunia untuk orang ramai; setiap trek
+// memaut alat hidup sepadan. Shell cermin studyDoc: chrome penuh + 3 unit iklan.
+function akadNav() {
+  const items = [{ href: '/akademi', icon: '\uD83C\uDF93', name: 'All 50 Lessons', blurb: 'The full syllabus — ten tracks, five short lessons each, no account needed.' }]
+    .concat(akad.trackList().map((t) => ({ href: `/akademi/${t.s}`, icon: t.icon, name: t.name, blurb: t.blurb })));
+  return `<nav aria-label="Academy tracks"><h2 class="section-title">Akademi Tukuk-OS — every track</h2><div class="feed">`
+    + items.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+// Pelukan standard halaman /akademi — cermin studyDoc (chrome penuh + iklan berkawal).
+function akadDoc(o) {
+  const robots = o.robots || 'index,follow';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#4c8dff">
+<style>${COMMON_CSS}
+.akad-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
+.akad-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel,#171a21);margin:0}
+.akad-card h3{margin:0 0 8px;font-size:1.05rem}
+.akad-card p{margin:6px 0;font-size:.95rem}
+.takeaway{border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:10px;padding:14px 18px;margin:20px 0;background:var(--panel,#171a21)}
+.takeaway h2{margin:0 0 10px;font-size:1.05rem}
+.takeaway ul{margin:0;padding-left:22px}
+.takeaway li{margin-bottom:6px}
+.lesson-nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:26px 0 6px}
+.qopt{display:inline-block;border:1px solid var(--line);background:var(--panel,#171a21);color:var(--text);border-radius:8px;padding:7px 13px;margin:4px 6px 4px 0;font-size:.92rem;cursor:pointer}
+.qopt:hover{border-color:var(--accent,#4c8dff)}
+.qopt.ok{border-color:#3fb950;color:#3fb950;font-weight:700}
+.qopt.no{border-color:#e5534b;color:#e5534b}
+.quiz-block{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0;background:var(--panel,#171a21)}
+@media(max-width:680px){.akad-grid{grid-template-columns:1fr}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('learn')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${akadNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// ── /akademi — hab: grid 10 trek + jumlah masa terpampang jujur ──────────────
+function akadHubPage() {
+  const flat = akad.allLessons();
+  const totalMin = flat.reduce((n, l) => n + l.mn, 0);
+  const cards = akad.trackList().map((t, i) => {
+    const min = (akad.LESSONS[t.s] || []).reduce((n, l) => n + l.mn, 0);
+    return `<div class="akad-card"><h3><a href="/akademi/${t.s}">${t.icon} ${escapeHtml(t.name)}</a></h3><p>${escapeHtml(t.blurb)}</p><p class="meta">Track ${i + 1} · 5 lessons · about ${min} min</p></div>`;
+  }).join('');
+  const body = `<p class="learn-intro">Fifty short lessons on how the world actually works — sky and space, weather, the planet, air, the body, life, numbers, computers, everyday machines and clear thinking. Each lesson is three plain-language paragraphs, three takeaways and one quiz question; the whole academy reads in about ${Math.round(totalMin / 60)} hours spread over a month. Free, no account, no paywall. For coding paths see the <a href="/learn">Zero-to-Hero Academy</a>; for daily facts and quizzes the <a href="/study">Knowledge Complex</a>.</p>
+  <h2 class="section-title">The syllabus — ten tracks, fifty lessons</h2>
+  <div class="akad-grid">${cards}</div>
+  <p class="meta">Figures in the lessons are labelled “about” or “roughly” wherever sources differ — the academy prefers an honest approximation to a false decimal.</p>`;
+  return akadDoc({
+    title: 'Akademi Tukuk-OS — 50 Free Micro-Lessons on How the World Works',
+    desc: 'A free general-knowledge academy: 50 short lessons across ten tracks — space, weather, Earth, air, body, life, numbers, internet, machines and clear thinking — each with takeaways and a quiz.',
+    selfUrl: 'https://tukuk.org/akademi',
+    heroTitle: 'Akademi Tukuk-OS', heroSub: 'Fifty lessons, ten tracks, one curiosity — how the world works, in plain language',
+    body,
+  });
+}
+
+// ── /akademi/:track — senarai 5 pelajaran + pautan alat hidup trek ──────────
+function akadTrackPage(t) {
+  const lessons = akad.LESSONS[t.s] || [];
+  const min = lessons.reduce((n, l) => n + l.mn, 0);
+  const rows = lessons.map((l, i) => `<div class="akad-card"><h3><a href="/akademi/${t.s}/${l.s}">${i + 1}. ${escapeHtml(l.t)}</a></h3><p>${escapeHtml(l.sum)}</p><p class="meta">About ${l.mn} min · 1 quiz question</p></div>`).join('');
+  const rel = `<h2 class="section-title">Try it live</h2><ul>${t.rel.map((r) => `<li><a href="${r.h}">${escapeHtml(r.l)}</a></li>`).join('')}</ul>`;
+  const body = `<p class="learn-intro"><a href="/akademi">&larr; All 50 lessons</a></p>
+  <p>${escapeHtml(t.blurb)} Five lessons, about ${min} minutes in total — read one at a time; each stands alone.</p>
+  <div class="akad-grid">${rows}</div>
+  ${rel}`;
+  return akadDoc({
+    title: `${t.name} — 5 Lessons | Akademi Tukuk-OS`,
+    desc: `${t.blurb} Five short free lessons with key takeaways and quiz questions, from Akademi Tukuk-OS.`,
+    selfUrl: `https://tukuk.org/akademi/${t.s}`,
+    heroTitle: `${t.icon} ${t.name}`, heroSub: 'Five micro-lessons · about ' + min + ' minutes in total',
+    body,
+  });
+}
+
+// ── /akademi/:track/:slug — bacaan + pengajaran + kuiz satu soalan + prev/next ─
+function akadLessonPage(t, l, prev, next, no) {
+  const right = l.q.o[l.q.a];
+  const quizHtml = `<h2 class="section-title">Check yourself</h2>
+  <div class="quiz-block"><p><b>${escapeHtml(l.q.s)}</b></p>
+    ${l.q.o.map((opt, i) => `<button type="button" class="qopt" data-ok="${i === l.q.a ? '1' : '0'}">${escapeHtml(opt)}</button>`).join('')}
+    <div id="qexp" style="display:none;margin-top:12px"><p class="meta" style="margin:0 0 4px">Correct answer: <b>${escapeHtml(right)}</b></p><p style="margin:0">${escapeHtml(l.q.e)}</p></div>
+  </div>
+  <script>(function(){var b=document.querySelector('.quiz-block');if(!b)return;var done=false;Array.prototype.forEach.call(b.querySelectorAll('.qopt'),function(btn){btn.addEventListener('click',function(){if(done)return;done=true;var good=btn.getAttribute('data-ok')==='1';btn.className='qopt '+(good?'ok':'no');if(!good){Array.prototype.forEach.call(b.querySelectorAll('.qopt'),function(o){if(o.getAttribute('data-ok')==='1')o.className='qopt ok';});}var x=document.getElementById('qexp');if(x)x.style.display='block';});});})();</script>`;
+  const relHtml = `<h2 class="section-title">Go deeper</h2><ul>${t.rel.map((r) => `<li><a href="${r.h}">${escapeHtml(r.l)}</a></li>`).join('')}<li><a href="/akademi/${t.s}">All ${t.name} lessons</a></li></ul>`;
+  const lrMin = Math.max(1, Math.round(l.mn));
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@graph': [
+      { '@type': 'LearningResource', name: l.t, description: l.sum, url: `https://tukuk.org/akademi/${t.s}/${l.s}`,
+        inLanguage: 'en', learningResourceType: 'Micro-lesson', timeRequired: `PT${lrMin}M`,
+        isPartOf: { '@type': 'Collection', name: `${t.name} track — Akademi Tukuk-OS`, url: `https://tukuk.org/akademi/${t.s}` },
+        providesSerialization: { '@type': 'WebPage', id: `https://tukuk.org/akademi/${t.s}/${l.s}#main` },
+        publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' } },
+      { '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Akademi', item: 'https://tukuk.org/akademi' },
+        { '@type': 'ListItem', position: 2, name: t.name, item: `https://tukuk.org/akademi/${t.s}` },
+        { '@type': 'ListItem', position: 3, name: l.t, item: `https://tukuk.org/akademi/${t.s}/${l.s}` } ] },
+    ],
+  }).replace(/</g, '\\u003c');
+  const body = `<p class="learn-intro"><a href="/akademi">&larr; Akademi</a> · <a href="/akademi/${t.s}">${t.icon} ${escapeHtml(t.name)}</a> · Lesson ${no} of 50 · about ${l.mn} min</p>
+  <article>${l.p.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</article>
+  <div class="takeaway"><h2>Key takeaways</h2><ul>${l.k.map((k) => `<li>${escapeHtml(k)}</li>`).join('')}</ul></div>
+  ${quizHtml}
+  ${relHtml}
+  <div class="lesson-nav">
+    ${prev ? `<a class="btn ghost" href="/akademi/${prev.track.s}/${prev.s}">&larr; ${escapeHtml(prev.t)}</a>` : '<span></span>'}
+    ${next ? `<a class="btn ghost" href="/akademi/${next.track.s}/${next.s}">${escapeHtml(next.t)} &rarr;</a>` : '<span></span>'}
+  </div>`;
+  return akadDoc({
+    title: `${l.t} — ${t.name} Lesson | Akademi Tukuk-OS`,
+    desc: l.sum,
+    selfUrl: `https://tukuk.org/akademi/${t.s}/${l.s}`,
+    heroTitle: l.t, heroSub: `${t.icon} ${t.name} · Lesson ${no} of 50 · about ${l.mn} minutes`,
+    ld,
+    body,
+  });
+}
+
+app.get('/akademi', (req, res) => res.type('html').send(akadHubPage()));
+app.get('/akademi/:track', (req, res) => {
+  const t = akad.findTrack(req.params.track);
+  if (!t) return res.redirect('/akademi');
+  res.type('html').send(akadTrackPage(t));
+});
+app.get('/akademi/:track/:slug', (req, res) => {
+  const t = akad.findTrack(req.params.track);
+  const l = t && akad.findLesson(t.s, req.params.slug);
+  if (!l) return res.redirect('/akademi');
+  const flat = akad.allLessons();
+  const idx = flat.findIndex((x) => x.track.s === t.s && x.s === l.s);
+  res.type('html').send(akadLessonPage(t, l, idx > 0 ? flat[idx - 1] : null, idx < flat.length - 1 ? flat[idx + 1] : null, idx + 1));
 });
 
 app.get('/blog/rss.xml', (req, res) => {
