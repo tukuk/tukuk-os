@@ -1525,8 +1525,8 @@ function siteFooter() {
       <li><a href="/cuaca/ekstrem">World extremes</a></li>
       <li><a href="/cuaca/kuala-lumpur">Cuaca Kuala Lumpur</a></li>
       <li><a href="/cuaca/serian">Cuaca Serian</a></li>
-      <li><a href="/gempa">Latest earthquakes</a></li>
-      <li><a href="/gempa/malaysia">Gempa Malaysia</a></li>
+      <li><a href="/gempa">World Earthquakes</a></li>
+      <li><a href="/gempa/dunia">Major Quakes M4.5+</a></li>
       <li><a href="/cuti">Public holidays 2026</a></li>
       <li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>
       <li><a href="/negara">World countries</a></li>
@@ -2727,11 +2727,11 @@ function cuacaWindPage(req) {
 // "gempa bumi hari ini" / "gempa sabah" yang pesaing BM-nya sangat sedikit.
 const GEMPA_SECTIONS = [
   { href: '/gempa', icon: '\uD83C\uDF0D', name: 'Gempa Bumi Terkini', blurb: 'Senarai langsung gempa seluruh dunia — data USGS, kemas kini setiap 10 minit.' },
-  { href: '/gempa/malaysia', icon: '\uD83C\uDDF9', name: 'Gempa Malaysia', blurb: 'Zon Sabah, Sarawak & sempadan — 30 hari terakhir, dari magnitude kecil.' },
+  { href: '/gempa/dunia', icon: '\uD83D\uDD2F', name: 'Dunia M4.5+', blurb: 'Semua gempa besar 4.5 ke atas dalam tujuh hari terakhir.' },
   { href: '/gempa/asia-tenggara', icon: '\uD83C\uDF34', name: 'Asia Tenggara', blurb: 'Indonesia, Filipina, PNG — lingkaran tektonik paling aktif di Asia.' },
   { href: '/gempa/jepun', icon: '\uD83D\uDDE5', name: 'Jepun & Pasifik Barat', blurb: 'Cincin Api barat: Jepun, Guam, Kamchatka dan parit Mariana.' },
   { href: '/gempa/pasifik-timur', icon: '\uD83C\uDFE5', name: 'Pasifik Timur', blurb: 'Pantai barat Amerika: California, Chile, Peru, Mexico, Alaska.' },
-  { href: '/gempa/dunia', icon: '\uD83D\uDD2F', name: 'Dunia M4.5+', blurb: 'Semua gempa besar 4.5 ke atas dalam tujuh hari terakhir.' },
+  { href: '/gempa/malaysia', icon: '\uD83C\uDDF9', name: 'Malaysia & Sabah', blurb: 'Zon Sabah, Sarawak & sempadan — 30 hari terakhir, dari magnitude kecil.' },
   { href: '/gempa/penjelasan', icon: '\uD83D\uDCD8', name: 'Cara Baca Data Gempa', blurb: 'Magnitude, kedalaman, tsunami dan apa perlu buat bila bumi bergegar.' },
 ];
 
@@ -2820,7 +2820,7 @@ function gpChip(m) {
 }
 function gpTable(rows, n) {
   if (!rows || !rows.length) return '<p>Belum ada rekod dalam tempoh ini.</p>';
-  return `<table class="wx-table"><tr><th>Bila (Waktu Malaysia)</th><th>Kuasa</th><th>Lokasi</th><th>Kedalaman</th><th>Maklum balas</th></tr>`
+  return `<table class="wx-table"><tr><th>Bila (UTC+8)</th><th>Kuasa</th><th>Lokasi</th><th>Kedalaman</th><th>Maklum balas</th></tr>`
     + rows.slice(0, n || rows.length).map((q) => `<tr><td>${gpWhen(q.time)}</td><td>${gpChip(q.mag)}</td>`
       + `<td><a href="${escapeHtml(q.url)}" target="_blank" rel="noopener">${escapeHtml(q.place)}</a>${q.tsunami ? ' <b style="color:#e5534b">\u26A0 potensi tsunami</b>' : ''}${q.status === 'reviewed' ? ' <span class="meta">(disemak)</span>' : ''}</td>`
       + `<td>${q.depth} km</td><td>${q.felt ? `${q.felt} laporan terasa` : (q.cdi ? `skala rasa ${q.cdi}` : '\u2014')}</td></tr>`).join('')
@@ -2852,10 +2852,10 @@ function gempaHubPage(req, rows, myRows) {
     + `<h2 class="section-title">Gempa di sekitar Malaysia (30 hari)</h2>${gpTable(myRows, 20)}`
     + `<p>Malaysia bukan di bawah Cincin Api, tetapi tidak bebas gegaran: zon seismik Sabah timur (runtuhan Lingkabau, Pitas dan Kota Belud) aktif dan pernah menggegarkan Gunung Kinabalu pada Jun 2015 (M6.0, 181 nyawa di pendakian), manakala gempa besar di Sumatera kerap terasa di Lembah Klang dan Pulau Pinang kerana tanah lembut mengampifikasi gelombang.</p>`
     + `<h2 class="section-title">Rantau pemantauan</h2><div class="wx-grid">${regionCards}</div>`
-    + `<p class="meta">Baru nak fahami angka? Baca <a href="/gempa/penjelasan">cara baca data gempa</a>. Untuk cuaca semasa di lokasi anda, guna <a href="/cuaca">Kompleks Cuaca</a>; untuk langit malam, <a href="/nasa/sky">Langit Malam NASA</a>.</p>`;
+    + `<p class="meta">Baru nak fahami angka? Baca <a href="/gempa/penjelasan">cara baca data gempa</a>. Untuk cuaca semasa di lokasi anda, guna <a href="/cuaca">Kompleks Cuaca</a>; untuk langit malam, <a href="/nasa/sky">Langit Malam NASA</a>; profil negara tempat gempa berlaku? <a href="/negara">Kompleks Negara</a>.</p>`;
   return gempaDoc({
-    title: 'Gempa Bumi Hari Ini \u2014 Senarai Langsung Dunia & Malaysia | Tukuk-OS',
-    desc: 'Semak gempa bumi terkini secara langsung: magnitude, lokasi, kedalaman dan potensi tsunami daripada data awam USGS \u2014 kemas kini setiap 10 minit, termasuk zon Sabah dan Sumatera yang terasa di Malaysia.',
+    title: 'Gempa Bumi Hari Ini — Senarai Langsung Seluruh Dunia | Tukuk-OS',
+    desc: 'Semak gempa bumi terkini secara langsung merentasi dunia: magnitude, lokasi, kedalaman dan potensi tsunami daripada data awam USGS — kemas kini setiap 10 minit, dengan pemantauan khas Asia Tenggara, Jepun, Pasifik dan zon Sabah.',
     selfUrl: 'https://tukuk.org/gempa',
     heroTitle: 'Kompleks Gempa Tukuk-OS', heroSub: 'Data langsung USGS \u00b7 kemas kini 10 minit \u00b7 percuma tanpa log masuk',
     body, ld,
@@ -2870,7 +2870,7 @@ function gempaRegionPage(req, region, rows) {
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Gempa Bumi Terkini: ${region.name}`,
     description: region.blurb, url: selfUrl,
   }).replace(/</g, '\\u003c');
-  const body = `<p>${escapeHtml(region.blurb)} Data dikemas kini setiap 10 minit daripada Survei Geologi AS (USGS); masa dipaparkan dalam Waktu Malaysia (UTC+8).</p>`
+  const body = `<p>${escapeHtml(region.blurb)} Data dikemas kini setiap 10 minit daripada Survei Geologi AS (USGS); masa dipaparkan dalam UTC+8.</p>`
     + `<div class="wx-grid">`
     + `<div class="wx-card"><h3>Jumlah dalam tempoh</h3><div class="big">${s.count}</div><div class="meta">magnitud minimum ${region.minMag.toFixed(1)}</div></div>`
     + `<div class="wx-card"><h3>Paling kuat</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`

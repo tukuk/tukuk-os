@@ -59,7 +59,7 @@ test('sitemap-gempa.xml + robots + pautan silang cuaca↔gempa & footer', () => 
   const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-gempa.xml'"), serverSrc.indexOf("app.get('/sitemap-gempa.xml'") + 1300);
   assert.ok(sm.includes('gp.REGIONS.map'), 'semua rantau masuk sitemap');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-gempa\.xml/, 'robots iklankan sitemap-gempa');
-  assert.ok(serverSrc.includes('<li><a href="/gempa">Latest earthquakes</a></li>'), 'footer ada pautan gempa');
+  assert.ok(serverSrc.includes('<li><a href="/gempa">World Earthquakes</a></li>'), 'footer ada pautan gempa dunia');
   assert.ok(serverSrc.includes('<a href="/gempa">Kompleks Gempa</a>'), 'hab cuaca paut silang ke gempa');
   assert.ok(serverSrc.includes("'/gempa', '/gempa/penjelasan'"), 'sitemap utama menyenaraikan /gempa');
 });
