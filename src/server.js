@@ -466,6 +466,14 @@ app.get('/nasa/satellites/:group', (req, res) => {
 });
 
 // ── LALUAN KOMPLEKS CUACA (/cuaca*) ── semua statik-dahulu, kemudian :slug ──
+// robots.txt: hidang dari fail dengan no-store — Cloudflare pernah sajikan versi
+// lapuk (baris Sitemap baharu tak nampak di tepi). Fail kecil, kos sifar, dan
+// enjin carian sentiasa baca versi paling terkini.
+app.get('/robots.txt', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('text/plain').send(fs.readFileSync(path.join(PUBLIC_DIR, 'robots.txt'), 'utf8'));
+});
+
 function cuacaHtml(res, html, status) {
   res.status(status || 200).type('html').send(html);
 }
