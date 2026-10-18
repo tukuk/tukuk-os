@@ -1611,6 +1611,7 @@ ${pageAdScript()}${clarityScript()}
 <body>
 ${siteHeader('learn')}
 <div class="wrap">
+  ${adUnitGuarded(config.adsense.slotTop, 'top')}
   <header>
     <h1>Tukuk-OS Academy<span class="badge-count" id="lesson-count"></span></h1>
     <p class="tagline">Zero to Hero: one free curriculum from your first terminal command to running, defending and growing your own search engine.</p>
@@ -1637,6 +1638,7 @@ ${siteHeader('learn')}
 
   html += `
   </main>
+  ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}
 </div>
 ${siteFooter()}
 <script>document.getElementById('lesson-count').textContent='${lessonNo} lessons';</script>
