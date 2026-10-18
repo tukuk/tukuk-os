@@ -1603,7 +1603,7 @@ function siteHeader(active) {
   const a = String(active || '');
   const link = (href, label, key) => `<a href="${href}"${a === key ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
   return `<div class="site-top"><div class="wrap-w"><div class="topbar">
-    <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="">Tukuk-OS</a>
+    <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
     <nav class="topnav" aria-label="Primary">
       ${link('/', 'Home', 'home')}
       ${link('/cari', 'Search', 'cari')}
@@ -1632,7 +1632,7 @@ function siteFooter() {
   return `<footer class="site-foot"><div class="wrap-w">
   <div class="foot-cols">
     <div class="brand-foot">
-      <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="">Tukuk-OS</a>
+      <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
       <p>Independent articles, guides and reference on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account required.</p>
     </div>
     <div><h4>Explore</h4><ul>
