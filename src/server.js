@@ -29,6 +29,7 @@ const gp = require('./gempa');
 const cu = require('./cuti');
 const cd = require('./cuti-dunia');
 const ng = require('./negara');
+const study = require('./study');
 const st = require('./statistik');
 const bc = require('./bencana');
 const social = require('./social');
@@ -1259,7 +1260,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1641,6 +1642,7 @@ function siteFooter() {
       <li><a href="/blog">Blog</a></li>
       <li><a href="/wiki">Wiki</a></li>
       <li><a href="/learn">Learn</a></li>
+      <li><a href="/study">General Knowledge</a></li>
       <li><a href="/docs">Docs</a></li>
     </ul></div>
     <div><h4>NASA Space</h4><ul>
@@ -4619,6 +4621,339 @@ ${siteFooter()}
 </body>
 </html>`;
   res.send(html);
+});
+
+// ══ KOMPLEKS ILMU (/study) — sains, geografi, sejarah, eksperimen, teka-teki,
+// fakta, matematik, alarm. Shell sama seperti nasaDoc: chrome penuh + 3 unit
+// iklan + nav silang. Data kurasi setempat (src/study.js) — tiada API luar.
+const STUDY_SECTIONS = [
+  { href: '/study', icon: '\uD83C\uDF1F', name: 'Today\u2019s Picks', blurb: 'One fact, one riddle, one experiment and one history moment \u2014 fresh every day.' },
+  { href: '/study/science', icon: '\uD83E\uDD2C', name: 'Science', blurb: 'The core ideas of physics, chemistry and biology, explained in plain language.' },
+  { href: '/study/geography', icon: '\uD83C\uDF0D', name: 'Geography', blurb: 'World records, population rankings and a daily capital-city quiz.' },
+  { href: '/study/history', icon: '\uD83D\uDCDC', name: 'History', blurb: 'Thirty-nine milestones that shaped the world \u2014 from cuneiform to CRISPR.' },
+  { href: '/study/experiments', icon: '\uD83E\uDEBA', name: 'Experiments', blurb: 'Safe kitchen science with real explanations \u2014 materials you already own.' },
+  { href: '/study/riddles', icon: '\uD83E\uDD14', name: 'Riddles', blurb: 'Classic brain-teasers; guess first, then unfold the answer.' },
+  { href: '/study/facts', icon: '\uD83D\uDCA1', name: 'Facts', blurb: 'Verified, checkable fun facts across science, history, body and world.' },
+  { href: '/study/math', icon: '\u2795', name: 'Math', blurb: 'A mental-math sprint trainer plus the formulas and stories behind numbers.' },
+  { href: '/study/alarm', icon: '\u23F0', name: 'Alarm & Timer', blurb: 'A browser alarm clock and pomodoro timer \u2014 no install, no account.' },
+];
+
+function studyNav() {
+  return `<nav aria-label="Study sections"><h2 class="section-title">Explore the Tukuk-OS Knowledge Complex</h2><div class="feed">`
+    + STUDY_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+// Pelukan standard seksyen /study — cermin nasaDoc (chrome penuh + iklan berkawal).
+function studyDoc(o) {
+  const robots = o.robots || 'index,follow';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#4c8dff">
+<style>${COMMON_CSS}
+.study-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
+.study-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel,#171a21);margin:0}
+.study-card h3{margin:0 0 8px;font-size:1.05rem}
+.study-card p{margin:6px 0;font-size:.95rem}
+.study-table{width:100%;border-collapse:collapse;font-size:.92rem;margin:14px 0}
+.study-table th,.study-table td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+.study-table th{background:var(--panel,#171a21)}
+.study-step{margin:4px 0 4px 0;padding-left:2px}
+.qopt{display:inline-block;border:1px solid var(--line);background:var(--panel,#171a21);color:var(--text);border-radius:8px;padding:7px 13px;margin:4px 6px 4px 0;font-size:.92rem;cursor:pointer}
+.qopt:hover{border-color:var(--accent,#4c8dff)}
+.qopt.ok{border-color:#3fb950;color:#3fb950;font-weight:700}
+.qopt.no{border-color:#e5534b;color:#e5534b}
+.quiz-block{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0;background:var(--panel,#171a21)}
+details.study-q{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
+details.study-q summary{cursor:pointer;font-weight:600}
+details.study-q p{margin:10px 0 0;color:var(--accent,#4c8dff)}
+#bigclock{font-size:2.6rem;font-weight:700;letter-spacing:1px;margin:10px 0}
+@media(max-width:680px){.study-grid{grid-template-columns:1fr}.study-table{display:block;overflow-x:auto}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('learn')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${studyNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// ── /study — hab: pilihan harian deterministik (tiada kandungan berulang) ────
+function studyHubPage() {
+  const seed = study.dayIndex();
+  const fact = study.pickDaily(study.FACTS, seed);
+  const riddle = study.pickDaily(study.RIDDLES, seed);
+  const exp = study.pickDaily(study.EXPERIMENTS, seed);
+  const hist = study.pickDaily(study.HISTORY, seed);
+  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const body = `<p class="learn-intro">One place for curiosity: verified facts, real experiments and quick brain training \u2014 every section is free, needs no account, and rotates its daily picks on the calendar. For deeper structured learning try the <a href="/learn">Zero-to-Hero Academy</a> or the <a href="/nasa">NASA Space Complex</a>.</p>
+  <div class="study-grid">
+    <div class="study-card"><h3>\uD83D\uDCC5 Today\u2019s fact</h3><p>${escapeHtml(fact.s)}</p><p class="meta">Topic: ${escapeHtml(fact.t)} \u00b7 ${today}</p></div>
+    <div class="study-card"><h3>\uD83E\uDD14 Riddle of the day</h3><p>${escapeHtml(riddle.q)}</p><details class="study-q" style="border:0;padding:0;margin:6px 0 0;background:none"><summary style="font-size:.9rem">Show answer</summary><p>${escapeHtml(riddle.a)}</p></details></div>
+    <div class="study-card"><h3>\uD83E\uDEBA Experiment of the day</h3><p><b>${escapeHtml(exp.name)}</b> \u2014 about ${escapeHtml(exp.time)}.</p><p>${escapeHtml(exp.why.split('.')[0])}.</p><p><a class="btn ghost" href="/study/experiments">Full instructions &rarr;</a></p></div>
+    <div class="study-card"><h3>\uD83D\uDCDC History moment</h3><p><b>${escapeHtml(hist.y)}</b> \u2014 ${escapeHtml(hist.t)}</p><p>${escapeHtml(hist.d)}</p><p><a class="btn ghost" href="/study/history">See the full timeline &rarr;</a></p></div>
+  </div>
+  <h2 class="section-title">Nine ways to explore</h2>
+  <p>Each section below is a full standalone page \u2014 read it, play with it, or use it for classroom and family curiosity.</p>`;
+  return studyDoc({
+    title: 'General Knowledge \u2014 Science, Geography, History, Riddles & More | Tukuk-OS',
+    desc: 'A free knowledge hub: daily facts, brain riddles, safe kitchen experiments, world geography quizzes, history milestones, math drills and a browser alarm clock.',
+    selfUrl: 'https://tukuk.org/study',
+    heroTitle: 'The Knowledge Complex', heroSub: 'Daily facts, riddles, experiments, geography, history, math and tools \u2014 free, no account, every day fresh',
+    body,
+  });
+}
+
+// ── /study/science — penerangan konsep kurasi ───────────────────────────────
+function studySciencePage() {
+  const cards = study.SCIENCE.map((c) => `<div class="study-card"><h3>${escapeHtml(c.title)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
+  const body = `<p class="learn-intro">Seventeen core ideas that school curricula usually scatter across five subjects \u2014 collected here in plain language, each in three short paragraphs. Read one a day; they stand alone. Pair them with the <a href="/study/experiments">hands-on experiments</a> to see the ideas move.</p>
+  <div class="study-grid">${cards}</div>`;
+  return studyDoc({
+    title: 'Science Explained \u2014 17 Core Ideas of Physics, Chemistry & Biology | Tukuk-OS',
+    desc: 'Plain-language explanations of gravity, energy, electricity, light, atoms, DNA, evolution, plate tectonics, climate and more \u2014 free science reference.',
+    selfUrl: 'https://tukuk.org/study/science',
+    heroTitle: 'Science, in Plain Language', heroSub: 'The ideas behind everything \u2014 accurate, short and free',
+    body,
+  });
+}
+
+// ── /study/history — kronologi mercu tanda ──────────────────────────────────
+function studyHistoryPage() {
+  const rows = study.HISTORY.map((h) => `<tr><td><b>${escapeHtml(h.y)}</b></td><td>${escapeHtml(h.t)}</td><td>${escapeHtml(h.d)}</td></tr>`).join('');
+  const body = `<p class="learn-intro">Thirty-nine moments, evenly told: what happened, when, and why it still matters. Dates given as "c." are scholarly approximations. For the cosmos side of the story, see the <a href="/nasa">NASA Space Complex</a>.</p>
+  <table class="study-table"><thead><tr><th>When</th><th>Moment</th><th>Why it mattered</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return studyDoc({
+    title: 'World History in 39 Milestones \u2014 From Sumer to CRISPR | Tukuk-OS',
+    desc: 'A chronological timeline of the events that shaped the world: writing, empires, the printing press, revolutions, flight, penicillin, DNA and the internet.',
+    selfUrl: 'https://tukuk.org/study/history',
+    heroTitle: 'History \u2014 The Short Long Story', heroSub: 'Thirty-nine milestones that made the world you are reading this on',
+    body,
+  });
+}
+
+// Bina 8 soalan kapital deterministik daripada data negara REBENAR (bukan rekaan).
+function studyGeoQuiz(rows, seed) {
+  const withCap = rows.filter((c) => c.capital && /^[\w .'-]+$/.test(String(c.capital)) && c.population);
+  if (withCap.length < 20) return null;
+  const picks = study.shuffleSeeded(withCap, seed).slice(0, 8);
+  const allCaps = withCap.map((c) => c.capital);
+  return picks.map((c) => {
+    const wrong = study.shuffleSeeded(allCaps.filter((x) => x !== c.capital), seed + c.cca3.length).slice(0, 3);
+    const opts = study.shuffleSeeded([c.capital, ...wrong], seed + c.slug.length);
+    return { country: c.name, flag: c.flag, options: opts.map((o) => ({ t: o, ok: o === c.capital })) };
+  });
+}
+
+// ── /study/geography — rekod + ranking populasi + kuiz kapital harian ──────
+function studyGeographyPage(rows) {
+  const seed = study.dayIndex();
+  const records = study.GEO_RECORDS.map((r) => `<tr><td><b>${escapeHtml(r[0])}</b></td><td>${escapeHtml(r[1])}</td></tr>`).join('');
+  let rankHtml = '';
+  if (rows && rows.length) {
+    const top = rows.filter((c) => c.population).sort((a, b) => b.population - a.population).slice(0, 12);
+    rankHtml = `<h2 class="section-title">The ten-biggest, right now</h2><p>Live from the same United Nations / World Bank figures the <a href="/negara">country directory</a> uses — population, land area and capital.</p><table class="study-table"><thead><tr><th>#</th><th>Country</th><th>Population</th><th>Area (km²)</th><th>Capital</th></tr></thead><tbody>`
+      + top.map((c, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(c.name)}</td><td>${Number(c.population).toLocaleString('en-US')}</td><td>${c.area ? Number(c.area).toLocaleString('en-US') : '—'}</td><td>${escapeHtml(c.capital || '—')}</td></tr>`).join('')
+      + `</tbody></table>`;
+  }
+  const quiz = rows && rows.length ? studyGeoQuiz(rows, seed) : null;
+  let quizHtml = '';
+  if (quiz) {
+    quizHtml = `<h2 class="section-title">Capital quiz of the day</h2><p>Eight countries, four choices each — the same eight for everyone today. Click a capital to check yourself; the score updates as you go.</p><div id="quizscore" class="meta" aria-live="polite"></div>`
+      + quiz.map((q) => `<div class="quiz-block"><p><b>${escapeHtml(q.country)}</b> — what is its capital?</p>`
+        + q.options.map((o) => `<button type="button" class="qopt" data-ok="${o.ok ? '1' : '0'}">${escapeHtml(o.t)}</button>`).join('')
+        + `</div>`).join('');
+  } else {
+    quizHtml = `<h2 class="section-title">Capital quiz of the day</h2><p>The live country feed is briefly unavailable, so today's quiz is resting. The world records below are always accurate — and reload this page in a few minutes for the quiz.</p>`;
+  }
+  const body = `<p class="learn-intro">Geography is the study of where things are and why. Below: the planet's outright records, the current population giants, and a daily capital quiz built from real country data. For every country's full profile — flags, languages, borders and statistics — see the <a href="/negara">World Countries directory</a>.</p>
+  <h2 class="section-title">Planetary records</h2>
+  <table class="study-table"><thead><tr><th>Category</th><th>The record holder</th></tr></thead><tbody>${records}</tbody></table>
+  ${rankHtml}
+  ${quizHtml}
+  <script>(function(){var s=document.getElementById('quizscore');var blocks=document.querySelectorAll('.quiz-block');var done=0,right=0;if(s){s.textContent='Score: 0 / '+blocks.length+' answered';}Array.prototype.forEach.call(blocks,function(b){var btns=b.querySelectorAll('.qopt');Array.prototype.forEach.call(btns,function(btn){btn.addEventListener('click',function(){if(b.getAttribute('data-done')==='1')return;var good=btn.getAttribute('data-ok')==='1';btn.className='qopt '+(good?'ok':'no');if(good){right++;}else{Array.prototype.forEach.call(btns,function(o){if(o.getAttribute('data-ok')==='1')o.className='qopt ok';});}b.setAttribute('data-done','1');done++;if(s){s.textContent='Score: '+right+' correct of '+done+' answered';}});});});})();</script>`;
+  return studyDoc({
+    title: 'World Geography \u2014 Records, Population & Daily Capital Quiz | Tukuk-OS',
+    desc: 'Geographic records of the world, live top-country population rankings and a free daily capital-city quiz built from real country data.',
+    selfUrl: 'https://tukuk.org/study/geography',
+    heroTitle: 'Geography \u2014 Where the World Is', heroSub: 'Planetary records, population giants and a daily capital quiz',
+    body,
+  });
+}
+
+// ── /study/experiments — sains dapur selamat ─────────────────────────
+function studyExperimentsPage() {
+  const cards = study.EXPERIMENTS.map((e) => `<div class="study-card"><h3>${escapeHtml(e.name)}</h3><p class="meta">${escapeHtml(e.level)} \u00b7 ${escapeHtml(e.time)}</p><p><b>You need:</b> ${escapeHtml(e.materials)}</p><ol>${e.steps.map((s) => `<li class="study-step">${escapeHtml(s)}</li>`).join('')}</ol><p><b>Why it happens:</b> ${escapeHtml(e.why)}</p></div>`).join('');
+  const body = `<p class="learn-intro">Twelve safe, low-cost experiments using things already in most kitchens. Each lists materials, ordered steps and the real science behind the result. Items marked <b>medium</b> need an adult for a hot-water or boiling step. The concepts connect directly to the <a href="/study/science">science explainers</a>.</p>
+  <div class="study-grid">${cards}</div>`;
+  return studyDoc({
+    title: '12 Safe Home Science Experiments \u2014 With Real Explanations | Tukuk-OS',
+    desc: 'Kitchen science you can do today: density towers, invisible ink, cabbage pH indicator, a homemade compass, DNA from a strawberry and more, each with the why.',
+    selfUrl: 'https://tukuk.org/study/experiments',
+    heroTitle: 'Experiments \u2014 Science You Can Touch', heroSub: 'Safe, cheap, hands-on \u2014 and every one has a real explanation',
+    body,
+  });
+}
+
+// ── /study/riddles — teka-teki klasik (details reveal tanpa JS) ───────────
+function studyRiddlesPage() {
+  const items = study.RIDDLES.map((r) => `<details class="study-q"><summary>${escapeHtml(r.q)}</summary><p>${escapeHtml(r.a)}</p></details>`).join('');
+  const body = `<p class="learn-intro">Thirty-six classic brain-teasers, mostly centuries old and in the public domain. Read the question, sit with it a moment, then tap to unfold the answer. Great for car rides, classrooms and keeping the mind limber.</p>
+  ${items}`;
+  return studyDoc({
+    title: '36 Best Riddles With Answers \u2014 Brain Teasers for All Ages | Tukuk-OS',
+    desc: 'A free collection of classic riddles with hidden answers \u2014 the more you have, the less you see; many keys but no locks; and thirty-five more.',
+    selfUrl: 'https://tukuk.org/study/riddles',
+    heroTitle: 'Riddles \u2014 Think Twice', heroSub: 'Guess before you unfold \u2014 the answer is one tap away',
+    body,
+  });
+}
+
+// ── /study/facts — fakta tertapis ikut topik ────────────────────────────
+function studyFactsPage() {
+  const byTopic = {};
+  for (const f of study.FACTS) { (byTopic[f.t] = byTopic[f.t] || []).push(f.s); }
+  const sections = Object.keys(byTopic).map((t) => `<h2 class="section-title">${escapeHtml(t)}</h2>` + byTopic[t].map((s) => `<p>&bull; ${escapeHtml(s)}</p>`).join('')).join('');
+  const body = `<p class="learn-intro">Forty-two facts chosen to be surprising <em>and</em> checkable \u2014 each is grouped by topic and phrased so you can verify it yourself. Numbers are best public estimates; where experts disagree (river lengths, for instance) we say so. Today's single fact lives on the <a href="/study">Knowledge hub</a>.</p>
+  ${sections}`;
+  return studyDoc({
+    title: '42 Verified Fun Facts \u2014 Science, History, Space & the World | Tukuk-OS',
+    desc: 'A curated, checkable list of fascinating facts about space, the Earth, animals, the human body, history, geography and mathematics \u2014 grouped by topic.',
+    selfUrl: 'https://tukuk.org/study/facts',
+    heroTitle: 'Facts \u2014 True and Verifiable', heroSub: 'Surprising things you can actually check',
+    body,
+  });
+}
+
+// ── /study/math — jurulatih sprint kiraan mental + formula + cerita ─────────
+function studyMathPage() {
+  const formulas = [
+    ['Circle', 'C = 2\u03c0r   \u00b7   A = \u03c0r\u00b2'],
+    ['Rectangle', 'Perimeter = 2(l + w)   \u00b7   Area = l \u00d7 w'],
+    ['Triangle area', 'A = \u00bd \u00d7 base \u00d7 height'],
+    ['Pythagoras', 'a\u00b2 + b\u00b2 = c\u00b2 (right triangles)'],
+    ['Volume of a box', 'V = l \u00d7 w \u00d7 h'],
+    ['Sphere', 'V = \u2044\u2083 \u03c0r\u00b3   \u00b7   A = 4\u03c0r\u00b2'],
+    ['Quadratic formula', 'x = (\u2212b \u00b1 \u221a(b\u00b2 \u2212 4ac)) / 2a'],
+    ['Simple interest', 'I = P \u00d7 r \u00d7 t'],
+    ['Percentage change', '(new \u2212 old) / old \u00d7 100%'],
+    ['Average (mean)', 'sum of values \u00f7 number of values'],
+    ['Speed', 'speed = distance \u00f7 time'],
+    ['Density', 'density = mass \u00f7 volume'],
+  ].map((f) => `<tr><td><b>${escapeHtml(f[0])}</b></td><td>${escapeHtml(f[1])}</td></tr>`).join('');
+  const body = `<p class="learn-intro">Maths is a muscle: quick daily drills build the number sense that makes everything else easier. Use the sprint trainer below for two minutes a day, keep the formula sheet for reference, and read the stories to see why the numbers matter. Pair with the <a href="/study/science">science explainers</a> for the physics that uses these tools.</p>
+  <h2 class="section-title">Mental-math sprint \u2014 60 seconds</h2>
+  <p>Pick a level, press Start, and answer as many as you can before the clock runs out. Every problem is generated fresh in your browser.</p>
+  <div class="quiz-block">
+    <label for="mathlevel">Level:</label>
+    <select id="mathlevel"><option value="add">Addition (easy)</option><option value="sub">Subtraction (easy)</option><option value="mul">Multiplication (medium)</option><option value="mix">Mixed (hard)</option></select>
+    <button type="button" class="btn primary" id="mathstart">Start</button>
+  </div>
+  <div class="quiz-block" id="mathplay" style="display:none">
+    <p class="meta">Time left: <b id="mathtime">60</b>s \u00b7 Score: <b id="mathscore">0</b></p>
+    <p style="font-size:1.6rem;font-weight:700" id="mathq">\u2014</p>
+    <input id="mathans" type="number" inputmode="numeric" aria-label="Your answer" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel,#171a21);color:inherit;font-size:1.1rem;width:140px">
+    <button type="button" class="btn primary" id="mathcheck">Check</button>
+    <span id="mathfb" class="meta" aria-live="polite"></span>
+  </div>
+  <h2 class="section-title">The formula sheet</h2>
+  <table class="study-table"><thead><tr><th>Thing</th><th>Formula</th></tr></thead><tbody>${formulas}</tbody></table>
+  <h2 class="section-title">Numbers with a story</h2>
+  <p>&bull; Zero became a number in India by the 7th century \u2014 before that, "nothing" was not something you could count with.</p>
+  <p>&bull; A shuffled deck of 52 cards has about 8\u00d710<sup>67</sup> possible orders \u2014 more than the seconds since the Big Bang, so your shuffle has almost certainly never happened before.</p>
+  <p>&bull; The Babylonians knew the Pythagorean relationship over a thousand years before Pythagoras; a clay tablet (Plimpton 322, c. 1800 BC) lists correct triples.</p>
+  <p>&bull; Every map ever drawn needs at most four colours \u2014 the Four Colour Theorem, proven with a computer in 1976.</p>
+  <script>(function(){var level=document.getElementById('mathlevel');var startBtn=document.getElementById('mathstart');var play=document.getElementById('mathplay');var qEl=document.getElementById('mathq');var ans=document.getElementById('mathans');var checkBtn=document.getElementById('mathcheck');var fb=document.getElementById('mathfb');var timeEl=document.getElementById('mathtime');var scoreEl=document.getElementById('mathscore');var current=0,left=60,score=0,timer=null;function rint(n){return Math.floor(Math.random()*n);}function make(){var t=level.value;if(t==='mix'){t=['add','sub','mul'][rint(3)];}var a,b;if(t==='add'){a=rint(50)+1;b=rint(50)+1;current=a+b;qEl.textContent=a+' + '+b+' =';}else if(t==='sub'){a=rint(80)+20;b=rint(a);current=a-b;qEl.textContent=a+' \u2212 '+b+' =';}else{a=rint(12)+2;b=rint(12)+2;current=a*b;qEl.textContent=a+' \u00d7 '+b+' =';}ans.value='';fb.textContent='';ans.focus();}function stop(){if(timer){clearInterval(timer);timer=null;}}startBtn.addEventListener('click',function(){play.style.display='block';left=60;score=0;scoreEl.textContent='0';timeEl.textContent='60';stop();make();timer=setInterval(function(){left--;timeEl.textContent=String(left);if(left<=0){stop();qEl.textContent="Time! You scored "+score;fb.textContent='';play.style.display='none';}},1000);});function judge(){var v=parseInt(ans.value,10);if(String(v)===String(current)){score++;scoreEl.textContent=String(score);fb.textContent='Correct';}else{fb.textContent='Not quite \u2014 it was '+current;}make();}checkBtn.addEventListener('click',judge);ans.addEventListener('keydown',function(e){if(e.key==='Enter'){judge();}});})();</script>`;
+  return studyDoc({
+    title: 'Mental Math Trainer \u2014 60-Second Sprint, Formulas & Number Facts | Tukuk-OS',
+    desc: 'A free in-browser mental-math sprint game with addition, subtraction, multiplication and mixed levels, plus a formula sheet and the stories behind the numbers.',
+    selfUrl: 'https://tukuk.org/study/math',
+    heroTitle: 'Math \u2014 Fast and Faithful', heroSub: 'Drill your number sense, keep the formulas, meet the stories',
+    body,
+  });
+}
+
+// ── /study/alarm — jam + alarm + pomodoro (honest: tab mesti kekal terbuka) ──
+function studyAlarmPage() {
+  const body = `<p class="learn-intro">A no-install alarm clock and study timer that run entirely in your browser \u2014 nothing leaves this page. <b>Keep this tab open</b> for an alarm or countdown to fire; browsers do not let a closed tab ring. For the pomodoro technique, run a 25-minute focus block, take a 5-minute break, repeat.</p>
+  <div class="quiz-block" style="text-align:center">
+    <div id="bigclock" aria-live="off">--:--:--</div>
+    <p class="meta" id="clockdate"></p>
+    <button type="button" class="btn ghost" id="soundbtn">\uD83D\uDD0A Enable sound</button>
+    <span class="meta" id="soundstate"> (click so the alarm can play)</span>
+  </div>
+  <div class="study-grid">
+    <div class="study-card"><h3>\u23F0 Alarm</h3>
+      <label for="alarmtime">Wake at:</label>
+      <input id="alarmtime" type="time" style="padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel,#171a21);color:inherit">
+      <p><button type="button" class="btn primary" id="alarmtoggle">Set alarm</button> <span class="meta" id="alarmstate">Off</span></p>
+    </div>
+    <div class="study-card"><h3>\uD83C\uDF45 Pomodoro / countdown</h3>
+      <p><button type="button" class="qbtn qopt" id="p25">25 min focus</button> <button type="button" class="qopt" id="p5">5 min break</button></p>
+      <div style="font-size:1.8rem;font-weight:700" id="pdisplay">--:--</div>
+      <p><button type="button" class="btn ghost" id="pstop">Stop</button></p>
+    </div>
+  </div>
+  <p class="meta">Tip: set your device to keep the screen awake while studying. This tool never sends your data anywhere \u2014 see <a href="/privacy">Privacy</a>.</p>
+  <script>(function(){var ac=null;var clk=document.getElementById('bigclock');var cdate=document.getElementById('clockdate');function pad(n){return (n<10?'0':'')+n;}var alarmOn=false,alarmAt='',alarmFired=false;function two(x){return x<10?'0'+x:''+x;}function tick(){var d=new Date();if(clk){clk.textContent=two(d.getHours())+':'+two(d.getMinutes())+':'+two(d.getSeconds());}if(cdate){cdate.textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}var now=two(d.getHours())+':'+two(d.getMinutes());if(alarmOn&&alarmAt&&now===alarmAt&&!alarmFired){alarmFired=true;beepLoop();var s=document.getElementById('alarmstate');if(s){s.textContent='Ringing \u2014 dismiss to stop';}}}function beepLoop(){var n=0;var iv=setInterval(function(){beep();n++;if(n>40){clearInterval(iv);}},700);window.__stopbeep=function(){clearInterval(iv);};}function beep(){if(!ac)return;try{var o=ac.createOscillator();var g=ac.createGain();o.connect(g);g.connect(ac.destination);o.type='sine';o.frequency.value=880;g.gain.setValueAtTime(0.001,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.2,ac.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+0.4);o.start();o.stop(ac.currentTime+0.45);}catch(e){}}var sb=document.getElementById('soundbtn');if(sb){sb.addEventListener('click',function(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.resume){ac.resume();}document.getElementById('soundstate').textContent=' \u2713 ready';});}var tt=document.getElementById('alarmtoggle');if(tt){tt.addEventListener('click',function(){var inp=document.getElementById('alarmtime');var st=document.getElementById('alarmstate');if(alarmOn){alarmOn=false;st.textContent='Off';if(window.__stopbeep){window.__stopbeep();}return;}if(!inp.value){st.textContent='Pick a time first';return;}alarmAt=inp.value;alarmOn=true;alarmFired=false;st.textContent='On for '+alarmAt+' (keep this tab open)';});}var pdisp=document.getElementById('pdisplay');var pleft=0,ptimer=null;function pstop(){if(ptimer){clearInterval(ptimer);ptimer=null;}if(window.__stopbeep){window.__stopbeep();}}function render(){var m=Math.floor(pleft/60);var s=pleft%60;pdisp.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;}function startP(secs){pstop();pleft=secs;render();ptimer=setInterval(function(){pleft--;render();if(pleft<=0){pstop();beep();beep();pdisp.textContent='Done!';}},1000);}var b25=document.getElementById('p25');if(b25){b25.addEventListener('click',function(){startP(25*60);});}var b5=document.getElementById('p5');if(b5){b5.addEventListener('click',function(){startP(5*60);});}var pstopBtn=document.getElementById('pstop');if(pstopBtn){pstopBtn.addEventListener('click',function(){pstop();pdisp.textContent='--:--';});}tick();setInterval(tick,1000);})();</script>`;
+  return studyDoc({
+    title: 'Alarm Clock & Pomodoro Timer \u2014 Free Browser Tool | Tukuk-OS',
+    desc: 'A no-install alarm clock and 25/5 pomodoro study timer that runs in your browser with sound. Set a wake time, start a focus block, keep your data on-device.',
+    selfUrl: 'https://tukuk.org/study/alarm',
+    heroTitle: 'Alarm & Timer', heroSub: 'Wake-up alarm and pomodoro study timer \u2014 private, in-browser, no install',
+    body,
+  });
+}
+
+// ── Laluan /study — semua literal; geografi async (data negara REBENAR). ────
+app.get('/study', (req, res) => res.type('html').send(studyHubPage()));
+app.get('/study/science', (req, res) => res.type('html').send(studySciencePage()));
+app.get('/study/history', (req, res) => res.type('html').send(studyHistoryPage()));
+app.get('/study/experiments', (req, res) => res.type('html').send(studyExperimentsPage()));
+app.get('/study/riddles', (req, res) => res.type('html').send(studyRiddlesPage()));
+app.get('/study/facts', (req, res) => res.type('html').send(studyFactsPage()));
+app.get('/study/math', (req, res) => res.type('html').send(studyMathPage()));
+app.get('/study/alarm', (req, res) => res.type('html').send(studyAlarmPage()));
+app.get('/study/geography', async (req, res) => {
+  let rows = null;
+  try { rows = await ng.loadCountries(); } catch (e) { rows = null; }
+  res.type('html').send(studyGeographyPage(Array.isArray(rows) && rows.length >= 20 ? rows : null));
 });
 
 app.get('/blog/rss.xml', (req, res) => {
