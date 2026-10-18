@@ -13,3 +13,4 @@ User-agent: AdsBot-Google
 Allow: /
 
 Sitemap: https://tukuk.org/sitemap.xml
+Sitemap: https://tukuk.org/sitemap-nasa.xml

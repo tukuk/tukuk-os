@@ -298,6 +298,172 @@ app.get('/nasa', async (req, res) => {
   }
 });
 
+// ── NASA SPACE COMPLEX — laluan ──────────────────────────────────────────
+// Setiap seksyen hidang HTML boleh-index + 3 unit iklan melalui nasaDoc. Data
+// ditarik ATAS PERMINTAAN (src/nasa.js sudah ada cache 2–12 jam + pemutus litar),
+// jadi walaupun Googlebot menyerbu kluster ini, server kekal ringan dan kuot
+// NASA tidak tercetus. Ralat data → 503 noindex (tiada halaman kosong terindeks).
+const APOD_FIRST_DAY = '1995-06-16';
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function nasaHtml(res, html, status) {
+  res.status(status || 200).type('html').send(html);
+}
+
+// `/nasa/random` → 302 ke satu tarikh APOD rawak. Tidak di-index (ia sentiasa
+// berbeza), tapi pautan darinya mengukuhkan struktur crawl seluruh arkib.
+app.get('/nasa/random', (req, res) => {
+  const start = Date.parse(`${APOD_FIRST_DAY}T12:00:00Z`);
+  const span = Math.max(1, Date.now() - start);
+  const d = new Date(start + Math.floor(Math.random() * span)).toISOString().slice(0, 10);
+  res.redirect(302, `/nasa/apod/${d}`);
+});
+
+// Arkib setempat: senarai + carian teks atas rekod yang pernah disimpan (sifar
+// kuot API). Semakin lama pelayan berjalan, semakin besar arkib ini secara organik.
+app.get('/nasa/archive', (req, res) => {
+  const q = String(req.query.q || '').trim().slice(0, 60);
+  try {
+    const items = nasa.store.listApod({ limit: 120, q });
+    nasaHtml(res, nasaArchivePage(req, items, q));
+  } catch {
+    nasaHtml(res, nasaBusy('APOD archive is unavailable'), 503);
+  }
+});
+
+// Penjana halaman SEO terbesar: satu halaman PER HARI sejak 16 Jun 1995 —
+// ±11,000 URL unik berindeks yang ditulis oleh NASA, bukan oleh kita.
+app.get('/nasa/apod/:date', async (req, res) => {
+  const dateStr = String(req.params.date || '');
+  const today = new Date().toISOString().slice(0, 10);
+  if (!ISO_DATE_RE.test(dateStr) || dateStr < APOD_FIRST_DAY || dateStr > today) {
+    return nasaHtml(res, nasaBusy('That date is outside the APOD archive (16 June 1995 \u2013 today)'), 404);
+  }
+  try {
+    const apod = await nasa.getAPOD({ date: dateStr });
+    nasaHtml(res, nasaApodDatePage(req, apod, dateStr));
+  } catch {
+    nasaHtml(res, nasaBusy('No picture recorded for that date'), 503);
+  }
+});
+
+app.get('/nasa/sky', async (req, res) => {
+  const useQuery = req.query.lat !== undefined || req.query.lng !== undefined;
+  try {
+    const sky = await nasa.getSkyTonight({ lat: req.query.lat, lng: req.query.lng });
+    nasaHtml(res, nasaSkyPage(req, sky, useQuery));
+  } catch {
+    nasaHtml(res, nasaBusy('Sky calculations are unavailable'), 503);
+  }
+});
+
+app.get('/nasa/iss', async (req, res) => {
+  try {
+    const [iss, crew] = await Promise.all([nasa.getISSTelemetry(), nasa.getCrew().catch(() => null)]);
+    nasaHtml(res, nasaIssPage(req, iss, crew));
+  } catch {
+    nasaHtml(res, nasaBusy('ISS telemetry is unavailable'), 503);
+  }
+});
+
+app.get('/nasa/asteroids', async (req, res) => {
+  try {
+    const [week, trend, sentry] = await Promise.all([
+      nasa.getNearEarthObjects(),
+      nasa.getAsteroidTrend({ weeks: 4 }).catch(() => null),
+      nasa.getSentryRisk().catch(() => null),
+    ]);
+    nasaHtml(res, nasaAsteroidsPage(req, week, trend, sentry));
+  } catch {
+    nasaHtml(res, nasaBusy('Asteroid data is unavailable'), 503);
+  }
+});
+
+app.get('/nasa/space-weather', async (req, res) => {
+  try {
+    const solar = await nasa.getSolarActivity({ days: 30 });
+    nasaHtml(res, nasaSpaceWeatherPage(req, solar));
+  } catch {
+    nasaHtml(res, nasaBusy('Space-weather data is unavailable'), 503);
+  }
+});
+
+function marsRoute(slug) {
+  return async (req, res) => {
+    const rv = MARS_ROVERS.find((r) => r.slug === slug) || MARS_ROVERS[0];
+    try {
+      const data = await nasa.getMarsPhotos({ rover: rv.slug, sol: rv.sol });
+      nasaHtml(res, nasaMarsPage(req, data, rv.slug));
+    } catch {
+      nasaHtml(res, nasaBusy('Mars imagery is unavailable'), 503);
+    }
+  };
+}
+
+app.get('/nasa/mars', marsRoute('perseverance'));
+// Slug sebarang → laluan parameter + sahkan dalam handler. (Loop daftar route di
+// sini akan kena TDZ: MARS_ROVERS ialah `const` yang baru diisytihar kemudian.)
+app.get('/nasa/mars/:slug', (req, res) => {
+  const rv = MARS_ROVERS.find((r) => r.slug === String(req.params.slug));
+  if (!rv) return res.redirect(301, '/nasa/mars');
+  return marsRoute(rv.slug)(req, res);
+});
+
+app.get('/nasa/earth', async (req, res) => {
+  try {
+    const epic = await nasa.getEPIC({});
+    nasaHtml(res, nasaEarthPage(req, epic));
+  } catch {
+    nasaHtml(res, nasaBusy('EPIC imagery is unavailable'), 503);
+  }
+});
+
+app.get('/nasa/exoplanets', async (req, res) => {
+  const d = Number(req.query.d) || 0;
+  try {
+    const exo = await nasa.getExoplanets({ limit: 250 });
+    nasaHtml(res, nasaExoplanetsPage(req, exo, d));
+  } catch {
+    nasaHtml(res, nasaBusy('The exoplanet archive is unreachable'), 503);
+  }
+});
+
+function soundsRoute(topic) {
+  return async (req, res) => {
+    try {
+      const audio = await nasa.getSpaceAudio(topic);
+      nasaHtml(res, nasaSoundsPage(req, audio, topic));
+    } catch {
+      nasaHtml(res, nasaBusy('NASA audio is unavailable'), 503);
+    }
+  };
+}
+
+app.get('/nasa/sounds', soundsRoute('apollo'));
+app.get('/nasa/sounds/:topic', (req, res) => {
+  const t = NASA_SOUND_TOPICS.find((x) => x.slug === String(req.params.topic));
+  if (!t) return res.redirect(301, '/nasa/sounds');
+  return soundsRoute(t.slug)(req, res);
+});
+
+function satellitesRoute(group) {
+  return async (req, res) => {
+    try {
+      const data = await nasa.getSatellites({ group });
+      nasaHtml(res, nasaSatellitesPage(req, data, group));
+    } catch {
+      nasaHtml(res, nasaBusy('Orbital element data is unavailable'), 503);
+    }
+  };
+}
+
+app.get('/nasa/satellites', satellitesRoute('stations'));
+app.get('/nasa/satellites/:group', (req, res) => {
+  const g = SAT_GROUPS.find((x) => x.slug === String(req.params.group));
+  if (!g) return res.redirect(301, '/nasa/satellites');
+  return satellitesRoute(g.slug)(req, res);
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -802,7 +968,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/wiki', '/blog', '/learn', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -821,6 +987,46 @@ app.get('/sitemap.xml', async (req, res) => {
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls.join('\n') +
     `\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP NASA — klaster APOD harian ──────────────────────────────────────
+// NASA telah menerbitkan SATU gambar + penjelasan setiap hari sejak 16 Jun 1995.
+// Kita mirrorkan sebagai ±11,000 halaman unik (/nasa/apod/YYYY-MM-DD) — setiap
+// satu berbeza kandungan, berindeks, dan beriklan. Dipotong ikut tahun supaya
+// satu fail nie lebih kecil daripada had 50,000 URL Google dan jana kekal ringan
+// (dijana semasa permintaan, O(366) string, tiada API dipanggil).
+function apodDatesInYear(year) {
+  const y = Number(year);
+  if (!Number.isFinite(y) || y < 1995 || y > new Date().getUTCFullYear()) return null;
+  const first = Date.parse(`${APOD_FIRST_DAY}T00:00:00Z`);
+  const start = Math.max(first, Date.UTC(y, 0, 1));
+  const end = Math.min(Date.UTC(y, 11, 31), Date.now());
+  const out = [];
+  for (let t = start; t <= end; t += 86400000) out.push(new Date(t).toISOString().slice(0, 10));
+  return out;
+}
+
+app.get('/sitemap-nasa.xml', (req, res) => {
+  const thisYear = new Date().getUTCFullYear();
+  const years = [];
+  for (let y = 1995; y <= thisYear; y += 1) years.push(y);
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + years.map((y) => `  <sitemap>\n    <loc>https://tukuk.org/sitemap-nasa-${y}.xml</loc>\n  </sitemap>`).join('\n')
+    + '\n</sitemapindex>\n'
+  );
+});
+
+// Laluan bertailkan `.xml` ditulis sebagai regex — bentuk `:year.xml` tidak
+// boleh dipercayai merentas versi path-to-regexp.
+app.get(/^\/sitemap-nasa-(\d{4})\.xml$/, (req, res) => {
+  const dates = apodDatesInYear(req.params[0]);
+  if (!dates) return res.status(404).type('text/plain').send('Unknown APOD year');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + dates.map((d) => `  <url>\n    <loc>https://tukuk.org/nasa/apod/${d}</loc>\n    <lastmod>${d}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>0.6</priority>\n  </url>`).join('\n')
+    + '\n</urlset>\n'
   );
 });
 
@@ -1046,6 +1252,11 @@ function siteFooter() {
       <li><a href="/blog">Blog</a></li>
       <li><a href="/wiki">Wiki</a></li>
       <li><a href="/nasa">NASA APOD</a></li>
+      <li><a href="/nasa/archive">APOD archive</a></li>
+      <li><a href="/nasa/sky">Sky tonight</a></li>
+      <li><a href="/nasa/iss">ISS live</a></li>
+      <li><a href="/nasa/asteroids">Asteroid watch</a></li>
+      <li><a href="/nasa/exoplanets">Exoplanets</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/docs">Docs</a></li>
     </ul></div>
@@ -1228,13 +1439,560 @@ ${siteHeader('nasa')}
     ${imgHtml}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     <article>${explanationHtml}</article>
-    <p class="meta">Source: NASA APOD. Mirror for search &amp; reading convenience at Tukuk-OS. Explore more in the <a href="/blog">knowledge base</a>.</p>
+    <p class="meta">Source: NASA APOD. Mirror for search &amp; reading convenience at Tukuk-OS. Browse <a href="/nasa/archive">three decades of archive</a> or more in the <a href="/blog">knowledge base</a>.</p>
+    ${nasaSpaceNav()}
     ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
 </div>
 ${siteFooter()}
 </body>
 </html>`;
+}
+
+// ── TUKUK-OS SPACE COMPLEX — banyak halaman konten SEO di atas data NASA live ──
+// Semua data diambil ATAS PERMINTAAN melalui src/nasa.js (cache 2–12 jam +
+// circuit-breaker sedia ada) → tiada kerja latar baru, server kekal ringan.
+// Setiap halaman: index,follow + 3 unit iklan + JSON-LD + nasaSpaceNav() sebagai
+// hab pautan-silang (internal link mengukuhkan seluruh kluster NASA di Google).
+const NASA_SECTIONS = [
+  { href: '/nasa', icon: '\uD83C\uDF20', name: 'Picture of the Day', blurb: "Today's Astronomy Picture of the Day, with NASA's own explanation." },
+  { href: '/nasa/archive', icon: '\uD83D\uDDC4', name: 'APOD Archive', blurb: 'Three decades of universe — browse and search every picture we hold.' },
+  { href: '/nasa/sky', icon: '\uD83C\uDF19', name: 'Sky Tonight', blurb: 'Moon phase, illumination and twilight times for tonight\u2019s stargazing.' },
+  { href: '/nasa/iss', icon: '\uD83D\uDEF8', name: 'ISS Live', blurb: 'Where the Space Station orbits right now — and who is aboard.' },
+  { href: '/nasa/asteroids', icon: '\u2604\uFE0F', name: 'Asteroid Watch', blurb: 'This week\u2019s close approaches plus the JPL Sentry risk table.' },
+  { href: '/nasa/space-weather', icon: '\uD83C\uDF1E', name: 'Space Weather', blurb: 'Solar flares, sunspot number and what the Sun is doing this week.' },
+  { href: '/nasa/mars', icon: '\uD83D\uDD34', name: 'Mars Rovers', blurb: 'Latest surface photos from Curiosity and Perseverance.' },
+  { href: '/nasa/earth', icon: '\uD83C\uDF0D', name: 'EPIC Earth', blurb: 'The whole planet in one frame, imaged a million miles away by DSCOVR.' },
+  { href: '/nasa/exoplanets', icon: '\uD83E\uDEF5', name: 'Exoplanets', blurb: 'Worlds around other stars — the nearest ones, ranked by distance.' },
+  { href: '/nasa/sounds', icon: '\uD83D\uDD0A', name: 'Sounds of Space', blurb: 'Apollo chatter, planets and rockets — free NASA audio, playable here.' },
+  { href: '/nasa/satellites', icon: '\uD83D\uDCE1', name: 'Satellites', blurb: 'Who is up there: stations, weather birds and the navigation fleet.' },
+];
+
+function nasaSpaceNav() {
+  return `<nav aria-label="NASA sections"><h2 class="section-title">Explore the Tukuk-OS Space Complex</h2><div class="feed">`
+    + NASA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
+    + `</div></nav>`;
+}
+
+function nasaImg(url, alt, eager) {
+  if (!/^https?:\/\//i.test(String(url || ''))) return '';
+  return `<img class="nasa-img" src="${escapeHtml(url)}" alt="${escapeHtml(alt || 'NASA space image (public domain)')}" loading="${eager ? 'eager' : 'lazy'}" decoding="async">`;
+}
+
+function nasaParas(text, limit) {
+  return String(text || '').split(/\n+/).map((s) => s.trim()).filter(Boolean).slice(0, limit || 6)
+    .map((s) => `<p>${escapeHtml(s)}</p>`).join('');
+}
+
+function nasaFmt(n) { return Number(n || 0).toLocaleString('en-US'); }
+
+// Pelukan halaman standard seksyen NASA: head SEO penuh + chrome situs + unit
+// iklan top / in-article / bottom + nav silang. `body` dari pemanggil ialah HTML
+// yang sudah selamat (panggil escapeHtml sendiri untuk data dinamik).
+function nasaDoc(o) {
+  const robots = o.robots || 'index,follow,max-image-preview:large';
+  const ogImage = o.image || 'https://tukuk.org/og.png';
+  const ld = o.ld || JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
+    description: o.desc, url: o.selfUrl,
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(o.title)}</title>
+<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="robots" content="${robots}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="${escapeHtml(o.title)}">
+<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:url" content="${o.selfUrl}">
+<meta property="og:image" content="${escapeHtml(ogImage)}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${o.selfUrl}">
+<meta name="google-adsense-account" content="ca-pub-8954948214333501">
+<script type="application/ld+json">${ld}</script>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}
+.nasa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.nasa-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21)}
+.nasa-card h3{margin:0 0 6px;font-size:.9rem;color:var(--muted,#9aa3b2);font-weight:600}
+.nasa-card .big{font-size:1.45rem;font-weight:700}
+.nasa-img{max-width:100%;border-radius:10px;border:1px solid var(--line);display:block;margin:0 auto}
+table.nasa-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
+.nasa-table th,.nasa-table td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+.nasa-table th{background:var(--panel,#171a21)}
+.nasa-daynav{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+.nasa-haz{color:#e5534b;font-weight:700}
+.nasa-ok{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel,#171a21);margin:14px 0}
+.nasa-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.nasa-photos figure{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel,#171a21)}
+.nasa-photos img{width:100%;height:170px;object-fit:cover;display:block}
+.nasa-photos figcaption{padding:8px 10px;font-size:.82rem;color:var(--muted,#9aa3b2)}
+.nasa-map{width:100%;max-width:760px;height:auto;border:1px solid var(--line);border-radius:10px;display:block;margin:16px auto;background:#0a1020}
+.nasa-bar{height:10px;border-radius:6px;background:var(--accent,#4c8dff);margin-top:4px}
+.nasa-barwrap{border:1px solid var(--line);border-radius:6px;background:var(--panel,#171a21);padding:6px 10px;margin:6px 0}
+.nasa-strip{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.nasa-strip button{border:1px solid var(--line);background:var(--panel,#171a21);color:var(--text);border-radius:8px;padding:6px 10px;font-size:.82rem;cursor:pointer}
+.nasa-strip button.on{border-color:var(--accent,#4c8dff);color:var(--accent,#4c8dff)}
+.nasa-audio{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0;background:var(--panel,#171a21)}
+.nasa-audio h3{margin:0 0 6px;font-size:1rem}
+.nasa-audio p{color:var(--muted,#9aa3b2);font-size:.88rem;margin:0 0 10px}
+.nasa-audio audio{width:100%}
+@media(max-width:680px){.nasa-grid{grid-template-columns:1fr}.nasa-photos{grid-template-columns:1fr}table.nasa-table{display:block;overflow-x:auto}}
+</style>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+${pageAdScript()}${clarityScript()}
+</head>
+<body>
+${siteHeader('nasa')}
+<div class="wrap">
+  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${o.body}
+    ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
+    ${nasaSpaceNav()}
+    ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
+  </main>
+</div>
+${siteFooter()}
+</body>
+</html>`;
+}
+
+// Gagal data → halaman mesra-CARI (503) tanpa menjejaskan indeks halaman lain.
+function nasaBusy(msg) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The NASA feed is briefly unreachable. Please try again in a few minutes.</p><p><a href="/nasa">Back to the Space Complex</a></p></body>`;
+}
+
+// APOD ikut tarikh — /nasa/apod/1997-08-26 dan seterusnya. Ini penjana halaman
+// SEO terbesar kita: NASA menerbitkan APOD sejak 16 Jun 1995 = ±11,000 halaman
+// unik berindeks, satu per hari, tanpa penulisan manual.
+function nasaApodDatePage(req, apod, dateStr) {
+  const a = Array.isArray(apod) ? apod[0] : (apod || {});
+  const title = String(a.title || 'APOD').slice(0, 120);
+  const selfUrl = `https://tukuk.org/nasa/apod/${dateStr}`;
+  const day = 86400000;
+  const shift = (n) => { const d = new Date(Date.parse(dateStr + 'T12:00:00Z') + n * day); return d.toISOString().slice(0, 10); };
+  const prev = shift(-1); const next = shift(1);
+  const isVideo = String(a.media_type || '') === 'video';
+  const imgHtml = isVideo
+    ? `<p><a href="${escapeHtml(String(a.url || 'https://apod.nasa.gov'))}" rel="noopener" target="_blank">▶ Watch today\u2019s video on the source</a></p>`
+    : nasaImg(a.hdurl || a.url, `${title} — APOD for ${dateStr}`, true);
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'ImageObject', name: title, description: String(a.explanation || '').slice(0, 300),
+    contentUrl: isVideo ? '' : String(a.hdurl || a.url || ''), datePublished: dateStr,
+    license: 'https://www.nasa.gov/multimedia/guidelines/index.html', producer: { '@type': 'Organization', name: 'NASA' },
+  }).replace(/</g, '\\u003c');
+  const body = `<p class="back-link"><a href="/nasa">&larr; Space Complex</a> &middot; <a href="/nasa/archive">Archive</a></p>`
+    + `<div class="nasa-daynav"><a class="btn ghost" href="/nasa/apod/${prev}">&larr; ${prev}</a>`
+    + `<a class="btn ghost" href="/nasa/apod/${next}">${next} &rarr;</a></div>`
+    + imgHtml
+    + `<article>${nasaParas(a.explanation, 12)}</article>`
+    + (a.copyright ? `<p class="meta">Copyright: ${escapeHtml(String(a.copyright).slice(0, 120))}</p>` : '')
+    + `<p class="meta">Astronomy Picture of the Day for ${dateStr} — image &amp; explanation courtesy of NASA (public domain), mirrored at Tukuk-OS for reading and search convenience.</p>`;
+  return nasaDoc({
+    title: `${title} — APOD ${dateStr} | Tukuk-OS`, desc: String(a.explanation || '').slice(0, 155) || `NASA's Astronomy Picture of the Day for ${dateStr}.`,
+    selfUrl, heroTitle: title, heroSub: `Astronomy Picture of the Day \u00b7 ${dateStr} \u00b7 NASA (public domain)`,
+    image: (!isVideo && (a.hdurl || a.url)) || undefined, ld: jsonLd, body,
+  });
+}
+
+// Arkib APOD setempat (cakerakan) + carian teks — tidak guna kuot API.
+function nasaArchivePage(req, items, q) {
+  const cards = items.map((e) => {
+    const isImg = String(e.media_type || 'image') === 'image' && !/^https:\/\/www\.youtube\./i.test(String(e.url || ''));
+    const thumb = isImg ? nasaImg(e.url, String(e.title || 'APOD')) : '<div class="nasa-card" style="text-align:center">\uD83C\uDFAC Video</div>';
+    return `<div class="post-card"><h2><a href="/nasa/apod/${encodeURIComponent(String(e.date || ''))}">${escapeHtml(String(e.title || e.date || 'APOD'))}</a></h2>`
+      + `<div class="meta">${escapeHtml(String(e.date || ''))}</div>${thumb}</div>`;
+  }).join('');
+  const body = `<form action="/nasa/archive" method="get" role="search" style="margin:14px 0">`
+    + `<input type="search" name="q" value="${escapeHtml(q)}" placeholder="Search 30 years of APOD — nebula, mars, aurora\u2026" aria-label="Search APOD archive" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;min-width:260px;background:var(--panel,#171a21);color:inherit">`
+    + `<button class="btn primary" type="submit" style="margin-left:8px">Search</button></form>`
+    + `<p>NASA has published one original image with an explanation every day since <b>16 June 1995</b>. This mirror keeps them searchable \u2014 each picture has its own permanent page, ideal for classes, night skies and pure browsing curiosity. Feeling adventurous? <a href="/nasa/random">Take a random trip through the archive</a>.</p>`
+    + `<h2 class="section-title">${items.length} pictures${q ? ` matching \u201C${escapeHtml(q)}\u201D` : ' (newest first)'}</h2><div class="feed">${cards || '<p>No archived pictures match yet — try a broader word.</p>'}</div>`;
+  return nasaDoc({
+    title: q ? `APOD archive search: ${q} | Tukuk-OS` : 'NASA APOD Archive 1995\u2013today \u2014 every Astronomy Picture of the Day | Tukuk-OS',
+    desc: 'Browse and search NASA\u2019s Astronomy Picture of the Day archive \u2014 three decades of universe, one page per date, free and public domain.',
+    selfUrl: q ? `https://tukuk.org/nasa/archive?q=${encodeURIComponent(q)}` : 'https://tukuk.org/nasa/archive',
+    robots: q ? 'noindex,follow' : 'index,follow,max-image-preview:large',
+    heroTitle: 'The APOD Archive', heroSub: 'Every Astronomy Picture of the Day since 1995 \u00b7 image & explanation courtesy of NASA',
+    body,
+  });
+}
+
+function nasaSkyPage(req, sky, useQuery) {
+  const m = sky.moon || {};
+  const sun = sky.sun || null;
+  const loc = sky.location || { lat: 3.139, lng: 101.687 };
+  const locLabel = `${Math.abs(Number(loc.lat) || 0).toFixed(2)}\u00b0${Number(loc.lat) >= 0 ? 'N' : 'S'}, ${Math.abs(Number(loc.lng) || 0).toFixed(2)}\u00b0${Number(loc.lng) >= 0 ? 'E' : 'W'}`;
+  const hhmm = (iso) => { try { return new Date(iso).toISOString().slice(11, 16) + ' UTC'; } catch { return '--:--'; } };
+  const cards = `<div class="nasa-grid">`
+    + `<div class="nasa-card"><h3>Moon phase</h3><div class="big">${m.emoji || ''} ${escapeHtml(m.name || 'Unknown')}</div></div>`
+    + `<div class="nasa-card"><h3>Illumination</h3><div class="big">${Number(m.illum_percent) || 0}%</div></div>`
+    + `<div class="nasa-card"><h3>Age of Moon</h3><div class="big">${Number(m.age_days) || 0} days</div></div>`
+    + `<div class="nasa-card"><h3>Next Full Moon</h3><div class="big">in ${Number(m.next_full_days) || 0} nights</div></div>`
+    + `<div class="nasa-card"><h3>Next New Moon</h3><div class="big">in ${Number(m.next_new_days) || 0} nights</div></div>`
+    + (sun ? `<div class="nasa-card"><h3>Sun</h3><div class="big" style="font-size:1rem">\u2197 ${hhmm(sun.sunrise)} &middot; \u2198 ${hhmm(sun.sunset)}</div></div>` : '')
+    + `</div>`;
+  const twRows = sun ? ['civil', 'nautical', 'astronomical'].map((k) =>
+    `<tr><td>${k[0].toUpperCase() + k.slice(1)} twilight</td><td>${hhmm((sun[k] || [])[0])}</td><td>${hhmm((sun[k] || [])[1])}</td></tr>`).join('') : '';
+  const finder = `<form action="/nasa/sky" method="get" role="search" class="nasa-ok">`
+    + `<h3>See tonight\u2019s sky for your own coordinates</h3><p>Enter any place on Earth \u2014 the moon phase is global, twilight times are local.</p>`
+    + `<label>Latitude <input type="number" step="0.01" min="-90" max="90" name="lat" value="${(Number(loc.lat) || 0).toFixed(2)}" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:inherit"></label> `
+    + `<label>Longitude <input type="number" step="0.01" min="-180" max="180" name="lng" value="${(Number(loc.lng) || 0).toFixed(2)}" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:inherit"></label> `
+    + `<button class="btn primary" type="submit" style="margin-left:8px">Update</button></form>`;
+  const body = `<p>Tonight for <b>${escapeHtml(locLabel)}</b>: moon phase, illumination and the twilight windows that decide when the sky is actually dark enough to observe. The moon figures are computed locally (exact), the twilight times come from the U.S. Naval Observatory\u2019s public sunrise\u2013sunset service.</p>`
+    + finder + cards
+    + (sun ? `<table class="nasa-table"><tr><th>Twilight stage</th><th>Begins</th><th>Ends</th></tr>${twRows}</table><p class="meta">Day length today: ${Number(sun.day_length_hours) || 0} h. Times are UTC; your browser clock may differ.</p>` : '')
+    + (sky.note ? `<p class="meta">${escapeHtml(sky.note)}</p>` : '')
+    + `<h2 class="section-title">Astronomical darkness \u2014 the number that matters</h2><p>Civil twilight ends when the Sun is 6\u00b0 below the horizon (you can see Venus and Jupiter), nautical at 12\u00b0 (the horizon and bright stars appear), and <b>astronomical twilight</b> at 18\u00b0 \u2014 only after that does the sky reach true dark, letting faint galaxies, the zodiacal light and the Milky Way show themselves. Near the equator this happens fast (Malaysia gets about 90 minutes of full night all year round); at high latitudes summer can never reach it at all.</p>`
+    + `<h2 class="section-title">What to observe tonight</h2><p>Under a ${escapeHtml(m.name || '')} sky, try: the Moon\u2019s terminator line (best crater detail), Jupiter and Saturn when above the horizon after midnight, and the Milky Way core season from southern latitudes. Check the <a href="/nasa/space-weather">space-weather page</a> for aurora chances and the <a href="/nasa/iss">ISS page</a> for pass timings.</p>`;
+  return nasaDoc({
+    title: 'Sky Tonight \u2014 Moon Phase, Twilight & Observing Guide | Tukuk-OS',
+    desc: 'Tonight\u2019s moon phase, illumination, twilight windows and what to observe \u2014 free, computed live, any coordinate on Earth.',
+    selfUrl: 'https://tukuk.org/nasa/sky', heroTitle: 'Sky Tonight', heroSub: 'Moon \u00b7 twilight \u00b7 observing \u2014 updated automatically',
+    robots: useQuery ? 'noindex,follow' : 'index,follow,max-image-preview:large',
+    body,
+  });
+}
+
+// ── ISS LANGSUNG — peta kanvas sendiri (tiada pustaka luar) + krew antarabangsa ──
+// wheretheiss.at (tanpa kunci) bagi telemetri, open-notify bagi krew. Halaman ini
+// menghasilkan data "live" yang buat orang kembali setiap hari → sinyal SEO kuat.
+function nasaIssPage(req, iss, crew) {
+  const lat = Math.round((Number(iss && iss.latitude) || 0) * 100) / 100;
+  const lng = Math.round((Number(iss && iss.longitude) || 0) * 100) / 100;
+  const alt = Number(iss && iss.altitude_km) || 418;
+  const vel = Number(iss && iss.velocity_kmh) || 27600;
+  const rawVis = String((iss && iss.visibility) || 'daylight');
+  const vis = rawVis === 'eclipsed' ? 'in Earth\u2019s shadow' : rawVis;
+  const seenAt = new Date((Number(iss && iss.timestamp) || Math.floor(Date.now() / 1000)) * 1000).toUTCString();
+  const stations = crew && Array.isArray(crew.stations) ? crew.stations : [];
+  const inSpace = Number(crew && crew.inSpace) || stations.reduce((s, x) => s + (Number(x.count) || 0), 0);
+  const hemi = (v, k) => `${Math.abs(v).toFixed(2)}\u00b0 ${v >= 0 ? (k === 'ns' ? 'N' : 'E') : (k === 'ns' ? 'S' : 'W')}`;
+  const cards = `<div class="nasa-grid">`
+    + `<div class="nasa-card"><h3>Sub-station point</h3><div class="big">${hemi(lat, 'ns')}, ${hemi(lng, 'ew')}</div></div>`
+    + `<div class="nasa-card"><h3>Altitude</h3><div class="big">${alt} km</div></div>`
+    + `<div class="nasa-card"><h3>Ground speed</h3><div class="big">${nasaFmt(vel)} km/h</div></div>`
+    + `<div class="nasa-card"><h3>Sunlight</h3><div class="big">${escapeHtml(vis)}</div></div>`
+    + `<div class="nasa-card"><h3>Humans in space</h3><div class="big">${inSpace}</div></div>`
+    + `<div class="nasa-card"><h3>Orbits per day</h3><div class="big">\u2248 15.5</div></div>`
+    + `</div>`;
+  // Peta equirektangular 720x360: grid + sengkuk tanah IDEAL (kecenderungan 51.6\u00b0)
+  // + penanda semasa. Semua dilukis di pelayar dengan kanvas — tiada fail luar, tiada CDN.
+  const map = `<canvas id="issmap" width="720" height="360" class="nasa-map" role="img" `
+    + `aria-label="World map with the current position of the International Space Station at ${hemi(lat, 'ns')}, ${hemi(lng, 'ew')}"></canvas>`
+    + `<script>(function(){var c=document.getElementById('issmap');if(!c||!c.getContext)return;`
+    + `var g=c.getContext('2d'),W=c.width,H=c.height;g.fillStyle='#0a1020';g.fillRect(0,0,W,H);`
+    + `g.strokeStyle='rgba(120,150,200,.22)';g.lineWidth=1;`
+    + `for(var x=0;x<=W;x+=60){g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();}`
+    + `for(var y=0;y<=H;y+=60){g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}`
+    + `g.strokeStyle='rgba(120,150,200,.5)';g.beginPath();g.moveTo(0,H/2);g.lineTo(W,H/2);g.stroke();`
+    + `var inc=51.6*Math.PI/180;g.strokeStyle='rgba(76,141,255,.55)';g.lineWidth=2;g.beginPath();`
+    + `for(var d=0;d<=360;d+=3){var th=d*Math.PI/180;var la=Math.asin(Math.sin(inc)*Math.sin(th))*180/Math.PI;`
+    + `var px=((d*2)%360-180+180)/360*W,py=(90-la)/180*H;if(d===0)g.moveTo(px,py);else g.lineTo(px,py);}`
+    + `g.stroke();var ix=((${lng})+180)/360*W,iy=(90-(${lat}))/180*H;`
+    + `g.fillStyle='rgba(255,183,3,.25)';g.beginPath();g.arc(ix,iy,18,0,6.2832);g.fill();`
+    + `g.fillStyle='#ffb703';g.beginPath();g.arc(ix,iy,6,0,6.2832);g.fill();`
+    + `g.strokeStyle='#fff';g.lineWidth=1;g.beginPath();g.arc(ix,iy,6,0,6.2832);g.stroke();})();</script>`;
+  const crewHtml = stations.length
+    ? `<h2 class="section-title">Who is up there right now</h2>` + stations.map((st) => {
+      const list = Array.isArray(st.crew) ? st.crew : [];
+      return `<div class="nasa-ok"><h3>${escapeHtml(String(st.craft || 'Station'))} \u00b7 ${Number(st.count) || list.length} aboard</h3>`
+        + `<p>${list.map((p) => escapeHtml(String(p.name || 'Unknown'))).join(' &middot; ') || 'Crew roster unavailable'}</p></div>`;
+    }).join('')
+    : '<p class="meta">The crew roster feed is briefly quiet \u2014 telemetry above is still live.</p>';
+  const body = `<p>The International Space Station has been continuously crewed since <b>2 November 2000</b>, orbiting at about 400 km altitude and travelling at ${nasaFmt(vel)} km/h \u2014 fast enough to circle the Earth every ~92 minutes, roughly <b>15.5 orbits a day</b>. The dot below is its position the moment this page was generated (${escapeHtml(seenAt)}); the blue curve is an idealised ground track for its 51.6\u00b0 inclination.</p>`
+    + cards + map + crewHtml
+    + `<h2 class="section-title">How to see it with your own eyes</h2><p>The ISS is the <b>sixth-brightest object in the night sky</b> and needs no telescope. Best chances: within a couple of hours after dusk or before dawn, when you are in darkness but the station is still sunlit. Look for a steady, fast, non-blinking point crossing the whole sky in 3\u20136 minutes. Free pass alerts for your town are published by NASA\u2019s "Spot the Station" service.</p>`
+    + `<h2 class="section-title">Why it matters</h2><p>Microgravity research aboard the ISS covers protein crystallography, combustion, fluid physics, biology and human physiology \u2014 the evidence base for every future Moon and Mars mission. It is a jointly operated laboratory by five space agencies.</p>`
+    + `<p class="meta">Position data: wheretheiss.at \u00b7 crew data: open-notify.org \u00b7 both key-free public services. Station imagery and facts courtesy of NASA.</p>`;
+  return nasaDoc({
+    title: 'ISS Live Position \u2014 Where the Space Station Is Right Now | Tukuk-OS',
+    desc: 'Where the International Space Station is at this second, how fast it is travelling, and exactly who is aboard \u2014 live, free, no app.',
+    selfUrl: 'https://tukuk.org/nasa/iss', heroTitle: 'ISS Live Tracking', heroSub: 'Position, speed and crew \u00b7 updated on every visit',
+    body,
+  });
+}
+
+// ── ASTEROID WATCH — pendekatan minggu ini + meja risiko Sentry + trend 4 minggu ──
+function nasaAsteroidsPage(req, week, trend, sentry) {
+  const rows = (week.asteroids || []).slice(0, 60).map((a) => {
+    const dmin = Number(a.estimated_diameter_meters && a.estimated_diameter_meters.min) || 0;
+    const dmax = Number(a.estimated_diameter_meters && a.estimated_diameter_meters.max) || 0;
+    const ld = Math.round((Number(a.miss_distance_km) || 0) / 384400 * 100) / 100;
+    return `<tr><td><a href="${escapeHtml(String(a.nasa_jpl_url || '#'))}" rel="noopener">${escapeHtml(String(a.name || a.id || 'NEO'))}</a></td>`
+      + `<td>${escapeHtml(String(a.close_approach_date || '')).slice(0, 24)}</td>`
+      + `<td>${nasaFmt(dmin)}\u2013${nasaFmt(dmax)} m</td>`
+      + `<td>${nasaFmt(a.velocity_kmh)} km/h</td>`
+      + `<td>${nasaFmt(a.miss_distance_km)} km (${ld} LD)</td>`
+      + `<td>${a.is_potentially_hazardous ? '<span class="nasa-haz">Hazardous</span>' : 'No'}</td></tr>`;
+  }).join('');
+  const b = trend && trend.buckets ? trend.buckets : [];
+  const maxCount = Math.max(1, ...b.map((x) => Number(x.count) || 0));
+  const bars = b.map((x) => `<div class="nasa-barwrap"><span>${escapeHtml(String(x.start))} \u2192 ${escapeHtml(String(x.end))}: <b>${nasaFmt(x.count)}</b> objects, ${nasaFmt(x.hazardous)} hazardous</span>`
+    + `<div class="nasa-bar" style="width:${Math.round(((Number(x.count) || 0) / maxCount) * 100)}%"></div></div>`).join('');
+  const risks = sentry && Array.isArray(sentry.risks) ? sentry.risks : [];
+  const sentryHtml = risks.length
+    ? `<h2 class="section-title">JPL Sentry risk table</h2><table class="nasa-table"><tr><th>Object</th><th>Possible years</th><th>Diameter</th><th>Cumulative probability</th><th>Torino</th></tr>`
+      + risks.slice(0, 15).map((r) => `<tr><td>${escapeHtml(String(r.name))}</td><td>${escapeHtml(String(r.impact_years || '\u2014'))}</td>`
+        + `<td>${r.diameter_km ? Math.round(r.diameter_km * 1000) + ' m' : '\u2014'}</td>`
+        + `<td>1 in ${nasaFmt(Math.max(1, Math.round(1 / (Number(r.cum_prob) || 1))))}</td><td>${Number(r.torino) || 0}</td></tr>`).join('')
+      + `</table><p class="meta">Sentry tracks every catalogued object with a non-zero impact probability. These are monitoring entries, <b>not predictions of an impact</b> \u2014 most are removed within months as arcs improve.</p>`
+    : `<div class="nasa-ok"><h3>All clear</h3><p>JPL\u2019s Sentry table currently lists no object with a significant impact probability. NASA\u2019s Planetary Defense Coordination Office tracks >35,000 near-Earth objects and none of the known large ones threaten Earth for at least the next 100 years.</p></div>`;
+  const nearest = trend && trend.nearest
+    ? `<div class="nasa-grid"><div class="nasa-card"><h3>Closest in the window</h3><div class="big">${escapeHtml(String(trend.nearest.name))}</div></div>`
+      + `<div class="nasa-card"><h3>Miss distance</h3><div class="big">${nasaFmt(trend.nearest.miss_distance_km)} km</div></div>`
+      + `<div class="nasa-card"><h3>In lunar distances</h3><div class="big">${Number(trend.nearest.moonDistances) || 0} \u00d7 Moon</div></div></div>`
+    : '';
+  const dir = trend && trend.trend ? trend.trend.direction : 'flat';
+  const body = `<p>"Near-Earth object" means any asteroid or comet whose orbit brings it within <b>1.3 times</b> the Earth\u2013Sun distance. Almost every one passes at millions of kilometres \u2014 an "encounter" is an astronomical event, not a hazard. One lunar distance (LD) equals 384,400 km, the average Earth\u2013Moon gap.</p>`
+    + `<div class="nasa-grid"><div class="nasa-card"><h3>Objects in window</h3><div class="big">${nasaFmt(trend && trend.totals ? trend.totals.asteroids : (week.element_count || 0))}</div></div>`
+    + `<div class="nasa-card"><h3>Potentially hazardous</h3><div class="big">${nasaFmt(trend && trend.totals ? trend.totals.hazardous : 0)}</div></div>`
+    + `<div class="nasa-card"><h3>4-week trend</h3><div class="big">${dir === 'up' ? '\u2197 rising' : dir === 'down' ? '\u2198 easing' : '\u2194 steady'} (${Number(trend && trend.trend ? trend.trend.changePercent : 0)}%)</div></div></div>`
+    + nearest + sentryHtml
+    + `<h2 class="section-title">Close approaches this week</h2>`
+    + (rows ? `<table class="nasa-table"><tr><th>Object</th><th>Approach</th><th>Diameter</th><th>Speed</th><th>Miss distance</th><th>Hazardous</th></tr>${rows}</table>`
+      : '<p>No radar-confirmed close approaches were returned for this window \u2014 check again tomorrow, the list repopulates daily from JPL.</p>')
+    + `<h2 class="section-title">Activity by week</h2>${bars || '<p class="meta">Trend history is still accumulating.</p>'}`
+    + `<h2 class="section-title">How Earth is defended</h2><p>NASA\u2019s <b>DART</b> mission successfully altered the orbit of the asteroid Dimorphos in 2022, proving a kinetic impactor can deflect a body given years of warning. Survey missions such as <b>NEO Surveyor</b> aim to find the dark objects still hiding inside Venus\u2019s orbit.</p>`
+    + `<p class="meta">Approach data: NASA CNEOS NeoWs \u00b7 risk data: JPL Sentry \u00b7 public domain.</p>`;
+  return nasaDoc({
+    title: 'Asteroid Watch \u2014 Live Close Approaches & Sentry Risk Table | Tukuk-OS',
+    desc: 'Every near-Earth asteroid passing this week with distance, speed and size, plus NASA\u2019s Sentry impact-risk table \u2014 updated live.',
+    selfUrl: 'https://tukuk.org/nasa/asteroids', heroTitle: 'Asteroid Watch', heroSub: 'Real numbers from NASA\u2019s Planetary Defence radar \u00b7 no hype, just data',
+    body,
+  });
+}
+
+// ── CUACA ANGKASA — flares NOAA GOES + fluks radio F10.7 + panduan aurora ──
+function nasaSpaceWeatherPage(req, solar) {
+  const f = (solar && solar.flares) || { classes: {}, buckets: [], total: 0, strongest: null };
+  const fx = (solar && solar.flux) || { avg: 0, min: 0, max: 0, buckets: [], direction: 'flat', changePercent: 0, days: 0 };
+  const classes = f.classes || {};
+  const maxCls = Math.max(1, ...Object.values(classes).map((v) => Number(v) || 0));
+  const clsBars = ['X', 'M', 'C', 'B', 'A'].map((k) => `<div class="nasa-barwrap"><span><b>${k}-class</b> \u00b7 ${Number(classes[k]) || 0} flare${Number(classes[k]) === 1 ? '' : 's'} in the last 7 days</span>`
+    + `<div class="nasa-bar" style="width:${Math.round(((Number(classes[k]) || 0) / maxCls) * 100)}%"></div></div>`).join('');
+  const dayRows = (f.buckets || []).map((d) => `<tr><td>${escapeHtml(String(d.day))}</td><td>${Number(d.flares) || 0}</td><td>${escapeHtml(String(d.maxClass || '\u2014'))}</td></tr>`).join('');
+  const maxFlux = Math.max(1, ...(fx.buckets || []).map((x) => Number(x.flux) || 0));
+  const fluxBars = (fx.buckets || []).map((x) => `<div class="nasa-barwrap"><span>${escapeHtml(String(x.label))} (${escapeHtml(String(x.start))}\u2013${escapeHtml(String(x.end))}): F10.7 <b>${nasaFmt(x.flux)}</b> sfu</span>`
+    + `<div class="nasa-bar" style="width:${Math.round(((Number(x.flux) || 0) / maxFlux) * 100)}%"></div></div>`).join('');
+  const strong = f.strongest && f.strongest.classType
+    ? `<div class="nasa-ok"><h3>Strongest flare this week: ${escapeHtml(String(f.strongest.classType))}</h3><p>Peak ${escapeHtml(String(f.strongest.peakTime || f.strongest.time || 'reported by NOAA SWPC'))}. An X-class flare can trigger radio blackouts on the daylight side of Earth within 8 minutes; M-class events give brief polar fadeouts; C-class are routine.</p></div>`
+    : '<div class="nasa-ok"><h3>A quiet Sun this week</h3><p>No X or M flare of note in the reporting window \u2014 conditions favourable for satellite operations and HF radio.</p></div>';
+  const body = `<p>Space weather is what the Sun does to our technology. Solar flares arrive at the speed of light (8 minutes), radiation storms within hours to days, and coronal mass ejections \u2014 the drivers of aurora and geomagnetic storms \u2014 in one to three days. Numbers below come from NOAA\u2019s GOES X-ray sensor and the F10.7 radio flux index, the two classic live measures of solar activity.</p>`
+    + `<div class="nasa-grid">`
+    + `<div class="nasa-card"><h3>Flares (7 days)</h3><div class="big">${nasaFmt(f.total)}</div></div>`
+    + `<div class="nasa-card"><h3>Avg F10.7 flux</h3><div class="big">${nasaFmt(fx.avg)} sfu</div></div>`
+    + `<div class="nasa-card"><h3>Flux range</h3><div class="big">${nasaFmt(fx.min)}\u2013${nasaFmt(fx.max)}</div></div>`
+    + `<div class="nasa-card"><h3>30-day trend</h3><div class="big">${fx.direction === 'up' ? '\u2197 active' : fx.direction === 'down' ? '\u2198 calming' : '\u2194 steady'} (${Number(fx.changePercent) || 0}%)</div></div>`
+    + `<div class="nasa-card"><h3>Reporting window</h3><div class="big">${Number(fx.days) || 0} days</div></div>`
+    + `<div class="nasa-card"><h3>Source</h3><div class="big" style="font-size:1rem">NOAA SWPC / GOES</div></div></div>`
+    + strong
+    + `<h2 class="section-title">Flare strength by class</h2>${clsBars}`
+    + `<h2 class="section-title">Day by day</h2>`
+    + (dayRows ? `<table class="nasa-table"><tr><th>Date (UTC)</th><th>Flares</th><th>Strongest class</th></tr>${dayRows}</table>` : '<p class="meta">No daily flare buckets returned.</p>')
+    + `<h2 class="section-title">Radio flux, week by week</h2>${fluxBars || '<p class="meta">Flux history unavailable right now.</p>'}`
+    + `<h2 class="section-title">Will there be aurora, and can you see it from Malaysia?</h2><p>Aurora needs a geomagnetic storm (Kp \u2265 5) plus a dark, clear sky near a magnetic pole \u2014 so from the tropics the answer is normally no, though exceptionally strong storms have produced equatorial sightings. What space weather <i>does</i> reach here with force: HF radio skip quality, GPS accuracy, and satellite drag. If you plan radio or GNSS work during a storm, NOAA\u2019s 3-day forecast is the operational reference.</p>`
+    + `<h2 class="section-title">Reading the numbers</h2><p><b>F10.7 flux</b> (solar flux units, sfu) tracks the Sun\u2019s microwave output and rises with sunspot area: ~70 sfu at deep minimum, 200+ at cycle peak. <b>X-class</b> flares are numbered by their X-ray peak in watts per square metre at Earth \u2014 X1, X2, X10 (the 2003 Halloween storm was X28, the strongest ever measured).</p>`
+    + `<p class="meta">Data: NOAA SWPC GOES X-ray &amp; F10.7 feeds \u00b7 public-domain U.S. government measurements, mirrored by Tukuk-OS.</p>`;
+  return nasaDoc({
+    title: 'Space Weather Today \u2014 Solar Flares, F10.7 Flux & Aurora Outlook | Tukuk-OS',
+    desc: 'Live solar flare counts by class, 30-day radio-flux trend and what the current space weather means for radio, GPS and aurora.',
+    selfUrl: 'https://tukuk.org/nasa/space-weather', heroTitle: 'Space Weather', heroSub: 'What the Sun is doing this week \u00b7 NOAA GOES live data',
+    body,
+  });
+}
+
+// ── MARS ROVERS — galeri permukaan tiap kenderaan, satu URL berbeza per rover ──
+const MARS_ROVERS = [
+  { slug: 'perseverance', name: 'Perseverance', site: 'Jezero Crater', since: 'Feb 2021', sol: 1500 },
+  { slug: 'curiosity', name: 'Curiosity', site: 'Gale Crater', since: 'Aug 2012', sol: 4500 },
+  { slug: 'opportunity', name: 'Opportunity', site: 'Meridiani Planum', since: 'Jan 2004 \u2013 Jun 2018', sol: 5100 },
+  { slug: 'spirit', name: 'Spirit', site: 'Gusev Crater', since: 'Jan 2004 \u2013 Mar 2010', sol: 2100 },
+];
+
+function nasaMarsPage(req, data, rover) {
+  const rv = MARS_ROVERS.find((r) => r.slug === rover) || MARS_ROVERS[0];
+  const photos = Array.isArray(data && data.photos) ? data.photos : [];
+  const selfUrl = `https://tukuk.org/nasa/mars${rv.slug === 'perseverance' ? '' : `/${rv.slug}`}`;
+  const grid = photos.length
+    ? `<div class="nasa-photos">` + photos.slice(0, 24).map((p) => `<figure>${nasaImg(p.img_src, `${rv.name} sol ${p.sol} \u2014 ${p.camera && p.camera.name ? p.camera.name : 'Mars surface'}`)}`
+      + `<figcaption>Sol ${Number(p.sol) || 0}${p.earth_date ? ` \u00b7 ${escapeHtml(String(p.earth_date))}` : ''}${p.camera && p.camera.name ? ` \u00b7 ${escapeHtml(String(p.camera.name))}` : ''}</figcaption></figure>`).join('')
+      + `</div>`
+    : '<p>No frames could be retrieved for this rover right now \u2014 try the other rovers or reload in an hour.</p>';
+  const switcher = `<p class="nasa-strip">` + MARS_ROVERS.map((r) => `<a class="btn ${r.slug === rv.slug ? 'primary' : 'ghost'}" href="/nasa/mars${r.slug === 'perseverance' ? '' : `/${r.slug}`}">${r.name}</a>`).join('') + `</p>`;
+  const facts = photos[0] && photos[0].rover && photos[0].rover.landing_date
+    ? `<div class="nasa-ok"><h3>${rv.name} \u2014 ${escapeHtml(String(rv.site))}</h3><p>Landed ${escapeHtml(String(photos[0].rover.landing_date))}${photos[0].rover.status ? `, status: ${escapeHtml(String(photos[0].rover.status))}` : ''}. Latest frame is sol ${Number(photos[0].sol) || 0} (${escapeHtml(String(photos[0].earth_date || ''))}).</p></div>`
+    : `<div class="nasa-ok"><h3>${rv.name} \u2014 ${escapeHtml(String(rv.site))}</h3><p>Operating ${escapeHtml(String(rv.since))}. Every image below is an original NASA surface frame, public domain.</p></div>`;
+  const body = `<p>These are not artistic impressions \u2014 each picture below was taken by a camera on a vehicle driving on another planet. A "sol" is a Martian day (24 h 39 min 35 s), so the sol number in every caption is the local date on Mars.</p>`
+    + switcher + facts + grid
+    + `<h2 class="section-title">Why we keep going back</h2><p>Mars once had rivers, lakes and a thicker atmosphere. ${rv.slug === 'perseverance' ? 'Perseverance is drilling rock cores from a delta built by an ancient river, and has already produced the first samples of another world sealed in tubes for a future return to Earth. Its helicopter Ingenuity proved powered flight is possible in 1% of Earth\u2019s air.' : rv.slug === 'curiosity' ? 'Curiosity found evidence that Gale Crater held a habitable lake, detected organic molecules and seasonal methane, and is climbing a mountain built from the sediments of a vanished lake system.' : 'The rover generation proved Mars was once wet: Opportunity found hematite \u201cblueberries\u201d formed in water, and Spirit found hot-spring silica at Home Plate.'}</p>`
+    + `<h2 class="section-title">Reading a raw Mars image</h2><p>Frames arrive nearly monochrome from each individual detector; colour is assembled from repeated exposures through different filters, and hazard-avoidance cameras (Fishtail, Navcam) are wide-angle and slightly distorted. Dust storms and the distant sun make the sky butterscotch by day and occasionally blue at sunset \u2014 the reverse of Earth, caused by fine dust scattering red light.</p>`
+    + `<h2 class="section-title">Time delay</h2><p>Radio takes 3\u201322 minutes each way depending on orbital positions, so no rover is driven live. Each mission day starts with a command upload built from overnight imagery, then the vehicle drives and observes autonomously until the next sol.</p>`
+    + `<p class="meta">Imagery: NASA/JPL-Caltech Mars Assembl\u00e9 Camera archive \u00b7 public domain \u00b7 mirrored at Tukuk-OS.</p>`;
+  return nasaDoc({
+    title: `${rv.name} on Mars \u2014 Latest Rover Photos from ${escapeHtml(String(rv.site)).replace(/&[a-z]+;/g, ' ')} | Tukuk-OS`,
+    desc: `Real surface photos from NASA's ${rv.name} rover on Mars, with sols, cameras and dates \u2014 updated from the JPL archive.`,
+    selfUrl, image: photos.length ? String(photos[0].img_src || '') : undefined,
+    heroTitle: `${rv.name} \u00b7 Mars Live Frames`, heroSub: `${rv.site} \u00b7 ${photos.length} of the latest surface images \u00b7 NASA public domain`,
+    body,
+  });
+}
+
+// ── EPIC EARTH — pelantang gambar planet penuh DSCOVR (1.6 juta km) ──
+function nasaEarthPage(req, list) {
+  const items = (Array.isArray(list) ? list : []).filter((e) => e && (e.url || e.thumb));
+  const first = items[0] || {};
+  const ld = first.url ? JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'ImageObject', name: 'EPIC: Earth from a million miles',
+    contentUrl: String(first.url), caption: String(first.caption || 'Whole-Earth disc imaged by DSCOVR EPIC'),
+    creditText: 'NASA', creator: { '@type': 'Organization', name: 'NASA' }, license: 'https://www.nasa.gov/multimedia/guidelines/index.html',
+  }).replace(/</g, '\\u003c') : undefined;
+  const slides = items.map((e, i) => ({ src: String(e.url || e.thumb), cap: String(e.caption || 'Earth \u00b7 DSCOVR EPIC').slice(0, 200), date: String(e.date || '').slice(0, 10), i })).slice(0, 12);
+  const payload = JSON.stringify(slides).replace(/</g, '\\u003c');
+  const strip = slides.map((s, i) => `<button type="button" data-i="${i}" class="${i === 0 ? 'on' : ''}">${escapeHtml(s.date || ('#' + (i + 1)))}</button>`).join('');
+  const player = slides.length ? `<p><img id="epicimg" class="nasa-img" src="${escapeHtml(slides[0].src)}" alt="Whole planet Earth photographed from the DSCOVR EPIC camera at the L1 point" loading="eager" decoding="async"></p>`
+    + `<p class="meta" id="epiccap">${escapeHtml(slides[0].cap)}</p>`
+    + `<div class="nasa-strip" id="epicstrip" role="group" aria-label="Choose an EPIC image by date">${strip}</div>`
+    + `<script>(function(){var d=${payload};var im=document.getElementById('epicimg');var cp=document.getElementById('epiccap');var st=document.getElementById('epicstrip');if(!im||!st)return;`
+    + `st.addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;var k=Number(b.getAttribute('data-i'))||0;var s=d[k];if(!s)return;im.src=s.src;im.alt=s.cap;cp.textContent=s.cap;`
+    + `Array.prototype.forEach.call(st.children,function(x){x.classList.toggle('on',x===b);});});})();</script>`
+    : '<p>EPIC has not returned a frame for this request yet \u2014 the instrument images Earth roughly once every two hours while sunlit.</p>';
+  const thumbs = slides.length > 1 ? `<h2 class="section-title">Every frame in this set</h2><div class="nasa-photos">`
+    + slides.map((s) => `<figure>${nasaImg(s.src, s.cap)}<figcaption>${escapeHtml(s.date || '')}</figcaption></figure>`).join('') + `</div>` : '';
+  const body = `<p>The Earth seen whole and in real colour, from a satellite a <b>million miles</b> away. DSCOVR sits at the Sun\u2013Earth L1 gravity point, 1.6 million km sunward of us, and its EPIC camera takes one full-disc photograph every few hours \u2014 the only view that shows the entire sunlit half of the planet at once, clouds moving in daylight time-lapse.</p>`
+    + player + thumbs
+    + `<h2 class="section-title">What this view is for</h2><p>EPIC is a science instrument: by imaging the whole planet in eleven spectral bands it measures ozone, aerosols, cloud height, vegetation and water vapour simultaneously \u2014 the daily health check of the atmosphere that geostationary satellites can only do from one side.</p>`
+    + `<h2 class="section-title">The pale blue dot, revisited</h2><p>In 1990 Voyager 1, 6 billion km out, turned its camera back and took the first portrait of Earth from beyond the Solar System. Carl Sagan\u2019s reflection on that pixel \u2014 \u201clook again at that dot. That\u2019s here. That\u2019s home.\u201d \u2014 is the reason whole-Earth imagery carries emotional weight: every national border, city and argument fits inside one cloud-wrapped speck.</p>`
+    + `<h2 class="section-title">Try this</h2><p>Pick two frames a day apart and watch the cloud systems rotate westward with the trade winds; find the swirl of a tropical cyclone; notice that at any moment roughly half the planet in the picture is in daylight. EPIC\u2019s archive back to 2015 is free and public domain.</p>`
+    + `<p class="meta">Imagery: NASA \u2013 NOAA DSCOVR/EPIC experiment \u00b7 public domain.</p>`;
+  return nasaDoc({
+    title: 'EPIC Earth \u2014 the Whole Planet Photographed from a Million Miles | Tukuk-OS',
+    desc: 'NASA\u2019s DSCOVR EPIC camera images the entire sunlit Earth every few hours from 1.6 million km away. Today\u2019s frames, free and public domain.',
+    selfUrl: 'https://tukuk.org/nasa/earth', heroTitle: 'Earth, Whole', heroSub: 'Imaged by DSCOVR EPIC from the L1 point \u00b7 NASA public domain',
+    image: first.url || undefined, ld, body,
+  });
+}
+
+// ── EKOPLANET — senarai dunia berdekatan, dari Arkib Eksoplanet NASA ──
+function nasaExoplanetsPage(req, exo, withinPc) {
+  const planets = exo && Array.isArray(exo.planets) ? exo.planets : [];
+  const cut = Number(withinPc) || 0;
+  const shown = cut ? planets.filter((p) => Number(p.dist_pc) <= cut) : planets;
+  const nearest = planets[0] || null;
+  const within10 = planets.filter((p) => Number(p.dist_pc) <= 10).length;
+  const rocky = planets.filter((p) => p.radius_earth && Number(p.radius_earth) <= 1.6).length;
+  const selfUrl = cut ? `https://tukuk.org/nasa/exoplanets?d=${cut}` : 'https://tukuk.org/nasa/exoplanets';
+  const filters = `<p class="nasa-strip">` + [[0, 'Nearest 250'], [10, 'Within 10 pc'], [20, 'Within 20 pc'], [50, 'Within 50 pc']]
+    .map(([v, label]) => `<a class="btn ${((Number(withinPc) || 0) === v) ? 'primary' : 'ghost'}" href="/nasa/exoplanets${v ? `?d=${v}` : ''}">${label}</a>`).join('') + `</p>`;
+  const rows = shown.slice(0, 120).map((p) => `<tr><td>${escapeHtml(String(p.name))}</td>`
+    + `<td>${Number(p.dist_pc) || 0} pc (${Math.round((Number(p.dist_pc) || 0) * 3.2616 * 10) / 10} ly)</td>`
+    + `<td>${p.radius_earth ? `${p.radius_earth} \u2295` : '\u2014'}</td>`
+    + `<td>${p.period_days ? `${p.period_days} d` : '\u2014'}</td>`
+    + `<td>${p.star_temp_k ? nasaFmt(p.star_temp_k) + ' K' : '\u2014'}</td>`
+    + `<td>${p.disc_year || '\u2014'}</td></tr>`).join('');
+  const body = `<p>More than <b>5,800 planets</b> have now been confirmed around other stars \u2014 a catalogue that did not exist before 1992. Below are the closest confirmed worlds, sorted by distance, taken from the NASA Exoplanet Archive. A parsec (pc) is 3.26 light years; the nearest star system, Alpha Centauri, is 1.3 pc away.</p>`
+    + `<div class="nasa-grid"><div class="nasa-card"><h3>Worlds listed here</h3><div class="big">${nasaFmt(shown.length)}</div></div>`
+    + `<div class="nasa-card"><h3>Closest of all</h3><div class="big">${nearest ? escapeHtml(String(nearest.name)) : '\u2014'}</div></div>`
+    + `<div class="nasa-card"><h3>Its distance</h3><div class="big">${nearest ? `${nearest.dist_pc} pc` : '\u2014'}</div></div>`
+    + `<div class="nasa-card"><h3>Within 10 pc</h3><div class="big">${within10}</div></div>`
+    + `<div class="nasa-card"><h3>Potentially rocky</h3><div class="big">${rocky} \u2264 1.6 \u2295</div></div>`
+    + `<div class="nasa-card"><h3>Source</h3><div class="big" style="font-size:1rem">NASA Exoplanet Archive</div></div></div>`
+    + filters
+    + (rows ? `<table class="nasa-table"><tr><th>Planet</th><th>Distance</th><th>Radius</th><th>Orbital period</th><th>Star temp</th><th>Discovered</th></tr>${rows}</table>`
+      : '<p>No planets match that distance window in the nearest-sample cache \u2014 the widest list is the default page.</p>')
+    + `<h2 class="section-title">How a planet gets found at all</h2><p>Nearly every planet here was detected indirectly: by the <b>transit method</b> (a star dims for hours as a world crosses it \u2014 the technique of Kepler, TESS and CHEOPS), by <b>radial velocity</b> (the star\u2019s wobble measured in Doppler shifts), or by direct imaging and microlensing for the widest orbits. What looks like an impossible measurement is now routine precision: a Jupiter-sized world dims a Sun-like star by about 1%.</p>`
+    + `<h2 class="section-title">The interesting shortlist</h2><p><b>Proxima Centauri b</b> (1.3 pc) orbits our nearest stellar neighbour. <b>TRAPPIST-1</b> (14 pc) packs seven Earth-sized worlds into a space smaller than Mercury\u2019s orbit, several in the temperate zone. <b>LHS 1140 b</b> and <b>K2-18 b</b> are the current priorities for atmospheric study with JWST \u2014 detection of water vapour, carbon dioxide or methane in a temperate rocky atmosphere would be the first real hint of a habitable world beyond the Sun.</p>`
+    + `<h2 class="section-title">Why radius and star temperature matter</h2><p>A planet\u2019s radius in Earth radii (\u2295) hints at composition: below ~1.6 it is likely rocky, above ~2.5 it holds a thick gas envelope. Because red dwarfs are far cooler, their habitable zones sit so close in that planets are tidally locked \u2014 one permanent day side, one night side \u2014 which changes what \u201chabitable\u201d can even mean.</p>`
+    + `<p class="meta">Data: NASA Exoplanet Archive (pscomppars), Caltech/JPL \u00b7 US government public data.</p>`;
+  return nasaDoc({
+    title: 'Exoplanets Nearest to Earth \u2014 Confirmed Worlds, Ranked by Distance | Tukuk-OS',
+    desc: 'Every confirmed planet within the nearest parsecs, with radius in Earth units, orbital period and discovery year \u2014 live from the NASA archive.',
+    selfUrl, robots: cut ? 'noindex,follow' : 'index,follow,max-image-preview:large',
+    heroTitle: 'Other Worlds', heroSub: 'The nearest confirmed planets around other stars \u00b7 ranked by distance',
+    body,
+  });
+}
+
+// ── BUNYI ANGKASA — arkib audio NASA (domain awam) boleh main di halaman ──
+const NASA_SOUND_TOPICS = [
+  { slug: 'apollo', label: 'Apollo missions', blurb: 'Lunar surface chatter, launch control and mission audio from the 1960s\u201370s.' },
+  { slug: 'planets', label: 'Planets', blurb: 'Sonified magnetic fields and plasma waves recorded by spacecraft.' },
+  { slug: 'rockets', label: 'Rocket launches', blurb: 'Lift-off acoustics \u2014 from Saturn V to SLS and commercial boosters.' },
+  { slug: 'mars', label: 'Mars', blurb: 'NASA has recorded sound on another planet \u2014 Perseverance\u2019s microphones did it.' },
+  { slug: 'spacewalk', label: 'Spacewalks', blurb: 'EVA radio traffic, tool clanks and breathing outside the station.' },
+  { slug: 'shuttle', label: 'Space Shuttle', blurb: 'Station construction era: deployments, docking calls and landings.' },
+];
+
+function nasaSoundsPage(req, audio, topic) {
+  const t = NASA_SOUND_TOPICS.find((x) => x.slug === topic) || NASA_SOUND_TOPICS[0];
+  const items = audio && Array.isArray(audio.items) ? audio.items : [];
+  const selfUrl = `https://tukuk.org/nasa/sounds${t.slug === 'apollo' ? '' : `/${t.slug}`}`;
+  const strip = `<p class="nasa-strip">` + NASA_SOUND_TOPICS.map((x) => `<a class="btn ${x.slug === t.slug ? 'primary' : 'ghost'}" href="/nasa/sounds${x.slug === 'apollo' ? '' : `/${x.slug}`}">${x.label}</a>`).join('') + `</p>`;
+  const players = items.length
+    ? items.map((a) => `<div class="nasa-audio"><h3>${escapeHtml(String(a.title || 'Untitled NASA recording'))}</h3>`
+      + `<p>${escapeHtml(String(a.description || '').slice(0, 400)) || 'No description supplied by NASA for this asset.'}</p>`
+      + `<audio controls preload="none" src="${escapeHtml(String(a.audio_url))}"></audio>`
+      + `<p class="meta">${escapeHtml(String(a.date_created || '').slice(0, 10))} \u00b7 NASA audio asset ${escapeHtml(String(a.nasa_id || '')).slice(0, 30)} \u00b7 public domain</p></div>`).join('')
+    : '<p>This collection returned no playable files right now \u2014 try another topic above.</p>';
+  const body = `<p>${escapeHtml(t.blurb)} Every clip below is an original NASA recording released into the <b>public domain</b> \u2014 no account, no licence, playable straight here.</p>`
+    + strip + players
+    + `<h2 class="section-title">Why space has sound at all</h2><p>Space is a vacuum, so sound cannot travel through it \u2014 what you can hear here is of three kinds: microphones that worked inside a pressurised cabin or on a suit, engineering telemetry converted into audible ranges (\u201csonification\u201d of plasma waves and magnetic fields), and the acoustic record of launches on Earth. The Apollo crews recorded dust, static and their own breathing; the Voyagers and Cluster missions turned invisible plasma oscillations into pitch.</p>`
+    + `<h2 class="section-title">Hearing Mars</h2><p>Perseverance carries microphones, and in 2021 humanity heard another planet for the first time: a light wind, a rover\u2019s own motor noise, and the Ingenuity helicopter overhead. Because Mars\u2019 thin CO\u2082 atmosphere absorbs high frequencies, distant sounds arrive hushed and dull \u2014 an actual acoustic signature of a different world.</p>`
+    + `<h2 class="section-title">Using these recordings</h2><p>NASA imagery and audio are not copyrighted by NASA, so educators, podcasters and video makers may reuse them with attribution. The only usual limits are persona rights (astronaut faces and names in advertising) and \u201cDon\u2019s Dream\u201d style commercial-endorsement rules.</p>`
+    + `<p class="meta">Audio: NASA Images API (images.nasa.gov, media_type=audio) \u00b7 served from NASA\u2019s own asset store.</p>`;
+  return nasaDoc({
+    title: `Sounds of Space \u2014 ${t.label} Recordings (NASA Audio) | Tukuk-OS`,
+    desc: `Play real NASA audio: ${t.blurb} Free, public-domain recordings with no account required.`,
+    selfUrl, heroTitle: 'Sounds of Space', heroSub: `${t.label} \u00b7 playable NASA archive audio \u00b7 public domain`,
+    body,
+  });
+}
+
+// ── SATELIT — elemen orbit CelesTrak (TLE) bagi armada yang benar-benar di atas ──
+const SAT_GROUPS = [
+  { slug: 'stations', label: 'Space stations', blurb: 'The crewed outposts: ISS, Tiangong and the crew vehicles visiting them.' },
+  { slug: 'visual', label: 'Brightest payloads', blurb: 'The naked-eye fleet \u2014 station, Hubble and the big bright satellites.' },
+  { slug: 'gps-ops', label: 'Navigation (GPS)', blurb: 'The medium-Earth constellation that your phone\u2019s position depends on.' },
+  { slug: 'geostationary', label: 'Geostationary', blurb: 'Weather birds and comsats parked over one point of the equator.' },
+  { slug: 'resource', label: 'Earth observation', blurb: 'Imaging, radar and science satellites watching the planet below.' },
+];
+
+function nasaSatellitesPage(req, data, group) {
+  const g = SAT_GROUPS.find((x) => x.slug === group) || SAT_GROUPS[0];
+  const sats = data && Array.isArray(data.satellites) ? data.satellites : [];
+  const selfUrl = `https://tukuk.org/nasa/satellites${g.slug === 'stations' ? '' : `/${g.slug}`}`;
+  const strip = `<p class="nasa-strip">` + SAT_GROUPS.map((x) => `<a class="btn ${x.slug === g.slug ? 'primary' : 'ghost'}" href="/nasa/satellites${x.slug === 'stations' ? '' : `/${x.slug}`}">${x.label}</a>`).join('') + `</p>`;
+  const rows = sats.slice(0, 60).map((s) => `<tr><td>${escapeHtml(String(s.name))}</td>`
+    + `<td>${escapeHtml(String(s.norad || '\u2014'))}</td><td>${escapeHtml(String(s.intl || '\u2014'))}</td>`
+    + `<td>${s.incl_deg != null ? s.incl_deg + '\u00b0' : '\u2014'}</td>`
+    + `<td>${s.period_min ? s.period_min + ' min' : '\u2014'}</td>`
+    + `<td>${s.alt_km != null ? `${nasaFmt(s.alt_km)} km` : '\u2014'}</td></tr>`).join('');
+  const alts = sats.map((s) => Number(s.alt_km)).filter((v) => Number.isFinite(v));
+  const cards = `<div class="nasa-grid"><div class="nasa-card"><h3>Objects listed</h3><div class="big">${nasaFmt(sats.length)}</div></div>`
+    + `<div class="nasa-card"><h3>Mean altitude</h3><div class="big">${alts.length ? Math.round(alts.reduce((a, b) => a + b, 0) / alts.length) : 0} km</div></div>`
+    + `<div class="nasa-card"><h3>Fastest orbit</h3><div class="big">${sats.length ? Math.min(...sats.map((s) => Number(s.period_min) || 9999)) : 0} min</div></div></div>`;
+  const body = `<p>${escapeHtml(g.blurb)} Each line below is a real object in orbit, decoded from its Two-Line Element set \u2014 the standard shorthand that describes an orbit: inclination, period and altitude are derived here from the mean motion in the second line.</p>`
+    + strip + cards
+    + (rows ? `<table class="nasa-table"><tr><th>Name</th><th>NORAD ID</th><th>International designator</th><th>Inclination</th><th>Period</th><th>Altitude</th></tr>${rows}</table>`
+      : '<p>The element feed returned nothing for this group just now \u2014 CelesTrak refreshes several times a day.</p>')
+    + `<h2 class="section-title">How orbits are measured</h2><p><b>Inclination</b> is the tilt of the orbit against the equator: the ISS\u2019 51.6\u00b0 is a compromise between crew-launch capability from Baikonur and fuel cost, while sun-synchronous Earth-imaging orbits sit near 97\u00b0 and pass over the same local time of day. <b>Period</b> follows altitude: low orbit circles Earth in 90\u2013100 minutes; a geostationary orbit needs 35,786 km and exactly 24 hours, which is why it stays parked over one spot.</p>`
+    + `<h2 class="section-title">The congestion problem</h2><p>Over 10,000 active satellites now orbit Earth, most in the Starlink-style shells of the 400\u2013600 km band. Their combined brightness now affects ground-based astronomy, and every spent booster and collision fragment adds collision risk \u2014 the chain-reaction scenario called the Kessler syndrome. Deorbit rules (leave the orbit within five years, now tightening to 25\u21925) exist precisely for this.</p>`
+    + `<h2 class="section-title">See one yourself</h2><p>On a clear night an hour after dusk, look for a steady bright light moving steadily across the sky \u2014 that is almost always a satellite, and the brightest are the station and the Iridium-style flares. Anything moving is in orbit; anything twinkling is a star.</p>`
+    + `<p class="meta">Orbital elements: CelesTrak GP data (public TLE feed) \u00b7 catalogue identifiers: USSPACECOM NORAD.</p>`;
+  return nasaDoc({
+    title: `Satellites in Orbit \u2014 ${g.label} Live Orbital Elements | Tukuk-OS`,
+    desc: `Real orbit data for the ${g.label.toLowerCase()}: NORAD ID, inclination, period and altitude, decoded live from public TLE elements.`,
+    selfUrl, heroTitle: `Orbiting Now \u00b7 ${g.label}`, heroSub: 'Decoded from public two-line elements \u00b7 refreshed on every visit',
+    body,
+  });
 }
 
 // ── TUKUK-OS WIKI — gaya Ensiklopedia (MediaWiki-esque) ────────────────────
