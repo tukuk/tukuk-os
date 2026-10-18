@@ -11,9 +11,11 @@
 const axios = require('axios');
 
 const http = axios.create({
-  timeout: 12000,
+  timeout: 20000,
   headers: { 'User-Agent': 'TukukOS-Air-Client/1.0 (+https://tukuk.org)' },
 });
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── Cache ringkas dalam modul (Map + TTL) ────────────────────────────────────
 const cache = new Map();
@@ -127,6 +129,7 @@ let airInFlight = null; // dedup: satu kemas kini serentak sahaja
 async function fetchCityAir(c) {
   const url = 'https://air-quality-api.open-meteo.com/v1/air-quality';
   const res = await http.get(url, {
+    timeout: 9000, // laluan kota lebih ketat; fail → retry, bukan tergantung
     params: {
       latitude: c.lat, longitude: c.lon,
       current: 'us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide', timezone: 'UTC',
@@ -145,6 +148,12 @@ async function fetchCityAir(c) {
   };
 }
 
+// VPS report: 6 serentak terlalu agresif — Open-Meteo mula throttling selepas
+// ±40 permintaan. Chunk kecil + jeda + satu retry lembut membaiki liputan.
+async function fetchCityAirRetry(c) {
+  try { return await fetchCityAir(c); } catch (e) { await sleep(300); return await fetchCityAir(c); }
+}
+
 // Ranking semua kota → { source, asOf, rows } (rows diasingkan mengikut AQI).
 async function getAirRanking(force) {
   const key = 'air:ranking';
@@ -157,11 +166,12 @@ async function getAirRanking(force) {
     try {
       const rows = [];
       const failed = [];
-      const CHUNK = 6; // Derma permintaan terkawal: 6 kota serentak
+      const CHUNK = 4; // Derma permintaan terkawal: 4 kota serentak, jeda 250 ms
       for (let i = 0; i < CITIES.length; i += CHUNK) {
         const slice = CITIES.slice(i, i + CHUNK);
-        const settled = await Promise.all(slice.map(fetchCityAir).map((p) => p.then((r) => ({ ok: true, r }), (e) => ({ ok: false, e }))));
+        const settled = await Promise.all(slice.map(fetchCityAirRetry).map((p) => p.then((r) => ({ ok: true, r }), (e) => ({ ok: false, e }))));
         for (const s of settled) (s.ok ? rows : failed).push(s.ok ? s.r : s.e);
+        await sleep(250);
       }
       if (!rows.length) throw new Error('semua kota gagal');
       rows.sort((a, b) => a.usAqi - b.usAqi);
