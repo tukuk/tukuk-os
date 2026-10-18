@@ -42,8 +42,9 @@ test('publicOrigin: hormat x-forwarded-proto https + host', () => {
   assert.equal(publish.publicOrigin(local), 'http://localhost:3000');
 });
 
-test('PUBLISH_MAX_BYTES: berada di bawah had body JSON pelayan (2MB)', () => {
-  assert.ok(publish.PUBLISH_MAX_BYTES > 0 && publish.PUBLISH_MAX_BYTES <= 2 * 1024 * 1024);
+test('PUBLISH_MAX_BYTES: 4MB untuk fail tunggal 3D, di bawah parser khas /api/publish (6MB)', () => {
+  assert.equal(publish.PUBLISH_MAX_BYTES, 4 * 1024 * 1024);
+  assert.ok(publish.PUBLISH_MAX_BYTES < 6 * 1024 * 1024, 'mesti ada ruang untuk balutan JSON body');
 });
 
 test('isEditKey: terima 32 aksara hex sah, tolak lain', () => {
@@ -110,4 +111,31 @@ test('injectComments: sisip sebelum </body> terakhir; tampal jika tiada', () => 
   assert.ok(out.includes('</html>'), 'struktur penutup kekal');
   const frag = publish.injectComments('<div>tiada body</div>', 'zz-1');
   assert.ok(frag.includes('id="tukuk-comments"'), 'tiada </body> → tampal di hujung');
+});
+
+// ── Genre game (MURNI; dipindah ke publish.js supaya boleh diuji tanpa pelayan) ──
+test('guessGameGenre: 3D didahulukan (Three.js/WebGL/open-world)', () => {
+  assert.equal(publish.guessGameGenre('Neon Racer 3D'), '3d');
+  assert.equal(publish.guessGameGenre('built with three.js'), '3d');
+  assert.equal(publish.guessGameGenre('WebGL shooter'), '3d', 'webgl → 3d walaupun ada "shooter"');
+  assert.equal(publish.guessGameGenre('open world survival'), '3d');
+});
+
+test('guessGameGenre: cabang sedia ada masih berfungsi', () => {
+  assert.equal(publish.guessGameGenre('2048 blok'), 'teki-teki');
+  assert.equal(publish.guessGameGenre('lumba kereta drift'), 'kereta');
+  assert.equal(publish.guessGameGenre('Super Mola .io'), 'io');
+  assert.equal(publish.guessGameGenre('sesuatu yang tak dikenali'), 'arkad', 'fallback arkad');
+});
+
+test('normalizeGenre: sinonim + nilai 3D baharu dinormalisasi', () => {
+  assert.equal(publish.normalizeGenre('3D'), '3d');
+  assert.equal(publish.normalizeGenre('threejs'), '3d');
+  assert.equal(publish.normalizeGenre('arcade'), 'arkad');
+  assert.equal(publish.normalizeGenre('puzzle'), 'teki-teki');
+  assert.equal(publish.normalizeGenre('tiada-genre-begini'), null, 'tak diketahui → null');
+});
+
+test('GENRE_UI: label paparan 3D = "3D" (permukaan awam bahasa Inggeris)', () => {
+  assert.equal(publish.GENRE_UI['3d'], '3D');
 });

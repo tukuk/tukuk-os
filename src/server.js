@@ -208,6 +208,25 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
+// ── Tukuk Builder (build.tukuk.org) → /api/publish*: parser JSON BADAN BESAR khusus.
+//    Didaftarkan SEBELUM parser global (2mb) supaya satu fail HTML 3D (~4MB) lalu.
+//    CORS asal *.tukuk.org di echo eksplisit (tidak bergantung pada default '*'),
+//    OPTIONS prarasakan 204. Laluan /api/publish TIDAK padan /api/published (se
+//    berbeza) maka kedua-dua dipasang berasingan.
+function publishCors(req, res, next) {
+  const origin = req.get('origin') || '';
+  if (/^https?:\/\/([a-z0-9-]+\.)*tukuk\.org$/i.test(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '600');
+  }
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  next();
+}
+app.use('/api/publish', publishCors, express.json({ limit: '6mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use('/api/published', publishCors);
 // verify: simpan mentah badan (Buffer) pada req.rawBody supaya proksi /agent boleh
 // hantar semula badan POST yang tepat walaupun express.json/urlencoded sudah membacanya.
 app.use(express.json({ limit: '2mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
@@ -6974,7 +6993,7 @@ app.post('/api/publish', publishLimiter, (req, res) => {
   const body = req.body || {};
   const html = String(body.html || '');
   if (!html) return res.status(400).json({ error: 'No content to publish' });
-  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'App too large (max ~1.5MB)' });
+  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'App too large (max ~4MB)' });
   if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Not a valid HTML document' });
   try {
     fs.mkdirSync(PUBLISH_DIR, { recursive: true });
@@ -7014,7 +7033,7 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
   if (!publish.isSlug(slug)) return res.status(400).json({ error: 'Invalid slug' });
   if (!publish.isEditKey(body.editKey)) return res.status(400).json({ error: 'Invalid edit key' });
   if (!html) return res.status(400).json({ error: 'No content to publish' });
-  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'App too large (max ~1.5MB)' });
+  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'App too large (max ~4MB)' });
   if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Not a valid HTML document' });
   const meta = readMeta(slug);
   if (!meta || !verifyKey(meta.key, body.editKey)) return res.status(403).json({ error: 'Forbidden — edit key does not match' });
@@ -7081,32 +7100,9 @@ function bumpPlays(id) {
 }
 
 // Genre game (gaya web-games.io) — chip /store & kad berkaitan /play dibina daripada
-// nilai ini sahaja. Store arked guna genre eksplisit; sumber lain dinormalisasi/tekaan.
-const GAME_GENRES = new Set(['arkad', 'teki-teki', 'refleks', 'kuiz', 'tindakan', 'penembakan', 'santai', 'kereta', 'sukan', 'klik', 'io', 'board', 'cards']);
-const GENRE_SYNONYM = { arkade: 'arkad', arcade: 'arkad', action: 'tindakan', shooter: 'penembakan', puzzle: 'teki-teki', reflex: 'refleks', casual: 'santai', racing: 'kereta', car: 'kereta', sport: 'sukan', clicker: 'klik', quiz: 'kuiz', board: 'board', card: 'cards', cards: 'cards' };
-// Display labels for internal (Malay-keyed) genres — user-facing surfaces are English.
-const GENRE_UI = { arkad: 'Arcade', 'teki-teki': 'Puzzle', refleks: 'Reflex', kuiz: 'Quiz', tindakan: 'Action', penembakan: 'Shooter', santai: 'Casual', kereta: 'Racing', sukan: 'Sports', klik: 'Clicker', io: 'IO', board: 'Board', cards: 'Cards' };
-function normalizeGenre(g) {
-  const s = String(g || '').trim().toLowerCase().replace(/\s+/g, '-');
-  if (GAME_GENRES.has(s)) return s;
-  return GAME_GENRES.has(GENRE_SYNONYM[s]) ? GENRE_SYNONYM[s] : null;
-}
-// Tebakan genre berasaskan kata kunci (komuniti / satu kata) — default 'arkad' supaya
-// setiap game pasti ada genre (tiada kad tersesat dari penapis chip).
-function guessGameGenre(text) {
-  const t = ' ' + String(text || '').toLowerCase() + ' ';
-  if (/\.io\b|\bio\b/.test(t)) return 'io';
-  if (/(kereta|\bcar\b|racing|lumba|drift)/.test(t)) return 'kereta';
-  if (/(sukan|footbal|bola|basket|sokker)/.test(t)) return 'sukan';
-  if (/(klik|clicker|idle)/.test(t)) return 'klik';
-  if (/(penembak|tembak|shooter|shooting|\bfps\b)/.test(t)) return 'penembakan';
-  if (/(tindakan|action|battle|royale|\brpg\b)/.test(t)) return 'tindakan';
-  if (/(kuiz|quiz|trivia)/.test(t)) return 'kuiz';
-  if (/(refleks|reflex|reaksi|tikus|\bmola\b)/.test(t)) return 'refleks';
-  if (/(teki|puzzle|memori|2048|sudoku|jigsaw|ambang|rambau|blok|jajar)/.test(t)) return 'teki-teki';
-  if (/(santai|casual|lari|runner)/.test(t)) return 'santai';
-  return 'arkad';
-}
+// nilai ini sahaja. Definisi MURNI kini tinggal di src/publish.js (boleh diuji unit);
+// server.js hanya mengambil pembantu itu untuk membina katalog /api/store.
+const { normalizeGenre, guessGameGenre, GENRE_UI } = publish;
 
 // Senarai app awam (slug terbaru) — ringan, untuk indeks /a + katalog /store.
 function listPublished(limit = 200) {
@@ -7232,7 +7228,7 @@ function storeSatuKata() {
 }
 function storeCatalog() {
   const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', genre: g.genre, icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl + '&play=1', updated: 0 }));
-  const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Community publish from the Studio Builder.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
+  const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Published from Tukuk Builder.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
   const items = storeBawaan().concat(storeSatuKata(), arked, komuniti);
   // Kiraan "main" — komuniti belum ada riwayat main → jatuh kepada "dilihat" supaya
   // bahagian Trending kekal bermakna sejak hari pertama.

@@ -50,8 +50,10 @@ const PUBLISH_CSP = [
   "frame-ancestors 'none'"
 ].join('; ') + ';';
 
-// Had saiz dokumen terbitan (bayt). Body JSON pelayan pagari ~2MB; ini pagari HTML.
-const PUBLISH_MAX_BYTES = 1.5 * 1024 * 1024;
+// Had saiz dokumen terbitan (bayt). Body JSON pelayan pada laluan /api/publish
+// dipagari pada 6MB (parser khas); ini pagari HTML itu sendiri — 4MB cukup untuk
+// satu fail HTML 3D (Three.js via CDN + aset base64) sambil kekal selamat di tepi.
+const PUBLISH_MAX_BYTES = 4 * 1024 * 1024;
 
 // CSP terbitan + `connect-src` DIPASANGKAN kepada host yang menyajikan halaman sahaja —
 // membenarkan app dalam sandbox membaca papan pendahulu (/api/scores) & menghantar skor
@@ -121,4 +123,35 @@ function injectComments(html, slug) {
   return String(html).slice(0, i) + widget + String(html).slice(i);
 }
 
-module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml, isEditKey, extractTitle, publishCspFor, cmtSlug, cmtName, cmtText, commentsWidget, injectComments };
+// ── Genre game (gaya web-games.io). Pembantu MURNI supaya boleh diuji unit tanpa
+//    memulakan pelayan. server.js mengambil fungsi ini untuk membina /api/store.
+//    Nilai dalaman berkunci Melayu (padan data sedia ada); paparan awam = GENRE_UI.
+const GAME_GENRES = new Set(['arkad', 'teki-teki', 'refleks', 'kuiz', 'tindakan', 'penembakan', 'santai', 'kereta', 'sukan', 'klik', 'io', 'board', 'cards', '3d']);
+const GENRE_SYNONYM = { arkade: 'arkad', arcade: 'arkad', action: 'tindakan', shooter: 'penembakan', puzzle: 'teki-teki', reflex: 'refleks', casual: 'santai', racing: 'kereta', car: 'kereta', sport: 'sukan', clicker: 'klik', quiz: 'kuiz', board: 'board', card: 'cards', cards: 'cards', threejs: '3d', '3d': '3d', '3d-game': '3d' };
+// Display labels for internal (Malay-keyed) genres — user-facing surfaces are English.
+const GENRE_UI = { arkad: 'Arcade', 'teki-teki': 'Puzzle', refleks: 'Reflex', kuiz: 'Quiz', tindakan: 'Action', penembakan: 'Shooter', santai: 'Casual', kereta: 'Racing', sukan: 'Sports', klik: 'Clicker', io: 'IO', board: 'Board', cards: 'Cards', '3d': '3D' };
+function normalizeGenre(g) {
+  const s = String(g || '').trim().toLowerCase().replace(/\s+/g, '-');
+  if (GAME_GENRES.has(s)) return s;
+  return GAME_GENRES.has(GENRE_SYNONYM[s]) ? GENRE_SYNONYM[s] : null;
+}
+// Tebakan genre berasaskan kata kunci (komuniti / satu kata) — default 'arkad' supaya
+// setiap game pasti ada genre (tiada kad tersesat dari penapis chip).
+function guessGameGenre(text) {
+  const t = ' ' + String(text || '').toLowerCase() + ' ';
+  // 3D dahulu — WebGL/Three.js/open-world ialah isyarat paling spesifik.
+  if (/(\b3d\b|three\.?js|babylon|webgl|voxel|first[- ]person|dunia bukaan|open[- ]world)/.test(t)) return '3d';
+  if (/\.io\b|\bio\b/.test(t)) return 'io';
+  if (/(kereta|\bcar\b|racing|lumba|drift)/.test(t)) return 'kereta';
+  if (/(sukan|footbal|bola|basket|sokker)/.test(t)) return 'sukan';
+  if (/(klik|clicker|idle)/.test(t)) return 'klik';
+  if (/(penembak|tembak|shooter|shooting|\bfps\b)/.test(t)) return 'penembakan';
+  if (/(tindakan|action|battle|royale|\brpg\b)/.test(t)) return 'tindakan';
+  if (/(kuiz|quiz|trivia)/.test(t)) return 'kuiz';
+  if (/(refleks|reflex|reaksi|tikus|\bmola\b)/.test(t)) return 'refleks';
+  if (/(teki|puzzle|memori|2048|sudoku|jigsaw|ambang|rambau|blok|jajar)/.test(t)) return 'teki-teki';
+  if (/(santai|casual|lari|runner)/.test(t)) return 'santai';
+  return 'arkad';
+}
+
+module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml, isEditKey, extractTitle, publishCspFor, cmtSlug, cmtName, cmtText, commentsWidget, injectComments, GAME_GENRES, GENRE_SYNONYM, GENRE_UI, normalizeGenre, guessGameGenre };
