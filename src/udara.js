@@ -129,6 +129,7 @@ function aqiCategory(v) {
 }
 
 let airInFlight = null; // dedup: satu kemas kini serentak sahaja
+const AIR_KEY = 'air:ranking'; // skop modul — refreshAir & getAirRanking pakai kunci sama
 
 async function fetchCityAir(c) {
   const url = 'https://air-quality-api.open-meteo.com/v1/air-quality';
@@ -160,9 +161,8 @@ async function fetchCityAirRetry(c) {
 
 // Ranking semua kota → { source, asOf, rows } (rows diasingkan mengikut AQI).
 async function getAirRanking(force) {
-  const key = 'air:ranking';
   if (!force) {
-    const hit = cacheGet(key);
+    const hit = cacheGet(AIR_KEY);
     if (hit) {
       if (!hit.stale) return hit.data;
       // Stale-while-revalidate: saiz scrape penuh ~60 saat (50 kota × timeout 9s).
@@ -192,18 +192,18 @@ function refreshAir() {
       rows.sort((a, b) => a.usAqi - b.usAqi);
       const source = failed.length ? 'partial' : 'live';
       const data = { source, rows, failedCount: failed.length, asOf: rows[0] && rows[0].asOf, fetchedAt: Date.now() };
-      cacheSet(key, data, AIR_TTL);
+      cacheSet(AIR_KEY, data, AIR_TTL);
       cacheSet('air:last-good', data, AIR_LASTGOOD_TTL);
       return data;
     } catch (err) {
       const good = cacheGet('air:last-good');
       if (good && good.data && good.data.rows && good.data.rows.length) {
         const stale = Object.assign({}, good.data, { source: 'last-known', staleSince: good.data.fetchedAt });
-        cacheSet(key, stale, 5 * 60 * 1000); // cuba semula selepas 5 minit
+        cacheSet(AIR_KEY, stale, 5 * 60 * 1000); // cuba semula selepas 5 minit
         return stale;
       }
       const empty = { source: 'unavailable', rows: [], failedCount: CITIES.length, asOf: '', fetchedAt: Date.now() };
-      cacheSet(key, empty, 5 * 60 * 1000);
+      cacheSet(AIR_KEY, empty, 5 * 60 * 1000);
       return empty;
     } finally {
       airInFlight = null;
