@@ -66,3 +66,18 @@ test('kegagalan API → 503 + nasaBusy noindex (kosong tak masuk indeks)', () =>
   assert.match(serverSrc, /function nasaBusy\(/, 'nasaBusy ditakrif');
   assert.match(serverSrc, /status\(503\)[\s\S]{0,80}nasaBusy|nasaBusy\([\s\S]{0,120}503/, 'laluan NASA guna 503 semasa API down');
 });
+
+test('APOD video ("Sonified:") → iframe player + poster, BUKAN <img src=youtube> rosak', () => {
+  assert.match(serverSrc, /function nasaVideoId\(/, 'pengenal ID YouTube berpusat');
+  assert.match(serverSrc, /function nasaVideoPlayer\(/, 'player iframe disediakan');
+  assert.match(serverSrc, /function nasaVideoPoster\(/, 'poster untuk og:image');
+  const today = serverSrc.slice(serverSrc.indexOf('function renderNasaApodPage'), serverSrc.indexOf('function nasaSpaceNav'));
+  assert.ok(today.includes('nasaVideoPlayer(a.url, title, true)'), 'halaman hari ini guna player utk video');
+  assert.ok(!/mediaType === 'video'[\s\S]{0,160}String\(a\.url \|\| ''\)\)/.test(today), 'URL video tidak pernah jadi nilai <img>/og terus');
+  assert.match(today, /'@type': 'VideoObject'/, 'JSON-LD video untuk media_type=video');
+  const dated = serverSrc.slice(serverSrc.indexOf('function nasaApodDatePage'), serverSrc.indexOf('function nasaArchivePage'));
+  assert.ok(dated.includes('nasaVideoPlayer(a.url, title, true)'), 'halaman arkib ikut tarikh guna player juga');
+  assert.match(dated, /'@type': 'VideoObject'/, 'LD arkib ikut tarikh sedar video');
+  const arch = serverSrc.slice(serverSrc.indexOf('function nasaArchivePage'), serverSrc.indexOf('function nasaSkyPage'));
+  assert.ok(arch.includes('nasaVideoPoster(e)'), 'thumbnail arkib papar poster video');
+});

@@ -1740,27 +1740,42 @@ function renderNasaApodPage(req, apod) {
   const explanation = String(a.explanation || '').trim();
   const mediaType = String(a.media_type || 'image').toLowerCase();
   const selfUrl = 'https://tukuk.org/nasa';
-  const img = mediaType === 'video'
-    ? (Array.isArray(a.thumbs) && a.thumbs.length ? String(a.thumbs[a.thumbs.length - 1].url || '') : String(a.url || ''))
+  const isVideo = mediaType === 'video';
+  const img = isVideo
+    ? (nasaVideoPoster(a) || (Array.isArray(a.thumbs) && a.thumbs.length ? String(a.thumbs[a.thumbs.length - 1].url || '') : ''))
     : String(a.hdurl || a.url || '');
   const ogImage = /^https?:\/\//i.test(img) ? img : 'https://tukuk.org/og.png';
   const desc = (explanation.replace(/\s+/g, ' ').slice(0, 155)).trim() || 'Today\u2019s Astronomy Picture of the Day \u2014 a space image and explanation from NASA, mirrored at Tukuk-OS.';
   const dateLabel = (() => { const d = new Date(dateStr); return isNaN(d) ? dateStr : d.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }); })();
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'ImageObject',
-    'name': title,
-    'caption': title,
-    'contentUrl': /^https?:\/\//i.test(img) ? img : undefined,
-    'datePublished': dateStr,
-    'creditText': 'NASA',
-    'creator': { '@type': 'Organization', 'name': 'NASA' },
-    'url': selfUrl
-  }).replace(/</g, '\\u003c');
+  const jsonLd = JSON.stringify(isVideo
+    ? {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      'name': title,
+      'description': String(explanation || '').replace(/\s+/g, ' ').slice(0, 300),
+      'contentUrl': /^https?:\/\//i.test(String(a.url || '')) ? String(a.url) : undefined,
+      'thumbnailUrl': /^https?:\/\//i.test(img) ? img : undefined,
+      'datePublished': dateStr,
+      'publisher': { '@type': 'Organization', 'name': 'NASA' },
+      'url': selfUrl,
+    }
+    : {
+      '@context': 'https://schema.org',
+      '@type': 'ImageObject',
+      'name': title,
+      'caption': title,
+      'contentUrl': /^https?:\/\//i.test(img) ? img : undefined,
+      'datePublished': dateStr,
+      'creditText': 'NASA',
+      'creator': { '@type': 'Organization', 'name': 'NASA' },
+      'url': selfUrl,
+    }).replace(/</g, '\\u003c');
   const explanationHtml = explanation
     ? explanation.split(/\n{2,}|\n/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${escapeHtml(p)}</p>`).join('\n')
     : '<p>NASA has not published an explanation for today\u2019s picture yet.</p>';
-  const imgHtml = /^https?:\/\//i.test(img)
+  const imgHtml = isVideo
+    ? nasaVideoPlayer(a.url, title, true)
+    : /^https?:\/\//i.test(img)
     ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(title)} \u2014 Astronomy Picture of the Day" loading="eager" decoding="async" style="max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">`
     : `<p><a href="${escapeHtml(String(a.url || selfUrl))}" rel="noopener" target="_blank">View today\u2019s media on NASA</a></p>`;
   return `<!DOCTYPE html>
@@ -1843,6 +1858,27 @@ function nasaSpaceNav() {
 function nasaImg(url, alt, eager) {
   if (!/^https?:\/\//i.test(String(url || ''))) return '';
   return `<img class="nasa-img" src="${escapeHtml(url)}" alt="${escapeHtml(alt || 'NASA space image (public domain)')}" loading="${eager ? 'eager' : 'lazy'}" decoding="async">`;
+}
+
+// APOD media_type=video (termasuk entri "Sonified:") — URL YouTube BUKAN untuk <img>.
+// ID video → player iframe (CSP frame-src meluluskan youtube-nocookie) + poster untuk og:.
+function nasaVideoId(url) {
+  const m = String(url || '').match(/(?:[?&]v=|youtu\.be\/|embed\/)([\w-]{6,20})/);
+  return m ? m[1] : null;
+}
+function nasaVideoPlayer(url, title, eager) {
+  const id = nasaVideoId(url);
+  if (!id) {
+    const u = /^https?:\/\//i.test(String(url || '')) ? String(url) : 'https://apod.nasa.gov';
+    return `<p><a href="${escapeHtml(u)}" rel="noopener" target="_blank">▶ Watch today’s video on the source</a></p>`;
+  }
+  return `<iframe class="nasa-img" style="aspect-ratio:16/9;width:100%;max-width:853px;max-height:480px" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}" title="${escapeHtml(String(title || 'NASA video'))}" loading="${eager ? 'eager' : 'lazy'}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+}
+function nasaVideoPoster(a) {
+  const t = String((a && a.thumbnail_url) || '');
+  if (/^https?:\/\//i.test(t)) return t;
+  const id = nasaVideoId(a && a.url);
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : '';
 }
 
 function nasaParas(text, limit) {
@@ -1948,11 +1984,16 @@ function nasaApodDatePage(req, apod, dateStr) {
   const prev = shift(-1); const next = shift(1);
   const isVideo = String(a.media_type || '') === 'video';
   const imgHtml = isVideo
-    ? `<p><a href="${escapeHtml(String(a.url || 'https://apod.nasa.gov'))}" rel="noopener" target="_blank">▶ Watch today\u2019s video on the source</a></p>`
+    ? nasaVideoPlayer(a.url, title, true)
     : nasaImg(a.hdurl || a.url, `${title} — APOD for ${dateStr}`, true);
-  const jsonLd = JSON.stringify({
+  const poster = isVideo ? nasaVideoPoster(a) : '';
+  const jsonLd = JSON.stringify(isVideo ? {
+    '@context': 'https://schema.org', '@type': 'VideoObject', name: title, description: String(a.explanation || '').slice(0, 300),
+    contentUrl: String(a.url || ''), thumbnailUrl: /^https?:\/\//i.test(poster) ? poster : undefined, datePublished: dateStr,
+    publisher: { '@type': 'Organization', name: 'NASA' },
+  } : {
     '@context': 'https://schema.org', '@type': 'ImageObject', name: title, description: String(a.explanation || '').slice(0, 300),
-    contentUrl: isVideo ? '' : String(a.hdurl || a.url || ''), datePublished: dateStr,
+    contentUrl: String(a.hdurl || a.url || ''), datePublished: dateStr,
     license: 'https://www.nasa.gov/multimedia/guidelines/index.html', producer: { '@type': 'Organization', name: 'NASA' },
   }).replace(/</g, '\\u003c');
   const body = `<p class="back-link"><a href="/nasa">&larr; Space Complex</a> &middot; <a href="/nasa/archive">Archive</a></p>`
@@ -1965,7 +2006,7 @@ function nasaApodDatePage(req, apod, dateStr) {
   return nasaDoc({
     title: `${title} — APOD ${dateStr} | Tukuk-OS`, desc: String(a.explanation || '').slice(0, 155) || `NASA's Astronomy Picture of the Day for ${dateStr}.`,
     selfUrl, heroTitle: title, heroSub: `Astronomy Picture of the Day \u00b7 ${dateStr} \u00b7 NASA (public domain)`,
-    image: (!isVideo && (a.hdurl || a.url)) || undefined, ld: jsonLd, body,
+    image: (isVideo ? (/^https?:\/\//i.test(poster) ? poster : undefined) : (a.hdurl || a.url)) || undefined, ld: jsonLd, body,
   });
 }
 
@@ -1973,7 +2014,10 @@ function nasaApodDatePage(req, apod, dateStr) {
 function nasaArchivePage(req, items, q) {
   const cards = items.map((e) => {
     const isImg = String(e.media_type || 'image') === 'image' && !/^https:\/\/www\.youtube\./i.test(String(e.url || ''));
-    const thumb = isImg ? nasaImg(e.url, String(e.title || 'APOD')) : '<div class="nasa-card" style="text-align:center">\uD83C\uDFAC Video</div>';
+    const poster = isImg ? '' : nasaVideoPoster(e);
+    const thumb = isImg
+      ? nasaImg(e.url, String(e.title || 'APOD'))
+      : (poster ? nasaImg(poster, `▶ ${String(e.title || 'APOD video')}`) : '<div class="nasa-card" style="text-align:center">\uD83C\uDFAC Video</div>');
     return `<div class="post-card"><h2><a href="/nasa/apod/${encodeURIComponent(String(e.date || ''))}">${escapeHtml(String(e.title || e.date || 'APOD'))}</a></h2>`
       + `<div class="meta">${escapeHtml(String(e.date || ''))}</div>${thumb}</div>`;
   }).join('');
