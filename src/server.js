@@ -7543,7 +7543,10 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
     try {
       let text = '';
       try {
-        const r = await brain.generateCloudRotation(brief, { system: sysPrompt, temperature: 0.85, maxTokens: 900 });
+        // Bajet 2048 (bukan 900): SYSTEM_PROMPT builder panjang + 4-8 widget → JSON
+        // selalu mencecah >900 → terpotong → parse gagal → fallback heuristik. 2048 cukup
+        // lapang untuk model reasoning (gpt-oss) tanpa membazir; hanya berjalan bila useAI.
+        const r = await brain.generateCloudRotation(brief, { system: sysPrompt, temperature: 0.85, maxTokens: 2048 });
         text = (r && r.response) || '';
       } catch { /* cuba ollama */ }
       if (!text) {
