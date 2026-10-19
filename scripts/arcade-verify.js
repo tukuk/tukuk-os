@@ -8,7 +8,7 @@
 const fs = require('node:fs');
 const BASE = 'http://127.0.0.1:9222';
 const args = process.argv.slice(2);
-const KEY = args[0] || 'fps3d';
+const KEY = args[0] || 'subway';
 const OUT = (args.find((a) => a.endsWith('.png'))) || `/tmp/arc-${KEY}.png`;
 const MS = parseInt((args.find((a) => a.startsWith('--ms=')) || '--ms=1600').split('=')[1], 10);
 const URL_TARGET = /^https?:/.test(KEY) ? KEY : `https://tukuk.org/games/${KEY}`;

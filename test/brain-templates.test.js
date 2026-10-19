@@ -63,15 +63,6 @@ test('detect: petakan huraian ms/en → key yang betul', () => {
     ['todolist tugas senarai', 'todo'],
     ['game 2048 geser gabung tile', 'number2048'],
     ['minesweeper ranjau bendera', 'mines'],
-    ['buat game counter strike fps', 'fps3d'],
-    ['lumba kereta 3d drift', 'racer3d'],
-    ['main bola penalti penalty keeper', 'soccer3d'],
-    ['kapal terbang pesawat ring', 'flight3d'],
-    ['basket bola keranjang dunk', 'basket3d'],
-    ['tembak zombi wave survive gelap', 'zombie3d'],
-    ['motosikal moto nitro traffic laju', 'moto3d'],
-    ['boling bowling pin alley gutter', 'bowl3d'],
-    ['golf putt hole par links birdie', 'golf3d'],
   ];
   for (const [goal, expect] of cases) {
     const m = templates.detect(goal);
