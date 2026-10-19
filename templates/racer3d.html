@@ -90,7 +90,7 @@
     if ((playerX < -1 || playerX > 1) && speed > maxSpeed * 0.25) speed = Math.max(maxSpeed * 0.25, speed + braking * dt * 1.5);
     playerX = Math.max(-1.6, Math.min(1.6, playerX));
     pos = (pos + speed * dt) % trackLen; lapT += dt;
-    if (pos < speed * dt) { lap++; if (best === null || lapT < best) best = lapT; lapT = 0; msg('Lap ' + lap + ' — masa terbaik ' + (best ? best.toFixed(1) : '-') + 's'); }
+    if (pos < speed * dt) { lap++; if (best === null || lapT < best) best = lapT; lapT = 0; if (window.__tkScore) window.__tkScore((lap - 1) * 1000); msg('Lap ' + lap + ' — masa terbaik ' + (best ? best.toFixed(1) : '-') + 's'); }
     // traffic
     for (const c of cars) { c.z = (c.z + c.speed * dt) % trackLen; }
     for (const c of cars) { const dz = (c.z - pos + trackLen) % trackLen; if (dz < SEG * 1.2 && Math.abs(c.offset - playerX) < 0.6 && speed > c.speed) { speed = c.speed * 0.85; msg('Terlanggar!'); } }

@@ -123,6 +123,51 @@ function injectComments(html, slug) {
   return String(html).slice(0, i) + widget + String(html).slice(i);
 }
 
+// Sisip blok HTML sebelum </body> terakhir; jika tiada </body>, tampal di hujung.
+function insertBeforeBody(html, block) {
+  const i = String(html).lastIndexOf('</body>');
+  if (i === -1) return String(html) + block;
+  return String(html).slice(0, i) + block + String(html).slice(i);
+}
+
+// ── Widget papan skor GLOBAL untuk halaman Arked stateless (/games/<key>). ──────
+//    MURNI: hanya bina string (style + inline script). Game melapor skor dengan
+//    memanggil window.__tkScore(n) (sedia ada; no-op jika widget tiada → offline-safe).
+//    Widget ini juga memuat & memaparkan top-5 daripada /api/scores. Fetch ke
+//    laluan host-sendiri dibenarkan oleh publishCspFor(connect-src). sandbox
+//    publish sudah ada allow-modals (prompt OK) + allow-scripts.
+function arcadeWidget(key) {
+  const g = String(key || '').replace(/[^a-z0-9_-]/gi, '');
+  const css = '<style>#tk-lb{position:fixed;left:8px;bottom:8px;width:196px;max-width:46vw;font:12px/1.45 system-ui,sans-serif;'
+    + 'background:rgba(18,22,30,.92);color:#e6e9ef;border:1px solid rgba(128,128,128,.4);border-radius:10px;padding:8px 11px;z-index:2147483000}'
+    + '#tk-lb h4{margin:0 0 5px;font-size:12px}#tk-lb ol{margin:0;padding-left:18px}#tk-lb li{margin:1px 0}'
+    + '#tk-lb .mine{color:#4c8dff;font-weight:700}#tk-lb .sub{opacity:.55;font-size:10px}</style>';
+  const js = '<script>(function(){var G="' + g + '",s=0,peaked=0,box;'
+    + 'function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
+    + 'function get(k){try{return localStorage.getItem(k)||"";}catch(e){return"";}}'
+    + 'function put(k,v){try{localStorage.setItem(k,v);}catch(e){}}'
+    + 'function nm(){var n=get("tk-lb-name");if(!n){n=(prompt("Nama untuk papan skor global?","")||"").trim().slice(0,20);if(n)put("tk-lb-name",n);}return n||"Anon";}'
+    + 'function load(){fetch("/api/scores?g="+encodeURIComponent(G)+"&limit=5",{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){var it=(d&&d.items)||[],me=nm().toLowerCase();'
+    + 'var h="<h4>\ud83c\udf0d Global Top</h4><div class=\\"sub\\">"+esc(G)+"</div>";'
+    + 'h+=it.length?"<ol>"+it.map(function(x){var m=(String(x.n).toLowerCase()===me);return "<li>"+(m?"\u2605 ":"")+esc(x.n)+" \u2014 "+(x.s|0)+"</li>";}).join("")+"</ol>":"<div style=\'opacity:.6\'>Belum ada skor. Jadilah yang pertama!</div>";'
+    + 'box.innerHTML=h;}).catch(function(){box.innerHTML="<div style=\'opacity:.6\'>Papan skor luar talian.</div>";});}'
+    + 'function post(sc){var n=nm();fetch("/api/score?g="+encodeURIComponent(G)+"&n="+encodeURIComponent(n)+"&s="+sc,{cache:"no-store",keepalive:true}).then(load).catch(function(){});}'
+    + 'window.__tkScore=function(v){v=parseInt(v,10)||0;if(v>s)s=v;if(s>peaked){peaked=s;post(s);}};'
+    + 'function boot(){box=document.createElement("div");box.id="tk-lb";document.body.appendChild(box);load();}'
+    + 'if(document.readyState!=="loading")boot();else document.addEventListener("DOMContentLoaded",boot);'
+    + '})();</' + 'script>';
+  return css + js;
+}
+
+// Hidang templat Arked dalam mod main-terus: buang pautan /store (ganti balik ke
+// /games) + suntik widget skor (hanya untuk game). MURNI supaya boleh diuji unit.
+function injectArcade(html, key, showScore) {
+  let out = String(html || '');
+  out = out.replace(/href="\/store"/gi, 'href="/games"');
+  if (showScore) out = insertBeforeBody(out, arcadeWidget(key));
+  return out;
+}
+
 // ── Genre game (gaya web-games.io). Pembantu MURNI supaya boleh diuji unit tanpa
 //    memulakan pelayan. server.js mengambil fungsi ini untuk membina /api/store.
 //    Nilai dalaman berkunci Melayu (padan data sedia ada); paparan awam = GENRE_UI.
@@ -154,4 +199,4 @@ function guessGameGenre(text) {
   return 'arkad';
 }
 
-module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml, isEditKey, extractTitle, publishCspFor, cmtSlug, cmtName, cmtText, commentsWidget, injectComments, GAME_GENRES, GENRE_SYNONYM, GENRE_UI, normalizeGenre, guessGameGenre };
+module.exports = { SLUG_RE, slugify, isSlug, publicOrigin, PUBLISH_CSP, PUBLISH_MAX_BYTES, looksLikeHtml, isEditKey, extractTitle, publishCspFor, cmtSlug, cmtName, cmtText, commentsWidget, injectComments, insertBeforeBody, arcadeWidget, injectArcade, GAME_GENRES, GENRE_SYNONYM, GENRE_UI, normalizeGenre, guessGameGenre };

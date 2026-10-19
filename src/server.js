@@ -1699,6 +1699,7 @@ function siteHeader(active) {
       ${link('/nasa', 'NASA', 'nasa')}
       ${link('/cuaca', 'Weather', 'cuaca')}
       ${link('/learn', 'Learn', 'learn')}
+      ${link('/games', 'Games', 'games')}
       <a href="https://build.tukuk.org" rel="noopener">Build</a>
       ${link('/docs', 'Docs', 'docs')}
       ${link('/about', 'About', 'about')}
@@ -1732,6 +1733,7 @@ function siteFooter() {
       <li><a href="/study">General Knowledge</a></li>
       <li><a href="/udara">Air & Oxygen</a></li>
       <li><a href="/akademi">Academy — 50 Lessons</a></li>
+      <li><a href="/games">Game Arcade — Play Free</a></li>
       <li><a href="/wang">World Currency — Live Rates</a></li>
       <li><a href="/seni">Free Art Gallery — The Met</a></li>
       <li><a href="/hidupan">Wildlife Atlas — Real Photos</a></li>
@@ -7291,6 +7293,69 @@ app.get('/play/:id', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'play.html'), (error) => {
     if (error) res.status(404).json({ error: 'Play page not found', path: req.originalUrl });
   });
+});
+
+// ── Arked awam (/games): HUB senarai + MAIN-TERUS stateless (/games/<key>). ───────
+//    Konsep: semua game dalam perpustakaan templat boleh dimainkan terus di website
+//    TANPA perlu /api/builder/build (tiada publish, tiada AI, tiada tulis cakera).
+//    /games/<key> hanya baca templates.get(key) (cache mtime) → hidang dengan CSP
+//    sandbox sama seperti /a/<slug> (connect-src host untuk papan skor global).
+//    Ini hampir SIFAR beban pelayan + boleh dikache CDN (max-age). Halaman arked
+//    DIKEKAL noindex (bukan sitemap/nav SEO) supaya pivot kandungan AdSense tak cair.
+const GAMES_CSS = '<style>.gwrap{max-width:960px;margin:0 auto;padding:14px}.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}'
+  + '.gcard{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--text);transition:transform .12s,border-color .12s}'
+  + '.gcard:hover{transform:translateY(-3px);border-color:var(--accent)}.gic{font-size:2rem;line-height:1}.gt{font-weight:700;font-size:.92rem;text-align:center}.gg{font-size:.68rem;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:2px 10px}'
+  + '.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.gchip{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;font:inherit;font-size:.82rem;cursor:pointer}.gchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}'
+  + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent),#7a5cff);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.92;font-size:.95rem}</style>';
+function renderGamesIndex() {
+  const games = templates.list().filter((t) => t.kind === 'game');
+  const genres = Array.from(new Set(games.map((g) => g.genre).filter(Boolean)));
+  const chips = ['all'].concat(genres).map((g) => `<button class="gchip${g === 'all' ? ' on' : ''}" data-f="${escapeHtml(g)}" type="button">${escapeHtml(g === 'all' ? 'All' : (GENRE_UI[g] || g))}</button>`).join('');
+  const cards = games.map((g) => `<a class="gcard" href="/games/${encodeURIComponent(g.key)}" data-genre="${escapeHtml(g.genre || 'lain')}"><span class="gic">${g.ic}</span><span class="gt">${escapeHtml(g.title)}</span><span class="gg">${escapeHtml(GENRE_UI[g.genre] || 'Arcade')}</span></a>`).join('');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free HTML5 Games Arcade — Play Instantly — Tukuk-OS</title>
+<meta name="description" content="Play dozens of free browser games instantly — no download, no sign-up, no install. 3D racing, penalty shootout, first-person shooter, puzzle, arcade and more, all running lightweight in your browser.">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://tukuk.org/games">
+<link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>${COMMON_CSS}</style>${GAMES_CSS}
+<script src="/theme.js"></script><link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+${siteHeader('')}
+<div class="gwrap"><section class="ghero"><h1>🎮 Game Arcade</h1><p>${games.length} free games — click to play instantly. Runs on the CPU-free web: no downloads, no accounts, works offline once loaded.</p></section>
+<div class="gchips">${chips}</div>
+<main><div class="ggrid" id="ggrid">${cards}</div></main>
+</div>
+${siteFooter()}
+<script>(function(){var bs=document.querySelectorAll('.gchip'),cs=document.querySelectorAll('.gcard');function f(v){cs.forEach(function(c){c.style.display=(v==='all'||c.getAttribute('data-genre')===v)?'':'none';});bs.forEach(function(b){b.classList.toggle('on',b.getAttribute('data-f')===v);});}bs.forEach(function(b){b.addEventListener('click',function(){f(b.getAttribute('data-f'));});});})();</' + 'script>
+</body>
+</html>`;
+}
+
+app.get('/games', (req, res) => {
+  res.setHeader('X-Robots-Tag', 'noindex, follow');
+  res.setHeader('Cache-Control', 'public, max-age=120');
+  res.type('html').send(renderGamesIndex());
+});
+
+app.get('/games/:key', (req, res) => {
+  const meta = templates.REGISTRY.find((r) => r.key === String(req.params.key || ''));
+  const html = meta ? templates.get(meta.key) : null;
+  if (!html) {
+    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Game not found — Tukuk-OS</title><meta name="robots" content="noindex"><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>That game does not exist.</p><p><a href="/games">&larr; All games</a></p></body></html>');
+  }
+  const proto = (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : 'http';
+  const out = publish.injectArcade(html, meta.key, meta.kind === 'game');
+  res.setHeader('Content-Security-Policy', publish.publishCspFor(req.get('host'), proto, false));
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.type('html').send(out);
 });
 
 // ── APK atas-permintaan (tukuk.org = gedung apl, gaya APKPure) ─────────────────

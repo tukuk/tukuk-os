@@ -166,7 +166,7 @@
     }
   }
 
-  function over() { running = false; draw(); msg('K.O. — ' + kills + ' kill. Tekan Mula untuk cuba lagi.'); document.getElementById('start').textContent = 'Mula Semula'; }
+  function over() { running = false; if (window.__tkScore) window.__tkScore(kills); draw(); msg('K.O. — ' + kills + ' kill. Tekan Mula untuk cuba lagi.'); document.getElementById('start').textContent = 'Mula Semula'; }
   function msg(t) { document.getElementById('msg').textContent = t; }
   function loop() { if (!running) return; step(); if (running) draw(); requestAnimationFrame(loop); }
   function start() { if (running) { fire(); return; } reset(); running = true; msg('Bertahan! Bersihkan arena.'); document.getElementById('start').textContent = 'Tembak'; requestAnimationFrame(loop); }

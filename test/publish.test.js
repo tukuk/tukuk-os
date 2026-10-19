@@ -139,3 +139,37 @@ test('normalizeGenre: sinonim + nilai 3D baharu dinormalisasi', () => {
 test('GENRE_UI: label paparan 3D = "3D" (permukaan awam bahasa Inggeris)', () => {
   assert.equal(publish.GENRE_UI['3d'], '3D');
 });
+
+// ── Arked stateless (/games): widget skor + suntikan (MURNI, tiada pelayan) ──
+test('arcadeWidget: ada <style> + skrip inline yang lapor /api/score & baca /api/scores + __tkScore', () => {
+  const w = publish.arcadeWidget('fps3d');
+  assert.ok(w.includes('<style>'), 'gaya panel disertakan');
+  assert.ok(w.includes('/api/score'), 'skrip hantar skor');
+  assert.ok(w.includes('/api/scores'), 'skrip baca papan skor');
+  assert.ok(w.includes('window.__tkScore'), 'API laporan skor didedahkan ke game');
+  assert.ok(w.includes('var G="fps3d"'), 'kunci game ditanam selamat');
+  assert.ok(w.includes('</' + 'script>'), 'blok skrip ditutup dengan betul');
+  // key musuh → dibuang aksara tak selamat (tiada pecah literal/closing skrip).
+  const evil = publish.arcadeWidget('a";alert(1);//');
+  assert.ok(evil.includes('var G="aalert1"'), 'key disanitasi kepada [a-z0-9_-] sahaja');
+  assert.ok(!evil.includes('alert(1)'), 'ranjang kod tidak tembus');
+});
+
+test('arcadeWidget: JS inline yang dijana ialah JavaScript yang sah (parse check)', () => {
+  const m = publish.arcadeWidget('racer3d').match(/<script>([\s\S]*)<\/script>/);
+  assert.ok(m, 'blok skrip ditemui');
+  // new Function() membungkus penguraian tanpa pelaksanaan → SyntaxError jika cacat.
+  assert.doesNotThrow(() => new Function(m[1]), 'skrip widget mesti boleh diuraikan');
+});
+
+test('injectArcade: pautan /store → /games; widget skor disuntik hanya bila showScore', () => {
+  const doc = '<html><body><header><a href="/store">x</a></header><script>1<\/script></body></html>';
+  const on = publish.injectArcade(doc, 'soccer3d', true);
+  assert.ok(on.includes('href="/games"'), 'pautan balik ke arked');
+  assert.ok(!on.includes('href="/store"'), 'pautan /store lama dibuang');
+  assert.ok(on.includes('window.__tkScore'), 'widget disuntik untuk game');
+  assert.ok(on.lastIndexOf('__tkScore') < on.lastIndexOf('</body>'), 'widget sebelum </body>');
+  const off = publish.injectArcade(doc, 'notes', false);
+  assert.ok(!off.includes('__tkScore'), 'bukan game → tiada widget skor');
+  assert.ok(off.includes('href="/games"'), 'pautan tetap ditulis walau tanpa widget');
+});

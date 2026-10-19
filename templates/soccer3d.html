@@ -43,7 +43,7 @@
   let aim = 0, aimDir = 1, power = 0, powerDir = 1, phase = 'idle', shot = null, goals = 0, taken = 0, best = 0, keeper = 0, keeperDir = 0, tick = 0;
 
   function reset() { aim = 0; power = 0; shot = null; goals = 0; taken = 0; phase = 'aim'; msg('Gerakkan sasaran — TAP untuk kunci'); }
-  function endRound() { if (taken >= 5) { phase = 'over'; if (goals > best) best = goals; hud(); msg('Selesai! ' + goals + '/5 gol. Tekan Mula.'); document.getElementById('start').textContent = 'Main Semula'; } }
+  function endRound() { if (taken >= 5) { phase = 'over'; if (goals > best) best = goals; if (window.__tkScore) window.__tkScore(goals * 100); hud(); msg('Selesai! ' + goals + '/5 gol. Tekan Mula.'); document.getElementById('start').textContent = 'Main Semula'; } }
 
   function tap() {
     if (phase === 'idle' || phase === 'over') { reset(); hud(); return; }

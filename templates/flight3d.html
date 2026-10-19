@@ -86,7 +86,7 @@
     // target reticle showing player world pos
     g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1; g.beginPath(); g.arc(W / 2, H / 2, 3, 0, 6.283); g.stroke();
   }
-  function over() { running = false; draw(); msg('Tamat — skor ' + score + '. Tekan Terbang lagi.'); document.getElementById('start').textContent = 'Terbang Semula'; }
+  function over() { running = false; if (window.__tkScore) window.__tkScore(score); draw(); msg('Tamat — skor ' + score + '. Tekan Terbang lagi.'); document.getElementById('start').textContent = 'Terbang Semula'; }
   function loop() { if (!running) return; step(); if (running) draw(); requestAnimationFrame(loop); }
   function start() { if (running) return; reset(); running = true; msg('Jaga nyawa — lalu setiap cincin!'); document.getElementById('start').textContent = 'Terbang'; requestAnimationFrame(loop); }
   document.getElementById('start').addEventListener('click', start);
