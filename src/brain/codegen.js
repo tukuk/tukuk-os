@@ -226,6 +226,70 @@ const HTML_PAGE = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// ── Templat siap-jalan (single-file) ── semakin banyak = semakin kurang LLM ──
+// Setiap fail satu HTML penuh tanpa bergantung library luar & TANPA backtick/${
+// supaya selamat dibungkus sebagai template literal (konvensyen fail ini).
+const SNAKE_HTML = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Snake</title>
+<style>html,body{margin:0;height:100%;background:#0f1115;color:#e6e9ef;font:16px system-ui;display:grid;place-items:center}canvas{background:#171a21;border:1px solid #262b36}#s{position:fixed;top:8px;left:12px;color:#9aa3b2}</style>
+</head><body><div id="s">Snake &mdash; arrow keys / swipe &middot; R restart</div><canvas id="c" width="360" height="360"></canvas>
+<script>
+var c=document.getElementById('c'),x=c.getContext('2d'),G=18,N=c.width/G,snake=[{x:8,y:8}],dir={x:1,y:0},next=dir,food={x:12,y:8},score=0,dead=false;
+function place(){food={x:(Math.random()*N)|0,y:(Math.random()*N)|0};}
+function reset(){snake=[{x:8,y:8}];dir={x:1,y:0};next=dir;score=0;dead=false;place();}
+addEventListener('keydown',function(e){var k=e.key;if(k==='r'){reset();return;}if(k==='ArrowLeft'&&dir.x===0){next={x:-1,y:0};}if(k==='ArrowRight'&&dir.x===0){next={x:1,y:0};}if(k==='ArrowUp'&&dir.y===0){next={x:0,y:-1};}if(k==='ArrowDown'&&dir.y===0){next={x:0,y:1};}});
+var tx=0,ty=0;c.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY;});
+c.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>Math.abs(dy)){if(dx>0&&dir.x===0)next={x:1,y:0};else if(dx<0&&dir.x===0)next={x:-1,y:0};}else{if(dy>0&&dir.y===0)next={x:0,y:1};else if(dy<0&&dir.y===0)next={x:0,y:-1};}});
+function tick(){if(dead)return;dir=next;var h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};if(h.x<0||h.y<0||h.x>=N||h.y>=N){dead=true;return;}for(var i=0;i<snake.length;i++){if(snake[i].x===h.x&&snake[i].y===h.y){dead=true;return;}}snake.unshift(h);if(h.x===food.x&&h.y===food.y){score++;place();}else{snake.pop();}}
+function draw(){x.fillStyle='#171a21';x.fillRect(0,0,c.width,c.height);x.fillStyle='#fb7185';x.fillRect(food.x*G,food.y*G,G-1,G-1);x.fillStyle='#34d399';for(var i=0;i<snake.length;i++)x.fillRect(snake[i].x*G,snake[i].y*G,G-1,G-1);x.fillStyle='#e6e9ef';x.font='16px system-ui';x.fillText('Score '+score,8,c.height-8);if(dead){x.fillStyle='#fb7185';x.font='24px system-ui';x.fillText('Game Over - R',110,c.height/2);}}
+setInterval(function(){tick();draw();},110);tick();draw();
+</script></body></html>`;
+
+const MEMORY_HTML = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Memory Match</title>
+<style>body{margin:0;background:#0f1115;color:#e6e9ef;font:16px system-ui;display:grid;place-items:center;min-height:100vh}h1{font-size:1.1rem;color:#9aa3b2}.g{display:grid;grid-template-columns:repeat(4,72px);gap:8px}.c{width:72px;height:72px;border:1px solid #262b36;border-radius:10px;background:#171a21;display:grid;place-items:center;font-size:28px;font-weight:700;cursor:pointer}.c.o{background:#12203a;border-color:#4c8dff}.c.m{opacity:.35;pointer-events:none}</style>
+</head><body><div><h1>Memory Match &mdash; klik untuk buka</h1><div class="g" id="g"></div></div>
+<script>
+var em={a:'S',b:'H',c:'M',d:'U',e:'L',f:'B',g:'R',h:'F'};var deck=[];for(var s in em){deck.push(s,s);}
+deck.sort(function(){return Math.random()-0.5;});
+var g=document.getElementById('g'),first=null,lock=false,flipped=0;
+deck.forEach(function(sym){var d=document.createElement('div');d.className='c';d.dataset.sym=sym;d.textContent='';d.onclick=function(){if(lock||d.classList.contains('m')||d.classList.contains('o'))return;d.classList.add('o');d.textContent=em[sym];if(!first){first=d;return;}if(first.dataset.sym===sym){first.classList.add('m');d.classList.add('m');first=null;flipped+=2;if(flipped===deck.length)setTimeout(function(){alert('Done!');},200);}else{lock=true;var a=first,b=d;setTimeout(function(){a.classList.remove('o');a.textContent='';b.classList.remove('o');b.textContent='';first=null;lock=false;},700);}};g.appendChild(d);});
+</script></body></html>`;
+
+const POMODORO_HTML = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pomodoro</title>
+<style>body{margin:0;background:#0f1115;color:#e6e9ef;font:16px system-ui;display:grid;place-items:center;min-height:100vh;text-align:center}.t{font-size:72px;font-variant-numeric:tabular-nums}button{margin:6px;padding:10px 16px;border:1px solid #262b36;border-radius:8px;background:#171a21;color:#e6e9ef;cursor:pointer}button.on{background:#4c8dff;border-color:#4c8dff;color:#fff}</style>
+</head><body><div><h1>Pomodoro Timer</h1><div class="t" id="t">25:00</div><div><button id="start">Start</button><button id="reset">Reset</button></div><div><button class="m on" data-m="25">25</button><button class="m" data-m="5">5</button><button class="m" data-m="15">15</button></div></div>
+<script>
+var total=1500,left=total,running=false,iv=null;
+function fmt(s){var m=Math.floor(s/60),ss=s%60;return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;}
+function render(){document.getElementById('t').textContent=fmt(left);}
+function stop(){running=false;if(iv)clearInterval(iv);iv=null;document.getElementById('start').textContent='Start';}
+function toggle(){running=!running;document.getElementById('start').textContent=running?'Pause':'Start';if(running){iv=setInterval(function(){if(left>0){left--;render();}if(left<=0){stop();alert('Time up!');}},1000);}else if(iv){clearInterval(iv);iv=null;}}
+document.getElementById('start').onclick=toggle;
+document.getElementById('reset').onclick=function(){stop();left=total;render();};
+var bs=document.querySelectorAll('.m');for(var i=0;i<bs.length;i++){bs[i].onclick=function(){for(var j=0;j<bs.length;j++)bs[j].classList.remove('on');this.classList.add('on');total=Number(this.dataset.m)*60;left=total;stop();render();};}
+render();
+</script></body></html>`;
+
+const TEMPLATES = { snake: SNAKE_HTML, memory: MEMORY_HTML, pomodoro: POMODORO_HTML };
+
+// Padan kata kunci goal → key templat (multibahasa ms/en). MURNI & boleh diuji.
+const TEMPLATE_HINTS = [
+  ['snake', ['snake', 'ular', 'ulat', 'hedgehog']],
+  ['memory', ['memory', 'ingatan', 'padan', 'padanan', 'pair', 'kad', 'card', 'match']],
+  ['pomodoro', ['pomodoro', 'timer', 'tempoh', 'focus', 'fokus', 'kanji', 'masa', 'countdown']]
+];
+function detectTemplate(goal) {
+  const q = String(goal || '').toLowerCase();
+  for (const [key, ws] of TEMPLATE_HINTS) { if (ws.some((w) => q.includes(w))) return key; }
+  return '';
+}
+function listTemplates() { return Object.keys(TEMPLATES); }
+
 function filesFor(kind) {
   switch (kind) {
     case 'game': return [{ path: 'index.html', contents: GAME_HTML }, { path: 'game.js', contents: GAME_JS }];
@@ -240,6 +304,17 @@ function filesFor(kind) {
 /** Scaffold lengkap bagi sesuatu jenis projek. */
 function scaffoldFor(kind, goal) {
   const k = normalizeKind(kind);
+  // Prioritikan templat single-file siap-jalan bagi game/app → 0 token LLM.
+  const tmplKey = (k === 'game' || k === 'app') ? detectTemplate(goal) : '';
+  if (tmplKey && TEMPLATES[tmplKey]) {
+    return {
+      kind: k,
+      goal: String(goal || '').slice(0, 200),
+      template: tmplKey,
+      files: [{ path: 'index.html', contents: TEMPLATES[tmplKey] }],
+      run: 'Open index.html in the browser (or upload it to Studio).'
+    };
+  }
   return {
     kind: k,
     goal: String(goal || '').slice(0, 200),
@@ -280,4 +355,4 @@ function review(code, lang) {
   });
 }
 
-module.exports = { KINDS, normalizeKind, planFor, scaffoldFor, review };
+module.exports = { KINDS, normalizeKind, planFor, scaffoldFor, review, TEMPLATES, detectTemplate, listTemplates };

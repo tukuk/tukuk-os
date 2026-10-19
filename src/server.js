@@ -7507,6 +7507,13 @@ const builderGenLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 60 * 1000, max: 40, keyPrefix: 'bgen:' })
   : (req, res, next) => next();
 
+// Cache hasil /builder/generate dalam memori (TTL 24j, cap 200) — permintaan
+// berulang dilayan tanpa AI/rangkaian. BUKAN store kekal (reboot → kosong).
+const BGEN_TTL_MS = 24 * 60 * 60 * 1000;
+const bgenCache = new Map();
+function bgenCacheGet(k) { const e = bgenCache.get(k); if (!e) return null; if (Date.now() > e.exp) { bgenCache.delete(k); return null; } return e.v; }
+function bgenCacheSet(k, v) { if (bgenCache.size >= 200) { const first = bgenCache.keys().next().value; bgenCache.delete(first); } bgenCache.set(k, { v, exp: Date.now() + BGEN_TTL_MS }); }
+
 app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const idea = truncate(String((req.body && req.body.idea) || '').trim(), 160);
   if (!idea) return res.status(400).json({ error: 'Type an idea or a word first.' });
@@ -7515,16 +7522,24 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const color = builderGen.isHexColor(req.body && req.body.color) ? String(req.body.color).trim() : '';
   const lang = truncate(String((req.body && req.body.lang) || '').replace(/\s+/g, ' ').trim(), 24);
   const opts = { color, lang };
+  const want = Math.min(3, Math.max(1, Number(req.body && req.body.count) || 3));
+  const explicitAI = Boolean(req.body && (req.body.ai === true || req.body.ai === '1' || req.body.ai === 1));
+  // JIMAT AWAN: heuristik deterministik DULU (0 token). AI hanya bila idea wajar
+  // (panjang/berperincis) atau pengguna tekan butang "✨ AI" secara eksplisit.
+  const useAI = Boolean(config.brain.enabled && builderGen.needsAI(idea, { ai: explicitAI }));
+  const ckey = builderGen.genCacheKey({ idea, style, color, lang, count: want, seed, useAI });
+  const hit = bgenCacheGet(ckey);
+  if (hit) return res.json({ ok: true, cached: true, source: hit.source, apps: hit.apps, app: hit.apps[0] });
+
   const brief = `App idea: ${idea}${style ? ', style ' + style : ''}${color ? ', main colour ' + color : ''}`;
   const sysPrompt = builderGen.SYSTEM_PROMPT + (lang ? ` Content language: ${lang}.` : '');
-  const want = Math.min(3, Math.max(1, Number(req.body && req.body.count) || 3));
   const apps = [];
   const seen = new Set();
   // Tandatangan untuk elak kad pendua (nama + aksen + set game).
   const sigOf = (a) => a.appName + '|' + (a.theme && a.theme.accent) + '|' + a.widgets.filter((w) => builderGen.GAMES.includes(w.type)).map((w) => w.type).join(',');
   const pushApp = (a, src) => { if (!a || !Array.isArray(a.widgets) || !a.widgets.length) return; const k = sigOf(a); if (seen.has(k)) return; seen.add(k); a._src = src || 'auto'; apps.push(a); };
-  let aiHit = false;
-  if (config.brain.enabled) {
+  // (1) AI HANYA bila wajar — kayuhkan slot pertama dengan reka model.
+  if (useAI) {
     try {
       let text = '';
       try {
@@ -7538,14 +7553,15 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
         } catch { /* jatuh ke heuristik */ }
       }
       const parsed = builderGen.parseGenJson(text);
-      if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) { pushApp(s, 'ai'); aiHit = true; } }
+      if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) pushApp(s, 'ai'); }
     } catch { /* noop — heuristik di bawah */ }
   }
-  // Lengkapkan hingga `want` dengan varian heuristik (palet + game berbeza).
+  // (2) Lengkapkan (atau lengkapkan sepenuhnya bila AI tak dipakai) dengan heuristik.
   if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want, style, seed, opts)) pushApp(v, 'auto');
   const finalApps = apps.slice(0, want);
   if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea, style, opts); fb._src = 'auto'; finalApps.push(fb); } // sentiasa ada >=1
-  const source = aiHit ? 'ai' : 'auto';
+  const source = finalApps[0] && finalApps[0]._src === 'ai' ? 'ai' : 'auto';
+  bgenCacheSet(ckey, { source, apps: finalApps });
   store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source, count: finalApps.length });
   res.json({ ok: true, source, apps: finalApps, app: finalApps[0] });
 });

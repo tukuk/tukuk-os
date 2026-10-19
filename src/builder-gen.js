@@ -201,4 +201,32 @@ const SYSTEM_PROMPT = [
   'Only 4-8 widgets. Keep all text short. No raw HTML/scripts inside values.'
 ].join(' ');
 
-module.exports = { KNOWN, GAMES, SYSTEM_PROMPT, parseGenJson, sanitizeApp, heuristicBuild, heuristicVariants, buildOne, pickGame, clipWidget, matchWords, isHexColor, lum };
+// Putuskan sama ada sesuatu idea WAJAR menghabiskan token AI, atau cukup
+// templat deterministik (0 token). Prinsip: jimat awan — heuristik dulu.
+//   true  → idea panjang/berperincis, atau pengguna minta AI secara eksplisit.
+//   false → satu/dua patah kata, atau padan genre game yang sudah ada templat.
+function needsAI(idea, opts) {
+  if (opts && opts.ai) return true; // butang "✨ AI" ditekan → hormati permintaan
+  const q = String(idea || '').toLowerCase().trim();
+  if (!q) return false;
+  const words = q.split(/\s+/).filter(Boolean);
+  if (/\bai\b|cerdas|pintar|smart|khusus|\bkhas\b|custom|reka khas|berperincis|detail|complex|canggih/.test(q)) return true;
+  // Padan genre game yang builder sudah punya templat → jangan bazir AI.
+  if (GAME_HINTS.some(([ws]) => ws.some((w) => q.includes(w)))) return false;
+  if (words.length <= 2 && q.length <= 24) return false;
+  return words.length >= 6 || q.length >= 48;
+}
+
+// Kunci cache deterministik bagi hasil generate. `useAI` dimasukkan supaya
+// permintaan "plain" vs "AI polish" tak berkongsi cache.
+function genCacheKey(o) {
+  const src = o && typeof o === 'object' ? o : {};
+  const norm = (v) => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
+  return [
+    norm(src.idea), norm(src.style), norm(src.color), norm(src.lang),
+    Math.min(3, Math.max(1, Number(src.count) || 3)), Math.max(0, Math.floor(Number(src.seed) || 0)),
+    src.useAI ? 'ai' : 'auto'
+  ].join('\u0001');
+}
+
+module.exports = { KNOWN, GAMES, SYSTEM_PROMPT, parseGenJson, sanitizeApp, heuristicBuild, heuristicVariants, buildOne, pickGame, clipWidget, matchWords, isHexColor, lum, needsAI, genCacheKey };

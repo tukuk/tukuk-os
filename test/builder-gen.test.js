@@ -95,6 +95,23 @@ test('heuristicVariants: N calon berbeza (palet+game); salt 0 = heuristicBuild; 
   assert.equal(g.heuristicVariants('x', 99).length, 6);
 });
 
+test('needsAI: pendek/genre game → false (jimat token); panjang/eksplisit → true', () => {
+  assert.equal(g.needsAI('kopi'), false, 'satu patah → template');
+  assert.equal(g.needsAI('snake game'), false, 'genre pendek → template');
+  assert.equal(g.needsAI('teka nombor'), false, 'hint game padan → template');
+  assert.equal(g.needsAI('kopi', { ai: true }), true, 'butang AI dipaksa');
+  assert.equal(g.needsAI('aplikasi kedai dengan troli pembayaran dan inventori penjual'), true, 'brief panjang → AI');
+  assert.equal(g.needsAI('buat app khas untuk gym'), true, 'kata kunci custom/khas → AI');
+});
+
+test('genCacheKey: normalisasi stabil; useAI & seed bezakan kunci', () => {
+  const a = g.genCacheKey({ idea: ' Kopi ', style: 'Dark', seed: 0, count: 3 });
+  const b = g.genCacheKey({ idea: 'kopi', style: 'dark', seed: 0, count: 3 });
+  assert.equal(a, b, 'kasus/spasi dinormalkan');
+  assert.notEqual(a, g.genCacheKey({ idea: 'kopi', style: 'dark', seed: 1, count: 3 }), 'seed bezakan');
+  assert.notEqual(a, g.genCacheKey({ idea: 'kopi', style: 'dark', seed: 0, count: 3, useAI: true }), 'useAI bezakan');
+});
+
 test('style: gelap/dark → hanya palet gelap; cerah/minimalis → palet cerah', () => {
   for (let i = 0; i < 4; i++) {
     const d = g.buildOne('kopi', i, 'gelap');
