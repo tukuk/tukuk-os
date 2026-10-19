@@ -40,6 +40,7 @@ const bacaan = require('./bacaan');
 const st = require('./statistik');
 const bc = require('./bencana');
 const els = require('./elements');
+const sky = require('./deepsky');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -807,6 +808,20 @@ app.get('/unsur/:q', (req, res) => {
   res.status(200).type('html').send(elementPage(req, e));
 });
 
+// ── LALUAN KOMPLEKS DEEP-SKY (/buruj*, /messier*) — data STATIK (tiada API) ──
+app.get('/buruj', (req, res) => res.status(200).type('html').send(burujHubPage()));
+app.get('/buruj/:slug', (req, res) => {
+  const c = sky.findConstellation(req.params.slug);
+  if (!c) return res.status(404).type('html').send(burujNotFound(req.params.slug));
+  res.status(200).type('html').send(constellationPage(c));
+});
+app.get('/messier', (req, res) => res.status(200).type('html').send(messierHubPage()));
+app.get('/messier/:id', (req, res) => {
+  const m = sky.findMessier(req.params.id);
+  if (!m) return res.status(404).type('html').send(messierNotFound(req.params.id));
+  res.status(200).type('html').send(messierPage(m));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1299,7 +1314,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1432,6 +1447,19 @@ app.get('/sitemap-unsur.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/unsur', '0.9')].concat(els.ELEMENTS.map((e) => one(`/unsur/${e.slug}`, '0.6'))).join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP DEEP-SKY — 2 hab + 88 buruj + 110 Messier (senarai statik) ──
+app.get('/sitemap-deepsky.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/buruj', '0.9'), one('/messier', '0.9')]
+    .concat(sky.CONSTELLATIONS.map((c) => one(`/buruj/${c.slug}`, '0.6')))
+    .concat(sky.MESSIER.map((m) => one(`/messier/${m.slug}`, '0.6')))
+    .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
@@ -5837,6 +5865,140 @@ function elementsNotFound(q) {
     css: EL_CSS,
     body: `<p>We could not match that to one of the 118 elements. Try a name (e.g. <a href="/unsur/gold">gold</a>), a symbol (e.g. <a href="/unsur/Au">Au</a>) or an atomic number — or open the <a href="/unsur">full periodic table</a> and pick a tile.</p>`,
   }, elementsNav());
+}
+
+// ── /buruj + /messier — deep-sky: 88 buruj IAU + 110 objek Messier (STATIK) ──
+function deepskyNav() {
+  return worldNav('Deep sky — constellations & Messier objects', [
+    { href: '/buruj', icon: '✨', name: 'The 88 constellations', blurb: 'Every officially recognised constellation: its Latin name and meaning, brightest star, size on the sky and hemisphere — with the deep-sky objects that lie within each.' },
+    { href: '/messier', icon: '🔭', name: 'The 110 Messier objects', blurb: 'The full Messier catalogue of galaxies, nebulae and star clusters — the fuzzy things that kept Charles Messier from finding comets — grouped by type and mapped to their constellation.' },
+  ]);
+}
+const byName = (a, b) => a.name.localeCompare(b.name);
+
+function burujHubPage() {
+  const list = [...sky.CONSTELLATIONS].sort(byName);
+  const rows = list.map((c) => `<tr><td><a href="/buruj/${c.slug}"><b>${escapeHtml(c.name)}</b></a></td><td>${escapeHtml(c.abbr)}</td><td>${escapeHtml(c.meaning || '—')}</td><td>${escapeHtml(c.brightest || '—')}${c.brightestMag != null ? ` (${c.brightestMag})` : ''}</td><td>${c.area ? c.area.toLocaleString('en-US') : '—'}</td><td>${escapeHtml(c.hemisphere)}</td></tr>`).join('');
+  const body = `<p>Since 1922 the International Astronomical Union has recognised exactly <b>88 constellations</b> — defined regions that tile the whole celestial sphere, so every point in the night sky belongs to one. Their names are Latin, most inherited from Ptolemy’s 2nd-century catalogue; the southern ones were added by early-modern European navigators. Below is every constellation with its official three-letter abbreviation, the <b>meaning</b> of its name, its <b>brightest star</b>, its area on the sky and which hemisphere it favours. Each name links to a full profile with the Messier objects found inside it.</p>
+  <table class="world-table"><tr><th>Constellation</th><th>Abbr.</th><th>Meaning</th><th>Brightest star</th><th>Area (sq. deg.)</th><th>Hemisphere</th></tr>${rows}</table>
+  <p class="meta">Data: IAU-designated constellations, via English Wikipedia (CC BY-SA 3.0), stored statically on our server — no external call when a page loads.</p>`;
+  return worldDoc({
+    title: 'The 88 Constellations — Names, Meanings, Brightest Stars | Tukuk-OS',
+    desc: 'All 88 IAU-recognised constellations with their Latin meaning, brightest star, sky area and hemisphere, each linked to the Messier objects within it.',
+    selfUrl: 'https://tukuk.org/buruj',
+    heroTitle: '✨ The 88 Constellations', heroSub: 'Every IAU constellation · name, meaning, brightest star & the deep-sky objects inside',
+    body,
+  }, deepskyNav());
+}
+
+function constellationPage(c) {
+  const objs = sky.messierInConstellation(c.name).sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+  const objList = objs.length
+    ? `<ul>${objs.map((m) => `<li><a href="/messier/${m.slug}">${escapeHtml(m.id)}</a>${m.name ? ` — ${escapeHtml(m.name)}` : ''} <span class="meta">(${escapeHtml(m.type)}${m.mag != null ? `, mag ${m.mag}` : ''})</span></li>`).join('')}</ul>`
+    : `<p class="meta">No Messier-catalogued object lies within this constellation’s borders.</p>`;
+  const rows = [
+    ['Constellation', c.name],
+    ['IAU abbreviation', c.abbr],
+    ['Genitive (Latin)', c.genitive],
+    ['Meaning', c.meaning],
+    ['Brightest star', c.brightest ? `${c.brightest}${c.brightestMag != null ? ` (apparent magnitude ${c.brightestMag})` : ''}` : null],
+    ['Area', c.area ? `${c.area.toLocaleString('en-US')} square degrees` : null],
+    ['Hemisphere', c.hemisphere],
+    ['Messier objects here', objs.length ? `${objs.length}` : null],
+  ].filter((r) => r[1] != null && String(r[1]).trim()).map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]))}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/buruj">&larr; All 88 constellations</a></p>
+  <p><b>${escapeHtml(c.name)}</b> is one of the 88 modern constellations defined by the International Astronomical Union. Its name is Latin${c.meaning ? `, meaning <em>${escapeHtml(c.meaning)}</em>` : ''}${c.genitive ? `; stars within it are named in the genitive form <em>${escapeHtml(c.genitive)}</em>` : ''}.</p>
+  <h2 class="section-title">Facts about ${escapeHtml(c.name)}</h2><table class="world-table">${rows}</table>
+  <h2 class="section-title">Deep-sky objects in ${escapeHtml(c.name)}</h2>${objList}
+  <p class="meta">Data: IAU-designated constellations & the Messier catalogue, via English Wikipedia (CC BY-SA 3.0) · stored statically.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'DefinedTerm', name: c.name,
+    description: `${c.name} constellation — IAU abbreviation ${c.abbr}${c.meaning ? `, meaning ${c.meaning}` : ''}.${c.brightest ? ` Brightest star ${c.brightest}.` : ''}`,
+    url: `https://tukuk.org/buruj/${c.slug}`, inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'IAU constellations', url: 'https://tukuk.org/buruj' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${c.name} Constellation — Meaning, Brightest Star & Objects | Tukuk-OS`,
+    desc: `${c.name} (${c.abbr})${c.meaning ? `, meaning “${c.meaning}”` : ''}${c.brightest ? `, brightest star ${c.brightest}` : ''}: a full profile plus every Messier object lying in this ${c.hemisphere.toLowerCase()} constellation.`,
+    selfUrl: `https://tukuk.org/buruj/${c.slug}`,
+    heroTitle: `✨ ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.abbr)} · ${escapeHtml(c.meaning || '')} · ${escapeHtml(c.hemisphere)} sky`,
+    ld, body,
+  }, deepskyNav());
+}
+
+function messierHubPage() {
+  const sections = sky.TYPES.map((t) => {
+    const items = sky.messierByType(t).sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+    if (!items.length) return '';
+    const links = items.map((m) => `<a href="/messier/${m.slug}">${escapeHtml(m.id)}</a>${m.name ? ` <span class="meta">${escapeHtml(m.name)}</span>` : ''}`).join(' · ');
+    return `<h2 class="section-title">${t}s <span class="meta">(${items.length})</span></h2><p>${escapeHtml(sky.TYPE_INFO[t] || '')}</p><p>${links}</p>`;
+  }).join('');
+  const body = `<p>In the 1770s the French comet-hunter <b>Charles Messier</b> compiled a list of the fuzzy, comet-like objects that kept interrupting his searches — 110 of them in the final, expanded catalogue. Today they are the <b>Messier objects</b>: the brightest galaxies, nebulae and star clusters in the sky, and the backbone of every amateur astronomer’s “Messier marathon”. Every object is below, grouped by what it actually is, each linked to its own page and its home constellation.</p>
+  ${sections}
+  <p class="meta">Data: Messier catalogue, via English Wikipedia (CC BY-SA 3.0) · stored statically.</p>`;
+  return worldDoc({
+    title: 'The Messier Catalogue — All 110 Objects by Type | Tukuk-OS',
+    desc: 'The complete catalogue of 110 Messier objects — galaxies, nebulae and star clusters — grouped by type, with magnitudes, constellations and a page for each.',
+    selfUrl: 'https://tukuk.org/messier',
+    heroTitle: '🔭 The Messier Catalogue', heroSub: '110 deep-sky objects · galaxies, nebulae & star clusters',
+    body,
+  }, deepskyNav());
+}
+
+function messierPage(m) {
+  const consLink = m.cSlug ? `<a href="/buruj/${m.cSlug}">${escapeHtml(m.constellation)}</a>` : escapeHtml(m.constellation || '—');
+  const rows = [
+    ['Catalogue designation', m.id],
+    ['Common name', m.name],
+    ['Object type', m.type],
+    ['Constellation', m.constellation || null],
+    ['NGC / IC', m.ngc],
+    ['Apparent magnitude', m.mag != null ? String(m.mag) : null],
+    ['Distance (approx.)', m.distance != null ? `${m.distance.toLocaleString('en-US')} thousand light-years` : null],
+  ].filter((r) => r[1] != null && String(r[1]).trim()).map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]))}</td></tr>`).join('');
+  const siblings = sky.messierInConstellation(m.constellation).filter((x) => x.id !== m.id).sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+  const siblingHtml = siblings.length
+    ? `<p>Other Messier objects in ${escapeHtml(m.constellation)}: ${siblings.map((s) => `<a href="/messier/${s.slug}">${escapeHtml(s.id)}</a>`).join(', ')}.</p>` : '';
+  const typeInfo = sky.TYPE_INFO[m.type] || '';
+  const body = `<p class="back-link"><a href="/messier">&larr; The full Messier catalogue</a></p>
+  <p><b>${escapeHtml(m.id)}${m.name ? `, ${escapeHtml(m.name)}` : ''}</b> is a ${escapeHtml(String(m.type).toLowerCase())} in the constellation ${consLink}${m.mag != null ? `, with an apparent magnitude of about ${m.mag}` : ''}${m.distance != null ? `, roughly ${m.distance.toLocaleString('en-US')} thousand light-years away` : ''}.</p>
+  <h2 class="section-title">Data</h2><table class="world-table">${rows}</table>
+  <h2 class="section-title">What a ${escapeHtml(String(m.type).toLowerCase())} is</h2><p>${escapeHtml(typeInfo)}</p>
+  ${siblingHtml}
+  <p class="meta">Data: Messier catalogue & IAU constellations, via English Wikipedia (CC BY-SA 3.0) · stored statically.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Place', name: `${m.id}${m.name ? ` — ${m.name}` : ''}`, description: `${m.type} in ${m.constellation || 'the night sky'}.`, url: `https://tukuk.org/messier/${m.slug}` },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Deep sky', item: 'https://tukuk.org/buruj' },
+      { '@type': 'ListItem', position: 2, name: 'Messier catalogue', item: 'https://tukuk.org/messier' },
+      { '@type': 'ListItem', position: 3, name: m.id, item: `https://tukuk.org/messier/${m.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${m.id}${m.name ? ` (${m.name})` : ''} — ${m.type} Facts & Location | Tukuk-OS`,
+    desc: `${m.id}${m.name ? `, ${m.name},` : ''} a ${String(m.type).toLowerCase()} in ${m.constellation || 'the night sky'}${m.mag != null ? ` (magnitude ${m.mag})` : ''}: type, constellation, catalogue references and what this kind of object is.`,
+    selfUrl: `https://tukuk.org/messier/${m.slug}`,
+    heroTitle: `🔭 ${escapeHtml(m.id)}${m.name ? ` — ${escapeHtml(m.name)}` : ''}`, heroSub: `${escapeHtml(m.type)} in ${escapeHtml(m.constellation || 'the night sky')}`,
+    ld, body,
+  }, deepskyNav());
+}
+
+function burujNotFound(q) {
+  return worldDoc({
+    title: 'Constellation not found | Tukuk-OS',
+    desc: 'That constellation was not recognised — browse the full list of all 88 IAU constellations instead.',
+    selfUrl: 'https://tukuk.org/buruj', robots: 'noindex,follow',
+    heroTitle: 'Constellation not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    body: `<p>We could not match that to one of the 88 constellations. Open <a href="/buruj">the full list</a>, or explore the <a href="/messier">Messier catalogue</a>.</p>`,
+  }, deepskyNav());
+}
+function messierNotFound(q) {
+  return worldDoc({
+    title: 'Messier object not found | Tukuk-OS',
+    desc: 'That Messier object was not recognised — browse the full catalogue of 110 Messier objects instead.',
+    selfUrl: 'https://tukuk.org/messier', robots: 'noindex,follow',
+    heroTitle: 'Messier object not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    body: `<p>Messier catalogued 110 objects (M1 to M110). Try a designation like <a href="/messier/m31">M31</a> — or open <a href="/messier">the full catalogue</a>.</p>`,
+  }, deepskyNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
