@@ -865,7 +865,11 @@ app.get('/sejarah/:mm/:dd', async (req, res) => {
 app.get('/kota', (req, res) => res.status(200).type('html').send(kotaHubPage()));
 app.get('/kota/:slug', async (req, res) => {
   const c = kt.findCity(req.params.slug);
-  if (!c) return res.status(404).type('html').send(kotaNotFound(req.params.slug));
+  if (!c) {
+    const r = kt.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(kotaRegionPage(r)); // hub benua — statik, tak boleh 503
+    return res.status(404).type('html').send(kotaNotFound(req.params.slug));
+  }
   let sum = null;
   try { sum = await kt.fetchSummary(c.wiki); } catch {}
   res.status(200).type('html').send(kotaPage(c, sum));
@@ -1545,6 +1549,7 @@ app.get('/sitemap-kota.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/kota', '0.9')]
+    .concat(kt.REGIONS.map((r) => one(`/kota/${r.slug}`, '0.8')))
     .concat(kt.CITIES.map((c) => one(`/kota/${c.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
@@ -6316,17 +6321,19 @@ function cityCard(c) {
 }
 function kotaNav() {
   return worldNav('World Cities — tukuk.org/kota', [{ href: '/kota', icon: '🌆', name: 'All cities', blurb: 'Profiles of the world’s great cities — where they are, which country they belong to, and a plain-English introduction to each.' }
-  ].concat(kt.REGION_ORDER.map((r) => ({ href: `/kota#${kt.slugify(r)}`, icon: '🌍', name: `${r} cities`, blurb: `${kt.citiesInRegion(r).length} cities across ${r}, from global megacities to historic capitals.`}))));
+  ].concat(kt.REGIONS.map((r) => ({ href: `/kota/${r.slug}`, icon: '🌍', name: `${r} cities`, blurb: `${r.count} cities across ${r}, from global megacities to historic capitals.`}))));
 }
 
 function kotaHubPage() {
   const sections = kt.REGION_ORDER.map((r) => {
     const cs = kt.citiesInRegion(r);
     if (!cs.length) return '';
-    return `<h2 class="section-title" id="${kt.slugify(r)}">${r} <span class="meta">(${cs.length} cities)</span></h2><div class="city-grid">${cs.map(cityCard).join('')}</div>`;
+    return `<h2 class="section-title" id="${kt.slugify(r)}"><a href="/kota/${kt.slugify(r)}">${r}</a> <span class="meta">(${cs.length} cities)</span></h2><div class="city-grid">${cs.map(cityCard).join('')}</div>`;
   }).join('');
+  const browse = `<p>${kt.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/kota/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
   const body = `<p>These are some of the world’s most <b>influential and visited cities</b> — the megacities, capitals and cultural crossroads that shape economies, art and everyday life. Each profile shows <em>where</em> the city sits, <em>which country</em> it belongs to and <em>what it is known for</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${kt.CITIES.length} cities from ${kt.COUNTRIES.length} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each city to read about its country in our World Countries series.</p>
+  ${browse}
   ${sections}
   <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/negara">World Countries</a> · <a href="/cuaca">World Weather</a> · <a href="/sejarah">On this day</a> · <a href="/pepatah">Proverbs</a>.</p>`;
   const ld = JSON.stringify({
@@ -6339,6 +6346,30 @@ function kotaHubPage() {
     desc: `Introductions to ${kt.CITIES.length} major world cities across ${kt.COUNTRIES.length} countries: location, country and what each city is known for.`,
     selfUrl: 'https://tukuk.org/kota',
     heroTitle: '🌆 World Cities', heroSub: `${kt.CITIES.length} cities · ${kt.COUNTRIES.length} countries · location, country & introduction`,
+    ld, css: KT_CSS, body,
+  }, kotaNav());
+}
+
+function kotaRegionPage(region) {
+  const cs = kt.citiesInRegion(region.name);
+  const countries = [...new Set(cs.map((c) => c.country))].sort((a, b) => a.localeCompare(b));
+  const grid = `<div class="city-grid">${cs.map(cityCard).join('')}</div>`;
+  const other = kt.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/kota/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/kota">&larr; All cities</a></p>
+  <p>A profile for each of the <b>${cs.length} major cities in ${region.name}</b> in our World Cities series — where the city sits, which country it belongs to, and a plain-English introduction drawn from Wikipedia so the description stays sourced rather than invented. These ${cs.length} cities span ${countries.length} countries across the continent.</p>
+  ${grid}
+  <h2 class="section-title">Other continents</h2><p>${other}</p>
+  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/negara">World Countries</a> · <a href="/cuaca">World Weather</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} Cities — Tukuk-OS`,
+    description: `Profiles of ${cs.length} major cities in ${region.name}: location, country and a plain-English introduction to each.`,
+    url: `https://tukuk.org/kota/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${region.name} Cities — City Profiles, Locations & Facts | Tukuk-OS`,
+    desc: `Introductions to ${cs.length} major cities in ${region.name} across ${countries.length} countries: location, country and what each city is known for.`,
+    selfUrl: `https://tukuk.org/kota/${region.slug}`,
+    heroTitle: `🌍 ${region.name} Cities`, heroSub: `${cs.length} cities · ${countries.length} countries · location, country & introduction`,
     ld, css: KT_CSS, body,
   }, kotaNav());
 }
@@ -6369,7 +6400,7 @@ function kotaPage(c, sum) {
       geo: { '@type': 'GeoCoordinates', latitude: c.lat, longitude: c.lng } },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'World Cities', item: 'https://tukuk.org/kota' },
-      { '@type': 'ListItem', position: 2, name: c.region, item: `https://tukuk.org/kota#${kt.slugify(c.region)}` },
+      { '@type': 'ListItem', position: 2, name: c.region, item: `https://tukuk.org/kota/${kt.slugify(c.region)}` },
       { '@type': 'ListItem', position: 3, name: c.name, item: `https://tukuk.org/kota/${c.slug}` },
     ] },
   ]).replace(/</g, '\u003c');

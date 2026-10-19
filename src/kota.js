@@ -32,7 +32,13 @@ for (const c of CITIES) {
 }
 const COUNTRIES = [...COUNTRY_MAP.values()].sort((a, b) => a.name.localeCompare(b.name));
 
+// Rantau (benua) sebagai halaman hub tersendiri — kira jumlah kota setiap satu.
+const REGIONS = REGION_ORDER.map((r) => ({ name: r, slug: slugify(r), count: citiesInRegionCount(r) }));
+const R_BY_SLUG = new Map(REGIONS.map((r) => [r.slug, r]));
+function citiesInRegionCount(r) { let n = 0; for (const c of CITIES) if (c.region === r) n++; return n; }
+
 function findCity(slug) { return C_BY_SLUG.get(String(slug || '').toLowerCase()) || null; }
+function findRegion(slug) { return R_BY_SLUG.get(String(slug || '').toLowerCase()) || null; }
 function citiesInRegion(region) { return CITIES.filter((c) => c.region === region); }
 function citiesByCountry(countrySlug) { const x = COUNTRY_MAP.get(countrySlug); return x ? x.items : []; }
 
@@ -70,7 +76,7 @@ async function fetchSummary(wikiTitle) {
   if (hit && Date.now() <= hit.expiresAt) return hit.data;
   try {
     const s = await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, '_'))}`);
-    if (!s || !s.extract) { const out = null; cache.set(key, out, TTL); return out; }
+    if (!s || !s.extract) { const out = null; cache.set(key, { data: out, expiresAt: Date.now() + TTL }); return out; }
     const out = {
       extract: String(s.extract).trim(),
       description: s.description ? String(s.description).trim() : '',
@@ -79,11 +85,11 @@ async function fetchSummary(wikiTitle) {
       thumbH: s.thumbnail && s.thumbnail.height ? s.thumbnail.height : null,
       url: (s.content_urls && s.content_urls.desktop && s.content_urls.desktop.page) || `https://en.wikipedia.org/wiki/${encodeURIComponent(t.replace(/ /g, '_'))}`,
     };
-    cache.set(key, out, TTL);
+    cache.set(key, { data: out, expiresAt: Date.now() + TTL });
     return out;
   } catch {
     return hit ? hit.data : null; // SWR — basi lebih baik daripada tiada, tapi jangan sekat
   }
 }
 
-module.exports = { CITIES, COUNTRIES, REGION_ORDER, findCity, citiesInRegion, citiesByCountry, fetchSummary, slugify };
+module.exports = { CITIES, COUNTRIES, REGIONS, REGION_ORDER, findCity, findRegion, citiesInRegion, citiesByCountry, fetchSummary, slugify };
