@@ -77,6 +77,13 @@ test('detect: null untuk teks kosong / tak berkaitan', () => {
   assert.equal(templates.detect('zzz qqq www'), null);
 });
 
+test('detect: elak substr dalam perkataan (regresi "ber"+"bil"+"ang" → tip)', () => {
+  // "bil" ialah hint tip; secara substring ia ada dalam "berbilang". Padanan
+  // mesti berasaskan perkataan penuh → tiada padanan, bukan 'tip'.
+  const m = templates.detect('aplikasi berbilang modul gudang automatik');
+  assert.ok(!m || m.key !== 'tip', 'tidak boleh padan tip melalui substr "bil"');
+});
+
 test('detect: keputusan deterministik (seri → hash stabil)', () => {
   const a = templates.detect('snake ular');
   const b = templates.detect('snake ular');

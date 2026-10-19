@@ -116,20 +116,26 @@ function get(key) {
 }
 
 // Padankan huraian bebas → templat terbaik (ms/en). Skor = bilangan hint yang
-// muncul sebagai substr kata dalam soalan. Seri → hash deterministik (elak
-// tersenarai rawak). null bila tiada padanan cukup kuat (skor < 1).
+// muncul SEBAGAI PERKATAAN penuh (bukan substr dalam perkataan lain — elak
+// "berbilang"→"bil"→tip). Awalan longgar (≥4 aksara) cover singular/plural. Seri
+// → hash deterministik. null bila tiada padanan cukup kuat (skor < 1).
 function h32(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function detect(goal) {
   const q = String(goal || '').toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, ' ').trim();
   if (!q) return null;
+  const words = q.split(/\s+/).filter(Boolean);
+  const wset = new Set(words);
   let best = null, bestScore = 0;
   const leaders = [];
   for (const r of REGISTRY) {
     const hints = r.hints.split(/\s+/);
     let score = 0;
     for (const h of hints) {
-      if (h.length >= 3 && q.includes(h)) score++;
-      else if (h.length < 3 && new RegExp('(^|\\s)' + h + '($|\\s)').test(q)) score += 0.5;
+      if (!h) continue;
+      if (wset.has(h)) { score++; continue; } // padanan perkataan penuh
+      if (h.length >= 4) { // awalan longgar: "weathers"↔"weather", plurals
+        for (const w of words) { if (w.length >= 4 && (w.startsWith(h) || h.startsWith(w))) { score += 0.5; break; } }
+      }
     }
     if (score > bestScore) { bestScore = score; best = r; leaders.length = 0; leaders.push(r); }
     else if (score === bestScore && score > 0) leaders.push(r);
