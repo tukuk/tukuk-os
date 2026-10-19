@@ -7,7 +7,7 @@
 const axios = require('axios');
 
 const http = axios.create({
-  timeout: 12000,
+  timeout: 20000,
   headers: { 'User-Agent': 'TukukOS-Gempa-Client/1.0 (+https://tukuk.org)' },
 });
 
@@ -54,6 +54,13 @@ async function usgsQuery(params) {
   const key = JSON.stringify(params);
   const hit = cacheGet(key);
   if (hit && !hit.stale) return hit.data;
+  // stale-while-revalidate: suapan USGS boleh ambil ~8s; hidang data lama serta-merta
+  // dan muat semula di latar supaya halaman tak pernah 503 atau tunggu lama.
+  if (hit && hit.stale) { fetchAndCache(key, params).catch(() => {}); return hit.data; }
+  return fetchAndCache(key, params);
+}
+
+async function fetchAndCache(key, params) {
   try {
     const res = await http.get(QUERY_URL, {
       params: { format: 'geojson', orderby: 'time', ...params },
@@ -80,7 +87,8 @@ async function usgsQuery(params) {
     cacheSet(key, rows);
     return rows;
   } catch (err) {
-    if (hit) return hit.data; // stale lebih baik daripada gagal
+    const h = cacheGet(key);
+    if (h) return h.data; // stale lebih baik daripada gagal
     throw err;
   }
 }

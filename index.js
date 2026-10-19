@@ -8,6 +8,7 @@ const { app } = require('./src/server');
 const news = require('./src/news');
 const queries = require('./src/queries');
 const nasa = require('./src/nasa');
+const gempa = require('./src/gempa');
 const agentEditor = require('./src/agent-editor');
 
 async function waitForMeili({ attempts = 30, delayMs = 1000 } = {}) {
@@ -69,6 +70,14 @@ async function main() {
         .then((n) => { if (n > 0) console.log(`[news] ${n} item RSS sedia`); })
         .catch(() => {});
     }, 3000);
+    // Panaskan suapan gempa (USGS query boleh ambil ~8s) supaya pelawat pertama
+    // dapat cache serta-merta dan tak kena 503 sejuk. Non-blocking, gagal senyap.
+    setTimeout(() => {
+      Promise.all([
+        gempa.regionFeed(gempa.findRegion('dunia')).catch(() => {}),
+        gempa.regionFeed(gempa.findRegion('malaysia')).catch(() => []),
+      ]).catch(() => {});
+    }, 4000);
     // Auto-update APOD + backfill arkib NASA — NYALI hanya bila NASA_AUTO=1.
     // Halaman NASA sudah dibuang (fokus konten + server ringan); secara lalai
     // dimatikan supaya tak bazir CPU/jaringan/disk pada VPS.

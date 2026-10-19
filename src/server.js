@@ -600,7 +600,7 @@ app.get('/gempa', async (req, res) => {
   try {
     const [rows, myRows] = await Promise.all([
       gp.regionFeed(gp.findRegion('dunia')),
-      gp.regionFeed(gp.findRegion('malaysia')),
+      gp.regionFeed(gp.findRegion('malaysia')).catch(() => []),
     ]);
     if (!rows || !rows.length) throw new Error('suapan kosong');
     res.status(200).type('html').send(gempaHubPage(req, rows, myRows || []));
