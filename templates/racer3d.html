@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Turbo Racer 3D — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="A pseudo-3D arcade racer with projected curves and hills — no libraries, runs offline. Overtake traffic, hold the road through bends and clock the fastest lap.">
+<link rel="canonical" href="https://tukuk.org/apps/racer3d">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:12px 18px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.15rem; }
+  header .back { font-size:.86rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:520px; margin:0 auto; padding:10px; }
+  .hud { display:flex; gap:8px; justify-content:space-between; margin-bottom:8px; font-size:.8rem; }
+  .hud .stat { flex:1; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px; }
+  .hud .lab { display:block; color:var(--muted); font-size:.62rem; text-transform:uppercase; }
+  canvas { display:block; width:100%; border-radius:10px; background:#1a2330; touch-action:none; }
+  .msg { min-height:1.1em; text-align:center; color:var(--muted); font-size:.82rem; margin-top:6px; }
+  .ctrls { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:10px; }
+  .ctrls button { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:16px 0; font-size:1.2rem; cursor:pointer; }
+  .ctrls button:active { background:var(--accent); color:#fff; }
+  #start { margin-top:8px; width:100%; background:var(--accent); color:#fff; border:0; border-radius:10px; padding:12px; font-weight:700; cursor:pointer; font:inherit; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🏎️ Turbo Racer 3D</h1></header>
+<div class="wrap">
+  <div class="hud">
+    <div class="stat"><span class="lab">Speed</span><b id="spd">0</b></div>
+    <div class="stat"><span class="lab">Lap</span><b id="lap">1</b></div>
+    <div class="stat"><span class="lab">Best</span><b id="best">--</b></div>
+    <div class="stat"><span class="lab">Time</span><b id="time">0.0</b></div>
+  </div>
+  <canvas id="cv" width="480" height="320"></canvas>
+  <div class="msg" id="msg">◀ ▶ steer · ▲ gas · ▼ brake (atau kekunci arrow)</div>
+  <div class="ctrls"><button id="bl">◀</button><button id="br">▶</button><button id="bd">▼</button><button id="bu">▲</button></div>
+  <button id="start">Mula / Race</button>
+</div>
+<script>
+(() => {
+  const W = 480, H = 320, cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const SEG = 200, ROADW = 2000, RUMBLE = 3, DRAW = 260, FOV = 100, CAMH = 1000;
+  const camD = 1 / Math.tan((FOV / 2) * Math.PI / 180);
+  let segs = [], trackLen, pos = 0, playerX = 0, speed = 0, maxSpeed = SEG * 60, accel = maxSpeed / 5, braking = -maxSpeed, decel = -maxSpeed / 5;
+  let cars = [], lap = 1, lapT = 0, best = null, running = false, keys = {};
+
+  function addSeg(curve, y) {
+    const n = segs.length, prevY = n ? segs[n - 1].p2.y : 0;
+    segs.push({ index: n, curve, p1: { world: { y: prevY, z: n * SEG } }, p2: { world: { y: y, z: (n + 1) * SEG } }, color: (Math.floor(n / RUMBLE) % 2) ? 'dark' : 'light', cars: [] });
+  }
+  function addRoad(enter, hold, leave, curve, dy) {
+    const sy = (segs.length ? segs[segs.length - 1].p2.y : 0);
+    const total = enter + hold + leave;
+    for (let i = 0; i < enter; i++) addSeg(easeIn(0, curve, i / enter), easeInOut(sy, sy + dy, i / total));
+    for (let i = 0; i < hold; i++) addSeg(curve, easeInOut(sy, sy + dy, (enter + i) / total));
+    for (let i = 0; i < leave; i++) addSeg(easeInOut(curve, 0, i / leave), easeInOut(sy, sy + dy, (enter + hold + i) / total));
+  }
+  const easeIn = (a, b, p) => a + (b - a) * p * p, easeInOut = (a, b, p) => a + (b - a) * (0.5 - Math.cos(p * Math.PI) / 2);
+  function build() {
+    segs = []; let n = 0;
+    const S = 40, M = 70, L = 110;
+    addRoad(S, S, S, 0, 0);
+    addRoad(M, M, M, 3, 40); addRoad(M, M, M, 0, -20); addRoad(L, L, L, -4, 60);
+    addRoad(S, S, S, 0, 0); addRoad(M, M, M, -3, -40); addRoad(L, L, L, 5, 30);
+    addRoad(M, M, M, 0, 0); addRoad(M, M, M, 4, 50); addRoad(S, S, S, 0, -60);
+    addRoad(L, L, L, -5, 20); addRoad(M, M, M, 2, 0); addRoad(S, S, S, 0, 0);
+    trackLen = segs.length * SEG;
+    for (let i = 0; i < 14; i++) { const idx = (Math.random() * segs.length) | 0, c = { offset: Math.random() * 1.6 - 0.8, z: segs[idx].p1.world.z + idx * 0, speed: maxSpeed * (0.25 + Math.random() * 0.4), car: idx }; cars.push(c); }
+    segs.forEach((s) => { s.cars = []; });
+    cars.forEach((c) => { c.percent = 0; });
+  }
+  function findSeg(z) { return segs[Math.floor((z % trackLen) / SEG) % segs.length]; }
+  function project(p, cx, cy, cz) {
+    p.camera = { x: p.world.x - cx, y: p.world.y - cy, z: p.world.z - cz };
+    p.screen = { scale: camD / p.camera.z, x: 0, y: 0, w: 0 };
+    if (p.camera.z > 0) { p.screen.x = Math.round(W / 2 + p.screen.scale * p.camera.x * W / 2); p.screen.y = Math.round(H / 2 - p.screen.scale * p.camera.y * H / 2); p.screen.w = Math.round(p.screen.scale * ROADW * W / 2); }
+  }
+  function poly(x1, y1, x2, y2, x3, y3, x4, y4, col) { g.fillStyle = col; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.lineTo(x3, y3); g.lineTo(x4, y4); g.closePath(); g.fill(); }
+
+  function step(dt) {
+    const pSeg = findSeg(pos), pPct = (pos % SEG) / SEG, speedPct = speed / maxSpeed, dx = dt * 2 * speedPct;
+    if (keys.l) playerX -= dx; else if (keys.r) playerX += dx;
+    playerX -= dx * speedPct * pSeg.curve * 0.35;
+    if (keys.u) speed = Math.min(maxSpeed, speed + accel * dt); else if (keys.d) speed = Math.max(0, speed + braking * dt); else speed = Math.max(0, speed + decel * dt);
+    if ((playerX < -1 || playerX > 1) && speed > maxSpeed * 0.25) speed = Math.max(maxSpeed * 0.25, speed + braking * dt * 1.5);
+    playerX = Math.max(-1.6, Math.min(1.6, playerX));
+    pos = (pos + speed * dt) % trackLen; lapT += dt;
+    if (pos < speed * dt) { lap++; if (best === null || lapT < best) best = lapT; lapT = 0; msg('Lap ' + lap + ' — masa terbaik ' + (best ? best.toFixed(1) : '-') + 's'); }
+    // traffic
+    for (const c of cars) { c.z = (c.z + c.speed * dt) % trackLen; }
+    for (const c of cars) { const dz = (c.z - pos + trackLen) % trackLen; if (dz < SEG * 1.2 && Math.abs(c.offset - playerX) < 0.6 && speed > c.speed) { speed = c.speed * 0.85; msg('Terlanggar!'); } }
+    hud();
+  }
+  function draw() {
+    g.fillStyle = '#12233b'; g.fillRect(0, 0, W, H); g.fillStyle = '#1a4d2e'; g.fillRect(0, H / 2, W, H / 2);
+    const base = findSeg(pos), basePct = (pos % SEG) / SEG;
+    let x = 0, dx = -(base.curve * basePct), maxy = H, cx = playerX * ROADW, cy = CAMH + base.p1.world.y + (base.p2.world.y - base.p1.world.y) * basePct;
+    for (let n = 0; n < DRAW; n++) {
+      const s = segs[(base.index + n) % segs.length], looped = (base.index + n) >= segs.length;
+      s.p1.world.x = x; s.p2.world.x = x + dx;
+      const z1 = s.p1.world.z + (looped ? trackLen : 0) - pos, z2 = s.p2.world.z + (looped ? trackLen : 0) - pos;
+      const c1 = { ...s.p1.world, z: z1 }, c2 = { ...s.p2.world, z: z2 };
+      project(c1, cx, cy, 0); project(c2, cx, cy, 0);
+      x += dx; dx += s.curve;
+      if (c1.z <= camD || c2.y >= maxy) continue;
+      maxy = c2.y;
+      const grass = s.color === 'dark' ? '#123a24' : '#164d2e', rum = s.color === 'dark' ? '#c0392b' : '#e6e9ef', road = s.color === 'dark' ? '#333a45' : '#38404d';
+      g.fillStyle = grass; g.fillRect(0, c2.y, W, c1.y - c2.y);
+      poly(c1.x - c1.w - c1.w * 0.12, c1.y, c1.x - c1.w, c1.y, c2.x - c2.w, c2.y, c2.x - c2.w - c2.w * 0.12, c2.y, rum);
+      poly(c1.x + c1.w + c1.w * 0.12, c1.y, c1.x + c1.w, c1.y, c2.x + c2.w, c2.y, c2.x + c2.w + c2.w * 0.12, c2.y, rum);
+      poly(c1.x - c1.w, c1.y, c1.x + c1.w, c1.y, c2.x + c2.w, c2.y, c2.x - c2.w, c2.y, road);
+      if (s.color === 'dark' && c1.w > 3) { const lw1 = c1.w * 0.06, lw2 = c2.w * 0.06; poly(c1.x - lw1, c1.y, c1.x + lw1, c1.y, c2.x + lw2, c2.y, c2.x - lw2, c2.y, '#dfe4ea'); }
+    }
+    // player car
+    const bw = 60, bh = 30, by = H - 46, steer = (keys.l ? -1 : keys.r ? 1 : 0);
+    g.save(); g.translate(W / 2, by + bh / 2); g.rotate(steer * 0.12 + playerX * 0.06);
+    g.fillStyle = '#e23b3b'; g.fillRect(-bw / 2, -bh / 2, bw, bh); g.fillStyle = '#0f1115'; g.fillRect(-bw / 2 + 8, -bh / 2 + 3, bw - 16, 8);
+    g.fillStyle = '#111'; g.fillRect(-bw / 2 - 4, bh / 2 - 8, 8, 12); g.fillRect(bw / 2 - 4, bh / 2 - 8, 8, 12); g.restore();
+    // traffic cars (draw nearest visible on horizon band)
+    for (const c of cars) {
+      const dz = (c.z - pos + trackLen) % trackLen; if (dz > DRAW * SEG || dz < SEG) continue;
+      const sc = camD / dz, sx = W / 2 + sc * (c.offset * ROADW - playerX * ROADW) * W / 2, sy = H / 2 - sc * (0 - cy) * H / 2, w = sc * ROADW * 0.5 * W / 2;
+      if (sx < 0 || sx > W || w < 2) continue;
+      g.fillStyle = '#f0a500'; g.fillRect(sx - w / 2, sy - w * 0.5, w, w * 0.5); g.fillStyle = '#0f1115'; g.fillRect(sx - w * 0.3, sy - w * 0.45, w * 0.6, w * 0.16);
+    }
+    // speed lines
+    if (speed > maxSpeed * 0.8) { g.strokeStyle = 'rgba(255,255,255,.15)'; for (let i = 0; i < 6; i++) { const yy = Math.random() * H; g.beginPath(); g.moveTo(0, yy); g.lineTo(W, yy + (Math.random() - 0.5) * 20); g.stroke(); } }
+  }
+  function hud() { document.getElementById('spd').textContent = Math.round(speed / maxSpeed * 240); document.getElementById('lap').textContent = lap; document.getElementById('best').textContent = best ? best.toFixed(1) : '--'; document.getElementById('time').textContent = lapT.toFixed(1); }
+  function msg(t) { document.getElementById('msg').textContent = t; }
+  function loop(t) { if (!running) return; const dt = Math.min(0.05, (t - last) / 1000 || 0.016); last = t; step(dt); draw(); requestAnimationFrame(loop); }
+  let last = 0;
+  function start() { if (running) return; build(); pos = 0; playerX = 0; speed = 0; lap = 1; lapT = 0; running = true; msg('Pusing! Gunakan ◀▶▲▼'); document.getElementById('start').textContent = 'Berhenti'; requestAnimationFrame((t) => { last = t; loop(t); }); }
+  document.getElementById('start').addEventListener('click', () => { if (running) { running = false; document.getElementById('start').textContent = 'Mula / Race'; msg('Berhenti. Tekan Mula.'); } else start(); });
+
+  const bind = (id, k) => { const e = document.getElementById(id); const on = (ev) => { ev.preventDefault(); keys[k] = 1; }; const off = () => { keys[k] = 0; }; e.addEventListener('pointerdown', on); ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => e.addEventListener(t, off)); };
+  bind('bl', 'l'); bind('br', 'r'); bind('bu', 'u'); bind('bd', 'd');
+  const KM = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd', KeyA: 'l', KeyD: 'r', KeyW: 'u', KeyS: 'd' };
+  window.addEventListener('keydown', (e) => { if (KM[e.code]) { keys[KM[e.code]] = 1; e.preventDefault(); } });
+  window.addEventListener('keyup', (e) => { if (KM[e.code]) keys[KM[e.code]] = 0; });
+  build(); draw(); hud();
+})();
+</script>
+</body>
+</html>

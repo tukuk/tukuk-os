@@ -2,8 +2,9 @@
 /**
  * Tukuk Templates — perpustakaan templat HTML standalone (1 prompt → terus siap).
  *
- * 44 game/aplikasi single-file yang TERBUKTI dipulihkan daripada sejarah git
- * (commit pivot `b0542e7` membuangnya dari public/apps). Disimpan sebagai ASET
+ * 49 game/aplikasi single-file yang TERBUKTI: 44 dipulihkan daripada sejarah git
+ * (commit pivot `b0542e7` membuangnya dari public/apps) + 5 game 3D canvas baru
+ * (fps/racer/soccer/flight/basket). Disimpan sebagai ASET
  * DALAMAN di `templates/` — BUKAN public/apps, jadi ia TIDAK muncul di /store,
  * /sitemap.xml atau nav awam (keputusan pivot AdSense dikekalkan). Hanya contoh
  * yang DIENERBITKAN ke /a/<slug> boleh diakses umum.
@@ -54,6 +55,12 @@ const REGISTRY = [
   { key: 'simon', kind: 'game', genre: 'teki-teki', title: 'Simon Tones', ic: '🎼', hints: 'simon tones sequence warna ingatan echo' },
   { key: 'muncher', kind: 'game', genre: 'arkad', title: 'Maze Muncher', ic: '🟡', hints: 'pac man pacman maze ghost hantu labirin munch' },
   { key: 'puzzle15', kind: 'game', genre: 'teki-teki', title: 'Slide 15', ic: '🔢', hints: 'slide 15 fifteen sliding number puzzle nombor' },
+  // ── Game 3D (self-contained canvas/WebGL-free — jalan dalam CSP sandbox) ──
+  { key: 'fps3d', kind: 'game', genre: '3d', title: 'FPS Strike 3D', ic: '🔫', hints: 'fps counter strike shooting shooter tembak first person askar perang soldier gun senjata rifle zombie 3d' },
+  { key: 'racer3d', kind: 'game', genre: 'kereta', title: 'Turbo Racer 3D', ic: '🏎️', hints: 'race racing lumba kereta car drive drift turbo speed rally pesaung overtake 3d' },
+  { key: 'soccer3d', kind: 'game', genre: 'sukan', title: 'Penalty Shootout 3D', ic: '⚽', hints: 'soccer football bola penalty shootout sepakan penalti goal keeper penjaga gol futsal 3d' },
+  { key: 'flight3d', kind: 'game', genre: '3d', title: 'Ring Flyer 3D', ic: '✈️', hints: 'plane airplane flight flying terbang pesawat kapal jet ring cincin pilot glide 3d' },
+  { key: 'basket3d', kind: 'game', genre: 'sukan', title: 'Hoops 3D Shootout', ic: '🏀', hints: 'basket basketball keranjang hoops dunk shoot jaring bola jaring 3d' },
   // ── Aplikasi / alat ──
   { key: 'notes', kind: 'app', genre: null, title: 'Notes', ic: '📝', hints: 'notes nota catat menulis text pad sticky memo' },
   { key: 'calc', kind: 'app', genre: null, title: 'Calculator', ic: '🧮', hints: 'calculator kira kalkulator math arithmetic numeric' },
