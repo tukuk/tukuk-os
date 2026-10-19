@@ -160,6 +160,8 @@ async function keepRenderable(ids, cap) {
 // bila sejuk → sitemap statik hub+koleksi) sambil build segar di belakang.
 let objectUrlCache = null; // { urls: string[], expiresAt: number }
 let buildInflight = null;
+const TTL_GOOD = 6 * 60 * 60 * 1000;  // senarai berisi: tahan 6 jam
+const TTL_EMPTY = 5 * 60 * 1000;      // build kosong/gagal: cuba lagi dalam 5 minit
 function buildObjectUrls(pagesPerCollection) {
   if (buildInflight) return buildInflight;
   buildInflight = (async () => {
@@ -167,17 +169,25 @@ function buildObjectUrls(pagesPerCollection) {
     const renderable = await keepRenderable(cols.flat(), 700);
     const urls = [];
     for (const id of renderable) urls.push(`/seni/objek/${id}`);
-    objectUrlCache = { urls, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
-    return urls;
+    // Hanya kunci 6j bila ada konten. Build kosong (Met transient/gagal) → kekalkan
+    // URL lama jika ada, dan jadualkan percubaan semula segera (5 min) — bukan 6j.
+    const now = Date.now();
+    if (urls.length) {
+      objectUrlCache = { urls, expiresAt: now + TTL_GOOD };
+    } else {
+      objectUrlCache = { urls: objectUrlCache ? objectUrlCache.urls : [], expiresAt: now + TTL_EMPTY };
+    }
+    return objectUrlCache.urls;
   })().catch(() => (objectUrlCache ? objectUrlCache.urls : []))
     .finally(() => { buildInflight = null; });
   return buildInflight;
 }
 
-// Non-blocking: hidang segera (cache segar/stale atau []), kick build bila perlu.
+// Non-blocking: hidang segera (cache berisi / URL lama semasa build / [] bila sejuk
+// sepenuhnya), kick build bila tiada cache berisi atau telah tamat tempoh.
 function sitemapObjectUrls(pagesPerCollection) {
-  const now = Date.now();
-  const fresh = objectUrlCache && now < objectUrlCache.expiresAt;
+  const has = objectUrlCache && objectUrlCache.urls.length > 0;
+  const fresh = has && Date.now() < objectUrlCache.expiresAt;
   if (!fresh) buildObjectUrls(pagesPerCollection);
   return objectUrlCache ? objectUrlCache.urls : [];
 }
