@@ -8,7 +8,10 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config-build.yml tunnel run
+# --protocol http2: lalai 'auto' pakai QUIC/UDP yang kerap timeout pada rangkaian
+# VPS ini (lihat 'Failed to dial a quic connection'), menyebabkan build.tukuk.org
+# sesekali tak dapat dibuka. HTTP/2 atas TCP/443 lebih teguh.
+ExecStart=/usr/bin/cloudflared --no-autoupdate --protocol http2 --config /etc/cloudflared/config-build.yml tunnel run
 Restart=always
 RestartSec=5
 
