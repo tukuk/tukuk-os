@@ -68,6 +68,10 @@ test('detect: petakan huraian ms/en → key yang betul', () => {
     ['main bola penalti penalty keeper', 'soccer3d'],
     ['kapal terbang pesawat ring', 'flight3d'],
     ['basket bola keranjang dunk', 'basket3d'],
+    ['tembak zombi wave survive gelap', 'zombie3d'],
+    ['motosikal moto nitro traffic laju', 'moto3d'],
+    ['boling bowling pin alley gutter', 'bowl3d'],
+    ['golf putt hole par links birdie', 'golf3d'],
   ];
   for (const [goal, expect] of cases) {
     const m = templates.detect(goal);

@@ -61,6 +61,10 @@ const REGISTRY = [
   { key: 'soccer3d', kind: 'game', genre: 'sukan', title: 'Penalty Shootout 3D', ic: '⚽', hints: 'soccer football bola penalty shootout sepakan penalti goal keeper penjaga gol futsal 3d' },
   { key: 'flight3d', kind: 'game', genre: '3d', title: 'Ring Flyer 3D', ic: '✈️', hints: 'plane airplane flight flying terbang pesawat kapal jet ring cincin pilot glide 3d' },
   { key: 'basket3d', kind: 'game', genre: 'sukan', title: 'Hoops 3D Shootout', ic: '🏀', hints: 'basket basketball keranjang hoops dunk shoot jaring bola jaring 3d' },
+  { key: 'zombie3d', kind: 'game', genre: '3d', title: 'Zombie Wave 3D', ic: '🧟', hints: 'zombie zombi undead wave waves survive horror dark first person tembak gun pistol 3d' },
+  { key: 'moto3d', kind: 'game', genre: 'kereta', title: 'Moto Nitro 3D', ic: '🏍️', hints: 'moto motosikal motor motorcycle bike nitro boost traffic jalan raya selekoh laju 3d' },
+  { key: 'bowl3d', kind: 'game', genre: 'sukan', title: 'Bowling Strike 3D', ic: '🎳', hints: 'bowl bowling boling pins pin alley lane gutter frame split spare 3d' },
+  { key: 'golf3d', kind: 'game', genre: 'sukan', title: 'Mini Golf 3D', ic: '⛳', hints: 'golf golfing putt hole holes links par birdie eagle bunker green tee club 3d' },
   // ── Aplikasi / alat ──
   { key: 'notes', kind: 'app', genre: null, title: 'Notes', ic: '📝', hints: 'notes nota catat menulis text pad sticky memo' },
   { key: 'calc', kind: 'app', genre: null, title: 'Calculator', ic: '🧮', hints: 'calculator kira kalkulator math arithmetic numeric' },
