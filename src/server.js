@@ -1553,6 +1553,10 @@ const COMMON_CSS = `
   li { margin-bottom:6px; }
   .back-link { display:inline-block; margin-bottom:16px; font-size:.92rem; }
   .ad-slot { margin:24px 0; overflow:hidden; }
+  /* Slot iklan: latar panel gelap supaya ruang kosong/sekat tidak jadi blok putih besar pada tema gelap. */
+  .ad-sense { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 8px 6px; }
+  .ad-sense ins.adsbygoogle { background:transparent; }
+  .ad-label { display:block; font-size:.66rem; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); margin:0 2px 6px; }
   /* Site chrome — bar atas penuh, hero, grid feed, footer berbilang lajur. */
   .site-top { position:sticky; top:0; z-index:50; background:var(--panel); border-bottom:1px solid var(--line); }
   .wrap-w { max-width:1080px; margin:0 auto; padding:0 20px; }
@@ -1616,7 +1620,7 @@ function adUnit(slot, label) {
   const raw = storeKey ? store.getSetting(storeKey, slot) : slot;
   const s = realSlot(raw);
   if (!client || !s) return '';
-  return `<ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${s}" data-ad-format="auto" data-full-width-responsive="true"></ins>` +
+  return `<div class="ad-slot ad-sense"><span class="ad-label">Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${s}" data-ad-format="auto" data-full-width-responsive="true"></ins></div>` +
     `<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>`;
 }
 // Script pemuat Adsense satu kali di <head> (hanya bila aktif + client sah).
