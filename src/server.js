@@ -7308,7 +7308,10 @@ const GAMES_CSS = '<style>.gwrap{max-width:960px;margin:0 auto;padding:14px}.ggr
   + '.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.gchip{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;font:inherit;font-size:.82rem;cursor:pointer}.gchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}'
   + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent),#7a5cff);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.92;font-size:.95rem}</style>';
 function renderGamesIndex() {
-  const games = templates.list().filter((t) => t.kind === 'game');
+  // Arkad HANYA paparkan game 3D sebenar (key berahir '3d'). Game 2D rata masih
+  // wujud dalam REGISTRY untuk pembina (/api/builder/build → /a/<slug>) & pautan
+  // terus /games/<key> — cuma tidak dipaparkan di hub supaya arkad kekal premium.
+  const games = templates.list().filter((t) => t.kind === 'game' && /3d$/i.test(t.key));
   const genres = Array.from(new Set(games.map((g) => g.genre).filter(Boolean)));
   const chips = ['all'].concat(genres).map((g) => `<button class="gchip${g === 'all' ? ' on' : ''}" data-f="${escapeHtml(g)}" type="button">${escapeHtml(g === 'all' ? 'All' : (GENRE_UI[g] || g))}</button>`).join('');
   const cards = games.map((g) => `<a class="gcard" href="/games/${encodeURIComponent(g.key)}" data-genre="${escapeHtml(g.genre || 'lain')}"><span class="gic">${g.ic}</span><span class="gt">${escapeHtml(g.title)}</span><span class="gg">${escapeHtml(GENRE_UI[g.genre] || 'Arcade')}</span></a>`).join('');
@@ -7317,7 +7320,7 @@ function renderGamesIndex() {
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Free HTML5 Games Arcade — Play Instantly — Tukuk-OS</title>
-<meta name="description" content="Play dozens of free browser games instantly — no download, no sign-up, no install. 3D racing, penalty shootout, first-person shooter, puzzle, arcade and more, all running lightweight in your browser.">
+<meta name="description" content="Play real 3D browser games instantly — no download, no sign-up, no install. WebGL racing, penalty shootout, first-person shooter, bowling, golf and more, all running lightweight in your browser.">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://tukuk.org/games">
 <link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/icon.svg">
