@@ -64,6 +64,7 @@ async function searchIds(opts) {
   if (opts.departmentId) params.departmentId = opts.departmentId;
   if (opts.title) params.title = true;
   if (opts.page) params.page = opts.page;
+  if (opts.isPublicDomain) params.isPublicDomain = true;
   params.hasImages = true;
   const key = `s:${JSON.stringify(params)}`;
   const hit = cacheGet(key);
@@ -118,16 +119,18 @@ async function getDepartments() {
   return list;
 }
 
-// Enumerasi objectID berimg untuk satu koleksi merentas beberapa halaman carian
-// (hasImages=true supaya setiap id ialah halaman /seni/objek yang betul-betul
-// render). Non-fatal: bila satu halaman carian gagal/habis, berhenti dan kumpul
+// Enumerasi objectID untuk satu koleksi merentas beberapa halaman carian. Kami
+// minta `isPublicDomain=true` (bukan sekadar hasImages) kerana hanya kerja
+// domain-awam dijamin mempunyai `primaryImage` penuh — dan halaman objek
+// 302→/seni bila primaryImage kosong. Jadi setiap id yang disenaraiakan PASTI
+// render 200. Non-fatal: bila satu halaman carian gagal/habis, berhenti & kumpul
 // yang telah berjaya — jangan rosak seluruh sitemap.
 async function collectionImageIds(c, pages) {
   const seen = new Set();
   const max = Number(pages) || 3;
   for (let p = 1; p <= max; p++) {
     let r;
-    try { r = await searchIds({ q: c.q, page: p }); }
+    try { r = await searchIds({ q: c.q, page: p, isPublicDomain: true }); }
     catch { break; }
     if (!r || !Array.isArray(r.ids) || !r.ids.length) break;
     for (const id of r.ids) seen.add(id);
