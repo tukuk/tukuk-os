@@ -30,31 +30,6 @@ const THEME_STYLE = '<style id="tk-theme">:root{--bg:#0f1115;--panel:#171a21;--l
 // Registry: key = nama fail dalam templates/ (tanpa .html). map KECUALI (Leaflet CDN
 // luar → disekat CSP sandbox). hints = ms/en untuk pengesanan (lowercase).
 const REGISTRY = [
-  // ── Game ──
-  { key: 'tictactoe', kind: 'game', genre: 'board', title: 'Tic-Tac-Toe', ic: '❎', hints: 'tic tac toe tictactoe xoxo tiga salib kosong board' },
-  { key: 'number2048', kind: 'game', genre: 'teki-teki', title: '2048', ic: '🧊', hints: '2048 tile tiles geser gabung merge sliding nombor' },
-  { key: 'snake', kind: 'game', genre: 'arkad', title: 'Snake', ic: '🐍', hints: 'snake ular ulat makan tumbuh grow eat nokia' },
-  { key: 'memory', kind: 'game', genre: 'teki-teki', title: 'Memory Match', ic: '🧠', hints: 'memory match padan padanan kad kartu ingat pair emoji flip' },
-  { key: 'whack', kind: 'game', genre: 'refleks', title: 'Whack-a-Mole', ic: '🔨', hints: 'whack mole tikus tanah pukul tampar refleks hammered' },
-  { key: 'breakout', kind: 'game', genre: 'arkad', title: 'Breakout', ic: '🧱', hints: 'breakout brick block peluru bola paddle pecah' },
-  { key: 'invaders', kind: 'game', genre: 'penembakan', title: 'Space Invaders', ic: '👾', hints: 'invader alien space shooter angkasa lepas tembak extraterrestrial' },
-  { key: 'pong', kind: 'game', genre: 'arkad', title: 'Pong', ic: '🏓', hints: 'pong paddle tennis table bola reget' },
-  { key: 'flappy', kind: 'game', genre: 'refleks', title: 'Flappy Dash', ic: '🐦', hints: 'flappy bird pipes terbang burung sayap one tap' },
-  { key: 'candy', kind: 'game', genre: 'teki-teki', title: 'Candy Blast', ic: '🍬', hints: 'candy sweets match 3 blast permen gula saga' },
-  { key: 'subway', kind: 'game', genre: 'arkad', title: 'Subway Dash 3D', ic: '🚇', hints: 'subway surf runner dash lari train kereta bawah tanah endless 3d' },
-  { key: 'slice', kind: 'game', genre: 'refleks', title: 'Fruit Slice', ic: '🍉', hints: 'slice fruit ninja buah potong irisan bomb' },
-  { key: 'roadhop', kind: 'game', genre: 'santai', title: 'Road Hop', ic: '🐸', hints: 'road hop frog kodok cross traffic lintar lompat kata' },
-  { key: 'bubble', kind: 'game', genre: 'teki-teki', title: 'Bubble Pop', ic: '🫧', hints: 'bubble shooter gelembung tembak warna pop' },
-  { key: 'ludo', kind: 'game', genre: 'board', title: 'Ludo', ic: '🎲', hints: 'ludo board dadu dice empat player' },
-  { key: 'solitaire', kind: 'game', genre: 'cards', title: 'Solitaire', ic: '🃏', hints: 'solitaire card kad klondike patience' },
-  { key: 'blockdrop', kind: 'game', genre: 'teki-teki', title: 'Block Drop', ic: '🧩', hints: 'block drop tetris blok jatuh falling susun' },
-  { key: 'mines', kind: 'game', genre: 'teki-teki', title: 'Minesweeper', ic: '💣', hints: 'minesweeper mines ranjau flag bendera kotak' },
-  { key: 'connect4', kind: 'game', genre: 'board', title: 'Connect Four', ic: '🔴', hints: 'connect four quattro discs cakera empat baris' },
-  { key: 'doodle', kind: 'game', genre: 'refleks', title: 'Doodle Jump', ic: '🦘', hints: 'doodle jump platform lompat memanjat spring' },
-  { key: 'stack', kind: 'game', genre: 'santai', title: 'Stack Tower', ic: '🗼', hints: 'stack tower menara susun drop timba' },
-  { key: 'simon', kind: 'game', genre: 'teki-teki', title: 'Simon Tones', ic: '🎼', hints: 'simon tones sequence warna ingatan echo' },
-  { key: 'muncher', kind: 'game', genre: 'arkad', title: 'Maze Muncher', ic: '🟡', hints: 'pac man pacman maze ghost hantu labirin munch' },
-  { key: 'puzzle15', kind: 'game', genre: 'teki-teki', title: 'Slide 15', ic: '🔢', hints: 'slide 15 fifteen sliding number puzzle nombor' },
   // ── Aplikasi / alat ──
   { key: 'notes', kind: 'app', genre: null, title: 'Notes', ic: '📝', hints: 'notes nota catat menulis text pad sticky memo' },
   { key: 'calc', kind: 'app', genre: null, title: 'Calculator', ic: '🧮', hints: 'calculator kira kalkulator math arithmetic numeric' },

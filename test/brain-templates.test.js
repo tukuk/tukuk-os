@@ -8,7 +8,7 @@ const templates = require('../src/brain/templates');
 
 // ── REGISTRY ↔ cakera ────────────────────────────────────────────────────────
 test('REGISTRY: setiap entri tunjuk fail .html yang benar-benar wujud', () => {
-  assert.ok(templates.REGISTRY.length >= 40, 'sekurang-kurangnya 40 templat');
+  assert.ok(templates.REGISTRY.length >= 15, 'sekurang-kurangnya 15 templat app');
   for (const r of templates.REGISTRY) {
     const file = path.join(templates.TEMPLATES_DIR, `${r.key}.html`);
     assert.ok(fs.existsSync(file), `fail hilang untuk key: ${r.key}`);
@@ -57,12 +57,8 @@ test('sanitize: output self-contained — tiada rujukan http/https luar', () => 
 // ── detect ───────────────────────────────────────────────────────────────────
 test('detect: petakan huraian ms/en → key yang betul', () => {
   const cases = [
-    ['buat game tic tac toe', 'tictactoe'],
-    ['snake ular makan tumbuh', 'snake'],
     ['a simple calculator app', 'calc'],
     ['todolist tugas senarai', 'todo'],
-    ['game 2048 geser gabung tile', 'number2048'],
-    ['minesweeper ranjau bendera', 'mines'],
   ];
   for (const [goal, expect] of cases) {
     const m = templates.detect(goal);
@@ -91,12 +87,10 @@ test('detect: keputusan deterministik (seri → hash stabil)', () => {
 });
 
 // ── nearest ──────────────────────────────────────────────────────────────────
-test('nearest: sentiasa pulang entri REGISTRY ikut kind', () => {
-  const g = templates.nearest('xyz takde padanan', 'game');
-  assert.ok(g && g.kind === 'game', 'nearest game → game');
+test('nearest: app → entri REGISTRY; game → null (tiada lagi game tetap)', () => {
   const ap = templates.nearest('xyz takde padanan', 'app');
   assert.ok(ap && ap.kind === 'app', 'nearest app → app');
-  assert.ok(templates.REGISTRY.some((r) => r.key === g.key), 'nearest dalam registry');
+  assert.equal(templates.nearest('xyz takde padanan', 'game'), null, 'tiada game dalam REGISTRY → null');
 });
 
 // ── personalize ──────────────────────────────────────────────────────────────
@@ -122,7 +116,7 @@ test('personalize: accent bukan hex sah diabaikan', () => {
 
 // ── get ──────────────────────────────────────────────────────────────────────
 test('get: kunci diketahui → HTML <!DOCTYPE; kunci salah → null', () => {
-  const h = templates.get('snake');
+  const h = templates.get('notes');
   assert.match(h, /^\s*<!DOCTYPE html>/i);
   assert.equal(templates.get('tiada-kunci-ini'), null);
 });
