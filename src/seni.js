@@ -119,18 +119,17 @@ async function getDepartments() {
   return list;
 }
 
-// Enumerasi objectID untuk satu koleksi merentas beberapa halaman carian. Kami
-// minta `isPublicDomain=true` (bukan sekadar hasImages) kerana hanya kerja
-// domain-awam dijamin mempunyai `primaryImage` penuh — dan halaman objek
-// 302→/seni bila primaryImage kosong. Jadi setiap id yang disenaraiakan PASTI
-// render 200. Non-fatal: bila satu halaman carian gagal/habis, berhenti & kumpul
-// yang telah berjaya — jangan rosak seluruh sitemap.
+// Enumerasi calon objectID untuk satu koleksi merentas beberapa halaman carian
+// (hasImages=true). Tiada penapis domain-awam boleh guna: carian v1.1 MENGABAIKAN
+// `isPublicDomain` (disahkan — total tak berubah). Penapisan sebenar dibuat
+// kemudiannya melalui keepRenderable(). Non-fatal: satu halaman carian gagal →
+// berhenti & kumpul yang ada, jangan rosak seluruh sitemap.
 async function collectionImageIds(c, pages) {
   const seen = new Set();
-  const max = Number(pages) || 3;
+  const max = Number(pages) || 5;
   for (let p = 1; p <= max; p++) {
     let r;
-    try { r = await searchIds({ q: c.q, page: p, isPublicDomain: true }); }
+    try { r = await searchIds({ q: c.q, page: p }); }
     catch { break; }
     if (!r || !Array.isArray(r.ids) || !r.ids.length) break;
     for (const id of r.ids) seen.add(id);
@@ -139,19 +138,48 @@ async function collectionImageIds(c, pages) {
   return [...seen];
 }
 
-// Senarai lalanan /seni/objek/<id> untuk sitemap — dedupe merentas koleksi, di-cache
-// SWR 6 jam supaya GET sitemap serta-merta & Met tidak dibanjiri. Kegagalan setiap
-// koleksi diisolasi (.catch → []) jadi senarai kekal separa walaupun Met slow/down.
-let objectUrlCache = null; // { urls: string[], expiresAt: number }
-async function sitemapObjectUrls(pagesPerCollection) {
-  const now = Date.now();
-  if (objectUrlCache && now < objectUrlCache.expiresAt) return objectUrlCache.urls;
-  const cols = await Promise.all(COLLECTIONS.map((c) => collectionImageIds(c, pagesPerCollection).catch(() => [])));
-  const seen = new Set(objectUrlCache ? objectUrlCache.urls : []);
-  const urls = [];
-  for (const ids of cols) for (const id of ids) { const p = `/seni/objek/${id}`; if (!seen.has(p)) { seen.add(p); urls.push(p); } }
-  objectUrlCache = { urls, expiresAt: now + 6 * 60 * 60 * 1000 };
-  return urls;
+// Saring calon → hanya id yang BETUL-BETUL render halaman objek. Syarat route
+// /seni/objek/:id ialah `getObject(id)` mengembalikan objek dengan `primaryImage`
+// (jika tidak → 302 /seni). Kami sahkan langsung supaya sitemap tidak sarat URL
+// yang melompat ke hab. Dideria had 6 supaya Met tidak dibanjiri; getObject
+// sendiri di-cache 30 hari jadi bina semula selepas itu murah.
+async function keepRenderable(ids, cap) {
+  const list = [...new Set(ids || [])].slice(0, Number(cap) || 700);
+  const valid = [];
+  for (let i = 0; i < list.length && valid.length < 600; i += 6) {
+    const slice = list.slice(i, i + 6);
+    const got = await Promise.all(slice.map((id) => getObject(id).catch(() => null)));
+    slice.forEach((id, j) => { const o = got[j]; if (o && o.primaryImage) valid.push(id); });
+  }
+  return valid;
 }
 
-module.exports = { COLLECTIONS, findCollection, searchIds, getObject, hydrate, getDepartments, collectionImageIds, sitemapObjectUrls };
+// Senarai lalanan /seni/objek/<id> untuk sitemap — dijana DALAM LATAR (SWR 6 jam)
+// supaya GET sitemap sentiasa serta-merta & TIDAK PERNAH 503 walaupun Met lambat/
+// mati (pitfall halaman suapan lambat): pemanggil hidang cache sedia-ada (atau []
+// bila sejuk → sitemap statik hub+koleksi) sambil build segar di belakang.
+let objectUrlCache = null; // { urls: string[], expiresAt: number }
+let buildInflight = null;
+function buildObjectUrls(pagesPerCollection) {
+  if (buildInflight) return buildInflight;
+  buildInflight = (async () => {
+    const cols = await Promise.all(COLLECTIONS.map((c) => collectionImageIds(c, pagesPerCollection).catch(() => [])));
+    const renderable = await keepRenderable(cols.flat(), 700);
+    const urls = [];
+    for (const id of renderable) urls.push(`/seni/objek/${id}`);
+    objectUrlCache = { urls, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
+    return urls;
+  })().catch(() => (objectUrlCache ? objectUrlCache.urls : []))
+    .finally(() => { buildInflight = null; });
+  return buildInflight;
+}
+
+// Non-blocking: hidang segera (cache segar/stale atau []), kick build bila perlu.
+function sitemapObjectUrls(pagesPerCollection) {
+  const now = Date.now();
+  const fresh = objectUrlCache && now < objectUrlCache.expiresAt;
+  if (!fresh) buildObjectUrls(pagesPerCollection);
+  return objectUrlCache ? objectUrlCache.urls : [];
+}
+
+module.exports = { COLLECTIONS, findCollection, searchIds, getObject, hydrate, getDepartments, collectionImageIds, keepRenderable, buildObjectUrls, sitemapObjectUrls };

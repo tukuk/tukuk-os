@@ -1480,10 +1480,10 @@ app.get('/sitemap-seni.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio, freq) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq || 'weekly'}</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const parts = [one('/seni', '0.9')].concat(seni.COLLECTIONS.map((c) => one(`/seni/koleksi/${c.slug}`, '0.7')));
-  try {
-    const objUrls = await seni.sitemapObjectUrls(4);
-    for (const p of objUrls) parts.push(one(p, '0.6', 'monthly'));
-  } catch { /* simpan statik minimum */ }
+  // sitemapObjectUrls ialah non-blocking: hidang cache sedia-ada (atau [] bila sejuk)
+  // serta-merta & kick build latar — jadi endpoint ini tak pernah lambat/503.
+  const objUrls = seni.sitemapObjectUrls(5);
+  for (const p of objUrls) parts.push(one(p, '0.6', 'monthly'));
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${parts.join('\n')}\n</urlset>\n`
   );
