@@ -9,6 +9,7 @@ const news = require('./src/news');
 const queries = require('./src/queries');
 const nasa = require('./src/nasa');
 const gempa = require('./src/gempa');
+const seni = require('./src/seni');
 const agentEditor = require('./src/agent-editor');
 
 async function waitForMeili({ attempts = 30, delayMs = 1000 } = {}) {
@@ -78,6 +79,10 @@ async function main() {
         gempa.regionFeed(gempa.findRegion('malaysia')).catch(() => []),
       ]).catch(() => {});
     }, 4000);
+    // Panaskan senarai objectID galeri seni (Met API) untuk sitemap-seni supaya GET
+    // pertama oleh crawler serta-merta. Non-blocking; gagal senyap — sitemap tetap
+    // hidang senarai statik hub+koleksi jika cache belum terisi.
+    setTimeout(() => { seni.sitemapObjectUrls(4).catch(() => {}); }, 6000);
     // Auto-update APOD + backfill arkib NASA — NYALI hanya bila NASA_AUTO=1.
     // Halaman NASA sudah dibuang (fokus konten + server ringan); secara lalai
     // dimatikan supaya tak bazir CPU/jaringan/disk pada VPS.

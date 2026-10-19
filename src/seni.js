@@ -118,4 +118,37 @@ async function getDepartments() {
   return list;
 }
 
-module.exports = { COLLECTIONS, findCollection, searchIds, getObject, hydrate, getDepartments };
+// Enumerasi objectID berimg untuk satu koleksi merentas beberapa halaman carian
+// (hasImages=true supaya setiap id ialah halaman /seni/objek yang betul-betul
+// render). Non-fatal: bila satu halaman carian gagal/habis, berhenti dan kumpul
+// yang telah berjaya — jangan rosak seluruh sitemap.
+async function collectionImageIds(c, pages) {
+  const seen = new Set();
+  const max = Number(pages) || 3;
+  for (let p = 1; p <= max; p++) {
+    let r;
+    try { r = await searchIds({ q: c.q, page: p }); }
+    catch { break; }
+    if (!r || !Array.isArray(r.ids) || !r.ids.length) break;
+    for (const id of r.ids) seen.add(id);
+    if (r.total && seen.size >= r.total) break;
+  }
+  return [...seen];
+}
+
+// Senarai lalanan /seni/objek/<id> untuk sitemap — dedupe merentas koleksi, di-cache
+// SWR 6 jam supaya GET sitemap serta-merta & Met tidak dibanjiri. Kegagalan setiap
+// koleksi diisolasi (.catch → []) jadi senarai kekal separa walaupun Met slow/down.
+let objectUrlCache = null; // { urls: string[], expiresAt: number }
+async function sitemapObjectUrls(pagesPerCollection) {
+  const now = Date.now();
+  if (objectUrlCache && now < objectUrlCache.expiresAt) return objectUrlCache.urls;
+  const cols = await Promise.all(COLLECTIONS.map((c) => collectionImageIds(c, pagesPerCollection).catch(() => [])));
+  const seen = new Set(objectUrlCache ? objectUrlCache.urls : []);
+  const urls = [];
+  for (const ids of cols) for (const id of ids) { const p = `/seni/objek/${id}`; if (!seen.has(p)) { seen.add(p); urls.push(p); } }
+  objectUrlCache = { urls, expiresAt: now + 6 * 60 * 60 * 1000 };
+  return urls;
+}
+
+module.exports = { COLLECTIONS, findCollection, searchIds, getObject, hydrate, getDepartments, collectionImageIds, sitemapObjectUrls };

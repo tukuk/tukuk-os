@@ -1471,13 +1471,21 @@ app.get('/sitemap-wang.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP SENI — hab + 10 koleksi (halaman objek ditemui melalui grid) ────
-app.get('/sitemap-seni.xml', (req, res) => {
+// ── SITEMAP SENI — hab + 10 koleksi + halaman objek setiap koleksi ──────────
+// Halaman /seni/objek/<id> sudah render (dijumpai menerusi grid); menyenaraikan
+// objectID dalam sitemap menjadikannya ditemui crawler — beratus→beribu halaman
+// unik tanpa kod baharu. Enrichment non-fatal: kegagalan Met → senarai statik,
+// JAMANKAN tak pernah 503 (pitfall halaman suapan lambat).
+app.get('/sitemap-seni.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
-  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/seni', '0.9')].concat(seni.COLLECTIONS.map((c) => one(`/seni/koleksi/${c.slug}`, '0.7'))).join('\n');
+  const one = (p, prio, freq) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq || 'weekly'}</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const parts = [one('/seni', '0.9')].concat(seni.COLLECTIONS.map((c) => one(`/seni/koleksi/${c.slug}`, '0.7')));
+  try {
+    const objUrls = await seni.sitemapObjectUrls(4);
+    for (const p of objUrls) parts.push(one(p, '0.6', 'monthly'));
+  } catch { /* simpan statik minimum */ }
   res.type('application/xml').send(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${parts.join('\n')}\n</urlset>\n`
   );
 });
 
