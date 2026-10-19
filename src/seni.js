@@ -144,9 +144,9 @@ async function collectionImageIds(c, pages) {
 // yang melompat ke hab. Dideria had 6 supaya Met tidak dibanjiri; getObject
 // sendiri di-cache 30 hari jadi bina semula selepas itu murah.
 async function keepRenderable(ids, cap) {
-  const list = [...new Set(ids || [])].slice(0, Number(cap) || 200);
+  const list = [...new Set(ids || [])].slice(0, Number(cap) || 360);
   const valid = [];
-  for (let i = 0; i < list.length && valid.length < 140; i += 4) {
+  for (let i = 0; i < list.length && valid.length < 220; i += 4) {
     const slice = list.slice(i, i + 4);
     const got = await Promise.all(slice.map((id) => getObject(id).catch(() => null)));
     slice.forEach((id, j) => { const o = got[j]; if (o && o.primaryImage) valid.push(id); });
@@ -167,7 +167,7 @@ function buildObjectUrls(pagesPerCollection) {
   const pages = Number(pagesPerCollection) || 1;
   buildInflight = (async () => {
     const cols = await Promise.all(COLLECTIONS.map((c) => collectionImageIds(c, pages).catch(() => [])));
-    const renderable = await keepRenderable(cols.flat(), 200);
+    const renderable = await keepRenderable(cols.flat(), 360);
     const urls = [];
     for (const id of renderable) urls.push(`/seni/objek/${id}`);
     // Hanya kunci 6j bila ada konten. Build kosong (Met transient/gagal) → kekalkan
