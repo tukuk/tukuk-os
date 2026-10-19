@@ -428,5 +428,51 @@
 
   {"name":"Willandra Lakes Region","wiki":"Willandra Lakes Region","country":"Australia","region":"Oceania","lat":-33.70,"lng":142.90,"type":"Cultural"},
   {"name":"Chief Roi Mata's Domain","wiki":"Chief Roi Mata's Domain","country":"Vanuatu","region":"Oceania","lat":-17.75,"lng":168.30,"type":"Cultural"},
-  {"name":"Taputapuātea","wiki":"Taputapuātea","country":"France","region":"Oceania","lat":-16.85,"lng":-151.50,"type":"Cultural"}
+  {"name":"Taputapuātea","wiki":"Taputapuātea","country":"France","region":"Oceania","lat":-16.85,"lng":-151.50,"type":"Cultural"},
+
+  {"name":"Kilwa Kisiwani and Songo Mnara","wiki":"Kilwa Kisiwani","country":"Tanzania","region":"Africa","lat":-8.95,"lng":39.50,"type":"Cultural"},
+  {"name":"Okapi Wildlife Reserve","wiki":"Okapi Wildlife Reserve","country":"DR Congo","region":"Africa","lat":1.50,"lng":28.50,"type":"Natural"},
+  {"name":"Medina of Essaouira","wiki":"Essaouira","country":"Morocco","region":"Africa","lat":31.51,"lng":-9.77,"type":"Cultural"},
+  {"name":"Meknes","wiki":"Meknes","country":"Morocco","region":"Africa","lat":33.87,"lng":-5.54,"type":"Cultural"},
+  {"name":"Mazagan: Portuguese City of El Jadida","wiki":"El Jadida","country":"Morocco","region":"Africa","lat":33.25,"lng":-8.50,"type":"Cultural"},
+  {"name":"Tsodilo Hills","wiki":"Tsodilo","country":"Botswana","region":"Africa","lat":-20.60,"lng":21.70,"type":"Cultural"},
+  {"name":"Royal Hill of Ambohimanga","wiki":"Ambohimanga","country":"Madagascar","region":"Africa","lat":-18.73,"lng":47.55,"type":"Cultural"},
+  {"name":"Aldabra Atoll","wiki":"Aldabra","country":"Seychelles","region":"Africa","lat":-9.42,"lng":46.35,"type":"Natural"},
+  {"name":"Le Morne Brabant","wiki":"Le Morne Brabant","country":"Mauritius","region":"Africa","lat":-20.51,"lng":57.46,"type":"Cultural"},
+  {"name":"Lower Valley of the Awash","wiki":"Awash","country":"Ethiopia","region":"Africa","lat":11.40,"lng":40.50,"type":"Cultural"},
+  {"name":"Twyfelfontein","wiki":"Twyfelfontein","country":"Namibia","region":"Africa","lat":-20.57,"lng":14.30,"type":"Cultural"},
+
+  {"name":"Fallingwater","wiki":"Fallingwater","country":"United States","region":"Americas","lat":39.91,"lng":-79.67,"type":"Cultural"},
+  {"name":"Carlsbad Caverns National Park","wiki":"Carlsbad Caverns National Park","country":"United States","region":"Americas","lat":32.17,"lng":-104.44,"type":"Natural"},
+  {"name":"Historic Centre of Oaxaca","wiki":"Oaxaca","country":"Mexico","region":"Americas","lat":17.06,"lng":-96.72,"type":"Cultural"},
+  {"name":"El Vizcaino Biosphere Reserve","wiki":"El Vizcaino Biosphere Reserve","country":"Mexico","region":"Americas","lat":27.70,"lng":-114.60,"type":"Natural"},
+  {"name":"Area de Conservación Guanacaste","wiki":"Area de Conservación Guanacaste","country":"Costa Rica","region":"Americas","lat":10.90,"lng":-85.40,"type":"Natural"},
+  {"name":"Coiba National Park","wiki":"Coiba","country":"Panama","region":"Americas","lat":7.50,"lng":-81.75,"type":"Natural"},
+  {"name":"Historic Centre of Arequipa","wiki":"Arequipa","country":"Peru","region":"Americas","lat":-16.40,"lng":-71.54,"type":"Cultural"},
+  {"name":"Sacred City of Caral-Supe","wiki":"Caral","country":"Peru","region":"Americas","lat":-10.89,"lng":-77.52,"type":"Cultural"},
+  {"name":"Citadelle Laferrière","wiki":"Citadelle Laferriere","country":"Haiti","region":"Americas","lat":19.57,"lng":-72.13,"type":"Cultural"},
+
+  {"name":"Red Fort Complex","wiki":"Red Fort","country":"India","region":"Asia","lat":28.66,"lng":77.24,"type":"Cultural"},
+  {"name":"Chhatrapati Shivaji Terminus","wiki":"Chhatrapati Shivaji Maharaj Terminus","country":"India","region":"Asia","lat":18.94,"lng":72.84,"type":"Cultural"},
+  {"name":"Nalanda Mahavihara","wiki":"Nalanda","country":"India","region":"Asia","lat":25.13,"lng":85.44,"type":"Cultural"},
+  {"name":"Yinxu","wiki":"Yinxu","country":"China","region":"Asia","lat":36.13,"lng":114.32,"type":"Cultural"},
+  {"name":"Mount Wutai","wiki":"Mount Wutai","country":"China","region":"Asia","lat":39.00,"lng":113.60,"type":"Cultural"},
+  {"name":"Shiretoko","wiki":"Shiretoko","country":"Japan","region":"Asia","lat":44.15,"lng":145.30,"type":"Natural"},
+  {"name":"Sacred Sites and Pilgrimage Routes in the Kii Mountain Range","wiki":"Kumano Sanzen","country":"Japan","region":"Asia","lat":33.85,"lng":135.80,"type":"Cultural"},
+
+  {"name":"Angra do Heroísmo","wiki":"Angra do Heroismo","country":"Portugal","region":"Europe","lat":38.67,"lng":-27.22,"type":"Cultural"},
+  {"name":"Historic Centre of Guimarães","wiki":"Guimaraes","country":"Portugal","region":"Europe","lat":41.44,"lng":-8.29,"type":"Cultural"},
+  {"name":"Røros Mining Town and the Circumference","wiki":"Roros","country":"Norway","region":"Europe","lat":62.57,"lng":11.40,"type":"Cultural"},
+  {"name":"Rock Art of Alta","wiki":"Rock Carvings in Alta","country":"Norway","region":"Europe","lat":69.93,"lng":23.28,"type":"Cultural"},
+  {"name":"West Norwegian Fjords","wiki":"Geirangerfjord","country":"Norway","region":"Europe","lat":62.10,"lng":7.10,"type":"Natural"},
+  {"name":"Urnes Stave Church","wiki":"Urnes Stave Church","country":"Norway","region":"Europe","lat":61.29,"lng":7.51,"type":"Cultural"},
+  {"name":"Naval Port of Karlskrona","wiki":"Karlskrona","country":"Sweden","region":"Europe","lat":56.16,"lng":15.59,"type":"Cultural"},
+  {"name":"Birka and Hovgårda","wiki":"Birka","country":"Sweden","region":"Europe","lat":59.33,"lng":17.55,"type":"Cultural"},
+  {"name":"Ilulissat Icefjord","wiki":"Ilulissat Icefjord","country":"Greenland","region":"Europe","lat":69.20,"lng":-51.10,"type":"Natural"},
+  {"name":"Þingvellir National Park","wiki":"Thingvellir","country":"Iceland","region":"Europe","lat":64.25,"lng":-21.13,"type":"Cultural"},
+
+  {"name":"Heard Island and McDonald Islands","wiki":"Heard Island and McDonald Islands","country":"Australia","region":"Oceania","lat":-53.10,"lng":73.50,"type":"Natural"},
+  {"name":"Tasmanian Wilderness","wiki":"Tasmanian Wilderness","country":"Australia","region":"Oceania","lat":-42.00,"lng":146.20,"type":"Mixed"},
+  {"name":"Nan Madol","wiki":"Nan Madol","country":"Micronesia","region":"Oceania","lat":6.84,"lng":158.22,"type":"Cultural"},
+  {"name":"Phoenix Islands Protected Area","wiki":"Phoenix Islands","country":"Kiribati","region":"Oceania","lat":2.00,"lng":-172.00,"type":"Natural"}
 ]
