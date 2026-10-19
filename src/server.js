@@ -39,6 +39,7 @@ const hidup = require('./hidup');
 const bacaan = require('./bacaan');
 const st = require('./statistik');
 const bc = require('./bencana');
+const els = require('./elements');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -796,6 +797,16 @@ app.get('/bencana/:cat/:id', async (req, res) => {
   }
 });
 
+// ── LALUAN KOMPLEKS UNSUR (/unsur*) — periodik table, data STATIK (tiada API) ──
+// Data tertanam dalam kod → tak boleh 503 & tak pernah panggil API luar (pelajaran
+// daripada insiden WAF Met). /unsur/:q terima nama, simbol (Au) atau nombor atom.
+app.get('/unsur', (req, res) => res.status(200).type('html').send(elementsHubPage()));
+app.get('/unsur/:q', (req, res) => {
+  const e = els.findElement(req.params.q);
+  if (!e) return res.status(404).type('html').send(elementsNotFound(req.params.q));
+  res.status(200).type('html').send(elementPage(req, e));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1288,7 +1299,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1413,6 +1424,16 @@ app.get('/sitemap-negara.xml', async (req, res) => {
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + special + (countries ? '\n' + countries : '') + '\n</urlset>\n'
+  );
+});
+
+// ── SITEMAP UNSUR — hab + 118 unsur (senarai statik, sentiasa sah) ──
+app.get('/sitemap-unsur.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/unsur', '0.9')].concat(els.ELEMENTS.map((e) => one(`/unsur/${e.slug}`, '0.6'))).join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
 });
 
@@ -5693,8 +5714,130 @@ const wangNav = () => worldNav('World Money — tukuk.org/wang', [
 ]);
 const seniNav = () => worldNav('Art Gallery — free images from The Met', [{ href: '/seni', icon: '🖼️', name: 'All collections', blurb: 'Ten curated doors into the Metropolitan Museum’s open-access archive — hundreds of thousands of public-domain images.' }]
   .concat(seni.COLLECTIONS.map((c) => ({ href: `/seni/koleksi/${c.slug}`, icon: c.icon, name: c.name, blurb: c.blurb }))));
-const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/hidupan', icon: '🦁', name: 'All species', blurb: 'Sixteen animals, each with a plain-language story and real research-grade photographs from the iNaturalist community.' }]
-  .concat(hidup.TAXA.map((t) => ({ href: `/hidupan/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
+const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/hidupan', icon: '🦁', name: 'All species', blurb: 'Sixteen animals, each with a plain-language story and real research-grade photographs from the iNaturalist community.' }
+  ].concat(hidup.TAXA.map((t) => ({ href: `/hidupan/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
+
+// ── /unsur — periodic table of the elements (data STATIK tertanam) ────────────
+const EL_CSS = `.el-scroll{overflow-x:auto;padding-bottom:8px;margin:14px 0}
+.el-grid{display:grid;grid-template-columns:repeat(18,minmax(38px,1fr));grid-auto-rows:minmax(44px,auto);gap:3px;min-width:760px}
+.el-tile{display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;color:#0b0f16;border-radius:5px;padding:3px 4px;font-size:.7rem;line-height:1.05;background:var(--c);transition:transform .12s}
+.el-tile:hover{transform:scale(1.18);z-index:3;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.el-tile .num{opacity:.75;font-size:.6rem}
+.el-tile .sym{font-weight:800;font-size:1.05rem}
+.el-tile .nm{font-size:.52rem;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.el-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 0;font-size:.82rem}
+.el-legend span{display:inline-flex;align-items:center;gap:6px}
+.el-legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
+.el-hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.el-hero .el-big{display:flex;flex-direction:column;justify-content:center;width:150px;height:150px;border-radius:14px;padding:12px;color:#0b0f16;background:var(--c)}
+.el-hero .el-big .b-sym{font-size:3rem;font-weight:800;line-height:1}
+.el-hero .el-big .b-nm{font-size:1.1rem;font-weight:700}
+.el-hero .el-big .b-meta{display:flex;justify-content:space-between;font-size:.72rem;opacity:.85}`;
+const EL_CAT_BLURB = {
+  'Reactive nonmetal': 'Elements that readily gain or share electrons — the building blocks of water, air, living tissue and most organic chemistry.',
+  'Noble gas': 'Full outer electron shells make these gases almost inert: they barely react, glow in discharge lamps and are used to create unreactive atmospheres.',
+  'Alkali metal': 'Soft, wildly reactive metals of group 1 — they fizz in water and never occur pure in nature. Lithium, sodium, potassium and friends.',
+  'Alkaline earth metal': 'Reactive group-2 metals a step calmer than the alkalis: magnesium, calcium and the structural and biological workhorses among them.',
+  'Transition metal': 'The dense, strong, catalytic heart of the table — iron, copper, gold, titanium — responsible for most of metallurgy, jewellery and industry.',
+  'Post-transition metal': 'Softer, lower-melting metals beside the transition block — aluminium, tin, lead — abundant in cans, foils, solders and pigments.',
+  'Metalloid': 'In-between elements that behave as semiconductors: silicon, germanium and boron underpin electronics, glass and solar cells.',
+  'Lanthanide': 'The rare-earth “inner transition” metals that give strong permanent magnets, screen phosphors and catalyst polish.',
+  'Actinide': 'Mostly radioactive, heavy metals — several made only in reactors — whose fission powers nuclear energy and weapons.',
+  'Unknown properties': 'Superheavy synthetic elements made atom-by-atom, existing for fractions of a second; their true chemistry is still unmeasured.',
+};
+const elKelvin = (v) => (v == null ? null : `${v} K (${Math.round(v - 273.15)} °C)`);
+
+function elementsNav() {
+  const cats = els.groupedByCategory().map((g) => ({
+    href: `/unsur#${els.slugify(g.label)}`, icon: '🧪', name: g.label,
+    blurb: `${g.items.length} element${g.items.length > 1 ? 's' : ''}: ${EL_CAT_BLURB[g.label] || 'See the grouping in the periodic table.'}`,
+  }));
+  return worldNav('Explore by category — Periodic Table /unsur',
+    [{ href: '/unsur', icon: '⚛️', name: 'Full periodic table', blurb: 'All 118 chemical elements on one interactive, colour-coded table, each linking to a fact file and plain-language summary.' }].concat(cats));
+}
+
+function elementTile(e) {
+  return `<a class="el-tile" style="--c:${e.color};grid-column:${e.xpos};grid-row:${e.ypos}" href="/unsur/${e.slug}" title="${escapeHtml(e.name)} — atomic number ${e.n}"><span class="num">${e.n}</span><span class="sym">${escapeHtml(e.s)}</span><span class="nm">${escapeHtml(e.name)}</span></a>`;
+}
+
+function elementsHubPage() {
+  const grid = els.ELEMENTS.map(elementTile).join('');
+  const legend = els.CATEGORY_ORDER.filter((l) => els.CAT_COLOR[l])
+    .map((l) => `<span><i style="background:${els.CAT_COLOR[l]}"></i>${l}</span>`).join('');
+  const sections = els.groupedByCategory().map((g) => {
+    const links = g.items.map((e) => `<a href="/unsur/${e.slug}">${escapeHtml(e.name)} (${escapeHtml(e.s)})</a>`).join(' · ');
+    return `<h2 class="section-title" id="${els.slugify(g.label)}">${g.label} <span class="meta">(${g.items.length})</span></h2><p>${escapeHtml(EL_CAT_BLURB[g.label] || '')}</p><p>${links}</p>`;
+  }).join('');
+  const body = `<p>The <b>periodic table of the elements</b> is chemistry’s map of everything: all 118 known chemical elements, ordered by atomic number and arranged so that elements with similar behaviour fall in the same vertical column. Tap any tile — or pick an element below — for its full fact file, physical properties and a plain-language summary of what it is and what it does.</p>
+  <div class="el-scroll"><div class="el-grid">${grid}</div></div>
+  <div class="el-legend">${legend}</div>
+  <h2 class="section-title">A quick way to read the table</h2><p>Across each <b>period</b> (row) the atomic number climbs by one proton at a time. Down each <b>group</b> (column) the atoms gain a full electron shell, which is why lithium, sodium and potassium all react with water in the same dramatic way. The far-right column is the noble gases — chemically satisfied — while the reactive metals cluster on the left. Elements coloured grey have been made only a few atoms at a time and their properties are still predicted, not measured.</p>
+  ${sections}
+  <p class="meta">Data: Bowserinator/Periodic-Table-JSON (CC BY-SA 3.0), cross-checked against standard reference values. Kelvin (K) shown with Celsius. Stored statically on our server — no external call when you load a page.</p>`;
+  return worldDoc({
+    title: 'Periodic Table of Elements — All 118, Interactive with Fact Files | Tukuk-OS',
+    desc: 'The complete periodic table of the 118 chemical elements as an interactive, colour-coded grid, each linking to atomic number, mass, melting/boiling points, electron configuration and a plain-language summary.',
+    selfUrl: 'https://tukuk.org/unsur',
+    heroTitle: '⚛️ The Periodic Table', heroSub: 'All 118 chemical elements · interactive, colour-coded, with fact files',
+    css: EL_CSS, body,
+  }, elementsNav());
+}
+
+function elementPage(req, e) {
+  const rows = [
+    ['Element category', e.catLabel],
+    ['Atomic number', e.n],
+    ['Atomic mass', `${e.mass} u`],
+    ['Phase at STP', e.phase],
+    ['Group', e.group],
+    ['Period', e.period],
+    ['Block', e.block],
+    ['Electron configuration', e.ec],
+    ['Electrons per shell', Array.isArray(e.shells) ? e.shells.join(', ') : null],
+    ['Electronegativity (Pauling)', e.en],
+    ['Melting point', elKelvin(e.melt)],
+    ['Boiling point', elKelvin(e.boil)],
+    ['Density', e.density != null ? `${e.density} ${e.dunit || 'g/cm³'}` : null],
+    ['Discovered by', e.disc],
+    ['Named by', e.named],
+  ].filter((r) => r[1] != null && String(r[1]).trim()).map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]))}</td></tr>`).join('');
+  const intro = escapeHtml(e.summ || `${e.name} is a chemical element with symbol ${e.s} and atomic number ${e.n}.`);
+  const neighbours = [
+    e.n > 1 ? `<a href="/unsur/${(els.ELEMENTS.find((x) => x.n === e.n - 1) || {}).slug}">&larr; ${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n - 1) || {}).name || '')}</a>` : '',
+    `<a href="/unsur">Periodic table</a>`,
+    e.n < 118 ? `${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).name || '')} &rarr; <a href="/unsur/${(els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).slug}">${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).s || '')}</a>` : '',
+  ].filter(Boolean).join(' · ');
+  const body = `<div class="el-hero"><div class="el-big" style="--c:${e.color}"><span class="b-meta"><span>${e.n}</span><span>${e.mass}</span></span><span class="b-sym">${escapeHtml(e.s)}</span><span class="b-nm">${escapeHtml(e.name)}</span><span class="b-meta"><span>${escapeHtml(e.phase || '')}</span><span>${escapeHtml(e.catLabel)}</span></span></div>
+  <p>${intro}</p></div>
+  <h2 class="section-title">Properties of ${escapeHtml(e.name)}</h2><table class="world-table">${rows}</table>
+  <p class="back-link">${neighbours}</p>
+  <h2 class="section-title">About the ${escapeHtml(e.catLabel.toLowerCase())} group</h2><p>${escapeHtml(EL_CAT_BLURB[e.catLabel] || '')}</p>
+  <p class="meta">Data: Periodic-Table-JSON (CC BY-SA 3.0) · stored statically on our server. ${escapeHtml(e.src || '')}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'ChemicalElement', name: e.name, alternateName: e.s,
+    url: `https://tukuk.org/unsur/${e.slug}`, description: e.summ || undefined,
+    atomicNumber: e.n, molecularFormula: e.s,
+    provider: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${e.name} (${e.s}) — Properties, Facts & Uses | Periodic Table`,
+    desc: `${e.name}, atomic number ${e.n}: symbol, atomic mass, electron configuration, melting and boiling points, density and a plain-language summary of what ${e.name} is used for.`,
+    selfUrl: `https://tukuk.org/unsur/${e.slug}`,
+    heroTitle: escapeHtml(e.name), heroSub: `${escapeHtml(e.catLabel)} · atomic number ${e.n}`,
+    ld, css: EL_CSS, body,
+  }, elementsNav());
+}
+
+function elementsNotFound(q) {
+  return worldDoc({
+    title: 'Element not found | Periodic Table — Tukuk-OS',
+    desc: 'That element was not recognised — browse the full periodic table of all 118 chemical elements instead.',
+    selfUrl: 'https://tukuk.org/unsur', robots: 'noindex,follow',
+    heroTitle: 'Element not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: EL_CSS,
+    body: `<p>We could not match that to one of the 118 elements. Try a name (e.g. <a href="/unsur/gold">gold</a>), a symbol (e.g. <a href="/unsur/Au">Au</a>) or an atomic number — or open the <a href="/unsur">full periodic table</a> and pick a tile.</p>`,
+  }, elementsNav());
+}
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
 const moneyName = (code) => (wang.CODES.find((c) => c[0] === code) || ['', code])[1];
