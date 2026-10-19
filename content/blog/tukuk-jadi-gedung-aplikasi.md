@@ -5,7 +5,7 @@ TAGS: tukuk, apk, app-store, android, pwa
 
 ## Why build your own app store?
 
-Most people know APKPure or F-Droid as places to download Android apps that are not on Google Play. Our idea is similar, but for the Tukuk ecosystem: **why send users somewhere else**, when tukuk.org itself can be the store? So we built a `/store` page that lists every Tukuk app — built-ins, arcade, Satu Kata, and community contributions — each with an **Install** button, an **⬇ APK** button, and a **🔒 Signed by Tukuk** badge.
+Most people know APKPure or F-Droid as places to download Android apps that are not on Google Play. Our idea is similar, but for the Tukuk ecosystem: **why send users somewhere else**, when tukuk.org itself can be the store? So we built an app hub on the homepage that lists every Tukuk app — built-ins, arcade, Satu Kata, and community contributions — each with an **Install** button, an **⬇ APK** button, and a **🔒 Signed by Tukuk** badge.
 
 ## APKs generated on demand
 
@@ -23,4 +23,4 @@ All APKs are signed with **the same Tukuk keystore**. Why it matters: when you u
 
 ## PWA for iPhone instead
 
-APKs are Android-only. For iPhone/iPad, every app also supports **PWA installation** (Progressive Web App) — you can "Add to Home Screen" and it opens like a native app with its own icon. So every one of our apps has two install doors: **APK for Android, PWA for everything else**. The store now lives at `https://tukuk.org/store` — try pressing ⬇ APK on any app and watch it get built right in front of you.
+APKs are Android-only. For iPhone/iPad, every app also supports **PWA installation** (Progressive Web App) — you can "Add to Home Screen" and it opens like a native app with its own icon. So every one of our apps has two install doors: **APK for Android, PWA for everything else**. The app hub now lives at `https://tukuk.org/` — try pressing ⬇ APK on any app and watch it get built right in front of you.

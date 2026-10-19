@@ -1,19 +1,19 @@
 # Tukuk-OS
 
 > Tukuk-OS is a free, account-free, Malay-first internet portal served from
-> https://tukuk.org: a privacy-first web search engine with AI answers, an app &
-> game store, a no-code builder, low-bandwidth chat (T Chat), radio/music/news
-> explorers, and a media studio. It is self-hosted (Meilisearch index), sets no
-> tracking cookies, and exposes a friendly JSON API. Content and UI are primarily
-> in Malay (Bahasa Melayu) and work on weak networks (2G). Search results pages
-> (`/cari`) carry no ads; the homepage dashboard may.
+> https://tukuk.org: a privacy-first web search engine with AI answers, an
+> in-browser game arcade, low-bandwidth chat (T Chat), radio/music/news
+> explorers, and a one-word app & game generator. It is self-hosted
+> (Meilisearch index), sets no tracking cookies, and exposes a friendly JSON
+> API. Content and UI are primarily in Malay (Bahasa Melayu) and work on weak
+> networks (2G). Search results pages (`/cari`) carry no ads; the homepage
+> dashboard may.
 
 Tukuk-OS answers a query by ranking its own crawled index, then can generate an
-extractive or LLM-assisted answer. Beyond search it hosts an in-browser game &
-app store (`/store`, `GET /api/store`), a no-code app builder (`/builder`),
-client-side tools (image & video editors, an offline app hub, a NASA data hub),
-and a daily generator that turns one word into a web app + a playable Phaser
-game with sound.
+extractive or LLM-assisted answer. Beyond search it hosts an in-browser game
+arcade (`/games`) and an app hub on the homepage, a live NASA data hub
+(`/nasa`), radio/music/news verticals, and a daily generator that turns one word
+into a web app + a playable Phaser game with sound.
 
 ## Core search & AI
 - [Search](https://tukuk.org/search?q=sqlite): ranked results from the local index. `GET /search?q=<query>&limit=<n>`.
@@ -26,20 +26,20 @@ game with sound.
 - [Blog](https://tukuk.org/blog): engineering & privacy articles (Malay). Individual posts at `/blog/<slug>`.
 - [Docs](https://tukuk.org/docs): how the engine and tools work.
 - [About](https://tukuk.org/about) · [Privacy](https://tukuk.org/privacy) · [Terms](https://tukuk.org/terms) · [Contact](https://tukuk.org/contact).
-- [Explore](https://tukuk.org/explore): live datasets (weather, earthquakes, arXiv, sun, geocode, IP, countries).
 - [NASA hub](https://tukuk.org/nasa): APOD, ISS, Mars, asteroids, EPIC, space weather, crew (JSON under `/api/nasa/*`).
 - [Radio](https://tukuk.org/radio) · [Music](https://tukuk.org/music) · [News](https://tukuk.org/news).
 
-## Store, builder & chat
-- [Tukuk Store](https://tukuk.org/store): games playable in-browser + mini apps, community and generated. `GET /api/store` (JSON), `POST /api/play/<id>` (counter).
-- [Builder](https://tukuk.org/builder): no-code drag-drop app/web builder, exports one self-contained HTML file. Publish at `/a/<slug>`, play fullscreen via `/builder?tpl=<id>&play=1`.
+## Chat & apps
 - [T Chat](https://tukuk.org/apps/chat): chat PWA engineered for 2G/GPRS — receipt reads, offline queue, minimal data.
+- [Game arcade](https://tukuk.org/games): 3D browser games, play instantly with a global leaderboard.
+- [App hub](https://tukuk.org/): mini apps and games on the homepage; each can be installed as a PWA or downloaded as a signed APK via `/api/apk/<id>`.
 
 ## One-word app + game generator
 - [Satu Kata hub](https://tukuk.org/satu-kata/): each word becomes one static web app + one web game (Preact + Phaser), auto-generated daily via free CI. No build step, no login.
 
-## Tools (client-side, no upload)
-- [Studio hub](https://tukuk.org/studio) · [Image editor](https://tukuk.org/editor) · [Video editor](https://tukuk.org/editor-video) · [App hub](https://tukuk.org/apps).
+## Apps & tools
+- [App hub](https://tukuk.org/): mini apps and games on the homepage (install as PWA or fetch a signed APK).
+- [Download](https://tukuk.org/download): T Chat for every OS.
 
 ## Machine-readable
 - [sitemap.xml](https://tukuk.org/sitemap.xml): full URL list.

@@ -17,4 +17,4 @@ The beautiful part: theme, colors, and genre are **chosen deterministically** fr
 
 ## Into the app store
 
-Every Satu Kata pair appears in `tukuk.org/store` (the "satu-kata" source) with two cards: **App «word»** and **Game «word»**. And like every app here, each one can be downloaded as a **Tukuk-signed Android APK** — so today's word can be an app in your pocket tomorrow. The hub lives at `tukuk.org/satu-kata`. One word, one day, one small world.
+Every Satu Kata pair appears on the app hub `tukuk.org/` (the "satu-kata" source) with two cards: **App «word»** and **Game «word»**. And like every app here, each one can be downloaded as a **Tukuk-signed Android APK** — so today's word can be an app in your pocket tomorrow. The hub lives at `tukuk.org/satu-kata`. One word, one day, one small world.

@@ -22,7 +22,7 @@ All one page, one style, and lightweight.
 
 ## If you like it, then install it
 
-Want faster access? Any app can be **"Added to Home Screen"** as a PWA — it opens full-screen with its own icon, feeling like a regular app. On Android, some can also be downloaded as an **APK from the store** (`tukuk.org/store`). But it is optional: you are never *forced* to install to use.
+Want faster access? Any app can be **"Added to Home Screen"** as a PWA — it opens full-screen with its own icon, feeling like a regular app. On Android, some can also be downloaded as an **APK from the app hub** (`tukuk.org/`). But it is optional: you are never *forced* to install to use.
 
 ## The "open and go" philosophy
 
