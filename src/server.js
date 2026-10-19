@@ -41,6 +41,7 @@ const st = require('./statistik');
 const bc = require('./bencana');
 const els = require('./elements');
 const sky = require('./deepsky');
+const pv = require('./proverbs');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -822,6 +823,21 @@ app.get('/messier/:id', (req, res) => {
   res.status(200).type('html').send(messierPage(m));
 });
 
+// ── LALUAN KOMPLEKS PEPATAH (/pepatah*) — Proverbs of the World, STATIK ───────
+// Data tertanam → tak boleh 503 & tak pernah panggil API luar. Route negara
+// (/pepatah/negara/:c, 3 segmen) tak bertindih dengan /pepatah/:slug (2 segmen).
+app.get('/pepatah', (req, res) => res.status(200).type('html').send(pepatahHubPage()));
+app.get('/pepatah/negara/:c', (req, res) => {
+  const c = pv.findCountry(req.params.c);
+  if (!c) return res.status(404).type('html').send(pepatahNotFound(req.params.c));
+  res.status(200).type('html').send(pepatahCountryPage(c));
+});
+app.get('/pepatah/:slug', (req, res) => {
+  const p = pv.findProverb(req.params.slug);
+  if (!p) return res.status(404).type('html').send(pepatahNotFound(req.params.slug));
+  res.status(200).type('html').send(pepatahProverbPage(p));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1314,7 +1330,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1459,6 +1475,19 @@ app.get('/sitemap-deepsky.xml', (req, res) => {
   const urls = [one('/buruj', '0.9'), one('/messier', '0.9')]
     .concat(sky.CONSTELLATIONS.map((c) => one(`/buruj/${c.slug}`, '0.6')))
     .concat(sky.MESSIER.map((m) => one(`/messier/${m.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP PEPATAH — hab + negara + setiap peribahasa (senarai statik) ──
+app.get('/sitemap-pepatah.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/pepatah', '0.9')]
+    .concat(pv.COUNTRIES.map((c) => one(`/pepatah/negara/${c.slug}`, '0.7')))
+    .concat(pv.PROVERBS.map((p) => one(`/pepatah/${p.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5999,6 +6028,114 @@ function messierNotFound(q) {
     heroTitle: 'Messier object not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
     body: `<p>Messier catalogued 110 objects (M1 to M110). Try a designation like <a href="/messier/m31">M31</a> — or open <a href="/messier">the full catalogue</a>.</p>`,
   }, deepskyNav());
+}
+
+// ── /pepatah — Proverbs of the World (data STATIK tertanam, tiada API) ────────
+const PV_CSS = `.prov-card{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;margin:14px 0;background:var(--panel,#171a21)}
+.prov-orig{font-size:1.5rem;font-weight:800;line-height:1.35;margin:0 0 6px}
+.prov-tr{font-style:italic;color:var(--muted,#9aa3b2);margin:0 0 8px;font-size:.95rem}
+.prov-en{font-size:1.12rem;font-weight:600;margin:0 0 8px}
+.prov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.prov-country{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel,#171a21)}
+.prov-country h3{margin:0 0 4px;font-size:1rem}
+@media(max-width:760px){.prov-grid{grid-template-columns:1fr}}`;
+
+function provCard(p, showLink) {
+  const tr = p.translit ? `<p class="prov-tr">${escapeHtml(p.translit)}</p>` : '';
+  const link = showLink ? `<p class="meta"><a href="/pepatah/${p.slug}">${escapeHtml(p.lang)} · ${escapeHtml(p.country)}</a></p>` : '';
+  return `<div class="prov-card"><p class="prov-orig">${escapeHtml(p.text)}</p>${tr}<p class="prov-en">&ldquo;${escapeHtml(p.en)}&rdquo;</p><p>${escapeHtml(p.meaning)}</p>${link}</div>`;
+}
+function countryTile(c) {
+  return `<div class="prov-country"><h3><a href="/pepatah/negara/${c.slug}">${escapeHtml(c.name)}</a></h3><p class="meta">${c.items.length} proverb${c.items.length > 1 ? 's' : ''} · <a href="/negara/${c.slug}">country profile</a></p></div>`;
+}
+function pepatahNav() {
+  return worldNav('Proverbs of the World — tukuk.org/pepatah', [{ href: '/pepatah', icon: '🗣️', name: 'All proverbs', blurb: 'Traditional sayings from around the world, each with its original wording, a romanisation, a plain-English translation and what it really means.' }
+  ].concat(pv.REGION_ORDER.map((r) => ({ href: `/pepatah#${pv.slugify(r)}`, icon: '🌍', name: `${r} proverbs`, blurb: `Folk wisdom from ${pv.countriesInRegion(r).length} ${r} countries in the collection.`}))));
+}
+
+function pepatahHubPage() {
+  const featured = [pv.findProverb('japan-ishi-no-ue'), pv.findProverb('south-africa-ubuntu'), pv.findProverb('egypt-friend-need')].filter(Boolean).map((p) => provCard(p, true)).join('');
+  const sections = pv.REGION_ORDER.map((r) => {
+    const cs = pv.countriesInRegion(r);
+    if (!cs.length) return '';
+    return `<h2 class="section-title" id="${pv.slugify(r)}">${r} <span class="meta">(${cs.reduce((s, c) => s + c.items.length, 0)} proverbs from ${cs.length} countries)</span></h2><div class="prov-grid">${cs.map(countryTile).join('')}</div>`;
+  }).join('');
+  const body = `<p>A <b>proverb</b> is a short, traditional saying that packs a piece of practical wisdom into a single line — passed down by word of mouth long before it was ever written. Because every culture has learned the same hard lessons about patience, work, friendship and pride, you will often find the <em>same</em> idea phrased in wonderfully different images from Japan to Nigeria. Below are proverbs from ${pv.PROVERBS.length} traditions across ${pv.COUNTRIES.length} countries, each shown in its <b>original language</b> with a romanisation, a plain-English translation and a note on what it actually means. Pick a country to read its sayings together, or follow any line to its own page.</p>
+  <h2 class="section-title">A taste from the collection</h2>${featured}
+  <h2 class="section-title">Browse by region</h2>${sections}
+  <p class="meta">Each country links to its full profile in our World Countries series. Proverbs are traditional folk heritage (public domain); translations and explanations are our own plain-English renderings. Stored statically on our server — no external call when a page loads.</p>`;
+  return worldDoc({
+    title: 'Proverbs of the World — Traditional Sayings with Meanings | Tukuk-OS',
+    desc: `Sixty-five proverbs from ${pv.COUNTRIES.length} countries across every inhabited continent, each with its original wording, romanisation, plain-English translation and the wisdom behind it.`,
+    selfUrl: 'https://tukuk.org/pepatah',
+    heroTitle: '🗣️ Proverbs of the World', heroSub: `${pv.PROVERBS.length} traditional sayings · ${pv.COUNTRIES.length} countries · original text, translation & meaning`,
+    css: PV_CSS, body,
+  }, pepatahNav());
+}
+
+function pepatahCountryPage(c) {
+  const list = c.items.map((p) => provCard(p, true)).join('');
+  const siblings = pv.countriesInRegion(c.region).filter((x) => x.slug !== c.slug);
+  const otherLinks = siblings.length ? `<h2 class="section-title">More ${escapeHtml(c.region)} proverbs</h2><p>${siblings.map((x) => `<a href="/pepatah/negara/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const body = `<p class="back-link"><a href="/pepatah">&larr; All proverbs</a></p>
+  <p><b>${escapeHtml(c.name)}</b> contributes ${c.items.length} proverb${c.items.length > 1 ? 's' : ''} to this collection. A country&rsquo;s sayings reveal what its people prize most. See the full <a href="/negara/${c.slug}">profile of ${escapeHtml(c.name)}</a> for its geography, languages and history.</p>
+  ${list}
+  ${otherLinks}
+  <p class="meta">Proverbs are traditional folk heritage (public domain); translations and meanings are plain-English renderings. Stored statically.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Proverbs of ${c.name}`, description: `${c.items.length} traditional proverbs from ${c.name} with English translations and meanings.`, url: `https://tukuk.org/pepatah/negara/${c.slug}`,
+    mainEntity: { '@type': 'ItemList', itemListElement: c.items.map((p, i) => ({ '@type': 'ListItem', position: i + 1, name: p.en, url: `https://tukuk.org/pepatah/${p.slug}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `Proverbs of ${c.name} — Sayings & Meanings | Tukuk-OS`,
+    desc: `${c.items.length} traditional ${c.name} proverbs with their original wording, English translations and the wisdom behind each — from the Proverbs of the World collection.`,
+    selfUrl: `https://tukuk.org/pepatah/negara/${c.slug}`,
+    heroTitle: `🗣️ Proverbs of ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.region)} · ${c.items.length} traditional sayings`,
+    ld, css: PV_CSS, body,
+  }, pepatahNav());
+}
+
+function pepatahProverbPage(p) {
+  const others = pv.findCountry(p.countrySlug).items.filter((x) => x.slug !== p.slug);
+  const moreList = others.length ? `<h2 class="section-title">More proverbs from ${escapeHtml(p.country)}</h2>${others.map((x) => provCard(x, false)).join('')}` : '';
+  const tr = p.translit ? `<tr><th>Romanisation</th><td>${escapeHtml(p.translit)}</td></tr>` : '';
+  const rows = [
+    ['Origin country', `<a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>`],
+    ['Region', escapeHtml(p.region)],
+    ['Language', escapeHtml(p.lang)],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('') + tr;
+  const body = `<p class="back-link"><a href="/pepatah">&larr; All proverbs</a> · <a href="/pepatah/negara/${p.countrySlug}">${escapeHtml(p.country)} proverbs</a></p>
+  <div class="prov-card"><p class="prov-orig">${escapeHtml(p.text)}</p>${p.translit ? `<p class="prov-tr">${escapeHtml(p.translit)}</p>` : ''}<p class="prov-en">&ldquo;${escapeHtml(p.en)}&rdquo;</p><p>${escapeHtml(p.meaning)}</p></div>
+  <h2 class="section-title">About this proverb</h2><table class="world-table">${rows}</table>
+  <p>This saying belongs to the oral tradition of <a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>, a country in ${escapeHtml(p.region)}. Read the full <a href="/pepatah/negara/${p.countrySlug}">collection of ${escapeHtml(p.country)} proverbs</a>, or explore the <a href="/pepatah">Proverbs of the World</a> index.</p>
+  ${moreList}
+  <p class="meta">Proverbs are traditional folk heritage (public domain); the translation and explanation are our own plain-English rendering. Stored statically.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Quotation', text: p.text, inLanguage: p.lang, url: `https://tukuk.org/pepatah/${p.slug}`, attribution: `${p.country} folk tradition`, creator: { '@type': 'Organization', name: `${p.lang} oral tradition` } },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Proverbs of the World', item: 'https://tukuk.org/pepatah' },
+      { '@type': 'ListItem', position: 2, name: p.country, item: `https://tukuk.org/pepatah/negara/${p.countrySlug}` },
+      { '@type': 'ListItem', position: 3, name: p.en, item: `https://tukuk.org/pepatah/${p.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${p.en} — ${p.lang} Proverb (${p.country}) | Tukuk-OS`,
+    desc: `The ${p.country} proverb ${p.translit ? `(${p.translit}) ` : ''}“${p.en}” — its original wording, English translation and the practical wisdom behind it.`,
+    selfUrl: `https://tukuk.org/pepatah/${p.slug}`,
+    heroTitle: `🗣️ ${escapeHtml(p.country)}: &ldquo;${escapeHtml(p.en)}&rdquo;`, heroSub: `${escapeHtml(p.lang)} proverb · ${escapeHtml(p.region)}`,
+    ld, css: PV_CSS, body,
+  }, pepatahNav());
+}
+
+function pepatahNotFound(q) {
+  return worldDoc({
+    title: 'Proverb not found | Proverbs of the World — Tukuk-OS',
+    desc: 'That proverb was not recognised — browse the full collection of world proverbs instead.',
+    selfUrl: 'https://tukuk.org/pepatah', robots: 'noindex,follow',
+    heroTitle: 'Proverb not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: PV_CSS,
+    body: `<p>We could not match that to one of our world proverbs. Open <a href="/pepatah">the full collection</a> and browse by country or region.</p>`,
+  }, pepatahNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
