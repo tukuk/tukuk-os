@@ -23,24 +23,34 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#4c8dff">
 <style>
-  :root { --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef; --muted:#9aa3b2; --accent:#4c8dff; }
+  :root { --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef; --muted:#9aa3b2; --accent:#4c8dff; --code-bg:#12151c; }
   * { box-sizing:border-box; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   body { margin:0; background:var(--bg); color:var(--text); font:16px/1.75 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   .wrap { max-width:760px; margin:0 auto; padding:0 20px; }
   header { padding:48px 0 8px; }
-  h1 { margin:0 0 6px; font-size:2rem; letter-spacing:-.4px; }
-  h2 { margin:34px 0 10px; font-size:1.18rem; }
+  h1 { margin:0 0 6px; font-size:2.2rem; letter-spacing:-.5px; background:linear-gradient(120deg,var(--text),var(--accent)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  h2 { margin:34px 0 12px; font-size:1.24rem; padding-bottom:6px; border-bottom:1px solid var(--line); }
   h3 { margin:22px 0 8px; font-size:1rem; color:var(--muted); }
   .updated { color:var(--muted); font-size:.9rem; margin:0; }
-  a { color:var(--accent); }
-  nav { display:flex; gap:14px; flex-wrap:wrap; margin:24px 0 0; padding:16px 0;
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  nav { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:24px 0 0; padding:14px 0;
     border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:.9rem; }
-  footer { margin:44px 0; color:var(--muted); font-size:.88rem; }
-  .box { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:18px 0; }
-  code { background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-size:.9em; }
+  nav a { color:var(--muted); padding:6px 12px; border-radius:8px; font-weight:500; } nav a:hover { color:var(--text); background:var(--panel); text-decoration:none; }
+  footer { margin:44px 0; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:.88rem; text-align:center; }
+  .box { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:18px 0; transition:border-color .2s; }
+  .box:hover { border-color:var(--accent); }
+  code { background:var(--code-bg); border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:.9em; font-family:monospace; }
   table { border-collapse:collapse; width:100%; margin:14px 0; font-size:.94rem; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
-  th { color:var(--muted); font-weight:600; }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.72rem; letter-spacing:.6px; background:var(--panel); }
+  tr:hover td { background:rgba(76,141,255,.06); }
+  label { display:block; font-weight:600; margin-bottom:5px; font-size:.92rem; }
+  input, textarea { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); font:inherit; }
+  input:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(76,141,255,.18); }
+  form p { margin:0 0 16px; }
+  button[type=submit] { padding:11px 24px; border-radius:10px; border:0; background:var(--accent); color:#fff; font-weight:600; font-size:1rem; cursor:pointer; transition:filter .15s; }
+  button[type=submit]:hover { filter:brightness(1.08); }
 
   .ad-slot{margin:24px 0;overflow:hidden;}
 </style>
@@ -101,11 +111,11 @@
 <div class="box">
 <div id="contactBanner" style="display:none; padding:12px 14px; border-radius:8px; margin-bottom:14px; font-size:.92rem;"></div>
 <form action="/api/contact" method="post">
-  <p><label>Name: <input name="name" required maxlength="120" style="padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--text)"></label></p>
-  <p><label>Email: <input type="email" name="email" required maxlength="200" style="padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--text)"></label></p>
-  <p><label>Message:<br><textarea name="message" rows="5" required maxlength="5000" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--text)"></textarea></label></p>
+  <p><label for="cf-name">Name</label><input id="cf-name" name="name" required maxlength="120"></p>
+  <p><label for="cf-email">Email</label><input id="cf-email" type="email" name="email" required maxlength="200"></p>
+  <p><label for="cf-msg">Message</label><textarea id="cf-msg" name="message" rows="5" required maxlength="5000"></textarea></p>
   <p style="position:absolute;left:-9999px;" aria-hidden="true"><label>Website: <input name="website" tabindex="-1" autocomplete="off"></label></p>
-  <p><button type="submit" style="padding:10px 20px;border-radius:8px;border:0;background:var(--accent);color:#fff;font-weight:600">Send</button></p>
+  <p><button type="submit">Send</button></p>
 </form>
 <p style="font-size:.88rem">This page is served from your own server. The form submits messages through <code>/api/contact</code> (rate-limited to 5 messages per 10 minutes).</p>
 </div>
