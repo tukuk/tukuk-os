@@ -193,7 +193,7 @@ module.exports = {
     // mendahului; cloudflare scout (lambat ~30s+) dihantar ke belakang supaya bajet
     // interaktif jarang perlu menunggu pembekal lambat. litert (tier pinggir lokal)
     // paling belakang: sentiasa ada, tiada kuota, tapi paling perlahan.
-    cloudOrder: process.env.LLM_CLOUD_ORDER || 'groq,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai,litert'
+    cloudOrder: process.env.LLM_CLOUD_ORDER || 'groq,gemini-openai,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai,litert'
   },
 
   // Tukuk Agent (editor AI) — OpenAI-compatible tool-calling proxy + headless build.

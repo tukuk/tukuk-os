@@ -146,6 +146,10 @@ function isLocalFirst() {
 const CLOUD_PROVIDERS = {
   gemini: { defaultModel: 'gemini-flash-latest', kind: 'gemini' },
   groq: { defaultModel: 'openai/gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
+  // Google Gemini melalui lapisan OpenAI-compatible (function-calling disokong) supaya
+  // ia LAYAK masuk rotasi AGEN builder (kind:'openai'). Kunci = GEMINI_API_KEY yang sama
+  // dgn 'gemini' native. Tier percuma Gemini besar → meluaskan kapasitas percuma builder.
+  'gemini-openai': { defaultModel: 'gemini-3.8-flash', kind: 'openai', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' },
   openai: { defaultModel: 'gpt-4o-mini', kind: 'openai', baseUrl: 'https://api.openai.com/v1' },
   openrouter: { defaultModel: 'openrouter/free', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
   xai: { defaultModel: 'grok-4', kind: 'openai', baseUrl: 'https://api.x.ai/v1' },
@@ -159,7 +163,7 @@ const CLOUD_PROVIDERS = {
   // via providerBaseUrl(). Tiada kuota → tiada cooling; sentiasa barisan terakhir.
   litert: { defaultModel: 'gemma3-1b-it-int4.litertlm', kind: 'openai', baseUrl: '' }
 };
-const DEFAULT_ORDER = ['groq', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai', 'litert'];
+const DEFAULT_ORDER = ['groq', 'gemini-openai', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai', 'litert'];
 
 function providerBaseUrl(name) {
   if (name === 'litert') return config.brain.litertHost;
@@ -173,6 +177,7 @@ function cloudKey(name) {
   const pref = String(setting('aiProvider', '') || '').toLowerCase();
   const adminKey = (pref === name) ? (setting('aiApiKey', '') || '') : '';
   if (name === 'gemini') return process.env.GEMINI_API_KEY || b.geminiApiKey || adminKey;
+  if (name === 'gemini-openai') return process.env.GEMINI_API_KEY || b.geminiApiKey || adminKey;
   if (name === 'openai') return process.env.OPENAI_API_KEY || b.openaiApiKey || adminKey;
   if (name === 'groq') return process.env.GROQ_API_KEY || b.groqApiKey || adminKey;
   if (name === 'openrouter') return process.env.OPENROUTER_API_KEY || b.openrouterApiKey || adminKey;
