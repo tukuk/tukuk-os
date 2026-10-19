@@ -27,3 +27,4 @@ Sitemap: https://tukuk.org/sitemap-hidupan.xml
 Sitemap: https://tukuk.org/sitemap-unsur.xml
 Sitemap: https://tukuk.org/sitemap-deepsky.xml
 Sitemap: https://tukuk.org/sitemap-pepatah.xml
+Sitemap: https://tukuk.org/sitemap-sejarah.xml

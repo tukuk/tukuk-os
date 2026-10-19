@@ -42,6 +42,7 @@ const bc = require('./bencana');
 const els = require('./elements');
 const sky = require('./deepsky');
 const pv = require('./proverbs');
+const sj = require('./sejarah');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -838,6 +839,25 @@ app.get('/pepatah/:slug', (req, res) => {
   res.status(200).type('html').send(pepatahProverbPage(p));
 });
 
+// ── LALUAN KOMPLEKS SEJARAH (/sejarah*) — "On this day", Wikipedia REST feed ──
+// API-backed: cache 30d + SWR (modul sejarah.js). Tarikh tidak sah → 404 TANPA
+// panggil API; feed gagal & tiada cache → 503 busy. /sejarah/:mm/:dd (2 segmen
+// selepas /sejarah) tak bertindih dengan /sejarah hab.
+app.get('/sejarah', async (req, res) => {
+  const t = sj.todayParts();
+  let today = null;
+  try { today = await sj.loadDay(t.mm, t.dd); } catch {}
+  res.status(200).type('html').send(sejarahHubPage(today));
+});
+app.get('/sejarah/:mm/:dd', async (req, res) => {
+  const v = sj.validDate(req.params.mm, req.params.dd);
+  if (!v) return res.status(404).type('html').send(sejarahNotFound(`${req.params.mm}/${req.params.dd}`));
+  let data = null;
+  try { data = await sj.loadDay(v.mm, v.dd); } catch {}
+  if (!data) return res.status(503).type('html').send(sejarahBusy(`${v.month} ${v.d} is briefly unavailable`));
+  res.status(200).type('html').send(sejarahDayPage(data));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1330,7 +1350,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1488,6 +1508,19 @@ app.get('/sitemap-pepatah.xml', (req, res) => {
   const urls = [one('/pepatah', '0.9')]
     .concat(pv.COUNTRIES.map((c) => one(`/pepatah/negara/${c.slug}`, '0.7')))
     .concat(pv.PROVERBS.map((p) => one(`/pepatah/${p.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP SEJARAH — hab + 366 tarikh (senarai statik, sentiasa sah) ──
+// URL tarikh dijana daripada kalendar tetap (tiada panggilan API di sini).
+app.get('/sitemap-sejarah.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/sejarah', '0.9')]
+    .concat(sj.allDates().map((x) => one(`/sejarah/${x.mm}/${x.dd}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6136,6 +6169,112 @@ function pepatahNotFound(q) {
     css: PV_CSS,
     body: `<p>We could not match that to one of our world proverbs. Open <a href="/pepatah">the full collection</a> and browse by country or region.</p>`,
   }, pepatahNav());
+}
+
+// ── /sejarah — "On this day" (Wikipedia REST feed, API-backed + 30d cache SWR) ─
+const SJ_CSS = `.otd-cal{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+.otd-month{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel,#171a21)}
+.otd-month h3{margin:0 0 8px;font-size:1rem}
+.otd-month .days{display:flex;flex-wrap:wrap;gap:3px 8px;font-size:.9rem}
+.otd-list{list-style:none;padding:0;margin:10px 0}
+.otd-list li{padding:9px 0;border-bottom:1px solid var(--line);line-height:1.5}
+.otd-list li b{color:var(--accent,#4c8dff)}
+.otd-links{margin:4px 0 0;font-size:.85rem;color:var(--muted,#9aa3b2)}
+.otd-links a{margin-right:8px}
+.otd-daynav{display:flex;justify-content:space-between;gap:10px;margin:18px 0;font-size:.95rem}
+@media(max-width:820px){.otd-cal{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.otd-cal{grid-template-columns:1fr}}`;
+
+function otdItemLi(it) {
+  const yr = it.year != null ? `<b>${it.year}</b> — ` : '';
+  const links = it.links && it.links.length
+    ? `<p class="otd-links">${it.links.map((l) => `<a href="${l.href}" rel="noopener" target="_blank">${escapeHtml(l.title)}</a>`).join('')}</p>` : '';
+  return `<li>${yr}${escapeHtml(it.text)}${links}</li>`;
+}
+function otdMiniList(items) {
+  return `<ul class="otd-list">${items.map((it) => otdItemLi(it)).join('')}</ul>`;
+}
+function sejarahNav() {
+  return worldNav('On this day in history — tukuk.org/sejarah', [{ href: '/sejarah', icon: '📅', name: 'Every day of the year', blurb: 'Browse notable events, births and deaths for all 366 dates — drawn from Wikipedia’s curated “On this day” feed.' }
+  ].concat(sj.MONTHS.map((mo, i) => ({ href: `/sejarah#${i + 1}`, icon: '🗓️', name: mo, blurb: `See what happened on each day of ${mo}, from famous events to notable births and deaths.`}))));
+}
+
+// Cari tarikh sebelum/selepas (wrap hujung tahun) daripada senarai 366.
+function otdNeighbours(mm, dd) {
+  const all = sj.allDates();
+  const idx = all.findIndex((x) => x.mm === mm && x.dd === dd);
+  if (idx < 0) return { prev: null, next: null };
+  return { prev: all[(idx - 1 + all.length) % all.length], next: all[(idx + 1) % all.length] };
+}
+
+function sejarahHubPage(today) {
+  const all = sj.allDates();
+  const months = sj.MONTHS.map((mo, i) => {
+    const days = all.filter((x) => x.mm === String(i + 1).padStart(2, '0'));
+    const cells = days.map((x) => `<a href="/sejarah/${x.mm}/${x.dd}">${x.d}</a>`).join('');
+    return `<div class="otd-month" id="${i + 1}"><h3>${mo}</h3><div class="days">${cells}</div></div>`;
+  }).join('');
+  const featured = today ? `<h2 class="section-title">Today — ${escapeHtml(today.label)}</h2>
+    <p>${today.selected.length} notable things happened on ${escapeHtml(today.label)}. Here is a selection; <a href="/sejarah/${today.mm}/${today.dd}">see the full entry</a>.</p>
+    <ul class="otd-list">${today.selected.slice(0, 5).map(otdItemLi).join('')}</ul>`
+    : `<h2 class="section-title">Today</h2><p class="meta">Today’s highlights are briefly reloading — pick any date below to browse.</p>`;
+  const body = `<p><b>On this day…</b> — pick any of the 366 dates below to read the notable <b>events</b>, <b>births</b> and <b>deaths</b> that happened on it, plus the observances recognised around the world. Every entry is drawn from the <b>Wikipedia “On this day”</b> feed, curated by volunteer editors and refreshed into our own cache, so a page loads instantly and keeps working even when the source feed is busy.</p>
+  ${featured}
+  <h2 class="section-title">Browse the calendar</h2>
+  <div class="otd-cal">${months}</div>
+  <p class="meta">Content &amp; data: Wikipedia (CC BY-SA 4.0). Dates are cached for 30 days; history itself never changes. Explore more world knowledge: <a href="/negara">countries</a>, <a href="/pepatah">proverbs</a>, <a href="/unsur">elements</a>, <a href="/buruj">constellations</a>.</p>`;
+  return worldDoc({
+    title: 'On This Day in History — Events, Births & Deaths for Every Date | Tukuk-OS',
+    desc: 'Browse notable historical events, births and deaths for all 366 days of the year — what happened on this day, curated from Wikipedia.',
+    selfUrl: 'https://tukuk.org/sejarah',
+    heroTitle: '📅 On This Day in History', heroSub: 'Events, births and deaths for every date of the year · 366 days',
+    css: SJ_CSS, body,
+  }, sejarahNav());
+}
+
+function sejarahDayPage(data) {
+  const { prev, next } = otdNeighbours(data.mm, data.dd);
+  const nav = `<div class="otd-daynav"><span>${prev ? `<a href="/sejarah/${prev.mm}/${prev.dd}">&larr; ${prev.month} ${prev.d}</a>` : ''}</span><a href="/sejarah">All dates</a><span>${next ? `<a href="/sejarah/${next.mm}/${next.dd}">${next.month} ${next.d} &rarr;</a>` : ''}</span></div>`;
+  const selBlock = data.selected.length ? `<h2 class="section-title">Events</h2><ul class="otd-list">${data.selected.map(otdItemLi).join('')}</ul>` : '';
+  const birthsBlock = data.births.length ? `<h2 class="section-title">Births</h2>${otdMiniList(data.births)}` : '';
+  const deathsBlock = data.deaths.length ? `<h2 class="section-title">Deaths</h2>${otdMiniList(data.deaths)}` : '';
+  const holBlock = data.holidays.length ? `<h2 class="section-title">Observances &amp; holidays</h2><ul class="otd-list">${data.holidays.map(otdItemLi).join('')}</ul>` : '';
+  const body = `<p class="back-link"><a href="/sejarah">&larr; On this day index</a></p>
+  <p>What happened on <b>${escapeHtml(data.label)}</b>? Below are the notable events chosen by Wikipedia’s editors for this date, followed by celebrated births, deaths and the observances recognised around the world.</p>
+  ${selBlock}${birthsBlock}${deathsBlock}${holBlock}
+  ${nav}
+  <p class="meta">Content &amp; data: Wikipedia “On this day” (CC BY-SA 4.0). Cached on our server for 30 days so the page loads fast and survives feed outages.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'ItemList', name: `On this day: ${data.label}`, description: `Notable events, births and deaths on ${data.label}.`, url: `https://tukuk.org/sejarah/${data.mm}/${data.dd}`,
+      itemListElement: data.selected.slice(0, 15).map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: `${it.year || ''} ${it.text}`.slice(0, 120) })) },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'On this day', item: 'https://tukuk.org/sejarah' },
+      { '@type': 'ListItem', position: 2, name: data.month, item: `https://tukuk.org/sejarah#${data.m}` },
+      { '@type': 'ListItem', position: 3, name: data.label, item: `https://tukuk.org/sejarah/${data.mm}/${data.dd}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `On This Day in History — ${data.label} | Tukuk-OS`,
+    desc: `What happened on ${data.label}: notable events, famous births and deaths, and observances for this date in history.`,
+    selfUrl: `https://tukuk.org/sejarah/${data.mm}/${data.dd}`,
+    heroTitle: `📅 ${escapeHtml(data.label)}`, heroSub: `${data.selected.length} events · ${data.births.length} births · ${data.deaths.length} deaths`,
+    ld, css: SJ_CSS, body,
+  }, sejarahNav());
+}
+
+function sejarahBusy(msg) {
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The history feed is briefly unavailable. Entries are cached, so please try again in a moment.</p><p><a href="/sejarah">Back to On this day</a></p></body></html>`;
+}
+
+function sejarahNotFound(q) {
+  return worldDoc({
+    title: 'Date not found — On this day | Tukuk-OS',
+    desc: 'That date was not recognised — browse the full On this day calendar instead.',
+    selfUrl: 'https://tukuk.org/sejarah', robots: 'noindex,follow',
+    heroTitle: 'Date not found', heroSub: `“${escapeHtml(String(q || ''))}” is not a valid calendar date`,
+    css: SJ_CSS,
+    body: `<p>That looks like a date outside the calendar (try <a href="/sejarah/10/20">10/20</a> for October 20). Open <a href="/sejarah">the full On this day calendar</a> and pick any day.</p>`,
+  }, sejarahNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
