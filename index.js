@@ -82,7 +82,7 @@ async function main() {
     // Panaskan senarai objectID galeri seni (Met API) untuk sitemap-seni supaya GET
     // pertama oleh crawler sudah sarat. buildObjectUrls jalan dalam latar, non-blocking
     // & self-handled (tak reject); sitemap hidang statik dahulu jika masih sejuk.
-    setTimeout(() => { seni.buildObjectUrls(5).catch(() => {}); }, 6000);
+    setTimeout(() => { seni.buildObjectUrls(1).catch(() => {}); }, 6000);
     // Auto-update APOD + backfill arkib NASA — NYALI hanya bila NASA_AUTO=1.
     // Halaman NASA sudah dibuang (fokus konten + server ringan); secara lalai
     // dimatikan supaya tak bazir CPU/jaringan/disk pada VPS.
