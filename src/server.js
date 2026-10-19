@@ -1534,12 +1534,19 @@ const COMMON_CSS = `
   a:hover { text-decoration:underline; }
   nav { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0 0; font-size:.92rem; }
   footer { margin:54px 0 36px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:.88rem; text-align:center; }
-  .post-card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:22px; margin:22px 0; transition:border-color .2s; }
-  .post-card:hover { border-color:var(--accent); }
-  .post-card h2 { margin:0 0 8px; font-size:1.4rem; }
+  .post-card { position:relative; display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 22px 18px; margin:22px 0; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .post-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(var(--accent),transparent); opacity:0; transition:opacity .18s ease; }
+  .post-card:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(0,0,0,.20); border-color:var(--accent); }
+  .post-card:hover::before { opacity:.9; }
+  .post-card h2 { margin:0 0 8px; font-size:1.4rem; line-height:1.3; }
+  .post-card h2 a { color:var(--text); } .post-card h2 a:hover { color:var(--accent); text-decoration:none; }
   .meta { color:var(--muted); font-size:.88rem; margin-bottom:12px; }
+  .excerpt { color:var(--muted); margin:0; line-height:1.6; flex:1 1 auto; }
+  .read-more { display:inline-flex; align-items:center; gap:6px; margin-top:14px; font-weight:600; font-size:.92rem; color:var(--accent); align-self:flex-start; }
+  .read-more:hover { text-decoration:underline; } .read-more .arrow { transition:transform .18s ease; } .post-card:hover .read-more .arrow { transform:translateX(4px); }
   .tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
-  .tag { background:var(--bg); border:1px solid var(--line); border-radius:4px; padding:2px 8px; font-size:.8rem; color:var(--muted); }
+  .tag { background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:3px 11px; font-size:.76rem; color:var(--muted); font-weight:600; letter-spacing:.2px; }
+  @supports (background:color-mix(in srgb,red,blue)) { .tag { background:color-mix(in srgb,var(--accent) 13%,transparent); border-color:transparent; color:var(--accent); } }
   article { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:28px; margin:28px 0; }
   code { background:var(--code-bg); border:1px solid var(--line); border-radius:4px; padding:2px 6px; font-size:.9em; font-family:monospace; }
   ul, ol { padding-left:24px; margin:14px 0; }
@@ -1836,12 +1843,15 @@ ${siteHeader(asHome ? 'home' : 'blog')}
 
   for (const post of posts) {
     const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+    const mins = Math.max(1, Math.round((String(post.content || '').split(/\s+/).filter(Boolean).length) / 200));
+    const href = `/blog/${encodeURIComponent(post.slug)}`;
     html += `
     <div class="post-card">
-      <h2><a href="/blog/${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a></h2>
-      <div class="meta">${postDate} &middot; Author: ${escapeHtml(post.author || 'Fevian Donald')}</div>
-      <p>${escapeHtml(post.excerpt)}</p>
+      <h2><a href="${href}">${escapeHtml(post.title)}</a></h2>
+      <div class="meta">${postDate} &middot; ${escapeHtml(post.author || 'Fevian Donald')} &middot; ${mins} min read</div>
+      <p class="excerpt">${escapeHtml(post.excerpt)}</p>
       ${post.tags && post.tags.length ? `<div class="tags">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      <a class="read-more" href="${href}" aria-label="Read ${escapeHtml(post.title)}">Read article <span class="arrow">&rarr;</span></a>
     </div>`;
   }
 
@@ -6012,6 +6022,7 @@ app.get('/blog/:slug', (req, res) => {
   }
 
   const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  const mins = Math.max(1, Math.round((String(post.content || '').split(/\s+/).filter(Boolean).length) / 200));
   const renderedContent = renderMarkdown(post.content);
 
   // Nilai lolos-HTML untuk mengelakkan XSS dalam kepala/meta & badan.
@@ -6100,7 +6111,7 @@ ${siteHeader('blog')}
   <header>
     <a href="/blog" class="back-link">&larr; Back to all articles</a>
     <h1>${eTitle}</h1>
-    <div class="meta">Published: ${postDate} &middot; Author: ${eAuthor}</div>
+    <div class="meta">Published: ${postDate} &middot; ${eAuthor} &middot; ${mins} min read</div>
   </header>
   <main>
     ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
