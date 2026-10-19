@@ -44,6 +44,7 @@ const sky = require('./deepsky');
 const pv = require('./proverbs');
 const sj = require('./sejarah');
 const kt = require('./kota');
+const wr = require('./warisan');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -875,6 +876,20 @@ app.get('/kota/:slug', async (req, res) => {
   res.status(200).type('html').send(kotaPage(c, sum));
 });
 
+// ── LALUAN KOMPLEKS WARISAN (/warisan*) — UNESCO World Heritage, senarai statik + wiki fail-open ─
+app.get('/warisan', (req, res) => res.status(200).type('html').send(warisanHubPage()));
+app.get('/warisan/:slug', async (req, res) => {
+  const s = wr.findSite(req.params.slug);
+  if (!s) {
+    const r = wr.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(warisanRegionPage(r)); // hub benua — statik, tak boleh 503
+    return res.status(404).type('html').send(warisanNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await wr.fetchSummary(s.wiki); } catch {}
+  res.status(200).type('html').send(warisanPage(s, sum));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1367,7 +1382,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1551,6 +1566,19 @@ app.get('/sitemap-kota.xml', (req, res) => {
   const urls = [one('/kota', '0.9')]
     .concat(kt.REGIONS.map((r) => one(`/kota/${r.slug}`, '0.8')))
     .concat(kt.CITIES.map((c) => one(`/kota/${c.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP WARISAN — hab + setiap benua + setiap tapak (senarai statik, sentiasa sah) ──
+app.get('/sitemap-warisan.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/warisan', '0.9')]
+    .concat(wr.REGIONS.map((r) => one(`/warisan/${r.slug}`, '0.8')))
+    .concat(wr.SITES.map((s) => one(`/warisan/${s.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6335,7 +6363,7 @@ function kotaHubPage() {
   <p>${kt.CITIES.length} cities from ${kt.COUNTRIES.length} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each city to read about its country in our World Countries series.</p>
   ${browse}
   ${sections}
-  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/negara">World Countries</a> · <a href="/cuaca">World Weather</a> · <a href="/sejarah">On this day</a> · <a href="/pepatah">Proverbs</a>.</p>`;
+  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/negara">World Countries</a> · <a href="/cuaca">World Weather</a> · <a href="/sejarah">On this day</a> · <a href="/pepatah">Proverbs</a> · <a href="/warisan">World Heritage</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'World Cities — Tukuk-OS',
     description: `Profiles of ${kt.CITIES.length} major world cities: location, country and a plain-English introduction to each.`,
@@ -6423,6 +6451,132 @@ function kotaNotFound(q) {
     css: KT_CSS,
     body: `<p>We don’t have a profile for that city yet. Open <a href="/kota">the full list of world cities</a> and browse by continent.</p>`,
   }, kotaNav());
+}
+
+// ── /warisan — UNESCO World Heritage (senarai statik + ringkasan Wikipedia fail-open) ──
+const WR_CSS = `.site-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
+.site-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
+.site-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
+.site-badge{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:2px 8px;margin-top:6px}
+.site-badge.Cultural{background:rgba(76,141,255,.16);color:#7fb0ff}
+.site-badge.Natural{background:rgba(60,190,120,.16);color:#5fd08a}
+.site-badge.Mixed{background:rgba(220,160,60,.16);color:#e2b765}
+.site-hero{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
+.site-hero img{border-radius:10px;border:1px solid var(--line);max-width:280px;width:100%;height:auto}
+.site-sum{font-size:1.02rem;line-height:1.7}
+@media(max-width:760px){.site-grid{grid-template-columns:1fr}}`;
+
+const TYPE_ICON = { Cultural: '🏛️', Natural: '🌿', Mixed: '🏔️' };
+function siteCard(s) {
+  return `<div class="site-card"><h3><a href="/warisan/${s.slug}">${escapeHtml(s.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(s.country)} · <a href="/negara/${s.countrySlug}">profile</a></p><span class="site-badge ${s.type}">${TYPE_ICON[s.type] || ''} ${s.type}</span></div>`;
+}
+function warisanNav() {
+  return worldNav('World Heritage — tukuk.org/warisan', [{ href: '/warisan', icon: '🏛️', name: 'All sites', blurb: 'Profiles of the world’s most celebrated UNESCO World Heritage sites — where they are, which country they belong to, whether they are cultural or natural, and a plain-English introduction to each.' }
+  ].concat(wr.REGIONS.map((r) => ({ href: `/warisan/${r.slug}`, icon: '🌍', name: `${r} sites`, blurb: `${r.count} World Heritage sites across ${r}, from ancient monuments to protected landscapes.`}))));
+}
+
+function warisanHubPage() {
+  const sections = wr.REGION_ORDER.map((r) => {
+    const ss = wr.sitesInRegion(r);
+    if (!ss.length) return '';
+    return `<h2 class="section-title" id="${wr.slugify(r)}"><a href="/warisan/${wr.slugify(r)}">${r}</a> <span class="meta">(${ss.length} sites)</span></h2><div class="site-grid">${ss.map(siteCard).join('')}</div>`;
+  }).join('');
+  const browse = `<p>${wr.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/warisan/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const legend = `<p><span class="site-badge Cultural">🏛️ Cultural</span> monuments, cities &amp; sites of human achievement · <span class="site-badge Natural">🌿 Natural</span> ecosystems, landscapes &amp; protected areas · <span class="site-badge Mixed">🏔️ Mixed</span> sites of both.</p>`;
+  const body = `<p>These are some of the world’s most <b>celebrated UNESCO World Heritage sites</b> — the monuments, ancient cities, reefs and wild landscapes that humanity has agreed are worth protecting for everyone. Each profile shows <em>where</em> the site sits, <em>which country</em> it belongs to, whether it is <em>cultural or natural</em>, and <em>what makes it special</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
+  <p>${wr.SITES.length} iconic sites from ${new Set(wr.SITES.map((s) => s.country)).size} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each site to read about its country in our World Countries series.</p>
+  ${legend}
+  ${browse}
+  ${sections}
+  <p class="meta">Coordinates are approximate centres for reference. Site descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. A curated selection of the roughly 1,200 properties on the UNESCO list. Related: <a href="/kota">World Cities</a> · <a href="/negara">World Countries</a> · <a href="/sejarah">On this day</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'UNESCO World Heritage Sites — Tukuk-OS',
+    description: `Profiles of ${wr.SITES.length} celebrated world heritage sites: location, country, cultural or natural significance and a plain-English introduction to each.`,
+    url: 'https://tukuk.org/warisan', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'UNESCO World Heritage Sites — Profiles & Locations | Tukuk-OS',
+    desc: `Introductions to ${wr.SITES.length} celebrated UNESCO World Heritage sites across the world: location, country, cultural or natural significance and what makes each special.`,
+    selfUrl: 'https://tukuk.org/warisan',
+    heroTitle: '🏛️ World Heritage', heroSub: `${wr.SITES.length} UNESCO sites · cultural, natural & mixed · location & introduction`,
+    ld, css: WR_CSS, body,
+  }, warisanNav());
+}
+
+function warisanRegionPage(region) {
+  const ss = wr.sitesInRegion(region.name);
+  const countries = [...new Set(ss.map((s) => s.country))].sort((a, b) => a.localeCompare(b));
+  const grid = `<div class="site-grid">${ss.map(siteCard).join('')}</div>`;
+  const other = wr.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/warisan/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/warisan">&larr; All sites</a></p>
+  <p>A profile for each of the <b>${ss.length} celebrated World Heritage sites in ${region.name}</b> — where the site sits, which country it belongs to, whether it is cultural or natural, and a plain-English introduction drawn from Wikipedia so the description stays sourced rather than invented. These ${ss.length} sites span ${countries.length} countries across the continent.</p>
+  ${grid}
+  <h2 class="section-title">Other continents</h2><p>${other}</p>
+  <p class="meta">Coordinates are approximate centres for reference. Site descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/kota">World Cities</a> · <a href="/negara">World Countries</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} World Heritage Sites — Tukuk-OS`,
+    description: `Profiles of ${ss.length} UNESCO World Heritage sites in ${region.name}: location, country and significance.`,
+    url: `https://tukuk.org/warisan/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${region.name} World Heritage Sites — Profiles & Locations | Tukuk-OS`,
+    desc: `Introductions to ${ss.length} UNESCO World Heritage sites in ${region.name} across ${countries.length} countries: location, country and cultural or natural significance.`,
+    selfUrl: `https://tukuk.org/warisan/${region.slug}`,
+    heroTitle: `🌍 ${region.name} World Heritage`, heroSub: `${ss.length} sites · ${countries.length} countries · location & significance`,
+    ld, css: WR_CSS, body,
+  }, warisanNav());
+}
+
+function warisanPage(s, sum) {
+  const coords = `${Math.abs(s.lat).toFixed(2)}\u00b0${s.lat >= 0 ? 'N' : 'S'}, ${Math.abs(s.lng).toFixed(2)}\u00b0${s.lng >= 0 ? 'E' : 'W'}`;
+  const mapHref = `https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lng}#map=11/${s.lat}/${s.lng}`;
+  const hero = sum && sum.thumb
+    ? `<div class="site-hero"><img src="${escapeHtml(sum.thumb)}" width="${sum.thumbW || 280}" height="${sum.thumbH || 280}" alt="${escapeHtml(s.name)}" loading="lazy" decoding="async"><div class="site-sum">${escapeHtml(sum.extract)}</div></div>`
+    : (sum && sum.extract ? `<p class="site-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(s.name)} is briefly reloading — the key facts below always show.</p>`);
+  const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
+  const siblings = wr.sitesByCountry(s.countrySlug).filter((x) => x.slug !== s.slug);
+  const moreSite = siblings.length ? `<h2 class="section-title">More sites in ${escapeHtml(s.country)}</h2><p>${siblings.map((x) => `<a href="/warisan/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const rows = [
+    ['Country', `<a href="/negara/${s.countrySlug}">${escapeHtml(s.country)}</a>`],
+    ['Continent / region', escapeHtml(s.region)],
+    ['List type', `${TYPE_ICON[s.type] || ''} ${escapeHtml(s.type)} heritage site`],
+    ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/warisan">&larr; All sites</a></p>
+  ${hero}${readMore}
+  <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
+  <p><b>${escapeHtml(s.name)}</b> is a ${escapeHtml(s.type.toLowerCase())} World Heritage site in <a href="/negara/${s.countrySlug}">${escapeHtml(s.country)}</a>, in ${escapeHtml(s.region)}. For the living forecast of the area, open <a href="/cuaca">World Weather</a>; the details of why ${escapeHtml(s.name)} was inscribed are described by the sourced introduction above (from Wikipedia).</p>
+  ${moreSite}
+  <p class="meta">Coordinates are an approximate site centre. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Place', name: s.name, description: (sum && sum.description) || `${s.type} World Heritage site in ${s.country}`, url: `https://tukuk.org/warisan/${s.slug}`,
+      containedInPlace: { '@type': 'Country', name: s.country }, additionalType: 'https://schema.org/LandmarksOrHistoricalBuildings',
+      geo: { '@type': 'GeoCoordinates', latitude: s.lat, longitude: s.lng } },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'World Heritage', item: 'https://tukuk.org/warisan' },
+      { '@type': 'ListItem', position: 2, name: s.region, item: `https://tukuk.org/warisan/${wr.slugify(s.region)}` },
+      { '@type': 'ListItem', position: 3, name: s.name, item: `https://tukuk.org/warisan/${s.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  const ogImage = sum && sum.thumb ? sum.thumb : undefined;
+  return worldDoc({
+    title: `${s.name} — UNESCO World Heritage Site Profile | Tukuk-OS`,
+    desc: sum && sum.description ? `${s.name}, ${sum.description.toLowerCase()} — a ${s.type.toLowerCase()} World Heritage site: location, country and a plain-English introduction.` : `${s.name} is a ${s.type.toLowerCase()} UNESCO World Heritage site in ${s.country}. Where it is, and a sourced introduction.`,
+    selfUrl: `https://tukuk.org/warisan/${s.slug}`,
+    heroTitle: `${TYPE_ICON[s.type] || '🏛️'} ${escapeHtml(s.name)}`, heroSub: `${escapeHtml(s.country)} · ${escapeHtml(s.region)} · ${escapeHtml(s.type)} · ${escapeHtml(coords)}`,
+    ld, css: WR_CSS, body, ogImage,
+  }, warisanNav());
+}
+
+function warisanNotFound(q) {
+  return worldDoc({
+    title: 'Site not found — World Heritage | Tukuk-OS',
+    desc: 'That heritage site was not recognised — browse the full list of UNESCO World Heritage sites instead.',
+    selfUrl: 'https://tukuk.org/warisan', robots: 'noindex,follow',
+    heroTitle: 'Site not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: WR_CSS,
+    body: `<p>We don’t have a profile for that site yet. Open <a href="/warisan">the full list of World Heritage sites</a> and browse by continent.</p>`,
+  }, warisanNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────

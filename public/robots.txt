@@ -29,3 +29,4 @@ Sitemap: https://tukuk.org/sitemap-deepsky.xml
 Sitemap: https://tukuk.org/sitemap-pepatah.xml
 Sitemap: https://tukuk.org/sitemap-sejarah.xml
 Sitemap: https://tukuk.org/sitemap-kota.xml
+Sitemap: https://tukuk.org/sitemap-warisan.xml
