@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Drop — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="The timeless falling-block puzzle: slide and rotate each tetromino, clear full rows before the stack reaches the top. Endless levels, faster every line.">
+<link rel="canonical" href="https://tukuk.org/apps/blockdrop">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:420px; margin:0 auto; padding:12px; }
+  .hud { display:flex; gap:8px; justify-content:space-between; margin-bottom:10px; font-size:.82rem; }
+  .hud .stat { flex:1; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px; }
+  .hud .lab { display:block; color:var(--muted); font-size:.66rem; text-transform:uppercase; }
+  canvas { display:block; width:100%; border-radius:10px; background:#0c0f16; touch-action:none; }
+  .ctrls { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+  .ctrls button { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:14px 0; font-size:1.3rem; cursor:pointer; }
+  .ctrls button:active { background:var(--accent); color:#fff; }
+  #start { margin-top:10px; width:100%; background:var(--accent); color:#fff; border:0; border-radius:10px; padding:12px; font-weight:700; cursor:pointer; font:inherit; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🧩 Block Drop</h1></header>
+<div class="wrap">
+  <div class="hud">
+    <div class="stat"><span class="lab">Score</span><b id="score">0</b></div>
+    <div class="stat"><span class="lab">Lines</span><b id="lines">0</b></div>
+    <div class="stat"><span class="lab">Level</span><b id="level">1</b></div>
+  </div>
+  <canvas id="cv" width="300" height="480"></canvas>
+  <div class="ctrls">
+    <button id="left">◀</button>
+    <button id="rot">⟳</button>
+    <button id="right">▶</button>
+    <button id="drop">⤓</button>
+  </div>
+  <button id="start">Start</button>
+</div>
+<script>
+(() => {
+  const COLS = 10, ROWS = 16, cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const CELL = cv.width / COLS;
+  const SHAPES = [
+    [[1,1,1,1]],                 // I
+    [[1,1],[1,1]],               // O
+    [[0,1,0],[1,1,1]],           // T
+    [[1,1,0],[0,1,1]],           // S
+    [[0,1,1],[1,1,0]],           // Z
+    [[1,0,0],[1,1,1]],           // J
+    [[0,0,1],[1,1,1]],           // L
+  ];
+  const COLORS = ['#00d0d0','#ffd400','#b04ce0','#4cd04c','#e04c4c','#4c78e0','#e0912c'];
+  let grid, cur, score = 0, lines = 0, level = 1, best = Number(localStorage.getItem('blockdrop-best') || 0);
+  let acc = 0, last = 0, running = false, over = false;
+
+  function reset() {
+    grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    score = 0; lines = 0; level = 1; over = false; acc = 0;
+    spawn(); updateHud();
+  }
+  function spawn() {
+    const t = Math.floor(Math.random() * SHAPES.length);
+    cur = { m: SHAPES[t].map((r) => r.slice()), color: t + 1, x: Math.floor((COLS - SHAPES[t][0].length) / 2), y: 0 };
+    if (collides(cur.m, cur.x, cur.y)) { over = true; running = false; draw(); banner('Game over — ' + score + ' pts'); }
+  }
+  function rotate(m) {
+    const R = m.length, C = m[0].length;
+    const out = Array.from({ length: C }, () => Array(R).fill(0));
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) out[c][R - 1 - r] = m[r][c];
+    return out;
+  }
+  function collides(m, x, y) {
+    for (let r = 0; r < m.length; r++) for (let c = 0; c < m[r].length; c++) {
+      if (!m[r][c]) continue;
+      const nx = x + c, ny = y + r;
+      if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+      if (ny >= 0 && grid[ny][nx]) return true;
+    }
+    return false;
+  }
+  function merge() {
+    cur.m.forEach((row, r) => row.forEach((v, c) => { if (v && cur.y + r >= 0) grid[cur.y + r][cur.x + c] = cur.color; }));
+  }
+  function clearLines() {
+    let cleared = 0;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (grid[r].every((v) => v)) { grid.splice(r, 1); grid.unshift(Array(COLS).fill(0)); cleared++; r++; }
+    }
+    if (cleared) {
+      lines += cleared;
+      score += [0, 100, 300, 500, 800][cleared] * level;
+      level = 1 + Math.floor(lines / 10);
+      updateHud();
+    }
+  }
+  function step() {
+    if (!collides(cur.m, cur.x, cur.y + 1)) cur.y++;
+    else { merge(); clearLines(); if (!over) spawn(); }
+  }
+  function hardDrop() { while (!collides(cur.m, cur.x, cur.y + 1)) { cur.y++; score += 2; } merge(); clearLines(); if (!over) spawn(); updateHud(); }
+
+  function speed() { return Math.max(90, 480 - (level - 1) * 40); } // ms per cell
+  function loop(ts) {
+    if (!running) return;
+    if (!last) last = ts;
+    const dt = ts - last; last = ts; acc += dt;
+    if (acc > speed()) { acc = 0; step(); }
+    draw();
+    requestAnimationFrame(loop);
+  }
+  function banner(t) { g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(0, cv.height / 2 - 34, cv.width, 68); g.fillStyle = '#fff'; g.font = 'bold 20px system-ui'; g.textAlign = 'center'; g.fillText(t, cv.width / 2, cv.height / 2 + 7); }
+  function draw() {
+    g.clearRect(0, 0, cv.width, cv.height);
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c]) block(c, r, COLORS[grid[r][c] - 1]);
+    if (cur && !over) cur.m.forEach((row, r) => row.forEach((v, c) => { if (v) block(cur.x + c, cur.y + r, COLORS[cur.color - 1]); }));
+    g.strokeStyle = 'rgba(255,255,255,.05)';
+    for (let c = 1; c < COLS; c++) { g.beginPath(); g.moveTo(c * CELL, 0); g.lineTo(c * CELL, cv.height); g.stroke(); }
+  }
+  function block(x, y, col) {
+    const px = x * CELL, py = y * CELL;
+    g.fillStyle = col; g.fillRect(px + 1, py + 1, CELL - 2, CELL - 2);
+    g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(px + 1, py + 1, CELL - 2, 4);
+  }
+  function updateHud() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('lines').textContent = lines;
+    document.getElementById('level').textContent = level;
+    if (score > best) { best = score; localStorage.setItem('blockdrop-best', String(best)); }
+  }
+  function start() { if (running) return; reset(); running = true; last = 0; acc = 0; requestAnimationFrame(loop); }
+
+  const btn = (id, fn) => document.getElementById(id).addEventListener('click', (e) => { e.preventDefault(); if (!running || over) return; fn(); });
+  btn('left', () => { if (!collides(cur.m, cur.x - 1, cur.y)) cur.x--; });
+  btn('right', () => { if (!collides(cur.m, cur.x + 1, cur.y)) cur.x++; });
+  btn('rot', () => { const r = rotate(cur.m); if (!collides(r, cur.x, cur.y)) cur.m = r; else if (!collides(r, cur.x - 1, cur.y)) { cur.x--; cur.m = r; } else if (!collides(r, cur.x + 1, cur.y)) { cur.x++; cur.m = r; } });
+  btn('drop', hardDrop);
+  document.getElementById('start').addEventListener('click', start);
+  window.addEventListener('keydown', (e) => {
+    if (!running || over) return;
+    if (e.key === 'ArrowLeft') { if (!collides(cur.m, cur.x - 1, cur.y)) cur.x--; }
+    else if (e.key === 'ArrowRight') { if (!collides(cur.m, cur.x + 1, cur.y)) cur.x++; }
+    else if (e.key === 'ArrowDown') hardDrop();
+    else if (e.key === 'ArrowUp' || e.key === ' ') { const r = rotate(cur.m); if (!collides(r, cur.x, cur.y)) cur.m = r; }
+  });
+  reset(); draw();
+})();
+</script>
+</body>
+</html>

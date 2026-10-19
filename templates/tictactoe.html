@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tic-Tac-Toe — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="The classic 3×3 duel against an unbeatable minimax CPU. Pick your mark and try to force a draw.">
+<link rel="canonical" href="https://tukuk.org/apps/tictactoe">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:420px; margin:0 auto; padding:12px; text-align:center; }
+  .hud { display:flex; gap:8px; justify-content:space-between; margin-bottom:12px; font-size:.82rem; }
+  .hud .stat { flex:1; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px; }
+  .hud .lab { display:block; color:var(--muted); font-size:.66rem; text-transform:uppercase; }
+  .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; width:min(320px, 88vw); margin:0 auto; }
+  .c { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:2.6rem; font-weight:900; border-radius:14px; background:var(--panel); border:1px solid var(--line); cursor:pointer; user-select:none; }
+  .c.x { color:#4cc2ff; } .c.o { color:#ffb54c; }
+  #msg { min-height:1.4em; margin-top:12px; font-weight:600; }
+  #new { margin-top:4px; background:var(--accent); color:#fff; border:0; border-radius:10px; padding:11px 26px; font-weight:700; cursor:pointer; font:inherit; }
+  select { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:10px; font:inherit; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>⭕ Tic-Tac-Toe</h1></header>
+<main class="wrap">
+  <div class="hud">
+    <div class="stat"><span class="lab">You</span><b id="hW">0</b></div>
+    <div class="stat"><span class="lab">Draws</span><b id="hD">0</b></div>
+    <div class="stat"><span class="lab">CPU</span><b id="hL">0</b></div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p id="msg">You are ❌ — CPU never loses, but it lets you draw. Good luck.</p>
+  <button id="new">New round</button><br>
+  <select id="lvl" aria-label="Difficulty">
+    <option value="0.35">Easy (35% perfect)</option>
+    <option value="0.7">Medium</option>
+    <option value="1" selected>Unbeatable</option>
+  </select>
+</main>
+<script>
+(function () {
+  'use strict';
+  var LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  var bd = Array(9).fill(''), busy = false, rec = { w: 0, d: 0, l: 0 };
+  var grid = document.getElementById('grid'), msg = document.getElementById('msg');
+
+  function winner(b) {
+    for (var i = 0; i < LINES.length; i++) {
+      var l = LINES[i];
+      if (b[l[0]] && b[l[0]] === b[l[1]] && b[l[1]] === b[l[2]]) return b[l[0]];
+    }
+    return b.every(function (v) { return v; }) ? 'draw' : null;
+  }
+  function minimax(b, turn, me, cpu) {
+    var w = winner(b);
+    if (w === cpu) return { s: 10 };
+    if (w === me) return { s: -10 };
+    if (w === 'draw') return { s: 0 };
+    var best = null;
+    for (var i = 0; i < 9; i++) if (!b[i]) {
+      b[i] = turn;
+      var r = minimax(b, turn === me ? cpu : me, me, cpu).s;
+      b[i] = '';
+      if (!best || (turn === cpu ? r > best.s : r < best.s)) best = { i: i, s: r };
+    }
+    return best;
+  }
+  function cpuMove() {
+    var perfect = minimax(bd.slice(), 'O', 'X', 'O').i;
+    var chance = +document.getElementById('lvl').value;
+    var move = Math.random() < chance ? perfect
+      : (function () { var e = []; for (var i = 0; i < 9; i++) if (!bd[i]) e.push(i); return e[Math.floor(Math.random() * e.length)]; })();
+    bd[move] = 'O'; if (!check()) busy = false; render();
+  }
+  function check() {
+    var w = winner(bd);
+    busy = true;
+    if (w === 'X') { rec.w++; msg.textContent = 'You win — impossible, but congrats! 🎉'; }
+    else if (w === 'O') { rec.l++; msg.textContent = 'CPU wins. Try the Easy level 😉'; }
+    else if (w === 'draw') { rec.d++; msg.textContent = 'Draw — well played.'; }
+    else return false;
+    busy = false;
+    document.getElementById('hW').textContent = rec.w;
+    document.getElementById('hD').textContent = rec.d;
+    document.getElementById('hL').textContent = rec.l;
+    return true;
+  }
+  function render() {
+    grid.innerHTML = '';
+    bd.forEach(function (v, i) {
+      var d = document.createElement('div');
+      d.className = 'c' + (v === 'X' ? ' x' : v === 'O' ? ' o' : '');
+      d.textContent = v === 'X' ? '❌' : v === 'O' ? '⭕' : '';
+      d.addEventListener('click', function () {
+        if (busy || bd[i]) return;
+        bd[i] = 'X';
+        if (!check()) { render(); setTimeout(cpuMove, 240); }
+        busy = true;
+        render();
+      });
+      grid.appendChild(d);
+    });
+  }
+  document.getElementById('new').addEventListener('click', function () {
+    bd = Array(9).fill(''); busy = false; msg.textContent = 'Your move — X.'; render();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -16,6 +16,7 @@ const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
 const reranker = require('./brain/reranker');
 const builderGen = require('./builder-gen');
+const templates = require('./brain/templates');
 const news = require('./news');
 const queries = require('./queries');
 const answer = require('./answer');
@@ -6991,40 +6992,49 @@ function uniqueSlug(pref) {
   return null;
 }
 
-app.post('/api/publish', publishLimiter, (req, res) => {
-  const body = req.body || {};
-  const html = String(body.html || '');
-  if (!html) return res.status(400).json({ error: 'No content to publish' });
-  if (html.length > publish.PUBLISH_MAX_BYTES) return res.status(413).json({ error: 'App too large (max ~4MB)' });
-  if (!publish.looksLikeHtml(html)) return res.status(400).json({ error: 'Not a valid HTML document' });
+// Terbitkan HTML berdiri sendiri ke /a/<slug> (sandbox). Dipakai oleh /api/publish
+// DAN penghulu /api/builder/build. Pulang { ok, code, error, slug, url, editKey }.
+function publishHtml(req, o) {
+  const src = o && typeof o === 'object' ? o : {};
+  const html = String(src.html || '');
+  if (!html) return { ok: false, code: 400, error: 'No content to publish' };
+  if (html.length > publish.PUBLISH_MAX_BYTES) return { ok: false, code: 413, error: 'App too large (max ~4MB)' };
+  if (!publish.looksLikeHtml(html)) return { ok: false, code: 400, error: 'Not a valid HTML document' };
   try {
     fs.mkdirSync(PUBLISH_DIR, { recursive: true });
-    // Slug: hormati permintaan eksplisit pengguna (jika sah & kosong), jika tidak jana unik daripada nama.
+    // Slug: hormati permintaan eksplisit (jika sah & kosong), jika tidak jana unik daripada nama.
     let slug;
-    const want = String(body.slug || '').trim().toLowerCase();
+    const want = String(src.slug || '').trim().toLowerCase();
     if (want) {
-      if (!publish.isSlug(want)) return res.status(400).json({ error: 'Invalid slug — lowercase letters/digits/hyphen, 3–40 chars' });
-      if (fs.existsSync(path.join(PUBLISH_DIR, `${want}.html`))) return res.status(409).json({ error: 'That link is already taken — try another name' });
+      if (!publish.isSlug(want)) return { ok: false, code: 400, error: 'Invalid slug — lowercase letters/digits/hyphen, 3–40 chars' };
+      if (fs.existsSync(path.join(PUBLISH_DIR, `${want}.html`))) return { ok: false, code: 409, error: 'That link is already taken — try another name' };
       slug = want;
     } else {
-      slug = uniqueSlug(publish.slugify(body.name || 'app'));
+      slug = uniqueSlug(publish.slugify(src.name || 'app'));
     }
-    if (!slug) return res.status(500).json({ error: 'Failed to generate unique link' });
+    if (!slug) return { ok: false, code: 500, error: 'Failed to generate unique link' };
     const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
     fs.writeFileSync(tmp, html, 'utf8');
     fs.renameSync(tmp, path.join(PUBLISH_DIR, `${slug}.html`));
     const editKey = newEditKey();
-    // kind: 'game' hanya bila dihantar eksplisit (Pembina tahu kandungan kanvas); selainnya 'app'.
-    const kind = String(body.kind || '').toLowerCase() === 'game' ? 'game' : 'app';
-    writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(body.name || ''), 80)), created: Date.now(), updated: Date.now(), kind });
+    // kind: 'game' hanya bila dihantar eksplisit; selainnya 'app'.
+    const kind = String(src.kind || '').toLowerCase() === 'game' ? 'game' : 'app';
+    writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(src.name || ''), 80)), created: Date.now(), updated: Date.now(), kind });
     const url = `${publish.publicOrigin(req)}/a/${slug}`;
-    const srcTag = truncate(String(body.source || '').replace(/[^a-z0-9_-]/g, ''), 24);
-    store.event('publish', `Aplikasi diterbitkan: /a/${slug}${srcTag ? ' [' + srcTag + ']' : ''}`, { name: truncate(String(body.name || ''), 120), bytes: html.length, source: srcTag || 'manual' });
+    const srcTag = truncate(String(src.source || '').replace(/[^a-z0-9_-]/g, ''), 24);
+    store.event('publish', `Aplikasi diterbitkan: /a/${slug}${srcTag ? ' [' + srcTag + ']' : ''}`, { name: truncate(String(src.name || ''), 120), bytes: html.length, source: srcTag || 'manual' });
     notifyIndexNow(url); // pautan awam → indeks (opt-in)
-    res.json({ ok: true, slug, url, editKey });
+    return { ok: true, slug, url, editKey };
   } catch (error) {
-    res.status(500).json({ error: 'Publish failed', details: safeError(error) });
+    return { ok: false, code: 500, error: 'Publish failed', details: safeError(error) };
   }
+}
+
+app.post('/api/publish', publishLimiter, (req, res) => {
+  const body = req.body || {};
+  const r = publishHtml(req, { html: body.html, name: body.name, kind: body.kind, source: body.source, slug: body.slug });
+  if (!r.ok) return res.status(r.code).json({ error: r.error, details: r.details });
+  res.json({ ok: true, slug: r.slug, url: r.url, editKey: r.editKey });
 });
 
 // Terbit semula ke slug yang sama (bukti pemilikan via editKey).
@@ -7567,6 +7577,90 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   bgenCacheSet(ckey, { source, apps: finalApps });
   store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source, count: finalApps.length });
   res.json({ ok: true, source, apps: finalApps, app: finalApps[0] });
+});
+
+// ── PENGHULU "1 prompt → terus siap": idea → templat/LLM → auto-terbit /a/<slug> + APK ──
+// Susun ikut jimat: (1) TEMPLAT padan (0 token), (2) LLM single-file bila wajar & brain
+// aktif, (3) templat paling hampir (jaring) — supaya SENTIASA ada output siap. Hasil
+// diterbitkan serta-merta; APK dibina atas-permintaan (/api/apk/km-<slug>). Idempoten:
+// prompt sama dalam TTL dipulang tanpa tulis fail berganda. Perhatian: output model
+// reasoning boleh kosong bila bajet kecil — 2400 token cukup untuk 1 fail HTML.
+const BUILD_TTL_MS = 10 * 60 * 1000;
+const buildCache = new Map();
+function buildCacheGet(k) { const e = buildCache.get(k); if (!e) return null; if (Date.now() > e.exp) { buildCache.delete(k); return null; } return e.v; }
+function buildCacheSet(k, v) { if (buildCache.size >= 200) { const first = buildCache.keys().next().value; buildCache.delete(first); } buildCache.set(k, { v, exp: Date.now() + BUILD_TTL_MS }); }
+function cleanAppName(idea) {
+  const s = truncate(String(idea || '').replace(/\s+/g, ' ').trim(), 40);
+  if (!s) return 'App';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+app.post('/api/builder/build', builderGenLimiter, async (req, res) => {
+  const body = req.body || {};
+  const idea = truncate(String(body.idea || '').trim(), 160);
+  if (!idea) return res.status(400).json({ error: 'Parameter "idea" is required' });
+  const style = truncate(String(body.style || '').trim(), 40);
+  const color = String(body.color || '').trim();
+  const wantKind = ['game', 'app'].includes(String(body.kind || '').toLowerCase()) ? String(body.kind).toLowerCase() : '';
+  const explicitAI = Boolean(body.ai === true || body.ai === '1' || body.ai === 1);
+
+  const ckey = [idea.toLowerCase(), style.toLowerCase(), color.toLowerCase(), wantKind, explicitAI ? 'ai' : 'auto'].join('\u0001');
+  const hit = buildCacheGet(ckey);
+  if (hit) return res.json(Object.assign({ ok: true, cached: true }, hit));
+
+  const name = cleanAppName(idea);
+  const accent = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color) ? color : '';
+  let html = '', mode = '', kind = wantKind || 'app', templateKey = '';
+
+  // (1) Templat padan — deterministik, 0 token.
+  let m = templates.detect(idea);
+  if (m && wantKind && m.kind !== wantKind) m = templates.nearest(idea, wantKind); // hormati game/app yang diminta
+  if (m && templates.get(m.key)) {
+    html = templates.personalize(templates.get(m.key), { name, accent });
+    mode = 'template'; kind = m.kind; templateKey = m.key;
+  }
+
+  // (2) Tiada padanan + wajar → LLM single-file. Gagal/terpotong → jatuh (3).
+  if (!html && config.brain.enabled && (explicitAI || builderGen.needsAI(idea, { ai: explicitAI }))) {
+    try {
+      const r = await brain.generateCloudRotation('Bina berdasarkan idea ini: ' + idea, { system: templates.LLM_SYS, temperature: 0.6, maxTokens: 2400 });
+      const doc = templates.extractHtml((r && r.response) || '');
+      const safe = doc ? templates.sanitize(doc) : '';
+      if (safe && publish.looksLikeHtml(safe)) { html = templates.personalize(safe, { name, accent }); mode = 'ai'; }
+    } catch { /* LLM gagal → nearest di bawah */ }
+  }
+
+  // (3) Jaring keselamatan: templat paling hampir (ikut hash idea) → sentiasa siap.
+  if (!html) {
+    const nb = templates.nearest(idea, wantKind) || templates.nearest(idea, 'game') || templates.nearest(idea, 'app');
+    const h = nb && templates.get(nb.key);
+    if (h) { html = templates.personalize(h, { name, accent }); mode = 'nearest'; kind = nb.kind; templateKey = nb.key; }
+  }
+  if (!html) return res.status(500).json({ error: 'Failed to assemble a ready app' });
+
+  const pub = publishHtml(req, { html, name, kind, source: 'build', slug: String(body.slug || '').trim() });
+  if (!pub.ok) return res.status(pub.code || 500).json({ error: pub.error, details: pub.details });
+
+  const apkUrl = '/api/apk/km-' + pub.slug;
+  const refineUrl = 'https://build.tukuk.org/?prompt=' + encodeURIComponent(idea) + '&slug=' + encodeURIComponent(pub.slug);
+  const payload = { mode, kind, template: templateKey || null, slug: pub.slug, url: pub.url, editKey: pub.editKey, apkUrl, refineUrl };
+  buildCacheSet(ckey, payload);
+  store.event('builder', `Build siap (${mode}): ${truncate(idea, 60)} → /a/${pub.slug}`, { mode, kind, slug: pub.slug });
+  // Pra-hangat APK tanpa halang respons (best-effort; senyap bila SDK tiada).
+  try { Promise.resolve(buildApk(apkSpec('km-' + pub.slug))).catch(() => {}); } catch { /* noop */ }
+  res.json(Object.assign({ ok: true }, payload));
+});
+
+// ── Galeri templat (data sahaja — untuk build.tukuk.org seed & UI akan datang) ──
+app.get('/api/builder/templates', (req, res) => {
+  res.setHeader('X-Robots-Tag', 'noindex');
+  res.json({ ok: true, count: templates.REGISTRY.length, items: templates.list() });
+});
+app.get('/api/builder/templates/:key', (req, res) => {
+  const html = templates.get(req.params.key);
+  if (!html) return res.status(404).json({ error: 'Unknown template' });
+  res.setHeader('X-Robots-Tag', 'noindex');
+  res.type('html').send(html);
 });
 
 // Senarai kata satu-kata untuk 🎲 Rambang + cadangan idea (/builder). Dimuat sekali, ringan.

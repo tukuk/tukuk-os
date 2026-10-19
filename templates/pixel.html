@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Studio — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Draw 16×16 pixel art with a 24-color palette, bucket fill, color picker, undo and transparent PNG export — all in the browser.">
+<link rel="canonical" href="https://tukuk.org/apps/pixel">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icons/apps/pixel.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:640px; margin:0 auto; padding:16px; }
+  #cv { display:block; width:100%; max-width:384px; margin:0 auto; image-rendering:pixelated; border:1px solid var(--line); border-radius:10px; cursor:crosshair; touch-action:none; background:
+    conic-gradient(var(--panel) 25%, var(--bg) 0 50%, var(--panel) 0 75%, var(--bg) 0) 0/24px 24px; }
+  .tools { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:12px 0; }
+  .tools button { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:8px 11px; font:inherit; font-size:.85rem; cursor:pointer; }
+  .tools button.on { border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .pal { display:grid; grid-template-columns:repeat(12,1fr); gap:5px; margin:10px auto; max-width:384px; }
+  .pal i { aspect-ratio:1; border-radius:6px; border:1px solid var(--line); cursor:pointer; }
+  .pal i.on { outline:2px solid var(--accent); outline-offset:1px; }
+  .bot { display:flex; gap:8px; justify-content:center; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  input[type=color] { width:44px; height:38px; border:1px solid var(--line); border-radius:9px; background:var(--panel); cursor:pointer; padding:3px; }
+  .note { color:var(--muted); font-size:.78rem; text-align:center; margin-top:10px; }
+</style>
+  <link rel="manifest" href="/manifest-pixel.json">
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>🟩 Pixel Studio</h1></header>
+<div class="wrap">
+  <canvas id="cv" width="384" height="384"></canvas>
+  <div class="tools" id="tools">
+    <button data-t="pen" class="on">✏️ Pen</button>
+    <button data-t="eraser">🧽 Eraser</button>
+    <button data-t="fill">🪣 Bucket</button>
+    <button data-t="pick">💉 Picker</button>
+  </div>
+  <div class="pal" id="pal"></div>
+  <div class="bot">
+    <input type="color" id="cur" value="#4c8dff">
+    <button id="undo">↩ Undo</button>
+    <button id="clear">🗑 Clear</button>
+    <button id="png">⬇ PNG 16px</button>
+    <button id="png8">⬇ PNG 128px</button>
+  </div>
+  <p class="note">16×16 canvas · drawing auto-saves in your browser · export PNG at real size or scaled 8× (sharp, pixelated). Empty cells stay transparent.</p>
+</div>
+<script>
+(() => {
+  const N = 16, cv = document.getElementById('cv'), cx = cv.getContext('2d'), S = cv.width / N;
+  const KEY = 'tukuk-pixel-v1';
+  let cells = Array.from({ length: N * N }, () => null);
+  let col = '#4c8dff', tool = 'pen', down = false, hist = [];
+  const PAL = ['#000000','#5b5b66','#9aa0ae','#ffffff','#7c3f00','#c67a35','#ffd5a0','#ff5e5e','#ff9f43','#f2c14e','#ffe66d','#a7f070','#30d158','#0f8b4d','#26c6da','#0a63b0','#4c8dff','#7d5fff','#b891ff','#ff5ea8','#ff85b3','#ff2e63','#8d3f00','#552583'];
+  // Palette + color selection
+  const pal = document.getElementById('pal');
+  pal.innerHTML = PAL.map((c) => `<i data-c="${c}" style="background:${c}" title="${c}"></i>`).join('');
+  pal.onclick = (e) => { const t = e.target.closest('[data-c]'); if (!t) return; col = t.dataset.c; document.getElementById('cur').value = col; markPal(); };
+  function markPal(){ pal.querySelectorAll('i').forEach((x) => x.classList.toggle('on', x.dataset.c.toLowerCase() === col.toLowerCase())); }
+  document.getElementById('cur').oninput = (e) => { col = e.target.value; markPal(); };
+  document.getElementById('tools').onclick = (e) => { const b = e.target.closest('[data-t]'); if (!b) return; tool = b.dataset.t;
+    document.querySelectorAll('#tools button').forEach((x) => x.classList.toggle('on', x === b)); };
+  // Save / restore
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(cells)); } catch (e) {} }
+  function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(v) && v.length === N * N) cells = v; } catch (e) {} }
+  function pushH(){ hist.push(cells.join('|')); if (hist.length > 60) hist.shift(); }
+  function undo(){ if (!hist.length) return; cells = hist.pop().split('|').map((x) => x || null); draw(); save(); }
+  // Cell detection from canvas coordinates
+  function at(ev){ const r = cv.getBoundingClientRect(), t = ev.touches ? ev.touches[0] : ev;
+    const x = Math.floor((t.clientX - r.left) / r.width * N), y = Math.floor((t.clientY - r.top) / r.height * N);
+    return (x < 0 || y < 0 || x >= N || y >= N) ? -1 : y * N + x; }
+  function same(a, b){ return (a || '') === (b || ''); }
+  function paint(i){ if (i < 0) return;
+    if (tool === 'pen') cells[i] = col;
+    else if (tool === 'eraser') cells[i] = null;
+    else if (tool === 'pick') { if (cells[i]) { col = cells[i]; document.getElementById('cur').value = col.length === 7 ? col : rgb2hex(col); markPal(); } }
+    else if (tool === 'fill') { const old = cells[i]; if (same(old, col)) return; const st = [i];
+      while (st.length) { const j = st.pop(); if (j < 0 || j >= N * N || !same(cells[j], old)) continue; cells[j] = col;
+        const x = j % N, y = (j / N) | 0; if (x > 0) st.push(j - 1); if (x < N - 1) st.push(j + 1); if (y > 0) st.push(j - N); if (y < N - 1) st.push(j + N); } } }
+  function rgb2hex(c){ return c; } // palet sudah HEX
+  function start(ev){ ev.preventDefault(); down = true; pushH(); act(ev); }
+  function act(ev){ if (!down) return; paint(at(ev)); draw(); }
+  function end(){ if (!down) return; down = false; save(); }
+  cv.addEventListener('mousedown', start); cv.addEventListener('mousemove', act);
+  addEventListener('mouseup', end);
+  cv.addEventListener('touchstart', start, { passive: false });
+  cv.addEventListener('touchmove', (e) => { e.preventDefault(); act(e); }, { passive: false });
+  addEventListener('touchend', end);
+  // Render: transparent + grid
+  function draw(){ cx.clearRect(0, 0, cv.width, cv.height);
+    for (let i = 0; i < N * N; i++) if (cells[i]) { cx.fillStyle = cells[i]; cx.fillRect((i % N) * S, ((i / N) | 0) * S, S, S); }
+    cx.strokeStyle = 'rgba(128,128,140,0.18)';
+    for (let k = 1; k < N; k++) { cx.beginPath(); cx.moveTo(k * S, 0); cx.lineTo(k * S, cv.height); cx.stroke(); cx.beginPath(); cx.moveTo(0, k * S); cx.lineTo(cv.width, k * S); cx.stroke(); } }
+  // PNG export — real RGBA matrix (transparent stays transparent)
+  function exportPng(scale){ const o = document.createElement('canvas'); o.width = N * scale; o.height = N * scale;
+    const oc = o.getContext('2d'); oc.imageSmoothingEnabled = false;
+    const t = document.createElement('canvas'); t.width = N; t.height = N; const tc = t.getContext('2d');
+    for (let i = 0; i < N * N; i++) if (cells[i]) { tc.fillStyle = cells[i]; tc.fillRect(i % N, (i / N) | 0, 1, 1); }
+    oc.drawImage(t, 0, 0, N * scale, N * scale);
+    const a = document.createElement('a'); a.download = `pixel-${Date.now()}.png`; a.href = o.toDataURL('image/png'); a.click(); }
+  document.getElementById('png').onclick = () => exportPng(1);
+  document.getElementById('png8').onclick = () => exportPng(8);
+  document.getElementById('undo').onclick = undo;
+  document.getElementById('clear').onclick = () => { pushH(); cells = Array.from({ length: N * N }, () => null); draw(); save(); };
+  load(); draw(); markPal();
+})();
+</script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
+</body>
+</html>

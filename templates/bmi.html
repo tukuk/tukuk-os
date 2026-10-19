@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BMI Check — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Body mass index with a colour gauge, healthy weight range for your height, and metric/imperial switching — offline.">
+<link rel="canonical" href="https://tukuk.org/apps/bmi">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:440px; margin:0 auto; padding:16px; }
+  .seg { display:flex; gap:8px; margin-bottom:14px; }
+  .seg button { flex:1; background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px; font:inherit; font-weight:700; cursor:pointer; }
+  .seg button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  label { display:block; font-size:.72rem; color:var(--muted); text-transform:uppercase; margin:12px 0 6px; }
+  input[type=number] { width:100%; box-sizing:border-box; background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:12px; font-size:1.05rem; }
+  .res { margin-top:18px; text-align:center; }
+  .big { font-size:3rem; font-weight:900; }
+  .cat { font-weight:700; margin-top:2px; }
+  .gauge { height:12px; border-radius:6px; margin-top:14px; background:linear-gradient(90deg,#3fa7ff 0 18.5%, #2ecc71 18.5% 25%, #f1c40f 25% 30%, #e67e22 30% 35%, #e74c3c 35% 100%); position:relative; }
+  .mark { position:absolute; top:-6px; width:4px; height:24px; background:#fff; border-radius:2px; left:0; transition:left .25s; box-shadow:0 0 6px rgba(0,0,0,.5); }
+  .range { color:var(--muted); font-size:.84rem; margin-top:12px; }
+  .note { color:var(--muted); font-size:.72rem; margin-top:10px; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>⚖️ BMI Check</h1></header>
+<main class="wrap">
+  <div class="seg">
+    <button id="met" class="on">Metric (cm · kg)</button>
+    <button id="imp">Imperial (in · lb)</button>
+  </div>
+  <label id="lh" for="h">Height (cm)</label>
+  <input type="number" id="h" inputmode="decimal" placeholder="170">
+  <label id="lw" for="w">Weight (kg)</label>
+  <input type="number" id="w" inputmode="decimal" placeholder="62">
+  <div class="res">
+    <div class="big" id="bmi">—</div>
+    <div class="cat" id="cat"></div>
+    <div class="gauge"><div class="mark" id="mark"></div></div>
+    <div class="range" id="range"></div>
+    <p class="note">BMI is a screening number, not a diagnosis — athletes and older adults often sit "off-scale" happily.</p>
+  </div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var metric = true;
+  var hIn = document.getElementById('h'), wIn = document.getElementById('w');
+  var bmiEl = document.getElementById('bmi'), catEl = document.getElementById('cat'), mark = document.getElementById('mark');
+  var rangeEl = document.getElementById('range');
+
+  function setMode(m) {
+    metric = m;
+    document.getElementById('met').classList.toggle('on', m);
+    document.getElementById('imp').classList.toggle('on', !m);
+    document.getElementById('lh').textContent = m ? 'Height (cm)' : 'Height (inches)';
+    document.getElementById('lw').textContent = m ? 'Weight (kg)' : 'Weight (lb)';
+    calc();
+  }
+  document.getElementById('met').addEventListener('click', function () { setMode(true); });
+  document.getElementById('imp').addEventListener('click', function () { setMode(false); });
+
+  function catOf(b) {
+    if (b < 18.5) return ['Underweight', '#3fa7ff'];
+    if (b < 25) return ['Healthy', '#2ecc71'];
+    if (b < 30) return ['Overweight', '#f1c40f'];
+    if (b < 35) return ['Obese I', '#e67e22'];
+    return ['Obese II+', '#e74c3c'];
+  }
+  function calc() {
+    var h = parseFloat(hIn.value), w = parseFloat(wIn.value);
+    if (!h || !w || h < 0 || w < 0) { bmiEl.textContent = '—'; catEl.textContent = ''; mark.style.left = '0'; rangeEl.textContent = ''; return; }
+    var b = metric ? w / Math.pow(h / 100, 2) : (703 * w) / (h * h);
+    b = Math.round(b * 10) / 10;
+    var cc = catOf(b);
+    bmiEl.textContent = b;
+    bmiEl.style.color = cc[1];
+    catEl.textContent = cc[0];
+    catEl.style.color = cc[1];
+    mark.style.left = Math.max(0, Math.min(97, (b - 12) / (40 - 12) * 100)) + '%';
+    // healthy weight range for this height (BMI 18.5–24.9)
+    var lo, hi;
+    if (metric) { var m = h / 100; lo = 18.5 * m * m; hi = 24.9 * m * m; rangeEl.textContent = 'Healthy weight for your height: ' + lo.toFixed(1) + '–' + hi.toFixed(1) + ' kg'; }
+    else { lo = 18.5 * h * h / 703; hi = 24.9 * h * h / 703; rangeEl.textContent = 'Healthy weight for your height: ' + lo.toFixed(0) + '–' + hi.toFixed(0) + ' lb'; }
+  }
+  hIn.addEventListener('input', calc); wIn.addEventListener('input', calc);
+  setMode(true);
+})();
+</script>
+</body>
+</html>

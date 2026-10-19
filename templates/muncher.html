@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maze Muncher — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="Munch every dot in the maze while a ghost hunts you. Power pellets turn the hunter into prey for a few seconds.">
+<link rel="canonical" href="https://tukuk.org/apps/muncher">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:440px; margin:0 auto; padding:12px; }
+  .hud { display:flex; gap:8px; justify-content:space-between; margin-bottom:10px; font-size:.82rem; }
+  .hud .stat { flex:1; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px; }
+  .hud .lab { display:block; color:var(--muted); font-size:.66rem; text-transform:uppercase; }
+  canvas { display:block; width:100%; border-radius:10px; background:#0c0f16; touch-action:none; }
+  #start { margin-top:12px; width:100%; background:var(--accent); color:#fff; border:0; border-radius:10px; padding:12px; font-weight:700; cursor:pointer; font:inherit; }
+  .hint { text-align:center; color:var(--muted); font-size:.78rem; margin-top:8px; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🟡 Maze Muncher</h1></header>
+<main class="wrap">
+  <div class="hud">
+    <div class="stat"><span class="lab">Score</span><b id="hScore">0</b></div>
+    <div class="stat"><span class="lab">Lives</span><b id="hLives">❤❤❤</b></div>
+    <div class="stat"><span class="lab">Best</span><b id="hBest">0</b></div>
+  </div>
+  <canvas id="cvs" width="330" height="374"></canvas>
+  <button id="start">Play</button>
+  <p class="hint">Arrows / WASD or swipe. ● pellets = 10, big pellets = frighten the ghost (eat it for 100).</p>
+</main>
+<script>
+(function () {
+  'use strict';
+  // 15×17 maze: # wall, . dot, o power pellet, P player start, G ghost start
+  var MAP = [
+    '###############',
+    '#.......#.....#',
+    '#o###.###o###.#',
+    '#.............#',
+    '#.###.#-#.###.#',
+    '#.....#.#.....#',
+    '###.#.###.#.###',
+    '#...#..G..#...#',
+    '###.# ## .#.###',
+    '#.....#.#.....#',
+    '#.###.#.#.###.#',
+    '#o#.........#o#',
+    '###.###.###.###',
+    '#......P......#',
+    '#.###.#.#.###.#',
+    '#....#...#....#',
+    '###############'
+  ].map(function (r) { return r.split(''); });
+  var TS = 22, COLS = 15, ROWS = 17;
+  var c = document.getElementById('cvs'), x = c.getContext('2d');
+  var best = +(localStorage.getItem('tkmunch-best') || 0);
+  document.getElementById('hBest').textContent = best;
+  var P, G, GS, PS, score, lives, dots, fright, live = false, tick = 0, msg = '';
+
+  function at(g) { return MAP[g.y] && MAP[g.y][g.x] !== '#' && MAP[g.y][g.x] !== '-'; }
+  function find(ch) { for (var y = 0; y < ROWS; y++) for (var xx = 0; xx < COLS; xx++) if (MAP[y][xx] === ch) return { x: xx, y: y }; return { x: 1, y: 1 }; }
+  PS = find('P'); GS = find('G');
+  function reset(full) {
+    P = { x: PS.x, y: PS.y }; G = { x: GS.x, y: GS.y, k: 'l' }; MAP[P.y][P.x] = '.'; MAP[G.y][G.x] = '.';
+    dots = 0; for (var y = 0; y < ROWS; y++) for (var xx = 0; xx < COLS; xx++) if (MAP[y][xx] === '.' || MAP[y][xx] === 'o') dots++;
+    fright = 0; if (full) { score = 0; lives = 3; }
+    hud();
+  }
+  function hud() {
+    document.getElementById('hScore').textContent = score;
+    document.getElementById('hLives').textContent = '❤'.repeat(Math.max(0, lives)) || '—';
+  }
+  var DIRS = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
+  var want = 'l', pdir = 'l';
+  function ctrl(e) {
+    var k = (e.key || '').toLowerCase();
+    if (k === 'arrowup' || k === 'w') want = 'u';
+    else if (k === 'arrowdown' || k === 's') want = 'd';
+    else if (k === 'arrowleft' || k === 'a') want = 'l';
+    else if (k === 'arrowright' || k === 'd') want = 'r';
+  }
+  addEventListener('keydown', ctrl);
+  var ts0 = null;
+  c.addEventListener('touchstart', function (e) { ts0 = e.touches[0]; }, { passive: true });
+  c.addEventListener('touchend', function (e) {
+    if (!ts0) return;
+    var t = e.changedTouches[0], dx = t.clientX - ts0.clientX, dy = t.clientY - ts0.clientY;
+    if (Math.abs(dx) > Math.abs(dy)) want = dx > 0 ? 'r' : 'l'; else want = dy > 0 ? 'd' : 'u';
+    ts0 = null;
+  }, { passive: true });
+
+  function movePlayer() {
+    if (MAP[P.y][P.x] === '.') { MAP[P.y][P.x] = ' '; score += 10; dots--; hud(); }
+    else if (MAP[P.y][P.x] === 'o') { MAP[P.y][P.x] = ' '; score += 50; dots--; fright = 180; hud(); }
+    var d = DIRS[want];
+    if (at({ x: P.x + d[0], y: P.y + d[1] })) pdir = want;
+    d = DIRS[pdir];
+    if (at({ x: P.x + d[0], y: P.y + d[1] })) { P.x += d[0]; P.y += d[1]; }
+  }
+  function moveGhost() {
+    var opts = [];
+    for (var k in DIRS) {
+      var d = DIRS[k], nx = G.x + d[0], ny = G.y + d[1];
+      if (MAP[ny] && MAP[ny][nx] !== '#' && MAP[ny][nx] !== '-') opts.push([k, nx, ny]);
+    }
+    if (!opts.length) return;
+    // chase toward player (or flee when frightened); avoid instant reversal
+    var key = G.k || 'l', away = { l: 'r', r: 'l', u: 'd', d: 'u' }[key];
+    opts = opts.filter(function (o) { return o[0] !== away; }).length ? opts.filter(function (o) { return o[0] !== away; }) : opts;
+    opts.sort(function (a, b) {
+      var da = Math.abs(a[2] - P.y) + Math.abs(a[1] - P.x);
+      var db = Math.abs(b[2] - P.y) + Math.abs(b[1] - P.x);
+      return fright > 0 ? db - da : da - db;
+    });
+    var pick = fright > 0 || Math.random() < 0.25 ? opts[Math.floor(Math.random() * opts.length)] : opts[0];
+    G.x = pick[1]; G.y = pick[2]; G.k = pick[0];
+  }
+  function collide() {
+    if (G.x !== P.x || G.y !== P.y) return;
+    if (fright > 0) { score += 100; G = { x: GS.x, y: GS.y, k: 'l' }; hud(); }
+    else if (--lives <= 0) {
+      live = false; msg = 'Game Over';
+      if (score > best) { best = score; localStorage.setItem('tkmunch-best', best); document.getElementById('hBest').textContent = best; }
+      document.getElementById('start').textContent = 'Score ' + score + ' — Play again';
+    } else { P = { x: PS.x, y: PS.y }; }
+    hud();
+  }
+  function step() {
+    if (!live) return;
+    tick++;
+    if (fright > 0) fright--;
+    if (tick % 6 === 0) movePlayer();
+    if (tick % 9 === 0) moveGhost();
+    collide();
+    if (dots <= 0) { live = false; msg = 'You cleared the maze!'; score += 200; hud(); document.getElementById('start').textContent = 'Cleared! Play again'; if (score > best) { best = score; localStorage.setItem('tkmunch-best', best); document.getElementById('hBest').textContent = best; } }
+  }
+  function draw() {
+    x.clearRect(0, 0, c.width, c.height);
+    for (var y = 0; y < ROWS; y++) for (var gx = 0; gx < COLS; gx++) {
+      var ch = MAP[y][gx], px = gx * TS, py = y * TS;
+      if (ch === '#') { x.fillStyle = '#1c2a52'; x.fillRect(px, py, TS, TS); x.strokeStyle = '#3b5bb5'; x.strokeRect(px + .5, py + .5, TS - 1, TS - 1); }
+      else if (ch === '-') { x.fillStyle = '#123'; x.fillRect(px, py, TS, TS); }
+      else if (ch === '.') { x.fillStyle = '#ffd977'; x.beginPath(); x.arc(px + TS / 2, py + TS / 2, 2.4, 0, 7); x.fill(); }
+      else if (ch === 'o') { x.fillStyle = '#ffd977'; x.beginPath(); x.arc(px + TS / 2, py + TS / 2, 6.5, 0, 7); x.fill(); }
+    }
+    // player wedge with chomp animation
+    var cx0 = P.x * TS + TS / 2, cy0 = P.y * TS + TS / 2, ang = { r: 0, d: Math.PI / 2, l: Math.PI, u: -Math.PI / 2 }[pdir];
+    var open = 0.25 + 0.5 * Math.abs(Math.sin(tick / 5));
+    x.fillStyle = '#ffd400'; x.beginPath(); x.moveTo(cx0, cy0);
+    x.arc(cx0, cy0, TS / 2 - 2, ang + open, ang - open + Math.PI * 2); x.fill();
+    // ghost
+    var gx0 = G.x * TS + TS / 2, gy0 = G.y * TS + TS / 2;
+    x.fillStyle = fright > 0 ? (Math.floor(tick / 8) % 2 ? '#37c6ff' : '#17496b') : '#ff5d5d';
+    x.beginPath(); x.arc(gx0, gy0 - 2, TS / 2 - 3, Math.PI, 0); x.lineTo(gx0 + TS / 2 - 3, gy0 + TS / 2 - 4);
+    for (var f = 0; f < 3; f++) x.lineTo(gx0 + TS / 2 - 3 - (f + 0.5) * ((TS - 6) / 3), gy0 + TS / 2 - 8);
+    x.lineTo(gx0 - TS / 2 + 3, gy0 + TS / 2 - 4); x.fill();
+    x.fillStyle = '#fff';
+    x.beginPath(); x.arc(gx0 - 4, gy0 - 4, 3, 0, 7); x.arc(gx0 + 4, gy0 - 4, 3, 0, 7); x.fill();
+    x.fillStyle = '#1c2a52';
+    x.beginPath(); x.arc(gx0 - 4 + (P.x * TS + TS / 2 - gx0) / 22, gy0 - 4 + (P.y * TS + TS / 2 - gy0) / 22, 1.5, 0, 7);
+    x.arc(gx0 + 4 + (P.x * TS + TS / 2 - gx0) / 22, gy0 - 4 + (P.y * TS + TS / 2 - gy0) / 22, 1.5, 0, 7); x.fill();
+    if (msg) { x.fillStyle = 'rgba(10,12,18,.7)'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#fff'; x.font = '700 24px system-ui'; x.textAlign = 'center'; x.fillText(msg, c.width / 2, c.height / 2); }
+  }
+  document.getElementById('start').addEventListener('click', function () {
+    reset(true); msg = ''; live = true; this.textContent = 'Playing…';
+  });
+  reset(true);
+  (function loop() { step(); draw(); requestAnimationFrame(loop); })();
+})();
+</script>
+</body>
+</html>

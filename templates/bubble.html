@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Pop — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="Classic bubble shooter: aim, fire, match three or more colours, drop orphan clusters. A new row descends every few shots — how long can you last?">
+<link rel="canonical" href="https://tukuk.org/apps/bubble">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:440px; margin:0 auto; padding:14px; }
+  .hud { display:flex; gap:10px; justify-content:space-between; margin-bottom:8px; font-size:.85rem; color:var(--muted); }
+  .hud b { color:var(--text); font-size:1rem; }
+  canvas { display:block; width:100%; border-radius:12px; background:#101828; touch-action:none; }
+  .hint { color:var(--muted); font-size:.78rem; margin-top:10px; text-align:center; }
+</style>
+</head>
+<body>
+<header><a class="back" href="/store">← Store</a><h1>🫧 Bubble Pop</h1></header>
+<div class="wrap">
+  <div class="hud"><span>Score <b id="score">0</b></span><span>Best <b id="best">0</b></span><span>Row in <b id="until">8</b></span></div>
+  <canvas id="cv" width="420" height="600"></canvas>
+  <p class="hint">Move to aim, tap / click to shoot. Match 3+ of one colour. Orphaned clusters drop for bonus points.</p>
+</div>
+<script>
+(() => {
+  const cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const W = cv.width, H = cv.height, R = 19, ROWH = R * 1.73, TOP = 8, NC = 10;
+  const COLORS = ['#ff5252', '#ffd54a', '#4c8dff', '#69f0ae', '#b388ff', '#ff8a65'];
+  const BEST_KEY = 'bubble-best';
+  let best = Number(localStorage.getItem(BEST_KEY) || 0);
+  let grid, parityShift, shooter, flying, drop, score, shotsUntilRow, mode = 'play', aimX = W / 2, aimY = H / 3;
+
+  const rowW = (r) => (((r + parityShift) % 2) === 0 ? NC : NC - 1);
+  const cellX = (r, c) => R + c * 2 * R + (((r + parityShift) % 2) ? R : 0);
+  const cellY = (r) => TOP + R + r * ROWH;
+
+  function reset() {
+    parityShift = 0; grid = [];
+    score = 0; shotsUntilRow = 8; drop = []; flying = null; mode = 'play';
+    for (let r = 0; r < 5; r++) grid[r] = Array.from({ length: rowW(r) }, () => Math.floor(Math.random() * Math.min(4 + Math.floor(score / 300), COLORS.length)));
+    shooter = { x: W / 2, y: H - 34, cur: rndColor(), next: rndColor() };
+    hud();
+  }
+  reset();
+
+  function neighbors(r, c) {
+    const even = ((r + parityShift) % 2) === 0;
+    const list = even
+      ? [[r, c - 1], [r, c + 1], [r - 1, c - 1], [r - 1, c], [r + 1, c - 1], [r + 1, c]]
+      : [[r, c - 1], [r, c + 1], [r - 1, c], [r - 1, c + 1], [r + 1, c], [r + 1, c + 1]];
+    return list.filter(([nr, nc]) => nr >= 0 && nc >= 0 && nr < grid.length && nc < rowW(nr));
+  }
+
+  function shoot() {
+    if (flying || mode !== 'play') return;
+    const ang = Math.atan2(aimY - shooter.y, aimX - shooter.x);
+    const a = Math.max(-Math.PI + 0.18, Math.min(-0.18, ang));
+    flying = { x: shooter.x, y: shooter.y - 20, vx: Math.cos(a) * 10, vy: Math.sin(a) * 10, color: shooter.cur };
+    shooter.next = shooter.cur; shooter.cur = rndColor();
+  }
+  function rndColor() {
+    const live = new Set();
+    if (typeof grid !== 'undefined') grid.forEach((row) => row && row.forEach((v) => { if (v != null) live.add(v); }));
+    const arr = [...live];
+    return arr.length ? arr[Math.floor(Math.random() * arr.length)] : Math.floor(Math.random() * COLORS.length);
+  }
+  function snapCell(x, y) {
+    let bestCell = null, bestD = 1e9;
+    const rGuess = Math.round((y - TOP - R) / ROWH);
+    for (let r = Math.max(0, rGuess - 1); r <= rGuess + 1; r++) {
+      if (r >= grid.length && r > 0) continue;
+      if (r >= grid.length) { grid[r] = []; }
+      const cGuess = Math.round((x - R - (((r + parityShift) % 2) ? R : 0)) / (2 * R));
+      for (let c = Math.max(0, cGuess - 1); c <= cGuess + 1; c++) {
+        if (c >= rowW(r)) continue;
+        if (grid[r][c] != null) continue;
+        const attached = r === 0 || neighbors(r, c).some(([nr, nc]) => grid[nr] && grid[nr][nc] != null);
+        if (!attached) continue;
+        const d = Math.hypot(cellX(r, c) - x, cellY(r) - y);
+        if (d < bestD) { bestD = d; bestCell = [r, c]; }
+      }
+    }
+    return bestCell;
+  }
+  function placeAndResolve(x, y) {
+    const cell = snapCell(x, y);
+    if (!cell) return gameOver();
+    const [r, c] = cell;
+    (grid[r] = grid[r] || [])[c] = flying.color;
+    flying = null;
+    // pop same-colour cluster (3+)
+    const color = grid[r][c], seen = new Set([r + ',' + c]), stack = [[r, c]], cluster = [];
+    while (stack.length) {
+      const [cr, cc] = stack.pop(); cluster.push([cr, cc]);
+      for (const [nr, nc] of neighbors(cr, cc)) {
+        const k = nr + ',' + nc;
+        if (!seen.has(k) && grid[nr] && grid[nr][nc] === color) { seen.add(k); stack.push([nr, nc]); }
+      }
+    }
+    if (cluster.length >= 3) {
+      for (const [pr, pc] of cluster) grid[pr][pc] = null;
+      score += cluster.length * 10;
+      dropFloaters();
+    }
+    if (--shotsUntilRow <= 0) addRow();
+    // lose check
+    for (let rr = 0; rr < grid.length; rr++) for (let cc = 0; cc < rowW(rr); cc++)
+      if (grid[rr][cc] != null && cellY(rr) > shooter.y - R - 6) return gameOver();
+    hud();
+  }
+  function dropFloaters() {
+    const connected = new Set();
+    const stack = [];
+    if (grid[0]) grid[0].forEach((v, c) => { if (v != null) stack.push([0, c]); });
+    while (stack.length) {
+      const [r, c] = stack.pop(), k = r + ',' + c;
+      if (connected.has(k)) continue; connected.add(k);
+      for (const nb of neighbors(r, c)) {
+        const [nr, nc] = nb;
+        if (grid[nr] && grid[nr][nc] != null) stack.push(nb);
+      }
+    }
+    let n = 0;
+    for (let r = 0; r < grid.length; r++) for (let c = 0; c < rowW(r); c++) {
+      if (grid[r][c] != null && !connected.has(r + ',' + c)) {
+        drop.push({ x: cellX(r, c), y: cellY(r), vy: 1, color: COLORS[grid[r][c]] });
+        grid[r][c] = null; n++;
+      }
+    }
+    score += n * 20;
+  }
+  function addRow() {
+    parityShift ^= 1;
+    const fresh = Array.from({ length: rowW(0) }, () => Math.floor(Math.random() * Math.min(4 + Math.floor(score / 400), COLORS.length)));
+    grid.unshift(fresh);
+    shotsUntilRow = 8;
+  }
+  function gameOver() {
+    mode = 'dead';
+    if (score > best) { best = score; localStorage.setItem(BEST_KEY, String(best)); }
+    hud();
+  }
+  function hud() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('best').textContent = best;
+    document.getElementById('until').textContent = shotsUntilRow;
+  }
+
+  function toCanvas(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+  }
+  cv.addEventListener('pointermove', (e) => { const p = toCanvas(e); aimX = p.x; aimY = Math.min(p.y, shooter.y - 40); });
+  cv.addEventListener('pointerdown', (e) => {
+    if (mode === 'dead') { reset(); return; }
+    const p = toCanvas(e); aimX = p.x; aimY = Math.min(p.y, shooter.y - 40);
+    shoot();
+  });
+
+  function step() {
+    if (flying) {
+      flying.x += flying.vx; flying.y += flying.vy;
+      if (flying.x < R) { flying.x = R; flying.vx = -flying.vx; }
+      if (flying.x > W - R) { flying.x = W - R; flying.vx = -flying.vx; }
+      let stop = flying.y <= TOP + R;
+      if (!stop) outer: for (let r = 0; r < grid.length; r++) for (let c = 0; c < rowW(r); c++) {
+        if (grid[r][c] != null && Math.hypot(cellX(r, c) - flying.x, cellY(r) - flying.y) < R * 1.82) { stop = true; break outer; }
+      }
+      if (stop) placeAndResolve(flying.x, flying.y);
+    }
+    drop = drop.filter((d) => { d.vy += 0.5; d.y += d.vy; return d.y < H + 30; });
+  }
+
+  function bubble(x, y, col) {
+    g.fillStyle = col; g.beginPath(); g.arc(x, y, R - 1, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.arc(x - 5, y - 6, 5, 0, 7); g.fill();
+  }
+  function draw() {
+    g.fillStyle = '#101828'; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(0, 0, W, TOP);
+    for (let r = 0; r < grid.length; r++) for (let c = 0; c < rowW(r); c++)
+      if (grid[r][c] != null) bubble(cellX(r, c), cellY(r), COLORS[grid[r][c]]);
+    for (const d of drop) bubble(d.x, d.y, d.color);
+    if (flying) bubble(flying.x, flying.y, COLORS[flying.color]);
+    // aim guide
+    if (mode === 'play' && !flying) {
+      const a = Math.atan2(aimY - (shooter.y - 20), aimX - shooter.x);
+      g.strokeStyle = 'rgba(255,255,255,.2)'; g.setLineDash([6, 8]); g.lineWidth = 2;
+      g.beginPath(); g.moveTo(shooter.x, shooter.y - 20);
+      g.lineTo(shooter.x + Math.cos(Math.max(-Math.PI + .18, Math.min(-.18, a))) * 90, shooter.y - 20 + Math.sin(Math.max(-Math.PI + .18, Math.min(-.18, a))) * 90);
+      g.stroke(); g.setLineDash([]);
+    }
+    // cannon + ammo
+    g.fillStyle = '#39456b'; g.beginPath(); g.arc(shooter.x, shooter.y, 26, 0, 7); g.fill();
+    if (shooter.cur == null) { shooter.cur = rndColor(); shooter.next = rndColor(); }
+    bubble(shooter.x, shooter.y, COLORS[shooter.cur]);
+    bubble(W - 30, shooter.y, COLORS[shooter.next]);
+    g.fillStyle = '#9aa3b2'; g.font = '11px system-ui'; g.textAlign = 'center'; g.fillText('next', W - 30, shooter.y + 34);
+    if (mode === 'dead') {
+      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = 'bold 32px system-ui';
+      g.fillText('Game Over', W / 2, H / 2 - 40);
+      g.font = '20px system-ui'; g.fillText('Score ' + score + ' · Best ' + best, W / 2, H / 2);
+      g.fillStyle = '#9fb4ff'; g.fillText('Tap to play again', W / 2, H / 2 + 40);
+    }
+  }
+
+  (function loop() { step(); draw(); requestAnimationFrame(loop); })();
+})();
+</script>
+</body>
+</html>

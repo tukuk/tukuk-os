@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Tools — Tukuk Apps — Tukuk-OS</title>
+<meta name="description" content="Count words, change case, Base64, URL encode, sort & dedupe lines — a complete text toolkit in the browser.">
+<link rel="canonical" href="https://tukuk.org/apps/text">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icons/apps/text.svg">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; gap:14px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:1.2rem; }
+  header .back { font-size:.88rem; color:var(--muted); text-decoration:none; }
+  header .back:hover { color:var(--accent); }
+  .wrap { max-width:640px; margin:0 auto; padding:16px; }
+  textarea { width:100%; min-height:180px; box-sizing:border-box; padding:13px; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--text); font-family:ui-monospace,monospace; font-size:.9rem; outline:none; resize:vertical; }
+  textarea:focus { border-color:var(--accent); }
+  .stats { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:.82rem; margin:10px 2px 14px; }
+  .stats b { color:var(--text); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+  .grid button { background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px 8px; font-size:.83rem; cursor:pointer; }
+  .grid button:hover { border-color:var(--accent); color:var(--accent); }
+  .sep { height:1px; background:var(--line); margin:16px 0; }
+</style>
+  <link rel="manifest" href="/manifest-text.json">
+</head>
+<body>
+<header><a class="back" href="/apps">← Apps</a><h1>🔡 Text Tools</h1></header>
+<div class="wrap">
+  <textarea id="ta" placeholder="Paste or type text here…" spellcheck="false"></textarea>
+  <div class="stats" id="stats"></div>
+  <div class="grid">
+    <button data-op="upper">UPPERCASE</button>
+    <button data-op="lower">lowercase</button>
+    <button data-op="title">Title Case</button>
+    <button data-op="sentence">Sentence case</button>
+    <button data-op="trim">Trim spaces</button>
+    <button data-op="dedupe">Dedupe lines</button>
+    <button data-op="sortA">Sort A→Z</button>
+    <button data-op="sortZ">Sort Z→A</button>
+    <button data-op="reverseLines">Reverse lines</button>
+    <button data-op="reverseChars">Reverse chars</button>
+    <button data-op="b64e">Base64 → encode</button>
+    <button data-op="b64d">Base64 ← decode</button>
+    <button data-op="urle">URL encode</button>
+    <button data-op="urlr">URL decode</button>
+    <button data-op="slug">Make slug</button>
+    <button data-op="copy">📋 Copy result</button>
+  </div>
+  <div class="sep"></div>
+  <div class="stats"><span id="msg"></span></div>
+</div>
+<script>
+(() => {
+  const $=(s)=>document.querySelector(s);
+  const ta=()=>$('#ta');
+  function stats(){
+    const t=$('#ta').value;
+    const words=(t.match(/\S+/g)||[]).length;
+    const lines=t?t.split('\n').length:0;
+    const chars=t.length, nospace=t.replace(/\s/g,'').length;
+    const read=Math.max(1,Math.round(words/200));
+    $('#stats').innerHTML=`<span><b>${words}</b> words</span><span><b>${chars}</b> characters</span><span><b>${nospace}</b> no spaces</span><span><b>${lines}</b> lines</span><span>≈ <b>${read}</b> min read</span>`;
+  }
+  function say(m){ $('#msg').textContent=m; setTimeout(()=>{ if($('#msg').textContent===m)$('#msg').textContent=''; },2500); }
+  const OPS={
+    upper:(t)=>t.toUpperCase(),
+    lower:(t)=>t.toLowerCase(),
+    title:(t)=>t.replace(/\w\S*/g,(w)=>w[0].toUpperCase()+w.slice(1).toLowerCase()),
+    sentence:(t)=>t.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g,(c)=>c.toUpperCase()),
+    trim:(t)=>t.split('\n').map((l)=>l.trim()).filter(Boolean).join('\n'),
+    dedupe:(t)=>{ const s=new Set(); return t.split('\n').filter((l)=>{ const k=l.trim().toLowerCase(); if(s.has(k))return false; s.add(k); return true; }).join('\n'); },
+    sortA:(t)=>t.split('\n').sort((a,b)=>a.localeCompare(b,'ms')).join('\n'),
+    sortZ:(t)=>t.split('\n').sort((a,b)=>b.localeCompare(a,'ms')).join('\n'),
+    reverseLines:(t)=>t.split('\n').reverse().join('\n'),
+    reverseChars:(t)=>[...t].reverse().join(''),
+    b64e:(t)=>{ try{ return btoa(unescape(encodeURIComponent(t))); }catch(e){ return null; } },
+    b64d:(t)=>{ try{ return decodeURIComponent(escape(atob(t.trim()))); }catch(e){ return null; } },
+    urle:(t)=>encodeURIComponent(t),
+    urlr:(t)=>{ try{ return decodeURIComponent(t.replace(/\+/g,' ')); }catch(e){ return null; } },
+    slug:(t)=>t.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/[\s_-]+/g,'-').replace(/^-+|-+$/g,'')
+  };
+  document.querySelectorAll('.grid button').forEach((b)=>b.onclick=async ()=>{
+    const op=b.dataset.op;
+    if(op==='copy'){ try{ await navigator.clipboard.writeText(ta().value); say('✓ Copied to clipboard'); }catch(e){ say('Copy failed — select the text manually.'); } return; }
+    const r=OPS[op](ta().value);
+    if(r===null){ say('⚠ Invalid input for decode.'); return; }
+    $('#ta').value=r; stats(); say('✓ ' + b.textContent + ' done');
+  });
+  $('#ta').addEventListener('input',stats);
+  stats();
+})();
+</script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});</script>
+</body>
+</html>
