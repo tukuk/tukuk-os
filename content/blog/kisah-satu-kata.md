@@ -5,7 +5,9 @@ TAGS: satu-kata, apps, game, automation, ci
 
 ## The idea: one word, two things
 
-**Satu Kata** is the most unusual experiment in Tukuk-OS: every day, an automated job (cron) picks **one word** — `rain`, `coffee`, `book`, `rocket`, `fish`, `cloud`, `flower` — and from that word **two things** are generated: a **mini app** and a **mini game**. So the word `coffee ☕` becomes a caffeine counter; `rocket 🚀` becomes a catch-the-fuel-reach-orbit game. Nobody writes code for any of them — everything is born from one generator script.
+> **Update (Oct 2026):** the daily Satu Kata generator has been retired — the `/satu-kata` hub is offline and the CI job no longer runs. This post stays as an engineering retrospective. For one-off app ideas, try the builder API or the app hub on `tukuk.org/`.
+
+**Satu Kata** was the most unusual experiment in Tukuk-OS: every day, an automated job (cron) picks **one word** — `rain`, `coffee`, `book`, `rocket`, `fish`, `cloud`, `flower` — and from that word **two things** are generated: a **mini app** and a **mini game**. So the word `coffee ☕` became a caffeine counter; `rocket 🚀` a catch-the-fuel-reach-orbit game. Nobody wrote code for any of them — everything was born from one generator script.
 
 ## No build step
 
@@ -17,4 +19,4 @@ The beautiful part: theme, colors, and genre are **chosen deterministically** fr
 
 ## Into the app store
 
-Every Satu Kata pair appears on the app hub `tukuk.org/` (the "satu-kata" source) with two cards: **App «word»** and **Game «word»**. And like every app here, each one can be downloaded as a **Tukuk-signed Android APK** — so today's word can be an app in your pocket tomorrow. The hub lives at `tukuk.org/satu-kata`. One word, one day, one small world.
+Every Satu Kata pair appeared on the app hub `tukuk.org/` (the "satu-kata" source) with two cards: **App «word»** and **Game «word»**. And like every app here, each one could be downloaded as a **Tukuk-signed Android APK** — so today's word could be an app in your pocket tomorrow. One word, one day, one small world.

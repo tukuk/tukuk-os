@@ -96,7 +96,7 @@ function installsOf(id,plays){if(plays>0)return fmtK(plays)+' installs';var h=0;
 function fmtK(n){return n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':''+n;}
 function isImg(icon){return /^https?:\/\//i.test(icon)||/^\/(.+\.(png|svg|jpg|jpeg|webp|ico))$/i.test(icon);}
 
-var FILTER = 'all'; // all | app | game | bawaan | satu-kata | komuniti | arked
+var FILTER = 'all'; // all | app | game | bawaan | komuniti | arked
 function matches(it,q){
   if(!q) return true;
   return ((it.title||'')+' '+(it.desc||'')+' '+(it.genre||'')).toLowerCase().indexOf(q)!==-1;
@@ -136,17 +136,15 @@ function render(){
   var games = pool.filter(function(i){return i.kind==='game';});
   var apps  = pool.filter(function(i){return i.kind==='app';});
   var comm  = pool.filter(function(i){return i.src==='komuniti';});
-  var satu  = pool.filter(function(i){return i.src==='satu-kata';});
   var html = '';
   html += row('Popular games', games.slice(0,12));
   html += row('Apps &amp; tools', apps.slice(0,12));
   html += grid('All games', games);
-  if(satu.length) html += row('Satu Kata — daily word apps', satu.slice(0,12));
   if(comm.length) html += row('Made by the community', comm);
   el.innerHTML = html;
 }
 function renderChips(){
-  var chips = [['all','All'],['game','Games'],['app','Apps'],['satu-kata','Satu Kata'],['komuniti','Community'],['arked','Arcade']];
+  var chips = [['all','All'],['game','Games'],['app','Apps'],['komuniti','Community'],['arked','Arcade']];
   var bar = document.getElementById('chips');
   bar.innerHTML = chips.map(function(c){return '<button class="chip'+(c[0]===FILTER?' on':'')+'" data-f="'+c[0]+'">'+c[1]+'</button>';}).join('');
 }

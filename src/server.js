@@ -818,18 +818,6 @@ app.use(express.static(PUBLIC_DIR, {
   }
 }));
 
-// Satu Kata — hidangkan hub app+game STATIK daripada generated/public (dijana cron
-// GitHub Actions). Ini HILANGkan kebergantungan pada Cloudflare Pages & token API-nya;
-// hanya fail HTML statik, jadi kos pada VPS sangat ringan. Tiada kata → hub di /satu-kata/.
-const GENERATED_DIR = path.join(__dirname, '..', 'generated', 'public');
-app.use('/satu-kata', express.static(GENERATED_DIR, {
-  index: 'index.html',
-  maxAge: '1h',
-  setHeaders(res, filePath) {
-    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
-  }
-}));
-
 // URL bersih untuk halaman statik: /privacy -> public/privacy.html
 // NOTE: halaman AI berat (nasa/explore/builder/editor/editor-video/3d/design/movie/
 // collage/converter/bg-remover/studio) + app store UI (store) telah dibuang — fokus T Chat.
@@ -7116,7 +7104,7 @@ function bumpPlays(id) {
 // Genre game (gaya web-games.io) — chip /store & kad berkaitan /play dibina daripada
 // nilai ini sahaja. Definisi MURNI kini tinggal di src/publish.js (boleh diuji unit);
 // server.js hanya mengambil pembantu itu untuk membina katalog /api/store.
-const { normalizeGenre, guessGameGenre, GENRE_UI } = publish;
+const { guessGameGenre, GENRE_UI } = publish;
 
 // Senarai app awam (slug terbaru) — ringan, untuk indeks /a + katalog /store.
 function listPublished(limit = 200) {
@@ -7215,35 +7203,10 @@ function storeBawaan() {
     .filter(([name]) => fs.existsSync(path.join(PUBLIC_DIR, 'apps', `${name}.html`)))
     .map(([name, m]) => ({ id: 'bv-' + name, kind: m.game ? 'game' : 'app', src: 'bawaan', genre: m.game ? m.genre : null, icon: m.ic, title: m.title, desc: m.desc, url: `/apps/${name}`, updated: 0 }));
 }
-// Satu Kata = pasangan app+game dijana CI (generated/manifest.json → /satu-kata/<slug>/{app,game}/).
-// Dikache ikut mtime manifest; fail HTML disahkan wujud sebelum disenaraikan.
-const SK_DIR = path.join(__dirname, '..', 'generated');
-let skCache = { mtime: -1, entries: [] };
-function storeSatuKata() {
-  let mtime = 0;
-  try { mtime = fs.statSync(path.join(SK_DIR, 'manifest.json')).mtimeMs; } catch { return []; }
-  if (skCache.mtime !== mtime) {
-    skCache = { mtime, entries: [] };
-    try {
-      const raw = JSON.parse(fs.readFileSync(path.join(SK_DIR, 'manifest.json'), 'utf8'));
-      skCache.entries = (Array.isArray(raw.entries) ? raw.entries : [])
-        .filter((e) => e && e.slug && publish.isSlug(String(e.slug)) && String(e.word || '').trim());
-    } catch { /* manifest rosak → katalog tetap hidup tanpa Satu Kata */ }
-  }
-  const out = [];
-  for (const e of skCache.entries) {
-    const dir = path.join(SK_DIR, 'public', e.slug);
-    const t = Date.parse(e.createdAt) || 0;
-    const word = String(e.word).trim();
-    if (fs.existsSync(path.join(dir, 'app', 'index.html'))) out.push({ id: 'sk-' + e.slug, kind: 'app', src: 'satukata', icon: e.emoji || '⚡', title: 'App ' + word, desc: `One-word app «${word}» — ${e.tagline || 'auto-generated'}`, url: `/satu-kata/${e.slug}/app/`, updated: t });
-    if (e.game && fs.existsSync(path.join(dir, 'game', 'index.html'))) out.push({ id: 'skg-' + e.slug, kind: 'game', src: 'satukata', genre: normalizeGenre(e.genre) || guessGameGenre(word + ' ' + (e.genre || '')), icon: e.emoji || '🎮', title: 'Game ' + word, desc: `Game «${word}» (${GENRE_UI[e.genre] || e.genre || 'Arcade'}) — ${e.tagline || ''}`, url: `/satu-kata/${e.slug}/game/`, updated: t });
-  }
-  return out;
-}
 function storeCatalog() {
   const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', genre: g.genre, icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl + '&play=1', updated: 0 }));
   const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Published from Tukuk Builder.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
-  const items = storeBawaan().concat(storeSatuKata(), arked, komuniti);
+  const items = storeBawaan().concat(arked, komuniti);
   // Kiraan "main" — komuniti belum ada riwayat main → jatuh kepada "dilihat" supaya
   // bahagian Trending kekal bermakna sejak hari pertama.
   for (const it of items) it.plays = playsMap[it.id] || (it.src === 'komuniti' ? (it.views || 0) : 0);
@@ -7362,7 +7325,7 @@ app.get('/games/:key', (req, res) => {
 });
 
 // ── APK atas-permintaan (tukuk.org = gedung apl, gaya APKPure) ─────────────────
-//   Setiap item katalog /store (bawaan / arked / satu kata / komuniti) boleh
+//   Setiap item katalog /store (bawaan / arked / komuniti) boleh
 //   dijadikan APK pembungkus WebView yang membuka URL apl itu. Pembina memanggil
 //   scripts/build-apk.sh (aapt2/d8/apksigner) dengan env per-apl. Semua APK
 //   ditandatangani dengan kunci Tukuk yang sama (apk/tukuk-chat-release.jks) supaya

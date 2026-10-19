@@ -5,11 +5,11 @@ TAGS: builder, no-code, apps, guide, community
 
 ## Build without coding
 
-The **auto-generate** flow (`tukuk.org/satu-kata`) is the *no-code* way to get an app: describe what the app is in a word or a short line, and the system builds it for you — buttons, text, lists, input boxes and all. No lines of code need to be written. Everything produced is **a single app file** that can be opened and shared directly. It was built so that someone who has never stared at a code editor can walk away with something that works.
+The **auto-generate** flow (`tukuk.org/`, under the app hub) is the *no-code* way to get an app: describe what the app is in a word or a short line, and the system builds it for you — buttons, text, lists, input boxes and all. No lines of code need to be written. Everything produced is **a single app file** that can be opened and shared directly. It was built so that someone who has never stared at a code editor can walk away with something that works.
 
 ## How it works
 
-1. Open `tukuk.org/satu-kata`. Every day a word becomes one mini app and one mini game — try them as a starting point.
+1. Open `tukuk.org/` — the app hub lists built-in apps, mini arcade games, and community publications you can remix as a starting point.
 2. Use **Auto-generate** mode to turn your own idea into an app — describe what the app is, and the generator builds a structure + starter content you can adapt. (There is a deterministic fallback when the AI model is unavailable, so it always works.)
 3. Preview the result live, and when you are happy, **Publish**.
 

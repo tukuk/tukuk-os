@@ -9,7 +9,7 @@ Many people try to learn a language by scrolling through long lists — 100 word
 
 ## The one-word-a-day approach
 
-**Satu Kata** (`tukuk.org/satu-kata`) builds that small habit: every day, one new word — with an emoji, a short meaning, and a **mini app plus a mini game** built around that word. Today `rain 🌧️`, tomorrow `rocket 🚀`. You do not feel like you are "studying"; you feel like you are playing, while vocabulary quietly seeps in.
+**Satu Kata** (an experiment we retired in October 2026 — the habit below still works, just pick the word yourself) built that small habit: every day, one new word — with an emoji, a short meaning, and a **mini app plus a mini game** around that word. Today `rain 🌧️`, tomorrow `rocket 🚀`. You do not feel like you are "studying"; you feel like you are playing, while vocabulary quietly seeps in.
 
 ## A little but consistent
 

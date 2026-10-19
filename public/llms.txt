@@ -2,8 +2,8 @@
 
 > Tukuk-OS is a free, account-free, Malay-first internet portal served from
 > https://tukuk.org: a privacy-first web search engine with AI answers, an
-> in-browser game arcade, low-bandwidth chat (T Chat), radio/music/news
-> explorers, and a one-word app & game generator. It is self-hosted
+> in-browser game arcade, low-bandwidth chat (T Chat), and radio/music/news
+> explorers. It is self-hosted
 > (Meilisearch index), sets no tracking cookies, and exposes a friendly JSON
 > API. Content and UI are primarily in Malay (Bahasa Melayu) and work on weak
 > networks (2G). Search results pages (`/cari`) carry no ads; the homepage
@@ -12,8 +12,7 @@
 Tukuk-OS answers a query by ranking its own crawled index, then can generate an
 extractive or LLM-assisted answer. Beyond search it hosts an in-browser game
 arcade (`/games`) and an app hub on the homepage, a live NASA data hub
-(`/nasa`), radio/music/news verticals, and a daily generator that turns one word
-into a web app + a playable Phaser game with sound.
+(`/nasa`), and radio/music/news verticals.
 
 ## Core search & AI
 - [Search](https://tukuk.org/search?q=sqlite): ranked results from the local index. `GET /search?q=<query>&limit=<n>`.
@@ -34,9 +33,6 @@ into a web app + a playable Phaser game with sound.
 - [Game arcade](https://tukuk.org/games): 3D browser games, play instantly with a global leaderboard.
 - [App hub](https://tukuk.org/): mini apps and games on the homepage; each can be installed as a PWA or downloaded as a signed APK via `/api/apk/<id>`.
 
-## One-word app + game generator
-- [Satu Kata hub](https://tukuk.org/satu-kata/): each word becomes one static web app + one web game (Preact + Phaser), auto-generated daily via free CI. No build step, no login.
-
 ## Apps & tools
 - [App hub](https://tukuk.org/): mini apps and games on the homepage (install as PWA or fetch a signed APK).
 - [Download](https://tukuk.org/download): T Chat for every OS.
@@ -50,4 +46,4 @@ into a web app + a playable Phaser game with sound.
 ## Notes for agents
 - All endpoints return JSON unless the request `Accept`s `text/html` (content negotiation on `/search`, `/ask`, etc.).
 - `/api/image?url=` is a same-origin image proxy for cross-origin media.
-- No account or API key is required for search, ask, blog, NASA, radio, or the Satu Kata apps.
+- No account or API key is required for search, ask, blog, NASA, or radio.

@@ -152,7 +152,7 @@
 (() => {
   const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   const GENRE_LABEL = { 'arkad': 'Arcade', 'teki-teki': 'Puzzle', 'refleks': 'Reflex', 'kuiz': 'Quiz', 'tindakan': 'Action', 'penembakan': 'Shooter', 'santai': 'Casual', 'kereta': 'Racing', 'sukan': 'Sports', 'klik': 'Clicker', 'io': '.io' };
-  const SRC_LABEL = { bawaan: 'Built-in', satukata: 'One-Word', arked: 'Arcade', komuniti: 'Community' };
+  const SRC_LABEL = { bawaan: 'Built-in', arked: 'Arcade', komuniti: 'Community' };
   const fmtPlays = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n || 0);
   const RECENT_KEY = 'tukuk-recent';
 
