@@ -43,6 +43,7 @@ const els = require('./elements');
 const sky = require('./deepsky');
 const pv = require('./proverbs');
 const sj = require('./sejarah');
+const kt = require('./kota');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -858,6 +859,18 @@ app.get('/sejarah/:mm/:dd', async (req, res) => {
   res.status(200).type('html').send(sejarahDayPage(data));
 });
 
+// ── LALUAN KOMPLEKS KOTA (/kota*) — World Cities, senarai statik + wiki fail-open ─
+// Teras halaman ialah data STATIK → tak boleh 503. Ringkasan Wikipedia ialah
+// KAYA-SAHAYA: fetch gagal → sum=null → halaman tetap 200 tanpa perihalan.
+app.get('/kota', (req, res) => res.status(200).type('html').send(kotaHubPage()));
+app.get('/kota/:slug', async (req, res) => {
+  const c = kt.findCity(req.params.slug);
+  if (!c) return res.status(404).type('html').send(kotaNotFound(req.params.slug));
+  let sum = null;
+  try { sum = await kt.fetchSummary(c.wiki); } catch {}
+  res.status(200).type('html').send(kotaPage(c, sum));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1350,7 +1363,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1521,6 +1534,18 @@ app.get('/sitemap-sejarah.xml', (req, res) => {
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/sejarah', '0.9')]
     .concat(sj.allDates().map((x) => one(`/sejarah/${x.mm}/${x.dd}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP KOTA — hab + setiap kota (senarai statik, sentiasa sah) ──
+app.get('/sitemap-kota.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/kota', '0.9')]
+    .concat(kt.CITIES.map((c) => one(`/kota/${c.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6275,6 +6300,98 @@ function sejarahNotFound(q) {
     css: SJ_CSS,
     body: `<p>That looks like a date outside the calendar (try <a href="/sejarah/10/20">10/20</a> for October 20). Open <a href="/sejarah">the full On this day calendar</a> and pick any day.</p>`,
   }, sejarahNav());
+}
+
+// ── /kota — World City profiles (senarai STATIK + ringkasan Wikipedia fail-open) ─
+const KT_CSS = `.city-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.city-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
+.city-card h3{margin:0 0 2px;font-size:1rem}
+.city-hero{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
+.city-hero img{border-radius:10px;border:1px solid var(--line);max-width:250px;width:100%;height:auto}
+.city-sum{font-size:1.02rem;line-height:1.7}
+@media(max-width:760px){.city-grid{grid-template-columns:1fr}}`;
+
+function cityCard(c) {
+  return `<div class="city-card"><h3><a href="/kota/${c.slug}">${escapeHtml(c.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(c.country)} · <a href="/negara/${c.countrySlug}">profile</a></p></div>`;
+}
+function kotaNav() {
+  return worldNav('World Cities — tukuk.org/kota', [{ href: '/kota', icon: '🌆', name: 'All cities', blurb: 'Profiles of the world’s great cities — where they are, which country they belong to, and a plain-English introduction to each.' }
+  ].concat(kt.REGION_ORDER.map((r) => ({ href: `/kota#${kt.slugify(r)}`, icon: '🌍', name: `${r} cities`, blurb: `${kt.citiesInRegion(r).length} cities across ${r}, from global megacities to historic capitals.`}))));
+}
+
+function kotaHubPage() {
+  const sections = kt.REGION_ORDER.map((r) => {
+    const cs = kt.citiesInRegion(r);
+    if (!cs.length) return '';
+    return `<h2 class="section-title" id="${kt.slugify(r)}">${r} <span class="meta">(${cs.length} cities)</span></h2><div class="city-grid">${cs.map(cityCard).join('')}</div>`;
+  }).join('');
+  const body = `<p>These are some of the world’s most <b>influential and visited cities</b> — the megacities, capitals and cultural crossroads that shape economies, art and everyday life. Each profile shows <em>where</em> the city sits, <em>which country</em> it belongs to and <em>what it is known for</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
+  <p>${kt.CITIES.length} cities from ${kt.COUNTRIES.length} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each city to read about its country in our World Countries series.</p>
+  ${sections}
+  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/negara">World Countries</a> · <a href="/cuaca">World Weather</a> · <a href="/sejarah">On this day</a> · <a href="/pepatah">Proverbs</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'World Cities — Tukuk-OS',
+    description: `Profiles of ${kt.CITIES.length} major world cities: location, country and a plain-English introduction to each.`,
+    url: 'https://tukuk.org/kota', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'World Cities — Profiles of the Great Cities of the World | Tukuk-OS',
+    desc: `Introductions to ${kt.CITIES.length} major world cities across ${kt.COUNTRIES.length} countries: location, country and what each city is known for.`,
+    selfUrl: 'https://tukuk.org/kota',
+    heroTitle: '🌆 World Cities', heroSub: `${kt.CITIES.length} cities · ${kt.COUNTRIES.length} countries · location, country & introduction`,
+    ld, css: KT_CSS, body,
+  }, kotaNav());
+}
+
+function kotaPage(c, sum) {
+  const coords = `${Math.abs(c.lat).toFixed(2)}\u00b0${c.lat >= 0 ? 'N' : 'S'}, ${Math.abs(c.lng).toFixed(2)}\u00b0${c.lng >= 0 ? 'E' : 'W'}`;
+  const mapHref = `https://www.openstreetmap.org/?mlat=${c.lat}&mlon=${c.lng}#map=11/${c.lat}/${c.lng}`;
+  const hero = sum && sum.thumb
+    ? `<div class="city-hero"><img src="${escapeHtml(sum.thumb)}" width="${sum.thumbW || 250}" height="${sum.thumbH || 250}" alt="${escapeHtml(c.name)}" loading="lazy" decoding="async"><div class="city-sum">${escapeHtml(sum.extract)}</div></div>`
+    : (sum && sum.extract ? `<p class="city-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(c.name)} is briefly reloading — the key facts below always show.</p>`);
+  const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
+  const siblings = kt.citiesByCountry(c.countrySlug).filter((x) => x.slug !== c.slug);
+  const moreCity = siblings.length ? `<h2 class="section-title">More cities in ${escapeHtml(c.country)}</h2><p>${siblings.map((x) => `<a href="/kota/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const rows = [
+    ['Country', `<a href="/negara/${c.countrySlug}">${escapeHtml(c.country)}</a>`],
+    ['Continent / region', escapeHtml(c.region)],
+    ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/kota">&larr; All cities</a></p>
+  ${hero}${readMore}
+  <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
+  <p><b>${escapeHtml(c.name)}</b> is in <a href="/negara/${c.countrySlug}">${escapeHtml(c.country)}</a>, a country in ${escapeHtml(c.region)}. For the living forecast here, open <a href="/cuaca">World Weather</a>; ${escapeHtml(c.name)}’s population and history are described by the sourced introduction above (from Wikipedia).</p>
+  ${moreCity}
+  <p class="meta">Coordinates are an approximate city centre. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Place', name: c.name, description: (sum && sum.description) || `City in ${c.country}`, url: `https://tukuk.org/kota/${c.slug}`,
+      containedInPlace: { '@type': 'Country', name: c.country },
+      geo: { '@type': 'GeoCoordinates', latitude: c.lat, longitude: c.lng } },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'World Cities', item: 'https://tukuk.org/kota' },
+      { '@type': 'ListItem', position: 2, name: c.region, item: `https://tukuk.org/kota#${kt.slugify(c.region)}` },
+      { '@type': 'ListItem', position: 3, name: c.name, item: `https://tukuk.org/kota/${c.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  const ogImage = sum && sum.thumb ? sum.thumb : undefined;
+  return worldDoc({
+    title: `${c.name} — City Profile, Location & Facts | Tukuk-OS`,
+    desc: sum && sum.description ? `${c.name}, ${sum.description.toLowerCase()} — location, country and a plain-English introduction.` : `${c.name} is a city in ${c.country}. Where it is, what country it belongs to, and a sourced introduction.`,
+    selfUrl: `https://tukuk.org/kota/${c.slug}`,
+    heroTitle: `🌆 ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.country)} · ${escapeHtml(c.region)} · ${escapeHtml(coords)}`,
+    ld, css: KT_CSS, body, ogImage,
+  }, kotaNav());
+}
+
+function kotaNotFound(q) {
+  return worldDoc({
+    title: 'City not found — World Cities | Tukuk-OS',
+    desc: 'That city was not recognised — browse the full list of world cities instead.',
+    selfUrl: 'https://tukuk.org/kota', robots: 'noindex,follow',
+    heroTitle: 'City not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: KT_CSS,
+    body: `<p>We don’t have a profile for that city yet. Open <a href="/kota">the full list of world cities</a> and browse by continent.</p>`,
+  }, kotaNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
