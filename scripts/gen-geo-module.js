@@ -2,7 +2,12 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'settlement', label: 'SETTLEMENT', title: 'Settlements of the World', var: 'SETTLEMENTS', sing: 'Settlement', finder: 'settlement', pfx: 'stl', cap: 'Settlements' },
+  { file: 'taman-negara', label: 'TAMAN-NEGARA', title: 'National Parks of the World', var: 'PARKS', sing: 'Park', finder: 'park', pfx: 'np', cap: 'Parks' },
+  { file: 'benteng', label: 'BENTENG', title: 'Forts of the World', var: 'FORTS', sing: 'Fort', finder: 'fort', pfx: 'ft', cap: 'Forts' },
+  { file: 'penjara', label: 'PENJARA', title: 'Prisons of the World', var: 'PRISONS', sing: 'Prison', finder: 'prison', pfx: 'pr', cap: 'Prisons' },
+  { file: 'mahkamah', label: 'MAHKAMAH', title: 'Courthouses of the World', var: 'COURTHOUSES', sing: 'Courthouse', finder: 'courthouse', pfx: 'ct', cap: 'Courthouses' },
+  { file: 'kincir-angin', label: 'KINCIR-ANGIN', title: 'Windmills of the World', var: 'WINDMILLS', sing: 'Windmill', finder: 'windmill', pfx: 'wm', cap: 'Windmills' },
+  { file: 'lapangan-golf', label: 'LAPANGAN-GOLF', title: 'Golf Courses of the World', var: 'GOLFCOURSES', sing: 'GolfCourse', finder: 'golfcourse', pfx: 'gc', cap: 'GolfCourses' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;

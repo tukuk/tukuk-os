@@ -111,6 +111,12 @@ const akd = require('./akueduk');
 const stn = require('./stesen-kereta-api');
 const sch = require('./sekolah');
 const stl = require('./settlement');
+const tmn = require('./taman-negara');
+const btg = require('./benteng');
+const pj = require('./penjara');
+const mhk = require('./mahkamah');
+const ka = require('./kincir-angin');
+const lg = require('./lapangan-golf');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1130,6 +1136,12 @@ geoRoutesPaged('railway-stations', stn, 'findRailwayStation', railwayHubPage, ra
 geoRoutesPaged('schools', sch, 'findSchool', schoolHubPage, schoolRegionPage, schoolPage, schoolNotFound, schoolCountryPage);
 // /settlements — merged multi-country tier (French communes, US CDPs, Dutch municipalities), paged hub.
 geoRoutesPaged('settlements', stl, 'findSettlement', settlementHubPage, settlementRegionPage, settlementPage, settlementNotFound, settlementCountryPage);
+geoRoutes('national-parks', tmn, 'findPark', nationalParksHubPage, nationalParksRegionPage, nationalParksPage, nationalParksNotFound);
+geoRoutes('forts', btg, 'findFort', fortsHubPage, fortsRegionPage, fortsPage, fortsNotFound);
+geoRoutes('prisons', pj, 'findPrison', prisonsHubPage, prisonsRegionPage, prisonsPage, prisonsNotFound);
+geoRoutes('courthouses', mhk, 'findCourthouse', courthousesHubPage, courthousesRegionPage, courthousesPage, courthousesNotFound);
+geoRoutes('windmills', ka, 'findWindmill', windmillsHubPage, windmillsRegionPage, windmillsPage, windmillsNotFound);
+geoRoutes('golf-courses', lg, 'findGolfCourse', golfCoursesHubPage, golfCoursesRegionPage, golfCoursesPage, golfCoursesNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1637,7 +1649,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2013,6 +2025,12 @@ geoSitemap('patung', ptg, 'STATUES');
 geoSitemap('rumah-opera', rpo, 'OPERAHOUSES');
 geoSitemap('gurun', grn, 'DESERTS');
 geoSitemap('akueduk', akd, 'AQUEDUCTS');
+geoSitemap('national-parks', tmn, 'PARKS');
+geoSitemap('forts', btg, 'FORTS');
+geoSitemap('prisons', pj, 'PRISONS');
+geoSitemap('courthouses', mhk, 'COURTHOUSES');
+geoSitemap('windmills', ka, 'WINDMILLS');
+geoSitemap('golf-courses', lg, 'GOLFCOURSES');
 geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
 geoSitemap('settlements', stl, 'SETTLEMENTS');
@@ -7744,6 +7762,43 @@ function akuedukHubPage() { return geoHubPage(akd, 'akueduk', AKUEDUK_CFG); }
 function akuedukRegionPage(r) { return geoRegionPage(r, akd, 'akueduk', AKUEDUK_CFG); }
 function akuedukPage(x, sum) { return geoItemPage(x, sum, akd, 'akueduk', AKUEDUK_CFG); }
 function akuedukNotFound(q) { return geoNotFound('akueduk', AKUEDUK_CFG, q); }
+
+// ── BATCH H: national parks, forts, prisons, courthouses, windmills, golf courses ──
+const NATIONALPARKS_CFG = geoCfg({ base: 'national-parks', listKey: 'PARKS', inRegion: 'parksInRegion', byCountry: 'parkByCountry', unit: 'national parks', singular: 'national park', titleCase: 'National Parks', icon: '\ud83c\udf32', navBlurb: `Profiles of the world's national parks \u2014 where each protected area lies, which country it belongs to, and a plain-English introduction.`, seoDesc: 'Introductions to notable national parks worldwide: location, country and what makes each protected area significant.', subMetric: 'protected area & country', intro: `These are the world's most notable <b>national parks</b> \u2014 large protected areas set aside to conserve ecosystems, wildlife and landscapes, from savanna reserves to alpine wilderness. Each profile shows where the park is, which country it belongs to, and a plain-English introduction from Wikipedia.`, ldType: 'Park' });
+function nationalParksHubPage() { return geoHubPage(tmn, 'national-parks', NATIONALPARKS_CFG); }
+function nationalParksRegionPage(r) { return geoRegionPage(r, tmn, 'national-parks', NATIONALPARKS_CFG); }
+function nationalParksPage(x, sum) { return geoItemPage(x, sum, tmn, 'national-parks', NATIONALPARKS_CFG); }
+function nationalParksNotFound(q) { return geoNotFound('national-parks', NATIONALPARKS_CFG, q); }
+
+const FORTS_CFG = geoCfg({ base: 'forts', listKey: 'FORTS', inRegion: 'fortsInRegion', byCountry: 'fortByCountry', unit: 'forts', singular: 'fort', titleCase: 'Forts', icon: '\ud83c\udff0', navBlurb: `Profiles of the world's forts \u2014 where each fortification stood, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable forts and fortifications worldwide: location, country and the military history behind each structure.', subMetric: 'fortification & country', intro: `These are the world's most notable <b>forts</b> \u2014 defensive military structures from star-shaped citadels to colonial frontier posts and coastal batteries. Each profile shows where the fort stood, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Fort' });
+function fortsHubPage() { return geoHubPage(btg, 'forts', FORTS_CFG); }
+function fortsRegionPage(r) { return geoRegionPage(r, btg, 'forts', FORTS_CFG); }
+function fortsPage(x, sum) { return geoItemPage(x, sum, btg, 'forts', FORTS_CFG); }
+function fortsNotFound(q) { return geoNotFound('forts', FORTS_CFG, q); }
+
+const PRISONS_CFG = geoCfg({ base: 'prisons', listKey: 'PRISONS', inRegion: 'prisonsInRegion', byCountry: 'prisonByCountry', unit: 'prisons', singular: 'prison', titleCase: 'Prisons', icon: '\ud83d\udd12', navBlurb: `Profiles of notable prisons \u2014 where each facility is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable prisons and penal institutions worldwide: location, country and the history behind each facility.', subMetric: 'penal institution & country', intro: `These are some of the world's most notable <b>prisons</b> \u2014 penal institutions infamous for their history, architecture or famous inmates, from island fortresses to maximum-security complexes. Each profile shows where the prison is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Building' });
+function prisonsHubPage() { return geoHubPage(pj, 'prisons', PRISONS_CFG); }
+function prisonsRegionPage(r) { return geoRegionPage(r, pj, 'prisons', PRISONS_CFG); }
+function prisonsPage(x, sum) { return geoItemPage(x, sum, pj, 'prisons', PRISONS_CFG); }
+function prisonsNotFound(q) { return geoNotFound('prisons', PRISONS_CFG, q); }
+
+const COURTHOUSES_CFG = geoCfg({ base: 'courthouses', listKey: 'COURTHOUSES', inRegion: 'courthousesInRegion', byCountry: 'courthouseByCountry', unit: 'courthouses', singular: 'courthouse', titleCase: 'Courthouses', icon: '\ud83c\udfdb\ufe0f', navBlurb: `Profiles of notable courthouses \u2014 where each court sits, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable courthouses and palaces of justice worldwide: location, country and the legal history within each building.', subMetric: 'seat of justice & country', intro: `These are notable <b>courthouses</b> \u2014 buildings that host courts of law, from grand civic palaces to historic seats of justice where landmark trials were held. Each profile shows where the courthouse is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Building' });
+function courthousesHubPage() { return geoHubPage(mhk, 'courthouses', COURTHOUSES_CFG); }
+function courthousesRegionPage(r) { return geoRegionPage(r, mhk, 'courthouses', COURTHOUSES_CFG); }
+function courthousesPage(x, sum) { return geoItemPage(x, sum, mhk, 'courthouses', COURTHOUSES_CFG); }
+function courthousesNotFound(q) { return geoNotFound('courthouses', COURTHOUSES_CFG, q); }
+
+const WINDMILLS_CFG = geoCfg({ base: 'windmills', listKey: 'WINDMILLS', inRegion: 'windmillsInRegion', byCountry: 'windmillByCountry', unit: 'windmills', singular: 'windmill', titleCase: 'Windmills', icon: '\ud83c\udf00', navBlurb: `Profiles of notable windmills \u2014 where each mill stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable windmills worldwide: location, country and the engineering heritage behind each mill.', subMetric: 'heritage mill & country', intro: `These are notable <b>windmills</b> \u2014 historic structures that harness the wind to grind grain, drain land or pump water, from Dutch tower mills to Mediterranean smock mills. Each profile shows where the windmill stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Landmark' });
+function windmillsHubPage() { return geoHubPage(ka, 'windmills', WINDMILLS_CFG); }
+function windmillsRegionPage(r) { return geoRegionPage(r, ka, 'windmills', WINDMILLS_CFG); }
+function windmillsPage(x, sum) { return geoItemPage(x, sum, ka, 'windmills', WINDMILLS_CFG); }
+function windmillsNotFound(q) { return geoNotFound('windmills', WINDMILLS_CFG, q); }
+
+const GOLFCOURSES_CFG = geoCfg({ base: 'golf-courses', listKey: 'GOLFCOURSES', inRegion: 'golfcoursesInRegion', byCountry: 'golfcourseByCountry', unit: 'golf courses', singular: 'golf course', titleCase: 'Golf Courses', icon: '\u26f3', navBlurb: `Profiles of notable golf courses \u2014 where each course lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable golf courses worldwide: location, country and what makes each championship layout renowned.', subMetric: 'championship course & country', intro: `These are notable <b>golf courses</b> \u2014 celebrated links and parkland layouts that host major championships or are prized for their design, from Scottish coastal links to desert reserves. Each profile shows where the course is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'GolfCourse' });
+function golfCoursesHubPage() { return geoHubPage(lg, 'golf-courses', GOLFCOURSES_CFG); }
+function golfCoursesRegionPage(r) { return geoRegionPage(r, lg, 'golf-courses', GOLFCOURSES_CFG); }
+function golfCoursesPage(x, sum) { return geoItemPage(x, sum, lg, 'golf-courses', GOLFCOURSES_CFG); }
+function golfCoursesNotFound(q) { return geoNotFound('golf-courses', GOLFCOURSES_CFG, q); }
 
 // ── RAILWAY STATIONS (/railway-stations) — paged, country-partitioned hub ──
 const RAILWAY_CFG = geoCfg({ base: 'railway-stations', listKey: 'STATIONS', inRegion: 'stationsInRegion', byCountry: 'stationByCountry', unit: 'railway stations', singular: 'railway station', titleCase: 'Railway Stations', icon: '\ud83d\ude89', navBlurb: `Profiles of the world's railway stations \u2014 where each stop is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable railway stations worldwide: location, country and what makes each station significant.', subMetric: 'location & rail heritage', intro: `These are the world's notable <b>railway stations</b> \u2014 grand terminuses, quiet rural halts and busy junctions that anchor cities and national networks. This library is large, so it is browsed by continent, then by country. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
