@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'pondok-gunung', label: 'PONDOK-GUNUNG', title: 'Mountain Huts of the World', var: 'MOUNTAINHUTS', sing: 'MountainHut', finder: 'mountainhut', finders: 'mountainHutsInRegion', pfx: 'pg', cap: 'PondokGunung' },
-  { file: 'kota-spa', label: 'KOTA-SPA', title: 'Spa Towns of the World', var: 'SPATOWNS', sing: 'SpaTown', finder: 'spatown', finders: 'spaTownsInRegion', pfx: 'ks', cap: 'KotaSpa' },
-  { file: 'jeram', label: 'JERAM', title: 'Rapids of the World', var: 'RAPIDS', sing: 'Rapid', finder: 'rapid', finders: 'rapidsInRegion', pfx: 'jr', cap: 'Jeram' },
-  { file: 'genting-tanah', label: 'GENTING-TANAH', title: 'Isthmuses of the World', var: 'ISTHMUSES', sing: 'Isthmus', finder: 'isthmus', finders: 'isthmusesInRegion', pfx: 'gt', cap: 'GentingTanah' },
-  { file: 'pan-garam', label: 'PAN-GARAM', title: 'Salt Pans of the World', var: 'SALTPANS', sing: 'SaltPan', finder: 'saltpan', finders: 'saltPansInRegion', pfx: 'pa', cap: 'PanGaram' },
-  { file: 'jalan-tambak', label: 'JALAN-TAMBAK', title: 'Causeways of the World', var: 'CAUSEWAYS', sing: 'Causeway', finder: 'causeway', finders: 'causewaysInRegion', pfx: 'jt', cap: 'JalanTambak' },
-  { file: 'stesen-signal', label: 'STESEN-SIGNAL', title: 'Signal Boxes of the World', var: 'SIGNALBOXES', sing: 'SignalBox', finder: 'signalbox', finders: 'signalBoxesInRegion', pfx: 'sg', cap: 'StesenSignal' },
-  { file: 'kasbah', label: 'KASBAH', title: 'Kasbahs of the World', var: 'KASBAHS', sing: 'Kasbah', finder: 'kasbah', finders: 'kasbahsInRegion', pfx: 'kb', cap: 'Kasbah' },
+  { file: 'jambatan-kaki', label: 'JAMBATAN-KAKI', title: 'Footbridges of the World', var: 'FOOTBRIDGES', sing: 'Footbridge', finder: 'footbridge', finders: 'footbridgesInRegion', pfx: 'jk', cap: 'JambatanKaki' },
+  { file: 'rumah-menara', label: 'RUMAH-MENARA', title: 'Tower Houses of the World', var: 'TOWERHOUSES', sing: 'TowerHouse', finder: 'towerhouse', finders: 'towerHousesInRegion', pfx: 'rh', cap: 'RumahMenara' },
+  { file: 'muzium-terbuka', label: 'MUZIUM-TERBUKA', title: 'Open-Air Museums of the World', var: 'OPENAIRMUSEUMS', sing: 'OpenAirMuseum', finder: 'openairmuseum', finders: 'openAirMuseumsInRegion', pfx: 'mz', cap: 'MuziumTerbuka' },
+  { file: 'jambatan-tol', label: 'JAMBATAN-TOL', title: 'Toll Bridges of the World', var: 'TOLLBRIDGES', sing: 'TollBridge', finder: 'tollbridge', finders: 'tollBridgesInRegion', pfx: 'jg', cap: 'JambatanTol' },
+  { file: 'jambatan-ayun', label: 'JAMBATAN-AYUN', title: 'Swing Bridges of the World', var: 'SWINGBRIDGES', sing: 'SwingBridge', finder: 'swingbridge', finders: 'swingBridgesInRegion', pfx: 'jy', cap: 'JambatanAyun' },
+  { file: 'pembenihan-ikan', label: 'PEMBENIHAN-IKAN', title: 'Fish Hatcheries of the World', var: 'FISHHATCHERIES', sing: 'FishHatchery', finder: 'fishhatchery', finders: 'fishHatcheriesInRegion', pfx: 'pi', cap: 'PembenihanIkan' },
+  { file: 'pulau-halangan', label: 'PULAU-HALANGAN', title: 'Barrier Islands of the World', var: 'BARRIERISLANDS', sing: 'BarrierIsland', finder: 'barrierisland', finders: 'barrierIslandsInRegion', pfx: 'ph', cap: 'PulauHalangan' },
+  { file: 'menara-martello', label: 'MENARA-MARTELLO', title: 'Martello Towers of the World', var: 'MARTELLOTOWERS', sing: 'MartelloTower', finder: 'martellotower', finders: 'martelloTowersInRegion', pfx: 'mm', cap: 'MenaraMartello' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
