@@ -2,12 +2,10 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'taman-negara', label: 'TAMAN-NEGARA', title: 'National Parks of the World', var: 'PARKS', sing: 'Park', finder: 'park', pfx: 'np', cap: 'Parks' },
-  { file: 'benteng', label: 'BENTENG', title: 'Forts of the World', var: 'FORTS', sing: 'Fort', finder: 'fort', pfx: 'ft', cap: 'Forts' },
-  { file: 'penjara', label: 'PENJARA', title: 'Prisons of the World', var: 'PRISONS', sing: 'Prison', finder: 'prison', pfx: 'pr', cap: 'Prisons' },
-  { file: 'mahkamah', label: 'MAHKAMAH', title: 'Courthouses of the World', var: 'COURTHOUSES', sing: 'Courthouse', finder: 'courthouse', pfx: 'ct', cap: 'Courthouses' },
-  { file: 'kincir-angin', label: 'KINCIR-ANGIN', title: 'Windmills of the World', var: 'WINDMILLS', sing: 'Windmill', finder: 'windmill', pfx: 'wm', cap: 'Windmills' },
-  { file: 'lapangan-golf', label: 'LAPANGAN-GOLF', title: 'Golf Courses of the World', var: 'GOLFCOURSES', sing: 'GolfCourse', finder: 'golfcourse', pfx: 'gc', cap: 'GolfCourses' },
+  { file: 'teater', label: 'TEATER', title: 'Theatres of the World', var: 'THEATRES', sing: 'Theatre', finder: 'theatre', pfx: 'th', cap: 'Theatres' },
+  { file: 'pusat-beli-belah', label: 'PUSAT-BELI-BELAJ', title: 'Shopping Centers of the World', var: 'SHOPPINGCENTERS', sing: 'ShoppingCenter', finder: 'shoppingcenter', pfx: 'sc', cap: 'ShoppingCenters' },
+  { file: 'arena', label: 'ARENA', title: 'Arenas of the World', var: 'ARENAS', sing: 'Arena', finder: 'arena', pfx: 'ar', cap: 'Arenas' },
+  { file: 'ladang', label: 'LADANG', title: 'Farms of the World', var: 'FARMS', sing: 'Farm', finder: 'farm', pfx: 'fm', cap: 'Farms' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
