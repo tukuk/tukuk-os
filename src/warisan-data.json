@@ -771,5 +771,17 @@
 {"name": "Novodevichy Convent", "wiki": "Novodevichy Convent", "country": "Russia", "region": "Europe", "lat": 55.72, "lng": 37.08, "type": "Cultural"},
 {"name": "Old Quarters and Fortifications of the City of Luxembourg", "wiki": "Luxembourg City", "country": "Luxembourg", "region": "Europe", "lat": 49.61, "lng": 6.13, "type": "Cultural"},
 {"name": "Archaeological Site of Philippi", "wiki": "Philippi", "country": "Greece", "region": "Europe", "lat": 41.0, "lng": 24.3, "type": "Cultural"},
-{"name": "Megalithic Temples of Malta", "wiki": "Megalithic Temples of Malta", "country": "Malta", "region": "Europe", "lat": 35.9, "lng": 14.45, "type": "Cultural"}
+{"name": "Megalithic Temples of Malta", "wiki": "Megalithic Temples of Malta", "country": "Malta", "region": "Europe", "lat": 35.9, "lng": 14.45, "type": "Cultural"},
+{"name": "Archaeological Site of Kerkouane", "wiki": "Kerkouane", "country": "Tunisia", "region": "Africa", "lat": 36.9, "lng": 11.4, "type": "Cultural"},
+{"name": "La Fortaleza and San Juan National Historic Site", "wiki": "San Juan National Historic Site", "country": "Puerto Rico", "region": "Americas", "lat": 18.47, "lng": -66.11, "type": "Cultural"},
+{"name": "Jantar Mantar, Jaipur", "wiki": "Jantar Mantar, Jaipur", "country": "India", "region": "Asia", "lat": 26.92, "lng": 75.82, "type": "Cultural"},
+{"name": "Sacred Ensembles of the Hoysalas", "wiki": "Halebidu", "country": "India", "region": "Asia", "lat": 13.22, "lng": 75.33, "type": "Cultural"},
+{"name": "Sambor Prei Kuk", "wiki": "Sambor Prei Kuk", "country": "Cambodia", "region": "Asia", "lat": 12.87, "lng": 105.05, "type": "Cultural"},
+{"name": "Plain of Jars", "wiki": "Plain of Jars", "country": "Laos", "region": "Asia", "lat": 19.4, "lng": 103.15, "type": "Cultural"},
+{"name": "Naumburg Cathedral", "wiki": "Naumburg", "country": "Germany", "region": "Europe", "lat": 51.15, "lng": 11.8, "type": "Cultural"},
+{"name": "Episcopal City of Albi", "wiki": "Albi", "country": "France", "region": "Europe", "lat": 43.93, "lng": 2.14, "type": "Cultural"},
+{"name": "Historic Centre of Oporto, Luiz I Bridge and Monastery of Serra do Pilar", "wiki": "Porto", "country": "Portugal", "region": "Europe", "lat": 41.15, "lng": -8.61, "type": "Cultural"},
+{"name": "Monastery of Alcobaca", "wiki": "Alcobaça Monastery", "country": "Portugal", "region": "Europe", "lat": 39.55, "lng": -8.93, "type": "Cultural"},
+{"name": "Catalan Romanesque Churches of the Vall de Boi", "wiki": "Catalan Romanesque Churches of the Vall de Boí", "country": "Spain", "region": "Europe", "lat": 42.5, "lng": 0.85, "type": "Cultural"},
+{"name": "Hal Saflieni Hypogeum", "wiki": "Ħal Saflieni Hypogeum", "country": "Malta", "region": "Europe", "lat": 35.88, "lng": 14.5, "type": "Cultural"}
 ]
