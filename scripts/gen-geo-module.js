@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'lewah', label: 'LEWAH', title: 'Mountain Passes of the World', var: 'MOUNTAINPASSES', sing: 'MountainPass', finder: 'mountainpass', finders: 'mountainPassesInRegion', pfx: 'mp', cap: 'MountainPasses' },
-  { file: 'galeri-seni', label: 'GALERI-SENI', title: 'Art Galleries of the World', var: 'ARTGALLERIES', sing: 'ArtGallery', finder: 'artgallery', finders: 'artGalleriesInRegion', pfx: 'ag', cap: 'ArtGalleries' },
-  { file: 'kasino', label: 'KASINO', title: 'Casinos of the World', var: 'CASINOS', sing: 'Casino', finder: 'casino', finders: 'casinosInRegion', pfx: 'ks', cap: 'Casinos' },
-  { file: 'menara-air', label: 'MENARA-AIR', title: 'Water Towers of the World', var: 'WATERTOWERS', sing: 'WaterTower', finder: 'watertower', finders: 'waterTowersInRegion', pfx: 'mt', cap: 'WaterTowers' },
-  { file: 'muara', label: 'MUARA', title: 'Estuaries of the World', var: 'ESTUARIES', sing: 'Estuary', finder: 'estuary', finders: 'estuariesInRegion', pfx: 'mu', cap: 'Estuaries' },
-  { file: 'velodrom', label: 'VELODROM', title: 'Velodromes of the World', var: 'VELODROMES', sing: 'Velodrome', finder: 'velodrome', finders: 'velodromesInRegion', pfx: 'vd', cap: 'Velodromes' },
-  { file: 'planetarium', label: 'PLANETARIUM', title: 'Planetariums of the World', var: 'PLANETARIUMS', sing: 'Planetarium', finder: 'planetarium', finders: 'planetariumsInRegion', pfx: 'pn', cap: 'Planetariums' },
-  { file: 'amphitheatre', label: 'AMPHITHEATRE', title: 'Amphitheatres of the World', var: 'AMPHITHEATRES', sing: 'Amphitheatre', finder: 'amphitheatre', finders: 'amphitheatresInRegion', pfx: 'ah', cap: 'Amphitheatres' },
-  { file: 'menhir', label: 'MENHIR', title: 'Menhirs of the World', var: 'MENHIRS', sing: 'Menhir', finder: 'menhir', finders: 'menhirsInRegion', pfx: 'mh', cap: 'Menhirs' },
+  { file: 'kawasan-lindung', label: 'KAWASAN-LINDUNG', title: 'Protected Areas of the World', var: 'PROTECTEDAREAS', sing: 'ProtectedArea', finder: 'protectedarea', finders: 'protectedAreasInRegion', pfx: 'pa', cap: 'ProtectedAreas' },
+  { file: 'puncak', label: 'PUNCAK', title: 'Summits of the World', var: 'SUMMITS', sing: 'Summit', finder: 'summit', finders: 'summitsInRegion', pfx: 'sm', cap: 'Summits' },
+  { file: 'gerbang-kota', label: 'GERBANG-KOTA', title: 'City Gates of the World', var: 'CITYGATES', sing: 'CityGate', finder: 'citygate', finders: 'cityGatesInRegion', pfx: 'cg', cap: 'CityGates' },
+  { file: 'terusan-kunci', label: 'TERUSAN-KUNCI', title: 'Canal Locks of the World', var: 'CANALLOCKS', sing: 'CanalLock', finder: 'canallock', finders: 'canalLocksInRegion', pfx: 'cl', cap: 'CanalLocks' },
+  { file: 'kuari', label: 'KUARI', title: 'Quarries of the World', var: 'QUARRIES', sing: 'Quarry', finder: 'quarry', finders: 'quarriesInRegion', pfx: 'qr', cap: 'Quarries' },
+  { file: 'hutan-negeri', label: 'HUTAN-NEGERI', title: 'State Forests of the World', var: 'STATEFORESTS', sing: 'StateForest', finder: 'stateforest', finders: 'stateForestsInRegion', pfx: 'sf', cap: 'StateForests' },
+  { file: 'lebuh-raya', label: 'LEBUH-RAYA', title: 'Controlled-access Highways of the World', var: 'EXPRESSWAYS', sing: 'Expressway', finder: 'expressway', finders: 'expresswaysInRegion', pfx: 'ex', cap: 'Expressways' },
+  { file: 'galangan-kapal', label: 'GALANGAN-KAPAL', title: 'Shipyards of the World', var: 'SHIPYARDS', sing: 'Shipyard', finder: 'shipyard', finders: 'shipyardsInRegion', pfx: 'sy', cap: 'Shipyards' },
+  { file: 'obelisk', label: 'OBELISK', title: 'Obelisks of the World', var: 'OBELISKS', sing: 'Obelisk', finder: 'obelisk', finders: 'obelisksInRegion', pfx: 'ob', cap: 'Obelisks' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;

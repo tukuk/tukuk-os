@@ -164,6 +164,15 @@ const vld = require('./velodrom');
 const pln = require('./planetarium');
 const amp = require('./amphitheatre');
 const mnh = require('./menhir');
+const kld = require('./kawasan-lindung');
+const pck = require('./puncak');
+const gkt = require('./gerbang-kota');
+const tkn = require('./terusan-kunci');
+const kua = require('./kuari');
+const htn = require('./hutan-negeri');
+const lbr = require('./lebuh-raya');
+const gkp = require('./galangan-kapal');
+const obl = require('./obelisk');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1236,6 +1245,15 @@ geoRoutes('velodromes', vld, 'findVelodrome', velodromesHubPage, velodromesRegio
 geoRoutes('planetariums', pln, 'findPlanetarium', planetariumsHubPage, planetariumsRegionPage, planetariumsPage, planetariumsNotFound);
 geoRoutes('amphitheatres', amp, 'findAmphitheatre', amphitheatresHubPage, amphitheatresRegionPage, amphitheatresPage, amphitheatresNotFound);
 geoRoutes('menhirs', mnh, 'findMenhir', menhirsHubPage, menhirsRegionPage, menhirsPage, menhirsNotFound);
+geoRoutesPaged('protected-areas', kld, 'findProtectedArea', protectedAreasHubPage, protectedAreasRegionPage, protectedAreasPage, protectedAreasNotFound, protectedAreasCountryPage);
+geoRoutes('summits', pck, 'findSummit', summitsHubPage, summitsRegionPage, summitsPage, summitsNotFound);
+geoRoutes('city-gates', gkt, 'findCityGate', cityGatesHubPage, cityGatesRegionPage, cityGatesPage, cityGatesNotFound);
+geoRoutes('canal-locks', tkn, 'findCanalLock', canalLocksHubPage, canalLocksRegionPage, canalLocksPage, canalLocksNotFound);
+geoRoutes('quarries', kua, 'findQuarry', quarriesHubPage, quarriesRegionPage, quarriesPage, quarriesNotFound);
+geoRoutes('state-forests', htn, 'findStateForest', stateForestsHubPage, stateForestsRegionPage, stateForestsPage, stateForestsNotFound);
+geoRoutes('expressways', lbr, 'findExpressway', expresswaysHubPage, expresswaysRegionPage, expresswaysPage, expresswaysNotFound);
+geoRoutes('shipyards', gkp, 'findShipyard', shipyardsHubPage, shipyardsRegionPage, shipyardsPage, shipyardsNotFound);
+geoRoutes('obelisks', obl, 'findObelisk', obelisksHubPage, obelisksRegionPage, obelisksPage, obelisksNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1743,7 +1761,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2172,6 +2190,15 @@ geoSitemap('velodromes', vld, 'VELODROMES');
 geoSitemap('planetariums', pln, 'PLANETARIUMS');
 geoSitemap('amphitheatres', amp, 'AMPHITHEATRES');
 geoSitemap('menhirs', mnh, 'MENHIRS');
+geoSitemap('protected-areas', kld, 'PROTECTEDAREAS');
+geoSitemap('summits', pck, 'SUMMITS');
+geoSitemap('city-gates', gkt, 'CITYGATES');
+geoSitemap('canal-locks', tkn, 'CANALLOCKS');
+geoSitemap('quarries', kua, 'QUARRIES');
+geoSitemap('state-forests', htn, 'STATEFORESTS');
+geoSitemap('expressways', lbr, 'EXPRESSWAYS');
+geoSitemap('shipyards', gkp, 'SHIPYARDS');
+geoSitemap('obelisks', obl, 'OBELISKS');
 geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
 geoSitemap('settlements', stl, 'SETTLEMENTS');
@@ -8262,6 +8289,70 @@ function menhirsHubPage() { return geoHubPage(mnh, 'menhirs', MENHIRS_CFG); }
 function menhirsRegionPage(r) { return geoRegionPage(r, mnh, 'menhirs', MENHIRS_CFG); }
 function menhirsPage(x, sum) { return geoItemPage(x, sum, mnh, 'menhirs', MENHIRS_CFG); }
 function menhirsNotFound(q) { return geoNotFound('menhirs', MENHIRS_CFG, q); }
+
+// ── PROTECTED AREAS (/protected-areas) — paged, country-partitioned hub ──
+const PROTECTEDAREAS_CFG = geoCfg({ base: 'protected-areas', listKey: 'PROTECTEDAREAS', inRegion: 'protectedAreasInRegion', byCountry: 'protectedareaByCountry', unit: 'protected areas', singular: 'protected area', titleCase: 'Protected Areas', icon: '\ud83c\udfde\ufe0f', navBlurb: `Profiles of the world's protected areas \u2014 where each site lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to protected areas worldwide: location, country and what each conserved region protects.', subMetric: 'conservation site & country', intro: `These are the world's notable <b>protected areas</b> \u2014 parks, reserves and conserved lands set aside to safeguard nature, wildlife and cultural heritage. This library is large, so it is browsed by continent, then by country. Each profile shows where the site is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Park' });
+function protectedAreasHubPage() { return geoHubCompactPage(kld, 'protected-areas', PROTECTEDAREAS_CFG); }
+function protectedAreasRegionPage(r) { return geoRegionCountryIndexPage(r, kld, 'protected-areas', PROTECTEDAREAS_CFG); }
+function protectedAreasPage(x, sum) { return geoItemPage(x, sum, kld, 'protected-areas', PROTECTEDAREAS_CFG); }
+function protectedAreasNotFound(q) { return geoNotFound('protected-areas', PROTECTEDAREAS_CFG, q); }
+function protectedAreasCountryPage(cs, p) { return geoCountryPagedPage(cs, kld, 'protected-areas', PROTECTEDAREAS_CFG, p); }
+
+// ── SUMMITS (/summits) — simple geo factory ──
+const SUMMITS_CFG = geoCfg({ base: 'summits', listKey: 'SUMMITS', inRegion: 'summitsInRegion', byCountry: 'summitByCountry', unit: 'summits', singular: 'summit', titleCase: 'Summits', icon: '\u26f0', navBlurb: `Profiles of notable summits \u2014 where each peak rises, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable mountain summits worldwide: location, country and the high points climbers reach.', subMetric: 'peak & country', intro: `These are notable <b>summits</b> \u2014 the high points and tops of mountains and ridges that climbers bag and maps mark, from alpine crowns to remote range pillars. Each profile shows where the summit is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Mountain' });
+function summitsHubPage() { return geoHubPage(pck, 'summits', SUMMITS_CFG); }
+function summitsRegionPage(r) { return geoRegionPage(r, pck, 'summits', SUMMITS_CFG); }
+function summitsPage(x, sum) { return geoItemPage(x, sum, pck, 'summits', SUMMITS_CFG); }
+function summitsNotFound(q) { return geoNotFound('summits', SUMMITS_CFG, q); }
+
+// ── CITY GATES (/city-gates) — simple geo factory ──
+const CITYGATES_CFG = geoCfg({ base: 'city-gates', listKey: 'CITYGATES', inRegion: 'cityGatesInRegion', byCountry: 'citygateByCountry', unit: 'city gates', singular: 'city gate', titleCase: 'City Gates', icon: '\ud83c\udff0', navBlurb: `Profiles of notable city gates \u2014 where each gateway stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to historic city gates worldwide: location, country and the walls and sieges each gateway guarded.', subMetric: 'fortified gateway & country', intro: `These are notable <b>city gates</b> \u2014 the fortified entrances through which walled cities were entered and defended, many surviving as celebrated landmarks. Each profile shows where the gate stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function cityGatesHubPage() { return geoHubPage(gkt, 'city-gates', CITYGATES_CFG); }
+function cityGatesRegionPage(r) { return geoRegionPage(r, gkt, 'city-gates', CITYGATES_CFG); }
+function cityGatesPage(x, sum) { return geoItemPage(x, sum, gkt, 'city-gates', CITYGATES_CFG); }
+function cityGatesNotFound(q) { return geoNotFound('city-gates', CITYGATES_CFG, q); }
+
+// ── CANAL LOCKS (/canal-locks) — simple geo factory ──
+const CANALLOCKS_CFG = geoCfg({ base: 'canal-locks', listKey: 'CANALLOCKS', inRegion: 'canalLocksInRegion', byCountry: 'canallockByCountry', unit: 'canal locks', singular: 'canal lock', titleCase: 'Canal Locks', icon: '\ud83d\udea2', navBlurb: `Profiles of notable canal locks \u2014 where each flight lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable canal locks worldwide: location, country and the engineering of each waterway staircase.', subMetric: 'waterway lock & country', intro: `These are notable <b>canal locks</b> \u2014 the gated chambers and staircases of flights that lift and lower boats between water levels, engineering marvels of the canal age. Each profile shows where the lock is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function canalLocksHubPage() { return geoHubPage(tkn, 'canal-locks', CANALLOCKS_CFG); }
+function canalLocksRegionPage(r) { return geoRegionPage(r, tkn, 'canal-locks', CANALLOCKS_CFG); }
+function canalLocksPage(x, sum) { return geoItemPage(x, sum, tkn, 'canal-locks', CANALLOCKS_CFG); }
+function canalLocksNotFound(q) { return geoNotFound('canal-locks', CANALLOCKS_CFG, q); }
+
+// ── QUARRIES (/quarries) — simple geo factory ──
+const QUARRIES_CFG = geoCfg({ base: 'quarries', listKey: 'QUARRIES', inRegion: 'quarriesInRegion', byCountry: 'quarryByCountry', unit: 'quarries', singular: 'quarry', titleCase: 'Quarries', icon: '\u26cf', navBlurb: `Profiles of notable quarries \u2014 where each pit lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable quarries worldwide: location, country and the stone, marble or aggregate each has yielded.', subMetric: 'stone pit & country', intro: `These are notable <b>quarries</b> \u2014 open-pit excavations that have supplied the marble, limestone and granite behind great buildings, some now flooded lakes or heritage sites. Each profile shows where the quarry is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function quarriesHubPage() { return geoHubPage(kua, 'quarries', QUARRIES_CFG); }
+function quarriesRegionPage(r) { return geoRegionPage(r, kua, 'quarries', QUARRIES_CFG); }
+function quarriesPage(x, sum) { return geoItemPage(x, sum, kua, 'quarries', QUARRIES_CFG); }
+function quarriesNotFound(q) { return geoNotFound('quarries', QUARRIES_CFG, q); }
+
+// ── STATE FORESTS (/state-forests) — simple geo factory ──
+const STATEFORESTS_CFG = geoCfg({ base: 'state-forests', listKey: 'STATEFORESTS', inRegion: 'stateForestsInRegion', byCountry: 'stateforestByCountry', unit: 'state forests', singular: 'state forest', titleCase: 'State Forests', icon: '\ud83c\udf32', navBlurb: `Profiles of notable state forests \u2014 where each woodland lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable state forests worldwide: location, country and the woodlands each public forest covers.', subMetric: 'public forest & country', intro: `These are notable <b>state forests</b> \u2014 large public woodlands managed for conservation, recreation and sustainable timber, far broader than ordinary parks. Each profile shows where the forest is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Park' });
+function stateForestsHubPage() { return geoHubPage(htn, 'state-forests', STATEFORESTS_CFG); }
+function stateForestsRegionPage(r) { return geoRegionPage(r, htn, 'state-forests', STATEFORESTS_CFG); }
+function stateForestsPage(x, sum) { return geoItemPage(x, sum, htn, 'state-forests', STATEFORESTS_CFG); }
+function stateForestsNotFound(q) { return geoNotFound('state-forests', STATEFORESTS_CFG, q); }
+
+// ── EXPRESSWAYS (/expressways) — simple geo factory ──
+const EXPRESSWAYS_CFG = geoCfg({ base: 'expressways', listKey: 'EXPRESSWAYS', inRegion: 'expresswaysInRegion', byCountry: 'expresswayByCountry', unit: 'expressways', singular: 'expressway', titleCase: 'Expressways', icon: '\ud83d\udee3\ufe0f', navBlurb: `Profiles of notable controlled-access highways \u2014 where each route runs, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable expressways and controlled-access highways worldwide: location, country and route history.', subMetric: 'highway & country', intro: `These are notable <b>expressways</b> \u2014 the controlled-access motorways, freeways and parkways that carry high-speed traffic between cities and across continents. Each profile shows where the route runs, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Road' });
+function expresswaysHubPage() { return geoHubPage(lbr, 'expressways', EXPRESSWAYS_CFG); }
+function expresswaysRegionPage(r) { return geoRegionPage(r, lbr, 'expressways', EXPRESSWAYS_CFG); }
+function expresswaysPage(x, sum) { return geoItemPage(x, sum, lbr, 'expressways', EXPRESSWAYS_CFG); }
+function expresswaysNotFound(q) { return geoNotFound('expressways', EXPRESSWAYS_CFG, q); }
+
+// ── SHIPYARDS (/shipyards) — simple geo factory ──
+const SHIPYARDS_CFG = geoCfg({ base: 'shipyards', listKey: 'SHIPYARDS', inRegion: 'shipyardsInRegion', byCountry: 'shipyardByCountry', unit: 'shipyards', singular: 'shipyard', titleCase: 'Shipyards', icon: '\u2693', navBlurb: `Profiles of notable shipyards \u2014 where each yard lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable shipyards worldwide: location, country and the vessels each yard has built.', subMetric: 'shipbuilding yard & country', intro: `These are notable <b>shipyards</b> \u2014 the dockyards and marine engineering complexes that have built clipper ships, ocean liners, warships and modern tankers. Each profile shows where the yard is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function shipyardsHubPage() { return geoHubPage(gkp, 'shipyards', SHIPYARDS_CFG); }
+function shipyardsRegionPage(r) { return geoRegionPage(r, gkp, 'shipyards', SHIPYARDS_CFG); }
+function shipyardsPage(x, sum) { return geoItemPage(x, sum, gkp, 'shipyards', SHIPYARDS_CFG); }
+function shipyardsNotFound(q) { return geoNotFound('shipyards', SHIPYARDS_CFG, q); }
+
+// ── OBELISKS (/obelisks) — simple geo factory ──
+const OBELISKS_CFG = geoCfg({ base: 'obelisks', listKey: 'OBELISKS', inRegion: 'obelisksInRegion', byCountry: 'obeliskByCountry', unit: 'obelisks', singular: 'obelisk', titleCase: 'Obelisks', icon: '\ud83d\uddfd', navBlurb: `Profiles of notable obelisks \u2014 where each monument stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable obelisks and monuments worldwide: location, country and the history each commemorates.', subMetric: 'monumental spire & country', intro: `These are notable <b>obelisks</b> \u2014 tall, four-sided tapering monuments, from ancient Egyptian masterworks to nineteenth-century civic memorials raised in capitals around the world. Each profile shows where the obelisk stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function obelisksHubPage() { return geoHubPage(obl, 'obelisks', OBELISKS_CFG); }
+function obelisksRegionPage(r) { return geoRegionPage(r, obl, 'obelisks', OBELISKS_CFG); }
+function obelisksPage(x, sum) { return geoItemPage(x, sum, obl, 'obelisks', OBELISKS_CFG); }
+function obelisksNotFound(q) { return geoNotFound('obelisks', OBELISKS_CFG, q); }
 
 // ── METRO STATIONS (/metro-stations) — paged, country-partitioned hub ──
 const METRO_CFG = geoCfg({ base: 'metro-stations', listKey: 'METROSTATIONS', inRegion: 'metrostationsInRegion', byCountry: 'metrostationByCountry', unit: 'metro stations', singular: 'metro station', titleCase: 'Metro Stations', icon: '\ud83d\udef7', navBlurb: `Profiles of the world's metro stations \u2014 where each stop is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable rapid-transit and metro stations worldwide: location, country and what makes each station significant.', subMetric: 'location & transit heritage', intro: `These are the world's notable <b>metro stations</b> \u2014 the rapid-transit stops and grand underground halls that move millions through cities. This library is large, so it is browsed by continent, then by country. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
