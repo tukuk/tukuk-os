@@ -12,6 +12,11 @@ const fs = require('fs');
 const QIDS = String(process.argv[2] || '').split(',').map((s) => s.trim()).filter(Boolean);
 const OUT = process.argv[3];
 if (!QIDS.length || !OUT) { console.error('usage: fetch-geo-partitioned.js <QID[,QID...]> <out.json>'); process.exit(1); }
+// Optional: restrict a GENERIC class (e.g. village Q486972) to specific country
+// QIDs so we can harvest high-en-wiki-coverage countries without a global crawl.
+// Set via env PF_COUNTRIES="Q36,Q794,Q668". When set, the group query requires
+// P17 restricted to those countries and the no-country pass is skipped.
+const PF_COUNTRIES = String(process.env.PF_COUNTRIES || '').split(',').map((s) => s.trim()).filter((s) => /^Q\d+$/.test(s));
 
 const UA = 'TukukOS-GeoFetch/1.0 (+https://tukuk.org)';
 const CONT_REGION = {
@@ -94,19 +99,29 @@ const qidOf = (u) => (u && u.value ? u.value.split('/').pop() : null);
   }
 
   for (const QID of QIDS) {
-    // 1) country groups (with continent + count) for items that have coordinates.
-    const gq = `SELECT ?c ?cont (COUNT(?e) AS ?n) WHERE {
+    let withCountry;
+    if (PF_COUNTRIES.length) {
+      // Country-restricted mode for a GENERIC class: skip the expensive GROUP BY
+      // aggregate (which 504s on huge classes) and iterate the target countries
+      // directly with the reliable bounded per-country item query. Region falls
+      // back to coordinates (regionByCoord).
+      withCountry = PF_COUNTRIES.map((c) => ({ c, cont: null, n: 0 }));
+      console.error('country-restricted mode for', QID, '->', PF_COUNTRIES.join(','));
+    } else {
+      // 1) country groups (with continent + count) for items that have coordinates.
+      const gq = `SELECT ?c ?cont (COUNT(?e) AS ?n) WHERE {
       ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord .
       OPTIONAL { ?e wdt:P17 ?c . OPTIONAL { ?c wdt:P30 ?cont } }
     } GROUP BY ?c ?cont ORDER BY ?c`;
-    console.error('listing country groups for', QID, '...');
-    let groups;
-    try {
-      const gres = await sparql(gq);
-      groups = gres.results.bindings.map((b) => ({ c: qidOf(b.c), cont: qidOf(b.cont), n: parseInt(b.n.value, 10) || 0 }));
-    } catch (e) { console.error('  group listing FAILED for', QID, ':', e.message, '— skipping QID'); continue; }
-    const withCountry = groups.filter((g) => g.c);
-    console.error('  groups:', groups.length, '(with-country:', withCountry.length, ', no-country:', groups.length - withCountry.length, ')');
+      console.error('listing country groups for', QID, '...');
+      let groups;
+      try {
+        const gres = await sparql(gq);
+        groups = gres.results.bindings.map((b) => ({ c: qidOf(b.c), cont: qidOf(b.cont), n: parseInt(b.n.value, 10) || 0 }));
+      } catch (e) { console.error('  group listing FAILED for', QID, ':', e.message, '— skipping QID'); continue; }
+      withCountry = groups.filter((g) => g.c);
+      console.error('  groups:', groups.length, '(with-country:', withCountry.length, ', no-country:', groups.length - withCountry.length, ')');
+    }
     const cmap = await labels(withCountry.map((g) => g.c));
 
     for (let gi = 0; gi < withCountry.length; gi++) {
@@ -135,7 +150,7 @@ const qidOf = (u) => (u && u.value ? u.value.split('/').pop() : null);
     }
 
     // no-country group: items with coordinates but no P17 (Antarctica, ocean etc.)
-    for (let off = 0; ; off += PAGE) {
+    if (!PF_COUNTRIES.length) for (let off = 0; ; off += PAGE) {
       const q = `SELECT ?e ?article ?coord WHERE {
         ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord .
         ?article schema:about ?e ; schema:isPartOf <https://en.wikipedia.org/> .

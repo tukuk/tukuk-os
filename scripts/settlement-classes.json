@@ -1,5 +1,6 @@
 {
-  "_note": "Merged into ONE /settlements dataset via scripts/fetch-geo-partitioned.js. Rebuild: node scripts/fetch-geo-partitioned.js \"$(node -e 'console.log(Object.keys(require(\"./scripts/settlement-classes.json\")).filter(k!=\"_note\").join(\",\"))')\" src/settlement-data.json. If any class fails transiently during the long run, re-fetch it alone and merge by (name|country) dedup.",
+ "_note": "Merged into ONE /settlements dataset via scripts/fetch-geo-partitioned.js. Rebuild national-admin classes: node scripts/fetch-geo-partitioned.js \"$(node -e 'console.log(Object.keys(require(\"./scripts/settlement-classes.json\")).filter(k!==\"_note\"&&k!==\"_villages\").join(\",\"))')\" src/settlement-data.json. THEN harvest generic villages for high-en-wiki countries and merge: PF_COUNTRIES=\"Q794,Q668,Q148,Q43,Q183,Q36,Q227,Q155,Q212,Q1518\" node scripts/fetch-geo-partitioned.js Q486972 /tmp/villages.json (override region by country on merge). If any class fails transiently during the long run, re-fetch it alone and merge by (name|country) dedup.",
+  "_villages": "generic village Q486972 restricted to: Iran Q794, India Q668, China Q148, Turkey Q43, Germany Q183, Poland Q36, Azerbaijan Q227, Brazil Q155, Ukraine Q212, Kazakhstan Q1518 (+21,027)",
   "Q484170": "commune of France (37,441)",
   "Q498162": "U.S. census-designated place (11,398)",
   "Q747074": "municipality of Italy (7,833)",
