@@ -2,15 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'pangkalan-udara', label: 'PANGKALAN-UDARA', title: 'Military Air Bases of the World', var: 'MILITARYAIRBASES', sing: 'MilitaryAirBase', finder: 'militaryairbase', finders: 'militaryAirBasesInRegion', pfx: 'mb', cap: 'MilitaryAirBases' },
-  { file: 'pekan-kecil', label: 'PEKAN-KECIL', title: 'Townships of the World', var: 'TOWNSHIPS', sing: 'Township', finder: 'township', finders: 'townshipsInRegion', pfx: 'tw', cap: 'Townships' },
-  { file: 'ladang-solar', label: 'LADANG-SOLAR', title: 'Solar Power Stations of the World', var: 'SOLARPOWERSTATIONS', sing: 'SolarPowerStation', finder: 'solarpowerstation', finders: 'solarPowerStationsInRegion', pfx: 'sp', cap: 'SolarPowerStations' },
-  { file: 'loji-atom', label: 'LOJI-ATOM', title: 'Nuclear Power Plants of the World', var: 'NUCLEARPOWERPLANTS', sing: 'NuclearPowerPlant', finder: 'nuclearpowerplant', finders: 'nuclearPowerPlantsInRegion', pfx: 'np', cap: 'NuclearPowerPlants' },
-  { file: 'menara-radio', label: 'MENARA-RADIO', title: 'Radio Transmitters of the World', var: 'RADIOTRANSMITTERS', sing: 'RadioTransmitter', finder: 'radiotransmitter', finders: 'radioTransmittersInRegion', pfx: 'rt', cap: 'RadioTransmitters' },
-  { file: 'parip-sipil', label: 'PARIP-SIPIL', title: 'Civil Parishes of the World', var: 'CIVILPARISHES', sing: 'CivilParish', finder: 'civilparish', finders: 'civilParishesInRegion', pfx: 'cp', cap: 'CivilParishes' },
-  { file: 'tanah-benjol', label: 'TANAH-BENJOL', title: 'Mounds of the World', var: 'MOUNDS', sing: 'Mound', finder: 'mound', finders: 'moundsInRegion', pfx: 'mo', cap: 'Mounds' },
-  { file: 'stupa', label: 'STUPA', title: 'Stupas of the World', var: 'STUPAS', sing: 'Stupa', finder: 'stupa', finders: 'stupasInRegion', pfx: 'su', cap: 'Stupas' },
-  { file: 'tebing-panjang', label: 'TEBING-PANJANG', title: 'Escarpments of the World', var: 'ESCARPMENTS', sing: 'Escarpment', finder: 'escarpment', finders: 'escarpmentsInRegion', pfx: 'es', cap: 'Escarpments' },
+  { file: 'kawah-hentaman', label: 'KAWAH-HENTAMAN', title: 'Impact Craters of the World', var: 'IMPACTCRATERS', sing: 'ImpactCrater', finder: 'impactcrater', finders: 'impactCratersInRegion', pfx: 'ic', cap: 'ImpactCraters' },
+  { file: 'jambatan-beratap', label: 'JAMBATAN-BERATAP', title: 'Covered Bridges of the World', var: 'COVEREDBRIDGES', sing: 'CoveredBridge', finder: 'coveredbridge', finders: 'coveredBridgesInRegion', pfx: 'cvb', cap: 'CoveredBridges' },
+  { file: 'kereta-bergerigi', label: 'KERETA-BERGERIGI', title: 'Funiculars of the World', var: 'FUNICULARS', sing: 'Funicular', finder: 'funicular', finders: 'funicularsInRegion', pfx: 'fun', cap: 'Funiculars' },
+  { file: 'tambang-udara', label: 'TAMBANG-UDARA', title: 'Aerial Tramways of the World', var: 'AERIALTRAMWAYS', sing: 'AerialTramway', finder: 'aerialtramway', finders: 'aerialTramwaysInRegion', pfx: 'atm', cap: 'AerialTramways' },
+  { file: 'tasik-kawah', label: 'TASIK-KAWAH', title: 'Crater Lakes of the World', var: 'CRATERLAKES', sing: 'CraterLake', finder: 'craterlake', finders: 'craterLakesInRegion', pfx: 'crl', cap: 'CraterLakes' },
+  { file: 'lengkung-alam', label: 'LENGKUNG-ALAM', title: 'Natural Arches of the World', var: 'NATURALARCHES', sing: 'NaturalArch', finder: 'naturalarch', finders: 'naturalArchesInRegion', pfx: 'nar', cap: 'NaturalArches' },
+  { file: 'delta-sungai', label: 'DELTA-SUNGAI', title: 'River Deltas of the World', var: 'RIVERDELTAS', sing: 'RiverDelta', finder: 'riverdelta', finders: 'riverDeltasInRegion', pfx: 'rvd', cap: 'RiverDeltas' },
+  { file: 'salib-tinggi', label: 'SALIB-TINGGI', title: 'High Crosses of the World', var: 'HIGHCROSSES', sing: 'HighCross', finder: 'highcross', finders: 'highCrossesInRegion', pfx: 'hcr', cap: 'HighCrosses' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
