@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'nunatak', label: 'NUNATAK', title: 'Nunataks of the World', var: 'NUNATAKS', sing: 'Nunatak', finder: 'nunatak', finders: 'nunataksInRegion', pfx: 'nu', cap: 'Nunatak' },
-  { file: 'terumbu-laut', label: 'TERUMBU-LAUT', title: 'Reefs of the World', var: 'REEFS', sing: 'Reef', finder: 'reef', finders: 'reefsInRegion', pfx: 'tl', cap: 'TerumbuLaut' },
-  { file: 'pangkalan-penerbang-apung', label: 'PANGKALAN-PENERBANG-APUNG', title: 'Seaplane Bases of the World', var: 'SEAPLANEBASES', sing: 'SeaplaneBase', finder: 'seaplanebase', finders: 'seaplaneBasesInRegion', pfx: 'pa', cap: 'PangkalanPenerbangApung' },
-  { file: 'menara-patroli', label: 'MENARA-PATROLI', title: 'Fire Lookout Towers of the World', var: 'FIRETOWERS', sing: 'FireTower', finder: 'firetower', finders: 'fireTowersInRegion', pfx: 'mp', cap: 'MenaraPatroli' },
-  { file: 'paya-gambut', label: 'PAYA-GAMBUT', title: 'Bogs of the World', var: 'BOGS', sing: 'Bog', finder: 'bog', finders: 'bogsInRegion', pfx: 'pb', cap: 'PayaGambut' },
-  { file: 'gerbang-benteng', label: 'GERBANG-BENTENG', title: 'Gatehouses of the World', var: 'GATEHOUSES', sing: 'Gatehouse', finder: 'gatehouse', finders: 'gatehousesInRegion', pfx: 'gb', cap: 'GerbangBenteng' },
-  { file: 'menara-pengawas', label: 'MENARA-PENGAWAS', title: 'Watchtowers of the World', var: 'WATCHTOWERS', sing: 'Watchtower', finder: 'watchtower', finders: 'watchtowersInRegion', pfx: 'mw', cap: 'MenaraPengawas' },
-  { file: 'rumah-perahu', label: 'RUMAH-PERAHU', title: 'Boathouses of the World', var: 'BOATHOUSES', sing: 'Boathouse', finder: 'boathouse', finders: 'boathousesInRegion', pfx: 'rp', cap: 'RumahPerahu' },
+  { file: 'gunung-strato', label: 'GUNUNG-STRATO', title: 'Stratovolcanoes of the World', var: 'STRATOVOLCANOES', sing: 'Stratovolcano', finder: 'stratovolcano', finders: 'stratovolcanoesInRegion', pfx: 'gs', cap: 'GunungStrato' },
+  { file: 'kilap-kapas', label: 'KILAP-KAPAS', title: 'Cotton Mills of the World', var: 'COTTONMILLS', sing: 'CottonMill', finder: 'cottonmill', finders: 'cottonMillsInRegion', pfx: 'km', cap: 'KilapKapas' },
+  { file: 'gunung-perisai', label: 'GUNUNG-PERISAI', title: 'Shield Volcanoes of the World', var: 'SHIELDVOLCANOES', sing: 'ShieldVolcano', finder: 'shieldvolcano', finders: 'shieldVolcanoesInRegion', pfx: 'gp', cap: 'GunungPerisai' },
+  { file: 'stesen-pam', label: 'STESEN-PAM', title: 'Pumping Stations of the World', var: 'PUMPINGSTATIONS', sing: 'PumpingStation', finder: 'pumpingstation', finders: 'pumpingStationsInRegion', pfx: 'sp', cap: 'StesenPam' },
+  { file: 'taman-luncur', label: 'TAMAN-LUNCUR', title: 'Skateparks of the World', var: 'SKATEPARKS', sing: 'Skatepark', finder: 'skatepark', finders: 'skateparksInRegion', pfx: 'tl', cap: 'TamanLuncur' },
+  { file: 'depot-tram', label: 'DEPOT-TRAM', title: 'Tram Depots of the World', var: 'TRAMDEPOTS', sing: 'TramDepot', finder: 'tramdepot', finders: 'tramDepotsInRegion', pfx: 'dt', cap: 'DepotTram' },
+  { file: 'arena-toros', label: 'ARENA-TOROS', title: 'Bullrings of the World', var: 'BULLRINGS', sing: 'Bullring', finder: 'bullring', finders: 'bullringsInRegion', pfx: 'ar', cap: 'ArenaToros' },
+  { file: 'kerucut-kerikil', label: 'KERUCUT-KERIKIL', title: 'Cinder Cones of the World', var: 'CINDERCONES', sing: 'CinderCone', finder: 'cindercone', finders: 'cinderConesInRegion', pfx: 'kk', cap: 'KerucutKerikil' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
