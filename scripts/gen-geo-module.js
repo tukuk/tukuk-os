@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'telaga', label: 'WATER-WELLS', title: 'Water Wells of the World', var: 'WATERWELLS', sing: 'WaterWell', finder: 'waterwell', finders: 'waterWellsInRegion', pfx: 'ww', cap: 'WaterWells' },
-  { file: 'gosong', label: 'SHOALS', title: 'Sandbanks and Shoals of the World', var: 'SHOALS', sing: 'Shoal', finder: 'shoal', finders: 'shoalsInRegion', pfx: 'sn', cap: 'Shoals' },
-  { file: 'cekungan-sungai', label: 'DRAINAGE-BASINS', title: 'Drainage Basins of the World', var: 'DRAINAGEBASINS', sing: 'DrainageBasin', finder: 'drainagebasin', finders: 'drainageBasinsInRegion', pfx: 'db', cap: 'DrainageBasins' },
-  { file: 'danau-kering', label: 'DRY-LAKES', title: 'Dry Lakes of the World', var: 'DRYLAKES', sing: 'DryLake', finder: 'drylake', finders: 'dryLakesInRegion', pfx: 'dl', cap: 'DryLakes' },
-  { file: 'dataran-banjir', label: 'FLOODPLAINS', title: 'Floodplains of the World', var: 'FLOODPLAINS', sing: 'Floodplain', finder: 'floodplain', finders: 'floodplainsInRegion', pfx: 'fp', cap: 'Floodplains' },
-  { file: 'kawah', label: 'VOLCANIC-CRATERS', title: 'Volcanic Craters of the World', var: 'VCRATERS', sing: 'VolcanicCrater', finder: 'crater', finders: 'volcanicCratersInRegion', pfx: 'vc', cap: 'VolcanicCraters' },
-  { file: 'angkat-kapal', label: 'BOAT-LIFTS', title: 'Boat Lifts of the World', var: 'BOATLIFTS', sing: 'BoatLift', finder: 'boatlift', finders: 'boatLiftsInRegion', pfx: 'bl', cap: 'BoatLifts' },
-  { file: 'lumpur-pasang', label: 'TIDAL-FLATS', title: 'Tidal Flats of the World', var: 'TIDALFLATS', sing: 'TidalFlat', finder: 'tidalflat', finders: 'tidalFlatsInRegion', pfx: 'tf', cap: 'TidalFlats' },
-  { file: 'ksar', label: 'KSARS', title: 'Ksars of the World', var: 'KSARS', sing: 'Ksar', finder: 'ksar', finders: 'ksarsInRegion', pfx: 'ks', cap: 'Ksars' },
+  { file: 'celah-muara', label: 'INLETS', title: 'Inlets of the World', var: 'INLETS', sing: 'Inlet', finder: 'inlet', finders: 'inletsInRegion', pfx: 'in', cap: 'Inlets' },
+  { file: 'taman-negeri', label: 'STATE-PARKS', title: 'State Parks of the World', var: 'STATEPARKS', sing: 'StatePark', finder: 'statepark', finders: 'stateParksInRegion', pfx: 'sp', cap: 'StateParks' },
+  { file: 'kibbutz', label: 'KIBBUTZIM', title: 'Kibbutzim of Israel and the World', var: 'KIBBUTZIM', sing: 'Kibbutz', finder: 'kibbutz', finders: 'kibbutzimInRegion', pfx: 'kz', cap: 'Kibbutzim' },
+  { file: 'monumen-nasional', label: 'NATIONAL-MONUMENTS', title: 'National Monuments of the United States', var: 'NATMONUMENTS', sing: 'NationalMonument', finder: 'nationalmonument', finders: 'nationalMonumentsInRegion', pfx: 'nm', cap: 'NationalMonuments' },
+  { file: 'rawa', label: 'SWAMPS', title: 'Swamps of the World', var: 'SWAMPS', sing: 'Swamp', finder: 'swamp', finders: 'swampsInRegion', pfx: 'sw', cap: 'Swamps' },
+  { file: 'parit-pasang', label: 'TIDAL-CREEKS', title: 'Tidal Creeks of the World', var: 'TIDALCREEKS', sing: 'TidalCreek', finder: 'tidalcreek', finders: 'tidalCreeksInRegion', pfx: 'tc', cap: 'TidalCreeks' },
+  { file: 'tanggul', label: 'LEVEES', title: 'Levees and Flood Embankments of the World', var: 'LEVEES', sing: 'Levee', finder: 'levee', finders: 'leveesInRegion', pfx: 'lv', cap: 'Levees' },
+  { file: 'kubah-lava', label: 'LAVA-DOMES', title: 'Lava Domes of the World', var: 'LAVADOMES', sing: 'LavaDome', finder: 'lavadome', finders: 'lavaDomesInRegion', pfx: 'ld', cap: 'LavaDomes' },
+  { file: 'pengecoran', label: 'FOUNDRY', title: 'Foundries of the World', var: 'FOUNDRY', sing: 'Foundry', finder: 'foundry', finders: 'foundriesInRegion', pfx: 'fd', cap: 'Foundry' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
