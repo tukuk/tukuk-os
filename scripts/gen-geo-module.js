@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'celah-muara', label: 'INLETS', title: 'Inlets of the World', var: 'INLETS', sing: 'Inlet', finder: 'inlet', finders: 'inletsInRegion', pfx: 'in', cap: 'Inlets' },
-  { file: 'taman-negeri', label: 'STATE-PARKS', title: 'State Parks of the World', var: 'STATEPARKS', sing: 'StatePark', finder: 'statepark', finders: 'stateParksInRegion', pfx: 'sp', cap: 'StateParks' },
-  { file: 'kibbutz', label: 'KIBBUTZIM', title: 'Kibbutzim of Israel and the World', var: 'KIBBUTZIM', sing: 'Kibbutz', finder: 'kibbutz', finders: 'kibbutzimInRegion', pfx: 'kz', cap: 'Kibbutzim' },
-  { file: 'monumen-nasional', label: 'NATIONAL-MONUMENTS', title: 'National Monuments of the United States', var: 'NATMONUMENTS', sing: 'NationalMonument', finder: 'nationalmonument', finders: 'nationalMonumentsInRegion', pfx: 'nm', cap: 'NationalMonuments' },
-  { file: 'rawa', label: 'SWAMPS', title: 'Swamps of the World', var: 'SWAMPS', sing: 'Swamp', finder: 'swamp', finders: 'swampsInRegion', pfx: 'sw', cap: 'Swamps' },
-  { file: 'parit-pasang', label: 'TIDAL-CREEKS', title: 'Tidal Creeks of the World', var: 'TIDALCREEKS', sing: 'TidalCreek', finder: 'tidalcreek', finders: 'tidalCreeksInRegion', pfx: 'tc', cap: 'TidalCreeks' },
-  { file: 'tanggul', label: 'LEVEES', title: 'Levees and Flood Embankments of the World', var: 'LEVEES', sing: 'Levee', finder: 'levee', finders: 'leveesInRegion', pfx: 'lv', cap: 'Levees' },
-  { file: 'kubah-lava', label: 'LAVA-DOMES', title: 'Lava Domes of the World', var: 'LAVADOMES', sing: 'LavaDome', finder: 'lavadome', finders: 'lavaDomesInRegion', pfx: 'ld', cap: 'LavaDomes' },
-  { file: 'pengecoran', label: 'FOUNDRY', title: 'Foundries of the World', var: 'FOUNDRY', sing: 'Foundry', finder: 'foundry', finders: 'foundriesInRegion', pfx: 'fd', cap: 'Foundry' },
+  { file: 'stesen-selidik', label: 'RESEARCH-STATIONS', title: 'Research Stations of the World', var: 'RESEARCHSTATIONS', sing: 'ResearchStation', finder: 'researchstation', finders: 'researchStationsInRegion', pfx: 'rs', cap: 'ResearchStations' },
+  { file: 'stesen-bukit', label: 'HILL-STATIONS', title: 'Hill Stations of the World', var: 'HILLSTATIONS', sing: 'HillStation', finder: 'hillstation', finders: 'hillStationsInRegion', pfx: 'hs', cap: 'HillStations' },
+  { file: 'suk', label: 'SOUKS', title: 'Souks and Markets of the World', var: 'SOUKS', sing: 'Souk', finder: 'souk', finders: 'souksInRegion', pfx: 'sq', cap: 'Souks' },
+  { file: 'oppidum', label: 'OPPIDA', title: 'Oppida of the Iron Age World', var: 'OPPIDA', sing: 'Oppidum', finder: 'oppidum', finders: 'oppidaInRegion', pfx: 'op', cap: 'Oppida' },
+  { file: 'lembah-laut', label: 'SUBMARINE-CANYONS', title: 'Submarine Canyons of the World', var: 'SUBCANYONS', sing: 'SubmarineCanyon', finder: 'subcanyon', finders: 'submarineCanyonsInRegion', pfx: 'sc', cap: 'SubmarineCanyons' },
+  { file: 'bandar-syarikat', label: 'COMPANY-TOWNS', title: 'Company Towns of the World', var: 'COMPANYTOWNS', sing: 'CompanyTown', finder: 'companytown', finders: 'companyTownsInRegion', pfx: 'co', cap: 'CompanyTowns' },
+  { file: 'graben', label: 'GRABENS', title: 'Graben and Rift Valleys of the World', var: 'GRABENS', sing: 'Graben', finder: 'graben', finders: 'grabensInRegion', pfx: 'gr', cap: 'Grabens' },
+  { file: 'dataran-laut', label: 'OCEANIC-PLATEAUS', title: 'Oceanic Plateaus of the World', var: 'OCEANICPLATEAUS', sing: 'OceanicPlateau', finder: 'oceanicplateau', finders: 'oceanicPlateausInRegion', pfx: 'ol', cap: 'OceanicPlateaus' },
+  { file: 'geoglif', label: 'GEOGLYPHS', title: 'Geoglyphs of the World', var: 'GEOGLYPHS', sing: 'Geoglyph', finder: 'geoglyph', finders: 'geoglyphsInRegion', pfx: 'gg', cap: 'Geoglyphs' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
