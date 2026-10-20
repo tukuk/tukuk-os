@@ -2,16 +2,13 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'candi-hindu', label: 'CANDI-HINDU', title: 'Hindu Temples of the World', var: 'HINDUTEMPLES', sing: 'HinduTemple', finder: 'hindutemple', finders: 'hinduTemplesInRegion', pfx: 'ht', cap: 'HinduTemples' },
-  { file: 'rumah-pedesaan', label: 'RUMAH-PEDESAAN', title: 'Country Houses of the World', var: 'COUNTRYHOUSES', sing: 'CountryHouse', finder: 'countryhouse', finders: 'countryHousesInRegion', pfx: 'ch', cap: 'CountryHouses' },
-  { file: 'kuil-shinto', label: 'KUIL-SHINTO', title: 'Shinto Shrines of the World', var: 'SHINTOSHRINES', sing: 'ShintoShrine', finder: 'shintoshrine', finders: 'shintoShrinesInRegion', pfx: 'ss', cap: 'ShintoShrines' },
-  { file: 'dataran-tinggi', label: 'DATARAN-TINGGI', title: 'Plateaus of the World', var: 'PLATEAUS', sing: 'Plateau', finder: 'plateau', finders: 'plateausInRegion', pfx: 'pt', cap: 'Plateaus' },
-  { file: 'dataran-rendah', label: 'DATARAN-RENDAH', title: 'Plains of the World', var: 'PLAINS', sing: 'Plain', finder: 'plain', finders: 'plainsInRegion', pfx: 'pl', cap: 'Plains' },
-  { file: 'lingkaran-batu', label: 'LINGKARAN-BATU', title: 'Stone Circles of the World', var: 'STONECIRCLES', sing: 'StoneCircle', finder: 'stonecircle', finders: 'stoneCirclesInRegion', pfx: 'sc', cap: 'StoneCircles' },
-  { file: 'pagoda', label: 'PAGODA', title: 'Pagodas of the World', var: 'PAGODAS', sing: 'Pagoda', finder: 'pagoda', finders: 'pagodasInRegion', pfx: 'pg', cap: 'Pagodas' },
-  { file: 'dolmen', label: 'DOLMEN', title: 'Dolmens of the World', var: 'DOLMENS', sing: 'Dolmen', finder: 'dolmen', finders: 'dolmensInRegion', pfx: 'dm', cap: 'Dolmens' },
-  { file: 'gundar', label: 'GUNDAR', title: 'Burial Barrows of the World', var: 'BARROWS', sing: 'Barrow', finder: 'barrow', finders: 'barrowsInRegion', pfx: 'bw', cap: 'Barrows' },
-  { file: 'menara-loceng', label: 'MENARA-LOCENG', title: 'Bell Towers of the World', var: 'BELLTOWERS', sing: 'BellTower', finder: 'belltower', finders: 'bellTowersInRegion', pfx: 'bt', cap: 'BellTowers' },
+  { file: 'kedai-minum', label: 'KEDAI-MINUM', title: 'Historic Pubs of the World', var: 'PUBS', sing: 'Pub', finder: 'pub', finders: 'pubsInRegion', pfx: 'pb', cap: 'Pubs' },
+  { file: 'tanda-perang', label: 'TANDA-PERANG', title: 'War Memorials of the World', var: 'WARMEMORIALS', sing: 'WarMemorial', finder: 'warmemorial', finders: 'warMemorialsInRegion', pfx: 'wm', cap: 'WarMemorials' },
+  { file: 'pejabat-pos', label: 'PEJABAT-POS', title: 'Historic Post Offices of the World', var: 'POSTOFFICES', sing: 'PostOffice', finder: 'postoffice', finders: 'postOfficesInRegion', pfx: 'po', cap: 'PostOffices' },
+  { file: 'mata-air', label: 'MATA-AIR', title: 'Natural Springs of the World', var: 'SPRINGS', sing: 'Spring', finder: 'spring', finders: 'springsInRegion', pfx: 'sp', cap: 'Springs' },
+  { file: 'kem-tahanan', label: 'KEM-TAHANAN', title: 'Historic Concentration Camps of the World', var: 'CONCENTRATIONCAMPS', sing: 'ConcentrationCamp', finder: 'concentrationcamp', finders: 'concentrationCampsInRegion', pfx: 'cc', cap: 'ConcentrationCamps' },
+  { file: 'wadi', label: 'WADI', title: 'Wadis of the World', var: 'WADIS', sing: 'Wadi', finder: 'wadi', finders: 'wadisInRegion', pfx: 'wd', cap: 'Wadis' },
+  { file: 'bukit-benteng', label: 'BUKIT-BENTENG', title: 'Hillforts of the World', var: 'HILLFORTS', sing: 'Hillfort', finder: 'hillfort', finders: 'hillfortsInRegion', pfx: 'hf', cap: 'Hillforts' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
