@@ -2,13 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'stesen-penyelamat', label: 'STESEN-PENYELAMAT', title: 'Lifeboat Stations of the World', var: 'LIFEBOATSTATIONS', sing: 'LifeboatStation', finder: 'lifeboatstation', finders: 'lifeboatStationsInRegion', pfx: 'lb', cap: 'LifeboatStations' },
-  { file: 'tembok-kota', label: 'TEMBOK-KOTA', title: 'City Walls of the World', var: 'CITYWALLS', sing: 'CityWall', finder: 'citywall', finders: 'cityWallsInRegion', pfx: 'cw', cap: 'CityWalls' },
-  { file: 'bukit-luncur', label: 'BUKIT-LUNCUR', title: 'Ski Jumping Hills of the World', var: 'SKIJUMPINGHILLS', sing: 'SkiJumpingHill', finder: 'skijumpinghill', finders: 'skiJumpingHillsInRegion', pfx: 'sj', cap: 'SkiJumpingHills' },
-  { file: 'kolam-renang', label: 'KOLAM-RENANG', title: 'Swimming Pools of the World', var: 'SWIMMINGPOOLS', sing: 'SwimmingPool', finder: 'swimmingpool', finders: 'swimmingPoolsInRegion', pfx: 'sw', cap: 'SwimmingPools' },
-  { file: 'mandi-rom', label: 'MANDI-ROM', title: 'Roman Baths of the World', var: 'ROMANBATHS', sing: 'RomanBath', finder: 'romanbath', finders: 'romanBathsInRegion', pfx: 'rb', cap: 'RomanBaths' },
-  { file: 'tiang-laut', label: 'TIANG-LAUT', title: 'Sea Stacks of the World', var: 'SEASTACKS', sing: 'SeaStack', finder: 'seastack', finders: 'seaStacksInRegion', pfx: 'ss', cap: 'SeaStacks' },
-  { file: 'bukit-pasir', label: 'BUKIT-PASIR', title: 'Dunes of the World', var: 'DUNES', sing: 'Dune', finder: 'dune', finders: 'dunesInRegion', pfx: 'dn', cap: 'Dunes' },
+  { file: 'rongga-tanah', label: 'RONGGA-TANAH', title: 'Sinkholes of the World', var: 'SINKHOLES', sing: 'Sinkhole', finder: 'sinkhole', finders: 'sinkholesInRegion', pfx: 'sh', cap: 'Sinkholes' },
+  { file: 'menara-bijirin', label: 'MENARA-BIJIRIN', title: 'Grain Elevators of the World', var: 'GRAINELEVATORS', sing: 'GrainElevator', finder: 'grainelevator', finders: 'grainElevatorsInRegion', pfx: 'ge', cap: 'GrainElevators' },
+  { file: 'tiang-kemenangan', label: 'TIANG-KEMENANGAN', title: 'Victory Columns of the World', var: 'VICTORYCOLUMNS', sing: 'VictoryColumn', finder: 'victorycolumn', finders: 'victoryColumnsInRegion', pfx: 'vc', cap: 'VictoryColumns' },
+  { file: 'menara-masjid', label: 'MENARA-MASJID', title: 'Minarets of the World', var: 'MINARETS', sing: 'Minaret', finder: 'minaret', finders: 'minaretsInRegion', pfx: 'mn', cap: 'Minarets' },
+  { file: 'broch', label: 'BROCH', title: 'Brochs of the World', var: 'BROCHS', sing: 'Broch', finder: 'broch', finders: 'brochsInRegion', pfx: 'br', cap: 'Brochs' },
+  { file: 'mata-air-suci', label: 'MATA-AIR-SUCI', title: 'Holy Wells of the World', var: 'HOLYWELLS', sing: 'HolyWell', finder: 'holywell', finders: 'holyWellsInRegion', pfx: 'hw', cap: 'HolyWells' },
+  { file: 'astaka-muzik', label: 'ASTAKA-MUZIK', title: 'Bandstands of the World', var: 'BANDSTANDS', sing: 'Bandstand', finder: 'bandstand', finders: 'bandstandsInRegion', pfx: 'bs', cap: 'Bandstands' },
+  { file: 'rumah-merpati', label: 'RUMAH-MERPATI', title: 'Dovecotes of the World', var: 'DOVECOTES', sing: 'Dovecote', finder: 'dovecote', finders: 'dovecotesInRegion', pfx: 'dc', cap: 'Dovecotes' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
