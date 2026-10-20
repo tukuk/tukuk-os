@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'jambatan-kaki', label: 'JAMBATAN-KAKI', title: 'Footbridges of the World', var: 'FOOTBRIDGES', sing: 'Footbridge', finder: 'footbridge', finders: 'footbridgesInRegion', pfx: 'jk', cap: 'JambatanKaki' },
-  { file: 'rumah-menara', label: 'RUMAH-MENARA', title: 'Tower Houses of the World', var: 'TOWERHOUSES', sing: 'TowerHouse', finder: 'towerhouse', finders: 'towerHousesInRegion', pfx: 'rh', cap: 'RumahMenara' },
-  { file: 'muzium-terbuka', label: 'MUZIUM-TERBUKA', title: 'Open-Air Museums of the World', var: 'OPENAIRMUSEUMS', sing: 'OpenAirMuseum', finder: 'openairmuseum', finders: 'openAirMuseumsInRegion', pfx: 'mz', cap: 'MuziumTerbuka' },
-  { file: 'jambatan-tol', label: 'JAMBATAN-TOL', title: 'Toll Bridges of the World', var: 'TOLLBRIDGES', sing: 'TollBridge', finder: 'tollbridge', finders: 'tollBridgesInRegion', pfx: 'jg', cap: 'JambatanTol' },
-  { file: 'jambatan-ayun', label: 'JAMBATAN-AYUN', title: 'Swing Bridges of the World', var: 'SWINGBRIDGES', sing: 'SwingBridge', finder: 'swingbridge', finders: 'swingBridgesInRegion', pfx: 'jy', cap: 'JambatanAyun' },
-  { file: 'pembenihan-ikan', label: 'PEMBENIHAN-IKAN', title: 'Fish Hatcheries of the World', var: 'FISHHATCHERIES', sing: 'FishHatchery', finder: 'fishhatchery', finders: 'fishHatcheriesInRegion', pfx: 'pi', cap: 'PembenihanIkan' },
-  { file: 'pulau-halangan', label: 'PULAU-HALANGAN', title: 'Barrier Islands of the World', var: 'BARRIERISLANDS', sing: 'BarrierIsland', finder: 'barrierisland', finders: 'barrierIslandsInRegion', pfx: 'ph', cap: 'PulauHalangan' },
-  { file: 'menara-martello', label: 'MENARA-MARTELLO', title: 'Martello Towers of the World', var: 'MARTELLOTOWERS', sing: 'MartelloTower', finder: 'martellotower', finders: 'martelloTowersInRegion', pfx: 'mm', cap: 'MenaraMartello' },
+  { file: 'nunatak', label: 'NUNATAK', title: 'Nunataks of the World', var: 'NUNATAKS', sing: 'Nunatak', finder: 'nunatak', finders: 'nunataksInRegion', pfx: 'nu', cap: 'Nunatak' },
+  { file: 'terumbu-laut', label: 'TERUMBU-LAUT', title: 'Reefs of the World', var: 'REEFS', sing: 'Reef', finder: 'reef', finders: 'reefsInRegion', pfx: 'tl', cap: 'TerumbuLaut' },
+  { file: 'pangkalan-penerbang-apung', label: 'PANGKALAN-PENERBANG-APUNG', title: 'Seaplane Bases of the World', var: 'SEAPLANEBASES', sing: 'SeaplaneBase', finder: 'seaplanebase', finders: 'seaplaneBasesInRegion', pfx: 'pa', cap: 'PangkalanPenerbangApung' },
+  { file: 'menara-patroli', label: 'MENARA-PATROLI', title: 'Fire Lookout Towers of the World', var: 'FIRETOWERS', sing: 'FireTower', finder: 'firetower', finders: 'fireTowersInRegion', pfx: 'mp', cap: 'MenaraPatroli' },
+  { file: 'paya-gambut', label: 'PAYA-GAMBUT', title: 'Bogs of the World', var: 'BOGS', sing: 'Bog', finder: 'bog', finders: 'bogsInRegion', pfx: 'pb', cap: 'PayaGambut' },
+  { file: 'gerbang-benteng', label: 'GERBANG-BENTENG', title: 'Gatehouses of the World', var: 'GATEHOUSES', sing: 'Gatehouse', finder: 'gatehouse', finders: 'gatehousesInRegion', pfx: 'gb', cap: 'GerbangBenteng' },
+  { file: 'menara-pengawas', label: 'MENARA-PENGAWAS', title: 'Watchtowers of the World', var: 'WATCHTOWERS', sing: 'Watchtower', finder: 'watchtower', finders: 'watchtowersInRegion', pfx: 'mw', cap: 'MenaraPengawas' },
+  { file: 'rumah-perahu', label: 'RUMAH-PERAHU', title: 'Boathouses of the World', var: 'BOATHOUSES', sing: 'Boathouse', finder: 'boathouse', finders: 'boathousesInRegion', pfx: 'rp', cap: 'RumahPerahu' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
