@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'jurang', label: 'CANYONS', title: 'Canyons and Gorges of the World', var: 'CANYONS', sing: 'Canyon', finder: 'canyon', finders: 'canyonsInRegion', pfx: 'cy', cap: 'Canyons' },
-  { file: 'medan-pasar', label: 'MARKET-SQUARES', title: 'Market Squares of the World', var: 'MARKETSQUARES', sing: 'MarketSquare', finder: 'marketsquare', finders: 'marketSquaresInRegion', pfx: 'ms', cap: 'MarketSquares' },
-  { file: 'salib-pasar', label: 'MARKET-CROSSES', title: 'Market Crosses of the World', var: 'MARKETCROSSES', sing: 'MarketCross', finder: 'marketcross', finders: 'marketCrossesInRegion', pfx: 'mcr', cap: 'MarketCrosses' },
-  { file: 'tanur-tinggi', label: 'BLAST-FURNACES', title: 'Blast Furnaces of the World', var: 'BLASTFURNACES', sing: 'BlastFurnace', finder: 'blastfurnace', finders: 'blastFurnacesInRegion', pfx: 'bf', cap: 'BlastFurnaces' },
-  { file: 'baptisteri', label: 'BAPTISTERIES', title: 'Baptisteries of the World', var: 'BAPTISTERIES', sing: 'Baptistery', finder: 'baptistery', finders: 'baptisteriesInRegion', pfx: 'bp', cap: 'Baptisteries' },
-  { file: 'gua-laut', label: 'SEA-CAVES', title: 'Sea Caves of the World', var: 'SEACAVES', sing: 'SeaCave', finder: 'seacave', finders: 'seaCavesInRegion', pfx: 'sc', cap: 'SeaCaves' },
-  { file: 'dok-kering', label: 'DRY-DOCKS', title: 'Dry Docks of the World', var: 'DRYDOCKS', sing: 'DryDock', finder: 'drydock', finders: 'dryDocksInRegion', pfx: 'dd', cap: 'DryDocks' },
-  { file: 'kincir-pasang', label: 'TIDE-MILLS', title: 'Tide Mills of the World', var: 'TIDEMILLS', sing: 'TideMill', finder: 'tidemill', finders: 'tideMillsInRegion', pfx: 'tm', cap: 'TideMills' },
-  { file: 'pabrik-gula', label: 'SUGAR-MILLS', title: 'Sugar Mills of the World', var: 'SUGARMILLS', sing: 'SugarMill', finder: 'sugarmill', finders: 'sugarMillsInRegion', pfx: 'sg', cap: 'SugarMills' },
+  { file: 'payau', label: 'MARSHES', title: 'Marshes of the World', var: 'MARSHES', sing: 'Marsh', finder: 'marsh', finders: 'marshesInRegion', pfx: 'mh', cap: 'Marshes' },
+  { file: 'rumah-yatim', label: 'ORPHANAGES', title: 'Orphanages of the World', var: 'ORPHANAGES', sing: 'Orphanage', finder: 'orphanage', finders: 'orphanagesInRegion', pfx: 'orp', cap: 'Orphanages' },
+  { file: 'sirke-gletser', label: 'GLACIAL-CIRQUES', title: 'Glacial Cirques of the World', var: 'CIRQUES', sing: 'Cirque', finder: 'cirque', finders: 'cirquesInRegion', pfx: 'cq', cap: 'GlacialCirques' },
+  { file: 'benteng-gelang', label: 'RINGFORTS', title: 'Ringforts of the World', var: 'RINGFORTS', sing: 'Ringfort', finder: 'ringfort', finders: 'ringfortsInRegion', pfx: 'rf', cap: 'Ringforts' },
+  { file: 'lido', label: 'LIDOS', title: 'Lidos of the World', var: 'LIDOS', sing: 'Lido', finder: 'lido', finders: 'lidosInRegion', pfx: 'ld', cap: 'Lidos' },
+  { file: 'topi-ais', label: 'ICE-CAPS', title: 'Ice Caps of the World', var: 'ICECAPS', sing: 'IceCap', finder: 'icecap', finders: 'iceCapsInRegion', pfx: 'ic', cap: 'IceCaps' },
+  { file: 'roundhouse-kreta', label: 'RAILWAY-ROUNDHOUSES', title: 'Railway Roundhouses of the World', var: 'ROUNDHOUSES', sing: 'Roundhouse', finder: 'roundhouse', finders: 'roundhousesInRegion', pfx: 'rh', cap: 'RailwayRoundhouses' },
+  { file: 'medan-ais', label: 'ICE-FIELDS', title: 'Ice Fields of the World', var: 'ICEFIELDS', sing: 'IceField', finder: 'icefield', finders: 'iceFieldsInRegion', pfx: 'if', cap: 'IceFields' },
+  { file: 'adit', label: 'ADITS', title: 'Mining Adits of the World', var: 'ADITS', sing: 'Adit', finder: 'adit', finders: 'aditsInRegion', pfx: 'ad', cap: 'Adits' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
