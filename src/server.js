@@ -46,6 +46,7 @@ const sj = require('./sejarah');
 const kt = require('./kota');
 const wr = require('./warisan');
 const cg = require('./cagar');
+const gn = require('./gunung');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -905,6 +906,20 @@ app.get('/cagar/:slug', async (req, res) => {
   res.status(200).type('html').send(cagarPage(a, sum));
 });
 
+// ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
+app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
+app.get('/gunung/:slug', async (req, res) => {
+  const p = gn.findPeak(req.params.slug);
+  if (!p) {
+    const r = gn.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(gunungRegionPage(r));
+    return res.status(404).type('html').send(gunungNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await gn.fetchSummary(p.wiki); } catch {}
+  res.status(200).type('html').send(gunungPage(p, sum));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1397,7 +1412,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1607,6 +1622,19 @@ app.get('/sitemap-cagar.xml', (req, res) => {
   const urls = [one('/cagar', '0.9')]
     .concat(cg.REGIONS.map((r) => one(`/cagar/${r.slug}`, '0.8')))
     .concat(cg.AREAS.map((a) => one(`/cagar/${a.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP GUNUNG — hab + setiap benua + setiap gunung ──
+app.get('/sitemap-gunung.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/gunung', '0.9')]
+    .concat(gn.REGIONS.map((r) => one(`/gunung/${r.slug}`, '0.8')))
+    .concat(gn.PEAKS.map((p) => one(`/gunung/${p.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6732,6 +6760,130 @@ function cagarNotFound(q) {
     css: CG_CSS,
     body: `<p>We don\u2019t have a profile for that area yet. Open <a href="/cagar">the full list of Protected Areas</a> and browse by continent.</p>`,
   }, cagarNav());
+}
+
+// ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
+const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
+.peak-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
+.peak-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
+.peak-elev{font-size:.82rem;color:var(--muted);margin:0}
+.peak-hero{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
+.peak-hero img{border-radius:10px;border:1px solid var(--line);max-width:280px;width:100%;height:auto}
+.peak-sum{font-size:1.02rem;line-height:1.7}
+@media(max-width:760px){.peak-grid{grid-template-columns:1fr}}`;
+
+function peakCard(p) {
+  const elev = p.elev ? `<p class="peak-elev">${p.elev.toLocaleString()} m</p>` : '';
+  return `<div class="peak-card"><h3><a href="/gunung/${p.slug}">${escapeHtml(p.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(p.country)}</p>${elev}</div>`;
+}
+function gunungNav() {
+  return worldNav('Mountains — tukuk.org/gunung', [{ href: '/gunung', icon: '⛰️', name: 'All peaks', blurb: 'Profiles of the world\u2019s mountains \u2014 where each peak is, which country it belongs to, its elevation, and a plain-English introduction from Wikipedia.' }
+  ].concat(gn.REGIONS.map((r) => ({ href: `/gunung/${r.slug}`, icon: '\ud83c\udfd4️', name: `${r} mountains`, blurb: `${r.count} documented peaks across ${r.name}, from alpine giants to volcanic cones.`}))));
+}
+
+function gunungHubPage() {
+  const sections = gn.REGION_ORDER.map((rg) => {
+    const ps = gn.peaksInRegion(rg);
+    if (!ps.length) return '';
+    return `<h2 class="section-title" id="${gn.slugify(rg)}"><a href="/gunung/${gn.slugify(rg)}">${rg}</a> <span class="meta">(${ps.length} peaks)</span></h2><div class="peak-grid">${ps.map(peakCard).join('')}</div>`;
+  }).join('');
+  const browse = `<p>${gn.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/gunung/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const countries = new Set(gn.PEAKS.map((p) => p.country)).size;
+  const body = `<p>These are the world\u2019s most notable <b>mountains</b> \u2014 alpine giants, volcanic cones and ancient massifs that define landscapes and cultures. Each profile shows <em>where</em> the peak rises, <em>which country</em> claims it, its <em>elevation</em>, and a <em>plain-English introduction</em> drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
+  <p>${gn.PEAKS.length} mountains from ${countries} countries are covered below, grouped by continent. Open any peak for its full profile.</p>
+  ${browse}
+  ${sections}
+  <p class="meta">Elevation figures from Wikidata (metres above sea level). Coordinates are approximate summit locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/cagar">Protected Areas</a> · <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Mountains of the World \u2014 Tukuk-OS',
+    description: `Profiles of ${gn.PEAKS.length} notable mountains: location, country, elevation and a plain-English introduction to each.`,
+    url: 'https://tukuk.org/gunung', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'Mountains of the World \u2014 Peaks, Elevation & Location | Tukuk-OS',
+    desc: `Introductions to ${gn.PEAKS.length} notable mountains: elevation, country, continent and what makes each peak significant.`,
+    selfUrl: 'https://tukuk.org/gunung',
+    heroTitle: '\u26f0\ufe0f Mountains of the World', heroSub: `${gn.PEAKS.length} peaks · ${countries} countries · elevation & location`,
+    ld, css: GN_CSS, body,
+  }, gunungNav());
+}
+
+function gunungRegionPage(region) {
+  const ps = gn.peaksInRegion(region.name);
+  const countries = [...new Set(ps.map((p) => p.country))].sort((a, b) => a.localeCompare(b));
+  const grid = `<div class="peak-grid">${ps.map(peakCard).join('')}</div>`;
+  const other = gn.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/gunung/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/gunung">&larr; All peaks</a></p>
+  <p>A profile for each of the <b>${ps.length} notable mountains in ${region.name}</b> \u2014 where the peak rises, which country claims it, elevation, and a plain-English introduction from Wikipedia. These ${ps.length} peaks span ${countries.length} countries.</p>
+  ${grid}
+  <h2 class="section-title">Other continents</h2><p>${other}</p>
+  <p class="meta">Elevation figures from Wikidata. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/cagar">Protected Areas</a> · <a href="/warisan">World Heritage</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} Mountains \u2014 Tukuk-OS`,
+    description: `Profiles of ${ps.length} mountains in ${region.name}: elevation, country and location.`,
+    url: `https://tukuk.org/gunung/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${region.name} Mountains \u2014 Peaks & Elevation | Tukuk-OS`,
+    desc: `Introductions to ${ps.length} mountains in ${region.name} across ${countries.length} countries: elevation, location and significance.`,
+    selfUrl: `https://tukuk.org/gunung/${region.slug}`,
+    heroTitle: `\ud83c\udfd4\ufe0f ${region.name} Mountains`, heroSub: `${ps.length} peaks · ${countries.length} countries · elevation & location`,
+    ld, css: GN_CSS, body,
+  }, gunungNav());
+}
+
+function gunungPage(p, sum) {
+  const coords = `${Math.abs(p.lat).toFixed(2)}\u00b0${p.lat >= 0 ? 'N' : 'S'}, ${Math.abs(p.lng).toFixed(2)}\u00b0${p.lng >= 0 ? 'E' : 'W'}`;
+  const mapHref = `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=12/${p.lat}/${p.lng}`;
+  const elevStr = p.elev ? ` ${p.elev.toLocaleString()} m` : '';
+  const hero = sum && sum.thumb
+    ? `<div class="peak-hero"><img src="${escapeHtml(sum.thumb)}" width="${sum.thumbW || 280}" height="${sum.thumbH || 280}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async"><div class="peak-sum">${escapeHtml(sum.extract)}</div></div>`
+    : (sum && sum.extract ? `<p class="peak-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(p.name)} is briefly reloading \u2014 the key facts below always show.</p>`);
+  const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
+  const siblings = gn.peaksByCountry(p.countrySlug).filter((x) => x.slug !== p.slug).slice(0, 10);
+  const morePeak = siblings.length ? `<h2 class="section-title">More peaks in ${escapeHtml(p.country)}</h2><p>${siblings.map((x) => `<a href="/gunung/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const rows = [
+    ['Country', `<a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>`],
+    ['Continent / region', escapeHtml(p.region)],
+    ['Elevation', elevStr ? escapeHtml(elevStr.trim()) + ' above sea level' : 'unknown'],
+    ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/gunung">&larr; All peaks</a></p>
+  ${hero}${readMore}
+  <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
+  <p><b>${escapeHtml(p.name)}</b>${elevStr ? ` rises to ${escapeHtml(elevStr.trim())}` : ''} in <a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>, in ${escapeHtml(p.region)}. The full story of this mountain is described by the sourced introduction above (from Wikipedia).</p>
+  ${morePeak}
+  <p class="meta">Elevation from Wikidata. Coordinates approximate summit. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Mountain', name: p.name, description: (sum && sum.description) || `Mountain in ${p.country}`, url: `https://tukuk.org/gunung/${p.slug}`,
+      containedInPlace: { '@type': 'Country', name: p.country },
+      geo: { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng },
+      ...(p.elev ? { elevation: { '@type': 'QuantitativeValue', value: p.elev, unitCode: 'MTR' } } : {}) },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Mountains', item: 'https://tukuk.org/gunung' },
+      { '@type': 'ListItem', position: 2, name: p.region, item: `https://tukuk.org/gunung/${gn.slugify(p.region)}` },
+      { '@type': 'ListItem', position: 3, name: p.name, item: `https://tukuk.org/gunung/${p.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  const ogImage = sum && sum.thumb ? sum.thumb : undefined;
+  return worldDoc({
+    title: `${p.name}${elevStr ? ` (${p.elev.toLocaleString()} m)` : ''} \u2014 Mountain Profile | Tukuk-OS`,
+    desc: sum && sum.description ? `${p.name}, ${sum.description.toLowerCase()} \u2014 elevation, location and introduction.` : `${p.name} is a mountain in ${p.country}${elevStr ? `, elevation ${p.elev.toLocaleString()} m` : ''}. Location and sourced introduction.`,
+    selfUrl: `https://tukuk.org/gunung/${p.slug}`,
+    heroTitle: `\u26f0\ufe0f ${escapeHtml(p.name)}`, heroSub: `${escapeHtml(p.country)} · ${escapeHtml(p.region)}${elevStr ? ' · ' + escapeHtml(elevStr.trim()) : ''} · ${escapeHtml(coords)}`,
+    ld, css: GN_CSS, body, ogImage,
+  }, gunungNav());
+}
+
+function gunungNotFound(q) {
+  return worldDoc({
+    title: 'Mountain not found \u2014 Mountains of the World | Tukuk-OS',
+    desc: 'That mountain was not recognised \u2014 browse the full list of peaks instead.',
+    selfUrl: 'https://tukuk.org/gunung', robots: 'noindex,follow',
+    heroTitle: 'Mountain not found', heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    css: GN_CSS,
+    body: `<p>We don\u2019t have a profile for that peak yet. Open <a href="/gunung">the full list of Mountains</a> and browse by continent.</p>`,
+  }, gunungNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
