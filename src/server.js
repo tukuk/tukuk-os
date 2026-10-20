@@ -198,6 +198,14 @@ const gsl = require('./medan-gas');
 const dpk = require('./depo-kereta');
 const grw = require('./gudwara');
 const ric = require('./gelang-ais');
+const rcg = require('./litar-lumba');
+const pri = require('./priori');
+const bbv = require('./padang-baseball');
+const mdr = require('./madrasah');
+const crv = require('./kafilah-surai');
+const alm = require('./rumah-derma');
+const ncp = require('./tanah-kubur-kuno');
+const hamm = require('./rumah-banja');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1304,6 +1312,14 @@ geoRoutes('gas-fields', gsl, 'findGasField', gasFieldsHubPage, gasFieldsRegionPa
 geoRoutes('railway-depots', dpk, 'findRailwayDepot', railwayDepotsHubPage, railwayDepotsRegionPage, railwayDepotsPage, railwayDepotsNotFound);
 geoRoutes('gurdwaras', grw, 'findGurdwara', gurdwarasHubPage, gurdwarasRegionPage, gurdwarasPage, gurdwarasNotFound);
 geoRoutes('ice-rinks', ric, 'findIceRink', iceRinksHubPage, iceRinksRegionPage, iceRinksPage, iceRinksNotFound);
+geoRoutes('racing-circuits', rcg, 'findRacingCircuit', racingCircuitsHubPage, racingCircuitsRegionPage, racingCircuitsPage, racingCircuitsNotFound);
+geoRoutes('priories', pri, 'findPriory', prioriesHubPage, prioriesRegionPage, prioriesPage, prioriesNotFound);
+geoRoutes('baseball-venues', bbv, 'findBaseballVenue', baseballVenuesHubPage, baseballVenuesRegionPage, baseballVenuesPage, baseballVenuesNotFound);
+geoRoutes('madrasas', mdr, 'findMadrasa', madrasasHubPage, madrasasRegionPage, madrasasPage, madrasasNotFound);
+geoRoutes('caravanserais', crv, 'findCaravanserai', caravanseraisHubPage, caravanseraisRegionPage, caravanseraisPage, caravanseraisNotFound);
+geoRoutes('almshouses', alm, 'findAlmshouse', almshousesHubPage, almshousesRegionPage, almshousesPage, almshousesNotFound);
+geoRoutes('necropolises', ncp, 'findNecropolis', necropolisesHubPage, necropolisesRegionPage, necropolisesPage, necropolisesNotFound);
+geoRoutes('hammams', hamm, 'findHammam', hammamsHubPage, hammamsRegionPage, hammamsPage, hammamsNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1811,7 +1827,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2274,6 +2290,14 @@ geoSitemap('gas-fields', gsl, 'GASFIELDS');
 geoSitemap('railway-depots', dpk, 'RAILWAYDEPOTS');
 geoSitemap('gurdwaras', grw, 'GURDWARAS');
 geoSitemap('ice-rinks', ric, 'ICERINKS');
+geoSitemap('racing-circuits', rcg, 'RACINGCIRCUITS');
+geoSitemap('priories', pri, 'PRIORIES');
+geoSitemap('baseball-venues', bbv, 'BASEBALLVENUES');
+geoSitemap('madrasas', mdr, 'MADRASAS');
+geoSitemap('caravanserais', crv, 'CARAVANSERAIS');
+geoSitemap('almshouses', alm, 'ALMSHOUSES');
+geoSitemap('necropolises', ncp, 'NECROPOLISES');
+geoSitemap('hammams', hamm, 'HAMMAMS');
 geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
 geoSitemap('settlements', stl, 'SETTLEMENTS');
@@ -8603,6 +8627,62 @@ function iceRinksHubPage() { return geoHubPage(ric, 'ice-rinks', ICERINKS_CFG); 
 function iceRinksRegionPage(r) { return geoRegionPage(r, ric, 'ice-rinks', ICERINKS_CFG); }
 function iceRinksPage(x, sum) { return geoItemPage(x, sum, ric, 'ice-rinks', ICERINKS_CFG); }
 function iceRinksNotFound(q) { return geoNotFound('ice-rinks', ICERINKS_CFG, q); }
+
+// ── RACING CIRCUITS (/racing-circuits) — simple geo factory ──
+const RACINGCIRCUITS_CFG = geoCfg({ base: 'racing-circuits', listKey: 'RACINGCIRCUITS', inRegion: 'racingCircuitsInRegion', byCountry: 'racingcircuitByCountry', unit: 'motor racing circuits', singular: 'racing circuit', titleCase: 'Motor Racing Circuits', icon: '\ud83c\udfc1', navBlurb: `Profiles of notable motor racing circuits \u2014 where each track lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable motor racing circuits and race tracks worldwide: location, country and the motorsport history within.', subMetric: 'track & country', intro: `These are notable <b>motor racing circuits</b> \u2014 the purpose-built tracks and street courses where Grand Prix, endurance and stock-car racing unfold, from cathedral ovals to legendary European autódromos. Each profile shows where the circuit is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'SportsVenue' });
+function racingCircuitsHubPage() { return geoHubPage(rcg, 'racing-circuits', RACINGCIRCUITS_CFG); }
+function racingCircuitsRegionPage(r) { return geoRegionPage(r, rcg, 'racing-circuits', RACINGCIRCUITS_CFG); }
+function racingCircuitsPage(x, sum) { return geoItemPage(x, sum, rcg, 'racing-circuits', RACINGCIRCUITS_CFG); }
+function racingCircuitsNotFound(q) { return geoNotFound('racing-circuits', RACINGCIRCUITS_CFG, q); }
+
+// ── PRIORIES (/priories) — simple geo factory ──
+const PRIORIES_CFG = geoCfg({ base: 'priories', listKey: 'PRIORIES', inRegion: 'prioriesInRegion', byCountry: 'prioryByCountry', unit: 'priories', singular: 'priory', titleCase: 'Priories', icon: '\u26ea', navBlurb: `Profiles of notable priories \u2014 where each house lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable priories and monastic houses worldwide: location, country and the religious history within.', subMetric: 'house & country', intro: `These are notable <b>priories</b> \u2014 the monastic houses, ruled by a prior or prioress, that anchored medieval prayer, learning and hospitality across Europe and beyond, many now surviving as ruins or country estates. Each profile shows where the priory is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'PlaceOfWorship' });
+function prioriesHubPage() { return geoHubPage(pri, 'priories', PRIORIES_CFG); }
+function prioriesRegionPage(r) { return geoRegionPage(r, pri, 'priories', PRIORIES_CFG); }
+function prioriesPage(x, sum) { return geoItemPage(x, sum, pri, 'priories', PRIORIES_CFG); }
+function prioriesNotFound(q) { return geoNotFound('priories', PRIORIES_CFG, q); }
+
+// ── BASEBALL VENUES (/baseball-venues) — simple geo factory ──
+const BASEBALLVENUES_CFG = geoCfg({ base: 'baseball-venues', listKey: 'BASEBALLVENUES', inRegion: 'baseballVenuesInRegion', byCountry: 'baseballvenueByCountry', unit: 'baseball venues', singular: 'baseball venue', titleCase: 'Baseball Venues', icon: '\u26be', navBlurb: `Profiles of notable baseball venues \u2014 where each ballpark lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable baseball parks and ballparks worldwide: location, country and the games and teams within.', subMetric: 'ballpark & country', intro: `These are notable <b>baseball venues</b> \u2014 the ballparks and diamonds where the game has been played from its earliest grounds to the great domed arenas of today, beloved for their history, food and Friday-night lights. Each profile shows where the venue is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'StadiumOrArena' });
+function baseballVenuesHubPage() { return geoHubPage(bbv, 'baseball-venues', BASEBALLVENUES_CFG); }
+function baseballVenuesRegionPage(r) { return geoRegionPage(r, bbv, 'baseball-venues', BASEBALLVENUES_CFG); }
+function baseballVenuesPage(x, sum) { return geoItemPage(x, sum, bbv, 'baseball-venues', BASEBALLVENUES_CFG); }
+function baseballVenuesNotFound(q) { return geoNotFound('baseball-venues', BASEBALLVENUES_CFG, q); }
+
+// ── MADRASAS (/madrasas) — simple geo factory ──
+const MADRASAS_CFG = geoCfg({ base: 'madrasas', listKey: 'MADRASAS', inRegion: 'madrasasInRegion', byCountry: 'madrasaByCountry', unit: 'madrasas', singular: 'madrasa', titleCase: 'Madrasas', icon: '\ud83d\udcd8', navBlurb: `Profiles of notable madrasas \u2014 where each school lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable madrasas and Islamic schools worldwide: location, country and the learning and architecture within.', subMetric: 'school & country', intro: `These are notable <b>madrasas</b> \u2014 the colleges of Islamic learning whose tiled courtyards and lecture halls have taught law, theology and science for nearly a thousand years, from Cairo and Samarkand to South Asia. Each profile shows where the madrasa is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'EducationalOrganization' });
+function madrasasHubPage() { return geoHubPage(mdr, 'madrasas', MADRASAS_CFG); }
+function madrasasRegionPage(r) { return geoRegionPage(r, mdr, 'madrasas', MADRASAS_CFG); }
+function madrasasPage(x, sum) { return geoItemPage(x, sum, mdr, 'madrasas', MADRASAS_CFG); }
+function madrasasNotFound(q) { return geoNotFound('madrasas', MADRASAS_CFG, q); }
+
+// ── CARAVANSERAIS (/caravanserais) — simple geo factory ──
+const CARAVANSERAIS_CFG = geoCfg({ base: 'caravanserais', listKey: 'CARAVANSERAIS', inRegion: 'caravanseraisInRegion', byCountry: 'caravanseraiByCountry', unit: 'caravanserais', singular: 'caravanserai', titleCase: 'Caravanserais', icon: '\ud83d\udc2b', navBlurb: `Profiles of notable caravanserais \u2014 where each inn lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable caravanserais and roadside inns along the trade routes worldwide: location, country and history.', subMetric: 'inn & country', intro: `These are notable <b>caravanserais</b> \u2014 the fortified roadside inns that sheltered merchants, their camels and goods along the Silk Road and the great trade routes of Asia, the Middle East and North Africa. Each profile shows where the caravanserai is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'HistoricBuilding' });
+function caravanseraisHubPage() { return geoHubPage(crv, 'caravanserais', CARAVANSERAIS_CFG); }
+function caravanseraisRegionPage(r) { return geoRegionPage(r, crv, 'caravanserais', CARAVANSERAIS_CFG); }
+function caravanseraisPage(x, sum) { return geoItemPage(x, sum, crv, 'caravanserais', CARAVANSERAIS_CFG); }
+function caravanseraisNotFound(q) { return geoNotFound('caravanserais', CARAVANSERAIS_CFG, q); }
+
+// ── ALMSHOUSES (/almshouses) — simple geo factory ──
+const ALMSHOUSES_CFG = geoCfg({ base: 'almshouses', listKey: 'ALMSHOUSES', inRegion: 'almshousesInRegion', byCountry: 'almshouseByCountry', unit: 'almshouses', singular: 'almshouse', titleCase: 'Almshouses', icon: '\ud83c\udfe0', navBlurb: `Profiles of notable almshouses \u2014 where each house lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable historic almshouses and charitable housing worldwide: location, country and the social history within.', subMetric: 'house & country', intro: `These are notable <b>almshouses</b> \u2014 the charitable residences founded over the centuries to house the poor, the elderly and widows, many still occupied behind the same humble brick fronts and chapel-and-courtyard gates. Each profile shows where the almshouse is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Structure' });
+function almshousesHubPage() { return geoHubPage(alm, 'almshouses', ALMSHOUSES_CFG); }
+function almshousesRegionPage(r) { return geoRegionPage(r, alm, 'almshouses', ALMSHOUSES_CFG); }
+function almshousesPage(x, sum) { return geoItemPage(x, sum, alm, 'almshouses', ALMSHOUSES_CFG); }
+function almshousesNotFound(q) { return geoNotFound('almshouses', ALMSHOUSES_CFG, q); }
+
+// ── NECROPOLISES (/necropolises) — simple geo factory ──
+const NECROPOLISES_CFG = geoCfg({ base: 'necropolises', listKey: 'NECROPOLISES', inRegion: 'necropolisesInRegion', byCountry: 'necropolisByCountry', unit: 'ancient necropolises', singular: 'necropolis', titleCase: 'Ancient Necropolises', icon: '\u26b0\ufe0f', navBlurb: `Profiles of notable ancient necropolises \u2014 where each city of the dead lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable ancient necropolises and burial cities worldwide: location, country and the archaeology within.', subMetric: 'burial site & country', intro: `These are notable <b>ancient necropolises</b> \u2014 the great "cities of the dead" of Egypt, Greece, Rome and the Near East, where tombs, mastabas and rock-cut chapels preserve the beliefs and daily lives of long-vanished civilisations. Each profile shows where the necropolis is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function necropolisesHubPage() { return geoHubPage(ncp, 'necropolises', NECROPOLISES_CFG); }
+function necropolisesRegionPage(r) { return geoRegionPage(r, ncp, 'necropolises', NECROPOLISES_CFG); }
+function necropolisesPage(x, sum) { return geoItemPage(x, sum, ncp, 'necropolises', NECROPOLISES_CFG); }
+function necropolisesNotFound(q) { return geoNotFound('necropolises', NECROPOLISES_CFG, q); }
+
+// ── HAMMAMS (/hammams) — simple geo factory ──
+const HAMMAMS_CFG = geoCfg({ base: 'hammams', listKey: 'HAMMAMS', inRegion: 'hammamsInRegion', byCountry: 'hammamByCountry', unit: 'hammams', singular: 'hammam', titleCase: 'Hammams', icon: '\u2668\ufe0f', navBlurb: `Profiles of notable hammams \u2014 where each bath lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable historic hammams and Islamic baths worldwide: location, country and the architecture and ritual within.', subMetric: 'bath & country', intro: `These are notable <b>hammams</b> \u2014 the vaulted public baths of the Islamic world, heirs to Roman thermae, whose domed steam rooms and tiled washing halls served cleanliness, ceremony and community for a thousand years. Each profile shows where the hammam is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function hammamsHubPage() { return geoHubPage(hamm, 'hammams', HAMMAMS_CFG); }
+function hammamsRegionPage(r) { return geoRegionPage(r, hamm, 'hammams', HAMMAMS_CFG); }
+function hammamsPage(x, sum) { return geoItemPage(x, sum, hamm, 'hammams', HAMMAMS_CFG); }
+function hammamsNotFound(q) { return geoNotFound('hammams', HAMMAMS_CFG, q); }
 
 // ── METRO STATIONS (/metro-stations) — paged, country-partitioned hub ──
 const METRO_CFG = geoCfg({ base: 'metro-stations', listKey: 'METROSTATIONS', inRegion: 'metrostationsInRegion', byCountry: 'metrostationByCountry', unit: 'metro stations', singular: 'metro station', titleCase: 'Metro Stations', icon: '\ud83d\udef7', navBlurb: `Profiles of the world's metro stations \u2014 where each stop is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable rapid-transit and metro stations worldwide: location, country and what makes each station significant.', subMetric: 'location & transit heritage', intro: `These are the world's notable <b>metro stations</b> \u2014 the rapid-transit stops and grand underground halls that move millions through cities. This library is large, so it is browsed by continent, then by country. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });

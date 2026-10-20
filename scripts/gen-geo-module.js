@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'padang-kriket', label: 'PADANG-KRIKET', title: 'Cricket Grounds of the World', var: 'CRICKETGROUNDS', sing: 'CricketGround', finder: 'cricketground', finders: 'cricketGroundsInRegion', pfx: 'cg', cap: 'CricketGrounds' },
-  { file: 'barak', label: 'BARAK', title: 'Historic Barracks of the World', var: 'BARRACKS', sing: 'Barracks', finder: 'barracks', finders: 'barracksInRegion', pfx: 'bk', cap: 'Barracks' },
-  { file: 'ladang-minyak', label: 'LADANG-MINYAK', title: 'Oil Fields of the World', var: 'OILFIELDS', sing: 'OilField', finder: 'oilfield', finders: 'oilFieldsInRegion', pfx: 'of', cap: 'OilFields' },
-  { file: 'helipad', label: 'HELIPAD', title: 'Heliports of the World', var: 'HELIPORTS', sing: 'Heliport', finder: 'heliport', finders: 'heliportsInRegion', pfx: 'hp', cap: 'Heliports' },
-  { file: 'medan-gas', label: 'MEDAN-GAS', title: 'Natural Gas Fields of the World', var: 'GASFIELDS', sing: 'GasField', finder: 'gasfield', finders: 'gasFieldsInRegion', pfx: 'gs', cap: 'GasFields' },
-  { file: 'depo-kereta', label: 'DEPO-KERETA', title: 'Railway Depots of the World', var: 'RAILWAYDEPOTS', sing: 'RailwayDepot', finder: 'railwaydepot', finders: 'railwayDepotsInRegion', pfx: 'rd', cap: 'RailwayDepots' },
-  { file: 'gudwara', label: 'GUDWARA', title: 'Gurdwaras of the World', var: 'GURDWARAS', sing: 'Gurdwara', finder: 'gurdwara', finders: 'gurdwarasInRegion', pfx: 'gd', cap: 'Gurdwaras' },
-  { file: 'gelang-ais', label: 'GELANG-AIS', title: 'Ice Rinks of the World', var: 'ICERINKS', sing: 'IceRink', finder: 'icerink', finders: 'iceRinksInRegion', pfx: 'ir', cap: 'IceRinks' },
+  { file: 'litar-lumba', label: 'LITAR-LUMBA', title: 'Motor Racing Circuits of the World', var: 'RACINGCIRCUITS', sing: 'RacingCircuit', finder: 'racingcircuit', finders: 'racingCircuitsInRegion', pfx: 'rc', cap: 'RacingCircuits' },
+  { file: 'priori', label: 'PRIORI', title: 'Priories of the World', var: 'PRIORIES', sing: 'Priory', finder: 'priory', finders: 'prioriesInRegion', pfx: 'pr', cap: 'Priories' },
+  { file: 'padang-baseball', label: 'PADANG-BASEBALL', title: 'Baseball Venues of the World', var: 'BASEBALLVENUES', sing: 'BaseballVenue', finder: 'baseballvenue', finders: 'baseballVenuesInRegion', pfx: 'bv', cap: 'BaseballVenues' },
+  { file: 'madrasah', label: 'MADRASAH', title: 'Madrasas of the World', var: 'MADRASAS', sing: 'Madrasa', finder: 'madrasa', finders: 'madrasasInRegion', pfx: 'md', cap: 'Madrasas' },
+  { file: 'kafilah-surai', label: 'KAFILAH-SURAI', title: 'Caravanserais of the World', var: 'CARAVANSERAIS', sing: 'Caravanserai', finder: 'caravanserai', finders: 'caravanseraisInRegion', pfx: 'cv', cap: 'Caravanserais' },
+  { file: 'rumah-derma', label: 'RUMAH-DERMA', title: 'Almshouses of the World', var: 'ALMSHOUSES', sing: 'Almshouse', finder: 'almshouse', finders: 'almshousesInRegion', pfx: 'al', cap: 'Almshouses' },
+  { file: 'tanah-kubur-kuno', label: 'TANAH-KUBUR-KUNO', title: 'Ancient Necropolises of the World', var: 'NECROPOLISES', sing: 'Necropolis', finder: 'necropolis', finders: 'necropolisesInRegion', pfx: 'nc', cap: 'Necropolises' },
+  { file: 'rumah-banja', label: 'RUMAH-BANJA', title: 'Hammams of the World', var: 'HAMMAMS', sing: 'Hammam', finder: 'hammam', finders: 'hammamsInRegion', pfx: 'hm', cap: 'Hammams' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
