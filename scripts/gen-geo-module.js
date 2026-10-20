@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'gunung-strato', label: 'GUNUNG-STRATO', title: 'Stratovolcanoes of the World', var: 'STRATOVOLCANOES', sing: 'Stratovolcano', finder: 'stratovolcano', finders: 'stratovolcanoesInRegion', pfx: 'gs', cap: 'GunungStrato' },
-  { file: 'kilap-kapas', label: 'KILAP-KAPAS', title: 'Cotton Mills of the World', var: 'COTTONMILLS', sing: 'CottonMill', finder: 'cottonmill', finders: 'cottonMillsInRegion', pfx: 'km', cap: 'KilapKapas' },
-  { file: 'gunung-perisai', label: 'GUNUNG-PERISAI', title: 'Shield Volcanoes of the World', var: 'SHIELDVOLCANOES', sing: 'ShieldVolcano', finder: 'shieldvolcano', finders: 'shieldVolcanoesInRegion', pfx: 'gp', cap: 'GunungPerisai' },
-  { file: 'stesen-pam', label: 'STESEN-PAM', title: 'Pumping Stations of the World', var: 'PUMPINGSTATIONS', sing: 'PumpingStation', finder: 'pumpingstation', finders: 'pumpingStationsInRegion', pfx: 'sp', cap: 'StesenPam' },
-  { file: 'taman-luncur', label: 'TAMAN-LUNCUR', title: 'Skateparks of the World', var: 'SKATEPARKS', sing: 'Skatepark', finder: 'skatepark', finders: 'skateparksInRegion', pfx: 'tl', cap: 'TamanLuncur' },
-  { file: 'depot-tram', label: 'DEPOT-TRAM', title: 'Tram Depots of the World', var: 'TRAMDEPOTS', sing: 'TramDepot', finder: 'tramdepot', finders: 'tramDepotsInRegion', pfx: 'dt', cap: 'DepotTram' },
-  { file: 'arena-toros', label: 'ARENA-TOROS', title: 'Bullrings of the World', var: 'BULLRINGS', sing: 'Bullring', finder: 'bullring', finders: 'bullringsInRegion', pfx: 'ar', cap: 'ArenaToros' },
-  { file: 'kerucut-kerikil', label: 'KERUCUT-KERIKIL', title: 'Cinder Cones of the World', var: 'CINDERCONES', sing: 'CinderCone', finder: 'cindercone', finders: 'cinderConesInRegion', pfx: 'kk', cap: 'KerucutKerikil' },
+  { file: 'seminari', label: 'SEMINARI', title: 'Seminaries of the World', var: 'SEMINARIES', sing: 'Seminary', finder: 'seminary', finders: 'seminariesInRegion', pfx: 'sm', cap: 'Seminari' },
+  { file: 'stesen-bensin', label: 'STESEN-BENSIN', title: 'Filling Stations of the World', var: 'FILLINGSTATIONS', sing: 'FillingStation', finder: 'fillingstation', finders: 'fillingStationsInRegion', pfx: 'fs', cap: 'StesenBensin' },
+  { file: 'tangga-perigi', label: 'TANGGA-PERIGI', title: 'Stepwells of the World', var: 'STEPWELLS', sing: 'Stepwell', finder: 'stepwell', finders: 'stepwellsInRegion', pfx: 'sw', cap: 'TanggaPerigi' },
+  { file: 'pulau-batu', label: 'PULAU-BATU', title: 'Skerries of the World', var: 'SKERRIES', sing: 'Skerry', finder: 'skerry', finders: 'skerriesInRegion', pfx: 'sk', cap: 'PulauBatu' },
+  { file: 'terowong-lava', label: 'TEROWONG-LAVA', title: 'Lava Tubes of the World', var: 'LAVATUBES', sing: 'LavaTube', finder: 'lavatube', finders: 'lavaTubesInRegion', pfx: 'lt', cap: 'TerowongLava' },
+  { file: 'morena', label: 'MORENA', title: 'Moraines of the World', var: 'MORAINES', sing: 'Moraine', finder: 'moraine', finders: 'morainesInRegion', pfx: 'mo', cap: 'Morena' },
+  { file: 'rumah-benteng', label: 'RUMAH-BENTENG', title: 'Blockhouses of the World', var: 'BLOCKHOUSES', sing: 'Blockhouse', finder: 'blockhouse', finders: 'blockhousesInRegion', pfx: 'bh', cap: 'RumahBenteng' },
+  { file: 'pemecah-ombak', label: 'PEMECAH-OMBAK', title: 'Breakwaters of the World', var: 'BREAKWATERS', sing: 'Breakwater', finder: 'breakwater', finders: 'breakwatersInRegion', pfx: 'bw', cap: 'PemecahOmbak' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
