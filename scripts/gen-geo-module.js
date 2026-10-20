@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'jambatan-gerudi', label: 'JAMBATAN-GERUDI', title: 'Arch Bridges of the World', var: 'ARCHBRIDGES', sing: 'ArchBridge', finder: 'archbridge', finders: 'archBridgesInRegion', pfx: 'ag', cap: 'JambatanGerudi' },
-  { file: 'gunung-laut', label: 'GUNUNG-LAUT', title: 'Seamounts of the World', var: 'SEAMOUNTS', sing: 'Seamount', finder: 'seamount', finders: 'seamountsInRegion', pfx: 'sm', cap: 'GunungLaut' },
-  { file: 'kelab-yacht', label: 'KELAB-YACHT', title: 'Yacht Clubs of the World', var: 'YACHTCLUBS', sing: 'YachtClub', finder: 'yachtclub', finders: 'yachtClubsInRegion', pfx: 'yc', cap: 'KelabYacht' },
-  { file: 'pelabuhan-angkasa', label: 'PELABUHAN-ANGKASA', title: 'Spaceports of the World', var: 'SPACEPORTS', sing: 'Spaceport', finder: 'spaceport', finders: 'spaceportsInRegion', pfx: 'sp', cap: 'PelabuhanAngkasa' },
-  { file: 'medan-vulkanik', label: 'MEDAN-VULKANIK', title: 'Volcanic Fields of the World', var: 'VOLCANICFIELDS', sing: 'VolcanicField', finder: 'volcanicfield', finders: 'volcanicFieldsInRegion', pfx: 'vf', cap: 'MedanVulkanik' },
-  { file: 'ukiran-batu', label: 'UKIRAN-BATU', title: 'Petroglyphs of the World', var: 'PETROGLYPHS', sing: 'PetroglyphSite', finder: 'petroglyph', finders: 'petroglyphsInRegion', pfx: 'pg', cap: 'UkiranBatu' },
-  { file: 'patung-kuda', label: 'PATUNG-KUDA', title: 'Equestrian Statues of the World', var: 'EQUESTRIANSTATUES', sing: 'EquestrianStatue', finder: 'equestrianstatue', finders: 'equestrianStatuesInRegion', pfx: 'eq', cap: 'PatungKuda' },
-  { file: 'parit-laut', label: 'PARIT-LAUT', title: 'Oceanic Trenches of the World', var: 'OCEANICTRENCHES', sing: 'OceanTrench', finder: 'oceantrench', finders: 'oceanicTrenchesInRegion', pfx: 'ot', cap: 'ParitLaut' },
-  { file: 'frazioni', label: 'FRAZIONI', title: 'Frazioni of Italy', var: 'FRAZIONI', sing: 'Frazione', finder: 'frazione', finders: 'frazioniInRegion', pfx: 'fz', cap: 'Frazioni' },
+  { file: 'lokaliti', label: 'LOKALITI', title: 'Localities of the World', var: 'LOCALITIES', sing: 'Locality', finder: 'locality', finders: 'localitiesInRegion', pfx: 'lc', cap: 'Lokaliti' },
+  { file: 'petak-tanah', label: 'PETAK-TANAH', title: 'Townlands of the World', var: 'TOWNLANDS', sing: 'Townland', finder: 'townland', finders: 'townlandsInRegion', pfx: 'tl', cap: 'PetakTanah' },
+  { file: 'arkib', label: 'ARKIB', title: 'Archives of the World', var: 'ARCHIVES', sing: 'Archive', finder: 'archive', finders: 'archivesInRegion', pfx: 'ar', cap: 'Arkib' },
+  { file: 'rak-ais', label: 'RAK-AIS', title: 'Ice Shelves of the World', var: 'ICESHELVES', sing: 'IceShelf', finder: 'iceshelf', finders: 'iceShelvesInRegion', pfx: 'is', cap: 'RakAis' },
+  { file: 'pencawang', label: 'PENC-AWANG', title: 'Electrical Substations of the World', var: 'SUBSTATIONS', sing: 'Substation', finder: 'substation', finders: 'substationsInRegion', pfx: 'sb', cap: 'Pencawang' },
+  { file: 'kuil-api', label: 'KUIL-API', title: 'Fire Temples of the World', var: 'FIRETEMPLES', sing: 'FireTemple', finder: 'firetemple', finders: 'fireTemplesInRegion', pfx: 'ft', cap: 'KuilApi' },
+  { file: 'gunung-terasing', label: 'GUNUNG-TERASING', title: 'Inselbergs of the World', var: 'INSELBERGS', sing: 'Inselberg', finder: 'inselberg', finders: 'inselbergsInRegion', pfx: 'ib', cap: 'GunungTerasing' },
+  { file: 'lumbung', label: 'LUMBUNG', title: 'Granaries of the World', var: 'GRANARIES', sing: 'Granary', finder: 'granary', finders: 'granariesInRegion', pfx: 'gn', cap: 'Lumbung' },
+  { file: 'rumah-potong', label: 'RUMAH-POTONG', title: 'Abattoirs of the World', var: 'ABATTOIRS', sing: 'Abattoir', finder: 'abattoir', finders: 'abattoirsInRegion', pfx: 'ab', cap: 'RumahPotong' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
