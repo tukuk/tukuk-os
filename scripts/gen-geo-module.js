@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'payau', label: 'MARSHES', title: 'Marshes of the World', var: 'MARSHES', sing: 'Marsh', finder: 'marsh', finders: 'marshesInRegion', pfx: 'mh', cap: 'Marshes' },
-  { file: 'rumah-yatim', label: 'ORPHANAGES', title: 'Orphanages of the World', var: 'ORPHANAGES', sing: 'Orphanage', finder: 'orphanage', finders: 'orphanagesInRegion', pfx: 'orp', cap: 'Orphanages' },
-  { file: 'sirke-gletser', label: 'GLACIAL-CIRQUES', title: 'Glacial Cirques of the World', var: 'CIRQUES', sing: 'Cirque', finder: 'cirque', finders: 'cirquesInRegion', pfx: 'cq', cap: 'GlacialCirques' },
-  { file: 'benteng-gelang', label: 'RINGFORTS', title: 'Ringforts of the World', var: 'RINGFORTS', sing: 'Ringfort', finder: 'ringfort', finders: 'ringfortsInRegion', pfx: 'rf', cap: 'Ringforts' },
-  { file: 'lido', label: 'LIDOS', title: 'Lidos of the World', var: 'LIDOS', sing: 'Lido', finder: 'lido', finders: 'lidosInRegion', pfx: 'ld', cap: 'Lidos' },
-  { file: 'topi-ais', label: 'ICE-CAPS', title: 'Ice Caps of the World', var: 'ICECAPS', sing: 'IceCap', finder: 'icecap', finders: 'iceCapsInRegion', pfx: 'ic', cap: 'IceCaps' },
-  { file: 'roundhouse-kreta', label: 'RAILWAY-ROUNDHOUSES', title: 'Railway Roundhouses of the World', var: 'ROUNDHOUSES', sing: 'Roundhouse', finder: 'roundhouse', finders: 'roundhousesInRegion', pfx: 'rh', cap: 'RailwayRoundhouses' },
-  { file: 'medan-ais', label: 'ICE-FIELDS', title: 'Ice Fields of the World', var: 'ICEFIELDS', sing: 'IceField', finder: 'icefield', finders: 'iceFieldsInRegion', pfx: 'if', cap: 'IceFields' },
-  { file: 'adit', label: 'ADITS', title: 'Mining Adits of the World', var: 'ADITS', sing: 'Adit', finder: 'adit', finders: 'aditsInRegion', pfx: 'ad', cap: 'Adits' },
+  { file: 'benteng-tanjung', label: 'PROMONTORY-FORTS', title: 'Promontory Forts of the World', var: 'PROMFORTS', sing: 'PromontoryFort', finder: 'promfort', finders: 'promontoryFortsInRegion', pfx: 'pf', cap: 'PromontoryForts' },
+  { file: 'penanda-sempadan', label: 'BOUNDARY-MARKERS', title: 'Boundary Markers of the World', var: 'BOUNDARYMARKERS', sing: 'BoundaryMarker', finder: 'boundarymarker', finders: 'boundaryMarkersInRegion', pfx: 'bm', cap: 'BoundaryMarkers' },
+  { file: 'cairn', label: 'CAIRNS', title: 'Cairns of the World', var: 'CAIRNS', sing: 'Cairn', finder: 'cairn', finders: 'cairnsInRegion', pfx: 'ca', cap: 'Cairns' },
+  { file: 'lumbung-sepuluh', label: 'TITHE-BARNS', title: 'Tithe Barns of the World', var: 'TITHEBARNS', sing: 'TitheBarn', finder: 'tithebarn', finders: 'titheBarnsInRegion', pfx: 'tb', cap: 'TitheBarns' },
+  { file: 'kubur-laluan', label: 'PASSAGE-TOMBS', title: 'Passage Tombs of the World', var: 'PASSAGETOMBS', sing: 'PassageTomb', finder: 'passagetomb', finders: 'passageTombsInRegion', pfx: 'pt', cap: 'PassageTombs' },
+  { file: 'perapuk-kapur', label: 'LIME-KILNS', title: 'Lime Kilns of the World', var: 'LIMEKILNS', sing: 'LimeKiln', finder: 'limekiln', finders: 'limeKilnsInRegion', pfx: 'lk', cap: 'LimeKilns' },
+  { file: 'polje', label: 'POLJES', title: 'Poljes of the World', var: 'POLJES', sing: 'Polje', finder: 'polje', finders: 'poljesInRegion', pfx: 'pj', cap: 'Poljes' },
+  { file: 'batu-mail', label: 'MILESTONES', title: 'Milestones of the World', var: 'MILESTONES', sing: 'Milestone', finder: 'milestone', finders: 'milestonesInRegion', pfx: 'mi', cap: 'Milestones' },
+  { file: 'menara-transmisi', label: 'TRANSMISSION-TOWERS', title: 'Transmission Towers of the World', var: 'TRANSMISSIONTOWERS', sing: 'TransmissionTower', finder: 'transmissiontower', finders: 'transmissionTowersInRegion', pfx: 'tt', cap: 'TransmissionTowers' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
