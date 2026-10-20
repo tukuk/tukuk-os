@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kawah-hentaman', label: 'KAWAH-HENTAMAN', title: 'Impact Craters of the World', var: 'IMPACTCRATERS', sing: 'ImpactCrater', finder: 'impactcrater', finders: 'impactCratersInRegion', pfx: 'ic', cap: 'ImpactCraters' },
-  { file: 'jambatan-beratap', label: 'JAMBATAN-BERATAP', title: 'Covered Bridges of the World', var: 'COVEREDBRIDGES', sing: 'CoveredBridge', finder: 'coveredbridge', finders: 'coveredBridgesInRegion', pfx: 'cvb', cap: 'CoveredBridges' },
-  { file: 'kereta-bergerigi', label: 'KERETA-BERGERIGI', title: 'Funiculars of the World', var: 'FUNICULARS', sing: 'Funicular', finder: 'funicular', finders: 'funicularsInRegion', pfx: 'fun', cap: 'Funiculars' },
-  { file: 'tambang-udara', label: 'TAMBANG-UDARA', title: 'Aerial Tramways of the World', var: 'AERIALTRAMWAYS', sing: 'AerialTramway', finder: 'aerialtramway', finders: 'aerialTramwaysInRegion', pfx: 'atm', cap: 'AerialTramways' },
-  { file: 'tasik-kawah', label: 'TASIK-KAWAH', title: 'Crater Lakes of the World', var: 'CRATERLAKES', sing: 'CraterLake', finder: 'craterlake', finders: 'craterLakesInRegion', pfx: 'crl', cap: 'CraterLakes' },
-  { file: 'lengkung-alam', label: 'LENGKUNG-ALAM', title: 'Natural Arches of the World', var: 'NATURALARCHES', sing: 'NaturalArch', finder: 'naturalarch', finders: 'naturalArchesInRegion', pfx: 'nar', cap: 'NaturalArches' },
-  { file: 'delta-sungai', label: 'DELTA-SUNGAI', title: 'River Deltas of the World', var: 'RIVERDELTAS', sing: 'RiverDelta', finder: 'riverdelta', finders: 'riverDeltasInRegion', pfx: 'rvd', cap: 'RiverDeltas' },
-  { file: 'salib-tinggi', label: 'SALIB-TINGGI', title: 'High Crosses of the World', var: 'HIGHCROSSES', sing: 'HighCross', finder: 'highcross', finders: 'highCrossesInRegion', pfx: 'hcr', cap: 'HighCrosses' },
+  { file: 'takungan-air', label: 'TAKUNGAN-AIR', title: 'Reservoirs of the World', var: 'RESERVOIRS', sing: 'Reservoir', finder: 'reservoir', finders: 'reservoirsInRegion', pfx: 'ra', cap: 'Reservoirs' },
+  { file: 'stesen-penyelamat', label: 'STESEN-PENYELAMAT', title: 'Lifeboat Stations of the World', var: 'LIFEBOATSTATIONS', sing: 'LifeboatStation', finder: 'lifeboatstation', finders: 'lifeboatStationsInRegion', pfx: 'lb', cap: 'LifeboatStations' },
+  { file: 'tembok-kota', label: 'TEMBOK-KOTA', title: 'City Walls of the World', var: 'CITYWALLS', sing: 'CityWall', finder: 'citywall', finders: 'cityWallsInRegion', pfx: 'cw', cap: 'CityWalls' },
+  { file: 'bukit-luncur', label: 'BUKIT-LUNCUR', title: 'Ski Jumping Hills of the World', var: 'SKIJUMPINGHILLS', sing: 'SkiJumpingHill', finder: 'skijumpinghill', finders: 'skiJumpingHillsInRegion', pfx: 'sj', cap: 'SkiJumpingHills' },
+  { file: 'kolam-renang', label: 'KOLAM-RENANG', title: 'Swimming Pools of the World', var: 'SWIMMINGPOOLS', sing: 'SwimmingPool', finder: 'swimmingpool', finders: 'swimmingPoolsInRegion', pfx: 'sw', cap: 'SwimmingPools' },
+  { file: 'mandi-rom', label: 'MANDI-ROM', title: 'Roman Baths of the World', var: 'ROMANBATHS', sing: 'RomanBath', finder: 'romanbath', finders: 'romanBathsInRegion', pfx: 'rb', cap: 'RomanBaths' },
+  { file: 'tiang-laut', label: 'TIANG-LAUT', title: 'Sea Stacks of the World', var: 'SEASTACKS', sing: 'SeaStack', finder: 'seastack', finders: 'seaStacksInRegion', pfx: 'ss', cap: 'SeaStacks' },
+  { file: 'bukit-pasir', label: 'BUKIT-PASIR', title: 'Dunes of the World', var: 'DUNES', sing: 'Dune', finder: 'dune', finders: 'dunesInRegion', pfx: 'dn', cap: 'Dunes' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
