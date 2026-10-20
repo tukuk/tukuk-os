@@ -89,6 +89,17 @@ const ks = require('./kastil');
 const mj = require('./masjid');
 const mm = require('./monumen');
 const ktl = require('./katedral');
+const hs = require('./hospital');
+const ht = require('./hotel');
+const is = require('./istana');
+const tbt = require('./taman-botani');
+const tpk = require('./taman');
+const sng = require('./sinagog');
+const ppk = require('./perpustakaan');
+const zo = require('./zoo');
+const kb = require('./kubu');
+const blc = require('./balai-cerap');
+const ak = require('./akuarium');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1083,6 +1094,17 @@ geoRoutes('kastil', ks, 'findCastle', kastilHubPage, kastilRegionPage, kastilPag
 geoRoutes('masjid', mj, 'findMosque', masjidHubPage, masjidRegionPage, masjidPage, masjidNotFound);
 geoRoutes('monumen', mm, 'findMonument', monumenHubPage, monumenRegionPage, monumenPage, monumenNotFound);
 geoRoutes('katedral', ktl, 'findCathedral', katedralHubPage, katedralRegionPage, katedralPage, katedralNotFound);
+geoRoutes('hospital', hs, 'findHospital', hospitalHubPage, hospitalRegionPage, hospitalPage, hospitalNotFound);
+geoRoutes('hotel', ht, 'findHotel', hotelHubPage, hotelRegionPage, hotelPage, hotelNotFound);
+geoRoutes('istana', is, 'findPalace', istanaHubPage, istanaRegionPage, istanaPage, istanaNotFound);
+geoRoutes('taman-botani', tbt, 'findBotanicalGarden', tamanBotaniHubPage, tamanBotaniRegionPage, tamanBotaniPage, tamanBotaniNotFound);
+geoRoutes('taman', tpk, 'findPark', tamanHubPage, tamanRegionPage, tamanPage, tamanNotFound);
+geoRoutes('sinagog', sng, 'findSynagogue', sinagogHubPage, sinagogRegionPage, sinagogPage, sinagogNotFound);
+geoRoutes('perpustakaan', ppk, 'findLibrary', perpustakaanHubPage, perpustakaanRegionPage, perpustakaanPage, perpustakaanNotFound);
+geoRoutes('zoo', zo, 'findZoo', zooHubPage, zooRegionPage, zooPage, zooNotFound);
+geoRoutes('kubu', kb, 'findFortress', kubuHubPage, kubuRegionPage, kubuPage, kubuNotFound);
+geoRoutes('balai-cerap', blc, 'findObservatory', balaiCerapHubPage, balaiCerapRegionPage, balaiCerapPage, balaiCerapNotFound);
+geoRoutes('akuarium', ak, 'findAquarium', akuariumHubPage, akuariumRegionPage, akuariumPage, akuariumNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1590,7 +1612,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1947,6 +1969,17 @@ geoSitemap('kastil', ks, 'CASTLES');
 geoSitemap('masjid', mj, 'MOSQUES');
 geoSitemap('monumen', mm, 'MONUMENTS');
 geoSitemap('katedral', ktl, 'CATHEDRALS');
+geoSitemap('hospital', hs, 'HOSPITALS');
+geoSitemap('hotel', ht, 'HOTELS');
+geoSitemap('istana', is, 'PALACES');
+geoSitemap('taman-botani', tbt, 'GARDENS');
+geoSitemap('taman', tpk, 'PARKS');
+geoSitemap('sinagog', sng, 'SYNAGOGUES');
+geoSitemap('perpustakaan', ppk, 'LIBRARIES');
+geoSitemap('zoo', zo, 'ZOOS');
+geoSitemap('kubu', kb, 'FORTRESSES');
+geoSitemap('balai-cerap', blc, 'OBSERVATORIES');
+geoSitemap('akuarium', ak, 'AQUARIUMS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7474,6 +7507,62 @@ function katedralHubPage() { return geoHubPage(ktl, 'katedral', KATEDRAL_CFG); }
 function katedralRegionPage(r) { return geoRegionPage(r, ktl, 'katedral', KATEDRAL_CFG); }
 function katedralPage(x, sum) { return geoItemPage(x, sum, ktl, 'katedral', KATEDRAL_CFG); }
 function katedralNotFound(q) { return geoNotFound('katedral', KATEDRAL_CFG, q); }
+
+const HOSPITAL_CFG = geoCfg({ base: 'hospital', listKey: 'HOSPITALS', inRegion: 'hospitalsInRegion', byCountry: 'hospitalByCountry', unit: 'hospitals', singular: 'hospital', titleCase: 'Hospitals', icon: '\ud83c\udfe5', navBlurb: `Profiles of the world's hospitals \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable hospitals worldwide: location, country and what makes each hospital significant.', subMetric: 'location & healthcare', intro: `These are the world's most notable <b>hospitals</b> \u2014 institutions of medical care and teaching, from centuries-old charity foundations to modern research centers serving whole regions. Each profile shows where the hospital stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Hospital' });
+function hospitalHubPage() { return geoHubPage(hs, 'hospital', HOSPITAL_CFG); }
+function hospitalRegionPage(r) { return geoRegionPage(r, hs, 'hospital', HOSPITAL_CFG); }
+function hospitalPage(x, sum) { return geoItemPage(x, sum, hs, 'hospital', HOSPITAL_CFG); }
+function hospitalNotFound(q) { return geoNotFound('hospital', HOSPITAL_CFG, q); }
+const HOTEL_CFG = geoCfg({ base: 'hotel', listKey: 'HOTELS', inRegion: 'hotelsInRegion', byCountry: 'hotelByCountry', unit: 'hotels', singular: 'hotel', titleCase: 'Hotels', icon: '\ud83c\udfe8', navBlurb: `Profiles of the world's hotels \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable hotels worldwide: location, country and what makes each hotel significant.', subMetric: 'location & hospitality', intro: `These are the world's most notable <b>hotels</b> \u2014 lodging establishments famous for architecture, history or luxury, from grand European grand hotels to iconic modern towers. Each profile shows where the hotel stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Hotel' });
+function hotelHubPage() { return geoHubPage(ht, 'hotel', HOTEL_CFG); }
+function hotelRegionPage(r) { return geoRegionPage(r, ht, 'hotel', HOTEL_CFG); }
+function hotelPage(x, sum) { return geoItemPage(x, sum, ht, 'hotel', HOTEL_CFG); }
+function hotelNotFound(q) { return geoNotFound('hotel', HOTEL_CFG, q); }
+const ISTANA_CFG = geoCfg({ base: 'istana', listKey: 'PALACES', inRegion: 'palacesInRegion', byCountry: 'palaceByCountry', unit: 'palaces', singular: 'palace', titleCase: 'Palaces', icon: '\ud83d\udcf0', navBlurb: `Profiles of the world's palaces \u2014 where each residence stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable palaces worldwide: location, country and what makes each palace significant.', subMetric: 'location & royalty', intro: `These are the world's most notable <b>palaces</b> \u2014 grand residences of royalty and state, from the Hall of Mirrors at Versailles to imperial complexes of Asia, staging grounds of power and patron of the arts. Each profile shows where the palace stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
+function istanaHubPage() { return geoHubPage(is, 'istana', ISTANA_CFG); }
+function istanaRegionPage(r) { return geoRegionPage(r, is, 'istana', ISTANA_CFG); }
+function istanaPage(x, sum) { return geoItemPage(x, sum, is, 'istana', ISTANA_CFG); }
+function istanaNotFound(q) { return geoNotFound('istana', ISTANA_CFG, q); }
+const TAMAN_BOTANI_CFG = geoCfg({ base: 'taman-botani', listKey: 'GARDENS', inRegion: 'gardensInRegion', byCountry: 'gardenByCountry', unit: 'botanical gardens', singular: 'botanical garden', titleCase: 'Botanical Gardens', icon: '\ud83c\udf3f', navBlurb: `Profiles of the world's botanical gardens \u2014 where each garden is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable botanical gardens worldwide: location, country and what makes each garden significant.', subMetric: 'location & horticulture', intro: `These are the world's most notable <b>botanical gardens</b> \u2014 cultivated collections of living plants for science, education and enjoyment, many attached to centuries-old herbaria and universities. Each profile shows where the garden is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Garden' });
+function tamanBotaniHubPage() { return geoHubPage(tbt, 'taman-botani', TAMAN_BOTANI_CFG); }
+function tamanBotaniRegionPage(r) { return geoRegionPage(r, tbt, 'taman-botani', TAMAN_BOTANI_CFG); }
+function tamanBotaniPage(x, sum) { return geoItemPage(x, sum, tbt, 'taman-botani', TAMAN_BOTANI_CFG); }
+function tamanBotaniNotFound(q) { return geoNotFound('taman-botani', TAMAN_BOTANI_CFG, q); }
+const TAMAN_CFG = geoCfg({ base: 'taman', listKey: 'PARKS', inRegion: 'parksInRegion', byCountry: 'parkByCountry', unit: 'urban parks', singular: 'urban park', titleCase: 'Urban Parks', icon: '\ud83c\udf33', navBlurb: `Profiles of the world's urban parks \u2014 where each green space is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable urban parks and green spaces worldwide: location, country and what makes each park significant.', subMetric: 'location & public space', intro: `These are the world's most notable <b>urban parks</b> \u2014 green lungs of cities, planned from Central Park to tropical gardens, offering recreation, wildlife and respite within the built environment. Each profile shows where the park is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Park' });
+function tamanHubPage() { return geoHubPage(tpk, 'taman', TAMAN_CFG); }
+function tamanRegionPage(r) { return geoRegionPage(r, tpk, 'taman', TAMAN_CFG); }
+function tamanPage(x, sum) { return geoItemPage(x, sum, tpk, 'taman', TAMAN_CFG); }
+function tamanNotFound(q) { return geoNotFound('taman', TAMAN_CFG, q); }
+const SINAGOG_CFG = geoCfg({ base: 'sinagog', listKey: 'SYNAGOGUES', inRegion: 'synagoguesInRegion', byCountry: 'synagogueByCountry', unit: 'synagogues', singular: 'synagogue', titleCase: 'Synagogues', icon: '\u2721', navBlurb: `Profiles of the world's synagogues \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable synagogues worldwide: location, country and what makes each synagogue significant.', subMetric: 'location & architecture', intro: `These are the world's most notable <b>synagogues</b> \u2014 Jewish houses of prayer and community, ranging from grand Moorish-revival temples to historic neighborhood shuls that anchored diaspora life. Each profile shows where the synagogue stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function sinagogHubPage() { return geoHubPage(sng, 'sinagog', SINAGOG_CFG); }
+function sinagogRegionPage(r) { return geoRegionPage(r, sng, 'sinagog', SINAGOG_CFG); }
+function sinagogPage(x, sum) { return geoItemPage(x, sum, sng, 'sinagog', SINAGOG_CFG); }
+function sinagogNotFound(q) { return geoNotFound('sinagog', SINAGOG_CFG, q); }
+const PERPUSTAKAAN_CFG = geoCfg({ base: 'perpustakaan', listKey: 'LIBRARIES', inRegion: 'librarysInRegion', byCountry: 'libraryByCountry', unit: 'public libraries', singular: 'public library', titleCase: 'Public Libraries', icon: '\ud83d\udcda', navBlurb: `Profiles of the world's public libraries \u2014 where each collection is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable public and research libraries worldwide: location, country and what makes each library significant.', subMetric: 'location & knowledge', intro: `These are the world's most notable <b>public and research libraries</b> \u2014 institutions that collect, preserve and lend the record of human knowledge, from national legal-deposit libraries to landmark civic reading rooms. Each profile shows where the library is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Library' });
+function perpustakaanHubPage() { return geoHubPage(ppk, 'perpustakaan', PERPUSTAKAAN_CFG); }
+function perpustakaanRegionPage(r) { return geoRegionPage(r, ppk, 'perpustakaan', PERPUSTAKAAN_CFG); }
+function perpustakaanPage(x, sum) { return geoItemPage(x, sum, ppk, 'perpustakaan', PERPUSTAKAAN_CFG); }
+function perpustakaanNotFound(q) { return geoNotFound('perpustakaan', PERPUSTAKAAN_CFG, q); }
+const ZOO_CFG = geoCfg({ base: 'zoo', listKey: 'ZOOS', inRegion: 'zoosInRegion', byCountry: 'zooByCountry', unit: 'zoos', singular: 'zoo', titleCase: 'Zoos', icon: '\ud83e\udd81', navBlurb: `Profiles of the world's zoos \u2014 where each park is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable zoos and wildlife parks worldwide: location, country and what makes each zoo significant.', subMetric: 'location & wildlife', intro: `These are the world's most notable <b>zoos</b> \u2014 institutions that keep and exhibit live animals for conservation, education and research, many running breeding programs for endangered species. Each profile shows where the zoo is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Zoo' });
+function zooHubPage() { return geoHubPage(zo, 'zoo', ZOO_CFG); }
+function zooRegionPage(r) { return geoRegionPage(r, zo, 'zoo', ZOO_CFG); }
+function zooPage(x, sum) { return geoItemPage(x, sum, zo, 'zoo', ZOO_CFG); }
+function zooNotFound(q) { return geoNotFound('zoo', ZOO_CFG, q); }
+const KUBU_CFG = geoCfg({ base: 'kubu', listKey: 'FORTRESSES', inRegion: 'fortressesInRegion', byCountry: 'fortressByCountry', unit: 'fortresses', singular: 'fortress', titleCase: 'Fortresses', icon: '\ud83d\udea9', navBlurb: `Profiles of the world's fortresses \u2014 where each stronghold stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable fortresses and forts worldwide: location, country and what makes each fortification significant.', subMetric: 'location & defense', intro: `These are the world's most notable <b>fortresses</b> \u2014 large permanent military fortifications built to command strategic ground, from star-shaped citadels to mountain redoubts that withstood sieges. Each profile shows where the stronghold stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
+function kubuHubPage() { return geoHubPage(kb, 'kubu', KUBU_CFG); }
+function kubuRegionPage(r) { return geoRegionPage(r, kb, 'kubu', KUBU_CFG); }
+function kubuPage(x, sum) { return geoItemPage(x, sum, kb, 'kubu', KUBU_CFG); }
+function kubuNotFound(q) { return geoNotFound('kubu', KUBU_CFG, q); }
+const BALAI_CERAP_CFG = geoCfg({ base: 'balai-cerap', listKey: 'OBSERVATORIES', inRegion: 'observatorysInRegion', byCountry: 'observatoryByCountry', unit: 'observatories', singular: 'observatory', titleCase: 'Astronomical Observatories', icon: '\ud83d\udd2d', navBlurb: `Profiles of the world's observatories \u2014 where each telescope stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable astronomical observatories worldwide: location, country and what makes each site significant.', subMetric: 'location & astronomy', intro: `These are the world's most notable <b>astronomical observatories</b> \u2014 mountaintops and desert sites where telescopes scan the cosmos, from historic domes to great modern arrays discovering galaxies and planets. Each profile shows where the observatory stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Observatory' });
+function balaiCerapHubPage() { return geoHubPage(blc, 'balai-cerap', BALAI_CERAP_CFG); }
+function balaiCerapRegionPage(r) { return geoRegionPage(r, blc, 'balai-cerap', BALAI_CERAP_CFG); }
+function balaiCerapPage(x, sum) { return geoItemPage(x, sum, blc, 'balai-cerap', BALAI_CERAP_CFG); }
+function balaiCerapNotFound(q) { return geoNotFound('balai-cerap', BALAI_CERAP_CFG, q); }
+const AKUARIUM_CFG = geoCfg({ base: 'akuarium', listKey: 'AQUARIUMS', inRegion: 'aquariumsInRegion', byCountry: 'aquariumByCountry', unit: 'aquariums', singular: 'aquarium', titleCase: 'Aquariums', icon: '\ud83d\udc20', navBlurb: `Profiles of the world's aquariums \u2014 where each ocean house is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable public aquariums worldwide: location, country and what makes each aquarium significant.', subMetric: 'location & marine life', intro: `These are the world's most notable <b>aquariums</b> \u2014 facilities that keep and display aquatic plants and animals for public education and conservation, from giant ocean tanks to specialized reef houses. Each profile shows where the aquarium is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Aquarium' });
+function akuariumHubPage() { return geoHubPage(ak, 'akuarium', AKUARIUM_CFG); }
+function akuariumRegionPage(r) { return geoRegionPage(r, ak, 'akuarium', AKUARIUM_CFG); }
+function akuariumPage(x, sum) { return geoItemPage(x, sum, ak, 'akuarium', AKUARIUM_CFG); }
+function akuariumNotFound(q) { return geoNotFound('akuarium', AKUARIUM_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
