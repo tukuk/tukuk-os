@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'litar-lumba', label: 'LITAR-LUMBA', title: 'Motor Racing Circuits of the World', var: 'RACINGCIRCUITS', sing: 'RacingCircuit', finder: 'racingcircuit', finders: 'racingCircuitsInRegion', pfx: 'rc', cap: 'RacingCircuits' },
-  { file: 'priori', label: 'PRIORI', title: 'Priories of the World', var: 'PRIORIES', sing: 'Priory', finder: 'priory', finders: 'prioriesInRegion', pfx: 'pr', cap: 'Priories' },
-  { file: 'padang-baseball', label: 'PADANG-BASEBALL', title: 'Baseball Venues of the World', var: 'BASEBALLVENUES', sing: 'BaseballVenue', finder: 'baseballvenue', finders: 'baseballVenuesInRegion', pfx: 'bv', cap: 'BaseballVenues' },
-  { file: 'madrasah', label: 'MADRASAH', title: 'Madrasas of the World', var: 'MADRASAS', sing: 'Madrasa', finder: 'madrasa', finders: 'madrasasInRegion', pfx: 'md', cap: 'Madrasas' },
-  { file: 'kafilah-surai', label: 'KAFILAH-SURAI', title: 'Caravanserais of the World', var: 'CARAVANSERAIS', sing: 'Caravanserai', finder: 'caravanserai', finders: 'caravanseraisInRegion', pfx: 'cv', cap: 'Caravanserais' },
-  { file: 'rumah-derma', label: 'RUMAH-DERMA', title: 'Almshouses of the World', var: 'ALMSHOUSES', sing: 'Almshouse', finder: 'almshouse', finders: 'almshousesInRegion', pfx: 'al', cap: 'Almshouses' },
-  { file: 'tanah-kubur-kuno', label: 'TANAH-KUBUR-KUNO', title: 'Ancient Necropolises of the World', var: 'NECROPOLISES', sing: 'Necropolis', finder: 'necropolis', finders: 'necropolisesInRegion', pfx: 'nc', cap: 'Necropolises' },
-  { file: 'rumah-banja', label: 'RUMAH-BANJA', title: 'Hammams of the World', var: 'HAMMAMS', sing: 'Hammam', finder: 'hammam', finders: 'hammamsInRegion', pfx: 'hm', cap: 'Hammams' },
+  { file: 'penempatan-bebas', label: 'PENEMPATAN-BEBAS', title: 'Unincorporated Communities of the World', var: 'UNINCORPORATED', sing: 'UnincorporatedCommunity', finder: 'unincorporated', finders: 'unincorporatedCommunitiesInRegion', pfx: 'uc', cap: 'UnincorporatedCommunities' },
+  { file: 'kawasan-jiran', label: 'KAWASAN-JIRAN', title: 'Neighborhoods of the World', var: 'NEIGHBORHOODS', sing: 'Neighborhood', finder: 'neighborhood', finders: 'neighborhoodsInRegion', pfx: 'nh', cap: 'Neighborhoods' },
+  { file: 'kawasan-sensus', label: 'KAWASAN-SENSUS', title: 'Census-Designated Places of the World', var: 'CENSUSPLACES', sing: 'CensusPlace', finder: 'censusplace', finders: 'censusPlacesInRegion', pfx: 'cd', cap: 'CensusPlaces' },
+  { file: 'daerah-sejarah', label: 'DAERAH-SEJARAH', title: 'Historic Districts of the World', var: 'HISTORICDISTRICTS', sing: 'HistoricDistrict', finder: 'historicdistrict', finders: 'historicDistrictsInRegion', pfx: 'hd', cap: 'HistoricDistricts' },
+  { file: 'pinggiran', label: 'PINGGIRAN', title: 'Suburbs of the World', var: 'SUBURBS', sing: 'Suburb', finder: 'suburb', finders: 'suburbsInRegion', pfx: 'sb', cap: 'Suburbs' },
+  { file: 'perhentian-tram', label: 'PERHENTIAN-TRAM', title: 'Tram Stops of the World', var: 'TRAMSTOPS', sing: 'TramStop', finder: 'tramstop', finders: 'tramStopsInRegion', pfx: 'ts', cap: 'TramStops' },
+  { file: 'pusat-konvensyen', label: 'PUSAT-KONVENSYEN', title: 'Convention Centers of the World', var: 'CONVENTIONCENTERS', sing: 'ConventionCenter', finder: 'conventioncenter', finders: 'conventionCentersInRegion', pfx: 'cc', cap: 'ConventionCenters' },
+  { file: 'formasi-batu', label: 'FORMASI-BATU', title: 'Rock Formations of the World', var: 'ROCKFORMATIONS', sing: 'RockFormation', finder: 'rockformation', finders: 'rockFormationsInRegion', pfx: 'rf', cap: 'RockFormations' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
