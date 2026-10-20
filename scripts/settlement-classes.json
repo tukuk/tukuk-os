@@ -1,0 +1,21 @@
+{
+  "_note": "Merged into ONE /settlements dataset via scripts/fetch-geo-partitioned.js. Rebuild: node scripts/fetch-geo-partitioned.js \"$(node -e 'console.log(Object.keys(require(\"./scripts/settlement-classes.json\")).filter(k!=\"_note\").join(\",\"))')\" src/settlement-data.json. If any class fails transiently during the long run, re-fetch it alone and merge by (name|country) dedup.",
+  "Q484170": "commune of France (37,441)",
+  "Q498162": "U.S. census-designated place (11,398)",
+  "Q747074": "municipality of Italy (7,833)",
+  "Q5153359": "municipality with town rights of Czechia (6,241)",
+  "Q2074737": "municipality of Spain (6,205)",
+  "Q3184121": "municipality of Brazil (5,564)",
+  "Q659103": "commune of Romania (2,847)",
+  "Q2590631": "municipality of Hungary (2,798)",
+  "Q667509": "municipality of Austria (2,366)",
+  "Q70208": "municipality of Switzerland (2,162)",
+  "Q1131296": "freguesia of Portugal (1,517)",
+  "Q2039348": "municipality of the Netherlands (1,168)",
+  "Q2555896": "municipality of Colombia (1,093)",
+  "Q493522": "municipality of Belgium (579)",
+  "Q755707": "municipality of Norway (351)",
+  "Q13217644": "municipality of Portugal (308)",
+  "Q127448": "municipality of Sweden (289)",
+  "Q1349648": "municipality of Greece (154)"
+}
