@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'observatorium', label: 'OBSERVATORIES', title: 'Astronomical Observatories of the World', var: 'OBSERVATORIES', sing: 'Observatory', finder: 'observatory', finders: 'observatoriesInRegion', pfx: 'ob', cap: 'Observatories' },
-  { file: 'hidro', label: 'HYDROELECTRIC-PLANTS', title: 'Hydroelectric Power Stations of the World', var: 'HYDROEL', sing: 'HydroelectricPlant', finder: 'hydroelectric', finders: 'hydroelectricPlantsInRegion', pfx: 'he', cap: 'HydroelectricPlants' },
-  { file: 'baterai-meriam', label: 'GUN-BATTERIES', title: 'Artillery and Coastal Gun Batteries of the World', var: 'GUNBATT', sing: 'GunBattery', finder: 'gunbattery', finders: 'gunBatteriesInRegion', pfx: 'gu', cap: 'GunBatteries' },
-  { file: 'teleskop-radio', label: 'RADIO-TELESCOPES', title: 'Radio Telescopes of the World', var: 'RADIOSCP', sing: 'RadioTelescope', finder: 'radiotelescope', finders: 'radioTelescopesInRegion', pfx: 'rt', cap: 'RadioTelescopes' },
-  { file: 'stesen-radar', label: 'RADAR-STATIONS', title: 'Radar Stations of the World', var: 'RADARST', sing: 'RadarStation', finder: 'radarstation', finders: 'radarStationsInRegion', pfx: 'rd', cap: 'RadarStations' },
-  { file: 'polder', label: 'POLDERS', title: 'Polders of the World', var: 'POLDERS', sing: 'Polder', finder: 'polder', finders: 'poldersInRegion', pfx: 'pl', cap: 'Polders' },
-  { file: 'stesen-cuaca', label: 'WEATHER-STATIONS', title: 'Weather Stations of the World', var: 'WEATHERST', sing: 'WeatherStation', finder: 'weatherstation', finders: 'weatherStationsInRegion', pfx: 'wc', cap: 'WeatherStations' },
-  { file: 'pabrik-kertas', label: 'PAPER-MILLS', title: 'Paper Mills of the World', var: 'PAPERMILL', sing: 'PaperMill', finder: 'papermill', finders: 'paperMillsInRegion', pfx: 'pk', cap: 'PaperMills' },
-  { file: 'anjakan-minyak', label: 'OIL-PLATFORMS', title: 'Offshore Oil Platforms of the World', var: 'OILPLAT', sing: 'OilPlatform', finder: 'oilplatform', finders: 'oilPlatformsInRegion', pfx: 'oa', cap: 'OilPlatforms' },
+  { file: 'kilin-tekstil', label: 'TEXTILE-MILLS', title: 'Textile Mills of the World', var: 'TEXTILEMILLS', sing: 'TextileMill', finder: 'textilemill', finders: 'textileMillsInRegion', pfx: 'kt', cap: 'TextileMills' },
+  { file: 'kerja-besi', label: 'IRONWORKS', title: 'Ironworks of the World', var: 'IRONWORKS', sing: 'Ironworks', finder: 'ironworks', finders: 'ironworksInRegion', pfx: 'iw', cap: 'Ironworks' },
+  { file: 'batu-glasier', label: 'GLACIAL-ERRATICS', title: 'Glacial Erratics of the World', var: 'ERRATICS', sing: 'GlacialErratic', finder: 'erratic', finders: 'glacialErraticsInRegion', pfx: 'ge', cap: 'GlacialErratics' },
+  { file: 'keluli', label: 'STEELWORKS', title: 'Steelworks of the World', var: 'STEELWORKS', sing: 'Steelworks', finder: 'steelworks', finders: 'steelworksInRegion', pfx: 'st', cap: 'Steelworks' },
+  { file: 'peram-biji', label: 'MALTINGS', title: 'Maltings of the World', var: 'MALTINGS', sing: 'Maltings', finder: 'maltings', finders: 'maltingsInRegion', pfx: 'mt', cap: 'Maltings' },
+  { file: 'kilang-gula', label: 'SUGAR-REFINERIES', title: 'Sugar Refineries of the World', var: 'SUGARREF', sing: 'SugarRefinery', finder: 'sugarrefinery', finders: 'sugarRefineriesInRegion', pfx: 'sr', cap: 'SugarRefineries' },
+  { file: 'rumah-kerja', label: 'WORKHOUSES', title: 'Workhouses of the World', var: 'WORKHOUSES', sing: 'Workhouse', finder: 'workhouse', finders: 'workhousesInRegion', pfx: 'wk', cap: 'Workhouses' },
+  { file: 'kilang-kayu', label: 'SAWMILLS', title: 'Sawmills of the World', var: 'SAWMILLS', sing: 'Sawmill', finder: 'sawmill', finders: 'sawmillsInRegion', pfx: 'sw', cap: 'Sawmills' },
+  { file: 'kilang-bata', label: 'BRICKWORKS', title: 'Brickworks of the World', var: 'BRICKWORKS', sing: 'Brickworks', finder: 'brickworks', finders: 'brickworksInRegion', pfx: 'bw', cap: 'Brickworks' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
