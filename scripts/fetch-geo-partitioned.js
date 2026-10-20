@@ -9,9 +9,9 @@
 const https = require('https');
 const fs = require('fs');
 
-const QID = process.argv[2];
+const QIDS = String(process.argv[2] || '').split(',').map((s) => s.trim()).filter(Boolean);
 const OUT = process.argv[3];
-if (!QID || !OUT) { console.error('usage: fetch-geo-partitioned.js <QID> <out.json>'); process.exit(1); }
+if (!QIDS.length || !OUT) { console.error('usage: fetch-geo-partitioned.js <QID[,QID...]> <out.json>'); process.exit(1); }
 
 const UA = 'TukukOS-GeoFetch/1.0 (+https://tukuk.org)';
 const CONT_REGION = {
@@ -81,87 +81,84 @@ async function labels(qids) {
 const qidOf = (u) => (u && u.value ? u.value.split('/').pop() : null);
 
 (async () => {
-  // 1) country groups (with continent + count) for items that have coordinates.
-  const gq = `SELECT ?c ?cont (COUNT(?e) AS ?n) WHERE {
-    ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord .
-    OPTIONAL { ?e wdt:P17 ?c . OPTIONAL { ?c wdt:P30 ?cont } }
-  } GROUP BY ?c ?cont ORDER BY ?c`;
-  console.error('listing country groups for', QID, '...');
-  const gres = await sparql(gq);
-  const groups = gres.results.bindings.map((b) => ({
-    c: qidOf(b.c), cont: qidOf(b.cont), n: parseInt(b.n.value, 10) || 0,
-  }));
-  const withCountry = groups.filter((g) => g.c);
-  const noCountry = groups.filter((g) => !g.c);
-  console.error('  groups:', groups.length, '(with-country:', withCountry.length, ', no-country:', noCountry.length, ')');
-
-  const cmap = await labels(withCountry.map((g) => g.c));
-
   const seen = new Set();
   const out = [];
   const PAGE = 8000;
 
-  function pushRows(page, countryName, regionHint) {
-    for (const b of page) {
-      const art = b.article.value;
-      const title = decodeURIComponent(art.split('/wiki/')[1] || '').replace(/_/g, ' ');
-      if (!title) continue;
-      const slug = slugify(title);
-      if (!slug || seen.has(slug)) continue;
-      const m = /Point\(([-\d.]+) ([-\d.]+)\)/.exec(b.coord.value);
-      if (!m) continue;
-      const lng = parseFloat(m[1]), lat = parseFloat(m[2]);
-      const region = regionHint || regionByCoord(lat, lng);
-      out.push({ name: title, wiki: title, country: countryName, region, lat, lng });
-      seen.add(slug);
-    }
+  function addRow(title, countryName, lat, lng, regionHint) {
+    const region = regionHint || regionByCoord(lat, lng);
+    const slug = slugify(title);
+    if (!title || !slug || seen.has(slug)) return;
+    seen.add(slug);
+    out.push({ name: title, wiki: title, country: countryName, region, lat, lng });
   }
 
-  for (let gi = 0; gi < withCountry.length; gi++) {
-    const g = withCountry[gi];
-    const countryName = cmap[g.c] || 'Other';
-    const regionHint = (g.cont && CONT_REGION[g.cont]) || null;
-    let off = 0;
-    for (; ; off += PAGE) {
+  for (const QID of QIDS) {
+    // 1) country groups (with continent + count) for items that have coordinates.
+    const gq = `SELECT ?c ?cont (COUNT(?e) AS ?n) WHERE {
+      ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord .
+      OPTIONAL { ?e wdt:P17 ?c . OPTIONAL { ?c wdt:P30 ?cont } }
+    } GROUP BY ?c ?cont ORDER BY ?c`;
+    console.error('listing country groups for', QID, '...');
+    let groups;
+    try {
+      const gres = await sparql(gq);
+      groups = gres.results.bindings.map((b) => ({ c: qidOf(b.c), cont: qidOf(b.cont), n: parseInt(b.n.value, 10) || 0 }));
+    } catch (e) { console.error('  group listing FAILED for', QID, ':', e.message, '— skipping QID'); continue; }
+    const withCountry = groups.filter((g) => g.c);
+    console.error('  groups:', groups.length, '(with-country:', withCountry.length, ', no-country:', groups.length - withCountry.length, ')');
+    const cmap = await labels(withCountry.map((g) => g.c));
+
+    for (let gi = 0; gi < withCountry.length; gi++) {
+      const g = withCountry[gi];
+      const countryName = cmap[g.c] || 'Other';
+      const regionHint = (g.cont && CONT_REGION[g.cont]) || null;
+      let off = 0;
+      for (; ; off += PAGE) {
+        const q = `SELECT ?e ?article ?coord WHERE {
+          ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord ; wdt:P17 wd:${g.c} .
+          ?article schema:about ?e ; schema:isPartOf <https://en.wikipedia.org/> .
+        } ORDER BY ?e LIMIT ${PAGE} OFFSET ${off}`;
+        let page;
+        try { page = (await sparql(q)).results.bindings; }
+        catch (e) { console.error(`  [${gi}] ${countryName} offset ${off} FAILED: ${e.message} — skipping`); break; }
+        for (const b of page) {
+          const title = decodeURIComponent((b.article.value.split('/wiki/')[1] || '').replace(/_/g, ' '));
+          const m = /Point\(([-\d.]+) ([-\d.]+)\)/.exec(b.coord.value);
+          if (!m) continue;
+          addRow(title, countryName, parseFloat(m[2]), parseFloat(m[1]), regionHint);
+        }
+        if (page.length < PAGE) break;
+        if (off > 100000) { console.error(`  [${gi}] ${countryName} safety stop`); break; }
+      }
+      console.error(`  [${gi + 1}/${withCountry.length}] ${countryName} done (total so far ${out.length})`);
+    }
+
+    // no-country group: items with coordinates but no P17 (Antarctica, ocean etc.)
+    for (let off = 0; ; off += PAGE) {
       const q = `SELECT ?e ?article ?coord WHERE {
-        ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord ; wdt:P17 wd:${g.c} .
+        ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord .
         ?article schema:about ?e ; schema:isPartOf <https://en.wikipedia.org/> .
+        FILTER NOT EXISTS { ?e wdt:P17 ?any }
       } ORDER BY ?e LIMIT ${PAGE} OFFSET ${off}`;
       let page;
       try { page = (await sparql(q)).results.bindings; }
-      catch (e) { console.error(`  [${gi}] ${countryName} offset ${off} FAILED: ${e.message} — skipping`); break; }
-      pushRows(page, countryName, regionHint);
+      catch (e) { console.error(`  no-country offset ${off} FAILED: ${e.message} — skipping`); break; }
+      for (const b of page) {
+        const title = decodeURIComponent((b.article.value.split('/wiki/')[1] || '').replace(/_/g, ' '));
+        const m = /Point\(([-\d.]+) ([-\d.]+)\)/.exec(b.coord.value);
+        if (!m) continue;
+        const lng = parseFloat(m[1]), lat = parseFloat(m[2]);
+        const region = lat < -60 ? 'Antarctica' : regionByCoord(lat, lng);
+        const country = region === 'Antarctica' ? 'Antarctica' : 'Other';
+        const slug = slugify(title);
+        if (!title || !slug || seen.has(slug)) continue;
+        seen.add(slug);
+        out.push({ name: title, wiki: title, country, region, lat, lng });
+      }
       if (page.length < PAGE) break;
-      if (off > 100000) { console.error(`  [${gi}] ${countryName} safety stop at offset ${off}`); break; }
+      if (off > 100000) { console.error('  no-country safety stop'); break; }
     }
-    console.error(`  [${gi + 1}/${withCountry.length}] ${countryName} done (total so far ${out.length})`);
-  }
-
-  // no-country group: items with coordinates but no P17 (Antarctica, ocean etc.)
-  for (let off = 0; ; off += PAGE) {
-    const q = `SELECT ?e ?article ?coord WHERE {
-      ?e wdt:P31 wd:${QID} ; wdt:P625 ?coord .
-      ?article schema:about ?e ; schema:isPartOf <https://en.wikipedia.org/> .
-      FILTER NOT EXISTS { ?e wdt:P17 ?any }
-    } ORDER BY ?e LIMIT ${PAGE} OFFSET ${off}`;
-    let page;
-    try { page = (await sparql(q)).results.bindings; }
-    catch (e) { console.error(`  no-country offset ${off} FAILED: ${e.message} — skipping`); break; }
-    for (const b of page) {
-      const title = decodeURIComponent((b.article.value.split('/wiki/')[1] || '').replace(/_/g, ' '));
-      if (!title) continue;
-      const slug = slugify(title);
-      if (!slug || seen.has(slug)) continue;
-      const m = /Point\(([-\d.]+) ([-\d.]+)\)/.exec(b.coord.value);
-      if (!m) continue;
-      const lng = parseFloat(m[1]), lat = parseFloat(m[2]);
-      const region = lat < -60 ? 'Antarctica' : regionByCoord(lat, lng);
-      const country = region === 'Antarctica' ? 'Antarctica' : 'Other';
-      out.push({ name: title, wiki: title, country, region, lat, lng });
-      seen.add(slug);
-    }
-    if (page.length < PAGE) break;
-    if (off > 100000) { console.error('  no-country safety stop'); break; }
   }
 
   out.sort((a, x) => a.name.localeCompare(x.name));

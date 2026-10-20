@@ -110,6 +110,7 @@ const grn = require('./gurun');
 const akd = require('./akueduk');
 const stn = require('./stesen-kereta-api');
 const sch = require('./sekolah');
+const stl = require('./settlement');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1127,6 +1128,8 @@ geoRoutes('akueduk', akd, 'findAqueduct', akuedukHubPage, akuedukRegionPage, aku
 geoRoutesPaged('railway-stations', stn, 'findRailwayStation', railwayHubPage, railwayRegionPage, railwayPage, railwayNotFound, railwayCountryPage);
 // /schools — 11k+ direct-typed class, paged + country-partitioned hub.
 geoRoutesPaged('schools', sch, 'findSchool', schoolHubPage, schoolRegionPage, schoolPage, schoolNotFound, schoolCountryPage);
+// /settlements — merged multi-country tier (French communes, US CDPs, Dutch municipalities), paged hub.
+geoRoutesPaged('settlements', stl, 'findSettlement', settlementHubPage, settlementRegionPage, settlementPage, settlementNotFound, settlementCountryPage);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1634,7 +1637,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2012,6 +2015,7 @@ geoSitemap('gurun', grn, 'DESERTS');
 geoSitemap('akueduk', akd, 'AQUEDUCTS');
 geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
+geoSitemap('settlements', stl, 'SETTLEMENTS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7756,6 +7760,14 @@ function schoolRegionPage(r) { return geoRegionCountryIndexPage(r, sch, 'schools
 function schoolPage(x, sum) { return geoItemPage(x, sum, sch, 'schools', SCHOOL_CFG); }
 function schoolNotFound(q) { return geoNotFound('schools', SCHOOL_CFG, q); }
 function schoolCountryPage(cs, p) { return geoCountryPagedPage(cs, sch, 'schools', SCHOOL_CFG, p); }
+
+// ── SETTLEMENTS (/settlements) — merged multi-country tier, paged country-partitioned hub ──
+const SETTLEMENT_CFG = geoCfg({ base: 'settlements', listKey: 'SETTLEMENTS', inRegion: 'settlementsInRegion', byCountry: 'settlementByCountry', unit: 'settlements', singular: 'settlement', titleCase: 'Settlements', icon: '\ud83c\udfd8\ufe0f', navBlurb: `Profiles of the world's settlements \u2014 communes, municipalities and census places, where each is, and a plain-English introduction.`, seoDesc: 'Introductions to settlements worldwide \u2014 French communes, US census places and Dutch municipalities: location, country and introduction.', subMetric: 'location & administrative geography', intro: `These are the world's <b>settlements</b> \u2014 the communes, municipalities, districts and census-designated places that form the fabric of everyday geography. This library is very large, so it is browsed by continent, then by country, a page at a time. Each profile shows where the settlement is, which country administers it, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function settlementHubPage() { return geoHubCompactPage(stl, 'settlements', SETTLEMENT_CFG); }
+function settlementRegionPage(r) { return geoRegionCountryIndexPage(r, stl, 'settlements', SETTLEMENT_CFG); }
+function settlementPage(x, sum) { return geoItemPage(x, sum, stl, 'settlements', SETTLEMENT_CFG); }
+function settlementNotFound(q) { return geoNotFound('settlements', SETTLEMENT_CFG, q); }
+function settlementCountryPage(cs, p) { return geoCountryPagedPage(cs, stl, 'settlements', SETTLEMENT_CFG, p); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}

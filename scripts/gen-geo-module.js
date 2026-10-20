@@ -2,7 +2,7 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'sekolah', label: 'SEKOLAH', title: 'Schools of the World', var: 'SCHOOLS', sing: 'School', finder: 'school', pfx: 'sch', cap: 'Schools' },
+  { file: 'settlement', label: 'SETTLEMENT', title: 'Settlements of the World', var: 'SETTLEMENTS', sing: 'Settlement', finder: 'settlement', pfx: 'stl', cap: 'Settlements' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
