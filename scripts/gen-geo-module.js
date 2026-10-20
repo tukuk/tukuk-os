@@ -2,13 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'balai-padam', label: 'BALAI-PADAM', title: 'Fire Stations of the World', var: 'FIRESTATIONS', sing: 'FireStation', finder: 'firestation', pfx: 'fs', cap: 'FireStations' },
-  { file: 'kelab-malam', label: 'KELAB-MALAM', title: 'Nightclubs of the World', var: 'NIGHTCLUBS', sing: 'Nightclub', finder: 'nightclub', pfx: 'nc', cap: 'Nightclubs' },
-  { file: 'lumba-kuda', label: 'LUMBA-KUDA', title: 'Racecourses of the World', var: 'RACECOURSES', sing: 'Racecourse', finder: 'racecourse', pfx: 'rc', cap: 'Racecourses' },
-  { file: 'ladang-angin', label: 'LADANG-ANGIN', title: 'Wind Farms of the World', var: 'WINDFARMS', sing: 'WindFarm', finder: 'windfarm', pfx: 'wfr', cap: 'WindFarms' },
-  { file: 'taman-air', label: 'TAMAN-AIR', title: 'Water Parks of the World', var: 'WATERPARKS', sing: 'WaterPark', finder: 'waterpark', pfx: 'wp', cap: 'WaterParks' },
-  { file: 'gerbang-kemenangan', label: 'GERBANG-KEMENANGAN', title: 'Triumphal Arches of the World', var: 'TRIUMPHALARCHES', sing: 'TriumphalArch', finder: 'triumphalarch', pfx: 'ta', cap: 'TriumphalArches' },
-  { file: 'balai-polis', label: 'BALAI-POLIS', title: 'Police Stations of the World', var: 'POLICESTATIONS', sing: 'PoliceStation', finder: 'policestation', pfx: 'pl', cap: 'PoliceStations' },
+  { file: 'lewah', label: 'LEWAH', title: 'Mountain Passes of the World', var: 'MOUNTAINPASSES', sing: 'MountainPass', finder: 'mountainpass', finders: 'mountainPassesInRegion', pfx: 'mp', cap: 'MountainPasses' },
+  { file: 'galeri-seni', label: 'GALERI-SENI', title: 'Art Galleries of the World', var: 'ARTGALLERIES', sing: 'ArtGallery', finder: 'artgallery', finders: 'artGalleriesInRegion', pfx: 'ag', cap: 'ArtGalleries' },
+  { file: 'kasino', label: 'KASINO', title: 'Casinos of the World', var: 'CASINOS', sing: 'Casino', finder: 'casino', finders: 'casinosInRegion', pfx: 'ks', cap: 'Casinos' },
+  { file: 'menara-air', label: 'MENARA-AIR', title: 'Water Towers of the World', var: 'WATERTOWERS', sing: 'WaterTower', finder: 'watertower', finders: 'waterTowersInRegion', pfx: 'mt', cap: 'WaterTowers' },
+  { file: 'muara', label: 'MUARA', title: 'Estuaries of the World', var: 'ESTUARIES', sing: 'Estuary', finder: 'estuary', finders: 'estuariesInRegion', pfx: 'mu', cap: 'Estuaries' },
+  { file: 'velodrom', label: 'VELODROM', title: 'Velodromes of the World', var: 'VELODROMES', sing: 'Velodrome', finder: 'velodrome', finders: 'velodromesInRegion', pfx: 'vd', cap: 'Velodromes' },
+  { file: 'planetarium', label: 'PLANETARIUM', title: 'Planetariums of the World', var: 'PLANETARIUMS', sing: 'Planetarium', finder: 'planetarium', finders: 'planetariumsInRegion', pfx: 'pn', cap: 'Planetariums' },
+  { file: 'amphitheatre', label: 'AMPHITHEATRE', title: 'Amphitheatres of the World', var: 'AMPHITHEATRES', sing: 'Amphitheatre', finder: 'amphitheatre', finders: 'amphitheatresInRegion', pfx: 'ah', cap: 'Amphitheatres' },
+  { file: 'menhir', label: 'MENHIR', title: 'Menhirs of the World', var: 'MENHIRS', sing: 'Menhir', finder: 'menhir', finders: 'menhirsInRegion', pfx: 'mh', cap: 'Menhirs' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
