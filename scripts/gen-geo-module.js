@@ -2,12 +2,12 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'bukit', label: 'BUKIT', title: 'Hills of the World', var: 'HILLS', sing: 'Hill', finder: 'hill', pfx: 'bk', cap: 'Hills' },
-  { file: 'celah', label: 'CELAH', title: 'Mountain Passes of the World', var: 'PASSES', sing: 'Pass', finder: 'pass', pfx: 'cp', cap: 'Passes' },
-  { file: 'tanjung', label: 'TANJUNG', title: 'Headlands of the World', var: 'HEADLANDS', sing: 'Headland', finder: 'headland', pfx: 'hd', cap: 'Headlands' },
-  { file: 'lagun', label: 'LAGUN', title: 'Lagoons of the World', var: 'LAGOONS', sing: 'Lagoon', finder: 'lagoon', pfx: 'lg', cap: 'Lagoons' },
-  { file: 'danau-garam', label: 'DANAU-GARAM', title: 'Salt Lakes of the World', var: 'SALT_LAKES', sing: 'SaltLake', finder: 'saltLake', pfx: 'dk', cap: 'SaltLakes' },
-  { file: 'laut', label: 'LAUT', title: 'Seas of the World', var: 'SEAS', sing: 'Sea', finder: 'sea', pfx: 'lt', cap: 'Seas' },
+  { file: 'waduk', label: 'WADUK', title: 'Reservoirs of the World', var: 'RESERVOIRS', sing: 'Reservoir', finder: 'reservoir', pfx: 'wd', cap: 'Reservoirs' },
+  { file: 'fjord', label: 'FJORD', title: 'Fjords of the World', var: 'FJORDS', sing: 'Fjord', finder: 'fjord', pfx: 'fj', cap: 'Fjords' },
+  { file: 'tanah-basah', label: 'TANAH-BASAH', title: 'Wetlands of the World', var: 'WETLANDS', sing: 'Wetland', finder: 'wetland', pfx: 'tb', cap: 'Wetlands' },
+  { file: 'air-panas', label: 'AIR-PANAS', title: 'Hot Springs of the World', var: 'HOTSPRINGS', sing: 'HotSpring', finder: 'hotSpring', pfx: 'hp', cap: 'HotSprings' },
+  { file: 'terumbu-karang', label: 'TERUMBU-KARANG', title: 'Coral Reefs of the World', var: 'REEFS', sing: 'Reef', finder: 'reef', pfx: 'rf', cap: 'Reefs' },
+  { file: 'kaldera', label: 'KALDERA', title: 'Calderas of the World', var: 'CALDERAS', sing: 'Caldera', finder: 'caldera', pfx: 'kdf', cap: 'Calderas' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;

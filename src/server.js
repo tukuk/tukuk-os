@@ -66,6 +66,12 @@ const tj = require('./tanjung');
 const lgn = require('./lagun');
 const dgs = require('./danau-garam');
 const sas = require('./laut');
+const wd = require('./waduk');
+const fj = require('./fjord');
+const tb = require('./tanah-basah');
+const ap = require('./air-panas');
+const trk = require('./terumbu-karang');
+const kdf = require('./kaldera');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1037,6 +1043,12 @@ geoRoutes('tanjung', tj, 'findHeadland', tanjungHubPage, tanjungRegionPage, tanj
 geoRoutes('lagun', lgn, 'findLagoon', lagunHubPage, lagunRegionPage, lagunPage, lagunNotFound);
 geoRoutes('danau-garam', dgs, 'findSaltLake', danauGaramHubPage, danauGaramRegionPage, danauGaramPage, danauGaramNotFound);
 geoRoutes('laut', sas, 'findSea', lautHubPage, lautRegionPage, lautPage, lautNotFound);
+geoRoutes('waduk', wd, 'findReservoir', wadukHubPage, wadukRegionPage, wadukPage, wadukNotFound);
+geoRoutes('fjord', fj, 'findFjord', fjordHubPage, fjordRegionPage, fjordPage, fjordNotFound);
+geoRoutes('tanah-basah', tb, 'findWetland', tanahBasahHubPage, tanahBasahRegionPage, tanahBasahPage, tanahBasahNotFound);
+geoRoutes('air-panas', ap, 'findHotSpring', airPanasHubPage, airPanasRegionPage, airPanasPage, airPanasNotFound);
+geoRoutes('terumbu-karang', trk, 'findReef', terumbuKarangHubPage, terumbuKarangRegionPage, terumbuKarangPage, terumbuKarangNotFound);
+geoRoutes('kaldera', kdf, 'findCaldera', kalderaHubPage, kalderaRegionPage, kalderaPage, kalderaNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1544,7 +1556,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1878,6 +1890,12 @@ geoSitemap('tanjung', tj, 'HEADLANDS');
 geoSitemap('lagun', lgn, 'LAGOONS');
 geoSitemap('danau-garam', dgs, 'SALT_LAKES');
 geoSitemap('laut', sas, 'SEAS');
+geoSitemap('waduk', wd, 'RESERVOIRS');
+geoSitemap('fjord', fj, 'FJORDS');
+geoSitemap('tanah-basah', tb, 'WETLANDS');
+geoSitemap('air-panas', ap, 'HOTSPRINGS');
+geoSitemap('terumbu-karang', trk, 'REEFS');
+geoSitemap('kaldera', kdf, 'CALDERAS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7287,6 +7305,37 @@ function lautHubPage() { return geoHubPage(sas, 'laut', LAUT_CFG); }
 function lautRegionPage(r) { return geoRegionPage(r, sas, 'laut', LAUT_CFG); }
 function lautPage(x, sum) { return geoItemPage(x, sum, sas, 'laut', LAUT_CFG); }
 function lautNotFound(q) { return geoNotFound('laut', LAUT_CFG, q); }
+
+const WADUK_CFG = geoCfg({ base: 'waduk', listKey: 'RESERVOIRS', inRegion: 'reservoirsInRegion', byCountry: 'reservoirByCountry', unit: 'reservoirs', singular: 'reservoir', titleCase: 'Reservoirs', icon: '\ud83d\udbe7', navBlurb: `Profiles of the world\u2019s reservoirs \u2014 where each lake sits, which country built it, and a plain-English introduction.`, seoDesc: 'Introductions to notable reservoirs worldwide: location, country and what makes each impoundment significant.', subMetric: 'location & water storage', intro: `These are the world\u2019s most notable <b>reservoirs</b> \u2014 artificial lakes behind great dams that supply water, irrigation and hydropower to millions. Each profile shows where the reservoir sits, which country built it, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function wadukHubPage() { return geoHubPage(wd, 'waduk', WADUK_CFG); }
+function wadukRegionPage(r) { return geoRegionPage(r, wd, 'waduk', WADUK_CFG); }
+function wadukPage(x, sum) { return geoItemPage(x, sum, wd, 'waduk', WADUK_CFG); }
+function wadukNotFound(q) { return geoNotFound('waduk', WADUK_CFG, q); }
+const FJORD_CFG = geoCfg({ base: 'fjord', listKey: 'FJORDS', inRegion: 'fjordsInRegion', byCountry: 'fjordByCountry', unit: 'fjords', singular: 'fjord', titleCase: 'Fjords', icon: '\ud83c\udfde\ufe0f', navBlurb: `Profiles of the world\u2019s fjords \u2014 where each inlet cuts, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable fjords worldwide: location, country and what makes each inlet significant.', subMetric: 'location & coastlines', intro: `These are the world\u2019s most notable <b>fjords</b> \u2014 deep, steep-sided inlets carved by glaciers into coastlines, from Norway and New Zealand to Greenland and Chile. Each profile shows where the inlet cuts, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function fjordHubPage() { return geoHubPage(fj, 'fjord', FJORD_CFG); }
+function fjordRegionPage(r) { return geoRegionPage(r, fj, 'fjord', FJORD_CFG); }
+function fjordPage(x, sum) { return geoItemPage(x, sum, fj, 'fjord', FJORD_CFG); }
+function fjordNotFound(q) { return geoNotFound('fjord', FJORD_CFG, q); }
+const TANAH_BASAH_CFG = geoCfg({ base: 'tanah-basah', listKey: 'WETLANDS', inRegion: 'wetlandsInRegion', byCountry: 'wetlandByCountry', unit: 'wetlands', singular: 'wetland', titleCase: 'Wetlands', icon: '\ud83e\udd86', navBlurb: `Profiles of the world\u2019s wetlands \u2014 where each marsh or swamp lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable wetlands worldwide: location, country and what makes each wetland significant.', subMetric: 'location & ecosystems', intro: `These are the world\u2019s most notable <b>wetlands</b> \u2014 marshes, swamps and peatlands that filter water, store carbon and teem with life, among the most productive ecosystems on Earth. Each profile shows where the wetland lies, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function tanahBasahHubPage() { return geoHubPage(tb, 'tanah-basah', TANAH_BASAH_CFG); }
+function tanahBasahRegionPage(r) { return geoRegionPage(r, tb, 'tanah-basah', TANAH_BASAH_CFG); }
+function tanahBasahPage(x, sum) { return geoItemPage(x, sum, tb, 'tanah-basah', TANAH_BASAH_CFG); }
+function tanahBasahNotFound(q) { return geoNotFound('tanah-basah', TANAH_BASAH_CFG, q); }
+const AIR_PANAS_CFG = geoCfg({ base: 'air-panas', listKey: 'HOTSPRINGS', inRegion: 'hotSpringsInRegion', byCountry: 'hotSpringByCountry', unit: 'hot springs', singular: 'hot spring', titleCase: 'Hot Springs', icon: '\u2668\ufe0f', navBlurb: `Profiles of the world\u2019s hot springs \u2014 where each thermal well rises, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable hot springs worldwide: location, country and what makes each thermal spring significant.', subMetric: 'location & geothermal', intro: `These are the world\u2019s most notable <b>hot springs</b> \u2014 geothermally heated waters that have drawn bathers, healing traditions and power plants for millennia. Each profile shows where the thermal well rises, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function airPanasHubPage() { return geoHubPage(ap, 'air-panas', AIR_PANAS_CFG); }
+function airPanasRegionPage(r) { return geoRegionPage(r, ap, 'air-panas', AIR_PANAS_CFG); }
+function airPanasPage(x, sum) { return geoItemPage(x, sum, ap, 'air-panas', AIR_PANAS_CFG); }
+function airPanasNotFound(q) { return geoNotFound('air-panas', AIR_PANAS_CFG, q); }
+const TERUMBU_KARANG_CFG = geoCfg({ base: 'terumbu-karang', listKey: 'REEFS', inRegion: 'reefsInRegion', byCountry: 'reefByCountry', unit: 'coral reefs', singular: 'coral reef', titleCase: 'Coral Reefs', icon: '\ud83e\uddc0', navBlurb: `Profiles of the world\u2019s coral reefs \u2014 where each reef lies, which country it belongs to, and a plain-English introduction.`, seoDesc: 'Introductions to notable coral reefs worldwide: location, country and what makes each reef significant.', subMetric: 'location & marine life', intro: `These are the world\u2019s most notable <b>coral reefs</b> \u2014 living structures built by tiny polyps that shelter a quarter of all marine species, from the Great Barrier Reef onward. Each profile shows where the reef lies, which country it belongs to, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function terumbuKarangHubPage() { return geoHubPage(trk, 'terumbu-karang', TERUMBU_KARANG_CFG); }
+function terumbuKarangRegionPage(r) { return geoRegionPage(r, trk, 'terumbu-karang', TERUMBU_KARANG_CFG); }
+function terumbuKarangPage(x, sum) { return geoItemPage(x, sum, trk, 'terumbu-karang', TERUMBU_KARANG_CFG); }
+function terumbuKarangNotFound(q) { return geoNotFound('terumbu-karang', TERUMBU_KARANG_CFG, q); }
+const KALDERA_CFG = geoCfg({ base: 'kaldera', listKey: 'CALDERAS', inRegion: 'calderasInRegion', byCountry: 'calderaByCountry', unit: 'calderas', singular: 'caldera', titleCase: 'Calderas', icon: '\ud83c\udfb0', navBlurb: `Profiles of the world\u2019s calderas \u2014 where each collapse crater lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable calderas worldwide: location, country and what makes each volcanic crater significant.', subMetric: 'location & geology', intro: `These are the world\u2019s most notable <b>calderas</b> \u2014 vast collapse craters left by cataclysmic eruptions, some now holding lakes or bubbling with geothermal life. Each profile shows where the caldera lies, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Landform' });
+function kalderaHubPage() { return geoHubPage(kdf, 'kaldera', KALDERA_CFG); }
+function kalderaRegionPage(r) { return geoRegionPage(r, kdf, 'kaldera', KALDERA_CFG); }
+function kalderaPage(x, sum) { return geoItemPage(x, sum, kdf, 'kaldera', KALDERA_CFG); }
+function kalderaNotFound(q) { return geoNotFound('kaldera', KALDERA_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
