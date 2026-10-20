@@ -173,6 +173,16 @@ const htn = require('./hutan-negeri');
 const lbr = require('./lebuh-raya');
 const gkp = require('./galangan-kapal');
 const obl = require('./obelisk');
+const cdh = require('./candi-hindu');
+const rph = require('./rumah-pedesaan');
+const ksh = require('./kuil-shinto');
+const dtg = require('./dataran-tinggi');
+const plr = require('./dataran-rendah');
+const lkb = require('./lingkaran-batu');
+const pgd = require('./pagoda');
+const dlm = require('./dolmen');
+const brw = require('./gundar');
+const mlc = require('./menara-loceng');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1254,6 +1264,16 @@ geoRoutes('state-forests', htn, 'findStateForest', stateForestsHubPage, stateFor
 geoRoutes('expressways', lbr, 'findExpressway', expresswaysHubPage, expresswaysRegionPage, expresswaysPage, expresswaysNotFound);
 geoRoutes('shipyards', gkp, 'findShipyard', shipyardsHubPage, shipyardsRegionPage, shipyardsPage, shipyardsNotFound);
 geoRoutes('obelisks', obl, 'findObelisk', obelisksHubPage, obelisksRegionPage, obelisksPage, obelisksNotFound);
+geoRoutes('hindu-temples', cdh, 'findHinduTemple', hinduTemplesHubPage, hinduTemplesRegionPage, hinduTemplesPage, hinduTemplesNotFound);
+geoRoutes('country-houses', rph, 'findCountryHouse', countryHousesHubPage, countryHousesRegionPage, countryHousesPage, countryHousesNotFound);
+geoRoutes('shinto-shrines', ksh, 'findShintoShrine', shintoShrinesHubPage, shintoShrinesRegionPage, shintoShrinesPage, shintoShrinesNotFound);
+geoRoutes('plateaus', dtg, 'findPlateau', plateausHubPage, plateausRegionPage, plateausPage, plateausNotFound);
+geoRoutes('plains', plr, 'findPlain', plainsHubPage, plainsRegionPage, plainsPage, plainsNotFound);
+geoRoutes('stone-circles', lkb, 'findStoneCircle', stoneCirclesHubPage, stoneCirclesRegionPage, stoneCirclesPage, stoneCirclesNotFound);
+geoRoutes('pagodas', pgd, 'findPagoda', pagodasHubPage, pagodasRegionPage, pagodasPage, pagodasNotFound);
+geoRoutes('dolmens', dlm, 'findDolmen', dolmensHubPage, dolmensRegionPage, dolmensPage, dolmensNotFound);
+geoRoutes('barrows', brw, 'findBarrow', barrowsHubPage, barrowsRegionPage, barrowsPage, barrowsNotFound);
+geoRoutes('bell-towers', mlc, 'findBellTower', bellTowersHubPage, bellTowersRegionPage, bellTowersPage, bellTowersNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1761,7 +1781,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2199,6 +2219,16 @@ geoSitemap('state-forests', htn, 'STATEFORESTS');
 geoSitemap('expressways', lbr, 'EXPRESSWAYS');
 geoSitemap('shipyards', gkp, 'SHIPYARDS');
 geoSitemap('obelisks', obl, 'OBELISKS');
+geoSitemap('hindu-temples', cdh, 'HINDUTEMPLES');
+geoSitemap('country-houses', rph, 'COUNTRYHOUSES');
+geoSitemap('shinto-shrines', ksh, 'SHINTOSHRINES');
+geoSitemap('plateaus', dtg, 'PLATEAUS');
+geoSitemap('plains', plr, 'PLAINS');
+geoSitemap('stone-circles', lkb, 'STONECIRCLES');
+geoSitemap('pagodas', pgd, 'PAGODAS');
+geoSitemap('dolmens', dlm, 'DOLMENS');
+geoSitemap('barrows', brw, 'BARROWS');
+geoSitemap('bell-towers', mlc, 'BELLTOWERS');
 geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
 geoSitemap('settlements', stl, 'SETTLEMENTS');
@@ -8353,6 +8383,76 @@ function obelisksHubPage() { return geoHubPage(obl, 'obelisks', OBELISKS_CFG); }
 function obelisksRegionPage(r) { return geoRegionPage(r, obl, 'obelisks', OBELISKS_CFG); }
 function obelisksPage(x, sum) { return geoItemPage(x, sum, obl, 'obelisks', OBELISKS_CFG); }
 function obelisksNotFound(q) { return geoNotFound('obelisks', OBELISKS_CFG, q); }
+
+// ── HINDU TEMPLES (/hindu-temples) — simple geo factory ──
+const HINDUTEMPLES_CFG = geoCfg({ base: 'hindu-temples', listKey: 'HINDUTEMPLES', inRegion: 'hinduTemplesInRegion', byCountry: 'hindutempleByCountry', unit: 'Hindu temples', singular: 'Hindu temple', titleCase: 'Hindu Temples', icon: '\ud83d\uded5', navBlurb: `Profiles of notable Hindu temples \u2014 where each shrine stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable Hindu temples worldwide: location, country and the deity and architecture each is devoted to.', subMetric: 'sacred site & country', intro: `These are notable <b>Hindu temples</b> \u2014 sacred places of worship dedicated to the gods of Hinduism, from cliff-cut cave shrines and towering South Indian gopurams to island sanctuaries and Khmer mountain temples. Each profile shows where the temple stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function hinduTemplesHubPage() { return geoHubPage(cdh, 'hindu-temples', HINDUTEMPLES_CFG); }
+function hinduTemplesRegionPage(r) { return geoRegionPage(r, cdh, 'hindu-temples', HINDUTEMPLES_CFG); }
+function hinduTemplesPage(x, sum) { return geoItemPage(x, sum, cdh, 'hindu-temples', HINDUTEMPLES_CFG); }
+function hinduTemplesNotFound(q) { return geoNotFound('hindu-temples', HINDUTEMPLES_CFG, q); }
+
+// ── COUNTRY HOUSES (/country-houses) — simple geo factory ──
+const COUNTRYHOUSES_CFG = geoCfg({ base: 'country-houses', listKey: 'COUNTRYHOUSES', inRegion: 'countryHousesInRegion', byCountry: 'countryhouseByCountry', unit: 'country houses', singular: 'country house', titleCase: 'Country Houses', icon: '\ud83c\udfe1', navBlurb: `Profiles of notable country houses \u2014 where each estate lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable country houses and stately homes worldwide: location, country and the families and architecture behind each.', subMetric: 'great house & country', intro: `These are notable <b>country houses</b> \u2014 the grand rural residences and stately homes built by landowning families over the centuries, many now open to the public as museums and heritage estates. Each profile shows where the house is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function countryHousesHubPage() { return geoHubPage(rph, 'country-houses', COUNTRYHOUSES_CFG); }
+function countryHousesRegionPage(r) { return geoRegionPage(r, rph, 'country-houses', COUNTRYHOUSES_CFG); }
+function countryHousesPage(x, sum) { return geoItemPage(x, sum, rph, 'country-houses', COUNTRYHOUSES_CFG); }
+function countryHousesNotFound(q) { return geoNotFound('country-houses', COUNTRYHOUSES_CFG, q); }
+
+// ── SHINTO SHRINES (/shinto-shrines) — simple geo factory ──
+const SHINTOSHRINES_CFG = geoCfg({ base: 'shinto-shrines', listKey: 'SHINTOSHRINES', inRegion: 'shintoShrinesInRegion', byCountry: 'shintoshrineByCountry', unit: 'Shinto shrines', singular: 'Shinto shrine', titleCase: 'Shinto Shrines', icon: '\u26e9\ufe0f', navBlurb: `Profiles of notable Shinto shrines \u2014 where each sanctuary lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable Shinto shrines worldwide: location, country and the kami each shrine enshrines.', subMetric: 'sacred site & country', intro: `These are notable <b>Shinto shrines</b> \u2014 the sacred compounds of Japan (and beyond) where the kami are enshrined, marked by torii gates, inner forests and revered ritual architecture like Ise and Izumo. Each profile shows where the shrine is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function shintoShrinesHubPage() { return geoHubPage(ksh, 'shinto-shrines', SHINTOSHRINES_CFG); }
+function shintoShrinesRegionPage(r) { return geoRegionPage(r, ksh, 'shinto-shrines', SHINTOSHRINES_CFG); }
+function shintoShrinesPage(x, sum) { return geoItemPage(x, sum, ksh, 'shinto-shrines', SHINTOSHRINES_CFG); }
+function shintoShrinesNotFound(q) { return geoNotFound('shinto-shrines', SHINTOSHRINES_CFG, q); }
+
+// ── PLATEAUS (/plateaus) — simple geo factory ──
+const PLATEAUS_CFG = geoCfg({ base: 'plateaus', listKey: 'PLATEAUS', inRegion: 'plateausInRegion', byCountry: 'plateauByCountry', unit: 'plateaus', singular: 'plateau', titleCase: 'Plateaus', icon: '\ud83c\udfd4\ufe0f', navBlurb: `Profiles of notable plateaus \u2014 where each tableland lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable plateaus and tablelands worldwide: location, country, elevation and the landscapes each covers.', subMetric: 'high plain & country', intro: `These are notable <b>plateaus</b> \u2014 the broad elevated tablelands and high plains that rise above the surrounding land, from the Tibetan Plateau to the Deccan and the Colorado. Each profile shows where the plateau is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Landform' });
+function plateausHubPage() { return geoHubPage(dtg, 'plateaus', PLATEAUS_CFG); }
+function plateausRegionPage(r) { return geoRegionPage(r, dtg, 'plateaus', PLATEAUS_CFG); }
+function plateausPage(x, sum) { return geoItemPage(x, sum, dtg, 'plateaus', PLATEAUS_CFG); }
+function plateausNotFound(q) { return geoNotFound('plateaus', PLATEAUS_CFG, q); }
+
+// ── PLAINS (/plains) — simple geo factory ──
+const PLAINS_CFG = geoCfg({ base: 'plains', listKey: 'PLAINS', inRegion: 'plainsInRegion', byCountry: 'plainByCountry', unit: 'plains', singular: 'plain', titleCase: 'Plains', icon: '\ud83c\udf3e', navBlurb: `Profiles of notable plains \u2014 where each grassland lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable plains and grasslands worldwide: location, country and the agriculture and history of each.', subMetric: 'grassland & country', intro: `These are notable <b>plains</b> \u2014 the vast flat grasslands, steppes and prairies that feed continents and shaped the nomads, ranchers and farmers who lived on them. Each profile shows where the plain is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Landform' });
+function plainsHubPage() { return geoHubPage(plr, 'plains', PLAINS_CFG); }
+function plainsRegionPage(r) { return geoRegionPage(r, plr, 'plains', PLAINS_CFG); }
+function plainsPage(x, sum) { return geoItemPage(x, sum, plr, 'plains', PLAINS_CFG); }
+function plainsNotFound(q) { return geoNotFound('plains', PLAINS_CFG, q); }
+
+// ── STONE CIRCLES (/stone-circles) — simple geo factory ──
+const STONECIRCLES_CFG = geoCfg({ base: 'stone-circles', listKey: 'STONECIRCLES', inRegion: 'stoneCirclesInRegion', byCountry: 'stonecircleByCountry', unit: 'stone circles', singular: 'stone circle', titleCase: 'Stone Circles', icon: '\ud83e\udea8', navBlurb: `Profiles of notable stone circles \u2014 where each ring stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable prehistoric stone circles worldwide: location, country and the ritual astronomy each marks.', subMetric: 'megalithic ring & country', intro: `These are notable <b>stone circles</b> \u2014 prehistoric rings of standing stones raised for ceremony and possibly astronomy, from Stonehenge and Avebury to the far-flung circles of Cumbria and Brittany. Each profile shows where the circle stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function stoneCirclesHubPage() { return geoHubPage(lkb, 'stone-circles', STONECIRCLES_CFG); }
+function stoneCirclesRegionPage(r) { return geoRegionPage(r, lkb, 'stone-circles', STONECIRCLES_CFG); }
+function stoneCirclesPage(x, sum) { return geoItemPage(x, sum, lkb, 'stone-circles', STONECIRCLES_CFG); }
+function stoneCirclesNotFound(q) { return geoNotFound('stone-circles', STONECIRCLES_CFG, q); }
+
+// ── PAGODAS (/pagodas) — simple geo factory ──
+const PAGODAS_CFG = geoCfg({ base: 'pagodas', listKey: 'PAGODAS', inRegion: 'pagodasInRegion', byCountry: 'pagodaByCountry', unit: 'pagodas', singular: 'pagoda', titleCase: 'Pagodas', icon: '\ud83c\udfef', navBlurb: `Profiles of notable pagodas \u2014 where each tower stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable Buddhist pagodas worldwide: location, country and the relics and history each holds.', subMetric: 'tiered tower & country', intro: `These are notable <b>pagodas</b> \u2014 the tiered towers of East and South-East Asian Buddhism that house relics and offer landmark skylines, from ancient Chinese brick towers to Japanese and Korean temple pagodas. Each profile shows where the pagoda stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function pagodasHubPage() { return geoHubPage(pgd, 'pagodas', PAGODAS_CFG); }
+function pagodasRegionPage(r) { return geoRegionPage(r, pgd, 'pagodas', PAGODAS_CFG); }
+function pagodasPage(x, sum) { return geoItemPage(x, sum, pgd, 'pagodas', PAGODAS_CFG); }
+function pagodasNotFound(q) { return geoNotFound('pagodas', PAGODAS_CFG, q); }
+
+// ── DOLMENS (/dolmens) — simple geo factory ──
+const DOLMENS_CFG = geoCfg({ base: 'dolmens', listKey: 'DOLMENS', inRegion: 'dolmensInRegion', byCountry: 'dolmenByCountry', unit: 'dolmens', singular: 'dolmen', titleCase: 'Dolmens', icon: '\ud83d\uddff', navBlurb: `Profiles of notable dolmens \u2014 where each chamber stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable dolmens and portal tombs worldwide: location, country and the prehistoric burial each forms.', subMetric: 'megalithic tomb & country', intro: `These are notable <b>dolmens</b> \u2014 single-chamber megalithic tombs of capstones resting on upright stones, raised by early farming communities thousands of years ago across Europe and Asia. Each profile shows where the dolmen stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function dolmensHubPage() { return geoHubPage(dlm, 'dolmens', DOLMENS_CFG); }
+function dolmensRegionPage(r) { return geoRegionPage(r, dlm, 'dolmens', DOLMENS_CFG); }
+function dolmensPage(x, sum) { return geoItemPage(x, sum, dlm, 'dolmens', DOLMENS_CFG); }
+function dolmensNotFound(q) { return geoNotFound('dolmens', DOLMENS_CFG, q); }
+
+// ── BARROWS (/barrows) — simple geo factory ──
+const BARROWS_CFG = geoCfg({ base: 'barrows', listKey: 'BARROWS', inRegion: 'barrowsInRegion', byCountry: 'barrowByCountry', unit: 'burial barrows', singular: 'burial barrow', titleCase: 'Burial Barrows', icon: '\ud83e\udea6', navBlurb: `Profiles of notable burial barrows \u2014 where each mound lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable burial barrows and tumuli worldwide: location, country and the prehistoric dead each entombs.', subMetric: 'burial mound & country', intro: `These are notable <b>burial barrows</b> \u2014 the ancient earthen and stone mounds heaped over graves in prehistoric times, marking cemeteries, chieftains and ritual landscapes across the world. Each profile shows where the barrow is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function barrowsHubPage() { return geoHubPage(brw, 'barrows', BARROWS_CFG); }
+function barrowsRegionPage(r) { return geoRegionPage(r, brw, 'barrows', BARROWS_CFG); }
+function barrowsPage(x, sum) { return geoItemPage(x, sum, brw, 'barrows', BARROWS_CFG); }
+function barrowsNotFound(q) { return geoNotFound('barrows', BARROWS_CFG, q); }
+
+// ── BELL TOWERS (/bell-towers) — simple geo factory ──
+const BELLTOWERS_CFG = geoCfg({ base: 'bell-towers', listKey: 'BELLTOWERS', inRegion: 'bellTowersInRegion', byCountry: 'belltowerByCountry', unit: 'bell towers', singular: 'bell tower', titleCase: 'Bell Towers', icon: '\ud83d\udd14', navBlurb: `Profiles of notable bell towers \u2014 where each campanile stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable bell towers and campaniles worldwide: location, country and the bells and clock each carries.', subMetric: 'campanile & country', intro: `These are notable <b>bell towers</b> \u2014 the campaniles and freestanding towers that call the faithful and mark the hours, from the leaning tower of Pisa to great civic belfries. Each profile shows where the tower stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function bellTowersHubPage() { return geoHubPage(mlc, 'bell-towers', BELLTOWERS_CFG); }
+function bellTowersRegionPage(r) { return geoRegionPage(r, mlc, 'bell-towers', BELLTOWERS_CFG); }
+function bellTowersPage(x, sum) { return geoItemPage(x, sum, mlc, 'bell-towers', BELLTOWERS_CFG); }
+function bellTowersNotFound(q) { return geoNotFound('bell-towers', BELLTOWERS_CFG, q); }
 
 // ── METRO STATIONS (/metro-stations) — paged, country-partitioned hub ──
 const METRO_CFG = geoCfg({ base: 'metro-stations', listKey: 'METROSTATIONS', inRegion: 'metrostationsInRegion', byCountry: 'metrostationByCountry', unit: 'metro stations', singular: 'metro station', titleCase: 'Metro Stations', icon: '\ud83d\udef7', navBlurb: `Profiles of the world's metro stations \u2014 where each stop is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable rapid-transit and metro stations worldwide: location, country and what makes each station significant.', subMetric: 'location & transit heritage', intro: `These are the world's notable <b>metro stations</b> \u2014 the rapid-transit stops and grand underground halls that move millions through cities. This library is large, so it is browsed by continent, then by country. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });

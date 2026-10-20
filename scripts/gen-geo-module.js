@@ -2,15 +2,16 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kawasan-lindung', label: 'KAWASAN-LINDUNG', title: 'Protected Areas of the World', var: 'PROTECTEDAREAS', sing: 'ProtectedArea', finder: 'protectedarea', finders: 'protectedAreasInRegion', pfx: 'pa', cap: 'ProtectedAreas' },
-  { file: 'puncak', label: 'PUNCAK', title: 'Summits of the World', var: 'SUMMITS', sing: 'Summit', finder: 'summit', finders: 'summitsInRegion', pfx: 'sm', cap: 'Summits' },
-  { file: 'gerbang-kota', label: 'GERBANG-KOTA', title: 'City Gates of the World', var: 'CITYGATES', sing: 'CityGate', finder: 'citygate', finders: 'cityGatesInRegion', pfx: 'cg', cap: 'CityGates' },
-  { file: 'terusan-kunci', label: 'TERUSAN-KUNCI', title: 'Canal Locks of the World', var: 'CANALLOCKS', sing: 'CanalLock', finder: 'canallock', finders: 'canalLocksInRegion', pfx: 'cl', cap: 'CanalLocks' },
-  { file: 'kuari', label: 'KUARI', title: 'Quarries of the World', var: 'QUARRIES', sing: 'Quarry', finder: 'quarry', finders: 'quarriesInRegion', pfx: 'qr', cap: 'Quarries' },
-  { file: 'hutan-negeri', label: 'HUTAN-NEGERI', title: 'State Forests of the World', var: 'STATEFORESTS', sing: 'StateForest', finder: 'stateforest', finders: 'stateForestsInRegion', pfx: 'sf', cap: 'StateForests' },
-  { file: 'lebuh-raya', label: 'LEBUH-RAYA', title: 'Controlled-access Highways of the World', var: 'EXPRESSWAYS', sing: 'Expressway', finder: 'expressway', finders: 'expresswaysInRegion', pfx: 'ex', cap: 'Expressways' },
-  { file: 'galangan-kapal', label: 'GALANGAN-KAPAL', title: 'Shipyards of the World', var: 'SHIPYARDS', sing: 'Shipyard', finder: 'shipyard', finders: 'shipyardsInRegion', pfx: 'sy', cap: 'Shipyards' },
-  { file: 'obelisk', label: 'OBELISK', title: 'Obelisks of the World', var: 'OBELISKS', sing: 'Obelisk', finder: 'obelisk', finders: 'obelisksInRegion', pfx: 'ob', cap: 'Obelisks' },
+  { file: 'candi-hindu', label: 'CANDI-HINDU', title: 'Hindu Temples of the World', var: 'HINDUTEMPLES', sing: 'HinduTemple', finder: 'hindutemple', finders: 'hinduTemplesInRegion', pfx: 'ht', cap: 'HinduTemples' },
+  { file: 'rumah-pedesaan', label: 'RUMAH-PEDESAAN', title: 'Country Houses of the World', var: 'COUNTRYHOUSES', sing: 'CountryHouse', finder: 'countryhouse', finders: 'countryHousesInRegion', pfx: 'ch', cap: 'CountryHouses' },
+  { file: 'kuil-shinto', label: 'KUIL-SHINTO', title: 'Shinto Shrines of the World', var: 'SHINTOSHRINES', sing: 'ShintoShrine', finder: 'shintoshrine', finders: 'shintoShrinesInRegion', pfx: 'ss', cap: 'ShintoShrines' },
+  { file: 'dataran-tinggi', label: 'DATARAN-TINGGI', title: 'Plateaus of the World', var: 'PLATEAUS', sing: 'Plateau', finder: 'plateau', finders: 'plateausInRegion', pfx: 'pt', cap: 'Plateaus' },
+  { file: 'dataran-rendah', label: 'DATARAN-RENDAH', title: 'Plains of the World', var: 'PLAINS', sing: 'Plain', finder: 'plain', finders: 'plainsInRegion', pfx: 'pl', cap: 'Plains' },
+  { file: 'lingkaran-batu', label: 'LINGKARAN-BATU', title: 'Stone Circles of the World', var: 'STONECIRCLES', sing: 'StoneCircle', finder: 'stonecircle', finders: 'stoneCirclesInRegion', pfx: 'sc', cap: 'StoneCircles' },
+  { file: 'pagoda', label: 'PAGODA', title: 'Pagodas of the World', var: 'PAGODAS', sing: 'Pagoda', finder: 'pagoda', finders: 'pagodasInRegion', pfx: 'pg', cap: 'Pagodas' },
+  { file: 'dolmen', label: 'DOLMEN', title: 'Dolmens of the World', var: 'DOLMENS', sing: 'Dolmen', finder: 'dolmen', finders: 'dolmensInRegion', pfx: 'dm', cap: 'Dolmens' },
+  { file: 'gundar', label: 'GUNDAR', title: 'Burial Barrows of the World', var: 'BARROWS', sing: 'Barrow', finder: 'barrow', finders: 'barrowsInRegion', pfx: 'bw', cap: 'Barrows' },
+  { file: 'menara-loceng', label: 'MENARA-LOCENG', title: 'Bell Towers of the World', var: 'BELLTOWERS', sing: 'BellTower', finder: 'belltower', finders: 'bellTowersInRegion', pfx: 'bt', cap: 'BellTowers' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
