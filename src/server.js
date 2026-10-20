@@ -148,6 +148,13 @@ const dwk = require('./dewan-konsert');
 const pnc = require('./pancutan');
 const pwr = require('./stesen-tenaga');
 const bsr = require('./rizab-biosfera');
+const bpd = require('./balai-padam');
+const klm = require('./kelab-malam');
+const lbk = require('./lumba-kuda');
+const ldf = require('./ladang-angin');
+const twr = require('./taman-air');
+const gbk = require('./gerbang-kemenangan');
+const blp = require('./balai-polis');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1204,6 +1211,13 @@ geoRoutes('concert-halls', dwk, 'findConcertHall', concertHallsHubPage, concertH
 geoRoutes('fountains', pnc, 'findFountain', fountainsHubPage, fountainsRegionPage, fountainsPage, fountainsNotFound);
 geoRoutes('power-stations', pwr, 'findPowerStation', powerStationsHubPage, powerStationsRegionPage, powerStationsPage, powerStationsNotFound);
 geoRoutes('biosphere-reserves', bsr, 'findBiosphereReserve', biosphereReservesHubPage, biosphereReservesRegionPage, biosphereReservesPage, biosphereReservesNotFound);
+geoRoutes('fire-stations', bpd, 'findFireStation', fireStationsHubPage, fireStationsRegionPage, fireStationsPage, fireStationsNotFound);
+geoRoutes('nightclubs', klm, 'findNightclub', nightclubsHubPage, nightclubsRegionPage, nightclubsPage, nightclubsNotFound);
+geoRoutes('racecourses', lbk, 'findRacecourse', racecoursesHubPage, racecoursesRegionPage, racecoursesPage, racecoursesNotFound);
+geoRoutes('wind-farms', ldf, 'findWindFarm', windFarmsHubPage, windFarmsRegionPage, windFarmsPage, windFarmsNotFound);
+geoRoutes('water-parks', twr, 'findWaterPark', waterParksHubPage, waterParksRegionPage, waterParksPage, waterParksNotFound);
+geoRoutes('triumphal-arches', gbk, 'findTriumphalArch', triumphalArchesHubPage, triumphalArchesRegionPage, triumphalArchesPage, triumphalArchesNotFound);
+geoRoutes('police-stations', blp, 'findPoliceStation', policeStationsHubPage, policeStationsRegionPage, policeStationsPage, policeStationsNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1711,7 +1725,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2124,6 +2138,13 @@ geoSitemap('concert-halls', dwk, 'CONCERTHALLS');
 geoSitemap('fountains', pnc, 'FOUNTAINS');
 geoSitemap('power-stations', pwr, 'POWERSTATIONS');
 geoSitemap('biosphere-reserves', bsr, 'BIOSPHERERESERVES');
+geoSitemap('fire-stations', bpd, 'FIRESTATIONS');
+geoSitemap('nightclubs', klm, 'NIGHTCLUBS');
+geoSitemap('racecourses', lbk, 'RACECOURSES');
+geoSitemap('wind-farms', ldf, 'WINDFARMS');
+geoSitemap('water-parks', twr, 'WATERPARKS');
+geoSitemap('triumphal-arches', gbk, 'TRIUMPHALARCHES');
+geoSitemap('police-stations', blp, 'POLICESTATIONS');
 geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
 geoSitemap('settlements', stl, 'SETTLEMENTS');
@@ -8102,6 +8123,55 @@ function biosphereReservesHubPage() { return geoHubPage(bsr, 'biosphere-reserves
 function biosphereReservesRegionPage(r) { return geoRegionPage(r, bsr, 'biosphere-reserves', BIOSPHERERESERVES_CFG); }
 function biosphereReservesPage(x, sum) { return geoItemPage(x, sum, bsr, 'biosphere-reserves', BIOSPHERERESERVES_CFG); }
 function biosphereReservesNotFound(q) { return geoNotFound('biosphere-reserves', BIOSPHERERESERVES_CFG, q); }
+
+// ── FIRE STATIONS (/fire-stations) — simple geo factory ──
+const FIRESTATIONS_CFG = geoCfg({ base: 'fire-stations', listKey: 'FIRESTATIONS', inRegion: 'firestationsInRegion', byCountry: 'firestationByCountry', unit: 'fire stations', singular: 'fire station', titleCase: 'Fire Stations', icon: '\ud83d\udea9', navBlurb: `Profiles of notable fire stations \u2014 where each station lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable fire stations worldwide: location, country and what makes each firehouse significant.', subMetric: 'firehouse & country', intro: `These are notable <b>fire stations</b> \u2014 the firehouses and engine companies that house firefighters and their appliances, many cherished civic landmarks. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function fireStationsHubPage() { return geoHubPage(bpd, 'fire-stations', FIRESTATIONS_CFG); }
+function fireStationsRegionPage(r) { return geoRegionPage(r, bpd, 'fire-stations', FIRESTATIONS_CFG); }
+function fireStationsPage(x, sum) { return geoItemPage(x, sum, bpd, 'fire-stations', FIRESTATIONS_CFG); }
+function fireStationsNotFound(q) { return geoNotFound('fire-stations', FIRESTATIONS_CFG, q); }
+
+// ── NIGHTCLUBS (/nightclubs) — simple geo factory ──
+const NIGHTCLUBS_CFG = geoCfg({ base: 'nightclubs', listKey: 'NIGHTCLUBS', inRegion: 'nightclubsInRegion', byCountry: 'nightclubByCountry', unit: 'nightclubs', singular: 'nightclub', titleCase: 'Nightclubs', icon: '\ud83c\udfb9', navBlurb: `Profiles of notable nightclubs \u2014 where each venue lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable nightclubs worldwide: location, country and what makes each music venue renowned.', subMetric: 'music venue & country', intro: `These are notable <b>nightclubs</b> \u2014 legendary after-dark venues where jazz, rock, disco and electronic music found a home and shaped nightlife history. Each profile shows where the club is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function nightclubsHubPage() { return geoHubPage(klm, 'nightclubs', NIGHTCLUBS_CFG); }
+function nightclubsRegionPage(r) { return geoRegionPage(r, klm, 'nightclubs', NIGHTCLUBS_CFG); }
+function nightclubsPage(x, sum) { return geoItemPage(x, sum, klm, 'nightclubs', NIGHTCLUBS_CFG); }
+function nightclubsNotFound(q) { return geoNotFound('nightclubs', NIGHTCLUBS_CFG, q); }
+
+// ── RACECOURSES (/racecourses) — simple geo factory ──
+const RACECOURSES_CFG = geoCfg({ base: 'racecourses', listKey: 'RACECOURSES', inRegion: 'racecoursesInRegion', byCountry: 'racecourseByCountry', unit: 'racecourses', singular: 'racecourse', titleCase: 'Racecourses', icon: '\ud83c\udfc7', navBlurb: `Profiles of notable racecourses \u2014 where each track lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable horse-racing racecourses worldwide: location, country and what makes each track renowned.', subMetric: 'hippodrome & country', intro: `These are notable <b>racecourses</b> \u2014 the historic hippodromes and turf tracks that stage great flat and jumps racing, from ancient grandstands to modern arenas. Each profile shows where the racecourse is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'SportsFacility' });
+function racecoursesHubPage() { return geoHubPage(lbk, 'racecourses', RACECOURSES_CFG); }
+function racecoursesRegionPage(r) { return geoRegionPage(r, lbk, 'racecourses', RACECOURSES_CFG); }
+function racecoursesPage(x, sum) { return geoItemPage(x, sum, lbk, 'racecourses', RACECOURSES_CFG); }
+function racecoursesNotFound(q) { return geoNotFound('racecourses', RACECOURSES_CFG, q); }
+
+// ── WIND FARMS (/wind-farms) — simple geo factory ──
+const WINDFARMS_CFG = geoCfg({ base: 'wind-farms', listKey: 'WINDFARMS', inRegion: 'windfarmsInRegion', byCountry: 'windfarmByCountry', unit: 'wind farms', singular: 'wind farm', titleCase: 'Wind Farms', icon: '\ud83c\udf2c\ufe0f', navBlurb: `Profiles of notable wind farms \u2014 where each array lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable wind farms worldwide: location, country and the scale of each renewable energy array.', subMetric: 'turbine array & country', intro: `These are notable <b>wind farms</b> \u2014 clusters of wind turbines on hilltops, plains and offshore that convert wind into electricity for whole communities. Each profile shows where the wind farm is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function windFarmsHubPage() { return geoHubPage(ldf, 'wind-farms', WINDFARMS_CFG); }
+function windFarmsRegionPage(r) { return geoRegionPage(r, ldf, 'wind-farms', WINDFARMS_CFG); }
+function windFarmsPage(x, sum) { return geoItemPage(x, sum, ldf, 'wind-farms', WINDFARMS_CFG); }
+function windFarmsNotFound(q) { return geoNotFound('wind-farms', WINDFARMS_CFG, q); }
+
+// ── WATER PARKS (/water-parks) — simple geo factory ──
+const WATERPARKS_CFG = geoCfg({ base: 'water-parks', listKey: 'WATERPARKS', inRegion: 'waterparksInRegion', byCountry: 'waterparkByCountry', unit: 'water parks', singular: 'water park', titleCase: 'Water Parks', icon: '\ud83d\uddfa', navBlurb: `Profiles of notable water parks \u2014 where each park lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable water parks worldwide: location, country and what makes each aquapark renowned.', subMetric: 'aquapark & country', intro: `These are notable <b>water parks</b> \u2014 aquaparks of slides, wave pools and lazy rivers that draw families and thrill-seekers across the world. Each profile shows where the park is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'AmusementPark' });
+function waterParksHubPage() { return geoHubPage(twr, 'water-parks', WATERPARKS_CFG); }
+function waterParksRegionPage(r) { return geoRegionPage(r, twr, 'water-parks', WATERPARKS_CFG); }
+function waterParksPage(x, sum) { return geoItemPage(x, sum, twr, 'water-parks', WATERPARKS_CFG); }
+function waterParksNotFound(q) { return geoNotFound('water-parks', WATERPARKS_CFG, q); }
+
+// ── TRIUMPHAL ARCHES (/triumphal-arches) — simple geo factory ──
+const TRIUMPHALARCHES_CFG = geoCfg({ base: 'triumphal-arches', listKey: 'TRIUMPHALARCHES', inRegion: 'triumphalarchsInRegion', byCountry: 'triumphalarchByCountry', unit: 'triumphal arches', singular: 'triumphal arch', titleCase: 'Triumphal Arches', icon: '\ud83c\udfdb\ufe0f', navBlurb: `Profiles of notable triumphal arches \u2014 where each monument stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable triumphal arches worldwide: location, country and the history each monument commemorates.', subMetric: 'monumental arch & country', intro: `These are notable <b>triumphal arches</b> \u2014 free-standing monumental arches built to mark victories and processions, from Roman antiquity to grand modern memorials. Each profile shows where the arch stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksOrHistoricalBuildings' });
+function triumphalArchesHubPage() { return geoHubPage(gbk, 'triumphal-arches', TRIUMPHALARCHES_CFG); }
+function triumphalArchesRegionPage(r) { return geoRegionPage(r, gbk, 'triumphal-arches', TRIUMPHALARCHES_CFG); }
+function triumphalArchesPage(x, sum) { return geoItemPage(x, sum, gbk, 'triumphal-arches', TRIUMPHALARCHES_CFG); }
+function triumphalArchesNotFound(q) { return geoNotFound('triumphal-arches', TRIUMPHALARCHES_CFG, q); }
+
+// ── POLICE STATIONS (/police-stations) — simple geo factory ──
+const POLICESTATIONS_CFG = geoCfg({ base: 'police-stations', listKey: 'POLICESTATIONS', inRegion: 'policestationsInRegion', byCountry: 'policestationByCountry', unit: 'police stations', singular: 'police station', titleCase: 'Police Stations', icon: '\ud83d\ude93', navBlurb: `Profiles of notable police stations \u2014 where each station lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable police stations worldwide: location, country and what makes each building significant.', subMetric: 'law-enforcement building & country', intro: `These are notable <b>police stations</b> \u2014 the headquarters and local stations of law enforcement, some historic landmarks, others famed in culture and news. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function policeStationsHubPage() { return geoHubPage(blp, 'police-stations', POLICESTATIONS_CFG); }
+function policeStationsRegionPage(r) { return geoRegionPage(r, blp, 'police-stations', POLICESTATIONS_CFG); }
+function policeStationsPage(x, sum) { return geoItemPage(x, sum, blp, 'police-stations', POLICESTATIONS_CFG); }
+function policeStationsNotFound(q) { return geoNotFound('police-stations', POLICESTATIONS_CFG, q); }
 
 // ── METRO STATIONS (/metro-stations) — paged, country-partitioned hub ──
 const METRO_CFG = geoCfg({ base: 'metro-stations', listKey: 'METROSTATIONS', inRegion: 'metrostationsInRegion', byCountry: 'metrostationByCountry', unit: 'metro stations', singular: 'metro station', titleCase: 'Metro Stations', icon: '\ud83d\udef7', navBlurb: `Profiles of the world's metro stations \u2014 where each stop is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable rapid-transit and metro stations worldwide: location, country and what makes each station significant.', subMetric: 'location & transit heritage', intro: `These are the world's notable <b>metro stations</b> \u2014 the rapid-transit stops and grand underground halls that move millions through cities. This library is large, so it is browsed by continent, then by country. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });

@@ -2,15 +2,13 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'stesen-metro', label: 'STESEN-METRO', title: 'Metro Stations of the World', var: 'METROSTATIONS', sing: 'MetroStation', finder: 'metrostation', pfx: 'ms', cap: 'MetroStations' },
-  { file: 'pawagam', label: 'PAWAGAM', title: 'Cinemas of the World', var: 'CINEMAS', sing: 'Cinema', finder: 'cinema', pfx: 'cn', cap: 'Cinemas' },
-  { file: 'kapel', label: 'KAPEL', title: 'Chapels of the World', var: 'CHAPELS', sing: 'Chapel', finder: 'chapel', pfx: 'cp', cap: 'Chapels' },
-  { file: 'terminal-bas', label: 'TERMINAL-BAS', title: 'Bus Stations of the World', var: 'BUSSTATIONS', sing: 'BusStation', finder: 'busstation', pfx: 'bu', cap: 'BusStations' },
-  { file: 'rumah-manor', label: 'RUMAH-MANOR', title: 'Manor Houses of the World', var: 'MANORHOUSES', sing: 'ManorHouse', finder: 'manorhouse', pfx: 'ma', cap: 'ManorHouses' },
-  { file: 'dewan-konsert', label: 'DEWAN-KONSERT', title: 'Concert Halls of the World', var: 'CONCERTHALLS', sing: 'ConcertHall', finder: 'concerthall', pfx: 'co', cap: 'ConcertHalls' },
-  { file: 'pancutan', label: 'PANCUTAN', title: 'Fountains of the World', var: 'FOUNTAINS', sing: 'Fountain', finder: 'fountain', pfx: 'fu', cap: 'Fountains' },
-  { file: 'stesen-tenaga', label: 'STESEN-TENAGA', title: 'Power Stations of the World', var: 'POWERSTATIONS', sing: 'PowerStation', finder: 'powerstation', pfx: 'po', cap: 'PowerStations' },
-  { file: 'rizab-biosfera', label: 'RIZAB-BIOSFERA', title: 'Biosphere Reserves of the World', var: 'BIOSPHERERESERVES', sing: 'BiosphereReserve', finder: 'biospherereserve', pfx: 'bi', cap: 'BiosphereReserves' },
+  { file: 'balai-padam', label: 'BALAI-PADAM', title: 'Fire Stations of the World', var: 'FIRESTATIONS', sing: 'FireStation', finder: 'firestation', pfx: 'fs', cap: 'FireStations' },
+  { file: 'kelab-malam', label: 'KELAB-MALAM', title: 'Nightclubs of the World', var: 'NIGHTCLUBS', sing: 'Nightclub', finder: 'nightclub', pfx: 'nc', cap: 'Nightclubs' },
+  { file: 'lumba-kuda', label: 'LUMBA-KUDA', title: 'Racecourses of the World', var: 'RACECOURSES', sing: 'Racecourse', finder: 'racecourse', pfx: 'rc', cap: 'Racecourses' },
+  { file: 'ladang-angin', label: 'LADANG-ANGIN', title: 'Wind Farms of the World', var: 'WINDFARMS', sing: 'WindFarm', finder: 'windfarm', pfx: 'wfr', cap: 'WindFarms' },
+  { file: 'taman-air', label: 'TAMAN-AIR', title: 'Water Parks of the World', var: 'WATERPARKS', sing: 'WaterPark', finder: 'waterpark', pfx: 'wp', cap: 'WaterParks' },
+  { file: 'gerbang-kemenangan', label: 'GERBANG-KEMENANGAN', title: 'Triumphal Arches of the World', var: 'TRIUMPHALARCHES', sing: 'TriumphalArch', finder: 'triumphalarch', pfx: 'ta', cap: 'TriumphalArches' },
+  { file: 'balai-polis', label: 'BALAI-POLIS', title: 'Police Stations of the World', var: 'POLICESTATIONS', sing: 'PoliceStation', finder: 'policestation', pfx: 'pl', cap: 'PoliceStations' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
