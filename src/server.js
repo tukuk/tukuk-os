@@ -60,6 +60,12 @@ const gb = require('./gunung-berapi');
 const sl = require('./selat');
 const kp = require('./kepulauan');
 const ngr = require('./ngarai');
+const bk = require('./bukit');
+const clh = require('./celah');
+const tj = require('./tanjung');
+const lgn = require('./lagun');
+const dgs = require('./danau-garam');
+const sas = require('./laut');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1025,6 +1031,12 @@ geoRoutes('gunung-berapi', gb, 'findVolcano', gunungBerapiHubPage, gunungBerapiR
 geoRoutes('selat', sl, 'findStrait', selatHubPage, selatRegionPage, selatPage, selatNotFound);
 geoRoutes('kepulauan', kp, 'findArchipelago', kepulauanHubPage, kepulauanRegionPage, kepulauanPage, kepulauanNotFound);
 geoRoutes('ngarai', ngr, 'findGorge', ngaraiHubPage, ngaraiRegionPage, ngaraiPage, ngaraiNotFound);
+geoRoutes('bukit', bk, 'findHill', bukitHubPage, bukitRegionPage, bukitPage, bukitNotFound);
+geoRoutes('celah', clh, 'findPass', celahHubPage, celahRegionPage, celahPage, celahNotFound);
+geoRoutes('tanjung', tj, 'findHeadland', tanjungHubPage, tanjungRegionPage, tanjungPage, tanjungNotFound);
+geoRoutes('lagun', lgn, 'findLagoon', lagunHubPage, lagunRegionPage, lagunPage, lagunNotFound);
+geoRoutes('danau-garam', dgs, 'findSaltLake', danauGaramHubPage, danauGaramRegionPage, danauGaramPage, danauGaramNotFound);
+geoRoutes('laut', sas, 'findSea', lautHubPage, lautRegionPage, lautPage, lautNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1532,7 +1544,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1860,6 +1872,12 @@ geoSitemap('gunung-berapi', gb, 'VOLCANOES');
 geoSitemap('selat', sl, 'STRAITS');
 geoSitemap('kepulauan', kp, 'ARCHIPELAGOS');
 geoSitemap('ngarai', ngr, 'GORGES');
+geoSitemap('bukit', bk, 'HILLS');
+geoSitemap('celah', clh, 'PASSES');
+geoSitemap('tanjung', tj, 'HEADLANDS');
+geoSitemap('lagun', lgn, 'LAGOONS');
+geoSitemap('danau-garam', dgs, 'SALT_LAKES');
+geoSitemap('laut', sas, 'SEAS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7238,6 +7256,37 @@ function ngaraiHubPage() { return geoHubPage(ngr, 'ngarai', NGARAI_CFG); }
 function ngaraiRegionPage(r) { return geoRegionPage(r, ngr, 'ngarai', NGARAI_CFG); }
 function ngaraiPage(x, sum) { return geoItemPage(x, sum, ngr, 'ngarai', NGARAI_CFG); }
 function ngaraiNotFound(q) { return geoNotFound('ngarai', NGARAI_CFG, q); }
+
+const BUKIT_CFG = geoCfg({ base: 'bukit', listKey: 'HILLS', inRegion: 'hillsInRegion', byCountry: 'hillByCountry', unit: 'hills', singular: 'hill', titleCase: 'Hills', icon: '\u26f0\ufe0f', navBlurb: `Profiles of the world\u2019s hills \u2014 where each hill rises, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable hills worldwide: location, country and what makes each hill significant.', subMetric: 'location & landforms', intro: `These are the world\u2019s most notable <b>hills</b> \u2014 low rising landforms that mark skylines, anchor hill towns and give us the oldest word for elevation. Each profile shows where the hill rises, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Mountain' });
+function bukitHubPage() { return geoHubPage(bk, 'bukit', BUKIT_CFG); }
+function bukitRegionPage(r) { return geoRegionPage(r, bk, 'bukit', BUKIT_CFG); }
+function bukitPage(x, sum) { return geoItemPage(x, sum, bk, 'bukit', BUKIT_CFG); }
+function bukitNotFound(q) { return geoNotFound('bukit', BUKIT_CFG, q); }
+const CELAH_CFG = geoCfg({ base: 'celah', listKey: 'PASSES', inRegion: 'passsInRegion', byCountry: 'passByCountry', unit: 'mountain passes', singular: 'mountain pass', titleCase: 'Mountain Passes', icon: '\ud83d\udec7', navBlurb: `Profiles of the world\u2019s mountain passes \u2014 where each route crosses, which countries it links, and a plain-English introduction.`, seoDesc: 'Introductions to notable mountain passes worldwide: location, country and what makes each route significant.', subMetric: 'location & routes', intro: `These are the world\u2019s most notable <b>mountain passes</b> \u2014 the low points that let armies, traders and travellers cross otherwise impassable ranges, many still carrying busy highways. Each profile shows where the route crosses, which countries it links, and a plain-English introduction from Wikipedia.`, ldType: 'Landform' });
+function celahHubPage() { return geoHubPage(clh, 'celah', CELAH_CFG); }
+function celahRegionPage(r) { return geoRegionPage(r, clh, 'celah', CELAH_CFG); }
+function celahPage(x, sum) { return geoItemPage(x, sum, clh, 'celah', CELAH_CFG); }
+function celahNotFound(q) { return geoNotFound('celah', CELAH_CFG, q); }
+const TANJUNG_CFG = geoCfg({ base: 'tanjung', listKey: 'HEADLANDS', inRegion: 'headlandsInRegion', byCountry: 'headlandByCountry', unit: 'headlands', singular: 'headland', titleCase: 'Headlands', icon: '\ud83c\udfd4\ufe0f', navBlurb: `Profiles of the world\u2019s headlands and capes \u2014 where each point reaches, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable headlands and capes worldwide: location, country and what makes each point significant.', subMetric: 'location & coastlines', intro: `These are the world\u2019s most notable <b>headlands and capes</b> \u2014 promontories where land thrusts into the sea, marking hazardous turning points for sailors from the Cape of Good Hope to Cape Horn. Each profile shows where the point reaches, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Landform' });
+function tanjungHubPage() { return geoHubPage(tj, 'tanjung', TANJUNG_CFG); }
+function tanjungRegionPage(r) { return geoRegionPage(r, tj, 'tanjung', TANJUNG_CFG); }
+function tanjungPage(x, sum) { return geoItemPage(x, sum, tj, 'tanjung', TANJUNG_CFG); }
+function tanjungNotFound(q) { return geoNotFound('tanjung', TANJUNG_CFG, q); }
+const LAGUN_CFG = geoCfg({ base: 'lagun', listKey: 'LAGOONS', inRegion: 'lagoonsInRegion', byCountry: 'lagoonByCountry', unit: 'lagoons', singular: 'lagoon', titleCase: 'Lagoons', icon: '\ud83c\udfdd\ufe0f', navBlurb: `Profiles of the world\u2019s lagoons \u2014 where each lagoon lies, which country it belongs to, and a plain-English introduction.`, seoDesc: 'Introductions to notable lagoons worldwide: location, country and what makes each lagoon significant.', subMetric: 'location & coastlines', intro: `These are the world\u2019s most notable <b>lagoons</b> \u2014 calm shallow waters sheltered from the sea by reefs, barrier islands or sandbars, fringing atolls and coastlines alike. Each profile shows where the lagoon lies, which country it belongs to, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function lagunHubPage() { return geoHubPage(lgn, 'lagun', LAGUN_CFG); }
+function lagunRegionPage(r) { return geoRegionPage(r, lgn, 'lagun', LAGUN_CFG); }
+function lagunPage(x, sum) { return geoItemPage(x, sum, lgn, 'lagun', LAGUN_CFG); }
+function lagunNotFound(q) { return geoNotFound('lagun', LAGUN_CFG, q); }
+const DANAU_GARAM_CFG = geoCfg({ base: 'danau-garam', listKey: 'SALT_LAKES', inRegion: 'saltLakesInRegion', byCountry: 'saltLakeByCountry', unit: 'salt lakes', singular: 'salt lake', titleCase: 'Salt Lakes', icon: '\ud83e\udda2', navBlurb: `Profiles of the world\u2019s salt lakes \u2014 where each lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable salt lakes worldwide: location, country and what makes each saline lake significant.', subMetric: 'location & hydrology', intro: `These are the world\u2019s most notable <b>salt lakes</b> \u2014 landlocked basins where evaporation leaves water far saltier than the sea, from the Dead Sea to the Great Salt Lake. Each profile shows where the lake lies, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function danauGaramHubPage() { return geoHubPage(dgs, 'danau-garam', DANAU_GARAM_CFG); }
+function danauGaramRegionPage(r) { return geoRegionPage(r, dgs, 'danau-garam', DANAU_GARAM_CFG); }
+function danauGaramPage(x, sum) { return geoItemPage(x, sum, dgs, 'danau-garam', DANAU_GARAM_CFG); }
+function danauGaramNotFound(q) { return geoNotFound('danau-garam', DANAU_GARAM_CFG, q); }
+const LAUT_CFG = geoCfg({ base: 'laut', listKey: 'SEAS', inRegion: 'seasInRegion', byCountry: 'seaByCountry', unit: 'seas', singular: 'sea', titleCase: 'Seas', icon: '\ud83c\udf0a', navBlurb: `Profiles of the world\u2019s seas \u2014 where each sea lies, which countries border it, and a plain-English introduction.`, seoDesc: 'Introductions to notable seas worldwide: location, bordering countries and what makes each sea significant.', subMetric: 'location & oceans', intro: `These are the world\u2019s most notable <b>seas</b> \u2014 the great marginal and enclosed bodies of water between continents, from the Mediterranean to the Coral Sea. Each profile shows where the sea lies, which countries border it, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
+function lautHubPage() { return geoHubPage(sas, 'laut', LAUT_CFG); }
+function lautRegionPage(r) { return geoRegionPage(r, sas, 'laut', LAUT_CFG); }
+function lautPage(x, sum) { return geoItemPage(x, sum, sas, 'laut', LAUT_CFG); }
+function lautNotFound(q) { return geoNotFound('laut', LAUT_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}

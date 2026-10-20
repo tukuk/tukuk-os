@@ -2,13 +2,12 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'teluk', label: 'TELUK', title: 'Bays of the World', var: 'BAYS', sing: 'Bay', finder: 'bay', pfx: 'tls', cap: 'Bays' },
-  { file: 'lembah', label: 'LEMBah', title: 'Valleys of the World', var: 'VALLEYS', sing: 'Valley', finder: 'valley', pfx: 'lv', cap: 'Valleys' },
-  { file: 'semenanjung', label: 'SEMENANJUNG', title: 'Peninsulas of the World', var: 'PENINSULAS', sing: 'Peninsula', finder: 'peninsula', pfx: 'sn', cap: 'Peninsulas' },
-  { file: 'gunung-berapi', label: 'GUNUNG-BERAPI', title: 'Volcanoes of the World', var: 'VOLCANOES', sing: 'Volcano', finder: 'volcano', pfx: 'vln', cap: 'Volcanoes' },
-  { file: 'selat', label: 'SELAT', title: 'Straits of the World', var: 'STRAITS', sing: 'Strait', finder: 'strait', pfx: 'sl', cap: 'Straits' },
-  { file: 'kepulauan', label: 'KEPULAUAN', title: 'Archipelagos of the World', var: 'ARCHIPELAGOS', sing: 'Archipelago', finder: 'archipelago', pfx: 'kp', cap: 'Archipelagos' },
-  { file: 'ngarai', label: 'NGARAI', title: 'Gorges of the World', var: 'GORGES', sing: 'Gorge', finder: 'gorge', pfx: 'ng', cap: 'Gorges' },
+  { file: 'bukit', label: 'BUKIT', title: 'Hills of the World', var: 'HILLS', sing: 'Hill', finder: 'hill', pfx: 'bk', cap: 'Hills' },
+  { file: 'celah', label: 'CELAH', title: 'Mountain Passes of the World', var: 'PASSES', sing: 'Pass', finder: 'pass', pfx: 'cp', cap: 'Passes' },
+  { file: 'tanjung', label: 'TANJUNG', title: 'Headlands of the World', var: 'HEADLANDS', sing: 'Headland', finder: 'headland', pfx: 'hd', cap: 'Headlands' },
+  { file: 'lagun', label: 'LAGUN', title: 'Lagoons of the World', var: 'LAGOONS', sing: 'Lagoon', finder: 'lagoon', pfx: 'lg', cap: 'Lagoons' },
+  { file: 'danau-garam', label: 'DANAU-GARAM', title: 'Salt Lakes of the World', var: 'SALT_LAKES', sing: 'SaltLake', finder: 'saltLake', pfx: 'dk', cap: 'SaltLakes' },
+  { file: 'laut', label: 'LAUT', title: 'Seas of the World', var: 'SEAS', sing: 'Sea', finder: 'sea', pfx: 'lt', cap: 'Seas' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
