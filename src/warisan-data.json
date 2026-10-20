@@ -467,7 +467,7 @@
 {"name": "Land of Frankincense", "wiki": "Land of Frankincense", "country": "Oman", "region": "Asia", "lat": 17.3, "lng": 54.4, "type": "Cultural"},
 {"name": "Qal'at al-Bahrain", "wiki": "Qal'at al-Bahrain", "country": "Bahrain", "region": "Asia", "lat": 26.23, "lng": 50.59, "type": "Cultural"},
 {"name": "Ancient Town of Al Zubarah", "wiki": "Al Zubarah", "country": "Qatar", "region": "Asia", "lat": 25.7, "lng": 51.1, "type": "Cultural"},
-{"name": "Ancient Durable Complex of Wudang Mountains", "wiki": "Wudang Mountains", "country": "China", "region": "Asia", "lat": 32.4, "lng": 111.0, "type": "Cultural"},
+{"name": "Ancient Building Complex in the Wudang Mountains", "wiki": "Wudang Mountains", "country": "China", "region": "Asia", "lat": 32.4, "lng": 111.0, "type": "Cultural"},
 {"name": "Orkhon Valley Cultural Landscape", "wiki": "Orkhon Valley", "country": "Mongolia", "region": "Asia", "lat": 47.2, "lng": 102.8, "type": "Cultural"},
 {"name": "Saryarka, Steppe and Lakes of Northern Kazakhstan", "wiki": "Saryarka", "country": "Kazakhstan", "region": "Asia", "lat": 53.0, "lng": 69.5, "type": "Natural"},
 {"name": "Proto-Urban Site of Sarazm", "wiki": "Sarazm", "country": "Tajikistan", "region": "Asia", "lat": 42.27, "lng": 69.9, "type": "Cultural"},
