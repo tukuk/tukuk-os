@@ -2,13 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kedai-minum', label: 'KEDAI-MINUM', title: 'Historic Pubs of the World', var: 'PUBS', sing: 'Pub', finder: 'pub', finders: 'pubsInRegion', pfx: 'pb', cap: 'Pubs' },
-  { file: 'tanda-perang', label: 'TANDA-PERANG', title: 'War Memorials of the World', var: 'WARMEMORIALS', sing: 'WarMemorial', finder: 'warmemorial', finders: 'warMemorialsInRegion', pfx: 'wm', cap: 'WarMemorials' },
-  { file: 'pejabat-pos', label: 'PEJABAT-POS', title: 'Historic Post Offices of the World', var: 'POSTOFFICES', sing: 'PostOffice', finder: 'postoffice', finders: 'postOfficesInRegion', pfx: 'po', cap: 'PostOffices' },
-  { file: 'mata-air', label: 'MATA-AIR', title: 'Natural Springs of the World', var: 'SPRINGS', sing: 'Spring', finder: 'spring', finders: 'springsInRegion', pfx: 'sp', cap: 'Springs' },
-  { file: 'kem-tahanan', label: 'KEM-TAHANAN', title: 'Historic Concentration Camps of the World', var: 'CONCENTRATIONCAMPS', sing: 'ConcentrationCamp', finder: 'concentrationcamp', finders: 'concentrationCampsInRegion', pfx: 'cc', cap: 'ConcentrationCamps' },
-  { file: 'wadi', label: 'WADI', title: 'Wadis of the World', var: 'WADIS', sing: 'Wadi', finder: 'wadi', finders: 'wadisInRegion', pfx: 'wd', cap: 'Wadis' },
-  { file: 'bukit-benteng', label: 'BUKIT-BENTENG', title: 'Hillforts of the World', var: 'HILLFORTS', sing: 'Hillfort', finder: 'hillfort', finders: 'hillfortsInRegion', pfx: 'hf', cap: 'Hillforts' },
+  { file: 'padang-kriket', label: 'PADANG-KRIKET', title: 'Cricket Grounds of the World', var: 'CRICKETGROUNDS', sing: 'CricketGround', finder: 'cricketground', finders: 'cricketGroundsInRegion', pfx: 'cg', cap: 'CricketGrounds' },
+  { file: 'barak', label: 'BARAK', title: 'Historic Barracks of the World', var: 'BARRACKS', sing: 'Barracks', finder: 'barracks', finders: 'barracksInRegion', pfx: 'bk', cap: 'Barracks' },
+  { file: 'ladang-minyak', label: 'LADANG-MINYAK', title: 'Oil Fields of the World', var: 'OILFIELDS', sing: 'OilField', finder: 'oilfield', finders: 'oilFieldsInRegion', pfx: 'of', cap: 'OilFields' },
+  { file: 'helipad', label: 'HELIPAD', title: 'Heliports of the World', var: 'HELIPORTS', sing: 'Heliport', finder: 'heliport', finders: 'heliportsInRegion', pfx: 'hp', cap: 'Heliports' },
+  { file: 'medan-gas', label: 'MEDAN-GAS', title: 'Natural Gas Fields of the World', var: 'GASFIELDS', sing: 'GasField', finder: 'gasfield', finders: 'gasFieldsInRegion', pfx: 'gs', cap: 'GasFields' },
+  { file: 'depo-kereta', label: 'DEPO-KERETA', title: 'Railway Depots of the World', var: 'RAILWAYDEPOTS', sing: 'RailwayDepot', finder: 'railwaydepot', finders: 'railwayDepotsInRegion', pfx: 'rd', cap: 'RailwayDepots' },
+  { file: 'gudwara', label: 'GUDWARA', title: 'Gurdwaras of the World', var: 'GURDWARAS', sing: 'Gurdwara', finder: 'gurdwara', finders: 'gurdwarasInRegion', pfx: 'gd', cap: 'Gurdwaras' },
+  { file: 'gelang-ais', label: 'GELANG-AIS', title: 'Ice Rinks of the World', var: 'ICERINKS', sing: 'IceRink', finder: 'icerink', finders: 'iceRinksInRegion', pfx: 'ir', cap: 'IceRinks' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
