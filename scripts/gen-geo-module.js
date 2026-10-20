@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'stesen-selidik', label: 'RESEARCH-STATIONS', title: 'Research Stations of the World', var: 'RESEARCHSTATIONS', sing: 'ResearchStation', finder: 'researchstation', finders: 'researchStationsInRegion', pfx: 'rs', cap: 'ResearchStations' },
-  { file: 'stesen-bukit', label: 'HILL-STATIONS', title: 'Hill Stations of the World', var: 'HILLSTATIONS', sing: 'HillStation', finder: 'hillstation', finders: 'hillStationsInRegion', pfx: 'hs', cap: 'HillStations' },
-  { file: 'suk', label: 'SOUKS', title: 'Souks and Markets of the World', var: 'SOUKS', sing: 'Souk', finder: 'souk', finders: 'souksInRegion', pfx: 'sq', cap: 'Souks' },
-  { file: 'oppidum', label: 'OPPIDA', title: 'Oppida of the Iron Age World', var: 'OPPIDA', sing: 'Oppidum', finder: 'oppidum', finders: 'oppidaInRegion', pfx: 'op', cap: 'Oppida' },
-  { file: 'lembah-laut', label: 'SUBMARINE-CANYONS', title: 'Submarine Canyons of the World', var: 'SUBCANYONS', sing: 'SubmarineCanyon', finder: 'subcanyon', finders: 'submarineCanyonsInRegion', pfx: 'sc', cap: 'SubmarineCanyons' },
-  { file: 'bandar-syarikat', label: 'COMPANY-TOWNS', title: 'Company Towns of the World', var: 'COMPANYTOWNS', sing: 'CompanyTown', finder: 'companytown', finders: 'companyTownsInRegion', pfx: 'co', cap: 'CompanyTowns' },
-  { file: 'graben', label: 'GRABENS', title: 'Graben and Rift Valleys of the World', var: 'GRABENS', sing: 'Graben', finder: 'graben', finders: 'grabensInRegion', pfx: 'gr', cap: 'Grabens' },
-  { file: 'dataran-laut', label: 'OCEANIC-PLATEAUS', title: 'Oceanic Plateaus of the World', var: 'OCEANICPLATEAUS', sing: 'OceanicPlateau', finder: 'oceanicplateau', finders: 'oceanicPlateausInRegion', pfx: 'ol', cap: 'OceanicPlateaus' },
-  { file: 'geoglif', label: 'GEOGLYPHS', title: 'Geoglyphs of the World', var: 'GEOGLYPHS', sing: 'Geoglyph', finder: 'geoglyph', finders: 'geoglyphsInRegion', pfx: 'gg', cap: 'Geoglyphs' },
+  { file: 'observatorium', label: 'OBSERVATORIES', title: 'Astronomical Observatories of the World', var: 'OBSERVATORIES', sing: 'Observatory', finder: 'observatory', finders: 'observatoriesInRegion', pfx: 'ob', cap: 'Observatories' },
+  { file: 'hidro', label: 'HYDROELECTRIC-PLANTS', title: 'Hydroelectric Power Stations of the World', var: 'HYDROEL', sing: 'HydroelectricPlant', finder: 'hydroelectric', finders: 'hydroelectricPlantsInRegion', pfx: 'he', cap: 'HydroelectricPlants' },
+  { file: 'baterai-meriam', label: 'GUN-BATTERIES', title: 'Artillery and Coastal Gun Batteries of the World', var: 'GUNBATT', sing: 'GunBattery', finder: 'gunbattery', finders: 'gunBatteriesInRegion', pfx: 'gu', cap: 'GunBatteries' },
+  { file: 'teleskop-radio', label: 'RADIO-TELESCOPES', title: 'Radio Telescopes of the World', var: 'RADIOSCP', sing: 'RadioTelescope', finder: 'radiotelescope', finders: 'radioTelescopesInRegion', pfx: 'rt', cap: 'RadioTelescopes' },
+  { file: 'stesen-radar', label: 'RADAR-STATIONS', title: 'Radar Stations of the World', var: 'RADARST', sing: 'RadarStation', finder: 'radarstation', finders: 'radarStationsInRegion', pfx: 'rd', cap: 'RadarStations' },
+  { file: 'polder', label: 'POLDERS', title: 'Polders of the World', var: 'POLDERS', sing: 'Polder', finder: 'polder', finders: 'poldersInRegion', pfx: 'pl', cap: 'Polders' },
+  { file: 'stesen-cuaca', label: 'WEATHER-STATIONS', title: 'Weather Stations of the World', var: 'WEATHERST', sing: 'WeatherStation', finder: 'weatherstation', finders: 'weatherStationsInRegion', pfx: 'wc', cap: 'WeatherStations' },
+  { file: 'pabrik-kertas', label: 'PAPER-MILLS', title: 'Paper Mills of the World', var: 'PAPERMILL', sing: 'PaperMill', finder: 'papermill', finders: 'paperMillsInRegion', pfx: 'pk', cap: 'PaperMills' },
+  { file: 'anjakan-minyak', label: 'OIL-PLATFORMS', title: 'Offshore Oil Platforms of the World', var: 'OILPLAT', sing: 'OilPlatform', finder: 'oilplatform', finders: 'oilPlatformsInRegion', pfx: 'oa', cap: 'OilPlatforms' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
