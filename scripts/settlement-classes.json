@@ -30,5 +30,16 @@
   "Q7632426": "suburb/locality of Australia",
   "Q5084": "hamlet (global) (17,939)",
   "Q123705": "neighbourhood (global) (12,186)",
-  "Q3257686": "locality (global) (11,225)"
+  "Q3257686": "locality (global) (11,225)",
+  "Q2198484": "municipal district",
+  "Q15284": "municipality (generic)",
+  "Q16830604": "census town of India",
+  "Q1077097": "tambon (Thailand)",
+  "Q194203": "arrondissement of France",
+  "Q1195098": "ward",
+  "Q61878": "barangay",
+  "Q3700011": "kecamatan",
+  "Q26211545": "desa",
+  "Q875157": "resort",
+  "Q7688": "raion"
 }
