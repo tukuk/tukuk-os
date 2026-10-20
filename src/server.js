@@ -47,6 +47,7 @@ const kt = require('./kota');
 const wr = require('./warisan');
 const cg = require('./cagar');
 const gn = require('./gunung');
+const dn = require('./danau');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -906,6 +907,20 @@ app.get('/cagar/:slug', async (req, res) => {
   res.status(200).type('html').send(cagarPage(a, sum));
 });
 
+// ── LALUAN KOMPLEKS DANAU (/danau*) — Lakes of the World, statik + wiki fail-open ─
+app.get('/danau', (req, res) => res.status(200).type('html').send(danauHubPage()));
+app.get('/danau/:slug', async (req, res) => {
+  const l = dn.findLake(req.params.slug);
+  if (!l) {
+    const r = dn.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(danauRegionPage(r));
+    return res.status(404).type('html').send(danauNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await dn.fetchSummary(l.wiki); } catch {}
+  res.status(200).type('html').send(danauPage(l, sum));
+});
+
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
 app.get('/gunung/:slug', async (req, res) => {
@@ -1412,7 +1427,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1635,6 +1650,19 @@ app.get('/sitemap-gunung.xml', (req, res) => {
   const urls = [one('/gunung', '0.9')]
     .concat(gn.REGIONS.map((r) => one(`/gunung/${r.slug}`, '0.8')))
     .concat(gn.PEAKS.map((p) => one(`/gunung/${p.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP DANAU — hab + setiap benua + setiap danau ──
+app.get('/sitemap-danau.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/danau', '0.9')]
+    .concat(dn.REGIONS.map((r) => one(`/danau/${r.slug}`, '0.8')))
+    .concat(dn.LAKES.map((l) => one(`/danau/${l.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6884,6 +6912,130 @@ function gunungNotFound(q) {
     css: GN_CSS,
     body: `<p>We don\u2019t have a profile for that peak yet. Open <a href="/gunung">the full list of Mountains</a> and browse by continent.</p>`,
   }, gunungNav());
+}
+
+// ── /danau — Lakes of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
+const DN_CSS = `.lake-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
+.lake-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
+.lake-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
+.lake-elev{font-size:.82rem;color:var(--muted);margin:0}
+.lake-hero{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
+.lake-hero img{border-radius:10px;border:1px solid var(--line);max-width:280px;width:100%;height:auto}
+.lake-sum{font-size:1.02rem;line-height:1.7}
+@media(max-width:760px){.lake-grid{grid-template-columns:1fr}}`;
+
+function lakeCard(l) {
+  const elev = l.elev ? `<p class="lake-elev">${l.elev.toLocaleString()} m ASL</p>` : '';
+  return `<div class="lake-card"><h3><a href="/danau/${l.slug}">${escapeHtml(l.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(l.country)}</p>${elev}</div>`;
+}
+function danauNav() {
+  return worldNav('Lakes — tukuk.org/danau', [{ href: '/danau', icon: '\ud83c\udf0a', name: 'All lakes', blurb: 'Profiles of the world\u2019s lakes \u2014 where each lake is, which country borders it, its surface elevation, and a plain-English introduction from Wikipedia.' }
+  ].concat(dn.REGIONS.map((r) => ({ href: `/danau/${r.slug}`, icon: '\ud83d\udcab', name: `${r} lakes`, blurb: `${r.count} documented lakes across ${r.name}, from alpine tarns to great continental seas of water.`}))));
+}
+
+function danauHubPage() {
+  const sections = dn.REGION_ORDER.map((rg) => {
+    const ls = dn.lakesInRegion(rg);
+    if (!ls.length) return '';
+    return `<h2 class="section-title" id="${dn.slugify(rg)}"><a href="/danau/${dn.slugify(rg)}">${rg}</a> <span class="meta">(${ls.length} lakes)</span></h2><div class="lake-grid">${ls.map(lakeCard).join('')}</div>`;
+  }).join('');
+  const browse = `<p>${dn.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/danau/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const countries = new Set(dn.LAKES.map((l) => l.country)).size;
+  const body = `<p>These are the world\u2019s most notable <b>lakes</b> \u2014 from vast continental seas of water to hidden alpine tarns that define landscapes and sustain millions. Each profile shows <em>where</em> the lake sits, <em>which country</em> borders it, its <em>surface elevation</em>, and a <em>plain-English introduction</em> drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
+  <p>${dn.LAKES.length} lakes from ${countries} countries are covered below, grouped by continent. Open any lake for its full profile.</p>
+  ${browse}
+  ${sections}
+  <p class="meta">Surface elevation from Wikidata (metres above sea level). Coordinates are approximate lake centres. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/gunung">Mountains</a> · <a href="/cagar">Protected Areas</a> · <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Lakes of the World \u2014 Tukuk-OS',
+    description: `Profiles of ${dn.LAKES.length} notable lakes: location, country, surface elevation and introduction.`,
+    url: 'https://tukuk.org/danau', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'Lakes of the World \u2014 Profiles & Elevation | Tukuk-OS',
+    desc: `Introductions to ${dn.LAKES.length} notable lakes: elevation, country, continent and what makes each water body significant.`,
+    selfUrl: 'https://tukuk.org/danau',
+    heroTitle: '\ud83c\udf0a Lakes of the World', heroSub: `${dn.LAKES.length} lakes · ${countries} countries · elevation & location`,
+    ld, css: DN_CSS, body,
+  }, danauNav());
+}
+
+function danauRegionPage(region) {
+  const ls = dn.lakesInRegion(region.name);
+  const countries = [...new Set(ls.map((l) => l.country))].sort((a, b) => a.localeCompare(b));
+  const grid = `<div class="lake-grid">${ls.map(lakeCard).join('')}</div>`;
+  const other = dn.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/danau/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/danau">&larr; All lakes</a></p>
+  <p>A profile for each of the <b>${ls.length} notable lakes in ${region.name}</b> \u2014 location, country, surface elevation, and a plain-English introduction from Wikipedia. These ${ls.length} lakes span ${countries.length} countries.</p>
+  ${grid}
+  <h2 class="section-title">Other continents</h2><p>${other}</p>
+  <p class="meta">Surface elevation from Wikidata. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/gunung">Mountains</a> · <a href="/cagar">Protected Areas</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} Lakes \u2014 Tukuk-OS`,
+    description: `Profiles of ${ls.length} lakes in ${region.name}: elevation, country and location.`,
+    url: `https://tukuk.org/danau/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${region.name} Lakes \u2014 Profiles & Elevation | Tukuk-OS`,
+    desc: `Introductions to ${ls.length} lakes in ${region.name} across ${countries.length} countries: elevation, location and significance.`,
+    selfUrl: `https://tukuk.org/danau/${region.slug}`,
+    heroTitle: `\ud83d\udcab ${region.name} Lakes`, heroSub: `${ls.length} lakes · ${countries.length} countries · elevation & location`,
+    ld, css: DN_CSS, body,
+  }, danauNav());
+}
+
+function danauPage(l, sum) {
+  const coords = `${Math.abs(l.lat).toFixed(2)}\u00b0${l.lat >= 0 ? 'N' : 'S'}, ${Math.abs(l.lng).toFixed(2)}\u00b0${l.lng >= 0 ? 'E' : 'W'}`;
+  const mapHref = `https://www.openstreetmap.org/?mlat=${l.lat}&mlon=${l.lng}#map=11/${l.lat}/${l.lng}`;
+  const elevStr = l.elev ? `${l.elev.toLocaleString()} m` : '';
+  const hero = sum && sum.thumb
+    ? `<div class="lake-hero"><img src="${escapeHtml(sum.thumb)}" width="${sum.thumbW || 280}" height="${sum.thumbH || 280}" alt="${escapeHtml(l.name)}" loading="lazy" decoding="async"><div class="lake-sum">${escapeHtml(sum.extract)}</div></div>`
+    : (sum && sum.extract ? `<p class="lake-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(l.name)} is briefly reloading \u2014 the key facts below always show.</p>`);
+  const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
+  const siblings = dn.lakesByCountry(l.countrySlug).filter((x) => x.slug !== l.slug).slice(0, 10);
+  const moreLake = siblings.length ? `<h2 class="section-title">More lakes in ${escapeHtml(l.country)}</h2><p>${siblings.map((x) => `<a href="/danau/${x.slug}">${escapeHtml(x.name)}</a>`).join(' \u00b7 ')}.</p>` : '';
+  const rows = [
+    ['Country', `<a href="/negara/${l.countrySlug}">${escapeHtml(l.country)}</a>`],
+    ['Continent / region', escapeHtml(l.region)],
+    ['Surface elevation', elevStr ? `${escapeHtml(elevStr)} above sea level` : 'unknown'],
+    ['Coordinates (approx.)', `${escapeHtml(coords)} \u00b7 <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/danau">&larr; All lakes</a></p>
+  ${hero}${readMore}
+  <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
+  <p><b>${escapeHtml(l.name)}</b>${elevStr ? ` sits at ${escapeHtml(elevStr)}` : ''} in <a href="/negara/${l.countrySlug}">${escapeHtml(l.country)}</a>, in ${escapeHtml(l.region)}. The full story of this lake is described by the sourced introduction above (from Wikipedia).</p>
+  ${moreLake}
+  <p class="meta">Surface elevation from Wikidata. Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'BodyOfWater', name: l.name, description: (sum && sum.description) || `Lake in ${l.country}`, url: `https://tukuk.org/danau/${l.slug}`,
+      containedInPlace: { '@type': 'Country', name: l.country },
+      geo: { '@type': 'GeoCoordinates', latitude: l.lat, longitude: l.lng },
+      ...(l.elev ? { elevation: { '@type': 'QuantitativeValue', value: l.elev, unitCode: 'MTR' } } : {}) },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Lakes', item: 'https://tukuk.org/danau' },
+      { '@type': 'ListItem', position: 2, name: l.region, item: `https://tukuk.org/danau/${dn.slugify(l.region)}` },
+      { '@type': 'ListItem', position: 3, name: l.name, item: `https://tukuk.org/danau/${l.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  const ogImage = sum && sum.thumb ? sum.thumb : undefined;
+  return worldDoc({
+    title: `${l.name}${elevStr ? ` (${elevStr})` : ''} \u2014 Lake Profile | Tukuk-OS`,
+    desc: sum && sum.description ? `${l.name}, ${sum.description.toLowerCase()} \u2014 elevation, location and introduction.` : `${l.name} is a lake in ${l.country}${elevStr ? `, elevation ${elevStr}` : ''}. Location and sourced introduction.`,
+    selfUrl: `https://tukuk.org/danau/${l.slug}`,
+    heroTitle: `\ud83c\udf0a ${escapeHtml(l.name)}`, heroSub: `${escapeHtml(l.country)} \u00b7 ${escapeHtml(l.region)}${elevStr ? ' \u00b7 ' + escapeHtml(elevStr) : ''} \u00b7 ${escapeHtml(coords)}`,
+    ld, css: DN_CSS, body, ogImage,
+  }, danauNav());
+}
+
+function danauNotFound(q) {
+  return worldDoc({
+    title: 'Lake not found \u2014 Lakes of the World | Tukuk-OS',
+    desc: 'That lake was not recognised \u2014 browse the full list of lakes instead.',
+    selfUrl: 'https://tukuk.org/danau', robots: 'noindex,follow',
+    heroTitle: 'Lake not found', heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    css: DN_CSS,
+    body: `<p>We don\u2019t have a profile for that lake yet. Open <a href="/danau">the full list of Lakes</a> and browse by continent.</p>`,
+  }, danauNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
