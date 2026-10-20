@@ -2,17 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'hospital', label: 'HOSPITAL', title: 'Hospitals of the World', var: 'HOSPITALS', sing: 'Hospital', finder: 'hospital', pfx: 'hos', cap: 'Hospitals' },
-  { file: 'hotel', label: 'HOTEL', title: 'Hotels of the World', var: 'HOTELS', sing: 'Hotel', finder: 'hotel', pfx: 'hot', cap: 'Hotels' },
-  { file: 'istana', label: 'ISTANA', title: 'Palaces of the World', var: 'PALACES', sing: 'Palace', finder: 'palace', pfx: 'pal', cap: 'Palaces' },
-  { file: 'taman-botani', label: 'TAMAN-BOTANI', title: 'Botanical Gardens of the World', var: 'GARDENS', sing: 'BotanicalGarden', finder: 'garden', pfx: 'bg', cap: 'Gardens' },
-  { file: 'taman', label: 'TAMAN', title: 'Urban Parks of the World', var: 'PARKS', sing: 'Park', finder: 'park', pfx: 'pk', cap: 'Parks' },
-  { file: 'sinagog', label: 'SINAGOG', title: 'Synagogues of the World', var: 'SYNAGOGUES', sing: 'Synagogue', finder: 'synagogue', pfx: 'syn', cap: 'Synagogues' },
-  { file: 'perpustakaan', label: 'PERPUSTAKAAN', title: 'Public Libraries of the World', var: 'LIBRARIES', sing: 'Library', finder: 'library', pfx: 'lib', cap: 'Libraries' },
-  { file: 'zoo', label: 'ZOO', title: 'Zoos of the World', var: 'ZOOS', sing: 'Zoo', finder: 'zoo', pfx: 'zoo', cap: 'Zoos' },
-  { file: 'kubu', label: 'KUBU', title: 'Fortresses of the World', var: 'FORTRESSES', sing: 'Fortress', finder: 'fortress', pfx: 'fort', cap: 'Fortresses' },
-  { file: 'balai-cerap', label: 'BALAI-CERAP', title: 'Astronomical Observatories of the World', var: 'OBSERVATORIES', sing: 'Observatory', finder: 'observatory', pfx: 'obs', cap: 'Observatories' },
-  { file: 'akuarium', label: 'AKUARIUM', title: 'Aquariums of the World', var: 'AQUARIUMS', sing: 'Aquarium', finder: 'aquarium', pfx: 'aq', cap: 'Aquariums' },
+  { file: 'banjaran', label: 'BANJARAN', title: 'Mountain Ranges of the World', var: 'RANGES', sing: 'MountainRange', finder: 'range', pfx: 'rng', cap: 'Ranges' },
+  { file: 'tanah-kubur', label: 'TANAH-KUBUR', title: 'Cemeteries of the World', var: 'CEMETERIES', sing: 'Cemetery', finder: 'cemetery', pfx: 'cem', cap: 'Cemeteries' },
+  { file: 'lapangan-terbang', label: 'LAPANGAN-TERBANG', title: 'Airports of the World', var: 'AIRPORTS', sing: 'Airport', finder: 'airport', pfx: 'apt', cap: 'Airports' },
+  { file: 'biara', label: 'BIARA', title: 'Monasteries of the World', var: 'MONASTERIES', sing: 'Monastery', finder: 'monastery', pfx: 'mst', cap: 'Monasteries' },
+  { file: 'patung', label: 'PATUNG', title: 'Statues of the World', var: 'STATUES', sing: 'Statue', finder: 'statue', pfx: 'stt', cap: 'Statues' },
+  { file: 'rumah-opera', label: 'RUMAH-OPERA', title: 'Opera Houses of the World', var: 'OPERAHOUSES', sing: 'OperaHouse', finder: 'opera', pfx: 'op', cap: 'OperaHouses' },
+  { file: 'gurun', label: 'GURUN', title: 'Deserts of the World', var: 'DESERTS', sing: 'Desert', finder: 'desert', pfx: 'des', cap: 'Deserts' },
+  { file: 'akueduk', label: 'AKUEDUK', title: 'Aqueducts of the World', var: 'AQUEDUCTS', sing: 'Aqueduct', finder: 'aqueduct', pfx: 'aqd', cap: 'Aqueducts' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;

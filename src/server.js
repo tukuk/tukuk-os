@@ -100,6 +100,14 @@ const zo = require('./zoo');
 const kb = require('./kubu');
 const blc = require('./balai-cerap');
 const ak = require('./akuarium');
+const bjr = require('./banjaran');
+const tkr = require('./tanah-kubur');
+const lpt = require('./lapangan-terbang');
+const br = require('./biara');
+const ptg = require('./patung');
+const rpo = require('./rumah-opera');
+const grn = require('./gurun');
+const akd = require('./akueduk');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1105,6 +1113,14 @@ geoRoutes('zoo', zo, 'findZoo', zooHubPage, zooRegionPage, zooPage, zooNotFound)
 geoRoutes('kubu', kb, 'findFortress', kubuHubPage, kubuRegionPage, kubuPage, kubuNotFound);
 geoRoutes('balai-cerap', blc, 'findObservatory', balaiCerapHubPage, balaiCerapRegionPage, balaiCerapPage, balaiCerapNotFound);
 geoRoutes('akuarium', ak, 'findAquarium', akuariumHubPage, akuariumRegionPage, akuariumPage, akuariumNotFound);
+geoRoutes('banjaran', bjr, 'findMountainRange', banjaranHubPage, banjaranRegionPage, banjaranPage, banjaranNotFound);
+geoRoutes('tanah-kubur', tkr, 'findCemetery', tanahKuburHubPage, tanahKuburRegionPage, tanahKuburPage, tanahKuburNotFound);
+geoRoutes('lapangan-terbang', lpt, 'findAirport', lapanganTerbangHubPage, lapanganTerbangRegionPage, lapanganTerbangPage, lapanganTerbangNotFound);
+geoRoutes('biara', br, 'findMonastery', biaraHubPage, biaraRegionPage, biaraPage, biaraNotFound);
+geoRoutes('patung', ptg, 'findStatue', patungHubPage, patungRegionPage, patungPage, patungNotFound);
+geoRoutes('rumah-opera', rpo, 'findOperaHouse', rumahOperaHubPage, rumahOperaRegionPage, rumahOperaPage, rumahOperaNotFound);
+geoRoutes('gurun', grn, 'findDesert', gurunHubPage, gurunRegionPage, gurunPage, gurunNotFound);
+geoRoutes('akueduk', akd, 'findAqueduct', akuedukHubPage, akuedukRegionPage, akuedukPage, akuedukNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1612,7 +1628,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1980,6 +1996,14 @@ geoSitemap('zoo', zo, 'ZOOS');
 geoSitemap('kubu', kb, 'FORTRESSES');
 geoSitemap('balai-cerap', blc, 'OBSERVATORIES');
 geoSitemap('akuarium', ak, 'AQUARIUMS');
+geoSitemap('banjaran', bjr, 'RANGES');
+geoSitemap('tanah-kubur', tkr, 'CEMETERIES');
+geoSitemap('lapangan-terbang', lpt, 'AIRPORTS');
+geoSitemap('biara', br, 'MONASTERIES');
+geoSitemap('patung', ptg, 'STATUES');
+geoSitemap('rumah-opera', rpo, 'OPERAHOUSES');
+geoSitemap('gurun', grn, 'DESERTS');
+geoSitemap('akueduk', akd, 'AQUEDUCTS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7563,6 +7587,47 @@ function akuariumHubPage() { return geoHubPage(ak, 'akuarium', AKUARIUM_CFG); }
 function akuariumRegionPage(r) { return geoRegionPage(r, ak, 'akuarium', AKUARIUM_CFG); }
 function akuariumPage(x, sum) { return geoItemPage(x, sum, ak, 'akuarium', AKUARIUM_CFG); }
 function akuariumNotFound(q) { return geoNotFound('akuarium', AKUARIUM_CFG, q); }
+
+const BANJARAN_CFG = geoCfg({ base: 'banjaran', listKey: 'RANGES', inRegion: 'rangesInRegion', byCountry: 'rangeByCountry', unit: 'mountain ranges', singular: 'mountain range', titleCase: 'Mountain Ranges', icon: '\ud83c\udfd4\ufe0f', navBlurb: `Profiles of the world's mountain ranges \u2014 where each chain runs, which countries it spans, and a plain-English introduction.`, seoDesc: 'Introductions to notable mountain ranges worldwide: location, countries and what makes each range significant.', subMetric: 'location & orography', intro: `These are the world's most notable <b>mountain ranges</b> \u2014 long linear chains of peaks formed by colliding tectonic plates and uplift, from the Himalaya and Andes to the Appalachians and Alps. Each profile shows where the range runs, which countries it spans, and a plain-English introduction from Wikipedia.`, ldType: 'MountainRange' });
+function banjaranHubPage() { return geoHubPage(bjr, 'banjaran', BANJARAN_CFG); }
+function banjaranRegionPage(r) { return geoRegionPage(r, bjr, 'banjaran', BANJARAN_CFG); }
+function banjaranPage(x, sum) { return geoItemPage(x, sum, bjr, 'banjaran', BANJARAN_CFG); }
+function banjaranNotFound(q) { return geoNotFound('banjaran', BANJARAN_CFG, q); }
+const TANAH_KUBUR_CFG = geoCfg({ base: 'tanah-kubur', listKey: 'CEMETERIES', inRegion: 'cemeterysInRegion', byCountry: 'cemeteryByCountry', unit: 'cemeteries', singular: 'cemetery', titleCase: 'Cemeteries', icon: '\ud83c\udf4c', navBlurb: `Profiles of the world's notable cemeteries \u2014 where each lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable cemeteries and burial grounds worldwide: location, country and what makes each significant.', subMetric: 'location & memorial', intro: `These are the world's most notable <b>cemeteries</b> \u2014 burial grounds and necropoleis that are also open-air museums of sculpture, architecture and history, resting places of the famous and mirrors of the cultures that raised them. Each profile shows where the cemetery lies, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Cemetery' });
+function tanahKuburHubPage() { return geoHubPage(tkr, 'tanah-kubur', TANAH_KUBUR_CFG); }
+function tanahKuburRegionPage(r) { return geoRegionPage(r, tkr, 'tanah-kubur', TANAH_KUBUR_CFG); }
+function tanahKuburPage(x, sum) { return geoItemPage(x, sum, tkr, 'tanah-kubur', TANAH_KUBUR_CFG); }
+function tanahKuburNotFound(q) { return geoNotFound('tanah-kubur', TANAH_KUBUR_CFG, q); }
+const LAPANGAN_TERBANG_CFG = geoCfg({ base: 'lapangan-terbang', listKey: 'AIRPORTS', inRegion: 'airportsInRegion', byCountry: 'airportByCountry', unit: 'airports', singular: 'airport', titleCase: 'Airports', icon: '\u2708\ufe0f', navBlurb: `Profiles of the world's airports \u2014 where each aerodrome is, which country it serves, and a plain-English introduction.`, seoDesc: 'Introductions to notable airports worldwide: location, country and what makes each airport significant.', subMetric: 'location & aviation', intro: `These are the world's most notable <b>airports</b> \u2014 aviation hubs that move people and cargo across the globe, gateways to cities and engineering feats of terminals, runways and air traffic. Each profile shows where the airport is, which country it serves, and a plain-English introduction from Wikipedia.`, ldType: 'Airport' });
+function lapanganTerbangHubPage() { return geoHubPage(lpt, 'lapangan-terbang', LAPANGAN_TERBANG_CFG); }
+function lapanganTerbangRegionPage(r) { return geoRegionPage(r, lpt, 'lapangan-terbang', LAPANGAN_TERBANG_CFG); }
+function lapanganTerbangPage(x, sum) { return geoItemPage(x, sum, lpt, 'lapangan-terbang', LAPANGAN_TERBANG_CFG); }
+function lapanganTerbangNotFound(q) { return geoNotFound('lapangan-terbang', LAPANGAN_TERBANG_CFG, q); }
+const BIARA_CFG = geoCfg({ base: 'biara', listKey: 'MONASTERIES', inRegion: 'monasterysInRegion', byCountry: 'monasteryByCountry', unit: 'monasteries', singular: 'monastery', titleCase: 'Monasteries', icon: '\ud83d\uded5', navBlurb: `Profiles of the world's monasteries \u2014 where each community stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable monasteries worldwide: location, country and what makes each monastery significant.', subMetric: 'location & religious life', intro: `These are the world's most notable <b>monasteries</b> \u2014 communities of monks or nuns and the buildings they inhabit, from cliff-hugging Buddhist lodings to medieval Christian abbeys that preserved learning and art. Each profile shows where the monastery stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
+function biaraHubPage() { return geoHubPage(br, 'biara', BIARA_CFG); }
+function biaraRegionPage(r) { return geoRegionPage(r, br, 'biara', BIARA_CFG); }
+function biaraPage(x, sum) { return geoItemPage(x, sum, br, 'biara', BIARA_CFG); }
+function biaraNotFound(q) { return geoNotFound('biara', BIARA_CFG, q); }
+const PATUNG_CFG = geoCfg({ base: 'patung', listKey: 'STATUES', inRegion: 'statuesInRegion', byCountry: 'statueByCountry', unit: 'statues', singular: 'statue', titleCase: 'Statues', icon: '\ud83d\udfcc\ufe0f', navBlurb: `Profiles of the world's statues \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable statues worldwide: location, country and what makes each statue significant.', subMetric: 'location & sculpture', intro: `These are the world's most notable <b>statues</b> \u2014 free-standing sculptures raised to commemorate people and ideals, from the Statue of Liberty and colossal Buddha figures to monumental modern works. Each profile shows where the statue stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Sculpture' });
+function patungHubPage() { return geoHubPage(ptg, 'patung', PATUNG_CFG); }
+function patungRegionPage(r) { return geoRegionPage(r, ptg, 'patung', PATUNG_CFG); }
+function patungPage(x, sum) { return geoItemPage(x, sum, ptg, 'patung', PATUNG_CFG); }
+function patungNotFound(q) { return geoNotFound('patung', PATUNG_CFG, q); }
+const RUMAH_OPERA_CFG = geoCfg({ base: 'rumah-opera', listKey: 'OPERAHOUSES', inRegion: 'operasInRegion', byCountry: 'operaByCountry', unit: 'opera houses', singular: 'opera house', titleCase: 'Opera Houses', icon: '\ud83c\udfad', navBlurb: `Profiles of the world's opera houses \u2014 where each theatre stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable opera houses worldwide: location, country and what makes each venue significant.', subMetric: 'location & performing arts', intro: `These are the world's most notable <b>opera houses</b> \u2014 purpose-built theatres for opera and classical performance, architectural showpieces with legendary acoustics, from La Scala and the Vienna State Opera to the Sydney Harbour house. Each profile shows where the theatre stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function rumahOperaHubPage() { return geoHubPage(rpo, 'rumah-opera', RUMAH_OPERA_CFG); }
+function rumahOperaRegionPage(r) { return geoRegionPage(r, rpo, 'rumah-opera', RUMAH_OPERA_CFG); }
+function rumahOperaPage(x, sum) { return geoItemPage(x, sum, rpo, 'rumah-opera', RUMAH_OPERA_CFG); }
+function rumahOperaNotFound(q) { return geoNotFound('rumah-opera', RUMAH_OPERA_CFG, q); }
+const GURUN_CFG = geoCfg({ base: 'gurun', listKey: 'DESERTS', inRegion: 'desertsInRegion', byCountry: 'desertByCountry', unit: 'deserts', singular: 'desert', titleCase: 'Deserts', icon: '\ud83c\udfdc\ufe0f', navBlurb: `Profiles of the world's deserts \u2014 where each expanse lies, which countries it covers, and a plain-English introduction.`, seoDesc: 'Introductions to notable deserts worldwide: location, countries and what makes each desert significant.', subMetric: 'location & aridity', intro: `These are the world's most notable <b>deserts</b> \u2014 vast arid regions where scarce rainfall shapes extreme landscapes and adapted life, from the Sahara and Arabian sands to the cold Gobi and Antarctic desert. Each profile shows where the desert lies, which countries it covers, and a plain-English introduction from Wikipedia.`, ldType: 'Landform' });
+function gurunHubPage() { return geoHubPage(grn, 'gurun', GURUN_CFG); }
+function gurunRegionPage(r) { return geoRegionPage(r, grn, 'gurun', GURUN_CFG); }
+function gurunPage(x, sum) { return geoItemPage(x, sum, grn, 'gurun', GURUN_CFG); }
+function gurunNotFound(q) { return geoNotFound('gurun', GURUN_CFG, q); }
+const AKUEDUK_CFG = geoCfg({ base: 'akueduk', listKey: 'AQUEDUCTS', inRegion: 'aqueductsInRegion', byCountry: 'aqueductByCountry', unit: 'aqueducts', singular: 'aqueduct', titleCase: 'Aqueducts', icon: '\ud83d\udde7\ufe0f', navBlurb: `Profiles of the world's aqueducts \u2014 where each waterway ran, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable aqueducts worldwide: location, country and what makes each waterway significant.', subMetric: 'location & water supply', intro: `These are the world's most notable <b>aqueducts</b> \u2014 engineered channels and arcaded bridges that carried water across valleys to cities and settlements, Roman masterworks among them. Each profile shows where the aqueduct ran, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Bridge' });
+function akuedukHubPage() { return geoHubPage(akd, 'akueduk', AKUEDUK_CFG); }
+function akuedukRegionPage(r) { return geoRegionPage(r, akd, 'akueduk', AKUEDUK_CFG); }
+function akuedukPage(x, sum) { return geoItemPage(x, sum, akd, 'akueduk', AKUEDUK_CFG); }
+function akuedukNotFound(q) { return geoNotFound('akueduk', AKUEDUK_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
