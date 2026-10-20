@@ -2,7 +2,7 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'stesen-kereta-api', label: 'STESEN-KERETA-API', title: 'Railway Stations of the World', var: 'STATIONS', sing: 'RailwayStation', finder: 'station', pfx: 'rsk', cap: 'Stations' },
+  { file: 'sekolah', label: 'SEKOLAH', title: 'Schools of the World', var: 'SCHOOLS', sing: 'School', finder: 'school', pfx: 'sch', cap: 'Schools' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
