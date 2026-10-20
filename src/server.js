@@ -48,6 +48,8 @@ const wr = require('./warisan');
 const cg = require('./cagar');
 const gn = require('./gunung');
 const dn = require('./danau');
+const pl = require('./pulau');
+const sg = require('./sungai');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -921,6 +923,34 @@ app.get('/danau/:slug', async (req, res) => {
   res.status(200).type('html').send(danauPage(l, sum));
 });
 
+// ── LALUAN KOMPLEKS PULAU (/pulau*) — Islands of the World ─
+app.get('/pulau', (req, res) => res.status(200).type('html').send(pulauHubPage()));
+app.get('/pulau/:slug', async (req, res) => {
+  const i = pl.findIsland(req.params.slug);
+  if (!i) {
+    const r = pl.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(pulauRegionPage(r));
+    return res.status(404).type('html').send(pulauNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await pl.fetchSummary(i.wiki); } catch {}
+  res.status(200).type('html').send(pulauPage(i, sum));
+});
+
+// ── LALUAN KOMPLEKS SUNGAI (/sungai*) — Rivers of the World ─
+app.get('/sungai', (req, res) => res.status(200).type('html').send(sungaiHubPage()));
+app.get('/sungai/:slug', async (req, res) => {
+  const r2 = sg.findRiver(req.params.slug);
+  if (!r2) {
+    const r = sg.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(sungaiRegionPage(r));
+    return res.status(404).type('html').send(sungaiNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await sg.fetchSummary(r2.wiki); } catch {}
+  res.status(200).type('html').send(sungaiPage(r2, sum));
+});
+
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
 app.get('/gunung/:slug', async (req, res) => {
@@ -1427,7 +1457,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1663,6 +1693,32 @@ app.get('/sitemap-danau.xml', (req, res) => {
   const urls = [one('/danau', '0.9')]
     .concat(dn.REGIONS.map((r) => one(`/danau/${r.slug}`, '0.8')))
     .concat(dn.LAKES.map((l) => one(`/danau/${l.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP PULAU ──
+app.get('/sitemap-pulau.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/pulau', '0.9')]
+    .concat(pl.REGIONS.map((r) => one(`/pulau/${r.slug}`, '0.8')))
+    .concat(pl.ISLANDS.map((i) => one(`/pulau/${i.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP SUNGAI ──
+app.get('/sitemap-sungai.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/sungai', '0.9')]
+    .concat(sg.REGIONS.map((r) => one(`/sungai/${r.slug}`, '0.8')))
+    .concat(sg.RIVERS.map((rv) => one(`/sungai/${rv.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6789,6 +6845,160 @@ function cagarNotFound(q) {
     body: `<p>We don\u2019t have a profile for that area yet. Open <a href="/cagar">the full list of Protected Areas</a> and browse by continent.</p>`,
   }, cagarNav());
 }
+
+// ── /pulau & /sungai — generic geo-page factory for simple clusters ──
+const GEO_CSS = `.geo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
+.geo-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
+.geo-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
+.geo-hero{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
+.geo-hero img{border-radius:10px;border:1px solid var(--line);max-width:280px;width:100%;height:auto}
+.geo-sum{font-size:1.02rem;line-height:1.7}
+@media(max-width:760px){.geo-grid{grid-template-columns:1fr}}`;
+
+function geoCard(item, base) {
+  return `<div class="geo-card"><h3><a href="/${base}/${item.slug}">${escapeHtml(item.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(item.country)}</p></div>`;
+}
+function geoHubPage(mod, base, cfg) {
+  const items = mod[cfg.listKey];
+  const sections = mod.REGION_ORDER.map((rg) => {
+    const ss = mod[cfg.inRegion](rg);
+    if (!ss.length) return '';
+    return `<h2 class="section-title" id="${mod.slugify(rg)}"><a href="/${base}/${mod.slugify(rg)}">${rg}</a> <span class="meta">(${ss.length} ${cfg.unit})</span></h2><div class="geo-grid">${ss.map((x) => geoCard(x, base)).join('')}</div>`;
+  }).join('');
+  const browse = `<p>${mod.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const countries = new Set(items.map((x) => x.country)).size;
+  const body = `<p>${cfg.intro}</p>
+  <p>${items.length} ${cfg.unit} from ${countries} countries are covered below, grouped by continent. Open any ${cfg.singular} for its full profile.</p>
+  ${browse}
+  ${sections}
+  <p class="meta">${cfg.footer}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: cfg.hubTitle,
+    description: `Profiles of ${items.length} ${cfg.unit}: location, country and introduction.`,
+    url: `https://tukuk.org/${base}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: cfg.seoTitle, desc: cfg.seoDesc,
+    selfUrl: `https://tukuk.org/${base}`,
+    heroTitle: cfg.hero, heroSub: `${items.length} ${cfg.unit} \u00b7 ${countries} countries \u00b7 ${cfg.subMetric}`,
+    ld, css: GEO_CSS, body,
+  }, geoNav(base, cfg, mod));
+}
+function geoNav(base, cfg, mod) {
+  return worldNav(cfg.navLabel, [{ href: `/${base}`, icon: cfg.icon, name: cfg.navAll, blurb: cfg.navBlurb }
+  ].concat(mod.REGIONS.map((r) => ({ href: `/${base}/${r.slug}`, icon: '\ud83c\udf0d', name: `${r} ${cfg.unit}`, blurb: `${r.count} ${cfg.unit} across ${r.name}.`}))));
+}
+function geoRegionPage(region, mod, base, cfg) {
+  const items = mod[cfg.inRegion](region.name);
+  const countries = [...new Set(items.map((x) => x.country))].sort((a, b) => a.localeCompare(b));
+  const grid = `<div class="geo-grid">${items.map((x) => geoCard(x, base)).join('')}</div>`;
+  const other = mod.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
+  <p>A profile for each of the <b>${items.length} notable ${cfg.unit} in ${region.name}</b> \u2014 location, country, and a plain-English introduction from Wikipedia. These ${items.length} ${cfg.unit} span ${countries.length} countries.</p>
+  ${grid}
+  <h2 class="section-title">Other continents</h2><p>${other}</p>
+  <p class="meta">${cfg.footer}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} ${cfg.titleCase} \u2014 Tukuk-OS`,
+    description: `Profiles of ${items.length} ${cfg.unit} in ${region.name}.`,
+    url: `https://tukuk.org/${base}/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${region.name} ${cfg.titleCase} \u2014 Profiles | Tukuk-OS`,
+    desc: `Introductions to ${items.length} ${cfg.unit} in ${region.name} across ${countries.length} countries.`,
+    selfUrl: `https://tukuk.org/${base}/${region.slug}`,
+    heroTitle: `${cfg.icon} ${region.name} ${cfg.titleCase}`, heroSub: `${items.length} ${cfg.unit} \u00b7 ${countries.length} countries`,
+    ld, css: GEO_CSS, body,
+  }, geoNav(base, cfg, mod));
+}
+function geoItemPage(item, sum, mod, base, cfg) {
+  const coords = `${Math.abs(item.lat).toFixed(2)}\u00b0${item.lat >= 0 ? 'N' : 'S'}, ${Math.abs(item.lng).toFixed(2)}\u00b0${item.lng >= 0 ? 'E' : 'W'}`;
+  const mapHref = `https://www.openstreetmap.org/?mlat=${item.lat}&mlon=${item.lng}#map=11/${item.lat}/${item.lng}`;
+  const hero = sum && sum.thumb
+    ? `<div class="geo-hero"><img src="${escapeHtml(sum.thumb)}" width="${sum.thumbW || 280}" height="${sum.thumbH || 280}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async"><div class="geo-sum">${escapeHtml(sum.extract)}</div></div>`
+    : (sum && sum.extract ? `<p class="geo-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(item.name)} is briefly reloading \u2014 the key facts below always show.</p>`);
+  const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
+  const siblings = mod[cfg.byCountry](item.countrySlug).filter((x) => x.slug !== item.slug).slice(0, 10);
+  const more = siblings.length ? `<h2 class="section-title">More ${cfg.unit} in ${escapeHtml(item.country)}</h2><p>${siblings.map((x) => `<a href="/${base}/${x.slug}">${escapeHtml(x.name)}</a>`).join(' \u00b7 ')}.</p>` : '';
+  const rows = [
+    ['Country', `<a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>`],
+    ['Continent / region', escapeHtml(item.region)],
+    ['Coordinates (approx.)', `${escapeHtml(coords)} \u00b7 <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
+  ${hero}${readMore}
+  <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
+  <p><b>${escapeHtml(item.name)}</b> is located in <a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>, in ${escapeHtml(item.region)}.</p>
+  ${more}
+  <p class="meta">${cfg.itemFooter}</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': cfg.ldType, name: item.name, description: (sum && sum.description) || `${cfg.titleCase} in ${item.country}`, url: `https://tukuk.org/${base}/${item.slug}`,
+      containedInPlace: { '@type': 'Country', name: item.country },
+      geo: { '@type': 'GeoCoordinates', latitude: item.lat, longitude: item.lng } },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: cfg.titleCase, item: `https://tukuk.org/${base}` },
+      { '@type': 'ListItem', position: 2, name: item.region, item: `https://tukuk.org/${base}/${mod.slugify(item.region)}` },
+      { '@type': 'ListItem', position: 3, name: item.name, item: `https://tukuk.org/${base}/${item.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  const ogImage = sum && sum.thumb ? sum.thumb : undefined;
+  return worldDoc({
+    title: `${item.name} \u2014 ${cfg.titleCase} Profile | Tukuk-OS`,
+    desc: sum && sum.description ? `${item.name}, ${sum.description.toLowerCase()}.` : `${item.name} is a ${cfg.singular} in ${item.country}. Location and introduction.`,
+    selfUrl: `https://tukuk.org/${base}/${item.slug}`,
+    heroTitle: `${cfg.icon} ${escapeHtml(item.name)}`, heroSub: `${escapeHtml(item.country)} \u00b7 ${escapeHtml(item.region)} \u00b7 ${escapeHtml(coords)}`,
+    ld, css: GEO_CSS, body, ogImage,
+  }, geoNav(base, cfg, mod));
+}
+function geoNotFound(base, cfg, q) {
+  return worldDoc({
+    title: `${cfg.titleCase} not found | Tukuk-OS`,
+    desc: `Browse the full list of ${cfg.unit} instead.`,
+    selfUrl: `https://tukuk.org/${base}`, robots: 'noindex,follow',
+    heroTitle: `${cfg.titleCase} not found`, heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    css: GEO_CSS,
+    body: `<p>Open <a href="/${base}">the full list of ${cfg.unit}</a> and browse by continent.</p>`,
+  }, geoNav(base, cfg, undefined));
+}
+
+// Config objects for island & river clusters
+const PULAU_CFG = {
+  listKey: 'ISLANDS', inRegion: 'islandsInRegion', byCountry: 'islandsByCountry',
+  unit: 'islands', singular: 'island', titleCase: 'Islands', icon: '\ud83c\udfdd\ufe0f',
+  navLabel: 'Islands \u2014 tukuk.org/pulau', navAll: 'All islands',
+  navBlurb: 'Profiles of the world\u2019s islands \u2014 where each island is, which country administers it, and a plain-English introduction.',
+  hubTitle: 'Islands of the World \u2014 Tukuk-OS',
+  seoTitle: 'Islands of the World \u2014 Profiles & Locations | Tukuk-OS',
+  seoDesc: 'Introductions to notable islands worldwide: location, country and what makes each island significant.',
+  hero: '\ud83c\udfdd\ufe0f Islands of the World', subMetric: 'location & geography',
+  intro: 'These are the world\u2019s most notable <b>islands</b> \u2014 from continental landmasses to tiny atolls that define maritime boundaries and unique ecosystems. Each profile shows where the island is, which country administers it, and a plain-English introduction from Wikipedia.',
+  footer: 'Coordinates are approximate island centres. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/danau">Lakes</a> \u00b7 <a href="/gunung">Mountains</a> \u00b7 <a href="/cagar">Protected Areas</a> \u00b7 <a href="/warisan">World Heritage</a>.',
+  itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
+  ldType: 'Island',
+};
+const SUNGAI_CFG = {
+  listKey: 'RIVERS', inRegion: 'riversInRegion', byCountry: 'riversByCountry',
+  unit: 'rivers', singular: 'river', titleCase: 'Rivers', icon: '\ud83d\udca7',
+  navLabel: 'Rivers \u2014 tukuk.org/sungai', navAll: 'All rivers',
+  navBlurb: 'Profiles of the world\u2019s rivers \u2014 where each river flows, which countries it traverses, and a plain-English introduction.',
+  hubTitle: 'Rivers of the World \u2014 Tukuk-OS',
+  seoTitle: 'Rivers of the World \u2014 Profiles & Locations | Tukuk-OS',
+  seoDesc: 'Introductions to notable rivers worldwide: location, country and what makes each waterway significant.',
+  hero: '\ud83d\udca7 Rivers of the World', subMetric: 'location & hydrology',
+  intro: 'These are the world\u2019s most notable <b>rivers</b> \u2014 great continental waterways that sustain civilisations, shape landscapes and define borders. Each profile shows where the river flows, which countries it traverses, and a plain-English introduction from Wikipedia.',
+  footer: 'Coordinates are approximate source/centre locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/danau">Lakes</a> \u00b7 <a href="/pulau">Islands</a> \u00b7 <a href="/gunung">Mountains</a> \u00b7 <a href="/cagar">Protected Areas</a>.',
+  itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
+  ldType: 'RiverSource',
+};
+
+function pulauHubPage() { return geoHubPage(pl, 'pulau', PULAU_CFG); }
+function pulauRegionPage(r) { return geoRegionPage(r, pl, 'pulau', PULAU_CFG); }
+function pulauPage(i, sum) { return geoItemPage(i, sum, pl, 'pulau', PULAU_CFG); }
+function pulauNotFound(q) { return geoNotFound('pulau', PULAU_CFG, q); }
+function sungaiHubPage() { return geoHubPage(sg, 'sungai', SUNGAI_CFG); }
+function sungaiRegionPage(r) { return geoRegionPage(r, sg, 'sungai', SUNGAI_CFG); }
+function sungaiPage(r2, sum) { return geoItemPage(r2, sum, sg, 'sungai', SUNGAI_CFG); }
+function sungaiNotFound(q) { return geoNotFound('sungai', SUNGAI_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
