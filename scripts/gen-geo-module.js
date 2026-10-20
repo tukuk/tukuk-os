@@ -2,14 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'rongga-tanah', label: 'RONGGA-TANAH', title: 'Sinkholes of the World', var: 'SINKHOLES', sing: 'Sinkhole', finder: 'sinkhole', finders: 'sinkholesInRegion', pfx: 'sh', cap: 'Sinkholes' },
-  { file: 'menara-bijirin', label: 'MENARA-BIJIRIN', title: 'Grain Elevators of the World', var: 'GRAINELEVATORS', sing: 'GrainElevator', finder: 'grainelevator', finders: 'grainElevatorsInRegion', pfx: 'ge', cap: 'GrainElevators' },
-  { file: 'tiang-kemenangan', label: 'TIANG-KEMENANGAN', title: 'Victory Columns of the World', var: 'VICTORYCOLUMNS', sing: 'VictoryColumn', finder: 'victorycolumn', finders: 'victoryColumnsInRegion', pfx: 'vc', cap: 'VictoryColumns' },
-  { file: 'menara-masjid', label: 'MENARA-MASJID', title: 'Minarets of the World', var: 'MINARETS', sing: 'Minaret', finder: 'minaret', finders: 'minaretsInRegion', pfx: 'mn', cap: 'Minarets' },
-  { file: 'broch', label: 'BROCH', title: 'Brochs of the World', var: 'BROCHS', sing: 'Broch', finder: 'broch', finders: 'brochsInRegion', pfx: 'br', cap: 'Brochs' },
-  { file: 'mata-air-suci', label: 'MATA-AIR-SUCI', title: 'Holy Wells of the World', var: 'HOLYWELLS', sing: 'HolyWell', finder: 'holywell', finders: 'holyWellsInRegion', pfx: 'hw', cap: 'HolyWells' },
-  { file: 'astaka-muzik', label: 'ASTAKA-MUZIK', title: 'Bandstands of the World', var: 'BANDSTANDS', sing: 'Bandstand', finder: 'bandstand', finders: 'bandstandsInRegion', pfx: 'bs', cap: 'Bandstands' },
-  { file: 'rumah-merpati', label: 'RUMAH-MERPATI', title: 'Dovecotes of the World', var: 'DOVECOTES', sing: 'Dovecote', finder: 'dovecote', finders: 'dovecotesInRegion', pfx: 'dc', cap: 'Dovecotes' },
+  { file: 'pondok-gunung', label: 'PONDOK-GUNUNG', title: 'Mountain Huts of the World', var: 'MOUNTAINHUTS', sing: 'MountainHut', finder: 'mountainhut', finders: 'mountainHutsInRegion', pfx: 'pg', cap: 'PondokGunung' },
+  { file: 'kota-spa', label: 'KOTA-SPA', title: 'Spa Towns of the World', var: 'SPATOWNS', sing: 'SpaTown', finder: 'spatown', finders: 'spaTownsInRegion', pfx: 'ks', cap: 'KotaSpa' },
+  { file: 'jeram', label: 'JERAM', title: 'Rapids of the World', var: 'RAPIDS', sing: 'Rapid', finder: 'rapid', finders: 'rapidsInRegion', pfx: 'jr', cap: 'Jeram' },
+  { file: 'genting-tanah', label: 'GENTING-TANAH', title: 'Isthmuses of the World', var: 'ISTHMUSES', sing: 'Isthmus', finder: 'isthmus', finders: 'isthmusesInRegion', pfx: 'gt', cap: 'GentingTanah' },
+  { file: 'pan-garam', label: 'PAN-GARAM', title: 'Salt Pans of the World', var: 'SALTPANS', sing: 'SaltPan', finder: 'saltpan', finders: 'saltPansInRegion', pfx: 'pa', cap: 'PanGaram' },
+  { file: 'jalan-tambak', label: 'JALAN-TAMBAK', title: 'Causeways of the World', var: 'CAUSEWAYS', sing: 'Causeway', finder: 'causeway', finders: 'causewaysInRegion', pfx: 'jt', cap: 'JalanTambak' },
+  { file: 'stesen-signal', label: 'STESEN-SIGNAL', title: 'Signal Boxes of the World', var: 'SIGNALBOXES', sing: 'SignalBox', finder: 'signalbox', finders: 'signalBoxesInRegion', pfx: 'sg', cap: 'StesenSignal' },
+  { file: 'kasbah', label: 'KASBAH', title: 'Kasbahs of the World', var: 'KASBAHS', sing: 'Kasbah', finder: 'kasbah', finders: 'kasbahsInRegion', pfx: 'kb', cap: 'Kasbah' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
