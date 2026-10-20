@@ -755,5 +755,21 @@
 {"name": "Monastery of Daphni", "wiki": "Daphni Monastery", "country": "Greece", "region": "Europe", "lat": 38.0, "lng": 23.65, "type": "Cultural"},
 {"name": "Historic Square and Chateau of Litomysl", "wiki": "Litomyšl", "country": "Czechia", "region": "Europe", "lat": 49.87, "lng": 16.31, "type": "Cultural"},
 {"name": "Trinity Lavra of St. Sergius", "wiki": "Trinity Lavra of St. Sergius", "country": "Russia", "region": "Europe", "lat": 56.13, "lng": 38.13, "type": "Cultural"},
-{"name": "Portovenere, Cinque Terre and the Islands", "wiki": "Portovenere", "country": "Italy", "region": "Europe", "lat": 44.05, "lng": 9.85, "type": "Cultural"}
+{"name": "Portovenere, Cinque Terre and the Islands", "wiki": "Portovenere", "country": "Italy", "region": "Europe", "lat": 44.05, "lng": 9.85, "type": "Cultural"},
+{"name": "Colonia del Sacramento", "wiki": "Colonia del Sacramento", "country": "Uruguay", "region": "Americas", "lat": 34.47, "lng": -58.68, "type": "Cultural"},
+{"name": "Historic Bridgetown and its Garrison", "wiki": "Bridgetown", "country": "Barbados", "region": "Americas", "lat": 13.1, "lng": -59.62, "type": "Cultural"},
+{"name": "Wulingyuan Scenic Area", "wiki": "Wulingyuan", "country": "China", "region": "Asia", "lat": 29.35, "lng": 110.43, "type": "Natural"},
+{"name": "China Danxia", "wiki": "Danxia landform", "country": "China", "region": "Asia", "lat": 25.9, "lng": 113.1, "type": "Natural"},
+{"name": "Churches and Convents of Old Goa", "wiki": "Bom Jesus, Goa", "country": "India", "region": "Asia", "lat": 15.5, "lng": 73.9, "type": "Cultural"},
+{"name": "Upper Svaneti", "wiki": "Ushguli", "country": "Georgia", "region": "Asia", "lat": 42.9, "lng": 43.0, "type": "Cultural"},
+{"name": "Mantua and Sabbioneta", "wiki": "Mantua", "country": "Italy", "region": "Europe", "lat": 45.15, "lng": 10.78, "type": "Cultural"},
+{"name": "City of Verona", "wiki": "Verona", "country": "Italy", "region": "Europe", "lat": 45.44, "lng": 10.99, "type": "Cultural"},
+{"name": "Le Havre, City Rebuilt by Auguste Perret", "wiki": "Le Havre", "country": "France", "region": "Europe", "lat": 49.5, "lng": 0.45, "type": "Cultural"},
+{"name": "Archaeological Ensemble of Merida", "wiki": "Mérida, Spain", "country": "Spain", "region": "Europe", "lat": 38.92, "lng": -6.34, "type": "Cultural"},
+{"name": "Historic Centre of Evora", "wiki": "Évora", "country": "Portugal", "region": "Europe", "lat": 38.57, "lng": -7.91, "type": "Cultural"},
+{"name": "Silver Mining Town of Tarnowskie Gory", "wiki": "Tarnowskie Góry", "country": "Poland", "region": "Europe", "lat": 50.43, "lng": 18.9, "type": "Cultural"},
+{"name": "Novodevichy Convent", "wiki": "Novodevichy Convent", "country": "Russia", "region": "Europe", "lat": 55.72, "lng": 37.08, "type": "Cultural"},
+{"name": "Old Quarters and Fortifications of the City of Luxembourg", "wiki": "Luxembourg City", "country": "Luxembourg", "region": "Europe", "lat": 49.61, "lng": 6.13, "type": "Cultural"},
+{"name": "Archaeological Site of Philippi", "wiki": "Philippi", "country": "Greece", "region": "Europe", "lat": 41.0, "lng": 24.3, "type": "Cultural"},
+{"name": "Megalithic Temples of Malta", "wiki": "Megalithic Temples of Malta", "country": "Malta", "region": "Europe", "lat": 35.9, "lng": 14.45, "type": "Cultural"}
 ]
