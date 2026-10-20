@@ -51,6 +51,8 @@ const dn = require('./danau');
 const pl = require('./pulau');
 const sg = require('./sungai');
 const at = require('./air-terjun');
+const gu = require('./gua');
+const gl = require('./gletser');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -966,6 +968,34 @@ app.get('/air-terjun/:slug', async (req, res) => {
   res.status(200).type('html').send(airTerjunPage(f, sum));
 });
 
+// ── LALUAN KOMPLEKS GUA (/gua*) — Caves of the World ─
+app.get('/gua', (req, res) => res.status(200).type('html').send(guaHubPage()));
+app.get('/gua/:slug', async (req, res) => {
+  const c = gu.findCave(req.params.slug);
+  if (!c) {
+    const r = gu.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(guaRegionPage(r));
+    return res.status(404).type('html').send(guaNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await gu.fetchSummary(c.wiki); } catch {}
+  res.status(200).type('html').send(guaPage(c, sum));
+});
+
+// ── LALUAN KOMPLEKS GLETSER (/gletser*) — Glaciers of the World ─
+app.get('/gletser', (req, res) => res.status(200).type('html').send(gletserHubPage()));
+app.get('/gletser/:slug', async (req, res) => {
+  const g = gl.findGlacier(req.params.slug);
+  if (!g) {
+    const r = gl.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(gletserRegionPage(r));
+    return res.status(404).type('html').send(gletserNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await gl.fetchSummary(g.wiki); } catch {}
+  res.status(200).type('html').send(gletserPage(g, sum));
+});
+
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
 app.get('/gunung/:slug', async (req, res) => {
@@ -1472,7 +1502,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1747,6 +1777,32 @@ app.get('/sitemap-air-terjun.xml', (req, res) => {
   const urls = [one('/air-terjun', '0.9')]
     .concat(at.REGIONS.map((r) => one(`/air-terjun/${r.slug}`, '0.8')))
     .concat(at.FALLS.map((f) => one(`/air-terjun/${f.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP GUA ──
+app.get('/sitemap-gua.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/gua', '0.9')]
+    .concat(gu.REGIONS.map((r) => one(`/gua/${r.slug}`, '0.8')))
+    .concat(gu.CAVES.map((c) => one(`/gua/${c.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP GLETSER ──
+app.get('/sitemap-gletser.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/gletser', '0.9')]
+    .concat(gl.REGIONS.map((r) => one(`/gletser/${r.slug}`, '0.8')))
+    .concat(gl.GLACIERS.map((g) => one(`/gletser/${g.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6914,7 +6970,7 @@ function geoHubPage(mod, base, cfg) {
 }
 function geoNav(base, cfg, mod) {
   return worldNav(cfg.navLabel, [{ href: `/${base}`, icon: cfg.icon, name: cfg.navAll, blurb: cfg.navBlurb }
-  ].concat(mod.REGIONS.map((r) => ({ href: `/${base}/${r.slug}`, icon: '\ud83c\udf0d', name: `${r} ${cfg.unit}`, blurb: `${r.count} ${cfg.unit} across ${r.name}.`}))));
+  ].concat(mod ? mod.REGIONS.map((r) => ({ href: `/${base}/${r.slug}`, icon: '\ud83c\udf0d', name: `${r} ${cfg.unit}`, blurb: `${r.count} ${cfg.unit} across ${r.name}.` })) : []));
 }
 function geoRegionPage(region, mod, base, cfg) {
   const items = mod[cfg.inRegion](region.name);
@@ -6948,15 +7004,16 @@ function geoItemPage(item, sum, mod, base, cfg) {
   const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
   const siblings = mod[cfg.byCountry](item.countrySlug).filter((x) => x.slug !== item.slug).slice(0, 10);
   const more = siblings.length ? `<h2 class="section-title">More ${cfg.unit} in ${escapeHtml(item.country)}</h2><p>${siblings.map((x) => `<a href="/${base}/${x.slug}">${escapeHtml(x.name)}</a>`).join(' \u00b7 ')}.</p>` : '';
+  const isRealCountry = item.country && item.country !== 'Other' && item.country !== 'Antarctica';
   const rows = [
-    ['Country', `<a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>`],
+    ['Country', isRealCountry ? `<a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)],
     ['Continent / region', escapeHtml(item.region)],
     ['Coordinates (approx.)', `${escapeHtml(coords)} \u00b7 <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
   ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
   const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
-  <p><b>${escapeHtml(item.name)}</b> is located in <a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>, in ${escapeHtml(item.region)}.</p>
+  <p><b>${escapeHtml(item.name)}</b> is located in ${isRealCountry ? `<a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)}, in ${escapeHtml(item.region)}.</p>
   ${more}
   <p class="meta">${cfg.itemFooter}</p>`;
   const ld = JSON.stringify([
@@ -7045,6 +7102,43 @@ function airTerjunHubPage() { return geoHubPage(at, 'air-terjun', AIR_TERJUN_CFG
 function airTerjunRegionPage(r) { return geoRegionPage(r, at, 'air-terjun', AIR_TERJUN_CFG); }
 function airTerjunPage(f, sum) { return geoItemPage(f, sum, at, 'air-terjun', AIR_TERJUN_CFG); }
 function airTerjunNotFound(q) { return geoNotFound('air-terjun', AIR_TERJUN_CFG, q); }
+
+const GUA_CFG = {
+  listKey: 'CAVES', inRegion: 'cavesInRegion', byCountry: 'cavesByCountry',
+  unit: 'caves', singular: 'cave', titleCase: 'Caves', icon: '\ud83c\udf2c\ufe0f',
+  navLabel: 'Caves \u2014 tukuk.org/gua', navAll: 'All caves',
+  navBlurb: 'Profiles of the world\u2019s caves \u2014 where each cavern is, which country it lies in, and a plain-English introduction.',
+  hubTitle: 'Caves of the World \u2014 Tukuk-OS',
+  seoTitle: 'Caves of the World \u2014 Profiles & Locations | Tukuk-OS',
+  seoDesc: 'Introductions to notable caves and cavern systems worldwide: location, country and what makes each cave significant.',
+  hero: '\ud83c\udf2c\ufe0f Caves of the World', subMetric: 'location & speleology',
+  intro: 'These are the world\u2019s most notable <b>caves</b> \u2014 limestone caverns, lava tubes and karst systems carved over millennia, some drowned and some home to unique ecosystems. Each profile shows where the cave is, which country it lies in, and a plain-English introduction from Wikipedia.',
+  footer: 'Coordinates are approximate cave locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/gletser">Glaciers</a> \u00b7 <a href="/cagar">Protected Areas</a> \u00b7 <a href="/warisan">World Heritage</a>.',
+  itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
+  ldType: 'Landform',
+};
+function guaHubPage() { return geoHubPage(gu, 'gua', GUA_CFG); }
+function guaRegionPage(r) { return geoRegionPage(r, gu, 'gua', GUA_CFG); }
+function guaPage(c, sum) { return geoItemPage(c, sum, gu, 'gua', GUA_CFG); }
+function guaNotFound(q) { return geoNotFound('gua', GUA_CFG, q); }
+const GLETSER_CFG = {
+  listKey: 'GLACIERS', inRegion: 'glaciersInRegion', byCountry: 'glaciersByCountry',
+  unit: 'glaciers', singular: 'glacier', titleCase: 'Glaciers', icon: '\u2744\ufe0f',
+  navLabel: 'Glaciers \u2014 tukuk.org/gletser', navAll: 'All glaciers',
+  navBlurb: 'Profiles of the world\u2019s glaciers \u2014 where each ice field flows, which country or continent it belongs to, and a plain-English introduction.',
+  hubTitle: 'Glaciers of the World \u2014 Tukuk-OS',
+  seoTitle: 'Glaciers of the World \u2014 Profiles & Locations | Tukuk-OS',
+  seoDesc: 'Introductions to notable glaciers and ice fields worldwide: location, country and what makes each glacier significant.',
+  hero: '\u2744\ufe0f Glaciers of the World', subMetric: 'location & glaciology',
+  intro: 'These are the world\u2019s most notable <b>glaciers</b> \u2014 rivers of ice that store most of Earth\u2019s freshwater, sculpt mountains and drive sea-level change. Each profile shows where the glacier is, which country or continent it belongs to, and a plain-English introduction from Wikipedia.',
+  footer: 'Coordinates are approximate glacier locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/gua">Caves</a> \u00b7 <a href="/danau">Lakes</a> \u00b7 <a href="/air-terjun">Waterfalls</a>.',
+  itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
+  ldType: 'Glacier',
+};
+function gletserHubPage() { return geoHubPage(gl, 'gletser', GLETSER_CFG); }
+function gletserRegionPage(r) { return geoRegionPage(r, gl, 'gletser', GLETSER_CFG); }
+function gletserPage(g, sum) { return geoItemPage(g, sum, gl, 'gletser', GLETSER_CFG); }
+function gletserNotFound(q) { return geoNotFound('gletser', GLETSER_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
