@@ -2,14 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'seminari', label: 'SEMINARI', title: 'Seminaries of the World', var: 'SEMINARIES', sing: 'Seminary', finder: 'seminary', finders: 'seminariesInRegion', pfx: 'sm', cap: 'Seminari' },
-  { file: 'stesen-bensin', label: 'STESEN-BENSIN', title: 'Filling Stations of the World', var: 'FILLINGSTATIONS', sing: 'FillingStation', finder: 'fillingstation', finders: 'fillingStationsInRegion', pfx: 'fs', cap: 'StesenBensin' },
-  { file: 'tangga-perigi', label: 'TANGGA-PERIGI', title: 'Stepwells of the World', var: 'STEPWELLS', sing: 'Stepwell', finder: 'stepwell', finders: 'stepwellsInRegion', pfx: 'sw', cap: 'TanggaPerigi' },
-  { file: 'pulau-batu', label: 'PULAU-BATU', title: 'Skerries of the World', var: 'SKERRIES', sing: 'Skerry', finder: 'skerry', finders: 'skerriesInRegion', pfx: 'sk', cap: 'PulauBatu' },
-  { file: 'terowong-lava', label: 'TEROWONG-LAVA', title: 'Lava Tubes of the World', var: 'LAVATUBES', sing: 'LavaTube', finder: 'lavatube', finders: 'lavaTubesInRegion', pfx: 'lt', cap: 'TerowongLava' },
-  { file: 'morena', label: 'MORENA', title: 'Moraines of the World', var: 'MORAINES', sing: 'Moraine', finder: 'moraine', finders: 'morainesInRegion', pfx: 'mo', cap: 'Morena' },
-  { file: 'rumah-benteng', label: 'RUMAH-BENTENG', title: 'Blockhouses of the World', var: 'BLOCKHOUSES', sing: 'Blockhouse', finder: 'blockhouse', finders: 'blockhousesInRegion', pfx: 'bh', cap: 'RumahBenteng' },
-  { file: 'pemecah-ombak', label: 'PEMECAH-OMBAK', title: 'Breakwaters of the World', var: 'BREAKWATERS', sing: 'Breakwater', finder: 'breakwater', finders: 'breakwatersInRegion', pfx: 'bw', cap: 'PemecahOmbak' },
+  { file: 'jambatan-gantung', label: 'JAMBATAN-GANTUNG', title: 'Suspension Bridges of the World', var: 'SUSPENSIONBRIDGES', sing: 'SuspensionBridge', finder: 'suspensionbridge', finders: 'suspensionBridgesInRegion', pfx: 'sg', cap: 'JambatanGantung' },
+  { file: 'jambatan-kabel', label: 'JAMBATAN-KABEL', title: 'Cable-Stayed Bridges of the World', var: 'CABLESTAYEDBRIDGES', sing: 'CableStayedBridge', finder: 'cablestayedbridge', finders: 'cableStayedBridgesInRegion', pfx: 'cs', cap: 'JambatanKabel' },
+  { file: 'jambatan-konsol', label: 'JAMBATAN-KONSOL', title: 'Cantilever Bridges of the World', var: 'CANTILEVERBRIDGES', sing: 'CantileverBridge', finder: 'cantileverbridge', finders: 'cantileverBridgesInRegion', pfx: 'cb', cap: 'JambatanKonsol' },
+  { file: 'jambatan-angkat', label: 'JAMBATAN-ANGKAT', title: 'Lift Bridges of the World', var: 'LIFTBRIDGES', sing: 'LiftBridge', finder: 'liftbridge', finders: 'liftBridgesInRegion', pfx: 'lb', cap: 'JambatanAngkat' },
+  { file: 'pulau-kecil', label: 'PULAU-KECIL', title: 'Islets of the World', var: 'ISLETS', sing: 'Islet', finder: 'islet', finders: 'isletsInRegion', pfx: 'ik', cap: 'PulauKecil' },
+  { file: 'kereta-api-warisan', label: 'KERETA-API-WARISAN', title: 'Heritage Railways of the World', var: 'HERITAGERAILWAYS', sing: 'HeritageRailway', finder: 'heritagerailway', finders: 'heritageRailwaysInRegion', pfx: 'hw', cap: 'KeretaApiWarisan' },
+  { file: 'rel-sempit', label: 'REL-SEMPIT', title: 'Narrow-Gauge Railways of the World', var: 'NARROWGAUGERAILWAYS', sing: 'NarrowGaugeRailway', finder: 'narrowgauge', finders: 'narrowGaugeRailwaysInRegion', pfx: 'ng', cap: 'RelSempit' },
+  { file: 'krematorium', label: 'KREMATORIUM', title: 'Crematoriums of the World', var: 'CREMATORIUMS', sing: 'Crematorium', finder: 'crematorium', finders: 'crematoriumsInRegion', pfx: 'cm', cap: 'Krematorium' },
+  { file: 'dusun', label: 'DUSUN', title: 'Hamlets of the World', var: 'HAMLETS', sing: 'Hamlet', finder: 'hamlet', finders: 'hamletsInRegion', pfx: 'hl', cap: 'Dusun' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
