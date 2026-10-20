@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'balai-bandar', label: 'BALAI-BANDAR', title: 'Town Halls of the World', var: 'TOWNHALLS', sing: 'TownHall', finder: 'townhall', pfx: 'thl', cap: 'TownHalls' },
-  { file: 'makam', label: 'MAKAM', title: 'Mausoleums of the World', var: 'MAUSOLEUMS', sing: 'Mausoleum', finder: 'mausoleum', pfx: 'mz', cap: 'Mausoleums' },
-  { file: 'kilang-bir', label: 'KILANG-BIR', title: 'Breweries of the World', var: 'BREWERIES', sing: 'Brewery', finder: 'brewery', pfx: 'brw', cap: 'Breweries' },
-  { file: 'kincir-air', label: 'KINCIR-AIR', title: 'Watermills of the World', var: 'WATERMILLS', sing: 'Watermill', finder: 'watermill', pfx: 'wml', cap: 'Watermills' },
-  { file: 'penyuling', label: 'PENYULING', title: 'Distilleries of the World', var: 'DISTILLERIES', sing: 'Distillery', finder: 'distillery', pfx: 'dst', cap: 'Distilleries' },
-  { file: 'basilika', label: 'BASILIKA', title: 'Basilicas of the World', var: 'BASILICAS', sing: 'Basilica', finder: 'basilica', pfx: 'bsl', cap: 'Basilicas' },
-  { file: 'viaduk', label: 'VIADUK', title: 'Viaducts of the World', var: 'VIADUCTS', sing: 'Viaduct', finder: 'viaduct', pfx: 'vid', cap: 'Viaducts' },
-  { file: 'geyser', label: 'GEYSER', title: 'Geysers of the World', var: 'GEYSERS', sing: 'Geyser', finder: 'geyser', pfx: 'gys', cap: 'Geysers' },
-  { file: 'terminal-feri', label: 'TERMINAL-FERI', title: 'Ferry Terminals of the World', var: 'FERRYPORTS', sing: 'FerryPort', finder: 'ferryport', pfx: 'fpt', cap: 'FerryPorts' },
+  { file: 'stesen-metro', label: 'STESEN-METRO', title: 'Metro Stations of the World', var: 'METROSTATIONS', sing: 'MetroStation', finder: 'metrostation', pfx: 'ms', cap: 'MetroStations' },
+  { file: 'pawagam', label: 'PAWAGAM', title: 'Cinemas of the World', var: 'CINEMAS', sing: 'Cinema', finder: 'cinema', pfx: 'cn', cap: 'Cinemas' },
+  { file: 'kapel', label: 'KAPEL', title: 'Chapels of the World', var: 'CHAPELS', sing: 'Chapel', finder: 'chapel', pfx: 'cp', cap: 'Chapels' },
+  { file: 'terminal-bas', label: 'TERMINAL-BAS', title: 'Bus Stations of the World', var: 'BUSSTATIONS', sing: 'BusStation', finder: 'busstation', pfx: 'bu', cap: 'BusStations' },
+  { file: 'rumah-manor', label: 'RUMAH-MANOR', title: 'Manor Houses of the World', var: 'MANORHOUSES', sing: 'ManorHouse', finder: 'manorhouse', pfx: 'ma', cap: 'ManorHouses' },
+  { file: 'dewan-konsert', label: 'DEWAN-KONSERT', title: 'Concert Halls of the World', var: 'CONCERTHALLS', sing: 'ConcertHall', finder: 'concerthall', pfx: 'co', cap: 'ConcertHalls' },
+  { file: 'pancutan', label: 'PANCUTAN', title: 'Fountains of the World', var: 'FOUNTAINS', sing: 'Fountain', finder: 'fountain', pfx: 'fu', cap: 'Fountains' },
+  { file: 'stesen-tenaga', label: 'STESEN-TENAGA', title: 'Power Stations of the World', var: 'POWERSTATIONS', sing: 'PowerStation', finder: 'powerstation', pfx: 'po', cap: 'PowerStations' },
+  { file: 'rizab-biosfera', label: 'RIZAB-BIOSFERA', title: 'Biosphere Reserves of the World', var: 'BIOSPHERERESERVES', sing: 'BiosphereReserve', finder: 'biospherereserve', pfx: 'bi', cap: 'BiosphereReserves' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
