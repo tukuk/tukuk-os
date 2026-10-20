@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'jambatan-gantung', label: 'JAMBATAN-GANTUNG', title: 'Suspension Bridges of the World', var: 'SUSPENSIONBRIDGES', sing: 'SuspensionBridge', finder: 'suspensionbridge', finders: 'suspensionBridgesInRegion', pfx: 'sg', cap: 'JambatanGantung' },
-  { file: 'jambatan-kabel', label: 'JAMBATAN-KABEL', title: 'Cable-Stayed Bridges of the World', var: 'CABLESTAYEDBRIDGES', sing: 'CableStayedBridge', finder: 'cablestayedbridge', finders: 'cableStayedBridgesInRegion', pfx: 'cs', cap: 'JambatanKabel' },
-  { file: 'jambatan-konsol', label: 'JAMBATAN-KONSOL', title: 'Cantilever Bridges of the World', var: 'CANTILEVERBRIDGES', sing: 'CantileverBridge', finder: 'cantileverbridge', finders: 'cantileverBridgesInRegion', pfx: 'cb', cap: 'JambatanKonsol' },
-  { file: 'jambatan-angkat', label: 'JAMBATAN-ANGKAT', title: 'Lift Bridges of the World', var: 'LIFTBRIDGES', sing: 'LiftBridge', finder: 'liftbridge', finders: 'liftBridgesInRegion', pfx: 'lb', cap: 'JambatanAngkat' },
-  { file: 'pulau-kecil', label: 'PULAU-KECIL', title: 'Islets of the World', var: 'ISLETS', sing: 'Islet', finder: 'islet', finders: 'isletsInRegion', pfx: 'ik', cap: 'PulauKecil' },
-  { file: 'kereta-api-warisan', label: 'KERETA-API-WARISAN', title: 'Heritage Railways of the World', var: 'HERITAGERAILWAYS', sing: 'HeritageRailway', finder: 'heritagerailway', finders: 'heritageRailwaysInRegion', pfx: 'hw', cap: 'KeretaApiWarisan' },
-  { file: 'rel-sempit', label: 'REL-SEMPIT', title: 'Narrow-Gauge Railways of the World', var: 'NARROWGAUGERAILWAYS', sing: 'NarrowGaugeRailway', finder: 'narrowgauge', finders: 'narrowGaugeRailwaysInRegion', pfx: 'ng', cap: 'RelSempit' },
-  { file: 'krematorium', label: 'KREMATORIUM', title: 'Crematoriums of the World', var: 'CREMATORIUMS', sing: 'Crematorium', finder: 'crematorium', finders: 'crematoriumsInRegion', pfx: 'cm', cap: 'Krematorium' },
-  { file: 'dusun', label: 'DUSUN', title: 'Hamlets of the World', var: 'HAMLETS', sing: 'Hamlet', finder: 'hamlet', finders: 'hamletsInRegion', pfx: 'hl', cap: 'Dusun' },
+  { file: 'jambatan-gerudi', label: 'JAMBATAN-GERUDI', title: 'Arch Bridges of the World', var: 'ARCHBRIDGES', sing: 'ArchBridge', finder: 'archbridge', finders: 'archBridgesInRegion', pfx: 'ag', cap: 'JambatanGerudi' },
+  { file: 'gunung-laut', label: 'GUNUNG-LAUT', title: 'Seamounts of the World', var: 'SEAMOUNTS', sing: 'Seamount', finder: 'seamount', finders: 'seamountsInRegion', pfx: 'sm', cap: 'GunungLaut' },
+  { file: 'kelab-yacht', label: 'KELAB-YACHT', title: 'Yacht Clubs of the World', var: 'YACHTCLUBS', sing: 'YachtClub', finder: 'yachtclub', finders: 'yachtClubsInRegion', pfx: 'yc', cap: 'KelabYacht' },
+  { file: 'pelabuhan-angkasa', label: 'PELABUHAN-ANGKASA', title: 'Spaceports of the World', var: 'SPACEPORTS', sing: 'Spaceport', finder: 'spaceport', finders: 'spaceportsInRegion', pfx: 'sp', cap: 'PelabuhanAngkasa' },
+  { file: 'medan-vulkanik', label: 'MEDAN-VULKANIK', title: 'Volcanic Fields of the World', var: 'VOLCANICFIELDS', sing: 'VolcanicField', finder: 'volcanicfield', finders: 'volcanicFieldsInRegion', pfx: 'vf', cap: 'MedanVulkanik' },
+  { file: 'ukiran-batu', label: 'UKIRAN-BATU', title: 'Petroglyphs of the World', var: 'PETROGLYPHS', sing: 'PetroglyphSite', finder: 'petroglyph', finders: 'petroglyphsInRegion', pfx: 'pg', cap: 'UkiranBatu' },
+  { file: 'patung-kuda', label: 'PATUNG-KUDA', title: 'Equestrian Statues of the World', var: 'EQUESTRIANSTATUES', sing: 'EquestrianStatue', finder: 'equestrianstatue', finders: 'equestrianStatuesInRegion', pfx: 'eq', cap: 'PatungKuda' },
+  { file: 'parit-laut', label: 'PARIT-LAUT', title: 'Oceanic Trenches of the World', var: 'OCEANICTRENCHES', sing: 'OceanTrench', finder: 'oceantrench', finders: 'oceanicTrenchesInRegion', pfx: 'ot', cap: 'ParitLaut' },
+  { file: 'frazioni', label: 'FRAZIONI', title: 'Frazioni of Italy', var: 'FRAZIONI', sing: 'Frazione', finder: 'frazione', finders: 'frazioniInRegion', pfx: 'fz', cap: 'Frazioni' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
