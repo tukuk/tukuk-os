@@ -2,14 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'penempatan-bebas', label: 'PENEMPATAN-BEBAS', title: 'Unincorporated Communities of the World', var: 'UNINCORPORATED', sing: 'UnincorporatedCommunity', finder: 'unincorporated', finders: 'unincorporatedCommunitiesInRegion', pfx: 'uc', cap: 'UnincorporatedCommunities' },
-  { file: 'kawasan-jiran', label: 'KAWASAN-JIRAN', title: 'Neighborhoods of the World', var: 'NEIGHBORHOODS', sing: 'Neighborhood', finder: 'neighborhood', finders: 'neighborhoodsInRegion', pfx: 'nh', cap: 'Neighborhoods' },
-  { file: 'kawasan-sensus', label: 'KAWASAN-SENSUS', title: 'Census-Designated Places of the World', var: 'CENSUSPLACES', sing: 'CensusPlace', finder: 'censusplace', finders: 'censusPlacesInRegion', pfx: 'cd', cap: 'CensusPlaces' },
-  { file: 'daerah-sejarah', label: 'DAERAH-SEJARAH', title: 'Historic Districts of the World', var: 'HISTORICDISTRICTS', sing: 'HistoricDistrict', finder: 'historicdistrict', finders: 'historicDistrictsInRegion', pfx: 'hd', cap: 'HistoricDistricts' },
-  { file: 'pinggiran', label: 'PINGGIRAN', title: 'Suburbs of the World', var: 'SUBURBS', sing: 'Suburb', finder: 'suburb', finders: 'suburbsInRegion', pfx: 'sb', cap: 'Suburbs' },
-  { file: 'perhentian-tram', label: 'PERHENTIAN-TRAM', title: 'Tram Stops of the World', var: 'TRAMSTOPS', sing: 'TramStop', finder: 'tramstop', finders: 'tramStopsInRegion', pfx: 'ts', cap: 'TramStops' },
-  { file: 'pusat-konvensyen', label: 'PUSAT-KONVENSYEN', title: 'Convention Centers of the World', var: 'CONVENTIONCENTERS', sing: 'ConventionCenter', finder: 'conventioncenter', finders: 'conventionCentersInRegion', pfx: 'cc', cap: 'ConventionCenters' },
-  { file: 'formasi-batu', label: 'FORMASI-BATU', title: 'Rock Formations of the World', var: 'ROCKFORMATIONS', sing: 'RockFormation', finder: 'rockformation', finders: 'rockFormationsInRegion', pfx: 'rf', cap: 'RockFormations' },
+  { file: 'pangkalan-udara', label: 'PANGKALAN-UDARA', title: 'Military Air Bases of the World', var: 'MILITARYAIRBASES', sing: 'MilitaryAirBase', finder: 'militaryairbase', finders: 'militaryAirBasesInRegion', pfx: 'mb', cap: 'MilitaryAirBases' },
+  { file: 'pekan-kecil', label: 'PEKAN-KECIL', title: 'Townships of the World', var: 'TOWNSHIPS', sing: 'Township', finder: 'township', finders: 'townshipsInRegion', pfx: 'tw', cap: 'Townships' },
+  { file: 'ladang-solar', label: 'LADANG-SOLAR', title: 'Solar Power Stations of the World', var: 'SOLARPOWERSTATIONS', sing: 'SolarPowerStation', finder: 'solarpowerstation', finders: 'solarPowerStationsInRegion', pfx: 'sp', cap: 'SolarPowerStations' },
+  { file: 'loji-atom', label: 'LOJI-ATOM', title: 'Nuclear Power Plants of the World', var: 'NUCLEARPOWERPLANTS', sing: 'NuclearPowerPlant', finder: 'nuclearpowerplant', finders: 'nuclearPowerPlantsInRegion', pfx: 'np', cap: 'NuclearPowerPlants' },
+  { file: 'menara-radio', label: 'MENARA-RADIO', title: 'Radio Transmitters of the World', var: 'RADIOTRANSMITTERS', sing: 'RadioTransmitter', finder: 'radiotransmitter', finders: 'radioTransmittersInRegion', pfx: 'rt', cap: 'RadioTransmitters' },
+  { file: 'parip-sipil', label: 'PARIP-SIPIL', title: 'Civil Parishes of the World', var: 'CIVILPARISHES', sing: 'CivilParish', finder: 'civilparish', finders: 'civilParishesInRegion', pfx: 'cp', cap: 'CivilParishes' },
+  { file: 'tanah-benjol', label: 'TANAH-BENJOL', title: 'Mounds of the World', var: 'MOUNDS', sing: 'Mound', finder: 'mound', finders: 'moundsInRegion', pfx: 'mo', cap: 'Mounds' },
+  { file: 'stupa', label: 'STUPA', title: 'Stupas of the World', var: 'STUPAS', sing: 'Stupa', finder: 'stupa', finders: 'stupasInRegion', pfx: 'su', cap: 'Stupas' },
+  { file: 'tebing-panjang', label: 'TEBING-PANJANG', title: 'Escarpments of the World', var: 'ESCARPMENTS', sing: 'Escarpment', finder: 'escarpment', finders: 'escarpmentsInRegion', pfx: 'es', cap: 'Escarpments' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
