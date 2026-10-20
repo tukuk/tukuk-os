@@ -2,10 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'teater', label: 'TEATER', title: 'Theatres of the World', var: 'THEATRES', sing: 'Theatre', finder: 'theatre', pfx: 'th', cap: 'Theatres' },
-  { file: 'pusat-beli-belah', label: 'PUSAT-BELI-BELAJ', title: 'Shopping Centers of the World', var: 'SHOPPINGCENTERS', sing: 'ShoppingCenter', finder: 'shoppingcenter', pfx: 'sc', cap: 'ShoppingCenters' },
-  { file: 'arena', label: 'ARENA', title: 'Arenas of the World', var: 'ARENAS', sing: 'Arena', finder: 'arena', pfx: 'ar', cap: 'Arenas' },
-  { file: 'ladang', label: 'LADANG', title: 'Farms of the World', var: 'FARMS', sing: 'Farm', finder: 'farm', pfx: 'fm', cap: 'Farms' },
+  { file: 'dataran', label: 'DATARAN', title: 'Public Squares of the World', var: 'SQUARES', sing: 'Square', finder: 'square', pfx: 'sq', cap: 'Squares' },
+  { file: 'tambang', label: 'TAMBANG', title: 'Mines of the World', var: 'MINES', sing: 'Mine', finder: 'mine', pfx: 'mn', cap: 'Mines' },
+  { file: 'suaka-alam', label: 'SUAKA-ALAM', title: 'Nature Reserves of the World', var: 'NATURERESERVES', sing: 'NatureReserve', finder: 'naturereserve', pfx: 'nr', cap: 'NatureReserves' },
+  { file: 'pantai', label: 'PANTAI', title: 'Beaches of the World', var: 'BEACHES', sing: 'Beach', finder: 'beach', pfx: 'bc', cap: 'Beaches' },
+  { file: 'taman-riang', label: 'TAMAN-RIANG', title: 'Amusement Parks of the World', var: 'AMUSEMENTPARKS', sing: 'AmusementPark', finder: 'amusementpark', pfx: 'ap', cap: 'AmusementParks' },
+  { file: 'resort-ski', label: 'RESORT-SKI', title: 'Ski Resorts of the World', var: 'SKIRESORTS', sing: 'SkiResort', finder: 'skiresort', pfx: 'sr', cap: 'SkiResorts' },
+  { file: 'peringatan', label: 'PERINGATAN', title: 'Memorials of the World', var: 'MEMORIALS', sing: 'Memorial', finder: 'memorial', pfx: 'ml', cap: 'Memorials' },
+  { file: 'ranrungan', label: 'RANRUNGAN', title: 'Ancient Ruins of the World', var: 'RUINS', sing: 'Ruin', finder: 'ruin', pfx: 'rn', cap: 'Ruins' },
+  { file: 'kilang-anggur', label: 'KILANG-ANGGUR', title: 'Wineries of the World', var: 'WINERIES', sing: 'Winery', finder: 'winery', pfx: 'wr', cap: 'Wineries' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
