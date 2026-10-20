@@ -108,6 +108,7 @@ const ptg = require('./patung');
 const rpo = require('./rumah-opera');
 const grn = require('./gurun');
 const akd = require('./akueduk');
+const stn = require('./stesen-kereta-api');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1121,6 +1122,8 @@ geoRoutes('patung', ptg, 'findStatue', patungHubPage, patungRegionPage, patungPa
 geoRoutes('rumah-opera', rpo, 'findOperaHouse', rumahOperaHubPage, rumahOperaRegionPage, rumahOperaPage, rumahOperaNotFound);
 geoRoutes('gurun', grn, 'findDesert', gurunHubPage, gurunRegionPage, gurunPage, gurunNotFound);
 geoRoutes('akueduk', akd, 'findAqueduct', akuedukHubPage, akuedukRegionPage, akuedukPage, akuedukNotFound);
+// /railway-stations — very large class, uses the compact hub + country-partitioned pages.
+geoRoutesPaged('railway-stations', stn, 'findRailwayStation', railwayHubPage, railwayRegionPage, railwayPage, railwayNotFound, railwayCountryPage);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1628,7 +1631,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2004,6 +2007,7 @@ geoSitemap('patung', ptg, 'STATUES');
 geoSitemap('rumah-opera', rpo, 'OPERAHOUSES');
 geoSitemap('gurun', grn, 'DESERTS');
 geoSitemap('akueduk', akd, 'AQUEDUCTS');
+geoSitemap('railway-stations', stn, 'STATIONS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7145,7 +7149,7 @@ function geoHubPage(mod, base, cfg) {
     if (!ss.length) return '';
     return `<h2 class="section-title" id="${mod.slugify(rg)}"><a href="/${base}/${mod.slugify(rg)}">${rg}</a> <span class="meta">(${ss.length} ${cfg.unit})</span></h2><div class="geo-grid">${ss.map((x) => geoCard(x, base)).join('')}</div>`;
   }).join('');
-  const browse = `<p>${mod.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${mod.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r.name} (${r.count})</a>`).join(' ')}</p>`;
   const countries = new Set(items.map((x) => x.country)).size;
   const body = `<p>${cfg.intro}</p>
   <p>${items.length} ${cfg.unit} from ${countries} countries are covered below, grouped by continent. Open any ${cfg.singular} for its full profile.</p>
@@ -7166,7 +7170,7 @@ function geoHubPage(mod, base, cfg) {
 }
 function geoNav(base, cfg, mod) {
   return worldNav(cfg.navLabel, [{ href: `/${base}`, icon: cfg.icon, name: cfg.navAll, blurb: cfg.navBlurb }
-  ].concat(mod ? mod.REGIONS.map((r) => ({ href: `/${base}/${r.slug}`, icon: '\ud83c\udf0d', name: `${r} ${cfg.unit}`, blurb: `${r.count} ${cfg.unit} across ${r.name}.` })) : []));
+  ].concat(mod ? mod.REGIONS.map((r) => ({ href: `/${base}/${r.slug}`, icon: '\ud83c\udf0d', name: `${r.name} ${cfg.unit}`, blurb: `${r.count} ${cfg.unit} across ${r.name}.` })) : []));
 }
 function geoRegionPage(region, mod, base, cfg) {
   const items = mod[cfg.inRegion](region.name);
@@ -7240,6 +7244,110 @@ function geoNotFound(base, cfg, q) {
     css: GEO_CSS,
     body: `<p>Open <a href="/${base}">the full list of ${cfg.unit}</a> and browse by continent.</p>`,
   }, geoNav(base, cfg, undefined));
+}
+
+// ── GEO PAGED FACTORY — untuk kelas sangat besar (stesen kereta api dsb.) agar
+// hub tidak dump sejuta kad dalam satu halaman. Alur: hub ringkas → benua →
+// senarai negara → senarai berhalaman (GEO_PAGE_SIZE items/halaman).
+const GEO_PAGE_SIZE = 180;
+function geoHubCompactPage(mod, base, cfg) {
+  const items = mod[cfg.listKey];
+  const countries = new Set(items.map((x) => x.country)).size;
+  const browse = mod.REGIONS.map((r) => `<a class="btn ghost" style="margin:4px" href="/${base}/${r.slug}">${r.name} (${r.count})</a>`).join(' ');
+  const body = `<p>${cfg.intro}</p>
+  <p>${items.length} ${cfg.unit} from ${countries} countries. This library is large, so it is browsed in two steps: pick a <b>continent</b>, then a <b>country</b>; each country page lists its ${cfg.unit} a screen at a time. Open any ${cfg.singular} for its full profile.</p>
+  <h2 class="section-title">Browse by continent</h2>
+  <p>${browse}</p>
+  <p class="meta">${cfg.footer}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: cfg.hubTitle,
+    description: `Index of ${items.length} ${cfg.unit} by continent and country.`,
+    url: `https://tukuk.org/${base}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: cfg.seoTitle, desc: cfg.seoDesc, selfUrl: `https://tukuk.org/${base}`,
+    heroTitle: cfg.hero, heroSub: `${items.length} ${cfg.unit} \u00b7 ${countries} countries \u00b7 ${cfg.subMetric}`,
+    ld, css: GEO_CSS, body,
+  }, geoNav(base, cfg, mod));
+}
+function geoRegionCountryIndexPage(region, mod, base, cfg) {
+  const items = mod[cfg.inRegion](region.name);
+  const byC = new Map();
+  for (const x of items) { const k = x.countrySlug; if (!byC.has(k)) byC.set(k, { country: x.country, slug: k, n: 0 }); byC.get(k).n++; }
+  const list = [...byC.values()].sort((a, b) => a.country.localeCompare(b.country));
+  const btns = list.map((c) => `<a class="btn ghost" style="margin:3px" href="/${base}/n/${c.slug}">${escapeHtml(c.country)} (${c.n})</a>`).join(' ');
+  const other = mod.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r.name}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
+  <p><b>${items.length} notable ${cfg.unit} in ${region.name}</b> across ${list.length} countries. Pick a country to browse its ${cfg.unit} a page at a time.</p>
+  <h2 class="section-title">Countries in ${region.name}</h2><p>${btns}</p>
+  <h2 class="section-title">Other continents</h2><p>${other}</p>
+  <p class="meta">${cfg.footer}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} ${cfg.titleCase} \u2014 Tukuk-OS`,
+    description: `Countries with ${cfg.unit} in ${region.name}.`,
+    url: `https://tukuk.org/${base}/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${region.name} ${cfg.titleCase} \u2014 Browse by Country | Tukuk-OS`,
+    desc: `${items.length} ${cfg.unit} in ${region.name} across ${list.length} countries.`,
+    selfUrl: `https://tukuk.org/${base}/${region.slug}`,
+    heroTitle: `${cfg.icon} ${region.name} ${cfg.titleCase}`, heroSub: `${items.length} ${cfg.unit} \u00b7 ${list.length} countries`,
+    ld, css: GEO_CSS, body,
+  }, geoNav(base, cfg, mod));
+}
+function geoCountryPagedPage(countrySlug, mod, base, cfg, page) {
+  const all = mod[cfg.byCountry](countrySlug);
+  if (!all.length) return null;
+  const country = all[0].country, region = all[0].region;
+  const totalPages = Math.max(1, Math.ceil(all.length / GEO_PAGE_SIZE));
+  const p = Math.min(Math.max(1, page || 1), totalPages);
+  const slice = all.slice((p - 1) * GEO_PAGE_SIZE, p * GEO_PAGE_SIZE);
+  const grid = `<div class="geo-grid">${slice.map((x) => geoCard(x, base)).join('')}</div>`;
+  const qp = (n) => `/${base}/n/${countrySlug}${n > 1 ? `?p=${n}` : ''}`;
+  let pager = '';
+  if (totalPages > 1) {
+    const prev = p > 1 ? `<a class="btn ghost" href="${qp(p - 1)}">&larr; Prev</a>` : '';
+    const next = p < totalPages ? `<a class="btn ghost" href="${qp(p + 1)}">Next &rarr;</a>` : '';
+    const nums = [];
+    for (let i = 1; i <= totalPages; i++) { if (i === 1 || i === totalPages || Math.abs(i - p) <= 2) nums.push(i === p ? `<b>[${i}]</b>` : `<a href="${qp(i)}">${i}</a>`); else if (nums[nums.length - 1] !== '\u2026') nums.push('\u2026'); }
+    pager = `<p class="meta">Page ${p} of ${totalPages}</p><p>${prev} ${nums.join(' ')} ${next}</p>`;
+  }
+  const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a> \u00b7 <a href="/${base}/${mod.slugify(region)}">${escapeHtml(region)}</a></p>
+  <p>Page ${p} of ${totalPages} \u2014 showing ${slice.length} of the <b>${all.length} ${cfg.unit} in ${escapeHtml(country)}</b>.</p>
+  ${grid}
+  ${pager}
+  <p class="meta">${cfg.footer}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${cfg.titleCase} of ${country} \u2014 Tukuk-OS`,
+    description: `${all.length} ${cfg.unit} in ${country}, ${region}.`,
+    url: `https://tukuk.org/${base}/n/${countrySlug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${cfg.titleCase} of ${country}${p > 1 ? ` (Page ${p})` : ''} | Tukuk-OS`,
+    desc: `Profiles of ${all.length} ${cfg.unit} located in ${country}, ${region}.`,
+    selfUrl: `https://tukuk.org/${base}/n/${countrySlug}${p > 1 ? `?p=${p}` : ''}`,
+    heroTitle: `${cfg.icon} ${country} \u2014 ${cfg.titleCase}`, heroSub: `${all.length} ${cfg.unit} \u00b7 ${region}`,
+    ld, css: GEO_CSS, body,
+  }, geoNav(base, cfg, mod));
+}
+function geoRoutesPaged(base, mod, findFn, hubFn, regionFn, pageFn, notFoundFn, countryFn) {
+  app.get(`/${base}`, (req, res) => res.status(200).type('html').send(hubFn()));
+  app.get(`/${base}/n/:cslug`, (req, res) => {
+    const html = countryFn(req.params.cslug, parseInt(req.query.p, 10) || 1);
+    if (!html) return res.status(404).type('html').send(notFoundFn(req.params.cslug));
+    res.status(200).type('html').send(html);
+  });
+  app.get(`/${base}/:slug`, async (req, res) => {
+    const it = mod[findFn](req.params.slug);
+    if (!it) {
+      const r = mod.findRegion(req.params.slug);
+      if (r) return res.status(200).type('html').send(regionFn(r));
+      return res.status(404).type('html').send(notFoundFn(req.params.slug));
+    }
+    let sum = null;
+    try { sum = await mod.fetchSummary(it.wiki); } catch {}
+    res.status(200).type('html').send(pageFn(it, sum));
+  });
 }
 
 // Config objects for island & river clusters
@@ -7628,6 +7736,14 @@ function akuedukHubPage() { return geoHubPage(akd, 'akueduk', AKUEDUK_CFG); }
 function akuedukRegionPage(r) { return geoRegionPage(r, akd, 'akueduk', AKUEDUK_CFG); }
 function akuedukPage(x, sum) { return geoItemPage(x, sum, akd, 'akueduk', AKUEDUK_CFG); }
 function akuedukNotFound(q) { return geoNotFound('akueduk', AKUEDUK_CFG, q); }
+
+// ── RAILWAY STATIONS (/railway-stations) — paged, country-partitioned hub ──
+const RAILWAY_CFG = geoCfg({ base: 'railway-stations', listKey: 'STATIONS', inRegion: 'stationsInRegion', byCountry: 'stationByCountry', unit: 'railway stations', singular: 'railway station', titleCase: 'Railway Stations', icon: '\ud83d\ude89', navBlurb: `Profiles of the world's railway stations \u2014 where each stop is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable railway stations worldwide: location, country and what makes each station significant.', subMetric: 'location & rail heritage', intro: `These are the world's notable <b>railway stations</b> \u2014 grand terminuses, quiet rural halts and busy junctions that anchor cities and national networks. This library is large, so it is browsed by continent, then by country. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function railwayHubPage() { return geoHubCompactPage(stn, 'railway-stations', RAILWAY_CFG); }
+function railwayRegionPage(r) { return geoRegionCountryIndexPage(r, stn, 'railway-stations', RAILWAY_CFG); }
+function railwayPage(x, sum) { return geoItemPage(x, sum, stn, 'railway-stations', RAILWAY_CFG); }
+function railwayNotFound(q) { return geoNotFound('railway-stations', RAILWAY_CFG, q); }
+function railwayCountryPage(cs, p) { return geoCountryPagedPage(cs, stn, 'railway-stations', RAILWAY_CFG, p); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}

@@ -2,14 +2,7 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'banjaran', label: 'BANJARAN', title: 'Mountain Ranges of the World', var: 'RANGES', sing: 'MountainRange', finder: 'range', pfx: 'rng', cap: 'Ranges' },
-  { file: 'tanah-kubur', label: 'TANAH-KUBUR', title: 'Cemeteries of the World', var: 'CEMETERIES', sing: 'Cemetery', finder: 'cemetery', pfx: 'cem', cap: 'Cemeteries' },
-  { file: 'lapangan-terbang', label: 'LAPANGAN-TERBANG', title: 'Airports of the World', var: 'AIRPORTS', sing: 'Airport', finder: 'airport', pfx: 'apt', cap: 'Airports' },
-  { file: 'biara', label: 'BIARA', title: 'Monasteries of the World', var: 'MONASTERIES', sing: 'Monastery', finder: 'monastery', pfx: 'mst', cap: 'Monasteries' },
-  { file: 'patung', label: 'PATUNG', title: 'Statues of the World', var: 'STATUES', sing: 'Statue', finder: 'statue', pfx: 'stt', cap: 'Statues' },
-  { file: 'rumah-opera', label: 'RUMAH-OPERA', title: 'Opera Houses of the World', var: 'OPERAHOUSES', sing: 'OperaHouse', finder: 'opera', pfx: 'op', cap: 'OperaHouses' },
-  { file: 'gurun', label: 'GURUN', title: 'Deserts of the World', var: 'DESERTS', sing: 'Desert', finder: 'desert', pfx: 'des', cap: 'Deserts' },
-  { file: 'akueduk', label: 'AKUEDUK', title: 'Aqueducts of the World', var: 'AQUEDUCTS', sing: 'Aqueduct', finder: 'aqueduct', pfx: 'aqd', cap: 'Aqueducts' },
+  { file: 'stesen-kereta-api', label: 'STESEN-KERETA-API', title: 'Railway Stations of the World', var: 'STATIONS', sing: 'RailwayStation', finder: 'station', pfx: 'rsk', cap: 'Stations' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;

@@ -24,7 +24,7 @@ function get(url, headers) {
       if (res.statusCode !== 200) { res.resume(); return reject(new Error('HTTP ' + res.statusCode)); }
       let size = 0; const chunks = [];
       res.on('data', (d) => { size += d.length; if (size > 32 * 1024 * 1024) req.destroy(new Error('too big')); chunks.push(d); });
-      res.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { reject(e); } });
+      res.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8').replace(/[\u0000-\u001F]+/g, ' '))); } catch (e) { reject(e); } });
     });
     req.setTimeout(180000, () => req.destroy(new Error('timeout')));
     req.on('error', reject);
