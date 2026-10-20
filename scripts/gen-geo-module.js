@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'benteng-tanjung', label: 'PROMONTORY-FORTS', title: 'Promontory Forts of the World', var: 'PROMFORTS', sing: 'PromontoryFort', finder: 'promfort', finders: 'promontoryFortsInRegion', pfx: 'pf', cap: 'PromontoryForts' },
-  { file: 'penanda-sempadan', label: 'BOUNDARY-MARKERS', title: 'Boundary Markers of the World', var: 'BOUNDARYMARKERS', sing: 'BoundaryMarker', finder: 'boundarymarker', finders: 'boundaryMarkersInRegion', pfx: 'bm', cap: 'BoundaryMarkers' },
-  { file: 'cairn', label: 'CAIRNS', title: 'Cairns of the World', var: 'CAIRNS', sing: 'Cairn', finder: 'cairn', finders: 'cairnsInRegion', pfx: 'ca', cap: 'Cairns' },
-  { file: 'lumbung-sepuluh', label: 'TITHE-BARNS', title: 'Tithe Barns of the World', var: 'TITHEBARNS', sing: 'TitheBarn', finder: 'tithebarn', finders: 'titheBarnsInRegion', pfx: 'tb', cap: 'TitheBarns' },
-  { file: 'kubur-laluan', label: 'PASSAGE-TOMBS', title: 'Passage Tombs of the World', var: 'PASSAGETOMBS', sing: 'PassageTomb', finder: 'passagetomb', finders: 'passageTombsInRegion', pfx: 'pt', cap: 'PassageTombs' },
-  { file: 'perapuk-kapur', label: 'LIME-KILNS', title: 'Lime Kilns of the World', var: 'LIMEKILNS', sing: 'LimeKiln', finder: 'limekiln', finders: 'limeKilnsInRegion', pfx: 'lk', cap: 'LimeKilns' },
-  { file: 'polje', label: 'POLJES', title: 'Poljes of the World', var: 'POLJES', sing: 'Polje', finder: 'polje', finders: 'poljesInRegion', pfx: 'pj', cap: 'Poljes' },
-  { file: 'batu-mail', label: 'MILESTONES', title: 'Milestones of the World', var: 'MILESTONES', sing: 'Milestone', finder: 'milestone', finders: 'milestonesInRegion', pfx: 'mi', cap: 'Milestones' },
-  { file: 'menara-transmisi', label: 'TRANSMISSION-TOWERS', title: 'Transmission Towers of the World', var: 'TRANSMISSIONTOWERS', sing: 'TransmissionTower', finder: 'transmissiontower', finders: 'transmissionTowersInRegion', pfx: 'tt', cap: 'TransmissionTowers' },
+  { file: 'telaga', label: 'WATER-WELLS', title: 'Water Wells of the World', var: 'WATERWELLS', sing: 'WaterWell', finder: 'waterwell', finders: 'waterWellsInRegion', pfx: 'ww', cap: 'WaterWells' },
+  { file: 'gosong', label: 'SHOALS', title: 'Sandbanks and Shoals of the World', var: 'SHOALS', sing: 'Shoal', finder: 'shoal', finders: 'shoalsInRegion', pfx: 'sn', cap: 'Shoals' },
+  { file: 'cekungan-sungai', label: 'DRAINAGE-BASINS', title: 'Drainage Basins of the World', var: 'DRAINAGEBASINS', sing: 'DrainageBasin', finder: 'drainagebasin', finders: 'drainageBasinsInRegion', pfx: 'db', cap: 'DrainageBasins' },
+  { file: 'danau-kering', label: 'DRY-LAKES', title: 'Dry Lakes of the World', var: 'DRYLAKES', sing: 'DryLake', finder: 'drylake', finders: 'dryLakesInRegion', pfx: 'dl', cap: 'DryLakes' },
+  { file: 'dataran-banjir', label: 'FLOODPLAINS', title: 'Floodplains of the World', var: 'FLOODPLAINS', sing: 'Floodplain', finder: 'floodplain', finders: 'floodplainsInRegion', pfx: 'fp', cap: 'Floodplains' },
+  { file: 'kawah', label: 'VOLCANIC-CRATERS', title: 'Volcanic Craters of the World', var: 'VCRATERS', sing: 'VolcanicCrater', finder: 'crater', finders: 'volcanicCratersInRegion', pfx: 'vc', cap: 'VolcanicCraters' },
+  { file: 'angkat-kapal', label: 'BOAT-LIFTS', title: 'Boat Lifts of the World', var: 'BOATLIFTS', sing: 'BoatLift', finder: 'boatlift', finders: 'boatLiftsInRegion', pfx: 'bl', cap: 'BoatLifts' },
+  { file: 'lumpur-pasang', label: 'TIDAL-FLATS', title: 'Tidal Flats of the World', var: 'TIDALFLATS', sing: 'TidalFlat', finder: 'tidalflat', finders: 'tidalFlatsInRegion', pfx: 'tf', cap: 'TidalFlats' },
+  { file: 'ksar', label: 'KSARS', title: 'Ksars of the World', var: 'KSARS', sing: 'Ksar', finder: 'ksar', finders: 'ksarsInRegion', pfx: 'ks', cap: 'Ksars' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
