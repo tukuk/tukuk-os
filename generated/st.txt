@@ -1,0 +1,27 @@
+chat.ts
+editor.ts
+files.ts
+github.ts
+githubConnection.ts
+gitlabConnection.ts
+logs.ts
+mcp.ts
+netlify.ts
+plugins.spec.ts
+plugins.ts
+previews.ts
+profile.ts
+qrCodeStore.ts
+settings.ts
+streaming.ts
+supabase.ts
+tabConfigurationStore.ts
+terminal.ts
+theme.ts
+toolAccess.ts
+vercel.ts
+workbench-lifecycle.spec.ts
+workbench.spec.ts
+workbench.ts
+app/lib/stores/settings.ts:90:  const DEFAULT_ENABLED_PROVIDERS = ['OpenRouter', 'Anthropic', 'OpenAI', 'Google'];
+grep: app/lib/stores/selection*.ts: No such file or directory

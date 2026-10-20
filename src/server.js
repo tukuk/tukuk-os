@@ -72,6 +72,14 @@ const tb = require('./tanah-basah');
 const ap = require('./air-panas');
 const trk = require('./terumbu-karang');
 const kdf = require('./kaldera');
+const bd = require('./bendungan');
+const sk = require('./pencakar-langit');
+const jb = require('./jambatan');
+const ms = require('./mercu-suar');
+const tc = require('./terusan');
+const mn = require('./menara');
+const ph = require('./pelabuhan');
+const tw = require('./terowong');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1049,6 +1057,14 @@ geoRoutes('tanah-basah', tb, 'findWetland', tanahBasahHubPage, tanahBasahRegionP
 geoRoutes('air-panas', ap, 'findHotSpring', airPanasHubPage, airPanasRegionPage, airPanasPage, airPanasNotFound);
 geoRoutes('terumbu-karang', trk, 'findReef', terumbuKarangHubPage, terumbuKarangRegionPage, terumbuKarangPage, terumbuKarangNotFound);
 geoRoutes('kaldera', kdf, 'findCaldera', kalderaHubPage, kalderaRegionPage, kalderaPage, kalderaNotFound);
+geoRoutes('bendungan', bd, 'findDam', bendunganHubPage, bendunganRegionPage, bendunganPage, bendunganNotFound);
+geoRoutes('pencakar-langit', sk, 'findSkyscraper', pencakarLangitHubPage, pencakarLangitRegionPage, pencakarLangitPage, pencakarLangitNotFound);
+geoRoutes('jambatan', jb, 'findBridge', jambatanHubPage, jambatanRegionPage, jambatanPage, jambatanNotFound);
+geoRoutes('mercu-suar', ms, 'findLighthouse', mercuSuarHubPage, mercuSuarRegionPage, mercuSuarPage, mercuSuarNotFound);
+geoRoutes('terusan', tc, 'findCanal', terusanHubPage, terusanRegionPage, terusanPage, terusanNotFound);
+geoRoutes('menara', mn, 'findTower', menaraHubPage, menaraRegionPage, menaraPage, menaraNotFound);
+geoRoutes('pelabuhan', ph, 'findHarbour', pelabuhanHubPage, pelabuhanRegionPage, pelabuhanPage, pelabuhanNotFound);
+geoRoutes('terowong', tw, 'findTunnel', terowongHubPage, terowongRegionPage, terowongPage, terowongNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1556,7 +1572,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1896,6 +1912,14 @@ geoSitemap('tanah-basah', tb, 'WETLANDS');
 geoSitemap('air-panas', ap, 'HOTSPRINGS');
 geoSitemap('terumbu-karang', trk, 'REEFS');
 geoSitemap('kaldera', kdf, 'CALDERAS');
+geoSitemap('bendungan', bd, 'DAMS');
+geoSitemap('pencakar-langit', sk, 'SKYSCRAPERS');
+geoSitemap('jambatan', jb, 'BRIDGES');
+geoSitemap('mercu-suar', ms, 'LIGHTHOUSES');
+geoSitemap('terusan', tc, 'CANALS');
+geoSitemap('menara', mn, 'TOWERS');
+geoSitemap('pelabuhan', ph, 'HARBOURS');
+geoSitemap('terowong', tw, 'TUNNELS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7336,6 +7360,47 @@ function kalderaHubPage() { return geoHubPage(kdf, 'kaldera', KALDERA_CFG); }
 function kalderaRegionPage(r) { return geoRegionPage(r, kdf, 'kaldera', KALDERA_CFG); }
 function kalderaPage(x, sum) { return geoItemPage(x, sum, kdf, 'kaldera', KALDERA_CFG); }
 function kalderaNotFound(q) { return geoNotFound('kaldera', KALDERA_CFG, q); }
+
+const BENDUNGAN_CFG = geoCfg({ base: 'bendungan', listKey: 'DAMS', inRegion: 'damsInRegion', byCountry: 'damByCountry', unit: 'dams', singular: 'dam', titleCase: 'Dams', icon: '\ud83d\udea7', navBlurb: `Profiles of the world's dams \u2014 where each barrier stands, which country built it, and a plain-English introduction.`, seoDesc: 'Introductions to notable dams worldwide: location, country and what makes each dam significant.', subMetric: 'location & water control', intro: `These are the world's most notable <b>dams</b> \u2014 great concrete and earth barriers that tame rivers for hydropower, irrigation and flood control, some among the largest structures humans have ever built. Each profile shows where the dam stands, which country built it, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
+function bendunganHubPage() { return geoHubPage(bd, 'bendungan', BENDUNGAN_CFG); }
+function bendunganRegionPage(r) { return geoRegionPage(r, bd, 'bendungan', BENDUNGAN_CFG); }
+function bendunganPage(x, sum) { return geoItemPage(x, sum, bd, 'bendungan', BENDUNGAN_CFG); }
+function bendunganNotFound(q) { return geoNotFound('bendungan', BENDUNGAN_CFG, q); }
+const PENCAKAR_LANGIT_CFG = geoCfg({ base: 'pencakar-langit', listKey: 'SKYSCRAPERS', inRegion: 'skyscrapersInRegion', byCountry: 'skyscraperByCountry', unit: 'skyscrapers', singular: 'skyscraper', titleCase: 'Skyscrapers', icon: '\ud83c\udfd9\ufe0f', navBlurb: `Profiles of the world's skyscrapers \u2014 where each tower rises, which city it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable skyscrapers and tall buildings worldwide: location, country and what makes each tower significant.', subMetric: 'location & height', intro: `These are the world's most notable <b>skyscrapers</b> \u2014 tall habitable buildings that define skylines, from early steel-frame pioneers to supertall towers piercing the clouds. Each profile shows where the tower rises, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Building' });
+function pencakarLangitHubPage() { return geoHubPage(sk, 'pencakar-langit', PENCAKAR_LANGIT_CFG); }
+function pencakarLangitRegionPage(r) { return geoRegionPage(r, sk, 'pencakar-langit', PENCAKAR_LANGIT_CFG); }
+function pencakarLangitPage(x, sum) { return geoItemPage(x, sum, sk, 'pencakar-langit', PENCAKAR_LANGIT_CFG); }
+function pencakarLangitNotFound(q) { return geoNotFound('pencakar-langit', PENCAKAR_LANGIT_CFG, q); }
+const JAMBATAN_CFG = geoCfg({ base: 'jambatan', listKey: 'BRIDGES', inRegion: 'bridgesInRegion', byCountry: 'bridgeByCountry', unit: 'bridges', singular: 'bridge', titleCase: 'Bridges', icon: '\ud83c\udf09', navBlurb: `Profiles of the world's bridges \u2014 where each spans, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable bridges worldwide: location, country and what makes each bridge significant.', subMetric: 'location & engineering', intro: `These are the world's most notable <b>bridges</b> \u2014 spans of stone, iron and cable that carry roads, railways and footpaths across rivers and straits, many landmark feats of engineering. Each profile shows where the bridge spans, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Bridge' });
+function jambatanHubPage() { return geoHubPage(jb, 'jambatan', JAMBATAN_CFG); }
+function jambatanRegionPage(r) { return geoRegionPage(r, jb, 'jambatan', JAMBATAN_CFG); }
+function jambatanPage(x, sum) { return geoItemPage(x, sum, jb, 'jambatan', JAMBATAN_CFG); }
+function jambatanNotFound(q) { return geoNotFound('jambatan', JAMBATAN_CFG, q); }
+const MERCU_SUAR_CFG = geoCfg({ base: 'mercu-suar', listKey: 'LIGHTHOUSES', inRegion: 'lighthousesInRegion', byCountry: 'lighthouseByCountry', unit: 'lighthouses', singular: 'lighthouse', titleCase: 'Lighthouses', icon: '\ud83d\udca1', navBlurb: `Profiles of the world's lighthouses \u2014 where each light stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable lighthouses worldwide: location, country and what makes each light significant.', subMetric: 'location & navigation', intro: `These are the world's most notable <b>lighthouses</b> \u2014 towers and beacons raised on hazardous coasts to guide mariners, some standing for centuries as feats of masonry and engineering. Each profile shows where the light stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Lighthouse' });
+function mercuSuarHubPage() { return geoHubPage(ms, 'mercu-suar', MERCU_SUAR_CFG); }
+function mercuSuarRegionPage(r) { return geoRegionPage(r, ms, 'mercu-suar', MERCU_SUAR_CFG); }
+function mercuSuarPage(x, sum) { return geoItemPage(x, sum, ms, 'mercu-suar', MERCU_SUAR_CFG); }
+function mercuSuarNotFound(q) { return geoNotFound('mercu-suar', MERCU_SUAR_CFG, q); }
+const TERUSAN_CFG = geoCfg({ base: 'terusan', listKey: 'CANALS', inRegion: 'canalsInRegion', byCountry: 'canalByCountry', unit: 'canals', singular: 'canal', titleCase: 'Canals', icon: '\ud83d\udea2', navBlurb: `Profiles of the world's canals \u2014 where each waterway runs, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable canals and waterways worldwide: location, country and what makes each canal significant.', subMetric: 'location & waterways', intro: `These are the world's most notable <b>canals</b> \u2014 artificial waterways that moved trade and water long before railways, from historic navigation cuts to sea-linking engineering marvels like Suez and Panama. Each profile shows where the canal runs, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Waterway' });
+function terusanHubPage() { return geoHubPage(tc, 'terusan', TERUSAN_CFG); }
+function terusanRegionPage(r) { return geoRegionPage(r, tc, 'terusan', TERUSAN_CFG); }
+function terusanPage(x, sum) { return geoItemPage(x, sum, tc, 'terusan', TERUSAN_CFG); }
+function terusanNotFound(q) { return geoNotFound('terusan', TERUSAN_CFG, q); }
+const MENARA_CFG = geoCfg({ base: 'menara', listKey: 'TOWERS', inRegion: 'towersInRegion', byCountry: 'towerByCountry', unit: 'towers', singular: 'tower', titleCase: 'Towers', icon: '\ud83d\uddfc\ufe0f', navBlurb: `Profiles of the world's towers \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable towers worldwide: location, country and what makes each tower significant.', subMetric: 'location & structures', intro: `These are the world's most notable <b>towers</b> \u2014 tall, slender structures built to be seen and to reach upward, from ancient minarets and bell towers to modern transmission and observation spires. Each profile shows where the tower stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
+function menaraHubPage() { return geoHubPage(mn, 'menara', MENARA_CFG); }
+function menaraRegionPage(r) { return geoRegionPage(r, mn, 'menara', MENARA_CFG); }
+function menaraPage(x, sum) { return geoItemPage(x, sum, mn, 'menara', MENARA_CFG); }
+function menaraNotFound(q) { return geoNotFound('menara', MENARA_CFG, q); }
+const PELABUHAN_CFG = geoCfg({ base: 'pelabuhan', listKey: 'HARBOURS', inRegion: 'harboursInRegion', byCountry: 'harbourByCountry', unit: 'harbours', singular: 'harbour', titleCase: 'Harbours', icon: '\u2693', navBlurb: `Profiles of the world's harbours \u2014 where each port lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable harbours and natural ports worldwide: location, country and what makes each harbour significant.', subMetric: 'location & sea trade', intro: `These are the world's most notable <b>harbours</b> \u2014 sheltered anchorages where ships load, refit and take on fresh water, the natural seeds from which great port cities grew. Each profile shows where the harbour lies, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function pelabuhanHubPage() { return geoHubPage(ph, 'pelabuhan', PELABUHAN_CFG); }
+function pelabuhanRegionPage(r) { return geoRegionPage(r, ph, 'pelabuhan', PELABUHAN_CFG); }
+function pelabuhanPage(x, sum) { return geoItemPage(x, sum, ph, 'pelabuhan', PELABUHAN_CFG); }
+function pelabuhanNotFound(q) { return geoNotFound('pelabuhan', PELABUHAN_CFG, q); }
+const TEROWONG_CFG = geoCfg({ base: 'terowong', listKey: 'TUNNELS', inRegion: 'tunnelsInRegion', byCountry: 'tunnelByCountry', unit: 'tunnels', singular: 'tunnel', titleCase: 'Tunnels', icon: '\ud83d\ude87', navBlurb: `Profiles of the world's tunnels \u2014 where each bore runs, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable tunnels and underground passages worldwide: location, country and what makes each tunnel significant.', subMetric: 'location & engineering', intro: `These are the world's most notable <b>tunnels</b> \u2014 engineered underground and undersea passages that bore through mountains and beneath straits to speed roads, railways and water. Each profile shows where the tunnel runs, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Tunnel' });
+function terowongHubPage() { return geoHubPage(tw, 'terowong', TEROWONG_CFG); }
+function terowongRegionPage(r) { return geoRegionPage(r, tw, 'terowong', TEROWONG_CFG); }
+function terowongPage(x, sum) { return geoItemPage(x, sum, tw, 'terowong', TEROWONG_CFG); }
+function terowongNotFound(q) { return geoNotFound('terowong', TEROWONG_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}

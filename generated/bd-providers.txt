@@ -1,0 +1,4 @@
+app/components/chat/ChatBox.tsx
+app/components/chat/ModelSelector.tsx
+app/components/chat/Chat.client.tsx
+app/components/chat/BaseChat.tsx

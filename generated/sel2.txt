@@ -1,0 +1,6 @@
+app/lib/services/importExportService.ts
+app/lib/.server/llm/stream-text.ts
+app/components/chat/GitCloneButton.tsx
+app/components/chat/ModelSelector.tsx
+app/components/chat/Chat.client.tsx
+=== defaults in workbench/chat store ===

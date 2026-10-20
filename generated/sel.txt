@@ -1,0 +1,5 @@
+grep: app/hooks/*.ts*: No such file or directory
+app/components/chat/ModelSelector.tsx:363:          const selectedProvider = filteredProviders[focusedProviderIndex];
+app/components/chat/ModelSelector.tsx:366:            setProvider(selectedProvider);
+app/components/chat/ModelSelector.tsx:368:            const firstModel = modelList.find((m) => m.provider === selectedProvider.name);
+ls: cannot access 'app/hooks': No such file or directory

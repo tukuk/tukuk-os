@@ -1,0 +1,22 @@
+145:      const savedModel = Cookies.get('selectedModel');
+148:    const [provider, setProvider] = useState(() => {
+149:      const savedProvider = Cookies.get('selectedProvider');
+348:          provider: provider.name,
+620:      // console.log(prompt, searchParams, model, provider);
+628:            text: `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${prompt}`,
+632:    }, [model, provider, searchParams]);
+765:        provider: provider.name,
+780:          provider: provider.name,
+823:          provider: provider.name,
+831:          provider: provider.name,
+836:      [provider.name, stop],
+964:            provider,
+980:              const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
+984:                text: `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${userMessage}\n\nOriginal request:\n${finalMessageContent}`,
+1018:        const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
+1051:        const messageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${userUpdateArtifact}${finalMessageContent}`;
+1057:        const messageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
+1127:      Cookies.set('selectedModel', newModel, { expires: 30 });
+1132:      Cookies.set('selectedProvider', newProvider.name, { expires: 30 });
+1151:        provider={provider}
+1186:            provider,

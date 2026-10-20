@@ -1,0 +1,5 @@
+1:import { LLMManager } from '~/lib/modules/llm/manager';
+2:import type { Template } from '~/types/template';
+11:export const DEFAULT_MODEL = 'tukuk-agent';
+21:const llmManager = LLMManager.getInstance(import.meta.env);
+24:export const DEFAULT_PROVIDER = llmManager.getDefaultProvider();

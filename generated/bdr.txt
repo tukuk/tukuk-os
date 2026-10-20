@@ -1,0 +1,63 @@
+app/lib/runtime:
+__snapshots__
+action-runner.spec.ts
+action-runner.ts
+enhanced-message-parser.ts
+message-parser.spec.ts
+message-parser.ts
+projectFileValidation.spec.ts
+projectFileValidation.ts
+projectMcp.shared.spec.ts
+projectMcp.shared.ts
+projectMcp.spec.ts
+projectMcp.ts
+ripgrep.ts
+ripgrep.worker.ts
+ripgrepClient.ts
+
+app/lib/stores:
+chat.ts
+editor.ts
+files.ts
+github.ts
+githubConnection.ts
+gitlabConnection.ts
+logs.ts
+mcp.ts
+netlify.ts
+plugins.spec.ts
+plugins.ts
+previews.ts
+profile.ts
+qrCodeStore.ts
+settings.ts
+streaming.ts
+supabase.ts
+tabConfigurationStore.ts
+terminal.ts
+theme.ts
+toolAccess.ts
+vercel.ts
+workbench-lifecycle.spec.ts
+workbench.spec.ts
+workbench.ts
+5:import type { ProviderInfo } from '~/types/model';
+84:  model?: string;
+85:  setModel?: (model: string) => void;
+86:  provider?: ProviderInfo;
+87:  setProvider?: (provider: ProviderInfo) => void;
+88:  modelList: ModelInfo[];
+89:  providerList: ProviderInfo[];
+91:  modelLoading?: string;
+94:// Helper function to determine if a model is likely free
+95:const isModelLikelyFree = (model: ModelInfo, providerName?: string): boolean => {
+96:  if (providerName === 'OpenRouter') {
+97:    return model.isFree ?? (model.name.endsWith(':free') || model.name === 'openrouter/free');
+101:  if (model.name.toLowerCase().includes('free') || model.label.toLowerCase().includes('free')) {
+109:  model,
+111:  provider,
+113:  modelList,
+114:  providerList,
+115:  modelLoading,
+117:  const [modelSearchQuery, setModelSearchQuery] = useState('');
+121:  const modelSearchInputRef = useRef<HTMLInputElement>(null);

@@ -1,0 +1,80 @@
+import { BaseProvider } from './base-provider';
+import { setEnv } from './env';
+import * as providers from './registry';
+import type { ModelInfo, ProviderInfo } from './types';
+import type { IProviderSetting } from '~/types/model';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('LLMManager');
+
+/*
+ * Providers exposed to the app. Every other provider in ./registry stays
+ * unregistered, so its models never reach the model picker.
+ */
+const ENABLED_PROVIDERS = new Set([
+  'Tukuk',
+  'OpenRouter',
+  'Anthropic',
+  'OpenAI',
+  'Google',
+  'Groq',
+  'HuggingFace',
+  'Cohere',
+  'Mistral',
+  'Perplexity',
+  'Deepseek',
+  'xAI',
+  'Together',
+  'Fireworks',
+  'Cerebras',
+  'AmazonBedrock',
+  'Github',
+  'Moonshot',
+  'Hyperbolic',
+  'Z.ai',
+  'Ollama',
+  'LMStudio',
+  'OpenAILike',
+]);
+
+export class LLMManager {
+  private static _instance: LLMManager;
+  private _providers: Map<string, BaseProvider> = new Map();
+  private _modelList: ModelInfo[] = [];
+  private _env: Record<string, string> = {};
+
+  private constructor(_env: Record<string, string>) {
+    this._registerProvidersFromDirectory();
+    this._env = _env;
+    setEnv(_env);
+  }
+
+  static getInstance(env: Record<string, string> = {}): LLMManager {
+    if (!LLMManager._instance) {
+      LLMManager._instance = new LLMManager(env);
+    } else if (Object.keys(env).length > 0) {
+      // Update env on subsequent calls so Cloudflare Workers get fresh bindings
+      LLMManager._instance._env = env;
+      setEnv(env);
+    }
+
+    return LLMManager._instance;
+  }
+  get env() {
+    return this._env;
+  }
+
+  private async _registerProvidersFromDirectory() {
+    try {
+      /*
+       * Dynamically import all files from the providers directory
+       * const providerModules = import.meta.glob('./providers/*.ts', { eager: true });
+       */
+
+      // Look for exported classes that extend BaseProvider
+      for (const exportedItem of Object.values(providers)) {
+        if (typeof exportedItem === 'function' && exportedItem.prototype instanceof BaseProvider) {
+          const provider = new exportedItem();
+
+          if (!ENABLED_PROVIDERS.has(provider.name)) {
+            continue;

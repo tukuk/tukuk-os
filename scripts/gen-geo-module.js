@@ -2,12 +2,14 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'waduk', label: 'WADUK', title: 'Reservoirs of the World', var: 'RESERVOIRS', sing: 'Reservoir', finder: 'reservoir', pfx: 'wd', cap: 'Reservoirs' },
-  { file: 'fjord', label: 'FJORD', title: 'Fjords of the World', var: 'FJORDS', sing: 'Fjord', finder: 'fjord', pfx: 'fj', cap: 'Fjords' },
-  { file: 'tanah-basah', label: 'TANAH-BASAH', title: 'Wetlands of the World', var: 'WETLANDS', sing: 'Wetland', finder: 'wetland', pfx: 'tb', cap: 'Wetlands' },
-  { file: 'air-panas', label: 'AIR-PANAS', title: 'Hot Springs of the World', var: 'HOTSPRINGS', sing: 'HotSpring', finder: 'hotSpring', pfx: 'hp', cap: 'HotSprings' },
-  { file: 'terumbu-karang', label: 'TERUMBU-KARANG', title: 'Coral Reefs of the World', var: 'REEFS', sing: 'Reef', finder: 'reef', pfx: 'rf', cap: 'Reefs' },
-  { file: 'kaldera', label: 'KALDERA', title: 'Calderas of the World', var: 'CALDERAS', sing: 'Caldera', finder: 'caldera', pfx: 'kdf', cap: 'Calderas' },
+  { file: 'bendungan', label: 'BENDUNGAN', title: 'Dams of the World', var: 'DAMS', sing: 'Dam', finder: 'dam', pfx: 'dm', cap: 'Dams' },
+  { file: 'pencakar-langit', label: 'PENCAKAR-LANGIT', title: 'Skyscrapers of the World', var: 'SKYSCRAPERS', sing: 'Skyscraper', finder: 'skyscraper', pfx: 'skys', cap: 'Skyscrapers' },
+  { file: 'jambatan', label: 'JAMBATAN', title: 'Bridges of the World', var: 'BRIDGES', sing: 'Bridge', finder: 'bridge', pfx: 'jb', cap: 'Bridges' },
+  { file: 'mercu-suar', label: 'MERCU-SUAR', title: 'Lighthouses of the World', var: 'LIGHTHOUSES', sing: 'Lighthouse', finder: 'lighthouse', pfx: 'lht', cap: 'Lighthouses' },
+  { file: 'terusan', label: 'TERUSAN', title: 'Canals of the World', var: 'CANALS', sing: 'Canal', finder: 'canal', pfx: 'cn', cap: 'Canals' },
+  { file: 'menara', label: 'MENARA', title: 'Towers of the World', var: 'TOWERS', sing: 'Tower', finder: 'tower', pfx: 'twr', cap: 'Towers' },
+  { file: 'pelabuhan', label: 'PELABUHAN', title: 'Harbours of the World', var: 'HARBOURS', sing: 'Harbour', finder: 'harbour', pfx: 'hb', cap: 'Harbours' },
+  { file: 'terowong', label: 'TEROWONG', title: 'Tunnels of the World', var: 'TUNNELS', sing: 'Tunnel', finder: 'tunnel', pfx: 'tn', cap: 'Tunnels' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
