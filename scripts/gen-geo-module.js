@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'dataran', label: 'DATARAN', title: 'Public Squares of the World', var: 'SQUARES', sing: 'Square', finder: 'square', pfx: 'sq', cap: 'Squares' },
-  { file: 'tambang', label: 'TAMBANG', title: 'Mines of the World', var: 'MINES', sing: 'Mine', finder: 'mine', pfx: 'mn', cap: 'Mines' },
-  { file: 'suaka-alam', label: 'SUAKA-ALAM', title: 'Nature Reserves of the World', var: 'NATURERESERVES', sing: 'NatureReserve', finder: 'naturereserve', pfx: 'nr', cap: 'NatureReserves' },
-  { file: 'pantai', label: 'PANTAI', title: 'Beaches of the World', var: 'BEACHES', sing: 'Beach', finder: 'beach', pfx: 'bc', cap: 'Beaches' },
-  { file: 'taman-riang', label: 'TAMAN-RIANG', title: 'Amusement Parks of the World', var: 'AMUSEMENTPARKS', sing: 'AmusementPark', finder: 'amusementpark', pfx: 'ap', cap: 'AmusementParks' },
-  { file: 'resort-ski', label: 'RESORT-SKI', title: 'Ski Resorts of the World', var: 'SKIRESORTS', sing: 'SkiResort', finder: 'skiresort', pfx: 'sr', cap: 'SkiResorts' },
-  { file: 'peringatan', label: 'PERINGATAN', title: 'Memorials of the World', var: 'MEMORIALS', sing: 'Memorial', finder: 'memorial', pfx: 'ml', cap: 'Memorials' },
-  { file: 'ranrungan', label: 'RANRUNGAN', title: 'Ancient Ruins of the World', var: 'RUINS', sing: 'Ruin', finder: 'ruin', pfx: 'rn', cap: 'Ruins' },
-  { file: 'kilang-anggur', label: 'KILANG-ANGGUR', title: 'Wineries of the World', var: 'WINERIES', sing: 'Winery', finder: 'winery', pfx: 'wr', cap: 'Wineries' },
+  { file: 'balai-bandar', label: 'BALAI-BANDAR', title: 'Town Halls of the World', var: 'TOWNHALLS', sing: 'TownHall', finder: 'townhall', pfx: 'thl', cap: 'TownHalls' },
+  { file: 'makam', label: 'MAKAM', title: 'Mausoleums of the World', var: 'MAUSOLEUMS', sing: 'Mausoleum', finder: 'mausoleum', pfx: 'mz', cap: 'Mausoleums' },
+  { file: 'kilang-bir', label: 'KILANG-BIR', title: 'Breweries of the World', var: 'BREWERIES', sing: 'Brewery', finder: 'brewery', pfx: 'brw', cap: 'Breweries' },
+  { file: 'kincir-air', label: 'KINCIR-AIR', title: 'Watermills of the World', var: 'WATERMILLS', sing: 'Watermill', finder: 'watermill', pfx: 'wml', cap: 'Watermills' },
+  { file: 'penyuling', label: 'PENYULING', title: 'Distilleries of the World', var: 'DISTILLERIES', sing: 'Distillery', finder: 'distillery', pfx: 'dst', cap: 'Distilleries' },
+  { file: 'basilika', label: 'BASILIKA', title: 'Basilicas of the World', var: 'BASILICAS', sing: 'Basilica', finder: 'basilica', pfx: 'bsl', cap: 'Basilicas' },
+  { file: 'viaduk', label: 'VIADUK', title: 'Viaducts of the World', var: 'VIADUCTS', sing: 'Viaduct', finder: 'viaduct', pfx: 'vid', cap: 'Viaducts' },
+  { file: 'geyser', label: 'GEYSER', title: 'Geysers of the World', var: 'GEYSERS', sing: 'Geyser', finder: 'geyser', pfx: 'gys', cap: 'Geysers' },
+  { file: 'terminal-feri', label: 'TERMINAL-FERI', title: 'Ferry Terminals of the World', var: 'FERRYPORTS', sing: 'FerryPort', finder: 'ferryport', pfx: 'fpt', cap: 'FerryPorts' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;

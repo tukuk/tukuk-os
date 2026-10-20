@@ -130,6 +130,15 @@ const rsk = require('./resort-ski');
 const prg = require('./peringatan');
 const rgg = require('./ranrungan');
 const kag = require('./kilang-anggur');
+const blb = require('./balai-bandar');
+const mkm = require('./makam');
+const klb = require('./kilang-bir');
+const kka = require('./kincir-air');
+const pny = require('./penyuling');
+const bsk = require('./basilika');
+const vdk = require('./viaduk');
+const gys = require('./geyser');
+const tfr = require('./terminal-feri');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1168,6 +1177,15 @@ geoRoutes('ski-resorts', rsk, 'findSkiResort', skiResortsHubPage, skiResortsRegi
 geoRoutes('memorials', prg, 'findMemorial', memorialsHubPage, memorialsRegionPage, memorialsPage, memorialsNotFound);
 geoRoutes('ruins', rgg, 'findRuin', ruinsHubPage, ruinsRegionPage, ruinsPage, ruinsNotFound);
 geoRoutes('wineries', kag, 'findWinery', wineriesHubPage, wineriesRegionPage, wineriesPage, wineriesNotFound);
+geoRoutes('town-halls', blb, 'findTownHall', townHallsHubPage, townHallsRegionPage, townHallsPage, townHallsNotFound);
+geoRoutes('mausoleums', mkm, 'findMausoleum', mausoleumsHubPage, mausoleumsRegionPage, mausoleumsPage, mausoleumsNotFound);
+geoRoutes('breweries', klb, 'findBrewery', breweriesHubPage, breweriesRegionPage, breweriesPage, breweriesNotFound);
+geoRoutes('watermills', kka, 'findWatermill', watermillsHubPage, watermillsRegionPage, watermillsPage, watermillsNotFound);
+geoRoutes('distilleries', pny, 'findDistillery', distilleriesHubPage, distilleriesRegionPage, distilleriesPage, distilleriesNotFound);
+geoRoutes('basilicas', bsk, 'findBasilica', basilicasHubPage, basilicasRegionPage, basilicasPage, basilicasNotFound);
+geoRoutes('viaducts', vdk, 'findViaduct', viaductsHubPage, viaductsRegionPage, viaductsPage, viaductsNotFound);
+geoRoutes('geysers', gys, 'findGeyser', geysersHubPage, geysersRegionPage, geysersPage, geysersNotFound);
+geoRoutes('ferry-terminals', tfr, 'findFerryPort', ferryTerminalsHubPage, ferryTerminalsRegionPage, ferryTerminalsPage, ferryTerminalsNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1675,7 +1693,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -2070,6 +2088,15 @@ geoSitemap('ski-resorts', rsk, 'SKIRESORTS');
 geoSitemap('memorials', prg, 'MEMORIALS');
 geoSitemap('ruins', rgg, 'RUINS');
 geoSitemap('wineries', kag, 'WINERIES');
+geoSitemap('town-halls', blb, 'TOWNHALLS');
+geoSitemap('mausoleums', mkm, 'MAUSOLEUMS');
+geoSitemap('breweries', klb, 'BREWERIES');
+geoSitemap('watermills', kka, 'WATERMILLS');
+geoSitemap('distilleries', pny, 'DISTILLERIES');
+geoSitemap('basilicas', bsk, 'BASILICAS');
+geoSitemap('viaducts', vdk, 'VIADUCTS');
+geoSitemap('geysers', gys, 'GEYSERS');
+geoSitemap('ferry-terminals', tfr, 'FERRYPORTS');
 geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
 geoSitemap('settlements', stl, 'SETTLEMENTS');
@@ -7929,6 +7956,69 @@ function wineriesHubPage() { return geoHubPage(kag, 'wineries', WINERIES_CFG); }
 function wineriesRegionPage(r) { return geoRegionPage(r, kag, 'wineries', WINERIES_CFG); }
 function wineriesPage(x, sum) { return geoItemPage(x, sum, kag, 'wineries', WINERIES_CFG); }
 function wineriesNotFound(q) { return geoNotFound('wineries', WINERIES_CFG, q); }
+
+// ── TOWN HALLS (/town-halls) — simple geo factory ──
+const TOWNHALLS_CFG = geoCfg({ base: 'town-halls', listKey: 'TOWNHALLS', inRegion: 'townhallsInRegion', byCountry: 'townhallByCountry', unit: 'town halls', singular: 'town hall', titleCase: 'Town Halls', icon: '\ud83c\udfdb\ufe0f', navBlurb: `Profiles of notable town halls \u2014 where each civic building lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable town halls and city halls worldwide: location, country and civic architecture.', subMetric: 'civic building & country', intro: `These are notable <b>town halls</b> \u2014 the grand council chambers and civic seats at the heart of town governance, from medieval Flemish cloth halls to modern municipal buildings. Each profile shows where the hall is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function townHallsHubPage() { return geoHubPage(blb, 'town-halls', TOWNHALLS_CFG); }
+function townHallsRegionPage(r) { return geoRegionPage(r, blb, 'town-halls', TOWNHALLS_CFG); }
+function townHallsPage(x, sum) { return geoItemPage(x, sum, blb, 'town-halls', TOWNHALLS_CFG); }
+function townHallsNotFound(q) { return geoNotFound('town-halls', TOWNHALLS_CFG, q); }
+
+// ── MAUSOLEUMS (/mausoleums) — simple geo factory ──
+const MAUSOLEUMS_CFG = geoCfg({ base: 'mausoleums', listKey: 'MAUSOLEUMS', inRegion: 'mausoleumsInRegion', byCountry: 'mausoleumByCountry', unit: 'mausoleums', singular: 'mausoleum', titleCase: 'Mausoleums', icon: '\ud83d\uddff', navBlurb: `Profiles of notable mausoleums \u2014 where each tomb lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable mausoleums and tomb monuments worldwide: location, country and funerary architecture.', subMetric: 'monumental tomb & country', intro: `These are notable <b>mausoleums</b> \u2014 monumental tombs and burial chambers that house the dead, from ancient royal mausolea to grand imperial and private memorials. Each profile shows where the mausoleum is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function mausoleumsHubPage() { return geoHubPage(mkm, 'mausoleums', MAUSOLEUMS_CFG); }
+function mausoleumsRegionPage(r) { return geoRegionPage(r, mkm, 'mausoleums', MAUSOLEUMS_CFG); }
+function mausoleumsPage(x, sum) { return geoItemPage(x, sum, mkm, 'mausoleums', MAUSOLEUMS_CFG); }
+function mausoleumsNotFound(q) { return geoNotFound('mausoleums', MAUSOLEUMS_CFG, q); }
+
+// ── BREWERIES (/breweries) — simple geo factory ──
+const BREWERIES_CFG = geoCfg({ base: 'breweries', listKey: 'BREWERIES', inRegion: 'brewerysInRegion', byCountry: 'breweryByCountry', unit: 'breweries', singular: 'brewery', titleCase: 'Breweries', icon: '\ud83c\udf7a', navBlurb: `Profiles of notable breweries \u2014 where each brewery lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable breweries worldwide: location, country and what makes each brewing house significant.', subMetric: 'brewing house & country', intro: `These are notable <b>breweries</b> \u2014 historic monastic houses, pioneering industrial plants and renowned craft makers that define beer traditions across the world. Each profile shows where the brewery is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function breweriesHubPage() { return geoHubPage(klb, 'breweries', BREWERIES_CFG); }
+function breweriesRegionPage(r) { return geoRegionPage(r, klb, 'breweries', BREWERIES_CFG); }
+function breweriesPage(x, sum) { return geoItemPage(x, sum, klb, 'breweries', BREWERIES_CFG); }
+function breweriesNotFound(q) { return geoNotFound('breweries', BREWERIES_CFG, q); }
+
+// ── WATERMILLS (/watermills) — simple geo factory ──
+const WATERMILLS_CFG = geoCfg({ base: 'watermills', listKey: 'WATERMILLS', inRegion: 'watermillsInRegion', byCountry: 'watermillByCountry', unit: 'watermills', singular: 'watermill', titleCase: 'Watermills', icon: '\ud83d\udca7', navBlurb: `Profiles of notable watermills \u2014 where each mill lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable watermills worldwide: location, country and the history of water-powered milling.', subMetric: 'historic mill & country', intro: `These are notable <b>watermills</b> \u2014 mills driven by river and stream power that ground grain and drove industry for centuries, many surviving as heritage landmarks. Each profile shows where the mill is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function watermillsHubPage() { return geoHubPage(kka, 'watermills', WATERMILLS_CFG); }
+function watermillsRegionPage(r) { return geoRegionPage(r, kka, 'watermills', WATERMILLS_CFG); }
+function watermillsPage(x, sum) { return geoItemPage(x, sum, kka, 'watermills', WATERMILLS_CFG); }
+function watermillsNotFound(q) { return geoNotFound('watermills', WATERMILLS_CFG, q); }
+
+// ── DISTILLERIES (/distilleries) — simple geo factory ──
+const DISTILLERIES_CFG = geoCfg({ base: 'distilleries', listKey: 'DISTILLERIES', inRegion: 'distillerysInRegion', byCountry: 'distilleryByCountry', unit: 'distilleries', singular: 'distillery', titleCase: 'Distilleries', icon: '\u2697\ufe0f', navBlurb: `Profiles of notable distilleries \u2014 where each distillery lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable distilleries worldwide: location, country and what makes each spirit producer renowned.', subMetric: 'spirit distillery & country', intro: `These are notable <b>distilleries</b> \u2014 the whisky, brandy and spirit houses whose stills and maturing warehouses define regional liquors. Each profile shows where the distillery is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function distilleriesHubPage() { return geoHubPage(pny, 'distilleries', DISTILLERIES_CFG); }
+function distilleriesRegionPage(r) { return geoRegionPage(r, pny, 'distilleries', DISTILLERIES_CFG); }
+function distilleriesPage(x, sum) { return geoItemPage(x, sum, pny, 'distilleries', DISTILLERIES_CFG); }
+function distilleriesNotFound(q) { return geoNotFound('distilleries', DISTILLERIES_CFG, q); }
+
+// ── BASILICAS (/basilicas) — simple geo factory ──
+const BASILICAS_CFG = geoCfg({ base: 'basilicas', listKey: 'BASILICAS', inRegion: 'basilicasInRegion', byCountry: 'basilicaByCountry', unit: 'basilicas', singular: 'basilica', titleCase: 'Basilicas', icon: '\u26ea', navBlurb: `Profiles of notable basilicas \u2014 where each church lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable basilicas worldwide: location, country and what makes each great church significant.', subMetric: 'major church & country', intro: `These are notable <b>basilicas</b> \u2014 churches granted special prominence, from ancient Roman basilicas to great pilgrimage cathedrals of Christendom. Each profile shows where the basilica is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'PlaceOfWorship' });
+function basilicasHubPage() { return geoHubPage(bsk, 'basilicas', BASILICAS_CFG); }
+function basilicasRegionPage(r) { return geoRegionPage(r, bsk, 'basilicas', BASILICAS_CFG); }
+function basilicasPage(x, sum) { return geoItemPage(x, sum, bsk, 'basilicas', BASILICAS_CFG); }
+function basilicasNotFound(q) { return geoNotFound('basilicas', BASILICAS_CFG, q); }
+
+// ── VIADUCTS (/viaducts) — simple geo factory ──
+const VIADUCTS_CFG = geoCfg({ base: 'viaducts', listKey: 'VIADUCTS', inRegion: 'viaductsInRegion', byCountry: 'viaductByCountry', unit: 'viaducts', singular: 'viaduct', titleCase: 'Viaducts', icon: '\ud83c\udf09', navBlurb: `Profiles of notable viaducts \u2014 where each structure lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable viaducts worldwide: location, country and what makes each high crossing remarkable.', subMetric: 'engineering crossing & country', intro: `These are notable <b>viaducts</b> \u2014 long elevated crossings that carry roads and railways over valleys, gorges and waterways, many feats of pioneering engineering. Each profile shows where the viaduct is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Bridge' });
+function viaductsHubPage() { return geoHubPage(vdk, 'viaducts', VIADUCTS_CFG); }
+function viaductsRegionPage(r) { return geoRegionPage(r, vdk, 'viaducts', VIADUCTS_CFG); }
+function viaductsPage(x, sum) { return geoItemPage(x, sum, vdk, 'viaducts', VIADUCTS_CFG); }
+function viaductsNotFound(q) { return geoNotFound('viaducts', VIADUCTS_CFG, q); }
+
+// ── GEYSERS (/geysers) — simple geo factory ──
+const GEYSERS_CFG = geoCfg({ base: 'geysers', listKey: 'GEYSERS', inRegion: 'geysersInRegion', byCountry: 'geyserByCountry', unit: 'geysers', singular: 'geyser', titleCase: 'Geysers', icon: '\u2668\ufe0f', navBlurb: `Profiles of notable geysers \u2014 where each geyser lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable geysers worldwide: location, country and the eruption behaviour of each hot spring.', subMetric: 'eruptive spring & country', intro: `These are notable <b>geysers</b> \u2014 hot springs that periodically erupt with jets of water and steam, found only in a handful of volcanic regions on Earth. Each profile shows where the geyser is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandformsExperience' });
+function geysersHubPage() { return geoHubPage(gys, 'geysers', GEYSERS_CFG); }
+function geysersRegionPage(r) { return geoRegionPage(r, gys, 'geysers', GEYSERS_CFG); }
+function geysersPage(x, sum) { return geoItemPage(x, sum, gys, 'geysers', GEYSERS_CFG); }
+function geysersNotFound(q) { return geoNotFound('geysers', GEYSERS_CFG, q); }
+
+// ── FERRY TERMINALS (/ferry-terminals) — simple geo factory ──
+const FERRYPORTS_CFG = geoCfg({ base: 'ferry-terminals', listKey: 'FERRYPORTS', inRegion: 'ferryportsInRegion', byCountry: 'ferryportByCountry', unit: 'ferry terminals', singular: 'ferry terminal', titleCase: 'Ferry Terminals', icon: '\u26f4\ufe0f', navBlurb: `Profiles of notable ferry terminals \u2014 where each port lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable ferry terminals and ports worldwide: location, country and the routes each serves.', subMetric: 'ferry port & country', intro: `These are notable <b>ferry terminals</b> \u2014 ports and docks where roll-on and passenger ferries load and link coasts, islands and continents across the world's waterways. Each profile shows where the terminal is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
+function ferryTerminalsHubPage() { return geoHubPage(tfr, 'ferry-terminals', FERRYPORTS_CFG); }
+function ferryTerminalsRegionPage(r) { return geoRegionPage(r, tfr, 'ferry-terminals', FERRYPORTS_CFG); }
+function ferryTerminalsPage(x, sum) { return geoItemPage(x, sum, tfr, 'ferry-terminals', FERRYPORTS_CFG); }
+function ferryTerminalsNotFound(q) { return geoNotFound('ferry-terminals', FERRYPORTS_CFG, q); }
 
 // ── RAILWAY STATIONS (/railway-stations) — paged, country-partitioned hub ──
 const RAILWAY_CFG = geoCfg({ base: 'railway-stations', listKey: 'STATIONS', inRegion: 'stationsInRegion', byCountry: 'stationByCountry', unit: 'railway stations', singular: 'railway station', titleCase: 'Railway Stations', icon: '\ud83d\ude89', navBlurb: `Profiles of the world's railway stations \u2014 where each stop is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable railway stations worldwide: location, country and what makes each station significant.', subMetric: 'location & rail heritage', intro: `These are the world's notable <b>railway stations</b> \u2014 grand terminuses, quiet rural halts and busy junctions that anchor cities and national networks. This library is large, so it is browsed by continent, then by country. Each profile shows where the station is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
