@@ -45,6 +45,7 @@ const pv = require('./proverbs');
 const sj = require('./sejarah');
 const kt = require('./kota');
 const wr = require('./warisan');
+const cg = require('./cagar');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -890,6 +891,20 @@ app.get('/warisan/:slug', async (req, res) => {
   res.status(200).type('html').send(warisanPage(s, sum));
 });
 
+// ── LALUAN KOMPLEKS CAGAR (/cagar*) — Protected Areas of the World, statik + wiki fail-open ─
+app.get('/cagar', (req, res) => res.status(200).type('html').send(cagarHubPage()));
+app.get('/cagar/:slug', async (req, res) => {
+  const a = cg.findArea(req.params.slug);
+  if (!a) {
+    const r = cg.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(cagarRegionPage(r));
+    return res.status(404).type('html').send(cagarNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await cg.fetchSummary(a.wiki); } catch {}
+  res.status(200).type('html').send(cagarPage(a, sum));
+});
+
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
@@ -1382,7 +1397,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1579,6 +1594,19 @@ app.get('/sitemap-warisan.xml', (req, res) => {
   const urls = [one('/warisan', '0.9')]
     .concat(wr.REGIONS.map((r) => one(`/warisan/${r.slug}`, '0.8')))
     .concat(wr.SITES.map((s) => one(`/warisan/${s.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP CAGAR — hab + setiap benua + setiap kawasan lindung ──
+app.get('/sitemap-cagar.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/cagar', '0.9')]
+    .concat(cg.REGIONS.map((r) => one(`/cagar/${r.slug}`, '0.8')))
+    .concat(cg.AREAS.map((a) => one(`/cagar/${a.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6577,6 +6605,133 @@ function warisanNotFound(q) {
     css: WR_CSS,
     body: `<p>We don’t have a profile for that site yet. Open <a href="/warisan">the full list of World Heritage sites</a> and browse by continent.</p>`,
   }, warisanNav());
+}
+
+// ── /cagar — Protected Areas of the World (senarai statik Wikidata + ringkasan Wikipedia fail-open) ──
+const CG_CSS = `.area-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
+.area-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
+.area-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
+.area-badge{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:2px 8px;margin-top:6px}
+.area-badge.National-park{background:rgba(46,160,67,.16);color:#5fd08a}
+.area-badge.Nature-reserve{background:rgba(76,141,255,.16);color:#7fb0ff}
+.area-badge.Biosphere-reserve{background:rgba(220,160,60,.16);color:#e2b765}
+.area-hero{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
+.area-hero img{border-radius:10px;border:1px solid var(--line);max-width:280px;width:100%;height:auto}
+.area-sum{font-size:1.02rem;line-height:1.7}
+@media(max-width:760px){.area-grid{grid-template-columns:1fr}}`;
+
+const AREA_ICON = { 'National Park': '🌲', 'Nature Reserve': '🦎', 'Biosphere Reserve': '🌐' };
+function areaSlugBadge(type) { return type.toLowerCase().replace(/\s+/g, '-'); }
+function areaCard(a) {
+  return `<div class="area-card"><h3><a href="/cagar/${a.slug}">${escapeHtml(a.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(a.country)}</p><span class="area-badge ${areaSlugBadge(a.type)}">${AREA_ICON[a.type] || '🌍'} ${escapeHtml(a.type)}</span></div>`;
+}
+function cagarNav() {
+  return worldNav('Protected Areas — tukuk.org/cagar', [{ href: '/cagar', icon: '🌲', name: 'All areas', blurb: 'Profiles of the world\u2019s national parks, nature reserves, and biosphere reserves \u2014 where they are, which country manages them, and what makes each one ecologically significant.' }
+  ].concat(cg.REGIONS.map((r) => ({ href: `/cagar/${r.slug}`, icon: '🌍', name: `${r} areas`, blurb: `${r.count} protected areas across ${r.name}, from savanna reserves to mountain parks.`}))));
+}
+
+function cagarHubPage() {
+  const sections = cg.REGION_ORDER.map((r) => {
+    const as = cg.areasInRegion(r);
+    if (!as.length) return '';
+    return `<h2 class="section-title" id="${cg.slugify(r)}"><a href="/cagar/${cg.slugify(r)}">${r}</a> <span class="meta">(${as.length} areas)</span></h2><div class="area-grid">${as.map(areaCard).join('')}</div>`;
+  }).join('');
+  const browse = `<p>${cg.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/cagar/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const legend = `<p><span class="area-badge National-park">🌲 National Park</span> government-managed wilderness &amp; recreation · <span class="area-badge Nature-reserve">🦎 Nature Reserve</span> strict biodiversity protection · <span class="area-badge Biosphere-reserve">🌐 Biosphere Reserve</span> UNESCO-recognised human-nature coexistence.</p>`;
+  const body = `<p>These are the world\u2019s most important <b>protected areas</b> \u2014 national parks, nature reserves and biosphere reserves that safeguard biodiversity, ecosystems and cultural landscapes. Each profile shows <em>where</em> the area sits, <em>which country</em> manages it, its <em>protection category</em>, and <em>what makes it ecologically special</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
+  <p>${cg.AREAS.length} protected areas from ${new Set(cg.AREAS.map((a) => a.country)).size} countries are covered below, grouped by continent. Open any name for its full profile.</p>
+  ${legend}
+  ${browse}
+  ${sections}
+  <p class="meta">Coordinates are approximate centres for reference. Area descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a> · <a href="/negara">World Countries</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Protected Areas of the World \u2014 Tukuk-OS',
+    description: `Profiles of ${cg.AREAS.length} national parks, nature reserves and biosphere reserves: location, country, protection category and ecological significance.`,
+    url: 'https://tukuk.org/cagar', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'Protected Areas of the World \u2014 National Parks & Reserves | Tukuk-OS',
+    desc: `Introductions to ${cg.AREAS.length} protected areas worldwide: national parks, nature reserves, biosphere reserves \u2014 location, country and ecological significance.`,
+    selfUrl: 'https://tukuk.org/cagar',
+    heroTitle: '\ud83c\udf32 Protected Areas', heroSub: `${cg.AREAS.length} national parks, reserves & biosphere areas \u00b7 location & ecology`,
+    ld, css: CG_CSS, body,
+  }, cagarNav());
+}
+
+function cagarRegionPage(region) {
+  const as = cg.areasInRegion(region.name);
+  const countries = [...new Set(as.map((a) => a.country))].sort((a, b) => a.localeCompare(b));
+  const grid = `<div class="area-grid">${as.map(areaCard).join('')}</div>`;
+  const other = cg.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/cagar/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/cagar">&larr; All areas</a></p>
+  <p>A profile for each of the <b>${as.length} protected areas in ${region.name}</b> \u2014 where the area sits, which country manages it, its protection category, and a plain-English introduction drawn from Wikipedia. These ${as.length} areas span ${countries.length} countries across the continent.</p>
+  ${grid}
+  <h2 class="section-title">Other continents</h2><p>${other}</p>
+  <p class="meta">Coordinates are approximate centres for reference. Area descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a>.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} Protected Areas \u2014 Tukuk-OS`,
+    description: `Profiles of ${as.length} protected areas in ${region.name}: location, country and ecological significance.`,
+    url: `https://tukuk.org/cagar/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${region.name} Protected Areas \u2014 National Parks & Reserves | Tukuk-OS`,
+    desc: `Introductions to ${as.length} protected areas in ${region.name} across ${countries.length} countries: national parks, nature reserves and biosphere reserves.`,
+    selfUrl: `https://tukuk.org/cagar/${region.slug}`,
+    heroTitle: `\ud83c\udf0d ${region.name} Protected Areas`, heroSub: `${as.length} areas · ${countries.length} countries · ecology & location`,
+    ld, css: CG_CSS, body,
+  }, cagarNav());
+}
+
+function cagarPage(a, sum) {
+  const coords = `${Math.abs(a.lat).toFixed(2)}\u00b0${a.lat >= 0 ? 'N' : 'S'}, ${Math.abs(a.lng).toFixed(2)}\u00b0${a.lng >= 0 ? 'E' : 'W'}`;
+  const mapHref = `https://www.openstreetmap.org/?mlat=${a.lat}&mlon=${a.lng}#map=11/${a.lat}/${a.lng}`;
+  const hero = sum && sum.thumb
+    ? `<div class="area-hero"><img src="${escapeHtml(sum.thumb)}" width="${sum.thumbW || 280}" height="${sum.thumbH || 280}" alt="${escapeHtml(a.name)}" loading="lazy" decoding="async"><div class="area-sum">${escapeHtml(sum.extract)}</div></div>`
+    : (sum && sum.extract ? `<p class="area-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(a.name)} is briefly reloading \u2014 the key facts below always show.</p>`);
+  const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
+  const siblings = cg.areasByCountry(a.countrySlug).filter((x) => x.slug !== a.slug).slice(0, 10);
+  const moreArea = siblings.length ? `<h2 class="section-title">More protected areas in ${escapeHtml(a.country)}</h2><p>${siblings.map((x) => `<a href="/cagar/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const rows = [
+    ['Country', `<a href="/negara/${a.countrySlug}">${escapeHtml(a.country)}</a>`],
+    ['Continent / region', escapeHtml(a.region)],
+    ['Protection type', `${AREA_ICON[a.type] || '\ud83c\udf0d'} ${escapeHtml(a.type)}`],
+    ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
+  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/cagar">&larr; All areas</a></p>
+  ${hero}${readMore}
+  <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
+  <p><b>${escapeHtml(a.name)}</b> is a ${escapeHtml(a.type.toLowerCase())} in <a href="/negara/${a.countrySlug}">${escapeHtml(a.country)}</a>, in ${escapeHtml(a.region)}. The details of why ${escapeHtml(a.name)} is ecologically important are described by the sourced introduction above (from Wikipedia).</p>
+  ${moreArea}
+  <p class="meta">Coordinates are an approximate area centre. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Place', name: a.name, description: (sum && sum.description) || `${a.type} in ${a.country}`, url: `https://tukuk.org/cagar/${a.slug}`,
+      containedInPlace: { '@type': 'Country', name: a.country }, additionalType: 'https://schema.org/TouristAttraction',
+      geo: { '@type': 'GeoCoordinates', latitude: a.lat, longitude: a.lng } },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Protected Areas', item: 'https://tukuk.org/cagar' },
+      { '@type': 'ListItem', position: 2, name: a.region, item: `https://tukuk.org/cagar/${cg.slugify(a.region)}` },
+      { '@type': 'ListItem', position: 3, name: a.name, item: `https://tukuk.org/cagar/${a.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  const ogImage = sum && sum.thumb ? sum.thumb : undefined;
+  return worldDoc({
+    title: `${a.name} \u2014 ${a.type} Profile | Tukuk-OS`,
+    desc: sum && sum.description ? `${a.name}, ${sum.description.toLowerCase()} \u2014 a ${a.type.toLowerCase()}: location, country and ecological introduction.` : `${a.name} is a ${a.type.toLowerCase()} in ${a.country}. Where it is, and a sourced introduction.`,
+    selfUrl: `https://tukuk.org/cagar/${a.slug}`,
+    heroTitle: `${AREA_ICON[a.type] || '\ud83c\udf0d'} ${escapeHtml(a.name)}`, heroSub: `${escapeHtml(a.country)} · ${escapeHtml(a.region)} · ${escapeHtml(a.type)} · ${escapeHtml(coords)}`,
+    ld, css: CG_CSS, body, ogImage,
+  }, cagarNav());
+}
+
+function cagarNotFound(q) {
+  return worldDoc({
+    title: 'Area not found \u2014 Protected Areas | Tukuk-OS',
+    desc: 'That protected area was not recognised \u2014 browse the full list of national parks and reserves instead.',
+    selfUrl: 'https://tukuk.org/cagar', robots: 'noindex,follow',
+    heroTitle: 'Area not found', heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    css: CG_CSS,
+    body: `<p>We don\u2019t have a profile for that area yet. Open <a href="/cagar">the full list of Protected Areas</a> and browse by continent.</p>`,
+  }, cagarNav());
 }
 
 // ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
