@@ -50,6 +50,7 @@ const gn = require('./gunung');
 const dn = require('./danau');
 const pl = require('./pulau');
 const sg = require('./sungai');
+const at = require('./air-terjun');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -951,6 +952,20 @@ app.get('/sungai/:slug', async (req, res) => {
   res.status(200).type('html').send(sungaiPage(r2, sum));
 });
 
+// ── LALUAN KOMPLEKS AIR TERJUN (/air-terjun*) — Waterfalls of the World ─
+app.get('/air-terjun', (req, res) => res.status(200).type('html').send(airTerjunHubPage()));
+app.get('/air-terjun/:slug', async (req, res) => {
+  const f = at.findFall(req.params.slug);
+  if (!f) {
+    const r = at.findRegion(req.params.slug);
+    if (r) return res.status(200).type('html').send(airTerjunRegionPage(r));
+    return res.status(404).type('html').send(airTerjunNotFound(req.params.slug));
+  }
+  let sum = null;
+  try { sum = await at.fetchSummary(f.wiki); } catch {}
+  res.status(200).type('html').send(airTerjunPage(f, sum));
+});
+
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
 app.get('/gunung/:slug', async (req, res) => {
@@ -1457,7 +1472,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1719,6 +1734,19 @@ app.get('/sitemap-sungai.xml', (req, res) => {
   const urls = [one('/sungai', '0.9')]
     .concat(sg.REGIONS.map((r) => one(`/sungai/${r.slug}`, '0.8')))
     .concat(sg.RIVERS.map((rv) => one(`/sungai/${rv.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP AIR TERJUN ──
+app.get('/sitemap-air-terjun.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/air-terjun', '0.9')]
+    .concat(at.REGIONS.map((r) => one(`/air-terjun/${r.slug}`, '0.8')))
+    .concat(at.FALLS.map((f) => one(`/air-terjun/${f.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -6999,6 +7027,24 @@ function sungaiHubPage() { return geoHubPage(sg, 'sungai', SUNGAI_CFG); }
 function sungaiRegionPage(r) { return geoRegionPage(r, sg, 'sungai', SUNGAI_CFG); }
 function sungaiPage(r2, sum) { return geoItemPage(r2, sum, sg, 'sungai', SUNGAI_CFG); }
 function sungaiNotFound(q) { return geoNotFound('sungai', SUNGAI_CFG, q); }
+const AIR_TERJUN_CFG = {
+  listKey: 'FALLS', inRegion: 'fallsInRegion', byCountry: 'fallsByCountry',
+  unit: 'waterfalls', singular: 'waterfall', titleCase: 'Waterfalls', icon: '\u27a4\ufe0f',
+  navLabel: 'Waterfalls \u2014 tukuk.org/air-terjun', navAll: 'All waterfalls',
+  navBlurb: 'Profiles of the world\u2019s waterfalls \u2014 where each cascade is, which country it belongs to, and a plain-English introduction.',
+  hubTitle: 'Waterfalls of the World \u2014 Tukuk-OS',
+  seoTitle: 'Waterfalls of the World \u2014 Profiles & Locations | Tukuk-OS',
+  seoDesc: 'Introductions to notable waterfalls worldwide: location, country and what makes each cascade significant.',
+  hero: '\ud83d\udca6 Waterfalls of the World', subMetric: 'location & hydrology',
+  intro: 'These are the world\u2019s most spectacular <b>waterfalls</b> \u2014 thundering plunges, tiered cascades and mist-shrouded drops that draw millions of visitors and define national parks. Each profile shows where the waterfall is, which country it belongs to, and a plain-English introduction from Wikipedia.',
+  footer: 'Coordinates are approximate waterfall locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/sungai">Rivers</a> \u00b7 <a href="/danau">Lakes</a> \u00b7 <a href="/gunung">Mountains</a> \u00b7 <a href="/pulau">Islands</a>.',
+  itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
+  ldType: 'Waterfall',
+};
+function airTerjunHubPage() { return geoHubPage(at, 'air-terjun', AIR_TERJUN_CFG); }
+function airTerjunRegionPage(r) { return geoRegionPage(r, at, 'air-terjun', AIR_TERJUN_CFG); }
+function airTerjunPage(f, sum) { return geoItemPage(f, sum, at, 'air-terjun', AIR_TERJUN_CFG); }
+function airTerjunNotFound(q) { return geoNotFound('air-terjun', AIR_TERJUN_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
