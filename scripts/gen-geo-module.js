@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'lokaliti', label: 'LOKALITI', title: 'Localities of the World', var: 'LOCALITIES', sing: 'Locality', finder: 'locality', finders: 'localitiesInRegion', pfx: 'lc', cap: 'Lokaliti' },
-  { file: 'petak-tanah', label: 'PETAK-TANAH', title: 'Townlands of the World', var: 'TOWNLANDS', sing: 'Townland', finder: 'townland', finders: 'townlandsInRegion', pfx: 'tl', cap: 'PetakTanah' },
-  { file: 'arkib', label: 'ARKIB', title: 'Archives of the World', var: 'ARCHIVES', sing: 'Archive', finder: 'archive', finders: 'archivesInRegion', pfx: 'ar', cap: 'Arkib' },
-  { file: 'rak-ais', label: 'RAK-AIS', title: 'Ice Shelves of the World', var: 'ICESHELVES', sing: 'IceShelf', finder: 'iceshelf', finders: 'iceShelvesInRegion', pfx: 'is', cap: 'RakAis' },
-  { file: 'pencawang', label: 'PENC-AWANG', title: 'Electrical Substations of the World', var: 'SUBSTATIONS', sing: 'Substation', finder: 'substation', finders: 'substationsInRegion', pfx: 'sb', cap: 'Pencawang' },
-  { file: 'kuil-api', label: 'KUIL-API', title: 'Fire Temples of the World', var: 'FIRETEMPLES', sing: 'FireTemple', finder: 'firetemple', finders: 'fireTemplesInRegion', pfx: 'ft', cap: 'KuilApi' },
-  { file: 'gunung-terasing', label: 'GUNUNG-TERASING', title: 'Inselbergs of the World', var: 'INSELBERGS', sing: 'Inselberg', finder: 'inselberg', finders: 'inselbergsInRegion', pfx: 'ib', cap: 'GunungTerasing' },
-  { file: 'lumbung', label: 'LUMBUNG', title: 'Granaries of the World', var: 'GRANARIES', sing: 'Granary', finder: 'granary', finders: 'granariesInRegion', pfx: 'gn', cap: 'Lumbung' },
-  { file: 'rumah-potong', label: 'RUMAH-POTONG', title: 'Abattoirs of the World', var: 'ABATTOIRS', sing: 'Abattoir', finder: 'abattoir', finders: 'abattoirsInRegion', pfx: 'ab', cap: 'RumahPotong' },
+  { file: 'jurang', label: 'CANYONS', title: 'Canyons and Gorges of the World', var: 'CANYONS', sing: 'Canyon', finder: 'canyon', finders: 'canyonsInRegion', pfx: 'cy', cap: 'Canyons' },
+  { file: 'medan-pasar', label: 'MARKET-SQUARES', title: 'Market Squares of the World', var: 'MARKETSQUARES', sing: 'MarketSquare', finder: 'marketsquare', finders: 'marketSquaresInRegion', pfx: 'ms', cap: 'MarketSquares' },
+  { file: 'salib-pasar', label: 'MARKET-CROSSES', title: 'Market Crosses of the World', var: 'MARKETCROSSES', sing: 'MarketCross', finder: 'marketcross', finders: 'marketCrossesInRegion', pfx: 'mcr', cap: 'MarketCrosses' },
+  { file: 'tanur-tinggi', label: 'BLAST-FURNACES', title: 'Blast Furnaces of the World', var: 'BLASTFURNACES', sing: 'BlastFurnace', finder: 'blastfurnace', finders: 'blastFurnacesInRegion', pfx: 'bf', cap: 'BlastFurnaces' },
+  { file: 'baptisteri', label: 'BAPTISTERIES', title: 'Baptisteries of the World', var: 'BAPTISTERIES', sing: 'Baptistery', finder: 'baptistery', finders: 'baptisteriesInRegion', pfx: 'bp', cap: 'Baptisteries' },
+  { file: 'gua-laut', label: 'SEA-CAVES', title: 'Sea Caves of the World', var: 'SEACAVES', sing: 'SeaCave', finder: 'seacave', finders: 'seaCavesInRegion', pfx: 'sc', cap: 'SeaCaves' },
+  { file: 'dok-kering', label: 'DRY-DOCKS', title: 'Dry Docks of the World', var: 'DRYDOCKS', sing: 'DryDock', finder: 'drydock', finders: 'dryDocksInRegion', pfx: 'dd', cap: 'DryDocks' },
+  { file: 'kincir-pasang', label: 'TIDE-MILLS', title: 'Tide Mills of the World', var: 'TIDEMILLS', sing: 'TideMill', finder: 'tidemill', finders: 'tideMillsInRegion', pfx: 'tm', cap: 'TideMills' },
+  { file: 'pabrik-gula', label: 'SUGAR-MILLS', title: 'Sugar Mills of the World', var: 'SUGARMILLS', sing: 'SugarMill', finder: 'sugarmill', finders: 'sugarMillsInRegion', pfx: 'sg', cap: 'SugarMills' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
