@@ -2,7 +2,6 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'takungan-air', label: 'TAKUNGAN-AIR', title: 'Reservoirs of the World', var: 'RESERVOIRS', sing: 'Reservoir', finder: 'reservoir', finders: 'reservoirsInRegion', pfx: 'ra', cap: 'Reservoirs' },
   { file: 'stesen-penyelamat', label: 'STESEN-PENYELAMAT', title: 'Lifeboat Stations of the World', var: 'LIFEBOATSTATIONS', sing: 'LifeboatStation', finder: 'lifeboatstation', finders: 'lifeboatStationsInRegion', pfx: 'lb', cap: 'LifeboatStations' },
   { file: 'tembok-kota', label: 'TEMBOK-KOTA', title: 'City Walls of the World', var: 'CITYWALLS', sing: 'CityWall', finder: 'citywall', finders: 'cityWallsInRegion', pfx: 'cw', cap: 'CityWalls' },
   { file: 'bukit-luncur', label: 'BUKIT-LUNCUR', title: 'Ski Jumping Hills of the World', var: 'SKIJUMPINGHILLS', sing: 'SkiJumpingHill', finder: 'skijumpinghill', finders: 'skiJumpingHillsInRegion', pfx: 'sj', cap: 'SkiJumpingHills' },
