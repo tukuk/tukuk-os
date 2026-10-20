@@ -80,6 +80,15 @@ const tc = require('./terusan');
 const mn = require('./menara');
 const ph = require('./pelabuhan');
 const tw = require('./terowong');
+const gj = require('./gereja');
+const mus = require('./museum');
+const ta = require('./tapak-arkologi');
+const uv = require('./universiti');
+const sdm = require('./stadium');
+const ks = require('./kastil');
+const mj = require('./masjid');
+const mm = require('./monumen');
+const ktl = require('./katedral');
 const social = require('./social');
 const explore = require('./explore');
 const { rateLimit, requireApiKey } = require('./middleware');
@@ -1065,6 +1074,15 @@ geoRoutes('terusan', tc, 'findCanal', terusanHubPage, terusanRegionPage, terusan
 geoRoutes('menara', mn, 'findTower', menaraHubPage, menaraRegionPage, menaraPage, menaraNotFound);
 geoRoutes('pelabuhan', ph, 'findHarbour', pelabuhanHubPage, pelabuhanRegionPage, pelabuhanPage, pelabuhanNotFound);
 geoRoutes('terowong', tw, 'findTunnel', terowongHubPage, terowongRegionPage, terowongPage, terowongNotFound);
+geoRoutes('gereja', gj, 'findChurch', gerejaHubPage, gerejaRegionPage, gerejaPage, gerejaNotFound);
+geoRoutes('museum', mus, 'findMuseum', museumHubPage, museumRegionPage, museumPage, museumNotFound);
+geoRoutes('tapak-arkologi', ta, 'findArchaeologicalSite', tapakArkologiHubPage, tapakArkologiRegionPage, tapakArkologiPage, tapakArkologiNotFound);
+geoRoutes('universiti', uv, 'findUniversity', universitiHubPage, universitiRegionPage, universitiPage, universitiNotFound);
+geoRoutes('stadium', sdm, 'findStadium', stadiumHubPage, stadiumRegionPage, stadiumPage, stadiumNotFound);
+geoRoutes('kastil', ks, 'findCastle', kastilHubPage, kastilRegionPage, kastilPage, kastilNotFound);
+geoRoutes('masjid', mj, 'findMosque', masjidHubPage, masjidRegionPage, masjidPage, masjidNotFound);
+geoRoutes('monumen', mm, 'findMonument', monumenHubPage, monumenRegionPage, monumenPage, monumenNotFound);
+geoRoutes('katedral', ktl, 'findCathedral', katedralHubPage, katedralRegionPage, katedralPage, katedralNotFound);
 
 // ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
@@ -1572,7 +1590,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -1920,6 +1938,15 @@ geoSitemap('terusan', tc, 'CANALS');
 geoSitemap('menara', mn, 'TOWERS');
 geoSitemap('pelabuhan', ph, 'HARBOURS');
 geoSitemap('terowong', tw, 'TUNNELS');
+geoSitemap('gereja', gj, 'CHURCHES');
+geoSitemap('museum', mus, 'MUSEUMS');
+geoSitemap('tapak-arkologi', ta, 'SITES');
+geoSitemap('universiti', uv, 'UNIVERSITIES');
+geoSitemap('stadium', sdm, 'STADIUMS');
+geoSitemap('kastil', ks, 'CASTLES');
+geoSitemap('masjid', mj, 'MOSQUES');
+geoSitemap('monumen', mm, 'MONUMENTS');
+geoSitemap('katedral', ktl, 'CATHEDRALS');
 
 // ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
@@ -7401,6 +7428,52 @@ function terowongHubPage() { return geoHubPage(tw, 'terowong', TEROWONG_CFG); }
 function terowongRegionPage(r) { return geoRegionPage(r, tw, 'terowong', TEROWONG_CFG); }
 function terowongPage(x, sum) { return geoItemPage(x, sum, tw, 'terowong', TEROWONG_CFG); }
 function terowongNotFound(q) { return geoNotFound('terowong', TEROWONG_CFG, q); }
+
+const GEREJA_CFG = geoCfg({ base: 'gereja', listKey: 'CHURCHES', inRegion: 'churchsInRegion', byCountry: 'churchByCountry', unit: 'churches', singular: 'church', titleCase: 'Churches', icon: '\u26ea', navBlurb: `Profiles of the world's churches \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable churches worldwide: location, country and what makes each church significant.', subMetric: 'location & architecture', intro: `These are the world's most notable <b>churches</b> \u2014 places of Christian worship ranging from humble parish chapels to cathedrals and basilicas that took centuries to build, masterworks of Romanesque, Gothic and Baroque architecture. Each profile shows where the church stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Church' });
+function gerejaHubPage() { return geoHubPage(gj, 'gereja', GEREJA_CFG); }
+function gerejaRegionPage(r) { return geoRegionPage(r, gj, 'gereja', GEREJA_CFG); }
+function gerejaPage(x, sum) { return geoItemPage(x, sum, gj, 'gereja', GEREJA_CFG); }
+function gerejaNotFound(q) { return geoNotFound('gereja', GEREJA_CFG, q); }
+const MUSEUM_CFG = geoCfg({ base: 'museum', listKey: 'MUSEUMS', inRegion: 'museumsInRegion', byCountry: 'museumByCountry', unit: 'museums', singular: 'museum', titleCase: 'Museums', icon: '\ud83c\udfdb\ufe0f', navBlurb: `Profiles of the world's museums \u2014 where each collection is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable museums worldwide: location, country and what makes each museum significant.', subMetric: 'location & collections', intro: `These are the world's most notable <b>museums</b> \u2014 institutions that collect, preserve and exhibit art, history and science, from grand national galleries to specialized houses. Each profile shows where the museum is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Museum' });
+function museumHubPage() { return geoHubPage(mus, 'museum', MUSEUM_CFG); }
+function museumRegionPage(r) { return geoRegionPage(r, mus, 'museum', MUSEUM_CFG); }
+function museumPage(x, sum) { return geoItemPage(x, sum, mus, 'museum', MUSEUM_CFG); }
+function museumNotFound(q) { return geoNotFound('museum', MUSEUM_CFG, q); }
+const TAPAK_ARKOLOGI_CFG = geoCfg({ base: 'tapak-arkologi', listKey: 'SITES', inRegion: 'sitesInRegion', byCountry: 'siteByCountry', unit: 'archaeological sites', singular: 'archaeological site', titleCase: 'Archaeological Sites', icon: '\ud83e\uddff', navBlurb: `Profiles of the world's archaeological sites \u2014 where each lies, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable archaeological sites worldwide: location, country and what makes each site significant.', subMetric: 'location & prehistory', intro: `These are the world's most notable <b>archaeological sites</b> \u2014 excavated ruins, mounds and settlements that preserve the physical record of ancient cultures, from tell towns to ceremonial complexes. Each profile shows where the site lies, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Place' });
+function tapakArkologiHubPage() { return geoHubPage(ta, 'tapak-arkologi', TAPAK_ARKOLOGI_CFG); }
+function tapakArkologiRegionPage(r) { return geoRegionPage(r, ta, 'tapak-arkologi', TAPAK_ARKOLOGI_CFG); }
+function tapakArkologiPage(x, sum) { return geoItemPage(x, sum, ta, 'tapak-arkologi', TAPAK_ARKOLOGI_CFG); }
+function tapakArkologiNotFound(q) { return geoNotFound('tapak-arkologi', TAPAK_ARKOLOGI_CFG, q); }
+const UNIVERSITI_CFG = geoCfg({ base: 'universiti', listKey: 'UNIVERSITIES', inRegion: 'universitysInRegion', byCountry: 'universityByCountry', unit: 'universities', singular: 'university', titleCase: 'Universities', icon: '\ud83c\udf93', navBlurb: `Profiles of the world's universities \u2014 where each campus is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable universities worldwide: location, country and what makes each institution significant.', subMetric: 'location & education', intro: `These are the world's most notable <b>universities</b> \u2014 centers of higher learning and research, from medieval foundations like Bologna and Oxford to modern global institutions. Each profile shows where the university is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CollegeOrUniversity' });
+function universitiHubPage() { return geoHubPage(uv, 'universiti', UNIVERSITI_CFG); }
+function universitiRegionPage(r) { return geoRegionPage(r, uv, 'universiti', UNIVERSITI_CFG); }
+function universitiPage(x, sum) { return geoItemPage(x, sum, uv, 'universiti', UNIVERSITI_CFG); }
+function universitiNotFound(q) { return geoNotFound('universiti', UNIVERSITI_CFG, q); }
+const STADIUM_CFG = geoCfg({ base: 'stadium', listKey: 'STADIUMS', inRegion: 'stadiumsInRegion', byCountry: 'stadiumByCountry', unit: 'stadiums', singular: 'stadium', titleCase: 'Stadiums', icon: '\ud83c\udfdf\ufe0f', navBlurb: `Profiles of the world's stadiums \u2014 where each arena is, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable stadiums and sports venues worldwide: location, country and what makes each venue significant.', subMetric: 'location & sport', intro: `These are the world's most notable <b>stadiums</b> \u2014 large venues for sport and spectacle, cathedral-like bowls that host club derbies, concerts and opening ceremonies of the Olympic Games and World Cup. Each profile shows where the stadium is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'StadiumOrArena' });
+function stadiumHubPage() { return geoHubPage(sdm, 'stadium', STADIUM_CFG); }
+function stadiumRegionPage(r) { return geoRegionPage(r, sdm, 'stadium', STADIUM_CFG); }
+function stadiumPage(x, sum) { return geoItemPage(x, sum, sdm, 'stadium', STADIUM_CFG); }
+function stadiumNotFound(q) { return geoNotFound('stadium', STADIUM_CFG, q); }
+const KASTIL_CFG = geoCfg({ base: 'kastil', listKey: 'CASTLES', inRegion: 'castlesInRegion', byCountry: 'castleByCountry', unit: 'castles', singular: 'castle', titleCase: 'Castles', icon: '\ud83c\udff0', navBlurb: `Profiles of the world's castles \u2014 where each fortress stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable castles worldwide: location, country and what makes each castle significant.', subMetric: 'location & fortification', intro: `These are the world's most notable <b>castles</b> \u2014 fortified residences of nobility and royalty, ringed with walls, moats and keeps that dominated medieval landscapes and still define tourist routes today. Each profile shows where the castle stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
+function kastilHubPage() { return geoHubPage(ks, 'kastil', KASTIL_CFG); }
+function kastilRegionPage(r) { return geoRegionPage(r, ks, 'kastil', KASTIL_CFG); }
+function kastilPage(x, sum) { return geoItemPage(x, sum, ks, 'kastil', KASTIL_CFG); }
+function kastilNotFound(q) { return geoNotFound('kastil', KASTIL_CFG, q); }
+const MASJID_CFG = geoCfg({ base: 'masjid', listKey: 'MOSQUES', inRegion: 'mosquesInRegion', byCountry: 'mosqueByCountry', unit: 'mosques', singular: 'mosque', titleCase: 'Mosques', icon: '\ud83d\udd4c', navBlurb: `Profiles of the world's mosques \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable mosques worldwide: location, country and what makes each mosque significant.', subMetric: 'location & architecture', intro: `These are the world's most notable <b>mosques</b> \u2014 Islamic places of worship, from early hypostyle halls to imperial Ottoman domes and vast modern complexes, centering the spiritual and civic life of Muslim communities. Each profile shows where the mosque stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Mosque' });
+function masjidHubPage() { return geoHubPage(mj, 'masjid', MASJID_CFG); }
+function masjidRegionPage(r) { return geoRegionPage(r, mj, 'masjid', MASJID_CFG); }
+function masjidPage(x, sum) { return geoItemPage(x, sum, mj, 'masjid', MASJID_CFG); }
+function masjidNotFound(q) { return geoNotFound('masjid', MASJID_CFG, q); }
+const MONUMEN_CFG = geoCfg({ base: 'monumen', listKey: 'MONUMENTS', inRegion: 'monumentsInRegion', byCountry: 'monumentByCountry', unit: 'monuments', singular: 'monument', titleCase: 'Monuments', icon: '\ud83c\udfdf\ufe0f', navBlurb: `Profiles of the world's monuments \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable monuments and memorials worldwide: location, country and what makes each monument significant.', subMetric: 'location & commemoration', intro: `These are the world's most notable <b>monuments</b> \u2014 structures and statues raised to commemorate people, events and ideals, from triumphal arches and obelisks to war memorials and modern landmarks. Each profile shows where the monument stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
+function monumenHubPage() { return geoHubPage(mm, 'monumen', MONUMEN_CFG); }
+function monumenRegionPage(r) { return geoRegionPage(r, mm, 'monumen', MONUMEN_CFG); }
+function monumenPage(x, sum) { return geoItemPage(x, sum, mm, 'monumen', MONUMEN_CFG); }
+function monumenNotFound(q) { return geoNotFound('monumen', MONUMEN_CFG, q); }
+const KATEDRAL_CFG = geoCfg({ base: 'katedral', listKey: 'CATHEDRALS', inRegion: 'cathedralsInRegion', byCountry: 'cathedralByCountry', unit: 'cathedrals', singular: 'cathedral', titleCase: 'Cathedrals', icon: '\ud83d\udeda', navBlurb: `Profiles of the world's cathedrals \u2014 where each seat stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable cathedrals worldwide: location, country and what makes each cathedral significant.', subMetric: 'location & architecture', intro: `These are the world's most notable <b>cathedrals</b> \u2014 the principal churches of dioceses, often the architectural glory of their cities: soaring Gothic naves, domes and rose windows built over generations. Each profile shows where the cathedral stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Church' });
+function katedralHubPage() { return geoHubPage(ktl, 'katedral', KATEDRAL_CFG); }
+function katedralRegionPage(r) { return geoRegionPage(r, ktl, 'katedral', KATEDRAL_CFG); }
+function katedralPage(x, sum) { return geoItemPage(x, sum, ktl, 'katedral', KATEDRAL_CFG); }
+function katedralNotFound(q) { return geoNotFound('katedral', KATEDRAL_CFG, q); }
 
 // ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}

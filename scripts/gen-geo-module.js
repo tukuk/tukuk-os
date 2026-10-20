@@ -2,14 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'bendungan', label: 'BENDUNGAN', title: 'Dams of the World', var: 'DAMS', sing: 'Dam', finder: 'dam', pfx: 'dm', cap: 'Dams' },
-  { file: 'pencakar-langit', label: 'PENCAKAR-LANGIT', title: 'Skyscrapers of the World', var: 'SKYSCRAPERS', sing: 'Skyscraper', finder: 'skyscraper', pfx: 'skys', cap: 'Skyscrapers' },
-  { file: 'jambatan', label: 'JAMBATAN', title: 'Bridges of the World', var: 'BRIDGES', sing: 'Bridge', finder: 'bridge', pfx: 'jb', cap: 'Bridges' },
-  { file: 'mercu-suar', label: 'MERCU-SUAR', title: 'Lighthouses of the World', var: 'LIGHTHOUSES', sing: 'Lighthouse', finder: 'lighthouse', pfx: 'lht', cap: 'Lighthouses' },
-  { file: 'terusan', label: 'TERUSAN', title: 'Canals of the World', var: 'CANALS', sing: 'Canal', finder: 'canal', pfx: 'cn', cap: 'Canals' },
-  { file: 'menara', label: 'MENARA', title: 'Towers of the World', var: 'TOWERS', sing: 'Tower', finder: 'tower', pfx: 'twr', cap: 'Towers' },
-  { file: 'pelabuhan', label: 'PELABUHAN', title: 'Harbours of the World', var: 'HARBOURS', sing: 'Harbour', finder: 'harbour', pfx: 'hb', cap: 'Harbours' },
-  { file: 'terowong', label: 'TEROWONG', title: 'Tunnels of the World', var: 'TUNNELS', sing: 'Tunnel', finder: 'tunnel', pfx: 'tn', cap: 'Tunnels' },
+  { file: 'gereja', label: 'GEREJA', title: 'Churches of the World', var: 'CHURCHES', sing: 'Church', finder: 'church', pfx: 'chr', cap: 'Churches' },
+  { file: 'museum', label: 'MUSEUM', title: 'Museums of the World', var: 'MUSEUMS', sing: 'Museum', finder: 'museum', pfx: 'mus', cap: 'Museums' },
+  { file: 'tapak-arkologi', label: 'TAPAK-ARKOLOGI', title: 'Archaeological Sites of the World', var: 'SITES', sing: 'ArchaeologicalSite', finder: 'site', pfx: 'arch', cap: 'Sites' },
+  { file: 'universiti', label: 'UNIVERSITI', title: 'Universities of the World', var: 'UNIVERSITIES', sing: 'University', finder: 'university', pfx: 'uni', cap: 'Universities' },
+  { file: 'stadium', label: 'STADIUM', title: 'Stadiums of the World', var: 'STADIUMS', sing: 'Stadium', finder: 'stadium', pfx: 'sta', cap: 'Stadiums' },
+  { file: 'kastil', label: 'KASTIL', title: 'Castles of the World', var: 'CASTLES', sing: 'Castle', finder: 'castle', pfx: 'cas', cap: 'Castles' },
+  { file: 'masjid', label: 'MASJID', title: 'Mosques of the World', var: 'MOSQUES', sing: 'Mosque', finder: 'mosque', pfx: 'mq', cap: 'Mosques' },
+  { file: 'monumen', label: 'MONUMEN', title: 'Monuments of the World', var: 'MONUMENTS', sing: 'Monument', finder: 'monument', pfx: 'mon', cap: 'Monuments' },
+  { file: 'katedral', label: 'KATEDRAL', title: 'Cathedrals of the World', var: 'CATHEDRALS', sing: 'Cathedral', finder: 'cathedral', pfx: 'cat', cap: 'Cathedrals' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
