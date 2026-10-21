@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'pasar-raya', label: 'DEPARTMENT-STORES', title: 'Department Stores of the World', var: 'DEPTSTORE', sing: 'DepartmentStore', finder: 'departmentStore', finders: 'departmentStoresInRegion', pfx: 'ds', cap: 'DepartmentStores' },
-  { file: 'pusat-komuniti', label: 'COMMUNITY-CENTERS', title: 'Community Centers of the World', var: 'COMMCEN', sing: 'CommunityCenter', finder: 'communityCenter', finders: 'communityCentersInRegion', pfx: 'cc', cap: 'CommunityCenters' },
-  { file: 'menara-observasi', label: 'OBSERVATION-TOWERS', title: 'Observation Towers of the World', var: 'OBSTOWER', sing: 'ObservationTower', finder: 'observationTower', finders: 'observationTowersInRegion', pfx: 'ot', cap: 'ObservationTowers' },
-  { file: 'tapak-pelupahan', label: 'LANDFILLS', title: 'Landfills of the World', var: 'LANDFILL', sing: 'Landfill', finder: 'landfill', finders: 'landfillsInRegion', pfx: 'lf', cap: 'Landfills' },
-  { file: 'bangkai-kapal', label: 'SHIPWRECKS', title: 'Shipwrecks of the World', var: 'SHIPWRECK', sing: 'Shipwreck', finder: 'shipwreck', finders: 'shipwrecksInRegion', pfx: 'sw', cap: 'Shipwrecks' },
-  { file: 'pusat-santai', label: 'LEISURE-CENTERS', title: 'Leisure Centers of the World', var: 'LEISUCEN', sing: 'LeisureCenter', finder: 'leisureCenter', finders: 'leisureCentersInRegion', pfx: 'lc', cap: 'LeisureCenters' },
-  { file: 'rawatan-kali', label: 'WASTEWATER-TREATMENT', title: 'Wastewater Treatment Plants of the World', var: 'WASTETP', sing: 'WastewaterPlant', finder: 'wastewaterPlant', finders: 'wastewaterPlantsInRegion', pfx: 'wp', cap: 'WastewaterPlants' },
-  { file: 'arked-beliah', label: 'SHOPPING-ARCADES', title: 'Shopping Arcades and Passages of the World', var: 'SHOPARCD', sing: 'ShoppingArcade', finder: 'shoppingArcade', finders: 'shoppingArcadesInRegion', pfx: 'sa', cap: 'ShoppingArcades' },
-  { file: 'terowong-pejalan', label: 'PEDESTRIAN-TUNNELS', title: 'Pedestrian Tunnels of the World', var: 'PEDTUNEL', sing: 'PedestrianTunnel', finder: 'pedestrianTunnel', finders: 'pedestrianTunnelsInRegion', pfx: 'pt', cap: 'PedestrianTunnels' },
+  { file: 'suaka-margastwa', label: 'NATIONAL-WILDLIFE-REFUGES', title: 'National Wildlife Refuges of the World', var: 'WILDLIFEREF', sing: 'WildlifeRefuge', finder: 'wildlifeRefuge', finders: 'wildlifeRefugesInRegion', pfx: 'swr', cap: 'WildlifeRefuges' },
+  { file: 'perhentian-bas', label: 'BUS-STOPS', title: 'Bus Stops of the World', var: 'BUSSTOPS', sing: 'BusStop', finder: 'busStop', finders: 'busStopsInRegion', pfx: 'spb', cap: 'BusStops' },
+  { file: 'terowong-kereta', label: 'RAILWAY-TUNNELS', title: 'Railway Tunnels of the World', var: 'RWTUNELS', sing: 'RailwayTunnel', finder: 'railwayTunnel', finders: 'railwayTunnelsInRegion', pfx: 'rwt', cap: 'RailwayTunnels' },
+  { file: 'laluan-jauh', label: 'LONG-DISTANCE-TRAILS', title: 'Long-Distance Trails of the World', var: 'LDTRAILS', sing: 'LongDistanceTrail', finder: 'longDistanceTrail', finders: 'longDistanceTrailsInRegion', pfx: 'ljt', cap: 'LongDistanceTrails' },
+  { file: 'tapak-ramsar', label: 'RAMSAR-SITES', title: 'Ramsar Wetland Sites of the World', var: 'RAMSARS', sing: 'RamsarSite', finder: 'ramsarSite', finders: 'ramsarSitesInRegion', pfx: 'rsm', cap: 'RamsarSites' },
+  { file: 'taman-geologi', label: 'GEOPARKS', title: 'Geoparks of the World', var: 'GEOPARKS', sing: 'Geopark', finder: 'geopark', finders: 'geoparksInRegion', pfx: 'gpk', cap: 'Geoparks' },
+  { file: 'laluan-basikal', label: 'CYCLING-ROUTES', title: 'Long-Distance Cycling Routes of the World', var: 'CYCRTE', sing: 'CyclingRoute', finder: 'cyclingRoute', finders: 'cyclingRoutesInRegion', pfx: 'lbn', cap: 'CyclingRoutes' },
+  { file: 'nuraghe', label: 'NURAGHI', title: 'Nuraghi of Sardinia', var: 'NURAGHI', sing: 'Nuraghe', finder: 'nuraghe', finders: 'nuraghiInRegion', pfx: 'nrg', cap: 'Nuraghi' },
+  { file: 'asrama-muda', label: 'YOUTH-HOSTELS', title: 'Youth Hostels of the World', var: 'YHOSTEL', sing: 'YouthHostel', finder: 'youthHostel', finders: 'youthHostelsInRegion', pfx: 'asm', cap: 'YouthHostels' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
