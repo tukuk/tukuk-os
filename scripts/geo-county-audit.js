@@ -8,19 +8,20 @@
 // perbezaan HILANG/LEBIH di sini adalah ralat data kita, bukan beza tafsiran.
 //
 // Kegunaan:
-//   node scripts/geo-county-audit.js                 → semua 34 negeri (±2 minit)
+//   node scripts/geo-county-audit.js                 → semua 37 negeri (±2 minit)
 //   node scripts/geo-county-audit.js iowa california → negeri terpilih sahaja
 // Keluar: laporan satu baris per negeri + /tmp/cat-add.json (calon baris dengan
 // koordinat) + /tmp/cat-members.json (senarai penuh ahli kategori). Kod keluar
 // 1 jika ada LEBIH/HILANG/DUPE — sesuai sebagai gerbang selepas sunting data.
 //
-// Negeri yang unitnya bukan county (Louisiana parishes) dilangkau automatik
-// apabila fail data tidak wujud.
+// Negeri yang unitnya bukan county (Louisiana = parish, New Jersey = borough)
+// TIDAK dilangkau lagi: namanya didaftarkan dalam UNITS di bawah supaya tiada
+// lagi kawasan buta dalam semakan data kita.
 const fs = require('fs');
 
 const STATES = ['Alabama', 'Arkansas', 'California', 'Colorado', 'Florida', 'Georgia', 'Idaho',
   'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kenya', 'Kentucky', 'Louisiana', 'Michigan', 'Minnesota',
-  'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'New Mexico', 'New York', 'North Carolina',
+  'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'New Jersey', 'New Mexico', 'New York', 'North Carolina',
   'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'South Carolina', 'South Dakota',
   'Tennessee', 'Texas', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin'];
 
@@ -35,16 +36,33 @@ const CONSOLIDATED = {
 /* Nama kategori yang tidak mengikut pola "<Negeri> counties". */
 const CAT_OVERRIDE = {
   georgia: 'Georgia (U.S. state) counties',
+  'new-jersey': 'Boroughs in New Jersey',
   'new-york': 'New York (state) counties',
   washington: 'Washington (state) counties',
   kenya: 'Counties of Kenya',
 };
 
+/* Dataset yang fail & unitnya bukan county-<negeri>. Louisiana menggunakan
+   "parish" — 64 buah; New Jersey pula 255 borough. Kategori borough
+   Pennsylvania dipecah ikut county (hanya 2 ahli terus) jadi ia TIDAK
+   diaudit di sini. `matchAll`: nama borough TIDAK mengandungi perkataan
+   "Borough" (contohnya "Allendale, New Jersey"), jadi semua ahli kategori
+   yang terserap bukan dalam NOT_MEMBERS dianggap unit. */
+const UNITS = {
+  louisiana: { prefix: 'parish', word: 'parishes', unitWord: 'Parish' },
+  'new-jersey': { prefix: 'borough', word: 'boroughs', unitWord: 'Borough', matchAll: true },
+};
+
+/* Ahli kategori yang bukan unit sebenar — artikel utama/semakan, dilangkau. */
+const NOT_MEMBERS = {
+  'new-jersey': ['Borough (New Jersey)'],
+};
+
 /* Kunci perbandingan: buang ", <Negeri>", " County" hujung, awalan
    "City and County of ", titik (St. Louis ↔ Saint Louis) dan ruang lebihan. */
-function keyOf(title, st) {
+function keyOf(title, st, unitWord = 'County') {
   let s = String(title).replace(new RegExp(`, ${st}$`), '');
-  s = s.replace(/^City and County of /i, '').replace(/ County$/i, '').replace(/\./g, '');
+  s = s.replace(/^City and County of /i, '').replace(new RegExp(` ${unitWord}$`, 'i'), '').replace(/\./g, '');
   return s.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
@@ -72,35 +90,39 @@ async function api(params, tries = 5) {
   for (const st of STATES) {
     const state = st.toLowerCase().replace(/\s+/g, '-');
     if (only.length && !only.includes(state)) continue;
-    const file = `src/county-${state}-data.json`;
-    if (!fs.existsSync(file)) { report.push(`${state}\tdilangkau (tiada fail county-${state}-data.json)`); continue; }
+    const unit = UNITS[state] || { prefix: 'county', word: 'counties', unitWord: 'County' };
+    const file = `src/${unit.prefix}-${state}-data.json`;
+    if (!fs.existsSync(file)) { report.push(`${state}\tdilangkau (tiada fail ${unit.prefix}-${state}-data.json)`); continue; }
     const j = await api({
       action: 'query', format: 'json', generator: 'categorymembers',
-      gcmtitle: `Category:${CAT_OVERRIDE[state] || `${st} counties`}`, gcmlimit: 500, gcmtype: 'page',
+      gcmtitle: `Category:${CAT_OVERRIDE[state] || `${st} ${unit.word}`}`, gcmlimit: 500, gcmtype: 'page',
       prop: 'coordinates|info', coinfo: '', colimit: 500,
     });
     const cat = new Map();
     const skip = [];
     const allow = new Set(CONSOLIDATED[state] || []);
+    const bukan = new Set(NOT_MEMBERS[state] || []);
+    const unitRe = new RegExp(`\\b${unit.unitWord}\\b`);
     for (const p of Object.values(j.query?.pages || {}).filter((x) => x.ns === 0)) {
       const t = p.title;
-      const countyLike = /\bCounty\b/.test(t) || /^City and County of /i.test(t) || allow.has(t);
-      if (!countyLike) { skip.push(t); continue; }
+      if (bukan.has(t)) { skip.push(t); continue; }
+      const unitLike = unit.matchAll || unitRe.test(t) || /^City and County of /i.test(t) || allow.has(t);
+      if (!unitLike) { skip.push(t); continue; }
       const c = (p.coordinates || [])[0];
-      if (!cat.has(keyOf(t, st))) cat.set(keyOf(t, st), { title: t, lat: c ? c.lat : null, lng: c ? c.lon : null });
+      if (!cat.has(keyOf(t, st, unit.unitWord))) cat.set(keyOf(t, st, unit.unitWord), { title: t, lat: c ? c.lat : null, lng: c ? c.lon : null });
     }
     const auth = [...cat.values()];
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const byKey = new Map(data.map((x) => [keyOf(String(x.wiki || ''), st), x]));
+    const byKey = new Map(data.map((x) => [keyOf(String(x.wiki || ''), st, unit.unitWord), x]));
     const seen = {};
-    for (const x of data) { const k = keyOf(String(x.wiki || ''), st); seen[k] = (seen[k] || 0) + 1; }
+    for (const x of data) { const k = keyOf(String(x.wiki || ''), st, unit.unitWord); seen[k] = (seen[k] || 0) + 1; }
     const extras = [...byKey.keys()].filter((k) => !cat.has(k));
     const dupes = Object.entries(seen).filter(([, n]) => n > 1).map(([k, n]) => `${k}×${n}`);
-    const missing = auth.filter((a) => !byKey.has(keyOf(a.title, st)) && a.lat !== null);
+    const missing = auth.filter((a) => !byKey.has(keyOf(a.title, st, unit.unitWord)) && a.lat !== null);
     if (extras.length || missing.length || dupes.length) bad++;
     report.push(`${state}\tdata=${data.length}\twiki=${auth.length}\tLEBIH(${extras.length}): ${extras.map((k) => byKey.get(k).wiki || k).join(', ') || '-'}\tDUPE(${dupes.length}): ${dupes.join(', ') || '-'}\tHILANG(${missing.length}): ${missing.map((m) => m.title).join(', ') || '-'}`);
     for (const m of missing) add.push({ state, nice: st, ...m });
-    members[state] = { countyLike: auth.map((a) => a.title), skip };
+    members[state] = { unitLike: auth.map((a) => a.title), skip };
     await new Promise((r) => setTimeout(r, 1500));
   }
   console.log(report.join('\n'));
