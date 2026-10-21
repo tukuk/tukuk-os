@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'komun-maroko', label: 'MOROCCAN-COMMUNES', title: 'Communes of Morocco', var: 'KMOR', sing: 'MoroccanCommune', finder: 'moroccanCommune', finders: 'moroccanCommunesInRegion', pfx: 'kmr', cap: 'MoroccanCommunes' },
-  { file: 'distrik-afghanistan', label: 'AFGHAN-DISTRICTS', title: 'Districts of Afghanistan', var: 'DAFG', sing: 'AfghanDistrict', finder: 'afghanDistrict', finders: 'afghanDistrictsInRegion', pfx: 'daf', cap: 'AfghanDistricts' },
-  { file: 'township-michigan', label: 'MICHIGAN-TOWNSHIPS', title: 'Townships of Michigan', var: 'TMICH', sing: 'MichiganTownship', finder: 'michiganTownship', finders: 'michiganTownshipsInRegion', pfx: 'tmi', cap: 'MichiganTownships' },
-  { file: 'borough-pennsylvania', label: 'PENNSYLVANIA-BOROUGHS', title: 'Boroughs of Pennsylvania', var: 'BPEN', sing: 'PennsylvaniaBorough', finder: 'pennsylvaniaBorough', finders: 'pennsylvaniaBoroughsInRegion', pfx: 'bpp', cap: 'PennsylvaniaBoroughs' },
-  { file: 'desa-illinois', label: 'ILLINOIS-VILLAGES', title: 'Villages of Illinois', var: 'VILL', sing: 'IllinoisVillage', finder: 'illinoisVillage', finders: 'illinoisVillagesInRegion', pfx: 'vil', cap: 'IllinoisVillages' },
-  { file: 'komun-pantai-gading', label: 'IVORIAN-COMMUNES', title: 'Communes of Ivory Coast', var: 'KCIV', sing: 'IvorianCommune', finder: 'ivorianCommune', finders: 'ivorianCommunesInRegion', pfx: 'kci', cap: 'IvorianCommunes' },
-  { file: 'komun-mauritania', label: 'MAURITANIAN-COMMUNES', title: 'Communes of Mauritania', var: 'KMUR', sing: 'MauritanianCommune', finder: 'mauritanianCommune', finders: 'mauritanianCommunesInRegion', pfx: 'kmu', cap: 'MauritanianCommunes' },
-  { file: 'munisipaliti-tunisia', label: 'TUNISIAN-MUNICIPALITIES', title: 'Municipalities of Tunisia', var: 'MTUN', sing: 'TunisianMunicipality', finder: 'tunisianMunicipality', finders: 'tunisianMunicipalitiesInRegion', pfx: 'ttn', cap: 'TunisianMunicipalities' },
-  { file: 'provinsi-iran', label: 'IRANIAN-PROVINCES', title: 'Provinces of Iran', var: 'PIRN', sing: 'IranianProvince', finder: 'iranianProvince', finders: 'iranianProvincesInRegion', pfx: 'pir', cap: 'IranianProvinces' },
+  { file: 'township-minnesota', label: 'MINNESOTA-TOWNSHIPS', title: 'Townships of Minnesota', var: 'TMIN', sing: 'MinnesotaTownship', finder: 'minnesotaTownship', finders: 'minnesotaTownshipsInRegion', pfx: 'tsi', cap: 'MinnesotaTownships' },
+  { file: 'township-illinois', label: 'ILLINOIS-TOWNSHIPS', title: 'Townships of Illinois', var: 'TILL', sing: 'IllinoisTownship', finder: 'illinoisTownship', finders: 'illinoisTownshipsInRegion', pfx: 'tst', cap: 'IllinoisTownships' },
+  { file: 'township-missouri', label: 'MISSOURI-TOWNSHIPS', title: 'Townships of Missouri', var: 'TMIS', sing: 'MissouriTownship', finder: 'missouriTownship', finders: 'missouriTownshipsInRegion', pfx: 'tso', cap: 'MissouriTownships' },
+  { file: 'township-ohio', label: 'OHIO-TOWNSHIPS', title: 'Townships of Ohio', var: 'TOHI', sing: 'OhioTownship', finder: 'ohioTownship', finders: 'ohioTownshipsInRegion', pfx: 'toh', cap: 'OhioTownships' },
+  { file: 'township-indiana', label: 'INDIANA-TOWNSHIPS', title: 'Townships of Indiana', var: 'TIND', sing: 'IndianaTownship', finder: 'indianaTownship', finders: 'indianaTownshipsInRegion', pfx: 'tsa', cap: 'IndianaTownships' },
+  { file: 'town-new-york', label: 'NEW-YORK-TOWNS', title: 'Towns of New York', var: 'TNKY', sing: 'NewYorkTown', finder: 'newYorkTown', finders: 'newYorkTownsInRegion', pfx: 'tny', cap: 'NewYorkTowns' },
+  { file: 'desa-ohio', label: 'OHIO-VILLAGES', title: 'Villages of Ohio', var: 'VOHI', sing: 'OhioVillage', finder: 'ohioVillage', finders: 'ohioVillagesInRegion', pfx: 'voa', cap: 'OhioVillages' },
+  { file: 'desa-wisconsin', label: 'WISCONSIN-VILLAGES', title: 'Villages of Wisconsin', var: 'VWIS', sing: 'WisconsinVillage', finder: 'wisconsinVillage', finders: 'wisconsinVillagesInRegion', pfx: 'vwi', cap: 'WisconsinVillages' },
+  { file: 'borough-new-jersey', label: 'NEW-JERSEY-BOROUGHS', title: 'Boroughs of New Jersey', var: 'BNJR', sing: 'NewJerseyBorough', finder: 'newJerseyBorough', finders: 'newJerseyBoroughsInRegion', pfx: 'bne', cap: 'NewJerseyBoroughs' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
