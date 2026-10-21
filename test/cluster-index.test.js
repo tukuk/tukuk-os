@@ -69,10 +69,9 @@ test('indexGeoHubs(): tolak sekali, skip bila data belum berubah', async () => {
   let pushes = 0;
   const index = {
     async updateDocuments(list) { pushes += 1; list.forEach((d) => store.set(d.id, d)); return { taskUid: 1 }; },
-    async getDocument(id) { const d = store.get(id); if (!d) throw new Error('not found'); return d; },
-    // Meili sejati: `attributesToRetrieve: ['hash']` mengembalikan hash setiap
-    // dokumen `cluster` yang ada — itulah bahan perbandingan indeks.
-    async search() { return { hits: [...store.values()].map((d) => ({ hash: d.hash })), estimatedTotalHits: store.size }; }
+    // Meili sejati: `getDocuments({ filter, fields: ['hash'] })` mengembalikan
+    // hash setiap dokumen `cluster` — itulah bahan perbandingan penjaga ini.
+    async getDocuments() { return { results: [...store.values()].map((d) => ({ hash: d.hash })), total: store.size }; }
   };
   const first = await indexGeoHubs(index, clusters, { logger: { log() {} } });
   assert.equal(pushes, 1);
@@ -94,7 +93,7 @@ test('indexGeoHubs(): perubahan SATU hub bukan-sentinel tetap dikesan', async ()
   let pushes = 0;
   const index = {
     async updateDocuments(list) { pushes += 1; list.forEach((d) => store.set(d.id, d)); return { taskUid: 1 }; },
-    async search() { return { hits: [...store.values()].map((d) => ({ hash: d.hash })), estimatedTotalHits: store.size }; }
+    async getDocuments() { return { results: [...store.values()].map((d) => ({ hash: d.hash })), total: store.size }; }
   };
   await indexGeoHubs(index, clusters, { logger: { log() {} } });
   assert.equal(pushes, 1);
@@ -113,8 +112,7 @@ test('indexGeoHubs(): index kosong/roboh → cuba tolak, jangan buang dokumen', 
   let pushed = 0;
   const index = {
     async updateDocuments(list) { pushed = list.length; return { taskUid: 7 }; },
-    async getDocument() { throw new Error('meili down'); },
-    async search() { throw new Error('meili down'); }
+    async getDocuments() { throw new Error('meili down'); }
   };
   const out = await indexGeoHubs(index, clusters, { logger: { log() {} } });
   assert.equal(pushed, docs.length);
@@ -124,6 +122,20 @@ test('indexGeoHubs(): index kosong/roboh → cuba tolak, jangan buang dokumen', 
 test('indexGeoHubs(): tiada kluster → tanpa kerja', async () => {
   const out = await indexGeoHubs({ async updateDocuments() { throw new Error('tak patut panggil'); } }, [], { logger: { log() {} } });
   assert.deepEqual(out, { count: 0, skipped: true, taskUid: null });
+});
+
+test('indexGeoHubs(): hash tidak boleh dibaca (attributes tersembunyi) → tolak', async () => {
+  // Regresi sebenar di pelayan: `search` memotong atribut ikut
+  // `displayedAttributes` yang tidak mengandungi `hash`, jadi penjaga yang
+  // bertanya hash melalui carian akan melihat senarai kosong dan menolak
+  // 610 dokumen pada SETIAP boot — burukkan keadaan, bukan lebih baik.
+  let pushes = 0;
+  const index = {
+    async updateDocuments(list) { pushes += 1; return { taskUid: 1 }; },
+    async getDocuments() { return { results: [{ hash: undefined }], total: 1 }; }
+  };
+  await indexGeoHubs(index, clusters, { logger: { log() {} } });
+  assert.equal(pushes, 1, 'bacaan tak cukup bukti → anggap perlu menolak');
 });
 
 test('bantu: stripHtml buang tag + entity, tally kira & susun turun', () => {

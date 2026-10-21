@@ -164,21 +164,32 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
   // Jersey) mengubah hash satu dokumen sahaja, jadi indeks akan kekal lama
   // berisi data lama. Selepas pemulihan indeks dari R2 semakan ini gagal dan
   // dokumen ditolak semula.
+  //
+  // `getDocuments` + `fields`, BUKAN `search` + `attributesToRetrieve`: Meili
+  // memotong atribut carian dengan `displayedAttributes` dan `hash` tidak ada
+  // dalam senarai itu, jadi carian akan sentiasa pulang kosong dan penjaga ini
+  // tidak akan pernah melangkau penolakan. Endpoint dokumen menggunakan
+  // `fields` (lintas `displayedAttributes`) dan menyokong penapis `type`
+  // (filterableAttributes).
   if (!force) {
     try {
-      const found = await index.search('', {
+      const found = await index.getDocuments({
         filter: 'type = "cluster"',
-        limit: Math.min(docs.length, 1000),        // had paginasi Meilisearch
-        attributesToRetrieve: ['hash']
+        // Endpoint dokumen TIDAK dikawal `pagination.maxTotalHits` (ia hanya
+        // untuk carian), jadi satu permintaan sahaja cukup walaupun kluster
+        // bertambah jauh melebihi 1000.
+        limit: docs.length,
+        fields: ['hash']
       });
-      const hits = (found && found.hits) || [];
-      const total = found ? (found.estimatedTotalHits != null ? found.estimatedTotalHits : hits.length) : 0;
+      const rows = (found && found.results) || [];
+      const total = found && found.total != null ? found.total : rows.length;
       const want = docs.map((d) => d.hash).sort();
-      const got = hits.map((h) => h && h.hash).filter(Boolean).sort();
-      // Set hanya boleh dibandingkan bila TIADA dokumen tercetus oleh had limit;
-      // jika index besar daripada 1000 hub, kita tolak sahaja (sentiasa selamat).
-      const unchanged = total === docs.length && want.length === docs.length &&
-        got.length === want.length && want.every((h, i) => h === got[i]);
+      const got = rows.map((r) => r && r.hash).filter(Boolean).sort();
+      // Multiset sepadan hanya bila bilangan dokumen SAMA dan setiap hash sama;
+      // sebarang bacaan kurang lengkap (hash tersembunyi, 404, mock sandaran)
+      // berakibat tolak semula — sentiasa selamat.
+      const unchanged = total === docs.length && got.length === want.length &&
+        want.every((h, i) => h === got[i]);
       if (unchanged) {
         if (logger && logger.log) logger.log(`[cluster-index] ${docs.length} hub kluster sudah dalam indeks — tiada perubahan`);
         return { count: docs.length, skipped: true, taskUid: null };
