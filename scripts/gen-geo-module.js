@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'munisipaliti-slovakia', label: 'SLOVAK-MUNICIPALITIES', title: 'Municipalities of Slovakia', var: 'SKVMU', sing: 'SlovakMunicipality', finder: 'slovakMunicipality', finders: 'slovakMunicipalitiesInRegion', pfx: 'msk', cap: 'SlovakMunicipalities' },
-  { file: 'munisipaliti-hungary', label: 'HUNGARIAN-MUNICIPALITIES', title: 'Municipalities of Hungary', var: 'HUNMU', sing: 'HungarianMunicipality', finder: 'hungarianMunicipality', finders: 'hungarianMunicipalitiesInRegion', pfx: 'mgh', cap: 'HungarianMunicipalities' },
-  { file: 'munisipaliti-croatia', label: 'CROATIAN-MUNICIPALITIES', title: 'Municipalities of Croatia', var: 'CROMU', sing: 'CroatianMunicipality', finder: 'croatianMunicipality', finders: 'croatianMunicipalitiesInRegion', pfx: 'mhr', cap: 'CroatianMunicipalities' },
-  { file: 'munisipaliti-venezuela', label: 'VENEZUELAN-MUNICIPALITIES', title: 'Municipalities of Venezuela', var: 'VENZM', sing: 'VenezuelanMunicipality', finder: 'venezuelanMunicipality', finders: 'venezuelanMunicipalitiesInRegion', pfx: 'mvz', cap: 'VenezuelanMunicipalities' },
-  { file: 'munisipaliti-bulgaria', label: 'BULGARIAN-MUNICIPALITIES', title: 'Municipalities of Bulgaria', var: 'BULMU', sing: 'BulgarianMunicipality', finder: 'bulgarianMunicipality', finders: 'bulgarianMunicipalitiesInRegion', pfx: 'mbl', cap: 'BulgarianMunicipalities' },
-  { file: 'provinsi-peru', label: 'PERUVIAN-PROVINCES', title: 'Provinces of Peru', var: 'PERPR', sing: 'PeruvianProvince', finder: 'peruvianProvince', finders: 'peruvianProvincesInRegion', pfx: 'mpv', cap: 'PeruvianProvinces' },
-  { file: 'munisipaliti-slovenia', label: 'SLOVENIAN-MUNICIPALITIES', title: 'Municipalities of Slovenia', var: 'SLVMU', sing: 'SlovenianMunicipality', finder: 'slovenianMunicipality', finders: 'slovenianMunicipalitiesInRegion', pfx: 'msv', cap: 'SlovenianMunicipalities' },
-  { file: 'munisipaliti-greece', label: 'GREEK-MUNICIPALITIES', title: 'Municipalities of Greece', var: 'GRCMU', sing: 'GreekMunicipality', finder: 'greekMunicipality', finders: 'greekMunicipalitiesInRegion', pfx: 'mgr', cap: 'GreekMunicipalities' },
-  { file: 'munisipaliti-romania', label: 'ROMANIAN-MUNICIPALITIES', title: 'Communes of Romania', var: 'ROMMU', sing: 'RomanianMunicipality', finder: 'romanianMunicipality', finders: 'romanianMunicipalitiesInRegion', pfx: 'mrq', cap: 'RomanianMunicipalities' },
+  { file: 'komun-vietnam', label: 'VIETNAMESE-COMMUNES', title: 'Communes of Vietnam', var: 'KOMVT', sing: 'VietnameseCommune', finder: 'vietnameseCommune', finders: 'vietnameseCommunesInRegion', pfx: 'kvt', cap: 'VietnameseCommunes' },
+  { file: 'munisipaliti-kolombia', label: 'COLOMBIAN-MUNICIPALITIES', title: 'Municipalities of Colombia', var: 'MUCOL', sing: 'ColombianMunicipality', finder: 'colombianMunicipality', finders: 'colombianMunicipalitiesInRegion', pfx: 'mkl', cap: 'ColombianMunicipalities' },
+  { file: 'distrik-turki', label: 'TURKISH-DISTRICTS', title: 'Districts of Turkey', var: 'DISTU', sing: 'TurkishDistrict', finder: 'turkishDistrict', finders: 'turkishDistrictsInRegion', pfx: 'dtu', cap: 'TurkishDistricts' },
+  { file: 'kaunti-china', label: 'CHINESE-COUNTIES', title: 'Counties of China', var: 'KNCHE', sing: 'ChineseCounty', finder: 'chineseCounty', finders: 'chineseCountiesInRegion', pfx: 'ktc', cap: 'ChineseCounties' },
+  { file: 'amphoe-thailand', label: 'THAI-DISTRICTS', title: 'Amphoe (Districts of Thailand)', var: 'AMPHO', sing: 'ThaiDistrict', finder: 'thaiDistrict', finders: 'thaiDistrictsInRegion', pfx: 'amh', cap: 'ThaiDistricts' },
+  { file: 'kelurahan-tanzania', label: 'TANZANIAN-WARDS', title: 'Wards of Tanzania', var: 'WARDTZ', sing: 'TanzanianWard', finder: 'tanzanianWard', finders: 'tanzanianWardsInRegion', pfx: 'ktz', cap: 'TanzanianWards' },
+  { file: 'paroki-latvia', label: 'LATVIAN-PARISHES', title: 'Parishes of Latvia', var: 'PARLV', sing: 'LatvianParish', finder: 'latvianParish', finders: 'latvianParishesInRegion', pfx: 'plv', cap: 'LatvianParishes' },
+  { file: 'kaunti-iran', label: 'IRANIAN-COUNTIES', title: 'Counties of Iran', var: 'KNIRN', sing: 'IranianCounty', finder: 'iranianCounty', finders: 'iranianCountiesInRegion', pfx: 'kir', cap: 'IranianCounties' },
+  { file: 'kaunti-polandia', label: 'POLISH-COUNTIES', title: 'Counties of Poland (Powiat)', var: 'KNPOL', sing: 'PolishCounty', finder: 'polishCounty', finders: 'polishCountiesInRegion', pfx: 'kpo', cap: 'PolishCounties' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
