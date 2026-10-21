@@ -8936,7 +8936,7 @@ function geoItemPage(item, sum, mod, base, cfg) {
   const ogImage = sum && sum.thumb ? sum.thumb : undefined;
   return worldDoc({
     title: `${item.name} \u2014 ${cfg.titleCase} Profile | Tukuk-OS`,
-    desc: sum && sum.description ? `${item.name}, ${sum.description.toLowerCase()}.` : `${item.name} is ${geoArticle(cfg.singular)} ${cfg.singular} in ${item.country}. Location and introduction.`,
+    desc: sum && sum.description ? `${item.name}, ${sum.description.charAt(0).toLowerCase()}${sum.description.slice(1)}.` : `${item.name} is ${geoArticle(cfg.singular)} ${cfg.singular} in ${item.country}. Location and introduction.`,
     selfUrl: `https://tukuk.org/${base}/${item.slug}`,
     heroTitle: `${cfg.icon} ${escapeHtml(item.name)}`, heroSub: `${escapeHtml(item.country)} \u00b7 ${escapeHtml(item.region)} \u00b7 ${escapeHtml(coords)}`,
     ld, css: GEO_CSS, body, ogImage,
