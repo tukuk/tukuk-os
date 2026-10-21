@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'bio-tenaga', label: 'BIOMASS-PLANTS', title: 'Biomass Power Stations of the World', var: 'BIOMASS', sing: 'BiomassPlant', finder: 'biomassplant', finders: 'biomassPlantsInRegion', pfx: 'bw', cap: 'BiomassPlants' },
-  { file: 'menara-benteng', label: 'CASTLE-TOWERS', title: 'Castle Towers and Fortified Towers of the World', var: 'CASTLETOWERS', sing: 'CastleTower', finder: 'castletower', finders: 'castleTowersInRegion', pfx: 'cb', cap: 'CastleTowers' },
-  { file: 'stesen-misi', label: 'MISSION-STATIONS', title: 'Mission Stations of the World', var: 'MISSIONSTN', sing: 'MissionStation', finder: 'missionstation', finders: 'missionStationsInRegion', pfx: 'sm', cap: 'MissionStations' },
-  { file: 'pempam-tenaga', label: 'PUMPED-STORAGE', title: 'Pumped-Storage Power Stations of the World', var: 'PUMPEDSTOR', sing: 'PumpedStorage', finder: 'pumpedstorage', finders: 'pumpedStorageInRegion', pfx: 'pu', cap: 'PumpedStorage' },
-  { file: 'geoterma-kuasa', label: 'GEOTHERMAL-PLANTS', title: 'Geothermal Power Stations of the World', var: 'GEOTHERMAL', sing: 'GeothermalPlant', finder: 'geothermalplant', finders: 'geothermalPlantsInRegion', pfx: 'gt', cap: 'GeothermalPlants' },
-  { file: 'ladang-anggur', label: 'VINEYARDS', title: 'Vineyards of the World', var: 'VINEYARDS', sing: 'Vineyard', finder: 'vineyard', finders: 'vineyardsInRegion', pfx: 'vg', cap: 'Vineyards' },
-  { file: 'kubur-baji', label: 'WEDGE-TOMBS', title: 'Wedge Tombs of the World', var: 'WEDGETOMBS', sing: 'WedgeTomb', finder: 'wedgetomb', finders: 'wedgeTombsInRegion', pfx: 'wb', cap: 'WedgeTombs' },
-  { file: 'cairn-pengadilan', label: 'COURT-CAIRNS', title: 'Court Cairns and Court Tombs of the World', var: 'COURTCAIRN', sing: 'CourtCairn', finder: 'courtcairn', finders: 'courtCairnsInRegion', pfx: 'cr', cap: 'CourtCairns' },
-  { file: 'balai-lokomotif', label: 'MOTIVE-POWER-DEPOTS', title: 'Locomotive Depots of the World', var: 'MOTIVEDEPO', sing: 'MotiveDepot', finder: 'motivedepot', finders: 'motiveDepotsInRegion', pfx: 'mo', cap: 'MotiveDepots' },
+  { file: 'hospital-jiwa', label: 'PSYCHIATRIC-HOSPITALS', title: 'Psychiatric Hospitals of the World', var: 'PSYHIATRIC', sing: 'PsychiatricHospital', finder: 'psychiatric', finders: 'psychiatricInRegion', pfx: 'py', cap: 'Psychiatric' },
+  { file: 'lombong-terbuka', label: 'OPEN-PIT-MINES', title: 'Open-Pit Mines of the World', var: 'OPENPIT', sing: 'OpenPitMine', finder: 'openpit', finders: 'openPitsInRegion', pfx: 'op', cap: 'OpenPit' },
+  { file: 'kuasa-pasang', label: 'TIDAL-POWER', title: 'Tidal Power Stations of the World', var: 'TIDALPOWER', sing: 'TidalPowerStation', finder: 'tidalpower', finders: 'tidalPowerInRegion', pfx: 'tp', cap: 'TidalPower' },
+  { file: 'balai-kereta', label: 'CARRIAGE-HOUSES', title: 'Carriage Houses of the World', var: 'CARRIAGE', sing: 'CarriageHouse', finder: 'carriage', finders: 'carriagesInRegion', pfx: 'cy', cap: 'Carriage' },
+  { file: 'hacienda', label: 'HACIENDAS', title: 'Haciendas of the World', var: 'HACIENDAS', sing: 'Hacienda', finder: 'hacienda', finders: 'haciendasInRegion', pfx: 'ha', cap: 'Haciendas' },
+  { file: 'stesen-telegraf', label: 'TELEGRAPH-STATIONS', title: 'Telegraph Stations of the World', var: 'TELEGRAPH', sing: 'TelegraphStation', finder: 'telegraph', finders: 'telegraphsInRegion', pfx: 'te', cap: 'Telegraph' },
+  { file: 'kubur-gua', label: 'ROCK-CUT-TOMBS', title: 'Rock-Cut Tombs of the World', var: 'ROCKTOMBS', sing: 'RockCutTomb', finder: 'rocktomb', finders: 'rockTombsInRegion', pfx: 'rc', cap: 'RockTombs' },
+  { file: 'rumah-miskin', label: 'POORHOUSES', title: 'Poorhouses of the World', var: 'POORHOUSE', sing: 'Poorhouse', finder: 'poorhouse', finders: 'poorhousesInRegion', pfx: 'po', cap: 'Poorhouses' },
+  { file: 'gua-candi', label: 'CAVE-TEMPLES', title: 'Cave Temples of the World', var: 'CAVETEMPLE', sing: 'CaveTemple', finder: 'cavetemple', finders: 'caveTemplesInRegion', pfx: 'cv', cap: 'CaveTemples' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
