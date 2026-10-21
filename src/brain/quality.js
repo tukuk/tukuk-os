@@ -20,13 +20,49 @@ const MIN_COHERENT_CHARS = 40;
 const MIN_COHERENT_CHARS_SPACELESS = 12;
 const SENT_LEN_SPACELESS = [12, 150];
 
-/** Adakah output ini cuma menggulang arahan atau soalan? */
-function isEcho(answer, prompt) {
+/**
+ * Terma soal sahaja — bukan entiti, jadi ia boleh padan dengan SEMBARANG
+ * perenggan. "how many counties" dulu cukup untuk meluluskan ayat blog tentang
+ * "how many animals"; kini hanya TERMA KANDUNGAN yang mengira skor & kelayakan.
+ * Senarai ini sengaja konservatif: kata yang sentiasa ada dalam soalan manusia.
+ */
+const STOPWORDS = new Set([
+  // Melayu / Indonesia
+  'apa', 'apakah', 'itu', 'ini', 'yang', 'dan', 'atau', 'untuk', 'dengan', 'dari',
+  'kepada', 'pada', 'dalam', 'adalah', 'siapa', 'berapa', 'mana', 'bila', 'kenapa',
+  'mengapa', 'bagaimana', 'sudah', 'boleh', 'tidak', 'tak', 'ada', 'akan', 'kah',
+  // Inggeris
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'am', 'do', 'does', 'did',
+  'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'about', 'into',
+  'how', 'many', 'much', 'more', 'most', 'long', 'far', 'old', 'new', 'big',
+  'what', 'when', 'where', 'which', 'who', 'whom', 'why', 'whose', 'that', 'this',
+  'these', 'those', 'there', 'here', 'it', 'its', 'i', 'you', 'we', 'they', 'he',
+  'she', 'him', 'her', 'my', 'me', 'our', 'their', 'can', 'could', 'will', 'would',
+  'should', 'shall', 'may', 'might', 'have', 'has', 'had', 'not', 'no', 'yes', 'so',
+  'if', 'then', 'than', 'very', 'just', 'also', 'get', 'gets', 'like', 'well', 'ever'
+]);
+
+/** Terma yang benar-benar membawa makna (entiti), untuk skor & kelayakan ayat. */
+function contentTerms(terms) {
+  return (terms || []).filter((w) => w.length > 2 && !STOPWORDS.has(w));
+}
+
+/**
+ * Adakah output ini cuma menggulang arahan atau soalan?
+ * `opts.smallModel === false` (model awan besar): dua heuristik anti-model-kecil
+ * DILOMPATKAN — lantai panjang 40 aksara dan larangan penanda "(Sources: …)".
+ * Jawapan ringkas yang sah ("California has 58 counties." = 28 aksara) dan
+ * penolakan jujur ("I don't know." = 13 aksara) dahulu dibuang sebagai echo,
+ * sehingga /ask jatuh ke perenggan ekstraktif yang tak berkaitan sama sekali.
+ * Semakan ulang-prompt / ayat berulang / context dump tetap berjalan.
+ */
+function isEcho(answer, prompt, opts = {}) {
+  const small = opts.smallModel !== false;
   if (!answer) return true;
 
   const normalized = answer.toLowerCase().replace(/\s+/g, ' ').trim();
   const minCoherent = isSpacelessScript(normalized) ? MIN_COHERENT_CHARS_SPACELESS : MIN_COHERENT_CHARS;
-  if ([...normalized].length < minCoherent) return true;
+  if (small && [...normalized].length < minCoherent) return true;
 
   // Ayat berulang (litar ulang) — model 135M kerap melakukan ini. Potong
   // Unicode-sedar supaya ulang-an CJK （。！？） turut dikesan.
@@ -69,7 +105,7 @@ function isEcho(answer, prompt) {
   // jawapan — bentuk templat yang ditiru dari prompt ekstraktif, bukan jawapan
   // LLM sebenar. Jika jawapan bermula dengan ayat dan TAMAT dengan label
   // sumber, ia adalah echo yang perlu ditolak.
-  if (/\n\s*\((?:Sources|Sumber|Source):/i.test(answer)) return true;
+  if (small && /\n\s*\((?:Sources|Sumber|Source):/i.test(answer)) return true;
 
   // perkataan yang sama berulang kali — bilangan aksara untuk skrip tanpa-ruang
   const words = normalized.split(/\s+/).filter((w) => [...w].length > 4);
@@ -126,13 +162,20 @@ function scoreSentence(sentence, terms) {
 function extractiveAnswer(question, hits, maxSentences = 3) {
   const locale = detectLocale(question);
   const terms = tokenizeQuery(question);
+  // Skor + kelayakan hanya pada TERMA KANDUNGAN. Sebelumnya soalan "how many
+  // counties does California have" lulus dengan memetik ayat blog yang cuma
+  // mengandungi "how" + "many" → jawapan salah tersaji sebagai fakta.
+  // Skrip tanpa-ruang (CJK) tokenize jadi aksara tunggal → tiada terma kandungan,
+  // jadi `scoreTerms` jatuh kembali ke semua terma (kelakuan lama dikekalkan).
+  const ct = contentTerms(terms);
+  const scoreTerms = ct.length ? ct : terms;
 
   // Query berbilang kata perlu padanan kukuh (≥2 kata kunci ATAU kata kunci
   // di posisi awal) supaya ayat yang hanya mengandungi kata umum ("what")
   // tak tersenarai sebagai jawapan. Untuk skrip tanpa-ruang (token = aksara),
   // ambang skor dinaikan supaya 1 aksara common tak cukup.
   const spaceless = isSpacelessScript(question);
-  const minScore = terms.length >= 2 ? (spaceless ? 7 : 5) : (spaceless ? 4 : 3);
+  const minScore = scoreTerms.length >= 2 ? (spaceless ? 7 : 5) : (spaceless ? 4 : 3);
   const candidates = [];
   for (let i = 0; i < hits.length; i += 1) {
     const hit = hits[i];
@@ -148,8 +191,12 @@ function extractiveAnswer(question, hits, maxSentences = 3) {
     const raw = String(hit.content || hit._formatted?.content || hit.description || '');
     const text = raw.replace(/<\/?mark>/g, '');
     for (const sentence of splitSentences(text)) {
-      const score = scoreSentence(sentence, terms) + rankBias;
-      if (score >= minScore) candidates.push({ sentence, score, ref: hit.url, title: hit.title });
+      const lower = sentence.toLowerCase();
+      // Wajib ada sekurang-kurangnya SATU entiti soalan dalam ayat — jika tidak,
+      // ayat itu bukan jawapan, berapa pun skornya.
+      if (ct.length && !ct.some((term) => lower.includes(term))) continue;
+      const score = scoreSentence(sentence, scoreTerms) + rankBias;
+      if (score >= minScore) candidates.push({ sentence, score, ref: hit.url, title: hit.title, rank: i });
     }
   }
 
@@ -162,10 +209,16 @@ function extractiveAnswer(question, hits, maxSentences = 3) {
     };
   }
 
-  // Ambil ayat atas tanpa ulang dalam doc yang sama.
+  // SATU dokumen sahaja: mencampur ayat daripada artikel berbeza menghasilkan
+  // perenggan "dua fakta tak berkaitan" yang kelihatan seperti jawapan. Ambil
+  // dokumen calon terbaik (sama skor → ranking lebih awal) sehingga
+  // `maxSentences` ayatnya, tanpa ayat berulang.
+  candidates.sort((a, b) => (b.score - a.score) || (a.rank - b.rank));
+  const bestRef = candidates[0].ref;
   const seen = new Set();
   const picked = [];
-  for (const candidate of candidates.sort((a, b) => b.score - a.score)) {
+  for (const candidate of candidates) {
+    if (candidate.ref !== bestRef) continue;
     const key = candidate.sentence.slice(0, 60).toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -180,4 +233,4 @@ function extractiveAnswer(question, hits, maxSentences = 3) {
   };
 }
 
-module.exports = { isEcho, extractiveAnswer, splitSentences };
+module.exports = { isEcho, extractiveAnswer, splitSentences, contentTerms };

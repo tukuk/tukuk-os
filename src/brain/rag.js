@@ -365,7 +365,12 @@ async function ask(question, { limit } = {}) {
         });
         for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
         const text = String(out?.response || '').trim();
-        if (text && !isEcho(text, prompt)) return { text, model: `${out._provider}:${out._model}` };
+        // Model awan besar TIDAK dinilai dengan heuristik model 135M: jawapan
+        // ringkas ("California has 58 counties.") dan penolakan jujur ("I don't
+        // know.") dulu dibuang sebagai echo → /ask jatuh ke perenggan ekstraktif
+        // daripada artikel tak berkaitan, iaitu jauh lebih buruk daripada "tidak
+        // tahu". Semakan ulang-prompt & ulang-an ayat tetap jalan.
+        if (text && !isEcho(text, prompt, { smallModel: false })) return { text, model: `${out._provider}:${out._model}` };
         if (text) rejected.push({ model: out._provider, reason: 'output not coherent (repeating the prompt)' });
         return null;
       })());
