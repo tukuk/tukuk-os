@@ -19,10 +19,10 @@
 const fs = require('fs');
 
 const STATES = ['Alabama', 'Arkansas', 'California', 'Colorado', 'Florida', 'Georgia', 'Idaho',
-  'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Michigan', 'Minnesota',
+  'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kenya', 'Kentucky', 'Louisiana', 'Michigan', 'Minnesota',
   'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'New Mexico', 'New York', 'North Carolina',
-  'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'South Carolina', 'Tennessee',
-  'Texas', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin'];
+  'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'South Carolina', 'South Dakota',
+  'Tennessee', 'Texas', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin'];
 
 const UA = 'tukuk-os-geo-audit/1.0 (hello@tukuk.org)';
 
@@ -37,6 +37,7 @@ const CAT_OVERRIDE = {
   georgia: 'Georgia (U.S. state) counties',
   'new-york': 'New York (state) counties',
   washington: 'Washington (state) counties',
+  kenya: 'Counties of Kenya',
 };
 
 /* Kunci perbandingan: buang ", <Negeri>", " County" hujung, awalan
@@ -83,8 +84,7 @@ async function api(params, tries = 5) {
     const allow = new Set(CONSOLIDATED[state] || []);
     for (const p of Object.values(j.query?.pages || {}).filter((x) => x.ns === 0)) {
       const t = p.title;
-      const countyLike = / County, /.test(t) || /^City and County of /i.test(t) || allow.has(t);
-      if (!countyLike && !/, ${st}$/.test(t)) { skip.push(t); continue; }
+      const countyLike = /\bCounty\b/.test(t) || /^City and County of /i.test(t) || allow.has(t);
       if (!countyLike) { skip.push(t); continue; }
       const c = (p.coordinates || [])[0];
       if (!cat.has(keyOf(t, st))) cat.set(keyOf(t, st), { title: t, lat: c ? c.lat : null, lng: c ? c.lon : null });
