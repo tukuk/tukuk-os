@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'komun-prancis', label: 'FRENCH-COMMUNES', title: 'Communes of France', var: 'KOMFR', sing: 'FrenchCommune', finder: 'frenchCommune', finders: 'frenchCommunesInRegion', pfx: 'kmf', cap: 'FrenchCommunes' },
-  { file: 'munisipaliti-sepanyol', label: 'SPANISH-MUNICIPALITIES', title: 'Municipalities of Spain', var: 'MUNSP', sing: 'SpanishMunicipality', finder: 'spanishMunicipality', finders: 'spanishMunicipalitiesInRegion', pfx: 'msp', cap: 'SpanishMunicipalities' },
-  { file: 'munisipaliti-brazil', label: 'BRAZILIAN-MUNICIPALITIES', title: 'Municipalities of Brazil', var: 'MUBR', sing: 'BrazilianMunicipality', finder: 'brazilianMunicipality', finders: 'brazilianMunicipalitiesInRegion', pfx: 'brz', cap: 'BrazilianMunicipalities' },
-  { file: 'munisipaliti-meksiko', label: 'MEXICAN-MUNICIPALITIES', title: 'Municipalities of Mexico', var: 'MUMX', sing: 'MexicanMunicipality', finder: 'mexicanMunicipality', finders: 'mexicanMunicipalitiesInRegion', pfx: 'mmx', cap: 'MexicanMunicipalities' },
-  { file: 'komun-swis', label: 'SWISS-COMMUNES', title: 'Communes of Switzerland', var: 'KMSW', sing: 'SwissCommune', finder: 'swissCommune', finders: 'swissCommunesInRegion', pfx: 'ksw', cap: 'SwissCommunes' },
-  { file: 'munisipaliti-belanda', label: 'DUTCH-MUNICIPALITIES', title: 'Municipalities of the Netherlands', var: 'MUNL', sing: 'DutchMunicipality', finder: 'dutchMunicipality', finders: 'dutchMunicipalitiesInRegion', pfx: 'mnb', cap: 'DutchMunicipalities' },
-  { file: 'munisipaliti-belgia', label: 'BELGIAN-MUNICIPALITIES', title: 'Municipalities of Belgium', var: 'MUBG', sing: 'BelgianMunicipality', finder: 'belgianMunicipality', finders: 'belgianMunicipalitiesInRegion', pfx: 'mbg', cap: 'BelgianMunicipalities' },
-  { file: 'munisipaliti-norway', label: 'NORWEGIAN-MUNICIPALITIES', title: 'Municipalities of Norway', var: 'MUNO', sing: 'NorwegianMunicipality', finder: 'norwegianMunicipality', finders: 'norwegianMunicipalitiesInRegion', pfx: 'mno', cap: 'NorwegianMunicipalities' },
-  { file: 'kabupaten-indonesia', label: 'INDONESIAN-REGENCIES', title: 'Regencies of Indonesia', var: 'KABID', sing: 'IndonesianRegency', finder: 'indonesianRegency', finders: 'indonesianRegenciesInRegion', pfx: 'kab', cap: 'IndonesianRegencies' },
+  { file: 'munisipaliti-austria', label: 'AUSTRIAN-MUNICIPALITIES', title: 'Municipalities of Austria', var: 'AUMUN', sing: 'AustrianMunicipality', finder: 'austrianMunicipality', finders: 'austrianMunicipalitiesInRegion', pfx: 'aus', cap: 'AustrianMunicipalities' },
+  { file: 'kabupaten-india', label: 'INDIAN-DISTRICTS', title: 'Districts of India', var: 'INDDI', sing: 'IndianDistrict', finder: 'indianDistrict', finders: 'indianDistrictsInRegion', pfx: 'ind', cap: 'IndianDistricts' },
+  { file: 'kota-jepang', label: 'JAPANESE-CITIES', title: 'Cities of Japan', var: 'JPCIT', sing: 'JapaneseCity', finder: 'japaneseCity', finders: 'japaneseCitiesInRegion', pfx: 'jpc', cap: 'JapaneseCities' },
+  { file: 'distrik-jepang', label: 'JAPANESE-DISTRICTS', title: 'Districts of Japan', var: 'JPDST', sing: 'JapaneseDistrict', finder: 'japaneseDistrict', finders: 'japaneseDistrictsInRegion', pfx: 'jpd', cap: 'JapaneseDistricts' },
+  { file: 'munisipaliti-finland', label: 'FINNISH-MUNICIPALITIES', title: 'Municipalities of Finland', var: 'FIMUN', sing: 'FinnishMunicipality', finder: 'finnishMunicipality', finders: 'finnishMunicipalitiesInRegion', pfx: 'fin', cap: 'FinnishMunicipalities' },
+  { file: 'munisipaliti-portugal', label: 'PORTUGUESE-MUNICIPALITIES', title: 'Municipalities of Portugal', var: 'POMUN', sing: 'PortugueseMunicipality', finder: 'portugueseMunicipality', finders: 'portugueseMunicipalitiesInRegion', pfx: 'prt', cap: 'PortugueseMunicipalities' },
+  { file: 'komun-chile', label: 'CHILEAN-COMMUNES', title: 'Communes of Chile', var: 'CHLCM', sing: 'ChileanCommune', finder: 'chileanCommune', finders: 'chileanCommunesInRegion', pfx: 'kch', cap: 'ChileanCommunes' },
+  { file: 'munisipaliti-sweden', label: 'SWEDISH-MUNICIPALITIES', title: 'Municipalities of Sweden', var: 'SWMUN', sing: 'SwedishMunicipality', finder: 'swedishMunicipality', finders: 'swedishMunicipalitiesInRegion', pfx: 'swe', cap: 'SwedishMunicipalities' },
+  { file: 'munisipaliti-denmark', label: 'DANISH-MUNICIPALITIES', title: 'Municipalities of Denmark', var: 'DAMUN', sing: 'DanishMunicipality', finder: 'danishMunicipality', finders: 'danishMunicipalitiesInRegion', pfx: 'dkk', cap: 'DanishMunicipalities' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
