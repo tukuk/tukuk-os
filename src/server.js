@@ -3076,8 +3076,25 @@ app.get('/sitemap-gletser.xml', (req, res) => {
 // Senarai base sitemap anak geo — dikumpul semasa boot, hidang sebagai satu
 // <sitemapindex> di /sitemap-geo.xml (robots.txt hanya isytihar indeks ini).
 const GEO_SITEMAP_BASES = [];
+// Daftar kluster geo untuk indeks carian sendiri: geoCfg() menyimpan cfg ikut
+// base, geoSitemap() menyimpan modul + listKey ikut base. Kedua-duanya berjalan
+// semasa require, jadi geoClusters() hanya boleh dipanggil SELEPAS server.js
+// dimuat sepenuhnya (index.js semasa boot).
+const GEO_CFG_BY_BASE = {};
+const GEO_MOD_BY_BASE = {};
+function geoClusters() {
+  return GEO_SITEMAP_BASES.slice()
+    .sort((a, b) => a.localeCompare(b))
+    .map((base) => {
+      const cfg = GEO_CFG_BY_BASE[base];
+      const reg = GEO_MOD_BY_BASE[base];
+      return cfg && reg && Array.isArray(reg.mod[reg.listKey]) ? { base, cfg, mod: reg.mod, listKey: reg.listKey } : null;
+    })
+    .filter(Boolean);
+}
 function geoSitemap(base, mod, listKey) {
   GEO_SITEMAP_BASES.push(base);
+  GEO_MOD_BY_BASE[base] = { mod, listKey };
   app.get(`/sitemap-${base}.xml`, (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -9160,7 +9177,7 @@ function geoCfg(o) {
   // titleCase yang sudah menyebut yurisdiksinya ("Counties of Iowa") tidak
   // perlu ekoran "of the World" lagi.
   const world = /\sof\s/.test(o.titleCase || '') ? '' : ' of the World';
-  return Object.assign({
+  const cfg = Object.assign({
     navLabel: `${o.titleCase} \u2014 tukuk.org/${o.base}`,
     navAll: `All ${unit}`,
     seoTitle: `${o.titleCase}${world} \u2014 Profiles & Locations | Tukuk-OS`,
@@ -9169,6 +9186,8 @@ function geoCfg(o) {
     itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
     footer: `Coordinates are approximate locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/danau">Lakes</a> \u00b7 <a href="/pulau">Islands</a> \u00b7 <a href="/warisan">World Heritage</a>.`,
   }, o, { unit });
+  if (cfg.base) GEO_CFG_BY_BASE[cfg.base] = cfg;
+  return cfg;
 }
 const TELUK_CFG = geoCfg({ base: 'teluk', listKey: 'BAYS', inRegion: 'baysInRegion', byCountry: 'bayByCountry', unit: 'bays', singular: 'bay', titleCase: 'Bays', icon: '\ud83c\udf0a', navBlurb: `Profiles of the world\u2019s bays \u2014 where each bay is, which country borders it, and a plain-English introduction.`, seoDesc: 'Introductions to notable bays and gulfs worldwide: location, country and what makes each bay significant.', subMetric: 'location & coastlines', intro: `These are the world\u2019s most notable <b>bays</b> \u2014 sheltered coastal inlets that have hosted fleets, founded ports and shaped empires. Each profile shows where the bay is, which country borders it, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
 function telukHubPage() { return geoHubPage(tk, 'teluk', TELUK_CFG); }
@@ -16017,4 +16036,4 @@ app.use((error, req, res, next) => {
   res.status(error.statusCode || 500).json({ error: 'Server error', details: safeError(error) });
 });
 
-module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT };
+module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters };

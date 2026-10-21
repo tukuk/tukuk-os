@@ -4,7 +4,8 @@ const crawler = require('./src/crawler');
 const net = require('./src/net');
 const store = require('./src/store');
 const { indexBlogPosts } = require('./src/blog-index');
-const { app } = require('./src/server');
+const { indexGeoHubs } = require('./src/cluster-index');
+const { app, geoClusters } = require('./src/server');
 const news = require('./src/news');
 const queries = require('./src/queries');
 const nasa = require('./src/nasa');
@@ -49,6 +50,16 @@ async function main() {
     indexBlogPosts(index)
       .then(({ count }) => { if (count > 0) console.log(`[blog-index] ${count} post blog boleh dicari`); })
       .catch((err) => console.warn(`[blog-index] dilewati: ${err.message}`));
+    // Halaman hub kluster geo juga milik korpus kami — dibina daripada data
+    // yang sudah dimuat (tiada HTTP), ditangguh supaya cold start tidak berat.
+    // Tanpa ini /ask & /search buta terhadap 612 kluster yang kami sendiri hidang.
+    setTimeout(() => {
+      indexGeoHubs(index, geoClusters())
+        .then(({ count, skipped }) => {
+          if (!skipped) console.log(`[cluster-index] ${count} hub kluster boleh dicari`);
+        })
+        .catch((err) => console.warn(`[cluster-index] dilewati: ${err.message}`));
+    }, 8000);
   } catch (error) {
     // Jangan mati — enjin carian masih boleh menjawab daripada cache fallback.
     console.warn(`[tukuk-os] AMARAN: ${error.message}`);

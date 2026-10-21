@@ -74,6 +74,15 @@ fi
 [[ -f "$REPO_DIR/.env" ]] && chmod 600 "$REPO_DIR/.env"
 get_env() { [[ -f "$REPO_DIR/.env" ]] && grep -E "^$1=" "$REPO_DIR/.env" | head -1 | cut -d= -f2- | sed 's/^["'"'"']//; s/["'"'"']$//' || true; }
 
+# Route mutasi (/crawl, /crawl/batch, /documents, /settings) FAIL-TERBUKA: kalau
+# API_KEY kosong, requireApiKey() terus luluskan permintaan — sesiapa di internet
+# boleh menyuntik dokumen ke indeks carian kita atau mengosongkannya. Jana kunci
+# sebaik .env ada supaya server baru selamat secara lalai.
+if [[ -f "$REPO_DIR/.env" && -z "$(get_env API_KEY)" ]]; then
+  echo "API_KEY=$(head -c 24 /dev/urandom | base64 | tr -d '=+/')" >> "$REPO_DIR/.env"
+  warn "API_KEY dijana dalam .env — hantar sebagai header X-API-Key untuk route mutasi."
+fi
+
 # ── [2] Pakej asas + tuning memori (2GB RAM) ──────────────────────────────────
 info "[1/8] Pakej asas & tuning kernel..."
 apt-get update -y -qq
