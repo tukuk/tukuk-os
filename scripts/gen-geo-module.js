@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'lapangan-udara', label: 'AIRFIELDS', title: 'Airfields and Aerodromes of the World', var: 'AIRFIELDS', sing: 'Airfield', finder: 'airfield', finders: 'airfieldsInRegion', pfx: 'lu', cap: 'Airfields' },
-  { file: 'pangkalan-tentera', label: 'MILITARY-BASES', title: 'Military Bases of the World', var: 'MILBASE', sing: 'MilitaryBase', finder: 'militaryBase', finders: 'militaryBasesInRegion', pfx: 'mb', cap: 'MilitaryBases' },
-  { file: 'kilang', label: 'FACTORIES', title: 'Factories of the World', var: 'FACTORIES', sing: 'Factory', finder: 'factory', finders: 'factoriesInRegion', pfx: 'fk', cap: 'Factories' },
-  { file: 'perlintasan-sempadan', label: 'BORDER-CHECKPOINTS', title: 'Border Checkpoints of the World', var: 'BORDERCP', sing: 'BorderCheckpoint', finder: 'borderCheckpoint', finders: 'borderCheckpointsInRegion', pfx: 'bc', cap: 'BorderCheckpoints' },
-  { file: 'pangkalan-laut', label: 'NAVAL-BASES', title: 'Naval Bases of the World', var: 'NAVALBASE', sing: 'NavalBase', finder: 'navalBase', finders: 'navalBasesInRegion', pfx: 'nb', cap: 'NavalBases' },
-  { file: 'bangunan-industri', label: 'INDUSTRIAL-BUILDINGS', title: 'Industrial Buildings of the World', var: 'INDBLDG', sing: 'IndustrialBuilding', finder: 'industrialBuilding', finders: 'industrialBuildingsInRegion', pfx: 'ib', cap: 'IndustrialBuildings' },
-  { file: 'kem-tentera', label: 'MILITARY-CAMPS', title: 'Military Camps of the World', var: 'MILCAMP', sing: 'MilitaryCamp', finder: 'militaryCamp', finders: 'militaryCampsInRegion', pfx: 'mk', cap: 'MilitaryCamps' },
-  { file: 'terusan-irigasi', label: 'IRRIGATION-CANALS', title: 'Irrigation Canals of the World', var: 'IRRIGCAN', sing: 'IrrigationCanal', finder: 'irrigationCanal', finders: 'irrigationCanalsInRegion', pfx: 'ig', cap: 'IrrigationCanals' },
-  { file: 'kawasan-kemah', label: 'CAMPSITES', title: 'Campsites of the World', var: 'CAMPSITE', sing: 'Campsite', finder: 'campsite', finders: 'campsitesInRegion', pfx: 'ck', cap: 'Campsites' },
+  { file: 'pasar-raya', label: 'DEPARTMENT-STORES', title: 'Department Stores of the World', var: 'DEPTSTORE', sing: 'DepartmentStore', finder: 'departmentStore', finders: 'departmentStoresInRegion', pfx: 'ds', cap: 'DepartmentStores' },
+  { file: 'pusat-komuniti', label: 'COMMUNITY-CENTERS', title: 'Community Centers of the World', var: 'COMMCEN', sing: 'CommunityCenter', finder: 'communityCenter', finders: 'communityCentersInRegion', pfx: 'cc', cap: 'CommunityCenters' },
+  { file: 'menara-observasi', label: 'OBSERVATION-TOWERS', title: 'Observation Towers of the World', var: 'OBSTOWER', sing: 'ObservationTower', finder: 'observationTower', finders: 'observationTowersInRegion', pfx: 'ot', cap: 'ObservationTowers' },
+  { file: 'tapak-pelupahan', label: 'LANDFILLS', title: 'Landfills of the World', var: 'LANDFILL', sing: 'Landfill', finder: 'landfill', finders: 'landfillsInRegion', pfx: 'lf', cap: 'Landfills' },
+  { file: 'bangkai-kapal', label: 'SHIPWRECKS', title: 'Shipwrecks of the World', var: 'SHIPWRECK', sing: 'Shipwreck', finder: 'shipwreck', finders: 'shipwrecksInRegion', pfx: 'sw', cap: 'Shipwrecks' },
+  { file: 'pusat-santai', label: 'LEISURE-CENTERS', title: 'Leisure Centers of the World', var: 'LEISUCEN', sing: 'LeisureCenter', finder: 'leisureCenter', finders: 'leisureCentersInRegion', pfx: 'lc', cap: 'LeisureCenters' },
+  { file: 'rawatan-kali', label: 'WASTEWATER-TREATMENT', title: 'Wastewater Treatment Plants of the World', var: 'WASTETP', sing: 'WastewaterPlant', finder: 'wastewaterPlant', finders: 'wastewaterPlantsInRegion', pfx: 'wp', cap: 'WastewaterPlants' },
+  { file: 'arked-beliah', label: 'SHOPPING-ARCADES', title: 'Shopping Arcades and Passages of the World', var: 'SHOPARCD', sing: 'ShoppingArcade', finder: 'shoppingArcade', finders: 'shoppingArcadesInRegion', pfx: 'sa', cap: 'ShoppingArcades' },
+  { file: 'terowong-pejalan', label: 'PEDESTRIAN-TUNNELS', title: 'Pedestrian Tunnels of the World', var: 'PEDTUNEL', sing: 'PedestrianTunnel', finder: 'pedestrianTunnel', finders: 'pedestrianTunnelsInRegion', pfx: 'pt', cap: 'PedestrianTunnels' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
