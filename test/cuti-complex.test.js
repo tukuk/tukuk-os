@@ -101,7 +101,7 @@ test('sitemap-cuti.xml + robots + footer + pautan silang cuaca/gempa↔cuti', ()
   assert.ok(!serverSrc.includes('<li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>'), 'footer tidak lagi ada Long weekends MY');
   assert.ok(serverSrc.includes('<li><a href="/cuti">World public holidays</a></li>'), 'footer ada label cuti dunia');
   assert.ok(serverSrc.includes('<a href="/cuti">cuti umum dunia</a>'), 'hab cuaca paut silang ke cuti dunia');
-  assert.ok(serverSrc.includes('<a href="/cuti">jadual cuti umum</a>'), 'hab/rantau gempa paut silang ke cuti');
+  assert.ok(serverSrc.includes('<a href="/cuti">the public-holiday calendar</a>'), 'the quake pages cross-link to the holiday calendar');
   assert.ok(serverSrc.includes("'/cuti', ") && serverSrc.includes("'/cuti/2026', '/cuti/2027'"), 'sitemap utama menyenaraikan halaman cuti');
 });
 

@@ -1,9 +1,9 @@
 'use strict';
-// ── TUKUK-OS GEMPA COMPLEX — USGS Earthquake Feed (PERCUMA, tanpa kunci API) ──
-// Sumber: https://earthquake.usgs.gov/fdsnws/event/1/query (GeoJSON). Tiada
-// pendaftaran, tiada kuota keras (dasar penggunaan yang munasabah), kemas kini
-// setiap ~5 minit di pihak USGS. Kita cache 10 minit → beban pelayan sifar.
-// Sejarah acara besar statik disimpan dalam teks halaman penjelasan sahaja.
+// ── TUKUK-OS GEMPA COMPLEX — USGS Earthquake Feed (FREE, no API key) ──────────
+// Source: https://earthquake.usgs.gov/fdsnws/event/1/query (GeoJSON). No signup,
+// no hard quota (fair-use policy), USGS refreshes about every 5 minutes. We cache
+// 10 minutes → zero extra load on our server.
+// The static big-event history lives inside the explanation page text only.
 const axios = require('axios');
 
 const http = axios.create({
@@ -32,18 +32,19 @@ function cacheSet(key, data) {
   }
 }
 
-// ——— Wilayah tetap (slug → kotak lat/lon) — bbox = [minLon, minLat, maxLon, maxLat] ———
+// ——— Fixed regions (slug → lat/lon box) — bbox = [minLon, minLat, maxLon, maxLat] ———
+// Slugs stay Malay because they are the public URLs; the labels are English.
 const REGIONS = [
   { slug: 'malaysia', name: 'Malaysia', bbox: [98, -2, 121, 8], minMag: 2.0, hours: 24 * 30, limit: 60,
-    blurb: 'Gempa terdekat dengan Malaysia — Sabah, Sarawak, Semenanjung dan sempadan Laut China Selatan.' },
-  { slug: 'asia-tenggara', name: 'Asia Tenggara', bbox: [90, -15, 148, 30], minMag: 4.5, hours: 24 * 7, limit: 60,
-    blurb: 'Indonesia, Filipina, Papua New Guinea dan sekeliling — zon tektonik paling aktif di Asia.' },
-  { slug: 'jepun', name: 'Jepun & Pasifik Barat', bbox: [125, 10, 180, 50], minMag: 4.0, hours: 24 * 7, limit: 50,
-    blurb: 'Cincin Api bahagian barat: Jepun, Kamchatka, Mariana dan Kepulauan Ryukyu.' },
-  { slug: 'pasifik-timur', name: 'Pasifik Timur & Amerika', bbox: [-180, -60, -55, 62], minMag: 5.0, hours: 24 * 7, limit: 50,
-    blurb: 'Pantai barat Amerika: California, Chile, Peru, Mexico dan Alaska.' },
-  { slug: 'dunia', name: 'Dunia M4.5+', bbox: null, minMag: 4.5, hours: 24 * 7, limit: 80,
-    blurb: 'Semua gempa magnitude 4.5 ke atas di seluruh dunia, tujuh hari terakhir.' },
+    blurb: 'The earthquakes closest to Malaysia — Sabah, Sarawak, the Peninsula and the South China Sea border.' },
+  { slug: 'asia-tenggara', name: 'Southeast Asia', bbox: [90, -15, 148, 30], minMag: 4.5, hours: 24 * 7, limit: 60,
+    blurb: 'Indonesia, the Philippines, Papua New Guinea and neighbours — the most tectonically active zone in Asia.' },
+  { slug: 'jepun', name: 'Japan & the Western Pacific', bbox: [125, 10, 180, 50], minMag: 4.0, hours: 24 * 7, limit: 50,
+    blurb: 'The western side of the Ring of Fire: Japan, Kamchatka, Mariana and the Ryukyu Islands.' },
+  { slug: 'pasifik-timur', name: 'Eastern Pacific & the Americas', bbox: [-180, -60, -55, 62], minMag: 5.0, hours: 24 * 7, limit: 50,
+    blurb: 'The west coast of the Americas: California, Chile, Peru, Mexico and Alaska.' },
+  { slug: 'dunia', name: 'World M4.5+', bbox: null, minMag: 4.5, hours: 24 * 7, limit: 80,
+    blurb: 'Every earthquake of magnitude 4.5 or above worldwide, over the last seven days.' },
 ];
 
 function findRegion(slug) {
@@ -54,8 +55,8 @@ async function usgsQuery(params) {
   const key = JSON.stringify(params);
   const hit = cacheGet(key);
   if (hit && !hit.stale) return hit.data;
-  // stale-while-revalidate: suapan USGS boleh ambil ~8s; hidang data lama serta-merta
-  // dan muat semula di latar supaya halaman tak pernah 503 atau tunggu lama.
+  // stale-while-revalidate: a USGS feed can take ~8s; serve the old data at once
+  // and re-fetch in the background so the page never 503s or waits a long time.
   if (hit && hit.stale) { fetchAndCache(key, params).catch(() => {}); return hit.data; }
   return fetchAndCache(key, params);
 }
@@ -88,12 +89,12 @@ async function fetchAndCache(key, params) {
     return rows;
   } catch (err) {
     const h = cacheGet(key);
-    if (h) return h.data; // stale lebih baik daripada gagal
+    if (h) return h.data; // stale beats an error
     throw err;
   }
 }
 
-// Carikan mengikut wilayah config (kotak lat/lon atau tanpa kotak untuk dunia).
+// Query by configured region (a lat/lon box, or none for the whole world).
 function regionFeed(r) {
   const params = { starttime: isoAgo(r.hours), endtime: new Date().toISOString(), minmagnitude: r.minMag, limit: r.limit };
   if (r.bbox) {
@@ -108,7 +109,7 @@ function isoAgo(hours) {
   return new Date(Date.now() - hours * 3600 * 1000).toISOString();
 }
 
-// Ringkasan untuk kad statistik hab.
+// Summary for the hub statistic cards.
 function summarise(rows) {
   if (!rows || !rows.length) return { count: 0, max: 0, latest: null, shallow: 0, felt: 0, tsunamis: 0 };
   let max = 0; let shallow = 0; let felt = 0; let tsunamis = 0;

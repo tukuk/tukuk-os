@@ -1219,31 +1219,31 @@ app.get('/cuaca/:slug/udara', (req, res) => cuacaCityHandler(req, res, 'udara'))
 app.get('/cuaca/:slug/surya', (req, res) => cuacaCityHandler(req, res, 'surya'));
 app.get('/cuaca/:slug', (req, res) => cuacaCityHandler(req, res, 'kota'));
 
-// ── LALUAN KOMPLEKS GEMPA (/gempa*) — suapan USGS, statik-dahulu, kemudian :region ──
+// ── EARTHQUAKE COMPLEX ROUTES (/gempa*) — USGS feed, static paths first, then :region ──
 app.get('/gempa', async (req, res) => {
   try {
     const [rows, myRows] = await Promise.all([
       gp.regionFeed(gp.findRegion('dunia')),
       gp.regionFeed(gp.findRegion('malaysia')).catch(() => []),
     ]);
-    if (!rows || !rows.length) throw new Error('suapan kosong');
+    if (!rows || !rows.length) throw new Error('empty feed');
     res.status(200).type('html').send(gempaHubPage(req, rows, myRows || []));
   } catch {
-    res.status(503).type('html').send(gempaBusy('Suapan gempa belum sempat dimuat'));
+    res.status(503).type('html').send(gempaBusy('The earthquake feed has not loaded yet'));
   }
 });
 
 app.get('/gempa/penjelasan', (req, res) => res.status(200).type('html').send(gempaExplainPage(req)));
 
-// :region DIHURUFKAN selepas laluan literal — senarai semak dalam handler (TDZ selamat).
+// :region is registered AFTER the literal paths — the lookup happens inside the handler (no TDZ).
 app.get('/gempa/:region', async (req, res) => {
   const region = gp.findRegion(req.params.region);
-  if (!region) return res.status(404).type('html').send(gempaBusy(`Rantau "${req.params.region}" tidak dikenali`));
+  if (!region) return res.status(404).type('html').send(gempaBusy(`Region "${req.params.region}" is not in our list`));
   try {
     const rows = await gp.regionFeed(region);
     res.status(200).type('html').send(gempaRegionPage(req, region, rows || []));
   } catch {
-    res.status(503).type('html').send(gempaBusy(`Data gempa ${region.name} tidak sempat dimuat`));
+    res.status(503).type('html').send(gempaBusy(`Earthquake data for ${region.name} did not load in time`));
   }
 });
 
@@ -5438,32 +5438,32 @@ function cuacaWindPage(req) {
   });
 }
 
-// ── TUKUK-OS GEMPA COMPLEX — halaman BM di atas suapan USGS (percuma, tanpa kunci) ──
-// Data atas permintaan melalui src/gempa.js (cache 10 minit, gagal → 503 noindex).
-// Greda magnitude, jadual terjemah, dan nasihat keselamatan — ceruk carian
-// "gempa bumi hari ini" / "gempa sabah" yang pesaing BM-nya sangat sedikit.
+// ── TUKUK-OS GEMPA COMPLEX — English pages on top of the USGS feed (free, no key) ──
+// Data on demand through src/gempa.js (10-minute cache, failure → 503 noindex).
+// Magnitude grading, a translation table and safety advice — the "earthquake today"
+// / "earthquake sabah" search niche has very few English-language competitors.
 const GEMPA_SECTIONS = [
-  { href: '/gempa', icon: '\uD83C\uDF0D', name: 'Gempa Bumi Terkini', blurb: 'Senarai langsung gempa seluruh dunia — data USGS, kemas kini setiap 10 minit.' },
-  { href: '/gempa/dunia', icon: '\uD83D\uDD2F', name: 'Dunia M4.5+', blurb: 'Semua gempa besar 4.5 ke atas dalam tujuh hari terakhir.' },
-  { href: '/gempa/asia-tenggara', icon: '\uD83C\uDF34', name: 'Asia Tenggara', blurb: 'Indonesia, Filipina, PNG — lingkaran tektonik paling aktif di Asia.' },
-  { href: '/gempa/jepun', icon: '\uD83D\uDDE5', name: 'Jepun & Pasifik Barat', blurb: 'Cincin Api barat: Jepun, Guam, Kamchatka dan parit Mariana.' },
-  { href: '/gempa/pasifik-timur', icon: '\uD83C\uDFE5', name: 'Pasifik Timur', blurb: 'Pantai barat Amerika: California, Chile, Peru, Mexico, Alaska.' },
-  { href: '/gempa/malaysia', icon: '\uD83C\uDDF9', name: 'Malaysia & Sabah', blurb: 'Zon Sabah, Sarawak & sempadan — 30 hari terakhir, dari magnitude kecil.' },
-  { href: '/gempa/penjelasan', icon: '\uD83D\uDCD8', name: 'Cara Baca Data Gempa', blurb: 'Magnitude, kedalaman, tsunami dan apa perlu buat bila bumi bergegar.' },
+  { href: '/gempa', icon: '\uD83C\uDF0D', name: 'Latest Earthquakes', blurb: 'A live list of earthquakes worldwide — USGS data, refreshed every 10 minutes.' },
+  { href: '/gempa/dunia', icon: '\uD83D\uDD2F', name: 'World M4.5+', blurb: 'Every larger quake, magnitude 4.5 and up, over the past seven days.' },
+  { href: '/gempa/asia-tenggara', icon: '\uD83C\uDF34', name: 'Southeast Asia', blurb: 'Indonesia, the Philippines, PNG — the most active tectonic ring in Asia.' },
+  { href: '/gempa/jepun', icon: '\uD83D\uDDE5', name: 'Japan & the Western Pacific', blurb: 'The western Ring of Fire: Japan, Guam, Kamchatka and the Mariana Trench.' },
+  { href: '/gempa/pasifik-timur', icon: '\uD83C\uDFE5', name: 'Eastern Pacific', blurb: 'The west coast of the Americas: California, Chile, Peru, Mexico, Alaska.' },
+  { href: '/gempa/malaysia', icon: '\uD83C\uDDF9', name: 'Malaysia & Sabah', blurb: 'The Sabah, Sarawak & border zones — last 30 days, down to small magnitudes.' },
+  { href: '/gempa/penjelasan', icon: '\uD83D\uDCD8', name: 'How to Read Quake Data', blurb: 'Magnitude, depth, tsunami and what to do when the ground shakes.' },
 ];
 
 function gempaNav() {
-  return `<nav aria-label="Bahagian gempa"><h2 class="section-title">Jelajahi Kompleks Gempa Tukuk-OS</h2><div class="feed">`
+  return `<nav aria-label="Earthquake sections"><h2 class="section-title">Explore the Tukuk-OS Earthquake Complex</h2><div class="feed">`
     + GEMPA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
     + `</div></nav>`;
 }
 
 function gempaBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>Sumber data gempa (USGS) tidak sempat menjawab. Sila cuba lagi beberapa minit.</p><p><a href="/gempa">Kembali ke Kompleks Gempa</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The earthquake data source (USGS) did not answer in time. Please try again in a few minutes.</p><p><a href="/gempa">Back to the Earthquake Complex</a></p></body>`;
 }
 
-// Shell sama resipi cuacaDoc: lang ms, 3 slot iklan, nav silang, CSS wx-* digunakan
-// semula supaya hab & jadual konsisten merentas kedua-dua kompleks bumi.
+// Same shell as the cuacaDoc recipe: lang en, 3 ad slots, cross nav, the wx-* CSS is
+// reused so the hub and the tables look the same across both earth complexes.
 function gempaDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
   const ld = o.ld || JSON.stringify({
@@ -5526,7 +5526,7 @@ ${siteFooter()}
 </html>`;
 }
 
-// ——— Utiliti paparan: masa MYT (UTC+8), cip magnitude, jadual ———
+// ——— Display helpers: MYT (UTC+8) time, magnitude chip, tables ———
 function gpWhen(t) {
   const p = wxParts(Math.floor(t / 1000), 8 * 3600);
   return `${WX_DAYS[p.wday]} ${p.day} ${WX_MONTHS[p.mon].slice(0, 3)} ${String(p.h).padStart(2, '0')}:${String(p.m).padStart(2, '0')}`;
@@ -5536,103 +5536,103 @@ function gpChip(m) {
   return `<span class="wx-pill" style="background:${bg};color:#fff">M ${Number(m).toFixed(1)}</span>`;
 }
 function gpTable(rows, n) {
-  if (!rows || !rows.length) return '<p>Belum ada rekod dalam tempoh ini.</p>';
-  return `<table class="wx-table"><tr><th>Bila (UTC+8)</th><th>Kuasa</th><th>Lokasi</th><th>Kedalaman</th><th>Maklum balas</th></tr>`
+  if (!rows || !rows.length) return '<p>No records in this time window yet.</p>';
+  return `<table class="wx-table"><tr><th>When (UTC+8)</th><th>Strength</th><th>Location</th><th>Depth</th><th>Feedback</th></tr>`
     + rows.slice(0, n || rows.length).map((q) => `<tr><td>${gpWhen(q.time)}</td><td>${gpChip(q.mag)}</td>`
-      + `<td><a href="${escapeHtml(q.url)}" target="_blank" rel="noopener">${escapeHtml(q.place)}</a>${q.tsunami ? ' <b style="color:#e5534b">\u26A0 potensi tsunami</b>' : ''}${q.status === 'reviewed' ? ' <span class="meta">(disemak)</span>' : ''}</td>`
-      + `<td>${q.depth} km</td><td>${q.felt ? `${q.felt} laporan terasa` : (q.cdi ? `skala rasa ${q.cdi}` : '\u2014')}</td></tr>`).join('')
+      + `<td><a href="${escapeHtml(q.url)}" target="_blank" rel="noopener">${escapeHtml(q.place)}</a>${q.tsunami ? ' <b style="color:#e5534b">\u26A0 possible tsunami</b>' : ''}${q.status === 'reviewed' ? ' <span class="meta">(reviewed)</span>' : ''}</td>`
+      + `<td>${q.depth} km</td><td>${q.felt ? `${q.felt} felt reports` : (q.cdi ? `perceived scale ${q.cdi}` : '\u2014')}</td></tr>`).join('')
     + '</table>';
 }
 function gpStatCards(rows, my) {
   const s = gp.summarise(rows);
   return `<div class="wx-grid">`
-    + `<div class="wx-card"><h3>Gempa M4.5+ (7 hari)</h3><div class="big">${s.count}</div><div class="meta">di seluruh dunia</div></div>`
-    + `<div class="wx-card"><h3>Paling kuat</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
-    + `<div class="wx-card"><h3>Gempa terdekat Malaysia</h3><div class="big">${my ? my.length : 0}</div><div class="meta">30 hari terakhir, semua magnitud</div></div>`
+    + `<div class="wx-card"><h3>Earthquakes M4.5+ (7 days)</h3><div class="big">${s.count}</div><div class="meta">worldwide</div></div>`
+    + `<div class="wx-card"><h3>Strongest</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
+    + `<div class="wx-card"><h3>Closest to Malaysia</h3><div class="big">${my ? my.length : 0}</div><div class="meta">last 30 days, all magnitudes</div></div>`
     + `</div>`;
 }
 
-// ——— HAB /gempa — dunia ringkas + Malaysia penuh + kad wilayah ———
+// ——— HUB /gempa — world summary + full Malaysia list + region cards ———
 function gempaHubPage(req, rows, myRows) {
   const s = gp.summarise(rows);
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Gempa Tukuk-OS',
-    description: 'Senarai langsung gempa bumi seluruh dunia dan rantau Asia Tenggara daripada Survei Geologi AS (USGS).',
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Earthquake Complex',
+    description: 'A live list of earthquakes worldwide and across Southeast Asia, from USGS public data.',
     url: 'https://tukuk.org/gempa', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   const regionCards = gp.REGIONS.map((r) => `<div class="wx-card"><h3><a href="/gempa/${r.slug}">${escapeHtml(r.name)}</a></h3><div class="meta">${escapeHtml(r.blurb)}</div></div>`).join('');
   const body = `<div class="wx-hero"><div class="temp">M ${s.max.toFixed(1)}</div><div class="wmeta">`
-    + `Gempa paling kuat seminggu terakhir \u00b7 ${escapeHtml(s.latest ? s.latest.place : '')}<br>`
-    + `${s.latest ? gpWhen(s.latest.time) + ' \u00b7 kedalaman ' + s.latest.depth + ' km' : ''} \u00b7 sumber: Survei Geologi Amerika Syarikat (USGS), data awam.</div></div>`
+    + `The strongest quake of the past week \u00b7 ${escapeHtml(s.latest ? s.latest.place : '')}<br>`
+    + `${s.latest ? gpWhen(s.latest.time) + ' \u00b7 depth ' + s.latest.depth + ' km' : ''} \u00b7 source: the United States Geological Survey (USGS), public data.</div></div>`
     + gpStatCards(rows, myRows)
-    + `<h2 class="section-title">Sepuluh gempa terbaharu (M4.5+ dunia)</h2>${gpTable(rows, 10)}`
-    + `<h2 class="section-title">Gempa di sekitar Malaysia (30 hari)</h2>${gpTable(myRows, 20)}`
-    + `<p>Malaysia bukan di bawah Cincin Api, tetapi tidak bebas gegaran: zon seismik Sabah timur (runtuhan Lingkabau, Pitas dan Kota Belud) aktif dan pernah menggegarkan Gunung Kinabalu pada Jun 2015 (M6.0, 181 nyawa di pendakian), manakala gempa besar di Sumatera kerap terasa di Lembah Klang dan Pulau Pinang kerana tanah lembut mengampifikasi gelombang.</p>`
-    + `<h2 class="section-title">Rantau pemantauan</h2><div class="wx-grid">${regionCards}</div>`
-    + `<p class="meta">Baru nak fahami angka? Baca <a href="/gempa/penjelasan">cara baca data gempa</a>. Untuk cuaca semasa di lokasi anda, guna <a href="/cuaca">Kompleks Cuaca</a>; untuk langit malam, <a href="/nasa/sky">Langit Malam NASA</a>; profil negara tempat gempa berlaku? <a href="/negara">Kompleks Negara</a>.</p>`;
+    + `<h2 class="section-title">The ten newest quakes (world M4.5+)</h2>${gpTable(rows, 10)}`
+    + `<h2 class="section-title">Earthquakes around Malaysia (30 days)</h2>${gpTable(myRows, 20)}`
+    + `<p>Malaysia does not sit on the Ring of Fire, but it is not free of shaking either: the eastern Sabah seismic zone (the Lingkabau, Pitas and Kota Belud faults) is active and shook Mount Kinabalu in June 2015 (M6.0, 181 deaths on the climb), while large Sumatran quakes are often felt in the Klang Valley and Penang because soft ground amplifies the waves.</p>`
+    + `<h2 class="section-title">Monitored regions</h2><div class="wx-grid">${regionCards}</div>`
+    + `<p class="meta">New to the numbers? Read <a href="/gempa/penjelasan">how to interpret quake data</a>. For the current sky where you are, use the <a href="/cuaca">Weather Complex</a>; for the night sky, <a href="/nasa/sky">NASA Night Sky</a>; and the country a quake hits? <a href="/negara">Country Complex</a>.</p>`;
   return gempaDoc({
-    title: 'Gempa Bumi Hari Ini — Senarai Langsung Seluruh Dunia | Tukuk-OS',
-    desc: 'Semak gempa bumi terkini secara langsung merentasi dunia: magnitude, lokasi, kedalaman dan potensi tsunami daripada data awam USGS — kemas kini setiap 10 minit, dengan pemantauan khas Asia Tenggara, Jepun, Pasifik dan zon Sabah.',
+    title: 'Earthquakes Today — Live World List | Tukuk-OS',
+    desc: 'Check the latest earthquakes live across the world: magnitude, location, depth and tsunami potential from USGS public data — refreshed every 10 minutes, with special monitoring of Southeast Asia, Japan, the Pacific and the Sabah zone.',
     selfUrl: 'https://tukuk.org/gempa',
-    heroTitle: 'Kompleks Gempa Tukuk-OS', heroSub: 'Data langsung USGS \u00b7 kemas kini 10 minit \u00b7 percuma tanpa log masuk',
+    heroTitle: 'Tukuk-OS Earthquake Complex', heroSub: 'Live USGS data \u00b7 updated every 10 minutes \u00b7 free, no login',
     body, ld,
   });
 }
 
-// ——— Halaman wilayah ———
+// ——— Region pages ———
 function gempaRegionPage(req, region, rows) {
   const s = gp.summarise(rows);
   const selfUrl = `https://tukuk.org/gempa/${region.slug}`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Gempa Bumi Terkini: ${region.name}`,
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Latest Earthquakes: ${region.name}`,
     description: region.blurb, url: selfUrl,
   }).replace(/</g, '\\u003c');
-  const body = `<p>${escapeHtml(region.blurb)} Data dikemas kini setiap 10 minit daripada Survei Geologi AS (USGS); masa dipaparkan dalam UTC+8.</p>`
+  const body = `<p>${escapeHtml(region.blurb)} The data is refreshed every 10 minutes by the United States Geological Survey (USGS); times are shown in UTC+8.</p>`
     + `<div class="wx-grid">`
-    + `<div class="wx-card"><h3>Jumlah dalam tempoh</h3><div class="big">${s.count}</div><div class="meta">magnitud minimum ${region.minMag.toFixed(1)}</div></div>`
-    + `<div class="wx-card"><h3>Paling kuat</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
-    + `<div class="wx-card"><h3>Dangkal (&lt;35 km)</h3><div class="big">${s.shallow}</div><div class="meta">gempa dangkal paling terasa di permukaan</div></div></div>`
+    + `<div class="wx-card"><h3>Total in the window</h3><div class="big">${s.count}</div><div class="meta">minimum magnitude ${region.minMag.toFixed(1)}</div></div>`
+    + `<div class="wx-card"><h3>Strongest</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
+    + `<div class="wx-card"><h3>Shallow (&lt;35 km)</h3><div class="big">${s.shallow}</div><div class="meta">shallow quakes are the ones felt at the surface</div></div></div>`
     + gpTable(rows, 50)
-    + (s.felt ? `<p><b>${s.felt}</b> daripada gempa tersenarai mempunyai laporan manusia yang merasakannya (butiran felt di USGS).</p>` : '')
-    + `<h2 class="section-title">Apa perlu buat bila bumi bergegar</h2><p><b>Reda \u2014 Lindungi \u2014 Tahan</b>: menjatuhkan diri ke lantai, berlindung di bawah meja kukuh dan tahan sehingga gegaran berhenti. Jangan berlari ketika gegaran masih ada; jangan guna lif; selepas itu periksa wayar, paip gas dan amaran susulan. Panduan penuh dalam <a href="/gempa/penjelasan">halaman penjelasan</a>.</p>`
-    + `<p class="meta">Lihat juga: <a href="/gempa">hab gempa dunia</a> \u00b7 <a href="/gempa/malaysia">zon Malaysia</a> \u00b7 <a href="/cuaca">cuaca semasa</a> \u00b7 <a href="/cuti">jadual cuti umum</a>.</p>`;
+    + (s.felt ? `<p><b>${s.felt}</b> of the earthquakes listed carry human reports of having been felt (the "felt" field in USGS data).</p>` : '')
+    + `<h2 class="section-title">What to do when the ground shakes</h2><p><b>Drop \u2014 Cover \u2014 Hold</b>: let yourself down onto the floor, take cover under a sturdy table and hold on until the shaking stops. Do not run while the ground is still moving; do not use the lift; afterwards check the wiring, the gas pipes and the aftershock warnings. The full guide is on the <a href="/gempa/penjelasan">explanation page</a>.</p>`
+    + `<p class="meta">See also: <a href="/gempa">the world earthquake hub</a> \u00b7 <a href="/gempa/malaysia">the Malaysia zone</a> \u00b7 <a href="/cuaca">current weather</a> \u00b7 <a href="/cuti">the public-holiday calendar</a>.</p>`;
   return gempaDoc({
-    title: `Gempa Bumi Terkini di ${region.name} — Magnitud, Lokasi & Kedalaman | Tukuk-OS`,
-    desc: `Senarai langsung gempa ${region.name}: magnitud, kedalaman, lokasi dan laporan terasa — data USGS kemas kini setiap 10 minit, masa dalam Waktu Malaysia.`,
+    title: `Latest Earthquakes in ${region.name} \u2014 Magnitude, Location & Depth | Tukuk-OS`,
+    desc: `A live list of earthquakes in ${region.name}: magnitude, depth, location and felt reports from USGS data, updated every 10 minutes, with times in Malaysia time.`,
     selfUrl,
-    heroTitle: `Gempa di ${region.name}`, heroSub: `Suapan langsung USGS \u00b7 ${s.count} rekod dalam tempoh pemantauan`,
+    heroTitle: `Earthquakes in ${region.name}`, heroSub: `Live USGS feed \u00b7 ${s.count} records in the monitoring window`,
     body, ld,
   });
 }
 
-// ——— Halaman penjelasan (statik, pendidikan) ———
+// ——— Explanation page (static, educational) ———
 function gempaExplainPage(req) {
   const magRows = [
-    ['< 2.5', 'mikro', 'hanya alat seismograf dapat mengesan'],
-    ['2.5 – 5.0', 'ringan', 'kerap terasa berhampiran pusat; kerosakan kecil'],
-    ['5.0 – 6.0', 'sederhana', 'kerosakan serius di kawasan berpenduduk; Sabah 2015 = 6.0'],
-    ['6.0 – 7.0', 'kuat', 'kemusnahan meluas dalam radius ~100 km'],
-    ['7.0 – 8.0', 'besar', 'kemusnahan di kawasan luas; gempa Laut Sulawesi 2018 = 7.5 + likuifaksi + tsunami'],
-    ['> 8.0', 'dahsyat', 'melintasi seluruh rantaian gunung berapi; Aceh 2004 = 9.1, tsunami merentasi samudera'],
+    ['&lt; 2.5', 'micro', 'only seismographs pick it up'],
+    ['2.5 – 5.0', 'light', 'often felt near the epicentre; minor damage'],
+    ['5.0 – 6.0', 'moderate', 'serious damage where people live; Sabah 2015 = 6.0'],
+    ['6.0 – 7.0', 'strong', 'widespread destruction within a radius of about 100 km'],
+    ['7.0 – 8.0', 'major', 'destruction over a wide area; the 2018 Sulawesi Sea quake = 7.5 + liquefaction + tsunami'],
+    ['&gt; 8.0', 'great', 'ruptures whole volcanic chains; Aceh 2004 = 9.1, a tsunami that crossed an ocean'],
   ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
-  const body = `<p>Setiap baris di <a href="/gempa">kompleks gempa</a> kami berasal daripada Survei Geologi AS (USGS), agensi sains awam yang merakam >20,000 gempa setahun dengan rangkaian seismograf global. Ini yang perlu anda tahu untuk membacanya.</p>`
-    + `<h2 class="section-title">Magnitude: skala logaritma</h2><p>Setiap kenaikan 1 magnitud bermakna <b>10× amplitud</b> dan <b>~32× tenaga</b>. Gempa M6.0 melepaskan tenaga kira-kira 32 kali ganda M5.0 — sebab itu beza "6.1" dan "5.4" dalam berita bukan calang-calang.</p>`
-    + `<table class="wx-table"><tr><th>Magnitud</th><th>Kelas</th><th>Kesan tipikal</th></tr>${magRows}</table>`
-    + `<h2 class="section-title">Kedalaman: faktor penentu rasa</h2><p>Gempa 10 km jauh lebih terasa di permukaan daripada gempa 200 km yang bermagnitud sama. Zon Sabah biasanya dangkal (<20 km) sebab itu gegaran kecil pun dirasakan di Kota Kinabalu. Gempa dalam (>300 km) di bawah Laut Filipina pula jarang memudaratkan walaupun magnitudnya besar.</p>`
-    + `<h2 class="section-title">Mengapa Sabah bergegar tetapi KL biasanya tidak</h2><p>Borneo duduk di atas plat Sunda yang agak stabil, tetapi tepi timurnya dihimpit plat Sulu dan Laut Filipina — lahirlah runtuhan aktif Lingkabau, Pitas dan Tambon. Semenanjung berada pada "litar belakang": kebanyakan gegaran yang dilaporkan di Klang atau Penang adalah gelombang jauh dari Sumatera yang diperkuat lapisan tanah lembut dan bangunan tinggi.</p>`
-    + `<h2 class="section-title">Tsunami: bila amaran perlu serius</h2><p>Tanda amaran tsunami = gempa M7+ di zon sesaran laut dengan kedalaman &lt;30 km. Di Malaysia, pantai barat Sabah dan timur Sarawak paling terdedah kepada laut Sulawesi. Jika gegaran di tepi pantai bertahan lebih 20 saat, terus bergerak ke darat tinggi — jangan menunggu siren rasmi.</p>`
-    + `<h2 class="section-title">Protokol emas: Reda, Lindungi, Tahan</h2><ul><li><b>Reda</b> — jatuhkan diri ke tangan dan lutut sebelum gegaran melemparkan anda.</li><li><b>Lindungi</b> — merangkak bawah meja; lindungi kepala & leher. Tiada meja? Di sudut dalaman, jauh dari cermin.</li><li><b>Tahan</b> — pegang tempat hingga gegaran berhenti; bergerak semasa bumi masih bergegar adalah punca kecederaan paling biasa.</li></ul>`
-    + `<p class="meta">Untuk amaran rasmi Malaysia, rujuk Jabatan Meteorologi Malaysia (met.gov.my) dan Majlis Keselamatan Negara. Halaman ini untuk pendidikan & rujukan pantas — data mentah sentiasa di USGS. Semak juga <a href="/cuaca">Kompleks Cuaca</a> untuk keadaan langit semasa.</p>`;
+  const body = `<p>Every row in our <a href="/gempa">earthquake complex</a> comes from the United States Geological Survey (USGS), the public science agency that records more than 20,000 earthquakes a year with a global seismograph network. This is what you need to read them.</p>`
+    + `<h2 class="section-title">Magnitude: a logarithmic scale</h2><p>Every step of 1 magnitude means <b>10× the amplitude</b> and <b>~32× the energy</b>. An M6.0 releases roughly 32 times the energy of an M5.0 — which is why the gap between "6.1" and "5.4" in the news is not a small thing.</p>`
+    + `<table class="wx-table"><tr><th>Magnitude</th><th>Class</th><th>Typical effect</th></tr>${magRows}</table>`
+    + `<h2 class="section-title">Depth: the factor that decides what you feel</h2><p>A quake at 10 km is felt far harder at the surface than one of the same magnitude at 200 km. The Sabah zone is usually shallow (&lt;20 km), which is why even small tremors are felt in Kota Kinabalu. Deep events (&gt;300 km) under the Philippine Sea rarely do damage even when their magnitude is large.</p>`
+    + `<h2 class="section-title">Why Sabah shakes while KL usually does not</h2><p>Borneo sits on the fairly stable Sunda Plate, but its eastern edge is squeezed by the Sulu and Philippine Sea plates — that is what formed the active Lingkabau, Pitas and Tambon faults. The Peninsula is on the back row: most tremors reported in Klang or Penang are distant Sumatran waves, amplified by soft ground and tall buildings.</p>`
+    + `<h2 class="section-title">Tsunami: when a warning deserves to be taken seriously</h2><p>The tsunami-warning signature = an M7+ quake on a sea fault at a depth below 30 km. In Malaysia, the west coast of Sabah and eastern Sarawak are most exposed to the Sulawesi Sea. If shaking by the water lasts more than 20 seconds, move to higher ground straight away — do not wait for the official siren.</p>`
+    + `<h2 class="section-title">The gold protocol: Drop, Cover, Hold</h2><ul><li><b>Drop</b> — get down on your hands and knees before the shaking throws you over.</li><li><b>Cover</b> — crawl under a table and shield your head & neck. No table? An interior corner, away from mirrors.</li><li><b>Hold</b> — hold on where you are until the shaking stops; moving around while the ground still moves is the most common cause of injury.</li></ul>`
+    + `<p class="meta">For official Malaysian warnings, refer to MetMalaysia (met.gov.my) and the National Security Council. This page is for education & quick reference — the raw data always lives at USGS. Also check the <a href="/cuaca">Weather Complex</a> for the sky overhead.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Article', name: 'Cara Baca Data Gempa Bumi',
-    description: 'Penjelasan Bahasa Melayu: magnitud, kedalaman, tsunami dan protokol Reda-Lindungi-Tahan.',
-    url: 'https://tukuk.org/gempa/penjelasan', inLanguage: 'ms', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
+    '@context': 'https://schema.org', '@type': 'Article', name: 'How to Read Earthquake Data',
+    description: 'An explanation of magnitude, depth, tsunami potential and the Drop-Cover-Hold protocol, written for the Malaysian context.',
+    url: 'https://tukuk.org/gempa/penjelasan', inLanguage: 'en', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
   }).replace(/</g, '\\u003c');
   return gempaDoc({
-    title: 'Cara Baca Data Gempa Bumi — Magnitud, Kedalaman & Tsunami | Tukuk-OS',
-    desc: 'Fahami skala magnitud (setiap 1 = 32× tenaga), kedalaman, potensi tsunami dan protokol Reda-Lindungi-Tahan — penjelasan Bahasa Melayu untuk konteks Malaysia.',
+    title: 'How to Read Earthquake Data — Magnitude, Depth & Tsunami | Tukuk-OS',
+    desc: 'Understand the magnitude scale (every step = 32× the energy), depth, tsunami potential and the Drop-Cover-Hold protocol — explained for the Malaysian context.',
     selfUrl: 'https://tukuk.org/gempa/penjelasan',
-    heroTitle: 'Cara Baca Data Gempa', heroSub: 'Daripada angka seismograf hingga keputusan selamat dalam 60 saat',
+    heroTitle: 'How to Read Earthquake Data', heroSub: 'From seismograph numbers to a safe decision in 60 seconds',
     body, ld,
   });
 }
