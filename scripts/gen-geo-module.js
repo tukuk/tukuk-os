@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kincir-menara', label: 'TOWER-MILLS', title: 'Tower Mills of the World', var: 'TOWERMILLS', sing: 'TowerMill', finder: 'towermill', finders: 'towerMillsInRegion', pfx: 'tm', cap: 'TowerMills' },
-  { file: 'kincir-smock', label: 'SMOCK-MILLS', title: 'Smock Mills of the World', var: 'SMOCKMILLS', sing: 'SmockMill', finder: 'smockmill', finders: 'smockMillsInRegion', pfx: 'sm', cap: 'SmockMills' },
-  { file: 'kincir-tiang', label: 'POST-MILLS', title: 'Post Mills of the World', var: 'POSTMILLS', sing: 'PostMill', finder: 'postmill', finders: 'postMillsInRegion', pfx: 'ps', cap: 'PostMills' },
-  { file: 'benteng-bintang', label: 'STAR-FORTS', title: 'Star Forts of the World', var: 'STARFORTS', sing: 'StarFort', finder: 'starfort', finders: 'starFortsInRegion', pfx: 'sf', cap: 'StarForts' },
-  { file: 'jambatan-kuda', label: 'PACKHORSE-BRIDGES', title: 'Packhorse Bridges of the World', var: 'PACKBRIDGES', sing: 'PackhorseBridge', finder: 'packhorsebridge', finders: 'packhorseBridgesInRegion', pfx: 'pb', cap: 'PackhorseBridges' },
-  { file: 'gudang-serbuk', label: 'POWDER-MAGAZINES', title: 'Powder Magazines of the World', var: 'POWDERMAG', sing: 'PowderMagazine', finder: 'powdermagazine', finders: 'powderMagazinesInRegion', pfx: 'px', cap: 'PowderMagazines' },
-  { file: 'batu-run', label: 'RUNESTONES', title: 'Runestones of the World', var: 'RUNESTONES', sing: 'Runestone', finder: 'runestone', finders: 'runestonesInRegion', pfx: 'rn', cap: 'Runestones' },
-  { file: 'sabkha', label: 'SABKHAS', title: 'Sabkhas and Coastal Salt Flats of the World', var: 'SABKHAS', sing: 'Sabkha', finder: 'sabkha', finders: 'sabkhasInRegion', pfx: 'sa', cap: 'Sabkhas' },
-  { file: 'rumah-jeruk', label: 'ORANGERIES', title: 'Orangeries of the World', var: 'ORANGERIES', sing: 'Orangery', finder: 'orangery', finders: 'orangeriesInRegion', pfx: 'or', cap: 'Orangeries' },
+  { file: 'pulau-pasang', label: 'TIDAL-ISLANDS', title: 'Tidal Islands of the World', var: 'TIDALISLES', sing: 'TidalIsland', finder: 'tidalisland', finders: 'tidalIslandsInRegion', pfx: 'ti', cap: 'TidalIslands' },
+  { file: 'hypogeum', label: 'HYPOGEUMS', title: 'Hypogea and Underground Tombs of the World', var: 'HYPOGEA', sing: 'Hypogeum', finder: 'hypogeum', finders: 'hypogeaInRegion', pfx: 'hg', cap: 'Hypogea' },
+  { file: 'batu-bertulis', label: 'STELES', title: 'Steles and Inscribed Stones of the World', var: 'STELES', sing: 'Stele', finder: 'stele', finders: 'stelesInRegion', pfx: 'sx', cap: 'Steles' },
+  { file: 'sanatorium', label: 'SANATORIUMS', title: 'Sanatoriums of the World', var: 'SANATOR', sing: 'Sanatorium', finder: 'sanatorium', finders: 'sanatoriumsInRegion', pfx: 'sn', cap: 'Sanatoriums' },
+  { file: 'kebun-buah', label: 'ORCHARDS', title: 'Orchards of the World', var: 'ORCHARDS', sing: 'Orchard', finder: 'orchard', finders: 'orchardsInRegion', pfx: 'oc', cap: 'Orchards' },
+  { file: 'kincir-pam', label: 'WINDPUMPS', title: 'Windpumps of the World', var: 'WINDPUMPS', sing: 'Windpump', finder: 'windpump', finders: 'windpumpsInRegion', pfx: 'wd', cap: 'Windpumps' },
+  { file: 'danau-belok', label: 'OXBOW-LAKES', title: 'Oxbow Lakes of the World', var: 'OXBOWS', sing: 'OxbowLake', finder: 'oxbowlake', finders: 'oxbowLakesInRegion', pfx: 'ox', cap: 'OxbowLakes' },
+  { file: 'kolam-ikan', label: 'FISH-PONDS', title: 'Fish Ponds of the World', var: 'FISHPONDS', sing: 'FishPond', finder: 'fishpond', finders: 'fishPondsInRegion', pfx: 'fp', cap: 'FishPonds' },
+  { file: 'tiang-totem', label: 'TOTEM-POLES', title: 'Totem Poles of the World', var: 'TOTEMPOLES', sing: 'TotemPole', finder: 'totempole', finders: 'totemPolesInRegion', pfx: 'tp', cap: 'TotemPoles' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
