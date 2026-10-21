@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'institut-sidik', label: 'RESEARCH-INSTITUTES', title: 'Research Institutes of the World', var: 'RESINST', sing: 'ResearchInstitute', finder: 'researchInstitute', finders: 'researchInstitutesInRegion', pfx: 'ri', cap: 'ResearchInstitutes' },
-  { file: 'bank-bangunan', label: 'BANK-BUILDINGS', title: 'Bank Buildings of the World', var: 'BANKBLDG', sing: 'BankBuilding', finder: 'bankBuilding', finders: 'bankBuildingsInRegion', pfx: 'bk', cap: 'BankBuildings' },
-  { file: 'sekolah-seni', label: 'ART-SCHOOLS', title: 'Art Schools and Academies of the World', var: 'ARTSCHOOL', sing: 'ArtSchool', finder: 'artSchool', finders: 'artSchoolsInRegion', pfx: 'ar', cap: 'ArtSchools' },
-  { file: 'kampus', label: 'CAMPUSES', title: 'University Campuses of the World', var: 'CAMPUSES', sing: 'Campus', finder: 'campus', finders: 'campusesInRegion', pfx: 'cp', cap: 'Campuses' },
-  { file: 'kem-tawanan', label: 'PRISONER-OF-WAR-CAMPS', title: 'Prisoner-of-War Camps of the World', var: 'POWCAMPS', sing: 'PowCamp', finder: 'powCamp', finders: 'powCampsInRegion', pfx: 'pw', cap: 'PowCamps' },
-  { file: 'bursa-saham', label: 'STOCK-EXCHANGES', title: 'Stock Exchanges of the World', var: 'STOCKXCH', sing: 'StockExchange', finder: 'stockExchange', finders: 'stockExchangesInRegion', pfx: 'sx', cap: 'StockExchanges' },
-  { file: 'pusat-tahanan', label: 'DETENTION-CENTERS', title: 'Detention Centers of the World', var: 'DETENCEN', sing: 'DetentionCenter', finder: 'detentionCenter', finders: 'detentionCentersInRegion', pfx: 'dc', cap: 'DetentionCenters' },
-  { file: 'konsulat', label: 'CONSULATES', title: 'Consulates of the World', var: 'CONSULATE', sing: 'Consulate', finder: 'consulate', finders: 'consulatesInRegion', pfx: 'cs', cap: 'Consulates' },
-  { file: 'kedutaan', label: 'EMBASSIES', title: 'Embassies of the World', var: 'EMBASSY', sing: 'Embassy', finder: 'embassy', finders: 'embassiesInRegion', pfx: 'em', cap: 'Embassies' },
+  { file: 'lapangan-udara', label: 'AIRFIELDS', title: 'Airfields and Aerodromes of the World', var: 'AIRFIELDS', sing: 'Airfield', finder: 'airfield', finders: 'airfieldsInRegion', pfx: 'lu', cap: 'Airfields' },
+  { file: 'pangkalan-tentera', label: 'MILITARY-BASES', title: 'Military Bases of the World', var: 'MILBASE', sing: 'MilitaryBase', finder: 'militaryBase', finders: 'militaryBasesInRegion', pfx: 'mb', cap: 'MilitaryBases' },
+  { file: 'kilang', label: 'FACTORIES', title: 'Factories of the World', var: 'FACTORIES', sing: 'Factory', finder: 'factory', finders: 'factoriesInRegion', pfx: 'fk', cap: 'Factories' },
+  { file: 'perlintasan-sempadan', label: 'BORDER-CHECKPOINTS', title: 'Border Checkpoints of the World', var: 'BORDERCP', sing: 'BorderCheckpoint', finder: 'borderCheckpoint', finders: 'borderCheckpointsInRegion', pfx: 'bc', cap: 'BorderCheckpoints' },
+  { file: 'pangkalan-laut', label: 'NAVAL-BASES', title: 'Naval Bases of the World', var: 'NAVALBASE', sing: 'NavalBase', finder: 'navalBase', finders: 'navalBasesInRegion', pfx: 'nb', cap: 'NavalBases' },
+  { file: 'bangunan-industri', label: 'INDUSTRIAL-BUILDINGS', title: 'Industrial Buildings of the World', var: 'INDBLDG', sing: 'IndustrialBuilding', finder: 'industrialBuilding', finders: 'industrialBuildingsInRegion', pfx: 'ib', cap: 'IndustrialBuildings' },
+  { file: 'kem-tentera', label: 'MILITARY-CAMPS', title: 'Military Camps of the World', var: 'MILCAMP', sing: 'MilitaryCamp', finder: 'militaryCamp', finders: 'militaryCampsInRegion', pfx: 'mk', cap: 'MilitaryCamps' },
+  { file: 'terusan-irigasi', label: 'IRRIGATION-CANALS', title: 'Irrigation Canals of the World', var: 'IRRIGCAN', sing: 'IrrigationCanal', finder: 'irrigationCanal', finders: 'irrigationCanalsInRegion', pfx: 'ig', cap: 'IrrigationCanals' },
+  { file: 'kawasan-kemah', label: 'CAMPSITES', title: 'Campsites of the World', var: 'CAMPSITE', sing: 'Campsite', finder: 'campsite', finders: 'campsitesInRegion', pfx: 'ck', cap: 'Campsites' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
