@@ -1,15 +1,15 @@
 'use strict';
-// ── TUKUK-OS BENCANA COMPLEX — pemantau acara alam langsung NASA EONET ──
-// Sumber: https://eonet.gsfc.nasa.gov/api/v3 — NASA Earth Observatory Network,
-// dibuka 24/7 oleh kurator manusia + satelit. TANPA kunci, tanpa daftar.
-// Meliputi gunung berapi, taufan/ribut, kebakaran lahan, banjir, kemarau,
-// tanah runtuh, salji, habuk, ais laut dan isu air di seluruh dunia.
+// ── TUKUK-OS DISASTER COMPLEX — live natural-event watch from NASA EONET ──
+// Source: https://eonet.gsfc.nasa.gov/api/v3 — NASA Earth Observatory Network,
+// staffed 24/7 by human curators plus satellites. NO key, no signup.
+// Covers volcanoes, storms, wildfires, floods, drought, landslides, snow,
+// dust, sea ice and water issues around the world.
 const https = require('https');
 
 const EONET = 'https://eonet.gsfc.nasa.gov/api/v3';
 const cache = new Map();
-const TTL_OPEN = 6 * 60 * 60 * 1000;  // senarai acara dibuka kemas kini beberapa kali sehari
-const TTL_ONE = 24 * 60 * 60 * 1000;  //butiran satu acara
+const TTL_OPEN = 6 * 60 * 60 * 1000;  // the open-event list refreshes a few times a day
+const TTL_ONE = 24 * 60 * 60 * 1000;  // one event's detail
 
 function cacheGet(key, ttl) {
   const hit = cache.get(key);
@@ -20,7 +20,7 @@ function cacheSet(key, data, ttl) {
   cache.set(key, { data, expiresAt: Date.now() + (ttl || TTL_OPEN) });
 }
 
-// Agent IPv6 didahulukan (pitfall dns ipv4first global server.js).
+// The IPv6 agent goes first — server.js pins the global resolver to 'ipv4first'.
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 
@@ -48,33 +48,40 @@ async function fetchJson(url) {
   catch { return await httpsGet(url, v4Agent); }
 }
 
-// Kategori dipilih (id EONET → slug/bm), dengan blurb edukatif Bahasa Melayu
-// yang menjadi bahan SEO setiap halaman kategori.
+// The categories we publish (EONET id → slug/name), each with the explanatory
+// blurb that doubles as the SEO copy of its category page.
+// The slugs stay Malay: they are the live URLs of this complex.
+// KNOWN DATA DEFECT (not yet fixed, it would move public URLs): EONET v3 publishes
+// drought, dustHaze, earthquakes, floods, landslides, manmade, seaLakeIce,
+// severeStorms, snow, tempExtremes, volcanoes, waterColor and wildfires — so the ids
+// dustHazard, seaAndLakeIce, icebergs and waterIssues below are unknown to the API,
+// and an unknown category= does not error: EONET drops the filter and returns every
+// open event (up to the limit). Those four pages therefore over-report.
 const CATS = [
-  { id: 'volcanoes', slug: 'gunung-berapi', bm: 'Gunung Berapi', icon: '🌋',
-    blurb: 'Aktiviti gunung berapi yang sedang dipantau — letusan, gegaran vulkanik, aliran lava dan amaran abu. Abu vulkanik boleh terbang ribuan kilometer dan menggangu penerbangan, jadi senarai ini dikemas kini kurator NASA dari laporan VAAC dan observatori seluruh dunia.' },
-  { id: 'severeStorms', slug: 'taufan-ribut', bm: 'Taufan & Ribut', icon: '🌀',
-    blurb: 'Siklon tropika, taufan, topan dan ribut petir dahsyat — dikesan dari angkasa lewat imbasan satelit geostasioner. Nama badai datang daripada senarai berputar enam regional; kekuatan diukur dengan skala Saffir–Simpson bagi belahan bumi barat dan skala JMA di Asia.' },
-  { id: 'wildfires', slug: 'kebakaran-lahan', bm: 'Kebakaran Lahan & Hutan', icon: '🔥',
-    blurb: 'Kebakaran hutan, semak dan lahan gambut yang aktif — dikesan oleh sensor MODIS/VIIRS yang menangkap haba terbakar dari orbit. Asap kebakaran boleh mengelilingi benua dan mempengaruhi kualiti udara negara yang jauh.' },
-  { id: 'floods', slug: 'banjir', bm: 'Banjir', icon: '🌊',
-    blurb: 'Banjir sungai, kilat dan monsun yang menjejaskan penduduk — laporan agensi bencana dan imej satelit perairan (Sentinel-1 menembus awan). Banjir adalah bencana paling kerap berlaku di dunia; lebih 1.5 bilion manusia pernah terjejas setiap dekad.' },
-  { id: 'drought', slug: 'kemarau', bm: 'Kemarau', icon: '☀️',
-    blurb: 'Tempat yang mengalami kekurangan hujan berpanjangan — dipantau dengan indeks kelewatan tanah dan suhu permukaan. Kemarau bergerak perlahan tetapi membunuh paling banyak ternakan dan tanaman daripada bencana lain yang tiba-tiba.' },
-  { id: 'landslides', slug: 'tanah-runtuh', bm: 'Tanah Runtuh', icon: '⛰️',
-    blurb: 'Runtuhan lereng, longsor dan aliran serpihan — selalunya dicetuskan hujan lebat atau gempa bumi di kawasan berbukit. Tropika yang bergunung seperti Indonesia dan Filipina sangat terdedah pada musim monsun.' },
-  { id: 'snow', slug: 'salji-beku', bm: 'Salji & Cuaca Beku', icon: '❄️',
-    blurb: 'Badai salji besar dan cuaca beku melampau — dari blizzard Amerika Utara hingga salji awal Himalaya. Peristiwa ini menguji grid tenaga, penerbangan dan bekalan air sebuah negara dalam satu malam.' },
-  { id: 'dustHazard', slug: 'badai-habuk', bm: 'Badai Habuk & Pasir', icon: '🏜️',
-    blurb: 'Habuk Sahara, ribut pasir Asia dan badai debu — awan debu yang boleh menyeberangi lautan hingga ke Caribbean. Habuk fosforus yang dibawa malah menyuburkan hutan Amazon setiap tahun.' },
-  { id: 'seaAndLakeIce', slug: 'ais-laut', bm: 'Ais Laut & Tasik', icon: '🧊',
-    blurb: 'Pembentukan dan peleraian ais laut Artik serta tasik beku — barometer iklim kutub yang paling jujur. Luas ais laut bermusim kini menyusut setiap dekad sejak pengukuran satelit bermula 1979.' },
-  { id: 'icebergs', slug: 'gunung-ais', bm: 'Gunung Ais (Iceberg)', icon: '🚢',
-    blurb: 'Gunung ais gergasi yang berpecah (calving) dari rak ais Greenland dan Antartika — ada sebesar bandar, boleh terapung bertahun-tahun. Pemantauan penting untuk laluan kapal dan kajian kenaikan paras laut.' },
-  { id: 'waterIssues', slug: 'isu-air', bm: 'Isu Air', icon: '💧',
-    blurb: 'Peristiwa yang menjejaskan bekalan air — pencemaran, tanah runtuh ke takungan, kegagalan empangan dan kekurangan bekalan. Lebih 2 bilion manusia tinggal di negara tertekan air; isu ini jarang menjadi berita utama tetapi bahaya lambat-launnya besar.' },
-  { id: 'manmade', slug: 'insiden-manusia', bm: 'Insiden Manusia', icon: '🏭',
-    blurb: 'Bencana teknologi dan industri yang dilihat dari angkasa: kebakaran gudang, runtuhan, tumpahan minyak dan letupan. Kategori ini mengingatkan bahawa satelit turut mengawal keselamatan manusia, bukan alam semata-mata.' },
+  { id: 'volcanoes', slug: 'gunung-berapi', en: 'Volcanoes', icon: '🌋',
+    blurb: 'Volcanic activity under watch right now — eruptions, volcanic tremor, lava flows and ash alerts. Volcanic ash can travel thousands of kilometres and ground aircraft, so this list is kept current by NASA curators working from VAAC and observatory reports worldwide.' },
+  { id: 'severeStorms', slug: 'taufan-ribut', en: 'Hurricanes & Cyclones', icon: '🌀',
+    blurb: 'Tropical cyclones, hurricanes, typhoons and severe thunderstorms — spotted from space by geostationary satellite scans. Storm names come from six rotating regional lists; strength is measured on the Saffir–Simpson scale in the western hemisphere and the JMA scale in Asia.' },
+  { id: 'wildfires', slug: 'kebakaran-lahan', en: 'Wildfires & Forest Fires', icon: '🔥',
+    blurb: 'Active forest, scrub and peat-land fires — detected by the MODIS and VIIRS sensors, which see burning heat from orbit. Fire smoke can cross whole continents and degrade air quality in countries far away from the flame.' },
+  { id: 'floods', slug: 'banjir', en: 'Floods', icon: '🌊',
+    blurb: 'River, flash and monsoon floods that reach people — reported by disaster agencies and imaged by water satellites (Sentinel-1 sees through cloud). Flooding is the most frequent disaster on earth; more than 1.5 billion people are affected every decade.' },
+  { id: 'drought', slug: 'kemarau', en: 'Drought', icon: '☀️',
+    blurb: 'Places suffering a prolonged shortfall of rain — tracked with soil-delay and land-surface temperature indices. Drought moves slowly but kills more livestock and crops than the sudden disasters do.' },
+  { id: 'landslides', slug: 'tanah-runtuh', en: 'Landslides', icon: '⛰️',
+    blurb: 'Slope failures, slumps and debris flows — usually triggered by heavy rain or an earthquake in hilly ground. Mountainous tropics such as Indonesia and the Philippines are badly exposed through the monsoon season.' },
+  { id: 'snow', slug: 'salji-beku', en: 'Snow & Extreme Cold', icon: '❄️',
+    blurb: 'Major snowstorms and severe freezing weather — from North American blizzards to early Himalayan snow. These events test a country\'s power grid, flights and water supply in a single night.' },
+  { id: 'dustHazard', slug: 'badai-habuk', en: 'Dust & Sandstorms', icon: '🏜️',
+    blurb: 'Saharan dust, Asian sandstorms and dust storms — dust clouds that can cross an ocean and reach the Caribbean. The phosphorus they carry even fertilises the Amazon rainforest every year.' },
+  { id: 'seaAndLakeIce', slug: 'ais-laut', en: 'Sea & Lake Ice', icon: '🧊',
+    blurb: 'The formation and breakup of Arctic sea ice and frozen lakes — the most honest barometer of polar climate. Seasonal sea-ice extent has been shrinking every decade since satellite measurement began in 1979.' },
+  { id: 'icebergs', slug: 'gunung-ais', en: 'Icebergs', icon: '🚢',
+    blurb: 'Giant icebergs calved from the Greenland and Antarctic ice shelves — some the size of a city, able to drift for years. Watching them matters for shipping lanes and for sea-level-rise research.' },
+  { id: 'waterIssues', slug: 'isu-air', en: 'Water Issues', icon: '💧',
+    blurb: 'Events that hit the water supply — pollution, landslides into reservoirs, dam failures and shortages. More than 2 billion people live in water-stressed countries; the topic rarely makes headlines, but the slow danger is large.' },
+  { id: 'manmade', slug: 'insiden-manusia', en: 'Human-Made Incidents', icon: '🏭',
+    blurb: 'Technological and industrial disasters seen from space: warehouse fires, collapses, oil spills and explosions. This category is a reminder that satellites watch over human safety, not nature alone.' },
 ];
 
 function findCat(slug) {
@@ -82,15 +89,31 @@ function findCat(slug) {
   return CATS.find((c) => c.slug === s || c.id === s) || null;
 }
 
-// Senarai acara masih dibuka bagi satu kategori EONET.
+// EONET sends the geometry under `geometry` (singular) on BOTH the list and the
+// detail endpoint, and never sends created/updated — derive them from the ends of
+// the timeline, then hand the page one stable key: `geometries`.
+function normaliseEvent(ev) {
+  if (!ev || typeof ev !== 'object') return ev;
+  if (!Array.isArray(ev.geometries)) ev.geometries = Array.isArray(ev.geometry) ? ev.geometry : [];
+  if (ev.geometries.length && (ev.created == null || ev.updated == null)) {
+    const dates = ev.geometries.map((g) => String(g.date || '')).filter(Boolean).sort();
+    if (dates.length) {
+      if (ev.created == null) ev.created = dates[0];
+      if (ev.updated == null) ev.updated = dates[dates.length - 1];
+    }
+  }
+  return ev;
+}
+
+// The list of events still open for one EONET category.
 async function loadEvents(cat) {
   const key = `open:${cat.id}`;
   const hit = cacheGet(key);
   if (hit && !hit.stale) return hit.data;
   try {
     const body = await fetchJson(`${EONET}/events?category=${encodeURIComponent(cat.id)}&status=open&limit=300&include=geo`);
-    const events = (body && Array.isArray(body.events)) ? body.events : null;
-    if (!events) throw new Error('tiada senarai');
+    const events = (body && Array.isArray(body.events)) ? body.events.map(normaliseEvent) : null;
+    if (!events) throw new Error('no event list');
     cacheSet(key, events, TTL_OPEN);
     return events;
   } catch (err) {
@@ -99,37 +122,28 @@ async function loadEvents(cat) {
   }
 }
 
-// Buka semua kategori serentak untuk hab (kegagalan satu kategori tak gagalkan hab).
+// Open every category at once for the hub (one failing category must not sink it).
 async function loadAllOpen() {
   const results = await Promise.all(CATS.map(async (c) => {
     try { return { cat: c, events: await loadEvents(c) }; }
     catch { return { cat: c, events: null }; }
   }));
   const ok = results.filter((r) => r.events && r.events.length);
-  if (!ok.length) throw new Error('semua suapan gagal');
-  return results; // kekalkan urutan CATS; pemanggil semak events === null
+  if (!ok.length) throw new Error('every feed failed');
+  return results; // keeps the CATS order; the caller checks events === null
 }
 
-// Butiran satu acara — geometri/garis masa penuh.
+// Detail of one event — the full geometry / timeline.
 async function loadEvent(eonetId) {
   const id = String(eonetId || '');
-  if (!/^EONET_\d+$/.test(id)) throw new Error('id janggal');
+  if (!/^EONET_\d+$/.test(id)) throw new Error('odd event id');
   const key = `ev:${id}`;
   const hit = cacheGet(key, TTL_ONE);
   if (hit && !hit.stale) return hit.data;
   try {
     const body = await fetchJson(`${EONET}/events/${id}`);
-    if (!body || !body.id) throw new Error('tiada acara');
-    // Endpoint DETAIL guna kunci `geometry` (tunggal); senarai guna `geometries`.
-    if (!Array.isArray(body.geometries)) body.geometries = Array.isArray(body.geometry) ? body.geometry : [];
-    // Detail juga tiada created/updated — terbit daripada hujung garis masa geometri.
-    if (body.geometries.length && (body.created == null || body.updated == null)) {
-      const dates = body.geometries.map((g) => String(g.date || '')).filter(Boolean).sort();
-      if (dates.length) {
-        if (body.created == null) body.created = dates[0];
-        if (body.updated == null) body.updated = dates[dates.length - 1];
-      }
-    }
+    if (!body || !body.id) throw new Error('no such event');
+    normaliseEvent(body);
     cacheSet(key, body, TTL_ONE);
     return body;
   } catch (err) {
@@ -138,19 +152,19 @@ async function loadEvent(eonetId) {
   }
 }
 
-// Pembantu paparan: koordinat [lng,lat] → label cantik + URL peta terbuka.
+// Display helper: [lng,lat] coordinates → a readable label + an open-map URL.
 function geoLabel(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return null;
   const lng = Number(coords[0]); const lat = Number(coords[1]);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat, lng, text: `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'U' : 'S'}, ${Math.abs(lng).toFixed(2)}°${lng >= 0 ? 'T' : 'B'}` };
+  return { lat, lng, text: `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(2)}°${lng >= 0 ? 'E' : 'W'}` };
 }
 
-// ── wikiPeek: ringkasan Wikipedia untuk kotak konteks halaman acara ────────
-// Sumber: en.wikipedia.org API — PERCUMA tanpa kunci. Dua langkah: carian
-// opensearch (nama tempat → laluan tajuk ensiklopedia), kemudian REST summary
-// (ekstrak pendek + thumbnail). Gagal mana-mana langkah → null; halaman tetap
-// sah tanpa kotak. Cache 24 jam — ringkasan Wikipedia berubah perlahan.
+// ── wikiPeek: a Wikipedia summary for the context box on the event page ─────
+// Source: the en.wikipedia.org API — FREE, no key. Two steps: an opensearch
+// query (place name → encyclopedia article title), then the REST summary
+// (short extract + thumbnail). If either step fails → null and the page is
+// still valid without the box. Cached 24 hours — Wikipedia summaries change slowly.
 async function wikiPeek(term) {
   const q = String(term || '').trim();
   if (!q || q.length < 3) return null;
@@ -176,4 +190,4 @@ async function wikiPeek(term) {
   }
 }
 
-module.exports = { CATS, findCat, loadEvents, loadAllOpen, loadEvent, geoLabel, wikiPeek };
+module.exports = { CATS, findCat, loadEvents, loadAllOpen, loadEvent, geoLabel, wikiPeek, normaliseEvent };

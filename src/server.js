@@ -1386,36 +1386,36 @@ app.get('/statistik/:slug', async (req, res) => {
   }
 });
 
-// ── LALUAN KOMPLEKS BENCANA (/bencana*) — suapan acara NASA EONET, tanpa kunci ──
+// ── DISASTER COMPLEX ROUTES (/bencana*) — the NASA EONET event feed, no key ──
 app.get('/bencana', async (req, res) => {
   try {
     const all = await bc.loadAllOpen();
     res.status(200).type('html').send(bencanaHubPage(req, all));
   } catch {
-    res.status(503).type('html').send(bencanaBusy('Suapan acara NASA EONET tidak sempat dimuat'));
+    res.status(503).type('html').send(bencanaBusy('The NASA EONET event feed did not answer in time'));
   }
 });
 
 app.get('/bencana/:cat', async (req, res) => {
   const cat = bc.findCat(String(req.params.cat || '').toLowerCase());
-  if (!cat) return res.status(404).type('html').send(bencanaBusy(`Kategori "${req.params.cat}" tidak dikenali`));
+  if (!cat) return res.status(404).type('html').send(bencanaBusy(`Category "${req.params.cat}" is not on our list`));
   try {
     const events = await bc.loadEvents(cat);
     res.status(200).type('html').send(bencanaCatPage(req, cat, events || []));
   } catch {
-    res.status(503).type('html').send(bencanaBusy(`Suapan ${cat.bm} tidak sempat dimuat`));
+    res.status(503).type('html').send(bencanaBusy(`The ${cat.en} feed did not load in time`));
   }
 });
 
 app.get('/bencana/:cat/:id', async (req, res) => {
   const cat = bc.findCat(String(req.params.cat || '').toLowerCase());
   const id = String(req.params.id || '');
-  if (!cat || !/^EONET_\d+$/.test(id)) return res.status(404).type('html').send(bencanaBusy('Halaman acara tidak dikenali'));
+  if (!cat || !/^EONET_\d+$/.test(id)) return res.status(404).type('html').send(bencanaBusy('That event page is not on our list'));
   try {
     const ev = await bc.loadEvent(id);
     res.status(200).type('html').send(await bencanaEventPage(req, cat, ev));
   } catch {
-    res.status(503).type('html').send(bencanaBusy(`Butiran acara ${id} tidak sempat dimuat`));
+    res.status(503).type('html').send(bencanaBusy(`The details of event ${id} did not load in time`));
   }
 });
 
@@ -3739,8 +3739,8 @@ app.get('/sitemap-statistik.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP BENCANA — hab + kategori + acara masih dibuka (had 900 URL) ──
-// Suapan langsung: jika EONET lambat, hab + kategori tetap dihantar supaya XML sah.
+// ── DISASTER SITEMAP — hub + categories + events still open (capped at 900 URLs) ──
+// A live feed: if EONET is slow we still ship the hub and the categories so the XML is valid.
 app.get('/sitemap-bencana.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -3753,7 +3753,7 @@ app.get('/sitemap-bencana.xml', async (req, res) => {
       for (const ev of block.events.slice(0, budget)) urls.push(one(`/bencana/${block.cat.slug}/${encodeURIComponent(ev.id)}`, '0.6'));
       budget -= Math.min(block.events.length, budget);
     }
-  } catch { /* suapan gagal → hab + kategori sahaja */ }
+  } catch { /* feed failed → hub + categories only */ }
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`
   );
@@ -6506,20 +6506,20 @@ function statistikIndPage(req, rk, rows) {
   });
 }
 
-// ── TUKUK-OS BENCANA COMPLEX — /bencana* (pemantau acara alam NASA EONET) ──
-// Shell sama, hero merah-lava; halaman kategori + setiap acara masih "open".
+// ── TUKUK-OS DISASTER COMPLEX — /bencana* (the NASA EONET natural-event watch) ──
+// Same shell, lava-red hero; only events that are still "open" are listed.
 
-const BENCANA_SECTIONS = [{ href: '/bencana', icon: '🚨', name: 'Semua Peristiwa', blurb: 'Pantau semua acara alam yang sedang berlaku di planet ini — langsung dari satelit NASA EONET.' }]
-  .concat(bc.CATS.map((c) => ({ href: `/bencana/${c.slug}`, icon: c.icon, name: c.bm, blurb: c.blurb })));
+const BENCANA_SECTIONS = [{ href: '/bencana', icon: '🚨', name: 'All Events', blurb: 'Watch every natural event happening on the planet right now — live from the NASA EONET satellites.' }]
+  .concat(bc.CATS.map((c) => ({ href: `/bencana/${c.slug}`, icon: c.icon, name: c.en, blurb: c.blurb })));
 
 function bencanaNav() {
-  return `<nav aria-label="Bahagian bencana"><h2 class="section-title">Jelajahi Kompleks Bencana Tukuk-OS</h2><div class="feed">`
+  return `<nav aria-label="Disaster sections"><h2 class="section-title">Explore the Tukuk-OS Disaster Complex</h2><div class="feed">`
     + BENCANA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
     + `</div></nav>`;
 }
 
 function bencanaBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>NASA EONET tidak sempat menjawab. Suapan ini di-cache beberapa jam — sila cuba lagi sebentar.</p><p><a href="/bencana">Kembali ke Kompleks Bencana</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>NASA EONET did not answer in time. This feed is cached for hours — please try again in a few minutes.</p><p><a href="/bencana">Back to the Disaster Complex</a></p></body>`;
 }
 
 function bencanaDoc(o) {
@@ -6584,18 +6584,24 @@ ${siteFooter()}
 </html>`;
 }
 
-const BC_DATE_FMT = new Intl.DateTimeFormat('ms-MY', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-function bcDate(iso) { try { return BC_DATE_FMT.format(new Date(iso)); } catch { return '—'; } }
+const BC_DATE_FMT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+function bcDate(iso) {
+  // null/undefined must not become the epoch: new Date(null) is 1 Jan 1970, not invalid.
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  try { return BC_DATE_FMT.format(d); } catch { return '—'; }
+}
 function bcLatest(ev) { return ev.updated || ev.created || (ev.geometries && ev.geometries.length ? ev.geometries[ev.geometries.length - 1].date : null) || null; }
 
-// ─── HAB /bencana — kiraan langsung setiap kategori + acara terkini ───
+// ─── Hub /bencana — a live count per category plus the newest events ───
 function bencanaHubPage(req, all) {
   const totalOpen = all.reduce((s, x) => s + (x.events ? x.events.length : 0), 0);
   const cards = all.map((x) => {
     const latest = x.events && x.events.length ? [...x.events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')))[0] : null;
-    return `<div class="wx-card"><h3>${x.cat.icon} <a href="/bencana/${x.cat.slug}">${escapeHtml(x.cat.bm)}</a></h3>`
+    return `<div class="wx-card"><h3>${x.cat.icon} <a href="/bencana/${x.cat.slug}">${escapeHtml(x.cat.en)}</a></h3>`
       + `<div class="big">${x.events ? x.events.length : '—'}</div>`
-      + `<div class="meta">acara masih dibuka${latest ? ` · terkini: <a href="/bencana/${x.cat.slug}/${encodeURIComponent(latest.id)}">${escapeHtml(String(latest.title || '').slice(0, 48))}</a>` : ''}</div></div>`;
+      + `<div class="meta">events still open${latest ? ` · latest: <a href="/bencana/${x.cat.slug}/${encodeURIComponent(latest.id)}">${escapeHtml(String(latest.title || '').slice(0, 48))}</a>` : ''}</div></div>`;
   }).join('');
   const flat = [];
   for (const x of all) if (x.events) for (const ev of x.events) flat.push({ cat: x.cat, ev });
@@ -6603,28 +6609,28 @@ function bencanaHubPage(req, all) {
   const rowsHtml = flat.slice(0, 15).map(({ cat, ev }) => {
     const g = ev.geometries && ev.geometries.length ? ev.geometries[ev.geometries.length - 1] : null;
     const loc = g ? bc.geoLabel(g.coordinates) : null;
-    return `<tr><td>${bcDate(bcLatest(ev))}</td><td>${cat.icon} <a href="/bencana/${cat.slug}">${escapeHtml(cat.bm)}</a></td><td><a href="/bencana/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${loc ? escapeHtml(loc.text) : '—'}</td></tr>`;
+    return `<tr><td>${bcDate(bcLatest(ev))}</td><td>${cat.icon} <a href="/bencana/${cat.slug}">${escapeHtml(cat.en)}</a></td><td><a href="/bencana/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${loc ? escapeHtml(loc.text) : '—'}</td></tr>`;
   }).join('');
-  const body = `<div class="wx-hero"><div class="temp">${totalOpen} acara alam sedang berlaku</div><div class="wmeta">Dipantau 24/7 oleh NASA EONET · ${bc.CATS.length} kategori · kemas kini beberapa kali sehari · tanpa pendaftaran</div></div>`
-    + `<h2 class="section-title">Kategori pemantauan</h2><div class="wx-grid">${cards}</div>`
-    + `<h2 class="section-title">15 acara paling terkini dikemas kini</h2><table class="wx-table"><tr><th>Kemas kini</th><th>Kategori</th><th>Peristiwa</th><th>Lokasi terakhir</th></tr>${rowsHtml}</table>`
-    + `<h2 class="section-title">Apa itu EONET?</h2><p>EONET (Earth Observatory Natural Event Tracker) ialah suapan terbuka NASA yang merekod setiap peristiwa alam penting di dunia — letusan gunung berapi, taufan, kebakaran lahan, banjir, tanah runtuh dan lebih banyak lagi — dengan koordinat satelit dan laporan kurator manusia. Data ini awam, tanpa kunci API; kami memaparkannya dalam Bahasa Melayu dan memautkan setiap peristiwa ke halaman sendiri supaya boleh dirujuk.</p>`
-    + `<p class="meta">Gempa bumi langsung ada di <a href="/gempa">Kompleks Gempa (USGS)</a>; langit kota anda di <a href="/cuaca">Kompleks Cuaca</a>; profil negara terjejas di <a href="/negara">Kompleks Negara</a>.</p>`;
+  const body = `<div class="wx-hero"><div class="temp">${totalOpen} natural event${totalOpen === 1 ? '' : 's'} in progress</div><div class="wmeta">Watched 24/7 by NASA EONET · ${bc.CATS.length} categories · updated several times a day · no signup</div></div>`
+    + `<h2 class="section-title">Categories under watch</h2><div class="wx-grid">${cards}</div>`
+    + `<h2 class="section-title">The 15 most recently updated events</h2><table class="wx-table"><tr><th>Updated</th><th>Category</th><th>Event</th><th>Last location</th></tr>${rowsHtml}</table>`
+    + `<h2 class="section-title">What is EONET?</h2><p>EONET (the Earth Observatory Natural Event Tracker) is NASA's open feed of every significant natural event on earth — volcanic eruptions, storms, wildfires, floods, landslides and more — recorded with satellite coordinates and a human curator's report. The data is public, with no API key; we show it in plain English and give every event its own page so it can be cited.</p>`
+    + `<p class="meta">Live earthquakes are in the <a href="/gempa">Earthquake Complex (USGS)</a>; the sky over your city is in the <a href="/cuaca">Weather Complex</a>; the profile of an affected country is in the <a href="/negara">Country Complex</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Bencana Tukuk-OS',
-    description: 'Pemantau langsung gunung berapi, taufan, kebakaran lahan, banjir dan acara alam lain — suapan NASA EONET dalam Bahasa Melayu.',
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Disaster Complex',
+    description: 'Live watch of volcanoes, storms, wildfires, floods and other natural events — the NASA EONET feed in English.',
     url: 'https://tukuk.org/bencana',
   }).replace(/</g, '\\u003c');
   return bencanaDoc({
-    title: 'Bencana Dunia Langsung — Gunung Berapi, Taufan, Kebakaran (NASA EONET) | Tukuk-OS',
-    desc: `${totalOpen} acara alam sedang berlaku di planet ini: pantau gunung berapi, taufan, kebakaran lahan, banjir, kemarau dan tanah runtuh — langsung dari NASA EONET, dalam Bahasa Melayu.`,
+    title: 'Live World Disasters — Volcanoes, Storms, Wildfires (NASA EONET) | Tukuk-OS',
+    desc: `${totalOpen} natural events are in progress on this planet right now: watch volcanoes, storms, wildfires, floods, drought and landslides — live from NASA EONET.`,
     selfUrl: 'https://tukuk.org/bencana',
-    heroTitle: 'Kompleks Bencana Tukuk-OS', heroSub: `Suapan NASA EONET · ${totalOpen} acara dibuka · kemas kini ${bcDate(new Date().toISOString())}`,
+    heroTitle: 'Tukuk-OS Disaster Complex', heroSub: `NASA EONET feed · ${totalOpen} open event${totalOpen === 1 ? '' : 's'} · updated ${bcDate(new Date().toISOString())}`,
     body, ld,
   });
 }
 
-// ─── /bencana/:kategori — semua acara dibuka dalam satu kategori ───
+// ─── /bencana/:category — every open event in one category ───
 function bencanaCatPage(req, cat, events) {
   const selfUrl = `https://tukuk.org/bencana/${cat.slug}`;
   const sorted = [...events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')));
@@ -6633,26 +6639,26 @@ function bencanaCatPage(req, cat, events) {
     const last = geo.length ? bc.geoLabel(geo[geo.length - 1].coordinates) : null;
     return `<tr><td><a href="/bencana/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${bcDate(ev.created)}</td><td>${bcDate(bcLatest(ev))}</td><td>${geo.length}</td><td>${last ? escapeHtml(last.text) : '—'}</td></tr>`;
   }).join('');
-  const body = `<div class="wx-hero"><div class="temp">${cat.icon} ${sorted.length} acara ${escapeHtml(cat.bm).toLowerCase()} sedang aktif</div><div class="wmeta">Kemas kini langsung NASA EONET · setiap acara ada halaman sendiri dengan koordinat &amp; garis masa</div></div>`
+  const body = `<div class="wx-hero"><div class="temp">${cat.icon} ${sorted.length} ${escapeHtml(cat.en).toLowerCase()} event${sorted.length === 1 ? '' : 's'} active</div><div class="wmeta">Live from NASA EONET · every event has its own page with coordinates &amp; a timeline</div></div>`
     + `<p>${escapeHtml(cat.blurb)}</p>`
     + (sorted.length
-      ? `<h2 class="section-title">Senarai acara dibuka</h2><table class="wx-table"><tr><th>Peristiwa</th><th>Bermula</th><th>Kemas kini</th><th>Lokasi direkod</th><th>Koordinat terakhir</th></tr>${rowsHtml}</table>`
-      : '<p>Tiada acara yang masih dibuka dalam kategori ini sekarang. Semak <a href="/bencana">hab semua kategori</a>.</p>')
-    + `<p class="meta">Data mentah: <a rel="noopener" target="_blank" href="https://eonet.gsfc.nasa.gov">eonet.gsfc.nasa.gov</a> (domain awam NASA). Cuaca semasa di kawasan terjejas: <a href="/cuaca">Kompleks Cuaca</a>; gempa tektonik: <a href="/gempa">Kompleks Gempa</a>.</p>`;
+      ? `<h2 class="section-title">Open events</h2><table class="wx-table"><tr><th>Event</th><th>Started</th><th>Updated</th><th>Locations logged</th><th>Last coordinates</th></tr>${rowsHtml}</table>`
+      : '<p>No event in this category is still open right now. See the <a href="/bencana">hub of all categories</a>.</p>')
+    + `<p class="meta">Raw data: <a rel="noopener" target="_blank" href="https://eonet.gsfc.nasa.gov">eonet.gsfc.nasa.gov</a> (a public NASA domain). Current weather in an affected area: <a href="/cuaca">Weather Complex</a>; tectonic quakes: <a href="/gempa">Earthquake Complex</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Acara ${cat.bm} — langsung`,
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${cat.en} — live`,
     description: cat.blurb.slice(0, 200), url: selfUrl,
   }).replace(/</g, '\\u003c');
   return bencanaDoc({
-    title: `${cat.bm} Langsung — Acara Aktif Dunia Hari Ini | Tukuk-OS`,
-    desc: sorted.length ? `${sorted.length} acara ${cat.bm.toLowerCase()} masih dibuka sekarang — kemas kini langsung NASA EONET dengan koordinat, tarikh dan pautan sumber rasmi.` : `Pantau berita ${cat.bm.toLowerCase()} langsung daripada NASA EONET — dengan koordinat dan garis masa setiap peristiwa.`,
+    title: `${cat.en} Live — Active Events Worldwide Today | Tukuk-OS`,
+    desc: sorted.length ? `Live NASA EONET updates on ${sorted.length} open ${cat.en.toLowerCase()} event${sorted.length === 1 ? '' : 's'} — coordinates, dates and a link to the official source.` : `Watch ${cat.en.toLowerCase()} news live from NASA EONET — with the coordinates and the timeline of every event.`,
     selfUrl,
-    heroTitle: `${cat.icon} ${cat.bm}`, heroSub: `Suapan langsung NASA EONET · ${sorted.length} acara dibuka · dikemas kini ${bcDate(new Date().toISOString())}`,
+    heroTitle: `${cat.icon} ${cat.en}`, heroSub: `Live NASA EONET feed · ${sorted.length} open event${sorted.length === 1 ? '' : 's'} · updated ${bcDate(new Date().toISOString())}`,
     body, ld,
   });
 }
 
-// ─── /bencana/:kategori/:id — satu acara: peta SVG + garis masa koordinat ───
+// ─── /bencana/:category/:id — one event: SVG map + coordinate timeline ───
 async function bencanaEventPage(req, cat, ev) {
   const selfUrl = `https://tukuk.org/bencana/${cat.slug}/${encodeURIComponent(ev.id)}`;
   const geo = (ev.geometries || []).slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
@@ -6665,43 +6671,43 @@ async function bencanaEventPage(req, cat, ev) {
   const grid = [];
   for (let lng = -180; lng <= 180; lng += 60) grid.push(`<line x1="${((lng + 180) / 360) * 720}" y1="0" x2="${((lng + 180) / 360) * 720}" y2="360" stroke="#243044" stroke-width="1">`);
   for (let lat = -90; lat <= 90; lat += 30) grid.push(`<line x1="0" y1="${((90 - lat) / 180) * 360}" x2="720" y2="${((90 - lat) / 180) * 360}" stroke="#243044" stroke-width="1">`);
-  const map = geo.length ? `<svg class="bc-svg" viewBox="0 0 720 360" role="img" aria-label="Peta lokasi ${escapeHtml(String(ev.title || ''))}">${grid.join('')}${dots}</svg>` : '';
+  const map = geo.length ? `<svg class="bc-svg" viewBox="0 0 720 360" role="img" aria-label="Map of ${escapeHtml(String(ev.title || ''))}">${grid.join('')}${dots}</svg>` : '';
   const timeline = geo.map((g) => {
     const loc = bc.geoLabel(g.coordinates);
     return `<tr><td>${bcDate(g.date)}</td><td>${loc ? escapeHtml(loc.text) : '—'}</td><td>${escapeHtml(String(g.type || 'point'))}</td></tr>`;
   }).join('');
-  const srcs = (ev.sources || []).map((s) => `<li><a rel="noopener" target="_blank" href="${escapeHtml(String(s.url || '#'))}">${escapeHtml(String(s.id || 'sumber'))}</a></li>`).join('');
-  // Konteks tempat — ringkasan Wikipedia (keyless). Tajuk EONET biasanya
-  // "Jenis - Tempat", jadi cari bahagian selepas pemisah; gagal → tiada kotak.
+  const srcs = (ev.sources || []).map((s) => `<li><a rel="noopener" target="_blank" href="${escapeHtml(String(s.url || '#'))}">${escapeHtml(String(s.id || 'source'))}</a></li>`).join('');
+  // Place context — a Wikipedia summary (keyless). EONET titles are usually
+  // "Type - Place", so take the part after the separator; on failure → no box.
   const wikiTerm = String(ev.title || '').split(/\s[-\u2013\u2014]\s/).pop().trim() || String(ev.title || '');
   const wiki = await bc.wikiPeek(wikiTerm);
   const wikiBox = wiki
-    ? `<h2 class="section-title">Kenali lokasinya</h2><p><b>${escapeHtml(wiki.title)}</b> — ${escapeHtml(wiki.extract)} <a rel="noopener nofollow" href="${escapeHtml(wiki.url)}">Baca artikel penuh di Wikipedia →</a></p>`
+    ? `<h2 class="section-title">Know the place</h2><p><b>${escapeHtml(wiki.title)}</b> — ${escapeHtml(wiki.extract)} <a rel="noopener nofollow" href="${escapeHtml(wiki.url)}">Read the full article on Wikipedia →</a></p>`
     : '';
   const desc = ev.description ? `<p>${escapeHtml(String(ev.description))}</p>` : '';
   const first = geo.length ? geo[0] : null;
   const last = geo.length ? geo[geo.length - 1] : null;
-  const body = `<p class="back-link"><a href="/bencana">&larr; Kompleks Bencana</a> · <a href="/bencana/${cat.slug}">${cat.icon} ${escapeHtml(cat.bm)}</a></p>`
-    + `<div class="wx-hero"><div class="temp">${cat.icon} ${escapeHtml(String(ev.title || ev.id))}</div><div class="wmeta">${escapeHtml(cat.bm)} · bermula ${bcDate(ev.created)}${last ? ` · kemas kini terakhir ${bcDate(bcLatest(ev))}` : ''} · ${geo.length} lokasi direkod</div></div>`
+  const body = `<p class="back-link"><a href="/bencana">&larr; Disaster Complex</a> · <a href="/bencana/${cat.slug}">${cat.icon} ${escapeHtml(cat.en)}</a></p>`
+    + `<div class="wx-hero"><div class="temp">${cat.icon} ${escapeHtml(String(ev.title || ev.id))}</div><div class="wmeta">${escapeHtml(cat.en)} · started ${bcDate(ev.created)}${last ? ` · last updated ${bcDate(bcLatest(ev))}` : ''} · ${geo.length} location${geo.length === 1 ? '' : 's'} logged</div></div>`
     + desc + map
-    + (first && last && first !== last ? `<p>Peristiwa ini bermula di ${escapeHtml((bc.geoLabel(first.coordinates) || {}).text || '—')} dan kini aktif di ${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}.</p>` : (last ? `<p>Kedudukan terkini: <b>${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}</b>.</p>` : ''))
+    + (first && last && first !== last ? `<p>This event began at ${escapeHtml((bc.geoLabel(first.coordinates) || {}).text || '—')} and is active now at ${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}.</p>` : (last ? `<p>Current position: <b>${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}</b>.</p>` : ''))
     + wikiBox
-    + (timeline ? `<h2 class="section-title">Garis masa lokasi</h2><table class="wx-table"><tr><th>Tarikh</th><th>Koordinat</th><th>Jenis</th></tr>${timeline}</table>` : '')
-    + (srcs ? `<h2 class="section-title">Sumber laporan</h2><ul>${srcs}</ul>` : '')
-    + `<p class="meta">Data: NASA EONET (domain awam) · ${escapeHtml(cat.blurb.split('.')[0])}. Semak keadaan langit di kawasan terjejas: <a href="/cuaca">Kompleks Cuaca</a>; aktiviti tektonik: <a href="/gempa">Kompleks Gempa</a>; negara berkenaan: <a href="/negara">Kompleks Negara</a>.</p>`;
+    + (timeline ? `<h2 class="section-title">Location timeline</h2><table class="wx-table"><tr><th>Date</th><th>Coordinates</th><th>Type</th></tr>${timeline}</table>` : '')
+    + (srcs ? `<h2 class="section-title">Reported by</h2><ul>${srcs}</ul>` : '')
+    + `<p class="meta">Data: NASA EONET (public domain) · ${escapeHtml(cat.blurb.split('.')[0])}. Check the sky over the affected area in the <a href="/cuaca">Weather Complex</a>; tectonic activity in the <a href="/gempa">Earthquake Complex</a>; the country itself in the <a href="/negara">Country Complex</a>.</p>`;
   const lastLoc = last ? bc.geoLabel(last.coordinates) : null;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Event', name: String(ev.title || ev.id),
     description: String(ev.description || cat.blurb).slice(0, 300), url: selfUrl,
     startDate: ev.created || undefined, endDate: ev.closed || undefined,
     eventStatus: ev.closed ? 'EventCancelled' : 'EventOngoing',
-    location: lastLoc ? { '@type': 'Place', name: `${cat.bm} — ${lastLoc.text}`, geo: { '@type': 'GeoCoordinates', latitude: lastLoc.lat, longitude: lastLoc.lng } } : undefined,
+    location: lastLoc ? { '@type': 'Place', name: `${cat.en} — ${lastLoc.text}`, geo: { '@type': 'GeoCoordinates', latitude: lastLoc.lat, longitude: lastLoc.lng } } : undefined,
   }).replace(/</g, '\\u003c');
   return bencanaDoc({
-    title: `${String(ev.title || ev.id)} — Status Langsung ${cat.bm} | Tukuk-OS`,
-    desc: `${ev.title || cat.bm}: koordinat, tarikh bermula dan garis masa lokasi langsung daripada NASA EONET — ${geo.length} rekod, dikemas kini ${bcDate(bcLatest(ev))}.`,
+    title: `${String(ev.title || ev.id)} — Live ${cat.en} Status | Tukuk-OS`,
+    desc: `${ev.title || cat.en}: coordinates, the date it started and the live location timeline from NASA EONET — ${geo.length} record${geo.length === 1 ? '' : 's'}, updated ${bcDate(bcLatest(ev))}.`,
     selfUrl,
-    heroTitle: String(ev.title || ev.id), heroSub: `${escapeHtml(cat.bm)} · suapan langsung NASA EONET`,
+    heroTitle: String(ev.title || ev.id), heroSub: `${cat.en} · live NASA EONET feed`,
     body, ld,
   });
 }

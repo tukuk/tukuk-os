@@ -62,16 +62,75 @@ test('the statistics copy is English: labels translated, public slugs preserved'
 });
 
 test('bencana.js: NASA EONET without a key, include=geo, EONET_\d+ ids validated', () => {
+  const bc = require(path.join(ROOT, 'src', 'bencana.js'));
   assert.ok(bcSrc.includes('eonet.gsfc.nasa.gov/api/v3'), 'the EONET v3 feed');
   assert.ok(!/api_key|apikey|Bearer/i.test(bcSrc), 'no API key');
   assert.ok(bcSrc.includes('include=geo'), 'the coordinate geometry comes with the list');
   assert.ok(/EONET_\\d\+\$/.test(bcSrc), 'event ids are validated by regex');
-  assert.ok(bcSrc.includes('body.geometry'), 'EONET detail: the `geometry` key is normalised → geometries');
-  assert.ok(bcSrc.includes("body.created == null"), 'created/updated are derived from the geometry timeline');
+  // EONET sends `geometry` (singular) on the LIST endpoint too, with no created/updated.
+  const ev = bc.normaliseEvent({ id: 'EONET_1', geometry: [{ date: '2026-06-15' }, { date: '2026-10-21' }] });
+  assert.equal(ev.geometries.length, 2, 'the singular geometry key becomes the list the pages read');
+  assert.equal(ev.created, '2026-06-15', 'created is derived from the start of the timeline');
+  assert.equal(ev.updated, '2026-10-21', 'updated is the last recorded position');
+  assert.deepStrictEqual(bc.normaliseEvent({ id: 'EONET_2' }).geometries, [], 'an event without geometry stays renderable');
+  assert.ok(bcSrc.includes('body.events.map(normaliseEvent)'), 'the hub list is normalised, not just the detail page');
   assert.ok(bcSrc.includes('family: 6'), 'the IPv6 agent goes first');
   const n = (bcSrc.match(/id: '/g) || []).length;
   assert.ok(n >= 10, `at least 10 categories (got ${n})`);
   assert.ok(!/[\u4e00-\u9fff]/.test(bcSrc), 'no CJK character leaks into the module');
+});
+
+test('the disaster copy is English: categories translated, public slugs preserved', () => {
+  const bc = require(path.join(ROOT, 'src', 'bencana.js'));
+  assert.ok(bc.CATS.length >= 10, 'the EONET category list is intact');
+  for (const c of bc.CATS) {
+    assert.ok(!('bm' in c), `${c.slug} has no bm field left`);
+    assert.ok(c.en && c.en.length > 2, `${c.slug} carries an English name`);
+    assert.doesNotMatch(c.blurb, /\b(yang|dan|untuk|dengan|tidak|tiada|adalah|lebih|sangat|boleh|juga|dalam|pada|ini|itu)\b/, `${c.slug} blurb is English`);
+  }
+  // The category slugs and the EONET ids are both public: neither may move with the copy.
+  assert.deepStrictEqual(bc.CATS.map((c) => c.slug), [
+    'gunung-berapi', 'taufan-ribut', 'kebakaran-lahan', 'banjir', 'kemarau', 'tanah-runtuh',
+    'salji-beku', 'badai-habuk', 'ais-laut', 'gunung-ais', 'isu-air', 'insiden-manusia',
+  ], 'every category keeps its public URL slug');
+  // The EONET ids are as much public as the slugs: an /api/v3 request for a category
+  // EONET does not publish does not fail — it silently ignores the filter and returns
+  // every event. Four ids here (dustHazard, seaAndLakeIce, icebergs, waterIssues) are
+  // not in `GET /api/v3/categories`, so those pages currently over-report. Remapping
+  // them is a data decision, not a language one; this pin freezes today's behaviour so
+  // such a change has to be made on purpose.
+  assert.deepStrictEqual(bc.CATS.map((c) => c.id), [
+    'volcanoes', 'severeStorms', 'wildfires', 'floods', 'drought', 'landslides', 'snow',
+    'dustHazard', 'seaAndLakeIce', 'icebergs', 'waterIssues', 'manmade',
+  ], 'every category still maps to its EONET id');
+  // The compass letters are English too: the old U/T were Malay Utara/Timur.
+  const loc = bc.geoLabel([96.8, 5.3]);
+  assert.equal(loc.text, '5.30°N, 96.80°E', 'the coordinate label reads N/E');
+  assert.equal(bc.geoLabel([-96.8, -5.3]).text, '5.30°S, 96.80°W', 'the coordinate label reads S/W');
+  // Anchor on the renderers themselves: slicing to the next complex's declaration
+  // would drag in that block's own comments and blame this one for them.
+  const body = (name) => {
+    const m = serverSrc.match(new RegExp('(async )?function ' + name + '\\([\\s\\S]*?\\n}'));
+    assert.ok(m, `${name} is still defined`);
+    return m[0];
+  };
+  const pages = serverSrc.slice(serverSrc.indexOf('const BENCANA_SECTIONS'), serverSrc.indexOf('function bencanaNav'))
+    + [body('bencanaNav'), body('bencanaBusy'), body('bencanaDoc'), body('bencanaHubPage'), body('bencanaCatPage'),
+      body('bencanaEventPage'),
+      serverSrc.slice(serverSrc.indexOf('const BC_DATE_FMT'), serverSrc.indexOf('function bcDate'))].join('\n');
+  assert.ok(pages.length > 12000, 'the slice really covers the disaster pages');
+  assert.ok(pages.includes('<html lang="en">') && pages.includes('content="en_US"'), 'the shell declares English');
+  assert.doesNotMatch(pages, /\b(acara|kategori|peristiwa|kemas kini|belum sempat|tiada|hab|langit|kompleks|melayu|tarikh|garis masa|sumber|lokasi|peta|dibuka|bermula|jenis|semua)\b/i, 'no Malay wording remains on the disaster pages');
+  assert.ok(pages.includes('cat.en') && pages.includes('c.en'), 'the pages read the English category field');
+  assert.ok(pages.includes('What is EONET?') && pages.includes('Categories under watch'), 'the hub headings are English');
+  assert.ok(pages.includes("Intl.DateTimeFormat('en-GB'"), 'BC_DATE_FMT formats in en-GB');
+  // A missing date must render as an em dash, never as the epoch (1 Jan 1970).
+  assert.ok(/function bcDate\(iso\) \{\s*\/\/[^]*if \(!iso\) return '—';/.test(serverSrc), 'bcDate rejects a null date');
+  assert.ok(/Number\.isNaN\(d\.getTime\(\)\)/.test(serverSrc), 'bcDate rejects an unparseable date');
+  assert.doesNotMatch(pages, /ms-MY/, 'no Malay locale is left in the disaster shell');
+  const busy = serverSrc.slice(serverSrc.indexOf('function bencanaBusy'), serverSrc.indexOf('function bencanaDoc'));
+  assert.ok(busy.includes('noindex,follow'), 'bencanaBusy is noindex,follow');
+  assert.ok(busy.includes('Back to the Disaster Complex'), 'the escape page links back in English');
 });
 
 test('server.js: routes + renderers + sitemaps of both complexes (static first, then :slug)', () => {
