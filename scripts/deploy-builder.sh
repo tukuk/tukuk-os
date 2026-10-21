@@ -11,7 +11,7 @@
 # pnpm ~1-2 GB); selepas itu increment sahaja.
 set -euo pipefail
 
-HOST="${BUILDER_HOST:-tukuk@192.168.8.103}"
+HOST="${BUILDER_HOST:-tukuk@${TUKUK_HOST:-192.168.8.105}}"
 PASS="${1:-${BUILDER_PASS:-1}}"
 DEST="/opt/tukuk-builder"
 SRC="$(cd "$(dirname "$0")/.." && pwd)/bolt.diy"

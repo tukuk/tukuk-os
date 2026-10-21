@@ -4,7 +4,8 @@
 # pelayan, lalu pasang & mulakan servisnya di sana (tiada build berat di VPS).
 #
 #   bash scripts/build-tukuk-agent.sh            # sekali, di laptop
-#   bash scripts/publish-agent.sh tukuk@192.168.8.100
+#   bash scripts/publish-agent.sh                    # default tukuk@$TUKUK_HOST
+#   bash scripts/publish-agent.sh tukuk@192.168.8.105
 #
 # Aliran:
 #   1. rsync code-server/release/ → $DEST:/tmp/tukuk-agent-release/  (sebagai user biasa)
@@ -21,9 +22,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DEST="${1:-}"
+DEST="${1:-tukuk@${TUKUK_HOST:-192.168.8.105}}"
 if [ -z "$DEST" ]; then
-  echo "guna: bash scripts/publish-agent.sh <user@host>   (cth. tukuk@192.168.8.100)"
+  echo "guna: bash scripts/publish-agent.sh <user@host>   (cth. tukuk@192.168.8.105)"
   exit 1
 fi
 

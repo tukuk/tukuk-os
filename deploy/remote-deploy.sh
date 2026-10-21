@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Direct Deployment Script from Laptop to Ubuntu Server (192.168.8.100)
+# Direct Deployment Script from Laptop to Ubuntu Server (LAN IP — see TUKUK_HOST)
+# The VPS is on DHCP, so its address drifts (was .100, now .105). Override per
+# run:  TUKUK_HOST=192.168.8.110 bash deploy/remote-deploy.sh
 # ==============================================================================
 
 SERVER_USER="tukuk"
-SERVER_IP="192.168.8.100"
+SERVER_IP="${TUKUK_HOST:-192.168.8.105}"
 REMOTE_DIR="/opt/tukuk-os"
 
 echo "=== Tukuk-OS Direct Remote Deployment ==="

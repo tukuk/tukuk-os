@@ -14,7 +14,7 @@ Our own internet portal — web search engine + AI answers + in-browser app & ga
 |---|---|
 | Run locally | `npm install` → `npm start` → `http://localhost:3000` |
 | Deploy to a NEW SERVER | Bring the code (USB/push) → `sudo bash scripts/install-from-usb.sh`. All automatic (Node, Meili, systemd, tunnel, edge). **No GitHub auth / no `.json` files.** |
-| Server running | `192.168.8.100` (user `tukuk`). Admin access: `ssh -L 3000:localhost:3000 tukuk@192.168.8.100` → `http://localhost:3000/admin` (email + **WebAuthn passkey**). Public: `https://dashboard.tukuk.org/admin` |
+| Server running | `192.168.8.105` (user `tukuk`) — LAN address **drifts** (DHCP; was `.100`); scripts read `TUKUK_HOST`. Admin access: `ssh -L 3000:localhost:3000 tukuk@192.168.8.105` → `http://localhost:3000/admin` (email + **WebAuthn passkey**). Public: `https://dashboard.tukuk.org/admin` |
 | Edit static pages (`public/*.html`) | **Just reload the browser** — read on every request. |
 | Edit `src/server.js` (routes/`STATIC_PAGES`) | **MUST restart** `node index.js` — routes live in memory. |
 | Change config/keys | Edit `deploy/env.defaults` (private repo) → `sudo bash scripts/setup-all.sh` (idempotent). |
@@ -91,7 +91,7 @@ sudo ./deploy/build-iso.sh
    - **Fully offline (no internet):** `TUKUK_KEEP_NODEMODULES=1 TUKUK_OFFLINE=1 sudo bash scripts/install-from-usb.sh` — but you must also carry `node_modules` (built on an online machine of the same arch) + the `node`/`cloudflared`/`meilisearch` binaries, and enable the systemd services manually.
    - **Tunnel & edge AUTOMATIC:** `deploy/env.defaults` already contains `CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) and `CLOUDFLARE_API_TOKEN` — so `setup-all.sh` brings the tunnel up straight away (TOKEN mode, no `.json` files) and deploys the worker/edge. **No manual steps needed** on a new server.
 
-1. **Quick Install on an existing Ubuntu Server (`192.168.8.100`):**
+1. **Quick Install on an existing Ubuntu Server (LAN IP — `TUKUK_HOST`, now `192.168.8.105`):**
    ```bash
    sudo ./deploy/quick-install.sh
    ```
