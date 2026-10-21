@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'township-minnesota', label: 'MINNESOTA-TOWNSHIPS', title: 'Townships of Minnesota', var: 'TMIN', sing: 'MinnesotaTownship', finder: 'minnesotaTownship', finders: 'minnesotaTownshipsInRegion', pfx: 'tsi', cap: 'MinnesotaTownships' },
-  { file: 'township-illinois', label: 'ILLINOIS-TOWNSHIPS', title: 'Townships of Illinois', var: 'TILL', sing: 'IllinoisTownship', finder: 'illinoisTownship', finders: 'illinoisTownshipsInRegion', pfx: 'tst', cap: 'IllinoisTownships' },
-  { file: 'township-missouri', label: 'MISSOURI-TOWNSHIPS', title: 'Townships of Missouri', var: 'TMIS', sing: 'MissouriTownship', finder: 'missouriTownship', finders: 'missouriTownshipsInRegion', pfx: 'tso', cap: 'MissouriTownships' },
-  { file: 'township-ohio', label: 'OHIO-TOWNSHIPS', title: 'Townships of Ohio', var: 'TOHI', sing: 'OhioTownship', finder: 'ohioTownship', finders: 'ohioTownshipsInRegion', pfx: 'toh', cap: 'OhioTownships' },
-  { file: 'township-indiana', label: 'INDIANA-TOWNSHIPS', title: 'Townships of Indiana', var: 'TIND', sing: 'IndianaTownship', finder: 'indianaTownship', finders: 'indianaTownshipsInRegion', pfx: 'tsa', cap: 'IndianaTownships' },
-  { file: 'town-new-york', label: 'NEW-YORK-TOWNS', title: 'Towns of New York', var: 'TNKY', sing: 'NewYorkTown', finder: 'newYorkTown', finders: 'newYorkTownsInRegion', pfx: 'tny', cap: 'NewYorkTowns' },
-  { file: 'desa-ohio', label: 'OHIO-VILLAGES', title: 'Villages of Ohio', var: 'VOHI', sing: 'OhioVillage', finder: 'ohioVillage', finders: 'ohioVillagesInRegion', pfx: 'voa', cap: 'OhioVillages' },
-  { file: 'desa-wisconsin', label: 'WISCONSIN-VILLAGES', title: 'Villages of Wisconsin', var: 'VWIS', sing: 'WisconsinVillage', finder: 'wisconsinVillage', finders: 'wisconsinVillagesInRegion', pfx: 'vwi', cap: 'WisconsinVillages' },
-  { file: 'borough-new-jersey', label: 'NEW-JERSEY-BOROUGHS', title: 'Boroughs of New Jersey', var: 'BNJR', sing: 'NewJerseyBorough', finder: 'newJerseyBorough', finders: 'newJerseyBoroughsInRegion', pfx: 'bne', cap: 'NewJerseyBoroughs' },
+  { file: 'township-kansas', label: 'KANSAS-TOWNSHIPS', title: 'Townships of Kansas', var: 'TKAN', sing: 'KansasTownship', finder: 'kansasTownship', finders: 'kansasTownshipsInRegion', pfx: 'tka', cap: 'KansasTownships' },
+  { file: 'town-wisconsin', label: 'WISCONSIN-TOWNS', title: 'Towns of Wisconsin', var: 'TWIS', sing: 'WisconsinTown', finder: 'wisconsinTown', finders: 'wisconsinTownsInRegion', pfx: 'two', cap: 'WisconsinTowns' },
+  { file: 'desa-new-york', label: 'NEW-YORK-VILLAGES', title: 'Villages of New York', var: 'VNYK', sing: 'NewYorkVillage', finder: 'newYorkVillage', finders: 'newYorkVillagesInRegion', pfx: 'vne', cap: 'NewYorkVillages' },
+  { file: 'township-nebraska', label: 'NEBRASKA-TOWNSHIPS', title: 'Townships of Nebraska', var: 'TNEB', sing: 'NebraskaTownship', finder: 'nebraskaTownship', finders: 'nebraskaTownshipsInRegion', pfx: 'tbr', cap: 'NebraskaTownships' },
+  { file: 'township-new-jersey', label: 'NEW-JERSEY-TOWNSHIPS', title: 'Townships of New Jersey', var: 'TNJS', sing: 'NewJerseyTownship', finder: 'newJerseyTownship', finders: 'newJerseyTownshipsInRegion', pfx: 'tno', cap: 'NewJerseyTownships' },
+  { file: 'township-north-dakota', label: 'NORTH-DAKOTA-TOWNSHIPS', title: 'Townships of North Dakota', var: 'TNDK', sing: 'NorthDakotaTownship', finder: 'northDakotaTownship', finders: 'northDakotaTownshipsInRegion', pfx: 'tnd', cap: 'NorthDakotaTownships' },
+  { file: 'kota-ohio', label: 'OHIO-CITIES', title: 'Cities of Ohio', var: 'COHI', sing: 'OhioCity', finder: 'ohioCity', finders: 'ohioCitiesInRegion', pfx: 'voc', cap: 'OhioCities' },
+  { file: 'parish-louisiana', label: 'LOUISIANA-PARISHES', title: 'Parishes of Louisiana', var: 'PLAI', sing: 'LouisianaParish', finder: 'louisianaParish', finders: 'louisianaParishesInRegion', pfx: 'lpr', cap: 'LouisianaParishes' },
+  { file: 'kota-pennsylvania', label: 'PENNSYLVANIA-CITIES', title: 'Cities of Pennsylvania', var: 'CPA', sing: 'PennsylvaniaCity', finder: 'pennsylvaniaCity', finders: 'pennsylvaniaCitiesInRegion', pfx: 'cit', cap: 'PennsylvaniaCities' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
