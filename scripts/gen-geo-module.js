@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'rumah-klerus', label: 'CLERGY-HOUSES', title: 'Parsonages and Clergy Houses of the World', var: 'CLERGYHOUSE', sing: 'ClergyHouse', finder: 'clergy', finders: 'clergyHousesInRegion', pfx: 'rk', cap: 'ClergyHouses' },
-  { file: 'menara-jagaan-api', label: 'FIRE-LOOKOUT-TOWERS', title: 'Fire Lookout Towers of the World', var: 'FIRELOOKOUT', sing: 'FireLookoutTower', finder: 'firelookout', finders: 'fireLookoutsInRegion', pfx: 'fj', cap: 'FireLookouts' },
-  { file: 'kubur-yahudi', label: 'JEWISH-CEMETERIES', title: 'Jewish Cemeteries of the World', var: 'JEWCEM', sing: 'JewishCemetery', finder: 'jewishcemetery', finders: 'jewishCemeteriesInRegion', pfx: 'jy', cap: 'JewishCemeteries' },
-  { file: 'kubur-perang', label: 'WAR-CEMETERIES', title: 'War Cemeteries of the World', var: 'WARCEM', sing: 'WarCemetery', finder: 'warcemetery', finders: 'warCemeteriesInRegion', pfx: 'wp', cap: 'WarCemeteries' },
-  { file: 'taman-arkologi', label: 'ARCHAEOLOGICAL-PARKS', title: 'Archaeological Parks of the World', var: 'ARCHPARK', sing: 'ArchaeologicalPark', finder: 'archpark', finders: 'archParksInRegion', pfx: 'ta', cap: 'ArchParks' },
-  { file: 'rumah-kastam', label: 'CUSTOMS-HOUSES', title: 'Custom Houses of the World', var: 'CUSTOMS', sing: 'CustomHouse', finder: 'customhouse', finders: 'customHousesInRegion', pfx: 'ks', cap: 'CustomHouses' },
-  { file: 'pos-pedagangan', label: 'TRADING-POSTS', title: 'Trading Posts of the World', var: 'TRADINGPOST', sing: 'TradingPost', finder: 'tradingpost', finders: 'tradingPostsInRegion', pfx: 'pd', cap: 'TradingPosts' },
-  { file: 'balai-guild', label: 'GUILD-HALLS', title: 'Guild Halls of the World', var: 'GUILDHALL', sing: 'GuildHall', finder: 'guildhall', finders: 'guildHallsInRegion', pfx: 'gl', cap: 'GuildHalls' },
-  { file: 'gereja-cabang', label: 'FILIAL-CHURCHES', title: 'Filial Churches and Chapels of Ease of the World', var: 'FILIALCH', sing: 'FilialChurch', finder: 'filialchurch', finders: 'filialChurchesInRegion', pfx: 'gb', cap: 'FilialChurches' },
+  { file: 'akueduk-navigasi', label: 'NAVIGABLE-AQUEDUCTS', title: 'Navigable Aqueducts of the World', var: 'NAVAQCD', sing: 'NavigableAqueduct', finder: 'navaqueduct', finders: 'navAqueductsInRegion', pfx: 'av', cap: 'NavAqueducts' },
+  { file: 'perlindung-batu', label: 'ROCK-SHELTERS', title: 'Rock Shelters of the World', var: 'ROCKSHLT', sing: 'RockShelter', finder: 'rockshelter', finders: 'rockSheltersInRegion', pfx: 'rs', cap: 'RockShelters' },
+  { file: 'kereta-berigi', label: 'RACK-RAILWAYS', title: 'Rack Railways of the World', var: 'RACKRAIL', sing: 'RackRailway', finder: 'rackrailway', finders: 'rackRailwaysInRegion', pfx: 'rr', cap: 'RackRailways' },
+  { file: 'gereja-kayu', label: 'STAVE-CHURCHES', title: 'Stave Churches of the World', var: 'STAVECH', sing: 'StaveChurch', finder: 'stavechurch', finders: 'staveChurchesInRegion', pfx: 'sv', cap: 'StaveChurches' },
+  { file: 'rumah-kaca', label: 'GREENHOUSES', title: 'Greenhouses and Glasshouses of the World', var: 'GREENHSE', sing: 'Greenhouse', finder: 'greenhouse', finders: 'greenhousesInRegion', pfx: 'gk', cap: 'Greenhouses' },
+  { file: 'salib-batu', label: 'STONE-CROSSES', title: 'Stone Crosses of the World', var: 'STONECRS', sing: 'StoneCross', finder: 'stonecross', finders: 'stoneCrossesInRegion', pfx: 'sc', cap: 'StoneCrosses' },
+  { file: 'celah-air', label: 'WATER-GAPS', title: 'Water Gaps of the World', var: 'WATERGAP', sing: 'WaterGap', finder: 'watergap', finders: 'waterGapsInRegion', pfx: 'wg', cap: 'WaterGaps' },
+  { file: 'hospital-bersalin', label: 'MATERNITY-HOSPITALS', title: 'Maternity Hospitals of the World', var: 'MATERNITY', sing: 'MaternityHospital', finder: 'maternity', finders: 'maternityHospitalsInRegion', pfx: 'mh', cap: 'MaternityHospitals' },
+  { file: 'pusat-kesihatan', label: 'HEALTH-CENTERS', title: 'Community Health Centers of the World', var: 'HLTCENTER', sing: 'HealthCenter', finder: 'healthcenter', finders: 'healthCentersInRegion', pfx: 'hc', cap: 'HealthCenters' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
