@@ -70,7 +70,9 @@ test('indexGeoHubs(): tolak sekali, skip bila data belum berubah', async () => {
   const index = {
     async updateDocuments(list) { pushes += 1; list.forEach((d) => store.set(d.id, d)); return { taskUid: 1 }; },
     async getDocument(id) { const d = store.get(id); if (!d) throw new Error('not found'); return d; },
-    async search() { return { estimatedTotalHits: store.size }; }
+    // Meili sejati: `attributesToRetrieve: ['hash']` mengembalikan hash setiap
+    // dokumen `cluster` yang ada — itulah bahan perbandingan indeks.
+    async search() { return { hits: [...store.values()].map((d) => ({ hash: d.hash })), estimatedTotalHits: store.size }; }
   };
   const first = await indexGeoHubs(index, clusters, { logger: { log() {} } });
   assert.equal(pushes, 1);
@@ -85,6 +87,26 @@ test('indexGeoHubs(): tolak sekali, skip bila data belum berubah', async () => {
   store.set([...store.keys()][0], { hash: 'berubah' });
   await indexGeoHubs(index, clusters, { logger: { log() {} } });
   assert.equal(pushes, 2, 'perubahan data mesti masuk indeks');
+});
+
+test('indexGeoHubs(): perubahan SATU hub bukan-sentinel tetap dikesan', async () => {
+  const store = new Map();
+  let pushes = 0;
+  const index = {
+    async updateDocuments(list) { pushes += 1; list.forEach((d) => store.set(d.id, d)); return { taskUid: 1 }; },
+    async search() { return { hits: [...store.values()].map((d) => ({ hash: d.hash })), estimatedTotalHits: store.size }; }
+  };
+  await indexGeoHubs(index, clusters, { logger: { log() {} } });
+  assert.equal(pushes, 1);
+
+  // Senario sebenar: sunting fail data borough New Jersey → hanya satu dokumen
+  // bertukar hash. Penjaga sentinel lama akan MELANGKAU penolakan dan indeks
+  // kekal berisi data lama.
+  const nj = docs.find((d) => d.url === 'https://tukuk.org/new-jersey-boroughs');
+  assert.ok(nj, 'kluster new-jersey-boroughs mesti ada');
+  store.set(nj.id, Object.assign({}, store.get(nj.id), { hash: 'lama-255-borough' }));
+  await indexGeoHubs(index, clusters, { logger: { log() {} } });
+  assert.equal(pushes, 2, 'satu dokumen berubah pun mesti ditolak semula');
 });
 
 test('indexGeoHubs(): index kosong/roboh → cuba tolak, jangan buang dokumen', async () => {

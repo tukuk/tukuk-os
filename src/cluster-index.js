@@ -158,18 +158,28 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
   const docs = (clusters || []).map(hubToDoc).filter(Boolean);
   if (!docs.length) return { count: 0, skipped: true, taskUid: null };
 
-  // Pengesahan murah sebelum menolak: dokumen sentinel (hub pertama, base
-  // tersusun) sudah ada dengan hash yang sama DAN bilangan dokumen 'cluster'
-  // sudah penuh → data geo belum berubah, jadi tiada kerja indeks perlu dibuat.
-  // Selepas pemulihan indeks dari R2, semakan ini gagal dan dokumen ditolak semula.
+  // Pengesahan murah sebelum menolak: baca SEMUA hash dokumen `cluster` yang
+  // sudah ada dalam indeks dan bandarkan sebagai multisets. Sentinel tunggal
+  // (hub pertama) TIDAK cukup — sunting satu fail data (contohnya borough New
+  // Jersey) mengubah hash satu dokumen sahaja, jadi indeks akan kekal lama
+  // berisi data lama. Selepas pemulihan indeks dari R2 semakan ini gagal dan
+  // dokumen ditolak semula.
   if (!force) {
     try {
-      const [existing, found] = await Promise.all([
-        index.getDocument(docs[0].id).catch(() => null),
-        index.search('', { filter: 'type = "cluster"', limit: 0 }).catch(() => null)
-      ]);
-      const have = found ? (found.estimatedTotalHits != null ? found.estimatedTotalHits : (found.hits || []).length) : 0;
-      if (existing && existing.hash === docs[0].hash && have >= docs.length - 1) {
+      const found = await index.search('', {
+        filter: 'type = "cluster"',
+        limit: Math.min(docs.length, 1000),        // had paginasi Meilisearch
+        attributesToRetrieve: ['hash']
+      });
+      const hits = (found && found.hits) || [];
+      const total = found ? (found.estimatedTotalHits != null ? found.estimatedTotalHits : hits.length) : 0;
+      const want = docs.map((d) => d.hash).sort();
+      const got = hits.map((h) => h && h.hash).filter(Boolean).sort();
+      // Set hanya boleh dibandingkan bila TIADA dokumen tercetus oleh had limit;
+      // jika index besar daripada 1000 hub, kita tolak sahaja (sentiasa selamat).
+      const unchanged = total === docs.length && want.length === docs.length &&
+        got.length === want.length && want.every((h, i) => h === got[i]);
+      if (unchanged) {
         if (logger && logger.log) logger.log(`[cluster-index] ${docs.length} hub kluster sudah dalam indeks — tiada perubahan`);
         return { count: docs.length, skipped: true, taskUid: null };
       }
