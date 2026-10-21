@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kilin-tekstil', label: 'TEXTILE-MILLS', title: 'Textile Mills of the World', var: 'TEXTILEMILLS', sing: 'TextileMill', finder: 'textilemill', finders: 'textileMillsInRegion', pfx: 'kt', cap: 'TextileMills' },
-  { file: 'kerja-besi', label: 'IRONWORKS', title: 'Ironworks of the World', var: 'IRONWORKS', sing: 'Ironworks', finder: 'ironworks', finders: 'ironworksInRegion', pfx: 'iw', cap: 'Ironworks' },
-  { file: 'batu-glasier', label: 'GLACIAL-ERRATICS', title: 'Glacial Erratics of the World', var: 'ERRATICS', sing: 'GlacialErratic', finder: 'erratic', finders: 'glacialErraticsInRegion', pfx: 'ge', cap: 'GlacialErratics' },
-  { file: 'keluli', label: 'STEELWORKS', title: 'Steelworks of the World', var: 'STEELWORKS', sing: 'Steelworks', finder: 'steelworks', finders: 'steelworksInRegion', pfx: 'st', cap: 'Steelworks' },
-  { file: 'peram-biji', label: 'MALTINGS', title: 'Maltings of the World', var: 'MALTINGS', sing: 'Maltings', finder: 'maltings', finders: 'maltingsInRegion', pfx: 'mt', cap: 'Maltings' },
-  { file: 'kilang-gula', label: 'SUGAR-REFINERIES', title: 'Sugar Refineries of the World', var: 'SUGARREF', sing: 'SugarRefinery', finder: 'sugarrefinery', finders: 'sugarRefineriesInRegion', pfx: 'sr', cap: 'SugarRefineries' },
-  { file: 'rumah-kerja', label: 'WORKHOUSES', title: 'Workhouses of the World', var: 'WORKHOUSES', sing: 'Workhouse', finder: 'workhouse', finders: 'workhousesInRegion', pfx: 'wk', cap: 'Workhouses' },
-  { file: 'kilang-kayu', label: 'SAWMILLS', title: 'Sawmills of the World', var: 'SAWMILLS', sing: 'Sawmill', finder: 'sawmill', finders: 'sawmillsInRegion', pfx: 'sw', cap: 'Sawmills' },
-  { file: 'kilang-bata', label: 'BRICKWORKS', title: 'Brickworks of the World', var: 'BRICKWORKS', sing: 'Brickworks', finder: 'brickworks', finders: 'brickworksInRegion', pfx: 'bw', cap: 'Brickworks' },
+  { file: 'kincir-menara', label: 'TOWER-MILLS', title: 'Tower Mills of the World', var: 'TOWERMILLS', sing: 'TowerMill', finder: 'towermill', finders: 'towerMillsInRegion', pfx: 'tm', cap: 'TowerMills' },
+  { file: 'kincir-smock', label: 'SMOCK-MILLS', title: 'Smock Mills of the World', var: 'SMOCKMILLS', sing: 'SmockMill', finder: 'smockmill', finders: 'smockMillsInRegion', pfx: 'sm', cap: 'SmockMills' },
+  { file: 'kincir-tiang', label: 'POST-MILLS', title: 'Post Mills of the World', var: 'POSTMILLS', sing: 'PostMill', finder: 'postmill', finders: 'postMillsInRegion', pfx: 'ps', cap: 'PostMills' },
+  { file: 'benteng-bintang', label: 'STAR-FORTS', title: 'Star Forts of the World', var: 'STARFORTS', sing: 'StarFort', finder: 'starfort', finders: 'starFortsInRegion', pfx: 'sf', cap: 'StarForts' },
+  { file: 'jambatan-kuda', label: 'PACKHORSE-BRIDGES', title: 'Packhorse Bridges of the World', var: 'PACKBRIDGES', sing: 'PackhorseBridge', finder: 'packhorsebridge', finders: 'packhorseBridgesInRegion', pfx: 'pb', cap: 'PackhorseBridges' },
+  { file: 'gudang-serbuk', label: 'POWDER-MAGAZINES', title: 'Powder Magazines of the World', var: 'POWDERMAG', sing: 'PowderMagazine', finder: 'powdermagazine', finders: 'powderMagazinesInRegion', pfx: 'px', cap: 'PowderMagazines' },
+  { file: 'batu-run', label: 'RUNESTONES', title: 'Runestones of the World', var: 'RUNESTONES', sing: 'Runestone', finder: 'runestone', finders: 'runestonesInRegion', pfx: 'rn', cap: 'Runestones' },
+  { file: 'sabkha', label: 'SABKHAS', title: 'Sabkhas and Coastal Salt Flats of the World', var: 'SABKHAS', sing: 'Sabkha', finder: 'sabkha', finders: 'sabkhasInRegion', pfx: 'sa', cap: 'Sabkhas' },
+  { file: 'rumah-jeruk', label: 'ORANGERIES', title: 'Orangeries of the World', var: 'ORANGERIES', sing: 'Orangery', finder: 'orangery', finders: 'orangeriesInRegion', pfx: 'or', cap: 'Orangeries' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
