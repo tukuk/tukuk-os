@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'township-kansas', label: 'KANSAS-TOWNSHIPS', title: 'Townships of Kansas', var: 'TKAN', sing: 'KansasTownship', finder: 'kansasTownship', finders: 'kansasTownshipsInRegion', pfx: 'tka', cap: 'KansasTownships' },
-  { file: 'town-wisconsin', label: 'WISCONSIN-TOWNS', title: 'Towns of Wisconsin', var: 'TWIS', sing: 'WisconsinTown', finder: 'wisconsinTown', finders: 'wisconsinTownsInRegion', pfx: 'two', cap: 'WisconsinTowns' },
-  { file: 'desa-new-york', label: 'NEW-YORK-VILLAGES', title: 'Villages of New York', var: 'VNYK', sing: 'NewYorkVillage', finder: 'newYorkVillage', finders: 'newYorkVillagesInRegion', pfx: 'vne', cap: 'NewYorkVillages' },
-  { file: 'township-nebraska', label: 'NEBRASKA-TOWNSHIPS', title: 'Townships of Nebraska', var: 'TNEB', sing: 'NebraskaTownship', finder: 'nebraskaTownship', finders: 'nebraskaTownshipsInRegion', pfx: 'tbr', cap: 'NebraskaTownships' },
-  { file: 'township-new-jersey', label: 'NEW-JERSEY-TOWNSHIPS', title: 'Townships of New Jersey', var: 'TNJS', sing: 'NewJerseyTownship', finder: 'newJerseyTownship', finders: 'newJerseyTownshipsInRegion', pfx: 'tno', cap: 'NewJerseyTownships' },
-  { file: 'township-north-dakota', label: 'NORTH-DAKOTA-TOWNSHIPS', title: 'Townships of North Dakota', var: 'TNDK', sing: 'NorthDakotaTownship', finder: 'northDakotaTownship', finders: 'northDakotaTownshipsInRegion', pfx: 'tnd', cap: 'NorthDakotaTownships' },
-  { file: 'kota-ohio', label: 'OHIO-CITIES', title: 'Cities of Ohio', var: 'COHI', sing: 'OhioCity', finder: 'ohioCity', finders: 'ohioCitiesInRegion', pfx: 'voc', cap: 'OhioCities' },
-  { file: 'parish-louisiana', label: 'LOUISIANA-PARISHES', title: 'Parishes of Louisiana', var: 'PLAI', sing: 'LouisianaParish', finder: 'louisianaParish', finders: 'louisianaParishesInRegion', pfx: 'lpr', cap: 'LouisianaParishes' },
-  { file: 'kota-pennsylvania', label: 'PENNSYLVANIA-CITIES', title: 'Cities of Pennsylvania', var: 'CPA', sing: 'PennsylvaniaCity', finder: 'pennsylvaniaCity', finders: 'pennsylvaniaCitiesInRegion', pfx: 'cit', cap: 'PennsylvaniaCities' },
+  { file: 'township-iowa', label: 'IOWA-TOWNSHIPS', title: 'Townships of Iowa', var: 'TIWA', sing: 'IowaTownship', finder: 'iowaTownship', finders: 'iowaTownshipsInRegion', pfx: 'tio', cap: 'IowaTownships' },
+  { file: 'county-texas', label: 'TEXAS-COUNTIES', title: 'Counties of Texas', var: 'CTXE', sing: 'TexasCounty', finder: 'texasCounty', finders: 'texasCountiesInRegion', pfx: 'ktx', cap: 'TexasCounties' },
+  { file: 'munisipaliti-jerman', label: 'GERMAN-MUNICIPALITIES', title: 'Municipalities of Germany', var: 'MGER', sing: 'GermanMunicipality', finder: 'germanMunicipality', finders: 'germanMunicipalitiesInRegion', pfx: 'kgn', cap: 'GermanMunicipalities' },
+  { file: 'county-kansas', label: 'KANSAS-COUNTIES', title: 'Counties of Kansas', var: 'CKAS', sing: 'KansasCounty', finder: 'kansasCounty', finders: 'kansasCountiesInRegion', pfx: 'kks', cap: 'KansasCounties' },
+  { file: 'county-illinois', label: 'ILLINOIS-COUNTIES', title: 'Counties of Illinois', var: 'CILL', sing: 'IllinoisCounty', finder: 'illinoisCounty', finders: 'illinoisCountiesInRegion', pfx: 'kil', cap: 'IllinoisCounties' },
+  { file: 'county-ohio', label: 'OHIO-COUNTIES', title: 'Counties of Ohio', var: 'OHCT', sing: 'OhioCounty', finder: 'ohioCounty', finders: 'ohioCountiesInRegion', pfx: 'koh', cap: 'OhioCounties' },
+  { file: 'county-pennsylvania', label: 'PENNSYLVANIA-COUNTIES', title: 'Counties of Pennsylvania', var: 'PACT', sing: 'PennsylvaniaCounty', finder: 'pennsylvaniaCounty', finders: 'pennsylvaniaCountiesInRegion', pfx: 'kpa', cap: 'PennsylvaniaCounties' },
+  { file: 'county-new-york', label: 'NEW-YORK-COUNTIES', title: 'Counties of New York', var: 'NYCT', sing: 'NewYorkCounty', finder: 'newYorkCounty', finders: 'newYorkCountiesInRegion', pfx: 'kny', cap: 'NewYorkCounties' },
+  { file: 'county-california', label: 'CALIFORNIA-COUNTIES', title: 'Counties of California', var: 'CACT', sing: 'CaliforniaCounty', finder: 'californiaCounty', finders: 'californiaCountiesInRegion', pfx: 'kca', cap: 'CaliforniaCounties' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
