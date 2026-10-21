@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'suaka-margastwa', label: 'NATIONAL-WILDLIFE-REFUGES', title: 'National Wildlife Refuges of the World', var: 'WILDLIFEREF', sing: 'WildlifeRefuge', finder: 'wildlifeRefuge', finders: 'wildlifeRefugesInRegion', pfx: 'swr', cap: 'WildlifeRefuges' },
-  { file: 'perhentian-bas', label: 'BUS-STOPS', title: 'Bus Stops of the World', var: 'BUSSTOPS', sing: 'BusStop', finder: 'busStop', finders: 'busStopsInRegion', pfx: 'spb', cap: 'BusStops' },
-  { file: 'terowong-kereta', label: 'RAILWAY-TUNNELS', title: 'Railway Tunnels of the World', var: 'RWTUNELS', sing: 'RailwayTunnel', finder: 'railwayTunnel', finders: 'railwayTunnelsInRegion', pfx: 'rwt', cap: 'RailwayTunnels' },
-  { file: 'laluan-jauh', label: 'LONG-DISTANCE-TRAILS', title: 'Long-Distance Trails of the World', var: 'LDTRAILS', sing: 'LongDistanceTrail', finder: 'longDistanceTrail', finders: 'longDistanceTrailsInRegion', pfx: 'ljt', cap: 'LongDistanceTrails' },
-  { file: 'tapak-ramsar', label: 'RAMSAR-SITES', title: 'Ramsar Wetland Sites of the World', var: 'RAMSARS', sing: 'RamsarSite', finder: 'ramsarSite', finders: 'ramsarSitesInRegion', pfx: 'rsm', cap: 'RamsarSites' },
-  { file: 'taman-geologi', label: 'GEOPARKS', title: 'Geoparks of the World', var: 'GEOPARKS', sing: 'Geopark', finder: 'geopark', finders: 'geoparksInRegion', pfx: 'gpk', cap: 'Geoparks' },
-  { file: 'laluan-basikal', label: 'CYCLING-ROUTES', title: 'Long-Distance Cycling Routes of the World', var: 'CYCRTE', sing: 'CyclingRoute', finder: 'cyclingRoute', finders: 'cyclingRoutesInRegion', pfx: 'lbn', cap: 'CyclingRoutes' },
-  { file: 'nuraghe', label: 'NURAGHI', title: 'Nuraghi of Sardinia', var: 'NURAGHI', sing: 'Nuraghe', finder: 'nuraghe', finders: 'nuraghiInRegion', pfx: 'nrg', cap: 'Nuraghi' },
-  { file: 'asrama-muda', label: 'YOUTH-HOSTELS', title: 'Youth Hostels of the World', var: 'YHOSTEL', sing: 'YouthHostel', finder: 'youthHostel', finders: 'youthHostelsInRegion', pfx: 'asm', cap: 'YouthHostels' },
+  { file: 'muzium-perang', label: 'WAR-MUSEUMS', title: 'War Museums of the World', var: 'WARMUSEUM', sing: 'WarMuseum', finder: 'warMuseum', finders: 'warMuseumsInRegion', pfx: 'mpr', cap: 'WarMuseums' },
+  { file: 'muzium-arkeologi', label: 'ARCHAEOLOGICAL-MUSEUMS', title: 'Archaeological Museums of the World', var: 'ARCHMUSEUM', sing: 'ArchaeologicalMuseum', finder: 'archaeologicalMuseum', finders: 'archaeologicalMuseumsInRegion', pfx: 'akm', cap: 'ArchaeologicalMuseums' },
+  { file: 'terowong-jalan', label: 'ROAD-TUNNELS', title: 'Road Tunnels of the World', var: 'ROADTUN', sing: 'RoadTunnel', finder: 'roadTunnel', finders: 'roadTunnelsInRegion', pfx: 'tjl', cap: 'RoadTunnels' },
+  { file: 'jambatan-kereta', label: 'RAILWAY-BRIDGES', title: 'Railway Bridges of the World', var: 'RAILBRDG', sing: 'RailwayBridge', finder: 'railwayBridge', finders: 'railwayBridgesInRegion', pfx: 'jtk', cap: 'RailwayBridges' },
+  { file: 'muzium-sejarah-alam', label: 'NATURAL-HISTORY-MUSEUMS', title: 'Natural History Museums of the World', var: 'NATHMUSEUM', sing: 'NaturalHistoryMuseum', finder: 'naturalHistoryMuseum', finders: 'naturalHistoryMuseumsInRegion', pfx: 'msa', cap: 'NaturalHistoryMuseums' },
+  { file: 'muzium-penerbangan', label: 'AVIATION-MUSEUMS', title: 'Aviation Museums of the World', var: 'AVIAMUSEUM', sing: 'AviationMuseum', finder: 'aviationMuseum', finders: 'aviationMuseumsInRegion', pfx: 'mpn', cap: 'AviationMuseums' },
+  { file: 'muzium-maritima', label: 'MARITIME-MUSEUMS', title: 'Maritime Museums of the World', var: 'MARIMUSEUM', sing: 'MaritimeMuseum', finder: 'maritimeMuseum', finders: 'maritimeMuseumsInRegion', pfx: 'mmr', cap: 'MaritimeMuseums' },
+  { file: 'muzium-sains', label: 'SCIENCE-MUSEUMS', title: 'Science Museums of the World', var: 'SCIMUSEUM', sing: 'ScienceMuseum', finder: 'scienceMuseum', finders: 'scienceMuseumsInRegion', pfx: 'msx', cap: 'ScienceMuseums' },
+  { file: 'runtuhan-biara', label: 'MONASTERY-RUINS', title: 'Monastery Ruins of the World', var: 'MONARUIN', sing: 'MonasteryRuin', finder: 'monasteryRuin', finders: 'monasteryRuinsInRegion', pfx: 'rbi', cap: 'MonasteryRuins' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
