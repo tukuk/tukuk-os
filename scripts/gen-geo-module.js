@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kanton-kosta-rika', label: 'COSTA-RICAN-CANTONS', title: 'Cantons of Costa Rica', var: 'KCCRA', sing: 'CostaricanCanton', finder: 'costaricanCanton', finders: 'costaricanCantonsInRegion', pfx: 'ccr', cap: 'CostaRicanCantons' },
-  { file: 'komun-senegal', label: 'SENEGALESE-COMMUNES', title: 'Communes of Senegal', var: 'KSENC', sing: 'SenegaleseCommune', finder: 'senegaleseCommune', finders: 'senegaleseCommunesInRegion', pfx: 'ksg', cap: 'SenegaleseCommunes' },
-  { file: 'distrik-nepal', label: 'NEPALI-DISTRICTS', title: 'Districts of Nepal', var: 'DNPAL', sing: 'NepaliDistrict', finder: 'nepaliDistrict', finders: 'nepaliDistrictsInRegion', pfx: 'dnp', cap: 'NepaliDistricts' },
-  { file: 'county-kenya', label: 'KENYAN-COUNTIES', title: 'Counties of Kenya', var: 'KKNYA', sing: 'KenyanCounty', finder: 'kenyanCounty', finders: 'kenyanCountiesInRegion', pfx: 'kke', cap: 'KenyanCounties' },
-  { file: 'prefektur-jepang', label: 'JAPANESE-PREFECTURES', title: 'Prefectures of Japan', var: 'PJPN', sing: 'JapanesePrefecture', finder: 'japanesePrefecture', finders: 'japanesePrefecturesInRegion', pfx: 'jpf', cap: 'JapanesePrefectures' },
-  { file: 'distrik-somalia', label: 'SOMALI-DISTRICTS', title: 'Districts of Somalia', var: 'DSML', sing: 'SomaliDistrict', finder: 'somaliDistrict', finders: 'somaliDistrictsInRegion', pfx: 'dso', cap: 'SomaliDistricts' },
-  { file: 'departemen-kolombia', label: 'COLOMBIAN-DEPARTMENTS', title: 'Departments of Colombia', var: 'DCOLO', sing: 'ColombianDepartment', finder: 'colombianDepartment', finders: 'colombianDepartmentsInRegion', pfx: 'dco', cap: 'ColombianDepartments' },
-  { file: 'distrik-mozambik', label: 'MOZAMBICAN-DISTRICTS', title: 'Districts of Mozambique', var: 'DMZB', sing: 'MozambicanDistrict', finder: 'mozambicanDistrict', finders: 'mozambicanDistrictsInRegion', pfx: 'dmz', cap: 'MozambicanDistricts' },
-  { file: 'komun-benin', label: 'BENINESE-COMMUNES', title: 'Communes of Benin', var: 'KBNIN', sing: 'BenineseCommune', finder: 'benineseCommune', finders: 'benineseCommunesInRegion', pfx: 'kbn', cap: 'BenineseCommunes' },
+  { file: 'komun-maroko', label: 'MOROCCAN-COMMUNES', title: 'Communes of Morocco', var: 'KMOR', sing: 'MoroccanCommune', finder: 'moroccanCommune', finders: 'moroccanCommunesInRegion', pfx: 'kmr', cap: 'MoroccanCommunes' },
+  { file: 'distrik-afghanistan', label: 'AFGHAN-DISTRICTS', title: 'Districts of Afghanistan', var: 'DAFG', sing: 'AfghanDistrict', finder: 'afghanDistrict', finders: 'afghanDistrictsInRegion', pfx: 'daf', cap: 'AfghanDistricts' },
+  { file: 'township-michigan', label: 'MICHIGAN-TOWNSHIPS', title: 'Townships of Michigan', var: 'TMICH', sing: 'MichiganTownship', finder: 'michiganTownship', finders: 'michiganTownshipsInRegion', pfx: 'tmi', cap: 'MichiganTownships' },
+  { file: 'borough-pennsylvania', label: 'PENNSYLVANIA-BOROUGHS', title: 'Boroughs of Pennsylvania', var: 'BPEN', sing: 'PennsylvaniaBorough', finder: 'pennsylvaniaBorough', finders: 'pennsylvaniaBoroughsInRegion', pfx: 'bpp', cap: 'PennsylvaniaBoroughs' },
+  { file: 'desa-illinois', label: 'ILLINOIS-VILLAGES', title: 'Villages of Illinois', var: 'VILL', sing: 'IllinoisVillage', finder: 'illinoisVillage', finders: 'illinoisVillagesInRegion', pfx: 'vil', cap: 'IllinoisVillages' },
+  { file: 'komun-pantai-gading', label: 'IVORIAN-COMMUNES', title: 'Communes of Ivory Coast', var: 'KCIV', sing: 'IvorianCommune', finder: 'ivorianCommune', finders: 'ivorianCommunesInRegion', pfx: 'kci', cap: 'IvorianCommunes' },
+  { file: 'komun-mauritania', label: 'MAURITANIAN-COMMUNES', title: 'Communes of Mauritania', var: 'KMUR', sing: 'MauritanianCommune', finder: 'mauritanianCommune', finders: 'mauritanianCommunesInRegion', pfx: 'kmu', cap: 'MauritanianCommunes' },
+  { file: 'munisipaliti-tunisia', label: 'TUNISIAN-MUNICIPALITIES', title: 'Municipalities of Tunisia', var: 'MTUN', sing: 'TunisianMunicipality', finder: 'tunisianMunicipality', finders: 'tunisianMunicipalitiesInRegion', pfx: 'ttn', cap: 'TunisianMunicipalities' },
+  { file: 'provinsi-iran', label: 'IRANIAN-PROVINCES', title: 'Provinces of Iran', var: 'PIRN', sing: 'IranianProvince', finder: 'iranianProvince', finders: 'iranianProvincesInRegion', pfx: 'pir', cap: 'IranianProvinces' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
