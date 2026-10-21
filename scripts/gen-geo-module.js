@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'tambon-thailand', label: 'THAI-SUBDISTRICTS', title: 'Subdistricts of Thailand (Tambon)', var: 'TMBTN', sing: 'ThaiSubdistrict', finder: 'thaiSubdistrict', finders: 'thaiSubdistrictsInRegion', pfx: 'tbn', cap: 'ThaiSubdistricts' },
-  { file: 'komun-mali', label: 'MALIAN-COMMUNES', title: 'Communes of Mali', var: 'KOMML', sing: 'MalianCommune', finder: 'malianCommune', finders: 'malianCommunesInRegion', pfx: 'kml', cap: 'MalianCommunes' },
-  { file: 'munisipaliti-afrika-selatan', label: 'SOUTH-AFRICAN-MUNICIPALITIES', title: 'Local Municipalities of South Africa', var: 'MASAF', sing: 'SouthAfricanMunicipality', finder: 'southAfricanMunicipality', finders: 'southAfricanMunicipalitiesInRegion', pfx: 'mas', cap: 'SouthAfricanMunicipalities' },
-  { file: 'distrik-ghana', label: 'GHANAIAN-DISTRICTS', title: 'Districts of Ghana', var: 'DSGHA', sing: 'GhanaianDistrict', finder: 'ghanaianDistrict', finders: 'ghanaianDistrictsInRegion', pfx: 'dgh', cap: 'GhanaianDistricts' },
-  { file: 'jamoat-tajikistan', label: 'TAJIK-DISTRICTS', title: 'Jamoats of Tajikistan', var: 'JMTJK', sing: 'TajikJamoat', finder: 'tajikJamoat', finders: 'tajikJamoatsInRegion', pfx: 'jtj', cap: 'TajikJamoats' },
-  { file: 'arrondisman-senegal', label: 'SENEGALESE-ARRONDISSEMENTS', title: 'Arrondissements of Senegal', var: 'ARSEN', sing: 'SenegaleseArrondissement', finder: 'senegaleseArrondissement', finders: 'senegaleseArrondissementsInRegion', pfx: 'ars', cap: 'SenegaleseArrondissements' },
-  { file: 'distrik-zambia', label: 'ZAMBIAN-DISTRICTS', title: 'Districts of Zambia', var: 'DSZMB', sing: 'ZambianDistrict', finder: 'zambianDistrict', finders: 'zambianDistrictsInRegion', pfx: 'dzm', cap: 'ZambianDistricts' },
-  { file: 'distrik-papua', label: 'PNG-DISTRICTS', title: 'Districts of Papua New Guinea', var: 'DSPNG', sing: 'PapuaNewGuineaDistrict', finder: 'papuaNewGuineaDistrict', finders: 'papuaNewGuineaDistrictsInRegion', pfx: 'dpg', cap: 'PapuaNewGuineaDistricts' },
-  { file: 'sektor-rwanda', label: 'RWANDAN-SECTORS', title: 'Sectors of Rwanda', var: 'SERWA', sing: 'RwandanSector', finder: 'rwandanSector', finders: 'rwandanSectorsInRegion', pfx: 'srw', cap: 'RwandanSectors' },
+  { file: 'kanton-kosta-rika', label: 'COSTA-RICAN-CANTONS', title: 'Cantons of Costa Rica', var: 'KCCRA', sing: 'CostaricanCanton', finder: 'costaricanCanton', finders: 'costaricanCantonsInRegion', pfx: 'ccr', cap: 'CostaRicanCantons' },
+  { file: 'komun-senegal', label: 'SENEGALESE-COMMUNES', title: 'Communes of Senegal', var: 'KSENC', sing: 'SenegaleseCommune', finder: 'senegaleseCommune', finders: 'senegaleseCommunesInRegion', pfx: 'ksg', cap: 'SenegaleseCommunes' },
+  { file: 'distrik-nepal', label: 'NEPALI-DISTRICTS', title: 'Districts of Nepal', var: 'DNPAL', sing: 'NepaliDistrict', finder: 'nepaliDistrict', finders: 'nepaliDistrictsInRegion', pfx: 'dnp', cap: 'NepaliDistricts' },
+  { file: 'county-kenya', label: 'KENYAN-COUNTIES', title: 'Counties of Kenya', var: 'KKNYA', sing: 'KenyanCounty', finder: 'kenyanCounty', finders: 'kenyanCountiesInRegion', pfx: 'kke', cap: 'KenyanCounties' },
+  { file: 'prefektur-jepang', label: 'JAPANESE-PREFECTURES', title: 'Prefectures of Japan', var: 'PJPN', sing: 'JapanesePrefecture', finder: 'japanesePrefecture', finders: 'japanesePrefecturesInRegion', pfx: 'jpf', cap: 'JapanesePrefectures' },
+  { file: 'distrik-somalia', label: 'SOMALI-DISTRICTS', title: 'Districts of Somalia', var: 'DSML', sing: 'SomaliDistrict', finder: 'somaliDistrict', finders: 'somaliDistrictsInRegion', pfx: 'dso', cap: 'SomaliDistricts' },
+  { file: 'departemen-kolombia', label: 'COLOMBIAN-DEPARTMENTS', title: 'Departments of Colombia', var: 'DCOLO', sing: 'ColombianDepartment', finder: 'colombianDepartment', finders: 'colombianDepartmentsInRegion', pfx: 'dco', cap: 'ColombianDepartments' },
+  { file: 'distrik-mozambik', label: 'MOZAMBICAN-DISTRICTS', title: 'Districts of Mozambique', var: 'DMZB', sing: 'MozambicanDistrict', finder: 'mozambicanDistrict', finders: 'mozambicanDistrictsInRegion', pfx: 'dmz', cap: 'MozambicanDistricts' },
+  { file: 'komun-benin', label: 'BENINESE-COMMUNES', title: 'Communes of Benin', var: 'KBNIN', sing: 'BenineseCommune', finder: 'benineseCommune', finders: 'benineseCommunesInRegion', pfx: 'kbn', cap: 'BenineseCommunes' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
