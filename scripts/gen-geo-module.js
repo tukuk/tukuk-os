@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'muzium-perang', label: 'WAR-MUSEUMS', title: 'War Museums of the World', var: 'WARMUSEUM', sing: 'WarMuseum', finder: 'warMuseum', finders: 'warMuseumsInRegion', pfx: 'mpr', cap: 'WarMuseums' },
-  { file: 'muzium-arkeologi', label: 'ARCHAEOLOGICAL-MUSEUMS', title: 'Archaeological Museums of the World', var: 'ARCHMUSEUM', sing: 'ArchaeologicalMuseum', finder: 'archaeologicalMuseum', finders: 'archaeologicalMuseumsInRegion', pfx: 'akm', cap: 'ArchaeologicalMuseums' },
-  { file: 'terowong-jalan', label: 'ROAD-TUNNELS', title: 'Road Tunnels of the World', var: 'ROADTUN', sing: 'RoadTunnel', finder: 'roadTunnel', finders: 'roadTunnelsInRegion', pfx: 'tjl', cap: 'RoadTunnels' },
-  { file: 'jambatan-kereta', label: 'RAILWAY-BRIDGES', title: 'Railway Bridges of the World', var: 'RAILBRDG', sing: 'RailwayBridge', finder: 'railwayBridge', finders: 'railwayBridgesInRegion', pfx: 'jtk', cap: 'RailwayBridges' },
-  { file: 'muzium-sejarah-alam', label: 'NATURAL-HISTORY-MUSEUMS', title: 'Natural History Museums of the World', var: 'NATHMUSEUM', sing: 'NaturalHistoryMuseum', finder: 'naturalHistoryMuseum', finders: 'naturalHistoryMuseumsInRegion', pfx: 'msa', cap: 'NaturalHistoryMuseums' },
-  { file: 'muzium-penerbangan', label: 'AVIATION-MUSEUMS', title: 'Aviation Museums of the World', var: 'AVIAMUSEUM', sing: 'AviationMuseum', finder: 'aviationMuseum', finders: 'aviationMuseumsInRegion', pfx: 'mpn', cap: 'AviationMuseums' },
-  { file: 'muzium-maritima', label: 'MARITIME-MUSEUMS', title: 'Maritime Museums of the World', var: 'MARIMUSEUM', sing: 'MaritimeMuseum', finder: 'maritimeMuseum', finders: 'maritimeMuseumsInRegion', pfx: 'mmr', cap: 'MaritimeMuseums' },
-  { file: 'muzium-sains', label: 'SCIENCE-MUSEUMS', title: 'Science Museums of the World', var: 'SCIMUSEUM', sing: 'ScienceMuseum', finder: 'scienceMuseum', finders: 'scienceMuseumsInRegion', pfx: 'msx', cap: 'ScienceMuseums' },
-  { file: 'runtuhan-biara', label: 'MONASTERY-RUINS', title: 'Monastery Ruins of the World', var: 'MONARUIN', sing: 'MonasteryRuin', finder: 'monasteryRuin', finders: 'monasteryRuinsInRegion', pfx: 'rbi', cap: 'MonasteryRuins' },
+  { file: 'muzium-rumah-historis', label: 'HISTORIC-HOUSE-MUSEUMS', title: 'Historic House Museums of the World', var: 'HHMUSEUM', sing: 'HistoricHouseMuseum', finder: 'historicHouseMuseum', finders: 'historicHouseMuseumsInRegion', pfx: 'mrh', cap: 'HistoricHouseMuseums' },
+  { file: 'muzium-sejarah', label: 'HISTORY-MUSEUMS', title: 'History Museums of the World', var: 'HIMUSEUM', sing: 'HistoryMuseum', finder: 'historyMuseum', finders: 'historyMuseumsInRegion', pfx: 'msj', cap: 'HistoryMuseums' },
+  { file: 'muzium-kereta', label: 'RAILWAY-MUSEUMS', title: 'Railway Museums of the World', var: 'RLMUSEUM', sing: 'RailwayMuseum', finder: 'railwayMuseum', finders: 'railwayMuseumsInRegion', pfx: 'mkr', cap: 'RailwayMuseums' },
+  { file: 'muzium-auto', label: 'AUTOMOBILE-MUSEUMS', title: 'Automobile Museums of the World', var: 'AUMUSEUM', sing: 'AutomobileMuseum', finder: 'automobileMuseum', finders: 'automobileMuseumsInRegion', pfx: 'mau', cap: 'AutomobileMuseums' },
+  { file: 'muzium-transport', label: 'TRANSPORT-MUSEUMS', title: 'Transport Museums of the World', var: 'TRMUSEUM', sing: 'TransportMuseum', finder: 'transportMuseum', finders: 'transportMuseumsInRegion', pfx: 'mtt', cap: 'TransportMuseums' },
+  { file: 'muzium-kanak', label: 'CHILDRENS-MUSEUMS', title: "Children's Museums of the World", var: 'CHMUSEUM', sing: 'ChildrensMuseum', finder: 'childrensMuseum', finders: 'childrensMuseumsInRegion', pfx: 'mka', cap: 'ChildrensMuseums' },
+  { file: 'muzium-pelombongan', label: 'MINING-MUSEUMS', title: 'Mining Museums of the World', var: 'MINMUSEUM', sing: 'MiningMuseum', finder: 'miningMuseum', finders: 'miningMuseumsInRegion', pfx: 'mpo', cap: 'MiningMuseums' },
+  { file: 'monumen-holocaust', label: 'HOLOCAUST-MEMORIALS', title: 'Holocaust Memorials of the World', var: 'HOLOMEM', sing: 'HolocaustMemorial', finder: 'holocaustMemorial', finders: 'holocaustMemorialsInRegion', pfx: 'hmn', cap: 'HolocaustMemorials' },
+  { file: 'muzium-pos', label: 'POSTAL-MUSEUMS', title: 'Postal Museums of the World', var: 'POSMUSEUM', sing: 'PostalMuseum', finder: 'postalMuseum', finders: 'postalMuseumsInRegion', pfx: 'mop', cap: 'PostalMuseums' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
