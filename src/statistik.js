@@ -1,14 +1,14 @@
 'use strict';
-// ── TUKUK-OS STATISTIK COMPLEX — ranking dunia ikut indikator (PERCUMA, tanpa kunci) ──
-// Sumber: World Bank Open Data (JSON awam, tanpa daftar) + dataset src/negara.js
-// yang sudah di-cache (populasi/jangka hayat/urbanisasi field sedia ada).
-// Modul ini hanya memuatin indikator TAMBAHAN dan menjana ranking siap-render.
+// ── TUKUK-OS STATISTICS COMPLEX — world rankings by indicator (FREE, no API key) ──
+// Sources: World Bank Open Data (public JSON, no signup) plus the already-cached
+// dataset in src/negara.js (the population / life-expectancy / urbanisation fields
+// exist there). This module only loads the EXTRA indicators and builds the rankings.
 const https = require('https');
 
 const WB_IND_BASE = 'https://api.worldbank.org/v2/country/all/indicator';
 const WB_YEAR_DEFAULT = 2023;
 const cache = new Map();
-const TTL = 30 * 24 * 60 * 60 * 1000; // stat 2023 sudah tetap
+const TTL = 30 * 24 * 60 * 60 * 1000; // the 2023 statistics are already final
 
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -19,7 +19,7 @@ function cacheSet(key, data) {
   cache.set(key, { data, expiresAt: Date.now() + TTL });
 }
 
-// Agent IPv6 didahulukan — server.js tetapkan dns 'ipv4first' global (pitfall cuti).
+// The IPv6 agent goes first — server.js pins the global resolver to 'ipv4first' (the holiday pitfall).
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 
@@ -47,46 +47,47 @@ async function fetchJson(url) {
   catch { return await httpsGet(url, v4Agent); }
 }
 
-// ——— Katalog indikator (slugs BM; `field` dipinjam dari rows negara.js) ———
-// better: 'high' = makin tinggi makin hebat; 'low' = makin rendah makin baik; null neutral.
+// ——— Indicator catalogue (the Malay slugs are public URLs and must not change;
+// `field` is borrowed from the rows src/negara.js exports) ———
+// better: 'high' = higher is better; 'low' = lower is better; null = neutral.
 const INDICATORS = [
-  { slug: 'populasi', code: null, field: 'population', bm: 'Populasi', unit: 'orang', dec: 0, better: 'high',
-    intro: 'Jumlah penduduk setiap buah negara — anggaran rasmi World Bank bagi tahun 2023, dibundarkan kepada orang.' },
-  { slug: 'kdnk-kapita', code: 'NY.GDP.PCAP.CD', field: null, bm: 'KDNK Sekepala', unit: 'USD', dec: 0, better: 'high',
-    intro: 'Nilai keluaran dalam negara kasar dibahagi penduduk, dalam dolar AS nominal — ukuran kasar kekuatan ekonomi individu.' },
-  { slug: 'jangka-hayat', code: null, field: 'life', bm: 'Jangka Hayat Lahir', unit: 'tahun', dec: 1, better: 'high',
-    intro: 'Berapa tahun bayi yang lahir hari ini dijangka hidup, dengan pemeraian sistem kesihatan semasa.' },
-  { slug: 'internet', code: 'IT.NET.USER.ZS', field: null, bm: 'Pengguna Internet', unit: '%', dec: 1, better: 'high',
-    intro: 'Peratus penduduk yang menggunakan internet sekurang-kurangnya sekali dalam tiga bulan — nadi ekonomi digital.' },
-  { slug: 'urbanisasi', code: null, field: 'urban', bm: 'Penduduk Bandar', unit: '%', dec: 1, better: null,
-    intro: 'Peratus penduduk yang tinggal di kawasan bandar ikut definisi setiap negara — cermin transformasi ekonomi.' },
-  { slug: 'kesuburan', code: 'SP.DYN.TFRT.IN', field: null, bm: 'Kadar Kesuburan', unit: 'anak/wanita', dec: 1, better: null,
-    intro: 'Purata anak yang dilahirkan seorang wanita sepanjang hayat. Di bawah 2.1, populasi sesuatu negara mula mengecil.' },
-  { slug: 'literasi', code: 'SE.ADT.LITR.ZS', field: null, bm: 'Kadar Literasi Dewasa', unit: '%', dec: 1, better: 'high',
-    intro: 'Peratus penduduk berusia 15 tahun ke atas yang boleh membaca dan menulis dengan faham.' },
-  { slug: 'pengangguran', code: 'SL.UEM.TOTL.ZS', field: null, bm: 'Kadar Pengangguran', unit: '%', dec: 1, better: 'low',
-    intro: 'Peratus tenaga kerja yang aktif mencari pekerjaan tetapi belum mendapatkannya.' },
-  { slug: 'inflasi', code: 'FP.CPI.TOTL.ZG', field: null, bm: 'Inflasi Harga Pengguna', unit: '%', dec: 1, better: 'low',
-    intro: 'Perubahan tahunan indeks harga pengguna — kadar yang memacu saku rakyat setiap bulan.' },
-  { slug: 'tenaga-boleh-diperbaharui', code: 'EG.FEC.RNEW.ZS', field: null, yr: 2021, bm: 'Tenaga Boleh Diperbaharui', unit: '%', dec: 1, better: 'high',
-    intro: 'Bahagian tenaga boleh diperbaharui (hidro, solar, angin, bio) dalam penggunaan tenaga akhir keseluruhan. World Bank baru melaporkan 2021 untuk indikator ini — ia didahulukan tahun lain.' },
-  { slug: 'pelepasan-co2', code: 'EN.GHG.CO2.PC.CE.AR5', field: null, bm: 'Pelepasan CO₂ Sekepala', unit: 'tan CO₂', dec: 1, better: 'low',
-    intro: 'Ton karbon dioksida dilepaskan setiap penduduk setiap tahun (tidak termasuk penggunaan tanah) — cap kaki karbon negara.' },
-  { slug: 'liputan-hutan', code: 'AG.LND.FRST.ZS', field: null, bm: 'Liputan Hutan', unit: '%', dec: 1, better: 'high',
-    intro: 'Peratus keluasan tanah negara yang dilitupi hutan semula jadi dan tumbuhan — paru-paru dunia.' },
-  { slug: 'kematian-bayi', code: 'SP.DYN.IMRT.IN', field: null, bm: 'Kematian Bayi', unit: 'per 1,000', dec: 1, better: 'low',
-    intro: 'Bilangan bayi yang meninggal dunia sebelum mencapai usia satu tahun bagi setiap 1,000 kelahiran hidup.' },
-  { slug: 'pertumbuhan-penduduk', code: 'SP.POP.GROW', field: null, bm: 'Pertumbuhan Penduduk', unit: '%', dec: 1, better: null,
-    intro: 'Perubahan tahunan jumlah penduduk — positif bermakna negara membesar, negatif bermakna rakyatnya makin susut.' },
-  { slug: 'kematian-kanak', code: 'SH.DYN.MORT', field: null, bm: 'Kematian Kanak-Kanak', unit: 'per 1,000', dec: 1, better: 'low',
-    intro: 'Kanak yang meninggal dunia sebelum usia lima tahun bagi setiap 1,000 kelahiran hidup — penunjuk paling kuat kejayaan sistem kesihatan sesebuah negara.' },
+  { slug: 'populasi', code: null, field: 'population', en: 'Population', unit: 'people', dec: 0, better: 'high',
+    intro: 'How many people live in each country — the official World Bank estimate for 2023, rounded to a single person.' },
+  { slug: 'kdnk-kapita', code: 'NY.GDP.PCAP.CD', field: null, en: 'GDP per Capita', unit: 'USD', dec: 0, better: 'high',
+    intro: 'Gross domestic product divided by the population, in nominal US dollars — a rough measure of individual economic strength.' },
+  { slug: 'jangka-hayat', code: null, field: 'life', en: 'Life Expectancy at Birth', unit: 'years', dec: 1, better: 'high',
+    intro: 'How long a baby born today is expected to live, given the health system currently in place.' },
+  { slug: 'internet', code: 'IT.NET.USER.ZS', field: null, en: 'Internet Users', unit: '%', dec: 1, better: 'high',
+    intro: 'The share of people who used the internet at least once in the past three months — the pulse of the digital economy.' },
+  { slug: 'urbanisasi', code: null, field: 'urban', en: 'Urban Population', unit: '%', dec: 1, better: null,
+    intro: 'The share of people living in urban areas, measured by the definition each country itself uses — a mirror of economic transformation.' },
+  { slug: 'kesuburan', code: 'SP.DYN.TFRT.IN', field: null, en: 'Fertility Rate', unit: 'children per woman', dec: 1, better: null,
+    intro: 'The average number of children a woman would have in her lifetime. Below 2.1 the population of a country starts to shrink.' },
+  { slug: 'literasi', code: 'SE.ADT.LITR.ZS', field: null, en: 'Adult Literacy Rate', unit: '%', dec: 1, better: 'high',
+    intro: 'The share of people aged 15 and above who can read and write a short, simple statement with understanding.' },
+  { slug: 'pengangguran', code: 'SL.UEM.TOTL.ZS', field: null, en: 'Unemployment Rate', unit: '%', dec: 1, better: 'low',
+    intro: 'The share of the labour force that is actively looking for work but has not found it yet.' },
+  { slug: 'inflasi', code: 'FP.CPI.TOTL.ZG', field: null, en: 'Consumer Price Inflation', unit: '%', dec: 1, better: 'low',
+    intro: 'The annual change in the consumer price index — the rate that reaches into every household purse each month.' },
+  { slug: 'tenaga-boleh-diperbaharui', code: 'EG.FEC.RNEW.ZS', field: null, yr: 2021, en: 'Renewable Energy', unit: '%', dec: 1, better: 'high',
+    intro: 'The renewable share (hydro, solar, wind, bioenergy) of total final energy use. The World Bank has only reported 2021 for this indicator, so that year is used ahead of the others.' },
+  { slug: 'pelepasan-co2', code: 'EN.GHG.CO2.PC.CE.AR5', field: null, en: 'CO₂ Emissions per Capita', unit: 'tonnes CO₂', dec: 1, better: 'low',
+    intro: 'Tonnes of carbon dioxide released per person per year, excluding land use — the per-person carbon footprint of a country.' },
+  { slug: 'liputan-hutan', code: 'AG.LND.FRST.ZS', field: null, en: 'Forest Cover', unit: '%', dec: 1, better: 'high',
+    intro: 'The share of a country\'s land covered by natural forest and growth — the lungs of the planet.' },
+  { slug: 'kematian-bayi', code: 'SP.DYN.IMRT.IN', field: null, en: 'Infant Mortality', unit: 'per 1,000 births', dec: 1, better: 'low',
+    intro: 'How many babies die before reaching their first birthday, for every 1,000 live births.' },
+  { slug: 'pertumbuhan-penduduk', code: 'SP.POP.GROW', field: null, en: 'Population Growth', unit: '%', dec: 1, better: null,
+    intro: 'The yearly change in total population — positive means the country is growing, negative means its people are thinning out.' },
+  { slug: 'kematian-kanak', code: 'SH.DYN.MORT', field: null, en: 'Child Mortality', unit: 'per 1,000 births', dec: 1, better: 'low',
+    intro: 'Children who die before the age of five, for every 1,000 live births — the single strongest signal of how well a health system works.' },
 ];
 
 function findIndicator(slug) {
   return INDICATORS.find((i) => i.slug === String(slug || '')) || null;
 }
 
-// Peta iso3 → nilai untuk indikator WB baharu; cache 30 hari + stale-serve.
+// iso3 → value map for the newer World Bank indicators; 30-day cache plus stale-serve.
 async function loadWbMap(code, yr) {
   const year = yr || WB_YEAR_DEFAULT;
   const key = `wb:${code}:${year}`;

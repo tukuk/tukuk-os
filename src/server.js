@@ -1359,30 +1359,30 @@ app.get('/negara/:slug', async (req, res) => {
   return res.status(404).type('html').send(negaraBusy(`Country "${slug}" is not in our list`));
 });
 
-// ── LALUAN KOMPLEKS STATISTIK (/statistik*) — World Bank Open Data, tanpa kunci ──
-// Hab + satu halaman setiap indikator; slug divalidasi DALAM handler (TDZ selamat).
+// ── STATISTICS COMPLEX ROUTES (/statistik*) — World Bank Open Data, no API key ──
+// Hub + one page per indicator; the slug is validated INSIDE the handler (TDZ-safe).
 app.get('/statistik', async (req, res) => {
   try {
     const rows = await ng.loadCountries();
-    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+    if (!rows || rows.length < 200) throw new Error('empty dataset');
     res.status(200).type('html').send(await statistikHubPage(req, rows));
   } catch {
-    res.status(503).type('html').send(statistikBusy('Data statistik dunia belum sempat dimuat'));
+    res.status(503).type('html').send(statistikBusy('The world statistics have not loaded yet'));
   }
 });
 
 app.get('/statistik/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase();
   const ind = st.findIndicator(slug);
-  if (!ind) return res.status(404).type('html').send(statistikBusy(`Indikator "${slug}" tidak dikenali`));
+  if (!ind) return res.status(404).type('html').send(statistikBusy(`Indicator "${slug}" is not in our list`));
   try {
     const rows = await ng.loadCountries();
-    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+    if (!rows || rows.length < 200) throw new Error('empty dataset');
     const rk = await st.loadRanking(ind, rows);
-    if (!rk.list.length) throw new Error('tiada nilai');
+    if (!rk.list.length) throw new Error('no values');
     res.status(200).type('html').send(statistikIndPage(req, rk, rows));
   } catch {
-    res.status(503).type('html').send(statistikBusy(`Data ${ind.bm} tidak sempat dimuat`));
+    res.status(503).type('html').send(statistikBusy(`The ${ind.en} data did not load in time`));
   }
 });
 
@@ -3729,7 +3729,7 @@ geoSitemap('railway-stations', stn, 'STATIONS');
 geoSitemap('schools', sch, 'SCHOOLS');
 geoSitemap('settlements', stl, 'SETTLEMENTS');
 
-// ── SITEMAP STATISTIK — hab + setiap indikator (senarai statik, sentiasa sah) ──
+// ── STATISTICS SITEMAP — hub + every indicator (static list, always valid) ──
 app.get('/sitemap-statistik.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -6326,9 +6326,9 @@ function negaraCountryPage(req, c, rows) {
   });
 }
 
-// ── TUKUK-OS STATISTIK COMPLEX — /statistik* (ranking dunia, World Bank) ──
-// Pinjam dataset + cache src/negara.js untuk nama BM/slug/bendera; indikator
-// tambahan dimuat dari World Bank Open Data (2023). Shell sama negaraDoc, hero ungu.
+// ── TUKUK-OS STATISTICS COMPLEX — /statistik* (world rankings, World Bank) ──
+// Borrows the dataset + cache in src/negara.js for the English name/slug/flag; the
+// extra indicators load from World Bank Open Data (2023). Same shell as negaraDoc, purple hero.
 
 function stFmt(ind, v) {
   if (v == null || !Number.isFinite(v)) return '—';
@@ -6340,17 +6340,17 @@ function stFmt(ind, v) {
 function bestOf(ind, list) { return ind.better === 'low' ? list[list.length - 1] : list[0]; }
 function worstOf(ind, list) { return ind.better === 'low' ? list[0] : list[list.length - 1]; }
 
-const STAT_SECTIONS = [{ href: '/statistik', icon: '📊', name: 'Semua Indikator', blurb: `Ranking ${st.INDICATORS.length} indikator World Bank untuk ±200 buah negara — pop, ekonomi, kesihatan & alam.` }]
-  .concat(st.INDICATORS.map((i) => ({ href: `/statistik/${i.slug}`, icon: '📈', name: i.bm, blurb: i.intro })));
+const STAT_SECTIONS = [{ href: '/statistik', icon: '📊', name: 'All Indicators', blurb: `World Bank rankings for ${st.INDICATORS.length} indicators across ±200 countries — population, economy, health & environment.` }]
+  .concat(st.INDICATORS.map((i) => ({ href: `/statistik/${i.slug}`, icon: '📈', name: i.en, blurb: i.intro })));
 
 function statistikNav() {
-  return `<nav aria-label="Bahagian statistik"><h2 class="section-title">Jelajahi Kompleks Statistik Tukuk-OS</h2><div class="feed">`
+  return `<nav aria-label="Statistics sections"><h2 class="section-title">Explore the Tukuk-OS Statistics Complex</h2><div class="feed">`
     + STAT_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
     + `</div></nav>`;
 }
 
 function statistikBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>World Bank Open Data tidak sempat menjawab. Sila cuba lagi sebentar.</p><p><a href="/statistik">Kembali ke Kompleks Statistik</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The World Bank Open Data feed did not answer in time. Please try again in a few minutes.</p><p><a href="/statistik">Back to the Statistics Complex</a></p></body>`;
 }
 
 function statistikDoc(o) {
@@ -6417,15 +6417,15 @@ ${siteFooter()}
 </html>`;
 }
 
-// ─── HAB /statistik — kad peneraju setiap indikator + posisi Malaysia ───
+// ─── HUB /statistik — leader card per indicator + Malaysia's position ───
 async function statistikHubPage(req, rows) {
   const ranks = await Promise.all(st.INDICATORS.map((i) => st.loadRanking(i, rows).catch(() => null)));
   const cards = st.INDICATORS.map((ind, k) => {
     const rk = ranks[k];
     const best = rk && rk.list.length ? bestOf(ind, rk.list) : null;
-    return `<div class="wx-card"><h3><a href="/statistik/${ind.slug}">${escapeHtml(ind.bm)}</a></h3>`
+    return `<div class="wx-card"><h3><a href="/statistik/${ind.slug}">${escapeHtml(ind.en)}</a></h3>`
       + (best ? `<div class="big">${escapeHtml(best.name)}</div><div class="meta">${stVal(ind, best.value)}</div>` : '<div class="big">—</div>')
-      + (rk ? `<div class="meta">${rk.stats.n} buah negara bernilai data</div>` : '<div class="meta">sumber belum sempat dimuat</div>') + '</div>';
+      + (rk ? `<div class="meta">${rk.stats.n} countries reported a value</div>` : '<div class="meta">the source did not load in time</div>') + '</div>';
   }).join('');
   const my = rows.find((c) => c.slug === 'malaysia');
   let myTable = '';
@@ -6433,72 +6433,75 @@ async function statistikHubPage(req, rows) {
     const baris = st.INDICATORS.map((ind, k) => {
       const rk = ranks[k];
       const e = rk ? rk.list.find((x) => x.cca3 === my.cca3) : null;
-      return `<tr><td><a href="/statistik/${ind.slug}">${escapeHtml(ind.bm)}</a></td><td>${e ? stVal(ind, e.value) : '—'}</td><td>${e ? `#${e.rank} daripada ${rk.stats.n}` : '—'}</td><td>${ind.yr || 2023}</td></tr>`;
+      return `<tr><td><a href="/statistik/${ind.slug}">${escapeHtml(ind.en)}</a></td><td>${e ? stVal(ind, e.value) : '—'}</td><td>${e ? `#${e.rank} of ${rk.stats.n}` : '—'}</td><td>${ind.yr || 2023}</td></tr>`;
     }).join('');
-    myTable = `<h2 class="section-title">Malaysia mengikut indikator</h2><table class="wx-table"><tr><th>Indikator</th><th>Nilai</th><th>Kedudukan dunia</th><th>Tahun data</th></tr>${baris}</table>`;
+    myTable = `<h2 class="section-title">Malaysia by indicator</h2><table class="wx-table"><tr><th>Indicator</th><th>Value</th><th>World rank</th><th>Data year</th></tr>${baris}</table>`;
   }
   const okCount = ranks.filter((r) => r && r.list.length).length;
-  const body = `<div class="wx-hero"><div class="temp">${st.INDICATORS.length} indikator &middot; ±${rows.length} buah negara</div><div class="wmeta">Ranking dunia dalam Bahasa Melayu — sumber World Bank Open Data (indikator 2023), percuma tanpa pendaftaran. ${okCount} indikator siap dimuat.</div></div>`
-    + `<h2 class="section-title">Peneraju setiap indikator</h2><div class="wx-grid">${cards}</div>`
+  const body = `<div class="wx-hero"><div class="temp">${st.INDICATORS.length} indicators &middot; ±${rows.length} countries</div><div class="wmeta">World rankings from World Bank Open Data (2023 indicators), free and with no registration. ${okCount} indicators ready.</div></div>`
+    + `<h2 class="section-title">The best value in every indicator</h2><div class="wx-grid">${cards}</div>`
     + myTable
-    + `<h2 class="section-title">Bagaimana data ini disusun</h2><p>World Bank mengumpulkan statistik rasmi setiap kerajaan ahli — penduduk, ekonomi, kesihatan, pendidikan dan alam sekitar — lalu menyiapkannya sebagai JSON awam tanpa kunci API. Kami memuatnya sekali sebulan, membandingkan nilai antarabangsa, dan memaparkan ranking yang paling bermakna untuk pembaca Malaysia. Nilai kosong bererti negara itu tidak melapor indikator berkenaan pada 2023.</p>`
-    + `<p class="meta">Profil penuh setiap negara ada di <a href="/negara">Kompleks Negara</a>; perbandingan hujung-minggu cuti di <a href="/cuti">Kompleks Cuti</a>; keadaan langit langsung di <a href="/cuaca">Kompleks Cuaca</a>.</p>`;
+    + `<h2 class="section-title">How this data is put together</h2><p>The World Bank gathers the official statistics of every member government — population, economy, health, education and environment — and publishes them as plain public JSON with no API key. We load it once a month, compare the values across borders and show the rankings that mean most to our readers. An empty value simply means that country did not report this indicator for 2023.</p>`
+    + `<p class="meta">The full profile of every country is in the <a href="/negara">Country Complex</a>; holiday long-weekend comparisons in the <a href="/cuti">Holiday Complex</a>; live skies in the <a href="/cuaca">Weather Complex</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Statistik Tukuk-OS',
-    description: 'Ranking World Bank bagi populasi, KDNK, jangka hayat, internet, literasi, CO2 dan lebih 10 indikator lain untuk ±200 buah negara.',
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Statistics Complex',
+    description: 'World Bank rankings for population, GDP, life expectancy, internet use, literacy, CO2 and more than ten other indicators across ±200 countries.',
     url: 'https://tukuk.org/statistik',
   }).replace(/</g, '\\u003c');
   return statistikDoc({
-    title: 'Statistik Dunia — Ranking 14 Indikator Negara (Populasi, KDNK, CO₂) | Tukuk-OS',
-    desc: `Ranking ${st.INDICATORS.length} indikator World Bank 2023 untuk ±200 buah negara dalam Bahasa Melayu: populasi, KDNK sekepala, jangka hayat, internet, literasi, CO₂, hutan dan posisi Malaysia.`,
+    title: `World Statistics — ${st.INDICATORS.length} Country Rankings (Population, GDP, CO₂) | Tukuk-OS`,
+    desc: `World Bank 2023 rankings for ${st.INDICATORS.length} indicators across ±200 countries: population, GDP per capita, life expectancy, internet use, literacy, CO₂, forest cover and where Malaysia stands.`,
     selfUrl: 'https://tukuk.org/statistik',
-    heroTitle: 'Kompleks Statistik Tukuk-OS', heroSub: 'World Bank Open Data 2023 · tanpa kunci · dikemas kini sebulan sekali',
+    heroTitle: 'Tukuk-OS Statistics Complex', heroSub: 'World Bank Open Data 2023 · no API key · refreshed once a month',
     body, ld,
   });
 }
 function stVal(ind, v) { return stFmt(ind, v); }
 
-// ─── /statistik/:indikator — jadual ranking penuh + bar + statistik taburan ───
+// ─── /statistik/:indicator — full ranking table + bars + distribution stats ───
 function statistikIndPage(req, rk, rows) {
   const ind = rk.ind; const list = rk.list; const stats = rk.stats;
   const yr = ind.yr || 2023;
   const selfUrl = `https://tukuk.org/statistik/${ind.slug}`;
   const best = bestOf(ind, list); const worst = worstOf(ind, list);
-  const bestLabel = ind.better === 'low' ? 'Paling rendah (baik)' : 'Paling tinggi';
-  const worstLabel = ind.better === 'low' ? 'Paling tinggi (buruk)' : 'Paling rendah';
+  const bestLabel = ind.better === 'low' ? 'Lowest (best)' : 'Highest';
+  const worstLabel = ind.better === 'low' ? 'Highest (worst)' : 'Lowest';
   const maxAbs = Math.max(Math.abs(stats.max || 0), Math.abs(stats.min || 0), 1e-9);
-  const arahTxt = ind.better === 'low' ? 'nilai yang lebih rendah dianggap lebih baik' : ind.better === 'high' ? 'nilai yang lebih tinggi dianggap lebih baik' : 'indikator neutral — kedua-dua hujung ada ceritanya';
+  const arahTxt = ind.better === 'low' ? 'a lower value counts as better' : ind.better === 'high' ? 'a higher value counts as better' : 'a neutral indicator — both ends of the scale have a story';
   const my = rows.find((c) => c.slug === 'malaysia');
   const myEntry = my ? list.find((x) => x.cca3 === my.cca3) : null;
   const top = list.slice(0, 50);
   const baris = top.map((x) => `<tr><td>${x.rank}</td><td class="st-val"><a href="/negara/${x.slug}"><img class="ng-fl" src="${ngThumb(x.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(x.name)}</a><div class="st-bar" style="width:${Math.max(2, Math.round(Math.abs(x.value) / maxAbs * 100))}%"></div></td><td><b>${stVal(ind, x.value)}</b></td></tr>`).join('');
-  const myNote = myEntry && myEntry.rank > 50 ? `<p class="meta">Posisi Malaysia: <b>#${myEntry.rank}</b> daripada ${stats.n} buah negara dengan nilai ${stVal(ind, myEntry.value)} — lihat jadual penuh peneraju di bawah.</p>` : '';
+  const myNote = myEntry && myEntry.rank > 50 ? `<p class="meta">Malaysia sits at <b>#${myEntry.rank}</b> of ${stats.n} countries with a value of ${stVal(ind, myEntry.value)} — the full leaderboard is in the table below.</p>` : '';
   const cards = `<div class="wx-grid">`
     + `<div class="wx-card"><h3>${escapeHtml(bestLabel)}</h3><div class="big">${escapeHtml(best.name)}</div><div class="meta">${stVal(ind, best.value)}</div></div>`
-    + `<div class="wx-card"><h3>Purata dunia</h3><div class="big">${stVal(ind, stats.avg)}</div><div class="meta">median ${stVal(ind, stats.median)}</div></div>`
+    + `<div class="wx-card"><h3>World average</h3><div class="big">${stVal(ind, stats.avg)}</div><div class="meta">median ${stVal(ind, stats.median)}</div></div>`
     + `<div class="wx-card"><h3>${escapeHtml(worstLabel)}</h3><div class="big">${escapeHtml(worst.name)}</div><div class="meta">${stVal(ind, worst.value)}</div></div>`
     + `</div>`;
-  const body = `<div class="wx-hero"><div class="temp">${escapeHtml(best.name)}</div><div class="wmeta">Peneraju ${escapeHtml(ind.bm)} ${yr} · ${stVal(ind, best.value)} · ${stats.n} buah negara dilaporkan ke World Bank</div></div>`
+  // The hero names the winning country; "leader" is wrong where a low value is the good one.
+  const leadLabel = ind.better === 'low' ? 'Best value for' : 'World leader for';
+  const body = `<div class="wx-hero"><div class="temp">${escapeHtml(best.name)}</div><div class="wmeta">${leadLabel} ${escapeHtml(ind.en)} ${yr} · ${stVal(ind, best.value)} · ${stats.n} countries reported to the World Bank</div></div>`
     + `<p>${escapeHtml(ind.intro)}</p>`
     + cards + myNote
-    + `<h2 class="section-title">50 negara — ${escapeHtml(ind.bm)}</h2><p class="meta">Disusun mengikut nilai tertinggi dahulu (${arahTxt}), tahun data ${yr}. Bendera: flagcdn; nama negara paut ke profil penuhnya.</p>`
-    + `<table class="wx-table"><tr><th>#</th><th>Negara</th><th>Nilai</th></tr>${baris}</table>`
-    + `<h2 class="section-title">Taburan global</h3><table class="wx-table"><tr><th>Statistik</th><th>Nilai</th></tr>`
-    + `<tr><th>Bilangan negara</th><td>${stats.n}</td></tr>`
-    + `<tr><th>Terendah</th><td>${stVal(ind, stats.min)} (${escapeHtml(list[list.length - 1].name)})</td></tr>`
-    + `<tr><th>Tertinggi</th><td>${stVal(ind, stats.max)} (${escapeHtml(list[0].name)})</td></tr></table>`
-    + `<p>Sumber: <b>World Bank Open Data</b>${ind.code ? ` (indikator <code>${escapeHtml(ind.code)}</code>, tahun ${yr})` : ' — pinjam daripada dataset Kompleks Negara'} — data awam tanpa kunci API, dillesen CC BY 4.0. Profil penuh setiap negara: <a href="/negara">Kompleks Negara</a> · berita alam langsung: <a href="/bencana">Kompleks Bencana</a>.</p>`;
+    + `<h2 class="section-title">The top 50 — ${escapeHtml(ind.en)}</h2><p class="meta">Sorted with the highest value first (${arahTxt}), data year ${yr}. Flags: flagcdn; every country name links to its full profile.</p>`
+    + `<table class="wx-table"><tr><th>#</th><th>Country</th><th>Value</th></tr>${baris}</table>`
+    + `<h2 class="section-title">Global distribution</h2><table class="wx-table"><tr><th>Statistic</th><th>Value</th></tr>`
+    + `<tr><th>Countries reporting</th><td>${stats.n}</td></tr>`
+    + `<tr><th>Lowest</th><td>${stVal(ind, stats.min)} (${escapeHtml(list[list.length - 1].name)})</td></tr>`
+    + `<tr><th>Highest</th><td>${stVal(ind, stats.max)} (${escapeHtml(list[0].name)})</td></tr></table>`
+    + `<p>Source: <b>World Bank Open Data</b>${ind.code ? ` (indicator <code>${escapeHtml(ind.code)}</code>, year ${yr})` : ' — borrowed from the Country Complex dataset'} — public data with no API key, licensed CC BY 4.0. The full profile of every country: <a href="/negara">Country Complex</a> · live natural events: <a href="/bencana">Disaster Complex</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Dataset', name: `${ind.bm} — ranking dunia ${yr}`,
+    '@context': 'https://schema.org', '@type': 'Dataset', name: `${ind.en} — world ranking ${yr}`,
     description: ind.intro, url: selfUrl,
     creator: { '@type': 'Organization', name: 'World Bank', url: 'https://data.worldbank.org' },
     temporalCoverage: String(yr), license: 'https://creativecommons.org/licenses/by/4.0/',
   }).replace(/</g, '\\u003c');
   return statistikDoc({
-    title: `${ind.bm} — Ranking Dunia ${yr} (50 Negara Teratas) | Tukuk-OS`,
-    desc: `Ranking ${ind.bm} ${yr}: ${escapeHtml(best.name)} di tangga pertama (${stVal(ind, best.value)}), purata dunia ${stVal(ind, stats.avg)}${myEntry ? `, Malaysia #${myEntry.rank}` : ''}. Data World Bank Open Data.`,
+    title: `${ind.en} — World Ranking ${yr} (Top 50 Countries) | Tukuk-OS`,
+    // best.name arrives raw: statistikDoc() escapes the desc, so escaping it here too would double-escape it.
+    desc: `${ind.en} ${yr}: ${best.name} leads (${stVal(ind, best.value)}), the world average is ${stVal(ind, stats.avg)}${myEntry ? `, Malaysia at #${myEntry.rank}` : ''}. From World Bank Open Data.`,
     selfUrl,
-    heroTitle: `${ind.bm} — Ranking Dunia`, heroSub: `World Bank Open Data ${yr} · ${stats.n} buah negara · unit: ${ind.unit}`,
+    heroTitle: `${ind.en} — World Ranking`, heroSub: `World Bank Open Data ${yr} · ${stats.n} countries · unit: ${ind.unit}`,
     body, ld,
   });
 }
