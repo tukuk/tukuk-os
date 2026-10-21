@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'hospital-jiwa', label: 'PSYCHIATRIC-HOSPITALS', title: 'Psychiatric Hospitals of the World', var: 'PSYHIATRIC', sing: 'PsychiatricHospital', finder: 'psychiatric', finders: 'psychiatricInRegion', pfx: 'py', cap: 'Psychiatric' },
-  { file: 'lombong-terbuka', label: 'OPEN-PIT-MINES', title: 'Open-Pit Mines of the World', var: 'OPENPIT', sing: 'OpenPitMine', finder: 'openpit', finders: 'openPitsInRegion', pfx: 'op', cap: 'OpenPit' },
-  { file: 'kuasa-pasang', label: 'TIDAL-POWER', title: 'Tidal Power Stations of the World', var: 'TIDALPOWER', sing: 'TidalPowerStation', finder: 'tidalpower', finders: 'tidalPowerInRegion', pfx: 'tp', cap: 'TidalPower' },
-  { file: 'balai-kereta', label: 'CARRIAGE-HOUSES', title: 'Carriage Houses of the World', var: 'CARRIAGE', sing: 'CarriageHouse', finder: 'carriage', finders: 'carriagesInRegion', pfx: 'cy', cap: 'Carriage' },
-  { file: 'hacienda', label: 'HACIENDAS', title: 'Haciendas of the World', var: 'HACIENDAS', sing: 'Hacienda', finder: 'hacienda', finders: 'haciendasInRegion', pfx: 'ha', cap: 'Haciendas' },
-  { file: 'stesen-telegraf', label: 'TELEGRAPH-STATIONS', title: 'Telegraph Stations of the World', var: 'TELEGRAPH', sing: 'TelegraphStation', finder: 'telegraph', finders: 'telegraphsInRegion', pfx: 'te', cap: 'Telegraph' },
-  { file: 'kubur-gua', label: 'ROCK-CUT-TOMBS', title: 'Rock-Cut Tombs of the World', var: 'ROCKTOMBS', sing: 'RockCutTomb', finder: 'rocktomb', finders: 'rockTombsInRegion', pfx: 'rc', cap: 'RockTombs' },
-  { file: 'rumah-miskin', label: 'POORHOUSES', title: 'Poorhouses of the World', var: 'POORHOUSE', sing: 'Poorhouse', finder: 'poorhouse', finders: 'poorhousesInRegion', pfx: 'po', cap: 'Poorhouses' },
-  { file: 'gua-candi', label: 'CAVE-TEMPLES', title: 'Cave Temples of the World', var: 'CAVETEMPLE', sing: 'CaveTemple', finder: 'cavetemple', finders: 'caveTemplesInRegion', pfx: 'cv', cap: 'CaveTemples' },
+  { file: 'rumah-klerus', label: 'CLERGY-HOUSES', title: 'Parsonages and Clergy Houses of the World', var: 'CLERGYHOUSE', sing: 'ClergyHouse', finder: 'clergy', finders: 'clergyHousesInRegion', pfx: 'rk', cap: 'ClergyHouses' },
+  { file: 'menara-jagaan-api', label: 'FIRE-LOOKOUT-TOWERS', title: 'Fire Lookout Towers of the World', var: 'FIRELOOKOUT', sing: 'FireLookoutTower', finder: 'firelookout', finders: 'fireLookoutsInRegion', pfx: 'fj', cap: 'FireLookouts' },
+  { file: 'kubur-yahudi', label: 'JEWISH-CEMETERIES', title: 'Jewish Cemeteries of the World', var: 'JEWCEM', sing: 'JewishCemetery', finder: 'jewishcemetery', finders: 'jewishCemeteriesInRegion', pfx: 'jy', cap: 'JewishCemeteries' },
+  { file: 'kubur-perang', label: 'WAR-CEMETERIES', title: 'War Cemeteries of the World', var: 'WARCEM', sing: 'WarCemetery', finder: 'warcemetery', finders: 'warCemeteriesInRegion', pfx: 'wp', cap: 'WarCemeteries' },
+  { file: 'taman-arkologi', label: 'ARCHAEOLOGICAL-PARKS', title: 'Archaeological Parks of the World', var: 'ARCHPARK', sing: 'ArchaeologicalPark', finder: 'archpark', finders: 'archParksInRegion', pfx: 'ta', cap: 'ArchParks' },
+  { file: 'rumah-kastam', label: 'CUSTOMS-HOUSES', title: 'Custom Houses of the World', var: 'CUSTOMS', sing: 'CustomHouse', finder: 'customhouse', finders: 'customHousesInRegion', pfx: 'ks', cap: 'CustomHouses' },
+  { file: 'pos-pedagangan', label: 'TRADING-POSTS', title: 'Trading Posts of the World', var: 'TRADINGPOST', sing: 'TradingPost', finder: 'tradingpost', finders: 'tradingPostsInRegion', pfx: 'pd', cap: 'TradingPosts' },
+  { file: 'balai-guild', label: 'GUILD-HALLS', title: 'Guild Halls of the World', var: 'GUILDHALL', sing: 'GuildHall', finder: 'guildhall', finders: 'guildHallsInRegion', pfx: 'gl', cap: 'GuildHalls' },
+  { file: 'gereja-cabang', label: 'FILIAL-CHURCHES', title: 'Filial Churches and Chapels of Ease of the World', var: 'FILIALCH', sing: 'FilialChurch', finder: 'filialchurch', finders: 'filialChurchesInRegion', pfx: 'gb', cap: 'FilialChurches' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
