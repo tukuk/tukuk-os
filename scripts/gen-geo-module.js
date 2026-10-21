@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kampung-bulgaria', label: 'BULGARIAN-VILLAGES', title: 'Villages of Bulgaria', var: 'KMBGR', sing: 'BulgarianVillage', finder: 'bulgarianVillage', finders: 'bulgarianVillagesInRegion', pfx: 'kvb', cap: 'BulgarianVillages' },
-  { file: 'komun-algeria', label: 'ALGERIAN-COMMUNES', title: 'Communes of Algeria', var: 'KOMDZ', sing: 'AlgerianCommune', finder: 'algerianCommune', finders: 'algerianCommunesInRegion', pfx: 'dza', cap: 'AlgerianCommunes' },
-  { file: 'distrik-yaman', label: 'YEMENI-DISTRICTS', title: 'Districts of Yemen', var: 'DSYEM', sing: 'YemeniDistrict', finder: 'yemeniDistrict', finders: 'yemeniDistrictsInRegion', pfx: 'dyv', cap: 'YemeniDistricts' },
-  { file: 'distrik-ethiopia', label: 'ETHIOPIAN-DISTRICTS', title: 'Districts of Ethiopia (Woreda)', var: 'DSETI', sing: 'EthiopianDistrict', finder: 'ethiopianDistrict', finders: 'ethiopianDistrictsInRegion', pfx: 'dte', cap: 'EthiopianDistricts' },
-  { file: 'departemen-burkina', label: 'BURKINABE-DEPARTMENTS', title: 'Departments of Burkina Faso', var: 'DPBFA', sing: 'BurkinabeDepartment', finder: 'burkinabeDepartment', finders: 'burkinabeDepartmentsInRegion', pfx: 'dbf', cap: 'BurkinabeDepartments' },
-  { file: 'komun-kamerun', label: 'CAMEROONIAN-COMMUNES', title: 'Communes of Cameroon', var: 'KMCMR', sing: 'CameroonianCommune', finder: 'cameroonianCommune', finders: 'cameroonianCommunesInRegion', pfx: 'kcm', cap: 'CameroonianCommunes' },
-  { file: 'kanton-ekuator', label: 'ECUADORIAN-CANTONS', title: 'Cantons of Ecuador', var: 'KECU', sing: 'EcuadorianCanton', finder: 'ecuadorianCanton', finders: 'ecuadorianCantonsInRegion', pfx: 'kek', cap: 'EcuadorianCantons' },
-  { file: 'munisipaliti-paraguay', label: 'PARAGUAYAN-MUNICIPALITIES', title: 'Municipalities of Paraguay', var: 'MUPY', sing: 'ParaguayanMunicipality', finder: 'paraguayanMunicipality', finders: 'paraguayanMunicipalitiesInRegion', pfx: 'mpy', cap: 'ParaguayanMunicipalities' },
-  { file: 'distrik-irak', label: 'IRAQI-DISTRICTS', title: 'Districts of Iraq', var: 'DSIRQ', sing: 'IraqiDistrict', finder: 'iraqiDistrict', finders: 'iraqiDistrictsInRegion', pfx: 'dir', cap: 'IraqiDistricts' },
+  { file: 'komun-madagaskar', label: 'MALAGASY-COMMUNES', title: 'Communes of Madagascar', var: 'KOMMG', sing: 'MalagasyCommune', finder: 'malagasyCommune', finders: 'malagasyCommunesInRegion', pfx: 'kmg', cap: 'MalagasyCommunes' },
+  { file: 'pekan-tiongkok', label: 'CHINESE-TOWNSHIPS', title: 'Townships of China', var: 'TWNCH', sing: 'ChineseTownship', finder: 'chineseTownship', finders: 'chineseTownshipsInRegion', pfx: 'ptc', cap: 'ChineseTownships' },
+  { file: 'arrondisman-benin', label: 'BENINESE-ARRONDISSEMENTS', title: 'Arrondissements of Benin', var: 'ARBEN', sing: 'BenineseArrondissement', finder: 'benineseArrondissement', finders: 'benineseArrondissementsInRegion', pfx: 'abn', cap: 'BenineseArrondissements' },
+  { file: 'munisipaliti-guatemala', label: 'GUATEMALAN-MUNICIPALITIES', title: 'Municipalities of Guatemala', var: 'MUGUA', sing: 'GuatemalanMunicipality', finder: 'guatemalanMunicipality', finders: 'guatemalanMunicipalitiesInRegion', pfx: 'mgu', cap: 'GuatemalanMunicipalities' },
+  { file: 'munisipaliti-honduras', label: 'HONDURAN-MUNICIPALITIES', title: 'Municipalities of Honduras', var: 'MUHON', sing: 'HonduranMunicipality', finder: 'honduranMunicipality', finders: 'honduranMunicipalitiesInRegion', pfx: 'mhn', cap: 'HonduranMunicipalities' },
+  { file: 'munisipaliti-bolivia', label: 'BOLIVIAN-MUNICIPALITIES', title: 'Municipalities of Bolivia', var: 'MOBOL', sing: 'BolivianMunicipality', finder: 'bolivianMunicipality', finders: 'bolivianMunicipalitiesInRegion', pfx: 'mbo', cap: 'BolivianMunicipalities' },
+  { file: 'distrik-laos', label: 'LAOTIAN-DISTRICTS', title: 'Districts of Laos', var: 'DSLAO', sing: 'LaotianDistrict', finder: 'laotianDistrict', finders: 'laotianDistrictsInRegion', pfx: 'dla', cap: 'LaotianDistricts' },
+  { file: 'munisipaliti-nikaragua', label: 'NICARAGUAN-MUNICIPALITIES', title: 'Municipalities of Nicaragua', var: 'MUNICN', sing: 'NicaraguanMunicipality', finder: 'nicaraguanMunicipality', finders: 'nicaraguanMunicipalitiesInRegion', pfx: 'mnk', cap: 'NicaraguanMunicipalities' },
+  { file: 'lga-australia', label: 'AUSTRALIAN-LGAS', title: 'Local Government Areas of Australia', var: 'LGAU', sing: 'AustralianLGA', finder: 'australianLGA', finders: 'australianLGAsInRegion', pfx: 'lga', cap: 'AustralianLGAs' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
