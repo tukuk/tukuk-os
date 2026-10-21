@@ -1,29 +1,30 @@
 const crypto = require('crypto');
 
 /**
- * Indekskan HALAMAN HUB kluster geo ke dalam korpus carian sendiri.
+ * Index the GEO CLUSTER HUB pages into our own search corpus.
  *
- * Masalah yang ditutup: indeks `halaman_web` diisi oleh crawler — ±32k dokumen
- * berita luar, tetapi hanya 97 dokumen tukuk.org (post blog, via blog-index.js).
- * 612 kluster geo kami (ratusan ribu halaman item + halaman hubnya) TIDAK ada
- * dalam indeks sama sekali. Akibatnya soalan yang halaman kami sendiri jawab
- * — "how many counties does California have" — pulang "I do not know", dan
- * /search untuk "california counties" mengeluarkan artikel berita kebakaran.
+ * Gap this closes: the `halaman_web` index is filled by the crawler — roughly
+ * 32k external news documents, but only 97 tukuk.org documents (blog posts,
+ * via blog-index.js). Our 610 geo clusters (hundreds of thousands of item
+ * pages plus their hub pages) were NOT in the index at all. So questions that
+ * our own pages answer — "how many counties does California have" — returned
+ * "I do not know", and /search for "california counties" surfaced fire-news
+ * articles instead.
  *
- * Modul ini membina SATU dokumen per halaman hub terus daripada data yang
- * sudah dimuat di memori (tiada HTTP, tiada crawler, tiada kos CPU besar), dengan
- * id deterministik → idempotent; jalan berkali-kali tak hasilkan duplikat.
+ * This module builds ONE document per hub page straight from the data already
+ * held in memory (no HTTP, no crawler, no big CPU cost), with a deterministic
+ * id → idempotent; running it repeatedly never creates duplicates.
  *
- * Hanya HUB yang diindeks, bukan item: dokumen item (ratusan ribu) akan
- * melembungkan indeks pada VPS kecil, sedangkan hub sudah cukup untuk soalan
- * bilangan, keahlian dan kawasan ("puluhan county di California", "county di
- * Kenya", "gunung api di Indonesia").
+ * Only HUBS are indexed, not items: item documents (hundreds of thousands)
+ * would bloat the index on a small VPS, while a hub already covers counting,
+ * membership and region questions ("how many counties in California",
+ * "counties in Kenya", "volcanoes in Indonesia").
  */
 
-// Kluster besar (settlements ~puluhan ribu baris) jangan menghasilkan dokumen
-// bersaiz megabait — nama di luar had ini masih boleh dibuka di halaman hub.
+// Big clusters (settlements: tens of thousands of rows) must not produce
+// megabyte-sized documents — names beyond this cap are still openable on the hub page.
 const NAME_CAP = 400;
-// Senarai tally dipotong supaya dokumen tidak membesar mengikut bilangan negara.
+// Tally lists are trimmed so the document does not grow with the number of countries.
 const TALLY_CAP = 60;
 
 function stripHtml(value) {
@@ -37,7 +38,7 @@ function stripHtml(value) {
     .trim();
 }
 
-/** Kira kemunculan nilai → pasangan [nama, bilangan] disusun turun. */
+/** Count occurrences of a value → [name, count] pairs sorted descending. */
 function tally(values) {
   const counts = new Map();
   for (const raw of values || []) {
@@ -55,13 +56,13 @@ function formatTally(pairs) {
 }
 
 /**
- * Baris soal-jawab (FAQ) untuk padanan BM25.
+ * Question–answer (FAQ) lines for BM25 matching.
  *
- * Meili mengira peraturan `words` dahulu: dokumen yang memuat LEBIH BANYAK
- * kata soalan akan mengatasi artikel blog yang cuma mengandungi "how" +
- * "many". Tanpa baris ini, soalan "how many counties does California have"
- * jatuh ke blog sains awam dan /ask menjawab "I do not know" — walaupun
- * halaman hub kami sendiri menulis fakta itu.
+ * Meili applies the `words` rule first: a document carrying MORE question
+ * words outranks a blog post that merely mentions "how" + "many". Without
+ * these lines, "how many counties does California have" fell to a public
+ * science blog and /ask answered "I do not know" — even though our own hub
+ * page states the fact.
  */
 function faqLines({ subject, unit, singular, count, top }) {
   const where = subject ? ` in ${subject}` : '';
@@ -71,16 +72,16 @@ function faqLines({ subject, unit, singular, count, top }) {
       `How many ${unit} are there${where}? There are ${count}.`,
       `Does ${subject} have ${count} ${unit}? Yes — the full list of every ${singular}${where} is on this page.`,
       `List of ${unit}${where} (${count} entries): names, country and region.`,
-      // Baris BM — ayat Melayu penuh, tanpa campur kata sendi Inggeris.
+      // Malay sentence, fully Malay — no mixed English prepositions.
       `Berapa banyak ${singular} di ${subject}? ${subject} mempunyai ${count} ${unit}.`
     ]
     : [
       `How many ${unit} are there in total? There are ${count} ${unit}.`,
       top ? `Which country has the most ${unit}? ${top}.` : '',
       `List of ${unit} worldwide (${count} entries): names, country and region.`,
-      // Soalan Melayu juga: penanya utama tapak ini berbahasa Melayu, dan
-      // Meili tidak mempunyai punca kata (stemming) — 'bay' ≠ 'bays', jadi
-      // baris ini sengaja memuat bentuk tunggal (soalan) dan jamak (jawab).
+      // Malay questions too: a large share of this site's askers type Malay,
+      // and Meili has no stemming — 'bay' ≠ 'bays' — so these lines deliberately
+      // carry both the singular (question) and plural (answer) forms.
       `Berapa banyak ${singular} di seluruh dunia? Terdapat ${count} ${unit}.`,
       top ? `Negara mana yang paling banyak ${singular}? ${top}.` : ''
     ];
@@ -103,8 +104,8 @@ function hubToDoc(cluster) {
     .map((i) => String(i.name || i.wiki || '').trim())
     .filter(Boolean);
 
-  // Yurisdiksi dibaca daripada titleCase ("Counties of California" →
-  // "California"); kluster global tiada ekoran 'of' → guna soalan umum.
+  // Jurisdiction is read from titleCase ("Counties of California" →
+  // "California"); global clusters leave no 'of' trace → use the general question.
   const ofMatch = /^(.+?)\s+of\s+(.+)$/.exec(String(cfg.titleCase || '').trim());
   const subject = ofMatch ? ofMatch[2].trim() : '';
   const topCountry = countries.length && countries[0][1] > 1
@@ -112,24 +113,24 @@ function hubToDoc(cluster) {
 
   const lines = [
     `${cfg.titleCase} — hub di tukuk.org/${base}.`,
-    // FACTA DAHULU, baru prosa. `/ask` memotong kandungan ikut
-    // `BRAIN_SNIPPET_CHARS` (450 aksara di pelayan) dari AWAL dokumen — intro
-    // yang panjang akan menolak baris soal-jawab ke luar jendela, dan model
-    // awan yang jujur menjawab "I don't know" walaupun faktanya kami tulis.
-    // Susunan ini tidak menjejaskan BM25 (kiraan kata tidak ikut kedudukan).
+    // FACTS FIRST, prose after. `/ask` truncates content to
+    // `BRAIN_SNIPPET_CHARS` (450 chars on the server) starting from the BEGINNING
+    // of the document — a long intro pushes the FAQ lines outside the window and
+    // an honest cloud model answers "I don't know" even though we wrote the fact.
+    // This ordering does not affect BM25 (word counts are position-independent).
     ...faqLines({ subject, unit, singular: cfg.singular || unit, count: items.length, top: topCountry }),
     `Total in this cluster: ${items.length} ${unit}.`,
     intro,
     blurb && blurb !== intro ? blurb : '',
     countries.length > 1 ? `By country: ${formatTally(countries)}.` : (countries[0] ? `Country: ${countries[0][0]} (${countries[0][1]}).` : ''),
     regions.length ? `By region: ${formatTally(regions)}.` : '',
-    // Pemisah '; ' — nama item sudah mengandungi ekoran ', California'; koma
-    // akan menjadikan senarai ini sukar dibaca model LLM.
+    // Separator '; ' — item names already carry a ', California' suffix; commas
+    // would make this list hard for the LLM to read.
     names.length ? `Names: ${names.join('; ')}${items.length > names.length ? ` (and ${items.length - names.length} more)` : ''}.` : '',
     seoDesc && seoDesc !== intro ? seoDesc : ''
   ].filter(Boolean);
 
-  // Baris unik sahaja — banyak kluster berkongsi templat ayat yang sama.
+  // Unique lines only — many clusters share the same sentence template.
   const content = [...new Set(lines)].join('\n');
   const id = crypto.createHash('sha256').update(`geo-hub:${base}`).digest('hex').slice(0, 16);
   const hash = crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
@@ -158,9 +159,9 @@ function hubToDoc(cluster) {
 }
 
 /**
- * Tolak semua dokumen hub ke index utama.
- * @param {object} index    Index Meilisearch (hibrida sebenar+mock) dari ensureIndex().
- * @param {Array}  clusters geoClusters() dari src/server.js — {base, cfg, mod, listKey}.
+ * Push every hub document into the main index.
+ * @param {object} index    Meilisearch index (real+mock hybrid) from ensureIndex().
+ * @param {Array}  clusters geoClusters() from src/server.js — {base, cfg, mod, listKey}.
  * @param {object} opts     { logger, force }
  * @returns {Promise<{count:number, skipped:boolean, taskUid:*}>}
  */
@@ -168,26 +169,24 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
   const docs = (clusters || []).map(hubToDoc).filter(Boolean);
   if (!docs.length) return { count: 0, skipped: true, taskUid: null };
 
-  // Pengesahan murah sebelum menolak: baca SEMUA hash dokumen `cluster` yang
-  // sudah ada dalam indeks dan bandarkan sebagai multisets. Sentinel tunggal
-  // (hub pertama) TIDAK cukup — sunting satu fail data (contohnya borough New
-  // Jersey) mengubah hash satu dokumen sahaja, jadi indeks akan kekal lama
-  // berisi data lama. Selepas pemulihan indeks dari R2 semakan ini gagal dan
-  // dokumen ditolak semula.
+  // Cheap validation before pushing: read ALL `cluster` document hashes already
+  // in the index and compare them as multisets. A single sentinel (the first hub)
+  // is NOT enough — editing one data file (e.g. New Jersey boroughs) changes the
+  // hash of one document only, so the index would keep serving stale data forever.
+  // After an index restore from R2 this check fails and the documents are re-pushed.
   //
-  // `getDocuments` + `fields`, BUKAN `search` + `attributesToRetrieve`: Meili
-  // memotong atribut carian dengan `displayedAttributes` dan `hash` tidak ada
-  // dalam senarai itu, jadi carian akan sentiasa pulang kosong dan penjaga ini
-  // tidak akan pernah melangkau penolakan. Endpoint dokumen menggunakan
-  // `fields` (lintas `displayedAttributes`) dan menyokong penapis `type`
-  // (filterableAttributes).
+  // `getDocuments` + `fields`, NOT `search` + `attributesToRetrieve`: Meili
+  // intersects search attributes with `displayedAttributes` and `hash` is not in
+  // that list, so a search would always come back empty and this guard would
+  // never skip a push. The documents endpoint uses `fields` (it crosses
+  // `displayedAttributes`) and supports the `type` filter (filterableAttributes).
   if (!force) {
     try {
       const found = await index.getDocuments({
         filter: 'type = "cluster"',
-        // Endpoint dokumen TIDAK dikawal `pagination.maxTotalHits` (ia hanya
-        // untuk carian), jadi satu permintaan sahaja cukup walaupun kluster
-        // bertambah jauh melebihi 1000.
+        // The documents endpoint is NOT governed by `pagination.maxTotalHits`
+        // (that only applies to search), so one request is enough even if the
+        // cluster count grows far past 1000.
         limit: docs.length,
         fields: ['hash']
       });
@@ -195,21 +194,21 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
       const total = found && found.total != null ? found.total : rows.length;
       const want = docs.map((d) => d.hash).sort();
       const got = rows.map((r) => r && r.hash).filter(Boolean).sort();
-      // Multiset sepadan hanya bila bilangan dokumen SAMA dan setiap hash sama;
-      // sebarang bacaan kurang lengkap (hash tersembunyi, 404, mock sandaran)
-      // berakibat tolak semula — sentiasa selamat.
+      // The multisets match only when the document COUNT is the same and every
+      // hash matches; any incomplete read (hidden attribute, 404, mock fallback)
+      // results in re-pushing — always the safe direction.
       const unchanged = total === docs.length && got.length === want.length &&
         want.every((h, i) => h === got[i]);
       if (unchanged) {
-        if (logger && logger.log) logger.log(`[cluster-index] ${docs.length} hub kluster sudah dalam indeks — tiada perubahan`);
+        if (logger && logger.log) logger.log(`[cluster-index] ${docs.length} cluster hubs already in the index — no change`);
         return { count: docs.length, skipped: true, taskUid: null };
       }
-    } catch { /* fail terbuka: tolak dokumen sahaja */ }
+    } catch { /* fail open: just push the documents */ }
   }
 
   const task = await index.updateDocuments(docs);
   if (logger && logger.log) {
-    logger.log(`[cluster-index] ${docs.length} hub kluster dihantar ke indeks utama (task ${task && task.taskUid ? task.taskUid : 'mock'})`);
+    logger.log(`[cluster-index] ${docs.length} cluster hubs submitted to the main index (task ${task && task.taskUid ? task.taskUid : 'mock'})`);
   }
   return { count: docs.length, skipped: false, taskUid: task && task.taskUid ? task.taskUid : null };
 }

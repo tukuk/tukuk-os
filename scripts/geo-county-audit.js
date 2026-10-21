@@ -1,22 +1,23 @@
 #!/usr/bin/env node
-// ── TUKUK-OS geo-county-audit — semak data county terhadap sumber authoritative ──
+// ── TUKUK-OS geo-county-audit — check county data against the authoritative source ──
 //
-// Bandarkan setiap src/county-<negeri>-data.json dengan ahli kategori Wikipedia
-// "<Negeri> counties" (ns=0, type=page). Kategori itu = SET SEMASA sahaja: county
-// historik/lupa (Bancroft IA, Uncompahgre CO, Encinal TX, Princess Anne VA, …) dan
-// county yang belum dibuka (Pearl MS, Birch SC) tidak menjadi ahli — jadi
-// perbezaan HILANG/LEBIH di sini adalah ralat data kita, bukan beza tafsiran.
+// Compares every src/county-<state>-data.json with the Wikipedia category members
+// "<State> counties" (ns=0, type=page). That category is the CURRENT set only:
+// historic/forgotten counties (Bancroft IA, Uncompahgre CO, Encinal TX, Princess
+// Anne VA, …) and counties not yet created (Pearl MS, Birch SC) are not members —
+// so a MISSING/EXTRA difference here is an error in our data, not a difference of
+// interpretation.
 //
-// Kegunaan:
-//   node scripts/geo-county-audit.js                 → semua 37 negeri (±2 minit)
-//   node scripts/geo-county-audit.js iowa california → negeri terpilih sahaja
-// Keluar: laporan satu baris per negeri + /tmp/cat-add.json (calon baris dengan
-// koordinat) + /tmp/cat-members.json (senarai penuh ahli kategori). Kod keluar
-// 1 jika ada LEBIH/HILANG/DUPE — sesuai sebagai gerbang selepas sunting data.
+// Usage:
+//   node scripts/geo-county-audit.js                 → all 37 states (±2 minutes)
+//   node scripts/geo-county-audit.js iowa california → selected states only
+// Output: one report line per state + /tmp/cat-add.json (candidate rows with
+// coordinates) + /tmp/cat-members.json (full category member list). Exit code
+// 1 when there are EXTRA/MISSING/DUPES — fits as a gate after a data edit.
 //
-// Negeri yang unitnya bukan county (Louisiana = parish, New Jersey = borough)
-// TIDAK dilangkau lagi: namanya didaftarkan dalam UNITS di bawah supaya tiada
-// lagi kawasan buta dalam semakan data kita.
+// States whose unit is not a county (Louisiana = parish, New Jersey = borough) are
+// NO LONGER skipped: they are registered in UNITS below so our data checks have no
+// blind spots.
 const fs = require('fs');
 
 const STATES = ['Alabama', 'Arkansas', 'California', 'Colorado', 'Florida', 'Georgia', 'Idaho',
@@ -27,13 +28,13 @@ const STATES = ['Alabama', 'Arkansas', 'California', 'Colorado', 'Florida', 'Geo
 
 const UA = 'tukuk-os-geo-audit/1.0 (hello@tukuk.org)';
 
-/* County digabung bandar-county yang artikelnya bukan "<Nama> County, <Negeri>". */
+/* Counties merged with a city-county whose article is not "<Name> County, <State>". */
 const CONSOLIDATED = {
   california: ['San Francisco', 'San Francisco County, California'],
   colorado: ['Denver', 'Broomfield, Colorado'],
 };
 
-/* Nama kategori yang tidak mengikut pola "<Negeri> counties". */
+/* Category names that do not follow the "<State> counties" pattern. */
 const CAT_OVERRIDE = {
   georgia: 'Georgia (U.S. state) counties',
   'new-jersey': 'Boroughs in New Jersey',
@@ -42,24 +43,23 @@ const CAT_OVERRIDE = {
   kenya: 'Counties of Kenya',
 };
 
-/* Dataset yang fail & unitnya bukan county-<negeri>. Louisiana menggunakan
-   "parish" — 64 buah; New Jersey pula 255 borough. Kategori borough
-   Pennsylvania dipecah ikut county (hanya 2 ahli terus) jadi ia TIDAK
-   diaudit di sini. `matchAll`: nama borough TIDAK mengandungi perkataan
-   "Borough" (contohnya "Allendale, New Jersey"), jadi semua ahli kategori
-   yang terserap bukan dalam NOT_MEMBERS dianggap unit. */
+/* Datasets whose file and unit are not county-<state>. Louisiana uses "parish" —
+   64 of them; New Jersey has 255 boroughs. The Pennsylvania borough category is
+   split by county (only 2 direct members) so it is NOT audited here.
+   `matchAll`: borough names do NOT contain the word "Borough" (e.g. "Allendale,
+   New Jersey"), so every category member outside NOT_MEMBERS counts as a unit. */
 const UNITS = {
   louisiana: { prefix: 'parish', word: 'parishes', unitWord: 'Parish' },
   'new-jersey': { prefix: 'borough', word: 'boroughs', unitWord: 'Borough', matchAll: true },
 };
 
-/* Ahli kategori yang bukan unit sebenar — artikel utama/semakan, dilangkau. */
+/* Category members that are not real units — main/verification articles, skipped. */
 const NOT_MEMBERS = {
   'new-jersey': ['Borough (New Jersey)'],
 };
 
-/* Kunci perbandingan: buang ", <Negeri>", " County" hujung, awalan
-   "City and County of ", titik (St. Louis ↔ Saint Louis) dan ruang lebihan. */
+/* Comparison key: strip ", <State>", a trailing " County", the "City and County of "
+   prefix, periods (St. Louis ↔ Saint Louis) and extra spaces. */
 function keyOf(title, st, unitWord = 'County') {
   let s = String(title).replace(new RegExp(`, ${st}$`), '');
   s = s.replace(/^City and County of /i, '').replace(new RegExp(` ${unitWord}$`, 'i'), '').replace(/\./g, '');
@@ -92,7 +92,7 @@ async function api(params, tries = 5) {
     if (only.length && !only.includes(state)) continue;
     const unit = UNITS[state] || { prefix: 'county', word: 'counties', unitWord: 'County' };
     const file = `src/${unit.prefix}-${state}-data.json`;
-    if (!fs.existsSync(file)) { report.push(`${state}\tdilangkau (tiada fail ${unit.prefix}-${state}-data.json)`); continue; }
+    if (!fs.existsSync(file)) { report.push(`${state}\tskipped (no ${unit.prefix}-${state}-data.json file)`); continue; }
     const j = await api({
       action: 'query', format: 'json', generator: 'categorymembers',
       gcmtitle: `Category:${CAT_OVERRIDE[state] || `${st} ${unit.word}`}`, gcmlimit: 500, gcmtype: 'page',
@@ -101,11 +101,11 @@ async function api(params, tries = 5) {
     const cat = new Map();
     const skip = [];
     const allow = new Set(CONSOLIDATED[state] || []);
-    const bukan = new Set(NOT_MEMBERS[state] || []);
+    const notUnits = new Set(NOT_MEMBERS[state] || []);
     const unitRe = new RegExp(`\\b${unit.unitWord}\\b`);
     for (const p of Object.values(j.query?.pages || {}).filter((x) => x.ns === 0)) {
       const t = p.title;
-      if (bukan.has(t)) { skip.push(t); continue; }
+      if (notUnits.has(t)) { skip.push(t); continue; }
       const unitLike = unit.matchAll || unitRe.test(t) || /^City and County of /i.test(t) || allow.has(t);
       if (!unitLike) { skip.push(t); continue; }
       const c = (p.coordinates || [])[0];
@@ -120,7 +120,7 @@ async function api(params, tries = 5) {
     const dupes = Object.entries(seen).filter(([, n]) => n > 1).map(([k, n]) => `${k}×${n}`);
     const missing = auth.filter((a) => !byKey.has(keyOf(a.title, st, unit.unitWord)) && a.lat !== null);
     if (extras.length || missing.length || dupes.length) bad++;
-    report.push(`${state}\tdata=${data.length}\twiki=${auth.length}\tLEBIH(${extras.length}): ${extras.map((k) => byKey.get(k).wiki || k).join(', ') || '-'}\tDUPE(${dupes.length}): ${dupes.join(', ') || '-'}\tHILANG(${missing.length}): ${missing.map((m) => m.title).join(', ') || '-'}`);
+    report.push(`${state}\tdata=${data.length}\twiki=${auth.length}\tEXTRA(${extras.length}): ${extras.map((k) => byKey.get(k).wiki || k).join(', ') || '-'}\tDUPES(${dupes.length}): ${dupes.join(', ') || '-'}\tMISSING(${missing.length}): ${missing.map((m) => m.title).join(', ') || '-'}`);
     for (const m of missing) add.push({ state, nice: st, ...m });
     members[state] = { unitLike: auth.map((a) => a.title), skip };
     await new Promise((r) => setTimeout(r, 1500));
@@ -128,6 +128,6 @@ async function api(params, tries = 5) {
   console.log(report.join('\n'));
   fs.writeFileSync('/tmp/cat-add.json', JSON.stringify(add, null, 1));
   fs.writeFileSync('/tmp/cat-members.json', JSON.stringify(members, null, 1));
-  console.log(`kawasan tidak sepadan: ${bad} (calon tambah ${add.length} → /tmp/cat-add.json)`);
+  console.log(`regions out of sync: ${bad} (add candidates ${add.length} → /tmp/cat-add.json)`);
   process.exit(bad ? 1 : 0);
-})().catch((e) => { console.log('RALAT:', e.message); process.exit(2); });
+})().catch((e) => { console.log('ERROR:', e.message); process.exit(2); });
