@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'county-iowa', label: 'IOWA-COUNTIES', title: 'Counties of Iowa', var: 'GIOW', sing: 'IowaCounty', finder: 'iowaCounty', finders: 'iowaCountiesInRegion', pfx: 'kio', cap: 'IowaCounties' },
-  { file: 'county-indiana', label: 'INDIANA-COUNTIES', title: 'Counties of Indiana', var: 'GINN', sing: 'IndianaCounty', finder: 'indianaCounty', finders: 'indianaCountiesInRegion', pfx: 'kin', cap: 'IndianaCounties' },
-  { file: 'county-mississippi', label: 'MISSISSIPPI-COUNTIES', title: 'Counties of Mississippi', var: 'GMSS', sing: 'MississippiCounty', finder: 'mississippiCounty', finders: 'mississippiCountiesInRegion', pfx: 'kms', cap: 'MississippiCounties' },
-  { file: 'county-oklahoma', label: 'OKLAHOMA-COUNTIES', title: 'Counties of Oklahoma', var: 'GOLA', sing: 'OklahomaCounty', finder: 'oklahomaCounty', finders: 'oklahomaCountiesInRegion', pfx: 'kol', cap: 'OklahomaCounties' },
-  { file: 'county-arkansas', label: 'ARKANSAS-COUNTIES', title: 'Counties of Arkansas', var: 'GARZ', sing: 'ArkansasCounty', finder: 'arkansasCounty', finders: 'arkansasCountiesInRegion', pfx: 'kar', cap: 'ArkansasCounties' },
-  { file: 'county-alabama', label: 'ALABAMA-COUNTIES', title: 'Counties of Alabama', var: 'GALA', sing: 'AlabamaCounty', finder: 'alabamaCounty', finders: 'alabamaCountiesInRegion', pfx: 'alb', cap: 'AlabamaCounties' },
-  { file: 'county-florida', label: 'FLORIDA-COUNTIES', title: 'Counties of Florida', var: 'GFLO', sing: 'FloridaCounty', finder: 'floridaCounty', finders: 'floridaCountiesInRegion', pfx: 'kfl', cap: 'FloridaCounties' },
-  { file: 'county-colorado', label: 'COLORADO-COUNTIES', title: 'Counties of Colorado', var: 'GCOL', sing: 'ColoradoCounty', finder: 'coloradoCounty', finders: 'coloradoCountiesInRegion', pfx: 'kco', cap: 'ColoradoCounties' },
-  { file: 'county-south-carolina', label: 'SOUTH-CAROLINA-COUNTIES', title: 'Counties of South Carolina', var: 'GSCA', sing: 'SouthCarolinaCounty', finder: 'southCarolinaCounty', finders: 'southCarolinaCountiesInRegion', pfx: 'ksc', cap: 'SouthCarolinaCounties' },
+  { file: 'county-nebraska', label: 'NEBRASKA-COUNTIES', title: 'Counties of Nebraska', var: 'GNEB', sing: 'NebraskaCounty', finder: 'nebraskaCounty', finders: 'nebraskaCountiesInRegion', pfx: 'knb', cap: 'NebraskaCounties' },
+  { file: 'county-south-dakota', label: 'SOUTH-DAKOTA-COUNTIES', title: 'Counties of South Dakota', var: 'GSDK', sing: 'SouthDakotaCounty', finder: 'southDakotaCounty', finders: 'southDakotaCountiesInRegion', pfx: 'ksd', cap: 'SouthDakotaCounties' },
+  { file: 'county-montana', label: 'MONTANA-COUNTIES', title: 'Counties of Montana', var: 'GMNT', sing: 'MontanaCounty', finder: 'montanaCounty', finders: 'montanaCountiesInRegion', pfx: 'kma', cap: 'MontanaCounties' },
+  { file: 'county-west-virginia', label: 'WEST-VIRGINIA-COUNTIES', title: 'Counties of West Virginia', var: 'GWVA', sing: 'WestVirginiaCounty', finder: 'westVirginiaCounty', finders: 'westVirginiaCountiesInRegion', pfx: 'kwv', cap: 'WestVirginiaCounties' },
+  { file: 'county-north-dakota', label: 'NORTH-DAKOTA-COUNTIES', title: 'Counties of North Dakota', var: 'GNDK', sing: 'NorthDakotaCounty', finder: 'northDakotaCounty', finders: 'northDakotaCountiesInRegion', pfx: 'knk', cap: 'NorthDakotaCounties' },
+  { file: 'county-idaho', label: 'IDAHO-COUNTIES', title: 'Counties of Idaho', var: 'GIDA', sing: 'IdahoCounty', finder: 'idahoCounty', finders: 'idahoCountiesInRegion', pfx: 'kid', cap: 'IdahoCounties' },
+  { file: 'county-washington', label: 'WASHINGTON-COUNTIES', title: 'Counties of Washington', var: 'GWSH', sing: 'WashingtonCounty', finder: 'washingtonCounty', finders: 'washingtonCountiesInRegion', pfx: 'kwn', cap: 'WashingtonCounties' },
+  { file: 'county-oregon', label: 'OREGON-COUNTIES', title: 'Counties of Oregon', var: 'GORE', sing: 'OregonCounty', finder: 'oregonCounty', finders: 'oregonCountiesInRegion', pfx: 'kor', cap: 'OregonCounties' },
+  { file: 'county-new-mexico', label: 'NEW-MEXICO-COUNTIES', title: 'Counties of New Mexico', var: 'GNMX', sing: 'NewMexicoCounty', finder: 'newMexicoCounty', finders: 'newMexicoCountiesInRegion', pfx: 'knm', cap: 'NewMexicoCounties' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
