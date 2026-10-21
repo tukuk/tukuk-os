@@ -1135,10 +1135,10 @@ app.get('/nasa/satellites/:group', (req, res) => {
   return satellitesRoute(g.slug)(req, res);
 });
 
-// ── LALUAN KOMPLEKS CUACA (/cuaca*) ── semua statik-dahulu, kemudian :slug ──
-// robots.txt: hidang dari fail dengan no-store — Cloudflare pernah sajikan versi
-// lapuk (baris Sitemap baharu tak nampak di tepi). Fail kecil, kos sifar, dan
-// enjin carian sentiasa baca versi paling terkini.
+// ── WEATHER COMPLEX ROUTES (/cuaca*) — all static paths first, then :slug ──
+// robots.txt: served from the file with no-store — Cloudflare once delivered a stale
+// copy (the new Sitemap line was not visible at the edge). The file is tiny, the cost
+// is zero, and search engines always read the most current version.
 app.get('/robots.txt', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.type('text/plain').send(fs.readFileSync(path.join(PUBLIC_DIR, 'robots.txt'), 'utf8'));
@@ -1151,10 +1151,10 @@ function cuacaHtml(res, html, status) {
 app.get('/cuaca', async (req, res) => {
   try {
     const snap = await wx.getFeaturedSnapshot();
-    if (!snap || snap.length < 4) throw new Error('snapshot tipis');
+    if (!snap || snap.length < 4) throw new Error('thin snapshot');
     cuacaHtml(res, cuacaHubPage(req, snap));
   } catch {
-    cuacaHtml(res, weatherBusy('Suapan cuaca belum sempat dimuat'), 503);
+    cuacaHtml(res, weatherBusy('The weather feed has not loaded yet'), 503);
   }
 });
 
@@ -1166,24 +1166,24 @@ app.get('/cuaca/angin', (req, res) => cuacaHtml(res, cuacaWindPage(req)));
 app.get('/cuaca/ekstrem', async (req, res) => {
   try {
     const snap = await wx.getFeaturedSnapshot();
-    if (!snap || snap.length < 4) throw new Error('snapshot tipis');
+    if (!snap || snap.length < 4) throw new Error('thin snapshot');
     cuacaHtml(res, cuacaExtremesPage(req, snap));
   } catch {
-    cuacaHtml(res, weatherBusy('Data suhu dunia tidak sempat dimuat'), 503);
+    cuacaHtml(res, weatherBusy('World temperature data did not load in time'), 503);
   }
 });
 
-// Carian → geokoding → 302 ke halaman kota. Slugs sebarang nama di dunia.
+// Search → geocoding → 302 to the city page. Slugs exist for any name in the world.
 app.get('/cuaca/cari', async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (!q || q.length > 60) return res.redirect(301, '/cuaca');
   try {
     let city = wx.findCity(q);
     if (!city) city = await wx.geocode(q);
-    if (!city) return cuacaHtml(res, weatherBusy(`Tiada bandar bernama “${q}” ditemui`), 404);
+    if (!city) return cuacaHtml(res, weatherBusy(`No city named “${q}” was found`), 404);
     return res.redirect(302, `/cuaca/${city.slug}`);
   } catch {
-    return cuacaHtml(res, weatherBusy('Carian bandar tidak sempat diproses'), 503);
+    return cuacaHtml(res, weatherBusy('The city search could not be processed in time'), 503);
   }
 });
 
@@ -1192,11 +1192,11 @@ async function cuacaCityHandler(req, res, view) {
   if (!slug || slug.length > 60) return res.redirect(301, '/cuaca');
   let city;
   try { city = await wx.resolveCity(slug); } catch { city = null; }
-  if (!city) return cuacaHtml(res, weatherBusy(`Halaman cuaca untuk “${slug}” belum tersedia`), 404);
+  if (!city) return cuacaHtml(res, weatherBusy(`The weather page for “${slug}” is not available yet`), 404);
   try {
     if (view === 'udara') {
       const [air, airFc] = await Promise.all([wx.getAir(city), wx.getAirForecast(city).catch(() => null)]);
-      if (!air) throw new Error('tiada data');
+      if (!air) throw new Error('no data');
       return cuacaHtml(res, cuacaAirPage(req, city, air, airFc));
     }
     if (view === 'surya') {
@@ -1211,7 +1211,7 @@ async function cuacaCityHandler(req, res, view) {
     ]);
     return cuacaHtml(res, cuacaCityPage(req, city, cur, fc, air, river));
   } catch {
-    return cuacaHtml(res, weatherBusy(`Cuaca ${city.name} tidak sempat dimuat`), 503);
+    return cuacaHtml(res, weatherBusy(`Weather for ${city.name} did not load in time`), 503);
   }
 }
 
@@ -4968,22 +4968,23 @@ function nasaSatellitesPage(req, data, group) {
   });
 }
 
-// ── TUKUK-OS WEATHER COMPLEX — OpenWeather tier PERCUMA, konten Bahasa Melayu ──
-// Ceruk SEO berbeza daripada kluster NASA (en): carian "cuaca hari ini …" MY/ID
-// bervolume tinggi & persaingan rendah. Semua halaman: index,follow + 3 unit iklan
-// + cuacaNav() hab pautan-silang. Kuota API dijaga src/weather.js (bajet harian +
-// cache 45m–30h) → server kekal ringan, halaman kota nyaris tanpa had (geokoding).
+// ── TUKUK-OS WEATHER COMPLEX — OpenWeather FREE tier, English content ──────────
+// Different SEO niche from the NASA cluster: high-volume "weather today …" searches.
+// Every page: index,follow + 3 ad units + cuacaNav() cross-link hub. API quota is
+// guarded by src/weather.js (daily budget + 45m–30h cache) → the server stays light
+// and city pages are practically unbounded (geocoded on demand). Routes keep their
+// Malay slugs (/cuaca…) for URL stability; the copy itself is English.
 const CUACA_SECTIONS = [
-  { href: '/cuaca', icon: '\uD83C\uDF24', name: 'Cuaca Hari Ini', blurb: 'Peta & senarai suhu langsung seluruh dunia — kemas kini setiap jam.' },
-  { href: '/cuaca/peta', icon: '\uD83D\uDDFA', name: 'Peta Cuaca Langsung', blurb: 'Jubin OpenWeather pada peta interaktif: hujan, awan dan tekanan.' },
-  { href: '/cuaca/ekstrem', icon: '\u2696', name: 'Rekod Suhu Dunia', blurb: 'Kota paling panas, paling sejuk & paling berangin sekarang.' },
-  { href: '/cuaca/kod', icon: '\uD83D\uDCDC', name: 'Kod Cuaca', blurb: 'Makna setiap kod & ikon OpenWeather — dalam Bahasa Melayu.' },
-  { href: '/cuaca/awan', icon: '\u2601', name: 'Jenis Awan', blurb: 'Cirrus sampai cumulonimbus — baca langit macam ahli meteorologi.' },
-  { href: '/cuaca/angin', icon: '\uD83D\uDCA8', name: 'Skala Angin', blurb: 'Skala Beaufort 0–12 dan monsun Malaysia dijelaskan.' },
+  { href: '/cuaca', icon: '\uD83C\uDF24', name: 'Today\u2019s Weather', blurb: 'Live world temperature map & lists — updated every hour.' },
+  { href: '/cuaca/peta', icon: '\uD83D\uDDFA', name: 'Live Weather Map', blurb: 'OpenWeather tiles on an interactive map: rain, cloud and pressure.' },
+  { href: '/cuaca/ekstrem', icon: '\u2696', name: 'World Temperature Records', blurb: 'The hottest, coldest and windiest cities right now.' },
+  { href: '/cuaca/kod', icon: '\uD83D\uDCDC', name: 'Weather Codes', blurb: 'What every OpenWeather code and icon actually means.' },
+  { href: '/cuaca/awan', icon: '\u2601', name: 'Cloud Types', blurb: 'Cirrus to cumulonimbus — read the sky like a forecaster.' },
+  { href: '/cuaca/angin', icon: '\uD83D\uDCA8', name: 'Wind Scale', blurb: 'The Beaufort 0\u201312 scale and the monsoons explained.' },
 ];
 
 function cuacaNav() {
-  return `<nav aria-label="Bahagian cuaca"><h2 class="section-title">Jelajahi Kompleks Cuaca Tukuk-OS</h2><div class="feed">`
+  return `<nav aria-label="Weather sections"><h2 class="section-title">Explore the Tukuk-OS Weather Complex</h2><div class="feed">`
     + CUACA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
     + `</div></nav>`;
 }
@@ -4997,7 +4998,7 @@ function cuacaDoc(o) {
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -5010,7 +5011,7 @@ function cuacaDoc(o) {
 <meta property="og:description" content="${escapeHtml(o.desc)}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="${escapeHtml(ogImage)}">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -5059,12 +5060,12 @@ ${siteFooter()}
 }
 
 function weatherBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>Sumber data cuaca (OpenWeather) tidak sempat menjawab. Sila cuba lagi beberapa minit.</p><p><a href="/cuaca">Kembali ke Kompleks Cuaca</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The weather data source (OpenWeather) did not answer in time. Please try again in a few minutes.</p><p><a href="/cuaca">Back to the Weather Complex</a></p></body>`;
 }
 
-// ——— Utiliti masa setempat (offset TZ dari API) + label Melayu ———
-const WX_DAYS = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
-const WX_MONTHS = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+// ——— Local-time helpers (TZ offset from the API) + English date labels ———
+const WX_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WX_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function wxParts(unixSec, tzSec) {
   const d = new Date((Number(unixSec) + Number(tzSec || 0)) * 1000);
@@ -5076,15 +5077,15 @@ function wxHHMM(unixSec, tzSec) {
   return `${String(p.h).padStart(2, '0')}:${String(p.m).padStart(2, '0')}`;
 }
 
-function wxDateMs(p) { return `${WX_DAYS[p.wday]}, ${p.day} ${WX_MONTHS[p.mon]} ${p.year}`; }
+function wxDateLabel(p) { return `${WX_DAYS[p.wday]}, ${p.day} ${WX_MONTHS[p.mon]} ${p.year}`; }
 function wxTempC(v) { return `${Math.round(Number(v) || 0)}\u00b0C`; }
-function wxKmh(ms) { return Math.round((Number(ms) || 0) * 3.6); }
+function wxKmh(mps) { return Math.round((Number(mps) || 0) * 3.6); }
 function isNightNow(cur) {
   if (!cur || !cur.sunrise || !cur.sunset || !cur.dt) return false;
   return !(cur.dt > cur.sunrise && cur.dt < cur.sunset);
 }
 
-// Halaman kota → kumpul hari setempat daripada ramalan 3-jam (dt + tz).
+// City page → group local days from the 3-hourly forecast (dt + tz).
 function wxDaily(fc, tzSec) {
   const byDay = new Map();
   for (const s of (fc && fc.list) || []) {
@@ -5112,7 +5113,7 @@ function wxDaily(fc, tzSec) {
   });
 }
 
-// ——— HAB /cuaca — snapshot kota featured + senarai semua kota (hab pautan) ———
+// ——— HUB /cuaca — featured-city snapshot + list of every city (link hub) ———
 function cuacaHubPage(req, snap) {
   const tz = snap[0] && snap[0].cur ? snap[0].cur.timezone : 0;
   const now = wxParts(Math.floor(Date.now() / 1000), tz);
@@ -5120,32 +5121,32 @@ function cuacaHubPage(req, snap) {
     const d = wx.describe(cur.weather && cur.weather[0] ? cur.weather[0].id : 800, isNightNow(cur));
     return `<div class="wx-card"><h3><a href="/cuaca/${city.slug}">${escapeHtml(city.name)}${city.cc ? ` \u00b7 ${city.cc}` : ''}</a></h3>`
       + `<div class="big">${d.emoji} ${wxTempC(cur.main.temp)}</div>`
-      + `<div class="meta">${escapeHtml(d.ms)} \u00b7 ${wxKmh(cur.wind.speed)} km/j \u00b7 kelembapan ${Number(cur.main.humidity) || 0}%</div></div>`;
+      + `<div class="meta">${escapeHtml(d.label)} \u00b7 ${wxKmh(cur.wind.speed)} km/h \u00b7 humidity ${Number(cur.main.humidity) || 0}%</div></div>`;
   }).join('');
   const grouped = {};
   for (const c of wx.CITIES) (grouped[c.country] = grouped[c.country] || []).push(c);
   const linkBoxes = Object.entries(grouped).map(([country, list]) => `<h3>${escapeHtml(country)}</h3><div class="wx-citylinks">`
     + list.map((c) => `<a href="/cuaca/${c.slug}">${escapeHtml(c.name)}</a>`).join('') + `</div>`).join('');
-  const body = `<p>Kemas kini ${wxDateMs(now)} \u00b7 data langsung OpenWeather. Cari bandar anda: </p>`
+  const body = `<p>Updated ${wxDateLabel(now)} \u00b7 live OpenWeather data. Search for your city: </p>`
     + `<form action="/cuaca/cari" method="get" role="search" style="margin:10px 0">`
-    + `<input type="search" name="q" placeholder="cth: Kuching, Tokyo, London\u2026" aria-label="Cari bandar" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;min-width:260px;background:var(--panel,#171a21);color:inherit">`
-    + `<button class="btn primary" type="submit" style="margin-left:8px">Cari cuaca</button></form>`
-    + `<h2 class="section-title">Suhu dunia sekarang</h2><div class="wx-grid">${cards}</div>`
-    + `<h2 class="section-title">Ramalan penuh ikut bandar</h2>`
-    + `<p>Setiap halaman bandar membawa semasa, 8 slot jam akan datang, ramalan 5\u20136 hari, kualiti udara (PM2.5), waktu matahari serta nasihat bersiap yang dijana automatik \u2014 semua daripada API OpenWeather tier percuma. Cuaca dunia \u2014 Tokyo, London, New York, Makkah dan ratusan kota lain tersenarai ikut negara di bawah; permulaan popular: <a href="/cuaca/tokyo">Tokyo</a>, <a href="/cuaca/london">London</a>, <a href="/cuaca/new-york">New York</a> atau <a href="/cuaca/makkah">Makkah</a>.</p>`
+    + `<input type="search" name="q" placeholder="e.g. Kuching, Tokyo, London\u2026" aria-label="Search a city" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;min-width:260px;background:var(--panel,#171a21);color:inherit">`
+    + `<button class="btn primary" type="submit" style="margin-left:8px">Search weather</button></form>`
+    + `<h2 class="section-title">World temperatures right now</h2><div class="wx-grid">${cards}</div>`
+    + `<h2 class="section-title">Full forecast by city</h2>`
+    + `<p>Every city page carries current conditions, the next 8 hourly slots, a 5\u20136 day forecast, air quality (PM2.5), sun times and automatically generated get-ready advice \u2014 all from the free-tier OpenWeather API. World weather \u2014 Tokyo, London, New York, Mecca and hundreds of other cities are listed by country below; popular starting points: <a href="/cuaca/tokyo">Tokyo</a>, <a href="/cuaca/london">London</a>, <a href="/cuaca/new-york">New York</a> or <a href="/cuaca/makkah">Makkah</a>.</p>`
     + linkBoxes
-    + `<h2 class="section-title">Kenapa cuaca penting untuk kita</h2><p>Malaysia duduk di laluan zon hujan khatulistiwa: monsun barat daya (Mei\u2013September) dan monsun timur laut (November\u2013Mac) silih berganti membawa hujan, dan jerebu rentas sempadan sesekali menentukan sama ada sekolah ditutup. Memahami bacaan \u2014 kelembapan, tekanan, kelajuan angin, indeks AQI \u2014 menukar ramalan daripada angka kepada keputusan: bila sesuai menanam, bila perlu bawa payung, bila paling bahaya memandu.</p>`
-    + `<p class="meta">Untuk langit malam pula (fasa bulan & senja), lawati <a href="/nasa/sky">Langit Malam Ini di kompleks NASA</a> \u2014 satu keluarga data, dua sudut pandangan. Bumi bergegar? Semak <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS. Nak rancang percutian? Kalendar penuh <a href="/cuti">cuti umum dunia</a>. Nak kenal destinasi? Profil penuh di <a href="/negara">Kompleks Negara</a>.</p>`;
+    + `<h2 class="section-title">Why the numbers matter</h2><p>Rain belts and monsoons move twice a year across the tropics, cross-border haze periodically closes schools, and mid-latitude countries plan around fronts, snow and storm surges. Reading the measurements \u2014 humidity, pressure, wind speed, AQI \u2014 turns a forecast into decisions: when to plant, when to carry an umbrella, when driving is most dangerous.</p>`
+    + `<p class="meta">For the night sky (moon phase & twilight), see <a href="/nasa/sky">Tonight\u2019s Sky in the NASA complex</a> \u2014 one family of data, two points of view. Ground shaking? Check the <a href="/gempa">Earthquake Complex</a> for the live USGS list. Planning a trip? The full calendar of <a href="/cuti">world public holidays</a>. Want to know a destination? Full profiles in the <a href="/negara">Country Complex</a>.</p>`;
   return cuacaDoc({
-    title: 'Cuaca Hari Ini \u2014 Suhu, Ramalan & Kualiti Udara Seluruh Dunia | Tukuk-OS',
-    desc: 'Semak cuaca hari ini secara langsung: suhu, hujan, angin, kualiti udara PM2.5 dan ramalan 5 hari untuk Tokyo, London, New York, Makkah dan ratusan bandar lain di seluruh dunia.',
+    title: 'Weather Today \u2014 Temperature, Forecast & Air Quality Worldwide | Tukuk-OS',
+    desc: 'Check today\u2019s weather live: temperature, rain, wind, PM2.5 air quality and a 5-day forecast for Tokyo, London, New York, Makkah and hundreds of other cities worldwide.',
     selfUrl: 'https://tukuk.org/cuaca',
-    heroTitle: 'Kompleks Cuaca Tukuk-OS', heroSub: 'Data langsung OpenWeather \u00b7 kemas kini setiap jam \u00b7 percuma tanpa log masuk',
+    heroTitle: 'Tukuk-OS Weather Complex', heroSub: 'Live OpenWeather data \u00b7 updated hourly \u00b7 free, no login',
     body,
   });
 }
 
-// ——— Halaman kota: semasa + 8 jam + 5 hari + AQI + nasihat dijana automatik ———
+// ——— City page: current + 8 hours + 5 days + AQI + auto-generated advice ———
 function cuacaCityPage(req, city, cur, fc, air, river) {
   const w = (cur.weather && cur.weather[0]) || { id: 800 };
   const night = isNightNow(cur);
@@ -5157,89 +5158,89 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
   const aqi = air && air.list && air.list[0] ? air.list[0].main : null;
   const band = aqi ? wx.aqiBand(aqi.aqi) : null;
   const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Place', name: `Cuaca di ${city.name}`,
-    description: `Semakan langsung cuaca ${city.name}: ${d.ms}, ${wxTempC(main.temp)}, angin ${wxKmh(cur.wind.speed)} km/j.`,
+    '@context': 'https://schema.org', '@type': 'Place', name: `Weather in ${city.name}`,
+    description: `Live weather check for ${city.name}: ${d.label}, ${wxTempC(main.temp)}, wind ${wxKmh(cur.wind.speed)} km/h.`,
     geo: { '@type': 'GeoCoordinates', latitude: city.lat, longitude: city.lon },
     url: selfUrl,
   }).replace(/</g, '\\u003c');
   const hero = `<div class="wx-hero"><div class="temp">${d.emoji} ${wxTempC(main.temp)}</div><div class="wmeta">`
-    + `<b>${escapeHtml(city.name)}</b>${city.country ? `, ${escapeHtml(String(city.country))}` : ''} \u00b7 ${escapeHtml(d.ms)}<br>`
-    + `Rasa sebenar ${wxTempC(main.feels_like)} \u00b7 ${wxDateMs(nowP)} ${String(nowP.h).padStart(2, '0')}:${String(nowP.m).padStart(2, '0')} waktu setempat`
+    + `<b>${escapeHtml(city.name)}</b>${city.country ? `, ${escapeHtml(String(city.country))}` : ''} \u00b7 ${escapeHtml(d.label)}<br>`
+    + `Feels like ${wxTempC(main.feels_like)} \u00b7 ${wxDateLabel(nowP)} ${String(nowP.h).padStart(2, '0')}:${String(nowP.m).padStart(2, '0')} local time`
     + `</div></div>`;
   const bf = wx.beaufort(wxKmh(cur.wind.speed));
   const cards = `<div class="wx-grid">`
-    + `<div class="wx-card"><h3>Angin</h3><div class="big">${wxKmh(cur.wind.speed)} km/j</div><div class="meta">Skala Beaufort ${bf[0]} \u2014 ${escapeHtml(bf[2])}</div></div>`
-    + `<div class="wx-card"><h3>Kelembapan</h3><div class="big">${Number(main.humidity) || 0}%</div></div>`
-    + `<div class="wx-card"><h3>Tekanan</h3><div class="big">${Number(main.pressure) || 0} hPa</div></div>`
-    + `<div class="wx-card"><h3>Jarak nampak</h3><div class="big">${cur.visibility ? (cur.visibility / 1000).toFixed(cur.visibility >= 10000 ? 0 : 1) + ' km' : '\u2014'}</div></div>`
-    + `<div class="wx-card"><h3>Litupan awan</h3><div class="big">${Number(cur.clouds && cur.clouds.all) || 0}%</div></div>`
-    + `<div class="wx-card"><h3>Matahari</h3><div class="big">${wxHHMM(cur.sunrise, tz)} \u2192 ${wxHHMM(cur.sunset, tz)}</div><div class="meta"><a href="/cuaca/${city.slug}/surya">panduan waktu keemasan \u2192</a></div></div>`
+    + `<div class="wx-card"><h3>Wind</h3><div class="big">${wxKmh(cur.wind.speed)} km/h</div><div class="meta">Beaufort scale ${bf[0]} \u2014 ${escapeHtml(bf[2])}</div></div>`
+    + `<div class="wx-card"><h3>Humidity</h3><div class="big">${Number(main.humidity) || 0}%</div></div>`
+    + `<div class="wx-card"><h3>Pressure</h3><div class="big">${Number(main.pressure) || 0} hPa</div></div>`
+    + `<div class="wx-card"><h3>Visibility</h3><div class="big">${cur.visibility ? (cur.visibility / 1000).toFixed(cur.visibility >= 10000 ? 0 : 1) + ' km' : '\u2014'}</div></div>`
+    + `<div class="wx-card"><h3>Cloud cover</h3><div class="big">${Number(cur.clouds && cur.clouds.all) || 0}%</div></div>`
+    + `<div class="wx-card"><h3>Sun</h3><div class="big">${wxHHMM(cur.sunrise, tz)} \u2192 ${wxHHMM(cur.sunset, tz)}</div><div class="meta"><a href="/cuaca/${city.slug}/surya">golden-hour guide \u2192</a></div></div>`
     + `</div>`;
   let hourHtml = '';
   if (fc && Array.isArray(fc.list)) {
     const soon = fc.list.filter((s) => s.dt >= cur.dt - 3600).slice(0, 8);
-    if (soon.length) hourHtml = `<h2 class="section-title">Jam akan datang</h2><div class="wx-hour">`
+    if (soon.length) hourHtml = `<h2 class="section-title">Next hours</h2><div class="wx-hour">`
       + soon.map((s) => { const dd = wx.describe(s.weather && s.weather[0] ? s.weather[0].id : 800, false); const p = wxParts(s.dt, tz); return `<div class="hr"><div class="lbl">${String(p.h).padStart(2, '0')}:00</div><div>${dd.emoji}</div><div class="t">${wxTempC(s.main.temp)}</div><div class="lbl">${Math.round((Number(s.pop) || 0) * 100)}% \uD83D\uDCA7</div></div>`; }).join('')
       + `</div>`;
   }
   let daysHtml = '';
   if (fc && Array.isArray(fc.list)) {
-    const rows = wxDaily(fc, tz).slice(0, 6).map((e) => { const dd = wx.describe(e.id, false); return `<tr><td>${escapeHtml(e.label)}</td><td>${dd.emoji} ${escapeHtml(dd.ms)}</td><td>${e.min}\u00b0 \u2192 ${e.max}\u00b0C</td><td>${e.pop}%</td><td>${e.rainMm ? `${e.rainMm} mm` : '\u2014'}</td></tr>`; }).join('');
-    daysHtml = rows ? `<h2 class="section-title">Ramalan 5\u20136 hari</h2><table class="wx-table"><tr><th>Hari</th><th>Keadaan</th><th>Suhu</th><th>Kebarangkalian hujan</th><th>Anggaran hujan</th></tr>${rows}</table>` : '';
+    const rows = wxDaily(fc, tz).slice(0, 6).map((e) => { const dd = wx.describe(e.id, false); return `<tr><td>${escapeHtml(e.label)}</td><td>${dd.emoji} ${escapeHtml(dd.label)}</td><td>${e.min}\u00b0 \u2192 ${e.max}\u00b0C</td><td>${e.pop}%</td><td>${e.rainMm ? `${e.rainMm} mm` : '\u2014'}</td></tr>`; }).join('');
+    daysHtml = rows ? `<h2 class="section-title">5\u20136 day forecast</h2><table class="wx-table"><tr><th>Day</th><th>Conditions</th><th>Temperature</th><th>Rain probability</th><th>Expected rain</th></tr>${rows}</table>` : '';
   }
   const airBox = band
-    ? `<h2 class="section-title">Kualiti udara</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} — ${escapeHtml(band.label)}</span> · ${escapeHtml(band.advice)} <a href="/cuaca/${city.slug}/udara">Butiran PM2.5 & ramalan pencemaran →</a></p>`
+    ? `<h2 class="section-title">Air quality</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} — ${escapeHtml(band.label)}</span> · ${escapeHtml(band.advice)} <a href="/cuaca/${city.slug}/udara">PM2.5 detail & pollution forecast →</a></p>`
     : '';
-  // Kad risiko sungai — model GloFAS via Open-Meteo Flood (bukan ukuran sebenar;
-  // grid 5km boleh terlepas sungai kecil — dilabel jujur dalam meta).
+  // River-risk card — GloFAS model via Open-Meteo Flood (not a real measurement;
+  // the 5 km grid can miss small rivers — labelled honestly in the meta note).
   let riverBox = '';
   if (river && river.source !== 'unavailable' && Number.isFinite(river.current)) {
     const pct = Number(river.pctYear) || 0;
-    const lbl = pct >= 95 ? ['Sangat tinggi — aliran luar biasa bagi setahun ini', '#e5534b']
-      : pct >= 80 ? ['Tinggi — melebihi 80% hari tahun lalu', '#d29922']
-      : pct >= 20 ? ['Normal untuk musim ini', '#3fb950']
-      : ['Rendah — musim kering di grid ini', '#4c8dff'];
+    const lbl = pct >= 95 ? ['Very high — an exceptional flow for this time of year', '#e5534b']
+      : pct >= 80 ? ['High — above 80% of the days recorded last year', '#d29922']
+      : pct >= 20 ? ['Normal for this season', '#3fb950']
+      : ['Low — a dry spell on this grid', '#4c8dff'];
     const series = (river.series || []).slice(-35);
     const hi = Math.max(1, ...series);
     const spark = series.map((v) => `<span title="${v} m³/s" style="display:inline-block;width:5px;margin-right:2px;height:${Math.max(2, Math.round((v / hi) * 34))}px;background:var(--accent,#4c8dff);vertical-align:bottom;border-radius:1px"></span>`).join('');
-    riverBox = `<h2 class="section-title">Model aliran sungai</h2><p><span class="wx-pill" style="background:${lbl[1]}">${lbl[0]}</span> — grid model merekod <b>${river.current} ${escapeHtml(river.unit)}</b> pada ${escapeHtml(String(river.date))}, iaitu lebih tinggi daripada ${pct}% daripada ${river.days} hari sejarah setempat (min ${river.min} · median ${river.median} · maks ${river.max} ${escapeHtml(river.unit)}).</p><p style="line-height:1">${spark}</p><p class="meta">Anggaran model hidrologi GloFAS (Open-Meteo Flood API) pada grid ±5 km — <b>bukan ukuran stesen sungai sebenar</b> dan tidak menggantikan amaran banjir rasmi Jabatan Pengairan dan Saliran atau agensi negara anda. Sumber: ${river.source === 'last-known' ? 'bacaan terakhir yang berjaya disimpan' : 'model langsung'}.</p>`;
+    riverBox = `<h2 class="section-title">River flow model</h2><p><span class="wx-pill" style="background:${lbl[1]}">${lbl[0]}</span> — the model grid records <b>${river.current} ${escapeHtml(river.unit)}</b> on ${escapeHtml(String(river.date))}, higher than ${pct}% of the local ${river.days}-day history (min ${river.min} · median ${river.median} · max ${river.max} ${escapeHtml(river.unit)}).</p><p style="line-height:1">${spark}</p><p class="meta">GloFAS hydrological model estimate (Open-Meteo Flood API) on a ±5 km grid — <b>not a real river-station measurement</b> and no substitute for official flood warnings from the national water authority where you are. Source: ${river.source === 'last-known' ? 'the last reading that was successfully stored' : 'live model output'}.</p>`;
   }
   const advice = wx.cityAdvice(cur, air).map((t) => `<li>${escapeHtml(t)}</li>`).join('');
-  const body = `<p class="back-link"><a href="/cuaca">\u2190 Semua cuaca</a> \u00b7 <a href="/cuaca/peta">Peta langsung</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Langit malam di sini (fasa bulan & senja)</a></p>`
+  const body = `<p class="back-link"><a href="/cuaca">\u2190 All weather</a> \u00b7 <a href="/cuaca/peta">Live map</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Tonight\u2019s sky here (moon phase & twilight)</a></p>`
     + hero + cards + hourHtml + daysHtml + airBox + riverBox
-    + (advice ? `<h2 class="section-title">Sedia hari ini</h2><ul>${advice}</ul>` : '')
-    + `<h2 class="section-title">Bagaimana bacaan ini diperoleh</h2><p>Angka di atas ialah cerapan model raster OpenWeather untuk koordinat ${Number(city.lat).toFixed(3)}\u00b0, ${Number(city.lon).toFixed(3)}\u00b0 \u2014 dikemas kini setiap 45 minit dan dipaparkan dalam waktu setempat ${city.name} (UTC${tz >= 0 ? '+' : '\u2212'}${Math.abs(Math.round(tz / 3600))}). Kelembapan tinggi bersama suhu \u2265 31\u00b0C menjadikan "rasa sebenar" lebih panas daripada bacaan termometer; tekanan yang menurun perlahan biasanya isyarat hujan dalam 12\u201324 jam.</p>`
-    + `<h2 class="section-title">Makna ikon & kod</h2><p>Keadaan <b>${escapeHtml(d.ms)}</b> sepadan dengan kod ${Number(w.id)} OpenWeather \u2014 keseluruhan senarai kod dijelaskan di <a href="/cuaca/kod">halaman kod cuaca</a>, jenis awan di <a href="/cuaca/awan">panduan awan</a> dan kelajuan angin di <a href="/cuaca/angin">skala Beaufort</a>.</p>`
-    + `<p class="meta">Data: OpenWeather (tier percuma) \u00b7 halaman ini dijana langsung pada setiap kunjungan.</p>`;
+    + (advice ? `<h2 class="section-title">Getting ready today</h2><ul>${advice}</ul>` : '')
+    + `<h2 class="section-title">How these readings are produced</h2><p>The numbers above are OpenWeather raster-model observations for the coordinates ${Number(city.lat).toFixed(3)}\u00b0, ${Number(city.lon).toFixed(3)}\u00b0 — refreshed every 45 minutes and shown in ${city.name} local time (UTC${tz >= 0 ? '+' : '\u2212'}${Math.abs(Math.round(tz / 3600))}). High humidity combined with temperatures \u2265 31\u00b0C makes the "feels like" value hotter than the thermometer reading; slowly falling pressure is usually a sign of rain within 12\u201324 hours.</p>`
+    + `<h2 class="section-title">What the icons & codes mean</h2><p>The condition <b>${escapeHtml(d.label)}</b> maps to OpenWeather code ${Number(w.id)} — the full code list is explained on the <a href="/cuaca/kod">weather codes page</a>, cloud types in the <a href="/cuaca/awan">cloud guide</a> and wind speeds on the <a href="/cuaca/angin">Beaufort scale</a>.</p>`
+    + `<p class="meta">Data: OpenWeather (free tier) \u00b7 this page is generated live on every visit.</p>`;
   return cuacaDoc({
-    title: `Cuaca Hari Ini di ${city.name}${city.country ? `, ${city.country}` : ''} \u2014 Suhu, Ramalan & Kualiti Udara | Tukuk-OS`,
-    desc: `Semasa ${city.name}: ${wxTempC(main.temp)} (${d.ms}), angin ${wxKmh(cur.wind.speed)} km/j, kelembapan ${Number(main.humidity) || 0}% + ramalan 5 hari dan kualiti udara.`,
-    selfUrl, heroTitle: `Cuaca di ${city.name}`, heroSub: `${d.emoji} ${escapeHtml(d.en)} \u00b7 dikemas kini ${wxHHMM(cur.dt, tz)} waktu setempat`,
+    title: `Weather Today in ${city.name}${city.country ? `, ${city.country}` : ''} \u2014 Temperature, Forecast & Air Quality | Tukuk-OS`,
+    desc: `Right now in ${city.name}: ${wxTempC(main.temp)} (${d.label}), wind ${wxKmh(cur.wind.speed)} km/h, humidity ${Number(main.humidity) || 0}% + a 5-day forecast and air quality.`,
+    selfUrl, heroTitle: `Weather in ${city.name}`, heroSub: `${d.emoji} ${escapeHtml(d.label)} \u00b7 updated ${wxHHMM(cur.dt, tz)} local time`,
     ld: jsonLd, body,
   });
 }
 
-// ——— /cuaca/:slug/udara — AQI + komponen + ramalan + panduan kesihatan ———
+// ——— /cuaca/:slug/udara — AQI + components + forecast + health guide ———
 function cuacaAirPage(req, city, air, airFc) {
   const item = air && air.list && air.list[0] ? air.list[0] : null;
-  if (!item) throw new Error('tiada data udara');
+  if (!item) throw new Error('no air quality data');
   const band = wx.aqiBand(item.main.aqi);
   const c = item.components || {};
   const selfUrl = `https://tukuk.org/cuaca/${city.slug}/udara`;
   const POLLUTANTS = [
-    ['pm2_5', 'PM2.5', 'partikul halus < 2.5 μm — masuk ke dalam darah; risiko utama jerebu'],
-    ['pm10', 'PM10', 'debu & debu halus — merangsang mata dan tekak'],
-    ['o3', 'Ozon (O\u2083)', 'bagaimana baik di stratosfera, buruk di permukaan: terbentuk daripada panas + kenderaan'],
-    ['no2', 'Nitrogen dioksida', 'asap enjin diesel & loji kuasa — penanda pencemaran trafik'],
-    ['so2', 'Sulfur dioksida', 'peleburan & loji arang batu; juga gunung berapi'],
-    ['co', 'Karbon monoksida', 'pembakaran tidak lengkap; berbahaya di ruang tertutup'],
-    ['nh3', 'Amonia', 'penternakan & baja — jarang jadi isu bandar'],
+    ['pm2_5', 'PM2.5', 'fine particles under 2.5 \u03bcm \u2014 they enter the bloodstream; the main haze risk'],
+    ['pm10', 'PM10', 'dust & coarse dust \u2014 irritates the eyes and throat'],
+    ['o3', 'Ozone (O\u2083)', 'good up in the stratosphere, bad at ground level: formed by heat + traffic'],
+    ['no2', 'Nitrogen dioxide', 'diesel exhaust & power plants \u2014 a marker of traffic pollution'],
+    ['so2', 'Sulfur dioxide', 'smelting & coal plants; also volcanoes'],
+    ['co', 'Carbon monoxide', 'incomplete combustion; dangerous in enclosed spaces'],
+    ['nh3', 'Ammonia', 'livestock farming & fertiliser \u2014 rarely an urban problem'],
   ];
   const WHO = { pm2_5: 15, pm10: 45, o3: 100, no2: 25, so2: 40, co: 4000, nh3: 22 };
   const rows = POLLUTANTS.map(([k, label, note]) => {
     const v = Math.round((Number(c[k]) || 0) * 100) / 100;
     const limit = WHO[k];
-    const flag = v > limit ? `\u26A0\uFE0F melebihi panduan 24-jam WHO (${limit})` : '\u2713 di bawah panduan 24-jam WHO';
+    const flag = v > limit ? `\u26A0\uFE0F above the WHO 24-hour guideline (${limit})` : '\u2713 below the WHO 24-hour guideline';
     return `<tr><td><b>${label}</b></td><td>${v} \u00b5g/m\u00b3</td><td>${escapeHtml(flag)}</td><td>${escapeHtml(note)}</td></tr>`;
   }).join('');
   let fcHtml = '';
@@ -5248,33 +5249,33 @@ function cuacaAirPage(req, city, air, airFc) {
       const b = wx.aqiBand(s.main && s.main.aqi);
       return `<span class="wx-pill" style="background:${b.color}" title="${escapeHtml(b.label)}">${wxHHMM(s.dt, 0)} \u00b7 AQI ${Number(s.main && s.main.aqi) || '?'}</span>`;
     }).join(' ');
-    fcHtml = `<h2 class="section-title">Ramaman pencemaran (slot 3-jam)</h2><p>${chips}</p>`;
+    fcHtml = `<h2 class="section-title">Pollution forecast (3-hour slots)</h2><p>${chips}</p>`;
   }
   const bandRows = wx.AQI_BANDS.map((b) => `<tr><td><span class="wx-pill" style="background:${b.color}">${b.n} \u00b7 ${escapeHtml(b.label)}</span></td><td>${escapeHtml(b.advice)}</td></tr>`).join('');
   const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Dataset', name: `Kualiti udara ${city.name}`,
-    description: `AQI semasa ${Number(item.main.aqi)} (${band.label}) dengan komponen PM2.5, PM10, O\u2083, NO\u2082, SO\u2082, CO, NH\u2083.`,
+    '@context': 'https://schema.org', '@type': 'Dataset', name: `Air quality in ${city.name}`,
+    description: `Current AQI ${Number(item.main.aqi)} (${band.label}) with PM2.5, PM10, O\u2083, NO\u2082, SO\u2082, CO and NH\u2083 components.`,
     url: selfUrl,
   }).replace(/</g, '\\u003c');
-  const body = `<p class="back-link"><a href="/cuaca/${city.slug}">\u2190 Cuaca ${escapeHtml(city.name)}</a> \u00b7 <a href="/cuaca/peta">Peta</a></p>`
+  const body = `<p class="back-link"><a href="/cuaca/${city.slug}">\u2190 Weather in ${escapeHtml(city.name)}</a> \u00b7 <a href="/cuaca/peta">Map</a></p>`
     + `<div class="wx-hero"><div class="temp" style="font-size:2.6rem">AQI ${Number(item.main.aqi)}</div><div class="wmeta">`
     + `<span class="wx-pill" style="background:${band.color}">${escapeHtml(band.label)}</span><br>${escapeHtml(band.advice)}</div></div>`
-    + `<h2 class="section-title">Komponen pencemar sekarang di ${escapeHtml(city.name)}</h2>`
-    + `<table class="wx-table"><tr><th>Pencemar</th><th>Kepadan</th><th>Tahap</th><th>Makna</th></tr>${rows}</table>`
+    + `<h2 class="section-title">Pollutant components in ${escapeHtml(city.name)} right now</h2>`
+    + `<table class="wx-table"><tr><th>Pollutant</th><th>Concentration</th><th>Level</th><th>What it means</th></tr>${rows}</table>`
     + fcHtml
-    + `<h2 class="section-title">Skala AQI OpenWeather (1\u20135)</h2><table class="wx-table"><tr><th>Jalur</th><th>Panduan kesihatan</th></tr>${bandRows}</table>`
-    + `<h2 class="section-title">Kenapa PM2.5 penting di Asia Tenggara</h2><p>PM2.5 cukup kecil untuk menembusi sawar paru-paru dan mengalir ke darah. Puncanya di rantau ini bermusim: pembakaran lahan dan gambut untuk pembukaan ladang (Februari\u2013Oktober) menghantar jerebu rentas sempadan ke Semenanjung, Sabah dan Sarawak, dan indeks udara sekolah menjadi faktor penutupan. Di bandar, gabungan trafik + habuk pembinaan mengekalkan bacaan sederhana walaupun langit nampak cerah. Masker pembedahan kurang berkesan berbanding respirator N95/FFP2 yang menempel rapat.</p>`
-    + `<h2 class="section-title">Tips dalaman</h2><p>Mengetat tingkap pada waktu puncak (6\u20139 pg, 6\u20139 ptg) mengurangkan pendedahan NO\u2083; menanam pokok dalaman tidak menapis PM2.5 secara bermakna \u2014 penapis HEPA bersaiz bilik jauh lebih berkesan. Jika AQI jalur 4\u20135, tukar senaman luar kepada waktu subuh atau petang lewat apabila bacaan biasanya lebih rendah.</p>`
-    + `<p class="meta">Sumber: OpenWeather Air Pollution API (tier percuma) \u00b7 rujukan panduan: WHO 24-jam. Bukan pengganti peralatan pemantauan rasmi.</p>`;
+    + `<h2 class="section-title">The OpenWeather AQI scale (1\u20135)</h2><table class="wx-table"><tr><th>Band</th><th>Health advice</th></tr>${bandRows}</table>`
+    + `<h2 class="section-title">Why PM2.5 matters in Southeast Asia</h2><p>PM2.5 is small enough to cross the lung barrier and enter the bloodstream. In this region the cause is seasonal: burning of land and peat to clear plantations (February\u2013October) sends haze across borders into the Peninsula, Sabah and Sarawak, and the school air index becomes a closure factor. In cities, traffic plus construction dust keeps readings moderate even when the sky looks clear. Surgical masks are far less effective than N95/FFP2 respirators that seal tightly to the face.</p>`
+    + `<h2 class="section-title">Indoor tips</h2><p>Keeping windows shut at rush hour (6\u20139 am, 6\u20139 pm) reduces NO\u2083 exposure; houseplants do not filter PM2.5 in any meaningful way \u2014 a room-sized HEPA filter is far more effective. If the AQI sits in bands 4\u20135, move outdoor exercise to dawn or late evening, when readings are usually lower.</p>`
+    + `<p class="meta">Source: OpenWeather Air Pollution API (free tier) \u00b7 guideline reference: WHO 24-hour values. Not a replacement for official monitoring equipment.</p>`;
   return cuacaDoc({
-    title: `Kualiti Udara di ${city.name} Hari Ini \u2014 AQI, PM2.5 & Ramalan Pencemaran | Tukuk-OS`,
-    desc: `AQI semasa ${city.name}: ${Number(item.main.aqi)} (${band.label}). Pecahan PM2.5, PM10, ozon, NO\u2082 + ramaman pencemaran dan panduan kesihatan berbahasa Melayu.`,
-    selfUrl, heroTitle: `Udara di ${city.name}`, heroSub: `Indeks kualiti udara langsung \u00b7 skala OpenWeather 1\u20135`,
+    title: `Air Quality in ${city.name} Today \u2014 AQI, PM2.5 & Pollution Forecast | Tukuk-OS`,
+    desc: `Current AQI in ${city.name}: ${Number(item.main.aqi)} (${band.label}). Breakdown of PM2.5, PM10, ozone, NO\u2082 + the pollution forecast and health advice.`,
+    selfUrl, heroTitle: `Air in ${city.name}`, heroSub: `Live air quality index \u00b7 OpenWeather scale 1\u20135`,
     ld: jsonLd, body,
   });
 }
 
-// ——— /cuaca/:slug/surya — terbit/terbenam/noon/golden hour (0 API tambahan) ———
+// ——— /cuaca/:slug/surya — sunrise/sunset/solar noon/golden hour (0 extra API calls) ———
 function cuacaSunPage(req, city, cur) {
   const tz = Number(cur.timezone) || 0;
   const rise = Number(cur.sunrise) || 0;
@@ -5284,155 +5285,155 @@ function cuacaSunPage(req, city, cur) {
   const noon = rise + (set - rise) / 2;
   const selfUrl = `https://tukuk.org/cuaca/${city.slug}/surya`;
   const rows = [
-    ['Matahari terbit', wxHHMM(rise, tz), 'Langit mula berwarna; burung mula berkicau'],
-    ['Waktu keemasan pagi', `${wxHHMM(rise + 15 * 60, tz)} \u2013 ${wxHHMM(rise + 45 * 60, tz)}`, 'Cahaya lembut condong \u2014 terbaik untuk potret & landskap'],
-    ['Tengah hari suria', wxHHMM(noon, tz), 'Matahari paling tinggi; bayang paling pendek; UV memuncak'],
-    ['Waktu keemasan petang', `${wxHHMM(set - 45 * 60, tz)} \u2013 ${wxHHMM(set - 5 * 60, tz)}`, 'Jam emas fotografer \u2014 warna keemasan & bayang panjang'],
-    ['Matahari terbenam', wxHHMM(set, tz), 'Selepas ini 20\u201340 minit “blue hour” untuk bandar'],
+    ['Sunrise', wxHHMM(rise, tz), 'The sky starts to colour; birds begin to sing'],
+    ['Morning golden hour', `${wxHHMM(rise + 15 * 60, tz)} \u2013 ${wxHHMM(rise + 45 * 60, tz)}`, 'Soft, slanted light \u2014 best for portraits & landscapes'],
+    ['Solar noon', wxHHMM(noon, tz), 'The sun at its highest; shortest shadows; UV peaks'],
+    ['Evening golden hour', `${wxHHMM(set - 45 * 60, tz)} \u2013 ${wxHHMM(set - 5 * 60, tz)}`, 'The photographer\u2019s golden hour \u2014 warm colour & long shadows'],
+    ['Sunset', wxHHMM(set, tz), 'Followed by 20\u201340 minutes of "blue hour" for city scenes'],
   ].map((r) => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${escapeHtml(r[2])}</td></tr>`).join('');
   const absLat = Math.abs(Number(city.lat) || 0);
   const seasonNote = absLat < 10
-    ? `Di ${escapeHtml(city.name)} (${absLat.toFixed(1)}\u00b0 lintang), panjang hari hampir tetap sepanjang tahun \u2014 sekitar ${lenH} jam ${lenM} minit, cuma berbeza \u00b1${Math.round(10 + absLat)} minit antara equinox dan soltis. Yang berubah ialah <em>waktu</em> terbit/terbenam, bukan jumlah cahaya.`
-    : `Pada lintang ${absLat.toFixed(1)}\u00b0, panjang hari ${escapeHtml(city.name)} berubah dengan ketara antara musim \u2014 hari ini ${lenH} jam ${lenM} minit; di musim panas lintang ia boleh mencecah 16\u201318 jam dan di musim dingin menyusut bawah 8 jam.`;
-  const body = `<p class="back-link"><a href="/cuaca/${city.slug}">\u2190 Cuaca ${escapeHtml(city.name)}</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Fasa bulan & gelap astronomi di sini \u2192</a></p>`
-    + `<div class="wx-hero"><div class="temp">\uD83C\uDF05 ${lenH}j ${lenM}m</div><div class="wmeta">panjang hari di ${escapeHtml(city.name)} \u00b7 ${wxDateMs(wxParts(cur.dt, tz))}</div></div>`
-    + `<table class="wx-table"><tr><th>Peristiwa</th><th>Waktu setempat</th><th>Makna</th></tr>${rows}</table>`
-    + `<h2 class="section-title">Mengapa panjang hari begitu</h2><p>${seasonNote} Penyebab musim ialah kecondongan paksi Bumi 23.4\u00b0 \u2014 bukan jarak ke matahari.Equinox (Mac & September) menyamakan siang dan malam di seluruh planet; soltis (Jun & Disember) memuncakkan perbezaan lintang.</p>`
-    + `<h2 class="section-title">Cara guna waktu keemasan</h2><p>“Golden hour” berlaku apabila matahari di bawah \u22486\u00b0: cahaya diserakkan lebih panjang jalannya, membiaki baki warna jingga. Untuk selfie/motosikal: elak matahari tepat hadapan pada tengah hari suria \u2014 bayang topi akan menutup mata. Untuk panel suria rumah: tengah hari suria (bukan jam 12:00 pada jam!) ialah puncak produksi \u2014 di Malaysia selalunya 12:30\u201313:10 setempat bergantung lokasi bujur.</p>`
-    + `<h2 class="section-title">Kaitan dengan cuaca</h2><p>Terbit/terbenam di halaman ini ialah kiraan astronomi; awan boleh “mencuri” 20\u201340 minit cahaya awal/akhir. Semak <a href="/cuaca/${city.slug}">ramalan awan ${escapeHtml(city.name)}</a> untuk litupan jam tersebut \u2014 litupan <20% menjanjikan matahari terbenam jelas, 40\u201370% ialah senario warna paling dramatik (awan menjadi kanvas pantulan).</p>`;
+    ? `In ${escapeHtml(city.name)} (${absLat.toFixed(1)}\u00b0 latitude), day length stays almost constant through the year \u2014 about ${lenH} hours ${lenM} minutes, varying only \u00b1${Math.round(10 + absLat)} minutes between equinox and solstice. What changes is the <em>timing</em> of sunrise and sunset, not the amount of light.`
+    : `At latitude ${absLat.toFixed(1)}\u00b0, the day length in ${escapeHtml(city.name)} shifts noticeably between seasons \u2014 today ${lenH} hours ${lenM} minutes; in high-latitude summer it can reach 16\u201318 hours and in winter shrink below 8 hours.`;
+  const body = `<p class="back-link"><a href="/cuaca/${city.slug}">\u2190 Weather in ${escapeHtml(city.name)}</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Moon phase & astronomical darkness here \u2192</a></p>`
+    + `<div class="wx-hero"><div class="temp">\uD83C\uDF05 ${lenH}h ${lenM}m</div><div class="wmeta">day length in ${escapeHtml(city.name)} \u00b7 ${wxDateLabel(wxParts(cur.dt, tz))}</div></div>`
+    + `<table class="wx-table"><tr><th>Event</th><th>Local time</th><th>What it means</th></tr>${rows}</table>`
+    + `<h2 class="section-title">Why the day is that long</h2><p>${seasonNote} The cause of the seasons is the 23.4\u00b0 tilt of Earth\u2019s axis \u2014 not the distance to the sun. The equinoxes (March & September) make day and night equal across the planet; the solstices (June & December) maximise the difference by latitude.</p>`
+    + `<h2 class="section-title">How to use the golden hour</h2><p>"Golden hour" happens while the sun sits below about 6\u00b0: light travels a longer path through the air and scatters away the blue, leaving orange tones. For selfies and motorcycling: avoid the sun straight ahead at solar noon \u2014 a cap brim will shadow your eyes. For home solar panels: solar noon (not 12:00 on the clock!) is the production peak \u2014 in Malaysia typically 12:30\u201313:10 local time depending on longitude.</p>`
+    + `<h2 class="section-title">The link to weather</h2><p>Sunrise and sunset on this page are astronomical calculations; cloud can "steal" the first and last 20\u201340 minutes of light. Check the <a href="/cuaca/${city.slug}">cloud forecast for ${escapeHtml(city.name)}</a> for coverage at those hours \u2014 coverage below 20% promises a clean sunset, 40\u201370% is the most colourful scenario (cloud becomes a reflection canvas).</p>`;
   return cuacaDoc({
-    title: `Waktu Matahari di ${city.name} \u2014 Terbit, Terbenam & Waktu Keemasan | Tukuk-OS`,
-    desc: `Matahari terbit ${wxHHMM(rise, tz)}, terbenam ${wxHHMM(set, tz)} waktu ${city.name} (${lenH}j ${lenM}m hari) + panduan golden hour untuk fotografer dan pemilik panel suria.`,
-    selfUrl, heroTitle: `Matahari di ${city.name}`, heroSub: 'Waktu astronomi setempat \u00b7 golden hour & tengah hari suria',
+    title: `Sun Times in ${city.name} \u2014 Sunrise, Sunset & Golden Hour | Tukuk-OS`,
+    desc: `Sunrise ${wxHHMM(rise, tz)}, sunset ${wxHHMM(set, tz)} in ${city.name} local time (${lenH}h ${lenM}m of daylight) + a golden-hour guide for photographers and solar-panel owners.`,
+    selfUrl, heroTitle: `Sun in ${city.name}`, heroSub: 'Local astronomical times \u00b7 golden hour & solar noon',
     body,
   });
 }
 
-// ——— /cuaca/peta — Leaflet + jubin OpenWeather percuma (hujan/awan/tekanan) ———
+// ——— /cuaca/peta — Leaflet + free OpenWeather tiles (rain/clouds/pressure) ———
 function cuacaMapPage(req) {
   const layers = [
-    ['weather_new', 'Hujan & ribut', true],
-    ['clouds_new', 'Awan', false],
-    ['pressure_new', 'Tekanan udara', false],
+    ['weather_new', 'Rain & storms', true],
+    ['clouds_new', 'Clouds', false],
+    ['pressure_new', 'Air pressure', false],
   ];
   const payload = JSON.stringify(layers.map(([l, label, def]) => ({ layer: l, label, def, url: wx.tileTemplateUrl(l) }))).replace(/</g, '\\u003c');
-  const body = `<p>Peta langsung berlapis cuaca OpenWeather \u2014 toglayer hujan, awan dan tekanan di atas jalan raya/terrain. Jubin dimuat pada resolusi dunia; cari kota anda di mana-mana benua, atau zum ke Singapura, Mumbai atau Lagos untuk melihat sel hujan petang tropika yang terkenal itu.</p>`
-    + `<div id="wxmap" role="application" aria-label="Peta cuaca langsung"></div>`
-    + `<noscript><p>Javascript diperlukan untuk peta interaktif. Senarai teks ada di <a href="/cuaca">hab cuaca</a> dan <a href="/cuaca/ekstrem">rekod suhu</a>.</p></noscript>`
-    + `<h2 class="section-title">Cara membaca</h2><p>Lapisan hujan mengikut skala warna: biru = hujan ringan, kuning\u2013merah = lebat/ribut. Corak “bintik-bintik” kecil di daratan Borneo pada waktu petang ialah konveksi setempat \u2014 awan guruh tumbuh dari panas tanah, bukan daripada front; sebab itu ramalan tropika cepat berubah dan nilai 45 minit cache kami sengaja pendek. Lapisan tekanan pula memaparkan isobar: jarak isobar rapat = angin kencang.</p>`
-    + `<h2 class="section-title">Kongsi dengan langit malam</h2><p>Peta ini memaparkan <em>awan sekarang</em> \u2014 musuh pemerhati bintang. Jika lapisan awan kosong di lokasi anda, semak pula <a href="/nasa/sky">Langit Malam Ini</a> untuk fasa bulan dan waktu gelap astronomi sebelum membentangkan teleskop.</p>`
-    + `<p class="meta">Jubin: \u00a9 <a href="https://openweathermap.org/" rel="noopener nofollow">OpenWeather</a> \u00b7 peta dasar: \u00a9 <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors.</p>`;
+  const body = `<p>A live map layered with OpenWeather weather \u2014 toggle rain, clouds and pressure over streets/terrain. Tiles load at world resolution; find your city on any continent, or zoom into Singapore, Mumbai or Lagos to watch the famous tropical afternoon rain cells form.</p>`
+    + `<div id="wxmap" role="application" aria-label="Live weather map"></div>`
+    + `<noscript><p>JavaScript is required for the interactive map. Text lists are on the <a href="/cuaca">weather hub</a> and <a href="/cuaca/ekstrem">temperature extremes</a>.</p></noscript>`
+    + `<h2 class="section-title">How to read it</h2><p>The rain layer follows a colour scale: blue = light rain, yellow\u2013red = heavy/thunderstorm. The small "speckled" pattern over inland Borneo in the late afternoon is local convection \u2014 storm clouds grow from heated ground rather than from a front; that is why tropical forecasts change fast and why our 45-minute cache value is deliberately short. The pressure layer shows isobars: closely spaced isobars mean strong wind.</p>`
+    + `<h2 class="section-title">Shared with the night sky</h2><p>This map shows <em>cloud right now</em> \u2014 the stargazer\u2019s enemy. If the cloud layer is empty over your location, check <a href="/nasa/sky">Tonight\u2019s Sky</a> for the moon phase and astronomical darkness before hauling out the telescope.</p>`
+    + `<p class="meta">Tiles: \u00a9 <a href="https://openweathermap.org/" rel="noopener nofollow">OpenWeather</a> \u00b7 base map: \u00a9 <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors.</p>`;
   const script = `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
     + `<script>document.addEventListener('DOMContentLoaded',function(){var WXP=${payload};function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('wxmap').setView([3.8,107],5);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'\\u00a9 OpenStreetMap'}).addTo(m);var ctl=[];WXP.forEach(function(o){var tl=L.tileLayer(o.url,{maxZoom:12,opacity:.8});if(o.def)tl.addTo(m);ctl.push({[o.label]:tl});});L.control.layers(null,ctl,{collapsed:false}).addTo(m);}boot();});</script>`;
   return cuacaDoc({
-    title: 'Peta Cuaca Langsung \u2014 Hujan, Awan & Tekanan Seluruh Dunia (OpenWeather) | Tukuk-OS',
-    desc: 'Peta interaktif percuma: lapiskan hujan, awan dan tekanan udara OpenWeather atas OpenStreetMap. Zum ke bandar anda dan lihat cuaca bergerak sekarang.',
+    title: 'Live Weather Map \u2014 Rain, Clouds & Pressure Worldwide (OpenWeather) | Tukuk-OS',
+    desc: 'A free interactive map: layer OpenWeather rain, clouds and air pressure over OpenStreetMap. Zoom into your city and watch the weather move right now.',
     selfUrl: 'https://tukuk.org/cuaca/peta',
-    heroTitle: 'Peta Cuaca Langsung', heroSub: 'Jubin OpenWeather \u00b7 hujan + awan + tekanan \u00b7 interaktif',
-    heroHtml: 'Peta Cuaca Langsung \uD83D\uDDFA',
+    heroTitle: 'Live Weather Map', heroSub: 'OpenWeather tiles \u00b7 rain + clouds + pressure \u00b7 interactive',
+    heroHtml: 'Live Weather Map \uD83D\uDDFA',
     body: body + script,
     ld: JSON.stringify({
-      '@context': 'https://schema.org', '@type': 'Map', name: 'Peta Cuaca Langsung Tukuk-OS',
-      description: 'Slippy map hujan/awan/tekanan OpenWeather', url: 'https://tukuk.org/cuaca/peta',
+      '@context': 'https://schema.org', '@type': 'Map', name: 'Tukuk-OS Live Weather Map',
+      description: 'Slippy map of OpenWeather rain/cloud/pressure layers', url: 'https://tukuk.org/cuaca/peta',
       contentUrl: wx.tileTemplateUrl('weather_new').replace('{z}/{x}/{y}', '5/24/40'),
       license: 'https://openweathermap.org/terms-of-use',
     }).replace(/</g, '\\u003c'),
   });
 }
 
-// ——— /cuaca/ekstrem — daripada snapshot kota featured (sifar API tambahan) ———
+// ——— /cuaca/ekstrem — from the featured-city snapshot (zero extra API calls) ———
 function cuacaExtremesPage(req, snap) {
   const rowsOf = (list, cell) => list.map(({ city, cur }) => `<tr><td><a href="/cuaca/${city.slug}">${escapeHtml(city.name)}</a></td><td>${cell(cur)}</td></tr>`).join('');
   const byTemp = [...snap].sort((a, b) => b.cur.main.temp - a.cur.main.temp);
   const hot = byTemp.slice(0, 6); const cold = byTemp.slice(-6).reverse();
   const windy = [...snap].sort((a, b) => b.cur.wind.speed - a.cur.wind.speed).slice(0, 6);
   const humid = [...snap].sort((a, b) => (b.cur.main.humidity || 0) - (a.cur.main.humidity || 0)).slice(0, 6);
-  const body = `<p>Daripada ${snap.length} kota pantauan langsung kami \u2014 senarai disusun daripada bacaan semasa OpenWeather, jadi nilai berubah setiap jam. Ini bukan rekod rasmi dunia (stesen gurun terpencil tidak dipantau di sini), tetapi cermin “dua dunia” iklim planet: kota tropika lembap, kota kontinental sejuk dan litar angin kutub.</p>`
-    + `<h2 class="section-title">\uD83D\uDD25 Paling panas sekarang</h2><table class="wx-table"><tr><th>Kota</th><th>Suhu</th></tr>${rowsOf(hot, (c) => `${wxTempC(c.main.temp)} (rasa ${wxTempC(c.main.feels_like)})`)}</table>`
-    + `<h2 class="section-title">\uD83E\uDD76 Paling sejuk</h2><table class="wx-table"><tr><th>Kota</th><th>Suhu</th></tr>${rowsOf(cold, (c) => `${wxTempC(c.main.temp)} (rasa ${wxTempC(c.main.feels_like)})`)}</table>`
-    + `<h2 class="section-title">\uD83D\uDCA8 Paling berangin</h2><table class="wx-table"><tr><th>Kota</th><th>Angin</th></tr>${rowsOf(windy, (c) => `${wxKmh(c.wind.speed)} km/j \u00b7 Beaufort ${wx.beaufort(wxKmh(c.wind.speed))[0]}`)}</table>`
-    + `<h2 class="section-title">\uD83D\uDCA7 Paling lembap</h2><table class="wx-table"><tr><th>Kota</th><th>Kelembapan</th></tr>${rowsOf(humid, (c) => `${Number(c.main.humidity) || 0}%`)}</table>`
-    + `<h2 class="section-title">Bacaan silang: mengapa “rasa” berbeza</h2><p>Indeks heat (rasa sebenar) menggabungkan suhu + kelembapan: pada 35\u00b0C dengan 60% kelembapan, tubuh insan terasa seperti 45\u00b0C+ kerana peluh berhenti menyejat \u2014 mekanisme penyejukan semula jadi kita. Sebaliknya angin kencang menurunkan “wind chill” di kota sejuk. Dua sebab itu juga menjelaskan kenapa Kuala Lumpur (33\u00b0C, 60%+) lebih meletihkan daripada Dubai (40\u00b0C, 20%) walaupun nombornya lebih rendah.</p>`
-    + `<h2 class="section-title">Rekod sebenar planet</h2><p>Tempat terpanas tercatat di Bumi: Death Valley, AS \u2014 56.7\u00b0C (1913, dipertikaikan) / 54.4\u00b0C (2020-21 diterima). Terdingin: stesen Vostok, Antartika \u2014 \u221289.2\u00b0C (1983). Angin paling kuat terpantau: Barrow Ridge, Antartika, ~400 km/j katabatik. Kota terbesar “terpanas berkembar” lazimnya di zon gurun Arab/Sahara; kota “terlembap” di delta khatulistiwa seperti our own Kuching dan Kolkata.</p>`;
+  const body = `<p>From the ${snap.length} cities in our live watch list \u2014 the lists are sorted by the current OpenWeather readings, so the values change every hour. This is not the official world record book (remote desert stations are not monitored here), but it mirrors the "two worlds" of planetary climate: humid tropical cities, cold continental cities and the polar wind circuit.</p>`
+    + `<h2 class="section-title">\uD83D\uDD25 Hottest right now</h2><table class="wx-table"><tr><th>City</th><th>Temperature</th></tr>${rowsOf(hot, (c) => `${wxTempC(c.main.temp)} (feels like ${wxTempC(c.main.feels_like)})`)}</table>`
+    + `<h2 class="section-title">\uD83E\uDD76 Coldest</h2><table class="wx-table"><tr><th>City</th><th>Temperature</th></tr>${rowsOf(cold, (c) => `${wxTempC(c.main.temp)} (feels like ${wxTempC(c.main.feels_like)})`)}</table>`
+    + `<h2 class="section-title">\uD83D\uDCA8 Windiest</h2><table class="wx-table"><tr><th>City</th><th>Wind</th></tr>${rowsOf(windy, (c) => `${wxKmh(c.wind.speed)} km/h \u00b7 Beaufort ${wx.beaufort(wxKmh(c.wind.speed))[0]}`)}</table>`
+    + `<h2 class="section-title">\uD83D\uDCA7 Most humid</h2><table class="wx-table"><tr><th>City</th><th>Humidity</th></tr>${rowsOf(humid, (c) => `${Number(c.main.humidity) || 0}%`)}</table>`
+    + `<h2 class="section-title">Cross-reading: why "feels like" differs</h2><p>The heat index combines temperature and humidity: at 35\u00b0C with 60% humidity the body experiences 45\u00b0C+ because sweat stops evaporating \u2014 our natural cooling mechanism. Strong wind does the opposite, lowering the wind chill in cold cities. Those two effects also explain why Kuala Lumpur (33\u00b0C, 60%+) is more exhausting than Dubai (40\u00b0C, 20%) despite the lower number.</p>`
+    + `<h2 class="section-title">Real planetary records</h2><p>The hottest reliably recorded place on Earth: Death Valley, USA \u2014 56.7\u00b0C (1913, disputed) / 54.4\u00b0C (accepted 2020-21). Coldest: Vostok station, Antarctica \u2014 \u221289.2\u00b0C (1983). Strongest measured wind: Barrow Ridge, Antarctica, ~400 km/h katabatic flow. The largest "hottest twin" cities usually sit in the Arab/Sahara desert belt; the most humid large cities sit in equatorial deltas such as Kuching and Kolkata.</p>`;
   return cuacaDoc({
-    title: 'Ekstrem Cuaca Dunia Sekarang \u2014 Kota Paling Panas & Sejuk | Tukuk-OS',
-    desc: 'Susunan langsung kota terpanas, terdingin, berangin dan lembap di seluruh dunia, dikira setiap jam daripada OpenWeather + penjelasan indeks heat & rekod planet.',
+    title: 'World Weather Extremes Right Now \u2014 Hottest & Coldest Cities | Tukuk-OS',
+    desc: 'A live ranking of the hottest, coldest, windiest and most humid cities worldwide, recomputed every hour from OpenWeather + an explanation of the heat index and planetary records.',
     selfUrl: 'https://tukuk.org/cuaca/ekstrem',
-    heroTitle: 'Ekstrem Dunia Sekarang', heroSub: `Disusun daripada ${snap.length} kota pantauan \u00b7 kemas kini setiap jam`,
+    heroTitle: 'World Extremes Right Now', heroSub: `Ranked from ${snap.length} watched cities \u00b7 updated hourly`,
     body,
   });
 }
 
-// ——— /cuaca/kod — jadual penuh 55 kod OpenWeather BM (statik, boleh indeks) ———
+// ——— /cuaca/kod — the full 55-code OpenWeather table (static, indexable) ———
 function cuacaCodesPage(req) {
   const GRUP = [
-    [2, 'Ribut petir (2xx)', 'Guruh + kilat; paling berbahaya di tempat terbuka dan dekat air'],
-    [3, 'Renyai (3xx)', 'titisan halus < 0.5 mm — nampak ringan tapi boleh licin lama'],
-    [5, 'Hujan (5xx)', 'titisan > 0.5 mm; 520\u2013531 = renyai tropika singkat yang kita kenali'],
-    [6, 'Salji & beku (6xx)', 'kristal ais, graupel dan hujan beku \u2014 sifar di Malaysia, ngeri di lintang tinggi'],
-    [7, 'Atmosfera (7xx)', 'kabus, jerebu, debu, asap \u2014 pengurai jarak nampak, bukan hujan'],
-    [8, 'Langit (8xx)', 'skala litupan awan 0\u2013100% \u2014 800 cerah sampai 804 awan penuh'],
+    [2, 'Thunderstorm (2xx)', 'thunder with lightning; the most dangerous group outdoors and near water'],
+    [3, 'Drizzle (3xx)', 'fine drops under 0.5 mm — looks light but can keep roads slippery for hours'],
+    [5, 'Rain (5xx)', 'drops above 0.5 mm; 520\u2013531 = the short tropical showers we know well'],
+    [6, 'Snow & freezing (6xx)', 'ice crystals, graupel and freezing rain \u2014 zero in Malaysia, terrifying at high latitude'],
+    [7, 'Atmosphere (7xx)', 'fog, haze, dust, smoke \u2014 they cut visibility but they are not rain'],
+    [8, 'Sky (8xx)', 'the 0\u2013100% cloud cover scale \u2014 800 clear up to 804 fully overcast'],
   ];
   const sections = GRUP.map(([g, label, nota]) => {
     const rows = wx.OW_CODES.filter((c) => Math.floor(c.id / 100) === g)
-      .map((c) => `<tr><td>${c.id}</td><td>${c.emoji}</td><td>${escapeHtml(c.ms)}</td><td>${escapeHtml(c.en)}</td></tr>`).join('');
+      .map((c) => `<tr><td>${c.id}</td><td>${c.emoji}</td><td>${escapeHtml(c.en)}</td><td>${escapeHtml(c.meaning)}</td></tr>`).join('');
     return `<h2 class="section-title">${label}</h2><p>${escapeHtml(nota)}</p>`
-      + `<table class="wx-table"><tr><th>Kod</th><th>Ikon</th><th>Bahasa Melayu</th><th>English</th></tr>${rows}</table>`;
+      + `<table class="wx-table"><tr><th>Code</th><th>Icon</th><th>Condition</th><th>What it means</th></tr>${rows}</table>`;
   }).join('');
-  const body = `<p>Setiap bacaan di Kompleks Cuaca kami bermula daripada satu nombor kod keadaan OpenWeather. Ini terjemahan rasminya \u2014 guna untuk memahami API, aplikasi anda, atau sekadar ingin tahu apa beza 802 dengan 804.</p>`
+  const body = `<p>Every reading in our Weather Complex starts from one OpenWeather condition code number. This is the official wording \u2014 useful for understanding the API, your own apps, or simply the difference between 802 and 804.</p>`
     + sections
-    + `<h2 class="section-title">Butiran teknikal</h2><p>Kod dikumpul dalam kumpulan 100 dan setiap kod juga ada deskripsi teks (contoh “light intensity shower rain”). Ikon cuaca OpenWeather (01d\u201350n) mengikuti kod yang sama dengan varian siang (<code>d</code>)/malam (<code>n</code>) \u2014 sebab itu 800 malam dilukis bulan, bukan matahari. Halaman kami menukar kedua-duanya kepada label Melayu + emoji supaya mudah dibaca tanpa log masuk.</p>`
-    + `<h2 class="section-title">Lihat kod ini beraksi</h2><p>Nak bandingkan dengan langit sekarang? Buka <a href="/cuaca/peta">peta langsung</a> atau semak <a href="/cuaca">cuaca dunia di kota anda</a> \u2014 setiap halaman kota memaparkan kod aktifnya.</p>`;
+    + `<h2 class="section-title">Technical detail</h2><p>Codes are grouped by hundreds and each code also carries a text description (for example "light intensity shower rain"). The OpenWeather weather icons (01d\u201350n) follow the same codes with day (<code>d</code>)/night (<code>n</code>) variants \u2014 which is why an 800 evening is drawn as a moon, not a sun. Our pages turn both into a plain label plus an emoji so they read easily without any login.</p>`
+    + `<h2 class="section-title">See these codes in action</h2><p>Want to compare with the sky above you? Open the <a href="/cuaca/peta">live map</a> or check <a href="/cuaca">world weather in your city</a> \u2014 every city page shows its active code.</p>`;
   return cuacaDoc({
-    title: 'Kod Cuaca OpenWeather \u2014 Maksud Setiap Ikon & Nombor (Bahasa Melayu) | Tukuk-OS',
-    desc: 'Senarai penuh 55 kod keadaan OpenWeather dengan terjemahan Bahasa Melayu, emoji dan penjelasan \u2014 daripada ribut petir 2xx sampai awan penuh 804.',
+    title: 'OpenWeather Condition Codes \u2014 What Every Icon & Number Means | Tukuk-OS',
+    desc: 'The full list of 55 OpenWeather condition codes with labels, emoji and plain explanations \u2014 from thunderstorm 2xx to fully overcast 804.',
     selfUrl: 'https://tukuk.org/cuaca/kod',
-    heroTitle: 'Kamus Kod Cuaca', heroSub: '55 kod OpenWeather \u00b7 EN \u2194 BM \u00b7 ikon & makna',
+    heroTitle: 'Weather Code Dictionary', heroSub: '55 OpenWeather codes \u00b7 icons & meanings',
     body,
   });
 }
 
-// ——— /cuaca/awan — panduan 10 jenis awan (statik) ———
+// ——— /cuaca/awan — guide to the 10 cloud genera (static) ———
 function cuacaCloudPage(req) {
   const AWAN = [
-    ['Cirrus', 'awan bulu halus tinggi (6\u201313 km)', 'hablur ais; isyarat perubahan cuaca 24\u201348 jam'],
-    ['Cirrocumulus', 'corak “skala ikan” kecil tinggi', 'titisan superjuk; cantik bergambar, kadangkala petanda ribut petang'],
-    ['Cirrostratus', 'selubung putih tipis, halo bulan/matahari', 'halo = cahaya bias melalui kristal ais; hujan mungkin dalam 12\u201324 jam'],
-    ['Altocumulus', 'belon kelabu-sederhana 2\u20137 km', 'stabil pagi, boleh jadi ribut petang tropika'],
-    ['Altostratus', 'kelabu rata separuh langit', 'hujan berterusan menghampiri; matahari nampak samar'],
-    ['Nimbostratus', 'lapisan tebal kelabam 1\u20134 km', 'hujan/renyai tetap berjam-jam; penutup bumbung terbaik'],
-    ['Stratocumulus', 'gumpal rendah bergaris', 'jenis awan paling biasa di dunia; jarang hujan lebat'],
-    ['Stratus', 'lapisan rendah = kabus permukaan', 'drizzle halus, jarak nampak rendah'],
-    ['Cumulus', 'gobok belon “cuaca baik” 0.5\u20132 km', 'pagi menawan; jika tumbuh tinggi lewat petang → calon ribut'],
-    ['Cumulonimbus', 'menara ribut 1\u201315 km, landasan (incus)', 'guruh, kilat, hujan lebat, angin burst dan sesekali hujan batu (hail)'],
+    ['Cirrus', 'high, feathery hair-thin cloud (6\u201313 km)', 'ice filaments; a sign the weather changes within 24\u201348 hours'],
+    ['Cirrocumulus', 'small high "mackerel scales" pattern', 'supercooled droplets; photogenic, sometimes a hint of afternoon storms'],
+    ['Cirrostratus', 'thin white veil, halo around moon/sun', 'the halo is light refracting through ice crystals; rain likely within 12\u201324 hours'],
+    ['Altocumulus', 'mid-level grey patches at 2\u20137 km', 'stable in the morning, can build into tropical afternoon storms'],
+    ['Altostratus', 'flat grey sheet over half the sky', 'a steady rain approaching; the sun shows through only dimly'],
+    ['Nimbostratus', 'dark thick layer at 1\u20134 km', 'steady rain or drizzle for hours; the best roof-cover cloud'],
+    ['Stratocumulus', 'low lumpy bands', 'the most common cloud type on Earth; rarely heavy rain'],
+    ['Stratus', 'low layer = fog at the ground', 'light drizzle, low visibility'],
+    ['Cumulus', 'puffy "fair weather" towers at 0.5\u20132 km', 'lovely in the morning; if they grow tall by late afternoon they are storm candidates'],
+    ['Cumulonimbus', 'storm tower 1\u201315 km with an anvil top (incus)', 'thunder, lightning, heavy rain, gust fronts and occasional hail'],
   ];
   const rows = AWAN.map((a) => `<tr><td><b>${a[0]}</b></td><td>${escapeHtml(a[1])}</td><td>${escapeHtml(a[2])}</td></tr>`).join('');
-  const body = `<p>Klasifikasi awan moden dicipta Luke Howard pada 1803 \u2014 menggunakan Latin: <em>cirrus</em> (keriting), <em>cumulus</em> (bertimbun), <em>stratus</em> (berlapis) dan <em>nimbus</em> (hujan). Sepuluh genus hari ini masih anak kepada empat kata itu. Bila halaman kota kami memaparkan “Litupan awan 62%”, nombor itu gabungan genus-genus ini yang dikesan satelit + model.</p>`
-    + `<table class="wx-table"><tr><th>Jenis</th><th>Rupa & ketinggian</th><th>Makna cuaca</th></tr>${rows}</table>`
-    + `<h2 class="section-title">Senjang ribut di khatulistiwa</h2><p>Di Malaysia, kitaran harian lebih penting daripada front bermusim: pemanasan tanah pagi → cumulus membengkak tengah hari → cumulonimbus hujan ribut 4\u20137 petang → langit bersih malam. Ini sebab ramalan “hujan petang” hampir selalu tepat di Semenanjung, dan sebab <a href="/cuaca/kuching">cuaca Kuching</a> kami cache cuma 45 minit.</p>`
-    + `<h2 class="section-title">Awan & astronomi</h2><p>Pemerhati bintang tahu litupan awan ialah penentu utama: 0% + bulan baru = malam terbaik. Semak <a href="/nasa/sky">Langit Malam Ini</a> untuk fasa bulan, kemudian <a href="/cuaca/peta">peta awan langsung</a> untuk memastikan langit anda benar-benar kosong sebelum memikul teleskop.</p>`;
+  const body = `<p>Modern cloud classification was created by Luke Howard in 1803 \u2014 in Latin: <em>cirrus</em> (curled), <em>cumulus</em> (heaped), <em>stratus</em> (layered) and <em>nimbus</em> (rain). The ten genera we use today are still children of those four words. When our city pages show "Cloud cover 62%", that number is a blend of these genera detected by satellite plus model.</p>`
+    + `<table class="wx-table"><tr><th>Type</th><th>Shape & height</th><th>What it means for weather</th></tr>${rows}</table>`
+    + `<h2 class="section-title">The equatorial storm cycle</h2><p>In Malaysia the daily cycle matters more than seasonal fronts: morning ground heating \u2192 cumulus swelling by midday \u2192 cumulonimbus thunderstorms between 4 and 7 pm \u2192 a clear night. That is why the "afternoon rain" forecast is almost always right on the Peninsula, and why we cache <a href="/cuaca/kuching">Kuching weather</a> for only 45 minutes.</p>`
+    + `<h2 class="section-title">Cloud & astronomy</h2><p>Stargazers know that cloud cover is the deciding factor: 0% plus a new moon = the best night. Check <a href="/nasa/sky">Tonight\u2019s Sky</a> for the moon phase, then the <a href="/cuaca/peta">live cloud map</a> to be sure your sky is really empty before carrying out the telescope.</p>`;
   return cuacaDoc({
-    title: 'Jenis-Jenis Awan \u2014 Panduan Membaca Langit (Cirrus sampai Cumulonimbus) | Tukuk-OS',
-    desc: '10 genus awan dijelaskan dalam Bahasa Melayu: rupa, ketinggian dan apa masing-masing isyaratkan tentang cuaca 24 jam akan datang.',
+    title: 'Cloud Types \u2014 A Guide to Reading the Sky (Cirrus to Cumulonimbus) | Tukuk-OS',
+    desc: 'The 10 cloud genera explained: shape, altitude and what each one signals about the weather in the next 24 hours.',
     selfUrl: 'https://tukuk.org/cuaca/awan',
-    heroTitle: 'Baca Langit: 10 Jenis Awan', heroSub: 'Klasifikasi Luke Howard 1803 \u00b7 panduan lapangan moden',
+    heroTitle: 'Read the Sky: 10 Cloud Types', heroSub: 'Luke Howard classification 1803 \u00b7 a modern field guide',
     body,
   });
 }
 
-// ——— /cuaca/angin — skala Beaufort + monsun (statik) ———
+// ——— /cuaca/angin — Beaufort scale + monsoons (static) ———
 function cuacaWindPage(req) {
-  const rows = wx.BEAUFORT.map((b) => `<tr><td>${b[0]}</td><td>${b[1]} km/j</td><td><b>${escapeHtml(b[2])}</b></td><td>${escapeHtml(b[3])}</td></tr>`).join('');
-  const body = `<p>Sebelum anemometer tersebar, pelaut mengukur angin dengan mata \u2014 dan skala Beaufort (1805, Francis Beaufort) kekal cara terbaik “meras” nombor km/j. Setiap halaman kota kami memaparkan nombor Beaufort bersebelahan kelajuan angin; ini jadual penuhnya.</p>`
-    + `<table class="wx-table"><tr><th>Tahap</th><th>Kelajuan</th><th>Nama</th><th>Cerita di laut & darat</th></tr>${rows}</table>`
-    + `<h2 class="section-title">Dua monsun Malaysia</h2><p>Angin di rantau kita bertukak arah dua kali setahun. <b>Monsun Barat Daya</b> (Mei\u2013September) lebih kering di Semenanjung tapi membasahkan Sabah luar pesisir barat; <b>Monsun Timur Laut</b> (November\u2013Mac) menghantar hujan monsun ke pantai timur Semenanjung (Kelantan, Terengganu, Pahang) dan sering membanjiri Kota Bharu &\u00a0Kuantan, sementara KL dan Kuching kekal lebih kering. Angin lemah monsun + asap pembakaran = jerebu (kod 721) \u2014 sebab itu musim Jun\u2013September ialah musim AQI teruk, bukan musim hujan.</p>`
-    + `<h2 class="section-title">Bahaya praktikal</h2><p>Beaufort 7+ = sukar menunggang motosikal dalam hujan ribut (daya samping + tayar licin). Beaufort 9+ = larat keluar rumah; pohon tumbang ialah pembunuh №1 ribut di subtropika. Nombor angin semasa di <a href="/cuaca/ekstrem">halaman ekstrem</a> kami sentiasa menunjukkan kota yang sudah mencecah tahap bahaya itu.</p>`
-    + `<h2 class="section-title">Arah angin</h2><p>Bacaan “angin 240\u00b0” bermaksud angin <em>datang dari</em> 240\u00b0 (barat daya) \u2014 konvensyen meteorologi yang mengelirukan ramai. Bawah angin (leeward) ialah sisi yang dilindungi; sebab itu hujan orografik turun di sisi windward Sarawak dan kering di sisi lindung (leeward).</p>`;
+  const rows = wx.BEAUFORT.map((b) => `<tr><td>${b[0]}</td><td>${b[1]} km/h</td><td><b>${escapeHtml(b[2])}</b></td><td>${escapeHtml(b[3])}</td></tr>`).join('');
+  const body = `<p>Before anemometers were everywhere, sailors measured wind with their eyes \u2014 and the Beaufort scale (1805, Francis Beaufort) is still the best way to "feel" a km/h number. Every city page of ours shows the Beaufort number next to the wind speed; here is the full table.</p>`
+    + `<table class="wx-table"><tr><th>Level</th><th>Speed</th><th>Name</th><th>What it looks like at sea and on land</th></tr>${rows}</table>`
+    + `<h2 class="section-title">Malaysia\u2019s two monsoons</h2><p>The wind in our region reverses direction twice a year. The <b>Southwest Monsoon</b> (May\u2013September) is drier on the Peninsula but wets offshore western Sabah; the <b>Northeast Monsoon</b> (November\u2013March) sends monsoon rain to the Peninsula\u2019s east coast (Kelantan, Terengganu, Pahang) and regularly floods Kota Bharu &\u00a0Kuantan while Kuala Lumpur and Kuching stay comparatively dry. Weak monsoon wind plus smoke from burning = haze (code 721) \u2014 which is why June\u2013September is the bad-AQI season, not the rainy season.</p>`
+    + `<h2 class="section-title">Practical danger</h2><p>Beaufort 7+ = hard to ride a motorcycle in storm rain (sideways force plus slippery tyres). Beaufort 9+ = staying indoors is the right call; falling trees are the number-one storm killer in the subtropics. The live wind numbers on our <a href="/cuaca/ekstrem">extremes page</a> always show which cities have already reached those levels.</p>`
+    + `<h2 class="section-title">Wind direction</h2><p>A reading of "wind 240\u00b0" means the wind <em>comes from</em> 240\u00b0 (southwest) \u2014 a meteorological convention that confuses many people. Leeward is the sheltered side; that is why orographic rain falls on Sarawak\u2019s windward slope and stays dry in the rain shadow behind it.</p>`;
   return cuacaDoc({
-    title: 'Skala Angin Beaufort 0\u201312 & Monsun Malaysia \u2014 Panduan Kelajuan Angin | Tukuk-OS',
-    desc: 'Jadual Beaufort penuh dalam Bahasa Melayu + penjelasan monsun barat daya/timur laut, bahaya angin untuk motosikal dan cara baca arah angin meteorologi.',
+    title: 'Beaufort Wind Scale 0\u201312 & Monsoon Winds \u2014 A Wind Speed Guide | Tukuk-OS',
+    desc: 'The complete Beaufort table plus an explanation of the southwest and northeast monsoons, the danger of wind for motorcyclists and how to read meteorological wind direction.',
     selfUrl: 'https://tukuk.org/cuaca/angin',
-    heroTitle: 'Angin: Skala Beaufort & Monsun', heroSub: '1805 sampai hari ini \u00b7 daripada angan-angan sampai badai',
+    heroTitle: 'Wind: Beaufort Scale & Monsoons', heroSub: '1805 to today \u00b7 from a breeze to a storm',
     body,
   });
 }
@@ -5471,7 +5472,7 @@ function gempaDoc(o) {
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -5484,7 +5485,7 @@ function gempaDoc(o) {
 <meta property="og:description" content="${escapeHtml(o.desc)}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -5669,7 +5670,7 @@ function cutiDoc(o) {
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -5682,7 +5683,7 @@ function cutiDoc(o) {
 <meta property="og:description" content="${escapeHtml(o.desc)}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -6147,7 +6148,7 @@ function negaraDoc(o) {
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -6160,7 +6161,7 @@ function negaraDoc(o) {
 <meta property="og:description" content="${escapeHtml(o.desc)}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -6369,7 +6370,7 @@ function statistikDoc(o) {
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -6382,7 +6383,7 @@ function statistikDoc(o) {
 <meta property="og:description" content="${escapeHtml(o.desc)}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -6535,7 +6536,7 @@ function bencanaDoc(o) {
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -6548,7 +6549,7 @@ function bencanaDoc(o) {
 <meta property="og:description" content="${escapeHtml(o.desc)}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
@@ -13743,7 +13744,7 @@ app.get('/blog/:slug', (req, res) => {
 <meta property="og:image" content="${ogImage}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:locale" content="ms_MY">
+<meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="${escapeHtml(post.createdAt)}">
 <meta property="article:modified_time" content="${escapeHtml(post.updatedAt || post.createdAt)}">
 <meta property="article:author" content="${eAuthor}">

@@ -1,10 +1,10 @@
 'use strict';
-// ── TUKUK-OS WEATHER COMPLEX — OpenWeather API (tier PERCUMA sahaja) ──────────
-// Endpoint guna: /data/2.5/weather (semasa), /data/2.5/forecast (5 hari/3 jam),
-// /data/2.5/air_pollution (+ /forecast), /geo/1.0/direct (geokoding), dan jubin
-// peta /map/{layer}/{z}/{x}/{y}.png?appid. Sejarah + OneCall = berbayar → dielak.
-// Pelindung kuota: pemfailan >1x429 → breaker 15 minit; kiraan panggilan harian
-// dipagari config.weather.dailyBudget — lebih bajet hanya hidang cache (stale).
+// ── TUKUK-OS WEATHER COMPLEX — OpenWeather API (FREE tier only) ──────────────
+// Endpoints used: /data/2.5/weather (current), /data/2.5/forecast (5 days/3h),
+// /data/2.5/air_pollution (+ /forecast), /geo/1.0/direct (geocoding), and the map
+// tiles /map/{layer}/{z}/{x}/{y}.png?appid. History + OneCall = paid → avoided.
+// Quota guard: more than one 429 → 15-minute breaker; daily call count is capped by
+// config.weather.dailyBudget — over budget we only serve cache (stale).
 const axios = require('axios');
 const config = require('./config');
 
@@ -26,14 +26,14 @@ function getCache(key) {
 function setCache(key, data, ttlMs = DEFAULT_TTL) {
   cache.set(key, { data, expiresAt: Date.now() + ttlMs });
   if (cache.size > 400) {
-    // Buang entri TAMAT TEMPOH paling lama supaya kota popular kekal panas.
+    // Drop the entries with the OLDEST EXPIRY so popular cities stay warm.
     let oldestKey = null; let oldest = Infinity;
     for (const [k, v] of cache) if (v.expiresAt < oldest) { oldest = v.expiresAt; oldestKey = k; }
     if (oldestKey) cache.delete(oldestKey);
   }
 }
 
-// ——— Kiraan bajet harian (UTC) + pemutus litar ———
+// ——— Daily budget call count (UTC) + circuit breaker ———
 let callDay = '';
 let callCount = 0;
 let breakerUntil = 0;
@@ -49,8 +49,8 @@ class WeatherDownError extends Error {}
 async function owGet(pathname, params) {
   const day = new Date().toISOString().slice(0, 10);
   if (day !== callDay) { callDay = day; callCount = 0; }
-  if (Date.now() < breakerUntil) throw new WeatherDownError('OpenWeather breaker aktif');
-  if (callCount >= (config.weather.dailyBudget || 950)) throw new WeatherDownError('Bajet API harian habis');
+  if (Date.now() < breakerUntil) throw new WeatherDownError('OpenWeather circuit breaker is active');
+  if (callCount >= (config.weather.dailyBudget || 950)) throw new WeatherDownError('Daily API budget exhausted');
   callCount += 1;
   const res = await http.get(`${config.weather.baseUrl}${pathname}`, {
     params: { ...params, appid: config.weather.apiKey, units: 'metric' },
@@ -60,16 +60,16 @@ async function owGet(pathname, params) {
 
 function markBreaker(err) {
   const status = err && err.response && err.response.status;
-  // 429 = had kadar; 401 = kunci tidak dibenarkan endpoint → rehat seketika
+  // 429 = rate limit; 401/403 = key not allowed on this endpoint → back off briefly
   if (status === 429 || status === 401 || status === 403) {
     breakerUntil = Date.now() + 15 * 60 * 1000;
   }
 }
 
-// ——— Data kota tetap (sumber slug yang boleh diramal + hab pautan) ———
-// [slug, nama, cc, negara, lat, lon, featured(0/1)]
+// ——— Fixed city data (predictable slugs + link hub) ———
+// [slug, name, cc, country, lat, lon, featured(0/1)]
 const CITY_ROWS = [
-  // Malaysia — semua ibu negeri + bandar utama (Serian = kampung halaman ✦)
+  // Malaysia — every state capital + main cities (Serian = home town ✦)
   ['serian', 'Serian', 'MY', 'Malaysia', 1.1333, 110.5667, 1],
   ['kuching', 'Kuching', 'MY', 'Malaysia', 1.58, 110.31, 1],
   ['sibu', 'Sibu', 'MY', 'Malaysia', 5.18, 111.82, 0],
@@ -95,23 +95,23 @@ const CITY_ROWS = [
   ['langkawi', 'Langkawi', 'MY', 'Malaysia', 6.35, 99.8, 0],
   ['taiping', 'Taiping', 'MY', 'Malaysia', 4.85, 100.74, 0],
   // Asia
-  ['singapore', 'Singapore', 'SG', 'Singapura', 1.2897, 103.8501, 1],
+  ['singapore', 'Singapore', 'SG', 'Singapore', 1.2897, 103.8501, 1],
   ['jakarta', 'Jakarta', 'ID', 'Indonesia', -6.2088, 106.8456, 1],
   ['bandung', 'Bandung', 'ID', 'Indonesia', -6.9175, 107.6191, 0],
   ['surabaya', 'Surabaya', 'ID', 'Indonesia', -7.2575, 112.7521, 0],
   ['denpasar', 'Denpasar', 'ID', 'Indonesia', -8.6705, 115.2126, 0],
-  ['manila', 'Manila', 'PH', 'Filipina', 14.5995, 120.9842, 1],
-  ['cebu', 'Cebu City', 'PH', 'Filipina', 10.3157, 123.8854, 0],
+  ['manila', 'Manila', 'PH', 'Philippines', 14.5995, 120.9842, 1],
+  ['cebu', 'Cebu City', 'PH', 'Philippines', 10.3157, 123.8854, 0],
   ['bangkok', 'Bangkok', 'TH', 'Thailand', 13.7563, 100.5018, 1],
   ['chiang-mai', 'Chiang Mai', 'TH', 'Thailand', 18.7883, 98.9853, 0],
   ['hanoi', 'Hanoi', 'VN', 'Vietnam', 21.0329, 105.854, 0],
   ['ho-chi-minh-city', 'Ho Chi Minh City', 'VN', 'Vietnam', 10.8231, 106.63, 0],
-  ['phnom-penh', 'Phnom Penh', 'KH', 'Kemboja', 11.5564, 104.9282, 0],
+  ['phnom-penh', 'Phnom Penh', 'KH', 'Cambodia', 11.5564, 104.9282, 0],
   ['vientiane', 'Vientiane', 'LA', 'Laos', 17.9667, 102.6, 0],
   ['yangon', 'Yangon', 'MM', 'Myanmar', 16.8667, 96.1833, 0],
-  ['tokyo', 'Tokyo', 'JP', 'Jepun', 35.6895, 139.6917, 1],
-  ['osaka', 'Osaka', 'JP', 'Jepun', 34.6937, 135.5023, 0],
-  ['seoul', 'Seoul', 'KR', 'Korea Selatan', 37.5665, 126.978, 1],
+  ['tokyo', 'Tokyo', 'JP', 'Japan', 35.6895, 139.6917, 1],
+  ['osaka', 'Osaka', 'JP', 'Japan', 34.6937, 135.5023, 0],
+  ['seoul', 'Seoul', 'KR', 'South Korea', 37.5665, 126.978, 1],
   ['taipei', 'Taipei', 'TW', 'Taiwan', 25.033, 121.5654, 0],
   ['hong-kong', 'Hong Kong', 'HK', 'Hong Kong', 22.3193, 114.1694, 0],
   ['shanghai', 'Shanghai', 'CN', 'China', 31.2304, 121.4737, 1],
@@ -122,33 +122,33 @@ const CITY_ROWS = [
   ['dhaka', 'Dhaka', 'BD', 'Bangladesh', 23.8103, 90.4125, 0],
   ['colombo', 'Colombo', 'LK', 'Sri Lanka', 6.9271, 79.8612, 0],
   ['kathmandu', 'Kathmandu', 'NP', 'Nepal', 27.7172, 85.324, 0],
-  // Timur Tengah & Mesir
-  ['dubai', 'Dubai', 'AE', 'UEA', 25.2048, 55.2708, 1],
-  ['abu-dhabi', 'Abu Dhabi', 'AE', 'UEA', 24.4539, 54.3773, 0],
+  // Middle East & Egypt
+  ['dubai', 'Dubai', 'AE', 'United Arab Emirates', 25.2048, 55.2708, 1],
+  ['abu-dhabi', 'Abu Dhabi', 'AE', 'United Arab Emirates', 24.4539, 54.3773, 0],
   ['doha', 'Doha', 'QA', 'Qatar', 25.2854, 51.531, 0],
-  ['riyadh', 'Riyadh', 'SA', 'Arab Saudi', 24.7136, 46.6753, 0],
-  ['jeddah', 'Jeddah', 'SA', 'Arab Saudi', 21.4858, 39.1925, 0],
-  ['makkah', 'Makkah', 'SA', 'Arab Saudi', 21.4225, 39.8262, 0],
-  ['madinah', 'Madinah', 'SA', 'Arab Saudi', 24.5247, 39.5692, 0],
-  ['istanbul', 'Istanbul', 'TR', 'Turkiye', 41.0082, 28.9784, 1],
-  ['cairo', 'Cairo', 'EG', 'Mesir', 30.0444, 31.2357, 1],
+  ['riyadh', 'Riyadh', 'SA', 'Saudi Arabia', 24.7136, 46.6753, 0],
+  ['jeddah', 'Jeddah', 'SA', 'Saudi Arabia', 21.4858, 39.1925, 0],
+  ['makkah', 'Makkah', 'SA', 'Saudi Arabia', 21.4225, 39.8262, 0],
+  ['madinah', 'Madinah', 'SA', 'Saudi Arabia', 24.5247, 39.5692, 0],
+  ['istanbul', 'Istanbul', 'TR', 'Turkey', 41.0082, 28.9784, 1],
+  ['cairo', 'Cairo', 'EG', 'Egypt', 30.0444, 31.2357, 1],
   ['amman', 'Amman', 'JO', 'Jordan', 31.9539, 35.9106, 0],
-  ['beirut', 'Beirut', 'LB', 'Lubnan', 33.8938, 35.5018, 0],
+  ['beirut', 'Beirut', 'LB', 'Lebanon', 33.8938, 35.5018, 0],
   ['baghdad', 'Baghdad', 'IQ', 'Iraq', 33.3152, 44.3661, 0],
   ['tehran', 'Tehran', 'IR', 'Iran', 35.6892, 51.389, 0],
-  // Eropah
+  // Europe
   ['london', 'London', 'GB', 'United Kingdom', 51.5074, -0.1278, 1],
   ['manchester', 'Manchester', 'GB', 'United Kingdom', 53.4808, -2.2426, 0],
-  ['paris', 'Paris', 'FR', 'Perancis', 48.8566, 2.3522, 1],
-  ['berlin', 'Berlin', 'DE', 'Jerman', 52.52, 13.405, 1],
-  ['munich', 'Munich', 'DE', 'Jerman', 48.1351, 11.582, 0],
-  ['madrid', 'Madrid', 'ES', 'Sepanyol', 40.4168, -3.7038, 0],
-  ['barcelona', 'Barcelona', 'ES', 'Sepanyol', 41.3874, 2.1686, 0],
-  ['rome', 'Rome', 'IT', 'Itali', 41.9028, 12.4964, 0],
-  ['amsterdam', 'Amsterdam', 'NL', 'Belanda', 52.3676, 4.9041, 0],
+  ['paris', 'Paris', 'FR', 'France', 48.8566, 2.3522, 1],
+  ['berlin', 'Berlin', 'DE', 'Germany', 52.52, 13.405, 1],
+  ['munich', 'Munich', 'DE', 'Germany', 48.1351, 11.582, 0],
+  ['madrid', 'Madrid', 'ES', 'Spain', 40.4168, -3.7038, 0],
+  ['barcelona', 'Barcelona', 'ES', 'Spain', 41.3874, 2.1686, 0],
+  ['rome', 'Rome', 'IT', 'Italy', 41.9028, 12.4964, 0],
+  ['amsterdam', 'Amsterdam', 'NL', 'Netherlands', 52.3676, 4.9041, 0],
   ['vienna', 'Vienna', 'AT', 'Austria', 48.2082, 16.3738, 0],
   ['zurich', 'Zurich', 'CH', 'Switzerland', 47.3769, 8.5417, 0],
-  ['moscow', 'Moscow', 'RU', 'Rusia', 55.7558, 37.6173, 1],
+  ['moscow', 'Moscow', 'RU', 'Russia', 55.7558, 37.6173, 1],
   ['kyiv', 'Kyiv', 'UA', 'Ukraine', 50.4501, 30.5234, 0],
   ['warsaw', 'Warsaw', 'PL', 'Poland', 52.2297, 21.0122, 0],
   ['prague', 'Prague', 'CZ', 'Czech', 50.0755, 14.4378, 0],
@@ -161,17 +161,17 @@ const CITY_ROWS = [
   ['lisbon', 'Lisbon', 'PT', 'Portugal', 38.7223, -9.1393, 0],
   ['athens', 'Athens', 'GR', 'Greece', 37.9838, 23.7275, 0],
   ['belgrade', 'Belgrade', 'RS', 'Serbia', 44.7866, 20.4489, 0],
-  // Amerika
-  ['new-york', 'New York', 'US', 'Amerika Syarikat', 40.7128, -74.006, 1],
-  ['los-angeles', 'Los Angeles', 'US', 'Amerika Syarikat', 34.0522, -118.2437, 1],
-  ['chicago', 'Chicago', 'US', 'Amerika Syarikat', 41.8781, -87.6298, 0],
-  ['houston', 'Houston', 'US', 'Amerika Syarikat', 29.7604, -95.3698, 0],
-  ['miami', 'Miami', 'US', 'Amerika Syarikat', 25.7617, -80.1918, 0],
-  ['washington', 'Washington DC', 'US', 'Amerika Syarikat', 38.9072, -77.0369, 0],
-  ['honolulu', 'Honolulu', 'US', 'Amerika Syarikat', 21.3069, -157.8583, 0],
-  ['toronto', 'Toronto', 'CA', 'Kanada', 43.6532, -79.3832, 1],
-  ['vancouver', 'Vancouver', 'CA', 'Kanada', 49.2827, -123.1207, 0],
-  ['montreal', 'Montreal', 'CA', 'Kanada', 45.5017, -73.5673, 0],
+  // Americas
+  ['new-york', 'New York', 'US', 'United States', 40.7128, -74.006, 1],
+  ['los-angeles', 'Los Angeles', 'US', 'United States', 34.0522, -118.2437, 1],
+  ['chicago', 'Chicago', 'US', 'United States', 41.8781, -87.6298, 0],
+  ['houston', 'Houston', 'US', 'United States', 29.7604, -95.3698, 0],
+  ['miami', 'Miami', 'US', 'United States', 25.7617, -80.1918, 0],
+  ['washington', 'Washington DC', 'US', 'United States', 38.9072, -77.0369, 0],
+  ['honolulu', 'Honolulu', 'US', 'United States', 21.3069, -157.8583, 0],
+  ['toronto', 'Toronto', 'CA', 'Canada', 43.6532, -79.3832, 1],
+  ['vancouver', 'Vancouver', 'CA', 'Canada', 49.2827, -123.1207, 0],
+  ['montreal', 'Montreal', 'CA', 'Canada', 45.5017, -73.5673, 0],
   ['mexico-city', 'Mexico City', 'MX', 'Mexico', 19.4326, -99.1332, 1],
   ['cancun', 'Cancun', 'MX', 'Mexico', 21.1619, -86.8515, 0],
   ['havana', 'Havana', 'CU', 'Cuba', 23.1136, -82.3666, 0],
@@ -186,7 +186,7 @@ const CITY_ROWS = [
   ['santiago', 'Santiago', 'CL', 'Chile', -33.4489, -70.6693, 0],
   ['quito', 'Quito', 'EC', 'Ecuador', -0.1807, -78.4678, 0],
   ['la-paz', 'La Paz', 'BO', 'Bolivia', -16.4897, -68.1193, 0],
-  // Afrika
+  // Africa
   ['lagos', 'Lagos', 'NG', 'Nigeria', 6.5244, 3.3792, 1],
   ['abuja', 'Abuja', 'NG', 'Nigeria', 9.0765, 7.3986, 0],
   ['nairobi', 'Nairobi', 'KE', 'Kenya', -1.2921, 36.8219, 1],
@@ -195,13 +195,13 @@ const CITY_ROWS = [
   ['kampala', 'Kampala', 'UG', 'Uganda', 0.3476, 32.5825, 0],
   ['accra', 'Accra', 'GH', 'Ghana', 5.6037, -0.187, 0],
   ['dakar', 'Dakar', 'SN', 'Senegal', 14.7167, -17.4677, 0],
-  ['casablanca', 'Casablanca', 'MA', 'Maghrib', 33.5731, -7.5898, 0],
+  ['casablanca', 'Casablanca', 'MA', 'Morocco', 33.5731, -7.5898, 0],
   ['algiers', 'Algiers', 'DZ', 'Algeria', 36.7538, 3.0588, 0],
   ['tunis', 'Tunis', 'TN', 'Tunisia', 36.8065, 10.1815, 0],
-  ['johannesburg', 'Johannesburg', 'ZA', 'Afrika Selatan', -26.2041, 28.0473, 1],
-  ['cape-town', 'Cape Town', 'ZA', 'Afrika Selatan', -33.9249, 18.4241, 0],
-  ['durban', 'Durban', 'ZA', 'Afrika Selatan', -29.8587, 31.0218, 0],
-  ['maputo', 'Maputo', 'MZ', 'Mozambik', -25.9653, 32.5892, 0],
+  ['johannesburg', 'Johannesburg', 'ZA', 'South Africa', -26.2041, 28.0473, 1],
+  ['cape-town', 'Cape Town', 'ZA', 'South Africa', -33.9249, 18.4241, 0],
+  ['durban', 'Durban', 'ZA', 'South Africa', -29.8587, 31.0218, 0],
+  ['maputo', 'Maputo', 'MZ', 'Mozambique', -25.9653, 32.5892, 0],
   ['antananarivo', 'Antananarivo', 'MG', 'Madagascar', -18.8792, 47.5079, 0],
   ['luanda', 'Luanda', 'AO', 'Angola', -8.839, 13.2894, 0],
   // Oceania & Pasifik
@@ -217,7 +217,7 @@ const CITY_ROWS = [
   ['nadi', 'Nadi', 'FJ', 'Fiji', -17.7765, 177.9661, 0],
   ['suva', 'Suva', 'FJ', 'Fiji', -18.1416, 178.4419, 0],
   ['port-moresby', 'Port Moresby', 'PG', 'Papua New Guinea', -9.4438, 147.1803, 0],
-  ['honiara', 'Honiara', 'SB', 'Kepulauan Solomon', -9.4333, 159.95, 0],
+  ['honiara', 'Honiara', 'SB', 'Solomon Islands', -9.4333, 159.95, 0],
 ];
 
 function slugify(s) {
@@ -239,7 +239,7 @@ function featuredCities() {
   return CITIES.filter((c) => c.featured);
 }
 
-// Geokoding — sebarang nama bandar di dunia → halaman baharu. Cache 30 hari.
+// Geocoding — any city name in the world → a new page. Cached 30 days.
 async function geocode(query) {
   const key = `geo:${slugify(query)}`;
   const hit = getCache(key);
@@ -257,12 +257,12 @@ async function geocode(query) {
     return city;
   } catch (err) {
     markBreaker(err);
-    return hit ? hit.data : null; // stale lebih baik daripada tiada
+    return hit ? hit.data : null; // stale is better than nothing
   }
 }
 
-// SLUG kota boleh jadi nama geokoding terdahulu — simpan hasil geokoding yang
-// pernah berjaya supaya /cuaca/<slug> kekal laju & tak bazir API.
+// A city SLUG may be an earlier geocoded name — keep the geocode results that
+// already succeeded so /cuaca/<slug> stays fast and does not waste API calls.
 const geoSlugCache = new Map();
 async function resolveCity(slug) {
   const known = findCity(slug);
@@ -337,7 +337,7 @@ async function getAirForecast(city) {
   }
 }
 
-// Snapshot kota featured untuk hab + ekstrem (sejam sahaja; muatan paralel).
+// Featured-city snapshot for the hub + extremes pages (one hour; parallel load).
 let snapshotCache = null;
 let snapshotAt = 0;
 async function getFeaturedSnapshot() {
@@ -355,91 +355,93 @@ async function getFeaturedSnapshot() {
   return snapshotCache || ok;
 }
 
-// ——— Kod keadaan OpenWeather → label Melayu + emoji (untuk halaman /cuaca/kod) ———
-// [id, en, ms, emoji]
+// ——— OpenWeather condition codes → English label + emoji (for the /cuaca/kod page) ———
+// [id, apiText, meaning, emoji]
 const OW_CODE_ROWS = [
-  [200, 'thunderstorm with light rain', 'ribut petir dengan hujan ringan', '\u26C8\uFE0F'],
-  [201, 'thunderstorm with rain', 'ribut petir dengan hujan', '\u26C8\uFE0F'],
-  [202, 'thunderstorm with heavy rain', 'ribut petir dengan hujan lebat', '\u26C8\uFE0F'],
-  [210, 'light thunderstorm', 'ribut petir ringan', '\u26C8\uFE0F'],
-  [211, 'thunderstorm', 'ribut petir', '\u26C8\uFE0F'],
-  [212, 'heavy thunderstorm', 'ribut petir kencang', '\u26C8\uFE0F'],
-  [221, 'ragged thunderstorm', 'ribut petir berselang-seli', '\u26C8\uFE0F'],
-  [230, 'thunderstorm with light drizzle', 'ribut dengan renyai ringan', '\u26C8\uFE0F'],
-  [231, 'thunderstorm with drizzle', 'ribut dengan renyai', '\u26C8\uFE0F'],
-  [232, 'thunderstorm with heavy drizzle', 'ribut dengan renyai lebat', '\u26C8\uFE0F'],
-  [300, 'light intensity drizzle', 'renyai ringan', '\uD83C\uDF26\uFE0F'],
-  [301, 'drizzle', 'renyai', '\uD83C\uDF26\uFE0F'],
-  [302, 'heavy intensity drizzle', 'renyai lebat', '\uD83C\uDF26\uFE0F'],
-  [310, 'light intensity shower rain', 'hujan renyai ringan', '\uD83C\uDF27\uFE0F'],
-  [311, 'shower rain', 'hujan renyai', '\uD83C\uDF27\uFE0F'],
-  [312, 'heavy intensity shower rain', 'hujan renyai lebat', '\uD83C\uDF27\uFE0F'],
-  [313, 'shower rain and thunder', 'hujan renyai + ribut', '\u26C8\uFE0F'],
-  [314, 'shower rain and heavy thunder', 'hujan renyai + ribut kencang', '\u26C8\uFE0F'],
-  [321, 'shower snow', 'renyai salji', '\uD83C\uDF28\uFE0F'],
-  [500, 'light rain', 'hujan ringan', '\uD83C\uDF27\uFE0F'],
-  [501, 'moderate rain', 'hujan sederhana', '\uD83C\uDF27\uFE0F'],
-  [502, 'heavy intensity rain', 'hujan lebat', '\uD83C\uDF27\uFE0F'],
-  [503, 'very heavy rain', 'hujan sangat lebat', '\uD83C\uDF27\uFE0F'],
-  [504, 'extreme rain', 'hujan ekstrem', '\uD83C\uDF27\uFE0F'],
-  [511, 'freezing rain', 'hujan beku', '\u2744\uFE0F'],
-  [520, 'light intensity shower rain', 'hujan renyai ringkas', '\uD83C\uDF27\uFE0F'],
-  [521, 'shower rain', 'hujan renyai petir singkat', '\uD83C\uDF27\uFE0F'],
-  [522, 'shower rain with hail', 'hujan renyai + graupel', '\uD83C\uDF27\uFE0F'],
-  [531, 'complex shower rain', 'hujan renyai kompleks', '\uD83C\uDF27\uFE0F'],
-  [600, 'light snow', 'salji ringan', '\uD83C\uDF28\uFE0F'],
-  [601, 'snow', 'salji', '\uD83C\uDF28\uFE0F'],
-  [602, 'heavy snow', 'salji lebat', '\uD83C\uDF28\uFE0F'],
-  [611, 'sleet', 'hujan salji bercampur', '\uD83C\uDF28\uFE0F'],
-  [612, 'light shower sleet', 'sleet renyai ringan', '\uD83C\uDF28\uFE0F'],
-  [613, 'shower sleet', 'sleet renyai', '\uD83C\uDF28\uFE0F'],
-  [616, 'rain and snow mixed', 'hujan bercampur salji', '\uD83C\uDF28\uFE0F'],
-  [620, 'light shower snow', 'salji renyai ringan', '\uD83C\uDF28\uFE0F'],
-  [621, 'shower snow', 'salji renyai', '\uD83C\uDF28\uFE0F'],
-  [622, 'heavy shower snow', 'salji renyai lebat', '\uD83C\uDF28\uFE0F'],
-  [701, 'mist', 'jelaga nipis', '\uD83C\uDF2B\uFE0F'],
-  [711, 'smoke', 'asap', '\uD83D\uDEA1'],
-  [721, 'haze', 'jerebu', '\uD83C\uDF2B\uFE0F'],
-  [731, 'sand/dust whirls', 'pusaran pasir/debu', '\uD83C\uDF2A\uFE0F'],
-  [741, 'fog', 'kabus tebal', '\uD83C\uDF2B\uFE0F'],
-  [751, 'sand', 'pasir terbang', '\uD83C\uDFDC\uFE0F'],
-  [761, 'dust', 'debu', '\uD83C\uDFDC\uFE0F'],
-  [762, 'volcanic ash', 'abu gunung berapi', '\uD83C\uDF0B'],
-  [771, 'squalls', 'angin kuat tiba-tiba', '\uD83D\uDCA8'],
-  [781, 'tornado', 'tornado', '\uD83C\uDF00'],
-  [800, 'clear sky', 'cerah', '\u2600\uFE0F'],
-  [801, 'few clouds', 'awan sedikit', '\uD83C\uDF24\uFE0F'],
-  [802, 'scattered clouds', 'awan bertaburan', '\u26C5\uFE0F'],
-  [803, 'broken clouds', 'awan pecah', '\u26C5\uFE0F'],
-  [804, 'overcast clouds', 'awan penuh', '\u2601\uFE0F'],
+  [200, 'thunderstorm with light rain', 'thunder and lightning with a light rain shower — the most common tropical storm shape', '\u26C8\uFE0F'],
+  [201, 'thunderstorm with rain', 'thunderstorm with moderate rain; visibility drops while it passes', '\u26C8\uFE0F'],
+  [202, 'thunderstorm with heavy rain', 'strong thunderstorm with downpours — flash-flood conditions', '\u26C8\uFE0F'],
+  [210, 'light thunderstorm', 'isolated, short-lived lightning with little rain', '\u26C8\uFE0F'],
+  [211, 'thunderstorm', 'general thunderstorm; stay off open ground and away from water', '\u26C8\uFE0F'],
+  [212, 'heavy thunderstorm', 'severe thunderstorm — intense rain, frequent lightning, gusty outflows', '\u26C8\uFE0F'],
+  [221, 'ragged thunderstorm', 'sporadic, hard-to-forecast lightning with irregular rain', '\u26C8\uFE0F'],
+  [230, 'thunderstorm with light drizzle', 'lightning with a fine mist of rain', '\u26C8\uFE0F'],
+  [231, 'thunderstorm with drizzle', 'thunderstorm with drizzle; roads get slick slowly', '\u26C8\uFE0F'],
+  [232, 'thunderstorm with heavy drizzle', 'thunderstorm with dense drizzle — wet, poor visibility', '\u26C8\uFE0F'],
+  [300, 'light intensity drizzle', 'very fine drops under 0.5 mm; light but persistent', '\uD83C\uDF26\uFE0F'],
+  [301, 'drizzle', 'widespread fine droplets; an umbrella helps more than a raincoat', '\uD83C\uDF26\uFE0F'],
+  [302, 'heavy intensity drizzle', 'dense drizzle that soaks through clothing', '\uD83C\uDF26\uFE0F'],
+  [310, 'light intensity shower rain', 'brief light shower — starts and stops quickly', '\uD83C\uDF27\uFE0F'],
+  [311, 'shower rain', 'moderate shower with clear breaks between cells', '\uD83C\uDF27\uFE0F'],
+  [312, 'heavy intensity shower rain', 'intense short shower, often with gusts', '\uD83C\uDF27\uFE0F'],
+  [313, 'shower rain and thunder', 'shower with thunder but little lightning', '\u26C8\uFE0F'],
+  [314, 'shower rain and heavy thunder', 'heavy shower with thunder — strongest of the 3xx group', '\u26C8\uFE0F'],
+  [321, 'shower snow', 'shower of snowflakes rather than rain', '\uD83C\uDF28\uFE0F'],
+  [500, 'light rain', 'steady light rain, drops over 0.5 mm', '\uD83C\uDF27\uFE0F'],
+  [501, 'moderate rain', 'steady moderate rain; reduced visibility on highways', '\uD83C\uDF27\uFE0F'],
+  [502, 'heavy intensity rain', 'heavy continuous rain — the usual cause of urban flooding', '\uD83C\uDF27\uFE0F'],
+  [503, 'very heavy rain', 'very heavy rain, often 30 mm/h or more', '\uD83C\uDF27\uFE0F'],
+  [504, 'extreme rain', 'extreme rainfall rate; drainage cannot keep up', '\uD83C\uDF27\uFE0F'],
+  [511, 'freezing rain', 'rain that freezes on contact — glazed ice on roads and wires', '\u2744\uFE0F'],
+  [520, 'light intensity shower rain', 'isolated light shower; the classic tropical afternoon spot', '\uD83C\uDF27\uFE0F'],
+  [521, 'shower rain', 'isolated moderate shower of short duration', '\uD83C\uDF27\uFE0F'],
+  [522, 'shower rain with hail', 'shower carrying soft graupel or hail pellets', '\uD83C\uDF27\uFE0F'],
+  [531, 'complex shower rain', 'irregular shower pattern from several cells', '\uD83C\uDF27\uFE0F'],
+  [600, 'light snow', 'few snowflakes; little accumulation', '\uD83C\uDF28\uFE0F'],
+  [601, 'snow', 'moderate, steady snowfall', '\uD83C\uDF28\uFE0F'],
+  [602, 'heavy snow', 'heavy snowfall — travel disruption likely', '\uD83C\uDF28\uFE0F'],
+  [611, 'sleet', 'mixed rain and snow pellets', '\uD83C\uDF28\uFE0F'],
+  [612, 'light shower sleet', 'brief light sleet shower', '\uD83C\uDF28\uFE0F'],
+  [613, 'shower sleet', 'sleet shower between clearer spells', '\uD83C\uDF28\uFE0F'],
+  [616, 'rain and snow mixed', 'rain with melting snowflakes — slippery, not deep', '\uD83C\uDF28\uFE0F'],
+  [620, 'light shower snow', 'light snow shower', '\uD83C\uDF28\uFE0F'],
+  [621, 'shower snow', 'moderate snow shower', '\uD83C\uDF28\uFE0F'],
+  [622, 'heavy shower snow', 'heavy snow shower, near-whiteout possible', '\uD83C\uDF28\uFE0F'],
+  [701, 'mist', 'fine water droplets; visibility 1–2 km, milder than fog', '\uD83C\uDF2B\uFE0F'],
+  [711, 'smoke', 'wildfire or burning waste — the smell is the warning', '\uD83D\uDEA1'],
+  [721, 'haze', 'dry particles cut visibility; the seasonal cross-border smoke signature', '\uD83C\uDF2B\uFE0F'],
+  [731, 'sand/dust whirls', 'dust devils and blowing sand on dry ground', '\uD83C\uDF2A\uFE0F'],
+  [741, 'fog', 'visibility below 1 km — the most dangerous code for drivers', '\uD83C\uDF2B\uFE0F'],
+  [751, 'sand', 'airborne sand from deserts or dry river beds', '\uD83C\uDFDC\uFE0F'],
+  [761, 'dust', 'fine dust raised by wind or distant sources', '\uD83C\uDFDC\uFE0F'],
+  [762, 'volcanic ash', 'ash from an erupting volcano — hazardous to lungs and engines', '\uD83C\uDF0B'],
+  [771, 'squalls', 'sudden violent wind shifts, usually ahead of a storm', '\uD83D\uDCA8'],
+  [781, 'tornado', 'tornado or waterspout reported', '\uD83C\uDF00'],
+  [800, 'clear sky', 'clear — warmest nights, coldest dawns, no cloud insulation', '\u2600\uFE0F'],
+  [801, 'few clouds', 'under 20% cloud cover — mostly sunny', '\uD83C\uDF24\uFE0F'],
+  [802, 'scattered clouds', '20–50% cloud cover — broken sun, fair-weather cumulus', '\u26C5\uFE0F'],
+  [803, 'broken clouds', '50–85% cloud cover — the sun is rarely unobstructed', '\u26C5\uFE0F'],
+  [804, 'overcast clouds', 'full cloud deck — grey sky, mild temperatures day and night', '\u2601\uFE0F'],
 ];
-const OW_CODES = OW_CODE_ROWS.map(([id, en, ms, emoji]) => ({ id, en, ms, emoji }));
+const OW_CODES = OW_CODE_ROWS.map(([id, en, meaning, emoji]) => ({ id, en, meaning, emoji }));
 const CODE_BY_ID = new Map(OW_CODES.map((c) => [c.id, c]));
 
+/** describe(500) → { label: 'Light rain', meaning: '…', emoji: '🌧️' } */
 function describe(codeId, isNight) {
   const c = CODE_BY_ID.get(Number(codeId)) || null;
-  if (!c) return { ms: 'keadaan langit berubah-ubah', emoji: '\uD83C\uDF21\uFE0F', en: 'variable' };
+  if (!c) return { label: 'Variable sky', meaning: 'conditions are changing', emoji: '\uD83C\uDF21\uFE0F' };
   let emoji = c.emoji;
   if (c.id === 800) emoji = isNight ? '\uD83C\uDF19' : '\u2600\uFE0F';
   if (c.id === 801 || c.id === 802) emoji = isNight ? '\uD83C\uDF19' : emoji;
-  return { ms: c.ms, en: c.en, emoji };
+  const label = c.en.charAt(0).toUpperCase() + c.en.slice(1);
+  return { label, meaning: c.meaning, emoji };
 }
 
-// Skala Beaufort (0–12) — untuk halaman /cuaca/angin + label kelajuan angin.
+// Beaufort wind scale (0–12) — for the /cuaca/angin page + wind speed labels.
 const BEAUFORT = [
-  [0, '< 1', 'Angan-angan', 'Asap naik tegak; daun tidak berganjak'],
-  [1, '1–5', 'Angin lemah', 'Arah angin hanya diketahui melalui asap'],
-  [2, '6–11', 'Angin ringan', 'Daun dan anak dahan bergoyang'],
-  [3, '12–19', 'Angin sederhana', 'Dahan kecil bergerak, bendera mula terkibar'],
-  [4, '20–28', 'Angin bertenaga', 'Debu dan kertas terbang; dahan tipis bergoyang'],
-  [5, '29–38', 'Angin kencang', 'Dahan sederhana bergerak; buih ombak'],
-  [6, '39–49', 'Kencang sangat', 'Dahan besar bergoyang; sukar memakai payung'],
-  [7, '50–61', 'Ribut kecil', 'Pohon seluruhnya bergoyang; sukar berjalan menentang angin'],
-  [8, '62–74', 'Ribut', 'Ranting patah; penutup bumbung tercabut'],
-  [9, '75–88', 'Ribut kuat', 'Pohon tersedak; kerosakan bangunan sederhana'],
-  [10, '89–102', 'Ribut sangat kuat', 'Pohon tumbang; binaaan rosak serius'],
-  [11, '103–112', 'Badai', 'Kerosakan meluas di kawasan penduduk'],
-  [12, '> 112', 'Badai luar biasa', 'Kemusnahan menyeluruh; gelombang laut luar biasa'],
+  [0, '< 1', 'Calm', 'Smoke rises vertically; leaves do not stir'],
+  [1, '1–5', 'Light air', 'Wind direction shown only by smoke drift'],
+  [2, '6–11', 'Light breeze', 'Leaves and small twigs in constant motion'],
+  [3, '12–19', 'Gentle breeze', 'Small branches move; flags extend'],
+  [4, '20–28', 'Moderate breeze', 'Dust and loose paper rise; thin branches bend'],
+  [5, '29–38', 'Fresh breeze', 'Small trees sway; whitecaps form on waves'],
+  [6, '39–49', 'Strong breeze', 'Large branches move; walking an umbrella is hard'],
+  [7, '50–61', 'Near gale', 'Whole trees sway; walking into the wind is difficult'],
+  [8, '62–74', 'Gale', 'Twigs break off; roof tiles and cladding start to lift'],
+  [9, '75–88', 'Strong gale', 'Trees uprooted; moderate structural damage'],
+  [10, '89–102', 'Storm', 'Widespread damage; trees snapped or toppled'],
+  [11, '103–112', 'Violent storm', 'Extensive damage across built-up areas'],
+  [12, '> 112', 'Hurricane force', 'Total destruction; exceptional sea waves'],
 ];
 
 function beaufort(kmh) {
@@ -454,37 +456,37 @@ function beaufort(kmh) {
   return BEAUFORT[12];
 }
 
-// Jalur AQI OpenWeather (1–5) — panduan kesihatan berbahasa Melayu.
+// OpenWeather AQI bands (1–5) — English health guidance.
 const AQI_BANDS = [
-  { n: 1, label: 'Baik', color: '#2ecc71', advice: 'Udara bersih — sesuai untuk semua aktiviti luar, termasuk senaman dan jogging.' },
-  { n: 2, label: 'Sederhana', color: '#a2d94e', advice: 'Boleh diterima. Golongan sangat sensitif (asma, jantung) mungkin rasa sedikit gangguan.' },
-  { n: 3, label: 'Tidak sihat untuk golongan sensitif', color: '#f1c40f', advice: 'Pesakit asma/jantung dan kanak-kanak patut kurangkan aktiviti luar yang berpanjangan.' },
-  { n: 4, label: 'Tidak sihat', color: '#e67e22', advice: 'Semua orang patut hadkan masa luar; pakai pelindung PM2.5 jika perlu.' },
-  { n: 5, label: 'Sangat tidak sihat', color: '#e74c3c', advice: 'Elakkan aktiviti luar. Tutup tingkap; guna penapis udara jika ada.' },
+  { n: 1, label: 'Good', color: '#2ecc71', advice: 'Clean air — fine for every outdoor activity, including exercise and running.' },
+  { n: 2, label: 'Fair', color: '#a2d94e', advice: 'Acceptable. Very sensitive people (asthma, heart conditions) may notice mild irritation.' },
+  { n: 3, label: 'Unhealthy for sensitive groups', color: '#f1c40f', advice: 'People with asthma or heart conditions, children and older adults should cut back long outdoor exertion.' },
+  { n: 4, label: 'Unhealthy', color: '#e67e22', advice: 'Everyone should limit time outdoors; wear PM2.5 protection if you must go out.' },
+  { n: 5, label: 'Very unhealthy', color: '#e74c3c', advice: 'Avoid outdoor activity. Keep windows shut and run an air purifier if you have one.' },
 ];
 
 function aqiBand(n) {
   return AQI_BANDS[Math.min(Math.max((Number(n) || 1) - 1, 0), 4)];
 }
 
-// Cuaca harian → nasihat bersiap (unik setiap halaman kota).
+// Daily conditions → get-ready advice (unique to each city page).
 function cityAdvice(cur, air) {
   const w = (cur && cur.weather && cur.weather[0]) || {};
   const id = Number(w.id) || 800;
   const temp = Number(cur && cur.main && cur.main.temp) || 25;
   const out = [];
-  if (id >= 200 && id < 300) out.push('Bawa payung dan elakkan tempat terbuka semasa ribut petir — kilat paling bahaya 30 minit sebelum dan selepas guruh.');
-  else if (id >= 300 && id < 600) out.push('Bawa payung dan sandal — jalan basah bermakna jarak membrek bertambah; brek awal di permukaan licin.');
-  else if (id >= 600) out.push('Cuaca beku/salji: pakai pakaian berlapis, sarung tangan dan kasut bercekam.');
-  else if (id >= 700 && id < 800) out.push('Jarak nampak rendah (kabus/jerebu): guna lampu rendah, perlahanankan kenderaan; kurangkan aktiviti luar berat jika anda ada masalah salur nafas.');
-  else if (temp >= 34) out.push('Cuaca terik: minum air sebelum dahaga, elakkan matahari 12–3 tengah hari, pakai topi & pelindung suria SPF.');
-  else if (temp <= 5) out.push('Cuaca sejuk: pakai pakaian berlapis dan lindungi hujung jari/telinga.');
-  else out.push('Langit menyeronokkan untuk aktiviti luar — sesuai untuk fotografi waktu keemasan dan berkelah petang.');
+  if (id >= 200 && id < 300) out.push('Carry an umbrella and avoid open ground during thunderstorms — lightning is most dangerous in the 30 minutes before and after the thunder.');
+  else if (id >= 300 && id < 600) out.push('Carry an umbrella and grippy shoes — wet roads mean longer braking distances; brake early on slippery surfaces.');
+  else if (id >= 600) out.push('Freezing or snowy weather: layer up, wear gloves and shoes with real grip.');
+  else if (id >= 700 && id < 800) out.push('Low visibility (fog/smoke): use low beams and slow down; ease off hard outdoor exercise if you have a respiratory condition.');
+  else if (temp >= 34) out.push('Scorching heat: drink before you feel thirsty, avoid the sun between 12:00 and 15:00, wear a hat and SPF sun protection.');
+  else if (temp <= 5) out.push('Cold weather: layer up and cover fingers and ears.');
+  else out.push('Pleasant sky for outdoor plans — good for golden-hour photography and an evening picnic.');
   const wind = Number(cur && cur.wind && cur.wind.speed) || 0;
-  if (wind >= 10.8) out.push(`Angin ${Math.round(wind * 3.6)} km/j — ikat barang terpacak di halaman dan beri perhatian kepada penunggang motosikal.`);
+  if (wind >= 10.8) out.push(`Wind at ${Math.round(wind * 3.6)} km/h — tie down anything standing in the yard and give motorcyclists extra room.`);
   if (air && air.list && air.list[0]) {
     const aqi = Number(air.list[0].main && air.list[0].main.aqi) || 1;
-    if (aqi >= 4) out.push('Indeks udara pada jalur tidak sihat — kurangkan masa luar dan pantau kanak-kanak serta warga emas.');
+    if (aqi >= 4) out.push('Air quality index in the unhealthy band — cut outdoor time and watch children and older adults.');
   }
   return out;
 }

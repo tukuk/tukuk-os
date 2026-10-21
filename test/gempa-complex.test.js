@@ -19,7 +19,7 @@ test('GEMPA_SECTIONS + REGIONS menyenaraikan 7 seksyen (6 + penjelasan)', () => 
   assert.match(gempaSrc, /slug: 'dunia'/, 'suapan dunia ditakrif');
 });
 
-test('renderer gempa ditakrif dan dibungkus melalui gempaDoc (3 slot + nav + lang ms)', () => {
+test('renderer gempa ditakrif dan dibungkus melalui gempaDoc (3 slot + nav + lang en)', () => {
   for (const fn of ['gempaHubPage', 'gempaRegionPage', 'gempaExplainPage', 'gempaDoc', 'gempaNav', 'gempaBusy']) {
     assert.match(serverSrc, new RegExp(`function ${fn}\\(`), `${fn} ditakrif`);
   }
@@ -27,7 +27,7 @@ test('renderer gempa ditakrif dan dibungkus melalui gempaDoc (3 slot + nav + lan
   const doc = serverSrc.slice(idx, idx + 12000);
   for (const slot of ['slotTop', 'slotInArticle', 'slotBottom']) assert.ok(doc.includes(slot), `gempaDoc ada ${slot}`);
   assert.ok(doc.includes('gempaNav()'), 'gempaDoc ada nav gempa (hub pautan)');
-  assert.ok(doc.includes('<html lang="ms">'), 'halaman gempa berlang="ms"');
+  assert.ok(doc.includes('<html lang="en">'), 'quake pages are lang="en"');
 });
 
 test('laluan /gempa* berdaftar ikut tertib: hub, penjelasan literal, baru :region', () => {

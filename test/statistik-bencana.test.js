@@ -55,14 +55,14 @@ test('server.js: laluan + renderer + sitemap kedua-dua kompleks (statik dahulu, 
     'function bencanaCatPage', 'function bencanaEventPage', 'function bencanaBusy']) {
     assert.ok(serverSrc.includes(fn), fn);
   }
-  // Shell BM: lang ms + tiga slot iklan + pautan canonical.
+  // Shell: lang en + three ad slots + the canonical link.
   const stBlock = serverSrc.slice(serverSrc.indexOf('function statistikDoc'), serverSrc.indexOf('function statistikHubPage'));
-  assert.ok(stBlock.includes('<html lang="ms">'), 'statistikDoc lang ms');
+  assert.ok(stBlock.includes('<html lang="en">'), 'statistikDoc lang en');
   assert.ok(stBlock.includes("adUnitGuarded(config.adsense.slotTop, 'top')"), 'slot top');
   assert.ok(stBlock.includes("adUnitGuarded(config.adsense.slotInArticle, 'in-article')"), 'slot in-article');
   assert.ok(stBlock.includes("adUnitGuarded(config.adsense.slotBottom, 'bottom')"), 'slot bottom');
   const bcBlock = serverSrc.slice(serverSrc.indexOf('function bencanaDoc'), serverSrc.indexOf('const BC_DATE_FMT'));
-  assert.ok(bcBlock.includes('<html lang="ms">'), 'bencanaDoc lang ms');
+  assert.ok(bcBlock.includes('<html lang="en">'), 'bencanaDoc lang en');
   assert.ok(bcBlock.includes("adUnitGuarded(config.adsense.slotTop, 'top')"), 'bencana slot top');
   // Halaman gagal → noindex,follow (shell busy).
   assert.ok(serverSrc.includes('function statistikBusy') && serverSrc.includes('function bencanaBusy'), 'shell busy wujud');

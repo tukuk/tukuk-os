@@ -49,7 +49,7 @@ test('pengiraan hujung minggu panjang: run berturutan + appendix hujung minggu +
   assert.ok(lw.some((w) => w.bridge === 1), 'cuti Selasa dikesan sebagai jambatan');
 });
 
-test('renderer cuti ditakrif dan dibungkus melalui cutiDoc (3 slot + nav + lang ms)', () => {
+test('renderer cuti ditakrif dan dibungkus melalui cutiDoc (3 slot + nav + lang en)', () => {
   for (const fn of ['cutiHubPage', 'cutiYearPage', 'cutiLongWeekendPage', 'cutiStatePage', 'cutiExplainPage', 'cutiDoc', 'cutiNav', 'cutiBusy']) {
     assert.match(serverSrc, new RegExp(`function ${fn}\\(`), `${fn} ditakrif`);
   }
@@ -57,8 +57,8 @@ test('renderer cuti ditakrif dan dibungkus melalui cutiDoc (3 slot + nav + lang 
   const doc = serverSrc.slice(idx, idx + 12000);
   for (const slot of ['slotTop', 'slotInArticle', 'slotBottom']) assert.ok(doc.includes(slot), `cutiDoc ada ${slot}`);
   assert.ok(doc.includes('cutiNav()'), 'cutiDoc ada nav cuti (hab pautan)');
-  assert.ok(doc.includes('<html lang="ms">'), 'halaman cuti berlang="ms"');
-  assert.ok(doc.includes('ms_MY'), 'og:locale ms_MY');
+  assert.ok(doc.includes('<html lang="en">'), 'holiday pages are lang="en"');
+  assert.ok(doc.includes('en_US'), 'og:locale en_US');
 });
 
 test('CUTI_SECTIONS menyenaraikan hab + 5 benua + hujung minggu + 2 tahun MY + penjelasan', () => {

@@ -113,12 +113,12 @@ test('server: slug palsu redirect + kadar pasangan invalid → redirect kadar', 
   assert.ok(serverSrc.includes("if (!o || !o.primaryImage) return res.redirect(302, '/seni')"), 'objek tiada img → /seni');
 });
 
-test('server: kad sungai /cuaca + kotak wiki /bencana + kotak langit + bacaan akademi', () => {
-  // Kad banjir sungai — getRiver dalam Promise.all kota + label jujur GloFAS.
-  assert.ok(serverSrc.includes('udara.getRiver(city.lat, city.lon)'), 'handler kota tarik getRiver');
+test('server: river card on /cuaca + wiki box on /bencana + sky box + academic reading', () => {
+  // River flood card — getRiver inside the city Promise.all + an honest GloFAS label.
+  assert.ok(serverSrc.includes('udara.getRiver(city.lat, city.lon)'), 'the city handler pulls getRiver');
   const river = (serverSrc.match(/let riverBox = '';[\s\S]*?\n  \}/) || [''])[0];
-  assert.ok(river.includes('bukan ukuran stesen sungai sebenar'), 'label jujur model');
-  assert.ok(river.includes('Model aliran sungai'), 'tajuk kad');
+  assert.ok(river.includes('not a real river-station measurement'), 'honest model label');
+  assert.ok(river.includes('River flow model'), 'card heading');
   // Konteks Wikipedia halaman acara — async + terminologi EONET dipotong.
   assert.ok(serverSrc.includes('await bc.wikiPeek(wikiTerm)'), 'bencanaEventPage await wikiPeek');
   assert.ok(serverSrc.includes('async function bencanaEventPage'), 'renderer jadi async');

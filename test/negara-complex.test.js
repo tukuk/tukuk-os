@@ -39,7 +39,7 @@ test('negara.js: 6 region + BM_NAMES + slug + sempadan cca3→slug dieksport', (
   assert.ok(negaraSrc.includes('borderSlugs'), 'peta jiran cca3→slug dijana');
 });
 
-test('renderer negara ditakrif dan dibungkus melalui negaraDoc (3 slot + nav + lang ms)', () => {
+test('renderer negara ditakrif dan dibungkus melalui negaraDoc (3 slot + nav + lang en)', () => {
   for (const fn of ['negaraHubPage', 'negaraRegionPage', 'negaraCountryPage', 'negaraDoc', 'negaraNav', 'negaraBusy']) {
     assert.match(serverSrc, new RegExp(`function ${fn}\\(`), `${fn} ditakrif`);
   }
@@ -47,8 +47,8 @@ test('renderer negara ditakrif dan dibungkus melalui negaraDoc (3 slot + nav + l
   const doc = serverSrc.slice(idx, idx + 12000);
   for (const slot of ['slotTop', 'slotInArticle', 'slotBottom']) assert.ok(doc.includes(slot), `negaraDoc ada ${slot}`);
   assert.ok(doc.includes('negaraNav()'), 'negaraDoc ada nav negara (hub pautan)');
-  assert.ok(doc.includes('<html lang="ms">'), 'halaman negara berlang="ms"');
-  assert.ok(doc.includes('og:locale" content="ms_MY"'), 'og locale ms_MY');
+  assert.ok(doc.includes('<html lang="en">'), 'country pages are lang="en"');
+  assert.ok(doc.includes('og:locale" content="en_US"'), 'og locale en_US');
 });
 
 test('laluan /negara* berdaftar ikut tertib: hub literal dahulu, kemudian :slug', () => {
