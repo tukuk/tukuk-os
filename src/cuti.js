@@ -1,9 +1,10 @@
 'use strict';
-// ── TUKUK-OS CUTI COMPLEX — jadual cuti umum Malaysia (PERCUMA, tanpa kunci) ──
-// Sumber: malaysia-holiday.dydxsoft.my/api/v1 — API Laravel terbuka yang
-// disemak admin terhadap dokumen rasmi (www.kabinet.gov.my/hari-kelepasan-am),
-// nama perayaan dalam Bahasa Melayu, liputan 13 negeri + 3 wilayah persekutuan.
-// Tiada pendaftaran & tiada kuota keras; jadual jarang berubah → cache 30 hari.
+// ── TUKUK-OS CUTI COMPLEX — Malaysia public-holiday calendar (FREE, no API key) ──
+// Source: malaysia-holiday.dydxsoft.my/api/v1 — an open Laravel API whose
+// tables are checked by the admin against the official gazette
+// (www.kabinet.gov.my/hari-kelepasan-am); celebration names come back in Malay,
+// covering 13 states + 3 federal territories. No signup and no hard quota; the
+// calendar rarely changes → cached for 30 days.
 const axios = require('axios');
 const https = require('https');
 
@@ -12,18 +13,18 @@ const http = axios.create({
   headers: { 'User-Agent': 'TukukOS-Cuti-Client/1.0 (+https://tukuk.org)' },
 });
 
-// CDN (hcdn) di sisi pelayan ini menjawab 403 "browser challenge" pada edge
-// IPv4-nya untuk klien bukan pelayar (axios/fetch/curl), tetapi lulus melalui
-// edge IPv6. server.js menetapkan dns result order 'ipv4first' global, jadi
-// kita paksa IPv6 dahulu, kemudian fallback ke resolusi biasa jika hos
-// langsung tiada IPv6 (laptop korporat/VPS tertentu) atau ralat rangkaian.
+// The server-side CDN (hcdn) answers non-browser clients (axios/fetch/curl) with a
+// 403 "browser challenge" on its IPv4 edge but passes us through the IPv6 edge.
+// server.js sets the global dns result order to 'ipv4first', so we force IPv6
+// first and fall back to plain resolution when the host has no IPv6 at all
+// (corporate laptop / certain VPS) or the network itself fails.
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const plainAgent = new https.Agent({ keepAlive: true });
 
 const BASE = 'https://malaysia-holiday.dydxsoft.my/api/v1';
 
 const cache = new Map();
-const TTL = 30 * 24 * 60 * 60 * 1000; // 30 hari — hanya berubah bila kerajaan umum potongan khas
+const TTL = 30 * 24 * 60 * 60 * 1000; // 30 days — the table only moves when the government declares a special day off
 
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -41,25 +42,25 @@ function cacheSet(key, data) {
   }
 }
 
-// ——— 16 negeri/wilayah: [kod API, slug, nama, hujung minggu] ———
-// Kedah, Kelantan, Johor & Terengganu bercuti Jumaat–Sabtu; selebihnya Sabtu–Ahad.
+// ——— 16 states/territories: [API code, slug, name, weekend convention] ———
+// Kedah, Kelantan, Johor & Terengganu rest on Friday–Saturday; the rest Saturday–Sunday.
 const STATE_ROWS = [
-  ['JHR', 'johor', 'Johor', 'Jumaat–Sabtu'],
-  ['KDH', 'kedah', 'Kedah', 'Jumaat–Sabtu'],
-  ['KTN', 'kelantan', 'Kelantan', 'Jumaat–Sabtu'],
-  ['MLK', 'melaka', 'Melaka', 'Sabtu–Ahad'],
-  ['NSN', 'negeri-sembilan', 'Negeri Sembilan', 'Sabtu–Ahad'],
-  ['PHG', 'pahang', 'Pahang', 'Sabtu–Ahad'],
-  ['PRK', 'perak', 'Perak', 'Sabtu–Ahad'],
-  ['PLS', 'perlis', 'Perlis', 'Sabtu–Ahad'],
-  ['PNG', 'pulau-pinang', 'Pulau Pinang', 'Sabtu–Ahad'],
-  ['SBH', 'sabah', 'Sabah', 'Sabtu–Ahad'],
-  ['SWK', 'sarawak', 'Sarawak', 'Sabtu–Ahad'],
-  ['SGR', 'selangor', 'Selangor', 'Sabtu–Ahad'],
-  ['TRG', 'terengganu', 'Terengganu', 'Jumaat–Sabtu'],
-  ['KUL', 'kuala-lumpur', 'Kuala Lumpur', 'Sabtu–Ahad'],
-  ['PJY', 'putrajaya', 'Putrajaya', 'Sabtu–Ahad'],
-  ['LBN', 'labuan', 'Labuan', 'Sabtu–Ahad'],
+  ['JHR', 'johor', 'Johor', 'Friday–Saturday'],
+  ['KDH', 'kedah', 'Kedah', 'Friday–Saturday'],
+  ['KTN', 'kelantan', 'Kelantan', 'Friday–Saturday'],
+  ['MLK', 'melaka', 'Melaka', 'Saturday–Sunday'],
+  ['NSN', 'negeri-sembilan', 'Negeri Sembilan', 'Saturday–Sunday'],
+  ['PHG', 'pahang', 'Pahang', 'Saturday–Sunday'],
+  ['PRK', 'perak', 'Perak', 'Saturday–Sunday'],
+  ['PLS', 'perlis', 'Perlis', 'Saturday–Sunday'],
+  ['PNG', 'pulau-pinang', 'Pulau Pinang', 'Saturday–Sunday'],
+  ['SBH', 'sabah', 'Sabah', 'Saturday–Sunday'],
+  ['SWK', 'sarawak', 'Sarawak', 'Saturday–Sunday'],
+  ['SGR', 'selangor', 'Selangor', 'Saturday–Sunday'],
+  ['TRG', 'terengganu', 'Terengganu', 'Friday–Saturday'],
+  ['KUL', 'kuala-lumpur', 'Kuala Lumpur', 'Saturday–Sunday'],
+  ['PJY', 'putrajaya', 'Putrajaya', 'Saturday–Sunday'],
+  ['LBN', 'labuan', 'Labuan', 'Saturday–Sunday'],
 ];
 const STATES = STATE_ROWS.map(([code, slug, name, weekend]) => ({ code, slug, name, weekend }));
 
@@ -69,20 +70,20 @@ function findState(slug) {
 }
 
 async function requestJson(url) {
-  // Dua laluan: IPv6-paksa (edge yang dilayan CDN) kemudian resolusi biasa.
+  // Two routes: the forced-IPv6 one (the edge the CDN serves) then plain resolution.
   try {
     const res = await http.get(url, { httpsAgent: v6Agent });
     return res.data;
   } catch (err) {
     const status = err.response ? err.response.status : null;
-    // Ralat bukan-403 yang mempunyai respons (404/500) = memang tiada data.
+    // A non-403 status that did get a response (404/500) really means "no data".
     if (status && status !== 403) throw err;
     const res2 = await http.get(url, { httpsAgent: plainAgent });
     return res2.data;
   }
 }
 
-// Ekor giliran permintaan — satu sokongan pada satu masa ke CDN yang sama.
+// One request in flight at a time toward the same CDN.
 let queueTail = Promise.resolve();
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
@@ -92,9 +93,9 @@ async function apiGet(path, params) {
   if (hit && !hit.stale) return hit.data;
   const qs = new URLSearchParams(Object.entries(params || {}).map(([k, v]) => [k, String(v)])).toString();
   const url = `${BASE}${path}${qs ? `?${qs}` : ''}`;
-  // CDN hcdn di sisi pelayan kadang menolak dengan 403 "challenge" apabila
-  // beberapa sokongan serentak dari IP yang sama. Suai cara bergilir (satu
-  // permintaan pada satu masa) + satu percubaan semula selepas 1.5s.
+  // The server-side hcdn sometimes answers 403 "challenge" when several
+  // connections from the same IP are open at once. Serialize the requests (one
+  // at a time) and retry once after 1.5s.
   const prev = queueTail;
   let release;
   queueTail = new Promise((r) => { release = r; });
@@ -113,39 +114,40 @@ async function apiGet(path, params) {
         if (process.env.CUTI_DEBUG) console.error('[cuti] apiGet fail', path, JSON.stringify(params), 'attempt', attempt, err.message);
       }
     }
-    if (hit) return hit.data; // stale lebih baik daripada tiada
+    if (hit) return hit.data; // stale beats an error page
     throw lastErr;
   } finally {
     release();
   }
 }
 
-// Senarai nasional (setiap entri ada state_codes = negeri yang bercuti).
+// National list (every entry carries state_codes = the states that rest that day).
 function getHolidays(year) {
   return apiGet('/holidays', { year: Number(year) });
 }
 
-// Senarai satu negeri sahaja.
+// One state only.
 function getStateHolidays(code, year) {
   return apiGet('/holidays', { year: Number(year), state: code });
 }
 
-// Tapis senarai nasional mengikut negeri (untuk halaman hab — run berturutan
-// hanya bermakna bagi satu negeri; nasional bercampur-cahur tak boleh digabung).
+// Filter the national list down to one state (for the hub pages — consecutive runs
+// only make sense per state; the mixed national list cannot be joined up).
 function forState(rows, code) {
   return rows.filter((r) => Array.isArray(r.state_codes) && r.state_codes.includes(code));
 }
 
 const YEAR_MIN = 2026;
-const YEAR_MAX = 2027; // API kini menyokong dua tahun ini sahaja
+const YEAR_MAX = 2027; // the API currently supports these two years only
 
 function dow(dateStr) { return new Date(`${dateStr}T00:00:00Z`).getUTCDay(); }
 
-// ——— Pengiraan hujung minggu panjang ———
-// Kumpul cuti berturutan jadi "run", tambah hujung minggu bersebelahan (Sabtu–Ahad
-// sebagai piawaian nasional; 4 negeri Jumaat–Sabtu noted di halaman negeri).
+// ——— Long-weekend calculation ———
+// Collect consecutive holidays into runs, then append the adjacent weekend
+// (Saturday–Sunday as the national convention; the 4 Friday–Saturday states are
+// noted on each state page).
 // Output: [{start,end,holidays:[row],spanDays,auto,bridge}]
-//   auto = 3 hari atau lebih TANPA perlu cuti rehat; bridge = perlu 1 cuti rehat.
+//   auto = 3 days or more WITHOUT taking leave; bridge = one leave day is needed.
 function longWeekends(rows) {
   const sorted = [...rows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const runs = [];
@@ -160,13 +162,13 @@ function longWeekends(rows) {
   for (const r of runs) {
     let span = r.length;
     const fd = dow(r[0].date), ld = dow(r[r.length - 1].date);
-    // Hujung minggu piawai Sabtu–Ahad. Khamis→2 (Jumaat kerja) & Selasa→2 (Isnin kerja)
-    // bukan hujung minggu panjang, jadi hanya Jumaat/Sabtu/Ahad/Istin dan Ahad
-    // di belakang run dikira.
-    if (ld === 5) span += 2;              // cuti berakhir Jumaat → Sabtu-Ahad melekat
-    else if (ld === 6) span += 1;         // berakhir Sabtu → Ahad melekat
-    if (fd === 1) span += 2;              // cuti bermula Isnin → Sabtu-Ahad sebelumnya
-    else if (fd === 0) span += 1;         // bermula Ahad → Sabtu sebelumnya
+    // The standard Saturday–Sunday weekend. Thursday→2 (Friday is a work day) and
+    // Tuesday→2 (Monday is a work day) are not long weekends, so only a Friday or
+    // Saturday end, and a Monday or Sunday start, are counted.
+    if (ld === 5) span += 2;              // holiday ends on Friday → Saturday-Sunday attach
+    else if (ld === 6) span += 1;         // ends on Saturday → Sunday attaches
+    if (fd === 1) span += 2;              // holiday starts on Monday → the previous Saturday-Sunday
+    else if (fd === 0) span += 1;         // starts on Sunday → the Saturday before
     out.push({
       start: r[0].date, end: r[r.length - 1].date, holidays: r, spanDays: span,
       auto: span >= 3, bridge: span >= 3 ? 0 : (hasBridge(r) ? 1 : 0),
@@ -176,7 +178,7 @@ function longWeekends(rows) {
 }
 
 function hasBridge(r) {
-  // Cuti tunggal Selasa/ Khamis: 1 hari cuti rehat sambung hujung minggu → 4 hari.
+  // A lone Tuesday or Thursday holiday: 1 leave day joins it to the weekend → 4 days.
   if (r.length !== 1) return false;
   const d = dow(r[0].date);
   return d === 2 || d === 4;

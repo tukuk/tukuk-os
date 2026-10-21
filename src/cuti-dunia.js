@@ -1,18 +1,18 @@
 'use strict';
-// ── TUKUK-OS CUTI DUNIA — kalendar cuti umum seluruh planet (PERCUMA, tanpa kunci) ──
-// Sumber: Nager.Date v3 (date.nager.at) — projek open-source, tanpa pendaftaran.
-// Liputan ±180 negara; kami pilih senarai negara besar untuk hab + halaman negara.
-// Negara tanpa data (jawapan 204) dilayakkan dengan anggun — dibuang dari kiraan.
-// Senarai negara ini disahkan terhadap /AvailableCountries Nager.Date: Israel,
-// India, Thailand, Taiwan, UAE, Saudi, Pakistan, Sri Lanka, Nepal dan Malaysia
-// TIDAK disokong sumber itu, jadi ia ditukar dengan negara sebenua yang berdata.
-// Malaysia tetap dilayan Kompleks Cuti sendiri (/cuti/2026) daripada API + dokumen
-// kabinet, dan hab memaut ke sana secara khusus.
+// ── TUKUK-OS CUTI DUNIA — public-holiday calendars for the whole planet (FREE, no key) ──
+// Source: Nager.Date v3 (date.nager.at) — an open-source project, no registration.
+// It covers ~180 countries; we picked the larger ones for the hub + country pages.
+// Countries with no data (HTTP 204) are handled gracefully — dropped from the counts.
+// This country list was verified against Nager.Date's /AvailableCountries: Israel,
+// India, Thailand, Taiwan, UAE, Saudi Arabia, Pakistan, Sri Lanka, Nepal and Malaysia
+// are NOT supported by that source, so they are replaced by neighbours that do have
+// data. Malaysia is still served by the Cuti Complex's own feed (/cuti/2026) built
+// from the API + the official gazette, and the hub links to it explicitly.
 const https = require('https');
 
 const NAGER = 'https://date.nager.at/api/v3';
 const cache = new Map();
-const TTL = 30 * 24 * 60 * 60 * 1000; // kalendar tahunan jarang berubah
+const TTL = 30 * 24 * 60 * 60 * 1000; // annual calendars rarely change
 
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -23,14 +23,14 @@ function cacheSet(key, data) {
   cache.set(key, { data, expiresAt: Date.now() + TTL });
 }
 
-// Agent IPv6 didahulukan (pitfall dns ipv4first global server.js).
+// The IPv6 agent goes first (server.js sets the global dns order to ipv4first).
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 
 function httpsGet(url, agent) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { agent, headers: { Accept: 'application/json', 'User-Agent': 'TukukOS-CutiDunia-Client/1.0 (+https://tukuk.org)' } }, (res) => {
-      if (res.statusCode === 204) { res.resume(); resolve(null); return; } // tiada data = OK
+      if (res.statusCode === 204) { res.resume(); resolve(null); return; } // no data is fine, not an error
       if (res.statusCode >= 301 && res.statusCode <= 308 && res.headers.location) {
         const next = new URL(res.headers.location, url).toString();
         res.resume();
@@ -52,10 +52,9 @@ async function fetchJson(url) {
   catch { return await httpsGet(url, v4Agent); }
 }
 
-// ——— Negara pilihan hab: [cca2, nama Inggeris, rantau] ———
-// Nama BM + bendera dipinjam daripada rows src/negara.js (padan cca2); URL halaman
-// cuti memakai slug ASCII kami sendiri supaya ejaan sumber (Türkiye → 't-rkiye')
-// tidak pernah bocor ke alamat web.
+// ——— The hub's chosen countries: [cca2, English name, region] ———
+// Flags and the page URLs come from this table. The holiday URLs use our own ASCII
+// slug so the source spelling (Türkiye → 't-rkiye') never leaks into a web address.
 const COUNTRIES = [
   ['JP', 'Japan', 'Asia'], ['CN', 'China', 'Asia'], ['KR', 'South Korea', 'Asia'], ['KH', 'Cambodia', 'Asia'],
   ['VN', 'Vietnam', 'Asia'], ['ID', 'Indonesia', 'Asia'], ['PH', 'Philippines', 'Asia'], ['SG', 'Singapore', 'Asia'],
@@ -92,13 +91,13 @@ function findCountryBySlug(slug) {
   return SLUGROWS[String(slug || '').toLowerCase()] || null;
 }
 
-// Rantau hab — slug seakan Kompleks Negara supaya pautan silang mudah difahami.
+// Hub regions — the slugs mirror the Country Complex so the cross links read well.
 const REGIONS = [
-  { slug: 'asia', en: 'Asia', bm: 'Asia' },
-  { slug: 'americas', en: 'Americas', bm: 'Amerika' },
-  { slug: 'europe', en: 'Europe', bm: 'Eropah' },
-  { slug: 'africa', en: 'Africa', bm: 'Afrika' },
-  { slug: 'oceania', en: 'Oceania', bm: 'Oseania' },
+  { slug: 'asia', en: 'Asia' },
+  { slug: 'americas', en: 'Americas' },
+  { slug: 'europe', en: 'Europe' },
+  { slug: 'africa', en: 'Africa' },
+  { slug: 'oceania', en: 'Oceania' },
 ];
 function findRegion(slug) {
   const s = String(slug || '').toLowerCase();
@@ -110,14 +109,14 @@ function inRegion(world, slug) {
   return world.filter((x) => x.region === r.en);
 }
 
-// Kiraan ringkas untuk kad statistik hab.
+// Simple totals for the hub statistic cards.
 function worldTotals(world) {
   const withData = (world || []).filter((r) => Array.isArray(r.holidays) && r.holidays.length);
   const total = withData.reduce((s, r) => s + r.holidays.length, 0);
   return { countries: withData.length, total, avg: withData.length ? total / withData.length : 0 };
 }
 
-// Cuti umum satu negara satu tahun; 204/null → [] (tiada data, bukan ralat).
+// Public holidays of one country in one year; a 204/null becomes [] (no data, not an error).
 async function loadHolidays(year, cca2) {
   const key = `ph:${year}:${cca2}`;
   const hit = cacheGet(key);
@@ -133,7 +132,7 @@ async function loadHolidays(year, cca2) {
   }
 }
 
-// Gabungan hujung minggu panjang versi Nager (termasuk logik bridge).
+// Nager's own long-weekend combinations (they include the bridge-day logic).
 async function loadLongWeekends(year, cca2) {
   const key = `lw:${year}:${cca2}`;
   const hit = cacheGet(key);
@@ -149,8 +148,8 @@ async function loadLongWeekends(year, cca2) {
   }
 }
 
-// Muat semua negara dengan kolam kecil (6 serentak) supaya Nager tidak dibanjiri.
-// Kegagalan satu negara tidak gagalkan dunia — negara itu dapat rows = null.
+// Load every country through a small pool (6 at a time) so Nager is never flooded.
+// One country failing does not break the world — that country simply gets rows = null.
 async function mapPool(items, size, fn) {
   const out = new Array(items.length);
   let i = 0;
@@ -170,11 +169,11 @@ async function loadWorld(year) {
     return { cca2, en, region, slug: slugOf(en), holidays };
   });
   const withData = results.filter((r) => Array.isArray(r.holidays) && r.holidays.length);
-  if (!withData.length) throw new Error('tiada data dunia');
+  if (!withData.length) throw new Error('no world data');
   return results;
 }
 
-// Cuti sedunia dalam N hari akan datang (tarikh ISO_sorted → senarai).
+// Public holidays worldwide in the next N days (ISO date order → list).
 function worldUpcoming(world, days, todayStr) {
   const end = new Date(Date.parse(`${todayStr}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
   const list = [];
@@ -188,7 +187,7 @@ function worldUpcoming(world, days, todayStr) {
   return list;
 }
 
-// Dunia paling banyak cuti — ranking ikut kiraan.
+// The countries with the most holidays — ranked by count.
 function worldRanking(world) {
   return world
     .filter((r) => Array.isArray(r.holidays) && r.holidays.length)
@@ -196,7 +195,7 @@ function worldRanking(world) {
     .sort((a, b) => b.count - a.count || String(a.en).localeCompare(String(b.en)));
 }
 
-// Semua gabungan hujung minggu panjang dunia, disusun paling panjang dahulu.
+// Every long-weekend combination in the world, longest first.
 async function loadWorldLongWeekends(year) {
   const results = await mapPool(COUNTRIES, 6, async ([cca2, en, region]) => {
     const lws = await loadLongWeekends(year, cca2);
@@ -207,7 +206,7 @@ async function loadWorldLongWeekends(year) {
     if (!Array.isArray(r.lws)) continue;
     for (const w of r.lws) flat.push({ cca2: r.cca2, en: r.en, region: r.region, slug: slugOf(r.en), start: w.startDate, end: w.endDate, dayCount: w.dayCount, needBridge: !!w.needBridgeDay, bridgeDays: w.bridgeDays || [] });
   }
-  if (!flat.length) throw new Error('tiada data hujung minggu');
+  if (!flat.length) throw new Error('no long-weekend data');
   flat.sort((a, b) => b.dayCount - a.dayCount || String(a.start).localeCompare(String(b.start)));
   return flat;
 }
