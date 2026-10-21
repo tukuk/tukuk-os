@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'muzium-rumah-historis', label: 'HISTORIC-HOUSE-MUSEUMS', title: 'Historic House Museums of the World', var: 'HHMUSEUM', sing: 'HistoricHouseMuseum', finder: 'historicHouseMuseum', finders: 'historicHouseMuseumsInRegion', pfx: 'mrh', cap: 'HistoricHouseMuseums' },
-  { file: 'muzium-sejarah', label: 'HISTORY-MUSEUMS', title: 'History Museums of the World', var: 'HIMUSEUM', sing: 'HistoryMuseum', finder: 'historyMuseum', finders: 'historyMuseumsInRegion', pfx: 'msj', cap: 'HistoryMuseums' },
-  { file: 'muzium-kereta', label: 'RAILWAY-MUSEUMS', title: 'Railway Museums of the World', var: 'RLMUSEUM', sing: 'RailwayMuseum', finder: 'railwayMuseum', finders: 'railwayMuseumsInRegion', pfx: 'mkr', cap: 'RailwayMuseums' },
-  { file: 'muzium-auto', label: 'AUTOMOBILE-MUSEUMS', title: 'Automobile Museums of the World', var: 'AUMUSEUM', sing: 'AutomobileMuseum', finder: 'automobileMuseum', finders: 'automobileMuseumsInRegion', pfx: 'mau', cap: 'AutomobileMuseums' },
-  { file: 'muzium-transport', label: 'TRANSPORT-MUSEUMS', title: 'Transport Museums of the World', var: 'TRMUSEUM', sing: 'TransportMuseum', finder: 'transportMuseum', finders: 'transportMuseumsInRegion', pfx: 'mtt', cap: 'TransportMuseums' },
-  { file: 'muzium-kanak', label: 'CHILDRENS-MUSEUMS', title: "Children's Museums of the World", var: 'CHMUSEUM', sing: 'ChildrensMuseum', finder: 'childrensMuseum', finders: 'childrensMuseumsInRegion', pfx: 'mka', cap: 'ChildrensMuseums' },
-  { file: 'muzium-pelombongan', label: 'MINING-MUSEUMS', title: 'Mining Museums of the World', var: 'MINMUSEUM', sing: 'MiningMuseum', finder: 'miningMuseum', finders: 'miningMuseumsInRegion', pfx: 'mpo', cap: 'MiningMuseums' },
-  { file: 'monumen-holocaust', label: 'HOLOCAUST-MEMORIALS', title: 'Holocaust Memorials of the World', var: 'HOLOMEM', sing: 'HolocaustMemorial', finder: 'holocaustMemorial', finders: 'holocaustMemorialsInRegion', pfx: 'hmn', cap: 'HolocaustMemorials' },
-  { file: 'muzium-pos', label: 'POSTAL-MUSEUMS', title: 'Postal Museums of the World', var: 'POSMUSEUM', sing: 'PostalMuseum', finder: 'postalMuseum', finders: 'postalMuseumsInRegion', pfx: 'mop', cap: 'PostalMuseums' },
+  { file: 'muzium-seni', label: 'ART-MUSEUMS', title: 'Art Museums of the World', var: 'ARMUSEUM', sing: 'ArtMuseum', finder: 'artMuseum', finders: 'artMuseumsInRegion', pfx: 'msn', cap: 'ArtMuseums' },
+  { file: 'tapak-sejarah', label: 'HISTORIC-SITES', title: 'Historic Sites of the World', var: 'HISTSITE', sing: 'HistoricSite', finder: 'historicSite', finders: 'historicSitesInRegion', pfx: 'tps', cap: 'HistoricSites' },
+  { file: 'pusat-budaya', label: 'CULTURAL-CENTERS', title: 'Cultural Centers of the World', var: 'CUTCEN', sing: 'CulturalCenter', finder: 'culturalCenter', finders: 'culturalCentersInRegion', pfx: 'pbd', cap: 'CulturalCenters' },
+  { file: 'anak-sungai', label: 'TRIBUTARIES', title: 'River Tributaries of the World', var: 'TRIB', sing: 'Tributary', finder: 'tributary', finders: 'tributariesInRegion', pfx: 'ask', cap: 'Tributaries' },
+  { file: 'pusat-seni', label: 'ARTS-CENTERS', title: 'Arts Centers of the World', var: 'ARTCTR', sing: 'ArtsCenter', finder: 'artsCenter', finders: 'artsCentersInRegion', pfx: 'psn', cap: 'ArtsCenters' },
+  { file: 'taman-wilayah', label: 'REGIONAL-PARKS', title: 'Regional Parks of the World', var: 'REGPARK', sing: 'RegionalPark', finder: 'regionalPark', finders: 'regionalParksInRegion', pfx: 'tpr', cap: 'RegionalParks' },
+  { file: 'taman-country', label: 'COUNTRY-PARKS', title: 'Country Parks of the World', var: 'CNTYPARK', sing: 'CountryPark', finder: 'countryPark', finders: 'countryParksInRegion', pfx: 'tpn', cap: 'CountryParks' },
+  { file: 'oratori', label: 'ORATORIES', title: 'Oratories of the World', var: 'ORAT', sing: 'Oratory', finder: 'oratory', finders: 'oratoriesInRegion', pfx: 'ora', cap: 'Oratories' },
+  { file: 'cabang-sungai', label: 'DISTRIBUTARIES', title: 'River Distributaries of the World', var: 'DISTRIB', sing: 'Distributary', finder: 'distributary', finders: 'distributariesInRegion', pfx: 'csx', cap: 'Distributaries' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
