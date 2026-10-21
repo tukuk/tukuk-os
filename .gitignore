@@ -70,6 +70,11 @@ apk/.gradle/
 public/downloads/*.idsig
 # AAB hanya untuk muat naik Play (tak di-host umum) — boleh dibina semula
 public/downloads/*.aab
+# APK apl terhasil daripada Tukuk Builder (tukuk-km* = slug apps dinjana pengguna)
+# — artefak setempat pada pelayan, boleh dibina semula dengan
+# scripts/build-apk.sh <slug>. Jangan commit: fail yang wujud untracked di pelayan
+# akan MENOLAK `git merge --ff-only` tukuk-update.service.
+public/downloads/tukuk-km*.apk
 # Kunci service-account Google Cloud utk fastlane supply — RAHSIA, jangan commit
 google-cloud-key.json
 fastlane/report.xml
@@ -82,3 +87,8 @@ bolt.diy/
 
 # local safety-net backups (never commit)
 .backups/
+
+# Output probe/bench semasa (GPU detection, tier bench) — fail laporan .txt di
+# generated/ di-commit sekali-sekala secara eksplisit, direktori ini dijana terus
+# oleh kod berjalan di pelayan.
+generated/gpu/
