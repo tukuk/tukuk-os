@@ -106,7 +106,7 @@ async function loadWbMap(code, yr) {
   }
 }
 
-// Gabungkan dengan rows negara.js (nama BM + slug + bendera percuma daripada cache sana).
+// Merge with the negara.js rows (English name + slug + flag come free from that cache).
 async function loadRanking(ind, countries) {
   let values = null;
   if (ind.field) {
@@ -118,7 +118,7 @@ async function loadRanking(ind, countries) {
   const list = [];
   for (const c of countries) {
     const v = values[c.cca3];
-    if (v != null && Number.isFinite(v)) list.push({ cca3: c.cca3, name: c.bm, slug: c.slug, flag: c.flag, cca2: c.cca2, value: v });
+    if (v != null && Number.isFinite(v)) list.push({ cca3: c.cca3, name: c.name, slug: c.slug, flag: c.flag, cca2: c.cca2, value: v });
   }
   list.sort((a, b) => b.value - a.value);
   list.forEach((x, i) => { x.rank = i + 1; });

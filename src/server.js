@@ -1330,16 +1330,16 @@ app.get('/cuti/:negeri', async (req, res) => {
   }
 });
 
-// ── LALUAN KOMPLEKS NEGARA (/negara*) — world-countries + World Bank, tanpa kunci ──
-// Hab + :slug; rantau/negara divalidasi DALAM handler (ikut tertib: region →
-// country → 404). Data di-cache 30 hari, jadi permintaan susulan segera.
+// ── COUNTRY COMPLEX ROUTES (/negara*) — world-countries + World Bank, no API key ──
+// Hub + :slug; continent/country are validated INSIDE the handler (in order:
+// region → country → 404). The data is cached for 30 days, so later requests are fast.
 app.get('/negara', async (req, res) => {
   try {
     const rows = await ng.loadCountries();
-    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+    if (!rows || rows.length < 200) throw new Error('empty dataset');
     res.status(200).type('html').send(negaraHubPage(req, rows));
   } catch {
-    res.status(503).type('html').send(negaraBusy('Data negara belum sempat dimuat'));
+    res.status(503).type('html').send(negaraBusy('The country data has not loaded yet'));
   }
 });
 
@@ -1348,15 +1348,15 @@ app.get('/negara/:slug', async (req, res) => {
   let rows;
   try {
     rows = await ng.loadCountries();
-    if (!rows || rows.length < 200) throw new Error('dataset kosong');
+    if (!rows || rows.length < 200) throw new Error('empty dataset');
   } catch {
-    return res.status(503).type('html').send(negaraBusy('Data negara belum sempat dimuat'));
+    return res.status(503).type('html').send(negaraBusy('The country data has not loaded yet'));
   }
   const region = ng.findRegion(slug);
   if (region) return res.status(200).type('html').send(negaraRegionPage(req, region, ng.inRegion(rows, slug)));
   const country = ng.findCountry(rows, slug);
   if (country) return res.status(200).type('html').send(negaraCountryPage(req, country, rows));
-  return res.status(404).type('html').send(negaraBusy(`Negara "${slug}" tidak dikenali`));
+  return res.status(404).type('html').send(negaraBusy(`Country "${slug}" is not in our list`));
 });
 
 // ── LALUAN KOMPLEKS STATISTIK (/statistik*) — World Bank Open Data, tanpa kunci ──
@@ -2873,9 +2873,9 @@ app.get('/sitemap-cuti.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP NEGARA — hab + 6 rantau + ±250 negara (daripada cache gabungan) ──
-// Negara masuk sitemap hanya bila dataset berjaya dimuat; jika sumber luar lambat,
-// fallback hab + rantau sahaja supaya fail XML tetap sah & boleh diindeks.
+// ── COUNTRY SITEMAP — hub + 6 continents + ±250 countries (from the merged cache) ──
+// Countries only enter the sitemap when the dataset loaded successfully; if the external
+// sources are slow we fall back to hub + continents so the XML stays valid & indexable.
 app.get('/sitemap-negara.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2885,7 +2885,7 @@ app.get('/sitemap-negara.xml', async (req, res) => {
   try {
     const rows = await ng.loadCountries();
     countries = rows.map((c) => one(`/negara/${c.slug}`, '0.6')).join('\n');
-  } catch { /* sumber lambat → hab + rantau sahaja */ }
+  } catch { /* source slow → hub + continents only */ }
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + special + (countries ? '\n' + countries : '') + '\n</urlset>\n'
@@ -6099,42 +6099,35 @@ function cutiExplainPage(req) {
   });
 }
 
-// ── TUKUK-OS NEGARA COMPLEX — /negara* (profil ±250 negara, Bahasa Melayu) ──
-// Sumber: world-countries (jsDelivr, tanpa kunci) + World Bank Open Data (populasi,
-// KDNK, urbanisasi, jangka hayat 2023) + flagcdn.com untuk bendera. Shell resepi sama
-// cutiDoc: lang ms, 3 slot iklan, nav silang; hero biru-nelayan bezakan kompleks ini.
+// ── TUKUK-OS COUNTRY COMPLEX — /negara* (profiles for ±250 countries, in English) ──
+// Sources: world-countries (jsDelivr, no key) + World Bank Open Data (population,
+// GDP, urbanisation, life expectancy 2023) + flagcdn.com for the flags. Same shell
+// recipe as cutiDoc: lang en, 3 ad slots, cross nav; the seafaring-blue hero sets this complex apart.
 
-const NEGARA_SECTIONS = [{ href: '/negara', icon: '\uD83D\uDDFA\uFE0F', name: 'Semua Negara', blurb: 'Profil setiap buah negara di dunia \u2014 ibu negara, populasi, KDNK, bendera dan jiran daratan.' }]
-  .concat(ng.REGIONS.map((r) => ({ href: `/negara/${r.slug}`, icon: '\uD83E\uDDED', name: `Negara ${r.bm}`, blurb: `Senarai lengkap negara dalam benua ${r.bm}, disusun ikut abjad.` })));
+const NEGARA_SECTIONS = [{ href: '/negara', icon: '\uD83D\uDDFA\uFE0F', name: 'All Countries', blurb: 'A profile of every country on earth — capital, population, GDP, flag and land borders.' }]
+  .concat(ng.REGIONS.map((r) => ({ href: `/negara/${r.slug}`, icon: '\uD83E\uDDED', name: `Countries of ${r.en}`, blurb: `The complete list of countries on the ${r.en} continent, in alphabetical order.` })));
 
 function negaraNav() {
-  return `<nav aria-label="Bahagian negara"><h2 class="section-title">Jelajahi Kompleks Negara Tukuk-OS</h2><div class="feed">`
+  return `<nav aria-label="Country sections"><h2 class="section-title">Explore the Tukuk-OS Country Complex</h2><div class="feed">`
     + NEGARA_SECTIONS.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${s.blurb}</p></div>`).join('')
     + `</div></nav>`;
 }
 
 function negaraBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>Sumber data negara (world-countries / World Bank) tidak sempat menjawab. Sila cuba lagi sebentar.</p><p><a href="/negara">Kembali ke Kompleks Negara</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The country data source (world-countries / World Bank) did not answer in time. Please try again in a few minutes.</p><p><a href="/negara">Back to the Country Complex</a></p></body>`;
 }
 
-// Terjemahan subregion (skema restcountries) untuk paparan mesra pembaca MY.
-const NG_SUB_BM = {
-  'South East Asia': 'Asia Tenggara', 'East Asia': 'Asia Timur', 'South Asia': 'Asia Selatan',
-  'Central Asia': 'Asia Tengah', 'Western Asia': 'Asia Barat', 'Northern Africa': 'Afrika Utara',
-  'Western Africa': 'Afrika Barat', 'Eastern Africa': 'Afrika Timur', 'Middle Africa': 'Afrika Tengah',
-  'Southern Africa': 'Afrika Selatan', 'Northern Europe': 'Eropah Utara', 'Western Europe': 'Eropah Barat',
-  'Eastern Europe': 'Eropah Timur', 'Southern Europe': 'Eropah Selatan', 'Central Europe': 'Eropah Tengah',
-  'Caribbean': 'Karibia', 'Central America': 'Amerika Tengah', 'North America': 'Amerika Utara',
-  'Northern America': 'Amerika Utara', 'South America': 'Amerika Selatan',
-  'Australia and New Zealand': 'Australia &amp; New Zealand', 'Melanesia': 'Melanesia',
-  'Micronesia': 'Mikronesia', 'Polynesia': 'Polinesia',
+// A couple of subregion spellings in the restcountries scheme read badly for readers.
+const NG_SUB_LABEL = {
+  'Northern America': 'North America',
+  'Australia and New Zealand': 'Australia & New Zealand',
 };
 
-const NG_INT = new Intl.NumberFormat('ms-MY');
-const NG_DEC = new Intl.NumberFormat('ms-MY', { maximumFractionDigits: 1 });
+const NG_INT = new Intl.NumberFormat('en-GB');
+const NG_DEC = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 });
 function ngNum(n) { return n == null || !Number.isFinite(n) ? '—' : NG_INT.format(Math.round(n)); }
-function ngGdp(usd) { return usd == null ? '—' : `US$${NG_DEC.format(usd / 1e9)} bilion`; }
-function ngSubBm(s) { return NG_SUB_BM[s] || s || ''; }
+function ngGdp(usd) { return usd == null ? '—' : `US$${NG_DEC.format(usd / 1e9)} billion`; }
+function ngSub(s) { return NG_SUB_LABEL[s] || s || ''; }
 function ngThumb(cca2) { return `https://flagcdn.com/w160/${String(cca2 || '').toLowerCase()}.png`; }
 
 function negaraDoc(o) {
@@ -6201,133 +6194,134 @@ ${siteFooter()}
 </html>`;
 }
 
-// ─── HAB /negara — kiraan dunia, rantau, top-10 populasi & keluasan, grid A–Z ───
+// ─── HUB /negara — world counts, continents, top-10 by population & area, A–Z grid ───
 function negaraHubPage(req, rows) {
   const totalPop = rows.reduce((s, c) => s + (c.population || 0), 0);
   const byPop = [...rows].filter((c) => c.population).sort((a, b) => b.population - a.population);
   const byArea = [...rows].filter((c) => c.area).sort((a, b) => b.area - a.area);
   const regionCards = ng.REGIONS.map((r) => {
     const list = ng.inRegion(rows, r.slug);
-    return `<div class="wx-card"><h3><a href="/negara/${r.slug}">${escapeHtml(r.bm)}</a></h3><div class="big">${list.length}</div><div class="meta">buah negara & wilayah dalam benua ini</div></div>`;
+    return `<div class="wx-card"><h3><a href="/negara/${r.slug}">${escapeHtml(r.en)}</a></h3><div class="big">${list.length}</div><div class="meta">countries & territories on this continent</div></div>`;
   }).join('');
-  const topPop = byPop.slice(0, 10).map((c, i) => `<tr><td>${i + 1}</td><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.bm)}</a></td><td>${escapeHtml(c.capital || '—')}</td><td><b>${ngNum(c.population)}</b></td></tr>`).join('');
-  const topArea = byArea.slice(0, 10).map((c) => `<tr><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.bm)}</a></td><td>${ngNum(c.area)} km²</td><td>${ngNum(c.population)}</td></tr>`).join('');
-  // Grid A–Z — hab pautan crawlable ke kesemua ±250 halaman negara.
+  const topPop = byPop.slice(0, 10).map((c, i) => `<tr><td>${i + 1}</td><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></td><td>${escapeHtml(c.capital || '—')}</td><td><b>${ngNum(c.population)}</b></td></tr>`).join('');
+  const topArea = byArea.slice(0, 10).map((c) => `<tr><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></td><td>${ngNum(c.area)} km²</td><td>${ngNum(c.population)}</td></tr>`).join('');
+  // A–Z grid — a crawlable link hub to all ±250 country pages.
   const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
   const letters = new Map();
   for (const c of sorted) {
-    const L = c.bm.charAt(0).toUpperCase();
+    const L = c.name.charAt(0).toUpperCase();
     if (!letters.has(L)) letters.set(L, []);
-    letters.get(L).push(`<a href="/negara/${c.slug}">${escapeHtml(c.bm)}</a>`);
+    letters.get(L).push(`<a href="/negara/${c.slug}">${escapeHtml(c.name)}</a>`);
   }
   const az = [...letters.entries()].map(([L, links]) => `<h3>${L}</h3><div class="ng-az">${links.join('')}</div>`).join('');
-  const body = `<div class="wx-hero"><div class="temp">${rows.length} buah negara</div><div class="wmeta">Profil lengkap setiap negara dalam Bahasa Melayu \u00b7 populasi & KDNK World Bank (2023) \u00b7 bendera flagcdn \u00b7 data asas pakej open-data world-countries</div></div>`
+  const body = `<div class="wx-hero"><div class="temp">${rows.length} countries</div><div class="wmeta">The complete profile of every country \u00b7 World Bank population & GDP (2023) \u00b7 flags from flagcdn \u00b7 base data from the open world-countries package</div></div>`
     + `<div class="wx-grid">`
-    + `<div class="wx-card"><h3>Jumlah populasi terhimpun</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">anggaran penduduk dunia (indikator World Bank 2023)</div></div>`
-    + `<div class="wx-card"><h3>Negara paling padat</h3><div class="big">${byPop[0] ? `<a href="/negara/${byPop[0].slug}">${escapeHtml(byPop[0].bm)}</a>` : '—'}</div><div class="meta">${byPop[0] ? ngNum(byPop[0].population) : 0} orang</div></div>`
-    + `<div class="wx-card"><h3>Negara paling luas</h3><div class="big">${byArea[0] ? `<a href="/negara/${byArea[0].slug}">${escapeHtml(byArea[0].bm)}</a>` : '—'}</div><div class="meta">${byArea[0] ? ngNum(byArea[0].area) : 0} km²</div></div>`
+    + `<div class="wx-card"><h3>Population counted so far</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">the world's people in our coverage (World Bank 2023)</div></div>`
+    + `<div class="wx-card"><h3>Most populous country</h3><div class="big">${byPop[0] ? `<a href="/negara/${byPop[0].slug}">${escapeHtml(byPop[0].name)}</a>` : '—'}</div><div class="meta">${byPop[0] ? ngNum(byPop[0].population) : 0} people</div></div>`
+    + `<div class="wx-card"><h3>Largest country</h3><div class="big">${byArea[0] ? `<a href="/negara/${byArea[0].slug}">${escapeHtml(byArea[0].name)}</a>` : '—'}</div><div class="meta">${byArea[0] ? ngNum(byArea[0].area) : 0} km²</div></div>`
     + `</div>`
-    + `<h2 class="section-title">Mengikut benua</h2><div class="wx-grid">${regionCards}</div>`
-    + `<h2 class="section-title">10 negara terbanyak penduduk</h2><table class="wx-table"><tr><th>#</th><th>Negara</th><th>Ibu negara</th><th>Populasi</th></tr>${topPop}</table>`
-    + `<h2 class="section-title">10 negara paling luas</h2><table class="wx-table"><tr><th>Negara</th><th>Keluasan</th><th>Populasi</th></tr>${topArea}</table>`
-    + `<h2 class="section-title">Senarai semua negara (A–Z)</h2>${az}`
-    + `<p class="meta">Merancang perjalanan? Semak <a href="/cuaca">Kompleks Cuaca</a> untuk keadaan langit, <a href="/gempa">Kompleks Gempa</a> untuk senarai langsung USGS, <a href="/bencana">Kompleks Bencana</a> untuk acara alam aktif dan <a href="/statistik">Kompleks Statistik</a> untuk ranking dunia. Jadual kelepasan Malaysia di <a href="/cuti">Kompleks Cuti</a>.</p>`;
+    + `<h2 class="section-title">By continent</h2><div class="wx-grid">${regionCards}</div>`
+    + `<h2 class="section-title">The 10 most populous countries</h2><table class="wx-table"><tr><th>#</th><th>Country</th><th>Capital</th><th>Population</th></tr>${topPop}</table>`
+    + `<h2 class="section-title">The 10 largest countries</h2><table class="wx-table"><tr><th>Country</th><th>Area</th><th>Population</th></tr>${topArea}</table>`
+    + `<h2 class="section-title">Every country, A–Z</h2>${az}`
+    + `<p class="meta">Planning a trip? The <a href="/cuaca">Weather Complex</a> covers the sky, the <a href="/gempa">Earthquake Complex</a> the live USGS list, the <a href="/bencana">Disaster Complex</a> active natural events and the <a href="/statistik">Statistics Complex</a> the world rankings. Malaysia's holiday calendar is in the <a href="/cuti">Holiday Complex</a>.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Kompleks Negara Tukuk-OS',
-    description: 'Profil Bahasa Melayu untuk lebih 250 buah negara: ibu negara, populasi, KDNK, keluasan, mata wang, bahasa dan jiran.',
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Country Complex',
+    description: 'Country profiles for more than 250 nations: capital, population, GDP, area, currency, languages and land neighbours.',
     url: 'https://tukuk.org/negara', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return negaraDoc({
-    title: 'Senarai Negara & Profil Dunia — Ibu Negara, Populasi, Bendera | Tukuk-OS',
-    desc: `Profil lengkap ${rows.length} buah negara dalam Bahasa Melayu: ibu negara, populasi & KDNK World Bank, keluasan, mata wang, bahasa, kod panggilan dan negara jiran.`,
+    title: 'List of Countries & World Profiles — Capitals, Population, Flags | Tukuk-OS',
+    desc: `A complete profile of ${rows.length} countries: capital, World Bank population & GDP, area, currency, languages, calling codes and land neighbours.`,
     selfUrl: 'https://tukuk.org/negara',
-    heroTitle: 'Kompleks Negara Tukuk-OS', heroSub: `${rows.length} buah negara \u00b7 6 benua \u00b7 data World Bank & world-countries, percuma tanpa daftar`,
+    heroTitle: 'Tukuk-OS Country Complex', heroSub: `${rows.length} countries \u00b7 6 continents \u00b7 World Bank & world-countries data, free with no signup`,
     body, ld,
   });
 }
 
-// ─── /negara/:rantau — satu benua, kad bendera + ibu + populasi ───
+// ─── /continent page — one continent: flag card + capital + population ───
 function negaraRegionPage(req, region, rows) {
   const selfUrl = `https://tukuk.org/negara/${region.slug}`;
   const totalPop = rows.reduce((s, c) => s + (c.population || 0), 0);
   const most = rows.filter((x) => x.population).sort((a, b) => b.population - a.population)[0];
-  const cards = rows.map((c) => `<div class="wx-card"><h3><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.bm)}</a></h3>`
-    + `<div class="meta">${escapeHtml(c.capital || 'Tiada ibu negara tetap')}${c.population ? ` \u00b7 ${ngNum(c.population)} orang` : ''}</div></div>`).join('');
+  const cards = rows.map((c) => `<div class="wx-card"><h3><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></h3>`
+    + `<div class="meta">${escapeHtml(c.capital || 'No fixed capital')}${c.population ? ` \u00b7 ${ngNum(c.population)} people` : ''}</div></div>`).join('');
   const body = `<div class="wx-grid">`
-    + `<div class="wx-card"><h3>Jumlah entri ${escapeHtml(region.bm)}</h3><div class="big">${rows.length}</div><div class="meta">buah negara & wilayah tersenarai</div></div>`
-    + `<div class="wx-card"><h3>Populasi terhimpun</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">jumlah penduduk semua entri (World Bank 2023)</div></div>`
-    + `<div class="wx-card"><h3>Paling padat di ${escapeHtml(region.bm)}</h3><div class="big">${most ? `<a href="/negara/${most.slug}">${escapeHtml(most.bm)}</a>` : '—'}</div><div class="meta">${most ? ngNum(most.population) : 0} orang</div></div>`
+    + `<div class="wx-card"><h3>Entries in ${escapeHtml(region.en)}</h3><div class="big">${rows.length}</div><div class="meta">countries & territories listed</div></div>`
+    + `<div class="wx-card"><h3>Combined population</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">residents of every entry (World Bank 2023)</div></div>`
+    + `<div class="wx-card"><h3>Most populous in ${escapeHtml(region.en)}</h3><div class="big">${most ? `<a href="/negara/${most.slug}">${escapeHtml(most.name)}</a>` : '—'}</div><div class="meta">${most ? ngNum(most.population) : 0} people</div></div>`
     + `</div>`
-    + `<h2 class="section-title">Semua negara di ${escapeHtml(region.bm)}</h2><div class="wx-grid">${cards || '<p>Belum ada data untuk benua ini.</p>'}</div>`
-    + `<p class="meta">Bandingkan dengan benua lain melalui <a href="/negara">senarai A–Z penuh</a>, atau semak <a href="/cuaca">cuaca</a> dan <a href="/gempa">aktiviti gempa</a> di rantau ini.</p>`;
+    + `<h2 class="section-title">Every country in ${escapeHtml(region.en)}</h2><div class="wx-grid">${cards || '<p>No data for this continent yet.</p>'}</div>`
+    + `<p class="meta">Compare with the other continents through the <a href="/negara">full A–Z list</a>, or check the <a href="/cuaca">weather</a> and <a href="/gempa">earthquake activity</a> in this region.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Negara di ${region.bm}`,
-    description: `Senarai ${rows.length} buah negara di benua ${region.bm} dengan ibu negara dan populasi.`,
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Countries of ${region.en}`,
+    description: `The list of ${rows.length} countries on the ${region.en} continent with their capitals and populations.`,
     url: selfUrl,
   }).replace(/</g, '\\u003c');
   return negaraDoc({
-    title: `Senarai Negara di ${region.bm} — Profil, Ibu Negara & Populasi | Tukuk-OS`,
-    desc: `Semua ${rows.length} buah negara di benua ${region.bm}: bendera, ibu negara dan populasi terkini (World Bank 2023), disusun ikut abjad.`,
+    title: `List of Countries in ${region.en} — Profiles, Capitals & Population | Tukuk-OS`,
+    desc: `All ${rows.length} countries on the ${region.en} continent: flags, capitals and current populations (World Bank 2023), in alphabetical order.`,
     selfUrl,
-    heroTitle: `Negara di ${region.bm}`, heroSub: `${rows.length} buah negara \u00b7 populasi terhimpun ${ngNum(totalPop)} orang`,
+    heroTitle: `Countries of ${region.en}`, heroSub: `${rows.length} countries \u00b7 combined population ${ngNum(totalPop)} people`,
     body, ld,
   });
 }
 
-// ─── /negara/:slug — profil satu negara: hero bendera, jadual statistik, jiran ───
+// ─── /country page — one country: flag hero, statistics table, neighbours ───
 function negaraCountryPage(req, c, rows) {
   const selfUrl = `https://tukuk.org/negara/${c.slug}`;
-  const bmBySlug = {}; for (const x of rows) bmBySlug[x.slug] = x.bm;
-  const regionBm = ng.REGION_BM[c.region] || c.region || '';
-  const popLine = c.population ? `${ngNum(c.population)} orang${c.popRank ? ` (kedudukan ${c.popRank} dunia)` : ''}` : 'Tiada data populasi';
+  const nameBySlug = {}; for (const x of rows) nameBySlug[x.slug] = x.name;
+  const regionLabel = c.region || '';
+  const subLabel = c.subregion ? ` \u00b7 ${ngSub(c.subregion)}` : '';
+  const popLine = c.population ? `${ngNum(c.population)} people${c.popRank ? ` (world rank ${c.popRank})` : ''}` : 'No population data';
   const curTxt = c.currencies.length ? c.currencies.map((x) => `${x.name}${x.symbol && x.symbol !== x.code ? ` (${x.symbol})` : ''} \u2014 ${x.code}`).join(', ') : '—';
   const langTxt = c.languages.length ? c.languages.join(', ') : '—';
-  const hero = `<div class="wx-hero"><img src="${c.flag}" alt="Bendera ${escapeHtml(c.bm)}" width="320" loading="eager" decoding="async" style="max-width:280px;width:45%;height:auto;border-radius:8px;border:1px solid rgba(255,255,255,.25)">`
-    + `<div><div class="temp">${escapeHtml(c.bm)}</div><div class="wmeta">${escapeHtml(c.official)}<br>${escapeHtml(regionBm)}${c.subregion ? ` \u00b7 ${ngSubBm(c.subregion)}` : ''}${c.capital ? ` \u00b7 Ibu negara: <b>${escapeHtml(c.capital)}</b>` : ''}</div></div></div>`;
+  const hero = `<div class="wx-hero"><img src="${c.flag}" alt="Flag of ${escapeHtml(c.name)}" width="320" loading="eager" decoding="async" style="max-width:280px;width:45%;height:auto;border-radius:8px;border:1px solid rgba(255,255,255,.25)">`
+    + `<div><div class="temp">${escapeHtml(c.name)}</div><div class="wmeta">${escapeHtml(c.official)}<br>${escapeHtml(regionLabel)}${escapeHtml(subLabel)}${c.capital ? ` \u00b7 Capital: <b>${escapeHtml(c.capital)}</b>` : ''}</div></div></div>`;
   const baris = (k, v) => `<tr><th>${k}</th><td>${v}</td></tr>`;
-  const stats = `<h2 class="section-title">Maklumat ringkas ${escapeHtml(c.bm)}</h2><table class="wx-table">`
-    + baris('Nama rasmi', escapeHtml(c.official))
-    + baris('Ibu negara', c.capital ? escapeHtml(c.capital) : '—')
-    + baris('Benua & subwilayah', `${escapeHtml(regionBm)}${c.subregion ? ` \u00b7 ${ngSubBm(c.subregion)}` : ''}`)
-    + baris('Populasi', popLine)
-    + baris('Keluasan', c.area ? `${ngNum(c.area)} km²` : '—')
-    + baris('Kepadatan', c.population && c.area ? `${NG_INT.format(Math.round(c.population / c.area))} orang/km²` : '—')
-    + baris('KDNK (nominal)', ngGdp(c.gdp))
-    + baris('Urbanisasi', c.urban == null ? '—' : `${NG_DEC.format(c.urban)}% penduduk bandar`)
-    + baris('Jangka hayat', c.life == null ? '—' : `${NG_DEC.format(c.life)} tahun`)
-    + baris('Mata wang', escapeHtml(curTxt))
-    + baris('Bahasa', escapeHtml(langTxt))
-    + baris('Domain internet', c.tld ? `<code>${escapeHtml(c.tld)}</code>` : '—')
-    + baris('Kod panggilan', c.calling ? escapeHtml(c.calling) : '—')
-    + baris('Status', c.independent ? 'Negara berdaulat' : 'Wilayah bergantung')
+  const stats = `<h2 class="section-title">Quick facts about ${escapeHtml(c.name)}</h2><table class="wx-table">`
+    + baris('Official name', escapeHtml(c.official))
+    + baris('Capital', c.capital ? escapeHtml(c.capital) : '—')
+    + baris('Continent & subregion', `${escapeHtml(regionLabel)}${escapeHtml(subLabel)}`)
+    + baris('Population', popLine)
+    + baris('Area', c.area ? `${ngNum(c.area)} km²` : '—')
+    + baris('Density', c.population && c.area ? `${NG_INT.format(Math.round(c.population / c.area))} people/km²` : '—')
+    + baris('GDP (nominal)', ngGdp(c.gdp))
+    + baris('Urbanisation', c.urban == null ? '—' : `${NG_DEC.format(c.urban)}% urban population`)
+    + baris('Life expectancy', c.life == null ? '—' : `${NG_DEC.format(c.life)} years`)
+    + baris('Currency', escapeHtml(curTxt))
+    + baris('Languages', escapeHtml(langTxt))
+    + baris('Internet domain', c.tld ? `<code>${escapeHtml(c.tld)}</code>` : '—')
+    + baris('Calling code', c.calling ? escapeHtml(c.calling) : '—')
+    + baris('Status', c.independent ? 'Sovereign state' : 'Dependent territory')
     + `</table>`;
-  const jiran = c.borderSlugs.length
-    ? `<h2 class="section-title">Jiran (sempadan darat)</h2><div class="ng-az">${c.borderSlugs.map((s) => `<a href="/negara/${s}">${escapeHtml(bmBySlug[s] || s)}</a>`).join('')}</div>`
-    : `<h2 class="section-title">Jiran (sempadan darat)</h2><p>Tiada sempadan darat \u2014 ${c.landlocked ? 'negara pedalan' : 'negara pulau atau wilayah terpencil'}.</p>`;
-  const coord = c.latlng && c.latlng.length === 2 && (c.latlng[0] || c.latlng[1]) ? `<p>Posisi geografi kira-kira <b>${NG_DEC.format(c.latlng[0])}\u00b0, ${NG_DEC.format(c.latlng[1])}\u00b0</b>.</p>` : '';
-  // Pautan silang ke halaman cuti negara ini ( Complex Cuti Dunia ) jika liputan ada.
+  const neighbours = c.borderSlugs.length
+    ? `<h2 class="section-title">Neighbours (land borders)</h2><div class="ng-az">${c.borderSlugs.map((s) => `<a href="/negara/${s}">${escapeHtml(nameBySlug[s] || s)}</a>`).join('')}</div>`
+    : `<h2 class="section-title">Neighbours (land borders)</h2><p>No land borders \u2014 ${c.landlocked ? 'a landlocked country' : 'an island country or a remote territory'}.</p>`;
+  const coord = c.latlng && c.latlng.length === 2 && (c.latlng[0] || c.latlng[1]) ? `<p>The geographic position is roughly <b>${NG_DEC.format(c.latlng[0])}\u00b0, ${NG_DEC.format(c.latlng[1])}\u00b0</b>.</p>` : '';
+  // Cross link to this country's holiday page ( World Holiday Complex ) when we cover it.
   const cutiCoun = cd.findCountry(c.cca2);
-  const cutiLink = cutiCoun ? `<a href="/cuti/dunia/${cutiCoun.slug}">jadual cuti umum ${c.bm} ${CT_WORLD_YEAR}</a>` : '<a href="/cuti">cuti umum dunia</a>';
-  const body = hero + stats + jiran + coord
-    + `<p>Bendera: flagcdn.com; populasi, KDNK, urbanisasi & jangka hayat: <b>World Bank Open Data</b> (indikator 2023); maklumat asas: pakej open-data <b>world-countries</b> \u2014 semuanya percuma, tanpa pendaftaran.</p>`
-    + `<p class="meta">Semak juga: <a href="/cuaca">cuaca mengikut kota</a> · <a href="/gempa">gempa terkini</a> · <a href="/bencana">acara alam aktif</a> · <a href="/statistik">ranking indikator dunia</a> · ${cutiLink} · <a href="/negara">senarai semua negara</a>.</p>`;
+  const cutiLink = cutiCoun ? `<a href="/cuti/dunia/${cutiCoun.slug}">the ${escapeHtml(c.name)} public-holiday calendar for ${CT_WORLD_YEAR}</a>` : '<a href="/cuti">world public holidays</a>';
+  const body = hero + stats + neighbours + coord
+    + `<p>Flags: flagcdn.com; population, GDP, urbanisation & life expectancy: <b>World Bank Open Data</b> (2023 indicators); base data: the open-source <b>world-countries</b> package \u2014 all of it free, with no registration.</p>`
+    + `<p class="meta">See also: <a href="/cuaca">weather by city</a> · <a href="/gempa">latest earthquakes</a> · <a href="/bencana">active natural events</a> · <a href="/statistik">world indicator rankings</a> · ${cutiLink} · <a href="/negara">the full country list</a>.</p>`;
   const descBits = [
-    c.capital ? `ibu negara ${c.capital}` : null,
-    c.population ? `populasi ${ngNum(c.population)} orang` : null,
-    c.area ? `keluasan ${ngNum(c.area)} km²` : null,
-    c.gdp != null ? `KDNK ${ngGdp(c.gdp)}` : null,
+    c.capital ? `capital ${c.capital}` : null,
+    c.population ? `population ${ngNum(c.population)}` : null,
+    c.area ? `area ${ngNum(c.area)} km²` : null,
+    c.gdp != null ? `GDP ${ngGdp(c.gdp)}` : null,
   ].filter(Boolean).join(', ');
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Country', name: c.bm,
-    alternateName: [c.name, c.official].filter((x, i, arr) => x && arr.indexOf(x) === i),
-    description: `${c.bm} (${c.official}) — ${descBits || 'profil ringkas'}.`,
+    '@context': 'https://schema.org', '@type': 'Country', name: c.name,
+    alternateName: [c.official].filter(Boolean),
+    description: `${c.name} (${c.official}) — ${descBits || 'a short profile'}.`,
     url: selfUrl,
   }).replace(/</g, '\\u003c');
   return negaraDoc({
-    title: `${c.bm} — Profil Negara: Ibu Negara, Populasi, Bendera | Tukuk-OS`,
-    desc: `${c.bm} (${c.official}): ${descBits || 'profil ringkas lengkap'} — mata wang, bahasa, kod panggilan, jiran dan data World Bank 2023.`,
+    title: `${c.name} — Country Profile: Capital, Population, Flag | Tukuk-OS`,
+    desc: `${c.name} (${c.official}): ${descBits || 'the full short profile'} — currency, languages, calling code, neighbours and the 2023 World Bank data.`,
     selfUrl,
-    heroHtml: '', heroTitle: c.bm, heroSub: c.official === c.bm ? regionBm : `${escapeHtml(regionBm)} \u00b7 ${ngSubBm(c.subregion)}`.trim(),
+    heroHtml: '', heroTitle: c.name, heroSub: c.official === c.name ? regionLabel : `${regionLabel}${subLabel}`.trim(),
     body, ld,
   });
 }

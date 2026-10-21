@@ -82,7 +82,7 @@ test('SEO: robots, staticPages, footer SSR, tile index, katalog OS', () => {
   assert.ok(footer.includes('<a href="/bencana">Live disaster watch</a>'), 'footer bencana');
   assert.ok(indexHtml.includes('href="/statistik"') && indexHtml.includes('href="/bencana"'), 'tile/index paut kedua-duanya');
   assert.ok(osHtml.includes("'/statistik'") && osHtml.includes("['bencana'"), 'katalog OS ada entri');
-  // Pautan silang dari Kompleks Negara.
-  assert.ok(serverSrc.includes('<a href="/bencana">Kompleks Bencana</a>'), 'negara hub → bencana');
-  assert.ok(serverSrc.includes('<a href="/statistik">Kompleks Statistik</a>'), 'negara hub → statistik');
+  // Cross links out of the Country Complex hub page.
+  assert.ok(serverSrc.includes('<a href="/bencana">Disaster Complex</a>'), 'country hub → disaster complex');
+  assert.ok(serverSrc.includes('<a href="/statistik">Statistics Complex</a>'), 'country hub → statistics complex');
 });

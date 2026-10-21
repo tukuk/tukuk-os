@@ -1,6 +1,6 @@
 'use strict';
-// Invarian Negara Complex: sumber tanpa kunci + hab/rantau/negara renderer +
-// sitemap-negara + robots + pautan silang. Tiada rangkaian — statik sahaja.
+// Invariants of the Country Complex: key-free sources + hub/continent/country renderers
+// + the country sitemap + robots + cross links. No network — static checks only.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -11,71 +11,97 @@ const serverSrc = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
 const negaraSrc = fs.readFileSync(path.join(ROOT, 'src', 'negara.js'), 'utf8');
 const robotsTxt = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
 
-test('negara.js: sumber tanpa kunci (jsDelivr + World Bank + flagcdn), cache 30 hari', () => {
-  assert.ok(negaraSrc.includes('cdn.jsdelivr.net/npm/world-countries'), 'dataset world-countries via jsDelivr');
-  assert.ok(negaraSrc.includes('api.worldbank.org/v2/country/all/indicator'), 'indikator World Bank Open Data');
-  assert.ok(negaraSrc.includes('flagcdn.com'), 'bendera flagcdn');
-  assert.doesNotMatch(negaraSrc, /apikey|api_key|appid|Bearer|token/i, 'tiada kunci/API bersyarat daftar');
-  assert.match(negaraSrc, /TTL = 30 \* 24 \* 60 \* 60 \* 1000/, 'cache 30 hari');
-  assert.ok(negaraSrc.includes('restcountries'), 'nota pembuangan restcountries v3.1 (depremadi) didokumentasi');
-  assert.doesNotMatch(negaraSrc, /restcountries\.com\/v3|all\.json/, 'endpoint restcountries mati tidak diguna');
+test('negara.js: key-free sources (jsDelivr + World Bank + flagcdn), 30-day cache', () => {
+  assert.ok(negaraSrc.includes('cdn.jsdelivr.net/npm/world-countries'), 'world-countries dataset via jsDelivr');
+  assert.ok(negaraSrc.includes('api.worldbank.org/v2/country/all/indicator'), 'World Bank Open Data indicators');
+  assert.ok(negaraSrc.includes('flagcdn.com'), 'flags from flagcdn');
+  assert.doesNotMatch(negaraSrc, /apikey|api_key|appid|Bearer|token/i, 'no keyed / signup-gated API');
+  assert.match(negaraSrc, /TTL = 30 \* 24 \* 60 \* 60 \* 1000/, '30-day cache');
+  assert.ok(negaraSrc.includes('restcountries'), 'the drop of restcountries v3.1 (deprecated) is documented');
+  assert.doesNotMatch(negaraSrc, /restcountries\.com\/v3|all\.json/, 'the dead restcountries endpoint is not used');
 });
 
-test('negara.js: pitfall IPv6 cuti ditangani — agent family 6 dahulu, fallback 4', () => {
-  assert.match(negaraSrc, /new https\.Agent\(\{ family: 6/, 'v6Agent wujud');
-  assert.match(negaraSrc, /new https\.Agent\(\{ family: 4/, 'v4Agent fallback wujud');
+test('negara.js: the holiday-module IPv6 pitfall is handled — family 6 first, fallback 4', () => {
+  assert.match(negaraSrc, /new https\.Agent\(\{ family: 6/, 'v6Agent exists');
+  assert.match(negaraSrc, /new https\.Agent\(\{ family: 4/, 'v4Agent fallback exists');
 });
 
-test('negara.js: 6 region + BM_NAMES + slug + sempadan cca3→slug dieksport', () => {
+test('negara.js: 6 regions + slug + cca3→slug borders are exported', () => {
   for (const slug of ['asia', 'africa', 'europe', 'americas', 'oceania', 'antarctic']) {
-    assert.ok(negaraSrc.includes(`slug: '${slug}'`), `region ${slug} ditakrif`);
+    assert.ok(negaraSrc.includes(`slug: '${slug}'`), `region ${slug} is defined`);
   }
-  assert.ok(negaraSrc.includes("'south-korea': 'Korea Selatan'"), 'alias BM utama wujud (key hyphen ikut output slugify)');
-  assert.ok(negaraSrc.includes("'united-states': 'Amerika Syarikat'"), 'key BM multi-kata pakai hyphen — padan slug');
   const ex = negaraSrc.slice(negaraSrc.indexOf('module.exports'));
   for (const fn of ['loadCountries', 'findCountry', 'inRegion', 'findRegion', 'REGIONS', 'flagUrl', 'slugify']) {
-    assert.ok(ex.includes(fn), `${fn} dieksport`);
+    assert.ok(ex.includes(fn), `${fn} is exported`);
   }
-  assert.ok(negaraSrc.includes('borderSlugs'), 'peta jiran cca3→slug dijana');
+  assert.ok(!ex.includes('BM_NAMES') && !ex.includes('REGION_BM'), 'the Malay name tables are no longer exported');
+  assert.ok(negaraSrc.includes('borderSlugs'), 'the cca3→slug neighbour map is built');
 });
 
-test('renderer negara ditakrif dan dibungkus melalui negaraDoc (3 slot + nav + lang en)', () => {
+test('the country data model is English-only: no bm field survives', () => {
+  const ng = require(path.join(ROOT, 'src', 'negara.js'));
+  assert.doesNotMatch(negaraSrc, /\bbm:/, 'the merged rows carry no bm label');
+  assert.doesNotMatch(negaraSrc, /BM_NAMES|REGION_BM/, 'the Malay name lookup tables are deleted');
+  for (const r of ng.REGIONS) assert.deepStrictEqual(Object.keys(r), ['slug', 'en'], `${r.slug} is {slug,en}`);
+  // inRegion must resolve our slug back onto the restcountries English region value.
+  assert.match(negaraSrc, /c\.region === \(r \? r\.en : ''\)/, 'inRegion filters on the English region name');
+  assert.deepStrictEqual(ng.inRegion([{ region: 'Asia', name: 'B' }, { region: 'Europe', name: 'A' }, { region: 'Asia', name: 'C' }], 'asia').map((c) => c.name), ['B', 'C'], 'the Asian subset is picked and sorted');
+  assert.strictEqual(ng.inRegion([{ region: 'Asia', name: 'A' }], 'nope').length, 0, 'an unknown slug yields an empty list');
+});
+
+test('the country copy is English: labels translated, public slugs preserved', () => {
+  // Anchor on the next complex's own declaration: internal identifiers are never renamed.
+  const pages = serverSrc.slice(serverSrc.indexOf('const NEGARA_SECTIONS'), serverSrc.indexOf('const STAT_SECTIONS'));
+  assert.ok(pages.length > 5000, 'the slice really covers the country pages');
+  assert.doesNotMatch(pages, /buah negara|ibu negara|belum sempat|tiada data|pedalan|jiran|Kompleks Negara|Bahasa Melayu|KDNK|benua & subwilayah/i, 'no Malay editorial copy left');
+  assert.ok(pages.includes('Sovereign state') && pages.includes('Dependent territory'), 'the status row is English');
+  assert.ok(pages.includes('Capital:') && pages.includes('Neighbours (land borders)'), 'the profile rows are English');
+  // URLs are public contracts: the route prefixes and the continent slugs must not move.
+  assert.ok(pages.includes('/negara/${c.slug}'), 'country links keep the English-derived slugs');
+  assert.ok(pages.includes('/cuti/dunia/${cutiCoun.slug}'), 'the holiday cross-link keeps its Nager slug');
+  assert.ok(pages.includes('flagcdn.com') && pages.includes('ng.REGIONS'), 'the flag CDN and region loop are intact');
+  assert.ok(pages.includes('/negara/${r.slug}'), 'continent links keep the six public slugs');
+  assert.ok(pages.includes("name: c.name"), 'the schema.org Country node is named in English');
+});
+
+test('the country pages are defined and wrapped through negaraDoc (3 ad slots + nav + lang en)', () => {
   for (const fn of ['negaraHubPage', 'negaraRegionPage', 'negaraCountryPage', 'negaraDoc', 'negaraNav', 'negaraBusy']) {
-    assert.match(serverSrc, new RegExp(`function ${fn}\\(`), `${fn} ditakrif`);
+    assert.match(serverSrc, new RegExp(`function ${fn}\\(`), `${fn} is defined`);
   }
   const idx = serverSrc.indexOf('function negaraDoc(o)');
   const doc = serverSrc.slice(idx, idx + 12000);
-  for (const slot of ['slotTop', 'slotInArticle', 'slotBottom']) assert.ok(doc.includes(slot), `negaraDoc ada ${slot}`);
-  assert.ok(doc.includes('negaraNav()'), 'negaraDoc ada nav negara (hub pautan)');
+  for (const slot of ['slotTop', 'slotInArticle', 'slotBottom']) assert.ok(doc.includes(slot), `negaraDoc has ${slot}`);
+  assert.ok(doc.includes('negaraNav()'), 'negaraDoc embeds the country nav (hub links)');
   assert.ok(doc.includes('<html lang="en">'), 'country pages are lang="en"');
   assert.ok(doc.includes('og:locale" content="en_US"'), 'og locale en_US');
 });
 
-test('laluan /negara* berdaftar ikut tertib: hub literal dahulu, kemudian :slug', () => {
+test('the /negara* routes register in order: literal hub first, then :slug', () => {
   const hub = serverSrc.indexOf("app.get('/negara'");
   const one = serverSrc.indexOf("app.get('/negara/:slug'");
-  assert.ok(hub > -1 && one > hub, 'tertib daftar: /negara < :slug');
-  assert.match(serverSrc, /ng\.findRegion\(slug\)/, 'rantau disahkan DALAM handler (tiada TDZ)');
-  assert.match(serverSrc, /ng\.findCountry\(rows, slug\)/, 'negara disahkan DALAM handler');
-  assert.doesNotMatch(serverSrc, /for \(const r of ng\.REGIONS\)\s*app\.get/, 'loop daftar-route atas REGIONS diharamkan');
+  assert.ok(hub > -1 && one > hub, 'registration order: /negara < :slug');
+  assert.match(serverSrc, /ng\.findRegion\(slug\)/, 'the continent is validated INSIDE the handler (no TDZ)');
+  assert.match(serverSrc, /ng\.findCountry\(rows, slug\)/, 'the country is validated INSIDE the handler');
+  assert.doesNotMatch(serverSrc, /for \(const r of ng\.REGIONS\)\s*app\.get/, 'a route-registration loop over REGIONS is forbidden');
   const staticIdx = serverSrc.indexOf('app.use(express.static(PUBLIC_DIR');
-  assert.ok(one < staticIdx, 'laluan negara sebelum static middleware');
+  assert.ok(one < staticIdx, 'the country routes come before the static middleware');
 });
 
-test('kegagalan dataset → 503, slug salah → 404, dua-dua negaraBusy noindex', () => {
+test('a dataset failure → 503, a wrong slug → 404, both through the noindex negaraBusy', () => {
   const busy = serverSrc.slice(serverSrc.indexOf('function negaraBusy'), serverSrc.indexOf('function negaraBusy') + 900);
-  assert.ok(busy.includes('noindex,follow'), 'negaraBusy noindex,follow');
-  assert.match(serverSrc, /status\(503\)\.type\('html'\)\.send\(negaraBusy/, '503 guna negaraBusy');
-  assert.match(serverSrc, /status\(404\)\.type\('html'\)\.send\(negaraBusy/, '404 slug salah guna negaraBusy');
+  assert.ok(busy.includes('noindex,follow'), 'negaraBusy is noindex,follow');
+  assert.ok(busy.includes('Back to the Country Complex'), 'negaraBusy links back in English');
+  assert.match(serverSrc, /status\(503\)\.type\('html'\)\.send\(negaraBusy/, 'the 503 uses negaraBusy');
+  assert.match(serverSrc, /status\(404\)\.type\('html'\)\.send\(negaraBusy/, 'the 404 (bad slug) uses negaraBusy');
 });
 
-test('sitemap-negara.xml + robots + footer + pautan silang tiga kompleks lain', () => {
-  assert.match(serverSrc, /app\.get\('\/sitemap-negara\.xml'/, 'laluan sitemap-negara wujud');
+test('sitemap-negara.xml + robots + footer + cross links from the other three complexes', () => {
+  assert.match(serverSrc, /app\.get\('\/sitemap-negara\.xml'/, 'the sitemap-negara route exists');
   const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-negara.xml'"), serverSrc.indexOf("app.get('/sitemap-negara.xml'") + 1500);
-  assert.ok(sm.includes('ng.REGIONS.map'), '6 rantau masuk sitemap');
-  assert.ok(sm.includes('loadCountries'), '250 negara masuk sitemap bila cache siap');
-  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-negara\.xml/, 'robots iklankan sitemap-negara');
-  assert.ok(serverSrc.includes('<li><a href="/negara">World countries</a></li>'), 'footer SSR ada pautan negara');
-  assert.ok(serverSrc.includes('<a href="/negara">Kompleks Negara</a>'), 'cuaca & cuti paut silang ke negara');
-  assert.ok(serverSrc.includes("'/negara', '/negara/asia'"), 'sitemap utama menyenaraikan /negara');
+  assert.ok(sm.includes('ng.REGIONS.map'), 'the 6 continents enter the sitemap');
+  assert.ok(sm.includes('loadCountries'), 'the ±250 countries enter the sitemap once the cache is warm');
+  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-negara\.xml/, 'robots advertises sitemap-negara');
+  assert.ok(serverSrc.includes('<li><a href="/negara">World countries</a></li>'), 'the SSR footer links to the country hub');
+  assert.ok(serverSrc.includes('<a href="/negara">Country Complex</a>'), 'the weather page cross-links to the country complex');
+  assert.ok(serverSrc.includes("'/negara', '/negara/asia'"), 'the main sitemap lists /negara');
 });

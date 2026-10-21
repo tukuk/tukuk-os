@@ -138,7 +138,9 @@ test('the world renderers + helpers + 503/404 pages are supported by server.js',
 });
 
 test('the holiday copy is English: labels translated, public slugs preserved', () => {
-  const pages = serverSrc.slice(serverSrc.indexOf('const CUTI_SECTIONS'), serverSrc.indexOf('TUKUK-OS NEGARA COMPLEX'));
+  // Anchor on the next complex's own declaration: internal identifiers are never renamed.
+  const pages = serverSrc.slice(serverSrc.indexOf('const CUTI_SECTIONS'), serverSrc.indexOf('const NEGARA_SECTIONS'));
+  assert.ok(pages.length > 5000, 'the slice really covers the holiday pages');
   assert.ok(pages.includes("inLanguage: 'en'"), 'the holiday articles declare inLanguage en');
   assert.doesNotMatch(pages, /inLanguage: 'ms'/, 'no holiday page still claims Malay structured data');
   assert.doesNotMatch(pages, /Jumaat|Sabtu|Ahad|Isnin|belum sempat|tiada data|Kompleks Cuti|cuti umum|Bahasa Melayu/, 'no Malay wording remains on the holiday pages');

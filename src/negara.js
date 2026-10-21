@@ -1,12 +1,12 @@
 'use strict';
-// ── TUKUK-OS NEGARA COMPLEX — profil 250 negara (PERCUMA, tanpa kunci API) ──
-// Sumber 1: pakej npm "world-countries" melalui CDN jsDelivr — salinan penuh
-// dataset old restcountries v3.1 (ibu negara, benua, bahasa, mata wang, sempadan,
-// keluasan, terjemahan). Tiada pendaftaran; jsDelivr CDN stabil & laju.
-// Sumber 2: World Bank Open Data API — populasi, KDNK, urbanisasi, jangka hayat
-// (indikator 2023, format JSON, tanpa kunci). flagcdn.com untuk gambar bendera.
-// Nota: restcountries.com asal kini v5 + API key — sengaja DILAPAS kerana dasar
-// "hanya yang percuma tanpa daftar".
+// ── TUKUK-OS COUNTRY COMPLEX — profiles for 250 countries (FREE, no API key) ──
+// Source 1: the npm package "world-countries" over the jsDelivr CDN — a full copy of
+// the old restcountries v3.1 dataset (capital, continent, languages, currencies,
+// borders, area, translations). No registration; the jsDelivr CDN is stable and fast.
+// Source 2: World Bank Open Data — population, GDP, urbanisation, life expectancy
+// (2023 indicators, plain JSON, no key). flagcdn.com serves the flag images.
+// Note: the original restcountries.com is now v5 behind an API key — deliberately
+// DROPPED because of our "only free sources that need no signup" policy.
 const https = require('https');
 
 const WC_URL = 'https://cdn.jsdelivr.net/npm/world-countries@5.1.0/countries.json';
@@ -14,7 +14,7 @@ const WB_IND = 'https://api.worldbank.org/v2/country/all/indicator/INDICATOR?for
 const IND = { pop: 'SP.POP.TOTL', gdp: 'NY.GDP.MKTP.CD', urban: 'SP.URB.TOTL.IN.ZS', life: 'SP.DYN.LE00.IN' };
 
 const cache = new Map();
-const TTL = 30 * 24 * 60 * 60 * 1000; // data negara jarang berubah
+const TTL = 30 * 24 * 60 * 60 * 1000; // country data rarely changes
 
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -31,8 +31,8 @@ function cacheSet(key, data) {
   }
 }
 
-// jsDelivr + api.worldbank.org lulus fetch biasa; agent IPv6 didahulukan
-// kerana server.js menetapkan dns order 'ipv4first' global (pitfall cuti).
+// jsDelivr and api.worldbank.org pass a plain fetch; the IPv6 agent goes first
+// because server.js sets the global dns order to 'ipv4first' (the holiday-module pitfall).
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 
@@ -58,40 +58,23 @@ function httpsGet(url, agent) {
 
 async function fetchJson(url) {
   try { return await httpsGet(url, v6Agent); }
-  catch { return await httpsGet(url, v4Agent); } // hos tiada IPv6 → fallback
+  catch { return await httpsGet(url, v4Agent); } // host has no IPv6 → fall back
 }
 
-// ——— slug & nama BM ———
+// ——— slug ———
 function slugify(name) {
   return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-// Nama common Bahasa Melayu untuk negara yang kerap dicari pembaca MY.
-const BM_NAMES = {
-  japan: 'Jepun', germany: 'Jerman', 'south-korea': 'Korea Selatan', china: 'Cina',
-  india: 'India', indonesia: 'Indonesia', thailand: 'Thailand', turkey: 'Turki',
-  egypt: 'Mesir', 'united-states': 'Amerika Syarikat', netherlands: 'Belanda',
-  france: 'Perancis', spain: 'Sepanyol', italy: 'Itali', russia: 'Rusia',
-  brazil: 'Brazil', argentina: 'Argentina', australia: 'Australia',
-  singapore: 'Singapura', brunei: 'Brunei', mexico: 'Mexico', canada: 'Kanada',
-  'united-arab-emirates': 'Emirab Arab Bersatu', 'saudi-arabia': 'Arab Saudi',
-  philippines: 'Filipina', cambodia: 'Kemboja', vietnam: 'Vietnam',
-  pakistan: 'Pakistan', bangladesh: 'Bangladesh', nepal: 'Nepal',
-  'south-africa': 'Afrika Selatan', nigeria: 'Nigeria', palestine: 'Palestin',
-  'united-kingdom': 'United Kingdom', 'new-zealand': 'New Zealand',
-  'papua-new-guinea': 'Papua New Guinea', 'east-timor': 'Timor-Leste',
-  'sri-lanka': 'Sri Lanka', 'myanmar': 'Myanmar', 'hong-kong': 'Hong Kong',
-};
-
+// Hub continents — the English label is the restcountries region value itself.
 const REGIONS = [
-  { slug: 'asia', bm: 'Asia' },
-  { slug: 'africa', bm: 'Afrika' },
-  { slug: 'europe', bm: 'Eropah' },
-  { slug: 'americas', bm: 'Amerika' },
-  { slug: 'oceania', bm: 'Oseania' },
-  { slug: 'antarctic', bm: 'Antartika' },
+  { slug: 'asia', en: 'Asia' },
+  { slug: 'africa', en: 'Africa' },
+  { slug: 'europe', en: 'Europe' },
+  { slug: 'americas', en: 'Americas' },
+  { slug: 'oceania', en: 'Oceania' },
+  { slug: 'antarctic', en: 'Antarctic' },
 ];
-const REGION_BM = { Asia: 'Asia', Africa: 'Afrika', Europe: 'Eropah', Americas: 'Amerika', Oceania: 'Oseania', Antarctic: 'Antartika' };
 
 function findRegion(slug) {
   return REGIONS.find((r) => r.slug === String(slug || '')) || null;
@@ -124,7 +107,7 @@ async function loadBase() {
   if (hit && !hit.stale) return hit.data;
   try {
     const body = await fetchJson(WC_URL);
-    if (!Array.isArray(body) || body.length < 200) throw new Error('dataset janggal');
+    if (!Array.isArray(body) || body.length < 200) throw new Error('odd dataset');
     cacheSet('wc', body);
     return body;
   } catch (err) {
@@ -133,7 +116,7 @@ async function loadBase() {
   }
 }
 
-// Gabungkan kedua-dua sumber jadi senarai siap-render + ranking populasi.
+// Merge both sources into a render-ready list plus the population ranking.
 async function loadCountries() {
   const hit = cacheGet('merged');
   if (hit && !hit.stale) return hit.data;
@@ -146,7 +129,6 @@ async function loadCountries() {
     return {
       cca2: c.cca2, cca3: c.cca3,
       name,
-      bm: BM_NAMES[slugify(name)] || name,
       official: c.name ? c.name.official : name,
       capital: Array.isArray(c.capital) && c.capital.length ? c.capital[0] : null,
       region: c.region || '', subregion: c.subregion || '',
@@ -164,7 +146,7 @@ async function loadCountries() {
       flag: flagUrl(c.cca2),
     };
   }).filter((c) => c.slug);
-  // Ranking populasi + peta sempadan cca3→slug untuk pautan jiran.
+  // Population ranking + a cca3→slug border map for the neighbour links.
   const byPop = [...out].filter((c) => c.population).sort((a, b) => b.population - a.population);
   const rank = {}; byPop.forEach((c, i) => { rank[c.cca3] = i + 1; });
   const slugByCca3 = {}; out.forEach((c) => { slugByCca3[c.cca3] = c.slug; });
@@ -182,10 +164,10 @@ function findCountry(rows, slug) {
   return rows.find((c) => c.slug === s) || null;
 }
 
+// The continent index: our slug maps back onto the restcountries region value.
 function inRegion(rows, slug) {
-  const en = Object.keys(REGION_BM).find((k) => REGION_BM[k] && slugify(REGION_BM[k]) === slug) ||
-    Object.keys(REGION_BM).find((k) => slugify(k) === slug);
-  return rows.filter((c) => c.region === en).sort((a, b) => a.name.localeCompare(b.name));
+  const r = findRegion(slug);
+  return rows.filter((c) => c.region === (r ? r.en : '')).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-module.exports = { loadCountries, findCountry, inRegion, findRegion, REGIONS, REGION_BM, flagUrl, slugify };
+module.exports = { loadCountries, findCountry, inRegion, findRegion, REGIONS, flagUrl, slugify };
