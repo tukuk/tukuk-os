@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'komun-vietnam', label: 'VIETNAMESE-COMMUNES', title: 'Communes of Vietnam', var: 'KOMVT', sing: 'VietnameseCommune', finder: 'vietnameseCommune', finders: 'vietnameseCommunesInRegion', pfx: 'kvt', cap: 'VietnameseCommunes' },
-  { file: 'munisipaliti-kolombia', label: 'COLOMBIAN-MUNICIPALITIES', title: 'Municipalities of Colombia', var: 'MUCOL', sing: 'ColombianMunicipality', finder: 'colombianMunicipality', finders: 'colombianMunicipalitiesInRegion', pfx: 'mkl', cap: 'ColombianMunicipalities' },
-  { file: 'distrik-turki', label: 'TURKISH-DISTRICTS', title: 'Districts of Turkey', var: 'DISTU', sing: 'TurkishDistrict', finder: 'turkishDistrict', finders: 'turkishDistrictsInRegion', pfx: 'dtu', cap: 'TurkishDistricts' },
-  { file: 'kaunti-china', label: 'CHINESE-COUNTIES', title: 'Counties of China', var: 'KNCHE', sing: 'ChineseCounty', finder: 'chineseCounty', finders: 'chineseCountiesInRegion', pfx: 'ktc', cap: 'ChineseCounties' },
-  { file: 'amphoe-thailand', label: 'THAI-DISTRICTS', title: 'Amphoe (Districts of Thailand)', var: 'AMPHO', sing: 'ThaiDistrict', finder: 'thaiDistrict', finders: 'thaiDistrictsInRegion', pfx: 'amh', cap: 'ThaiDistricts' },
-  { file: 'kelurahan-tanzania', label: 'TANZANIAN-WARDS', title: 'Wards of Tanzania', var: 'WARDTZ', sing: 'TanzanianWard', finder: 'tanzanianWard', finders: 'tanzanianWardsInRegion', pfx: 'ktz', cap: 'TanzanianWards' },
-  { file: 'paroki-latvia', label: 'LATVIAN-PARISHES', title: 'Parishes of Latvia', var: 'PARLV', sing: 'LatvianParish', finder: 'latvianParish', finders: 'latvianParishesInRegion', pfx: 'plv', cap: 'LatvianParishes' },
-  { file: 'kaunti-iran', label: 'IRANIAN-COUNTIES', title: 'Counties of Iran', var: 'KNIRN', sing: 'IranianCounty', finder: 'iranianCounty', finders: 'iranianCountiesInRegion', pfx: 'kir', cap: 'IranianCounties' },
-  { file: 'kaunti-polandia', label: 'POLISH-COUNTIES', title: 'Counties of Poland (Powiat)', var: 'KNPOL', sing: 'PolishCounty', finder: 'polishCounty', finders: 'polishCountiesInRegion', pfx: 'kpo', cap: 'PolishCounties' },
+  { file: 'kampung-bulgaria', label: 'BULGARIAN-VILLAGES', title: 'Villages of Bulgaria', var: 'KMBGR', sing: 'BulgarianVillage', finder: 'bulgarianVillage', finders: 'bulgarianVillagesInRegion', pfx: 'kvb', cap: 'BulgarianVillages' },
+  { file: 'komun-algeria', label: 'ALGERIAN-COMMUNES', title: 'Communes of Algeria', var: 'KOMDZ', sing: 'AlgerianCommune', finder: 'algerianCommune', finders: 'algerianCommunesInRegion', pfx: 'dza', cap: 'AlgerianCommunes' },
+  { file: 'distrik-yaman', label: 'YEMENI-DISTRICTS', title: 'Districts of Yemen', var: 'DSYEM', sing: 'YemeniDistrict', finder: 'yemeniDistrict', finders: 'yemeniDistrictsInRegion', pfx: 'dyv', cap: 'YemeniDistricts' },
+  { file: 'distrik-ethiopia', label: 'ETHIOPIAN-DISTRICTS', title: 'Districts of Ethiopia (Woreda)', var: 'DSETI', sing: 'EthiopianDistrict', finder: 'ethiopianDistrict', finders: 'ethiopianDistrictsInRegion', pfx: 'dte', cap: 'EthiopianDistricts' },
+  { file: 'departemen-burkina', label: 'BURKINABE-DEPARTMENTS', title: 'Departments of Burkina Faso', var: 'DPBFA', sing: 'BurkinabeDepartment', finder: 'burkinabeDepartment', finders: 'burkinabeDepartmentsInRegion', pfx: 'dbf', cap: 'BurkinabeDepartments' },
+  { file: 'komun-kamerun', label: 'CAMEROONIAN-COMMUNES', title: 'Communes of Cameroon', var: 'KMCMR', sing: 'CameroonianCommune', finder: 'cameroonianCommune', finders: 'cameroonianCommunesInRegion', pfx: 'kcm', cap: 'CameroonianCommunes' },
+  { file: 'kanton-ekuator', label: 'ECUADORIAN-CANTONS', title: 'Cantons of Ecuador', var: 'KECU', sing: 'EcuadorianCanton', finder: 'ecuadorianCanton', finders: 'ecuadorianCantonsInRegion', pfx: 'kek', cap: 'EcuadorianCantons' },
+  { file: 'munisipaliti-paraguay', label: 'PARAGUAYAN-MUNICIPALITIES', title: 'Municipalities of Paraguay', var: 'MUPY', sing: 'ParaguayanMunicipality', finder: 'paraguayanMunicipality', finders: 'paraguayanMunicipalitiesInRegion', pfx: 'mpy', cap: 'ParaguayanMunicipalities' },
+  { file: 'distrik-irak', label: 'IRAQI-DISTRICTS', title: 'Districts of Iraq', var: 'DSIRQ', sing: 'IraqiDistrict', finder: 'iraqiDistrict', finders: 'iraqiDistrictsInRegion', pfx: 'dir', cap: 'IraqiDistricts' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
