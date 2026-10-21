@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'munisipaliti', label: 'MUNICIPALITIES', title: 'Municipalities of the World', var: 'MUNIC', sing: 'Municipality', finder: 'municipality', finders: 'municipalitiesInRegion', pfx: 'mpt', cap: 'Municipalities' },
-  { file: 'komuni-itali', label: 'ITALIAN-COMUNI', title: 'Comuni of Italy', var: 'COMUNI', sing: 'Comune', finder: 'comune', finders: 'comuniInRegion', pfx: 'kto', cap: 'ItalianComuni' },
-  { file: 'frazione-itali', label: 'ITALIAN-FRAZIONI', title: 'Frazioni of Italy', var: 'FRAZI', sing: 'Frazione', finder: 'frazione', finders: 'frazioniInRegion', pfx: 'fzn', cap: 'ItalianFrazioni' },
-  { file: 'kanton-prancis', label: 'FRENCH-CANTONS', title: 'Cantons of France', var: 'CANTON', sing: 'Canton', finder: 'canton', finders: 'cantonsInRegion', pfx: 'kfp', cap: 'FrenchCantons' },
-  { file: 'arondisman-prancis', label: 'FRENCH-ARRONDISSEMENTS', title: 'Arrondissements of France', var: 'ARRONDI', sing: 'Arrondissement', finder: 'arrondissement', finders: 'arrondissementsInRegion', pfx: 'afp', cap: 'FrenchArrondissements' },
-  { file: 'jabatan-prancis', label: 'FRENCH-DEPARTMENTS', title: 'Departments of France', var: 'DEPFR', sing: 'FrenchDepartment', finder: 'frenchDepartment', finders: 'frenchDepartmentsInRegion', pfx: 'jfp', cap: 'FrenchDepartments' },
-  { file: 'avenue', label: 'AVENUES', title: 'Avenues of the World', var: 'AVENUE', sing: 'Avenue', finder: 'avenue', finders: 'avenuesInRegion', pfx: 'avn', cap: 'Avenues' },
-  { file: 'persimpangan', label: 'MOTORWAY-INTERCHANGES', title: 'Motorway Interchanges of the World', var: 'INTERCH', sing: 'MotorwayInterchange', finder: 'motorwayInterchange', finders: 'motorwayInterchangesInRegion', pfx: 'pss', cap: 'MotorwayInterchanges' },
-  { file: 'provinsi-itali', label: 'ITALIAN-PROVINCES', title: 'Provinces of Italy', var: 'PROVIT', sing: 'ItalianProvince', finder: 'italianProvince', finders: 'italianProvincesInRegion', pfx: 'pti', cap: 'ItalianProvinces' },
+  { file: 'komun-prancis', label: 'FRENCH-COMMUNES', title: 'Communes of France', var: 'KOMFR', sing: 'FrenchCommune', finder: 'frenchCommune', finders: 'frenchCommunesInRegion', pfx: 'kmf', cap: 'FrenchCommunes' },
+  { file: 'munisipaliti-sepanyol', label: 'SPANISH-MUNICIPALITIES', title: 'Municipalities of Spain', var: 'MUNSP', sing: 'SpanishMunicipality', finder: 'spanishMunicipality', finders: 'spanishMunicipalitiesInRegion', pfx: 'msp', cap: 'SpanishMunicipalities' },
+  { file: 'munisipaliti-brazil', label: 'BRAZILIAN-MUNICIPALITIES', title: 'Municipalities of Brazil', var: 'MUBR', sing: 'BrazilianMunicipality', finder: 'brazilianMunicipality', finders: 'brazilianMunicipalitiesInRegion', pfx: 'brz', cap: 'BrazilianMunicipalities' },
+  { file: 'munisipaliti-meksiko', label: 'MEXICAN-MUNICIPALITIES', title: 'Municipalities of Mexico', var: 'MUMX', sing: 'MexicanMunicipality', finder: 'mexicanMunicipality', finders: 'mexicanMunicipalitiesInRegion', pfx: 'mmx', cap: 'MexicanMunicipalities' },
+  { file: 'komun-swis', label: 'SWISS-COMMUNES', title: 'Communes of Switzerland', var: 'KMSW', sing: 'SwissCommune', finder: 'swissCommune', finders: 'swissCommunesInRegion', pfx: 'ksw', cap: 'SwissCommunes' },
+  { file: 'munisipaliti-belanda', label: 'DUTCH-MUNICIPALITIES', title: 'Municipalities of the Netherlands', var: 'MUNL', sing: 'DutchMunicipality', finder: 'dutchMunicipality', finders: 'dutchMunicipalitiesInRegion', pfx: 'mnb', cap: 'DutchMunicipalities' },
+  { file: 'munisipaliti-belgia', label: 'BELGIAN-MUNICIPALITIES', title: 'Municipalities of Belgium', var: 'MUBG', sing: 'BelgianMunicipality', finder: 'belgianMunicipality', finders: 'belgianMunicipalitiesInRegion', pfx: 'mbg', cap: 'BelgianMunicipalities' },
+  { file: 'munisipaliti-norway', label: 'NORWEGIAN-MUNICIPALITIES', title: 'Municipalities of Norway', var: 'MUNO', sing: 'NorwegianMunicipality', finder: 'norwegianMunicipality', finders: 'norwegianMunicipalitiesInRegion', pfx: 'mno', cap: 'NorwegianMunicipalities' },
+  { file: 'kabupaten-indonesia', label: 'INDONESIAN-REGENCIES', title: 'Regencies of Indonesia', var: 'KABID', sing: 'IndonesianRegency', finder: 'indonesianRegency', finders: 'indonesianRegenciesInRegion', pfx: 'kab', cap: 'IndonesianRegencies' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
