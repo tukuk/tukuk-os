@@ -51,6 +51,22 @@ test('faqLines(): kluster bernegara menyahut bentuk soalan sebenar', () => {
   assert.ok(lines.some((l) => l.includes('Berapa banyak county di Kenya')));
 });
 
+test('hubToDoc(): fakta muat dalam jendela petikan /ask', () => {
+  // Regresi sebenar di pelayan: BRAIN_SNIPPET_CHARS=450 memotong kandungan dari
+  // AWAL dokumen. Bila intro panjang mendahului, baris "Which country has the
+  // most bays? United States (541 bays)." terpotong di tengah dan model awan
+  // yang jujur menjawab "I don't know" — padahal faktanya kami sendiri tulis.
+  for (const d of docs) {
+    const i = d.content.indexOf('How many');
+    assert.ok(i >= 0 && i < 120, `${d.url}: soalan pertama perlu di kepala dokumen (dapat ${i})`);
+  }
+  const bays = docs.find((d) => d.url === 'https://tukuk.org/teluk');
+  assert.ok(bays, 'kluster teluk (bays) mesti ada');
+  const mula = bays.content.indexOf('Which country has the most');
+  const hujung = bays.content.indexOf('\n', mula);
+  assert.ok(mula > 0 && hujung < 450, 'soal + jawab "most bays" mesti muat dalam 450 aksara');
+});
+
 test('hubToDoc(): idempotent — id & hash tak berubah antara dua binaan', () => {
   const one = hubToDoc(clusters[0]);
   const two = hubToDoc(clusters[0]);

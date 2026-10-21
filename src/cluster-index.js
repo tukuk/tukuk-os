@@ -107,10 +107,15 @@ function hubToDoc(cluster) {
 
   const lines = [
     `${cfg.titleCase} — hub di tukuk.org/${base}.`,
-    intro,
-    blurb && blurb !== intro ? blurb : '',
+    // FACTA DAHULU, baru prosa. `/ask` memotong kandungan ikut
+    // `BRAIN_SNIPPET_CHARS` (450 aksara di pelayan) dari AWAL dokumen — intro
+    // yang panjang akan menolak baris soal-jawab ke luar jendela, dan model
+    // awan yang jujur menjawab "I don't know" walaupun faktanya kami tulis.
+    // Susunan ini tidak menjejaskan BM25 (kiraan kata tidak ikut kedudukan).
     ...faqLines({ subject, unit, singular: cfg.singular || unit, count: items.length, top: topCountry }),
     `Total in this cluster: ${items.length} ${unit}.`,
+    intro,
+    blurb && blurb !== intro ? blurb : '',
     countries.length > 1 ? `By country: ${formatTally(countries)}.` : (countries[0] ? `Country: ${countries[0][0]} (${countries[0][1]}).` : ''),
     regions.length ? `By region: ${formatTally(regions)}.` : '',
     // Pemisah '; ' — nama item sudah mengandungi ekoran ', California'; koma
