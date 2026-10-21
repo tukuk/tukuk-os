@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'kolej', label: 'COLLEGES', title: 'Colleges of the World', var: 'COLLEGES', sing: 'College', finder: 'college', finders: 'collegesInRegion', pfx: 'co', cap: 'Colleges' },
-  { file: 'kastil-prancis', label: 'CHATEAUX', title: 'Chateaux of the World', var: 'CHATEAUX', sing: 'Chateau', finder: 'chateau', finders: 'chateauxInRegion', pfx: 'ch', cap: 'Chateaux' },
-  { file: 'runtuhan-kastil', label: 'CASTLE-RUINS', title: 'Castle Ruins of the World', var: 'CASTLERUIN', sing: 'CastleRuin', finder: 'castleRuin', finders: 'castleRuinsInRegion', pfx: 'cr', cap: 'CastleRuins' },
-  { file: 'sekolah-tata', label: 'GRAMMAR-SCHOOLS', title: 'Grammar Schools of the World', var: 'GRAMSCHL', sing: 'GrammarSchool', finder: 'grammarSchool', finders: 'grammarSchoolsInRegion', pfx: 'gs', cap: 'GrammarSchools' },
-  { file: 'motte-bailey', label: 'MOTTE-BAILEY', title: 'Motte-and-Bailey Castles of the World', var: 'MOTTEBAIL', sing: 'MotteBaileyCastle', finder: 'motteBailey', finders: 'motteBaileysInRegion', pfx: 'mb', cap: 'MotteBaileys' },
-  { file: 'gudang', label: 'WAREHOUSES', title: 'Warehouses of the World', var: 'WAREHSE', sing: 'Warehouse', finder: 'warehouse', finders: 'warehousesInRegion', pfx: 'wd', cap: 'Warehouses' },
-  { file: 'menara-kubu', label: 'FORTIFIED-TOWERS', title: 'Fortified Towers of the World', var: 'FORTTWR', sing: 'FortifiedTower', finder: 'fortifiedTower', finders: 'fortifiedTowersInRegion', pfx: 'fw', cap: 'FortifiedTowers' },
-  { file: 'bursa-jagung', label: 'CORN-EXCHANGES', title: 'Corn Exchanges of the World', var: 'CORNXCH', sing: 'CornExchange', finder: 'cornExchange', finders: 'cornExchangesInRegion', pfx: 'cx', cap: 'CornExchanges' },
-  { file: 'terowongan-kanal', label: 'CANAL-TUNNELS', title: 'Canal Tunnels of the World', var: 'CANALTUN', sing: 'CanalTunnel', finder: 'canalTunnel', finders: 'canalTunnelsInRegion', pfx: 'ct', cap: 'CanalTunnels' },
+  { file: 'institut-sidik', label: 'RESEARCH-INSTITUTES', title: 'Research Institutes of the World', var: 'RESINST', sing: 'ResearchInstitute', finder: 'researchInstitute', finders: 'researchInstitutesInRegion', pfx: 'ri', cap: 'ResearchInstitutes' },
+  { file: 'bank-bangunan', label: 'BANK-BUILDINGS', title: 'Bank Buildings of the World', var: 'BANKBLDG', sing: 'BankBuilding', finder: 'bankBuilding', finders: 'bankBuildingsInRegion', pfx: 'bk', cap: 'BankBuildings' },
+  { file: 'sekolah-seni', label: 'ART-SCHOOLS', title: 'Art Schools and Academies of the World', var: 'ARTSCHOOL', sing: 'ArtSchool', finder: 'artSchool', finders: 'artSchoolsInRegion', pfx: 'ar', cap: 'ArtSchools' },
+  { file: 'kampus', label: 'CAMPUSES', title: 'University Campuses of the World', var: 'CAMPUSES', sing: 'Campus', finder: 'campus', finders: 'campusesInRegion', pfx: 'cp', cap: 'Campuses' },
+  { file: 'kem-tawanan', label: 'PRISONER-OF-WAR-CAMPS', title: 'Prisoner-of-War Camps of the World', var: 'POWCAMPS', sing: 'PowCamp', finder: 'powCamp', finders: 'powCampsInRegion', pfx: 'pw', cap: 'PowCamps' },
+  { file: 'bursa-saham', label: 'STOCK-EXCHANGES', title: 'Stock Exchanges of the World', var: 'STOCKXCH', sing: 'StockExchange', finder: 'stockExchange', finders: 'stockExchangesInRegion', pfx: 'sx', cap: 'StockExchanges' },
+  { file: 'pusat-tahanan', label: 'DETENTION-CENTERS', title: 'Detention Centers of the World', var: 'DETENCEN', sing: 'DetentionCenter', finder: 'detentionCenter', finders: 'detentionCentersInRegion', pfx: 'dc', cap: 'DetentionCenters' },
+  { file: 'konsulat', label: 'CONSULATES', title: 'Consulates of the World', var: 'CONSULATE', sing: 'Consulate', finder: 'consulate', finders: 'consulatesInRegion', pfx: 'cs', cap: 'Consulates' },
+  { file: 'kedutaan', label: 'EMBASSIES', title: 'Embassies of the World', var: 'EMBASSY', sing: 'Embassy', finder: 'embassy', finders: 'embassiesInRegion', pfx: 'em', cap: 'Embassies' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
