@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'komun-madagaskar', label: 'MALAGASY-COMMUNES', title: 'Communes of Madagascar', var: 'KOMMG', sing: 'MalagasyCommune', finder: 'malagasyCommune', finders: 'malagasyCommunesInRegion', pfx: 'kmg', cap: 'MalagasyCommunes' },
-  { file: 'pekan-tiongkok', label: 'CHINESE-TOWNSHIPS', title: 'Townships of China', var: 'TWNCH', sing: 'ChineseTownship', finder: 'chineseTownship', finders: 'chineseTownshipsInRegion', pfx: 'ptc', cap: 'ChineseTownships' },
-  { file: 'arrondisman-benin', label: 'BENINESE-ARRONDISSEMENTS', title: 'Arrondissements of Benin', var: 'ARBEN', sing: 'BenineseArrondissement', finder: 'benineseArrondissement', finders: 'benineseArrondissementsInRegion', pfx: 'abn', cap: 'BenineseArrondissements' },
-  { file: 'munisipaliti-guatemala', label: 'GUATEMALAN-MUNICIPALITIES', title: 'Municipalities of Guatemala', var: 'MUGUA', sing: 'GuatemalanMunicipality', finder: 'guatemalanMunicipality', finders: 'guatemalanMunicipalitiesInRegion', pfx: 'mgu', cap: 'GuatemalanMunicipalities' },
-  { file: 'munisipaliti-honduras', label: 'HONDURAN-MUNICIPALITIES', title: 'Municipalities of Honduras', var: 'MUHON', sing: 'HonduranMunicipality', finder: 'honduranMunicipality', finders: 'honduranMunicipalitiesInRegion', pfx: 'mhn', cap: 'HonduranMunicipalities' },
-  { file: 'munisipaliti-bolivia', label: 'BOLIVIAN-MUNICIPALITIES', title: 'Municipalities of Bolivia', var: 'MOBOL', sing: 'BolivianMunicipality', finder: 'bolivianMunicipality', finders: 'bolivianMunicipalitiesInRegion', pfx: 'mbo', cap: 'BolivianMunicipalities' },
-  { file: 'distrik-laos', label: 'LAOTIAN-DISTRICTS', title: 'Districts of Laos', var: 'DSLAO', sing: 'LaotianDistrict', finder: 'laotianDistrict', finders: 'laotianDistrictsInRegion', pfx: 'dla', cap: 'LaotianDistricts' },
-  { file: 'munisipaliti-nikaragua', label: 'NICARAGUAN-MUNICIPALITIES', title: 'Municipalities of Nicaragua', var: 'MUNICN', sing: 'NicaraguanMunicipality', finder: 'nicaraguanMunicipality', finders: 'nicaraguanMunicipalitiesInRegion', pfx: 'mnk', cap: 'NicaraguanMunicipalities' },
-  { file: 'lga-australia', label: 'AUSTRALIAN-LGAS', title: 'Local Government Areas of Australia', var: 'LGAU', sing: 'AustralianLGA', finder: 'australianLGA', finders: 'australianLGAsInRegion', pfx: 'lga', cap: 'AustralianLGAs' },
+  { file: 'tambon-thailand', label: 'THAI-SUBDISTRICTS', title: 'Subdistricts of Thailand (Tambon)', var: 'TMBTN', sing: 'ThaiSubdistrict', finder: 'thaiSubdistrict', finders: 'thaiSubdistrictsInRegion', pfx: 'tbn', cap: 'ThaiSubdistricts' },
+  { file: 'komun-mali', label: 'MALIAN-COMMUNES', title: 'Communes of Mali', var: 'KOMML', sing: 'MalianCommune', finder: 'malianCommune', finders: 'malianCommunesInRegion', pfx: 'kml', cap: 'MalianCommunes' },
+  { file: 'munisipaliti-afrika-selatan', label: 'SOUTH-AFRICAN-MUNICIPALITIES', title: 'Local Municipalities of South Africa', var: 'MASAF', sing: 'SouthAfricanMunicipality', finder: 'southAfricanMunicipality', finders: 'southAfricanMunicipalitiesInRegion', pfx: 'mas', cap: 'SouthAfricanMunicipalities' },
+  { file: 'distrik-ghana', label: 'GHANAIAN-DISTRICTS', title: 'Districts of Ghana', var: 'DSGHA', sing: 'GhanaianDistrict', finder: 'ghanaianDistrict', finders: 'ghanaianDistrictsInRegion', pfx: 'dgh', cap: 'GhanaianDistricts' },
+  { file: 'jamoat-tajikistan', label: 'TAJIK-DISTRICTS', title: 'Jamoats of Tajikistan', var: 'JMTJK', sing: 'TajikJamoat', finder: 'tajikJamoat', finders: 'tajikJamoatsInRegion', pfx: 'jtj', cap: 'TajikJamoats' },
+  { file: 'arrondisman-senegal', label: 'SENEGALESE-ARRONDISSEMENTS', title: 'Arrondissements of Senegal', var: 'ARSEN', sing: 'SenegaleseArrondissement', finder: 'senegaleseArrondissement', finders: 'senegaleseArrondissementsInRegion', pfx: 'ars', cap: 'SenegaleseArrondissements' },
+  { file: 'distrik-zambia', label: 'ZAMBIAN-DISTRICTS', title: 'Districts of Zambia', var: 'DSZMB', sing: 'ZambianDistrict', finder: 'zambianDistrict', finders: 'zambianDistrictsInRegion', pfx: 'dzm', cap: 'ZambianDistricts' },
+  { file: 'distrik-papua', label: 'PNG-DISTRICTS', title: 'Districts of Papua New Guinea', var: 'DSPNG', sing: 'PapuaNewGuineaDistrict', finder: 'papuaNewGuineaDistrict', finders: 'papuaNewGuineaDistrictsInRegion', pfx: 'dpg', cap: 'PapuaNewGuineaDistricts' },
+  { file: 'sektor-rwanda', label: 'RWANDAN-SECTORS', title: 'Sectors of Rwanda', var: 'SERWA', sing: 'RwandanSector', finder: 'rwandanSector', finders: 'rwandanSectorsInRegion', pfx: 'srw', cap: 'RwandanSectors' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
