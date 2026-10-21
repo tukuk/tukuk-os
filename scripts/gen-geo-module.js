@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'munisipaliti-austria', label: 'AUSTRIAN-MUNICIPALITIES', title: 'Municipalities of Austria', var: 'AUMUN', sing: 'AustrianMunicipality', finder: 'austrianMunicipality', finders: 'austrianMunicipalitiesInRegion', pfx: 'aus', cap: 'AustrianMunicipalities' },
-  { file: 'kabupaten-india', label: 'INDIAN-DISTRICTS', title: 'Districts of India', var: 'INDDI', sing: 'IndianDistrict', finder: 'indianDistrict', finders: 'indianDistrictsInRegion', pfx: 'ind', cap: 'IndianDistricts' },
-  { file: 'kota-jepang', label: 'JAPANESE-CITIES', title: 'Cities of Japan', var: 'JPCIT', sing: 'JapaneseCity', finder: 'japaneseCity', finders: 'japaneseCitiesInRegion', pfx: 'jpc', cap: 'JapaneseCities' },
-  { file: 'distrik-jepang', label: 'JAPANESE-DISTRICTS', title: 'Districts of Japan', var: 'JPDST', sing: 'JapaneseDistrict', finder: 'japaneseDistrict', finders: 'japaneseDistrictsInRegion', pfx: 'jpd', cap: 'JapaneseDistricts' },
-  { file: 'munisipaliti-finland', label: 'FINNISH-MUNICIPALITIES', title: 'Municipalities of Finland', var: 'FIMUN', sing: 'FinnishMunicipality', finder: 'finnishMunicipality', finders: 'finnishMunicipalitiesInRegion', pfx: 'fin', cap: 'FinnishMunicipalities' },
-  { file: 'munisipaliti-portugal', label: 'PORTUGUESE-MUNICIPALITIES', title: 'Municipalities of Portugal', var: 'POMUN', sing: 'PortugueseMunicipality', finder: 'portugueseMunicipality', finders: 'portugueseMunicipalitiesInRegion', pfx: 'prt', cap: 'PortugueseMunicipalities' },
-  { file: 'komun-chile', label: 'CHILEAN-COMMUNES', title: 'Communes of Chile', var: 'CHLCM', sing: 'ChileanCommune', finder: 'chileanCommune', finders: 'chileanCommunesInRegion', pfx: 'kch', cap: 'ChileanCommunes' },
-  { file: 'munisipaliti-sweden', label: 'SWEDISH-MUNICIPALITIES', title: 'Municipalities of Sweden', var: 'SWMUN', sing: 'SwedishMunicipality', finder: 'swedishMunicipality', finders: 'swedishMunicipalitiesInRegion', pfx: 'swe', cap: 'SwedishMunicipalities' },
-  { file: 'munisipaliti-denmark', label: 'DANISH-MUNICIPALITIES', title: 'Municipalities of Denmark', var: 'DAMUN', sing: 'DanishMunicipality', finder: 'danishMunicipality', finders: 'danishMunicipalitiesInRegion', pfx: 'dkk', cap: 'DanishMunicipalities' },
+  { file: 'munisipaliti-slovakia', label: 'SLOVAK-MUNICIPALITIES', title: 'Municipalities of Slovakia', var: 'SKVMU', sing: 'SlovakMunicipality', finder: 'slovakMunicipality', finders: 'slovakMunicipalitiesInRegion', pfx: 'msk', cap: 'SlovakMunicipalities' },
+  { file: 'munisipaliti-hungary', label: 'HUNGARIAN-MUNICIPALITIES', title: 'Municipalities of Hungary', var: 'HUNMU', sing: 'HungarianMunicipality', finder: 'hungarianMunicipality', finders: 'hungarianMunicipalitiesInRegion', pfx: 'mgh', cap: 'HungarianMunicipalities' },
+  { file: 'munisipaliti-croatia', label: 'CROATIAN-MUNICIPALITIES', title: 'Municipalities of Croatia', var: 'CROMU', sing: 'CroatianMunicipality', finder: 'croatianMunicipality', finders: 'croatianMunicipalitiesInRegion', pfx: 'mhr', cap: 'CroatianMunicipalities' },
+  { file: 'munisipaliti-venezuela', label: 'VENEZUELAN-MUNICIPALITIES', title: 'Municipalities of Venezuela', var: 'VENZM', sing: 'VenezuelanMunicipality', finder: 'venezuelanMunicipality', finders: 'venezuelanMunicipalitiesInRegion', pfx: 'mvz', cap: 'VenezuelanMunicipalities' },
+  { file: 'munisipaliti-bulgaria', label: 'BULGARIAN-MUNICIPALITIES', title: 'Municipalities of Bulgaria', var: 'BULMU', sing: 'BulgarianMunicipality', finder: 'bulgarianMunicipality', finders: 'bulgarianMunicipalitiesInRegion', pfx: 'mbl', cap: 'BulgarianMunicipalities' },
+  { file: 'provinsi-peru', label: 'PERUVIAN-PROVINCES', title: 'Provinces of Peru', var: 'PERPR', sing: 'PeruvianProvince', finder: 'peruvianProvince', finders: 'peruvianProvincesInRegion', pfx: 'mpv', cap: 'PeruvianProvinces' },
+  { file: 'munisipaliti-slovenia', label: 'SLOVENIAN-MUNICIPALITIES', title: 'Municipalities of Slovenia', var: 'SLVMU', sing: 'SlovenianMunicipality', finder: 'slovenianMunicipality', finders: 'slovenianMunicipalitiesInRegion', pfx: 'msv', cap: 'SlovenianMunicipalities' },
+  { file: 'munisipaliti-greece', label: 'GREEK-MUNICIPALITIES', title: 'Municipalities of Greece', var: 'GRCMU', sing: 'GreekMunicipality', finder: 'greekMunicipality', finders: 'greekMunicipalitiesInRegion', pfx: 'mgr', cap: 'GreekMunicipalities' },
+  { file: 'munisipaliti-romania', label: 'ROMANIAN-MUNICIPALITIES', title: 'Communes of Romania', var: 'ROMMU', sing: 'RomanianMunicipality', finder: 'romanianMunicipality', finders: 'romanianMunicipalitiesInRegion', pfx: 'mrq', cap: 'RomanianMunicipalities' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
