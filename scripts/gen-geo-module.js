@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'township-iowa', label: 'IOWA-TOWNSHIPS', title: 'Townships of Iowa', var: 'TIWA', sing: 'IowaTownship', finder: 'iowaTownship', finders: 'iowaTownshipsInRegion', pfx: 'tio', cap: 'IowaTownships' },
-  { file: 'county-texas', label: 'TEXAS-COUNTIES', title: 'Counties of Texas', var: 'CTXE', sing: 'TexasCounty', finder: 'texasCounty', finders: 'texasCountiesInRegion', pfx: 'ktx', cap: 'TexasCounties' },
-  { file: 'munisipaliti-jerman', label: 'GERMAN-MUNICIPALITIES', title: 'Municipalities of Germany', var: 'MGER', sing: 'GermanMunicipality', finder: 'germanMunicipality', finders: 'germanMunicipalitiesInRegion', pfx: 'kgn', cap: 'GermanMunicipalities' },
-  { file: 'county-kansas', label: 'KANSAS-COUNTIES', title: 'Counties of Kansas', var: 'CKAS', sing: 'KansasCounty', finder: 'kansasCounty', finders: 'kansasCountiesInRegion', pfx: 'kks', cap: 'KansasCounties' },
-  { file: 'county-illinois', label: 'ILLINOIS-COUNTIES', title: 'Counties of Illinois', var: 'CILL', sing: 'IllinoisCounty', finder: 'illinoisCounty', finders: 'illinoisCountiesInRegion', pfx: 'kil', cap: 'IllinoisCounties' },
-  { file: 'county-ohio', label: 'OHIO-COUNTIES', title: 'Counties of Ohio', var: 'OHCT', sing: 'OhioCounty', finder: 'ohioCounty', finders: 'ohioCountiesInRegion', pfx: 'koh', cap: 'OhioCounties' },
-  { file: 'county-pennsylvania', label: 'PENNSYLVANIA-COUNTIES', title: 'Counties of Pennsylvania', var: 'PACT', sing: 'PennsylvaniaCounty', finder: 'pennsylvaniaCounty', finders: 'pennsylvaniaCountiesInRegion', pfx: 'kpa', cap: 'PennsylvaniaCounties' },
-  { file: 'county-new-york', label: 'NEW-YORK-COUNTIES', title: 'Counties of New York', var: 'NYCT', sing: 'NewYorkCounty', finder: 'newYorkCounty', finders: 'newYorkCountiesInRegion', pfx: 'kny', cap: 'NewYorkCounties' },
-  { file: 'county-california', label: 'CALIFORNIA-COUNTIES', title: 'Counties of California', var: 'CACT', sing: 'CaliforniaCounty', finder: 'californiaCounty', finders: 'californiaCountiesInRegion', pfx: 'kca', cap: 'CaliforniaCounties' },
+  { file: 'county-georgia', label: 'GEORGIA-COUNTIES', title: 'Counties of Georgia', var: 'GGAG', sing: 'GeorgiaCounty', finder: 'georgiaCounty', finders: 'georgiaCountiesInRegion', pfx: 'kga', cap: 'GeorgiaCounties' },
+  { file: 'county-kentucky', label: 'KENTUCKY-COUNTIES', title: 'Counties of Kentucky', var: 'GKTY', sing: 'KentuckyCounty', finder: 'kentuckyCounty', finders: 'kentuckyCountiesInRegion', pfx: 'ktk', cap: 'KentuckyCounties' },
+  { file: 'county-missouri', label: 'MISSOURI-COUNTIES', title: 'Counties of Missouri', var: 'GMIS', sing: 'MissouriCounty', finder: 'missouriCounty', finders: 'missouriCountiesInRegion', pfx: 'kmo', cap: 'MissouriCounties' },
+  { file: 'county-north-carolina', label: 'NORTH-CAROLINA-COUNTIES', title: 'Counties of North Carolina', var: 'GNCC', sing: 'NorthCarolinaCounty', finder: 'northCarolinaCounty', finders: 'northCarolinaCountiesInRegion', pfx: 'kno', cap: 'NorthCarolinaCounties' },
+  { file: 'county-virginia', label: 'VIRGINIA-COUNTIES', title: 'Counties of Virginia', var: 'GVAG', sing: 'VirginiaCounty', finder: 'virginiaCounty', finders: 'virginiaCountiesInRegion', pfx: 'kva', cap: 'VirginiaCounties' },
+  { file: 'county-tennessee', label: 'TENNESSEE-COUNTIES', title: 'Counties of Tennessee', var: 'GTNS', sing: 'TennesseeCounty', finder: 'tennesseeCounty', finders: 'tennesseeCountiesInRegion', pfx: 'ktn', cap: 'TennesseeCounties' },
+  { file: 'county-minnesota', label: 'MINNESOTA-COUNTIES', title: 'Counties of Minnesota', var: 'GMNS', sing: 'MinnesotaCounty', finder: 'minnesotaCounty', finders: 'minnesotaCountiesInRegion', pfx: 'kmn', cap: 'MinnesotaCounties' },
+  { file: 'county-michigan', label: 'MICHIGAN-COUNTIES', title: 'Counties of Michigan', var: 'GMIC', sing: 'MichiganCounty', finder: 'michiganCounty', finders: 'michiganCountiesInRegion', pfx: 'kmi', cap: 'MichiganCounties' },
+  { file: 'county-wisconsin', label: 'WISCONSIN-COUNTIES', title: 'Counties of Wisconsin', var: 'GWIS', sing: 'WisconsinCounty', finder: 'wisconsinCounty', finders: 'wisconsinCountiesInRegion', pfx: 'kwi', cap: 'WisconsinCounties' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
