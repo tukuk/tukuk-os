@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'pulau-pasang', label: 'TIDAL-ISLANDS', title: 'Tidal Islands of the World', var: 'TIDALISLES', sing: 'TidalIsland', finder: 'tidalisland', finders: 'tidalIslandsInRegion', pfx: 'ti', cap: 'TidalIslands' },
-  { file: 'hypogeum', label: 'HYPOGEUMS', title: 'Hypogea and Underground Tombs of the World', var: 'HYPOGEA', sing: 'Hypogeum', finder: 'hypogeum', finders: 'hypogeaInRegion', pfx: 'hg', cap: 'Hypogea' },
-  { file: 'batu-bertulis', label: 'STELES', title: 'Steles and Inscribed Stones of the World', var: 'STELES', sing: 'Stele', finder: 'stele', finders: 'stelesInRegion', pfx: 'sx', cap: 'Steles' },
-  { file: 'sanatorium', label: 'SANATORIUMS', title: 'Sanatoriums of the World', var: 'SANATOR', sing: 'Sanatorium', finder: 'sanatorium', finders: 'sanatoriumsInRegion', pfx: 'sn', cap: 'Sanatoriums' },
-  { file: 'kebun-buah', label: 'ORCHARDS', title: 'Orchards of the World', var: 'ORCHARDS', sing: 'Orchard', finder: 'orchard', finders: 'orchardsInRegion', pfx: 'oc', cap: 'Orchards' },
-  { file: 'kincir-pam', label: 'WINDPUMPS', title: 'Windpumps of the World', var: 'WINDPUMPS', sing: 'Windpump', finder: 'windpump', finders: 'windpumpsInRegion', pfx: 'wd', cap: 'Windpumps' },
-  { file: 'danau-belok', label: 'OXBOW-LAKES', title: 'Oxbow Lakes of the World', var: 'OXBOWS', sing: 'OxbowLake', finder: 'oxbowlake', finders: 'oxbowLakesInRegion', pfx: 'ox', cap: 'OxbowLakes' },
-  { file: 'kolam-ikan', label: 'FISH-PONDS', title: 'Fish Ponds of the World', var: 'FISHPONDS', sing: 'FishPond', finder: 'fishpond', finders: 'fishPondsInRegion', pfx: 'fp', cap: 'FishPonds' },
-  { file: 'tiang-totem', label: 'TOTEM-POLES', title: 'Totem Poles of the World', var: 'TOTEMPOLES', sing: 'TotemPole', finder: 'totempole', finders: 'totemPolesInRegion', pfx: 'tp', cap: 'TotemPoles' },
+  { file: 'bio-tenaga', label: 'BIOMASS-PLANTS', title: 'Biomass Power Stations of the World', var: 'BIOMASS', sing: 'BiomassPlant', finder: 'biomassplant', finders: 'biomassPlantsInRegion', pfx: 'bw', cap: 'BiomassPlants' },
+  { file: 'menara-benteng', label: 'CASTLE-TOWERS', title: 'Castle Towers and Fortified Towers of the World', var: 'CASTLETOWERS', sing: 'CastleTower', finder: 'castletower', finders: 'castleTowersInRegion', pfx: 'cb', cap: 'CastleTowers' },
+  { file: 'stesen-misi', label: 'MISSION-STATIONS', title: 'Mission Stations of the World', var: 'MISSIONSTN', sing: 'MissionStation', finder: 'missionstation', finders: 'missionStationsInRegion', pfx: 'sm', cap: 'MissionStations' },
+  { file: 'pempam-tenaga', label: 'PUMPED-STORAGE', title: 'Pumped-Storage Power Stations of the World', var: 'PUMPEDSTOR', sing: 'PumpedStorage', finder: 'pumpedstorage', finders: 'pumpedStorageInRegion', pfx: 'pu', cap: 'PumpedStorage' },
+  { file: 'geoterma-kuasa', label: 'GEOTHERMAL-PLANTS', title: 'Geothermal Power Stations of the World', var: 'GEOTHERMAL', sing: 'GeothermalPlant', finder: 'geothermalplant', finders: 'geothermalPlantsInRegion', pfx: 'gt', cap: 'GeothermalPlants' },
+  { file: 'ladang-anggur', label: 'VINEYARDS', title: 'Vineyards of the World', var: 'VINEYARDS', sing: 'Vineyard', finder: 'vineyard', finders: 'vineyardsInRegion', pfx: 'vg', cap: 'Vineyards' },
+  { file: 'kubur-baji', label: 'WEDGE-TOMBS', title: 'Wedge Tombs of the World', var: 'WEDGETOMBS', sing: 'WedgeTomb', finder: 'wedgetomb', finders: 'wedgeTombsInRegion', pfx: 'wb', cap: 'WedgeTombs' },
+  { file: 'cairn-pengadilan', label: 'COURT-CAIRNS', title: 'Court Cairns and Court Tombs of the World', var: 'COURTCAIRN', sing: 'CourtCairn', finder: 'courtcairn', finders: 'courtCairnsInRegion', pfx: 'cr', cap: 'CourtCairns' },
+  { file: 'balai-lokomotif', label: 'MOTIVE-POWER-DEPOTS', title: 'Locomotive Depots of the World', var: 'MOTIVEDEPO', sing: 'MotiveDepot', finder: 'motivedepot', finders: 'motiveDepotsInRegion', pfx: 'mo', cap: 'MotiveDepots' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
