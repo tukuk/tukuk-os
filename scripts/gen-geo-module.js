@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'county-georgia', label: 'GEORGIA-COUNTIES', title: 'Counties of Georgia', var: 'GGAG', sing: 'GeorgiaCounty', finder: 'georgiaCounty', finders: 'georgiaCountiesInRegion', pfx: 'kga', cap: 'GeorgiaCounties' },
-  { file: 'county-kentucky', label: 'KENTUCKY-COUNTIES', title: 'Counties of Kentucky', var: 'GKTY', sing: 'KentuckyCounty', finder: 'kentuckyCounty', finders: 'kentuckyCountiesInRegion', pfx: 'ktk', cap: 'KentuckyCounties' },
-  { file: 'county-missouri', label: 'MISSOURI-COUNTIES', title: 'Counties of Missouri', var: 'GMIS', sing: 'MissouriCounty', finder: 'missouriCounty', finders: 'missouriCountiesInRegion', pfx: 'kmo', cap: 'MissouriCounties' },
-  { file: 'county-north-carolina', label: 'NORTH-CAROLINA-COUNTIES', title: 'Counties of North Carolina', var: 'GNCC', sing: 'NorthCarolinaCounty', finder: 'northCarolinaCounty', finders: 'northCarolinaCountiesInRegion', pfx: 'kno', cap: 'NorthCarolinaCounties' },
-  { file: 'county-virginia', label: 'VIRGINIA-COUNTIES', title: 'Counties of Virginia', var: 'GVAG', sing: 'VirginiaCounty', finder: 'virginiaCounty', finders: 'virginiaCountiesInRegion', pfx: 'kva', cap: 'VirginiaCounties' },
-  { file: 'county-tennessee', label: 'TENNESSEE-COUNTIES', title: 'Counties of Tennessee', var: 'GTNS', sing: 'TennesseeCounty', finder: 'tennesseeCounty', finders: 'tennesseeCountiesInRegion', pfx: 'ktn', cap: 'TennesseeCounties' },
-  { file: 'county-minnesota', label: 'MINNESOTA-COUNTIES', title: 'Counties of Minnesota', var: 'GMNS', sing: 'MinnesotaCounty', finder: 'minnesotaCounty', finders: 'minnesotaCountiesInRegion', pfx: 'kmn', cap: 'MinnesotaCounties' },
-  { file: 'county-michigan', label: 'MICHIGAN-COUNTIES', title: 'Counties of Michigan', var: 'GMIC', sing: 'MichiganCounty', finder: 'michiganCounty', finders: 'michiganCountiesInRegion', pfx: 'kmi', cap: 'MichiganCounties' },
-  { file: 'county-wisconsin', label: 'WISCONSIN-COUNTIES', title: 'Counties of Wisconsin', var: 'GWIS', sing: 'WisconsinCounty', finder: 'wisconsinCounty', finders: 'wisconsinCountiesInRegion', pfx: 'kwi', cap: 'WisconsinCounties' },
+  { file: 'county-iowa', label: 'IOWA-COUNTIES', title: 'Counties of Iowa', var: 'GIOW', sing: 'IowaCounty', finder: 'iowaCounty', finders: 'iowaCountiesInRegion', pfx: 'kio', cap: 'IowaCounties' },
+  { file: 'county-indiana', label: 'INDIANA-COUNTIES', title: 'Counties of Indiana', var: 'GINN', sing: 'IndianaCounty', finder: 'indianaCounty', finders: 'indianaCountiesInRegion', pfx: 'kin', cap: 'IndianaCounties' },
+  { file: 'county-mississippi', label: 'MISSISSIPPI-COUNTIES', title: 'Counties of Mississippi', var: 'GMSS', sing: 'MississippiCounty', finder: 'mississippiCounty', finders: 'mississippiCountiesInRegion', pfx: 'kms', cap: 'MississippiCounties' },
+  { file: 'county-oklahoma', label: 'OKLAHOMA-COUNTIES', title: 'Counties of Oklahoma', var: 'GOLA', sing: 'OklahomaCounty', finder: 'oklahomaCounty', finders: 'oklahomaCountiesInRegion', pfx: 'kol', cap: 'OklahomaCounties' },
+  { file: 'county-arkansas', label: 'ARKANSAS-COUNTIES', title: 'Counties of Arkansas', var: 'GARZ', sing: 'ArkansasCounty', finder: 'arkansasCounty', finders: 'arkansasCountiesInRegion', pfx: 'kar', cap: 'ArkansasCounties' },
+  { file: 'county-alabama', label: 'ALABAMA-COUNTIES', title: 'Counties of Alabama', var: 'GALA', sing: 'AlabamaCounty', finder: 'alabamaCounty', finders: 'alabamaCountiesInRegion', pfx: 'alb', cap: 'AlabamaCounties' },
+  { file: 'county-florida', label: 'FLORIDA-COUNTIES', title: 'Counties of Florida', var: 'GFLO', sing: 'FloridaCounty', finder: 'floridaCounty', finders: 'floridaCountiesInRegion', pfx: 'kfl', cap: 'FloridaCounties' },
+  { file: 'county-colorado', label: 'COLORADO-COUNTIES', title: 'Counties of Colorado', var: 'GCOL', sing: 'ColoradoCounty', finder: 'coloradoCounty', finders: 'coloradoCountiesInRegion', pfx: 'kco', cap: 'ColoradoCounties' },
+  { file: 'county-south-carolina', label: 'SOUTH-CAROLINA-COUNTIES', title: 'Counties of South Carolina', var: 'GSCA', sing: 'SouthCarolinaCounty', finder: 'southCarolinaCounty', finders: 'southCarolinaCountiesInRegion', pfx: 'ksc', cap: 'SouthCarolinaCounties' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
