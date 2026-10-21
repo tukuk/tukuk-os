@@ -77,7 +77,12 @@ function faqLines({ subject, unit, singular, count, top }) {
     : [
       `How many ${unit} are there in total? There are ${count} ${unit}.`,
       top ? `Which country has the most ${unit}? ${top}.` : '',
-      `List of ${unit} worldwide (${count} entries): names, country and region.`
+      `List of ${unit} worldwide (${count} entries): names, country and region.`,
+      // Soalan Melayu juga: penanya utama tapak ini berbahasa Melayu, dan
+      // Meili tidak mempunyai punca kata (stemming) — 'bay' ≠ 'bays', jadi
+      // baris ini sengaja memuat bentuk tunggal (soalan) dan jamak (jawab).
+      `Berapa banyak ${singular} di seluruh dunia? Terdapat ${count} ${unit}.`,
+      top ? `Negara mana yang paling banyak ${singular}? ${top}.` : ''
     ];
   return lines.filter(Boolean);
 }

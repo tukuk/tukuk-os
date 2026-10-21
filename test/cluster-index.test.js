@@ -39,10 +39,22 @@ test('faqLines(): kluster global guna soalan tanpa yurisdiksi', () => {
   assert.deepEqual(lines, [
     'How many bays are there in total? There are 52 bays.',
     'Which country has the most bays? Norway (11 bays).',
-    'List of bays worldwide (52 entries): names, country and region.'
+    'List of bays worldwide (52 entries): names, country and region.',
+    'Berapa banyak bay di seluruh dunia? Terdapat 52 bays.',
+    'Negara mana yang paling banyak bay? Norway (11 bays).'
   ]);
   const none = faqLines({ subject: '', unit: 'lagoons', singular: 'lagoon', count: 60, top: '' });
-  assert.equal(none.length, 2, 'tiada negara mendominasi → buang baris "most"');
+  assert.equal(none.length, 3, 'tiada negara mendominasi → buang kedua-dua baris "most"');
+});
+
+test('faqLines(): soalan Melayu memuat bentuk tunggal dan jamak', () => {
+  // Meili tiada punca kata — 'bay' dan 'bays' kata berbeza. Soalan Melayu
+  // bertanya bentuk tunggal, jawapan mengandungi bentuk jamak; kedua-duanya
+  // perlu ada dalam dokumen agar caruan BM boleh menemuinya.
+  const g = faqLines({ subject: '', unit: 'bays', singular: 'bay', count: 52, top: 'Norway (11 bays)' });
+  const ms = g.filter((l) => /^Berapa |^Negara /.test(l));
+  assert.equal(ms.length, 2);
+  assert.ok(ms.every((l) => /\bbay\b/.test(l) && /\bbays\b/.test(l)), ms.join(' / '));
 });
 
 test('faqLines(): kluster bernegara menyahut bentuk soalan sebenar', () => {
