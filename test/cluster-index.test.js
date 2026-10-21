@@ -5,7 +5,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { geoClusters } = require('../src/server');
-const { hubToDoc, indexGeoHubs, stripHtml, tally } = require('../src/cluster-index');
+const { hubToDoc, indexGeoHubs, stripHtml, tally, faqLines } = require('../src/cluster-index');
 
 const clusters = geoClusters();
 const docs = clusters.map(hubToDoc).filter(Boolean);
@@ -27,7 +27,28 @@ test('hubToDoc(): dokumen hub lengkap + boleh dicari sebagai konten kami', () =>
   assert.match(ca.content, /divided into 58 counties/);
   assert.match(ca.content, /Total in this cluster: 58 counties\./);
   assert.match(ca.content, /United States \(58\)/);
+  // Baris FAQ: soalan pengguna dalam bentuk BM25 boleh memandu — tanpanya
+  // dokumen kami kalah kepada blog yang cuma menyebut "how" + "many".
+  assert.match(ca.content, /How many counties does California have\? California has 58 counties\./);
+  assert.match(ca.content, /Berapa banyak county di California\?/);
   assert.ok(ca.id.length === 16, 'id deterministik 16 hex');
+});
+
+test('faqLines(): kluster global guna soalan tanpa yurisdiksi', () => {
+  const lines = faqLines({ subject: '', unit: 'bays', singular: 'bay', count: 52, top: 'Norway (11 bays)' });
+  assert.deepEqual(lines, [
+    'How many bays are there in total? There are 52 bays.',
+    'Which country has the most bays? Norway (11 bays).',
+    'List of bays worldwide (52 entries): names, country and region.'
+  ]);
+  const none = faqLines({ subject: '', unit: 'lagoons', singular: 'lagoon', count: 60, top: '' });
+  assert.equal(none.length, 2, 'tiada negara mendominasi → buang baris "most"');
+});
+
+test('faqLines(): kluster bernegara menyahut bentuk soalan sebenar', () => {
+  const lines = faqLines({ subject: 'Kenya', unit: 'counties', singular: 'county', count: 47, top: '' });
+  assert.ok(lines.some((l) => l === 'How many counties does Kenya have? Kenya has 47 counties.'));
+  assert.ok(lines.some((l) => l.includes('Berapa banyak county di Kenya')));
 });
 
 test('hubToDoc(): idempotent — id & hash tak berubah antara dua binaan', () => {

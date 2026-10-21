@@ -54,6 +54,34 @@ function formatTally(pairs) {
     .join(', ') + (pairs.length > TALLY_CAP ? `, +${pairs.length - TALLY_CAP} lagi` : '');
 }
 
+/**
+ * Baris soal-jawab (FAQ) untuk padanan BM25.
+ *
+ * Meili mengira peraturan `words` dahulu: dokumen yang memuat LEBIH BANYAK
+ * kata soalan akan mengatasi artikel blog yang cuma mengandungi "how" +
+ * "many". Tanpa baris ini, soalan "how many counties does California have"
+ * jatuh ke blog sains awam dan /ask menjawab "I do not know" — walaupun
+ * halaman hub kami sendiri menulis fakta itu.
+ */
+function faqLines({ subject, unit, singular, count, top }) {
+  const where = subject ? ` in ${subject}` : '';
+  const lines = subject
+    ? [
+      `How many ${unit} does ${subject} have? ${subject} has ${count} ${unit}.`,
+      `How many ${unit} are there${where}? There are ${count}.`,
+      `Does ${subject} have ${count} ${unit}? Yes — the full list of every ${singular}${where} is on this page.`,
+      `List of ${unit}${where} (${count} entries): names, country and region.`,
+      // Baris BM — ayat Melayu penuh, tanpa campur kata sendi Inggeris.
+      `Berapa banyak ${singular} di ${subject}? ${subject} mempunyai ${count} ${unit}.`
+    ]
+    : [
+      `How many ${unit} are there in total? There are ${count} ${unit}.`,
+      top ? `Which country has the most ${unit}? ${top}.` : '',
+      `List of ${unit} worldwide (${count} entries): names, country and region.`
+    ];
+  return lines.filter(Boolean);
+}
+
 function hubToDoc(cluster) {
   const { base, cfg, mod, listKey } = cluster;
   const items = (mod && listKey && Array.isArray(mod[listKey])) ? mod[listKey] : [];
@@ -70,10 +98,18 @@ function hubToDoc(cluster) {
     .map((i) => String(i.name || i.wiki || '').trim())
     .filter(Boolean);
 
+  // Yurisdiksi dibaca daripada titleCase ("Counties of California" →
+  // "California"); kluster global tiada ekoran 'of' → guna soalan umum.
+  const ofMatch = /^(.+?)\s+of\s+(.+)$/.exec(String(cfg.titleCase || '').trim());
+  const subject = ofMatch ? ofMatch[2].trim() : '';
+  const topCountry = countries.length && countries[0][1] > 1
+    ? `${countries[0][0]} (${countries[0][1]} ${unit})` : '';
+
   const lines = [
     `${cfg.titleCase} — hub di tukuk.org/${base}.`,
     intro,
     blurb && blurb !== intro ? blurb : '',
+    ...faqLines({ subject, unit, singular: cfg.singular || unit, count: items.length, top: topCountry }),
     `Total in this cluster: ${items.length} ${unit}.`,
     countries.length > 1 ? `By country: ${formatTally(countries)}.` : (countries[0] ? `Country: ${countries[0][0]} (${countries[0][1]}).` : ''),
     regions.length ? `By region: ${formatTally(regions)}.` : '',
@@ -147,4 +183,4 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
   return { count: docs.length, skipped: false, taskUid: task && task.taskUid ? task.taskUid : null };
 }
 
-module.exports = { hubToDoc, indexGeoHubs, stripHtml, tally };
+module.exports = { hubToDoc, indexGeoHubs, stripHtml, tally, faqLines };
