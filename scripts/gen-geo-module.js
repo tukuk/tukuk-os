@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'akueduk-navigasi', label: 'NAVIGABLE-AQUEDUCTS', title: 'Navigable Aqueducts of the World', var: 'NAVAQCD', sing: 'NavigableAqueduct', finder: 'navaqueduct', finders: 'navAqueductsInRegion', pfx: 'av', cap: 'NavAqueducts' },
-  { file: 'perlindung-batu', label: 'ROCK-SHELTERS', title: 'Rock Shelters of the World', var: 'ROCKSHLT', sing: 'RockShelter', finder: 'rockshelter', finders: 'rockSheltersInRegion', pfx: 'rs', cap: 'RockShelters' },
-  { file: 'kereta-berigi', label: 'RACK-RAILWAYS', title: 'Rack Railways of the World', var: 'RACKRAIL', sing: 'RackRailway', finder: 'rackrailway', finders: 'rackRailwaysInRegion', pfx: 'rr', cap: 'RackRailways' },
-  { file: 'gereja-kayu', label: 'STAVE-CHURCHES', title: 'Stave Churches of the World', var: 'STAVECH', sing: 'StaveChurch', finder: 'stavechurch', finders: 'staveChurchesInRegion', pfx: 'sv', cap: 'StaveChurches' },
-  { file: 'rumah-kaca', label: 'GREENHOUSES', title: 'Greenhouses and Glasshouses of the World', var: 'GREENHSE', sing: 'Greenhouse', finder: 'greenhouse', finders: 'greenhousesInRegion', pfx: 'gk', cap: 'Greenhouses' },
-  { file: 'salib-batu', label: 'STONE-CROSSES', title: 'Stone Crosses of the World', var: 'STONECRS', sing: 'StoneCross', finder: 'stonecross', finders: 'stoneCrossesInRegion', pfx: 'sc', cap: 'StoneCrosses' },
-  { file: 'celah-air', label: 'WATER-GAPS', title: 'Water Gaps of the World', var: 'WATERGAP', sing: 'WaterGap', finder: 'watergap', finders: 'waterGapsInRegion', pfx: 'wg', cap: 'WaterGaps' },
-  { file: 'hospital-bersalin', label: 'MATERNITY-HOSPITALS', title: 'Maternity Hospitals of the World', var: 'MATERNITY', sing: 'MaternityHospital', finder: 'maternity', finders: 'maternityHospitalsInRegion', pfx: 'mh', cap: 'MaternityHospitals' },
-  { file: 'pusat-kesihatan', label: 'HEALTH-CENTERS', title: 'Community Health Centers of the World', var: 'HLTCENTER', sing: 'HealthCenter', finder: 'healthcenter', finders: 'healthCentersInRegion', pfx: 'hc', cap: 'HealthCenters' },
+  { file: 'kolej', label: 'COLLEGES', title: 'Colleges of the World', var: 'COLLEGES', sing: 'College', finder: 'college', finders: 'collegesInRegion', pfx: 'co', cap: 'Colleges' },
+  { file: 'kastil-prancis', label: 'CHATEAUX', title: 'Chateaux of the World', var: 'CHATEAUX', sing: 'Chateau', finder: 'chateau', finders: 'chateauxInRegion', pfx: 'ch', cap: 'Chateaux' },
+  { file: 'runtuhan-kastil', label: 'CASTLE-RUINS', title: 'Castle Ruins of the World', var: 'CASTLERUIN', sing: 'CastleRuin', finder: 'castleRuin', finders: 'castleRuinsInRegion', pfx: 'cr', cap: 'CastleRuins' },
+  { file: 'sekolah-tata', label: 'GRAMMAR-SCHOOLS', title: 'Grammar Schools of the World', var: 'GRAMSCHL', sing: 'GrammarSchool', finder: 'grammarSchool', finders: 'grammarSchoolsInRegion', pfx: 'gs', cap: 'GrammarSchools' },
+  { file: 'motte-bailey', label: 'MOTTE-BAILEY', title: 'Motte-and-Bailey Castles of the World', var: 'MOTTEBAIL', sing: 'MotteBaileyCastle', finder: 'motteBailey', finders: 'motteBaileysInRegion', pfx: 'mb', cap: 'MotteBaileys' },
+  { file: 'gudang', label: 'WAREHOUSES', title: 'Warehouses of the World', var: 'WAREHSE', sing: 'Warehouse', finder: 'warehouse', finders: 'warehousesInRegion', pfx: 'wd', cap: 'Warehouses' },
+  { file: 'menara-kubu', label: 'FORTIFIED-TOWERS', title: 'Fortified Towers of the World', var: 'FORTTWR', sing: 'FortifiedTower', finder: 'fortifiedTower', finders: 'fortifiedTowersInRegion', pfx: 'fw', cap: 'FortifiedTowers' },
+  { file: 'bursa-jagung', label: 'CORN-EXCHANGES', title: 'Corn Exchanges of the World', var: 'CORNXCH', sing: 'CornExchange', finder: 'cornExchange', finders: 'cornExchangesInRegion', pfx: 'cx', cap: 'CornExchanges' },
+  { file: 'terowongan-kanal', label: 'CANAL-TUNNELS', title: 'Canal Tunnels of the World', var: 'CANALTUN', sing: 'CanalTunnel', finder: 'canalTunnel', finders: 'canalTunnelsInRegion', pfx: 'ct', cap: 'CanalTunnels' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
