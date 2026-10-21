@@ -2,15 +2,15 @@
 // Generates simple geo-cluster modules (name,wiki,country,region,lat,lng) from a spec.
 const fs = require('fs');
 const SPECS = [
-  { file: 'muzium-seni', label: 'ART-MUSEUMS', title: 'Art Museums of the World', var: 'ARMUSEUM', sing: 'ArtMuseum', finder: 'artMuseum', finders: 'artMuseumsInRegion', pfx: 'msn', cap: 'ArtMuseums' },
-  { file: 'tapak-sejarah', label: 'HISTORIC-SITES', title: 'Historic Sites of the World', var: 'HISTSITE', sing: 'HistoricSite', finder: 'historicSite', finders: 'historicSitesInRegion', pfx: 'tps', cap: 'HistoricSites' },
-  { file: 'pusat-budaya', label: 'CULTURAL-CENTERS', title: 'Cultural Centers of the World', var: 'CUTCEN', sing: 'CulturalCenter', finder: 'culturalCenter', finders: 'culturalCentersInRegion', pfx: 'pbd', cap: 'CulturalCenters' },
-  { file: 'anak-sungai', label: 'TRIBUTARIES', title: 'River Tributaries of the World', var: 'TRIB', sing: 'Tributary', finder: 'tributary', finders: 'tributariesInRegion', pfx: 'ask', cap: 'Tributaries' },
-  { file: 'pusat-seni', label: 'ARTS-CENTERS', title: 'Arts Centers of the World', var: 'ARTCTR', sing: 'ArtsCenter', finder: 'artsCenter', finders: 'artsCentersInRegion', pfx: 'psn', cap: 'ArtsCenters' },
-  { file: 'taman-wilayah', label: 'REGIONAL-PARKS', title: 'Regional Parks of the World', var: 'REGPARK', sing: 'RegionalPark', finder: 'regionalPark', finders: 'regionalParksInRegion', pfx: 'tpr', cap: 'RegionalParks' },
-  { file: 'taman-country', label: 'COUNTRY-PARKS', title: 'Country Parks of the World', var: 'CNTYPARK', sing: 'CountryPark', finder: 'countryPark', finders: 'countryParksInRegion', pfx: 'tpn', cap: 'CountryParks' },
-  { file: 'oratori', label: 'ORATORIES', title: 'Oratories of the World', var: 'ORAT', sing: 'Oratory', finder: 'oratory', finders: 'oratoriesInRegion', pfx: 'ora', cap: 'Oratories' },
-  { file: 'cabang-sungai', label: 'DISTRIBUTARIES', title: 'River Distributaries of the World', var: 'DISTRIB', sing: 'Distributary', finder: 'distributary', finders: 'distributariesInRegion', pfx: 'csx', cap: 'Distributaries' },
+  { file: 'munisipaliti', label: 'MUNICIPALITIES', title: 'Municipalities of the World', var: 'MUNIC', sing: 'Municipality', finder: 'municipality', finders: 'municipalitiesInRegion', pfx: 'mpt', cap: 'Municipalities' },
+  { file: 'komuni-itali', label: 'ITALIAN-COMUNI', title: 'Comuni of Italy', var: 'COMUNI', sing: 'Comune', finder: 'comune', finders: 'comuniInRegion', pfx: 'kto', cap: 'ItalianComuni' },
+  { file: 'frazione-itali', label: 'ITALIAN-FRAZIONI', title: 'Frazioni of Italy', var: 'FRAZI', sing: 'Frazione', finder: 'frazione', finders: 'frazioniInRegion', pfx: 'fzn', cap: 'ItalianFrazioni' },
+  { file: 'kanton-prancis', label: 'FRENCH-CANTONS', title: 'Cantons of France', var: 'CANTON', sing: 'Canton', finder: 'canton', finders: 'cantonsInRegion', pfx: 'kfp', cap: 'FrenchCantons' },
+  { file: 'arondisman-prancis', label: 'FRENCH-ARRONDISSEMENTS', title: 'Arrondissements of France', var: 'ARRONDI', sing: 'Arrondissement', finder: 'arrondissement', finders: 'arrondissementsInRegion', pfx: 'afp', cap: 'FrenchArrondissements' },
+  { file: 'jabatan-prancis', label: 'FRENCH-DEPARTMENTS', title: 'Departments of France', var: 'DEPFR', sing: 'FrenchDepartment', finder: 'frenchDepartment', finders: 'frenchDepartmentsInRegion', pfx: 'jfp', cap: 'FrenchDepartments' },
+  { file: 'avenue', label: 'AVENUES', title: 'Avenues of the World', var: 'AVENUE', sing: 'Avenue', finder: 'avenue', finders: 'avenuesInRegion', pfx: 'avn', cap: 'Avenues' },
+  { file: 'persimpangan', label: 'MOTORWAY-INTERCHANGES', title: 'Motorway Interchanges of the World', var: 'INTERCH', sing: 'MotorwayInterchange', finder: 'motorwayInterchange', finders: 'motorwayInterchangesInRegion', pfx: 'pss', cap: 'MotorwayInterchanges' },
+  { file: 'provinsi-itali', label: 'ITALIAN-PROVINCES', title: 'Provinces of Italy', var: 'PROVIT', sing: 'ItalianProvince', finder: 'italianProvince', finders: 'italianProvincesInRegion', pfx: 'pti', cap: 'ItalianProvinces' },
 ];
 for (const s of SPECS) {
   const itemsVar = s.var;
