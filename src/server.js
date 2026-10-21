@@ -1610,6 +1610,27 @@ app.get('/gletser/:slug', async (req, res) => {
 // Region dengan 0 item (cth. "Africa" untuk cluster county US) tidak pernah
 // dilayari sebagai halaman, tidak dipaut dan tidak masuk sitemap.
 function geoRegionHasItems(r) { return !!r && r.count !== 0; }
+
+// Jamak rutin untuk cluster yang menaruh kata tunggal di slot jamak
+// (county/county hasil janaan). Hanya dipakai bila memang belum dijimakkan.
+function geoPlural(word) {
+  if (/[^aeiou]y$/i.test(word)) return word.slice(0, -1) + 'ies';
+  if (/(s|sh|ch|x|z)$/i.test(word)) return word + 'es';
+  return word + 's';
+}
+// Artikel tak tentu Inggeris — "an aquarium" tapi "a university".
+function geoArticle(word) {
+  const w = String(word || '').trim().toLowerCase();
+  if (/^(univ|use|u[kgn]|eu|one\s)/.test(w)) return 'a';
+  return /^[aeiou]/.test(w) ? 'an' : 'a';
+}
+// "1 country" / "7 countries" supaya agreement bilangan betul.
+function geoCountries(n) { return `${n} ${n === 1 ? 'country' : 'countries'}`; }
+// Cluster yang titleCase-nya sudah menyebut yurisdiksi ("Counties of Iowa")
+// tidak dibaca "Americas Counties of Iowa" — letak benua di belakang.
+function geoRegionTitle(cfg, regionName) {
+  return /\sof\s/.test(cfg.titleCase) ? `${cfg.titleCase} in ${regionName}` : `${regionName} ${cfg.titleCase}`;
+}
 function geoRoutes(base, mod, findFn, hubFn, regionFn, pageFn, notFoundFn) {
   app.get(`/${base}`, (req, res) => res.status(200).type('html').send(hubFn()));
   app.get(`/${base}/:slug`, async (req, res) => {
@@ -8834,8 +8855,11 @@ function geoHubPage(mod, base, cfg) {
   }).join('');
   const browse = `<p>${mod.REGIONS.filter(geoRegionHasItems).map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r.name} (${r.count})</a>`).join(' ')}</p>`;
   const countries = new Set(items.map((x) => x.country)).size;
+  const covered = countries === 1
+    ? `${items.length} ${cfg.unit} are listed below. Open any ${cfg.singular} for its full profile.`
+    : `${items.length} ${cfg.unit} from ${geoCountries(countries)} are covered below, grouped by continent. Open any ${cfg.singular} for its full profile.`;
   const body = `<p>${cfg.intro}</p>
-  <p>${items.length} ${cfg.unit} from ${countries} countries are covered below, grouped by continent. Open any ${cfg.singular} for its full profile.</p>
+  <p>${covered}</p>
   ${browse}
   ${sections}
   <p class="meta">${cfg.footer}</p>`;
@@ -8847,7 +8871,7 @@ function geoHubPage(mod, base, cfg) {
   return worldDoc({
     title: cfg.seoTitle, desc: cfg.seoDesc,
     selfUrl: `https://tukuk.org/${base}`,
-    heroTitle: cfg.hero, heroSub: `${items.length} ${cfg.unit} \u00b7 ${countries} countries \u00b7 ${cfg.subMetric}`,
+    heroTitle: cfg.hero, heroSub: `${items.length} ${cfg.unit} \u00b7 ${geoCountries(countries)} \u00b7 ${cfg.subMetric}`,
     ld, css: GEO_CSS, body,
   }, geoNav(base, cfg, mod));
 }
@@ -8861,20 +8885,20 @@ function geoRegionPage(region, mod, base, cfg) {
   const grid = `<div class="geo-grid">${items.map((x) => geoCard(x, base)).join('')}</div>`;
   const other = mod.REGIONS.filter((r) => r.slug !== region.slug && geoRegionHasItems(r)).map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
-  <p>A profile for each of the <b>${items.length} notable ${cfg.unit} in ${region.name}</b> \u2014 location, country, and a plain-English introduction from Wikipedia. These ${items.length} ${cfg.unit} span ${countries.length} countries.</p>
+  <p>A profile for each of the <b>${items.length} notable ${cfg.unit} in ${region.name}</b> \u2014 location, country, and a plain-English introduction from Wikipedia. These ${items.length} ${cfg.unit} span ${geoCountries(countries.length)}.</p>
   ${grid}
   <h2 class="section-title">Other continents</h2><p>${other}</p>
   <p class="meta">${cfg.footer}</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} ${cfg.titleCase} \u2014 Tukuk-OS`,
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${geoRegionTitle(cfg, region.name)} \u2014 Tukuk-OS`,
     description: `Profiles of ${items.length} ${cfg.unit} in ${region.name}.`,
     url: `https://tukuk.org/${base}/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\u003c');
   return worldDoc({
-    title: `${region.name} ${cfg.titleCase} \u2014 Profiles | Tukuk-OS`,
-    desc: `Introductions to ${items.length} ${cfg.unit} in ${region.name} across ${countries.length} countries.`,
+    title: `${geoRegionTitle(cfg, region.name)} \u2014 Profiles | Tukuk-OS`,
+    desc: `Introductions to ${items.length} ${cfg.unit} in ${region.name} across ${geoCountries(countries.length)}.`,
     selfUrl: `https://tukuk.org/${base}/${region.slug}`,
-    heroTitle: `${cfg.icon} ${region.name} ${cfg.titleCase}`, heroSub: `${items.length} ${cfg.unit} \u00b7 ${countries.length} countries`,
+    heroTitle: `${cfg.icon} ${geoRegionTitle(cfg, region.name)}`, heroSub: `${items.length} ${cfg.unit} \u00b7 ${geoCountries(countries.length)}`,
     ld, css: GEO_CSS, body,
   }, geoNav(base, cfg, mod));
 }
@@ -8912,7 +8936,7 @@ function geoItemPage(item, sum, mod, base, cfg) {
   const ogImage = sum && sum.thumb ? sum.thumb : undefined;
   return worldDoc({
     title: `${item.name} \u2014 ${cfg.titleCase} Profile | Tukuk-OS`,
-    desc: sum && sum.description ? `${item.name}, ${sum.description.toLowerCase()}.` : `${item.name} is a ${cfg.singular} in ${item.country}. Location and introduction.`,
+    desc: sum && sum.description ? `${item.name}, ${sum.description.toLowerCase()}.` : `${item.name} is ${geoArticle(cfg.singular)} ${cfg.singular} in ${item.country}. Location and introduction.`,
     selfUrl: `https://tukuk.org/${base}/${item.slug}`,
     heroTitle: `${cfg.icon} ${escapeHtml(item.name)}`, heroSub: `${escapeHtml(item.country)} \u00b7 ${escapeHtml(item.region)} \u00b7 ${escapeHtml(coords)}`,
     ld, css: GEO_CSS, body, ogImage,
@@ -8938,7 +8962,7 @@ function geoHubCompactPage(mod, base, cfg) {
   const countries = new Set(items.map((x) => x.country)).size;
   const browse = mod.REGIONS.filter(geoRegionHasItems).map((r) => `<a class="btn ghost" style="margin:4px" href="/${base}/${r.slug}">${r.name} (${r.count})</a>`).join(' ');
   const body = `<p>${cfg.intro}</p>
-  <p>${items.length} ${cfg.unit} from ${countries} countries. This library is large, so it is browsed in two steps: pick a <b>continent</b>, then a <b>country</b>; each country page lists its ${cfg.unit} a screen at a time. Open any ${cfg.singular} for its full profile.</p>
+  <p>${items.length} ${cfg.unit} from ${geoCountries(countries)}. This library is large, so it is browsed in two steps: pick a <b>continent</b>, then a <b>country</b>; each country page lists its ${cfg.unit} a screen at a time. Open any ${cfg.singular} for its full profile.</p>
   <h2 class="section-title">Browse by continent</h2>
   <p>${browse}</p>
   <p class="meta">${cfg.footer}</p>`;
@@ -8949,7 +8973,7 @@ function geoHubCompactPage(mod, base, cfg) {
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: cfg.seoTitle, desc: cfg.seoDesc, selfUrl: `https://tukuk.org/${base}`,
-    heroTitle: cfg.hero, heroSub: `${items.length} ${cfg.unit} \u00b7 ${countries} countries \u00b7 ${cfg.subMetric}`,
+    heroTitle: cfg.hero, heroSub: `${items.length} ${cfg.unit} \u00b7 ${geoCountries(countries)} \u00b7 ${cfg.subMetric}`,
     ld, css: GEO_CSS, body,
   }, geoNav(base, cfg, mod));
 }
@@ -8961,20 +8985,20 @@ function geoRegionCountryIndexPage(region, mod, base, cfg) {
   const btns = list.map((c) => `<a class="btn ghost" style="margin:3px" href="/${base}/n/${c.slug}">${escapeHtml(c.country)} (${c.n})</a>`).join(' ');
   const other = mod.REGIONS.filter((r) => r.slug !== region.slug && geoRegionHasItems(r)).map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r.name}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
-  <p><b>${items.length} notable ${cfg.unit} in ${region.name}</b> across ${list.length} countries. Pick a country to browse its ${cfg.unit} a page at a time.</p>
+  <p><b>${items.length} notable ${cfg.unit} in ${region.name}</b> across ${geoCountries(list.length)}. Pick a country to browse its ${cfg.unit} a page at a time.</p>
   <h2 class="section-title">Countries in ${region.name}</h2><p>${btns}</p>
   <h2 class="section-title">Other continents</h2><p>${other}</p>
   <p class="meta">${cfg.footer}</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} ${cfg.titleCase} \u2014 Tukuk-OS`,
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${geoRegionTitle(cfg, region.name)} \u2014 Tukuk-OS`,
     description: `Countries with ${cfg.unit} in ${region.name}.`,
     url: `https://tukuk.org/${base}/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\u003c');
   return worldDoc({
-    title: `${region.name} ${cfg.titleCase} \u2014 Browse by Country | Tukuk-OS`,
-    desc: `${items.length} ${cfg.unit} in ${region.name} across ${list.length} countries.`,
+    title: `${geoRegionTitle(cfg, region.name)} \u2014 Browse by Country | Tukuk-OS`,
+    desc: `${items.length} ${cfg.unit} in ${region.name} across ${geoCountries(list.length)}.`,
     selfUrl: `https://tukuk.org/${base}/${region.slug}`,
-    heroTitle: `${cfg.icon} ${region.name} ${cfg.titleCase}`, heroSub: `${items.length} ${cfg.unit} \u00b7 ${list.length} countries`,
+    heroTitle: `${cfg.icon} ${geoRegionTitle(cfg, region.name)}`, heroSub: `${items.length} ${cfg.unit} \u00b7 ${geoCountries(list.length)}`,
     ld, css: GEO_CSS, body,
   }, geoNav(base, cfg, mod));
 }
@@ -9128,15 +9152,23 @@ function gletserPage(g, sum) { return geoItemPage(g, sum, gl, 'gletser', GLETSER
 function gletserNotFound(q) { return geoNotFound('gletser', GLETSER_CFG, q); }
 
 function geoCfg(o) {
+  // Sebagian cluster (terutamanya janaan batch) menaruh kata tunggal di slot
+  // jamak — unit:'county', singular:'county'. Plarkan di sini supaya semua
+  // templat ikut betul tanpa menyentuh ratusan baris CFG. Kata yang memang
+  // sudah berakhir dengan 's' (ironworks, brickworks) dibiarkan apa adanya.
+  const unit = (o.unit && o.unit === o.singular && !/s$/i.test(o.unit)) ? geoPlural(o.unit) : o.unit;
+  // titleCase yang sudah menyebut yurisdiksinya ("Counties of Iowa") tidak
+  // perlu ekoran "of the World" lagi.
+  const world = /\sof\s/.test(o.titleCase || '') ? '' : ' of the World';
   return Object.assign({
     navLabel: `${o.titleCase} \u2014 tukuk.org/${o.base}`,
-    navAll: `All ${o.unit}`,
-    seoTitle: `${o.titleCase} of the World \u2014 Profiles & Locations | Tukuk-OS`,
-    hero: `${o.icon} ${o.titleCase} of the World`,
-    hubTitle: `${o.titleCase} of the World \u2014 Tukuk-OS`,
+    navAll: `All ${unit}`,
+    seoTitle: `${o.titleCase}${world} \u2014 Profiles & Locations | Tukuk-OS`,
+    hero: `${o.icon} ${o.titleCase}${world}`,
+    hubTitle: `${o.titleCase}${world} \u2014 Tukuk-OS`,
     itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
     footer: `Coordinates are approximate locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/danau">Lakes</a> \u00b7 <a href="/pulau">Islands</a> \u00b7 <a href="/warisan">World Heritage</a>.`,
-  }, o);
+  }, o, { unit });
 }
 const TELUK_CFG = geoCfg({ base: 'teluk', listKey: 'BAYS', inRegion: 'baysInRegion', byCountry: 'bayByCountry', unit: 'bays', singular: 'bay', titleCase: 'Bays', icon: '\ud83c\udf0a', navBlurb: `Profiles of the world\u2019s bays \u2014 where each bay is, which country borders it, and a plain-English introduction.`, seoDesc: 'Introductions to notable bays and gulfs worldwide: location, country and what makes each bay significant.', subMetric: 'location & coastlines', intro: `These are the world\u2019s most notable <b>bays</b> \u2014 sheltered coastal inlets that have hosted fleets, founded ports and shaped empires. Each profile shows where the bay is, which country borders it, and a plain-English introduction from Wikipedia.`, ldType: 'BodyOfWater' });
 function telukHubPage() { return geoHubPage(tk, 'teluk', TELUK_CFG); }
