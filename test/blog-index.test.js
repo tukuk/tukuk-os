@@ -1,5 +1,5 @@
 'use strict';
-// Ujian unit src/blog-index.js — postToDoc ialah pemetaan tulen (crypto + string).
+// Unit tests for src/blog-index.js — postToDoc is pure mapping (crypto + strings).
 const { test } = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
@@ -7,24 +7,24 @@ const crypto = require('crypto');
 const { postToDoc } = require('../src/blog-index');
 
 const POST = {
-  slug: 'ujian-panduan',
-  title: 'Panduan Ujian',
-  excerpt: 'Ringkasan pendek.',
-  content: '## Sub Satu\nAda beberapa patah perkataan di sini untuk tujuan pengiraan kata.\n## Bahagian Dua\nTambahan teks lagi.',
-  tags: ['panduan', 'ujian'],
+  slug: 'test-guide',
+  title: 'Test Guide',
+  excerpt: 'A short summary.',
+  content: '## Sub One\nThere are several words here for the purpose of word counting.\n## Section Two\nMore text added.',
+  tags: ['guide', 'test'],
   createdAt: '2026-01-02T00:00:00.000Z'
 };
 
-test('postToDoc: id deterministik (sha256(slug) prefix 16) & idempotent', () => {
+test('postToDoc: a deterministic id (sha256(slug) prefix 16) & idempotent', () => {
   const expected = crypto.createHash('sha256').update(POST.slug).digest('hex').slice(0, 16);
   const d = postToDoc(POST);
   assert.strictEqual(d.id, expected);
-  assert.strictEqual(postToDoc(POST).id, d.id); // panggil dua kali sama
+  assert.strictEqual(postToDoc(POST).id, d.id); // called twice, same result
 });
 
-test('postToDoc: medan tetap & URL blog terbina', () => {
+test('postToDoc: fixed fields & the blog URL are built', () => {
   const d = postToDoc(POST);
-  assert.strictEqual(d.url, 'https://tukuk.org/blog/ujian-panduan');
+  assert.strictEqual(d.url, 'https://tukuk.org/blog/test-guide');
   assert.strictEqual(d.siteName, 'Tukuk-OS');
   assert.strictEqual(d.host, 'tukuk.org');
   assert.strictEqual(d.type, 'article');
@@ -32,22 +32,22 @@ test('postToDoc: medan tetap & URL blog terbina', () => {
   assert.strictEqual(d.publishedAt, POST.createdAt);
 });
 
-test('postToDoc: ringkasan/deskripsi ikut excerpt, section=tag pertama, keywords=tags', () => {
+test('postToDoc: summary/description follow the excerpt, section=first tag, keywords=tags', () => {
   const d = postToDoc(POST);
-  assert.strictEqual(d.summary, 'Ringkasan pendek.');
-  assert.strictEqual(d.description, 'Ringkasan pendek.');
-  assert.strictEqual(d.section, 'panduan');
-  assert.deepStrictEqual(d.keywords, ['panduan', 'ujian']);
+  assert.strictEqual(d.summary, 'A short summary.');
+  assert.strictEqual(d.description, 'A short summary.');
+  assert.strictEqual(d.section, 'guide');
+  assert.deepStrictEqual(d.keywords, ['guide', 'test']);
 });
 
-test('postToDoc: headings dari baris ## , wordCount kira teks', () => {
+test('postToDoc: headings come from ## lines, wordCount counts the text', () => {
   const d = postToDoc(POST);
-  assert.deepStrictEqual(d.headings, ['Sub Satu', 'Bahagian Dua']);
+  assert.deepStrictEqual(d.headings, ['Sub One', 'Section Two']);
   assert.ok(d.wordCount > 0);
   assert.strictEqual(d.wordCount, POST.content.split(/\s+/).filter(Boolean).length);
 });
 
-test('postToDoc: fallback — tiada tag → keywords lalai, tiada excerpt → description potong content', () => {
+test('postToDoc: fallback — no tags → default keywords, no excerpt → description trims the content', () => {
   const d = postToDoc({ slug: 'x', title: 'Hello World', content: 'One two three four five six seven eight nine ten.' });
   assert.deepStrictEqual(d.keywords, ['tukuk', 'search']);
   assert.strictEqual(d.section, 'Blog');

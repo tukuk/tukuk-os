@@ -1,16 +1,16 @@
 'use strict';
-// Ujian bentuk config — pastikan kunci utama ada & nilai default masuk akal.
+// Config shape tests — make sure the main keys exist and the defaults are sensible.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const config = require('../src/config');
 
-test('config: pindaan utama wujud sebagai objek', () => {
+test('config: the main sections exist as objects', () => {
   for (const key of ['search', 'rateLimit', 'security', 'adsense', 'rerank', 'brain']) {
-    assert.equal(typeof config[key], 'object', `${key} perlu objek`);
+    assert.equal(typeof config[key], 'object', `${key} must be an object`);
   }
 });
 
-test('config.rerank: boolean & string dengan default waras', () => {
+test('config.rerank: booleans & strings with sane defaults', () => {
   assert.equal(typeof config.rerank.enabled, 'boolean');
   assert.equal(typeof config.rerank.cloud, 'boolean');
   if (typeof config.rerank.embedModel === 'string') {
@@ -18,12 +18,12 @@ test('config.rerank: boolean & string dengan default waras', () => {
   }
 });
 
-test('config.adsense: ada client & slot (placeholder default dibenarkan)', () => {
+test('config.adsense: has a client & slot (default placeholders allowed)', () => {
   assert.equal(typeof config.adsense.enabled, 'boolean');
   assert.equal(typeof config.adsense.client, 'string');
 });
 
-test('config.rateLimit: windowMs & max ialah nombor bila wujud', () => {
+test('config.rateLimit: windowMs & max are numbers when present', () => {
   for (const k of ['windowMs', 'max']) {
     if (config.rateLimit[k] !== undefined) {
       assert.equal(typeof config.rateLimit[k], 'number');

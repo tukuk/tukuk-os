@@ -1,5 +1,5 @@
 'use strict';
-// Ujian unit untuk middleware rate-limit & pengenalan klien.
+// Unit tests for the rate-limit middleware & client identification.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const mw = require('../src/middleware');
@@ -12,9 +12,9 @@ function mockReq({ xff, ip, remote } = {}) {
   };
 }
 
-test('clientKey: utamakan XFF segmen pertama, fallback ip, kemudian socket', () => {
-  // trustProxy config boleh jadi true/false pada persekitaran — kita cuma sahkan
-  // pemulangan bukan-empty string & pilihan sumber ikut keutamaan.
+test('clientKey: prefers the first XFF segment, then ip, then the socket', () => {
+  // The trustProxy config may be true/false depending on the environment — we only assert
+  // a non-empty string is returned and the source choice follows the priority order.
   const a = mw.clientKey(mockReq({ xff: '203.0.113.7, 10.0.0.1' }));
   assert.equal(typeof a, 'string');
   assert.ok(a.length > 0);
@@ -28,13 +28,13 @@ test('clientKey: utamakan XFF segmen pertama, fallback ip, kemudian socket', () 
   assert.ok(c.length > 0);
 });
 
-test('rateLimit: hasilkan middleware (function 3-arg)', () => {
+test('rateLimit: produces a middleware (3-arg function)', () => {
   const handler = mw.rateLimit({ windowMs: 1000, max: 2 });
   assert.equal(typeof handler, 'function');
   assert.equal(handler.length, 3);
 });
 
-test('rateLimit: lalu 2 permintaan, bloating ke-3 dengan 429', () => {
+test('rateLimit: lets 2 requests through, blocks the 3rd with 429', () => {
   const handler = mw.rateLimit({ windowMs: 60_000, max: 2, keyPrefix: 't-' });
   const req = mockReq({ ip: '203.0.113.200' });
   let status = 200, json = null, nextCalled = 0;
@@ -47,9 +47,9 @@ test('rateLimit: lalu 2 permintaan, bloating ke-3 dengan 429', () => {
 
   handler(req, res, next);
   handler(req, res, next);
-  assert.equal(nextCalled, 2, 'dua permintaan pertama wajar lulus');
+  assert.equal(nextCalled, 2, 'the first two requests should pass');
   handler(req, res, next);
-  assert.equal(nextCalled, 2, 'permintaan ketiga tidak wajar panggil next');
+  assert.equal(nextCalled, 2, 'the third request must not call next');
   assert.equal(status, 429);
   assert.ok(json && typeof json.error === 'string');
 });

@@ -1,5 +1,5 @@
 'use strict';
-// Ujian unit src/lang.js — pengesanan locale, tokenisasi & pemisah ayat Unicode.
+// Unit tests for src/lang.js — locale detection, tokenisation & the Unicode sentence splitter.
 const { test } = require('node:test');
 const assert = require('node:assert');
 
@@ -12,7 +12,7 @@ const {
 } = require('../src/lang');
 
 // ── detectLocale ──
-test('detectLocale: contoh didokumentasi + fallback English', () => {
+test('detectLocale: documented examples + the English fallback', () => {
   assert.strictEqual(detectLocale('apa itu DNS'), 'ms');
   assert.strictEqual(detectLocale('什么是API'), 'zh');
   assert.strictEqual(detectLocale('how do I reset my password'), 'en');
@@ -21,7 +21,7 @@ test('detectLocale: contoh didokumentasi + fallback English', () => {
 });
 
 // ── isSpacelessScript ──
-test('isSpacelessScript: CJK/JP/KO benar, Latin salah', () => {
+test('isSpacelessScript: CJK/JP/KO true, Latin false', () => {
   assert.strictEqual(isSpacelessScript('中文测试'), true);
   assert.strictEqual(isSpacelessScript('日本語です'), true);
   assert.strictEqual(isSpacelessScript('한국어'), true);
@@ -30,35 +30,35 @@ test('isSpacelessScript: CJK/JP/KO benar, Latin salah', () => {
 });
 
 // ── splitSentencesUnicode ──
-test('splitSentencesUnicode: penamat Latin [.!?]', () => {
+test('splitSentencesUnicode: Latin terminators [.!?]', () => {
   assert.deepStrictEqual(
     splitSentencesUnicode('Hello world. Second one! Third?'),
     ['Hello world.', 'Second one!', 'Third?']
   );
 });
-test('splitSentencesUnicode: penamat CJK 。 dan runtuh ruang', () => {
+test('splitSentencesUnicode: the CJK terminator 。 and whitespace collapse', () => {
   assert.deepStrictEqual(splitSentencesUnicode('一。二'), ['一。', '二']);
   assert.deepStrictEqual(splitSentencesUnicode('  a b   c  '), ['a b c']);
   assert.deepStrictEqual(splitSentencesUnicode(''), []);
 });
 
 // ── tokenizeQuery ──
-test('tokenizeQuery: beruang — token ≥2 aksara, buang satu huruf', () => {
+test('tokenizeQuery: plain text — tokens of ≥2 chars, single letters dropped', () => {
   assert.deepStrictEqual(tokenizeQuery('hello world'), ['hello', 'world']);
   assert.deepStrictEqual(tokenizeQuery('a bb c cc'), ['bb', 'cc']);
-  // kekalkan + dan . teknikal
+  // technical + and . are kept
   assert.deepStrictEqual(tokenizeQuery('C++ node.js'), ['c++', 'node.js']);
   assert.deepStrictEqual(tokenizeQuery('   '), []);
 });
-test('tokenizeQuery: tanpa-ruang — satu aksara CJK satu token', () => {
+test('tokenizeQuery: spaceless scripts — one CJK character per token', () => {
   assert.deepStrictEqual(tokenizeQuery('中文测试'), ['中', '文', '测', '试']);
 });
 
-// ── t (rangkaian paparan) ──
-test('t: padan locale, jatuh ke en untuk locale tak diketahui', () => {
+// ── t (display strings) ──
+test('t: matches the locale, falls back to en for an unknown locale', () => {
   assert.strictEqual(t('sourcesLabel', 'ms'), 'Sumber');
   assert.strictEqual(t('sourcesLabel', 'de'), 'Quellen');
-  assert.strictEqual(t('sourcesLabel', 'zz'), 'Sources'); // fallback en
-  assert.strictEqual(t('tiada-kunci', 'en'), '');           // kunci tak wujud → ''
+  assert.strictEqual(t('sourcesLabel', 'zz'), 'Sources'); // en fallback
+  assert.strictEqual(t('no-such-key', 'en'), '');          // unknown key → ''
   assert.ok(t('dontKnow', 'ms').includes('Tukuk-OS'));
 });

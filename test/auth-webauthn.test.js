@@ -1,8 +1,8 @@
 'use strict';
-// Ujian bulat-penuh WebAuthn (v14) dengan authenticator sintetik:
-// daftar passkey → login assertasi ES256 → tolak main-semula.
-// CBOR ditulis manual (peta kecil sahaja) supaya tiada bergantung pada
-// dependencies dalaman @simplewebauthn/server.
+// Full-round WebAuthn (v14) tests with a synthetic authenticator:
+// register a passkey → log in with an ES256 assertion → reject a replay.
+// CBOR is written by hand (only a small map) so there is no dependency on
+// @simplewebauthn/server internals.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-// ── Penyoal CBOR minimal (int/text/bytes/list/map, panjang terkecil) ─────────
+// ── A minimal CBOR writer (int/text/bytes/list/map, shortest length) ─────────
 function cborHead(major, n) {
   const m = major << 5;
   if (n < 24) return Buffer.from([m | n]);
@@ -29,7 +29,7 @@ function cborMap(entries) {
   return Buffer.concat(parts);
 }
 
-// ── Authenticator sintetik ───────────────────────────────────────────────────
+// ── The synthetic authenticator ─────────────────────────────────────────────────
 const { privateKey, publicKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
 const jwk = publicKey.export({ format: 'jwk' });
 const X = Buffer.from(jwk.x, 'base64url');
@@ -43,8 +43,8 @@ const EMAIL = 'owner@tukuk.org';
 function sha256(buf) { return crypto.createHash('sha256').update(buf).digest(); }
 function b64url(buf) { return Buffer.from(buf).toString('base64url'); }
 
-// Nota: authenticator sebenar menghantar tandatangan ECDSA dalam format DER/ASN.1
-// (bukan raw r||s) — v14 membuka DER sendiri sebelum menghantar ke WebCrypto.
+// Note: a real authenticator sends the ECDSA signature in DER/ASN.1 format
+// (not raw r||s) — v14 parses the DER itself before handing it to WebCrypto.
 
 function makeAuthData(counter, payload) {
   const flags = Buffer.from([payload ? 0x45 : 0x05]); // reg: UP|UV|AT · auth: UP|UV
@@ -73,7 +73,7 @@ function freshAuth() {
   return require('../src/auth');
 }
 
-test('webauthn v14: pendaftaran passkey sintetik lulus dan tersimpan', async () => {
+test('webauthn v14: a synthetic passkey registration passes and is stored', async () => {
   const auth = freshAuth();
   const options = await auth.startRegistration(EMAIL);
   assert.ok(typeof options.challenge === 'string' && options.challenge.length > 20, 'challenge base64url string');
@@ -94,12 +94,12 @@ test('webauthn v14: pendaftaran passkey sintetik lulus dan tersimpan', async () 
   assert.equal(result.id, b64url(CRED_ID));
   const stored = auth.passkeys();
   assert.equal(stored.length, 1);
-  assert.equal(typeof stored[0].publicKey, 'string', 'publicKey disimpan sebagai base64url');
+  assert.equal(typeof stored[0].publicKey, 'string', 'publicKey is stored as base64url');
 });
 
-test('webauthn v14: login assertasi lulus → sesi; cabaran sekali-pakai', async () => {
+test('webauthn v14: an assertion login passes → a session; the challenge is single-use', async () => {
   const auth = freshAuth();
-  // daftar dahulu
+  // register first
   const regOptions = await auth.startRegistration(EMAIL);
   const regClientData = b64url(Buffer.from(JSON.stringify({
     type: 'webauthn.create', challenge: regOptions.challenge, origin: ORIGIN
@@ -114,9 +114,9 @@ test('webauthn v14: login assertasi lulus → sesi; cabaran sekali-pakai', async
     response: { attestationObject: b64url(attObj), clientDataJSON: regClientData }
   }, ORIGIN);
 
-  // kemudian log masuk
+  // then log in
   const authOptions = await auth.startAuthentication(EMAIL);
-  assert.equal(authOptions.allowCredentials[0].id, b64url(CRED_ID), 'allowCredentials id string base64url (v14)');
+  assert.equal(authOptions.allowCredentials[0].id, b64url(CRED_ID), 'allowCredentials id is a base64url string (v14)');
   const clientDataHash = sha256(Buffer.from(JSON.stringify({
     type: 'webauthn.get', challenge: authOptions.challenge, origin: ORIGIN
   })));
@@ -134,18 +134,18 @@ test('webauthn v14: login assertasi lulus → sesi; cabaran sekali-pakai', async
     }
   };
   const token = await auth.finishAuthentication(EMAIL, assertion, ORIGIN);
-  assert.ok(typeof token === 'string' && token.length === 64, 'token sesi dikeluarkan');
+  assert.ok(typeof token === 'string' && token.length === 64, 'a session token is issued');
   assert.equal(auth.readSession(token).email, EMAIL);
-  assert.equal(auth.passkeys()[0].counter, 2, 'counter baharu tersimpan (anti-replay)');
+  assert.equal(auth.passkeys()[0].counter, 2, 'the new counter is stored (anti-replay)');
 
-  // main semula: cabaran sudah dipakai → 400
+  // replay: the challenge is already used → 400
   await assert.rejects(
     () => auth.finishAuthentication(EMAIL, assertion, ORIGIN),
     (e) => e.statusCode === 400 && /Challenge/.test(e.message)
   );
 });
 
-test('webauthn v14: origin palsu ditolak semasa pendaftaran', async () => {
+test('webauthn v14: a forged origin is rejected during registration', async () => {
   const auth = freshAuth();
   const options = await auth.startRegistration(EMAIL);
   const clientDataJSON = b64url(Buffer.from(JSON.stringify({

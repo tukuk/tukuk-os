@@ -1,12 +1,12 @@
 'use strict';
-// Ujian sistem muzik/radio seluruh-laman. Dua komponen:
-//  - public/index.html  → bar pemain penuh (pemilik keadaan; menulis 'tk-player-state')
-//  - public/player.js   → mini-pemain global (mengambil-alih di halaman lain)
-// Konvensi: playback BERTERUSAN (Auto‑next lalai HIDUP) & berhenti hanya atas tindakan
-// pengguna; kedua-dua pemain mesti menghormati preferensi `auto` yang sama.
-// Fungsi murni (normAudioSrc/savePlayerState) diekstrak verbatim dari index.html lalu
-// dijalankan dalam sandbox `new Function` dengan stub. Baki ialah pengawal-regresi teks
-// (kontrak kelakuan) yang tidak boleh diuji tanpa DOM/autio sebenar.
+// Tests for the site-wide music/radio system. Two components:
+//  - public/index.html  → the full player bar (owns the state; writes 'tk-player-state')
+//  - public/player.js   → the global mini-player (takes over on other pages)
+// Convention: playback is CONTINUOUS (Auto‑next is ON by default) and only stops on a user
+// action; both players must honour the same `auto` preference.
+// The pure functions (normAudioSrc/savePlayerState) are extracted verbatim from index.html and
+// then run inside a `new Function` sandbox with stubs. The rest are text guard-rails for the
+// behaviour contract that cannot be unit-tested without a real DOM/audio engine.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -17,7 +17,7 @@ const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'player.js'), 'u
 
 function extractFn(src, name) {
   const idx = src.indexOf('function ' + name + '(');
-  if (idx < 0) throw new Error('fungsi tidak ditemui: ' + name);
+  if (idx < 0) throw new Error('function not found: ' + name);
   let i = src.indexOf('{', idx);
   let depth = 0;
   for (; i < src.length; i++) {
@@ -25,26 +25,26 @@ function extractFn(src, name) {
     if (ch === '{') depth++;
     else if (ch === '}') { depth--; if (depth === 0) return src.slice(idx, i + 1); }
   }
-  throw new Error('kurung tak seimbang: ' + name);
+  throw new Error('unbalanced brackets: ' + name);
 }
 
 const normAudioSrc = extractFn(html, 'normAudioSrc');
 const savePlayerState = extractFn(html, 'savePlayerState');
 
-// ── normAudioSrc: hanya http(s); stream http diproksi sama-asal pada halaman https ──
-test('normAudioSrc: tolak non-http, proksi http→/radio/stream bila halaman https', () => {
+// ── normAudioSrc: http(s) only; an http stream is same-origin proxied on an https page ──
+test('normAudioSrc: rejects non-http, proxies http→/radio/stream on an https page', () => {
   const load = (proto) => new Function('window', `${normAudioSrc}\nreturn normAudioSrc;`)({ location: { protocol: proto } });
   const https = load('https:'); const http = load('http:');
-  assert.equal(https('https://a.com/x.m4a'), 'https://a.com/x.m4a', 'https kekal (main terus)');
-  assert.equal(https('http://a.com/x.m4a'), '/radio/stream?url=' + encodeURIComponent('http://a.com/x.m4a'), 'http→proksi sama-asal di halaman https (elak mixed-content)');
-  assert.equal(http('http://a.com/x.m4a'), 'http://a.com/x.m4a', 'http dibiarkan di halaman http (tiada mixed-content)');
-  assert.equal(https('/radio/stream?url=http%3A%2F%2Fa'), '/radio/stream?url=http%3A%2F%2Fa', 'sudah diproksi → idempotent');
-  assert.equal(https(''), '', 'kosong ditolak');
-  assert.equal(https('ftp://a/x'), '', 'skema bukan-http ditolak');
+  assert.equal(https('https://a.com/x.m4a'), 'https://a.com/x.m4a', 'https stays (plays directly)');
+  assert.equal(https('http://a.com/x.m4a'), '/radio/stream?url=' + encodeURIComponent('http://a.com/x.m4a'), 'http→same-origin proxy on an https page (avoids mixed-content)');
+  assert.equal(http('http://a.com/x.m4a'), 'http://a.com/x.m4a', 'http is left alone on an http page (no mixed-content)');
+  assert.equal(https('/radio/stream?url=http%3A%2F%2Fa'), '/radio/stream?url=http%3A%2F%2Fa', 'already proxied → idempotent');
+  assert.equal(https(''), '', 'empty is rejected');
+  assert.equal(https('ftp://a/x'), '', 'a non-http scheme is rejected');
   assert.equal(https('  https://a/y  '), 'https://a/y', 'whitespace trim');
 });
 
-// ── savePlayerState: simpan keadaan + preferensi auto (Auto‑next) ──
+// ── savePlayerState: stores the state + the auto preference (Auto‑next) ──
 function runSave(inputs) {
   const wrote = {};
   const localStorage = { setItem: (k, v) => { wrote[k] = v; }, getItem: () => null, removeItem: () => {} };
@@ -61,55 +61,55 @@ function runSave(inputs) {
   return JSON.parse(f(inputs, localStorage, document, () => wrote[inputs.PLAYER_STATE_KEY]).slice(0));
 }
 
-test('savePlayerState: tulis src/queue/playing + auto mencerminkan checkbox', () => {
+test('savePlayerState: writes src/queue/playing + auto mirrors the checkbox', () => {
   const inputs = {
     currentSrc: 'https://a/1.m4a', currentLive: false,
-    audioBarTitle: { textContent: 'Lagu X' },
+    audioBarTitle: { textContent: 'Song X' },
     mediaAudio: { currentTime: 12.5 },
     playedSec: 30,
     audioAutoEl: { checked: true },
     PLAYER_STATE_KEY: 'tk-player-state',
-    currentQueueArr: () => [{ src: 'https://a/1.m4a', title: 'Lagu X' }, { src: 'https://a/2.m4a', title: 'Lagu Y' }],
+    currentQueueArr: () => [{ src: 'https://a/1.m4a', title: 'Song X' }, { src: 'https://a/2.m4a', title: 'Song Y' }],
   };
   const st = runSave(inputs);
   assert.equal(st.src, 'https://a/1.m4a');
   assert.equal(st.playing, true);
-  assert.equal(st.pos, 12.5, 'pos disimpan untuk trek bukan-live');
-  assert.equal(st.played, 43, 'played = bulat(loop terkumpul + currentTime)');
-  assert.equal(st.qi, 0, 'qi ialah indeks trek semasa');
-  assert.equal(st.auto, true, 'auto=ON dipersist');
+  assert.equal(st.pos, 12.5, 'pos is stored for a non-live track');
+  assert.equal(st.played, 43, 'played = round(looped + currentTime)');
+  assert.equal(st.qi, 0, 'qi is the current track index');
+  assert.equal(st.auto, true, 'auto=ON is persisted');
   assert.equal(st.queue.length, 2);
-  // Auto‑next dimatikan → auto false (mini-pemain mesti ikut).
+  // Auto‑next turned off → auto false (the mini-player must follow).
   const off = runSave(Object.assign({}, inputs, { audioAutoEl: { checked: false } }));
-  assert.equal(off.auto, false, 'auto=OFF dipersist supaya konsisten rentas-pemain');
+  assert.equal(off.auto, false, 'auto=OFF is persisted so it stays consistent across players');
 });
 
-test('savePlayerState: tanpa currentSrc → tidak tulis apa-apa', () => {
+test('savePlayerState: with no currentSrc → nothing is written', () => {
   const wrote = {};
   const localStorage = { setItem: (k, v) => { wrote[k] = v; }, getItem: () => null };
   const document = { getElementById: () => null, querySelectorAll: () => [] };
   const f = new Function('localStorage', 'document', `${normAudioSrc}\n${savePlayerState}\nvar currentSrc='',currentLive=false;savePlayerState(true);`);
   f(localStorage, document);
-  assert.deepEqual(wrote, {}, 'tiada tulis bila tiada sumber');
+  assert.deepEqual(wrote, {}, 'nothing is written without a source');
 });
 
-// ── Pengawal-regresi kontrak kelakuan (tak boleh unit-uji tanpa DOM/audio) ──
-test('index.html: Auto‑next lalai HIDUP + persist + pulih + gerbang advance', () => {
-  assert.ok(/id="audioAuto"\s+checked/.test(html), 'checkbox default checked (berterusan)');
-  assert.ok(/auto:\s*audioAutoEl \? audioAutoEl\.checked : true/.test(html), 'savePlayerState persist auto');
-  assert.ok(/audioAutoEl\.checked = st\.auto !== false/.test(html), 'restore pulih auto (lalai true)');
-  assert.ok(/audioAutoEl && audioAutoEl\.checked\) advanceQueue\(\)/.test(html), "ended: advance HANYA bila auto ON (lalu berhenti)");
+// ── Guard-rails for the behaviour contract (untestable as units without DOM/audio) ──
+test('index.html: Auto‑next is ON by default + persisted + restored + the advance gate', () => {
+  assert.ok(/id="audioAuto"\s+checked/.test(html), 'the checkbox is checked by default (continuous)');
+  assert.ok(/auto:\s*audioAutoEl \? audioAutoEl\.checked : true/.test(html), 'savePlayerState persists auto');
+  assert.ok(/audioAutoEl\.checked = st\.auto !== false/.test(html), 'restore brings auto back (default true)');
+  assert.ok(/audioAutoEl && audioAutoEl\.checked\) advanceQueue\(\)/.test(html), "ended: advance ONLY when auto is ON (otherwise it stops)");
 });
 
-test('player.js: autoNext dari st.auto, persist, gerbang ended + reconnect, sync tab', () => {
-  assert.ok(/var autoNext = st\.auto !== false/.test(js), 'player.js baca autoNext dari state (lalai true)');
-  assert.ok(/auto:\s*autoNext/.test(js), 'player.js persist auto dalam save()');
-  assert.ok(/if \(!autoNext\) \{ softStop\(\); return; \}/.test(js), 'ended: auto OFF → softStop (bukan lompat trek)');
-  assert.ok(/\(live \|\| !autoNext\) \? softStop\(\) : next\(\)/.test(js), 'reconnect gagal berulang: auto OFF → softStop, bukan skip rambang');
-  assert.ok(/autoNext = !!ns\.auto/.test(js), 'storage event: ikut togol auto dari tab lain');
+test('player.js: autoNext from st.auto, persisted, the ended + reconnect gates, tab sync', () => {
+  assert.ok(/var autoNext = st\.auto !== false/.test(js), 'player.js reads autoNext from the state (default true)');
+  assert.ok(/auto:\s*autoNext/.test(js), 'player.js persists auto inside save()');
+  assert.ok(/if \(!autoNext\) \{ softStop\(\); return; \}/.test(js), 'ended: auto OFF → softStop (not a track skip)');
+  assert.ok(/\(live \|\| !autoNext\) \? softStop\(\) : next\(\)/.test(js), 'repeated reconnect failures: auto OFF → softStop, not a random skip');
+  assert.ok(/autoNext = !!ns\.auto/.test(js), 'storage event: follows the auto toggle from another tab');
 });
 
-test('player.js: index punya bar sendiri → mini-pemain menyerah (#mediaAudio)', () => {
-  assert.ok(/getElementById\('mediaAudio'\)\) return/.test(js), 'boot() keluar bila #mediaAudio wujud (tiada dwi-audio)');
-  assert.ok(/\/admin/.test(js), 'tidak aktif di /admin');
+test('player.js: the index has its own bar → the mini-player backs off (#mediaAudio)', () => {
+  assert.ok(/getElementById\('mediaAudio'\)\) return/.test(js), 'boot() exits when #mediaAudio exists (no double audio)');
+  assert.ok(/\/admin/.test(js), 'inactive on /admin');
 });

@@ -1,10 +1,10 @@
 'use strict';
-// Ujian gate kualiti jawapan (/ask): pemakan-echo + penghasil ekstraktif.
-// Dua kerosakan nyata yang diuji di sini:
-//   1. Jawapan awan yang RINGKAS (atau penolakan jujur "I don't know") dahulu
-//      dibuang sebagai echo → sistem jatuh ke perenggan ekstraktif.
-//   2. Ayat yang hanya memadam kata soal ("how", "many") cukup untuk menjadi
-//      "jawapan" bagi soalan tentang entiti yang sama sekali berbeza.
+// Tests for the /ask answer quality gate: the echo-eater + the extractive generator.
+// Two real failures are covered here:
+//   1. A SHORT cloud answer (or an honest "I don't know" refusal) used to be thrown
+//      away as echo → the system fell back to an extractive paragraph.
+//   2. A sentence that only deleted the question words ("how", "many") was enough to be
+//      an "answer" for a question about a completely different entity.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
@@ -16,45 +16,45 @@ const PROMPT = [
   '[1] California counties — California is a state in the United States.'
 ].join('\n\n');
 
-test('isEcho: model kecil tetap menolak jawapan bawah 40 aksara', () => {
+test('isEcho: a small model still rejects an answer below 40 characters', () => {
   assert.equal(isEcho('California has 58 counties.', PROMPT), true);
 });
 
-test('isEcho: model awan besar menerima jawapan ringkas yang sah', () => {
+test('isEcho: a large cloud model accepts a valid short answer', () => {
   assert.equal(isEcho('California has 58 counties.', PROMPT, { smallModel: false }), false);
 });
 
-test('isEcho: penolakan jujur diterima (bukan ditukar jadi karangan salah)', () => {
+test('isEcho: an honest refusal is accepted (not turned into a wrong essay)', () => {
   assert.equal(isEcho("I don't know.", PROMPT, { smallModel: false }), false);
 });
 
-test('isEcho: salin semula soalan/label prompt ditolak walaupun oleh awan', () => {
+test('isEcho: re-copying the question/prompt labels is rejected even for the cloud model', () => {
   assert.equal(isEcho('how many counties does California have', PROMPT, { smallModel: false }), true);
   assert.equal(isEcho('QUESTION: how many counties does California have', PROMPT, { smallModel: false }), true);
 });
 
-test('isEcho: ayat berulang (litar ulang) masih ditolak oleh kedua-dua mod', () => {
+test('isEcho: a repeating sentence (loop) is still rejected in both modes', () => {
   const loop = 'It is a county. It is a county. It is a county. It is a county indeed.';
   assert.equal(isEcho(loop, PROMPT), true);
   assert.equal(isEcho(loop, PROMPT, { smallModel: false }), true);
 });
 
-test('isEcho: petikan mentah berlabel sumber — longgar untuk awan, ketat untuk model kecil', () => {
+test('isEcho: raw quoted source text — loose for the cloud, strict for a small model', () => {
   const cited = 'California has fifty-eight counties in total, of which Los Angeles is the most populous.\n\n(Sources: California counties)';
   assert.equal(isEcho(cited, PROMPT), true);
   assert.equal(isEcho(cited, PROMPT, { smallModel: false }), false);
 });
 
-test('contentTerms: kata soal/kuantiti dibuang, entiti dikekalkan', () => {
+test('contentTerms: question/quantity words are dropped, entities are kept', () => {
   assert.deepEqual(
     contentTerms(['how', 'many', 'counties', 'does', 'california', 'have']),
     ['counties', 'california']
   );
 });
 
-test('extractiveAnswer: ayat yang hanya memadam kata soal BUKAN jawapan', () => {
-  // Ini tepat kes produksi: soalan bilangan county California dipetik daripada
-  // blog pemuliharaan yang menyebut "how many?" — bukan fakta California.
+test('extractiveAnswer: a sentence that only deletes the question words is NOT an answer', () => {
+  // This is exactly the production case: the California county-count question was lifted
+  // from a conservation blog mentioning "how many?" — not a California fact.
   const hits = [{
     title: 'The Data Gap in Biology',
     url: '/blog/data-gap',
@@ -63,10 +63,10 @@ test('extractiveAnswer: ayat yang hanya memadam kata soal BUKAN jawapan', () => 
   }];
   const out = extractiveAnswer('how many counties does California have', hits);
   assert.equal(out.method, 'extractive-fallback-list');
-  assert.ok(!out.answer.includes('conservation'), 'perenggan tak berkaitan tidak boleh jadi jawapan');
+  assert.ok(!out.answer.includes('conservation'), 'an unrelated paragraph must not become the answer');
 });
 
-test('extractiveAnswer: ayat berpadanan entiti dipakai', () => {
+test('extractiveAnswer: the sentence matching the entity is used', () => {
   const out = extractiveAnswer('capital of Kenya', [{
     title: 'Kenya',
     url: '/wiki/kenya',
@@ -76,7 +76,7 @@ test('extractiveAnswer: ayat berpadanan entiti dipakai', () => {
   assert.ok(out.answer.includes('Nairobi is the capital'));
 });
 
-test('extractiveAnswer: hanya SATU dokumen — tiada campur aduk artikel', () => {
+test('extractiveAnswer: only ONE document — no stitched-together articles', () => {
   const hits = [{
     title: 'Kenya',
     url: '/wiki/kenya',
@@ -88,12 +88,12 @@ test('extractiveAnswer: hanya SATU dokumen — tiada campur aduk artikel', () =>
   }];
   const out = extractiveAnswer('capital of Kenya', hits);
   assert.equal(out.method, 'extractive');
-  assert.ok(out.answer.includes('Nairobi'), 'dokumen teratas mesti menang');
-  assert.ok(!out.answer.includes('fashion'), 'artikel kedua tidak boleh dijahit masuk');
-  assert.ok(!out.answer.includes('Fashion Week'), 'label sumber hanya menyebut satu dokumen');
+  assert.ok(out.answer.includes('Nairobi'), 'the top document must win');
+  assert.ok(!out.answer.includes('fashion'), 'the second article must not be sewn in');
+  assert.ok(!out.answer.includes('Fashion Week'), 'the source label mentions only one document');
 });
 
-test('extractiveAnswer: soalan Melayu masih berfungsi', () => {
+test('extractiveAnswer: Malay questions still work', () => {
   const out = extractiveAnswer('apa itu lagoon', [{
     title: 'Lagoon',
     url: '/lagoons/world',
@@ -103,7 +103,7 @@ test('extractiveAnswer: soalan Melayu masih berfungsi', () => {
   assert.ok(/lagoon/i.test(out.answer));
 });
 
-test('extractiveAnswer: skrip tanpa-ruang (CJK) tidak rosak tanpa terma kandungan', () => {
+test('extractiveAnswer: a spaceless script (CJK) is not broken by missing content terms', () => {
   const out = extractiveAnswer('ケニアの首都', [{
     title: 'ナイロビ',
     url: '/wiki/nairobi',

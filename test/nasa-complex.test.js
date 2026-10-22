@@ -1,6 +1,6 @@
 'use strict';
-// Invarian NASA Space Complex: 11 seksyen SSR + arkib APOD per-tarikh (±11k halaman
-// SEO) + sitemap-nasa ber-years. Semua halaman lalu melalui nasaDoc → 3 unit iklan.
+// Invariants of the NASA Space Complex: 11 server-rendered sections + a per-date APOD archive
+// (±11k SEO pages) + a year-bucketed sitemap-nasa. Every page goes through nasaDoc → 3 ad slots.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -13,118 +13,118 @@ const robotsTxt = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8
 const SECTIONS = ['/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids',
   '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites'];
 
-test('NASA_SECTSEN menyenaraikan 11 seksyen ruang angkas', () => {
+test('NASA_SECTIONS lists the 11 space sections', () => {
   for (const p of SECTIONS) {
-    assert.ok(serverSrc.includes(`'${p}'`), `seksyen ${p} mesti wujud dalam NASA_SECTIONS/nav`);
+    assert.ok(serverSrc.includes(`'${p}'`), `section ${p} must exist in NASA_SECTIONS/nav`);
   }
 });
 
-test('setiap renderer seksyen ditakrif dan dibungkus melalui nasaDoc', () => {
+test('every section renderer is defined and wrapped through nasaDoc', () => {
   for (const fn of ['nasaApodDatePage', 'nasaArchivePage', 'nasaSkyPage', 'nasaIssPage',
     'nasaAsteroidsPage', 'nasaSpaceWeatherPage', 'nasaMarsPage', 'nasaEarthPage',
     'nasaExoplanetsPage', 'nasaSoundsPage', 'nasaSatellitesPage']) {
-    assert.match(serverSrc, new RegExp(`function ${fn}\\(`), `${fn} ditakrif`);
+    assert.match(serverSrc, new RegExp(`function ${fn}\\(`), `${fn} is defined`);
   }
-  assert.match(serverSrc, /function nasaDoc\(o\)/, 'shell nasaDoc ditakrif');
-  // nasaDoc mesti hidang 3 slot iklan + loader + nav silang-paut
+  assert.match(serverSrc, /function nasaDoc\(o\)/, 'the nasaDoc shell is defined');
+  // nasaDoc must serve 3 ad slots + the loader + the cross-linked nav
   const doc = serverSrc.slice(serverSrc.indexOf('function nasaDoc(o)'), serverSrc.indexOf('function nasaDoc(o)') + 12000);
   for (const slot of ['slotTop', 'slotInArticle', 'slotBottom']) {
-    assert.ok(doc.includes(slot), `nasaDoc perlu memaparkan ${slot}`);
+    assert.ok(doc.includes(slot), `nasaDoc needs to render ${slot}`);
   }
-  assert.ok(doc.includes('nasaSpaceNav()'), 'nasaDoc perlu nav ruang angkasa (hub pautan)');
+  assert.ok(doc.includes('nasaSpaceNav()'), 'nasaDoc needs the space nav (link hub)');
 });
 
-test('laluan /nasa/* berdaftar: archive, apod/:date, random, 9 seksyen parameterized', () => {
+test('the /nasa/* routes are registered: archive, apod/:date, random, 9 parameterized sections', () => {
   for (const r of ['/nasa/random', '/nasa/archive', '/nasa/apod/:date', '/nasa/sky', '/nasa/iss',
     '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/mars/:slug', '/nasa/earth',
     '/nasa/exoplanets', '/nasa/sounds', '/nasa/sounds/:topic', '/nasa/satellites', '/nasa/satellites/:group']) {
-    assert.ok(serverSrc.includes(`app.get('${r}'`), `laluan ${r} perlu berdaftar`);
+    assert.ok(serverSrc.includes(`app.get('${r}'`), `the ${r} route must be registered`);
   }
 });
 
-test('tiada loop daftar-route atas `const` (TDZ) — slug disahkan dalam handler + 301', () => {
-  assert.doesNotMatch(serverSrc, /for \(const rv of MARS_ROVERS\)\s*app\.get/, 'loop MARS_ROVERS diharamkan (TDZ)');
-  assert.match(serverSrc, /redirect\(301, '\/nasa\/mars'\)/, 'slug mars salah → 301');
-  assert.match(serverSrc, /redirect\(301, '\/nasa\/sounds'\)/, 'topic sounds salah → 301');
-  assert.match(serverSrc, /redirect\(301, '\/nasa\/satellites'\)/, 'group satellites salah → 301');
+test('no route-registration loop over a `const` (TDZ) — slugs are validated inside the handler + 301', () => {
+  assert.doesNotMatch(serverSrc, /for \(const rv of MARS_ROVERS\)\s*app\.get/, 'a MARS_ROVERS loop is forbidden (TDZ)');
+  assert.match(serverSrc, /redirect\(301, '\/nasa\/mars'\)/, 'a bad mars slug → 301');
+  assert.match(serverSrc, /redirect\(301, '\/nasa\/sounds'\)/, 'a bad sounds topic → 301');
+  assert.match(serverSrc, /redirect\(301, '\/nasa\/satellites'\)/, 'a bad satellites group → 301');
 });
 
-test('halaman filter/query → noindex,follow; halaman canonical → index,follow', () => {
-  assert.match(serverSrc, /noindex,follow/, 'token noindex untuk paparan ?q/?d/?lat');
-  assert.match(serverSrc, /index,follow,max-image-preview:large/, 'canonical boleh indeks + gambar besar');
+test('filtered/query pages → noindex,follow; canonical pages → index,follow', () => {
+  assert.match(serverSrc, /noindex,follow/, 'the noindex token for ?q/?d/?lat views');
+  assert.match(serverSrc, /index,follow,max-image-preview:large/, 'canonical is indexable + large images');
 });
 
-test('sitemap-nasa: indeks ber-years + laluan regex tahun; robots.txt mengiklankannya', () => {
-  assert.match(serverSrc, /app\.get\('\/sitemap-nasa\.xml'/, 'indeks sitemap NASA wujud');
-  assert.ok(serverSrc.includes('sitemap-nasa-(\\d{4})'), 'laluan regex tahun wujud');
-  assert.match(serverSrc, /function apodDatesInYear/, 'penjana tarikh APOD setahun wujud');
-  assert.match(serverSrc, /1995-06-16/, 'APOD first day 1995-06-16 menjadi floor');
-  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-nasa\.xml/, 'robots.txt iklankan sitemap-nasa');
+test('sitemap-nasa: a year-bucketed index + the year regex route; robots.txt advertises it', () => {
+  assert.match(serverSrc, /app\.get\('\/sitemap-nasa\.xml'/, 'the NASA sitemap index exists');
+  assert.ok(serverSrc.includes('sitemap-nasa-(\\d{4})'), 'the year regex route exists');
+  assert.match(serverSrc, /function apodDatesInYear/, 'the one-year APOD date generator exists');
+  assert.match(serverSrc, /1995-06-16/, 'the APOD first day 1995-06-16 is the floor');
+  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-nasa\.xml/, 'robots.txt advertises sitemap-nasa');
 });
 
-test('kegagalan API → 503 + nasaBusy noindex (kosong tak masuk indeks)', () => {
-  assert.match(serverSrc, /function nasaBusy\(/, 'nasaBusy ditakrif');
-  assert.match(serverSrc, /status\(503\)[\s\S]{0,80}nasaBusy|nasaBusy\([\s\S]{0,120}503/, 'laluan NASA guna 503 semasa API down');
+test('an API failure → 503 + nasaBusy noindex (empty pages never reach the index)', () => {
+  assert.match(serverSrc, /function nasaBusy\(/, 'nasaBusy is defined');
+  assert.match(serverSrc, /status\(503\)[\s\S]{0,80}nasaBusy|nasaBusy\([\s\S]{0,120}503/, 'the NASA routes use 503 while the API is down');
 });
 
-test('APOD video ("Sonified:") → iframe player + poster, BUKAN <img src=youtube> rosak', () => {
-  assert.match(serverSrc, /function nasaVideoId\(/, 'pengenal ID YouTube berpusat');
-  assert.match(serverSrc, /function nasaVideoPlayer\(/, 'player iframe disediakan');
-  assert.match(serverSrc, /function nasaVideoPoster\(/, 'poster untuk og:image');
+test('an APOD video ("Sonified:") → an iframe player + poster, NOT a broken <img src=youtube>', () => {
+  assert.match(serverSrc, /function nasaVideoId\(/, 'the YouTube ID extractor is centralised');
+  assert.match(serverSrc, /function nasaVideoPlayer\(/, 'the iframe player is provided');
+  assert.match(serverSrc, /function nasaVideoPoster\(/, 'a poster for og:image');
   const today = serverSrc.slice(serverSrc.indexOf('function renderNasaApodPage'), serverSrc.indexOf('function nasaSpaceNav'));
-  assert.ok(today.includes('nasaVideoPlayer(a.url, title, true)'), 'halaman hari ini guna player utk video');
-  assert.ok(!/mediaType === 'video'[\s\S]{0,160}String\(a\.url \|\| ''\)\)/.test(today), 'URL video tidak pernah jadi nilai <img>/og terus');
-  assert.match(today, /'@type': 'VideoObject'/, 'JSON-LD video untuk media_type=video');
+  assert.ok(today.includes('nasaVideoPlayer(a.url, title, true)'), 'today\'s page uses the player for video');
+  assert.ok(!/mediaType === 'video'[\s\S]{0,160}String\(a\.url \|\| ''\)\)/.test(today), 'a video URL never becomes an <img>/og value directly');
+  assert.match(today, /'@type': 'VideoObject'/, 'video JSON-LD for media_type=video');
   const dated = serverSrc.slice(serverSrc.indexOf('function nasaApodDatePage'), serverSrc.indexOf('function nasaArchivePage'));
-  assert.ok(dated.includes('nasaVideoPlayer(a.url, title, true)'), 'halaman arkib ikut tarikh guna player juga');
-  assert.match(dated, /'@type': 'VideoObject'/, 'LD arkib ikut tarikh sedar video');
+  assert.ok(dated.includes('nasaVideoPlayer(a.url, title, true)'), 'the dated archive page uses the player too');
+  assert.match(dated, /'@type': 'VideoObject'/, 'the dated archive LD is video-aware');
   const arch = serverSrc.slice(serverSrc.indexOf('function nasaArchivePage'), serverSrc.indexOf('function nasaSkyPage'));
-  assert.ok(arch.includes('nasaVideoPoster(e)'), 'thumbnail arkib papar poster video');
+  assert.ok(arch.includes('nasaVideoPoster(e)'), 'the archive thumbnail shows the video poster');
 });
 
-// ——— Kejujuran & kualiti data (audit Okt 2026: "jangan malukan NASA") ———
-test('asteroid: TIADA data rekaan — sandaran ialah arkib nyata + notis jujur', () => {
+// ——— Data honesty & quality (October 2026 audit: "don't embarrass NASA") ———
+test('asteroids: NO invented data — the fallback is the real archive + an honest notice', () => {
   const nasaSrc = fs.readFileSync(path.join(ROOT, 'src', 'nasa.js'), 'utf8');
-  assert.ok(!nasaSrc.includes('fallbackAsteroids'), 'senarai asteroid mock mesti dipadam');
-  assert.ok(nasaSrc.includes("source: 'archive'"), 'laluan gagal hidang arkib NeoWs nyata');
-  assert.ok(nasaSrc.includes("source: 'unavailable'"), 'arkib kosong → jujur, bukan mock');
-  assert.ok(nasaSrc.includes('latestAsteroids('), 'penggetter arkib digunakan');
-  // renderer mesti ada notis source archive/unavailable
-  assert.match(serverSrc, /week\.source === 'archive'/, 'notis arkib dipaparkan');
-  assert.match(serverSrc, /week\.source === 'unavailable'/, 'notis tiada suapan dipaparkan');
-  assert.match(serverSrc, /Nothing below is simulated/, 'teks kejujuran archive');
+  assert.ok(!nasaSrc.includes('fallbackAsteroids'), 'the mock asteroid list must stay deleted');
+  assert.ok(nasaSrc.includes("source: 'archive'"), 'a failed route serves the real NeoWs archive');
+  assert.ok(nasaSrc.includes("source: 'unavailable'"), 'an empty archive → honest, not mock');
+  assert.ok(nasaSrc.includes('latestAsteroids('), 'the archive getter is used');
+  // the renderer must carry the archive/unavailable source notice
+  assert.match(serverSrc, /week\.source === 'archive'/, 'the archive notice is rendered');
+  assert.match(serverSrc, /week\.source === 'unavailable'/, 'the no-feed notice is rendered');
+  assert.match(serverSrc, /Nothing below is simulated/, 'the archive honesty text');
 });
 
-test('audio: penapis kaitan topik + nyahpendua saluran liputan', () => {
+test('audio: a topic-relevance filter + de-duplication of coverage channels', () => {
   const nasaSrc = fs.readFileSync(path.join(ROOT, 'src', 'nasa.js'), 'utf8');
-  assert.match(nasaSrc, /const AUDIO_TOPICS = \{/, 'peta topik audio ditakrif');
-  assert.ok(nasaSrc.includes('cfg.words.some'), 'kaitan kata kunci ditapis');
-  assert.ok(nasaSrc.includes('seenKey'), 'nyahpendua tajuk saluran sama');
-  assert.ok(nasaSrc.includes("reject: ['launch coverage']"), 'planets: liputan pelancaran ditolak');
+  assert.match(nasaSrc, /const AUDIO_TOPICS = \{/, 'the audio topic map is defined');
+  assert.ok(nasaSrc.includes('cfg.words.some'), 'keyword relevance is filtered');
+  assert.ok(nasaSrc.includes('seenKey'), 'identical channel titles are de-duplicated');
+  assert.ok(nasaSrc.includes("reject: ['launch coverage']"), 'planets: launch coverage is rejected');
 });
 
-test('imej NASA: semua <img> konten punya width/height (CLS) + CSS height:auto', () => {
+test('NASA images: every content <img> has width/height (CLS) + CSS height:auto', () => {
   const imgFn = serverSrc.slice(serverSrc.indexOf('function nasaImg('), serverSrc.indexOf('function nasaVideoId('));
-  assert.match(imgFn, /width="1280" height="720"/, 'nasaImg rizab nisbah');
-  assert.match(serverSrc, /\.nasa-img\{max-width:100%;height:auto/, 'CSS nasa-img height:auto');
-  assert.match(serverSrc, /id="epicimg"[^>]*width="1024" height="1024"/, 'EPIC player ada dimensi');
+  assert.match(imgFn, /width="1280" height="720"/, 'nasaImg reserves the aspect ratio');
+  assert.match(serverSrc, /\.nasa-img\{max-width:100%;height:auto/, 'the nasa-img CSS has height:auto');
+  assert.match(serverSrc, /id="epicimg"[^>]*width="1024" height="1024"/, 'the EPIC player carries dimensions');
 });
 
-// ── ISS auto-refresh langsung (2026-10-18): poll klien 15s + penanda sumber jujur ──
+// ── Direct ISS auto-refresh (2026-10-18): a 15s client poll + honest source markers ──
 const nasaSrc = fs.readFileSync(path.join(ROOT, 'src', 'nasa.js'), 'utf8');
 
-test('ISS: laluan live.json wujud dan halaman poll setiap 15s', () => {
-  assert.ok(serverSrc.includes("app.get('/nasa/iss/live.json'"), 'laluan JSON untuk auto-refresh');
-  assert.ok(serverSrc.includes('setInterval(poll,15000)'), 'klien poll 15s');
-  assert.ok(serverSrc.includes("fetch('/nasa/iss/live.json'"), 'poll guna fetch JSON');
-  assert.ok(serverSrc.includes('id="issbase"'), 'gambar asas ada id untuk fallback chain');
-  assert.ok(serverSrc.includes('three-globe/example/img/earth-blue-marble.jpg'), 'fallback host 1 apabila Wikimedia gagal');
+test('ISS: the live.json route exists and the page polls every 15s', () => {
+  assert.ok(serverSrc.includes("app.get('/nasa/iss/live.json'"), 'a JSON route for the auto-refresh');
+  assert.ok(serverSrc.includes('setInterval(poll,15000)'), 'the client polls every 15s');
+  assert.ok(serverSrc.includes("fetch('/nasa/iss/live.json'"), 'the poll fetches the JSON');
+  assert.ok(serverSrc.includes('id="issbase"'), 'the base image has an id for the fallback chain');
+  assert.ok(serverSrc.includes('three-globe/example/img/earth-blue-marble.jpg'), 'host 1 is the fallback when Wikimedia fails');
 });
 
-test('ISS: telemetri jujur — penanda source, TIADA posisi 0,0 rekaan', () => {
-  assert.ok(nasaSrc.includes("source: 'live'"), 'bacaan semasa ditanda live');
-  assert.ok(nasaSrc.includes("source: 'last-known'"), 'gagal → posisi nyata terakhir, bukan rekaan');
-  assert.ok(nasaSrc.includes("return { source: 'unavailable' }"), 'tiada langsung → unavailable jujur');
-  assert.ok(!/latitude: 0,/.test(nasaSrc), 'fallback 0,0 palsu telah dibuang selama-lamanya');
-  assert.ok(nasaSrc.includes("setCache('iss:last-good'"), 'last-good di-cache untuk mod sibuk');
+test('ISS: honest telemetry — source markers, NO invented 0,0 position', () => {
+  assert.ok(nasaSrc.includes("source: 'live'"), 'the current reading is marked live');
+  assert.ok(nasaSrc.includes("source: 'last-known'"), 'on failure → the real last position, not an invention');
+  assert.ok(nasaSrc.includes("return { source: 'unavailable' }"), 'nothing at all → an honest unavailable');
+  assert.ok(!/latitude: 0,/.test(nasaSrc), 'the fake 0,0 fallback is removed for good');
+  assert.ok(nasaSrc.includes("setCache('iss:last-good'"), 'last-good is cached for the busy mode');
 });

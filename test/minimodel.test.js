@@ -1,6 +1,6 @@
 'use strict';
-// Ujian "Tukuk-Brain Mini" — model AI milik sendiri (softmax MURNI-JS) +
-// integrasi celah-regex dalam taskrouter. Deterministik: seed tetap.
+// Tests for "Tukuk-Brain Mini" — our own AI model (a PURE-JS softmax) +
+// the regex-gap integration inside taskrouter. Deterministic: a fixed seed.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -30,11 +30,11 @@ const DATA = [
     .map((text) => ({ text, label: 'general' }))
 ];
 
-test('minimodel: train → predikasi betul pada contoh baru (generalisasi)', () => {
+test('minimodel: train → correct prediction on new examples (generalisation)', () => {
   const { model, stats } = minimodel.train(DATA, { epochs: 200, lr: 0.4, l2: 3e-3, tri: 60, seed: 7, holdout: 0 });
   assert.ok(stats.examples >= 28);
-  // GATE KUALITI: mesti ambil sekurang-kurangnya 80% contoh pegang sendiri.
-  assert.ok(stats.trainAccuracy >= 0.8, `trainAccuracy terlalu rendah: ${stats.trainAccuracy}`);
+  // QUALITY GATE: it must pick at least 80% of its own held-out examples.
+  assert.ok(stats.trainAccuracy >= 0.8, `trainAccuracy too low: ${stats.trainAccuracy}`);
   const cases = [
     ['kalikan 22 dengan 4', 'math'],
     ['macam mana nak backup mysql', 'howto'],
@@ -46,10 +46,10 @@ test('minimodel: train → predikasi betul pada contoh baru (generalisasi)', () 
   for (const [text, want] of cases) {
     if (minimodel.predict(model, text).label === want) ok += 1;
   }
-  assert.ok(ok >= 4, `generalisasi lemah: ${ok}/${cases.length}`);
+  assert.ok(ok >= 4, `weak generalisation: ${ok}/${cases.length}`);
 });
 
-test('minimodel: save/load roundtrip — ramalan sama & fail sparse', () => {
+test('minimodel: a save/load roundtrip — identical predictions & a sparse file', () => {
   const { model } = minimodel.train(DATA, { epochs: 50, seed: 1, tri: 60 });
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'bm-')), 'm.json');
   minimodel.save(model, file, { name: 'test' });
@@ -64,21 +64,21 @@ test('minimodel: save/load roundtrip — ramalan sama & fail sparse', () => {
   assert.equal(loaded.meta.name, 'test');
 });
 
-test('minimodel: predict sentiasa softmax sah (jumlah 1) & label sah', () => {
+test('minimodel: predict is always a valid softmax (sums to 1) with a valid label', () => {
   const { model } = minimodel.train(DATA, { epochs: 10, seed: 3 });
-  const r = minimodel.predict(model, 'soalan rawak tentang apa sahaja');
+  const r = minimodel.predict(model, 'a random question about anything');
   assert.ok(model.classes.includes(r.label));
   const sum = Object.values(r.probs).reduce((a, b) => a + b, 0);
-  assert.ok(Math.abs(sum - 1) < 0.01, `probs tak normal: ${sum}`);
+  assert.ok(Math.abs(sum - 1) < 0.01, `probs are not normalised: ${sum}`);
 });
 
-test('minimodel: terlalu sedikit contoh → ralat jelas', () => {
-  assert.throws(() => minimodel.train([{ text: 'satu', label: 'math' }]), /too few/);
+test('minimodel: too few examples → a clear error', () => {
+  assert.throws(() => minimodel.train([{ text: 'one', label: 'math' }]), /too few/);
 });
 
-test('taskrouter: tanpa model fail → kelakuan regex lama (regresi)', () => {
+test('taskrouter: a missing model file → the old regex behaviour (no regression)', () => {
   const prev = process.env.BRAIN_MODEL_FILE;
-  process.env.BRAIN_MODEL_FILE = path.join(os.tmpdir(), 'tiada-model-' + Date.now() + '.json');
+  process.env.BRAIN_MODEL_FILE = path.join(os.tmpdir(), 'no-model-' + Date.now() + '.json');
   const taskrouter = require('../src/brain/taskrouter');
   taskrouter._resetModelCache();
   assert.equal(taskrouter.modelInfo().loaded, false);
@@ -88,8 +88,8 @@ test('taskrouter: tanpa model fail → kelakuan regex lama (regresi)', () => {
   process.env.BRAIN_MODEL_FILE = prev;
 });
 
-test('taskrouter: model selamatkan frasa yang regex lepas (with gate)', () => {
-  // Latih model kecil dengan gaya frasa BARU yang regex tak nampak.
+test('taskrouter: the model rescues phrases the regex misses (with a gate)', () => {
+  // Train a small model on NEW phrase styles that the regex does not recognise.
   const train = [];
   for (const p of [
     'nak tahu procedure mohon passport baru', 'method nak buat duit online', 'guide install linux',
@@ -108,10 +108,10 @@ test('taskrouter: model selamatkan frasa yang regex lepas (with gate)', () => {
   const info = taskrouter.modelInfo();
   assert.equal(info.loaded, true);
   assert.equal(info.name, 'Tukuk-Brain Mini');
-  // Frasa yang regex LEPAS → model wajib selamatkan (yakin).
+  // Phrases the regex MISSES → the model must rescue them (with confidence).
   assert.equal(taskrouter.classifyRawRegex('procedure mohon visa kerja').kind, 'general');
   assert.equal(taskrouter.classify('procedure mohon visa kerja').kind, 'howto');
-  // Regex TETAP menang (model tak boleh override keputusan regex).
+  // The regex still wins (the model may not override a regex decision).
   assert.equal(taskrouter.classify('cara buat kuih').kind, 'howto');
   assert.equal(taskrouter.classify('12*7').pureMath, true);
   process.env.BRAIN_MODEL_FILE = prev;

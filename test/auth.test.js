@@ -1,6 +1,6 @@
 'use strict';
-// Ujian unit src/auth.js — fokus logik tulen/keselamatan yang tidak memerlukan
-// I/O pelayar WebAuthn sebenar (kewujudan sesi, gerbang e-mel, origin, bearer).
+// Unit tests for src/auth.js — focused on the real/security logic that does not need
+// an actual WebAuthn browser (session lifecycle, the e-mail gate, origins, bearer).
 const { test } = require('node:test');
 const assert = require('node:assert');
 
@@ -14,41 +14,41 @@ test('normalizeEmail: trim + lowercase', () => {
   assert.strictEqual(auth.normalizeEmail(undefined), '');
 });
 
-// ── isAllowedEmail (terikat pada config.admin.email) ──
-test('isAllowedEmail: e-mel pemilik lulus, lain ditolak', () => {
+// ── isAllowedEmail (bound to config.admin.email) ──
+test('isAllowedEmail: the owner e-mail passes, others are rejected', () => {
   const owner = config.admin.email;
-  assert.ok(owner, 'config.admin.email mestilah ada (default atau env)');
+  assert.ok(owner, 'config.admin.email must exist (default or env)');
   assert.strictEqual(auth.isAllowedEmail(owner), true);
-  assert.strictEqual(auth.isAllowedEmail(owner.toUpperCase()), true); // tak peka kes
-  assert.strictEqual(auth.isAllowedEmail('seseorang-yang-bukan-pemilik@example.test'), false);
+  assert.strictEqual(auth.isAllowedEmail(owner.toUpperCase()), true); // case insensitive
+  assert.strictEqual(auth.isAllowedEmail('someone-not-the-owner@example.test'), false);
 });
 
 // ── checkBootstrapPassword ──
-test('checkBootstrapPassword: padan tepat lulus, salah/x lwn gagal', () => {
+test('checkBootstrapPassword: an exact match passes, a wrong/added X fails', () => {
   const pw = config.admin.bootstrapPassword;
   assert.strictEqual(auth.checkBootstrapPassword(pw), true);
   assert.strictEqual(auth.checkBootstrapPassword(pw + 'X'), false);
   assert.strictEqual(auth.checkBootstrapPassword(''), pw ? false : false);
-  // panjang berbeza mestilah false (lwn timingSafeEqual pendek/panjang)
+  // a different length must be false (against timingSafeEqual for short/long input)
   assert.strictEqual(auth.checkBootstrapPassword('x'), pw.length === 1);
 });
 
 // ── originsFor ──
-test('originsFor: sentiasa sertakan origin config, tambah https baharu', () => {
+test('originsFor: always includes the config origin, adds a new https one', () => {
   const base = auth.originsFor();
   assert.ok(Array.isArray(base));
   const primary = String(config.webauthn.origin).split(',')[0].trim();
-  assert.ok(base.includes(primary), 'mengandungi origin WebAuthn config');
-  assert.ok(base.includes('http://localhost:3000'), 'mengandungi localhost untuk ujian');
+  assert.ok(base.includes(primary), 'contains the configured WebAuthn origin');
+  assert.ok(base.includes('http://localhost:3000'), 'contains localhost for tests');
   const withExtra = auth.originsFor('https://admin.tukuk.org');
   assert.ok(withExtra.length >= base.length);
   assert.ok(withExtra.includes('https://admin.tukuk.org'));
-  // bukan http(s) tidak ditambah
+  // a non http(s) value is not added
   assert.deepStrictEqual(auth.originsFor('not-a-origin'), base);
 });
 
 // ── b64urlToBuf ──
-test('b64urlToBuf: Uint8Array padan bait Buffer base64url', () => {
+test('b64urlToBuf: a Uint8Array matching the base64url buffer bytes', () => {
   const s = Buffer.from('hello tukuk').toString('base64url');
   const buf = auth.b64urlToBuf(s);
   assert.ok(buf instanceof Uint8Array);
@@ -56,25 +56,25 @@ test('b64urlToBuf: Uint8Array padan bait Buffer base64url', () => {
 });
 
 // ── bearer ──
-test('bearer: baca Bearer header & fallback x-admin-token', () => {
+test('bearer: reads the Bearer header & falls back to x-admin-token', () => {
   assert.strictEqual(auth.bearer({ headers: { authorization: 'Bearer abc123' } }), 'abc123');
   assert.strictEqual(auth.bearer({ headers: { authorization: 'bearer  spaced  ' } }), 'spaced');
   assert.strictEqual(auth.bearer({ headers: { 'x-admin-token': 'tok-xyz' } }), 'tok-xyz');
   assert.strictEqual(auth.bearer({ headers: {} }), '');
 });
 
-// ── Kitaran sesi: issue → read → revoke ──
-test('session: issue/read/revoke bulat penuh', () => {
-  const token = auth.issueSession('pemilik@example.com');
-  assert.match(token, /^[0-9a-f]{64}$/, 'token hex 32 bait');
+// ── The session cycle: issue → read → revoke ──
+test('session: a full issue/read/revoke round trip', () => {
+  const token = auth.issueSession('owner@example.com');
+  assert.match(token, /^[0-9a-f]{64}$/, 'a 32-byte hex token');
   const s = auth.readSession(token);
   assert.ok(s);
-  assert.strictEqual(s.email, 'pemilik@example.com');
-  // token tak dikenali / kosong → null
-  assert.strictEqual(auth.readSession('bukan-token'), null);
+  assert.strictEqual(s.email, 'owner@example.com');
+  // an unknown / empty token → null
+  assert.strictEqual(auth.readSession('not-a-token'), null);
   assert.strictEqual(auth.readSession(''), null);
   assert.strictEqual(auth.readSession(null), null);
-  // selepas revoke → mati
+  // after revoke → dead
   auth.revokeSession(token);
   assert.strictEqual(auth.readSession(token), null);
 });
@@ -86,7 +86,7 @@ function mockRes() {
   res.json = (o) => { res.body = o; return res; };
   return res;
 }
-test('requireAdmin: sesi sah panggil next, tanpa sesi 401', () => {
+test('requireAdmin: a valid session calls next, without a session 401', () => {
   const token = auth.issueSession('a@b.com');
   const req = { headers: { authorization: 'Bearer ' + token } };
   const res = mockRes();
@@ -105,14 +105,14 @@ test('requireAdmin: sesi sah panggil next, tanpa sesi 401', () => {
 });
 
 // ── requireAllowedEmail middleware ──
-test('requireAllowedEmail: 400 tanpa e-mel, 403 salah, next betul', () => {
+test('requireAllowedEmail: 400 without an e-mail, 403 when wrong, next when right', () => {
   const r1 = mockRes(); let n1 = false;
   auth.requireAllowedEmail({ body: {} }, r1, () => { n1 = true; });
   assert.strictEqual(n1, false);
   assert.strictEqual(r1.statusCode, 400);
 
   const r2 = mockRes(); let n2 = false;
-  auth.requireAllowedEmail({ body: { email: 'bukan-pemilik@example.test' } }, r2, () => { n2 = true; });
+  auth.requireAllowedEmail({ body: { email: 'not-the-owner@example.test' } }, r2, () => { n2 = true; });
   assert.strictEqual(n2, false);
   assert.strictEqual(r2.statusCode, 403);
 
@@ -121,11 +121,11 @@ test('requireAllowedEmail: 400 tanpa e-mel, 403 salah, next betul', () => {
   assert.strictEqual(n3, true);
 });
 
-// ── Cabaran: set/take + luput jenis ──
-test('takeChallenge: sekali pakai, ikut jenis, null bila tiada', () => {
+// ── Challenges: set/take + type expiry ──
+test('takeChallenge: single use, per type, null when absent', () => {
   auth.setChallenge('c@x.com', 'chal-value', 'register');
-  assert.strictEqual(auth.takeChallenge('c@x.com', 'login'), null); // jenis salah → dimakan (sekali pakai)
+  assert.strictEqual(auth.takeChallenge('c@x.com', 'login'), null); // the wrong type → consumed (single use)
   auth.setChallenge('d@x.com', 'v2', 'authenticate');
   assert.strictEqual(auth.takeChallenge('d@x.com', 'authenticate'), 'v2');
-  assert.strictEqual(auth.takeChallenge('d@x.com', 'authenticate'), null); // sudah diambil
+  assert.strictEqual(auth.takeChallenge('d@x.com', 'authenticate'), null); // already taken
 });

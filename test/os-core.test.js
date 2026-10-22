@@ -1,6 +1,6 @@
-// ═══ Tests: enjin TULEN Tukuk OS (/os) — pemroses arahan + integriti katalog ═══
-// findApp/parseCommand/timeFmt diekstrak verbatim dari public/os.html (sumber
-// sebenar yang dijalankan pelayar) dan diuji dalam sandbox tanpa DOM.
+// ═══ Tests: the REAL Tukuk OS engine (/os) — the command parser + catalogue integrity ═══
+// findApp/parseCommand/timeFmt are extracted verbatim from public/os.html (the
+// source the browser actually runs) and tested in a sandbox without a DOM.
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -11,7 +11,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'os.html'), 'u
 
 function extractFn(src, name) {
   const idx = src.indexOf('function ' + name + '(');
-  if (idx < 0) throw new Error('fungsi tidak ditemui: ' + name);
+  if (idx < 0) throw new Error('function not found: ' + name);
   let i = src.indexOf('{', idx);
   let depth = 0;
   for (; i < src.length; i++) {
@@ -19,17 +19,17 @@ function extractFn(src, name) {
     if (ch === '{') depth++;
     else if (ch === '}') { depth--; if (depth === 0) return src.slice(idx, i + 1); }
   }
-  throw new Error('kurung tak seimbang: ' + name);
+  throw new Error('unbalanced brackets: ' + name);
 }
 
-// Ambil array APPS + fungsi murni dari fail yang sama.
+// Take the APPS array + the pure functions from the same file.
 const appsMatch = html.match(/var APPS = (\[[\s\S]*?\n\]);/);
-assert.ok(appsMatch, 'array APPS ditemui dalam os.html');
+assert.ok(appsMatch, 'the APPS array was found in os.html');
 const APPS = new Function('return ' + appsMatch[1])();
 const code = ['findApp', 'parseCommand', 'timeFmt'].map((n) => extractFn(html, n)).join('\n\n');
 const engine = new Function('APPS', code + '\nreturn { findApp, parseCommand, timeFmt };')(APPS);
 
-test('findApp: padanan nama/tajuk biasa & sebahagian', () => {
+test('findApp: full and partial name/title matches', () => {
   assert.equal(engine.findApp('weather')[0], 'cuaca');
   assert.equal(engine.findApp('holidays')[0], 'cuti');
   assert.equal(engine.findApp('wiki')[0], 'wiki');
@@ -39,7 +39,7 @@ test('findApp: padanan nama/tajuk biasa & sebahagian', () => {
   assert.equal(engine.findApp(''), null);
 });
 
-test('parseCommand: arahan sistem dijawab OS tanpa questions ke AI', () => {
+test('parseCommand: system commands are answered by the OS without asking the AI', () => {
   assert.equal(engine.parseCommand('open chat').action, 'open');
   assert.equal(engine.parseCommand('open chat').app[0], 'chat');
   assert.equal(engine.parseCommand('Open Wiki!').action, 'open');
@@ -50,36 +50,36 @@ test('parseCommand: arahan sistem dijawab OS tanpa questions ke AI', () => {
   assert.equal(engine.parseCommand('search how to bake bread').q, 'how to bake bread');
 });
 
-test('parseCommand: bukan arahan → dihantar ke AI (termasuk "open <bukan app>")', () => {
+test('parseCommand: not a command → sent to the AI (including "open <not an app>")', () => {
   const a = engine.parseCommand('what is dns over https');
   assert.equal(a.action, 'ask');
   assert.equal(a.q, 'what is dns over https');
   const b = engine.parseCommand('open quantum flux capacitor');
-  assert.equal(b.action, 'ask'); // app tak wujud → biar AI cuba jawab
+  assert.equal(b.action, 'ask'); // the app does not exist → let the AI try to answer
   assert.equal(engine.parseCommand('').action, 'noop');
 });
 
-test('timeFmt: 12-jam dengan minit berpad zero', () => {
+test('timeFmt: 12-hour clock with zero-padded minutes', () => {
   assert.equal(engine.timeFmt(new Date(2026, 0, 1, 13, 5)), '1:05');
   assert.equal(engine.timeFmt(new Date(2026, 0, 1, 0, 30)), '12:30');
   assert.equal(engine.timeFmt(new Date(2026, 0, 1, 9, 0)), '9:00');
 });
 
-// ── Katalog aplikasi (fail benar-benar wujud di pelayan; senarai dipantau ujian) ──
-// Hanya halaman HIDUP yang boleh dilancarkan pelayar — apl/web-tool yang dibuang
-// pada pivot konten (b0542e7) mesti hilang daripada APPS, bukan sekadar disembunyi.
-test('katalog OS: hanya halaman hidup (tiada 404 known-dead)', () => {
+// ── The app catalogue (the files really exist on the server; the list is watched by tests) ──
+// Only LIVING pages may be launched by the browser — apps/web-tools dropped during
+// the content pivot (b0542e7) must leave APPS, not merely be hidden.
+test('the OS catalogue: living pages only (no known-dead 404s)', () => {
   const DEAD = ['/explore', '/store', '/builder', '/studio', '/editor', '/editor-video',
     '/movie', '/design', '/3d', '/collage', '/bg-remover', '/converter', '/apps'];
   for (const a of APPS) {
     for (const d of DEAD) {
-      if (d !== '/apps') assert.ok(!a[3].startsWith(d), `${a[0]} → ${a[3]} ialah halaman mati`);
-      else assert.ok(a[3] === '/apps/chat' || !a[3].startsWith('/apps/'), `${a[0]} → ${a[3]} app mati`);
+      if (d !== '/apps') assert.ok(!a[3].startsWith(d), `${a[0]} → ${a[3]} is a dead page`);
+      else assert.ok(a[3] === '/apps/chat' || !a[3].startsWith('/apps/'), `${a[0]} → ${a[3]} is a dead app`);
     }
   }
 });
 
-test('katalog OS: setiap URL petakan ke fail HTML atau route server yang wujud', () => {
+test('the OS catalogue: every URL maps to an HTML file or an existing server route', () => {
   const PUBLIC = path.join(__dirname, '..', 'public');
   const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
   for (const a of APPS) {
@@ -89,17 +89,17 @@ test('katalog OS: setiap URL petakan ke fail HTML atau route server yang wujud',
     if (url === '/') file = path.join(PUBLIC, 'index.html');
     else if (url.startsWith('/apps/')) file = path.join(PUBLIC, 'apps', a[0] + '.html');
     else file = path.join(PUBLIC, a[0] + '.html');
-    // Halaman terespons (model/datacenter) sah jika route app.get daftar di server.js.
+    // A server-rendered page (model/datacenter) is valid when its app.get route is registered in server.js.
     const routed = serverSrc.includes(`app.get('/${a[0]}'`);
-    assert.ok(fs.existsSync(file) || routed, `fail/route wujud untuk ${a[1]} (${url})`);
+    assert.ok(fs.existsSync(file) || routed, `a file/route exists for ${a[1]} (${url})`);
   }
 });
 
-test('katalog OS: nama unik & tuple lengkap (5 medan)', () => {
+test('the OS catalogue: unique names and complete tuples (5 fields)', () => {
   const names = APPS.map((a) => a[0]);
-  assert.equal(new Set(names).size, names.length, 'tiada nama berganda');
+  assert.equal(new Set(names).size, names.length, 'no duplicate names');
   for (const a of APPS) {
-    assert.equal(a.length, 5, `tuple lengkap untuk ${a[0]}`);
-    assert.ok(a[1] && a[2] && a[3] && a[4], `medan tak kosong: ${a[0]}`);
+    assert.equal(a.length, 5, `a complete tuple for ${a[0]}`);
+    assert.ok(a[1] && a[2] && a[3] && a[4], `no empty field: ${a[0]}`);
   }
 });

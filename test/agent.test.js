@@ -1,7 +1,7 @@
 'use strict';
-// Ujian Tukuk Agent: src/brain/openai-compat.js (rotasi + peta 4xx) dan
-// src/agent.js (proksi OpenAI-compatible + /build + auth/CORS) melalui loopback HTTP.
-// Tiada rangkaian sebenar — fetch/provider/mcp di-stub.
+// Tests for the Tukuk Agent: src/brain/openai-compat.js (rotation + the 4xx mapping) and
+// src/agent.js (the OpenAI-compatible proxy + /build + auth/CORS) over loopback HTTP.
+// No real network — fetch/provider/mcp are stubbed.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
@@ -10,7 +10,7 @@ const openai = require('../src/brain/openai-compat');
 const agent = require('../src/agent');
 const mcp = require('../mcp/server');
 
-// ── Stub pembekal OpenAI tanpa menyentuh store/env sebenar ──────────────────
+// ── Stub the OpenAI providers without touching the real store/env ────────────
 function withProviders(list, fn) {
   const saved = {
     listCloudProviders: provider.listCloudProviders,
@@ -26,19 +26,19 @@ function withProviders(list, fn) {
 const groq = { name: 'groq', kind: 'openai', baseUrl: 'https://groq.test/v1', key: 'k1', model: 'openai/gpt-oss-120b' };
 const or = { name: 'openrouter', kind: 'openai', baseUrl: 'https://or.test/v1', key: 'k2', model: 'x/y' };
 
-test('chatWithRotation: tiada provider OpenAI -> 409 (bukan 5xx)', () => withProviders([], async () => {
+test('chatWithRotation: no OpenAI provider -> 409 (not 5xx)', () => withProviders([], async () => {
   const out = await openai.chatWithRotation({ messages: [{ role: 'user', content: 'hi' }] });
   assert.equal(out.ok, false);
   assert.equal(out.status, 409);
   assert.ok(out.status < 500, 'pasti 4xx supaya tepi tak topeng mod sandaran');
 }));
 
-test('chatWithRotation: messages kosong -> 400', () => withProviders([groq], async () => {
+test('chatWithRotation: empty messages -> 400', () => withProviders([groq], async () => {
   const out = await openai.chatWithRotation({ messages: [] });
   assert.equal(out.status, 400);
 }));
 
-test('chatWithRotation: provider jaya -> ok, model dipaksa ke model pembekal', () => withProviders([groq], async () => {
+test('chatWithRotation: a successful provider -> ok, the model is forced to the provider model', () => withProviders([groq], async () => {
   let seenBody;
   const fetchImpl = async (url, opts) => {
     seenBody = JSON.parse(opts.body);
@@ -50,11 +50,11 @@ test('chatWithRotation: provider jaya -> ok, model dipaksa ke model pembekal', (
   );
   assert.equal(out.ok, true);
   assert.equal(out.provider, 'groq');
-  assert.equal(seenBody.model, 'openai/gpt-oss-120b', 'model klien dipeta ke model sebenar');
+  assert.equal(seenBody.model, 'openai/gpt-oss-120b', 'the client model is mapped to the real model');
   assert.ok(Array.isArray(seenBody.tools), 'tools diteruskan utuh');
 }));
 
-test('chatWithRotation: semua 429 -> 429; bukan kuota -> 424', () => withProviders([groq, or], async () => {
+test('chatWithRotation: all 429 -> 429; not a quota -> 424', () => withProviders([groq, or], async () => {
   const q = await openai.chatWithRotation(
     { messages: [{ role: 'user', content: 'x' }] },
     { fetchImpl: async () => new Response('rate limited', { status: 429 }) }
@@ -66,19 +66,19 @@ test('chatWithRotation: semua 429 -> 429; bukan kuota -> 424', () => withProvide
     { fetchImpl: async () => new Response('bad model', { status: 400 }) }
   );
   assert.equal(n.status, 424);
-  assert.ok(n.rejected.length >= 2, 'senarai rejected diisi');
+  assert.ok(n.rejected.length >= 2, 'the rejected list is filled');
 }));
 
-// ── openaiProviders(): penapisan pembekal buta-tools + pemetaan ollama-cloud ──
-test('openaiProviders: litert (buta tool) dibuang dari rotasi agen', () => withProviders([
+// ── openaiProviders(): filtering tool-blind providers + the ollama-cloud mapping ──
+test('openaiProviders: litert (tool-blind) is dropped from the agent rotation', () => withProviders([
   groq,
   { name: 'litert', kind: 'openai', baseUrl: 'http://127.0.0.1:8090/v1', key: 'edge', model: 'gemma3-1b' },
 ], async () => {
   const names = openai.openaiProviders().map((p) => p.name);
-  assert.deepEqual(names, ['groq'], 'litert tak boleh muncul pada /api/agent/v1');
+  assert.deepEqual(names, ['groq'], 'litert must not show up on /api/agent/v1');
 }));
 
-test('openaiProviders: ollama-cloud dipetakan ke bentuk OpenAI /v1', () => withProviders([
+test('openaiProviders: ollama-cloud is mapped into the OpenAI /v1 shape', () => withProviders([
   { name: 'ollama-cloud', kind: 'ollama-native', baseUrl: 'https://api.ollama.com', key: 'k', model: 'gpt-oss:20b' },
 ], async () => {
   const ps = openai.openaiProviders();
@@ -93,7 +93,7 @@ test('openaiProviders: ollama-cloud dipetakan ke bentuk OpenAI /v1', () => withP
   assert.equal(out.provider, 'ollama-cloud');
 }));
 
-test('rotasi fast: model pembekal dipetakan ke model ringan apabila fast=true', () => withProviders([groq], async () => {
+test('the fast rotation: the provider model maps to a light model when fast=true', () => withProviders([groq], async () => {
   let seenBody;
   const fetchImpl = async (url, opts) => {
     seenBody = JSON.parse(opts.body);
@@ -108,7 +108,7 @@ test('rotasi fast: model pembekal dipetakan ke model ringan apabila fast=true', 
   assert.equal(out.model, 'openai/gpt-oss-20b', 'header X-Agent-Model ikut model sebenar');
 }));
 
-test('rotasi fast: provider tolak model laju (404) → jatuh ke model biasa, bukan cooling', () => withProviders([groq], async () => {
+test('the fast rotation: a provider rejecting the fast model (404) → falls back to the normal model, not cooling', () => withProviders([groq], async () => {
   const calls = [];
   const fetchImpl = async (url, opts) => {
     const b = JSON.parse(opts.body);
@@ -121,16 +121,16 @@ test('rotasi fast: provider tolak model laju (404) → jatuh ke model biasa, buk
     { model: 'tukuk-agent-fast', messages: [{ role: 'user', content: 'x' }] },
     { fetchImpl, fast: true }
   );
-  assert.equal(out.ok, true, 'model biasa penyelamat permintaan');
+  assert.equal(out.ok, true, 'the normal model rescued the request');
   assert.deepEqual(calls, ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']);
 }));
 
-test('/models mengiklankan tukuk-agent + tukuk-agent-fast', () => {
+test('/models advertises tukuk-agent + tukuk-agent-fast', () => {
   const ids = openai.listModels().map((m) => m.id);
   assert.deepEqual(ids, ['tukuk-agent', 'tukuk-agent-fast']);
 });
 
-// ── Loopback HTTP penuh untuk src/agent.js ──────────────────────────────────
+// ── A full loopback HTTP run for src/agent.js ──────────────────────────────
 function startApp({ token = 'secret-agent', freeToken = 'free-public', origin = '', patch } = {}) {
   const app = express();
   app.use(express.json());
@@ -151,7 +151,7 @@ function startApp({ token = 'secret-agent', freeToken = 'free-public', origin = 
   });
 }
 
-test('route: /v1/models tanpa token -> 401, dengan token -> senarai tukuk-agent', async () => {
+test('route: /v1/models without a token -> 401, with a token -> the tukuk-agent list', async () => {
   const { base, close } = await startApp();
   try {
     assert.equal((await fetch(base + '/api/agent/v1/models')).status, 401, 'tanpa auth ditolak');
@@ -162,17 +162,17 @@ test('route: /v1/models tanpa token -> 401, dengan token -> senarai tukuk-agent'
   } finally { await close(); }
 });
 
-test('tier percuma: freeToken diterima di /models; token salah tetap 401', async () => {
+test('the free tier: freeToken is accepted on /models; a wrong token still gets 401', async () => {
   const { base, close } = await startApp();
   try {
     const free = await fetch(base + '/api/agent/v1/models', { headers: { Authorization: 'Bearer free-public' } });
     assert.equal(free.status, 200, 'penanda free tier layak ke /models');
     const bogus = await fetch(base + '/api/agent/v1/models', { headers: { Authorization: 'Bearer teka-pecah' } });
-    assert.equal(bogus.status, 401, 'token tidak dikenali tak lolos');
+    assert.equal(bogus.status, 401, 'an unknown token does not slip through');
   } finally { await close(); }
 });
 
-test('tier percuma: max_tokens klien dikekang ke freeMaxTokens sebelum rotasi', async () => {
+test('the free tier: the client max_tokens is clamped to freeMaxTokens before the rotation', async () => {
   const saved = openai.chatWithRotation;
   let seenBody;
   openai.chatWithRotation = async (body) => {
@@ -192,17 +192,17 @@ test('tier percuma: max_tokens klien dikekang ke freeMaxTokens sebelum rotasi', 
     assert.equal(r.status, 200);
     assert.equal(seenBody.max_tokens, 4096, 'clamp ke had tier percuma');
 
-    // Token penuh (admin token) TIDAK dikekang.
+    // A full token (the admin token) is NOT clamped.
     await fetch(base + '/api/agent/v1/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json', Authorization: 'Bearer secret-agent' },
       body: JSON.stringify({ messages: [{ role: 'user', content: 'x' }], max_tokens: 200000 }),
     });
-    assert.equal(seenBody.max_tokens, 200000, 'tier penuh tak dikekang');
+    assert.equal(seenBody.max_tokens, 200000, 'the full tier is not clamped');
   } finally { openai.chatWithRotation = saved; await close(); }
 });
 
-test('CORS: subdomain tukuk.org (Builder) didengungkan walau AGENT_ORIGIN lain', async () => {
+test('CORS: a tukuk.org subdomain (the Builder) is echoed even when AGENT_ORIGIN differs', async () => {
   const { base, close } = await startApp({ origin: 'https://agent.tukuk.org' });
   try {
     const pre = await fetch(base + '/api/agent/v1/models', {
@@ -211,7 +211,7 @@ test('CORS: subdomain tukuk.org (Builder) didengungkan walau AGENT_ORIGIN lain',
     });
     assert.equal(pre.status, 204);
     assert.equal(pre.headers.get('access-control-allow-origin'), 'https://build.tukuk.org');
-    // Asal asing bukan tukuk.org → tetap config.agent.origin (tingkah laku lama).
+    // A foreign origin that is not tukuk.org → still config.agent.origin (the old behaviour).
     const alien = await fetch(base + '/api/agent/v1/models', {
       method: 'OPTIONS',
       headers: { Origin: 'https://evil.example' },
@@ -220,7 +220,7 @@ test('CORS: subdomain tukuk.org (Builder) didengungkan walau AGENT_ORIGIN lain',
   } finally { await close(); }
 });
 
-test('route: model `-fast` sampai ke rotasi dengan flag fast=true', async () => {
+test('route: the `-fast` model reaches the rotation with the fast=true flag', async () => {
   const saved = openai.chatWithRotation;
   let seenOpts;
   openai.chatWithRotation = async (body, opts) => {
@@ -237,11 +237,11 @@ test('route: model `-fast` sampai ke rotasi dengan flag fast=true', async () => 
       headers: { 'content-type': 'application/json', Authorization: 'Bearer secret-agent' },
       body: JSON.stringify({ model: 'tukuk-agent-fast', messages: [{ role: 'user', content: 'x' }] }),
     });
-    assert.equal(seenOpts.fast, true, 'hujung `-fast` dicantum jadi flag rotasi');
+    assert.equal(seenOpts.fast, true, 'the `-fast` suffix is folded into the rotation flag');
   } finally { openai.chatWithRotation = saved; await close(); }
 });
 
-test('route: /v1/chat/completions memancarkan jawapan upstream + header provider', async () => {
+test('route: /v1/chat/completions streams the upstream answer + the provider headers', async () => {
   const saved = openai.chatWithRotation;
   openai.chatWithRotation = async () => ({
     ok: true, provider: 'groq', model: 'openai/gpt-oss-120b',
@@ -261,7 +261,7 @@ test('route: /v1/chat/completions memancarkan jawapan upstream + header provider
   } finally { openai.chatWithRotation = saved; await close(); }
 });
 
-test('route: kegagalan provider dipantau 4xx (tiada 5xx)', async () => {
+test('route: a provider failure is mapped to 4xx (never 5xx)', async () => {
   const saved = openai.chatWithRotation;
   openai.chatWithRotation = async () => ({ ok: false, status: 409, error: 'no provider', rejected: [] });
   const { base, close } = await startApp();
@@ -275,7 +275,7 @@ test('route: kegagalan provider dipantau 4xx (tiada 5xx)', async () => {
   } finally { openai.chatWithRotation = saved; await close(); }
 });
 
-test('route: /build memanggil mcp tukuk_agent; goal kosong -> 400', async () => {
+test('route: /build calls the mcp tukuk_agent; an empty goal -> 400', async () => {
   const saved = mcp.handle;
   mcp.handle = async (name, args) => ({ content: [{ type: 'text', text: name + ':' + args.goal }] });
   const { base, close } = await startApp();
