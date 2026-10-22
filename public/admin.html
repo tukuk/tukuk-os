@@ -860,18 +860,18 @@ Type a command below or click a quick action.
     try {
       const res = await fetch('/api/admin/auth/config');
       authConfig = await res.json();
-      // E-mel TIDAK lagi di-auto-fill — dahulu ia terserlah setiap kali /admin
-      // dibuka (bocor melalui /api/admin/auth/config). Taip sendiri sekali sahaja.
+      // The email is NOT auto-filled anymore — it used to be revealed every time /admin
+      // was opened (leaked via /api/admin/auth/config). Type it once yourself.
       if (authConfig && !authConfig.passkeysRegistered) enterSetupMode();
       else enterLoginMode();
       showDomainWarning();
-    } catch { /* biarkan mod login */ }
+    } catch { /* keep the login mode */ }
   }
 
-  // Amaran pra-kosong: passkey hanya boleh didaftarkan/diguna pada domain yang
-  // sepadan dengan rpID pelayan (dan atas HTTPS). Jika tidak, browser pasti
-  // gagalkan navigator.credentials dengan ralat teknikal yang mengelirukan —
-  // jadi beritahu pengguna alamat sebenar yang perlu dibuka sebelum mereka cuba.
+  // Warning up front: a passkey can only be registered/used on a domain that
+  // matches the server rpID (and over HTTPS). Otherwise the browser will
+  // always fail navigator.credentials with a confusing technical error —
+  // so tell users the real address they must open before trying.
   function showDomainWarning() {
     const rp = (authConfig && authConfig.rpID) || '';
     if (!rp) return;
@@ -936,7 +936,7 @@ Type a command below or click a quick action.
     };
   }
 
-  // Sign in dengan passkey (submit form)
+  // Sign in with a passkey (form submit)
   document.getElementById('authForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     showErr('');
@@ -965,9 +965,9 @@ Type a command below or click a quick action.
     }
   });
 
-  // Escape hatch: passkey peranti tidak sepadan/lost — benarkan pendaftaran
-  // passkey BAHARU dengan kata laluan bootstrap walaupun pelayan sudah ada
-  // passkey (tanpa itu pengguna terkunci keluar sepenuhnya).
+  // Escape hatch: the device passkey does not match / is lost — allow registering
+  // a NEW passkey with the bootstrap password even when the server already has
+  // passkeys (without it the user would be locked out completely).
   document.getElementById('authBootstrapToggle').addEventListener('click', (e) => {
     e.preventDefault();
     authBootstrapLinkEl.hidden = true;
@@ -977,7 +977,7 @@ Type a command below or click a quick action.
     authHintEl.textContent = 'Fill in the bootstrap password and press Register Passkey. A new passkey will be added; old passkeys are kept.';
   });
 
-  // Daftar passkey pertama (e-mel + kata laluan bootstrap)
+  // Register the first passkey (email + bootstrap password)
   authRegisterBtn.addEventListener('click', async () => {
     showErr('');
     const email = authEmailEl.value.trim();
@@ -1006,7 +1006,7 @@ Type a command below or click a quick action.
     }
   });
 
-  //auto-check sesi sedia ada (token) dengan memanggil route bersesi
+  //auto-check the existing session (token) by calling a session-protected route
   loadAuthConfig();
   if (authToken) {
     fetch('/api/admin/status', { headers: { 'Authorization': `Bearer ${authToken}` } })
@@ -1089,7 +1089,7 @@ Type a command below or click a quick action.
       document.getElementById('bgMode').value = s.bgMode || 'default';
       document.getElementById('customBgUrl').value = s.customBgUrl || '';
       
-      // AI — kunci sebenar tidak dipulangkan; tunjuk status tersimpan sahaja
+      // AI — the real key is never returned; only show the saved status
       document.getElementById('aiProvider').value = s.aiProvider || 'gemini';
       document.getElementById('aiApiKey').value = '';
       document.getElementById('aiApiKey').placeholder = s.aiApiKeySet ? `✓ saved (${s.aiApiKeyMasked || ''}) — leave empty to keep` : 'Enter API key';

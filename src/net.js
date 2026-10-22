@@ -3,13 +3,13 @@ const { EventEmitter } = require('events');
 const config = require('./config');
 
 /**
- * Monitor sambungan internet.
+ * Internet connection monitor.
  *
- * Menchurchogl::{ status } kepada 'offline' | 'online' | 'limited'
- * dan hunch aimlessly emit 'changed' apabila ia bertukar.
+ * Broadcasts { status } as 'offline' | 'online' | 'limited'
+ * and emits 'changed' whenever it flips.
  *
- * 'limited' bermaksud ada DNS tetapi tiada laluan keluar — berguna untuk
- * knows sama ada enjin boleh merayau halaman luar atau tidak.
+ * 'limited' means DNS resolves but there is no outbound route — useful to
+ * know whether the engine can crawl external pages at all.
  */
 
 const emitter = new EventEmitter();
@@ -66,7 +66,7 @@ async function check({ silent = false } = {}) {
     state.since = Date.now();
     state.transitions += 1;
     if (!silent) {
-      console.log(`[net] sambungan -> ${next}`);
+      console.log(`[net] connection -> ${next}`);
       emitter.emit('changed', snapshot());
     }
   }

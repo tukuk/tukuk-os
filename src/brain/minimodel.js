@@ -1,25 +1,25 @@
 /**
- * minimodel.js — model AI MILIK SENDIRI Tukuk-OS ("Tukuk-Brain Mini").
+ * minimodel.js — Tukuk-OS's OWN AI model ("Tukuk-Brain Mini").
  *
- * Multinomial logistic regression (softmax) ke atas ciri hashed:
- *   • unigram + bigigram token (pecahan Unicode, bahasa-agnostic)
- *   • trigram aksara (tahan Ejaan berbeza & skrip tanpa-ruang: CJK/Arab/Cyrillic)
+ * Multinomial logistic regression (softmax) over hashed features:
+ *   • token unigrams + bigrams (Unicode splits, language-agnostic)
+ *   • character trigrams (tolerant of spelling variants & space-less scripts: CJK/Arabic/Cyrillic)
  *
- * Kenapa bukan LLM dari-sifar? CPU-only (AMD Kaveri, tiada AVX2) — latih 100M+
- * parameter ambil bulan. Softmax di atas 8192 hashed bucket LATIH dalam detik
- * pada CPU dan MEMANG model neural (lapisan tunggal, gradient descent) —
- * dilatih daripada data carian/soalan server ini sendiri, bukan salinan model orang.
+ * Why not an LLM from scratch? CPU-only (AMD Kaveri, no AVX2) — training 100M+
+ * parameters takes months. A softmax over 8192 hashed buckets TRAINS in seconds
+ * on CPU and IS genuinely a neural model (single layer, gradient descent) —
+ * trained from this server's own search/question data, not a copy of someone else's model.
  *
- * Guna: klasifikasi NIAT soalan (math/code/compare/list/howto/define/general)
- * supaya taskrouter pilih bentuk jawapan yang betul walaupun_regex terlepas.
+ * Use: classify the question's INTENT (math/code/compare/list/howto/define/general)
+ * so taskrouter picks the right answer shape even when a regex is missed.
  */
 
 const fs = require('fs');
 
-const DIMS = 8192; // bucket hashed (2^13) — kecil, muat serta-merta di CPU
+const DIMS = 8192; // hashed buckets (2^13) — small, loads instantly on CPU
 const CLASSES = ['math', 'code', 'compare', 'list', 'howto', 'define', 'general'];
 
-// FNV-1a — hash 32-bit pantas, distribusi rata untuk token pendek.
+// FNV-1a — a fast 32-bit hash with an even spread for short tokens.
 function fnv1a(str) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i += 1) {
@@ -29,30 +29,30 @@ function fnv1a(str) {
   return h >>> 0;
 }
 
-/** Ciri teks → indeks bucket hashed. Token + bigigram + trigram aksara.
- *  Trigram DIBATASKAN (90): pada set data kecil, trimen tak terhad buat model
- *  menghafal ayat (train 100% / holdout 47%) — unigram+bigigram lebih general. */
+/** Text features → hashed bucket indices. Tokens + bigrams + character trigrams.
+ *  Trigrams are CAPPED (90): on a small dataset unlimited trigrams make the model
+ *  memorise sentences (train 100% / holdout 47%) — unigrams+bigrams generalise better. */
 function features(text, cap = 240, tri = undefined) {
   const norm = String(text || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
   const idx = new Set();
   const words = norm.split(' ').filter(Boolean);
   for (const w of words) {
-    // unigram (abaikan 1 huruf — noise) + bigigram bersebelahan
+    // unigrams (skip single letters — noise) + adjacent bigrams
     if (w.length > 1) idx.add(fnv1a('w:' + w) % DIMS);
-    // awalan 4 aksara: morfosintesis ("hitung", "hitungkan", "hitungan" → sama)
+    // 4-char prefix: morphosynthesis ("hitung", "hitungkan", "hitungan" → identical)
     if (w.length > 3) idx.add(fnv1a('p:' + w.slice(0, 4)) % DIMS);
   }
   for (let i = 0; i + 1 < words.length; i += 1) idx.add(fnv1a('b:' + words[i] + ' ' + words[i + 1]) % DIMS);
-  // trigram aksara HINGGA tri — penanda bahasa/ejaan sahaja, bukan capaian
-  // hafalan; 0 = mati sekali (unigram/bigram murni). tri tersimpan dalam fail
-  // model supaya train dan predict SENTIASA pakai ciri yang sama.
+  // Character trigrams UP TO tri — only a language/spelling marker, not a memorisation
+  // channel; 0 = off entirely (pure unigrams/bigrams). tri is stored in the model file
+  // so training and prediction ALWAYS use the same features.
   const TRI = tri ?? Number(process.env.BRAIN_TRI ?? 90);
   let c = 0;
   for (let i = 0; i + 2 < norm.length && c < TRI; i += 1, c += 1) idx.add(fnv1a('c:' + norm.slice(i, i + 3)) % DIMS);
   return [...idx].slice(0, cap);
 }
 
-// Softmax numerik-stabil (tolak max sebelum exp).
+// Numerically stable softmax (subtract the max before exp).
 function softmax(logits) {
   const m = Math.max(...logits);
   const ex = logits.map((v) => Math.exp(v - m));
@@ -71,7 +71,7 @@ function scoreAll(featIdx, W, bias) {
   return out;
 }
 
-/** PRNG berbenih (mulberry32) — latihan Deterministik: seed sama → model sama. */
+/** Seeded PRNG (mulberry32) — deterministic training: the same seed → the same model. */
 function rng(seed) {
   let a = seed >>> 0;
   return () => {
@@ -84,10 +84,10 @@ function rng(seed) {
 }
 
 /**
- * Latih daripada contoh {text, label}. Gradient descent SGD + L2.
- * opts: epochs (lalai 80), lr (0.4), l2 (1e-4), seed (42), holdout (0.2).
- * Pulangkan { model, stats } — stats.accuracy ialah kejituan HOLDOUT (tidak
- * dilihat semasa latihan) supaya angka tidak menipu diri sendiri.
+ * Train on {text, label} examples. SGD gradient descent + L2.
+ * opts: epochs (default 80), lr (0.4), l2 (1e-4), seed (42), holdout (0.2).
+ * Returns { model, stats } — stats.accuracy is the HOLDOUT accuracy (never
+ * seen during training) so the number isn't self-deception.
  */
 function train(examples, opts = {}) {
   const epochs = opts.epochs ?? 80;
@@ -102,7 +102,7 @@ function train(examples, opts = {}) {
     .map((e) => ({ x: features(e.text, 240, tri), y: classes.indexOf(e.label) }));
   if (data.length < classes.length) throw new Error('too few examples to train');
 
-  // Split holdout rawak-berbenih.
+  // Seeded random holdout split.
   for (let i = data.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rand() * (i + 1));
     [data[i], data[j]] = [data[j], data[i]];
@@ -116,7 +116,7 @@ function train(examples, opts = {}) {
 
   let lastTrainAcc = 0;
   for (let epoch = 0; epoch < epochs; epoch += 1) {
-    // susun semula setiap epoch (SGD)
+    // reshuffle every epoch (SGD)
     for (let i = fit.length - 1; i > 0; i -= 1) {
       const j = Math.floor(rand() * (i + 1));
       [fit[i], fit[j]] = [fit[j], fit[i]];
@@ -129,7 +129,7 @@ function train(examples, opts = {}) {
       if (best === y) correct += 1;
       for (let c = 0; c < p.length; c += 1) {
         const g = (p[c] - (c === y ? 1 : 0)) * lr;
-        // Gradient DESCENT: w ← w − g − l2·w  (g ialah kecerunan × lr).
+        // Gradient DESCENT: w ← w − g − l2·w  (g is the gradient × lr).
         bias[c] -= g;
         for (const i of x) W[c][i] -= g + l2 * W[c][i];
       }
@@ -164,8 +164,8 @@ function train(examples, opts = {}) {
   };
 }
 
-/** Simpan muat JSON — bobot SPARSE (hanya bukan-sifar, dibulat 5 dp): fail
- *  jadi kecil (~50 KB) dan mesra git; muat semula ke vektor padat. */
+/** JSON save/load — weights are SPARSE (non-zeros only, rounded to 5 dp): the file
+ *  stays small (~50 KB) and git-friendly; it reloads into dense vectors. */
 function save(model, file, meta = {}) {
   const rows = model.classes.map((_, c) => {
     const nz = [];
@@ -194,7 +194,7 @@ function save(model, file, meta = {}) {
 function load(file) {
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (raw.format !== 'tukuk-minimodel-v1') throw new Error('not a tukuk minimodel file');
-  // sparse → padat; format lama (pejal) turut diterima.
+  // sparse → dense; the older (dense) format is still accepted.
   const W = raw.classes.map((_, c) => {
     const dense = new Float64Array(DIMS);
     if (raw.sparse) { for (const [i, v] of raw.W[c]) dense[i] = v; }

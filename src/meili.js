@@ -446,17 +446,17 @@ class MockClient {
 
 const mockClientInstance = new MockClient();
 
-// ── Klien Meilisearch SEBENAR (pakej `meilisearch`) ──────────────────────────
-// SEBELUM ini, `client` yang dieksport ialah mock in-memory semata-mata. Akibat:
-// carian runtime, grounding AI Sembang (/ask) dan MCP `tukuk_search` HANYA nampak
-// ~puluhan artikel seed, BUKAN korpus crawl sebenar (puluh ribu dokumen) yang
-// sudah pun ada di Meilisearch — dan hasil crawler ditulis ke mock lalu lesap
-// setiap reboot.
+// ── REAL Meilisearch client (the `meilisearch` package) ───────────────────────
+// Before this, the exported `client` was nothing but an in-memory mock. As a
+// result, runtime search, the Chat AI grounding (/ask) and MCP `tukuk_search` only saw
+// a few dozen seed articles, NOT the real crawl corpus (tens of thousands of
+// documents) that already lives in Meilisearch — and crawler output was written to
+// the mock, then lost on every reboot.
 //
-// Sekarang kita guna klien sebenar, dengan mock sebagai SANDARAN AUTOMATIK bila
-// Meilisearch tak dapat dicapai (ralat rangkaian / index belum sedia). Jadi
-// tapak tidak mungkin menjadi lebih teruk daripada sebelum ini; worst case =
-// kelakuan lama.
+// We now use the real client, with the mock as an AUTOMATIC FALLBACK whenever
+// Meilisearch cannot be reached (network error / index not ready). So the
+// site can never be worse than it was before; worst case =
+// the old behaviour.
 let realClient = null;
 try {
   const { Meilisearch } = require('meilisearch');
@@ -475,7 +475,7 @@ const INDEX_METHODS = [
   'deleteAllDocuments', 'getSettings', 'updateSettings'
 ];
 
-// Bungkus satu index: cuba Meilisearch sebenar; kalau throw, jatuh ke mock.
+// Wrap one index: try real Meilisearch; if it throws, fall back to the mock.
 function wrapIndex(name) {
   if (!realClient) return mockClientInstance.index(name);
   const real = realClient.index(name);
@@ -527,9 +527,9 @@ async function ensureIndex({ logger = console } = {}) {
   }
   try {
     const stats = await realClient.index(name).getStats();
-    logger.log(`[meili] index SEBENAR tersambung: "${name}" (${stats.numberOfDocuments} dokumen)`);
+    logger.log(`[meili] REAL index connected: "${name}" (${stats.numberOfDocuments} documents)`);
   } catch (err) {
-    // Index belum wujud → cipta + terap tetapan supaya crawler mula guna.
+    // Index doesn't exist yet → create it + apply settings so the crawler can start using it.
     try {
       const created = await realClient.createIndex(name, { primaryKey: 'id' });
       await realClient.waitForTask(created.taskUid).catch(() => {});

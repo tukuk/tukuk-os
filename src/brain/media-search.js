@@ -1,12 +1,12 @@
 /**
- * media-search.js — Carian imej dan video web.
+ * media-search.js — web image and video search.
  *
- * Sumber utama (disokong dari pelayan ini):
- *   1. Imej : Bing Images  (parse atribut m="…murl…")
+ * Primary sources (supported from this server):
+ *   1. Images : Bing Images  (parse the m="…murl…" attribute)
  *   2. Video: YouTube      (parse ytInitialData → videoRenderer)
  *
- * Fallback: carian web biasa, kemudian cari URL imej / pautan
- * platform video dalam keputusan tersebut.
+ * Fallback: a plain web search, then look for image URLs / video-platform
+ * links inside those results.
  */
 
 const https = require('https');
@@ -93,7 +93,7 @@ function extractVideoUrls(text) {
   return urls;
 }
 
-/* ---------- Sumber utama: Bing Images (sokong paging) ---------- */
+/* ---------- Primary source: Bing Images (supports paging) ---------- */
 const BING_PAGE_SIZE = 35;
 
 async function searchImagesBing(query, page = 1) {
@@ -130,7 +130,7 @@ async function searchImagesBing(query, page = 1) {
   return hits;
 }
 
-/* ---------- Sumber utama: YouTube ---------- */
+/* ---------- Primary source: YouTube ---------- */
 function walkJson(node, key, out) {
   if (!node || typeof node !== 'object') return;
   if (Array.isArray(node)) {
@@ -157,7 +157,7 @@ async function searchVideosYouTube(query, sp = '') {
   const compact = [];
   walkJson(data, 'compactVideoRenderer', compact);
 
-  // Token sambungan untuk halaman seterusnya
+  // The continuation token for the next page
   let nextSp = '';
   const conts = [];
   walkJson(data, 'continuationItemRenderer', conts);
@@ -210,14 +210,14 @@ async function searchImages(query, { page = 1 } = {}) {
         hits, total: hits.length, query: q, provider: 'bing', page,
         nextPage: hits.length >= 20 ? page + 1 : 0
       };
-      // Keputusan lemah (respons separuh siap) tidak disimpan supaya boleh dicuba semula
+      // Weak results (a half-finished response) aren't cached, so they can be retried
       if (hits.length >= 5) CACHE.set(cacheKeyPage, { at: Date.now(), value: result });
       return result;
     }
     if (page > 1) return { hits: [], total: 0, query: q, page, nextPage: 0 };
-  } catch { /* jatuh ke fallback */ }
+  } catch { /* fall through to the fallback */ }
 
-  // Fallback: carian web + cari URL imej dalam ringkasan.
+  // Fallback: a web search + look for image URLs inside the snippets.
   try {
     const webResults = await websearch.search(q);
     const imageUrls = extractImageUrls(webResults.hits.map((h) => `${h.title} ${h.description}`).join(' '));
@@ -256,9 +256,9 @@ async function searchVideos(query, { sp = '' } = {}) {
       return result;
     }
     if (sp) return { hits: [], total: 0, query: q, nextSp: '' };
-  } catch { /* jatuh ke fallback */ }
+  } catch { /* fall through to the fallback */ }
 
-  // Fallback: carian web + cari pautan platform video.
+  // Fallback: a web search + look for video-platform links.
   try {
     const webResults = await websearch.search(q);
     const videoUrls = extractVideoUrls(webResults.hits.map((h) => `${h.title} ${h.description} ${h.url}`).join(' '));
@@ -281,7 +281,7 @@ async function searchVideos(query, { sp = '' } = {}) {
 }
 
 
-/* ---------- Muzik: iTunes Search API (Apple, rasmi, tanpa kunci) ---------- */
+/* ---------- Music: the iTunes Search API (Apple, official, no key) ---------- */
 async function fetchJson(url) {
   const { status, body } = await request(url, BROWSER_UA, 8000);
   if (status !== 200 || !body) throw new Error(`HTTP ${status}`);
@@ -305,8 +305,8 @@ async function searchMusicItunes(q, offset = 0) {
     artwork: String(r.artworkUrl100 || '').replace('100x100bb', '400x400bb'),
     preview: r.previewUrl || '',
     duration: fmtDuration(r.trackTimeMillis),
-    // durasi penuh lagu dalam saat — pemain guna untuk ulang klip pratinjau ±30s
-    // sehingga sempat "main penuh" ikut durasi yang dipaparkan pada kad.
+    // the track's full duration in seconds — the player uses it to loop the ±30s preview clip
+    // so it can feel like "full playback" matching the duration shown on the card.
     durationSec: Math.round((r.trackTimeMillis || 0) / 1000) || 0,
     url: r.trackViewUrl || r.collectionViewUrl || '',
     source: 'itunes.apple.com',
@@ -316,24 +316,24 @@ async function searchMusicItunes(q, offset = 0) {
   return { hits, nextOffset };
 }
 
-/* ---------- Radio: Radio Browser API (komuniti, tanpa kunci) ---------- */
+/* ---------- Radio: the Radio Browser API (community, no key) ---------- */
 const RADIO_BASES = ['https://all.api.radio-browser.info', 'https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info'];
 
 async function fetchRadioJson(path) {
   let data = null;
   for (let round = 0; round < 2 && !Array.isArray(data); round++) {
     for (const base of RADIO_BASES) {
-      try { data = await fetchJson(base + path); break; } catch { /* cuba cermin seterusnya */ }
+      try { data = await fetchJson(base + path); break; } catch { /* try the next mirror */ }
     }
     if (!Array.isArray(data) && round === 0) await new Promise((r) => setTimeout(r, 400));
   }
   return data;
 }
 
-// q = nama, country = nama penuh negara, tag = genre. Semua ini filter radio-browser.
-// kawasan (region) = gabungan beberapa ISO countrycode. radio-browser TIDAK
-// menerima senarai koma pada `countrycode` (pulang 0), jadi kami serikan
-// setiap negara secara selari lalu gabuang & buang pendua ikut populariti.
+// q = name, country = the full country name, tag = genre. All of these are radio-browser filters.
+// A region = a union of several ISO country codes. radio-browser does NOT
+// accept a comma list in `countrycode` (returns 0), so we query
+// each country in parallel, then merge and de-duplicate by popularity.
 const RADIO_REGIONS = {
   asia: ['MY','ID','TH','PH','SG','VN','IN','JP','KR','CN','TW','HK','MM','KH','LK','BD'],
   'asia-tenggara': ['MY','ID','TH','PH','SG','VN','MM','KH','LA','BN','TL'],
@@ -346,7 +346,7 @@ const RADIO_REGIONS = {
   oseania: ['AU','NZ','FJ','PG'],
 };
 
-// Tukar array stesen mentah radio-browser kepada objek hit kami (buang tanpa URL).
+// Turn the raw radio-browser station array into our hit objects (drop those without a URL).
 function mapRadioStations(arr) {
   return arr.map((s) => ({
     type: 'radio',
@@ -365,17 +365,17 @@ function mapRadioStations(arr) {
   })).filter((h) => h.url);
 }
 
-// Radio "Angkasa / Planet" — bukan stesen Bumi: rakaman SEBENAR emisi radio
-// planet & Voyager Golden Record (NASA) yang ditukar kepada audio, plus stesen
-// langsung bertag 'space' dari radio-browser. Setiap URL disahkan mengalir
-// melalui proksi /radio/stream (bait audio tulen). Diurus sebagai pseudo-kawasan 'angkasa'.
+// "Space / Planet" radio — not Earth stations: REAL recordings of planetary radio
+// emissions & the Voyager Golden Record (NASA) converted to audio, plus live
+// stations tagged 'space' from radio-browser. Every URL is verified to stream
+// through the /radio/stream proxy (genuine audio bytes). Managed as the pseudo-region 'angkasa'.
 const PLANETARY_RADIO = [
   { type: 'radio', title: '\ud83e\ude90 Planet Radio Emissions — Calm Stream (Space Meditation)', url: 'https://archive.org/download/01-rainshadow/05_ThoughtsOfFloatingStreams.mp3', favicon: '', country: 'Space', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'ambient', 'tenang'], votes: 0, clicks: 0, uuid: 'planet-radio-meditation', source: 'NASA / Internet Archive', description: 'Space radio emissions converted into calm audio — for all living things.' },
   { type: 'radio', title: '\ud83d\udef0 Voyager Golden Record — A Greeting from Earth to Other Planets', url: 'https://archive.org/download/voyager-golden-record/voyager golden record.mp3', favicon: '', country: 'Space (Voyager)', codec: 'MP3', bitrate: 0, tags: ['angkasa', 'voyager', 'golden record'], votes: 0, clicks: 0, uuid: 'planet-radio-voyager', source: 'NASA Voyager / Internet Archive', description: 'The "Golden Record" Voyager sent to the outer world — music & sounds of Earth.' },
 ];
 
 async function searchRadioStations(q, skip = 0, { country = '', tag = '', region = '' } = {}) {
-  // Pseudo-kawasan 'angkasa': gabung rakaman planet curated + stesen langsung tag 'space'.
+  // The 'angkasa' pseudo-region: merge the curated planet recordings + live stations tagged 'space'.
   if (String(region).toLowerCase() === 'angkasa') {
     const p = new URLSearchParams({ tag: 'space', hidebroken: 'true', limit: '40', offset: String(skip), order: 'clickcount', reverse: 'true' });
     const data = await fetchRadioJson(`/json/stations/search?${p}`);
@@ -387,8 +387,8 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
   }
   const codes = region && RADIO_REGIONS[String(region).toLowerCase()];
   if (codes) {
-    // Satu permintaan kecil setiap negara (cap 14 utk elak too much fan-out),
-    // gabung, buang pendua, ikut paling popular.
+    // One small request per country (capped at 14 to avoid too much fan-out),
+    // merge, de-duplicate, ordered by most popular.
     const list = codes.slice(0, 14);
     const per = Math.max(1, Math.ceil(48 / list.length));
     const results = await Promise.all(list.map((code) => {
@@ -425,7 +425,7 @@ async function searchRadioStations(q, skip = 0, { country = '', tag = '', region
   return { hits, nextSkip };
 }
 
-// Senarai negara (untuk pemilih "semua radio di dunia"). Di-cache sehari.
+// The country list (for the "all radio in the world" picker). Cached for a day.
 async function listRadioCountries() {
   const cached = CACHE.get('radio:countries');
   if (cached && Date.now() - cached.at <= 24 * 3600 * 1000) return cached.value;

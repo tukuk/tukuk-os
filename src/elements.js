@@ -1,13 +1,13 @@
 'use strict';
-// ── TUKUK-OS PERIODIC TABLE (/unsur) — 118 kimia unsur, data STATIK tertanam ──
-// Sumber data: Bowserinator/Periodic-Table-JSON (lesen CC BY-SA 3.0), diambil
-// SEKALI semasa penulisan dan disimpan sebagai src/elements-data.json. Tiada
-// panggilan API semasa runtime → halaman instant & mustahil diblok (pelajaran
-// daripada insiden WAF Met). Setiap unsur punya `summ` ensiklopedia sebenar,
-// koordinat grid (xpos/ypos) untuk jadual interaktif, dan warna CPK kategori.
+// ── TUKUK-OS PERIODIC TABLE (/unsur) — 118 chemical elements, STATIC embedded data ──
+// Data source: Bowserinator/Periodic-Table-JSON (CC BY-SA 3.0 license), fetched
+// ONCE at authoring time and stored as src/elements-data.json. No
+// runtime API calls → instant pages that are impossible to block (lesson
+// from the Met WAF incident). Every element has a real encyclopedic `summ`,
+// grid coordinates (xpos/ypos) for the interactive table, and CPK category colors.
 const RAW = require('./elements-data.json');
 
-// ——— kategori → label paparan + warna (skema jadual berkala standard) ———
+// ——— category → display label + color (standard periodic-table scheme) ———
 const CAT_DISPLAY = {
   'diatomic nonmetal': 'Reactive nonmetal',
   'polyatomic nonmetal': 'Reactive nonmetal',
@@ -32,7 +32,7 @@ const CAT_COLOR = {
   'Actinide': '#e56bd6',
   'Unknown properties': '#8a94a6',
 };
-// Tertib legenda / kumpulan hub.
+// Legend / hub grouping order.
 const CATEGORY_ORDER = [
   'Reactive nonmetal', 'Noble gas', 'Alkali metal', 'Alkaline earth metal',
   'Transition metal', 'Post-transition metal', 'Metalloid',
@@ -51,7 +51,7 @@ function catDisplay(cat) {
   return 'Unknown properties';
 }
 
-// ——— hias setiap rekod dengan slug + label + warna ———
+// ——— decorate every record with slug + label + color ———
 const ELEMENTS = RAW.map((e) => {
   const disp = catDisplay(e.cat);
   return {
@@ -66,7 +66,7 @@ const BY_SLUG = new Map(ELEMENTS.map((e) => [e.slug, e]));
 const BY_SYMBOL = new Map(ELEMENTS.map((e) => [String(e.s).toLowerCase(), e]));
 const BY_NUMBER = new Map(ELEMENTS.map((e) => [e.n, e]));
 
-// Cari ikut slug, simbol (H, He…) atau nombor atom (1..118). null jika tak padan.
+// Find by slug, symbol (H, He…) or atomic number (1..118). null when nothing matches.
 function findElement(query) {
   const q = String(query || '').trim();
   if (!q) return null;
@@ -78,12 +78,12 @@ function findElement(query) {
   return null;
 }
 
-// Senarai unsur dalam satu kategori paparan, ikut nombor atom.
+// List the elements of one display category, sorted by atomic number.
 function byCategory(label) {
   return ELEMENTS.filter((e) => e.catLabel === label).sort((a, b) => a.n - b.n);
 }
 
-// Kumpulan mengikut kategori untuk hab (hanya yang ada unsur).
+// Group by category for the hub (only categories that actually have elements).
 function groupedByCategory() {
   return CATEGORY_ORDER.map((label) => ({ label, color: CAT_COLOR[label], items: byCategory(label) }))
     .filter((g) => g.items.length);

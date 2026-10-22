@@ -119,7 +119,7 @@ async function fetchDocument(targetUrl) {
     return { status: 'skipped', reason: 'no title', url: targetUrl };
   }
 
-  // index boleh jadi null jika Meilisearch tidak dapat dicapai semasa boot.
+  // The index may be null if Meilisearch was unreachable at boot.
   const existing = index ? await index.getDocument(documentId(parsed.url)).catch(() => null) : null;
   if (existing && existing.hash === hash) {
     stats.skipped += 1;

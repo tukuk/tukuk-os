@@ -110,7 +110,7 @@
   var PAGE = location.origin + '/download' + (SLUG === 'chat' ? '' : '?app=' + SLUG);
   var bip = null;
 
-  // Label & ikon daripada manifest apl (sumber tunggal); fallback nama kemas.
+  // Label & icon come from the app manifest (single source); fallback is a tidy name.
   function pretty(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
   fetch('/manifest-' + SLUG + '.json').then(function(r){ return r.ok ? r.json() : null; }).then(function(m){
     var name = (m && m.name) || pretty(SLUG);

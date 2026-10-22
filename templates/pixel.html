@@ -83,7 +83,7 @@
     else if (tool === 'fill') { const old = cells[i]; if (same(old, col)) return; const st = [i];
       while (st.length) { const j = st.pop(); if (j < 0 || j >= N * N || !same(cells[j], old)) continue; cells[j] = col;
         const x = j % N, y = (j / N) | 0; if (x > 0) st.push(j - 1); if (x < N - 1) st.push(j + 1); if (y > 0) st.push(j - N); if (y < N - 1) st.push(j + N); } } }
-  function rgb2hex(c){ return c; } // palet sudah HEX
+  function rgb2hex(c){ return c; } // palette is already HEX
   function start(ev){ ev.preventDefault(); down = true; pushH(); act(ev); }
   function act(ev){ if (!down) return; paint(at(ev)); draw(); }
   function end(){ if (!down) return; down = false; save(); }

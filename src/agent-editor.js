@@ -1,20 +1,20 @@
 'use strict';
-// Proksi terbalik Tukuk Agent EDITOR: tukuk.org/agent/* → 127.0.0.1:8443/*.
+// Reverse proxy for the Tukuk Agent EDITOR: tukuk.org/agent/* → 127.0.0.1:8443/*.
 //
-// Kenapa bukan subdomain agent.tukuk.org? Token API di pelayan tidak punya
-// izin Cloudflare Tunnel, dan laluan dashboard tidak disentuh — jadi editor
-// dinaung dalam TUNNEL SEDIA ADA melalui applikasi ini. code-server dijalankan
-// dengan --abs-proxy-base-path /agent. Prefix /agent DIBUANG sebelum forward ke
-// upstream (route dalaman code-server di '/'); Location redirect ditulis semula
-// supaya browser kekal di bawah /agent/.
+// Why not an agent.tukuk.org subdomain? The API token on this server has no
+// Cloudflare Tunnel permission, and the dashboard route must stay untouched — so the editor
+// is hosted inside the EXISTING tunnel through this application. code-server is run
+// with --abs-proxy-base-path /agent. The /agent prefix is REMOVED before forwarding to
+// upstream (code-server's internal routes live at '/'); redirect Locations are rewritten
+// so the browser stays under /agent/.
 //
-// autentikasi = code-server sendiri (--auth password; kuki diuruskan olehnya).
-// Gerbang admin BUKAN di sini kerana subresource pelayar (JS/CSS/WS) tidak
-// boleh memikul token Bearer — hanya kuki code-server yang berfungsi.
+// authentication = code-server's own (--auth password; it manages the cookie).
+// The admin gate is NOT here because browser subresources (JS/CSS/WS) cannot
+// carry a Bearer token — only the code-server cookie works.
 //
-// WebSocket: middleware Express tidak melihat 'upgrade' — attachUpgrade()
-// dipanggil di index.js pada http server sebenar; dia cuma sentuh permintaan
-// yang berimbuh /agent dan meninggalkan upgrade lain (SSE chat dsb.) aman.
+// WebSocket: Express middleware never sees 'upgrade' — attachUpgrade()
+// is called in index.js on the real http server; it only touches requests
+// that start with /agent and leaves other upgrades (chat SSE etc.) alone.
 
 const http = require('node:http');
 
@@ -24,7 +24,7 @@ function upstreamOf(config) {
   return String((config.agentEditor && config.agentEditor.upstream) || '');
 }
 
-/** Header untuk upstream: host ditulis semula + isyarat proxy standard. */
+/** Headers for upstream: host rewritten + the standard proxy hints. */
 function forwardHeaders(reqHeaders, target) {
   const host = target.replace(/^https?:\/\//, '').replace(/\/+$/, '');
   return {
@@ -40,12 +40,12 @@ function forwardHeaders(reqHeaders, target) {
  * @param {import('express').Express} app
  * @param {{config: object}} deps
  */
-// agent-editor.js — proksi balik untuk Tukuk Agent (code-server) yang berjalan di
-// 127.0.0.1:8443 dengan --abs-proxy-base-path /agent.
+// agent-editor.js — reverse proxy for Tukuk Agent (code-server) running on
+// 127.0.0.1:8443 with --abs-proxy-base-path /agent.
 //
-// code-server hanya pakai prefix /agent untuk menjana URL dalam HTML (href, WS URL).
-// Route dalaman Express tetap di '/' — maka '/agent/login' perlu dihantar sebagai
-// '/login' ke upstream. Kita buang PREFIX sebelum forward.
+// code-server only uses the /agent prefix to generate URLs inside the HTML (href, WS URL).
+// Express's internal routes stay at '/' — so '/agent/login' has to be sent as
+// '/login' to upstream. We strip PREFIX before forwarding.
 
 function mount(app, { config }) {
   app.use(PREFIX, (req, res) => {
@@ -60,8 +60,8 @@ function mount(app, { config }) {
       { method: req.method, headers: forwardHeaders(req.headers, target) },
       (up) => {
         const headers = Object.assign({}, up.headers);
-        // code-server buat redirect ke '/' (tanpa prefix kerana route dalaman di '/').
-        // Tulis-semula Location supaya browser kekal di bawah /agent/.
+        // code-server redirects to '/' (no prefix, because its internal routes are at '/').
+        // Rewrite Location so the browser stays under /agent/.
         if ([301, 302, 303, 307, 308].includes(up.statusCode) && headers.location) {
           if (headers.location.startsWith('/')) {
             headers.location = PREFIX + headers.location;
@@ -76,24 +76,24 @@ function mount(app, { config }) {
       if (!res.headersSent) res.status(502).json({ error: 'The editor agent is not ready — please try again in a moment.' });
       else res.end();
     });
-    // express.json/urlencoded sudahconsume req — gunakan rawBody jika ada.
-    // Jika tiada (GET, HEAD, multipart, dll), pipe secara normal.
+    // express.json/urlencoded already consumed req — use rawBody when present.
+    // When it isn't (GET, HEAD, multipart, etc.), pipe normally.
     if (req.rawBody && req.rawBody.length) preq.end(req.rawBody);
     else req.pipe(preq);
   });
 }
 
 /**
- * Proksi WebSocket 'ws' code-server (path /agent/...). Dipasang pada http
- * server sebenar; pemanggil dapat fungsi detach untuk ujian/kebersihan.
+ * Reverse-proxies code-server's 'ws' WebSocket traffic (path /agent/...). Attached to the real
+ * http server; the caller gets a detach function back for tests/cleanup.
  * @param {import('node:http').Server} server
  * @param {{config: object}} deps
  */
 function attachUpgrade(server, { config }) {
   const onUpgrade = (req, clientSocket, head) => {
     const target = upstreamOf(config);
-    if (!target || !req.url || !req.url.startsWith(PREFIX)) return; // bukan editor — biarkan listener lain
-    // Buang prefix /agent daripada URL penuh (ws URL browser bermula /agent/...).
+    if (!target || !req.url || !req.url.startsWith(PREFIX)) return; // not the editor — let other listeners handle it
+    // Strip the /agent prefix from the full URL (the browser's ws URL starts with /agent/...).
     const stripped = req.url.slice(PREFIX.length) || '/';
     const p = http.request(target + stripped, { method: req.method, headers: forwardHeaders(req.headers, target) });
     p.on('upgrade', (pres, upSocket, upHead) => {

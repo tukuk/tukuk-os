@@ -680,14 +680,14 @@ const { Readable } = require('stream');
 
 const index = client.index(config.indexName);
 
-// Index korpus ujian yang boleh dipilih melalui ?index= pada /search.
-// Indeks lain tidak dibenarkan supaya carian awam tidak boleh dialih sesuka hati.
+// The test-corpus index that can be picked through ?index= on /search.
+// Any other index is refused so public searches cannot be pointed elsewhere on a whim.
 const DEMO_INDEXES = new Set(['uji_coba']);
 
 const START_TIME = Date.now();
 
-// Jumlah seumur-hidup yang DISIMPAN ke cakera supaya /stats tidak set ke 0 setiap kali
-// restart/deploy. requestCount/errorCount dimulakan daripada fail ini dan diflush berkala.
+// The lifetime totals SAVED to disk so /stats does not reset to 0 on every
+// restart/deploy. requestCount/errorCount start from this file and are flushed periodically.
 const LIFETIME_FILE = path.join(path.dirname(config.store.path), 'lifetime-stats.json');
 let lifetime = { requests: 0, errors: 0, firstStartedAt: START_TIME };
 try {
@@ -699,7 +699,7 @@ try {
       firstStartedAt: Number(j.firstStartedAt) || START_TIME
     };
   }
-} catch { /* fail belum wujud — mula kosong */ }
+} catch { /* the file does not exist yet — start empty */ }
 let requestCount = lifetime.requests;
 let errorCount = lifetime.errors;
 
@@ -712,7 +712,7 @@ function persistLifetime() {
     const tmp = `${LIFETIME_FILE}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(lifetime));
     fs.renameSync(tmp, LIFETIME_FILE);
-  } catch { /* terbaik sahaja — jangan gagikan permintaan */ }
+  } catch { /* best effort only — never break the request */ }
 }
 const lifetimeTimer = setInterval(persistLifetime, 20000);
 if (lifetimeTimer.unref) lifetimeTimer.unref();
@@ -744,7 +744,7 @@ const limiter = config.rateLimit.enabled
     }
   : { search: (req, res, next) => next(), write: (req, res, next) => next(), crawl: (req, res, next) => next(), websearch: (req, res, next) => next() };
 
-// Borang hubungi: hadkan setiap pelawat kepada 5 hantaran / 10 minit
+// Contact form: limit every visitor to 5 submissions / 10 minutes
 const contactLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 10 * 60 * 1000, max: 5, keyPrefix: 'contact:' })
   : (req, res, next) => next();
@@ -752,18 +752,18 @@ const contactLimiter = config.rateLimit.enabled
 const app = express();
 app.disable('x-powered-by');
 
-// Security headers (Lighthouse "Trust & Safety"). Cloudflare boleh tambah di edge juga,
-// tapi ini memastikan header ada tanpa mengira laluan (aplikasi terus, tunnel, dsb.).
-// CSP DUA LAPISAN:
-//  (1) ENFORCED — `CSP_ENFORCED` HANYA direktif struktur (frame-ancestors/object-src/
-//      base-uri/form-action). Sengaja TIDAK menyentuh default-src/script-src/style-src,
-//      jadi TiADA kerosakan: AdSense + `<script>` inline SPA + 62 atribut style= terus jalan.
-//      Ini tetap memberi perlindungan nyata (clickjacking, penyisipan <base>/<object>/form).
-//  (2) REPORT-ONLY — `CSP_REPORT_ONLY` = dasar ketat penuh (default/script-src dll.) untuk
-//      kumpul telemetri ke /csp-report. Peralihan ke enforced PENUH butuh: esktraksi skrip
-//      inline ke fail luar + de-inline 70 handler (onclick/onerror) + AdSense strict-dynamic/
-//      nonce — kerja besar & wajib QA pelayar. Clickjacking juga dilindungi X-Frame-Options;
-//      COOP = same-origin-allow-popups supaya popup OAuth/login (window.open) tak terputus.
+// Security headers (Lighthouse "Trust & Safety"). Cloudflare can add them at the edge too,
+// but this guarantees the headers exist on every route (direct app access, tunnel, etc.).
+// CSP IN TWO LAYERS:
+//  (1) ENFORCED — `CSP_ENFORCED` holds ONLY structural directives (frame-ancestors/object-src/
+//      base-uri/form-action). It deliberately does NOT touch default-src/script-src/style-src,
+//      so there is NO breakage: AdSense + the inline `<script>` SPA + 62 style= attributes keep running.
+//      It still gives real protection (clickjacking, injected <base>/<object>/form).
+//  (2) REPORT-ONLY — `CSP_REPORT_ONLY` = the full strict policy (default/script-src etc.) used to
+//      collect telemetry into /csp-report. Going fully enforced needs: extracting the inline
+//      scripts into external files + de-inlining 70 handlers (onclick/onerror) + AdSense strict-dynamic/
+//      nonce — a big job that also requires browser QA. Clickjacking is covered by X-Frame-Options too;
+//      COOP = same-origin-allow-popups so OAuth/login popups (window.open) are not cut off.
 const CSP_ENFORCED = [
   "frame-ancestors 'self'",
   "object-src 'none'",
@@ -785,12 +785,12 @@ const CSP_REPORT_ONLY = [
   "form-action 'self'",
   "report-uri /csp-report",
 ].join('; ') + ';';
-// (3) CSP_STRICT — untuk halaman STATIK yang terbukti bersih (0 handler inline, 0 <script>
-//     inline — skripnya external sahaja, 0 rujukan iklan/analytics, dan player.js yang
-//     disuntik theme.js tidak pakai `new Function`/`eval`). Untuk halaman ini kita ENFORCE
-//     `script-src 'self'` TANPA unsafe-inline/unsafe-eval — inilah kemenangan Lighthouse
-//     sebenar. Halaman interaktif (index/apps/nasa/editor/collage/studio*) TIDAK dahilkan
-//     kerana ada <script> inline + handler + `new Function` (boleh rosak senyap).
+// (3) CSP_STRICT — for STATIC pages proven clean (0 inline handlers, 0 <script>
+//     inline — its scripts are external only, 0 ad/analytics references, and the theme.js
+//     injected by player.js uses no `new Function`/`eval`). For these pages we ENFORCE
+//     `script-src 'self'` WITHOUT unsafe-inline/unsafe-eval — this is the real Lighthouse win.
+//     Interactive pages (index/apps/nasa/editor/collage/studio*) are NOT included
+//     because they have inline <script> + handlers + `new Function` (they could break silently).
 const CSP_STRICT_PAGES = new Set(['about', 'privacy', 'terms', 'docs', 'access', 'tentang', 'terma', 'privasi', 'dokumen']);
 const CSP_STRICT = [
   "default-src 'self'",
@@ -813,18 +813,18 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('X-DNS-Prefetch-Control', 'on');
-  // Halaman statik bersih → ENFORCE script-src penuh; selainnya → enforced struktur sahaja.
+  // Clean static pages → ENFORCE the full script-src; everything else → structural enforcement only.
   const seg = req.path.replace(/^\/+/, '').replace(/\.html$/i, '').replace(/\/+$/, '').toLowerCase();
   res.setHeader('Content-Security-Policy', CSP_STRICT_PAGES.has(seg) ? CSP_STRICT : CSP_ENFORCED);
   res.setHeader('Content-Security-Policy-Report-Only', CSP_REPORT_ONLY);
-  // HSTS hanya bermakna atas HTTPS; tiada `preload` (butuh daftar + semua subdomain HTTPS dulu).
+  // HSTS only means anything over HTTPS; no `preload` (needs a listing + every subdomain on HTTPS first).
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
   next();
 });
 
-// SEO: canonical host — semua permintaan www di301 ke apex
+// SEO: canonical host — every www request is 301'd to the apex
 app.use((req, res, next) => {
   if (req.hostname === 'www.tukuk.org') {
     return res.redirect(301, `https://tukuk.org${req.originalUrl}`);
@@ -833,11 +833,11 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-// ── Tukuk Builder (build.tukuk.org) → /api/publish*: parser JSON BADAN BESAR khusus.
-//    Didaftarkan SEBELUM parser global (2mb) supaya satu fail HTML 3D (~4MB) lalu.
-//    CORS asal *.tukuk.org di echo eksplisit (tidak bergantung pada default '*'),
-//    OPTIONS prarasakan 204. Laluan /api/publish TIDAK padan /api/published (se
-//    berbeza) maka kedua-dua dipasang berasingan.
+// ── Tukuk Builder (build.tukuk.org) → /api/publish*: a dedicated JSON parser for BIG bodies.
+//    Registered BEFORE the global parser (2mb) so a single 3D HTML file (~4MB) gets through.
+//    The *.tukuk.org origin CORS is echoed explicitly (never relying on the default '*'),
+//    OPTIONS is pre-answered with 204. The /api/publish route does NOT match /api/published (a
+//    different prefix), so both are installed separately.
 function publishCors(req, res, next) {
   const origin = req.get('origin') || '';
   if (/^https?:\/\/([a-z0-9-]+\.)*tukuk\.org$/i.test(origin)) {
@@ -852,18 +852,18 @@ function publishCors(req, res, next) {
 }
 app.use('/api/publish', publishCors, express.json({ limit: '6mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use('/api/published', publishCors);
-// verify: simpan mentah badan (Buffer) pada req.rawBody supaya proksi /agent boleh
-// hantar semula badan POST yang tepat walaupun express.json/urlencoded sudah membacanya.
+// verify: keeps the raw body (Buffer) on req.rawBody so the /agent proxy can
+// resend the exact POST body even though express.json/urlencoded already read it.
 app.use(express.json({ limit: '2mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, limit: '64kb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
-// Gzip: semua teks (HTML/JSON) dipampatkan — halaman ~32KB jadi ~8KB.
-// Aliran SSE (/api/chat/stream) tidak boleh dimampat — mampat menyimpan bingkai
-// daripada dihantar serta-merta, jadi terus kecualikan jenis kandungan itu.
+// Gzip: every text response (HTML/JSON) is compressed — a ~32KB page becomes ~8KB.
+// SSE streams (/api/chat/stream) must not be compressed — compression holds frames
+// back from being sent immediately, so that content type is excluded outright.
 app.use(compression({
   filter: (req, res) => {
     const ct = String(res.getHeader('Content-Type') || '');
-    // Jangan mampat aliran langsung (SSE) maupun audio/video radio — mampat
-    // menyimpan bingkai/byte daripada dihantar serta-merta (stream jadi tersekat).
+    // Never compress live streams (SSE) or radio audio/video — compression
+    // keeps frames/bytes from being sent immediately (the stream would stall).
     if (/text\/event-stream|audio\/|video\/|application\/octet-stream/i.test(ct)) return false;
     return compression.filter(req, res);
   },
@@ -871,38 +871,38 @@ app.use(compression({
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
-// ── Domain khas T Chat: tchat.tukuk.org ─────────────────────────────────────
-// Ruang terpencil untuk messenger: hanya aset yang T Chat guna dilaluan;
-// CSP lebih ketat (frame-ancestors 'none', tanpa iklan/analitik), X-Robots-Tag
-// noindex supaya mesej/katalog tidak terindeks, dan mana-mana path lain → 302
-// ke tukuk.org supaya pelawat tidak tersesat ke enjin carian/iklan. Sesi (Bearer
-// token di localStorage) terasing ikut origin — cookie tukuk.org tidak mengalir
-// ke sini, dan sebaliknya.
+// ── The dedicated T Chat domain: tchat.tukuk.org ─────────────────────────────────────
+// An isolated space for the messenger: only the assets T Chat uses are routed;
+// a stricter CSP (frame-ancestors 'none', no ads/analytics), X-Robots-Tag
+// noindex so messages/the catalogue are never indexed, and any other path → 302
+// to tukuk.org so visitors don't wander into a search engine/ads. Sessions (Bearer
+// token in localStorage) are isolated per origin — tukuk.org cookies do not travel
+// here, and the other way round.
 const TCHAT_HOST = String(process.env.TCHAT_HOST || 'tchat.tukuk.org').trim().toLowerCase();
 const TCHAT_ALLOWED = [
-  /^\/apps\/chat(\.html)?\/?$/,                   // path asal applikasi (pautan sedia ada)
-  /^\/api\/chat(\/.*)?$/,                     // root + semua endpoint chat (SSE, media, dsb.)
-  /^\/csp-report$/,                                // pelapor CSP (dipakai CSP report-uri)
-  /^\/sw\.js$/,                                     // service worker (skop root host ini)
+  /^\/apps\/chat(\.html)?\/?$/,                   // the app's original path (an existing link)
+  /^\/api\/chat(\/.*)?$/,                     // root + every chat endpoint (SSE, media, etc.)
+  /^\/csp-report$/,                                // the CSP reporter (used by CSP report-uri)
+  /^\/sw\.js$/,                                     // service worker (scoped to this host's root)
   /^\/manifest-chat\.json$/,                      // PWA install
-  /^\/theme\.(?:css|js)$/,                         // tema global
-  /^\/icons\/[A-Za-z0-9._/-]+$/,                  // logo + ikon apl (chat.svg, chat-192.png, ...)
+  /^\/theme\.(?:css|js)$/,                         // global theme
+  /^\/icons\/[A-Za-z0-9._/-]+$/,                  // logo + app icons (chat.svg, chat-192.png, ...)
   /^\/(?:favicon\.ico|apple-touch-icon\.png|og\.png|icon\.svg|logo\.png|logo-mark\.svg)$/,
-  /^\/downloads\/tukuk-chat\.apk$/,               // muat turun APK beta
-  /^\/libs\/[A-Za-z0-9._-]+$/,                    // pustaka vendored (ggwave-js utk 📻 Sound Wave)
+  /^\/downloads\/tukuk-chat\.apk$/,               // beta APK downloads
+  /^\/libs\/[A-Za-z0-9._-]+$/,                    // vendored libraries (ggwave-js for 📻 Sound Wave)
 ];
 const CSP_TCHAT = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",              // chat.html memang inline <script> + atribut onclick
+  "script-src 'self' 'unsafe-inline'",              // chat.html really does use inline <script> + onclick attributes
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
-  "media-src 'self' data: blob:",                    // rakaman suara + lampiran (blob URL)
-  "connect-src 'self' data: blob: wss: turn: stun: stuns:",  // SSE + WebRTC + muat naik
+  "media-src 'self' data: blob:",                    // voice recordings + attachments (blob URL)
+  "connect-src 'self' data: blob: wss: turn: stun: stuns:",  // SSE + WebRTC + uploads
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "frame-src 'self'",
   "object-src 'none'",
-  "frame-ancestors 'none'",                          // anti-clickjacking mutlak untuk messenger
+  "frame-ancestors 'none'",                          // absolute anti-clickjacking for the messenger
   "base-uri 'self'",
   "form-action 'self'",
   "report-uri /csp-report",
@@ -910,24 +910,24 @@ const CSP_TCHAT = [
 app.use((req, res, next) => {
   if (!TCHAT_HOST) return next();
   if (String(req.hostname || '').toLowerCase() !== TCHAT_HOST) return next();
-  // Header ruang-khas (timpa nilai global dari blok security-headers di atas).
+  // Space-specific headers (override the global values from the security-headers block above).
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
   res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
   res.setHeader('Content-Security-Policy', CSP_TCHAT);
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-  // Root host tchat → hidang chat.html secara terus (URL kekal tchat.tukuk.org/).
+  // tchat root host → serve chat.html directly (the URL stays tchat.tukuk.org/).
   if (req.path === '/' || req.path === '/index.html') {
     return res.sendFile(path.join(PUBLIC_DIR, 'apps', 'chat.html'), (err) => {
       if (err) res.status(503).type('txt').send('T Chat cannot load right now.');
     });
   }
   for (const re of TCHAT_ALLOWED) if (re.test(req.path)) return next();
-  // Selainnya: bawa pelawat ke ruang utama (kekalkan query string & path asal).
+  // Anything else: send the visitor to the main site (keep the query string & original path).
   return res.redirect(302, 'https://tukuk.org' + req.originalUrl);
 });
 
-// Akses global: beritahu Tor Browser tentang onion mirror automatik
-// (header Onion-Location → Tor Browser tawar buka laman via onion).
+// Global access: tell Tor Browser about the onion mirror automatically
+// (Onion-Location header → Tor Browser offers to open the site through the onion).
 const ONION_HOST = process.env.ONION_HOST || 'd33axv7iaq4sp5hlwjn7i2tovkuxmxc53xl2drjhve7mboitsoicdfid.onion';
 app.use((req, res, next) => {
   if (!/\.[a-z0-9]+$/i.test(req.path) || req.path.endsWith('.html')) {
@@ -936,17 +936,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// tukuk.org ROOT = hub konten (permukaan AdSense/SEO yang boleh di-crawl),
-// BUKAN portal carian. Diregister sebelum express.static supaya menang ke atas
-// public/index.html. Portal carian kekal di /cari. T Chat ada di tchat.tukuk.org.
+// tukuk.org ROOT = the content hub (the crawlable AdSense/SEO surface),
+// NOT a search portal. Registered before express.static so it wins over
+// public/index.html. The search portal stays at /cari. T Chat lives at tchat.tukuk.org.
 app.get('/', (req, res) => {
   res.type('html').send(renderBlogListPage(req, true));
 });
 
-// Halaman NASA APOD yang boleh di-index + beriklan (SEO text + ImageObject JSON-LD). Data
-// APOD = domain-awam NASA (selamat dari copyright), bahasa Inggeris (trafik global), ni‑astronomi
-// CPC sederhana → sesuai untuk AdSense. Diambil ATAS PERMINTAAN melalui nasa.getAPOD() (cache 4
-// jam + circuit-breaker sedia ada), jadi TIADA kerja latar / beban tambahan pada server.
+// The indexable, ad-serving NASA APOD page (SEO text + ImageObject JSON-LD). APOD
+// data = NASA public domain (copyright-safe), in English (global traffic), non‑astronomy
+// mid-CPC → a good fit for AdSense. Fetched ON REQUEST through nasa.getAPOD() (4-hour
+// cache + the existing circuit-breaker), so there is NO background work / extra load on the server.
 app.get('/nasa', async (req, res) => {
   try {
     const apod = await nasa.getAPOD();
@@ -956,11 +956,11 @@ app.get('/nasa', async (req, res) => {
   }
 });
 
-// ── NASA SPACE COMPLEX — laluan ──────────────────────────────────────────
-// Setiap seksyen hidang HTML boleh-index + 3 unit iklan melalui nasaDoc. Data
-// ditarik ATAS PERMINTAAN (src/nasa.js sudah ada cache 2–12 jam + pemutus litar),
-// jadi walaupun Googlebot menyerbu kluster ini, server kekal ringan dan kuot
-// NASA tidak tercetus. Ralat data → 503 noindex (tiada halaman kosong terindeks).
+// ── NASA SPACE COMPLEX — routes ──────────────────────────────────────────
+// Every section serves indexable HTML + 3 ad units through nasaDoc. Data is
+// pulled ON REQUEST (src/nasa.js already caches 2–12 hours + a circuit breaker),
+// so even if Googlebot storms these clusters the server stays light and the
+// NASA quota is never triggered. A data error → 503 noindex (no empty page gets indexed).
 const APOD_FIRST_DAY = '1995-06-16';
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -968,8 +968,8 @@ function nasaHtml(res, html, status) {
   res.status(status || 200).type('html').send(html);
 }
 
-// `/nasa/random` → 302 ke satu tarikh APOD rawak. Tidak di-index (ia sentiasa
-// berbeza), tapi pautan darinya mengukuhkan struktur crawl seluruh arkib.
+// `/nasa/random` → 302 to one random APOD date. It is not indexed (it always
+// differs), but the links coming off it strengthen the crawl structure of the whole archive.
 app.get('/nasa/random', (req, res) => {
   const start = Date.parse(`${APOD_FIRST_DAY}T12:00:00Z`);
   const span = Math.max(1, Date.now() - start);
@@ -977,8 +977,8 @@ app.get('/nasa/random', (req, res) => {
   res.redirect(302, `/nasa/apod/${d}`);
 });
 
-// Arkib setempat: senarai + carian teks atas rekod yang pernah disimpan (sifar
-// kuot API). Semakin lama pelayan berjalan, semakin besar arkib ini secara organik.
+// The local archive: a list + text search over the records already stored (zero
+// API quota). The longer the server runs, the bigger this archive grows organically.
 app.get('/nasa/archive', (req, res) => {
   const q = String(req.query.q || '').trim().slice(0, 60);
   try {
@@ -989,8 +989,8 @@ app.get('/nasa/archive', (req, res) => {
   }
 });
 
-// Penjana halaman SEO terbesar: satu halaman PER HARI sejak 16 Jun 1995 —
-// ±11,000 URL unik berindeks yang ditulis oleh NASA, bukan oleh kita.
+// The biggest SEO page generator: one page PER DAY since 16 June 1995 —
+// ±11,000 unique indexable URLs written by NASA, not by us.
 app.get('/nasa/apod/:date', async (req, res) => {
   const dateStr = String(req.params.date || '');
   const today = new Date().toISOString().slice(0, 10);
@@ -1024,7 +1024,7 @@ app.get('/nasa/iss', async (req, res) => {
   }
 });
 
-// Suapan JSON kecil untuk auto-refresh klien (peta ISS poll setiap 15s).
+// A small JSON feed for client auto-refresh (the ISS map polls every 15s).
 app.get('/nasa/iss/live.json', async (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex');
   res.setHeader('Cache-Control', 'no-store');
@@ -1072,8 +1072,8 @@ function marsRoute(slug) {
 }
 
 app.get('/nasa/mars', marsRoute('perseverance'));
-// Slug sebarang → laluan parameter + sahkan dalam handler. (Loop daftar route di
-// sini akan kena TDZ: MARS_ROVERS ialah `const` yang baru diisytihar kemudian.)
+// Any slug → the parameter route + validation inside the handler. (A loop registering routes
+// here would hit a TDZ: MARS_ROVERS is a `const` declared further down.)
 app.get('/nasa/mars/:slug', (req, res) => {
   const rv = MARS_ROVERS.find((r) => r.slug === String(req.params.slug));
   if (!rv) return res.redirect(301, '/nasa/mars');
@@ -1419,9 +1419,9 @@ app.get('/bencana/:cat/:id', async (req, res) => {
   }
 });
 
-// ── LALUAN KOMPLEKS UNSUR (/unsur*) — periodik table, data STATIK (tiada API) ──
-// Data tertanam dalam kod → tak boleh 503 & tak pernah panggil API luar (pelajaran
-// daripada insiden WAF Met). /unsur/:q terima nama, simbol (Au) atau nombor atom.
+// ── ELEMENT COMPLEX ROUTES (/unsur*) — periodic table, STATIC data (no API) ──
+// The data is embedded in code → it can never 503 and never calls an external API (a lesson
+// from the Met WAF incident). /unsur/:q accepts a name, a symbol (Au) or an atomic number.
 app.get('/unsur', (req, res) => res.status(200).type('html').send(elementsHubPage()));
 app.get('/unsur/:q', (req, res) => {
   const e = els.findElement(req.params.q);
@@ -1429,7 +1429,7 @@ app.get('/unsur/:q', (req, res) => {
   res.status(200).type('html').send(elementPage(req, e));
 });
 
-// ── LALUAN KOMPLEKS DEEP-SKY (/buruj*, /messier*) — data STATIK (tiada API) ──
+// ── DEEP-SKY COMPLEX ROUTES (/buruj*, /messier*) — STATIC data (no API) ──
 app.get('/buruj', (req, res) => res.status(200).type('html').send(burujHubPage()));
 app.get('/buruj/:slug', (req, res) => {
   const c = sky.findConstellation(req.params.slug);
@@ -1443,9 +1443,9 @@ app.get('/messier/:id', (req, res) => {
   res.status(200).type('html').send(messierPage(m));
 });
 
-// ── LALUAN KOMPLEKS PEPATAH (/pepatah*) — Proverbs of the World, STATIK ───────
-// Data tertanam → tak boleh 503 & tak pernah panggil API luar. Route negara
-// (/pepatah/negara/:c, 3 segmen) tak bertindih dengan /pepatah/:slug (2 segmen).
+// ── PROVERBS COMPLEX ROUTES (/pepatah*) — Proverbs of the World, STATIC ───────
+// Embedded data → can never 503 and never calls an external API. The country routes
+// (/pepatah/negara/:c, 3 segments) do not overlap /pepatah/:slug (2 segments).
 app.get('/pepatah', (req, res) => res.status(200).type('html').send(pepatahHubPage()));
 app.get('/pepatah/negara/:c', (req, res) => {
   const c = pv.findCountry(req.params.c);
@@ -1458,10 +1458,10 @@ app.get('/pepatah/:slug', (req, res) => {
   res.status(200).type('html').send(pepatahProverbPage(p));
 });
 
-// ── LALUAN KOMPLEKS SEJARAH (/sejarah*) — "On this day", Wikipedia REST feed ──
-// API-backed: cache 30d + SWR (modul sejarah.js). Tarikh tidak sah → 404 TANPA
-// panggil API; feed gagal & tiada cache → 503 busy. /sejarah/:mm/:dd (2 segmen
-// selepas /sejarah) tak bertindih dengan /sejarah hab.
+// ── HISTORY COMPLEX ROUTES (/sejarah*) — "On this day", a Wikipedia REST feed ──
+// API-backed: a 30d cache + SWR (the sejarah.js module). An invalid date → 404 WITHOUT
+// calling the API; the feed fails and there is no cache → 503 busy. /sejarah/:mm/:dd (2 segments
+// after /sejarah) does not overlap the /sejarah hub.
 app.get('/sejarah', async (req, res) => {
   const t = sj.todayParts();
   let today = null;
@@ -1477,15 +1477,15 @@ app.get('/sejarah/:mm/:dd', async (req, res) => {
   res.status(200).type('html').send(sejarahDayPage(data));
 });
 
-// ── LALUAN KOMPLEKS KOTA (/kota*) — World Cities, senarai statik + wiki fail-open ─
-// Teras halaman ialah data STATIK → tak boleh 503. Ringkasan Wikipedia ialah
-// KAYA-SAHAYA: fetch gagal → sum=null → halaman tetap 200 tanpa perihalan.
+// ── CITY COMPLEX ROUTES (/kota*) — World Cities, a static list + a fail-open wiki ─
+// The core of the page is STATIC data → it can never 503. The Wikipedia summary is
+// BEST-EFFORT: a failed fetch → sum=null → the page still returns 200 without a description.
 app.get('/kota', (req, res) => res.status(200).type('html').send(kotaHubPage()));
 app.get('/kota/:slug', async (req, res) => {
   const c = kt.findCity(req.params.slug);
   if (!c) {
     const r = kt.findRegion(req.params.slug);
-    if (r) return res.status(200).type('html').send(kotaRegionPage(r)); // hub benua — statik, tak boleh 503
+    if (r) return res.status(200).type('html').send(kotaRegionPage(r)); // continent hub — static, can never 503
     return res.status(404).type('html').send(kotaNotFound(req.params.slug));
   }
   let sum = null;
@@ -1493,13 +1493,13 @@ app.get('/kota/:slug', async (req, res) => {
   res.status(200).type('html').send(kotaPage(c, sum));
 });
 
-// ── LALUAN KOMPLEKS WARISAN (/warisan*) — UNESCO World Heritage, senarai statik + wiki fail-open ─
+// ── WARISAN COMPLEX ROUTES (/warisan*) — UNESCO World Heritage, static list + fail-open wiki ─
 app.get('/warisan', (req, res) => res.status(200).type('html').send(warisanHubPage()));
 app.get('/warisan/:slug', async (req, res) => {
   const s = wr.findSite(req.params.slug);
   if (!s) {
     const r = wr.findRegion(req.params.slug);
-    if (r) return res.status(200).type('html').send(warisanRegionPage(r)); // hub benua — statik, tak boleh 503
+    if (r) return res.status(200).type('html').send(warisanRegionPage(r)); // continent hub — static, can never 503
     return res.status(404).type('html').send(warisanNotFound(req.params.slug));
   }
   let sum = null;
@@ -1507,7 +1507,7 @@ app.get('/warisan/:slug', async (req, res) => {
   res.status(200).type('html').send(warisanPage(s, sum));
 });
 
-// ── LALUAN KOMPLEKS CAGAR (/cagar*) — Protected Areas of the World, statik + wiki fail-open ─
+// ── CAGAR COMPLEX ROUTES (/cagar*) — Protected Areas of the World, static + fail-open wiki ─
 app.get('/cagar', (req, res) => res.status(200).type('html').send(cagarHubPage()));
 app.get('/cagar/:slug', async (req, res) => {
   const a = cg.findArea(req.params.slug);
@@ -1521,7 +1521,7 @@ app.get('/cagar/:slug', async (req, res) => {
   res.status(200).type('html').send(cagarPage(a, sum));
 });
 
-// ── LALUAN KOMPLEKS DANAU (/danau*) — Lakes of the World, statik + wiki fail-open ─
+// ── DANAU COMPLEX ROUTES (/danau*) — Lakes of the World, static + fail-open wiki ─
 app.get('/danau', (req, res) => res.status(200).type('html').send(danauHubPage()));
 app.get('/danau/:slug', async (req, res) => {
   const l = dn.findLake(req.params.slug);
@@ -1535,7 +1535,7 @@ app.get('/danau/:slug', async (req, res) => {
   res.status(200).type('html').send(danauPage(l, sum));
 });
 
-// ── LALUAN KOMPLEKS PULAU (/pulau*) — Islands of the World ─
+// ── PULAU COMPLEX ROUTES (/pulau*) — Islands of the World ─
 app.get('/pulau', (req, res) => res.status(200).type('html').send(pulauHubPage()));
 app.get('/pulau/:slug', async (req, res) => {
   const i = pl.findIsland(req.params.slug);
@@ -1549,7 +1549,7 @@ app.get('/pulau/:slug', async (req, res) => {
   res.status(200).type('html').send(pulauPage(i, sum));
 });
 
-// ── LALUAN KOMPLEKS SUNGAI (/sungai*) — Rivers of the World ─
+// ── SUNGAI COMPLEX ROUTES (/sungai*) — Rivers of the World ─
 app.get('/sungai', (req, res) => res.status(200).type('html').send(sungaiHubPage()));
 app.get('/sungai/:slug', async (req, res) => {
   const r2 = sg.findRiver(req.params.slug);
@@ -1563,7 +1563,7 @@ app.get('/sungai/:slug', async (req, res) => {
   res.status(200).type('html').send(sungaiPage(r2, sum));
 });
 
-// ── LALUAN KOMPLEKS AIR TERJUN (/air-terjun*) — Waterfalls of the World ─
+// ── AIR TERJUN COMPLEX ROUTES (/air-terjun*) — Waterfalls of the World ─
 app.get('/air-terjun', (req, res) => res.status(200).type('html').send(airTerjunHubPage()));
 app.get('/air-terjun/:slug', async (req, res) => {
   const f = at.findFall(req.params.slug);
@@ -1577,7 +1577,7 @@ app.get('/air-terjun/:slug', async (req, res) => {
   res.status(200).type('html').send(airTerjunPage(f, sum));
 });
 
-// ── LALUAN KOMPLEKS GUA (/gua*) — Caves of the World ─
+// ── GUA COMPLEX ROUTES (/gua*) — Caves of the World ─
 app.get('/gua', (req, res) => res.status(200).type('html').send(guaHubPage()));
 app.get('/gua/:slug', async (req, res) => {
   const c = gu.findCave(req.params.slug);
@@ -1591,7 +1591,7 @@ app.get('/gua/:slug', async (req, res) => {
   res.status(200).type('html').send(guaPage(c, sum));
 });
 
-// ── LALUAN KOMPLEKS GLETSER (/gletser*) — Glaciers of the World ─
+// ── GLETSER COMPLEX ROUTES (/gletser*) — Glaciers of the World ─
 app.get('/gletser', (req, res) => res.status(200).type('html').send(gletserHubPage()));
 app.get('/gletser/:slug', async (req, res) => {
   const g = gl.findGlacier(req.params.slug);
@@ -1605,28 +1605,28 @@ app.get('/gletser/:slug', async (req, res) => {
   res.status(200).type('html').send(gletserPage(g, sum));
 });
 
-// ── LALUAN GEografi BATCH (teluk/lembah/semenanjung/gunung-berapi/selat/kepulauan/ngarai) ─
-// Region dengan 0 item (cth. "Africa" untuk cluster county US) tidak pernah
-// dilayari sebagai halaman, tidak dipaut dan tidak masuk sitemap.
+// ── BATCH GEO ROUTES (teluk/lembah/semenanjung/gunung-berapi/selat/kepulauan/ngarai) ─
+// A region with 0 items (e.g. "Africa" for the US county cluster) is never
+// served as a page, never linked and never put in the sitemap.
 function geoRegionHasItems(r) { return !!r && r.count !== 0; }
 
-// Jamak rutin untuk cluster yang menaruh kata tunggal di slot jamak
-// (county/county hasil janaan). Hanya dipakai bila memang belum dijimakkan.
+// The routine plural for clusters that put a singular word in the plural slot
+// (county/county as generated). Only applied when it genuinely is not pluralised yet.
 function geoPlural(word) {
   if (/[^aeiou]y$/i.test(word)) return word.slice(0, -1) + 'ies';
   if (/(s|sh|ch|x|z)$/i.test(word)) return word + 'es';
   return word + 's';
 }
-// Artikel tak tentu Inggeris — "an aquarium" tapi "a university".
+// English indefinite article — "an aquarium" but "a university".
 function geoArticle(word) {
   const w = String(word || '').trim().toLowerCase();
   if (/^(univ|use|u[kgn]|eu|one\s)/.test(w)) return 'a';
   return /^[aeiou]/.test(w) ? 'an' : 'a';
 }
-// "1 country" / "7 countries" supaya agreement bilangan betul.
+// "1 country" / "7 countries" so the number agreement is right.
 function geoCountries(n) { return `${n} ${n === 1 ? 'country' : 'countries'}`; }
-// Cluster yang titleCase-nya sudah menyebut yurisdiksi ("Counties of Iowa")
-// tidak dibaca "Americas Counties of Iowa" — letak benua di belakang.
+// A cluster whose titleCase already names the jurisdiction ("Counties of Iowa")
+// must not read "Americas Counties of Iowa" — the continent goes behind it.
 function geoRegionTitle(cfg, regionName) {
   return /\sof\s/.test(cfg.titleCase) ? `${cfg.titleCase} in ${regionName}` : `${regionName} ${cfg.titleCase}`;
 }
@@ -2258,7 +2258,7 @@ geoRoutes('washington-counties', kwn, 'findWashingtonCounty', washingtonCounties
 geoRoutes('oregon-counties', kor, 'findOregonCounty', oregonCountiesHubPage, oregonCountiesRegionPage, oregonCountiesPage, oregonCountiesNotFound);
 geoRoutes('new-mexico-counties', knm, 'findNewMexicoCounty', newMexicoCountiesHubPage, newMexicoCountiesRegionPage, newMexicoCountiesPage, newMexicoCountiesNotFound);
 
-// ── LALUAN KOMPLEKS GUNUNG (/gunung*) — Mountains of the World, statik + wiki fail-open ─
+// ── GUNUNG COMPLEX ROUTES (/gunung*) — Mountains of the World, static + fail-open wiki ─
 app.get('/gunung', (req, res) => res.status(200).type('html').send(gunungHubPage()));
 app.get('/gunung/:slug', async (req, res) => {
   const p = gn.findPeak(req.params.slug);
@@ -2275,28 +2275,28 @@ app.get('/gunung/:slug', async (req, res) => {
 app.use(express.static(PUBLIC_DIR, {
   index: 'index.html',
   maxAge: '1h',
-  redirect: false,   // jangan redirect /apps → /apps/ — biar lalu ke STATIC_PAGES
+  redirect: false,   // do not redirect /apps → /apps/ — let it fall through to STATIC_PAGES
   setHeaders(res, filePath) {
-    // APK pembungkus WebView — hidang sebagai muat turun dengan nama fail sebenar
-    // (tukuk-<slug>.apk), supaya setiap apl gedung tersimpan dengan nama yang betul.
+    // The WebView wrapper APK — served as a download with the real file name
+    // (tukuk-<slug>.apk) so every store app is saved under the correct name.
     if (filePath.endsWith('.apk')) {
       res.setHeader('Content-Type', 'application/vnd.android.package-archive');
       res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
       res.setHeader('Cache-Control', 'no-cache');
       return;
     }
-    // Service worker: JANGAN sekali cache — pelanggan mesti dapat versi terkini terus.
+    // Service worker: NEVER cache — clients must get the newest version right away.
     if (filePath.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-store');
-    // HTML: biar revalidate setiap kali supaya kemas-kini segera kelihatan.
+    // HTML: let it revalidate every time so updates appear immediately.
     else if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
-    // CSS/JS: revalidate setiap kali — kemas-kini gaya segera kelihatan (browser + edge cache).
+    // CSS/JS: revalidate every time — style updates show at once (browser + edge cache).
     else if (/\.(css|js)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
   }
 }));
 
-// URL bersih untuk halaman statik: /privacy -> public/privacy.html
-// NOTE: halaman AI berat (nasa/explore/builder/editor/editor-video/3d/design/movie/
-// collage/converter/bg-remover/studio) + app store UI (store) telah dibuang — fokus T Chat.
+// Clean URLs for static pages: /privacy -> public/privacy.html
+// NOTE: the heavy AI pages (nasa/explore/builder/editor/editor-video/3d/design/movie/
+// collage/converter/bg-remover/studio) + the app-store UI (store) were dropped — the focus is T Chat.
 const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'access', 'bingbot', 'playstore', 'download', 'rekomendasi', 'os', 'sms'];
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
@@ -2306,7 +2306,7 @@ for (const name of STATIC_PAGES) {
   });
 }
 
-// Sub-page untuk setiap app: /apps/chat → public/apps/chat.html (fokus chat sahaja)
+// Sub-page for every app: /apps/chat → public/apps/chat.html (chat focus only)
 const APPS = ['chat'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
@@ -2315,11 +2315,11 @@ for (const name of APPS) {
     });
   });
 }
-// Katalog app/game (/apps, /apps/) dibuang — fokus konten+chat. /apps/ → '/' supaya
-// pautan lama tak 404. /apps/chat (chat) kekal dilayan oleh loop APPS di atas.
+// The app/game catalogue (/apps, /apps/) was dropped — the focus is content+chat. /apps/ → '/' so
+// old links do not 404. /apps/chat (chat) is still served by the APPS loop above.
 app.get(['/apps', '/apps/'], (req, res) => res.redirect(301, '/'));
 
-// Alias bahasa supaya pautan sedia ada tidak 404
+// Language aliases so the existing links do not 404
 const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', privasi: 'privacy', dokumen: 'docs' };
 for (const [alias, name] of Object.entries(PAGE_ALIASES)) {
   app.get(`/${alias}`, (req, res) => {
@@ -2331,9 +2331,9 @@ for (const [alias, name] of Object.entries(PAGE_ALIASES)) {
 
 app.get("/test", (req, res) => res.send("OK"));
 
-// CSP Report-Only receiver — browser POST JSON bertipe `application/csp-report` ke sini.
-// Bukan kritikal: cuma log baris ringkas (matikan dgn CSP_REPORTS=0) & balas 204. Tiada
-// PII disimpan; had body 16kb supaya tak boleh digunakan utk spam.
+// CSP Report-Only receiver — browsers POST JSON of type `application/csp-report` here.
+// Not critical: it only logs a short line (disable with CSP_REPORTS=0) and replies 204. No
+// PII is stored; the 16kb body cap keeps it from being used for spam.
 app.post('/csp-report', express.json({ type: ['application/csp-report', 'application/json'], limit: '16kb' }), (req, res) => {
   if (process.env.CSP_REPORTS !== '0') {
     const r = (req.body && req.body['csp-report']) || {};
@@ -2342,30 +2342,30 @@ app.post('/csp-report', express.json({ type: ['application/csp-report', 'applica
   res.status(204).end();
 });
 
-// Negotiasi kandungan: pelayar (Accept: text/html) dapat halaman HTML yang cantik;
-// skrip/API/agent (curl default, fetch Accept:*/*) kekal dapat JSON seperti sebelum ini.
+// Content negotiation: a browser (Accept: text/html) gets the nice HTML page;
+// scripts/API/agents (curl default, fetch Accept:*/*) still get JSON as before.
 function isHtmlRequest(req) {
   return req.accepts(['json', 'html']) === 'html';
 }
 
-// ——— IndexNow: beritahu enjin carian (Bing/Yandex/Naver/Seznam) serta-merta bila
-// kandungan baharu diterbitkan. Non-blocking, ralat diabaikan. Dimatikan jika tiada key.
+// ——— IndexNow: tell the search engines (Bing/Yandex/Naver/Seznam) immediately when
+// a newly published piece of content. Non-blocking, errors ignored. Off when there is no key.
 const INDEXNOW_KEY = (process.env.INDEXNOW_KEY || 'bd8f0317c5ab4cddb9a3dc62f7ec15ae').trim();
 function notifyIndexNow(urls) {
-  if (!INDEXNOW_KEY || !process.env.INDEXNOW_ENABLED) return; // opt-in supaya tak bazir derma permintaan
+  if (!INDEXNOW_KEY || !process.env.INDEXNOW_ENABLED) return; // opt-in so we don't waste request quota
   const list = (Array.isArray(urls) ? urls : [urls]).filter(u => typeof u === 'string' && u.startsWith('https://tukuk.org/'));
   if (!list.length) return;
   fetch('https://api.indexnow.org/indexnow', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ host: 'tukuk.org', key: INDEXNOW_KEY, keyLocation: `https://tukuk.org/${INDEXNOW_KEY}.txt`, urlList: list })
-  }).catch(() => {}); // senyap — pengindeksan ialah penambahbaikan, bukan kritikal
+  }).catch(() => {}); // silently — indexing is an improvement, not critical
 }
 
-// `/cari` DIHIDUPKAN: SPA carian Meilisearch lama (web/CC, images, videos, music,
-// radio, apps, NASA) — index.html yang sama, tetapi noindex + BEBAS IKLAN
-// (adsense-loader.js self-skip pada /cari; dasar Google: halaman hasil carian
-// tidak layak diiklankan). Cache string sekali; restart servis ↔ index.html baru.
+// `/cari` IS ENABLED: the old Meilisearch search SPA (web/CC, images, videos, music,
+// radio, apps, NASA) — the same index.html, but noindex + AD-FREE
+// (adsense-loader.js self-skips on /cari; Google policy: search-result pages
+// not fit to be advertised). The string is cached once; a service restart ↔ a fresh index.html.
 let cariHtml = null;
 app.get('/cari', (req, res) => {
   if (!cariHtml) {
@@ -2377,15 +2377,15 @@ app.get('/cari', (req, res) => {
   res.type('html').send(cariHtml);
 });
 
-// Proksi imej luar — untuk lightbox & Tukuk Studio (/editor).
-// Same-origin = canvas tidak "tainted", export/edge filter boleh jalan.
+// A proxy for external images — for the lightbox & Tukuk Studio (/editor).
+// Same-origin = the canvas is not "tainted", export/edge filters can run.
 app.get('/api/image', limiter.search, async (req, res) => {
   const targetUrl = String(req.query.url || '').trim();
   if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
     return res.status(400).json({ error: 'url parameter (http/https) required' });
   }
   try {
-    await assertPublicUrl(targetUrl); // sekat SSRF alamat dalaman
+    await assertPublicUrl(targetUrl); // block SSRF against internal addresses
     const upstream = await fetch(targetUrl, {
       redirect: 'follow',
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TukukOSBot/2.1; +https://tukuk.org)' }
@@ -2515,8 +2515,8 @@ function reshape(hit, { includeContent = false } = {}) {
 }
 
 app.get('/ask', limiter.search, async (req, res) => {
-  // Jawapan AI berubah selepas setiap deploy — jangan biar browser replay
-  // respons lama (sebelum fix ranking) dan pengguna sangka masih rosak.
+  // AI answers change after every deploy — do not let the browser replay
+  // an old response (before the ranking fix) so users think it is still broken.
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   const question = String(req.query.q || req.query.question || '').trim();
   if (!question) {
@@ -2528,7 +2528,7 @@ app.get('/ask', limiter.search, async (req, res) => {
   }
 
   const health = await brain.health();
-  // Jangan blok walaupun Ollama mati — rag.ask akan guna cloud (jika ada kunci) atau jawapan ekstraktif.
+  // Never block even if Ollama is down — rag.ask uses the cloud (if a key exists) or an extractive answer.
 
   try {
     const offline = !net.snapshot().internet;
@@ -2551,11 +2551,11 @@ app.get('/ask', limiter.search, async (req, res) => {
       cached: Boolean(answer.cached),
       offline,
       warning: answer.warning,
-      // Gabungan brain ↔ aplikasi: soalan pengguna juga dipadankan dengan
-      // katalog app server ("buang background gambar" → /bg-remover).
+      // Brain ↔ app fusion: the user question is also matched against
+      // the server app catalogue ("remove an image background" → /bg-remover).
       apps: approuter.route(question).apps,
-      // Debug diagonal: `?debug=1` mendedahkan model yang dicuba-tolak (sebab
-      // qwen dilangkau, ralat ollama, dsb.) dan status local-first.
+      // A diagonal debug: `?debug=1` reveals the models that were tried and rejected (the
+      // qwen skipped, an ollama error, etc.) and the local-first status.
       ...(req.query.debug
         ? { rejected: answer.rejectedModels || [], localFirst: Boolean(health.localFirst), cloudFallback: health.cloudFallback || [] }
         : {}),
@@ -2600,7 +2600,7 @@ app.get('/network', async (req, res) => {
   res.json(await net.check());
 });
 
-// ── AI Data Center: inventori model AI yang berjalan di server ini ─────────
+// ── AI Data Center: the inventory of AI models running on this server ─────────
 async function modelsInventory() {
   const health = await brain.health();
   let ollamaModels = [];
@@ -2616,7 +2616,7 @@ async function modelsInventory() {
       timeout: config.brain.timeout
     },
     ollamaModels,
-    // Model AI MILIK SENDIRI — dilatih di sini oleh scripts/train-brain.js.
+    // Our OWN AI models — trained here by scripts/train-brain.js.
     ownModel: taskrouter.modelInfo(),
     reranker: {
       enabled: config.rerank.enabled,
@@ -2630,20 +2630,20 @@ app.get('/api/models', async (req, res) => {
   res.json(await modelsInventory());
 });
 
-// ── App Router API: padankan teks bebas → aplikasi server ("tool use" ringan) ──
+// ── App Router API: match free text → a server app (lightweight "tool use") ──
 app.get('/api/apps/route', (req, res) => {
   const q = String(req.query.q || '').trim();
   if (!q) return res.status(400).json({ error: 'q parameter required' });
   res.json({ ok: true, query: q, apps: approuter.route(q).apps });
 });
 
-// ── /datacenter: papan pemuka operasi — semua aplikasi + AI dalam satu pandang ──
+// ── /datacenter: the operations dashboard — every app + AI in one view ──
 app.get('/api/datacenter', async (req, res) => {
   try {
     const models = await modelsInventory();
-    // JANGAN dedahkan spesifikasi fizikal pelayan (model CPU, teras, RAM, load,
-    // uptime) ke publik — papan pemuka ini menunjuki KEBOLEHAN (model, app,
-    // aktiviti), bukan perkakasan tempat ia berjalan.
+    // NEVER expose the physical server specs (CPU model, cores, RAM, load,
+    // uptime) to the public — this dashboard shows AVAILABILITY (models, apps,
+    // activity), not the hardware it runs on.
     res.json({
       dataCenter: 'Tukuk-OS AI Data Center',
       models,
@@ -2761,15 +2761,15 @@ app.get('/models', (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
-  // Hanya halaman HIDUP (yang balas 200) — buang yang sudah dibuang (/store, /explore,
+  // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
-  // /apps→301, /play, /models, /datacenter, /bingbot) supaya sitemap tak sarat 404.
+  // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
   const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
   for (const page of staticPages) {
-    // Homepage ikut canonical (akhiran '/'); halaman lain tanpa slash
+    // Homepage follows the canonical form (trailing '/'); other pages without a slash
     const loc = page === '' ? `${base}/` : `${base}${page}`;
     urls.push(`  <url>\n    <loc>${loc}</loc>\n    <changefreq>daily</changefreq>\n    <priority>${page === '' ? '1.0' : '0.8'}</priority>\n  </url>`);
   }
@@ -2786,12 +2786,12 @@ app.get('/sitemap.xml', async (req, res) => {
   );
 });
 
-// ── SITEMAP NASA — klaster APOD harian ──────────────────────────────────────
-// NASA telah menerbitkan SATU gambar + penjelasan setiap hari sejak 16 Jun 1995.
-// Kita mirrorkan sebagai ±11,000 halaman unik (/nasa/apod/YYYY-MM-DD) — setiap
-// satu berbeza kandungan, berindeks, dan beriklan. Dipotong ikut tahun supaya
-// satu fail nie lebih kecil daripada had 50,000 URL Google dan jana kekal ringan
-// (dijana semasa permintaan, O(366) string, tiada API dipanggil).
+// ── SITEMAP NASA — the daily APOD cluster ─────────────────────────────────────
+// NASA has published ONE picture + explanation every day since 16 June 1995.
+// We mirror it as ±11,000 unique pages (/nasa/apod/YYYY-MM-DD) — each
+// one distinct piece of content, indexable and ad-supported. Split by year so
+// a single file stays under Google's 50,000 URL cap and generation stays light
+// (generated per request, an O(366) string, no API is called).
 function apodDatesInYear(year) {
   const y = Number(year);
   if (!Number.isFinite(y) || y < 1995 || y > new Date().getUTCFullYear()) return null;
@@ -2814,8 +2814,8 @@ app.get('/sitemap-nasa.xml', (req, res) => {
   );
 });
 
-// Laluan bertailkan `.xml` ditulis sebagai regex — bentuk `:year.xml` tidak
-// boleh dipercayai merentas versi path-to-regexp.
+// Routes suffixed with `.xml` are written as regex — the `:year.xml` form cannot
+// be relied on across path-to-regexp versions.
 app.get(/^\/sitemap-nasa-(\d{4})\.xml$/, (req, res) => {
   const dates = apodDatesInYear(req.params[0]);
   if (!dates) return res.status(404).type('text/plain').send('Unknown APOD year');
@@ -2826,9 +2826,9 @@ app.get(/^\/sitemap-nasa-(\d{4})\.xml$/, (req, res) => {
   );
 });
 
-// ── SITEMAP CUACA — setiap kota DB × 3 halaman (kota, udara, surya) + statik ──
-// Kota geokoding dinamik TIDAK tersenarai (tiada senarai tetap) tetapi sentiasa
-// ditemui melalui hab pautan hub /cuaca + pautan silang halaman kota.
+// ── SITEMAP CUACA — every DB city × 3 pages (city, air, solar) + the statics ──
+// Dynamically geocoded cities are NOT listed (there is no fixed list) but always
+// discovered through the /cuaca hub link hub + cross-links on the city pages.
 app.get('/sitemap-cuaca.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const special = ['/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin']
@@ -2844,7 +2844,7 @@ app.get('/sitemap-cuaca.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP GEMPA — hub + 5 rantau (jamly) + penjelasan (bulanan) ──
+// ── SITEMAP GEMPA — hub + 5 regions (hourly) + explanation (monthly) ──
 app.get('/sitemap-gempa.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const urls = ['/gempa']
@@ -2892,7 +2892,7 @@ app.get('/sitemap-negara.xml', async (req, res) => {
   );
 });
 
-// ── SITEMAP UNSUR — hab + 118 unsur (senarai statik, sentiasa sah) ──
+// ── SITEMAP UNSUR — the hub + 118 elements (a static list, always valid) ──
 app.get('/sitemap-unsur.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2902,7 +2902,7 @@ app.get('/sitemap-unsur.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP DEEP-SKY — 2 hab + 88 buruj + 110 Messier (senarai statik) ──
+// ── SITEMAP DEEP-SKY — 2 hubs + 88 /buruj pages + 110 Messier (a static list) ──
 app.get('/sitemap-deepsky.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2915,7 +2915,7 @@ app.get('/sitemap-deepsky.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP PEPATAH — hab + negara + setiap peribahasa (senarai statik) ──
+// ── SITEMAP PEPATAH — the hub + countries + every proverb (a static list) ──
 app.get('/sitemap-pepatah.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2928,8 +2928,8 @@ app.get('/sitemap-pepatah.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP SEJARAH — hab + 366 tarikh (senarai statik, sentiasa sah) ──
-// URL tarikh dijana daripada kalendar tetap (tiada panggilan API di sini).
+// ── SITEMAP SEJARAH — the hub + 366 dates (a static list, always valid) ──
+// Date URLs come from a fixed calendar (no API call happens here).
 app.get('/sitemap-sejarah.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2941,7 +2941,7 @@ app.get('/sitemap-sejarah.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP KOTA — hab + setiap kota (senarai statik, sentiasa sah) ──
+// ── SITEMAP KOTA — the hub + every city (a static list, always valid) ──
 app.get('/sitemap-kota.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2954,7 +2954,7 @@ app.get('/sitemap-kota.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP WARISAN — hab + setiap benua + setiap tapak (senarai statik, sentiasa sah) ──
+// ── SITEMAP WARISAN — the hub + every continent + every site (a static list, always valid) ──
 app.get('/sitemap-warisan.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2967,7 +2967,7 @@ app.get('/sitemap-warisan.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP CAGAR — hab + setiap benua + setiap kawasan lindung ──
+// ── SITEMAP CAGAR — hub + every continent + every protected area ──
 app.get('/sitemap-cagar.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2980,7 +2980,7 @@ app.get('/sitemap-cagar.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP GUNUNG — hab + setiap benua + setiap gunung ──
+// ── SITEMAP GUNUNG — hub + every continent + every mountain ──
 app.get('/sitemap-gunung.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -2993,7 +2993,7 @@ app.get('/sitemap-gunung.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP DANAU — hab + setiap benua + setiap danau ──
+// ── SITEMAP DANAU — hub + every continent + every lake ──
 app.get('/sitemap-danau.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -3072,13 +3072,13 @@ app.get('/sitemap-gletser.xml', (req, res) => {
 });
 
 // ── SITEMAP GEO BATCH — teluk/lembah/semenanjung/gunung-berapi/selat/kepulauan/ngarai ──
-// Senarai base sitemap anak geo — dikumpul semasa boot, hidang sebagai satu
-// <sitemapindex> di /sitemap-geo.xml (robots.txt hanya isytihar indeks ini).
+// Base list of the geo child sitemaps — collected during boot, served as one
+// <sitemapindex> at /sitemap-geo.xml (robots.txt declares only this index).
 const GEO_SITEMAP_BASES = [];
-// Daftar kluster geo untuk indeks carian sendiri: geoCfg() menyimpan cfg ikut
-// base, geoSitemap() menyimpan modul + listKey ikut base. Kedua-duanya berjalan
-// semasa require, jadi geoClusters() hanya boleh dipanggil SELEPAS server.js
-// dimuat sepenuhnya (index.js semasa boot).
+// The geo cluster registry for the site's own search index: geoCfg() stores cfg per
+// base, geoSitemap() stores the module + listKey per base. Both run
+// at require time, so geoClusters() may only be called AFTER server.js
+// fully loaded (index.js during boot).
 const GEO_CFG_BY_BASE = {};
 const GEO_MOD_BY_BASE = {};
 function geoClusters() {
@@ -3106,8 +3106,8 @@ function geoSitemap(base, mod, listKey) {
     );
   });
 }
-// <sitemapindex> untuk semua anak sitemap geo — tanpa ini, URL item (ratusan
-// ribu halaman) tidak diisytiharkan di mana-mana pun crawlers boleh temui.
+// <sitemapindex> for every geo child sitemap — without it the item URLs (hundreds
+// of thousands of pages) are not declared anywhere a crawler could find them.
 app.get('/sitemap-geo.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const entries = GEO_SITEMAP_BASES.slice()
@@ -3759,7 +3759,7 @@ app.get('/sitemap-bencana.xml', async (req, res) => {
   );
 });
 
-// ── SITEMAP AKADEMI — hab + 10 trek + 50 pelajaran (dataset setempat, sentiasa sah) ──
+// ── SITEMAP AKADEMI — the hub + 10 tracks + 50 lessons (a local dataset, always valid) ──
 app.get('/sitemap-akademi.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -3772,7 +3772,7 @@ app.get('/sitemap-akademi.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP WANG — hab + kadar + 29 halaman tukaran USD (USD→setiap kod ECB) ──
+// ── SITEMAP WANG — the hub + rates + 29 USD conversion pages (USD→every ECB code) ──
 app.get('/sitemap-wang.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -3784,17 +3784,17 @@ app.get('/sitemap-wang.xml', (req, res) => {
   );
 });
 
-// ── SITEMAP SENI — hab + 10 koleksi + halaman objek setiap koleksi ──────────
-// Halaman /seni/objek/<id> sudah render (dijumpai menerusi grid); menyenaraikan
-// objectID dalam sitemap menjadikannya ditemui crawler — beratus→beribu halaman
-// unik tanpa kod baharu. Enrichment non-fatal: kegagalan Met → senarai statik,
-// JAMANKAN tak pernah 503 (pitfall halaman suapan lambat).
+// ── SITEMAP SENI — hub + 10 collections + each collection's object pages ──────
+// The /seni/objek/<id> pages already render (discovered through the grid); listing
+// the objectIDs in a sitemap is what lets crawlers find them — hundreds→thousands of pages
+// unique pages with no new code. Enrichment is non-fatal: a Met failure → the static list,
+// GUARANTEED never to 503 (the slow-feed-page pitfall).
 app.get('/sitemap-seni.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio, freq) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq || 'weekly'}</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const parts = [one('/seni', '0.9')].concat(seni.COLLECTIONS.map((c) => one(`/seni/koleksi/${c.slug}`, '0.7')));
-  // sitemapObjectUrls ialah non-blocking: hidang cache sedia-ada (atau [] bila sejuk)
-  // serta-merta & kick build latar — jadi endpoint ini tak pernah lambat/503.
+  // sitemapObjectUrls is non-blocking: serve the cache that already exists (or [] when cold)
+  // immediately and kicks a background build — so this endpoint is never slow/503.
   const objUrls = seni.sitemapObjectUrls(3);
   for (const p of objUrls) parts.push(one(p, '0.6', 'monthly'));
   res.type('application/xml').send(
@@ -3802,7 +3802,7 @@ app.get('/sitemap-seni.xml', async (req, res) => {
   );
 });
 
-// ── SITEMAP HIDUPAN — hab + 16 halaman spesies ───────────────────────────────
+// ── SITEMAP HIDUPAN — hub + 16 species pages ─────────────────────────
 app.get('/sitemap-hidupan.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
@@ -3879,7 +3879,7 @@ const COMMON_CSS = `
   .ad-sense { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 8px 6px; }
   .ad-sense ins.adsbygoogle { background:transparent; }
   .ad-label { display:block; font-size:.66rem; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); margin:0 2px 6px; }
-  /* Site chrome — bar atas penuh, hero, grid feed, footer berbilang lajur. */
+  /* Site chrome — the full top bar, the hero, the feed grid, the multi-column footer. */
   .site-top { position:sticky; top:0; z-index:50; background:var(--panel); border-bottom:1px solid var(--line); }
   .wrap-w { max-width:1080px; margin:0 auto; padding:0 20px; }
   .topbar { display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:11px 0; }
@@ -3914,17 +3914,17 @@ const COMMON_CSS = `
 `;
 
 // Blog routes
-// AdSense: hanya papar unit bila AKTIF + client `ca-pub-…` sah + slot numerik.
-// `2206273113` dah disahkan unit SEBENAR ("test banner", akaun ini) — guard
-// placeholder lama dibuang; slot kosong bukan-numerik tetap ditolak.
+// AdSense: only show a unit when it is ACTIVE + the client `ca-pub-…` is valid + a numeric slot.
+// `2206273113` is a confirmed REAL unit ("test banner", this account) — the old
+// placeholder guard is dropped; a non-numeric empty slot is still refused.
 function adsenseClient() {
   const c = String(store.getSetting('adsClient', config.adsense.client) || '').trim();
   return /^ca-pub-\d+$/.test(c) ? c : '';
 }
 function adsenseOn() {
-  // Togel Admin (`adsEnabled`) menjadi tuan bila pernah disentuh; jika belum,
-  // ikut config/env (default ON). Ini memastikan halaman utama (klien) & blog/app
-  // (pelayan) memakai SATU punca kebenaran yang sama.
+  // The Admin toggle (`adsEnabled`) takes the lead once it has been touched; if it never has,
+  // follow config/env (default ON). This makes the home page (client) and the blog/app
+  // (server) share ONE single source of truth.
   const toggle = store.getSetting('adsEnabled', null);
   const enabled = (toggle === null) ? config.adsense.enabled : Boolean(toggle);
   return enabled && adsenseClient();
@@ -3933,8 +3933,8 @@ function realSlot(slot) {
   const s = String(slot || '').trim();
   return /^\d+$/.test(s) ? s : '';
 }
-// Slot boleh dikonfigur via Admin (store: adsSlotTop/adsSlotInArticle/adsSlotBottom)
-// dengan fallback ke env/config. `label` dari pemanggil menentukan kunci store.
+// Slots can be configured from Admin (store: adsSlotTop/adsSlotInArticle/adsSlotBottom)
+// with a fallback to env/config. The caller's `label` decides which store key is used.
 const ADSENSE_STORE_KEYS = { top: 'adsSlotTop', 'in-article': 'adsSlotInArticle', bottom: 'adsSlotBottom' };
 function adUnit(slot, label) {
   const client = adsenseOn();
@@ -3945,37 +3945,37 @@ function adUnit(slot, label) {
   return `<div class="ad-slot ad-sense"><span class="ad-label">Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${s}" data-ad-format="auto" data-full-width-responsive="true"></ins></div>` +
     `<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>`;
 }
-// Script pemuat Adsense satu kali di <head> (hanya bila aktif + client sah).
+// The Adsense loader script once in <head> (only when active + the client is valid).
 function adsenseLoader() {
   const client = adsenseOn();
   if (!client) return '';
   return `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`;
 }
 
-// Rangkaian iklan PANTAS (Adsterra / PropellerAds / HilltopAds, dll): Admin tampal
-// SATU URL skrip universal + aktifkan togel. Bila aktif, ia GANTIKAN AdSense pada
-// halaman yang sama — elak "mixed/competing ad networks" yang boleh buat akaun
-// AdSense di-BAN. AdSense auto-resume bila togel ini dimatikan.
+// FAST ad networks (Adsterra / PropellerAds / HilltopAds, etc): the admin pastes
+// ONE universal script URL + flips the toggle. When active it REPLACES AdSense on
+// the same page — avoiding "mixed/competing ad networks", which can get an
+// AdSense account BANNED. AdSense auto-resumes when this toggle is switched off.
 function thirdPartyAdTag() {
   if (!store.getSetting('thirdPartyAdEnabled', false)) return '';
   const src = String(store.getSetting('thirdPartyAdSrc', '')).trim();
   if (!/^https:\/\/[a-z0-9.-]+\//i.test(src)) return '';
   return `<script async src="${escapeHtml(src)}"></script>`;
 }
-// Skrip <head> untuk halaman dilayar pelayan (blog/artikel): third-party ATAU AdSense.
+// The <head> script for server-rendered pages (blog/articles): third-party OR AdSense.
 function pageAdScript() {
   return thirdPartyAdTag() || adsenseLoader();
 }
-// Microsoft Clarity (analitik penggunaan) — sudah didedahkan dalam /privacy. ID projek
-// Clarity bersifat awam (tersemat dalam URL tag), jadi fallback lalai selamat. Togel
-// Admin `clarityEnabled` (lalai HIDUP) mematikannya serta-merta pada semua halaman.
+// Microsoft Clarity (usage analytics) — already disclosed in /privacy. The project ID
+// is public (it is baked into the tag URL), so a safe default fallback is fine. The Admin
+// `clarityEnabled` toggle (default ON) switches it off instantly on every page.
 const DEFAULT_CLARITY_ID = 'ytshvg0zer';
 function clarityIdValue() {
   return String(store.getSetting('clarityId', process.env.CLARITY_PROJECT_ID || DEFAULT_CLARITY_ID) || '').trim();
 }
 function clarityEnabledValue() {
-  // Lalai HIDUP (sudah didedahkan dalam /privacy); boleh dimatikan melalui
-  // env CLARITY_ENABLED atau togel Admin (yang menyimpan store `clarityEnabled`).
+  // Default ON (already disclosed in /privacy); it can be switched off through
+  // env CLARITY_ENABLED or the Admin toggle (which stores `clarityEnabled`).
   const envDefault = typeof process.env.CLARITY_ENABLED !== 'undefined'
     ? /^(1|true|yes|on)$/i.test(process.env.CLARITY_ENABLED)
     : true;
@@ -3987,14 +3987,14 @@ function clarityScript() {
   if (!/^[a-z0-9]+$/i.test(id)) return '';
   return `<script async src="https://www.clarity.ms/tag/${escapeHtml(id)}"></script>`;
 }
-// Unit dalam-kandungan: jika third-party ON, jangan susun <ins> AdSense pada halaman sama.
+// The in-content unit: when third-party is ON, never stack an AdSense <ins> on the same page.
 function adUnitGuarded(slot, label) {
   return thirdPartyAdTag() ? '' : adUnit(slot, label);
 }
 
-// Microsoft Ads / rangkaian lain: Admin tampal snippet HTML/JS penuh dari
-// pembekal (mis. Microsoft monetizenow). Kita inject APA ADANYA bila msAdsEnabled.
-// Reka bentuk ini elak daripada aku mereka markup MS yang mungkin salah.
+// Microsoft Ads / other networks: the admin pastes the full HTML/JS snippet from
+// the provider (e.g. Microsoft monetizenow). We inject IT VERBATIM when msAdsEnabled.
+// This design avoids me inventing MS markup that could be wrong.
 // Field store: msAdsSnippetTop / msAdsSnippetInArticle / msAdsSnippetBottom.
 const MSADS_STORE_KEYS = { top: 'msAdsSnippetTop', 'in-article': 'msAdsSnippetInArticle', bottom: 'msAdsSnippetBottom' };
 function msAdUnit(label) {
@@ -4005,8 +4005,8 @@ function msAdUnit(label) {
   return raw ? `<div class="ad-slot" data-ad-network="ms-${label}">${raw}</div>` : '';
 }
 
-// Chrome laman dikongsi: bar atas (brand + nav + togel tema) dan footer berlapis penuh.
-// `active` menandakan pautan halaman semasa (home|blog|nasa|learn|docs|about).
+// The shared page chrome: the top bar (brand + nav + theme toggle) and the full layered footer.
+// `active` marks the link of the current page (home|blog|nasa|learn|docs|about).
 function siteHeader(active) {
   const a = String(active || '');
   const link = (href, label, key) => `<a href="${href}"${a === key ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
@@ -4103,7 +4103,7 @@ function siteFooter() {
 <script src="/read-aloud.js" defer></script>`;
 }
 
-// Hab konten — senarai artikel. asHome=true bila dihidang di '/' (tukuk.org = konten, bukan carian).
+// The content hub — the article list. asHome=true when served at '/' (tukuk.org = content, not search).
 function renderBlogListPage(req, asHome) {
   const posts = store.getAllPosts(100);
   const selfUrl = asHome ? 'https://tukuk.org/' : 'https://tukuk.org/blog';
@@ -4191,9 +4191,9 @@ ${siteFooter()}
   return html;
 }
 
-// Halaman NASA APOD sebagai KANDUNGAN yang boleh di-index + beriklan (bukan SPA noindex lama).
-// Teks penjelasan dihantar dari pelayan = bahan SEO sebenar; imej domain-awam = trafik gambar
-// global. Ni-astronomi ialah ceruk CPC sederhana yang sesuai untuk AdSense.
+// The NASA APOD page as indexable, ad-served CONTENT (not the old noindex SPA).
+// Explanatory text sent from the server = real SEO material; public-domain images = image traffic
+// global. Non-astronomy is a mid-CPC niche that suits AdSense.
 function renderNasaApodPage(req, apod) {
   const a = apod && typeof apod === 'object' ? apod : {};
   const title = String(a.title || 'Astronomy Picture of the Day').trim();
@@ -4291,11 +4291,11 @@ ${siteFooter()}
 </html>`;
 }
 
-// ── TUKUK-OS SPACE COMPLEX — banyak halaman konten SEO di atas data NASA live ──
-// Semua data diambil ATAS PERMINTAAN melalui src/nasa.js (cache 2–12 jam +
-// circuit-breaker sedia ada) → tiada kerja latar baru, server kekal ringan.
-// Setiap halaman: index,follow + 3 unit iklan + JSON-LD + nasaSpaceNav() sebagai
-// hab pautan-silang (internal link mengukuhkan seluruh kluster NASA di Google).
+// ── TUKUK-OS SPACE COMPLEX — many SEO content pages on top of live NASA data ──
+// All data is fetched ON REQUEST through src/nasa.js (a 2–12 hour cache +
+// the existing circuit-breaker) → no new background work, the server stays light.
+// Every page: index,follow + 3 ad units + JSON-LD + nasaSpaceNav() as the
+// cross-link hub (internal links strengthen the whole NASA cluster on Google).
 const NASA_SECTIONS = [
   { href: '/nasa', icon: '\uD83C\uDF20', name: 'Picture of the Day', blurb: "Today's Astronomy Picture of the Day, with NASA's own explanation." },
   { href: '/nasa/archive', icon: '\uD83D\uDDC4', name: 'APOD Archive', blurb: 'Three decades of universe — browse and search every picture we hold.' },
@@ -4318,12 +4318,12 @@ function nasaSpaceNav() {
 
 function nasaImg(url, alt, eager) {
   if (!/^https?:\/\//i.test(String(url || ''))) return '';
-  // width/height + CSS height:auto → nisbah rizab (CLS); kotak sebenar tetap CSS yang tentukan.
+  // width/height + CSS height:auto → the ratio is reserved (CLS); the real box is still decided by CSS.
   return `<img class="nasa-img" src="${escapeHtml(url)}" alt="${escapeHtml(alt || 'NASA space image (public domain)')}" width="1280" height="720" loading="${eager ? 'eager' : 'lazy'}" decoding="async">`;
 }
 
-// APOD media_type=video (termasuk entri "Sonified:") — URL YouTube BUKAN untuk <img>.
-// ID video → player iframe (CSP frame-src meluluskan youtube-nocookie) + poster untuk og:.
+// APOD media_type=video (including "Sonified:" entries) — a YouTube URL is NOT for <img>.
+// a video ID → an iframe player (CSP frame-src allows youtube-nocookie) + a poster for og:.
 function nasaVideoId(url) {
   const m = String(url || '').match(/(?:[?&]v=|youtu\.be\/|embed\/)([\w-]{6,20})/);
   return m ? m[1] : null;
@@ -4350,9 +4350,9 @@ function nasaParas(text, limit) {
 
 function nasaFmt(n) { return Number(n || 0).toLocaleString('en-US'); }
 
-// Pelukan halaman standard seksyen NASA: head SEO penuh + chrome situs + unit
-// iklan top / in-article / bottom + nav silang. `body` dari pemanggil ialah HTML
-// yang sudah selamat (panggil escapeHtml sendiri untuk data dinamik).
+// The standard page wrapper for a NASA section: full SEO head + site chrome + the
+// top / in-article / bottom ad units + cross nav. The caller's `body` is HTML
+// which is already safe (call escapeHtml yourself for dynamic data).
 function nasaDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
   const ogImage = o.image || 'https://tukuk.org/og.png';
@@ -4429,14 +4429,14 @@ ${siteFooter()}
 </html>`;
 }
 
-// Gagal data → halaman mesra-CARI (503) tanpa menjejaskan indeks halaman lain.
+// A data failure → a search-FRIENDLY page (503) without hurting the index of other pages.
 function nasaBusy(msg) {
   return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The NASA feed is briefly unreachable. Please try again in a few minutes.</p><p><a href="/nasa">Back to the Space Complex</a></p></body>`;
 }
 
-// APOD ikut tarikh — /nasa/apod/1997-08-26 dan seterusnya. Ini penjana halaman
-// SEO terbesar kita: NASA menerbitkan APOD sejak 16 Jun 1995 = ±11,000 halaman
-// unik berindeks, satu per hari, tanpa penulisan manual.
+// APOD by date — /nasa/apod/1997-08-26 and onwards. This is the page generator
+// Our biggest SEO asset: NASA has published APOD since 16 Jun 1995 = ±11,000 unique
+// indexable pages, one per day, with no manual writing.
 function nasaApodDatePage(req, apod, dateStr) {
   const a = Array.isArray(apod) ? apod[0] : (apod || {});
   const title = String(a.title || 'APOD').slice(0, 120);
@@ -4472,7 +4472,7 @@ function nasaApodDatePage(req, apod, dateStr) {
   });
 }
 
-// Arkib APOD setempat (cakerakan) + carian teks — tidak guna kuot API.
+// The local APOD archive (on disk) + text search — it uses no API quota.
 function nasaArchivePage(req, items, q) {
   const cards = items.map((e) => {
     const isImg = String(e.media_type || 'image') === 'image' && !/^https:\/\/www\.youtube\./i.test(String(e.url || ''));
@@ -4498,11 +4498,11 @@ function nasaArchivePage(req, items, q) {
   });
 }
 
-// Peristiwa langit bertarikh tetap — kurasan setempat. (API in-the-sky.org
-// sudah mati — pelayan DNS-nya tidak dapat diselesaikan Okt 2026 — jadi kotak
-// ini dibina daripada takwim astronomi yang disemak tangan. Tarikh puncak
-// meteor bergerak ±1–2 hari antara tahun; KADAR (ZHR) ialah anggaran optimum
-// bawah langit gelap sepenuhnya, bukan apa yang pasti kelihatan.)
+// Sky events on fixed dates — locally curated. (The in-the-sky.org API
+// is dead — its DNS server could not be resolved in Oct 2026 — so this box
+// is built from a hand-reviewed astronomy calendar. Meteor peak dates
+// move ±1–2 days between years; the RATE (ZHR) is an optimum estimate
+// under a fully dark sky, not what is guaranteed to be seen.)
 const SKY_EVENTS = [
   { y: 2027, m: 8, d: 2, icon: '🌑', name: 'Total solar eclipse', rate: 'totality up to 6m23s',
     note: 'The biggest eclipse event of the decade — totality sweeps southern Spain, North Africa, Egypt (Luxor sits on the centre line), Saudi Arabia, Yemen and Somalia. July 2028 repeats it for Australia and New Zealand.' },
@@ -4580,9 +4580,9 @@ function nasaSkyPage(req, sky, useQuery) {
   });
 }
 
-// ── ISS LANGSUNG — peta kanvas sendiri (tiada pustaka luar) + krew antarabangsa ──
-// wheretheiss.at (tanpa kunci) bagi telemetri, open-notify bagi krew. Halaman ini
-// menghasilkan data "live" yang buat orang kembali setiap hari → sinyal SEO kuat.
+// ── LIVE ISS — our own canvas map (no external library) + the international crew ──
+// wheretheiss.at (no key) for telemetry, open-notify for the crew. This page
+// produces "live" data that brings people back every day → a strong SEO signal.
 function nasaIssPage(req, iss, crew) {
   const hasPos = Boolean(iss && iss.source && iss.source !== 'unavailable');
   const lat = Math.round((Number(iss && iss.latitude) || 0) * 100) / 100;
@@ -4593,7 +4593,7 @@ function nasaIssPage(req, iss, crew) {
   const vis = rawVis === 'eclipsed' ? 'in Earth\u2019s shadow' : rawVis;
   const tsSec = Number(iss && iss.timestamp) || Math.floor(Date.now() / 1000);
   const seenAt = new Date(tsSec * 1000).toUTCString();
-  // Titik subsolar (Matahari di zenit) → pemisah siang/malam SEBENAR pada peta.
+  // The subsolar point (the Sun at zenith) → the REAL day/night divider on the map.
   let subLat = Number(iss && iss.solar_lat);
   let subLng = Number(iss && iss.solar_lon);
   if (!Number.isFinite(subLat) || !Number.isFinite(subLng)) {
@@ -4603,7 +4603,7 @@ function nasaIssPage(req, iss, crew) {
     const doy = Math.floor((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 0)) / 86400000);
     subLat = -23.44 * Math.cos((360 / 365.24) * (doy + 10) * Math.PI / 180);
   } else {
-    subLng = ((subLng + 180) % 360 + 360) % 360 - 180; // normalisasi kepada -180..180
+    subLng = ((subLng + 180) % 360 + 360) % 360 - 180; // normalised to -180..180
   }
   subLat = Math.round(subLat * 100) / 100;
   subLng = Math.round(subLng * 100) / 100;
@@ -4618,9 +4618,9 @@ function nasaIssPage(req, iss, crew) {
     + `<div class="nasa-card"><h3>Humans in space</h3><div class="big">${inSpace}</div></div>`
     + `<div class="nasa-card"><h3>Orbits per day</h3><div class="big">\u2248 15.5</div></div>`
     + `</div>`;
-  // Peta SATELIT sebenar: NASA Blue Marble equirektangular sebagai latar, kanvas
-  // lutsinar di atas melukis grid + pemisah siang/malam (dari titik subsolar) +
-  // landasan tanah 51.6° + penanda ISS semasa. Tiada pustaka luar, tiada CDN.
+  // A REAL satellite map: NASA Blue Marble equirectangular as the backdrop, the canvas
+  // transparent over the drawn grid + the day/night divider (from the subsolar point) +
+  // ground track 51.6° + the current ISS marker. No external library, no CDN.
   const daymap = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/1280px-Blue_Marble_2002.png';
   const map = `<div style="position:relative;max-width:720px;margin:16px auto;border:1px solid var(--line);border-radius:12px;overflow:hidden;line-height:0;background:#0a1020">`
     + `<img id="issbase" src="${daymap}" width="1280" height="640" alt="NASA Blue Marble true-colour satellite image of the whole Earth (equirectangular world map)" loading="eager" decoding="async" style="width:100%;height:auto;display:block">`
@@ -4683,7 +4683,7 @@ function nasaIssPage(req, iss, crew) {
   });
 }
 
-// ── ASTEROID WATCH — pendekatan minggu ini + meja risiko Sentry + trend 4 minggu ──
+// ── ASTEROID WATCH — this week's approaches + the Sentry risk table + a 4-week trend ──
 function nasaAsteroidsPage(req, week, trend, sentry) {
   const rows = (week.asteroids || []).slice(0, 60).map((a) => {
     const dmin = Number(a.estimated_diameter_meters && a.estimated_diameter_meters.min) || 0;
@@ -4714,8 +4714,8 @@ function nasaAsteroidsPage(req, week, trend, sentry) {
       + `<div class="nasa-card"><h3>In lunar distances</h3><div class="big">${Number(trend.nearest.moonDistances) || 0} \u00d7 Moon</div></div></div>`
     : '';
   const dir = trend && trend.trend ? trend.trend.direction : 'flat';
-  // Kejujuran sumber: tiada nombor rekaan pernah dipaparkan — jika suapan JPL
-  // sibuk, arkib tarikan nyata hidang dengan notis yang jelas.
+  // Source honesty: no invented number is ever displayed — if the JPL feed
+  // is busy, the archive of real pulls is served with a clear notice.
   const srcNote = week && week.source === 'archive'
     ? `<div class="nasa-ok"><h3>Live feed briefly busy — showing real archived approaches</h3><p>NASA\u2019s NeoWs endpoint is not answering this moment, so the table lists <b>genuine close approaches from the last successful JPL fetch</b>${week.archivedAt ? ` (recorded ${escapeHtml(String(week.archivedAt).slice(0, 10))})` : ''}. Nothing below is simulated; the live list repopulates automatically the moment the feed recovers.</p></div>`
     : week && week.source === 'unavailable'
@@ -4741,7 +4741,7 @@ function nasaAsteroidsPage(req, week, trend, sentry) {
   });
 }
 
-// ── CUACA ANGKASA — flares NOAA GOES + fluks radio F10.7 + panduan aurora ──
+// ── SPACE WEATHER — NOAA GOES flares + F10.7 radio flux + the aurora guide ──
 function nasaSpaceWeatherPage(req, solar) {
   const f = (solar && solar.flares) || { classes: {}, buckets: [], total: 0, strongest: null };
   const fx = (solar && solar.flux) || { avg: 0, min: 0, max: 0, buckets: [], direction: 'flat', changePercent: 0, days: 0 };
@@ -4780,7 +4780,7 @@ function nasaSpaceWeatherPage(req, solar) {
   });
 }
 
-// ── MARS ROVERS — galeri permukaan tiap kenderaan, satu URL berbeza per rover ──
+// ── MARS ROVERS — a surface gallery per vehicle, one distinct URL per rover ──
 const MARS_ROVERS = [
   { slug: 'perseverance', name: 'Perseverance', site: 'Jezero Crater', since: 'Feb 2021', sol: 1500 },
   { slug: 'curiosity', name: 'Curiosity', site: 'Gale Crater', since: 'Aug 2012', sol: 4500 },
@@ -4816,7 +4816,7 @@ function nasaMarsPage(req, data, rover) {
   });
 }
 
-// ── EPIC EARTH — pelantang gambar planet penuh DSCOVR (1.6 juta km) ──
+// ── EPIC EARTH — the DSCOVR full-disc planet imager (1.6 million km) ──
 function nasaEarthPage(req, list) {
   const items = (Array.isArray(list) ? list : []).filter((e) => e && (e.url || e.thumb));
   const first = items[0] || {};
@@ -4851,7 +4851,7 @@ function nasaEarthPage(req, list) {
   });
 }
 
-// ── EKOPLANET — senarai dunia berdekatan, dari Arkib Eksoplanet NASA ──
+// ── EKOPLANET — the list of nearby worlds, from the NASA Exoplanet Archive ──
 function nasaExoplanetsPage(req, exo, withinPc) {
   const planets = exo && Array.isArray(exo.planets) ? exo.planets : [];
   const cut = Number(withinPc) || 0;
@@ -4894,7 +4894,7 @@ function nasaExoplanetsPage(req, exo, withinPc) {
   });
 }
 
-// ── BUNYI ANGKASA — arkib audio NASA (domain awam) boleh main di halaman ──
+// ── SOUNDS OF SPACE — the NASA audio archive (public domain), playable on the page ──
 const NASA_SOUND_TOPICS = [
   { slug: 'apollo', label: 'Apollo missions', blurb: 'Apollo-era mission audio and NASA\u2019s own historians on the landings.' },
   { slug: 'planets', label: 'Planets', blurb: 'Planetary science in NASA\u2019s own audio \u2014 what spacecraft measured across the Solar System.' },
@@ -4929,7 +4929,7 @@ function nasaSoundsPage(req, audio, topic) {
   });
 }
 
-// ── SATELIT — elemen orbit CelesTrak (TLE) bagi armada yang benar-benar di atas ──
+// ── SATELLITES — CelesTrak orbital elements (TLE) for the fleet actually up there ──
 const SAT_GROUPS = [
   { slug: 'stations', label: 'Space stations', blurb: 'The crewed outposts: ISS, Tiangong and the crew vehicles visiting them.' },
   { slug: 'visual', label: 'Brightest payloads', blurb: 'The naked-eye fleet \u2014 station, Hubble and the big bright satellites.' },
@@ -6713,11 +6713,11 @@ async function bencanaEventPage(req, cat, ev) {
   });
 }
 
-// ── TUKUK-OS WIKI — gaya Ensiklopedia (MediaWiki-esque)) ────────────────────
-// Portal pengetahuan bergaya Wikipedia: bar sisi navigasi, Jadual Kandungan (TOC)
-// auto, infobox, bar kategori & carian dalaman. Artikel wiki memaparkan semula post
-// blog sedia ada dalam rupa wiki — halaman konten yang boleh di-index + beriklan.
-// Rupa sengaja CAHAYA (tidak ikut togel tema gelap) untuk imej ensiklopedia tulen.
+// ── TUKUK-OS WIKI — encyclopedia style (MediaWiki-esque)) ────────────────────
+// A Wikipedia-style knowledge portal: a navigation sidebar, an auto Table of Contents (TOC),
+// an infobox, a category bar & internal search. A wiki article re-renders the post
+// the existing blog in wiki form — indexable, ad-served content pages.
+// The look is deliberately LIGHT (ignoring the dark theme toggle) for genuine encyclopedia imagery.
 const WIKI_CSS = `
   *{box-sizing:border-box}
   body{margin:0;background:#fff;color:#202122;font:15px/1.6 -apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -6813,7 +6813,7 @@ function wikiFooter() {
     `</footer></div>`;
 }
 
-// Tambah id pada <h2>/<h3> dalam HTML artikel + bina Jadual Kandungan (TOC).
+// Add an id to the <h2>/<h3> inside the article HTML + build the Table of Contents (TOC).
 function wikiTocify(html) {
   const headings = [];
   let idx = 0;
@@ -6910,7 +6910,7 @@ function wikiSearchPage(req, q) {
     `</main></div>${wikiFooter()}</body></html>`;
 }
 
-// ── Laluan Wiki. 'random' (literal) DIDAHULUIKAN sebelum '/wiki/:slug' ──────
+// ── The Wiki routes. 'random' (a literal) comes BEFORE '/wiki/:slug' ──────
 app.get('/wiki/random', (req, res) => {
   const posts = store.getAllPosts(300);
   if (!posts.length) return res.redirect(302, '/wiki');
@@ -6936,7 +6936,7 @@ app.get('/wiki/:slug', (req, res) => {
 
 app.get('/blog', (req, res) => res.type('html').send(renderBlogListPage(req, false)));
 
-// Kurikulum "Tukuk-OS 0 -> Hero": susunan pembelajaran merentas semua artikel.
+// The "Tukuk-OS 0 -> Hero" curriculum: the learning order across all the articles.
 const LEARN_STAGES = [
   {
     n: '0',
@@ -7137,9 +7137,9 @@ ${siteFooter()}
   res.send(html);
 });
 
-// ══ KOMPLEKS ILMU (/study) — sains, geografi, sejarah, eksperimen, teka-teki,
-// fakta, matematik, alarm. Shell sama seperti nasaDoc: chrome penuh + 3 unit
-// iklan + nav silang. Data kurasi setempat (src/study.js) — tiada API luar.
+// ══ ILMU COMPLEX (/study) — science, geography, history, experiments, riddles,
+// facts, maths, alarm. The same shell as nasaDoc: the full chrome + 3 ad
+// units + cross nav. Locally curated data (src/study.js) — no external API.
 const STUDY_SECTIONS = [
   { href: '/study', icon: '\uD83C\uDF1F', name: 'Today\u2019s Picks', blurb: 'One fact, one riddle, one experiment and one history moment \u2014 fresh every day.' },
   { href: '/study/science', icon: '\uD83E\uDD2C', name: 'Science', blurb: 'The core ideas of physics, chemistry and biology, explained in plain language.' },
@@ -7158,7 +7158,7 @@ function studyNav() {
     + `</div></nav>`;
 }
 
-// Pelukan standard seksyen /study — cermin nasaDoc (chrome penuh + iklan berkawal).
+// The standard /study section wrapper — mirrors nasaDoc (full chrome + gated ads).
 function studyDoc(o) {
   const robots = o.robots || 'index,follow';
   const ld = o.ld || JSON.stringify({
@@ -7228,7 +7228,7 @@ ${siteFooter()}
 </html>`;
 }
 
-// ── /study — hab: pilihan harian deterministik (tiada kandungan berulang) ────
+// ── /study — hub: a deterministic daily pick (no repeated content) ────
 function studyHubPage() {
   const seed = study.dayIndex();
   const fact = study.pickDaily(study.FACTS, seed);
@@ -7254,7 +7254,7 @@ function studyHubPage() {
   });
 }
 
-// ── /study/science — penerangan konsep kurasi ───────────────────────────────
+// ── /study/science — curated concepts explained ─────────────────────────────
 function studySciencePage() {
   const cards = study.SCIENCE.map((c) => `<div class="study-card"><h3>${escapeHtml(c.title)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
   const body = `<p class="learn-intro">Seventeen core ideas that school curricula usually scatter across five subjects \u2014 collected here in plain language, each in three short paragraphs. Read one a day; they stand alone. Pair them with the <a href="/study/experiments">hands-on experiments</a> to see the ideas move.</p>
@@ -7268,7 +7268,7 @@ function studySciencePage() {
   });
 }
 
-// ── /study/history — kronologi mercu tanda ──────────────────────────────────
+// ── /study/history — a chronology of landmarks ─────────────────────────────
 function studyHistoryPage() {
   const rows = study.HISTORY.map((h) => `<tr><td><b>${escapeHtml(h.y)}</b></td><td>${escapeHtml(h.t)}</td><td>${escapeHtml(h.d)}</td></tr>`).join('');
   const body = `<p class="learn-intro">Thirty-nine moments, evenly told: what happened, when, and why it still matters. Dates given as "c." are scholarly approximations. For the cosmos side of the story, see the <a href="/nasa">NASA Space Complex</a>.</p>
@@ -7282,7 +7282,7 @@ function studyHistoryPage() {
   });
 }
 
-// Bina 8 soalan kapital deterministik daripada data negara REBENAR (bukan rekaan).
+// Build 8 deterministic capital questions from REAL country data (not invented).
 function studyGeoQuiz(rows, seed) {
   const withCap = rows.filter((c) => c.capital && /^[\w .'-]+$/.test(String(c.capital)) && c.population);
   if (withCap.length < 20) return null;
@@ -7295,7 +7295,7 @@ function studyGeoQuiz(rows, seed) {
   });
 }
 
-// ── /study/geography — rekod + ranking populasi + kuiz kapital harian ──────
+// ── /study/geography — records + population ranking + daily capital quiz ──────
 function studyGeographyPage(rows) {
   const seed = study.dayIndex();
   const records = study.GEO_RECORDS.map((r) => `<tr><td><b>${escapeHtml(r[0])}</b></td><td>${escapeHtml(r[1])}</td></tr>`).join('');
@@ -7331,7 +7331,7 @@ function studyGeographyPage(rows) {
   });
 }
 
-// ── /study/experiments — sains dapur selamat ─────────────────────────
+// ── /study/experiments — safe kitchen science ─────────────────────────
 function studyExperimentsPage() {
   const cards = study.EXPERIMENTS.map((e) => `<div class="study-card"><h3>${escapeHtml(e.name)}</h3><p class="meta">${escapeHtml(e.level)} \u00b7 ${escapeHtml(e.time)}</p><p><b>You need:</b> ${escapeHtml(e.materials)}</p><ol>${e.steps.map((s) => `<li class="study-step">${escapeHtml(s)}</li>`).join('')}</ol><p><b>Why it happens:</b> ${escapeHtml(e.why)}</p></div>`).join('');
   const body = `<p class="learn-intro">Twelve safe, low-cost experiments using things already in most kitchens. Each lists materials, ordered steps and the real science behind the result. Items marked <b>medium</b> need an adult for a hot-water or boiling step. The concepts connect directly to the <a href="/study/science">science explainers</a>.</p>
@@ -7345,7 +7345,7 @@ function studyExperimentsPage() {
   });
 }
 
-// ── /study/riddles — teka-teki klasik (details reveal tanpa JS) ───────────
+// ── /study/riddles — classic riddles (the reveal works without JS) ───────────
 function studyRiddlesPage() {
   const items = study.RIDDLES.map((r) => `<details class="study-q"><summary>${escapeHtml(r.q)}</summary><p>${escapeHtml(r.a)}</p></details>`).join('');
   const body = `<p class="learn-intro">Thirty-six classic brain-teasers, mostly centuries old and in the public domain. Read the question, sit with it a moment, then tap to unfold the answer. Great for car rides, classrooms and keeping the mind limber.</p>
@@ -7359,7 +7359,7 @@ function studyRiddlesPage() {
   });
 }
 
-// ── /study/facts — fakta tertapis ikut topik ────────────────────────────
+// ── /study/facts — facts filtered by topic ────────────────────────────
 function studyFactsPage() {
   const byTopic = {};
   for (const f of study.FACTS) { (byTopic[f.t] = byTopic[f.t] || []).push(f.s); }
@@ -7375,7 +7375,7 @@ function studyFactsPage() {
   });
 }
 
-// ── /study/math — jurulatih sprint kiraan mental + formula + cerita ─────────
+// ── /study/math — a mental-maths sprint coach + formulas + word problems ─────
 function studyMathPage() {
   const formulas = [
     ['Circle', 'C = 2\u03c0r   \u00b7   A = \u03c0r\u00b2'],
@@ -7423,7 +7423,7 @@ function studyMathPage() {
   });
 }
 
-// ── /study/alarm — jam + alarm + pomodoro (honest: tab mesti kekal terbuka) ──
+// ── /study/alarm — the clock + alarm + pomodoro (honest: the tab must stay open) ──
 function studyAlarmPage() {
   const body = `<p class="learn-intro">A no-install alarm clock and study timer that run entirely in your browser \u2014 nothing leaves this page. <b>Keep this tab open</b> for an alarm or countdown to fire; browsers do not let a closed tab ring. For the pomodoro technique, run a 25-minute focus block, take a 5-minute break, repeat.</p>
   <div class="quiz-block" style="text-align:center">
@@ -7455,7 +7455,7 @@ function studyAlarmPage() {
   });
 }
 
-// ── Laluan /study — semua literal; geografi async (data negara REBENAR). ────
+// ── The /study routes — all literals; geography is async (REAL country data). ────
 app.get('/study', (req, res) => res.type('html').send(studyHubPage()));
 app.get('/study/science', (req, res) => res.type('html').send(studySciencePage()));
 app.get('/study/history', (req, res) => res.type('html').send(studyHistoryPage()));
@@ -7470,7 +7470,7 @@ app.get('/study/geography', async (req, res) => {
   res.type('html').send(studyGeographyPage(Array.isArray(rows) && rows.length >= 20 ? rows : null));
 });
 
-// ══ KOMPLEKS UDARA /udara — bacaan AQI dunia + CO2 langsung + edukasi oksigen ══
+// ══ UDARA COMPLEX /udara — world AQI readings + live CO2 + oxygen education ══
 const UDARA_SECTIONS = [
   { href: '/udara', icon: '\uD83C\uDF0D', name: 'World Air Ranking', blurb: 'Live air quality for 70+ cities — the cleanest and dirtiest spots on Earth right now.' },
   { href: '/udara/carbon', icon: '\uD83D\uDDA2', name: 'Carbon Dioxide Live', blurb: 'Today\u2019s actual CO2 reading from NOAA\u2019s Mauna Loa observatory, with the 65-year climb.' },
@@ -7484,7 +7484,7 @@ function udaraNav() {
     + `</div></nav>`;
 }
 
-// Pelukan standard /udara — cermin studyDoc (chrome penuh + iklan berkawal).
+// The standard /udara wrapper — mirrors studyDoc (full chrome + gated ads).
 function udaraDoc(o) {
   const robots = o.robots || 'index,follow';
   const ld = o.ld || JSON.stringify({
@@ -7566,7 +7566,7 @@ function airRow(r) {
   return `<tr><td><b>${escapeHtml(r.name)}</b>, ${escapeHtml(r.country)}</td><td>${escapeHtml(r.region)}</td><td>${aqiChip(r.usAqi)}</td><td>${n(r.pm25, ' \u00b5g/m\u00b3')}</td><td>${n(r.o3, ' \u00b5g/m\u00b3')}</td><td>${n(r.no2, ' \u00b5g/m\u00b3')}</td></tr>`;
 }
 
-// ── /udara — ranking langsung; jujur dengan source:'unavailable' bila mati ──
+// ── /udara — the live ranking; honest with source:'unavailable' when it is down ──
 function udaraHubPage(air, co2) {
   const scale = `<h2 class="section-title">Reading the scale (US AQI)</h2>
   <table class="air-table"><thead><tr><th>Number</th><th>What it means</th></tr></thead><tbody>
@@ -7626,7 +7626,7 @@ function udaraHubPage(air, co2) {
   });
 }
 
-// ── /udara/carbon — bacaan CO2 langsung NOAA ───────────────────────
+// ── /udara/carbon — live NOAA CO2 readings ───────────────────────
 function udaraCarbonPage(co2) {
   let readout = '';
   if (co2 && co2.source && co2.source !== 'unavailable') {
@@ -7668,7 +7668,7 @@ function udaraCarbonPage(co2) {
   });
 }
 
-// ── /udara/oxygen — edukasi O2 (kurasi statik) ─────────────────────
+// ── /udara/oxygen — O2 education (static curation) ─────────────────────
 function udaraOxygenPage() {
   const cards = udara.OXYGEN.map((c) => `<div class="air-card"><h3>${escapeHtml(c.h)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
   const myths = udara.MYTHS.map((m) => `<div class="air-card"><h3>Myth: ${escapeHtml(m.m)}</h3><p>${escapeHtml(m.f)}</p></div>`).join('');
@@ -7685,7 +7685,7 @@ function udaraOxygenPage() {
   });
 }
 
-// ── /udara/breath — pernafasan makhluk hidup ───────────────────────
+// ── /udara/breath — how living things breathe ───────────────────────
 function udaraBreathPage() {
   const human = udara.HUMAN_BREATH.map((r) => `<tr><td><b>${escapeHtml(r.k)}</b></td><td>${escapeHtml(r.v)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('');
   const animals = udara.ANIMAL_BREATH.map((r) => `<tr><td><b>${escapeHtml(r.a)}</b></td><td>${escapeHtml(r.rr)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('');
@@ -7722,10 +7722,10 @@ app.get('/udara/carbon', async (req, res) => {
   res.type('html').send(udaraCarbonPage(co2));
 });
 
-// ══ AKADEMI TUKUK-OS (/akademi) — 50 mikro-pelajaran pengetahuan umum: 10 trek
-// × 5 pelajaran (src/akademi.js, kurasi setempat, Bahasa Inggeris). Berbeza dari
-// /learn (kurikulum developer) — ini ilmu dunia untuk orang ramai; setiap trek
-// memaut alat hidup sepadan. Shell cermin studyDoc: chrome penuh + 3 unit iklan.
+// ══ TUKUK-OS AKADEMI (/akademi) — 50 micro-lessons of general knowledge: 10 tracks
+// × 5 lessons (src/akademi.js, locally curated, in English). Unlike
+// /learn (the developer curriculum) — this is world knowledge for everyone; every track
+// it links the matching live tool. The shell mirrors studyDoc: full chrome + 3 ad units.
 function akadNav() {
   const items = [{ href: '/akademi', icon: '\uD83C\uDF93', name: 'All 50 Lessons', blurb: 'The full syllabus — ten tracks, five short lessons each, no account needed.' }]
     .concat(akad.trackList().map((t) => ({ href: `/akademi/${t.s}`, icon: t.icon, name: t.name, blurb: t.blurb })));
@@ -7734,7 +7734,7 @@ function akadNav() {
     + `</div></nav>`;
 }
 
-// Pelukan standard halaman /akademi — cermin studyDoc (chrome penuh + iklan berkawal).
+// The standard /akademi page wrapper — mirrors studyDoc (full chrome + gated ads).
 function akadDoc(o) {
   const robots = o.robots || 'index,follow';
   const ld = o.ld || JSON.stringify({
@@ -7801,7 +7801,7 @@ ${siteFooter()}
 </html>`;
 }
 
-// ── /akademi — hab: grid 10 trek + jumlah masa terpampang jujur ──────────────
+// ── /akademi — the hub: a grid of 10 tracks + an honest total time on display ──────────────
 function akadHubPage() {
   const flat = akad.allLessons();
   const totalMin = flat.reduce((n, l) => n + l.mn, 0);
@@ -7822,8 +7822,8 @@ function akadHubPage() {
   });
 }
 
-// ── /akademi/:track — senarai 5 pelajaran + pautan alat hidup trek ──────────
-// Topik carian bacaan tambahan setiap trek (Open Library + Crossref, keyless).
+// ── /akademi/:track — the 5 lessons + the track's live-tool link ──────────
+// The extra-reading search topic for each track (Open Library + Crossref, keyless).
 const TRACK_TOPIC = {
   sky: 'astronomy', weather: 'weather and climate', earth: 'geology of the Earth',
   air: 'the atmosphere and air quality', body: 'the human body', life: 'ecology and the living world',
@@ -7835,7 +7835,7 @@ async function akadTrackPage(t) {
   const min = lessons.reduce((n, l) => n + l.mn, 0);
   const rows = lessons.map((l, i) => `<div class="akad-card"><h3><a href="/akademi/${t.s}/${l.s}">${i + 1}. ${escapeHtml(l.t)}</a></h3><p>${escapeHtml(l.sum)}</p><p class="meta">About ${l.mn} min · 1 quiz question</p></div>`).join('');
   const rel = `<h2 class="section-title">Try it live</h2><ul>${t.rel.map((r) => `<li><a href="${r.h}">${escapeHtml(r.l)}</a></li>`).join('')}</ul>`;
-  // Kotak bacaan — kegagalan sumber luar dibuang senyap (setiap satu catch → []).
+  // The reading box — external-source failures are dropped silently (each one catches → []).
   const topic = TRACK_TOPIC[t.s] || t.name;
   const [bk, pp] = await Promise.all([
     bacaan.books(topic, 3).catch(() => []),
@@ -7860,7 +7860,7 @@ async function akadTrackPage(t) {
   });
 }
 
-// ── /akademi/:track/:slug — bacaan + pengajaran + kuiz satu soalan + prev/next ─
+// ── /akademi/:track/:slug — reading + teaching + a one-question quiz + prev/next ─
 function akadLessonPage(t, l, prev, next, no) {
   const right = l.q.o[l.q.a];
   const quizHtml = `<h2 class="section-title">Check yourself</h2>
@@ -7918,10 +7918,10 @@ app.get('/akademi/:track/:slug', (req, res) => {
   res.type('html').send(akadLessonPage(t, l, idx > 0 ? flat[idx - 1] : null, idx < flat.length - 1 ? flat[idx + 1] : null, idx + 1));
 });
 
-// ══ DUNIA TUKUK-OS — tiga kluster baharu berpunca API keyless: /wang (ECB via
+// ══ DUNIA TUKUK-OS — three new clusters built on keyless APIs: /wang (ECB via
 // frankfurter.dev), /seni (The Metropolitan Museum), /hidupan (iNaturalist).
-// Bahasa Inggeris untuk khalayak global; chrome penuh + 3 unit iklan seperti
-// akadDoc, nav disuntik per-kluster supaya satu pelukan menjaga tiga halaman.
+// English for a global audience; the full chrome + 3 ad units like
+// akadDoc, with the per-cluster nav injected so one wrapper looks after three pages.
 function worldDoc(o, navHtml) {
   const robots = o.robots || 'index,follow';
   const ld = o.ld || JSON.stringify({
@@ -7993,7 +7993,7 @@ ${siteFooter()}
 </html>`;
 }
 
-// Kad nav kecil setiap kluster — feed card seperti akadNav.
+// A small nav card for every cluster — a card feed like akadNav.
 function worldNav(label, items) {
   return `<nav aria-label="${escapeHtml(label)}"><h2 class="section-title">${escapeHtml(label)}</h2><div class="feed">`
     + items.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
@@ -8012,7 +8012,7 @@ const seniNav = () => worldNav('Art Gallery — free images from The Met', [{ hr
 const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/hidupan', icon: '🦁', name: 'All species', blurb: 'Sixteen animals, each with a plain-language story and real research-grade photographs from the iNaturalist community.' }
   ].concat(hidup.TAXA.map((t) => ({ href: `/hidupan/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
 
-// ── /unsur — periodic table of the elements (data STATIK tertanam) ────────────
+// ── /unsur — periodic table of the elements (STATIK data embedded) ────────────
 const EL_CSS = `.el-scroll{overflow-x:auto;padding-bottom:8px;margin:14px 0}
 .el-grid{display:grid;grid-template-columns:repeat(18,minmax(38px,1fr));grid-auto-rows:minmax(44px,auto);gap:3px;min-width:760px}
 .el-tile{display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;color:#0b0f16;border-radius:5px;padding:3px 4px;font-size:.7rem;line-height:1.05;background:var(--c);transition:transform .12s}
@@ -8268,7 +8268,7 @@ function messierNotFound(q) {
   }, deepskyNav());
 }
 
-// ── /pepatah — Proverbs of the World (data STATIK tertanam, tiada API) ────────
+// ── /pepatah — Proverbs of the World (embedded STATIC data, no API) ────────
 const PV_CSS = `.prov-card{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;margin:14px 0;background:var(--panel,#171a21)}
 .prov-orig{font-size:1.5rem;font-weight:800;line-height:1.35;margin:0 0 6px}
 .prov-tr{font-style:italic;color:var(--muted,#9aa3b2);margin:0 0 8px;font-size:.95rem}
@@ -8404,7 +8404,7 @@ function sejarahNav() {
   ].concat(sj.MONTHS.map((mo, i) => ({ href: `/sejarah#${i + 1}`, icon: '🗓️', name: mo, blurb: `See what happened on each day of ${mo}, from famous events to notable births and deaths.`}))));
 }
 
-// Cari tarikh sebelum/selepas (wrap hujung tahun) daripada senarai 366.
+// Find the date before/after (wrapping at year end) from the list of 366.
 function otdNeighbours(mm, dd) {
   const all = sj.allDates();
   const idx = all.findIndex((x) => x.mm === mm && x.dd === dd);
@@ -8482,7 +8482,7 @@ function sejarahNotFound(q) {
   }, sejarahNav());
 }
 
-// ── /kota — World City profiles (senarai STATIK + ringkasan Wikipedia fail-open) ─
+// ── /kota — World City profiles (a STATIC list + a fail-open Wikipedia summary) ─
 const KT_CSS = `.city-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
 .city-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
 .city-card h3{margin:0 0 2px;font-size:1rem}
@@ -8600,7 +8600,7 @@ function kotaNotFound(q) {
   }, kotaNav());
 }
 
-// ── /warisan — UNESCO World Heritage (senarai statik + ringkasan Wikipedia fail-open) ──
+// ── /warisan — UNESCO World Heritage (a static list + a fail-open Wikipedia summary) ──
 const WR_CSS = `.site-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
 .site-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
 .site-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
@@ -8726,7 +8726,7 @@ function warisanNotFound(q) {
   }, warisanNav());
 }
 
-// ── /cagar — Protected Areas of the World (senarai statik Wikidata + ringkasan Wikipedia fail-open) ──
+// ── /cagar — Protected Areas of the World (a static Wikidata list + a fail-open Wikipedia summary) ──
 const CG_CSS = `.area-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
 .area-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
 .area-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
@@ -8972,9 +8972,9 @@ function geoNotFound(base, cfg, q) {
   }, geoNav(base, cfg, undefined));
 }
 
-// ── GEO PAGED FACTORY — untuk kelas sangat besar (stesen kereta api dsb.) agar
-// hub tidak dump sejuta kad dalam satu halaman. Alur: hub ringkas → benua →
-// senarai negara → senarai berhalaman (GEO_PAGE_SIZE items/halaman).
+// ── GEO PAGED FACTORY — for very large classes (railway stations etc.) so the
+// hub doesn't dump a million cards on one page. The flow: a simple hub → continents →
+// a country list → a paginated list (GEO_PAGE_SIZE items per page).
 const GEO_PAGE_SIZE = 180;
 function geoHubCompactPage(mod, base, cfg) {
   const items = mod[cfg.listKey];
@@ -9171,13 +9171,13 @@ function gletserPage(g, sum) { return geoItemPage(g, sum, gl, 'gletser', GLETSER
 function gletserNotFound(q) { return geoNotFound('gletser', GLETSER_CFG, q); }
 
 function geoCfg(o) {
-  // Sebagian cluster (terutamanya janaan batch) menaruh kata tunggal di slot
-  // jamak — unit:'county', singular:'county'. Plarkan di sini supaya semua
-  // templat ikut betul tanpa menyentuh ratusan baris CFG. Kata yang memang
-  // sudah berakhir dengan 's' (ironworks, brickworks) dibiarkan apa adanya.
+  // Some clusters (mostly the generated batches) put the singular word in the slot
+  // the plural — unit:'county', singular:'county'. Pluralise it here so every
+  // template comes out right without touching hundreds of CFG lines. Words that already
+  // end in 's' (ironworks, brickworks) are left exactly as they are.
   const unit = (o.unit && o.unit === o.singular && !/s$/i.test(o.unit)) ? geoPlural(o.unit) : o.unit;
-  // titleCase yang sudah menyebut yurisdiksinya ("Counties of Iowa") tidak
-  // perlu ekoran "of the World" lagi.
+  // A titleCase that already names its jurisdiction ("Counties of Iowa") must not
+  // need the "of the World" suffix any more.
   const world = /\sof\s/.test(o.titleCase || '') ? '' : ' of the World';
   const cfg = Object.assign({
     navLabel: `${o.titleCase} \u2014 tukuk.org/${o.base}`,
@@ -13096,7 +13096,7 @@ function settlementPage(x, sum) { return geoItemPage(x, sum, stl, 'settlements',
 function settlementNotFound(q) { return geoNotFound('settlements', SETTLEMENT_CFG, q); }
 function settlementCountryPage(cs, p) { return geoCountryPagedPage(cs, stl, 'settlements', SETTLEMENT_CFG, p); }
 
-// ── /gunung — Mountains of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
+// ── /gunung — Mountains of the World (a Wikidata list + a fail-open Wikipedia summary) ──
 const GN_CSS = `.peak-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
 .peak-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
 .peak-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
@@ -13220,7 +13220,7 @@ function gunungNotFound(q) {
   }, gunungNav());
 }
 
-// ── /danau — Lakes of the World (senarai Wikidata + ringkasan Wikipedia fail-open) ──
+// ── /danau — Lakes of the World (a Wikidata list + a fail-open Wikipedia summary) ──
 const DN_CSS = `.lake-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
 .lake-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
 .lake-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
@@ -13344,7 +13344,7 @@ function danauNotFound(q) {
   }, danauNav());
 }
 
-// ── /wang — penukar mata wang (frankfurter.dev / ECB, tanpa kunci) ───────────
+// ── /wang — the currency converter (frankfurter.dev / ECB, no key) ───────────
 const moneyName = (code) => (wang.CODES.find((c) => c[0] === code) || ['', code])[1];
 const moneyFlag = (code) => (wang.CODES.find((c) => c[0] === code) || ['', '', '🏳️'])[2];
 const moneyFmt = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: Math.abs(Number(n)) < 1 ? 6 : 2 });
@@ -13474,7 +13474,7 @@ app.get('/wang/tukar/:from/:to', async (req, res) => {
   } catch { res.status(503).type('html').send(wangDown('The ECB rate feed is briefly unreachable.')); }
 });
 
-// ── /seni — galeri The Metropolitan Museum (open access, tanpa kunci) ───────
+// ── /seni — The Metropolitan Museum gallery (open access, no key) ───────
 function seniDown(note) {
   return worldDoc({
     title: 'Free Art Gallery — temporarily unavailable | Tukuk-OS',
@@ -13575,7 +13575,7 @@ app.get('/seni/objek/:id', async (req, res) => {
   res.type('html').send(seniObjectPage(req, o));
 });
 
-// ── /hidupan — atlas satwa iNaturalist (foto CC komuniti, tanpa kunci) ──────
+// ── /hidupan — the iNaturalist animal atlas (community CC photos, no key) ──────
 function hidupDown(note) {
   return worldDoc({
     title: 'Wildlife Atlas — temporarily unavailable | Tukuk-OS',
@@ -13685,7 +13685,7 @@ app.get('/blog/:slug', (req, res) => {
   const mins = Math.max(1, Math.round((String(post.content || '').split(/\s+/).filter(Boolean).length) / 200));
   const renderedContent = renderMarkdown(post.content);
 
-  // Nilai lolos-HTML untuk mengelakkan XSS dalam kepala/meta & badan.
+  // HTML-escaped values to keep XSS out of the head/meta & body.
   const eTitle = escapeHtml(post.title);
   const eTitleAttr = escapeHtml(post.title);
   const eExcerptAttr = escapeHtml(post.excerpt || '');
@@ -13888,8 +13888,8 @@ app.get('/stats', limiter.search, async (req, res) => {
   }
 });
 
-// Halaman transparansi manusia untuk /stats (isyarat kepercayaan untuk pelawat & Google AdSense:
-// "laman ini jujur tentang cara ia beroperasi, tiada penjejakan").
+// A human transparency page for /stats (a trust signal for visitors & Google AdSense:
+// "this site is honest about how it runs, there is no tracking").
 function fmtBytes(n) {
   n = Number(n) || 0;
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -13968,8 +13968,8 @@ app.get('/search', limiter.search, async (req, res) => {
     const params = buildSearchParams(rest);
     const wantedLimit = params.limit;
     let result = await target.search(qq, params);
-    // Rerank neural (hanya mod relevansi, halaman pertama). Selamat: no-op jika
-    // tiada backend tersedia (model tempatan belum di-deploy & tiada cred cloud).
+    // Neural rerank (relevance mode only, first page). Safe: a no-op when
+    // no backend is available (the local model is not deployed & there are no cloud credentials).
     if (reranker.available() && !params.sort && (params.offset || 0) === 0 && result.hits.length > 1) {
       if (wantedLimit < config.rerank.candidates) {
         params.limit = Math.min(config.rerank.candidates, config.search.maxLimit);
@@ -14015,9 +14015,9 @@ app.get('/websearch', limiter.search, async (req, res) => {
   }
 });
 
-// Social finder — semak kewujudan nama akaun AWAM di platform publik (status
-// HTTP profil awam sahaja; tiada login, tiada data peribadi). Diproksikan di
-// pelayan kerana pelayar tidak boleh membaca respons silang-asal.
+// Social finder — check whether a PUBLIC account name exists on public platforms (the
+// public-profile HTTP status only; no login, no personal data). Proxied on the
+// server because browsers cannot read cross-origin responses.
 app.get('/api/social', limiter.search, async (req, res) => {
   try {
     res.json(await social.lookup(String(req.query.u || '')));
@@ -14087,7 +14087,7 @@ app.get('/radio', limiter.search, async (req, res) => {
   }
 });
 
-// Senarai negara untuk pelayaran radio seluruh dunia (radio-browser, di-cache).
+// The country list for world-wide radio browsing (radio-browser, cached).
 app.get('/radio/countries', limiter.search, async (req, res) => {
   try {
     res.json({ countries: await mediaSearch.listRadioCountries() });
@@ -14096,28 +14096,28 @@ app.get('/radio/countries', limiter.search, async (req, res) => {
   }
 });
 
-// ── Proksi aliran radio sama-asal (same-origin) ─────────────────────────────
-// Pelayar BLOK stream http:// pada halaman https:// ("mixed content"), dan sesetengah
-// stesen Asia memblok ikut Referrer/CORS. Muncul ralat "Mixed Content or CORS" semasa main
-// Radio. Endpoint ini fetch upstream (HTTP atau HTTPS) di PELAYAN lalu pipe balik byte
-// mentah sebagai https://tukuk.org same-origin — selesaikan mixed-content + CORS +
-// hotlink-referrer serentak. Tiada ICY metadata dipinta (audio tulen, mudah di-pipe).
-// Aliran HIDUP (tak tamat) — jadi tiada timeout body; hanya timeout sambungan + abort
-// bila klien putuskan hubungan.
+// ── The same-origin radio stream proxy ─────────────────────────────
+// Browsers BLOCK http:// streams on an https:// page ("mixed content"), and some
+// Asian stations block by Referrer/CORS. A "Mixed Content or CORS" error showed up while playing
+// Radio. This endpoint fetches the upstream (HTTP or HTTPS) on the SERVER then pipes the byte
+// stream back raw as https://tukuk.org same-origin — solving mixed-content + CORS +
+// hotlink-referrer in one go. No ICY metadata is requested (pure audio, easy to pipe).
+// A LIVE stream (never ends) — so there is no body timeout; only a connect timeout + abort
+// when the client disconnects.
 app.get('/radio/stream', limiter.search, async (req, res) => {
   const target = String(req.query.url || '').trim();
   if (!/^https?:\/\//i.test(target)) return res.status(400).end();
   let upstreamUrl;
   try {
-    upstreamUrl = await assertPublicUrl(target); // sekat SSRF alamat dalaman
+    upstreamUrl = await assertPublicUrl(target); // block SSRF against internal addresses
   } catch {
     return res.status(400).end();
   }
   const controller = new AbortController();
-  const abort = () => { try { controller.abort(); } catch { /* sudah tamat */ } };
+  const abort = () => { try { controller.abort(); } catch { /* already finished */ } };
   req.on('close', abort);
   res.on('close', abort);
-  const connectTimer = setTimeout(abort, 10000); // hanya had masa SAMBUNG, bukan body
+  const connectTimer = setTimeout(abort, 10000); // a time limit on CONNECT only, never the body
   try {
     const upstream = await fetch(upstreamUrl.href, {
       signal: controller.signal,
@@ -14128,7 +14128,7 @@ app.get('/radio/stream', limiter.search, async (req, res) => {
         'Accept': '*/*',
       },
     });
-    clearTimeout(connectTimer); // kepala diterima — jangan bunuh badan stream hidup
+    clearTimeout(connectTimer); // headers received — do not kill the live stream body
     if (!upstream.ok && upstream.status !== 200 && upstream.status !== 206) {
       if (!res.headersSent) res.status(502).end();
       return;
@@ -14138,21 +14138,21 @@ app.get('/radio/stream', limiter.search, async (req, res) => {
     res.setHeader('Content-Type', ct);
     res.setHeader('Cache-Control', 'no-store, no-transform');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('X-Accel-Buffering', 'no'); // matikan buffering nginx/edge jika ada
+    res.setHeader('X-Accel-Buffering', 'no'); // turn off nginx/edge buffering if present
     if (!upstream.body) { res.end(); return; }
     const nodeStream = Readable.fromWeb(upstream.body);
-    nodeStream.on('error', () => { try { res.end(); } catch { /* sudah tamat */ } });
+    nodeStream.on('error', () => { try { res.end(); } catch { /* already finished */ } });
     nodeStream.pipe(res);
   } catch (err) {
     clearTimeout(connectTimer);
     if (!res.headersSent) res.status(502).end();
-    else { try { res.end(); } catch { /* sudah tamat */ } }
+    else { try { res.end(); } catch { /* already finished */ } }
   }
 });
 
-// Carian ASET Creative Commons — Wikimedia Commons (semua gambar berlesen bebas/CC).
-// Direka untuk Tab "CC Aset" di Studio: setiap hasil SAH diedit & dieksport,
-// jadi tiada isu hak cipta bila pengguna hantar gambar ke Tukuk Studio.
+// A Creative Commons ASSET search — Wikimedia Commons (every image is freely licensed/CC).
+// Built for the "CC Assets" tab in Studio: every result is a REAL asset that gets edited & exported,
+// so there is no copyright problem when a user sends a picture into Tukuk Studio.
 app.get('/cc', limiter.search, async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (!q) return res.json({ hits: [], provider: 'Wikimedia Commons' });
@@ -14196,7 +14196,7 @@ app.get('/cc', limiter.search, async (req, res) => {
   }
 });
 
-// Cadangan automatik (autocomplete) untuk kotak carian di laman depan
+// Automatic suggestions (autocomplete) for the search box on the front page
 app.get('/suggest', limiter.search, async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (q.length < 2) return res.json({ suggestions: [] });
@@ -14219,7 +14219,7 @@ app.get('/api/reader', limiter.search, async (req, res) => {
   }
 
   try {
-    // Sekat SSRF: selesaikan DNS dan tolak alamat dalaman/tertempatan.
+    // Block SSRF: resolve DNS first and refuse internal/private addresses.
     const parsed = await assertPublicUrl(targetUrl);
 
     const controller = new AbortController();
@@ -14403,7 +14403,7 @@ app.get('/api/nasa/iss', async (req, res) => {
   }
 });
 
-// Krew ISS langsung — siapa yang sedang di angkasa sekarang (open-notify.org, tiada kunci)
+// The live ISS crew — who is in space right now (open-notify.org, no key)
 app.get('/api/nasa/crew', async (req, res) => {
   try {
     res.json(await nasa.getCrew());
@@ -14440,7 +14440,7 @@ app.get('/api/nasa/experiments/solar', async (req, res) => {
   }
 });
 
-// Bulan & langit malam ini — fasa bulan setempat + waktu senja ikut lokasi (lat/lng, lalai KL)
+// The Moon & tonight's sky — the local moon phase + dusk times by location (lat/lng, defaults to KL)
 app.get('/api/nasa/sky', async (req, res) => {
   try {
     res.json(await nasa.getSkyTonight({ lat: req.query.lat, lng: req.query.lng }));
@@ -14449,7 +14449,7 @@ app.get('/api/nasa/sky', async (req, res) => {
   }
 });
 
-// Pemburu eksoplanet — katalog archive NASA (had 10–500 baris paling dekat)
+// Exoplanet hunter — the NASA archive catalogue (10–500 rows, the nearest first)
 app.get('/api/nasa/exoplanets', async (req, res) => {
   try {
     res.json(await nasa.getExoplanets({ limit: req.query.limit }));
@@ -14458,7 +14458,7 @@ app.get('/api/nasa/exoplanets', async (req, res) => {
   }
 });
 
-// Pertahanan planet — jadual risiko impak Sentry (JPL)
+// Planetary defense — the Sentry impact-risk table (JPL)
 app.get('/api/nasa/sentry', async (req, res) => {
   try {
     res.json(await nasa.getSentryRisk());
@@ -14467,7 +14467,7 @@ app.get('/api/nasa/sentry', async (req, res) => {
   }
 });
 
-// Ceruk satelit — elemen orbit TLE dari CelesTrak ikut kumpulan
+// Satellite niche — TLE orbital elements from CelesTrak, per group
 app.get('/api/nasa/satellites', async (req, res) => {
   try {
     res.json(await nasa.getSatellites({ group: req.query.group }));
@@ -14476,8 +14476,8 @@ app.get('/api/nasa/satellites', async (req, res) => {
   }
 });
 
-// Pangkalan data arkib NASA setempat — dibaca terus dari cakera (tanpa API NASA),
-// jadi pantas & sentiasa ada walaupun api.nasa.gov down. q menapis tajuk/penjelasan.
+// The local NASA archive database — read straight off the disk (no NASA API),
+// so it is fast & always there even when api.nasa.gov is down. q filters title/explanation.
 app.get('/api/nasa/archive', (req, res) => {
   const kind = String(req.query.kind || 'apod').toLowerCase();
   if (kind === 'apod') {
@@ -14495,12 +14495,12 @@ app.get('/api/nasa/archive', (req, res) => {
   res.status(400).json({ error: "kind must be one of: apod | asteroids | epic" });
 });
 
-// Statistik arkib (jumlah rekod setiap koleksi) untuk papan pemuka & AI.
+// Archive statistics (how many records per collection) for the dashboard & the AI.
 app.get('/api/nasa/archive/stats', (req, res) => {
   res.json({ source: 'local-archive', ...nasa.store.stats() });
 });
 
-// Borang hubungi: simpan mesej pelawat (admin baca melalui /api/contact/messages)
+// Contact form: store the visitor's message (the admin reads it via /api/contact/messages)
 const CONTACT_FILE = path.join(path.dirname(config.store.path), 'contact-messages.json');
 
 function loadContactMessages() {
@@ -14529,7 +14529,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   const message = truncate(String(body.message || '').trim(), 5000);
   const honeypot = String(body.website || '').trim();
 
-  // Bot mengisi medan tersembunyi: buang senyap supaya mereka tidak sedar
+  // Bots fill the hidden field: drop it silently so they do not notice
   if (honeypot) return res.redirect('/contact?sent=1');
   if (!name || !message || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.redirect(400, '/contact?error=1');
@@ -14548,7 +14548,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   const total = saveContactMessage(entry);
   store.event('contact', `new message from ${name}`, { email, characters: message.length, total });
 
-  // Pilihan: hantar notifikasi segera (Discord/Slack/maka webhook)
+  // Optional: send an instant notification (Discord/Slack/any webhook)
   const webhook = process.env.CONTACT_WEBHOOK_URL;
   if (webhook) {
     fetch(webhook, {
@@ -14566,7 +14566,7 @@ app.get('/api/contact/messages', requireApiKey, (req, res) => {
   res.json({ total: list.length, messages: list.slice(0, Math.min(Number(req.query.limit) || 50, 200)) });
 });
 
-// Logger ralat JS pelawat — penambah Clarity ScriptError/ErrorClick (punca tak dapat dari API)
+// Visitor JS-error logger — a Clarity ScriptError/ErrorClick add-on (its API cannot give the cause)
 const JS_ERROR_FILE = path.join(path.dirname(config.store.path), 'js-errors.json');
 const jsErrorLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 1000, max: 30, keyPrefix: 'jserr:' })
@@ -14597,7 +14597,7 @@ app.post('/api/js-error', jsErrorLimiter, (req, res) => {
   };
 
   const list = loadJsErrors();
-  // gabung mesej sama supaya tak banjiri fail
+  // merge identical messages so the file is not flooded
   const same = list.find((e) => e.message === entry.message && e.page === entry.page);
   if (same) {
     same.count = (same.count || 1) + 1;
@@ -14618,16 +14618,16 @@ app.get('/api/js-error', requireApiKey, (req, res) => {
   res.json({ total: list.length, errors: list.slice(0, Math.min(Number(req.query.limit) || 100, 300)) });
 });
 
-// ── Terbitan /builder: satu-klik ke pautan awam (tukuk.org/a/<slug>) ─────────
-// HTML berdiri sendiri yang dijana pembina disimpan pada cakera & dihidangkan di
-// /a/<slug> DALAM SANDBOX opaque-origin (lihat src/publish.js) — skrip app berjalan
-// tapi tak boleh sentuh cookie/fetch/storage domain utama. Anti-XSS/phishing rentas-asal.
+// ── /builder publishing: one click to a public link (tukuk.org/a/<slug>) ─────────
+// The standalone HTML generated by the builder is stored on disk & served at
+// /a/<slug> INSIDE an opaque-origin sandbox (see src/publish.js) — the app script runs
+// but cannot touch the main domain's cookies/fetch/storage. Anti cross-origin XSS/phishing.
 const PUBLISH_DIR = path.join(path.dirname(config.store.path), 'published');
 const publishLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: 'publish:' })
   : (req, res, next) => next();
 
-// Meta pemilikan per-app (kunci edit + tajuk) — fail berasingan, TIDAK dilayan web.
+// Per-app ownership meta (edit key + title) — a separate file, NEVER served over the web.
 function metaPath(slug) { return path.join(PUBLISH_DIR, `${slug}.meta.json`); }
 function readMeta(slug) {
   if (!publish.isSlug(slug)) return null;
@@ -14653,8 +14653,8 @@ function uniqueSlug(pref) {
   return null;
 }
 
-// Terbitkan HTML berdiri sendiri ke /a/<slug> (sandbox). Dipakai oleh /api/publish
-// DAN penghulu /api/builder/build. Pulang { ok, code, error, slug, url, editKey }.
+// Publish the standalone HTML to /a/<slug> (sandbox). Used by /api/publish
+// AND the /api/builder/build handler. Returns { ok, code, error, slug, url, editKey }.
 function publishHtml(req, o) {
   const src = o && typeof o === 'object' ? o : {};
   const html = String(src.html || '');
@@ -14663,7 +14663,7 @@ function publishHtml(req, o) {
   if (!publish.looksLikeHtml(html)) return { ok: false, code: 400, error: 'Not a valid HTML document' };
   try {
     fs.mkdirSync(PUBLISH_DIR, { recursive: true });
-    // Slug: hormati permintaan eksplisit (jika sah & kosong), jika tidak jana unik daripada nama.
+    // Slug: honour an explicit request (when valid & free), else derive a unique one from the name.
     let slug;
     const want = String(src.slug || '').trim().toLowerCase();
     if (want) {
@@ -14678,13 +14678,13 @@ function publishHtml(req, o) {
     fs.writeFileSync(tmp, html, 'utf8');
     fs.renameSync(tmp, path.join(PUBLISH_DIR, `${slug}.html`));
     const editKey = newEditKey();
-    // kind: 'game' hanya bila dihantar eksplisit; selainnya 'app'.
+    // kind: 'game' only when it is sent explicitly; otherwise 'app'.
     const kind = String(src.kind || '').toLowerCase() === 'game' ? 'game' : 'app';
     writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(src.name || ''), 80)), created: Date.now(), updated: Date.now(), kind });
     const url = `${publish.publicOrigin(req)}/a/${slug}`;
     const srcTag = truncate(String(src.source || '').replace(/[^a-z0-9_-]/g, ''), 24);
     store.event('publish', `App published: /a/${slug}${srcTag ? ' [' + srcTag + ']' : ''}`, { name: truncate(String(src.name || ''), 120), bytes: html.length, source: srcTag || 'manual' });
-    notifyIndexNow(url); // pautan awam → indeks (opt-in)
+    notifyIndexNow(url); // a public link → index it (opt-in)
     return { ok: true, slug, url, editKey };
   } catch (error) {
     return { ok: false, code: 500, error: 'Publish failed', details: safeError(error) };
@@ -14698,7 +14698,7 @@ app.post('/api/publish', publishLimiter, (req, res) => {
   res.json({ ok: true, slug: r.slug, url: r.url, editKey: r.editKey });
 });
 
-// Terbit semula ke slug yang sama (bukti pemilikan via editKey).
+// Re-publish to the same slug (ownership proven via editKey).
 app.post('/api/publish/update', publishLimiter, (req, res) => {
   const body = req.body || {};
   const slug = String(body.slug || '');
@@ -14727,7 +14727,7 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
   }
 });
 
-// Buang/nyahterbit app secara selamat (bukti pemilikan via editKey). Fail .html + .meta dipadam.
+// Remove/unpublish an app safely (ownership proven via editKey). The .html + .meta files are deleted.
 app.post('/api/publish/delete', publishLimiter, (req, res) => {
   const body = req.body || {};
   const slug = String(body.slug || '');
@@ -14745,8 +14745,8 @@ app.post('/api/publish/delete', publishLimiter, (req, res) => {
   }
 });
 
-// Kiraan "dilihat" untuk /store — in-memory, disatukan ke fail dengan debounce supaya
-// setiap permintaan /a/<slug> hanya tulis cakera sekali sekala (bukan setiap hit).
+// The "seen" counter for /store — in-memory, merged into the file with a debounce so
+// every /a/<slug> request only writes to disk now and then (not on every hit).
 const VIEWS_PATH = path.join(path.dirname(config.store.path), 'publish-views.json');
 let pubViews = {};
 try { pubViews = JSON.parse(fs.readFileSync(VIEWS_PATH, 'utf8')) || {}; } catch { pubViews = {}; }
@@ -14757,11 +14757,11 @@ function bumpViews(slug) {
   if (!viewsTimer) { viewsTimer = setTimeout(flushViews, 5000); if (viewsTimer.unref) viewsTimer.unref(); }
 }
 
-// Kata kunci game untuk terbitan klasik (meta tanpa kind) — tekaan berdasarkan tajuk.
+// Game keywords for classic publications (meta without kind) — a guess from the title.
 const GAME_TITLE_RE = /tic[- ]?tac|arked|battle[- ]?royale|\bfps\b|runner|padanan[- ]memori|tikus[- ]pukul|teka[- ]nombor|batu[- ]kertas|lari[- ]tanpa|\bgame\b/i;
 
-// Kiraan "main" untuk halaman /play (gaya web-games.io) — sama corak dengan publish-views:
-// in-memory + tulis cakera berdebounce supaya setiap sesi main tidak menulis fail seorang.
+// The "played" counter for the /play pages (web-games.io style) — the same pattern as publish-views:
+// in-memory + a debounced disk write so one play session does not rewrite the file.
 const PLAYS_PATH = path.join(path.dirname(config.store.path), 'plays.json');
 let playsMap = {};
 try { playsMap = JSON.parse(fs.readFileSync(PLAYS_PATH, 'utf8')) || {}; } catch { playsMap = {}; }
@@ -14772,12 +14772,12 @@ function bumpPlays(id) {
   if (!playsTimer) { playsTimer = setTimeout(flushPlays, 5000); if (playsTimer.unref) playsTimer.unref(); }
 }
 
-// Genre game (gaya web-games.io) — chip /store & kad berkaitan /play dibina daripada
-// nilai ini sahaja. Definisi MURNI kini tinggal di src/publish.js (boleh diuji unit);
-// server.js hanya mengambil pembantu itu untuk membina katalog /api/store.
+// Game genres (web-games.io style) — the /store chips & the related cards on /play are built from
+// these values only. The PURE definition now lives in src/publish.js (unit-testable);
+// server.js only takes that helper to build the /api/store catalogue.
 const { guessGameGenre, GENRE_UI } = publish;
 
-// Senarai app awam (slug terbaru) — ringan, untuk indeks /a + katalog /store.
+// The public app list (newest slugs) — light, for the /a index + the /store catalogue.
 function listPublished(limit = 200) {
   try {
     return fs.readdirSync(PUBLISH_DIR)
@@ -14794,16 +14794,16 @@ function listPublished(limit = 200) {
   } catch { return []; }
 }
 
-// JSON senarai app awam — untuk panel "Pameran" dalam /builder + katalog /store.
+// The public app list as JSON — for the "Showcase" panel in /builder + the /store catalogue.
 app.get('/api/published', (req, res) => {
   const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 60));
   const items = listPublished(limit).map((x) => ({ slug: x.slug, title: truncate(x.title, 80), url: `/a/${x.slug}`, updated: x.t, created: x.created, kind: x.kind, views: x.views }));
   res.json({ ok: true, count: items.length, items });
 });
 
-// ── Tukuk Store (/store): katalog 4 sumber — Bawaan + Satu Kata + Arked + Komuniti. ────
-// Bawaan = app mini di public/apps (hanya yang failnya benar-benar wujud supaya /store
-// tak benjol pautan 404 — tambah fail HTML baru + entri meta, ia muncul sendiri).
+// ── Tukuk Store (/store): a 4-source catalogue — Built-in + Satu Kata + Arcade + Community. ────
+// Built-in = the mini apps in public/apps (only those whose file really exists so /store
+// does not sprout 404 links — add a new HTML file + a meta entry and it shows up by itself).
 const STORE_APP_META = {
   notes: { ic: '📝', title: 'Notes', desc: 'Local notes with autosave, tags & search — nothing ever leaves your device.' },
   calc: { ic: '🧮', title: 'Calculator', desc: 'Scientific calculator with history, parentheses & copy result.' },
@@ -14853,8 +14853,8 @@ const STORE_APP_META = {
   bmi: { ic: '⚖️', title: 'BMI Check', desc: 'Body mass index with colour gauge and healthy-weight range, metric or imperial.' },
   chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'A real messenger in your browser that keeps working on weak networks (2G/3G/4G/GPRS). Install as an app on Android, iOS, Windows, Linux & Huawei, or download the native Android APK directly (beta — stable coming soon). Name + password signup, permanent Tukuk ID, public room, 1-to-1 DMs and groups, video & voice calls (WebRTC) with TukuCaller-style caller ID, fake-call prank mode (no network needed), voice messages, offline outbox (auto-resend), data-saving mode (tap-to-load media), read receipts ✓✓, photo & video sending, reply, forward, reactions, edit, pin messages, search, friends & blocking, wallpapers & sounds.' }
 };
-// Arked = templat game Pembina; dibuka dengan ?tpl=<nama> → /builder muat & terus main.
-// genre = label penapis /store (gaya web-games.io).
+// Arcade = the builder's game templates; opened with ?tpl=<name> → /builder loads & plays right away.
+// genre = the /store filter label (web-games.io style).
 const STORE_ARCADE = [
   { tpl: 'arcade', genre: 'arkad', ic: '🕹️', title: 'Mini Arcade', desc: 'Tic-Tac-Toe + Memory Match + Whack-a-Mole + Reaction Time on one page.' },
   { tpl: 'tttpl', genre: 'teki-teki', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'The classic two-player game — line up three to win.' },
@@ -14878,8 +14878,8 @@ function storeCatalog() {
   const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', genre: g.genre, icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl + '&play=1', updated: 0 }));
   const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Published from Tukuk Builder.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
   const items = storeBawaan().concat(arked, komuniti);
-  // Kiraan "main" — komuniti belum ada riwayat main → jatuh kepada "dilihat" supaya
-  // bahagian Trending kekal bermakna sejak hari pertama.
+  // The "played" count — community items have no play history yet → fall back to "seen" so
+  // the Trending section stays meaningful from the very first day.
   for (const it of items) it.plays = playsMap[it.id] || (it.src === 'komuniti' ? (it.views || 0) : 0);
   return items;
 }
@@ -14893,8 +14893,8 @@ app.get('/api/store', (req, res) => {
   }
 });
 
-// Kiraan sesi main — dipanggil sekali setiap kali game dimuat dalam /play. Data awam
-// ringan (seperti skor); had-kadar longgar tapi cukup untuk elak pembaziran tulis fail.
+// The play-session counter — called once each time a game loads in /play. Public,
+// light data (like a score); the rate limit is loose but enough to avoid wasted writes.
 const playLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 60 * 1000, max: 300, keyPrefix: 'play:' })
   : (req, res, next) => next();
@@ -14909,16 +14909,16 @@ app.post('/api/play/:id', playLimiter, (req, res) => {
   }
 });
 
-// Landing games /play — paparan senarai (fail play.html). Tanpa ini `/play` 404
-// kerana statik tidak henti-ekstensi & `/play/:id` hanya capai id store.
+// The /play games landing — the list view (play.html). Without this `/play` 404s
+// because static serving does not drop extensions & `/play/:id` only reaches store ids.
 app.get('/play', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'play.html'), (error) => {
     if (error) res.status(404).json({ error: 'Play page not found', path: req.originalUrl });
   });
 });
 
-// Halaman pemain /play/<item-id> (gaya web-games.io) — fail statik yang sama untuk semua
-// id; JS halaman cari item dalam /api/store & menempek URL-nya. Hanya id WUJUD dilayan.
+// The /play/<item-id> player page (web-games.io style) — the same static file for every
+// id; the page JS finds the item in /api/store & embeds its URL. Only EXISTING ids are served.
 app.get('/play/:id', (req, res) => {
   const item = storeCatalog().find((x) => x.id === String(req.params.id));
   if (!item) {
@@ -14929,22 +14929,22 @@ app.get('/play/:id', (req, res) => {
   });
 });
 
-// ── Arked awam (/games): HUB senarai + MAIN-TERUS stateless (/games/<key>). ───────
-//    Konsep: semua game dalam perpustakaan templat boleh dimainkan terus di website
-//    TANPA perlu /api/builder/build (tiada publish, tiada AI, tiada tulis cakera).
-//    /games/<key> hanya baca templates.get(key) (cache mtime) → hidang dengan CSP
-//    sandbox sama seperti /a/<slug> (connect-src host untuk papan skor global).
-//    Ini hampir SIFAR beban pelayan + boleh dikache CDN (max-age). Halaman arked
-//    DIKEKAL noindex (bukan sitemap/nav SEO) supaya pivot kandungan AdSense tak cair.
+// ── The public arcade (/games): a list HUB + stateless PLAY-NOW (/games/<key>). ───────
+//    Concept: every game in the template library can be played right on the website
+//    WITHOUT /api/builder/build (no publish, no AI, no disk writes).
+//    /games/<key> only reads templates.get(key) (an mtime cache) → served with the CSP
+//    sandbox identical to /a/<slug> (connect-src host for the global leaderboard).
+//    That is nearly ZERO server load + CDN-cacheable (max-age). The arcade pages
+//    stay noindex (not in the sitemap or the SEO nav) so the AdSense content pivot does not dilute.
 const GAMES_CSS = '<style>.gwrap{max-width:960px;margin:0 auto;padding:14px}.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}'
   + '.gcard{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--text);transition:transform .12s,border-color .12s}'
   + '.gcard:hover{transform:translateY(-3px);border-color:var(--accent)}.gic{font-size:2rem;line-height:1}.gt{font-weight:700;font-size:.92rem;text-align:center}.gg{font-size:.68rem;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:2px 10px}'
   + '.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.gchip{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;font:inherit;font-size:.82rem;cursor:pointer}.gchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}'
   + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent),#7a5cff);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.92;font-size:.95rem}</style>';
 function renderGamesIndex() {
-  // Arkad HANYA paparkan game 3D sebenar (key berahir '3d'). Game 2D rata masih
-  // wujud dalam REGISTRY untuk pembina (/api/builder/build → /a/<slug>) & pautan
-  // terus /games/<key> — cuma tidak dipaparkan di hub supaya arkad kekal premium.
+  // The arcade ONLY shows real 3D games (keys ending in '3d'). Flat 2D games still
+  // exist in the REGISTRY for the builder (/api/builder/build → /a/<slug>) & the
+  // direct /games/<key> links — they are just not listed on the hub so the arcade stays premium.
   const games = templates.list().filter((t) => t.kind === 'game' && /3d$/i.test(t.key));
   const genres = Array.from(new Set(games.map((g) => g.genre).filter(Boolean)));
   const chips = ['all'].concat(genres).map((g) => `<button class="gchip${g === 'all' ? ' on' : ''}" data-f="${escapeHtml(g)}" type="button">${escapeHtml(g === 'all' ? 'All' : (GENRE_UI[g] || g))}</button>`).join('');
@@ -14995,15 +14995,15 @@ app.get('/games/:key', (req, res) => {
   res.type('html').send(out);
 });
 
-// ── APK atas-permintaan (tukuk.org = gedung apl, gaya APKPure) ─────────────────
-//   Setiap item katalog /store (bawaan / arked / komuniti) boleh
-//   dijadikan APK pembungkus WebView yang membuka URL apl itu. Pembina memanggil
-//   scripts/build-apk.sh (aapt2/d8/apksigner) dengan env per-apl. Semua APK
-//   ditandatangani dengan kunci Tukuk yang sama (apk/tukuk-chat-release.jks) supaya
-//   satu pengenal-penerbit & kemas kini berjalan lancar. Output dikache di
-//   public/downloads — permintaan seterusnya hidang fail cache (tiada bina semula).
-//   Keselamatan: hanya id yang WUJUD dalam storeCatalog dilayan (URL sentiasa milik
-//   tukuk.org sendiri — tiada SSRF/pembungkusan laman luar); label & slug disanitasi.
+// ── On-demand APKs (tukuk.org = an app warehouse, APKPure style) ─────────────────
+//   Every /store catalogue item (built-in / arcade / community) can be
+//   turned into a WebView wrapper APK that opens that app's URL. The builder calls
+//   scripts/build-apk.sh (aapt2/d8/apksigner) with per-app env. Every APK
+//   is signed with the same Tukuk key (apk/tukuk-chat-release.jks) so that
+//   one publisher identity & updates run smoothly. Output is cached in
+//   public/downloads — the next request serves the cached file (no rebuild).
+//   Safety: only ids that EXIST in storeCatalog are served (the URL always belongs
+//   to tukuk.org itself — no SSRF/wrapping of outside sites); label & slug are sanitised.
 const APK_ORIGIN = process.env.APK_ORIGIN || 'https://tukuk.org';
 const APK_REPO = path.join(__dirname, '..');
 const APK_OUT_DIR = path.join(APK_REPO, 'public', 'downloads');
@@ -15013,9 +15013,9 @@ const apkBuildLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 1000, max: 6, keyPrefix: 'apkbuild:' })
   : (req, res, next) => next();
 
-// Slug paket/fail stabil & sah (alfanumerik kecil, bermula huruf) daripada id item.
-// bv-/ak- buang tag sumber → padan APK statik sedia ada (tukuk-calc.apk, org.tukuk.calc);
-// sk-/skg-/km- kekalkan prefix → tiada pertindihan silang-sumber (km-chat ≠ chat).
+// A stable & valid package/file slug (lowercase alphanumeric, starts with a letter) from the item id.
+// bv-/ak- drop the source tag → match the existing static APKs (tukuk-calc.apk, org.tukuk.calc);
+// sk-/skg-/km- keep the prefix → no cross-source collision (km-chat ≠ chat).
 function apkSlug(id) {
   const s = String(id || '');
   let base = s;
@@ -15025,19 +15025,19 @@ function apkSlug(id) {
   if (!cleaned) return 'app';
   return (/^[a-z]/.test(cleaned) ? cleaned : 'a' + cleaned).slice(0, 40);
 }
-// Label selamat untuk heredoc strings.xml: buang aksara shell (<>&"'`$\) & XML.
+// A safe label for the strings.xml heredoc: strip shell (<>&"'`$\) & XML characters.
 function apkLabel(title) {
   const clean = String(title || '').replace(/[<>&"'`$\\]/g, '').replace(/\s+/g, ' ').trim();
   return (clean || 'Tukuk App').slice(0, 30);
 }
-// SDK untuk proses anak (root tiada $HOME/Android/Sdk pada VPS → cari calon).
+// The SDK for the child process (root has no $HOME/Android/Sdk on the VPS → find candidates).
 function findAndroidSdk() {
   const cands = [process.env.ANDROID_HOME, process.env.ANDROID_SDK_ROOT,
     '/home/tukuk/Android/Sdk', path.join(process.env.HOME || '/root', 'Android/Sdk'), '/root/Android/Sdk'];
   for (const c of cands) { if (c && fs.existsSync(path.join(c, 'build-tools'))) return c; }
   return null;
 }
-// id item store → spesifikasi binaan, atau null jika tak dikenali.
+// a store item id → its build spec, or null when it is not recognised.
 function apkSpec(id) {
   const item = storeCatalog().find((x) => x.id === id);
   if (!item) return null;
@@ -15056,7 +15056,7 @@ function apkSpec(id) {
     file: `tukuk-${slug}.apk` };
 }
 
-// Bina APK (kunci in-flight per-slug supaya permintaan serentak tak bina berganda).
+// Build the APK (an in-flight lock per slug so concurrent requests do not build twice).
 const apkInflight = new Map();
 function buildApk(spec) {
   const absOut = path.join(APK_OUT_DIR, spec.file);
@@ -15081,7 +15081,7 @@ function buildApk(spec) {
   return p;
 }
 
-// GET /api/apk/<item-id> → jana atau ambil cache APK, lalu alihkan ke fail muat turun.
+// GET /api/apk/<item-id> → generate or take the cached APK, then redirect to the download file.
 app.get('/api/apk/:id', apkBuildLimiter, async (req, res) => {
   try {
     const spec = apkSpec(req.params.id);
@@ -15094,9 +15094,9 @@ app.get('/api/apk/:id', apkBuildLimiter, async (req, res) => {
   }
 });
 
-// ── Papan pendahulu komuniti (skor game terbitan). Data AWAM, tanpa pengesahan, had-kadar.
-//    Games dalam sandbox hantar skor (GET /api/score) & baca (GET /api/scores) melalui
-//    connect-src host-sendiri (lihat publishCspFor). opaque-origin = tiada cookie dihantar.
+// ── The community leaderboard (scores of published games). PUBLIC data, no auth, rate-limited.
+//    Games in the sandbox post scores (GET /api/score) & read them (GET /api/scores) through
+//    the host's own connect-src (see publishCspFor). opaque-origin = no cookies are sent.
 const LB_PATH = path.join(path.dirname(config.store.path), 'leaderboard.json');
 const scoreLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 60 * 1000, max: 200, keyPrefix: 'score:' })
@@ -15129,10 +15129,10 @@ app.get('/api/scores', (req, res) => {
   res.json({ ok: true, game: g, items });
 });
 
-// ── Papan komen komuniti (app terbitan /a/<slug>). Data AWAM, tanpa pengesahan,
-//    had-kadar lebih ketat daripada skor (teks = risiko salah guna lebih tinggi).
-//    Corak sama: connect-src host-sendiri (publishCspFor) benarkan app dalam sandbox
-//    baca/tulis; opaque-origin = tiada cookie dihantar. UI disuntik pada /a/:slug.
+// ── The community comment board (published apps at /a/<slug>). PUBLIC data, no auth,
+//    a rate limit stricter than scores (text = a higher abuse risk).
+//    Same pattern: the host's own connect-src (publishCspFor) lets the app in the sandbox
+//    read/write; opaque-origin = no cookies are sent. The UI is injected at /a/:slug.
 const COMMENTS_PATH = path.join(path.dirname(config.store.path), 'comments.json');
 const commentLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: 'cmt:' })
@@ -15169,31 +15169,31 @@ app.post('/api/comments', commentLimiter, (req, res) => {
   }
 });
 
-// ── T Chat: akaun + bilik/DM multi-pengguna untuk app /apps/chat. ─────────
-// Data awam berdaftar (nama + hash scrypt, tiada e-mel), disimpan di data/chat.json.
-// Had-kadar per-IP pada daftar/login/kiriman; poll mesej = bacaan ringan sahaja.
+// ── T Chat: accounts + multi-user rooms/DMs for the /apps/chat app. ─────────
+// Public registered data (name + scrypt hash, no e-mail), stored in data/chat.json.
+// A per-IP rate limit on register/login/posting; polling messages = a light read only.
 chat.mount(app, {
   rateLimit: config.rateLimit.enabled ? rateLimit : null,
   store,
   path: path.join(path.dirname(config.store.path), 'chat.json'),
 });
 
-// Gerbang SMS (paired-Android relay, dua hala + inbox). Admin di /sms.
+// The SMS gateway (paired-Android relay, two-way + inbox). Admin at /sms.
 sms.mount(app, {
   auth,
   rateLimit: config.rateLimit.enabled ? rateLimit : null,
   path: path.join(path.dirname(config.store.path), 'sms.json'),
 });
 
-// Jambatan Chat ⇄ Sel: DM yang diterima kawan semasa dia LUAR TALIAN (dan sudah
-// menaut nombor) dihantar sebagai SMS melalui gerbang Android yang dipasangkan;
-// balasan SMS masuk disalur kembali ke dalam DM asal. Hanya aktif bila relay
-// dipasangkan — tanpa peranti, mesej kekal dalam T Chat seperti biasa.
+// The Chat ⇄ SMS bridge: a DM received while the friend is OFFLINE (and has
+// linked their number) is sent as an SMS through the paired Android gateway;
+// incoming SMS replies are routed back into the original DM. Only active when a relay
+// is paired — without a device the message stays in T Chat as usual.
 chat.setSmsSender((payload) => (sms.isPaired() ? sms.enqueue(payload.to, payload.body) : { error: 'No SMS device paired.' }));
-sms.onInbound((evt) => { try { chat.ingestSms(evt.from, evt.body); } catch { /* jambatan gagal — inbox SMS tidak terjejas */ } });
+sms.onInbound((evt) => { try { chat.ingestSms(evt.from, evt.body); } catch { /* the bridge failed — the SMS inbox is untouched */ } });
 
-// Tukuk Agent: proksi OpenAI-compatible (tool-calling) untuk pelanjutan agen Cline
-// dalam code-server + build API kepala-tanpa (/api/agent/build).
+// Tukuk Agent: an OpenAI-compatible proxy (tool-calling) for the Cline agent extension
+// inside code-server + the headless build API (/api/agent/build).
 agent.mount(app, {
   auth,
   rateLimit: config.rateLimit.enabled ? rateLimit : null,
@@ -15201,26 +15201,26 @@ agent.mount(app, {
   store,
 });
 
-// /login dan /logout (tanpa prefix /agent) dipaut semula ke editor.
-// Browser lama mungkin cache 302 ke '/login' daripada sebelum fix prefix.
-// Express redirect supaya pautan itu berfungsi lagi.
+// /login and /logout (without the /agent prefix) are re-linked to the editor.
+// An old browser may have cached the 302 to '/login' from before the prefix fix.
+// Express redirects so that link works again.
 app.get('/login',  (req, res) => res.redirect(302, '/agent/login' + (req._parsedUrl.search || '')));
 app.get('/logout', (req, res) => res.redirect(302, '/agent/logout' + (req._parsedUrl.search || '')));
 
-// Editor Tukuk Agent (code-server tempatan) dinaung di tukuk.org/agent —
-// guna tunnel sedia ada; tanpa perubahan Cloudflare. WS dipasang di index.js.
+// The Tukuk Agent editor (a local code-server) is hosted at tukuk.org/agent —
+// reusing the existing tunnel; no Cloudflare changes. The WS is mounted in index.js.
 agentEditor.mount(app, { config });
 
 
-// ── Jana auto: SATU kata/huraian → app + game (/builder ✨ Jana). ──────────────
-// AI bila brain tersedia (rotasi cloud → ollama); JATUH kepada heuristik deterministik
-// supaya sentiasa ada hasil walau AI tak dikonfigurasi/tiada rangkaian. Output disanitasi.
+// ── Auto-generate: ONE word/description → an app + a game (/builder ✨ Generate). ──────
+// The AI when the brain is available (rotating cloud → ollama); it FALLS BACK to a deterministic
+// heuristic so there is always a result even unconfigured/offline. Output is sanitised.
 const builderGenLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 60 * 1000, max: 40, keyPrefix: 'bgen:' })
   : (req, res, next) => next();
 
-// Cache hasil /builder/generate dalam memori (TTL 24j, cap 200) — permintaan
-// berulang dilayan tanpa AI/rangkaian. BUKAN store kekal (reboot → kosong).
+// The /builder/generate results cached in memory (TTL 24h, cap 200) — repeated
+// requests are served without AI/network. NOT a permanent store (reboot → empty).
 const BGEN_TTL_MS = 24 * 60 * 60 * 1000;
 const bgenCache = new Map();
 function bgenCacheGet(k) { const e = bgenCache.get(k); if (!e) return null; if (Date.now() > e.exp) { bgenCache.delete(k); return null; } return e.v; }
@@ -15236,8 +15236,8 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const opts = { color, lang };
   const want = Math.min(3, Math.max(1, Number(req.body && req.body.count) || 3));
   const explicitAI = Boolean(req.body && (req.body.ai === true || req.body.ai === '1' || req.body.ai === 1));
-  // JIMAT AWAN: heuristik deterministik DULU (0 token). AI hanya bila idea wajar
-  // (panjang/berperincis) atau pengguna tekan butang "✨ AI" secara eksplisit.
+  // SAVE CLOUD TOKENS: the deterministic heuristic FIRST (0 tokens). AI only when the idea is
+  // worth it (long/detailed) or the user explicitly presses the "✨ AI" button.
   const useAI = Boolean(config.brain.enabled && builderGen.needsAI(idea, { ai: explicitAI }));
   const ckey = builderGen.genCacheKey({ idea, style, color, lang, count: want, seed, useAI });
   const hit = bgenCacheGet(ckey);
@@ -15247,17 +15247,17 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
   const sysPrompt = builderGen.SYSTEM_PROMPT + (lang ? ` Content language: ${lang}.` : '');
   const apps = [];
   const seen = new Set();
-  // Tandatangan untuk elak kad pendua (nama + aksen + set game).
+  // A signature to avoid duplicate cards (name + accent + the game set).
   const sigOf = (a) => a.appName + '|' + (a.theme && a.theme.accent) + '|' + a.widgets.filter((w) => builderGen.GAMES.includes(w.type)).map((w) => w.type).join(',');
   const pushApp = (a, src) => { if (!a || !Array.isArray(a.widgets) || !a.widgets.length) return; const k = sigOf(a); if (seen.has(k)) return; seen.add(k); a._src = src || 'auto'; apps.push(a); };
-  // (1) AI HANYA bila wajar — kayuhkan slot pertama dengan reka model.
+  // (1) AI ONLY when it is worth it — seed the first slot with a model design.
   if (useAI) {
     try {
       let text = '';
       try {
-        // Bajet 2048 (bukan 900): SYSTEM_PROMPT builder panjang + 4-8 widget → JSON
-        // selalu mencecah >900 → terpotong → parse gagal → fallback heuristik. 2048 cukup
-        // lapang untuk model reasoning (gpt-oss) tanpa membazir; hanya berjalan bila useAI.
+        // A budget of 2048 (not 900): the builder's long SYSTEM_PROMPT + 4-8 widgets → the JSON
+        // always passes 900 → gets truncated → the parse fails → the heuristic fallback. 2048 is
+        // roomy enough for a reasoning model (gpt-oss) without wasting tokens; it only runs when useAI.
         const r = await brain.generateCloudRotation(brief, { system: sysPrompt, temperature: 0.85, maxTokens: 2048 });
         text = (r && r.response) || '';
       } catch { /* cuba ollama */ }
@@ -15265,28 +15265,28 @@ app.post('/api/builder/generate', builderGenLimiter, async (req, res) => {
         try {
           const r = await brain.generate(brief, { system: sysPrompt, numPredict: 900, temperature: 0.85 });
           text = (r && r.response) || '';
-        } catch { /* jatuh ke heuristik */ }
+        } catch { /* fall through to the heuristic */ }
       }
       const parsed = builderGen.parseGenJson(text);
       if (parsed) { const s = builderGen.sanitizeApp(parsed); if (s.widgets.length) pushApp(s, 'ai'); }
-    } catch { /* noop — heuristik di bawah */ }
+    } catch { /* noop — the heuristic below */ }
   }
-  // (2) Lengkapkan (atau lengkapkan sepenuhnya bila AI tak dipakai) dengan heuristik.
+  // (2) Complete it (or complete it fully when no AI is used) with the heuristic.
   if (apps.length < want) for (const v of builderGen.heuristicVariants(idea, want, style, seed, opts)) pushApp(v, 'auto');
   const finalApps = apps.slice(0, want);
-  if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea, style, opts); fb._src = 'auto'; finalApps.push(fb); } // sentiasa ada >=1
+  if (!finalApps.length) { const fb = builderGen.heuristicBuild(idea, style, opts); fb._src = 'auto'; finalApps.push(fb); } // there is always >=1
   const source = finalApps[0] && finalApps[0]._src === 'ai' ? 'ai' : 'auto';
   bgenCacheSet(ckey, { source, apps: finalApps });
   store.event('builder', `Jana auto (${source}): ${truncate(idea, 60)}`, { source, count: finalApps.length });
   res.json({ ok: true, source, apps: finalApps, app: finalApps[0] });
 });
 
-// ── PENGHULU "1 prompt → terus siap": idea → templat/LLM → auto-terbit /a/<slug> + APK ──
-// Susun ikut jimat: (1) TEMPLAT padan (0 token), (2) LLM single-file bila wajar & brain
-// aktif, (3) templat paling hampir (jaring) — supaya SENTIASA ada output siap. Hasil
-// diterbitkan serta-merta; APK dibina atas-permintaan (/api/apk/km-<slug>). Idempoten:
-// prompt sama dalam TTL dipulang tanpa tulis fail berganda. Perhatian: output model
-// reasoning boleh kosong bila bajet kecil — 2400 token cukup untuk 1 fail HTML.
+// ── The "1 prompt → ready at once" handler: idea → template/LLM → auto-publish /a/<slug> + APK ──
+// Order by thrift: (1) a matching TEMPLATE (0 tokens), (2) a single-file LLM when it is worth it &
+// the brain is active, (3) the nearest template (a safety net) — so there is ALWAYS finished output.
+// The result is published immediately; the APK is built on demand (/api/apk/km-<slug>). Idempotent:
+// the same prompt inside the TTL is replayed without writing duplicate files. Note: the output of a
+// reasoning model can be empty on a small budget — 2400 tokens is enough for 1 HTML file.
 const BUILD_TTL_MS = 10 * 60 * 1000;
 const buildCache = new Map();
 function buildCacheGet(k) { const e = buildCache.get(k); if (!e) return null; if (Date.now() > e.exp) { buildCache.delete(k); return null; } return e.v; }
@@ -15314,25 +15314,25 @@ app.post('/api/builder/build', builderGenLimiter, async (req, res) => {
   const accent = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color) ? color : '';
   let html = '', mode = '', kind = wantKind || 'app', templateKey = '';
 
-  // (1) Templat padan — deterministik, 0 token.
+  // (1) The matching template — deterministic, 0 tokens.
   let m = templates.detect(idea);
-  if (m && wantKind && m.kind !== wantKind) m = templates.nearest(idea, wantKind); // hormati game/app yang diminta
+  if (m && wantKind && m.kind !== wantKind) m = templates.nearest(idea, wantKind); // honour the game/app that was asked for
   if (m && templates.get(m.key)) {
     html = templates.personalize(templates.get(m.key), { name, accent });
     mode = 'template'; kind = m.kind; templateKey = m.key;
   }
 
-  // (2) Tiada padanan + wajar → LLM single-file. Gagal/terpotong → jatuh (3).
+  // (2) No match + worth it → a single-file LLM. Fails/truncates → fall to (3).
   if (!html && config.brain.enabled && (explicitAI || builderGen.needsAI(idea, { ai: explicitAI }))) {
     try {
       const r = await brain.generateCloudRotation('Bina berdasarkan idea ini: ' + idea, { system: templates.LLM_SYS, temperature: 0.6, maxTokens: 2400 });
       const doc = templates.extractHtml((r && r.response) || '');
       const safe = doc ? templates.sanitize(doc) : '';
       if (safe && publish.looksLikeHtml(safe)) { html = templates.personalize(safe, { name, accent }); mode = 'ai'; }
-    } catch { /* LLM gagal → nearest di bawah */ }
+    } catch { /* the LLM failed → the nearest template below */ }
   }
 
-  // (3) Jaring keselamatan: templat paling hampir (ikut hash idea) → sentiasa siap.
+  // (3) The safety net: the nearest template (by idea hash) → always finished.
   if (!html) {
     const nb = templates.nearest(idea, wantKind) || templates.nearest(idea, 'game') || templates.nearest(idea, 'app');
     const h = nb && templates.get(nb.key);
@@ -15348,12 +15348,12 @@ app.post('/api/builder/build', builderGenLimiter, async (req, res) => {
   const payload = { mode, kind, template: templateKey || null, slug: pub.slug, url: pub.url, editKey: pub.editKey, apkUrl, refineUrl };
   buildCacheSet(ckey, payload);
   store.event('builder', `Build siap (${mode}): ${truncate(idea, 60)} → /a/${pub.slug}`, { mode, kind, slug: pub.slug });
-  // Pra-hangat APK tanpa halang respons (best-effort; senyap bila SDK tiada).
+  // Pre-warm the APK without blocking the response (best effort; silent when the SDK is missing).
   try { Promise.resolve(buildApk(apkSpec('km-' + pub.slug))).catch(() => {}); } catch { /* noop */ }
   res.json(Object.assign({ ok: true }, payload));
 });
 
-// ── Galeri templat (data sahaja — untuk build.tukuk.org seed & UI akan datang) ──
+// ── The template gallery (data only — for the build.tukuk.org seed & a future UI) ──
 app.get('/api/builder/templates', (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex');
   res.json({ ok: true, count: templates.REGISTRY.length, items: templates.list() });
@@ -15365,7 +15365,7 @@ app.get('/api/builder/templates/:key', (req, res) => {
   res.type('html').send(html);
 });
 
-// Senarai kata satu-kata untuk 🎲 Rambang + cadangan idea (/builder). Dimuat sekali, ringan.
+// The one-word list for the 🎲 surprise pick + idea suggestions (/builder). Loaded once, light.
 const WORDS_PATH = path.join(__dirname, '..', 'scripts', 'satu-kata', 'words.txt');
 function loadBuilderWords() {
   try {
@@ -15389,7 +15389,7 @@ app.get('/api/builder/suggest', (req, res) => {
   res.json({ ok: true, items });
 });
 
-// Indeks /a — senarai aplikasi yang diterbitkan komuniti (pautan sahaja, nama disanitasi).
+// The /a index — the apps published by the community (links only, names sanitised).
 app.get('/a', (req, res) => {
   const items = listPublished();
   const rows = items.length
@@ -15398,7 +15398,7 @@ app.get('/a', (req, res) => {
   res.type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Published Apps — Tukuk Studio</title><meta name="robots" content="noindex"><style>body{font:16px/1.6 system-ui;margin:0;padding:40px 20px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}main{max-width:720px;margin:0 auto}h1{font-size:1.6rem}ul{list-style:none;padding:0}li{padding:6px 0;border-bottom:1px solid #262b36}</style></head><body><main><h1>🧩 Published Apps</h1><p style="color:#9aa3b2">Built with Tukuk Studio — the no-code Builder. Pages run sandboxed (separate origin).</p><ul>\n${rows}\n</ul></main></body></html>`);
 });
 
-// Hidangkan satu app terbitan dalam sandbox opaque-origin.
+// Serve one published app inside an opaque-origin sandbox.
 app.get('/a/:slug', (req, res) => {
   const slug = String(req.params.slug || '');
   if (!publish.isSlug(slug)) return res.status(400).type('html').send('Invalid slug');
@@ -15406,9 +15406,9 @@ app.get('/a/:slug', (req, res) => {
   let html;
   try { html = fs.readFileSync(file, 'utf8'); }
   catch { return res.status(404).type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Studio</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>App <code>/${escapeHtml(slug)}</code> does not exist or has been removed.</p><p><a href="/a">← All apps</a></p></body></html>`); }
-  bumpViews(slug); // kiraan "dilihat" untuk katalog /store
-  // ?embed=1 → dibenarkan menempek dalam pemain /play kita (frame-ancestors 'self');
-  // laman luar tetap disekat 'none' seperti sebelumnya (anti-clickjacking silang-origin).
+  bumpViews(slug); // the "seen" counter for the /store catalogue
+  // ?embed=1 → embedding in our own /play player is allowed (frame-ancestors 'self');
+  // outside sites are still blocked with 'none' as before (anti cross-origin clickjacking).
   const embed = req.query.embed === '1';
   res.setHeader('Content-Security-Policy', publish.publishCspFor(req.get('host'), (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : 'http', embed));
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -15418,7 +15418,7 @@ app.get('/a/:slug', (req, res) => {
   res.type('html').send(publish.injectComments(html, slug));
 });
 
-// Explore: sains & geografi (data terbuka, tanpa kunci API)
+// Explore: science & geography (open data, no API key)
 app.get('/api/explore/earthquakes', async (req, res) => {
   try {
     res.json(await explore.getEarthquakes({
@@ -15579,17 +15579,17 @@ app.get('/admin', (req, res) => {
 
 // Admin API
 // ── Pentadbir: login e-mel + WebAuthn passkey ────────────────────────────────
-// Hanya SATU e-mel dibenarkan (config.admin.email). Yang lain ditolak.
+// Only ONE e-mail is allowed (config.admin.email). Anything else is refused.
 const adminLoginLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 5 * 60 * 1000, max: 20, keyPrefix: 'adminlogin:' })
   : (req, res, next) => next();
 
-// Konfigurasi awam untuk UI login (e-mel dibenarkan, ada passkey?, RP config).
+// The public configuration for the login UI (allowed e-mail, has a passkey?, RP config).
 app.get('/api/admin/auth/config', (req, res) => {
   res.json(auth.publicConfig());
 });
 
-// Origin sebenar permintaan (untuk pengesahan WebAuthn pelbagai-hostname).
+// The real origin of the request (for multi-hostname WebAuthn verification).
 function requestOrigin(req) {
   const h = String(req.headers.origin || '').trim();
   if (h) return h;
@@ -15598,7 +15598,7 @@ function requestOrigin(req) {
   return host ? `${proto}://${host}` : '';
 }
 
-// Langkah 1 daftar passkey: sahkan e-mel + kata laluan bootstrap, dapat cabaran.
+// Passkey registration step 1: verify the e-mail + the bootstrap password, get the challenge.
 app.post('/api/admin/auth/register/start', adminLoginLimiter, auth.requireAllowedEmail, (req, res) => {
   const password = String((req.body && req.body.password) || '');
   if (!auth.checkBootstrapPassword(password)) {
@@ -15609,7 +15609,7 @@ app.post('/api/admin/auth/register/start', adminLoginLimiter, auth.requireAllowe
     .catch((error) => res.status(500).json({ error: 'Failed to start registration', details: safeError(error) }));
 });
 
-// Langkah 2 daftar: sahkan attestasi, simpan passkey, keluarkan sesi.
+// Registration step 2: verify the attestation, store the passkey, issue a session.
 app.post('/api/admin/auth/register/finish', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
   try {
     const credential = req.body && req.body.credential;
@@ -15623,7 +15623,7 @@ app.post('/api/admin/auth/register/finish', adminLoginLimiter, auth.requireAllow
   }
 });
 
-// Langkah 1 login: sahkan e-mel, dapat cabaran authenticasi (passkey).
+// Login step 1: verify the e-mail, get the authentication challenge (passkey).
 app.post('/api/admin/auth/login/start', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
   try {
     if (!auth.passkeys().length) {
@@ -15636,7 +15636,7 @@ app.post('/api/admin/auth/login/start', adminLoginLimiter, auth.requireAllowedEm
   }
 });
 
-// Langkah 2 login: sahkan assertasi passkey, keluarkan token sesi.
+// Login step 2: verify the passkey assertion, issue the session token.
 app.post('/api/admin/auth/login/finish', adminLoginLimiter, auth.requireAllowedEmail, async (req, res) => {
   try {
     const credential = req.body && req.body.credential;
@@ -15649,13 +15649,13 @@ app.post('/api/admin/auth/login/finish', adminLoginLimiter, auth.requireAllowedE
   }
 });
 
-// Logout: batalkan sesi semasa.
+// Logout: revoke the current session.
 app.post('/api/admin/auth/logout', (req, res) => {
   auth.revokeSession((req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
   res.json({ ok: true });
 });
 
-// Senarai & buang passkey (perlu sesi sah).
+// List & delete passkeys (a valid session is required).
 app.get('/api/admin/auth/passkeys', auth.requireAdmin, (req, res) => {
   res.json({ passkeys: auth.passkeys().map((k) => ({ id: k.id, label: k.label, addedAt: k.addedAt })) });
 });
@@ -15683,8 +15683,8 @@ app.get('/api/admin/status', auth.requireAdmin, async (req, res) => {
   }
 });
 
-// Produk disyorkan (afiliasi) — default supaya /rekomendasi tak kosong. Admin ganti
-// dengan link affiliate sebenar (Shopee/Amazon/Hostinger/NordVPN dll). JSON array.
+// Recommended (affiliate) products — the default so /rekomendasi is not empty. The admin replaces
+// them with real affiliate links (Shopee/Amazon/Hostinger/NordVPN etc). A JSON array.
 const DEFAULT_AFFILIATE = JSON.stringify([
   { name: 'Hostinger', blurb: 'Affordable, fast web hosting for your side projects.', price: 'from RM10/mo', url: 'https://www.hostinger.com', cta: 'View Plans' },
   { name: 'Namecheap', blurb: 'Get a .com domain for your personal brand.', price: 'from $5.98', url: 'https://www.namecheap.com', cta: 'Check Domain' },
@@ -15729,11 +15729,11 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     msAdsSlotTop: store.getSetting('msAdsSlotTop', ''),
     msAdsSlotBottom: store.getSetting('msAdsSlotBottom', ''),
     msAdsUsmSrc: store.getSetting('msAdsUsmSrc', ''),
-    // Produk afiliasi (JSON array) untuk halaman /rekomendasi
+    // Affiliate products (a JSON array) for the /rekomendasi page
     affiliateProducts: store.getSetting('affiliateProducts', DEFAULT_AFFILIATE),
     thirdPartyAdEnabled: Boolean(store.getSetting('thirdPartyAdEnabled', false)),
     thirdPartyAdSrc: store.getSetting('thirdPartyAdSrc', ''),
-    // Snippet penuh (HTML/JS) ditampal dari pembekal. Renderer inject apa adanya.
+    // A full snippet (HTML/JS) pasted from the provider. The renderer injects it verbatim.
     msAdsSnippetTop: store.getSetting('msAdsSnippetTop', ''),
     msAdsSnippetInArticle: store.getSetting('msAdsSnippetInArticle', ''),
     msAdsSnippetBottom: store.getSetting('msAdsSnippetBottom', ''),
@@ -15743,7 +15743,7 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     // Custom Themes & Wallpaper
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
-    // AI Configuration — jangan pulangkan kunci sebenar, hanya status tersimpan
+    // AI Configuration — never return the real keys, only the stored status
     aiProvider: store.getSetting('aiProvider', 'gemini'),
     aiApiKeySet: Boolean(rawKey),
     aiApiKeyMasked: rawKey ? `${rawKey.slice(0, 4)}…${rawKey.slice(-4)}` : '',
@@ -15760,7 +15760,7 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
 
 app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   const b = req.body || {};
-  // Validas awal: produk afiliasi mesti JSON array yang sah (atau kosong).
+  // Early validation: the affiliate products must be a valid JSON array (or empty).
   if (typeof b.affiliateProducts !== 'undefined') {
     const raw = String(b.affiliateProducts).trim();
     if (raw) {
@@ -15792,7 +15792,7 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   // Themes & Custom Background
   if (typeof b.bgMode !== 'undefined') store.setSetting('bgMode', String(b.bgMode));
   if (typeof b.customBgUrl !== 'undefined') store.setSetting('customBgUrl', String(b.customBgUrl));
-  // AI Settings — hanya kemas kini kunci jika nilai baharu diberikan (jangan kosongkan tersirat)
+  // AI Settings — only update a key when a new value is supplied (never blank it implicitly)
   if (typeof b.aiProvider !== 'undefined') store.setSetting('aiProvider', String(b.aiProvider));
   if (typeof b.aiApiKey !== 'undefined' && String(b.aiApiKey).trim()) store.setSetting('aiApiKey', String(b.aiApiKey).trim());
   if (typeof b.aiModel !== 'undefined') store.setSetting('aiModel', String(b.aiModel));
@@ -15806,12 +15806,12 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// Admin Web Terminal — hanya pentadbir bersesi. Sekatan arahan musnah diperketat.
+// The admin web terminal — signed-in admins only. Destructive-command limits are tightened.
 app.post('/api/admin/terminal', auth.requireAdmin, (req, res) => {
   const cmd = req.body && String(req.body.cmd || '').trim();
   if (!cmd) return res.status(400).json({ error: 'Command is required' });
 
-  // Sekat arahan pemadam/perosak dan helah rantai shell yang jelas berbahaya.
+  // Block delete/damage commands and clearly dangerous shell-chaining tricks.
   const dangerous = [
     /\brm\b/i,
     /\brmdir\b/i,
@@ -15883,7 +15883,7 @@ app.post('/api/admin/ai/generate', auth.requireAdmin, async (req, res) => {
 });
 
 // In-app Reader View Proxy (opens articles inside Tukuk-OS without leaving)
-// Lindung daripada SSRF: hanya URL awam yang dibenarkan.
+// Guard against SSRF: only public URLs are allowed.
 app.get('/api/proxy/reader', async (req, res) => {
   const targetUrl = String(req.query.url || '').trim();
   if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {

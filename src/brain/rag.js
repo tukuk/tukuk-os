@@ -33,9 +33,9 @@ const TUUK_PATTERNS = [
   /\bapi\b/i
 ];
 
-// Soalan IDENTITI AI → jawab serta-merta dari pengetahuan (tiada carian/LLM).
-// Tanpa ini, "siapakah kamu" pergi ke carian + panggilan cloud 30s lalu return
-// definisi kamus — perlahan DAN bodoh. Corak ini menangkap siapa/apa/boleh-buat.
+// AI IDENTITY questions → answer at once from knowledge (no search/LLM).
+// Without this, "who are you" goes to search + a 30s cloud call, then returns
+// a dictionary definition — slow AND dumb. These patterns catch who/what/can-do.
 const IDENTITY_PATTERNS = [
   /\b(siapakah|siapa)\s+(kamu|kau|anda|awak|engko|kamu\s+ini|ni)\b/i,
   /\b(kamu|anda|awak|kau)\s+siapa\b/i,
@@ -49,7 +49,7 @@ const IDENTITY_PATTERNS = [
   /\b(tugasmu|kebolehanmu|fungsi\s+awak)\b/i
 ];
 
-/** Cache jawapan supaya model tidak dipanggil semula untuk soalan yang sama. */
+/** Cache answers so the model is not called again for the same question. */
 const answerCache = new Map();
 const CACHE_TTL = 10 * 60 * 1000;
 const CACHE_MAX = 200;
@@ -71,9 +71,9 @@ function cacheSet(key, value) {
   answerCache.set(key, { at: Date.now(), value });
 }
 
-// ─── Web-relevance: tapis hasil DuckDuckGo yang langsung tak berkait ───────
-// Stopword Melayu + Inggeris yang kerap dalam soalan kabur ("apa itu ini", "untuk apa").
-// Jika semua terma soalan adalah stopword → terlalu kabur (score 0) → buang web hits.
+// ─── Web relevance: filter DuckDuckGo results that are totally unrelated ───────
+// Malay + English stopwords that recur in vague questions ("apa itu ini", "untuk apa").
+// If every question term is a stopword → too vague (score 0) → drop the web hits.
 const WEB_STOPWORDS = new Set([
   'apa','itu','ini','yang','dan','untuk','dengan','dari','kepada','pada','dalam','adalah',
   'is','the','a','an','of','in','to','on','for','how','what','do','does','are','was','it',
@@ -82,7 +82,7 @@ const WEB_STOPWORDS = new Set([
 function webRelevanceScore(query, hit) {
   const qt = String(query).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/)
     .filter((w) => w.length > 2 && !WEB_STOPWORDS.has(w));
-  if (!qt.length) return 0; // soalan 100% stopword → terlalu kabur untuk web
+  if (!qt.length) return 0; // a 100% stopword question → too vague for the web
   const title = String(hit.title || '').toLowerCase();
   const desc = String(hit.description || '').toLowerCase();
   const overlap = qt.filter((t) => title.includes(t) || desc.includes(t)).length;
@@ -95,15 +95,15 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
       limit,
       attributesToCrop: ['content'],
       cropLength: 40,
-      // `content` perlu ikut serta supaya ekstraktif boleh membaca badan
-      // artikel sebenar — description (1 ayat) sering terlalu pendek & term
-      // soalan berada di luar 60 aksara → skoring hilang, artikel betul
-      // ditapis keluar sementara artikel salah (ranking lebih rendah)
-      // tersangkut kerana satu padanan awal.
+      // `content` must join in so the extractive pass can read the body of
+      // a real article — the description (1 sentence) is often too short and terms
+      // from the question fall outside the first 60 characters → scoring is lost, a correct
+      // article is filtered out while a wrong one (lower ranking)
+      // sticks on a single early match.
       attributesToRetrieve: ['url', 'title', 'description', 'content', 'siteName', 'host', 'lang', 'wordCount'],
       showRankingScore: true
     });
-    // Tapis ikut skor relevan Meilisearch.
+    // Filter by the Meilisearch relevance score.
     const hits = (result.hits || []).filter(
       (hit) => (hit._rankingScore ?? 0) >= config.brain.minConfidence
     );
@@ -119,13 +119,13 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
             webRef: idx + 1,
             _webRelevance: webRelevanceScore(query, hit)
           }));
-          // Hanya kekalkan hasil yang ada OVERLAP nyata dengan soalan.
-          // Kalau semua < 0.3 → soalan terlalu kabur untuk web-search → buang semua.
+          // Keep only the results with a REAL overlap with the question.
+          // If all are < 0.3 → the question is too vague for web-search → drop them all.
           const relevant = scored.filter((h) => h._webRelevance >= 0.3);
           if (relevant.length > 0) return relevant;
         }
       } catch {
-        // abaikan ralat carian web
+        // ignore web-search errors
       }
     }
 
@@ -148,9 +148,9 @@ function buildContext(hits) {
   if (hits.length === 0) return '';
   return hits
     .map((hit, position) => {
-      // Utamakan `content` penuh (badan artikel dari Meilisearch), kemudian
-      // crop _formatted, kemudian description — supaya LLM dapat teks sebenar
-      // dan mudah bezakan artikel yang mana menjawab soalan.
+      // Prefer the full `content` (the article body from Meilisearch), then
+      // crop _formatted, then the description — so the LLM gets the real text
+      // and can easily tell which article answers the question.
       const body = hit.content || hit._formatted?.content || hit.description || '';
       const trimmed = String(body).replace(/<\/?mark>/g, '').slice(0, config.brain.snippetChars);
       const source = hit.source === 'web' ? `[WEB] ${hit.url}` : hit.url;
@@ -182,14 +182,14 @@ const MINIMAL_SYSTEM =
   'Use ONLY the information in the context. If the context does not actually answer the ' +
   'question, say you do not know instead of guessing or inventing.';
 
-// Fall-back jika taskrouter tidak diberi (keliru-pelindung).
+// Fall-back when taskrouter is not given (mistake-proof).
 const GUIDANCE_DEFAULT = 'Answer directly in 2-4 sentences, using only the sources.';
 
 function buildPrompt(question, hits, selfQuestion, task) {
   const lines = [];
 
   if (selfQuestion) {
-    // Soalan tentang Tukuk-OS: gunakan pengetahuan sistem sahaja.
+    // Questions about Tukuk-OS: use the system knowledge only.
     lines.push(knowledgeForSelf());
     lines.push(`QUESTION: ${question}`);
     lines.push('Answer in 2-3 sentences, in the SAME LANGUAGE as the QUESTION.');
@@ -198,8 +198,8 @@ function buildPrompt(question, hits, selfQuestion, task) {
 
   lines.push(`QUESTION: ${question}`);
 
-  // Arithmetik tulen / penjanaan kod: bukan fakta dunia — jawab terus, ABAIKAN
-  // hit yang tak relevan (retrieve mungkin keluarkan noise) supaya tak tertolak.
+  // True arithmetic / code generation: not world facts — answer directly, IGNORE
+  // irrelevant hits (retrieve may produce noise) so they can't reject it.
   if (task && task.selfContained) {
     lines.push(
       'This is a self-contained task (arithmetic or code), not a factual lookup. Solve it '
@@ -210,16 +210,16 @@ function buildPrompt(question, hits, selfQuestion, task) {
   }
 
   if (hits.length > 0) {
-    // Bila hasil #1 skor tinggi (≥ 0.8): tajuk/padanan sangat kuat — nyatakan
-    // kepada LLM supaya fokus pada sumber [1] dan abaikan sumber tambahan
-    // (mencegah model kecil seperti smollm/qwen jawab artikel yang salah).
+    // When result #1 scores high (≥ 0.8): the title/match is very strong — state
+    // it to the LLM so it focuses on source [1] and ignores the extra sources
+    // (keeps small models such as smollm/qwen from answering from the wrong article).
     const topScore = hits[0]._rankingScore ?? 0;
     const srcsLabel = topScore >= 0.8
       ? `SOURCES (source [1] is the closest match to the question — answer from [1] first):\n${buildContext(hits)}`
       : `SOURCES:\n${buildContext(hits)}`;
     lines.push(srcsLabel);
-    // Arahan adaptif ikut JENIS tugasan (math/code/list/…) — membuatkan model
-    // kecil memberi BENTUK jawapan yang betul, bukan hanya 2-4 ayat generic.
+    // Adaptive instructions by task KIND (math/code/list/…) — making the
+    // small model produce the right SHAPE of answer, not just 2-4 generic sentences.
     const guidance = (task && task.guidance) || GUIDANCE_DEFAULT;
     lines.push(
       'Write the answer in the SAME LANGUAGE as the QUESTION (any language — answer in '
@@ -240,7 +240,7 @@ function buildPrompt(question, hits, selfQuestion, task) {
 }
 
 function knowledgeForSelf() {
-  // `knowledge` di sini sudah objek pengetahuan (dari destructure di atas).
+  // `knowledge` here is already the knowledge object (from the destructure above).
   return [
     'Tukuk-OS is a web search engine for tukuk.org, ISC license, built with Meilisearch.',
     `Routes: ${knowledge.routes.split('\n').slice(0, 8).join('; ')}`,
@@ -257,8 +257,8 @@ async function ask(question, { limit } = {}) {
   }
 
   const startedAt = Date.now();
-  // Gate awal: soalan terlalu kabur (hanya stopword/common words) → BM25 tidak
-  // dapat membezakan → jangan cari, refuse. Contoh: "untuk apa ini", "apa itu".
+  // Early gate: the question is too vague (stopwords/common words only) → BM25 cannot
+  // tell anything apart → don't search, refuse. Examples: "untuk apa ini", "apa itu".
   const meaningful = query.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/)
     .filter((w) => w.length > 2 && !WEB_STOPWORDS.has(w));
   if (!meaningful.length && !isSelfQuestion(query)) {
@@ -274,8 +274,8 @@ async function ask(question, { limit } = {}) {
 
   const selfQuestion = isSelfQuestion(query);
   const task = taskrouter.classify(query);
-  // Aritmetik tulen → jawab dengan KALKULATOR deterministik (tepat, serta-merta,
-  // tiada halusinasi). Jangan guna LLM untuk kira 12*7 — dia boleh silap.
+  // True arithmetic → answer with a deterministic CALCULATOR (exact, instant,
+  // no hallucination). Don't use an LLM to compute 12*7 — it can get it wrong.
   if (!selfQuestion && task.arithmetic) {
     const { expression, value } = task.arithmetic;
     return {
@@ -290,8 +290,8 @@ async function ask(question, { limit } = {}) {
   }
   const hits = selfQuestion ? [] : await retrieve(query, { limit });
 
-  // Soalan tentang Tukuk-OS: gunakan pengetahuan sistem terus — tidak guna LLM.
-  // Model 135M parameter terlalu kecil untuk menjawab soalan generale dengan tepat.
+  // Questions about Tukuk-OS: use the system knowledge directly — no LLM.
+  // A 135M-parameter model is too small to answer general questions accurately.
   if (selfQuestion) {
     const answer = knowledgeForSelf();
     return {
@@ -309,12 +309,12 @@ async function ask(question, { limit } = {}) {
   const prompt = buildPrompt(query, hits, selfQuestion, task);
 
   const system = selfQuestion ? systemPrompt() : MINIMAL_SYSTEM;
-  // Bawaan token; code/math dapat ruang tambahan supaya jawapan tidak terpotong
-  // (dibincangkan pada lantai CPU kecil — tambahan hanya bila tugasan benar-benar perlu).
+  // Default tokens; code/math get extra room so the answer is not cut off
+  // (discussed at the small-CPU floor — extra only when the task really needs it).
   const baseTokens = selfQuestion ? config.brain.maxTokens : Math.min(config.brain.maxTokens, 120);
   const numPredict = Math.min(baseTokens + (selfQuestion ? 0 : (task.extraTokens || 0)), 320);
-  // Cloud boleh guna bajet lebih besar: model reasoning (gpt-oss/qwen3/gemini-latest)
-  // perlukan ruang akal dalaman sebelum jawapan; bajet Ollama kecil akan kosongkan mereka.
+  // The cloud can afford a bigger budget: reasoning models (gpt-oss/qwen3/gemini-latest)
+  // need thinking room before answering; a small Ollama budget would empty it.
   const cloudTokens = Math.max(numPredict, config.brain.cloudMaxTokens);
 
   let answer = '';
@@ -322,19 +322,19 @@ async function ask(question, { limit } = {}) {
   let method = 'llm';
   let rejected = [];
 
-  // BAJET INTERAKTIF: fasa LLM (cloud+ollama) tidak boleh melebihi budgetMs dari
-  // mula. Lewat itu → berhenti & guna ekstraktif serta-merta (instan, berpunca).
-  // Ini menutup 37s/60s. Lantai kecil selepas retrieve supaya websearch lambat
-  // tidak merampas seluruh bajet — cloud (groq) biasanya pulang dalam 1–2s.
+  // INTERACTIVE BUDGET: the LLM phase (cloud+ollama) must not exceed budgetMs from
+  // the start. Past that → stop and use the extractive pass at once (instant, sourced).
+  // This closes the 37s/60s gap. A small floor after retrieve so a slow websearch
+  // doesn't grab the whole budget — the cloud (groq) usually returns in 1–2s.
   const deadline = Math.max(
     startedAt + (config.brain.budgetMs || config.brain.timeout),
     Date.now() + 3000
   );
 
   const backend = await provider.activeBackend();
-  // Ekstraktif serta-merta bila: tiada LLM langsung, ATAU Ollama + mod laju.
-  // Cloud SENTIASA dicuba (cepat & murah) — fastMode hanya penggalang ollama/none.
-  // Tugasan self-contained (aritmetik/kod) WAJIB lalu LLM — ekstraktif tak boleh mengira/menjana kod.
+  // Extractive at once when: no LLM at all, OR Ollama + fast mode.
+  // The cloud is ALWAYS tried (fast & cheap) — fastMode only gates ollama/none.
+  // Self-contained tasks (arithmetic/code) MUST go through the LLM — extraction can't compute or generate code.
   const useExtractive = backend.kind === 'none'
     || (backend.kind === 'ollama' && config.brain.fastMode && !backend.localFirst && !selfQuestion && !task.selfContained);
 
@@ -344,15 +344,15 @@ async function ask(question, { limit } = {}) {
     method = extracted.method;
     model = 'extractive (no LLM)';
   } else {
-    // HIBRIDA SERENTAK (ollama lokal + cloud dipakai bersama): rotasi cloud dan
-    // rantai Ollama berjalan SERENTAK — jawapan koheren PERTAMA menang, yang kalah
-    // dibatalkan serta-merta (AbortController) supaya token/CPU tidak dibakar.
-    // Cloud lazimnya ~1–2s (groq); model lokal mengisi jurang bila cloud cooling/
-    // blip/tiada kunci — dan tetap COBA, bukan terus jatuh ke ekstraktif.
+    // SIMULTANEOUS HYBRID (local ollama + cloud used together): the cloud rotation and
+    // the Ollama chain run AT THE SAME TIME — the first coherent answer wins, the loser
+    // is cancelled at once (AbortController) so tokens/CPU are not burned.
+    // The cloud is usually ~1–2s (groq); local models fill the gap when the cloud is cooling/
+    // blipping/out of key — and we still TRY, rather than dropping straight to extractive.
     const controller = new AbortController();
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    // Cloud dicuba bila backend cloud aktif ATAU localFirst dengan senarai
-    // pelarian. Admin paksa aiProvider=ollama (tiada cloudFallback) → lokal sahaja.
+    // The cloud is tried when a cloud backend is active OR localFirst has a fallback
+    // list. The admin forces aiProvider=ollama (no cloudFallback) → local only.
     const cloudWanted = backend.kind === 'cloud'
       || (backend.kind === 'ollama' && Array.isArray(backend.cloudFallback) && backend.cloudFallback.length > 0);
     const attempts = [];
@@ -365,24 +365,24 @@ async function ask(question, { limit } = {}) {
         });
         for (const r of (out?.rejected || [])) rejected.push({ model: r.provider, reason: r.reason });
         const text = String(out?.response || '').trim();
-        // Model awan besar TIDAK dinilai dengan heuristik model 135M: jawapan
-        // ringkas ("California has 58 counties.") dan penolakan jujur ("I don't
-        // know.") dulu dibuang sebagai echo → /ask jatuh ke perenggan ekstraktif
-        // daripada artikel tak berkaitan, iaitu jauh lebih buruk daripada "tidak
-        // tahu". Semakan ulang-prompt & ulang-an ayat tetap jalan.
+        // Large cloud models are NOT judged with the 135M-model heuristics: short
+        // answers ("California has 58 counties.") and honest refusals ("I don't
+        // know.") were thrown away as echo → /ask fell to the extractive paragraph
+        // of unrelated articles, which is far worse than "I don't
+        // know". The repeat-prompt & repeat-sentence checks still run.
         if (text && !isEcho(text, prompt, { smallModel: false })) return { text, model: `${out._provider}:${out._model}` };
         if (text) rejected.push({ model: out._provider, reason: 'output not coherent (repeating the prompt)' });
         return null;
       })());
     }
 
-    // Probed selepas cloud dilancarkan — supaya pusingan /api/tags tidak
-    // menangguh permulaan tier awan yang laju.
+    // Probed after the cloud is launched — so the /api/tags round does not
+    // delay the start of the fast cloud tier.
     const wantOllama = backend.kind === 'ollama' || (await provider.ollamaReachable());
     if (wantOllama) {
       attempts.push((async () => {
-        // Beri cloud head-start ~1.2s supaya CPU VPS tidak berputar untuk jawapan
-        // yang sedang dalam perjalanan. Tiada cloud / localFirst → jana serta-merta.
+        // Give the cloud a ~1.2s head-start so the VPS CPU isn't spinning for an answer
+        // already on its way. No cloud / localFirst → generate at once.
         if (cloudWanted && !backend.localFirst) {
           const head = Math.min(1200, Math.max(0, deadline - Date.now() - 1500));
           if (head > 0) await sleep(head);
@@ -413,27 +413,27 @@ async function ask(question, { limit } = {}) {
       })());
     }
 
-    // Pusingan null → rejection supaya Promise.any terus menunggu racer seterusnya.
+    // A null round → a rejection so Promise.any keeps waiting for the next racer.
     const guarded = attempts.map((p) => p.then((r) => r || Promise.reject(new Error('attempt yielded nothing'))));
     try {
       const winner = await Promise.any(guarded);
       answer = winner.text;
       model = winner.model;
     } catch {
-      // Semua racer gagal — jatuh ke ekstraktif di bawah (instan, berpunca).
+      // Every racer failed — fall to the extractive path below (instant, sourced).
     }
-    controller.abort(); // bunuh racer yang belum selesai — jangan bakar token/CPU lagi
+    controller.abort(); // kill the racers that have not finished — don't burn any more tokens/CPU
   }
 
   const sources = buildSources(hits);
 
-  // Tiada jawapan daripada LLM (gagal/offline/tiada model) → jatuhkan ke ekstraktif.
+  // No answer from the LLM (failed/offline/no model) → drop to extractive.
   if (!answer) {
     let extracted;
     if (hits.length > 0 && hits[0].source === 'web') {
-      // Hasil WEB jarang mengandungi satu ayat yang boleh dipetik; teks Wikipedia
-      // (infobox) bila dilombat jadi run-on "dishes Java rice Nasi bogana…" yang
-      // busuk. Untuk mod web, hidangkan SENARAI tajuk + penerangan yang kemas.
+      // WEB results rarely hold a quotable single sentence; Wikipedia text
+      // (infobox) when flattened becomes a run-on "dishes Java rice Nasi bogana…" that
+      // reads badly. In web mode, serve a tidy LIST of titles + descriptions.
       const lines = hits.slice(0, 4).map((hit, i) =>
         `[${i + 1}] ${hit.title || hit.url}${hit.description ? ' — ' + String(hit.description).replace(/\s+/g, ' ').trim().slice(0, 160) : ''}`);
       extracted = { answer: `${t('webListHeader', detectLocale(query))}\n${lines.join('\n')}`, method: 'web-list' };

@@ -2,13 +2,13 @@ const http = require('http');
 const config = require('../config');
 
 /**
- * Provider LLM untuk "otak" Tukuk-OS.
+ * LLM providers for the Tukuk-OS "brain".
  *
- * Default: smollm:135m (91 MB) — berjalan pada CPU, ~12 token/s.
- * Pengguna boleh tukar model; LLM_CHAIN memberi laluan failover.
+ * Default: smollm:135m (91 MB) — runs on CPU, ~12 tokens/s.
+ * Users can switch models; LLM_CHAIN provides the failover path.
  *
- * smollm:135m sangat kecil. Ia HANYA boleh bergantung kepada sumber yang
- * diberi (RAG). Tanpa konteks, jawapannya tidak boleh dipercayai.
+ * smollm:135m is very small. It can ONLY rely on sources that are fed
+ * to it (RAG). Without context its answers cannot be trusted.
  */
 
 let activeModel = null;
@@ -60,8 +60,8 @@ function request(path, { method = 'GET', body, timeout = config.brain.timeout, s
 
     req.on('timeout', () => req.destroy(new Error('ollama timeout')));
     req.on('error', reject);
-    // Sinyal luar (racers yang kalah dibatalkan) — bunuh request serta-merta
-    // supaya Ollama berhenti menjana dan CPU tidak dibakar untuk jawapan buangan.
+    // Outside signal (the losing racers are cancelled) — kill the request at once
+    // so Ollama stops generating and CPU is not burned on a thrown-away answer.
     if (signal) {
       if (signal.aborted) req.destroy(new Error('aborted'));
       else signal.addEventListener('abort', () => req.destroy(new Error('aborted')), { once: true });
@@ -123,20 +123,20 @@ async function generate(prompt, { system, numPredict, temperature, model: forceM
   return result;
 }
 
-// ── Pendaftar pembekal LLM awan ────────────────────────────────────────
-// Lebih SATU pembekal boleh didaftarkan serentak (satu pembolehubah env per
-// pembekal). /ask mencuba KEDAP secara rotasi: pembekal yang baru habis kuota
-// (429 / "quota / rate limit / daily") dimasukan "cooling" seketika lalu terus
-// dilangkau ke pembekal seterusnya yang masih ada kuota. Semua habis → Ollama
-// lokal → ekstraktif. Tiada pengiraan kuota manual — isyarat 429 menjadi trigger.
+// ── Registry of cloud LLM providers ────────────────────────────────────────
+// MORE THAN ONE provider can be registered at a time (one env variable per
+// provider). /ask tries BOTH in rotation: a provider that just ran out of quota
+// (429 / "quota / rate limit / daily") goes into a short-lived "cooling" and the call moves
+// straight on to the next provider that still has quota. All exhausted → local Ollama
+// → extractive. No manual quota counting — the 429 signal is the trigger.
 function setting(key, fb) {
   try { return require('../store').getSetting(key, fb); } catch { return fb; }
 }
 
-// LOCAL-FIRST dihidupkan oleh env BRAIN_LOCAL_FIRST (1/true/yes/on) ATAU setting
-// admin `aiLocalFirst=1` (boleh toggle dari /admin tanpa deploy). Dalam mod hibrid
-// semasa, localFirst TIDAK lagi menangguh cloud — ia hanya menghilangkan "head
-// start" cloud supaya Ollama mula menjana serta-merta serentak dengan awan.
+// LOCAL-FIRST is switched on by the BRAIN_LOCAL_FIRST env (1/true/yes/on) OR the
+// admin setting `aiLocalFirst=1` (toggleable from /admin without a deploy). In the hybrid
+// mode localFirst NO LONGER delays the cloud — it only removes the cloud "head
+// start" so Ollama begins generating at once, side by side with the cloud.
 function isLocalFirst() {
   if (config.brain.localFirst) return true;
   if (['1', 'true', 'yes', 'on'].includes(String(process.env.BRAIN_LOCAL_FIRST || '').toLowerCase())) return true;
@@ -146,21 +146,21 @@ function isLocalFirst() {
 const CLOUD_PROVIDERS = {
   gemini: { defaultModel: 'gemini-flash-latest', kind: 'gemini' },
   groq: { defaultModel: 'openai/gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
-  // Google Gemini melalui lapisan OpenAI-compatible (function-calling disokong) supaya
-  // ia LAYAK masuk rotasi AGEN builder (kind:'openai'). Kunci = GEMINI_API_KEY yang sama
-  // dgn 'gemini' native. Tier percuma Gemini besar → meluaskan kapasitas percuma builder.
+  // Google Gemini through the OpenAI-compatible layer (function-calling supported) so
+  // it QUALIFIES for the builder AGENT rotation (kind:'openai'). The key is the same GEMINI_API_KEY
+  // as the native 'gemini'. Gemini's free tier is generous → it widens the free builder capacity.
   'gemini-openai': { defaultModel: 'gemini-3.8-flash', kind: 'openai', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' },
   openai: { defaultModel: 'gpt-4o-mini', kind: 'openai', baseUrl: 'https://api.openai.com/v1' },
   openrouter: { defaultModel: 'openrouter/free', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
   xai: { defaultModel: 'grok-4', kind: 'openai', baseUrl: 'https://api.x.ai/v1' },
   huggingface: { defaultModel: 'meta-llama/Llama-3.3-70B-Instruct', kind: 'openai', baseUrl: 'https://router.huggingface.co/v1' },
   cloudflare: { defaultModel: '@cf/meta/llama-4-scout-17b-16e-instruct', kind: 'cloudflare' },
-  // Ollama Cloud API (format native /api/chat, bukan OpenAI). Free tier ada had
-  // 5-jam/harian → cooldown automatik bila 429, serve model besar bila quota ada.
+  // Ollama Cloud API (native /api/chat format, not OpenAI). The free tier has
+  // 5-hour/daily caps → an automatic cooldown on 429, serving the big models while quota exists.
   'ollama-cloud': { defaultModel: 'gpt-oss:20b', kind: 'ollama-native', baseUrl: 'https://api.ollama.com' },
-  // Tier pinggir LiteRT-LM (serve tempatan OpenAI-compatible, spt port 8090).
-  // Tiada kunci sebenar — kehadiran LITERT_HOST mengaktifkannya; baseUrl dinamik
-  // via providerBaseUrl(). Tiada kuota → tiada cooling; sentiasa barisan terakhir.
+  // LiteRT-LM edge tier (serves locally, OpenAI-compatible, e.g. port 8090).
+  // No real key — the presence of LITERT_HOST enables it; the baseUrl is dynamic
+  // via providerBaseUrl(). No quota → no cooling; always the last in line.
   litert: { defaultModel: 'gemma3-1b-it-int4.litertlm', kind: 'openai', baseUrl: '' }
 };
 const DEFAULT_ORDER = ['groq', 'gemini-openai', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai', 'litert'];
@@ -172,8 +172,8 @@ function providerBaseUrl(name) {
 
 function cloudKey(name) {
   const b = config.brain;
-  // Kunci Admin (aiProvider + aiApiKey) menghidupkan pembekal yang sepadan,
-  // supaya UI Admin → AI Settings tetap berfungsi walaupun rotasi baca env.
+  // The Admin keys (aiProvider + aiApiKey) enable the matching provider,
+  // so the Admin UI → AI Settings still works even though rotation reads env.
   const pref = String(setting('aiProvider', '') || '').toLowerCase();
   const adminKey = (pref === name) ? (setting('aiApiKey', '') || '') : '';
   if (name === 'gemini') return process.env.GEMINI_API_KEY || b.geminiApiKey || adminKey;
@@ -185,8 +185,8 @@ function cloudKey(name) {
   if (name === 'huggingface') return process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN || b.huggingfaceApiKey || adminKey;
   if (name === 'cloudflare') return process.env.CLOUDFLARE_AI_TOKEN || b.cloudflareAiToken || adminKey;
   if (name === 'ollama-cloud') return process.env.OLLAMA_CLOUD_API_KEY || b.ollamaCloudApiKey || adminKey;
-  // Tier pinggir LiteRT: "kunci" ialah kehadiran LITERT_HOST itu sendiri (serve
-  // lokal tanpa auth — nilai token dihantar tapi diabaikan oleh litert-lm).
+  // The LiteRT edge tier: the "key" is the presence of LITERT_HOST itself (it serves
+  // locally with no auth — a token value is sent but litert-lm ignores it).
   if (name === 'litert') return b.litertHost ? 'edge-tier' : '';
   return '';
 }
@@ -199,7 +199,7 @@ function cloudModel(name) {
 }
 function cloudAvailable(name) {
   if (!CLOUD_PROVIDERS[name] || !cloudKey(name)) return false;
-  // Workers AI perlu account id selain token — kalau tiada, anggap tak dikonfigurasi.
+  // Workers AI needs an account id besides the token — if it is missing, treat it as unconfigured.
   if (name === 'cloudflare' && !cloudAccountId()) return false;
   return true;
 }
@@ -207,12 +207,12 @@ function providerOrder() {
   const configured = String(config.brain.cloudOrder || DEFAULT_ORDER.join(','))
     .split(',').map((s) => s.trim()).filter((n) => CLOUD_PROVIDERS[n]);
   const order = configured.length ? configured : DEFAULT_ORDER.slice();
-  // aiProvider admin (jika salah satu cloud) menolak pembekal itu ke depan.
+  // The admin aiProvider (when it is one of the cloud ones) pushes that provider to the front.
   const pref = String(setting('aiProvider', '') || '').toLowerCase();
   if (order.includes(pref)) { order.splice(order.indexOf(pref), 1); order.unshift(pref); }
   return order;
 }
-// Pembekal awan yang ADA kunci, ikut susunan rotasi.
+// The cloud providers that HAVE a key, in rotation order.
 function listCloudProviders() {
   return providerOrder().filter(cloudAvailable).map((name) => ({
     name,
@@ -224,7 +224,7 @@ function listCloudProviders() {
   }));
 }
 
-// ── Cooling: jangan tempek pembekal yang baru saja habis kuota ─────────
+// ── Cooling: don't touch a provider that just ran out of quota ─────────
 const cooldown = new Map(); // name -> untilTs(ms)
 function coolingRemaining(name) {
   const until = cooldown.get(name) || 0;
@@ -239,9 +239,9 @@ function isQuotaError(err) {
 }
 function quotaCooldownMs(err) {
   const msg = String(err && err.message || '').toLowerCase();
-  // Tiada kredit / isu pembayaran → cooling panjang (tak cuba lagi 2 jam).
+  // No credit / billing issue → a long cooling (no retry for 2 hours).
   if (/credit|billing|insufficient|payment|top.?up|subscribe/i.test(msg)) return 2 * 60 * 60 * 1000;
-  // Kuota harian → 10 min; had seminit → 60s.
+  // Daily quota → 10 min; a per-minute cap → 60s.
   if (/daily|per day|per-day|resets|day\b|usage.?limit|free.?limit|5.?hour|weekly/i.test(msg)) return 10 * 60 * 1000;
   return 60 * 1000;
 }
@@ -250,13 +250,13 @@ async function ollamaReachable() {
   try { await availableModels(); return true; } catch { return false; }
 }
 
-// Backend aktif. `cloud` kini membawa SENARAI pembekal (rotasi), bukan satu sahaja.
+// The active backend. `cloud` now carries a LIST of providers (rotation), not just one.
 async function activeBackend() {
   const pref = String(setting('aiProvider', '') || '').toLowerCase();
   if (pref === 'ollama') {
     return (await ollamaReachable()) ? { kind: 'ollama' } : { kind: 'none' };
   }
-  // LOCAL-FIRST: Ollama ialah otak utama; senaraikan cloud sebagai pelarian kecemasan.
+  // LOCAL-FIRST: Ollama is the main brain; list the cloud as an emergency fallback.
   if (isLocalFirst() && (await ollamaReachable())) {
     return { kind: 'ollama', localFirst: true, cloudFallback: listCloudProviders().map((p) => p.name) };
   }
@@ -269,24 +269,24 @@ async function activeBackend() {
   return { kind: 'none' };
 }
 
-// Satu panggilan ke SATU pembekal. Ralat HTTP dinaikkan dengan .status supaya
-// rotasi dapat bezakan kuota (429) daripada ralat sementara.
+// One call to ONE provider. HTTP errors are raised with .status so that
+// rotation can tell a quota error (429) apart from a temporary failure.
 async function callCloud(p, prompt, { system, temperature, maxTokens, topP, timeout, signal: outerSignal } = {}) {
   const t = temperature ?? config.brain.temperature;
   const mt = maxTokens ?? config.brain.maxTokens;
   const tp = topP ?? config.brain.topP;
-  // Per-panggilan timeout boleh DITEKAN (bajet interaktif rag.ask) — kalau tiada,
-  // guna config.brain.timeout. Signal AbortSignal membunuh stream tepat pada masa.
+  // The per-call timeout can be PINCHED (the interactive budget in rag.ask) — when absent,
+  // config.brain.timeout is used. An AbortSignal kills the stream right on time.
   const capMs = Math.max(1000, Math.min(timeout || config.brain.timeout, config.brain.timeout));
-  // Gabung bajet per-panggilan dengan sinyal pembatalan luar (racer yang kalah).
+  // Combine the per-call budget with the outside cancellation signal (the losing racer).
   const signal = outerSignal
     ? AbortSignal.any([AbortSignal.timeout(capMs), outerSignal])
     : AbortSignal.timeout(capMs);
 
   if (p.kind === 'gemini') {
-    // gemini-*-latest ialah model "thinking": tanpa budget, token akal dalan
-    // habiskan bajet kecil → jawapan KOSONG (finishReason MAX_TOKENS). Matikan
-    // thinking (thinkingBudget 0) supaya jawapan ringkas cukup ruang & laju.
+    // gemini-*-latest is a "thinking" model: with no budget its internal thinking tokens
+    // burn the small budget → an EMPTY answer (finishReason MAX_TOKENS). Switch
+    // thinking off (thinkingBudget 0) so a short answer has enough room and stays fast.
     const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: t, maxOutputTokens: mt, topP: tp, thinkingConfig: { thinkingBudget: 0 } } };
     if (system) body.systemInstruction = { parts: [{ text: system }] };
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${p.model}:generateContent?key=${encodeURIComponent(p.key)}`, {
@@ -299,7 +299,7 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP, time
     return { response: text, _model: p.model };
   }
 
-  // Ollama native cloud API (format /api/chat dengan response shape berbeza)
+  // Ollama native cloud API (the /api/chat format with a different response shape)
   if (p.kind === 'ollama-native') {
     const body = { model: p.model, messages: [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }], stream: false, options: { temperature: t, num_predict: mt } };
     const res = await fetch(`${p.baseUrl}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` }, body: JSON.stringify(body), signal });
@@ -328,13 +328,13 @@ async function callCloud(p, prompt, { system, temperature, maxTokens, topP, time
   return { response: text, _model: p.model };
 }
 
-// Rotasi penuh: cuba setiap pembekal (langkau yang cooling). Pulangkan { response,
-// _model, _provider } jaya, atau { response:'', rejected:[...] } bila semua habis/gagal.
+// Full rotation: try every provider (skipping the ones cooling). Return { response,
+// _model, _provider } on success, or { response:'', rejected:[...] } when all are exhausted/failed.
 async function generateCloudRotation(prompt, opts = {}) {
   const rejected = [];
-  // Batas masa KESELURUhan (timestamp ms). Pemanggil interaktif (rag.ask) hantar
-  // deadline = kini + bajet; bila tiba, berhenti merotasi pembekal lambat & guna
-  // ekstraktif serta-merta. Tiada deadline → guna timeout config sebagai silap.
+  // The OVERALL deadline (a ms timestamp). Interactive callers (rag.ask) pass
+  // deadline = now + budget; once it hits, stop rotating slow providers and use
+  // the extractive path at once. No deadline → the config timeout is the default.
   const deadline = opts.deadline || (Date.now() + config.brain.timeout);
   for (const p of listCloudProviders()) {
     const rem = coolingRemaining(p.name);
@@ -352,10 +352,10 @@ async function generateCloudRotation(prompt, opts = {}) {
   return { response: '', _provider: null, rejected };
 }
 
-// Muka TERPELIHARA: `generateCloud(backend, ...)` kini menjalankan ROTASI penuh,
-// jadi pemanggil lama (rag.js, mcp/server.js) dapat kedap-automatik tanpa diubah
-// panggilannya. Jika `backend` ialah satu pembekal eksplisit (ada .key), cuba dia
-// dahulu; bila ia gagal/habis, sambung rotasi pembekal lain.
+// SURFACE PRESERVED: `generateCloud(backend, ...)` now runs the FULL rotation,
+// so older callers (rag.js, mcp/server.js) get automatic load-shedding without changing their
+// calls. If `backend` is one explicit provider (it has a .key), try it
+// first; when it fails or runs out, continue the rotation with other providers.
 async function generateCloud(b, prompt, opts = {}) {
   const deadline = opts.deadline || (Date.now() + config.brain.timeout);
   if (b && b.key && b.name && CLOUD_PROVIDERS[b.name]) {

@@ -6,11 +6,11 @@ const path = require('path');
 const config = require('./config');
 const store = require('./nasa-store');
 
-// ——— Rotasi IP untuk api.nasa.gov ———
-// Salah satu backend LB NASA sering rosak (500/timeout); pemerhatian menunjukkan rekod A
-// (IPv4) jauh lebih rosak daripada rekod AAAA (IPv6). Node default tersekat pada satu IP,
-// jadi agen ini pusing SEMUA IPv6+IPv4 setiap sambungan dan blacklist sementara IP yang
-// error di peringkat soket; keep-alive memastikan soket sihat diulang-pakai.
+// ——— IP rotation for api.nasa.gov ———
+// One of NASA's LB backends is often broken (500/timeout); observations show record A
+// (IPv4) is far more broken than record AAAA (IPv6). Node's default sticks to one IP,
+// so this agent rotates through ALL IPv6+IPv4 addresses per connection and blacklists the IP
+// that errors at socket level for a while; keep-alive makes healthy sockets get reused.
 const NASA_HOST = (() => { try { return new URL(config.nasa.baseUrl).hostname; } catch { return 'api.nasa.gov'; } })();
 let nasaIps = [];
 let nasaIpAt = 0;
@@ -22,7 +22,7 @@ function refreshNasaIps() {
   let pending = 2;
   const done = () => {
     if (--pending > 0) return;
-    const merged = [...v6, ...v4]; // IPv6 didahulukan (backend IPv4 lebih rosak)
+    const merged = [...v6, ...v4]; // IPv6 first (the IPv4 backend is more broken)
     if (merged.length) nasaIps = merged;
   };
   dns.resolve4(NASA_HOST, (err, addrs) => { if (!err && Array.isArray(addrs)) v4 = addrs; done(); });
@@ -66,10 +66,10 @@ const http = axios.create({
   }
 });
 
-// Khusus api.nasa.gov: TANPA keep-alive supaya setiap percubaan mendapat sambungan
-// (dan backend LB) baharu. NASA kini Separuh balas dengan HTTP 200 "payload rosak"
-// (title "NASA Science" + logo) dan 500; soket diulang-pakai akan tersepit pada backend
-// rosak yang sama — retry jadi sia-sia. Rotasi IP + sambungan baru = peluang terbaik.
+// api.nasa.gov only: NO keep-alive so every attempt gets a brand-new
+// connection (and LB backend). NASA now half-answers with HTTP 200 "broken payload"
+// (title "NASA Science" + logo) and 500; a reused socket would stay stuck on the same broken
+// backend — retries would be pointless. IP rotation + a new connection = the best chance.
 const apiHttp = axios.create({
   timeout: 20000,
   httpsAgent: new NasaAwareAgent({ keepAlive: false, maxSockets: 12 }),
@@ -78,11 +78,11 @@ const apiHttp = axios.create({
   }
 });
 
-// Cache ringkas dalam memori untuk elak had kadar (rate limit)
+// Small in-memory cache to stay under the rate limit
 const cache = new Map();
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 jam
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-// NOAA Space Weather Prediction Center — data cuaca angkasa percuma tanpa kunci
+// NOAA Space Weather Prediction Center — free space-weather data, no key
 const NOAA_SWPC = 'https://services.swpc.noaa.gov/json';
 
 function getCache(key) {
@@ -109,7 +109,7 @@ function sleep(ms) {
 
 const APOD_FALLBACK_FILE = path.join(path.dirname(config.store.path), 'apod-last.json');
 
-// Pemutus litar: jika API APOD NASA gagal, jangan bazir masa mencuba berulang-ulang
+// Circuit breaker: when the NASA APOD API fails, don't waste time retrying over and over
 let apodApiDownUntil = 0;
 
 function readApodFallback() {
@@ -125,7 +125,7 @@ function writeApodFallback(data) {
     fs.mkdirSync(path.dirname(APOD_FALLBACK_FILE), { recursive: true });
     fs.writeFileSync(APOD_FALLBACK_FILE, JSON.stringify(data));
   } catch {
-    // sandaran gagal tulis bukan masalah kritikal
+    // a failing fallback write is not a critical problem
   }
 }
 
@@ -143,9 +143,9 @@ function stripTags(htmlStr) {
 const MONTH_NUM = { January: '01', February: '02', March: '03', April: '04', May: '05', June: '06', July: '07', August: '08', September: '09', October: '10', November: '11', December: '12' };
 
 /**
- * Sumber sandaran rasmi: laman APOD NASA Science (science.nasa.gov) menyimpan
- * arkib penuh mengikut tarikh — dipanggil apabila api.nasa.gov gagal.
- * Halaman mesti sah: tajuk mesti bermula "APOD: <tarikh yang diminta>".
+ * The official fallback source: the NASA Science APOD page (science.nasa.gov) keeps
+ * a full archive by date — called when api.nasa.gov fails.
+ * The page must be valid: the title has to start with "APOD: <the requested date>".
  */
 async function getApodFromScienceSite(dateStr) {
   const [y, m, d] = dateStr.split('-');
@@ -162,7 +162,7 @@ async function getApodFromScienceSite(dateStr) {
 
   const monthNum = MONTH_NUM[titleTag[2]] || '';
   const pageDate = `${titleTag[1]}-${monthNum}-${String(titleTag[3]).padStart(2, '0')}`;
-  if (monthNum && pageDate !== dateStr) return null; // tarikh berbeza = halaman tiada lagi
+  if (monthNum && pageDate !== dateStr) return null; // a different date = the page is gone
 
   const title = stripTags(titleTag[4]);
   if (!title) return null;
@@ -203,11 +203,11 @@ async function getApodFromScienceSite(dateStr) {
   };
 }
 
-// Semak payload APOD: API NASA pernah menghantar tajuk/logo rosak semasa penghijrahan
+// Validate the APOD payload: the NASA API once served broken titles/logos during its migration
 function isValidApodPayload(data, acceptedDates) {
   if (!data || typeof data !== 'object') return false;
-  // Payload list (parameter count>1): NASA hantar array — sah jika sekurang-kurangnya
-  // satu entri di dalamnya sah. Tanpa cabang ini, array gagal semakan dan count rosak.
+  // List payloads (parameter count>1): NASA sends an array — valid if at least
+  // one entry inside it is valid. Without this branch the array fails the check and count breaks.
   if (Array.isArray(data)) return data.some((e) => isValidApodPayload(e, null));
   const title = String(data.title || '').trim();
   const explanation = String(data.explanation || '').trim();
@@ -221,12 +221,12 @@ function isValidApodPayload(data, acceptedDates) {
 
 /**
  * 1. APOD - Astronomy Picture of the Day
- *    API NASA kadang-kadang503 (upstream) — cuba beberapa kali, kemudian
- *    jatuh ke arkib rasmi science.nasa.gov, kemudian cakera tempatan.
+ *    The NASA API sometimes answers 503 (upstream) — try a few times, then
+ *    drop to the official science.nasa.gov archive, then the local disk.
  */
 async function getAPOD({ date, count, force } = {}) {
   const cacheKey = `apod:${date || 'today'}:${count || 1}`;
-  if (force) apodApiDownUntil = 0; // "Try live again" / auto-update: cabut pemutus litar dulu
+  if (force) apodApiDownUntil = 0; // "Try live again" / auto-update: clear the circuit breaker first
   const cached = force ? null : getCache(cacheKey);
   if (cached && isValidApodPayload(cached, null)) return cached;
 
@@ -247,7 +247,7 @@ async function getAPOD({ date, count, force } = {}) {
         const res = await apiHttp.get(url, { params, timeout: 18000 });
         if (res.data && isValidApodPayload(res.data, acceptedApiDates)) {
           apodApiDownUntil = 0;
-          store.saveApod(res.data); // kekalkan jejak ke pangkalan data arkib
+          store.saveApod(res.data); // keep a trace in the archive database
           setCache(cacheKey, res.data, 4 * 60 * 60 * 1000);
           if (!date && !count) writeApodFallback(res.data);
           return res.data;
@@ -261,7 +261,7 @@ async function getAPOD({ date, count, force } = {}) {
       await sleep(500 * (attempt + 1));
     }
 
-    // Jika tarikh hari ini belum wujud (rupa API NASA), cuba semalam
+    // If today's date does not exist yet (a NASA API quirk), try yesterday
     if (!date && !count) {
       try {
         const fallbackRes = await apiHttp.get(url, { params: { api_key: config.nasa.apiKey, date: yesterday }, timeout: 18000 });
@@ -277,7 +277,7 @@ async function getAPOD({ date, count, force } = {}) {
       }
     }
 
-    // Semua percubaan gagal → aktifkan pemutus litar selama10 minit
+    // Every attempt failed → trip the circuit breaker for 10 minutes
     apodApiDownUntil = Date.now() + 10 * 60 * 1000;
   }
 
@@ -285,13 +285,13 @@ async function getAPOD({ date, count, force } = {}) {
     throw lastError || new Error('NASA APOD API temporarily unavailable');
   }
 
-  // Sandaran A: arkib rasmi science.nasa.gov (tarikh diminta, kemudian semalam)
+  // Fallback A: the official science.nasa.gov archive (requested date, then yesterday)
   for (const tryDate of date ? [date] : [targetDate, yesterday]) {
     try {
       const apod = await getApodFromScienceSite(tryDate);
       if (apod && isValidApodPayload(apod, [tryDate])) {
         const payload = { ...apod, api_down: true };
-        store.saveApod(apod); // arkib rasmi juga disimpan ke DB
+        store.saveApod(apod); // the official archive is stored in the DB too
         setCache(cacheKey, payload, 30 * 60 * 1000);
         if (!date) writeApodFallback(payload);
         return payload;
@@ -301,13 +301,13 @@ async function getAPOD({ date, count, force } = {}) {
     }
   }
 
-  // Sandaran B: APOD terakhir yang berjaya disimpan dalam cakera (jika masih sah)
+  // Fallback B: the last APOD successfully written to disk (if still valid)
   const stored = readApodFallback();
   if (stored && isValidApodPayload(stored, null)) {
     return { ...stored, stale: true, staleNote: 'NASA APOD services are offline — showing the last successful picture.' };
   }
 
-  // Sandaran C: pangkalan data arkib setempat — entri APOD terakhir yang pernah disimpan
+  // Fallback C: the local archive database — the last APOD entry ever stored
   const archived = store.latestApod(targetDate);
   if (archived) {
     return { ...archived, stale: true, fromArchive: true, staleNote: 'NASA APOD services are offline — showing the latest archived picture.' };
@@ -318,7 +318,7 @@ async function getAPOD({ date, count, force } = {}) {
 
 let apodRefreshTimer = null;
 
-// Satu tarikan APOD "hari ini" dari luar (lintasi cache & pemutus litar) untuk auto-update
+// One outside pull of "today's" APOD (bypassing cache & circuit breaker) for the auto-update
 async function refreshApodNow() {
   try {
     return await getAPOD({ force: true });
@@ -331,8 +331,8 @@ function apodRefreshIntervalMs() {
   return Math.max(Number(config.nasa.apodRefreshMinutes) || 30, 5) * 60 * 1000;
 }
 
-// Jadual diri: API hidup → selang biasa; API rosak/timeout → cuba lebih awal (5 min)
-// supaya paparan kembali ke sumber hidup sendiri sebaik NASA pulih.
+// Self-scheduling: API alive → the normal interval; API broken/timeout → retry sooner (5 min)
+// so the display returns to the live source by itself as soon as NASA recovers.
 function scheduleApodRefresh(delayMs) {
   apodRefreshTimer = setTimeout(async () => {
     const data = await refreshApodNow();
@@ -343,10 +343,10 @@ function scheduleApodRefresh(delayMs) {
 }
 
 /**
- * Auto-update APOD: tarikan latar belakang berkala (NASA_APOD_REFRESH_MIN minit, lalai 30;
- * 5 min apabila API masih rosak) — API hidup→cache + cakera dikemas kini,
- * API down→arkib science.nasa.gov. Pengguna sentiasa hidang data terbaharu tanpa
- * perlu menunggu permintaan pertama, dan pemutus litar diuji semula setiap pusingan.
+ * APOD auto-update: a periodic background pull (NASA_APOD_REFRESH_MIN minutes, default 30;
+ * 5 min while the API is still broken) — API alive → cache + disk get refreshed,
+ * API down → the science.nasa.gov archive. Users are always served the freshest data without
+ * having to wait for the first request, and the circuit breaker is re-tested every round.
  */
 function startApodAutoUpdate() {
   if (apodRefreshTimer) return;
@@ -362,7 +362,7 @@ function stopApodAutoUpdate() {
 
 /**
  * 2. Mars Rover Photos (Curiosity, Perseverance, Opportunity, Spirit)
- * Dilengkapi dengan fallback pintar ke NASA Media Library jika pelayan lama mars-photos tidak tersedia.
+ * Equipped with a smart fallback to the NASA Media Library when the old mars-photos server is unavailable.
  */
 async function getMarsPhotos({ rover = 'curiosity', sol = 1000, earth_date, camera, page = 1 } = {}) {
   const cleanRover = String(rover).toLowerCase().trim() || 'curiosity';
@@ -400,7 +400,7 @@ async function getMarsPhotos({ rover = 'curiosity', sol = 1000, earth_date, came
       return data;
     }
   } catch (err) {
-    // Teruskan ke fallback NASA Image Library
+    // Fall through to the NASA Image Library fallback
   }
 
   // Fallback: NASA Image and Video Library
@@ -427,7 +427,7 @@ async function getMarsPhotos({ rover = 'curiosity', sol = 1000, earth_date, came
 }
 
 /**
- * 3. NeoWs - Asteroid & Objek Berdekatan Bumi
+ * 3. NeoWs - Asteroids & Near-Earth Objects
  */
 async function getNearEarthObjects({ startDate, endDate } = {}) {
   const today = new Date();
@@ -437,7 +437,7 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
   const end = endDate || todayStr;
   const cacheKey = `asteroids:${start}:${end}`;
   const cached = getCache(cacheKey);
-  // Keputusan 'unavailable' tidak disimpan supaya percubaan seterusnya kekal sah
+  // 'unavailable' verdicts are not cached so the next attempt stays valid
   if (cached && cached.source !== 'unavailable') return cached;
 
   try {
@@ -471,9 +471,9 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
       }
     }
 
-    // Respons SAH — termasuk tingkap kosong (element_count 0) — hidang jujur;
-    // tiada pernah data rekaan.
-    if (formatted.length > 0) store.saveAsteroids(formatted); // kumpul rekod NEO ke dalam DB arkib
+    // A VALID response — including an empty window (element_count 0) — is served honestly;
+    // never invented data.
+    if (formatted.length > 0) store.saveAsteroids(formatted); // gather NEO records into the archive DB
     const result = {
       element_count: res.data?.element_count || formatted.length,
       start_date: start,
@@ -484,7 +484,7 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
     setCache(cacheKey, result, 2 * 60 * 60 * 1000);
     return result;
   } catch (err) {
-    // Suapan langsung gagal → arkib rekod NYATA dari tarikan berjaya terakhir.
+    // The live feed failed → archive of REAL records from the last successful pull.
   }
 
   const archived = store.latestAsteroids({ limit: 60 });
@@ -498,7 +498,7 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
       archivedAt,
       asteroids: archived.sort((a, b) => a.miss_distance_km - b.miss_distance_km)
     };
-    setCache(cacheKey, result, 5 * 60 * 1000); // 5 min — cuba langsung semula dengan cepat
+    setCache(cacheKey, result, 5 * 60 * 1000); // 5 min — try the live path again soon
     return result;
   }
 
@@ -539,15 +539,15 @@ async function getEPIC({ date } = {}) {
           dscovr_j2000_position: item.dscovr_j2000_position
         };
       });
-      store.saveEpic(formatted); // simpan bola bumi harian ke arkib
+      store.saveEpic(formatted); // save the daily Earth image into the archive
       setCache(cacheKey, formatted, 6 * 60 * 60 * 1000);
       return formatted;
     }
   } catch (err) {
-    // Teruskan ke fallback NASA Image Library
+    // Fall through to the NASA Image Library fallback
   }
 
-  // Fallback ke NASA Media Library jika pelayan EPIC GSFC mengalami timeout
+  // Fall back to the NASA Media Library when the EPIC GSFC server times out
   try {
     const earthMedia = await searchNASAMedia('DSCOVR EPIC Earth full disc', { mediaType: 'image' });
     if (earthMedia.items && earthMedia.items.length) {
@@ -571,7 +571,7 @@ async function getEPIC({ date } = {}) {
 }
 
 /**
- * 5. DONKI - Cuaca Angkasa (Solar Flares & Ribut Geomagnetik)
+ * 5. DONKI - Space Weather (Solar Flares & Geomagnetic Storms)
  */
 async function getSpaceWeather({ type = 'FLR', startDate, endDate } = {}) {
   const today = new Date();
@@ -597,7 +597,7 @@ async function getSpaceWeather({ type = 'FLR', startDate, endDate } = {}) {
     setCache(cacheKey, data, 2 * 60 * 60 * 1000);
     return data;
   } catch {
-    // DONKI/CCMC berpindah pada2026-10 — sandaran rasmi: NOAA GOES X-ray flares
+    // DONKI/CCMC moved in 2026-10 — the official fallback: NOAA GOES X-ray flares
     if (cleanType !== 'FLR') return [];
     try {
       const res = await http.get(`${NOAA_SWPC}/goes/primary/xray-flares-7-day.json`, { timeout: 12000 });
@@ -663,9 +663,9 @@ async function searchNASAMedia(query, { mediaType = 'image' } = {}) {
 
 /**
  * 7. Live ISS (International Space Station) Telemetry
- * Cache 12s (halaman + poll live.json berkongsi); jujur tentang sumber:
- * 'live' → bacaan semasa · 'last-known' → feed sibuk, posisi nyata terakhir
- * (max 24 jam) · 'unavailable' → tiada data sama sekali (TIADA 0,0 rekaan).
+ * Cache 12s (the page + the live.json poll share it); honest about the source:
+ * 'live' → a current reading · 'last-known' → feed busy, the real last position
+ * (max 24 hours) · 'unavailable' → no data at all (NO invented 0,0).
  */
 async function getISSTelemetry() {
   const cacheKey = 'iss:telemetry';
@@ -700,7 +700,7 @@ async function getISSTelemetry() {
 /**
  * 8. NASA Audio & Space Sounds (Apollo, Shuttles, Planets, Rockets)
  */
-// URL aset NASA kadang mengandungi ruang dan skema http — paksa https + encode setiap segmen
+// NASA asset URLs sometimes contain spaces and an http scheme — force https + encode each segment
 function safeAssetUrl(raw) {
   if (typeof raw !== 'string' || !raw) return '';
   try {
@@ -718,9 +718,9 @@ function safeAssetUrl(raw) {
   }
 }
 
-// Topik audio → carian + kata kunci kaitan. Carian NASA SDK kadangkala hidang
-// podcast HWHAP/NASA TV yang tidak disebut topik — hanya item yang menyebut
-// kata kuncinya dalam tajuk/penjelasan dipaparkan (kualiti > kuantiti).
+// Audio topic → search + related keywords. The NASA SDK search sometimes serves
+// HWHAP/NASA TV podcasts that never mention the topic — only items that say
+// the keyword in the title/description are shown (quality > quantity).
 const AUDIO_TOPICS = {
   apollo: { q: 'apollo', words: ['apollo'] },
   planets: { q: 'planets', words: ['planet', 'sonif', 'plasma', 'magnetic'], reject: ['launch coverage'] },
@@ -744,8 +744,8 @@ async function getSpaceAudio(query = 'apollo') {
     });
 
     const rawItems = res.data?.collection?.items || [];
-    // Tapis kaitan dulu (murah — metadata sahaja), nyahpendua liputan berbilang
-    // saluran acara yang sama ("... - Pad 1 (CH1)"), baru selesaikan manifest aset.
+    // Filter for relevance first (cheap — metadata only), de-duplicate the multi
+    // coverage of the same event channel ("... - Pad 1 (CH1)"), then resolve the asset manifest.
     const seenKey = new Map();
     const relevant = rawItems.filter(item => {
       const d = item.data?.[0] || {};
@@ -772,7 +772,7 @@ async function getSpaceAudio(query = 'apollo') {
             .map(safeAssetUrl);
           audioUrl = files.find(f => f.endsWith('~128k.mp3')) || files.find(f => f.endsWith('.mp3')) || '';
         } catch {
-          // skip item ini
+          // skip this item
         }
       }
 
@@ -796,8 +796,8 @@ async function getSpaceAudio(query = 'apollo') {
 }
 
 /**
- * 7a2. Direct media asset (mp4/poster) untuk sesuatu nasa_id — dibaca dari manifest aset.
- *      Dipakai modal "Live Space TV" supaya klip planet main dalam-app, bukan pautan luar.
+ * 7a2. Direct media asset (mp4/poster) for a nasa_id — read from the asset manifest.
+ *      Used by the "Live Space TV" modal so planet clips play in-app instead of an outside link.
  */
 async function getNasaAssetUrl(nasaId) {
   const clean = String(nasaId || '').trim();
@@ -830,11 +830,11 @@ async function getNasaAssetUrl(nasaId) {
 }
 
 /**
- * 7b. Live crew — siapa yang sedang berada di angkasa lepas sekarang.
- *     open-notify.org (tiada kunci, percuma) SANGAT tidak stabil — kadang TCP
- *     connect menggantung puluhan saat. Strategi 'stale-while-revalidate':
- *     hidang data terakhir yang baik serta-merta (dari cakera), dan segar semula
- *     di latar belakang. Endpoint jadi tidak pernah menyekat pengguna.
+ * 7b. Live crew — who is in outer space right now.
+ *     open-notify.org (no key, free) is VERY unstable — sometimes a TCP
+ *     connect hangs for dozens of seconds. The 'stale-while-revalidate' strategy:
+ *     serve the last good data immediately (from disk) and refresh it
+ *     in the background. The endpoint therefore never blocks a user.
  */
 const CREW_FILE = path.join(path.dirname(config.store.path), 'crew-last.json');
 
@@ -852,11 +852,11 @@ function writeCrewFallback(result) {
     fs.mkdirSync(path.dirname(CREW_FILE), { recursive: true });
     fs.writeFileSync(CREW_FILE, JSON.stringify({ savedAt: Date.now(), result }));
   } catch {
-    /* sandaran tulis gagal — bukan kritikal */
+    /* the fallback write failed — not critical */
   }
 }
 
-// Fetch open-notify (blocking) — bina result, simpan ke memory + cakera.
+// Fetch open-notify (blocking) — build the result, store it in memory + on disk.
 async function refreshCrew() {
   const res = await http.get('http://api.open-notify.org/astros.json', { timeout: 6000 });
   const people = Array.isArray(res.data?.people) ? res.data.people : [];
@@ -872,7 +872,7 @@ async function refreshCrew() {
     stations: Object.entries(byCraft).map(([craft, list]) => ({ craft, count: list.length, crew: list }))
   };
   writeCrewFallback(result);
-  setCache('crew:live', result, 10 * 60 * 1000); // 10 minit — krew jarang berubah
+  setCache('crew:live', result, 10 * 60 * 1000); // 10 min — the crew rarely changes
   return result;
 }
 
@@ -882,7 +882,7 @@ async function getCrew() {
   try {
     return await refreshCrew();
   } catch {
-    // open-notify lambat/gagal → hidang salinan terakhir (jika ada), jangan sekat.
+    // open-notify slow/failed → serve the last copy (if any), never block.
     const disk = readCrewFallback();
     if (disk && disk.result && Date.now() - disk.savedAt < 6 * 60 * 60 * 1000) {
       const stale = {
@@ -891,8 +891,8 @@ async function getCrew() {
         savedAt: disk.savedAt,
         note: 'Live feed is congested — showing the last crew read on ' + new Date(disk.savedAt).toUTCString()
       };
-      setCache('crew:live', stale, 2 * 60 * 1000); // cache pendek, cuba segar semula lepas 2 min
-      // Cuba lagi di latar belakang supaya permintaan seterusnya dapat data segar.
+      setCache('crew:live', stale, 2 * 60 * 1000); // short cache, try to refresh after 2 min
+      // Retry in the background so the next request gets fresh data.
       refreshCrew().catch(() => {});
       return stale;
     }
@@ -905,7 +905,7 @@ function isoDate(d) {
 }
 
 /**
- * 9. Eksperimen: trend pendekatan asteroid N minggu lepas (agregat NeoWs)
+ * 9. Experiment: asteroid-approach trend for the last N weeks (NeoWs aggregate)
  */
 async function getAsteroidTrend({ weeks = 4 } = {}) {
   const cleanWeeks = Math.min(Math.max(Math.round(Number(weeks) || 4), 1), 8);
@@ -925,7 +925,7 @@ async function getAsteroidTrend({ weeks = 4 } = {}) {
 
   const results = await Promise.all(
     windows.map(async w => {
-      // Cuba dua kali: feed NeoWs kadang kala tersasar di tengah4 serentak
+      // Try twice: the NeoWs feed occasionally misses in the middle of 4 concurrent calls
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const data = await getNearEarthObjects({ startDate: w.start, endDate: w.end });
@@ -990,7 +990,7 @@ async function getAsteroidTrend({ weeks = 4 } = {}) {
     degraded: buckets.some(b => b.source === 'fallback')
   };
 
-  // Data separa (fallback) disimpan sebentar sahaja supaya percubaan seterusnya membaikinya
+  // Partial (fallback) data is kept only briefly so the next attempt can improve it
   setCache(cacheKey, result, result.degraded ? 2 * 60 * 1000 : 6 * 60 * 60 * 1000);
   return result;
 }
@@ -1003,8 +1003,8 @@ function avg(values) {
 }
 
 /**
- * 10. Eksperimen: aktiviti matahari (NOAA GOES X-ray flares + pancuran radio F10.7)
- *     Donki/CCMC dipindahkan pada2026-10, jadi rujukan cuaca angkasa kini NOAA SWPC.
+ * 10. Experiment: solar activity (NOAA GOES X-ray flares + F10.7 radio flux)
+ *     Donki/CCMC moved in 2026-10, so NOAA SWPC is now the space-weather reference.
  */
 async function getSolarActivity({ days = 30 } = {}) {
   const cleanDays = Math.min(Math.max(Math.round(Number(days) || 30), 14), 42);
@@ -1022,7 +1022,7 @@ async function getSolarActivity({ days = 30 } = {}) {
   const DAY = 86400000;
   const today = Date.now();
 
-  //1. Flare X-ray → bilangan & kelas terkuat setiap hari (7 hari terakhir)
+  // 1. X-ray flares → count & strongest class per day (last 7 days)
   const flareBuckets = new Map();
   for (let i = 6; i >= 0; i--) {
     const day = isoDate(today - i * DAY);
@@ -1046,7 +1046,7 @@ async function getSolarActivity({ days = 30 } = {}) {
     }
   }
 
-  //2. Pancuran radio F10.7 → purata harian untuk tetingkap terpilih
+  // 2. F10.7 radio flux → daily average for the selected window
   const fluxByDay = new Map();
   for (const record of fluxRecords) {
     const day = String(record.time_tag || '').slice(0, 10);
@@ -1106,12 +1106,12 @@ async function getSolarActivity({ days = 30 } = {}) {
 }
 
 /**
- * 11. 🌙 Bulan & Langit Malam Ini — fasa bulan dikira setempat (sifar kebergantungan
- *     API luar) + waktu senja/malam dari sunrise-sunset.org (percuma, tiada kunci).
- *     Waktu dikembalikan dalam UTC ISO; pelayar menukar ke zon waktu pengguna.
+ * 11. 🌙 Moon & Tonight's Sky — the moon phase is computed locally (zero dependency
+ *     on outside APIs) + dusk/night times from sunrise-sunset.org (free, no key).
+ *     Times are returned in ISO UTC; the browser converts them to the user's time zone.
  */
 const SYNODIC = 29.530588853;
-const KNOWN_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // bulan baru rujukan yang terbukti
+const KNOWN_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // the proven reference new moon
 
 function moonPhaseInfo(nowMs) {
   const days = (nowMs - KNOWN_NEW_MOON) / 86400000;
@@ -1137,7 +1137,7 @@ function moonPhaseInfo(nowMs) {
 }
 
 async function getSkyTonight({ lat, lng } = {}) {
-  const la = Number.isFinite(Number(lat)) ? Math.min(Math.max(Number(lat), -90), 90) : 3.139;   // lalai: Kuala Lumpur
+  const la = Number.isFinite(Number(lat)) ? Math.min(Math.max(Number(lat), -90), 90) : 3.139;   // default: Kuala Lumpur
   const ln = Number.isFinite(Number(lng)) ? Math.min(Math.max(Number(lng), -180), 180) : 101.687;
   const cacheKey = `sky:${la.toFixed(2)}:${ln.toFixed(2)}`;
   const cached = getCache(cacheKey);
@@ -1153,7 +1153,7 @@ async function getSkyTonight({ lat, lng } = {}) {
     if (r && r.sunrise) {
       sun = {
         sunrise: r.sunrise, sunset: r.sunset, solar_noon: r.solar_noon,
-        day_length_hours: Math.round(((Number(r.day_length) || 0) / 3600) * 10) / 10, // API sepulangkan SAAT
+        day_length_hours: Math.round(((Number(r.day_length) || 0) / 3600) * 10) / 10, // the API returns SECONDS
         civil: [r.civil_twilight_begin, r.civil_twilight_end],
         nautical: [r.nautical_twilight_begin, r.nautical_twilight_end],
         astronomical: [r.astronomical_twilight_begin, r.astronomical_twilight_end]
@@ -1170,8 +1170,8 @@ async function getSkyTonight({ lat, lng } = {}) {
 }
 
 /**
- * 12. 🪐 Pemburu Eksoplanet — NASA Exoplanet Archive TAP (percuma, tiada kunci).
- *     pscomppars = parameter lalai setiap planet disahkan; susun ikut jarak paling dekat.
+ * 12. 🪐 Exoplanet Hunter — NASA Exoplanet Archive TAP (free, no key).
+ *     pscomppars = the default parameters per confirmed planet; sorted by closest distance.
  */
 async function getExoplanets({ limit = 250 } = {}) {
   const n = Math.min(Math.max(parseInt(limit, 10) || 250, 10), 500);
@@ -1204,8 +1204,8 @@ async function getExoplanets({ limit = 250 } = {}) {
     setCache('exo:last-good', result, 7 * 24 * 60 * 60 * 1000);
     return result;
   } catch (err) {
-    // Kontrak kejujuran: hidangkan snapshot terakhir DILABEL bila arkib NASA
-    // tidak dapat dicapai (cx_Oracle di pihak mereka pernah runtuh berjam-jam).
+    // Honesty contract: serve the last snapshot LABELLED when the NASA archive
+    // is unreachable (their cx_Oracle has been down for hours before).
     const good = cache.get('exo:last-good');
     if (good && good.data && Array.isArray(good.data.planets) && good.data.planets.length) {
       return Object.assign({}, good.data, { stale: true, staleAt: good.data.generatedAt });
@@ -1215,16 +1215,16 @@ async function getExoplanets({ limit = 250 } = {}) {
 }
 
 /**
- * 13. ☄️ Pertahanan Planet — JPL Sentry: objek dengan risiko impak yang dikenal pasti.
- *     Senarai kosong = berita baik (tiada objek dipantau dengan kebarangkalian impak signifikan).
+ * 13. ☄️ Planetary Defense — JPL Sentry: objects with an identified impact risk.
+ *     An empty list = good news (no tracked object has a significant impact probability).
  */
 async function getSentryRisk() {
   const cacheKey = 'defense:sentry';
   const cached = getCache(cacheKey);
   if (cached) return cached;
   const res = await http.get('https://ssd-api.jpl.nasa.gov/sentry.api', { timeout: 15000 });
-  // Medan sebenar API: ip = kebarangkalian impak kumulatif, ps_cum = skala Palermo,
-  // ts_max = skala Torino, diameter dalam KM, range = julat tahun impak, n_imp = virtual impactors.
+  // The API's real fields: ip = cumulative impact probability, ps_cum = Palermo scale,
+  // ts_max = Torino scale, diameter in KM, range = the impact-year span, n_imp = virtual impactors.
   const raw = Array.isArray(res.data && res.data.data) ? res.data.data : [];
   const risks = raw.map(o => ({
     id: o.id || '',
@@ -1250,8 +1250,8 @@ async function getSentryRisk() {
 }
 
 /**
- * 14. 🛰 Ceruk Satelit — CelesTrak TLE (elemen orbit), percuma, tiada kunci.
- *     TLE dibaca & dipotong di pelayan (cache 6 jam) supaya pelanggan dapat JSON ringkas.
+ * 14. 🛰 Satellite Corner — CelesTrak TLE (orbital elements), free, no key.
+ *     TLEs are read & trimmed on the server (6-hour cache) so clients get compact JSON.
  */
 const SAT_GROUP_KEYS = ['stations', 'visual', 'gps-ops', 'geostationary', 'resource'];
 
@@ -1295,10 +1295,10 @@ async function getSatellites({ group = 'stations' } = {}) {
 }
 
 /**
- * 15. Backfill arkib — kumpul data NASA ke pangkalan data setempat secara berkala.
- *     APOD: tujuh tarikan satu-tarikh melalui getAPOD (retry + sandaran arkib sudah
- *     terbina dalam; laluan `count` sering hidang halaman rosak "NASA Science").
- *     NEO sehari + EPIC menyumbang baki koleksi. Ralat sehari diabaikan.
+ * 15. Archive backfill — gather NASA data into the local database periodically.
+ *     APOD: seven single-date pulls through getAPOD (retry + archive fallback are already
+ *     built in; the `count` path often serves the broken "NASA Science" page).
+ *     One NEO day + EPIC contribute the rest of the collection. A one-day error is ignored.
  */
 async function backfillArchive() {
   const hasil = { apod: 0, asteroids: 0, epic: 0 };
@@ -1307,7 +1307,7 @@ async function backfillArchive() {
     try {
       const apod = await getAPOD({ date: d });
       if (apod && !apod.api_down && !apod.stale && store.getApod(d)) hasil.apod += 1;
-    } catch { /* cuba hari seterusnya */ }
+    } catch { /* try the next day */ }
   }
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -1323,7 +1323,7 @@ async function backfillArchive() {
 
 let archiveTimer = null;
 
-/** Jadual backfill: kali pertama lewat 20 saat (selepas boot), kemudian setiap 6 jam. */
+/** Backfill schedule: the first run 20 s late (after boot), then every 6 hours. */
 function startArchiveBackfill() {
   if (archiveTimer) return;
   setTimeout(() => { backfillArchive().catch(() => {}); }, 20 * 1000).unref();

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ── TUKUK-OS DANAU (/danau) — Lakes of the World ────────────────────────────
-// Senarai STATik danau dari Wikidata (P31=Q23397) dengan koordinat + elevasi.
-// Ringkasan Wikipedia SEMASA + di-cache (fail-open). Skop Bahasa Inggeris.
+// STATIC list of lakes from Wikidata (P31=Q23397) with coordinates + elevation.
+// LIVE Wikipedia summary + cached (fail-open). English scope.
 const https = require('https');
 const DATA = require('./danau-data.json');
 

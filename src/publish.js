@@ -1,22 +1,22 @@
 'use strict';
-// Pembantu terbitan /builder: satu-klik terbitkan app HTML berdiri sendiri ke pautan
-// awam (/a/<slug>). Fungsi di sini MURNI (tanpa I/O) supaya boleh diuji unit tanpa
-// memulakan pelayan. server.js memakai modul ini + mengurus tulis/capai cakera.
+// /builder publishing helpers: one-click publish a stand-alone HTML app to a public link
+// (/a/<slug>). Everything here is PURE (no I/O) so it can be unit-tested without
+// booting the server. server.js uses this module and owns the disk read/write.
 //
-// KESELAMATAN: halaman terbitan DILAYAN DALAM SANDBOX (opaque-origin). `sandbox` TANPA
-// `allow-same-origin` bermakna dokumen tidak boleh membaca cookie/localStorage/fetch
-// sumber tukuk.org — memisahkan kandungan pengguna daripada domain utama (anti-XSS/
-// phishing lintas-asal). `allow-scripts` dibiarkan supaya game/interaksi dalam app jalan.
+// SECURITY: published pages are SERVED IN A SANDBOX (opaque origin). `sandbox` WITHOUT
+// `allow-same-origin` means the document cannot read cookies/localStorage or fetch
+// tukuk.org sources — user content is separated from the main domain (anti-XSS /
+// cross-origin phishing). `allow-scripts` is kept so games/interactions inside the app run.
 
-// Slug: huruf-kecil/angka/nego sahaja, 3–40 aksara, bermula huruf/angka.
+// Slug: lowercase letters/digits/hyphens only, 3–40 chars, must start with a letter/digit.
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{2,39}$/;
 
-// `slugify` — nama manusia → pangkal slug selamat (buang unicode/ruang, tanda hubung).
+// `slugify` — human name → safe slug root (strip unicode/spaces, use hyphens).
 function slugify(name, fallback = 'app') {
   const base = String(name || '')
     .toLowerCase()
     .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')   // buang tanda diakritik selepas normalisasi
+    .replace(/[\u0300-\u036f]/g, '')   // drop diacritics after normalisation
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 32);
@@ -27,16 +27,16 @@ function isSlug(s) {
   return SLUG_RE.test(String(s || ''));
 }
 
-// Asal awam untuk bina URL terbitan — hormat kepala proksi (Cloudflare → http di pelayan).
+// Public origin used to build publish URLs — honour proxy headers (Cloudflare → http at the server).
 function publicOrigin(req) {
   const proto = (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : (req.protocol || 'http');
   const host = req.get('host') || 'localhost';
   return `${proto}://${host}`;
 }
 
-// CSP untuk dokumen terbitan: sandbox opaque-origin + skrip/gaya inline (app berdiri
-// sendiri) + img/media data/https. connect-src & frame-ancestors 'none' (default-src
-// 'none') menghalang exfiltrasi & embedding. TIADA allow-same-origin = pemisahan asal.
+// CSP for published documents: opaque-origin sandbox + inline scripts/styles (self-contained
+// app) + img/media data/https. connect-src & frame-ancestors 'none' (default-src
+// 'none') block exfiltration & embedding. NO allow-same-origin = origin isolation.
 const PUBLISH_CSP = [
   'sandbox allow-scripts allow-forms allow-popups allow-modals',
   "default-src 'none'",
@@ -50,18 +50,18 @@ const PUBLISH_CSP = [
   "frame-ancestors 'none'"
 ].join('; ') + ';';
 
-// Had saiz dokumen terbitan (bayt). Body JSON pelayan pada laluan /api/publish
-// dipagari pada 6MB (parser khas); ini pagari HTML itu sendiri — 4MB cukup untuk
-// satu fail HTML 3D (Three.js via CDN + aset base64) sambil kekal selamat di tepi.
+// Size cap for published documents (bytes). The server JSON body on the /api/publish
+// route is capped at 6MB (custom parser); this caps the HTML itself — 4MB is enough for
+// a single 3D HTML file (Three.js via CDN + base64 assets) while staying safe at the edge.
 const PUBLISH_MAX_BYTES = 4 * 1024 * 1024;
 
-// CSP terbitan + `connect-src` DIPASANGKAN kepada host yang menyajikan halaman sahaja —
-// membenarkan app dalam sandbox membaca papan pendahulu (/api/scores) & menghantar skor
-// daripada origin yang sama. opaque-origin (tiada allow-same-origin) = cookie TIDAK dihantar,
-// jadi hanya endpoint awam boleh diakses; tiada laluan keluar ke host luar (eksfiltrasi kekal tertutup).
-// `embed` (halaman /a/<slug>?embed=1): frame-ancestors ditukar 'none' → 'self' supaya
-// pemain /play kita sendiri boleh menempek game; laman luar TETAP disekat (anti-clickjacking
-// silang-origin tidak berubah — 'self' hanya membenarkan dokumen dalam host yang sama).
+// Published CSP + `connect-src` SET TO the host serving the page only —
+// letting the sandboxed app read the leaderboard (/api/scores) and submit scores
+// from the same origin. opaque-origin (no allow-same-origin) = cookies are NOT sent,
+// so only public endpoints are reachable; no route out to external hosts (exfiltration stays closed).
+// `embed` (/a/<slug>?embed=1 page): frame-ancestors flips 'none' → 'self' so our own
+// /play player can embed the game; external sites REMAIN blocked (cross-origin anti-clickjacking
+// is unchanged — 'self' only allows documents inside the same host).
 function publishCspFor(host, proto, embed) {
   const scheme = (proto === 'https') ? 'https' : 'http';
   const extra = host ? ` connect-src ${scheme}://${host};` : '';
@@ -69,27 +69,27 @@ function publishCspFor(host, proto, embed) {
   return csp + extra;
 }
 
-// Semakan kelayakan awal HTML: mesti dokumen HTML penuh & dalam had saiz.
+// Early HTML eligibility check: must be a full HTML document and within the size cap.
 function looksLikeHtml(html) {
   return /^\s*<!doctype\s+html/i.test(html) || /^\s*<html[\s>]/i.test(html);
 }
 
-// Kunci edit: token acak 32 aksara hex (bukti pemilikan untuk terbit semula).
+// Edit key: random 32 hex-character token (proof of ownership for re-publishing).
 const EDIT_KEY_RE = /^[0-9a-f]{32}$/i;
 function isEditKey(k) {
   return EDIT_KEY_RE.test(String(k || ''));
 }
 
-// `extractTitle` — baca <title> dokumen HTML untuk senarai awam (sanitasi ringan).
+// `extractTitle` — read the HTML document's <title> for public listings (light sanitisation).
 function extractTitle(html, fallback = 'App') {
   const m = String(html || '').match(/<title[^>]*>([^<]*)<\/title>/i);
   const t = m ? m[1].replace(/\s+/g, ' ').trim() : '';
   return (t || fallback).slice(0, 80);
 }
 
-// ── Papan komen komuniti (app terbitan). Pembantu MURNI — sanitasi input + suntik
-//    UI komen ke halaman /a/<slug>. server.js mengurus I/O (baca/tulis comments.json).
-//    UI disuntik ialah skrip inline yang fetch host-sendiri (/api/comments) — dibenarkan
+// ── Community comment board (published apps). PURE helpers — sanitise input + inject
+//    the comment UI into the /a/<slug> page. server.js owns the I/O (read/write comments.json).
+//    The injected UI is an inline script that fetches the same host (/api/comments) — allowed by
 //    PUBLISH_CSP (script-src 'unsafe-inline') + publishCspFor (connect-src host).
 function cmtSlug(s) { const x = String(s || ''); return isSlug(x) ? x : ''; }
 function cmtName(n) { return String(n || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 20) || 'Anon'; }
@@ -115,7 +115,7 @@ function commentsWidget(slug) {
     + 'load();})();</' + 'script>';
 }
 
-// Sisip widget komen sebelum </body> terakhir; jika tiada </body>, tampal di hujung.
+// Insert the comment widget before the last </body>; if there is no </body>, append at the end.
 function injectComments(html, slug) {
   const widget = commentsWidget(slug);
   const i = String(html).lastIndexOf('</body>');
@@ -123,19 +123,19 @@ function injectComments(html, slug) {
   return String(html).slice(0, i) + widget + String(html).slice(i);
 }
 
-// Sisip blok HTML sebelum </body> terakhir; jika tiada </body>, tampal di hujung.
+// Insert an HTML block before the last </body>; if there is no </body>, append at the end.
 function insertBeforeBody(html, block) {
   const i = String(html).lastIndexOf('</body>');
   if (i === -1) return String(html) + block;
   return String(html).slice(0, i) + block + String(html).slice(i);
 }
 
-// ── Widget papan skor GLOBAL untuk halaman Arked stateless (/games/<key>). ──────
-//    MURNI: hanya bina string (style + inline script). Game melapor skor dengan
-//    memanggil window.__tkScore(n) (sedia ada; no-op jika widget tiada → offline-safe).
-//    Widget ini juga memuat & memaparkan top-5 daripada /api/scores. Fetch ke
-//    laluan host-sendiri dibenarkan oleh publishCspFor(connect-src). sandbox
-//    publish sudah ada allow-modals (prompt OK) + allow-scripts.
+// ── GLOBAL leaderboard widget for the stateless Arcade pages (/games/<key>). ──────
+//    PURE: only builds strings (style + inline script). Games report scores by
+//    calling window.__tkScore(n) (always present; no-op when the widget is missing → offline-safe).
+//    This widget also loads and renders the top-5 from /api/scores. Fetching the
+//    same-host route is allowed by publishCspFor(connect-src). The publish sandbox
+//    already has allow-modals (prompt OK) + allow-scripts.
 function arcadeWidget(key) {
   const g = String(key || '').replace(/[^a-z0-9_-]/gi, '');
   const css = '<style>#tk-lb{position:fixed;left:8px;bottom:8px;width:196px;max-width:46vw;font:12px/1.45 system-ui,sans-serif;'
@@ -159,8 +159,8 @@ function arcadeWidget(key) {
   return css + js;
 }
 
-// Hidang templat Arked dalam mod main-terus: buang pautan /store (ganti balik ke
-// /games) + suntik widget skor (hanya untuk game). MURNI supaya boleh diuji unit.
+// Serve the Arcade template in direct-play mode: drop the /store link (swap it back to
+// /games) + inject the score widget (games only). PURE so it can be unit-tested.
 function injectArcade(html, key, showScore) {
   let out = String(html || '');
   out = out.replace(/href="\/store"/gi, 'href="/games"');
@@ -168,9 +168,9 @@ function injectArcade(html, key, showScore) {
   return out;
 }
 
-// ── Genre game (gaya web-games.io). Pembantu MURNI supaya boleh diuji unit tanpa
-//    memulakan pelayan. server.js mengambil fungsi ini untuk membina /api/store.
-//    Nilai dalaman berkunci Melayu (padan data sedia ada); paparan awam = GENRE_UI.
+// ── Game genres (web-games.io style). PURE helpers so they can be unit-tested without
+//    booting the server. server.js uses these functions to build /api/store.
+//    Internal values keep Malay keys (matching existing data); public display = GENRE_UI.
 const GAME_GENRES = new Set(['arkad', 'teki-teki', 'refleks', 'kuiz', 'tindakan', 'penembakan', 'santai', 'kereta', 'sukan', 'klik', 'io', 'board', 'cards', '3d']);
 const GENRE_SYNONYM = { arkade: 'arkad', arcade: 'arkad', action: 'tindakan', shooter: 'penembakan', puzzle: 'teki-teki', reflex: 'refleks', casual: 'santai', racing: 'kereta', car: 'kereta', sport: 'sukan', clicker: 'klik', quiz: 'kuiz', board: 'board', card: 'cards', cards: 'cards', threejs: '3d', '3d': '3d', '3d-game': '3d' };
 // Display labels for internal (Malay-keyed) genres — user-facing surfaces are English.
@@ -180,11 +180,11 @@ function normalizeGenre(g) {
   if (GAME_GENRES.has(s)) return s;
   return GAME_GENRES.has(GENRE_SYNONYM[s]) ? GENRE_SYNONYM[s] : null;
 }
-// Tebakan genre berasaskan kata kunci (komuniti / satu kata) — default 'arkad' supaya
-// setiap game pasti ada genre (tiada kad tersesat dari penapis chip).
+// Keyword-based genre guess (community / satu kata) — defaults to 'arkad' so every
+// game always has a genre (no card gets lost from the chip filter).
 function guessGameGenre(text) {
   const t = ' ' + String(text || '').toLowerCase() + ' ';
-  // 3D dahulu — WebGL/Three.js/open-world ialah isyarat paling spesifik.
+  // 3D first — WebGL/Three.js/open-world are the most specific signals.
   if (/(\b3d\b|three\.?js|babylon|webgl|voxel|first[- ]person|dunia bukaan|open[- ]world)/.test(t)) return '3d';
   if (/\.io\b|\bio\b/.test(t)) return 'io';
   if (/(kereta|\bcar\b|racing|lumba|drift)/.test(t)) return 'kereta';

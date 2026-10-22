@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * generate-chat-icons.js — Jana PNG ikon PWA untuk T Chat daripada chat.svg.
- * Hasil: chat-192.png, chat-512.png (any) dan chat-maskable-512.png (maskable,
- * kandungan discalar ke safe-zone 70% dengan latar penuh tanpa bucu bundar).
- * Guna: node scripts/generate-chat-icons.js   (prasyarat: sharp devDependency)
+ * generate-chat-icons.js — Generate the PWA PNG icons for T Chat from chat.svg.
+ * Output: chat-192.png, chat-512.png (any) and chat-maskable-512.png (maskable,
+ * content scaled into the 70% safe-zone on a full square background with no rounded corners).
+ * Usage: node scripts/generate-chat-icons.js   (requires the sharp devDependency)
  */
 const fs = require('fs');
 const path = require('path');
@@ -21,8 +21,8 @@ async function main() {
     { name: 'chat-512.png', size: 512, src: svg },
   ];
 
-  // Versi maskable: latar penuh tanpa bucu bundar + SEMUA kandungan (kecuali
-  // rect latar & border inset) discalar ke safe-zone ~72% di tengah.
+  // Maskable variant: full square background with no rounded corners + ALL content (except
+  // the background rect & the inset border) scaled into a ~72% safe-zone in the middle.
   const defs = (svg.match(/<defs>[\s\S]*<\/defs>/) || [''])[0];
   const body = svg.replace(/<\?xml[^?]*\?>/, '').replace(/<svg[^>]*>/, '').replace('</svg>', '')
     .replace(/<defs>[\s\S]*<\/defs>/, '')
@@ -39,7 +39,7 @@ async function main() {
     await sharp(Buffer.from(t.src), { density: 384 }).resize(t.size, t.size).png().toFile(path.join(outDir, t.name));
     console.log('[chat-icons] ' + t.name);
   }
-  // Manifest juga guna SVG (pelayar moden sokong); pastikan ia wujud.
+  // The manifest also uses the SVG (modern browsers support it); make sure it exists.
   console.log('[chat-icons] done.');
 }
 main().catch((e) => { console.error(e); process.exit(1); });

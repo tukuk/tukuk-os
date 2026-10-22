@@ -1,27 +1,27 @@
 'use strict';
-// ── TUKUK-OS AIR & OXYGEN COMPLEX — bacaan udara dunia + CO2 langsung ────────
-// Sumber (PERCUMA, tanpa kunci API):
-//   * Open-Meteo Air Quality API (model CAMS/EUCCC; us_aqi, PM2.5, PM10, O3, NO2)
-//     https://air-quality-api.open-meteo.com — tanpa pendaftaran, guna secara berhemah.
-//   * NOAA Global Monitoring Laboratory —CO2 harian Mauna Loa + mean tahunan global
-//     https://gml.noaa.gov/webdata/ccgg/trends/co2/ (data awam, kredit: NOAA GML)
-// Kontrak kejujuran sama seperti ISS: setiap payload bawa source:'live' |
-// 'partial' | 'last-known' | 'unavailable'. TIADA data rekaan — kalau sumber mati,
-// halaman sendiri memaparkan nota rehat, bukan nombor rekaan.
+// ── TUKUK-OS AIR & OXYGEN COMPLEX — world air readings + live CO2 ─────────────
+// Sources (FREE, no API key):
+//   * Open-Meteo Air Quality API (CAMS/EUCCC model; us_aqi, PM2.5, PM10, O3, NO2)
+//     https://air-quality-api.open-meteo.com — no sign-up, use it sparingly.
+//   * NOAA Global Monitoring Laboratory — daily Mauna Loa CO2 + global annual mean
+//     https://gml.noaa.gov/webdata/ccgg/trends/co2/ (public data, credit: NOAA GML)
+// The same honesty contract as ISS: every payload carries source:'live' |
+// 'partial' | 'last-known' | 'unavailable'. NO invented data — if a source is down,
+// the page shows a rest note instead of made-up numbers.
 const axios = require('axios');
 const https = require('https');
 
 const http = axios.create({
   timeout: 20000,
-  // VPS kami: route IPv6 ke gml.noaa.gov mati (ETIMEDOUT segerak); curl IPv4 ok.
-  // Paksa keluarga IPv4 supaya NOAA sentiasa boleh dicapai.
+  // Our VPS: the IPv6 route to gml.noaa.gov is dead (ETIMEDOUT right away); IPv4 curl works.
+  // Force the IPv4 family so NOAA is always reachable.
   httpsAgent: new https.Agent({ family: 4 }),
   headers: { 'User-Agent': 'TukukOS-Air-Client/1.0 (+https://tukuk.org)' },
 });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ── Cache ringkas dalam modul (Map + TTL) ────────────────────────────────────
+// ── Simple in-module cache (Map + TTL) ───────────────────────────────────
 const cache = new Map();
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -33,11 +33,11 @@ function cacheSet(key, data, ttlMs) {
   cache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
-const AIR_TTL = 45 * 60 * 1000;        // kemas kini ranking 45 minit sekali
+const AIR_TTL = 45 * 60 * 1000;        // refresh the ranking every 45 minutes
 const AIR_LASTGOOD_TTL = 24 * 60 * 60 * 1000;
-const CO2_TTL = 12 * 60 * 60 * 1000;   // fail NOAA harian: cukup 12 jam
+const CO2_TTL = 12 * 60 * 60 * 1000;   // NOAA's file updates daily: 12 hours is enough
 
-// ── Senarai kota dunia (lintang/bujur tetap; serantau seimbang) ─────────────
+// ── World city list (fixed lat/lon; balanced across regions) ─────────────
 const CITIES = [
   // Asia
   { name: 'Delhi', country: 'India', region: 'Asia', lat: 28.61, lon: 77.21 },
@@ -117,7 +117,7 @@ const CITIES = [
   { name: 'Wellington', country: 'New Zealand', region: 'Oceania', lat: -41.29, lon: 174.78 },
 ];
 
-// Kategori US AQI (EPA) — label + kelas CSS dipautkan satu tempat sahaja.
+// US AQI categories (EPA) — label + CSS class are wired in exactly one place.
 function aqiCategory(v) {
   if (v == null || !Number.isFinite(v)) return null;
   if (v <= 50) return { label: 'Good', cls: 'good' };
@@ -128,13 +128,13 @@ function aqiCategory(v) {
   return { label: 'Hazardous', cls: 'hazardous' };
 }
 
-let airInFlight = null; // dedup: satu kemas kini serentak sahaja
-const AIR_KEY = 'air:ranking'; // skop modul — refreshAir & getAirRanking pakai kunci sama
+let airInFlight = null; // dedup: only one simultaneous refresh
+const AIR_KEY = 'air:ranking'; // module scope — refreshAir & getAirRanking use the same key
 
 async function fetchCityAir(c) {
   const url = 'https://air-quality-api.open-meteo.com/v1/air-quality';
   const res = await http.get(url, {
-    timeout: 9000, // laluan kota lebih ketat; fail → retry, bukan tergantung
+    timeout: 9000, // a tighter per-city timeout; on failure → retry, don't hang
     params: {
       latitude: c.lat, longitude: c.lon,
       current: 'us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide', timezone: 'UTC',
@@ -153,27 +153,27 @@ async function fetchCityAir(c) {
   };
 }
 
-// VPS report: 6 serentak terlalu agresif — Open-Meteo mula throttling selepas
-// ±40 permintaan. Chunk kecil + jeda + satu retry lembut membaiki liputan.
+// VPS report: 6 at a time is too aggressive — Open-Meteo starts throttling after
+// ±40 requests. Small chunks + a pause + one gentle retry fix coverage.
 async function fetchCityAirRetry(c) {
   try { return await fetchCityAir(c); } catch (e) { await sleep(300); return await fetchCityAir(c); }
 }
 
-// Ranking semua kota → { source, asOf, rows } (rows diasingkan mengikut AQI).
+// Ranking for all cities → { source, asOf, rows } (rows separated by AQI).
 async function getAirRanking(force) {
   if (!force) {
     const hit = cacheGet(AIR_KEY);
     if (hit) {
       if (!hit.stale) return hit.data;
-      // Stale-while-revalidate: saiz scrape penuh ~60 saat (50 kota × timeout 9s).
-      // Pelawat tak patut menanggung itu — hidangkan snapshot lama serta-merta,
-      // scan baharu jalan di belakang; halaman menlabel agesnya dengan jujur.
+      // Stale-while-revalidate: a full scrape takes ~60 seconds (50 cities × 9s timeout).
+      // Visitors shouldn't pay for that — serve the old snapshot immediately,
+      // run the new scan in the background; the page labels its age honestly.
       refreshAir().catch(() => {});
       return Object.assign({}, hit.data, { updating: true });
     }
-    // Tiada snapshot lagi (lawatan pertama selepas restart, sebelum prewarm
-    // sempat): pelawat tak patut tunggu scrape penuh ~2–3 minit — hidangkan
-    // keadaan 'starting' yang jujur sambil scan pertama berjalan di belakang.
+    // No snapshot yet (first visit after a restart, before prewarm gets there): visitors
+    // shouldn't wait for a full ~2–3 minute scrape — serve an honest 'starting'
+    // state while the first scan runs in the background.
     refreshAir().catch(() => {});
     return { source: 'starting', rows: [], failedCount: 0, asOf: '', fetchedAt: Date.now() };
   }
@@ -186,7 +186,7 @@ function refreshAir() {
     try {
       const rows = [];
       const failed = [];
-      const CHUNK = 4; // Derma permintaan terkawal: 4 kota serentak, jeda 250 ms
+      const CHUNK = 4; // Controlled request drip: 4 cities at once, 250 ms pause
       for (let i = 0; i < CITIES.length; i += CHUNK) {
         const slice = CITIES.slice(i, i + CHUNK);
         const settled = await Promise.all(slice.map(fetchCityAirRetry).map((p) => p.then((r) => ({ ok: true, r }), (e) => ({ ok: false, e }))));
@@ -204,7 +204,7 @@ function refreshAir() {
       const good = cacheGet('air:last-good');
       if (good && good.data && good.data.rows && good.data.rows.length) {
         const stale = Object.assign({}, good.data, { source: 'last-known', staleSince: good.data.fetchedAt });
-        cacheSet(AIR_KEY, stale, 5 * 60 * 1000); // cuba semula selepas 5 minit
+        cacheSet(AIR_KEY, stale, 5 * 60 * 1000); // try again after 5 minutes
         return stale;
       }
       const empty = { source: 'unavailable', rows: [], failedCount: CITIES.length, asOf: '', fetchedAt: Date.now() };
@@ -217,9 +217,9 @@ function refreshAir() {
   return airInFlight;
 }
 
-// Prewarm: selepas boot (12 d) dan setiap 40 minit — TTL ialah 45 min, jadi
-// cache tak pernah luput semasa pelayan hidup; pelawat pertama pun tak tunggu.
-// unref() supaya ujian node --test boleh tamat tanpa menunggu timer.
+// Prewarm: after boot (12 s) and every 40 minutes — the TTL is 45 min, so the
+// cache never expires while the server is up; even the first visitor doesn't wait.
+// unref() so `node --test` runs can finish without waiting on the timer.
 {
   const warm = setTimeout(() => { getAirRanking().catch(() => {}); }, 12000);
   if (warm.unref) warm.unref();
@@ -227,12 +227,12 @@ function refreshAir() {
   if (iv.unref) iv.unref();
 }
 
-// ——— CO2 langsung (NOAA GML) ———
+// ——— Live CO2 (NOAA GML) ———
 function parseNumericLine(line) {
   const f = line.trim().split(/\s+/).map(Number);
   return f.every((n) => Number.isFinite(n)) ? f : null;
 }
-// Cari medan ppm: nilai dalam julat CO2 munasabah (250–700) dengan perpuluhan.
+// Find the ppm field: a value inside the plausible CO2 range (250–700), preferring decimals.
 function pickPpm(fields) {
   for (const n of fields) if (n > 250 && n < 700 && n % 1 !== 0) return n;
   for (const n of fields) if (n > 250 && n < 700) return n;
@@ -287,11 +287,11 @@ async function getCo2(force) {
   }
 }
 
-// ── Sungai: risiko banjir dari Open-Meteo Flood API ─────────────────────────
-// Sumber: https://flood-api.open-meteo.com — model GLOROD/GloFAS, PERCUMA tanpa
-// kunci. river_discharge dalam m³/s. Kami bandingkan reading terkini dengan
-// setahun sejarah setempat → peratusan + label konservatif. Ini model, bukan
-// ukuran sungai sebenar — halaman wajib melabelnya sebagai anggaran.
+// ── Rivers: flood risk from the Open-Meteo Flood API ─────────────────────────
+// Source: https://flood-api.open-meteo.com — the GLOROD/GloFAS model, FREE without
+// a key. river_discharge is in m³/s. We compare the latest reading against
+// a year of local history → percentage + a conservative label. This is a model, not
+// a real river gauge — the page must label it as an estimate.
 const RIVER_TTL = 6 * 60 * 60 * 1000;
 async function getRiver(lat, lon) {
   const key = `river:${Number(lat).toFixed(2)}:${Number(lon).toFixed(2)}`;
@@ -325,8 +325,8 @@ async function getRiver(lat, lon) {
   }
 }
 
-// ── Kurasi edukatif: oksigen ────────────────────────────────────────────────
-// Angka dipilih konservatif & boleh disemak; kesamaran dilabel "about".
+// ── Educational curation: oxygen ────────────────────────────────────────
+// Numbers are chosen conservatively & are checkable; fuzzy values are labelled "about".
 const OXYGEN = [
   { h: 'The 20.9 percent number', paras: [
     'Dry air at sea level is about 78 percent nitrogen, 20.9 percent oxygen, 0.9 percent argon and a restless remainder of carbon dioxide, water vapour and traces. The oxygen share has barely moved in human history — yet every breath you take removes about one-quarter of the oxygen from the air you exhale.',
@@ -360,7 +360,7 @@ const OXYGEN = [
   ] },
 ];
 
-// ── Kurasi edukatif: pernafasan makhluk hidup ────────────────────────────────
+// ── Educational curation: how living things breathe ────────────────────────
 const HUMAN_BREATH = [
   { k: 'Normal respiratory rate, adult at rest', v: 'About 12 to 20 breaths per minute', note: 'A resting rate persistently above 20 is one of the quiet red flags doctors check.' },
   { k: 'Newborns', v: 'About 30 to 60 breaths per minute', note: 'Small lungs run on a faster clock; anything sustained above 60 in a newborn is taken seriously.' },

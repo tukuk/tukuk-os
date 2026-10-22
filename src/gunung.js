@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // ── TUKUK-OS GUNUNG (/gunung) — Mountains of the World ─────────────────────
-// Senarai STATik gunung dari Wikidata (P31=Q8502) dengan koordinat + elevation.
-// Ringkasan Wikipedia SEMASA + di-cache (fail-open). Halaman teras sentiasa
-// terrender daripada data tetap → TIDAK BOLEH 503. Skop Bahasa Inggeris.
+// STATIC list of mountains from Wikidata (P31=Q8502) with coordinates + elevation.
+// LIVE Wikipedia summary + cached (fail-open). The page core always
+// renders from fixed data → it MUST NEVER 503. English scope.
 const https = require('https');
 const DATA = require('./gunung-data.json');
 
@@ -29,7 +29,7 @@ function findRegion(slug) { return R_BY_SLUG.get(String(slug || '').toLowerCase(
 function peaksInRegion(region) { return PEAKS.filter((p) => p.region === region); }
 function peaksByCountry(countrySlug) { return PEAKS.filter((p) => p.countrySlug === countrySlug); }
 
-// ——— HTTP IPv6→IPv4 + timeout (corak warisan.js/cagar.js) ———
+// ——— HTTP IPv6→IPv4 + timeout (the warisan.js/cagar.js pattern) ———
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 function httpsGet(url, agent) {

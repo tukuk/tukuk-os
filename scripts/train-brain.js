@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * train-brain.js — latih "Tukuk-Brain Mini", model AI MILIK SENDIRI Tukuk-OS.
+ * train-brain.js — trains "Tukuk-Brain Mini", Tukuk-OS's OWN AI model.
  *
- * Sumber data latihan:
- *   1. Seed curated multi-bahasa dalam fail ini (BM/EN/ID/ES + skript-neutral).
- *   2. Log PRODUKSI server: data/tukuk-os.json (history ask/search) dan
- *      data/search-queries.jsonl — dilabel sendiri (self-distillation) oleh
- *      regex taskrouter sedia ada; regex = guru, model = pelajar yang
- *      menggeneralisasi ke frasa yang regex lepas.
+ * Training data sources:
+ *   1. The curated multilingual seeds in this file (BM/EN/ID/ES + script-neutral).
+ *   2. The server's PRODUCTION logs: data/tukuk-os.json (ask/search history) and
+ *      data/search-queries.jsonl — self-labeled (self-distillation) by
+ *      the existing taskrouter regex; regex = teacher, model = student that
+ *      generalizes to the phrasings the regex misses.
  *
- * Keluaran: data/tukuk-brain-v1.json (dimuat taskrouter semasa boot).
- * Jalankan di server:  node scripts/train-brain.js  (pasang / restart servis)
+ * Output: data/tukuk-brain-v1.json (loaded by taskrouter at boot).
+ * Run it on the server:  node scripts/train-brain.js  (install / restart the service)
  */
 
 const fs = require('fs');
@@ -70,14 +70,14 @@ const SEED = [
   ['cuaca hari ini', 'general'], ['khabar berita', 'general'], ['siapa presiden amerika sekarang', 'general'],
   ['filem best 2024 di netflix', 'general'], ['harga minyak masak hari ini', 'general'],
   ['adakah ai akan gantikan programmer', 'general'], ['tips jaga keyboard tahan lama', 'general'],
-  // ── Peningkatan kepelbagaian (generalisasi holdout) ────────────────────
-  // math (variasi frasa regex mudah lepas)
+  // ── Diversity boost (holdout generalization) ───────────────────────────
+  // math (variations of phrasings the simple regex misses)
   ['kalikan 9 dengan 9', 'math'], ['purata bagi 10 20 dan 30', 'math'],
   ['berapa jadual 12 bulan darab 30 hari', 'math'], ['what do 7 plus 8 equal', 'math'],
   ['percentage increase from 200 to 250', 'math'], ['jumlahkan semua harga dalam resit 45 60 25', 'math'],
   ['baki 1000 tolak belanja 378', 'math'], ['square root of 169', 'math'],
   ['17 kali 17 berapa', 'math'], ['berapa baki 9075 bahagi 5', 'math'],
-  // code (niat mengkod tanpa kata kunci regex tepat)
+  // code (coding intent with no exact regex keyword)
   ['buatkan aku script backup harian ke r2', 'code'], ['kod php hantar emel smtp', 'code'],
   ['query sql kira rekod mengikut bulan', 'code'], ['python loop cetak 1 sampai 100', 'code'],
   ['javascript filter array objek ikut umur', 'code'], ['saya perlukan fungsi tukar masa ke epoch', 'code'],
@@ -94,27 +94,27 @@ const SEED = [
   ['list aplikasi editing video percuma', 'list'], ['sebut contoh haiwan herbivora', 'list'],
   ['apa benda best untuk belajar coding', 'list'], ['name three types of databases', 'list'],
   ['senarai web hosting ada free tier', 'list'], ['contoh syarikat unicorn asia tenggara', 'list'],
-  // howto (frasa santai yang regex kerap terlepas)
+  // howto (casual phrasings the regex often misses)
   ['nak reset telefon terlupa password', 'howto'], ['macam mana hasilkan duit dengan dropship', 'howto'],
   ['cara nak connect printer wifi', 'howto'], ['steps to learn english fast', 'howto'],
   ['macam mana nak guna vpn di android', 'howto'], ['nak tahu cara video saya dapat banyak view', 'howto'],
   ['boleh tak ajar buat kuih lapis', 'howto'], ['guide naik bas dari kl ke penang', 'howto'],
   ['saya nak install ubuntu kat laptop lama', 'howto'], ['how make coffee without machine', 'howto'],
-  // define (frasa santai)
+  // define (casual phrasings)
   ['apa benda cpu ni', 'define'], ['what is an api', 'define'],
   ['erti kata halal', 'define'], ['siapa elon musk', 'define'],
   ['kenapa bulan ada fasa', 'define'], ['apa itu steganografi', 'define'],
   ['what is CDN in simple terms', 'define'], ['siapa Nabi Muhammad', 'define'],
   ['maksud word2vec', 'define'], ['apa sebenarnya blockchain tu', 'define'],
   ['why is my python slow', 'define'], ['kenapa air laut masin', 'define'],
-  // general (sapaan/sembang — model perlu tahu bila JANGAN tukar kelas)
+  // general (greetings/chat — the model must know when NOT to change class)
   ['cerita sikit', 'general'], ['khabar', 'general'], ['selamat tinggal', 'general'],
   ['test test', 'general'], ['halo ai', 'general'], ['terima kasih ya', 'general'],
   ['suka saya bantu anda', 'general'], ['who are you', 'general'], ['just saying hi', 'general'],
   ['jom sembang kosong', 'general'], ['ok fine', 'general'], ['wow Amazing', 'general']
 ];
 
-// ── 3) Probe pengesahan — frasa LUAR seed, gaya bahasa baru ───────────────
+// ── 3) Validation probes — phrases OUTSIDE the seed, new styles ────────────
 const PROBES = [
   ['apa beza kafein dan theanine', 'compare'],
   ['perlu kod node baca excel', 'code'],
@@ -134,7 +134,7 @@ const PROBES = [
   ['buatkan query cari user tanpa emel', 'code']
 ];
 
-// ── 2) Self-distillation daripada log produksi ──────────────────────────────
+// ── 2) Self-distillation from production logs ──────────────────────────────
 function readJsonl(file) {
   try {
     return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean)
@@ -151,13 +151,13 @@ function collectLogs() {
     for (const h of (store.history || [])) {
       if (h.query && h.query.length >= 6) texts.add(String(h.query).slice(0, 120));
     }
-  } catch { /* fail lembut */ }
+  } catch { /* fail soft */ }
   // data/search-queries.jsonl
   for (const r of readJsonl(path.join(ROOT, 'data', 'search-queries.jsonl'))) {
     if (r.q && String(r.q).length >= 6) texts.add(String(r.q).slice(0, 120));
   }
-  // Label oleh regex taskrouter (guru). general DIBUANG — regex tak pasti
-  // sesuatu bukan bukti ia general (elak label salah masuk latihan).
+  // Labeled by the taskrouter regex (the teacher). general is DROPPED — the regex not
+  // matching is no proof the query is general (keeps wrong labels out of training).
   const labeled = [];
   for (const t of texts) {
     const kind = taskrouter.classifyRawRegex(t).kind;
@@ -167,26 +167,26 @@ function collectLogs() {
 }
 
 function main() {
-  // CLI mudah: node scripts/train-brain.js [--epochs 200] [--lr 0.4] [--l2 0.005] [--seed 42]
+  // Simple CLI: node scripts/train-brain.js [--epochs 200] [--lr 0.4] [--l2 0.005] [--seed 42]
   const arg = (name, dflt) => {
     const i = process.argv.indexOf('--' + name);
     return i > -1 ? Number(process.argv[i + 1]) : dflt;
   };
   const seeds = SEED.map(([text, label]) => ({ text, label, from: 'seed' }));
   const logs = collectLogs();
-  // dedup teks sama (seed menang — label insan lebih dipercayai)
+  // dedup identical text (the seed wins — human labels are more trustworthy)
   const seen = new Set(seeds.map((s) => s.text.toLowerCase()));
   const extra = logs.filter((l) => !seen.has(l.text.toLowerCase()));
   const data = [...seeds, ...extra];
 
   const { model, stats } = minimodel.train(data, {
-    // Default terpilih daripada sweep: tri=60 l2=0.003 epochs=200
-    // (probe luar 10/16 + gate keyakinan menapis 2 ralat jadi 100% selamat).
+    // Defaults picked from the sweep: tri=60 l2=0.003 epochs=200
+    // (external probe 10/16 + a confidence gate that filtered 2 errors, so 100% safe).
     epochs: arg('epochs', 200), lr: arg('lr', 0.4), l2: arg('l2', 3e-3), tri: arg('tri', 60), seed: arg('seed', 42)
   });
 
-  // ── PENGESAHAN SEBENAR: set PROBE luar (frasa baru, BUKAN dalam seed).
-  // Metrik produksi = adakah model menangkap frasa yang regex LEPAS.
+  // ── REAL VALIDATION: the external PROBE set (new phrasings, NOT in the seed).
+  // The production metric = does the model catch the phrasings the regex MISSED.
   let okAll = 0; let regexMiss = 0; let modelSelamatkan = 0;
   const probeLines = [];
   for (const [t, want] of PROBES) {
@@ -197,14 +197,14 @@ function main() {
       regexMiss += 1;
       const rescued = r.label === want && r.p >= 0.5 && r.margin >= 0.2;
       if (rescued) modelSelamatkan += 1;
-      probeLines.push(`  → celah regex: "${t}" model=${r.label}(p=${r.p.toFixed(2)})${rescued ? ' ✓' : ''}`);
+      probeLines.push(`  → regex gap: "${t}" model=${r.label}(p=${r.p.toFixed(2)})${rescued ? ' ✓' : ''}`);
     }
   }
 
   const meta = {
     name: 'Tukuk-Brain Mini',
     version: 'v1',
-    purpose: 'intent classifier (task router) — model neural softmax dilatih pada data sendiri',
+    purpose: 'intent classifier (task router) — softmax neural model trained on our own data',
     trainedAt: new Date().toISOString(),
     sources: { seed: seeds.length, productionLog: extra.length },
     probeAccuracy: Math.round((okAll / PROBES.length) * 1000) / 1000,

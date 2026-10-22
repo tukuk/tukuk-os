@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * setup-pwa.js — Lapisan "Install" (PWA) untuk setiap apl dalam apk/catalog.json.
- * tukuk.org = gedung apl: setiap apl boleh dipasang (Add to Home Screen) selain
- * dimuat turun sebagai APK. Untuk install prompt Chrome/Android diperlukan:
- *   (1) manifest bertaut, (2) service worker berdaftar yang liputi start_url.
+ * setup-pwa.js — the "Install" layer (PWA) for every app in apk/catalog.json.
+ * tukuk.org = an app store: every app can be installed (Add to Home Screen) as well as
+ * downloaded as an APK. Chrome/Android need two things for the install prompt:
+ *   (1) a linked manifest, (2) a registered service worker covering the start_url.
  *
- * Langkah (idempotent — ulang selamat, chat yang sudah lengkap dilangkau):
- *   a. Raster public/icons/apps/<slug>.svg → PNG 192 & 512 (jika tiada).
- *   b. Tulis public/manifest-<slug>.json (start_url /apps/<slug>, scope /apps/).
- *   c. Suntik ke public/apps/<slug>.html: <link rel="manifest"> + daftar /sw.js.
+ * Steps (idempotent — safe to re-run, already-complete apps such as chat are skipped):
+ *   a. Rasterize public/icons/apps/<slug>.svg → PNG 192 & 512 (when missing).
+ *   b. Write public/manifest-<slug>.json (start_url /apps/<slug>, scope /apps/).
+ *   c. Inject into public/apps/<slug>.html: <link rel="manifest"> + register /sw.js.
  *
- * Guna: node scripts/setup-pwa.js
+ * Usage: node scripts/setup-pwa.js
  */
 const fs = require('fs');
 const path = require('path');
@@ -29,7 +29,7 @@ const shortOf = (slug, label) => {
 (async () => {
   let icons = 0, man = 0, inj = 0;
   for (const a of CAT) {
-    // (a) PNG ikon 192/512
+    // (a) PNG icons 192/512
     const svg = path.join(ICONS, `${a.slug}.svg`);
     const p192 = path.join(ICONS, `${a.slug}-192.png`);
     const p512 = path.join(ICONS, `${a.slug}-512.png`);
@@ -43,7 +43,7 @@ const shortOf = (slug, label) => {
     }
     // (b) manifest JSON
     const manPath = path.join(ROOT, 'public', `manifest-${a.slug}.json`);
-    if (fs.existsSync(manPath)) { /* kekalkan manifest terkurasi sedia ada (cth. chat) */ }
+    if (fs.existsSync(manPath)) { /* keep an existing hand-curated manifest (e.g. chat) */ }
     else {
     const manifest = {
       id: `/apps/${a.slug}`,
@@ -65,7 +65,7 @@ const shortOf = (slug, label) => {
     man++;
     }
 
-    // (c) suntik link manifest + daftar SW ke halaman apl (jika tiada)
+    // (c) inject the manifest link + SW registration into the app page (when missing)
     const page = path.join(APPS, `${a.slug}.html`);
     if (!fs.existsSync(page)) continue;
     let html = fs.readFileSync(page, 'utf8');

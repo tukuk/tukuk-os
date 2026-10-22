@@ -1,10 +1,10 @@
 'use strict';
-// ── KOMPLEKS ILMU (study.js) — data kurasi untuk hab /study ──────────────────
-// Prinsip: sumber percuma & self-contained (tiada API berbayar), kandungan
-// Bahasa Inggeris global (dasar SEO situs), dan semua fakta telah semak.
-// Pick harian adalah deterministik (daun tarikh) — stabil untuk pembaca & cache.
+// ── KNOWLEDGE COMPLEX (study.js) — curated data for the /study hub ──────────────────
+// Principle: free & self-contained sources (no paid APIs), content
+// is global English (site SEO policy), and every fact has been checked.
+// The daily pick is deterministic (date as seed) — stable for readers & cache.
 
-// PRNG mulberry32 — seeded, supaya kuiz & susunan tidak berubah dalam sehari.
+// PRNG mulberry32 — seeded so quizzes & ordering don't change within a day.
 function mulberry32(seed) {
   let a = seed >>> 0;
   return function next() {
@@ -25,7 +25,7 @@ function pickDaily(list, seed) {
   return list[(seed || dayIndex()) % list.length];
 }
 
-// Shuffle deterministik (Fisher-Yates dengan PRNG berseed).
+// Deterministic shuffle (Fisher-Yates with a seeded PRNG).
 function shuffleSeeded(arr, seed) {
   const rnd = mulberry32(seed);
   const out = arr.slice();
@@ -36,7 +36,7 @@ function shuffleSeeded(arr, seed) {
   return out;
 }
 
-// —── FAKTA — ringkas, boleh disemak, bertopik. —──────────────────────────────
+// —── FACTS — concise, checkable, on-topic. —──────────────────────────────
 const FACTS = [
   { t: 'Space', s: 'A day on Venus is longer than its year: it spins once every 243 Earth days while orbiting the Sun in 225.' },
   { t: 'Space', s: 'Neutron stars are so dense that a sugar-cube-sized piece of one would weigh about a billion tonnes on Earth.' },
@@ -82,7 +82,7 @@ const FACTS = [
   { t: 'Human world', s: 'The internal-combustion engine did not beat the horse overnight: cars only passed horses as the main US transport around 1915.' },
 ];
 
-// —── TEKA-TEKI (riddles) — teka-teki klasik domain awam. —────────────────────
+// —── RIDDLES — public-domain classic riddles. —────────────────────
 const RIDDLES = [
   { q: 'The more of this there is, the less you see. What is it?', a: 'Darkness.' },
   { q: 'What has to be broken before you can use it?', a: 'An egg.' },
@@ -122,7 +122,7 @@ const RIDDLES = [
   { q: 'What arrives but never stays; what is always new but always expected?', a: 'Tomorrow.' },
 ];
 
-// —── EKSPERIMEN — selamat, bahan rumah, tiada api terbuka/bahan kimia bahaya. —
+// —── EXPERIMENTS — safe, household materials, no open flame/hazardous chemicals. —
 const EXPERIMENTS = [
   { name: 'Density tower', time: '20 min', level: 'easy',
     materials: 'Honey, dish soap, water, vegetable oil, rubbing alcohol (adult to handle), a tall clear glass, food colouring (optional).',
@@ -174,7 +174,7 @@ const EXPERIMENTS = [
     why: 'Salt water is denser than an egg, plain water less dense — so buoyancy flips. Layered liquids create a density staircase, the same effect that lets you float effortlessly in the Dead Sea.' },
 ];
 
-// —── SAINS — penerangan konsep (2–4 ayat setiap perenggan). —─────────────────
+// —── SCIENCE — concept explanations (2–4 sentences per paragraph). —─────────────────
 const SCIENCE = [
   { title: 'Gravity — the shape of fall', paras: [
     'Gravity is the mutual attraction of anything with mass. Earth pulls you, you pull Earth — with an equal force, but Earth\'s enormous mass makes its side of the effect invisible.',
@@ -246,7 +246,7 @@ const SCIENCE = [
     'Climate is the budget; weather is one day\'s spending. The trend shows up as warmer averages plus more energy in heat, drought, storms and sea-level rise (currently about 3.7 mm a year).'] },
 ];
 
-// —── SEJARAH — mercu tanda kronologi (tahun, tajuk, inti). —──────────────────
+// —── HISTORY — chronological milestones (year, title, core point). —──────────────────
 const HISTORY = [
   { y: 'c. 3400 BC', t: 'Writing begins in Sumer', d: 'Accounting tokens evolved into cuneiform wedges pressed in clay — the first technology that let ideas outlive their speakers.' },
   { y: 'c. 3100 BC', t: 'Egypt unites under one crown', d: 'Narmer joins Upper and Lower Egypt, launching 3,000 years of pharaonic civilisation along the Nile.' },
@@ -289,7 +289,7 @@ const HISTORY = [
   { y: '2012–2020s', t: 'Deep learning, CRISPR, and mRNA vaccines', d: 'Neural networks pass human-level tests, gene editing (CRISPR) wins the 2020 Nobel, and mRNA vaccines race from sequence to jab in under a year — biotech becomes information tech.' },
 ];
 
-// —── GEOGRAFI — rekod dunia (stabil, semak). —────────────────────────────────
+// —── GEOGRAPHY — world records (stable, checked). —────────────────────────────────
 const GEO_RECORDS = [
   ['Highest point', 'Mount Everest — 8,849 m above sea level (2020 joint China/Nepal survey).'],
   ['Lowest land point', 'Shore of the Dead Sea — about −430 m, and falling ~1 m a year.'],

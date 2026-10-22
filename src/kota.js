@@ -1,18 +1,18 @@
 'use strict';
 // ── TUKUK-OS KOTA (/kota) — World City profiles ──────────────────────────────
-// Senarai STATIK kota terkenal dunia (fakta stabil sahaja: negara, rantau,
-// koordinat anggaran) + ringkasan Wikipedia yang diambil SEMASA dan dik_CACHE.
-// Prinsip keselamatan (pelajaran insiden Met + /sejarah): teras halaman sentiasa
-// terrender daripada data tetap → TIDAK BOLEH 503. Ringkasan Wikipedia ialah
-// KAYA-SAHAYA (fail-open): gagal → halaman tetap sah tanpa perihalan. Teks
-// & skop dalam Bahasa Inggeris (internasional). Populasi/deskripsi TIDAK ditulis
-// tangan — diambil daripada ringkasan Wikipedia supaya tidak direka (data honesty).
+// A STATIC list of world-famous cities (stable facts only: country, region,
+// approximate coordinates) + the Wikipedia summary fetched LIVE and cached.
+// Safety principle (the Met incident + /sejarah lesson): the page core always
+// renders from fixed data → it MUST NEVER 503. The Wikipedia summary is a
+// NICE-TO-HAVE (fail-open): failure → the page is still valid, just without a description. Text
+// & scope are in English (international). Population/description are NOT hand-
+// written — they come from the Wikipedia summary so nothing gets invented (data honesty).
 const https = require('https');
 const DATA = require('./kota-data.json');
 
 const UA = 'TukukOS-Kota/1.0 (+https://tukuk.org)';
 const cache = new Map();
-const TTL = 30 * 24 * 60 * 60 * 1000; // ringkasan Wikipedia berubah perlahan
+const TTL = 30 * 24 * 60 * 60 * 1000; // Wikipedia summaries change slowly
 
 function slugify(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -24,7 +24,7 @@ const REGION_ORDER = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania'];
 const CITIES = DATA.map((c) => ({ ...c, slug: slugify(c.name), countrySlug: slugify(c.country) }));
 const C_BY_SLUG = new Map(CITIES.map((c) => [c.slug, c]));
 
-// Kumpul kota ikut negara (untuk pautan silang /negara & "more cities").
+// Group cities by country (for the /negara cross links & "more cities").
 const COUNTRY_MAP = new Map();
 for (const c of CITIES) {
   if (!COUNTRY_MAP.has(c.countrySlug)) COUNTRY_MAP.set(c.countrySlug, { name: c.country, slug: c.countrySlug, region: c.region, items: [] });
@@ -32,7 +32,7 @@ for (const c of CITIES) {
 }
 const COUNTRIES = [...COUNTRY_MAP.values()].sort((a, b) => a.name.localeCompare(b.name));
 
-// Rantau (benua) sebagai halaman hub tersendiri — kira jumlah kota setiap satu.
+// Region (continent) as its own hub page — count the cities in each.
 const REGIONS = REGION_ORDER.map((r) => ({ name: r, slug: slugify(r), count: citiesInRegionCount(r) }));
 const R_BY_SLUG = new Map(REGIONS.map((r) => [r.slug, r]));
 function citiesInRegionCount(r) { let n = 0; for (const c of CITIES) if (c.region === r) n++; return n; }
@@ -42,7 +42,7 @@ function findRegion(slug) { return R_BY_SLUG.get(String(slug || '').toLowerCase(
 function citiesInRegion(region) { return CITIES.filter((c) => c.region === region); }
 function citiesByCountry(countrySlug) { const x = COUNTRY_MAP.get(countrySlug); return x ? x.items : []; }
 
-// ——— HTTP IPv6→IPv4 + timeout (corak bencana.js/sejarah.js) ———
+// ——— HTTP IPv6→IPv4 + timeout (the bencana.js/sejarah.js pattern) ———
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 function httpsGet(url, agent) {
@@ -66,8 +66,8 @@ async function fetchJson(url) {
   try { return await httpsGet(url, v6Agent); } catch { return await httpsGet(url, v4Agent); }
 }
 
-// Ringkasan Wikipedia satu tajuk → {extract, description, thumb, url} atau null.
-// Fail-open: sebarang ralat → null (panggilan render tetap hidang halaman statik).
+// Wikipedia summary for one title → {extract, description, thumb, url} or null.
+// Fail-open: any error → null (the render call still serves the static page).
 async function fetchSummary(wikiTitle) {
   const t = String(wikiTitle || '').trim();
   if (!t) return null;
@@ -88,7 +88,7 @@ async function fetchSummary(wikiTitle) {
     cache.set(key, { data: out, expiresAt: Date.now() + TTL });
     return out;
   } catch {
-    return hit ? hit.data : null; // SWR — basi lebih baik daripada tiada, tapi jangan sekat
+    return hit ? hit.data : null; // SWR — stale beats nothing, but don't block
   }
 }
 

@@ -1,32 +1,32 @@
 /**
- * openai-compat.js — JEMBATAN agent untuk Tukuk Agent (editor AI).
+ * openai-compat.js — the agent BRIDGE for Tukuk Agent (the AI editor).
  *
- * Pembuka Cline/Kilo (dan klien OpenAI-compatible lain) menghantar FULL
- * `messages` + `tools` + `tool_choice` + `stream` dan menjangkakan `tool_calls`
- * balik. `provider.js.callCloud()` TIDAK boleh itu — ia meratakan semuanya
- * kepada satu `prompt` text-only. Modul ini melakukan PASSTHROUGH mentah ke
- * pembekal OpenAI-kind (Groq `openai/gpt-oss-120b`, OpenRouter, OpenAI, xAI,
- * HuggingFace) yang menyokong function-calling, dengan ROTASI + COOLING kuota
- * yang sama dipakai /ask (diimport dari provider.js — tiada logik berganda).
+ * Cline/Kilo clients (and other OpenAI-compatible clients) send the FULL
+ * `messages` + `tools` + `tool_choice` + `stream` and expect `tool_calls`
+ * back. `provider.js.callCloud()` cannot do that — it flattens everything
+ * into one text-only `prompt`. This module does a raw PASSTHROUGH to
+ * OpenAI-kind providers (Groq `openai/gpt-oss-120b`, OpenRouter, OpenAI, xAI,
+ * HuggingFace) that support function-calling, using the same quota ROTATION +
+ * COOLING as /ask (imported from provider.js — no duplicated logic).
  *
- * Perhatian CSP/tepi: JANGAN pernah pulang 5xx untuk kegagalan aplikasi —
- * worker tepi tukuk.org menafsir sebarang 5xx asal sebagai "pelayan mati" lalu
- * menukar dengan mod sandaran. Semua kegagalan dipetakan ke 4xx.
+ * CSP/edge note: NEVER return 5xx for application failures —
+ * the tukuk.org edge worker reads any upstream 5xx as "server down" and
+ * switches to fallback mode. All failures are mapped to 4xx.
  */
 const provider = require('./provider');
 
-// Model stabil yang diiklankan ke klien. Dipeta kepada model sebenar pembekal
-// yang aktif pada setiap percubaan (rotasi boleh tukar pembekal/model).
+// The stable model advertised to clients. Mapped to the actual provider model
+// that is active on each attempt (rotation may switch provider/model).
 const ADVERTISED_MODEL = 'tukuk-agent';
-// Varian CEPAT: dipeta ke model ringan setiap pembekal (lihat FAST_MODELS).
+// FAST variant: mapped to each provider's lightweight model (see FAST_MODELS).
 const ADVERTISED_MODEL_FAST = 'tukuk-agent-fast';
 
 /*
- * Peta model laju bagi tier percuma/`-fast`: pemboleh ubah
- * AGENT_FAST_MODEL_<NAMA> menang; jika tiada, default terbukti ADA + PANTAS
- * pada akaun Groq kita (openai/gpt-oss-20b balas ±0.9s, lebih ringan daripada
- * 120b). llama-3.1-8b-instant SUDAH DITANGGALKAN Groq (404) — jangan guna.
- * Pembekal tanpa default hanya guna model biasa (tiada 404 model).
+ * Fast-model map for the free/`-fast` tier: the
+ * AGENT_FAST_MODEL_<NAME> variable wins; if absent, a default proven to EXIST + be QUICK
+ * on our Groq account (openai/gpt-oss-20b replies in ±0.9s, lighter than
+ * 120b). llama-3.1-8b-instant is RETIRED by Groq (404) — do not use it.
+ * Providers without a default just use the regular model (no model 404s).
  */
 const FAST_MODELS = {
   groq: process.env.AGENT_FAST_MODEL_GROQ || 'openai/gpt-oss-20b',
@@ -38,18 +38,18 @@ function fastModelFor(name) {
   return process.env[key] || FAST_MODELS[String(name)] || '';
 }
 
-// Pembekal yang `kind:'openai'` tetapi TIDAK faham `tools`/`tool_calls`.
-// litert (gemma3-1b pinggir) menjawab 200 dengan text sahaja dan MENJAUH
-// fungsi — kalau ia masuk rotasi agen (cth bila aiProvider=admin = litert),
-// mod Agent kliennya jadi bisu tool. Klien bolt.diy/Cline perlukan tool_calls.
+// Providers with `kind:'openai'` that do NOT understand `tools`/`tool_calls`.
+// litert (edge gemma3-1b) answers 200 with text only and AVOIDS
+// tooling — if it enters the agent rotation (e.g. when aiProvider=admin = litert),
+// the client's Agent mode goes tool-silent. bolt.diy/Cline clients need tool_calls.
 const NO_TOOLS_PROVIDERS = new Set(['litert']);
 
-// Hanya pembekal `kind:'openai'` yang faham /chat/completions + tools. Gemini,
-// Cloudflare (Workers AI) diLANGGAU di sini — mereka text-only.
-// Pengecualian: 'ollama-cloud' disimpan sebagai 'ollama-native' dalam
-// provider.js, TETAPI api.ollama.com juga menyajikan /v1/chat/completions
-// (format OpenAI) dengan sokongan tool untuk gpt-oss — jadi kita petakan ke
-// bentuk OpenAI di sini sahaja, tanpa mengubah logik /ask sedia ada.
+// Only `kind:'openai'` providers understand /chat/completions + tools. Gemini,
+// Cloudflare (Workers AI) are SKIPPED here — they are text-only.
+// Exception: 'ollama-cloud' is stored as 'ollama-native' in
+// provider.js, BUT api.ollama.com also serves /v1/chat/completions
+// (OpenAI format) with tool support for gpt-oss — so we map it to the
+// OpenAI shape here only, leaving the existing /ask logic untouched.
 function openaiProviders() {
   return provider
     .listCloudProviders()
@@ -57,8 +57,8 @@ function openaiProviders() {
     .filter((p) => p.kind === 'openai' && p.baseUrl && !NO_TOOLS_PROVIDERS.has(p.name));
 }
 
-// Senarai model untuk GET /v1/models — satu ID stabil sahaja supaya klien tidak
-// tersangkut pada model pembekal tertentu yang mungkin bertukar bila rotasi.
+// The model list for GET /v1/models — just one stable ID so clients don't get
+// stuck on a specific provider model that rotation may swap out.
 function listModels() {
   return [
     {
@@ -76,9 +76,9 @@ function listModels() {
   ];
 }
 
-// Satu percubaan ke SATU pembekal. Body diteruskan HANYLA dengan `model`
-// dipaksa ke model pembekal (menjamin model function-calling digunakan walau
-// klien hantar ID lain). Authorization + header per-pembekal ditangani di sini.
+// One attempt against ONE provider. The body is forwarded ONLY with `model`
+// forced to the provider's model (guaranteeing a function-calling model is used even if
+// the client sends a different ID). Authorization + per-provider headers are handled here.
 async function callUpstream(p, fwdBody, fetchImpl, timeoutMs, model) {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` };
   if (p.name === 'openrouter') {
@@ -95,14 +95,14 @@ async function callUpstream(p, fwdBody, fetchImpl, timeoutMs, model) {
 }
 
 /**
- * cubaRotation(body, { fetchImpl, timeoutMs })
- *  → { ok:true, provider, response }   (response = upstream fetch Response; pemanggil paip)
+ * chatWithRotation(body, { fetchImpl, timeoutMs })
+ *  → { ok:true, provider, response }   (response = the upstream fetch Response; the caller pipes it)
  *  → { ok:false, status, error, rejected }
  *
- * Rotasi: langkau pembekal cooling; pada ralat kuota (429/402) tandai cooling
- * lalu cuba pembekal seterusnya. Kegagalan BUKAN kuota (cth 400 pembekal) juga
- * mencuba pembekal seterusnya tetapi TIDAK menjejaskan cooling. Semua habis →
- * 429 (kuota) atau 424 (ralat lain). Tiada 5xx.
+ * Rotation: skip cooling providers; on a quota error (429/402) mark cooling
+ * then try the next provider. NON-quota failures (e.g. a provider 400) also
+ * try the next provider but do NOT affect cooling. All exhausted →
+ * 429 (quota) or 424 (other errors). Never 5xx.
  */
 async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs = 120000, fast = false } = {}) {
   const messages = body && body.messages;
@@ -120,8 +120,8 @@ async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs 
     };
   }
 
-  // Teruskan field OpenAI yang sah; buang `model` (kami paksa) & apa-apa sampler
-  // yang boleh merosakkan function-calling. `tools`/`tool_choice` wajib lalu.
+  // Keep valid OpenAI fields; drop `model` (we force it) and any sampler that
+  // could break function-calling. `tools`/`tool_choice` must pass through.
   const { model: _drop, ...rest } = body;
 
   const rejected = [];
@@ -145,19 +145,19 @@ async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs 
         provider.markCooling(p.name, provider.quotaCooldownMs(err));
       }
       /*
-       * Model laju tak dikenal pasti (400/404) — JANGAN tandai kuota/cooling;
-       * rotasi biasa (model pembekal) masih peluang kedua yang betul.
+       * An unrecognised fast model (400/404) — do NOT mark quota/cooling;
+       * normal rotation (the provider model) is still the correct second chance.
        */
       if (useModel && (err.status === 400 || err.status === 404)) {
-        rejected.push({ provider: p.name, reason: `fast model ditolak: ${err.message}` });
+        rejected.push({ provider: p.name, reason: `fast model rejected: ${err.message}` });
         try {
           const res2 = await callUpstream(p, rest, fetchImpl, timeoutMs, p.model);
           if (res2.ok) return { ok: true, provider: p.name, model: p.model, response: res2 };
-        } catch { /* jatuh ke bawah sebagai rejection biasa */ }
+        } catch { /* falls through as a normal rejection */ }
       }
       rejected.push({ provider: p.name, reason: err.message });
     } catch (err) {
-      // Timeout/ralat rangkaian — guna isQuotaError untuk consistency.
+      // Timeout/network errors — use isQuotaError for consistency.
       if (provider.isQuotaError(err)) sawQuota = true;
       rejected.push({ provider: p.name, reason: String((err && err.message) || err) });
     }

@@ -1,10 +1,10 @@
 'use strict';
 // ── TUKUK-OS WILDLIFE ATLAS (/hidupan) — iNaturalist API ─────────────────────
-// Sumber: api.inaturalist.org — PERCUMA tanpa kunci (had anonim rendah; semua
-// respons di-cache panjang + permintaan minimum). Rekod gred-kajian dengan foto
-// berlesen Creative Commons; atribusi setiap foto dipaparkan seperti diminta
-// lesen. ID takson TIDAK dihardcode — dicari semasa via exact_name dan dipaut
-// dalam cache 30 hari supaya ralat nama saintifik tidak menjejaskan tapak.
+// Source: api.inaturalist.org — FREE with no key (low anonymous limits; all
+// responses are cached long-term + requests minimized). Research-grade records with
+// Creative Commons-licensed photos; every photo's attribution is shown exactly as the
+// license requires. Taxon IDs are NOT hardcoded — resolved at runtime via exact_name and cached
+// for 30 days so a scientific-name typo can never hurt the site.
 const axios = require('axios');
 const https = require('https');
 
@@ -25,8 +25,8 @@ function cacheSet(key, data, ttlMs) { cache.set(key, { data, expiresAt: Date.now
 const TTL_TAXON = 30 * 24 * 60 * 60 * 1000;
 const TTL_OBS = 24 * 60 * 60 * 1000;
 
-// Kurasi trek satwa — nama saintifik sah (sistem Binomial), blurb edukatif BM/EN
-// jujur & dilabel konservatif. Slug menjadi URL halaman.
+// Curated animal tracks — valid scientific names (binomial system), honest educational
+// blurbs & conservatively labelled. The slug becomes the page URL.
 const TAXA = [
   { slug: 'monarch-butterfly', sci: 'Danaus plexippus', icon: '🦋', name: 'Monarch Butterfly',
     blurb: 'Famous for a two-to-three-generation migration across a continent each autumn — no individual makes the round trip, yet the map is inherited. Milkweed is the only nursery its caterpillars accept.' },
@@ -65,7 +65,7 @@ function findTaxon(slug) {
   return TAXA.find((t) => t.slug === String(slug || '')) || null;
 }
 
-// Selesaikan nama saintifik → takon iNaturalist (exact match dahulu).
+// Resolve a scientific name → iNaturalist taxon (exact match first).
 async function resolveTaxon(t) {
   const key = `taxon:${t.sci}`;
   const hit = cacheGet(key);
@@ -85,7 +85,7 @@ async function resolveTaxon(t) {
   return out;
 }
 
-// Rekod kajian bertopik dengan foto (attribution CC disertakan).
+// Research-grade records for a taxon with photos (CC attribution included).
 async function getObservations(taxonId, want) {
   const key = `obs:${taxonId}:${want}`;
   const hit = cacheGet(key);

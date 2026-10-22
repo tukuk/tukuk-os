@@ -48,7 +48,7 @@ async function fetchJson(url, { params, ttl, key } = {}) {
 }
 
 /**
- * Gempa bumi terkini — USGS (awam, tanpa kunci API).
+ * Latest earthquakes — USGS (public, no API key).
  */
 async function getEarthquakes({ limit = 20, minMagnitude = 0 } = {}) {
   const size = Math.min(Math.max(num(limit, 20), 1), 50);
@@ -87,7 +87,7 @@ async function getEarthquakes({ limit = 20, minMagnitude = 0 } = {}) {
 }
 
 /**
- * Maklumat negara — World Bank (awam, tanpa kunci API) + FlagCDN.
+ * Country information — World Bank (public, no API key) + FlagCDN.
  */
 async function searchCountries({ q = '', limit = 12 } = {}) {
   const query = clampText(q, 60).toLowerCase();
@@ -150,7 +150,7 @@ async function searchCountries({ q = '', limit = 12 } = {}) {
 }
 
 /**
- * Geokod — Open-Meteo Geocoding (awam, tanpa kunci API).
+ * Geocoding — Open-Meteo Geocoding (public, no API key).
  */
 async function geocode({ q = '', limit = 8 } = {}) {
   const query = clampText(q, 80);
@@ -178,7 +178,7 @@ async function geocode({ q = '', limit = 8 } = {}) {
 }
 
 /**
- * Cuaca semasa + ramalan 7 hari — Open-Meteo (awam, tanpa kunci API).
+ * Current weather + 7-day forecast — Open-Meteo (public, no API key).
  */
 async function getWeather({ lat, lon, days = 5 } = {}) {
   const latitude = num(lat, null);
@@ -228,7 +228,7 @@ async function getWeather({ lat, lon, days = 5 } = {}) {
 }
 
 /**
- * Waktu terbit & terbenam — Sunrise-Sunset API (awam, tanpa kunci API).
+ * Sunrise & sunset times — Sunrise-Sunset API (public, no API key).
  */
 async function getSunTimes({ lat, lon, date } = {}) {
   const latitude = num(lat, null);
@@ -279,7 +279,7 @@ function decodeXml(value) {
 }
 
 /**
- * Kertas penyelidikan — arXiv (awam, tanpa kunci API).
+ * Research papers — arXiv (public, no API key).
  */
 async function searchArxiv({ q = '', limit = 6 } = {}) {
   const query = clampText(q, 160);
@@ -323,7 +323,7 @@ async function searchArxiv({ q = '', limit = 6 } = {}) {
 }
 
 /**
- * Geolokasi IP pelawat — ipwho.is (awam, tanpa kunci API).
+ * Visitor IP geolocation — ipwho.is (public, no API key).
  */
 async function getIpInfo(ip = '') {
   const target = clampText(ip, 45);

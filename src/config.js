@@ -85,11 +85,11 @@ module.exports = {
     fallbackOnEmpty: bool(process.env.SEARCH_FALLBACK_ON_EMPTY, true)
   },
 
-  // Neural re-ranking. DUA backend:
-  //   1) tempatan  — cross-encoder ONNX (perlukan model Kaggle; lalai MATI).
-  //   2) cloud     — embeddings Workers AI (bi-encoder). Aktif AUTOMATIK bila
-  //                  CLOUDFLARE_API_TOKEN (keizinan Workers AI) wujud; no-op
-  //                  selamat bila tiada. Tiada had keras — latensi dipagari.
+  // Neural re-ranking. TWO backends:
+  //   1) local   — ONNX cross-encoder (needs the Kaggle model; OFF by default).
+  //   2) cloud   — Workers AI embeddings (bi-encoder). ACTIVE AUTOMATICALLY when
+  //                CLOUDFLARE_API_TOKEN (Workers AI permission) exists; a safe
+  //                no-op when it doesn't. No hard caps — latency is bounded.
   rerank: {
     enabled: bool(process.env.RERANK_ENABLED, false),
     modelDir: process.env.RERANK_MODEL_DIR || path.join(__dirname, '..', 'models', 'tukuk-reranker'),
@@ -115,17 +115,17 @@ module.exports = {
     apiKey: process.env.API_KEY || ''
   },
 
-  // Pentadbir: hanya SATU e-mel dibenarkan + WebAuthn passkey.
+  // Admin: only ONE e-mail is allowed + a WebAuthn passkey.
   admin: {
-    // E-mel pemilik yang dibenarkan. Siapa selain ini DITOLAK.
+    // The owner's allowed e-mail. Anyone else is REJECTED.
     email: String(process.env.ADMIN_EMAIL || 'fevianbenjo48@gmail.com').trim().toLowerCase(),
-    // Kata laluan bootstrap (hanya untuk mendaftarkan passkey pertama).
+    // Bootstrap password (only used to register the first passkey).
     bootstrapPassword: process.env.ADMIN_PASSWORD || process.env.ADMIN_PIN || 'tukuk123',
-    // Tempoh sesi login (millisaat). Lalai 8 jam.
+    // Login session duration (milliseconds). Default 8 hours.
     sessionTtlMs: num(process.env.ADMIN_SESSION_TTL_MS, 8 * 60 * 60 * 1000)
   },
 
-  // Konfigurasi WebAuthn (passkey). rpID mesti sepadan dengan domain sebenar.
+  // WebAuthn (passkey) configuration. rpID must match the real domain.
   webauthn: {
     rpName: process.env.WEBAUTHN_RP_NAME || 'Tukuk-OS Admin',
     rpID: process.env.WEBAUTHN_RP_ID || 'tukuk.org',
@@ -135,7 +135,7 @@ module.exports = {
   adsense: {
     enabled: bool(process.env.ADSENSE_ENABLED, true),
     client: process.env.ADSENSE_CLIENT || 'ca-pub-8954948214333501',
-    // Unit sebenar dalam akaun ini (konsol AdSense, Okt 2026):
+    // The real units inside this account (AdSense console, Oct 2026):
     // top=「test banner 1」, in-article=「test banner」, bottom=「test banner 2」.
     slotTop: process.env.ADSENSE_SLOT_TOP || '4776075642',
     slotInArticle: process.env.ADSENSE_SLOT_IN_ARTICLE || '2206273113',
@@ -152,25 +152,25 @@ module.exports = {
     temperature: Number(process.env.LLM_TEMPERATURE ?? 0.2),
     topP: Number(process.env.LLM_TOP_P ?? 0.9),
     maxTokens: num(process.env.LLM_MAX_TOKENS, 120),
-    // Model reasoning cloud (gpt-oss, qwen3, gemini-*-latest) belanja token pada
-    // akal dalaman SEBELUM jawapan; bajet Ollama (≈80) memotong mereka jadi KOSONG.
-    // Cloud murah & laju → beri bajet longgar (ruang akal + jawapan). Override env.
+    // Cloud reasoning models (gpt-oss, qwen3, gemini-*-latest) spend tokens on
+    // internal thinking BEFORE the answer; the Ollama budget (≈80) cuts them to ZERO.
+    // Cloud is cheap & fast → give a generous budget (thinking room + answer). Env override.
     cloudMaxTokens: num(process.env.LLM_CLOUD_MAX_TOKENS, 512),
     contextWindow: num(process.env.LLM_CONTEXT_WINDOW, 2048),
     seed: num(process.env.LLM_SEED, 42),
     timeout: num(process.env.LLM_TIMEOUT, 15000),
-    // BAJET INTERAKTIF: had MASA KESELURUhan bagi fasa LLM /ask (cloud+ollama).
-    // Rotasi cuba pembekal satu-satu; bila melebihi bajet ini → berhenti & guna
-    // ekstraktif serta-merta. Ini MENAMAT kes 37s/60s: pengguna tak menunggu.
+    // INTERACTIVE BUDGET: the OVERALL TIME cap for the /ask LLM phase (cloud+ollama).
+    // Rotation tries providers one by one; once this budget is exceeded → stop & use
+    // the extractive answer immediately. This ENDS the 37s/60s cases: users don't wait.
     budgetMs: num(process.env.BRAIN_BUDGET_MS, 9000),
     retrievalLimit: num(process.env.BRAIN_RETRIEVAL_LIMIT, 4),
     snippetChars: num(process.env.BRAIN_SNIPPET_CHARS, 700),
     minConfidence: Number(process.env.BRAIN_MIN_CONFIDENCE ?? 0.5),
     fastMode: bool(process.env.BRAIN_FAST_MODE, true),
-    // LOCAL-FIRST: aktif melalui BRAIN_LOCAL_FIRST=1 atau setting admin
-    // aiLocalFirst=1. Dalam hibrida semasa ia TIDAK menangguh cloud — cloud dan
-    // Ollama berlumba serentak; localFirst hanya membuang head-start ~1.2s cloud
-    // supaya model lokal mula menjana serta-merta. Lalai mati.
+    // LOCAL-FIRST: enabled via BRAIN_LOCAL_FIRST=1 or the admin setting
+    // aiLocalFirst=1. In the current hybrid it does NOT delay the cloud — cloud and
+    // Ollama race simultaneously; localFirst only drops the ~1.2s cloud
+    // head-start so the local model starts generating right away. Off by default.
     localFirst: bool(process.env.BRAIN_LOCAL_FIRST, false),
     provider: process.env.BRAIN_PROVIDER || 'ollama',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
@@ -179,20 +179,20 @@ module.exports = {
     openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
     xaiApiKey: process.env.XAI_API_KEY || '',
     huggingfaceApiKey: process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN || '',
-    // Cloudflare Workers AI: token (boleh pakai CLOUDFLARE_API_TOKEN jika ia
-    // mempunyai keizinan Workers AI) + account id. Kedua-dua wajib ada.
+    // Cloudflare Workers AI: token (may reuse CLOUDFLARE_API_TOKEN if it
+    // carries the Workers AI permission) + account id. Both are required.
     cloudflareAiToken: process.env.CLOUDFLARE_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '',
     cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
     ollamaCloudApiKey: process.env.OLLAMA_CLOUD_API_KEY || '',
-    // Tier pinggir LiteRT-LM: serve OpenAI-compatible (gemma3-1B int4 +
-    // EmbeddingGemma) di port 8090 pada pelayan ini. HANYA aktif bila
-    // LITERT_HOST ditetapkan eksplisit — default mati supaya CI/laptop tak
-    // cuba menghubungi port yang tiada. Model boleh dioverride LITERT_MODEL.
+    // LiteRT-LM edge tier: serves OpenAI-compatible (gemma3-1B int4 +
+    // EmbeddingGemma) on port 8090 on this server. ONLY active when
+    // LITERT_HOST is set explicitly — off by default so CI/laptops don't
+    // try to reach a port that isn't there. The model is overridable via LITERT_MODEL.
     litertHost: process.env.LITERT_HOST || '',
-    // Susunan rotasi cloud (kiri→kanan). PALING LAJU DULU: groq (LPU ~1s) & gemini-flash
-    // mendahului; cloudflare scout (lambat ~30s+) dihantar ke belakang supaya bajet
-    // interaktif jarang perlu menunggu pembekal lambat. litert (tier pinggir lokal)
-    // paling belakang: sentiasa ada, tiada kuota, tapi paling perlahan.
+    // The cloud rotation order (left→right). FASTEST FIRST: groq (LPU ~1s) & gemini-flash
+    // lead; the cloudflare scout (slow, ~30s+) is sent to the back so the interactive
+    // budget rarely has to wait for a slow provider. litert (the local edge tier) is
+    // last: always available, no quota, but the slowest.
     cloudOrder: process.env.LLM_CLOUD_ORDER || 'groq,gemini-openai,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai,litert'
   },
 
@@ -204,16 +204,16 @@ module.exports = {
     origin: process.env.AGENT_ORIGIN || '',
     timeoutMs: num(process.env.AGENT_TIMEOUT_MS, 120000),
     maxPerMin: num(process.env.AGENT_RATE_PER_MIN, 30),
-    // Tier PERCUMA untuk Tukuk Builder (build.tukuk.org): pelawat tak punya
-    // kunci. freeToken ialah penanda AWAM (sudah terbit di GitHub fork), jadi
-    // perlindungannya = had kadar ketat + kekangan max_tokens, BUKAN kerahsiaan.
+    // FREE tier for Tukuk Builder (build.tukuk.org): visitors have no
+    // key. freeToken is a PUBLIC marker (already published in the GitHub fork), so
+    // its protection = a strict rate cap + max_tokens limits, NOT secrecy.
     freeToken: process.env.AGENT_FREE_TOKEN || '',
     freeMaxPerMin: num(process.env.AGENT_FREE_RATE_PER_MIN, 8),
     freeMaxTokens: num(process.env.AGENT_FREE_MAX_TOKENS, 16384)
   },
 
-  // Editor Tukuk Agent (fork code-server) yang proksi ini dinaung —
-  // tukuk.org/agent → 127.0.0.1:8443 (--auth password di sisinya).
+  // The Tukuk Agent editor (a code-server fork) this proxy fronts —
+  // tukuk.org/agent → 127.0.0.1:8443 (--auth password on its side).
   agentEditor: {
     upstream: process.env.AGENT_EDITOR_UPSTREAM || 'http://127.0.0.1:8443'
   },
@@ -244,18 +244,18 @@ module.exports = {
   nasa: {
     apiKey: process.env.NASA_API_KEY || 'fmALFBwD70rhld4szo2P3qGezLRgTqWH6vLUh2lb',
     baseUrl: 'https://api.nasa.gov',
-    // Auto-update APOD: selang tarikan latar belakang (minit, minimum 5)
+    // APOD auto-update: the background pull interval (minutes, minimum 5)
     apodRefreshMinutes: num(process.env.NASA_APOD_REFRESH_MIN, 30)
   },
 
-  // OpenWeather — tier percuma (1,000 panggilan/hari, 60/min): current, forecast
-  // 5-hari/3-jam, air pollution (+forecast) dan geocoding. Peta jubin juga percuma
-  // dengan appid. Sejarah/OneCall adalah berbayar → TIDAK digunakan di sini.
+  // OpenWeather — free tier (1,000 calls/day, 60/min): current, 5-day/3-hour
+  // forecast, air pollution (+forecast) and geocoding. Tile maps are also free
+  // with the appid. History/OneCall are paid → NOT used here.
   weather: {
     apiKey: process.env.OPENWEATHER_API_KEY || 'c5cdeb2e2261ae767890f8e3c3a651ab',
     baseUrl: 'https://api.openweathermap.org',
     tileBase: 'https://tile.openweathermap.org/map',
-    // Bajet harian konservatif supaya ada ruang untuk retry/manual seed.
+    // Conservative daily budget so there is headroom for retries/manual seeds.
     dailyBudget: num(process.env.OW_DAILY_BUDGET, 950)
   },
 

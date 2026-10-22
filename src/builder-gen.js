@@ -1,11 +1,11 @@
 'use strict';
-// Penjana auto Pembina (/builder): tukar SATU kata/huraian → app (widget + tema + game).
-// Dua laluan: (1) AI bila brain tersedia (server.js guna provider.generateCloudRotation),
-// (2) HEURISTIK deterministik — sentiasa jalan, tanpa AI/rangkaian. Fungsi di sini MURNI
-// (tanpa I/O) supaya boleh diuji unit. server.js yang panggil LLM + gabung laluan.
+// Builder (/builder) auto-generator: turn ONE word/description → an app (widgets + theme + game).
+// Two paths: (1) AI when the brain is available (server.js uses provider.generateCloudRotation),
+// (2) a deterministic HEURISTIC — always works, no AI/network. The functions here are PURE
+// (no I/O) so they can be unit-tested. server.js calls the LLM and merges the two paths.
 
-// Types widget yang DIBENARKAN — padan tepat dengan `TYPES` dalam public/builder.html.
-// Sebarang types lain dibuang semasa sanitasi (anti suntikan skrip/widget tak diketahui).
+// Widget types that are ALLOWED — must match `TYPES` in public/builder.html exactly.
+// Any other type is dropped during sanitization (guards against script/unknown-widget injection).
 const KNOWN = new Set(['heading', 'text', 'button', 'image', 'input', 'counter', 'toggle', 'list', 'card', 'divider', 'spacer', 'faq', 'steps', 'quiz', 'ttt', 'memory', 'mole', 'rps', 'reaction', 'guess', 'br', 'fps', 'runner', 's2048', 'snake', 'breakout', 'blox', 'astro', 'mines']);
 const GAMES = ['ttt', 'memory', 'mole', 'rps', 'reaction', 'guess', 'br', 'fps', 'runner', 's2048', 'snake', 'breakout', 'blox', 'astro', 'mines'];
 
@@ -20,7 +20,7 @@ const PALETTES = [
   { accent: '#30d158', bg: '#0b0f1a', fg: '#eaf0ff', dark: true }
 ];
 
-// Kata kunci → genre game (pilih yang paling awal padan; kalau tiada, hash deterministik).
+// Keywords → game genre (the first match wins; if none, a deterministic hash).
 const GAME_HINTS = [
   [['lari', 'runner', 'jarak', 'kejar', 'hindar'], 'runner'],
   [['tembak', 'battle', 'royale', 'br', 'senjata', 'musuh', 'zombi'], 'br'],
@@ -43,7 +43,7 @@ function pickGame(key) {
   return GAMES[h32(key) % GAMES.length];
 }
 
-// Sanitasi satu widget: hanya props yang diketahui bagi types itu, dengan coercion ringan.
+// Sanitize one widget: only the props known for that type, with light coercion.
 function clipWidget(t, w) {
   const out = { type: t };
   const s = (k, m) => { if (w[k] != null) out[k] = String(w[k]).trim().slice(0, m); };
@@ -51,7 +51,7 @@ function clipWidget(t, w) {
     case 'heading': s('text', 120); out.level = clampNum(w.level, 1, 3, 2); out.align = oneOf(String(w.align), ['left', 'center', 'right'], 'left'); break;
     case 'text': s('text', 600); out.align = oneOf(String(w.align), ['left', 'center', 'right'], 'left'); break;
     case 'button': s('label', 40); s('href', 200); out.variant = oneOf(String(w.variant), ['primary', 'ghost'], 'primary'); out.fullWidth = Boolean(w.fullWidth); break;
-    case 'image': s('src', 0); s('alt', 60); s('caption', 80); out.radius = clampNum(w.radius, 0, 50, 12); break; // src dipaksa kosong (tiada dataURL besar/luar)
+    case 'image': s('src', 0); s('alt', 60); s('caption', 80); out.radius = clampNum(w.radius, 0, 50, 12); break; // src is forced empty (no large/external dataURL)
     case 'input': s('label', 40); s('placeholder', 60); out.kind = oneOf(String(w.kind), ['text', 'number', 'email', 'tel', 'date'], 'text'); break;
     case 'counter': s('label', 40); out.value = clampNum(w.value, -100000, 100000, 0); out.step = clampNum(w.step, 1, 1000, 1); break;
     case 'toggle': s('label', 40); out.on = Boolean(w.on); break;
@@ -67,12 +67,12 @@ function clipWidget(t, w) {
     case 'guess': out.max = clampNum(w.max, 1, 9999, 100); break;
     case 'br': out.enemies = clampNum(w.enemies, 1, 15, 5); out.zoneSpeed = clampNum(w.zoneSpeed, 5, 60, 10); out.mapSize = clampNum(w.mapSize, 200, 1400, 600); break;
     case 'fps': out.enemies = clampNum(w.enemies, 1, 10, 4); out.zoneSpeed = clampNum(w.zoneSpeed, 10, 60, 25); break;
-    default: break; // ttt/rps/reaction/runner tiada props
+    default: break; // ttt/rps/reaction/runner have no props
   }
   return out;
 }
 
-// Sanitasi penuh output (AI atau heuristic) → bentuk {appName,theme,widgets} yang selamat.
+// Full sanitization of the output (AI or heuristic) → a safe {appName,theme,widgets} shape.
 function sanitizeApp(o) {
   const src = o && typeof o === 'object' ? o : {};
   const appName = String(src.appName || '').trim().slice(0, 40) || 'App';
@@ -95,7 +95,7 @@ function sanitizeApp(o) {
   return { appName, theme, widgets };
 }
 
-// Ekstrak objek JSON pertama daripada teks model (toleransi ``` fence + teks sekitar).
+// Extract the first JSON object from the model's text (tolerates ``` fences + surrounding text).
 function parseGenJson(text) {
   let s = String(text || '');
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -114,8 +114,8 @@ function parseGenJson(text) {
   try { return JSON.parse(s.slice(start, end + 1)); } catch { return null; }
 }
 
-// Bina deterministik tanpa AI — sentiasa hasilnya app lengkap + satu game.
-// `salt` memutar palet & genre game (varian/seed); `style` membias palet gelap/cerah.
+// Deterministic build without AI — always produces a complete app + one game.
+// `salt` rotates the palette & game genre (variant/seed); `style` biases the palette dark/light.
 const DARK = PALETTES.filter((p) => p.dark);
 const LIGHT = PALETTES.filter((p) => !p.dark);
 function poolFor(style) {
@@ -124,7 +124,7 @@ function poolFor(style) {
   if (/cerah|light|putih|white|minimalis|minimal|clean|pastel/.test(s)) return LIGHT.length ? LIGHT : PALETTES;
   return PALETTES;
 }
-// Warna hex → RGB + luminans (putuskan bg gelap/cerah ikut 'warna utama' pilihan).
+// Hex color → RGB + luminance (decide dark/light bg from the chosen "primary color").
 function hexRgb(h) {
   let x = String(h || '').trim().replace('#', '');
   if (x.length === 3) x = x.split('').map((c) => c + c).join('');
@@ -137,7 +137,7 @@ function lum(h) {
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 }
 function isHexColor(v) { return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(v || '').trim()); }
-// Padanan kata berkaitan untuk cadangan idea (MURNI — senarai masuk sebagai arg).
+// Related-word matching for idea suggestions (PURE — the word list comes in as an arg).
 function matchWords(list, query, n) {
   const q = String(query || '').toLowerCase().trim(); if (!q) return [];
   const cap = Math.max(1, Math.min(12, Number(n) || 6));
@@ -158,7 +158,7 @@ function buildOne(idea, salt, style, opts) {
   const name = clean.charAt(0).toUpperCase() + clean.slice(1);
   const pool = poolFor(style);
   const pal = Object.assign({}, pool[(h32(key) + s) % pool.length]);
-  // 'warna utama' eksplisit → paksa aksen; bg diputuskan ikut luminans aksen.
+  // An explicit "primary color" → force the accent; the bg follows the accent's luminance.
   if (isHexColor(o.color)) {
     pal.accent = String(o.color).trim();
     const L = lum(pal.accent);
@@ -166,7 +166,7 @@ function buildOne(idea, salt, style, opts) {
     else if (L != null) { pal.bg = '#ffffff'; pal.fg = '#16181d'; pal.dark = false; }
   }
   const baseGame = pickGame(key);
-  const game = GAMES[(GAMES.indexOf(baseGame) + s + GAMES.length) % GAMES.length]; // salt 0 → padan kata kunci
+  const game = GAMES[(GAMES.indexOf(baseGame) + s + GAMES.length) % GAMES.length]; // salt 0 → keyword match
   const widgets = [
     { type: 'heading', text: name, level: 2, align: 'center' },
     { type: 'text', text: `All about ${clean} — fast, simple & fun.`, align: 'center' },
@@ -183,7 +183,7 @@ function buildOne(idea, salt, style, opts) {
 }
 function heuristicBuild(idea, style, opts) { return buildOne(idea, 0, style, opts); }
 
-// N calon heuristik berbeza (palet + game berputar). `offset` menggeser salt → "Jana semula" berbeza.
+// N distinct heuristic candidates (rotating palette + game). `offset` shifts the salt → a different "Regenerate".
 function heuristicVariants(idea, n, style, offset, opts) {
   const count = Math.max(1, Math.min(6, Number(n) || 1));
   const base = Math.max(0, Math.floor(Number(offset) || 0));
@@ -192,7 +192,7 @@ function heuristicVariants(idea, n, style, offset, opts) {
   return out;
 }
 
-// Arahan sistem untuk LLM — paksa JSON sah sahaja + types yang dibenarkan.
+// System instruction for the LLM — force valid JSON only + the allowed types.
 const SYSTEM_PROMPT = [
   'You are a no-code app generator. Reply ONLY with a single JSON object, no other text.',
   'Schema: {"appName":string(<=40),"theme":{"accent":"#rrggbb","bg":"#rrggbb","fg":"#rrggbb","dark":bool,"sub":string,"desc":string},"widgets":[...]}',
@@ -201,24 +201,24 @@ const SYSTEM_PROMPT = [
   'Only 4-8 widgets. Keep all text short. No raw HTML/scripts inside values.'
 ].join(' ');
 
-// Putuskan sama ada sesuatu idea WAJAR menghabiskan token AI, atau cukup
-// templat deterministik (0 token). Prinsip: jimat awan — heuristik dulu.
-//   true  → idea panjang/berperincis, atau pengguna minta AI secara eksplisit.
-//   false → satu/dua patah kata, atau padan genre game yang sudah ada templat.
+// Decide whether an idea DESERVES spending AI tokens, or whether a
+// deterministic template (0 tokens) is enough. Principle: save the cloud — heuristic first.
+//   true  → a long/detailed idea, or the user explicitly asked for AI.
+//   false → a one/two-word idea, or a game genre that already has a template.
 function needsAI(idea, opts) {
-  if (opts && opts.ai) return true; // butang "✨ AI" ditekan → hormati permintaan
+  if (opts && opts.ai) return true; // the "✨ AI" button was pressed → honor the request
   const q = String(idea || '').toLowerCase().trim();
   if (!q) return false;
   const words = q.split(/\s+/).filter(Boolean);
   if (/\bai\b|cerdas|pintar|smart|khusus|\bkhas\b|custom|reka khas|berperincis|detail|complex|canggih/.test(q)) return true;
-  // Padan genre game yang builder sudah punya templat → jangan bazir AI.
+  // A game genre the builder already has a template for → don't waste AI.
   if (GAME_HINTS.some(([ws]) => ws.some((w) => q.includes(w)))) return false;
   if (words.length <= 2 && q.length <= 24) return false;
   return words.length >= 6 || q.length >= 48;
 }
 
-// Kunci cache deterministik bagi hasil generate. `useAI` dimasukkan supaya
-// permintaan "plain" vs "AI polish" tak berkongsi cache.
+// Deterministic cache key for generated results. `useAI` is included so that a
+// "plain" and an "AI polish" request never share the cache.
 function genCacheKey(o) {
   const src = o && typeof o === 'object' ? o : {};
   const norm = (v) => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');

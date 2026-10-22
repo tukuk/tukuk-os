@@ -1,17 +1,17 @@
 'use strict';
 /**
- * Tukuk Templates — perpustakaan templat HTML standalone (1 prompt → terus siap).
+ * Tukuk Templates — a library of standalone HTML templates (1 prompt → ready to run).
  *
- * 49 game/aplikasi single-file yang TERBUKTI: 44 dipulihkan daripada sejarah git
- * (commit pivot `b0542e7` membuangnya dari public/apps) + 5 game 3D canvas baru
- * (fps/racer/soccer/flight/basket). Disimpan sebagai ASET
- * DALAMAN di `templates/` — BUKAN public/apps, jadi ia TIDAK muncul di /store,
- * /sitemap.xml atau nav awam (keputusan pivot AdSense dikekalkan). Hanya contoh
- * yang DIENERBITKAN ke /a/<slug> boleh diakses umum.
+ * 49 PROVEN single-file games/apps: 44 recovered from git history
+ * (the pivot commit `b0542e7` dropped them from public/apps) + 5 new canvas 3D games
+ * (fps/racer/soccer/flight/basket). They are stored as INTERNAL assets in
+ * `templates/` — NOT public/apps, so they do NOT appear in /store,
+ * /sitemap.xml or the public nav (the AdSense pivot decision stands). Only examples
+ * PUBLISHED to /a/<slug> are publicly reachable.
  *
- * Fungsi MURNI (detect/sanitize/personalize/extractHtml) boleh diuji unit tanpa
- * I/O; `get()` sahaja yang baca cakera (dengan cache mtime). Tiada rangkaian /
- * arbitrary code di sini.
+ * PURE functions (detect/sanitize/personalize/extractHtml) can be unit-tested without
+ * I/O; only `get()` touches disk (with an mtime cache). No network /
+ * arbitrary code here.
  */
 
 const fs = require('fs');
@@ -19,18 +19,18 @@ const path = require('path');
 
 const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'templates');
 
-// Token tema (padan public/theme.css dark) — disuntik selepas sanitasi supaya
-// 44/45 templat yang memakai var(--accent/--bg/...) kekal berwarna dalam CSP
-// sandbox /a/<slug> (default-src 'none'; theme.css & theme.js dibuang).
+// Theme tokens (matching public/theme.css dark) — injected after sanitisation so
+// the 44/45 templates using var(--accent/--bg/...) keep their colours under the CSP
+// sandbox at /a/<slug> (default-src 'none'; theme.css & theme.js are stripped).
 const THEME_STYLE = '<style id="tk-theme">:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;'
   + '--text:#e6e9ef;--muted:#9aa3b2;--accent:#4c8dff;--accent-fill:#2a6edb;'
   + '--accent-glow:rgba(76,141,255,0.2);--mark:#ffd54a;--card:#181d2a;--code-bg:#12151c;'
   + '--gold:#ffd54a;--danger:#ff5555;--success:#4cd964;color-scheme:dark;}</style>';
 
-// Registry: key = nama fail dalam templates/ (tanpa .html). map KECUALI (Leaflet CDN
-// luar → disekat CSP sandbox). hints = ms/en untuk pengesanan (lowercase).
+// Registry: key = the file name inside templates/ (without .html). map EXCEPT (external Leaflet CDN
+// → blocked by the sandbox CSP). hints = ms/en for detection (lowercase).
 const REGISTRY = [
-  // ── Aplikasi / alat ──
+  // ── Apps / tools ──
   { key: 'notes', kind: 'app', genre: null, title: 'Notes', ic: '📝', hints: 'notes nota catat menulis text pad sticky memo' },
   { key: 'calc', kind: 'app', genre: null, title: 'Calculator', ic: '🧮', hints: 'calculator kira kalkulator math arithmetic numeric' },
   { key: 'todo', kind: 'app', genre: null, title: 'To-Do', ic: '✅', hints: 'todo task list senarai kerja tugas checklist' },
@@ -59,22 +59,22 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Buang semua rujukan luar (CSP sandbox akan sekatnya) + suntik token tema supaya
-// var(--...) tetap resolved. Kembalikan HTML self-contained.
+// Drop every external reference (the sandbox CSP would block it) + inject the theme tokens so
+// var(--...) stays resolved. Returns self-contained HTML.
 function sanitize(raw) {
   let out = String(raw || '');
   out = out.replace(/<script[^>]*\bsrc\s*=\s*["'][^"']*["'][^>]*>\s*<\/script>/gi, ''); // <script src=...></script>
-  out = out.replace(/<link\b[^>]*>/gi, '');    // semua <link ...> (theme.css, canonical, icon, manifest)
+  out = out.replace(/<link\b[^>]*>/gi, '');    // all <link ...> (theme.css, canonical, icon, manifest)
   out = out.replace(/<base\b[^>]*>/gi, '');
   if (!/^\s*<!DOCTYPE/i.test(out)) out = '<!DOCTYPE html>\n' + out;
-  // Buang token lama kalau ada, lalu suntik sekali selepas <head>.
+  // Remove an old token if present, then inject exactly once after <head>.
   out = out.replace(/<style id="tk-theme">[\s\S]*?<\/style>/gi, '');
   if (/<head[^>]*>/i.test(out)) out = out.replace(/<head[^>]*>/i, (m) => m + THEME_STYLE);
   else out = THEME_STYLE + out;
   return out;
 }
 
-// Cache hasil sanitize ikut mtime fail supaya setiap get() tak baca/bcacca cakera.
+// Cache the sanitize result per file mtime so get() doesn't hit the disk on every call.
 const cache = new Map(); // key → { mtime, html }
 function get(key) {
   const meta = BY_KEY.get(String(key || ''));
@@ -91,10 +91,10 @@ function get(key) {
   return html;
 }
 
-// Padankan huraian bebas → templat terbaik (ms/en). Skor = bilangan hint yang
-// muncul SEBAGAI PERKATAAN penuh (bukan substr dalam perkataan lain — elak
-// "berbilang"→"bil"→tip). Awalan longgar (≥4 aksara) cover singular/plural. Seri
-// → hash deterministik. null bila tiada padanan cukup kuat (skor < 1).
+// Match a free-text description → the best template (ms/en). Score = how many hints
+// appear as FULL WORDS (not a substring inside another word — avoids
+// "berbilang"→"bil"→tip). Loose prefixes (≥4 chars) cover singular/plural. Ties
+// → a deterministic hash. null when no match is strong enough (score < 1).
 function h32(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function detect(goal) {
   const q = String(goal || '').toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, ' ').trim();
@@ -108,8 +108,8 @@ function detect(goal) {
     let score = 0;
     for (const h of hints) {
       if (!h) continue;
-      if (wset.has(h)) { score++; continue; } // padanan perkataan penuh
-      if (h.length >= 4) { // awalan longgar: "weathers"↔"weather", plurals
+      if (wset.has(h)) { score++; continue; } // full-word match
+      if (h.length >= 4) { // loose prefix: "weathers"↔"weather", plurals
         for (const w of words) { if (w.length >= 4 && (w.startsWith(h) || h.startsWith(w))) { score += 0.5; break; } }
       }
     }
@@ -121,8 +121,8 @@ function detect(goal) {
   return { key: chosen.key, kind: chosen.kind, genre: chosen.genre, title: chosen.title, ic: chosen.ic, score: bestScore };
 }
 
-// Pilih templat paling hampir untuk fallback (tiada padanan kata kunci): putar
-// mengikut hash idea supaya output stabil & pelbagai. `kindFilter` ('game'|'app'|'') .
+// Pick the closest template as a fallback (no keyword match): rotate
+// by a hash of the idea so the output stays stable & varied. `kindFilter` ('game'|'app'|'') .
 function nearest(goal, kindFilter) {
   const pool = kindFilter ? REGISTRY.filter((r) => r.kind === kindFilter) : REGISTRY;
   if (!pool.length) return null;
@@ -130,8 +130,8 @@ function nearest(goal, kindFilter) {
   return { key: r.key, kind: r.kind, genre: r.genre, title: r.title, ic: r.ic };
 }
 
-// Suai tapak: tajuk + <h1> + aksen. Konservatif — hanya sentuh <title>, h1 pertama
-// & tambah override --accent; struktur game tak disentuh.
+// Site branding: title + <h1> + accent. Conservative — only touches <title>, the first h1
+// & adds a --accent override; the game structure is left alone.
 function personalize(html, opts) {
   const o = opts && typeof opts === 'object' ? opts : {};
   let out = String(html || '');
@@ -147,12 +147,12 @@ function personalize(html, opts) {
   return out;
 }
 
-// Senarai ringkas untuk galeri/API (tanpa HTML).
+// A short listing for the gallery/API (no HTML).
 function list() {
   return REGISTRY.map((r) => ({ key: r.key, kind: r.kind, genre: r.genre, title: r.title, ic: r.ic }));
 }
 
-// Ekstrak dokumen HTML penuh daripada teks model (``` fence atau <!DOCTYPE…</html>).
+// Extract the full HTML document from model text (a ``` fence or <!DOCTYPE…</html>).
 function extractHtml(text) {
   let s = String(text || '');
   const fence = s.match(/```(?:html)?\s*([\s\S]*?)```/i);
@@ -166,7 +166,7 @@ function extractHtml(text) {
   return /<\s*(html|body|div|canvas|script|style)/i.test(doc) ? doc : null;
 }
 
-// Arahan sistem untuk cabang LLM: satu fail HTML lengkap, tanpa sumber luar.
+// The system prompt for the LLM branch: one complete HTML file, no external resources.
 const LLM_SYS = [
   'You are an expert single-file web app/game generator. Reply with ONLY one complete HTML document, no prose before or after.',
   'The document MUST be fully self-contained: all CSS and JavaScript inline. NEVER reference any external resource (no http/https URLs, no <script src>, no <link rel=stylesheet>, no CDN, no fonts). It must run offline inside a strict sandbox.',

@@ -7,14 +7,14 @@ const BOILERPLATE = [
   'svg', 'template', 'button', 'select', 'video', 'audio', 'object', 'embed',
   '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]', '[role="dialog"]',
   '[role="search"]', '[aria-hidden="true"]', '[hidden]',
-  // Navigasi bahasa dan UI yang tidakHernandez
+  // Language navigation and UI chrome that isn't article content
   '#p-lang-btn', '#siteNotice', '.mw-editsection', '.reflist', '.navbox',
   '.sidebar', '.sistersitebox', '.mw-jump-link', '.shortdescription',
   '.hatnote', '.thumbcaption', '.toc', '#toc', '.catlinks', '.printfooter',
   '.mw-indicators', '.language-list', '.interlanguage-link'
 ].join(', ');
 
-//bekas yang biasanyaAN ada kandungan utama — lebih diutamakan daripada <body>
+// Containers that usually hold the main content — preferred over <body>
 const CONTENT_SELECTORS = [
   'main', 'article', '[role="main"]', '#mw-content-text', '.mw-parser-output',
   '#content', '.post-content', '.entry-content', '.article-content', '#main-content'
@@ -103,7 +103,7 @@ function extract(html, finalUrl) {
   const root = pickContentRoot($);
   const body = root.length ? root.clone() : $('body').clone();
   body.find(BOILERPLATE).remove();
-  // buang skrip dalam kandungan yang disalin
+  // remove scripts inside the cloned content
   body.find('script, style').remove();
 
   const paragraphText = [];

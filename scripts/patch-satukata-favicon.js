@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * patch-satukata-favicon.js — Sisipkan favicon emoji (data-URI SVG) ke dalam
- * templat Satu Kata dan semua halaman generated/ yang sudah wujud, supaya
- * setiap app/game satu-kata ada icon sendiri pada tab pelayar.
+ * patch-satukata-favicon.js — Insert an emoji favicon (data-URI SVG) into
+ * the Satu Kata templates and every existing generated/ page, so
+ * each Satu Kata app/game has its own browser tab icon.
  *
- * Guna: node scripts/patch-satukata-favicon.js
+ * Usage: node scripts/patch-satukata-favicon.js
  */
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +15,7 @@ const targets = [
   path.join(__dirname, 'satu-kata', 'templates', 'app.html'),
   path.join(__dirname, 'satu-kata', 'templates', 'game.html'),
 ];
-// semua halaman generated sedia ada (app/game index)
+// all existing generated pages (app/game index)
 const GEN = path.join(__dirname, '..', 'generated', 'public');
 for (const word of fs.readdirSync(GEN)) {
   for (const sub of ['app', 'game']) {
@@ -27,7 +27,7 @@ for (const word of fs.readdirSync(GEN)) {
 let patched = 0, skipped = 0;
 for (const f of targets) {
   let h = fs.readFileSync(f, 'utf8');
-  if (h.includes("l.rel='icon'")) { skipped++; continue; } // sudah ditampal
+  if (h.includes("l.rel='icon'")) { skipped++; continue; } // already patched
   const m = h.match(/^<script>var CFG = .*;<\/script>$/m);
   if (!m) { console.log('NO CFG line:', f); skipped++; continue; }
   h = h.replace(m[0], m[0] + '\n' + SNIPPET);

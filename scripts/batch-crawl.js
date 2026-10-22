@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * batch-crawl.js — Rantau ramai URL secara berbercit, catat progres, elakkan ulangan.
+ * batch-crawl.js — Crawl many URLs concurrently, track progress, avoid duplicates.
  *
- * Guna:
- *   node scripts/batch-crawl.js                           # guna senarai default
- *   node scripts/batch-crawl.js --seeds seeds/example.txt # guna senarai kustom
+ * Usage:
+ *   node scripts/batch-crawl.js                           # use the default list
+ *   node scripts/batch-crawl.js --seeds seeds/example.txt # use a custom list
  *   node scripts/batch-crawl.js --max 2000 --concurrency 8
  *
- * Keperluan:
- *   - tukuk-os berjalan (systemctl --user status tukuk-os)
- *   - API key dalam .env atau env local (jika RATE_LIMIT_ENABLED=true)
+ * Requirements:
+ *   - tukuk-os running (systemctl --user status tukuk-os)
+ *   - API key in .env or the local env (if RATE_LIMIT_ENABLED=true)
  */
 
 const fs = require('fs');

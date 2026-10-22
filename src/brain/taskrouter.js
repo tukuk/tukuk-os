@@ -1,23 +1,23 @@
 /**
- * Task router — membuat model KECIL menjawab lebih baik untuk SEMUA jenis
- * soalan dengan memberikan BENTUK jawapan yang tepat ikut tugas.
+ * Task router — making the SMALL model answer better for EVERY kind of
+ * question by giving it the right answer SHAPE for the task.
  *
- * Realiti: pada VPS CPU-only (qwen2.5:1.5b) kita tak boleh jadikan model 1.5B
- * itu pakar sejagat. TETAPI kualiti keluaran sangat bergantung pada sama ada
- * arahan prompt sepadan dengan JENIS tugasan. Model kecil yang diminta "senarai
- * bernombor" atau "kod fenced" atau "kira langkah demi langkah" jauh lebih
- * seragam dan tepat daripada arahan generic "answer in 2-4 sentences".
+ * Reality: on a CPU-only VPS (qwen2.5:1.5b) we cannot turn a 1.5B model
+ * into an all-round expert. BUT output quality depends heavily on whether the
+ * prompt instructions match the task KIND. Asked for a "numbered
+ * list" or "fenced code" or "count step by step", a small model is far
+ * more consistent and accurate than with the generic "answer in 2-4 sentences".
  *
- * Pengelasan adalah MULTI-BAHASA (kita baru antarabangsakan /ask): isyarat
- * Melayu/Indonesia/English/Spanish/Portuguese/French/German + angka/operator
- * script-neutral (12*7, 2+2) dan aksara CJK/Arab/Cyrillic untuk kata kunci.
+ * Classification is MULTI-LINGUAL (we just internationalised /ask): Malay/Indonesian/
+ * English/Spanish/Portuguese/French/German cues + numbers/operators are
+ * script-neutral (12*7, 2+2), with CJK/Arabic/Cyrillic characters for the keywords.
  *
- * Kelas: math | code | compare | list | howto | define | general.
+ * Classes: math | code | compare | list | howto | define | general.
  */
 
-// Ekspresi arithmetik murni / separuh (script-neutral): "12*7", "(3+4)/2", "18%of 250".
+// A pure / half arithmetic expression (script-neutral): "12*7", "(3+4)/2", "18%of 250".
 const ARITH_SYM_RE = /(\d+\s*[+/\-*x×÷%^]\s*\d+|\d+\s*(?:%|peratus)\s*(?:of|dari|daripada)\s*\d+)/i;
-// Bentuk perkataan pelbagai bahasa: "12 darab 7", "10 divided by 4", "5 tambah 3".
+// Multi-language word forms: "12 darab 7", "10 divided by 4", "5 tambah 3".
 const ARITH_WORD_RE = /\b\d+\s*(?:darab|dibahagi|bahagi|tambah|tolak|kurang|kali|power|kuasa|times|multiplied\s+by|divided\s+by|plus|minus|to\s+the\s+power)\s*\d+\b/i;
 const ARITH_RE = (q) => ARITH_SYM_RE.test(q) || ARITH_WORD_RE.test(q);
 
@@ -31,8 +31,8 @@ const SIGNALS = {
     ],
   },
   code: {
-    // KOD hanya bila ada NIAT mengkod (kata kerja/token teknikal khusus), BUKAN
-    // sekadar noun teknologi — "apa itu api" ialah DEFINISI, bukan minta kod.
+    // CODE only when there is a CODING INTENT (a verb/specific technical token), NOT
+    // just a technology noun — "apa itu api" is a DEFINITION, not a request for code.
     re: [
       /\b(kode|kod|code|script|snippet|function|regex|implement|compile|debug|syntax|variable|loop|array|class|method|async|await)\b/i,
       /\b(tulis|buatkan|buat|write|generate|create|make|show me)\b[^.?!]*\b(javascript|typescript|python|java|css|html|sql|bash|json|code|program|api|function|script|query)\b/i,
@@ -66,8 +66,8 @@ const SIGNALS = {
   },
 };
 
-// Arahan BENTUK jawapan (English ke model, tetapi WAJIB jawab ikut bahasa
-// soalan — dipertegas di sini supaya bentuk + bahasa serentak dipatuhi).
+// Answer-SHAPE instructions (English to the model, but it MUST answer in the
+// question's language — restated here so shape + language are obeyed together).
 const GUIDANCE = {
   math:
     'This is a numeric/arithmetric question. Compute it STEP BY STEP (show the short ' +
@@ -96,12 +96,12 @@ const GUIDANCE = {
 const path = require('path');
 
 /**
- * Model AI milik sendiri ("Tukuk-Brain Mini") — softmax dilatih
- * scripts/train-brain.js pada data carian/soalan server ini. Regex di atas
- * ialah GURU berketepatan tinggi; model hanya MELAPISKAN CELAH: bila semua
- * regex terlepas (calon 'general'), model yang yakin boleh tukar kelas.
- * Fail: data/tukuk-brain-v1.json (atau env BRAIN_MODEL_FILE). Tiada fail →
- * tingkah laku lama sama sekali (regex-only).
+ * Our own AI model ("Tukuk-Brain Mini") — a softmax trained by
+ * scripts/train-brain.js on this server's search/question data. The regexes above
+ * are the high-precision TEACHER; the model only BRIDGES THE GAP: when every
+ * regex misses (a 'general' candidate), a confident model may change the class.
+ * File: data/tukuk-brain-v1.json (or the BRAIN_MODEL_FILE env). No file →
+ * the old behaviour entirely (regex-only).
  */
 const MODEL_FILE = () => process.env.BRAIN_MODEL_FILE
   || path.join(__dirname, '..', '..', 'data', 'tukuk-brain-v1.json');
@@ -119,10 +119,10 @@ function brainModel() {
   return brainCache.none ? null : brainCache;
 }
 
-// Uji-sahaja: paksa muat semula model (contoh selepas train baru).
+// Test-only: force a model reload (e.g. after a fresh training run).
 function _resetModelCache() { brainCache = null; }
 
-/** Maklumat model untuk paparan /api/models (Data Center). */
+/** Model info for the /api/models display (Data Center). */
 function modelInfo() {
   const b = brainModel();
   if (!b) return { loaded: false, file: MODEL_FILE() };
@@ -142,29 +142,29 @@ function modelInfo() {
   };
 }
 
-/** Kelas utama + cadangan guidance + token tambahan (untuk math/code yang perlu ruang). */
+/** Main class + fallback guidance + extra tokens (math/code need the room). */
 function classify(query) {
   const q = String(query || '');
   const regex = classifyRawRegex(q);
   if (regex.kind !== 'general') return regex;
-  // Semua regex terlepas → BIAR MODEL NEURAL yang memutuskan (kalau yakin).
+  // Every regex missed → LET THE NEURAL MODEL decide (when it is confident).
   const b = brainModel();
   if (b) {
     const r = b.mm.predict(b.m, q);
     if (r.label !== 'general' && r.p >= 0.5 && r.margin >= 0.2) {
-      // code hasil model TIDAK dianggap self-contained (tiada bukti niat kukuh
-      // seperti regex) → cuma bentuk jawapan (guidance) ditukar.
+      // Code from the model is NOT treated as self-contained (no strong intent evidence
+      // like the regexes) → only the answer shape (guidance) is changed.
       return finalize(r.label);
     }
   }
   return regex;
 }
 
-/** Hanya lapisan regex (tanpa model) — dipakai train-brain.js utk ukur celah. */
+/** The regex layer only (without the model) — used by train-brain.js to measure the gap. */
 function classifyRawRegex(q) {
-  // Arithmetik: jika boleh dinilai sebagai ekspresi numeric bersih, kira DETERMINISTIK
-  // (kalkulator) — jauh lebih tepat daripada model 1.5B. Jika ada perkataan lain
-  // (masalah cerita / julat tarikh) → kekal math BERGROUNDED, jangan kira buta.
+  // Arithmetic: if it evaluates as a clean numeric expression, compute DETERMINISTICALLY
+  // (a calculator) — far more exact than a 1.5B model. If other words remain
+  // (a word problem / a date range) → keep the math BERGROUNDED, don't compute blindly.
   if (ARITH_RE(q)) {
     const calc = computeArithmetic(q);
     if (calc) return { ...finalize('math'), pureMath: true, selfContained: true, arithmetic: calc };
@@ -187,18 +187,18 @@ function finalize(kind) {
   return {
     kind,
     guidance: GUIDANCE[kind],
-    // Tugasan self-contained ( arithmetic tulen / penjanaan kod ) tidak memerlukan
-    // sumber dunia — boleh dijawab terus tanpa gate "mesti ada konteks".
+    // Self-contained tasks ( pure arithmetic / code generation ) need no
+    // world sources — they can be answered directly without a "context required" gate.
     selfContained: false,
     pureMath: false,
-    // code & math untung dengan lebih token; lain cukup ringkas.
+    // code & math gain from more tokens; the others are fine concise.
     extraTokens: kind === 'code' ? 160 : kind === 'math' ? 60 : 0,
   };
 }
 
-// Kata tanya/pengisi yang DIBENARKAN dalam soalan aritmetik (pelbagai bahasa).
-// Selepas operator-perkataan ditukar ke simbol & kata ini dibuang, jika ada HURUF
-// lain tinggal → soalan itu bukan aritmetik tulen (cth "perang 1939-1945").
+// Question words/fillers ALLOWED inside arithmetic questions (several languages).
+// Once word-operators are converted to symbols & these words are dropped, if any LETTER
+// is still left → the question is not pure arithmetic (e.g. "perang 1939-1945").
 const FILLER_RE = new RegExp(
   '\\b(' + [
     'berapa', 'berapakah', 'berapa banyak', 'hitung', 'hitungkan', 'kira', 'kirakan', 'kiran',
@@ -210,33 +210,33 @@ const FILLER_RE = new RegExp(
   ].join('|') + ')\\b', 'gi');
 
 /**
- * Nilai ekspresi aritmetik SECURA dari teks multi-bahasa. Pulangkan
- * { expression, value } jika ia benar-benar pengiraan numeric bersih; null jika
- * terdapat perkataan/ubah suai lain (supaya pemanggil boleh bergaya grounded).
+ * Evaluate an arithmetic expression SAFELY from multi-language text. Returns
+ * { expression, value } when it really is a clean numeric calculation; null when
+ * other words or modifiers remain (so the caller can stay grounded).
  */
 function computeArithmetic(query) {
   let s = ' ' + String(query || '').toLowerCase() + ' ';
   s = s.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/,/g, '');
   // "X% of Y" / "X peratus dari Y" → (X/100)*Y
   s = s.replace(/(\d+(?:\.\d+)?)\s*(?:%|peratus|percent)\s*(?:of|dari|daripada)\s*(\d+(?:\.\d+)?)/g, '($1/100)*$2');
-  // operator-perkataan → simbol
+  // word operators → symbols
   s = s.replace(/\b(?:darab|kali|times|multiplied|multiply)\b/g, '*');
   s = s.replace(/\b(?:dibahagi|bahagi|divided|divide)\b/g, '/');
   s = s.replace(/\b(?:tambah|plus|add)\b/g, '+');
   s = s.replace(/\b(?:tolak|kurang|minus|subtract|less)\b/g, '-');
   s = s.replace(/\b(?:kuasa|power|eksponen)\b/g, '^');
-  // buang kata pengisi yang dibenarkan
+  // drop the allowed filler words
   s = s.replace(FILLER_RE, ' ');
-  // jika masih ada HURUF (aksara apa-apa script) → bukan aritmetik tulen
+  // if any LETTER is left (any character of any script) → not pure arithmetic
   if (/\p{L}/u.test(s)) return null;
-  // kunci kepada aksara matematik sahaja
+  // keep to mathematical characters only
   s = s.replace(/[^0-9.+\-*/^()\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  // mestilah ada sekurang-kurangnya satu operator BINARI antara dua angka
+  // there must be at least one BINARY operator between two numbers
   const hasBinOp = /[+*/^]/.test(s) || /\d\s*-\s*\d/.test(s);
   if (!hasBinOp || !/\d/.test(s)) return null;
-  // imbang kurungan
+  // balance the parentheses
   if (((s.match(/\(/g) || []).length) !== ((s.match(/\)/g) || []).length)) return null;
-  // bentuk bersih: hanya angka/operator/kurungan/ruang
+  // clean shape: only digits/operators/parentheses/spaces
   if (!/^[-+*/^().\d\s]+$/.test(s)) return null;
   const expr = s.replace(/\^/g, '**');
   let value;

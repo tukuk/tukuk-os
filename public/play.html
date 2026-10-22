@@ -29,7 +29,7 @@
     display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden;
   }
 
-  /* Bar atas nipis — balik, tajuk, kiraan main, alat main */
+  /* Thin top bar — back, title, play count, player tools */
   .topbar {
     display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
     padding: 8px 12px; background: var(--panel-glass); backdrop-filter: blur(16px);
@@ -57,7 +57,7 @@
   .tbtn:hover { color: #fff; border-color: var(--accent-glow); }
   .tbtn.prim { background: var(--play-green); border-color: var(--play-green); color: #fff; }
 
-  /* Pentas main — iframe mengisi baki viewport */
+  /* Play stage — the iframe fills the remaining viewport */
   .stage { flex: 1; min-height: 0; position: relative; background: #05070d; }
   .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
   .stage .loadmsg {
@@ -65,7 +65,7 @@
     font-size: .95rem; background: #05070d; z-index: 2; transition: opacity .3s;
   }
   .stage .loadmsg.gone { opacity: 0; pointer-events: none; }
-  /* Petua pusing skrin (telefon, potret) — boleh tutup */
+  /* Screen-rotation tip (phone, portrait) — dismissible */
   .rotate {
     position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 4;
     background: var(--panel-glass); border: 1px solid var(--panel-border); border-radius: 12px;
@@ -75,7 +75,7 @@
   .rotate.show { display: flex; }
   .rotate button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: .9rem; }
 
-  /* Galeri berkaitan — rentetan mendatar di bawah */
+  /* Related gallery — a horizontal strip along the bottom */
   .relbar {
     border-top: 1px solid var(--panel-border); background: var(--panel-glass);
     padding: 8px 12px 10px; display: flex; gap: 10px; align-items: center; overflow-x: auto;
@@ -104,7 +104,7 @@
   .bg-io { background: linear-gradient(150deg, #0f4a5c, #0a2430); }
   .bg-app { background: linear-gradient(150deg, #1b2b55, #101a33); }
 
-  /* Keadaan ralat */
+  /* Error state */
   .oops { flex: 1; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 30px; }
   .oops .big { font-size: 3rem; margin-bottom: 10px; }
   .oops a { color: var(--accent-glow); font-weight: 700; text-decoration: none; }
@@ -156,7 +156,7 @@
   const fmtPlays = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n || 0);
   const RECENT_KEY = 'tukuk-recent';
 
-  // Id item daripada laluan /play/<id> (server sahkan id wujud sebelum hidang halaman ini).
+  // Item id from the /play/<id> path (the server verifies the id exists before serving this page).
   const m = location.pathname.match(/^\/play\/([^/]+)\/?$/);
   const id = m ? decodeURIComponent(m[1]) : '';
 
@@ -174,17 +174,17 @@
     topbar.hidden = true; stage.hidden = true; relbar.hidden = true;
   }
 
-  // Senarai main terkini → localStorage (dibaca /store "Baru Dimainkan"); cap 12.
+  // Recent plays list → localStorage (read back by the /store page); capped at 12.
   function pushRecent(itemId) {
     try {
       let arr = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
       if (!Array.isArray(arr)) arr = [];
       arr = [itemId].concat(arr.filter((x) => x !== itemId)).slice(0, 12);
       localStorage.setItem(RECENT_KEY, JSON.stringify(arr));
-    } catch { /* penyimpanan penuh / mod privasi — abaikan */ }
+    } catch { /* storage full / private mode — ignore */ }
   }
 
-  // Sekali sahaja per sesi main — kira + naikkan paparan.
+  // Once per play session — count it and update the display.
   function countPlay(item) {
     if (counted) return;
     counted = true;
@@ -192,7 +192,7 @@
     fetch('/api/play/' + encodeURIComponent(item.id), { method: 'POST' })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d && Number.isFinite(d.plays)) document.getElementById('gPlays').textContent = '▶ ' + fmtPlays(d.plays) + ' plays'; })
-      .catch(() => { /* kiraan bukan kritikal */ });
+      .catch(() => { /* the play count is not critical */ });
   }
 
   fetch('/api/store', { cache: 'no-store' })
@@ -202,7 +202,7 @@
       const item = items.find((x) => String(x.id) === id);
       if (!item) return fail('That game is not in the catalog — it may have been removed.');
 
-      // Kepala bar + SEO dinamik.
+      // Bar header + dynamic SEO.
       document.title = 'Play ' + item.title + ' — Tukuk Store';
       let og = document.querySelector('meta[property="og:title"]');
       if (!og) { og = document.createElement('meta'); og.setAttribute('property', 'og:title'); document.head.appendChild(og); }
@@ -213,14 +213,14 @@
       const raw = document.getElementById('rawLink');
       raw.href = item.url;
 
-      // Tempek — URL SENTIASA daripada katalog pelayan (asal sama; tiada input pengguna).
-      // Komuniti (/a/<slug>) perlu ?embed=1 supaya CSP frame-ancestors 'self' diguna.
+      // Embed — the URL ALWAYS comes from the server catalog (same origin; no user input).
+      // Community games (/a/<slug>) need ?embed=1 so the CSP frame-ancestors 'self' applies.
       let src = String(item.url || '/');
       if (item.src === 'komuniti') src += (src.includes('?') ? '&' : '?') + 'embed=1';
       frame.addEventListener('load', () => { loadMsg.classList.add('gone'); countPlay(item); });
       frame.src = src;
 
-      // Kad berkaitan: genre sama dahulu, kemudian paling main — 8 bijilah.
+      // Related cards: same genre first, then most played — 8 of them.
       const rel = items
         .filter((x) => x.kind === 'game' && x.id !== item.id)
         .sort((a, b) => (
@@ -241,18 +241,18 @@
       topbar.hidden = false;
       stage.hidden = false;
 
-      // Petua orientasi (telefon potret) — boleh tutup, tidak menggangu.
+      // Orientation tip (portrait phone) — dismissible, never blocks play.
       const rot = document.getElementById('rotateHint');
       if (matchMedia('(pointer: coarse)').matches && matchMedia('(orientation: portrait)').matches) rot.classList.add('show');
       document.getElementById('rotClose').addEventListener('click', () => rot.classList.remove('show'));
     })
     .catch(() => fail('Failed to load the catalog. Please reload.'));
 
-  // Skrin penuh pada pentas (iframe ikut serta) — butang ⛶ atau klik-dua pentas.
+  // Fullscreen on the stage (the iframe joins in) — the ⛶ button or double-clicking the stage.
   function toggleFs() {
     if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
     const el = stage.requestFullscreen ? stage : document.documentElement;
-    el.requestFullscreen({ navigationUI: 'hide' }).catch(() => { /* boleh jadi ditolak */ });
+    el.requestFullscreen({ navigationUI: 'hide' }).catch(() => { /* may be refused */ });
   }
   document.getElementById('fsBtn').addEventListener('click', toggleFs);
   stage.addEventListener('dblclick', toggleFs);

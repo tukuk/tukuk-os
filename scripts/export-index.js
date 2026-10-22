@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Eksport indeks Meilisearch ke fail JSON gzip (untuk backup).
+ * Export the Meilisearch index to a gzip JSON file (for backup).
  *
- *   node scripts/export-index.js <fail-keluaran> [index]
+ *   node scripts/export-index.js <output-file> [index]
  *
- * Baca dari env: MEILI_HOST, MEILI_MASTER_KEY, MEILI_INDEX.
- * Fail mengandungi settings + statistik + semua dokumen, jadi boleh
- * dipulihkan terus dengan POST ke /indexes/<uid>/documents.
+ * Reads from env: MEILI_HOST, MEILI_MASTER_KEY, MEILI_INDEX.
+ * The file contains settings + stats + all documents, so it can
+ * be restored directly with a POST to /indexes/<uid>/documents.
  */
 
 const fs = require('fs');

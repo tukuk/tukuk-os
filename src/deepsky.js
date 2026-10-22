@@ -1,10 +1,10 @@
 'use strict';
-// ── TUKUK-OS DEEP-SKY (/buruj + /messier) — 88 buruj IAU + 110 objek Messier ─
-// Data STATIK tertanam (src/deepsky-data.json), dijana SEKALI semasa penulisan
-// daripada jadual Wikipedia yang diauthentikan (IAU designated constellations +
-// Messier object). TIADA panggilan API semasa runtime → halaman instant &
-// mustahil diblok (pelajaran daripada insiden WAF Met). Sumber: en.wikipedia.org
-// (CC BY-SA). Nama/istilah & teks halaman dalam Bahasa Inggeris (internasional).
+// ── TUKUK-OS DEEP-SKY (/buruj + /messier) — 88 IAU constellations + 110 Messier objects ─
+// STATIC embedded data (src/deepsky-data.json), generated ONCE at authoring time
+// from vetted Wikipedia tables (IAU designated constellations +
+// Messier object). NO runtime API calls → instant pages &
+// impossible to block (lesson from the Met WAF incident). Source: en.wikipedia.org
+// (CC BY-SA). Names/terminology and page text are in English (international).
 const DATA = require('./deepsky-data.json');
 
 function slug(s) {
@@ -13,12 +13,12 @@ function slug(s) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-// Buruj: tambah slug.
+// Constellations: add the slug.
 const CONSTELLATIONS = DATA.constellations.map((c) => ({ ...c, slug: slug(c.name) }));
 const C_BY_SLUG = new Map(CONSTELLATIONS.map((c) => [c.slug, c]));
 const C_BY_NAME = new Map(CONSTELLATIONS.map((c) => [c.name.toLowerCase(), c]));
 
-// Objek Messier: slug = m31; paut ke buruj induk (slug) untuk cross-link.
+// Messier objects: slug = m31; link to the parent constellation (slug) for cross-linking.
 const MESSIER = DATA.messier.map((m) => ({
   ...m,
   slug: String(m.id).toLowerCase(),
@@ -26,10 +26,10 @@ const MESSIER = DATA.messier.map((m) => ({
 }));
 const M_BY_SLUG = new Map(MESSIER.map((m) => [m.slug, m]));
 
-// Tertib jenis objek (galaksi paling banyak → dulukan).
+// Object-type order (galaxies are the most numerous → first).
 const TYPES = ['Galaxy', 'Globular cluster', 'Open cluster', 'Diffuse nebula', 'Planetary nebula', 'Supernova remnant', 'Deep-sky object'];
 
-// Penjelasan ringkas setiap jenis objek — fakta umum yang sahih, bukan rekaan.
+// Short description of each object type — accurate general facts, not inventions.
 const TYPE_INFO = {
   'Galaxy': 'A vast, gravitationally-bound system of stars, gas and dust — from small irregular collections to giant spirals containing a trillion suns. Most Messier galaxies are island universes far beyond the Milky Way.',
   'Globular cluster': 'A dense, spheroidal ball of hundreds of thousands of old stars orbiting a galaxy’s halo. Through a small telescope they look like fuzzy stars; in a large one they resolve into glittering swarms.',
@@ -45,7 +45,7 @@ function findConstellation(query) {
   return C_BY_SLUG.get(q) || null;
 }
 
-// Terima 'M31', 'm31', '31' atau 'Messier 31'.
+// Accepts 'M31', 'm31', '31' or 'Messier 31'.
 function findMessier(query) {
   const raw = String(query || '').trim().toLowerCase();
   if (!raw) return null;

@@ -1,15 +1,15 @@
 'use strict';
-// ── TUKUK-OS WORLD MONEY (/wang) — kadar pertukaran langsung ECB ────────────
-// Sumber: frankfurter.dev — data kadar Bank Pusat Eropah (40 mata wang),
-// PERCUMA tanpa kunci, tanpa pendaftaran. Dikemas kini setiap hari kerja
-// ±16:00 CET. Kontrak kejujuran: setiap payload bawa source + asOfDate;
-// kadar sentiasa dilabel "reference rate" — bukannya kadar kedai terbang.
+// ── TUKUK-OS WORLD MONEY (/wang) — ECB direct exchange rates ────────────
+// Source: frankfurter.dev — European Central Bank rate data (40 currencies),
+// FREE with no key and no registration. Updated every working day
+// ±16:00 CET. Honesty contract: every payload carries source + asOfDate;
+// rates are always labelled "reference rate" — never airport/counter rates.
 const axios = require('axios');
 const https = require('https');
 
 const http = axios.create({
   timeout: 15000,
-  httpsAgent: new https.Agent({ family: 4 }), // VPS: IPv6 sukar (pitfall NOAA)
+  httpsAgent: new https.Agent({ family: 4 }), // VPS: IPv6 is awkward (NOAA pitfall)
   headers: { 'User-Agent': 'TukukOS-Money-Client/1.0 (+https://tukuk.org)' },
 });
 
@@ -21,10 +21,10 @@ function cacheGet(key) {
   return { data: hit.data, stale: Date.now() > hit.expiresAt };
 }
 function cacheSet(key, data, ttlMs) { cache.set(key, { data, expiresAt: Date.now() + ttlMs }); }
-const TTL_LATEST = 6 * 60 * 60 * 1000;         // ECB kemas kini harian
-const TTL_HIST = 7 * 24 * 60 * 60 * 1000;      // tarikh silam tidak berubah
+const TTL_LATEST = 6 * 60 * 60 * 1000;         // ECB updates daily
+const TTL_HIST = 7 * 24 * 60 * 60 * 1000;      // past dates never change
 
-// Nota: kadar ECB ialah referensi; hanya ~30 mata wang dalam jadual ECB disenaraikan.
+// Note: ECB rates are reference rates; only ~30 currencies in the ECB table are listed.
 const CODES = [
   ['USD', 'US Dollar', '🇺🇸'], ['EUR', 'Euro', '🇪🇺'], ['GBP', 'British Pound', '🇬🇧'],
   ['JPY', 'Japanese Yen', '🇯🇵'], ['MYR', 'Malaysian Ringgit', '🇲🇾'], ['SGD', 'Singapore Dollar', '🇸🇬'],

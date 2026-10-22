@@ -1,14 +1,14 @@
 'use strict';
 /**
- * Tukuk Code — penjana & penyahpijah kod untuk Tukuk Studio / MCP.
+ * Tukuk Code — code generator & scaffolder for Tukuk Studio / MCP.
  *
- * Direka supaya BERFUNGSI TANPA LLM (mod "template"): setiap hasil ialah
- * projek kecil yang benar-benar boleh terus dijalankan. Apabila LLM aktif
- * (cloud/Ollama), lapisan atas (mcp/server.js) boleh memperkasa rancangan &
- * kod dengan model — tetapi asas templat ini tetap menjadi jaring keselamatan.
+ * Designed to WORK WITHOUT AN LLM ("template" mode): every result is
+ * a small project that genuinely runs out of the box. When an LLM is active
+ * (cloud/Ollama), the layer above (mcp/server.js) can enrich the plan &
+ * code with the model — but this template base stays as the safety net.
  *
- * TIADA pelaksanaan rangkaian / arbitrary code di sini. `review()` hanya
- * menjalankan `node --check` ke atas fail sementara untuk mengesahkan sintaks.
+ * NO network execution / arbitrary code here. `review()` only
+ * runs `node --check` on a temporary file to confirm the syntax.
  */
 
 const fs = require('fs');
@@ -23,7 +23,7 @@ function normalizeKind(kind) {
   return KINDS.includes(k) ? k : 'app';
 }
 
-/** Rancangan berstruktur (fail + langkah) bagi sesuatu jenis projek. */
+/** A structured plan (files + steps) for a given project kind. */
 function planFor(kind, goal) {
   const g = String(goal || 'small app').slice(0, 200);
   const g2 = normalizeKind(kind);
@@ -63,9 +63,9 @@ function planFor(kind, goal) {
   return { goal: g, kind: g2, ...plans[g2] };
 }
 
-// ── Templat kod (setiap fail: { path, contents }) ──────────────────────────
-// Nota: kandungan di bawah SENGAJA tidak memakai backtick atau ${ supaya boleh
-// dibungkus dalam template literal dengan selamat.
+// ── Code templates (each file: { path, contents }) ──────────────────────────
+// Note: the contents below DELIBERATELY avoid backticks and ${ so they can be
+// wrapped safely inside a template literal.
 
 const GAME_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -226,9 +226,9 @@ const HTML_PAGE = `<!DOCTYPE html>
 </body>
 </html>`;
 
-// ── Templat siap-jalan (single-file) ── semakin banyak = semakin kurang LLM ──
-// Setiap fail satu HTML penuh tanpa bergantung library luar & TANPA backtick/${
-// supaya selamat dibungkus sebagai template literal (konvensyen fail ini).
+// ── Ready-to-run (single-file) templates ── the more we have, the less LLM ──
+// Each file is one complete HTML with no external library & NO backtick/${
+// so it is safe to wrap as a template literal (the convention of this file).
 const SNAKE_HTML = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Snake</title>
@@ -277,7 +277,7 @@ render();
 
 const TEMPLATES = { snake: SNAKE_HTML, memory: MEMORY_HTML, pomodoro: POMODORO_HTML };
 
-// Padan kata kunci goal → key templat (multibahasa ms/en). MURNI & boleh diuji.
+// Match goal keywords → template key (multilingual ms/en). PURE & testable.
 const TEMPLATE_HINTS = [
   ['snake', ['snake', 'ular', 'ulat', 'hedgehog']],
   ['memory', ['memory', 'ingatan', 'padan', 'padanan', 'pair', 'kad', 'card', 'match']],
@@ -301,10 +301,10 @@ function filesFor(kind) {
   }
 }
 
-/** Scaffold lengkap bagi sesuatu jenis projek. */
+/** The full scaffold for a given project kind. */
 function scaffoldFor(kind, goal) {
   const k = normalizeKind(kind);
-  // Prioritikan templat single-file siap-jalan bagi game/app → 0 token LLM.
+  // Prefer the ready-to-run single-file templates for game/app → 0 LLM tokens.
   const tmplKey = (k === 'game' || k === 'app') ? detectTemplate(goal) : '';
   if (tmplKey && TEMPLATES[tmplKey]) {
     return {
@@ -327,7 +327,7 @@ function scaffoldFor(kind, goal) {
   };
 }
 
-/** Sahkan sintaks JS/MJS dengan `node --check`; HTML diberi pemeriksaan ringkas. */
+/** Validate JS/MJS syntax with `node --check`; HTML gets a light inspection. */
 function review(code, lang) {
   const src = String(code || '');
   const l = String(lang || 'js').toLowerCase();
@@ -348,7 +348,7 @@ function review(code, lang) {
       return resolve({ ok: false, lang: l, error: 'failed to write tmp file: ' + e.message, hints });
     }
     execFile(process.execPath, ['--check', file], (err, _so, stderr) => {
-      try { fs.unlinkSync(file); } catch { /* abaikan */ }
+      try { fs.unlinkSync(file); } catch { /* ignore */ }
       if (err) resolve({ ok: false, lang: l, error: String(stderr || err.message).slice(0, 500), hints });
       else resolve({ ok: true, lang: l, hints });
     });

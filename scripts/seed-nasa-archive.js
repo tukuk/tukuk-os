@@ -1,17 +1,17 @@
 'use strict';
-// Seed arkib APOD setempat — satu larian manual (bukan jadual) supaya halaman
-// /nasa/archive segera penuh dengan gambar merentas dekad. Setiap panggilan
-// getAPOD({date}) persist ke data/tukuk-os.json melalui nasa-store → selamanya.
-// Penggunaan: node scripts/seed-nasa-archive.js [tahunMula] [tahunAkhir]
-// (default 1995 → tahun ini; ±2 tarikh setahun = ~64 panggilan API, mesra had.)
+// Seed the local APOD archive — a one-off manual run (not a schedule) so the
+// /nasa/archive page is immediately full of images spanning decades. Every
+// getAPOD({date}) call persists to data/tukuk-os.json via nasa-store → forever.
+// Usage: node scripts/seed-nasa-archive.js [startYear] [endYear]
+// (default 1995 → this year; ±2 dates a year = ~64 API calls, limit-friendly.)
 const config = require('../src/config');
 const nasa = require('../src/nasa');
 
 const startYear = Number(process.argv[2]) || 1995;
 const endYear = Number(process.argv[3]) || new Date().getFullYear();
 
-// Dua tarikh memento setahun: 1 Jan (AWW — World Wide Web Day di APOD) dan
-// 20 Jul (ulang tahun pendaratan Moon). APOD terbit setiap hari sejak 1995-06-16.
+// Two milestone dates per year: Jan 1 (AWW — World Wide Web Day on APOD) and
+// Jul 20 (the Moon landing anniversary). APOD publishes daily since 1995-06-16.
 const MONTH_DAYS = ['01-01', '07-20'];
 
 function iso(d) { return d.toISOString().slice(0, 10); }
@@ -25,7 +25,7 @@ function milestoneDates() {
       if (d >= '1995-06-16' && d <= todayIso) dates.push(d);
     }
   }
-  // Tambahan: 30 hari terbelakang supaya suapan arkib nampak "panas".
+  // Extra: the trailing 30 days so the archive feed looks "hot".
   for (let i = 1; i <= 30; i++) {
     const d = iso(new Date(Date.now() - i * 86400000));
     if (!dates.includes(d)) dates.push(d);
@@ -45,7 +45,7 @@ async function main() {
     } catch (err) {
       fail += 1; console.log(`  ✗ ${date}: ${err.message}`);
     }
-    // Sopan pada had kadar: ~2 permintaan/saatinja.
+    // Polite on the rate limit: ~2 requests/second.
     await new Promise((r) => setTimeout(r, 500));
   }
   console.log(`[seed] done — ${ok} saved, ${skip} skipped, ${fail} failed`);

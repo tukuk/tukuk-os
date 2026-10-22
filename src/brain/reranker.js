@@ -1,24 +1,24 @@
 'use strict';
 /**
- * Tukuk Reranker — penatalan semula neural untuk /search.
+ * Tukuk Reranker — neural re-ranking for /search.
  *
- * Model: cross-encoder (BERT-style MiniLM) yang di-fine-tune di Kaggle
- * (`fine-tune/reranker/`, fully offline) lalu dieksport ke ONNX via torch.onnx.
- * Ianya dijalankan SEPENUHNYA DALAM NODE menggunakan `@huggingface/transformers`
- * (onnxruntime di belakang tabir) — TIADA cloud, TIADA Ollama, TIADA Python.
+ * Model: a cross-encoder (BERT-style MiniLM) fine-tuned on Kaggle
+ * (`fine-tune/reranker/`, fully offline) then exported to ONNX via torch.onnx.
+ * It runs ENTIRELY IN NODE using `@huggingface/transformers`
+ * (onnxruntime behind the scenes) — NO cloud, NO Ollama, NO Python.
  *
- * Kenapa bukan pipeline('text-classification')? Model ini SATU logit (skor
- * relevansi regression). Laluan pipeline boleh apply softmax ke atas 1 logit
- * (= sentiasa 1.0) dan MUSNAK penatalan. Jadi kita muat
- * AutoModelForSequenceClassification terus dan baca LOGIT MENTAH — monotonic
- * dengan relevansi, tepat untuk menyusun dokumen.
+ * Why not pipeline('text-classification')? This model has ONE logit (a regression
+ * relevance score). The pipeline path may apply softmax over a single logit
+ * (= always 1.0) and DESTROY the ranking. So we load
+ * AutoModelForSequenceClassification directly and read the RAW LOGITS — monotonic
+ * with relevance, exactly right for ordering documents.
  *
- * Konsep: Meilisearch BM25 → calon top-K → skor (query, dokumen) → top-N.
- * Cross-encoder kecil (~22M) cukup laju pada CPU; inilah alat betul untuk
- * ranking (bukan LLM generatif).
+ * Concept: Meilisearch BM25 → top-K candidates → score (query, document) → top-N.
+ * A small cross-encoder (~22M) is fast enough on CPU; this is the right tool for
+ * ranking (not a generative LLM).
  *
- * KESELAMATAN: Jika `enabled=false`, model tiada, atau pembebanan/pengiraan
- * gagal, `rerank()` HANYA memulangkan input asal. /search tidak akan pecah.
+ * SAFETY: if `enabled=false`, the model is missing, or loading/scoring fails,
+ * `rerank()` RETURNS ONLY the original input. /search will not break.
  */
 
 const path = require('path');
@@ -43,7 +43,7 @@ function resolveModelDir() {
   return path.isAbsolute(p) ? p : path.join(__dirname, '..', '..', p);
 }
 
-/** Fail yang diperlukan untuk memuat model transformers.js. */
+/** The files required to load a transformers.js model. */
 function looksDeployed(dir) {
   return (
     fs.existsSync(path.join(dir, 'config.json')) &&
@@ -62,12 +62,12 @@ async function loadOnce() {
     if (!config.rerank.enabled) { status.error = 'disabled'; return null; }
     if (!looksDeployed(dir)) { status.error = 'model-not-found'; return null; }
 
-    // transformers.js ialah ESM — muat secara dinamik dari CommonJS.
+    // transformers.js is ESM — load it dynamically from CommonJS.
     const { AutoTokenizer, AutoModelForSequenceClassification, env } =
       await import('@huggingface/transformers');
     env.allowLocalModels = true;
     env.allowRemoteModels = false;
-    try { env.backends.onnx.logLevel = 'error'; } catch { /* pilihan sahaja */ }
+    try { env.backends.onnx.logLevel = 'error'; } catch { /* optional only */ }
 
     const tokenizer = await AutoTokenizer.from_pretrained(dir);
     const model = await AutoModelForSequenceClassification.from_pretrained(dir, {
@@ -85,7 +85,7 @@ async function loadOnce() {
   return loadPromise;
 }
 
-/** Teks dokumen untuk dipasangkan dengan query (buang tag highlight). */
+/** Document text to pair with the query (highlight tags stripped). */
 function docText(hit) {
   const title = String(hit.title || '').replace(/<\/?mark>/g, '');
   const body = String(
@@ -95,49 +95,49 @@ function docText(hit) {
 }
 
 /**
- * Susun semula `hits` ikut relevansi kepada `query`.
- * Pulangkan array asal jika rerank tidak tersedia (selamat).
- * Keutamaan: model ONNX tempatan → embeddings Workers AI cloud → input asal.
+ * Reorder `hits` by relevance to `query`.
+ * Returns the original array when reranking isn't available (safe).
+ * Preference: local ONNX cross-encoder → cloud Workers AI embeddings → original input.
  */
 async function rerank(query, hits, { topN } = {}) {
   const list = Array.isArray(hits) ? hits : [];
   if (list.length < 2) return list;
   if (!config.rerank.enabled && !config.rerank.cloud) return list;
 
-  // 1) Model cross-encoder tempatan (pilihan utama jika didayakan & di-deploy).
+  // 1) The local cross-encoder model (the main choice when enabled & deployed).
   if (config.rerank.enabled) {
     const eng = await loadOnce();
     if (eng) return localRerank(eng, query, list, topN);
   }
 
-  // 2) Cloud — embeddings Workers AI (bi-encoder kosine). No-op jika tiada cred.
+  // 2) Cloud — Workers AI embeddings (cosine bi-encoder). A no-op without credentials.
   if (config.rerank.cloud) {
     try {
-      // Pagar keras: walaupun fetch menggantung, jangan tahan /search.
+      // Hard guard: even if the fetch hangs, never hold up /search.
       const guard = new Promise((_, rej) =>
         setTimeout(() => rej(new Error('cloud-timeout')), config.rerank.timeoutMs + 800)
       );
       return await Promise.race([cloudRerank(query, list, topN), guard]);
     } catch (err) {
-      // Kekalkan isyarat "tiada cred" yang lebih tepat jika sudah diletak.
+      // Keep the more precise "no creds" signal if it was already set.
       if (status.error !== 'cloud-no-creds' && status.error !== 'cloud-no-account') {
         status.error = 'cloud:' + (err && err.message ? err.message : String(err));
       }
-      return list; // selamat: jangan pecahkan /search
+      return list; // safe: don't break /search
     }
   }
   return list;
 }
 
-/** Rerank dengan model ONNX tempatan (logit mentah cross-encoder). */
+/** Rerank with the local ONNX model (raw cross-encoder logits). */
 async function localRerank(eng, query, list, topN) {
   const started = Date.now();
   const work = (async () => {
     const queries = list.map(() => String(query || ''));
     const passages = list.map((h) => docText(h));
-    // API transformers.js v4: 2nd arg = OBJEK options dengan `text_pair`.
-    // (Bentuk positional `tok(qs, ps, opts)` SILENTLY menjatuhkan text_pair —
-    //  disahkan melalui probe: semua logit menjadi sama.)
+    // transformers.js v4 API: the 2nd arg = an options OBJECT with `text_pair`.
+    // (The positional form `tok(qs, ps, opts)` SILENTLY drops text_pair —
+    //  confirmed by probe: every logit came out identical.)
     const encoded = await eng.tokenizer(queries, {
       text_pair: passages,
       padding: true,
@@ -145,17 +145,17 @@ async function localRerank(eng, query, list, topN) {
       max_length: 256
     });
     const { logits } = await eng.model(encoded);
-    // logits.dims = [batch, 1]; data = Float32Array panjang = batch (logit mentah).
+    // logits.dims = [batch, 1]; data = Float32Array of length = batch (raw logits).
     const data = logits.data;
     const scored = list.map((hit, i) => ({ hit, s: Number(data[i]) || 0 }));
     scored.sort((a, b) => b.s - a.s);
     const sliced = scored.slice(0, topN == null ? scored.length : topN);
-    // Tampal skor mentah untuk debug/papar (bukan medan wajib frontend).
+    // Attach the raw scores for debug/display (not a required frontend field).
     return sliced.map((x) => Object.assign({}, x.hit, { _relevance: Number(x.s.toFixed(4)) }));
   })();
 
-  // Pagar latensi: CPU tanpa AVX2 boleh lambat. Jika kerja melebihi
-  // `timeoutMs`, kita SERAH susunan BM25 asal (user tak menunggu lama).
+  // Latency guard: a CPU without AVX2 can be slow. If the work exceeds
+  // `timeoutMs`, we SURRENDER the original BM25 order (users don't wait).
   const guard = new Promise((resolve) => setTimeout(() => resolve(null), config.rerank.timeoutMs));
   try {
     const out = await Promise.race([work, guard]);
@@ -166,14 +166,14 @@ async function localRerank(eng, query, list, topN) {
     return out;
   } catch (err) {
     status.error = err && err.message ? err.message : String(err);
-    return list; // selamat: jangan pecahkan /search
+    return list; // safe: don't break /search
   }
 }
 
-// ── Backend cloud: embeddings Workers AI (bi-encoder kosine) ────────────
-// Token: env (CLOUDFLARE_AI_TOKEN/API_TOKEN) ATAU Admin→AI Settings
-// (aiProvider=cloudflare + aiApiKey), selari dengan provider.js. Account id
-// boleh env atau auto-temui daripada token (/accounts).
+// ── Cloud backend: Workers AI embeddings (cosine bi-encoder) ────────────
+// Token: env (CLOUDFLARE_AI_TOKEN/API_TOKEN) OR Admin→AI Settings
+// (aiProvider=cloudflare + aiApiKey), matching provider.js. The account id
+// may come from env or be auto-discovered from the token (/accounts).
 function CF_TOKEN() {
   let t = config.brain.cloudflareAiToken || '';
   if (!t) {
@@ -182,7 +182,7 @@ function CF_TOKEN() {
       if (String(s.getSetting('aiProvider', '') || '').toLowerCase() === 'cloudflare') {
         t = String(s.getSetting('aiApiKey', '') || '');
       }
-    } catch { /* store belum sedia */ }
+    } catch { /* store not ready yet */ }
   }
   return t;
 }
@@ -255,7 +255,7 @@ async function cloudRerank(query, list, topN) {
   return sliced.map((x) => Object.assign({}, x.hit, { _relevance: Number(x.s.toFixed(4)) }));
 }
 
-/** Adakah sebarang backend rerank benar-benar tersedia (jimatkan query berganda). */
+/** Whether any rerank backend is really available (avoids repeated queries). */
 function available() {
   if (config.rerank.enabled && looksDeployed(resolveModelDir())) return true;
   if (config.rerank.cloud && CF_TOKEN()) return true;

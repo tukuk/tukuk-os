@@ -205,7 +205,7 @@
   .video-card .len { position:absolute; right:8px; bottom:8px; background:rgba(0,0,0,.82); color:#fff;
     font-size:.72rem; padding:2px 6px; border-radius:4px; }
   .video-card .body { padding:10px 12px; }
-  /* Pemain video dalam tukuk.org — modal embed, pelanggan tak keluar laman */
+  /* Video player inside tukuk.org — an embed modal, the visitor never leaves the page */
   .vmodal { position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; padding:20px; }
   .vmodal[hidden] { display:none; }
   .vmodal-bd { position:absolute; inset:0; background:rgba(4,8,15,.78); }
@@ -379,7 +379,7 @@
   .trending-home .t-label { display:block; font-size:.9rem; color:var(--muted); margin-bottom:12px; }
   .trending-home .chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
 
-  /* Dashboard Studio (laman / — kandungan original, permukaan iklan) */
+  /* Dashboard Studio (the / page — original content, ad-safe surface) */
   .dashboard { max-width: 960px; margin: 8px auto 0; padding: 8px 20px 40px; }
   .dashboard[hidden] { display: none; }
   .d-title { font-size: 1.35rem; font-weight: 800; margin: 22px 0 4px; text-align: center; }
@@ -567,7 +567,7 @@
   </nav>
 </header>
 
-<!-- Dashboard Studio — hanya di / (kandungan original; permukaan iklan yang selamat) -->
+<!-- Dashboard Studio — only on / (original content; a safe ad surface) -->
 <section class="dashboard" id="dashboard" hidden>
   <h2 class="d-title">🎛 Tukuk Studio — your creative space</h2>
   <p class="d-sub">Search, edit &amp; learn — all in the browser, zero uploads. Pick a tool below or use the box above.</p>
@@ -585,9 +585,9 @@
     <a class="d-tile" href="/blog"><span class="ico">📝</span><h3>Blog &amp; Articles</h3><p>Original writing on search, Node, privacy &amp; infrastructure.</p></a>
     <a class="d-tile" href="/nasa"><span class="ico">🚀</span><h3>NASA Explorer</h3><p>Daily astronomy pictures, Mars rovers &amp; open NASA data.</p></a>
   </div>
-  <!-- Ruang iklan: TIDAK dipaparkan sehingga unit AdSense sebenar disuntik (lihat JS di bawah).
-       Dahulunya ia kotak putus-putus berisi ayat dasar yang bocor ke pengguna → nampak seperti bug.
-       Bila AdSense lulus: set data-ad-slot pada <ins> di bawah & buang atribut `hidden`. -->
+  <!-- Ad slot: NOT shown until a real AdSense unit is injected (see the JS below).
+       It used to be a dashed box holding policy text that leaked to visitors → looked like a bug.
+       When AdSense is approved: set data-ad-slot on the <ins> below and drop the `hidden` attribute. -->
   <div class="d-ad" id="ad-slot" hidden>
     <ins class="adsbygoogle" style="display:block" data-ad-format="auto" data-full-width-responsive="true"></ins>
   </div>
@@ -610,9 +610,9 @@
   <section id="results" aria-live="polite"></section>
 </main>
 
-<!-- Footer peta-laman: dahulu satu baris rata 16 pautan (susuri dibaca & tidak
-     lengkap). Kini berkolom ikut kategori — grid auto-fit supaya kemas pada
-     telefon (1-2 lajur) dan desktop (5 lajur) tanpa media query. -->
+<!-- Sitemap footer: it used to be one flat row of 16 links (hard to scan & not
+     complete). Now the links are grouped into columns by category — an auto-fit grid so it stays tidy on
+     phones (1-2 columns) and desktop (5 columns) without media queries. -->
 <style>
   .sitefoot { text-align:center; padding:36px 20px 40px; border-top:1px solid var(--line); margin-top:40px; }
   .foot-cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:24px 18px; text-align:left; max-width:1100px; margin:0 auto 22px; }
@@ -828,15 +828,15 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let query = '', offset = 0, mode = 'web', corpus = '', timer = null, sugIdx = -1;
-let radioTag = '', radioCountry = '', radioRegion = '';   // penapis pelayaran radio dunia (genre/negara/kawasan)
+let radioTag = '', radioCountry = '', radioRegion = '';   // world radio browser filters (genre/country/region)
 
-// Pemisahan URL: `/` = dashboard (kandungan original, boleh ada iklan),
-// `/cari` = halaman hasil (SPA sama, TIADA iklan). Mematuhi dasar AdSense.
+// URL split: `/` = the dashboard (original content, may carry ads),
+// `/cari` = the results page (the same SPA, NO ads). Complies with the AdSense policy.
 const RESULT_PATH = '/cari';
 const IS_RESULTS = location.pathname === RESULT_PATH;
 
-// Bina URL hasil dan (jika sedang di dashboard) pindahkan pengguna ke /cari.
-// Return true jika navigasi penuh dilakukan (panggilan perlu berhenti).
+// Build the results URL and (when on the dashboard) move the user to /cari.
+// Returns true when a full navigation happened (the caller must stop).
 function toResultsIfNeeded() {
   if (IS_RESULTS) return false;
   const p = new URLSearchParams();
@@ -849,12 +849,12 @@ function toResultsIfNeeded() {
 
 const FILTER_PARAMS = ['host', 'lang', 'section', 'site', 'type', 'after', 'before', 'minWords', 'excludeHost'];
 
-// ── Prefetch keputusan semasa menaip (gaya Google Instant) ──
-// /search melalui terowong Cloudflare ambil ~0.4s dari luar; dengan menghantar
-// request semasa pengguna berehat menaip (debounce sedia ada), tekan Enter
-// hanya menunggu respons yang hampir siap — kadangkala serta-merta.
+// ── Prefetch results while typing (Google Instant style) ──
+// /search through the Cloudflare tunnel takes ~0.4s from outside; by sending the
+// request while the user pauses typing (the existing debounce), pressing Enter
+// only waits for a response that is nearly done — sometimes instantly.
 const preCache = new Map(); // url -> Promise<data|null>
-const preAt = new Map();    // url -> bila request dihantar (ms)
+const preAt = new Map();    // url -> when the request was sent (ms)
 const PRE_TTL = 30000;
 const PRE_MAX = 24;
 
@@ -950,8 +950,8 @@ function setMode(m, push = true) {
 
 async function run() {
   const q = $('q').value.trim();
-  if (!q && mode !== 'radio' && mode !== 'music') return; // radio → stesen teratas; music → carta pop default
-  if (toResultsIfNeeded()) return; // dari dashboard → pindah ke /cari, biarkan sana yang jalankan
+  if (!q && mode !== 'radio' && mode !== 'music') return; // radio → top stations; music → default pop chart
+  if (toResultsIfNeeded()) return; // from the dashboard → move to /cari and let it run there
   query = q;
   offset = 0;
   pushURL();
@@ -966,16 +966,16 @@ async function run() {
       : `/${mode}?q=${encodeURIComponent(query)}`;
     let data;
     if (isWeb) {
-      // Web: HANTAR ketiga-tiga serentak, tetapi jangan tunggu — papar indeks
-      // tempatan SEGERA, sambung hasil web & jawapan AI bila sedia.
+      // Web: FIRE all three at once, but do not wait — show the local
+      // index IMMEDIATELY, then append web results & the AI answer when ready.
       const webFetch = fetch(`/websearch?q=${encodeURIComponent(query)}`)
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
       const answerFetch = fetch(`/answer?q=${encodeURIComponent(query)}`)
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
-      // Guna respons prefetch (dihantar semasa menaip) bila masih segar —
-      // Enter terus papar hasil tanpa menunggu pusingan rangkaian penuh.
+      // Use the prefetched response (sent while typing) while it is still fresh —
+      // Enter shows results straight away without a full network round trip.
       const pre = preCache.get(base);
       if (pre && Date.now() - (preAt.get(base) || 0) < PRE_TTL) {
         preCache.delete(base);
@@ -1177,9 +1177,9 @@ async function loadMoreMedia() {
   }
 }
 
-// ── Pelayaran Radio Dunia: kawasan + genre + pemilih negara (radio-browser, ±50k stesen) ──
+// ── World Radio browsing: region + genre + country picker (radio-browser, ±50k stations) ──
 const RADIO_GENRES = ['Pop', 'Rock', 'Hip Hop', 'Jazz', 'Classical', 'Electronic', 'News', 'Talk', 'Latin', 'Country', 'Metal', 'Reggae', 'Ambient', 'Chill', 'Oldies', 'Dance', 'Sports', 'Kids'];
-// Kawasan pantas — 'asia' jadi tumpuan utama (permintaan pengguna), lain-lain bonus.
+// Fast regions — 'asia' is the main focus (user demand), the rest are bonuses.
 const RADIO_REGIONS_UI = [
   ['asia', '\ud83c\udf0f Asia'],
   ['asia-tenggara', 'Southeast Asia'],
@@ -1227,7 +1227,7 @@ function wireRadioBrowse() {
   }));
   bar.querySelectorAll('[data-rrgn]').forEach(b => b.addEventListener('click', () => {
     radioRegion = (radioRegion === b.dataset.rrgn) ? '' : b.dataset.rrgn;
-    radioCountry = '';   // kawasan & negara ialah penapis geografi — jangan bertindih
+    radioCountry = '';   // region & country are geographic filters — never let them overlap
     $('q').value = '';
     run();
   }));
@@ -1249,9 +1249,9 @@ function wireRadioBrowse() {
   }
 }
 
-// Kad aset Creative Commons — sama seperti kad imej: klik → lightbox
-// (butang ⬇ Download & ✂ Edit in Studio sudah ada di situ). `href` ialah
-// imej penuh luar-domain → lightbox hantar lewat /api/image (selamat).
+// Creative Commons asset cards — like the image cards: click → lightbox
+// (the ⬇ Download & ✂ Edit in Studio buttons are already there). `href` is the
+// full outside-domain image → the lightbox sends it through /api/image (safe).
 function ccCard(hit) {
   const full = hit.full || hit.thumb;
   const thumb = hit.thumb || full;
@@ -1367,7 +1367,7 @@ $('form').addEventListener('submit', (e) => {
 
 $('sort').addEventListener('change', () => { offset = 0; pushURL(); run(); });
 
-// Klik "Did you mean" / chip "Related searches" / trending → cari semula.
+// Clicking "Did you mean" / a "Related searches" chip / a trending term → search again.
 $('results').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-sugq]');
   if (!btn) return;
@@ -1469,15 +1469,15 @@ document.addEventListener('click', (e) => {
 
 query = readURL();
 if (!IS_RESULTS) {
-  // ── Dashboard `/` — kandungan original, permukaan iklan. ──
+  // ── Dashboard `/` — original content, the ad-bearing surface. ──
   const dash = document.getElementById('dashboard');
   const area = document.querySelector('main.results-area');
   if (dash) dash.hidden = false;
   if (area) area.hidden = true;
   const pillars = document.getElementById('pillars');
-  if (pillars) pillars.hidden = false; // chips pilar hanya di beranda, bukan di halaman hasil
+  if (pillars) pillars.hidden = false; // pillar chips only on the home page, never on the results page
   if (query) {
-    // Pautan lama `/?q=...` → alih ke /cari supaya hasil sentiasa di URL bebas-iklan.
+    // Legacy `/?q=...` links → move to /cari so results always live on an ad-free URL.
     location.replace(`${RESULT_PATH}?${new URLSearchParams(location.search)}`);
   } else {
     fetch('/trending').then((r) => (r.ok ? r.json() : null)).then((t) => {
@@ -1488,7 +1488,7 @@ if (!IS_RESULTS) {
     }).catch(() => {});
   }
 } else {
-  // ── Hasil `/cari` ──
+  // ── Results `/cari` ──
   const dash = document.getElementById('dashboard');
   if (dash) dash.hidden = true;
   if (query || mode === 'radio' || mode === 'music') run();
@@ -1538,7 +1538,7 @@ chatForm.addEventListener('submit', async (e) => {
       }
       html += '</div>';
     }
-    // Data center routing: server cadangkan aplikasi yang boleh menindaklanjut soalan.
+    // Data-center routing: the server suggests apps that can act on the question.
     if (data.apps && data.apps.length) {
       html += '<div class="sources">';
       for (const a of data.apps) {
@@ -1554,7 +1554,7 @@ chatForm.addEventListener('submit', async (e) => {
   }
 });
 
-// ── Pemain video dalam tukuk.org ── Klik kad video → main terus dalam modal.
+// ── Video player inside tukuk.org ── Click a video card → play right in a modal.
 function embedSrc(u) {
   try {
     const url = new URL(u);
@@ -1572,7 +1572,7 @@ function embedSrc(u) {
       if (m) return `https://www.dailymotion.com/embed/video/${m[1]}`;
     }
     if (id && /^[\w-]{6,}$/.test(id)) return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`;
-  } catch { /* bukan URL sah */ }
+  } catch { /* not a valid URL */ }
   return null;
 }
 let vLastFocus = null;
@@ -1588,12 +1588,12 @@ function closeVideo() {
 document.addEventListener('click', (e) => {
   const a = e.target.closest('a.video-card');
   if (!a) return;
-  if (e.target.closest('.card-actions')) return; // butangan dalaman → biar handler lain
+  if (e.target.closest('.card-actions')) return; // inner buttons → let the other handlers run
   const url = a.href;
   const title = (a.querySelector('h3') || {}).textContent || 'Video';
   const src = embedSrc(url);
-  // Host tak boleh embed (artikel/bilibili/lain) → KEKAL dalam-app, buka Reader;
-  // jangan biar <a target=_blank> bawa pengguna keluar dari Tukuk-OS.
+  // Hosts that refuse embedding (articles/bilibili/others) → STAY in-app and open the Reader;
+  // never let <a target=_blank> carry the user out of Tukuk-OS.
   if (!src) { e.preventDefault(); openReader(url, title, (a.querySelector('.meta') || {}).textContent || ''); return; }
   e.preventDefault();
   document.getElementById('vmodal-title').textContent = title;
@@ -1630,12 +1630,12 @@ let wantPlay = false;
 let playToken = 0;
 let retryTimer = null;
 let retryCount = 0;
-let playStartedAt = 0;   // bila play benar-benar mula — elak 'ended' serta-merta daripada klip rosak (cascade)
-let currentLive = false; // true = siaran langsung radio: 'ended'/stall → sambung semula, jangan tukar stesen
-let currentDur = 0;      // durasi penuh lagu (saat) dari kad — pratinjau ±30s diulang sehingga cukup
-let playedSec = 0;       // jumlah saat virtual telah dimainkan (panjang klip × ulangan) untuk lagu semasa
+let playStartedAt = 0;   // when playback really started — avoids an instant 'ended' from a broken clip (cascade)
+let currentLive = false; // true = live radio broadcast: on 'ended'/stall reconnect, never switch station
+let currentDur = 0;      // full track duration (seconds) taken from the card — the ±30s preview is looped until it adds up
+let playedSec = 0;       // virtual seconds played so far (clip length × repeats) for the current track
 
-// ── State pemain global — dibaca /player.js supaya muzik/radio sambung di halaman lain ──
+// ── Global player state — read by /player.js so music/radio continues on other pages ──
 const PLAYER_STATE_KEY = 'tk-player-state';
 function currentQueueArr() {
   const cards = [...document.querySelectorAll('.play-card[data-audio]')].filter((c) => normAudioSrc(c.dataset.audio));
@@ -1669,13 +1669,13 @@ function updatePpLabel() {
 function normAudioSrc(raw, proxy) {
   let src = String(raw || '').trim();
   if (!src) return '';
-  if (src.indexOf('/radio/stream?') !== -1) return src; // sudah diproksi — idempotent (elak normalisasi berganda)
+  if (src.indexOf('/radio/stream?') !== -1) return src; // already proxied — idempotent (avoids double normalization)
   if (!src.startsWith('http')) return '';
-  // Radio (langsung) pada halaman https://: banyak stesen HTTPS tetapi redirect ke
-  // stream http (penurunan mixed-content) ATAU blok ikut Referrer/hotlink → "diblock".
-  // Untuk radio, halakan SEMUA stream melalui proksi sama-asal pelayan (/radio/stream)
-  // yang fetch upstream (http/https, ikut redirect) & pipe balik — bunuh mixed-content
-  // + CORS + hotlink serentak. Muzik (pratinjau iTunes, https bersih) main terus.
+  // Radio (live) on an https:// page: many stations are HTTPS but redirect to an
+  // http stream (mixed-content downgrade) or block by Referrer/hotlink → "diblock".
+  // For radio, route EVERY stream through a same-origin server proxy (/radio/stream)
+  // that fetches upstream (http/https, following redirects) and pipes it back — killing
+  // mixed-content + CORS + hotlink protection at once. Music (iTunes preview, clean https) plays directly.
   if (proxy || (window.location.protocol === 'https:' && src.startsWith('http://'))) {
     return '/radio/stream?url=' + encodeURIComponent(src);
   }
@@ -1747,13 +1747,13 @@ function beginPlay(rawSrc, title, pBtn, opts = {}) {
   });
 }
 
-// Sambung semula secara automatik kalau stream terputus — jangan berhenti.
+// Reconnect automatically when the stream drops — never just stop.
 function scheduleRetry() {
   if (!wantPlay || !currentSrc) return;
   if (retryTimer) clearTimeout(retryTimer);
   retryCount++;
-  // Bila gagal berulang: radio → berhenti (stesen mungkin turun); muzik → lompat lagu hanya jika Auto-next.
-  // Trek mati (pratinjau 404) dilompat lebih cepat supaya tak nampak "berhenti/bertukar" rawak.
+  // After repeated failures: radio → stop (the station may be down); music → skip track only if Auto-next.
+  // Dead tracks (404 preview) are skipped faster so the player does not look like it randomly stops/switches.
   const maxRetry = currentLive ? 10 : 4;
   if (retryCount > maxRetry) { if (!currentLive && audioAutoEl && audioAutoEl.checked) advanceQueue(); else stopAudio(); return; }
   const delay = Math.min(800 * retryCount, 4000);
@@ -1765,7 +1765,7 @@ function scheduleRetry() {
   }, delay);
 }
 
-// Kad dalam senarai hasil semasa, kira ke hadapan/ke belakang (loop).
+// Cards in the current result list, count forward/backward (looping).
 function queueCard(step) {
   const cards = [...document.querySelectorAll('.play-card[data-audio]')].filter(c => normAudioSrc(c.dataset.audio));
   if (!cards.length) return null;
@@ -1786,7 +1786,7 @@ function advanceQueue() {
   else stopAudio();
 }
 
-// — Kawalan bar audio: play/pause manual, prev, next —
+// — Audio bar controls: manual play/pause, prev, next —
 if (audioPlayPauseEl) audioPlayPauseEl.addEventListener('click', () => {
   if (!currentSrc) return;
   if (mediaAudio.paused) { wantPlay = true; playToken++; mediaAudio.src = currentSrc; mediaAudio.play().then(updatePpLabel).catch(() => scheduleRetry()); }
@@ -1799,18 +1799,18 @@ if (audioNextEl) audioNextEl.addEventListener('click', () => playQueueCard(queue
 
 mediaAudio.addEventListener('ended', () => {
   if (!wantPlay) return;
-  // Anti-cascade: klip/stream rosak boleh trigger 'ended' serta-merta — cuba lagi, jangan lompat.
+  // Anti-cascade: a broken clip/stream can fire 'ended' instantly — retry, don't skip.
   if (Date.now() - playStartedAt < 3000) { scheduleRetry(); return; }
-  // Radio = siaran langsung; 'ended' biasanya ertinya terputus → sambung semula, jangan tukar stesen.
+  // Radio is a live broadcast; 'ended' usually means a dropout → reconnect, don't change station.
   if (currentLive) { scheduleRetry(); return; }
-  // Pratinjau iTunes ±30s: ulang klip yang sama sehingga durasi penuh yang dipaparkan
-  // pada kad (data-dur) cukup — baru bergerak ke lagu seterusnya / berhenti.
+  // iTunes preview is ±30s: loop the same clip until the full duration shown
+  // on the card (data-dur) is covered — only then move to the next track / stop.
   if (currentDur > 0) {
     playedSec += Math.round(mediaAudio.duration) || 30;
     if (playedSec < currentDur) { mediaAudio.currentTime = 0; mediaAudio.play().catch(() => scheduleRetry()); return; }
-    playedSec = 0; // durasi cukup → kitaran seterusnya bermula dari awal
+    playedSec = 0; // duration covered → the next cycle starts from the beginning
   }
-  // Muzik (pratinjau 30s iTunes): tukar lagu HANYA bila Auto-next dihidupkan; jika tidak, berhenti.
+  // Music (30s iTunes preview): switch track ONLY when Auto-next is on; otherwise stop.
   if (audioAutoEl && audioAutoEl.checked) advanceQueue();
   else stopAudio();
 });
@@ -1835,13 +1835,13 @@ document.addEventListener('click', (e) => {
   const pBtn = card ? card.querySelector('.play-btn') : btn;
   const title = target.dataset.title || (card && card.dataset.title) || '';
 
-  // Klik track yang sedang main → berhenti.
+  // Clicking the track that is already playing → stop.
   if ((audioOwner === pBtn || currentSrc === audioSrc) && !mediaAudio.paused && wantPlay) { stopAudio(); return; }
 
   beginPlay(target.dataset.audio, title, pBtn, { fallback: true, live: mode === 'radio', dur: Number(target.dataset.dur) || 0 });
 });
 
-// Sambung semula automatik bila pengguna kembali ke halaman carian sambil muzik berbunyi.
+// Resume automatically when the user returns to the search page while music is still running.
 (function restorePlayerState() {
   let st = null;
   try { st = JSON.parse(localStorage.getItem(PLAYER_STATE_KEY) || 'null'); } catch (e) { return; }
@@ -1849,11 +1849,11 @@ document.addEventListener('click', (e) => {
   const src = normAudioSrc(st.src, st.live);
   if (!src) return;
   currentSrc = src; currentLive = !!st.live; wantPlay = true; retryCount = 0; playToken++;
-  // Pulihkan durasi penuh + kiraan saat virtual supaya sambung di tab ini terus ikut jadual ulang.
+  // Restore the full duration + virtual-second counter so resuming in this tab keeps the loop schedule.
   const qItem = Array.isArray(st.queue) ? st.queue.find((x) => x && x.src === src) : null;
   currentDur = st.live ? 0 : (qItem && qItem.dur) || 0;
   playedSec = Math.max(0, Math.round((st.played || 0) - (st.pos || 0)));
-  if (audioAutoEl) audioAutoEl.checked = st.auto !== false; // pulih preferensi Auto‑next (lalai: berterusan)
+  if (audioAutoEl) audioAutoEl.checked = st.auto !== false; // restore the Auto‑next preference (default: keep playing)
   audioBarTitle.textContent = st.title || '';
   audioBar.hidden = false;
   mediaAudio.src = currentSrc;
@@ -1929,9 +1929,9 @@ function openReader(url, title, snippet) {
   document.getElementById('reader-site').textContent = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'web'; } })();
   document.getElementById('reader-ext-link').href = url;
   document.getElementById('reader-url-display').textContent = url;
-  // JANGAN terus tunjuk URL luar pada iframe — tapak yang hantar X-Frame-Options/CSP
-  // frame-ancestors (BBC dll.) akan "refuse to connect". Live Web dimuatkan secara
-  // lazy menerusi proksi same-origin /api/proxy/reader apabila butang ditekan.
+  // NEVER point the iframe straight at an external URL — sites that send
+  // X-Frame-Options / CSP frame-ancestors (BBC etc.) will "refuse to connect". Live Web is
+  // loaded lazily through the same-origin proxy /api/proxy/reader when the button is pressed.
   document.getElementById('reader-iframe').removeAttribute('src');
 
   const box = document.getElementById('reader-content');
@@ -1955,7 +1955,7 @@ function closeReader() {
   document.body.style.overflow = '';
 }
 
-// ── Imej Lightbox: membesar (zoom roda/Butang/dua-klik), hantar ke Studio ──
+// ── Image lightbox: enlarge (wheel/button/double-click), send to Studio ──
 const lbState = { scale: 1 };
 function lbApply() {
   const img = $('imgModal-img');
@@ -1966,8 +1966,8 @@ function lbApply() {
 }
 function lbZoomBy(factor) { lbState.scale = Math.min(12, Math.max(0.2, lbState.scale * factor)); lbApply(); }
 function lbReset() { lbState.scale = 1; lbApply(); }
-// URL luar tidak boleh di-download dengan atribut `download` (cross-origin) —
-// hantar lewat proksi same-origin /api/image supaya satu klik terus muat turun.
+// External URLs cannot be saved with the `download` attribute (cross-origin) —
+// route them through the same-origin /api/image proxy so one click downloads directly.
 function downloadHrefFor(u) {
   try {
     const x = new URL(u, location.href);
@@ -2006,11 +2006,11 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closeImageLightbox(); closeReader(); }
 });
 
-// Klik hasil/pautan: TERUS BUKA — tiada modal pertanyaan.
-// Tap dalam (tukuk.org / www / localhost) → navigasi tab ini.
-// Tap luar → tab baru. Reader modal hanya untuk fallback audio (call terus).
+// Clicking a result/link: OPEN IMMEDIATELY — no confirmation modal.
+// Internal tap (tukuk.org / www / localhost) → navigate this tab.
+// External tap → new tab. The Reader modal is only the audio fallback (called directly).
 document.addEventListener('click', (e) => {
-  // Tab Imej → lightbox membesar, bukan tab baru.
+  // Image tab → enlarging lightbox, not a new tab.
   const cardImg = e.target.closest('.img-card');
   if (cardImg) {
     e.preventDefault();
@@ -2019,14 +2019,14 @@ document.addEventListener('click', (e) => {
     openImageLightbox(full || thumb, cardImg.querySelector('.cap')?.textContent || 'Image', full);
     return;
   }
-  // Kad video & berita dikendalikan handler modal video di atas — JANGAN buka
-  // tab luar di sini (inilah punca "klik video terus keluar website").
+  // Video and news cards are handled by the video-modal handler above — do NOT open an
+  // external tab here (that was exactly why "clicking a video leaves the website").
   if (e.target.closest('a.video-card')) return;
   const a = e.target.closest('.result a, .blog-card a, a.reader-link, #results a');
   if (!a) return;
   const href = a.getAttribute('href') || '';
   if (href.startsWith('#') || href.startsWith('javascript')) return;
-  if (!/^https?:\/\//i.test(href)) return; // pautan relatif → tingkah laku asli pelayar
+  if (!/^https?:\/\//i.test(href)) return; // relative link → keep the browser's native behaviour
   let host = '';
   try { host = new URL(href).hostname; } catch { return; }
   const internal = host === location.hostname || host === 'tukuk.org' ||

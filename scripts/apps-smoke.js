@@ -1,7 +1,7 @@
 'use strict';
-// Smoke-test CDP untuk 12 surface baharu — buka setiap halaman di Chromium headless,
-// klik/isset nilai, assert HUD berubah & tiada ralat JS. Jalakan: node scripts/apps-smoke.js [base]
-// Perlu chromium headless dengan --remote-debugging-port=9222 (lihat scripts/os-playtest.js).
+// CDP smoke test for the 12 new surfaces — open every page in headless Chromium,
+// click/set values, assert the HUD changes and there are no JS errors. Run: node scripts/apps-smoke.js [base]
+// Needs headless Chromium with --remote-debugging-port=9222 (see scripts/os-playtest.js).
 const BASE = process.argv[2] || 'https://tukuk.org';
 const PORT = 9222;
 
@@ -26,7 +26,7 @@ class CDP {
 const jget = (path) => fetch(`http://127.0.0.1:${PORT}${path}`).then((r) => r.json());
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// probe setiap app: fungsi JS yang return string OK/PASCA atau throw
+// Probe for every app: a JS function that returns an OK/PASS string or throws.
 const PAGES = [
   ['pong', `document.getElementById('start').click(); await new Promise(r=>setTimeout(r,300)); return document.querySelector('canvas') ? 'canvas-ok' : 'NO-CANVAS';`],
   ['stack', `return document.querySelector('canvas') ? 'canvas-ok' : 'NO-CANVAS';`],

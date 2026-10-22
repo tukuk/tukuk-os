@@ -1,11 +1,11 @@
 'use strict';
-// ── TUKUK-OS PEPATAH (/pepatah) — Proverbs of the World ──────────────────────
-// Data STATIK tertanam (src/proverbs-data.json), dikurasi SEKALI semasa penulisan
-// daripada peribahasa dunia yang betul-betul attested (teks asal + rumi + maksud
-// Inggeris). TIADA panggilan API semasa runtime → halaman instant & mustahil
-// diblok (pelajaran insiden WAF Met). Peribahasa ialah warisan rakyat (domain
-// awam). Teks halaman dalam Bahasa Inggeris (internasional); setiap entri
-// paut-silang ke profil negara /negara/<slug> kluster negara.
+// ── TUKUK-OS PROVERBS (/pepatah) — Proverbs of the World ──────────────────────
+// STATIC embedded data (src/proverbs-data.json), curated ONCE at authoring time
+// from genuinely attested world proverbs (original text + romanisation + English
+// meaning). NO runtime API calls → instant pages & impossible
+// to block (lesson from the Met WAF incident). Proverbs are folk heritage (public
+// domain). Page text is in English (international); every entry
+// cross-links to the country profile /negara/<slug> of its country cluster.
 const DATA = require('./proverbs-data.json');
 
 function slugify(s) {
@@ -14,14 +14,14 @@ function slugify(s) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-// Tambah countrySlug (padan slug /negara, daripada nama common dunia).
+// Add countrySlug (matches the /negara slug, from the common world country name).
 const PROVERBS = DATA.map((p) => ({ ...p, countrySlug: slugify(p.country) }));
 const P_BY_SLUG = new Map(PROVERBS.map((p) => [p.slug, p]));
 
-// Lapan kawasan mengikut susunan yang masuk akal untuk hab.
+// Regions in an order that reads sensibly for the hub.
 const REGION_ORDER = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania'];
 
-// Kumpul mengikut negara (nama + slug + bilangan + senarai peribahasa).
+// Group by country (name + slug + count + list of proverbs).
 const COUNTRY_MAP = new Map();
 for (const p of PROVERBS) {
   if (!COUNTRY_MAP.has(p.countrySlug)) {

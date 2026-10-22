@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * generate-store-icons.js — Jana ikon SVG berasingan untuk setiap app bawaan
- * (/public/icons/apps/<nama>.svg) dan setiap game Arked (/public/icons/games/<kind>.svg).
+ * generate-store-icons.js — Generate a distinct SVG icon for every built-in app
+ * (/public/icons/apps/<name>.svg) and every Arcade game (/public/icons/games/<kind>.svg).
  *
- * Setiap ikon = jubin 128×128 dengan gradien + emoji gamenya, jadi tab pelayar,
- * buku tanda dan skrin utama boleh bezakan app/game walaupun tanpa favicon PNG.
+ * Each icon = a 128×128 tile with a gradient + the game's emoji, so the browser tab,
+ * bookmarks and home screen can tell apps/games apart even without a PNG favicon.
  *
- * Guna: node scripts/generate-store-icons.js
+ * Usage: node scripts/generate-store-icons.js
  */
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +14,7 @@ const path = require('path');
 const OUT_APPS = path.join(__dirname, '..', 'public', 'icons', 'apps');
 const OUT_GAMES = path.join(__dirname, '..', 'public', 'icons', 'games');
 
-// name → {em: emoji, c1/c2: hujung gradien} — selari dengan STORE_APP_META & TYPES Arked
+// name → {em: emoji, c1/c2: gradient ends} — mirrors STORE_APP_META & the Arcade TYPES
 const APPS = {
   notes:    { em: '📝', c1: '#ffd166', c2: '#f77f00' },
   calc:     { em: '🧮', c1: '#4cc9f0', c2: '#4361ee' },

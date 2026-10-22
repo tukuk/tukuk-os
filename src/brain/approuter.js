@@ -1,16 +1,16 @@
 // ═══ Tukuk App Router ════════════════════════════════════════════════════════
-// Lapisan "tool use" untuk brain: memetakan soalan/permintaan pengguna kepada
-// APLIKasi server yang paling tepat. Skor berasaskan kata kunci multibahasa
-// (ms/id/en) — bebas model, deterministik, dan digate supaya cadangan hanya
-// muncul bila benar-benar relevan.
+// The brain's "tool use" layer: map the user's question/request to the
+// most fitting server APPLICATION. Scored from multilingual keywords
+// (ms/id/en) — model-free, deterministic, and gated so suggestions only
+// appear when truly relevant.
 //
-// Sumber katalog: hanya PERMUKAAN HIDUP — fail/route yang wujud hari ini.
-// Pivoting konten Okt 2026 (b0542e7) membuang app/store/halaman AI; katalog
-// lama memaut URL 404 — dibetulkan. Ujian (test/approuter.test.js) mengesahkan
-// setiap laluan katalogpadanan mempunyai fail HTML atau route server.
+// Catalog source: only the LIVE SURFACE — files/routes that exist today.
+// The Oct 2026 content pivot (b0542e7) removed the app/store/AI pages; the old
+// catalog linked 404 URLs — fixed. The test (test/approuter.test.js) verifies
+// every matched catalog path has an HTML file or a server route.
 'use strict';
 
-// ── Katalog: [nama, url, ikon, tajuk, kata kunci (ms/id/en campur, lowercase)] ──
+// ── Catalog: [name, url, icon, title, keywords (ms/id/en mixed, lowercase)] ──
 const UTILITIES = [
   ['chat', '/apps/chat', '\uD83D\uDCAC', 'T Chat', 'chat message mesej messenger sembang room bilik call phone'],
 ];
@@ -42,7 +42,7 @@ const STOP = new Set(['the', 'a', 'an', 'is', 'are', 'to', 'of', 'for', 'and', '
   'satu', 'dua', 'ini', 'itu', 'dalam', 'dan', 'atau', 'untuk', 'macam', 'bagaimana', 'buat',
   'buatkan', 'bina', 'mainkan', 'bukakan', 'kerjakan', 'sediakan']);
 
-// ── Pembina indeks: kata kunci → [entry] (sekali sahaja, dipanggil lazily) ──
+// ── Index builder: keyword → [entry] (only once, lazily invoked) ──
 const CATALOG = [...UTILITIES, ...TOOLS];
 let INDEX = null;
 function index() {
@@ -56,7 +56,7 @@ function index() {
 }
 
 /**
- * Padankan soalan dengan aplikasi server.
+ * Match a question against the server applications.
  * @param {string} query
  * @returns {{apps: Array<{name:string,url:string,ic:string,title:string,score:number}>}}
  */
@@ -71,7 +71,7 @@ function route(query) {
       scores.set(e[0], cur);
     }
   }
-  // Longgar: padankan juga awalan 4+ aksara (singular/plural, "weathers"→"weather").
+  // Loose: also match a 4+ character prefix (singular/plural, "weathers"→"weather").
   for (const w of words) {
     if (w.length < 4) continue;
     for (const [kw, list] of idx) {
@@ -87,7 +87,7 @@ function route(query) {
   const ranked = [...scores.values()]
     .map((s) => ({ name: s.e[0], url: s.e[1], ic: s.e[2], title: s.e[3], score: Math.round(s.score * 10) / 10 }))
     .sort((a, b) => b.score - a.score);
-  // Gate: cukup kuat sahaja (1 padanan penuh ATAU 2 separuh) — kalau tak, kosong.
+  // Gate: only strong enough (1 full match OR 2 half) — otherwise empty.
   const apps = ranked.filter((r) => r.score >= 1).slice(0, 3);
   return { apps };
 }

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Eksport indeks carian RINGKAS untuk mod sandaran worker www.tukuk.org.
+ * Export a COMPACT search index for the www.tukuk.org worker's fallback mode.
  *
- *   node scripts/export-edge-index.js [fail-keluaran]
+ *   node scripts/export-edge-index.js [output-file]
  *
- * Baca dari env: MEILI_HOST, MEILI_MASTER_KEY, MEILI_INDEX.
- * Hasil: JSON array [{title, url, description, content, siteName}] dengan
- * konten dipangkas (≤300 aksara) supaya muat & laju dalam Cloudflare Worker.
+ * Reads from env: MEILI_HOST, MEILI_MASTER_KEY, MEILI_INDEX.
+ * Output: a JSON array [{title, url, description, content, siteName}] with
+ * content trimmed (≤300 characters) so it loads fast inside a Cloudflare Worker.
  */
 
 const fs = require('fs');
@@ -47,7 +47,7 @@ async function main() {
         siteName: String(d.siteName || '')
       });
     }
-    process.stdout.write(`\r  ${docs.length} dokumen...`);
+    process.stdout.write(`\r  ${docs.length} documents...`);
     if (results.length < PAGE) break;
   }
   console.log('');

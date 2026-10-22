@@ -1,10 +1,10 @@
 'use strict';
 
-// Pengesahan Bingbot mengikut kaedah rasmi Bing Webmaster Tools:
-//   1. Reverse DNS IP mesti berakhir dengan `.search.msn.com`
-//   2. Forward-confirm: hostname itu mesti resolve balik ke IP yang sama
-//   3. Isyarat ketiga: IP ada dalam senarai rasmi bing.com/toolbox/bingbot.json
-//      (sesetengah subnet sah tiada rDNS tetapi tersenarai di situ)
+// Bingbot verification using the official Bing Webmaster Tools method:
+//   1. The IP's reverse DNS must end with `.search.msn.com`
+//   2. Forward-confirm: that hostname must resolve back to the same IP
+//   3. Third signal: the IP appears in the official bing.com/toolbox/bingbot.json list
+//      (some valid subnets have no rDNS but are listed there)
 
 const dns = require('dns').promises;
 const net = require('net');
@@ -19,7 +19,7 @@ const DOCS = {
   ipList: IP_LIST_URL
 };
 
-const LIST_TTL_MS = 12 * 60 * 60 * 1000; // 12 jam
+const LIST_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 let listCache = { at: 0, v4: [], v6: [], status: 'never' };
 
 function getJson(url, ms = 8000) {
@@ -89,7 +89,7 @@ function inCidrV4(ip, cidrs) {
   });
 }
 
-// Best-effort: banding prefix heks (kedua-dua belas tanpa ':')
+// Best-effort: compare hex prefixes (both sides stripped of ':')
 function inCidrV6(ip, cidrs) {
   const norm = ip.toLowerCase().replace(/:/g, '');
   return cidrs.some((cidr) => {
@@ -107,7 +107,7 @@ async function reverseLookup(ip) {
     const hostnames = await dns.reverse(ip);
     return Array.isArray(hostnames) ? hostnames : [];
   } catch {
-    return []; // tiada PTR — bukan ralat
+    return []; // no PTR — not an error
   }
 }
 

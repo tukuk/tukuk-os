@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // ── TUKUK-OS CAGAR (/cagar) — Protected Areas of the World ─────────────────
-// Senarai STATIK kawasan lindung (taman negara, cagar alam, rizom biosfer) dari
-// Wikidata — fakta stabil: nama, negara, benua, koordinat, jenis. Ringkasan
-// Wikipedia SEMASA + di-cache (fail-open). Halaman teras sentiasa terrender
-// daripada data tetap → TIDAK BOLEH 503. Skop Bahasa Inggeris (internasional).
+// STATIC list of protected areas (national parks, nature reserves, biosphere reserves) from
+// Wikidata — stable facts: name, country, continent, coordinates, type. Summary
+// from Wikipedia LIVE + cached (fail-open). The page core always renders
+// from fixed data → it MUST NEVER 503. English scope (international).
 const https = require('https');
 const DATA = require('./cagar-data.json');
 
@@ -31,7 +31,7 @@ function findRegion(slug) { return R_BY_SLUG.get(String(slug || '').toLowerCase(
 function areasInRegion(region) { return AREAS.filter((a) => a.region === region); }
 function areasByCountry(countrySlug) { return AREAS.filter((a) => a.countrySlug === countrySlug); }
 
-// ——— HTTP IPv6→IPv4 + timeout (corak warisan.js) ———
+// ——— HTTP IPv6→IPv4 + timeout (the warisan.js pattern) ———
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 function httpsGet(url, agent) {

@@ -1,12 +1,12 @@
 /**
- * Fallback carian — digunakan hanya bila Meilisearch tidak boleh dicapai.
+ * Search fallback — used only when Meilisearch cannot be reached.
  *
- * Mengimplementasikan semula cara mudah yang asal: padanan substring ringkas
- * ke atas cache dokumen dalam memori. Cache itu diisi semasa crawl, jadi
- * enjin kekal berfungsi (ringkas) walaupun index utama rosak.
+ * Re-implements the original simple approach: plain substring matching
+ * over an in-memory document cache. The cache is filled during crawling, so the
+ * engine keeps working (simply) even when the main index is broken.
  *
- * Ini BUKAN pengganti Meilisearch — tiada typo tolerance, tiada facet,
- * tiada ranking. Hanya talian hayati apabila index turun.
+ * This is NOT a Meilisearch replacement — no typo tolerance, no facets,
+ * no ranking. Just a lifeline when the index is down.
  */
 
 const cache = new Map();

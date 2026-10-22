@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Merge indeks uji_coba (32k+ dokumen English) ke dalam indeks utama halaman_web.
- * Salinan, bukan pemindahan — uji_coba kekal sebagai asal rujukan.
- * Guna: node scripts/merge-index.js
+ * Merge the uji_coba index (32k+ English documents) into the main halaman_web index.
+ * A copy, not a move — uji_coba stays untouched as the original source.
+ * Use: node scripts/merge-index.js
  */
 const { client } = require('../src/meili');
 

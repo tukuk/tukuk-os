@@ -1,19 +1,19 @@
 'use strict';
 // ── TUKUK-OS WARISAN (/warisan) — UNESCO World Heritage sites ────────────────
-// Senarai STATIK tapak Warisan Dunia yang ikonik (fakta stabil sahaja: negara,
-// benua, jenis, koordinat anggaran) + ringkasan Wikipedia yang diambil SEMASA
-// dan dik-cache. Prinsip keselamatan (pelajaran insiden Met + /kota): teras
-// halaman sentiasa terrender daripada data tetap → TIDAK BOLEH 503. Ringkasan
-// Wikipedia ialah KAYA-SAHAYA (fail-open): gagal → halaman tetap sah. Teks &
-// skop Bahasa Inggeris (internasional). Tahun/terperinci TIDAK ditulis tangan —
-// diabaikan daripada data supaya tidak direka (data honesty); hanya nama, negara,
-// benua, jenis & koordinat anggaran yang confidently stabil.
+// A STATIC list of iconic World Heritage sites (stable facts only: country,
+// continent, type, approximate coordinates) + the Wikipedia summary fetched LIVE
+// and cached. Safety principle (the Met incident + /kota lesson): the page core
+// always renders from fixed data → it MUST NEVER 503. The Wikipedia summary is
+// a NICE-TO-HAVE (fail-open): failure → the page is still valid. Text &
+// scope are English (international). Years/details are NOT hand-written —
+// dropped from the data so nothing gets invented (data honesty); only the name, country,
+// continent, type & approximate coordinates that are confidently stable.
 const https = require('https');
 const DATA = require('./warisan-data.json');
 
 const UA = 'TukukOS-Warisan/1.0 (+https://tukuk.org)';
 const cache = new Map();
-const TTL = 30 * 24 * 60 * 60 * 1000; // ringkasan Wikipedia berubah perlahan
+const TTL = 30 * 24 * 60 * 60 * 1000; // Wikipedia summaries change slowly
 
 function slugify(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -26,7 +26,7 @@ const TYPE_ORDER = ['Cultural', 'Natural', 'Mixed'];
 const SITES = DATA.map((s) => ({ ...s, slug: slugify(s.name), countrySlug: slugify(s.country) }));
 const S_BY_SLUG = new Map(SITES.map((s) => [s.slug, s]));
 
-// Rantau (benua) sebagai halaman hub tersendiri — kira jumlah tapak setiap satu.
+// Region (continent) as its own hub page — count the sites in each.
 function countInRegion(r) { let n = 0; for (const s of SITES) if (s.region === r) n++; return n; }
 const REGIONS = REGION_ORDER.map((r) => ({ name: r, slug: slugify(r), count: countInRegion(r) }));
 const R_BY_SLUG = new Map(REGIONS.map((r) => [r.slug, r]));
@@ -36,7 +36,7 @@ function findRegion(slug) { return R_BY_SLUG.get(String(slug || '').toLowerCase(
 function sitesInRegion(region) { return SITES.filter((s) => s.region === region); }
 function sitesByCountry(countrySlug) { return SITES.filter((s) => s.countrySlug === countrySlug); }
 
-// ——— HTTP IPv6→IPv4 + timeout (corak bencana.js/sejarah.js/kota.js) ———
+// ——— HTTP IPv6→IPv4 + timeout (the bencana.js/sejarah.js/kota.js pattern) ———
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 function httpsGet(url, agent) {
@@ -60,8 +60,8 @@ async function fetchJson(url) {
   try { return await httpsGet(url, v6Agent); } catch { return await httpsGet(url, v4Agent); }
 }
 
-// Ringkasan Wikipedia satu tajuk → {extract, description, thumb, thumbW, thumbH, url} atau null.
-// Fail-open: sebarang ralat → null (panggilan render tetap hidang halaman statik).
+// Wikipedia summary for one title → {extract, description, thumb, thumbW, thumbH, url} or null.
+// Fail-open: any error → null (the render call still serves the static page).
 async function fetchSummary(wikiTitle) {
   const t = String(wikiTitle || '').trim();
   if (!t) return null;
@@ -82,7 +82,7 @@ async function fetchSummary(wikiTitle) {
     cache.set(key, { data: out, expiresAt: Date.now() + TTL });
     return out;
   } catch {
-    return hit ? hit.data : null; // SWR — basi lebih baik daripada tiada, tapi jangan sekat
+    return hit ? hit.data : null; // SWR — stale beats nothing, but don't block
   }
 }
 

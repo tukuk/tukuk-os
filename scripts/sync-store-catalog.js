@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 /**
- * sync-store-catalog.js — Selaraskan apk/catalog.json dengan kedai LIVE tukuk.org.
+ * sync-store-catalog.js — Reconcile apk/catalog.json with the LIVE tukuk.org store.
  *
- * Kedai /api/store hidang SEMUA item (bawaan bv-, arkad ak-, Satu Kata sk-/skg-,
- * komuniti km-). Katalog statik apk/catalog.json hanya jadi sumber kebenaran untuk
- * project Gradle Android Studio (satu productFlavour per item) + build-store-apks.sh.
- * Skrip ini menambah item yang BELUM ada supaya "semua game" benar-benar semua.
+ * The /api/store shelf serves EVERY item (default bv-, arcade ak-, Satu Kata sk-/skg-,
+ * community km-). The static apk/catalog.json is only the source of truth for the
+ * Android Studio Gradle project (one productFlavour per item) + build-store-apks.sh.
+ * This script adds items that DON'T exist yet so "all games" really means all.
  *
- * Untuk setiap item baharu:
- *   1. slug paket = peraturan apkSlug() di src/server.js (bv-/ak- buang prefix;
- *      sk-/skg-/km- kekalkan → tiada pertindihan silang-sumber).
- *   2. ikon unik SVG (gradien ber-hash + emoji dari API) → public/icons/apps/<slug>.svg
+ * For every new item:
+ *   1. package slug = the apkSlug() rule in src/server.js (bv-/ak- drop the prefix;
+ *      sk-/skg-/km- are kept → no cross-source collisions).
+ *   2. a unique SVG icon (hashed gradient + the emoji from the API) → public/icons/apps/<slug>.svg
  *      → PNG 512 (public/icons/apps/<slug>-512.png + apk/launcher/<slug>.png).
- *   3. mipmap per-flavour (5 kepadatan) → apk/app/src/<slug>/res/mipmap-<dpi>/ic_launcher.png
- *      — AGP auto-merge sumber flavour; setiap APK dapat ikon pelancarannya sendiri.
- *   4. entri katalog {slug,label,pkg,url,media,icon,vc,vn} disimpan (entry sedia
- *      ada TIDAK disentuh — vc/vn/media khas seperti chat kekal).
+ *   3. per-flavour mipmaps (5 densities) → apk/app/src/<slug>/res/mipmap-<dpi>/ic_launcher.png
+ *      — AGP merges flavour sources automatically; each APK gets its own launcher icon.
+ *   4. the catalog entry {slug,label,pkg,url,media,icon,vc,vn} is stored (existing
+ *      entries are NOT touched — special vc/vn/media such as chat stay).
  *
- * Guna: node scripts/sync-store-catalog.js [--dry]
- *   --dry : laporan sahaja, tiada tulis fail.
+ * Usage: node scripts/sync-store-catalog.js [--dry]
+ *   --dry : report only, no file writes.
  */
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +36,7 @@ const DENSITIES = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
 
 const DRY = process.argv.includes('--dry');
 
-// Padan apkSlug() di src/server.js — buang prefix bv-/ak-, bersih & mula huruf.
+// Mirrors apkSlug() in src/server.js — strips the bv-/ak- prefix, cleans & lowercases.
 function slugFromId(id) {
   let base = String(id || '');
   if (base.startsWith('bv-')) base = base.slice(3);
@@ -46,13 +46,13 @@ function slugFromId(id) {
   return (/^[a-z]/.test(cleaned) ? cleaned : 'a' + cleaned).slice(0, 40);
 }
 
-// Padan apkLabel() — buang aksara bahaya shell/XML, had 30 aksara.
+// Mirrors apkLabel() — strips shell/XML-dangerous characters, capped at 30 characters.
 function cleanLabel(title) {
   const clean = String(title || '').replace(/[<>&"'`$\\]/g, '').replace(/\s+/g, ' ').trim();
   return (clean || 'Tukuk App').slice(0, 30);
 }
 
-// Hash FNV-1a → dua warna gradien deterministik (unik per slug, stabil ulang-alik).
+// FNV-1a hash → two deterministic gradient colors (unique per slug, stable across runs).
 function gradFor(slug) {
   let h = 2166136261;
   for (let i = 0; i < slug.length; i++) { h ^= slug.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -70,7 +70,7 @@ function hslCss(h, s, l) {
   return `#${hex(f(0))}${hex(f(8))}${hex(f(4))}`;
 }
 
-// Templat sama dengan generate-store-icons.js — jubin 128 gradien + emoji.
+// Same template as generate-store-icons.js — a 128 gradient tile + the emoji.
 function iconSvg(emoji, { c1, c2 }) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
@@ -92,7 +92,7 @@ async function main() {
   if (!res.ok) throw new Error(`GET ${STORE_URL} → ${res.status}`);
   const body = await res.json();
   const items = Array.isArray(body) ? body : body.items;
-  if (!Array.isArray(items) || !items.length) throw new Error('Response store tiada items[]');
+  if (!Array.isArray(items) || !items.length) throw new Error('The store response has no items[]');
 
   const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
   const apps = catalog.apps || catalog;
@@ -120,7 +120,7 @@ async function main() {
   console.log(`store=${items.length} items · catalogue=${known.size} · new=${toAdd.length}`);
   if (DRY) { toAdd.forEach((a) => console.log('  +', a.slug, '←', a.url)); return; }
 
-  // 1) Ikon SVG + PNG-512 + launcher untuk item baharu.
+  // 1) SVG icon + PNG-512 + launcher icon for the new items.
   fs.mkdirSync(ICONS_DIR, { recursive: true });
   fs.mkdirSync(LAUNCH_DIR, { recursive: true });
   for (const a of toAdd) {
@@ -136,7 +136,7 @@ async function main() {
     }
   }
 
-  // 2) Mipmap per-flavour untuk SEMUA item ( sedia + baharu ) — idempotent.
+  // 2) Per-flavour mipmaps for EVERY item ( existing + new ) — idempotent.
   const all = known.size ? apps.concat(toAdd) : toAdd;
   let mip = 0;
   for (const a of all) {
@@ -152,7 +152,7 @@ async function main() {
     }
   }
 
-  // 3) Catalog: buang _emoji dalaman, simpan susunan asal + tambahan.
+  // 3) Catalog: drop the internal _emoji, keep the original order + the additions.
   for (const a of toAdd) delete a._emoji;
   if (catalog.apps) catalog.apps = apps.concat(toAdd);
   else catalog.splice(catalog.length, 0, ...toAdd);

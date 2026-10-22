@@ -1,28 +1,28 @@
-// T Chat — backend multi-pengguna untuk app /apps/chat.
-// Akaun (scrypt), sesi bearer-token, bilik global + DM 1-ke-1, mesej dengan
-// reply/reaction/edit/padam, lampiran gambar & video, kehadiran (online/menaip).
-// Metadata dalam satu fail JSON di data/chat.json; fail media di data/chat-media/.
+// T Chat — the multi-user backend for the /apps/chat app.
+// Accounts (scrypt), bearer-token sessions, a global room + 1-to-1 DMs, messages with
+// reply/reaction/edit/delete, image & video attachments, presence (online/typing).
+// Metadata lives in one JSON file at data/chat.json; media files in data/chat-media/.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 
 const DEFAULT_PATH = path.join(__dirname, '..', 'data', 'chat.json');
-const MAX_MSG = 500;        // panjang mesej
-const KEEP = 200;           // mesej terakhir per bilik
+const MAX_MSG = 500;        // message length
+const KEEP = 200;           // the last message per room
 const SESSION_TTL = 30 * 24 * 3600e3;
-const ONLINE_MS = 90e3;     // dianggap dalam talian
-const TYPING_MS = 4e3;      // paparan "menaip…"
-const MAX_IMG = 8 * 1024 * 1024;            // had fail gambar (selepas mampat klien)
-const MAX_VID = 64 * 1024 * 1024;           // had fail video
-const MAX_AUDIO = 8 * 1024 * 1024;          // had mesej suara (opus/webm/ogg)
-const MAX_DOC = 32 * 1024 * 1024;           // had fail umum (dokumen/zip/muzik)
-const MAX_PER_MSG = 4;                      // media satu mesej (album)
-const QUOTA_FILES = 40;                     // fail per jam per pengguna
-const QUOTA_BYTES = 512 * 1024 * 1024;      // saiz per jam per pengguna
+const ONLINE_MS = 90e3;     // considered online
+const TYPING_MS = 4e3;      // the "typing…" display
+const MAX_IMG = 8 * 1024 * 1024;            // the image file cap (after client-side compression)
+const MAX_VID = 64 * 1024 * 1024;           // the video file cap
+const MAX_AUDIO = 8 * 1024 * 1024;          // the voice-message cap (opus/webm/ogg)
+const MAX_DOC = 32 * 1024 * 1024;           // the general file cap (documents/zip/music)
+const MAX_PER_MSG = 4;                      // the media of one message (an album)
+const QUOTA_FILES = 40;                     // files per hour per user
+const QUOTA_BYTES = 512 * 1024 * 1024;      // size per hour per user
 const QUOTA_WIN = 3600e3;
-const STORE_CAP = 3 * 1024 * 1024 * 1024;   // jumlah stor media seluruh tapak
-const ORPHAN_TTL = 3600e3;                  // muat naik tak dihantar → buang
+const STORE_CAP = 3 * 1024 * 1024 * 1024;   // the total media storage of the whole site
+const ORPHAN_TTL = 3600e3;                  // an upload that was never posted → drop it
 
 let FILE = DEFAULT_PATH;
 let MEDIA = path.join(path.dirname(DEFAULT_PATH), 'chat-media');
@@ -30,8 +30,8 @@ let state = null;
 let writeTimer = null;
 let dirty = false;
 
-// ─── Simpanan ───
-const FIRST_ID = 100001;    // Tukuk ID pertama (nombor kekal, bukan nama)
+// ─── Storage ───
+const FIRST_ID = 100001;    // the first Tukuk ID (a permanent number, not a name)
 function blank() {
   return { users: {}, sessions: {}, rooms: {}, msgs: {}, seen: {}, typing: {}, media: {}, quota: {}, mediaBytes: 0, mediaKey: '', nextId: FIRST_ID, pushSubs: {}, vapid: null, posts: {}, stories: {}, notif: {}, polls: {}, smsReply: {} };
 }
@@ -49,23 +49,23 @@ function load() {
   migrate();
   return state;
 }
-// Naik taraf data lama: beri Tukuk ID pada akaun tanpa id, dan kunci bilik DM
-// berasaskan nombor ID (sebelum ini guna nama → nama bertukar = DM rosak).
+// Upgrade the old data: give a Tukuk ID to accounts that have none, and key DM rooms
+// on the ID number (before this they used names → a renamed account broke the DM).
 function migrate() {
   const s = state;
   if (!s.nextId) s.nextId = FIRST_ID;
   let changed = false;
   for (const u of Object.values(s.users)) {
     if (!u.id) { u.id = s.nextId++; changed = true; }
-    // Akaun lama belum punya senarai kawan/sekat — kosongkan supaya kod lain
-    // tidak perlu memeriksa kewujudannya setiap masa.
+    // Old accounts have no friends/blocked list yet — empty them so other code
+    // does not have to test for their existence every time.
     if (!Array.isArray(u.friends)) { u.friends = []; changed = true; }
     if (!Array.isArray(u.blocked)) { u.blocked = []; changed = true; }
-    // Lapisan sosial: following/followers (ID) + avatar (media id atau null).
+    // The social layer: following/followers (IDs) + the avatar (a media id or null).
     if (!Array.isArray(u.following)) { u.following = []; changed = true; }
     if (!Array.isArray(u.followers)) { u.followers = []; changed = true; }
     if (u.avatar === undefined) { u.avatar = null; changed = true; }
-    // Nombor telefon (pilihan) untuk fallback SMS semasa luar talian; null = tiada.
+    // A phone number (optional) for the SMS fallback while offline; null = none.
     if (u.phone === undefined) { u.phone = null; changed = true; }
   }
   for (const [id, r] of Object.entries(s.rooms)) {
@@ -103,7 +103,7 @@ function flush() {
   try {
     fs.mkdirSync(path.dirname(FILE), { recursive: true });
     fs.writeFileSync(FILE, JSON.stringify(state));
-  } catch { /* best-effort — data tetap di memori */ }
+  } catch { /* best-effort — the data stays in memory */ }
 }
 function touch() {
   dirty = true;
@@ -128,7 +128,7 @@ function normalizeName(value) {
   return s;
 }
 const key = (name) => String(name || '').toLowerCase();
-// Mesej boleh berbilang baris: kekalkan \n, buang aksara kawalan lain.
+// A message may be multi-line: keep \n, drop the other control characters.
 function cleanText(v) {
   return String(v || '')
     .replace(/\r\n?/g, '\n')
@@ -139,8 +139,8 @@ function cleanText(v) {
 }
 
 // ─── Tukuk ID ───
-// Setiap akaun dapat nombor kekal (100001+). Nama hanya paparan; DM, karangan
-// mesej dan carian "siapa punya ID ini" semua berpaut pada nombor itu.
+// Every account gets a permanent number (100001+). The name is only display; DMs, drafts,
+// messages and the "whose ID is this" search all hang off that number.
 function byId(id) {
   const n = Number(id);
   if (!Number.isInteger(n)) return null;
@@ -148,7 +148,7 @@ function byId(id) {
 }
 function userByName(name) { return load().users[key(name)] || null; }
 function nameOfUser(id) { const u = byId(id); return u ? u.name : null; }
-// Input pengguna: boleh Tukuk ID (nombor) atau nama → objek pengguna atau null.
+// User input: a Tukuk ID (number) or a name → a user object or null.
 function findUser(q) {
   if (q && typeof q === 'object') return q.id ? q : userByName(q.name);
   const raw = String(q == null ? '' : q).trim();
@@ -161,9 +161,9 @@ const uid = (who) => { const u = (who && typeof who === 'object') ? who : findUs
 const uname = (who) => { const u = (who && typeof who === 'object') ? who : findUser(who); return (u && u.name) || (who && who.name) || String(who || ''); };
 const isOnline = (u) => Date.now() - (u.lastSeen || 0) < ONLINE_MS;
 
-// ─── Media (gambar + video) ───
-// Fail mentah disimpan di data/chat-media/<id>.<ext>; metadata dalam JSON. Jenis
-// ditentukan daripada bait ajaib (magic bytes), BUKAN header Content-Type klien.
+// ─── Media (images + video) ───
+// The raw file is stored at data/chat-media/<id>.<ext>; the metadata is in JSON. The type
+// comes from the magic bytes, NOT from the client's Content-Type header.
 function sniff(b) {
   if (!b || b.length < 16) return null;
   const at = (o, n) => b.toString('latin1', o, o + n);
@@ -184,16 +184,16 @@ function sniff(b) {
 }
 const isImage = (mime) => String(mime).startsWith('image/');
 const isAudio = (mime) => String(mime).startsWith('audio/');
-// Nama fail selamat: buang aksara Laluan/sepadan Windows + aksara kawalan.
+// A safe file name: strip Path/Windows-matching characters + control characters.
 const safeFileName = (n) => {
   const x = String(n || '').replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, '_').trim().slice(0, 120);
   return x || 'fail';
 };
 function mediaFile(rec) { return path.join(MEDIA, rec.id + '.' + rec.ext); }
 function num(v, max) { const n = Math.round(Number(v) || 0); return n > 0 && n <= max ? n : 0; }
-// Pautan media TIDAK boleh membawa token sesi (token masuk log pelayan), jadi
-// setiap URL ditandatangani HMAC dengan tarikh luput. <img>/<video> boleh hantar
-// terus dan sokong julat bayaran (Range) untuk lompat video.
+// A T Chat media link may NOT carry the session token (tokens end up in server logs), so
+// every URL is HMAC-signed with an expiry date. <img>/<video> can send
+// it directly and support paid Range jumps for video seeking.
 const MEDIA_TTL = 6 * 3600e3;
 function mediaSecret() {
   const s = load();
@@ -201,9 +201,9 @@ function mediaSecret() {
   return s.mediaKey;
 }
 const mac = (id, exp) => crypto.createHmac('sha256', mediaSecret()).update(id + '.' + exp).digest('hex').slice(0, 32);
-// Tarikh luput dijana pada sempadan tempoh (bukan "sekarang + 6 jam") supaya URL
-// yang sama kekal stabil — jika tidak, setiap poll menghasilkan pautan baharu dan
-// pelayar memuat turun semula gambar/video yang sama.
+// The expiry date is generated on a period boundary (not "now + 6 hours") so the same URL
+// stays stable — otherwise every poll would produce a new link and
+// the browser would re-download the same image/video.
 function mediaUrl(id) {
   const exp = (Math.floor(Date.now() / MEDIA_TTL) + 2) * MEDIA_TTL;
   return '/api/chat/media/' + id + '?k=' + exp + '.' + mac(id, exp);
@@ -217,7 +217,7 @@ function mediaAllowed(id, k) {
   const a = Buffer.from(mac(id, exp)), b = Buffer.from(p[1]);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
-// Rekod media untuk paparan (jalan hanya dengan tandatangan yang sah).
+// The media record for display (only served with a valid signature).
 function mediaSrc(id) {
   const rec = (load().media || {})[/^[a-f0-9]{12}$/.test(String(id)) ? String(id) : ''];
   if (!rec || !fs.existsSync(mediaFile(rec))) return null;
@@ -240,9 +240,9 @@ function addMedia(user, buf, meta) {
   const t = sniff(buf);
   if (!t) return addGenericFile(user, buf, meta);
   const img = isImage(t.mime);
-  // Klien boleh menanda mesej suara (audio=1); ogg/opus juga dikesan menerusi
-  // bait ajaib. WebM audio mempunyai magic byte sama seperti video → bergantung
-  // pada flag klien untuk membezakan jenis paparan.
+  // The client may mark a voice message (audio=1); ogg/opus is also detected through
+  // magic bytes. WebM audio has the same magic bytes as video → it depends
+  // on the client flag to tell the display types apart.
   const audio = !img && (String((meta && meta.audio)) === '1' || isAudio(t.mime));
   const cap = img ? MAX_IMG : audio ? MAX_AUDIO : MAX_VID;
   if (buf.length > cap) return { error: img ? 'Image too large (limit 8MB).' : audio ? 'Voice recording too large (limit 8MB).' : 'Video too large (limit 64MB).', status: 413 };
@@ -267,9 +267,9 @@ function addMedia(user, buf, meta) {
   touch();
   return { ok: true, media: rec };
 }
-// Lampiran fail umum (dokumen, zip, muzik .mp3, apa sahaja yang tidak dikesan
-// sebagai gambar/video/suara). Sentiasa disimpan dengan nama asal; hidangan
-// dipaksa muat turun supaya pelayar tidak pernah menjalankan kandungan.
+// A general file attachment (documents, zip, .mp3 music, anything not detected
+// as an image/video/audio). Always stored under its original name; the serving
+// forces a download so the browser never runs the content.
 function addGenericFile(user, buf, meta) {
   const s = load();
   if (buf.length > MAX_DOC) return { error: 'File too large (limit ' + Math.round(MAX_DOC / 1048576) + 'MB).', status: 413 };
@@ -294,7 +294,7 @@ function addGenericFile(user, buf, meta) {
   touch();
   return { ok: true, media: rec };
 }
-// Ringkasan yang disemat dalam mesej (supaya paparan tak perlu satu lagi GET).
+// The summary embedded in the message (so the view needs no extra GET).
 function projectMedia(rec) {
   const out = { id: rec.id, kind: rec.kind, ext: rec.ext };
   if (rec.w && rec.h) { out.w = rec.w; out.h = rec.h; }
@@ -304,8 +304,8 @@ function projectMedia(rec) {
   if (rec.omime) out.mime = rec.omime;
   return out;
 }
-// Tandatangan dijana semula setiap kali dihantar — jadi mesej yang disimpan
-// tidak pernah mengandungi URL yang boleh luput.
+// The signature is regenerated on every send — so a stored message
+// never contains a URL that can expire.
 function hydrate(m) {
   if (!m) return m;
   if (!m.media && !m.pollId) return m;
@@ -315,9 +315,9 @@ function hydrate(m) {
   return out;
 }
 const hydrateAll = (list) => (list || []).map(hydrate);
-// Lampirkan fail yang sudah dimuat naik pada mesej bilik ini. Hak = pemilik muat
-// naik, atau sesiapa yang boleh baca bilik yang sudah memaparkan fail itu (membolehkan
-// "teruskan" gambar kawan tanpa menyalin fail di disk).
+// Attach a file already uploaded to a message of this room. Rights = the uploader
+// or anyone who can read a room that already shows that file (which allows
+// "forwarding" a friend's picture without copying the file on disk).
 function ownsMedia(user, rec) {
   if (user.k && rec.by === user.k) return true;
   if (!user.name) return false;
@@ -341,12 +341,12 @@ function attachMedia(user, roomId, ids, msgId) {
 function dropMedia(id) {
   const s = load(); const rec = (s.media || {})[id];
   if (!rec) return;
-  try { fs.unlinkSync(mediaFile(rec)); } catch { /* sudah tiada */ }
+  try { fs.unlinkSync(mediaFile(rec)); } catch { /* it is gone already */ }
   s.mediaBytes = Math.max(0, (s.mediaBytes || 0) - (rec.size || 0));
   delete s.media[id];
   touch();
 }
-// Buang rujukan mesej; fail dipadam bila tiada lagi mesej yang memakainya.
+// Drop the message reference; the file is deleted once no message uses it any more.
 function releaseMedia(items, msgId) {
   const s = load();
   for (const it of items || []) {
@@ -356,8 +356,8 @@ function releaseMedia(items, msgId) {
     if (!rec.msgs.length) dropMedia(rec.id);
   }
 }
-// Pembaca badan mentah — muat naik gambar/video bukan JSON, jadi tak guna
-// express.json. Had saiz dikuatkuasakan sendiri supaya ralat boleh difahami.
+// A raw body reader — image/video uploads are not JSON, so express.json is not
+// used. The size cap is enforced by hand so the error stays understandable.
 function readRaw(req, max) {
   return new Promise((resolve, reject) => {
     const parts = [];
@@ -390,7 +390,7 @@ function login(name, pass) {
   const s = load();
   const u = s.users[key(name)];
   if (!u || !eqHex(u.hash, hashPass(pass, u.salt))) return { error: 'Wrong name or password.' };
-  u.lastSeen = Date.now(); // login berjaya = memang hadir
+  u.lastSeen = Date.now(); // a successful login = really present
   touch();
   return { ok: true, user: u };
 }
@@ -408,7 +408,7 @@ function userOf(token) {
   if (!token) return null;
   const sess = s.sessions[token];
   if (!sess || sess.exp < Date.now()) return null;
-  // id dahulu — nama boleh bertukar, id tidak
+  // the id first — a name can change, an id cannot
   const u = (sess.uid ? byId(sess.uid) : null) || s.users[sess.k];
   if (!u) return null;
   u.lastSeen = Date.now();
@@ -417,8 +417,8 @@ function userOf(token) {
 }
 function revoke(token) { const s = load(); if (s.sessions[token]) { delete s.sessions[token]; touch(); } }
 
-// ─── Bilik ───
-// Bilik DM dikunci pada pasangan Tukuk ID, bukan nama — nama bertukar, DM selamat.
+// ─── Rooms ───
+// A DM room is keyed on the pair of Tukuk IDs, not names — a name changes, the DM survives.
 function dmId(a, b) {
   const na = Number(a), nb = Number(b);
   if (Number.isInteger(na) && Number.isInteger(nb) && na >= FIRST_ID && nb >= FIRST_ID)
@@ -432,7 +432,7 @@ function isMember(r, who) {
   const n = key(u ? u.name : uname(who));
   return (r.members || []).some(m => key(m) === n);
 }
-// Nama paparan ahli disegerakkan daripada ID (nama lama kekal jika akaun hilang).
+// A member's display name is synced from the ID (the old name stays if the account is gone).
 function syncNames(r) {
   if (!r || !r.memberIds || !r.memberIds.length) return;
   const names = r.memberIds.map(nameOfUser);
@@ -449,8 +449,8 @@ function roomsFor(name) {
   const hide = (u && u.hide) || null;
   return Object.values(s.rooms).filter(r => {
     if (r.kind !== 'global' && !isMember(r, name)) return false;
-    // DM "sembunyi untuk saya": dibuang dari sidebar sehingga mesej baharu
-    // (ts melebihi waktu sembunyi) mengembalikannya — seperti archive peribadi.
+    // A DM "hidden for me": dropped from the sidebar until a new message
+    // (ts past the hide time) brings it back — like a private archive.
     if (hide && r.kind === 'dm' && hide[r.id] && lastMsgTs(r) < hide[r.id]) return false;
     return true;
   });
@@ -459,14 +459,14 @@ function ensureDm(a, b) {
   const s = load();
   const ua = (a && typeof a === 'object') ? a : findUser(a);
   const ub = (b && typeof b === 'object') ? b : findUser(b);
-  if (!ua || !ub || !ua.id || !ub.id || ua.id === ub.id) return null; // belum daftar → tiada DM
+  if (!ua || !ub || !ua.id || !ub.id || ua.id === ub.id) return null; // not registered yet → no DM
   const pair = [ua.id, ub.id].sort((x, y) => x - y);
   const id = dmId(pair[0], pair[1]);
   let r = s.rooms[id];
   if (!r) {
     r = s.rooms[id] = { id, kind: 'dm', title: null, memberIds: pair, members: pair.map(nameOfUser), createdBy: ua.name, createdAt: Date.now() };
     touch();
-    pubRoom(r, 'room', { room: r.id });   // pasangan terus nampak bilik baharu
+    pubRoom(r, 'room', { room: r.id });   // both partners see the new room right away
     return r;
   }
   if (!r.memberIds || r.memberIds.length !== 2) { r.memberIds = pair; touch(); }
@@ -478,16 +478,16 @@ function peerId(r, mine) {
   const m = uid(mine);
   return r.memberIds.find(i => i !== m) || null;
 }
-// ─── Sembunyi DM ("delete untuk saya") ───
-// Bilik dan sejarah TIDAK dipadam — hanya senarai sisi pengguna ini ditapis.
-// Buka semula bilik (POST /api/chat/room) atau mesej baharu → ia kembali.
+// ─── Hiding a DM ("delete for me") ───
+// The room and its history are NOT deleted — only this user's side list is filtered.
+// Reopening the room (POST /api/chat/room) or a new message → it comes back.
 function hideRoom(name, roomId) {
   const s = load(); const r = s.rooms[roomId];
   if (!r || r.kind !== 'dm') return { error: 'Direct chat not found.' };
   const u = findUser(name);
   if (!u || !isMember(r, u)) return { error: 'You are not a member of this chat.' };
-  // Stempel mesti SENTIASA selepas mesej terakhir (>=) supaya sembunyi tidak
-  // «kandas» bila hide dan mesej terakhir jatuh pada milisaat yang sama.
+  // The stamp must ALWAYS be at or after the last message (>=) so hiding never
+  // «sticks» when the hide and the last message land on the same millisecond.
   (u.hide = u.hide || {})[roomId] = Math.max(Date.now(), lastMsgTs(r) + 1);
   touch();
   return { ok: true };
@@ -495,7 +495,7 @@ function hideRoom(name, roomId) {
 function unhideRoom(u, roomId) {
   if (u && u.hide && u.hide[roomId]) { delete u.hide[roomId]; touch(); }
 }
-// ─── Bilik kumpulan ───
+// ─── Group rooms ───
 function createGroup(creatorName, title, memberIds) {
   const s = load();
   const t = String(title || '').trim().slice(0, 40);
@@ -531,8 +531,8 @@ function addToGroup(name, roomId, memberId) {
 }
 const adminsOf = (r) => (r && Array.isArray(r.admins) ? r.admins : []);
 const isGroupAdmin = (r, name) => adminsOf(r).includes(uid(name));
-// Buang satu ID daripada senarai admin; jika tiada baki, promosikan ahli terakhir
-// supaya kumpulan tidak pernah kehilangan pentadbir.
+// Remove one ID from the admin list; if none are left, promote the last member
+// so the group never loses its administrator.
 function promoteAdmin(r) {
   r.admins = (r.admins || []).filter(id => r.memberIds.includes(id));
   if (!r.admins.length && r.memberIds.length) r.admins = [r.memberIds[0]];
@@ -560,7 +560,7 @@ function leaveGroup(name, roomId) {
   pubRoom(r, 'room', { room: roomId });
   return { ok: true };
 }
-// ─── Pentadbiran kumpulan (hanya admin) ───
+// ─── Group administration (admins only) ───
 function groupAdmin(name, roomId) {
   const s = load(); const r = s.rooms[roomId];
   if (!r || r.kind !== 'group') return { error: 'Group not found.' };
@@ -604,8 +604,8 @@ function addAdmin(name, roomId, memberId, remove) {
 function dissolveBy(name, roomId) {
   const g = groupAdmin(name, roomId); if (g.error) return g;
   const r = g.room;
-  // Hanya pencipta boleh bubarkan — kecuali pencipta sudah tiada dalam kumpulan,
-  // maka admin yang tinggal mengambil alih hak itu.
+  // Only the creator may dissolve it — unless the creator is no longer in the group,
+  // in which case a remaining admin takes over that right.
   if (r.createdById && r.createdById !== uid(name) && (r.memberIds || []).includes(r.createdById)) return { error: 'Only the creator can dissolve this group.' };
   dissolveGroup(roomId);
   return { ok: true, dissolved: true };
@@ -623,14 +623,14 @@ function roomTitle(r, viewer) {
   return (r.members || []).find(m => key(m) !== vk) || (r.members || [])[0] || 'DM';
 }
 
-// ─── Mesej ───
+// ─── Messages ───
 function canRead(name, roomId) {
   const s = load(); const r = s.rooms[roomId];
   if (!r) return false;
   if (r.kind === 'global') return true;
   return isMember(r, name);
 }
-// Pemilik mesej: id penghantar lebih autoritatif daripada nama (nama boleh tukar).
+// Message ownership: the sender id is more authoritative than the name (names can change).
 function sameAuthor(m, who) {
   if (!m) return false;
   const i = uid(who);
@@ -649,8 +649,8 @@ function send(name, roomId, text, replyTo, media, extra) {
   if (!r.list) r.list = [];
   if (!r.seq) r.seq = 0;
   const su = findUser(name);
-  // DM yang salah seorang anggotanya menyekat dibekukan dua-dua arah: masih
-  // boleh dibaca, tetapi tak seorang pun boleh menghantar mesej baharu.
+  // A DM where one member blocks the other is frozen both ways: it can still
+  // be read, but nobody may send a new message.
   if (r.kind === 'dm') {
     const pid = peerId(r, su ? su.id : uid(name));
     if (pid && dmFrozen(su || name, byId(pid))) return { error: 'Messages cannot be sent to this room.' };
@@ -663,8 +663,8 @@ function send(name, roomId, text, replyTo, media, extra) {
   if (replyTo && !r.list.find(m => m.id === replyTo)) replyTo = null;
   const msg = { id: msgId, seq: ++r.seq, from: su ? su.name : name, fid: su ? su.id : null, t, ts: Date.now(), to: replyTo || null, rx: {}, edited: false, del: false, pinned: false };
   if (att.length) msg.media = att;
-  // Meta tambahan (pollId, sticker) disimpan terus pada mesej; tidak mengubah
-  // semantik sedia ada kerana semua pemanggil lain tidak menghantar `extra`.
+  // Extra meta (pollId, sticker) is stored straight on the message; it does not change
+  // the existing semantics because no other caller sends `extra`.
   if (typeof extra === 'object' && extra) {
     if (extra.pollId) msg.pollId = extra.pollId;
     if (extra.sticker) msg.sticker = String(extra.sticker).slice(0, 8);
@@ -677,18 +677,18 @@ function send(name, roomId, text, replyTo, media, extra) {
   const out = hydrate(msg);
   pubRoom(r, 'msg', { room: r.id, seq: r.seq, msg: out });
   maybePush(r, out).catch(() => {});
-  // Google Chat-style mention: @sini/@semua membangunkan satu bilik (terhad, anti-spam).
+  // Google Chat-style mention: @here/@all wakes a whole room (rate-limited, anti-spam).
   if (su && /@here\b|@all\b/i.test(t)) notifyAtAll(su, r, t);
-  // @nama biasa dalam bilik kumpulan/global → notif kepada yang disebut (DM sudah
-  // dimaklumkan melalui maybePush kepada pasangan).
+  // A plain @name in a group/global room → a notification for the person mentioned (DMs are
+  // already pushed to the partner through maybePush).
   if (su && (r.kind === 'group' || r.kind === 'global')) notifyMentions(su, t, null, r.id);
-  // Penunjuk menaip perlu habis serta-merta pada tab lain, bukan tunggu poll.
+  // The typing indicator must end right away on another tab, not wait for a poll.
   if (wasTyping) pubRoom(r, 'typing', { room: r.id, typing: [] });
-  // Fallback Sel: jika pasangan DM luar talian & ada nombor → hantar sebagai SMS.
+  // The SMS fallback: if the DM partner is offline & has a number → send it as an SMS.
   smsFallback(su, r, t, extra);
   return { ok: true, msg: out, room: r };
 }
-// Simpan hanya KEEP mesej terakhir; fail yang keluar dari senarai dibuang.
+// Keep only the last KEEP messages; files that leave the list are dropped.
 function trimRoom(r) {
   if (r.list.length <= KEEP) return;
   const out = r.list.splice(0, r.list.length - KEEP);
@@ -706,7 +706,7 @@ function markSeen(name, roomId) {
   if (!r) return;
   const seq = r.seq || 0;
   s.seen[roomId + '|' + key(name)] = seq; touch();
-  // DM: maklumkan pasangan sampai bila mesej mereka sudah dibaca → resit ✓✓.
+  // DM: tell the partner until their message has been read → a ✓✓ receipt.
   if (r.kind === 'dm') {
     const me = findUser(name);
     const pid = me ? peerId(r, me.id) : null;
@@ -718,7 +718,7 @@ function unread(name) {
   for (const r of Object.values(s.rooms)) {
     if (!canRead(name, r.id)) continue;
     const last = s.seen[r.id + '|' + key(name)] || 0;
-    // hanya mesej orang lain yang melebihi titik baca dikira belum-dibaca
+    // only other people's messages past the read point count as unread
     out[r.id] = (r.list || []).filter(m => m.seq > last && !sameAuthor(m, name)).length;
   }
   return out;
@@ -757,8 +757,8 @@ function remove(name, roomId, msgId) {
   pubRoom(r, 'del', { room: r.id, id: msgId });
   return { ok: true };
 }
-// Pin/unpin. Dalam bilik global & kumpulan: hanya admin (atau pemilik mesej pada
-// bilik global) boleh pin. DM: kedua-dua ahli boleh. Pinned disimpan pada mesej.
+// Pin/unpin. In the global & group rooms: only an admin (or the message owner in
+// the global room) may pin. A DM: both members may. Pinned is stored on the message.
 function pinMsg(name, roomId, msgId, pinned) {
   const s = load(); const r = s.rooms[roomId]; if (!r) return { error: 'Room not found.' };
   const m = (r.list || []).find(x => x.id === msgId); if (!m) return { error: 'Message not found.' };
@@ -775,9 +775,9 @@ function setTyping(name, roomId) {
   pubRoom(s.rooms[roomId], 'typing', { room: roomId, typing: typingIn(roomId) });
 }
 
-// ─── Undian (poll) ───
-// Satu undian dikunci pada satu bilik; satu undi setiap ahli (boleh ubah). Data
-// dikekalkan dalam JSON supaya keputusan langsung muncul pada semua tab melalui SSE.
+// ─── Polls ───
+// One poll is locked to one room; one vote per member (changeable). The data
+// is kept in the JSON so the result shows live in every tab through SSE.
 const MAX_POLL_Q = 200, MAX_POLL_OPT = 80, MAX_POLL_OPTS = 6;
 function projectPoll(p) {
   const total = Object.keys(p.votes).length;
@@ -827,7 +827,7 @@ function typingIn(roomId) {
   }
   return out;
 }
-// Carian mesej merentas semua bilik yang boleh dibaca.  Min 2 aksara, maks 30 hasil.
+// A message search across every room the reader can read. Min 2 characters, max 30 results.
 function searchMsgs(name, query) {
   const s = load();
   const q = String(query == null ? '' : query).trim().toLowerCase();
@@ -847,8 +847,8 @@ function searchMsgs(name, query) {
 }
 
 // ─── Web Push (VAPID) ───
-// Tanpa pakej luar: kunci EC P-256 dijana sekali dan disimpan dalam JSON state.
-// Push dihantar dengan badan kosong — SW memaparkan notifikasi generik.
+// No external package: the EC P-256 key is generated once and stored in the JSON state.
+// Pushes are sent with an empty body — the SW shows a generic notification.
 function initVapid() {
   const s = load();
   if (s.vapid) return;
@@ -860,7 +860,7 @@ function initVapid() {
     });
     s.vapid = { pub: publicKey, priv: privateKey };
     touch();
-  } catch { /* crypto tidak tersedia */ }
+  } catch { /* crypto is unavailable */ }
 }
 function vapidPubB64() {
   initVapid();
@@ -875,7 +875,7 @@ function vapidPubB64() {
     ]).toString('base64url');
   } catch { return null; }
 }
-// Tukar tandatangan DER (crypto.sign) kepada mentah 64-bait ES256.
+// Convert a DER signature (crypto.sign) into the raw 64-byte ES256 form.
 function derSigToRaw(der) {
   let pos = 2;
   if (der[1] & 0x80) pos += (der[1] & 0x7f);
@@ -907,7 +907,7 @@ async function doSendPush(sub, vapid) {
     timeout: 10000,
   });
 }
-// Hantar push untuk ahli DM/kumpulan yang tiada sink SSE aktif.
+// Send a push to DM/group members who have no active SSE sink.
 async function maybePush(room, msg) {
   if (!room || room.kind === 'global') return;
   const s = load();
@@ -916,12 +916,12 @@ async function maybePush(room, msg) {
     if (uid === msg.fid) continue;
     if (sinks.has(uid)) continue;
     for (const sub of (s.pushSubs[String(uid)] || [])) {
-      try { await doSendPush(sub, s.vapid); } catch { /* perkhidmatan push mati */ }
+      try { await doSendPush(sub, s.vapid); } catch { /* the push service is down */ }
     }
   }
 }
-// Direktori pengguna. `viewer` (pilihan) menapis mereka yang MENYEKAT penonton
-// dan menanda status kawan/sekat supaya klien tak perlu teka.
+// The user directory. `viewer` (optional) filters out those who BLOCK the viewer
+// and marks the friend/blocked status so the client does not have to guess.
 function people(query, limit, viewer) {
   const s = load();
   const q = String(query == null ? '' : query).trim().toLowerCase();
@@ -940,8 +940,8 @@ function people(query, limit, viewer) {
     .sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name))
     .slice(0, limit || 50);
 }
-// Paparan awam: "siapa punya ID/nama ini?" — nama, bio, tarikh sertai, kehadiran.
-// Jika orang itu menyekat penonton, kami berpura dia tiada (tiada kebocoran).
+// A public view: "whose ID/name is this?" — name, bio, join date, presence.
+// If that person blocked the viewer we pretend they do not exist (no leak).
 function profile(query, viewer) {
   const u = findUser(query);
   if (!u) return null;
@@ -966,11 +966,11 @@ function setBio(name, bio) {
   return { ok: true, user: u };
 }
 
-// ─── Jambatan Chat ⇄ Sel (gerbang SMS) ─────────────────────────────────
-// Pelayan tiada modem GSM, jadi satu peranti Android dipasangkan sebagai radio
-// (lihat src/sms.js). Fallback: DM kepada kawan yang LUAR TALIAN & menaut nombor
-// dihantar sebagai SMS; balasan SMS masuk disalur kembali ke dalam DM yang sama.
-// Normalisasi nombor MESTI sama dengan sms.normalizeNumber — kunci padanan.
+// ─── Chat ⇄ Cell bridge (SMS gateway) ──────────────────────────────────
+// The server has no GSM modem, so one Android device is paired as the radio
+// (see src/sms.js). The fallback: a DM to a friend who is OFFLINE & linked a number
+// is sent as an SMS; incoming SMS replies are routed back into that same DM.
+// Number normalisation MUST match sms.normalizeNumber — it is the matching key.
 function normPhone(value) {
   let s = String(value || '').trim();
   const plus = s.startsWith('+');
@@ -995,12 +995,12 @@ function setPhone(name, phone) {
   u.phone = norm; touch();
   return { ok: true, phone: norm };
 }
-// Penghantar SMS disuntik dari luar (server.js) supaya chat.js tidak perlu
-// mengenal HTTP/autentikasi gerbang. Pulangkan { ok } jika berjaya dimasukkan katus.
+// The SMS sender is injected from outside (server.js) so chat.js does not need
+// to know the gateway's HTTP/authentication. Return { ok } when the queue accepted it.
 let smsSender = null;
 function setSmsSender(fn) { smsSender = (typeof fn === 'function') ? fn : null; }
-// Dalam send(): DM kepada kawan luar talian yang ada nombor → satu SMS keluar.
-// Dilangkau untuk mesej yang memang datang daripada SMS (extra.sms) — anti-gelung.
+// In send(): a DM to an offline friend who has a number → one outgoing SMS.
+// Skipped for messages that came from SMS anyway (extra.sms) — anti-loop.
 function smsFallback(su, r, t, extra) {
   if (!smsSender || !su || !t || (extra && extra.sms) || r.kind !== 'dm') return;
   const pid = peerId(r, su.id);
@@ -1008,12 +1008,12 @@ function smsFallback(su, r, t, extra) {
   if (!peer || !peer.phone || isOnline(peer)) return;
   let ret = null;
   try { ret = smsSender({ to: peer.phone, from: su.name, body: su.name + ': ' + t }); } catch { ret = null; }
-  // Simatkan nombor → penghantar supaya balasan SMS masuk tahu ke DM yang mana.
+  // Stitch number → sender so an incoming SMS reply knows which DM.
   if (ret && ret.ok) { load().smsReply[peer.phone] = su.id; touch(); }
 }
-// SMS masuk daripada nombor yang ditaut → selur ke DM antara pemilik nombor
-// itu dengan kawan terakhir yang menghantarnya SMS. Nombor tak terkenal / tiada
-// utas dikekalkan hanya dalam inbox pentadbir (perjalanan asal gerbang).
+// An incoming SMS from a linked number → route it into the DM between the owner
+// of that number and the last friend who SMS-ed them. An unknown number / no
+// thread is kept only in the admin inbox (the gateway's original trip).
 function ingestSms(fromPhone, body) {
   const s = load();
   const norm = normPhone(fromPhone);
@@ -1029,15 +1029,15 @@ function ingestSms(fromPhone, body) {
   return send(owner.name, r.id, body, null, null, { sms: true });
 }
 // ─── Status (mood sementara) ────────────────────────────────────────────
-// Beza dengan bio (kekal, 120 aksara) dan cerita (24 jam, media): status
-// ialah teks pendek + emoji dengan tamat-lupa pilihan. Papar di profil,
-// senarai kawan/ikut, header DM & suapan sosial.
+// Unlike the bio (permanent, 120 characters) and a story (24 hours, media): a status
+// is short text + an emoji with an optional expiry. Shown on the profile,
+// the friends/follow lists, the DM header & the social feed.
 const STATUS_T_MAX = 80;
-const STATUS_E_MAX = 8;   // had kod-emoji (bait bukan aksara supaya keluarga emoji tak pecah)
-// Pilihan TTL: 'off' = kekal sehingga diganti/dibuang.
+const STATUS_E_MAX = 8;   // the emoji-code cap (bytes not characters so an emoji family does not split)
+// TTL choices: 'off' = stays until it is replaced/cleared.
 const STATUS_TTL = { off: 0, '30m': 1800e3, '1h': 3600e3, '4h': 14400e3, '8h': 28800e3, '12h': 43200e3, '24h': 86400e3, '7d': 604800e3 };
-// Kembalikan null bila tiada / sudah luput. Simpanan mentah masih ada sampai
-// penulis ganti/dibuang (supaya klien boleh papar baki masa tanpa jana 0).
+// Return null when there is none / it expired. The raw store still holds it until
+// the writer replaces/clears it (so the client can show the time left without faking 0).
 function effStatus(u) {
   const st = u && u.status;
   if (!st || typeof st !== 'object') return null;
@@ -1055,7 +1055,7 @@ function setStatus(name, body) {
   if (b.expiresIn != null && !Object.prototype.hasOwnProperty.call(STATUS_TTL, key)) {
     return { error: 'Unknown status duration option.' };
   }
-  // Buang: kedua-dua teks & emoji kosong → status dikosongkan.
+  // Clear: both the text & the emoji are empty → the status is emptied.
   if (!raw && !emo) { u.status = null; touch(); return { ok: true, status: null }; }
   if (raw.length > STATUS_T_MAX) return { error: 'Status too long (limit ' + STATUS_T_MAX + ' characters).' };
   const eb = Buffer.from(emo, 'utf8');
@@ -1066,7 +1066,7 @@ function setStatus(name, body) {
   touch();
   return { ok: true, status: effStatus(u) };
 }
-// Tukar nama paparan. Tukuk ID kekal → bilik DM, mesej dan unread tidak rosak.
+// Change the display name. The Tukuk ID stays → DM rooms, messages and unread survive.
 function rename(name, next) {
   const s = load();
   const u = findUser(name);
@@ -1097,11 +1097,11 @@ function rename(name, next) {
   touch();
   return { ok: true, user: u, changed: true };
 }
-// ─── Kawan & sekatan ───
-// Kedua-dua senarai menyimpan Tukuk ID (bukan nama) supaya pertukaran nama
-// tidak merosakkannya. Sekatan membekukan DM dua-dua arah: tiada pihak boleh
-// menghantar mesej, tetapi sejarah masih boleh dibaca. Mesej ralat disengajakan
-// generik — pihak yang disekat tidak boleh mengesahkan keadaan itu.
+// ─── Friends & blocking ───
+// Both lists store Tukuk IDs (not names) so a name change cannot
+// break them. Blocking freezes the DM both ways: neither side may
+// send a message, but the history stays readable. The error message is deliberately
+// generic — the blocked party cannot confirm that state.
 const MAX_FRIENDS = 500, MAX_BLOCKS = 200;
 const friendsOf = (u) => (u && Array.isArray(u.friends) ? u.friends : []);
 const blockedOf = (u) => (u && Array.isArray(u.blocked) ? u.blocked : []);
@@ -1110,7 +1110,7 @@ const iBlock = (a, b) => !!a && !!b && blockedOf(a).includes(b.id);
 const otherBlock = (a, b) => !!a && !!b && blockedOf(b).includes(a.id);
 const dmFrozen = (a, b) => { const ua = asUser(a), ub = asUser(b); return iBlock(ua, ub) || otherBlock(ua, ub); };
 
-// Sasaran sosial: mesti wujud dan bukan akaun sendiri.
+// A social target: it must exist and must not be your own account.
 function socialTarget(u, q) {
   const t = findUser(q);
   if (!t) return { error: normalizeName(q) ? 'That user has not registered on T Chat yet.' : 'No such ID or name.' };
@@ -1137,7 +1137,7 @@ function delFriend(name, q) {
   if (!u) return { error: 'Account not found.' };
   const t = socialTarget(u, q);
   if (t.error) return t;
-  u.friends = friendsOf(u).filter((i) => i !== t.peer.id); // sejarah DM tidak diusik
+  u.friends = friendsOf(u).filter((i) => i !== t.peer.id); // the DM history is untouched
   touch();
   pub('social', {}, [u.id]);
   return { ok: true, user: u, peer: t.peer };
@@ -1151,9 +1151,9 @@ function blockUser(name, q) {
   if (blockedOf(u).length >= MAX_BLOCKS) return { error: 'Block list has reached the limit of ' + MAX_BLOCKS + '.' };
   (u.blocked = blockedOf(u)).push(t.peer.id);
   u.friends = friendsOf(u).filter((i) => i !== t.peer.id);
-  t.peer.friends = friendsOf(t.peer).filter((i) => i !== u.id); // persahabatan dua arah dibuang
+  t.peer.friends = friendsOf(t.peer).filter((i) => i !== u.id); // the two-way friendship is dropped
   touch();
-  pub('social', {}, [u.id]);   // hanya penyekat diberitahu — mangsa tidak tahu
+  pub('social', {}, [u.id]);   // only the blocker is told — the victim does not know
   return { ok: true, user: u, peer: t.peer };
 }
 function unblockUser(name, q) {
@@ -1166,7 +1166,7 @@ function unblockUser(name, q) {
   pub('social', {}, [u.id]);
   return { ok: true, user: u, peer: t.peer };
 }
-// Senarai untuk skrin Tetapan. Kawan bawa `dm` (id bilik sedia ada / null).
+// The list for the Settings screen. Friends carry a `dm` (an existing room id / null).
 function socialLists(name) {
   const s = load();
   const u = findUser(name);
@@ -1181,25 +1181,25 @@ function socialLists(name) {
   return { ok: true, friends: wrap(friendsOf(u), true), blocked: wrap(blockedOf(u), false) };
 }
 
-// ─── Sosial: ikuti, posting, cerita, notifikasi, avatar ───
-// Follow SIEGARA (seperti X/Twitter): following/followers disimpan dua-dua sisi
-// sebagai senarai Tukuk ID. Posting + cerita memakai stor media yang sama dengan
-// mesej (magic bytes, kuota, HMAC) — tetapi bilik sintetiknya sendiri supaya
-// pemilikan fail semasa melampirkan pada post tidak memerlukan bilik DM/kumpulan.
-const MAX_POST = 500;          // panjang teks post
-const MAX_POST_MEDIA = 4;      // fail gambar/video satu post
-const MAX_COMMENT = 200;       // panjang teks komen
-const MAX_COMMENTS = 100;      // komen satu post (terlama dibuang)
-const MAX_FEED = 50;           // post maksimum satu halaman feed
-const MAX_STORIES = 10;        // cerita aktif satu pengguna
-const STORY_TTL = 24 * 3600e3; // cerita luput selepas 24 jam
-const MAX_NOTIF = 100;         // notifikasi disimpan per pengguna
-const MAX_FOLLOWING = 2000;    // had mengikuti
-const MAX_FOLLOWERS = 10000;   // had pengikut
+// ─── Social: follows, posts, stories, notifications, avatars ───
+// Follow X/Twitter-style: following/followers are stored on both sides
+// as lists of Tukuk IDs. Posting + stories use the same media store as
+// messages (magic bytes, quota, HMAC) — but their own synthetic room so that
+// owning a file when attaching to a post needs no DM/group room.
+const MAX_POST = 500;          // the post text length
+const MAX_POST_MEDIA = 4;      // the image/video files of one post
+const MAX_COMMENT = 200;       // the comment text length
+const MAX_COMMENTS = 100;      // the comments of one post (the oldest are dropped)
+const MAX_FEED = 50;           // the maximum posts per feed page
+const MAX_STORIES = 10;        // the active stories per user
+const STORY_TTL = 24 * 3600e3; // a story expires after 24 hours
+const MAX_NOTIF = 100;         // notifications stored per user
+const MAX_FOLLOWING = 2000;    // following cap
+const MAX_FOLLOWERS = 10000;   // follower cap
 const NOTIF_TYPES = new Set(['like', 'comment', 'follow', 'mention', 'story', 'repost']);
 const MAX_TAGS = 8;
-// Ciri gaya X: #tag pada post (Unicode-selamat, huruf pertama bukan angka).
-const HASH_RE = /(^|[\s(\[{"])#([\p{L}][\p{L}\p{N}_]{1,29})/gu; // tag mesti bermula huruf, min 2 aksara
+// An X-style feature: #tags on a post (Unicode-safe, the first letter is not a digit).
+const HASH_RE = /(^|[\s(\[{"])#([\p{L}][\p{L}\p{N}_]{1,29})/gu; // a tag must start with a letter, min 2 characters
 const parseTags = (t) => {
   const out = [];
   let m;
@@ -1211,19 +1211,19 @@ const parseTags = (t) => {
 const followingOf = (u) => (u && Array.isArray(u.following) ? u.following : []);
 const followersOf = (u) => (u && Array.isArray(u.followers) ? u.followers : []);
 const isFollowing = (a, b) => !!a && !!b && followingOf(a).includes(b.id);
-// Khalayak sesebuah post/cerita = pengikut penulis + penulis sendiri,
-// TAPAS sesiapa yang menyekat penulis atau disekat penulis (tiada kebocoran).
+// The audience of a post/story = the writer's followers + the writer themselves,
+// EXCLUDING anyone who blocks the writer or is blocked by them (no leak).
 function audience(authorId) {
   const s = load();
   const a = byId(authorId);
   if (!a) return [];
-  const inBlock = new Set(blockedOf(a));                    // a menyekat mereka
-  const outBlock = new Set(Object.values(s.users).filter(v => blockedOf(v).includes(a.id)).map(v => v.id)); // mereka menyekat a
+  const inBlock = new Set(blockedOf(a));                    // a blocks them
+  const outBlock = new Set(Object.values(s.users).filter(v => blockedOf(v).includes(a.id)).map(v => v.id)); // they block a
   const ids = followersOf(a).filter(id => !inBlock.has(id) && !outBlock.has(id));
   if (!inBlock.has(a.id) && !outBlock.has(a.id)) ids.push(a.id);
   return Array.from(new Set(ids));
 }
-// Post untuk paparan: url media ditandatangani semula + nama/avatar penulis semasa.
+// A post for display: the media url is re-signed + the writer's current name/avatar.
 function avatarUrl(u) {
   if (!u || !u.avatar) return null;
   const rec = (load().media || {})[u.avatar];
@@ -1237,7 +1237,7 @@ function hydratePost(p, viewer) {
   out.from = (a && a.name) || p.from;
   out.avatar = avatarUrl(a);
   if (out.comments) out.comments = out.comments.map(hydrate);
-  // Salinan post asal untuk gaya "repost/quote" — url ditandatangani semula.
+  // A copy of the original post for the "repost/quote" style — the url is re-signed.
   if (p.rp) {
     const o = (load().posts || {})[p.rp];
     if (o) {
@@ -1250,10 +1250,10 @@ function hydratePost(p, viewer) {
   }
   return out;
 }
-// Post hanya boleh dilampirkan oleh PEMILIK muat naik (berbeza dengan mesej bilik
-// yang boleh dikongsi ahli bilik) — belum ada perkongsian post antara pengguna.
-// Rujukan disimpan sebagai `<penanda>:<mediaId>` (penanda = id post/komen/cerita,
-// atau 'av' untuk avatar) supaya sweep dapat mengesan rujukan sosial yang mati.
+// A post may only be attached by the OWNER of the upload (unlike a room message
+// which room members may share) — posts are not shared between users yet.
+// A reference is stored as `<marker>:<mediaId>` (marker = the id of a post/comment/story,
+// or 'av' for an avatar) so the sweep can find dead social references.
 function attachPostMedia(user, ids, holder, cap) {
   const s = load();
   const out = [];
@@ -1269,7 +1269,7 @@ function attachPostMedia(user, ids, holder, cap) {
   }
   return out;
 }
-// Buang rujukan sosial `<penanda>:<mediaId>`; fail dipadam bila tiada rujukan tinggal.
+// Drop the social reference `<marker>:<mediaId>`; the file is deleted when no reference is left.
 function releaseSocialMedia(items, holder) {
   const s = load();
   for (const it of items || []) {
@@ -1290,8 +1290,8 @@ function createPost(name, text, media, opts) {
   const att = media && media.length ? attachPostMedia(u, media, pid, MAX_POST_MEDIA) : [];
   if (media && media.length && !att.length) return { error: 'Attachments could not be used — please upload again.' };
   if (o.rp) {
-    // Repost/quote: teks petikan sahaja dibenarkan tanpa lampiran (post asal
-    // sudah membawa medianya) dan ia mesti wujud serta boleh dilihat penulis.
+    // Repost/quote: only quote text is allowed with no attachment (the original post
+    // already carries its media) and it must exist and be visible to the writer.
     if (att.length) return { error: 'A repost cannot have its own attachments.' };
     orig = (s.posts || {})[String(o.rp)];
     if (!orig) return { error: 'Original post not found.' };
@@ -1313,8 +1313,8 @@ function createPost(name, text, media, opts) {
   if (orig && orig.fid !== u.id) pushNotif(orig.fid, 'repost', { actor: u.id, post: orig.id, text: t.slice(0, 120) });
   return { ok: true, post: out };
 }
-// Buang post milik penulis sahaja; media + komen (termasuk komen orang lain)
-// dileraikan sekali.
+// Delete only the writer's own post; the media + comments (including other people's)
+// are released in one go.
 function delPost(name, pid) {
   const s = load();
   const u = findUser(name);
@@ -1325,7 +1325,7 @@ function delPost(name, pid) {
   for (const c of p.comments || []) releaseSocialMedia(c.media, c.id);
   releaseSocialMedia(p.media, p.id);
   delete s.posts[p.id];
-  // Repost yang merujuk post ini dibuang sekali (tiada media sendiri untuk dileraikan).
+  // Reposts referring to this post are deleted too (they own no media to release).
   const rps = Object.values(s.posts || {}).filter(x => x.rp === p.id);
   for (const x of rps) delete s.posts[x.id];
   for (const [k, list] of Object.entries(s.notif || {})) {
@@ -1379,14 +1379,14 @@ function commentPost(name, pid, text, media) {
   p.comments.push(c);
   if (p.comments.length > MAX_COMMENTS) { const [gone] = p.comments.splice(0, p.comments.length - MAX_COMMENTS); for (const g of gone) releaseSocialMedia(g.media, g.id); }
   touch();
-  // Notif kepada penulis post apabila orang lain mengomen.
+  // Notify the post's writer when someone else comments.
   if (p.fid !== u.id) pushNotif(p.fid, 'comment', { actor: u.id, post: p.id, text: (t || (att.length ? '📎 media' : '')).slice(0, 120) });
   const out = hydratePost(p);
   pub('post', { post: out }, audience(p.fid));
   return { ok: true, post: out };
 }
-// Feed = post saya + post semua yang saya ikuti, terbaru dahulu. Penulis yang
-// menyekat saya, atau yang saya sekat, ditapis keluar.
+// Feed = my posts + the posts of everyone I follow, newest first. A writer who
+// blocks me, or whom I block, is filtered out.
 function feedFor(name, limit, tag) {
   const s = load();
   const u = findUser(name);
@@ -1413,7 +1413,7 @@ function userPosts(q, viewer) {
   return { ok: true, posts: list.map(p => hydratePost(p, v || undefined)) };
 }
 
-// ─── Cerita (24 jam) ───
+// ─── Stories (24 hours) ───
 function storyExpired(st) { return Date.now() - (st.ts || 0) >= STORY_TTL; }
 function pruneStories() {
   const s = load();
@@ -1483,7 +1483,7 @@ function delStory(name, sid) {
   return { ok: true };
 }
 
-// ─── Ikuti / buang ikuti ───
+// ─── Follow / unfollow ───
 function followUser(name, q) {
   const s = load();
   const u = findUser(name);
@@ -1513,7 +1513,7 @@ function unfollowUser(name, q) {
   pub('social', {}, [u.id]);
   return { ok: true, peer: t.peer };
 }
-// Senarai pamer pengikut/ikuti — sama tapisan seperti orang lain menyekat kita.
+// The followers/following display list — the same filter as when others block us.
 function followList(name, q, which) {
   const s = load();
   const u = findUser(name);
@@ -1535,7 +1535,7 @@ function followList(name, q, which) {
     .sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
   return { ok: true, id: t.id, name: t.name, list };
 }
-// Cadangan untuk skrin Terokai: orang yang belum anda ikuti & tidak saling-sekat.
+// Suggestions for the Discover screen: people you do not follow yet & no blocking either way.
 function discover(name, limit) {
   const s = load();
   const u = findUser(name);
@@ -1599,8 +1599,8 @@ function clearNotifs(name) {
 }
 
 // ─── Avatar ───
-// Fail avatar ialah rekod media biasa dengan penanda `avatar`; URL awam dijana
-// pada setiap paparan (HMAC), jadi stor tetap selamat tanpa endpoint khusus.
+// An avatar file is an ordinary media record with the `avatar` marker; the public URL is built
+// on every view (HMAC), so the store stays safe without a special endpoint.
 function setAvatar(user, mid) {
   const s = load();
   const u = typeof user === 'string' ? findUser(user) : user;
@@ -1638,8 +1638,8 @@ function removeAvatar(name) {
   pub('social', {}, [u.id]);
   return { ok: true };
 }
-// Sebut nama (@nama / @ID) dalam post/DP-bilik → notif kepada yang disebut (max 8).
-// `roomId` dihantar supaya klik notif terus membuka bilik (bukan post).
+// A name mention (@name / @ID) in a post or a room → a notification for the person (max 8).
+// `roomId` is sent so a notification click opens the room directly (not a post).
 function notifyMentions(author, text, postId, roomId) {
   const s = load();
   const seen = new Set();
@@ -1650,9 +1650,9 @@ function notifyMentions(author, text, postId, roomId) {
     if (t && t.id !== author.id && !seen.has(t.id)) { seen.add(t.id); pushNotif(t.id, 'mention', { actor: author.id, post: postId || undefined, room: roomId || undefined, text: String(text).slice(0, 120) }); n++; }
   }
 }
-// @sini / @semua (gaya Google Chat) dalam bilik → notif kepada ahli. Bilik global
-// hanya menyasarkan yang sedang online supaya tidak tenggelam dalam spam; had 10
-// minit satu pengguna satu bilik.
+// @here / @all (Google Chat style) in a room → notify the members. The global room
+// only targets people who are online so they do not drown in spam; 10 minutes
+// per user per room.
 const ATALL_COOLDOWN = 10 * 60e3;
 function notifyAtAll(author, room, text) {
   const s = load();
@@ -1671,8 +1671,8 @@ function notifyAtAll(author, room, text) {
   return n;
 }
 
-// Tukar kata laluan: wajib sah yang lama, salt baru, dan sesi lain diluputkan
-// (peranti lain perlu login semula; token yang sedang dipakai kekal hidup).
+// Change the password: the old one must be valid, a new salt, and the other sessions are dropped
+// (other devices must log in again; the token in use stays alive).
 function setPass(name, oldPass, nextPass) {
   const u = findUser(name);
   if (!u) return { error: 'Account not found.' };
@@ -1698,20 +1698,20 @@ function logoutAll(name, keep) {
   touch();
   return { ok: true, revoked: n };
 }
-// Padam akaun serta-merta dan tanpa boleh dibatalkan. Kata laluan wajib sah.
-// Buang pengguna, sesi, langganan push, keanggotaan bilik (DM dibuang, kumpulan
-// dibubarkan jika dia pencipta atau admin dipromosikan jika tidak), lihat/typing,
-// serta media yang dimilikinya. Mesej dalam bilik kekal atas nama lama (sejarah).
+// Delete an account immediately and irrevocably. The password must verify.
+// Drops the user, sessions, push subscriptions, room memberships (DMs removed, groups
+// dissolved if they were the creator or an admin promoted if not), seen/typing state,
+// and the media they own. Messages inside rooms keep the old name (history).
 function deleteAccount(name, pass) {
   const s = load();
   const u = findUser(name);
   if (!u) return { error: 'Account not found.' };
   if (!eqHex(u.hash, hashPass(String(pass == null ? '' : pass), u.salt))) return { error: 'Wrong password.', status: 401 };
   const id = u.id, k = u.k;
-  // 1) Sesi & langganan push
+  // 1) Sessions & push subscriptions
   for (const [tok, sess] of Object.entries(s.sessions)) if ((sess.uid && sess.uid === id) || key(sess.name) === k) delete s.sessions[tok];
   if (s.pushSubs) delete s.pushSubs[String(id)];
-  // 2) Bilik
+  // 2) Rooms
   for (const [rid, r] of Object.entries(s.rooms)) {
     if (r.kind === 'group') {
       if (r.createdById === id) { for (const m of (r.list || [])) releaseMedia(m.media, m.id); delete s.rooms[rid]; continue; }
@@ -1727,11 +1727,11 @@ function deleteAccount(name, pass) {
       delete s.rooms[rid];
     }
   }
-  // 3) Lihat & menaip milik pengguna ini
+  // 3) Seen & typing state belonging to this user
   for (const sk of Object.keys(s.seen)) if (sk.endsWith('|' + k)) delete s.seen[sk];
   for (const tk of Object.keys(s.typing)) if (tk.startsWith(k + '|')) delete s.typing[tk];
-  // 3b) Lapisan sosial: post + komen (termasuk komen orang lain padanya), cerita,
-  // notifikasi dua hala, dan hubungan ikuti di kedua-dua sisi pengguna lain.
+  // 3b) Social layer: posts + comments (including other people's comments on them), stories,
+  // two-way notifications, and follow links on both sides of every other user.
   for (const [pidp, p] of Object.entries(s.posts || {})) {
     if (p.fid === id) {
       for (const c of p.comments || []) releaseSocialMedia(c.media, c.id);
@@ -1763,9 +1763,9 @@ function deleteAccount(name, pass) {
     v.blocked = blockedOf(v).filter(i => i !== id);
   }
   u.following = []; u.followers = [];
-  // 4) Media milik pengguna (termasuk avatar & lampiran sosial)
+  // 4) Media owned by the user (avatar & social attachments included)
   for (const [mid, rec] of Object.entries(s.media || {})) if (rec.by === k) dropMedia(mid);
-  // 5) Akaun
+  // 5) Account
   delete s.users[k];
   touch();
   return { ok: true, id };
@@ -1776,19 +1776,19 @@ function onlineMap() {
   return out;
 }
 
-// ─── Pembersihan berkala ───
+// ─── Periodic sweep ───
 function sweep() {
   const s = load(); const now = Date.now();
   for (const [tok, sess] of Object.entries(s.sessions)) if (!sess || sess.exp < now) delete s.sessions[tok];
   for (const [k, ts] of Object.entries(s.typing)) if (now - ts > TYPING_MS * 2) delete s.typing[k];
   pruneStories();
-  // Muat naik yang tak pernah jadi mesej (tab ditutup) + fail tanpa rujukan → buang.
+  // Uploads that never became a message (tab closed) + files with no reference → drop.
   for (const [id, rec] of Object.entries(s.media || {})) {
     if (rec.msgs && rec.msgs.length) continue;
     if (now - (rec.ts || 0) > ORPHAN_TTL) dropMedia(id);
   }
-  // Rujukan sosial yang mati (post/cerita/komen/avatar sudah dipadam) → buang dari
-  // senarai; rujukan mesej biasa (polos, tanpa ':') tidak diusik di sini.
+  // Dead social references (post/story/comment/avatar already deleted) → drop them from
+  // the list; plain message references (no ':') are left alone here.
   const live = new Set();
   for (const p of Object.values(s.posts || {})) {
     for (const m of (p.media || [])) live.add(m.id);
@@ -1806,12 +1806,12 @@ function sweep() {
 }
 setInterval(sweep, 10 * 60e3).unref?.();
 
-// ─── Yuran langsung (SSE) ───
-// Satu sambungan HTTP panjang per tab supaya mesej sampai serta-merta. Poll
-// (since/markSeen) kekal sumber kebenaran — stream hanya memendekkan latensi,
-// jadi sambungan yang PUTUS tidak menghilangkan apa-apa.
-const MAX_STREAMS = 6;          // sambungan serentak untuk seorang pengguna
-const BEAT_MS = 20e3;           // denyut: halang edge/terowong daripada idling
+// ─── Live streams (SSE) ───
+// One long-lived HTTP connection per tab so messages arrive at once. Polling
+// (since/markSeen) stays the source of truth — the stream only shortens latency,
+// so a BROKEN connection never loses anything.
+const MAX_STREAMS = 6;          // concurrent connections per user
+const BEAT_MS = 20e3;           // heartbeat: keeps the edge/tunnel from idling
 const sinks = new Map();        // userId -> Set(sink)
 let beat = null, lastOn = null;
 
@@ -1829,21 +1829,21 @@ function detachSink(uid, snk) {
   if (!set.size) sinks.delete(uid);
   if (!sinks.size && beat) { clearInterval(beat); beat = null; lastOn = null; }
 }
-// `ids` kosong = semua yang bersambung (hanya maklumat AWAM seperti kehadiran).
-// Khalayak DM ialah ahlinya sahaja — mesej tidak pernah disiarkan orang lain.
+// An empty `ids` = everyone connected (PUBLIC information only, such as presence).
+// A DM audience is its members only — messages are never broadcast to other people.
 function pub(ev, data, ids) {
   const targets = ids && ids.length ? [].concat(ids) : Array.from(sinks.keys());
   for (const id of targets) {
     const set = sinks.get(id);
     if (!set) continue;
-    for (const snk of set) { try { snk.send(ev, data); } catch { /* sambungan sedang mati */ } }
+    for (const snk of set) { try { snk.send(ev, data); } catch { /* the connection is dying */ } }
   }
 }
 function pubRoom(r, ev, data) {
   pub(ev, data, r && (r.kind === 'dm' || r.kind === 'group') ? (r.memberIds || []) : null);
 }
-// Tutup stream peranti lain (kata laluan tukar / keluar semua sesi) selepas
-// sesi-sesi itu diluputkan — klien akan logout sendiri bila dapat 'kick'.
+// Close other devices' streams (password change / sign out of all sessions) after
+// those sessions are dropped — the client logs itself out when it receives 'kick'.
 function kickSinks(uid, keepTok) {
   const set = sinks.get(uid); if (!set) return 0;
   let n = 0;
@@ -1861,15 +1861,15 @@ function dropSink(tok) {
   }
   return n;
 }
-// Denyut + pengesanan perubahan kehadiran (ONLINE_MS 90s) untuk semua tab.
+// Heartbeat + presence-change detection (ONLINE_MS 90s) for every tab.
 function tickBeat() {
   const s = load();
-  // Write yang terlepas (stream sudah dimusnahkan tapi 'close' belum sampai ke sini)
-  // akan membangkitkan ralat — buang sink itu segera supaya slot tidak terperangkap.
+  // A missed write (stream already destroyed but 'close' has not reached here)
+  // would throw — drop that sink right away so the slot is not left trapped.
   for (const [uid, set] of Array.from(sinks)) {
     for (const snk of Array.from(set)) {
       try { snk.ping(); } catch {
-        try { snk.close(); } catch { /* sudah tertutup */ }
+        try { snk.close(); } catch { /* already closed */ }
         detachSink(uid, snk);
       }
     }
@@ -1879,7 +1879,7 @@ function tickBeat() {
   if (lastOn) for (const [id, v] of Object.entries(on)) if (lastOn[id] !== v) pub('presence', { id: Number(id), online: v });
   lastOn = on;
 }
-// Buang semua yuran (dipakai ujian — keadaan modul tidak boleh merembes).
+// Drop every stream (used by tests — module state must not leak between them).
 function clearSinks() {
   for (const set of Array.from(sinks.values())) for (const snk of set) { try { snk.close(); } catch { /* noop */ } }
   sinks.clear();
@@ -1887,12 +1887,12 @@ function clearSinks() {
   lastOn = null;
 }
 
-// ─── ICE / TURN (konfigurasi WebRTC) ───
-// Pelayan hanya STUN awam jika TURN belum dikonfigur. Untuk relay tembus-NAT,
-// pasang coturn (lihat deploy/coturn/ *) dan set env TURN_HOST (IP/domain awam),
-// TURN_PORT (default 3478), TURN_SECRET (rahsia "use-auth-secret" coturn),
-// TURN_TTL (tempoh sah credit, default 3600s). Kredensial ikut mekanisme REST
-// coturn: username "<exp>:<rand>", credential = base64(HMAC-SHA1(secret,user)).
+// ─── ICE / TURN (WebRTC configuration) ───
+// The server offers public STUN only while TURN is unconfigured. For a NAT-busting relay,
+// install coturn (see deploy/coturn/*) and set the TURN_HOST env (public IP/domain),
+// TURN_PORT (default 3478), TURN_SECRET (the coturn "use-auth-secret" secret),
+// TURN_TTL (credential lifetime, default 3600s). Credentials follow the coturn REST
+// mechanism: username "<exp>:<rand>", credential = base64(HMAC-SHA1(secret,user)).
 const STUN_URLS = ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'];
 function iceConfig() {
   const out = { iceServers: [{ urls: STUN_URLS }], turn: false };
@@ -1908,10 +1908,10 @@ function iceConfig() {
   return out;
 }
 
-// ─── Pemulihan akaun (kod darurat sekali-pakai) ───
-// Dulu lupa kata laluan = akaun hilang kekal. Kini pengguna jana 5 kod darurat
-// (dipapar sekali sahaja; disimpan sebagai hash SHA-256). Mana-mana kod menetapkan
-// semula kata laluan tanpa login; kod itu dimusnahkan dan semua sesi lama dibuang.
+// ─── Account recovery (single-use emergency codes) ───
+// A forgotten password used to mean an account lost for good. Now a user generates 5 emergency
+// codes (shown once only; stored as SHA-256 hashes). Any one code resets the
+// password without logging in; that code is destroyed and all old sessions are dropped.
 const RECOVERY_N = 5;
 const recHash = (c) => crypto.createHash('sha256').update(String(c).trim().toUpperCase()).digest('hex');
 function recoveryGenerate(name) {
@@ -1932,25 +1932,25 @@ function recoveryReset(name, code, newPass) {
   const p = String(newPass == null ? '' : newPass);
   if (p.length < 4) return { error: 'New password must be at least 4 characters.' };
   if (p.length > 200) return { error: 'New password is too long.' };
-  u.rec.splice(idx, 1);            // sekali-pakai: musnahkan kod ini
+  u.rec.splice(idx, 1);            // single-use: destroy this code
   u.salt = crypto.randomBytes(16).toString('hex');
   u.hash = hashPass(p, u.salt);
-  logoutAll(u.name, null);         // singkirkan semua sesi sedia ada
+  logoutAll(u.name, null);         // remove every existing session
   touch();
   return { ok: true, user: u };
 }
 
-// ─── Pembantu HTTP ───
+// ─── HTTP helpers ───
 function bearer(req) {
   const h = req.headers.authorization || '';
   return h.startsWith('Bearer ') ? h.slice(7).trim() : (req.query.token || '');
 }
 function cleanBody(x) { return x && typeof x === 'object' ? x : {}; }
 
-// ─── Pemasangan pada Express ───
+// ─── Mounting on Express ───
 function mount(app, deps) {
   const d = deps || {};
-  if (d.path) setPath(d.path); // ikut direktori data stor sedia ada (bukan hardcoded)
+  if (d.path) setPath(d.path); // follow the store's existing data directory (not hardcoded)
   const rateLimit = d.rateLimit;
   const store = d.store;
   const lim = (opt) => (rateLimit ? rateLimit(opt) : (req, res, next) => next());
@@ -1982,12 +1982,12 @@ function mount(app, deps) {
     const tok = bearer(req);
     const u = userOf(tok);
     revoke(tok);
-    if (u) dropSink(tok);   // tab peranti ini berhenti menerima terus
+    if (u) dropSink(tok);   // this device's tab stops receiving immediately
     res.json({ ok: true });
   });
 
-  // Aliran langsung (SSE) satu sambungan panjang per tab. Token melalui header
-  // Bearer (fetch-stream), jadi tiada kredensial masuk ke URL atau log pelayan.
+  // The live stream (SSE): one long connection per tab. The token travels in the
+  // Bearer header (fetch-stream), so no credentials end up in URLs or server logs.
   app.get('/api/chat/stream', (req, res) => {
     const tok = bearer(req);
     const u = authOf(req, res); if (!u) return;
@@ -1997,9 +1997,9 @@ function mount(app, deps) {
       tok,
       send: (ev, data) => { res.write('event: ' + ev + '\ndata: ' + JSON.stringify(data || {}) + '\n\n'); },
       ping: () => { res.write(': t\n\n'); },
-      close: () => { bye(); try { res.end(); } catch { /* sudah tertutup */ } },
+      close: () => { bye(); try { res.end(); } catch { /* already closed */ } },
     };
-    // Had yuran per akaun. Header belum ditulis lagi supaya 429 kekal JSON bersih.
+    // Rate cap per account. No header has been written yet so the 429 stays clean JSON.
     if (!attachSink(u.id, snk)) { bye(); return res.status(429).json({ error: 'Too many tabs open on this account.' }); }
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
@@ -2021,7 +2021,7 @@ function mount(app, deps) {
     res.json({ ok: true, name: u.name, id: u.id, bio: u.bio || '', joined: u.createdAt || null, online: true, avatar: avatarUrl(u), status: effStatus(u), notifUnread: nu, phone: u.phone || null, followingCount: followingOf(u).length, followersCount: followersOf(u).length });
   });
 
-  // Boleh dipanggil mana-mana app di tukuk.org — token chat yang sama = identitas sama.
+  // Callable from any app on tukuk.org — the same chat token = the same identity.
   app.get('/api/whoami', (req, res) => {
     const u = userOf(bearer(req));
     if (!u) return res.json({ ok: true, id: null, name: null });
@@ -2060,9 +2060,9 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     const room = String(req.query.room || '');
     if (!canRead(u.name, room)) return res.status(403).json({ error: 'This room does not belong to you.' });
-    // hanya tandakan "dibaca" bila kliennya memang paparkan bilik itu (elak badge hilang di mobile)
+    // only mark "read" when the client really displays that room (avoids lost badges on mobile)
     if (req.query.read === '1') markSeen(u.name, room);
-    // Senarai pengguna hanya dihantar pada refresh penuh — elak poll 2.5s membazir bandwidth.
+    // The user list is only sent on a full refresh — keeps the 2.5s poll from wasting bandwidth.
     if (req.query.full === '1') { const r = state.rooms[room]; return res.json({ ok: true, msgs: hydrateAll((r.list || []).slice(-KEEP)), seq: r.seq || 0, typing: typingIn(room), people: people(null, 300, u.name) }); }
     const out = since(u.name, room, req.query.after);
     res.json({ ok: true, msgs: hydrateAll(out.msgs), seq: out.seq, typing: typingIn(room) });
@@ -2080,9 +2080,9 @@ function mount(app, deps) {
     res.json({ ok: true, msg: r.msg, seq: r.room.seq });
   });
 
-  // Muat naik gambar/video: badan MENTAH (bukan JSON) + bilik dalam query.
-  // Flag sosial: `post=1` = muat naik untuk post/cerita/komen sendiri (tiada bilik);
-  // `avatar=1` = terus pasangkan sebagai avatar pengunggah.
+  // Image/video upload: the RAW body (not JSON) + the room in the query.
+  // Social flags: `post=1` = upload for your own post/story/comment (no room);
+  // `avatar=1` = attach it straight away as the uploader's avatar.
   app.post('/api/chat/media', lim({ windowMs: 60e3, max: 40, keyPrefix: 'chmedia:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const social = String(req.query.post || '') === '1' || String(req.query.avatar || '') === '1';
@@ -2109,8 +2109,8 @@ function mount(app, deps) {
     }).catch((e) => res.status(413).json({ error: e.message }));
   });
 
-  // Hidangan media: tandatangan sahaja (tiada token sesi dalam URL) + sokong
-  // julat bayaran supaya video boleh dilompat tanpa muat turun semua.
+  // Media serving: signature only (no session token in the URL) + support
+  // byte ranges so a video can be seeked without downloading the whole file.
   app.get('/api/chat/media/:id', (req, res) => {
     const id = String(req.params.id);
     if (!mediaAllowed(id, req.query.k)) return res.status(403).json({ error: 'Media link has expired.' });
@@ -2119,8 +2119,8 @@ function mount(app, deps) {
     serveMedia(req, res, rec);
   });
 
-  // Avatar AWAM: path pendek tanpa tandatangan — URL boleh terlepas ke papan
-  // berita/carian tanpa membuka fail media lain (hanya rekod berflag avatar).
+  // PUBLIC avatars: a short unsigned path — the URL may leak into news feeds or
+  // search without exposing other media files (only records flagged as avatars).
   app.get('/api/chat/avatar/:id', (req, res) => {
     const id = String(req.params.id);
     const rec = (load().media || {})[/^[a-f0-9]{12}$/.test(id) ? id : ''];
@@ -2141,8 +2141,8 @@ function mount(app, deps) {
         'Last-Modified': new Date(rec.ts || Date.now()).toUTCString(),
       };
       if (rec.kind === 'file') {
-        // Fail umum: muzik/video/pdf boleh main/pratinjau langsung (mime asal
-        // selamat); semua yang lain dipaksa muat turun + nosniff.
+        // Generic files: music/video/pdf play or preview in place (the original mime
+        // is safe); everything else is forced to download + nosniff.
         const inline = /^(audio|video)\//.test(rec.omime || '') || rec.omime === 'application/pdf';
         head['Content-Type'] = inline ? rec.omime : 'application/octet-stream';
         head['X-Content-Type-Options'] = 'nosniff';
@@ -2169,18 +2169,18 @@ function mount(app, deps) {
   app.post('/api/chat/room', (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const raw = cleanBody(req.body).peer;
-    const peer = findUser(raw);   // boleh Tukuk ID (nombor) atau nama
+    const peer = findUser(raw);   // may be a Tukuk ID (number) or a name
     if (!peer) return res.status(400).json({ error: normalizeName(raw) ? 'That user has not registered on T Chat yet.' : 'No such ID or name.' });
     if (peer.id === u.id) return res.status(400).json({ error: 'You cannot DM yourself.' });
     if (dmFrozen(u, peer)) return res.status(403).json({ error: 'Cannot start a chat with this user.' });
     const r = ensureDm(u, peer);
     if (!r) return res.status(400).json({ error: 'No such ID or name.' });
-    unhideRoom(u, r.id);   // buka DM = keluar daripada senyap (symmetric dgn hide)
+    unhideRoom(u, r.id);   // opening a DM = coming out of hiding (symmetric with hide)
     res.json({ ok: true, room: { id: r.id, kind: r.kind, title: roomTitle(r, u), members: r.members, peerId: peer.id, seq: r.seq || 0 }, profile: profile(peer, u.name) });
   });
 
-  // Sembunyi DM daripada sidebar saya sahaja — kembali bila mesej baharu tiba
-  // atau bila bilik dibuka semula melalui POST /api/chat/room.
+  // Hide a DM from my sidebar only — it comes back when a new message arrives
+  // or when the room is reopened through POST /api/chat/room.
   app.post('/api/chat/room/hide', (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const r = hideRoom(u.name, String(cleanBody(req.body).room || ''));
@@ -2211,8 +2211,8 @@ function mount(app, deps) {
     res.json({ ok: true, name: u.name, id: u.id, profile: profile(u.name) });
   });
 
-  // Taut/nyahaut nombor telefon untuk fallback DM semasa luar talian (gerbang SMS).
-  // Hantar { phone: '' } atau { phone: null } untuk menanggalkan.
+  // Link/unlink a phone number for offline DM fallback (the SMS gateway).
+  // Send { phone: '' } or { phone: null } to remove it.
   app.post('/api/chat/phone', lim({ windowMs: 3600e3, max: 20, keyPrefix: 'chphone:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
@@ -2222,14 +2222,14 @@ function mount(app, deps) {
     res.json({ ok: true, phone: r.phone });
   });
 
-  // Status (mood sementara) — teks pendek + emoji dengan TTL pilihan.
-  // Kosongkan dengan hantar { text:'', emoji:'' } (atau keduanya null).
+  // Status (a temporary mood) — short text + emoji with an optional TTL.
+  // Clear it by sending { text:'', emoji:'' } (or both null).
   app.post('/api/chat/status', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chst:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
     const r = setStatus(u.name, { text: b.text, emoji: b.emoji, expiresIn: b.expiresIn });
     if (r.error) return res.status(400).json({ error: r.error });
-    // Beritahu diri sendiri (tab lain) + pengikut supaya senarai/paparan segar.
+    // Tell yourself (other tabs) + followers so lists and views stay fresh.
     const audience = followersOf(u).concat([u.id]);
     pub('social', { kind: 'status', by: u.id }, audience);
     event('Status updated: ' + u.name + (r.status ? ' — ' + (r.status.e || '') + ' ' + r.status.t : ' — cleared'), { id: u.id });
@@ -2242,7 +2242,7 @@ function mount(app, deps) {
     res.json({ ok: true });
   });
 
-  // ─── Undian dalam bilik ───
+  // ─── Room polls ───
   app.post('/api/chat/poll', lim({ windowMs: 60e3, max: 10, keyPrefix: 'chpoll:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
@@ -2269,14 +2269,14 @@ function mount(app, deps) {
     res.json({ ok: true, people: people(req.query.q, 50, u.name) });
   });
 
-  // ─── Panggilan video/audio: isyarat P2P (WebRTC) ───
-  // Pelayan HANYA meneruskan paket isyarat (SDP/ICE/kawalan) kepada sasaran melalui
-  // yuran SSE yang sedia ada; media mengalir terus antara peranti (peer-to-peer),
-  // jadi tiada audio/video disimpan atau dilalukan di pelayan. `delivered` memaklumkan
-  // pemanggil sama ada pasangan benar-benar bersambung sekarang (untuk "luar talian").
+  // ─── Video/audio calls: P2P signalling (WebRTC) ───
+  // The server ONLY forwards signalling packets (SDP/ICE/control) to the target over the
+  // existing SSE streams; media flows directly between devices (peer-to-peer),
+  // so no audio/video is stored or relayed on the server. `delivered` tells the
+  // caller whether the peer is really connected right now (for "offline").
   const CALL_EV = new Set(['ring', 'accept', 'reject', 'busy', 'offer', 'answer', 'ice', 'end', 'cancel']);
-  const CALL_FANOUT = new Set(['ring', 'accept', 'end', 'cancel']);   // serentak ke ahli bilik
-  const MAX_GROUP_CALL = 6;   // had mesh P2P (n×(n−1)/2 sambungan)
+  const CALL_FANOUT = new Set(['ring', 'accept', 'end', 'cancel']);   // at once to room members
+  const MAX_GROUP_CALL = 6;   // P2P mesh cap (n×(n−1)/2 connections)
   app.post('/api/chat/call', lim({ windowMs: 60e3, max: 120, keyPrefix: 'chcall:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
@@ -2284,13 +2284,13 @@ function mount(app, deps) {
     if (!CALL_EV.has(ev)) return res.status(400).json({ error: 'Unknown call signal.' });
     let data = b.data && typeof b.data === 'object' ? b.data : {};
     if (JSON.stringify(data).length > 16384) return res.status(413).json({ error: 'Signal packet too large.' });
-    // 'kind' hanya relevan pada 'ring' — kekalkan kecil & normalisasi.
+    // 'kind' only matters on 'ring' — keep it small and normalized.
     if (ev === 'ring') data = Object.assign({ kind: data.kind === 'audio' ? 'audio' : 'video' }, data);
 
-    // ── Panggilan kumpulan (mesh): bingkaian frames carry `room` + `callId`. ──
-    // 'ring'/'accept'/'end'/'cancel' disiarkan ke semua ahli (kecuali penghantar,
-    // dan pasangan yang saling menyekat); 'offer'/'answer'/'ice'/'reject'/'busy'
-    // tetap titik-ke-titik melalui `to` — media tidak pernah melalui pelayan.
+    // ─── Group calls (mesh): these frames carry `room` + `callId`. ───
+    // 'ring'/'accept'/'end'/'cancel' broadcast to every member (except the sender,
+    // and peers who blocked each other); 'offer'/'answer'/'ice'/'reject'/'busy'
+    // stay point-to-point via `to` — media never passes through the server.
     if (b.room) {
       const gr = load().rooms[String(b.room)];
       if (!gr || gr.kind !== 'group') return res.status(400).json({ error: 'Group not found.' });
@@ -2322,13 +2322,13 @@ function mount(app, deps) {
     res.json({ ok: true, delivered: !!(set && set.size), online: isOnline(peer) });
   });
 
-  // Konfigurasi ICE untuk WebRTC — STUN sentiasa; TURN hanya bila dikonfigur.
+  // ICE configuration for WebRTC — STUN always; TURN only when configured.
   app.get('/api/chat/ice', (req, res) => {
     if (!userOf(bearer(req))) return res.status(401).json({ error: 'Session expired. Please log in again.' });
     res.json(Object.assign({ ok: true }, iceConfig()));
   });
 
-  // Pemulihan akaun: jana kod darurat (perlu login) + semak baki kod aktif.
+  // Account recovery: generate emergency codes (login required) + check how many are active.
   app.post('/api/chat/recovery/generate', lim({ windowMs: 3600e3, max: 10, keyPrefix: 'chrecgen:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const r = recoveryGenerate(u.name);
@@ -2340,8 +2340,8 @@ function mount(app, deps) {
     const u = authOf(req, res); if (!u) return;
     res.json({ ok: true, remaining: ((findUser(u.name) || {}).rec || []).length });
   });
-  // Tetapkan semula kata laluan guna kod darurat — TIADA login diperlukan (had yuran
-  // ketat kerana ia laluan tanpa kredential).
+  // Reset the password with an emergency code — NO login needed (strict rate cap
+  // because it is an unauthenticated path).
   app.post('/api/chat/recovery/reset', lim({ windowMs: 3600e3, max: 6, keyPrefix: 'chrec:' }), (req, res) => {
     const b = cleanBody(req.body);
     const r = recoveryReset(b.name, b.code, b.pass);
@@ -2350,7 +2350,7 @@ function mount(app, deps) {
     res.json({ ok: true, token: issueSession(r.user.name), name: r.user.name, id: r.user.id, remaining: (r.user.rec || []).length });
   });
 
-  // ─── Tetapan: kawan, sekatan, kata laluan, sesi ───
+  // ─── Settings: friends, blocking, password, sessions ───
   app.get('/api/chat/social', (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const r = socialLists(u.name);
@@ -2376,7 +2376,7 @@ function mount(app, deps) {
     if (!socialEdit(res, r)) return;
     if (r.already && !b.remove) return res.status(400).json({ error: 'Already blocked.' });
     event((b.remove ? 'Unblock' : 'Block') + ' @' + ((r.peer && r.peer.name) || b.peer) + ' by ' + u.name, { id: r.peer && r.peer.id });
-    // Sekatan turut memutuskan hubungan ikuti dua arah.
+    // Blocking also severs the two-way follow relationship.
     const x = findUser(u.name), y = r.peer;
     if (x && y && !b.remove) {
       x.following = followingOf(x).filter(i => i !== y.id);
@@ -2386,7 +2386,7 @@ function mount(app, deps) {
     res.json({ ok: true, blocked: !b.remove && !r.already, social: socialLists(u.name) });
   });
 
-  // ─── Laluan sosial: ikuti, post, cerita, notifikasi ───
+  // ─── Social routes: follows, posts, stories, notifications ───
   app.post('/api/chat/follow', lim({ windowMs: 3600e3, max: 60, keyPrefix: 'chfol:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);
@@ -2542,8 +2542,8 @@ function mount(app, deps) {
     res.json({ ok: true, revoked: r.revoked });
   });
 
-  // Padam akaun: kata laluan wajib, semua data dileraikan, semua sesi + stream
-  // ditutup (termasuk tab ini — klien akan logout sebaik dapat respons).
+  // Delete the account: password required, all data torn down, every session + stream
+  // closed (including this tab — the client logs out as soon as it gets the response).
   app.post('/api/chat/delete-account', lim({ windowMs: 24 * 3600e3, max: 3, keyPrefix: 'chdelacct:' }), (req, res) => {
     const tok = bearer(req);
     const u = authOf(req, res); if (!u) return;
@@ -2593,7 +2593,7 @@ function mount(app, deps) {
     res.json({ ok: true });
   });
 
-  // Carian mesej merentas bilik — min 2 aksara, max 30 hasil, newest first.
+  // Message search across rooms — min 2 characters, max 30 results, newest first.
   app.get('/api/chat/search', lim({ windowMs: 60e3, max: 30, keyPrefix: 'chrch:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const q = String(req.query.q || '').trim();
@@ -2601,7 +2601,7 @@ function mount(app, deps) {
     res.json({ ok: true, results: searchMsgs(u.name, q) });
   });
 
-  // ─── Bilik kumpulan ───
+  // ─── Group rooms ───
   app.post('/api/chat/group', lim({ windowMs: 3600e3, max: 20, keyPrefix: 'chgrp:' }), (req, res) => {
     const u = authOf(req, res); if (!u) return;
     const b = cleanBody(req.body);

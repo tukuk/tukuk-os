@@ -1,11 +1,11 @@
 'use strict';
-// ── TUKUK-OS BACAAN — kotak "Further reading" & "The research" untuk /akademi ─
-// Sumber dua, dua-dua PERCUMA tanpa kunci:
-//   * Open Library (openlibrary.org/search.json) — 40M+ rekod bibliografi;
-//     cover via covers.openlibrary.org (pautan imej luar, dibenarkan CSP).
-//   * Crossref (api.crossref.org) — indeks DOI 150M+ karya akademik;
-//     sort=is-referenced-by-count memberi yang paling banyak dikutip.
-// Cache 24 jam — topik akademi tetap, kepesatan tak perlu lebih.
+// ── TUKUK-OS READING — the "Further reading" & "The research" boxes for /akademi ─
+// Two sources, both FREE with no key:
+//   * Open Library (openlibrary.org/search.json) — 40M+ bibliographic records;
+//     cover via covers.openlibrary.org (external image link, allowed by the CSP).
+//   * Crossref (api.crossref.org) — a DOI index of 150M+ academic works;
+//     sort=is-referenced-by-count yields the most-cited ones.
+// 24-hour cache — academy topics are stable, freshness needs no more than that.
 const axios = require('axios');
 const https = require('https');
 

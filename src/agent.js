@@ -1,17 +1,17 @@
 /**
- * agent.js — Luka Tukuk Agent (AI build-agent) untuk server Tukuk-OS.
+ * agent.js — the face of Tukuk Agent (AI build-agent) for the Tukuk-OS server.
  *
- * Dua permukaan:
- *   1. PROXY OpenAI-compatible  (/api/agent/v1/chat/completions, /models) —
- *      dipanggil terus oleh pelanjutan agen (Cline/Kilo) dalam Tukuk Agent.
- *      Passthrough penuh `messages`+`tools`+`stream` ke rotasi cloud (openai-compat.js).
- *   2. BUILD kepala-tanpa       (/api/agent/build) — satu panggilan → fail + semakan
- *      sintaks via alat `tukuk_agent` pada pelayan MCP (/builder + store boleh guna).
+ * Two surfaces:
+ *   1. OpenAI-compatible PROXY  (/api/agent/v1/chat/completions, /models) —
+ *      called directly by the agent extension (Cline/Kilo) inside Tukuk Agent.
+ *      Full passthrough of `messages`+`tools`+`stream` to the cloud rotation (openai-compat.js).
+ *   2. Headless BUILD           (/api/agent/build) — one call → files + syntax
+ *      checks through the `tukuk_agent` tool on the MCP server (/builder + store can use it).
  *
- * CORS: asal *.tukuk.org (Tukuk Builder) + config.agent.origin dibenarkan.
- * Auth: Bearer AGENT_TOKEN, ATAU Bearer AGENT_FREE_TOKEN (tier percuma berlimit
- * ketat untuk Tukuk Builder), ATAU sesi passkey admin (auth.requireAdmin).
- * KEGAGALAN sentiasa 4xx — tepi tukuk.org menukar sebarang 5xx kepada mod sandaran.
+ * CORS: the *.tukuk.org origins (Tukuk Builder) + config.agent.origin are allowed.
+ * Auth: Bearer AGENT_TOKEN, OR Bearer AGENT_FREE_TOKEN (free tier with a strict
+ * limit for Tukuk Builder), OR the admin passkey session (auth.requireAdmin).
+ * FAILURES are always 4xx — the tukuk.org edge turns any 5xx into fallback mode.
  */
 const crypto = require('crypto');
 const openai = require('./brain/openai-compat');
@@ -31,16 +31,16 @@ function mount(app, deps) {
     ? rateLimit({ windowMs: 60 * 1000, max: config.agent.maxPerMin, keyPrefix: 'agent:' })
     : (req, res, next) => next();
 
-  // Tier percuma (Tukuk Builder) — had kadar LEBIH ketat, pemisah kunci cache.
+  // Free tier (Tukuk Builder) — a STRICTER rate cap, separate cache-key prefix.
   const freeLimiter = rateLimit
     ? rateLimit({ windowMs: 60 * 1000, max: config.agent.freeMaxPerMin, keyPrefix: 'agentfree:' })
     : (req, res, next) => next();
 
-  // Pilih limiter mengikut tier (requireAgent menetapkan req.agentFree lebih dahulu).
+  // Pick the limiter by tier (requireAgent sets req.agentFree first).
   const tierLimiter = (req, res, next) => (req.agentFree ? freeLimiter : limiter)(req, res, next);
 
-  // ── CORS: asal Tukuk Agent (config.agent.origin) + mana-mana subdomain tukuk.org
-  //    (Tukuk Builder di build.tukuk.org memanggil proksi ini dari pelayar) ──
+  // ── CORS: the Tukuk Agent origin (config.agent.origin) + any tukuk.org subdomain
+  //    (Tukuk Builder at build.tukuk.org calls this proxy from the browser) ──
   app.use(`${PREFIX}/v1`, (req, res, next) => {
     const origin = req.get('origin') || '';
     const isTukukHost = /^https?:\/\/([a-z0-9-]+\.)*tukuk\.org$/i.test(origin);
@@ -55,7 +55,7 @@ function mount(app, deps) {
     next();
   });
 
-  // ── Auth: AGENT_TOKEN (bearer) ATAU penanda tier percuma ATAU sesi admin ──
+  // ── Auth: AGENT_TOKEN (bearer) OR the free-tier marker OR an admin session ──
   function requireAgent(req, res, next) {
     const token = auth.bearer(req);
     if (config.agent.token && safeEqual(token, config.agent.token)) return next();
@@ -63,7 +63,7 @@ function mount(app, deps) {
       req.agentFree = true;
       return next();
     }
-    // Tiada padanan token → biar pintu admin (passkey sesi) cuba; ia 401 jika gagal.
+    // No token matched → let the admin door (passkey session) try; it 401s if it fails.
     return auth.requireAdmin(req, res, next);
   }
 
@@ -72,10 +72,10 @@ function mount(app, deps) {
     res.json({ object: 'list', data: openai.listModels() });
   });
 
-  // ── POST /v1/chat/completions (passthrough + rotasi + stream) ──
+  // ── POST /v1/chat/completions (passthrough + rotation + stream) ──
   app.post(`${PREFIX}/v1/chat/completions`, requireAgent, tierLimiter, async (req, res) => {
-    // Tier percuma: kekekang max_tokens supaya satu permintaan tak menghisap
-    // kuota cloud pembekal (rotasi kita yang bayar).
+    // Free tier: clamp max_tokens so one request can't drain the
+    // provider's cloud quota (our rotation is the one paying for it).
     if (req.agentFree && req.body) {
       const cap = config.agent.freeMaxTokens;
       if (cap && (!Number.isFinite(req.body.max_tokens) || req.body.max_tokens > cap)) {
@@ -83,12 +83,12 @@ function mount(app, deps) {
       }
     }
     let out;
-    // Model ID `-fast` (cth tukuk-agent-fast) → peta ke model ringan pembekal.
+    // A `-fast` model id (e.g. tukuk-agent-fast) → map to the provider's lightweight model.
     const wantFast = String((req.body && req.body.model) || '').endsWith('-fast');
     try {
       out = await openai.chatWithRotation(req.body || {}, { timeoutMs: config.agent.timeoutMs, fast: wantFast });
     } catch (error) {
-      // Ralat tak dijangka DALAM proxy → 4xx juga (jangan 500; tepi akan topeng).
+      // An unexpected error INSIDE the proxy → 4xx too (never 500; the edge would mask it).
       return res.status(424).json({ error: 'Agent proxy failed', details: String(error && error.message || error) });
     }
 
@@ -104,7 +104,7 @@ function mount(app, deps) {
       'X-Agent-Model': out.model,
       'Cache-Control': 'no-cache',
     };
-    // Paip bayangan mentah (SSE stream ATAU JSON) — kedua-duanya lalu tanpa diubah.
+    // Pipe the raw upstream bytes (SSE stream OR JSON) — both pass through untouched.
     res.writeHead(status, headers);
     if (upstream.body && typeof upstream.body[Symbol.asyncIterator] === 'function') {
       for await (const chunk of upstream.body) {
@@ -112,19 +112,19 @@ function mount(app, deps) {
       }
       return res.end();
     }
-    // Riwayat badan tanpa stream (fetch tanpa body).
+    // Non-streaming body: read it as text.
     const text = await upstream.text().catch(() => '');
     return res.end(text);
   });
 
-  // ── POST /build (kepala-tanpa; alat tukuk_agent pada MCP) ──
+  // ── POST /build (headless; the tukuk_agent tool on MCP) ──
   app.post(`${PREFIX}/build`, requireAgent, tierLimiter, async (req, res) => {
     const goal = String((req.body && req.body.goal) || '').trim().slice(0, 300);
     const kind = String((req.body && req.body.kind) || 'app').trim().slice(0, 20);
     if (!goal) return res.status(400).json({ error: 'Field "goal" is required.' });
     try {
-      // Dimuat lewat supaya proses utama tak pasang readline/stdin (mcp hanya main()
-      // bila require.main === module — selamat di-require di sini).
+      // Required lazily so the main process doesn't attach readline/stdin (mcp only runs
+      // main() when require.main === module — safe to require here).
       const mcp = require('../mcp/server');
       const payload = await mcp.handle('tukuk_agent', { goal, kind });
       if (store) store.event('agent', `Build (${kind}): ${goal.slice(0, 60)}`, { kind, goal });

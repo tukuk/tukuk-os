@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Pulihkan eksport JSON gzip (dijana scripts/export-index.js) ke Meilisearch.
+ * Restore a gzipped JSON export (produced by scripts/export-index.js) into Meilisearch.
  *
- *   node scripts/import-index.js <fail.json.gz> [index-atasan]
+ *   node scripts/import-index.js <file.json.gz> [index-name]
  *
- * Baca dari env: MEILI_HOST, MEILI_MASTER_KEY.
+ * Reads from env: MEILI_HOST, MEILI_MASTER_KEY.
  */
 
 const fs = require('fs');
@@ -15,7 +15,7 @@ const KEY = process.env.MEILI_MASTER_KEY || '';
 const FILE = process.argv[2];
 const OVERRIDE_INDEX = process.argv[3] || null;
 const BATCH = 500;
-// Indeks besar (puluhan ribu dokumen) pada CPU lama boleh ambil beberapa minit.
+// A large index (tens of thousands of documents) on an old CPU can take several minutes.
 const TASK_TIMEOUT_MS = Number(process.env.IMPORT_TASK_TIMEOUT_MS || 900000);
 
 if (!FILE) {
@@ -50,19 +50,19 @@ async function waitForTasks(taskUids, timeoutMs = TASK_TIMEOUT_MS) {
     const res = await request('GET', `/tasks?uids=${pending.join(',')}&limit=100`);
     const done = res.results.every((task) => ['succeeded', 'failed', 'canceled'].includes(task.status));
     const failed = res.results.filter((task) => task.status === 'failed');
-    if (failed.length) throw new Error(`task gagal: ${JSON.stringify(failed[0].error || failed[0]).slice(0, 300)}`);
+    if (failed.length) throw new Error(`task failed: ${JSON.stringify(failed[0].error || failed[0]).slice(0, 300)}`);
     if (done) return;
     await new Promise((r) => setTimeout(r, 500));
   }
-  throw new Error('timeout menunggu task Meilisearch');
+  throw new Error('timeout waiting for the Meilisearch task');
 }
 
 async function main() {
   const raw = zlib.gunzipSync(fs.readFileSync(FILE)).toString('utf8');
   const payload = JSON.parse(raw);
   const index = OVERRIDE_INDEX || payload.index;
-  if (!index) throw new Error('payload tiada nama indeks');
-  if (!Array.isArray(payload.documents)) throw new Error('payload tiada documents[]');
+  if (!index) throw new Error('payload has no index name');
+  if (!Array.isArray(payload.documents)) throw new Error('payload has no documents[]');
 
   const tasks = [];
   const exists = await request('GET', `/indexes/${index}`).catch(() => null);

@@ -6,7 +6,7 @@ const { extractiveAnswer } = require('./brain/quality');
 const cache = new Map();
 const TTL_MS = 30 * 60 * 1000;
 
-// Soalan / query maklumat — bukan navigasi ("facebook login") atau beli-belah.
+// Information question / query — not navigation ("facebook login") or shopping.
 const QUESTION_RE = /\b(what|who|when|where|why|how|which|is|are|was|were|can|could|do|does|did|will|would|should|explain|define|meaning|difference|compare|tutorial|guide|example)\b/i;
 
 function decodeEntities(s) {
@@ -29,9 +29,9 @@ function worthAnswering(q) {
   return q.split(/\s+/).length >= 3;
 }
 
-// Ekstraktif: pilih ayat terbaik dari sumber sebenar — model LLM kecil
-// (smollm:135m/qwen:0.5b) mengarang halusinasi untuk prompt berkonteks,
-// jadi kad jawapan guna ekstrak sahaja: pantas, boleh dipercayai, sifar halusinasi.
+// Extractive: pick the best sentence from real sources — small LLMs
+// (smollm:135m/qwen:0.5b) invent hallucinations when given context prompts,
+// so the answer card uses extracts only: fast, trustworthy, zero hallucination.
 async function getAnswer(query) {
   const q = String(query || '').trim();
   if (!q) return { answer: null, reason: 'empty' };
@@ -44,7 +44,7 @@ async function getAnswer(query) {
 
   const started = Date.now();
   try {
-    // Konteks: indeks tempatan + keputusan web (cache dikongsi dgn tab Web).
+    // Context: local index + web results (cache shared with the Web tab).
     const [localHits, web] = await Promise.all([
       rag.retrieve(q, { limit: 5 }).catch(() => []),
       websearch.search(q).catch(() => null)

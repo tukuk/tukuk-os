@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Import dataset dari fail CSV / JSON / JSONL ke index Meilisearch.
+ * Import a dataset from a CSV / JSON / JSONL file into a Meilisearch index.
  *
- *   node scripts/import-dataset.js <fail> [--index uji_coba] [--limit 5000] [--drop]
+ *   node scripts/import-dataset.js <file> [--index uji_coba] [--limit 5000] [--drop]
  *
- * Pemetaan lajur automatik (cari padanan dari senarai di bawah). Dokumen
- * disesuaikan dengan skema index `halaman_web` supaya carian, sorotan kata
- * dan penapis facet berfungsi sama seperti indeks web sebenar.
+ * Column mapping is automatic (it looks for a match in the list below). Documents
+ * are adapted to the `halaman_web` index schema so search, highlighting and facet
+ * filters behave exactly like the real web index.
  */
 
 const fs = require('fs');
@@ -117,7 +117,7 @@ function parseFile(file) {
     for (const key of ['data', 'articles', 'rows', 'records', 'items']) {
       if (Array.isArray(data[key])) return data[key];
     }
-    throw new Error('JSON mesti mengandungi array');
+    throw new Error('JSON must contain an array');
   }
   return parseCsv(raw);
 }
@@ -180,7 +180,7 @@ function deriveSection(url, fallback) {
 }
 
 function toDoc(row, index) {
-  const title = pick(row, FIELDS.title) || 'Tanpa tajuk';
+  const title = pick(row, FIELDS.title) || 'Untitled';
   const content = pick(row, FIELDS.content) || '';
   const urlRaw = pick(row, FIELDS.url);
   const published = pick(row, FIELDS.publishedAt);
@@ -291,7 +291,7 @@ async function main() {
     const chunk = docs.slice(i, i + BATCH);
     await request('POST', `/indexes/${uid}/documents`, chunk);
     indexed += chunk.length;
-    process.stdout.write(`\rhantar ${indexed}/${docs.length}`);
+    process.stdout.write(`\rsent ${indexed}/${docs.length}`);
   }
 
   console.log('\nwaiting for indexing...');

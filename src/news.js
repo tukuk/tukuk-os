@@ -1,8 +1,8 @@
 const https = require('https');
 const cheerio = require('cheerio');
 
-// Feed RSS/Atom rasmi — senang dijaga, tiada API key.
-// HN diasingkan: RSS mereka tolak HTTP/1.1 (419) — guna API Algolia rasmi.
+// Official RSS/Atom feeds — easy to maintain, no API key.
+// HN is handled separately: their RSS rejects HTTP/1.1 (419) — use the official Algolia API.
 const FEEDS = [
   { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
   { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
@@ -51,7 +51,7 @@ function fetchText(url, timeoutMs = 8000) {
         stream.on('end', () => {
           let buf = Buffer.concat(chunks);
           if (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
-            try { buf = require('zlib').gunzipSync(buf); } catch { /* biarkan mentah */ }
+            try { buf = require('zlib').gunzipSync(buf); } catch { /* leave it raw */ }
           }
           resolve(buf.toString('utf-8'));
         });

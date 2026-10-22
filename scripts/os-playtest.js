@@ -1,5 +1,5 @@
-// ═══ Playtest CDP untuk Tukuk OS (/os) — memandu Chromium headless ════════════
-// Node 22 WebSocket dalaman → Chrome DevTools Protocol. Tiada dependency luar.
+// ═══ CDP playtest for Tukuk OS (/os) — drives headless Chromium ════════════
+// Node 22 built-in WebSocket → Chrome DevTools Protocol. No external dependencies.
 'use strict';
 const fs = require('node:fs');
 
@@ -62,11 +62,11 @@ async function main() {
   const page = targets.find((t) => t.type === 'page');
   const cdp = await CDP.connect((await json('/json/version')).webSocketDebuggerUrl);
 
-  // Target baharu untuk navigasi terkawal
+  // New target for controlled navigation
   const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
   const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
 
-  // KUMPUL ralat console/pageerror
+  // COLLECT console/pageerror errors
   const consoleErrors = [];
   await cdp.send('Runtime.enable', {}, sessionId);
   await cdp.send('Log.enable', {}, sessionId).catch(() => {});
@@ -80,7 +80,7 @@ async function main() {
   await loaded;
   await sleep(2200); // boot splash fade
 
-  // ── LANGKAH 1: HOME ──
+  // ── STEP 1: HOME ──
   const home = await evalJS(cdp, sessionId, `(() => {
     var booted = !document.getElementById('boot') || document.getElementById('os').hidden === false;
     var cells = document.querySelectorAll('#grid .cell').length;
@@ -93,18 +93,18 @@ async function main() {
   check('1. Boot + home grid', home.boot && home.cells >= 10 && home.dock === 5, `cells=${home.cells} dock=${home.dock} clock="${home.clock}" carrier="${home.carrier}" search="${home.ph.slice(0,18)}"`);
   await shot(cdp, sessionId, '/tmp/os-home.png');
 
-  // ── LANGKAH 2: DRAWER + Snake ──
+  // ── STEP 2: DRAWER + Snake ──
   await evalJS(cdp, sessionId, `document.getElementById('dDrawer').click()`);
   await sleep(300);
   const drawer = await evalJS(cdp, sessionId, `(() => {
     var d = document.getElementById('drawer');
-    var wasOpen = d.classList.contains('open');            // baca SEBELUM klik (launch tutup drawer)
+    var wasOpen = d.classList.contains('open');            // read BEFORE the click (launch closes the drawer)
     var secs = [...document.querySelectorAll('#drawerBody h4')].map(h => h.textContent.trim());
     var snake = document.querySelector('#drawerBody [data-app="snake"]');
     if (snake) snake.click();
     return { open: wasOpen, secs, clicked: !!snake };
   })()`);
-  await sleep(2500); // iframe game dimuat
+  await sleep(2500); // the game iframe loads
   const snakeWin = await evalJS(cdp, sessionId, `(() => {
     var w = document.querySelector('#windows .win'); var a = document.getElementById('activity');
     var frame = (w && w.querySelector('iframe')) || (a && a.classList.contains('open') && document.getElementById('actFrame'));
@@ -113,11 +113,11 @@ async function main() {
     return { hasWin: !!w || (a && a.classList.contains('open')), src, bodyLen };
   })()`);
   check('2. Drawer + Snake game', drawer.open && drawer.secs.length >= 3 && drawer.clicked && snakeWin.hasWin && /snake/.test(snakeWin.src || ''), `sections=[${drawer.secs}] win=${snakeWin.hasWin} src=${snakeWin.src} gameText=${snakeWin.bodyLen} chars`);
-  // tutup
+  // close
   await evalJS(cdp, sessionId, `(() => { var w=document.querySelector('#windows .win'); if(w) w.querySelector('[data-act="x"]').click(); var x=document.getElementById('actX'); if(x) x.click(); return 1; })()`);
   await sleep(300);
 
-  // ── LANGKAH 3: AI COMMAND "open calculator" (tiada roundtrip) ──
+  // ── STEP 3: AI COMMAND "open calculator" (no roundtrip) ──
   await evalJS(cdp, sessionId, `(() => { document.getElementById('dAssist').click(); return 1; })()`);
   await sleep(200);
   await evalJS(cdp, sessionId, `(() => { document.getElementById('aQ').value='open calculator'; document.getElementById('aform').dispatchEvent(new Event('submit',{cancelable:true})); return 1; })()`);
@@ -129,9 +129,9 @@ async function main() {
     var src = win ? (win.querySelector('iframe')||{}).getAttribute?.('src') : null;
     return { text:(last.textContent||'').slice(0,60), opened: !!win, src };
   })()`);
-  check('3. Arahan "open calculator" (tanpa pelayan)', /Opening/i.test(cmd.text) && cmd.opened && /calc/.test(cmd.src || ''), `"${cmd.text.trim()}" → ${cmd.src}`);
+  check('3. Command "open calculator" (no server)', /Opening/i.test(cmd.text) && cmd.opened && /calc/.test(cmd.src || ''), `"${cmd.text.trim()}" → ${cmd.src}`);
 
-  // ── LANGKAH 4: AI QUESTION (CPU LLM, ≤90s) ──
+  // ── STEP 4: AI QUESTION (CPU LLM, ≤90s) ──
   await evalJS(cdp, sessionId, `(() => { var el=document.getElementById('aQ'); el.value='what is a cdn cache'; document.getElementById('aform').dispatchEvent(new Event('submit',{cancelable:true})); return 1; })()`);
   let answer = null;
   for (let i = 0; i < 45; i++) {
@@ -143,11 +143,11 @@ async function main() {
     })()`);
     if (answer && !answer.thinking && answer.len > 40) break;
   }
-  check('4. Soalan AI dijawab CPU LLM', answer && answer.len > 40 && answer.model && !/Thinking on the server/.test(answer.model || ''), `len=${answer && answer.len} model="${answer && answer.model}" chips=${JSON.stringify((answer && answer.chips) || [])}`);
+  check('4. AI question answered by the CPU LLM', answer && answer.len > 40 && answer.model && !/Thinking on the server/.test(answer.model || ''), `len=${answer && answer.len} model="${answer && answer.model}" chips=${JSON.stringify((answer && answer.chips) || [])}`);
   await evalJS(cdp, sessionId, `(() => { var s=document.getElementById('settings'); s.classList.remove('open'); var d=document.getElementById('assist'); return 1; })()`);
   await shot(cdp, sessionId, '/tmp/os-assistant.png');
 
-  // ── LANGKAH 5: RECENTS ──
+  // ── STEP 5: RECENTS ──
   await evalJS(cdp, sessionId, `(() => { document.getElementById('dAssist').click(); return 1; })()`);
   await sleep(150);
   await evalJS(cdp, sessionId, `(() => { document.getElementById('dRecents').click(); return 1; })()`);
@@ -156,10 +156,10 @@ async function main() {
     var r=document.getElementById('recents'); var cards=[...document.querySelectorAll('#rcards .card')].map(c=>c.textContent.replace(/✕/,'').trim());
     return { open: r.classList.contains('open'), cards };
   })()`);
-  check('5. Recents overlay', recents.open && recents.cards.length >= 1, `kadar: ${JSON.stringify(recents.cards)}`);
+  check('5. Recents overlay', recents.open && recents.cards.length >= 1, `cards: ${JSON.stringify(recents.cards)}`);
 
-  // ── RALAT KONSOL ──
-  check('6. Tiada ralat JavaScript', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.slice(0, 4).join(' | ') : 'bersih');
+  // ── CONSOLE ERRORS ──
+  check('6. No JavaScript errors', consoleErrors.length === 0, consoleErrors.length ? consoleErrors.slice(0, 4).join(' | ') : 'clean');
 
   await cdp.send('Target.closeTarget', { targetId }).catch(() => {});
   cdp.ws.close();

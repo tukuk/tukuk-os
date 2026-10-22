@@ -33,10 +33,10 @@ function httpRequest(targetUrl, headers = {}) {
         stream.on('data', (c) => chunks.push(c));
         stream.on('end', () => {
           let buf = Buffer.concat(chunks);
-          // Sesetengah API (cth StackExchange) hantar gzip walaupun tiada
-          // header Content-Encoding — kesan magic bytes 1f 8b sebagai sandaran.
+          // Some APIs (e.g. StackExchange) send gzip even without a
+          // Content-Encoding header — detect the 1f 8b magic bytes as a fallback.
           if (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
-            try { buf = zlib.gunzipSync(buf); } catch { /* biarkan mentah */ }
+            try { buf = zlib.gunzipSync(buf); } catch { /* leave it raw */ }
           }
           resolve({ status: res.statusCode, body: buf.toString('utf-8') });
         });
@@ -237,15 +237,15 @@ const STOPWORDS = new Set([
 ]);
 
 function looksRelevant(hits, query) {
-  // Tokenisasi Unicode-sedar (internasional): sebelum ini `[^a-z0-9+#.]+`
-  // buang terus aksara bukan-Latin — query Arab/Cyrillic/CJK jadi token kosong
-  // dan sentiasa "lulus", sementara Hindi/Yunani terpotong separuh.
+  // Unicode-aware tokenization (international): `[^a-z0-9+#.]+` used to
+  // delete non-Latin characters outright — Arabic/Cyrillic/CJK queries became empty tokens
+  // that always "passed", while Hindi/Greek got cut in half.
   let tokens = tokenizeQuery(query).filter((t) => t.length >= 3 || /[\u3040-\u9FFF\uAC00-\uD7AF]/.test(t));
   if (tokens.length === 0) return true;
   const nonStop = tokens.filter((t) => !STOPWORDS.has(t));
   if (nonStop.length > 0) tokens = nonStop;
-  // Perlukan sekurang-kurangnya 2 kata kunci sepadan (atau 1 jika query
-  // hanya satu kata) — halang decoy Bing yang mengandungi kata umum sahaja.
+  // Require at least 2 matching keywords (or 1 when the query is a single
+  // word) — blocks Bing decoys that only contain common words.
   const needMatches = Math.min(2, tokens.length);
   return hits.some((h) => {
     const hay = `${h.title || ''} ${h.description || ''}`.toLowerCase();
@@ -263,10 +263,10 @@ async function searchBing(query) {
     'Connection': 'keep-alive',
     'Upgrade-Insecure-Requests': '1'
   };
-  // Bahasa-neutra (internasional): paksaan setmkt=en-us dulu membuatkan Bing
-  // sengaja hantar decoy untuk query bukan Inggeris. Biar Bing kesan bahasa
-  // query sendiri; jika keputusan nampak tak relevan, cuba sekali lagi dengan
-  // pasaran en-us sebagai sandaran.
+  // Language-neutral (international): forcing setmkt=en-us used to make Bing
+  // deliberately serve decoys for non-English queries. Let Bing detect the
+  // query's own language; if the results look irrelevant, try once more with
+  // the en-us market as a fallback.
   const locale = detectLocale(query);
   const attempts = locale === 'en'
     ? [
@@ -289,16 +289,16 @@ async function searchBing(query) {
         }
         if (hits.length > 0) sawIrrelevant = true;
       }
-    } catch { /* cuba percubaan seterusnya */ }
+    } catch { /* try the next attempt */ }
   }
-  // Bing hidup tapi hantar decoy/tak relevan — jangan bazirkan masa
-  // rantaian seterusnya (ddg/searx memang disekat dari rangkaian ini);
-  // sumber selari (brave/wikipedia/dll) yang akan membawa keputusan.
+  // Bing is alive but served decoys/irrelevant hits — don't waste time on the
+  // rest of the chain (ddg/searx are blocked from this network anyway);
+  // the parallel sources (brave/wikipedia/etc.) will bring the results.
   if (sawIrrelevant) return { decoy: true };
   return null;
 }
 
-/* ============ Enjin selari (fan-out gabungan) ============ */
+/* ============ Parallel engines (combined fan-out) ============ */
 
 const BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -347,9 +347,9 @@ async function searchBrave(query) {
 }
 
 async function searchWikipedia(query) {
-  // Carian di Wikipedia BAHASA soalan (ms.wikipedia.org untuk Melayu,
-  // ja. untuk Jepun, dll) — bukan en. sahaja, supaya pengguna antarabangsa
-  // dapat sumber dalam bahasa mereka.
+  // Search the Wikipedia in the QUESTION's language (ms.wikipedia.org for Malay,
+  // ja. for Japanese, etc.) — not just en., so international users
+  // get sources in their own language.
   const wikiLang = { ms: 'ms', id: 'id', ja: 'ja', ko: 'ko', zh: 'zh', ru: 'ru', ar: 'ar', hi: 'hi', bn: 'bn', th: 'th', fr: 'fr', de: 'de', es: 'es', pt: 'pt' }[detectLocale(query)] || 'en';
   try {
     const target = `https://${wikiLang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=4&format=json&utf8=1`;
@@ -477,7 +477,7 @@ function withTimeout(promise, ms) {
   });
 }
 
-// Rantaian teras (failover pantas) vs sumber selari (dilancarkan serentak).
+// Core chain (fast failover) vs parallel sources (launched at the same time).
 async function search(query) {
   const q = String(query || '').trim();
   if (!q) return { hits: [], total: 0, query: q, provider: null };
@@ -498,10 +498,10 @@ async function search(query) {
     ] : [])
   ];
 
-  // Rantaian teras: bing + ddg + searx dilancarkan SERENTAK (fallback tetap
-  // tersedia untuk rangkaian lain), pilih yang pertama berjaya mengikut
-  // keutamaan; sumber selari (brave/wiki/dll) juga serentak. Dinding masa
-  // dihadkan ~3.5s — tak ada lagi rantai berperingkat yang membakar 7s.
+  // Core chain: bing + ddg + searx are launched TOGETHER (the fallback still
+  // works for other networks), take the first one that succeeds by
+  // preference; the parallel sources (brave/wiki/etc.) run concurrently too. The time
+  // budget is capped at ~3.5s — no more stepped chain burning 7s.
   const primaryP = (async () => {
     const candidates = [
       { name: 'bing', p: searchBing(q) },
@@ -559,8 +559,8 @@ async function search(query) {
     provider: used.length > 0 ? used.join(', ') : null,
     engines
   };
-  // Jangan cache keputusan kosong (masalah sementara rangkaian tidak patut
-  // melekat selama cacheSeconds penuh).
+  // Don't cache empty results (a temporary network problem shouldn't
+  // stick for the full cacheSeconds).
   if (hits.length > 0) cacheSet(cacheKey, final);
   return final;
 }

@@ -1,21 +1,21 @@
 /**
- * Pengesanan skrip + rangkataan fallback berlokal (internasional).
+ * Script detection + localized fallback strings (international).
  *
- * Kelas tinggi (/ask LLM) sudah jawab dalam bahasa soalan — arahan prompt
- * "IN THE SAME LANGUAGE as the QUESTION" bersifat bahasa-agnostic. Modul ini
- * menutup jurang LANTAI RENDAH: laluan fallback (tiada LLM / ekstraktif /
- * senarai web) yang sebelum ini keraskod English/Melayu sahaja, pemecahan
- * ayat yang hanya tahu [.!?], dan tokenisasi yang buang aksara bukan-Latin.
+ * The high tier (/ask LLM) already answers in the language of the question — the prompt
+ * instruction "IN THE SAME LANGUAGE as the QUESTION" is language-agnostic. This module
+ * closes the LOW-LEVEL gap: the fallback paths (no LLM / extractive /
+ * web list) that used to hard-code only English/Malay, the sentence splitting
+ * that only knew [.!?], and the tokenization that dropped non-Latin characters.
  *
- * Pendekatan: DETEKSI SKRIP (bukan bahasa penuh) — cukup untuk memilih
- * bahasa fallback yang betul (CJK -> Cina, Hangul -> Korea, dll), dan untuk
- * tokenisasi yang betul pada skrip tanpa ruang (CJK/Japanese).
+ * Approach: SCRIPT DETECTION (not full language) — enough to pick
+ * the right fallback language (CJK -> Chinese, Hangul -> Korean, etc.), and for
+ * correct tokenization in spaceless scripts (CJK/Japanese).
  */
 
 const SCRIPT_RE = {
-  han: /[\u4E00-\u9FFF\u3400-\u4DBF]/,          // CJK ideograph (Cina)
-  kana: /[\u3040-\u30FF]/,                       // Hiragana/Katakana => Jepun
-  hangul: /[\uAC00-\uD7AF\u1100-\u11FF]/,        // Korea
+  han: /[\u4E00-\u9FFF\u3400-\u4DBF]/,          // CJK ideograph (Chinese)
+  kana: /[\u3040-\u30FF]/,                       // Hiragana/Katakana => Japanese
+  hangul: /[\uAC00-\uD7AF\u1100-\u11FF]/,        // Korean
   arabic: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/,
   cyrillic: /[\u0400-\u04FF]/,
   devanagari: /[\u0900-\u097F]/,
@@ -40,7 +40,7 @@ const SCRIPT_RE = {
   ethiopic: /[\u1200-\u137F]/,
 };
 
-// Skrip -> kod locale. kana menang atas han (Jepun campur kanji).
+// Script -> locale code. kana wins over han (Japanese mixes in kanji).
 const SCRIPT_TO_LOCALE = [
   ['kana', 'ja'],
   ['hangul', 'ko'],
@@ -69,9 +69,9 @@ const SCRIPT_TO_LOCALE = [
   ['ethiopic', 'am'],
 ];
 
-/** Kod skrip Unicode untuk bahasa Latin — pembezian MS/ID/EN/ES/FR/DE/PT.
- *  Corak mengandungi varian TANPA aksen (que/como/donde/est ce) sebab pengguna
- *  sering menaip tanpa aksen — tapi hanya token yang jarang dalam query English. */
+/** Unicode script codes for Latin languages — tells MS/ID/EN/ES/FR/DE/PT apart.
+ *  The patterns contain accent-FREE variants (que/como/donde/est ce) because users
+ *  often type without accents — but only tokens that are rare in an English query. */
 const LATIN_HINTS = [
   [/\b(tidak|tak|apa|itu|ini|dan|yang|di|ke|dari|untuk|dengan|bagaimana|mengapa|adalah|boleh|sudah|saja|atau)\b/i, 'ms'],
   [/\b(qu'est|qu est|quelle|êtes|mercie|français|est-ce|est ce|avec|dans|pour|une|vous|où)\b/i, 'fr'],
@@ -81,7 +81,7 @@ const LATIN_HINTS = [
   [/\b(apakah|bagaimana|kenapa|saja|begini|terima kasih)\b/i, 'id'],
 ];
 
-/** Lokalisasikan setakat yang kita sokong; selainnya 'en'. */
+/** Localize only as far as we support it; anything else becomes 'en'. */
 const LOCALES_SUPPORTED = new Set(['en', 'ms', 'id', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi', 'bn', 'th', 'fr', 'de', 'es', 'pt']);
 
 /** detectLocale('apa itu DNS') -> 'ms'; detectLocale('什么是API') -> 'zh'. */
@@ -96,20 +96,20 @@ function detectLocale(text) {
     }
     return 'en';
   }
-  return 'en'; // skrip tak disokong fallback string → English (aman)
+  return 'en'; // unsupported script / fallback string → English (safe)
 }
 
-/** Skrip tanpa ruang (CJK/Jepun): token = aksara, bukan perkataan. */
+/** Spaceless scripts (CJK/Japanese): token = character, not word. */
 const SPACELESS_RE = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF]/;
 function isSpacelessScript(text) {
   return SPACELESS_RE.test(String(text || ''));
 }
 
-// Pemisah ayat merentas skrip: Latin `[.!?]`, CJK `。！？`, Devanagari `।॥`,
-// Armenian `։`, Greek `·`? — hanya penamat yang benar-benar henti.
+// Sentence separators across scripts: Latin `[.!?]`, CJK `。！？`, Devanagari `।॥`,
+// Armenian `։`, Greek `·`? — only the markers that truly end a sentence.
 const SENTENCE_END = '(?<=[.!?。！？\\u0E5B\\u104A\\u104B।॥։])';
 
-/** Potong teks kepada ayat untuk SEMUA skrip (bukan hanya [.!?]). */
+/** Cut text into sentences for ALL scripts (not just [.!?]). */
 function splitSentencesUnicode(text) {
   return String(text || '')
     .replace(/\s+/g, ' ')
@@ -119,10 +119,10 @@ function splitSentencesUnicode(text) {
 }
 
 /**
- * Token pertanyaan yang Unicode-sedar:
- *  - skrip beruang: perkataan ≥2 aksara (kekal `+`/`.` teknikal)
- *  - skrip tanpa-ruang: setiap aksara CJK satu token
- *  - aksara kombinasi (\u0300-\u036F dll) kekal melekat pada huruf
+ * Unicode-aware query tokens:
+ *  - spaced scripts: words of ≥2 characters (technical `+`/`.` kept)
+ *  - spaceless scripts: every CJK character is one token
+ *  - combining characters (\u0300-\u036F etc.) stay attached to the letter
  */
 function tokenizeQuery(text) {
   const s = String(text || '').toLowerCase();
@@ -136,8 +136,8 @@ function tokenizeQuery(text) {
 }
 
 /**
- * Rangkataan paparan untuk lantai rendah (fallback) — setiap bahasa utama
- * diwakili. `t(key, locale)` jatuh ke 'en' jika kunci/locale tiada.
+ * Display strings for the low level (fallback) — every major language
+ * is represented. `t(key, locale)` falls back to 'en' if the key/locale is missing.
  */
 const STRINGS = {
   dontKnow: {

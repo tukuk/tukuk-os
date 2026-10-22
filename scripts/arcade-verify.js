@@ -1,9 +1,9 @@
-// ═══ arcade-verify.js — sah-akan game arkad di PRODUCTION dengan Chrome headless ═══
-// Navigasi https://tukuk.org/games/<key>, auto-click butang mula, screenshot,
-// laporkan ralat konsol + sokongan WebGL + status kanvas. Perlukan Chrome headless
-// dengan --remote-debugging-port=9222 (SwiftShader untuk WebGL).
+// ═══ arcade-verify.js — verify arcade games in PRODUCTION with Chrome headless ═══
+// Navigates https://tukuk.org/games/<key>, auto-clicks the start button, screenshots,
+// and reports console errors + WebGL support + canvas status. Requires Chrome headless
+// with --remote-debugging-port=9222 (SwiftShader for WebGL).
 //
-// Guna: node scripts/arcade-verify.js <key> [out.png] [--ms=1500]
+// Usage: node scripts/arcade-verify.js <key> [out.png] [--ms=1500]
 'use strict';
 const fs = require('node:fs');
 const BASE = 'http://127.0.0.1:9222';
@@ -52,15 +52,15 @@ async function main() {
   await Promise.race([loaded, sleep(9000)]).catch(() => {});
   dbg('after-nav race');
   await sleep(800);
-  // WebGL keupayaan
+  // WebGL capabilities
   dbg('eval webgl');
   const gl = await evalJS(cdp, sessionId, `(()=>{try{var c=document.createElement('canvas');var g=c.getContext('webgl')||c.getContext('experimental-webgl');if(!g)return {ok:false};var d=g.getExtension('WEBGL_debug_renderer_info');return {ok:true,renderer:d?g.getParameter(d.UNMASKED_RENDERER_WEBGL):'n/a'};}catch(e){return {ok:false,err:''+e};}})()`);
-  // cuba mula game: cari butang main / panggil play
+  // try to start the game: find the play button / call play
   dbg('eval start');
   const started = await evalJS(cdp, sessionId, `(()=>{var sel=['#play','#start','.cta','button'];for(var i=0;i<sel.length;i++){var b=document.querySelector(sel[i]);if(b&&/main|mula|play|▶|▶|start|↻/i.test(b.textContent||'')){b.click();return 'clicked:'+(b.id||b.className);}}return 'none';})()`);
   await sleep(MS);
   dbg('eval canvas + shot');
-  // status kanvas + sampling kasar (drawn vs blank)
+  // canvas status + coarse sampling (drawn vs blank)
   const info = await evalJS(cdp, sessionId, `(()=>{var c=document.querySelector('canvas');if(!c)return {hasCanvas:false};var r=c.getBoundingClientRect();var has2d=false,hasgl=false;try{hasgl=!!(c.getContext&&(window.__tkGL));}catch(e){}return {hasCanvas:true,w:c.width,h:c.height,cw:Math.round(r.width),ch:Math.round(r.height)};})()`);
   const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' }, sessionId);
   dbg('shot done');

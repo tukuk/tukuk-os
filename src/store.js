@@ -3,10 +3,10 @@ const path = require('path');
 const config = require('./config');
 
 /**
- * Gudang data lokal — JSON dengan tulisan atomik.
+ * Local data store — JSON with atomic writes.
  *
- * Digunakan untuk: sejarah carian,-tetapan runtime, dan log peristiwa.
- * Bukan pangkalan data penuh; tujian yang besar, Meilisearch yang mengurusnya.
+ * Used for: search history, runtime settings, and event logs.
+ * Not a full database; for the large volumes, Meilisearch handles those.
  */
 
 const MAX_HISTORY = 500;
@@ -65,20 +65,20 @@ function load() {
   return data;
 }
 
-// Sinkron fail content/blog/*.md ke dalam store (idempotent; kemas kini ikut slug).
-// Dulu hanya dijalankan manual lewat scripts/import-posts.js — sebab itu pautan
-// blog jadi 404 pada server baru. Kini auto setiap cold start.
+// Sync content/blog/*.md files into the store (idempotent; updates match by slug).
+// This used to run only manually via scripts/import-posts.js — which is why blog
+// links 404'd on a fresh server. Now it runs automatically on every cold start.
 const CONTENT_DIR = path.join(__dirname, '..', 'content', 'blog');
 let lastSyncedDir = null;
 
 function syncPostsFromContent(dir = CONTENT_DIR) {
-  if (lastSyncedDir === dir) return; // sekali sahaja per proses
+  if (lastSyncedDir === dir) return; // once per process
   lastSyncedDir = dir;
   let files;
   try {
     files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
   } catch {
-    return; // tiada folder content — biarkan store apa adanya
+    return; // no content folder — leave the store as it is
   }
   let changed = false;
   for (const file of files) {
@@ -93,7 +93,7 @@ function syncPostsFromContent(dir = CONTENT_DIR) {
       header[match[1]] = match[2].trim();
     }
     const body = lines.slice(i).join('\n').replace(/^\s*\n/, '').trimEnd();
-    if (body.split(/\s+/).filter(Boolean).length < 80) continue; // terlalu pendek
+    if (body.split(/\s+/).filter(Boolean).length < 80) continue; // too short
     const slug = header.SLUG || file.replace(/\.md$/, '');
     const title = header.TITLE || slug;
     const excerpt = header.EXCERPT || body.slice(0, 200);

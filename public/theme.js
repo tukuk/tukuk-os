@@ -185,8 +185,8 @@
   });
 })();
 
-/* Mini-pemain global — muzik/radio sambung bermain di halaman selain index
-   (studio, editor, nasa, blog…). player.js berhenti sendiri bila bar index wujud. */
+/* Global mini-player — music/radio keeps playing on pages other than index
+   (studio, editor, nasa, blog…). player.js disables itself when the index bar exists. */
 (function () {
   try {
     if (/^\/admin/.test(location.pathname)) return;
@@ -199,8 +199,8 @@
   } catch (e) {}
 })();
 
-/* Microsoft Clarity — di-inject HANYA bila pentadbir benarkan & letak Project ID.
-   No-op selamat bila clarityEnabled=false / clarityId kosong (tiada permintaan luar). */
+/* Microsoft Clarity — injected ONLY when the admin enables it and sets a Project ID.
+   Safe no-op when clarityEnabled=false / clarityId is empty (no outbound requests). */
 (function () {
   try {
     if (/^\/admin/.test(location.pathname)) return;
@@ -221,12 +221,12 @@
   } catch (e) {}
 })();
 
-/* Tukuk ID — satu identitas untuk semua app di tukuk.org.
-   T Chat memberi setiap akaun nombor kekal (contoh 100042). Token sesi chat
-   disimpan dalam localStorage pada origin yang sama, jadi mana-mana app boleh
-   tanya "siapa yang log masuk?" tanpa form login baharu.
-   Kedua-dua fungsi ini HANYA menghantar permintaan bila dipanggil oleh app —
-   tiada panggilan automatik semasa halaman dimuat. */
+/* Tukuk ID — one identity for every app on tukuk.org.
+   T Chat gives each account a permanent number (e.g. 100042). The chat session
+   token is stored in localStorage on the same origin, so any app can ask
+   "who is logged in?" without a new login form.
+   Both functions below ONLY send a request when an app calls them —
+   there is no automatic call while the page loads. */
 window.tukukWhoami = function (force) {
   if (!force && window.__tukukWho) return Promise.resolve(window.__tukukWho);
   var kosong = { id: null, name: null, bio: '', joined: null }, tk = '';
@@ -242,7 +242,7 @@ window.tukukWhoami = function (force) {
     .catch(function () { return kosong; });
 };
 
-/* "Siapa punya ID/nama ini?" — carian direktori T Chat (perlukan sesi chat). */
+/* "Who owns this ID/name?" — T Chat directory lookup (needs a chat session). */
 window.tukukLookup = function (q) {
   var tk = '';
   try { tk = localStorage.getItem('tukuk-chat-token') || ''; } catch (e) {}

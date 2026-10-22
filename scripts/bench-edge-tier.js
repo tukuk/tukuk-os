@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 'use strict';
-// bench-edge-tier.js — Bandingkan tier AI pinggir di CPU pelayan:
+// bench-edge-tier.js — Compare edge AI tiers on the server CPU:
 //   A) LiteRT-LM   http://127.0.0.1:8090/v1  (model: gemma3-1b-it-int4)
-//   B) Ollama      http://127.0.0.1:11434/v1 (model: qwen3:1.7b dll)
-// Keduanya bercakap OpenAI-compatible, jadi meterik adalah apple-to-apple:
-//   - kelajuan: token keluaran / saat (usage rasmi; anggaran ~4 aksara/token
-//     jika server tak hantar usage)
-//   - masa pertama (wall-clock) untuk prompt tetap
-//   - RSS puncak proses pelayan ketika inferens (dipantau dari /proc)
-// GUNA: node scripts/bench-edge-tier.js [--litert http://...] [--ollama http://...]
-//       [--litert-model ID] [--ollama-model TAG] [--rounds 2]
-// Jalan HANYA selepas build Tukuk Agent tamat (elak dua beban CPU serentak).
+//   B) Ollama      http://127.0.0.1:11434/v1 (model: qwen3:1.7b etc.)
+// Both speak OpenAI-compatible, so the metrics are apple-to-apple:
+//   - speed: output tokens / second (official usage; ~4 chars/token
+//     estimate when the server sends no usage)
+//   - first-token time (wall-clock) for a fixed prompt
+//   - peak server-process RSS during inference (sampled from /proc)
+// USE: node scripts/bench-edge-tier.js [--litert http://...] [--ollama http://...]
+//      [--litert-model ID] [--ollama-model TAG] [--rounds 2]
+// Run ONLY after the Tukuk Agent build finishes (avoid two CPU loads at once).
 
 const PROMPT = 'Terangkan dalam 3 ayat ringkas: apakah sistem operasi dan apakah gunanya pada komputer lama.';
 
@@ -22,13 +22,13 @@ function arg(name, dflt) {
 const CFG = {
   litertBase: arg('litert', 'http://127.0.0.1:8090'),
   ollamaBase: arg('ollama', 'http://127.0.0.1:11434'),
-  litertModel: arg('litert-model', ''), // kosong → auto-detect daripada /v1/models
+  litertModel: arg('litert-model', ''), // empty → auto-detect from /v1/models
   ollamaModel: arg('ollama-model', 'qwen3:1.7b'),
   rounds: Number(arg('rounds', 2)),
   maxTokens: 128,
 };
 
-/** Cari PID proses pelayan (nama sebahagian) untuk sampel RSS. */
+/** Find the server process PID (partial name) for RSS sampling. */
 function sampleRss(pattern) {
   try {
     const { execSync } = require('node:child_process');
@@ -82,7 +82,7 @@ async function bench(label, base, model, procPattern) {
 
 (async () => {
   const hasil = [];
-  // LiteRT — senarai model datang daripada registry import.
+  // LiteRT — the model list comes from the import registry.
   try {
     const ids = await detectModel(CFG.litertBase);
     const pick = CFG.litertModel || ids.find((id) => id.includes('gemma3')) || ids[0];
@@ -92,7 +92,7 @@ async function bench(label, base, model, procPattern) {
     console.log('\n⚠ LiteRT-LM was tested but failed: ' + e.message);
     console.log('   (make sure litert-lm serve is active on port 8090 — see scripts/setup-litert-pilot.sh)');
   }
-  // Ollama (OpenAI-compatible pada :11434/v1).
+  // Ollama (OpenAI-compatible on :11434/v1).
   try {
     const rss = await bench('Ollama', CFG.ollamaBase, CFG.ollamaModel, 'ollama');
     hasil.push(['Ollama', CFG.ollamaModel, rss]);

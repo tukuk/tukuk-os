@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Indekskan kandungan blog ke korpus carian utama (Meilisearch `halaman_web`).
+ * Index the blog content into the main search corpus (Meilisearch `halaman_web`).
  *
  *   node scripts/index-blog.js
  *
- * Idempotent — id dokumen derivatif daripada slug, jadi jalan semula akan
- * KEMAS KINI dokumen sedia ada, bukan tambah duplikat. config.js memuat .env
- * sendiri, jadi MEILI_HOST / MEILI_MASTER_KEY dibaca automatik.
+ * Idempotent — the document id is derived from the slug, so re-running will
+ * UPDATE the existing document instead of adding a duplicate. config.js loads
+ * .env on its own, so MEILI_HOST / MEILI_MASTER_KEY are picked up automatically.
  */
 
 const config = require('../src/config');

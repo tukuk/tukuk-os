@@ -1,18 +1,18 @@
-// Pangkalan data arkib NASA — simpanan JSON kekal di data/nasa/ supaya data
-// Angkasa tidak hilang apabila cache memori luput atau API NASA down.
-// Koleksi: apod (ikut tarikh), asteroids (ikut id NEO), epic (ikut id imej).
-// ditulis tanpa require('./nasa') mengelakkan pusingan require (nasa.js → store).
+// NASA archive database — a persistent JSON store in data/nasa/ so the space
+// data isn't lost when the memory cache expires or the NASA API is down.
+// Collections: apod (by date), asteroids (by NEO id), epic (by image id).
+// Written without require('./nasa') to avoid a require cycle (nasa.js → store).
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 
-// Direktori boleh diuji (NASA_DB_PATH) — lalai bersebelahan fail store utama.
+// Testable directory (NASA_DB_PATH) — defaults to next to the main store file.
 const DB_DIR = process.env.NASA_DB_PATH || path.join(path.dirname(config.store.path), 'nasa');
 const APOD_FILE = path.join(DB_DIR, 'apod.json');
 const ASTERIOD_FILE = path.join(DB_DIR, 'asteroids.json');
 const EPIC_FILE = path.join(DB_DIR, 'epic.json');
 
-// Had arkib — buang rekod terlama bila penuh; APOD ~30 tahun pun cuma ~11k entri.
+// Archive caps — drop the oldest records when full; even ~30 years of APOD is only ~11k entries.
 const APOD_MAX = 4000;
 const ASTEROID_MAX = 3000;
 const EPIC_MAX = 500;
@@ -25,7 +25,7 @@ function loadJson(file, fallback) {
   }
 }
 
-// Tulis atomik: tmp kemudian rename — elak fail separuh tulis bila proses mati.
+// Atomic write: tmp then rename — avoids a half-written file if the process dies.
 function saveJson(file, data) {
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -38,7 +38,7 @@ function saveJson(file, data) {
   }
 }
 
-// Pengesahan ringan entri APOD (logik sama nasa.isValidApodPayload, tanpa require pusing).
+// Light validation of an APOD entry (same logic as nasa.isValidApodPayload, no require cycle).
 function isGoodApod(e) {
   if (!e || typeof e !== 'object') return false;
   const title = String(e.title || '').trim();
@@ -51,7 +51,7 @@ function isGoodApod(e) {
   return true;
 }
 
-/** Simpan satu atau banyak entri APOD (payload API boleh array bila count>1). */
+/** Save one or many APOD entries (the API payload may be an array when count>1). */
 function saveApod(data) {
   const entries = Array.isArray(data) ? data : [data];
   const db = loadJson(APOD_FILE, {});
@@ -71,20 +71,20 @@ function saveApod(data) {
     };
   }
   if (!added) return 0;
-  // Buang entri terlama bila melebihi had (kekalkannya yang terbaru).
+  // Drop the oldest entries past the cap (keeping the newest ones).
   const dates = Object.keys(db).sort();
   while (dates.length > APOD_MAX) delete db[dates.shift()];
   saveJson(APOD_FILE, db);
   return added;
 }
 
-/** Ambil satu APOD daripada arkib mengikut tarikh tepat. */
+/** Get a single archived APOD by exact date. */
 function getApod(dateStr) {
   const db = loadJson(APOD_FILE, {});
   return db[String(dateStr || '').slice(0, 10)] || null;
 }
 
-/** APOD arkib paling terbaru pada/atau sebelum tarikh (fallback apabila API down). */
+/** The newest archived APOD on/before a date (fallback when the API is down). */
 function latestApod(onOrBefore) {
   const db = loadJson(APOD_FILE, {});
   const cutoff = String(onOrBefore || new Date().toISOString().slice(0, 10)).slice(0, 10);
@@ -93,7 +93,7 @@ function latestApod(onOrBefore) {
   return db[dates[dates.length - 1]];
 }
 
-/** Senarai APOD arkib terbaru dahulu; q menapis tajuk/penjelasan (tak kira huruf). */
+/** List archived APODs newest first; q filters title/explanation (case-insensitive). */
 function listApod({ limit = 30, q = '' } = {}) {
   const db = loadJson(APOD_FILE, {});
   const needle = String(q || '').trim().toLowerCase();
@@ -105,7 +105,7 @@ function listApod({ limit = 30, q = '' } = {}) {
     .slice(0, Math.max(1, Math.min(Number(limit) || 30, 200)));
 }
 
-/** Simpan senarai asteroid NeoWs yang diformatkan (keys: id). */
+/** Save the formatted NeoWs asteroid list (keys: id). */
 function saveAsteroids(list) {
   if (!Array.isArray(list) || !list.length) return 0;
   const db = loadJson(ASTERIOD_FILE, {});
@@ -125,8 +125,8 @@ function saveAsteroids(list) {
   return added;
 }
 
-/** Rekod NEO paling terkini yang benar-benar pernah berjaya ditarik dari NeoWs —
- *  sandaran jujur apabila suapan langsung sibuk (TIADA data rekaan). */
+/** The newest NEO records that were really pulled from NeoWs successfully —
+ *  an honest fallback when the live feed is busy (NO invented data). */
 function latestAsteroids({ limit = 60 } = {}) {
   const db = loadJson(ASTERIOD_FILE, {});
   return Object.values(db)
@@ -135,7 +135,7 @@ function latestAsteroids({ limit = 60 } = {}) {
     .slice(0, Math.max(1, Math.min(Number(limit) || 60, 100)));
 }
 
-/** Cari asteroid arkib mengikut nama; bahaya dahulu, pendekatan terdekat dahulu. */
+/** Search archived asteroids by name; hazardous first, closest approach first. */
 function searchAsteroids({ q = '', limit = 20, hazardousOnly = false } = {}) {
   const db = loadJson(ASTERIOD_FILE, {});
   const needle = String(q || '').trim().toLowerCase();
@@ -147,7 +147,7 @@ function searchAsteroids({ q = '', limit = 20, hazardousOnly = false } = {}) {
     .slice(0, Math.max(1, Math.min(Number(limit) || 20, 100)));
 }
 
-/** Simpan imej EPIC (ball Earth harian) mengikut identifier. */
+/** Save EPIC images (the daily Earth shot) by identifier. */
 function saveEpic(items) {
   if (!Array.isArray(items) || !items.length) return 0;
   const db = loadJson(EPIC_FILE, {});
@@ -164,7 +164,7 @@ function saveEpic(items) {
   return added;
 }
 
-/** Senarai EPIC terbaru dahulu. */
+/** List EPIC images newest first. */
 function listEpic({ limit = 12 } = {}) {
   const db = loadJson(EPIC_FILE, {});
   return Object.values(db)
@@ -172,7 +172,7 @@ function listEpic({ limit = 12 } = {}) {
     .slice(0, Math.max(1, Math.min(Number(limit) || 12, 100)));
 }
 
-/** Kiraan ringkas untuk papan pemuka/AI. */
+/** Quick counts for the dashboard/AI. */
 function stats() {
   return {
     dir: DB_DIR,

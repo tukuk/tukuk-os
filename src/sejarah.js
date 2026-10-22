@@ -1,30 +1,30 @@
 'use strict';
 // ── TUKUK-OS SEJARAH (/sejarah) — "On this day" via Wikipedia REST feed ───────
-// Sumber: https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/MM/DD —
-// SATU permintaan tanpa kunci yang mengembalikan selected (peristiwa pilihan),
-// births, deaths dan holidays untuk satu tarikh. Data dik_CACHE 30 hari (sejarah
-// tidak berubah) dengan SWR: upstream lambat/gagal → hidang cache basi, JANGAN 503
-// bila pernah berjaya. Tarikh tidak sah (bulan/hari di luar julat) DITOLAK 404
-// SEBELUM sebarang panggilan API — supaya bot tak boleh cetus 500 / bazir kuota.
-// Teks & maksud halaman dalam Bahasa Inggeris (internasional).
+// Source: https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/MM/DD —
+// ONE keyless request that returns selected (featured events),
+// births, deaths and holidays for a date. The data is cached 30 days (history
+// doesn't change) with SWR: upstream slow/failing → serve the stale cache, NEVER 503
+// when it succeeded before. Invalid dates (month/day out of range) are REJECTED 404
+// BEFORE any API call — so a bot can't trigger a 500 / burn quota.
+// The page text & meaning are in English (international).
 const https = require('https');
 
 const FEED = 'https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all';
 const UA = 'TukukOS-Sejarah/1.0 (+https://tukuk.org)';
 const cache = new Map();
-const TTL = 30 * 24 * 60 * 60 * 1000; // sejarah tetap — cache panjang
+const TTL = 30 * 24 * 60 * 60 * 1000; // history is fixed — long cache
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function isLeap(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
 function daysInMonth(m, y) {
-  if (m === 2) return isLeap(y == null ? 2024 : y) ? 29 : 28; // Feb sentuh 29 (tahun lompat)
+  if (m === 2) return isLeap(y == null ? 2024 : y) ? 29 : 28; // Feb reaches 29 (leap year)
   return [4, 6, 9, 11].includes(m) ? 30 : 31;
 }
 function pad2(n) { return String(n).padStart(2, '0'); }
 
-// Sahkan mm/dd SEBELUM API. Feb longgar s.d. 29 supaya halaman 02/29 kekal wujud
-// (data feed sedia ada). Bulan/hari luar julat → null (caller balas 404, tanpa API).
+// Validate mm/dd BEFORE the API. Feb is lenient up to 29 so the 02/29 page keeps existing
+// (the feed has that data). Out-of-range month/day → null (the caller answers 404, no API).
 function validDate(mm, dd) {
   const m = Number(mm); const d = Number(dd);
   if (!Number.isInteger(m) || !Number.isInteger(d)) return null;
@@ -34,7 +34,7 @@ function validDate(mm, dd) {
   return { mm: pad2(m), dd: pad2(d), month: MONTHS[m - 1], m, d };
 }
 
-// ——— HTTP dengan fallback IPv6→IPv4 + timeout lembut (corak bencana.js) ———
+// ——— HTTP with an IPv6→IPv4 fallback + a soft timeout (the bencana.js pattern) ———
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const v4Agent = new https.Agent({ family: 4, keepAlive: true });
 function httpsGet(url, agent) {
@@ -58,7 +58,7 @@ async function fetchJson(url) {
   try { return await httpsGet(url, v6Agent); } catch { return await httpsGet(url, v4Agent); }
 }
 
-// Kemas satu item feed → {year, text, links[]}. pages[] → pautan Wikipedia.
+// Clean one feed item → {year, text, links[]}. pages[] → Wikipedia links.
 function pick(it) {
   const links = Array.isArray(it.pages) ? it.pages.slice(0, 3).map((p) => ({
     title: String(p.title || '').replace(/_/g, ' '),
@@ -67,13 +67,13 @@ function pick(it) {
   return { year: it.year || null, text: String(it.text || '').trim(), links };
 }
 
-// Muat & rampas satu tarikh. selected penuh; births/deaths dipangkas 12 teratas.
+// Load & condense one date. selected stays complete; births/deaths are trimmed to the top 12.
 async function loadDay(mm, dd) {
   const v = validDate(mm, dd);
   if (!v) return null;
   const key = `otd:${v.mm}-${v.dd}`;
   const hit = cache.get(key);
-  if (hit && Date.now() <= hit.expiresAt) return hit.data; // segar
+  if (hit && Date.now() <= hit.expiresAt) return hit.data; // fresh
   try {
     const body = await fetchJson(`${FEED}/${v.mm}/${v.dd}`);
     const arr = (k) => Array.isArray(body && body[k]) ? body[k].map(pick).filter((x) => x.text) : [];
@@ -86,19 +86,19 @@ async function loadDay(mm, dd) {
       holidays: arr('holidays'),
     };
     if (!data.selected.length && !data.births.length && !data.deaths.length) {
-      // Feed kosong (tarikh luar kalendar, dll.) → jangan cache kosong sebagai truth.
+      // Empty feed (date outside the calendar, etc.) → don't cache empty as truth.
       if (hit) return hit.data;
       return null;
     }
     cache.set(key, { data, expiresAt: Date.now() + TTL });
     return data;
   } catch (err) {
-    if (hit) return hit.data; // SWR — hidang basi, jangan 503
+    if (hit) return hit.data; // SWR — serve stale, never 503
     throw err;
   }
 }
 
-// Senarai 366 tarikh sah untuk hab + sitemap (tahun rujuk 2024 → sertakan 29 Feb).
+// The 366 valid dates for the hub + sitemap (reference year 2024 → 29 Feb included).
 function allDates() {
   const out = [];
   for (let m = 1; m <= 12; m++) {

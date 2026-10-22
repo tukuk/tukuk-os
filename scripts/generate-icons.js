@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * generate-icons.js — Jana ikon untuk desktop app.
+ * generate-icons.js — Generate the icons for the desktop app.
  *
- * Prasyarat: sharp (sudah diinstall sebagai devDependency)
+ * Requires: sharp (already installed as a devDependency)
  *
- * Guna:
+ * Usage:
  *   node scripts/generate-icons.js
  */
 
@@ -44,10 +44,10 @@ function generate() {
       });
   }
 
-  // ICO untuk Windows (electron-builder akan jana dari PNG)
+  // ICO for Windows (electron-builder generates it from the PNGs)
   console.log('[icons] skip icon.ico (electron-builder generates it automatically)');
 
-  // ICNS untuk macOS (electron-builder akan jana dari PNG)
+  // ICNS for macOS (electron-builder generates it from the PNGs)
   if (process.platform === 'darwin') {
     console.log('[icons] skip icon.icns (electron-builder generates it automatically)');
   } else {

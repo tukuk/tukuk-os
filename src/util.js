@@ -132,8 +132,8 @@ function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Loloskan karakter HTML supaya kandungan pengguna (title/author/excerpt)
-// tidak boleh menyuntik skrip (XSS) ke dalam templat.
+// Escape HTML characters so user content (title/author/excerpt)
+// cannot inject scripts (XSS) into templates.
 function escapeHtml(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')

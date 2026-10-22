@@ -1,17 +1,17 @@
 /**
- * auth.js — Kawalan akses pentadbir Tukuk-OS.
+ * auth.js — Tukuk-OS admin access control.
  *
- * Dasar keselamatan:
- *   1. HANYA satu e-mel dibenarkan (config.admin.email). E-mel lain ditolak.
- *   2. Login harian menggunakan WebAuthn PASSKEY (biometrik/peranti).
- *   3. Kata laluan bootstrap (config.admin.bootstrapPassword) hanya dipakai
- *      SEKALI untuk mendaftarkan passkey pertama (atau menambah passkey baru
- *      daripada dalam papan pemuka yang sudah dibuka kuncinya).
- *   4. Selepas login berjaya, satu token sesi rawak dikeluarkan dan disimpan
- *      dalam memori dengan TTL. Semua route /api/admin/* memerlukannya.
+ * Security policy:
+ *   1. ONLY one e-mail is allowed (config.admin.email). Any other e-mail is rejected.
+ *   2. Day-to-day login uses a WebAuthn PASSKEY (biometric/security key).
+ *   3. The bootstrap password (config.admin.bootstrapPassword) is used
+ *      ONCE to register the first passkey (or to add a new passkey
+ *      from inside an already-unlocked dashboard).
+ *   4. After a successful login, a random session token is issued and kept
+ *      in memory with a TTL. Every /api/admin/* route requires it.
  *
- * WebAuthn disahkan menggunakan pustaka @simplewebauthn/server (CBOR/COSE yang
- * diaudit) — bukan pelaksanaan sendiri, supaya selamat untuk pelayan awam.
+ * WebAuthn is verified with the @simplewebauthn/server library (audited CBOR/COSE)
+ * — not a hand-rolled implementation, so it is safe on a public server.
  */
 
 const crypto = require('crypto');
@@ -26,9 +26,9 @@ const store = require('./store');
 
 const RP_ID = config.webauthn.rpID;
 const RP_NAME = config.webauthn.rpName;
-// Origin yang dibenarkan untuk WebAuthn. WEBAUTHN_ORIGIN boleh mengandungi
-// senarai dipisahkan koma (cth: https://tukuk.org,https://dashboard.tukuk.org).
-// localhost/127.0.0.1 (dengan port tempatan) sentiasa dibenarkan untuk ujian.
+// Allowed origins for WebAuthn. WEBAUTHN_ORIGIN may hold a
+// comma-separated list (e.g. https://tukuk.org,https://dashboard.tukuk.org).
+// localhost/127.0.0.1 (with a local port) is always allowed for testing.
 const EXPECTED_ORIGIN = config.webauthn.origin;
 const EXPECTED_ORIGINS = String(EXPECTED_ORIGIN)
   .split(',')
@@ -43,10 +43,10 @@ for (const host of ['localhost', '127.0.0.1']) {
 const ALLOWED_EMAIL = String(config.admin.email || '').trim().toLowerCase();
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
-// Origin tambahan daripada permintaan semasa. Pengesahan WebAuthn TETAP terikat
-// pada rpID (tukuk.org) — domain lain tidak boleh mengeluarkan assertion untuk rpID
-// ini (browser sekat), jadi menerima origin peminta adalah selamat dan menghapuskan
-// ralat "origin mismatch" bila /admin dibuka dari hostname berbeza (tunnel/LAN/www).
+// Extra origins taken from the current request. WebAuthn verification stays bound
+// to the rpID (tukuk.org) — no other domain can mint an assertion for this rpID
+// (the browser blocks it), so accepting the requester's origin is safe and removes
+// the "origin mismatch" error when /admin is opened from a different hostname (tunnel/LAN/www).
 function originsFor(reqOrigin) {
   const o = String(reqOrigin || '').trim().replace(/\/+$/, '');
   if (o && /^https?:\/\/.+/i.test(o) && !EXPECTED_ORIGINS.includes(o)) return [...EXPECTED_ORIGINS, o];
@@ -62,18 +62,18 @@ function savePasskeys(list) {
   store.setSetting('passkeys', list);
 }
 
-// Cabaran tertunda (registration/authentication) — keyed by e-mel.
+// Pending challenges (registration/authentication) — keyed by e-mail.
 const pendingChallenges = new Map(); // email -> { value, type, expiresAt }
 
-// Sesi login yang aktif. token -> { email, expiresAt }
+// Active login sessions. token -> { email, expiresAt }
 const sessions = new Map();
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-// base64url (string) → Uint8Array — diperlukan untuk API @simplewebauthn/server
-// v14 yang menjangka kunci awam tersimpan sebagai bait CBOR mentah.
+// base64url (string) → Uint8Array — required by the @simplewebauthn/server v14 API,
+// which expects the public key stored as raw CBOR bytes.
 function b64urlToBuf(b64url) {
   return new Uint8Array(Buffer.from(String(b64url), 'base64url'));
 }
@@ -113,7 +113,7 @@ function revokeSession(token) {
   sessions.delete(token);
 }
 
-// Buang entri luput secara berkala supaya memori tidak membengkak.
+// Purge expired entries periodically so memory doesn't grow unbounded.
 setInterval(() => {
   const now = Date.now();
   for (const [token, s] of sessions) if (s.expiresAt < now) sessions.delete(token);
@@ -127,7 +127,7 @@ function bearer(req) {
   return String(req.headers['x-admin-token'] || '').trim();
 }
 
-/** Middleware: tolak melainkan peminta mempunyai sesi pentadbir yang sah. */
+/** Middleware: reject unless the requester has a valid admin session. */
 function requireAdmin(req, res, next) {
   const session = readSession(bearer(req));
   if (!session) {
@@ -137,7 +137,7 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
-/** Middleware: tolak melainkan e-mel padan dengan e-mel pemilik yang dibenarkan. */
+/** Middleware: reject unless the e-mail matches the allowed owner e-mail. */
 function requireAllowedEmail(req, res, next) {
   const email = normalizeEmail(req.body && req.body.email);
   if (!email) return res.status(400).json({ error: 'Email required' });
@@ -156,9 +156,9 @@ function checkBootstrapPassword(value) {
   return crypto.timingSafeEqual(a, b);
 }
 
-/** Maklumat awam untuk UI: ada/tidak passkey, konfigurasi RP.
- *  NOTA: `allowedEmail` SENGAJA tidak dipulangkan — sebelum ini e-mel pemilik
- *  dibocorkan kepada sesiapa yang membuka /admin (auto-fill pada input). */
+/** Public info for the UI: whether passkeys exist, the RP config.
+ *  NOTE: `allowedEmail` is DELIBERATELY not returned — previously the owner's e-mail
+ *  leaked to anyone opening /admin (auto-filled into the input). */
 function publicConfig() {
   const keys = passkeys();
   return {
@@ -170,15 +170,15 @@ function publicConfig() {
   };
 }
 
-// ── Registration (perlu e-mel yang dibenarkan + kata laluan bootstrap) ─────────
+// ── Registration (needs the allowed e-mail + the bootstrap password) ─────────
 async function startRegistration(email) {
   const userId = crypto.randomBytes(16);
-  // PENTING: generateRegistrationOptions ASINKRON pada v14 — mesti `await`
-  // supaya `options.challenge` wujud sebelum disimpan sebagai cabaran jangka pendek.
+  // IMPORTANT: generateRegistrationOptions is ASYNC on v14 — you must `await` it
+  // so `options.challenge` exists before it is stored as a short-lived challenge.
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: RP_ID,
-    userID: userId, // v14: bait (Uint8Array) — string base64url tidak lagi diterima
+    userID: userId, // v14: bytes (Uint8Array) — base64url strings are no longer accepted
     userName: ALLOWED_EMAIL,
     userDisplayName: ALLOWED_EMAIL,
     attestationType: 'none',
@@ -206,14 +206,14 @@ async function finishRegistration(email, credential, reqOrigin) {
       expectedRPID: RP_ID
     });
   } catch (error) {
-    // v14 membaling bagi kebanyakan kegagalan pengesahan (cabaran/origin/attestasi).
+    // v14 throws for most verification failures (challenge/origin/attestation).
     throw Object.assign(new Error(`Passkey registration could not be verified: ${error && error.message}`), { statusCode: 400 });
   }
   if (!verification.verified || !verification.registrationInfo) {
     throw Object.assign(new Error('Passkey could not be verified.'), { statusCode: 400 });
   }
   const info = verification.registrationInfo;
-  // v14: maklumat dalam `credential` (string base64url + publicKey bait); v8: medan atas.
+  // v14: the data sits under `credential` (base64url strings + publicKey bytes); v8: top-level fields.
   const credentialId = info.credential?.id || info.credentialID;
   const publicKey = info.credential?.publicKey || info.credentialPublicKey;
   const list = passkeys();
@@ -225,7 +225,7 @@ async function finishRegistration(email, credential, reqOrigin) {
     counter: info.credential?.counter ?? info.counter ?? 0,
     credentialDeviceType: info.credentialDeviceType || 'singleDevice',
     credentialBackedUp: Boolean(info.credentialBackedUp),
-    label: (credential.label && String(credential.label).slice(0, 40)) || `Peranti ${new Date().toLocaleDateString()}`,
+    label: (credential.label && String(credential.label).slice(0, 40)) || `Device ${new Date().toLocaleDateString()}`,
     addedAt: new Date().toISOString()
   });
   savePasskeys(list);
@@ -235,8 +235,8 @@ async function finishRegistration(email, credential, reqOrigin) {
 // ── Authentication (passkey) ──────────────────────────────────────────────────
 async function startAuthentication(email) {
   const keys = passkeys();
-  // v14: `allowCredentials[].id` mesti STRING base64url — membaling jika Uint8Array
-  // (berbeza dengan v8 yang menghendaki buffer). Challenge tetap base64url string.
+  // v14: `allowCredentials[].id` must be a base64url STRING — it throws on Uint8Array
+  // (unlike v8, which required a buffer). The challenge stays a base64url string.
   const options = await generateAuthenticationOptions({
     rpID: RP_ID,
     userVerification: 'preferred',
@@ -257,8 +257,8 @@ async function finishAuthentication(email, credential, reqOrigin) {
   if (!stored) {
     throw Object.assign(new Error('This passkey is not registered on the server.'), { statusCode: 401 });
   }
-  // v14 API: parameter `credential` (bukan `authenticator`) dengan `id`/`publicKey`
-  // — id string base64url, publicKey bait CBOR; kegagalan membaling SimpleWebAuthnError.
+  // v14 API: the `credential` parameter (not `authenticator`) with `id`/`publicKey`
+  // — id a base64url string, publicKey raw CBOR bytes; failures throw SimpleWebAuthnError.
   let verification;
   try {
     verification = await verifyAuthenticationResponse({
@@ -278,7 +278,7 @@ async function finishAuthentication(email, credential, reqOrigin) {
   if (!verification.verified) {
     throw Object.assign(new Error('Passkey verification failed.'), { statusCode: 401 });
   }
-  // Simpan counter baharu (anti-replay untuk authenticator FIDO2 yangincrements).
+  // Store the new counter (anti-replay for FIDO2 authenticators that increment it).
   const idx = keys.findIndex((k) => k.id === credential.id);
   const authInfo = verification.authenticationInfo;
   if (idx !== -1 && authInfo) {

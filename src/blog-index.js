@@ -2,21 +2,21 @@ const crypto = require('crypto');
 const store = require('./store');
 
 /**
- * Indekskan kandungan blog (store.posts) ke dalam korpus carian utama.
+ * Index the blog content (store.posts) into the main search corpus.
  *
- * Masalah: `scripts/import-posts.js` + `store.syncPostsFromContent()` memuatkan
- * content/blog/*.md ke dalam STORE (dihidangkan di /blog), tetapi TIDAK ada yang
- * menolaknya ke Meilisearch. `/search` dan grounding `/ask` hanya membaca
- * `halaman_web` (korpus berita crawl). Akibatnya panduan/blog kurasi — 'bm25',
- * 'cloudflare' — pulang 0 hits.
+ * The problem: `scripts/import-posts.js` + `store.syncPostsFromContent()` load
+ * content/blog/*.md into the STORE (served at /blog), but NOTHING
+ * pushes them into Meilisearch. `/search` and the `/ask` grounding only read
+ * `halaman_web` (the crawled news corpus). As a result the curated guides/blogs — 'bm25',
+ * 'cloudflare' — returned 0 hits.
  *
- * Modul ini menjembatani jurang itu: tukar setiap post store kepada dokumen
- * berskema sama dengan `_populateInitialDocs` (meili.js), lalu updateDocuments
- * ke index utama. id deterministik (sha256(slug)) → idempotent; jalan berkali-kali
- * tak hasilkan duplikat.
+ * This module bridges that gap: turn each store post into a document
+ * with the same schema as `_populateInitialDocs` (meili.js), then updateDocuments
+ * into the main index. The id is deterministic (sha256(slug)) → idempotent; running it
+ * many times produces no duplicates.
  */
 
-// Skema dokumen blog — sepadan dengan artikel seed di meili.js `_populateInitialDocs`.
+// The blog document schema — matches the seed articles in meili.js `_populateInitialDocs`.
 function postToDoc(post) {
   const content = post.content || '';
   const id = crypto.createHash('sha256').update(post.slug || post.title).digest('hex').slice(0, 16);
@@ -42,8 +42,8 @@ function postToDoc(post) {
 }
 
 /**
- * Tolak semua post store ke index utama.
- * @param {object} index  Index Meilisearch (hybrid real+mock) daripada ensureIndex().
+ * Push every store post into the main index.
+ * @param {object} index  The Meilisearch index (hybrid real+mock) from ensureIndex().
  * @param {object} opts   { limit, logger }
  * @returns {Promise<{count:number, taskUid:*}>}
  */
@@ -55,7 +55,7 @@ async function indexBlogPosts(index, { limit = 1000, logger = console } = {}) {
   const docs = posts.map(postToDoc);
   const task = await index.updateDocuments(docs);
   if (logger && logger.log) {
-    logger.log(`[blog-index] ${docs.length} post blog dihantar ke indeks utama (task ${task && task.taskUid ? task.taskUid : 'mock'})`);
+    logger.log(`[blog-index] ${docs.length} blog posts sent to the main index (task ${task && task.taskUid ? task.taskUid : 'mock'})`);
   }
   return { count: docs.length, taskUid: task && task.taskUid ? task.taskUid : null };
 }

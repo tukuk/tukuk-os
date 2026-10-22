@@ -1,9 +1,9 @@
-// Loader monetisasi (klien): Google AdSense auto-ads + Microsoft USM.
-// "Tampal-dan-jalan" + kill-switch Admin. Hanya jalankan pada halaman
-// selamat-iklan. Keputusan carian (/cari), panel Admin, dan ruang T Chat
-// (tchat.* / /apps/chat) TIDAK sekali-kali menyuntik iklan — mematuhi dasar
-// Google (no ads on web-search result pages) & reka bentuk Tukuk. Kami baca
-// /api/public/settings, jadi togel Admin serta-merta hidup/mati kedua-duanya.
+// Monetization loader (client): Google AdSense auto-ads + Microsoft USM.
+// "Paste-and-run" plus an Admin kill-switch. Only run it on
+// ad-safe pages. Search results (/cari), the Admin panel and the T Chat
+// rooms (tchat.* / /apps/chat) NEVER inject ads — complying with the
+// Google policy (no ads on web-search result pages) & the Tukuk design. We read
+// /api/public/settings, so the Admin toggle instantly turns both on/off.
 (function () {
   'use strict';
   try {
@@ -15,9 +15,9 @@
       .then(function (s) {
         if (!s) return;
         var head = document.head || document.documentElement;
-        // Microsoft Clarity (analitik penggunaan — didedahkan dalam /privacy). Ia BEBAS
-        // daripada togel iklan, jadi dimuatkan lebih awal supaya tetap hidup walaupun
-        // rangkaian iklan pihak ketiga di bawah membuat `return` (ganti AdSense).
+        // Microsoft Clarity (usage analytics — disclosed on /privacy). It is FREE
+        // of the ad toggle, so it is loaded early to stay alive even when the
+        // third-party ad networks below `return` (replacing AdSense).
         if (s.clarityEnabled) {
           var cid = String(s.clarityId || '');
           if (/^[a-z0-9]+$/i.test(cid)) {
@@ -27,9 +27,9 @@
             head.appendChild(cl);
           }
         }
-        // Rangkaian iklan PANTAS (Adsterra / PropellerAds / dll) — bila aktif, ia
-        // GANTIKAN AdSense pada halaman yang sama (elak "mixed networks" → lindungi
-        // akaun AdSense daripada ban). AdSense auto-resume bila togel ini dimatikan.
+        // FAST ad networks (Adsterra / PropellerAds / etc.) — when enabled they
+        // REPLACE AdSense on the same page (avoids "mixed networks" → protects the
+        // AdSense account from a ban). AdSense auto-resumes when this toggle is off.
         if (s.thirdPartyAdEnabled) {
           var t = String(s.thirdPartyAdSrc || '');
           if (/^https:\/\/[a-z0-9.-]+\//i.test(t)) {
@@ -51,7 +51,7 @@
             head.appendChild(g);
           }
         }
-        // Microsoft USM (Universal Site Monetization) — satu <script src> di head.
+        // Microsoft USM (Universal Site Monetization) — one <script src> in the head.
         if (s.msAdsEnabled) {
           var u = String(s.msAdsUsmSrc || '');
           if (/^https:\/\/[a-z0-9.-]+\//i.test(u)) {

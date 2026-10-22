@@ -1,15 +1,16 @@
 'use strict';
-// ── TUKUK-OS READ ALOUD — baca kuat dengan Web Speech API pelayar ──
-// Percuma, tanpa kunci/API pelayan: teks halaman dibaca oleh suara sintetik OS
-// (ms-MY di Android/Windows jika voice ada, selainnya bahasa sistem). Muncul
-// hanya pada halaman KANDUNGAN yang ada <main> — bukan SPA (/os, /cari, /apps,
-// /admin, editor) dan bukan bila pelayar tak sokong speechSynthesis.
-// Tiada eval/new Function (lulus CSP ketat) — semua guna addEventListener.
+// ── TUKUK-OS READ ALOUD — read aloud with the browser Web Speech API ──
+// Free, no API key and no server calls: the page text is spoken by the OS
+// synthetic voice (ms-MY on Android/Windows when such a voice exists, otherwise
+// the system language). It only appears on CONTENT pages that have <main> —
+// not on SPAs (/os, /cari, /apps, /admin, the editor) and not when the browser
+// does not support speechSynthesis.
+// No eval/new Function (passes the strict CSP) — everything uses addEventListener.
 (function () {
   var synth = window.speechSynthesis;
   if (!synth || !window.SpeechSynthesisUtterance) return;
   var path = location.pathname;
-  // SPA/alat interaktif: baca kuat tiada makna di sini.
+  // SPAs / interactive tools: reading them aloud makes no sense.
   if (/^\/(os|admin|cari|apps|editor|editor-video|movie|design|collage|converter|bg-remover|builder|store|play|playstore|terminal|dev|sms|health|stats|download-apk)/.test(path)) return;
   var main = document.querySelector('main') || document.querySelector('article') || document.querySelector('.wrap') || document.querySelector('.container');
   if (!main) return;
@@ -21,7 +22,7 @@
   };
   var T = I18N[LANG2] || I18N.en;
 
-  // ── Kumpulkan teks boleh-baca: buang nav/footer/iklan/kawalan ──
+  // ── Collect readable text: drop nav/footer/ads/controls ──
   function collectSentences() {
     var clone = main.cloneNode(true);
     var kill = 'script,style,nav,footer,form,button,input,select,textarea,ins,.ad-slot,.site-top,.site-foot,.ra-btn,.ra-tip,aside,noscript';
@@ -29,7 +30,7 @@
     for (var i = 0; i < dead.length; i++) dead[i].parentNode.removeChild(dead[i]);
     var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
     if (!text) return [];
-    // Ayat ~≤240 aksara: pemisah . ! ? … ; pemotong paksa ayat panjang.
+    // Sentences of ~≤240 chars: split on . ! ? … ; long sentences are force-cut.
     var raw = text.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || [text];
     var out = [];
     for (var j = 0; j < raw.length; j++) {
@@ -43,7 +44,7 @@
   var sentences = collectSentences();
   if (!sentences.length) return;
 
-  // ── UI: SATU butang kecil sahaja (kanan-bawah) ──
+  // ── UI: ONE small button only (bottom-right) ──
   var st = document.createElement('style');
   st.textContent = '.ra-btn{position:fixed;right:14px;bottom:14px;z-index:9999;width:44px;height:44px;border-radius:50%;border:1px solid var(--line,#262b36);background:var(--panel,#171a21);color:var(--text,#e6e9ef);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.3);transition:border-color .15s}'
     + '.ra-btn:hover{border-color:var(--accent,#4c8dff)}'
@@ -78,7 +79,7 @@
     tipTimer = setTimeout(function () { tip.classList.remove('show'); }, ms || 4000);
   }
 
-  // ── Voice: utamakan bahasa halaman (ms), hormati pilihan tersimpan ──
+  // ── Voice: prefer the page language (ms), honor the saved choice ──
   var voices = [];
   function pref() { return (LANG2 === 'ms' ? 'ms' : LANG2); }
   function fillVoices() {
@@ -92,7 +93,7 @@
   }
   fillVoices();
   if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = fillVoices;
-  // Voice tiba lewat (Chrome/Linux): semak semula supaya klik pertama tidak terlepas.
+  // Voices can arrive late (Chrome/Linux): re-check so the first click is not missed.
   if (!voices.length) { setTimeout(fillVoices, 1500); setTimeout(fillVoices, 4500); }
 
   function pickVoice() {
@@ -110,10 +111,10 @@
     return ['0.75', '1', '1.25', '1.5'].indexOf(r) > -1 ? Number(r) : 1;
   }
 
-  // ── Enjin baca: satu queue ayat, indeks simpan kedudukan ──
-  // PENTING: tanpa voice, synth.speak() melempar onerror SINKRON — kemajuan
-  // queue wajib ditangguhkan (setTimeout), jika tidak rekursi segerak
-  // meletupkan stack (RangeError) dan bacaan mati senyap.
+  // ── Reading engine: one queue of sentences, idx stores the position ──
+  // IMPORTANT: with no voice available, synth.speak() throws onerror SYNCHRONOUSLY —
+  // advancing the queue must be deferred (setTimeout), otherwise the
+  // synchronous recursion blows the stack (RangeError) and reading dies silently.
   var idx = 0, state = 'idle', keepAlive = null, errStreak = 0;
   function setUI() {
     btn.setAttribute('data-state', state);
@@ -145,7 +146,7 @@
     };
     synth.speak(u);
   }
-  // Bug Chrome: queue panjang berhenti sendiri selepas ~15s — pacu resume berkala.
+  // Chrome bug: a long queue stalls by itself after ~15s — force a periodic resume.
   function armKeepAlive() {
     if (keepAlive) return;
     keepAlive = setInterval(function () {
@@ -154,11 +155,11 @@
   }
 
   setUI();
-  // Klik: idle→baca · baca→jeda · jeda→sambung. Klik-kanan/penahan: berhenti.
+  // Click: idle→read · read→pause · pause→resume. Right-click/long-press: stop.
   btn.addEventListener('click', function () {
     if (state === 'idle') {
       if (!voices.length) fillVoices();
-      if (!voices.length) { say(T.novoice, 6000); return; } // jujur: jangan berlakon membaca
+      if (!voices.length) { say(T.novoice, 6000); return; } // be honest: never pretend to read
       synth.cancel();
       if (idx >= sentences.length) idx = 0;
       state = 'reading'; errStreak = 0;
@@ -167,7 +168,7 @@
       speakCur();
     } else if (state === 'reading') {
       synth.pause(); state = 'paused'; setUI();
-    } else { // paused → sambung
+    } else { // paused → resume
       synth.resume(); state = 'reading'; setUI();
     }
   });

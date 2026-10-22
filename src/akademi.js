@@ -1,9 +1,9 @@
 'use strict';
-// ── AKADEMI TUKUK-OS — 50 pelajaran pengetahuan untuk pengguna seluruh dunia ─
-// Sepuluh trek × lima mikro-pelajaran Bahasa Inggeris: teks ringkas 3 perenggan,
-// 3 pengajaran utama + 1 soalan kuiz. Semua fakta disemak & dilabel konservatif
-// ("about", "roughly") apabila sumber berbeza angka. Tiada API luar — kurasi
-// setempat seperti study.js; setiap trek memaut alat hidup yang sepadan.
+// ── TUKUK-OS ACADEMY — 50 knowledge lessons for users around the world ─
+// Ten tracks × five English micro-lessons: short 3-paragraph text,
+// 3 key takeaways + 1 quiz question. Every fact is checked & conservatively labelled
+// ("about", "roughly") when sources disagree on numbers. No external APIs — curated
+// locally like study.js; each track links to the matching live tool.
 const TRACKS = [
   { s: 'sky', icon: '🌌', name: 'Sky & Space', blurb: 'Read the night sky like your grandparents could — stars, Moon, planets and eclipses.', rel: [{ l: 'NASA Space Complex — live sky maps & APOD', h: '/nasa' }, { l: 'When to see the ISS overhead', h: '/nasa/iss' }] },
   { s: 'weather', icon: '🌦️', name: 'Weather', blurb: 'Forecasts, rain, storms and the wild Pacific engine that shifts weather worldwide.', rel: [{ l: 'World Weather — live forecasts for 190+ cities', h: '/cuaca' }, { l: 'How to read a weather map', h: '/cuaca/peta' }] },
@@ -12,13 +12,13 @@ const TRACKS = [
   { s: 'body', icon: '🫀', name: 'The Human Body', blurb: 'The machine you live in: heart, lungs, brain, gut and the immune war room.', rel: [{ l: 'How living things breathe', h: '/udara/breath' }, { l: 'Science ideas in plain language', h: '/study/science' }] },
   { s: 'life', icon: '🌿', name: 'Animals & Plants', blurb: 'Photosynthesis, pollination, evolution, food webs and the great migrations.', rel: [{ l: 'Oxygen explained — who makes the air', h: '/udara/oxygen' }, { l: 'Daily facts & riddles', h: '/study' }] },
   { s: 'numbers', icon: '📊', name: 'Numbers in Daily Life', blurb: 'Percentages, averages, interest, odds and inflation — the maths bills use.', rel: [{ l: 'Mental-math sprint trainer', h: '/study/math' }, { l: 'World statistics (World Bank data)', h: '/statistik' }] },
-  { s: 'internet', icon: '💻', name: 'Computers & the Internet', blurb: 'Packets, passwords, encryption and AI — how the network in your pocket works.', rel: [{ l: 'Passkey & account access guide', h: '/access' }, { l: 'AI Sembang chat', h: '/apps/chat' }] },
+  { s: 'internet', icon: '💻', name: 'Computers & the Internet', blurb: 'Packets, passwords, encryption and AI — how the network in your pocket works.', rel: [{ l: 'Passkey & account access guide', h: '/access' }, { l: 'AI Chat', h: '/apps/chat' }] },
   { s: 'things', icon: '🔧', name: 'How Things Work', blurb: 'Fridges, microwaves, motors, batteries and flight — everyday engineering.', rel: [{ l: 'Kitchen experiments to try at home', h: '/study/experiments' }, { l: 'Science core ideas', h: '/study/science' }] },
   { s: 'thinking', icon: '🧠', name: 'Thinking Clearly', blurb: 'Statistics, biases and fact-checking — defending your attention online.', rel: [{ l: 'Search 100M+ Wikipedia articles', h: '/wiki' }, { l: 'Site search with source notes', h: '/cari' }] },
 ];
 
-// Setiap pelajaran: { s:slug, t:judul, mn:minit, sum:satu baris, p:[perenggan],
-// k:[pengajaran], q:{ s:soalan, o:[pilihan], a:indeks betul, e:penerangan } }
+// Every lesson: { s:slug, t:title, mn:minutes, sum:one line, p:[paragraphs],
+// k:[key takeaways], q:{ s:question, o:[options], a:correct index, e:explanation } }
 const LESSONS = {
   sky: [
     { s: 'reading-the-night-sky', t: 'Reading the Night Sky', mn: 7,
@@ -501,7 +501,7 @@ function findLesson(trackSlug, lessonSlug) {
   return (LESSONS[trackSlug] || []).find((l) => l.s === lessonSlug) || null;
 }
 function totalLessons() { return Object.values(LESSONS).reduce((n, a) => n + a.length, 0); }
-// Semua pelajaran dengan nombor global & rujukan trek — untuk sitemap & nav prev/next.
+// All lessons with a global number & track reference — for the sitemap & prev/next nav.
 function allLessons() {
   const out = [];
   let n = 0;
