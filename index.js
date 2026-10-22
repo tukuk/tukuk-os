@@ -1,3 +1,22 @@
+/**
+ * Tukuk-OS entry point.
+ *
+ * Boot sequence, in order:
+ *   1. Load local runtime store (settings, history, events) and start the network monitor.
+ *   2. Wait for Meilisearch to be reachable, then wire the crawler to the primary index.
+ *   3. Kick off deferred, non-blocking corpus pre-warming (blog posts, geo cluster hubs).
+ *   4. Bind the HTTP server so /health responds quickly even if step 2 or 3 is still running.
+ *   5. Warm slow external feeds (RSS, USGS quakes, Met Museum object IDs) in the background
+ *      so the first visitor to each tab gets a warm cache instead of a cold 503.
+ *   6. Attach the Agent editor WebSocket upgrade handler (allowed paths only — chat SSE and
+ *      every other upgrade stays on the normal HTTP pipeline).
+ *   7. Register SIGINT/SIGTERM handlers so a systemctl restart closes the listener cleanly
+ *      instead of orphaning sockets.
+ *
+ * Every subsystem is fail-soft: a missing dependency downgrades the corresponding feature to
+ * fallback mode, but the process itself never exits on boot-time errors — the search engine
+ * and the static pages must remain reachable even if Meilisearch or Ollama is offline.
+ */
 const config = require('./src/config');
 const { ensureIndex, health } = require('./src/meili');
 const crawler = require('./src/crawler');
@@ -13,6 +32,11 @@ const gempa = require('./src/gempa');
 const seni = require('./src/seni');
 const agentEditor = require('./src/agent-editor');
 
+/**
+ * Poll Meilisearch until it reports "available", or throw after `attempts` tries.
+ * @param {{attempts?: number, delayMs?: number}} [opts]
+ * @returns {Promise<void>}
+ */
 async function waitForMeili({ attempts = 30, delayMs = 1000 } = {}) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
@@ -27,6 +51,10 @@ async function waitForMeili({ attempts = 30, delayMs = 1000 } = {}) {
   }
 }
 
+/**
+ * Main boot routine. Never throws on subsystem failure — only on a fatal top-level error.
+ * @returns {Promise<void>}
+ */
 async function main() {
   console.log('[tukuk-os] starting search engine...');
   store.load();
@@ -110,6 +138,10 @@ async function main() {
   // to the local code-server; this listener never touches other upgrades (chat SSE etc.).
   agentEditor.attachUpgrade(server, { config });
 
+  // Handle SIGINT / SIGTERM (systemctl stop / restart / Ctrl-C) by tearing down in reverse
+  // order: stop the network probe first, then background timers, then flush the on-disk
+  // store, then close the HTTP listener with a 5s hard-kill backstop so a stuck socket
+  // can never block a service restart.
   const shutdown = (signal) => async () => {
     console.log(`\n[tukuk-os] received ${signal}, shutting down gracefully...`);
     net.stop();

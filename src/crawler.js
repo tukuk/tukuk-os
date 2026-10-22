@@ -1,9 +1,28 @@
+/**
+ * Web crawler / index-ingest pipeline.
+ *
+ * Responsibilities:
+ *   - Fetch an arbitrary URL (with robots.txt respect, per-domain politeness delay, and
+ *     an SSRF guard via `assertPublicUrl`) and extract a clean title/description/body via
+ *     `src/extract.js`.
+ *   - Skip obviously low-value documents (too few words, no title, non-HTML content-type)
+ *     and unchanged documents (matched by content hash) so re-crawls are cheap.
+ *   - Push accepted documents into both the Meilisearch index (when reachable) and the
+ *     on-disk fallback cache so /search keeps answering offline.
+ *   - Expose sitemap + BFS seed crawling with strict page caps so a misconfigured seed
+ *     cannot turn into an unbounded scrape.
+ *
+ * Every public function returns a status-tagged object ('crawled' | 'skipped' | 'unchanged'
+ * | 'failed') so the HTTP layer can surface a per-URL result without throwing.
+ */
 const axios = require('axios');
 const config = require('./config');
 const { extract } = require('./extract');
 const fallback = require('./fallback');
 const { assertPublicUrl, documentId, contentHash, normalizeUrl, sameSite } = require('./util');
 
+// Runtime counters surfaced via /dev and the crawler status API. Kept in one place so
+// resetStats() can zero everything atomically.
 const stats = {
   queued: 0,
   crawled: 0,
@@ -12,10 +31,13 @@ const stats = {
   indexed: 0,
   startedAt: Date.now(),
   lastError: null,
-  robots: new Map(),
-  domainTimestamps: new Map()
+  robots: new Map(),        // origin -> parsed robots.txt rules (cached per process)
+  domainTimestamps: new Map() // origin -> last request time, for crawlDelayMs politeness
 };
 
+// Shared HTTP client: timeout + maxRedirects + maxContentLength + a Mozilla UA so most
+// public sites don't reject us as a bot. Content-type filter is applied by the caller
+// because some non-HTML responses (e.g. JSON APIs) are legitimately interesting elsewhere.
 const http = axios.create({
   timeout: config.crawl.timeout,
   maxRedirects: config.crawl.maxRedirects,
@@ -23,15 +45,24 @@ const http = axios.create({
   validateStatus: (status) => status >= 200 && status < 300,
   headers: {
     'User-Agent': config.crawl.userAgent,
+    // Publisher sites content-negotiate on Accept-Language; ms-MY first keeps Malay-language
+    // sources serving their native variant, with en;q=0.8 as the fallback for global sites.
     'Accept-Language': 'ms-MY,ms;q=0.9,en;q=0.8'
   },
   decompress: true
 });
 
+/** Promise-based sleep helper used to enforce politeness delays. */
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Enforce `crawlDelayMs` between requests to the same origin.
+ * Sleeps for the remaining gap (if any) and then records "now" as the new last-hit time,
+ * so parallel crawl workers naturally serialize per-domain without a global lock.
+ * @param {string} targetUrl
+ */
 async function domainDelay(targetUrl) {
   const origin = new URL(targetUrl).origin;
   const now = Date.now();
@@ -43,6 +74,12 @@ async function domainDelay(targetUrl) {
   stats.domainTimestamps.set(origin, Date.now());
 }
 
+/**
+ * Robots.txt gate. Fetches and caches rules per origin on first touch; on network or
+ * parse failure we default to "allow everything" so a broken robots.txt never silently
+ * blocks the whole crawl. Allow/disallow matching follows the standard longest-prefix rule.
+ * @param {string} targetUrl @returns {Promise<boolean>}
+ */
 async function isAllowed(targetUrl) {
   if (!config.crawl.respectRobots) return true;
   const { origin, pathname } = new URL(targetUrl);
@@ -67,6 +104,12 @@ async function isAllowed(targetUrl) {
   return matchingAllow[matchingAllow.length - 1].length >= matchingDisallow[matchingDisallow.length - 1].length;
 }
 
+/**
+ * Minimal robots.txt parser — recognises User-agent / Allow / Disallow only, ignores
+ * Crawl-delay, Sitemap, and other directives we don't act on. If nothing applies to our
+ * UA, we treat the site as fully allowed.
+ * @param {string} text @param {{allow: string[], disallow: string[]}} rules
+ */
 function parseRobots(text, rules) {
   let applies = false;
   for (const rawLine of text.split(/\r?\n/)) {
@@ -88,6 +131,14 @@ function parseRobots(text, rules) {
   if (!rules.allow.length && !rules.disallow.length) rules.allow.push('/');
 }
 
+/**
+ * Fetch and parse a single document.
+ * Returns a status-tagged result — never throws for ordinary HTTP/quality issues, so
+ * the caller can just push it into a results array. Throws only for SSRF rejections
+ * (blocked by assertPublicUrl) which indicate a programming/config error.
+ * @param {string} targetUrl
+ * @returns {Promise<{status:'crawled',document:object}|{status:'skipped',reason:string,url:string}|{status:'unchanged',url:string,id:string}>}
+ */
 async function fetchDocument(targetUrl) {
   await assertPublicUrl(targetUrl, { allowPrivate: config.crawl.allowPrivateHosts });
 
@@ -138,11 +189,19 @@ async function fetchDocument(targetUrl) {
   };
 }
 
+/** Meilisearch index handle — set once at boot via setIndex(); null in fallback-only mode. */
 let index = null;
+/** Wire the crawler to a Meilisearch index (called from index.js after ensureIndex). */
 function setIndex(value) {
   index = value;
 }
 
+/**
+ * Public wrapper around fetchDocument that also writes to Meilisearch + fallback cache
+ * and updates the run-time counters. Never throws: any error is captured in `stats.lastError`
+ * and surfaced as `{status:'failed'}` so a batch worker keeps running.
+ * @param {string} targetUrl @returns {Promise<object>}
+ */
 async function crawlOne(targetUrl) {
   try {
     const result = await fetchDocument(targetUrl);
@@ -167,6 +226,14 @@ async function crawlOne(targetUrl) {
   }
 }
 
+/**
+ * Crawl a set of URLs with bounded concurrency.
+ * Deduplicates the input, enforces a global queue cap (queueLimit) with an HTTP-429
+ * error object so the caller can propagate back-pressure, and runs `concurrency` worker
+ * coroutines that pull from a shared cursor. Order of `results` is non-deterministic.
+ * @param {string[]} urls @param {{concurrency?: number}} [opts]
+ * @returns {Promise<Array<object>>}
+ */
 async function crawlBatch(urls, { concurrency = config.crawl.concurrency } = {}) {
   const queue = [...new Set(urls)].filter(Boolean);
   if (stats.queued + queue.length > config.crawl.queueLimit) {
@@ -190,6 +257,12 @@ async function crawlBatch(urls, { concurrency = config.crawl.concurrency } = {})
   return results;
 }
 
+/**
+ * Extract `<loc>` entries from a sitemap.xml body.
+ * Uses regex (not a full XML parser) because sitemaps are simple and huge — a streaming
+ * parse would be overkill here. Hard-caps the output at 5000 URLs to bound memory.
+ * @param {string} xml @returns {string[]}
+ */
 function collectSitemapUrls(xml) {
   const urls = [];
   const blocks = String(xml).match(/<url\b[\s\S]*?<\/url>/gi) || [];
@@ -203,6 +276,13 @@ function collectSitemapUrls(xml) {
   return urls;
 }
 
+/**
+ * Fetch a sitemap and return the page URLs it references.
+ * Handles both plain `<urlset>` sitemaps and index sitemaps (which list child `<sitemap>`
+ * locs) — for index sitemaps we expand up to 10 children with a small delay between each
+ * to stay polite. Overall output is capped by `maxPagesPerSeed`.
+ * @param {string} sitemapUrl @returns {Promise<string[]>}
+ */
 async function crawlSitemap(sitemapUrl) {
   await assertPublicUrl(sitemapUrl, { allowPrivate: config.crawl.allowPrivateHosts });
   const { data } = await http.get(sitemapUrl, { responseType: 'text' });
@@ -225,6 +305,14 @@ async function crawlSitemap(sitemapUrl) {
   return collected.slice(0, config.crawl.maxPagesPerSeed);
 }
 
+/**
+ * Breadth-first crawl starting from a seed URL.
+ * Follows same-site links (unless `sameDomain: false`), respects the total page cap, and
+ * sleeps briefly between layers so a misconfigured seed can't turn into a full-site scrape.
+ * Deduplicates by normalised URL to survive `?ref=` variants and trailing slashes.
+ * @param {string} seedUrl @param {{maxPages?: number, sameDomain?: boolean}} [opts]
+ * @returns {Promise<{seed: string, discovered: number, results: Array<object>}>}
+ */
 async function crawlSeed(seedUrl, { maxPages = config.crawl.maxPagesPerSeed, sameDomain = true } = {}) {
   const seen = new Set([normalizeUrl(seedUrl)]);
   const results = [];
@@ -255,6 +343,11 @@ async function crawlSeed(seedUrl, { maxPages = config.crawl.maxPagesPerSeed, sam
   return { seed: seedUrl, discovered: seen.size, results };
 }
 
+/**
+ * Public view of the run-time counters. Excludes the internal `robots` and
+ * `domainTimestamps` maps so the response stays small and JSON-serialisable.
+ * @returns {{queued:number,crawled:number,failed:number,skipped:number,indexed:number,uptimeSeconds:number,lastError:object|null}}
+ */
 function snapshot() {
   return {
     queued: stats.queued,
@@ -267,6 +360,7 @@ function snapshot() {
   };
 }
 
+/** Reset the counters (used by the /dev panel to start a fresh measurement window). */
 function resetStats() {
   stats.queued = 0;
   stats.crawled = 0;
@@ -277,6 +371,7 @@ function resetStats() {
   stats.startedAt = Date.now();
 }
 
+/** Drop the inline `document` blob from crawl results before returning them over HTTP. */
 function stripDocuments(results) {
   return results.map(({ document, ...rest }) => rest);
 }

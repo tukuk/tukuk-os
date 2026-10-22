@@ -1,13 +1,22 @@
-const fs = require('fs');
-const path = require('path');
-const config = require('./config');
-
 /**
  * Local data store — JSON with atomic writes.
  *
- * Used for: search history, runtime settings, and event logs.
+ * Used for: search history, runtime settings, event logs, and blog-post projections.
  * Not a full database; for the large volumes, Meilisearch handles those.
+ *
+ * Write strategy: `touch()` marks the tree dirty and schedules a debounced flush (2 s).
+ * The flush writes to `<path>.tmp` and then renames over the target, so a crash mid-write
+ * can never leave a truncated JSON file on disk. `close()` runs a synchronous final flush
+ * on process exit (SIGINT / SIGTERM handled from index.js) so nothing is lost on restart.
+ *
+ * Cold-start side effects (see `load()`):
+ *   - If `posts` is empty we hydrate from bundled article modules under `src/articles/`.
+ *   - We then idempotently sync `content/blog/*.md` into `posts` (see `syncPostsFromContent`),
+ *     which is why blog links work on a fresh server without a manual import step.
  */
+const fs = require('fs');
+const path = require('path');
+const config = require('./config');
 
 const MAX_HISTORY = 500;
 const MAX_EVENTS = 200;
@@ -26,10 +35,17 @@ let data = null;
 let writeTimer = null;
 let dirty = false;
 
+/** Ensures the directory that will hold the JSON store exists (idempotent, sync). */
 function ensureDir() {
   fs.mkdirSync(path.dirname(config.store.path), { recursive: true });
 }
 
+/**
+ * Load (or lazily re-load) the store from disk.
+ * On first call this also seeds `posts` from bundled articles if none are present yet,
+ * then runs the one-shot blog-content sync. Every other call is a cheap in-memory hit.
+ * @returns {object} the live store document (mutate through the exported helpers only)
+ */
 function load() {
   if (data) return data;
   try {
@@ -120,6 +136,7 @@ function syncPostsFromContent(dir = CONTENT_DIR) {
   if (changed) touch();
 }
 
+/** Synchronously write the current dirty tree to disk via a tmp+rename pair. */
 function flush() {
   if (!data || !dirty) return;
   ensureDir();
@@ -133,6 +150,7 @@ function flush() {
   }
 }
 
+/** Mark the store dirty and schedule a debounced flush (2 s) — safe to call from any handler. */
 function touch() {
   dirty = true;
   if (writeTimer) return;
@@ -143,6 +161,10 @@ function touch() {
   writeTimer.unref?.();
 }
 
+/**
+ * Log a completed /search hit: increments counters, prepends to history, drops the tail.
+ * @param {string} query @param {{total?: number, tookMs?: number, offline?: boolean}} meta
+ */
 function recordSearch(query, { total, tookMs, offline = false }) {
   const store = load();
   store.stats.searches += 1;
@@ -160,6 +182,11 @@ function recordSearch(query, { total, tookMs, offline = false }) {
   return store.history[0];
 }
 
+/**
+ * Log a completed /ask hit. Same shape as recordSearch but carries the brain `mode` and
+ * `sources` count so we can trace which tier answered.
+ * @param {string} question @param {{mode?: string, tookMs?: number, sources?: number, offline?: boolean}} meta
+ */
 function recordAsk(question, { mode, tookMs, sources = 0, offline = false }) {
   const store = load();
   store.stats.asks += 1;
@@ -178,6 +205,7 @@ function recordAsk(question, { mode, tookMs, sources = 0, offline = false }) {
   return store.history[0];
 }
 
+/** Append a one-line crawl event (used by the crawler + /dev panel). */
 function recordCrawl(url, status) {
   const store = load();
   store.stats.crawls += 1;
@@ -186,6 +214,11 @@ function recordCrawl(url, status) {
   touch();
 }
 
+/**
+ * Push a general event into the log (level is 'info' | 'warn' | 'error').
+ * Note: the shadowed `data` parameter is intentional — the module-scope `data` tree is
+ * only reachable via `load()`, so this local name never collides with anything read here.
+ */
 function event(level, message, data = {}) {
   const store = load();
   store.events.unshift({ at: new Date().toISOString(), level, message, data });
@@ -193,10 +226,16 @@ function event(level, message, data = {}) {
   touch();
 }
 
+/** Return the last N history entries (searches + asks interleaved). */
 function history(limit = 25) {
   return load().history.slice(0, limit);
 }
 
+/**
+ * Most-frequent historical search queries, used by the "popular" widget.
+ * Asks are excluded because they are usually long natural-language questions and would
+ * dominate the ranking. Minimum length filter drops single-letter noise.
+ */
 function popularQueries(limit = 10) {
   const counts = new Map();
   for (const entry of load().history) {
@@ -211,21 +250,25 @@ function popularQueries(limit = 10) {
     .map(([query, count]) => ({ query, count }));
 }
 
+/** Snapshot of cumulative counters + array sizes for the /dev panel. */
 function stats() {
   return { ...load().stats, stored: load().history.length, events: load().events.length };
 }
 
+/** Read a runtime setting (returns `fallbackValue` when unset). */
 function getSetting(key, fallback = null) {
   const store = load();
   return store.settings[key] ?? fallback;
 }
 
+/** Write a runtime setting and schedule a flush. Returns the stored value for chaining. */
 function setSetting(key, value) {
   load().settings[key] = value;
   touch();
   return value;
 }
 
+/** Create a blog post (auto-generates id + slug if not provided). */
 function createPost(post) {
   const store = load();
   const newPost = {
@@ -244,6 +287,7 @@ function createPost(post) {
   return newPost;
 }
 
+/** Patch fields on an existing post by id; returns null when the id is unknown. */
 function updatePost(id, updates) {
   const store = load();
   const post = store.posts.find(p => p.id === id);
@@ -253,6 +297,7 @@ function updatePost(id, updates) {
   return post;
 }
 
+/** Delete a post by id. Returns true if something was removed, false otherwise. */
 function deletePost(id) {
   const store = load();
   const idx = store.posts.findIndex(p => p.id === id);
@@ -262,25 +307,35 @@ function deletePost(id) {
   return true;
 }
 
+/**
+ * Look up a post by URL slug.
+ * Accepts both the raw slug and its percent-encoded form (URL-encoded CJK / Turkish
+ * slugs come in from the router already encoded), and falls back to id lookup for admin
+ * perm-links. Comparison is lower-cased to be safe against case-only drift.
+ */
 function getPostBySlug(slug) {
   const decoded = decodeURIComponent(slug || '').trim().toLowerCase();
   return load().posts.find(p => p.slug.toLowerCase() === decoded || encodeURIComponent(p.slug).toLowerCase() === decoded || p.id === slug) || null;
 }
 
+/** Look up a post by its internal id. */
 function getPostById(id) {
   return load().posts.find(p => p.id === id) || null;
 }
 
+/** Return the newest N posts (creation order is preserved by the unshift in createPost). */
 function getAllPosts(limit = 20) {
   return load().posts.slice(0, limit);
 }
 
+/** Reset the whole store to defaults and flush immediately (used by tests / admin wipe). */
 function clear() {
   data = { ...defaults, createdAt: new Date().toISOString() };
   dirty = true;
   flush();
 }
 
+/** Final flush on process exit — cancels the pending debounce and writes synchronously. */
 function close() {
   if (writeTimer) {
     clearTimeout(writeTimer);

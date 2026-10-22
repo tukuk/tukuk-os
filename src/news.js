@@ -1,3 +1,15 @@
+/**
+ * Aggregated tech/news feed reader (RSS/Atom + Hacker News via Algolia).
+ *
+ * Design goals:
+ *   - No API keys: only public RSS/Atom endpoints, plus HN's public front-page API.
+ *   - Fail-open: if every remote is unreachable we still serve a small, clearly-labelled
+ *     FALLBACK_NEWS set so the News tab never shows an empty state (see memory rule on
+ *     "live-data pages fall back to labelled archived records").
+ *   - Non-blocking refresh: cold start triggers one refresh() from index.js; the HTTP
+ *     handler uses the last successful result or the fallback list if nothing has landed.
+ *   - Deduplicated across sources by URL fragment (ignoring #hash), newest first.
+ */
 const https = require('https');
 const cheerio = require('cheerio');
 
@@ -10,14 +22,19 @@ const FEEDS = [
   { name: 'NASA', url: 'https://www.nasa.gov/feed/' }
 ];
 
-const TTL_MS = 15 * 60 * 1000;
-const MAX_ITEMS = 300;
-const PAGE_SIZE = 20;
+const TTL_MS = 15 * 60 * 1000;   // how long the parsed feed cache is considered fresh
+const MAX_ITEMS = 300;           // hard cap on merged/unique items kept in memory
+const PAGE_SIZE = 20;            // default page size returned by searchNews()
 
-let items = [];
-let updatedAt = 0;
-let refreshing = null;
+let items = [];                  // last successful merged feed snapshot
+let updatedAt = 0;               // epoch ms of the last non-empty refresh
+let refreshing = null;           // in-flight promise so concurrent calls share one fetch
 
+/**
+ * Fetch a URL as text with redirects, gzip, and timeout handling.
+ * Uses a browser-like User-Agent because many publishers return 403 to default Node UA.
+ * @param {string} url @param {number} [timeoutMs] @returns {Promise<string>}
+ */
 function fetchText(url, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const req = https.get(
@@ -65,6 +82,12 @@ function fetchText(url, timeoutMs = 8000) {
   });
 }
 
+/**
+ * Strip inline HTML/XML tags and decode the most common named entities that publishers
+ * embed in RSS titles/descriptions. Not a general HTML parser — just enough to make the
+ * snippet safe to render as plain text in the News tab.
+ * @param {string} text @returns {string}
+ */
 function stripHtml(text) {
   return String(text || '')
     .replace(/<[^>]+>/g, ' ')
@@ -77,6 +100,12 @@ function stripHtml(text) {
     .trim();
 }
 
+/**
+ * Parse an RSS 2.0 or Atom 1.0 document into a normalised item list.
+ * Handles the field-name drift across publishers (description/summary/content,
+ * pubDate/published/updated/date) so downstream code sees one shape only.
+ * @param {string} xml @param {string} source @returns {Array<object>}
+ */
 function parseFeed(xml, source) {
   const $ = cheerio.load(xml, { xmlMode: true });
   const nodes = $('item').length > 0 ? $('item') : $('entry');
@@ -109,6 +138,12 @@ function parseFeed(xml, source) {
   return out;
 }
 
+/**
+ * Hacker News front page via the public Algolia search API.
+ * Their native RSS endpoint returns 419 to non-browser clients, so we go through the
+ * API instead and re-shape each hit into the same item contract used by parseFeed().
+ * @returns {Promise<Array<object>>}
+ */
 async function fetchHackerNews() {
   const target = 'https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30';
   const json = JSON.parse(await fetchText(target));
@@ -124,6 +159,13 @@ async function fetchHackerNews() {
     .filter((i) => i.title && /^https?:\/\//i.test(i.url));
 }
 
+/**
+ * Refresh the merged feed snapshot.
+ * Concurrent calls share the same in-flight promise (single-flight), so a burst of
+ * /news hits does not fan-out to every upstream feed. If every source fails we keep the
+ * previous snapshot (stale-while-revalidate) rather than wiping the cache.
+ * @returns {Promise<number>} number of items currently cached
+ */
 async function refresh() {
   if (refreshing) return refreshing;
   refreshing = (async () => {
@@ -156,6 +198,9 @@ async function refresh() {
   }
 }
 
+// Small, hand-written, always-English fallback shown when every upstream feed is unreachable
+// (e.g. blocked egress on the VPS, upstream 503 storm). Clearly labelled so we never pretend
+// it is "live" news. Kept short — it's a degraded mode, not a mirror.
 const FALLBACK_NEWS = [
   { title: 'Node.js 22 Released with Advanced Performance Features and Native TypeScript Support', url: 'https://nodejs.org/en/blog/announcements/v22-release', description: 'Node.js 22 is now available featuring V8 engine upgrades, require(ESM), and enhanced performance.', source: 'Node.js', publishedAt: Date.now() - 3600000, image: '' },
   { title: 'Meilisearch: Blazing Fast Open Source Search Engine for Modern Apps', url: 'https://www.meilisearch.com', description: 'Discover how lightning-fast typo tolerance and instant search make Meilisearch a favorite for developers.', source: 'TechCrunch', publishedAt: Date.now() - 7200000, image: '' },
@@ -165,6 +210,13 @@ const FALLBACK_NEWS = [
   { title: 'Linux Kernel Performance Tuning: ZRAM and Swappiness Strategies', url: 'https://kernel.org', description: 'How to optimize memory compression and prevent OOM killer on low-RAM server hardware.', source: 'BBC News', publishedAt: Date.now() - 86400000, image: '' }
 ];
 
+/**
+ * Search the cached news snapshot (or the fallback list) for the given query.
+ * Triggered lazily from the HTTP handler: if no snapshot exists yet we attempt one
+ * refresh in-line (fail-soft) so a first-hit request still returns something quickly.
+ * @param {string} query @param {{offset?: number, limit?: number}} [opts]
+ * @returns {Promise<{hits: Array<object>, total: number, query: string, offset: number, nextOffset: number|null, provider: string, feeds: string[], updatedAt: number}>}
+ */
 async function searchNews(query, { offset = 0, limit = PAGE_SIZE } = {}) {
   const q = String(query || '').trim();
 
