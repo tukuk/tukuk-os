@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Direct Deployment Script from Laptop to Ubuntu Server (LAN IP — see TUKUK_HOST)
-# The VPS is on DHCP, so its address drifts (was .100, now .105). Override per
+# The VPS is on DHCP, so its address drifts (was .105, now .100). Override per
 # run:  TUKUK_HOST=192.168.8.110 bash deploy/remote-deploy.sh
 # ==============================================================================
 
 SERVER_USER="tukuk"
-SERVER_IP="${TUKUK_HOST:-192.168.8.105}"
+SERVER_IP="${TUKUK_HOST:-192.168.8.100}"
 REMOTE_DIR="/opt/tukuk-os"
 
 echo "=== Tukuk-OS Direct Remote Deployment ==="
@@ -33,6 +33,6 @@ echo ""
 echo "================================================================"
 echo "✓ Deployment successful!"
 echo "Open your browser at: http://$SERVER_IP:3000"
-echo "Admin Panel: http://$SERVER_IP:3000/admin (login: e-mel + passkey)"
-echo "Catatan: .env (kunci & CF_TUNNEL_TOKEN) turut diserdakan oleh rsync di langkah 2."
+echo "Admin Panel: http://$SERVER_IP:3000/admin (login: email + passkey)"
+echo "Note: .env (keys & CF_TUNNEL_TOKEN) is also synced by rsync in step 2."
 echo "================================================================"
