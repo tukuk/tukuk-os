@@ -1629,6 +1629,59 @@ app.get('/peta/jam', (req, res) => {
     res.status(503).type('html').send(petaBusy());
   }
 });
+// ── EVERYDAY TOOLS (/alat) — five utilities that run entirely in the browser ──
+// No third-party API is involved anywhere in this cluster: units, dates, colour
+// maths, CSPRNG passwords and text transforms are all computed on the visitor’s
+// own machine, so nothing they type, count or generate ever reaches our server.
+app.get('/alat', (req, res) => {
+  try {
+    res.status(200).type('html').send(alatHubPage());
+  } catch (e) {
+    console.warn('[alat] hub render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
+app.get('/alat/unit', (req, res) => {
+  try {
+    res.status(200).type('html').send(unitPage());
+  } catch (e) {
+    console.warn('[alat/unit] render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
+app.get('/alat/tarikh', (req, res) => {
+  try {
+    res.status(200).type('html').send(tarikhPage());
+  } catch (e) {
+    console.warn('[alat/tarikh] render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
+app.get('/alat/warna', (req, res) => {
+  try {
+    res.status(200).type('html').send(warnaPage());
+  } catch (e) {
+    console.warn('[alat/warna] render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
+app.get('/alat/kata-laluan', (req, res) => {
+  try {
+    res.status(200).type('html').send(kataLaluanPage());
+  } catch (e) {
+    console.warn('[alat/kata-laluan] render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
+app.get('/alat/teks', (req, res) => {
+  try {
+    res.status(200).type('html').send(teksPage());
+  } catch (e) {
+    console.warn('[alat/teks] render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
+
 // Two places → straight-line (great-circle) plus the road reality in one
 // round trip. The road leg reuses the same router as /peta; when no road
 // exists the straight number still answers honestly, with the reason attached.
@@ -3022,7 +3075,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -4291,6 +4344,7 @@ function siteHeader(active) {
       ${link('/teknologi', 'Tech', 'teknologi')}
       ${link('/peta', 'Maps', 'peta')}
       ${link('/social', 'Social', 'social')}
+      ${link('/alat', 'Tools', 'alat')}
       ${link('/learn', 'Learn', 'learn')}
       ${link('/games', 'Games', 'games')}
       <a href="https://build.tukuk.org" rel="noopener">Build</a>
@@ -4326,6 +4380,7 @@ function siteFooter() {
       <li><a href="/traffic">Traffic — Community Road Reports</a></li>
       <li><a href="/peta">Maps &amp; Navigation — Route Planner</a></li>
       <li><a href="/social">Social &amp; Community — Chat, Posts &amp; Stories</a></li>
+      <li><a href="/alat">Everyday Tools — Converters, Calculators &amp; Generators</a></li>
       <li><a href="/apps/chat">T Chat — Free Messenger</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
@@ -9311,6 +9366,431 @@ render();setInterval(render,1000);
       url: 'https://tukuk.org/peta/jam', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, petaNav());
+}
+
+// ── /alat — Everyday Tools hub + five browser-local utilities ─────────────
+const TOOLS_CSS = `.tl-form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:14px 0}
+.tl-form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted,#9aa3b2)}
+.tl-form input,.tl-form select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;min-width:150px}
+textarea.tl-in{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:13px/1.5 ui-monospace,Consolas,monospace;min-height:140px}
+.tl-btn{border:1px solid var(--line);border-radius:8px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);padding:8px 14px;font:inherit;cursor:pointer}
+.tl-btn:hover{border-color:var(--accent,#4c8dff)}
+.tl-btn.primary{background:var(--accent,#4c8dff);border-color:transparent;color:#fff;font-weight:700}
+.tl-res{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--panel,#171a21);margin:12px 0;line-height:1.6}
+.tl-big{font-size:1.5rem;font-weight:800;color:var(--accent,#4c8dff);word-break:break-all}
+.tl-chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+table.tl-tab{width:100%;border-collapse:collapse;font-size:.92rem;margin:10px 0}
+.tl-tab td{padding:6px 10px;border-bottom:1px solid var(--line)}
+.tl-tab td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.tl-tab tr{cursor:pointer}
+.tl-tab tr:hover{background:var(--panel,#171a21)}
+.tl-pass{font:700 20px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.5px;word-break:break-all}
+.tl-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;font-weight:700;margin-right:6px}
+.tl-ok{background:#138a3d;color:#fff}
+.tl-no{background:#a02020;color:#fff}
+.sw{display:inline-block;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;margin:2px}
+@media(max-width:640px){.tl-big{font-size:1.2rem}}`;
+
+function toolsNav() {
+  return worldNav('Everyday Tools — tukuk.org/alat', [
+    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'The whole toolbox at a glance — converters, calculators, colour checkers and generators that run entirely in your browser.' },
+    { href: '/alat/unit', icon: '📐', name: 'Unit Converter', blurb: 'Length, weight, volume, area, speed, temperature, time and digital storage — exact factors, every unit at once, nothing uploaded.' },
+    { href: '/alat/tarikh', icon: '📅', name: 'Date & Age Calculator', blurb: 'Days between any two dates, add or subtract days, exact age in years-months-days, working days and days to your next birthday.' },
+    { href: '/alat/warna', icon: '🎨', name: 'Colour & Contrast Checker', blurb: 'WCAG contrast ratio between any two colours with AA/AAA verdicts, the nearest accessible colour, and tints & shades palettes.' },
+    { href: '/alat/kata-laluan', icon: '🔐', name: 'Password Generator', blurb: 'True random passwords from your browser’s cryptographic generator, with honest entropy maths — the password never touches our server.' },
+    { href: '/alat/teks', icon: '✂️', name: 'Text Toolkit', blurb: 'Word counter, case converters (camelCase, snake_case, kebab…), URL & Base64 encoders and SHA-256 hashing — all offline, all instant.' },
+  ]);
+}
+
+function alatHubPage() {
+  const body = `<p><b>The honest kind of useful.</b> Five small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  <h2 class="section-title">In the toolbox</h2>
+  <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
+  <p><b><a href="/alat/tarikh">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
+  <p><b><a href="/alat/warna">🎨 Colour &amp; contrast checker</a></b> — the official WCAG maths with pass/fail badges, and it suggests the nearest colour that <i>does</i> pass.</p>
+  <p><b><a href="/alat/kata-laluan">🔐 Password generator</a></b> — uniform random picks from your browser’s cryptographic generator with real entropy numbers, not a smiley face.</p>
+  <p><b><a href="/alat/teks">✂️ Text toolkit</a></b> — word &amp; reading time counts, six case styles, URL and Base64 encode/decode, and SHA-256 hashes for file or text integrity.</p>
+  <h2 class="section-title">Why browser-local, and why it matters to you</h2>
+  <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
+  <p class="meta">Prefer maps and time? The neighbouring <a href="/peta">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
+  return worldDoc({
+    title: 'Everyday Tools — Unit Converter, Date Calculator, Contrast Checker, Password Generator | Tukuk-OS',
+    desc: 'Five genuinely useful tools that run entirely in your browser: exact unit conversion, date and age maths, WCAG colour contrast, cryptographic password generation and a text toolkit with hashing — private, free, no account.',
+    selfUrl: 'https://tukuk.org/alat',
+    heroTitle: '🧰 Everyday Tools', heroSub: 'Converters · calculators · checkers · generators — all computed on your device',
+    css: TOOLS_CSS, body,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Everyday Tools — Tukuk-OS',
+      description: 'Browser-local unit converter, date calculator, colour contrast checker, password generator and text toolkit.',
+      url: 'https://tukuk.org/alat', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function toolsBusy() {
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Tools briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🧰 Everyday Tools</h1><p>The tools page failed to render while the server reloaded. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
+}
+
+function unitPage() {
+  const body = `<p>One number in, <b>every unit at once</b>: type an amount, pick the unit, and the whole table converts live. Eight categories, factors taken from the international definitions (1 inch = 2.54 cm exactly, 1 nautical mile = 1,852 m exactly, 1 lb = 0.45359237 kg by treaty since 1959), so the maths matches any official table. The conversion never leaves your device.</p>
+  <div class="tl-form">
+    <label>Category <select id="u-cat"><option value="length">📏 Length</option><option value="mass">⚖️ Weight</option><option value="volume">🥛 Volume</option><option value="area">🗺️ Area</option><option value="speed">🏎️ Speed</option><option value="temp">🌡️ Temperature</option><option value="time">⏱️ Time</option><option value="data">💾 Digital storage</option></select></label>
+    <label>Amount <input id="u-val" type="number" value="1" step="any"></label>
+    <label>From <select id="u-from"></select></label>
+    <label>To <select id="u-to"></select></label>
+  </div>
+  <div class="tl-res"><div class="tl-big" id="u-out">—</div><div id="u-expr" class="meta"></div></div>
+  <table class="tl-tab" id="u-tab"></table>
+  <p class="meta">Click any row to make it the target unit. “Floz” = fluid ounce; US and UK pints/gallons differ — both are listed. Kilobyte (1,000) vs kibibyte (1,024) are both given because hard disks and RAM count differently on purpose.</p>
+  <noscript><p>JavaScript is required — the converter lives in it, and that is exactly the privacy point: your numbers are never uploaded.</p></noscript>
+  <h2 class="section-title">The exactness is the point</h2>
+  <p>Since 1983 the metre is defined by the distance light travels in 1/299,792,458 of a second, and every other length unit here is an <b>exact multiple</b> of it — no rounding in the factor table, only in the last digits of the answer (we show ten significant ones). Temperature is the odd one out: Celsius and Kelvin share a step size but different zeroes, and Fahrenheit is affine, not proportional — so it gets its own formulas instead of a factor.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a> — see also <a href="/alat/tarikh">date &amp; age</a>, <a href="/peta/jarak">distances on Earth</a> and the <a href="/peta/jam">world clock</a>.</p>`;
+  const script = `<script>(function(){
+var CATS={
+ length:{u:{'metre (m)':1,'kilometre (km)':1000,'centimetre (cm)':0.01,'millimetre (mm)':0.001,'mile (mi)':1609.344,'yard (yd)':0.9144,'foot (ft)':0.3048,'inch (in)':0.0254,'nautical mile':1852}},
+ mass:{u:{'kilogram (kg)':1,'gram (g)':0.001,'milligram (mg)':0.000001,'tonne (t)':1000,'pound (lb)':0.45359237,'ounce (oz)':0.028349523125,'stone (st)':6.35029318}},
+ volume:{u:{'litre (L)':1,'millilitre (mL)':0.001,'cubic metre (m3)':1000,'gallon US':3.785411784,'quart US':0.946352946,'pint US':0.473176473,'cup US':0.2365882365,'floz US':0.0295735295625,'gallon UK':4.54609,'floz UK':0.0284130625}},
+ area:{u:{'square metre':1,'square kilometre':1000000,'square centimetre':0.0001,'hectare':10000,'square foot':0.09290304,'square inch':0.00064516,'acre':4046.8564224}},
+ speed:{u:{'metre/second':1,'kilometre/hour':1/3.6,'miles/hour (mph)':0.44704,'knot':1852/3600,'foot/second':0.3048}},
+ time:{u:{'second':1,'minute':60,'hour':3600,'day':86400,'week':604800,'month (average)':2629800,'year (Julian)':31557600}},
+ data:{u:{'bit':0.125,'byte (B)':1,'kilobyte (kB)':1000,'megabyte (MB)':1000000,'gigabyte (GB)':1000000000,'terabyte (TB)':1000000000000,'kibibyte (KiB)':1024,'mebibyte (MiB)':1048576,'gibibyte (GiB)':1073741824}}
+};
+function tToC(v,u){return u==='celsius'?v:(u==='fahrenheit'?(v-32)*5/9:v-273.15);}
+function tFromC(c,u){return u==='celsius'?c:(u==='fahrenheit'?c*9/5+32:c+273.15);}
+var cat='length',keys=[],selFrom=document.getElementById('u-from'),selTo=document.getElementById('u-to');
+function fmt(x){if(!isFinite(x))return '—';if(x===0)return '0';var a=Math.abs(x);if(a<0.0001||a>=1e13)return x.toExponential(6);
+ return String(parseFloat(x.toPrecision(10)).toLocaleString('en-US',{maximumFractionDigits:10}));}
+function keysOf(){if(cat==='temp')return ['celsius','fahrenheit','kelvin'];return Object.keys(CATS[cat].u);}
+function factor(k){return CATS[cat].u[k];}
+function build(){keys=keysOf();var o='';keys.forEach(function(k){o+='<option value="'+k+'">'+k+'</option>';});
+ selFrom.innerHTML=o;selTo.innerHTML=o;selFrom.value=keys[0];selTo.value=keys[1]||keys[0];draw();}
+function toBase(v){return cat==='temp'?tToC(v,selFrom.value):v*factor(selFrom.value);}
+function fromBase(c){return cat==='temp'?tFromC(c,selTo.value):c/factor(selTo.value);}
+function draw(){var v=parseFloat(document.getElementById('u-val').value);if(!isFinite(v)){document.getElementById('u-out').textContent='—';return;}
+ var base=toBase(v);var out=fromBase(base);
+ document.getElementById('u-out').textContent=fmt(v)+' '+selFrom.value+'  =  '+fmt(out)+' '+selTo.value;
+ var rows='<tr><td><b>in '+selFrom.value+'</b></td><td>'+fmt(v)+'</td></tr>';
+ keys.forEach(function(k){if(k===selFrom.value)return;var val=cat==='temp'?tFromC(base,k):base/factor(k);
+  rows+='<tr data-u="'+k+'"><td>'+k+'</td><td>'+fmt(val)+'</td></tr>';});
+ var tab=document.getElementById('u-tab');tab.innerHTML=rows;
+ [...tab.querySelectorAll('tr[data-u]')].forEach(function(tr){tr.onclick=function(){selTo.value=tr.getAttribute('data-u');draw();};});}
+selFrom.onchange=draw;selTo.onchange=draw;document.getElementById('u-val').oninput=draw;
+document.getElementById('u-cat').onchange=function(e){cat=e.target.value;build();};
+build();
+})();</script>`;
+  return worldDoc({
+    title: 'Unit Converter — Length, Weight, Volume, Area, Speed, Temperature, Time, Data | Tukuk-OS',
+    desc: 'Convert any unit exactly: metres to miles, kilograms to pounds, Celsius to Fahrenheit, GB to GiB and more — all categories show every unit at once, computed privately in your browser with definition-based factors.',
+    selfUrl: 'https://tukuk.org/alat/unit',
+    heroTitle: '📐 Unit Converter', heroSub: '8 categories · exact factors · every unit updates at once',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Unit Converter',
+      applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
+      description: 'Exact unit converter for length, weight, volume, area, speed, temperature, time and digital storage, running fully in the browser.',
+      url: 'https://tukuk.org/alat/unit', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function tarikhPage() {
+  const body = `<p>The date maths people actually need: <b>how long between two dates</b> (in days, weeks, and years-months-days), <b>what day is N days from now</b>, an <b>exact age</b>, <b>working days</b> between deadlines and <b>days until your next birthday</b>. All on the Gregorian calendar, counted in UTC so daylight saving cannot steal an hour and round a day off the answer.</p>
+  <h2 class="section-title">Between two dates</h2>
+  <div class="tl-form"><label>From <input id="d-a" type="date"></label><label>To <input id="d-b" type="date"></label><button class="tl-btn primary" id="d-go1" type="button">Count</button></div>
+  <div class="tl-res" id="d-r1">Pick two dates.</div>
+  <h2 class="section-title">Add or subtract days</h2>
+  <div class="tl-form"><label>Date <input id="d-c" type="date"></label><label>± days <input id="d-n" type="number" value="90" step="1"></label><button class="tl-btn primary" id="d-go2" type="button">Calculate</button></div>
+  <div class="tl-res" id="d-r2">Negative numbers count backwards.</div>
+  <h2 class="section-title">Exact age &amp; next birthday</h2>
+  <div class="tl-form"><label>Birthday <input id="d-b2" type="date"></label><label>On date <input id="d-t" type="date"></label><button class="tl-btn primary" id="d-go3" type="button">Calculate</button></div>
+  <div class="tl-res" id="d-r3">“On date” defaults to today — set it to e.g. a retirement or contract date.</div>
+  <noscript><p>JavaScript is required; the calendar maths runs in it, on your device.</p></noscript>
+  <h2 class="section-title">Notes on the answers</h2>
+  <p><b>Working days</b> counts Mon–Fri between the dates (start excluded, end included) but knows nothing about your country’s public holidays — treat it as an upper bound; for the festive picture see the holiday calendars linked from <a href="/peta/jam">the world clock</a>. The <b>years-months-days breakdown</b> is the calendar answer a human would give (“26 years, 3 months, 11 days”), which is why it can differ from total-days ÷ 365.25. Born on <b>29 February</b>? In non-leap years the page counts your birthday as 1 March and says so.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Times across zones: <a href="/peta/jam">world clock</a>; how long the daylight lasts: <a href="/peta/matahari">sunrise calculator</a>.</p>`;
+  const script = `<script>(function(){
+var DAY=86400000;
+function pd(id){var v=document.getElementById(id).value;return v&&v.length===10?new Date(Date.UTC(+v.substr(0,4),+v.substr(5,2)-1,+v.substr(8,2))):null;}
+function name(d){return d.toLocaleDateString('en-GB',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+function diffDays(a,b){return Math.round((b.getTime()-a.getTime())/DAY);}
+function ymd(a,b){if(b<a){var t=a;a=b;b=t;}
+ var y=b.getUTCFullYear()-a.getUTCFullYear(),m=b.getUTCMonth()-a.getUTCMonth(),d=b.getUTCDate()-a.getUTCDate();
+ if(d<0){m--;var dim=new Date(Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),0)).getUTCDate();d+=dim;}
+ if(m<0){y--;m+=12;}return [y,m,d];}
+function workdays(a,b){var n=0,step=1;if(b<a){var t=a;a=b;step=-1;}
+ for(var x=new Date(a.getTime()+DAY);x<=b;){var w=x.getUTCDay();if(w!==0&&w!==6)n++;x=new Date(x.getTime()+DAY);}return n;}
+function go1(){var a=pd('d-a'),b=pd('d-b');if(!a||!b){document.getElementById('d-r1').textContent='⚠ pick both dates';return;}
+ var dd=diffDays(a,b),ad=Math.abs(dd),ym=ymd(a,b),wd=workdays(a,b);
+ document.getElementById('d-r1').innerHTML='From '+name(a)+' to '+name(b)+' is <b>'+ad.toLocaleString('en-US')+' days</b>'
+ +(dd<0?' (counting backwards)':'')+' — that is <b>'+Math.floor(ad/7)+' weeks '+(ad%7)+' days</b>, or '+ym[0]+' years, '+ym[1]+' months, '+ym[2]+' days.'
+ +'<br>Working days (Mon–Fri, holidays not known): <b>'+wd.toLocaleString('en-US')+'</b>.';}
+function go2(){var c=pd('d-c'),n=parseInt(document.getElementById('d-n').value,10);if(!c||!isFinite(n)){document.getElementById('d-r2').textContent='⚠ pick a date and a whole number';return;}
+ var r=new Date(c.getTime()+n*DAY);
+ document.getElementById('d-r2').innerHTML=n+' days from '+name(c)+' is <b>'+name(r)+'</b> — '+Math.abs(diffDays(c,r))+' days '+(n<0?'before':'after')+' it.';}
+function go3(){var b=pd('d-b2');var t=pd('d-t')||new Date();if(!b){document.getElementById('d-r3').textContent='⚠ pick a birthday';return;}
+ if(t<b){var sw=t;t=b;b=sw;}
+ var ym=ymd(b,t),ad=diffDays(b,t);
+ var ty=t.getUTCFullYear();var nb=new Date(Date.UTC(ty,b.getUTCMonth(),b.getUTCDate()));var feb29=(b.getUTCMonth()===1&&b.getUTCDate()===29);
+ if(feb29&&nb.getUTCMonth()!==1){nb=new Date(Date.UTC(ty,2,1));}
+ if(nb<t)nb=new Date(Date.UTC(ty+1,b.getUTCMonth(),b.getUTCDate()));
+ var until=diffDays(t,nb);
+ document.getElementById('d-r3').innerHTML='Age on '+name(t)+': <b>'+ym[0]+' years, '+ym[1]+' months, '+ym[2]+' days</b> ('+ad.toLocaleString('en-US')+' days, ≈'+Math.floor(ad/365.25)+' years).'
+ +'<br>Next birthday '+name(nb)+' — <b>'+until+' days to go</b>.'+(feb29?' (born 29 Feb: counted as 1 March in non-leap years.)':'');}
+document.getElementById('d-go1').onclick=go1;
+document.getElementById('d-go2').onclick=go2;
+document.getElementById('d-go3').onclick=go3;
+var today=new Date();var iso=today.toISOString().slice(0,10);
+document.getElementById('d-b').value=iso;document.getElementById('d-c').value=iso;document.getElementById('d-t').value=iso;
+})();</script>`;
+  return worldDoc({
+    title: 'Date Calculator — Days Between Dates, Exact Age & Working Days | Tukuk-OS',
+    desc: 'Calculate days between any two dates, add or subtract days from a date, get an exact age in years-months-days, count working days and see how many days until your next birthday. Private, instant, no account.',
+    selfUrl: 'https://tukuk.org/alat/tarikh',
+    heroTitle: '📅 Date & Age Calculator', heroSub: 'Between dates · ± days · exact age · working days · next birthday',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Date & Age Calculator',
+      applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
+      description: 'Date difference, date arithmetic, exact age, working-day count and days-until-birthday calculator running in the browser.',
+      url: 'https://tukuk.org/alat/tarikh', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function warnaPage() {
+  const body = `<p>Pick a <b>text colour</b> and a <b>background colour</b> and get the official <b>WCAG contrast ratio</b> with pass/fail badges for AA and AAA — the same numbers the accessibility auditors use, computed from the published formula on your device. When a pair fails, the page also finds the <b>nearest colour that passes</b>, so you can fix the design instead of just being scolded.</p>
+  <div class="tl-form">
+    <label>Text <input id="c-fg" type="color" value="#e6e9ef"> <input id="t-fg" value="#e6e9ef" size=9 maxlength=7></label>
+    <label>Background <input id="c-bg" type="color" value="#171a21"> <input id="t-bg" value="#171a21" size=9 maxlength=7></label>
+    <label>Swap <button class="tl-btn" id="b-swap" type="button">⇄</button></label>
+  </div>
+  <div class="tl-res" id="prev" style="font-size:1.3rem;font-weight:700;padding:22px">The quick brown fox jumps over 13 lazy dogs — Aa 0O8B</div>
+  <div class="tl-res"><span class="tl-big" id="ratio">—</span>
+    <div id="badges" style="margin-top:8px"></div>
+    <div id="vals" class="meta" style="margin-top:8px"></div>
+    <div id="fix" style="margin-top:10px"></div></div>
+  <p class="meta">Click a swatch under the preview to try it as the text colour; the suggestions blend your text colour toward black or white by the smallest step that reaches the target ratio.</p>
+  <h2 class="section-title">Palette lab — tints &amp; shades</h2>
+  <div class="tl-chips" id="tints"></div>
+  <div class="tl-chips" id="shades"></div>
+  <p class="meta">Nine tints (mixed toward white) and nine shades (toward black) of the current text colour.</p>
+  <noscript><p>JavaScript is required; all colour maths run on your device.</p></noscript>
+  <h2 class="section-title">What the numbers mean</h2>
+  <p><b>AA</b> is the level most laws and policies require: normal text needs a ratio of <b>4.5:1</b>, large text (≈18.66px bold or 24px regular and up) needs <b>3:1</b>. <b>AAA</b> raises those to <b>7:1</b> and <b>4.5:1</b>. The ratio comes from relative luminance — each channel is linearised from sRGB and weighted for how sensitive the human eye is to red, green and blue (0.2126 / 0.7152 / 0.0722), which is exactly why bright yellow on white fails so violently while you can still read it yourself on a good screen. Roughly <b>1 in 12 men and 1 in 200 women</b> have some colour-vision deficiency, and every user over 40 loses contrast sensitivity — accessibility maths is audience maths, not bureaucracy.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Tukuk-OS practices what it checks: pages here ship with a <a href="/read-aloud">read-aloud engine</a> and this checker exists because we audited ourselves with it.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+var BLACK=[0,0,0],WHITE=[255,255,255];
+function hex2rgb(h){h=String(h).replace(/[^0-9a-f]/g,'');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length!==6)return null;
+ return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];}
+function rgb2hex(r){return '#'+r.map(function(v){var s=Math.max(0,Math.min(255,Math.round(v))).toString(16);return s.length<2?'0'+s:s;}).join('');}
+function chan(v){v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);}
+function lum(c){return 0.2126*chan(c[0])+0.7152*chan(c[1])+0.0722*chan(c[2]);}
+function ratio(a,b){var l1=lum(a),l2=lum(b);if(l1<l2){var t=l1;l1=l2;l2=t;}return (l1+0.05)/(l2+0.05);}
+function mix(a,b,t){return a.map(function(v,i){return v+(b[i]-v)*t;});}
+function hslOf(c){var r=c[0]/255,g=c[1]/255,b=c[2]/255,mn=Math.min(r,g,b),mx=Math.max(r,g,b),d=mx-mn,h=0,s=0,l=(mx+mn)/2;
+ if(d){s=l>0.5?d/(2-mx-mn):d/(mx+mn);
+  if(mx===r)h=(g-b)/d+(g<b?6:0);else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;}
+ return [Math.round(h),Math.round(s*100),Math.round(l*100)];}
+function nearestPass(f,b,need){var out=[];[BLACK,WHITE].forEach(function(d){
+ for(var i=1;i<=100;i++){var c=mix(f,d,i/100);if(ratio(c,b)>=need){out.push(rgb2hex(c));return;}}});return out;}
+function badge(txt,ok){return '<span class="tl-badge '+(ok?'tl-ok':'tl-no')+'">'+txt+'</span>';}
+var F='#e6e9ef',B='#171a21';
+function apply(){var f=hex2rgb(F),b=hex2rgb(B);if(!f||!b)return;
+ $('prev').style.background=rgb2hex(b);$('prev').style.color=rgb2hex(f);
+ var r=ratio(f,b);
+ $('ratio').textContent=r.toFixed(2)+' : 1';
+ $('badges').innerHTML=badge('AA normal '+(r>=4.5?'pass':'fail'),r>=4.5)+badge('AA large '+(r>=3?'pass':'fail'),r>=3)+badge('AAA normal '+(r>=7?'pass':'fail'),r>=7)+badge('AAA large '+(r>=4.5?'pass':'fail'),r>=4.5);
+ var h=hslOf(f);
+ $('vals').textContent='text  '+rgb2hex(f)+'  ·  rgb('+f.map(Math.round).join(', ')+')  ·  hsl('+h.join(', ')+')   |   background  '+rgb2hex(b);
+ var fx='';
+ if(r<4.5||r<7){var n45=nearestPass(f,b,4.5),n7=nearestPass(f,b,7);
+  if(n45.length)fx+='Closest text colour passing AA (4.5:1): '+n45.map(function(x){return '<span class="sw" style="background:'+x+'" data-c="'+x+'" title="'+x+'"></span>';}).join('');
+  if(n7.length)fx+='<br>Closest passing AAA (7:1): '+n7.map(function(x){return '<span class="sw" style="background:'+x+'" data-c="'+x+'" title="'+x+'"></span>';}).join('');
+  if(!fx)fx='No blend of this colour reaches the target against this background — change one of them.';}
+ $('fix').innerHTML=fx||'Already passes everything — nothing to fix.';
+ var tints='',shades='';
+ for(var i=1;i<=9;i++){var t=mix(f,WHITE,i/10),s=mix(f,BLACK,i/10);
+  tints+='<span class="sw" style="background:'+rgb2hex(t)+'" data-c="'+rgb2hex(t)+'" title="tint '+i+'0%"></span>';
+  shades+='<span class="sw" style="background:'+rgb2hex(s)+'" data-c="'+rgb2hex(s)+'" title="shade '+i+'0%"></span>';}
+ $('tints').innerHTML=tints;$('shades').innerHTML=shades;
+ [].forEach.call(document.querySelectorAll('.sw'),function(el){el.onclick=function(){F=el.getAttribute('data-c');sync();};});}
+function sync(){$('c-fg').value=F.length===7?F:'#000000';$('t-fg').value=F;$('c-bg').value=B.length===7?B:'#000000';$('t-bg').value=B;apply();}
+function normHex(v){v=String(v).replace(/[^0-9a-f]/g,'').toLowerCase();if(v.length===3)v=v[0]+v[0]+v[1]+v[1]+v[2]+v[2];return v.length===6?'#'+v:null;}
+$('c-fg').oninput=function(){F=this.value;sync();};
+$('c-bg').oninput=function(){B=this.value;sync();};
+$('t-fg').onchange=function(){var n=normHex(this.value);if(n)F=n;sync();};
+$('t-bg').onchange=function(){var n=normHex(this.value);if(n)B=n;sync();};
+$('b-swap').onclick=function(){var t=F;F=B;B=t;sync();};
+sync();
+})();</script>`;
+  return worldDoc({
+    title: 'Colour Contrast Checker — WCAG AA & AAA Ratio Calculator | Tukuk-OS',
+    desc: 'Check any text and background colour pair against the official WCAG contrast formula with AA/AAA pass-fail badges, get the nearest accessible colour automatically, and build tint and shade palettes — free and private.',
+    selfUrl: 'https://tukuk.org/alat/warna',
+    heroTitle: '🎨 Colour & Contrast Checker', heroSub: 'WCAG ratio · AA/AAA verdicts · nearest passing colour · palettes',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Colour Contrast Checker',
+      applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
+      description: 'WCAG contrast ratio checker with AA/AAA badges and nearest-passing-colour suggestions, running in the browser.',
+      url: 'https://tukuk.org/alat/warna', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function kataLaluanPage() {
+  const body = `<p>A password built from your browser’s <b>cryptographic random generator</b> (<code>crypto.getRandomValues</code>, the same source banks’ web apps use). It is generated <b>on your device</b> — nothing is sent anywhere, and the page works offline once loaded, so a password you mint here has provably never touched our server. Open the network tab and watch: no request happens when you press Generate.</p>
+  <div class="tl-form">
+    <label>Length <input id="k-len" type="number" value="18" min="8" max="64" style="min-width:80px"></label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input id="k-lo" type="checkbox" checked> a-z</label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input id="k-up" type="checkbox" checked> A-Z</label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input id="k-nu" type="checkbox" checked> 0-9</label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input id="k-sy" type="checkbox" checked> symbols</label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input id="k-sim" type="checkbox"> avoid look-alikes (i l 1 o O 0)</label>
+  </div>
+  <p><button class="tl-btn primary" id="k-gen" type="button">🎲 Generate</button> <button class="tl-btn" id="k-copy" type="button">📋 Copy</button> <span id="k-cp" class="meta"></span></p>
+  <div class="tl-res"><div class="tl-pass" id="k-out">—</div><div class="meta" id="k-ent" style="margin-top:8px"></div></div>
+  <noscript><p>JavaScript is required — deliberately: the randomness is created inside your browser and nowhere else.</p></noscript>
+  <h2 class="section-title">How strong is “strong”?</h2>
+  <p>We show the real number: <b>entropy = length × log₂(pool size)</b> bits. A random secret with <b>60 bits</b> is roughly a trillion tries; 80 bits is a quadrillion, and a single well-funded organisation already cracks the first. That is why the length default is 18 — with all four sets enabled the pool is 86 characters wide and the result carries ≈116 bits. Two honest caveats: this page guarantees <b>randomness</b>, not <b>uniqueness across sites</b> — reuse is still the #1 real-world break, so pair it with a password manager; and if a site allows long passphrases, four random words picked from a 7,776-word list already carry ≈52 bits between them — six such words (≈77 bits) are both stronger than the default here and easier to type from memory.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Symbol set excludes quotes, backslashes and angle brackets so passwords paste safely into forms and config files.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+var LO='abcdefghijklmnopqrstuvwxyz',UP='ABCDEFGHIJKLMNOPQRSTUVWXYZ',NU='0123456789',SY='!@#$%&*()-_=+[]{};:,.<>?';
+var SIM='il1Io0O';
+function randInt(n){if(!window.crypto||!crypto.getRandomValues)return Math.floor(Math.random()*n);
+ var lim=Math.floor(4294967296/n)*n,a=new Uint32Array(1);do{crypto.getRandomValues(a);}while(a[0]>=lim);return a[0]%n;}
+function sets(){var s=[];if($('k-lo').checked)s.push(LO);if($('k-up').checked)s.push(UP);if($('k-nu').checked)s.push(NU);if($('k-sy').checked)s.push(SY);
+ if($('k-sim').checked)s=s.map(function(x){return x.split('').filter(function(c){return SIM.indexOf(c)<0;}).join('');});
+ return s.filter(function(x){return x.length;});}
+function label(b){if(b<40)return 'weak — commodity hardware gets this in an afternoon';if(b<60)return 'fair — okay for low-value accounts only';if(b<80)return 'strong — fine for everyday email and forums';if(b<100)return 'very strong — good for banking and admin, keep 2FA on';return 'excellent — beyond any realistic brute force';}
+var last='';
+function gen(){var L=Math.max(8,Math.min(64,parseInt($('k-len').value,10)||18));var ss=sets();
+ if(!ss.length){$('k-out').textContent='enable at least one character set';$('k-ent').textContent='';return;}
+ var pool=ss.join(''),out=[];
+ ss.forEach(function(s){out.push(s[randInt(s.length)]);});
+ while(out.length<L)out.push(pool[randInt(pool.length)]);
+ for(var i=out.length-1;i>0;i--){var j=randInt(i+1),t=out[i];out[i]=out[j];out[j]=t;}
+ last=out.join('').substr(0,L);
+ $('k-out').textContent=last;
+ var bits=Math.round(L*Math.log2(pool.length)*10)/10;
+ $('k-ent').textContent='≈ '+bits+' bits of entropy ('+L+' characters × log₂ of a '+pool.length+'-character pool) — '+label(bits)+'.';
+ $('k-cp').textContent='';}
+function copy(){if(!last)return;
+ $('k-cp').textContent='';
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(last).then(function(){$('k-cp').textContent='copied ✓';},function(){$('k-cp').textContent='copy blocked — select it manually';});return;}
+ var ta=document.createElement('textarea');ta.value=last;document.body.appendChild(ta);ta.select();
+ try{document.execCommand('copy');$('k-cp').textContent='copied ✓';}catch(e){$('k-cp').textContent='copy blocked — select it manually';}
+ document.body.removeChild(ta);}
+$('k-gen').onclick=gen;$('k-copy').onclick=copy;
+['k-len','k-lo','k-up','k-nu','k-sy','k-sim'].forEach(function(id){$(id).onchange=gen;});
+gen();
+})();</script>`;
+  return worldDoc({
+    title: 'Password Generator — True Random, Real Entropy, Never Uploaded | Tukuk-OS',
+    desc: 'Generate strong random passwords using your browser’s cryptographic random source, with honest entropy maths and strength explanation. The password is created on your device and never sent to any server — check the network tab.',
+    selfUrl: 'https://tukuk.org/alat/kata-laluan',
+    heroTitle: '🔐 Password Generator', heroSub: 'crypto-grade randomness · entropy you can verify · zero uploads',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Password Generator',
+      applicationCategory: 'SecurityApplication', operatingSystem: 'Web browser',
+      description: 'Client-side random password generator with entropy display, powered by the browser CSPRNG.',
+      url: 'https://tukuk.org/alat/kata-laluan', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function teksPage() {
+  const body = `<p>Paste anything: get <b>live counts</b> (words, characters, sentences, reading time), then transform the text in place — six case styles, line cleanup, URL and Base64 encoders and a <b>SHA-256 hash</b>. Everything runs locally; the text is never uploaded, so it is safe to paste things you shouldn’t paste into random “online tools”.</p>
+  <textarea id="t-in" class="tl-in" placeholder="Type or paste text here…" spellcheck="false"></textarea>
+  <div class="tl-res" id="t-stats">Waiting for text…</div>
+  <div class="tl-chips">
+    <button class="tl-btn" data-k="upper" type="button">UPPERCASE</button>
+    <button class="tl-btn" data-k="lower" type="button">lowercase</button>
+    <button class="tl-btn" data-k="title" type="button">Title Case</button>
+    <button class="tl-btn" data-k="camel" type="button">camelCase</button>
+    <button class="tl-btn" data-k="snake" type="button">snake_case</button>
+    <button class="tl-btn" data-k="kebab" type="button">kebab-case</button>
+  </div>
+  <div class="tl-chips">
+    <button class="tl-btn" data-k="trimlines" type="button">Trim lines</button>
+    <button class="tl-btn" data-k="dedupe" type="button">Remove duplicate lines</button>
+    <button class="tl-btn" data-k="sort" type="button">Sort lines A→Z</button>
+    <button class="tl-btn" data-k="collapse" type="button">Collapse spaces</button>
+  </div>
+  <div class="tl-chips">
+    <button class="tl-btn" data-k="urlenc" type="button">URL-encode</button>
+    <button class="tl-btn" data-k="urldec" type="button">URL-decode</button>
+    <button class="tl-btn" data-k="b64enc" type="button">Base64 encode</button>
+    <button class="tl-btn" data-k="b64dec" type="button">Base64 decode</button>
+    <button class="tl-btn primary" data-k="sha" type="button">SHA-256 hash</button>
+  </div>
+  <div class="tl-res" id="t-out" style="display:none;font-family:ui-monospace,Consolas,monospace;font-size:13px;word-break:break-all"></div>
+  <noscript><p>JavaScript is required — the whole toolkit is the script, running on your machine.</p></noscript>
+  <h2 class="section-title">Details worth knowing</h2>
+  <p><b>Word count</b> splits on whitespace runs, matching what editors like Google Docs report for plain text; CJK text without spaces counts as fewer “words” than speakers would — honest limitation of any splitter, including big offices’. <b>Reading time</b> assumes 200 words per minute, the standard adult silent-reading average (listen-aloud is roughly half). <b>Base64</b> here is UTF-8 correct both directions, so emoji and Malay/Arabic/East-Asian text survive — many online converters break on exactly that. <b>SHA-256</b> uses the browser’s built-in Web Crypto; paste a file’s text content or any string and compare the digest against what the sender published — different hash means the file was altered, full stop.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Developer of the family: <a href="/wang/kadar">currency rates</a> and <a href="/peta">map tools</a> are nearby.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function words(s){var t=s.trim();if(!t)return 0;return t.replace(/\\s+/g,' ').split(' ').length;}
+function stats(){var s=$( 't-in').value;var w=words(s);
+ var ch=s.length,ns=s.replace(/\\s/g,'').length;
+ var sent=(s.match(/[.!?\u2026]+(\\s|$)/g)||[]).length;
+ var para=0,blank=true;s.split('\\n').forEach(function(l){if(l.trim()){if(blank)para++;blank=false;}else blank=true;});
+ if(!para&&s.trim())para=1;
+ var rt=w?Math.max(1,Math.round(w/200*10)/10):0;
+ $('t-stats').innerHTML='<b>'+w+'</b> words · <b>'+ch+'</b> characters ('+ns+' without spaces) · <b>'+sent+'</b> sentences · <b>'+para+'</b> paragraphs'
+ +(w?' · ≈'+rt+' min read ('+Math.round(w/2)+' speaking pace min)':'');}
+function ws(s){return s.split(/[^A-Za-z0-9]+/).filter(Boolean);}
+function show(t){var o=$('t-out');o.style.display='block';o.textContent=t;}
+function put(s){$('t-in').value=s;stats();show('');$('t-out').style.display='none';}
+function b64enc(s){var by=new TextEncoder().encode(s),bin='';for(var i=0;i<by.length;i++)bin+=String.fromCharCode(by[i]);return btoa(bin);}
+function b64dec(s){var bin=atob(s.trim()),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u);}
+function titleCase(s){return s.toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g,function(m,p,c){return p+c.toUpperCase();});}
+function lines(s){return s.split('\\n');}
+var K={
+ upper:function(s){return s.toUpperCase();},lower:function(s){return s.toLowerCase();},
+ title:function(s){return titleCase(s);},
+ camel:function(s){return ws(s).map(function(w,i){var c=w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();return i?c:c.toLowerCase();}).join('');},
+ snake:function(s){return ws(s).map(function(w){return w.toLowerCase();}).join('_');},
+ kebab:function(s){return ws(s).map(function(w){return w.toLowerCase();}).join('-');},
+ trimlines:function(s){return lines(s).map(function(l){return l.replace(/^ +| +$/g,'');}).join('\\n');},
+ dedupe:function(s){var seen={};return lines(s).filter(function(l){if(seen[l])return false;seen[l]=1;return true;}).join('\\n');},
+ sort:function(s){return lines(s).sort(function(a,b){return a.localeCompare(b);}).join('\\n');},
+ collapse:function(s){return s.replace(/ {2,}/g,' ');},
+ urlenc:function(s){return encodeURIComponent(s);},
+ urldec:function(s){try{return decodeURIComponent(s);}catch(e){return '⚠ not valid percent-encoding';}},
+ b64enc:function(s){try{return b64enc(s);}catch(e){return '⚠ encode failed';}},
+ b64dec:function(s){try{return b64dec(s);}catch(e){return '⚠ not valid Base64';}}
+};
+$('t-in').oninput=stats;
+[].forEach.call(document.querySelectorAll('.tl-chips .tl-btn'),function(b){b.onclick=function(){
+ var k=b.getAttribute('data-k'),s=$('t-in').value;if(!s)return;
+ if(k==='sha'){if(!window.crypto||!crypto.subtle){show('⚠ Web Crypto unavailable in this browser/context');return;}
+  show('hashing…');crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)).then(function(buf){
+   show(Array.from(new Uint8Array(buf)).map(function(x){var h=x.toString(16);return h.length<2?'0'+h:h;}).join(''));});
+  return;}
+ var r=K[k](s);
+ if(k==='urlenc'||k==='urldec'||k==='b64enc'||k==='b64dec')show(r);else put(r);
+};});
+stats();
+})();</script>`;
+  return worldDoc({
+    title: 'Text Toolkit — Word Counter, Case Converter, Base64 & SHA-256 | Tukuk-OS',
+    desc: 'Count words and reading time, convert case styles (camelCase, snake_case, kebab, Title), clean and sort lines, URL and Base64 encode/decode, and hash text with SHA-256 — all free, private and offline in your browser.',
+    selfUrl: 'https://tukuk.org/alat/teks',
+    heroTitle: '✂️ Text Toolkit', heroSub: 'Counts · case styles · line cleanup · URL & Base64 · SHA-256',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Text Toolkit',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local word counter, case converter, line cleaner, Base64/URL codec and SHA-256 hasher.',
+      url: 'https://tukuk.org/alat/teks', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
 }
 
 // ── /social — Community & Social hub (aggregate counters + where to join) ─────
