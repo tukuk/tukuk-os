@@ -30,6 +30,8 @@ const queries = require('./src/queries');
 const nasa = require('./src/nasa');
 const gempa = require('./src/gempa');
 const seni = require('./src/seni');
+const negara = require('./src/negara');
+const bendera = require('./src/bendera');
 const agentEditor = require('./src/agent-editor');
 
 /**
@@ -122,6 +124,14 @@ async function main() {
     // first GET is already loaded. buildObjectUrls runs in the background, non-blocking
     // and self-handled (never rejects); the sitemap serves the static part if still cold.
     setTimeout(() => { seni.buildObjectUrls(3).catch(() => {}); }, 6000);
+    // Warm the flag-story snapshot (English Wikipedia summaries, cached 30 days on disk)
+    // so the first visitor to /bendera reads a real story instead of an empty page.
+    // Bounded to the priority flags, polite 800 ms spacing, fail-soft.
+    setTimeout(() => {
+      negara.loadCountries()
+        .then((rows) => bendera.warmStories(rows, bendera.PRIORITY.length))
+        .catch(() => {});
+    }, 9000);
     // APOD auto-update + NASA archive backfill — OFF unless NASA_AUTO=1.
     // The NASA pages were removed (content focus + a light server); they are disabled
     // by default so the VPS does not waste CPU/network/disk on them.
