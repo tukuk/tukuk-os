@@ -1,12 +1,12 @@
-/* Tukuk-OS — mini-pemain global.
-   Muzik/radio yang dimainkan dari halaman carian (index) SAMBUNG bermain di
-   halaman lain (studio, editor, nasa, blog…) supaya orang boleh bekerja
-   sambil mendengar. State dikongsi dengan bar index melalui localStorage
-   'tk-player-state'. Di halaman index pemain penuh mengambil alih — skrip ini
-   sen diri bila ada #mediaAudio. */
+/* Tukuk-OS — the global mini-player.
+   Music/radio started on the search page (index) KEEPS PLAYING on the other
+   pages (studio, editor, nasa, blog…) so people can work while listening.
+   The state is shared with the index bar through the localStorage key
+   'tk-player-state'. On the index page the full player takes over — this
+   script stays out of the way whenever #mediaAudio exists. */
 (function () {
   var KEY = 'tk-player-state';
-  var MAX_AGE = 12 * 3600 * 1000; // state lebih lama daripada ini dianggap basi
+  var MAX_AGE = 12 * 3600 * 1000; // state older than this is stale
 
   function read() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
   function write(st) { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
@@ -42,7 +42,7 @@
     '@media (max-width:520px){.tkgp-sub{display:none;}}';
 
   function boot() {
-    if (document.getElementById('mediaAudio')) return; // index punya bar sendiri
+    if (document.getElementById('mediaAudio')) return; // the index page has its own bar
     if (/^\/admin/.test(location.pathname)) return;
     if (document.getElementById('tkGlobalPlayer')) return;
 
@@ -56,12 +56,12 @@
     bar.innerHTML =
       '<span class="tkgp-note">&#9835;</span>' +
       '<div class="tkgp-meta"><div class="tkgp-title"></div><div class="tkgp-sub"></div></div>' +
-      '<button type="button" class="tkgp-ghost" data-act="prev" title="Sebelumnya" aria-label="Sebelumnya">&#9198;</button>' +
-      '<button type="button" data-act="toggle" title="Main / Jeda" aria-label="Main atau jeda">&#9654;</button>' +
-      '<button type="button" class="tkgp-ghost" data-act="next" title="Seterusnya" aria-label="Seterusnya">&#9197;</button>' +
-      '<button type="button" class="tkgp-ghost" data-act="loop" title="Ulang lagu ini" aria-label="Ulang">&#8635;</button>' +
-      '<a class="tkgp-link tkgp-ghost" href="/cari?mode=radio" title="Pilih muzik / radio">&#9834;+</a>' +
-      '<button type="button" class="tkgp-stop" data-act="stop" title="Berhenti" aria-label="Berhenti">&#10005;</button>';
+      '<button type="button" class="tkgp-ghost" data-act="prev" title="Previous" aria-label="Previous">&#9198;</button>' +
+      '<button type="button" data-act="toggle" title="Play / Pause" aria-label="Play or pause">&#9654;</button>' +
+      '<button type="button" class="tkgp-ghost" data-act="next" title="Next" aria-label="Next">&#9197;</button>' +
+      '<button type="button" class="tkgp-ghost" data-act="loop" title="Repeat this track" aria-label="Repeat">&#8635;</button>' +
+      '<a class="tkgp-link tkgp-ghost" href="/cari?mode=radio" title="Pick music / radio">&#9834;+</a>' +
+      '<button type="button" class="tkgp-stop" data-act="stop" title="Stop" aria-label="Stop">&#10005;</button>';
     document.body.appendChild(bar);
 
     var elTitle = bar.querySelector('.tkgp-title');
@@ -79,13 +79,13 @@
 
     var live = !!st.live;
     var loop = false;
-    var autoNext = st.auto !== false; // ikut togol Auto‑next bar index (lalai: berterusan)
+    var autoNext = st.auto !== false; // follows the index bar's Auto‑next toggle (default: keep going)
     var wantPlay = true;
     var resumePending = true;
     var retries = 0;
     var retryTimer = null;
     var startedAt = 0;
-    // Pratinjau iTunes ±30s diulang sehingga durasi penuh lagu (queue[].dur dari kad) cukup.
+    // The iTunes ±30s preview is repeated until the full track length (queue[].dur from the card) is covered.
     var playedSec = Math.max(0, Math.round((st.played || 0) - (st.pos || 0)));
 
     function cur() { return queue[qi] || queue[0] || { src: st.src, title: st.title || '' }; }
@@ -94,9 +94,9 @@
       var c = cur();
       elTitle.textContent = c.title || 'Media';
       var playing = !audio.paused && !audio.ended;
-      var sub = live ? 'Radio \u00b7 siaran langsung'
-        : 'Muzik \u00b7 ' + (queue.length > 1 ? 'senarai main' : (cur().dur ? 'pratinjau \u00b7 ulang ikut durasi' : 'pratinjau 30s'));
-      elSub.textContent = (resumePending && !playing) ? 'Tekan \u25b6 untuk sambung bermain' : sub;
+      var sub = live ? 'Radio \u00b7 live broadcast'
+        : 'Music \u00b7 ' + (queue.length > 1 ? 'playlist' : (cur().dur ? 'preview \u00b7 repeats to the full length' : '30s preview'));
+      elSub.textContent = (resumePending && !playing) ? 'Press \u25b6 to resume playback' : sub;
       bar.classList.toggle('paused', !playing);
       btnToggle.innerHTML = playing ? '&#9208;' : '&#9654;';
       btnLoop.classList.toggle('on', loop);
@@ -131,7 +131,7 @@
       if (autoplay === false) { try { audio.pause(); } catch (e) {} paint(); }
     }
 
-    // Autoplay selepas navigasi mungkin disekat pelayar — sambung pada gestures pertama.
+    // Autoplay after a navigation may be blocked by the browser — resume on the first gesture.
     function awaitGesture() {
       var once = function () {
         document.removeEventListener('pointerdown', once);
@@ -146,7 +146,7 @@
       if (!wantPlay) return;
       if (retryTimer) clearTimeout(retryTimer);
       retries++;
-      // Radio: cuba sambung semula panjang (stesen hidup lagi); muzik: skip cepat bila mati.
+      // Radio: keep retrying at length (the station may come back); music: skip fast when it is dead.
       var maxTry = live ? 25 : 3;
       if (retries > maxTry) { (live || !autoNext) ? softStop() : next(); return; }
       retryTimer = setTimeout(function () {
@@ -164,7 +164,7 @@
       if (queue.length < 2) { load(true); return; }
       qi = (qi + d + queue.length) % queue.length;
       st.pos = 0;
-      playedSec = 0; // lagu baharu → kiraan ulang bermula dari awal
+      playedSec = 0; // a new track → the repeat count starts from zero
       load(true);
     }
 
@@ -173,7 +173,7 @@
       try { audio.pause(); } catch (e) {}
       paint();
       save(false);
-      elSub.textContent = 'Terputus — tekan ▶ untuk cuba lagi';
+      elSub.textContent = 'Disconnected — press ▶ to try again';
     }
 
     function stopAll() {
@@ -205,33 +205,33 @@
     audio.addEventListener('stalled', function () { if (wantPlay) setTimeout(function () { if (wantPlay && audio.paused) reconnect(); }, 1200); });
     audio.addEventListener('ended', function () {
       if (!wantPlay) return;
-      if (Date.now() - startedAt < 3000) { reconnect(); return; } // klip rosak — jangan lompat serta-merta
-      if (live) { reconnect(); return; }                          // radio terputus → sambung, bukan tukar stesen
+      if (Date.now() - startedAt < 3000) { reconnect(); return; } // a broken clip — don't jump straight away
+      if (live) { reconnect(); return; }                          // a dropped radio stream → reconnect, don't change station
       if (loop) { audio.currentTime = 0; audio.play().catch(reconnect); return; }
-      // Ulang klip pratinjau sehingga durasi penuh lagu yang dipaparkan cukup, baru tukar/berhenti.
+      // Repeat the preview clip until the full track length shown to the user is covered, then move on or stop.
       var durSec = cur().dur || 0;
       if (!live && durSec > 0) {
         playedSec += Math.round(audio.duration) || 30;
         if (playedSec < durSec) { audio.currentTime = 0; audio.play().catch(reconnect); return; }
-        playedSec = 0; // durasi cukup → kitaran seterusnya bermula dari awal
+        playedSec = 0; // length covered → the next cycle starts from the top
       }
-      // Auto‑next MATI → berhenti (hanya tindakan pengguna menyambung); HIDUP → sambung trek.
+      // Auto‑next OFF → stop (only a user action resumes); ON → go on to the next track.
       if (!autoNext) { softStop(); return; }
       if (queue.length > 1) { next(); } else { audio.currentTime = 0; audio.play().catch(reconnect); }
     });
     var tick = 0;
     audio.addEventListener('timeupdate', function () {
       if (audio.paused) return;
-      if (++tick % 20 !== 0) return; // simpan setiap ~20 event (~1 saat) sahaja
+      if (++tick % 20 !== 0) return; // save only every ~20 events (~1 second)
       save(true);
     });
 
-    // Tab/halaman lain mengubah state → ikut supaya tak main dua audio serentak.
+    // Another tab/page changed the state → follow it, so two audios never play at once.
     window.addEventListener('storage', function (e) {
       if (e.key !== KEY) return;
       if (!e.newValue) { stopAll(); return; }
       var ns = null; try { ns = JSON.parse(e.newValue); } catch (err) { return; }
-      if (ns && typeof ns.auto !== 'undefined') autoNext = !!ns.auto; // ikut togol Auto‑next dari tab lain
+      if (ns && typeof ns.auto !== 'undefined') autoNext = !!ns.auto; // follow the Auto‑next toggle from the other tab
       if (ns && ns.src && ns.src !== cur().src) {
         queue = ns.queue && ns.queue.length ? ns.queue.slice(0, 60) : queue;
         qi = Math.max(0, Math.min(queue.length - 1, ns.qi || 0));

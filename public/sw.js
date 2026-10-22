@@ -40,19 +40,19 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
-  // Luar domain: biar pelayar urus sendiri (iklan, CDN imej, dsb.)
+  // Off origin: leave it to the browser (ads, image CDNs, etc.)
   if (url.origin !== self.location.origin) return;
 
-  // API & aliran SSE: jangan sentuh langsung. `response.clone()` + `cache.put()`
-  // pada respons yang tidak pernah tamat (/api/chat/stream) akan membuat tee
-  // tertahan — bingkai tidak sampai ke halaman dan ingatan SW membengkak.
-  // Data API pula memang tiada gunanya bila luar talian.
+  // API and SSE streams: never touch them. `response.clone()` + `cache.put()`
+  // on a response that never ends (/api/chat/stream) would build a stalled
+  // tee — the frames never reach the page and the SW heap grows.
+  // API data is of no use offline anyway.
   if (url.pathname.startsWith('/api/')) return;
-  if (event.request.headers.get('accept') || '').includes('text/event-stream')) return;
+  if ((event.request.headers.get('accept') || '').includes('text/event-stream')) return;
 
   if (event.request.mode === 'navigate') {
-    // HTML: rangkaian dulu supaya pelanggan sentiasa dapat versi terkini.
-    // Cache hanya digunakan bila rangkaian gagal (offline).
+    // HTML: network first, so visitors always get the current version.
+    // The cache is only used when the network fails (offline).
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -67,8 +67,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Aset statik same-origin (css/js/ikon): rangkaian dulu, cache hanya bila offline.
-  // (cache-first menyebabkan CSS basi kelihatan semasa audit/mula sesi baharu.)
+  // Same-origin static assets (css/js/icons): network first, cache only when offline.
+  // (cache-first made stale CSS show up during an audit / the start of a new session.)
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -83,13 +83,13 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ─── Web Push ───
-// Push dihantar dengan badan kosong — SW memaparkan notifikasi generik. Klik pada
-// notifikasi akan membuka/menfokos aplikasi T Chat.
+// Push is sent with an empty body — the SW shows a generic notification. Clicking
+// it opens or focuses the T Chat app.
 self.addEventListener('push', (event) => {
   const title = 'T Chat';
   const body = event.data
     ? event.data.text()
-    : 'Anda menerima mesej baru.';
+    : 'You have a new message.';
   event.waitUntil(
     self.registration.showNotification(title, {
       body,

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SMS Gateway &mdash; Tukuk-OS</title>
-<meta name="description" content="Kawalan gerbang SMS Tukuk-OS: pasangkan telefon Android sebagai radio, hantar & terima SMS, dan lihat inbox secara langsung.">
+<meta name="description" content="Tukuk-OS SMS gateway control: pair an Android phone as the radio, send and receive SMS, and watch the inbox live.">
 <link rel="canonical" href="https://tukuk.org/sms">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -55,39 +55,39 @@
 <header>
   <a href="/admin">&larr; Admin</a>
   <h1>📮 SMS Gateway</h1>
-  <span class="pill"><span class="dot off" id="devDot"></span> <span id="devTxt">periksa…</span></span>
+  <span class="pill"><span class="dot off" id="devDot"></span> <span id="devTxt">checking…</span></span>
 </header>
 
 <div id="gate" class="card" hidden>
-  <h2>Perlu log masuk pentadbir</h2>
-  <p class="status">Gerbang SMS hanya untuk pentadbir. Sila <a href="/admin">log masuk di /admin</a> menggunakan passkey anda, kemudian buka semula halaman ini.</p>
+  <h2>Admin sign-in required</h2>
+  <p class="status">The SMS gateway is for administrators only. Please <a href="/admin">sign in at /admin</a> with your passkey, then open this page again.</p>
 </div>
 
 <main class="wrap" id="app" hidden>
   <section>
     <div class="card">
-      <h2>Peranti (telefon relay)</h2>
+      <h2>Device (relay phone)</h2>
       <div id="devInfo" class="status">—</div>
       <div style="margin-top:12px" class="row">
-        <button id="btnPair" class="primary">Jana token pasangan</button>
-        <button id="btnUnpair" class="danger">Nyahpasang</button>
+        <button id="btnPair" class="primary">Generate pairing token</button>
+        <button id="btnUnpair" class="danger">Unpair</button>
       </div>
       <div id="pairBox" style="margin-top:12px" hidden>
-        <label>Token pasangan (hanya dipapar sekali — salin sekarang):</label>
+        <label>Pairing token (shown once only — copy it now):</label>
         <div class="tok" id="pairTok"></div>
-        <p class="hint" style="margin-top:8px">Gunakan apl relay pada telefon Android: masukkan URL <code>tukuk.org</code> + token ini. Telefon akan menarik mesej keluar, menghantar menerusi SmsManager, melaporkan status, dan menolak SMS masuk.</p>
+        <p class="hint" style="margin-top:8px">Use the relay app on the Android phone: enter the URL <code>tukuk.org</code> plus this token. The phone pulls outgoing messages, sends them through SmsManager, reports the status, and pushes incoming SMS back.</p>
       </div>
     </div>
 
     <div class="card">
-      <h2>Hantar SMS</h2>
-      <label>Nombor penerima</label>
+      <h2>Send SMS</h2>
+      <label>Recipient number</label>
       <input id="to" placeholder="+60123456789" inputmode="tel" autocomplete="off">
-      <label>Mesej</label>
-      <textarea id="body" placeholder="Taip mesej…" maxlength="480"></textarea>
+      <label>Message</label>
+      <textarea id="body" placeholder="Type a message…" maxlength="480"></textarea>
       <div class="row" style="margin-top:10px; justify-content:space-between">
         <span class="hint"><span id="charCount">0</span>/480</span>
-        <button id="btnSend" class="primary">Hantar</button>
+        <button id="btnSend" class="primary">Send</button>
       </div>
       <div class="status" id="sendStatus" style="margin-top:8px"></div>
     </div>
@@ -96,10 +96,10 @@
   <section>
     <div class="card">
       <h2>Inbox</h2>
-      <div class="threads" id="threads"><div class="hint status">Tiada perbualan lagi.</div></div>
+      <div class="threads" id="threads"><div class="hint status">No conversations yet.</div></div>
     </div>
     <div class="card">
-      <h2 id="convTitle">Perbualan</h2>
+      <h2 id="convTitle">Conversation</h2>
       <div class="log" id="log"></div>
     </div>
   </section>
@@ -129,17 +129,17 @@
   function renderStatus(st) {
     var online = st.device && st.device.online;
     $('devDot').className = 'dot ' + (st.paired && online ? 'on' : (st.paired ? 'off' : ''));
-    $('devTxt').textContent = !st.paired ? 'tiada peranti' : (online ? 'dalam talian' : 'luar talian');
-    if (!st.paired) { $('devInfo').textContent = 'Belum ada telefon dipasangkan. Tekan "Jana token pasangan" untuk mula.'; return; }
+    $('devTxt').textContent = !st.paired ? 'no device' : (online ? 'online' : 'offline');
+    if (!st.paired) { $('devInfo').textContent = 'No phone is paired yet. Press "Generate pairing token" to start.'; return; }
     var d = st.device;
-    $('devInfo').innerHTML = esc(d.name || 'Android relay') + ' · ' + esc(d.number || 'nombor belum dilapor') +
-      ' · ' + esc(d.carrier || '—') + '<br><span class="hint">Akhir dilihat ' + hh(d.lastSeenAt) +
-      ' · katus keluar: ' + st.counts.queued + ' menunggu, ' + st.counts.delivered + ' dihantar, ' + st.counts.failed + ' gagal</span>';
+    $('devInfo').innerHTML = esc(d.name || 'Android relay') + ' · ' + esc(d.number || 'number not reported') +
+      ' · ' + esc(d.carrier || '—') + '<br><span class="hint">Last seen ' + hh(d.lastSeenAt) +
+      ' · outbox: ' + st.counts.queued + ' waiting, ' + st.counts.delivered + ' sent, ' + st.counts.failed + ' failed</span>';
   }
 
   function renderThreads(list) {
     var box = $('threads');
-    if (!list.length) { box.innerHTML = '<div class="hint status">Tiada perbualan lagi.</div>'; return; }
+    if (!list.length) { box.innerHTML = '<div class="hint status">No conversations yet.</div>'; return; }
     box.innerHTML = '';
     list.forEach(function (t) {
       var el = document.createElement('div');
@@ -164,7 +164,7 @@
   }
 
   function openThread(peer) {
-    $('convTitle').textContent = 'Perbualan — ' + peer;
+    $('convTitle').textContent = 'Conversation — ' + peer;
     api('/api/sms/thread?peer=' + encodeURIComponent(peer)).then(function (r) {
       if (r.status === 200) renderLog(r.json.messages);
     }).catch(function () {});
@@ -188,14 +188,14 @@
   $('body').addEventListener('input', function () { $('charCount').textContent = String($('body').value.length); });
   $('btnSend').addEventListener('click', function () {
     var to = $('to').value.trim(), body = $('body').value.trim();
-    $('sendStatus').textContent = 'Menghantar…';
+    $('sendStatus').textContent = 'Sending…';
     post('/api/sms/send', { to: to, body: body }).then(function (r) {
       if (r.status === 200) {
-        $('sendStatus').textContent = 'Masuk katus — telefon akan hantar.';
+        $('sendStatus').textContent = 'Queued — the phone will send it.';
         $('body').value = ''; $('charCount').textContent = '0';
         selected = r.json.message.peer; openThread(selected); refresh();
-      } else { $('sendStatus').textContent = (r.json && r.json.error) || 'Gagal menghantar.'; }
-    }).catch(function () { $('sendStatus').textContent = 'Ralat rangkaian.'; });
+      } else { $('sendStatus').textContent = (r.json && r.json.error) || 'Sending failed.'; }
+    }).catch(function () { $('sendStatus').textContent = 'Network error.'; });
   });
 
   $('app').hidden = false;

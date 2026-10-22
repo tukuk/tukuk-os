@@ -95,8 +95,8 @@ function cmtSlug(s) { const x = String(s || ''); return isSlug(x) ? x : ''; }
 function cmtName(n) { return String(n || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 20) || 'Anon'; }
 function cmtText(t) { return String(t || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300); }
 
-// Blok komen berdiri sendiri (bahasa MS) — senarai + borang. SLUG ditanam sebagai literal
-// (dilepaskan cmtSlug di pelayan sebelum dipanggil; dipertahankan di sini juga).
+// Stand-alone comment block (English UI) — the list plus the form. The SLUG is embedded
+// as a literal (the server passes it through cmtSlug before the call; it is sanitised here too).
 function commentsWidget(slug) {
   const s = String(slug).replace(/[^a-z0-9-]/g, '');
   return '<section id="tukuk-comments" style="max-width:640px;margin:28px auto 8px;padding:16px 18px;font-family:system-ui,sans-serif;border-top:1px solid rgba(128,128,128,.28)">'
@@ -144,13 +144,13 @@ function arcadeWidget(key) {
     + '#tk-lb .mine{color:#4c8dff;font-weight:700}#tk-lb .sub{opacity:.55;font-size:10px}</style>';
   const js = '<script>(function(){var G="' + g + '",s=0,peaked=0,box,name="";'
     + 'function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
-    // Nama hanya diminta SEKALI, dan hanya apabila pemain benar-benar mencuba hantar
-    // skor (bukan semasa muat) — elak modal block + UX buruk; localStorage tak guna (opaque-origin).
-    + 'function askName(){if(name)return name;var n="";try{n=prompt("Nama untuk papan skor global?","")||"";}catch(e){n="";}n=String(n).trim().slice(0,20);name=n||"Anon";return name;}'
+    // The name is asked for ONCE, and only when the player really tries to submit a
+    // score (not on load) — avoids a blocking modal + bad UX; no localStorage (opaque origin).
+    + 'function askName(){if(name)return name;var n="";try{n=prompt("Name for the global leaderboard?","")||"";}catch(e){n="";}n=String(n).trim().slice(0,20);name=n||"Anon";return name;}'
     + 'function load(){fetch("/api/scores?g="+encodeURIComponent(G)+"&limit=5",{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){var it=(d&&d.items)||[],me=name.toLowerCase();'
     + 'var h="<h4>\ud83c\udf0d Global Top</h4><div class=\\"sub\\">"+esc(G)+"</div>";'
-    + 'h+=it.length?"<ol>"+it.map(function(x){var m=(String(x.n).toLowerCase()===me);return "<li>"+(m?"\u2605 ":"")+esc(x.n)+" \u2014 "+(x.s|0)+"</li>";}).join("")+"</ol>":"<div style=\'opacity:.6\'>Belum ada skor. Jadilah yang pertama!</div>";'
-    + 'box.innerHTML=h;}).catch(function(){box.innerHTML="<div style=\'opacity:.6\'>Papan skor luar talian.</div>";});}'
+    + 'h+=it.length?"<ol>"+it.map(function(x){var m=(String(x.n).toLowerCase()===me);return "<li>"+(m?"\u2605 ":"")+esc(x.n)+" \u2014 "+(x.s|0)+"</li>";}).join("")+"</ol>":"<div style=\'opacity:.6\'>No scores yet. Be the first!</div>";'
+    + 'box.innerHTML=h;}).catch(function(){box.innerHTML="<div style=\'opacity:.6\'>The leaderboard is offline.</div>";});}'
     + 'function post(sc){var n=askName();fetch("/api/score?g="+encodeURIComponent(G)+"&n="+encodeURIComponent(n)+"&s="+sc,{cache:"no-store",keepalive:true}).then(load).catch(function(){});}'
     + 'window.__tkScore=function(v){v=parseInt(v,10)||0;if(v>s)s=v;if(s>peaked){peaked=s;post(s);}};'
     + 'function boot(){box=document.createElement("div");box.id="tk-lb";document.body.appendChild(box);load();}'

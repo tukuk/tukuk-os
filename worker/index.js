@@ -1,18 +1,18 @@
-// tukuk-www-worker — tukuk.org DAN www.tukuk.org sentiasa hidup.
-// 1. Origin hidup → proxy ke tunnel. (fetch() Worker ke hostname zonet yang sama
-//    pergi TERUS ke origin, BUKAN masuk semula ke route Worker — jadi tiada gelung.)
-// 2. Origin mati/5xx → mod sandaran daripada snapshot R2:
-//    a. /search & /suggest → enjin carian mini dalam worker, skor snapshot
-//       indeks dari R2 (search-index.json) — bentuk JSON sama seperti API asli.
-//    b. Halaman statik → snapshot HTML/assets dari R2.
-//    c. Snapshot pun takde → halaman penyelenggaraan.
+// tukuk-www-worker — tukuk.org AND www.tukuk.org stay alive.
+// 1. Origin alive → proxy to the tunnel. (A Worker's fetch() to a hostname in the same
+//    zone goes STRAIGHT to the origin, it does not re-enter the Worker route — so no loop.)
+// 2. Origin down/5xx → backup mode from an R2 snapshot:
+//    a. /search & /suggest → a mini search engine inside the worker, scoring the index
+//       snapshot from R2 (search-index.json) — the JSON shape matches the real API.
+//    b. Static pages → HTML/asset snapshots from R2.
+//    c. No snapshot either → the maintenance page.
 
-const INDEX_TTL_MS = 10 * 60 * 1000; // indeks dikitar semula dalam isolate setiap 10 min
+const INDEX_TTL_MS = 10 * 60 * 1000; // the index is recycled inside the isolate every 10 min
 let idxCache = { at: 0, docs: null, loading: null };
 
 function maintenancePage() {
   return new Response(
-    "<!DOCTYPE html><html><head><title>Tukuk - Penyelenggaraan</title></head><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>Sistem Sedang Diselenggara</h1><p>Maaf, pelayan utama kami sedang mengalami gangguan sementara atau dalam penyelenggaraan. Sila cuba sebentar lagi.</p></body></html>",
+    "<!DOCTYPE html><html><head><title>Tukuk - Maintenance</title></head><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>The system is under maintenance</h1><p>Sorry, our main server is having a temporary problem or is being maintained. Please try again in a moment.</p></body></html>",
     { status: 503, headers: { "Content-Type": "text/html;charset=UTF-8" } }
   );
 }
@@ -39,7 +39,7 @@ async function loadDocs(env) {
       return docs;
     })().catch((err) => {
       idxCache = { at: 0, docs: null, loading: null };
-      console.error("loadDocs gagal:", err?.message);
+      console.error("loadDocs failed:", err?.message);
       return [];
     });
   }
@@ -63,7 +63,8 @@ function scoreDoc(doc, tokens, phrase) {
   return s;
 }
 
-// /search?q=... — respons sama rupa seperti API Meilisearch asal
+// /search?q=... — a response with exactly the shape of the original Meilisearch API
+// (`index: "halaman_web"` is that live index name, not copy — do not translate it)
 async function backupSearch(request, env) {
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "").trim();
@@ -96,7 +97,7 @@ async function backupSearch(request, env) {
   });
 }
 
-// /suggest?q=... — aut lengkap seperti asal {suggestions:[{title,url}]}
+// /suggest?q=... — the full original shape: {suggestions:[{title,url}]}
 async function backupSuggest(request, env) {
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "").trim();
@@ -113,7 +114,7 @@ async function backupSuggest(request, env) {
   return json({ suggestions });
 }
 
-// Titik API lain — pulang kosong yang selamat supaya UI tidak rosak
+// The other API endpoints — safe empty payloads so the UI does not break
 const EMPTY_JSON = {
   "/trending": { queries: [], windowDays: 7 },
   "/websearch": { hits: [], provider: "backup" },
@@ -133,7 +134,7 @@ async function serveStatic(pathname, env) {
   if (!clean) keys.push("index.html");
   else {
     keys.push(clean);
-    // Laman disimpan sebagai <name>.html (contoh: /about → about.html)
+    // Pages are stored as <name>.html (example: /about → about.html)
     if (!/\.[a-z0-9]+$/i.test(clean)) {
       keys.push(`${clean}.html`);
       keys.push(`${clean}/index.html`);
@@ -154,7 +155,7 @@ async function serveStatic(pathname, env) {
         });
       }
     } catch (err) {
-      console.error("R2 get gagal", key, err?.message);
+      console.error("R2 get failed", key, err?.message);
     }
   }
   return null;
@@ -168,11 +169,11 @@ async function handleBackupMode(request, env, pathname) {
     const page = await serveStatic(pathname, env);
     if (page) return page;
   }
-  if (pathname.startsWith("/api/")) return json({ error: "Server offline (mod sandaran)" }, 503);
+  if (pathname.startsWith("/api/")) return json({ error: "Server offline (backup mode)" }, 503);
   return maintenancePage();
 }
 
-// Analytics Engine — tulis satu baris telemetry. Gagal senyap (jangan jejaskan respons).
+// Analytics Engine — write one telemetry line. Fails quietly (never block the response).
 function logEvent(env, e) {
   if (!env || !env.TUKUK_ENGINE) return;
   try {
@@ -182,7 +183,7 @@ function logEvent(env, e) {
       doubles: [Number(e.status) || 0]
     });
   } catch (err) {
-    console.error("logEvent gagal:", err && err.message);
+    console.error("logEvent failed:", err && err.message);
   }
 }
 
@@ -190,7 +191,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
-    const host = url.hostname; // host asal: tukuk.org / www.tukuk.org
+    const host = url.hostname; // the original host: tukuk.org / www.tukuk.org
     const q = (url.searchParams.get("q") || "").slice(0, 200);
     url.hostname = "tukuk.org";
 
@@ -199,13 +200,13 @@ export default {
         method: request.method,
         headers: request.headers,
         body: request.method === "GET" || request.method === "HEAD" ? null : request.body,
-        // redirect: 'manual' supaya 3xx code-server (login redirect + Set-Cookie)
-        // dihantar balik ke browser. Dengan 'follow', Worker ikut sendiri dan
-        // buang Set-Cookie/Location — browser tak dapat session token.
+        // redirect: 'manual' so the 3xx code-server responses (login redirect + Set-Cookie)
+        // are handed back to the browser. With 'follow' the Worker chases them itself and
+        // drops Set-Cookie/Location — the browser never gets a session token.
         redirect: "manual"
       });
 
-      // Jika pelayan membalas 5xx → masuk mod sandaran sepenuhnya
+      // If the server answers 5xx → go into full backup mode
       if (response.status >= 500) throw new Error("Server error");
 
       ctx.waitUntil(Promise.resolve().then(() =>
