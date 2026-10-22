@@ -53,6 +53,7 @@ const crawler = require('./crawler');
 const fallback = require('./fallback');
 const nasa = require('./nasa');
 const wx = require('./weather');
+const trf = require('./traffic');
 const gp = require('./gempa');
 const cu = require('./cuti');
 const cd = require('./cuti-dunia');
@@ -1494,6 +1495,47 @@ app.get('/rekod/:slug', (req, res) => {
   const r = rek.findRecord(req.params.slug);
   if (!r) return res.status(404).type('html').send(rekodNotFound(req.params.slug));
   res.status(200).type('html').send(rekodRecordPage(r));
+});
+
+// ── TUKUK TRAFFIC (/traffic) — community road reports, Waze-style ──────────────
+// A single hub page + three small JSON APIs. All data lives in memory (see
+// src/traffic.js) with an atomic 2s-debounced save to data/traffic.json. Every
+// report auto-expires per type (traffic 1h, closure 24h, camera 7d …) with an
+// upvote extension and a downvote cut — so the board stays honest without any
+// human moderator. No auth, no real-time routing; the goal is "is there
+// something on my road right now?" for a world audience.
+app.get('/traffic', (req, res) => {
+  try {
+    res.status(200).type('html').send(trafficHubPage());
+  } catch (e) {
+    console.warn('[traffic] hub render failed:', e.message);
+    res.status(503).type('html').send(trafficBusy());
+  }
+});
+app.get('/api/traffic/reports', (req, res) => {
+  // Optional ?bbox=swLat,swLon,neLat,neLon for a viewport-limited fetch.
+  let bbox = null;
+  if (req.query.bbox) {
+    const p = String(req.query.bbox).split(',').map(Number);
+    if (p.length === 4 && p.every((n) => Number.isFinite(n))) bbox = { sw: [p[0], p[1]], ne: [p[2], p[3]] };
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ serverTime: Date.now(), types: trf.TYPES, reports: trf.listActive(Date.now(), bbox) });
+});
+app.post('/api/traffic/report', (req, res) => {
+  try {
+    const { lat, lon, type, note } = req.body || {};
+    const r = trf.addReport({ lat, lon, type, note });
+    res.json({ ok: true, report: r });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: String(e.message || 'invalid report').slice(0, 200) });
+  }
+});
+app.post('/api/traffic/vote', (req, res) => {
+  const { id, dir } = req.body || {};
+  const r = trf.vote(String(id || ''), String(dir || ''));
+  if (!r) return res.status(404).json({ ok: false, error: 'report not found or already expired' });
+  res.json({ ok: true, report: r });
 });
 
 // ── HISTORY COMPLEX ROUTES (/sejarah*) — "On this day", a Wikipedia REST feed ──
@@ -4067,6 +4109,7 @@ function siteHeader(active) {
       ${link('/wiki', 'Wiki', 'wiki')}
       ${link('/nasa', 'NASA', 'nasa')}
       ${link('/cuaca', 'Weather', 'cuaca')}
+      ${link('/traffic', 'Traffic', 'traffic')}
       ${link('/learn', 'Learn', 'learn')}
       ${link('/games', 'Games', 'games')}
       <a href="https://build.tukuk.org" rel="noopener">Build</a>
@@ -8531,6 +8574,131 @@ function rekodNotFound(q) {
     css: REC_CSS,
     body: `<p>We could not match that to one of our world records. Open <a href="/rekod">the full World Extremes collection</a> and browse by category.</p>`,
   }, rekodNav());
+}
+
+// ── /traffic — Tukuk Traffic (Waze-style community road reports) ───────────────
+// One Leaflet map + a sidebar list; the whole UI lives in ONE inline <script> so
+// the page is a single round-trip and works offline once the shell is cached.
+// All data changes flow through the three /api/traffic/* JSON endpoints above.
+const TRAFFIC_CSS = `#trf-wrap{display:grid;grid-template-columns:1fr 340px;gap:14px;margin:18px 0}
+@media(max-width:900px){#trf-wrap{grid-template-columns:1fr}}
+#trf-map{height:520px;border:1px solid var(--line);border-radius:12px;background:var(--panel,#171a21);z-index:1}
+#trf-side{border:1px solid var(--line);border-radius:12px;background:var(--panel,#171a21);padding:14px;max-height:520px;overflow-y:auto}
+#trf-side h3{margin:0 0 10px;font-size:.95rem;color:var(--muted,#9aa3b2);text-transform:uppercase;letter-spacing:.5px}
+.trf-row{border-bottom:1px solid var(--line);padding:9px 0;font-size:.92rem;line-height:1.4}
+.trf-row:last-child{border-bottom:none}
+.trf-row .t{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.trf-row .t b{font-weight:600}
+.trf-row .m{color:var(--muted,#9aa3b2);font-size:.78rem}
+.trf-row .n{margin:4px 0 0}
+.trf-v{display:inline-flex;gap:6px;margin-top:4px}
+.trf-v button{background:var(--bg,#0f1115);border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:inherit;font:inherit;font-size:.78rem;cursor:pointer}
+.trf-v button:hover{border-color:var(--accent,#4c8dff)}
+.trf-v button[disabled]{opacity:.4;cursor:default}
+.trf-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--panel,#171a21);border:1px solid var(--line);font-size:.82rem;cursor:pointer;user-select:none;margin:0 4px 6px 0}
+.trf-chip.on{border-color:var(--accent,#4c8dff);background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--text)}
+.trf-chip .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+#trf-form{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel,#171a21);display:none}
+#trf-form.show{display:block}
+#trf-form input,#trf-form textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;box-sizing:border-box}
+#trf-form textarea{min-height:60px;resize:vertical}
+#trf-form .lbl{font-size:.82rem;color:var(--muted,#9aa3b2);margin:8px 0 4px}
+#trf-form .coord{font-family:monospace;font-size:.85rem;color:var(--accent,#4c8dff)}
+.trf-fabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.trf-btn{padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel,#171a21);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.trf-btn:hover{border-color:var(--accent,#4c8dff);text-decoration:none}
+.trf-btn.primary{background:var(--accent,#4c8dff);color:#fff;border-color:transparent}
+.trf-btn.primary:hover{filter:brightness(1.1)}
+.trf-btn[disabled]{opacity:.5;cursor:default}
+#trf-status{font-size:.85rem;color:var(--muted,#9aa3b2);margin-left:6px}
+.leaflet-popup-content{font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#151922}
+.leaflet-popup-content b{color:#0b0f16}`;
+
+function trafficHubPage() {
+  const activeCount = trf.activeCount();
+  const counts = trf.countsByType();
+  const initialReports = JSON.stringify(trf.listActive()).replace(/</g, '\\u003c');
+  const typeMeta = JSON.stringify(trf.TYPES).replace(/</g, '\\u003c');
+  // The chips row is server-rendered for SEO (the map itself is JS-only), so a
+  // crawler sees at least a summary of what types exist and the current counts.
+  const chipsHtml = Object.entries(trf.TYPES).map(([key, t]) =>
+    `<span class="trf-chip" data-type="${key}"><span class="dot" style="background:${t.color}"></span>${escapeHtml(t.emoji + ' ' + t.label)} <b class="meta">(${counts[key] || 0})</b></span>`
+  ).join('');
+  const listHtml = trf.listActive().slice(0, 20).map((r) =>
+    `<div class="trf-row" data-id="${r.id}"><div class="t"><span>${r.emoji}</span><b>${escapeHtml(r.label)}</b><span class="m">· ${r.expiresInMin} min left</span></div><p class="n">${escapeHtml(r.note || '(no details)')}</p><p class="m">▲ ${r.up} · ▼ ${r.down}</p></div>`
+  ).join('') || '<p class="meta">No reports yet — be the first to add one.</p>';
+  const body = `<p><b>Tukuk Traffic</b> is a small, community-run road board: anyone can drop a pin for a jam, an accident, a police checkpoint, a hazard, a road closure, a speed camera, heavy rain or a fuel-price tip. Reports <b>fade out automatically</b> as they age (traffic in an hour, closures in a day, cameras in a week), and every driver can up-vote what they still see or down-vote what has cleared — so the map shows <em>the road right now</em>, not a stale archive. There is no login, no account and no location tracking: it is a shared whiteboard for anyone on the road.</p>
+  <div class="trf-fabs">
+    <button class="trf-btn primary" id="trf-new">➕ New report</button>
+    <button class="trf-btn" id="trf-me">🎯 Near me</button>
+    <button class="trf-btn" id="trf-refresh">🔄 Refresh</button>
+    <span id="trf-status">${activeCount} active reports worldwide · auto-refresh every 30s</span>
+  </div>
+  <div id="trf-filters">${chipsHtml}</div>
+  <div id="trf-form">
+    <p class="lbl">1. <b>Tap anywhere on the map</b> to place your pin — or use “Near me” above. Current pin: <span class="coord" id="trf-pin">no pin yet</span></p>
+    <p class="lbl">2. Choose what you are reporting:</p>
+    <div id="trf-types">${Object.entries(trf.TYPES).map(([k, t]) => `<button type="button" class="trf-btn trf-type" data-type="${k}" style="margin:2px 4px 4px 0"><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${t.color};vertical-align:middle;margin-right:5px"></span>${escapeHtml(t.emoji + ' ' + t.label)}</button>`).join('')}</div>
+    <p class="lbl">3. Optional details (max 140 characters):</p>
+    <textarea id="trf-note" maxlength="140" placeholder="e.g. two lanes blocked on the north approach, expect 15 min delay"></textarea>
+    <p class="lbl" id="trf-form-msg" style="min-height:1.2em"></p>
+    <p><button class="trf-btn primary" id="trf-submit" disabled>Submit report</button> <button class="trf-btn" id="trf-cancel" type="button">Cancel</button></p>
+  </div>
+  <div id="trf-wrap">
+    <div id="trf-map" role="application" aria-label="Live road-report map"></div>
+    <aside id="trf-side"><h3>Latest reports</h3><div id="trf-list">${listHtml}</div></aside>
+  </div>
+  <noscript><p>JavaScript is required for the interactive map. Reload with JS enabled, or browse the <a href="/cuaca">world weather</a> instead.</p></noscript>
+  <h2 class="section-title">How the community keeps it honest</h2>
+  <p>Every report has a <b>time-to-live</b>: a traffic-jam report naturally clears within an hour, police checkpoints within three, closures stay posted for a full day, and speed cameras — being fixed objects — persist for a week. The clock starts the moment you post. Up-votes from other drivers extend the clock a little (up to ten extra minutes per vote, capped at six votes’ worth), and once a report has five more down-votes than up-votes it disappears immediately. That way we never need a human moderator: the crowd trims the board by itself.</p>
+  <h2 class="section-title">What this is not</h2>
+  <p>Tukuk Traffic is <b>not a turn-by-turn navigation app</b> and we do not offer live GPS routing or ETA prediction. It is a plain community notice board with a map on it. Nothing here is verified by authorities — use it as a heads-up alongside your own judgement and always obey local traffic laws.</p>
+  <h2 class="section-title">Data &amp; privacy</h2>
+  <p>Reports are anonymous. We do not attach any user ID, IP address or device fingerprint to a post. Coordinates are rounded to 5 decimal places (roughly a metre), and we keep at most 500 active reports on the server at any time. Old rows are removed automatically on every read and every write.</p>
+  <p class="meta">Base map: © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors, rendered with Leaflet. Data: this site only — stored in <code>data/traffic.json</code>, reloaded atomically.</p>`;
+  const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+    + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
+    + `<script>(function(){var TYPES=${typeMeta};var SEED=${initialReports};var all=SEED.slice();var pin=null;var chosenType=null;var voted={};var markers={};var activeTypes={};Object.keys(TYPES).forEach(function(k){activeTypes[k]=true;});function fmtAgo(ms){var m=Math.max(0,Math.round((Date.now()-ms)/60000));if(m<1)return'moments ago';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+' hr ago';return Math.floor(h/24)+' d ago';}
+function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('trf-map',{zoomControl:true,scrollWheelZoom:true}).setView([20,20],2);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'}).addTo(m);window.__trfMap=m;render(m);
+  m.on('click',function(e){pin=[e.latlng.lat.toFixed(5),e.latlng.lng.toFixed(5)];document.getElementById('trf-pin').textContent=pin.join(', ');showForm();var b=document.getElementById('trf-submit');if(b&&chosenType)b.disabled=false;});}
+function showForm(){document.getElementById('trf-form').classList.add('show');}
+function hideForm(){document.getElementById('trf-form').classList.remove('show');}
+function clearMarkers(){var m=window.__trfMap;Object.keys(markers).forEach(function(id){if(markers[id])m.removeLayer(markers[id]);delete markers[id];});}
+function render(m){clearMarkers();var list=document.getElementById('trf-list');if(!list||!m)m=window.__trfMap;var shown=all.filter(function(r){return activeTypes[r.type];});shown.forEach(function(r){var t=TYPES[r.type];if(!t)return;var mk=L.circleMarker([r.lat,r.lon],{radius:9,color:t.color,weight:2,fillColor:t.color,fillOpacity:.55}).addTo(m);mk.bindPopup('<b>'+t.emoji+' '+t.label+'</b><br>'+(r.note||'')+'<br><small>'+fmtAgo(r.createdAt)+' · ▲'+r.up+' ▼'+r.down+' · '+r.expiresInMin+' min left</small><br><button data-vote="up" data-id="'+r.id+'" class="trf-btn" style="padding:2px 8px">👍 still here</button> <button data-vote="down" data-id="'+r.id+'" class="trf-btn" style="padding:2px 8px">👎 cleared</button>');markers[r.id]=mk;});
+  list.innerHTML=shown.slice(0,25).map(function(r){var t=TYPES[r.type];return '<div class="trf-row" data-id="'+r.id+'"><div class="t">'+t.emoji+' <b>'+t.label+'</b><span class="m">· '+fmtAgo(r.createdAt)+'</span></div><p class="n">'+((r.note||'').replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];}))+'</p><p class="trf-v"><button data-vote="up" data-id="'+r.id+'">▲ '+r.up+'</button><button data-vote="down" data-id="'+r.id+'">▼ '+r.down+'</button><span class="m">· '+r.expiresInMin+' min left</span></p></div>';}).join('')||'<p class="meta">No reports match the current filter.</p>';}
+function fetchReports(){return fetch('/api/traffic/reports').then(function(x){return x.json();}).then(function(j){all=j.reports||[];render(window.__trfMap);var s=document.getElementById('trf-status');if(s)s.textContent=all.length+' active reports worldwide · refreshed '+new Date().toLocaleTimeString();}).catch(function(){var s=document.getElementById('trf-status');if(s)s.textContent='could not refresh — will retry';});}
+function vote(id,dir){if(voted[id+':'+dir])return;voted[id+':'+dir]=1;fetch('/api/traffic/vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,dir:dir})}).then(function(x){return x.json();}).then(function(j){if(!j.ok){delete voted[id+':'+dir];return;}for(var i=0;i<all.length;i++){if(all[i].id===id){all[i]=j.report;break;}}render(window.__trfMap);}).catch(function(){delete voted[id+':'+dir];});}
+function submit(){if(!pin||!chosenType)return;var note=document.getElementById('trf-note').value||'';var msg=document.getElementById('trf-form-msg');msg.textContent='submitting…';fetch('/api/traffic/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:+pin[0],lon:+pin[1],type:chosenType,note:note})}).then(function(x){return x.json();}).then(function(j){if(!j.ok){msg.textContent='⚠ '+j.error;return;}all.unshift(j.report);render(window.__trfMap);msg.textContent='✅ posted — thank you!';pin=null;chosenType=null;document.getElementById('trf-note').value='';document.getElementById('trf-pin').textContent='no pin yet';document.querySelectorAll('.trf-type').forEach(function(b){b.style.outline='';});setTimeout(function(){hideForm();msg.textContent='';},1500);}).catch(function(){msg.textContent='⚠ network error';});}
+document.addEventListener('DOMContentLoaded',function(){boot();
+  document.getElementById('trf-new').onclick=function(){showForm();};
+  document.getElementById('trf-cancel').onclick=function(){hideForm();};
+  document.getElementById('trf-refresh').onclick=function(){fetchReports();};
+  document.getElementById('trf-me').onclick=function(){if(!navigator.geolocation){alert('Your browser does not expose location.');return;}navigator.geolocation.getCurrentPosition(function(p){var c=[p.coords.latitude,p.coords.longitude];window.__trfMap.setView(c,13);pin=[c[0].toFixed(5),c[1].toFixed(5)];document.getElementById('trf-pin').textContent=pin.join(', ');showForm();document.getElementById('trf-submit').disabled=!chosenType;},function(e){alert('Location denied: '+(e.message||''));});};
+  document.getElementById('trf-submit').onclick=submit;
+  document.querySelectorAll('.trf-type').forEach(function(b){b.onclick=function(){document.querySelectorAll('.trf-type').forEach(function(x){x.style.outline='';});b.style.outline='2px solid var(--accent)';chosenType=b.dataset.type;if(pin)document.getElementById('trf-submit').disabled=false;};});
+  document.querySelectorAll('.trf-chip').forEach(function(c){c.onclick=function(){var k=c.dataset.type;activeTypes[k]=!activeTypes[k];c.classList.toggle('on',!activeTypes[k]?false:true);if(!activeTypes[k])c.classList.add('on');else c.classList.remove('on');render(window.__trfMap);c.classList.toggle('on',!activeTypes[k]);};});
+  document.addEventListener('click',function(e){var t=e.target;if(t&&t.dataset&&t.dataset.vote&&t.dataset.id){vote(t.dataset.id,t.dataset.vote);}});
+  setInterval(fetchReports,30000);
+});})();</script>`;
+  return worldDoc({
+    title: 'Tukuk Traffic — Community Road Reports, Live Hazards, Police, Closures & Jams | Tukuk-OS',
+    desc: 'A free, anonymous, community-maintained road map: report and see traffic jams, accidents, police checkpoints, road hazards, closures, speed cameras, heavy rain and fuel prices in real time — anywhere in the world.',
+    selfUrl: 'https://tukuk.org/traffic',
+    heroTitle: '🚦 Tukuk Traffic',
+    heroSub: 'Community road reports · auto-fading · no login · worldwide',
+    css: TRAFFIC_CSS,
+    body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Traffic',
+      applicationCategory: 'NavigationApplication', operatingSystem: 'Web',
+      description: 'Community road reports — traffic, accidents, police, hazards, closures, cameras, rain and fuel prices.',
+      url: 'https://tukuk.org/traffic', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+    }).replace(/</g, '\\u003c')
+  });
+}
+
+function trafficBusy() {
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Tukuk Traffic is briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🚦 Tukuk Traffic</h1><p>The traffic board is briefly unavailable while the server reloads. Reports are cached, so please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
 }
 
 // ── /sejarah — "On this day" (Wikipedia REST feed, API-backed + 30d cache SWR) ─
