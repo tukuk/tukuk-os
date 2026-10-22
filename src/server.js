@@ -41,6 +41,7 @@ const taskrouter = require('./brain/taskrouter');
 const approuter = require('./brain/approuter');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
+const muzikApi = require('./muzik');
 const reranker = require('./brain/reranker');
 const builderGen = require('./builder-gen');
 const templates = require('./brain/templates');
@@ -1698,6 +1699,40 @@ app.get('/alat/gambar', (req, res) => {
   }
 });
 
+// ── /muzik — World Music Charts (Apple keyless feeds, 24h SWR cache in src/muzik.js) ──
+app.get('/muzik', async (req, res) => {
+  try {
+    res.status(200).type('html').send(await muzikHubPage());
+  } catch (e) {
+    console.warn('[muzik] render failed:', e.message);
+    res.status(503).type('html').send(muzikBusy());
+  }
+});
+
+// The 30-second preview clip for one chart track (iTunes Lookup, cached a week).
+app.get('/muzik/api/preview', limiter.search, async (req, res) => {
+  try {
+    res.json(await muzikApi.previewFor(req.query.id));
+  } catch (e) {
+    res.status(e.notFound ? 404 : 502).json({ error: 'preview unavailable', details: safeError(e) });
+  }
+});
+
+// One country's Top 25. The code must be a storefront we verified against the live feed.
+app.get('/muzik/:cc', async (req, res) => {
+  const cc = String(req.params.cc || '').toLowerCase();
+  if (!muzikApi.hasCountry(cc)) {
+    res.status(404).type('html').send(muzikNotFoundPage());
+    return;
+  }
+  try {
+    res.status(200).type('html').send(await muzikChartPage(cc));
+  } catch (e) {
+    console.warn('[muzik/' + cc + '] render failed:', e.message);
+    res.status(503).type('html').send(muzikBusy());
+  }
+});
+
 // Two places → straight-line (great-circle) plus the road reality in one
 // round trip. The road leg reuses the same router as /peta; when no road
 // exists the straight number still answers honestly, with the reason attached.
@@ -3091,7 +3126,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -4361,6 +4396,7 @@ function siteHeader(active) {
       ${link('/peta', 'Maps', 'peta')}
       ${link('/social', 'Social', 'social')}
       ${link('/alat', 'Tools', 'alat')}
+      ${link('/muzik', 'Music', 'muzik')}
       ${link('/learn', 'Learn', 'learn')}
       ${link('/games', 'Games', 'games')}
       <a href="https://build.tukuk.org" rel="noopener">Build</a>
@@ -4397,6 +4433,7 @@ function siteFooter() {
       <li><a href="/peta">Maps &amp; Navigation — Route Planner</a></li>
       <li><a href="/social">Social &amp; Community — Chat, Posts &amp; Stories</a></li>
       <li><a href="/alat">Everyday Tools — Converters, Calculators &amp; Generators</a></li>
+      <li><a href="/muzik">World Music Charts — Daily Top 25 From 90 Countries</a></li>
       <li><a href="/apps/chat">T Chat — Free Messenger</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
@@ -9942,6 +9979,156 @@ $('g-q').onchange=run;
       url: 'https://tukuk.org/alat/gambar', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, toolsNav());
+}
+
+// ── /muzik — World Music Charts (SSR over the 24h SWR cache in src/muzik.js) ──────
+const MUZIK_CSS = `.mz-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+@media(max-width:900px){.mz-tiles{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:540px){.mz-tiles{grid-template-columns:1fr}}
+.mz-tile{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--panel,#171a21);text-decoration:none;color:inherit;min-width:0}
+.mz-tile:hover{border-color:var(--accent,#4c8dff)}
+.mz-tile img{width:54px;height:54px;border-radius:8px;object-fit:cover;flex:none}
+.mz-tile b{display:block;font-size:.9rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mz-tile span{display:block;font-size:.78rem;color:var(--muted,#9aa3b2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mz-tile .cc{font-size:.82rem;margin-bottom:2px;color:var(--muted,#9aa3b2)}
+.mz-reg{color:var(--accent,#4c8dff);margin:16px 0 4px;font-size:1rem}
+.mz-chip{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin:3px;text-decoration:none;color:inherit;font-size:.85rem;background:var(--panel,#171a21)}
+.mz-chip:hover{border-color:var(--accent,#4c8dff)}
+.mz-li{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:6px 0;background:var(--panel,#171a21)}
+.mz-li .rk{width:28px;text-align:right;font-weight:700;color:var(--muted,#9aa3b2);flex:none}
+.mz-li img{width:52px;height:52px;border-radius:8px;object-fit:cover;flex:none}
+.mz-li .tt{flex:1;min-width:0}
+.mz-li .tt b{display:block;font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mz-li .tt b a{color:inherit;text-decoration:none}
+.mz-li .tt b a:hover{color:var(--accent,#4c8dff);text-decoration:underline}
+.mz-li .tt span{font-size:.78rem;color:var(--muted,#9aa3b2)}
+.mz-go{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--bg,#10131a);color:inherit;font-size:1rem;cursor:pointer}
+.mz-go:hover{border-color:var(--accent,#4c8dff);color:var(--accent,#4c8dff)}
+.mz-bar{position:fixed;left:0;right:0;bottom:0;display:none;gap:12px;align-items:center;background:var(--panel,#171a21);border-top:1px solid var(--line);padding:8px 16px;z-index:60}
+.mz-bar.on{display:flex}
+.mz-bar img{width:40px;height:40px;border-radius:8px;flex:none;visibility:hidden}
+.mz-prog{height:4px;background:var(--line);border-radius:2px;margin-top:6px;overflow:hidden}
+.mz-prog i{display:block;height:100%;width:0;background:var(--accent,#4c8dff)}
+.mz-x{border:1px solid var(--line);border-radius:8px;background:none;color:inherit;padding:6px 10px;cursor:pointer}`;
+
+function muzikNav() {
+  return worldNav('World Music Charts — tukuk.org/muzik', [
+    { href: '/muzik', icon: '🌍', name: 'All Country Charts', blurb: 'Every country with a live Top 25 on one page — pick a storefront and see what the world is playing today.' },
+    { href: '/muzik/us', icon: '🇺🇸', name: 'United States', blurb: 'Today’s American Top 25 with a 30-second preview of every song.' },
+    { href: '/muzik/gb', icon: '🇬🇧', name: 'United Kingdom', blurb: 'Today’s British Top 25 — the chart that has moved pop for seven decades.' },
+    { href: '/muzik/jp', icon: '🇯🇵', name: 'Japan', blurb: 'Today’s Japanese Top 25 — often a world entirely its own, and better for it.' },
+    { href: '/muzik/kr', icon: '🇰🇷', name: 'South Korea', blurb: 'Today’s Korean Top 25, home of the biggest fandom machine on the planet.' },
+    { href: '/muzik/ng', icon: '🇳🇬', name: 'Nigeria', blurb: 'Today’s Nigerian Top 25 — Afrobeats’ home ground.' },
+    { href: '/muzik/br', icon: '🇧🇷', name: 'Brazil', blurb: 'Today’s Brazilian Top 25 — funk, sertanejo and whatever the radio can’t stop playing.' },
+  ]);
+}
+
+async function muzikHubPage() {
+  const w = await muzikApi.worldTop();
+  const tiles = w.tiles.map((t) => `<a class="mz-tile" href="/muzik/${t.cc}"><img src="${escapeHtml(t.song.artwork)}" width="54" height="54" loading="lazy" alt="">`
+    + `<div style="min-width:0"><div class="cc">${t.country.flag} ${escapeHtml(t.country.name)}</div>`
+    + `<b>№ 1 · ${escapeHtml(t.song.name)}</b><span>${escapeHtml(t.song.artist)}</span></div></a>`).join('');
+  const byRegion = muzikApi.REGIONS.map((r) => `<h2 class="mz-reg">${r}</h2><div>`
+    + muzikApi.allCountries().filter((c) => c.region === r)
+      .map((c) => `<a class="mz-chip" href="/muzik/${c.cc}">${c.flag} ${escapeHtml(c.name)}</a>`).join('')
+    + '</div>').join('');
+  const body = `<p><b>What is each country listening to right now?</b> Every day Apple publishes a “Most Played” chart per country storefront — streams and radio, counted by the same company that pays the labels. We fetch them all, cache them for a day, and put the whole world’s listening on one page. No account, no cookie wall, no algorithm pretending to be news.</p>
+  <h2 class="section-title">Today’s № 1 around the world</h2>
+  <div class="mz-tiles">${tiles}</div>
+  <h2 class="section-title">All ${muzikApi.allCountries().length} country charts</h2>
+  <p>Pick a country and you get its live <b>Top 25</b> — album art, genre, release year, and a one-tap <b>30-second preview</b> of every single song, played right here.</p>
+  ${byRegion}
+  <h2 class="section-title">Where the numbers come from</h2>
+  <p>Charts are Apple’s public daily <i>Most Played</i> feeds; previews are the official iTunes 30-second clips. Our copies refresh every 24 hours, and every chart page states exactly when its feed was published — no invented rankings, no “trends” that aren’t. Countries whose feed Apple does not publish (we verified all of them live) simply aren’t listed.</p>
+  <p class="meta">Prefer live presenters and whole genres? The <a href="/social">community pages</a> link out to radio tools — charts are what people already played.</p>`;
+  return worldDoc({
+    title: 'World Music Charts — What Every Country Is Listening To Today | Tukuk-OS',
+    desc: 'Daily Top 25 charts for 90 countries — what each nation is actually playing right now, with album art and a 30-second preview of every song. Free, no account, updated daily from Apple’s public Most Played feeds.',
+    selfUrl: 'https://tukuk.org/muzik',
+    heroTitle: '🎵 World Music Charts', heroSub: `Today’s № 1 in ${w.tiles.length} highlight countries · full Top 25 for ${muzikApi.allCountries().length} storefronts`,
+    css: MUZIK_CSS, body,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'World Music Charts',
+      description: 'Daily Apple Most Played charts for 90 countries with 30-second previews.',
+      url: 'https://tukuk.org/muzik',
+      mainEntity: { '@type': 'ItemList', itemListElement: w.tiles.map((t, i) => ({ '@type': 'ListItem', position: i + 1, name: t.song.name + ' — ' + t.song.artist, url: 'https://tukuk.org/muzik/' + t.cc })) },
+    }).replace(/</g, '\\u003c'),
+  }, muzikNav());
+}
+
+async function muzikChartPage(cc) {
+  const c = muzikApi.countryOf(cc);
+  const ch = await muzikApi.countryChart(cc);
+  const stale = Date.now() - ch.fetchedAt > 25 * 60 * 60 * 1000; // past TTL + an hour of grace
+  const rows = ch.rows.map((s) => `<div class="mz-li"><div class="rk">${s.rank}</div>`
+    + `<img src="${escapeHtml(s.artwork)}" width="52" height="52" loading="lazy" alt="">`
+    + `<div class="tt"><b><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.name)}</a></b>`
+    + `<span>${escapeHtml(s.artist)} · ${escapeHtml(s.genre)} · ${escapeHtml(String(s.releaseDate).slice(0, 4))}</span></div>`
+    + `<button class="mz-go" type="button" data-id="${escapeHtml(s.id)}" aria-label="Play a preview of ${escapeHtml(s.name)}">▶</button></div>`).join('');
+  const siblings = muzikApi.allCountries().filter((x) => x.region === c.region && x.cc !== c.cc)
+    .map((x) => `<a class="mz-chip" href="/muzik/${x.cc}">${x.flag} ${escapeHtml(x.name)}</a>`).join('');
+  const body = `${stale ? '<p class="meta">⚠ The Apple feed is briefly unreachable — this is the last chart we fetched successfully, published ' + escapeHtml(ch.updated) + '.</p>' : ''}
+  <div>${rows}</div>
+  <noscript><p>The play buttons need JavaScript, but the chart itself is plain server-rendered HTML.</p></noscript>
+  <h2 class="section-title">About this chart</h2>
+  <p>Apple’s <i>Most Played</i> for ${escapeHtml(c.name)}, published ${escapeHtml(ch.updated)} — a mix of streaming plays and radio listenership in that storefront, refreshed daily. Song titles link out to Apple Music; ▶ plays the official 30-second preview clip from iTunes (a preview is a preview — the full track is longer, and we show its real length in the player).</p>
+  <h2 class="section-title">More from ${escapeHtml(c.region)}</h2>
+  <div>${siblings}</div>
+  <p class="meta">All countries: <a href="/muzik">World Music Charts</a>.</p>
+  <div class="mz-bar" id="mz-bar"><img id="mz-art" width="40" height="40" alt="">
+    <div style="flex:1;min-width:0"><b id="mz-title" style="display:block;font-size:.9rem"></b><span id="mz-note" style="font-size:.78rem;color:var(--muted,#9aa3b2)"></span>
+    <div class="mz-prog"><i id="mz-fill"></i></div></div>
+    <button class="mz-x" id="mz-x" type="button" aria-label="Close player">✕</button>
+  </div>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+var audio=new Audio(),btns=[].slice.call(document.querySelectorAll('.mz-go'));
+function reset(){btns.forEach(function(b){b.textContent='▶';b.removeAttribute('data-on');});}
+btns.forEach(function(b){b.onclick=function(){
+ if(b.getAttribute('data-on')){audio.pause();return;}
+ if(!audio.paused)audio.pause();
+ reset();b.textContent='…';b.setAttribute('data-on','1');
+ var id=b.getAttribute('data-id');
+ fetch('/muzik/api/preview?id='+encodeURIComponent(id)).then(function(r){
+  if(!r.ok)throw new Error('http '+r.status);return r.json();
+ }).then(function(j){
+  $('mz-art').src=j.artwork;$('mz-art').style.visibility='visible';
+  $('mz-title').textContent=j.trackName+' — '+j.artist;
+  var fs=Math.round(j.fullMs/1000);
+  $('mz-note').textContent='official 30-second preview · full track '+(fs>0?fs+' s':'length unknown');
+  $('mz-bar').classList.add('on');
+  audio.src=j.previewUrl;
+  audio.play().catch(function(){$('mz-note').textContent='⚠ press play once more — browsers block sound until you interact';});
+ }).catch(function(){
+  reset();$('mz-bar').classList.add('on');$('mz-art').style.visibility='hidden';
+  $('mz-title').textContent='⚠ preview unavailable right now';$('mz-note').textContent='';
+ });
+};});
+audio.onpause=reset;
+audio.onended=function(){reset();$('mz-fill').style.width='0';};
+audio.ontimeupdate=function(){var d=audio.duration||1;$('mz-fill').style.width=Math.min(100,Math.round(audio.currentTime/d*100))+'%';};
+$('mz-x').onclick=function(){audio.pause();$('mz-bar').classList.remove('on');reset();};
+})();</script>`;
+  return worldDoc({
+    title: `${c.name} Music Chart Today — Top 25 With Previews | Tukuk-OS`,
+    desc: `Today's Apple Most Played Top 25 for ${c.name}: every song with album art, genre, release year and an official 30-second preview — free, no account needed.`,
+    selfUrl: `https://tukuk.org/muzik/${c.cc}`,
+    heroTitle: `${c.flag} ${c.name} — Top 25`, heroSub: `№ 1 today: ${ch.rows[0].name} — ${ch.rows[0].artist}`,
+    css: MUZIK_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebPage', name: `${c.name} — Daily Top 25 Music Chart`,
+      description: `Apple Most Played chart for ${c.name} with 30-second previews.`,
+      url: `https://tukuk.org/muzik/${c.cc}`,
+    }).replace(/</g, '\\u003c'),
+  }, muzikNav());
+}
+
+function muzikNotFoundPage() {
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>No chart for that country | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🎵 No chart for that country</h1><p>Apple does not publish a Most Played feed for that storefront code (we only list countries whose feeds we verified live). Browse them all instead:</p><p><a href="/muzik">→ World Music Charts</a></p></body></html>`;
+}
+
+function muzikBusy() {
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Music charts briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🎵 World Music Charts</h1><p>The chart page failed to render while the server reloaded, or Apple’s feed was unreachable on a cold start. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
 }
 
 // ── /social — Community & Social hub (aggregate counters + where to join) ─────
