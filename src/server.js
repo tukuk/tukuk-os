@@ -10085,26 +10085,26 @@ function $(id){return document.getElementById(id);}
 var audio=new Audio(),btns=[].slice.call(document.querySelectorAll('.mz-go'));
 function reset(){btns.forEach(function(b){b.textContent='▶';b.removeAttribute('data-on');});}
 btns.forEach(function(b){b.onclick=function(){
- if(b.getAttribute('data-on')){audio.pause();return;}
+ if(b.getAttribute('data-on')){audio.pause();reset();return;}
  if(!audio.paused)audio.pause();
  reset();b.textContent='…';b.setAttribute('data-on','1');
  var id=b.getAttribute('data-id');
  fetch('/muzik/api/preview?id='+encodeURIComponent(id)).then(function(r){
   if(!r.ok)throw new Error('http '+r.status);return r.json();
  }).then(function(j){
+  if(!b.getAttribute('data-on'))return; // user moved on while we were fetching
   $('mz-art').src=j.artwork;$('mz-art').style.visibility='visible';
   $('mz-title').textContent=j.trackName+' — '+j.artist;
   var fs=Math.round(j.fullMs/1000);
   $('mz-note').textContent='official 30-second preview · full track '+(fs>0?fs+' s':'length unknown');
   $('mz-bar').classList.add('on');
   audio.src=j.previewUrl;
-  audio.play().catch(function(){$('mz-note').textContent='⚠ press play once more — browsers block sound until you interact';});
+  audio.play().then(function(){b.textContent='⏸';}).catch(function(){reset();$('mz-note').textContent='⚠ press play once more — browsers block sound until you interact';});
  }).catch(function(){
   reset();$('mz-bar').classList.add('on');$('mz-art').style.visibility='hidden';
   $('mz-title').textContent='⚠ preview unavailable right now';$('mz-note').textContent='';
  });
 };});
-audio.onpause=reset;
 audio.onended=function(){reset();$('mz-fill').style.width='0';};
 audio.ontimeupdate=function(){var d=audio.duration||1;$('mz-fill').style.width=Math.min(100,Math.round(audio.currentTime/d*100))+'%';};
 $('mz-x').onclick=function(){audio.pause();$('mz-bar').classList.remove('on');reset();};
