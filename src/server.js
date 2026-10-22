@@ -6901,7 +6901,8 @@ function wikiFooter() {
   return `<div class="wrap"><footer class="wiki-catbar" style="border:0;border-top:1px solid #c8ccd1;text-align:center;margin:30px 0 40px">` +
     `<div>This page was last edited on ${today}. Written for the Tukuk-OS Wiki \u2014 free, no account needed. See our <a href="/privacy">privacy</a> &amp; <a href="/terms">terms</a>.</div>` +
     `<div style="margin-top:8px"><a href="/">Home</a> \u00b7 <a href="/wiki">Wiki</a> \u00b7 <a href="/blog">Blog</a> \u00b7 <a href="/learn">Learn</a> \u00b7 <a href="/docs">Docs</a> \u00b7 <a href="/about">About</a></div>` +
-    `</footer></div>`;
+    `</footer></div>` +
+    `<script src="/read-aloud.js" defer></script>`;
 }
 
 // Add an id to the <h2>/<h3> inside the article HTML + build the Table of Contents (TOC).

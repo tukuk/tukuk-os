@@ -30,14 +30,51 @@
     for (var i = 0; i < dead.length; i++) dead[i].parentNode.removeChild(dead[i]);
     var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
     if (!text) return [];
-    // Sentences of ~≤240 chars: split on . ! ? … ; long sentences are force-cut.
-    var raw = text.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || [text];
-    var out = [];
-    for (var j = 0; j < raw.length; j++) {
-      var s = raw[j].trim();
-      while (s.length > 240) { out.push(s.slice(0, 240)); s = s.slice(240); }
-      if (s) out.push(s);
+    return splitSentences(text);
+  }
+
+  // A naive split on ".!?" breaks on decimals (8,848.86 → "8,848." + "86"),
+  // initials (J.R.R.) and common abbreviations (e.g. Dr. km m etc.) — that
+  // reads as a jumble of wrong tiny fragments, and this site's weather /
+  // geography / science clusters are full of measurements. So split by hand:
+  // a "." only ends a sentence when the NEXT character is whitespace/end AND
+  // the run before it is not a known abbreviation and not a single-letter
+  // initial — otherwise keep it inside the current chunk.
+  var ABBREV = /(?:^|\s)(mr|mrs|ms|dr|prof|st|jr|sr|no|vs|etc|i\.e|e\.g|inc|ltd|co|corp|dept|approx|est|fig|vol|ed|trans|mt|ft|in|km|m|kg|lb|cm|mm|hr|min|sec|al|jl|dsb|dll|telp)\.$/i;
+  // Single-letter initial: an uppercase letter right before the dot that itself
+  // starts a token (start/space/dot after the previous initial — "J.R.R.").
+  function isInitial(text, i) {
+    var p = text[i - 1], pp = text[i - 2];
+    return !!p && /[A-Z]/.test(p) && (pp === undefined || pp === '.' || /\s/.test(pp));
+  }
+  function isDecimal(word, punct, nextChar) { return punct === '.' && /\d$/.test(word) && /^\d/.test(nextChar); }
+  function splitSentences(text) {
+    var out = [], buf = '';
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      buf += ch;
+      if (ch === '.' || ch === '!' || ch === '?' || ch === '\u2026') {
+        var next = text[i + 1] || '';
+        var prevMatch = buf.slice(0, -1).match(/(\S+)$/);
+        var lastWord = prevMatch ? prevMatch[1] : '';
+        var nextNonSpace = (text.slice(i + 1).match(/\S/) || [''])[0];
+        var endsSentence = (next === '' || /\s/.test(next))
+          && !isDecimal(lastWord, ch, nextNonSpace)
+          && !(ch === '.' && isInitial(text, i))
+          && !(ch === '.' && ABBREV.test(buf));
+        if (endsSentence) { var t = buf.trim(); if (t) out.push(t); buf = ''; }
+      } else if (buf.length > 240) {
+        // Force-cut an over-long run at the nearest preceding space so we never
+        // slice mid-word (the old version hard-sliced at exactly 240 chars).
+        var cut = buf.lastIndexOf(' ', 240);
+        if (cut < 40) cut = 240;
+        var piece = buf.slice(0, cut).trim();
+        if (piece) out.push(piece);
+        buf = buf.slice(cut);
+      }
     }
+    var tail = buf.trim();
+    if (tail) out.push(tail);
     return out;
   }
 
