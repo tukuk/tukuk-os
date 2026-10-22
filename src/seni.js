@@ -71,7 +71,7 @@ async function searchIds(opts) {
   if (hit && !hit.stale) return hit.data;
   const res = await http.get(`${API}/v1.1/search`, { params });
   const body = res.data || {};
-  if (!Array.isArray(body.objectIDs)) throw new Error('tiada objectIDs');
+  if (!Array.isArray(body.objectIDs)) throw new Error('no objectIDs');
   const out = { total: Number(body.total) || body.objectIDs.length, ids: body.objectIDs };
   cacheSet(key, out, TTL_SEARCH);
   return out;

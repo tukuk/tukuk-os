@@ -253,7 +253,7 @@ async function getAPOD({ date, count, force } = {}) {
           return res.data;
         }
         lastError = new Error('invalid APOD payload from the NASA API');
-        if (process.env.NASA_DEBUG === '1') console.error('[apod] attempt' , attempt, 'tak sah:', JSON.stringify(res.data).slice(0, 120));
+        if (process.env.NASA_DEBUG === '1') console.error('[apod] attempt' , attempt, 'not valid:', JSON.stringify(res.data).slice(0, 120));
       } catch (err) {
         lastError = err;
         if (process.env.NASA_DEBUG === '1') console.error('[apod] attempt', attempt, err.response?.status || err.code || err.message);
@@ -448,7 +448,7 @@ async function getNearEarthObjects({ startDate, endDate } = {}) {
     };
 
     const res = await apiHttp.get(`${config.nasa.baseUrl}/neo/rest/v1/feed`, { params, timeout: 8000 });
-    if (!res.data || !res.data.near_earth_objects) throw new Error('payload NeoWs tidak sah');
+    if (!res.data || !res.data.near_earth_objects) throw new Error('invalid NeoWs payload');
     const rawObjects = res.data.near_earth_objects || {};
     const formatted = [];
 
@@ -674,7 +674,7 @@ async function getISSTelemetry() {
   try {
     const res = await http.get('https://api.wheretheiss.at/v1/satellites/25544', { timeout: 6000 });
     const d = res.data || {};
-    if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) throw new Error('payload ISS tidak sah');
+    if (!Number.isFinite(d.latitude) || !Number.isFinite(d.longitude)) throw new Error('invalid ISS payload');
     const data = {
       name: 'iss',
       latitude: d.latitude,
@@ -1193,7 +1193,7 @@ async function getExoplanets({ limit = 250 } = {}) {
       disc_year: Number(r.disc_year) || null,
       period_days: Number(r.pl_orbper) ? Math.round(r.pl_orbper * 1000) / 1000 : null
     })).filter(p => p.name);
-    if (!planets.length) throw new Error('arkib tidak mengembalikan sebarang baris');
+    if (!planets.length) throw new Error('the archive returned no rows');
     const result = {
       count: planets.length,
       generatedAt: new Date().toISOString(),

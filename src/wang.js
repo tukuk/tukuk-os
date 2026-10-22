@@ -49,7 +49,7 @@ async function getLatest(base) {
   try {
     const res = await http.get(`${BASE}/latest?base=${b}`);
     const d = res.data || {};
-    if (!d.rates) throw new Error('tiada rates');
+    if (!d.rates) throw new Error('no rates');
     const out = { source: 'live', base: d.base || b, date: d.date, rates: d.rates, fetchedAt: Date.now() };
     cacheSet(key, out, TTL_LATEST);
     if (hit && hit.data) cacheSet(`hist:${b}:${out.date.slice(0, 4)}`, hit.data, TTL_HIST);

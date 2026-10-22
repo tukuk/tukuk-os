@@ -535,9 +535,9 @@ async function ensureIndex({ logger = console } = {}) {
       await realClient.waitForTask(created.taskUid).catch(() => {});
       const task = await realClient.index(name).updateSettings(settings());
       await realClient.waitForTask(task.taskUid).catch(() => {});
-      logger.log(`[meili] index "${name}" dicipta + tetapan diterapkan.`);
+      logger.log(`[meili] index "${name}" created + settings applied.`);
     } catch (err2) {
-      logger.warn(`[meili] tak dapat sedia index sebenar (${err2.message}) — sandaran mock aktif.`);
+      logger.warn(`[meili] could not provision the real index (${err2.message}) — the mock fallback is active.`);
     }
   }
   return idx;

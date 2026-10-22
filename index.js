@@ -41,28 +41,28 @@ async function main() {
   let index = null;
   try {
     await waitForMeili();
-    console.log(`[meili] terhubung ke ${config.meili.host}`);
+    console.log(`[meili] connected to ${config.meili.host}`);
     index = await ensureIndex();
     crawler.setIndex(index);
-    console.log(`[meili] index sedia: ${config.indexName}`);
-    // Indekskan kandungan blog ke korpus utama supaya panduan/blog kurasi boleh
-    // dicari di /search (idempotent; non-blocking — jangan tahan cold start).
+    console.log(`[meili] index ready: ${config.indexName}`);
+    // Index the blog content into the main corpus so the curated guides/blog posts
+    // are searchable at /search (idempotent; non-blocking — don't hold up cold start).
     indexBlogPosts(index)
-      .then(({ count }) => { if (count > 0) console.log(`[blog-index] ${count} post blog boleh dicari`); })
-      .catch((err) => console.warn(`[blog-index] dilewati: ${err.message}`));
-    // Halaman hub kluster geo juga milik korpus kami — dibina daripada data
-    // yang sudah dimuat (tiada HTTP), ditangguh supaya cold start tidak berat.
-    // Tanpa ini /ask & /search buta terhadap 612 kluster yang kami sendiri hidang.
+      .then(({ count }) => { if (count > 0) console.log(`[blog-index] ${count} blog posts are searchable`); })
+      .catch((err) => console.warn(`[blog-index] skipped: ${err.message}`));
+    // The geo cluster hub pages belong to our corpus too — built from data that is
+    // already loaded (no HTTP), deferred so cold start stays light. Without this,
+    // /ask and /search are blind to the 612 clusters that we ourselves serve.
     setTimeout(() => {
       indexGeoHubs(index, geoClusters())
         .then(({ count, skipped }) => {
-          if (!skipped) console.log(`[cluster-index] ${count} hub kluster boleh dicari`);
+          if (!skipped) console.log(`[cluster-index] ${count} cluster hubs are searchable`);
         })
-        .catch((err) => console.warn(`[cluster-index] dilewati: ${err.message}`));
+        .catch((err) => console.warn(`[cluster-index] skipped: ${err.message}`));
     }, 8000);
   } catch (error) {
-    // Jangan mati — enjin carian masih boleh menjawab daripada cache fallback.
-    console.warn(`[tukuk-os] AMARAN: ${error.message}`);
+    // Don't die — the search engine can still answer from the fallback cache.
+    console.warn(`[tukuk-os] WARNING: ${error.message}`);
     console.warn('[tukuk-os] search will use fallback mode until Meilisearch recovers.');
   }
 
@@ -76,42 +76,42 @@ async function main() {
     if (!config.brain.enabled) {
       console.log('[tukuk-os] brain disabled (BRAIN_ENABLED=false)');
     }
-    // Pra-refresh feed RSS supaya tab News pantas pada permintaan pertama.
+    // Pre-refresh the RSS feeds so the News tab is fast on the first request.
     setTimeout(() => {
       news.refresh()
-        .then((n) => { if (n > 0) console.log(`[news] ${n} item RSS sedia`); })
+        .then((n) => { if (n > 0) console.log(`[news] ${n} RSS items ready`); })
         .catch(() => {});
     }, 3000);
-    // Panaskan suapan gempa (USGS query boleh ambil ~8s) supaya pelawat pertama
-    // dapat cache serta-merta dan tak kena 503 sejuk. Non-blocking, gagal senyap.
+    // Warm the earthquake feeds (a USGS query can take ~8s) so the first visitor
+    // gets a warm cache instead of a cold 503. Non-blocking, fails silently.
     setTimeout(() => {
       Promise.all([
         gempa.regionFeed(gempa.findRegion('dunia')).catch(() => {}),
         gempa.regionFeed(gempa.findRegion('malaysia')).catch(() => []),
       ]).catch(() => {});
     }, 4000);
-    // Panaskan senarai objectID galeri seni (Met API) untuk sitemap-seni supaya GET
-    // pertama oleh crawler sudah sarat. buildObjectUrls jalan dalam latar, non-blocking
-    // & self-handled (tak reject); sitemap hidang statik dahulu jika masih sejuk.
+    // Warm the art-gallery objectID list (Met API) for sitemap-seni so the crawler's
+    // first GET is already loaded. buildObjectUrls runs in the background, non-blocking
+    // and self-handled (never rejects); the sitemap serves the static part if still cold.
     setTimeout(() => { seni.buildObjectUrls(3).catch(() => {}); }, 6000);
-    // Auto-update APOD + backfill arkib NASA — NYALI hanya bila NASA_AUTO=1.
-    // Halaman NASA sudah dibuang (fokus konten + server ringan); secara lalai
-    // dimatikan supaya tak bazir CPU/jaringan/disk pada VPS.
+    // APOD auto-update + NASA archive backfill — OFF unless NASA_AUTO=1.
+    // The NASA pages were removed (content focus + a light server); they are disabled
+    // by default so the VPS does not waste CPU/network/disk on them.
     if (process.env.NASA_AUTO === '1') {
       nasa.startApodAutoUpdate();
-      console.log(`[nasa] auto-update APOD setiap ${config.nasa.apodRefreshMinutes} minit`);
+      console.log(`[nasa] APOD auto-update every ${config.nasa.apodRefreshMinutes} minutes`);
       nasa.startArchiveBackfill();
     } else {
-      console.log('[nasa] kerja latar dimatikan (NASA_AUTO!=1) — mod konten/ringan');
+      console.log('[nasa] background work disabled (NASA_AUTO!=1) — content/light mode');
     }
   });
 
-  // WebSocket editor Tukuk Agent (/agent/...) —Upgrade lulus terus ke
-  // code-server tempatan; listener ini tak sentuh upgrade lain (chat SSE dsb.).
+  // The Tukuk Agent editor WebSocket (/agent/...) — an allowed Upgrade goes straight
+  // to the local code-server; this listener never touches other upgrades (chat SSE etc.).
   agentEditor.attachUpgrade(server, { config });
 
   const shutdown = (signal) => async () => {
-    console.log(`\n[tukuk-os] menerima ${signal}, menutup dengan perlahan...`);
+    console.log(`\n[tukuk-os] received ${signal}, shutting down gracefully...`);
     net.stop();
     nasa.stopApodAutoUpdate();
     nasa.stopArchiveBackfill();

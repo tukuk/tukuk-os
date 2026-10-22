@@ -61,9 +61,9 @@ function run() {
     }
   }
 
-  console.log(`[to-english] dikemas kini: ${updated}`);
-  if (missing.length) console.log('[to-english] TIADA dalam stor:', missing.join(', '));
-  console.log(`[to-english] jumlah artikel: ${store.getAllPosts(500).length}`);
+  console.log(`[to-english] updated: ${updated}`);
+  if (missing.length) console.log('[to-english] MISSING from the store:', missing.join(', '));
+  console.log(`[to-english] total articles: ${store.getAllPosts(500).length}`);
 
   const malay = /\b(yang|untuk|dengan|tidak|daripada|kepada|ialah|sebagai|boleh|saya|anda)\b/i;
   let suspect = 0;
@@ -71,10 +71,10 @@ function run() {
     const hits = (p.content.match(/\b(yang|dan|untuk|dengan|tidak|saya|anda|kepada|daripada|ialah|adalah|sebagai|boleh|telah|akan|serta|bagi|hanya|antara|kerana|masih|kini|segala|setiap|apabila|sebelum|selepas|membuat|menjadi|perlu|patut|seperti)\b/gi) || []).length;
     if (hits > 5) {
       suspect += 1;
-      console.log('  MASIH MELAYU?:', p.slug, hits);
+      console.log('  STILL MALAY?:', p.slug, hits);
     }
   }
-  console.log(`[to-english] artikel mencurigakan berbahasa Melayu: ${suspect}`);
+  console.log(`[to-english] suspicious Malay-language articles: ${suspect}`);
 }
 
 run();

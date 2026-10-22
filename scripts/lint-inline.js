@@ -1,23 +1,23 @@
-// Pemeriksa skop untuk skrip SEBARIS dalam HTML (dan fail JS biasa).
+// Scope checker for INLINE scripts inside HTML (and plain JS files).
 //
-// Kenapa: pelayar hanya menjatuh ralat apabila pengguna benar-benar menekan
-// sesuatu — misalnya `openView(msg, …)` yang merujuk pemboleh ubah di luar
-// skop, jadi `node --check` lulus tetapi butang mati. Alat ini mencari nama
-// yang diguna tetapi tidak diisytiharkan di mana-mana dalam rantaian skop.
+// Why: a browser only drops the ball when the user actually presses something — e.g.
+// `openView(msg, …)` referring to a variable outside its scope, so `node --check`
+// passes while the button is dead. This tool finds names that are used but never
+// declared anywhere in the scope chain.
 //
-// Guna:  node scripts/lint-inline.js public/apps/chat.html public/*.html
-//        (keluar bukan sifir jika ada pemboleh ubah gantung)
+// Use:   node scripts/lint-inline.js public/apps/chat.html public/*.html
+//        (exits non-zero when there are dangling variables)
 'use strict';
 const fs = require('fs');
 const path = require('path');
 
-// acorn + eslint-scope ada dalam pakej Debian (/usr/share/nodejs) dan juga
-// sebagai kebergantungan tak langsung ESLint; cuba selesaikan kedua-duanya.
+// acorn + eslint-scope exist in the Debian packages (/usr/share/nodejs) and also as
+// indirect ESLint dependencies; try to resolve both ways.
 const acorn = (() => { try { return require('acorn'); } catch { return require('/usr/share/nodejs/acorn/dist/acorn.js'); } })();
 const { analyze } = (() => { try { return require('eslint-scope'); } catch { return require('/usr/share/nodejs/eslint-scope/lib/index.js'); } })();
 
-// Global pelayar yang sah — senarai panjang sengaja, lebih baik terlepas
-// satu amaran daripada menenggelamkan isyarat sebenar.
+// Valid browser globals — the list is deliberately long; better to miss one warning
+// than to drown the real signal.
 const GLOBALS = new Set((`window document console localStorage sessionStorage navigator location history fetch XMLHttpRequest
   Image Audio Blob File FileList FileReader URL URLSearchParams ImageData MediaRecorder DataView ArrayBuffer SharedArrayBuffer createImageBitmap
   Uint8Array Uint8ClampedArray Uint16Array Uint32Array Int8Array Int16Array Int32Array Float32Array Float64Array BigInt
@@ -38,12 +38,12 @@ const GLOBALS = new Set((`window document console localStorage sessionStorage na
   ga dataLayer fbq chrome browser self top parent frames addEventListener removeEventListener dispatchEvent
   event clients windowWidth windowHeight origin location`).split(/\s+/));
 
-// Nama tambahan yang sah dalam fail CommonJS (pelayan).
+// Extra names that are legal in CommonJS files (the server).
 const NODE_GLOBALS = new Set(('require module exports __dirname __filename process Buffer global globalThis ' +
   'URL URLSearchParams fetch FormData Headers Request Response AbortController AbortSignal ' +
   'setImmediate clearImmediate TextEncoder TextDecoder BigInt Function eval').split(/\s+/));
 
-// Setiap blok <script> tanpa atribut src (skrip sebaris dalam HTML).
+// Every <script> block without a src attribute (an inline script inside HTML).
 function inlineScripts(html) {
   const out = [];
   const re = /<script([^>]*)>([\s\S]*?)<\/script>/g;
@@ -66,8 +66,8 @@ function patternNames(pat, set) {
   return set;
 }
 
-// Nama tahap atas daripada fail JS luar yang dirujuk (<script src="/theme.js">)
-// juga merupakan global semasa dijalankan.
+// Top-level names from the external JS files a page references (<script src="/theme.js">)
+// are also globals at run time.
 function externalNames(html, dir) {
   const names = new Set();
   for (const m of html.matchAll(/<script[^>]+src=["']([^"']+)["']/g)) {
@@ -83,20 +83,20 @@ function externalNames(html, dir) {
         else if (n.type === 'VariableDeclaration') n.declarations.forEach(d => patternNames(d.id, names));
         else if (n.type === 'ClassDeclaration' && n.id) names.add(n.id.name);
       }
-    } catch { /* fail tidak dapat dibaca — biarkan */ }
+    } catch { /* unreadable file — leave it alone */ }
   }
   return names;
 }
 
 let total = 0;
 const files = process.argv.slice(2);
-if (!files.length) { console.error('Guna: node scripts/lint-inline.js <fail.html|fail.js> [...]'); process.exit(2); }
+if (!files.length) { console.error('Use: node scripts/lint-inline.js <file.html|file.js> [...]'); process.exit(2); }
 
 for (const file of files) {
   const raw = fs.readFileSync(file, 'utf8');
   const isHtml = /\.html?$/i.test(file);
-  // Semua blok sebaris berkongsi skop global yang sama semasa dijalankan, jadi
-  // gabungkan dahulu; `map` memulangkan nombor baris HTML yang sebenar.
+  // All inline blocks share the same global scope at run time, so merge them first;
+  // `map` returns the real HTML line number.
   let src = raw, map = null;
   if (isHtml) {
     const parts = []; map = [];
@@ -109,7 +109,7 @@ for (const file of files) {
   const extra = isHtml ? externalNames(raw, path.dirname(file)) : NODE_GLOBALS;
 
   let ast;
-  // ESM dikesan secara kasar; jika gagal sebagai skrip biasa, cuba sebagai modul.
+  // ESM is detected roughly; if parsing fails as a plain script, retry as a module.
   const asModule = /^\s*(import|export)\s/m.test(src);
   const parseAs = (type) => acorn.parse(src, { ecmaVersion: 2022, sourceType: type, locations: true, ranges: true, allowHashBang: true });
   try { ast = parseAs(asModule ? 'module' : 'script'); }
@@ -119,8 +119,8 @@ for (const file of files) {
   }
 
   const sm = analyze(ast, { sourceType: asModule ? 'module' : 'script' });
-  // eslint-scope tidak menanda `resolved` untuk `function`/`var` tahap atas dalam
-  // skrip biasa (diselesaikan secara dinamik), jadi kumpulkan sendiri.
+  // eslint-scope does not mark `resolved` for top-level `function`/`var` declarations
+  // in a plain script (they resolve dynamically), so collect them ourselves.
   const topDecl = new Set([].concat(sm.globalScope.variables, (sm.globalScope.childScopes[0] || { variables: [] }).variables || [])
     .map(v => v.name));
   const lines = src.split('\n');
@@ -139,5 +139,5 @@ for (const file of files) {
   })(sm.globalScope);
   total += bad;
 }
-console.log(total ? 'FAIL — ' + total + ' pemboleh ubah gantung' : 'BERSIH — tiada pemboleh ubah gantung');
+console.log(total ? 'FAIL — ' + total + ' dangling variables' : 'CLEAN — no dangling variables');
 process.exit(total ? 1 : 0);

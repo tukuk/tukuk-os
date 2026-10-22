@@ -98,7 +98,7 @@ function start() {
   check({ silent: true });
   timer = setInterval(() => check().catch(() => {}), config.net.checkIntervalMs);
   timer.unref?.();
-  console.log(`[net] monitor aktif (setiap ${Math.round(config.net.checkIntervalMs / 1000)}s)`);
+  console.log(`[net] monitor active (every ${Math.round(config.net.checkIntervalMs / 1000)}s)`);
 }
 
 function stop() {

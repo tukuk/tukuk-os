@@ -66,5 +66,5 @@ if (scopeFail) {
 }
 if (scopeSkipped) console.log('- scope check skipped (acorn/eslint-scope not installed)');
 else console.log(`✓ scope OK — ${scopeTargets.length} files checked (inline scripts + variables)`);
-if (scopeOut && !/^BERSIH/.test(scopeOut)) console.log('  ' + scopeOut);
+if (scopeOut && !/^CLEAN/.test(scopeOut)) console.log('  ' + scopeOut);
 console.log(`✓ lint OK — ${checked} .js files checked (syntax)`);

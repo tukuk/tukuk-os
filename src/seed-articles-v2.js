@@ -30,18 +30,18 @@ function seed() {
     store.createPost({ ...item, author: AUTHOR });
     added += 1;
     const wc = wordCount(item.content);
-    if (wc < 650 || wc > 850) problems.push(`${wc} patah perkataan: ${item.title}`);
+    if (wc < 650 || wc > 850) problems.push(`${wc} words: ${item.title}`);
   }
 
   const total = store.getAllPosts(500).length;
-  console.log(`[seed-v2] Pengarang diseragamkan: ${authorsFixed}`);
-  console.log(`[seed-v2] Artikel baharu ditambah: ${added}`);
-  console.log(`[seed-v2] Jumlah artikel: ${total}`);
+  console.log(`[seed-v2] authors normalised: ${authorsFixed}`);
+  console.log(`[seed-v2] new articles added: ${added}`);
+  console.log(`[seed-v2] total articles: ${total}`);
   if (problems.length) {
-    console.log('[seed-v2] AMARAN di luar julat 650-850 patah perkataan:');
+    console.log('[seed-v2] WARNING outside the 650-850 word range:');
     for (const p of problems) console.log('  - ' + p);
   } else {
-    console.log('[seed-v2] Semua artikel baharu dalam julat 650-850 patah perkataan.');
+    console.log('[seed-v2] every new article is inside the 650-850 word range.');
   }
 }
 

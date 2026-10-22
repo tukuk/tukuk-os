@@ -14,7 +14,7 @@
     "setup": "bash scripts/setup-all.sh",
     "usb": "sudo bash scripts/install-from-usb.sh",
     "update": "bash scripts/auto-update.sh",
-    "build": "node -e \"console.log('tiada langkah build — aset statik dihantar terus')\"",
+    "build": "node -e \"console.log('no build step — static assets are served directly')\"",
     "lint": "node scripts/lint.js",
     "meili": "meilisearch --db-path ./meili_data --master-key $(grep '^MEILI_MASTER_KEY=' ~/.config/tukuk-os/env | cut -d= -f2-) --http-addr 127.0.0.1:7700",
     "test": "node --test test/*.test.js",

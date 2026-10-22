@@ -72,7 +72,7 @@ async function resolveTaxon(t) {
   if (hit && !hit.stale) return hit.data;
   const res = await http.get(`${API}/taxa`, { params: { q: t.sci, exact_name: t.sci, limit: 1 } });
   const r = res.data && res.data.results && res.data.results[0];
-  if (!r) throw new Error('takson tidak dijumpai: ' + t.sci);
+  if (!r) throw new Error('taxon not found: ' + t.sci);
   const out = {
     id: r.id, sci: r.name, rank: r.rank,
     common: (r.common_name && r.common_name.name) || t.name,

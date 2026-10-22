@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /*
- * Tukuk-OS CLI pemula (bin).
+ * Tukuk-OS starter CLI (bin).
  *
- *   tukuk-os           -> lancarkan enjin carian (index.js)
- *   tukuk-os mcp       -> lancarkan MCP server (stdio) — untuk pelanggan AI (Kilo/Claude)
+ *   tukuk-os           -> launch the search engine (index.js)
+ *   tukuk-os mcp       -> launch the MCP server (stdio) — for AI clients (Kilo/Claude)
  *
- * Menggunakan spawn supaya `require.main === module` dalam mcp/server.js
- * tetap benar dan main() berjalan seperti `node mcp/server.js`.
+ * spawn is used so that `require.main === module` inside mcp/server.js stays true
+ * and main() runs exactly like `node mcp/server.js`.
  */
 const { spawn } = require('node:child_process');
 const path = require('node:path');
@@ -24,6 +24,6 @@ child.on('exit', (code, signal) => {
   else process.exit(code == null ? 0 : code);
 });
 child.on('error', (err) => {
-  process.stderr.write(`[tukuk-os] gagal melancarkan: ${err.message}\n`);
+  process.stderr.write(`[tukuk-os] failed to launch: ${err.message}\n`);
   process.exit(1);
 });

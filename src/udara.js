@@ -141,7 +141,7 @@ async function fetchCityAir(c) {
     },
   });
   const cur = res.data && res.data.current;
-  if (!cur || !Number.isFinite(Number(cur.us_aqi))) throw new Error('tiada us_aqi untuk ' + c.name);
+  if (!cur || !Number.isFinite(Number(cur.us_aqi))) throw new Error('no us_aqi for ' + c.name);
   return {
     name: c.name, country: c.country, region: c.region, lat: c.lat, lon: c.lon,
     usAqi: Number(cur.us_aqi),
@@ -193,7 +193,7 @@ function refreshAir() {
         for (const s of settled) (s.ok ? rows : failed).push(s.ok ? s.r : s.e);
         await sleep(250);
       }
-      if (!rows.length) throw new Error('semua kota gagal');
+      if (!rows.length) throw new Error('every city failed');
       rows.sort((a, b) => a.usAqi - b.usAqi);
       const source = failed.length ? 'partial' : 'live';
       const data = { source, rows, failedCount: failed.length, asOf: rows[0] && rows[0].asOf, fetchedAt: Date.now() };
@@ -252,9 +252,9 @@ async function getCo2(force) {
     ]);
     const dailyLines = String(dailyRes.data).split('\n').filter((l) => l && l[0] !== '#');
     const last = parseNumericLine(dailyLines[dailyLines.length - 1] || '');
-    if (!last) throw new Error('fail CO2 harian tidak dapat dibaca');
+    if (!last) throw new Error('the daily CO2 file could not be read');
     const ppm = pickPpm(last);
-    if (ppm == null) throw new Error('medan ppm tidak dijumpai');
+    if (ppm == null) throw new Error('ppm field not found');
     const y = last[0], m = last[1], d = last[2];
     const annLines = String(annRes.data).split('\n').filter((l) => l && l[0] !== '#');
     const means = [];
@@ -262,7 +262,7 @@ async function getCo2(force) {
       const f = parseNumericLine(l);
       if (f && f.length >= 2 && f[0] >= 1959 && f[1] > 250 && f[1] < 700) means.push({ year: Math.round(f[0]), v: f[1] });
     }
-    if (!means.length) throw new Error('tiada mean tahunan');
+    if (!means.length) throw new Error('no annual means');
     means.sort((a, b) => a.year - b.year);
     const recent = means.slice(-15);
     let growth = null;
@@ -302,10 +302,10 @@ async function getRiver(lat, lon) {
       params: { latitude: lat, longitude: lon, daily: 'river_discharge', past_days: 365, timezone: 'UTC' },
     });
     const d = res.data && res.data.daily;
-    if (!d || !Array.isArray(d.time) || !Array.isArray(d.river_discharge)) throw new Error('tiada siri');
+    if (!d || !Array.isArray(d.time) || !Array.isArray(d.river_discharge)) throw new Error('no series');
     const rows = d.time.map((t, i) => ({ date: t, v: d.river_discharge[i] }))
       .filter((r) => Number.isFinite(r.v));
-    if (rows.length < 30) throw new Error('siri terlalu pendek');
+    if (rows.length < 30) throw new Error('series too short');
     const vals = rows.map((r) => r.v).sort((a, b) => a - b);
     const latest = rows[rows.length - 1];
     const below = vals.filter((v) => v <= latest.v).length;
