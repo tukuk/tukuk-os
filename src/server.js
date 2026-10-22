@@ -2681,7 +2681,7 @@ app.get('/datacenter', (req, res) => {
   function fmt(n) { return Number(n || 0).toLocaleString('en'); }
   fetch('/api/datacenter').then(function (r) { return r.json(); }).then(function (d) {
     var m = d.models || {}, b = m.backend || {}, html = '';
-    // Tiada kad "Compute" — maklumat perkakasan (CPU/RAM/load/uptime) tidak didedahkan.
+    // No "Compute" card — hardware details (CPU/RAM/load/uptime) are never exposed.
     html += '<div class="post-card"><h2>🧠 AI stack</h2>';
     html += '<p>Provider: <strong>' + esc(b.provider) + '</strong>' + (b.localFirst ? ' · local-first' : '') + '</p>';
     html += '<p>Chain: ' + (b.chain || []).map(esc).join(' → ') + ' → cloud: ' + (((b.cloudFallback || []).length) ? b.cloudFallback.map(esc).join(', ') : 'none') + '</p>';
@@ -3874,7 +3874,8 @@ const COMMON_CSS = `
   li { margin-bottom:6px; }
   .back-link { display:inline-block; margin-bottom:16px; font-size:.92rem; }
   .ad-slot { margin:24px 0; overflow:hidden; }
-  /* Slot iklan: latar panel gelap supaya ruang kosong/sekat tidak jadi blok putih besar pada tema gelap. */
+  /* Ad slot: a panel-dark background so an empty or blocked slot never becomes a big
+     white block on a dark theme. */
   .ad-sense { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 8px 6px; }
   .ad-sense ins.adsbygoogle { background:transparent; }
   .ad-label { display:block; font-size:.66rem; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); margin:0 2px 6px; }
@@ -6853,7 +6854,7 @@ function wikiMainPage(req) {
     feat + `${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}` +
     `<h2>Subject areas</h2><div class="wiki-sections">${topics}</div>` +
     `${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}` +
-    `<h2>Good to know</h2><p>Perlu data langsung? <a href="/cuaca">Cuaca hari ini</a> untuk ratusan bandar dan <a href="/nasa">NASA Picture of the Day</a> untuk langit — kedua-duanya kemas kini automatik. Litar pembelajaran tersusun ada di <a href="/learn">Tukuk-OS Academy</a>.</p>` +
+    `<h2>Good to know</h2><p>Need live data? <a href="/cuaca">Today's weather</a> for hundreds of cities and <a href="/nasa">NASA Picture of the Day</a> for the sky — both refresh automatically. The ordered learning track lives in <a href="/learn">Tukuk-OS Academy</a>.</p>` +
     `${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}` +
     `</main></div>${wikiFooter()}</body></html>`;
 }
@@ -14545,7 +14546,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   };
 
   const total = saveContactMessage(entry);
-  store.event('contact', `mesej baharu daripada ${name}`, { email, characters: message.length, total });
+  store.event('contact', `new message from ${name}`, { email, characters: message.length, total });
 
   // Pilihan: hantar notifikasi segera (Discord/Slack/maka webhook)
   const webhook = process.env.CONTACT_WEBHOOK_URL;
@@ -14553,7 +14554,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
     fetch(webhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: `Mesej baharu: ${name}`, email, message, at: entry.receivedAt })
+      body: JSON.stringify({ title: `New message: ${name}`, email, message, at: entry.receivedAt })
     }).catch(() => {});
   }
 
@@ -14582,7 +14583,7 @@ function loadJsErrors() {
 app.post('/api/js-error', jsErrorLimiter, (req, res) => {
   const body = req.body || {};
   const message = truncate(String(body.message || ''), 400);
-  if (!message) return res.status(400).json({ error: 'message wajib' });
+  if (!message) return res.status(400).json({ error: 'message is required' });
 
   const entry = {
     at: new Date().toISOString(),
@@ -14682,7 +14683,7 @@ function publishHtml(req, o) {
     writeMeta(slug, { key: editKey, title: publish.extractTitle(html, truncate(String(src.name || ''), 80)), created: Date.now(), updated: Date.now(), kind });
     const url = `${publish.publicOrigin(req)}/a/${slug}`;
     const srcTag = truncate(String(src.source || '').replace(/[^a-z0-9_-]/g, ''), 24);
-    store.event('publish', `Aplikasi diterbitkan: /a/${slug}${srcTag ? ' [' + srcTag + ']' : ''}`, { name: truncate(String(src.name || ''), 120), bytes: html.length, source: srcTag || 'manual' });
+    store.event('publish', `App published: /a/${slug}${srcTag ? ' [' + srcTag + ']' : ''}`, { name: truncate(String(src.name || ''), 120), bytes: html.length, source: srcTag || 'manual' });
     notifyIndexNow(url); // pautan awam → indeks (opt-in)
     return { ok: true, slug, url, editKey };
   } catch (error) {
@@ -14715,11 +14716,11 @@ app.post('/api/publish/update', publishLimiter, (req, res) => {
     const tmp = path.join(PUBLISH_DIR, `${slug}.${process.pid}.tmp`);
     fs.writeFileSync(tmp, html, 'utf8');
     fs.renameSync(tmp, file);
-    meta.title = publish.extractTitle(html, meta.title || 'Aplikasi');
+    meta.title = publish.extractTitle(html, meta.title || 'App');
     meta.updated = Date.now();
     if (body.kind === 'game' || body.kind === 'app') meta.kind = String(body.kind);
     writeMeta(slug, meta);
-    store.event('publish', `Aplikasi dikemas kini: /a/${slug}`, { bytes: html.length });
+    store.event('publish', `App updated: /a/${slug}`, { bytes: html.length });
     res.json({ ok: true, slug, url: `${publish.publicOrigin(req)}/a/${slug}` });
   } catch (error) {
     res.status(500).json({ error: 'Update failed', details: safeError(error) });
@@ -14737,7 +14738,7 @@ app.post('/api/publish/delete', publishLimiter, (req, res) => {
   try {
     fs.rmSync(path.join(PUBLISH_DIR, `${slug}.html`), { force: true });
     fs.rmSync(metaPath(slug), { force: true });
-    store.event('publish', `Aplikasi dibuang: /a/${slug}`, {});
+    store.event('publish', `App unpublished: /a/${slug}`, {});
     res.json({ ok: true, slug });
   } catch (error) {
     res.status(500).json({ error: 'Delete failed', details: safeError(error) });

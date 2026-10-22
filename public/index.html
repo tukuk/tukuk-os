@@ -1519,13 +1519,13 @@ chatForm.addEventListener('submit', async (e) => {
   const btn = chatForm.querySelector('button');
   btn.disabled = true;
   chatAnswer.hidden = false;
-  chatAnswer.innerHTML = '<div class="mode">Memikir…</div><p>Menunggu respons…</p>';
+  chatAnswer.innerHTML = '<div class="mode">Thinking…</div><p>Waiting for the answer…</p>';
   try {
     const res = await fetch('/ask?q=' + encodeURIComponent(q));
     const data = await res.json();
     if (!res.ok || data.error) {
       const reason = data.detail || data.error || 'Unknown error.';
-      chatAnswer.innerHTML = '<div class="mode">ralat</div><p>' + reason + '</p>' +
+      chatAnswer.innerHTML = '<div class="mode">error</div><p>' + reason + '</p>' +
         '<p class="foot-status">AI Chat uses cloud LLMs (Gemini/Groq/OpenAI) when keys are configured, or an extractive answer when none are. Check status at /brain.</p>';
       return;
     }

@@ -250,7 +250,7 @@ const MEMORY_HTML = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Memory Match</title>
 <style>body{margin:0;background:#0f1115;color:#e6e9ef;font:16px system-ui;display:grid;place-items:center;min-height:100vh}h1{font-size:1.1rem;color:#9aa3b2}.g{display:grid;grid-template-columns:repeat(4,72px);gap:8px}.c{width:72px;height:72px;border:1px solid #262b36;border-radius:10px;background:#171a21;display:grid;place-items:center;font-size:28px;font-weight:700;cursor:pointer}.c.o{background:#12203a;border-color:#4c8dff}.c.m{opacity:.35;pointer-events:none}</style>
-</head><body><div><h1>Memory Match &mdash; klik untuk buka</h1><div class="g" id="g"></div></div>
+</head><body><div><h1>Memory Match &mdash; click to open</h1><div class="g" id="g"></div></div>
 <script>
 var em={a:'S',b:'H',c:'M',d:'U',e:'L',f:'B',g:'R',h:'F'};var deck=[];for(var s in em){deck.push(s,s);}
 deck.sort(function(){return Math.random()-0.5;});

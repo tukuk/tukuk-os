@@ -189,10 +189,10 @@ const TOOLS = [
   {
     name: 'tukuk_nasa',
     description:
-      'NASA live data + local archive database. topic=apod (gambar hari ini/tarikh lampau; ' +
-      'auto-fallback ke arkib setempat jika API NASA down), asteroids (NeoWs feed), mars (rover photos), ' +
-      'crew (siapa di angkasa sekarang), epic (foto bola bumi), solar (flare & CME), ' +
-      'search (cari pustaka media NASA), archive (cari arkib DB setempat), stats (saiz arkib).',
+      'NASA live data + local archive database. topic=apod (the image of the day / a past date; ' +
+      'falls back to the local archive automatically when the NASA API is down), asteroids (NeoWs feed), mars (rover photos), ' +
+      'crew (who is in space right now), epic (Earth photos), solar (flares & CMEs), ' +
+      'search (the NASA media library), archive (search the local DB), stats (archive size).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -374,24 +374,24 @@ async function handle(name, args = {}) {
       const limit = Math.min(Number(args.limit) || 10, 100);
       if (topic === 'apod') {
         const data = await nasa.getAPOD({ date: args.date });
-        return text(`APOD ${data.date} — ${data.title}\n${(data.explanation || '').slice(0, 1200)}\nMedia: ${data.url}${data.fromArchive ? '\n(dari arkib setempat — API NASA sedang down)' : ''}`, { structuredContent: data });
+        return text(`APOD ${data.date} — ${data.title}\n${(data.explanation || '').slice(0, 1200)}\nMedia: ${data.url}${data.fromArchive ? '\n(from the local archive — the NASA API is down)' : ''}`, { structuredContent: data });
       }
       if (topic === 'asteroids') {
         const data = await nasa.getNearEarthObjects({ startDate: args.start, endDate: args.end });
-        return text(`${data.element_count} objek dekat Bumi (${data.start_date} → ${data.end_date}, sumber ${data.source})`, { structuredContent: { ...data, asteroids: (data.asteroids || []).slice(0, limit) } });
+        return text(`${data.element_count} near-Earth objects (${data.start_date} → ${data.end_date}, source ${data.source})`, { structuredContent: { ...data, asteroids: (data.asteroids || []).slice(0, limit) } });
       }
       if (topic === 'mars') {
         const data = await nasa.getMarsPhotos({ rover: args.rover, sol: args.sol });
-        return text(`${data.totalPhotos} foto ${data.rover} (sumber ${data.source})`, { structuredContent: { ...data, photos: (data.photos || []).slice(0, limit) } });
+        return text(`${data.totalPhotos} photos from ${data.rover} (source ${data.source})`, { structuredContent: { ...data, photos: (data.photos || []).slice(0, limit) } });
       }
       if (topic === 'crew') {
         const data = await nasa.getCrew();
         const nama = (data.people || []).map((p) => `${p.name} (${p.craft})`).join(', ');
-        return text(`${data.inSpace} manusia di angkasa sekarang: ${nama}${data.stale ? ' (salinan terakhir)' : ''}`, { structuredContent: data });
+        return text(`${data.inSpace} humans in space right now: ${nama}${data.stale ? ' (last known copy)' : ''}`, { structuredContent: data });
       }
       if (topic === 'epic') {
         const data = await nasa.getEPIC({ date: args.date });
-        return text(`${(data || []).length} bola bumi EPIC terbaru`, { structuredContent: (data || []).slice(0, limit) });
+        return text(`${(data || []).length} newest EPIC Earth images`, { structuredContent: (data || []).slice(0, limit) });
       }
       if (topic === 'solar') {
         const data = await nasa.getSolarActivity({ days: args.limit ? Number(args.limit) * 7 : undefined });
@@ -400,13 +400,13 @@ async function handle(name, args = {}) {
       if (topic === 'search') {
         const data = await nasa.searchNASAMedia(String(args.q || ''), { mediaType: 'image' });
         const lines = data.items.slice(0, limit).map((m, i) => `[${i + 1}] ${m.title}\n    ${m.asset_url}`);
-        return text([`${data.total} hasil untuk "${args.q}":`, ...lines].join('\n'), { structuredContent: data });
+        return text([`${data.total} results for "${args.q}":`, ...lines].join('\n'), { structuredContent: data });
       }
       if (topic === 'archive') {
-        // DB arkib setempat — pantas, tanpa API NASA.
+        // The local archive DB — fast, no NASA API call.
         const items = nasa.store.listApod({ limit, q: args.q });
         const lines = items.map((e, i) => `[${i + 1}] ${e.date} — ${e.title}`);
-        return text([`${items.length} entri arkib APOD${args.q ? ` untuk "${args.q}"` : ''}:`, ...lines].join('\n'), { structuredContent: { items } });
+        return text([`${items.length} APOD archive entries${args.q ? ` for "${args.q}"` : ''}:`, ...lines].join('\n'), { structuredContent: { items } });
       }
       if (topic === 'stats') {
         return text(JSON.stringify(nasa.store.stats(), null, 2), { structuredContent: nasa.store.stats() });
@@ -464,7 +464,7 @@ function main() {
     try {
       await dispatch(message);
     } catch (error) {
-      logToStderr('ralat:', error.message);
+      logToStderr('error:', error.message);
       if (message.id !== undefined) failure(message.id, -32603, error.message);
     } finally {
       pending -= 1;

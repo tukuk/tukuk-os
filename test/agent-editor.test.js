@@ -1,15 +1,15 @@
 'use strict';
-// Ujian proksi editor Tukuk Agent (src/agent-editor.js): penghantaran HTTP
-// (prefix DIBUANG sebelum forward — code-server berjalan pada '/'; x-forwarded-prefix
-// tetap dihantar + Location ditulis semula ke /agent/*), ralat mesra bila
-// upstream mati, dan relay WebSocket 'upgrade' yang hanya menyentuh path /agent.
+// Tests for the Tukuk Agent editor proxy (src/agent-editor.js): HTTP forwarding
+// (the prefix is STRIPPED before forwarding — code-server runs at '/'; x-forwarded-prefix
+// is still sent + Location is rewritten back to /agent/*), the friendly errors when
+// the upstream is dead, and the WebSocket 'upgrade' relay that only touches the /agent path.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const express = require('express');
 const agentEditor = require('../src/agent-editor');
 
-/** Upstream code-server palsu: gema url/header & layan upgrade WebSocket mentah. */
+/** Fake code-server upstream: echoes url/headers and serves raw WebSocket upgrades. */
 function startFakeEditor() {
   const up = http.createServer((req, res) => {
     res.setHeader('x-echo-url', req.url);
@@ -23,7 +23,7 @@ function startFakeEditor() {
       'HTTP/1.1 101 Switching Protocols\r\n' +
       'upgrade: websocket\r\nconnection: upgrade\r\n' +
       'sec-websocket-accept: FAKE123\r\n\r\n' +
-      'FRAME-DARI-EDITOR'
+      'FRAME-FROM-EDITOR'
     );
   });
   return new Promise((resolve) => up.listen(0, '127.0.0.1', () => resolve({ up, port: up.address().port })));
@@ -36,7 +36,7 @@ function buildApp(upstream) {
   return { app, config };
 }
 
-/** Pantau semua soket TCP masuk (termasuk upgrade) supaya tiada yang tertinggal. */
+/** Watch every incoming TCP socket (upgrades included) so none are left behind. */
 function trackSockets(srv) {
   const set = new Set();
   srv.on('connection', (s) => { set.add(s); s.on('close', () => set.delete(s)); });
@@ -54,7 +54,7 @@ const get = (port, path) =>
       .on('error', reject);
   });
 
-test('proxy HTTP: kekalkan prefix /agent, tulis host + header proxy', async () => {
+test('HTTP proxy: keeps the /agent prefix, rewrites host + proxy headers', async () => {
   const { up, port: upPort } = await startFakeEditor();
   const { app, config } = buildApp('http://127.0.0.1:' + upPort);
   const server = app.listen(0, '127.0.0.1');
@@ -65,7 +65,7 @@ test('proxy HTTP: kekalkan prefix /agent, tulis host + header proxy', async () =
   const r = await get(port, '/agent/login?windowId=_blank');
   assert.equal(r.status, 200);
   assert.equal(r.body, 'UP:GET');
-  assert.equal(r.headers['x-echo-url'], '/login?windowId=_blank'); // prefix dibuang (kelakuan 4447109)
+  assert.equal(r.headers['x-echo-url'], '/login?windowId=_blank'); // the prefix is stripped (behaviour of 4447109)
   assert.equal(r.headers['x-echo-host'], '127.0.0.1:' + upPort);
   assert.equal(r.headers['x-echo-prefix'], '/agent');
   assert.equal(r.headers['x-echo-xff'], '127.0.0.1');
@@ -75,13 +75,13 @@ test('proxy HTTP: kekalkan prefix /agent, tulis host + header proxy', async () =
   up.close(); up.closeAllConnections();
 });
 
-test('upstream mati → 502 JSON jujur; upstream kosong → 503', async () => {
-  const { app } = buildApp('http://127.0.0.1:1'); // port mati
+test('dead upstream → honest 502 JSON; empty upstream → 503', async () => {
+  const { app } = buildApp('http://127.0.0.1:1'); // a dead port
   const server = app.listen(0, '127.0.0.1');
   await new Promise((r) => server.once('listening', r));
   const r = await get(server.address().port, '/agent/');
   assert.equal(r.status, 502);
-  assert.match(r.body, /Editor agent tidak bersedia/);
+  assert.match(r.body, /editor agent is not ready/);
   server.close(); server.closeAllConnections();
 
   const { app: app2 } = buildApp('');
@@ -92,7 +92,7 @@ test('upstream mati → 502 JSON jujur; upstream kosong → 503', async () => {
   s2.close(); s2.closeAllConnections();
 });
 
-test('attachUpgrade: relay 101 untuk /agent; upgrade lain tidak diganggu', async () => {
+test('attachUpgrade: relays 101 for /agent; other upgrades are left alone', async () => {
   const { up, port: upPort } = await startFakeEditor();
   const { app, config } = buildApp('http://127.0.0.1:' + upPort);
   const server = app.listen(0, '127.0.0.1');
@@ -100,7 +100,7 @@ test('attachUpgrade: relay 101 untuk /agent; upgrade lain tidak diganggu', async
   const port = server.address().port;
   const killSockets = trackSockets(server), killUp = trackSockets(up);
 
-  // penanda: listener LAIN masih dapat upgrade bukan-/agent (handler kita return awal)
+  // marker: another listener still receives non-/agent upgrades (our handler returns early)
   let otherSaw = false;
   server.on('upgrade', (req) => { if (req.url === '/other') otherSaw = true; });
   const detach = agentEditor.attachUpgrade(server, { config });
@@ -114,11 +114,11 @@ test('attachUpgrade: relay 101 untuk /agent; upgrade lain tidak diganggu', async
     req.on('upgrade', (res, socket, head) => {
       assert.equal(res.statusCode, 101);
       assert.equal(res.headers['sec-websocket-accept'], 'FAKE123');
-      if (head && head.length && head.toString().includes('FRAME-DARI-EDITOR')) {
+      if (head && head.length && head.toString().includes('FRAME-FROM-EDITOR')) {
         resolve(true); socket.destroy(); return;
       }
       socket.on('data', (d) => {
-        if (d.toString().includes('FRAME-DARI-EDITOR')) { resolve(true); socket.destroy(); }
+        if (d.toString().includes('FRAME-FROM-EDITOR')) { resolve(true); socket.destroy(); }
       });
       socket.on('error', reject);
     });
@@ -128,21 +128,21 @@ test('attachUpgrade: relay 101 untuk /agent; upgrade lain tidak diganggu', async
   });
   assert.equal(wsResult, true);
 
-  // upgrade bukan-/agent: proksi kita TIDAK makan handshake — listener lain yang respon
+  // a non-/agent upgrade: our proxy does NOT eat the handshake — another listener answers
   const other = await new Promise((resolve, reject) => {
     const req = http.request({
       port,
       path: '/other',
       headers: { connection: 'upgrade', upgrade: 'websocket', 'sec-websocket-key': 'k2' }
     });
-    req.on('upgrade', () => resolve('salah — proksi tak patut relay /other'));
+    req.on('upgrade', () => resolve('wrong — the proxy must not relay /other'));
     req.on('response', (res) => { res.resume(); resolve('plain'); });
     req.on('error', () => resolve('dropped'));
     req.setTimeout(1500, () => { req.destroy(); resolve('timeout'); });
     req.end();
   });
-  assert.ok(otherSaw || other === 'dropped' || other === 'plain' || other === 'timeout', 'upgrade asing dibiarkan');
-  assert.notEqual(other, 'salah — proksi tak patut relay /other');
+  assert.ok(otherSaw || other === 'dropped' || other === 'plain' || other === 'timeout', 'a foreign upgrade was left alone');
+  assert.notEqual(other, 'wrong — the proxy must not relay /other');
 
   detach();
   killSockets(); killUp();

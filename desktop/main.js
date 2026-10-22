@@ -6,16 +6,16 @@ let mainWindow = null;
 let serverProcess = null;
 
 function createWindow() {
-  // Catatan: chrome-sandbox memerlukan root ownership + mode 4755.
-  // Jika tidak boleh dikonfigurasi, Electron akan crash dengan
-  // "setuid_sandbox_host.cc(163)". Buka tanpa sandbox sebagai fallback.
+  // Note: chrome-sandbox needs root ownership + mode 4755. If that cannot be
+  // configured, Electron crashes with "setuid_sandbox_host.cc(163)". Opening
+  // without the sandbox is the fallback.
   try {
     mainWindow = new BrowserWindow({
       width: 1280,
       height: 800,
       minWidth: 800,
       minHeight: 600,
-      title: 'Tukuk-OS — Enjin Carian Web',
+      title: 'Tukuk-OS — Web Search Engine',
       icon: path.join(__dirname, 'public', 'favicon.ico'),
       webPreferences: {
         nodeIntegration: false,
@@ -25,13 +25,13 @@ function createWindow() {
     });
   } catch (error) {
     if (error.message && error.message.includes('sandbox')) {
-      console.warn('[desktop] sandbox gagal, membuka tanpa sandbox...');
+      console.warn('[desktop] sandbox failed, opening without the sandbox...');
       mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
         minWidth: 800,
         minHeight: 600,
-        title: 'Tukuk-OS — Enjin Carian Web',
+        title: 'Tukuk-OS — Web Search Engine',
         icon: path.join(__dirname, 'public', 'favicon.ico'),
         webPreferences: {
           nodeIntegration: false,
@@ -44,13 +44,13 @@ function createWindow() {
     }
   }
 
-  // Cuba mulakan pelayan tempatan jika belum berjalan.
+  // Try to start the local server if it is not already running.
   startLocalServer();
 
-  // Buka UI utama.
+  // Open the main UI.
   mainWindow.loadURL('http://127.0.0.1:8000');
 
-  // Buka DevTools dalam mod pembangunan.
+  // Open DevTools in development mode.
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
@@ -61,11 +61,11 @@ function createWindow() {
 }
 
 function startLocalServer() {
-  // Cuba sambungan ke pelayan tempatan dahulu.
+  // Try the local server connection first.
   const http = require('http');
   const req = http.get('http://127.0.0.1:8000/health', (res) => {
     if (res.statusCode === 200) {
-      console.log('[desktop] pelayan tempatan sudah berjalan.');
+      console.log('[desktop] local server is already running.');
       return;
     }
     spawnServer();
@@ -76,7 +76,7 @@ function startLocalServer() {
 }
 
 function spawnServer() {
-  console.log('[desktop] memulakan pelayan tempatan...');
+  console.log('[desktop] starting the local server...');
   const serverPath = path.join(__dirname, 'index.js');
   serverProcess = spawn('node', [serverPath], {
     cwd: __dirname,
@@ -85,11 +85,11 @@ function spawnServer() {
   });
 
   serverProcess.on('error', (err) => {
-    console.error('[desktop] gagal memulakan pelayan:', err.message);
+    console.error('[desktop] failed to start the server:', err.message);
   });
 
   serverProcess.on('exit', (code) => {
-    console.log(`[desktop] pelayan tamat dengan kod ${code}`);
+    console.log(`[desktop] server exited with code ${code}`);
     serverProcess = null;
   });
 }
@@ -99,25 +99,25 @@ function buildMenu() {
     {
       label: 'Tukuk-OS',
       submenu: [
-        { label: 'Tentang Tukuk-OS', selector: 'orderFrontStandardAboutPanel:' },
+        { label: 'About Tukuk-OS', selector: 'orderFrontStandardAboutPanel:' },
         { type: 'separator' },
-        { label: 'Semak Semula', accelerator: 'CmdOrCtrl+R', click: () => mainWindow?.reload() },
-        { label: 'Force Semak Semula', accelerator: 'CmdOrCtrl+Shift+R', click: () => mainWindow?.webContents.reloadIgnoringCache() },
+        { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => mainWindow?.reload() },
+        { label: 'Force Reload', accelerator: 'CmdOrCtrl+Shift+R', click: () => mainWindow?.webContents.reloadIgnoringCache() },
         { type: 'separator' },
-        { label: 'Keluar', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
+        { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
       ]
     },
     {
-      label: 'Carian',
+      label: 'Search',
       submenu: [
-        { label: 'Fokus Kotak Carian', accelerator: 'CmdOrCtrl+K', click: () => mainWindow?.webContents.send('focus-search') }
+        { label: 'Focus the Search Box', accelerator: 'CmdOrCtrl+K', click: () => mainWindow?.webContents.send('focus-search') }
       ]
     },
     {
-      label: 'Pembangunan',
+      label: 'Development',
       submenu: [
-        { label: 'Alat Pembangunan', accelerator: 'CmdOrCtrl+Shift+I', click: () => mainWindow?.webContents.openDevTools() },
-        { label: 'Muat Semula Pelayan', click: () => {
+        { label: 'DevTools', accelerator: 'CmdOrCtrl+Shift+I', click: () => mainWindow?.webContents.openDevTools() },
+        { label: 'Restart the Server', click: () => {
           if (serverProcess) { serverProcess.kill(); serverProcess = null; }
           spawnServer();
         }}
@@ -130,11 +130,11 @@ function buildMenu() {
 }
 
 app.whenReady().then(() => {
-  // Cuba lainkan sandbox; jika tidakConfigured, Electron akan nggak crash di window nanti.
+  // Relax the sandbox; if the switch is unsupported Electron keeps running as before.
   try {
     app.commandLine.appendSwitch('no-sandbox');
   } catch {
-    // abaikan jika tidak disokong
+    // ignore when unsupported
   }
   createWindow();
   buildMenu();

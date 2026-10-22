@@ -51,9 +51,9 @@ function mount(app, { config }) {
   app.use(PREFIX, (req, res) => {
     const target = upstreamOf(config);
     if (!target) {
-      return res.status(503).json({ error: 'Editor agent tidak dikonfigurasi (AGENT_EDITOR_UPSTREAM).' });
+      return res.status(503).json({ error: 'The editor agent is not configured (AGENT_EDITOR_UPSTREAM).' });
     }
-    // req.url dalam app.use('/agent', ...) sudah tiada prefix — terus gunakan.
+    // Inside app.use('/agent', ...) req.url already has the prefix removed — use it as is.
     const upstreamPath = req.url || '/';
     const preq = http.request(
       target + upstreamPath,
@@ -72,8 +72,8 @@ function mount(app, { config }) {
       }
     );
     preq.on('error', () => {
-      // tukuk-agent belum jalan — 4xx/5xx jujur; worker tepi hanya mask 5xx utk HTML.
-      if (!res.headersSent) res.status(502).json({ error: 'Editor agent tidak bersedia — cuba lagi sebentar.' });
+      // tukuk-agent is not running yet — an honest 4xx/5xx; the edge worker only masks 5xx for HTML.
+      if (!res.headersSent) res.status(502).json({ error: 'The editor agent is not ready — please try again in a moment.' });
       else res.end();
     });
     // express.json/urlencoded sudahconsume req — gunakan rawBody jika ada.

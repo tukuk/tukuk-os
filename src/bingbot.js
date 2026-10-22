@@ -123,7 +123,7 @@ async function forwardMatches(hostname, ip) {
 function verdictText(verdict, why) {
   const label = {
     verified: 'VALID BINGBOT',
-    mismatch: 'SUSPICIOUS — rDNS TETAPI FORWARD TIDAK SEPADAN',
+    mismatch: 'SUSPICIOUS — rDNS MATCHED BUT FORWARD DOES NOT AGREE',
     'not-bingbot': 'NOT BINGBOT',
     inconclusive: 'INCONCLUSIVE'
   }[verdict] || verdict;
