@@ -119,6 +119,68 @@ async function route(from, to, mode) {
 
 function round6(n) { return Math.round(Number(n) * 1e6) / 1e6; }
 
+// Great-circle distance in km between two {lat, lon} points — the honest
+// "as the crow flies" number, pure spherical geometry, no API involved.
+function haversineKm(a, b) {
+  const R = 6371;
+  const rad = (d) => d * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(h))) * 10) / 10;
+}
+
+// Sunrise / sunset / day length by the classic textbook solar-position
+// algorithm: mean anomaly → ecliptic longitude → declination + right
+// ascension → equation of time → hour angle at zenith 90.833° (refraction
+// and solar disc included, so it matches printed almanacs). Accurate to
+// well under a minute and pure arithmetic — no service can be down,
+// rate-limited or sold. Times return as UTC minutes from midnight; polar
+// day/night are reported honestly instead of invented.
+function solarTimes(lat, lon, dateStr) {
+  const rad = (d) => d * Math.PI / 180, deg = (r) => r * 180 / Math.PI;
+  const norm = (x, lo, hi) => lo + ((x - lo) % (hi - lo) + (hi - lo)) % (hi - lo);
+  const [Y, M, D] = String(dateStr).split('-').map(Number);
+  if (!Y || !M || !D) throw new Error('bad date');
+  const n = (Date.UTC(Y, M - 1, D) - Date.UTC(Y, 0, 1)) / 86400000; // days since Jan 1
+  const meanAnom = rad(norm(357.5291 + 0.98560028 * n, 0, 360));
+  const meanLong = norm(280.459 + 0.98564736 * n, 0, 360);          // degrees
+  const eclLong = rad(norm(meanLong + 1.915 * Math.sin(meanAnom) + 0.020 * Math.sin(2 * meanAnom), 0, 360));
+  const obliq = rad(23.4393 - 0.00000036 * n);
+  const decl = Math.asin(Math.sin(obliq) * Math.sin(eclLong));
+  const ra = Math.atan2(Math.cos(obliq) * Math.sin(eclLong), Math.cos(eclLong)); // radians
+  const eqTime = 4 * norm(meanLong - deg(ra), -180, 180);           // minutes
+  const sinDec = Math.sin(decl), cosDec = Math.cos(decl);
+  // Hour-angle offset in minutes of time for a given zenith angle.
+  // null = the sun never reaches that altitude (polar night side of it),
+  // 'always' = it never drops below (polar day). 90.833° = rise/set with
+  // refraction; 96° = civil twilight (sun 6° below the horizon).
+  const off = (zen) => {
+    const c = (Math.cos(rad(zen)) - Math.sin(rad(lat)) * sinDec) / (Math.cos(rad(lat)) * cosDec);
+    if (c > 1) return null;
+    if (c < -1) return 'always';
+    return deg(Math.acos(c)) * 4;
+  };
+  const noon = 720 - 4 * lon - eqTime;                          // minutes after 00:00 UTC
+  const wrap = (m) => ((m % 1440) + 1440) % 1440;
+  const sun = off(90.833), civil = off(96);
+  const res = {
+    noonUtc: wrap(noon), polar: sun === 'always' ? 'day' : sun === null ? 'night' : null,
+    declDeg: deg(decl), eqTime,
+  };
+  if (typeof sun === 'number') {
+    res.sunriseUtc = wrap(noon - sun);
+    res.sunsetUtc = wrap(noon + sun);
+    res.dayLengthMin = Math.round(sun * 2);
+  }
+  if (typeof civil === 'number') {
+    res.civilDawnUtc = wrap(noon - civil);
+    res.civilDuskUtc = wrap(noon + civil);
+  }
+  return res;
+}
+
 // OSRM maneuver → a short English instruction the way a navigator would say it.
 function stepText(st) {
   const t = String((st.maneuver && st.maneuver.type) || '');
@@ -139,4 +201,4 @@ function stepText(st) {
   return `Continue${onto}`;
 }
 
-module.exports = { geocode, route, ROUTERS, MODE_LABEL };
+module.exports = { geocode, route, haversineKm, solarTimes, ROUTERS, MODE_LABEL };

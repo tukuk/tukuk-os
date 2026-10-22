@@ -1605,6 +1605,67 @@ app.get('/api/peta/route', async (req, res) => {
     res.status(422).json({ ok: false, error: String(e.message || 'routing failed').slice(0, 160) });
   }
 });
+app.get('/peta/jarak', (req, res) => {
+  try {
+    res.status(200).type('html').send(jarakPage());
+  } catch (e) {
+    console.warn('[jarak] page render failed:', e.message);
+    res.status(503).type('html').send(petaBusy());
+  }
+});
+app.get('/peta/matahari', (req, res) => {
+  try {
+    res.status(200).type('html').send(matahariPage());
+  } catch (e) {
+    console.warn('[matahari] page render failed:', e.message);
+    res.status(503).type('html').send(petaBusy());
+  }
+});
+// Two places → straight-line (great-circle) plus the road reality in one
+// round trip. The road leg reuses the same router as /peta; when no road
+// exists the straight number still answers honestly, with the reason attached.
+app.get('/api/peta/distance', async (req, res) => {
+  const pt = (s) => {
+    const p = String(s || '').split(',').map(Number);
+    return p.length === 2 && p.every(Number.isFinite) && Math.abs(p[0]) <= 90 && Math.abs(p[1]) <= 180
+      ? { lat: p[0], lon: p[1] } : null;
+  };
+  const from = pt(req.query.from);
+  const to = pt(req.query.to);
+  if (!from || !to) return res.status(400).json({ ok: false, error: 'from and to must be lat,lon pairs' });
+  const mode = String(req.query.mode || 'car');
+  try {
+    const straightKm = peta.haversineKm(from, to);
+    let road = null, roadError = null;
+    try {
+      const r = await peta.route(from, to, mode);
+      road = { km: Math.round(r.distance / 100) / 10, min: Math.round(r.duration / 60) };
+    } catch (e) {
+      roadError = String(e.message || 'no road route').slice(0, 160);
+    }
+    res.setHeader('Cache-Control', 'private, max-age=600');
+    res.json({ ok: true, straightKm, mode, road, roadError });
+  } catch (e) {
+    res.status(422).json({ ok: false, error: String(e.message || 'distance failed').slice(0, 160) });
+  }
+});
+// Sunrise/sunset from local arithmetic — no third party involved at all, so
+// this endpoint cannot be rate-limited, down or sold. Times are UTC minutes
+// from midnight; the page labels and converts them in the browser.
+app.get('/api/peta/sun', (req, res) => {
+  const lat = Number(req.query.lat), lon = Number(req.query.lon);
+  if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lon) || Math.abs(lon) > 180)
+    return res.status(400).json({ ok: false, error: 'lat and lon are required' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date || ''))
+    ? String(req.query.date) : new Date().toISOString().slice(0, 10);
+  try {
+    const s = peta.solarTimes(lat, lon, date);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json({ ok: true, date, lat, lon, ...s });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: String(e.message || 'bad date').slice(0, 160) });
+  }
+});
 
 // ── COMMUNITY & SOCIAL (/social) — the public face of T Chat's social layer ──
 // A static hub + five live AGGREGATE counters read straight from the chat
@@ -2942,7 +3003,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -8947,6 +9008,8 @@ const PETA_CSS = `.peta-form{display:flex;gap:10px;flex-wrap:wrap;align-items:fl
 function petaNav() {
   return worldNav('Maps & places — tukuk.org', [
     { href: '/peta', icon: '🗺️', name: 'Maps & Navigation', blurb: 'Route between any two places on Earth — driving, cycling or walking — with a full turn-by-turn list, free and without an account.' },
+    { href: '/peta/jarak', icon: '📏', name: 'Distance Calculator', blurb: 'How far, really? Straight through the globe versus the honest road distance between any two places, with the detour factor.' },
+    { href: '/peta/matahari', icon: '🌅', name: 'Sunrise & Sunset', blurb: 'Sunrise, sunset, solar noon, day length and twilight for any place on Earth and any date — computed from arithmetic, not an API.' },
     { href: '/traffic', icon: '🚦', name: 'Tukuk Traffic', blurb: 'The community road board: live jams, accidents, police checks, hazards and closures, fading away automatically as they age.' },
     { href: '/cuaca/peta', icon: '🌦️', name: 'World weather map', blurb: 'A live Leaflet map of weather across the planet — rain, heat and storms at a glance.' },
     { href: '/kota', icon: '🏙️', name: 'World cities', blurb: 'Profiles of the world’s major cities — where they are, how big, and what they are known for.' },
@@ -9036,6 +9099,139 @@ boot();})();</script>`;
 
 function petaBusy() {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Maps briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🗺️ Maps &amp; Navigation</h1><p>The map page failed to render while the server reloaded. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
+}
+
+// ── /peta/jarak + /peta/matahari — the two map companion tools ────────────────
+// Distance = great-circle arithmetic plus the existing road router; sun times
+// = textbook solar position computed on our own server. Neither invents data:
+// missing roads and polar days/nights are reported exactly as found.
+const PJ_CSS = PETA_CSS + `.pj-out{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+.pj-card{border:1px solid var(--line);border-radius:12px;padding:14px 10px;text-align:center;background:var(--panel,#171a21)}
+.pj-card b{display:block;font-size:1.3rem;color:var(--accent,#4c8dff)}
+.pj-card i{display:block;font-style:normal;font-size:.85rem;color:var(--muted,#9aa3b2);margin-top:2px}
+.pj-card span{font-size:.78rem;color:var(--muted,#9aa3b2)}
+@media(max-width:720px){.pj-out{grid-template-columns:repeat(2,1fr)}}`;
+
+function jarakPage() {
+  const body = `<p><b>How far is it, really?</b> Ask two questions and get both numbers: the straight line <i>through the globe</i> — the shortest path a bird, a radio wave or an antipode map would take — and the honest <b>road distance</b> a vehicle must actually cover. Type two place names and press Measure.</p>
+  <div class="peta-form">
+    <label>From <input id="pj-from" type="text" placeholder="e.g. Kuala Lumpur" autocomplete="off"></label>
+    <label>To <input id="pj-to" type="text" placeholder="e.g. Singapore" autocomplete="off"></label>
+    <label>Road <select id="pj-mode"><option value="car">🚗 Driving</option><option value="bike">🚲 Cycling</option><option value="foot">🚶 Walking</option></select></label>
+    <button class="peta-btn primary" id="pj-go" type="button">Measure</button>
+    <span id="pj-status"></span>
+  </div>
+  <div id="pj-out" class="pj-out"><div class="pj-card"><b>—</b><span>straight line</span></div><div class="pj-card"><b>—</b><span>by road</span></div><div class="pj-card"><b>—</b><span>road time</span></div><div class="pj-card"><b>—</b><span>detour factor</span></div></div>
+  <noscript><p>JavaScript is required for the calculator. The <a href="/peta">route planner</a> needs it too — everything else on tukuk.org works without it.</p></noscript>
+  <h2 class="section-title">Why the straight line is a curve</h2>
+  <p>The Earth is a ball, so the shortest path between two places is not a ruler line but a <b>great circle</b> — an arc hugging the largest circle you can draw around the globe. Long-haul flights bow toward the poles for exactly this reason, and the number here uses the <b>haversine formula</b> from spherical trigonometry with the Earth’s mean radius of 6,371 km (one full turn around the planet ≈ 40,075 km). A handy scale: 1° of latitude ≈ 111 km, and 1 minute of latitude ≈ 1.85 km — the <b>nautical mile</b>, born from the globe itself.</p>
+  <h2 class="section-title">Reading the detour factor</h2>
+  <p>Roads bend around mountains, coastlines and borders, so the driving number is always at least the straight one. The <b>ratio</b> is the interesting part: ~1.0–1.2 means an easy land corridor, 1.5+ means the terrain is arguing with the ruler, and “no route” is honest geography — islands have ferries, and you cannot drive from Malaysian Borneo to the Peninsula without one. Free-flow times ignore traffic; for today’s road reality see <a href="/traffic">Tukuk Traffic</a>. Related reading: <a href="/blog/latitude-longitude-explained">latitude &amp; longitude explained</a> and <a href="/blog/places-you-cannot-drive-to">places you cannot drive to</a> — and for the road itself, <a href="/peta">Maps &amp; Navigation</a>.</p>
+  <p class="meta">Places resolved by Nominatim (cached on our server); roads by OSRM on OpenStreetMap data; the straight line is pure arithmetic and never touches a third party.</p>`;
+  const script = `<script>(function(){
+function esc(x){return String(x).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});}
+function status(t){document.getElementById('pj-status').textContent=t||'';}
+function fmtKm(k){return k>=100?Math.round(k).toLocaleString('en-US')+' km':k>=10?k.toFixed(1)+' km':k.toFixed(2)+' km';}
+function fmtMin(m){return m<90?m+' min':Math.floor(m/60)+' h '+(m%60)+' min';}
+function resolveBox(id){var v=document.getElementById(id).value.trim();
+  if(!v)throw new Error('fill in both places');
+  var m=v.split(',');if(m.length===2){var a=parseFloat(m[0]),b=parseFloat(m[1]);if(isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180)return Promise.resolve({lat:a,lon:b});}
+  return fetch('/api/peta/geocode?q='+encodeURIComponent(v)).then(function(x){return x.json();}).then(function(j){if(!j.ok||!j.results||!j.results.length)throw new Error(j.error||'place not found');return {lat:j.results[0].lat,lon:j.results[0].lon};});}
+function render(j){var o=document.getElementById('pj-out');
+  var cards='<div class="pj-card"><b>'+fmtKm(j.straightKm)+'</b><span>'+Math.round(j.straightKm*0.621371).toLocaleString('en-US')+' miles</span><span>straight through the globe</span></div>';
+  if(j.road){var det=j.straightKm>1?(j.road.km/j.straightKm):null;
+    cards+='<div class="pj-card"><b>'+fmtKm(j.road.km)+'</b><span>by '+esc(j.mode)+'</span><span>real road distance</span></div>'
+      +'<div class="pj-card"><b>'+fmtMin(j.road.min)+'</b><span>free-flow</span><span>time on the road</span></div>'
+      +'<div class="pj-card"><b>'+(det?det.toFixed(2)+'×':'—')+'</b><span>road ÷ straight</span><span>detour factor</span></div>';
+  }else cards+='<div class="pj-card"><b>no route</b><span>'+esc(j.mode)+'</span><span>'+esc(j.roadError||'not connected')+'</span></div><div class="pj-card"><b>—</b><span>detour</span><span>needs a road</span></div>';
+  o.innerHTML=cards;}
+function go(){status('measuring…');var mode=document.getElementById('pj-mode').value;
+  Promise.all([resolveBox('pj-from'),resolveBox('pj-to')]).then(function(ps){
+    return fetch('/api/peta/distance?from='+ps[0].lat+','+ps[0].lon+'&to='+ps[1].lat+','+ps[1].lon+'&mode='+mode).then(function(x){return x.json();});
+  }).then(function(j){if(!j.ok)throw new Error(j.error||'failed');render(j);status('');
+  }).catch(function(e){status('⚠ '+(e.message||e));});}
+document.getElementById('pj-go').onclick=go;
+['pj-from','pj-to'].forEach(function(id){document.getElementById(id).addEventListener('keydown',function(e){if(e.key==='Enter')go();});});
+document.getElementById('pj-mode').onchange=function(){go();};
+})();</script>`;
+  return worldDoc({
+    title: 'Distance Calculator — Straight Line vs Road Distance Between Any Two Places | Tukuk-OS',
+    desc: 'Measure the true distance between any two places on Earth: great-circle (as the crow flies) in km and miles, the real road distance and time, and the detour factor between them. Free, no account, open data.',
+    selfUrl: 'https://tukuk.org/peta/jarak',
+    heroTitle: '📏 Distance Calculator', heroSub: 'Straight through the globe vs the honest road · any two places on Earth',
+    css: PJ_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Distance Calculator',
+      applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
+      description: 'Great-circle and road distance calculator for any two places on Earth, with travel time and detour factor.',
+      url: 'https://tukuk.org/peta/jarak', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, petaNav());
+}
+
+function matahariPage() {
+  const body = `<p><b>Sunrise &amp; Sunset</b> for any place on Earth and any date: when the sun actually crosses the horizon, when solar noon falls, how long the day lasts, and when civil twilight begins and ends. The arithmetic runs on our own server from the textbook solar-position algorithm — no API can be down, rate-limited or sold — and it matches printed almanacs to within a minute or two.</p>
+  <div class="peta-form">
+    <label>Place <input id="pj-place" type="text" placeholder="e.g. Reykjavík" autocomplete="off"></label>
+    <label>Date <input id="pj-date" type="date"></label>
+    <button class="peta-btn primary" id="pj-go" type="button">Compute</button>
+    <span id="pj-status"></span>
+  </div>
+  <div id="pj-out" class="pj-out"><div class="pj-card"><b>—</b><span>sunrise</span></div><div class="pj-card"><b>—</b><span>solar noon</span></div><div class="pj-card"><b>—</b><span>sunset</span></div><div class="pj-card"><b>—</b><span>day length</span></div></div>
+  <p class="meta" id="pj-extra"></p>
+  <noscript><p>JavaScript is required for the calculator — everything else on tukuk.org works without it.</p></noscript>
+  <h2 class="section-title">Why solar noon is not 12:00</h2>
+  <p>Every clock rounds the Sun’s behaviour to a tidy time zone, but the Sun does not negotiate. True <b>solar noon</b> — when the sun due south (or north) climbs highest — drifts up to about 15 minutes back and forth all year from the <b>equation of time</b> (Earth’s tilted, slightly squashed orbit), and then by up to a full hour or more from your time zone’s political width. That is why the noon row here rarely reads 12:00, and why the <a href="/blog/time-zones-explained">time zone guide</a> is worth your five minutes.</p>
+  <h2 class="section-title">What the numbers include</h2>
+  <p>Sunrise and sunset are the moment’s <b>upper edge</b> of the sun touching the horizon, with air <b>refraction</b> built in (the atmosphere bends light about half a degree, lengthening every day on Earth by a handful of minutes). Civil twilight marks the sun 6° below the horizon — the usual line between “daylight enough to read outside” and not. Inside the Arctic and Antarctic circles the sun may never rise or never set, and the page says exactly that instead of inventing a time. On reading the clock rows: the big figure is UTC — universal, unambiguous — and the small one is the <b>nearest standard meridian</b> estimate, which can differ from the political clock by an hour or two. Related: <a href="/blog/latitude-longitude-explained">latitude &amp; longitude</a>, <a href="/peta/jarak">distance calculator</a>, <a href="/peta">maps &amp; navigation</a>.</p>
+  <p class="meta">Algorithm: mean anomaly → ecliptic longitude → declination + equation of time → hour angle at zenith 90.833° (and 96° for civil twilight). Place names resolved by Nominatim, cached on our server.</p>`;
+  const script = `<script>(function(){
+function esc(x){return String(x).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});}
+function pad(n){return (n<10?'0':'')+n;}
+function hhmm(m){var t=Math.round(m);return pad(Math.floor(t/60)%24)+':'+pad(t%60);}
+function status(t){document.getElementById('pj-status').textContent=t||'';}
+function card(big,sub,label){return '<div class="pj-card"><b>'+big+'</b><i>'+sub+'</i><span>'+label+'</span></div>';}
+function utc(m){return m==null?'—':hhmm(m);}
+function est(m,lon){if(m==null)return '—';var tz=Math.round(lon/15);return '≈'+hhmm(((m+tz*60)%1440+1440)%1440)+' clock ('+(tz>=0?'+':'')+tz+'h zone)';}
+function day(d){var t=new Date();d.value=t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());}
+function go(){status('finding place…');
+  var v=document.getElementById('pj-place').value.trim();if(!v){status('⚠ type a place');return;}
+  var m=v.split(',');
+  var ptP;if(m.length===2){var a=parseFloat(m[0]),b=parseFloat(m[1]);ptP=(isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180)?Promise.resolve({lat:a,lon:b,label:v}):Promise.reject(new Error('bad coordinates'));}
+  else ptP=fetch('/api/peta/geocode?q='+encodeURIComponent(v)).then(function(x){return x.json();}).then(function(j){if(!j.ok||!j.results||!j.results.length)throw new Error(j.error||'place not found');return {lat:j.results[0].lat,lon:j.results[0].lon,label:j.results[0].label};});
+  ptP.then(function(p){var date=document.getElementById('pj-date').value||new Date().toISOString().slice(0,10);
+    status('computing…');
+    return fetch('/api/peta/sun?lat='+p.lat+'&lon='+p.lon+'&date='+date).then(function(x){return x.json();}).then(function(j){if(!j.ok)throw new Error(j.error||'failed');return {p:p,j:j};});
+  }).then(function(r){render(r.p,r.j);status('');
+  }).catch(function(e){status('⚠ '+(e.message||e));});}
+function render(p,j){var o=document.getElementById('pj-out');var cards='';
+  if(j.polar==='day')cards='<div class="pj-card" style="grid-column:1/-1"><b>☀ The sun never sets</b><span>24 hours of daylight on '+esc(j.date)+' at '+esc(p.label)+'</span></div>';
+  else if(j.polar==='night')cards='<div class="pj-card" style="grid-column:1/-1"><b>🌑 The sun never rises</b><span>polar night on '+esc(j.date)+' at '+esc(p.label)+'</span></div>';
+  else cards=card(utc(j.sunriseUtc),est(j.sunriseUtc,p.lon),'sunrise')
+    +card(utc(j.noonUtc),est(j.noonUtc,p.lon),'solar noon')
+    +card(utc(j.sunsetUtc),est(j.sunsetUtc,p.lon),'sunset')
+    +card(Math.floor(j.dayLengthMin/60)+'h '+pad(j.dayLengthMin%60)+'m','day length','from horizon to horizon');
+  o.innerHTML=cards;
+  var ex=(j.civilDawnUtc!=null)?('Civil twilight: dawn '+utc(j.civilDawnUtc)+' UTC, dusk '+utc(j.civilDuskUtc)+' UTC — '):'';
+  document.getElementById('pj-extra').textContent=p.label+' · '+j.date+' · sun declination '+j.declDeg.toFixed(2)+'° · equation of time '+(j.eqTime>=0?'+':'')+j.eqTime.toFixed(1)+' min. '+(j.civilDawnUtc==null&&j.polar?'(No civil twilight — the sun stays '+(j.polar==='day'?'up':'down')+' all day.)':ex);
+  }
+day(document.getElementById('pj-date'));
+document.getElementById('pj-go').onclick=go;
+document.getElementById('pj-place').addEventListener('keydown',function(e){if(e.key==='Enter')go();});
+})();</script>`;
+  return worldDoc({
+    title: 'Sunrise & Sunset Calculator — Day Length and Twilight Anywhere on Earth | Tukuk-OS',
+    desc: 'Compute sunrise, sunset, solar noon, day length and civil twilight for any place and any date. Almanac-accurate solar arithmetic, polar cases reported honestly, free with no account or API key.',
+    selfUrl: 'https://tukuk.org/peta/matahari',
+    heroTitle: '🌅 Sunrise & Sunset', heroSub: 'Any place · any date · almanac math computed from arithmetic, not an API',
+    css: PJ_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Sunrise & Sunset Calculator',
+      applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
+      description: 'Sunrise, sunset, solar noon, day length and civil twilight calculator for any location on Earth and any date.',
+      url: 'https://tukuk.org/peta/matahari', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, petaNav());
 }
 
 // ── /social — Community & Social hub (aggregate counters + where to join) ─────
@@ -14392,6 +14588,21 @@ app.get('/blog/rss.xml', (req, res) => {
   );
 });
 
+// Plain-anchor share strip: works with JS off, sends nothing anywhere until
+// the reader taps one — the link itself is the only payload, title + URL.
+function shareRow(title, url) {
+  const t = encodeURIComponent(title), u = encodeURIComponent(url);
+  const chip = (href, label) => `<a class="tag" style="text-decoration:none" href="${href}" rel="noopener nofollow">${label}</a>`;
+  return `<div class="tags" style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">`
+    + `<span style="font-size:.85rem;color:var(--muted,#9aa3b2)">Share this article:</span>`
+    + chip(`https://wa.me/?text=${t}%20${u}`, 'WhatsApp')
+    + chip(`https://twitter.com/intent/tweet?text=${t}&amp;url=${u}`, 'X')
+    + chip(`https://bsky.app/intent/compose?text=${t}%20${u}`, 'Bluesky')
+    + chip(`https://t.me/share/url?url=${u}&amp;text=${t}`, 'Telegram')
+    + chip(`mailto:?subject=${t}&amp;body=${u}`, 'Email')
+    + `</div>`;
+}
+
 app.get('/blog/:slug', (req, res) => {
   const post = store.getPostBySlug(req.params.slug);
   if (!post) {
@@ -14498,6 +14709,7 @@ ${siteHeader('blog')}
       ${renderedContent}
       ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
       ${post.tags && post.tags.length ? `<div class="tags" style="margin-top:28px; padding-top:16px; border-top:1px solid var(--line);">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      ${shareRow(post.title, postUrl)}
     </article>
     ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
   </main>
