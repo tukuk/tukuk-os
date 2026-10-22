@@ -9846,7 +9846,7 @@ function calc(){var a=parseFloat($('b-age').value),h=parseFloat($('b-h').value),
  var bmr=(10*kg+6.25*cm-5*a+($('b-sex').value==='m'?5:-161));
  var bf=1.20*bmi+0.23*a-10.8*($('b-sex').value==='m'?1:0)-5.4;
  var html='<div class="tl-big">BMI '+r1(bmi)+' — '+band(bmi)+'</div>'
- +'<p>For your height, the WHO normal band (18.5–24.9) spans <b>'+r1(lo)+'–'+r1(hi)+' kg</b> ('+(imperial?r1(lo/0.45359237)+'–'+r1(hi/0.45359237)+' lb':'')+').</p>'
+ +'<p>For your height, the WHO normal band (18.5–24.9) spans <b>'+r1(lo)+'–'+r1(hi)+' kg</b>'+(imperial?' ('+r1(lo/0.45359237)+'–'+r1(hi/0.45359237)+' lb)':'')+'.</p>'
  +(asian?'<p><b>Note:</b> you are between 23 and 25 — normal by the global cut-off, but in the “increased risk” band the WHO describes for many Asian populations.</p>':'');
  html+='<p>Resting burn (Mifflin-St Jeor BMR): <b>'+Math.round(bmr)+' kcal/day</b>. Rough maintenance needs by activity:</p>'
  +'<table class="tl-tab"><tr><td>Sedentary (desk, little exercise)</td><td>'+Math.round(bmr*1.2)+' kcal</td></tr>'
