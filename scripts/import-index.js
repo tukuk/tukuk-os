@@ -19,11 +19,11 @@ const BATCH = 500;
 const TASK_TIMEOUT_MS = Number(process.env.IMPORT_TASK_TIMEOUT_MS || 900000);
 
 if (!FILE) {
-  console.error('guna: node scripts/import-index.js <fail.json.gz> [index]');
+  console.error('usage: node scripts/import-index.js <file.json.gz> [index]');
   process.exit(1);
 }
 if (!KEY) {
-  console.error('MEILI_MASTER_KEY kosong');
+  console.error('MEILI_MASTER_KEY is empty');
   process.exit(1);
 }
 
@@ -69,7 +69,7 @@ async function main() {
   if (!exists) {
     const created = await request('POST', '/indexes', { uid: index, primaryKey: payload.primaryKey || undefined });
     tasks.push(created.taskUid);
-    console.log(`indeks ${index} dicipta`);
+    console.log(`index ${index} created`);
   }
 
   if (payload.settings) {
@@ -81,15 +81,15 @@ async function main() {
     const batch = payload.documents.slice(i, i + BATCH);
     const added = await request('POST', `/indexes/${index}/documents`, batch);
     tasks.push(added.taskUid);
-    console.log(`  ${Math.min(i + BATCH, payload.documents.length)}/${payload.documents.length} dokumen dihantar`);
+    console.log(`  ${Math.min(i + BATCH, payload.documents.length)}/${payload.documents.length} documents sent`);
   }
 
   await waitForTasks(tasks);
   const stats = await request('GET', `/indexes/${index}/stats`);
-  console.log(`${index}: pulih ${stats.numberOfDocuments} dokumen (import ${payload.documents.length})`);
+  console.log(`${index}: restored ${stats.numberOfDocuments} documents (imported ${payload.documents.length})`);
 }
 
 main().catch((err) => {
-  console.error(`pulihan gagal: ${err.message}`);
+  console.error(`restore failed: ${err.message}`);
   process.exit(1);
 });

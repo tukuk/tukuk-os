@@ -35,20 +35,20 @@ function milestoneDates() {
 
 async function main() {
   const dates = milestoneDates();
-  console.log(`[seed] ${dates.length} tarikh APOD akan disemai (kunci ${config.nasa.apiKey ? 'OK' : 'TIADA'})`);
+  console.log(`[seed] ${dates.length} APOD dates to seed (key ${config.nasa.apiKey ? 'OK' : 'MISSING'})`);
   let ok = 0, skip = 0, fail = 0;
   for (const date of dates) {
     try {
       const apod = await nasa.getAPOD({ date });
       if (apod && apod.date === date && apod.title) { ok += 1; console.log(`  ✓ ${date} — ${String(apod.title).slice(0, 60)}`); }
-      else { skip += 1; console.log(`  - ${date} (payload tak sah / video-only)`); }
+      else { skip += 1; console.log(`  - ${date} (payload not valid / video-only)`); }
     } catch (err) {
       fail += 1; console.log(`  ✗ ${date}: ${err.message}`);
     }
     // Sopan pada had kadar: ~2 permintaan/saatinja.
     await new Promise((r) => setTimeout(r, 500));
   }
-  console.log(`[seed] selesai — ${ok} disimpan, ${skip} diliwati, ${fail} gagal`);
+  console.log(`[seed] done — ${ok} saved, ${skip} skipped, ${fail} failed`);
 }
 
-main().catch((err) => { console.error('[seed] mati:', err.message); process.exit(1); });
+main().catch((err) => { console.error('[seed] fatal:', err.message); process.exit(1); });

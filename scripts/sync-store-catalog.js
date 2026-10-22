@@ -117,7 +117,7 @@ async function main() {
       _emoji: (it.icon || '').trim() || (it.kind === 'game' ? '🎮' : '📱'),
     });
   }
-  console.log(`store=${items.length} item · katalog=${known.size} · baharu=${toAdd.length}`);
+  console.log(`store=${items.length} items · catalogue=${known.size} · new=${toAdd.length}`);
   if (DRY) { toAdd.forEach((a) => console.log('  +', a.slug, '←', a.url)); return; }
 
   // 1) Ikon SVG + PNG-512 + launcher untuk item baharu.
@@ -157,7 +157,7 @@ async function main() {
   if (catalog.apps) catalog.apps = apps.concat(toAdd);
   else catalog.splice(catalog.length, 0, ...toAdd);
   fs.writeFileSync(CATALOG_PATH, JSON.stringify(catalog, null, 2) + '\n');
-  console.log(`sync-store-catalog: +${toAdd.length} entri · ${mip} mipmap dijana · katalog kini ${known.size + toAdd.length} item`);
+  console.log(`sync-store-catalog: +${toAdd.length} entries · ${mip} mipmaps generated · the catalogue is now ${known.size + toAdd.length} items`);
 }
 
-main().catch((e) => { console.error('sync-store-catalog GAGAL:', e.message); process.exit(1); });
+main().catch((e) => { console.error('sync-store-catalog FAILED:', e.message); process.exit(1); });

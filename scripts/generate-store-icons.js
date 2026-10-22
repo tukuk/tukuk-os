@@ -110,4 +110,4 @@ function writeAll(dir, map) {
 
 const a = writeAll(OUT_APPS, APPS);
 const g = writeAll(OUT_GAMES, GAMES);
-console.log(`Ikon dijana: ${a} app → public/icons/apps/ · ${g} game → public/icons/games/`);
+console.log(`Icons generated: ${a} apps → public/icons/apps/ · ${g} games → public/icons/games/`);

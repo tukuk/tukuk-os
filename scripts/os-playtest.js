@@ -165,7 +165,7 @@ async function main() {
   cdp.ws.close();
 
   const pass = results.filter((r) => r.pass).length;
-  console.log(`\n═══ PLAYTEST: ${pass}/${results.length} lulus ═══`);
+  console.log(`\n═══ PLAYTEST: ${pass}/${results.length} passed ═══`);
   process.exit(pass === results.length ? 0 : 1);
 }
 
@@ -174,7 +174,7 @@ async function shot(cdp, session, file) {
     const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' }, session);
     fs.writeFileSync(file, Buffer.from(data, 'base64'));
     console.log('   📸 ' + file);
-  } catch (e) { console.log('   (screenshot gagal: ' + e.message + ')'); }
+  } catch (e) { console.log('   (screenshot failed: ' + e.message + ')'); }
 }
 
 main().catch((e) => { console.error('FATAL:', e.message); process.exit(2); });

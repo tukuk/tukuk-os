@@ -19,7 +19,7 @@ const OUT = process.argv[2] || path.join(__dirname, '..', 'data', 'edge-index.js
 const PAGE = 1000;
 
 if (!KEY) {
-  console.error('MEILI_MASTER_KEY kosong');
+  console.error('MEILI_MASTER_KEY is empty');
   process.exit(1);
 }
 
@@ -54,10 +54,10 @@ async function main() {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(docs));
   const mb = (fs.statSync(OUT).size / 1e6).toFixed(1);
-  console.log(`edge-index: ${docs.length} dokumen, ${mb} MB → ${OUT}`);
+  console.log(`edge-index: ${docs.length} documents, ${mb} MB → ${OUT}`);
 }
 
 main().catch((e) => {
-  console.error('eksport gagal:', e.message);
+  console.error('export failed:', e.message);
   process.exit(1);
 });

@@ -16,7 +16,7 @@ async function main() {
 
   const fromStats = await from.getStats();
   const toStats = await to.getStats();
-  console.log(`[merge] ${FROM}: ${fromStats.numberOfDocuments} dokumen -> ${TO} (${toStats.numberOfDocuments} sedia ada)`);
+  console.log(`[merge] ${FROM}: ${fromStats.numberOfDocuments} documents -> ${TO} (${toStats.numberOfDocuments} already there)`);
 
   let offset = 0;
   let copied = 0;
@@ -33,10 +33,10 @@ async function main() {
   }
 
   const after = await to.getStats();
-  console.log(`\n[merge] selesai: ${copied} dokumen disalin; ${TO} kini ${after.numberOfDocuments} dokumen`);
+  console.log(`\n[merge] done: ${copied} documents copied; ${TO} now ${after.numberOfDocuments} documents`);
 }
 
 main().catch((err) => {
-  console.error('[merge] GAGAL:', err.message || err);
+  console.error('[merge] FAILED:', err.message || err);
   process.exit(1);
 });

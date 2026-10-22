@@ -252,7 +252,7 @@ async function ensureIndex(uid) {
 async function main() {
   const args = process.argv.slice(2);
   if (!args.length) {
-    console.log('guna: node scripts/import-dataset.js <fail> [--index uji_coba] [--limit 5000] [--drop]');
+    console.log('usage: node scripts/import-dataset.js <file> [--index uji_coba] [--limit 5000] [--drop]');
     process.exit(1);
   }
   const file = args[0];
@@ -265,7 +265,7 @@ async function main() {
   const drop = args.includes('--drop');
 
   if (!fs.existsSync(file)) {
-    console.error(`fail tidak dijumpai: ${file}`);
+    console.error(`file is missing: ${file}`);
     process.exit(1);
   }
 
@@ -275,16 +275,16 @@ async function main() {
       await request('DELETE', `/indexes/${uid}`);
       await new Promise((r) => setTimeout(r, 900));
       await ensureIndex(uid);
-      console.log(`index ${uid} dibuang dan dicipta semula`);
+      console.log(`index ${uid} deleted and recreated`);
     } catch (e) {
-      console.log(`buang index gagal: ${e.message}`);
+      console.log(`failed to delete the index: ${e.message}`);
     }
   }
 
   const rows = parseFile(file);
   const docs = rows.slice(0, limit || rows.length).map((row) => toDoc(row, uid));
   const unique = new Set(docs.map((d) => d.id));
-  console.log(`baris: ${rows.length} | dokumen unik: ${unique.size}`);
+  console.log(`rows: ${rows.length} | unique documents: ${unique.size}`);
 
   let indexed = 0;
   for (let i = 0; i < docs.length; i += BATCH) {
@@ -294,19 +294,19 @@ async function main() {
     process.stdout.write(`\rhantar ${indexed}/${docs.length}`);
   }
 
-  console.log('\nmenunggu pengindeksan...');
+  console.log('\nwaiting for indexing...');
   let stats;
   for (let i = 0; i < 120; i += 1) {
     await new Promise((r) => setTimeout(r, 1000));
     stats = await request('GET', `/indexes/${uid}/stats`);
     if (!stats.isIndexing) break;
   }
-  console.log(`index ${uid}: ${stats.numberOfDocuments} dokumen (unik dihantar: ${unique.size})`);
+  console.log(`index ${uid}: ${stats.numberOfDocuments} documents (unique sent: ${unique.size})`);
   const failed = await request('GET', '/tasks?statuses=failed&limit=1');
-  if (failed.total) console.log(`nota: ${failed.total} tugas gagal sebelum ini boleh diabaikan jika angka di atas betul`);
+  if (failed.total) console.log(`note: ${failed.total} tasks failed earlier — ignorable if the numbers above are right`);
 }
 
 main().catch((err) => {
-  console.error(`RALAT: ${err.message}`);
+  console.error(`ERROR: ${err.message}`);
   process.exit(1);
 });

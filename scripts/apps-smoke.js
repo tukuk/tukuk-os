@@ -44,7 +44,7 @@ const PAGES = [
 
 (async () => {
   let ver;
-  try { ver = await jget('/json/version'); } catch { console.error('❌ Chromium CDP tidak berjalan di port ' + PORT); process.exit(1); }
+  try { ver = await jget('/json/version'); } catch { console.error('❌ Chromium CDP is not running on port ' + PORT); process.exit(1); }
   const cdp = await CDP.connect(ver.webSocketDebuggerUrl);
   const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
   const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
@@ -69,7 +69,7 @@ const PAGES = [
     if (ok) pass++;
     console.log(`${ok ? '✅' : '❌'} /apps/${name} — ${out || ''}${fail ? ' FAIL:' + fail : ''}${errors.length ? ' JSERR:' + errors.join(' ;; ') : ''}`);
   }
-  console.log(`\n═══ SMOKE: ${pass}/${PAGES.length} lulus ═══`);
+  console.log(`\n═══ SMOKE: ${pass}/${PAGES.length} passed ═══`);
   try { await cdp.send('Target.closeTarget', { targetId }); } catch {}
   cdp.ws.close();
   process.exit(pass === PAGES.length ? 0 : 1);

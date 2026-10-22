@@ -17,7 +17,7 @@ const SVG = path.join(BUILD_DIR, 'icon.svg');
 
 function generate() {
   if (!fs.existsSync(SVG)) {
-    console.error('Fail ikon tidak dijumpai:', SVG);
+    console.error('Icon file is missing:', SVG);
     process.exit(1);
   }
 
@@ -31,7 +31,7 @@ function generate() {
     { name: 'icon-16.png', size: 16 }
   ];
 
-  console.log('[icons] menjana ikon PNG...');
+  console.log('[icons] generating the PNG icons...');
   for (const { name, size } of sizes) {
     const out = path.join(BUILD_DIR, name);
     sharp(SVG)
@@ -40,21 +40,21 @@ function generate() {
       .toFile(out)
       .then(() => console.log(`[icons] ${out}`))
       .catch((err) => {
-        console.error(`[icons] gagal jana ${out}:`, err.message);
+        console.error(`[icons] failed to generate ${out}:`, err.message);
       });
   }
 
   // ICO untuk Windows (electron-builder akan jana dari PNG)
-  console.log('[icons] langkau icon.ico (electron-builder akan jana automatik)');
+  console.log('[icons] skip icon.ico (electron-builder generates it automatically)');
 
   // ICNS untuk macOS (electron-builder akan jana dari PNG)
   if (process.platform === 'darwin') {
-    console.log('[icons] langkau icon.icns (electron-builder akan jana automatik)');
+    console.log('[icons] skip icon.icns (electron-builder generates it automatically)');
   } else {
-    console.log('[icons] langkau icon.icns (hanya untuk macOS)');
+    console.log('[icons] skip icon.icns (macOS only)');
   }
 
-  console.log('[icons] selesai!');
+  console.log('[icons] done!');
 }
 
 generate();

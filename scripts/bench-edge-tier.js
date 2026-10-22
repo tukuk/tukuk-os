@@ -59,7 +59,7 @@ async function detectModel(base) {
   if (!res.ok) throw new Error(base + '/v1/models → HTTP ' + res.status);
   const j = await res.json();
   const ids = (j.data || []).map((m) => m.id);
-  if (!ids.length) throw new Error(base + ': tiada model dalam registry (litert-lm import?)');
+  if (!ids.length) throw new Error(base + ': no model in the registry (litert-lm import?)');
   return ids;
 }
 
@@ -70,13 +70,13 @@ async function bench(label, base, model, procPattern) {
   try {
     for (let i = 0; i < CFG.rounds; i++) {
       const r = await chatOnce(base, model, PROMPT);
-      console.log('  pusingan ' + (i + 1) + ': ' + r.tokens + ' tok dalam ' + r.ms + 'ms = ' + r.tps.toFixed(1) + ' tok/s');
+      console.log('  round ' + (i + 1) + ': ' + r.tokens + ' tok in ' + r.ms + 'ms = ' + r.tps.toFixed(1) + ' tok/s');
       console.log('    → "' + r.snippet + '…"');
     }
   } finally {
     clearInterval(tick);
   }
-  console.log('  RSS puncak proses: ' + peak + 'MB');
+  console.log('  peak process RSS: ' + peak + 'MB');
   return peak;
 }
 
@@ -89,17 +89,17 @@ async function bench(label, base, model, procPattern) {
     const rss = await bench('LiteRT-LM', CFG.litertBase, pick, 'litert');
     hasil.push(['LiteRT-LM', pick, rss]);
   } catch (e) {
-    console.log('\n⚠ LiteRT-LM diuji tapi gagal: ' + e.message);
-    console.log('   (pastikan litert-lm serve aktif di port 8090 — lihat scripts/setup-litert-pilot.sh)');
+    console.log('\n⚠ LiteRT-LM was tested but failed: ' + e.message);
+    console.log('   (make sure litert-lm serve is active on port 8090 — see scripts/setup-litert-pilot.sh)');
   }
   // Ollama (OpenAI-compatible pada :11434/v1).
   try {
     const rss = await bench('Ollama', CFG.ollamaBase, CFG.ollamaModel, 'ollama');
     hasil.push(['Ollama', CFG.ollamaModel, rss]);
   } catch (e) {
-    console.log('\n⚠ Ollama gagal: ' + e.message + ' (pull dulu: ollama pull ' + CFG.ollamaModel + ')');
+    console.log('\n⚠ Ollama failed: ' + e.message + ' (pull first: ollama pull ' + CFG.ollamaModel + ')');
   }
-  console.log('\n════ RINGKASAN ════');
+  console.log('\n════ SUMMARY ════');
   for (const [nama, model, rss] of hasil) console.log('  ' + nama + ' [' + model + '] RSS=' + rss + 'MB');
-  console.log('  Keputusan tok/s ada di atas; pilih tier dengan tok/s tertinggi pada RSS yang muat 6.8GB.');
-})().catch((e) => { console.error('✗ bench gagal:', e.message); process.exit(1); });
+  console.log('  The tok/s results are above; pick the tier with the highest tok/s whose RSS fits in 6.8GB.');
+})().catch((e) => { console.error('✗ bench failed:', e.message); process.exit(1); });

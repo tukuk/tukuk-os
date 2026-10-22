@@ -213,12 +213,12 @@ function main() {
   };
   minimodel.save(model, OUT, { ...meta, accuracy: stats.accuracy, stats });
 
-  console.log(`✓ latihan selesai — ${stats.examples} contoh (${seeds.length} seed + ${extra.length} log)`);
-  console.log(`  kejituan holdout: ${(stats.accuracy * 100).toFixed(1)}%  (train ${(stats.trainAccuracy * 100).toFixed(1)}%)`);
-  console.log(`  sebaran kelas:`, stats.perClass.map((c) => `${c.name}:${c.samples}`).join(' '));
-  console.log(`  simpan → ${OUT}`);
+  console.log(`✓ training done — ${stats.examples} examples (${seeds.length} seed + ${extra.length} log)`);
+  console.log(`  holdout accuracy: ${(stats.accuracy * 100).toFixed(1)}%  (train ${(stats.trainAccuracy * 100).toFixed(1)}%)`);
+  console.log(`  class spread:`, stats.perClass.map((c) => `${c.name}:${c.samples}`).join(' '));
+  console.log(`  saved → ${OUT}`);
   for (const l of probeLines) console.log(l);
-  console.log(`  probe luar: ${okAll}/${PROBES.length} betul — regex lepas ${regexMiss}, model selamatkan ${modelSelamatkan}`);
+  console.log(`  external probes: ${okAll}/${PROBES.length} correct — the regex missed ${regexMiss}, the model rescued ${modelSelamatkan}`);
 }
 
 main();

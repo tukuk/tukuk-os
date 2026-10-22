@@ -12,7 +12,7 @@ const KEY = args[0] || 'notes';
 const OUT = (args.find((a) => a.endsWith('.png'))) || `/tmp/arc-${KEY}.png`;
 const MS = parseInt((args.find((a) => a.startsWith('--ms=')) || '--ms=1600').split('=')[1], 10);
 const URL_TARGET = /^https?:/.test(KEY) ? KEY : `https://tukuk.org/games/${KEY}`;
-setTimeout(() => { console.log('TIMEOUT: harness melebihi 25s'); process.exit(4); }, 25000).unref();
+setTimeout(() => { console.log('TIMEOUT: the harness exceeded 25s'); process.exit(4); }, 25000).unref();
 
 async function json(p) { const r = await fetch(BASE + p); if (!r.ok) throw new Error('CDP ' + r.status + ' ' + p); return r.json(); }
 class CDP {
@@ -74,7 +74,7 @@ async function main() {
   console.log('START     :', started);
   console.log('CANVAS    :', JSON.stringify(info));
   console.log('SCREENSHOT:', OUT);
-  console.log('ERRORS    :', realErrs.length ? realErrs.slice(0, 6).join(' | ') : 'bersih');
+  console.log('ERRORS    :', realErrs.length ? realErrs.slice(0, 6).join(' | ') : 'clean');
   process.exit(realErrs.length ? 3 : 0);
 }
 main().catch((e) => { console.error('FATAL:', e.message); process.exit(2); });

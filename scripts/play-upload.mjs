@@ -34,7 +34,7 @@ try { ({ google } = await import('googleapis')); }
 catch { die('googleapis belum dipasang — jalankan: npm install googleapis'); }
 if (!fs.existsSync(KEY) && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   // Tiada fail kunci — kita akan cuba ADC (gcloud application-default login) di bawah.
-  console.log('· (tiada google-cloud-key.json — akan guna ADC jika ada)');
+  console.log('· (no google-cloud-key.json — will use ADC if present)');
 }
 if (!fs.existsSync(AAB)) die(`tiada ${path.relative(ROOT, AAB)} — jalankan: bash scripts/build-apk.sh`);
 
@@ -45,7 +45,7 @@ if (fs.existsSync(KEY)) {
   console.log('· auth: service account (google-cloud-key.json)');
 } else {
   auth = new google.auth.GoogleAuth({ scopes: SCOPES }); // ADC: gcloud auth application-default login
-  console.log('· auth: Application Default Credentials (login gcloud anda)');
+  console.log('· auth: Application Default Credentials (your gcloud login)');
 }
 const api = google.androidpublisher({ version: 'v3', auth });
 
@@ -58,17 +58,17 @@ function listing(lang) {
   return { language: lang === 'en-US' ? 'en-US' : lang, fullDescription: fullD, title, shortDescription: shortD };
 }
 
-console.log(`▶ buka edit untuk ${PKG} …`);
+console.log(`▶ open the edit page for ${PKG} …`);
 const edit = (await api.edits.insert({ packageName: PKG, requestBody: {} })).data;
 const id = edit.id;
 try {
-  console.log(`▶ muat naik AAB (${(fs.statSync(AAB).size / 1024).toFixed(0)} KB) …`);
+  console.log(`▶ uploading the AAB (${(fs.statSync(AAB).size / 1024).toFixed(0)} KB) …`);
   const up = await api.edits.bundles.upload({
     packageName: PKG, editId: id,
     media: { mimeType: 'application/octet-stream', body: fs.createReadStream(AAB) },
   });
   const versionCode = up.data.versionCode;
-  console.log(`✓ AAB diterima — versionCode ${versionCode}`);
+  console.log(`✓ AAB accepted — versionCode ${versionCode}`);
 
   // Metadata/listing untuk setiap bahasa yang wujud.
   for (const lang of fs.readdirSync(META).filter((d) => fs.existsSync(path.join(META, d, 'title.txt')))) {
@@ -85,8 +85,8 @@ try {
   console.log(`✓ track "${TRACK}" → status "${STATUS}" (versionCode ${versionCode})`);
 
   await api.edits.commit({ packageName: PKG, editId: id });
-  console.log(`\n✅ Berjaya — keluaran di-commit ke Play (track ${TRACK}).`);
-  console.log('   Seterusnya di Play Console: Uji & terbitkan → ' + TRACK + ' → salin pautan/QR penguji.');
+  console.log(`\n✅ Success — the release is committed to Play (track ${TRACK}).`);
+  console.log('   Next in Play Console: Test & release → ' + TRACK + ' → copy the tester link/QR.');
 } catch (e) {
   try { await api.edits.delete({ packageName: PKG, editId: id }); } catch { /* abaikan */ }
   const detail = e?.response?.data?.error?.message || e?.message || String(e);

@@ -150,15 +150,15 @@ async function crawlBatch(urls, concurrency) {
 }
 
 async function main() {
-  console.log(`[batch-crawl] memuat senarai biji: ${SEEDS_FILE}`);
+  console.log(`[batch-crawl] loading the seed list: ${SEEDS_FILE}`);
   let seeds = [];
   try {
     seeds = fs.readFileSync(SEEDS_FILE, 'utf-8').split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
   } catch {
-    console.error(`[batch-crawl] FAIL: tidak dapat membaca ${SEEDS_FILE}`);
+    console.error(`[batch-crawl] FAIL: cannot read ${SEEDS_FILE}`);
     process.exit(1);
   }
-  console.log(`[batch-crawl] ${seeds.length} biji`);
+  console.log(`[batch-crawl] ${seeds.length} seeds`);
 
   const allUrls = [];
   const seen = new Set();
@@ -191,8 +191,8 @@ async function main() {
     } catch { /* skip seed */ }
   }
 
-  console.log(`[batch-crawl] ${allUrls.length} URL untuk dirantau`);
-  console.log(`[batch-crawl] memulai batch (concurrency=${CONCURRENCY_ARG})...`);
+  console.log(`[batch-crawl] ${allUrls.length} URLs to crawl`);
+  console.log(`[batch-crawl] starting the batch (concurrency=${CONCURRENCY_ARG})...`);
   const startedAt = Date.now();
   const results = await crawlBatch(allUrls, CONCURRENCY_ARG);
   const took = Date.now() - startedAt;
@@ -200,7 +200,7 @@ async function main() {
   const unchanged = results.filter((r) => r.status === 'unchanged').length;
   const failed = results.filter((r) => r.status === 'failed').length;
   const skipped = results.filter((r) => r.status === 'skipped').length;
-  console.log(`[batch-crawl] selesai dalam ${took}ms | indexed=${indexed} unchanged=${unchanged} failed=${failed} skipped=${skipped}`);
+  console.log(`[batch-crawl] done in ${took}ms | indexed=${indexed} unchanged=${unchanged} failed=${failed} skipped=${skipped}`);
 }
 
 main().catch((e) => {

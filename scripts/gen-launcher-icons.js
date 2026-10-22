@@ -38,6 +38,6 @@ fs.mkdirSync(LAUNCH, { recursive: true });
     await sharp(pngBuf).toFile(png512);
     made++;
   }
-  console.log(`gen-launcher-icons: ${made} dijana, ${skip} guna PNG khas, ${miss.length} tiada SVG${miss.length ? ' → ' + miss.join(', ') : ''}`);
+  console.log(`gen-launcher-icons: ${made} generated, ${skip} use a bespoke PNG, ${miss.length} have no SVG${miss.length ? ' → ' + miss.join(', ') : ''}`);
   if (miss.length) process.exitCode = 1;
-})().catch(e => { console.error('gen-launcher-icons GAGAL:', e.message); process.exit(1); });
+})().catch(e => { console.error('gen-launcher-icons FAILED:', e.message); process.exit(1); });

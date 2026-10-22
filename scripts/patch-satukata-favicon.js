@@ -29,9 +29,9 @@ for (const f of targets) {
   let h = fs.readFileSync(f, 'utf8');
   if (h.includes("l.rel='icon'")) { skipped++; continue; } // sudah ditampal
   const m = h.match(/^<script>var CFG = .*;<\/script>$/m);
-  if (!m) { console.log('TIADA baris CFG:', f); skipped++; continue; }
+  if (!m) { console.log('NO CFG line:', f); skipped++; continue; }
   h = h.replace(m[0], m[0] + '\n' + SNIPPET);
   fs.writeFileSync(f, h);
   patched++;
 }
-console.log(`Favicon satu-kata: ${patched} ditampal, ${skipped} dilangkau (sudah ada/tiada CFG)`);
+console.log(`Favicon satu-kata: ${patched} patched, ${skipped} skipped (already present / no CFG)`);

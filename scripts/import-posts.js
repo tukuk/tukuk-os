@@ -23,13 +23,13 @@ const store = require('../src/store');
 const dir = process.argv[2] || path.join(__dirname, '..', 'content', 'blog');
 
 if (!fs.existsSync(dir)) {
-  console.error(`Folder tidak dijumpai: ${dir}`);
+  console.error(`Folder is missing: ${dir}`);
   process.exit(1);
 }
 
 const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
 if (!files.length) {
-  console.error(`Tiada fail .md dalam ${dir}`);
+  console.error(`No .md files in ${dir}`);
   process.exit(1);
 }
 
@@ -53,7 +53,7 @@ for (const file of files) {
   const words = body.split(/\s+/).filter(Boolean).length;
 
   if (words < 80) {
-    console.log(`skip  ${String(words).padStart(4)}w  ${slug} (terlalu pendek)`);
+    console.log(`skip  ${String(words).padStart(4)}w  ${slug} (too short)`);
     skipped += 1;
     continue;
   }

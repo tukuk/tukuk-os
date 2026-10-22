@@ -10,7 +10,7 @@ const path = require('path');
 
 async function main() {
   let sharp;
-  try { sharp = require('sharp'); } catch (e) { console.error('sharp tidak dijumpai (npm i -D sharp)'); process.exit(1); }
+  try { sharp = require('sharp'); } catch (e) { console.error('sharp is missing (npm i -D sharp)'); process.exit(1); }
 
   const svgPath = path.join(__dirname, '..', 'public', 'icons', 'apps', 'chat.svg');
   const outDir = path.dirname(svgPath);
@@ -40,6 +40,6 @@ async function main() {
     console.log('[chat-icons] ' + t.name);
   }
   // Manifest juga guna SVG (pelayar moden sokong); pastikan ia wujud.
-  console.log('[chat-icons] siap.');
+  console.log('[chat-icons] done.');
 }
 main().catch((e) => { console.error(e); process.exit(1); });

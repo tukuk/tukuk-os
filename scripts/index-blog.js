@@ -14,17 +14,17 @@ const { ensureIndex } = require('../src/meili');
 const { indexBlogPosts } = require('../src/blog-index');
 
 async function main() {
-  console.log(`[index-blog] menyambung ke ${config.meili.host} (index: ${config.indexName})...`);
+  console.log(`[index-blog] connecting to ${config.meili.host} (index: ${config.indexName})...`);
   const index = await ensureIndex();
   const { count } = await indexBlogPosts(index);
   if (count === 0) {
-    console.warn('[index-blog] TIADA post store untuk diindeks — jalankan store.load() / import-posts dahulu.');
+    console.warn('[index-blog] no post store to index — run store.load() / import-posts first.');
     return;
   }
-  console.log(`[index-blog] OK — ${count} post blog kini boleh dicari di /search.`);
+  console.log(`[index-blog] OK — ${count} blog posts are now searchable at /search.`);
 }
 
 main().catch((error) => {
-  console.error('[index-blog] gagal:', error.message);
+  console.error('[index-blog] failed:', error.message);
   process.exit(1);
 });

@@ -19,11 +19,11 @@ const INDEX = process.argv[3] || process.env.MEILI_INDEX || 'halaman_web';
 const PAGE = 1000;
 
 if (!OUT) {
-  console.error('guna: node scripts/export-index.js <fail-keluaran> [index]');
+  console.error('usage: node scripts/export-index.js <output-file> [index]');
   process.exit(1);
 }
 if (!KEY) {
-  console.error('MEILI_MASTER_KEY kosong');
+  console.error('MEILI_MASTER_KEY is empty');
   process.exit(1);
 }
 
@@ -63,10 +63,10 @@ async function main() {
 
   fs.writeFileSync(OUT, zlib.gzipSync(JSON.stringify(payload)));
   const size = fs.statSync(OUT).size;
-  console.log(`${INDEX}: ${documents.length} dokumen -> ${OUT} (${size} bait)`);
+  console.log(`${INDEX}: ${documents.length} documents -> ${OUT} (${size} bytes)`);
 }
 
 main().catch((err) => {
-  console.error(`eksport gagal: ${err.message}`);
+  console.error(`export failed: ${err.message}`);
   process.exit(1);
 });
