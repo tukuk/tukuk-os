@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# restore-data.sh — Pulihkan data/ Tukuk-OS daripada salinan R2 (backup-data.sh).
+# restore-data.sh — restore Tukuk-OS data/ from an R2 copy (backup-data.sh).
 #
-#   bash scripts/restore-data.sh                    # slot jam semasa (paling segar)
-#   bash scripts/restore-data.sh 314                # key tukuk-data-314.tar.gz (hari3 jam14)
+#   bash scripts/restore-data.sh                    # current-hour slot (freshest)
+#   bash scripts/restore-data.sh 314                # key tukuk-data-314.tar.gz (day3 hour14)
 #
-# SELAMAT: data/ sedia ada dipindah ke data.broken-<ts>/ dahulu — tiada tulis
-# ganti buta. Selepas pulih: systemctl restart tukuk-os (root).
+# SAFE: the existing data/ is moved to data.broken-<ts>/ first — no blind
+# overwrite. After restoring: systemctl restart tukuk-os (root).
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -17,26 +17,26 @@ WURL="${BACKUP_WORKER_URL:-}"
 WSEC="${BACKUP_UPLOAD_SECRET:-}"
 SLOT="${1:-$(date -u +%u%H)}"
 KEY="backups/tukuk-data-${SLOT}.tar.gz"
-[[ "$SLOT" =~ ^[0-9]{3}$ || "$SLOT" =~ ^[0-9]{4}$ ]] || { echo "Slot perlu 3-4 digit (hari+jam), contoh: 314"; exit 1; }
+[[ "$SLOT" =~ ^[0-9]{3}$ || "$SLOT" =~ ^[0-9]{4}$ ]] || { echo "Slot must be 3-4 digits (day+hour), example: 314"; exit 1; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-echo "[restore] mengambil $KEY dari $BUCKET ..."
+echo "[restore] fetching $KEY from $BUCKET ..."
 if [[ -n "$WURL" && -n "$WSEC" ]]; then
   curl -fsS --max-time 120 -H "Authorization: Bearer $WSEC" "$WURL/?key=$KEY" -o "$TMP/data.tar.gz" || {
-    echo "[restore] RALAT: salinan tiada / muat gagal (worker)" >&2; exit 1;
+    echo "[restore] ERROR: copy missing / download failed (worker)" >&2; exit 1;
   }
 elif ! npx --yes wrangler r2 object get "$BUCKET/$KEY" --file "$TMP/data.tar.gz" --remote; then
-  echo "[restore] RALAT: salinan tiada / muat gagal" >&2; exit 1
+  echo "[restore] ERROR: copy missing / download failed" >&2; exit 1
 fi
 
 TS="$(date +%Y%m%d-%H%M%S)"
 if [[ -d "$ROOT/data" ]]; then
   mv "$ROOT/data" "$ROOT/data.broken-$TS"
-  echo "[restore] data lama disimpan di data.broken-$TS"
+  echo "[restore] old data kept at data.broken-$TS"
 fi
 
 tar xzf "$TMP/data.tar.gz" -C "$ROOT"
-echo "[restore] ✓ data dipulihkan daripada $KEY"
-echo "[restore] jangan lupa: systemctl restart tukuk-os"
+echo "[restore] ✓ data restored from $KEY"
+echo "[restore] don't forget: systemctl restart tukuk-os"

@@ -19,9 +19,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      # Hanya dependency produksi diperlukan oleh ujian (node:test ialah terbina
-      # dalam). --omit=dev melangkau electron/electron-builder/sharp (berat).
-      # postinstall setup-all.sh --from-npm keluar awal (exit 0) di bukan-server.
+      # Only production dependencies are needed by the tests (node:test is built
+      # in). --omit=dev skips electron/electron-builder/sharp (heavy).
+      # The postinstall setup-all.sh --from-npm exits early (exit 0) on non-servers.
       - name: Install
         run: npm ci --omit=dev --no-audit --no-fund
 

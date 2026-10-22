@@ -5,8 +5,8 @@
   "r2_buckets": [
     {
       "binding": "BACKUPS",
-      // Bucket cermin + sandaran: worker fallback (www.tukuk.org) baca dari sini,
-      // jadi backup data/ & snapshot mesti tulis ke bucket yang sama.
+      // Mirror + backup bucket: the fallback worker (www.tukuk.org) reads from here,
+      // so data/ backups & snapshots must write to the same bucket.
       "bucket_name": "tukuk-fallback"
     }
   ],

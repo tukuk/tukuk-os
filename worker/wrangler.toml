@@ -7,13 +7,13 @@ routes = [
   { pattern = "www.tukuk.org/*", zone_name = "tukuk.org" }
 ]
 
-# Bucket snapshot laman — bila origin mati, worker hidang fail dari sini.
+# Site snapshot bucket — when the origin is down, the worker serves files from here.
 [[r2_buckets]]
 binding = "BACKUP"
 bucket_name = "tukuk-fallback"
 
-# Analytics Engine (percuma, ~5 juta baris/bulan) — rekod permintaan tepi,
-# kata kunci carian /search, dan BILA mod sandaran (R2) digunakan.
+# Analytics Engine (free, ~5 million rows/month) — records edge requests,
+# /search query keywords, and WHEN the fallback (R2) mode is used.
 [[analytics_engine_datasets]]
 binding = "TUKUK_ENGINE"
 dataset = "tukuk-os"

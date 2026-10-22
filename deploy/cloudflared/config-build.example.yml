@@ -1,24 +1,24 @@
-# Template connector KEDUA cloudflared — build.tukuk.org → Tukuk Builder.
+# Template for the SECOND cloudflared connector — build.tukuk.org → Tukuk Builder.
 #
-# KENAPA BERBEZA: tunnel utama (87e7…) berjenis remote-config — Cloudflare edge
-# HANYA menghantar hostname yang terdaftar di dashboard; editan ingress lokal
-# (config.yml) diabaikan dan hostname baharu dapat 404 di edge. Penyelesaian
-# tanpa dashboard: tunnel legacy baru (dicipta `cloudflared tunnel create`,
-# auth cert.pem) + connector kedua dengan ingress lokal di bawah.
+# WHY SEPARATE: the main tunnel (87e7…) is remote-config type — the Cloudflare edge
+# ONLY serves hostnames registered in the dashboard; local ingress edits
+# (config.yml) are ignored and a new hostname gets a 404 at the edge. The
+# dashboard-free solution: a new legacy tunnel (created via `cloudflared tunnel create`,
+# auth cert.pem) + a second connector with the local ingress below.
 #
-# PROVISION SEKALI (di VPS, user tukuk — cert.pem sudah ada ~/.cloudflared/):
+# PROVISION ONCE (on the VPS, user tukuk — cert.pem already in ~/.cloudflared/):
 #   cloudflared tunnel create build-tukuk
 #   cloudflared tunnel route dns --overwrite-dns <NEW-ID> build.tukuk.org
-#   cp ~/.cloudflared/<NEW-ID>.json /tmp && sudo mv ke /etc/cloudflared/ (chmod 600)
-#   sudo cp config-build.example.yml → /etc/cloudflared/config-build.yml (isi ID)
+#   cp ~/.cloudflared/<NEW-ID>.json /tmp && sudo mv to /etc/cloudflared/ (chmod 600)
+#   sudo cp config-build.example.yml → /etc/cloudflared/config-build.yml (fill ID)
 #   sudo cp deploy/cloudflared-build.service → /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now cloudflared-build
 #
-# GUNA PLACEHOLDER — jangan commit ID/credentials sebenar ke repo.
+# USE PLACEHOLDERS — do not commit the real ID/credentials to the repo.
 tunnel: REPLACE_WITH_NEW_TUNNEL_ID
 credentials-file: /etc/cloudflared/REPLACE_WITH_NEW_TUNNEL_ID.json
 ingress:
   - hostname: build.tukuk.org
     service: http://127.0.0.1:5174
-  # Wajib: rule padanan terakhir
+  # Required: catch-all rule last
   - service: http_status:404

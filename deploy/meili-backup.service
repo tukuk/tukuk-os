@@ -1,12 +1,12 @@
 [Unit]
-Description=Backup Meilisearch ke Cloudflare R2
+Description=Backup Meilisearch to Cloudflare R2
 After=meilisearch.service
 
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/tukuk-os
-# Rahsia worker (BACKUP_WORKER_URL + BACKUP_UPLOAD_SECRET) + MEILI_MASTER_KEY
-# sudah ada dalam .env deployments — bukan lagi r2.env zaman laptop.
+# Worker secrets (BACKUP_WORKER_URL + BACKUP_UPLOAD_SECRET) + MEILI_MASTER_KEY
+# are already in the .env deployments — no longer the laptop-era r2.env.
 EnvironmentFile=-/opt/tukuk-os/.env
 Environment=APP_DIR=/opt/tukuk-os
 ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-meili.sh

@@ -1,9 +1,9 @@
 [Unit]
-Description=Backup data T Chat (chat.json + media) ke Cloudflare R2
+Description=Backup T Chat data (chat.json + media) to Cloudflare R2
 
-# Nota: setup-all.sh menulis unit ini secara automatik dengan $INSTALL_DIR yang
-# betul (di VPS: /opt/tukuk-os). Fail ini rujukan sahaja — elak double-backup,
-# pasang manual hanya jika TIDAK menggunakan setup-all.sh.
+# Note: setup-all.sh writes this unit automatically with the correct
+# $INSTALL_DIR (on the VPS: /opt/tukuk-os). This file is reference only — avoid double-backup,
+# install manually only if you do NOT use setup-all.sh.
 [Service]
 Type=oneshot
 User=tukuk

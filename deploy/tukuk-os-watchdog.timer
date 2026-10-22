@@ -1,5 +1,5 @@
 [Unit]
-Description=Watchdog Tukuk-OS setiap 2 minit
+Description=Watchdog Tukuk-OS every 2 minutes
 
 [Timer]
 OnBootSec=2min

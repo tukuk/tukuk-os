@@ -1,5 +1,5 @@
 [Unit]
-Description=Watchdog Tukuk-OS — pastikan enjin carian responsif
+Description=Watchdog Tukuk-OS — keep the search engine responsive
 After=tukuk-os.service meilisearch.service
 
 [Service]

@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# build-agent-on-server.sh — Bina release Tukuk Agent TERUS di pelayan.
+# build-agent-on-server.sh — Build the Tukuk Agent release DIRECTLY on the server.
 #
-# Laluan asal ialah build di laptop (build-tukuk-agent.sh) supaya VPS tetap
-# ringan. Tapi jika laptop kurang RAM/dependensi (kerberos perlu libkrb5-dev,
-# gulp perlu ~4GB), pelayan dengan 6.8GB+ boleh jadi rumah build yang lebih
-# selesa — asalkan Ollama dihenti-sementara semasa kompilasi (cloud tier
-# tetap menjawab /ask) dan ada ≥8GB ruang cakera.
+# The default path is to build on the laptop (build-tukuk-agent.sh) so the VPS stays
+# light. But if the laptop lacks RAM/dependencies (kerberos needs libkrb5-dev,
+# gulp needs ~4GB), a server with 6.8GB+ can be a more comfortable build home —
+# as long as Ollama is stopped temporarily during compilation (the cloud tier
+# still answers /ask) and there is ≥8GB of disk space.
 #
-#   sudo bash scripts/build-agent-on-server.sh            # build + pasang servis
+#   sudo bash scripts/build-agent-on-server.sh            # build + install service
 #   sudo bash scripts/build-agent-on-server.sh --keep-ollama
 #
-# Apa yang dibuat:
-#   [1] Semak pratent: cakera, RAM, sudo.
-#   [2] apt: pakej pembangunan (build-essential, python3, libkrb5-dev,
+# What it does:
+#   [1] Preflight: disk, RAM, sudo.
+#   [2] apt: development packages (build-essential, python3, libkrb5-dev,
 #       libxkbfile-dev, libsecret-1-dev, unzip).
-#   [3] Node 24 melalui nvm (jika belum ada).
-#   [4] Clone fork tukuk-agent-editor → /opt/tukuk-os/code-server (gitignored)
-#       + submodule lib/vscode (dalam ~350MB).
-#   [5] Henti ollama (kecuali --keep-ollama), jalankan build-tukuk-agent.sh,
-#       mula ollama semula.
-#   [6] Pasang release secara LOKAL (tiada rsync/ssh): /opt/tukuk-agent/release
-#       + user + unit systemd + start — catatan akhir sama seperti
+#   [3] Node 24 via nvm (if not already present).
+#   [4] Clone the tukuk-agent-editor fork → /opt/tukuk-os/code-server (gitignored)
+#       + the lib/vscode submodule (~350MB).
+#   [5] Stop ollama (unless --keep-ollama), run build-tukuk-agent.sh,
+#       restart ollama.
+#   [6] Install the release LOCALLY (no rsync/ssh): /opt/tukuk-agent/release
+#       + user + systemd unit + start — the final notes match
 #       publish-agent.sh.
 # ==============================================================================
 set -uo pipefail
@@ -36,46 +36,46 @@ ok()   { echo -e "\033[1;32m✓ $*\033[0m"; }
 warn() { echo -e "\033[1;33m⚠ $*\033[0m"; }
 die()  { echo -e "\033[1;31m✗ $*\033[0m"; exit 1; }
 
-[ "$(id -u)" = 0 ] || die "perlukan root: sudo bash $0"
-cd "$INSTALL_DIR" 2>/dev/null || die "$INSTALL_DIR tiada — ini skrip pelayan Tukuk-OS."
+[ "$(id -u)" = 0 ] || die "need root: sudo bash $0"
+cd "$INSTALL_DIR" 2>/dev/null || die "$INSTALL_DIR missing — this is a Tukuk-OS server script."
 
-# ── [1] Pratent ───────────────────────────────────────────────────────────────
+# ── [1] Preflight ─────────────────────────────────────────────────────────────
 AVAIL_GB=$(df -BG --output=avail "$INSTALL_DIR" | tail -1 | tr -dc '0-9')
-[ "${AVAIL_GB:-0}" -ge 8 ] || die "cakera tinggal ${AVAIL_GB}GB — build VS Code perlukan ≥8GB (node_modules + out + release)."
+[ "${AVAIL_GB:-0}" -ge 8 ] || die "only ${AVAIL_GB}GB disk left — the VS Code build needs ≥8GB (node_modules + out + release)."
 RAM_MB=$(free -m | awk '/Mem:/{print $2}')
-info "Pratent OK: cakera ${AVAIL_GB}GB bebas, RAM ${RAM_MB}MB."
+info "Preflight OK: ${AVAIL_GB}GB free disk, ${RAM_MB}MB RAM."
 
-# ── [2] Pakej pembangunan (termasuk libkrb5-dev — punca kegagalan laptop) ────
-info "[2] apt pakej pembangunan..."
+# ── [2] Development packages (incl. libkrb5-dev — the cause of laptop failures) ─
+info "[2] apt development packages..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq git curl ca-certificates build-essential python3 pkg-config jq \
   libkrb5-dev libxkbfile-dev libsecret-1-dev zip unzip rsync >/dev/null 2>&1 \
-  || warn "sebahagian pakej gagal — sambung, tapi node-gyp mungkin ulang ralat yang sama."
+  || warn "some packages failed — continuing, but node-gyp may repeat the same error."
 
 # ── [3] Node 24 ───────────────────────────────────────────────────────────────
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
 if [ "$NODE_MAJOR" != "24" ]; then
   if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-    info "[3] pasang nvm..."
+    info "[3] installing nvm..."
     git clone --depth 1 -b v0.40.1 https://github.com/nvm-sh/nvm.git "$NVM_DIR" >/dev/null 2>&1 \
-      || die "clone nvm gagal."
+      || die "nvm clone failed."
   fi
   . "$NVM_DIR/nvm.sh"
-  nvm install 24 >/dev/null || die "nvm install 24 gagal."
+  nvm install 24 >/dev/null || die "nvm install 24 failed."
   nvm use 24 >/dev/null
 fi
 . "$NVM_DIR/nvm.sh" 2>/dev/null || true
-ok "Node $(node -v) aktif."
+ok "Node $(node -v) active."
 
-# ── [4] Fork + submodule (kredit git pelayan perlu boleh akses repo private ──
-#     fevian448/tukuk-agent-editor; kalau 401: tambah PAT, atau publickan fork) ──
+# ── [4] Fork + submodule (the server's git credentials must reach the private repo ─
+#     fevian448/tukuk-agent-editor; on 401: add a PAT, or make the fork public) ──
 if [ ! -d code-server/.git ]; then
   info "[4] clone fork → $INSTALL_DIR/code-server (±350MB)..."
-  # Gunakembali kredit yang SUDAH berfungsi untuk auto-update parent:
-  #  • HTTPS ber-token (https://user:token@github.com/...) → token yang sama;
-  #  • SSH (git@github.com:owner/repo.git) → kunci SSH pelayan yang sama.
+  # Reuse the credentials that ALREADY work for the parent auto-update:
+  #  • token HTTPS (https://user:token@github.com/...) → the same token;
+  #  • SSH (git@github.com:owner/repo.git) → the same server SSH key.
   ORIGIN_URL="$(git remote get-url origin 2>/dev/null || true)"
   CLONE_URL="$FORK_URL"
   if [[ "$ORIGIN_URL" == https://*@github.com/* ]]; then
@@ -85,59 +85,59 @@ if [ ! -d code-server/.git ]; then
     CLONE_URL="git@github.com:fevian448/tukuk-agent-editor.git"
   fi
   git clone --depth 1 "$CLONE_URL" code-server \
-    || { warn "clone dengan URL origin gagal — cuba HTTPS anonim."; rm -rf code-server; git clone --depth 1 "$FORK_URL" code-server; } \
-    || die "clone gagal. Fork kini PUBLIC (fevian448/tukuk-agent-editor) — jika HTTPS anonim pun gagal, itu masalah jaringan GitHub dari pelayan, bukan kredit."
+    || { warn "clone with the origin URL failed — trying anonymous HTTPS."; rm -rf code-server; git clone --depth 1 "$FORK_URL" code-server; } \
+    || die "clone failed. The fork is now PUBLIC (fevian448/tukuk-agent-editor) — if anonymous HTTPS also fails, that is a GitHub network issue from the server, not credentials."
 fi
 ( cd code-server && git submodule update --init --depth 1 lib/vscode >/dev/null 2>&1 ) \
-  || ( cd code-server && git submodule update --init lib/vscode ) || die "submodule lib/vscode gagal."
+  || ( cd code-server && git submodule update --init lib/vscode ) || die "lib/vscode submodule failed."
 [ -d code-server/lib/vscode/extensions ] || [ -d code-server/lib/vscode/Extensions ] \
-  || die "lib/vscode masih kosong."
-ok "Sumber tersedia: $(git -C code-server rev-parse --short HEAD) + vscode $(git -C code-server/lib/vscode rev-parse --short HEAD)"
+  || die "lib/vscode is still empty."
+ok "Sources ready: $(git -C code-server rev-parse --short HEAD) + vscode $(git -C code-server/lib/vscode rev-parse --short HEAD)"
 
-# ── [5] Build (sumber besar REBAH sementara — cloud tier kekal jawab /ask) ───
-# Pelajaran: esbuild core-ci pernah DIBUNUH OOM killer (puncak ±3.5GB seorang,
-# + pekerja node warisan heap 4GB). Lapisan selamat: swap tambahan sementara,
-# swappiness naik, heap turun ke 3072, meilisearch+ollama rehat semasa build.
+# ── [5] Build (the big source is DOWN temporarily — cloud tier keeps answering /ask) ─
+# Lesson: esbuild core-ci was once KILLED by the OOM killer (peak ±3.5GB alone,
+# + inherited node workers with a 4GB heap). Safe layers: an extra temporary swap,
+# higher swappiness, heap lowered to 3072, meilisearch+ollama resting during the build.
 OLLAMA_WAS_ACTIVE=0
 if [ "$KEEP_OLLAMA" = 0 ] && systemctl is-active --quiet ollama 2>/dev/null; then
   systemctl stop ollama && OLLAMA_WAS_ACTIVE=1
-  warn "ollama DITUTUP sementara build (/ask guna cloud seperti biasa)."
+  warn "ollama STOPPED temporarily for the build (/ask uses the cloud as usual)."
 fi
 MEILI_WAS_ACTIVE=0
 if systemctl is-active --quiet meilisearch 2>/dev/null; then
   systemctl stop meilisearch && MEILI_WAS_ACTIVE=1
-  warn "meilisearch DITUTUP sementara build (carian /cari mungkin lambat)."
+  warn "meilisearch STOPPED temporarily for the build (/cari search may be slow)."
 fi
 
 TMPSWAP=/swap-agent.tmp
 ADDED_SWAP=0
 SWAP_GB=$(free -b | awk '/Swap:/{print int($2/1073741824)}')
 if [ "${SWAP_GB:-0}" -lt 12 ]; then
-  info "[5a] tambah swap sementara 6GB (jumlah kini ${SWAP_GB}GB)..."
+  info "[5a] adding 6GB temporary swap (total now ${SWAP_GB}GB)..."
   dd if=/dev/zero of="$TMPSWAP" bs=1M count=6144 status=none \
     && chmod 600 "$TMPSWAP" && mkswap "$TMPSWAP" >/dev/null && swapon "$TMPSWAP" \
-    && ADDED_SWAP=1 && ok "swap tambahan aktif."
+    && ADDED_SWAP=1 && ok "extra swap active."
 fi
 ORIG_SWAPPINESS=$(sysctl -n vm.swappiness 2>/dev/null || echo 60)
 sysctl -q -w vm.swappiness=90 2>/dev/null || true
 
-info "[5] build — ini ambil ~1–2 jam pada 4 teras; log: /tmp/tukuk-agent-build.log"
+info "[5] build — this takes ~1–2 hours on 4 cores; log: /tmp/tukuk-agent-build.log"
 export NODE_OPTIONS=--max-old-space-size=3072
 bash scripts/build-tukuk-agent.sh 2>&1 | tee /tmp/tukuk-agent-build.log
 BUILD_RC=${PIPESTATUS[0]}
 
-# Pulihkan semua yang direhatkan, apa pun hasil build.
+# Restore everything that was paused, whatever the build result.
 sysctl -q -w vm.swappiness="$ORIG_SWAPPINESS" 2>/dev/null || true
 if [ "$ADDED_SWAP" = 1 ]; then
-  swapoff "$TMPSWAP" 2>/dev/null && rm -f "$TMPSWAP" && ok "swap sementara dibuang."
+  swapoff "$TMPSWAP" 2>/dev/null && rm -f "$TMPSWAP" && ok "temporary swap removed."
 fi
-[ "$MEILI_WAS_ACTIVE" = 1 ] && systemctl start meilisearch && ok "meilisearch dihidupkan semula."
-[ "$OLLAMA_WAS_ACTIVE" = 1 ] && systemctl start ollama && ok "ollama dihidupkan semula."
-[ "$BUILD_RC" = 0 ] || die "build gagal (rc=$BUILD_RC) — hujung log: $(tail -3 /tmp/tukuk-agent-build.log | tr '\n' ' ')"
+[ "$MEILI_WAS_ACTIVE" = 1 ] && systemctl start meilisearch && ok "meilisearch restarted."
+[ "$OLLAMA_WAS_ACTIVE" = 1 ] && systemctl start ollama && ok "ollama restarted."
+[ "$BUILD_RC" = 0 ] || die "build failed (rc=$BUILD_RC) — end of log: $(tail -3 /tmp/tukuk-agent-build.log | tr '\n' ' ')"
 
-# ── [6] Pasang release secara lokal ──────────────────────────────────────────
-info "[6] pasang → /opt/tukuk-agent/release + servis..."
-[ -x code-server/release/bin/tukuk-agent ] || die "release/bin/tukuk-agent tiada — janggal."
+# ── [6] Install the release locally ────────────────────────────────────────
+info "[6] install → /opt/tukuk-agent/release + service..."
+[ -x code-server/release/bin/tukuk-agent ] || die "release/bin/tukuk-agent missing — odd."
 mkdir -p /opt/tukuk-agent
 rsync -a --delete code-server/release/ /opt/tukuk-agent/release/
 getent passwd tukuk-agent >/dev/null 2>&1 || useradd --system --home-dir /var/lib/tukuk-agent --shell /usr/sbin/nologin tukuk-agent
@@ -149,25 +149,25 @@ systemctl enable tukuk-agent >/dev/null
 systemctl restart tukuk-agent
 sleep 3
 if systemctl is-active --quiet tukuk-agent; then
-  ok "tukuk-agent AKTIF pada 127.0.0.1:8443."
+  ok "tukuk-agent ACTIVE on 127.0.0.1:8443."
 else
-  warn "servis belum aktif — semak: journalctl -u tukuk-agent -n 30"
+  warn "service not active yet — check: journalctl -u tukuk-agent -n 30"
 fi
 
 cat <<'EOF'
 ═══════════════════════════════════════════════════════════════════════
-Langkah akhir (selepas servis aktif):
-  1. Editor boleh diakses DUA cara:
-     a) https://tukuk.org/agent — proxy terbalik dalam tukuk-os (laluan
-        utama; guna tunnel sedia ada, TIADA perubahan Cloudflare), atau
-     b) agent.tukuk.org — HANYA jika sempat: route dashboard
+Final steps (after the service is active):
+  1. The editor can be reached TWO ways:
+     a) https://tukuk.org/agent — reverse proxy inside tukuk-os (the main
+        path; uses the existing tunnel, NO Cloudflare change), or
+     b) agent.tukuk.org — ONLY if feasible: a dashboard route
         (Zero Trust → Networks → Routes) → http://127.0.0.1:8443.
-        Token API semasa TIDAK punya izin tunnel; dashboard saja boleh.
-  2. Unit servis perlu baris Environment=... --abs-proxy-base-path /agent
-     untuk laluan (a) — sudah ditetapkan dalam ExecStart fork ini.
-  3. AGENT_TOKEN dalam /opt/tukuk-os/.env + restart tukuk-os (dilakukan
-     penulis melalui SSH, bukan kerja manual).
-  4. Dalam Cline (jika vsix sudah dipasang kemudian): Provider OpenAI
+        The current API token does NOT have tunnel permission; only the dashboard can.
+  2. The service unit needs an Environment=... --abs-proxy-base-path /agent line
+     for path (a) — already set in this fork's ExecStart.
+  3. AGENT_TOKEN in /opt/tukuk-os/.env + restart tukuk-os (done by the
+     author over SSH, not a manual task).
+  4. In Cline (if the vsix is installed later): Provider OpenAI
      Compatible, Base URL https://tukuk.org/api/agent/v1, Key <AGENT_TOKEN>,
      Model tukuk-agent.
 ═══════════════════════════════════════════════════════════════════════

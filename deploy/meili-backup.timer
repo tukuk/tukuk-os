@@ -1,5 +1,5 @@
 [Unit]
-Description=Backup Meilisearch ke Cloudflare R2 setiap 6 jam
+Description=Backup Meilisearch to Cloudflare R2 every 6 hours
 
 [Timer]
 OnCalendar=*-*-* 00,06,12,18:15:00

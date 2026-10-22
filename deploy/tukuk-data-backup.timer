@@ -1,5 +1,5 @@
 [Unit]
-Description=Backup data Tukuk-OS ke R2 setiap jam (rotak 168 slot / 7 hari)
+Description=Backup Tukuk-OS data to R2 every hour (rotate 168 slots / 7 days)
 
 [Timer]
 OnCalendar=*-*-* *:10:00

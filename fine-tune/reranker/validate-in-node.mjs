@@ -1,14 +1,14 @@
-// validate-in-node.mjs — buktikan runtime inferens reranker berjalan DI NODE
-// pada CPU Tukuk (no-AVX2). Cuba model LOKAL (models/tukuk-reranker) dahulu,
-// kemudian senarai calon AWAM (HF) sebagai sandaran. Cetak logit mentah + latensi.
+// validate-in-node.mjs — prove the reranker inference runtime works IN NODE
+// on the Tukuk CPU (no-AVX2). Try the LOCAL model (models/tukuk-reranker) first,
+// then the list of PUBLIC (HF) candidates as a fallback. Print raw logits + latency.
 //
-// Jalan:  node validate-in-node.mjs           (cuba local, jatuh ke remote)
-//         RK_LOCAL=0 node validate-in-node.mjs  (paksa remote sahaja)
+// Run:  node validate-in-node.mjs           (try local, fall back to remote)
+//       RK_LOCAL=0 node validate-in-node.mjs  (force remote only)
 const t0 = Date.now();
 const { AutoTokenizer, AutoModelForSequenceClassification, env } =
   await import('@huggingface/transformers');
 
-env.allowRemoteModels = true;   // dibenarkan HANYA utk ujian ini
+env.allowRemoteModels = true;   // allowed ONLY for this test
 env.allowLocalModels = true;
 
 const LOCAL_DIR = new URL('../../models/tukuk-reranker/', import.meta.url).pathname;
@@ -43,7 +43,7 @@ if (!loaded) {
 }
 console.log(`loaded=${usedSource} load_ms=${Date.now() - t0}`);
 
-// Saniti relevansi: pasangan (query, passing) — dokumen BETUL mesti skor tinggi.
+// Relevance sanity: (query, passage) pairs — the RIGHT document must score high.
 const q = 'how old is the planet earth';
 const good = 'The Earth is estimated to be about 4.54 billion years old.';
 const bad = 'Bananas are a good source of potassium and grow in tropical climates.';
@@ -58,8 +58,8 @@ const out = await loaded.model(enc);
 const scoreMs = Date.now() - t1;
 const data = Array.from(out.logits.data);
 console.log(`score_ms(3 pairs)=${scoreMs} dims=${JSON.stringify(out.logits.dims)}`);
-console.log(`  GOOD   logit=${data[0]?.toFixed(3)} (jangka paling tinggi)`);
+console.log(`  GOOD   logit=${data[0]?.toFixed(3)} (expected highest)`);
 console.log(`  BAD    logit=${data[1]?.toFixed(3)}`);
 console.log(`  MIXED  logit=${data[2]?.toFixed(3)}`);
 const pass = data[0] > data[1] && data[0] > data[2];
-console.log(`VERDICT=${pass ? 'OK' : 'CHECK'} — reranker membezakan relevan vs tidak`);
+console.log(`VERDICT=${pass ? 'OK' : 'CHECK'} — reranker distinguishes relevant vs not`);

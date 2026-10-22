@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# PROBE (tiada internet, tiada GPU): laporkan apa yang SUDAH ada dalam imej
-# Kaggle secara offline, supaya kita tahu sama ada resipi offline-viable.
+# PROBE (no internet, no GPU): report what ALREADY exists in the Kaggle
+# image offline, so we know whether an offline-viable recipe works.
 # ─────────────────────────────────────────────────────────────────────────────
 import importlib
 import os
@@ -20,7 +20,7 @@ for m in mods:
     except Exception as e:
         print(f"MISS {m}: {type(e).__name__}: {str(e)[:80]}", flush=True)
 
-# Adakah HF cache model (offline) sedia ada?
+# Is an HF model cache (offline) already present?
 for base in ["/root/.cache/huggingface", os.path.expanduser("~/.cache/huggingface")]:
     if os.path.isdir(base):
         for kind in ("hub", "datasets"):
@@ -28,11 +28,11 @@ for base in ["/root/.cache/huggingface", os.path.expanduser("~/.cache/huggingfac
             if os.path.isdir(d):
                 print(f"CACHE {d}: {sorted(os.listdir(d))[:15]}", flush=True)
 
-# Ujian DNS ringkas (jangka GAGAL bila internet mati).
+# Quick DNS test (expected to FAIL when the internet is off).
 try:
     socket.getaddrinfo("pypi.org", 443)
-    print("DNS   pypi.org: OK (internet ada)", flush=True)
+    print("DNS   pypi.org: OK (internet present)", flush=True)
 except Exception as e:
     print(f"DNS   pypi.org: FAIL ({e})", flush=True)
 
-print("=== probe selesai ===", flush=True)
+print("=== probe done ===", flush=True)

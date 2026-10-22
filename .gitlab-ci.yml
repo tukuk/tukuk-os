@@ -1,13 +1,13 @@
 # ============================================================================
-# satu-kata — MIRRORED pipeline di GitLab CI (devops/CI kedua, percuma).
-# GUNA TERHAD: GitLab Free cuma ~400 minit/bulan, jadi ia TIDAK berjalan setiap
-# push. Ia hanya jalan bila anda set "Pipeline schedule" mingguan di GitLab UI
-# (Build → Pipeline schedules) dan bertindak sebagai SANDARAN/backup kepada cron
-# GitHub Actions. Ia TIDAK mengubah manifest di GitHub (state utama = GitHub).
+# satu-kata — MIRRORED pipeline on GitLab CI (second devops/CI, free).
+# LIMITED USE: GitLab Free has only ~400 minutes/month, so it does NOT run on every
+# push. It only runs when you set a weekly "Pipeline schedule" in the GitLab UI
+# (Build → Pipeline schedules) and acts as a BACKUP to the GitHub Actions cron.
+# It does NOT change the manifest on GitHub (source of truth = GitHub).
 #
-# SEDIA di GitLab: Settings → CI/CD → Variables
+# SET UP in GitLab: Settings → CI/CD → Variables
 #   CLOUDFLARE_API_TOKEN (masked)  CLOUDFLARE_ACCOUNT_ID
-# Deploy ke projek Pages BERBEZA (…-mirror) supaya tak bergesel dengan GitHub.
+# Deploy to a SEPARATE Pages project (…-mirror) so it does not clash with GitHub.
 # ============================================================================
 stages: [generate, deploy]
 
@@ -15,11 +15,11 @@ satu-kata-mirror:
   stage: generate
   image: node:22-alpine
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # hanya jadual mingguan
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # weekly schedule only
   before_script:
     - apk add --no-cache git
   script:
-    - node scripts/satu-kata/generate.mjs            # auto-pilih kata (read-only, tak push)
+    - node scripts/satu-kata/generate.mjs            # auto-pick word (read-only, no push)
     - ls -R generated/public | head -40
   artifacts:
     paths: [generated/]
@@ -30,7 +30,7 @@ deploy-pages-mirror:
   image: node:22-alpine
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: manual                                # deploy mirror hanya bila perlu (jimat minit)
+      when: manual                                # deploy mirror only when needed (save minutes)
     - when: never
   needs: [satu-kata-mirror]
   script:

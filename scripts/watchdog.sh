@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Watchdog Tukuk-OS — pastikan enjin carian sentiasa hidup DAN responsif.
+# Tukuk-OS watchdog — keep the search engine always up AND responsive.
 #
-# systemd `Restart=always` hanya guna bila proses itu mati. Watchdog ini
-# mengendalikan kes lain:
-#   1. proses mati              → systemctl start
-#   2. proses hidup tapi hang   → systemctl restart
-#   3. Meilisearch mati         → cascade restart
-#   4. internet/tunnel bermasalah → log amaran sahaja
-#      (laman kekal hidup kerana Cloudflare fallback melayan dari R2)
+# systemd `Restart=always` only kicks in when the process dies. This watchdog
+# handles the other cases:
+#   1. process dead             → systemctl start
+#   2. process alive but hung   → systemctl restart
+#   3. Meilisearch dead         → cascade restart
+#   4. internet/tunnel problem  → just log a warning
+#      (the site stays up because the Cloudflare fallback serves from R2)
 #
-# Jalankan setiap 2 minit melalui systemd timer.
+# Run every 2 minutes via a systemd timer.
 
 set -uo pipefail
 
@@ -22,36 +22,36 @@ STAMP="/tmp/tukuk-os-watchdog.fail"
 log() { logger -t tukuk-os-watchdog -- "$*"; echo "[watchdog] $*"; }
 
 if ! systemctl is-active --quiet "$MEILI"; then
-  log "Meilisearch tidak aktif — restart"
+  log "Meilisearch not active — restart"
   systemctl restart "$MEILI"
 fi
 
-# --- tunnel (servis sistem; kami hanya boleh log, restart perlukan sudo) ---
+# --- tunnel (system service; we can only log, restart needs sudo) ---
 if ! systemctl is-active --quiet cloudflared.service 2>/dev/null; then
-  log "cloudflared (system) tidak aktif — jalankan: sudo systemctl restart cloudflared.service"
+  log "cloudflared (system) not active — run: sudo systemctl restart cloudflared.service"
 fi
 
-# --- laman awam: kesan internet/tunnel putus (bukan sebab restart) ---
-# Bila internet awam putus, laman tetap hidup via fallback Cloudflare (R2).
+# --- public site: detect internet/tunnel drop (not a restart cause) ---
+# When the public internet drops, the site still lives via the Cloudflare fallback (R2).
 PUB="${WATCHDOG_PUBLIC_URL:-https://tukuk.org/health}"
 PUB_STAMP="/tmp/tukuk-os-watchdog.public"
 if curl -sf -m 12 -o /dev/null "$PUB"; then
   if [ -f "$PUB_STAMP" ]; then
-    log "Internet/tunnel pulih — $PUB menjawab semula"
+    log "Internet/tunnel recovered — $PUB answering again"
     rm -f "$PUB_STAMP"
   fi
 else
   P=$(cat "$PUB_STAMP" 2>/dev/null || echo 0)
   P=$((P + 1))
   echo "$P" > "$PUB_STAMP"
-  # log pada percubaan pertama dan setiap 15 (≈30 minit) — elak spam journal
+  # log on the first attempt and every 15th (≈30 min) — avoid spamming the journal
   if [ "$P" -eq 1 ] || [ $((P % 15)) -eq 0 ]; then
-    log "Laman awam tidak menjawab (percubaan $P) — internet/tunnel? Fallback Cloudflare tetap melayan laman statik"
+    log "Public site not answering (attempt $P) — internet/tunnel? Cloudflare fallback still serving static pages"
   fi
 fi
 
 if ! systemctl is-active --quiet "$APP"; then
-  log "Enjin carian tidak aktif — start"
+  log "Search engine not active — start"
   systemctl start "$APP"
   rm -f "$STAMP"
   exit 0
@@ -59,7 +59,7 @@ fi
 
 if curl -sf -m 10 -o /dev/null "$URL"; then
   if [ -f "$STAMP" ]; then
-    log "Sihat semula selepas $(cat "$STAMP") kegagalan berturut-turut"
+    log "Healthy again after $(cat "$STAMP") consecutive failures"
     rm -f "$STAMP"
   fi
   exit 0
@@ -68,10 +68,10 @@ fi
 COUNT=$(cat "$STAMP" 2>/dev/null || echo 0)
 COUNT=$((COUNT + 1))
 echo "$COUNT" > "$STAMP"
-log "Health check gagal (percubaan $COUNT/$THRESHOLD): $URL"
+log "Health check failed (attempt $COUNT/$THRESHOLD): $URL"
 
 if [ "$COUNT" -ge "$THRESHOLD" ]; then
-  log "Melebihi ambang — restart $APP"
+  log "Threshold exceeded — restart $APP"
   systemctl restart "$APP"
   rm -f "$STAMP"
 fi

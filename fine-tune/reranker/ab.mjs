@@ -1,5 +1,5 @@
-// ab.mjs — A/B relevansi: BM25 (aplikasi /search) vs +rerank, pada korpus SEBENAR.
-// Jalan di sandbox (~/rktest) terhadap app localhost:3000. Tiada perubahan prod.
+// ab.mjs — relevance A/B: BM25 (the /search app) vs +rerank, on a REAL corpus.
+// Runs in a sandbox (~/rktest) against the localhost:3000 app. No prod changes.
 const { AutoTokenizer, AutoModelForSequenceClassification, env } =
   await import('@huggingface/transformers');
 env.allowRemoteModels = true; env.allowLocalModels = true;

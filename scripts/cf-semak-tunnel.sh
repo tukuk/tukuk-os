@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Semak keupayaan token Cloudflare API untuk menambah public hostname tunnel.
-# Hanya cetak ringkasan (ID/status), tidak cetak token.
+# Check the Cloudflare API token's ability to add a tunnel public hostname.
+# Print only a summary (ID/status), never the token.
 set -uo pipefail
 ENVFILE="${1:-/opt/tukuk-os/.env}"
 TUNNEL_ID="${2:-87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae}"
 TOKEN=$(grep -E '^CLOUDFLARE_API_TOKEN=' "$ENVFILE" | cut -d= -f2- | tr -d '"'"'")
-[ -n "$TOKEN" ] || { echo "tiada token"; exit 1; }
+[ -n "$TOKEN" ] || { echo "no token"; exit 1; }
 H=(-H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json")
 
 echo "== accounts =="
@@ -14,7 +14,7 @@ curl -s "${H[@]}" https://api.cloudflare.com/client/v4/accounts \
 
 ACC=$(curl -s "${H[@]}" https://api.cloudflare.com/client/v4/accounts \
   | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['result'][0]['id'] if d.get('success') and d['result'] else '')")
-[ -n "$ACC" ] || { echo "token tak boleh baca accounts (tiada lesen accounts.read?)"; exit 1; }
+[ -n "$ACC" ] || { echo "token cannot read accounts (missing accounts.read scope?)"; exit 1; }
 
 echo "== zone tukuk.org =="
 curl -s "${H[@]}" "https://api.cloudflare.com/client/v4/zones?name=tukuk.org" \

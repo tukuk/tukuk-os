@@ -1,5 +1,5 @@
 [Unit]
-Description=Backup data T Chat setiap 6 jam
+Description=Backup T Chat data every 6 hours
 
 [Timer]
 OnCalendar=*-*-* 01,07,13,19:15:00

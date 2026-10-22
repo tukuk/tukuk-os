@@ -1,6 +1,6 @@
 # frozen_string_literal: true
-# Gemfile — alatan penghantaran Google Play (fastlane).
-# Guna: `bundle install` kemudian `bundle exec fastlane android upload`.
+# Gemfile — Google Play delivery tooling (fastlane).
+# Usage: `bundle install` then `bundle exec fastlane android upload`.
 source "https://rubygems.org"
 
 gem "fastlane"

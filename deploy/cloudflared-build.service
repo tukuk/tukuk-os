@@ -1,16 +1,16 @@
 [Unit]
-# Connector cloudflared KEDUA — tunnel legacy build-tukuk (build.tukuk.org →
-# 127.0.0.1:5174 Tukuk Builder). Tunnel utama berjenis remote-config jadi
-# hostname baharu tak boleh ditambah lewat ingress lokal; lihat
-# deploy/cloudflared/config-build.example.yml untuk langkah provisioning.
-Description=cloudflared Tunnel kedua - build.tukuk.org (legacy mode, ingress lokal)
+# SECOND cloudflared connector — legacy build-tukuk tunnel (build.tukuk.org →
+# 127.0.0.1:5174 Tukuk Builder). The main tunnel is remote-config type, so a new
+# hostname cannot be added via a local ingress; see
+# deploy/cloudflared/config-build.example.yml for the provisioning steps.
+Description=cloudflared second tunnel - build.tukuk.org (legacy mode, local ingress)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-# --protocol http2: lalai 'auto' pakai QUIC/UDP yang kerap timeout pada rangkaian
-# VPS ini (lihat 'Failed to dial a quic connection'), menyebabkan build.tukuk.org
-# sesekali tak dapat dibuka. HTTP/2 atas TCP/443 lebih teguh.
+# --protocol http2: the 'auto' default uses QUIC/UDP which frequently times out on this
+# VPS's network (see 'Failed to dial a quic connection'), causing build.tukuk.org
+# to occasionally fail to open. HTTP/2 over TCP/443 is more robust.
 ExecStart=/usr/bin/cloudflared --no-autoupdate --protocol http2 --config /etc/cloudflared/config-build.yml tunnel run
 Restart=always
 RestartSec=5

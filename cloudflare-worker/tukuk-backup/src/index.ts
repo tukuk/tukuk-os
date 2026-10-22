@@ -32,8 +32,8 @@ export default {
 				url.searchParams.get('key') ||
 				request.headers.get('x-object-key') ||
 				`meili-${new Date().toISOString().replace(/[:.]/g, '-')}.json.gz`;
-			// Content-type boleh dinyatakan (worker fallback www membaca metadata ini);
-			// kosong → application/gzip (laluan lama: eksport meili/snapshot .gz).
+			// Content-type can be specified (the www fallback worker reads this metadata);
+			// empty → application/gzip (old default: meili/snapshot .gz exports).
 			const ct = request.headers.get('x-content-type') || 'application/gzip';
 			await env.BACKUPS.put(key, body, {
 				httpMetadata: { contentType: ct },
@@ -66,7 +66,7 @@ export default {
 
 		if (request.method === 'DELETE') {
 			const key = url.searchParams.get('key');
-			if (!key) return new Response('key diperlukan', { status: 400 });
+			if (!key) return new Response('key required', { status: 400 });
 			await env.BACKUPS.delete(key);
 			return Response.json({ ok: true, key });
 		}

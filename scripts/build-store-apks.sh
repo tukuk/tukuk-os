@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# build-store-apks.sh — Bina APK pembungkus untuk SETIAP apl dalam apk/catalog.json
-# (tukuk.org sebagai gedung apl sendiri, gaya APKPure). Ia memanggil build-apk.sh
-# dengan env per-apl. AAB hanya untuk T Chat (yang masuk Play).
+# build-store-apks.sh — build a wrapper APK for EVERY app in apk/catalog.json
+# (tukuk.org as its own app store, APKPure-style). It calls build-apk.sh
+# with per-app env. AAB is only for T Chat (the one that goes to Play).
 #
 #   bash scripts/build-store-apks.sh
 #
-# Perlu: node + sharp (ikon), Android SDK + JDK (build-apk.sh cari automatik).
-# Jalankan scripts/gen-launcher-icons.js dahulu (atau ia dijalankan di sini).
+# Needs: node + sharp (icons), Android SDK + JDK (build-apk.sh finds them automatically).
+# Run scripts/gen-launcher-icons.js first (or it runs here).
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
 
-# 1) Pastikan ikon launcher wujud untuk apl tanpa PNG khas.
-node scripts/gen-launcher-icons.js || { echo "build-store: penjanaan ikon gagal"; exit 1; }
+# 1) Make sure launcher icons exist for apps without a dedicated PNG.
+node scripts/gen-launcher-icons.js || { echo "build-store: icon generation failed"; exit 1; }
 
-# 2) Jana satu baris per-apl: slug|pkg|label|url|icon|media|vc|vn
+# 2) Emit one row per app: slug|pkg|label|url|icon|media|vc|vn
 ROWS="$(node -e '
 const fs=require("fs"),p=require("path");
 const apps=JSON.parse(fs.readFileSync("apk/catalog.json","utf8")).apps;
@@ -34,9 +34,9 @@ while IFS=$'\t' read -r slug pkg label url icon media vc vn; do
   APP_SLUG="$slug" APP_PKG="$pkg" APP_LABEL="$label" APP_URL="$url" \
   APP_ICON="$icon" APP_MEDIA="$media" APP_VC="$vc" APP_VN="$vn" BUILD_AAB="$aab" \
     bash scripts/build-apk.sh | grep -E "✓|⚠|error|Error|GAGAL" || fail=$((fail+1))
-  [ -f "public/downloads/tukuk-$slug.apk" ] && ok=$((ok+1)) || { echo "  ✗ $slug: APK Tiada!"; fail=$((fail+1)); }
+  [ -f "public/downloads/tukuk-$slug.apk" ] && ok=$((ok+1)) || { echo "  ✗ $slug: APK missing!"; fail=$((fail+1)); }
 done <<< "$ROWS"
 
 echo "══════════════════════════════════════════"
-echo "build-store: $ok APK berjaya, $fail masalah"
+echo "build-store: $ok APKs succeeded, $fail problems"
 ls -1 public/downloads/tukuk-*.apk | sed 's#.*/##'

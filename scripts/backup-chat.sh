@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# Backup data T Chat (data/chat.json + data/chat-media/) ke Cloudflare R2.
+# Backup T Chat data (data/chat.json + data/chat-media/) to Cloudflare R2.
 #
-# Mengikut jejak backup-meili.sh — dua laluan, cukup satu:
+# Follows backup-meili.sh — two paths, one is enough:
 #
-#   1) WORKER (disyorkan, tiada kunci S3):
-#        tar.gz snapshot -> POST ke worker tukuk-backup -> R2
-#        PERLU: BACKUP_WORKER_URL + BACKUP_UPLOAD_SECRET
+#   1) WORKER (recommended, no S3 keys):
+#        tar.gz snapshot -> POST to the tukuk-backup worker -> R2
+#        NEEDS: BACKUP_WORKER_URL + BACKUP_UPLOAD_SECRET
 #
-#   2) LOKAL SAHAJA (tiada creds worker):
-#        simpan tar.gz di SNAP_DIR dengan pemangkasan KEEP_LOKAL — berguna bila
-#        R2 belum dikonfigur, supaya data tidak berubah-ubah tiada salinan sama sekali.
+#   2) LOCAL ONLY (no worker creds):
+#        keep the tar.gz in SNAP_DIR with KEEP_LOCAL pruning — useful when
+#        R2 is not configured yet, so the data is never left without any copy.
 #
-# Semua nilai dalam ~/.config/tukuk-os/r2.env (EnvironmentFile systemd).
-# Aset media boleh besar; snapshot dibuat tanpa menghentikan proses pelayan
-# (JSON ditulis debounce; salinan best-effort — mungkin terlepas penulisan akhir jam).
+# All values live in ~/.config/tukuk-os/r2.env (systemd EnvironmentFile).
+# Media assets can be large; the snapshot is taken without stopping the server
+# (JSON is debounced-write; the copy is best-effort — may miss the last hour's writes).
 
 set -euo pipefail
 
-# HOME boleh tak wujud bila dijalankan root di bawah systemd (EnvironmentFile
-# sudah membekalkan nilai utama, jadi fail r2.env cuma tambahan).
+# HOME may not exist when run as root under systemd (the EnvironmentFile already
+# supplies the main values, so the r2.env file is only an addition).
 HOME="${HOME:-/home/tukuk}"
 if [ -f "${HOME}/.config/tukuk-os/r2.env" ]; then
   set -a
@@ -27,7 +27,7 @@ if [ -f "${HOME}/.config/tukuk-os/r2.env" ]; then
   set +a
 fi
 
-# APP_DIR: nilai env → lokasi skrip ini (paling boleh harap) → lalai lama.
+# APP_DIR: env value → this script's location (most reliable) → old default.
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${APP_DIR:-$SELF_DIR}"
 SNAP_DIR="${SNAP_DIR:-$APP_DIR/snapshots}"
@@ -37,9 +37,9 @@ KEEP_LOCAL="${KEEP_LOCAL:-3}"
 TIMEOUT="${TIMEOUT:-900}"
 
 log() { printf '[chat-backup] %s\n' "$*"; }
-fail() { printf '[chat-backup] RALAT: %s\n' "$*" >&2; exit 1; }
+fail() { printf '[chat-backup] ERROR: %s\n' "$*" >&2; exit 1; }
 
-# anggap placeholder <...> sebagai belum diisi
+# treat <...> placeholders as not yet filled in
 usable() {
   case "${1:-}" in
     ''|'<'*'>'|*'<your'*) return 1 ;;
@@ -51,7 +51,7 @@ usable "${BACKUP_WORKER_URL:-}" && usable "${BACKUP_UPLOAD_SECRET:-}" && WORKER_
 
 CHAT_JSON="$DATA_DIR/chat.json"
 CHAT_MEDIA="$DATA_DIR/chat-media"
-[ -f "$CHAT_JSON" ] || fail "tiada $CHAT_JSON — data T Chat belum wujud di pelayan ini"
+[ -f "$CHAT_JSON" ] || fail "no $CHAT_JSON — T Chat data does not exist on this server yet"
 
 mkdir -p "$SNAP_DIR"
 
@@ -59,17 +59,17 @@ upload_worker() {
   local file="$1" key="$2"
   local size remote
   size=$(stat -c%s "$file")
-  log "memuat naik $(basename "$file") ($size bait) -> $R2_BUCKET/$key"
+  log "uploading $(basename "$file") ($size bytes) -> $R2_BUCKET/$key"
   curl -sf -m "$TIMEOUT" -X POST \
     -H "Authorization: Bearer $BACKUP_UPLOAD_SECRET" \
     -H "Content-Type: application/gzip" \
     --data-binary "@$file" \
     "$BACKUP_WORKER_URL/?key=$key" \
-    || fail "muat naik worker gagal"
+    || fail "worker upload failed"
   remote=$(curl -sf -m 60 -H "Authorization: Bearer $BACKUP_UPLOAD_SECRET" \
     "$BACKUP_WORKER_URL/?key=$key" -o /dev/null -w '%{size_download}')
-  [ "$remote" = "$size" ] || fail "saiz tidak sepadan: local=$size remote=$remote"
-  log "sahkan saiz OK ($size bait)"
+  [ "$remote" = "$size" ] || fail "size mismatch: local=$size remote=$remote"
+  log "size verified OK ($size bytes)"
 }
 
 prune_local() {
@@ -78,18 +78,18 @@ prune_local() {
   mapfile -t files < <(ls -1t "$SNAP_DIR"/$pattern 2>/dev/null || true)
   local f
   for f in "${files[@]:$KEEP_LOCAL}"; do
-    [ -n "$f" ] && rm -f "$f" && log "buang backup local: $(basename "$f")"
+    [ -n "$f" ] && rm -f "$f" && log "pruned local backup: $(basename "$f")"
   done
   return 0
 }
 
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 OUT="$SNAP_DIR/tukuk-chat-${STAMP}.tar.gz"
-log "membuat snapshot T Chat ($OUT)..."
+log "creating T Chat snapshot ($OUT)..."
 
-# Salin JSON ke staging (elak baca fail ketika tulis debounce → snapshot separuh),
-# dan gunakan symlink ke media supaya tar tak berganda ruang. -h (dereference)
-# masukkan kandungan media sebenar ke dalam arkib.
+# Copy JSON to staging (avoid reading the file during a debounce write → half snapshot),
+# and use a symlink to media so tar does not double the space. -h (dereference)
+# puts the real media content into the archive.
 STAGE=$(mktemp -d)
 cp "$CHAT_JSON" "$STAGE/chat.json"
 if [ -d "$CHAT_MEDIA" ]; then
@@ -100,15 +100,15 @@ else
 fi
 rm -rf "$STAGE"
 
-[ -s "$OUT" ] || fail "snapshot kosong/gagal"
+[ -s "$OUT" ] || fail "snapshot empty/failed"
 SIZE=$(du -h "$OUT" | cut -f1)
-log "snapshot siap ($SIZE)"
+log "snapshot ready ($SIZE)"
 
 if [ "$WORKER_OK" = 1 ]; then
   upload_worker "$OUT" "tukuk-chat/$(date -u +%Y/%m/%d)/$(basename "$OUT")"
 else
-  log "WORKER OK=0 — simpan lokal sahaja (isi BACKUP_WORKER_URL+BACKUP_UPLOAD_SECRET untuk R2)"
+  log "WORKER OK=0 — keep local only (fill BACKUP_WORKER_URL+BACKUP_UPLOAD_SECRET for R2)"
 fi
 prune_local 'tukuk-chat-*.tar.gz'
 
-log "selesai"
+log "done"

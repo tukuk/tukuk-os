@@ -1,25 +1,25 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Tukuk-OS Reranker — FINE-TUNE FULLY OFFLINE (tiada internet) di Kaggle GPU.
+# Tukuk-OS Reranker — FULLY OFFLINE fine-tune (no internet) on a Kaggle GPU.
 #
-# Guna libreri PRA-INSTALL imej Kaggle (torch, transformers, datasets — tiada pip).
-# Input dimount sebagai sumber Kaggle (tiada muat turun HF diperlukan):
-#   • Model asas : johnsonhk88/cross-encoderms-marco-minilm-l-6-v2 (v1/Transformers)
+# Use the PRE-INSTALLED libraries in the Kaggle image (torch, transformers,
+# datasets — no pip). Inputs are mounted as Kaggle sources (no HF download needed):
+#   • Base model : johnsonhk88/cross-encoderms-marco-minilm-l-6-v2 (v1/Transformers)
 #   • Dataset    : parthplc/ms-marco-dataset → train.csv [answers,query,finalpassage]
 #
-# Latihan: cross-encoder BINARI (query+passage relevan = 1 ; query+passage rawak = 0),
-# BCEWithLogitsLoss. Eksport ONNX guna torch.onnx (bkn optimum) + salin fail tokenizer
-# supaya Node (@huggingface/transformers AutoModelForSequenceClassification) boleh muat.
+# Training: a BINARY cross-encoder (query+relevant passage = 1 ; query+random passage = 0),
+# BCEWithLogitsLoss. Export ONNX via torch.onnx (not optimum) + copy the tokenizer files
+# so Node (@huggingface/transformers AutoModelForSequenceClassification) can load them.
 #
-# Keluaran (/kaggle/working/tukuk-reranker/):
+# Output (/kaggle/working/tukuk-reranker/):
 #   config.json tokenizer.json tokenizer_config.json special_tokens_map.json vocab.txt
 #   onnx/model.onnx  (fp32 — input names: input_ids, attention_mask, token_type_ids)
 #
-# Nota: MAX_ROWS rendah (=2000) untuk VALIDASI SALURAN (jalankan ~1 min). Naikkan ke
-# ~120000 untuk model sebenar selepas eksport ONNX disahkan boleh dimuat di Node.
+# Note: MAX_ROWS is low (=2000) for PIPELINE VALIDATION (runs ~1 min). Raise it to
+# ~120000 for the real model once the ONNX export is confirmed loadable in Node.
 #
-# ── Nota GPU: jika akaun Kaggle belum menerima "GPU rules", kernel senyap jatuh
-# ke CPU (device=cpu). Untuk run penuh, pastikan GPU aktif di UI Kaggle atau
-# hadkan MAX_ROWS (~40k) supaya muat dalam had masa sesi CPU.
+# ── GPU note: if the Kaggle account has not accepted the "GPU rules", the kernel
+# silently falls to CPU (device=cpu). For a full run, make sure GPU is active in the
+# Kaggle UI or cap MAX_ROWS (~40k) so it fits within the CPU session time limit.
 # ─────────────────────────────────────────────────────────────────────────────
 import os
 import csv
@@ -31,7 +31,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-MAX_ROWS = int(os.environ.get("MAX_ROWS", "2000"))   # ← VALIDASI=2000; penuh=120000
+MAX_ROWS = int(os.environ.get("MAX_ROWS", "2000"))   # ← VALIDATION=2000; full=120000
 EPOCHS = int(os.environ.get("EPOCHS", "1"))
 BATCH = int(os.environ.get("BATCH_SIZE", "32"))
 LR = float(os.environ.get("LEARNING_RATE", "2e-5"))
@@ -51,13 +51,13 @@ def find_model_dir():
         d = os.path.dirname(cfg)
         if os.path.exists(os.path.join(d, "tokenizer.json")) or os.path.exists(os.path.join(d, "vocab.txt")):
             return d
-    raise SystemExit("[tukuk] fail: direktori model asas tidak ditemui dalam /kaggle/input")
+    raise SystemExit("[tukuk] fail: base model directory not found under /kaggle/input")
 
 
 def find_train_csv():
     for p in glob.glob("/kaggle/input/**/train.csv", recursive=True):
         return p
-    raise SystemExit("[tukuk] fail: train.csv tidak ditemui dalam /kaggle/input")
+    raise SystemExit("[tukuk] fail: train.csv not found under /kaggle/input")
 
 
 MODEL_DIR = find_model_dir()
@@ -67,7 +67,7 @@ print(f"[tukuk] train_csv = {TRAIN_CSV}", flush=True)
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
 
-# ── Baca (query, passage relevan) lalu jana pasangan binari dengan negatif rawak ──
+# ── Read (query, relevant passage) then generate binary pairs with random negatives ──
 pos = []  # (query, passage)
 with open(TRAIN_CSV, newline="", encoding="utf-8") as f:
     for row in csv.DictReader(f):
@@ -79,18 +79,18 @@ with open(TRAIN_CSV, newline="", encoding="utf-8") as f:
             continue
         pos.append((q, p))
 if len(pos) < 50:
-    raise SystemExit(f"[tukuk] fail: terlalu sedikit pasangan ({len(pos)})")
-print(f"[tukuk] {len(pos)} pasangan POSITIF dibaca", flush=True)
+    raise SystemExit(f"[tukuk] fail: too few pairs ({len(pos)})")
+print(f"[tukuk] read {len(pos)} POSITIVE pairs", flush=True)
 
 samples = []
-for i, (q, p) in enumerate(pos):  # positif label 1
+for i, (q, p) in enumerate(pos):  # positive label 1
     samples.append((q, p, 1.0))
 passages = [p for _, p in pos]
-for q, _ in pos:                   # negatif label 0: passage rawak lain
+for q, _ in pos:                   # negative label 0: another random passage
     other = passages[random.randrange(len(passages))]
     samples.append((q, other, 0.0))
 random.shuffle(samples)
-print(f"[tukuk] {len(samples)} pasangan latihan (pos+neg)", flush=True)
+print(f"[tukuk] {len(samples)} training pairs (pos+neg)", flush=True)
 
 
 class PairDS(Dataset):
@@ -133,7 +133,7 @@ for batch in loader:
     if step % 25 == 0 or step == len(loader):
         print(f"[tukuk] step {step}/{len(loader)} loss={running/step:.4f}", flush=True)
 
-# ── Sanity: adakah model membezakan positif vs negatif? ──
+# ── Sanity: does the model distinguish positive vs negative? ──
 model.eval()
 with torch.no_grad():
     probe = samples[:256]
@@ -141,7 +141,7 @@ with torch.no_grad():
     sc = model(**e).logits.view(-1).cpu().numpy()
     ys = np.array([c for _, _, c in probe])
     acc = float(np.mean((sc > 0.0) == (ys > 0.5)))
-    print(f"[tukuk] sanity accuracy = {acc:.3f} (jangka > 0.7 selepas latihan)", flush=True)
+    print(f"[tukuk] sanity accuracy = {acc:.3f} (expect > 0.7 after training)", flush=True)
 
 
 class ForONNX(torch.nn.Module):
@@ -161,9 +161,9 @@ torch.onnx.export(
     wrapper,
     (dummy["input_ids"], dummy["attention_mask"], dummy.get("token_type_ids", torch.zeros_like(dummy["input_ids"]))),
     onnx_path,
-    dynamo=False,          # torch 2.9+ default ke eksport baharu (dynamo) yang
-                           # perlukan `onnxscript` — TIADA dalam imej Kaggle offline.
-                           # Legacy TorchScript exporter tak perlu dep tambahan.
+    dynamo=False,          # torch 2.9+ defaults to the new (dynamo) exporter which
+                           # needs `onnxscript` — NOT in the offline Kaggle image.
+                           # The legacy TorchScript exporter needs no extra dep.
     opset_version=OPSET,
     input_names=["input_ids", "attention_mask", "token_type_ids"],
     output_names=["logits"],
@@ -174,9 +174,9 @@ torch.onnx.export(
         "logits": {0: "batch"},
     },
 )
-print(f"[tukuk] ONNX ditulis → {onnx_path} ({os.path.getsize(onnx_path)} bytes)", flush=True)
+print(f"[tukuk] ONNX written → {onnx_path} ({os.path.getsize(onnx_path)} bytes)", flush=True)
 
-# ── Salin fail tokenizer/config supaya Node boleh muat model ini ──
+# ── Copy tokenizer/config files so Node can load this model ──
 import shutil
 for fname in ["config.json", "tokenizer.json", "tokenizer_config.json",
               "special_tokens_map.json", "vocab.txt", "merges.txt"]:
@@ -187,6 +187,6 @@ for fname in ["config.json", "tokenizer.json", "tokenizer_config.json",
 for root, _dirs, files in os.walk(OUT_DIR):
     for f in files:
         p = os.path.join(root, f)
-        print(f"[tukuk] keluaran: {os.path.relpath(p, OUT_DIR)} ({os.path.getsize(p)} bytes)", flush=True)
+        print(f"[tukuk] output: {os.path.relpath(p, OUT_DIR)} ({os.path.getsize(p)} bytes)", flush=True)
 
-print("[tukuk] SELESAI — fail ONNX kini di output kernel.", flush=True)
+print("[tukuk] DONE — the ONNX files are now in the kernel output.", flush=True)

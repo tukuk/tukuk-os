@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# setup-all.sh — Auto-setup penuh Tukuk-OS untuk server sebenar.
+# setup-all.sh — Full automatic Tukuk-OS setup for a real server.
 #
-# Cara guna di mesin KOSONG (Ubuntu 22.04+) — SATU langkah sahaja:
+# How to use on an EMPTY machine (Ubuntu 22.04+) — ONE step only:
 #   git clone git@github.com:fevian448/tukuk-os-v2.git /opt/tukuk-os
 #   cd /opt/tukuk-os
-#   npm install     # postinstall -> skrip ini auto-jalan, terus siap 100%
+#   npm install     # postinstall -> this script auto-runs, ready 100% at once
 #
-# (repo private — mesin baru perlukan SSH key GitHub; .env auto-disalin
-#  daripada deploy/env.defaults; credentials tunnel dibaca daripada
+# (private repo — a new machine needs a GitHub SSH key; .env is auto-copied
+#  from deploy/env.defaults; tunnel credentials are read from
 #  deploy/cloudflared/<CF_TUNNEL_ID>.json)
 #
-# Atau manual:  sudo bash scripts/setup-all.sh
+# Or manual:  sudo bash scripts/setup-all.sh
 #
-# Skrip ini IDEMPOTENT — boleh jalankan berkali-kali; bahagian yang sudah
-# siap akan dilangkau. Apabila dipanggil melalui npm postinstall, ia hanya
-# bertindak jika: (a) TUKUK_AUTO_SETUP=1, ATAU (b) app berada di /opt/tukuk-os.
+# This script is IDEMPOTENT — you can run it many times; parts that are
+# already done will be skipped. When called via npm postinstall, it only
+# acts if: (a) TUKUK_AUTO_SETUP=1, OR (b) the app is at /opt/tukuk-os.
 # ==============================================================================
 
 set -euo pipefail
@@ -31,60 +31,60 @@ INSTALL_DIR="${TUKUK_INSTALL_DIR:-/opt/tukuk-os}"
 FROM_NPM=0
 [[ "${1:-}" == "--from-npm" ]] && FROM_NPM=1
 
-# ── Pintu keselamatan: jangan auto-ubah sistem kecuali benar-benar server ──────
-# Pengawal rekursi: elak npm install bersarang mencetuskan setup berkali-kali.
+# ── Safety gate: do not auto-modify the system unless it really is a server ────
+# Recursion guard: prevent nested npm install from triggering setup repeatedly.
 if [[ "${TUKUK_SETUP_RUNNING:-0}" == "1" ]]; then
-  info "setup-all sudah berjalan dalam proses induk — dilangkau."
+  info "setup-all already running in the parent process — skipping."
   exit 0
 fi
 export TUKUK_SETUP_RUNNING=1
 
 if [[ $FROM_NPM -eq 1 ]]; then
   if [[ "${TUKUK_AUTO_SETUP:-0}" != "1" && "$REPO_DIR" != "$INSTALL_DIR" ]]; then
-    info "postinstall: auto-setup dilangkau (bukan server). Untuk jalankan di server:"
+    info "postinstall: auto-setup skipped (not a server). To run it on a server:"
     echo "   sudo bash scripts/setup-all.sh     ATAU   TUKUK_AUTO_SETUP=1 npm install"
     exit 0
   fi
 fi
 
-# ── Wajib root; naik ke sudo secara automatik ─────────────────────────────────
+# ── Require root; escalate to sudo automatically ──────────────────────────────
 if [[ $EUID -ne 0 ]]; then
   if command -v sudo >/dev/null; then
     exec sudo env "TUKUK_AUTO_SETUP=${TUKUK_AUTO_SETUP:-1}" "TUKUK_SETUP_RUNNING=1" "PATH=$PATH" bash "$0" "${@:---from-server}"
   fi
-  die "Perlukan root (guna sudo)."
+  die "Need root (use sudo)."
 fi
 
-command -v apt-get >/dev/null || die "Skrip ini untuk Ubuntu/Debian."
+command -v apt-get >/dev/null || die "This script is for Ubuntu/Debian."
 
 echo -e "${BLUE}========================================================${NC}"
 echo -e "${GREEN}  Tukuk-OS — Auto Setup (server + Cloudflare Tunnel)${NC}"
 echo -e "${BLUE}========================================================${NC}"
 
-# ── [1] Fail .env (kunci & API) — auto daripada defaults terbawa ─────────────
+# ── [1] .env file (keys & API) — automatic from bundled defaults ─────────────
 if [[ ! -f "$REPO_DIR/.env" ]]; then
   if [[ -f "$REPO_DIR/deploy/env.defaults" ]]; then
     cp "$REPO_DIR/deploy/env.defaults" "$REPO_DIR/.env"
-    ok ".env automatik daripada deploy/env.defaults — tiada editing diperlukan."
+    ok ".env automatic from deploy/env.defaults — no editing needed."
   elif [[ -f "$REPO_DIR/.env.example" ]]; then
     cp "$REPO_DIR/.env.example" "$REPO_DIR/.env"
-    warn ".env dicipta daripada .env.example — ISI SEMUA KUNCI anda, kemudian jalankan semula."
+    warn ".env created from .env.example — FILL IN ALL YOUR KEYS, then run again."
   fi
 fi
 [[ -f "$REPO_DIR/.env" ]] && chmod 600 "$REPO_DIR/.env"
 get_env() { [[ -f "$REPO_DIR/.env" ]] && grep -E "^$1=" "$REPO_DIR/.env" | head -1 | cut -d= -f2- | sed 's/^["'"'"']//; s/["'"'"']$//' || true; }
 
-# Route mutasi (/crawl, /crawl/batch, /documents, /settings) FAIL-TERBUKA: kalau
-# API_KEY kosong, requireApiKey() terus luluskan permintaan — sesiapa di internet
-# boleh menyuntik dokumen ke indeks carian kita atau mengosongkannya. Jana kunci
-# sebaik .env ada supaya server baru selamat secara lalai.
+# Mutation routes (/crawl, /crawl/batch, /documents, /settings) are FAIL-OPEN: if
+# API_KEY is empty, requireApiKey() just lets the request through — anyone on the
+# internet could inject documents into our search index or wipe it. Generate a key
+# as soon as .env exists so a new server is secure by default.
 if [[ -f "$REPO_DIR/.env" && -z "$(get_env API_KEY)" ]]; then
   echo "API_KEY=$(head -c 24 /dev/urandom | base64 | tr -d '=+/')" >> "$REPO_DIR/.env"
-  warn "API_KEY dijana dalam .env — hantar sebagai header X-API-Key untuk route mutasi."
+  warn "API_KEY generated in .env — send it as the X-API-Key header for mutation routes."
 fi
 
-# ── [2] Pakej asas + tuning memori (2GB RAM) ──────────────────────────────────
-info "[1/8] Pakej asas & tuning kernel..."
+# ── [2] Base packages + memory tuning (2GB RAM) ───────────────────────────────
+info "[1/8] Base packages & kernel tuning..."
 apt-get update -y -qq
 apt-get install -y -qq curl wget git unzip rsync zram-tools ca-certificates >/dev/null
 [[ -f /etc/default/zramswap ]] || cat > /etc/default/zramswap << 'EOF'
@@ -103,7 +103,7 @@ net.ipv4.tcp_fastopen = 3
 net.ipv4.tcp_fin_timeout = 15
 EOF
 sysctl --system > /dev/null
-ok "Sistem tunes siap."
+ok "System tuning done."
 
 # ── [3] Node.js 22 LTS ─────────────────────────────────────────────────────────
 info "[2/8] Node.js..."
@@ -119,18 +119,18 @@ if ! command -v meilisearch >/dev/null; then
   curl -fsSL https://raw.githubusercontent.com/meilisearch/meilisearch/latest/scripts/install-meilisearch.sh | bash >/dev/null 2>&1 \
     || { ARCH=$(dpkg --print-architecture); wget -q "https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-linux-${ARCH}" -O /usr/local/bin/meilisearch && chmod +x /usr/local/bin/meilisearch; }
 fi
-ok "meilisearch: $(command -v meilisearch || echo 'TIADA — pasangkan sendiri')"
+ok "meilisearch: $(command -v meilisearch || echo 'NONE — install it yourself')"
 
 MEILI_KEY="$(get_env MEILI_MASTER_KEY)"
 if [[ -z "$MEILI_KEY" ]]; then
   MEILI_KEY="$(head -c 24 /dev/urandom | base64 | tr -d '=+/')"
   echo "MEILI_MASTER_KEY=$MEILI_KEY" >> "$REPO_DIR/.env"
-  warn "MEILI_MASTER_KEY baharu dijana dan disimpan dalam .env."
+  warn "A new MEILI_MASTER_KEY was generated and stored in .env."
 fi
 
 cat > /etc/systemd/system/meilisearch.service << EOF
 [Unit]
-Description=Meilisearch (enjin indeks Tukuk-OS)
+Description=Meilisearch (Tukuk-OS index engine)
 After=network-online.target
 StartLimitIntervalSec=0
 
@@ -145,8 +145,8 @@ MemoryMax=1G
 WantedBy=multi-user.target
 EOF
 
-# ── [5] Letak app di /opt/tukuk-os + git branch siap ──────────────────────────
-info "[4/8] Aplikasi & git..."
+# ── [5] Place the app at /opt/tukuk-os + git branch ready ──────────────────────
+info "[4/8] Application & git..."
 if [[ "$REPO_DIR" != "$INSTALL_DIR" ]]; then
   mkdir -p "$INSTALL_DIR"
   rsync -a --delete --exclude node_modules --exclude meili_data --exclude snapshots --exclude dumps "$REPO_DIR/" "$INSTALL_DIR/"
@@ -157,14 +157,14 @@ if [[ -d .git ]]; then
   DEFAULT_BRANCH="$(get_env GIT_BRANCH)"; DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
   git fetch --all --prune -q || true
   git checkout "$DEFAULT_BRANCH" 2>/dev/null || git checkout -b "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" || true
-  git pull --ff-only -q origin "$DEFAULT_BRANCH" || warn "git pull dilangkau (tmpahan tempatan)."
+  git pull --ff-only -q origin "$DEFAULT_BRANCH" || warn "git pull skipped (local overrides)."
   ok "Git branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
 fi
 [[ -d node_modules ]] || npm install --omit=dev --no-audit --no-fund
 mkdir -p meili_data snapshots dumps data
 
-# ── [6] Perkhidmatan systemd (tukuk-os + watchdog) ────────────────────────────
-info "[5/8] Servis Tukuk-OS..."
+# ── [6] systemd services (tukuk-os + watchdog) ──────────────────────────────
+info "[5/8] Tukuk-OS service..."
 cat > /etc/systemd/system/tukuk-os.service << EOF
 [Unit]
 Description=Tukuk-OS Search Engine
@@ -205,7 +205,7 @@ EOF
 
 cat > /etc/systemd/system/tukuk-os-watchdog.timer << 'EOF'
 [Unit]
-Description=Watchdog Tukuk-OS setiap 2 minit
+Description=Watchdog Tukuk-OS every 2 minutes
 
 [Timer]
 OnBootSec=2min
@@ -221,11 +221,11 @@ systemctl daemon-reload
 systemctl enable --now meilisearch >/dev/null
 systemctl enable --now tukuk-os >/dev/null
 systemctl enable --now tukuk-os-watchdog.timer >/dev/null
-ok "tukuk-os + meilisearch + watchdog berjalan."
+ok "tukuk-os + meilisearch + watchdog running."
 
-# ── [6b] Tukuk Agent (editor + AI build-agent) — unit sentiasa dipasang;
-#     servis HANYA boleh start bila release siap-bina dari laptop sudah
-#     di-rsync ke /opt/tukuk-agent/release (tiada build berat di VPS). ────────
+# ── [6b] Tukuk Agent (editor + AI build-agent) — unit is always installed;
+#     the service can ONLY start once a ready-built release from the laptop has
+#     been rsync'd to /opt/tukuk-agent/release (no heavy build on the VPS). ────
 if [[ -f "$INSTALL_DIR/deploy/tukuk-agent.service" ]]; then
   getent passwd tukuk-agent >/dev/null 2>&1 || \
     useradd --system --home-dir /var/lib/tukuk-agent --shell /usr/sbin/nologin tukuk-agent 2>/dev/null || true
@@ -237,17 +237,17 @@ if [[ -f "$INSTALL_DIR/deploy/tukuk-agent.service" ]]; then
   if [[ -x /opt/tukuk-agent/release/bin/tukuk-agent ]]; then
     chown -R tukuk-agent:tukuk-agent /opt/tukuk-agent 2>/dev/null || true
     systemctl restart tukuk-agent >/dev/null 2>&1 \
-      && ok "Tukuk Agent berjalan pada 127.0.0.1:8443 — https://agent.tukuk.org (melalui tunnel)." \
-      || warn "tukuk-agent gagal start — semak: journalctl -u tukuk-agent -n 30"
+      && ok "Tukuk Agent running on 127.0.0.1:8443 — https://agent.tukuk.org (through the tunnel)." \
+      || warn "tukuk-agent failed to start — check: journalctl -u tukuk-agent -n 30"
   else
-    warn "Unit Tukuk Agent terpasang, tapi release belum ada di /opt/tukuk-agent/release."
-    echo "   Bina di LAPTOP:  bash scripts/build-tukuk-agent.sh"
-    echo "   Hantar ke server: bash scripts/publish-agent.sh <user@host>"
-    echo "   kemudian ulang setup-all.sh (atau: sudo systemctl restart tukuk-agent)."
+    warn "Tukuk Agent unit installed, but no release yet at /opt/tukuk-agent/release."
+    echo "   Build on the LAPTOP:  bash scripts/build-tukuk-agent.sh"
+    echo "   Push to the server:   bash scripts/publish-agent.sh <user@host>"
+    echo "   then rerun setup-all.sh (or: sudo systemctl restart tukuk-agent)."
   fi
 fi
 
-# ── [7] Cloudflare Tunnel auto ────────────────────────────────────────────────
+# ── [7] Cloudflare Tunnel automatic ────────────────────────────────────────────
 info "[6/8] Cloudflare Tunnel..."
 if ! command -v cloudflared >/dev/null; then
   curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
@@ -261,29 +261,29 @@ fi
 
 CF_TOKEN="$(get_env CF_TUNNEL_TOKEN)"
 CF_ID="$(get_env CF_TUNNEL_ID)"
-# Token cloudflared sejati SELALU bermula "eyJ" (JSON base64). Tolak nilai
-# rosak/placeholder supaya pelayan baru tak mati pada `service install <sampah>`.
+# A real cloudflared token ALWAYS starts with "eyJ" (JSON base64). Reject broken
+# /placeholder values so a new server doesn't die on `service install <garbage>`.
 if [[ -n "$CF_TOKEN" && "$CF_TOKEN" != eyJ* ]]; then
-  warn "CF_TUNNEL_TOKEN bukan token cloudflared sah (mestinya bermula 'eyJ…'). Diabaikan."
+  warn "CF_TUNNEL_TOKEN is not a valid cloudflared token (it must start with 'eyJ…'). Ignored."
   CF_TOKEN=""
 fi
 mkdir -p /etc/cloudflared
 if [[ -n "$CF_TOKEN" ]]; then
-  # ── MOD TOKEN (paling portabel — TIADA fail credentials .json diperlukan) ──
-  # config.yml dibina daripada templat: baris `credentials-file:` digantikan
-  # `token: <TOKEN>`. Ingress kekal dalam fail ini (tidak bergantung dashboard).
-  # PENTING: `cloudflared service install` MENOLAK config `token:` (minta
-  # credentials-file), TETAPI `cloudflared tunnel run --config` MENERIMA token.
-  # Jadi unit systemd ditulis terus (ExecStart `--config ... tunnel run`), bukan
-  # melalui `service install` — beginilah pelayan baru boleh 100% auto.
-  [[ -n "$CF_ID" ]] || die "CF_TUNNEL_TOKEN diisi tapi CF_TUNNEL_ID kosong — letak UUID tunnel."
+  # ── TOKEN MODE (most portable — NO .json credentials file needed) ──
+  # config.yml is built from the template: the `credentials-file:` line is replaced
+  # with `token: <TOKEN>`. Ingress stays in this file (not dependent on the dashboard).
+  # IMPORTANT: `cloudflared service install` REJECTS a `token:` config (it wants
+  # credentials-file), BUT `cloudflared tunnel run --config` ACCEPTS a token.
+  # So the systemd unit is written directly (ExecStart `--config ... tunnel run`), not
+  # via `service install` — this is how a new server can be 100% automatic.
+  [[ -n "$CF_ID" ]] || die "CF_TUNNEL_TOKEN set but CF_TUNNEL_ID empty — put the tunnel UUID."
   sed -e "s#<TUNNEL_ID>#$CF_ID#g" \
       -e "s#^credentials-file:.*#token: $CF_TOKEN#" \
       "$INSTALL_DIR/deploy/cloudflared/config.yml" > /etc/cloudflared/config.yml
-  chmod 600 /etc/cloudflared/config.yml   # config kini mengandungi token rahsia
+  chmod 600 /etc/cloudflared/config.yml   # config now contains a secret token
   cat > /etc/systemd/system/cloudflared.service << 'EOF'
 [Unit]
-Description=cloudflared Tunnel (Tukuk-OS, mod token)
+Description=cloudflared Tunnel (Tukuk-OS, token mode)
 After=network-online.target
 Wants=network-online.target
 
@@ -297,42 +297,42 @@ WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
   systemctl enable --now cloudflared >/dev/null && systemctl restart cloudflared >/dev/null \
-    && ok "Cloudflare Tunnel ($CF_ID) berjalan dalam MOD TOKEN (portabel, tiada .json)." \
-    || die "Gagal mulakan servis cloudflared — semak: journalctl -u cloudflared -n 30"
+    && ok "Cloudflare Tunnel ($CF_ID) running in TOKEN MODE (portable, no .json)." \
+    || die "Failed to start cloudflared service — check: journalctl -u cloudflared -n 30"
 elif [[ -n "$CF_ID" ]]; then
-  # ── MOD NAMED/JSON (fallback: perlu fail <CF_ID>.json pada pelayan ini) ──
+  # ── NAMED/JSON MODE (fallback: needs a <CF_ID>.json file on this server) ──
   CRED_SRC=""
   for cand in "$INSTALL_DIR/deploy/cloudflared/$CF_ID.json" "$HOME/.cloudflared/$CF_ID.json" "/root/.cloudflared/$CF_ID.json" "/home/tukuk/.cloudflared/$CF_ID.json"; do
     [[ -f "$cand" ]] && CRED_SRC="$cand" && break
   done
-  [[ -n "$CRED_SRC" ]] || die "Tiada CF_TUNNEL_TOKEN & credentials $CF_ID.json tidak ditemui. Paling mudah: dashboard Cloudflare → Networks → Tunnels → $CF_ID → salin TOKEN, letak CF_TUNNEL_TOKEN=<eyJ…> dalam .env, ulangi setup-all.sh. ATAU scp fail .json dari pelayan lama."
+  [[ -n "$CRED_SRC" ]] || die "No CF_TUNNEL_TOKEN & credentials $CF_ID.json not found. Easiest: Cloudflare dashboard → Networks → Tunnels → $CF_ID → copy the TOKEN, put CF_TUNNEL_TOKEN=<eyJ…> in .env, rerun setup-all.sh. OR scp the .json file from the old server."
   cp "$CRED_SRC" "/etc/cloudflared/$CF_ID.json" && chmod 600 "/etc/cloudflared/$CF_ID.json"
   sed "s#<TUNNEL_ID>#$CF_ID#g" "$INSTALL_DIR/deploy/cloudflared/config.yml" > /etc/cloudflared/config.yml
   cloudflared service install >/dev/null && systemctl enable --now cloudflared >/dev/null \
-    && ok "Cloudflare Tunnel ($CF_ID) dipasang daripada credentials JSON lokal." \
-    || die "Gagal pasang servis cloudflared — semak /etc/cloudflared/config.yml."
+    && ok "Cloudflare Tunnel ($CF_ID) installed from the local JSON credentials." \
+    || die "Failed to install cloudflared service — check /etc/cloudflared/config.yml."
 else
-  warn "CF_TUNNEL_TOKEN / CF_TUNNEL_ID belum diisi dalam .env — tunnel dilangkau."
-  echo "   Cara disyorkan (MOD TOKEN, portabel ke semua pelayan):"
-  echo "   Cloudflare One → Tunnels → $CF_ID (atau create baharu) → salin TOKEN (mula 'eyJ'),"
-  echo "   tampal CF_TUNNEL_TOKEN=<token> + CF_TUNNEL_ID=<uuid> dalam $INSTALL_DIR/.env,"
-  echo "   kemudian:  sudo bash scripts/setup-all.sh   (hanya langkah tunnel diulang)"
-  echo "   Ujian pantas tanpa token:  cloudflared tunnel --url http://localhost:3000"
+  warn "CF_TUNNEL_TOKEN / CF_TUNNEL_ID not yet set in .env — tunnel skipped."
+  echo "   Recommended way (TOKEN MODE, portable to all servers):"
+  echo "   Cloudflare One → Tunnels → $CF_ID (or create a new one) → copy the TOKEN (starts 'eyJ'),"
+  echo "   paste CF_TUNNEL_TOKEN=<token> + CF_TUNNEL_ID=<uuid> into $INSTALL_DIR/.env,"
+  echo "   then:  sudo bash scripts/setup-all.sh   (only the tunnel step is rerun)"
+  echo "   Quick test without a token:  cloudflared tunnel --url http://localhost:3000"
 fi
 
-# ── [8] Cloudflare Edge — www.tukuk.org sentiasa hidup ─────────────────────
-info "[7/8] Cloudflare Edge (cermin www + snapshot R2)..."
+# ── [8] Cloudflare Edge — www.tukuk.org always live ───────────────────────
+info "[7/8] Cloudflare Edge (www mirror + R2 snapshot)..."
 CF_API="$(get_env CLOUDFLARE_API_TOKEN)"
 if [[ -n "$CF_API" ]]; then
   export CLOUDFLARE_API_TOKEN="$CF_API"
   command -v wrangler >/dev/null || npm install -g wrangler --silent || true
   ( cd "$INSTALL_DIR/worker" && npx --yes wrangler deploy >/dev/null ) \
-    && ok "Worker www.tukuk.org di-deploy (cuba origin → gagal → hidang snapshot R2)." \
-    || warn "wrangler deploy gagal — semak CLOUDFLARE_API_TOKEN & kebenaran zone."
+    && ok "Worker www.tukuk.org deployed (try origin → on failure → serve R2 snapshot)." \
+    || warn "wrangler deploy failed — check CLOUDFLARE_API_TOKEN & zone permissions."
   bash "$INSTALL_DIR/scripts/snapshot-r2.sh" || true
   cat > /etc/systemd/system/tukuk-snapshot.service << EOF
 [Unit]
-Description=Snapshot laman Tukuk-OS ke R2
+Description=Snapshot Tukuk-OS site to R2
 After=tukuk-os.service
 
 [Service]
@@ -343,7 +343,7 @@ ExecStart=/bin/bash $INSTALL_DIR/scripts/snapshot-r2.sh
 EOF
   cat > /etc/systemd/system/tukuk-snapshot.timer << 'EOF'
 [Unit]
-Description=Snapshot R2 setiap 6 jam
+Description=R2 snapshot every 6 hours
 
 [Timer]
 OnBootSec=10min
@@ -355,17 +355,17 @@ WantedBy=timers.target
 EOF
   systemctl daemon-reload
   systemctl enable --now tukuk-snapshot.timer >/dev/null
-  ok "Timer snapshot 6 jam aktif — cermin www sentiasa segar."
+  ok "6-hour snapshot timer active — the www mirror stays fresh."
 else
-  warn "CLOUDFLARE_API_TOKEN tiada — langkah edge dilangkau (fallback www tidak aktif)."
+  warn "No CLOUDFLARE_API_TOKEN — edge step skipped (www fallback not active)."
 fi
 
-# ── Backup T Chat (chat.json + chat-media) → R2, setiap 6 jam ──
+# ── T Chat backup (chat.json + chat-media) → R2, every 6 hours ──
 if [ -f "$INSTALL_DIR/scripts/backup-chat.sh" ]; then
   chmod +x "$INSTALL_DIR/scripts/backup-chat.sh" 2>/dev/null || true
   cat > /etc/systemd/system/chat-backup.service << EOF
 [Unit]
-Description=Backup data T Chat (chat.json + media)
+Description=Backup T Chat data (chat.json + media)
 After=tukuk-os.service
 
 [Service]
@@ -377,7 +377,7 @@ ExecStart=/bin/bash $INSTALL_DIR/scripts/backup-chat.sh
 EOF
   cat > /etc/systemd/system/chat-backup.timer << 'EOF'
 [Unit]
-Description=Backup data T Chat setiap 6 jam
+Description=Backup T Chat data every 6 hours
 
 [Timer]
 OnCalendar=*-*-* 01,07,13,19:15:00
@@ -389,15 +389,15 @@ WantedBy=timers.target
 EOF
   systemctl daemon-reload
   systemctl enable --now chat-backup.timer >/dev/null 2>&1 || true
-  ok "Timer backup T Chat 6 jam aktif (chat-backup.timer)."
+  ok "6-hour T Chat backup timer active (chat-backup.timer)."
 fi
 
-# Auto-update harian: git pull → npm install (postinstall → setup-all) → servis
-# & worker & snapshot ikut berkemas. Padam dengan GIT_AUTO_UPDATE=0 dalam .env.
+# Daily auto-update: git pull → npm install (postinstall → setup-all) → services
+# & worker & snapshot tidy themselves. Disable with GIT_AUTO_UPDATE=0 in .env.
 if [[ "$(get_env GIT_AUTO_UPDATE)" != "0" ]]; then
   cat > /etc/systemd/system/tukuk-update.service << 'EOF'
 [Unit]
-Description=Kemas kini Tukuk-OS (git + npm + servis + edge)
+Description=Update Tukuk-OS (git + npm + services + edge)
 
 [Service]
 Type=oneshot
@@ -406,7 +406,7 @@ ExecStart=/bin/bash /opt/tukuk-os/scripts/auto-update.sh
 EOF
   cat > /etc/systemd/system/tukuk-update.timer << 'EOF'
 [Unit]
-Description=Auto-update Tukuk-OS setiap hari
+Description=Auto-update Tukuk-OS daily
 
 [Timer]
 OnCalendar=*-*-* 04:30:00
@@ -419,33 +419,33 @@ WantedBy=timers.target
 EOF
   systemctl daemon-reload
   systemctl enable --now tukuk-update.timer >/dev/null
-  ok "Auto-update harian aktif (tukuk-update.timer ~04:30). Manual: npm run update"
+  ok "Daily auto-update active (tukuk-update.timer ~04:30). Manual: npm run update"
 fi
 
-# ── [9] Pengesahan akhir ──────────────────────────────────────────────────────
-info "[8/8] Mengesahkan..."
+# ── [9] Final verification ────────────────────────────────────────────────────
+info "[8/8] Verifying..."
 sleep 3
 for svc in meilisearch tukuk-os cloudflared; do
   printf "  %-14s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
 done
 if [[ "$(curl -s -m5 -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health 2>/dev/null)" == "200" ]]; then
-  ok "Enjin carian hidup di http://127.0.0.1:3000"
+  ok "Search engine is live at http://127.0.0.1:3000"
 else
-  warn "Server belum respons — semak: journalctl -u tukuk-os -n 30"
+  warn "Server not responding yet — check: journalctl -u tukuk-os -n 30"
 fi
 
-# Domain khas T Chat (tchat.tukuk.org) — semak sama ada hostname sudah dikonfigur.
+# T Chat custom domain (tchat.tukuk.org) — check whether the hostname is configured.
 TCHAT_H="$(get_env TCHAT_HOST)"; TCHAT_H="${TCHAT_H:-tchat.tukuk.org}"
 TCHAT_CODE=$(curl -s -m6 -o /dev/null -w '%{http_code}' "https://$TCHAT_H/" 2>/dev/null || echo 000)
 if [[ "$TCHAT_CODE" == "200" ]]; then
-  ok "Domain khas T Chat aktif di https://$TCHAT_H (HTTP 200)."
+  ok "T Chat custom domain is live at https://$TCHAT_H (HTTP 200)."
 elif [[ "$TCHAT_CODE" == "000" ]]; then
-  warn "https://$TCHAT_H belum resolve DNS — tambah public hostname di Cloudflare Zero Trust → Networks → Routes (panduan penuh dalam .env.example)."
+  warn "https://$TCHAT_H does not resolve in DNS yet — add a public hostname in Cloudflare Zero Trust → Networks → Routes (full guide in .env.example)."
 else
-  warn "https://$TCHAT_H balas HTTP $TCHAT_CODE — semak laluan tunnel + gerbang TCHAT_HOST di src/server.js."
+  warn "https://$TCHAT_H replied HTTP $TCHAT_CODE — check the tunnel route + the TCHAT_HOST gate in src/server.js."
 fi
 
 echo -e "${BLUE}========================================================${NC}"
-echo -e "${GREEN}  SELESAI. Panel admin: /admin — login e-mel + passkey.${NC}"
+echo -e "${GREEN}  DONE. Admin panel: /admin — email login + passkey.${NC}"
 echo -e "  Server: $INSTALL_DIR | Log: journalctl -u tukuk-os -f"
 echo -e "${BLUE}========================================================${NC}"

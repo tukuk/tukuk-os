@@ -7,16 +7,16 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-# Model kecil CPU-first (gemma3-1b int4 + embeddinggemma-300m) — direka untuk
-# pelayan 6.8GB kita. HANYA bind 127.0.0.1; awam tak pernah sentuh port ini.
-# Laluan utama AI kekal cloud (src/answer.js rotation); ini tier pinggir.
+# Small CPU-first model (gemma3-1b int4 + embeddinggemma-300m) — designed for
+# our 6.8GB server. Bind ONLY 127.0.0.1; the public never touches this port.
+# The main AI path stays cloud (src/answer.js rotation); this is the edge tier.
 User=tukuk
 Group=tukuk
 ExecStart=/home/tukuk/.local/bin/litert-lm serve --host 127.0.0.1 --port 8090
 Environment=LITERT_LM_HOME=/home/tukuk/.litert-lm
 
-# --- had sumber: node + meilisearch + tukuk-agenteditor lebih penting ---
-# RSS gemma3-1b int4 semasa inferens ±1.2–1.8GB; 4200M beri headroom selamat.
+# --- resource limits: node + meilisearch + tukuk-agenteditor matter more ---
+# RSS of gemma3-1b int4 during inference is ~1.2–1.8GB; 4200M gives a safe margin.
 MemoryMax=4200M
 CPUQuota=300%
 TasksMax=256
@@ -29,11 +29,11 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=litert-lm
 
-# --- hardening (policy native systemd, tiada Docker) ---
+# --- hardening (native systemd policy, no Docker) ---
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
-# Baca model + registry; tulis log sahaja (journal).
+# Read model + registry; write logs only (journal).
 ProtectHome=read-only
 ReadWritePaths=/home/tukuk/.litert-lm
 ProtectKernelTunables=true
@@ -42,5 +42,5 @@ ProtectControlGroups=true
 [Install]
 WantedBy=multi-user.target
 
-# NOTA: unit ini TIDAK di-enable oleh auto-update. Ia dipasang melalui
-# scripts/setup-litert-pilot.sh selepas pilot lulus benchmark — lihat fail itu.
+# NOTE: this unit is NOT enabled by auto-update. It is installed via
+# scripts/setup-litert-pilot.sh after the pilot passes its benchmark — see that file.

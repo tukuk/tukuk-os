@@ -1,13 +1,13 @@
-# Konfigurasi fastlane untuk Google Play (T Chat).
-# fail ini ialah TEMPLAT — nilainya perlu anda isi dari akaun Play anda.
+# fastlane configuration for Google Play (T Chat).
+# This file is a TEMPLATE — you must fill in the values from your Play account.
 #
-# json_key_file: path ke "service account key" dari Google Cloud → IAM →
-#   Service Accounts → (buka akses "Google Play Android Developer API") →
-#   muat turun JSON, letak di google-cloud-key.json (DIJANGANKAN commit —
-#   sudah disenyapkan oleh .gitignore).
-#   Hanya perlu jika anda mahu automasi upload (`fastlane supply`).
-#   Jika hantar manual melalui Play Console, abaikan fail ini.
+# json_key_file: path to the "service account key" from Google Cloud → IAM →
+#   Service Accounts → (enable access to "Google Play Android Developer API") →
+#   download the JSON, place it at google-cloud-key.json (DO NOT commit —
+#   already silenced by .gitignore).
+#   Only needed if you want to automate upload (`fastlane supply`).
+#   If you submit manually via the Play Console, ignore this file.
 #
-# package_name: nama pakej aplikasi (padan AndroidManifest.xml).
+# package_name: the app's package name (matches AndroidManifest.xml).
 json_key_file "google-cloud-key.json"
 package_name "org.tukuk.chat"

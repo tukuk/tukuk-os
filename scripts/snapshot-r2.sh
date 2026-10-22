@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# snapshot-r2.sh — Cermin laman Tukuk-OS ke R2 (bucket: tukuk-fallback).
-# Dijalankan oleh systemd timer (6 jam sekali) atau manual:
+# snapshot-r2.sh — mirror the Tukuk-OS site to R2 (bucket: tukuk-fallback).
+# Run by a systemd timer (every 6 hours) or manually:
 #   CLOUDFLARE_API_TOKEN=... bash scripts/snapshot-r2.sh
 #
-# Worker www.tukuk.org akan hidang snapshot ini bila origin/tunnel mati.
+# The www.tukuk.org worker will serve this snapshot when origin/tunnel is down.
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -15,9 +15,9 @@ WURL="${BACKUP_WORKER_URL:-}"
 WSEC="${BACKUP_UPLOAD_SECRET:-}"
 FAILS=0
 
-# Token VPS tidak ada skop R2 — tanpa laluan worker, snapshot pasti gagal senyap.
+# The VPS token has no R2 scope — without the worker path, the snapshot is sure to fail silently.
 if [[ -z "$WURL" || -z "$WSEC" ]]; then
-  [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || { echo "Tiada BACKUP_WORKER_URL/SECRET & tiada token — skip snapshot."; exit 0; }
+  [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || { echo "No BACKUP_WORKER_URL/SECRET & no token — skip snapshot."; exit 0; }
 fi
 
 put() { # put <key> <fail> [content-type]
@@ -26,20 +26,20 @@ put() { # put <key> <fail> [content-type]
     local args=(-fsS --max-time 60 -X POST -H "Authorization: Bearer $WSEC" --data-binary "@$file")
     [[ -n "$ct" ]] && args+=(-H "x-content-type: $ct")
     curl "${args[@]}" "$WURL/?key=$key" >/dev/null 2>&1 \
-      && echo "  ✓ $key" || { echo "  ! gagal $key"; FAILS=$((FAILS+1)); }
+      && echo "  ✓ $key" || { echo "  ! failed $key"; FAILS=$((FAILS+1)); }
     return
   fi
   if [[ -n "$ct" ]]; then
     npx --yes wrangler r2 object put "$BUCKET/$key" --file "$file" --content-type "$ct" --remote >/dev/null 2>&1
   else
     npx --yes wrangler r2 object put "$BUCKET/$key" --file "$file" --remote >/dev/null 2>&1
-  fi && echo "  ✓ $key" || { echo "  ! gagal $key"; FAILS=$((FAILS+1)); }
+  fi && echo "  ✓ $key" || { echo "  ! failed $key"; FAILS=$((FAILS+1)); }
 }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-echo "[snapshot] menarik halaman hidup daripada $BASE ..."
+echo "[snapshot] pulling live pages from $BASE ..."
 declare -A PAGES=(
   ["/"]="/index.html"
   ["/about"]="/about.html"
@@ -59,25 +59,25 @@ for path in "${!PAGES[@]}"; do
   if curl -fsS --max-time 30 "$BASE$path" -o "$TMP$key" 2>/dev/null; then
     put "${key#/}" "$TMP$key" "text/html;charset=UTF-8"
   else
-    echo "  ! $path tidak dapat ditarik"
+    echo "  ! $path could not be pulled"
   fi
 done
 
-echo "[snapshot] membina + menghantar indeks carian edge (search-index.json) ..."
+echo "[snapshot] building + uploading the edge search index (search-index.json) ..."
 if node scripts/export-edge-index.js; then
   put "search-index.json" "data/edge-index.json" "application/json"
 else
-  echo "  ! eksport indeks gagal (Meilisearch mati?) — carian sandaran mungkin lapuk"
+  echo "  ! index export failed (Meilisearch down?) — backup search may be stale"
 fi
 
-echo "[snapshot] naik taraf aset statik public/ ..."
+echo "[snapshot] upgrading public/ static assets ..."
 for f in public/*.css public/*.js public/*.svg public/*.png public/*.ico public/*.json public/*.txt public/*.webmanifest; do
   [[ -f "$f" ]] || continue
   put "$(basename "$f")" "$f"
 done
 
 if (( FAILS > 0 )); then
-  echo "[snapshot] AMARAN: $FAILS muat naik gagal — cermin www TIDAK segar." >&2
+  echo "[snapshot] WARNING: $FAILS uploads failed — www mirror NOT fresh." >&2
   exit 1
 fi
-echo "[snapshot] selesai. Cermin www.tukuk.org kini segar."
+echo "[snapshot] done. The www.tukuk.org mirror is now fresh."

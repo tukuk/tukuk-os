@@ -1,5 +1,5 @@
 [Unit]
-Description=Backup data/ runtime Tukuk-OS (chat, leaderboard, terbitan) ke R2
+Description=Backup Tukuk-OS runtime data/ (chat, leaderboard, publications) to R2
 
 [Service]
 Type=oneshot

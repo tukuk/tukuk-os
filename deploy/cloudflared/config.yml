@@ -1,45 +1,45 @@
 # ==============================================================================
-# Templat Cloudflared config untuk Tukuk-OS.
-# setup-all.sh menyalin fail ini ke /etc/cloudflared/config.yml dan mengganti
-# <TUNNEL_ID> dengan UUID tunnel anda.
+# Cloudflared config template for Tukuk-OS.
+# setup-all.sh copies this file to /etc/cloudflared/config.yml and replaces
+# <TUNNEL_ID> with your tunnel UUID.
 #
-#   MOD TOKEN (disyorkan, portabel): setup-all menukar baris `credentials-file:`
-#     kepada `token: <CF_TUNNEL_TOKEN>` — TIADA fail .json diperlukan, jadi
-#     pelayan baru cukup CF_TUNNEL_TOKEN + CF_TUNNEL_ID dalam .env → terus hidup.
-#     ⚠ PENTING: dalam mod TOKEN, cloudflared MENGABAIKAN seksyen `ingress:`
-#     setempat — laluan hostname dibaca dari dashboard Cloudflare. Untuk tambah
-#     hostname baru (cth. tchat.tukuk.org), buka Zero Trust → Networks → Routes
-#     → Add public hostname, atau pakai API dengan token yang ada lesen Tunnel.
-#   MOD JSON (fallback): <TUNNEL_ID>.json mesti wujud di /etc/cloudflared/.
+#   TOKEN mode (recommended, portable): setup-all changes the `credentials-file:`
+#     line to `token: <CF_TUNNEL_TOKEN>` — NO .json file needed, so a
+#     new server only needs CF_TUNNEL_TOKEN + CF_TUNNEL_ID in .env → comes right up.
+#     ⚠ IMPORTANT: in TOKEN mode, cloudflared IGNORES the local `ingress:`
+#     section — hostname routes are read from the Cloudflare dashboard. To add
+#     a new hostname (e.g. tchat.tukuk.org), open Zero Trust → Networks → Routes
+#     → Add public hostname, or use the API with a token that has Tunnel license.
+#   JSON mode (fallback): <TUNNEL_ID>.json must exist in /etc/cloudflared/.
 #
-# PENTING (kesilapan biasa):
-#   1. `tunnel:` mesti TUNNEL ID (UUID). setup-all isi automatik dari CF_TUNNEL_ID.
-#   2. `sudo cloudflared service install` berjalan sebagai root — ia HANYA baca
-#      /etc/cloudflared/config.yml, bukan ~/.cloudflared anda.
-#   3. Token/credentials ialah RAHSIA — config.yml yang mengandungi token
-#      di-chmod 600; jangan tampal token terus ke dalam fail templat ini.
+# IMPORTANT (common mistake):
+#   1. `tunnel:` must be the TUNNEL ID (UUID). setup-all fills it from CF_TUNNEL_ID.
+#   2. `sudo cloudflared service install` runs as root — it ONLY reads
+#      /etc/cloudflared/config.yml, not your ~/.cloudflared.
+#   3. Token/credentials are a SECRET — a config.yml containing the token
+#      is chmod 600; do not paste a token straight into this template file.
 # ==============================================================================
 
 tunnel: <TUNNEL_ID>
 credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
 
 ingress:
-  # Enjin carian + panel admin Tukuk-OS (node index.js, port 3000)
+  # Tukuk-OS search engine + admin panel (node index.js, port 3000)
   - hostname: tukuk.org
     service: http://localhost:3000
   - hostname: www.tukuk.org
     service: http://localhost:3000
   - hostname: dashboard.tukuk.org
     service: http://localhost:3000
-  # Ruang khas T Chat (pelayan sama, host berbeza — src/server.js gate TCHAT_HOST).
+  # Dedicated T Chat space (same server, different host — src/server.js TCHAT_HOST gate).
   - hostname: tchat.tukuk.org
     service: http://localhost:3000
-  # Tukuk Agent (editor code-server + AI build-agent). Pelayan BERBEZA
-  # (tukuk-agent.service, port 8443). Hostname asing elak perlanggaran CSP/laluan
-  # dengan aplikasi tukuk.org utama. Dalam MOD TOKEN, laluan ini juga MESTI
-  # ditambah dalam dashboard Cloudflare (Zero Trust → Networks → Routes) —
-  # cloudflared mod token MENGABAIKAN seksyen ingress setempat.
+  # Tukuk Agent (code-server editor + AI build-agent). A DIFFERENT server
+  # (tukuk-agent.service, port 8443). A separate hostname avoids CSP/route collisions
+  # with the main tukuk.org app. In TOKEN mode, this route must ALSO
+  # be added in the Cloudflare dashboard (Zero Trust → Networks → Routes) —
+  # cloudflared in token mode IGNORES the local ingress section.
   - hostname: agent.tukuk.org
     service: http://127.0.0.1:8443
-  # Wajib: rule padanan terakhir
+  # Required: catch-all rule last
   - service: http_status:404

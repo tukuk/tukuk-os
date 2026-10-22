@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-// play-upload.mjs — Hantar AAB + metadata T Chat ke Google Play (Internal testing)
-// melalui Play Developer API. TIADA Ruby/fastlane diperlukan (projek ini Node).
+// play-upload.mjs — Upload the T Chat AAB + metadata to Google Play (Internal testing)
+// via the Play Developer API. NO Ruby/fastlane needed (this project is Node).
 //
-// PRASYARAT (sekali sahaja, oleh anda):
-//   1. Google Cloud → IAM & admin → Service Accounts → Create (contoh "play-ci").
-//   2. Buka project itu → API & Services → Enable "Google Play Android Developer API".
-//   3. Service Account → Keys → Add key → JSON → muat turun.
-//   4. Simpan fail JSON itu sebagai  ./google-cloud-key.json  (sudah di-gitignore).
-//   5. Play Console → Users and permissions → Invites new user → e-mel service
-//      account (long string @<project>.iam.gserviceaccount.com) → grant
+// PREREQUISITES (once, by you):
+//   1. Google Cloud → IAM & admin → Service Accounts → Create (e.g. "play-ci").
+//   2. Open that project → API & Services → Enable "Google Play Android Developer API".
+//   3. Service Account → Keys → Add key → JSON → download.
+//   4. Save that JSON file as  ./google-cloud-key.json  (already gitignored).
+//   5. Play Console → Users and permissions → Invite new user → the service
+//      account email (long string @<project>.iam.gserviceaccount.com) → grant
 //      "Manage internal app testing" + view app information.
-//   6. `npm install googleapis` (sekali), kemudian:
+//   6. `npm install googleapis` (once), then:
 //        node scripts/play-upload.mjs
 //
-// Script ini: upload AAB → tetapkan track "internal" (status completed = rilis
-// dalaman) → tampal tajuk/deskripsi EN+MS dari fastlane/metadata. Idempotent-ish
-// (create edit → commit). Gagal awal dengan mesej jelas jika prasyarat tiada.
+// This script: upload the AAB → set the "internal" track (status completed = internal
+// release) → paste the EN+MS title/description from fastlane/metadata. Idempotent-ish
+// (create edit → commit). Fails early with a clear message if a prerequisite is missing.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,12 +31,12 @@ const META = path.join(ROOT, 'fastlane/metadata/android');
 function die(msg) { console.error('✗ ' + msg); process.exit(1); }
 let google;
 try { ({ google } = await import('googleapis')); }
-catch { die('googleapis belum dipasang — jalankan: npm install googleapis'); }
+catch { die('googleapis not installed yet — run: npm install googleapis'); }
 if (!fs.existsSync(KEY) && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  // Tiada fail kunci — kita akan cuba ADC (gcloud application-default login) di bawah.
+  // No key file — we will try ADC (gcloud application-default login) below.
   console.log('· (no google-cloud-key.json — will use ADC if present)');
 }
-if (!fs.existsSync(AAB)) die(`tiada ${path.relative(ROOT, AAB)} — jalankan: bash scripts/build-apk.sh`);
+if (!fs.existsSync(AAB)) die(`no ${path.relative(ROOT, AAB)} — run: bash scripts/build-apk.sh`);
 
 const SCOPES = ['https://www.googleapis.com/auth/androidpublisher'];
 let auth;
@@ -49,7 +49,7 @@ if (fs.existsSync(KEY)) {
 }
 const api = google.androidpublisher({ version: 'v3', auth });
 
-// Baca teks metadata untuk satu bahasa (jangan hantar bahasa tanpa fail).
+// Read the metadata text for one language (don't send a language without files).
 function listing(lang) {
   const dir = path.join(META, lang);
   const read = (f) => { try { return fs.readFileSync(path.join(dir, f), 'utf8').trim(); } catch { return ''; } };
@@ -70,14 +70,14 @@ try {
   const versionCode = up.data.versionCode;
   console.log(`✓ AAB accepted — versionCode ${versionCode}`);
 
-  // Metadata/listing untuk setiap bahasa yang wujud.
+  // Metadata/listing for each language that exists.
   for (const lang of fs.readdirSync(META).filter((d) => fs.existsSync(path.join(META, d, 'title.txt')))) {
     const l = listing(lang); if (!l) continue;
     await api.edits.listings.update({ packageName: PKG, editId: id, language: l.language, requestBody: l });
     console.log(`✓ listing ${l.language}: "${l.title}"`);
   }
 
-  // Tetapkan track dengan versi AAB yang baru dimuat naik.
+  // Set the track with the AAB version that was just uploaded.
   await api.edits.tracks.update({
     packageName: PKG, editId: id, track: TRACK,
     requestBody: { track: TRACK, releases: [{ versionCodes: [String(versionCode)], status: STATUS }] },
@@ -88,7 +88,7 @@ try {
   console.log(`\n✅ Success — the release is committed to Play (track ${TRACK}).`);
   console.log('   Next in Play Console: Test & release → ' + TRACK + ' → copy the tester link/QR.');
 } catch (e) {
-  try { await api.edits.delete({ packageName: PKG, editId: id }); } catch { /* abaikan */ }
+  try { await api.edits.delete({ packageName: PKG, editId: id }); } catch { /* ignore */ }
   const detail = e?.response?.data?.error?.message || e?.message || String(e);
-  die('Gagal: ' + detail + '\n   (ADC: jalankan `gcloud auth application-default login --scopes=https://www.googleapis.com/auth/androidpublisher`.\n    Service account: pastikan diundang di Play Console dgn kebenaran internal testing.)');
+  die('Failed: ' + detail + '\n   (ADC: run `gcloud auth application-default login --scopes=https://www.googleapis.com/auth/androidpublisher`.\n    Service account: make sure it was invited in the Play Console with internal-testing permission.)');
 }

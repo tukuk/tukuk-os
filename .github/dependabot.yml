@@ -1,6 +1,6 @@
-# Dependabot — PR automatik untuk dependensi terdedah/cemar.
-# Diset supaya kecairan selamat: hanya patch/minor digrup (major perlu semak manual),
-# jumlah PR terhad, dan npm + Actions diselia. Tambah `audit-check` utk amaran keselamatan.
+# Dependabot — automatic PRs for vulnerable/typosquatted dependencies.
+# Set for safe fluidity: only patch/minor are grouped (major needs a manual review),
+# PR count is limited, and npm + Actions are watched. `audit-check` adds security alerts.
 version: 2
 updates:
   - package-ecosystem: "npm"

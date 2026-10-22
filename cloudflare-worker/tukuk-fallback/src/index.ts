@@ -12,8 +12,8 @@ function track(env: any, outcome: Outcome, method: string, path: string, status?
 			indexes: [outcome],
 		});
 	} catch (e) {
-		// logging tidak boleh gagalkan permintaan
-		console.error('writeDataPoint gagal', outcome, (e as Error)?.message);
+		// logging must never fail the request
+		console.error('writeDataPoint failed', outcome, (e as Error)?.message);
 	}
 }
 
@@ -25,21 +25,21 @@ export default {
 		// Try to proxy to main server first
 		try {
 			const originUrl = new URL(ORIGIN + path + url.search);
-			// new Request(originUrl, request) forward method, body, dan semua
-			// header asal (termasuk Cookie, Authorization, Content-Type).
-			// `redirect: 'manual'` supaya 3xx tidak diikuti secara automatik.
+			// new Request(originUrl, request) forwards the method, body, and all
+			// original headers (including Cookie, Authorization, Content-Type).
+			// `redirect: 'manual'` so 3xx responses are not followed automatically.
 			const originResponse = await fetch(new Request(originUrl, request, { redirect: 'manual' }));
 
-			// Forward SEBARANG respons di bawah 500 (termasuk 3xx redirect).
-			// Kembalikan respons asal — semua header (Set-Cookie, Location, dll)
-			// dihantar terus ke browser tanpa penapisan.
-			// Hanya jatuh ke fallback R2 jika origin mengembalikan 5xx atau
-			// fetch gagal sepenuhnya (rangkaian terputus).
+			// Forward ANY response below 500 (including 3xx redirects).
+			// Return the original response — all headers (Set-Cookie, Location, etc.)
+			// are passed straight to the browser without filtering.
+			// Only fall back to R2 if the origin returns a 5xx or
+			// the fetch fails entirely (network down).
 			if (originResponse.status < 500) {
 				track(env, 'origin_ok', request.method, path, originResponse.status);
 				return originResponse;
 			}
-			// 5xx: origin dalam masalah — jatuh ke fallback di bawah
+			// 5xx: origin in trouble — fall through to the fallback below
 			track(env, 'origin_error', request.method, path, originResponse.status);
 		} catch (e) {
 			// Server down / unreachable — fall through to static fallback

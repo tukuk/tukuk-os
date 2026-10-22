@@ -1,9 +1,9 @@
 [Unit]
-Description=Meilisearch (mesin carian Tukuk-OS)
+Description=Meilisearch (Tukuk-OS search engine)
 Documentation=https://www.meilisearch.com/docs
 After=network-online.target
 Wants=network-online.target
-# Cuba mula semula selamanya, tanpa sekatan
+# Restart forever, without limits
 StartLimitIntervalSec=0
 
 [Service]

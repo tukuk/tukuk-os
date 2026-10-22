@@ -1,6 +1,6 @@
-# smoke.py — job pembukti kaggle-gpu-burst.sh: adakah GPU benar-benar
-# diberi & persekitaran sedia? Output kecil sahaja (fail ringkas).
-# Dijalankan di Kaggle (bukan pelayan kita) melalui: kaggle kernels push.
+# smoke.py — proof-of-work job for kaggle-gpu-burst.sh: is a GPU actually
+# granted and the environment ready? Small output only (a concise file).
+# Runs on Kaggle (not our server) via: kaggle kernels push.
 import json
 import os
 import subprocess
@@ -22,7 +22,7 @@ try:
     )
     info["cuda_smi"] = smi.stdout.strip() or smi.stderr.strip()[:200]
 except Exception as e:  # noqa: BLE001
-    info["cuda_smi"] = "nvidia-smi gagal: %s" % e
+    info["cuda_smi"] = "nvidia-smi failed: %s" % e
 
 try:
     import torch
@@ -31,7 +31,7 @@ try:
         "cuda_sedia": torch.cuda.is_available(),
         "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
     }
-    # kerja GPU sebenar supaya burst terbukti berfungsi hujung ke hujung
+    # real GPU work so the burst is proven to work end to end
     import time
     x = torch.rand(1024, 1024, device="cuda" if torch.cuda.is_available() else "cpu")
     t0 = time.perf_counter()
@@ -39,7 +39,7 @@ try:
     torch.cuda.synchronize() if torch.cuda.is_available() else None
     info["matriks_1024_ms"] = round((time.perf_counter() - t0) * 1000, 1)
 except Exception as e:  # noqa: BLE001
-    info["torch"] = "tiada/ralat: %s" % e
+    info["torch"] = "none/error: %s" % e
 
 with open(os.path.join(out_dir, "smoke.json"), "w", encoding="utf-8") as f:
     json.dump(info, f, ensure_ascii=False, indent=2)
