@@ -1,7 +1,25 @@
+#!/usr/bin/env node
+/**
+ * One-shot migration script that flips the bundled articles from their original Malay
+ * slugs to the English slugs used today. Kept in the repo (rather than deleted after
+ * the Oct 2026 translation pass) so a fresh clone / restored backup can re-apply the
+ * migration deterministically.
+ *
+ * For every article we look up the old slug first, fall back to the new slug, and then
+ * patch title/slug/excerpt/content/tags in place. A hard-coded `LEGACY_SLUGS` list at
+ * the bottom handles articles that were translated without an `oldSlug` field.
+ *
+ * The final sweep reports any post still containing more than 5 common Malay stopword
+ * hits so the operator can inspect leftovers manually. Never deletes anything — the
+ * store only grows and re-homes.
+ */
 const store = require('./store');
 
 const FILES = ['journey-a', 'journey-b', 'tukuk-a', 'tukuk-b', 'extra'];
 
+// Legacy Malay → English slug pairs for articles that pre-date the `oldSlug` field.
+// Also mirrored by `src/blog-redirects.js` at request time so 301s keep working even
+// after this script has been run once.
 const LEGACY_SLUGS = {
   'seo-on-page-menulis-kandungan-yang-disenangi-google': 'seo-on-page-content-google-loves',
   'redis-cache-pantas-untuk-aplikasi-web': 'redis-cache-for-fast-web-apps',
@@ -25,6 +43,7 @@ const LEGACY_SLUGS = {
   'cara-tukuk-os-menjadi-enjin-carian-web-bebas': 'how-tukuk-os-became-a-free-web-search-engine'
 };
 
+/** Apply the migration: patch every post from the article modules, then handle legacy slugs. */
 function run() {
   store.load();
   let updated = 0;

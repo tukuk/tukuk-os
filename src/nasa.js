@@ -1,3 +1,17 @@
+/**
+ * NASA open-data client for /nasa + the Astronomy hub.
+ *
+ * Covers APOD (Astronomy Picture of the Day), live ISS position + crew, Mars rover
+ * photos, EPIC Earth imagery, Near-Earth Object feed (Feeling), and the DSO/Sentry
+ * risk table. Every endpoint is cached for 1 h to stay inside the DEMO_KEY rate limit,
+ * and APOD responses are mirrored to disk (`data/apod-last.json`) so we can serve
+ * labelled archived records when NASA is down or half-failing (see memory rules on
+ * stale-archive fallbacks and the api.nasa.gov LB backend issue).
+ *
+ * The `NasaAwareAgent` in this file rotates through every resolved IPv6+IPv4 address
+ * on each connection and black-lists sockets that error at the transport layer — a
+ * workaround for NASA's LB that sometimes routes a whole backend to a broken pool.
+ */
 const axios = require('axios');
 const fs = require('fs');
 const https = require('https');

@@ -1,3 +1,16 @@
+/**
+ * Aggregated web search across free HTML endpoints (DuckDuckGo, SearX mirrors, Bing).
+ *
+ * No paid API keys — the site's ethos is "own server only, everything else free". Each
+ * provider is scraped by parsing its public HTML with regexes (they have no JSON API we
+ * can legally hammer without a key). Providers are tried in order until one returns hits,
+ * so a partial outage (SearX mirrors rate-limit frequently) is transparent to the caller.
+ *
+ * Results are cached per-query for `config.websearch.cacheSeconds` in a bounded Map so a
+ * hot question does not fan out to every provider again. Timeout + maxResults caps come
+ * from the same config block. Errors are swallowed at the provider level: the whole
+ * search only fails if every provider fails, and the caller decides what to show then.
+ */
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
@@ -8,6 +21,12 @@ const { detectLocale, tokenizeQuery } = require('../lang');
 const cache = new Map();
 const CACHE_TTL_MS = config.websearch.cacheSeconds * 1000;
 
+/**
+ * Minimal HTTP GET helper with gzip auto-detection and a fixed User-Agent.
+ * Some upstreams (StackExchange, DDG) send gzip without setting Content-Encoding, so we
+ * also sniff the 1f 8b magic bytes as a defensive fallback.
+ * @param {string} targetUrl @param {object} [headers] @returns {Promise<{status:number,body:string}>}
+ */
 function httpRequest(targetUrl, headers = {}) {
   return new Promise((resolve, reject) => {
     const mod = targetUrl.startsWith('https') ? https : http;
@@ -50,6 +69,7 @@ function httpRequest(targetUrl, headers = {}) {
   });
 }
 
+/** Read a cache entry; entries older than CACHE_TTL_MS are dropped on read. */
 function cacheGet(key) {
   const entry = cache.get(key);
   if (!entry) return null;
@@ -60,10 +80,12 @@ function cacheGet(key) {
   return entry.value;
 }
 
+/** Write a cache entry (no size cap here — bounded by query diversity + TTL). */
 function cacheSet(key, value) {
   cache.set(key, { at: Date.now(), value });
 }
 
+/** Strip HTML tags + decode the small set of entities provider snippets actually use. */
 function cleanText(text) {
   return text
     .replace(/<[^>]+>/g, ' ')
@@ -76,6 +98,7 @@ function cleanText(text) {
     .trim();
 }
 
+/** Parse the DDG HTML endpoint (html.duckduckgo.com/html/) response into normalised hits. */
 function parseDuckDuckGo(html, query) {
   const results = [];
   
@@ -123,6 +146,7 @@ function parseDuckDuckGo(html, query) {
   return results;
 }
 
+/** Parse a SearX instance's HTML response (`<article class="result">` blocks). */
 function parseSearX(html, query) {
   const results = [];
   const blocks = String(html).match(/<article[^>]*class="result"[^>]*>[\s\S]*?<\/article>/gi) || [];
@@ -145,6 +169,7 @@ function parseSearX(html, query) {
   return results;
 }
 
+/** Parse Bing SERP HTML; unwraps the base64 `u=a1` redirect so we return the real URL. */
 function parseBing(html, query) {
   const results = [];
   const blocks = String(html).match(/<li class="b_algo"[^>]*>[\s\S]*?<\/li>/gi) || [];
@@ -177,6 +202,7 @@ function parseBing(html, query) {
   return results;
 }
 
+/** Try DuckDuckGo's HTML endpoint. Returns null on any failure so the cascade continues. */
 async function searchDuckDuckGo(query) {
   const target = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
   try {

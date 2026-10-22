@@ -1,3 +1,20 @@
+/**
+ * Electron desktop wrapper for Tukuk-OS.
+ *
+ * Boots a child `node index.js` process on port 8000 if one is not already listening,
+ * then loads http://127.0.0.1:8000 into a single Chromium window. Menu shortcuts mirror
+ * what a desktop user would expect (Cmd/Ctrl+K to focus search, Cmd/Ctrl+R to reload,
+ * Cmd/Ctrl+Shift+I for DevTools, and a manual "Restart the Server" item for development).
+ *
+ * Sandbox: Chromium's chrome-sandbox helper needs root-owned setuid 4755 to start. If
+ * that cannot be configured (typical on a dev laptop without an SUID helper installed)
+ * we catch the crash and reopen the window with `sandbox: false` — a graceful fallback
+ * so the app at least launches. `--no-sandbox` is also appended defensively on start-up
+ * to keep the same code path working on Wayland / Flatpak hosts.
+ *
+ * The renderer is fully isolated: `nodeIntegration: false`, `contextIsolation: true`,
+ * and only the tiny API surface in `preload.js` is exposed to the page.
+ */
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -5,6 +22,7 @@ const { spawn } = require('child_process');
 let mainWindow = null;
 let serverProcess = null;
 
+/** Create the primary window, spinning up the local server if needed. */
 function createWindow() {
   // Note: chrome-sandbox needs root ownership + mode 4755. If that cannot be
   // configured, Electron crashes with "setuid_sandbox_host.cc(163)". Opening
@@ -60,6 +78,7 @@ function createWindow() {
   });
 }
 
+/** If a health check on 127.0.0.1:8000 succeeds we reuse it; otherwise spawn our own. */
 function startLocalServer() {
   // Try the local server connection first.
   const http = require('http');
@@ -75,6 +94,7 @@ function startLocalServer() {
   });
 }
 
+/** Spawn `node index.js` from the packaged app root and pipe stdio for developer visibility. */
 function spawnServer() {
   console.log('[desktop] starting the local server...');
   const serverPath = path.join(__dirname, 'index.js');
@@ -94,6 +114,7 @@ function spawnServer() {
   });
 }
 
+/** Build the native application menu (macOS + Windows/Linux share one template). */
 function buildMenu() {
   const template = [
     {

@@ -1,3 +1,16 @@
+/**
+ * HTML → clean-document extractor (used by the crawler and by /builder previews).
+ *
+ * Loads the page with cheerio, strips boilerplate (nav / footer / chrome / Wikipedia
+ * UI), and picks the most-likely content root via a prioritised selector list
+ * (`main`, `article`, `[role="main"]`, Wikipedia's `#mw-content-text`, etc.). Falls back
+ * to `<body>` when none match.
+ *
+ * Extracts: title, description (og/twitter/plain meta), lang, image, canonical, published,
+ * type, section, keywords, headings, same-site links, paragraph body, word count, URL
+ * depth, and a 0–100 heuristic quality score. The score is what the crawler uses to
+ * reject thin/junk pages before they hit the index.
+ */
 const cheerio = require('cheerio');
 const config = require('./config');
 const { decodeEntities, normalizeUrl, sameSite } = require('./util');
@@ -20,6 +33,7 @@ const CONTENT_SELECTORS = [
   '#content', '.post-content', '.entry-content', '.article-content', '#main-content'
 ].join(', ');
 
+/** Pick the first content selector that matches, or fall through to <body>. */
 function pickContentRoot($) {
   for (const selector of CONTENT_SELECTORS.split(', ')) {
     const node = $(selector).first();
@@ -28,6 +42,7 @@ function pickContentRoot($) {
   return $('body');
 }
 
+/** Read the first meta tag (property / name / itemprop) that has a non-empty value. */
 function meta($, names) {
   for (const name of names) {
     const value =
@@ -39,6 +54,7 @@ function meta($, names) {
   return '';
 }
 
+/** Resolve a possibly-relative URL against the page base; null on parse failure. */
 function absolute($, value, base) {
   if (!value) return null;
   try {
@@ -48,6 +64,7 @@ function absolute($, value, base) {
   }
 }
 
+/** Main entry — turn (html, finalUrl) into a normalised document object for the index. */
 function extract(html, finalUrl) {
   const $ = cheerio.load(html);
   $('base').remove();

@@ -1,7 +1,23 @@
+/**
+ * Meilisearch client wiring + in-process fallback index.
+ *
+ * Two implementations of the same surface are exported behind a single `client`:
+ *   - The real Meilisearch HTTP client (when `MEILI_HOST` is reachable).
+ *   - An `InMemoryIndex` shim that keeps the last-loaded corpus in a Map so
+ *     /search and /ask still return sensible hits when the Meilisearch service is
+ *     down (see memory rule: "Meilisearch dependency for health checks" + fail-open).
+ *
+ * `settings()` centralises everything the index needs at boot: searchable/displayed
+ * attributes, ranking rules, stopwords, synonym groups, typo tolerance thresholds,
+ * faceting / pagination caps, and a search cutoff that maps to `config.search.timeoutMs`.
+ * `ensureIndex()` idempotently applies them and returns the active index handle.
+ */
 const crypto = require('crypto');
 const config = require('./config');
 const fallback = require('./fallback');
 
+// Meilisearch stop-word list — English only. Kept deliberately short so brand-name
+// queries ("Google Analytics", "Node JS") are not over-filtered.
 const ENGLISH_STOP_WORDS = [
   'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and',
   'any', 'are', 'as', 'at', 'be', 'because', 'been', 'before', 'being',
@@ -17,6 +33,9 @@ const ENGLISH_STOP_WORDS = [
   'who', 'whom', 'why', 'with', 'would', 'you', 'your'
 ];
 
+// Curated synonym groups injected into the index. Small on purpose: we only list terms
+// whose meanings are effectively interchangeable to a search engine, not every thesaurus
+// row, so recall rises without precision loss.
 const SYNONYM_GROUPS = [
   ['location', 'address', 'place', 'venue'],
   ['company', 'firm', 'enterprise', 'organization'],
@@ -29,6 +48,7 @@ const SYNONYM_GROUPS = [
   ['website', 'webpage', 'site', 'portal']
 ];
 
+/** Expand an array-of-groups into the {word: [otherWords]} shape Meilisearch expects. */
 function buildSynonyms(groups) {
   const synonyms = {};
   for (const group of groups) {
@@ -39,6 +59,10 @@ function buildSynonyms(groups) {
   return synonyms;
 }
 
+/**
+ * Ranking rules, in order — mirrors Meilisearch's default but pinned here so a schema
+ * change is a code change, not a runtime surprise.
+ */
 const RANKING_RULES = [
   'words',
   'typo',
@@ -48,6 +72,11 @@ const RANKING_RULES = [
   'exactness'
 ];
 
+/**
+ * Canonical index settings. Every field is intentional; comments inline describe why.
+ * Called by `ensureIndex()` at boot and by the /admin reindex flow.
+ * @returns {object}
+ */
 function settings() {
   return {
     searchableAttributes: ['title', 'headings', 'description', 'content', 'keywords', 'siteName', 'path'],

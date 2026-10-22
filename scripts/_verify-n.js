@@ -1,3 +1,8 @@
+#!/usr/bin/env node
+/**
+ * Batch-N geo-cluster verification: same shape as scripts/_verify-m.js, different
+ * subset of clusters. Ensures every route in `src/server.js` maps to a real module.
+ */
 const fs = require('fs');
 const s = fs.readFileSync('src/server.js', 'utf8');
 const map = {

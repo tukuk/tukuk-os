@@ -1,3 +1,11 @@
+#!/usr/bin/env node
+/**
+ * Batch-M geo-cluster verification: ensure every declared route in `src/server.js`
+ * has a matching module file and a live catalog entry. Prints a per-cluster hit/miss
+ * report and exits 1 if anything is missing. Batch letter just tracks when the module
+ * set was added to the site; the other _verify-* scripts are the same check for
+ * batches N/O/P/Q.
+ */
 const fs = require('fs');
 const s = fs.readFileSync('src/server.js', 'utf8');
 const mods = {

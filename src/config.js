@@ -1,6 +1,24 @@
+/**
+ * Centralised runtime configuration.
+ *
+ * Precedence (highest wins): explicit `process.env` > `.env` file at repo root > default
+ * literal. The `.env` loader is intentionally simple (KEY=value only, no shell expansion)
+ * — dotenv-style multiline/interpolation is a security risk on a systemd-managed server
+ * and we do not need it.
+ *
+ * Every subsystem (crawl / search / brain / adsense / admin / webauthn / agent / litert /
+ * store / nasa …) exposes a nested object so callers destructure what they need instead
+ * of reading env variables directly. Tests may override fields after require to simulate
+ * alternate configurations.
+ */
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Parse a KEY=value file into process.env without overwriting anything already set.
+ * Search order: optional KILO_ENV_FILE override, then repo-root `.env`.
+ * @returns {string|null} the file we loaded, or null when none was readable
+ */
 function loadEnvFile() {
   const candidates = [path.join(__dirname, '..', '.env')];
   if (process.env.KILO_ENV_FILE) candidates.unshift(process.env.KILO_ENV_FILE);
@@ -30,12 +48,14 @@ function loadEnvFile() {
 
 const envFile = loadEnvFile();
 
+/** Coerce an env value to a number with a numeric fallback. */
 function num(value, fallback) {
   if (value === undefined || value === null || String(value).trim() === '') return fallback;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/** Coerce an env value to a boolean ('1' | 'true' | 'yes' | 'on' → true). */
 function bool(value, fallback = false) {
   if (value === undefined || value === '') return fallback;
   return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());

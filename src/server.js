@@ -1,3 +1,30 @@
+/**
+ * Express monolith — every HTTP route on tukuk.org.
+ *
+ * This single module owns the entire request surface: search + /ask + /suggest, static
+ * pages, blog + geo cluster hubs, weather / udara / gempa / nasa / akademi / study / 
+ * apps / games / store, admin (WebAuthn passkeys), builder + /publish sandbox, chat SSE,
+ * SMS bridge, APK resolver, MCP launcher, sitemap generation, and the /dev panel. It is
+ * large because the whole product is deliberately one Node process — no side services,
+ * no Docker (see memory rule: "No Docker on Tukuk OS server; deploy only as native
+ * systemd services").
+ *
+ * Layout conventions:
+ *   - Shared chrome lives in COMMON_CSS and the renderPage* helpers near the top so the
+ *     footer / nav / favicon are edited in ONE place (see memory: site chrome rules).
+ *   - Route handlers are grouped by domain and mounted via `app.get`/`app.post`. Express
+ *     route order matters — static catch-alls live at the bottom.
+ *   - Every live-data handler follows the fail-open pattern: try the API → retry with
+ *     stale-while-revalidate → fall back to a labelled archived snapshot → only then 503.
+ *   - CSP is layered three ways (structural enforced, strict on clean static pages, and
+ *     Report-Only); see the CSP regime memory before changing any header here.
+ *   - Sandbox pages published from /builder run on an opaque origin and have a distinct
+ *     CSP + connect-src allowlist (see publishCspFor).
+ *
+ * Because this file is very large and hot (multiple concurrent edits), prefer adding new
+ * domain handlers in sibling modules under `src/` and importing them here — the same
+ * pattern used by `src/chat.js`, `src/weather.js`, `src/akademi.js`, etc.
+ */
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');

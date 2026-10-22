@@ -1,3 +1,23 @@
+/**
+ * tukuk-backup — authenticated R2 write/read gateway used by VPS backup timers.
+ *
+ * Purpose: the VPS itself does NOT have an R2-scoped Cloudflare token (see memory
+ * "R2 uploads route through tukuk-backup worker, VPS token lacks R2 scope"), so
+ * every nightly `meili-backup.timer` / `tukuk-data-backup.timer` POSTs its gzip export
+ * here instead. The Worker holds the R2 binding and writes to the `BACKUPS` bucket.
+ *
+ * Auth: shared bearer secret `UPLOAD_SECRET`. No token or wrong token → 403.
+ * Size cap: 90 MB (checked against both the declared Content-Length AND the actual
+ * body bytes so a lying client cannot exceed it).
+ *
+ * Supported methods:
+ *   POST   → put object. Key comes from ?key=, X-Object-Key header, or a timestamped
+ *            `meili-<iso>.json.gz` default. Content-type from X-Content-Type (used by
+ *            the www fallback worker to distinguish gzip vs JSON snapshots).
+ *   GET    → when ?key= present, fetch that object; otherwise list by ?prefix=.
+ *   DELETE → remove a single object (admin prune flows).
+ *   other  → 405 with a plain-text banner.
+ */
 export interface Env {
 	BACKUPS: R2Bucket;
 	UPLOAD_SECRET: string;

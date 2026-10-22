@@ -1,10 +1,27 @@
+/**
+ * Optional PageRank-style authority boost for indexed documents.
+ *
+ * Runs a tiny iterative link-graph pass (only `ITERATIONS` rounds) over the current
+ * corpus so documents that are referenced by many other indexed pages get a small
+ * ranking bump on top of Meilisearch's BM25 score. The idea is deliberately modest:
+ * this is a coarse authority signal, not a replacement for the neural reranker.
+ *
+ * Currently a helper module — /search applies it only when the crawler has actually
+ * populated `doc.links` in the index; otherwise the graph is empty and every score
+ * collapses back to a uniform baseline (safe no-op).
+ */
 const config = require('../config');
 
 // Simple PageRank-like scoring based on link popularity
 const scores = new Map();
-const DAMPING = 0.85;
-const ITERATIONS = 3;
+const DAMPING = 0.85;      // classic Brin-Page damping factor
+const ITERATIONS = 3;      // a few passes are enough for a stable order on a small corpus
 
+/**
+ * Compute PageRank over the given document set and cache the result in `scores`.
+ * Only intra-corpus links count (a link to a URL that isn't in the corpus is ignored).
+ * @param {Array<{url: string, links?: string[]}>} documents
+ */
 function computePageRank(documents) {
   const urls = documents.map(d => d.url);
   const outgoing = new Map();
@@ -44,10 +61,12 @@ function computePageRank(documents) {
   }
 }
 
+/** Look up the cached PageRank for a URL (0 when the URL is not in the graph). */
 function getPageRank(url) {
   return scores.get(url) || 0;
 }
 
+/** Convenience wrapper: recompute over the whole set and return copies with `pageRank` attached. */
 function enrichDocuments(documents) {
   computePageRank(documents);
   return documents.map(doc => ({

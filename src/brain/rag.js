@@ -1,3 +1,23 @@
+/**
+ * Retrieval-Augmented Generation pipeline for /ask.
+ *
+ * Backend cascade (fast → slow, cheapest first):
+ *   1. Identity / self-question patterns — answer instantly from static `knowledge.js`
+ *      (no search, no LLM). This is what makes "who are you" and "apa itu Tukuk-OS"
+ *      respond in a few milliseconds instead of burning a 30-second cloud call.
+ *   2. Meilisearch retrieve (local corpus) filtered by `minConfidence` — the gate that
+ *      stops hallucinated off-topic answers (see memory rule on relevance gate).
+ *   3. Web-search fallback when the local index has nothing (DuckDuckGo / SearX / Bing
+ *      via `websearch.js`). Web hits pass through `webRelevanceScore` so a vague
+ *      question marks 0 and the whole set is dropped instead of spammed.
+ *   4. LLM generation via the cloud/Ollama rotation in `provider.js` — bounded by the
+ *      interactive wall-clock budget (`config.brain.budgetMs`).
+ *   5. Extractive fallback (`quality.js`) when the LLM is unavailable, times out, or
+ *      its answer is caught as echo/incoherent. Always grounded, never invented.
+ *
+ * Answers are cached in a bounded LRU-like Map (10 min TTL, 200 entries) so repeat
+ * questions don't re-hit the providers and blow through the free-tier quotas.
+ */
 const config = require('../config');
 const { client } = require('../meili');
 const { systemPrompt, knowledge } = require('./knowledge');
@@ -9,6 +29,8 @@ const taskrouter = require('./taskrouter');
 
 const index = client.index(config.indexName);
 
+// Signals that the question is a "thinking" question (definition, explanation, cause,
+// method) — these benefit from a longer snippet window and the guided task-router.
 const THINKING_PATTERNS = [
   /\bapa(kan)? (itu|ini)\b/,
   /\bbagaimanakah\b/,
@@ -23,6 +45,8 @@ const THINKING_PATTERNS = [
   /\bexplain\b/i
 ];
 
+// Questions about Tukuk-OS ITSELF ("apa aplikasi ini", "endpoint", "kau ada/tahu/boleh")
+// — answer from static knowledge instead of the corpus (which does not describe us).
 const TUUK_PATTERNS = [
   /\btukuk[\s-]?os\b/i,
   /\baplikasi (ini|tukuk)\b/i,
@@ -89,6 +113,14 @@ function webRelevanceScore(query, hit) {
   return overlap / qt.length;
 }
 
+/**
+ * Retrieve best-fit documents for the query.
+ * Filters by Meilisearch `_rankingScore` >= `minConfidence` (memory rule: gate was
+ * previously defined but never applied, causing hallucinated off-topic answers). Falls
+ * back to web-search hits — each re-scored via `webRelevanceScore` — only when the local
+ * corpus returns nothing AND web-search is enabled.
+ * @param {string} query @param {{limit?: number}} [opts] @returns {Promise<Array<object>>}
+ */
 async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
   try {
     const result = await index.search(query, {
@@ -135,15 +167,22 @@ async function retrieve(query, { limit = config.brain.retrievalLimit } = {}) {
   }
 }
 
+/** True when the question is about Tukuk-OS itself or asks the assistant's identity. */
 function isSelfQuestion(query) {
   return TUUK_PATTERNS.some((pattern) => pattern.test(query))
     || IDENTITY_PATTERNS.some((pattern) => pattern.test(query));
 }
 
+/** True when the question looks like a "thinking" question worth a richer context. */
 function isKnowledgeQuestion(query) {
   return THINKING_PATTERNS.some((pattern) => pattern.test(query));
 }
 
+/**
+ * Serialise retrieved hits into the LLM prompt context block (numbered 1..N).
+ * Prefers the full `content` field, then `_formatted.content`, then the description —
+ * so the extractive pass has real article bodies to quote from, not just first sentences.
+ */
 function buildContext(hits) {
   if (hits.length === 0) return '';
   return hits
@@ -165,6 +204,7 @@ function buildContext(hits) {
     .join('\n\n');
 }
 
+/** Turn retrieved hits into the citation list surfaced under the answer card. */
 function buildSources(hits) {
   return hits.map((hit, position) => ({
     ref: position + 1,
@@ -176,6 +216,11 @@ function buildSources(hits) {
   }));
 }
 
+/**
+ * Minimal system prompt used when taskrouter is off / unavailable. Mirrors the site-wide
+ * rule: answer in the same language as the question, use ONLY the context, prefer "I
+ * don't know" over guessing.
+ */
 const MINIMAL_SYSTEM =
   'You are a search assistant. Answer briefly IN THE SAME LANGUAGE as the QUESTION ' +
   '(Malay question -> Malay answer, English -> English, any script -> that language). ' +
@@ -185,6 +230,7 @@ const MINIMAL_SYSTEM =
 // Fall-back when taskrouter is not given (mistake-proof).
 const GUIDANCE_DEFAULT = 'Answer directly in 2-4 sentences, using only the sources.';
 
+/** Assemble the final user prompt from question + context + task-specific guidance. */
 function buildPrompt(question, hits, selfQuestion, task) {
   const lines = [];
 

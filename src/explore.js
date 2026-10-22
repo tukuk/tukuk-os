@@ -1,3 +1,12 @@
+/**
+ * Public-data explorer — thin wrappers over free, key-less external APIs used by the
+ * /explore hub (USGS earthquakes, World Bank countries, Open-Meteo geocoding + weather,
+ * arXiv, IP geolocation).
+ *
+ * Every function is cache-backed with a per-endpoint TTL so hammering a tab does not
+ * hammer the upstream (see memory rule: "Timeout and caching for slow APIs"). The cache
+ * is bounded (300 entries, LRU via Map ordering) so memory stays flat on the VPS.
+ */
 const axios = require('axios');
 
 const http = axios.create({
@@ -7,6 +16,7 @@ const http = axios.create({
 
 const cache = new Map();
 
+/** Fetch from the in-memory cache; entries expire lazily on read. */
 function getCache(key) {
   const item = cache.get(key);
   if (!item) return null;
@@ -17,6 +27,7 @@ function getCache(key) {
   return item.data;
 }
 
+/** Write into the cache; caps at 300 entries so memory stays bounded. */
 function setCache(key, data, ttlMs) {
   cache.set(key, { data, expiresAt: Date.now() + ttlMs });
   if (cache.size > 300) {
@@ -28,15 +39,22 @@ function setCache(key, data, ttlMs) {
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
+/** Numeric fallback that coerces to a finite number or the supplied default. */
 function num(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/** Trim + clamp a string to `max` chars — protects against oversized search params. */
 function clampText(value, max) {
   return String(value || '').trim().slice(0, max);
 }
 
+/**
+ * GET a JSON endpoint with an optional cache key + TTL.
+ * When `ttl` is falsy the response is not cached at all (used for endpoints whose
+ * parameters are not stable enough to key on).
+ */
 async function fetchJson(url, { params, ttl, key } = {}) {
   const cacheKey = key || url;
   const cached = getCache(cacheKey);
