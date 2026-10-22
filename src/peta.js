@@ -23,6 +23,7 @@ const http = axios.create({
 });
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const OM_GEO = 'https://geocoding-api.open-meteo.com/v1/search';
 const ROUTERS = {
   car: 'https://router.project-osrm.org/route/v1/driving/',
   bike: 'https://routing.openstreetmap.de/routed-bike/route/v1/cycling/',
@@ -181,6 +182,19 @@ function solarTimes(lat, lon, dateStr) {
   return res;
 }
 
+// City name → IANA time zone name (for the world clock). Goes through the
+// same fixed http agent as everything else here; explore.js has its own
+// transport that hits the deploy box’s Happy-Eyeballs bug on this host.
+async function city(q) {
+  const query = String(q || '').trim();
+  if (query.length < 2 || query.length > 60) throw new Error('city name too short or too long');
+  const data = await getCached(`city:${query.toLowerCase()}`, TTL_GEOCODE,
+    `${OM_GEO}?name=${encodeURIComponent(query)}&count=1&language=en&format=json`);
+  const r = Array.isArray(data && data.results) ? data.results[0] : null;
+  if (!r || !r.timezone) throw new Error('place not found');
+  return { name: String(r.name || query), country: String(r.country || ''), tz: String(r.timezone) };
+}
+
 // OSRM maneuver → a short English instruction the way a navigator would say it.
 function stepText(st) {
   const t = String((st.maneuver && st.maneuver.type) || '');
@@ -201,4 +215,4 @@ function stepText(st) {
   return `Continue${onto}`;
 }
 
-module.exports = { geocode, route, haversineKm, solarTimes, ROUTERS, MODE_LABEL };
+module.exports = { geocode, route, city, haversineKm, solarTimes, ROUTERS, MODE_LABEL };

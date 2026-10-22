@@ -1674,15 +1674,13 @@ app.get('/api/peta/sun', (req, res) => {
     res.status(400).json({ ok: false, error: String(e.message || 'bad date').slice(0, 160) });
   }
 });
-// City → IANA time zone name (Open-Meteo geocoder, cached 24 h by explore).
-// The browser’s own Intl + tzdb does all the offset/DST maths from this.
+// City → IANA time zone name (Open-Meteo geocoder via peta.js’s fixed agent +
+// 24 h cache). The browser’s own Intl + tzdb does all the offset/DST maths.
 app.get('/api/peta/city', async (req, res) => {
   try {
-    const rows = await explore.geocode({ q: req.query.q, limit: 1 });
-    const r = rows && rows[0];
-    if (!r || !r.timezone) return res.status(400).json({ ok: false, error: 'place not found' });
+    const r = await peta.city(req.query.q);
     res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.json({ ok: true, name: r.name, country: r.country || '', tz: r.timezone });
+    res.json({ ok: true, ...r });
   } catch (e) {
     res.status(400).json({ ok: false, error: String(e.message || 'search failed').slice(0, 160) });
   }
