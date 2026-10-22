@@ -1600,7 +1600,9 @@ app.get('/api/peta/route', async (req, res) => {
     res.setHeader('Cache-Control', 'private, max-age=600');
     res.json({ ok: true, ...r });
   } catch (e) {
-    res.status(502).json({ ok: false, error: String(e.message || 'routing failed').slice(0, 160) });
+    // 422, never 5xx: the edge worker turns any 5xx on /api/ into a generic
+    // “server offline” backup page — that would bury the honest routing error.
+    res.status(422).json({ ok: false, error: String(e.message || 'routing failed').slice(0, 160) });
   }
 });
 

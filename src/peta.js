@@ -7,9 +7,18 @@
 // charge nothing. Responses are cached per coordinate pair (30 min) with the
 // same stale-beats-error rule as gempa.js, so a flaky router never kills a page.
 const axios = require('axios');
+const https = require('https');
+
+// Our deploy box has a working IPv4 route but no usable IPv6, and Node's
+// Happy-Eyeballs (autoSelectFamily, on by default in Node 20+) fails there
+// against the OSRM hosts' dual-stack DNS — curl connects fine, Node times
+// out. Disabling family selection on this agent restores plain IPv4-first
+// behaviour without touching any other module's networking.
+const agent = new https.Agent({ autoSelectFamily: false, keepAlive: true });
 
 const http = axios.create({
   timeout: 15000,
+  httpsAgent: agent,
   headers: { 'User-Agent': 'TukukOS-Peta-Client/1.0 (+https://tukuk.org)' },
 });
 
