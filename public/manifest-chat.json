@@ -1,8 +1,8 @@
 {
   "id": "/apps/chat",
-  "name": "T Chat — Messenger Tukuk",
+  "name": "T Chat — Tukuk Messenger",
   "short_name": "T Chat",
-  "description": "Messenger yang berfungsi pada 2G/3G/4G/GPRS: peti keluar luar-talian, mod jimat data, panggilan video & suara, ID pemanggil dan mod prank.",
+  "description": "A messenger that still works on 2G/3G/4G/GPRS: offline outbox, data-saver mode, video & voice calls, caller ID and a prank mode.",
   "start_url": "/apps/chat",
   "scope": "/apps/",
   "display": "standalone",
@@ -16,6 +16,6 @@
     { "src": "/icons/apps/chat-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "categories": ["social", "communication", "productivity"],
-  "lang": "ms",
+  "lang": "en",
   "dir": "ltr"
 }

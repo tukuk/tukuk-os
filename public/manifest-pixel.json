@@ -2,7 +2,7 @@
   "id": "/apps/pixel",
   "name": "Pixel Studio",
   "short_name": "Pixel Studio",
-  "description": "Pixel Studio — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Pixel Studio — a Tukuk app that runs in your browser.",
   "start_url": "/apps/pixel",
   "scope": "/apps/",
   "display": "standalone",

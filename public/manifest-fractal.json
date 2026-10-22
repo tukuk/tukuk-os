@@ -2,7 +2,7 @@
   "id": "/apps/fractal",
   "name": "Fractal Explorer",
   "short_name": "Fractal Expl",
-  "description": "Fractal Explorer — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Fractal Explorer — a Tukuk app that runs in your browser.",
   "start_url": "/apps/fractal",
   "scope": "/apps/",
   "display": "standalone",

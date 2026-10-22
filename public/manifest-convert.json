@@ -2,7 +2,7 @@
   "id": "/apps/convert",
   "name": "Tukuk Convert",
   "short_name": "Convert",
-  "description": "Tukuk Convert — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Tukuk Convert — a Tukuk app that runs in your browser.",
   "start_url": "/apps/convert",
   "scope": "/apps/",
   "display": "standalone",

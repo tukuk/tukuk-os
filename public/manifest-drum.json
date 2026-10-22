@@ -2,7 +2,7 @@
   "id": "/apps/drum",
   "name": "Drum Machine",
   "short_name": "Drum Machine",
-  "description": "Drum Machine — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Drum Machine — a Tukuk app that runs in your browser.",
   "start_url": "/apps/drum",
   "scope": "/apps/",
   "display": "standalone",

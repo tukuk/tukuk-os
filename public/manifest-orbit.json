@@ -2,7 +2,7 @@
   "id": "/apps/orbit",
   "name": "Orbit Sim",
   "short_name": "Orbit Sim",
-  "description": "Orbit Sim — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Orbit Sim — a Tukuk app that runs in your browser.",
   "start_url": "/apps/orbit",
   "scope": "/apps/",
   "display": "standalone",

@@ -2,7 +2,7 @@
   "id": "/apps/piano",
   "name": "Synth Piano",
   "short_name": "Synth Piano",
-  "description": "Synth Piano — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Synth Piano — a Tukuk app that runs in your browser.",
   "start_url": "/apps/piano",
   "scope": "/apps/",
   "display": "standalone",

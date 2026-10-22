@@ -1,7 +1,7 @@
 {
   "name": "Tukuk-OS",
   "short_name": "Tukuk-OS",
-  "description": "Enjin carian web bebas untuk tukuk.org",
+  "description": "Free & open web search engine for tukuk.org",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -22,6 +22,6 @@
     }
   ],
   "categories": ["productivity", "utilities"],
-  "lang": "ms",
+  "lang": "en",
   "dir": "ltr"
 }

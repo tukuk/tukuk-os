@@ -1,5 +1,5 @@
 {
-  "_comment": "Sumber tunggal untuk katalog store tukuk.org (= APKPure sendiri). Setiap apl boleh dipasang sebagai PWA dan dimuat turun sebagai APK pembungkus WebView yang membuka laman web hidup apl itu. `pkg` ialah pakej Android — TIDAK BOLEH diubah selepas APK dipakai/di-upload (kekal). `media:true` tambah kebenaran kamera/mikrofon (hanya perlu untuk WebRTC/panggilan). `icon` pilihan; jika tiada, penjana pakai apk/launcher/<slug>.png (dijana dari SVG).",
+  "_comment": "Single source for the tukuk.org store catalogue (= our own APKPure). Every app can be installed as a PWA and downloaded as a WebView-wrapper APK that opens that app's live website. `pkg` is the Android package — it MUST NOT change once an APK is used/uploaded (it is permanent). `media:true` adds camera/microphone permissions (only needed for WebRTC/calls). `icon` is optional; without it the generator uses apk/launcher/<slug>.png (rendered from the SVG).",
   "apps": [
     {
       "slug": "chat",
@@ -58,7 +58,7 @@
     },
     {
       "slug": "color",
-      "label": "Tukuk Warna",
+      "label": "Tukuk Color",
       "pkg": "org.tukuk.color",
       "url": "https://tukuk.org/apps/color",
       "media": false,

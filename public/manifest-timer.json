@@ -2,7 +2,7 @@
   "id": "/apps/timer",
   "name": "Tukuk Timer",
   "short_name": "Timer",
-  "description": "Tukuk Timer — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Tukuk Timer — a Tukuk app that runs in your browser.",
   "start_url": "/apps/timer",
   "scope": "/apps/",
   "display": "standalone",

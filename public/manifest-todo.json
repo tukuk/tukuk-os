@@ -2,7 +2,7 @@
   "id": "/apps/todo",
   "name": "Tukuk To-Do",
   "short_name": "To-Do",
-  "description": "Tukuk To-Do — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Tukuk To-Do — a Tukuk app that runs in your browser.",
   "start_url": "/apps/todo",
   "scope": "/apps/",
   "display": "standalone",

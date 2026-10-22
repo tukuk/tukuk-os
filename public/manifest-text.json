@@ -2,7 +2,7 @@
   "id": "/apps/text",
   "name": "Tukuk Text",
   "short_name": "Text",
-  "description": "Tukuk Text — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Tukuk Text — a Tukuk app that runs in your browser.",
   "start_url": "/apps/text",
   "scope": "/apps/",
   "display": "standalone",

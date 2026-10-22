@@ -49,7 +49,7 @@ const shortOf = (slug, label) => {
       id: `/apps/${a.slug}`,
       name: a.label,
       short_name: shortOf(a.slug, a.label),
-      description: `${a.label} — aplikasi Tukuk yang berjalan dalam pelayar anda.`,
+      description: `${a.label} — a Tukuk app that runs in your browser.`,
       start_url: `/apps/${a.slug}`,
       scope: '/apps/',
       display: 'standalone',
@@ -82,5 +82,5 @@ const shortOf = (slug, label) => {
     fs.writeFileSync(page, html);
     inj++;
   }
-  console.log(`setup-pwa: ${icons} PNG dijana, ${man} manifest ditulis, ${inj} halaman disuntik manifest+SW`);
-})().catch(e => { console.error('setup-pwa GAGAL:', e.message); process.exit(1); });
+  console.log(`setup-pwa: ${icons} PNG generated, ${man} manifests written, ${inj} pages injected with manifest+SW`);
+})().catch(e => { console.error('setup-pwa FAILED:', e.message); process.exit(1); });

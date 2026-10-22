@@ -1,8 +1,8 @@
 {
   "id": "/apps/color",
-  "name": "Tukuk Warna",
-  "short_name": "Warna",
-  "description": "Tukuk Warna — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "name": "Tukuk Color",
+  "short_name": "Color",
+  "description": "Tukuk Color — a Tukuk app that runs in your browser.",
   "start_url": "/apps/color",
   "scope": "/apps/",
   "display": "standalone",

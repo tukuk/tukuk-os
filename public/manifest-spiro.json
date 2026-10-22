@@ -2,7 +2,7 @@
   "id": "/apps/spiro",
   "name": "Spiro Mandala",
   "short_name": "Spiro Mandal",
-  "description": "Spiro Mandala — aplikasi Tukuk yang berjalan dalam pelayar anda.",
+  "description": "Spiro Mandala — a Tukuk app that runs in your browser.",
   "start_url": "/apps/spiro",
   "scope": "/apps/",
   "display": "standalone",
