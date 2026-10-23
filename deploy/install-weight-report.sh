@@ -23,7 +23,9 @@ have_units() {
   [ -x /opt/tukuk-os/scripts/weight-report.sh ] || { step "MISSING or not executable: scripts/weight-report.sh"; exit 1; }
   systemctl daemon-reload
 }
-last() { journalctl -t weight-report --no-pager -n 200 2>/dev/null | sed 's/^[^ ]* [^ ]* [^ ]* weight-report: //'; }
+# `-o cat` is what makes this readable: the default format prefixes every line with
+# "host weight-report[pid]: ", which breaks up the aligned tables the report prints.
+last() { journalctl -t weight-report --no-pager -n 200 -o cat 2>/dev/null; }
 
 case "$MODE" in
   on)
