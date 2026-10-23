@@ -30,7 +30,9 @@ test('hubToDoc(): complete hub document + findable as our own content', () => {
   // FAQ lines: user questions in a BM25-friendly shape — without them our
   // document loses to blogs that merely mention "how" + "many".
   assert.match(ca.content, /How many counties does California have\? California has 58 counties\./);
-  assert.match(ca.content, /Berapa banyak county di California\?/);
+  // English only: the Malay template is gone, so nothing may carry a second
+  // language into an /ask answer.
+  assert.doesNotMatch(ca.content, /Berapa|Negara mana|Terdapat|mempunyai/);
   assert.ok(ca.id.length === 16, 'deterministic 16-hex id');
 });
 
@@ -40,27 +42,28 @@ test('faqLines(): global clusters use jurisdiction-free questions', () => {
     'How many bays are there in total? There are 52 bays.',
     'Which country has the most bays? Norway (11 bays).',
     'List of bays worldwide (52 entries): names, country and region.',
-    'Berapa banyak bay di seluruh dunia? Terdapat 52 bays.',
-    'Negara mana yang paling banyak bay? Norway (11 bays).'
+    'Every bay on this page lists its country and region.'
   ]);
   const none = faqLines({ subject: '', unit: 'lagoons', singular: 'lagoon', count: 60, top: '' });
-  assert.equal(none.length, 3, 'no dominant country → drop both "most" lines');
+  assert.equal(none.length, 3, 'no dominant country → drop the "most" line');
 });
 
-test('faqLines(): Malay questions carry both singular and plural forms', () => {
-  // Meili has no stemming — 'bay' and 'bays' are different words. The Malay
-  // question asks the singular form, the answer carries the plural; both must
-  // be in the document for BM search to find them.
-  const g = faqLines({ subject: '', unit: 'bays', singular: 'bay', count: 52, top: 'Norway (11 bays)' });
-  const ms = g.filter((l) => /^Berapa |^Negara /.test(l));
-  assert.equal(ms.length, 2);
-  assert.ok(ms.every((l) => /\bbay\b/.test(l) && /\bbays\b/.test(l)), ms.join(' / '));
+test('faqLines(): the corpus stays English — no Malay question templates', () => {
+  const global = faqLines({ subject: '', unit: 'bays', singular: 'bay', count: 52, top: 'Norway (11 bays)' });
+  const scoped = faqLines({ subject: 'Kenya', unit: 'counties', singular: 'county', count: 47, top: '' });
+  for (const line of [...global, ...scoped]) {
+    assert.doesNotMatch(line, /Berapa|Negara|Terdapat|mempunyai/i, `a Malay line leaked into the corpus: ${line}`);
+  }
+  // Meili has no stemming — 'bay' ≠ 'bays' — so both forms have to appear somewhere
+  // in the lines for BM25 to match either.
+  const joined = global.join(' ');
+  assert.ok(/\bbay\b/.test(joined) && /\bbays\b/.test(joined), 'both the singular and the plural appear');
 });
 
 test('faqLines(): country-scoped clusters answer real question shapes', () => {
   const lines = faqLines({ subject: 'Kenya', unit: 'counties', singular: 'county', count: 47, top: '' });
   assert.ok(lines.some((l) => l === 'How many counties does Kenya have? Kenya has 47 counties.'));
-  assert.ok(lines.some((l) => l.includes('Berapa banyak county di Kenya')));
+  assert.ok(lines.some((l) => l === 'List of counties in Kenya (47 entries): names, country and region.'));
 });
 
 test('hubToDoc(): facts fit inside the /ask snippet window', () => {
@@ -73,7 +76,7 @@ test('hubToDoc(): facts fit inside the /ask snippet window', () => {
     assert.ok(i >= 0 && i < 120, `${d.url}: the first question must be at the head of the document (got ${i})`);
   }
   const bays = docs.find((d) => d.url === 'https://tukuk.org/bays');
-  assert.ok(bays, 'the teluk (bays) cluster must exist');
+  assert.ok(bays, 'the bays cluster must exist');
   const start = bays.content.indexOf('Which country has the most');
   const end = bays.content.indexOf('\n', start);
   assert.ok(start > 0 && end < 450, 'the "most bays" question + answer must fit within 450 chars');
@@ -111,7 +114,7 @@ test('indexGeoHubs(): pushes once, skips when the data has not changed', async (
   assert.equal(second.skipped, true);
 
   // Data changed (different sentinel hash) → must push again.
-  store.set([...store.keys()][0], { hash: 'berubah' });
+  store.set([...store.keys()][0], { hash: 'changed' });
   await indexGeoHubs(index, clusters, { logger: { log() {} } });
   assert.equal(pushes, 2, 'a data change must reach the index');
 });
@@ -130,8 +133,8 @@ test('indexGeoHubs(): a change in ONE non-sentinel hub is still detected', async
   // ONE document. The old sentinel-only guard would SKIP the push and the index
   // would keep serving stale data.
   const nj = docs.find((d) => d.url === 'https://tukuk.org/new-jersey-boroughs');
-  assert.ok(nj, 'kluster new-jersey-boroughs mesti ada');
-  store.set(nj.id, Object.assign({}, store.get(nj.id), { hash: 'lama-255-borough' }));
+  assert.ok(nj, 'the new-jersey-boroughs cluster must exist');
+  store.set(nj.id, Object.assign({}, store.get(nj.id), { hash: 'stale-255-borough' }));
   await indexGeoHubs(index, clusters, { logger: { log() {} } });
   assert.equal(pushes, 2, 'even one changed document must be re-pushed');
 });

@@ -52,7 +52,7 @@ function tally(values) {
 function formatTally(pairs) {
   return pairs.slice(0, TALLY_CAP)
     .map(([name, count]) => `${name} (${count})`)
-    .join(', ') + (pairs.length > TALLY_CAP ? `, +${pairs.length - TALLY_CAP} lagi` : '');
+    .join(', ') + (pairs.length > TALLY_CAP ? `, +${pairs.length - TALLY_CAP} more` : '');
 }
 
 /**
@@ -63,6 +63,9 @@ function formatTally(pairs) {
  * these lines, "how many counties does California have" fell to a public
  * science blog and /ask answered "I do not know" — even though our own hub
  * page states the fact.
+ *
+ * English only, like the rest of the corpus: this text is what the model reads
+ * back, so a second language here would put it on every answer we publish.
  */
 function faqLines({ subject, unit, singular, count, top }) {
   const where = subject ? ` in ${subject}` : '';
@@ -72,18 +75,13 @@ function faqLines({ subject, unit, singular, count, top }) {
       `How many ${unit} are there${where}? There are ${count}.`,
       `Does ${subject} have ${count} ${unit}? Yes — the full list of every ${singular}${where} is on this page.`,
       `List of ${unit}${where} (${count} entries): names, country and region.`,
-      // Malay sentence, fully Malay — no mixed English prepositions.
-      `Berapa banyak ${singular} di ${subject}? ${subject} mempunyai ${count} ${unit}.`
     ]
     : [
       `How many ${unit} are there in total? There are ${count} ${unit}.`,
       top ? `Which country has the most ${unit}? ${top}.` : '',
       `List of ${unit} worldwide (${count} entries): names, country and region.`,
-      // Malay questions too: a large share of this site's askers type Malay,
-      // and Meili has no stemming — 'bay' ≠ 'bays' — so these lines deliberately
-      // carry both the singular (question) and plural (answer) forms.
-      `Berapa banyak ${singular} di seluruh dunia? Terdapat ${count} ${unit}.`,
-      top ? `Negara mana yang paling banyak ${singular}? ${top}.` : ''
+      // Meili has no stemming ('bay' ≠ 'bays'), so the singular gets its own line.
+      `Every ${singular} on this page lists its country and region.`,
     ];
   return lines.filter(Boolean);
 }
