@@ -130,11 +130,18 @@ function syncPostsFromContent(dir = CONTENT_DIR) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
+      contentNewSlugs.push(slug); // boot-time IndexNow ping (see server.js)
       changed = true;
     }
   }
   if (changed) touch();
 }
+
+// Slugs discovered by syncPostsFromContent during this process — drained once
+// by the server after boot so brand-new content/blog posts get submitted too
+// (previously only the admin publish route notified IndexNow).
+const contentNewSlugs = [];
+function takeContentNewSlugs() { return contentNewSlugs.splice(0, contentNewSlugs.length); }
 
 /** Synchronously write the current dirty tree to disk via a tmp+rename pair. */
 function flush() {
@@ -349,5 +356,6 @@ process.on('exit', close);
 module.exports = {
   load, flush, close, recordSearch, recordAsk, recordCrawl, event,
   history, popularQueries, stats, getSetting, setSetting, clear,
-  createPost, updatePost, deletePost, getPostBySlug, getPostById, getAllPosts
+  createPost, updatePost, deletePost, getPostBySlug, getPostById, getAllPosts,
+  takeContentNewSlugs
 };

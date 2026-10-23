@@ -18701,4 +18701,4 @@ app.use((error, req, res, next) => {
   res.status(error.statusCode || 500).json({ error: 'Server error', details: safeError(error) });
 });
 
-module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters };
+module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, notifyIndexNow };

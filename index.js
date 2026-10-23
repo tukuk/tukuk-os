@@ -24,7 +24,7 @@ const net = require('./src/net');
 const store = require('./src/store');
 const { indexBlogPosts } = require('./src/blog-index');
 const { indexGeoHubs } = require('./src/cluster-index');
-const { app, geoClusters } = require('./src/server');
+const { app, geoClusters, notifyIndexNow } = require('./src/server');
 const news = require('./src/news');
 const queries = require('./src/queries');
 const nasa = require('./src/nasa');
@@ -132,6 +132,10 @@ async function main() {
 
   const server = app.listen(config.port, config.host, () => {
     serving = true; // the resilience guard now logs & continues instead of exiting
+    // Posts that syncPostsFromContent ADDED to the store during this boot are
+    // submitted too — previously only the admin publish route pinged IndexNow.
+    const freshSlugs = store.takeContentNewSlugs();
+    if (freshSlugs.length) notifyIndexNow(freshSlugs.map((s) => `https://tukuk.org/blog/${s}`));
     console.log(`[tukuk-os] search engine running at http://${config.host}:${config.port}`);
     console.log(`[tukuk-os] health: http://localhost:${config.port}/health  |  search: http://localhost:${config.port}/search?q=word`);
     console.log(`[tukuk-os] ask:    http://localhost:${config.port}/ask?q=question     |  dev: http://localhost:${config.port}/dev`);
