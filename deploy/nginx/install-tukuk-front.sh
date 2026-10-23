@@ -149,7 +149,7 @@ case "${1:-status}" in
     find "$CACHE_DIR" -mindepth 1 -delete && step "cache emptied for a clean run"
     echo
     echo "   Now run the checks (they drive http://127.0.0.1:$VERIFY_PORT):"
-    echo "     node /tmp/nginx-front-check.js $VERIFY_PORT"
+    echo "     sudo node /opt/tukuk-os/scripts/nginx-front-check.js $VERIFY_PORT"
     echo "   If they pass:  sudo bash $0 cut"
     ;;
 
@@ -190,7 +190,7 @@ case "${1:-status}" in
       step "https://tukuk.org$u  nginx: ${first:-none} → ${second:-none}"
     done
     echo
-    echo "   Full regression: node /tmp/nginx-front-check.js $PROD_PORT"
+    echo "   Full regression: sudo node /opt/tukuk-os/scripts/nginx-front-check.js $PROD_PORT"
     ;;
 
   rollback)
