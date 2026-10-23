@@ -31,8 +31,13 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 echo "[backup] packing tar $DATA_DIR → $TMP/data.tar.gz ..."
-if ! tar czf "$TMP/data.tar.gz" -C "$(dirname "$DATA_DIR")" "$(basename "$DATA_DIR")"; then
-  echo "[backup] ERROR: tar failed" >&2; exit 1
+tar czf "$TMP/data.tar.gz" -C "$(dirname "$DATA_DIR")" "$(basename "$DATA_DIR")"; TARRC=$?
+# exit 1 = "file changed as we read it": data/ is written live by the app; the
+# archive is still valid (that one member may be one flush stale). Only ≥2 is fatal.
+if [[ $TARRC -ge 2 ]]; then
+  echo "[backup] ERROR: tar failed (rc=$TARRC)" >&2; exit 1
+elif [[ $TARRC -eq 1 ]]; then
+  echo "[backup] WARN: a file changed mid-read (live writes) — continuing with usable archive" >&2
 fi
 SIZE="$(du -h "$TMP/data.tar.gz" | cut -f1)"
 
