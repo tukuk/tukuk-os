@@ -99,7 +99,8 @@ test('handProxyLease: a render that flushes its headers gets the lease it was pr
 });
 
 test('handProxyLease: a route that overrode Cache-Control keeps its answer private', () => {
-  // The /bendera/studio case: inside a cacheable prefix, but the route says no-store.
+  // The /nasa/iss/live.json case: the middleware's policy is on the response until the
+  // route itself says no-store.
   const res = mockRes({ cacheControl: 'no-store' });
   mw.handProxyLease(res, { policy: POLICY, seconds: '300' });
   res.writeHead(200);

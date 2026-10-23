@@ -84,9 +84,10 @@ function requireApiKey(req, res, next) {
  * Hand a shared front proxy its cache lease at the last instant it can still be decided.
  *
  * `app.use` can only say "this prefix may be cached"; it cannot know what the route will
- * finally do. Two real cases prove the gap: an unknown flag slug 404s under a cacheable
- * prefix (the proxy would serve a cached "not found" for the whole lease), and
- * /bendera/studio overwrites Cache-Control with no-store while living under /bendera.
+ * finally do. Two measured cases prove the gap: an unknown flag slug 404s under a cacheable
+ * prefix while still carrying the public policy the middleware set (verified on the box —
+ * the proxy would otherwise hold a "not found" for the whole lease), and routes such as
+ * /nasa/iss/live.json overwrite Cache-Control with no-store after the middleware ran.
  * So the lease (`X-Accel-Expires`, the one header nginx's proxy_cache obeys while
  * deliberately ignoring the browser-facing `max-age=0`) is applied only if the final
  * status is 2xx and the final Cache-Control is still the policy that was offered.
