@@ -23,7 +23,10 @@ const PAGES = [
   { path: '/alat/pdf', marker: 'PDF Tools', ids: ['d-files', 'd-mode', 'd-range', 'd-rot', 'd-go', 'd-dl', 'd-out', 'd-list'] },
   { path: '/alat/json', marker: 'JSON Formatter &amp; Validator', ids: ['j-ind', 'j-fmt', 'j-min', 'j-val', 'j-sort', 'j-copy', 'j-in', 'j-status', 'j-out'] },
   { path: '/alat/hash', marker: 'Checksum &amp; Hash Generator', ids: ['h-text', 'h-file', 'h-clear', 'h-meta', 'h-tab'] },
-  { path: '/alat/base64', marker: 'Base64 Encoder &amp; Decoder', ids: ['b-in', 'b-variant', 'b-enc', 'b-dec', 'b-copy', 'b-out', 'b-file', 'b-finfo', 'b-fileout'] }
+  { path: '/alat/base64', marker: 'Base64 Encoder &amp; Decoder', ids: ['b-in', 'b-variant', 'b-enc', 'b-dec', 'b-copy', 'b-out', 'b-file', 'b-finfo', 'b-fileout'] },
+  { path: '/alat/zona', marker: 'Time Zone Meeting Planner', ids: ['z-date', 'z-base', 'z-add', 'z-do', 'z-chips', 'z-best', 'z-tab'] },
+  { path: '/alat/uuid', marker: 'UUID Generator', ids: ['u-count', 'u-ver', 'u-up', 'u-go', 'u-out', 'u-copy', 'u-in', 'u-dec'] },
+  { path: '/alat/cron', marker: 'Cron Expression Explainer', ids: ['c-in', 'c-go', 'c-pre', 'c-out', 'c-fields', 'c-next'] }
 ];
 
 for (const page of PAGES) {
@@ -56,7 +59,7 @@ test('every new tool is reachable from the hub and the cross-tool nav', async ()
   }
 });
 
-test('sitemap.xml lists all ten tools', async () => {
+test('sitemap.xml lists every tool', async () => {
   const xml = await (await fetch(base + '/sitemap.xml')).text();
   // The <loc> host follows the request host (tukuk.org in production, the test
   // listener here), so assert on the path only.

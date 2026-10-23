@@ -1817,6 +1817,9 @@ app.get('/alat/kamus', (req, res) => {
   ['/alat/json', jsonPage],
   ['/alat/hash', hashPage],
   ['/alat/base64', base64Page],
+  ['/alat/zona', zonaPage],
+  ['/alat/uuid', uuidPage],
+  ['/alat/cron', cronPage],
 ].forEach(function (entry) {
   app.get(entry[0], function (req, res) {
     try {
@@ -3360,7 +3363,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/peta/langit', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/alat/kamus', '/alat/peratus', '/alat/pinjaman', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/rawak', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/peta/langit', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/alat/kamus', '/alat/peratus', '/alat/pinjaman', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/rawak', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/zona', '/alat/uuid', '/alat/cron', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -9770,6 +9773,12 @@ table.tl-tab{width:100%;border-collapse:collapse;font-size:.92rem;margin:10px 0}
 .tl-ok{background:#138a3d;color:#fff}
 .tl-no{background:#a02020;color:#fff}
 .sw{display:inline-block;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;margin:2px}
+.tl-tab th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);font-size:.8rem;color:var(--muted,#9aa3b2);vertical-align:bottom;font-weight:700}
+.z-tab td:last-child{text-align:left}
+.z-tab .z-good{background:rgba(19,138,61,.22)}
+.z-tab .z-ok{background:rgba(176,132,20,.20)}
+.z-off{color:var(--muted,#9aa3b2);font-size:.8rem;font-weight:400}
+.u-out{font:13px/1.7 ui-monospace,Consolas,monospace}
 @media(max-width:640px){.tl-big{font-size:1.2rem}}`;
 
 function toolsNav() {
@@ -9793,11 +9802,14 @@ function toolsNav() {
     { href: '/alat/json', icon: '🧩', name: 'JSON Formatter', blurb: 'Format, minify and validate JSON with the exact line and column of a syntax error; large numbers and key order survive because it scans instead of re-parsing.' },
     { href: '/alat/hash', icon: '🔑', name: 'Checksum & Hash', blurb: 'MD5, SHA-1, SHA-256, SHA-384 and SHA-512 of text or a whole file at once — verify a download against its published checksum privately.' },
     { href: '/alat/base64', icon: '🔁', name: 'Base64 Encoder', blurb: 'UTF-8-correct Base64 both ways, URL-safe output, and a file turned into a data: URL — with the honest note that encoding is not encryption.' },
+    { href: '/alat/zona', icon: '🌍', name: 'Time Zone Planner', blurb: 'Compare up to eight cities hour by hour and find the call time that works for everyone — real IANA offsets and daylight saving, computed in the browser.' },
+    { href: '/alat/uuid', icon: '🆔', name: 'UUID Generator', blurb: 'Random v4 and time-ordered v7 identifiers in bulk, plus a decoder that shows the version, variant and any embedded timestamp.' },
+    { href: '/alat/cron', icon: '⏰', name: 'Cron Explainer', blurb: 'Any five-field cron schedule in plain English with its next ten runs, every field validated — including the day-of-month/day-of-week OR trap.' },
   ]);
 }
 
 function alatHubPage() {
-  const body = `<p><b>The honest kind of useful.</b> Eighteen small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  const body = `<p><b>The honest kind of useful.</b> Twenty-one small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
   <h2 class="section-title">In the toolbox</h2>
   <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
   <p><b><a href="/alat/tarikh">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
@@ -9817,12 +9829,15 @@ function alatHubPage() {
   <p><b><a href="/alat/json">🧩 JSON formatter</a></b> — format, minify and validate with the exact line and column of an error, keeping large numbers and key order intact.</p>
   <p><b><a href="/alat/hash">🔑 Checksum &amp; hash</a></b> — MD5 through SHA-512 for text or a whole file, so a download can be checked against its published value without handing the file to anyone.</p>
   <p><b><a href="/alat/base64">🔁 Base64 encoder</a></b> — correct UTF-8 both ways, URL-safe output and a file turned into a <code>data:</code> URL, with the caveat that encoding is not encryption.</p>
+  <p><b><a href="/alat/zona">🌍 Time zone meeting planner</a></b> — up to eight cities, every hour of the chosen day, with true UTC offsets and the best overlap named for you instead of counted by hand.</p>
+  <p><b><a href="/alat/uuid">🆔 UUID generator</a></b> — random v4 and time-ordered v7 in bulk, plus a decoder that reports the version, variant and any timestamp hiding inside an identifier.</p>
+  <p><b><a href="/alat/cron">⏰ Cron expression explainer</a></b> — a schedule in plain English with its next ten runs on your clock, every field range-checked, and the day-of-month/day-of-week OR trap spelled out.</p>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
   <p class="meta">Prefer maps and time? The neighbouring <a href="/peta">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
   return worldDoc({
     title: 'Everyday Tools — Converters, Calculators, PDF, JSON, Hashing & Generators | Tukuk-OS',
-    desc: 'Eighteen useful tools that run entirely in your browser: unit conversion, date and age maths, WCAG contrast, password generation, text toolkit, PDF merge and split, JSON formatting, checksums, Base64, currency, QR codes and more — private, free, no account.',
+    desc: 'Twenty-one useful tools that run entirely in your browser: unit conversion, date and age maths, WCAG contrast, password generation, PDF merge and split, JSON formatting, checksums, Base64, time zones, UUIDs, cron and more — private, free, no account.',
     selfUrl: 'https://tukuk.org/alat',
     heroTitle: '🧰 Everyday Tools', heroSub: 'Converters · calculators · checkers · generators — all computed on your device',
     css: TOOLS_CSS, body,
@@ -10754,6 +10769,325 @@ $('b-enc').click();
       applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
       description: 'Browser-local Base64 encoder and decoder for text and files, with URL-safe output and data: URL support.',
       url: 'https://tukuk.org/alat/base64', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/zona — meeting planner across time zones ──
+// Offsets come from the IANA database the browser already ships, so there is no table here
+// to go stale. Rows are built from real instants rather than by adding whole hours to a
+// wall-clock string, which is what makes half-hour zones (Kathmandu +05:45), 45-minute
+// zones (Chatham +12:45) and spring-forward days come out right instead of plausible.
+function zonaPage() {
+  const body = `<p>Finding a call time across time zones is a subtraction problem that daylight saving keeps changing. Add the cities, pick the date, and the grid shows what the clock actually says in each place — then the summary names the best overlap instead of leaving you to count rows. Every offset comes from the <b>IANA time-zone database already inside your browser</b>: no API call, no account, no guessed offsets.</p>
+  <div class="tl-form">
+    <label>Date <input id="z-date" type="date"></label>
+    <label style="flex:1;min-width:220px">Your zone <select id="z-base"></select></label>
+    <label style="flex:1;min-width:220px">Add a zone <select id="z-add"></select></label>
+    <button class="tl-btn primary" id="z-do" type="button">Add</button>
+  </div>
+  <div class="tl-chips" id="z-chips"></div>
+  <div class="tl-res" id="z-best" aria-live="polite">Choose a date and at least one city.</div>
+  <div style="overflow-x:auto"><table class="tl-tab z-tab" id="z-tab"></table></div>
+  <p class="meta">Green is 09:00–17:59 · amber is 07:00–08:59 or 18:00–20:59 · everything else is somebody’s night. The colours are a convention, not a law: shift workers, Fridays and half-day offices exist.</p>
+  <noscript><p>JavaScript is required — the offsets are computed on your device by <code>Intl</code>, which is also why no server ever learns who you are meeting.</p></noscript>
+  <h2 class="section-title">How to use it</h2>
+  <p>Set the date to the day you are proposing, keep <b>your own zone</b> as the base, then add the other places one at a time. Each column shows that city’s clock for the same instant, with its true UTC offset printed in the header. The <b>Work hours</b> column counts how many of your cities are between 09:00 and 17:59; the summary above the table finds the longest stretch where every city is inside it, and when no such hour exists it says so plainly and reports the closest one — including who is at 23:00.</p>
+  <p>Two habits make the result honest. First, a meeting that is comfortable for five of six cities is still a meeting somebody takes at midnight, so rotate the awkward slot between regions rather than always giving it to the same team. Second, the date matters as much as the hour: a slot that works in March can break in April because one country moved its clocks and another did not.</p>
+  <h2 class="section-title">Why the maths is trustworthy, and where it stops</h2>
+  <p>Time zones are not whole-hour offsets. India is +05:30, Nepal +05:45, Chatham Islands +12:45 and Lord Howe switches between +10:30 and +11:00 — none of which survives mental arithmetic on <code>UTC+5</code>. The browser’s <code>Intl</code> data knows all of them, including the historical rules, so this page never adds “one hour per zone”.</p>
+  <p>What the browser cannot know is a change made after your copy of the time-zone database was built. Governments do alter rules at short notice (Chile, Mexico, Iran, Russia and Egypt have all done it this decade), and a browser that has not updated can be weeks behind. For a meeting next week that is irrelevant; for a booking across a known transition date, confirm with a local calendar. On a spring-forward day one wall-clock hour does not exist, and this grid shows the instant’s real clock time rather than inventing a 02:30 that nobody lived through.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Converting a single timestamp instead? <a href="/alat/epoch">The Unix timestamp converter</a> handles epoch to date and back.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function pad(n){return n<10?'0'+n:''+n;}
+var COMMON=[['New York','America/New_York'],['Los Angeles','America/Los_Angeles'],['Chicago','America/Chicago'],['Denver','America/Denver'],['Toronto','America/Toronto'],['Vancouver','America/Vancouver'],['Mexico City','America/Mexico_City'],['Bogotá','America/Bogota'],['Lima','America/Lima'],['Santiago','America/Santiago'],['São Paulo','America/Sao_Paulo'],['Buenos Aires','America/Argentina/Buenos_Aires'],['London','Europe/London'],['Dublin','Europe/Dublin'],['Lisbon','Europe/Lisbon'],['Paris','Europe/Paris'],['Berlin','Europe/Berlin'],['Madrid','Europe/Madrid'],['Rome','Europe/Rome'],['Amsterdam','Europe/Amsterdam'],['Zurich','Europe/Zurich'],['Stockholm','Europe/Stockholm'],['Warsaw','Europe/Warsaw'],['Athens','Europe/Athens'],['Istanbul','Europe/Istanbul'],['Moscow','Europe/Moscow'],['Lagos','Africa/Lagos'],['Accra','Africa/Accra'],['Nairobi','Africa/Nairobi'],['Cairo','Africa/Cairo'],['Johannesburg','Africa/Johannesburg'],['Casablanca','Africa/Casablanca'],['Addis Ababa','Africa/Addis_Ababa'],['Dubai','Asia/Dubai'],['Riyadh','Asia/Riyadh'],['Tehran','Asia/Tehran'],['Karachi','Asia/Karachi'],['Mumbai','Asia/Kolkata'],['Kathmandu','Asia/Kathmandu'],['Dhaka','Asia/Dhaka'],['Bangkok','Asia/Bangkok'],['Jakarta','Asia/Jakarta'],['Kuala Lumpur','Asia/Kuala_Lumpur'],['Singapore','Asia/Singapore'],['Manila','Asia/Manila'],['Hong Kong','Asia/Hong_Kong'],['Shanghai','Asia/Shanghai'],['Taipei','Asia/Taipei'],['Seoul','Asia/Seoul'],['Tokyo','Asia/Tokyo'],['Sydney','Australia/Sydney'],['Melbourne','Australia/Melbourne'],['Perth','Australia/Perth'],['Brisbane','Australia/Brisbane'],['Auckland','Pacific/Auckland'],['Honolulu','Pacific/Honolulu'],['Anchorage','America/Anchorage'],['UTC','UTC']];
+var MAX=8,zones=[],base='';
+function parts(t,tz){var f=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false,weekday:'short',year:'numeric',month:'2-digit',day:'2-digit'}),o={},a=f.formatToParts(new Date(t)),i,p;
+ for(i=0;i<a.length;i++){p=a[i];if(p.type!=='literal')o[p.type]=p.value;}
+ o.h=(+o.hour)%24;o.mi=+o.minute;return o;}
+function offsetAt(tz,t){var p=parts(t,tz);return Date.UTC(+p.year,+p.month-1,+p.day,p.h,p.mi,0)-t;}
+function instant(tz,y,m,d,h){var g=Date.UTC(y,m,d,h,0,0),o=offsetAt(tz,g),t=g-o,o2=offsetAt(tz,t);return o2===o?t:g-o2;}
+function utcLabel(tz,y,m,d){var t=instant(tz,y,m,d,12),min=Math.round(offsetAt(tz,t)/60000),sg=min<0?'−':'+';min=Math.abs(min);
+ return 'UTC'+sg+pad(Math.floor(min/60))+':'+pad(min%60);}
+function label(tz){var i;for(i=0;i<COMMON.length;i++)if(COMMON[i][1]===tz)return COMMON[i][0];return String(tz).split('/').pop().replace(/_/g,' ');}
+function fill(sel,all){var h='<optgroup label="Common cities">',i,l,seen={};for(i=0;i<COMMON.length;i++)h+='<option value="'+COMMON[i][1]+'">'+esc(COMMON[i][0])+' · '+COMMON[i][1]+'</option>';h+='</optgroup>';
+ if(all&&Intl.supportedValuesOf){for(i=0;i<COMMON.length;i++)seen[COMMON[i][1]]=1;l=Intl.supportedValuesOf('timeZone');h+='<optgroup label="All IANA zones">';
+  for(i=0;i<l.length;i++)if(!seen[l[i]])h+='<option value="'+l[i]+'">'+l[i]+'</option>';h+='</optgroup>';}
+ sel.innerHTML=h;}
+function chips(){var h='',i;for(i=0;i<zones.length;i++)h+='<button class="tl-btn" type="button" data-i="'+i+'">'+esc(label(zones[i]))+' ✕</button>';$('z-chips').innerHTML=h;}
+function fmtDate(y,m,d){return new Date(y,m,d).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+function add(z){if(!z)return;if(zones.indexOf(z)>=0){$('z-best').textContent=label(z)+' is already in the list.';return;}
+ if(zones.length>=MAX){$('z-best').textContent='Eight zones is plenty — remove one first.';return;}
+ zones.push(z);chips();draw();}
+function best(counts,y,m,d){var n=zones.length,i,top=-1,topAt=-1,start=-1,bestStart=-1,bestLen=0,html,t,p,list='';
+ for(i=0;i<24;i++)if(counts[i]>top){top=counts[i];topAt=i;}
+ for(i=0;i<24;i++){if(counts[i]===n){if(start<0)start=i;if(i-start+1>bestLen){bestLen=i-start+1;bestStart=start;}}else start=-1;}
+ if(bestLen>0){html='<b>Everyone is inside 09:00–17:59 from '+pad(bestStart)+':00 to '+pad(bestStart+bestLen-1)+':00 your time on '+fmtDate(y,m,d)+'.</b>';t=instant(base,y,m,d,bestStart);}
+ else{html='<b>No hour puts all '+n+' zones inside 09:00–17:59.</b> The closest is '+pad(topAt)+':00 your time, when '+top+' of '+n+' are in working hours.';t=instant(base,y,m,d,topAt);}
+ for(i=0;i<n;i++){p=parts(t,zones[i]);if(!(p.h>=9&&p.h<18))list+=', '+label(zones[i])+' at '+pad(p.h)+':'+pad(p.mi);}
+ if(list)html+=' Outside that window: '+list.slice(2)+'.';
+ if(bestLen===0&&top<=n/2)html+=' Every hour is somebody’s night — consider another date rather than another hour.';
+ $('z-best').innerHTML=html;}
+function draw(){var ds=$('z-date').value||'',dp=ds.split('-'),y=+dp[0],m=+dp[1]-1,d=+dp[2];
+ if(!y||!m&&m!==0||!d){$('z-best').textContent='Pick a date first.';return;}
+ if(!base){$('z-best').textContent='Pick your zone first.';return;}
+ var hd='<tr><th>'+esc(label(base))+'</th>',i,h,p,t,cells,good,cls,counts=[],rows=[];
+ for(i=0;i<zones.length;i++)hd+='<th>'+esc(label(zones[i]))+'<br><span class="z-off">'+utcLabel(zones[i],y,m,d)+'</span></th>';
+ hd+='<th>Work hours</th></tr>';
+ for(h=0;h<24;h++){t=instant(base,y,m,d,h);cells='';good=0;var tp=parts(t,base);
+  for(i=0;i<zones.length;i++){p=parts(t,zones[i]);cls=(p.h>=9&&p.h<18)?'z-good':((p.h>=7&&p.h<21)?'z-ok':'z-off');if(cls==='z-good')good++;
+   cells+='<td class="'+cls+'">'+pad(p.h)+':'+pad(p.mi)+'</td>';}
+  counts.push(good);
+  rows.push('<tr><td>'+pad(tp.h)+':'+pad(tp.mi)+' <span class="z-off">'+tp.weekday+'</span></td>'+cells+'<td class="z-off">'+good+'/'+zones.length+'</td></tr>');}
+ $('z-tab').innerHTML=hd+rows.join('');best(counts,y,m,d);}
+var now=new Date();
+$('z-date').value=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+try{base=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch(e){base='UTC';}
+fill($('z-base'),false);$('z-base').value=base;fill($('z-add'),true);
+['America/New_York','Europe/London','Asia/Tokyo'].forEach(function(z){if(z!==base&&zones.indexOf(z)<0)zones.push(z);});
+chips();draw();
+$('z-base').addEventListener('change',function(){base=this.value;draw();});
+$('z-date').addEventListener('change',draw);
+$('z-do').addEventListener('click',function(){add($('z-add').value);});
+$('z-add').addEventListener('change',function(){add(this.value);});
+$('z-chips').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+ zones.splice(+b.getAttribute('data-i'),1);chips();draw();});
+})();</script>`;
+  return worldDoc({
+    title: 'Time Zone Meeting Planner — Find the Hour That Works for Everyone | Tukuk-OS',
+    desc: 'Compare up to eight cities hour by hour, see true UTC offsets and daylight saving, and get the best overlap for a call — computed in your browser from the IANA time-zone database.',
+    selfUrl: 'https://tukuk.org/alat/zona',
+    heroTitle: '🌍 Time Zone Meeting Planner', heroSub: 'Eight cities · every hour of the day · true offsets and DST — nothing uploaded',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Time Zone Meeting Planner',
+      applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local meeting planner that compares time zones hour by hour with real IANA offsets and daylight saving.',
+      url: 'https://tukuk.org/alat/zona', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/uuid — v4 and v7 identifiers, with a decoder ──
+// v4 is 122 random bits from crypto.getRandomValues. v7 puts a 48-bit millisecond
+// timestamp in front so IDs sort by creation time; it is generated here from scratch
+// rather than by a library, which is why the page states exactly how many random bits
+// remain and that two IDs from the same millisecond sort arbitrarily among themselves.
+function uuidPage() {
+  const body = `<p>Generate <b>UUID v4</b> (pure random) or <b>UUID v7</b> (time-ordered), up to 200 at a time, and paste an existing one to see what is actually inside it. The random bytes come from <code>crypto.getRandomValues</code> — your operating system’s generator — and never leave the tab.</p>
+  <div class="tl-form">
+    <label>How many <input id="u-count" type="number" min="1" max="200" value="5"></label>
+    <label>Version <select id="u-ver"><option value="v4">v4 — random, 122 bits</option><option value="v7">v7 — time-ordered</option></select></label>
+    <label style="flex-direction:row;align-items:center;gap:8px"><input id="u-up" type="checkbox"> Uppercase</label>
+    <button class="tl-btn primary" id="u-go" type="button">Generate</button>
+    <button class="tl-btn" id="u-copy" type="button">Copy all</button>
+  </div>
+  <textarea id="u-out" class="tl-in u-out" rows="9" readonly spellcheck="false"></textarea>
+  <h2 class="section-title">Decode a UUID</h2>
+  <div class="tl-form"><label style="flex:1;min-width:260px">Paste one — version, variant and any embedded time are read on this device <input id="u-in" type="text" spellcheck="false" placeholder="123e4567-e89b-12d3-a456-426614174000"></label></div>
+  <div class="tl-res" id="u-dec">Paste a UUID to see its version, variant and embedded timestamp.</div>
+  <p class="meta">Case never matters: UUIDs are hexadecimal, and <code>A</code> and <code>a</code> are the same digit.</p>
+  <noscript><p>JavaScript is required — generation uses the browser’s cryptographic random source.</p></noscript>
+  <h2 class="section-title">v4 or v7?</h2>
+  <p><b>v4</b> is 122 random bits with a version and variant marker. It is the right default for identifiers that must not reveal anything: two v4 UUIDs are unrelated, and neither says when it was made or by whom. <b>v7</b> puts a 48-bit Unix millisecond timestamp in front, so the strings sort in creation order — useful for database keys and logs, because new rows land at the end of the index instead of scattering through it. The trade is honesty: a v7 tells anyone holding it roughly when it was created, and it leaves 74 random bits, not 122.</p>
+  <p>Both are generated the same way here — fresh bytes from the OS, then the version and variant bits overwritten — with no counter and no shared state. The practical difference for sorting is that two v7s created inside the same millisecond fall back to their random bits, so their order among themselves is arbitrary. That is also true of most libraries; a strictly monotonic sequence needs a dedicated counter, which is a database feature, not a UUID feature.</p>
+  <h2 class="section-title">What a UUID is not</h2>
+  <p>It is an identifier, not a password, a reset token or an API secret. A v4 has plenty of entropy for identity, but a secret also has to be unguessable <i>and</i> revocable <i>and</i> never logged — which is a job for a purpose-built token. A v1 UUID is the worst case of all: it embeds the machine’s MAC address and a clock, so publishing one can leak hardware and timing information. The decoder above reports exactly which of these you are holding.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Need a password rather than an identifier? <a href="/alat/kata-laluan">The password generator</a> explains its entropy too.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function hex(b){var o='',i;for(i=0;i<b.length;i++)o+=(b[i]<16?'0':'')+b[i].toString(16);return o;}
+function rnd(n){var a=new Uint8Array(n);crypto.getRandomValues(a);return a;}
+function v4(){var b=rnd(16);b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;return hex(b);}
+function v7(){var b=rnd(16),t=Date.now();
+ b[0]=Math.floor(t/1099511627776)&255;b[1]=Math.floor(t/4294967296)&255;b[2]=Math.floor(t/16777216)&255;b[3]=Math.floor(t/65536)&255;b[4]=Math.floor(t/256)&255;b[5]=t&255;
+ b[6]=112|(b[6]&15);b[8]=128|(b[8]&63);return hex(b);}
+function dashed(s){return s.slice(0,8)+'-'+s.slice(8,12)+'-'+s.slice(12,16)+'-'+s.slice(16,20)+'-'+s.slice(20);}
+function gen(){var n=parseInt($('u-count').value,10),up=$('u-up').checked,ver=$('u-ver').value,i,s,seen={},rows=[];
+ if(!(n>=1&&n<=200)){$('u-out').value='Choose between 1 and 200.';return;}
+ for(i=0;i<n;i++){s=(ver==='v7')?v7():v4();if(seen[s]){i--;continue;}seen[s]=1;rows.push(up?dashed(s).toUpperCase():dashed(s));}
+ $('u-out').value=rows.join(String.fromCharCode(10));}
+function parse(s){s=String(s).trim().replace(/[{}]/g,'').replace(/-/g,'').toLowerCase();
+ if(s.length!==32||/[^0-9a-f]/.test(s))return null;
+ var b=[],i;for(i=0;i<16;i++)b.push(parseInt(s.substr(i*2,2),16));return b;}
+function time(ms){var d=new Date(ms);if(isNaN(d.getTime())||Math.abs(ms)>8.64e15)return 'a timestamp outside the range a clock can represent';
+ return d.toISOString().replace('T',' ').replace(/\.\d+Z$/,' UTC');}
+function describe(){var raw=$('u-in').value,b=parse(raw);
+ if(!String(raw).trim()){$('u-dec').textContent='Paste a UUID to see its version, variant and embedded timestamp.';return;}
+ if(!b){$('u-dec').innerHTML='⚠ that is not a UUID — it needs 32 hexadecimal digits, normally written 8-4-4-4-12.';return;}
+ var ver=b[6]>>4,vr=(b[8]>>6)&3,nil=true,mx=true,i;
+ for(i=0;i<16;i++){if(b[i]!==0)nil=false;if(b[i]!==255)mx=false;}
+ if(nil){$('u-dec').innerHTML='<b>The nil UUID</b> — every bit zero. Reserved to mean “no value”; it is not a real identifier.';return;}
+ if(mx){$('u-dec').innerHTML='<b>The max UUID</b> — every bit one. Reserved by RFC 9562 as the opposite of nil.';return;}
+ var variant=vr===0?'reserved (NCS, historical)':vr===2?'RFC 4122 / RFC 9562':vr===3?'reserved for Microsoft GUIDs':'reserved for future use';
+ var out='<b>Version '+ver+'</b> · variant '+variant+' · ';
+ if(ver===4)out+='<b>122 random bits</b>, no embedded time, no information about the creator.';
+ else if(ver===7){var ms=b[0]*1099511627776+b[1]*4294967296+b[2]*16777216+b[3]*65536+b[4]*256+b[5];
+  out+='<b>74 random bits</b> · created '+time(ms)+' (from the first 48 bits).';}
+ else if(ver===1){var tl=b[0]*16777216+b[1]*65536+b[2]*256+b[3],tm=b[4]*256+b[5],th=((b[6]<<8)|b[7])&4095;
+  var ms1=Number((BigInt(th)<<48n|BigInt(tm)<<32n|BigInt(tl))/10000n-12219292800000n);
+  out+='<b>timestamp</b> '+time(ms1)+' · node '+b[10].toString(16)+b[11].toString(16)+':'+b[12].toString(16)+b[13].toString(16)+':'+b[14].toString(16)+b[15].toString(16)+' — v1 embeds a clock and a hardware address, so treat it as a privacy leak.';}
+ else if(ver===3||ver===5)out+='<b>name-based hash</b> — deterministic: the same name in the same namespace always produces this exact UUID. No time, no randomness.';
+ else if(ver===6)out+='<b>reordered time</b> — a v1 layout with the timestamp fields swapped for sorting.';
+ else out+='a version field this decoder does not know — either a newer RFC or bits that are not a real UUID.';
+ $('u-dec').innerHTML=out;}
+$('u-go').addEventListener('click',gen);
+$('u-ver').addEventListener('change',gen);
+$('u-up').addEventListener('change',gen);
+$('u-in').addEventListener('input',describe);
+$('u-copy').addEventListener('click',function(){var t=$('u-out').value,b=this;if(!t)return;
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy all';},1400);});
+ else b.textContent='Copy unavailable';});
+gen();
+})();</script>`;
+  return worldDoc({
+    title: 'UUID Generator — v4 and v7, Bulk, With a Decoder | Tukuk-OS',
+    desc: 'Generate UUID v4 and time-ordered v7 in bulk from your browser’s cryptographic random source, and decode any UUID to see its version, variant and embedded time. Nothing is sent anywhere.',
+    selfUrl: 'https://tukuk.org/alat/uuid',
+    heroTitle: '🆔 UUID Generator & Decoder', heroSub: 'v4 · v7 · up to 200 at once · decode version, variant and timestamp',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk UUID Generator & Decoder',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local UUID v4 and v7 generator with bulk output and a decoder for version, variant and timestamp.',
+      url: 'https://tukuk.org/alat/uuid', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/cron — what does this schedule actually mean? ──
+// The parser is deliberately strict and the runner is five fields only. Two things it
+// refuses to hide: classic (Vixie) cron ORs day-of-month with day-of-week when both are
+// restricted, and a cron expression carries no time zone of its own — the *server's* clock
+// decides, which is where most "it ran at 3am" bugs come from.
+function cronPage() {
+  const body = `<p>Five small fields decide when a scheduled job runs, and a mistake in one of them can mean silence for a month. Paste an expression to get it in plain English, every field checked against its real range, and the next ten runs on your own clock. The explanation is computed on your device — nothing about your schedule is sent anywhere.</p>
+  <div class="tl-form">
+    <label style="flex:1;min-width:300px">Expression <input id="c-in" type="text" spellcheck="false" value="*/15 9-17 * * 1-5"></label>
+    <button class="tl-btn primary" id="c-go" type="button">Explain</button>
+  </div>
+  <div class="tl-chips" id="c-pre"></div>
+  <div class="tl-res" id="c-out" aria-live="polite">Loading the explanation…</div>
+  <table class="tl-tab" id="c-fields"></table>
+  <h2 class="section-title">Next ten runs, on this device’s clock</h2>
+  <table class="tl-tab" id="c-next"></table>
+  <p class="meta">Times are shown in your browser’s time zone. A server in another zone will run the same expression at a different local time — that is the field cron does not have.</p>
+  <noscript><p>JavaScript is required — the schedule is parsed and simulated in your browser.</p></noscript>
+  <h2 class="section-title">The five fields, in order</h2>
+  <p><b>minute · hour · day of month · month · day of week.</b> Numbers, ranges (<code>9-17</code>), lists (<code>1,15</code>), steps (<code>*/15</code> or <code>0-30/10</code>), and three-letter month and weekday names all work. A weekday of <code>7</code> is Sunday, the same as <code>0</code>. The macros <code>@hourly</code>, <code>@daily</code>, <code>@weekly</code>, <code>@monthly</code> and <code>@yearly</code> are shorthand for the five-field forms and are expanded before anything else happens.</p>
+  <p>Seconds are not a cron field. If you have a six-field expression, it came from Quartz, systemd or an AWS scheduler, all of which use different syntax — pasting it here reports that instead of guessing.</p>
+  <h2 class="section-title">The trap that catches almost everyone</h2>
+  <p>When <b>both</b> day-of-month and day-of-week are restricted, classic cron runs the job when <i>either</i> matches — not both. So <code>0 0 1 * 1</code> runs on the first of the month <b>and</b> on every Monday. People who mean “the first Monday” write <code>0 0 * * 1</code> with a check inside the script, because cron cannot express “the first Monday of the month” in five fields at all. If exactly one day field is restricted, the other must be <code>*</code> and the rule is simply that field.</p>
+  <p>Two more honest limits. A schedule such as <code>0 0 30 2 *</code> (30 February) is syntactically valid and will never run; the runner says so rather than inventing a date. And cron has no time zone: the same line runs at 02:30 server time, so a job written for 09:00 in London fires at 04:00 in New York. Daylight saving can also skip a run (the 02:30 that does not exist in spring) or repeat one (the 01:30 that happens twice in autumn). For anything that must be exact across a transition, run hourly and let the script decide.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Working with timestamps instead? <a href="/alat/epoch">The Unix timestamp converter</a> covers epoch, ISO 8601 and zones.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+var F=[['minute',0,59],['hour',0,23],['day of month',1,31],['month',1,12],['day of week',0,7]];
+var MON='jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
+var DOW='sun mon tue wed thu fri sat'.split(' ');
+var FULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MAC={'@yearly':'0 0 1 1 *','@annually':'0 0 1 1 *','@monthly':'0 0 1 * *','@weekly':'0 0 * * 0','@daily':'0 0 * * *','@midnight':'0 0 * * *','@hourly':'0 * * * *'};
+function keys(o){var a=[],k;for(k in o)if(Object.prototype.hasOwnProperty.call(o,k))a.push(+k);return a;}
+function num(s,names,idx){if(/^[0-9]+$/.test(s))return parseInt(s,10);
+ if(names){var k=names.indexOf(String(s).slice(0,3).toLowerCase());if(k>=0)return idx===3?k+1:k;}return NaN;}
+function field(txt,idx){var lo=0,hi=F[idx][2],min=F[idx][1],names=idx===3?MON:(idx===4?DOW:null),set={},parts=String(txt).split(','),i,any=String(txt)==='*';
+ for(i=0;i<parts.length;i++){var p=parts[i],sl=p.split('/'),step=1,a,b,rn=sl[0],k;
+  if(p==='')throw new Error(F[idx][0]+' has an empty list item — a trailing comma is not allowed');
+  if(sl.length>2)throw new Error(F[idx][0]+' “'+p+'” has more than one step');
+  if(sl.length===2){if(!/^[0-9]+$/.test(sl[1]))throw new Error(F[idx][0]+' step “'+sl[1]+'” is not a number');step=parseInt(sl[1],10);if(step<1)throw new Error(F[idx][0]+' step must be 1 or more');}
+  if(rn==='*'){a=min;b=hi;}
+  else if(rn.indexOf('-')>0){var ab=rn.split('-');a=num(ab[0],names,idx);b=num(ab[1],names,idx);}
+  else{a=num(rn,names,idx);b=(sl.length===2)?hi:a;}
+  if(isNaN(a)||isNaN(b))throw new Error(F[idx][0]+' “'+rn+'” is not a number'+(names?' or a three-letter name':''));
+  if(a<min||b>hi)throw new Error(F[idx][0]+' “'+rn+'” is outside '+min+'–'+hi);
+  if(a>b)throw new Error(F[idx][0]+' range “'+rn+'” runs backwards');
+  for(k=a;k<=b;k+=step)set[(idx===4&&k===7)?0:k]=1;}
+ if(idx===4&&set[7])set[0]=1;
+ return {set:set,any:any,raw:String(txt)};}
+function parseExpr(text){var s=String(text||'').trim(),parts,i,fs=[];
+ if(!s)throw new Error('type a cron expression first');
+ if(s.charAt(0)==='@'){var m=MAC[s.toLowerCase()];if(!m)throw new Error('“'+s+'” is not a macro this page knows — try @hourly, @daily, @weekly, @monthly, @yearly');s=m;}
+ parts=[];var sp=s.split(' ');for(i=0;i<sp.length;i++)if(sp[i])parts.push(sp[i]);
+ if(parts.length!==5)throw new Error('a classic cron expression has exactly five fields and this one has '+parts.length+(parts.length===6?'. Six fields means seconds — that is Quartz, systemd or AWS syntax, not cron':''));
+ for(i=0;i<5;i++)fs.push(field(parts[i],i));
+ return fs;}
+function dowName(n){return FULL[n%7];}
+function dowPhrase(f){var ks=keys(f.set).sort(function(a,b){return a-b;}),i,out=[];
+ if(ks.length===7)return 'every day';
+ if(ks.length>1&&ks[ks.length-1]-ks[0]===ks.length-1)return dowName(ks[0])+' through '+dowName(ks[ks.length-1]);
+ for(i=0;i<ks.length;i++)out.push(dowName(ks[i]));return out.join(', ');}
+function listPhrase(f,idx){var ks=keys(f.set).sort(function(a,b){return a-b;}),i,out=[];
+ for(i=0;i<ks.length;i++)out.push(idx===3?MON[ks[i]-1]:String(ks[i]));return out.join(', ');}
+function rng(f,idx){var ks=keys(f.set).sort(function(a,b){return a-b;}),i;
+ if(ks.length===1)return idx===3?MON[ks[0]-1]:String(ks[0]);
+ if(ks[ks.length-1]-ks[0]===ks.length-1)return (idx===3?MON[ks[0]-1]:ks[0])+'–'+(idx===3?MON[ks[ks.length-1]-1]:ks[ks.length-1]);
+ return listPhrase(f,idx);}
+function plural(s){return (s.indexOf('–')>=0||s.indexOf(',')>=0)?'s':'';}
+function whenPhrase(fs){var mn=fs[0],hr=fs[1],m=rng(mn,0),h=rng(hr,1);
+ if(mn.any&&hr.any)return 'every minute';
+ if(mn.any)return 'every minute of hour'+plural(h)+' '+h;
+ if(mn.raw.indexOf('*/')===0&&hr.any)return 'every '+mn.raw.slice(2)+' minutes of every hour';
+ if(mn.raw.indexOf('*/')===0)return 'every '+mn.raw.slice(2)+' minutes during hour'+plural(h)+' '+h;
+ if(hr.any)return 'at minute'+plural(m)+' '+m+' of every hour';
+ return 'at minute'+plural(m)+' '+m+' of hour'+plural(h)+' '+h;}
+function english(fs){var dm=fs[2],mo=fs[3],dw=fs[4],d=rng(dm,2),day,out='Runs '+whenPhrase(fs)+', ';
+ if(dm.any&&dw.any)day='every day';
+ else if(dw.any)day='on day'+plural(d)+' '+d+' of the month';
+ else if(dm.any)day='on '+dowPhrase(dw);
+ else day='on day'+plural(d)+' '+d+' of the month <b>or</b> on '+dowPhrase(dw);
+ out+=day;
+ if(!mo.any)out+=' in '+rng(mo,3);
+ return out+'.';}
+function match(fs,dt){var day=dt.getDate(),wd=dt.getDay(),dom=fs[2].set[day]?1:0,dow=fs[4].set[wd]?1:0,m=fs[3].set[dt.getMonth()+1]?1:0;
+ if(!m)return false;
+ if(fs[2].any&&fs[4].any)return true;
+ if(fs[4].any)return !!dom;
+ if(fs[2].any)return !!dow;
+ return !!(dom||dow);}
+function nextRuns(fs,n){var out=[],hs=keys(fs[1].set).sort(function(a,b){return a-b;}),ms=keys(fs[0].set).sort(function(a,b){return a-b;}),now=new Date(),i,j,k,day,dt;
+ for(i=0;i<2000&&out.length<n;i++){day=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i);
+  if(!match(fs,day))continue;
+  for(j=0;j<hs.length&&out.length<n;j++)for(k=0;k<ms.length&&out.length<n;k++){
+   dt=new Date(day.getFullYear(),day.getMonth(),day.getDate(),hs[j],ms[k],0,0);
+   if(dt.getHours()!==hs[j]||dt.getMinutes()!==ms[k])continue;
+   if(dt.getTime()<=now.getTime())continue;
+   out.push(dt);}}
+ return out;}
+function fmt(d){return d.toLocaleString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});}
+function run(){var text=$('c-in').value,fs,html,rows='',i,list;
+ try{fs=parseExpr(text);}catch(e){$('c-out').innerHTML='⚠ '+esc(e.message);$('c-fields').innerHTML='';$('c-next').innerHTML='';return;}
+ html=english(fs);
+ if(!fs[2].any&&!fs[4].any)html+=' <br><b>Careful:</b> both day fields are restricted, so classic cron treats them as <b>either</b> — this job runs on day '+listPhrase(fs[2],2)+' of the month <i>and</i> on '+dowPhrase(fs[4])+' as well.';
+ $('c-out').innerHTML='✅ '+html;
+ for(i=0;i<5;i++)rows+='<tr><td>'+F[i][0]+'</td><td>'+esc(fs[i].raw)+'</td><td class="z-off">'+F[i][1]+'–'+F[i][2]+'</td></tr>';
+ $('c-fields').innerHTML='<tr><th>Field</th><th>Value</th><th>Allowed</th></tr>'+rows;
+ list=nextRuns(fs,10);rows='';
+ if(!list.length){rows='<tr><td>No run inside the next five years — the expression is valid but cannot come true, like 30 February. The job would simply never fire.</td></tr>';}
+ else for(i=0;i<list.length;i++)rows+='<tr><td class="z-off">'+(i+1)+'</td><td>'+esc(fmt(list[i]))+'</td></tr>';
+ $('c-next').innerHTML=rows;}
+var presets=[['Every 15 min, office hours','*/15 9-17 * * 1-5'],['Midnight daily','0 0 * * *'],['Every 5 minutes','*/5 * * * *'],['Monday 09:00','0 9 * * 1'],['First of month','0 0 1 * *'],['Yearly','@yearly']];
+var ph='',i;for(i=0;i<presets.length;i++)ph+='<button class="tl-btn" type="button" data-v="'+esc(presets[i][1])+'">'+esc(presets[i][0])+'</button>';
+$('c-pre').innerHTML=ph;
+$('c-pre').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;$('c-in').value=b.getAttribute('data-v');run();});
+$('c-go').addEventListener('click',run);
+$('c-in').addEventListener('input',run);
+$('c-in').addEventListener('keydown',function(e){if(e.key==='Enter')run();});
+run();
+})();</script>`;
+  return worldDoc({
+    title: 'Cron Expression Explainer — Plain English and Next Run Times | Tukuk-OS',
+    desc: 'Paste a cron expression to see it in plain English, check every field against its real range, and list the next ten runs in your own time zone. Free and browser-local.',
+    selfUrl: 'https://tukuk.org/alat/cron',
+    heroTitle: '⏰ Cron Expression Explainer', heroSub: 'Five fields · plain English · next ten runs — including the day-field OR trap',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Cron Expression Explainer',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local cron expression parser that explains a schedule in English and simulates its next runs.',
+      url: 'https://tukuk.org/alat/cron', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, toolsNav());
 }
