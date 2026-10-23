@@ -21,6 +21,7 @@ const { extract } = require('./extract');
 const fallback = require('./fallback');
 const { assertPublicUrl, documentId, contentHash, normalizeUrl, sameSite } = require('./util');
 const safety = require('./safety');
+const { CRAWLED_QUALITY } = require('./meili');
 
 // Runtime counters surfaced via /dev and the crawler status API. Kept in one place so
 // resetStats() can zero everything atomically.
@@ -192,6 +193,9 @@ async function fetchDocument(targetUrl) {
       id: documentId(parsed.url),
       hash,
       summary: parsed.description,
+      // Every document carries a score so the quality tie-break in meili.js stays defined;
+      // a crawled page is unrated, so it takes the neutral middle.
+      quality: CRAWLED_QUALITY,
       crawledAt: new Date().toISOString()
     }
   };

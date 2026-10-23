@@ -69,8 +69,18 @@ const RANKING_RULES = [
   'proximity',
   'attribute',
   'sort',
-  'exactness'
+  'exactness',
+  // A single word is a pure tie: "weather" matches 275 documents equally well on every rule
+  // above, and the order then falls to insertion — which is how a 2023 BBC article came to
+  // outrank our own /weather at #46. The pages we write carry a score; a crawled page is
+  // unrated and takes CRAWLED_QUALITY, so the tie goes to the page we actually reviewed.
+  // Meilisearch documents this rule as UNDEFINED if any document lacks the field, which is
+  // why every writer sets `quality` and backfillQuality() covers the ones that predate it.
+  'quality:desc'
 ];
+
+/** The neutral middle: a page we crawled but never reviewed. Ours sit at 0.9–0.95. */
+const CRAWLED_QUALITY = 0.5;
 
 /**
  * Canonical index settings. Every field is intentional; comments inline describe why.
@@ -538,14 +548,56 @@ const client = {
     return realClient ? realClient.health() : mockClientInstance.health();
   },
   async waitForTask(taskUid) {
-    return realClient ? realClient.waitForTask(taskUid) : { taskUid, status: 'succeeded' };
+    return waitForTask(taskUid);
   },
   tasks: {
     async waitForTask(taskUid) {
-      return realClient ? realClient.waitForTask(taskUid) : { taskUid, status: 'succeeded' };
+      return waitForTask(taskUid);
     }
   }
 };
+
+/**
+ * Wait for an async task, across meilisearch client versions: 0.62 moved the waiting helpers
+ * onto `client.tasks` and dropped `client.waitForTask`, which this file still called — the
+ * create-and-apply-settings path had been throwing on that line ever since the upgrade.
+ * @param {number|string} taskUid
+ */
+async function waitForTask(taskUid) {
+  try {
+    if (realClient && realClient.tasks && typeof realClient.tasks.waitForTask === 'function') {
+      return await realClient.tasks.waitForTask(taskUid);
+    }
+    if (realClient && typeof realClient.waitForTask === 'function') {
+      return await realClient.waitForTask(taskUid);
+    }
+  } catch {
+    // Waiting is a convenience: the task is already queued. A slow or unreadable task must not
+    // turn a settings write that succeeded into a boot error — the next boot retries anyway.
+  }
+  return { taskUid, status: 'unknown' };
+}
+
+/**
+ * Push the ranking rules from settings() onto an index that already exists, but only when
+ * they differ — a boot that changes nothing should not queue a Meilisearch task.
+ * @returns {Promise<boolean>} whether the rules were written
+ */
+async function syncRankingRules(idx, { logger = console } = {}) {
+  let current;
+  try {
+    const have = await idx.getSettings();
+    current = (have && have.rankingRules) || [];
+  } catch {
+    return false;
+  }
+  const want = settings().rankingRules;
+  if (JSON.stringify(current) === JSON.stringify(want)) return false;
+  const task = await idx.updateSettings({ rankingRules: want });
+  await waitForTask(task.taskUid);
+  if (logger && logger.log) logger.log(`[meili] ranking rules updated: ${want.join(' > ')}`);
+  return true;
+}
 
 async function ensureIndex({ logger = console } = {}) {
   const name = config.indexName;
@@ -557,13 +609,16 @@ async function ensureIndex({ logger = console } = {}) {
   try {
     const stats = await realClient.index(name).getStats();
     logger.log(`[meili] REAL index connected: "${name}" (${stats.numberOfDocuments} documents)`);
+    // The index already exists, so its settings were written by an older version of this
+    // file and no longer follow the code. Push the difference instead of trusting it.
+    await syncRankingRules(idx, { logger });
   } catch (err) {
     // Index doesn't exist yet → create it + apply settings so the crawler can start using it.
     try {
       const created = await realClient.createIndex(name, { primaryKey: 'id' });
-      await realClient.waitForTask(created.taskUid).catch(() => {});
+      await waitForTask(created.taskUid);
       const task = await realClient.index(name).updateSettings(settings());
-      await realClient.waitForTask(task.taskUid).catch(() => {});
+      await waitForTask(task.taskUid);
       logger.log(`[meili] index "${name}" created + settings applied.`);
     } catch (err2) {
       logger.warn(`[meili] could not provision the real index (${err2.message}) — the mock fallback is active.`);
@@ -576,10 +631,47 @@ async function health() {
   return client.health();
 }
 
+/**
+ * Give every document a numeric `quality`, so the tie-break rule in RANKING_RULES is defined
+ * for all of them. Documents that predate the rule have none; this walks the index once and
+ * writes CRAWLED_QUALITY on exactly those, leaving an existing score untouched.
+ * Safe to re-run: the second pass finds nothing to write.
+ * @param {object} index a Meilisearch index handle
+ * @returns {Promise<{scanned:number, updated:number}>}
+ */
+async function backfillQuality(index, { logger = console, pageSize = 1000, batchSize = 5000 } = {}) {
+  const missing = [];
+  let scanned = 0;
+  for (;;) {
+    const page = await index.getDocuments({ limit: pageSize, offset: scanned, fields: ['id', 'quality'] });
+    const rows = (page && page.results) || [];
+    if (!rows.length) break;
+    for (const row of rows) {
+      const hasScore = row && row.quality != null && Number.isFinite(Number(row.quality));
+      if (row && row.id && !hasScore) missing.push(row.id);
+    }
+    scanned += rows.length;
+    const total = page && page.total;
+    if (rows.length < pageSize) break;
+    if (typeof total === 'number' && scanned >= total) break;
+  }
+  for (let i = 0; i < missing.length; i += batchSize) {
+    const chunk = missing.slice(i, i + batchSize).map((id) => ({ id, quality: CRAWLED_QUALITY }));
+    await index.updateDocuments(chunk);
+  }
+  if (logger && logger.log) {
+    logger.log(`[meili] quality backfill: ${scanned} document(s) scanned, ${missing.length} had no score`);
+  }
+  return { scanned, updated: missing.length };
+}
+
 module.exports = {
   client,
   ensureIndex,
   health,
   settings,
+  backfillQuality,
+  CRAWLED_QUALITY,
+  syncRankingRules,
   indexName: config.indexName
 };
