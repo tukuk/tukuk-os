@@ -283,6 +283,9 @@ var APPS = [
   ['docs','Docs','📚','/docs','SYSTEM'],['admin','Admin','🛠️','/admin','SYSTEM'],
   ['nasa','NASA APOD','🛰️','/nasa','MEDIA'],
   ['cuaca','Live Weather','🌦️','/cuaca','MEDIA'],['gempa','Earthquakes','🌍','/gempa','MEDIA'],
+  ['langit','Live Earth · Satellite','🛰️','/peta/langit','MEDIA'],
+  ['kamus','Dictionary & Translator','📖','/alat/kamus','TOOLS'],
+  ['peta','Maps & Navigation','🗺️','/peta','TOOLS'],
   ['wiki','Encyclopedia Wiki','📖','/wiki','PORTAL'],
   ['cuti','Public Holidays','📅','/cuti','PORTAL'],
   ['negara','World Countries','🗺️','/negara','PORTAL'],
@@ -304,7 +307,7 @@ var WALLS = [
   ['Grape','linear-gradient(160deg,#2b1055 0%,#0f1115 55%,#7597de55 100%)'],
   ['Volcano','linear-gradient(160deg,#3d1010 0%,#0f1115 60%,#5b247a 100%)']
 ];
-var DEFAULT_PINS = ['chat','search','radio','nasa','cuaca','cuti','wiki','play','playstore','blog','learn','datacenter','settings'];
+var DEFAULT_PINS = ['chat','search','radio','nasa','cuaca','cuti','wiki','play','playstore','blog','learn','datacenter','settings','kamus','peta'];
 
 // ── storage ──
 function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem('tkos:' + k)); return v == null ? d : v; } catch (e) { return d; } }
