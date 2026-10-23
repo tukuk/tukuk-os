@@ -87,7 +87,8 @@ function requireApiKey(req, res, next) {
  * finally do. Two measured cases prove the gap: an unknown flag slug 404s under a cacheable
  * prefix while still carrying the public policy the middleware set (verified on the box —
  * the proxy would otherwise hold a "not found" for the whole lease), and routes such as
- * /nasa/iss/live.json overwrite Cache-Control with no-store after the middleware ran.
+ * /nasa/iss/live.json and /nasa/iss overwrite Cache-Control with no-store after the
+ * middleware ran, which is how a page inside a cacheable prefix opts itself back out.
  * So the lease (`X-Accel-Expires`, the one header nginx's proxy_cache obeys while
  * deliberately ignoring the browser-facing `max-age=0`) is applied only if the final
  * status is 2xx and the final Cache-Control is still the policy that was offered.

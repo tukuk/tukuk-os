@@ -849,7 +849,13 @@ const CSP_STRICT = [
 // claim, and a wrong number on the page costs more than the request it saves. Same for
 // searches, account surfaces and JSON under /api. max-age=0 means the browser still
 // revalidates every view; only shared caches are given a lease.
+// The root is the busiest single render on the box and the whole /nasa cluster is the
+// biggest page generator (±11,000 APOD dates), so both were measured before being added:
+// their renderers contain no `req.` at all — no cookie, no header, no query-driven per-
+// visitor content — so one cached copy IS everybody's copy. One page in the cluster is
+// deliberately excepted again below: /nasa/iss.
 const CACHE_PUBLIC_EXTRA = [
+  '', 'nasa',
   'alat', 'bendera', 'negara', 'muzik', 'study', 'learn', 'akademi', 'pepatah', 'sejarah',
   'warisan', 'cagar', 'unsur', 'buruj', 'messier', 'rekod', 'kota', 'wang', 'seni', 'hidupan',
   'gunung', 'danau', 'pulau', 'sungai', 'air-terjun', 'gletser', 'blog',
@@ -1094,6 +1100,13 @@ app.get('/nasa/sky', async (req, res) => {
 });
 
 app.get('/nasa/iss', async (req, res) => {
+  // The one page in the cluster that must not be cached, and it is not a judgment call:
+  // getISSTelemetry() holds a reading for 12 seconds on purpose (the page and its
+  // live.json poll share that cache), so a 5-minute copy straight above it would be 25x
+  // staler than the app's own intent — on a page whose title says "right now". Overriding
+  // the policy here is how handProxyLease learns to withhold the lease; nginx holds no rule
+  // for it (src/middleware.js).
+  res.setHeader('Cache-Control', 'no-store');
   try {
     const [iss, crew] = await Promise.all([nasa.getISSTelemetry(), nasa.getCrew().catch(() => null)]);
     nasaHtml(res, nasaIssPage(req, iss, crew));
