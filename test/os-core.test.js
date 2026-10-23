@@ -89,8 +89,10 @@ test('the OS catalogue: every URL maps to an HTML file or an existing server rou
     if (url === '/') file = path.join(PUBLIC, 'index.html');
     else if (url.startsWith('/apps/')) file = path.join(PUBLIC, 'apps', a[0] + '.html');
     else file = path.join(PUBLIC, a[0] + '.html');
-    // A server-rendered page (model/datacenter) is valid when its app.get route is registered in server.js.
-    const routed = serverSrc.includes(`app.get('/${a[0]}'`);
+    // A server-rendered page is valid when its app.get route is registered in server.js.
+    // The catalogue key stays an internal identifier, so the public URL counts too.
+    const routePath = url.replace(/\/$/, '');
+    const routed = serverSrc.includes(`app.get('${routePath}'`) || serverSrc.includes(`app.get('/${a[0]}'`);
     assert.ok(fs.existsSync(file) || routed, `a file/route exists for ${a[1]} (${url})`);
   }
 });

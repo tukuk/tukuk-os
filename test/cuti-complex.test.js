@@ -12,7 +12,7 @@ const cutiSrc = fs.readFileSync(path.join(ROOT, 'src', 'cuti.js'), 'utf8');
 const duniaSrc = fs.readFileSync(path.join(ROOT, 'src', 'cuti-dunia.js'), 'utf8');
 const robotsTxt = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
 
-const SECTIONS = ['/cuti', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan'];
+const SECTIONS = ['/holidays', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained'];
 const NEGARI = ['johor', 'kedah', 'kelantan', 'melaka', 'negeri-sembilan', 'pahang', 'perak', 'perlis',
   'pulau-pinang', 'sabah', 'sarawak', 'selangor', 'terengganu', 'kuala-lumpur', 'putrajaya', 'labuan'];
 
@@ -69,14 +69,14 @@ test('CUTI_SECTIONS lists the hub + 5 continents + long weekends + 2 MY years + 
   assert.ok(navIdx > 0 && serverSrc.slice(navIdx, navIdx + 600).includes('Explore the Tukuk-OS World Holiday Complex'), 'the world nav heading');
 });
 
-test('the /cuti* routes register in order: hub, literals, the year regex, then :negeri', () => {
-  const hub = serverSrc.indexOf("app.get('/cuti'");
-  const pen = serverSrc.indexOf("app.get('/cuti/penjelasan'");
-  const lw = serverSrc.indexOf("app.get('/cuti/hujung-minggu-panjang'");
-  const dun = serverSrc.indexOf("app.get('/cuti/dunia/:slug'");
-  const yr = serverSrc.indexOf('app.get(/^\\/cuti\\/');
-  const reg = serverSrc.indexOf("app.get('/cuti/:negeri'");
-  assert.ok(hub > -1 && pen > hub && lw > pen && yr > lw && dun > yr && reg > dun, 'registration order: hub < penjelasan < hujung-minggu < year < dunia < :negeri');
+test('the /holidays* routes register in order: hub, literals, the year regex, then :negeri', () => {
+  const hub = serverSrc.indexOf("app.get('/holidays'");
+  const pen = serverSrc.indexOf("app.get('/holidays/explained'");
+  const lw = serverSrc.indexOf("app.get('/holidays/long-weekends'");
+  const dun = serverSrc.indexOf("app.get('/holidays/world/:slug'");
+  const yr = serverSrc.indexOf('app.get(/^\\/holidays\\/');
+  const reg = serverSrc.indexOf("app.get('/holidays/:negeri'");
+  assert.ok(hub > -1 && pen > hub && lw > pen && yr > lw && dun > yr && reg > dun, 'registration order: hub < explained < long-weekends < year < world < :negeri');
   assert.match(serverSrc, /cu\.findState\(req\.params\.negeri\)/, 'the state slug is validated INSIDE the handler (no TDZ)');
   assert.match(serverSrc, /cd\.findRegion\(slug\)[\s\S]*cd\.findCountryBySlug\(slug\)/, 'dunia checks the region THEN the country in the handler');
 });
@@ -98,12 +98,12 @@ test('sitemap-cuti.xml + robots + footer + the weather/quake ↔ holiday cross l
   assert.ok(sm.includes('cd.REGIONS.map') && sm.includes('cd.COUNTRIES.map'), 'continents + countries are in the sitemap');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-cuti\.xml/, 'robots advertises sitemap-cuti');
   // World policy: the footer chrome promotes the world label, NOT a MY-specific one.
-  assert.ok(!serverSrc.includes('<li><a href="/cuti">Public holidays 2026</a></li>'), 'the footer no longer carries a MY holiday label');
-  assert.ok(!serverSrc.includes('<li><a href="/cuti/hujung-minggu-panjang">Long weekends MY</a></li>'), 'the footer no longer carries Long weekends MY');
-  assert.ok(serverSrc.includes('<li><a href="/cuti">World public holidays</a></li>'), 'the footer carries the world holiday label');
-  assert.ok(serverSrc.includes('<a href="/cuti">world public holidays</a>'), 'the weather hub cross-links to the world holidays');
-  assert.ok(serverSrc.includes('<a href="/cuti">the public-holiday calendar</a>'), 'the quake pages cross-link to the holiday calendar');
-  assert.ok(serverSrc.includes("'/cuti', ") && serverSrc.includes("'/cuti/2026', '/cuti/2027'"), 'the main sitemap lists the holiday pages');
+  assert.ok(!serverSrc.includes('<li><a href="/holidays">Public holidays 2026</a></li>'), 'the footer no longer carries a MY holiday label');
+  assert.ok(!serverSrc.includes('<li><a href="/holidays/long-weekends">Long weekends MY</a></li>'), 'the footer no longer carries Long weekends MY');
+  assert.ok(serverSrc.includes('<li><a href="/holidays">World public holidays</a></li>'), 'the footer carries the world holiday label');
+  assert.ok(serverSrc.includes('<a href="/holidays">world public holidays</a>'), 'the weather hub cross-links to the world holidays');
+  assert.ok(serverSrc.includes('<a href="/holidays">the public-holiday calendar</a>'), 'the quake pages cross-link to the holiday calendar');
+  assert.ok(serverSrc.includes("'/holidays', ") && serverSrc.includes("'/holidays/2026', '/holidays/2027'"), 'the main sitemap lists the holiday pages');
 });
 
 test('cuti-dunia.js: Nager.Date without a key, an IPv6 agent, a 30-day cache, a pool of 6', () => {
@@ -131,13 +131,13 @@ test('the world renderers + helpers + 503/404 pages are supported by server.js',
   }
   assert.ok(serverSrc.includes('function ctWorldLwTable'), 'ctWorldLwTable is defined');
   // Nager's LongWeekend gives startDate/endDate — normalised to start/end before rendering.
-  const route = serverSrc.slice(serverSrc.indexOf("app.get('/cuti/dunia/:slug'"), serverSrc.indexOf("app.get('/cuti/:negeri'"));
+  const route = serverSrc.slice(serverSrc.indexOf("app.get('/holidays/world/:slug'"), serverSrc.indexOf("app.get('/holidays/:negeri'"));
   assert.ok(route.includes('start: w.startDate') && route.includes('needBridge: !!w.needBridgeDay'), 'the country LW rows are normalised');
   assert.ok(route.includes('cd.loadHolidays(2026'), 'the country page loads the holidays');
   assert.match(route, /status\(404\)[\s\S]*status\(503\)/, 'outside coverage → 404, a load failure → 503');
 });
 
-test('the holiday copy is English: labels translated, public slugs preserved', () => {
+test('the holiday copy is English: labels and world slugs translated', () => {
   // Anchor on the next complex's own declaration: internal identifiers are never renamed.
   const pages = serverSrc.slice(serverSrc.indexOf('const CUTI_SECTIONS'), serverSrc.indexOf('const NEGARA_SECTIONS'));
   assert.ok(pages.length > 5000, 'the slice really covers the holiday pages');
@@ -145,9 +145,9 @@ test('the holiday copy is English: labels translated, public slugs preserved', (
   assert.doesNotMatch(pages, /inLanguage: 'ms'/, 'no holiday page still claims Malay structured data');
   assert.doesNotMatch(pages, /Jumaat|Sabtu|Ahad|Isnin|belum sempat|tiada data|Kompleks Cuti|cuti umum|Bahasa Melayu/, 'no Malay wording remains on the holiday pages');
   assert.match(pages, /function cutiBusy\(msg\)[\s\S]*The holiday calendar source did not answer in time/, 'the escape page reads in English');
-  // Slugs and query keys stay Malay — they are public URLs, not editorial copy.
-  for (const slug of ['/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '?tahun=', '/cuti/dunia/'])
-    assert.ok(pages.includes(slug), `the public slug ${slug} is preserved`);
+  // Public URLs are English too; only the ?tahun year hint and MY state proper nouns remain.
+  for (const slug of ['/holidays/long-weekends', '/holidays/explained', '?tahun=', '/holidays/world/'])
+    assert.ok(pages.includes(slug), `the public slug ${slug} is published`);
 });
 
 test('the state page compares the weekend label against the value cuti.js really stores', () => {

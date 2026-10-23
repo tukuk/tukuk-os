@@ -56,8 +56,8 @@ test('rekod: countrySlug is set exactly when a country is present', () => {
 
 test('rekod: every cross-linked route still exists in server.js (no dead links)', () => {
   for (const r of rek.RECORDS) {
-    // Country profile links are dynamic (/negara/:slug), only assert the base is live.
-    if (r.country) assert.match(SRV, /app\.get\('\/negara'/, '/negara hub must exist for country links');
+    // Country profile links are dynamic (/countries/:slug), only assert the base is live.
+    if (r.country) assert.match(SRV, /app\.get\('\/countries'/, '/countries hub must exist for country links');
     if (r.cluster) {
       const live = SRV.includes(`'/${r.cluster}'`) || SRV.includes(`geoRoutes('${r.cluster}'`) || SRV.includes(`geoSitemap('${r.cluster}'`);
       assert.ok(live, `${r.id}: cluster link /${r.cluster} has no matching route in server.js`);

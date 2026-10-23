@@ -12,7 +12,7 @@ const serverSrc = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
 const weatherSrc = fs.readFileSync(path.join(ROOT, 'src', 'weather.js'), 'utf8');
 const robotsTxt = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
 
-const SECTIONS = ['/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin'];
+const SECTIONS = ['/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind'];
 
 test('CUACA_SECTIONS lists the 6 weather sections', () => {
   for (const p of SECTIONS) {
@@ -44,22 +44,22 @@ test('the weather copy is English: no Malay condition-field access remains', () 
   assert.doesNotMatch(serverSrc, /escapeHtml\(d\.ms\)|escapeHtml\(c\.ms\)/, 'no server.js page reads a Malay .ms field');
 });
 
-test('routes /cuaca* are registered: 6 static + cari + :slug (+udara/surya), static first', () => {
-  for (const r of ['/cuaca', '/cuaca/peta', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin',
-    '/cuaca/ekstrem', '/cuaca/cari', '/cuaca/:slug/udara', '/cuaca/:slug/surya', '/cuaca/:slug']) {
+test('routes /weather* are registered: 6 static + search + :slug (+air/sun), static first', () => {
+  for (const r of ['/weather', '/weather/map', '/weather/codes', '/weather/clouds', '/weather/wind',
+    '/weather/extremes', '/weather/search', '/weather/:slug/air', '/weather/:slug/sun', '/weather/:slug']) {
     assert.ok(serverSrc.includes(`app.get('${r}'`), `route ${r} must be registered`);
   }
   // :slug must be registered LAST so static names are not captured by it
-  const last = serverSrc.lastIndexOf(`app.get('/cuaca/:slug'`);
-  for (const r of ['/cuaca/peta', '/cuaca/cari', '/cuaca/:slug/udara']) {
-    assert.ok(serverSrc.indexOf(`app.get('${r}'`) < last, `${r} must be registered before /cuaca/:slug`);
+  const last = serverSrc.lastIndexOf(`app.get('/weather/:slug'`);
+  for (const r of ['/weather/map', '/weather/search', '/weather/:slug/air']) {
+    assert.ok(serverSrc.indexOf(`app.get('${r}'`) < last, `${r} must be registered before /weather/:slug`);
   }
 });
 
 test('no route-registration loop over a `const` (TDZ) — the city slug resolves in the handler', () => {
   assert.doesNotMatch(serverSrc, /for \(const c of wx\.CITIES\)\s*app\.get/, 'a wx.CITIES loop is forbidden (TDZ)');
   assert.match(serverSrc, /wx\.resolveCity\(slug\)/, 'resolveCity is called inside the handler');
-  assert.match(serverSrc, /redirect\(302, `\/cuaca\/\$\{city\.slug\}`\)/, 'search → 302 to the city page');
+  assert.match(serverSrc, /redirect\(302, `\/weather\/\$\{city\.slug\}`\)/, 'search → 302 to the city page');
 });
 
 test('API failure / unknown city → weatherBusy noindex,follow + non-200 status', () => {
@@ -87,16 +87,16 @@ test('sitemap-cuaca.xml + robots: 6 static + every DB city ×3 URLs; stats+nav i
   assert.match(serverSrc, /app\.get\('\/sitemap-cuaca\.xml'/, 'the sitemap-cuaca route exists');
   const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-cuaca.xml'"), serverSrc.indexOf("app.get('/sitemap-cuaca.xml'") + 2000);
   assert.ok(sm.includes('wx.CITIES.map'), 'every DB city is listed in the sitemap');
-  for (const suffix of ['/udara', '/surya']) assert.ok(sm.includes(suffix), `city ×${suffix} in the sitemap`);
+  for (const suffix of ['/air', '/sun']) assert.ok(sm.includes(suffix), `city ×${suffix} in the sitemap`);
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-cuaca\.xml/, 'robots.txt advertises sitemap-cuaca');
-  // Tidy SEO: /cuaca* in the main sitemap list + site header/footer nav
-  assert.ok(serverSrc.includes("const staticPages = ['', '/nasa'") && serverSrc.includes("'/cuaca/awan'"), 'the main sitemap lists the /cuaca pages');
-  assert.match(serverSrc, /link\('\/cuaca', 'Weather', 'cuaca'\)/, 'siteHeader has a Weather link');
+  // Tidy SEO: /weather* in the main sitemap list + site header/footer nav
+  assert.ok(serverSrc.includes("const staticPages = ['', '/nasa'") && serverSrc.includes("'/weather/clouds'"), 'the main sitemap lists the /weather pages');
+  assert.match(serverSrc, /link\('\/weather', 'Weather', 'cuaca'\)/, 'siteHeader has a Weather link');
   const footerCol = serverSrc.slice(serverSrc.indexOf('<h4>Weather</h4>'), serverSrc.indexOf('<h4>Weather</h4>') + 1200);
-  assert.ok(footerCol.includes('<li><a href="/cuaca/awan">Cloud types</a></li>'), 'siteFooter has the world education page');
-  assert.ok(footerCol.includes('<li><a href="/cuaca/angin">Beaufort wind scale</a></li>'), 'siteFooter has the wind scale page');
+  assert.ok(footerCol.includes('<li><a href="/weather/clouds">Cloud types</a></li>'), 'siteFooter has the world education page');
+  assert.ok(footerCol.includes('<li><a href="/weather/wind">Beaufort wind scale</a></li>'), 'siteFooter has the wind scale page');
   // Policy: site chrome does NOT promote specific local city pages (global traffic).
-  assert.ok(!footerCol.includes('/cuaca/kuala-lumpur') && !footerCol.includes('/cuaca/serian'), 'no local city labels in the footer');
+  assert.ok(!footerCol.includes('/weather/kuala-lumpur') && !footerCol.includes('/weather/serian'), 'no local city labels in the footer');
 });
 
 test('NASA sky ↔ weather cross-links + JSON-LD Place/Dataset on city pages', () => {

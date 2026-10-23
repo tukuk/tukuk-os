@@ -41,13 +41,13 @@ function cacheSet(key, data) {
 const REGIONS = [
   { slug: 'malaysia', name: 'Malaysia', bbox: [98, -2, 121, 8], minMag: 2.0, hours: 24 * 30, limit: 60,
     blurb: 'The earthquakes closest to Malaysia — Sabah, Sarawak, the Peninsula and the South China Sea border.' },
-  { slug: 'asia-tenggara', name: 'Southeast Asia', bbox: [90, -15, 148, 30], minMag: 4.5, hours: 24 * 7, limit: 60,
+  { slug: 'southeast-asia', name: 'Southeast Asia', bbox: [90, -15, 148, 30], minMag: 4.5, hours: 24 * 7, limit: 60,
     blurb: 'Indonesia, the Philippines, Papua New Guinea and neighbours — the most tectonically active zone in Asia.' },
-  { slug: 'jepun', name: 'Japan & the Western Pacific', bbox: [125, 10, 180, 50], minMag: 4.0, hours: 24 * 7, limit: 50,
+  { slug: 'japan', name: 'Japan & the Western Pacific', bbox: [125, 10, 180, 50], minMag: 4.0, hours: 24 * 7, limit: 50,
     blurb: 'The western side of the Ring of Fire: Japan, Kamchatka, Mariana and the Ryukyu Islands.' },
-  { slug: 'pasifik-timur', name: 'Eastern Pacific & the Americas', bbox: [-180, -60, -55, 62], minMag: 5.0, hours: 24 * 7, limit: 50,
+  { slug: 'east-pacific', name: 'Eastern Pacific & the Americas', bbox: [-180, -60, -55, 62], minMag: 5.0, hours: 24 * 7, limit: 50,
     blurb: 'The west coast of the Americas: California, Chile, Peru, Mexico and Alaska.' },
-  { slug: 'dunia', name: 'World M4.5+', bbox: null, minMag: 4.5, hours: 24 * 7, limit: 80,
+  { slug: 'world', name: 'World M4.5+', bbox: null, minMag: 4.5, hours: 24 * 7, limit: 80,
     blurb: 'Every earthquake of magnitude 4.5 or above worldwide, over the last seven days.' },
 ];
 

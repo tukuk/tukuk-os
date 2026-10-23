@@ -10,13 +10,13 @@ const serverSrc = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
 const gempaSrc = fs.readFileSync(path.join(ROOT, 'src', 'gempa.js'), 'utf8');
 const robotsTxt = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
 
-const SECTIONS = ['/gempa', '/gempa/malaysia', '/gempa/asia-tenggara', '/gempa/jepun',
-  '/gempa/pasifik-timur', '/gempa/dunia', '/gempa/penjelasan'];
+const SECTIONS = ['/earthquakes', '/earthquakes/malaysia', '/earthquakes/southeast-asia', '/earthquakes/japan',
+  '/earthquakes/east-pacific', '/earthquakes/world', '/earthquakes/explained'];
 
 test('GEMPA_SECTIONS + REGIONS list 7 sections (6 regions + explanation)', () => {
   for (const p of SECTIONS) assert.ok(serverSrc.includes(`'${p}'`), `section ${p} present in the nav`);
   assert.match(gempaSrc, /slug: 'malaysia'/, 'the malaysia region is defined in the module');
-  assert.match(gempaSrc, /slug: 'dunia'/, 'the world feed is defined');
+  assert.match(gempaSrc, /slug: 'world'/, 'the world feed is defined');
 });
 
 test('the quake renderers are defined and wrapped through gempaDoc (3 slots + nav + lang en)', () => {
@@ -30,11 +30,11 @@ test('the quake renderers are defined and wrapped through gempaDoc (3 slots + na
   assert.ok(doc.includes('<html lang="en">'), 'quake pages are lang="en"');
 });
 
-test('the /gempa* routes register in order: hub, literal explanation, then :region', () => {
-  const hub = serverSrc.indexOf("app.get('/gempa'");
-  const pen = serverSrc.indexOf("app.get('/gempa/penjelasan'");
-  const reg = serverSrc.indexOf("app.get('/gempa/:region'");
-  assert.ok(hub > -1 && pen > hub && reg > pen, 'registration order: /gempa < penjelasan < :region');
+test('the /earthquakes* routes register in order: hub, literal explanation, then :region', () => {
+  const hub = serverSrc.indexOf("app.get('/earthquakes'");
+  const pen = serverSrc.indexOf("app.get('/earthquakes/explained'");
+  const reg = serverSrc.indexOf("app.get('/earthquakes/:region'");
+  assert.ok(hub > -1 && pen > hub && reg > pen, 'registration order: /earthquakes < explained < :region');
   assert.match(serverSrc, /gp\.findRegion\(req\.params\.region\)/, 'the region slug is validated INSIDE the handler (no TDZ)');
   assert.doesNotMatch(serverSrc, /for \(const r of gp\.REGIONS\)\s*app\.get/, 'looping over REGIONS to register routes is forbidden');
 });
@@ -55,12 +55,12 @@ test('USGS: no API key, valid FDSN parameters, 10-minute cache', () => {
   assert.match(gempaSrc, /TTL = 10 \* 60 \* 1000/, 'cached for 10 minutes');
 });
 
-test('the quake copy is English: labels translated, public slugs preserved', () => {
+test('the quake copy is English: labels and slugs both translated', () => {
   const pages = serverSrc.slice(serverSrc.indexOf('function gempaRegionPage'), serverSrc.indexOf('const CUTI_SECTIONS'));
   assert.ok(pages.includes("inLanguage: 'en'"), 'the explanation article declares inLanguage en');
   assert.ok(pages.includes('Drop, Cover, Hold') || pages.includes('Drop \\u2014 Cover'), 'the safety protocol uses the English wording');
   assert.doesNotMatch(pages, /Reda|Lindungi|Tahan|Bahasa Melayu/, 'no Malay safety wording remains on the quake pages');
-  assert.match(gempaSrc, /slug: 'asia-tenggara', name: 'Southeast Asia'/, 'region labels are English while the URL slug stays Malay');
+  assert.match(gempaSrc, /slug: 'southeast-asia', name: 'Southeast Asia'/, 'region label and URL slug are both English');
 });
 
 test('sitemap-gempa.xml + robots + weather↔quake cross links & footer', () => {
@@ -68,7 +68,7 @@ test('sitemap-gempa.xml + robots + weather↔quake cross links & footer', () => 
   const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-gempa.xml'"), serverSrc.indexOf("app.get('/sitemap-gempa.xml'") + 1300);
   assert.ok(sm.includes('gp.REGIONS.map'), 'every region goes into the sitemap');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-gempa\.xml/, 'robots advertises sitemap-gempa');
-  assert.ok(serverSrc.includes('<li><a href="/gempa">World Earthquakes</a></li>'), 'the footer links to the world quake hub');
-  assert.ok(serverSrc.includes('<a href="/gempa">Earthquake Complex</a>'), 'the weather hub cross-links to the earthquake complex');
-  assert.ok(serverSrc.includes("'/gempa', '/gempa/penjelasan'"), 'the main sitemap lists /gempa');
+  assert.ok(serverSrc.includes('<li><a href="/earthquakes">World Earthquakes</a></li>'), 'the footer links to the world quake hub');
+  assert.ok(serverSrc.includes('<a href="/earthquakes">Earthquake Complex</a>'), 'the weather hub cross-links to the earthquake complex');
+  assert.ok(serverSrc.includes("'/earthquakes', '/earthquakes/explained'"), 'the main sitemap lists /earthquakes');
 });

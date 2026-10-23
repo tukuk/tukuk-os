@@ -84,13 +84,13 @@ test('server: the worldDoc shell is complete — chrome, 3 ad slots, the nav inj
 });
 
 test('server: routes + footer + staticPages + sitemaps for all three clusters', () => {
-  for (const r of ["app.get('/wang'", "app.get('/wang/kadar'", "app.get('/wang/tukar/:from/:to'",
-    "app.get('/seni'", "app.get('/seni/koleksi/:slug'", "app.get('/seni/objek/:id'",
-    "app.get('/hidupan'", "app.get('/hidupan/:slug'"]) {
+  for (const r of ["app.get('/money'", "app.get('/money/rates'", "app.get('/money/convert/:from/:to'",
+    "app.get('/art'", "app.get('/art/collection/:slug'", "app.get('/art/object/:id'",
+    "app.get('/life'", "app.get('/life/:slug'"]) {
     assert.ok(serverSrc.includes(r), `the ${r} route`);
   }
   const staticLine = (serverSrc.match(/const staticPages = \[[^\]]*\]/) || [''])[0];
-  for (const p of ["'/wang'", "'/wang/kadar'", "'/seni'", "'/hidupan'"]) {
+  for (const p of ["'/money'", "'/money/rates'", "'/art'", "'/life'"]) {
     assert.ok(staticLine.includes(p), `staticPages ${p}`);
   }
   for (const f of ['World Currency — Live Rates', 'Free Art Gallery — The Met', 'Wildlife Atlas — Real Photos']) {
@@ -107,10 +107,10 @@ test('server: routes + footer + staticPages + sitemaps for all three clusters', 
 });
 
 test('server: a bogus slug redirects + a bad rate pair → the rates redirect', () => {
-  assert.ok(serverSrc.includes("if (!c) return res.redirect(302, '/seni')"), 'a fake collection → /seni');
-  assert.ok(serverSrc.includes("if (!t) return res.redirect(302, '/hidupan')"), 'a fake species → /hidupan');
-  assert.ok(serverSrc.includes("if (!from || !to || from === to) return res.redirect(302, '/wang/kadar')"), 'a bad currency code → the rates page');
-  assert.ok(serverSrc.includes("if (!o || !o.primaryImage) return res.redirect(302, '/seni')"), 'an object with no image → /seni');
+  assert.ok(serverSrc.includes("if (!c) return res.redirect(302, '/art')"), 'a fake collection → /art');
+  assert.ok(serverSrc.includes("if (!t) return res.redirect(302, '/life')"), 'a fake species → /life');
+  assert.ok(serverSrc.includes("if (!from || !to || from === to) return res.redirect(302, '/money/rates')"), 'a bad currency code → the rates page');
+  assert.ok(serverSrc.includes("if (!o || !o.primaryImage) return res.redirect(302, '/art')"), 'an object with no image → /art');
 });
 
 test('server: river card on /cuaca + wiki box on /bencana + sky box + academic reading', () => {

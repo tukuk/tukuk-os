@@ -27,7 +27,7 @@ arcade (`/games`) and an app hub on the homepage, a live NASA data hub
 - [About](https://tukuk.org/about) · [Privacy](https://tukuk.org/privacy) · [Terms](https://tukuk.org/terms) · [Contact](https://tukuk.org/contact).
 - [NASA hub](https://tukuk.org/nasa): APOD, ISS, Mars, asteroids, EPIC, space weather, crew (JSON under `/api/nasa/*`).
 - [Radio](https://tukuk.org/radio) · [Music](https://tukuk.org/music) · [News](https://tukuk.org/news).
-- [World Music Charts](https://tukuk.org/muzik): most-played charts for 90 countries from Apple Music feeds, with artist info and previews.
+- [World Music Charts](https://tukuk.org/charts): most-played charts for 90 countries from Apple Music feeds, with artist info and previews.
 
 ## Chat & apps
 - [T Chat](https://tukuk.org/apps/chat): chat PWA engineered for 2G/GPRS — receipt reads, offline queue, minimal data.
@@ -41,10 +41,10 @@ arcade (`/games`) and an app hub on the homepage, a live NASA data hub
 - [Dictionary & Translator](https://tukuk.org/alat/dictionary) (the older `/alat/kamus` and `/kamus` both redirect here): define and translate across hundreds of human languages, plus animal, alien, sound and ancient-script encoders (runes, hieroglyphs, Morse, Braille), with browser read-aloud. `GET /api/kamus/define?word=&lang=` · `GET /api/kamus/translate?text=&from=&to=`.
 
 ## Maps & world data
-- [Maps & Navigation](https://tukuk.org/peta): turn-by-turn route planner (OSRM + Nominatim, no API key) with four base views — open street map, high-resolution satellite (Esri World Imagery), a live daily true-color satellite composite and a daily night-lights band (NASA GIBS, renewed every 24 h).
-- [Live Earth — Satellite View](https://tukuk.org/peta/langit): full-window satellite globe — today's NASA true-color pass, nightly city lights (VIIRS day/night band), Blue Marble and street-level high-res, with fly-to place search.
-- [Distance Calculator](https://tukuk.org/peta/jarak) · [Sunrise & Sunset](https://tukuk.org/peta/matahari) · [World Clock](https://tukuk.org/peta/jam).
-- [World Weather](https://tukuk.org/cuaca) · [World Earthquakes](https://tukuk.org/gempa) · [Traffic](https://tukuk.org/traffic).
+- [Maps & Navigation](https://tukuk.org/maps): turn-by-turn route planner (OSRM + Nominatim, no API key) with four base views — open street map, high-resolution satellite (Esri World Imagery), a live daily true-color satellite composite and a daily night-lights band (NASA GIBS, renewed every 24 h).
+- [Live Earth — Satellite View](https://tukuk.org/maps/sky): full-window satellite globe — today's NASA true-color pass, nightly city lights (VIIRS day/night band), Blue Marble and street-level high-res, with fly-to place search.
+- [Distance Calculator](https://tukuk.org/maps/distance) · [Sunrise & Sunset](https://tukuk.org/maps/sun) · [World Clock](https://tukuk.org/maps/clock).
+- [World Weather](https://tukuk.org/weather) · [World Earthquakes](https://tukuk.org/earthquakes) · [Traffic](https://tukuk.org/traffic).
 
 ## Machine-readable
 - [sitemap.xml](https://tukuk.org/sitemap.xml): full URL list.

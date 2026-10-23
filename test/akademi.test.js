@@ -1,5 +1,5 @@
 'use strict';
-// Anchors for Akademi Tukuk-OS /akademi: 50 lessons (10 tracks × 5), the routes, the
+// Anchors for Akademi Tukuk-OS /academy: 50 lessons (10 tracks × 5), the routes, the
 // shell+ad wiring, quiz validity, sitemap-akademi and the per-track live-tool links.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -49,7 +49,7 @@ test('educational honesty: conservative figures are labelled about/roughly', () 
 });
 
 test('every track links ≥2 live tools already on the site', () => {
-  const live = ['/nasa', '/cuaca', '/gempa', '/bencana', '/udara', '/study', '/statistik', '/access', '/wiki', '/cari', '/learn'];
+  const live = ['/nasa', '/weather', '/earthquakes', '/disasters', '/air-quality', '/study', '/statistics', '/access', '/wiki', '/cari', '/learn'];
   for (const t of akad.TRACKS) {
     assert.ok(t.rel.length >= 2, `track ${t.s} has ≥2 links`);
     assert.ok(t.icon && t.name && t.blurb, `track meta ${t.s}`);
@@ -61,19 +61,19 @@ test('every track links ≥2 live tools already on the site', () => {
   }
 });
 
-test('/akademi: 3 routes + staticPages (hub+10 tracks) + footer + a bogus-slug redirect', () => {
-  for (const r of ["app.get('/akademi'", "app.get('/akademi/:track'", "app.get('/akademi/:track/:slug'"]) {
+test('/academy: 3 routes + staticPages (hub+10 tracks) + footer + a bogus-slug redirect', () => {
+  for (const r of ["app.get('/academy'", "app.get('/academy/:track'", "app.get('/academy/:track/:slug'"]) {
     assert.ok(serverSrc.includes(r), `the ${r} route exists`);
   }
   const staticLine = (serverSrc.match(/const staticPages = \[[^\]]*\]/) || [''])[0];
-  assert.ok(staticLine.includes("'/akademi'"), 'the hub in staticPages');
-  for (const t of akad.TRACKS) assert.ok(staticLine.includes(`'/akademi/${t.s}'`), `staticPages track ${t.s}`);
-  assert.ok(serverSrc.includes('<li><a href="/akademi">Academy — 50 Lessons</a></li>'), 'the footer link');
-  assert.ok((serverSrc.match(/app\.get\('\/akademi\/:track'[\s\S]*?\}\);/) || [''])[0].includes("res.redirect('/akademi')"), 'a fake track → redirect');
-  assert.ok((serverSrc.match(/app\.get\('\/akademi\/:track\/:slug'[\s\S]*?\}\);/) || ['']).length > 0 && serverSrc.includes("if (!l) return res.redirect('/akademi')"), 'a fake lesson → redirect');
+  assert.ok(staticLine.includes("'/academy'"), 'the hub in staticPages');
+  for (const t of akad.TRACKS) assert.ok(staticLine.includes(`'/academy/${t.s}'`), `staticPages track ${t.s}`);
+  assert.ok(serverSrc.includes('<li><a href="/academy">Academy — 50 Lessons</a></li>'), 'the footer link');
+  assert.ok((serverSrc.match(/app\.get\('\/academy\/:track'[\s\S]*?\}\);/) || [''])[0].includes("res.redirect('/academy')"), 'a fake track → redirect');
+  assert.ok((serverSrc.match(/app\.get\('\/academy\/:track\/:slug'[\s\S]*?\}\);/) || ['']).length > 0 && serverSrc.includes("if (!l) return res.redirect('/academy')"), 'a fake lesson → redirect');
 });
 
-test('/akademi: the full shell wiring — chrome, 3 ad slots, the 10-track nav', () => {
+test('/academy: the full shell wiring — chrome, 3 ad slots, the 10-track nav', () => {
   const doc = (serverSrc.match(/function akadDoc\(o\) \{[\s\S]*?\n}/) || [''])[0];
   assert.ok(doc.length > 1000, 'akadDoc was found');
   assert.ok(doc.includes('siteHeader(') && doc.includes('siteFooter()'), 'header+footer');
@@ -100,7 +100,7 @@ test('sitemap-akademi.xml: the hub + 10 tracks + 50 lessons + robots registers i
   const route = (serverSrc.match(/app\.get\('\/sitemap-akademi\.xml'[\s\S]*?\}\);/) || [''])[0];
   assert.ok(route.length > 100, 'the sitemap route was found');
   assert.ok(route.includes('akad.TRACKS.map') && route.includes('akad.allLessons()'), 'tracks+lessons are generated from the dataset');
-  assert.ok(route.includes("one('/akademi', '0.9')"), 'the hub priority is 0.9');
+  assert.ok(route.includes("one('/academy', '0.9')"), 'the hub priority is 0.9');
   const robots = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
   assert.ok(robots.includes('https://tukuk.org/sitemap-akademi.xml'), 'robots knows the academy sitemap');
 });

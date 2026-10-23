@@ -17,9 +17,9 @@ The two families also measure different light, and that decides what you can act
 
 ## Which Sky to Watch, Which Question
 
-- **"Is the storm intensifying right now?"** → geostationary. The world weather map at [Tukuk Weather Maps](/cuaca/peta) and official Himawari/GOES imagery show the same hemisphere refreshed every ten minutes — that is the only way to *watch* weather rather than read its report card.
-- **"What did the Earth look like yesterday, everywhere?"** → polar orbiters. Smoke plumes from a wildfire, dust over the Sahara, green and brown coastlines: switch on the daily true-color layer on [Live Earth](/peta/langit) or [Maps & Navigation](/peta), or read [how free satellite imagery actually works](/blog/see-earth-from-space-today-free-satellite-imagery) for the machinery behind it.
-- **"Where do people actually live after dark?"** → the day/night band, a mapping instrument, on the [night-lights layer](/peta/langit) — weather satellites' night IR channels see heat, not lamps.
+- **"Is the storm intensifying right now?"** → geostationary. The world weather map at [Tukuk Weather Maps](/weather/map) and official Himawari/GOES imagery show the same hemisphere refreshed every ten minutes — that is the only way to *watch* weather rather than read its report card.
+- **"What did the Earth look like yesterday, everywhere?"** → polar orbiters. Smoke plumes from a wildfire, dust over the Sahara, green and brown coastlines: switch on the daily true-color layer on [Live Earth](/maps/sky) or [Maps & Navigation](/maps), or read [how free satellite imagery actually works](/blog/see-earth-from-space-today-free-satellite-imagery) for the machinery behind it.
+- **"Where do people actually live after dark?"** → the day/night band, a mapping instrument, on the [night-lights layer](/maps/sky) — weather satellites' night IR channels see heat, not lamps.
 - **"Under cloud, what changed on the ground?"** → radar satellites, the specialists in seeing through.
 
 There is a quieter overlap worth knowing: both families share the same orbits' grandparent — the very first TIROS weather satellites of 1960 were also the first humans' drawings of Earth's whole cloud cover, and every "blue marble" image since descends from that surprise. The split into *film-the-hemisphere* and *map-the-surface* came later, from economics of altitude: park high and watch time, fly low and measure place.

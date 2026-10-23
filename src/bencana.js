@@ -50,7 +50,8 @@ async function fetchJson(url) {
 
 // The categories we publish (EONET id → slug/name), each with the explanatory
 // blurb that doubles as the SEO copy of its category page.
-// The slugs stay Malay: they are the live URLs of this complex.
+// Slugs are English (Oct 2026): the old Malay slugs survive only in LEGACY_SLUGS below,
+// which the 301 redirects use so no published address breaks.
 // KNOWN DATA DEFECT (not yet fixed, it would move public URLs): EONET v3 publishes
 // drought, dustHaze, earthquakes, floods, landslides, manmade, seaLakeIce,
 // severeStorms, snow, tempExtremes, volcanoes, waterColor and wildfires — so the ids
@@ -58,29 +59,29 @@ async function fetchJson(url) {
 // and an unknown category= does not error: EONET drops the filter and returns every
 // open event (up to the limit). Those four pages therefore over-report.
 const CATS = [
-  { id: 'volcanoes', slug: 'gunung-berapi', en: 'Volcanoes', icon: '🌋',
+  { id: 'volcanoes', slug: 'volcanoes', en: 'Volcanoes', icon: '🌋',
     blurb: 'Volcanic activity under watch right now — eruptions, volcanic tremor, lava flows and ash alerts. Volcanic ash can travel thousands of kilometres and ground aircraft, so this list is kept current by NASA curators working from VAAC and observatory reports worldwide.' },
-  { id: 'severeStorms', slug: 'taufan-ribut', en: 'Hurricanes & Cyclones', icon: '🌀',
+  { id: 'severeStorms', slug: 'storms', en: 'Hurricanes & Cyclones', icon: '🌀',
     blurb: 'Tropical cyclones, hurricanes, typhoons and severe thunderstorms — spotted from space by geostationary satellite scans. Storm names come from six rotating regional lists; strength is measured on the Saffir–Simpson scale in the western hemisphere and the JMA scale in Asia.' },
-  { id: 'wildfires', slug: 'kebakaran-lahan', en: 'Wildfires & Forest Fires', icon: '🔥',
+  { id: 'wildfires', slug: 'wildfires', en: 'Wildfires & Forest Fires', icon: '🔥',
     blurb: 'Active forest, scrub and peat-land fires — detected by the MODIS and VIIRS sensors, which see burning heat from orbit. Fire smoke can cross whole continents and degrade air quality in countries far away from the flame.' },
-  { id: 'floods', slug: 'banjir', en: 'Floods', icon: '🌊',
+  { id: 'floods', slug: 'floods', en: 'Floods', icon: '🌊',
     blurb: 'River, flash and monsoon floods that reach people — reported by disaster agencies and imaged by water satellites (Sentinel-1 sees through cloud). Flooding is the most frequent disaster on earth; more than 1.5 billion people are affected every decade.' },
-  { id: 'drought', slug: 'kemarau', en: 'Drought', icon: '☀️',
+  { id: 'drought', slug: 'drought', en: 'Drought', icon: '☀️',
     blurb: 'Places suffering a prolonged shortfall of rain — tracked with soil-delay and land-surface temperature indices. Drought moves slowly but kills more livestock and crops than the sudden disasters do.' },
-  { id: 'landslides', slug: 'tanah-runtuh', en: 'Landslides', icon: '⛰️',
+  { id: 'landslides', slug: 'landslides', en: 'Landslides', icon: '⛰️',
     blurb: 'Slope failures, slumps and debris flows — usually triggered by heavy rain or an earthquake in hilly ground. Mountainous tropics such as Indonesia and the Philippines are badly exposed through the monsoon season.' },
-  { id: 'snow', slug: 'salji-beku', en: 'Snow & Extreme Cold', icon: '❄️',
+  { id: 'snow', slug: 'snow', en: 'Snow & Extreme Cold', icon: '❄️',
     blurb: 'Major snowstorms and severe freezing weather — from North American blizzards to early Himalayan snow. These events test a country\'s power grid, flights and water supply in a single night.' },
-  { id: 'dustHazard', slug: 'badai-habuk', en: 'Dust & Sandstorms', icon: '🏜️',
+  { id: 'dustHazard', slug: 'dust-storms', en: 'Dust & Sandstorms', icon: '🏜️',
     blurb: 'Saharan dust, Asian sandstorms and dust storms — dust clouds that can cross an ocean and reach the Caribbean. The phosphorus they carry even fertilises the Amazon rainforest every year.' },
-  { id: 'seaAndLakeIce', slug: 'ais-laut', en: 'Sea & Lake Ice', icon: '🧊',
+  { id: 'seaAndLakeIce', slug: 'sea-ice', en: 'Sea & Lake Ice', icon: '🧊',
     blurb: 'The formation and breakup of Arctic sea ice and frozen lakes — the most honest barometer of polar climate. Seasonal sea-ice extent has been shrinking every decade since satellite measurement began in 1979.' },
-  { id: 'icebergs', slug: 'gunung-ais', en: 'Icebergs', icon: '🚢',
+  { id: 'icebergs', slug: 'icebergs', en: 'Icebergs', icon: '🚢',
     blurb: 'Giant icebergs calved from the Greenland and Antarctic ice shelves — some the size of a city, able to drift for years. Watching them matters for shipping lanes and for sea-level-rise research.' },
-  { id: 'waterIssues', slug: 'isu-air', en: 'Water Issues', icon: '💧',
+  { id: 'waterIssues', slug: 'water', en: 'Water Issues', icon: '💧',
     blurb: 'Events that hit the water supply — pollution, landslides into reservoirs, dam failures and shortages. More than 2 billion people live in water-stressed countries; the topic rarely makes headlines, but the slow danger is large.' },
-  { id: 'manmade', slug: 'insiden-manusia', en: 'Human-Made Incidents', icon: '🏭',
+  { id: 'manmade', slug: 'man-made', en: 'Human-Made Incidents', icon: '🏭',
     blurb: 'Technological and industrial disasters seen from space: warehouse fires, collapses, oil spills and explosions. This category is a reminder that satellites watch over human safety, not nature alone.' },
 ];
 
@@ -88,6 +89,22 @@ function findCat(slug) {
   const s = String(slug || '');
   return CATS.find((c) => c.slug === s || c.id === s) || null;
 }
+
+// Old Malay category slug → the English slug now published. Only used by 301 redirects.
+const LEGACY_SLUGS = {
+  'gunung-berapi': 'volcanoes',
+  'taufan-ribut': 'storms',
+  'kebakaran-lahan': 'wildfires',
+  banjir: 'floods',
+  kemarau: 'drought',
+  'tanah-runtuh': 'landslides',
+  'salji-beku': 'snow',
+  'badai-habuk': 'dust-storms',
+  'ais-laut': 'sea-ice',
+  'gunung-ais': 'icebergs',
+  'isu-air': 'water',
+  'insiden-manusia': 'man-made',
+};
 
 // EONET sends the geometry under `geometry` (singular) on BOTH the list and the
 // detail endpoint, and never sends created/updated — derive them from the ends of
@@ -190,4 +207,4 @@ async function wikiPeek(term) {
   }
 }
 
-module.exports = { CATS, findCat, loadEvents, loadAllOpen, loadEvent, geoLabel, wikiPeek, normaliseEvent };
+module.exports = { CATS, LEGACY_SLUGS, findCat, loadEvents, loadAllOpen, loadEvent, geoLabel, wikiPeek, normaliseEvent };

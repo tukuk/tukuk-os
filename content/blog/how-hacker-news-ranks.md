@@ -27,4 +27,4 @@ If you build anything with a feed — a comment section, a vote board, a communi
 
 ## Try It Yourself
 
-Our [Technology hub](/teknologi) mirrors the same live data — the actual front page, Show HN launches, and Ask HN threads — through Hacker News's public search API, refreshed every ten minutes with no account. Watch how quickly the list churns: that decay curve in motion.
+Our [Technology hub](/technology) mirrors the same live data — the actual front page, Show HN launches, and Ask HN threads — through Hacker News's public search API, refreshed every ten minutes with no account. Watch how quickly the list churns: that decay curve in motion.

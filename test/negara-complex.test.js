@@ -56,11 +56,11 @@ test('the country copy is English: labels translated, public slugs preserved', (
   assert.doesNotMatch(pages, /buah negara|ibu negara|belum sempat|tiada data|pedalan|jiran|Kompleks Negara|Bahasa Melayu|KDNK|benua & subwilayah/i, 'no Malay editorial copy left');
   assert.ok(pages.includes('Sovereign state') && pages.includes('Dependent territory'), 'the status row is English');
   assert.ok(pages.includes('Capital:') && pages.includes('Neighbours (land borders)'), 'the profile rows are English');
-  // URLs are public contracts: the route prefixes and the continent slugs must not move.
-  assert.ok(pages.includes('/negara/${c.slug}'), 'country links keep the English-derived slugs');
-  assert.ok(pages.includes('/cuti/dunia/${cutiCoun.slug}'), 'the holiday cross-link keeps its Nager slug');
+  // URLs are public contracts too, and English is the public language: /countries, /holidays.
+  assert.ok(pages.includes('/countries/${c.slug}'), 'country links keep the English-derived slugs');
+  assert.ok(pages.includes('/holidays/world/${cutiCoun.slug}'), 'the holiday cross-link keeps its Nager slug');
   assert.ok(pages.includes('flagcdn.com') && pages.includes('ng.REGIONS'), 'the flag CDN and region loop are intact');
-  assert.ok(pages.includes('/negara/${r.slug}'), 'continent links keep the six public slugs');
+  assert.ok(pages.includes('/countries/${r.slug}'), 'continent links keep the six public slugs');
   assert.ok(pages.includes("name: c.name"), 'the schema.org Country node is named in English');
 });
 
@@ -76,10 +76,10 @@ test('the country pages are defined and wrapped through negaraDoc (3 ad slots + 
   assert.ok(doc.includes('og:locale" content="en_US"'), 'og locale en_US');
 });
 
-test('the /negara* routes register in order: literal hub first, then :slug', () => {
-  const hub = serverSrc.indexOf("app.get('/negara'");
-  const one = serverSrc.indexOf("app.get('/negara/:slug'");
-  assert.ok(hub > -1 && one > hub, 'registration order: /negara < :slug');
+test('the /countries* routes register in order: literal hub first, then :slug', () => {
+  const hub = serverSrc.indexOf("app.get('/countries'");
+  const one = serverSrc.indexOf("app.get('/countries/:slug'");
+  assert.ok(hub > -1 && one > hub, 'registration order: /countries < :slug');
   assert.match(serverSrc, /ng\.findRegion\(slug\)/, 'the continent is validated INSIDE the handler (no TDZ)');
   assert.match(serverSrc, /ng\.findCountry\(rows, slug\)/, 'the country is validated INSIDE the handler');
   assert.doesNotMatch(serverSrc, /for \(const r of ng\.REGIONS\)\s*app\.get/, 'a route-registration loop over REGIONS is forbidden');
@@ -101,7 +101,7 @@ test('sitemap-negara.xml + robots + footer + cross links from the other three co
   assert.ok(sm.includes('ng.REGIONS.map'), 'the 6 continents enter the sitemap');
   assert.ok(sm.includes('loadCountries'), 'the ±250 countries enter the sitemap once the cache is warm');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-negara\.xml/, 'robots advertises sitemap-negara');
-  assert.ok(serverSrc.includes('<li><a href="/negara">World countries</a></li>'), 'the SSR footer links to the country hub');
-  assert.ok(serverSrc.includes('<a href="/negara">Country Complex</a>'), 'the weather page cross-links to the country complex');
-  assert.ok(serverSrc.includes("'/negara', '/negara/asia'"), 'the main sitemap lists /negara');
+  assert.ok(serverSrc.includes('<li><a href="/countries">World countries</a></li>'), 'the SSR footer links to the country hub');
+  assert.ok(serverSrc.includes('<a href="/countries">Country Complex</a>'), 'the weather page cross-links to the country complex');
+  assert.ok(serverSrc.includes("'/countries', '/countries/asia'"), 'the main sitemap lists /countries');
 });

@@ -1,5 +1,5 @@
 'use strict';
-// Pins for the Air & Oxygen Complex /udara: routes, full shell+ad chrome, honest source contracts,
+// Pins for the Air & Oxygen Complex /air-quality: routes, full shell+ad chrome, honest source contracts,
 // the educational dataset and the cross links — mirroring the study-complex.test.js pattern.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -11,18 +11,18 @@ const serverSrc = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
 const udaraSrc = fs.readFileSync(path.join(ROOT, 'src', 'udara.js'), 'utf8');
 const udara = require('../src/udara');
 
-test('/udara: 4 registered routes + staticPages + the global footer', () => {
-  for (const r of ["app.get('/udara'", "app.get('/udara/oxygen'", "app.get('/udara/breath'", "app.get('/udara/carbon'"]) {
+test('/air-quality: 4 registered routes + staticPages + the global footer', () => {
+  for (const r of ["app.get('/air-quality'", "app.get('/air-quality/oxygen'", "app.get('/air-quality/breath'", "app.get('/air-quality/carbon'"]) {
     assert.ok(serverSrc.includes(r), `the route ${r} exists`);
   }
   const staticLine = (serverSrc.match(/const staticPages = \[[^\]]*\]/) || [''])[0];
-  for (const u of ["'/udara'", "'/udara/oxygen'", "'/udara/breath'", "'/udara/carbon'"]) {
+  for (const u of ["'/air-quality'", "'/air-quality/oxygen'", "'/air-quality/breath'", "'/air-quality/carbon'"]) {
     assert.ok(staticLine.includes(u), `staticPages ${u}`);
   }
-  assert.ok(serverSrc.includes('<li><a href="/udara">Air & Oxygen</a></li>'), 'the footer link');
+  assert.ok(serverSrc.includes('<li><a href="/air-quality">Air & Oxygen</a></li>'), 'the footer link');
 });
 
-test('/udara: a full shell chrome — header/footer, 3 ad slots, the cross nav', () => {
+test('/air-quality: a full shell chrome — header/footer, 3 ad slots, the cross nav', () => {
   const doc = (serverSrc.match(/function udaraDoc\(o\) \{[\s\S]*?\n}/) || [''])[0];
   assert.ok(doc.length > 1000, 'udaraDoc was found');
   assert.ok(doc.includes('siteHeader(') && doc.includes('siteFooter()'), 'header+footer');
@@ -31,7 +31,7 @@ test('/udara: a full shell chrome — header/footer, 3 ad slots, the cross nav',
   assert.ok(doc.includes('udaraNav()'), 'the complex nav is injected');
   assert.ok(doc.includes('application/ld+json') && doc.includes('rel="canonical"'), 'the SEO head');
   // The nav covers all 4 sections.
-  for (const h of ["'/udara'", "'/udara/carbon'", "'/udara/oxygen'", "'/udara/breath'"]) {
+  for (const h of ["'/air-quality'", "'/air-quality/carbon'", "'/air-quality/oxygen'", "'/air-quality/breath'"]) {
     assert.ok(serverSrc.includes(h), `the nav/hub ${h}`);
   }
 });
@@ -91,9 +91,9 @@ test('parsing NOAA: the ppm field is found correctly in the real file format', (
   assert.ok(udaraSrc.includes("l[0] !== '#'"), 'the NOAA comment lines are skipped');
 });
 
-test('the /udara hub loads both sources in parallel & does not collapse when one dies', () => {
+test('the /air-quality hub loads both sources in parallel & does not collapse when one dies', () => {
   assert.ok(serverSrc.includes('Promise.allSettled([udara.getAirRanking(), udara.getCo2()])'), 'allSettled over two sources');
   assert.ok(serverSrc.includes("air.status === 'fulfilled' ? air.value : null"), 'air: a failure → null, the page is still served');
-  const geoRoute = serverSrc.match(/app\.get\('\/udara\/carbon'[\s\S]*?\}\);/);
+  const geoRoute = serverSrc.match(/app\.get\('\/air-quality\/carbon'[\s\S]*?\}\);/);
   assert.ok(geoRoute && geoRoute[0].includes('try { co2 = await udara.getCo2(); }'), 'carbon: a guarded catch');
 });

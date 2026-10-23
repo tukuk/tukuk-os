@@ -142,8 +142,8 @@ async function collectionImageIds(c, pages) {
 }
 
 // Filter candidates → only ids that REALLY render an object page. The
-// /seni/objek/:id route requires `getObject(id)` to return an object with `primaryImage`
-// (otherwise → 302 /seni). We verify it up front so the sitemap isn't stuffed with URLs
+// /art/object/:id route requires `getObject(id)` to return an object with `primaryImage`
+// (otherwise → 302 /art). We verify it up front so the sitemap isn't stuffed with URLs
 // that bounce to the hub. Concurrency is capped at 6 so Met isn't flooded; getObject
 // itself is cached 30 days, so rebuilding afterwards is cheap.
 async function keepRenderable(ids, cap) {
@@ -157,7 +157,7 @@ async function keepRenderable(ids, cap) {
   return valid;
 }
 
-// The /seni/objek/<id> URL list for the sitemap — built IN THE BACKGROUND (SWR 6 hours)
+// The /art/object/<id> URL list for the sitemap — built IN THE BACKGROUND (SWR 6 hours)
 // so the sitemap GET is always instant and NEVER 503s even when Met is slow/
 // down (the slow-feed-page pitfall): the caller serves the existing cache (or []
 // when cold → the static hub+collection sitemap) while a fresh build runs in the background.
@@ -172,7 +172,7 @@ function buildObjectUrls(pagesPerCollection) {
     const cols = await Promise.all(COLLECTIONS.map((c) => collectionImageIds(c, pages).catch(() => [])));
     const renderable = await keepRenderable(cols.flat(), 360);
     const urls = [];
-    for (const id of renderable) urls.push(`/seni/objek/${id}`);
+    for (const id of renderable) urls.push(`/art/object/${id}`);
     // Only hold the 6h key when there is content. An empty build (Met transient/failing) → keep
     // the old URLs if any, and schedule a retry right away (5 min) — not 6h.
     const now = Date.now();

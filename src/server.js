@@ -1246,7 +1246,7 @@ app.get('/nasa/satellites/:group', (req, res) => {
   return satellitesRoute(g.slug)(req, res);
 });
 
-// ── WEATHER COMPLEX ROUTES (/cuaca*) — all static paths first, then :slug ──
+// ── WEATHER COMPLEX ROUTES (/weather*) — all static paths first, then :slug ──
 // robots.txt: served from the file with no-store — Cloudflare once delivered a stale
 // copy (the new Sitemap line was not visible at the edge). The file is tiny, the cost
 // is zero, and search engines always read the most current version.
@@ -1259,7 +1259,7 @@ function cuacaHtml(res, html, status) {
   res.status(status || 200).type('html').send(html);
 }
 
-app.get('/cuaca', async (req, res) => {
+app.get('/weather', async (req, res) => {
   try {
     const snap = await wx.getFeaturedSnapshot();
     if (!snap || snap.length < 4) throw new Error('thin snapshot');
@@ -1269,12 +1269,12 @@ app.get('/cuaca', async (req, res) => {
   }
 });
 
-app.get('/cuaca/peta', (req, res) => cuacaHtml(res, cuacaMapPage(req)));
-app.get('/cuaca/kod', (req, res) => cuacaHtml(res, cuacaCodesPage(req)));
-app.get('/cuaca/awan', (req, res) => cuacaHtml(res, cuacaCloudPage(req)));
-app.get('/cuaca/angin', (req, res) => cuacaHtml(res, cuacaWindPage(req)));
+app.get('/weather/map', (req, res) => cuacaHtml(res, cuacaMapPage(req)));
+app.get('/weather/codes', (req, res) => cuacaHtml(res, cuacaCodesPage(req)));
+app.get('/weather/clouds', (req, res) => cuacaHtml(res, cuacaCloudPage(req)));
+app.get('/weather/wind', (req, res) => cuacaHtml(res, cuacaWindPage(req)));
 
-app.get('/cuaca/ekstrem', async (req, res) => {
+app.get('/weather/extremes', async (req, res) => {
   try {
     const snap = await wx.getFeaturedSnapshot();
     if (!snap || snap.length < 4) throw new Error('thin snapshot');
@@ -1285,14 +1285,14 @@ app.get('/cuaca/ekstrem', async (req, res) => {
 });
 
 // Search → geocoding → 302 to the city page. Slugs exist for any name in the world.
-app.get('/cuaca/cari', async (req, res) => {
+app.get('/weather/search', async (req, res) => {
   const q = String(req.query.q || '').trim();
-  if (!q || q.length > 60) return res.redirect(301, '/cuaca');
+  if (!q || q.length > 60) return res.redirect(301, '/weather');
   try {
     let city = wx.findCity(q);
     if (!city) city = await wx.geocode(q);
     if (!city) return cuacaHtml(res, weatherBusy(`No city named “${q}” was found`), 404);
-    return res.redirect(302, `/cuaca/${city.slug}`);
+    return res.redirect(302, `/weather/${city.slug}`);
   } catch {
     return cuacaHtml(res, weatherBusy('The city search could not be processed in time'), 503);
   }
@@ -1300,7 +1300,7 @@ app.get('/cuaca/cari', async (req, res) => {
 
 async function cuacaCityHandler(req, res, view) {
   const slug = wx.slugify(req.params.slug);
-  if (!slug || slug.length > 60) return res.redirect(301, '/cuaca');
+  if (!slug || slug.length > 60) return res.redirect(301, '/weather');
   let city;
   try { city = await wx.resolveCity(slug); } catch { city = null; }
   if (!city) return cuacaHtml(res, weatherBusy(`The weather page for “${slug}” is not available yet`), 404);
@@ -1326,12 +1326,12 @@ async function cuacaCityHandler(req, res, view) {
   }
 }
 
-app.get('/cuaca/:slug/udara', (req, res) => cuacaCityHandler(req, res, 'udara'));
-app.get('/cuaca/:slug/surya', (req, res) => cuacaCityHandler(req, res, 'surya'));
-app.get('/cuaca/:slug', (req, res) => cuacaCityHandler(req, res, 'kota'));
+app.get('/weather/:slug/air', (req, res) => cuacaCityHandler(req, res, 'udara'));
+app.get('/weather/:slug/sun', (req, res) => cuacaCityHandler(req, res, 'surya'));
+app.get('/weather/:slug', (req, res) => cuacaCityHandler(req, res, 'kota'));
 
-// ── EARTHQUAKE COMPLEX ROUTES (/gempa*) — USGS feed, static paths first, then :region ──
-app.get('/gempa', async (req, res) => {
+// ── EARTHQUAKE COMPLEX ROUTES (/earthquakes*) — USGS feed, static paths first, then :region ──
+app.get('/earthquakes', async (req, res) => {
   try {
     const [rows, myRows] = await Promise.all([
       gp.regionFeed(gp.findRegion('dunia')),
@@ -1344,10 +1344,10 @@ app.get('/gempa', async (req, res) => {
   }
 });
 
-app.get('/gempa/penjelasan', (req, res) => res.status(200).type('html').send(gempaExplainPage(req)));
+app.get('/earthquakes/explained', (req, res) => res.status(200).type('html').send(gempaExplainPage(req)));
 
 // :region is registered AFTER the literal paths — the lookup happens inside the handler (no TDZ).
-app.get('/gempa/:region', async (req, res) => {
+app.get('/earthquakes/:region', async (req, res) => {
   const region = gp.findRegion(req.params.region);
   if (!region) return res.status(404).type('html').send(gempaBusy(`Region "${req.params.region}" is not in our list`));
   try {
@@ -1358,10 +1358,10 @@ app.get('/gempa/:region', async (req, res) => {
   }
 });
 
-// ── HOLIDAY COMPLEX ROUTES (/cuti*) — world public-holiday calendar + MY state tables ──
-// HUB /cuti — WORLD: holiday calendars for 60 countries (Nager.Date, no key).
-// The Malaysian state tables stay at /cuti/2026, /cuti/2027 and /cuti/:negeri.
-app.get('/cuti', async (req, res) => {
+// ── HOLIDAY COMPLEX ROUTES (/holidays*) — world public-holiday calendar + MY state tables ──
+// HUB /holidays — WORLD: holiday calendars for 60 countries (Nager.Date, no key).
+// The Malaysian state tables stay at /holidays/2026, /holidays/2027 and /holidays/:negeri.
+app.get('/holidays', async (req, res) => {
   try {
     const [world, rows] = await Promise.all([cd.loadWorld(2026), ng.loadCountries()]);
     res.status(200).type('html').send(cutiHubPage(req, world, rows));
@@ -1370,8 +1370,8 @@ app.get('/cuti', async (req, res) => {
   }
 });
 
-app.get('/cuti/penjelasan', (req, res) => res.status(200).type('html').send(cutiExplainPage(req)));
-app.get('/cuti/hujung-minggu-panjang', async (req, res) => {
+app.get('/holidays/explained', (req, res) => res.status(200).type('html').send(cutiExplainPage(req)));
+app.get('/holidays/long-weekends', async (req, res) => {
   try {
     const [worldLw, rows26, rows27] = await Promise.all([
       cd.loadWorldLongWeekends(2026).catch(() => null),
@@ -1385,8 +1385,8 @@ app.get('/cuti/hujung-minggu-panjang', async (req, res) => {
   }
 });
 
-// /cuti/2026, /cuti/2027 — the year is validated INSIDE the handler (never via :negeri).
-app.get(/^\/cuti\/(2026|2027)$/, async (req, res, next) => {
+// /holidays/2026, /holidays/2027 — the year is validated INSIDE the handler (never via :negeri).
+app.get(/^\/holidays\/(2026|2027)$/, async (req, res, next) => {
   const year = Number(req.params[0]);
   try {
     const rows = await cu.getHolidays(year);
@@ -1397,12 +1397,12 @@ app.get(/^\/cuti\/(2026|2027)$/, async (req, res, next) => {
   }
 });
 
-// /cuti/dunia — the old index; the main hub is world-wide now, so this is a plain 301.
-app.get('/cuti/dunia', (req, res) => res.redirect(301, '/cuti'));
+// /holidays/world — the old index; the main hub is world-wide now, so this is a plain 301.
+app.get('/holidays/world', (req, res) => res.redirect(301, '/holidays'));
 
 // Country and region holiday pages — our own ASCII slugs (not the Country Complex
 // slugs, which can carry broken spellings such as 't-rkiye'). Regions are checked first.
-app.get('/cuti/dunia/:slug', async (req, res) => {
+app.get('/holidays/world/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase();
   const region = cd.findRegion(slug);
   const coun = cd.findCountryBySlug(slug);
@@ -1428,7 +1428,7 @@ app.get('/cuti/dunia/:slug', async (req, res) => {
 });
 
 // :negeri is registered AFTER the literal paths — the lookup happens inside the handler (no TDZ).
-app.get('/cuti/:negeri', async (req, res) => {
+app.get('/holidays/:negeri', async (req, res) => {
   const st = cu.findState(req.params.negeri);
   if (!st) return res.status(404).type('html').send(cutiBusy(`State "${req.params.negeri}" is not in our list`));
   let year = Number(req.query.tahun || cu.YEAR_MIN);
@@ -1441,10 +1441,10 @@ app.get('/cuti/:negeri', async (req, res) => {
   }
 });
 
-// ── COUNTRY COMPLEX ROUTES (/negara*) — world-countries + World Bank, no API key ──
+// ── COUNTRY COMPLEX ROUTES (/countries*) — world-countries + World Bank, no API key ──
 // Hub + :slug; continent/country are validated INSIDE the handler (in order:
 // region → country → 404). The data is cached for 30 days, so later requests are fast.
-app.get('/negara', async (req, res) => {
+app.get('/countries', async (req, res) => {
   try {
     const rows = await ng.loadCountries();
     if (!rows || rows.length < 200) throw new Error('empty dataset');
@@ -1454,7 +1454,7 @@ app.get('/negara', async (req, res) => {
   }
 });
 
-app.get('/negara/:slug', async (req, res) => {
+app.get('/countries/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase();
   let rows;
   try {
@@ -1470,9 +1470,9 @@ app.get('/negara/:slug', async (req, res) => {
   return res.status(404).type('html').send(negaraBusy(`Country "${slug}" is not in our list`));
 });
 
-// ── STATISTICS COMPLEX ROUTES (/statistik*) — World Bank Open Data, no API key ──
+// ── STATISTICS COMPLEX ROUTES (/statistics*) — World Bank Open Data, no API key ──
 // Hub + one page per indicator; the slug is validated INSIDE the handler (TDZ-safe).
-app.get('/statistik', async (req, res) => {
+app.get('/statistics', async (req, res) => {
   try {
     const rows = await ng.loadCountries();
     if (!rows || rows.length < 200) throw new Error('empty dataset');
@@ -1482,7 +1482,7 @@ app.get('/statistik', async (req, res) => {
   }
 });
 
-app.get('/statistik/:slug', async (req, res) => {
+app.get('/statistics/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase();
   const ind = st.findIndicator(slug);
   if (!ind) return res.status(404).type('html').send(statistikBusy(`Indicator "${slug}" is not in our list`));
@@ -1497,8 +1497,8 @@ app.get('/statistik/:slug', async (req, res) => {
   }
 });
 
-// ── DISASTER COMPLEX ROUTES (/bencana*) — the NASA EONET event feed, no key ──
-app.get('/bencana', async (req, res) => {
+// ── DISASTER COMPLEX ROUTES (/disasters*) — the NASA EONET event feed, no key ──
+app.get('/disasters', async (req, res) => {
   try {
     const all = await bc.loadAllOpen();
     res.status(200).type('html').send(bencanaHubPage(req, all));
@@ -1507,7 +1507,7 @@ app.get('/bencana', async (req, res) => {
   }
 });
 
-app.get('/bencana/:cat', async (req, res) => {
+app.get('/disasters/:cat', async (req, res) => {
   const cat = bc.findCat(String(req.params.cat || '').toLowerCase());
   if (!cat) return res.status(404).type('html').send(bencanaBusy(`Category "${req.params.cat}" is not on our list`));
   try {
@@ -1518,7 +1518,7 @@ app.get('/bencana/:cat', async (req, res) => {
   }
 });
 
-app.get('/bencana/:cat/:id', async (req, res) => {
+app.get('/disasters/:cat/:id', async (req, res) => {
   const cat = bc.findCat(String(req.params.cat || '').toLowerCase());
   const id = String(req.params.id || '');
   if (!cat || !/^EONET_\d+$/.test(id)) return res.status(404).type('html').send(bencanaBusy('That event page is not on our list'));
@@ -1530,19 +1530,19 @@ app.get('/bencana/:cat/:id', async (req, res) => {
   }
 });
 
-// ── ELEMENT COMPLEX ROUTES (/unsur*) — periodic table, STATIC data (no API) ──
+// ── ELEMENT COMPLEX ROUTES (/elements*) — periodic table, STATIC data (no API) ──
 // The data is embedded in code → it can never 503 and never calls an external API (a lesson
-// from the Met WAF incident). /unsur/:q accepts a name, a symbol (Au) or an atomic number.
-app.get('/unsur', (req, res) => res.status(200).type('html').send(elementsHubPage()));
-app.get('/unsur/:q', (req, res) => {
+// from the Met WAF incident). /elements/:q accepts a name, a symbol (Au) or an atomic number.
+app.get('/elements', (req, res) => res.status(200).type('html').send(elementsHubPage()));
+app.get('/elements/:q', (req, res) => {
   const e = els.findElement(req.params.q);
   if (!e) return res.status(404).type('html').send(elementsNotFound(req.params.q));
   res.status(200).type('html').send(elementPage(req, e));
 });
 
-// ── DEEP-SKY COMPLEX ROUTES (/buruj*, /messier*) — STATIC data (no API) ──
-app.get('/buruj', (req, res) => res.status(200).type('html').send(burujHubPage()));
-app.get('/buruj/:slug', (req, res) => {
+// ── DEEP-SKY COMPLEX ROUTES (/constellations*, /messier*) — STATIC data (no API) ──
+app.get('/constellations', (req, res) => res.status(200).type('html').send(burujHubPage()));
+app.get('/constellations/:slug', (req, res) => {
   const c = sky.findConstellation(req.params.slug);
   if (!c) return res.status(404).type('html').send(burujNotFound(req.params.slug));
   res.status(200).type('html').send(constellationPage(c));
@@ -1554,26 +1554,26 @@ app.get('/messier/:id', (req, res) => {
   res.status(200).type('html').send(messierPage(m));
 });
 
-// ── PROVERBS COMPLEX ROUTES (/pepatah*) — Proverbs of the World, STATIC ───────
+// ── PROVERBS COMPLEX ROUTES (/proverbs*) — Proverbs of the World, STATIC ───────
 // Embedded data → can never 503 and never calls an external API. The country routes
-// (/pepatah/negara/:c, 3 segments) do not overlap /pepatah/:slug (2 segments).
-app.get('/pepatah', (req, res) => res.status(200).type('html').send(pepatahHubPage()));
-app.get('/pepatah/negara/:c', (req, res) => {
+// (/proverbs/country/:c, 3 segments) do not overlap /proverbs/:slug (2 segments).
+app.get('/proverbs', (req, res) => res.status(200).type('html').send(pepatahHubPage()));
+app.get('/proverbs/country/:c', (req, res) => {
   const c = pv.findCountry(req.params.c);
   if (!c) return res.status(404).type('html').send(pepatahNotFound(req.params.c));
   res.status(200).type('html').send(pepatahCountryPage(c));
 });
-app.get('/pepatah/:slug', (req, res) => {
+app.get('/proverbs/:slug', (req, res) => {
   const p = pv.findProverb(req.params.slug);
   if (!p) return res.status(404).type('html').send(pepatahNotFound(req.params.slug));
   res.status(200).type('html').send(pepatahProverbPage(p));
 });
 
-// ── WORLD EXTREMES ROUTES (/rekod*) — Superlatives of the Earth, STATIC ────────
+// ── WORLD EXTREMES ROUTES (/records*) — Superlatives of the Earth, STATIC ────────
 // Embedded data → can never 503 and never calls an external API. Only the hub and
-// item pages (/rekod/:slug, 1 segment), so nothing overlaps.
-app.get('/rekod', (req, res) => res.status(200).type('html').send(rekodHubPage()));
-app.get('/rekod/:slug', (req, res) => {
+// item pages (/records/:slug, 1 segment), so nothing overlaps.
+app.get('/records', (req, res) => res.status(200).type('html').send(rekodHubPage()));
+app.get('/records/:slug', (req, res) => {
   const r = rek.findRecord(req.params.slug);
   if (!r) return res.status(404).type('html').send(rekodNotFound(req.params.slug));
   res.status(200).type('html').send(rekodRecordPage(r));
@@ -1620,11 +1620,11 @@ app.post('/api/traffic/vote', (req, res) => {
   res.json({ ok: true, report: r });
 });
 
-// ── TECHNOLOGY COMPLEX ROUTES (/teknologi*) — live tech pulse, Hacker News feed ──
+// ── TECHNOLOGY COMPLEX ROUTES (/technology*) — live tech pulse, Hacker News feed ──
 // API-backed with a 10-minute stale-while-revalidate cache (see src/teknologi.js):
 // a cached list always beats an error, so only a cold cache PLUS a failed call
 // reaches the 503 busy shell. Unknown feed slugs 404 WITHOUT calling the API.
-app.get('/teknologi', async (req, res) => {
+app.get('/technology', async (req, res) => {
   try {
     const stories = await teknologi.frontPage();
     res.status(200).type('html').send(teknologiHubPage(stories));
@@ -1633,7 +1633,7 @@ app.get('/teknologi', async (req, res) => {
     res.status(503).type('html').send(teknologiBusy());
   }
 });
-app.get('/teknologi/:feed', async (req, res) => {
+app.get('/technology/:feed', async (req, res) => {
   const f = TK_FEEDS[req.params.feed];
   if (!f) return res.status(404).type('html').send(teknologiNotFound(req.params.feed));
   try {
@@ -1645,11 +1645,11 @@ app.get('/teknologi/:feed', async (req, res) => {
   }
 });
 
-// ── MAPS & NAVIGATION (/peta) — OSRM routing + Nominatim search, all keyless ──
+// ── MAPS & NAVIGATION (/maps) — OSRM routing + Nominatim search, all keyless ──
 // The page itself is static; the two JSON APIs proxy the public OSM engines
 // through our 24 h / 30 min caches (see src/peta.js) so the browser only ever
 // talks to tukuk.org and the upstreams see one request per unique query.
-app.get('/peta', (req, res) => {
+app.get('/maps', (req, res) => {
   try {
     res.status(200).type('html').send(petaPage());
   } catch (e) {
@@ -1685,7 +1685,7 @@ app.get('/api/peta/route', async (req, res) => {
     res.status(422).json({ ok: false, error: String(e.message || 'routing failed').slice(0, 160) });
   }
 });
-app.get('/peta/jarak', (req, res) => {
+app.get('/maps/distance', (req, res) => {
   try {
     res.status(200).type('html').send(jarakPage());
   } catch (e) {
@@ -1693,7 +1693,7 @@ app.get('/peta/jarak', (req, res) => {
     res.status(503).type('html').send(petaBusy());
   }
 });
-app.get('/peta/matahari', (req, res) => {
+app.get('/maps/sun', (req, res) => {
   try {
     res.status(200).type('html').send(matahariPage());
   } catch (e) {
@@ -1701,7 +1701,7 @@ app.get('/peta/matahari', (req, res) => {
     res.status(503).type('html').send(petaBusy());
   }
 });
-app.get('/peta/jam', (req, res) => {
+app.get('/maps/clock', (req, res) => {
   try {
     res.status(200).type('html').send(jamPage());
   } catch (e) {
@@ -1709,12 +1709,12 @@ app.get('/peta/jam', (req, res) => {
     res.status(503).type('html').send(petaBusy());
   }
 });
-app.get('/langit', (req, res) => res.redirect(301, '/peta/langit'));
+app.get('/langit', (req, res) => res.redirect(301, '/maps/sky'));
 // Dead paths that still get real traffic (37 and 20 hits in the week of
 // 2026-10-23, per the [http] journal): send them somewhere useful instead of 404.
 app.get('/explore', (req, res) => res.redirect(301, '/os'));
 app.get('/builder', (req, res) => res.redirect(301, '/download'));
-app.get('/peta/langit', (req, res) => {
+app.get('/maps/sky', (req, res) => {
   try {
     res.status(200).type('html').send(langitPage());
   } catch (e) {
@@ -1746,6 +1746,16 @@ app.get('/alat/unit', (req, res) => {
 // Every tool on this site is written in English, so its URL is English too. These older
 // paths are still in search results and old bookmarks, so each one redirects permanently
 // instead of 404ing — the canonical page, its canonical tag and JSON-LD all agree on one URL.
+function legacyRedirect(from, to, slugMap) {
+  app.get(from, (req, res) => {
+    let target = to;
+    Object.keys(req.params).forEach(function (k) {
+      const raw = String(req.params[k]);
+      target = target.replace(':' + k, encodeURIComponent(slugMap && slugMap[raw] ? slugMap[raw] : raw));
+    });
+    res.redirect(301, target);
+  });
+}
 [
   ['/alat/tarikh', '/alat/date'],
   ['/alat/warna', '/alat/color'],
@@ -1760,6 +1770,90 @@ app.get('/alat/unit', (req, res) => {
 ].forEach(function (pair) {
   app.get(pair[0], (req, res) => res.redirect(301, pair[1]));
 });
+
+// ── Legacy Malay section URLs → their English canonical URL ──
+// The content sections were named in Malay before the English-only rule. The same pages now
+// live under English paths, so every old address answers 301 with the parameter intact (a city,
+// a region, an event id) rather than dropping the visitor on the hub. Specific paths are listed
+// before the parameterised ones: Express takes the first match, so /weather/map must beat
+// /weather/:slug. A third element is an optional old-slug → new-slug map.
+[
+  ['/cuaca', '/weather'],
+  ['/cuaca/peta', '/weather/map'],
+  ['/cuaca/ekstrem', '/weather/extremes'],
+  ['/cuaca/kod', '/weather/codes'],
+  ['/cuaca/awan', '/weather/clouds'],
+  ['/cuaca/angin', '/weather/wind'],
+  ['/cuaca/cari', '/weather/search'],
+  ['/cuaca/:slug/surya', '/weather/:slug/sun'],
+  ['/cuaca/:slug/udara', '/weather/:slug/air'],
+  ['/cuaca/:slug', '/weather/:slug'],
+  ['/gempa', '/earthquakes'],
+  ['/gempa/penjelasan', '/earthquakes/explained'],
+  ['/gempa/asia-tenggara', '/earthquakes/southeast-asia'],
+  ['/gempa/pasifik-timur', '/earthquakes/east-pacific'],
+  ['/gempa/jepun', '/earthquakes/japan'],
+  ['/gempa/dunia', '/earthquakes/world'],
+  ['/gempa/:region', '/earthquakes/:region'],
+  ['/cuti', '/holidays'],
+  ['/cuti/2026', '/holidays/2026'],
+  ['/cuti/2027', '/holidays/2027'],
+  ['/cuti/dunia/:slug', '/holidays/world/:slug'],
+  ['/cuti/dunia', '/holidays/world'],
+  ['/cuti/hujung-minggu-panjang', '/holidays/long-weekends'],
+  ['/cuti/penjelasan', '/holidays/explained'],
+  ['/cuti/:negeri', '/holidays/:negeri'],
+  ['/negara', '/countries'],
+  ['/negara/:slug', '/countries/:slug'],
+  ['/statistik', '/statistics'],
+  ['/statistik/:slug', '/statistics/:slug'],
+  ['/bencana', '/disasters'],
+  ['/bencana/:cat/:id', '/disasters/:cat/:id', bc.LEGACY_SLUGS],
+  ['/bencana/:cat', '/disasters/:cat', bc.LEGACY_SLUGS],
+  ['/peta', '/maps'],
+  ['/peta/jarak', '/maps/distance'],
+  ['/peta/jam', '/maps/clock'],
+  ['/peta/matahari', '/maps/sun'],
+  ['/peta/langit', '/maps/sky'],
+  ['/muzik', '/charts'],
+  ['/muzik/:cc', '/charts/:cc'],
+  ['/bendera', '/flags'],
+  ['/bendera/teka', '/flags/quiz'],
+  ['/bendera/studio', '/flags/studio'],
+  ['/bendera/:slug', '/flags/:slug'],
+  ['/teknologi', '/technology'],
+  ['/teknologi/:feed', '/technology/:feed'],
+  ['/udara', '/air-quality'],
+  ['/udara/oxygen', '/air-quality/oxygen'],
+  ['/udara/breath', '/air-quality/breath'],
+  ['/udara/carbon', '/air-quality/carbon'],
+  ['/akademi', '/academy'],
+  ['/akademi/:track/:slug', '/academy/:track/:slug'],
+  ['/akademi/:track', '/academy/:track'],
+  ['/wang', '/money'],
+  ['/wang/kadar', '/money/rates'],
+  ['/wang/tukar/:from/:to', '/money/convert/:from/:to'],
+  ['/seni', '/art'],
+  ['/seni/koleksi/:slug', '/art/collection/:slug'],
+  ['/seni/objek/:id', '/art/object/:id'],
+  ['/hidupan', '/life'],
+  ['/hidupan/:slug', '/life/:slug'],
+  ['/unsur', '/elements'],
+  ['/unsur/:q', '/elements/:q'],
+  ['/buruj', '/constellations'],
+  ['/buruj/:slug', '/constellations/:slug'],
+  ['/pepatah', '/proverbs'],
+  ['/pepatah/negara/:c', '/proverbs/country/:c'],
+  ['/pepatah/:slug', '/proverbs/:slug'],
+  ['/rekod', '/records'],
+  ['/rekod/:slug', '/records/:slug'],
+  ['/sejarah', '/history'],
+  ['/sejarah/:mm/:dd', '/history/:mm/:dd'],
+  ['/kota', '/cities'],
+  ['/kota/:slug', '/cities/:slug'],
+  ['/warisan', '/heritage'],
+  ['/warisan/:slug', '/heritage/:slug'],
+].forEach(function (pair) { legacyRedirect(pair[0], pair[1], pair[2]); });
 
 app.get('/alat/date', (req, res) => {
   try {
@@ -1867,8 +1961,8 @@ app.get('/api/kamus/translate', limiter.search, async (req, res) => {
   }
 });
 
-// ── /muzik — World Music Charts (Apple keyless feeds, 24h SWR cache in src/muzik.js) ──
-app.get('/muzik', async (req, res) => {
+// ── /charts — World Music Charts (Apple keyless feeds, 24h SWR cache in src/muzik.js) ──
+app.get('/charts', async (req, res) => {
   try {
     res.status(200).type('html').send(await muzikHubPage());
   } catch (e) {
@@ -1878,7 +1972,7 @@ app.get('/muzik', async (req, res) => {
 });
 
 // The 30-second preview clip for one chart track (iTunes Lookup, cached a week).
-app.get('/muzik/api/preview', limiter.search, async (req, res) => {
+app.get('/charts/api/preview', limiter.search, async (req, res) => {
   try {
     res.json(await muzikApi.previewFor(req.query.id));
   } catch (e) {
@@ -1887,7 +1981,7 @@ app.get('/muzik/api/preview', limiter.search, async (req, res) => {
 });
 
 // One country's Top 25. The code must be a storefront we verified against the live feed.
-app.get('/muzik/:cc', async (req, res) => {
+app.get('/charts/:cc', async (req, res) => {
   const cc = String(req.params.cc || '').toLowerCase();
   if (!muzikApi.hasCountry(cc)) {
     res.status(404).type('html').send(muzikNotFoundPage());
@@ -1901,8 +1995,8 @@ app.get('/muzik/:cc', async (req, res) => {
   }
 });
 
-// ── /bendera — Flags of the World (world-countries via src/negara + Wikipedia flag stories) ──
-app.get('/bendera', async (req, res) => {
+// ── /flags — Flags of the World (world-countries via src/negara + Wikipedia flag stories) ──
+app.get('/flags', async (req, res) => {
   try {
     const rows = await ng.loadCountries();
     if (!rows || rows.length < 200) throw new Error('empty dataset');
@@ -1913,9 +2007,9 @@ app.get('/bendera', async (req, res) => {
   }
 });
 
-// The quiz is a literal segment, so it must be registered BEFORE /bendera/:slug —
+// The quiz is a literal segment, so it must be registered BEFORE /flags/:slug —
 // otherwise the parameterised route swallows it and 404s on slug "teka".
-app.get('/bendera/teka', async (req, res) => {
+app.get('/flags/quiz', async (req, res) => {
   try {
     const rows = await ng.loadCountries();
     if (!rows || rows.length < 200) throw new Error('empty dataset');
@@ -1926,11 +2020,11 @@ app.get('/bendera/teka', async (req, res) => {
   }
 });
 
-// Flag Studio is another literal segment, so it also sits before /bendera/:slug.
+// Flag Studio is another literal segment, so it also sits before /flags/:slug.
 // It needs no network at all: the measured palettes are read from disk at startup.
 // If that file is unusable the matches would be wrong rather than merely missing,
 // so the route refuses to render a page that would lie.
-app.get('/bendera/studio', (req, res) => {
+app.get('/flags/studio', (req, res) => {
   if (!FD_ROWS) {
     console.warn('[bendera/studio] no usable palette data');
     res.status(503).type('html').send(benderaBusy());
@@ -1939,7 +2033,7 @@ app.get('/bendera/studio', (req, res) => {
   res.status(200).type('html').send(benderaStudioPage());
 });
 
-app.get('/bendera/:slug', async (req, res) => {
+app.get('/flags/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase();
   let rows;
   try {
@@ -1961,7 +2055,7 @@ app.get('/bendera/:slug', async (req, res) => {
 });
 
 // Two places → straight-line (great-circle) plus the road reality in one
-// round trip. The road leg reuses the same router as /peta; when no road
+// round trip. The road leg reuses the same router as /maps; when no road
 // exists the straight number still answers honestly, with the reason attached.
 app.get('/api/peta/distance', async (req, res) => {
   const pt = (s) => {
@@ -2047,17 +2141,17 @@ app.get('/social', (req, res) => {
   }
 });
 
-// ── HISTORY COMPLEX ROUTES (/sejarah*) — "On this day", a Wikipedia REST feed ──
+// ── HISTORY COMPLEX ROUTES (/history*) — "On this day", a Wikipedia REST feed ──
 // API-backed: a 30d cache + SWR (the sejarah.js module). An invalid date → 404 WITHOUT
-// calling the API; the feed fails and there is no cache → 503 busy. /sejarah/:mm/:dd (2 segments
-// after /sejarah) does not overlap the /sejarah hub.
-app.get('/sejarah', async (req, res) => {
+// calling the API; the feed fails and there is no cache → 503 busy. /history/:mm/:dd (2 segments
+// after /history) does not overlap the /history hub.
+app.get('/history', async (req, res) => {
   const t = sj.todayParts();
   let today = null;
   try { today = await sj.loadDay(t.mm, t.dd); } catch {}
   res.status(200).type('html').send(sejarahHubPage(today));
 });
-app.get('/sejarah/:mm/:dd', async (req, res) => {
+app.get('/history/:mm/:dd', async (req, res) => {
   const v = sj.validDate(req.params.mm, req.params.dd);
   if (!v) return res.status(404).type('html').send(sejarahNotFound(`${req.params.mm}/${req.params.dd}`));
   let data = null;
@@ -2066,11 +2160,11 @@ app.get('/sejarah/:mm/:dd', async (req, res) => {
   res.status(200).type('html').send(sejarahDayPage(data));
 });
 
-// ── CITY COMPLEX ROUTES (/kota*) — World Cities, a static list + a fail-open wiki ─
+// ── CITY COMPLEX ROUTES (/cities*) — World Cities, a static list + a fail-open wiki ─
 // The core of the page is STATIC data → it can never 503. The Wikipedia summary is
 // BEST-EFFORT: a failed fetch → sum=null → the page still returns 200 without a description.
-app.get('/kota', (req, res) => res.status(200).type('html').send(kotaHubPage()));
-app.get('/kota/:slug', async (req, res) => {
+app.get('/cities', (req, res) => res.status(200).type('html').send(kotaHubPage()));
+app.get('/cities/:slug', async (req, res) => {
   const c = kt.findCity(req.params.slug);
   if (!c) {
     const r = kt.findRegion(req.params.slug);
@@ -2082,9 +2176,9 @@ app.get('/kota/:slug', async (req, res) => {
   res.status(200).type('html').send(kotaPage(c, sum));
 });
 
-// ── WARISAN COMPLEX ROUTES (/warisan*) — UNESCO World Heritage, static list + fail-open wiki ─
-app.get('/warisan', (req, res) => res.status(200).type('html').send(warisanHubPage()));
-app.get('/warisan/:slug', async (req, res) => {
+// ── HERITAGE COMPLEX ROUTES (/heritage*) — UNESCO World Heritage, static list + fail-open wiki ─
+app.get('/heritage', (req, res) => res.status(200).type('html').send(warisanHubPage()));
+app.get('/heritage/:slug', async (req, res) => {
   const s = wr.findSite(req.params.slug);
   if (!s) {
     const r = wr.findRegion(req.params.slug);
@@ -3383,7 +3477,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/peta/langit', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/charts', '/charts/us', '/charts/gb', '/charts/jp', '/charts/kr', '/charts/ng', '/charts/br', '/charts/in', '/charts/my', '/charts/de', '/charts/id', '/charts/au', '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -3447,15 +3541,15 @@ app.get(/^\/sitemap-nasa-(\d{4})\.xml$/, (req, res) => {
 
 // ── SITEMAP CUACA — every DB city × 3 pages (city, air, solar) + the statics ──
 // Dynamically geocoded cities are NOT listed (there is no fixed list) but always
-// discovered through the /cuaca hub link hub + cross-links on the city pages.
+// discovered through the /weather hub link hub + cross-links on the city pages.
 app.get('/sitemap-cuaca.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
-  const special = ['/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin']
-    .map((p) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>${p === '/cuaca' ? '0.9' : '0.7'}</priority>\n  </url>`).join('\n');
+  const special = ['/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind']
+    .map((p) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>${p === '/weather' ? '0.9' : '0.7'}</priority>\n  </url>`).join('\n');
   const cities = wx.CITIES.map((c) => (
-    `  <url>\n    <loc>https://tukuk.org/cuaca/${c.slug}</loc>\n    <changefreq>hourly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`
-    + `  <url>\n    <loc>https://tukuk.org/cuaca/${c.slug}/udara</loc>\n    <changefreq>hourly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`
-    + `  <url>\n    <loc>https://tukuk.org/cuaca/${c.slug}/surya</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.6</priority>\n  </url>`
+    `  <url>\n    <loc>https://tukuk.org/weather/${c.slug}</loc>\n    <changefreq>hourly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`
+    + `  <url>\n    <loc>https://tukuk.org/weather/${c.slug}/air</loc>\n    <changefreq>hourly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`
+    + `  <url>\n    <loc>https://tukuk.org/weather/${c.slug}/sun</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.6</priority>\n  </url>`
   )).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
@@ -3466,11 +3560,11 @@ app.get('/sitemap-cuaca.xml', (req, res) => {
 // ── SITEMAP GEMPA — hub + 5 regions (hourly) + explanation (monthly) ──
 app.get('/sitemap-gempa.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
-  const urls = ['/gempa']
-    .concat(gp.REGIONS.map((r) => `/gempa/${r.slug}`))
-    .map((p) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>${p === '/gempa' ? '0.9' : '0.7'}</priority>\n  </url>`)
+  const urls = ['/earthquakes']
+    .concat(gp.REGIONS.map((r) => `/earthquakes/${r.slug}`))
+    .map((p) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>${p === '/earthquakes' ? '0.9' : '0.7'}</priority>\n  </url>`)
     .join('\n');
-  const explain = `  <url>\n    <loc>https://tukuk.org/gempa/penjelasan</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>`;
+  const explain = `  <url>\n    <loc>https://tukuk.org/earthquakes/explained</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>`;
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + urls + '\n' + explain + '\n</urlset>\n'
@@ -3481,11 +3575,11 @@ app.get('/sitemap-gempa.xml', (req, res) => {
 app.get('/sitemap-cuti.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio, freq) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq || 'weekly'}</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const special = [one('/cuti', '0.9'), one('/cuti/hujung-minggu-panjang', '0.8'),
-    one(`/cuti/${cu.YEAR_MIN}`, '0.7'), one(`/cuti/${cu.YEAR_MAX}`, '0.7'), one('/cuti/penjelasan', '0.6', 'monthly')].join('\n');
-  const world = cd.REGIONS.map((r) => one(`/cuti/dunia/${r.slug}`, '0.7', 'monthly'))
-    .concat(cd.COUNTRIES.map(([cca2]) => one(`/cuti/dunia/${cd.findCountry(cca2).slug}`, '0.6', 'monthly'))).join('\n');
-  const states = cu.STATES.map((st) => `  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n  <url>\n    <loc>https://tukuk.org/cuti/${st.slug}?tahun=${cu.YEAR_MAX}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>`).join('\n');
+  const special = [one('/holidays', '0.9'), one('/holidays/long-weekends', '0.8'),
+    one(`/holidays/${cu.YEAR_MIN}`, '0.7'), one(`/holidays/${cu.YEAR_MAX}`, '0.7'), one('/holidays/explained', '0.6', 'monthly')].join('\n');
+  const world = cd.REGIONS.map((r) => one(`/holidays/world/${r.slug}`, '0.7', 'monthly'))
+    .concat(cd.COUNTRIES.map(([cca2]) => one(`/holidays/world/${cd.findCountry(cca2).slug}`, '0.6', 'monthly'))).join('\n');
+  const states = cu.STATES.map((st) => `  <url>\n    <loc>https://tukuk.org/holidays/${st.slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n  <url>\n    <loc>https://tukuk.org/holidays/${st.slug}?tahun=${cu.YEAR_MAX}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>`).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + special + '\n' + world + '\n' + states + '\n</urlset>\n'
@@ -3498,12 +3592,12 @@ app.get('/sitemap-cuti.xml', (req, res) => {
 app.get('/sitemap-negara.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const special = ['/negara'].concat(ng.REGIONS.map((r) => `/negara/${r.slug}`))
-    .map((p) => one(p, p === '/negara' ? '0.9' : '0.7')).join('\n');
+  const special = ['/countries'].concat(ng.REGIONS.map((r) => `/countries/${r.slug}`))
+    .map((p) => one(p, p === '/countries' ? '0.9' : '0.7')).join('\n');
   let countries = '';
   try {
     const rows = await ng.loadCountries();
-    countries = rows.map((c) => one(`/negara/${c.slug}`, '0.6')).join('\n');
+    countries = rows.map((c) => one(`/countries/${c.slug}`, '0.6')).join('\n');
   } catch { /* source slow → hub + continents only */ }
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
@@ -3515,18 +3609,18 @@ app.get('/sitemap-negara.xml', async (req, res) => {
 app.get('/sitemap-unsur.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/unsur', '0.9')].concat(els.ELEMENTS.map((e) => one(`/unsur/${e.slug}`, '0.6'))).join('\n');
+  const urls = [one('/elements', '0.9')].concat(els.ELEMENTS.map((e) => one(`/elements/${e.slug}`, '0.6'))).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
 });
 
-// ── SITEMAP DEEP-SKY — 2 hubs + 88 /buruj pages + 110 Messier (a static list) ──
+// ── SITEMAP DEEP-SKY — 2 hubs + 88 /constellations pages + 110 Messier (a static list) ──
 app.get('/sitemap-deepsky.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/buruj', '0.9'), one('/messier', '0.9')]
-    .concat(sky.CONSTELLATIONS.map((c) => one(`/buruj/${c.slug}`, '0.6')))
+  const urls = [one('/constellations', '0.9'), one('/messier', '0.9')]
+    .concat(sky.CONSTELLATIONS.map((c) => one(`/constellations/${c.slug}`, '0.6')))
     .concat(sky.MESSIER.map((m) => one(`/messier/${m.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
@@ -3538,9 +3632,9 @@ app.get('/sitemap-deepsky.xml', (req, res) => {
 app.get('/sitemap-pepatah.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/pepatah', '0.9')]
-    .concat(pv.COUNTRIES.map((c) => one(`/pepatah/negara/${c.slug}`, '0.7')))
-    .concat(pv.PROVERBS.map((p) => one(`/pepatah/${p.slug}`, '0.6')))
+  const urls = [one('/proverbs', '0.9')]
+    .concat(pv.COUNTRIES.map((c) => one(`/proverbs/country/${c.slug}`, '0.7')))
+    .concat(pv.PROVERBS.map((p) => one(`/proverbs/${p.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -3551,7 +3645,7 @@ app.get('/sitemap-pepatah.xml', (req, res) => {
 app.get('/sitemap-rekod.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/rekod', '0.9')].concat(rek.RECORDS.map((r) => one(`/rekod/${r.slug}`, '0.6'))).join('\n');
+  const urls = [one('/records', '0.9')].concat(rek.RECORDS.map((r) => one(`/records/${r.slug}`, '0.6'))).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
@@ -3562,8 +3656,8 @@ app.get('/sitemap-rekod.xml', (req, res) => {
 app.get('/sitemap-sejarah.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/sejarah', '0.9')]
-    .concat(sj.allDates().map((x) => one(`/sejarah/${x.mm}/${x.dd}`, '0.6')))
+  const urls = [one('/history', '0.9')]
+    .concat(sj.allDates().map((x) => one(`/history/${x.mm}/${x.dd}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -3574,9 +3668,9 @@ app.get('/sitemap-sejarah.xml', (req, res) => {
 app.get('/sitemap-kota.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/kota', '0.9')]
-    .concat(kt.REGIONS.map((r) => one(`/kota/${r.slug}`, '0.8')))
-    .concat(kt.CITIES.map((c) => one(`/kota/${c.slug}`, '0.6')))
+  const urls = [one('/cities', '0.9')]
+    .concat(kt.REGIONS.map((r) => one(`/cities/${r.slug}`, '0.8')))
+    .concat(kt.CITIES.map((c) => one(`/cities/${c.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -3587,9 +3681,9 @@ app.get('/sitemap-kota.xml', (req, res) => {
 app.get('/sitemap-warisan.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/warisan', '0.9')]
-    .concat(wr.REGIONS.map((r) => one(`/warisan/${r.slug}`, '0.8')))
-    .concat(wr.SITES.map((s) => one(`/warisan/${s.slug}`, '0.6')))
+  const urls = [one('/heritage', '0.9')]
+    .concat(wr.REGIONS.map((r) => one(`/heritage/${r.slug}`, '0.8')))
+    .concat(wr.SITES.map((s) => one(`/heritage/${s.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -4362,7 +4456,7 @@ geoSitemap('settlements', stl, 'SETTLEMENTS');
 app.get('/sitemap-statistik.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/statistik', '0.9')].concat(st.INDICATORS.map((i) => one(`/statistik/${i.slug}`, '0.7'))).join('\n');
+  const urls = [one('/statistics', '0.9')].concat(st.INDICATORS.map((i) => one(`/statistics/${i.slug}`, '0.7'))).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
@@ -4373,13 +4467,13 @@ app.get('/sitemap-statistik.xml', (req, res) => {
 app.get('/sitemap-bencana.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/bencana', '0.9')].concat(bc.CATS.map((c) => one(`/bencana/${c.slug}`, '0.7')));
+  const urls = [one('/disasters', '0.9')].concat(bc.CATS.map((c) => one(`/disasters/${c.slug}`, '0.7')));
   try {
     const all = await bc.loadAllOpen();
     let budget = 900;
     for (const block of all) {
       if (!block.events || !budget) continue;
-      for (const ev of block.events.slice(0, budget)) urls.push(one(`/bencana/${block.cat.slug}/${encodeURIComponent(ev.id)}`, '0.6'));
+      for (const ev of block.events.slice(0, budget)) urls.push(one(`/disasters/${block.cat.slug}/${encodeURIComponent(ev.id)}`, '0.6'));
       budget -= Math.min(block.events.length, budget);
     }
   } catch { /* feed failed → hub + categories only */ }
@@ -4392,9 +4486,9 @@ app.get('/sitemap-bencana.xml', async (req, res) => {
 app.get('/sitemap-akademi.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/akademi', '0.9')]
-    .concat(akad.TRACKS.map((t) => one(`/akademi/${t.s}`, '0.7')))
-    .concat(akad.allLessons().map((l) => one(`/akademi/${l.track.s}/${l.s}`, '0.6')))
+  const urls = [one('/academy', '0.9')]
+    .concat(akad.TRACKS.map((t) => one(`/academy/${t.s}`, '0.7')))
+    .concat(akad.allLessons().map((l) => one(`/academy/${l.track.s}/${l.s}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -4405,8 +4499,8 @@ app.get('/sitemap-akademi.xml', (req, res) => {
 app.get('/sitemap-wang.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/wang', '0.9'), one('/wang/kadar', '0.8')]
-    .concat(wang.CODES.map((c) => c[0]).filter((code) => code !== 'USD').map((code) => one(`/wang/tukar/USD/${code}`, '0.7')))
+  const urls = [one('/money', '0.9'), one('/money/rates', '0.8')]
+    .concat(wang.CODES.map((c) => c[0]).filter((code) => code !== 'USD').map((code) => one(`/money/convert/USD/${code}`, '0.7')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -4414,14 +4508,14 @@ app.get('/sitemap-wang.xml', (req, res) => {
 });
 
 // ── SITEMAP SENI — hub + 10 collections + each collection's object pages ──────
-// The /seni/objek/<id> pages already render (discovered through the grid); listing
+// The /art/object/<id> pages already render (discovered through the grid); listing
 // the objectIDs in a sitemap is what lets crawlers find them — hundreds→thousands of pages
 // unique pages with no new code. Enrichment is non-fatal: a Met failure → the static list,
 // GUARANTEED never to 503 (the slow-feed-page pitfall).
 app.get('/sitemap-seni.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio, freq) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq || 'weekly'}</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const parts = [one('/seni', '0.9')].concat(seni.COLLECTIONS.map((c) => one(`/seni/koleksi/${c.slug}`, '0.7')));
+  const parts = [one('/art', '0.9')].concat(seni.COLLECTIONS.map((c) => one(`/art/collection/${c.slug}`, '0.7')));
   // sitemapObjectUrls is non-blocking: serve the cache that already exists (or [] when cold)
   // immediately and kicks a background build — so this endpoint is never slow/503.
   const objUrls = seni.sitemapObjectUrls(3);
@@ -4435,7 +4529,7 @@ app.get('/sitemap-seni.xml', async (req, res) => {
 app.get('/sitemap-hidupan.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/hidupan', '0.9')].concat(hidup.TAXA.map((t) => one(`/hidupan/${t.slug}`, '0.7'))).join('\n');
+  const urls = [one('/life', '0.9')].concat(hidup.TAXA.map((t) => one(`/life/${t.slug}`, '0.7'))).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
@@ -4650,14 +4744,14 @@ function siteHeader(active) {
       ${link('/blog', 'Blog', 'blog')}
       ${link('/wiki', 'Wiki', 'wiki')}
       ${link('/nasa', 'NASA', 'nasa')}
-      ${link('/cuaca', 'Weather', 'cuaca')}
+      ${link('/weather', 'Weather', 'cuaca')}
       ${link('/traffic', 'Traffic', 'traffic')}
-      ${link('/teknologi', 'Tech', 'teknologi')}
-      ${link('/peta', 'Maps', 'peta')}
+      ${link('/technology', 'Tech', 'teknologi')}
+      ${link('/maps', 'Maps', 'peta')}
       ${link('/social', 'Social', 'social')}
       ${link('/alat', 'Tools', 'alat')}
-      ${link('/muzik', 'Music', 'muzik')}
-      ${link('/bendera', 'Flags', 'bendera')}
+      ${link('/charts', 'Music', 'muzik')}
+      ${link('/flags', 'Flags', 'bendera')}
       ${link('/learn', 'Learn', 'learn')}
       ${link('/games', 'Games', 'games')}
       <a href="https://build.tukuk.org" rel="noopener">Build</a>
@@ -4689,24 +4783,24 @@ function siteFooter() {
       <li><a href="/cari">Search</a></li>
       <li><a href="/blog">Blog</a></li>
       <li><a href="/wiki">Wiki</a></li>
-      <li><a href="/teknologi">Technology — Live Tech Pulse</a></li>
+      <li><a href="/technology">Technology — Live Tech Pulse</a></li>
       <li><a href="/traffic">Traffic — Community Road Reports</a></li>
-      <li><a href="/peta">Maps &amp; Navigation — Route Planner</a></li>
+      <li><a href="/maps">Maps &amp; Navigation — Route Planner</a></li>
       <li><a href="/social">Social &amp; Community — Chat, Posts &amp; Stories</a></li>
       <li><a href="/alat">Everyday Tools — Converters, Calculators &amp; Generators</a></li>
-      <li><a href="/muzik">World Music Charts — Daily Top 25 From 90 Countries</a></li>
-      <li><a href="/bendera">Flags of the World — The Story Behind 250 Flags</a></li>
-      <li><a href="/bendera/teka">Guess the Flag Quiz — Ten Random Flags</a></li>
-      <li><a href="/bendera/studio">Flag Studio — Draw a Flag, Find Its Closest Real Matches</a></li>
+      <li><a href="/charts">World Music Charts — Daily Top 25 From 90 Countries</a></li>
+      <li><a href="/flags">Flags of the World — The Story Behind 250 Flags</a></li>
+      <li><a href="/flags/quiz">Guess the Flag Quiz — Ten Random Flags</a></li>
+      <li><a href="/flags/studio">Flag Studio — Draw a Flag, Find Its Closest Real Matches</a></li>
       <li><a href="/apps/chat">T Chat — Free Messenger</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
-      <li><a href="/udara">Air & Oxygen</a></li>
-      <li><a href="/akademi">Academy — 50 Lessons</a></li>
+      <li><a href="/air-quality">Air & Oxygen</a></li>
+      <li><a href="/academy">Academy — 50 Lessons</a></li>
       <li><a href="/games">Game Arcade — Play Free</a></li>
-      <li><a href="/wang">World Currency — Live Rates</a></li>
-      <li><a href="/seni">Free Art Gallery — The Met</a></li>
-      <li><a href="/hidupan">Wildlife Atlas — Real Photos</a></li>
+      <li><a href="/money">World Currency — Live Rates</a></li>
+      <li><a href="/art">Free Art Gallery — The Met</a></li>
+      <li><a href="/life">Wildlife Atlas — Real Photos</a></li>
       <li><a href="/docs">Docs</a></li>
       <li><a href="https://build.tukuk.org">Tukuk Builder — build apps &amp; 3D games</a></li>
     </ul></div>
@@ -4719,18 +4813,18 @@ function siteFooter() {
       <li><a href="/nasa/exoplanets">Exoplanets</a></li>
     </ul></div>
     <div><h4>Weather</h4><ul>
-      <li><a href="/cuaca">World Weather</a></li>
-      <li><a href="/cuaca/peta">Weather map</a></li>
-      <li><a href="/cuaca/ekstrem">World extremes</a></li>
-      <li><a href="/cuaca/awan">Cloud types</a></li>
-      <li><a href="/cuaca/angin">Beaufort wind scale</a></li>
-      <li><a href="/cuaca/kod">Weather codes</a></li>
-      <li><a href="/gempa">World Earthquakes</a></li>
-      <li><a href="/gempa/dunia">Major Quakes M4.5+</a></li>
-      <li><a href="/negara">World countries</a></li>
-      <li><a href="/statistik">World statistics</a></li>
-      <li><a href="/bencana">Live disaster watch</a></li>
-      <li><a href="/cuti">World public holidays</a></li>
+      <li><a href="/weather">World Weather</a></li>
+      <li><a href="/weather/map">Weather map</a></li>
+      <li><a href="/weather/extremes">World extremes</a></li>
+      <li><a href="/weather/clouds">Cloud types</a></li>
+      <li><a href="/weather/wind">Beaufort wind scale</a></li>
+      <li><a href="/weather/codes">Weather codes</a></li>
+      <li><a href="/earthquakes">World Earthquakes</a></li>
+      <li><a href="/earthquakes/world">Major Quakes M4.5+</a></li>
+      <li><a href="/countries">World countries</a></li>
+      <li><a href="/statistics">World statistics</a></li>
+      <li><a href="/disasters">Live disaster watch</a></li>
+      <li><a href="/holidays">World public holidays</a></li>
     </ul></div>
     <div><h4>Site</h4><ul>
       <li><a href="/about">About</a></li>
@@ -5621,15 +5715,15 @@ function nasaSatellitesPage(req, data, group) {
 // Different SEO niche from the NASA cluster: high-volume "weather today …" searches.
 // Every page: index,follow + 3 ad units + cuacaNav() cross-link hub. API quota is
 // guarded by src/weather.js (daily budget + 45m–30h cache) → the server stays light
-// and city pages are practically unbounded (geocoded on demand). Routes keep their
-// Malay slugs (/cuaca…) for URL stability; the copy itself is English.
+// and city pages are practically unbounded (geocoded on demand). Routes are English now
+// (/weather…); the old /cuaca… addresses 301 onto them, so no published link breaks.
 const CUACA_SECTIONS = [
-  { href: '/cuaca', icon: '\uD83C\uDF24', name: 'Today\u2019s Weather', blurb: 'Live world temperature map & lists — updated every hour.' },
-  { href: '/cuaca/peta', icon: '\uD83D\uDDFA', name: 'Live Weather Map', blurb: 'OpenWeather tiles on an interactive map: rain, cloud and pressure.' },
-  { href: '/cuaca/ekstrem', icon: '\u2696', name: 'World Temperature Records', blurb: 'The hottest, coldest and windiest cities right now.' },
-  { href: '/cuaca/kod', icon: '\uD83D\uDCDC', name: 'Weather Codes', blurb: 'What every OpenWeather code and icon actually means.' },
-  { href: '/cuaca/awan', icon: '\u2601', name: 'Cloud Types', blurb: 'Cirrus to cumulonimbus — read the sky like a forecaster.' },
-  { href: '/cuaca/angin', icon: '\uD83D\uDCA8', name: 'Wind Scale', blurb: 'The Beaufort 0\u201312 scale and the monsoons explained.' },
+  { href: '/weather', icon: '\uD83C\uDF24', name: 'Today\u2019s Weather', blurb: 'Live world temperature map & lists — updated every hour.' },
+  { href: '/weather/map', icon: '\uD83D\uDDFA', name: 'Live Weather Map', blurb: 'OpenWeather tiles on an interactive map: rain, cloud and pressure.' },
+  { href: '/weather/extremes', icon: '\u2696', name: 'World Temperature Records', blurb: 'The hottest, coldest and windiest cities right now.' },
+  { href: '/weather/codes', icon: '\uD83D\uDCDC', name: 'Weather Codes', blurb: 'What every OpenWeather code and icon actually means.' },
+  { href: '/weather/clouds', icon: '\u2601', name: 'Cloud Types', blurb: 'Cirrus to cumulonimbus — read the sky like a forecaster.' },
+  { href: '/weather/wind', icon: '\uD83D\uDCA8', name: 'Wind Scale', blurb: 'The Beaufort 0\u201312 scale and the monsoons explained.' },
 ];
 
 function cuacaNav() {
@@ -5709,7 +5803,7 @@ ${siteFooter()}
 }
 
 function weatherBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The weather data source (OpenWeather) did not answer in time. Please try again in a few minutes.</p><p><a href="/cuaca">Back to the Weather Complex</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The weather data source (OpenWeather) did not answer in time. Please try again in a few minutes.</p><p><a href="/weather">Back to the Weather Complex</a></p></body>`;
 }
 
 // ——— Local-time helpers (TZ offset from the API) + English date labels ———
@@ -5762,34 +5856,34 @@ function wxDaily(fc, tzSec) {
   });
 }
 
-// ——— HUB /cuaca — featured-city snapshot + list of every city (link hub) ———
+// ——— HUB /weather — featured-city snapshot + list of every city (link hub) ———
 function cuacaHubPage(req, snap) {
   const tz = snap[0] && snap[0].cur ? snap[0].cur.timezone : 0;
   const now = wxParts(Math.floor(Date.now() / 1000), tz);
   const cards = snap.map(({ city, cur }) => {
     const d = wx.describe(cur.weather && cur.weather[0] ? cur.weather[0].id : 800, isNightNow(cur));
-    return `<div class="wx-card"><h3><a href="/cuaca/${city.slug}">${escapeHtml(city.name)}${city.cc ? ` \u00b7 ${city.cc}` : ''}</a></h3>`
+    return `<div class="wx-card"><h3><a href="/weather/${city.slug}">${escapeHtml(city.name)}${city.cc ? ` \u00b7 ${city.cc}` : ''}</a></h3>`
       + `<div class="big">${d.emoji} ${wxTempC(cur.main.temp)}</div>`
       + `<div class="meta">${escapeHtml(d.label)} \u00b7 ${wxKmh(cur.wind.speed)} km/h \u00b7 humidity ${Number(cur.main.humidity) || 0}%</div></div>`;
   }).join('');
   const grouped = {};
   for (const c of wx.CITIES) (grouped[c.country] = grouped[c.country] || []).push(c);
   const linkBoxes = Object.entries(grouped).map(([country, list]) => `<h3>${escapeHtml(country)}</h3><div class="wx-citylinks">`
-    + list.map((c) => `<a href="/cuaca/${c.slug}">${escapeHtml(c.name)}</a>`).join('') + `</div>`).join('');
+    + list.map((c) => `<a href="/weather/${c.slug}">${escapeHtml(c.name)}</a>`).join('') + `</div>`).join('');
   const body = `<p>Updated ${wxDateLabel(now)} \u00b7 live OpenWeather data. Search for your city: </p>`
-    + `<form action="/cuaca/cari" method="get" role="search" style="margin:10px 0">`
+    + `<form action="/weather/search" method="get" role="search" style="margin:10px 0">`
     + `<input type="search" name="q" placeholder="e.g. Kuching, Tokyo, London\u2026" aria-label="Search a city" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;min-width:260px;background:var(--panel,#171a21);color:inherit">`
     + `<button class="btn primary" type="submit" style="margin-left:8px">Search weather</button></form>`
     + `<h2 class="section-title">World temperatures right now</h2><div class="wx-grid">${cards}</div>`
     + `<h2 class="section-title">Full forecast by city</h2>`
-    + `<p>Every city page carries current conditions, the next 8 hourly slots, a 5\u20136 day forecast, air quality (PM2.5), sun times and automatically generated get-ready advice \u2014 all from the free-tier OpenWeather API. World weather \u2014 Tokyo, London, New York, Mecca and hundreds of other cities are listed by country below; popular starting points: <a href="/cuaca/tokyo">Tokyo</a>, <a href="/cuaca/london">London</a>, <a href="/cuaca/new-york">New York</a> or <a href="/cuaca/makkah">Makkah</a>.</p>`
+    + `<p>Every city page carries current conditions, the next 8 hourly slots, a 5\u20136 day forecast, air quality (PM2.5), sun times and automatically generated get-ready advice \u2014 all from the free-tier OpenWeather API. World weather \u2014 Tokyo, London, New York, Mecca and hundreds of other cities are listed by country below; popular starting points: <a href="/weather/tokyo">Tokyo</a>, <a href="/weather/london">London</a>, <a href="/weather/new-york">New York</a> or <a href="/weather/makkah">Makkah</a>.</p>`
     + linkBoxes
     + `<h2 class="section-title">Why the numbers matter</h2><p>Rain belts and monsoons move twice a year across the tropics, cross-border haze periodically closes schools, and mid-latitude countries plan around fronts, snow and storm surges. Reading the measurements \u2014 humidity, pressure, wind speed, AQI \u2014 turns a forecast into decisions: when to plant, when to carry an umbrella, when driving is most dangerous.</p>`
-    + `<p class="meta">For the night sky (moon phase & twilight), see <a href="/nasa/sky">Tonight\u2019s Sky in the NASA complex</a> \u2014 one family of data, two points of view. Ground shaking? Check the <a href="/gempa">Earthquake Complex</a> for the live USGS list. Planning a trip? The full calendar of <a href="/cuti">world public holidays</a>. Want to know a destination? Full profiles in the <a href="/negara">Country Complex</a>.</p>`;
+    + `<p class="meta">For the night sky (moon phase & twilight), see <a href="/nasa/sky">Tonight\u2019s Sky in the NASA complex</a> \u2014 one family of data, two points of view. Ground shaking? Check the <a href="/earthquakes">Earthquake Complex</a> for the live USGS list. Planning a trip? The full calendar of <a href="/holidays">world public holidays</a>. Want to know a destination? Full profiles in the <a href="/countries">Country Complex</a>.</p>`;
   return cuacaDoc({
     title: 'Weather Today \u2014 Temperature, Forecast & Air Quality Worldwide | Tukuk-OS',
     desc: 'Check today\u2019s weather live: temperature, rain, wind, PM2.5 air quality and a 5-day forecast for Tokyo, London, New York, Makkah and hundreds of other cities worldwide.',
-    selfUrl: 'https://tukuk.org/cuaca',
+    selfUrl: 'https://tukuk.org/weather',
     heroTitle: 'Tukuk-OS Weather Complex', heroSub: 'Live OpenWeather data \u00b7 updated hourly \u00b7 free, no login',
     body,
   });
@@ -5803,7 +5897,7 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
   const tz = Number(cur.timezone) || 0;
   const nowP = wxParts(cur.dt, tz);
   const main = cur.main || {};
-  const selfUrl = `https://tukuk.org/cuaca/${city.slug}`;
+  const selfUrl = `https://tukuk.org/weather/${city.slug}`;
   const aqi = air && air.list && air.list[0] ? air.list[0].main : null;
   const band = aqi ? wx.aqiBand(aqi.aqi) : null;
   const jsonLd = JSON.stringify({
@@ -5823,7 +5917,7 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
     + `<div class="wx-card"><h3>Pressure</h3><div class="big">${Number(main.pressure) || 0} hPa</div></div>`
     + `<div class="wx-card"><h3>Visibility</h3><div class="big">${cur.visibility ? (cur.visibility / 1000).toFixed(cur.visibility >= 10000 ? 0 : 1) + ' km' : '\u2014'}</div></div>`
     + `<div class="wx-card"><h3>Cloud cover</h3><div class="big">${Number(cur.clouds && cur.clouds.all) || 0}%</div></div>`
-    + `<div class="wx-card"><h3>Sun</h3><div class="big">${wxHHMM(cur.sunrise, tz)} \u2192 ${wxHHMM(cur.sunset, tz)}</div><div class="meta"><a href="/cuaca/${city.slug}/surya">golden-hour guide \u2192</a></div></div>`
+    + `<div class="wx-card"><h3>Sun</h3><div class="big">${wxHHMM(cur.sunrise, tz)} \u2192 ${wxHHMM(cur.sunset, tz)}</div><div class="meta"><a href="/weather/${city.slug}/surya">golden-hour guide \u2192</a></div></div>`
     + `</div>`;
   let hourHtml = '';
   if (fc && Array.isArray(fc.list)) {
@@ -5838,7 +5932,7 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
     daysHtml = rows ? `<h2 class="section-title">5\u20136 day forecast</h2><table class="wx-table"><tr><th>Day</th><th>Conditions</th><th>Temperature</th><th>Rain probability</th><th>Expected rain</th></tr>${rows}</table>` : '';
   }
   const airBox = band
-    ? `<h2 class="section-title">Air quality</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} — ${escapeHtml(band.label)}</span> · ${escapeHtml(band.advice)} <a href="/cuaca/${city.slug}/udara">PM2.5 detail & pollution forecast →</a></p>`
+    ? `<h2 class="section-title">Air quality</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} — ${escapeHtml(band.label)}</span> · ${escapeHtml(band.advice)} <a href="/weather/${city.slug}/udara">PM2.5 detail & pollution forecast →</a></p>`
     : '';
   // River-risk card — GloFAS model via Open-Meteo Flood (not a real measurement;
   // the 5 km grid can miss small rivers — labelled honestly in the meta note).
@@ -5855,11 +5949,11 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
     riverBox = `<h2 class="section-title">River flow model</h2><p><span class="wx-pill" style="background:${lbl[1]}">${lbl[0]}</span> — the model grid records <b>${river.current} ${escapeHtml(river.unit)}</b> on ${escapeHtml(String(river.date))}, higher than ${pct}% of the local ${river.days}-day history (min ${river.min} · median ${river.median} · max ${river.max} ${escapeHtml(river.unit)}).</p><p style="line-height:1">${spark}</p><p class="meta">GloFAS hydrological model estimate (Open-Meteo Flood API) on a ±5 km grid — <b>not a real river-station measurement</b> and no substitute for official flood warnings from the national water authority where you are. Source: ${river.source === 'last-known' ? 'the last reading that was successfully stored' : 'live model output'}.</p>`;
   }
   const advice = wx.cityAdvice(cur, air).map((t) => `<li>${escapeHtml(t)}</li>`).join('');
-  const body = `<p class="back-link"><a href="/cuaca">\u2190 All weather</a> \u00b7 <a href="/cuaca/peta">Live map</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Tonight\u2019s sky here (moon phase & twilight)</a></p>`
+  const body = `<p class="back-link"><a href="/weather">\u2190 All weather</a> \u00b7 <a href="/weather/map">Live map</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Tonight\u2019s sky here (moon phase & twilight)</a></p>`
     + hero + cards + hourHtml + daysHtml + airBox + riverBox
     + (advice ? `<h2 class="section-title">Getting ready today</h2><ul>${advice}</ul>` : '')
     + `<h2 class="section-title">How these readings are produced</h2><p>The numbers above are OpenWeather raster-model observations for the coordinates ${Number(city.lat).toFixed(3)}\u00b0, ${Number(city.lon).toFixed(3)}\u00b0 — refreshed every 45 minutes and shown in ${city.name} local time (UTC${tz >= 0 ? '+' : '\u2212'}${Math.abs(Math.round(tz / 3600))}). High humidity combined with temperatures \u2265 31\u00b0C makes the "feels like" value hotter than the thermometer reading; slowly falling pressure is usually a sign of rain within 12\u201324 hours.</p>`
-    + `<h2 class="section-title">What the icons & codes mean</h2><p>The condition <b>${escapeHtml(d.label)}</b> maps to OpenWeather code ${Number(w.id)} — the full code list is explained on the <a href="/cuaca/kod">weather codes page</a>, cloud types in the <a href="/cuaca/awan">cloud guide</a> and wind speeds on the <a href="/cuaca/angin">Beaufort scale</a>.</p>`
+    + `<h2 class="section-title">What the icons & codes mean</h2><p>The condition <b>${escapeHtml(d.label)}</b> maps to OpenWeather code ${Number(w.id)} — the full code list is explained on the <a href="/weather/codes">weather codes page</a>, cloud types in the <a href="/weather/clouds">cloud guide</a> and wind speeds on the <a href="/weather/wind">Beaufort scale</a>.</p>`
     + `<p class="meta">Data: OpenWeather (free tier) \u00b7 this page is generated live on every visit.</p>`;
   return cuacaDoc({
     title: `Weather Today in ${city.name}${city.country ? `, ${city.country}` : ''} \u2014 Temperature, Forecast & Air Quality | Tukuk-OS`,
@@ -5869,13 +5963,13 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
   });
 }
 
-// ——— /cuaca/:slug/udara — AQI + components + forecast + health guide ———
+// ——— /weather/:slug/air — AQI + components + forecast + health guide ———
 function cuacaAirPage(req, city, air, airFc) {
   const item = air && air.list && air.list[0] ? air.list[0] : null;
   if (!item) throw new Error('no air quality data');
   const band = wx.aqiBand(item.main.aqi);
   const c = item.components || {};
-  const selfUrl = `https://tukuk.org/cuaca/${city.slug}/udara`;
+  const selfUrl = `https://tukuk.org/weather/${city.slug}/udara`;
   const POLLUTANTS = [
     ['pm2_5', 'PM2.5', 'fine particles under 2.5 \u03bcm \u2014 they enter the bloodstream; the main haze risk'],
     ['pm10', 'PM10', 'dust & coarse dust \u2014 irritates the eyes and throat'],
@@ -5906,7 +6000,7 @@ function cuacaAirPage(req, city, air, airFc) {
     description: `Current AQI ${Number(item.main.aqi)} (${band.label}) with PM2.5, PM10, O\u2083, NO\u2082, SO\u2082, CO and NH\u2083 components.`,
     url: selfUrl,
   }).replace(/</g, '\\u003c');
-  const body = `<p class="back-link"><a href="/cuaca/${city.slug}">\u2190 Weather in ${escapeHtml(city.name)}</a> \u00b7 <a href="/cuaca/peta">Map</a></p>`
+  const body = `<p class="back-link"><a href="/weather/${city.slug}">\u2190 Weather in ${escapeHtml(city.name)}</a> \u00b7 <a href="/weather/map">Map</a></p>`
     + `<div class="wx-hero"><div class="temp" style="font-size:2.6rem">AQI ${Number(item.main.aqi)}</div><div class="wmeta">`
     + `<span class="wx-pill" style="background:${band.color}">${escapeHtml(band.label)}</span><br>${escapeHtml(band.advice)}</div></div>`
     + `<h2 class="section-title">Pollutant components in ${escapeHtml(city.name)} right now</h2>`
@@ -5924,7 +6018,7 @@ function cuacaAirPage(req, city, air, airFc) {
   });
 }
 
-// ——— /cuaca/:slug/surya — sunrise/sunset/solar noon/golden hour (0 extra API calls) ———
+// ——— /weather/:slug/sun — sunrise/sunset/solar noon/golden hour (0 extra API calls) ———
 function cuacaSunPage(req, city, cur) {
   const tz = Number(cur.timezone) || 0;
   const rise = Number(cur.sunrise) || 0;
@@ -5932,7 +6026,7 @@ function cuacaSunPage(req, city, cur) {
   const lenMin = Math.max(0, Math.round((set - rise) / 60));
   const lenH = Math.floor(lenMin / 60); const lenM = lenMin % 60;
   const noon = rise + (set - rise) / 2;
-  const selfUrl = `https://tukuk.org/cuaca/${city.slug}/surya`;
+  const selfUrl = `https://tukuk.org/weather/${city.slug}/surya`;
   const rows = [
     ['Sunrise', wxHHMM(rise, tz), 'The sky starts to colour; birds begin to sing'],
     ['Morning golden hour', `${wxHHMM(rise + 15 * 60, tz)} \u2013 ${wxHHMM(rise + 45 * 60, tz)}`, 'Soft, slanted light \u2014 best for portraits & landscapes'],
@@ -5944,12 +6038,12 @@ function cuacaSunPage(req, city, cur) {
   const seasonNote = absLat < 10
     ? `In ${escapeHtml(city.name)} (${absLat.toFixed(1)}\u00b0 latitude), day length stays almost constant through the year \u2014 about ${lenH} hours ${lenM} minutes, varying only \u00b1${Math.round(10 + absLat)} minutes between equinox and solstice. What changes is the <em>timing</em> of sunrise and sunset, not the amount of light.`
     : `At latitude ${absLat.toFixed(1)}\u00b0, the day length in ${escapeHtml(city.name)} shifts noticeably between seasons \u2014 today ${lenH} hours ${lenM} minutes; in high-latitude summer it can reach 16\u201318 hours and in winter shrink below 8 hours.`;
-  const body = `<p class="back-link"><a href="/cuaca/${city.slug}">\u2190 Weather in ${escapeHtml(city.name)}</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Moon phase & astronomical darkness here \u2192</a></p>`
+  const body = `<p class="back-link"><a href="/weather/${city.slug}">\u2190 Weather in ${escapeHtml(city.name)}</a> \u00b7 <a href="/nasa/sky?lat=${city.lat}&lng=${city.lon}">Moon phase & astronomical darkness here \u2192</a></p>`
     + `<div class="wx-hero"><div class="temp">\uD83C\uDF05 ${lenH}h ${lenM}m</div><div class="wmeta">day length in ${escapeHtml(city.name)} \u00b7 ${wxDateLabel(wxParts(cur.dt, tz))}</div></div>`
     + `<table class="wx-table"><tr><th>Event</th><th>Local time</th><th>What it means</th></tr>${rows}</table>`
     + `<h2 class="section-title">Why the day is that long</h2><p>${seasonNote} The cause of the seasons is the 23.4\u00b0 tilt of Earth\u2019s axis \u2014 not the distance to the sun. The equinoxes (March & September) make day and night equal across the planet; the solstices (June & December) maximise the difference by latitude.</p>`
     + `<h2 class="section-title">How to use the golden hour</h2><p>"Golden hour" happens while the sun sits below about 6\u00b0: light travels a longer path through the air and scatters away the blue, leaving orange tones. For selfies and motorcycling: avoid the sun straight ahead at solar noon \u2014 a cap brim will shadow your eyes. For home solar panels: solar noon (not 12:00 on the clock!) is the production peak \u2014 in Malaysia typically 12:30\u201313:10 local time depending on longitude.</p>`
-    + `<h2 class="section-title">The link to weather</h2><p>Sunrise and sunset on this page are astronomical calculations; cloud can "steal" the first and last 20\u201340 minutes of light. Check the <a href="/cuaca/${city.slug}">cloud forecast for ${escapeHtml(city.name)}</a> for coverage at those hours \u2014 coverage below 20% promises a clean sunset, 40\u201370% is the most colourful scenario (cloud becomes a reflection canvas).</p>`;
+    + `<h2 class="section-title">The link to weather</h2><p>Sunrise and sunset on this page are astronomical calculations; cloud can "steal" the first and last 20\u201340 minutes of light. Check the <a href="/weather/${city.slug}">cloud forecast for ${escapeHtml(city.name)}</a> for coverage at those hours \u2014 coverage below 20% promises a clean sunset, 40\u201370% is the most colourful scenario (cloud becomes a reflection canvas).</p>`;
   return cuacaDoc({
     title: `Sun Times in ${city.name} \u2014 Sunrise, Sunset & Golden Hour | Tukuk-OS`,
     desc: `Sunrise ${wxHHMM(rise, tz)}, sunset ${wxHHMM(set, tz)} in ${city.name} local time (${lenH}h ${lenM}m of daylight) + a golden-hour guide for photographers and solar-panel owners.`,
@@ -5958,7 +6052,7 @@ function cuacaSunPage(req, city, cur) {
   });
 }
 
-// ——— /cuaca/peta — Leaflet + free OpenWeather tiles (rain/clouds/pressure) ———
+// ——— /weather/map — Leaflet + free OpenWeather tiles (rain/clouds/pressure) ———
 function cuacaMapPage(req) {
   const layers = [
     ['weather_new', 'Rain & storms', true],
@@ -5968,7 +6062,7 @@ function cuacaMapPage(req) {
   const payload = JSON.stringify(layers.map(([l, label, def]) => ({ layer: l, label, def, url: wx.tileTemplateUrl(l) }))).replace(/</g, '\\u003c');
   const body = `<p>A live map layered with OpenWeather weather \u2014 toggle rain, clouds and pressure over streets/terrain. Tiles load at world resolution; find your city on any continent, or zoom into Singapore, Mumbai or Lagos to watch the famous tropical afternoon rain cells form.</p>`
     + `<div id="wxmap" role="application" aria-label="Live weather map"></div>`
-    + `<noscript><p>JavaScript is required for the interactive map. Text lists are on the <a href="/cuaca">weather hub</a> and <a href="/cuaca/ekstrem">temperature extremes</a>.</p></noscript>`
+    + `<noscript><p>JavaScript is required for the interactive map. Text lists are on the <a href="/weather">weather hub</a> and <a href="/weather/extremes">temperature extremes</a>.</p></noscript>`
     + `<h2 class="section-title">How to read it</h2><p>The rain layer follows a colour scale: blue = light rain, yellow\u2013red = heavy/thunderstorm. The small "speckled" pattern over inland Borneo in the late afternoon is local convection \u2014 storm clouds grow from heated ground rather than from a front; that is why tropical forecasts change fast and why our 45-minute cache value is deliberately short. The pressure layer shows isobars: closely spaced isobars mean strong wind.</p>`
     + `<h2 class="section-title">Shared with the night sky</h2><p>This map shows <em>cloud right now</em> \u2014 the stargazer\u2019s enemy. If the cloud layer is empty over your location, check <a href="/nasa/sky">Tonight\u2019s Sky</a> for the moon phase and astronomical darkness before hauling out the telescope.</p>`
     + `<p class="meta">Tiles: \u00a9 <a href="https://openweathermap.org/" rel="noopener nofollow">OpenWeather</a> \u00b7 base map: \u00a9 <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors.</p>`;
@@ -5977,22 +6071,22 @@ function cuacaMapPage(req) {
   return cuacaDoc({
     title: 'Live Weather Map \u2014 Rain, Clouds & Pressure Worldwide (OpenWeather) | Tukuk-OS',
     desc: 'A free interactive map: layer OpenWeather rain, clouds and air pressure over OpenStreetMap. Zoom into your city and watch the weather move right now.',
-    selfUrl: 'https://tukuk.org/cuaca/peta',
+    selfUrl: 'https://tukuk.org/weather/map',
     heroTitle: 'Live Weather Map', heroSub: 'OpenWeather tiles \u00b7 rain + clouds + pressure \u00b7 interactive',
     heroHtml: 'Live Weather Map \uD83D\uDDFA',
     body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'Map', name: 'Tukuk-OS Live Weather Map',
-      description: 'Slippy map of OpenWeather rain/cloud/pressure layers', url: 'https://tukuk.org/cuaca/peta',
+      description: 'Slippy map of OpenWeather rain/cloud/pressure layers', url: 'https://tukuk.org/weather/map',
       contentUrl: wx.tileTemplateUrl('weather_new').replace('{z}/{x}/{y}', '5/24/40'),
       license: 'https://openweathermap.org/terms-of-use',
     }).replace(/</g, '\\u003c'),
   });
 }
 
-// ——— /cuaca/ekstrem — from the featured-city snapshot (zero extra API calls) ———
+// ——— /weather/extremes — from the featured-city snapshot (zero extra API calls) ———
 function cuacaExtremesPage(req, snap) {
-  const rowsOf = (list, cell) => list.map(({ city, cur }) => `<tr><td><a href="/cuaca/${city.slug}">${escapeHtml(city.name)}</a></td><td>${cell(cur)}</td></tr>`).join('');
+  const rowsOf = (list, cell) => list.map(({ city, cur }) => `<tr><td><a href="/weather/${city.slug}">${escapeHtml(city.name)}</a></td><td>${cell(cur)}</td></tr>`).join('');
   const byTemp = [...snap].sort((a, b) => b.cur.main.temp - a.cur.main.temp);
   const hot = byTemp.slice(0, 6); const cold = byTemp.slice(-6).reverse();
   const windy = [...snap].sort((a, b) => b.cur.wind.speed - a.cur.wind.speed).slice(0, 6);
@@ -6007,13 +6101,13 @@ function cuacaExtremesPage(req, snap) {
   return cuacaDoc({
     title: 'World Weather Extremes Right Now \u2014 Hottest & Coldest Cities | Tukuk-OS',
     desc: 'A live ranking of the hottest, coldest, windiest and most humid cities worldwide, recomputed every hour from OpenWeather + an explanation of the heat index and planetary records.',
-    selfUrl: 'https://tukuk.org/cuaca/ekstrem',
+    selfUrl: 'https://tukuk.org/weather/extremes',
     heroTitle: 'World Extremes Right Now', heroSub: `Ranked from ${snap.length} watched cities \u00b7 updated hourly`,
     body,
   });
 }
 
-// ——— /cuaca/kod — the full 55-code OpenWeather table (static, indexable) ———
+// ——— /weather/codes — the full 55-code OpenWeather table (static, indexable) ———
 function cuacaCodesPage(req) {
   const GRUP = [
     [2, 'Thunderstorm (2xx)', 'thunder with lightning; the most dangerous group outdoors and near water'],
@@ -6032,17 +6126,17 @@ function cuacaCodesPage(req) {
   const body = `<p>Every reading in our Weather Complex starts from one OpenWeather condition code number. This is the official wording \u2014 useful for understanding the API, your own apps, or simply the difference between 802 and 804.</p>`
     + sections
     + `<h2 class="section-title">Technical detail</h2><p>Codes are grouped by hundreds and each code also carries a text description (for example "light intensity shower rain"). The OpenWeather weather icons (01d\u201350n) follow the same codes with day (<code>d</code>)/night (<code>n</code>) variants \u2014 which is why an 800 evening is drawn as a moon, not a sun. Our pages turn both into a plain label plus an emoji so they read easily without any login.</p>`
-    + `<h2 class="section-title">See these codes in action</h2><p>Want to compare with the sky above you? Open the <a href="/cuaca/peta">live map</a> or check <a href="/cuaca">world weather in your city</a> \u2014 every city page shows its active code.</p>`;
+    + `<h2 class="section-title">See these codes in action</h2><p>Want to compare with the sky above you? Open the <a href="/weather/map">live map</a> or check <a href="/weather">world weather in your city</a> \u2014 every city page shows its active code.</p>`;
   return cuacaDoc({
     title: 'OpenWeather Condition Codes \u2014 What Every Icon & Number Means | Tukuk-OS',
     desc: 'The full list of 55 OpenWeather condition codes with labels, emoji and plain explanations \u2014 from thunderstorm 2xx to fully overcast 804.',
-    selfUrl: 'https://tukuk.org/cuaca/kod',
+    selfUrl: 'https://tukuk.org/weather/codes',
     heroTitle: 'Weather Code Dictionary', heroSub: '55 OpenWeather codes \u00b7 icons & meanings',
     body,
   });
 }
 
-// ——— /cuaca/awan — guide to the 10 cloud genera (static) ———
+// ——— /weather/clouds — guide to the 10 cloud genera (static) ———
 function cuacaCloudPage(req) {
   const AWAN = [
     ['Cirrus', 'high, feathery hair-thin cloud (6\u201313 km)', 'ice filaments; a sign the weather changes within 24\u201348 hours'],
@@ -6059,29 +6153,29 @@ function cuacaCloudPage(req) {
   const rows = AWAN.map((a) => `<tr><td><b>${a[0]}</b></td><td>${escapeHtml(a[1])}</td><td>${escapeHtml(a[2])}</td></tr>`).join('');
   const body = `<p>Modern cloud classification was created by Luke Howard in 1803 \u2014 in Latin: <em>cirrus</em> (curled), <em>cumulus</em> (heaped), <em>stratus</em> (layered) and <em>nimbus</em> (rain). The ten genera we use today are still children of those four words. When our city pages show "Cloud cover 62%", that number is a blend of these genera detected by satellite plus model.</p>`
     + `<table class="wx-table"><tr><th>Type</th><th>Shape & height</th><th>What it means for weather</th></tr>${rows}</table>`
-    + `<h2 class="section-title">The equatorial storm cycle</h2><p>In Malaysia the daily cycle matters more than seasonal fronts: morning ground heating \u2192 cumulus swelling by midday \u2192 cumulonimbus thunderstorms between 4 and 7 pm \u2192 a clear night. That is why the "afternoon rain" forecast is almost always right on the Peninsula, and why we cache <a href="/cuaca/kuching">Kuching weather</a> for only 45 minutes.</p>`
-    + `<h2 class="section-title">Cloud & astronomy</h2><p>Stargazers know that cloud cover is the deciding factor: 0% plus a new moon = the best night. Check <a href="/nasa/sky">Tonight\u2019s Sky</a> for the moon phase, then the <a href="/cuaca/peta">live cloud map</a> to be sure your sky is really empty before carrying out the telescope.</p>`;
+    + `<h2 class="section-title">The equatorial storm cycle</h2><p>In Malaysia the daily cycle matters more than seasonal fronts: morning ground heating \u2192 cumulus swelling by midday \u2192 cumulonimbus thunderstorms between 4 and 7 pm \u2192 a clear night. That is why the "afternoon rain" forecast is almost always right on the Peninsula, and why we cache <a href="/weather/kuching">Kuching weather</a> for only 45 minutes.</p>`
+    + `<h2 class="section-title">Cloud & astronomy</h2><p>Stargazers know that cloud cover is the deciding factor: 0% plus a new moon = the best night. Check <a href="/nasa/sky">Tonight\u2019s Sky</a> for the moon phase, then the <a href="/weather/map">live cloud map</a> to be sure your sky is really empty before carrying out the telescope.</p>`;
   return cuacaDoc({
     title: 'Cloud Types \u2014 A Guide to Reading the Sky (Cirrus to Cumulonimbus) | Tukuk-OS',
     desc: 'The 10 cloud genera explained: shape, altitude and what each one signals about the weather in the next 24 hours.',
-    selfUrl: 'https://tukuk.org/cuaca/awan',
+    selfUrl: 'https://tukuk.org/weather/clouds',
     heroTitle: 'Read the Sky: 10 Cloud Types', heroSub: 'Luke Howard classification 1803 \u00b7 a modern field guide',
     body,
   });
 }
 
-// ——— /cuaca/angin — Beaufort scale + monsoons (static) ———
+// ——— /weather/wind — Beaufort scale + monsoons (static) ———
 function cuacaWindPage(req) {
   const rows = wx.BEAUFORT.map((b) => `<tr><td>${b[0]}</td><td>${b[1]} km/h</td><td><b>${escapeHtml(b[2])}</b></td><td>${escapeHtml(b[3])}</td></tr>`).join('');
   const body = `<p>Before anemometers were everywhere, sailors measured wind with their eyes \u2014 and the Beaufort scale (1805, Francis Beaufort) is still the best way to "feel" a km/h number. Every city page of ours shows the Beaufort number next to the wind speed; here is the full table.</p>`
     + `<table class="wx-table"><tr><th>Level</th><th>Speed</th><th>Name</th><th>What it looks like at sea and on land</th></tr>${rows}</table>`
     + `<h2 class="section-title">Malaysia\u2019s two monsoons</h2><p>The wind in our region reverses direction twice a year. The <b>Southwest Monsoon</b> (May\u2013September) is drier on the Peninsula but wets offshore western Sabah; the <b>Northeast Monsoon</b> (November\u2013March) sends monsoon rain to the Peninsula\u2019s east coast (Kelantan, Terengganu, Pahang) and regularly floods Kota Bharu &\u00a0Kuantan while Kuala Lumpur and Kuching stay comparatively dry. Weak monsoon wind plus smoke from burning = haze (code 721) \u2014 which is why June\u2013September is the bad-AQI season, not the rainy season.</p>`
-    + `<h2 class="section-title">Practical danger</h2><p>Beaufort 7+ = hard to ride a motorcycle in storm rain (sideways force plus slippery tyres). Beaufort 9+ = staying indoors is the right call; falling trees are the number-one storm killer in the subtropics. The live wind numbers on our <a href="/cuaca/ekstrem">extremes page</a> always show which cities have already reached those levels.</p>`
+    + `<h2 class="section-title">Practical danger</h2><p>Beaufort 7+ = hard to ride a motorcycle in storm rain (sideways force plus slippery tyres). Beaufort 9+ = staying indoors is the right call; falling trees are the number-one storm killer in the subtropics. The live wind numbers on our <a href="/weather/extremes">extremes page</a> always show which cities have already reached those levels.</p>`
     + `<h2 class="section-title">Wind direction</h2><p>A reading of "wind 240\u00b0" means the wind <em>comes from</em> 240\u00b0 (southwest) \u2014 a meteorological convention that confuses many people. Leeward is the sheltered side; that is why orographic rain falls on Sarawak\u2019s windward slope and stays dry in the rain shadow behind it.</p>`;
   return cuacaDoc({
     title: 'Beaufort Wind Scale 0\u201312 & Monsoon Winds \u2014 A Wind Speed Guide | Tukuk-OS',
     desc: 'The complete Beaufort table plus an explanation of the southwest and northeast monsoons, the danger of wind for motorcyclists and how to read meteorological wind direction.',
-    selfUrl: 'https://tukuk.org/cuaca/angin',
+    selfUrl: 'https://tukuk.org/weather/wind',
     heroTitle: 'Wind: Beaufort Scale & Monsoons', heroSub: '1805 to today \u00b7 from a breeze to a storm',
     body,
   });
@@ -6092,13 +6186,13 @@ function cuacaWindPage(req) {
 // Magnitude grading, a translation table and safety advice — the "earthquake today"
 // / "earthquake sabah" search niche has very few English-language competitors.
 const GEMPA_SECTIONS = [
-  { href: '/gempa', icon: '\uD83C\uDF0D', name: 'Latest Earthquakes', blurb: 'A live list of earthquakes worldwide — USGS data, refreshed every 10 minutes.' },
-  { href: '/gempa/dunia', icon: '\uD83D\uDD2F', name: 'World M4.5+', blurb: 'Every larger quake, magnitude 4.5 and up, over the past seven days.' },
-  { href: '/gempa/asia-tenggara', icon: '\uD83C\uDF34', name: 'Southeast Asia', blurb: 'Indonesia, the Philippines, PNG — the most active tectonic ring in Asia.' },
-  { href: '/gempa/jepun', icon: '\uD83D\uDDE5', name: 'Japan & the Western Pacific', blurb: 'The western Ring of Fire: Japan, Guam, Kamchatka and the Mariana Trench.' },
-  { href: '/gempa/pasifik-timur', icon: '\uD83C\uDFE5', name: 'Eastern Pacific', blurb: 'The west coast of the Americas: California, Chile, Peru, Mexico, Alaska.' },
-  { href: '/gempa/malaysia', icon: '\uD83C\uDDF9', name: 'Malaysia & Sabah', blurb: 'The Sabah, Sarawak & border zones — last 30 days, down to small magnitudes.' },
-  { href: '/gempa/penjelasan', icon: '\uD83D\uDCD8', name: 'How to Read Quake Data', blurb: 'Magnitude, depth, tsunami and what to do when the ground shakes.' },
+  { href: '/earthquakes', icon: '\uD83C\uDF0D', name: 'Latest Earthquakes', blurb: 'A live list of earthquakes worldwide — USGS data, refreshed every 10 minutes.' },
+  { href: '/earthquakes/world', icon: '\uD83D\uDD2F', name: 'World M4.5+', blurb: 'Every larger quake, magnitude 4.5 and up, over the past seven days.' },
+  { href: '/earthquakes/southeast-asia', icon: '\uD83C\uDF34', name: 'Southeast Asia', blurb: 'Indonesia, the Philippines, PNG — the most active tectonic ring in Asia.' },
+  { href: '/earthquakes/japan', icon: '\uD83D\uDDE5', name: 'Japan & the Western Pacific', blurb: 'The western Ring of Fire: Japan, Guam, Kamchatka and the Mariana Trench.' },
+  { href: '/earthquakes/east-pacific', icon: '\uD83C\uDFE5', name: 'Eastern Pacific', blurb: 'The west coast of the Americas: California, Chile, Peru, Mexico, Alaska.' },
+  { href: '/earthquakes/malaysia', icon: '\uD83C\uDDF9', name: 'Malaysia & Sabah', blurb: 'The Sabah, Sarawak & border zones — last 30 days, down to small magnitudes.' },
+  { href: '/earthquakes/explained', icon: '\uD83D\uDCD8', name: 'How to Read Quake Data', blurb: 'Magnitude, depth, tsunami and what to do when the ground shakes.' },
 ];
 
 function gempaNav() {
@@ -6108,7 +6202,7 @@ function gempaNav() {
 }
 
 function gempaBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The earthquake data source (USGS) did not answer in time. Please try again in a few minutes.</p><p><a href="/gempa">Back to the Earthquake Complex</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The earthquake data source (USGS) did not answer in time. Please try again in a few minutes.</p><p><a href="/earthquakes">Back to the Earthquake Complex</a></p></body>`;
 }
 
 // Same shell as the cuacaDoc recipe: lang en, 3 ad slots, cross nav, the wx-* CSS is
@@ -6201,15 +6295,15 @@ function gpStatCards(rows, my) {
     + `</div>`;
 }
 
-// ——— HUB /gempa — world summary + full Malaysia list + region cards ———
+// ——— HUB /earthquakes — world summary + full Malaysia list + region cards ———
 function gempaHubPage(req, rows, myRows) {
   const s = gp.summarise(rows);
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Earthquake Complex',
     description: 'A live list of earthquakes worldwide and across Southeast Asia, from USGS public data.',
-    url: 'https://tukuk.org/gempa', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    url: 'https://tukuk.org/earthquakes', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
-  const regionCards = gp.REGIONS.map((r) => `<div class="wx-card"><h3><a href="/gempa/${r.slug}">${escapeHtml(r.name)}</a></h3><div class="meta">${escapeHtml(r.blurb)}</div></div>`).join('');
+  const regionCards = gp.REGIONS.map((r) => `<div class="wx-card"><h3><a href="/earthquakes/${r.slug}">${escapeHtml(r.name)}</a></h3><div class="meta">${escapeHtml(r.blurb)}</div></div>`).join('');
   const body = `<div class="wx-hero"><div class="temp">M ${s.max.toFixed(1)}</div><div class="wmeta">`
     + `The strongest quake of the past week \u00b7 ${escapeHtml(s.latest ? s.latest.place : '')}<br>`
     + `${s.latest ? gpWhen(s.latest.time) + ' \u00b7 depth ' + s.latest.depth + ' km' : ''} \u00b7 source: the United States Geological Survey (USGS), public data.</div></div>`
@@ -6218,11 +6312,11 @@ function gempaHubPage(req, rows, myRows) {
     + `<h2 class="section-title">Earthquakes around Malaysia (30 days)</h2>${gpTable(myRows, 20)}`
     + `<p>Malaysia does not sit on the Ring of Fire, but it is not free of shaking either: the eastern Sabah seismic zone (the Lingkabau, Pitas and Kota Belud faults) is active and shook Mount Kinabalu in June 2015 (M6.0, 181 deaths on the climb), while large Sumatran quakes are often felt in the Klang Valley and Penang because soft ground amplifies the waves.</p>`
     + `<h2 class="section-title">Monitored regions</h2><div class="wx-grid">${regionCards}</div>`
-    + `<p class="meta">New to the numbers? Read <a href="/gempa/penjelasan">how to interpret quake data</a>. For the current sky where you are, use the <a href="/cuaca">Weather Complex</a>; for the night sky, <a href="/nasa/sky">NASA Night Sky</a>; and the country a quake hits? <a href="/negara">Country Complex</a>.</p>`;
+    + `<p class="meta">New to the numbers? Read <a href="/earthquakes/explained">how to interpret quake data</a>. For the current sky where you are, use the <a href="/weather">Weather Complex</a>; for the night sky, <a href="/nasa/sky">NASA Night Sky</a>; and the country a quake hits? <a href="/countries">Country Complex</a>.</p>`;
   return gempaDoc({
     title: 'Earthquakes Today — Live World List | Tukuk-OS',
     desc: 'Check the latest earthquakes live across the world: magnitude, location, depth and tsunami potential from USGS public data — refreshed every 10 minutes, with special monitoring of Southeast Asia, Japan, the Pacific and the Sabah zone.',
-    selfUrl: 'https://tukuk.org/gempa',
+    selfUrl: 'https://tukuk.org/earthquakes',
     heroTitle: 'Tukuk-OS Earthquake Complex', heroSub: 'Live USGS data \u00b7 updated every 10 minutes \u00b7 free, no login',
     body, ld,
   });
@@ -6231,7 +6325,7 @@ function gempaHubPage(req, rows, myRows) {
 // ——— Region pages ———
 function gempaRegionPage(req, region, rows) {
   const s = gp.summarise(rows);
-  const selfUrl = `https://tukuk.org/gempa/${region.slug}`;
+  const selfUrl = `https://tukuk.org/earthquakes/${region.slug}`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Latest Earthquakes: ${region.name}`,
     description: region.blurb, url: selfUrl,
@@ -6243,8 +6337,8 @@ function gempaRegionPage(req, region, rows) {
     + `<div class="wx-card"><h3>Shallow (&lt;35 km)</h3><div class="big">${s.shallow}</div><div class="meta">shallow quakes are the ones felt at the surface</div></div></div>`
     + gpTable(rows, 50)
     + (s.felt ? `<p><b>${s.felt}</b> of the earthquakes listed carry human reports of having been felt (the "felt" field in USGS data).</p>` : '')
-    + `<h2 class="section-title">What to do when the ground shakes</h2><p><b>Drop \u2014 Cover \u2014 Hold</b>: let yourself down onto the floor, take cover under a sturdy table and hold on until the shaking stops. Do not run while the ground is still moving; do not use the lift; afterwards check the wiring, the gas pipes and the aftershock warnings. The full guide is on the <a href="/gempa/penjelasan">explanation page</a>.</p>`
-    + `<p class="meta">See also: <a href="/gempa">the world earthquake hub</a> \u00b7 <a href="/gempa/malaysia">the Malaysia zone</a> \u00b7 <a href="/cuaca">current weather</a> \u00b7 <a href="/cuti">the public-holiday calendar</a>.</p>`;
+    + `<h2 class="section-title">What to do when the ground shakes</h2><p><b>Drop \u2014 Cover \u2014 Hold</b>: let yourself down onto the floor, take cover under a sturdy table and hold on until the shaking stops. Do not run while the ground is still moving; do not use the lift; afterwards check the wiring, the gas pipes and the aftershock warnings. The full guide is on the <a href="/earthquakes/explained">explanation page</a>.</p>`
+    + `<p class="meta">See also: <a href="/earthquakes">the world earthquake hub</a> \u00b7 <a href="/earthquakes/malaysia">the Malaysia zone</a> \u00b7 <a href="/weather">current weather</a> \u00b7 <a href="/holidays">the public-holiday calendar</a>.</p>`;
   return gempaDoc({
     title: `Latest Earthquakes in ${region.name} \u2014 Magnitude, Location & Depth | Tukuk-OS`,
     desc: `A live list of earthquakes in ${region.name}: magnitude, depth, location and felt reports from USGS data, updated every 10 minutes, with times in Malaysia time.`,
@@ -6264,23 +6358,23 @@ function gempaExplainPage(req) {
     ['7.0 – 8.0', 'major', 'destruction over a wide area; the 2018 Sulawesi Sea quake = 7.5 + liquefaction + tsunami'],
     ['&gt; 8.0', 'great', 'ruptures whole volcanic chains; Aceh 2004 = 9.1, a tsunami that crossed an ocean'],
   ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
-  const body = `<p>Every row in our <a href="/gempa">earthquake complex</a> comes from the United States Geological Survey (USGS), the public science agency that records more than 20,000 earthquakes a year with a global seismograph network. This is what you need to read them.</p>`
+  const body = `<p>Every row in our <a href="/earthquakes">earthquake complex</a> comes from the United States Geological Survey (USGS), the public science agency that records more than 20,000 earthquakes a year with a global seismograph network. This is what you need to read them.</p>`
     + `<h2 class="section-title">Magnitude: a logarithmic scale</h2><p>Every step of 1 magnitude means <b>10× the amplitude</b> and <b>~32× the energy</b>. An M6.0 releases roughly 32 times the energy of an M5.0 — which is why the gap between "6.1" and "5.4" in the news is not a small thing.</p>`
     + `<table class="wx-table"><tr><th>Magnitude</th><th>Class</th><th>Typical effect</th></tr>${magRows}</table>`
     + `<h2 class="section-title">Depth: the factor that decides what you feel</h2><p>A quake at 10 km is felt far harder at the surface than one of the same magnitude at 200 km. The Sabah zone is usually shallow (&lt;20 km), which is why even small tremors are felt in Kota Kinabalu. Deep events (&gt;300 km) under the Philippine Sea rarely do damage even when their magnitude is large.</p>`
     + `<h2 class="section-title">Why Sabah shakes while KL usually does not</h2><p>Borneo sits on the fairly stable Sunda Plate, but its eastern edge is squeezed by the Sulu and Philippine Sea plates — that is what formed the active Lingkabau, Pitas and Tambon faults. The Peninsula is on the back row: most tremors reported in Klang or Penang are distant Sumatran waves, amplified by soft ground and tall buildings.</p>`
     + `<h2 class="section-title">Tsunami: when a warning deserves to be taken seriously</h2><p>The tsunami-warning signature = an M7+ quake on a sea fault at a depth below 30 km. In Malaysia, the west coast of Sabah and eastern Sarawak are most exposed to the Sulawesi Sea. If shaking by the water lasts more than 20 seconds, move to higher ground straight away — do not wait for the official siren.</p>`
     + `<h2 class="section-title">The gold protocol: Drop, Cover, Hold</h2><ul><li><b>Drop</b> — get down on your hands and knees before the shaking throws you over.</li><li><b>Cover</b> — crawl under a table and shield your head & neck. No table? An interior corner, away from mirrors.</li><li><b>Hold</b> — hold on where you are until the shaking stops; moving around while the ground still moves is the most common cause of injury.</li></ul>`
-    + `<p class="meta">For official Malaysian warnings, refer to MetMalaysia (met.gov.my) and the National Security Council. This page is for education & quick reference — the raw data always lives at USGS. Also check the <a href="/cuaca">Weather Complex</a> for the sky overhead.</p>`;
+    + `<p class="meta">For official Malaysian warnings, refer to MetMalaysia (met.gov.my) and the National Security Council. This page is for education & quick reference — the raw data always lives at USGS. Also check the <a href="/weather">Weather Complex</a> for the sky overhead.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Article', name: 'How to Read Earthquake Data',
     description: 'An explanation of magnitude, depth, tsunami potential and the Drop-Cover-Hold protocol, written for the Malaysian context.',
-    url: 'https://tukuk.org/gempa/penjelasan', inLanguage: 'en', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
+    url: 'https://tukuk.org/earthquakes/explained', inLanguage: 'en', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
   }).replace(/</g, '\\u003c');
   return gempaDoc({
     title: 'How to Read Earthquake Data — Magnitude, Depth & Tsunami | Tukuk-OS',
     desc: 'Understand the magnitude scale (every step = 32× the energy), depth, tsunami potential and the Drop-Cover-Hold protocol — explained for the Malaysian context.',
-    selfUrl: 'https://tukuk.org/gempa/penjelasan',
+    selfUrl: 'https://tukuk.org/earthquakes/explained',
     heroTitle: 'How to Read Earthquake Data', heroSub: 'From seismograph numbers to a safe decision in 60 seconds',
     body, ld,
   });
@@ -6291,13 +6385,13 @@ function gempaExplainPage(req) {
 // Malaysia source: malaysia-holiday.dydxsoft.my (checked by the admin against the
 // official cabinet.gov.my gazette; 13 states + 3 federal territories). Source failure → 503 noindex.
 const CUTI_SECTIONS = [
-  { href: '/cuti', icon: '\uD83D\uDDD3\uFE0F', name: 'World Public Holidays 2026', blurb: `Calendars for ${cd.COUNTRIES.length} countries — which nation has the most days off, the next holiday anywhere on earth and the full table for every country.` },
+  { href: '/holidays', icon: '\uD83D\uDDD3\uFE0F', name: 'World Public Holidays 2026', blurb: `Calendars for ${cd.COUNTRIES.length} countries — which nation has the most days off, the next holiday anywhere on earth and the full table for every country.` },
 ];
-for (const rg of cd.REGIONS) CUTI_SECTIONS.push({ href: `/cuti/dunia/${rg.slug}`, icon: '\uD83C\uDF0E', name: `${rg.en} Holidays 2026`, blurb: `The country list, the number of public holidays and the next day off on every continent.` });
-CUTI_SECTIONS.push({ href: '/cuti/hujung-minggu-panjang', icon: '\uD83C\uDFD6\uFE0F', name: 'World Long Weekends', blurb: 'Holiday + weekend runs of 4 days or more around the planet — and when one bridge day is needed.' });
-CUTI_SECTIONS.push({ href: '/cuti/2026', icon: '\uD83D\uDCC5', name: 'Malaysia Holidays 2026', blurb: 'The full table for 13 states + 3 federal territories, checked against the official cabinet.gov.my gazette.' });
-CUTI_SECTIONS.push({ href: '/cuti/2027', icon: '\uD83D\uDCC6', name: 'Malaysia Holidays 2027', blurb: 'An early plan for next year\u2019s leave \u2014 every gazetted date we already know.' });
-CUTI_SECTIONS.push({ href: '/cuti/penjelasan', icon: '\uD83D\uDCD8', name: 'How Holiday Calendars Work', blurb: 'Month calendars, moving festivals, the substitute-day principle and bridge-day strategy.' });
+for (const rg of cd.REGIONS) CUTI_SECTIONS.push({ href: `/holidays/world/${rg.slug}`, icon: '\uD83C\uDF0E', name: `${rg.en} Holidays 2026`, blurb: `The country list, the number of public holidays and the next day off on every continent.` });
+CUTI_SECTIONS.push({ href: '/holidays/long-weekends', icon: '\uD83C\uDFD6\uFE0F', name: 'World Long Weekends', blurb: 'Holiday + weekend runs of 4 days or more around the planet — and when one bridge day is needed.' });
+CUTI_SECTIONS.push({ href: '/holidays/2026', icon: '\uD83D\uDCC5', name: 'Malaysia Holidays 2026', blurb: 'The full table for 13 states + 3 federal territories, checked against the official cabinet.gov.my gazette.' });
+CUTI_SECTIONS.push({ href: '/holidays/2027', icon: '\uD83D\uDCC6', name: 'Malaysia Holidays 2027', blurb: 'An early plan for next year\u2019s leave \u2014 every gazetted date we already know.' });
+CUTI_SECTIONS.push({ href: '/holidays/explained', icon: '\uD83D\uDCD8', name: 'How Holiday Calendars Work', blurb: 'Month calendars, moving festivals, the substitute-day principle and bridge-day strategy.' });
 
 function cutiNav() {
   return `<nav aria-label="Holiday sections"><h2 class="section-title">Explore the Tukuk-OS World Holiday Complex</h2><div class="feed">`
@@ -6306,7 +6400,7 @@ function cutiNav() {
 }
 
 function cutiBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The holiday calendar source did not answer in time. Please try again in a few minutes.</p><p><a href="/cuti">Back to the Holiday Complex</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The holiday calendar source did not answer in time. Please try again in a few minutes.</p><p><a href="/holidays">Back to the Holiday Complex</a></p></body>`;
 }
 
 // Same shell recipe as gempaDoc: lang en, 3 ad slots, cross nav, the wx-* CSS reused
@@ -6407,7 +6501,7 @@ const CT_WORLD_YEAR = 2026;
 function ctDay(dateStr) { try { return CT_DOW.format(new Date(`${dateStr}T00:00:00Z`)); } catch { return ''; } }
 function ctFlag(cca2) { return `https://flagcdn.com/w40/${String(cca2 || '').toLowerCase()}.png`; }
 function ctName(rec) { return String((rec && rec.en) || ''); }
-function ctCutiHref(rec) { return `/cuti/dunia/${rec.slug}`; }
+function ctCutiHref(rec) { return `/holidays/world/${rec.slug}`; }
 function ctNation(rec) {
   return `<img class="ct-fl" src="${ctFlag(rec.cca2)}" alt="" width="20" height="13" loading="lazy" decoding="async">`
     + `<a href="${ctCutiHref(rec)}"><b>${escapeHtml(ctName(rec))}</b></a>`;
@@ -6447,7 +6541,7 @@ const CT_REGION_NOTES = {
   oceania: 'Oceania is small in numbers but huge in geography: Australia follows state holidays — the same day can carry a different name and date in New South Wales than in Western Australia. New Zealand moves its main holidays to Mondays (King\u2019s Birthday, Labour Day) and has its own Waitangi Day week. The Pacific island nations list many customary days and local liberation days.',
 };
 
-// ——— HUB /cuti — WORLD: country ranking, next holiday anywhere, regions, MY section ———
+// ——— HUB /holidays — WORLD: country ranking, next holiday anywhere, regions, MY section ———
 function cutiHubPage(req, world, rows) {
   const rank = cd.worldRanking(world);
   const tot = cd.worldTotals(world);
@@ -6476,9 +6570,9 @@ function cutiHubPage(req, world, rows) {
   const regionCards = cd.REGIONS.map((r) => {
     const list = cd.inRegion(world, r.slug).filter((x) => Array.isArray(x.holidays) && x.holidays.length);
     const sum = list.reduce((s, x) => s + x.holidays.length, 0);
-    return `<div class="wx-card"><h3><a href="/cuti/dunia/${r.slug}">${escapeHtml(r.en)} holidays</a></h3><div class="big">${list.length}</div><div class="meta">countries with data \u00b7 ${sum} holidays ${yr}</div></div>`;
+    return `<div class="wx-card"><h3><a href="/holidays/world/${r.slug}">${escapeHtml(r.en)} holidays</a></h3><div class="big">${list.length}</div><div class="meta">countries with data \u00b7 ${sum} holidays ${yr}</div></div>`;
   }).join('');
-  const stateCards = cu.STATES.map((st) => `<div class="wx-card"><h3><a href="/cuti/${st.slug}">${escapeHtml(st.name)}</a></h3><div class="meta">Weekend ${escapeHtml(st.weekend)} \u00b7 tables for ${cu.YEAR_MIN} &amp; ${cu.YEAR_MAX}</div></div>`).join('');
+  const stateCards = cu.STATES.map((st) => `<div class="wx-card"><h3><a href="/holidays/${st.slug}">${escapeHtml(st.name)}</a></h3><div class="meta">Weekend ${escapeHtml(st.weekend)} \u00b7 tables for ${cu.YEAR_MIN} &amp; ${cu.YEAR_MAX}</div></div>`).join('');
   const body = hero
     + cards
     + `<h2 class="section-title">The countries with the most holidays ${yr}</h2><p>All ${tot.countries} countries in our coverage, ordered by the number of public days off. Click any country for the full date table.</p>`
@@ -6489,26 +6583,26 @@ function cutiHubPage(req, world, rows) {
     + `<h2 class="section-title">Why world holiday calendars differ so much</h2>`
     + `<p>There are four main causes. <b>First</b>, different calendars: Muslim-majority countries count Eid al-Fitr &amp; Eid al-Adha by the moon (moving ±11 days a year), India and East Asia follow lunisolar calendars, while the Western world uses the solar calendar with a layer of Christian feasts that move with Easter. <b>Second</b>, substitute-day policy: the United Kingdom, Australia, South Africa and the United States move a weekend holiday to the nearest working day, while many Asian countries simply let it «disappear». <b>Third</b>, local holidays: Spain, Switzerland and India have state or municipal days off that are not the same from one place to another. <b>Fourth</b>, political history: countries that gained independence in the 20th century mark an independence day, whereas Western Europe has more religious feasts and labour days.</p>`
     + `<h2 class="section-title">Malaysia — the full table by state</h2><p>For readers planning leave at home, our <b>${cu.YEAR_MIN} &amp; ${cu.YEAR_MAX}</b> tables are checked against the official cabinet.gov.my gazette and split across 13 states + 3 federal territories, including the Friday–Saturday weekend states (Johor, Kedah, Kelantan, Terengganu) and the substitute-day principle.</p>`
-    + `<p><a href="/cuti/2026">Malaysia holidays ${cu.YEAR_MIN}</a> \u00b7 <a href="/cuti/2027">Malaysia holidays ${cu.YEAR_MAX}</a> \u00b7 <a href="/cuti/hujung-minggu-panjang">Long weekends</a> \u00b7 <a href="/cuti/penjelasan">How holiday calendars work</a></p>`
+    + `<p><a href="/holidays/2026">Malaysia holidays ${cu.YEAR_MIN}</a> \u00b7 <a href="/holidays/2027">Malaysia holidays ${cu.YEAR_MAX}</a> \u00b7 <a href="/holidays/long-weekends">Long weekends</a> \u00b7 <a href="/holidays/explained">How holiday calendars work</a></p>`
     + `<div class="wx-grid">${stateCards}</div>`
-    + `<p class="meta">World source: <a href="https://date.nager.at" rel="noopener nofollow">Nager.Date</a> (open data, no key). Plan around the sky at your destination in the <a href="/cuaca">Weather Complex</a>; get to know a country first in the <a href="/negara">Country Complex</a>; compare socioeconomics in the <a href="/statistik">Statistics Complex</a>; live disasters in the <a href="/bencana">Disaster Complex</a>.</p>`;
+    + `<p class="meta">World source: <a href="https://date.nager.at" rel="noopener nofollow">Nager.Date</a> (open data, no key). Plan around the sky at your destination in the <a href="/weather">Weather Complex</a>; get to know a country first in the <a href="/countries">Country Complex</a>; compare socioeconomics in the <a href="/statistics">Statistics Complex</a>; live disasters in the <a href="/disasters">Disaster Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS World Holiday Complex',
     description: `The ${yr} public-holiday calendar for ${tot.countries} countries: the ranking of most days off, the next holiday anywhere on earth and the full table for every country.`,
-    url: 'https://tukuk.org/cuti', inLanguage: 'en',
+    url: 'https://tukuk.org/holidays', inLanguage: 'en',
     isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
     temporalCoverage: String(yr),
   }).replace(/</g, '\\u003c');
   return cutiDoc({
     title: `World Public Holidays ${yr} \u2014 Calendars & Ranking for ${cd.COUNTRIES.length} Countries | Tukuk-OS`,
     desc: `The ${yr} public-holiday calendar for ${cd.COUNTRIES.length} countries: which nation has the most days off, the next holiday anywhere in the world, long-weekend combinations and the full date table for every country.`,
-    selfUrl: 'https://tukuk.org/cuti',
+    selfUrl: 'https://tukuk.org/holidays',
     heroTitle: 'Tukuk-OS World Holiday Complex', heroSub: `Days-off calendars for ${cd.COUNTRIES.length} countries \u00b7 the open Nager.Date data \u00b7 free`,
     body, ld,
   });
 }
 
-// ——— /cuti/dunia/:region — the country index inside one continent ———
+// ——— /holidays/world/:region — the country index inside one continent ———
 function cutiRegionPage(req, region, world, rows) {
   const yr = CT_WORLD_YEAR;
   const all = cd.inRegion(world, region.slug);
@@ -6529,30 +6623,30 @@ function cutiRegionPage(req, region, world, rows) {
     + `<div class="wx-card"><h3>Most holidays</h3><div class="big">${top ? escapeHtml(ctName(top)) : '—'}</div><div class="meta">${top ? `${top.holidays.length} public days off ${yr}` : 'no data'}</div></div>`
     + `</div>`;
   const note = CT_REGION_NOTES[region.slug] || '';
-  const otherRegions = cd.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a href="/cuti/dunia/${r.slug}">${escapeHtml(r.en)}</a>`).join(' \u00b7 ');
+  const otherRegions = cd.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a href="/holidays/world/${r.slug}">${escapeHtml(r.en)}</a>`).join(' \u00b7 ');
   const body = `<div class="wx-hero"><div class="temp">${escapeHtml(region.en)} holidays ${yr}</div><div class="wmeta">${list.length} countries \u00b7 ${total} public days off recorded \u00b7 open Nager.Date data</div></div>`
     + cards
     + (note ? `<h2 class="section-title">The face of the ${escapeHtml(region.en)} calendar</h2><p>${escapeHtml(note)}</p>` : '')
     + `<h2 class="section-title">Every country \u2014 ${escapeHtml(region.en)}</h2>`
     + `<table class="wx-table"><tr><th>Country</th><th>Holidays ${yr}</th><th>Next day off</th></tr>${rowsHtml}</table>`
     + (nodata.length ? `<p class="meta">Not yet available in the source: ${escapeHtml(nodata.map((r) => ctName(r)).join(', '))}.</p>` : '')
-    + `<p>Other continental calendars: ${otherRegions}. Back to the <a href="/cuti">world holiday hub</a> for the cross-continent ranking and the full Malaysia tables.</p>`
-    + `<p class="meta">The geographic profile of every country (capital, population, flag, neighbours) is in the <a href="/negara/${region.slug}">Country Complex \u2014 ${escapeHtml(region.en)}</a>.</p>`;
+    + `<p>Other continental calendars: ${otherRegions}. Back to the <a href="/holidays">world holiday hub</a> for the cross-continent ranking and the full Malaysia tables.</p>`
+    + `<p class="meta">The geographic profile of every country (capital, population, flag, neighbours) is in the <a href="/countries/${region.slug}">Country Complex \u2014 ${escapeHtml(region.en)}</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Public Holidays in ${region.en} ${yr}`,
     description: `The list of ${list.length} countries in ${region.en} with their ${yr} public-holiday counts and next day-off dates.`,
-    url: `https://tukuk.org/cuti/dunia/${region.slug}`, inLanguage: 'en', temporalCoverage: String(yr),
+    url: `https://tukuk.org/holidays/world/${region.slug}`, inLanguage: 'en', temporalCoverage: String(yr),
   }).replace(/</g, '\\u003c');
   return cutiDoc({
     title: `Public Holidays in ${region.en} ${yr} \u2014 Country List & Dates | Tukuk-OS`,
     desc: `The ${yr} public-holiday calendar across ${region.en}: ${list.length} countries, the total number of days off, the next holiday and a link to the full table of every country.`,
-    selfUrl: `https://tukuk.org/cuti/dunia/${region.slug}`,
+    selfUrl: `https://tukuk.org/holidays/world/${region.slug}`,
     heroTitle: `${region.en} Holidays ${yr}`, heroSub: `${list.length} countries \u00b7 ${total} public days off \u00b7 open data`,
     body, ld,
   });
 }
 
-// ——— /cuti/dunia/:country — the full date table of one country ———
+// ——— /holidays/world/:country — the full date table of one country ———
 function cutiCountryPage(req, coun, holidays, lws, rows) {
   const byCca2 = new Map((rows || []).map((c) => [c.cca2, c]));
   const ngRow = byCca2.get(coun.cca2) || null;
@@ -6585,7 +6679,7 @@ function cutiCountryPage(req, coun, holidays, lws, rows) {
   const siblings = cd.COUNTRIES
     .filter(([cca2, , reg]) => reg === coun.region && cca2 !== coun.cca2)
     .map(([cca2]) => cd.findCountry(cca2))
-    .map((r) => `<a href="/cuti/dunia/${r.slug}">${escapeHtml(ctName(r))}</a>`).join(' \u00b7 ');
+    .map((r) => `<a href="/holidays/world/${r.slug}">${escapeHtml(ctName(r))}</a>`).join(' \u00b7 ');
   const longest = Array.isArray(lws) && lws.length ? [...lws].sort((a, b) => b.dayCount - a.dayCount)[0] : null;
   const body = hero
     + cards
@@ -6593,38 +6687,38 @@ function cutiCountryPage(req, coun, holidays, lws, rows) {
     + `<h2 class="section-title">Long weekends in ${escapeHtml(nm)} ${yr}</h2>${ctWorldLwTable(lws)}`
     + `<h2 class="section-title">Planning leave in ${escapeHtml(nm)}</h2><p>${escapeHtml(nm)} gives <b>${sorted.length}</b> public days off in ${yr}${nationals !== sorted.length ? `, of which ${sorted.length - nationals} are recognised only in certain states or regions` : ' — all of them nationwide'}. The longest weekend run ${longest ? `this year is <b>${longest.dayCount} days</b> (${escapeHtml(ctShort(longest.start))} \u2013 ${escapeHtml(ctShort(longest.end))})` : 'is not reported for this year yet'}. The busiest month is <b>${escapeHtml(busyLabel)}</b>, and holidays land most often on a <b>${topDay != null ? DAY_EN[Number(topDay)] : '—'}</b> \u2014 two facts that are enough to decide when a ticket must be bought early.</p>`
     + `<p>Countries with multi-faith calendars usually have «moving» holidays (Eid al-Fitr, Easter, Chinese New Year, Diwali) whose dates change every year, so check the table a year ahead before booking school holidays.</p>`
-    + `<p class="meta">The full profile of ${escapeHtml(nm)} (capital, population, GDP, neighbours): <a href="/negara/${ngRow ? ngRow.slug : 'dunia'}">Country Complex</a>${coun.cca2 === 'MY' ? ` \u00b7 the detailed state-by-state table is at <a href="/cuti/${cu.YEAR_MIN}">Malaysia holidays ${cu.YEAR_MIN}</a>` : ''} \u00b7 socioeconomic ranking: <a href="/statistik">Statistics Complex</a> \u00b7 active natural events: <a href="/bencana">Disaster Complex</a>.</p>`
+    + `<p class="meta">The full profile of ${escapeHtml(nm)} (capital, population, GDP, neighbours): <a href="/countries/${ngRow ? ngRow.slug : 'dunia'}">Country Complex</a>${coun.cca2 === 'MY' ? ` \u00b7 the detailed state-by-state table is at <a href="/holidays/${cu.YEAR_MIN}">Malaysia holidays ${cu.YEAR_MIN}</a>` : ''} \u00b7 socioeconomic ranking: <a href="/statistics">Statistics Complex</a> \u00b7 active natural events: <a href="/disasters">Disaster Complex</a>.</p>`
     + `<h2 class="section-title">Other countries in ${escapeHtml(coun.region)}</h2><p>${siblings}</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Public Holidays in ${nm} ${yr}`,
     description: `The full list of ${sorted.length} public holidays in ${nm} for ${yr} with dates, weekdays, national/regional scope and long-weekend combinations.`,
-    url: `https://tukuk.org/cuti/dunia/${coun.slug}`, inLanguage: 'en', temporalCoverage: String(yr),
+    url: `https://tukuk.org/holidays/world/${coun.slug}`, inLanguage: 'en', temporalCoverage: String(yr),
   }).replace(/</g, '\\u003c');
   return cutiDoc({
     title: `Public Holidays in ${nm} ${yr} \u2014 ${sorted.length} Days Off | Tukuk-OS`,
     desc: `The full public-holiday table for ${nm} ${yr}: ${sorted.length} dates (${nationals} national), the next day off ${next ? escapeHtml(ctShort(next.date)) : '—'}, long-weekend combinations and the busiest month.`,
-    selfUrl: `https://tukuk.org/cuti/dunia/${coun.slug}`,
+    selfUrl: `https://tukuk.org/holidays/world/${coun.slug}`,
     heroTitle: `Public Holidays in ${nm} ${yr}`, heroSub: `${sorted.length} days off \u00b7 open Nager.Date data \u00b7 updated automatically`,
     body, ld,
   });
 }
 
 
-// ——— Year pages (/cuti/2026, /cuti/2027) — the full national list + LW for 4 areas ———
+// ——— Year pages (/holidays/2026, /holidays/2027) — the full national list + LW for 4 areas ———
 function cutiYearPage(req, year, rows) {
   const sorted = [...rows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-  const selfUrl = `https://tukuk.org/cuti/${year}`;
+  const selfUrl = `https://tukuk.org/holidays/${year}`;
   const areas = [['KUL', 'Kuala Lumpur &amp; Putrajaya'], ['SGR', 'Selangor'], ['JHR', 'Johor'], ['SBH', 'Sabah'], ['SWK', 'Sarawak']];
   const lwBlocks = areas.map(([code, label]) => {
     const list = cu.longWeekends(cu.forState(sorted, code));
     return `<h2 class="section-title">Long weekends \u2014 ${label}</h2>${ctLwHtml(list)}`;
   }).join('');
-  const stateCards = cu.STATES.map((st) => `<li><a href="/cuti/${st.slug}?tahun=${year}">${escapeHtml(st.name)}</a></li>`).join('');
+  const stateCards = cu.STATES.map((st) => `<li><a href="/holidays/${st.slug}?tahun=${year}">${escapeHtml(st.name)}</a></li>`).join('');
   const body = `<p>The complete list of public holidays for <b>${year}</b> \u2014 ${sorted.length} dates across every state, checked against the official <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">kabinet.gov.my</a> gazette. Entries marked <i>subject to change</i> are days the government can still add or cancel (usually special celebration days off).</p>`
     + `<h2 class="section-title">All holidays ${year}</h2>${ctTable(sorted)}`
     + lwBlocks
     + `<h2 class="section-title">The table by state</h2><ul>${stateCards}</ul>`
-    + `<p class="meta">A state royal-birthday holiday may be kept on its old date until the palace announces otherwise; check your own state page. <a href="/cuti/penjelasan">Understand how the Malaysian holiday calendar works</a>.</p>`;
+    + `<p class="meta">A state royal-birthday holiday may be kept on its old date until the palace announces otherwise; check your own state page. <a href="/holidays/explained">Understand how the Malaysian holiday calendar works</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Malaysia Public Holidays ${year}`,
     description: `The complete list of Malaysian public holidays in ${year} by date and state, with the long-weekend counts.`,
@@ -6639,7 +6733,7 @@ function cutiYearPage(req, year, rows) {
   });
 }
 
-// ——— /cuti/hujung-minggu-panjang — world combinations + the Malaysia section ———
+// ——— /holidays/long-weekends — world combinations + the Malaysia section ———
 function cutiLongWeekendPage(req, rows26, rows27, worldLw) {
   const world = Array.isArray(worldLw) ? worldLw : [];
   const yr = CT_WORLD_YEAR;
@@ -6683,26 +6777,26 @@ function cutiLongWeekendPage(req, rows26, rows27, worldLw) {
     + (myAuto.length ? `<table class="wx-table"><tr><th>Area</th><th>Period</th><th>Length</th><th>Related holidays</th></tr>${myAuto.map(fmtMy).join('')}</table>` : '<p>No Malaysian holiday data to compute from yet.</p>')
     + `<h2 class="section-title">Malaysia — bridge combinations (one leave day)</h2>`
     + (myBridge.length ? `<table class="wx-table"><tr><th>Area</th><th>Period</th><th>Length</th><th>Related holidays</th></tr>${myBridge.map(fmtMy).join('')}</table>` : '<p>No bridge combinations in the data so far.</p>')
-    + `<p>States on a Friday\u2013Saturday weekend (Johor, Kedah, Kelantan, Terengganu) are counted differently \u2014 open each state page from the <a href="/cuti">holiday hub</a>.</p>`
-    + `<p class="meta">See also: <a href="/cuti">calendars for ${cd.COUNTRIES.length} countries</a> \u00b7 <a href="/cuti/2026">Malaysia ${cu.YEAR_MIN}</a> \u00b7 <a href="/cuti/2027">Malaysia ${cu.YEAR_MAX}</a> \u00b7 <a href="/cuti/penjelasan">how holiday calendars work</a> \u00b7 <a href="/cuaca">weather at your destination</a>.</p>`;
+    + `<p>States on a Friday\u2013Saturday weekend (Johor, Kedah, Kelantan, Terengganu) are counted differently \u2014 open each state page from the <a href="/holidays">holiday hub</a>.</p>`
+    + `<p class="meta">See also: <a href="/holidays">calendars for ${cd.COUNTRIES.length} countries</a> \u00b7 <a href="/holidays/2026">Malaysia ${cu.YEAR_MIN}</a> \u00b7 <a href="/holidays/2027">Malaysia ${cu.YEAR_MAX}</a> \u00b7 <a href="/holidays/explained">how holiday calendars work</a> \u00b7 <a href="/weather">weather at your destination</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `World Long Weekends ${yr}`,
     description: `Public-holiday and weekend combinations of four days or more across ${nationCount} countries (${yr}), plus the automatic and bridge-day counts for Malaysia.`,
-    url: 'https://tukuk.org/cuti/hujung-minggu-panjang', inLanguage: 'en', temporalCoverage: String(yr),
+    url: 'https://tukuk.org/holidays/long-weekends', inLanguage: 'en', temporalCoverage: String(yr),
   }).replace(/</g, '\\u003c');
   return cutiDoc({
     title: `World Long Weekends ${yr} \u2014 Consecutive Holidays & Bridge Days | Tukuk-OS`,
     desc: `${big.length} long-weekend combinations in ${yr} across ${nationCount} countries: the automatic runs of four days or more and those that only need a single leave day (a bridge day), including Malaysia's state-by-state counts.`,
-    selfUrl: 'https://tukuk.org/cuti/hujung-minggu-panjang',
+    selfUrl: 'https://tukuk.org/holidays/long-weekends',
     heroTitle: 'World Long Weekends', heroSub: `When holidays join the weekend in ${nationCount} countries \u2014 automatically or with one leave day`,
     body, ld,
   });
 }
 
-// ——— /cuti/:negeri — one state's table + long weekends from that state's weekend convention ———
+// ——— /holidays/:negeri — one state's table + long weekends from that state's weekend convention ———
 function cutiStatePage(req, st, year, rows) {
   const sorted = [...rows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-  const selfUrl = `https://tukuk.org/cuti/${st.slug}${Number(year) === cu.YEAR_MIN ? '' : `?tahun=${year}`}`;
+  const selfUrl = `https://tukuk.org/holidays/${st.slug}${Number(year) === cu.YEAR_MIN ? '' : `?tahun=${year}`}`;
   const lw = cu.longWeekends(sorted);
   const next = cu.nextHoliday(sorted, new Date().toISOString().slice(0, 10));
   const otherYear = Number(year) === cu.YEAR_MIN ? cu.YEAR_MAX : cu.YEAR_MIN;
@@ -6710,7 +6804,7 @@ function cutiStatePage(req, st, year, rows) {
     + (next ? `<div class="wx-hero"><div class="temp">${escapeHtml(next.name)}</div><div class="wmeta">Next ${escapeHtml(st.name)} holiday<br>${escapeHtml(ctDateFr(next.date))}</div></div>` : '')
     + `<h2 class="section-title">Every holiday in ${escapeHtml(st.name)} ${year}</h2>${ctTable(sorted)}`
     + `<h2 class="section-title">Long weekends in ${escapeHtml(st.name)}</h2>${ctLwHtml(lw)}`
-    + `<p class="meta">This state has ${sorted.length} holidays in ${year}; compare with <a href="/cuti/${st.slug}?tahun=${otherYear}">${otherYear}</a> or see the <a href="/cuti">comparison across all states</a>. Before planning outdoor activities, check the <a href="/cuaca">weather in ${escapeHtml(st.name)}</a>.</p>`;
+    + `<p class="meta">This state has ${sorted.length} holidays in ${year}; compare with <a href="/holidays/${st.slug}?tahun=${otherYear}">${otherYear}</a> or see the <a href="/holidays">comparison across all states</a>. Before planning outdoor activities, check the <a href="/weather">weather in ${escapeHtml(st.name)}</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Public Holidays in ${st.name} ${year}`,
     description: `The ${year} public-holiday list for ${st.name} with long-weekend counts based on the weekend days of that state.`,
@@ -6725,37 +6819,37 @@ function cutiStatePage(req, st, year, rows) {
   });
 }
 
-// ——— /cuti/penjelasan — static, educational (world + Malaysia) ———
+// ——— /holidays/explained — static, educational (world + Malaysia) ———
 function cutiExplainPage(req) {
-  const body = `<p>Every country defines «the non-working day» in its own way. Once you understand the five mechanics below, you can read the holiday table of any country in <a href="/cuti">this complex</a> and know straight away when to buy a ticket.</p>`
+  const body = `<p>Every country defines «the non-working day» in its own way. Once you understand the five mechanics below, you can read the holiday table of any country in <a href="/holidays">this complex</a> and know straight away when to buy a ticket.</p>`
     + `<h2 class="section-title">1. Four kinds of calendar</h2><p><b>Solar</b> dates (1 January, 1 May, independence day) fall on the same day every year. <b>The Islamic lunar calendar</b> (Hari Raya Aidilfitri, Hari Raya Aidiladha, Maulidur Rasul, the start of Ramadan) moves roughly <b>11 days earlier</b> each Gregorian year — a hijri year is only ±354 days long. <b>Lunisolar</b> festivals (Chinese New Year, Vesak, Deepavali) depend on the moon phase and the sun position at the same time, so their date window is wide (Chinese New Year always falls between 21 Jan and 20 Feb). <b>Movable Christian feasts</b> (Good Friday, Easter Monday, Ascension, Whit Monday) are all locked to one anchor date: the first full moon after the March equinox.</p>`
     + `<h2 class="section-title">2. Two layers: national and state</h2><p>Roughly half the world runs tiered holidays: <b>federal/national</b> days off plus <b>state, province or municipal holidays</b>. The extreme examples: India declares different holidays state by state (Pongal in Tamil Nadu, Onam in Kerala), Switzerland has cantonal holidays and Spain has autonomous-community holidays. In our tables a row marked <i>Part of the country</i> means that day off only applies in certain territories.</p>`
     + `<h2 class="section-title">3. The substitute-day principle (observed)</h2><p>The United Kingdom, Australia, New Zealand, South Africa, the United States and South Korea <b>move</b> a holiday that falls on a weekend to the nearest working day; in the US this is called <i>observed</i> — Christmas 2027 falls on a Saturday, so the federal holiday moves to Monday 27 Dec. By contrast, many Southeast Asian and Middle Eastern countries do not replace a Sunday holiday at all — it is simply «lost». That is the main reason your <i>effective</i> number of days off differs from the count printed in the table.</p>`
     + `<h2 class="section-title">4. Two weekend conventions</h2><p>Most Muslim-majority countries in the Middle East once took <b>Friday\u2013Saturday</b> off; the majority (including the UAE since 2022, and Saudi Arabia for the private sector) have switched to <b>Saturday\u2013Sunday</b> or <b>Sunday\u2013Monday</b> so the two rest days line up with the international weekend. In Malaysia, Johor, Kedah, Kelantan and Terengganu are still Friday\u2013Saturday \u2014 which is exactly why a Sunday holiday becomes three days off in one state and only two in another.</p>`
-    + `<h2 class="section-title">5. Leave days &amp; the bridge-day strategy</h2><p>A single holiday on a Tuesday or a Thursday is the most profitable kind you can get: add <b>one leave day</b>, take <b>four days</b> off. Nager.Date flags such combinations as <i>needBridgeDay</i> and we list them on the <a href="/cuti/hujung-minggu-panjang">long weekends</a> page. A popular strategy: book your tickets as soon as the annual calendar is gazetted (usually October\u2013November of the year before), because bridge holidays absorb flight capacity fast.</p>`
-    + `<h2 class="section-title">Malaysia: two layers plus a late gazette</h2><p>The Malaysian schedule stacks federal holidays (Merdeka Day on 31 August, Hari Raya Aidilfitri, Hari Raya Aidiladha, New Year, Vesak, Deepavali, Christmas) on top of <b>the Sultan/Raja birthday of each state</b> and state-specific days off (Gawai Dayak in Sarawak, Kaamatan Festival in Sabah). Entries marked <i>subject to change</i> are special holidays the government may still add or withdraw — compare the <a href="/cuti/${cu.YEAR_MIN}">${cu.YEAR_MIN} table</a> with <a href="/cuti/${cu.YEAR_MAX}">${cu.YEAR_MAX}</a> before you buy tickets.</p>`
-    + `<h2 class="section-title">Where our data comes from</h2><p>The world tables come from <b>Nager.Date v3</b> (<a href="https://date.nager.at" rel="noopener nofollow">date.nager.at</a>) — an open-source project that needs no registration and covers ±180 countries; we picked ${cd.COUNTRIES.length} of them for the in-depth pages. Country names, flags and continental positions are borrowed from the <a href="/negara">Country Complex</a> (world-countries + World Bank). The Malaysian table comes from the public <b>malaysia-holiday.dydxsoft.my</b> API, checked against the official <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">kabinet.gov.my</a> gazette. We cache for 30 days and refresh as soon as a source changes. The sky while you travel: the <a href="/cuaca">Weather Complex</a>; shaking ground at your destination: the <a href="/gempa">Earthquake Complex</a>; active natural events: the <a href="/bencana">Disaster Complex</a>.</p>`;
+    + `<h2 class="section-title">5. Leave days &amp; the bridge-day strategy</h2><p>A single holiday on a Tuesday or a Thursday is the most profitable kind you can get: add <b>one leave day</b>, take <b>four days</b> off. Nager.Date flags such combinations as <i>needBridgeDay</i> and we list them on the <a href="/holidays/long-weekends">long weekends</a> page. A popular strategy: book your tickets as soon as the annual calendar is gazetted (usually October\u2013November of the year before), because bridge holidays absorb flight capacity fast.</p>`
+    + `<h2 class="section-title">Malaysia: two layers plus a late gazette</h2><p>The Malaysian schedule stacks federal holidays (Merdeka Day on 31 August, Hari Raya Aidilfitri, Hari Raya Aidiladha, New Year, Vesak, Deepavali, Christmas) on top of <b>the Sultan/Raja birthday of each state</b> and state-specific days off (Gawai Dayak in Sarawak, Kaamatan Festival in Sabah). Entries marked <i>subject to change</i> are special holidays the government may still add or withdraw — compare the <a href="/holidays/${cu.YEAR_MIN}">${cu.YEAR_MIN} table</a> with <a href="/holidays/${cu.YEAR_MAX}">${cu.YEAR_MAX}</a> before you buy tickets.</p>`
+    + `<h2 class="section-title">Where our data comes from</h2><p>The world tables come from <b>Nager.Date v3</b> (<a href="https://date.nager.at" rel="noopener nofollow">date.nager.at</a>) — an open-source project that needs no registration and covers ±180 countries; we picked ${cd.COUNTRIES.length} of them for the in-depth pages. Country names, flags and continental positions are borrowed from the <a href="/countries">Country Complex</a> (world-countries + World Bank). The Malaysian table comes from the public <b>malaysia-holiday.dydxsoft.my</b> API, checked against the official <a href="https://www.kabinet.gov.my/hari-kelepasan-am" rel="noopener nofollow">kabinet.gov.my</a> gazette. We cache for 30 days and refresh as soon as a source changes. The sky while you travel: the <a href="/weather">Weather Complex</a>; shaking ground at your destination: the <a href="/earthquakes">Earthquake Complex</a>; active natural events: the <a href="/disasters">Disaster Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Article', name: 'How World Holiday Calendars Work',
     description: 'Solar, lunar and lunisolar calendars, national versus state holidays, the substitute-day principle, weekend conventions and the bridge-day leave strategy.',
-    url: 'https://tukuk.org/cuti/penjelasan', inLanguage: 'en', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
+    url: 'https://tukuk.org/holidays/explained', inLanguage: 'en', publisher: { '@type': 'Organization', name: 'Tukuk-OS' },
   }).replace(/</g, '\\u003c');
   return cutiDoc({
     title: 'How Holiday Calendars Work \u2014 Lunar Calendars, Substitute Days & Bridge Days | Tukuk-OS',
     desc: 'Understand the five mechanics of holiday calendars around the world: solar versus lunar and lunisolar calendars, national versus state holidays, the substitute-day principle, weekend conventions and the bridge-day strategy.',
-    selfUrl: 'https://tukuk.org/cuti/penjelasan',
+    selfUrl: 'https://tukuk.org/holidays/explained',
     heroTitle: 'How Holiday Calendars Work', heroSub: `Five mechanics that explain every public-holiday table in ${cd.COUNTRIES.length} countries`,
     body, ld,
   });
 }
 
-// ── TUKUK-OS COUNTRY COMPLEX — /negara* (profiles for ±250 countries, in English) ──
+// ── TUKUK-OS COUNTRY COMPLEX — /countries* (profiles for ±250 countries, in English) ──
 // Sources: world-countries (jsDelivr, no key) + World Bank Open Data (population,
 // GDP, urbanisation, life expectancy 2023) + flagcdn.com for the flags. Same shell
 // recipe as cutiDoc: lang en, 3 ad slots, cross nav; the seafaring-blue hero sets this complex apart.
 
-const NEGARA_SECTIONS = [{ href: '/negara', icon: '\uD83D\uDDFA\uFE0F', name: 'All Countries', blurb: 'A profile of every country on earth — capital, population, GDP, flag and land borders.' }]
-  .concat(ng.REGIONS.map((r) => ({ href: `/negara/${r.slug}`, icon: '\uD83E\uDDED', name: `Countries of ${r.en}`, blurb: `The complete list of countries on the ${r.en} continent, in alphabetical order.` })));
+const NEGARA_SECTIONS = [{ href: '/countries', icon: '\uD83D\uDDFA\uFE0F', name: 'All Countries', blurb: 'A profile of every country on earth — capital, population, GDP, flag and land borders.' }]
+  .concat(ng.REGIONS.map((r) => ({ href: `/countries/${r.slug}`, icon: '\uD83E\uDDED', name: `Countries of ${r.en}`, blurb: `The complete list of countries on the ${r.en} continent, in alphabetical order.` })));
 
 function negaraNav() {
   return `<nav aria-label="Country sections"><h2 class="section-title">Explore the Tukuk-OS Country Complex</h2><div class="feed">`
@@ -6764,7 +6858,7 @@ function negaraNav() {
 }
 
 function negaraBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The country data source (world-countries / World Bank) did not answer in time. Please try again in a few minutes.</p><p><a href="/negara">Back to the Country Complex</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The country data source (world-countries / World Bank) did not answer in time. Please try again in a few minutes.</p><p><a href="/countries">Back to the Country Complex</a></p></body>`;
 }
 
 // A couple of subregion spellings in the restcountries scheme read badly for readers.
@@ -6844,46 +6938,46 @@ ${siteFooter()}
 </html>`;
 }
 
-// ─── HUB /negara — world counts, continents, top-10 by population & area, A–Z grid ───
+// ─── HUB /countries — world counts, continents, top-10 by population & area, A–Z grid ───
 function negaraHubPage(req, rows) {
   const totalPop = rows.reduce((s, c) => s + (c.population || 0), 0);
   const byPop = [...rows].filter((c) => c.population).sort((a, b) => b.population - a.population);
   const byArea = [...rows].filter((c) => c.area).sort((a, b) => b.area - a.area);
   const regionCards = ng.REGIONS.map((r) => {
     const list = ng.inRegion(rows, r.slug);
-    return `<div class="wx-card"><h3><a href="/negara/${r.slug}">${escapeHtml(r.en)}</a></h3><div class="big">${list.length}</div><div class="meta">countries & territories on this continent</div></div>`;
+    return `<div class="wx-card"><h3><a href="/countries/${r.slug}">${escapeHtml(r.en)}</a></h3><div class="big">${list.length}</div><div class="meta">countries & territories on this continent</div></div>`;
   }).join('');
-  const topPop = byPop.slice(0, 10).map((c, i) => `<tr><td>${i + 1}</td><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></td><td>${escapeHtml(c.capital || '—')}</td><td><b>${ngNum(c.population)}</b></td></tr>`).join('');
-  const topArea = byArea.slice(0, 10).map((c) => `<tr><td><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></td><td>${ngNum(c.area)} km²</td><td>${ngNum(c.population)}</td></tr>`).join('');
+  const topPop = byPop.slice(0, 10).map((c, i) => `<tr><td>${i + 1}</td><td><a href="/countries/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></td><td>${escapeHtml(c.capital || '—')}</td><td><b>${ngNum(c.population)}</b></td></tr>`).join('');
+  const topArea = byArea.slice(0, 10).map((c) => `<tr><td><a href="/countries/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></td><td>${ngNum(c.area)} km²</td><td>${ngNum(c.population)}</td></tr>`).join('');
   // A–Z grid — a crawlable link hub to all ±250 country pages.
   const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
   const letters = new Map();
   for (const c of sorted) {
     const L = c.name.charAt(0).toUpperCase();
     if (!letters.has(L)) letters.set(L, []);
-    letters.get(L).push(`<a href="/negara/${c.slug}">${escapeHtml(c.name)}</a>`);
+    letters.get(L).push(`<a href="/countries/${c.slug}">${escapeHtml(c.name)}</a>`);
   }
   const az = [...letters.entries()].map(([L, links]) => `<h3>${L}</h3><div class="ng-az">${links.join('')}</div>`).join('');
   const body = `<div class="wx-hero"><div class="temp">${rows.length} countries</div><div class="wmeta">The complete profile of every country \u00b7 World Bank population & GDP (2023) \u00b7 flags from flagcdn \u00b7 base data from the open world-countries package</div></div>`
     + `<div class="wx-grid">`
     + `<div class="wx-card"><h3>Population counted so far</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">the world's people in our coverage (World Bank 2023)</div></div>`
-    + `<div class="wx-card"><h3>Most populous country</h3><div class="big">${byPop[0] ? `<a href="/negara/${byPop[0].slug}">${escapeHtml(byPop[0].name)}</a>` : '—'}</div><div class="meta">${byPop[0] ? ngNum(byPop[0].population) : 0} people</div></div>`
-    + `<div class="wx-card"><h3>Largest country</h3><div class="big">${byArea[0] ? `<a href="/negara/${byArea[0].slug}">${escapeHtml(byArea[0].name)}</a>` : '—'}</div><div class="meta">${byArea[0] ? ngNum(byArea[0].area) : 0} km²</div></div>`
+    + `<div class="wx-card"><h3>Most populous country</h3><div class="big">${byPop[0] ? `<a href="/countries/${byPop[0].slug}">${escapeHtml(byPop[0].name)}</a>` : '—'}</div><div class="meta">${byPop[0] ? ngNum(byPop[0].population) : 0} people</div></div>`
+    + `<div class="wx-card"><h3>Largest country</h3><div class="big">${byArea[0] ? `<a href="/countries/${byArea[0].slug}">${escapeHtml(byArea[0].name)}</a>` : '—'}</div><div class="meta">${byArea[0] ? ngNum(byArea[0].area) : 0} km²</div></div>`
     + `</div>`
     + `<h2 class="section-title">By continent</h2><div class="wx-grid">${regionCards}</div>`
     + `<h2 class="section-title">The 10 most populous countries</h2><table class="wx-table"><tr><th>#</th><th>Country</th><th>Capital</th><th>Population</th></tr>${topPop}</table>`
     + `<h2 class="section-title">The 10 largest countries</h2><table class="wx-table"><tr><th>Country</th><th>Area</th><th>Population</th></tr>${topArea}</table>`
     + `<h2 class="section-title">Every country, A–Z</h2>${az}`
-    + `<p class="meta">Planning a trip? The <a href="/cuaca">Weather Complex</a> covers the sky, the <a href="/gempa">Earthquake Complex</a> the live USGS list, the <a href="/bencana">Disaster Complex</a> active natural events and the <a href="/statistik">Statistics Complex</a> the world rankings. Malaysia's holiday calendar is in the <a href="/cuti">Holiday Complex</a>.</p>`;
+    + `<p class="meta">Planning a trip? The <a href="/weather">Weather Complex</a> covers the sky, the <a href="/earthquakes">Earthquake Complex</a> the live USGS list, the <a href="/disasters">Disaster Complex</a> active natural events and the <a href="/statistics">Statistics Complex</a> the world rankings. Malaysia's holiday calendar is in the <a href="/holidays">Holiday Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Country Complex',
     description: 'Country profiles for more than 250 nations: capital, population, GDP, area, currency, languages and land neighbours.',
-    url: 'https://tukuk.org/negara', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    url: 'https://tukuk.org/countries', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\\u003c');
   return negaraDoc({
     title: 'List of Countries & World Profiles — Capitals, Population, Flags | Tukuk-OS',
     desc: `A complete profile of ${rows.length} countries: capital, World Bank population & GDP, area, currency, languages, calling codes and land neighbours.`,
-    selfUrl: 'https://tukuk.org/negara',
+    selfUrl: 'https://tukuk.org/countries',
     heroTitle: 'Tukuk-OS Country Complex', heroSub: `${rows.length} countries \u00b7 6 continents \u00b7 World Bank & world-countries data, free with no signup`,
     body, ld,
   });
@@ -6891,18 +6985,18 @@ function negaraHubPage(req, rows) {
 
 // ─── /continent page — one continent: flag card + capital + population ───
 function negaraRegionPage(req, region, rows) {
-  const selfUrl = `https://tukuk.org/negara/${region.slug}`;
+  const selfUrl = `https://tukuk.org/countries/${region.slug}`;
   const totalPop = rows.reduce((s, c) => s + (c.population || 0), 0);
   const most = rows.filter((x) => x.population).sort((a, b) => b.population - a.population)[0];
-  const cards = rows.map((c) => `<div class="wx-card"><h3><a href="/negara/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></h3>`
+  const cards = rows.map((c) => `<div class="wx-card"><h3><a href="/countries/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></h3>`
     + `<div class="meta">${escapeHtml(c.capital || 'No fixed capital')}${c.population ? ` \u00b7 ${ngNum(c.population)} people` : ''}</div></div>`).join('');
   const body = `<div class="wx-grid">`
     + `<div class="wx-card"><h3>Entries in ${escapeHtml(region.en)}</h3><div class="big">${rows.length}</div><div class="meta">countries & territories listed</div></div>`
     + `<div class="wx-card"><h3>Combined population</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">residents of every entry (World Bank 2023)</div></div>`
-    + `<div class="wx-card"><h3>Most populous in ${escapeHtml(region.en)}</h3><div class="big">${most ? `<a href="/negara/${most.slug}">${escapeHtml(most.name)}</a>` : '—'}</div><div class="meta">${most ? ngNum(most.population) : 0} people</div></div>`
+    + `<div class="wx-card"><h3>Most populous in ${escapeHtml(region.en)}</h3><div class="big">${most ? `<a href="/countries/${most.slug}">${escapeHtml(most.name)}</a>` : '—'}</div><div class="meta">${most ? ngNum(most.population) : 0} people</div></div>`
     + `</div>`
     + `<h2 class="section-title">Every country in ${escapeHtml(region.en)}</h2><div class="wx-grid">${cards || '<p>No data for this continent yet.</p>'}</div>`
-    + `<p class="meta">Compare with the other continents through the <a href="/negara">full A–Z list</a>, or check the <a href="/cuaca">weather</a> and <a href="/gempa">earthquake activity</a> in this region.</p>`;
+    + `<p class="meta">Compare with the other continents through the <a href="/countries">full A–Z list</a>, or check the <a href="/weather">weather</a> and <a href="/earthquakes">earthquake activity</a> in this region.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Countries of ${region.en}`,
     description: `The list of ${rows.length} countries on the ${region.en} continent with their capitals and populations.`,
@@ -6919,7 +7013,7 @@ function negaraRegionPage(req, region, rows) {
 
 // ─── /country page — one country: flag hero, statistics table, neighbours ───
 function negaraCountryPage(req, c, rows) {
-  const selfUrl = `https://tukuk.org/negara/${c.slug}`;
+  const selfUrl = `https://tukuk.org/countries/${c.slug}`;
   const nameBySlug = {}; for (const x of rows) nameBySlug[x.slug] = x.name;
   const regionLabel = c.region || '';
   const subLabel = c.subregion ? ` \u00b7 ${ngSub(c.subregion)}` : '';
@@ -6946,15 +7040,15 @@ function negaraCountryPage(req, c, rows) {
     + baris('Status', c.independent ? 'Sovereign state' : 'Dependent territory')
     + `</table>`;
   const neighbours = c.borderSlugs.length
-    ? `<h2 class="section-title">Neighbours (land borders)</h2><div class="ng-az">${c.borderSlugs.map((s) => `<a href="/negara/${s}">${escapeHtml(nameBySlug[s] || s)}</a>`).join('')}</div>`
+    ? `<h2 class="section-title">Neighbours (land borders)</h2><div class="ng-az">${c.borderSlugs.map((s) => `<a href="/countries/${s}">${escapeHtml(nameBySlug[s] || s)}</a>`).join('')}</div>`
     : `<h2 class="section-title">Neighbours (land borders)</h2><p>No land borders \u2014 ${c.landlocked ? 'a landlocked country' : 'an island country or a remote territory'}.</p>`;
   const coord = c.latlng && c.latlng.length === 2 && (c.latlng[0] || c.latlng[1]) ? `<p>The geographic position is roughly <b>${NG_DEC.format(c.latlng[0])}\u00b0, ${NG_DEC.format(c.latlng[1])}\u00b0</b>.</p>` : '';
   // Cross link to this country's holiday page ( World Holiday Complex ) when we cover it.
   const cutiCoun = cd.findCountry(c.cca2);
-  const cutiLink = cutiCoun ? `<a href="/cuti/dunia/${cutiCoun.slug}">the ${escapeHtml(c.name)} public-holiday calendar for ${CT_WORLD_YEAR}</a>` : '<a href="/cuti">world public holidays</a>';
+  const cutiLink = cutiCoun ? `<a href="/holidays/world/${cutiCoun.slug}">the ${escapeHtml(c.name)} public-holiday calendar for ${CT_WORLD_YEAR}</a>` : '<a href="/holidays">world public holidays</a>';
   const body = hero + stats + neighbours + coord
     + `<p>Flags: flagcdn.com; population, GDP, urbanisation & life expectancy: <b>World Bank Open Data</b> (2023 indicators); base data: the open-source <b>world-countries</b> package \u2014 all of it free, with no registration.</p>`
-    + `<p class="meta">See also: <a href="/cuaca">weather by city</a> · <a href="/gempa">latest earthquakes</a> · <a href="/bencana">active natural events</a> · <a href="/statistik">world indicator rankings</a> · ${cutiLink} · <a href="/negara">the full country list</a>.</p>`;
+    + `<p class="meta">See also: <a href="/weather">weather by city</a> · <a href="/earthquakes">latest earthquakes</a> · <a href="/disasters">active natural events</a> · <a href="/statistics">world indicator rankings</a> · ${cutiLink} · <a href="/countries">the full country list</a>.</p>`;
   const descBits = [
     c.capital ? `capital ${c.capital}` : null,
     c.population ? `population ${ngNum(c.population)}` : null,
@@ -6976,7 +7070,7 @@ function negaraCountryPage(req, c, rows) {
   });
 }
 
-// ── TUKUK-OS STATISTICS COMPLEX — /statistik* (world rankings, World Bank) ──
+// ── TUKUK-OS STATISTICS COMPLEX — /statistics* (world rankings, World Bank) ──
 // Borrows the dataset + cache in src/negara.js for the English name/slug/flag; the
 // extra indicators load from World Bank Open Data (2023). Same shell as negaraDoc, purple hero.
 
@@ -6990,8 +7084,8 @@ function stFmt(ind, v) {
 function bestOf(ind, list) { return ind.better === 'low' ? list[list.length - 1] : list[0]; }
 function worstOf(ind, list) { return ind.better === 'low' ? list[0] : list[list.length - 1]; }
 
-const STAT_SECTIONS = [{ href: '/statistik', icon: '📊', name: 'All Indicators', blurb: `World Bank rankings for ${st.INDICATORS.length} indicators across ±200 countries — population, economy, health & environment.` }]
-  .concat(st.INDICATORS.map((i) => ({ href: `/statistik/${i.slug}`, icon: '📈', name: i.en, blurb: i.intro })));
+const STAT_SECTIONS = [{ href: '/statistics', icon: '📊', name: 'All Indicators', blurb: `World Bank rankings for ${st.INDICATORS.length} indicators across ±200 countries — population, economy, health & environment.` }]
+  .concat(st.INDICATORS.map((i) => ({ href: `/statistics/${i.slug}`, icon: '📈', name: i.en, blurb: i.intro })));
 
 function statistikNav() {
   return `<nav aria-label="Statistics sections"><h2 class="section-title">Explore the Tukuk-OS Statistics Complex</h2><div class="feed">`
@@ -7000,7 +7094,7 @@ function statistikNav() {
 }
 
 function statistikBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The World Bank Open Data feed did not answer in time. Please try again in a few minutes.</p><p><a href="/statistik">Back to the Statistics Complex</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The World Bank Open Data feed did not answer in time. Please try again in a few minutes.</p><p><a href="/statistics">Back to the Statistics Complex</a></p></body>`;
 }
 
 function statistikDoc(o) {
@@ -7067,13 +7161,13 @@ ${siteFooter()}
 </html>`;
 }
 
-// ─── HUB /statistik — leader card per indicator + Malaysia's position ───
+// ─── HUB /statistics — leader card per indicator + Malaysia's position ───
 async function statistikHubPage(req, rows) {
   const ranks = await Promise.all(st.INDICATORS.map((i) => st.loadRanking(i, rows).catch(() => null)));
   const cards = st.INDICATORS.map((ind, k) => {
     const rk = ranks[k];
     const best = rk && rk.list.length ? bestOf(ind, rk.list) : null;
-    return `<div class="wx-card"><h3><a href="/statistik/${ind.slug}">${escapeHtml(ind.en)}</a></h3>`
+    return `<div class="wx-card"><h3><a href="/statistics/${ind.slug}">${escapeHtml(ind.en)}</a></h3>`
       + (best ? `<div class="big">${escapeHtml(best.name)}</div><div class="meta">${stVal(ind, best.value)}</div>` : '<div class="big">—</div>')
       + (rk ? `<div class="meta">${rk.stats.n} countries reported a value</div>` : '<div class="meta">the source did not load in time</div>') + '</div>';
   }).join('');
@@ -7083,7 +7177,7 @@ async function statistikHubPage(req, rows) {
     const baris = st.INDICATORS.map((ind, k) => {
       const rk = ranks[k];
       const e = rk ? rk.list.find((x) => x.cca3 === my.cca3) : null;
-      return `<tr><td><a href="/statistik/${ind.slug}">${escapeHtml(ind.en)}</a></td><td>${e ? stVal(ind, e.value) : '—'}</td><td>${e ? `#${e.rank} of ${rk.stats.n}` : '—'}</td><td>${ind.yr || 2023}</td></tr>`;
+      return `<tr><td><a href="/statistics/${ind.slug}">${escapeHtml(ind.en)}</a></td><td>${e ? stVal(ind, e.value) : '—'}</td><td>${e ? `#${e.rank} of ${rk.stats.n}` : '—'}</td><td>${ind.yr || 2023}</td></tr>`;
     }).join('');
     myTable = `<h2 class="section-title">Malaysia by indicator</h2><table class="wx-table"><tr><th>Indicator</th><th>Value</th><th>World rank</th><th>Data year</th></tr>${baris}</table>`;
   }
@@ -7092,27 +7186,27 @@ async function statistikHubPage(req, rows) {
     + `<h2 class="section-title">The best value in every indicator</h2><div class="wx-grid">${cards}</div>`
     + myTable
     + `<h2 class="section-title">How this data is put together</h2><p>The World Bank gathers the official statistics of every member government — population, economy, health, education and environment — and publishes them as plain public JSON with no API key. We load it once a month, compare the values across borders and show the rankings that mean most to our readers. An empty value simply means that country did not report this indicator for 2023.</p>`
-    + `<p class="meta">The full profile of every country is in the <a href="/negara">Country Complex</a>; holiday long-weekend comparisons in the <a href="/cuti">Holiday Complex</a>; live skies in the <a href="/cuaca">Weather Complex</a>.</p>`;
+    + `<p class="meta">The full profile of every country is in the <a href="/countries">Country Complex</a>; holiday long-weekend comparisons in the <a href="/holidays">Holiday Complex</a>; live skies in the <a href="/weather">Weather Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Statistics Complex',
     description: 'World Bank rankings for population, GDP, life expectancy, internet use, literacy, CO2 and more than ten other indicators across ±200 countries.',
-    url: 'https://tukuk.org/statistik',
+    url: 'https://tukuk.org/statistics',
   }).replace(/</g, '\\u003c');
   return statistikDoc({
     title: `World Statistics — ${st.INDICATORS.length} Country Rankings (Population, GDP, CO₂) | Tukuk-OS`,
     desc: `World Bank 2023 rankings for ${st.INDICATORS.length} indicators across ±200 countries: population, GDP per capita, life expectancy, internet use, literacy, CO₂, forest cover and where Malaysia stands.`,
-    selfUrl: 'https://tukuk.org/statistik',
+    selfUrl: 'https://tukuk.org/statistics',
     heroTitle: 'Tukuk-OS Statistics Complex', heroSub: 'World Bank Open Data 2023 · no API key · refreshed once a month',
     body, ld,
   });
 }
 function stVal(ind, v) { return stFmt(ind, v); }
 
-// ─── /statistik/:indicator — full ranking table + bars + distribution stats ───
+// ─── /statistics/:indicator — full ranking table + bars + distribution stats ───
 function statistikIndPage(req, rk, rows) {
   const ind = rk.ind; const list = rk.list; const stats = rk.stats;
   const yr = ind.yr || 2023;
-  const selfUrl = `https://tukuk.org/statistik/${ind.slug}`;
+  const selfUrl = `https://tukuk.org/statistics/${ind.slug}`;
   const best = bestOf(ind, list); const worst = worstOf(ind, list);
   const bestLabel = ind.better === 'low' ? 'Lowest (best)' : 'Highest';
   const worstLabel = ind.better === 'low' ? 'Highest (worst)' : 'Lowest';
@@ -7121,7 +7215,7 @@ function statistikIndPage(req, rk, rows) {
   const my = rows.find((c) => c.slug === 'malaysia');
   const myEntry = my ? list.find((x) => x.cca3 === my.cca3) : null;
   const top = list.slice(0, 50);
-  const baris = top.map((x) => `<tr><td>${x.rank}</td><td class="st-val"><a href="/negara/${x.slug}"><img class="ng-fl" src="${ngThumb(x.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(x.name)}</a><div class="st-bar" style="width:${Math.max(2, Math.round(Math.abs(x.value) / maxAbs * 100))}%"></div></td><td><b>${stVal(ind, x.value)}</b></td></tr>`).join('');
+  const baris = top.map((x) => `<tr><td>${x.rank}</td><td class="st-val"><a href="/countries/${x.slug}"><img class="ng-fl" src="${ngThumb(x.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(x.name)}</a><div class="st-bar" style="width:${Math.max(2, Math.round(Math.abs(x.value) / maxAbs * 100))}%"></div></td><td><b>${stVal(ind, x.value)}</b></td></tr>`).join('');
   const myNote = myEntry && myEntry.rank > 50 ? `<p class="meta">Malaysia sits at <b>#${myEntry.rank}</b> of ${stats.n} countries with a value of ${stVal(ind, myEntry.value)} — the full leaderboard is in the table below.</p>` : '';
   const cards = `<div class="wx-grid">`
     + `<div class="wx-card"><h3>${escapeHtml(bestLabel)}</h3><div class="big">${escapeHtml(best.name)}</div><div class="meta">${stVal(ind, best.value)}</div></div>`
@@ -7139,7 +7233,7 @@ function statistikIndPage(req, rk, rows) {
     + `<tr><th>Countries reporting</th><td>${stats.n}</td></tr>`
     + `<tr><th>Lowest</th><td>${stVal(ind, stats.min)} (${escapeHtml(list[list.length - 1].name)})</td></tr>`
     + `<tr><th>Highest</th><td>${stVal(ind, stats.max)} (${escapeHtml(list[0].name)})</td></tr></table>`
-    + `<p>Source: <b>World Bank Open Data</b>${ind.code ? ` (indicator <code>${escapeHtml(ind.code)}</code>, year ${yr})` : ' — borrowed from the Country Complex dataset'} — public data with no API key, licensed CC BY 4.0. The full profile of every country: <a href="/negara">Country Complex</a> · live natural events: <a href="/bencana">Disaster Complex</a>.</p>`;
+    + `<p>Source: <b>World Bank Open Data</b>${ind.code ? ` (indicator <code>${escapeHtml(ind.code)}</code>, year ${yr})` : ' — borrowed from the Country Complex dataset'} — public data with no API key, licensed CC BY 4.0. The full profile of every country: <a href="/countries">Country Complex</a> · live natural events: <a href="/disasters">Disaster Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Dataset', name: `${ind.en} — world ranking ${yr}`,
     description: ind.intro, url: selfUrl,
@@ -7156,11 +7250,11 @@ function statistikIndPage(req, rk, rows) {
   });
 }
 
-// ── TUKUK-OS DISASTER COMPLEX — /bencana* (the NASA EONET natural-event watch) ──
+// ── TUKUK-OS DISASTER COMPLEX — /disasters* (the NASA EONET natural-event watch) ──
 // Same shell, lava-red hero; only events that are still "open" are listed.
 
-const BENCANA_SECTIONS = [{ href: '/bencana', icon: '🚨', name: 'All Events', blurb: 'Watch every natural event happening on the planet right now — live from the NASA EONET satellites.' }]
-  .concat(bc.CATS.map((c) => ({ href: `/bencana/${c.slug}`, icon: c.icon, name: c.en, blurb: c.blurb })));
+const BENCANA_SECTIONS = [{ href: '/disasters', icon: '🚨', name: 'All Events', blurb: 'Watch every natural event happening on the planet right now — live from the NASA EONET satellites.' }]
+  .concat(bc.CATS.map((c) => ({ href: `/disasters/${c.slug}`, icon: c.icon, name: c.en, blurb: c.blurb })));
 
 function bencanaNav() {
   return `<nav aria-label="Disaster sections"><h2 class="section-title">Explore the Tukuk-OS Disaster Complex</h2><div class="feed">`
@@ -7169,7 +7263,7 @@ function bencanaNav() {
 }
 
 function bencanaBusy(msg) {
-  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>NASA EONET did not answer in time. This feed is cached for hours — please try again in a few minutes.</p><p><a href="/bencana">Back to the Disaster Complex</a></p></body>`;
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>NASA EONET did not answer in time. This feed is cached for hours — please try again in a few minutes.</p><p><a href="/disasters">Back to the Disaster Complex</a></p></body>`;
 }
 
 function bencanaDoc(o) {
@@ -7244,14 +7338,14 @@ function bcDate(iso) {
 }
 function bcLatest(ev) { return ev.updated || ev.created || (ev.geometries && ev.geometries.length ? ev.geometries[ev.geometries.length - 1].date : null) || null; }
 
-// ─── Hub /bencana — a live count per category plus the newest events ───
+// ─── Hub /disasters — a live count per category plus the newest events ───
 function bencanaHubPage(req, all) {
   const totalOpen = all.reduce((s, x) => s + (x.events ? x.events.length : 0), 0);
   const cards = all.map((x) => {
     const latest = x.events && x.events.length ? [...x.events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')))[0] : null;
-    return `<div class="wx-card"><h3>${x.cat.icon} <a href="/bencana/${x.cat.slug}">${escapeHtml(x.cat.en)}</a></h3>`
+    return `<div class="wx-card"><h3>${x.cat.icon} <a href="/disasters/${x.cat.slug}">${escapeHtml(x.cat.en)}</a></h3>`
       + `<div class="big">${x.events ? x.events.length : '—'}</div>`
-      + `<div class="meta">events still open${latest ? ` · latest: <a href="/bencana/${x.cat.slug}/${encodeURIComponent(latest.id)}">${escapeHtml(String(latest.title || '').slice(0, 48))}</a>` : ''}</div></div>`;
+      + `<div class="meta">events still open${latest ? ` · latest: <a href="/disasters/${x.cat.slug}/${encodeURIComponent(latest.id)}">${escapeHtml(String(latest.title || '').slice(0, 48))}</a>` : ''}</div></div>`;
   }).join('');
   const flat = [];
   for (const x of all) if (x.events) for (const ev of x.events) flat.push({ cat: x.cat, ev });
@@ -7259,42 +7353,42 @@ function bencanaHubPage(req, all) {
   const rowsHtml = flat.slice(0, 15).map(({ cat, ev }) => {
     const g = ev.geometries && ev.geometries.length ? ev.geometries[ev.geometries.length - 1] : null;
     const loc = g ? bc.geoLabel(g.coordinates) : null;
-    return `<tr><td>${bcDate(bcLatest(ev))}</td><td>${cat.icon} <a href="/bencana/${cat.slug}">${escapeHtml(cat.en)}</a></td><td><a href="/bencana/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${loc ? escapeHtml(loc.text) : '—'}</td></tr>`;
+    return `<tr><td>${bcDate(bcLatest(ev))}</td><td>${cat.icon} <a href="/disasters/${cat.slug}">${escapeHtml(cat.en)}</a></td><td><a href="/disasters/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${loc ? escapeHtml(loc.text) : '—'}</td></tr>`;
   }).join('');
   const body = `<div class="wx-hero"><div class="temp">${totalOpen} natural event${totalOpen === 1 ? '' : 's'} in progress</div><div class="wmeta">Watched 24/7 by NASA EONET · ${bc.CATS.length} categories · updated several times a day · no signup</div></div>`
     + `<h2 class="section-title">Categories under watch</h2><div class="wx-grid">${cards}</div>`
     + `<h2 class="section-title">The 15 most recently updated events</h2><table class="wx-table"><tr><th>Updated</th><th>Category</th><th>Event</th><th>Last location</th></tr>${rowsHtml}</table>`
     + `<h2 class="section-title">What is EONET?</h2><p>EONET (the Earth Observatory Natural Event Tracker) is NASA's open feed of every significant natural event on earth — volcanic eruptions, storms, wildfires, floods, landslides and more — recorded with satellite coordinates and a human curator's report. The data is public, with no API key; we show it in plain English and give every event its own page so it can be cited.</p>`
-    + `<p class="meta">Live earthquakes are in the <a href="/gempa">Earthquake Complex (USGS)</a>; the sky over your city is in the <a href="/cuaca">Weather Complex</a>; the profile of an affected country is in the <a href="/negara">Country Complex</a>.</p>`;
+    + `<p class="meta">Live earthquakes are in the <a href="/earthquakes">Earthquake Complex (USGS)</a>; the sky over your city is in the <a href="/weather">Weather Complex</a>; the profile of an affected country is in the <a href="/countries">Country Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Tukuk-OS Disaster Complex',
     description: 'Live watch of volcanoes, storms, wildfires, floods and other natural events — the NASA EONET feed in English.',
-    url: 'https://tukuk.org/bencana',
+    url: 'https://tukuk.org/disasters',
   }).replace(/</g, '\\u003c');
   return bencanaDoc({
     title: 'Live World Disasters — Volcanoes, Storms, Wildfires (NASA EONET) | Tukuk-OS',
     desc: `${totalOpen} natural events are in progress on this planet right now: watch volcanoes, storms, wildfires, floods, drought and landslides — live from NASA EONET.`,
-    selfUrl: 'https://tukuk.org/bencana',
+    selfUrl: 'https://tukuk.org/disasters',
     heroTitle: 'Tukuk-OS Disaster Complex', heroSub: `NASA EONET feed · ${totalOpen} open event${totalOpen === 1 ? '' : 's'} · updated ${bcDate(new Date().toISOString())}`,
     body, ld,
   });
 }
 
-// ─── /bencana/:category — every open event in one category ───
+// ─── /disasters/:category — every open event in one category ───
 function bencanaCatPage(req, cat, events) {
-  const selfUrl = `https://tukuk.org/bencana/${cat.slug}`;
+  const selfUrl = `https://tukuk.org/disasters/${cat.slug}`;
   const sorted = [...events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')));
   const rowsHtml = sorted.map((ev) => {
     const geo = ev.geometries || [];
     const last = geo.length ? bc.geoLabel(geo[geo.length - 1].coordinates) : null;
-    return `<tr><td><a href="/bencana/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${bcDate(ev.created)}</td><td>${bcDate(bcLatest(ev))}</td><td>${geo.length}</td><td>${last ? escapeHtml(last.text) : '—'}</td></tr>`;
+    return `<tr><td><a href="/disasters/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${bcDate(ev.created)}</td><td>${bcDate(bcLatest(ev))}</td><td>${geo.length}</td><td>${last ? escapeHtml(last.text) : '—'}</td></tr>`;
   }).join('');
   const body = `<div class="wx-hero"><div class="temp">${cat.icon} ${sorted.length} ${escapeHtml(cat.en).toLowerCase()} event${sorted.length === 1 ? '' : 's'} active</div><div class="wmeta">Live from NASA EONET · every event has its own page with coordinates &amp; a timeline</div></div>`
     + `<p>${escapeHtml(cat.blurb)}</p>`
     + (sorted.length
       ? `<h2 class="section-title">Open events</h2><table class="wx-table"><tr><th>Event</th><th>Started</th><th>Updated</th><th>Locations logged</th><th>Last coordinates</th></tr>${rowsHtml}</table>`
-      : '<p>No event in this category is still open right now. See the <a href="/bencana">hub of all categories</a>.</p>')
-    + `<p class="meta">Raw data: <a rel="noopener" target="_blank" href="https://eonet.gsfc.nasa.gov">eonet.gsfc.nasa.gov</a> (a public NASA domain). Current weather in an affected area: <a href="/cuaca">Weather Complex</a>; tectonic quakes: <a href="/gempa">Earthquake Complex</a>.</p>`;
+      : '<p>No event in this category is still open right now. See the <a href="/disasters">hub of all categories</a>.</p>')
+    + `<p class="meta">Raw data: <a rel="noopener" target="_blank" href="https://eonet.gsfc.nasa.gov">eonet.gsfc.nasa.gov</a> (a public NASA domain). Current weather in an affected area: <a href="/weather">Weather Complex</a>; tectonic quakes: <a href="/earthquakes">Earthquake Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${cat.en} — live`,
     description: cat.blurb.slice(0, 200), url: selfUrl,
@@ -7308,9 +7402,9 @@ function bencanaCatPage(req, cat, events) {
   });
 }
 
-// ─── /bencana/:category/:id — one event: SVG map + coordinate timeline ───
+// ─── /disasters/:category/:id — one event: SVG map + coordinate timeline ───
 async function bencanaEventPage(req, cat, ev) {
-  const selfUrl = `https://tukuk.org/bencana/${cat.slug}/${encodeURIComponent(ev.id)}`;
+  const selfUrl = `https://tukuk.org/disasters/${cat.slug}/${encodeURIComponent(ev.id)}`;
   const geo = (ev.geometries || []).slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
   const dots = geo.map((g) => {
     const loc = bc.geoLabel(g.coordinates);
@@ -7337,14 +7431,14 @@ async function bencanaEventPage(req, cat, ev) {
   const desc = ev.description ? `<p>${escapeHtml(String(ev.description))}</p>` : '';
   const first = geo.length ? geo[0] : null;
   const last = geo.length ? geo[geo.length - 1] : null;
-  const body = `<p class="back-link"><a href="/bencana">&larr; Disaster Complex</a> · <a href="/bencana/${cat.slug}">${cat.icon} ${escapeHtml(cat.en)}</a></p>`
+  const body = `<p class="back-link"><a href="/disasters">&larr; Disaster Complex</a> · <a href="/disasters/${cat.slug}">${cat.icon} ${escapeHtml(cat.en)}</a></p>`
     + `<div class="wx-hero"><div class="temp">${cat.icon} ${escapeHtml(String(ev.title || ev.id))}</div><div class="wmeta">${escapeHtml(cat.en)} · started ${bcDate(ev.created)}${last ? ` · last updated ${bcDate(bcLatest(ev))}` : ''} · ${geo.length} location${geo.length === 1 ? '' : 's'} logged</div></div>`
     + desc + map
     + (first && last && first !== last ? `<p>This event began at ${escapeHtml((bc.geoLabel(first.coordinates) || {}).text || '—')} and is active now at ${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}.</p>` : (last ? `<p>Current position: <b>${escapeHtml((bc.geoLabel(last.coordinates) || {}).text || '—')}</b>.</p>` : ''))
     + wikiBox
     + (timeline ? `<h2 class="section-title">Location timeline</h2><table class="wx-table"><tr><th>Date</th><th>Coordinates</th><th>Type</th></tr>${timeline}</table>` : '')
     + (srcs ? `<h2 class="section-title">Reported by</h2><ul>${srcs}</ul>` : '')
-    + `<p class="meta">Data: NASA EONET (public domain) · ${escapeHtml(cat.blurb.split('.')[0])}. Check the sky over the affected area in the <a href="/cuaca">Weather Complex</a>; tectonic activity in the <a href="/gempa">Earthquake Complex</a>; the country itself in the <a href="/negara">Country Complex</a>.</p>`;
+    + `<p class="meta">Data: NASA EONET (public domain) · ${escapeHtml(cat.blurb.split('.')[0])}. Check the sky over the affected area in the <a href="/weather">Weather Complex</a>; tectonic activity in the <a href="/earthquakes">Earthquake Complex</a>; the country itself in the <a href="/countries">Country Complex</a>.</p>`;
   const lastLoc = last ? bc.geoLabel(last.coordinates) : null;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'Event', name: String(ev.title || ev.id),
@@ -7504,7 +7598,7 @@ function wikiMainPage(req) {
     feat + `${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}` +
     `<h2>Subject areas</h2><div class="wiki-sections">${topics}</div>` +
     `${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}` +
-    `<h2>Good to know</h2><p>Need live data? <a href="/cuaca">Today's weather</a> for hundreds of cities and <a href="/nasa">NASA Picture of the Day</a> for the sky — both refresh automatically. The ordered learning track lives in <a href="/learn">Tukuk-OS Academy</a>.</p>` +
+    `<h2>Good to know</h2><p>Need live data? <a href="/weather">Today's weather</a> for hundreds of cities and <a href="/nasa">NASA Picture of the Day</a> for the sky — both refresh automatically. The ordered learning track lives in <a href="/learn">Tukuk-OS Academy</a>.</p>` +
     `${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}` +
     `</main></div>${wikiFooter()}</body></html>`;
 }
@@ -7952,7 +8046,7 @@ function studyGeographyPage(rows) {
   let rankHtml = '';
   if (rows && rows.length) {
     const top = rows.filter((c) => c.population).sort((a, b) => b.population - a.population).slice(0, 12);
-    rankHtml = `<h2 class="section-title">The ten-biggest, right now</h2><p>Live from the same United Nations / World Bank figures the <a href="/negara">country directory</a> uses — population, land area and capital.</p><table class="study-table"><thead><tr><th>#</th><th>Country</th><th>Population</th><th>Area (km²)</th><th>Capital</th></tr></thead><tbody>`
+    rankHtml = `<h2 class="section-title">The ten-biggest, right now</h2><p>Live from the same United Nations / World Bank figures the <a href="/countries">country directory</a> uses — population, land area and capital.</p><table class="study-table"><thead><tr><th>#</th><th>Country</th><th>Population</th><th>Area (km²)</th><th>Capital</th></tr></thead><tbody>`
       + top.map((c, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(c.name)}</td><td>${Number(c.population).toLocaleString('en-US')}</td><td>${c.area ? Number(c.area).toLocaleString('en-US') : '—'}</td><td>${escapeHtml(c.capital || '—')}</td></tr>`).join('')
       + `</tbody></table>`;
   }
@@ -7966,7 +8060,7 @@ function studyGeographyPage(rows) {
   } else {
     quizHtml = `<h2 class="section-title">Capital quiz of the day</h2><p>The live country feed is briefly unavailable, so today's quiz is resting. The world records below are always accurate — and reload this page in a few minutes for the quiz.</p>`;
   }
-  const body = `<p class="learn-intro">Geography is the study of where things are and why. Below: the planet's outright records, the current population giants, and a daily capital quiz built from real country data. For every country's full profile — flags, languages, borders and statistics — see the <a href="/negara">World Countries directory</a>.</p>
+  const body = `<p class="learn-intro">Geography is the study of where things are and why. Below: the planet's outright records, the current population giants, and a daily capital quiz built from real country data. For every country's full profile — flags, languages, borders and statistics — see the <a href="/countries">World Countries directory</a>.</p>
   <h2 class="section-title">Planetary records</h2>
   <table class="study-table"><thead><tr><th>Category</th><th>The record holder</th></tr></thead><tbody>${records}</tbody></table>
   ${rankHtml}
@@ -8120,12 +8214,12 @@ app.get('/study/geography', async (req, res) => {
   res.type('html').send(studyGeographyPage(Array.isArray(rows) && rows.length >= 20 ? rows : null));
 });
 
-// ══ UDARA COMPLEX /udara — world AQI readings + live CO2 + oxygen education ══
+// ══ AIR QUALITY COMPLEX /air-quality — world AQI readings + live CO2 + oxygen education ══
 const UDARA_SECTIONS = [
-  { href: '/udara', icon: '\uD83C\uDF0D', name: 'World Air Ranking', blurb: 'Live air quality for 70+ cities — the cleanest and dirtiest spots on Earth right now.' },
-  { href: '/udara/carbon', icon: '\uD83D\uDDA2', name: 'Carbon Dioxide Live', blurb: 'Today\u2019s actual CO2 reading from NOAA\u2019s Mauna Loa observatory, with the 65-year climb.' },
-  { href: '/udara/oxygen', icon: '\uD83E\uDEE9', name: 'Oxygen Explained', blurb: 'Where your oxygen really comes from, why it is falling, and what altitude does to a breath.' },
-  { href: '/udara/breath', icon: '\uD83E\uDEC1', name: 'Breathing Life', blurb: 'From blue whales to houseflies: how every creature moves air, and what your own breath is doing.' },
+  { href: '/air-quality', icon: '\uD83C\uDF0D', name: 'World Air Ranking', blurb: 'Live air quality for 70+ cities — the cleanest and dirtiest spots on Earth right now.' },
+  { href: '/air-quality/carbon', icon: '\uD83D\uDDA2', name: 'Carbon Dioxide Live', blurb: 'Today\u2019s actual CO2 reading from NOAA\u2019s Mauna Loa observatory, with the 65-year climb.' },
+  { href: '/air-quality/oxygen', icon: '\uD83E\uDEE9', name: 'Oxygen Explained', blurb: 'Where your oxygen really comes from, why it is falling, and what altitude does to a breath.' },
+  { href: '/air-quality/breath', icon: '\uD83E\uDEC1', name: 'Breathing Life', blurb: 'From blue whales to houseflies: how every creature moves air, and what your own breath is doing.' },
 ];
 
 function udaraNav() {
@@ -8134,7 +8228,7 @@ function udaraNav() {
     + `</div></nav>`;
 }
 
-// The standard /udara wrapper — mirrors studyDoc (full chrome + gated ads).
+// The standard /air-quality wrapper — mirrors studyDoc (full chrome + gated ads).
 function udaraDoc(o) {
   const robots = o.robots || 'index,follow';
   const ld = o.ld || JSON.stringify({
@@ -8216,7 +8310,7 @@ function airRow(r) {
   return `<tr><td><b>${escapeHtml(r.name)}</b>, ${escapeHtml(r.country)}</td><td>${escapeHtml(r.region)}</td><td>${aqiChip(r.usAqi)}</td><td>${n(r.pm25, ' \u00b5g/m\u00b3')}</td><td>${n(r.o3, ' \u00b5g/m\u00b3')}</td><td>${n(r.no2, ' \u00b5g/m\u00b3')}</td></tr>`;
 }
 
-// ── /udara — the live ranking; honest with source:'unavailable' when it is down ──
+// ── /air-quality — the live ranking; honest with source:'unavailable' when it is down ──
 function udaraHubPage(air, co2) {
   const scale = `<h2 class="section-title">Reading the scale (US AQI)</h2>
   <table class="air-table"><thead><tr><th>Number</th><th>What it means</th></tr></thead><tbody>
@@ -8228,8 +8322,8 @@ function udaraHubPage(air, co2) {
   <tr><td>301+</td><td>${aqiChip(350)} \u2014 emergency conditions; nearly everyone is affected.</td></tr>
   </tbody></table>`;
   const co2Card = co2 && co2.source && co2.source !== 'unavailable'
-    ? `<div class="air-card"><h3>\uD83D\uDDA2 Carbon dioxide, right now</h3><p style="font-size:1.9rem;font-weight:800">${co2.ppm.toFixed(1)} ppm</p><p class="meta">NOAA ${escapeHtml(co2.site)} reading, ${escapeHtml(co2.date)} \u00b7 <a href="/udara/carbon">the full carbon story &rarr;</a></p></div>`
-    : `<div class="air-card"><h3>\uD83D\uDDA2 Carbon dioxide, right now</h3><p style="font-size:1.9rem;font-weight:800">\u2014</p><p class="meta">The NOAA feed is briefly resting \u2014 the <a href="/udara/carbon">carbon page</a> explains and retries.</p></div>`;
+    ? `<div class="air-card"><h3>\uD83D\uDDA2 Carbon dioxide, right now</h3><p style="font-size:1.9rem;font-weight:800">${co2.ppm.toFixed(1)} ppm</p><p class="meta">NOAA ${escapeHtml(co2.site)} reading, ${escapeHtml(co2.date)} \u00b7 <a href="/air-quality/carbon">the full carbon story &rarr;</a></p></div>`
+    : `<div class="air-card"><h3>\uD83D\uDDA2 Carbon dioxide, right now</h3><p style="font-size:1.9rem;font-weight:800">\u2014</p><p class="meta">The NOAA feed is briefly resting \u2014 the <a href="/air-quality/carbon">carbon page</a> explains and retries.</p></div>`;
   let data = '';
   if (air && air.rows && air.rows.length) {
     const rows = air.rows;
@@ -8264,19 +8358,19 @@ function udaraHubPage(air, co2) {
     data = `<div class="air-grid">${co2Card}</div>
     ${waitNote}`;
   }
-  const body = `<p class="learn-intro">Live air-quality readings for over seventy world cities, modelled by the Copernicus Atmosphere Monitoring Service and delivered through the free Open-Meteo API, refreshed on our side every 45 minutes. These are model estimates for each city\u2019s coordinates \u2014 your street can differ; treat them as a global pulse, not a personal sensor. Weather for any of these cities lives at <a href="/cuaca">World Weather</a>.</p>
+  const body = `<p class="learn-intro">Live air-quality readings for over seventy world cities, modelled by the Copernicus Atmosphere Monitoring Service and delivered through the free Open-Meteo API, refreshed on our side every 45 minutes. These are model estimates for each city\u2019s coordinates \u2014 your street can differ; treat them as a global pulse, not a personal sensor. Weather for any of these cities lives at <a href="/weather">World Weather</a>.</p>
   ${data}
   ${scale}`;
   return udaraDoc({
     title: 'World Air Quality Live \u2014 Cleanest and Most Polluted Places on Earth | Tukuk-OS',
     desc: 'Live US AQI, PM2.5, ozone and NO2 readings for 70+ world cities ranked cleanest to dirtiest, plus today\u2019s real CO2 level from the NOAA Mauna Loa observatory.',
-    selfUrl: 'https://tukuk.org/udara',
+    selfUrl: 'https://tukuk.org/air-quality',
     heroTitle: 'The Air We Breathe \u2014 Live', heroSub: 'Clean spots, dirty spots and the carbon in the sky, updated from free open sources',
     body,
   });
 }
 
-// ── /udara/carbon — live NOAA CO2 readings ───────────────────────
+// ── /air-quality/carbon — live NOAA CO2 readings ───────────────────────
 function udaraCarbonPage(co2) {
   let readout = '';
   if (co2 && co2.source && co2.source !== 'unavailable') {
@@ -8308,34 +8402,34 @@ function udaraCarbonPage(co2) {
     <div class="air-card"><h3>Where to argue with the number</h3><p>CO\u2082 itself is not a poison at outdoor levels \u2014 it is 0.04 percent of air. Its weight is radiative: more of it holds more of the Earth\u2019s outgoing heat. That physics, not toxicity, is why this dial matters to every country on the coast.</p></div>
   </div>
   <h2 class="section-title">Related</h2>
-  <p>How living things move this gas day by day: <a href="/udara/breath">Breathing Life</a>. The oxygen side of the same reaction: <a href="/udara/oxygen">Oxygen Explained</a>. City-by-city particulate and ozone readings: <a href="/udara">the world air ranking</a>.</p>`;
+  <p>How living things move this gas day by day: <a href="/air-quality/breath">Breathing Life</a>. The oxygen side of the same reaction: <a href="/air-quality/oxygen">Oxygen Explained</a>. City-by-city particulate and ozone readings: <a href="/air-quality">the world air ranking</a>.</p>`;
   return udaraDoc({
     title: 'CO2 Level Today, Live \u2014 The Real Mauna Loa Reading | Tukuk-OS',
     desc: 'Today\u2019s actual atmospheric carbon dioxide reading from NOAA\u2019s Mauna Loa observatory and global annual means, with plain-language context on the 280-to-420 ppm climb.',
-    selfUrl: 'https://tukuk.org/udara/carbon',
+    selfUrl: 'https://tukuk.org/air-quality/carbon',
     heroTitle: 'Carbon Dioxide, Read Directly', heroSub: 'The live number from NOAA \u2014 what it says and what it does not',
     body,
   });
 }
 
-// ── /udara/oxygen — O2 education (static curation) ─────────────────────
+// ── /air-quality/oxygen — O2 education (static curation) ─────────────────────
 function udaraOxygenPage() {
   const cards = udara.OXYGEN.map((c) => `<div class="air-card"><h3>${escapeHtml(c.h)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
   const myths = udara.MYTHS.map((m) => `<div class="air-card"><h3>Myth: ${escapeHtml(m.m)}</h3><p>${escapeHtml(m.f)}</p></div>`).join('');
-  const body = `<p class="learn-intro">Oxygen is the most consequential chemical argument on Earth: it lets fires spread, lets animals run hot and lets brains afford to think. Below \u2014 where it comes from, where it is going, and how the planet has breathed differently across deep time. The live side of this story is the <a href="/udara">world air ranking</a> and the <a href="/udara/carbon">CO2 readout</a>.</p>
+  const body = `<p class="learn-intro">Oxygen is the most consequential chemical argument on Earth: it lets fires spread, lets animals run hot and lets brains afford to think. Below \u2014 where it comes from, where it is going, and how the planet has breathed differently across deep time. The live side of this story is the <a href="/air-quality">world air ranking</a> and the <a href="/air-quality/carbon">CO2 readout</a>.</p>
   <div class="air-grid">${cards}</div>
   <h2 class="section-title">Claims worth un-learning</h2>
   <div class="air-grid">${myths}</div>`;
   return udaraDoc({
     title: 'Oxygen Explained \u2014 Where It Comes From and Where It Is Going | Tukuk-OS',
     desc: 'Plain-language oxygen science: 20.9 percent air, phytoplankton as the real oxygen factory, the measured slow decline, altitude physiology and ocean oxygen minimum zones.',
-    selfUrl: 'https://tukuk.org/udara/oxygen',
+    selfUrl: 'https://tukuk.org/air-quality/oxygen',
     heroTitle: 'Oxygen \u2014 The Argument Air Won', heroSub: 'The gas behind every flame, breath and giant insect in Earth history',
     body,
   });
 }
 
-// ── /udara/breath — how living things breathe ───────────────────────
+// ── /air-quality/breath — how living things breathe ───────────────────────
 function udaraBreathPage() {
   const human = udara.HUMAN_BREATH.map((r) => `<tr><td><b>${escapeHtml(r.k)}</b></td><td>${escapeHtml(r.v)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('');
   const animals = udara.ANIMAL_BREATH.map((r) => `<tr><td><b>${escapeHtml(r.a)}</b></td><td>${escapeHtml(r.rr)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('');
@@ -8354,37 +8448,37 @@ function udaraBreathPage() {
   return udaraDoc({
     title: 'How Living Things Breathe \u2014 Humans, Whales, Gills and Insects | Tukuk-OS',
     desc: 'Breathing explained across species: human respiratory numbers, resting rates of animals, whale dives, fish gills, insect tracheae, bird lungs and indoor CO2 levels.',
-    selfUrl: 'https://tukuk.org/udara/breath',
+    selfUrl: 'https://tukuk.org/air-quality/breath',
     heroTitle: 'Breathing Life', heroSub: 'Twenty thousand times a day, without one decision \u2014 the engineering of a breath',
     body,
   });
 }
 
-app.get('/udara', async (req, res) => {
+app.get('/air-quality', async (req, res) => {
   const [air, co2] = await Promise.allSettled([udara.getAirRanking(), udara.getCo2()]);
   res.type('html').send(udaraHubPage(air.status === 'fulfilled' ? air.value : null, co2.status === 'fulfilled' ? co2.value : null));
 });
-app.get('/udara/oxygen', (req, res) => res.type('html').send(udaraOxygenPage()));
-app.get('/udara/breath', (req, res) => res.type('html').send(udaraBreathPage()));
-app.get('/udara/carbon', async (req, res) => {
+app.get('/air-quality/oxygen', (req, res) => res.type('html').send(udaraOxygenPage()));
+app.get('/air-quality/breath', (req, res) => res.type('html').send(udaraBreathPage()));
+app.get('/air-quality/carbon', async (req, res) => {
   let co2 = null;
   try { co2 = await udara.getCo2(); } catch (e) { co2 = null; }
   res.type('html').send(udaraCarbonPage(co2));
 });
 
-// ══ TUKUK-OS AKADEMI (/akademi) — 50 micro-lessons of general knowledge: 10 tracks
+// ══ TUKUK-OS ACADEMY (/academy) — 50 micro-lessons of general knowledge: 10 tracks
 // × 5 lessons (src/akademi.js, locally curated, in English). Unlike
 // /learn (the developer curriculum) — this is world knowledge for everyone; every track
 // it links the matching live tool. The shell mirrors studyDoc: full chrome + 3 ad units.
 function akadNav() {
-  const items = [{ href: '/akademi', icon: '\uD83C\uDF93', name: 'All 50 Lessons', blurb: 'The full syllabus — ten tracks, five short lessons each, no account needed.' }]
-    .concat(akad.trackList().map((t) => ({ href: `/akademi/${t.s}`, icon: t.icon, name: t.name, blurb: t.blurb })));
+  const items = [{ href: '/academy', icon: '\uD83C\uDF93', name: 'All 50 Lessons', blurb: 'The full syllabus — ten tracks, five short lessons each, no account needed.' }]
+    .concat(akad.trackList().map((t) => ({ href: `/academy/${t.s}`, icon: t.icon, name: t.name, blurb: t.blurb })));
   return `<nav aria-label="Academy tracks"><h2 class="section-title">Akademi Tukuk-OS — every track</h2><div class="feed">`
     + items.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${s.name}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
     + `</div></nav>`;
 }
 
-// The standard /akademi page wrapper — mirrors studyDoc (full chrome + gated ads).
+// The standard /academy page wrapper — mirrors studyDoc (full chrome + gated ads).
 function akadDoc(o) {
   const robots = o.robots || 'index,follow';
   const ld = o.ld || JSON.stringify({
@@ -8451,13 +8545,13 @@ ${siteFooter()}
 </html>`;
 }
 
-// ── /akademi — the hub: a grid of 10 tracks + an honest total time on display ──────────────
+// ── /academy — the hub: a grid of 10 tracks + an honest total time on display ──────────────
 function akadHubPage() {
   const flat = akad.allLessons();
   const totalMin = flat.reduce((n, l) => n + l.mn, 0);
   const cards = akad.trackList().map((t, i) => {
     const min = (akad.LESSONS[t.s] || []).reduce((n, l) => n + l.mn, 0);
-    return `<div class="akad-card"><h3><a href="/akademi/${t.s}">${t.icon} ${escapeHtml(t.name)}</a></h3><p>${escapeHtml(t.blurb)}</p><p class="meta">Track ${i + 1} · 5 lessons · about ${min} min</p></div>`;
+    return `<div class="akad-card"><h3><a href="/academy/${t.s}">${t.icon} ${escapeHtml(t.name)}</a></h3><p>${escapeHtml(t.blurb)}</p><p class="meta">Track ${i + 1} · 5 lessons · about ${min} min</p></div>`;
   }).join('');
   const body = `<p class="learn-intro">Fifty short lessons on how the world actually works — sky and space, weather, the planet, air, the body, life, numbers, computers, everyday machines and clear thinking. Each lesson is three plain-language paragraphs, three takeaways and one quiz question; the whole academy reads in about ${Math.round(totalMin / 60)} hours spread over a month. Free, no account, no paywall. For coding paths see the <a href="/learn">Zero-to-Hero Academy</a>; for daily facts and quizzes the <a href="/study">Knowledge Complex</a>.</p>
   <h2 class="section-title">The syllabus — ten tracks, fifty lessons</h2>
@@ -8466,13 +8560,13 @@ function akadHubPage() {
   return akadDoc({
     title: 'Akademi Tukuk-OS — 50 Free Micro-Lessons on How the World Works',
     desc: 'A free general-knowledge academy: 50 short lessons across ten tracks — space, weather, Earth, air, body, life, numbers, internet, machines and clear thinking — each with takeaways and a quiz.',
-    selfUrl: 'https://tukuk.org/akademi',
+    selfUrl: 'https://tukuk.org/academy',
     heroTitle: 'Akademi Tukuk-OS', heroSub: 'Fifty lessons, ten tracks, one curiosity — how the world works, in plain language',
     body,
   });
 }
 
-// ── /akademi/:track — the 5 lessons + the track's live-tool link ──────────
+// ── /academy/:track — the 5 lessons + the track's live-tool link ──────────
 // The extra-reading search topic for each track (Open Library + Crossref, keyless).
 const TRACK_TOPIC = {
   sky: 'astronomy', weather: 'weather and climate', earth: 'geology of the Earth',
@@ -8483,7 +8577,7 @@ const TRACK_TOPIC = {
 async function akadTrackPage(t) {
   const lessons = akad.LESSONS[t.s] || [];
   const min = lessons.reduce((n, l) => n + l.mn, 0);
-  const rows = lessons.map((l, i) => `<div class="akad-card"><h3><a href="/akademi/${t.s}/${l.s}">${i + 1}. ${escapeHtml(l.t)}</a></h3><p>${escapeHtml(l.sum)}</p><p class="meta">About ${l.mn} min · 1 quiz question</p></div>`).join('');
+  const rows = lessons.map((l, i) => `<div class="akad-card"><h3><a href="/academy/${t.s}/${l.s}">${i + 1}. ${escapeHtml(l.t)}</a></h3><p>${escapeHtml(l.sum)}</p><p class="meta">About ${l.mn} min · 1 quiz question</p></div>`).join('');
   const rel = `<h2 class="section-title">Try it live</h2><ul>${t.rel.map((r) => `<li><a href="${r.h}">${escapeHtml(r.l)}</a></li>`).join('')}</ul>`;
   // The reading box — external-source failures are dropped silently (each one catches → []).
   const topic = TRACK_TOPIC[t.s] || t.name;
@@ -8497,20 +8591,20 @@ async function akadTrackPage(t) {
   const paperBox = pp && pp.length
     ? `<h2 class="section-title">The research</h2><p>The most-cited Crossref-indexed papers matching the topic — a window into how professionals actually study it.</p><ul>${pp.map((p) => `<li><a rel="noopener nofollow" href="${escapeHtml(p.url)}">${escapeHtml(p.title)}</a> — ${escapeHtml(p.author)}${p.year ? ` (${p.year})` : ''}, cited ${p.cites.toLocaleString('en-US')} times</li>`).join('')}</ul>`
     : '';
-  const body = `<p class="learn-intro"><a href="/akademi">&larr; All 50 lessons</a></p>
+  const body = `<p class="learn-intro"><a href="/academy">&larr; All 50 lessons</a></p>
   <p>${escapeHtml(t.blurb)} Five lessons, about ${min} minutes in total — read one at a time; each stands alone.</p>
   <div class="akad-grid">${rows}</div>
   ${rel}${bookBox}${paperBox}`;
   return akadDoc({
     title: `${t.name} — 5 Lessons | Akademi Tukuk-OS`,
     desc: `${t.blurb} Five short free lessons with key takeaways and quiz questions, from Akademi Tukuk-OS.`,
-    selfUrl: `https://tukuk.org/akademi/${t.s}`,
+    selfUrl: `https://tukuk.org/academy/${t.s}`,
     heroTitle: `${t.icon} ${t.name}`, heroSub: 'Five micro-lessons · about ' + min + ' minutes in total',
     body,
   });
 }
 
-// ── /akademi/:track/:slug — reading + teaching + a one-question quiz + prev/next ─
+// ── /academy/:track/:slug — reading + teaching + a one-question quiz + prev/next ─
 function akadLessonPage(t, l, prev, next, no) {
   const right = l.q.o[l.q.a];
   const quizHtml = `<h2 class="section-title">Check yourself</h2>
@@ -8519,57 +8613,57 @@ function akadLessonPage(t, l, prev, next, no) {
     <div id="qexp" style="display:none;margin-top:12px"><p class="meta" style="margin:0 0 4px">Correct answer: <b>${escapeHtml(right)}</b></p><p style="margin:0">${escapeHtml(l.q.e)}</p></div>
   </div>
   <script>(function(){var b=document.querySelector('.quiz-block');if(!b)return;var done=false;Array.prototype.forEach.call(b.querySelectorAll('.qopt'),function(btn){btn.addEventListener('click',function(){if(done)return;done=true;var good=btn.getAttribute('data-ok')==='1';btn.className='qopt '+(good?'ok':'no');if(!good){Array.prototype.forEach.call(b.querySelectorAll('.qopt'),function(o){if(o.getAttribute('data-ok')==='1')o.className='qopt ok';});}var x=document.getElementById('qexp');if(x)x.style.display='block';});});})();</script>`;
-  const relHtml = `<h2 class="section-title">Go deeper</h2><ul>${t.rel.map((r) => `<li><a href="${r.h}">${escapeHtml(r.l)}</a></li>`).join('')}<li><a href="/akademi/${t.s}">All ${t.name} lessons</a></li></ul>`;
+  const relHtml = `<h2 class="section-title">Go deeper</h2><ul>${t.rel.map((r) => `<li><a href="${r.h}">${escapeHtml(r.l)}</a></li>`).join('')}<li><a href="/academy/${t.s}">All ${t.name} lessons</a></li></ul>`;
   const lrMin = Math.max(1, Math.round(l.mn));
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@graph': [
-      { '@type': 'LearningResource', name: l.t, description: l.sum, url: `https://tukuk.org/akademi/${t.s}/${l.s}`,
+      { '@type': 'LearningResource', name: l.t, description: l.sum, url: `https://tukuk.org/academy/${t.s}/${l.s}`,
         inLanguage: 'en', learningResourceType: 'Micro-lesson', timeRequired: `PT${lrMin}M`,
-        isPartOf: { '@type': 'Collection', name: `${t.name} track — Akademi Tukuk-OS`, url: `https://tukuk.org/akademi/${t.s}` },
-        providesSerialization: { '@type': 'WebPage', id: `https://tukuk.org/akademi/${t.s}/${l.s}#main` },
+        isPartOf: { '@type': 'Collection', name: `${t.name} track — Akademi Tukuk-OS`, url: `https://tukuk.org/academy/${t.s}` },
+        providesSerialization: { '@type': 'WebPage', id: `https://tukuk.org/academy/${t.s}/${l.s}#main` },
         publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' } },
       { '@type': 'BreadcrumbList', itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Akademi', item: 'https://tukuk.org/akademi' },
-        { '@type': 'ListItem', position: 2, name: t.name, item: `https://tukuk.org/akademi/${t.s}` },
-        { '@type': 'ListItem', position: 3, name: l.t, item: `https://tukuk.org/akademi/${t.s}/${l.s}` } ] },
+        { '@type': 'ListItem', position: 1, name: 'Akademi', item: 'https://tukuk.org/academy' },
+        { '@type': 'ListItem', position: 2, name: t.name, item: `https://tukuk.org/academy/${t.s}` },
+        { '@type': 'ListItem', position: 3, name: l.t, item: `https://tukuk.org/academy/${t.s}/${l.s}` } ] },
     ],
   }).replace(/</g, '\\u003c');
-  const body = `<p class="learn-intro"><a href="/akademi">&larr; Akademi</a> · <a href="/akademi/${t.s}">${t.icon} ${escapeHtml(t.name)}</a> · Lesson ${no} of 50 · about ${l.mn} min</p>
+  const body = `<p class="learn-intro"><a href="/academy">&larr; Akademi</a> · <a href="/academy/${t.s}">${t.icon} ${escapeHtml(t.name)}</a> · Lesson ${no} of 50 · about ${l.mn} min</p>
   <article>${l.p.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</article>
   <div class="takeaway"><h2>Key takeaways</h2><ul>${l.k.map((k) => `<li>${escapeHtml(k)}</li>`).join('')}</ul></div>
   ${quizHtml}
   ${relHtml}
   <div class="lesson-nav">
-    ${prev ? `<a class="btn ghost" href="/akademi/${prev.track.s}/${prev.s}">&larr; ${escapeHtml(prev.t)}</a>` : '<span></span>'}
-    ${next ? `<a class="btn ghost" href="/akademi/${next.track.s}/${next.s}">${escapeHtml(next.t)} &rarr;</a>` : '<span></span>'}
+    ${prev ? `<a class="btn ghost" href="/academy/${prev.track.s}/${prev.s}">&larr; ${escapeHtml(prev.t)}</a>` : '<span></span>'}
+    ${next ? `<a class="btn ghost" href="/academy/${next.track.s}/${next.s}">${escapeHtml(next.t)} &rarr;</a>` : '<span></span>'}
   </div>`;
   return akadDoc({
     title: `${l.t} — ${t.name} Lesson | Akademi Tukuk-OS`,
     desc: l.sum,
-    selfUrl: `https://tukuk.org/akademi/${t.s}/${l.s}`,
+    selfUrl: `https://tukuk.org/academy/${t.s}/${l.s}`,
     heroTitle: l.t, heroSub: `${t.icon} ${t.name} · Lesson ${no} of 50 · about ${l.mn} minutes`,
     ld,
     body,
   });
 }
 
-app.get('/akademi', (req, res) => res.type('html').send(akadHubPage()));
-app.get('/akademi/:track', async (req, res) => {
+app.get('/academy', (req, res) => res.type('html').send(akadHubPage()));
+app.get('/academy/:track', async (req, res) => {
   const t = akad.findTrack(req.params.track);
-  if (!t) return res.redirect('/akademi');
+  if (!t) return res.redirect('/academy');
   res.type('html').send(await akadTrackPage(t));
 });
-app.get('/akademi/:track/:slug', (req, res) => {
+app.get('/academy/:track/:slug', (req, res) => {
   const t = akad.findTrack(req.params.track);
   const l = t && akad.findLesson(t.s, req.params.slug);
-  if (!l) return res.redirect('/akademi');
+  if (!l) return res.redirect('/academy');
   const flat = akad.allLessons();
   const idx = flat.findIndex((x) => x.track.s === t.s && x.s === l.s);
   res.type('html').send(akadLessonPage(t, l, idx > 0 ? flat[idx - 1] : null, idx < flat.length - 1 ? flat[idx + 1] : null, idx + 1));
 });
 
-// ══ DUNIA TUKUK-OS — three new clusters built on keyless APIs: /wang (ECB via
-// frankfurter.dev), /seni (The Metropolitan Museum), /hidupan (iNaturalist).
+// ══ WORLD TUKUK-OS — three new clusters built on keyless APIs: /money (ECB via
+// frankfurter.dev), /art (The Metropolitan Museum), /life (iNaturalist).
 // English for a global audience; the full chrome + 3 ad units like
 // akadDoc, with the per-cluster nav injected so one wrapper looks after three pages.
 function worldDoc(o, navHtml) {
@@ -8649,20 +8743,20 @@ function worldNav(label, items) {
     + items.map((s) => `<div class="post-card"><h2><a href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a></h2><p>${escapeHtml(s.blurb)}</p></div>`).join('')
     + `</div></nav>`;
 }
-const wangNav = () => worldNav('World Money — tukuk.org/wang', [
-  { href: '/wang', icon: '💱', name: 'Currency converter', blurb: 'Convert any of 30 world currencies at the latest European Central Bank reference rates — free, no account.' },
-  { href: '/wang/kadar', icon: '📊', name: 'All rates today', blurb: 'Every rate the ECB publishes, on one page, refreshed each weekday around 16:00 CET.' },
-  { href: '/wang/tukar/USD/EUR', icon: '🇺🇸', name: 'US Dollar → Euro', blurb: 'Live USD/EUR reference rate with a ready amount table and the reverse rate in one glance.' },
-  { href: '/wang/tukar/USD/MYR', icon: '🇲🇾', name: 'US Dollar → Ringgit', blurb: 'Live USD/MYR reference rate — the number travellers from Malaysia check most.' },
-  { href: '/wang/tukar/USD/INR', icon: '🇮🇳', name: 'US Dollar → Rupee', blurb: 'Live USD/INR reference rate with a ready amount table from ₹100 to ₹1,00,000.' },
-  { href: '/wang/tukar/GBP/JPY', icon: '🇬🇧', name: 'Pound → Yen', blurb: 'Cross-rate example: GBP to JPY computed from the same ECB table.' },
+const wangNav = () => worldNav('World Money — tukuk.org/money', [
+  { href: '/money', icon: '💱', name: 'Currency converter', blurb: 'Convert any of 30 world currencies at the latest European Central Bank reference rates — free, no account.' },
+  { href: '/money/rates', icon: '📊', name: 'All rates today', blurb: 'Every rate the ECB publishes, on one page, refreshed each weekday around 16:00 CET.' },
+  { href: '/money/convert/USD/EUR', icon: '🇺🇸', name: 'US Dollar → Euro', blurb: 'Live USD/EUR reference rate with a ready amount table and the reverse rate in one glance.' },
+  { href: '/money/convert/USD/MYR', icon: '🇲🇾', name: 'US Dollar → Ringgit', blurb: 'Live USD/MYR reference rate — the number travellers from Malaysia check most.' },
+  { href: '/money/convert/USD/INR', icon: '🇮🇳', name: 'US Dollar → Rupee', blurb: 'Live USD/INR reference rate with a ready amount table from ₹100 to ₹1,00,000.' },
+  { href: '/money/convert/GBP/JPY', icon: '🇬🇧', name: 'Pound → Yen', blurb: 'Cross-rate example: GBP to JPY computed from the same ECB table.' },
 ]);
-const seniNav = () => worldNav('Art Gallery — free images from The Met', [{ href: '/seni', icon: '🖼️', name: 'All collections', blurb: 'Ten curated doors into the Metropolitan Museum’s open-access archive — hundreds of thousands of public-domain images.' }]
-  .concat(seni.COLLECTIONS.map((c) => ({ href: `/seni/koleksi/${c.slug}`, icon: c.icon, name: c.name, blurb: c.blurb }))));
-const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/hidupan', icon: '🦁', name: 'All species', blurb: 'Sixteen animals, each with a plain-language story and real research-grade photographs from the iNaturalist community.' }
-  ].concat(hidup.TAXA.map((t) => ({ href: `/hidupan/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
+const seniNav = () => worldNav('Art Gallery — free images from The Met', [{ href: '/art', icon: '🖼️', name: 'All collections', blurb: 'Ten curated doors into the Metropolitan Museum’s open-access archive — hundreds of thousands of public-domain images.' }]
+  .concat(seni.COLLECTIONS.map((c) => ({ href: `/art/collection/${c.slug}`, icon: c.icon, name: c.name, blurb: c.blurb }))));
+const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/life', icon: '🦁', name: 'All species', blurb: 'Sixteen animals, each with a plain-language story and real research-grade photographs from the iNaturalist community.' }
+  ].concat(hidup.TAXA.map((t) => ({ href: `/life/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
 
-// ── /unsur — periodic table of the elements (STATIK data embedded) ────────────
+// ── /elements — periodic table of the elements (STATIK data embedded) ────────────
 const EL_CSS = `.el-scroll{overflow-x:auto;padding-bottom:8px;margin:14px 0}
 .el-grid{display:grid;grid-template-columns:repeat(18,minmax(38px,1fr));grid-auto-rows:minmax(44px,auto);gap:3px;min-width:760px}
 .el-tile{display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;color:#0b0f16;border-radius:5px;padding:3px 4px;font-size:.7rem;line-height:1.05;background:var(--c);transition:transform .12s}
@@ -8694,15 +8788,15 @@ const elKelvin = (v) => (v == null ? null : `${v} K (${Math.round(v - 273.15)} �
 
 function elementsNav() {
   const cats = els.groupedByCategory().map((g) => ({
-    href: `/unsur#${els.slugify(g.label)}`, icon: '🧪', name: g.label,
+    href: `/elements#${els.slugify(g.label)}`, icon: '🧪', name: g.label,
     blurb: `${g.items.length} element${g.items.length > 1 ? 's' : ''}: ${EL_CAT_BLURB[g.label] || 'See the grouping in the periodic table.'}`,
   }));
   return worldNav('Explore by category — Periodic Table /unsur',
-    [{ href: '/unsur', icon: '⚛️', name: 'Full periodic table', blurb: 'All 118 chemical elements on one interactive, colour-coded table, each linking to a fact file and plain-language summary.' }].concat(cats));
+    [{ href: '/elements', icon: '⚛️', name: 'Full periodic table', blurb: 'All 118 chemical elements on one interactive, colour-coded table, each linking to a fact file and plain-language summary.' }].concat(cats));
 }
 
 function elementTile(e) {
-  return `<a class="el-tile" style="--c:${e.color};grid-column:${e.xpos};grid-row:${e.ypos}" href="/unsur/${e.slug}" title="${escapeHtml(e.name)} — atomic number ${e.n}"><span class="num">${e.n}</span><span class="sym">${escapeHtml(e.s)}</span><span class="nm">${escapeHtml(e.name)}</span></a>`;
+  return `<a class="el-tile" style="--c:${e.color};grid-column:${e.xpos};grid-row:${e.ypos}" href="/elements/${e.slug}" title="${escapeHtml(e.name)} — atomic number ${e.n}"><span class="num">${e.n}</span><span class="sym">${escapeHtml(e.s)}</span><span class="nm">${escapeHtml(e.name)}</span></a>`;
 }
 
 function elementsHubPage() {
@@ -8710,7 +8804,7 @@ function elementsHubPage() {
   const legend = els.CATEGORY_ORDER.filter((l) => els.CAT_COLOR[l])
     .map((l) => `<span><i style="background:${els.CAT_COLOR[l]}"></i>${l}</span>`).join('');
   const sections = els.groupedByCategory().map((g) => {
-    const links = g.items.map((e) => `<a href="/unsur/${e.slug}">${escapeHtml(e.name)} (${escapeHtml(e.s)})</a>`).join(' · ');
+    const links = g.items.map((e) => `<a href="/elements/${e.slug}">${escapeHtml(e.name)} (${escapeHtml(e.s)})</a>`).join(' · ');
     return `<h2 class="section-title" id="${els.slugify(g.label)}">${g.label} <span class="meta">(${g.items.length})</span></h2><p>${escapeHtml(EL_CAT_BLURB[g.label] || '')}</p><p>${links}</p>`;
   }).join('');
   const body = `<p>The <b>periodic table of the elements</b> is chemistry’s map of everything: all 118 known chemical elements, ordered by atomic number and arranged so that elements with similar behaviour fall in the same vertical column. Tap any tile — or pick an element below — for its full fact file, physical properties and a plain-language summary of what it is and what it does.</p>
@@ -8722,7 +8816,7 @@ function elementsHubPage() {
   return worldDoc({
     title: 'Periodic Table of Elements — All 118, Interactive with Fact Files | Tukuk-OS',
     desc: 'The complete periodic table of the 118 chemical elements as an interactive, colour-coded grid, each linking to atomic number, mass, melting/boiling points, electron configuration and a plain-language summary.',
-    selfUrl: 'https://tukuk.org/unsur',
+    selfUrl: 'https://tukuk.org/elements',
     heroTitle: '⚛️ The Periodic Table', heroSub: 'All 118 chemical elements · interactive, colour-coded, with fact files',
     css: EL_CSS, body,
   }, elementsNav());
@@ -8748,9 +8842,9 @@ function elementPage(req, e) {
   ].filter((r) => r[1] != null && String(r[1]).trim()).map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]))}</td></tr>`).join('');
   const intro = escapeHtml(e.summ || `${e.name} is a chemical element with symbol ${e.s} and atomic number ${e.n}.`);
   const neighbours = [
-    e.n > 1 ? `<a href="/unsur/${(els.ELEMENTS.find((x) => x.n === e.n - 1) || {}).slug}">&larr; ${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n - 1) || {}).name || '')}</a>` : '',
-    `<a href="/unsur">Periodic table</a>`,
-    e.n < 118 ? `${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).name || '')} &rarr; <a href="/unsur/${(els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).slug}">${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).s || '')}</a>` : '',
+    e.n > 1 ? `<a href="/elements/${(els.ELEMENTS.find((x) => x.n === e.n - 1) || {}).slug}">&larr; ${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n - 1) || {}).name || '')}</a>` : '',
+    `<a href="/elements">Periodic table</a>`,
+    e.n < 118 ? `${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).name || '')} &rarr; <a href="/elements/${(els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).slug}">${escapeHtml((els.ELEMENTS.find((x) => x.n === e.n + 1) || {}).s || '')}</a>` : '',
   ].filter(Boolean).join(' · ');
   const body = `<div class="el-hero"><div class="el-big" style="--c:${e.color}"><span class="b-meta"><span>${e.n}</span><span>${e.mass}</span></span><span class="b-sym">${escapeHtml(e.s)}</span><span class="b-nm">${escapeHtml(e.name)}</span><span class="b-meta"><span>${escapeHtml(e.phase || '')}</span><span>${escapeHtml(e.catLabel)}</span></span></div>
   <p>${intro}</p></div>
@@ -8760,14 +8854,14 @@ function elementPage(req, e) {
   <p class="meta">Data: Periodic-Table-JSON (CC BY-SA 3.0) · stored statically on our server. ${escapeHtml(e.src || '')}</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'ChemicalElement', name: e.name, alternateName: e.s,
-    url: `https://tukuk.org/unsur/${e.slug}`, description: e.summ || undefined,
+    url: `https://tukuk.org/elements/${e.slug}`, description: e.summ || undefined,
     atomicNumber: e.n, molecularFormula: e.s,
     provider: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: `${e.name} (${e.s}) — Properties, Facts & Uses | Periodic Table`,
     desc: `${e.name}, atomic number ${e.n}: symbol, atomic mass, electron configuration, melting and boiling points, density and a plain-language summary of what ${e.name} is used for.`,
-    selfUrl: `https://tukuk.org/unsur/${e.slug}`,
+    selfUrl: `https://tukuk.org/elements/${e.slug}`,
     heroTitle: escapeHtml(e.name), heroSub: `${escapeHtml(e.catLabel)} · atomic number ${e.n}`,
     ld, css: EL_CSS, body,
   }, elementsNav());
@@ -8777,17 +8871,17 @@ function elementsNotFound(q) {
   return worldDoc({
     title: 'Element not found | Periodic Table — Tukuk-OS',
     desc: 'That element was not recognised — browse the full periodic table of all 118 chemical elements instead.',
-    selfUrl: 'https://tukuk.org/unsur', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/elements', robots: 'noindex,follow',
     heroTitle: 'Element not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
     css: EL_CSS,
-    body: `<p>We could not match that to one of the 118 elements. Try a name (e.g. <a href="/unsur/gold">gold</a>), a symbol (e.g. <a href="/unsur/Au">Au</a>) or an atomic number — or open the <a href="/unsur">full periodic table</a> and pick a tile.</p>`,
+    body: `<p>We could not match that to one of the 118 elements. Try a name (e.g. <a href="/elements/gold">gold</a>), a symbol (e.g. <a href="/elements/Au">Au</a>) or an atomic number — or open the <a href="/elements">full periodic table</a> and pick a tile.</p>`,
   }, elementsNav());
 }
 
-// ── /buruj + /messier — deep-sky: 88 buruj IAU + 110 objek Messier (STATIK) ──
+// ── /constellations + /messier — deep-sky: the 88 IAU constellations + 110 Messier objects (STATIK) ──
 function deepskyNav() {
   return worldNav('Deep sky — constellations & Messier objects', [
-    { href: '/buruj', icon: '✨', name: 'The 88 constellations', blurb: 'Every officially recognised constellation: its Latin name and meaning, brightest star, size on the sky and hemisphere — with the deep-sky objects that lie within each.' },
+    { href: '/constellations', icon: '✨', name: 'The 88 constellations', blurb: 'Every officially recognised constellation: its Latin name and meaning, brightest star, size on the sky and hemisphere — with the deep-sky objects that lie within each.' },
     { href: '/messier', icon: '🔭', name: 'The 110 Messier objects', blurb: 'The full Messier catalogue of galaxies, nebulae and star clusters — the fuzzy things that kept Charles Messier from finding comets — grouped by type and mapped to their constellation.' },
   ]);
 }
@@ -8795,14 +8889,14 @@ const byName = (a, b) => a.name.localeCompare(b.name);
 
 function burujHubPage() {
   const list = [...sky.CONSTELLATIONS].sort(byName);
-  const rows = list.map((c) => `<tr><td><a href="/buruj/${c.slug}"><b>${escapeHtml(c.name)}</b></a></td><td>${escapeHtml(c.abbr)}</td><td>${escapeHtml(c.meaning || '—')}</td><td>${escapeHtml(c.brightest || '—')}${c.brightestMag != null ? ` (${c.brightestMag})` : ''}</td><td>${c.area ? c.area.toLocaleString('en-US') : '—'}</td><td>${escapeHtml(c.hemisphere)}</td></tr>`).join('');
+  const rows = list.map((c) => `<tr><td><a href="/constellations/${c.slug}"><b>${escapeHtml(c.name)}</b></a></td><td>${escapeHtml(c.abbr)}</td><td>${escapeHtml(c.meaning || '—')}</td><td>${escapeHtml(c.brightest || '—')}${c.brightestMag != null ? ` (${c.brightestMag})` : ''}</td><td>${c.area ? c.area.toLocaleString('en-US') : '—'}</td><td>${escapeHtml(c.hemisphere)}</td></tr>`).join('');
   const body = `<p>Since 1922 the International Astronomical Union has recognised exactly <b>88 constellations</b> — defined regions that tile the whole celestial sphere, so every point in the night sky belongs to one. Their names are Latin, most inherited from Ptolemy’s 2nd-century catalogue; the southern ones were added by early-modern European navigators. Below is every constellation with its official three-letter abbreviation, the <b>meaning</b> of its name, its <b>brightest star</b>, its area on the sky and which hemisphere it favours. Each name links to a full profile with the Messier objects found inside it.</p>
   <table class="world-table"><tr><th>Constellation</th><th>Abbr.</th><th>Meaning</th><th>Brightest star</th><th>Area (sq. deg.)</th><th>Hemisphere</th></tr>${rows}</table>
   <p class="meta">Data: IAU-designated constellations, via English Wikipedia (CC BY-SA 3.0), stored statically on our server — no external call when a page loads.</p>`;
   return worldDoc({
     title: 'The 88 Constellations — Names, Meanings, Brightest Stars | Tukuk-OS',
     desc: 'All 88 IAU-recognised constellations with their Latin meaning, brightest star, sky area and hemisphere, each linked to the Messier objects within it.',
-    selfUrl: 'https://tukuk.org/buruj',
+    selfUrl: 'https://tukuk.org/constellations',
     heroTitle: '✨ The 88 Constellations', heroSub: 'Every IAU constellation · name, meaning, brightest star & the deep-sky objects inside',
     body,
   }, deepskyNav());
@@ -8823,7 +8917,7 @@ function constellationPage(c) {
     ['Hemisphere', c.hemisphere],
     ['Messier objects here', objs.length ? `${objs.length}` : null],
   ].filter((r) => r[1] != null && String(r[1]).trim()).map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]))}</td></tr>`).join('');
-  const body = `<p class="back-link"><a href="/buruj">&larr; All 88 constellations</a></p>
+  const body = `<p class="back-link"><a href="/constellations">&larr; All 88 constellations</a></p>
   <p><b>${escapeHtml(c.name)}</b> is one of the 88 modern constellations defined by the International Astronomical Union. Its name is Latin${c.meaning ? `, meaning <em>${escapeHtml(c.meaning)}</em>` : ''}${c.genitive ? `; stars within it are named in the genitive form <em>${escapeHtml(c.genitive)}</em>` : ''}.</p>
   <h2 class="section-title">Facts about ${escapeHtml(c.name)}</h2><table class="world-table">${rows}</table>
   <h2 class="section-title">Deep-sky objects in ${escapeHtml(c.name)}</h2>${objList}
@@ -8831,12 +8925,12 @@ function constellationPage(c) {
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'DefinedTerm', name: c.name,
     description: `${c.name} constellation — IAU abbreviation ${c.abbr}${c.meaning ? `, meaning ${c.meaning}` : ''}.${c.brightest ? ` Brightest star ${c.brightest}.` : ''}`,
-    url: `https://tukuk.org/buruj/${c.slug}`, inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'IAU constellations', url: 'https://tukuk.org/buruj' },
+    url: `https://tukuk.org/constellations/${c.slug}`, inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'IAU constellations', url: 'https://tukuk.org/constellations' },
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: `${c.name} Constellation — Meaning, Brightest Star & Objects | Tukuk-OS`,
     desc: `${c.name} (${c.abbr})${c.meaning ? `, meaning “${c.meaning}”` : ''}${c.brightest ? `, brightest star ${c.brightest}` : ''}: a full profile plus every Messier object lying in this ${c.hemisphere.toLowerCase()} constellation.`,
-    selfUrl: `https://tukuk.org/buruj/${c.slug}`,
+    selfUrl: `https://tukuk.org/constellations/${c.slug}`,
     heroTitle: `✨ ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.abbr)} · ${escapeHtml(c.meaning || '')} · ${escapeHtml(c.hemisphere)} sky`,
     ld, body,
   }, deepskyNav());
@@ -8862,7 +8956,7 @@ function messierHubPage() {
 }
 
 function messierPage(m) {
-  const consLink = m.cSlug ? `<a href="/buruj/${m.cSlug}">${escapeHtml(m.constellation)}</a>` : escapeHtml(m.constellation || '—');
+  const consLink = m.cSlug ? `<a href="/constellations/${m.cSlug}">${escapeHtml(m.constellation)}</a>` : escapeHtml(m.constellation || '—');
   const rows = [
     ['Catalogue designation', m.id],
     ['Common name', m.name],
@@ -8885,7 +8979,7 @@ function messierPage(m) {
   const ld = JSON.stringify([
     { '@context': 'https://schema.org', '@type': 'Place', name: `${m.id}${m.name ? ` — ${m.name}` : ''}`, description: `${m.type} in ${m.constellation || 'the night sky'}.`, url: `https://tukuk.org/messier/${m.slug}` },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Deep sky', item: 'https://tukuk.org/buruj' },
+      { '@type': 'ListItem', position: 1, name: 'Deep sky', item: 'https://tukuk.org/constellations' },
       { '@type': 'ListItem', position: 2, name: 'Messier catalogue', item: 'https://tukuk.org/messier' },
       { '@type': 'ListItem', position: 3, name: m.id, item: `https://tukuk.org/messier/${m.slug}` },
     ] },
@@ -8903,9 +8997,9 @@ function burujNotFound(q) {
   return worldDoc({
     title: 'Constellation not found | Tukuk-OS',
     desc: 'That constellation was not recognised — browse the full list of all 88 IAU constellations instead.',
-    selfUrl: 'https://tukuk.org/buruj', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/constellations', robots: 'noindex,follow',
     heroTitle: 'Constellation not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
-    body: `<p>We could not match that to one of the 88 constellations. Open <a href="/buruj">the full list</a>, or explore the <a href="/messier">Messier catalogue</a>.</p>`,
+    body: `<p>We could not match that to one of the 88 constellations. Open <a href="/constellations">the full list</a>, or explore the <a href="/messier">Messier catalogue</a>.</p>`,
   }, deepskyNav());
 }
 function messierNotFound(q) {
@@ -8918,7 +9012,7 @@ function messierNotFound(q) {
   }, deepskyNav());
 }
 
-// ── /pepatah — Proverbs of the World (embedded STATIC data, no API) ────────
+// ── /proverbs — Proverbs of the World (embedded STATIC data, no API) ────────
 const PV_CSS = `.prov-card{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;margin:14px 0;background:var(--panel,#171a21)}
 .prov-orig{font-size:1.5rem;font-weight:800;line-height:1.35;margin:0 0 6px}
 .prov-tr{font-style:italic;color:var(--muted,#9aa3b2);margin:0 0 8px;font-size:.95rem}
@@ -8930,15 +9024,15 @@ const PV_CSS = `.prov-card{border:1px solid var(--line);border-left:4px solid va
 
 function provCard(p, showLink) {
   const tr = p.translit ? `<p class="prov-tr">${escapeHtml(p.translit)}</p>` : '';
-  const link = showLink ? `<p class="meta"><a href="/pepatah/${p.slug}">${escapeHtml(p.lang)} · ${escapeHtml(p.country)}</a></p>` : '';
+  const link = showLink ? `<p class="meta"><a href="/proverbs/${p.slug}">${escapeHtml(p.lang)} · ${escapeHtml(p.country)}</a></p>` : '';
   return `<div class="prov-card"><p class="prov-orig">${escapeHtml(p.text)}</p>${tr}<p class="prov-en">&ldquo;${escapeHtml(p.en)}&rdquo;</p><p>${escapeHtml(p.meaning)}</p>${link}</div>`;
 }
 function countryTile(c) {
-  return `<div class="prov-country"><h3><a href="/pepatah/negara/${c.slug}">${escapeHtml(c.name)}</a></h3><p class="meta">${c.items.length} proverb${c.items.length > 1 ? 's' : ''} · <a href="/negara/${c.slug}">country profile</a></p></div>`;
+  return `<div class="prov-country"><h3><a href="/proverbs/country/${c.slug}">${escapeHtml(c.name)}</a></h3><p class="meta">${c.items.length} proverb${c.items.length > 1 ? 's' : ''} · <a href="/countries/${c.slug}">country profile</a></p></div>`;
 }
 function pepatahNav() {
-  return worldNav('Proverbs of the World — tukuk.org/pepatah', [{ href: '/pepatah', icon: '🗣️', name: 'All proverbs', blurb: 'Traditional sayings from around the world, each with its original wording, a romanisation, a plain-English translation and what it really means.' }
-  ].concat(pv.REGION_ORDER.map((r) => ({ href: `/pepatah#${pv.slugify(r)}`, icon: '🌍', name: `${r} proverbs`, blurb: `Folk wisdom from ${pv.countriesInRegion(r).length} ${r} countries in the collection.`}))));
+  return worldNav('Proverbs of the World — tukuk.org/proverbs', [{ href: '/proverbs', icon: '🗣️', name: 'All proverbs', blurb: 'Traditional sayings from around the world, each with its original wording, a romanisation, a plain-English translation and what it really means.' }
+  ].concat(pv.REGION_ORDER.map((r) => ({ href: `/proverbs#${pv.slugify(r)}`, icon: '🌍', name: `${r} proverbs`, blurb: `Folk wisdom from ${pv.countriesInRegion(r).length} ${r} countries in the collection.`}))));
 }
 
 function pepatahHubPage() {
@@ -8955,7 +9049,7 @@ function pepatahHubPage() {
   return worldDoc({
     title: 'Proverbs of the World — Traditional Sayings with Meanings | Tukuk-OS',
     desc: `Sixty-five proverbs from ${pv.COUNTRIES.length} countries across every inhabited continent, each with its original wording, romanisation, plain-English translation and the wisdom behind it.`,
-    selfUrl: 'https://tukuk.org/pepatah',
+    selfUrl: 'https://tukuk.org/proverbs',
     heroTitle: '🗣️ Proverbs of the World', heroSub: `${pv.PROVERBS.length} traditional sayings · ${pv.COUNTRIES.length} countries · original text, translation & meaning`,
     css: PV_CSS, body,
   }, pepatahNav());
@@ -8964,20 +9058,20 @@ function pepatahHubPage() {
 function pepatahCountryPage(c) {
   const list = c.items.map((p) => provCard(p, true)).join('');
   const siblings = pv.countriesInRegion(c.region).filter((x) => x.slug !== c.slug);
-  const otherLinks = siblings.length ? `<h2 class="section-title">More ${escapeHtml(c.region)} proverbs</h2><p>${siblings.map((x) => `<a href="/pepatah/negara/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
-  const body = `<p class="back-link"><a href="/pepatah">&larr; All proverbs</a></p>
-  <p><b>${escapeHtml(c.name)}</b> contributes ${c.items.length} proverb${c.items.length > 1 ? 's' : ''} to this collection. A country&rsquo;s sayings reveal what its people prize most. See the full <a href="/negara/${c.slug}">profile of ${escapeHtml(c.name)}</a> for its geography, languages and history.</p>
+  const otherLinks = siblings.length ? `<h2 class="section-title">More ${escapeHtml(c.region)} proverbs</h2><p>${siblings.map((x) => `<a href="/proverbs/country/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const body = `<p class="back-link"><a href="/proverbs">&larr; All proverbs</a></p>
+  <p><b>${escapeHtml(c.name)}</b> contributes ${c.items.length} proverb${c.items.length > 1 ? 's' : ''} to this collection. A country&rsquo;s sayings reveal what its people prize most. See the full <a href="/countries/${c.slug}">profile of ${escapeHtml(c.name)}</a> for its geography, languages and history.</p>
   ${list}
   ${otherLinks}
   <p class="meta">Proverbs are traditional folk heritage (public domain); translations and meanings are plain-English renderings. Stored statically.</p>`;
   const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Proverbs of ${c.name}`, description: `${c.items.length} traditional proverbs from ${c.name} with English translations and meanings.`, url: `https://tukuk.org/pepatah/negara/${c.slug}`,
-    mainEntity: { '@type': 'ItemList', itemListElement: c.items.map((p, i) => ({ '@type': 'ListItem', position: i + 1, name: p.en, url: `https://tukuk.org/pepatah/${p.slug}` })) },
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Proverbs of ${c.name}`, description: `${c.items.length} traditional proverbs from ${c.name} with English translations and meanings.`, url: `https://tukuk.org/proverbs/country/${c.slug}`,
+    mainEntity: { '@type': 'ItemList', itemListElement: c.items.map((p, i) => ({ '@type': 'ListItem', position: i + 1, name: p.en, url: `https://tukuk.org/proverbs/${p.slug}` })) },
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: `Proverbs of ${c.name} — Sayings & Meanings | Tukuk-OS`,
     desc: `${c.items.length} traditional ${c.name} proverbs with their original wording, English translations and the wisdom behind each — from the Proverbs of the World collection.`,
-    selfUrl: `https://tukuk.org/pepatah/negara/${c.slug}`,
+    selfUrl: `https://tukuk.org/proverbs/country/${c.slug}`,
     heroTitle: `🗣️ Proverbs of ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.region)} · ${c.items.length} traditional sayings`,
     ld, css: PV_CSS, body,
   }, pepatahNav());
@@ -8988,28 +9082,28 @@ function pepatahProverbPage(p) {
   const moreList = others.length ? `<h2 class="section-title">More proverbs from ${escapeHtml(p.country)}</h2>${others.map((x) => provCard(x, false)).join('')}` : '';
   const tr = p.translit ? `<tr><th>Romanisation</th><td>${escapeHtml(p.translit)}</td></tr>` : '';
   const rows = [
-    ['Origin country', `<a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>`],
+    ['Origin country', `<a href="/countries/${p.countrySlug}">${escapeHtml(p.country)}</a>`],
     ['Region', escapeHtml(p.region)],
     ['Language', escapeHtml(p.lang)],
   ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('') + tr;
-  const body = `<p class="back-link"><a href="/pepatah">&larr; All proverbs</a> · <a href="/pepatah/negara/${p.countrySlug}">${escapeHtml(p.country)} proverbs</a></p>
+  const body = `<p class="back-link"><a href="/proverbs">&larr; All proverbs</a> · <a href="/proverbs/country/${p.countrySlug}">${escapeHtml(p.country)} proverbs</a></p>
   <div class="prov-card"><p class="prov-orig">${escapeHtml(p.text)}</p>${p.translit ? `<p class="prov-tr">${escapeHtml(p.translit)}</p>` : ''}<p class="prov-en">&ldquo;${escapeHtml(p.en)}&rdquo;</p><p>${escapeHtml(p.meaning)}</p></div>
   <h2 class="section-title">About this proverb</h2><table class="world-table">${rows}</table>
-  <p>This saying belongs to the oral tradition of <a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>, a country in ${escapeHtml(p.region)}. Read the full <a href="/pepatah/negara/${p.countrySlug}">collection of ${escapeHtml(p.country)} proverbs</a>, or explore the <a href="/pepatah">Proverbs of the World</a> index.</p>
+  <p>This saying belongs to the oral tradition of <a href="/countries/${p.countrySlug}">${escapeHtml(p.country)}</a>, a country in ${escapeHtml(p.region)}. Read the full <a href="/proverbs/country/${p.countrySlug}">collection of ${escapeHtml(p.country)} proverbs</a>, or explore the <a href="/proverbs">Proverbs of the World</a> index.</p>
   ${moreList}
   <p class="meta">Proverbs are traditional folk heritage (public domain); the translation and explanation are our own plain-English rendering. Stored statically.</p>`;
   const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'Quotation', text: p.text, inLanguage: p.lang, url: `https://tukuk.org/pepatah/${p.slug}`, attribution: `${p.country} folk tradition`, creator: { '@type': 'Organization', name: `${p.lang} oral tradition` } },
+    { '@context': 'https://schema.org', '@type': 'Quotation', text: p.text, inLanguage: p.lang, url: `https://tukuk.org/proverbs/${p.slug}`, attribution: `${p.country} folk tradition`, creator: { '@type': 'Organization', name: `${p.lang} oral tradition` } },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Proverbs of the World', item: 'https://tukuk.org/pepatah' },
-      { '@type': 'ListItem', position: 2, name: p.country, item: `https://tukuk.org/pepatah/negara/${p.countrySlug}` },
-      { '@type': 'ListItem', position: 3, name: p.en, item: `https://tukuk.org/pepatah/${p.slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Proverbs of the World', item: 'https://tukuk.org/proverbs' },
+      { '@type': 'ListItem', position: 2, name: p.country, item: `https://tukuk.org/proverbs/country/${p.countrySlug}` },
+      { '@type': 'ListItem', position: 3, name: p.en, item: `https://tukuk.org/proverbs/${p.slug}` },
     ] },
   ]).replace(/</g, '\u003c');
   return worldDoc({
     title: `${p.en} — ${p.lang} Proverb (${p.country}) | Tukuk-OS`,
     desc: `The ${p.country} proverb ${p.translit ? `(${p.translit}) ` : ''}“${p.en}” — its original wording, English translation and the practical wisdom behind it.`,
-    selfUrl: `https://tukuk.org/pepatah/${p.slug}`,
+    selfUrl: `https://tukuk.org/proverbs/${p.slug}`,
     heroTitle: `🗣️ ${escapeHtml(p.country)}: &ldquo;${escapeHtml(p.en)}&rdquo;`, heroSub: `${escapeHtml(p.lang)} proverb · ${escapeHtml(p.region)}`,
     ld, css: PV_CSS, body,
   }, pepatahNav());
@@ -9019,14 +9113,14 @@ function pepatahNotFound(q) {
   return worldDoc({
     title: 'Proverb not found | Proverbs of the World — Tukuk-OS',
     desc: 'That proverb was not recognised — browse the full collection of world proverbs instead.',
-    selfUrl: 'https://tukuk.org/pepatah', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/proverbs', robots: 'noindex,follow',
     heroTitle: 'Proverb not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
     css: PV_CSS,
-    body: `<p>We could not match that to one of our world proverbs. Open <a href="/pepatah">the full collection</a> and browse by country or region.</p>`,
+    body: `<p>We could not match that to one of our world proverbs. Open <a href="/proverbs">the full collection</a> and browse by country or region.</p>`,
   }, pepatahNav());
 }
 
-// ── /rekod — World Extremes (superlatives of the Earth, STATIC embedded data) ──
+// ── /records — World Extremes (superlatives of the Earth, STATIC embedded data) ──
 const REC_CSS = `.rek-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}
 .rek-card{display:block;border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:10px;padding:13px 16px;background:var(--panel,#171a21);text-decoration:none;color:inherit}
 .rek-card h3{margin:0 0 4px;font-size:1.02rem}
@@ -9053,16 +9147,16 @@ const REK_CLUSTER_LABEL = {
 };
 
 function rekCard(r) {
-  return `<a class="rek-card" href="/rekod/${r.slug}"><h3>${escapeHtml(r.record)}</h3><p class="rek-name">${escapeHtml(r.name)}</p><p class="rek-val">${escapeHtml(r.value)} &middot; ${escapeHtml(r.place)}</p></a>`;
+  return `<a class="rek-card" href="/records/${r.slug}"><h3>${escapeHtml(r.record)}</h3><p class="rek-name">${escapeHtml(r.name)}</p><p class="rek-val">${escapeHtml(r.value)} &middot; ${escapeHtml(r.place)}</p></a>`;
 }
 
 function rekodNav() {
-  return worldNav('World Extremes — tukuk.org/rekod', [{ href: '/rekod', icon: '📏', name: 'Every record, one page', blurb: 'The highest, longest, deepest, largest and driest places on Earth — natural wonders and human-built superlatives, each on its own fact page.' }
-  ].concat(rek.CATEGORIES.map((c) => ({ href: `/rekod#${c.slug}`, icon: REK_CAT_EMOJI[c.name] || '📏', name: c.name, blurb: `${c.items.length} world records in this category, from extremes of the natural world to the tallest things people have built.`}))));
+  return worldNav('World Extremes — tukuk.org/records', [{ href: '/records', icon: '📏', name: 'Every record, one page', blurb: 'The highest, longest, deepest, largest and driest places on Earth — natural wonders and human-built superlatives, each on its own fact page.' }
+  ].concat(rek.CATEGORIES.map((c) => ({ href: `/records#${c.slug}`, icon: REK_CAT_EMOJI[c.name] || '📏', name: c.name, blurb: `${c.items.length} world records in this category, from extremes of the natural world to the tallest things people have built.`}))));
 }
 
 function rekodHubPage() {
-  const toc = rek.CATEGORIES.map((c) => `<a href="/rekod#${c.slug}">${REK_CAT_EMOJI[c.name] || '📏'} ${escapeHtml(c.name)} (${c.items.length})</a>`).join(' · ');
+  const toc = rek.CATEGORIES.map((c) => `<a href="/records#${c.slug}">${REK_CAT_EMOJI[c.name] || '📏'} ${escapeHtml(c.name)} (${c.items.length})</a>`).join(' · ');
   const sections = rek.CATEGORIES.map((c) => {
     const cards = c.items.map(rekCard).join('');
     return `<h2 class="section-title rek-cat-title" id="${c.slug}">${REK_CAT_EMOJI[c.name] || '📏'} ${escapeHtml(c.name)} <span class="meta">(${c.items.length} records)</span></h2><div class="rek-grid">${cards}</div>`;
@@ -9070,11 +9164,11 @@ function rekodHubPage() {
   const body = `<p>Our <b>World Extremes</b> collection gathers the superlatives of the planet — the <em>highest</em> mountain, the <em>longest</em> river, the <em>deepest</em> ocean trench, the <em>driest</em> desert, the <em>tallest</em> building and dozens more. Every entry is a single record with a plain measurement, where it is, and one or two sentences explaining it. Because these facts are settled, each page is stored statically on our server, so it loads instantly and never fails. Open any record for its full fact file and links to the country and the collection it belongs to.</p>
   <h2 class="section-title">Browse by category</h2><p>${toc}</p>
   ${sections}
-  <p class="meta">Figures are the widely-cited reference measurements; a few records (river length, mountain height) are refined as surveying improves. Stored statically on our server — no external call when you load a page. Explore more world knowledge: <a href="/gunung">mountains</a>, <a href="/sungai">rivers</a>, <a href="/danau">lakes</a>, <a href="/warisan">world heritage</a>, <a href="/negara">countries</a>.</p>`;
+  <p class="meta">Figures are the widely-cited reference measurements; a few records (river length, mountain height) are refined as surveying improves. Stored statically on our server — no external call when you load a page. Explore more world knowledge: <a href="/gunung">mountains</a>, <a href="/sungai">rivers</a>, <a href="/danau">lakes</a>, <a href="/heritage">world heritage</a>, <a href="/countries">countries</a>.</p>`;
   return worldDoc({
     title: 'World Extremes — the Highest, Longest, Deepest & Largest on Earth | Tukuk-OS',
     desc: `${rek.RECORDS.length} world records in one place: the highest mountain, longest river, deepest trench, largest desert, tallest building and more, each with its measurement, location and a plain-English explanation.`,
-    selfUrl: 'https://tukuk.org/rekod',
+    selfUrl: 'https://tukuk.org/records',
     heroTitle: '📏 World Extremes', heroSub: `${rek.RECORDS.length} superlatives of the Earth · natural wonders & human-built records`,
     css: REC_CSS, body,
   }, rekodNav());
@@ -9087,19 +9181,19 @@ function rekodRecordPage(r) {
     ['Feature', escapeHtml(r.name)],
     ['Measurement', escapeHtml(r.value)],
     ['Location', escapeHtml(r.place)],
-    r.country ? ['Country', `<a href="/negara/${r.countrySlug}">${escapeHtml(r.country)}</a>`] : null,
+    r.country ? ['Country', `<a href="/countries/${r.countrySlug}">${escapeHtml(r.country)}</a>`] : null,
   ].filter(Boolean).map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');
   const clusterLink = r.cluster
     ? `<p class="meta">This record belongs to our <a href="/${r.cluster}">${REK_CLUSTER_LABEL[r.cluster] || escapeHtml(r.cluster)}</a> collection, where every ${REK_CLUSTER_LABEL[r.cluster] ? REK_CLUSTER_LABEL[r.cluster].toLowerCase() : r.cluster} in the world is catalogued.</p>`
     : '';
   const readLine = r.country
-    ? `Read the <a href="/negara/${r.countrySlug}">${escapeHtml(r.country)}</a> profile, or browse the whole <a href="/rekod">World Extremes</a> index.`
-    : `Browse the whole <a href="/rekod">World Extremes</a> index for more records like this one.`;
+    ? `Read the <a href="/countries/${r.countrySlug}">${escapeHtml(r.country)}</a> profile, or browse the whole <a href="/records">World Extremes</a> index.`
+    : `Browse the whole <a href="/records">World Extremes</a> index for more records like this one.`;
   const siblings = rek.recordsInCategory(r.category).filter((x) => x.slug !== r.slug);
   const moreBlock = siblings.length
     ? `<h2 class="section-title">More ${escapeHtml(r.category)} records</h2><div class="rek-grid">${siblings.map(rekCard).join('')}</div>`
     : '';
-  const body = `<p class="back-link"><a href="/rekod">&larr; All world records</a> · <a href="/rekod#${r.catSlug}">${escapeHtml(r.category)}</a></p>
+  const body = `<p class="back-link"><a href="/records">&larr; All world records</a> · <a href="/records#${r.catSlug}">${escapeHtml(r.category)}</a></p>
   <div class="rek-lead"><h2 class="section-title" style="text-align:center">${catEmoji} ${escapeHtml(r.record)}</h2><p class="rek-big">${escapeHtml(r.value)}</p><p class="rek-sub">${escapeHtml(r.name)} &middot; ${escapeHtml(r.place)}</p></div>
   <p>${escapeHtml(r.blurb)}</p>
   <h2 class="section-title">Record at a glance</h2><table class="world-table">${rows}</table>
@@ -9108,17 +9202,17 @@ function rekodRecordPage(r) {
   ${moreBlock}
   <p class="meta">Figure is a widely-cited reference measurement. Stored statically on our server — no external call when you load a page.</p>`;
   const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'CreativeWork', name: r.record, headline: `${r.record}: ${r.name}`, description: r.blurb, url: `https://tukuk.org/rekod/${r.slug}`, keywords: r.category },
+    { '@context': 'https://schema.org', '@type': 'CreativeWork', name: r.record, headline: `${r.record}: ${r.name}`, description: r.blurb, url: `https://tukuk.org/records/${r.slug}`, keywords: r.category },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'World Extremes', item: 'https://tukuk.org/rekod' },
-      { '@type': 'ListItem', position: 2, name: r.category, item: `https://tukuk.org/rekod#${r.catSlug}` },
-      { '@type': 'ListItem', position: 3, name: r.record, item: `https://tukuk.org/rekod/${r.slug}` },
+      { '@type': 'ListItem', position: 1, name: 'World Extremes', item: 'https://tukuk.org/records' },
+      { '@type': 'ListItem', position: 2, name: r.category, item: `https://tukuk.org/records#${r.catSlug}` },
+      { '@type': 'ListItem', position: 3, name: r.record, item: `https://tukuk.org/records/${r.slug}` },
     ] },
   ]).replace(/</g, '\u003c');
   return worldDoc({
     title: `${r.record} — ${r.name} (${r.value}) | World Extremes`,
     desc: `${r.record}: ${r.name} at ${r.value}, in ${r.place}. Measurement, location and a plain-English explanation from the tukuk.org World Extremes collection.`,
-    selfUrl: `https://tukuk.org/rekod/${r.slug}`,
+    selfUrl: `https://tukuk.org/records/${r.slug}`,
     heroTitle: `${catEmoji} ${escapeHtml(r.record)}`, heroSub: `${escapeHtml(r.name)} · ${escapeHtml(r.value)}`,
     ld, css: REC_CSS, body,
   }, rekodNav());
@@ -9128,10 +9222,10 @@ function rekodNotFound(q) {
   return worldDoc({
     title: 'Record not found | World Extremes — Tukuk-OS',
     desc: 'That record was not recognised — browse the full World Extremes collection instead.',
-    selfUrl: 'https://tukuk.org/rekod', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/records', robots: 'noindex,follow',
     heroTitle: 'Record not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
     css: REC_CSS,
-    body: `<p>We could not match that to one of our world records. Open <a href="/rekod">the full World Extremes collection</a> and browse by category.</p>`,
+    body: `<p>We could not match that to one of our world records. Open <a href="/records">the full World Extremes collection</a> and browse by category.</p>`,
   }, rekodNav());
 }
 
@@ -9207,11 +9301,11 @@ function trafficHubPage() {
     <div id="trf-map" role="application" aria-label="Live road-report map"></div>
     <aside id="trf-side"><h3>Latest reports</h3><div id="trf-list">${listHtml}</div></aside>
   </div>
-  <noscript><p>JavaScript is required for the interactive map. Reload with JS enabled, or browse the <a href="/cuaca">world weather</a> instead.</p></noscript>
+  <noscript><p>JavaScript is required for the interactive map. Reload with JS enabled, or browse the <a href="/weather">world weather</a> instead.</p></noscript>
   <h2 class="section-title">How the community keeps it honest</h2>
   <p>Every report has a <b>time-to-live</b>: a traffic-jam report naturally clears within an hour, police checkpoints within three, closures stay posted for a full day, and speed cameras — being fixed objects — persist for a week. The clock starts the moment you post. Up-votes from other drivers extend the clock a little (up to ten extra minutes per vote, capped at six votes’ worth), and once a report has five more down-votes than up-votes it disappears immediately. That way we never need a human moderator: the crowd trims the board by itself.</p>
   <h2 class="section-title">What this is not</h2>
-  <p>Tukuk Traffic is <b>not a turn-by-turn navigation app</b> and we do not offer live GPS routing or ETA prediction. It is a plain community notice board with a map on it. Nothing here is verified by authorities — use it as a heads-up alongside your own judgement and always obey local traffic laws. Want point-to-point directions instead? Open <a href="/peta">Maps &amp; Navigation</a>.</p>
+  <p>Tukuk Traffic is <b>not a turn-by-turn navigation app</b> and we do not offer live GPS routing or ETA prediction. It is a plain community notice board with a map on it. Nothing here is verified by authorities — use it as a heads-up alongside your own judgement and always obey local traffic laws. Want point-to-point directions instead? Open <a href="/maps">Maps &amp; Navigation</a>.</p>
   <h2 class="section-title">Data &amp; privacy</h2>
   <p>Reports are anonymous. We do not attach any user ID, IP address or device fingerprint to a post. Coordinates are rounded to 5 decimal places (roughly a metre), and we keep at most 500 active reports on the server at any time. Old rows are removed automatically on every read and every write.</p>
   <p class="meta">Base map: © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors, rendered with Leaflet. Data: this site only — stored in <code>data/traffic.json</code>, reloaded atomically.</p>`;
@@ -9260,7 +9354,7 @@ function trafficBusy() {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Tukuk Traffic is briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🚦 Tukuk Traffic</h1><p>The traffic board is briefly unavailable while the server reloads. Reports are cached, so please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
 }
 
-// ── /teknologi — Technology complex (Hacker News front page via Algolia API) ────
+// ── /technology — Technology complex (Hacker News front page via Algolia API) ────
 const TK_CSS = `.tk-item{display:flex;gap:14px;border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
 .tk-score{min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:1.15rem;color:var(--accent,#4c8dff)}
 .tk-score span{font-weight:600;font-size:.68rem;color:var(--muted,#9aa3b2);text-transform:uppercase;letter-spacing:.04em}
@@ -9281,11 +9375,11 @@ function tkRow(s, withText) {
 }
 
 function teknologiNav() {
-  return worldNav('Technology — tukuk.org/teknologi', [
-    { href: '/teknologi', icon: '📰', name: 'Front page right now', blurb: 'The stories the world’s developers, founders and engineers are reading and arguing over at this very moment, ranked by community votes.' },
-    { href: '/teknologi/new', icon: '🆕', name: 'Latest submissions', blurb: 'Everything just submitted to the Hacker News community in the past 48 hours — software, AI, security, hardware and the open web.' },
-    { href: '/teknologi/show', icon: '🛠️', name: 'Show HN — things people built', blurb: 'New tools, libraries and products their makers just shipped and are demonstrating to the community for feedback.' },
-    { href: '/teknologi/ask', icon: '💬', name: 'Ask HN — tech questions', blurb: 'Questions technologists ask each other: career advice, debugging war stories, “what should I read”, and hard engineering choices.' },
+  return worldNav('Technology — tukuk.org/technology', [
+    { href: '/technology', icon: '📰', name: 'Front page right now', blurb: 'The stories the world’s developers, founders and engineers are reading and arguing over at this very moment, ranked by community votes.' },
+    { href: '/technology/new', icon: '🆕', name: 'Latest submissions', blurb: 'Everything just submitted to the Hacker News community in the past 48 hours — software, AI, security, hardware and the open web.' },
+    { href: '/technology/show', icon: '🛠️', name: 'Show HN — things people built', blurb: 'New tools, libraries and products their makers just shipped and are demonstrating to the community for feedback.' },
+    { href: '/technology/ask', icon: '💬', name: 'Ask HN — tech questions', blurb: 'Questions technologists ask each other: career advice, debugging war stories, “what should I read”, and hard engineering choices.' },
   ]);
 }
 
@@ -9310,15 +9404,15 @@ function teknologiHubPage(stories) {
   <h2 class="section-title">How to read this page</h2>
   <p>Each row shows the story’s <b>point score</b> (up-votes minus down-votes), where it links, how long ago it was posted, who submitted it, and how many comments the discussion has drawn. Clicking the title opens the article itself; clicking the comment count opens the thread on Hacker News, where the argument usually happens. Because ranking is democratic, the front page mixes hard engineering news, security incidents, startup funding, scientific papers and the occasional keyboard review — that mix is exactly what makes it interesting.</p>
   <h2 class="section-title">Explore the other feeds</h2>
-  <p>The <a href="/teknologi/new">latest submissions</a> show everything fresh off the wire before the vote has decided its fate. <a href="/teknologi/show">Show HN</a> is where people demonstrate things they just built — a good place to find a tool nobody has heard of yet. <a href="/teknologi/ask">Ask HN</a> is the community asking itself: career advice, debugging war stories and “what should I read next”.</p>
+  <p>The <a href="/technology/new">latest submissions</a> show everything fresh off the wire before the vote has decided its fate. <a href="/technology/show">Show HN</a> is where people demonstrate things they just built — a good place to find a tool nobody has heard of yet. <a href="/technology/ask">Ask HN</a> is the community asking itself: career advice, debugging war stories and “what should I read next”.</p>
   <p class="meta">Stories and comments belong to their authors; the list comes from <a href="https://news.ycombinator.com" rel="noopener nofollow">Hacker News</a> via its public API and we do not alter the ranking. Outbound links are community-submitted and carry no endorsement. For our own long-form writing see the <a href="/blog">Blog</a>, <a href="/learn">Learn</a> and <a href="/wiki">Wiki</a>.</p>`;
   return worldDoc({
     title: 'Technology — Live Top Tech Stories & News Pulse | Tukuk-OS',
     desc: 'The live front page of the tech world: today’s top-ranked technology stories on software, AI, security, hardware and the open web, voted by the Hacker News community and mirrored free on tukuk.org.',
-    selfUrl: 'https://tukuk.org/teknologi',
+    selfUrl: 'https://tukuk.org/technology',
     heroTitle: '💻 Technology — Live Pulse', heroSub: 'Top tech stories right now · community-ranked · refreshed every 10 minutes',
     css: TK_CSS, body,
-    ld: tkItemListLd('Top Technology Stories Right Now', 'https://tukuk.org/teknologi', 'The current community-ranked front page of technology stories.', stories),
+    ld: tkItemListLd('Top Technology Stories Right Now', 'https://tukuk.org/technology', 'The current community-ranked front page of technology stories.', stories),
   }, teknologiNav());
 }
 
@@ -9350,12 +9444,12 @@ function teknologiFeedPage(f, stories) {
   const slug = f === TK_FEEDS.new ? 'new' : f === TK_FEEDS.show ? 'show' : 'ask';
   const withText = slug === 'ask';
   const rows = stories.map((s) => tkRow(s, withText)).join('');
-  const selfUrl = `https://tukuk.org/teknologi/${slug}`;
+  const selfUrl = `https://tukuk.org/technology/${slug}`;
   const body = `${f.intro}
   <div class="tk-topline"><span><b>${stories.length}</b> stories</span><span class="meta">cached 10 min · source: Hacker News community</span></div>
   ${rows || '<p class="meta">Nothing in the window right now — reload in a minute.</p>'}
   <h2 class="section-title">Other tech feeds</h2>
-  <p>Back to the ranked <a href="/teknologi">front page</a>, or browse the other feeds above. Our own technology writing lives on the <a href="/blog">Blog</a> and in the <a href="/learn">Learn</a> library.</p>
+  <p>Back to the ranked <a href="/technology">front page</a>, or browse the other feeds above. Our own technology writing lives on the <a href="/blog">Blog</a> and in the <a href="/learn">Learn</a> library.</p>
   <p class="meta">Stories and comments belong to their authors, via <a href="https://news.ycombinator.com" rel="noopener nofollow">Hacker News</a>’ public API. Ranking shown as received; we do not edit the list.</p>`;
   return worldDoc({
     title: f.title, desc: f.desc, selfUrl,
@@ -9366,21 +9460,21 @@ function teknologiFeedPage(f, stories) {
 }
 
 function teknologiBusy() {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Technology feed briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>💻 Technology</h1><p>The tech feed is briefly unavailable while the source is re-checked. Cached copies usually return within a minute.</p><p><a href="/teknologi">Back to Technology</a> · <a href="/">Tukuk-OS</a></p></body></html>`;
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Technology feed briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>💻 Technology</h1><p>The tech feed is briefly unavailable while the source is re-checked. Cached copies usually return within a minute.</p><p><a href="/technology">Back to Technology</a> · <a href="/">Tukuk-OS</a></p></body></html>`;
 }
 
 function teknologiNotFound(q) {
   return worldDoc({
     title: 'Tech feed not found | Tukuk-OS',
     desc: 'That technology feed does not exist — browse the live front page, latest, Show HN and Ask HN feeds instead.',
-    selfUrl: 'https://tukuk.org/teknologi', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/technology', robots: 'noindex,follow',
     heroTitle: 'Feed not found', heroSub: `“${escapeHtml(String(q || ''))}” is not a tech feed`,
     css: TK_CSS,
-    body: `<p>Try one of the live feeds: <a href="/teknologi">front page</a>, <a href="/teknologi/new">latest</a>, <a href="/teknologi/show">Show HN</a> or <a href="/teknologi/ask">Ask HN</a>.</p>`,
+    body: `<p>Try one of the live feeds: <a href="/technology">front page</a>, <a href="/technology/new">latest</a>, <a href="/technology/show">Show HN</a> or <a href="/technology/ask">Ask HN</a>.</p>`,
   }, teknologiNav());
 }
 
-// ── /peta — Maps & Navigation (OSRM routing + Nominatim geocoding, keyless) ────
+// ── /maps — Maps & Navigation (OSRM routing + Nominatim geocoding, keyless) ────
 const PETA_CSS = `.peta-form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:16px 0}
 .peta-form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted,#9aa3b2)}
 .peta-form input,.peta-form select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;min-width:170px}
@@ -9398,14 +9492,14 @@ const PETA_CSS = `.peta-form{display:flex;gap:10px;flex-wrap:wrap;align-items:fl
 
 function petaNav() {
   return worldNav('Maps & places — tukuk.org', [
-    { href: '/peta', icon: '🗺️', name: 'Maps & Navigation', blurb: 'Route between any two places on Earth — driving, cycling or walking — with a full turn-by-turn list, free and without an account.' },
-    { href: '/peta/jarak', icon: '📏', name: 'Distance Calculator', blurb: 'How far, really? Straight through the globe versus the honest road distance between any two places, with the detour factor.' },
-    { href: '/peta/matahari', icon: '🌅', name: 'Sunrise & Sunset', blurb: 'Sunrise, sunset, solar noon, day length and twilight for any place on Earth and any date — computed from arithmetic, not an API.' },
-    { href: '/peta/jam', icon: '🕰️', name: 'World Clock', blurb: 'What time is it in Tokyo right now? Live clocks for the world’s major cities plus any city you search — exact offsets and DST, from the IANA time zone database.' },
-    { href: '/peta/langit', icon: '🛰️', name: 'Live Earth — Satellite', blurb: 'A full-window satellite view of the planet: today’s true-color pass, night city lights, Blue Marble and street-level zoom — fly to any place.' },
+    { href: '/maps', icon: '🗺️', name: 'Maps & Navigation', blurb: 'Route between any two places on Earth — driving, cycling or walking — with a full turn-by-turn list, free and without an account.' },
+    { href: '/maps/distance', icon: '📏', name: 'Distance Calculator', blurb: 'How far, really? Straight through the globe versus the honest road distance between any two places, with the detour factor.' },
+    { href: '/maps/sun', icon: '🌅', name: 'Sunrise & Sunset', blurb: 'Sunrise, sunset, solar noon, day length and twilight for any place on Earth and any date — computed from arithmetic, not an API.' },
+    { href: '/maps/clock', icon: '🕰️', name: 'World Clock', blurb: 'What time is it in Tokyo right now? Live clocks for the world’s major cities plus any city you search — exact offsets and DST, from the IANA time zone database.' },
+    { href: '/maps/sky', icon: '🛰️', name: 'Live Earth — Satellite', blurb: 'A full-window satellite view of the planet: today’s true-color pass, night city lights, Blue Marble and street-level zoom — fly to any place.' },
     { href: '/traffic', icon: '🚦', name: 'Tukuk Traffic', blurb: 'The community road board: live jams, accidents, police checks, hazards and closures, fading away automatically as they age.' },
-    { href: '/cuaca/peta', icon: '🌦️', name: 'World weather map', blurb: 'A live Leaflet map of weather across the planet — rain, heat and storms at a glance.' },
-    { href: '/kota', icon: '🏙️', name: 'World cities', blurb: 'Profiles of the world’s major cities — where they are, how big, and what they are known for.' },
+    { href: '/weather/map', icon: '🌦️', name: 'World weather map', blurb: 'A live Leaflet map of weather across the planet — rain, heat and storms at a glance.' },
+    { href: '/cities', icon: '🏙️', name: 'World cities', blurb: 'Profiles of the world’s major cities — where they are, how big, and what they are known for.' },
   ]);
 }
 
@@ -9426,7 +9520,7 @@ function petaPage() {
     <div id="peta-map" role="application" aria-label="Route map"></div>
     <aside id="peta-side"><h3 style="margin:0 0 8px">Directions</h3><p class="meta">Your turn-by-turn list will appear here.</p></aside>
   </div>
-  <noscript><p>JavaScript is required for the interactive map and routing. Everything else on tukuk.org works without it — try the <a href="/cuaca">world weather</a>.</p></noscript>
+  <noscript><p>JavaScript is required for the interactive map and routing. Everything else on tukuk.org works without it — try the <a href="/weather">world weather</a>.</p></noscript>
   <h2 class="section-title">How the route is built</h2>
   <p>Your place names are resolved by <b>Nominatim</b> (OpenStreetMap’s own search) and the road path by <b>OSRM</b>, one of the fastest open-source routing engines in existence — it answers in milliseconds across entire countries. Both run against the worldwide OpenStreetMap map, drawn and maintained by millions of volunteers, which is why remote villages and footpaths appear just like motorways. Our server caches every answer briefly, so repeated lookups never touch the public services.</p>
   <h2 class="section-title">What it is not</h2>
@@ -9488,14 +9582,14 @@ boot();})();</script>`;
   return worldDoc({
     title: 'Maps & Navigation — Free Turn-by-Turn Route Planner (Driving, Cycling, Walking) | Tukuk-OS',
     desc: 'Plan a route between any two places on Earth for free: driving, cycling or walking directions with distance, travel time and a full turn-by-turn list, powered by open OpenStreetMap engines. No account, no API key, no tracking.',
-    selfUrl: 'https://tukuk.org/peta',
+    selfUrl: 'https://tukuk.org/maps',
     heroTitle: '🗺️ Maps & Navigation', heroSub: 'Free routes worldwide · driving, cycling & walking · turn-by-turn',
     css: PETA_CSS, body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Maps & Navigation',
       applicationCategory: 'NavigationApplication', operatingSystem: 'Web browser',
       description: 'Free turn-by-turn route planner for driving, cycling and walking anywhere in the world, built on OpenStreetMap data with OSRM routing.',
-      url: 'https://tukuk.org/peta', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      url: 'https://tukuk.org/maps', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c')
   }, petaNav());
 }
@@ -9504,7 +9598,7 @@ function petaBusy() {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Maps briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🗺️ Maps &amp; Navigation</h1><p>The map page failed to render while the server reloaded. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
 }
 
-// ── /peta/langit — Live Earth: a full-window satellite view of the planet ─────
+// ── /maps/sky — Live Earth: a full-window satellite view of the planet ─────
 // Day side = NASA GIBS VIIRS true-color (renewed daily); night side = VIIRS
 // NOAA-20 day/night band (city lights, also current); Blue Marble is the crisp
 // always-on reference; Esri World Imagery zooms to street level. Every layer is
@@ -9528,11 +9622,11 @@ function langitPage() {
   </div>
   <div class="langit-wrap"><div id="langit-map" role="application" aria-label="Live satellite Earth"></div></div>
   <p class="langit-hint" id="langit-day"></p>
-  <noscript><p>JavaScript is required for the live satellite globe. The rest of tukuk.org works without it — try the <a href="/nasa/earth">EPIC whole-Earth picture</a> or the <a href="/cuaca/peta">world weather map</a>.</p></noscript>
+  <noscript><p>JavaScript is required for the live satellite globe. The rest of tukuk.org works without it — try the <a href="/nasa/earth">EPIC whole-Earth picture</a> or the <a href="/weather/map">world weather map</a>.</p></noscript>
   <h2 class="section-title">What each view actually is</h2>
   <p><b>True-color (day)</b> is a mosaic the satellite stitches every single day from light reflected off clouds, ocean and land — so haze, smoke plumes and the swirl of a developing storm are all real and current. <b>Night lights</b> come from a day/night band sensor sensitive enough to pick up individual cities, gas flares and even moonlight glinting off clouds; the lights you see are genuinely where people are after dark. <b>Blue Marble</b> is NASA's cleaned composite reference — cloudless and sharp, ideal for reading coastlines and deserts. <b>High-resolution</b> switches to a commercial satellite basemap that lets you zoom into airports, districts and harbours.</p>
   <h2 class="section-title">Why it is free (and what it is not)</h2>
-  <p>Every layer here is published by NASA's Global Imagery Browse Services or a national geographic archive for exactly this kind of use — no account, no API key, no usage limit on your side. The imagery is refreshed on the providers' schedule (typically about a day behind for the daily composites), so this is a living snapshot of the planet, not a real-time video feed, and clouds are sometimes in the way — that is the honest weather, not a bug. For routing between places use <a href="/peta">Maps &amp; Navigation</a>; for a single full-disk portrait of Earth use <a href="/nasa/earth">EPIC</a>; and for the fuller story behind these layers — why a daily composite beats a live feed — read <a href="/blog/see-earth-from-space-today-free-satellite-imagery">how free satellite imagery actually works</a> — then go deeper on <a href="/blog/reading-earth-at-night-what-city-lights-reveal">what city lights reveal about us</a> and <a href="/blog/weather-satellites-vs-map-satellites">weather vs map satellites</a>.</p>
+  <p>Every layer here is published by NASA's Global Imagery Browse Services or a national geographic archive for exactly this kind of use — no account, no API key, no usage limit on your side. The imagery is refreshed on the providers' schedule (typically about a day behind for the daily composites), so this is a living snapshot of the planet, not a real-time video feed, and clouds are sometimes in the way — that is the honest weather, not a bug. For routing between places use <a href="/maps">Maps &amp; Navigation</a>; for a single full-disk portrait of Earth use <a href="/nasa/earth">EPIC</a>; and for the fuller story behind these layers — why a daily composite beats a live feed — read <a href="/blog/see-earth-from-space-today-free-satellite-imagery">how free satellite imagery actually works</a> — then go deeper on <a href="/blog/reading-earth-at-night-what-city-lights-reveal">what city lights reveal about us</a> and <a href="/blog/weather-satellites-vs-map-satellites">weather vs map satellites</a>.</p>
   <p class="meta">Imagery: <a href="https://www.earthdata.nasa.gov/centers/goddard-earths-gibs-science-team/gibs" rel="noopener nofollow">NASA GIBS</a> (VIIRS true-color &amp; NOAA-20 day/night band), <a href="https://visibleearth.nasa.gov/collection/1484/blue-marble" rel="noopener nofollow">NASA Blue Marble</a>, <a href="https://www.esri.com/en-us/arcgis/products/arcgis-world-imagery/overview" rel="noopener nofollow">Esri World Imagery</a>. Rendered with Leaflet. Your view stays in your browser — no coordinates are stored.</p>`;
   const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
     + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
@@ -9566,7 +9660,7 @@ boot();})();</script>`;
   return worldDoc({
     title: 'Live Earth — Real Satellite View of the Planet (Day, Night Lights, Blue Marble) | Tukuk-OS',
     desc: 'A full-screen live satellite view of Earth: the latest NASA true-color pass, night lights from the day/night band, the cloudless Blue Marble and a high-res street-level satellite. Fly to any place. Free, no account, no API key.',
-    selfUrl: 'https://tukuk.org/peta/langit',
+    selfUrl: 'https://tukuk.org/maps/sky',
     heroTitle: '🛰️ Live Earth', heroSub: "Today's satellite view of the whole planet · day, night lights & high-res · fly anywhere",
     css: LANGIT_CSS, body: body + script,
     head: '\n<link rel="manifest" href="/manifest-langit.json">',
@@ -9574,12 +9668,12 @@ boot();})();</script>`;
       '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Live Earth',
       applicationCategory: 'ReferenceApplication', operatingSystem: 'Web browser',
       description: 'Full-screen live satellite view of Earth using NASA GIBS true-color and day/night imagery, NASA Blue Marble and Esri high-res imagery, with place search.',
-      url: 'https://tukuk.org/peta/langit', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      url: 'https://tukuk.org/maps/sky', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, petaNav());
 }
 
-// ── /peta/jarak + /peta/matahari — the two map companion tools ────────────────
+// ── /maps/distance + /maps/sun — the two map companion tools ────────────────
 // Distance = great-circle arithmetic plus the existing road router; sun times
 // = textbook solar position computed on our own server. Neither invents data:
 // missing roads and polar days/nights are reported exactly as found.
@@ -9600,11 +9694,11 @@ function jarakPage() {
     <span id="pj-status"></span>
   </div>
   <div id="pj-out" class="pj-out"><div class="pj-card"><b>—</b><span>straight line</span></div><div class="pj-card"><b>—</b><span>by road</span></div><div class="pj-card"><b>—</b><span>road time</span></div><div class="pj-card"><b>—</b><span>detour factor</span></div></div>
-  <noscript><p>JavaScript is required for the calculator. The <a href="/peta">route planner</a> needs it too — everything else on tukuk.org works without it.</p></noscript>
+  <noscript><p>JavaScript is required for the calculator. The <a href="/maps">route planner</a> needs it too — everything else on tukuk.org works without it.</p></noscript>
   <h2 class="section-title">Why the straight line is a curve</h2>
   <p>The Earth is a ball, so the shortest path between two places is not a ruler line but a <b>great circle</b> — an arc hugging the largest circle you can draw around the globe. Long-haul flights bow toward the poles for exactly this reason, and the number here uses the <b>haversine formula</b> from spherical trigonometry with the Earth’s mean radius of 6,371 km (one full turn around the planet ≈ 40,075 km). A handy scale: 1° of latitude ≈ 111 km, and 1 minute of latitude ≈ 1.85 km — the <b>nautical mile</b>, born from the globe itself.</p>
   <h2 class="section-title">Reading the detour factor</h2>
-  <p>Roads bend around mountains, coastlines and borders, so the driving number is always at least the straight one. The <b>ratio</b> is the interesting part: ~1.0–1.2 means an easy land corridor, 1.5+ means the terrain is arguing with the ruler, and “no route” is honest geography — islands have ferries, and you cannot drive from Malaysian Borneo to the Peninsula without one. Free-flow times ignore traffic; for today’s road reality see <a href="/traffic">Tukuk Traffic</a>. Related reading: <a href="/blog/latitude-longitude-explained">latitude &amp; longitude explained</a> and <a href="/blog/places-you-cannot-drive-to">places you cannot drive to</a> — and for the road itself, <a href="/peta">Maps &amp; Navigation</a>.</p>
+  <p>Roads bend around mountains, coastlines and borders, so the driving number is always at least the straight one. The <b>ratio</b> is the interesting part: ~1.0–1.2 means an easy land corridor, 1.5+ means the terrain is arguing with the ruler, and “no route” is honest geography — islands have ferries, and you cannot drive from Malaysian Borneo to the Peninsula without one. Free-flow times ignore traffic; for today’s road reality see <a href="/traffic">Tukuk Traffic</a>. Related reading: <a href="/blog/latitude-longitude-explained">latitude &amp; longitude explained</a> and <a href="/blog/places-you-cannot-drive-to">places you cannot drive to</a> — and for the road itself, <a href="/maps">Maps &amp; Navigation</a>.</p>
   <p class="meta">Places resolved by Nominatim (cached on our server); roads by OSRM on OpenStreetMap data; the straight line is pure arithmetic and never touches a third party.</p>`;
   const script = `<script>(function(){
 function esc(x){return String(x).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});}
@@ -9635,14 +9729,14 @@ document.getElementById('pj-mode').onchange=function(){go();};
   return worldDoc({
     title: 'Distance Calculator — Straight Line vs Road Distance Between Any Two Places | Tukuk-OS',
     desc: 'Measure the true distance between any two places on Earth: great-circle (as the crow flies) in km and miles, the real road distance and time, and the detour factor between them. Free, no account, open data.',
-    selfUrl: 'https://tukuk.org/peta/jarak',
+    selfUrl: 'https://tukuk.org/maps/distance',
     heroTitle: '📏 Distance Calculator', heroSub: 'Straight through the globe vs the honest road · any two places on Earth',
     css: PJ_CSS, body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Distance Calculator',
       applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
       description: 'Great-circle and road distance calculator for any two places on Earth, with travel time and detour factor.',
-      url: 'https://tukuk.org/peta/jarak', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      url: 'https://tukuk.org/maps/distance', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, petaNav());
 }
@@ -9661,7 +9755,7 @@ function matahariPage() {
   <h2 class="section-title">Why solar noon is not 12:00</h2>
   <p>Every clock rounds the Sun’s behaviour to a tidy time zone, but the Sun does not negotiate. True <b>solar noon</b> — when the sun due south (or north) climbs highest — drifts up to about 15 minutes back and forth all year from the <b>equation of time</b> (Earth’s tilted, slightly squashed orbit), and then by up to a full hour or more from your time zone’s political width. That is why the noon row here rarely reads 12:00, and why the <a href="/blog/time-zones-explained">time zone guide</a> is worth your five minutes.</p>
   <h2 class="section-title">What the numbers include</h2>
-  <p>Sunrise and sunset are the moment’s <b>upper edge</b> of the sun touching the horizon, with air <b>refraction</b> built in (the atmosphere bends light about half a degree, lengthening every day on Earth by a handful of minutes). Civil twilight marks the sun 6° below the horizon — the usual line between “daylight enough to read outside” and not. Inside the Arctic and Antarctic circles the sun may never rise or never set, and the page says exactly that instead of inventing a time. On reading the clock rows: the big figure is UTC — universal, unambiguous — and the small one is the <b>nearest standard meridian</b> estimate, which can differ from the political clock by an hour or two. Related: <a href="/blog/latitude-longitude-explained">latitude &amp; longitude</a>, <a href="/peta/jarak">distance calculator</a>, <a href="/peta">maps &amp; navigation</a>.</p>
+  <p>Sunrise and sunset are the moment’s <b>upper edge</b> of the sun touching the horizon, with air <b>refraction</b> built in (the atmosphere bends light about half a degree, lengthening every day on Earth by a handful of minutes). Civil twilight marks the sun 6° below the horizon — the usual line between “daylight enough to read outside” and not. Inside the Arctic and Antarctic circles the sun may never rise or never set, and the page says exactly that instead of inventing a time. On reading the clock rows: the big figure is UTC — universal, unambiguous — and the small one is the <b>nearest standard meridian</b> estimate, which can differ from the political clock by an hour or two. Related: <a href="/blog/latitude-longitude-explained">latitude &amp; longitude</a>, <a href="/maps/distance">distance calculator</a>, <a href="/maps">maps &amp; navigation</a>.</p>
   <p class="meta">Algorithm: mean anomaly → ecliptic longitude → declination + equation of time → hour angle at zenith 90.833° (and 96° for civil twilight). Place names resolved by Nominatim, cached on our server.</p>`;
   const script = `<script>(function(){
 function esc(x){return String(x).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});}
@@ -9700,14 +9794,14 @@ document.getElementById('pj-place').addEventListener('keydown',function(e){if(e.
   return worldDoc({
     title: 'Sunrise & Sunset Calculator — Day Length and Twilight Anywhere on Earth | Tukuk-OS',
     desc: 'Compute sunrise, sunset, solar noon, day length and civil twilight for any place and any date. Almanac-accurate solar arithmetic, polar cases reported honestly, free with no account or API key.',
-    selfUrl: 'https://tukuk.org/peta/matahari',
+    selfUrl: 'https://tukuk.org/maps/sun',
     heroTitle: '🌅 Sunrise & Sunset', heroSub: 'Any place · any date · almanac math computed from arithmetic, not an API',
     css: PJ_CSS, body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Sunrise & Sunset Calculator',
       applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
       description: 'Sunrise, sunset, solar noon, day length and civil twilight calculator for any location on Earth and any date.',
-      url: 'https://tukuk.org/peta/matahari', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      url: 'https://tukuk.org/maps/sun', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, petaNav());
 }
@@ -9722,11 +9816,11 @@ function jamPage() {
     <span id="pj-status"></span>
   </div>
   <div id="pj-out" class="pj-out"></div>
-  <noscript><p>JavaScript is required — a clock that lies about the time is worse than none. Everything else on tukuk.org works without it; the <a href="/peta/matahari">sunrise calculator</a> is pure server maths.</p></noscript>
+  <noscript><p>JavaScript is required — a clock that lies about the time is worse than none. Everything else on tukuk.org works without it; the <a href="/maps/sun">sunrise calculator</a> is pure server maths.</p></noscript>
   <h2 class="section-title">Why “the time in ___” is a hard question</h2>
   <p>Longitude gives you the sun, but <b>politicians give you the clock</b>. Zones bend around borders, provinces split in half, and daylight saving starts and ends on dates each parliament invents — the offset of a city is therefore a <i>lookup in a database of history and law</i>, not arithmetic. That database (the IANA tzdb) lives inside every modern browser, which is why this page can answer accurately for <i>any</i> city without a time-zone API of its own. For the full story of how the world’s clocks got this way, read <a href="/blog/time-zones-explained">time zones explained</a>.</p>
   <h2 class="section-title">Sun time vs clock time</h2>
-  <p>The ☀️/🌙 on each card is the rough daylight guess (6 pm-ish horizon rule on the <i>target’s</i> clock). The sun itself is stricter: for the actual sunrise, sunset and daylight length anywhere on Earth, use the <a href="/peta/matahari">sunrise &amp; sunset calculator</a> — and if you are planning a call across the map, the <a href="/peta/jarak">distance calculator</a> tells you how far the signal (or the flight) has to go. Related: <a href="/peta">maps &amp; navigation</a>.</p>
+  <p>The ☀️/🌙 on each card is the rough daylight guess (6 pm-ish horizon rule on the <i>target’s</i> clock). The sun itself is stricter: for the actual sunrise, sunset and daylight length anywhere on Earth, use the <a href="/maps/sun">sunrise &amp; sunset calculator</a> — and if you are planning a call across the map, the <a href="/maps/distance">distance calculator</a> tells you how far the signal (or the flight) has to go. Related: <a href="/maps">maps &amp; navigation</a>.</p>
   <p class="meta">City names resolved by the Open-Meteo geocoder (cached on our server, one request per city per day); times, offsets and DST computed locally by your browser’s Intl API from the IANA time zone database.</p>`;
   const script = `<script>(function(){
 var CITY=[['Singapore','Asia/Singapore'],['Tokyo','Asia/Tokyo'],['Sydney','Australia/Sydney'],['Mumbai','Asia/Kolkata'],['Dubai','Asia/Dubai'],['Moscow','Europe/Moscow'],['Cairo','Africa/Cairo'],['Johannesburg','Africa/Johannesburg'],['London','Europe/London'],['Paris','Europe/Paris'],['New York','America/New_York'],['Sao Paulo','America/Sao_Paulo'],['Los Angeles','America/Los_Angeles']];
@@ -9759,14 +9853,14 @@ render();setInterval(render,1000);
   return worldDoc({
     title: 'World Clock — Live Time in Any City, With Real UTC Offsets & Daylight Saving | Tukuk-OS',
     desc: 'See the current time in the world’s major cities and any city you search, with exact UTC offsets including daylight saving and the difference from your own clock. Free, no account, uses the IANA time zone database in your browser.',
-    selfUrl: 'https://tukuk.org/peta/jam',
+    selfUrl: 'https://tukuk.org/maps/clock',
     heroTitle: '🕰️ World Clock', heroSub: 'Any city · ticking now · offsets & DST from the IANA time zone database',
     css, body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk World Clock',
       applicationCategory: 'UtilityApplication', operatingSystem: 'Web browser',
       description: 'Live world clock for any city with true UTC offsets, daylight saving and difference from the visitor’s clock.',
-      url: 'https://tukuk.org/peta/jam', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      url: 'https://tukuk.org/maps/clock', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, petaNav());
 }
@@ -9854,7 +9948,7 @@ function alatHubPage() {
   <p><b><a href="/alat/cron">⏰ Cron expression explainer</a></b> — a schedule in plain English with its next ten runs on your clock, every field range-checked, and the day-of-month/day-of-week OR trap spelled out.</p>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
-  <p class="meta">Prefer maps and time? The neighbouring <a href="/peta">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
+  <p class="meta">Prefer maps and time? The neighbouring <a href="/maps">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
   return worldDoc({
     title: 'Everyday Tools — Converters, Calculators, PDF, JSON, Hashing & Generators | Tukuk-OS',
     desc: 'Twenty-one useful tools that run entirely in your browser: unit conversion, date and age maths, WCAG contrast, password generation, PDF merge and split, JSON formatting, checksums, Base64, time zones, UUIDs, cron and more — private, free, no account.',
@@ -9956,7 +10050,7 @@ function unitPage() {
   <noscript><p>JavaScript is required — the converter lives in it, and that is exactly the privacy point: your numbers are never uploaded.</p></noscript>
   <h2 class="section-title">The exactness is the point</h2>
   <p>Since 1983 the metre is defined by the distance light travels in 1/299,792,458 of a second, and every other length unit here is an <b>exact multiple</b> of it — no rounding in the factor table, only in the last digits of the answer (we show ten significant ones). Temperature is the odd one out: Celsius and Kelvin share a step size but different zeroes, and Fahrenheit is affine, not proportional — so it gets its own formulas instead of a factor.</p>
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a> — see also <a href="/alat/date">date &amp; age</a>, <a href="/peta/jarak">distances on Earth</a> and the <a href="/peta/jam">world clock</a>.</p>`;
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a> — see also <a href="/alat/date">date &amp; age</a>, <a href="/maps/distance">distances on Earth</a> and the <a href="/maps/clock">world clock</a>.</p>`;
   const script = `<script>(function(){
 var CATS={
  length:{u:{'metre (m)':1,'kilometre (km)':1000,'centimetre (cm)':0.01,'millimetre (mm)':0.001,'mile (mi)':1609.344,'yard (yd)':0.9144,'foot (ft)':0.3048,'inch (in)':0.0254,'nautical mile':1852}},
@@ -10018,8 +10112,8 @@ function tarikhPage() {
   <div class="tl-res" id="d-r3">“On date” defaults to today — set it to e.g. a retirement or contract date.</div>
   <noscript><p>JavaScript is required; the calendar maths runs in it, on your device.</p></noscript>
   <h2 class="section-title">Notes on the answers</h2>
-  <p><b>Working days</b> counts Mon–Fri between the dates (start excluded, end included) but knows nothing about your country’s public holidays — treat it as an upper bound; for the festive picture see the holiday calendars linked from <a href="/peta/jam">the world clock</a>. The <b>years-months-days breakdown</b> is the calendar answer a human would give (“26 years, 3 months, 11 days”), which is why it can differ from total-days ÷ 365.25. Born on <b>29 February</b>? In non-leap years the page counts your birthday as 1 March and says so.</p>
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Times across zones: <a href="/peta/jam">world clock</a>; how long the daylight lasts: <a href="/peta/matahari">sunrise calculator</a>.</p>`;
+  <p><b>Working days</b> counts Mon–Fri between the dates (start excluded, end included) but knows nothing about your country’s public holidays — treat it as an upper bound; for the festive picture see the holiday calendars linked from <a href="/maps/clock">the world clock</a>. The <b>years-months-days breakdown</b> is the calendar answer a human would give (“26 years, 3 months, 11 days”), which is why it can differ from total-days ÷ 365.25. Born on <b>29 February</b>? In non-leap years the page counts your birthday as 1 March and says so.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Times across zones: <a href="/maps/clock">world clock</a>; how long the daylight lasts: <a href="/maps/sun">sunrise calculator</a>.</p>`;
   const script = `<script>(function(){
 var DAY=86400000;
 function pd(id){var v=document.getElementById(id).value;return v&&v.length===10?new Date(Date.UTC(+v.substr(0,4),+v.substr(5,2)-1,+v.substr(8,2))):null;}
@@ -10243,7 +10337,7 @@ function teksPage() {
   <noscript><p>JavaScript is required — the whole toolkit is the script, running on your machine.</p></noscript>
   <h2 class="section-title">Details worth knowing</h2>
   <p><b>Word count</b> splits on whitespace runs, matching what editors like Google Docs report for plain text; CJK text without spaces counts as fewer “words” than speakers would — honest limitation of any splitter, including big offices’. <b>Reading time</b> assumes 200 words per minute, the standard adult silent-reading average (listen-aloud is roughly half). <b>Base64</b> here is UTF-8 correct both directions, so emoji and Malay/Arabic/East-Asian text survive — many online converters break on exactly that. <b>SHA-256</b> uses the browser’s built-in Web Crypto; paste a file’s text content or any string and compare the digest against what the sender published — different hash means the file was altered, full stop.</p>
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Developer of the family: <a href="/wang/kadar">currency rates</a> and <a href="/peta">map tools</a> are nearby.</p>`;
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Developer of the family: <a href="/money/rates">currency rates</a> and <a href="/maps">map tools</a> are nearby.</p>`;
   const script = `<script>(function(){
 function $(id){return document.getElementById(id);}
 function words(s){var t=s.trim();if(!t)return 0;return t.replace(/\\s+/g,' ').split(' ').length;}
@@ -11186,7 +11280,7 @@ function pinjamanPage() {
   <h2 class="section-title">How to read these numbers honestly</h2>
   <p><b>The monthly payment is not the price.</b> A 20,000 loan at 6.5% over five years costs about 391 a month — but roughly 3,500 of the 23,500 you hand over is interest, and front-loaded: in year one most of each payment is interest, so early overpayments save far more than later ones, which is exactly what the “extra payment” box demonstrates. <b>Quoted rates are nominal.</b> The effective annual rate is higher because interest compounds monthly: (1 + r/12)¹² − 1 gives about 6.70% for a 6.5% nominal rate. Fees, insurance and arrangement charges belong in the comparison too — the only fair way to compare two loans is the total cost, not the headline rate.</p>
   <p><b>Compounding is the same maths pointed the other way.</b> The savings projection assumes a constant return every month, contributions at month-end and no tax — real markets deliver the average with violent detours, so the final number is a planning anchor, not a promise. The honest summary of the table above is the gap between what you put in and what the growth adds; that gap is what time, not cleverness, creates. At high rates, note the rule of 72: money doubles in roughly 72 ÷ rate years.</p>
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For currency conversion at today’s reference rates, see <a href="/wang">the currency converter</a>. Estimates only — not financial advice, not a loan offer.</p>`;
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For currency conversion at today’s reference rates, see <a href="/money">the currency converter</a>. Estimates only — not financial advice, not a loan offer.</p>`;
   const script = `<script>(function(){
 function $(id){return document.getElementById(id);}
 function money(n){if(!isFinite(n))return '—';return n.toLocaleString('en-US',{maximumFractionDigits:2,minimumFractionDigits:2});}
@@ -11308,7 +11402,7 @@ function ipPage() {
   <h2 class="section-title">Why the city can be wrong</h2>
   <p><b>IP geolocation is a database guess, not GPS.</b> Registries map address blocks to the ISP that owns them, and databases infer a city from that — usually the regional hub, not your street. Mobile carriers and <b>CGNAT</b> make it worse: thousands of phones share one public address, so a whole country can sit behind a single entry, and a VPN makes the answer deliberate fiction. Treat the city as “the ISP’s opinion”, the country as usually right, and the ISP/ASN as the genuinely reliable field. The time zone shown is the one the database attributes to that block — your device’s real zone can differ.</p>
   <p><b>IPv4 and IPv6 are separate addresses.</b> Most networks still run both, and the address visible here is whichever one your connection happened to use — reload through another network and the address, country and ISP can all change. The lookup itself runs on our own server (a single request to the keyless <a href="https://ipwho.is" rel="nofollow noopener">ipwho.is</a> database, cached 30 minutes), and this page never writes your address to disk or to any analytics field.</p>
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Curious what the same address sees of the world? Open <a href="/peta">Maps &amp; Navigation</a>.</p>`;
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Curious what the same address sees of the world? Open <a href="/maps">Maps &amp; Navigation</a>.</p>`;
   const script = `<script>(function(){
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -11584,7 +11678,7 @@ $('g-q').onchange=run;
   }, toolsNav());
 }
 
-// ── /muzik — World Music Charts (SSR over the 24h SWR cache in src/muzik.js) ──────
+// ── /charts — World Music Charts (SSR over the 24h SWR cache in src/muzik.js) ──────
 const MUZIK_CSS = `.mz-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
 @media(max-width:900px){.mz-tiles{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:540px){.mz-tiles{grid-template-columns:1fr}}
@@ -11615,25 +11709,25 @@ const MUZIK_CSS = `.mz-tiles{display:grid;grid-template-columns:repeat(4,1fr);ga
 .mz-x{border:1px solid var(--line);border-radius:8px;background:none;color:inherit;padding:6px 10px;cursor:pointer}`;
 
 function muzikNav() {
-  return worldNav('World Music Charts — tukuk.org/muzik', [
-    { href: '/muzik', icon: '🌍', name: 'All Country Charts', blurb: 'Every country with a live Top 25 on one page — pick a storefront and see what the world is playing today.' },
-    { href: '/muzik/us', icon: '🇺🇸', name: 'United States', blurb: 'Today’s American Top 25 with a 30-second preview of every song.' },
-    { href: '/muzik/gb', icon: '🇬🇧', name: 'United Kingdom', blurb: 'Today’s British Top 25 — the chart that has moved pop for seven decades.' },
-    { href: '/muzik/jp', icon: '🇯🇵', name: 'Japan', blurb: 'Today’s Japanese Top 25 — often a world entirely its own, and better for it.' },
-    { href: '/muzik/kr', icon: '🇰🇷', name: 'South Korea', blurb: 'Today’s Korean Top 25, home of the biggest fandom machine on the planet.' },
-    { href: '/muzik/ng', icon: '🇳🇬', name: 'Nigeria', blurb: 'Today’s Nigerian Top 25 — Afrobeats’ home ground.' },
-    { href: '/muzik/br', icon: '🇧🇷', name: 'Brazil', blurb: 'Today’s Brazilian Top 25 — funk, sertanejo and whatever the radio can’t stop playing.' },
+  return worldNav('World Music Charts — tukuk.org/charts', [
+    { href: '/charts', icon: '🌍', name: 'All Country Charts', blurb: 'Every country with a live Top 25 on one page — pick a storefront and see what the world is playing today.' },
+    { href: '/charts/us', icon: '🇺🇸', name: 'United States', blurb: 'Today’s American Top 25 with a 30-second preview of every song.' },
+    { href: '/charts/gb', icon: '🇬🇧', name: 'United Kingdom', blurb: 'Today’s British Top 25 — the chart that has moved pop for seven decades.' },
+    { href: '/charts/jp', icon: '🇯🇵', name: 'Japan', blurb: 'Today’s Japanese Top 25 — often a world entirely its own, and better for it.' },
+    { href: '/charts/kr', icon: '🇰🇷', name: 'South Korea', blurb: 'Today’s Korean Top 25, home of the biggest fandom machine on the planet.' },
+    { href: '/charts/ng', icon: '🇳🇬', name: 'Nigeria', blurb: 'Today’s Nigerian Top 25 — Afrobeats’ home ground.' },
+    { href: '/charts/br', icon: '🇧🇷', name: 'Brazil', blurb: 'Today’s Brazilian Top 25 — funk, sertanejo and whatever the radio can’t stop playing.' },
   ]);
 }
 
 async function muzikHubPage() {
   const w = await muzikApi.worldTop();
-  const tiles = w.tiles.map((t) => `<a class="mz-tile" href="/muzik/${t.cc}"><img src="${escapeHtml(t.song.artwork)}" width="54" height="54" loading="lazy" alt="">`
+  const tiles = w.tiles.map((t) => `<a class="mz-tile" href="/charts/${t.cc}"><img src="${escapeHtml(t.song.artwork)}" width="54" height="54" loading="lazy" alt="">`
     + `<div style="min-width:0"><div class="cc">${t.country.flag} ${escapeHtml(t.country.name)}</div>`
     + `<b>№ 1 · ${escapeHtml(t.song.name)}</b><span>${escapeHtml(t.song.artist)}</span></div></a>`).join('');
   const byRegion = muzikApi.REGIONS.map((r) => `<h2 class="mz-reg">${r}</h2><div>`
     + muzikApi.allCountries().filter((c) => c.region === r)
-      .map((c) => `<a class="mz-chip" href="/muzik/${c.cc}">${c.flag} ${escapeHtml(c.name)}</a>`).join('')
+      .map((c) => `<a class="mz-chip" href="/charts/${c.cc}">${c.flag} ${escapeHtml(c.name)}</a>`).join('')
     + '</div>').join('');
   const body = `<p><b>What is each country listening to right now?</b> Every day Apple publishes a “Most Played” chart per country storefront — streams and radio, counted by the same company that pays the labels. We fetch them all, cache them for a day, and put the whole world’s listening on one page. No account, no cookie wall, no algorithm pretending to be news.</p>
   <h2 class="section-title">Today’s № 1 around the world</h2>
@@ -11647,14 +11741,14 @@ async function muzikHubPage() {
   return worldDoc({
     title: 'World Music Charts — What Every Country Is Listening To Today | Tukuk-OS',
     desc: 'Daily Top 25 charts for 90 countries — what each nation is actually playing right now, with album art and a 30-second preview of every song. Free, no account, updated daily from Apple’s public Most Played feeds.',
-    selfUrl: 'https://tukuk.org/muzik',
+    selfUrl: 'https://tukuk.org/charts',
     heroTitle: '🎵 World Music Charts', heroSub: `Today’s № 1 in ${w.tiles.length} highlight countries · full Top 25 for ${muzikApi.allCountries().length} storefronts`,
     css: MUZIK_CSS, body,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'World Music Charts',
       description: 'Daily Apple Most Played charts for 90 countries with 30-second previews.',
-      url: 'https://tukuk.org/muzik',
-      mainEntity: { '@type': 'ItemList', itemListElement: w.tiles.map((t, i) => ({ '@type': 'ListItem', position: i + 1, name: t.song.name + ' — ' + t.song.artist, url: 'https://tukuk.org/muzik/' + t.cc })) },
+      url: 'https://tukuk.org/charts',
+      mainEntity: { '@type': 'ItemList', itemListElement: w.tiles.map((t, i) => ({ '@type': 'ListItem', position: i + 1, name: t.song.name + ' — ' + t.song.artist, url: 'https://tukuk.org/charts/' + t.cc })) },
     }).replace(/</g, '\\u003c'),
   }, muzikNav());
 }
@@ -11669,7 +11763,7 @@ async function muzikChartPage(cc) {
     + `<span>${escapeHtml(s.artist)} · ${escapeHtml(s.genre)} · ${escapeHtml(String(s.releaseDate).slice(0, 4))}</span></div>`
     + `<button class="mz-go" type="button" data-id="${escapeHtml(s.id)}" aria-label="Play a preview of ${escapeHtml(s.name)}">▶</button></div>`).join('');
   const siblings = muzikApi.allCountries().filter((x) => x.region === c.region && x.cc !== c.cc)
-    .map((x) => `<a class="mz-chip" href="/muzik/${x.cc}">${x.flag} ${escapeHtml(x.name)}</a>`).join('');
+    .map((x) => `<a class="mz-chip" href="/charts/${x.cc}">${x.flag} ${escapeHtml(x.name)}</a>`).join('');
   const body = `${stale ? '<p class="meta">⚠ The Apple feed is briefly unreachable — this is the last chart we fetched successfully, published ' + escapeHtml(ch.updated) + '.</p>' : ''}
   <div>${rows}</div>
   <noscript><p>The play buttons need JavaScript, but the chart itself is plain server-rendered HTML.</p></noscript>
@@ -11677,7 +11771,7 @@ async function muzikChartPage(cc) {
   <p>Apple’s <i>Most Played</i> for ${escapeHtml(c.name)}, published ${escapeHtml(ch.updated)} — a mix of streaming plays and radio listenership in that storefront, refreshed daily. Song titles link out to Apple Music; ▶ plays the official 30-second preview clip from iTunes (a preview is a preview — the full track is longer, and we show its real length in the player).</p>
   <h2 class="section-title">More from ${escapeHtml(c.region)}</h2>
   <div>${siblings}</div>
-  <p class="meta">All countries: <a href="/muzik">World Music Charts</a>.</p>
+  <p class="meta">All countries: <a href="/charts">World Music Charts</a>.</p>
   <div class="mz-bar" id="mz-bar"><img id="mz-art" width="40" height="40" alt="">
     <div style="flex:1;min-width:0"><b id="mz-title" style="display:block;font-size:.9rem"></b><span id="mz-note" style="font-size:.78rem;color:var(--muted,#9aa3b2)"></span>
     <div class="mz-prog"><i id="mz-fill"></i></div></div>
@@ -11692,7 +11786,7 @@ btns.forEach(function(b){b.onclick=function(){
  if(!audio.paused)audio.pause();
  reset();b.textContent='…';b.setAttribute('data-on','1');
  var id=b.getAttribute('data-id');
- fetch('/muzik/api/preview?id='+encodeURIComponent(id)).then(function(r){
+ fetch('/charts/api/preview?id='+encodeURIComponent(id)).then(function(r){
   if(!r.ok)throw new Error('http '+r.status);return r.json();
  }).then(function(j){
   if(!b.getAttribute('data-on'))return; // user moved on while we were fetching
@@ -11715,26 +11809,26 @@ $('mz-x').onclick=function(){audio.pause();$('mz-bar').classList.remove('on');re
   return worldDoc({
     title: `${c.name} Music Chart Today — Top 25 With Previews | Tukuk-OS`,
     desc: `Today's Apple Most Played Top 25 for ${c.name}: every song with album art, genre, release year and an official 30-second preview — free, no account needed.`,
-    selfUrl: `https://tukuk.org/muzik/${c.cc}`,
+    selfUrl: `https://tukuk.org/charts/${c.cc}`,
     heroTitle: `${c.flag} ${c.name} — Top 25`, heroSub: `№ 1 today: ${ch.rows[0].name} — ${ch.rows[0].artist}`,
     css: MUZIK_CSS, body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebPage', name: `${c.name} — Daily Top 25 Music Chart`,
       description: `Apple Most Played chart for ${c.name} with 30-second previews.`,
-      url: `https://tukuk.org/muzik/${c.cc}`,
+      url: `https://tukuk.org/charts/${c.cc}`,
     }).replace(/</g, '\\u003c'),
   }, muzikNav());
 }
 
 function muzikNotFoundPage() {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>No chart for that country | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🎵 No chart for that country</h1><p>Apple does not publish a Most Played feed for that storefront code (we only list countries whose feeds we verified live). Browse them all instead:</p><p><a href="/muzik">→ World Music Charts</a></p></body></html>`;
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>No chart for that country | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🎵 No chart for that country</h1><p>Apple does not publish a Most Played feed for that storefront code (we only list countries whose feeds we verified live). Browse them all instead:</p><p><a href="/charts">→ World Music Charts</a></p></body></html>`;
 }
 
 function muzikBusy() {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Music charts briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🎵 World Music Charts</h1><p>The chart page failed to render while the server reloaded, or Apple’s feed was unreachable on a cold start. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
 }
 
-// ── /bendera — Flags of the World (flag images from the world-countries set, ──────
+// ── /flags — Flags of the World (flag images from the world-countries set, ──────
 // stories quoted from English Wikipedia, CC BY-SA — see src/bendera.js) ────────────
 const BENDERA_CSS = `.bd-search{width:100%;max-width:420px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;margin:14px 0}
 .bd-reg{color:var(--accent,#4c8dff);margin:22px 0 6px;font-size:1.05rem}
@@ -11860,20 +11954,20 @@ const FD_LAYOUTS = [
 ];
 
 function benderaNav() {
-  return worldNav('Flags of the World — tukuk.org/bendera', [
-    { href: '/bendera', icon: '🚩', name: 'All Flags', blurb: 'Every national flag on one searchable page, each linking to its origin story and free image files.' },
-    { href: '/bendera/teka', icon: '🎯', name: 'Guess the Flag Quiz', blurb: 'Ten random flags, four plausible names each — score 10 out of 10? Runs entirely in your browser, nothing is sent.' },
-    { href: '/bendera/studio', icon: '🎨', name: 'Flag Studio', blurb: 'Draw a flag from stripes, crosses and discs in 19 colours — the page ranks the real national flags that already share most of its colour area.' },
-    { href: '/bendera/malaysia', icon: '🇲🇾', name: 'Malaysia', blurb: 'The 14 stripes and the crescent — what the Jalur Gemilang stands for, and where to get the file.' },
-    { href: '/bendera/united-states', icon: '🇺🇸', name: 'United States', blurb: 'Fifty stars, seven red stripes — the story behind the most copied flag design on Earth.' },
-    { href: '/bendera/nepal', icon: '🇳🇵', name: 'Nepal', blurb: 'The only non-rectangular national flag in the world, two centuries old and still in use.' },
-    { href: '/bendera/brazil', icon: '🇧🇷', name: 'Brazil', blurb: 'A night sky over Rio de Janeiro, painted in 1889 and still accurate on the flag today.' },
-    { href: '/negara', icon: '🌍', name: 'Country Profiles', blurb: 'The sister pages: capitals, population, GDP and geography for every one of the 250 countries.' },
+  return worldNav('Flags of the World — tukuk.org/flags', [
+    { href: '/flags', icon: '🚩', name: 'All Flags', blurb: 'Every national flag on one searchable page, each linking to its origin story and free image files.' },
+    { href: '/flags/quiz', icon: '🎯', name: 'Guess the Flag Quiz', blurb: 'Ten random flags, four plausible names each — score 10 out of 10? Runs entirely in your browser, nothing is sent.' },
+    { href: '/flags/studio', icon: '🎨', name: 'Flag Studio', blurb: 'Draw a flag from stripes, crosses and discs in 19 colours — the page ranks the real national flags that already share most of its colour area.' },
+    { href: '/flags/malaysia', icon: '🇲🇾', name: 'Malaysia', blurb: 'The 14 stripes and the crescent — what the Jalur Gemilang stands for, and where to get the file.' },
+    { href: '/flags/united-states', icon: '🇺🇸', name: 'United States', blurb: 'Fifty stars, seven red stripes — the story behind the most copied flag design on Earth.' },
+    { href: '/flags/nepal', icon: '🇳🇵', name: 'Nepal', blurb: 'The only non-rectangular national flag in the world, two centuries old and still in use.' },
+    { href: '/flags/brazil', icon: '🇧🇷', name: 'Brazil', blurb: 'A night sky over Rio de Janeiro, painted in 1889 and still accurate on the flag today.' },
+    { href: '/countries', icon: '🌍', name: 'Country Profiles', blurb: 'The sister pages: capitals, population, GDP and geography for every one of the 250 countries.' },
   ]);
 }
 
 function benderaCard(c) {
-  return `<a class="bd-card" href="/bendera/${c.slug}" data-n="${escapeHtml((c.name + ' ' + c.slug).toLowerCase())}">`
+  return `<a class="bd-card" href="/flags/${c.slug}" data-n="${escapeHtml((c.name + ' ' + c.slug).toLowerCase())}">`
     + `<img src="${escapeHtml(ngThumb(c.cca2))}" width="160" height="107" loading="lazy" decoding="async" alt="Flag of ${escapeHtml(c.name)}">`
     + `<span>${escapeHtml(c.name)}</span></a>`;
 }
@@ -11891,8 +11985,8 @@ function benderaHubPage(rows) {
   ${sections}
   <h2 class="section-title">How the stories are researched</h2>
   <p>Each flag page quotes the lead of the matching <i>Flag of …</i> article on English Wikipedia — written by vexillologists and historians, cited to sources, and released under CC BY-SA so we can quote it with a link back. Flag images come from flagcdn.com (free for any use), and country facts from the open world-countries dataset. Where Wikipedia has no article for a flag — four entries in our list are uninhabited territories — we say so plainly on that page instead of inventing a story.</p>
-  <p><a class="btn" href="/bendera/teka">🎯 Play the Guess-the-Flag quiz</a> <a class="btn ghost" href="/bendera/studio">🎨 Draw your own flag</a></p>
-  <p class="meta">Looking for the country itself — capital, population, GDP? <a href="/negara">Country profiles</a>. Need the flag for a project? Every page links the original SVG and PNG sizes.</p>
+  <p><a class="btn" href="/flags/quiz">🎯 Play the Guess-the-Flag quiz</a> <a class="btn ghost" href="/flags/studio">🎨 Draw your own flag</a></p>
+  <p class="meta">Looking for the country itself — capital, population, GDP? <a href="/countries">Country profiles</a>. Need the flag for a project? Every page links the original SVG and PNG sizes.</p>
   <noscript><p>The filter box needs JavaScript; without it every flag below is still listed and linked.</p></noscript>`;
   const script = `<script>(function(){
 var q=document.getElementById('bd-q'),cards=[].slice.call(document.querySelectorAll('.bd-card')),out=document.getElementById('bd-count');
@@ -11907,12 +12001,12 @@ q.addEventListener('input',run);})();</script>`;
   return worldDoc({
     title: 'Flags of the World — All 250 Country Flags & Their Stories | Tukuk-OS',
     desc: `Every national flag (${rows.length} countries) with the story behind its design and free SVG/PNG image files — searchable by country and continent, sourced from Wikipedia and flagcdn.`,
-    selfUrl: 'https://tukuk.org/bendera',
+    selfUrl: 'https://tukuk.org/flags',
     heroTitle: '🚩 Flags of the World', heroSub: `${rows.length} national flags · the story behind each design · free image files`,
     css: BENDERA_CSS, body: body + script, ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Flags of the World',
       description: `All ${rows.length} national flags with their origin stories and free image files.`,
-      url: 'https://tukuk.org/bendera',
+      url: 'https://tukuk.org/flags',
     }).replace(/</g, '\\u003c'),
   }, benderaNav());
 }
@@ -11947,14 +12041,14 @@ function benderaFlagPage(c, story, rows) {
   ${storyHtml}
   <h2 class="section-title">${escapeHtml(c.name)} at a glance</h2>
   <table class="bd-facts">${facts.map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]))}</td></tr>`).join('')}</table>
-  <p class="meta">Full profile: <a href="/negara/${c.slug}">${escapeHtml(c.name)} — capital, economy, geography</a>.</p>
+  <p class="meta">Full profile: <a href="/countries/${c.slug}">${escapeHtml(c.name)} — capital, economy, geography</a>.</p>
   ${neighbours.length ? `<h2 class="section-title">Flags it touches land with</h2><div class="bd-grid">${neighbours.map(benderaCard).join('')}</div>` : ''}
   ${same.length ? `<h2 class="section-title">More flags from ${escapeHtml(c.region || 'the world')}</h2><div class="bd-grid">${same.map(benderaCard).join('')}</div>` : ''}
-  <p class="meta">All countries: <a href="/bendera">Flags of the World</a>.</p>`;
+  <p class="meta">All countries: <a href="/flags">Flags of the World</a>.</p>`;
   return worldDoc({
     title: `Flag of ${c.name} — Meaning, History & Free Image Files | Tukuk-OS`,
     desc: `The national flag of ${c.name}: what its colours and symbols mean, where the design came from, and free SVG/PNG files to download — with the country’s key facts on one page.`,
-    selfUrl: `https://tukuk.org/bendera/${c.slug}`,
+    selfUrl: `https://tukuk.org/flags/${c.slug}`,
     heroTitle: `🚩 Flag of ${c.name}`, heroSub: story && story.extract ? story.extract.slice(0, 120) + '…' : `${c.official || c.name} · national flag, meaning and free image files`,
     ogImage: flag, css: BENDERA_CSS, body,
     ld: JSON.stringify({
@@ -11990,8 +12084,8 @@ function benderaQuizPage(rows) {
   </div>
   <h2 class="section-title">How the questions are built</h2>
   <p>The three wrong answers come from the <b>same continent</b> as the real one — so Moldova and Romania can share a screen, but Romania and Canada never do. That keeps the quiz a test of flag knowledge rather than of geography. Keyboard: <b>1–4</b> answers, <b>Enter</b> moves on.</p>
-  <p class="meta">Warming up first? <a href="/bendera">Browse every flag</a> — the quiz is far easier when you know what you are looking for.</p>
-  <noscript><p>The quiz needs JavaScript. Everything else on <a href="/bendera">/bendera</a> works without it.</p></noscript>`;
+  <p class="meta">Warming up first? <a href="/flags">Browse every flag</a> — the quiz is far easier when you know what you are looking for.</p>
+  <noscript><p>The quiz needs JavaScript. Everything else on <a href="/flags">/bendera</a> works without it.</p></noscript>`;
   const script = `<script>(function(){
 var FL=${data};
 function $(x){return document.getElementById(x);}
@@ -12040,7 +12134,7 @@ function finish(){
  $('qz-best').textContent='Personal best for this browser: '+stored+' / '+ROUND+' — stored on your machine only, never sent to a server.';
  var list=$('qz-list');list.innerHTML='';
  log.forEach(function(r){
-  var a=document.createElement('a');a.href='/bendera/'+r[0][2];
+  var a=document.createElement('a');a.href='/flags/'+r[0][2];
   var im=document.createElement('img');im.src='https://flagcdn.com/w40/'+r[0][1]+'.png';im.width=32;im.height=22;im.alt='';a.appendChild(im);
   var s=document.createElement('span');s.textContent=r[0][0];a.appendChild(s);
   var e=document.createElement('em');e.textContent=r[1]?'\u2714':'\u2718';e.style.color=r[1]?'#2fbf71':'#e5484d';a.appendChild(e);
@@ -12055,13 +12149,13 @@ newRound();})();</script>`;
   return worldDoc({
     title: 'Guess the Flag Quiz — 10 Random World Flags, Name the Country | Tukuk-OS',
     desc: `A free flag-identification quiz: 10 random national flags drawn from ${rows.length} countries, four plausible names from the same continent, scored instantly in your browser — no account, nothing uploaded.`,
-    selfUrl: 'https://tukuk.org/bendera/teka',
+    selfUrl: 'https://tukuk.org/flags/quiz',
     heroTitle: '🎯 Guess the Flag', heroSub: `10 random flags · drawn from ${rows.length} countries · scored in your browser`,
     css: BENDERA_CSS, body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebPage', name: 'Guess the Flag Quiz',
       description: `Ten random national flags, four answer options each, scored entirely in the browser.`,
-      url: 'https://tukuk.org/bendera/teka', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+      url: 'https://tukuk.org/flags/quiz', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
     }).replace(/</g, '\\u003c'),
   }, benderaNav());
 }
@@ -12091,8 +12185,8 @@ function benderaStudioPage() {
   <h2 class="section-title">How the matches are worked out</h2>
   <p>Every flag on this site was measured pixel by pixel from the same image files we serve: a grid of 640 sample points, each given one of ${FD_PAL.length} plain colour names by its hue, lightness and saturation, so the result says how much of that flag is each colour. Your design is measured the same way — the areas come from the geometry itself. Two flags count as close when a lot of their area is made of the same colours, so the ranking is about <b>colour and coverage only</b>: it does not look at where the bands run, how dark the exact red is, or what any of it symbolises.</p>
   <p>Because of that, a match is a starting point, not a verdict — the two flags either side of yours may be near-identical in colours and completely different as designs. The ruler also keeps near shades apart: light green, green and dark green are three separate answers, so a plainer green than a flag’s own measured shade will rank it lower — pick the shade the flag really carries. Open any result to read what its symbols actually mean, with sources, on its own page.</p>
-  <p class="meta">Measuring all ${FD_ROWS.length} of them this way also shows what the world does <i>not</i> put on its flags: no national flag in the set has a measurable amount of pink or purple on it — nothing over the 1.5 % floor the measurement keeps. Try either colour and watch the list fall away. <a href="/bendera">All flags</a> · <a href="/bendera/teka">Guess-the-Flag quiz</a>.</p>
-  <noscript><p>The studio needs JavaScript to draw and compare. <a href="/bendera">Every flag is still listed here</a> without it.</p></noscript>`;
+  <p class="meta">Measuring all ${FD_ROWS.length} of them this way also shows what the world does <i>not</i> put on its flags: no national flag in the set has a measurable amount of pink or purple on it — nothing over the 1.5 % floor the measurement keeps. Try either colour and watch the list fall away. <a href="/flags">All flags</a> · <a href="/flags/quiz">Guess-the-Flag quiz</a>.</p>
+  <noscript><p>The studio needs JavaScript to draw and compare. <a href="/flags">Every flag is still listed here</a> without it.</p></noscript>`;
   const script = `<script>(function(){
 var PF=${pj(FD_ROWS)},LP=${pj(FD_LAYOUTS)},PL=${pj(FD_PAL.map((p) => [p[0], p[1], p[2]]))};
 function $(x){return document.getElementById(x);}
@@ -12124,10 +12218,10 @@ function render(){
  var best=PF.map(function(r){return [r,Math.round(sim(d,r[3]))];}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
  var out='';
  for(i=0;i<best.length;i++){var r=best[i][0];
-  out+='<a class="st-hit" href="/bendera/'+r[2]+'"><img src="https://flagcdn.com/w160/'+r[1]+'.png" width="60" height="40" loading="lazy" decoding="async" alt=""><span><b>'+r[0]+'</b><em>'+best[i][1]+'% of its area is the same colours</em><span class="st-bar">'+bar(r[3])+'</span></span></a>';}
+  out+='<a class="st-hit" href="/flags/'+r[2]+'"><img src="https://flagcdn.com/w160/'+r[1]+'.png" width="60" height="40" loading="lazy" decoding="async" alt=""><span><b>'+r[0]+'</b><em>'+best[i][1]+'% of its area is the same colours</em><span class="st-bar">'+bar(r[3])+'</span></span></a>';}
  $('st-hits').innerHTML=out;
  $('st-quiet').textContent=best.length&&best[0][1]<30?'Nothing official comes close to this one — under a third of any national flag matches. Which is rather the point of designing your own.':'';
- $('st-url').value='/bendera/studio?l='+L[0]+'&c='+cols.join(',');
+ $('st-url').value='/flags/studio?l='+L[0]+'&c='+cols.join(',');
 }
 function par(n){var s=location.search.slice(1).split('&'),i,kv;for(i=0;i<s.length;i++){kv=s[i].split('=');if(decodeURIComponent(kv[0])===n)return decodeURIComponent(kv[1]||'');}return '';}
 var L0=lay(par('l')),
@@ -12155,21 +12249,21 @@ $('st-copy').onclick=function(){
   return worldDoc({
     title: 'Flag Studio — Design a Flag, Find the Real Ones Closest to It | Tukuk-OS',
     desc: `Draw a flag from ${FD_LAYOUTS.length} arrangements and ${FD_PAL.length} colours, then see which of ${FD_ROWS.length} national flags share the most of their colours and coverage — measured from the flag images themselves, in your browser.`,
-    selfUrl: 'https://tukuk.org/bendera/studio',
+    selfUrl: 'https://tukuk.org/flags/studio',
     heroTitle: '🎨 Flag Studio', heroSub: `Design a flag · scored against ${FD_ROWS.length} real national flags by measured colour`,
     css: BENDERA_CSS, body: body + script,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Flag Studio',
       applicationCategory: 'DesignApplication', operatingSystem: 'Any (web browser)',
       description: 'A flag designer that compares your design with the measured colour composition of every national flag.',
-      url: 'https://tukuk.org/bendera/studio', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+      url: 'https://tukuk.org/flags/studio', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, benderaNav());
 }
 
 function benderaNotFoundPage() {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>No flag for that name | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🚩 No flag for that country</h1><p>That name is not in our list of 250 countries and territories. Browse them all instead:</p><p><a href="/bendera">→ Flags of the World</a></p></body></html>`;
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>No flag for that name | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🚩 No flag for that country</h1><p>That name is not in our list of 250 countries and territories. Browse them all instead:</p><p><a href="/flags">→ Flags of the World</a></p></body></html>`;
 }
 
 function benderaBusy() {
@@ -12188,7 +12282,7 @@ function socialNav() {
     { href: '/social', icon: '👥', name: 'Community Hub', blurb: 'Everything social on Tukuk-OS in one place: who is here right now, what the community did today, and where to join in.' },
     { href: '/apps/chat', icon: '💬', name: 'T Chat Messenger', blurb: 'A real messenger in your browser — DMs, groups, public rooms, voice & video calls, voice notes. Works on 2G/3G; installs like a native app.' },
     { href: '/traffic', icon: '🚦', name: 'Traffic Board', blurb: 'Community road reports on a live map: congestion, accidents, hazards and police checks, reported and voted by travellers.' },
-    { href: '/peta', icon: '🗺️', name: 'Maps & Routing', blurb: 'Free turn-by-turn directions for driving, cycling and walking between any two places on Earth.' },
+    { href: '/maps', icon: '🗺️', name: 'Maps & Routing', blurb: 'Free turn-by-turn directions for driving, cycling and walking between any two places on Earth.' },
     { href: '/cari', icon: '🔎', name: 'Search & Username Finder', blurb: 'Search the whole site — and check whether a public account name is already taken on the big platforms.' },
     { href: 'https://build.tukuk.org', icon: '🛠️', name: 'Builder — Make & Publish', blurb: 'Describe an app or game in one sentence, watch it get built, then publish it to the community store for everyone to play.' },
   ]);
@@ -12233,7 +12327,7 @@ function socialBusy() {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Community briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>👥 Community &amp; Social</h1><p>The community page failed to render while the server reloaded. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
 }
 
-// ── /sejarah — "On this day" (Wikipedia REST feed, API-backed + 30d cache SWR) ─
+// ── /history — "On this day" (Wikipedia REST feed, API-backed + 30d cache SWR) ─
 const SJ_CSS = `.otd-cal{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
 .otd-month{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel,#171a21)}
 .otd-month h3{margin:0 0 8px;font-size:1rem}
@@ -12257,8 +12351,8 @@ function otdMiniList(items) {
   return `<ul class="otd-list">${items.map((it) => otdItemLi(it)).join('')}</ul>`;
 }
 function sejarahNav() {
-  return worldNav('On this day in history — tukuk.org/sejarah', [{ href: '/sejarah', icon: '📅', name: 'Every day of the year', blurb: 'Browse notable events, births and deaths for all 366 dates — drawn from Wikipedia’s curated “On this day” feed.' }
-  ].concat(sj.MONTHS.map((mo, i) => ({ href: `/sejarah#${i + 1}`, icon: '🗓️', name: mo, blurb: `See what happened on each day of ${mo}, from famous events to notable births and deaths.`}))));
+  return worldNav('On this day in history — tukuk.org/history', [{ href: '/history', icon: '📅', name: 'Every day of the year', blurb: 'Browse notable events, births and deaths for all 366 dates — drawn from Wikipedia’s curated “On this day” feed.' }
+  ].concat(sj.MONTHS.map((mo, i) => ({ href: `/history#${i + 1}`, icon: '🗓️', name: mo, blurb: `See what happened on each day of ${mo}, from famous events to notable births and deaths.`}))));
 }
 
 // Find the date before/after (wrapping at year end) from the list of 366.
@@ -12273,22 +12367,22 @@ function sejarahHubPage(today) {
   const all = sj.allDates();
   const months = sj.MONTHS.map((mo, i) => {
     const days = all.filter((x) => x.mm === String(i + 1).padStart(2, '0'));
-    const cells = days.map((x) => `<a href="/sejarah/${x.mm}/${x.dd}">${x.d}</a>`).join('');
+    const cells = days.map((x) => `<a href="/history/${x.mm}/${x.dd}">${x.d}</a>`).join('');
     return `<div class="otd-month" id="${i + 1}"><h3>${mo}</h3><div class="days">${cells}</div></div>`;
   }).join('');
   const featured = today ? `<h2 class="section-title">Today — ${escapeHtml(today.label)}</h2>
-    <p>${today.selected.length} notable things happened on ${escapeHtml(today.label)}. Here is a selection; <a href="/sejarah/${today.mm}/${today.dd}">see the full entry</a>.</p>
+    <p>${today.selected.length} notable things happened on ${escapeHtml(today.label)}. Here is a selection; <a href="/history/${today.mm}/${today.dd}">see the full entry</a>.</p>
     <ul class="otd-list">${today.selected.slice(0, 5).map(otdItemLi).join('')}</ul>`
     : `<h2 class="section-title">Today</h2><p class="meta">Today’s highlights are briefly reloading — pick any date below to browse.</p>`;
   const body = `<p><b>On this day…</b> — pick any of the 366 dates below to read the notable <b>events</b>, <b>births</b> and <b>deaths</b> that happened on it, plus the observances recognised around the world. Every entry is drawn from the <b>Wikipedia “On this day”</b> feed, curated by volunteer editors and refreshed into our own cache, so a page loads instantly and keeps working even when the source feed is busy.</p>
   ${featured}
   <h2 class="section-title">Browse the calendar</h2>
   <div class="otd-cal">${months}</div>
-  <p class="meta">Content &amp; data: Wikipedia (CC BY-SA 4.0). Dates are cached for 30 days; history itself never changes. Explore more world knowledge: <a href="/negara">countries</a>, <a href="/pepatah">proverbs</a>, <a href="/unsur">elements</a>, <a href="/buruj">constellations</a>.</p>`;
+  <p class="meta">Content &amp; data: Wikipedia (CC BY-SA 4.0). Dates are cached for 30 days; history itself never changes. Explore more world knowledge: <a href="/countries">countries</a>, <a href="/proverbs">proverbs</a>, <a href="/elements">elements</a>, <a href="/constellations">constellations</a>.</p>`;
   return worldDoc({
     title: 'On This Day in History — Events, Births & Deaths for Every Date | Tukuk-OS',
     desc: 'Browse notable historical events, births and deaths for all 366 days of the year — what happened on this day, curated from Wikipedia.',
-    selfUrl: 'https://tukuk.org/sejarah',
+    selfUrl: 'https://tukuk.org/history',
     heroTitle: '📅 On This Day in History', heroSub: 'Events, births and deaths for every date of the year · 366 days',
     css: SJ_CSS, body,
   }, sejarahNav());
@@ -12296,50 +12390,50 @@ function sejarahHubPage(today) {
 
 function sejarahDayPage(data) {
   const { prev, next } = otdNeighbours(data.mm, data.dd);
-  const nav = `<div class="otd-daynav"><span>${prev ? `<a href="/sejarah/${prev.mm}/${prev.dd}">&larr; ${prev.month} ${prev.d}</a>` : ''}</span><a href="/sejarah">All dates</a><span>${next ? `<a href="/sejarah/${next.mm}/${next.dd}">${next.month} ${next.d} &rarr;</a>` : ''}</span></div>`;
+  const nav = `<div class="otd-daynav"><span>${prev ? `<a href="/history/${prev.mm}/${prev.dd}">&larr; ${prev.month} ${prev.d}</a>` : ''}</span><a href="/history">All dates</a><span>${next ? `<a href="/history/${next.mm}/${next.dd}">${next.month} ${next.d} &rarr;</a>` : ''}</span></div>`;
   const selBlock = data.selected.length ? `<h2 class="section-title">Events</h2><ul class="otd-list">${data.selected.map(otdItemLi).join('')}</ul>` : '';
   const birthsBlock = data.births.length ? `<h2 class="section-title">Births</h2>${otdMiniList(data.births)}` : '';
   const deathsBlock = data.deaths.length ? `<h2 class="section-title">Deaths</h2>${otdMiniList(data.deaths)}` : '';
   const holBlock = data.holidays.length ? `<h2 class="section-title">Observances &amp; holidays</h2><ul class="otd-list">${data.holidays.map(otdItemLi).join('')}</ul>` : '';
-  const body = `<p class="back-link"><a href="/sejarah">&larr; On this day index</a></p>
+  const body = `<p class="back-link"><a href="/history">&larr; On this day index</a></p>
   <p>What happened on <b>${escapeHtml(data.label)}</b>? Below are the notable events chosen by Wikipedia’s editors for this date, followed by celebrated births, deaths and the observances recognised around the world.</p>
   ${selBlock}${birthsBlock}${deathsBlock}${holBlock}
   ${nav}
   <p class="meta">Content &amp; data: Wikipedia “On this day” (CC BY-SA 4.0). Cached on our server for 30 days so the page loads fast and survives feed outages.</p>`;
   const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'ItemList', name: `On this day: ${data.label}`, description: `Notable events, births and deaths on ${data.label}.`, url: `https://tukuk.org/sejarah/${data.mm}/${data.dd}`,
+    { '@context': 'https://schema.org', '@type': 'ItemList', name: `On this day: ${data.label}`, description: `Notable events, births and deaths on ${data.label}.`, url: `https://tukuk.org/history/${data.mm}/${data.dd}`,
       itemListElement: data.selected.slice(0, 15).map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: `${it.year || ''} ${it.text}`.slice(0, 120) })) },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'On this day', item: 'https://tukuk.org/sejarah' },
-      { '@type': 'ListItem', position: 2, name: data.month, item: `https://tukuk.org/sejarah#${data.m}` },
-      { '@type': 'ListItem', position: 3, name: data.label, item: `https://tukuk.org/sejarah/${data.mm}/${data.dd}` },
+      { '@type': 'ListItem', position: 1, name: 'On this day', item: 'https://tukuk.org/history' },
+      { '@type': 'ListItem', position: 2, name: data.month, item: `https://tukuk.org/history#${data.m}` },
+      { '@type': 'ListItem', position: 3, name: data.label, item: `https://tukuk.org/history/${data.mm}/${data.dd}` },
     ] },
   ]).replace(/</g, '\u003c');
   return worldDoc({
     title: `On This Day in History — ${data.label} | Tukuk-OS`,
     desc: `What happened on ${data.label}: notable events, famous births and deaths, and observances for this date in history.`,
-    selfUrl: `https://tukuk.org/sejarah/${data.mm}/${data.dd}`,
+    selfUrl: `https://tukuk.org/history/${data.mm}/${data.dd}`,
     heroTitle: `📅 ${escapeHtml(data.label)}`, heroSub: `${data.selected.length} events · ${data.births.length} births · ${data.deaths.length} deaths`,
     ld, css: SJ_CSS, body,
   }, sejarahNav());
 }
 
 function sejarahBusy(msg) {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The history feed is briefly unavailable. Entries are cached, so please try again in a moment.</p><p><a href="/sejarah">Back to On this day</a></p></body></html>`;
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${escapeHtml(msg)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>${escapeHtml(msg)}</h1><p>The history feed is briefly unavailable. Entries are cached, so please try again in a moment.</p><p><a href="/history">Back to On this day</a></p></body></html>`;
 }
 
 function sejarahNotFound(q) {
   return worldDoc({
     title: 'Date not found — On this day | Tukuk-OS',
     desc: 'That date was not recognised — browse the full On this day calendar instead.',
-    selfUrl: 'https://tukuk.org/sejarah', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/history', robots: 'noindex,follow',
     heroTitle: 'Date not found', heroSub: `“${escapeHtml(String(q || ''))}” is not a valid calendar date`,
     css: SJ_CSS,
-    body: `<p>That looks like a date outside the calendar (try <a href="/sejarah/10/20">10/20</a> for October 20). Open <a href="/sejarah">the full On this day calendar</a> and pick any day.</p>`,
+    body: `<p>That looks like a date outside the calendar (try <a href="/history/10/20">10/20</a> for October 20). Open <a href="/history">the full On this day calendar</a> and pick any day.</p>`,
   }, sejarahNav());
 }
 
-// ── /kota — World City profiles (a STATIC list + a fail-open Wikipedia summary) ─
+// ── /cities — World City profiles (a STATIC list + a fail-open Wikipedia summary) ─
 const KT_CSS = `.city-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
 .city-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
 .city-card h3{margin:0 0 2px;font-size:1rem}
@@ -12349,34 +12443,34 @@ const KT_CSS = `.city-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:
 @media(max-width:760px){.city-grid{grid-template-columns:1fr}}`;
 
 function cityCard(c) {
-  return `<div class="city-card"><h3><a href="/kota/${c.slug}">${escapeHtml(c.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(c.country)} · <a href="/negara/${c.countrySlug}">profile</a></p></div>`;
+  return `<div class="city-card"><h3><a href="/cities/${c.slug}">${escapeHtml(c.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(c.country)} · <a href="/countries/${c.countrySlug}">profile</a></p></div>`;
 }
 function kotaNav() {
-  return worldNav('World Cities — tukuk.org/kota', [{ href: '/kota', icon: '🌆', name: 'All cities', blurb: 'Profiles of the world’s great cities — where they are, which country they belong to, and a plain-English introduction to each.' }
-  ].concat(kt.REGIONS.map((r) => ({ href: `/kota/${r.slug}`, icon: '🌍', name: `${r} cities`, blurb: `${r.count} cities across ${r}, from global megacities to historic capitals.`}))));
+  return worldNav('World Cities — tukuk.org/cities', [{ href: '/cities', icon: '🌆', name: 'All cities', blurb: 'Profiles of the world’s great cities — where they are, which country they belong to, and a plain-English introduction to each.' }
+  ].concat(kt.REGIONS.map((r) => ({ href: `/cities/${r.slug}`, icon: '🌍', name: `${r} cities`, blurb: `${r.count} cities across ${r}, from global megacities to historic capitals.`}))));
 }
 
 function kotaHubPage() {
   const sections = kt.REGION_ORDER.map((r) => {
     const cs = kt.citiesInRegion(r);
     if (!cs.length) return '';
-    return `<h2 class="section-title" id="${kt.slugify(r)}"><a href="/kota/${kt.slugify(r)}">${r}</a> <span class="meta">(${cs.length} cities)</span></h2><div class="city-grid">${cs.map(cityCard).join('')}</div>`;
+    return `<h2 class="section-title" id="${kt.slugify(r)}"><a href="/cities/${kt.slugify(r)}">${r}</a> <span class="meta">(${cs.length} cities)</span></h2><div class="city-grid">${cs.map(cityCard).join('')}</div>`;
   }).join('');
-  const browse = `<p>${kt.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/kota/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${kt.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/cities/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
   const body = `<p>These are some of the world’s most <b>influential and visited cities</b> — the megacities, capitals and cultural crossroads that shape economies, art and everyday life. Each profile shows <em>where</em> the city sits, <em>which country</em> it belongs to and <em>what it is known for</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${kt.CITIES.length} cities from ${kt.COUNTRIES.length} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each city to read about its country in our World Countries series.</p>
   ${browse}
   ${sections}
-  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/negara">World Countries</a> · <a href="/cuaca">World Weather</a> · <a href="/sejarah">On this day</a> · <a href="/pepatah">Proverbs</a> · <a href="/warisan">World Heritage</a>.</p>`;
+  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/countries">World Countries</a> · <a href="/weather">World Weather</a> · <a href="/history">On this day</a> · <a href="/proverbs">Proverbs</a> · <a href="/heritage">World Heritage</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'World Cities — Tukuk-OS',
     description: `Profiles of ${kt.CITIES.length} major world cities: location, country and a plain-English introduction to each.`,
-    url: 'https://tukuk.org/kota', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    url: 'https://tukuk.org/cities', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: 'World Cities — Profiles of the Great Cities of the World | Tukuk-OS',
     desc: `Introductions to ${kt.CITIES.length} major world cities across ${kt.COUNTRIES.length} countries: location, country and what each city is known for.`,
-    selfUrl: 'https://tukuk.org/kota',
+    selfUrl: 'https://tukuk.org/cities',
     heroTitle: '🌆 World Cities', heroSub: `${kt.CITIES.length} cities · ${kt.COUNTRIES.length} countries · location, country & introduction`,
     ld, css: KT_CSS, body,
   }, kotaNav());
@@ -12386,21 +12480,21 @@ function kotaRegionPage(region) {
   const cs = kt.citiesInRegion(region.name);
   const countries = [...new Set(cs.map((c) => c.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="city-grid">${cs.map(cityCard).join('')}</div>`;
-  const other = kt.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/kota/${r.slug}">${r}</a>`).join(' ');
-  const body = `<p class="back-link"><a href="/kota">&larr; All cities</a></p>
+  const other = kt.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/cities/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/cities">&larr; All cities</a></p>
   <p>A profile for each of the <b>${cs.length} major cities in ${region.name}</b> in our World Cities series — where the city sits, which country it belongs to, and a plain-English introduction drawn from Wikipedia so the description stays sourced rather than invented. These ${cs.length} cities span ${countries.length} countries across the continent.</p>
   ${grid}
   <h2 class="section-title">Other continents</h2><p>${other}</p>
-  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/negara">World Countries</a> · <a href="/cuaca">World Weather</a>.</p>`;
+  <p class="meta">Coordinates are approximate centres for reference. City descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/countries">World Countries</a> · <a href="/weather">World Weather</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} Cities — Tukuk-OS`,
     description: `Profiles of ${cs.length} major cities in ${region.name}: location, country and a plain-English introduction to each.`,
-    url: `https://tukuk.org/kota/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    url: `https://tukuk.org/cities/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: `${region.name} Cities — City Profiles, Locations & Facts | Tukuk-OS`,
     desc: `Introductions to ${cs.length} major cities in ${region.name} across ${countries.length} countries: location, country and what each city is known for.`,
-    selfUrl: `https://tukuk.org/kota/${region.slug}`,
+    selfUrl: `https://tukuk.org/cities/${region.slug}`,
     heroTitle: `🌍 ${region.name} Cities`, heroSub: `${cs.length} cities · ${countries.length} countries · location, country & introduction`,
     ld, css: KT_CSS, body,
   }, kotaNav());
@@ -12414,33 +12508,33 @@ function kotaPage(c, sum) {
     : (sum && sum.extract ? `<p class="city-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(c.name)} is briefly reloading — the key facts below always show.</p>`);
   const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
   const siblings = kt.citiesByCountry(c.countrySlug).filter((x) => x.slug !== c.slug);
-  const moreCity = siblings.length ? `<h2 class="section-title">More cities in ${escapeHtml(c.country)}</h2><p>${siblings.map((x) => `<a href="/kota/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const moreCity = siblings.length ? `<h2 class="section-title">More cities in ${escapeHtml(c.country)}</h2><p>${siblings.map((x) => `<a href="/cities/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
   const rows = [
-    ['Country', `<a href="/negara/${c.countrySlug}">${escapeHtml(c.country)}</a>`],
+    ['Country', `<a href="/countries/${c.countrySlug}">${escapeHtml(c.country)}</a>`],
     ['Continent / region', escapeHtml(c.region)],
     ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
   ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
-  const body = `<p class="back-link"><a href="/kota">&larr; All cities</a></p>
+  const body = `<p class="back-link"><a href="/cities">&larr; All cities</a></p>
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
-  <p><b>${escapeHtml(c.name)}</b> is in <a href="/negara/${c.countrySlug}">${escapeHtml(c.country)}</a>, a country in ${escapeHtml(c.region)}. For the living forecast here, open <a href="/cuaca">World Weather</a>; ${escapeHtml(c.name)}’s population and history are described by the sourced introduction above (from Wikipedia).</p>
+  <p><b>${escapeHtml(c.name)}</b> is in <a href="/countries/${c.countrySlug}">${escapeHtml(c.country)}</a>, a country in ${escapeHtml(c.region)}. For the living forecast here, open <a href="/weather">World Weather</a>; ${escapeHtml(c.name)}’s population and history are described by the sourced introduction above (from Wikipedia).</p>
   ${moreCity}
   <p class="meta">Coordinates are an approximate city centre. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
   const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'Place', name: c.name, description: (sum && sum.description) || `City in ${c.country}`, url: `https://tukuk.org/kota/${c.slug}`,
+    { '@context': 'https://schema.org', '@type': 'Place', name: c.name, description: (sum && sum.description) || `City in ${c.country}`, url: `https://tukuk.org/cities/${c.slug}`,
       containedInPlace: { '@type': 'Country', name: c.country },
       geo: { '@type': 'GeoCoordinates', latitude: c.lat, longitude: c.lng } },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'World Cities', item: 'https://tukuk.org/kota' },
-      { '@type': 'ListItem', position: 2, name: c.region, item: `https://tukuk.org/kota/${kt.slugify(c.region)}` },
-      { '@type': 'ListItem', position: 3, name: c.name, item: `https://tukuk.org/kota/${c.slug}` },
+      { '@type': 'ListItem', position: 1, name: 'World Cities', item: 'https://tukuk.org/cities' },
+      { '@type': 'ListItem', position: 2, name: c.region, item: `https://tukuk.org/cities/${kt.slugify(c.region)}` },
+      { '@type': 'ListItem', position: 3, name: c.name, item: `https://tukuk.org/cities/${c.slug}` },
     ] },
   ]).replace(/</g, '\u003c');
   const ogImage = sum && sum.thumb ? sum.thumb : undefined;
   return worldDoc({
     title: `${c.name} — City Profile, Location & Facts | Tukuk-OS`,
     desc: sum && sum.description ? `${c.name}, ${sum.description.toLowerCase()} — location, country and a plain-English introduction.` : `${c.name} is a city in ${c.country}. Where it is, what country it belongs to, and a sourced introduction.`,
-    selfUrl: `https://tukuk.org/kota/${c.slug}`,
+    selfUrl: `https://tukuk.org/cities/${c.slug}`,
     heroTitle: `🌆 ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.country)} · ${escapeHtml(c.region)} · ${escapeHtml(coords)}`,
     ld, css: KT_CSS, body, ogImage,
   }, kotaNav());
@@ -12450,14 +12544,14 @@ function kotaNotFound(q) {
   return worldDoc({
     title: 'City not found — World Cities | Tukuk-OS',
     desc: 'That city was not recognised — browse the full list of world cities instead.',
-    selfUrl: 'https://tukuk.org/kota', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/cities', robots: 'noindex,follow',
     heroTitle: 'City not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
     css: KT_CSS,
-    body: `<p>We don’t have a profile for that city yet. Open <a href="/kota">the full list of world cities</a> and browse by continent.</p>`,
+    body: `<p>We don’t have a profile for that city yet. Open <a href="/cities">the full list of world cities</a> and browse by continent.</p>`,
   }, kotaNav());
 }
 
-// ── /warisan — UNESCO World Heritage (a static list + a fail-open Wikipedia summary) ──
+// ── /heritage — UNESCO World Heritage (a static list + a fail-open Wikipedia summary) ──
 const WR_CSS = `.site-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
 .site-card{border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:var(--panel,#171a21)}
 .site-card h3{margin:0 0 2px;font-size:1rem;line-height:1.3}
@@ -12472,36 +12566,36 @@ const WR_CSS = `.site-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:
 
 const TYPE_ICON = { Cultural: '🏛️', Natural: '🌿', Mixed: '🏔️' };
 function siteCard(s) {
-  return `<div class="site-card"><h3><a href="/warisan/${s.slug}">${escapeHtml(s.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(s.country)} · <a href="/negara/${s.countrySlug}">profile</a></p><span class="site-badge ${s.type}">${TYPE_ICON[s.type] || ''} ${s.type}</span></div>`;
+  return `<div class="site-card"><h3><a href="/heritage/${s.slug}">${escapeHtml(s.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(s.country)} · <a href="/countries/${s.countrySlug}">profile</a></p><span class="site-badge ${s.type}">${TYPE_ICON[s.type] || ''} ${s.type}</span></div>`;
 }
 function warisanNav() {
-  return worldNav('World Heritage — tukuk.org/warisan', [{ href: '/warisan', icon: '🏛️', name: 'All sites', blurb: 'Profiles of the world’s most celebrated UNESCO World Heritage sites — where they are, which country they belong to, whether they are cultural or natural, and a plain-English introduction to each.' }
-  ].concat(wr.REGIONS.map((r) => ({ href: `/warisan/${r.slug}`, icon: '🌍', name: `${r} sites`, blurb: `${r.count} World Heritage sites across ${r}, from ancient monuments to protected landscapes.`}))));
+  return worldNav('World Heritage — tukuk.org/heritage', [{ href: '/heritage', icon: '🏛️', name: 'All sites', blurb: 'Profiles of the world’s most celebrated UNESCO World Heritage sites — where they are, which country they belong to, whether they are cultural or natural, and a plain-English introduction to each.' }
+  ].concat(wr.REGIONS.map((r) => ({ href: `/heritage/${r.slug}`, icon: '🌍', name: `${r} sites`, blurb: `${r.count} World Heritage sites across ${r}, from ancient monuments to protected landscapes.`}))));
 }
 
 function warisanHubPage() {
   const sections = wr.REGION_ORDER.map((r) => {
     const ss = wr.sitesInRegion(r);
     if (!ss.length) return '';
-    return `<h2 class="section-title" id="${wr.slugify(r)}"><a href="/warisan/${wr.slugify(r)}">${r}</a> <span class="meta">(${ss.length} sites)</span></h2><div class="site-grid">${ss.map(siteCard).join('')}</div>`;
+    return `<h2 class="section-title" id="${wr.slugify(r)}"><a href="/heritage/${wr.slugify(r)}">${r}</a> <span class="meta">(${ss.length} sites)</span></h2><div class="site-grid">${ss.map(siteCard).join('')}</div>`;
   }).join('');
-  const browse = `<p>${wr.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/warisan/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${wr.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/heritage/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
   const legend = `<p><span class="site-badge Cultural">🏛️ Cultural</span> monuments, cities &amp; sites of human achievement · <span class="site-badge Natural">🌿 Natural</span> ecosystems, landscapes &amp; protected areas · <span class="site-badge Mixed">🏔️ Mixed</span> sites of both.</p>`;
   const body = `<p>These are some of the world’s most <b>celebrated UNESCO World Heritage sites</b> — the monuments, ancient cities, reefs and wild landscapes that humanity has agreed are worth protecting for everyone. Each profile shows <em>where</em> the site sits, <em>which country</em> it belongs to, whether it is <em>cultural or natural</em>, and <em>what makes it special</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${wr.SITES.length} iconic sites from ${new Set(wr.SITES.map((s) => s.country)).size} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each site to read about its country in our World Countries series.</p>
   ${legend}
   ${browse}
   ${sections}
-  <p class="meta">Coordinates are approximate centres for reference. Site descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. A curated selection of the roughly 1,200 properties on the UNESCO list. Related: <a href="/kota">World Cities</a> · <a href="/negara">World Countries</a> · <a href="/sejarah">On this day</a>.</p>`;
+  <p class="meta">Coordinates are approximate centres for reference. Site descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. A curated selection of the roughly 1,200 properties on the UNESCO list. Related: <a href="/cities">World Cities</a> · <a href="/countries">World Countries</a> · <a href="/history">On this day</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'UNESCO World Heritage Sites — Tukuk-OS',
     description: `Profiles of ${wr.SITES.length} celebrated world heritage sites: location, country, cultural or natural significance and a plain-English introduction to each.`,
-    url: 'https://tukuk.org/warisan', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    url: 'https://tukuk.org/heritage', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: 'UNESCO World Heritage Sites — Profiles & Locations | Tukuk-OS',
     desc: `Introductions to ${wr.SITES.length} celebrated UNESCO World Heritage sites across the world: location, country, cultural or natural significance and what makes each special.`,
-    selfUrl: 'https://tukuk.org/warisan',
+    selfUrl: 'https://tukuk.org/heritage',
     heroTitle: '🏛️ World Heritage', heroSub: `${wr.SITES.length} UNESCO sites · cultural, natural & mixed · location & introduction`,
     ld, css: WR_CSS, body,
   }, warisanNav());
@@ -12511,21 +12605,21 @@ function warisanRegionPage(region) {
   const ss = wr.sitesInRegion(region.name);
   const countries = [...new Set(ss.map((s) => s.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="site-grid">${ss.map(siteCard).join('')}</div>`;
-  const other = wr.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/warisan/${r.slug}">${r}</a>`).join(' ');
-  const body = `<p class="back-link"><a href="/warisan">&larr; All sites</a></p>
+  const other = wr.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/heritage/${r.slug}">${r}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/heritage">&larr; All sites</a></p>
   <p>A profile for each of the <b>${ss.length} celebrated World Heritage sites in ${region.name}</b> — where the site sits, which country it belongs to, whether it is cultural or natural, and a plain-English introduction drawn from Wikipedia so the description stays sourced rather than invented. These ${ss.length} sites span ${countries.length} countries across the continent.</p>
   ${grid}
   <h2 class="section-title">Other continents</h2><p>${other}</p>
-  <p class="meta">Coordinates are approximate centres for reference. Site descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/kota">World Cities</a> · <a href="/negara">World Countries</a>.</p>`;
+  <p class="meta">Coordinates are approximate centres for reference. Site descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/cities">World Cities</a> · <a href="/countries">World Countries</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} World Heritage Sites — Tukuk-OS`,
     description: `Profiles of ${ss.length} UNESCO World Heritage sites in ${region.name}: location, country and significance.`,
-    url: `https://tukuk.org/warisan/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    url: `https://tukuk.org/heritage/${region.slug}`, isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
   }).replace(/</g, '\u003c');
   return worldDoc({
     title: `${region.name} World Heritage Sites — Profiles & Locations | Tukuk-OS`,
     desc: `Introductions to ${ss.length} UNESCO World Heritage sites in ${region.name} across ${countries.length} countries: location, country and cultural or natural significance.`,
-    selfUrl: `https://tukuk.org/warisan/${region.slug}`,
+    selfUrl: `https://tukuk.org/heritage/${region.slug}`,
     heroTitle: `🌍 ${region.name} World Heritage`, heroSub: `${ss.length} sites · ${countries.length} countries · location & significance`,
     ld, css: WR_CSS, body,
   }, warisanNav());
@@ -12539,34 +12633,34 @@ function warisanPage(s, sum) {
     : (sum && sum.extract ? `<p class="site-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(s.name)} is briefly reloading — the key facts below always show.</p>`);
   const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
   const siblings = wr.sitesByCountry(s.countrySlug).filter((x) => x.slug !== s.slug);
-  const moreSite = siblings.length ? `<h2 class="section-title">More sites in ${escapeHtml(s.country)}</h2><p>${siblings.map((x) => `<a href="/warisan/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
+  const moreSite = siblings.length ? `<h2 class="section-title">More sites in ${escapeHtml(s.country)}</h2><p>${siblings.map((x) => `<a href="/heritage/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
   const rows = [
-    ['Country', `<a href="/negara/${s.countrySlug}">${escapeHtml(s.country)}</a>`],
+    ['Country', `<a href="/countries/${s.countrySlug}">${escapeHtml(s.country)}</a>`],
     ['Continent / region', escapeHtml(s.region)],
     ['List type', `${TYPE_ICON[s.type] || ''} ${escapeHtml(s.type)} heritage site`],
     ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
   ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
-  const body = `<p class="back-link"><a href="/warisan">&larr; All sites</a></p>
+  const body = `<p class="back-link"><a href="/heritage">&larr; All sites</a></p>
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
-  <p><b>${escapeHtml(s.name)}</b> is a ${escapeHtml(s.type.toLowerCase())} World Heritage site in <a href="/negara/${s.countrySlug}">${escapeHtml(s.country)}</a>, in ${escapeHtml(s.region)}. For the living forecast of the area, open <a href="/cuaca">World Weather</a>; the details of why ${escapeHtml(s.name)} was inscribed are described by the sourced introduction above (from Wikipedia).</p>
+  <p><b>${escapeHtml(s.name)}</b> is a ${escapeHtml(s.type.toLowerCase())} World Heritage site in <a href="/countries/${s.countrySlug}">${escapeHtml(s.country)}</a>, in ${escapeHtml(s.region)}. For the living forecast of the area, open <a href="/weather">World Weather</a>; the details of why ${escapeHtml(s.name)} was inscribed are described by the sourced introduction above (from Wikipedia).</p>
   ${moreSite}
   <p class="meta">Coordinates are an approximate site centre. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
   const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'Place', name: s.name, description: (sum && sum.description) || `${s.type} World Heritage site in ${s.country}`, url: `https://tukuk.org/warisan/${s.slug}`,
+    { '@context': 'https://schema.org', '@type': 'Place', name: s.name, description: (sum && sum.description) || `${s.type} World Heritage site in ${s.country}`, url: `https://tukuk.org/heritage/${s.slug}`,
       containedInPlace: { '@type': 'Country', name: s.country }, additionalType: 'https://schema.org/LandmarksOrHistoricalBuildings',
       geo: { '@type': 'GeoCoordinates', latitude: s.lat, longitude: s.lng } },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'World Heritage', item: 'https://tukuk.org/warisan' },
-      { '@type': 'ListItem', position: 2, name: s.region, item: `https://tukuk.org/warisan/${wr.slugify(s.region)}` },
-      { '@type': 'ListItem', position: 3, name: s.name, item: `https://tukuk.org/warisan/${s.slug}` },
+      { '@type': 'ListItem', position: 1, name: 'World Heritage', item: 'https://tukuk.org/heritage' },
+      { '@type': 'ListItem', position: 2, name: s.region, item: `https://tukuk.org/heritage/${wr.slugify(s.region)}` },
+      { '@type': 'ListItem', position: 3, name: s.name, item: `https://tukuk.org/heritage/${s.slug}` },
     ] },
   ]).replace(/</g, '\u003c');
   const ogImage = sum && sum.thumb ? sum.thumb : undefined;
   return worldDoc({
     title: `${s.name} — UNESCO World Heritage Site Profile | Tukuk-OS`,
     desc: sum && sum.description ? `${s.name}, ${sum.description.toLowerCase()} — a ${s.type.toLowerCase()} World Heritage site: location, country and a plain-English introduction.` : `${s.name} is a ${s.type.toLowerCase()} UNESCO World Heritage site in ${s.country}. Where it is, and a sourced introduction.`,
-    selfUrl: `https://tukuk.org/warisan/${s.slug}`,
+    selfUrl: `https://tukuk.org/heritage/${s.slug}`,
     heroTitle: `${TYPE_ICON[s.type] || '🏛️'} ${escapeHtml(s.name)}`, heroSub: `${escapeHtml(s.country)} · ${escapeHtml(s.region)} · ${escapeHtml(s.type)} · ${escapeHtml(coords)}`,
     ld, css: WR_CSS, body, ogImage,
   }, warisanNav());
@@ -12576,10 +12670,10 @@ function warisanNotFound(q) {
   return worldDoc({
     title: 'Site not found — World Heritage | Tukuk-OS',
     desc: 'That heritage site was not recognised — browse the full list of UNESCO World Heritage sites instead.',
-    selfUrl: 'https://tukuk.org/warisan', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/heritage', robots: 'noindex,follow',
     heroTitle: 'Site not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
     css: WR_CSS,
-    body: `<p>We don’t have a profile for that site yet. Open <a href="/warisan">the full list of World Heritage sites</a> and browse by continent.</p>`,
+    body: `<p>We don’t have a profile for that site yet. Open <a href="/heritage">the full list of World Heritage sites</a> and browse by continent.</p>`,
   }, warisanNav());
 }
 
@@ -12619,7 +12713,7 @@ function cagarHubPage() {
   ${legend}
   ${browse}
   ${sections}
-  <p class="meta">Coordinates are approximate centres for reference. Area descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a> · <a href="/negara">World Countries</a>.</p>`;
+  <p class="meta">Coordinates are approximate centres for reference. Area descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/heritage">World Heritage</a> · <a href="/cities">World Cities</a> · <a href="/countries">World Countries</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Protected Areas of the World \u2014 Tukuk-OS',
     description: `Profiles of ${cg.AREAS.length} national parks, nature reserves and biosphere reserves: location, country, protection category and ecological significance.`,
@@ -12643,7 +12737,7 @@ function cagarRegionPage(region) {
   <p>A profile for each of the <b>${as.length} protected areas in ${region.name}</b> \u2014 where the area sits, which country manages it, its protection category, and a plain-English introduction drawn from Wikipedia. These ${as.length} areas span ${countries.length} countries across the continent.</p>
   ${grid}
   <h2 class="section-title">Other continents</h2><p>${other}</p>
-  <p class="meta">Coordinates are approximate centres for reference. Area descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a>.</p>`;
+  <p class="meta">Coordinates are approximate centres for reference. Area descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/heritage">World Heritage</a> · <a href="/cities">World Cities</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} Protected Areas \u2014 Tukuk-OS`,
     description: `Profiles of ${as.length} protected areas in ${region.name}: location, country and ecological significance.`,
@@ -12668,7 +12762,7 @@ function cagarPage(a, sum) {
   const siblings = cg.areasByCountry(a.countrySlug).filter((x) => x.slug !== a.slug).slice(0, 10);
   const moreArea = siblings.length ? `<h2 class="section-title">More protected areas in ${escapeHtml(a.country)}</h2><p>${siblings.map((x) => `<a href="/cagar/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
   const rows = [
-    ['Country', `<a href="/negara/${a.countrySlug}">${escapeHtml(a.country)}</a>`],
+    ['Country', `<a href="/countries/${a.countrySlug}">${escapeHtml(a.country)}</a>`],
     ['Continent / region', escapeHtml(a.region)],
     ['Protection type', `${AREA_ICON[a.type] || '\ud83c\udf0d'} ${escapeHtml(a.type)}`],
     ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
@@ -12676,7 +12770,7 @@ function cagarPage(a, sum) {
   const body = `<p class="back-link"><a href="/cagar">&larr; All areas</a></p>
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
-  <p><b>${escapeHtml(a.name)}</b> is a ${escapeHtml(a.type.toLowerCase())} in <a href="/negara/${a.countrySlug}">${escapeHtml(a.country)}</a>, in ${escapeHtml(a.region)}. The details of why ${escapeHtml(a.name)} is ecologically important are described by the sourced introduction above (from Wikipedia).</p>
+  <p><b>${escapeHtml(a.name)}</b> is a ${escapeHtml(a.type.toLowerCase())} in <a href="/countries/${a.countrySlug}">${escapeHtml(a.country)}</a>, in ${escapeHtml(a.region)}. The details of why ${escapeHtml(a.name)} is ecologically important are described by the sourced introduction above (from Wikipedia).</p>
   ${moreArea}
   <p class="meta">Coordinates are an approximate area centre. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
   const ld = JSON.stringify([
@@ -12789,14 +12883,14 @@ function geoItemPage(item, sum, mod, base, cfg) {
   const more = siblings.length ? `<h2 class="section-title">More ${cfg.unit} in ${escapeHtml(item.country)}</h2><p>${siblings.map((x) => `<a href="/${base}/${x.slug}">${escapeHtml(x.name)}</a>`).join(' \u00b7 ')}.</p>` : '';
   const isRealCountry = item.country && item.country !== 'Other' && item.country !== 'Antarctica';
   const rows = [
-    ['Country', isRealCountry ? `<a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)],
+    ['Country', isRealCountry ? `<a href="/countries/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)],
     ['Continent / region', escapeHtml(item.region)],
     ['Coordinates (approx.)', `${escapeHtml(coords)} \u00b7 <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
   ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
   const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
-  <p><b>${escapeHtml(item.name)}</b> is located in ${isRealCountry ? `<a href="/negara/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)}, in ${escapeHtml(item.region)}.</p>
+  <p><b>${escapeHtml(item.name)}</b> is located in ${isRealCountry ? `<a href="/countries/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)}, in ${escapeHtml(item.region)}.</p>
   ${more}
   <p class="meta">${cfg.itemFooter}</p>`;
   const ld = JSON.stringify([
@@ -12944,7 +13038,7 @@ const PULAU_CFG = {
   seoDesc: 'Introductions to notable islands worldwide: location, country and what makes each island significant.',
   hero: '\ud83c\udfdd\ufe0f Islands of the World', subMetric: 'location & geography',
   intro: 'These are the world\u2019s most notable <b>islands</b> \u2014 from continental landmasses to tiny atolls that define maritime boundaries and unique ecosystems. Each profile shows where the island is, which country administers it, and a plain-English introduction from Wikipedia.',
-  footer: 'Coordinates are approximate island centres. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/danau">Lakes</a> \u00b7 <a href="/gunung">Mountains</a> \u00b7 <a href="/cagar">Protected Areas</a> \u00b7 <a href="/warisan">World Heritage</a>.',
+  footer: 'Coordinates are approximate island centres. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/danau">Lakes</a> \u00b7 <a href="/gunung">Mountains</a> \u00b7 <a href="/cagar">Protected Areas</a> \u00b7 <a href="/heritage">World Heritage</a>.',
   itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
   ldType: 'Island',
 };
@@ -13000,7 +13094,7 @@ const GUA_CFG = {
   seoDesc: 'Introductions to notable caves and cavern systems worldwide: location, country and what makes each cave significant.',
   hero: '\ud83c\udf2c\ufe0f Caves of the World', subMetric: 'location & speleology',
   intro: 'These are the world\u2019s most notable <b>caves</b> \u2014 limestone caverns, lava tubes and karst systems carved over millennia, some drowned and some home to unique ecosystems. Each profile shows where the cave is, which country it lies in, and a plain-English introduction from Wikipedia.',
-  footer: 'Coordinates are approximate cave locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/gletser">Glaciers</a> \u00b7 <a href="/cagar">Protected Areas</a> \u00b7 <a href="/warisan">World Heritage</a>.',
+  footer: 'Coordinates are approximate cave locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/gletser">Glaciers</a> \u00b7 <a href="/cagar">Protected Areas</a> \u00b7 <a href="/heritage">World Heritage</a>.',
   itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
   ldType: 'Landform',
 };
@@ -13043,7 +13137,7 @@ function geoCfg(o) {
     hero: `${o.icon} ${o.titleCase}${world}`,
     hubTitle: `${o.titleCase}${world} \u2014 Tukuk-OS`,
     itemFooter: 'Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.',
-    footer: `Coordinates are approximate locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/danau">Lakes</a> \u00b7 <a href="/pulau">Islands</a> \u00b7 <a href="/warisan">World Heritage</a>.`,
+    footer: `Coordinates are approximate locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Data sourced from Wikidata. Related: <a href="/gunung">Mountains</a> \u00b7 <a href="/danau">Lakes</a> \u00b7 <a href="/pulau">Islands</a> \u00b7 <a href="/heritage">World Heritage</a>.`,
   }, o, { unit });
   if (cfg.base) GEO_CFG_BY_BASE[cfg.base] = cfg;
   return cfg;
@@ -16984,7 +17078,7 @@ function gunungHubPage() {
   <p>${gn.PEAKS.length} mountains from ${countries} countries are covered below, grouped by continent. Open any peak for its full profile.</p>
   ${browse}
   ${sections}
-  <p class="meta">Elevation figures from Wikidata (metres above sea level). Coordinates are approximate summit locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/cagar">Protected Areas</a> · <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a>.</p>`;
+  <p class="meta">Elevation figures from Wikidata (metres above sea level). Coordinates are approximate summit locations. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/cagar">Protected Areas</a> · <a href="/heritage">World Heritage</a> · <a href="/cities">World Cities</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Mountains of the World \u2014 Tukuk-OS',
     description: `Profiles of ${gn.PEAKS.length} notable mountains: location, country, elevation and a plain-English introduction to each.`,
@@ -17008,7 +17102,7 @@ function gunungRegionPage(region) {
   <p>A profile for each of the <b>${ps.length} notable mountains in ${region.name}</b> \u2014 where the peak rises, which country claims it, elevation, and a plain-English introduction from Wikipedia. These ${ps.length} peaks span ${countries.length} countries.</p>
   ${grid}
   <h2 class="section-title">Other continents</h2><p>${other}</p>
-  <p class="meta">Elevation figures from Wikidata. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/cagar">Protected Areas</a> · <a href="/warisan">World Heritage</a>.</p>`;
+  <p class="meta">Elevation figures from Wikidata. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/cagar">Protected Areas</a> · <a href="/heritage">World Heritage</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${region.name} Mountains \u2014 Tukuk-OS`,
     description: `Profiles of ${ps.length} mountains in ${region.name}: elevation, country and location.`,
@@ -17034,7 +17128,7 @@ function gunungPage(p, sum) {
   const siblings = gn.peaksByCountry(p.countrySlug).filter((x) => x.slug !== p.slug).slice(0, 10);
   const morePeak = siblings.length ? `<h2 class="section-title">More peaks in ${escapeHtml(p.country)}</h2><p>${siblings.map((x) => `<a href="/gunung/${x.slug}">${escapeHtml(x.name)}</a>`).join(' · ')}.</p>` : '';
   const rows = [
-    ['Country', `<a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>`],
+    ['Country', `<a href="/countries/${p.countrySlug}">${escapeHtml(p.country)}</a>`],
     ['Continent / region', escapeHtml(p.region)],
     ['Elevation', elevStr ? escapeHtml(elevStr.trim()) + ' above sea level' : 'unknown'],
     ['Coordinates (approx.)', `${escapeHtml(coords)} · <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
@@ -17042,7 +17136,7 @@ function gunungPage(p, sum) {
   const body = `<p class="back-link"><a href="/gunung">&larr; All peaks</a></p>
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
-  <p><b>${escapeHtml(p.name)}</b>${elevStr ? ` rises to ${escapeHtml(elevStr.trim())}` : ''} in <a href="/negara/${p.countrySlug}">${escapeHtml(p.country)}</a>, in ${escapeHtml(p.region)}. The full story of this mountain is described by the sourced introduction above (from Wikipedia).</p>
+  <p><b>${escapeHtml(p.name)}</b>${elevStr ? ` rises to ${escapeHtml(elevStr.trim())}` : ''} in <a href="/countries/${p.countrySlug}">${escapeHtml(p.country)}</a>, in ${escapeHtml(p.region)}. The full story of this mountain is described by the sourced introduction above (from Wikipedia).</p>
   ${morePeak}
   <p class="meta">Elevation from Wikidata. Coordinates approximate summit. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
   const ld = JSON.stringify([
@@ -17108,7 +17202,7 @@ function danauHubPage() {
   <p>${dn.LAKES.length} lakes from ${countries} countries are covered below, grouped by continent. Open any lake for its full profile.</p>
   ${browse}
   ${sections}
-  <p class="meta">Surface elevation from Wikidata (metres above sea level). Coordinates are approximate lake centres. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/gunung">Mountains</a> · <a href="/cagar">Protected Areas</a> · <a href="/warisan">World Heritage</a> · <a href="/kota">World Cities</a>.</p>`;
+  <p class="meta">Surface elevation from Wikidata (metres above sea level). Coordinates are approximate lake centres. Descriptions: Wikipedia (CC BY-SA 4.0), cached on our server. Related: <a href="/gunung">Mountains</a> · <a href="/cagar">Protected Areas</a> · <a href="/heritage">World Heritage</a> · <a href="/cities">World Cities</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Lakes of the World \u2014 Tukuk-OS',
     description: `Profiles of ${dn.LAKES.length} notable lakes: location, country, surface elevation and introduction.`,
@@ -17158,7 +17252,7 @@ function danauPage(l, sum) {
   const siblings = dn.lakesByCountry(l.countrySlug).filter((x) => x.slug !== l.slug).slice(0, 10);
   const moreLake = siblings.length ? `<h2 class="section-title">More lakes in ${escapeHtml(l.country)}</h2><p>${siblings.map((x) => `<a href="/danau/${x.slug}">${escapeHtml(x.name)}</a>`).join(' \u00b7 ')}.</p>` : '';
   const rows = [
-    ['Country', `<a href="/negara/${l.countrySlug}">${escapeHtml(l.country)}</a>`],
+    ['Country', `<a href="/countries/${l.countrySlug}">${escapeHtml(l.country)}</a>`],
     ['Continent / region', escapeHtml(l.region)],
     ['Surface elevation', elevStr ? `${escapeHtml(elevStr)} above sea level` : 'unknown'],
     ['Coordinates (approx.)', `${escapeHtml(coords)} \u00b7 <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
@@ -17166,7 +17260,7 @@ function danauPage(l, sum) {
   const body = `<p class="back-link"><a href="/danau">&larr; All lakes</a></p>
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
-  <p><b>${escapeHtml(l.name)}</b>${elevStr ? ` sits at ${escapeHtml(elevStr)}` : ''} in <a href="/negara/${l.countrySlug}">${escapeHtml(l.country)}</a>, in ${escapeHtml(l.region)}. The full story of this lake is described by the sourced introduction above (from Wikipedia).</p>
+  <p><b>${escapeHtml(l.name)}</b>${elevStr ? ` sits at ${escapeHtml(elevStr)}` : ''} in <a href="/countries/${l.countrySlug}">${escapeHtml(l.country)}</a>, in ${escapeHtml(l.region)}. The full story of this lake is described by the sourced introduction above (from Wikipedia).</p>
   ${moreLake}
   <p class="meta">Surface elevation from Wikidata. Coordinates approximate. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
   const ld = JSON.stringify([
@@ -17201,7 +17295,7 @@ function danauNotFound(q) {
   }, danauNav());
 }
 
-// ── /wang — the currency converter (frankfurter.dev / ECB, no key) ───────────
+// ── /money — the currency converter (frankfurter.dev / ECB, no key) ───────────
 const moneyName = (code) => (wang.CODES.find((c) => c[0] === code) || ['', code])[1];
 const moneyFlag = (code) => (wang.CODES.find((c) => c[0] === code) || ['', '', '🏳️'])[2];
 const moneyFmt = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: Math.abs(Number(n)) < 1 ? 6 : 2 });
@@ -17210,10 +17304,10 @@ function wangDown(note) {
   return worldDoc({
     title: 'World Currency — temporarily unavailable | Tukuk-OS',
     desc: 'The European Central Bank rate feed is briefly unreachable; rates return automatically from cache.',
-    selfUrl: 'https://tukuk.org/wang',
+    selfUrl: 'https://tukuk.org/money',
     robots: 'noindex,follow',
     heroTitle: 'World Money', heroSub: 'Live ECB reference rates',
-    body: `<p>${escapeHtml(note || 'The rate feed is briefly unreachable.')} Rates are cached for six hours per base currency, so reloading usually works within a minute. For live world data hubs that never depend on one feed, see <a href="/akademi">Akademi Tukuk-OS</a> and the <a href="/statistik">world statistics complex</a>.</p>`,
+    body: `<p>${escapeHtml(note || 'The rate feed is briefly unreachable.')} Rates are cached for six hours per base currency, so reloading usually works within a minute. For live world data hubs that never depend on one feed, see <a href="/academy">Akademi Tukuk-OS</a> and the <a href="/statistics">world statistics complex</a>.</p>`,
   }, wangNav());
 }
 
@@ -17225,7 +17319,7 @@ function moneyConverterPage(req, latest, useQuery) {
   if (amount === 0) amount = 100;
   const opts = wang.CODES.map(([code, name]) => `<option value="${code}"${code === from ? ' selected':''}>${moneyFlag(code)} ${code} — ${escapeHtml(name)}</option>`).join('');
   const optsTo = wang.CODES.map(([code, name]) => `<option value="${code}"${code === to ? ' selected':''}>${moneyFlag(code)} ${code} — ${escapeHtml(name)}</option>`).join('');
-  const form = `<form action="/wang" method="get" class="wang-form" role="search" aria-label="Currency converter">
+  const form = `<form action="/money" method="get" class="wang-form" role="search" aria-label="Currency converter">
     <label>From<select name="dari" aria-label="From currency">${opts}</select></label>
     <label>To<select name="kepada" aria-label="To currency">${optsTo}</select></label>
     <label>Amount<input type="number" name="jumlah" value="${amount}" step="any" min="0" aria-label="Amount"></label>
@@ -17243,18 +17337,18 @@ function moneyConverterPage(req, latest, useQuery) {
       <p class="meta" style="margin:0">1 ${from} = ${moneyFmt(conv.per)} ${to} · 1 ${to} = ${moneyFmt(1 / conv.per)} ${from} · ${escapeHtml(srcLbl)}</p></div>
       <h2 class="section-title">Quick amounts</h2><table class="world-table"><tr><th>${from}</th><th>${to}</th></tr>${quick}</table>`;
     } else {
-      resultHtml = `<div class="wang-result"><p>That pair is not in the current ECB table — try <a href="/wang?dari=USD&kepada=${encodeURIComponent(to || 'EUR')}">US Dollar as the base</a>.</p></div>`;
+      resultHtml = `<div class="wang-result"><p>That pair is not in the current ECB table — try <a href="/money?dari=USD&kepada=${encodeURIComponent(to || 'EUR')}">US Dollar as the base</a>.</p></div>`;
     }
   }
   const body = `<p>Convert over thirty world currencies instantly using the <b>European Central Bank’s own daily reference rates</b>, served key-free by frankfurter.dev. These are the mid-market benchmark rates banks and journalists quote — what a currency is worth between institutions, before any exchange counter adds its margin. That honesty matters: a airport kiosk will never give you exactly these numbers, and we say so instead of pretending to.</p>`
     + form + resultHtml
-    + `<h2 class="section-title">How the ECB fixing works</h2><p>Every weekday the ECB surveys national central banks around 14:15 CET and publishes one fixing per currency pair. Weekends and holidays hold the last fixing — which is exactly why your Monday morning screen still shows a Saturday date. The full table of every rate is on the <a href="/wang/kadar">rates page</a>; popular pairs have permanent pages below.</p>`
+    + `<h2 class="section-title">How the ECB fixing works</h2><p>Every weekday the ECB surveys national central banks around 14:15 CET and publishes one fixing per currency pair. Weekends and holidays hold the last fixing — which is exactly why your Monday morning screen still shows a Saturday date. The full table of every rate is on the <a href="/money/rates">rates page</a>; popular pairs have permanent pages below.</p>`
     + `<h2 class="section-title">Travel and remittance tip</h2><p>Compare any quote you receive against 1&nbsp;${escapeHtml(from || 'USD')} = ${resultHtml ? 'this page’s' : 'the live'} figure above: the gap is the dealer’s margin plus fees. Dynamic currency conversion (being charged in your home currency abroad) typically hides 3–7% inside the “convenience” — paying in the local currency is almost always cheaper.</p>`
     + `<p class="meta">Source: ECB via frankfurter.dev (open API) · reference rates only, not a trading feed.</p>`;
   return worldDoc({
     title: 'Currency Converter — 30 World Currencies, Live ECB Rates | Tukuk-OS',
     desc: 'Free currency converter using the European Central Bank’s daily reference rates — 30 currencies, mid-market numbers, updated every weekday.',
-    selfUrl: 'https://tukuk.org/wang',
+    selfUrl: 'https://tukuk.org/money',
     robots: useQuery ? 'noindex,follow' : 'index,follow',
     heroTitle: 'World Currency Converter', heroSub: `${wang.CODES.length} currencies · ECB reference rates · free, no account`,
     body,
@@ -17266,17 +17360,17 @@ function moneyRatesPage(req, latest) {
   const rows = wang.CODES.filter(([code]) => code !== base).map(([code, name]) => {
     const conv = wang.convert(latest, base, code, 1);
     if (!conv) return '';
-    return `<tr><td>${moneyFlag(code)} <a href="/wang/tukar/${base}/${code}"><b>${code}</b> — ${escapeHtml(name)}</a></td><td>${moneyFmt(conv.per)}</td><td>${moneyFmt(1 / conv.per)}</td></tr>`;
+    return `<tr><td>${moneyFlag(code)} <a href="/money/convert/${base}/${code}"><b>${code}</b> — ${escapeHtml(name)}</a></td><td>${moneyFmt(conv.per)}</td><td>${moneyFmt(1 / conv.per)}</td></tr>`;
   }).join('');
-  const pick = wang.CODES.map(([code, name]) => `<a class="btn ghost" style="margin:3px" href="/wang/kadar?asas=${code}">${code}</a>`).join(' ');
-  const body = `<p>Every rate in the ECB’s reference table today (${latest.date}), each expressed both ways — one <b>${base}</b> in the other currency, and one other currency back in <b>${base}</b>. Rates are mid-market reference figures; <a href="/wang">the converter</a> uses the same table for any pair you choose.</p>`
+  const pick = wang.CODES.map(([code, name]) => `<a class="btn ghost" style="margin:3px" href="/money/rates?asas=${code}">${code}</a>`).join(' ');
+  const body = `<p>Every rate in the ECB’s reference table today (${latest.date}), each expressed both ways — one <b>${base}</b> in the other currency, and one other currency back in <b>${base}</b>. Rates are mid-market reference figures; <a href="/money">the converter</a> uses the same table for any pair you choose.</p>`
     + `<h2 class="section-title">Base currency</h2><p>${pick}</p>`
     + `<table class="world-table"><tr><th>Currency</th><th>1 ${base} =</th><th>1 unit = ${base}</th></tr>${rows}</table>`
     + `<p class="meta">Source: European Central Bank via frankfurter.dev · refreshed each weekday ±16:00 CET · cache ${latest.source === 'live' ? 'live' : 'last-known'}.</p>`;
   return worldDoc({
     title: `ECB Exchange Rates Today — All ${wang.CODES.length} Currencies | Tukuk-OS`,
     desc: `Today’s complete European Central Bank reference-rate table in both directions, with permanent pages for every pair against ${moneyName(base)}.`,
-    selfUrl: 'https://tukuk.org/wang/kadar',
+    selfUrl: 'https://tukuk.org/money/rates',
     robots: req.query.asas ? 'noindex,follow' : 'index,follow',
     heroTitle: `World Rates — ${base}`, heroSub: `ECB reference table of ${latest.date}`,
     body,
@@ -17290,60 +17384,60 @@ function moneyPairPage(req, latest, from, to) {
   const body = `<p>The live reference rate: <b>1 ${moneyFlag(from)} ${from} = ${moneyFmt(conv.per)} ${to}</b>, and the reverse, <b>1 ${to} = ${moneyFmt(1 / conv.per)} ${from}</b>. Source: European Central Bank daily fixing (${latest.date}), key-free via frankfurter.dev. That is the mid-market benchmark — what the two currencies are worth to each other between banks, before any shop, card scheme or airport kiosk adds its margin.</p>`
     + `<div class="wang-result"><p class="meta" style="margin:0">${escapeHtml(nf)} ⇄ ${escapeHtml(nt)}</p><div class="big">1 ${from} = ${moneyFmt(conv.per)} ${to}</div><p class="meta" style="margin:0">as of ${latest.date} · ECB reference</p></div>`
     + `<h2 class="section-title">Amount cheat-sheet</h2><table class="world-table"><tr><th>From</th><th>To</th></tr>${quick}</table>`
-    + `<p class="back-link"><a href="/wang?dari=${from}&kepada=${to}&jumlah=100">Convert your own amount →</a> · <a href="/wang/kadar">Full rate table →</a></p>`
+    + `<p class="back-link"><a href="/money?dari=${from}&kepada=${to}&jumlah=100">Convert your own amount →</a> · <a href="/money/rates">Full rate table →</a></p>`
     + `<h2 class="section-title">Why ${from}/${to} moves</h2><p>Pair values reprice continuously on interest-rate differences, inflation gaps, trade flows and politics. A stronger ${from} makes ${to}-priced goods and trips cheaper for holders of ${from} — and makes ${nf} exports dearer for everyone buying them. The table above is the whole truth available to the public without an account; anything a dealer quotes you is this number plus their spread.</p>`
     + `<p class="meta">Data: ECB via frankfurter.dev · reference rates only, not dealable quotes.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'FinancialService', name: `${nf} to ${nt} — live rate`,
     description: `Current ECB reference rate for ${from}/${to} with amount conversion tables.`,
-    url: `https://tukuk.org/wang/tukar/${from}/${to}`, areaServed: 'Worldwide',
+    url: `https://tukuk.org/money/convert/${from}/${to}`, areaServed: 'Worldwide',
   }).replace(/</g, '\\u003c');
   return worldDoc({
     title: `${nf} to ${nt} — Live Exchange Rate & Converter | Tukuk-OS`,
     desc: `1 ${from} = ${moneyFmt(conv.per)} ${to} today (ECB reference rate, ${latest.date}). Amount tables, reverse rate and a free converter — no sign-up.`,
-    selfUrl: `https://tukuk.org/wang/tukar/${from}/${to}`,
+    selfUrl: `https://tukuk.org/money/convert/${from}/${to}`,
     heroTitle: `${moneyFlag(from)} ${nf} → ${moneyFlag(to)} ${nt}`, heroSub: `ECB reference rate of ${latest.date} · updated daily`,
     ld, body,
   }, wangNav());
 }
 
-app.get('/wang', async (req, res) => {
+app.get('/money', async (req, res) => {
   const base = wangCodeSet(req.query.dari) || 'USD';
   try {
     const latest = await wang.getLatest(base);
     res.type('html').send(moneyConverterPage(req, latest, Boolean(req.query.dari || req.query.kepada || req.query.jumlah)));
   } catch { res.status(503).type('html').send(wangDown('The ECB rate feed is briefly unreachable.')); }
 });
-app.get('/wang/kadar', async (req, res) => {
+app.get('/money/rates', async (req, res) => {
   const base = wangCodeSet(req.query.asas) || 'USD';
   try {
     const latest = await wang.getLatest(base);
     res.type('html').send(moneyRatesPage(req, latest));
   } catch { res.status(503).type('html').send(wangDown('The ECB rate feed is briefly unreachable.')); }
 });
-app.get('/wang/tukar/:from/:to', async (req, res) => {
+app.get('/money/convert/:from/:to', async (req, res) => {
   const from = wangCodeSet(req.params.from); const to = wangCodeSet(req.params.to);
-  if (!from || !to || from === to) return res.redirect(302, '/wang/kadar');
+  if (!from || !to || from === to) return res.redirect(302, '/money/rates');
   try {
     const latest = await wang.getLatest(from);
-    if (!wang.convert(latest, from, to, 1)) return res.redirect(302, '/wang/kadar');
+    if (!wang.convert(latest, from, to, 1)) return res.redirect(302, '/money/rates');
     res.type('html').send(moneyPairPage(req, latest, from, to));
   } catch { res.status(503).type('html').send(wangDown('The ECB rate feed is briefly unreachable.')); }
 });
 
-// ── /seni — The Metropolitan Museum gallery (open access, no key) ───────
+// ── /art — The Metropolitan Museum gallery (open access, no key) ───────
 function seniDown(note) {
   return worldDoc({
     title: 'Free Art Gallery — temporarily unavailable | Tukuk-OS',
     desc: 'The Metropolitan Museum open-access API is briefly unreachable; the gallery returns automatically.',
-    selfUrl: 'https://tukuk.org/seni', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/art', robots: 'noindex,follow',
     heroTitle: 'The Free Art Gallery', heroSub: 'Public-domain masterpieces from The Met',
-    body: `<p>${escapeHtml(note || 'The Met collection API is briefly unreachable.')} Every grid page is cached for a week, so reloading normally works. Meanwhile the <a href="/akademi">Academy</a> has art-history lessons that need no network at all.</p>`,
+    body: `<p>${escapeHtml(note || 'The Met collection API is briefly unreachable.')} Every grid page is cached for a week, so reloading normally works. Meanwhile the <a href="/academy">Academy</a> has art-history lessons that need no network at all.</p>`,
   }, seniNav());
 }
 
 function seniHubPage() {
-  const cards = seni.COLLECTIONS.map((c) => `<div class="world-card"><h3><a href="/seni/koleksi/${c.slug}">${c.icon} ${escapeHtml(c.name)}</a></h3><p>${escapeHtml(c.blurb)}</p><p class="meta">Open the wall &rarr;</p></div>`).join('');
+  const cards = seni.COLLECTIONS.map((c) => `<div class="world-card"><h3><a href="/art/collection/${c.slug}">${c.icon} ${escapeHtml(c.name)}</a></h3><p>${escapeHtml(c.blurb)}</p><p class="meta">Open the wall &rarr;</p></div>`).join('');
   const body = `<p>The Metropolitan Museum of Art has placed <b>hundreds of thousands of its works into the public domain</b> — 5,000 years of art from a dozen curatorial departments, photographed in high resolution and free to view, study and download. This gallery reads straight from the museum’s open-collection API: ten curated doors below, each a living wall of real objects.</p>
   <div class="world-grid">${cards}</div>
   <h2 class="section-title">Why “open access” matters</h2><p>A public-domain artwork belongs to everyone: no licence to read, no watermarked thumbnail, no permission email. Seeing a Vermeer at full resolution — brush hairs, canvas weave, the exact lead-white of a collar — is the difference between reading about art and meeting it. The Met switched this on in 2017 and has kept widening it; every image here is served from their own servers.</p>
@@ -17351,16 +17445,16 @@ function seniHubPage() {
   return worldDoc({
     title: 'The Free Art Gallery — Public-Domain Masterpieces from The Met | Tukuk-OS',
     desc: 'Ten curated galleries of real Metropolitan Museum artworks, served live from the museum’s open-access API — free to view, study and download.',
-    selfUrl: 'https://tukuk.org/seni',
+    selfUrl: 'https://tukuk.org/art',
     heroTitle: 'The Free Art Gallery', heroSub: 'Public-domain masterpieces · straight from The Met’s open collection',
     body,
   }, seniNav());
 }
 
 function seniCollectionPage(req, c, objs, total, page) {
-  const cards = objs.map((o) => `<figure><a href="/seni/objek/${o.objectID}"><img src="${escapeHtml(o.primaryImageSmall)}" alt="${escapeHtml(o.title || 'artwork')} — ${escapeHtml(c.name)}" loading="lazy"></a><figcaption><a href="/seni/objek/${o.objectID}">${escapeHtml(String(o.title || '').slice(0, 90))}</a>${o.objectDate ? `<br><span class="meta">${escapeHtml(String(o.objectDate).slice(0, 40))}</span>` : ''}</figcaption></figure>`).join('');
-  const pager = `<p class="back-link">${page > 1 ? `<a href="/seni/koleksi/${c.slug}?muk=${page - 1}">&larr; Previous wall</a> · ` : ''}${objs.length >= 12 ? `<a href="/seni/koleksi/${c.slug}?muk=${page + 1}">Next wall &rarr;</a>` : ''}</p>`;
-  const body = `<p class="back-link"><a href="/seni">&larr; All collections</a></p>
+  const cards = objs.map((o) => `<figure><a href="/art/object/${o.objectID}"><img src="${escapeHtml(o.primaryImageSmall)}" alt="${escapeHtml(o.title || 'artwork')} — ${escapeHtml(c.name)}" loading="lazy"></a><figcaption><a href="/art/object/${o.objectID}">${escapeHtml(String(o.title || '').slice(0, 90))}</a>${o.objectDate ? `<br><span class="meta">${escapeHtml(String(o.objectDate).slice(0, 40))}</span>` : ''}</figcaption></figure>`).join('');
+  const pager = `<p class="back-link">${page > 1 ? `<a href="/art/collection/${c.slug}?muk=${page - 1}">&larr; Previous wall</a> · ` : ''}${objs.length >= 12 ? `<a href="/art/collection/${c.slug}?muk=${page + 1}">Next wall &rarr;</a>` : ''}</p>`;
+  const body = `<p class="back-link"><a href="/art">&larr; All collections</a></p>
   <p>${escapeHtml(c.blurb)} Showing from a pool of <b>${total.toLocaleString('en-US')}</b> photographed works in The Met’s open collection — every image links to its full record.</p>
   <div class="seni-grid">${cards || '<p>The museum returned no images for this wall right now — try the next one.</p>'}</div>
   ${objs.length ? pager : ''}
@@ -17368,7 +17462,7 @@ function seniCollectionPage(req, c, objs, total, page) {
   return worldDoc({
     title: `${c.name} — Free Art Gallery Wall ${page > 1 ? `(page ${page}) ` : ''}| Tukuk-OS`,
     desc: `${c.blurb} Live public-domain images from The Metropolitan Museum of Art — ${total.toLocaleString('en-US')} works in this collection.`,
-    selfUrl: `https://tukuk.org/seni/koleksi/${c.slug}`,
+    selfUrl: `https://tukuk.org/art/collection/${c.slug}`,
     robots: page > 1 ? 'noindex,follow' : 'index,follow,max-image-preview:large',
     heroTitle: `${c.icon} ${c.name}`, heroSub: `${total.toLocaleString('en-US')} photographed works · The Met open access`,
     body,
@@ -17387,17 +17481,17 @@ function seniObjectPage(req, o) {
     ? `<p><span class="world-pill" style="background:#3fb950">Public domain — Open Access</span> This work is free of known copyright restrictions: view it, download it, remix it, print it on a mug. <a href="${escapeHtml(String(o.primaryImage))}">Full-resolution image →</a></p>`
     : `<p><span class="world-pill" style="background:#d29922">In copyright / restricted</span> The museum shows this record for study; the image may not be freely reusable — check <a rel="noopener nofollow" href="${escapeHtml(String(o.objectURL || 'https://www.metmuseum.org'))}">the Met’s own page</a> for terms.</p>`;
   const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'VisualArtwork', name: title, url: `https://tukuk.org/seni/objek/${o.objectID}`,
+    { '@context': 'https://schema.org', '@type': 'VisualArtwork', name: title, url: `https://tukuk.org/art/object/${o.objectID}`,
       creator: o.artistDisplayName ? { '@type': 'Person', name: o.artistDisplayName } : undefined,
       dateCreated: o.objectDate || undefined, artform: o.medium || undefined,
       image: o.primaryImage || undefined,
       license: pd ? 'https://creativecommons.org/publicdomain/zero/1.0/' : undefined,
       provider: { '@type': 'Museum', name: 'The Metropolitan Museum of Art', url: 'https://www.metmuseum.org' } },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Art Gallery', item: 'https://tukuk.org/seni' },
-      { '@type': 'ListItem', position: 2, name: title, item: `https://tukuk.org/seni/objek/${o.objectID}` } ] },
+      { '@type': 'ListItem', position: 1, name: 'Art Gallery', item: 'https://tukuk.org/art' },
+      { '@type': 'ListItem', position: 2, name: title, item: `https://tukuk.org/art/object/${o.objectID}` } ] },
   ]).replace(/</g, '\\u003c');
-  const body = `<p class="back-link"><a href="/seni">&larr; The Free Art Gallery</a></p>
+  const body = `<p class="back-link"><a href="/art">&larr; The Free Art Gallery</a></p>
   <figure style="margin:18px 0"><img src="${escapeHtml(String(o.primaryImage || o.primaryImageSmall))}" alt="${escapeHtml(title)} — ${escapeHtml(String(o.department || 'The Metropolitan Museum of Art'))}" loading="eager" style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">${o.creditLine ? `<figcaption class="meta">${escapeHtml(String(o.creditLine))}</figcaption>` : ''}</figure>
   ${pdHtml}
   <h2 class="section-title">Record details</h2><table class="world-table">${metaRows}</table>
@@ -17406,7 +17500,7 @@ function seniObjectPage(req, o) {
   return worldDoc({
     title: `${title} — Free Art Gallery | Tukuk-OS`,
     desc: `${title}${o.objectDate ? ` (${String(o.objectDate).slice(0, 40)})` : ''} — ${o.department || 'The Metropolitan Museum of Art'}. ${pd ? 'Public domain, free high-resolution download.' : 'Open educational record.'}`,
-    selfUrl: `https://tukuk.org/seni/objek/${o.objectID}`,
+    selfUrl: `https://tukuk.org/art/object/${o.objectID}`,
     robots: 'index,follow,max-image-preview:large',
     ogImage: o.primaryImageSmall || o.primaryImage || 'https://tukuk.org/og.png',
     heroTitle: title, heroSub: [o.artistDisplayName, o.objectDate].filter(Boolean).join(' · ') || 'The Metropolitan Museum of Art',
@@ -17414,10 +17508,10 @@ function seniObjectPage(req, o) {
   }, seniNav());
 }
 
-app.get('/seni', (req, res) => res.type('html').send(seniHubPage()));
-app.get('/seni/koleksi/:slug', async (req, res) => {
+app.get('/art', (req, res) => res.type('html').send(seniHubPage()));
+app.get('/art/collection/:slug', async (req, res) => {
   const c = seni.findCollection(req.params.slug);
-  if (!c) return res.redirect(302, '/seni');
+  if (!c) return res.redirect(302, '/art');
   let page = Number(req.query.muk) || 1;
   if (page < 1 || page > 50) page = 1;
   try {
@@ -17426,25 +17520,25 @@ app.get('/seni/koleksi/:slug', async (req, res) => {
     res.type('html').send(seniCollectionPage(req, c, objs, s.total, page));
   } catch { res.status(503).type('html').send(seniDown('The Met collection API is briefly unreachable.')); }
 });
-app.get('/seni/objek/:id', async (req, res) => {
+app.get('/art/object/:id', async (req, res) => {
   const o = await seni.getObject(req.params.id).catch(() => null);
-  if (!o || !o.primaryImage) return res.redirect(302, '/seni');
+  if (!o || !o.primaryImage) return res.redirect(302, '/art');
   res.type('html').send(seniObjectPage(req, o));
 });
 
-// ── /hidupan — the iNaturalist animal atlas (community CC photos, no key) ──────
+// ── /life — the iNaturalist animal atlas (community CC photos, no key) ──────
 function hidupDown(note) {
   return worldDoc({
     title: 'Wildlife Atlas — temporarily unavailable | Tukuk-OS',
     desc: 'The iNaturalist API is briefly unreachable; the atlas returns automatically from cache.',
-    selfUrl: 'https://tukuk.org/hidupan', robots: 'noindex,follow',
+    selfUrl: 'https://tukuk.org/life', robots: 'noindex,follow',
     heroTitle: 'Wildlife Atlas', heroSub: 'Real animals, real photographs',
-    body: `<p>${escapeHtml(note || 'The iNaturalist API is briefly unreachable.')} Species pages cache for a day, so reloading normally works. In the meantime, the <a href="/akademi/life">life track of the Academy</a> is fully local.</p>`,
+    body: `<p>${escapeHtml(note || 'The iNaturalist API is briefly unreachable.')} Species pages cache for a day, so reloading normally works. In the meantime, the <a href="/academy/life">life track of the Academy</a> is fully local.</p>`,
   }, hidupNav());
 }
 
 function hidupHubPage() {
-  const cards = hidup.TAXA.map((t) => `<div class="world-card"><h3><a href="/hidupan/${t.slug}">${t.icon} ${escapeHtml(t.name)}</a></h3><p>${escapeHtml(String(t.blurb).slice(0, 150))}…</p><p class="meta"><i>${escapeHtml(t.sci)}</i></p></div>`).join('');
+  const cards = hidup.TAXA.map((t) => `<div class="world-card"><h3><a href="/life/${t.slug}">${t.icon} ${escapeHtml(t.name)}</a></h3><p>${escapeHtml(String(t.blurb).slice(0, 150))}…</p><p class="meta"><i>${escapeHtml(t.sci)}</i></p></div>`).join('');
   const body = `<p>Sixteen animals chosen because their stories teach something real — migration without a teacher, a carnivore that eats bamboo, a fish that never grows up, a crab whose blue blood tests every injection given to humans. Each page pairs a plain-language account with <b>research-grade photographs posted by the iNaturalist community</b>, credited exactly as the photographers and their Creative Commons licences require.</p>
   <div class="world-grid">${cards}</div>
   <h2 class="section-title">What “research grade” means</h2><p>On iNaturalist, an observation earns research-grade status when the community independently confirms the identification — usually several qualified human eyes plus automated checks. It is the closest thing ecology has to a peer-reviewed photograph, which is why every wall below filters to it.</p>
@@ -17452,7 +17546,7 @@ function hidupHubPage() {
   return worldDoc({
     title: 'Wildlife Atlas — Real Animals, Research-Grade Photos | Tukuk-OS',
     desc: 'Sixteen species with honest natural-history stories and Creative Commons photographs confirmed by the iNaturalist research community.',
-    selfUrl: 'https://tukuk.org/hidupan',
+    selfUrl: 'https://tukuk.org/life',
     heroTitle: 'Wildlife Atlas', heroSub: 'Sixteen species · real photographs · no stock images',
     body,
   }, hidupNav());
@@ -17467,11 +17561,11 @@ function hidupSpeciesPage(req, t, taxon, obs) {
   ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
   const ld = JSON.stringify([
     { '@context': 'https://schema.org', '@type': 'Article', headline: t.name, description: t.blurb,
-      url: `https://tukuk.org/hidupan/${t.slug}`, inLanguage: 'en',
+      url: `https://tukuk.org/life/${t.slug}`, inLanguage: 'en',
       about: { '@type': 'Species', name: taxon.sci || t.sci, commonName: t.name },
       publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' } } ],
   ).replace(/</g, '\\u003c');
-  const body = `<p class="back-link"><a href="/hidupan">&larr; All species</a></p>
+  const body = `<p class="back-link"><a href="/life">&larr; All species</a></p>
   <article><p>${escapeHtml(t.blurb)}</p></article>
   ${taxon.photo ? `<figure style="margin:18px 0"><img src="${escapeHtml(taxon.photo)}" alt="${escapeHtml(t.name)} — default reference photo from iNaturalist" loading="eager" style="width:100%;max-width:640px;height:auto;border-radius:10px;border:1px solid var(--line)">${taxon.photoCredit ? `<figcaption class="meta">${escapeHtml(taxon.photoCredit)}</figcaption>` : ''}</figure>` : ''}
   <h2 class="section-title">Record card</h2><table class="world-table">${facts}</table>
@@ -17481,7 +17575,7 @@ function hidupSpeciesPage(req, t, taxon, obs) {
   return worldDoc({
     title: `${t.name} (${taxon.sci || t.sci}) — Facts & Real Photos | Tukuk-OS Wildlife Atlas`,
     desc: `${t.blurb.split('.')[0]}. Research-grade community photographs, scientific name and record links — free wildlife atlas entry.`,
-    selfUrl: `https://tukuk.org/hidupan/${t.slug}`,
+    selfUrl: `https://tukuk.org/life/${t.slug}`,
     robots: 'index,follow,max-image-preview:large',
     ogImage: taxon.photo || 'https://tukuk.org/og.png',
     heroTitle: `${t.icon} ${t.name}`, heroSub: `${escapeHtml(taxon.sci || t.sci)} · wildlife atlas entry`,
@@ -17489,10 +17583,10 @@ function hidupSpeciesPage(req, t, taxon, obs) {
   }, hidupNav());
 }
 
-app.get('/hidupan', (req, res) => res.type('html').send(hidupHubPage()));
-app.get('/hidupan/:slug', async (req, res) => {
+app.get('/life', (req, res) => res.type('html').send(hidupHubPage()));
+app.get('/life/:slug', async (req, res) => {
   const t = hidup.findTaxon(req.params.slug);
-  if (!t) return res.redirect(302, '/hidupan');
+  if (!t) return res.redirect(302, '/life');
   try {
     const taxon = await hidup.resolveTaxon(t);
     const obs = await hidup.getObservations(taxon.id, 8).catch(() => []);
@@ -19957,7 +20051,7 @@ app.use((req, res) => {
     <div class="actions">
       <a href="/">🏠 Home</a>
       <a href="/play">🎮 Play Games</a>
-      <a href="/negara">🗺️ World Countries</a>
+      <a href="/countries">🗺️ World Countries</a>
       <a href="/apps/chat">💬 T Chat</a>
       <a href="/blog">📝 Blog</a>
       <a href="/contact">✉️ Contact</a>

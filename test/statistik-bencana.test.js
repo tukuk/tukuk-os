@@ -80,7 +80,7 @@ test('bencana.js: NASA EONET without a key, include=geo, EONET_\d+ ids validated
   assert.ok(!/[\u4e00-\u9fff]/.test(bcSrc), 'no CJK character leaks into the module');
 });
 
-test('the disaster copy is English: categories translated, public slugs preserved', () => {
+test('the disaster copy is English: categories and their public slugs translated', () => {
   const bc = require(path.join(ROOT, 'src', 'bencana.js'));
   assert.ok(bc.CATS.length >= 10, 'the EONET category list is intact');
   for (const c of bc.CATS) {
@@ -88,11 +88,18 @@ test('the disaster copy is English: categories translated, public slugs preserve
     assert.ok(c.en && c.en.length > 2, `${c.slug} carries an English name`);
     assert.doesNotMatch(c.blurb, /\b(yang|dan|untuk|dengan|tidak|tiada|adalah|lebih|sangat|boleh|juga|dalam|pada|ini|itu)\b/, `${c.slug} blurb is English`);
   }
-  // The category slugs and the EONET ids are both public: neither may move with the copy.
+  // The category slugs are public URLs and they are English now; the Malay slugs that
+  // used to be published live on in LEGACY_SLUGS so the 301 redirects can map them.
   assert.deepStrictEqual(bc.CATS.map((c) => c.slug), [
-    'gunung-berapi', 'taufan-ribut', 'kebakaran-lahan', 'banjir', 'kemarau', 'tanah-runtuh',
-    'salji-beku', 'badai-habuk', 'ais-laut', 'gunung-ais', 'isu-air', 'insiden-manusia',
-  ], 'every category keeps its public URL slug');
+    'volcanoes', 'storms', 'wildfires', 'floods', 'drought', 'landslides',
+    'snow', 'dust-storms', 'sea-ice', 'icebergs', 'water', 'man-made',
+  ], 'every category has an English public URL slug');
+  assert.deepStrictEqual(Object.keys(bc.LEGACY_SLUGS).sort(), [
+    'ais-laut', 'badai-habuk', 'banjir', 'gunung-ais', 'gunung-berapi', 'insiden-manusia',
+    'isu-air', 'kebakaran-lahan', 'kemarau', 'salji-beku', 'tanah-runtuh', 'taufan-ribut',
+  ], 'all twelve legacy Malay slugs are redirected');
+  assert.strictEqual(bc.findCat('volcanoes').id, 'volcanoes', 'the English slug resolves to its category');
+  assert.strictEqual(bc.findCat('gunung-berapi'), null, 'a legacy slug is not a live route — it 301s');
   // The EONET ids are as much public as the slugs: an /api/v3 request for a category
   // EONET does not publish does not fail — it silently ignores the filter and returns
   // every event. Four ids here (dustHazard, seaAndLakeIce, icebergs, waterIssues) are
@@ -135,13 +142,13 @@ test('the disaster copy is English: categories translated, public slugs preserve
 
 test('server.js: routes + renderers + sitemaps of both complexes (static first, then :slug)', () => {
   for (const route of [
-    "app.get('/statistik'", "app.get('/statistik/:slug'",
-    "app.get('/bencana'", "app.get('/bencana/:cat'", "app.get('/bencana/:cat/:id'",
+    "app.get('/statistics'", "app.get('/statistics/:slug'",
+    "app.get('/disasters'", "app.get('/disasters/:cat'", "app.get('/disasters/:cat/:id'",
     "app.get('/sitemap-statistik.xml'", "app.get('/sitemap-bencana.xml'",
   ]) {
     assert.ok(serverSrc.includes(route), `the ${route} route`);
   }
-  const staticIdx = serverSrc.indexOf("app.get('/statistik'");
+  const staticIdx = serverSrc.indexOf("app.get('/statistics'");
   const dynIdx = serverSrc.indexOf('app.use(express.static(PUBLIC_DIR');
   assert.ok(staticIdx > 0 && staticIdx < dynIdx, 'the complex routes come before express.static');
   for (const fn of ['function statistikDoc', 'function statistikHubPage', 'function statistikIndPage',
@@ -170,17 +177,17 @@ test('server.js: routes + renderers + sitemaps of both complexes (static first, 
 test('SEO: robots, staticPages, footer SSR, tile index, OS catalogue', () => {
   assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-statistik.xml'), 'robots lists the statistik sitemap');
   assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-bencana.xml'), 'robots lists the bencana sitemap');
-  assert.ok(serverSrc.includes("'/statistik', '/bencana'"), 'the main sitemap staticPages');
+  assert.ok(serverSrc.includes("'/statistics', '/disasters'"), 'the main sitemap staticPages');
   // The window has to cover the WHOLE footer. It used to be 3000 characters, which passed
   // until an extra nav/footer entry pushed this link past it and made the test fail for a
   // reason that had nothing to do with the link. Generous on purpose.
   const footerAt = serverSrc.indexOf('function siteFooter()');
   const footer = serverSrc.slice(footerAt, footerAt + 12000);
-  assert.ok(footer.includes('<a href="/statistik">World statistics</a>'), 'the footer statistik link');
-  assert.ok(footer.includes('<a href="/bencana">Live disaster watch</a>'), 'the footer bencana link');
-  assert.ok(indexHtml.includes('href="/statistik"') && indexHtml.includes('href="/bencana"'), 'the tile index links both');
-  assert.ok(osHtml.includes("'/statistik'") && osHtml.includes("['bencana'"), 'the OS catalogue has both entries');
+  assert.ok(footer.includes('<a href="/statistics">World statistics</a>'), 'the footer statistik link');
+  assert.ok(footer.includes('<a href="/disasters">Live disaster watch</a>'), 'the footer bencana link');
+  assert.ok(indexHtml.includes('href="/statistics"') && indexHtml.includes('href="/disasters"'), 'the tile index links both');
+  assert.ok(osHtml.includes("'/statistics'") && osHtml.includes("'/disasters'"), 'the OS catalogue has both entries');
   // Cross links out of the Country Complex hub page.
-  assert.ok(serverSrc.includes('<a href="/bencana">Disaster Complex</a>'), 'country hub → disaster complex');
-  assert.ok(serverSrc.includes('<a href="/statistik">Statistics Complex</a>'), 'country hub → statistics complex');
+  assert.ok(serverSrc.includes('<a href="/disasters">Disaster Complex</a>'), 'country hub → disaster complex');
+  assert.ok(serverSrc.includes('<a href="/statistics">Statistics Complex</a>'), 'country hub → statistics complex');
 });

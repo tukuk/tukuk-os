@@ -50,10 +50,13 @@ test('catalogue: every match route points at an HTML file or an existing server 
   const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
   for (const [name, url, , title] of approuter.CATALOG) {
     if (url.includes('?')) continue; // the /store filter & the /cari mode — the file is the page itself
+    const routePath = url.replace(/\/$/, '');
     let file;
     if (url.startsWith('/apps/')) file = path.join(PUBLIC, 'apps', name + '.html');
     else file = path.join(PUBLIC, name + '.html');
-    const routed = serverSrc.includes(`app.get('/${name}'`);
+    // The catalogue key is an internal identifier; the URL is the public contract. A live
+    // route for either is enough — they coincided until the English URL migration.
+    const routed = serverSrc.includes(`app.get('${routePath}'`) || serverSrc.includes(`app.get('/${name}'`);
     assert.ok(fs.existsSync(file) || routed, `a file/route exists for ${title} (${url})`);
   }
 });

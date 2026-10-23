@@ -23,4 +23,4 @@ Daylight-saving schemes shift clocks seasonally for reasons that predate the mod
 
 ## Try It Yourself
 
-Pick three pairs of cities that sit on the same latitude but different time zones and check what "9 a.m. local" means for the sun overhead on our [World Weather](/cuaca) pages; then plan a [route](/peta) — the crossing of a border with a one-hour jump is where every long-haul driver learns the tz database by feeling, not by reading. The honest lesson: clocks are a social agreement drawn on an astronomical fact, and like all maps of agreements, the borders tell you more about people than about the planet.
+Pick three pairs of cities that sit on the same latitude but different time zones and check what "9 a.m. local" means for the sun overhead on our [World Weather](/weather) pages; then plan a [route](/maps) — the crossing of a border with a one-hour jump is where every long-haul driver learns the tz database by feeling, not by reading. The honest lesson: clocks are a social agreement drawn on an astronomical fact, and like all maps of agreements, the borders tell you more about people than about the planet.
