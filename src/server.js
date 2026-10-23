@@ -840,6 +840,31 @@ const CSP_STRICT = [
   "form-action 'self'",
   "report-uri /csp-report",
 ].join('; ') + ';';
+
+// ── Edge-cache policy ─────────────────────────────────────────────────────────────
+// Every page here is rendered per request, so without a policy each visit rebuilds the
+// HTML on this box. Reference content may be reused for a few minutes; pages carrying a
+// live reading are deliberately LEFT OUT — a cached copy of a page that says "live"
+// (earthquakes, weather, ISS position, air quality, traffic, feeds) would be a stale
+// claim, and a wrong number on the page costs more than the request it saves. Same for
+// searches, account surfaces and JSON under /api. max-age=0 means the browser still
+// revalidates every view; only shared caches are given a lease.
+const CACHE_PUBLIC_EXTRA = [
+  'alat', 'bendera', 'negara', 'muzik', 'study', 'learn', 'akademi', 'pepatah', 'sejarah',
+  'warisan', 'cagar', 'unsur', 'buruj', 'messier', 'rekod', 'kota', 'wang', 'seni', 'hidupan',
+  'gunung', 'danau', 'pulau', 'sungai', 'air-terjun', 'gletser', 'blog',
+  'docs', 'about', 'privacy', 'terms', 'contact', 'access', 'download', 'rekomendasi', 'os',
+];
+// The geo clusters are the bulk of the site and all register through geoSitemap(), so
+// this can never drift away from the sitemap. It is only read at request time, by which
+// point server.js has finished loading (GEO_SITEMAP_BASES is declared much later).
+let CACHE_PUBLIC_BASES = null;
+function cachePublicBaseSet() {
+  if (!CACHE_PUBLIC_BASES) CACHE_PUBLIC_BASES = new Set(CACHE_PUBLIC_EXTRA.concat(GEO_SITEMAP_BASES));
+  return CACHE_PUBLIC_BASES;
+}
+const CACHE_PUBLIC_HTML = 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600';
+
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -853,6 +878,12 @@ app.use((req, res, next) => {
   // HSTS only means anything over HTTPS; no `preload` (needs a listing + every subdomain on HTTPS first).
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  // Public reference pages may be answered from a shared cache for a few minutes (see the
+  // policy block above). A route that needs privacy sets its own Cache-Control afterwards,
+  // which overwrites this — the 503/error paths included.
+  if ((req.method === 'GET' || req.method === 'HEAD') && cachePublicBaseSet().has(seg.split('/')[0])) {
+    res.setHeader('Cache-Control', CACHE_PUBLIC_HTML);
   }
   next();
 });
@@ -2709,10 +2740,15 @@ app.use(express.static(PUBLIC_DIR, {
     }
     // Service worker: NEVER cache — clients must get the newest version right away.
     if (filePath.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-store');
-    // HTML: let it revalidate every time so updates appear immediately.
+    // HTML shells: revalidate every time, so an update shows at once.
     else if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
-    // CSS/JS: revalidate every time — style updates show at once (browser + edge cache).
-    else if (/\.(css|js)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+    // CSS/JS used to be `no-cache` too, which meant every single page view paid a round
+    // trip to this box just for the stylesheet. These files are not content-hashed, so a
+    // short browser lease is kept (a style edit still lands as soon as it expires) while
+    // the shared cache gets the long lease — that is where the requests were being lost.
+    else if (/\.(css|js)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400');
+    // Images/icons/fonts: rarely changed, and a stale one is only ever a visual regression.
+    else if (/\.(?:png|jpe?g|webp|avif|svg|ico|woff2?)$/i.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000');
   }
 }));
 
@@ -2720,9 +2756,12 @@ app.use(express.static(PUBLIC_DIR, {
 // NOTE: the heavy AI pages (nasa/explore/builder/editor/editor-video/3d/design/movie/
 // collage/converter/bg-remover/studio) + the app-store UI (store) were dropped — the focus is T Chat.
 const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'access', 'bingbot', 'playstore', 'download', 'rekomendasi', 'os', 'sms'];
+// res.sendFile sets its own "public, max-age=0" AFTER the policy middleware ran, which would
+// drop the edge lease, so the files served directly repeat the policy explicitly.
+const SEND_FILE_OPTS = { headers: { 'Cache-Control': CACHE_PUBLIC_HTML } };
 for (const name of STATIC_PAGES) {
   app.get(`/${name}`, (req, res) => {
-    res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
+    res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), SEND_FILE_OPTS, (error) => {
       if (error) res.status(404).json({ error: 'Page not found', path: req.originalUrl });
     });
   });
@@ -2732,7 +2771,7 @@ for (const name of STATIC_PAGES) {
 const APPS = ['chat'];
 for (const name of APPS) {
   app.get(`/apps/${name}`, (req, res) => {
-    res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), (error) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'apps', `${name}.html`), SEND_FILE_OPTS, (error) => {
       if (error) res.status(404).json({ error: `App '${name}' does not exist yet`, path: req.originalUrl });
     });
   });
@@ -2745,7 +2784,7 @@ app.get(['/apps', '/apps/'], (req, res) => res.redirect(301, '/'));
 const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', privasi: 'privacy', dokumen: 'docs' };
 for (const [alias, name] of Object.entries(PAGE_ALIASES)) {
   app.get(`/${alias}`, (req, res) => {
-    res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), (error) => {
+    res.sendFile(path.join(PUBLIC_DIR, `${name}.html`), SEND_FILE_OPTS, (error) => {
       if (error) res.status(404).json({ error: 'Page not found', path: req.originalUrl });
     });
   });
@@ -3049,6 +3088,9 @@ async function modelsInventory() {
   };
 }
 app.get('/api/models', async (req, res) => {
+  // Provider + chain configuration, which changes with the server's own .env: an
+  // intermediary must never serve a stale copy of it. It had no Cache-Control at all.
+  res.setHeader('Cache-Control', 'no-store');
   res.json(await modelsInventory());
 });
 
