@@ -43,6 +43,8 @@ die() { echo "✗ $*"; exit 1; }
 # a shell function declared while running `verify` would not exist in the process that
 # later runs `cut`, and `! port_free` would then abort a cutover over a typo.
 port_free() { ! ss -ltn 2>/dev/null | grep -q "127\.0\.0\.1:$1 "; }
+# Who holds 127.0.0.1:$1, if anyone. Needs root to see the process name.
+port_owner() { ss -ltnp 2>/dev/null | awk -v p="127.0.0.1:$1" '$4==p{print $NF}' | head -1; }
 
 [ "$(id -u)" = 0 ] || die "run as root: sudo bash $0 ${1:-status}"
 [ -f "$CONF_SRC" ] || die "missing $CONF_SRC — git pull first"
@@ -109,9 +111,12 @@ effective_port() {
 case "${1:-status}" in
   verify)
     echo "▶ verify — the front proxy beside production, changing nothing that serves traffic"
-    port_free "$VERIFY_PORT" || die "port $VERIFY_PORT is already taken by something else"
-    [ "$(installed_origin)" = "$NEW_PORT" ] && [ "$(installed_listen)" = "$VERIFY_PORT" ] \
-      && step "already verifying on $VERIFY_PORT"
+    if ! port_free "$VERIFY_PORT"; then
+      # Re-running verify is normal: our own nginx is then already on the port and this run
+      # replaces the config it loaded. A stranger on $VERIFY_PORT is a different matter.
+      port_owner "$VERIFY_PORT" | grep -q nginx || die "port $VERIFY_PORT is held by $(port_owner "$VERIFY_PORT") — not nginx, refusing to share"
+      step "re-verifying: nginx already holds $VERIFY_PORT, replacing its config"
+    fi
     place_conf "$VERIFY_PORT" "$NOW_PORT"
     echo
     echo "   Now run the checks (they drive http://127.0.0.1:$VERIFY_PORT):"
