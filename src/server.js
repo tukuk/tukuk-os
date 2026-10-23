@@ -1813,6 +1813,10 @@ app.get('/alat/kamus', (req, res) => {
   ['/alat/ip', ipPage],
   ['/alat/epoch', epochPage],
   ['/alat/rawak', rawakPage],
+  ['/alat/pdf', pdfPage],
+  ['/alat/json', jsonPage],
+  ['/alat/hash', hashPage],
+  ['/alat/base64', base64Page],
 ].forEach(function (entry) {
   app.get(entry[0], function (req, res) {
     try {
@@ -3356,7 +3360,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/peta/langit', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/alat/kamus', '/alat/peratus', '/alat/pinjaman', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/rawak', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/peta/langit', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/alat/kamus', '/alat/peratus', '/alat/pinjaman', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/rawak', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -9785,11 +9789,15 @@ function toolsNav() {
     { href: '/alat/ip', icon: '📍', name: 'What Is My IP?', blurb: 'Your public address, the ISP-level location databases infer from it, and every browser field a website can read — shown openly, nothing stored.' },
     { href: '/alat/epoch', icon: '⏱', name: 'Unix Timestamp Converter', blurb: 'Epoch to date and back, with seconds/millisecond auto-detection, ISO 8601, your local zone and a live ticking clock.' },
     { href: '/alat/rawak', icon: '🎲', name: 'Random Numbers & Dice', blurb: 'Unbiased integers, d4–d100 dice and a raffle-style list picker — drawn from crypto.getRandomValues with rejection sampling, so nothing is favoured.' },
+    { href: '/alat/pdf', icon: '📄', name: 'PDF Tools', blurb: 'Merge, extract, delete, rotate and split PDF pages without uploading the file — the document is opened and re-saved by your own browser.' },
+    { href: '/alat/json', icon: '🧩', name: 'JSON Formatter', blurb: 'Format, minify and validate JSON with the exact line and column of a syntax error; large numbers and key order survive because it scans instead of re-parsing.' },
+    { href: '/alat/hash', icon: '🔑', name: 'Checksum & Hash', blurb: 'MD5, SHA-1, SHA-256, SHA-384 and SHA-512 of text or a whole file at once — verify a download against its published checksum privately.' },
+    { href: '/alat/base64', icon: '🔁', name: 'Base64 Encoder', blurb: 'UTF-8-correct Base64 both ways, URL-safe output, and a file turned into a data: URL — with the honest note that encoding is not encryption.' },
   ]);
 }
 
 function alatHubPage() {
-  const body = `<p><b>The honest kind of useful.</b> Fourteen small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  const body = `<p><b>The honest kind of useful.</b> Eighteen small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
   <h2 class="section-title">In the toolbox</h2>
   <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
   <p><b><a href="/alat/tarikh">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
@@ -9805,18 +9813,22 @@ function alatHubPage() {
   <p><b><a href="/alat/ip">📍 What is my IP?</a></b> — your public address, the ISP and inferred city from a keyless database, and the browser fields any site can read, all explained instead of hidden.</p>
   <p><b><a href="/alat/epoch">⏱ Unix timestamp converter</a></b> — epoch to date and back, seconds-versus-milliseconds auto-detection, ISO 8601, time zones and a live clock.</p>
   <p><b><a href="/alat/rawak">🎲 Random numbers &amp; dice</a></b> — unbiased integer ranges, d4–d100 rolls and a raffle-style list picker from the operating system’s cryptographic generator.</p>
+  <p><b><a href="/alat/pdf">📄 PDF tools</a></b> — merge, extract, delete, rotate and split pages; the file is opened and re-saved by your browser, so the document never reaches a server.</p>
+  <p><b><a href="/alat/json">🧩 JSON formatter</a></b> — format, minify and validate with the exact line and column of an error, keeping large numbers and key order intact.</p>
+  <p><b><a href="/alat/hash">🔑 Checksum &amp; hash</a></b> — MD5 through SHA-512 for text or a whole file, so a download can be checked against its published value without handing the file to anyone.</p>
+  <p><b><a href="/alat/base64">🔁 Base64 encoder</a></b> — correct UTF-8 both ways, URL-safe output and a file turned into a <code>data:</code> URL, with the caveat that encoding is not encryption.</p>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
   <p class="meta">Prefer maps and time? The neighbouring <a href="/peta">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
   return worldDoc({
-    title: 'Everyday Tools — Unit Converter, Date Calculator, Contrast Checker, Password Generator | Tukuk-OS',
-    desc: 'Five genuinely useful tools that run entirely in your browser: exact unit conversion, date and age maths, WCAG colour contrast, cryptographic password generation and a text toolkit with hashing — private, free, no account.',
+    title: 'Everyday Tools — Converters, Calculators, PDF, JSON, Hashing & Generators | Tukuk-OS',
+    desc: 'Eighteen useful tools that run entirely in your browser: unit conversion, date and age maths, WCAG contrast, password generation, text toolkit, PDF merge and split, JSON formatting, checksums, Base64, currency, QR codes and more — private, free, no account.',
     selfUrl: 'https://tukuk.org/alat',
     heroTitle: '🧰 Everyday Tools', heroSub: 'Converters · calculators · checkers · generators — all computed on your device',
     css: TOOLS_CSS, body,
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Everyday Tools — Tukuk-OS',
-      description: 'Browser-local unit converter, date calculator, colour contrast checker, password generator and text toolkit.',
+      description: 'Browser-local unit converter, date calculator, colour contrast checker, password generator, text toolkit, PDF tools, JSON formatter, checksum tool and Base64 codec.',
       url: 'https://tukuk.org/alat', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
     }).replace(/</g, '\\u003c'),
   }, toolsNav());
@@ -10314,6 +10326,423 @@ $('b-go').onclick=calc;
       applicationCategory: 'HealthApplication', operatingSystem: 'Web browser',
       description: 'Browser-local BMI, BMR/TDEE, body-fat and waist-to-height calculator using published WHO, Mifflin-St Jeor and Deurenberg equations.',
       url: 'https://tukuk.org/alat/bmi', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/pdf — merge, split, extract, rotate and delete pages, all in the browser ──
+// Nothing is uploaded: the PDF engine (pdf-lib, MIT) and the ZIP writer (fflate, MIT) are
+// served from this box and the file bytes never leave the tab. That is the whole point of
+// the page — contracts, payslips and passport scans do not belong on a stranger's server.
+function pdfPage() {
+  const body = `<p>Merge several PDFs, pull out a page range, delete pages, rotate them, or split a file into one PDF per page — <b>without uploading anything</b>. The file is opened, edited and re-saved by your own browser; the download button at the end points at a blob on your disk image of the page, not at a URL we control. Close the tab and no copy exists anywhere.</p>
+  <div class="tl-form">
+    <label>PDF file(s) <input id="d-files" type="file" accept="application/pdf,.pdf" multiple></label>
+    <label>Action <select id="d-mode">
+      <option value="merge">Merge into one PDF</option>
+      <option value="extract">Extract pages</option>
+      <option value="remove">Delete pages</option>
+      <option value="rotate">Rotate pages</option>
+      <option value="split">Split — one PDF per page (ZIP)</option>
+    </select></label>
+    <label>Page range <input id="d-range" type="text" value="1-" placeholder="1-3,5,8-"></label>
+    <label>Rotation <select id="d-rot"><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° clockwise</option></select></label>
+    <button class="tl-btn primary" id="d-go" type="button">Build PDF</button>
+  </div>
+  <div class="tl-res" id="d-out" aria-live="polite">Choose one or more PDFs to begin. Nothing is uploaded.</div>
+  <p><a id="d-dl" class="tl-btn primary" href="#" download="tukuk-output.pdf" hidden>⬇ Download result</a></p>
+  <div id="d-list" class="meta"></div>
+  <noscript><p>JavaScript is required — and deliberately so: the PDF never leaves your device, which is only possible if your device does the work.</p></noscript>
+  <h2 class="section-title">What each action actually does</h2>
+  <p><b>Merge</b> copies whole pages into a new document — no re-encoding, so quality is bit-for-bit what you gave it and the output is roughly the sum of the inputs. <b>Extract</b> and <b>delete</b> use the page range box: <code>1-3,5,8-</code> means pages 1 to 3, page 5, then 8 to the end; an open range like <code>4-</code> always means “to the last page”, so it stays correct when the file changes. <b>Rotate</b> adds to the existing rotation instead of replacing it, which is why a page that was already sideways does not flip twice. <b>Split</b> writes one PDF per page into a ZIP, because browsers refuse a burst of automatic downloads; the ZIP is stored, not compressed, since PDF pages are already compressed.</p>
+  <p><b>Why there is no “compress PDF” button.</b> Most of a PDF's size is images. Genuinely shrinking it means re-encoding those images — lossy, irreversible, and sometimes visibly worse. Rewriting the file structure typically saves only a few percent, and any site promising 90% either rasterises every page (turning your text into a picture) or is uploading your file somewhere. The honest options are: re-export from the source at lower image quality, or accept the size. <b>Password-protected files cannot be opened here</b> — without the password even a correct reader can only see ciphertext, so the tool says so instead of failing mysteriously. Digital signatures are invalidated by any edit, this one included; that is how signatures work, not a limitation of the tool.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Shrinking a photo before it goes into a PDF? <a href="/alat/gambar">The image compressor</a> does that on your device too.</p>`;
+  const script = `<script src="/libs/pdf-lib.min.js"></script><script src="/libs/fflate.min.js"></script><script>(function(){
+function $(id){return document.getElementById(id);}
+var files=[],lastUrl='',NL=String.fromCharCode(10);
+function human(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';if(n<1073741824)return (n/1048576).toFixed(2)+' MB';return (n/1073741824).toFixed(2)+' GB';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function why(e){var l=String(e&&e.message||e).toLowerCase();
+ if(l.indexOf('encrypt')>=0)return 'password-protected — a locked PDF cannot be edited without its password';
+ if(l.indexOf('header')>=0||l.indexOf('parse')>=0)return 'not a PDF, or the file is damaged';
+ return String(e&&e.message||e);}
+function drawList(){var html='',total=0,i,f;
+ for(i=0;i<files.length;i++){f=files[i];if(!f)continue;
+  if(f.error)html+='<div>⚠ '+esc(f.name)+' — '+esc(f.error)+'</div>';
+  else{total+=f.pages;html+='<div>📄 '+esc(f.name)+' — '+f.pages+' page'+(f.pages===1?'':'s')+', '+human(f.size)+'</div>';}}
+ $('d-list').innerHTML=html+(total?'<div><b>'+total+' page'+(total===1?'':'s')+' ready on this device.</b></div>':'');}
+function readFiles(){var list=$('d-files').files,arr=[],i;
+ files=[];$('d-list').textContent='';$('d-dl').hidden=true;lastUrl='';
+ if(!list||!list.length){$('d-out').textContent='Choose one or more PDFs to begin. Nothing is uploaded.';return;}
+ for(i=0;i<list.length;i++)arr.push(list[i]);
+ $('d-out').textContent='Reading '+arr.length+' file'+(arr.length===1?'':'s')+'…';
+ var left=arr.length;
+ arr.forEach(function(f,idx){
+  files[idx]={name:f.name,size:f.size};
+  f.arrayBuffer().then(function(buf){
+   return PDFLib.PDFDocument.load(buf).then(function(doc){files[idx].buf=buf;files[idx].pages=doc.getPageCount();});
+  }).catch(function(e){files[idx].error=why(e);}).then(function(){
+   left--;if(left===0){drawList();$('d-out').innerHTML='<b>'+arr.length+'</b> file'+(arr.length===1?'':'s')+' loaded. Choose an action, then <b>Build PDF</b>.';}
+  });
+ });}
+function parseRange(text,total){var out=[],seen={},parts=String(text||'1-').split(','),i;
+ for(i=0;i<parts.length;i++){var part=parts[i].replace(/\\s+/g,'');if(!part)continue;
+  var m=part.match(/^(\\d+)(?:-(\\d+)?)?$/);
+  if(!m)throw new Error('“'+part+'” is not a page number, a range like 2-5, or an open range like 4-');
+  var a=parseInt(m[1],10),b;
+  if(m[2])b=parseInt(m[2],10);else if(part.indexOf('-')>=0)b=total;else b=a;
+  if(a<1||a>total)throw new Error('page '+a+' does not exist — this file has '+total+' page'+(total===1?'':'s'));
+  if(b<a)throw new Error('the range '+a+'-'+b+' runs backwards');
+  if(b>total)b=total;
+  for(var p=a;p<=b;p++)if(!seen[p]){seen[p]=1;out.push(p-1);}}
+ if(!out.length)throw new Error('that page range selected nothing');
+ out.sort(function(x,y){return x-y;});return out;}
+function complement(list,total){var keep=[],seen={},i;
+ for(i=0;i<list.length;i++)seen[list[i]]=1;
+ for(i=0;i<total;i++)if(!seen[i])keep.push(i);
+ if(!keep.length)throw new Error('that range deletes every page — a PDF needs at least one');
+ return keep;}
+function finish(bytes,name,mime){var blob=new Blob([bytes],{type:mime});
+ if(lastUrl)try{URL.revokeObjectURL(lastUrl);}catch(e){}
+ lastUrl=URL.createObjectURL(blob);
+ var a=$('d-dl');a.href=lastUrl;a.download=name;a.hidden=false;
+ $('d-out').innerHTML='<b>Done.</b> '+esc(name)+' — '+human(blob.size)+'. The download link points at a local blob; nothing was transmitted.';}
+function fail(e){$('d-out').innerHTML='⚠ '+esc(why(e));}
+function appendCopies(src,dest,indices){return dest.copyPages(src,indices).then(function(pages){var i;for(i=0;i<pages.length;i++)dest.addPage(pages[i]);});}
+function build(){var mode=$('d-mode').value,range=$('d-range').value,ready=[],i;
+ if(!files.length){$('d-out').textContent='⚠ choose at least one PDF first.';return;}
+ for(i=0;i<files.length;i++)if(files[i]&&files[i].buf)ready.push(files[i]);
+ if(!ready.length){$('d-out').innerHTML='⚠ none of the chosen files could be read — see the list below.';return;}
+ $('d-out').textContent='Working…';$('d-dl').hidden=true;
+ if(mode==='merge'){
+  var out=PDFLib.PDFDocument.create(),all=[],chain=Promise.resolve();
+  ready.forEach(function(f){chain=chain.then(function(){return PDFLib.PDFDocument.load(f.buf);}).then(function(src){all.push(src);});});
+  chain.then(function(){var seq=Promise.resolve();
+   all.forEach(function(src){seq=seq.then(function(){return appendCopies(src,out,src.getPageIndices());});});
+   return seq;}).then(function(){return out.save();})
+  .then(function(bytes){finish(bytes,'tukuk-merged.pdf','application/pdf');}).catch(fail);
+  return;}
+ var first=ready[0];
+ PDFLib.PDFDocument.load(first.buf).then(function(src){var total=src.getPageCount();
+  if(mode==='extract'){var idx=parseRange(range,total),out=PDFLib.PDFDocument.create();
+   return appendCopies(src,out,idx).then(function(){return out.save();}).then(function(bytes){finish(bytes,'tukuk-extracted.pdf','application/pdf');});}
+  if(mode==='remove'){var keep=complement(parseRange(range,total),total),out2=PDFLib.PDFDocument.create();
+   return appendCopies(src,out2,keep).then(function(){return out2.save();}).then(function(bytes){finish(bytes,'tukuk-pages-removed.pdf','application/pdf');});}
+  if(mode==='rotate'){var deg=parseInt($('d-rot').value,10),targets=parseRange(range,total),j,pg;
+   for(j=0;j<targets.length;j++){pg=src.getPage(targets[j]);pg.setRotation(PDFLib.degrees((pg.getRotation().angle+deg)%360));}
+   return src.save().then(function(bytes){finish(bytes,'tukuk-rotated.pdf','application/pdf');});}
+  var zipped={},seq2=Promise.resolve();
+  for(var p=0;p<total;p++){(function(p){
+   seq2=seq2.then(function(){var one=PDFLib.PDFDocument.create();
+    return appendCopies(src,one,[p]).then(function(){return one.save();}).then(function(bytes){
+     zipped['page-'+(p+1)+'.pdf']=new Uint8Array(bytes);});});})(p);}
+  return seq2.then(function(){var z=fflate.zipSync(zipped,{level:0});
+   finish(z,'tukuk-split.zip','application/zip');});
+ }).catch(fail);}
+$('d-files').addEventListener('change',readFiles);
+$('d-go').addEventListener('click',build);
+})();</script>`;
+  return worldDoc({
+    title: 'PDF Tools — Merge, Split, Extract, Rotate & Delete Pages in Your Browser | Tukuk-OS',
+    desc: 'Merge PDFs, extract or delete pages, rotate them and split a file into one PDF per page — entirely in your browser. No upload, no account, no watermark, no page limit.',
+    selfUrl: 'https://tukuk.org/alat/pdf',
+    heroTitle: '📄 PDF Tools', heroSub: 'Merge · extract · delete · rotate · split — the file never leaves your device',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk PDF Tools',
+      applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local PDF editor: merge, extract, delete, rotate pages and split into one PDF per page, with no upload.',
+      url: 'https://tukuk.org/alat/pdf', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/json — formatter, validator, minifier ──
+// The formatter is a small scanner rather than JSON.parse + JSON.stringify, because a
+// round trip through a JavaScript number quietly rounds anything above 2^53 and loses
+// duplicate keys. Only "Sort keys" rebuilds the object, and the page says so.
+function jsonPage() {
+  const body = `<p>Paste JSON: get it <b>formatted, minified or validated</b>, with the exact line and column of a syntax error instead of a shrug. The formatter scans characters instead of re-serialising, so a 19-digit ID or a <code>1e999</code> survives untouched and your key order is preserved. Copy the result and move on — the JSON never leaves this tab.</p>
+  <div class="tl-form">
+    <label>Indent <select id="j-ind"><option value="2">2 spaces</option><option value="4">4 spaces</option><option value="tab">Tab</option></select></label>
+    <button class="tl-btn primary" id="j-fmt" type="button">Format</button>
+    <button class="tl-btn" id="j-min" type="button">Minify</button>
+    <button class="tl-btn" id="j-val" type="button">Validate</button>
+    <button class="tl-btn" id="j-sort" type="button">Sort keys</button>
+    <button class="tl-btn" id="j-copy" type="button">Copy output</button>
+  </div>
+  <textarea id="j-in" class="tl-in" rows="10" spellcheck="false" placeholder='{"paste":"json here"}'></textarea>
+  <div class="tl-res" id="j-status" aria-live="polite">Paste JSON above. Nothing is sent anywhere.</div>
+  <textarea id="j-out" class="tl-in" rows="12" spellcheck="false" readonly placeholder="Result appears here"></textarea>
+  <noscript><p>JavaScript is required — which is precisely why your payload stays private.</p></noscript>
+  <h2 class="section-title">What “valid” does and does not mean</h2>
+  <p><b>Valid</b> means RFC 8259 syntax: no trailing commas, no comments, no single quotes, keys always double-quoted. A JSON5 or JavaScript object literal will be rejected here — and by every strict parser that receives it, so the error is worth knowing before it reaches production. The most common real-world faults are a trailing comma after the last member, an unquoted key, and a UTF-8 BOM that arrived with a file copy (the parser sees three invisible bytes and reports a position 0 error).</p>
+  <p><b>Sort keys</b> is the one action that rebuilds the object through <code>JSON.parse</code> and <code>JSON.stringify</code>. That means duplicate keys collapse to the last value and integers beyond 2<sup>53</sup> lose precision — a real hazard for database IDs and 64-bit timestamps. Object keys that look like array indices are also always listed first by JavaScript engines, whatever the sort order, so a perfectly sorted object can still print numerically in front. The other three buttons never parse numbers again and cannot cause either problem. Nothing here sends your payload anywhere: check the network tab while you use it.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Hashing a payload or a file instead? <a href="/alat/hash">The checksum tool</a> covers MD5 through SHA-512.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+var NL=String.fromCharCode(10),TAB=String.fromCharCode(9);
+function ws(c){var n=c.charCodeAt(0);return n===32||n===9||n===10||n===13;}
+function bytes(s){return new TextEncoder().encode(s).length;}
+function human(n){return n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(2)+' MB';}
+function ind(){var v=$('j-ind').value;return v==='tab'?TAB:v==='4'?'    ':'  ';}
+function check(src){try{JSON.parse(src);return null;}catch(e){
+ var m=String(e&&e.message||e),pos=-1,line=0,col=0;
+ var pi=m.indexOf('position ');if(pi>=0)pos=parseInt(m.slice(pi+9),10);
+ var li=m.indexOf('line ');if(li>=0){line=parseInt(m.slice(li+5),10);var ci=m.indexOf('column ',li);if(ci>=0)col=parseInt(m.slice(ci+7),10);}
+ if(!line&&pos>=0){var before=src.slice(0,pos).split(NL);line=before.length;col=before[before.length-1].length+1;}
+ var cut=m.indexOf(' in JSON at position');if(cut>0)m=m.slice(0,cut);
+ if(m.indexOf('JSON.parse: ')===0)m=m.slice(12);
+ return {message:m,line:line,col:col,pos:pos};}}
+function format(src,step){var out='',depth=0,inStr=false,escNext=false,stack=[],i,ch,k;
+ var BS=String.fromCharCode(92);
+ for(i=0;i<src.length;i++){ch=src.charAt(i);
+  if(inStr){out+=ch;if(escNext)escNext=false;else if(ch===BS)escNext=true;else if(ch==='"')inStr=false;continue;}
+  if(ch==='"'){inStr=true;out+=ch;continue;}
+  if(ws(ch))continue;
+  if(ch==='{'||ch==='['){
+   k=i+1;while(k<src.length&&ws(src.charAt(k)))k++;
+   var empty=(ch==='{'&&src.charAt(k)==='}')||(ch==='['&&src.charAt(k)===']');
+   out+=ch;depth++;stack.push(empty);if(!empty)out+=NL+new Array(depth+1).join(step);
+   continue;}
+  if(ch==='}'||ch===']'){depth--;var wasEmpty=stack.pop();if(!wasEmpty)out+=NL+new Array(depth+1).join(step);out+=ch;continue;}
+  if(ch===','){out+=','+NL+new Array(depth+1).join(step);continue;}
+  if(ch===':'){out+=': ';continue;}
+  out+=ch;}
+ if(inStr)throw new Error('a string is never closed — a missing quote swallows the rest of the file');
+ return out.replace(/[ \t]+$/,'');}
+function put(text,note){$('j-out').value=text;
+ $('j-status').innerHTML=note+' · output '+human(bytes(text))+' · input '+human(bytes($('j-in').value));}
+function need(){var src=$('j-in').value;if(!src.trim()){$('j-status').textContent='⚠ paste some JSON first.';return null;}return src;}
+$('j-fmt').addEventListener('click',function(){var src=need();if(src===null)return;
+ var err=check(src);
+ try{put(format(src,ind()),err?'<b>Formatted</b> — but the JSON is <b>invalid</b>, line '+err.line+', column '+err.col+': '+err.message:'<b>Formatted and valid.</b>');}
+ catch(e){$('j-status').innerHTML='⚠ '+e.message;}});
+$('j-min').addEventListener('click',function(){var src=need();if(src===null)return;var err=check(src);
+ if(err){$('j-status').innerHTML='⚠ cannot minify invalid JSON — line '+err.line+', column '+err.col+': '+err.message;return;}
+ put(JSON.stringify(JSON.parse(src)),'<b>Minified and valid.</b>');});
+$('j-val').addEventListener('click',function(){var src=need();if(src===null)return;var err=check(src),lines=src.split(NL).length;
+ if(err){$('j-status').innerHTML='❌ <b>Invalid</b> at line '+err.line+', column '+err.col+' — '+err.message;}
+ else{$('j-status').innerHTML='✅ <b>Valid JSON</b> — '+lines+' line'+(lines===1?'':'s')+', no duplicate-key warning, nothing parsed into numbers by this check.';}});
+function sortVal(v){if(Array.isArray(v))return v.map(sortVal);
+ if(v&&typeof v==='object'){var o={},ks=Object.keys(v).sort(),i;for(i=0;i<ks.length;i++)o[ks[i]]=sortVal(v[ks[i]]);return o;}return v;}
+$('j-sort').addEventListener('click',function(){var src=need();if(src===null)return;var err=check(src);
+ if(err){$('j-status').innerHTML='⚠ cannot sort invalid JSON — line '+err.line+', column '+err.col+': '+err.message;return;}
+ put(JSON.stringify(sortVal(JSON.parse(src)),null,ind()),'<b>Keys sorted (object rebuilt)</b> — duplicate keys collapsed, integers above 2^53 may have lost precision.');});
+$('j-copy').addEventListener('click',function(){var t=$('j-out').value;if(!t)return;var b=this;
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy output';},1400);});}
+ else{b.textContent='Copy unavailable';}});
+$('j-in').addEventListener('input',function(){var s=$('j-in').value,l=s?s.split(NL).length:0;
+ $('j-status').textContent=s?s.length+' characters · '+l+' line'+(l===1?'':'s')+' · '+human(bytes(s)):'Paste JSON above. Nothing is sent anywhere.';});
+})();</script>`;
+  return worldDoc({
+    title: 'JSON Formatter & Validator — Format, Minify, Sort Keys | Tukuk-OS',
+    desc: 'Format, minify and validate JSON in your browser, with the line and column of any syntax error. The formatter preserves large numbers and key order; nothing is uploaded.',
+    selfUrl: 'https://tukuk.org/alat/json',
+    heroTitle: '🧩 JSON Formatter & Validator', heroSub: 'Format · minify · validate with line & column · sort keys — no upload',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk JSON Formatter & Validator',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local JSON formatter, minifier, validator with error line/column, and key sorter.',
+      url: 'https://tukuk.org/alat/json', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/hash — text and file checksums ──
+// SHA-1/256/384/512 come from Web Crypto. MD5 does not exist in Web Crypto, so it is
+// implemented here; the page labels both MD5 and SHA-1 as checksums, not security,
+// because that is what they are now.
+function hashPage() {
+  const body = `<p>Get <b>MD5, SHA-1, SHA-256, SHA-384 and SHA-512</b> of a piece of text or a whole file, side by side, without uploading it. Checksums are how you prove a download is the file the publisher intended: if one bit changed in transit, every digit above changes. That is also why a hash is not a secret — anything you hash is still in your hands.</p>
+  <div class="tl-form">
+    <label style="flex:1;min-width:240px">Text to hash <input id="h-text" type="text" value="abc" spellcheck="false" placeholder="type anything"></label>
+    <label>… or a file <input id="h-file" type="file"></label>
+    <button class="tl-btn" id="h-clear" type="button">Clear file</button>
+  </div>
+  <div class="tl-res" id="h-meta" aria-live="polite">Hashing “abc” — type, or choose a file, and the table updates itself.</div>
+  <table class="tl-tab" id="h-tab"></table>
+  <p class="meta">Click any digest to copy it. Digests are hexadecimal, lowercase, no spaces — the form checksum files and package registries print.</p>
+  <noscript><p>JavaScript is required — the hashing runs in your browser, which is the reason a private file is safe here.</p></noscript>
+  <h2 class="section-title">Which one should you send?</h2>
+  <p><b>SHA-256</b> is the default answer for anything new: it is what package managers, Git object names, TLS certificates and “verify your download” pages use. <b>SHA-512</b> is the same family with a bigger internal state and is standard on 64-bit systems; neither is “more secure” in any way that matters to a person checking a download. <b>SHA-1</b> is fine as a change detector and dead as a security claim — the SHAttered collision in 2017 produced two different PDFs with the same SHA-1, and chosen-prefix collisions followed. <b>MD5</b> is worse: collisions are trivial to generate, so never use it to prove authenticity — but it is still everywhere as a fast file fingerprint (ETags, dedupe, old drivers, ROM databases), which is why it is here, labelled.</p>
+  <p><b>A hash proves integrity, not identity.</b> If an attacker controls both the file and the published hash, the match proves nothing; the hash has to come from somewhere you trust independently — the vendor’s HTTPS page, a signed release note. Hashes are also not encryption: you cannot reverse them, and a short password hashed with any of these can still be guessed offline at billions of attempts per second. For passwords, use a slow salted function (argon2, bcrypt, scrypt), never a general-purpose digest. Everything here runs locally; there is no upload, and no server ever sees your bytes.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Encoding rather than hashing? <a href="/alat/base64">Base64 &amp; data URLs</a> is the reversible one.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function hex(u8){var o='',i,b;for(i=0;i<u8.length;i++){b=u8[i];o+=(b<16?'0':'')+b.toString(16);}return o;}
+function human(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';if(n<1073741824)return (n/1048576).toFixed(2)+' MB';return (n/1073741824).toFixed(2)+' GB';}
+function md5(u8){
+ var S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+ var K=[],i;
+ for(i=0;i<64;i++)K[i]=Math.floor(Math.abs(Math.sin(i+1))*4294967296);
+ var len=u8.length,padded=new Uint8Array((((len+8)>>6)+1)*64);
+ padded.set(u8);padded[len]=0x80;
+ var dv=new DataView(padded.buffer),bits=len*8;
+ dv.setUint32(padded.length-8,bits>>>0,true);
+ dv.setUint32(padded.length-4,Math.floor(bits/4294967296)>>>0,true);
+ var a0=0x67452301,b0=0xefcdab89,c0=0x98badcfe,d0=0x10325476;
+ function add(x,y){return (x+y)>>>0;}
+ function rotl(x,c){return ((x<<c)|(x>>>(32-c)))>>>0;}
+ for(var off=0;off<padded.length;off+=64){
+  var M=[],A,B,C,D,F,g;
+  for(i=0;i<16;i++)M[i]=dv.getUint32(off+i*4,true);
+  A=a0;B=b0;C=c0;D=d0;
+  for(i=0;i<64;i++){
+   if(i<16){F=(B&C)|((~B)&D);g=i;}
+   else if(i<32){F=(D&B)|((~D)&C);g=(5*i+1)%16;}
+   else if(i<48){F=B^C^D;g=(3*i+5)%16;}
+   else{F=C^(B|(~D));g=(7*i)%16;}
+   F=(F+A+K[i]+M[g])>>>0;
+   A=D;D=C;C=B;B=(B+rotl(F,S[i]))>>>0;
+  }
+  a0=add(a0,A);b0=add(b0,B);c0=add(c0,C);d0=add(d0,D);
+ }
+ function le(x){var o='',i,b;for(i=0;i<4;i++){b=(x>>>(i*8))&255;o+=(b<16?'0':'')+b.toString(16);}return o;}
+ return le(a0)+le(b0)+le(c0)+le(d0);}
+function rows(results){var h='',i,r;
+ for(i=0;i<results.length;i++){r=results[i];
+  h+='<tr data-h="'+r.hex+'" title="click to copy"><td><b>'+r.name+'</b><br><span class="meta" style="font-size:.75rem">'+r.note+'</span></td><td style="text-align:left;word-break:break-all;font:12px/1.5 ui-monospace,Consolas,monospace">'+r.hex+'</td></tr>';}
+ $('h-tab').innerHTML=h;
+ [].forEach.call($('h-tab').querySelectorAll('tr[data-h]'),function(tr){tr.onclick=function(){var t=tr.getAttribute('data-h');
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t);};});}
+function runText(){
+ if(!window.crypto||!crypto.subtle){$('h-meta').textContent='⚠ Web Crypto is unavailable in this browser or context — checksums need it.';return;}
+ var s=$('h-text').value,u8=new TextEncoder().encode(s);
+ $('h-meta').textContent='Hashing '+u8.length+' bytes of UTF-8 text…';
+ Promise.all([crypto.subtle.digest('SHA-1',u8),crypto.subtle.digest('SHA-256',u8),crypto.subtle.digest('SHA-384',u8),crypto.subtle.digest('SHA-512',u8)]).then(function(d){
+  rows([{name:'MD5',hex:md5(u8),note:'checksum only — collisions trivial'},{name:'SHA-1',hex:hex(new Uint8Array(d[0])),note:'checksum only — SHAttered 2017'},{name:'SHA-256',hex:hex(new Uint8Array(d[1])),note:'the default choice'},{name:'SHA-384',hex:hex(new Uint8Array(d[2])),note:'truncated SHA-512 family'},{name:'SHA-512',hex:hex(new Uint8Array(d[3])),note:'64-bit systems'} ]);
+  $('h-meta').innerHTML='<b>'+u8.length+'</b> bytes of UTF-8 text'+(s.length!==u8.length?' ('+s.length+' characters — the difference is multibyte letters)':'')+'. Click a digest to copy it.';
+ }).catch(function(e){$('h-meta').textContent='⚠ hashing failed: '+e.message;});}
+function runFile(f){
+ if(!window.crypto||!crypto.subtle){$('h-meta').textContent='⚠ Web Crypto is unavailable in this browser or context.';return;}
+ if(f.size>209715200){$('h-meta').innerHTML='⚠ '+f.name+' is '+human(f.size)+' — too large to hash in a tab without risking a crash. Use a terminal: <code>sha256sum</code> (Linux), <code>shasum -a 256</code> (macOS), <code>certutil -hashfile</code> (Windows).';return;}
+ $('h-meta').textContent='Reading '+f.name+' ('+human(f.size)+')…';
+ var r=new FileReader();
+ r.onload=function(){var u8=new Uint8Array(r.result);
+  $('h-meta').textContent='Hashing '+f.name+'…';
+  Promise.all([crypto.subtle.digest('SHA-1',u8),crypto.subtle.digest('SHA-256',u8),crypto.subtle.digest('SHA-384',u8),crypto.subtle.digest('SHA-512',u8)]).then(function(d){
+   rows([{name:'MD5',hex:md5(u8),note:'checksum only — collisions trivial'},{name:'SHA-1',hex:hex(new Uint8Array(d[0])),note:'checksum only — SHAttered 2017'},{name:'SHA-256',hex:hex(new Uint8Array(d[1])),note:'the default choice'},{name:'SHA-384',hex:hex(new Uint8Array(d[2])),note:'truncated SHA-512 family'},{name:'SHA-512',hex:hex(new Uint8Array(d[3])),note:'64-bit systems'} ]);
+   $('h-meta').innerHTML='<b>'+f.name+'</b> — '+human(f.size)+' ('+u8.length+' bytes). Compare SHA-256 with the publisher’s published value; if one digit differs, stop.';
+  }).catch(function(e){$('h-meta').textContent='⚠ hashing failed: '+e.message;});};
+ r.onerror=function(){$('h-meta').textContent='⚠ the file could not be read — it may have moved or the permission was refused.';};
+ r.readAsArrayBuffer(f);}
+$('h-text').addEventListener('input',runText);
+$('h-file').addEventListener('change',function(){var f=this.files&&this.files[0];if(f)runFile(f);else runText();});
+$('h-clear').addEventListener('click',function(){$('h-file').value='';runText();$('h-text').focus();});
+runText();
+})();</script>`;
+  return worldDoc({
+    title: 'Checksum & Hash Generator — MD5, SHA-1, SHA-256, SHA-384, SHA-512 | Tukuk-OS',
+    desc: 'Hash text or a whole file with MD5, SHA-1, SHA-256, SHA-384 and SHA-512 at once, in your browser. Nothing is uploaded — compare a download against its published checksum privately.',
+    selfUrl: 'https://tukuk.org/alat/hash',
+    heroTitle: '🔑 Checksum & Hash Generator', heroSub: 'MD5 · SHA-1 · SHA-256 · SHA-384 · SHA-512 — text or file, nothing uploaded',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Checksum & Hash Generator',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local MD5, SHA-1, SHA-256, SHA-384 and SHA-512 generator for text and files.',
+      url: 'https://tukuk.org/alat/hash', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/base64 — the reversible sibling of hashing ──
+function base64Page() {
+  const body = `<p><b>Encode text or a whole file to Base64, and decode it back</b> — UTF-8 correct in both directions, with the URL-safe variant for tokens and query strings. It is an encoding, not encryption: anyone can decode it in a second, so it protects nothing. What it does do is move binary data through channels that only accept text — JSON, XML, e-mail, a <code>data:</code> URL inside a style sheet.</p>
+  <div class="tl-form">
+    <label style="flex:1;min-width:240px">Text <input id="b-in" type="text" value="Tukuk-OS" spellcheck="false" placeholder="type text, or paste Base64 to decode"></label>
+    <label>Also output <select id="b-variant"><option value="std">Standard Base64</option><option value="url">URL-safe (no + / padding)</option><option value="both">Both</option></select></label>
+    <button class="tl-btn primary" id="b-enc" type="button">Encode →</button>
+    <button class="tl-btn" id="b-dec" type="button">← Decode</button>
+    <button class="tl-btn" id="b-copy" type="button">Copy</button>
+  </div>
+  <div id="b-textout" style="display:none"><label>Result</label><textarea id="b-out" class="tl-in" rows="5" readonly spellcheck="false"></textarea></div>
+  <h2 class="section-title">A file instead</h2>
+  <div class="tl-form">
+    <label>File <input id="b-file" type="file"></label>
+    <label>As <select id="b-form"><option value="raw">Raw Base64</option><option value="dataurl">data: URL</option></select></label>
+    <button class="tl-btn" id="b-fcopy" type="button">Copy</button>
+    <button class="tl-btn" id="b-fdl" type="button">Download .txt</button>
+  </div>
+  <div class="tl-res" id="b-finfo">Choose a file — it is read locally and never uploaded.</div>
+  <textarea id="b-fileout" class="tl-in" rows="5" readonly spellcheck="false" placeholder="Base64 appears here"></textarea>
+  <noscript><p>JavaScript is required — the encoding runs in your browser, so your file stays on your disk.</p></noscript>
+  <h2 class="section-title">The details that actually bite</h2>
+  <p><b>Base64 makes data 33% bigger.</b> Four characters carry three bytes, so a 3 MB photo becomes a 4 MB string. That is exactly why <code>data:</code> URLs are a bad idea for anything larger than an icon: the browser must download the whole string before it can parse the CSS or HTML holding it, and it cannot stream, cache separately, or be compressed as well as the raw file. It is also why the same bytes look different when wrapped in newlines — <b>PEM</b> files and Base64 in e-mail insert line breaks every 64 or 76 characters; those breaks are cosmetic and any decoder that is not broken ignores them, which this page does too.</p>
+  <p><b>The URL-safe variant</b> (<code>-</code> and <code>_</code> instead of <code>+</code> and <code>/</code>, usually without padding) exists because <code>+</code> becomes a space in a query string and <code>/</code> is a path separator. JWTs, opaque IDs and signed tokens use it; standard Base64 uses the other alphabet. Sending one where the other is expected gives the classic “signature mismatch” that costs an afternoon. <b>Decoding is not always text:</b> if the bytes are an image, this page tells you the decoded size instead of printing mojibake, and if a character outside the alphabet appears it says so rather than silently skipping it. Nothing here is encrypted — if you need that, Base64 will not help.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Need the irreversible direction instead? <a href="/alat/hash">The checksum tool</a>.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function human(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';if(n<1073741824)return (n/1048576).toFixed(2)+' MB';return (n/1073741824).toFixed(2)+' GB';}
+function toBin(u8){var o='',i;for(i=0;i<u8.length;i+=32768)o+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return o;}
+function b64encode(u8){return btoa(toBin(u8));}
+function b64decode(s){var clean='',i,c,n;for(i=0;i<s.length;i++){c=s.charAt(i);n=c.charCodeAt(0);
+  if(n===32||n===9||n===10||n===13)continue;
+  if(c==='-')clean+='+';else if(c==='_')clean+='/';else clean+=c;}
+ while(clean.length%4)clean+='=';
+ var bin=atob(clean),u8=new Uint8Array(bin.length);
+ for(i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+ return u8;}
+function urlSafe(s){return s.split('+').join('-').split('/').join('_').replace(/=+$/,'');}
+function show(text){$('b-textout').style.display='block';$('b-out').value=text;}
+$('b-enc').addEventListener('click',function(){var s=$('b-in').value;if(!s){show('');return;}
+ var u8=new TextEncoder().encode(s),std=b64encode(u8),v=$('b-variant').value;
+ if(v==='url')show(urlSafe(std));
+ else if(v==='both')show('Standard:'+String.fromCharCode(10)+std+String.fromCharCode(10)+String.fromCharCode(10)+'URL-safe:'+String.fromCharCode(10)+urlSafe(std));
+ else show(std);});
+$('b-dec').addEventListener('click',function(){var raw=$('b-in').value.trim();if(!raw){show('');return;}
+ var data=raw,prefix='';
+ if(data.indexOf('data:')===0){var comma=data.indexOf(',');if(comma>0){prefix=data.slice(0,comma+1);data=data.slice(comma+1);}}
+ try{
+  var u8=b64decode(data);
+  if(!u8.length){show('⚠ that decoded to zero bytes — check the input.');return;}
+  var text='';
+  try{text=new TextDecoder('utf-8',{fatal:true}).decode(u8);}catch(e){text='';}
+  if(text){show(text);}
+  else{var preview='',i;for(i=0;i<Math.min(u8.length,24);i++)preview+=(u8[i]<16?'0':'')+u8[i].toString(16)+' ';
+   show('⚠ decoded '+u8.length+' bytes, but they are not UTF-8 text — this is a binary file (image, PDF, ZIP…), not something to show as letters.'+String.fromCharCode(10)+String.fromCharCode(10)+'First bytes: '+preview+(u8.length>24?'…':''));}
+ }catch(e){show('⚠ not valid Base64 — it contains a character outside the alphabet, or the length is wrong.');}});
+function chunked(u8,cb){var parts=[],i;for(i=0;i<u8.length;i+=32768)parts.push(String.fromCharCode.apply(null,u8.subarray(i,i+32768)));cb(parts.join(''));}
+function fill(){var b=$('b-fileout');b.value=$('b-finfo').getAttribute('data-value')||'';}
+$('b-file').addEventListener('change',function(){var f=this.files&&this.files[0];
+ $('b-fileout').value='';
+ if(!f){$('b-finfo').textContent='Choose a file — it is read locally and never uploaded.';return;}
+ $('b-finfo').textContent='Reading '+f.name+' ('+human(f.size)+')…';
+ var r=new FileReader();
+ r.onload=function(){var u8=new Uint8Array(r.result),b64=b64encode(u8),f2=$('b-form').value;
+  var out=f2==='dataurl'?'data:'+(f.type||'application/octet-stream')+';base64,'+b64:b64;
+  $('b-finfo').setAttribute('data-value',out);
+  $('b-finfo').innerHTML='<b>'+f.name+'</b> — '+human(f.size)+' → Base64 '+human(b64.length)+' (<b>'+(b64.length/Math.max(u8.length,1)).toFixed(2)+'×</b> the original).'+(f2==='dataurl'?' Use the data: URL only for small assets — it is '+Math.round(b64.length/1024)+' KB of text the browser cannot cache separately.':' This is text, not encryption; anyone can decode it.');
+  fill();};
+ r.onerror=function(){$('b-finfo').textContent='⚠ the file could not be read — it may have moved.';};
+ r.readAsArrayBuffer(f);});
+$('b-form').addEventListener('change',function(){var f=$('b-file').files&&$('b-file').files[0];
+ if(!f)return;
+ var dt=new DataTransfer();dt.items.add(f);$('b-file').files=dt.files;
+ $('b-file').dispatchEvent(new Event('change'));});
+$('b-copy').addEventListener('click',function(){var t=$('b-out').value;if(!t)return;var b=this;
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy';},1400);});});
+$('b-fcopy').addEventListener('click',function(){var t=$('b-finfo').getAttribute('data-value')||'';if(!t)return;var b=this;
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy';},1400);});});
+$('b-fdl').addEventListener('click',function(){var t=$('b-finfo').getAttribute('data-value')||'';if(!t)return;
+ var blob=new Blob([t],{type:'text/plain'});var url=URL.createObjectURL(blob);
+ var a=document.createElement('a');a.href=url;a.download='base64.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);
+ setTimeout(function(){URL.revokeObjectURL(url);},5000);});
+$('b-enc').click();
+})();</script>`;
+  return worldDoc({
+    title: 'Base64 Encoder & Decoder — Text, Files & data: URLs | Tukuk-OS',
+    desc: 'Encode and decode Base64 with correct UTF-8, URL-safe output, file to data URL and back — entirely in your browser. No upload, no account, no size limit.',
+    selfUrl: 'https://tukuk.org/alat/base64',
+    heroTitle: '🔁 Base64 Encoder & Decoder', heroSub: 'UTF-8 text · files · data: URLs · URL-safe variant — nothing uploaded',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Base64 Encoder & Decoder',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local Base64 encoder and decoder for text and files, with URL-safe output and data: URL support.',
+      url: 'https://tukuk.org/alat/base64', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, toolsNav());
 }

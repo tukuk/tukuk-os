@@ -19,7 +19,11 @@ const PAGES = [
   { path: '/alat/qr', marker: 'QR Code Generator', ids: ['q-text', 'q-ec', 'q-size', 'q-cv', 'q-dl', 'q-mode', 'q-ssid'] },
   { path: '/alat/ip', marker: 'What Is My IP?', ids: ['i-out', 'i-copy'] },
   { path: '/alat/epoch', marker: 'Unix Timestamp Converter', ids: ['e-now', 'e-in', 'e-unit', 'e-go', 'e-local', 'e-back', 'e-zones'] },
-  { path: '/alat/rawak', marker: 'Random Number, Dice &amp; List Picker', ids: ['r-min', 'r-go', 'r-out', 'd-sides', 'd-go', 'l-items', 'l-go'] }
+  { path: '/alat/rawak', marker: 'Random Number, Dice &amp; List Picker', ids: ['r-min', 'r-go', 'r-out', 'd-sides', 'd-go', 'l-items', 'l-go'] },
+  { path: '/alat/pdf', marker: 'PDF Tools', ids: ['d-files', 'd-mode', 'd-range', 'd-rot', 'd-go', 'd-dl', 'd-out', 'd-list'] },
+  { path: '/alat/json', marker: 'JSON Formatter &amp; Validator', ids: ['j-ind', 'j-fmt', 'j-min', 'j-val', 'j-sort', 'j-copy', 'j-in', 'j-status', 'j-out'] },
+  { path: '/alat/hash', marker: 'Checksum &amp; Hash Generator', ids: ['h-text', 'h-file', 'h-clear', 'h-meta', 'h-tab'] },
+  { path: '/alat/base64', marker: 'Base64 Encoder &amp; Decoder', ids: ['b-in', 'b-variant', 'b-enc', 'b-dec', 'b-copy', 'b-out', 'b-file', 'b-finfo', 'b-fileout'] }
 ];
 
 for (const page of PAGES) {
@@ -52,12 +56,24 @@ test('every new tool is reachable from the hub and the cross-tool nav', async ()
   }
 });
 
-test('sitemap.xml lists all six new tools', async () => {
+test('sitemap.xml lists all ten tools', async () => {
   const xml = await (await fetch(base + '/sitemap.xml')).text();
   // The <loc> host follows the request host (tukuk.org in production, the test
   // listener here), so assert on the path only.
   for (const page of PAGES) {
     assert.ok(xml.includes(`${page.path}</loc>`), `sitemap misses ${page.path}`);
+  }
+});
+
+// A tool is only as good as the code it loads. The PDF page is the first one in the
+// cluster that depends on a vendored binary-sized library, so its presence is part of
+// the page's contract — a missing lib turns a working page into a silent dead form.
+test('vendored PDF and ZIP libraries are served from our own host', async () => {
+  for (const [path, minBytes] of [['/libs/pdf-lib.min.js', 400000], ['/libs/fflate.min.js', 20000]]) {
+    const res = await fetch(base + path);
+    assert.equal(res.status, 200, `${path} must be served`);
+    const body = await res.arrayBuffer();
+    assert.ok(body.byteLength >= minBytes, `${path} looks truncated (${body.byteLength} bytes)`);
   }
 });
 

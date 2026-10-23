@@ -36,7 +36,7 @@ const GLOBALS = new Set((`window document console localStorage sessionStorage na
   RTCSessionDescription RTCIceCandidate MediaStream speechSynthesis SpeechSynthesisUtterance
   atob btoa onload onerror structuredClone cloneNode Intl BigInt localeCompare THREE L GoogleAnalytics
   ga dataLayer fbq chrome browser self top parent frames addEventListener removeEventListener dispatchEvent
-  event clients windowWidth windowHeight origin location`).split(/\s+/));
+  event clients windowWidth windowHeight origin location adsbygoogle DataTransfer PDFLib fflate`).split(/\s+/));
 
 // Extra names that are legal in CommonJS files (the server).
 const NODE_GLOBALS = new Set(('require module exports __dirname __filename process Buffer global globalThis ' +
@@ -50,7 +50,14 @@ function inlineScripts(html) {
   let m;
   while ((m = re.exec(html))) {
     if (/\bsrc\s*=/.test(m[1])) continue;
-    if (/type\s*=\s*["']?(application\/json|text\/template)/.test(m[1])) continue;
+    // Only real JavaScript blocks. SSR pages carry JSON-LD (application/ld+json), and
+    // the earlier pattern skipped application/json but not ld+json, which made every
+    // server-rendered page fail to parse while the browser ran it perfectly well.
+    const typeMatch = m[1].match(/\btype\s*=\s*["']?([^"'\s>]+)/);
+    if (typeMatch) {
+      const t = typeMatch[1].toLowerCase();
+      if (t !== 'module' && t !== 'text/javascript' && t !== 'application/javascript') continue;
+    }
     out.push({ offset: html.slice(0, m.index).split('\n').length, code: m[2] });
   }
   return out;
