@@ -62,6 +62,7 @@ const { guardedStats } = require('./outbound');
 const nasa = require('./nasa');
 const wx = require('./weather');
 const trf = require('./traffic');
+const trfLive = require('./traffic-live');
 const teknologi = require('./teknologi');
 const peta = require('./peta');
 const gp = require('./gempa');
@@ -1620,6 +1621,46 @@ app.post('/api/traffic/vote', (req, res) => {
   const r = trf.vote(String(id || ''), String(dir || ''));
   if (!r) return res.status(404).json({ ok: false, error: 'report not found or already expired' });
   res.json({ ok: true, report: r });
+});
+
+// ── /api/traffic/tiles/{z}/{x}/{y} — LIVE traffic flow, proxied + cached ────────
+// One page view asks for ~9 tiles, so this sits behind its own generous bucket:
+// 900 tiles/minute is far beyond what panning produces, and it stops a script
+// from turning our box into a free tile reseller. Everything the provider gives
+// us is cached for two minutes by src/traffic-live.js, which is also where the
+// stale-beats-error and 1x1-transparent fallbacks live.
+const trafficTileLimiter = config.rateLimit.enabled
+  ? rateLimit({ windowMs: 60 * 1000, max: 900, keyPrefix: 'trftile:' })
+  : (req, res, next) => next();
+app.get('/api/traffic/tiles/:z/:x/:y', trafficTileLimiter, async (req, res) => {
+  const y = String(req.params.y || '').replace(/\.[a-z]+$/i, '');
+  // getTile never throws by design, but an async route that rejects would take the
+  // whole request down silently in Express 4 — so the fallback is explicit here.
+  let tile = null;
+  try { tile = await trfLive.getTile(req.params.z, req.params.x, y); } catch { tile = null; }
+  if (!tile) {
+    // Nothing cached and the provider is unreachable: answer with a transparent tile
+    // so Leaflet quietly shows the community layer over the plain base map.
+    res.status(200);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=20');
+    res.setHeader('X-Traffic-Tile', 'fallback');
+    return res.end(trfLive.TRANSPARENT);
+  }
+  res.status(200);
+  res.setHeader('Content-Type', tile.type);
+  // Two minutes matches the freshness the page claims; a stale tile is worth a much
+  // shorter lease so the next view retries the provider instead of freezing the map.
+  res.setHeader('Cache-Control', tile.stale ? 'public, max-age=15' : 'public, max-age=60');
+  res.setHeader('X-Traffic-Tile', tile.stale ? 'stale' : tile.cached ? 'hit' : 'live');
+  res.end(tile.buf);
+});
+
+// Live-layer heartbeat for the page footer / health checks. Counters only — the
+// endpoint knows nothing about who asked, in line with the page's privacy promise.
+app.get('/api/traffic/live', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, ...trfLive.status() });
 });
 
 // ── TECHNOLOGY COMPLEX ROUTES (/technology*) — live tech pulse, Hacker News feed ──
@@ -6288,14 +6329,14 @@ function cuacaMapPage(req) {
     ['pressure_new', 'Air pressure', false],
   ];
   const payload = JSON.stringify(layers.map(([l, label, def]) => ({ layer: l, label, def, url: wx.tileTemplateUrl(l) }))).replace(/</g, '\\u003c');
-  const body = `<p>A live map layered with OpenWeather weather \u2014 toggle rain, clouds and pressure over streets/terrain. Tiles load at world resolution; find your city on any continent, or zoom into Singapore, Mumbai or Lagos to watch the famous tropical afternoon rain cells form.</p>`
+  const body = `<p>A live map layered with OpenWeather weather — toggle rain, clouds and pressure over streets/terrain, and flip the base map to <b>Live traffic</b> to read the roads under the same rain. Tiles load at world resolution; find your city on any continent, or zoom into Singapore, Mumbai or Lagos to watch the famous tropical afternoon rain cells form.</p>`
     + `<div id="wxmap" role="application" aria-label="Live weather map"></div>`
     + `<noscript><p>JavaScript is required for the interactive map. Text lists are on the <a href="/weather">weather hub</a> and <a href="/weather/extremes">temperature extremes</a>.</p></noscript>`
     + `<h2 class="section-title">How to read it</h2><p>The rain layer follows a colour scale: blue = light rain, yellow\u2013red = heavy/thunderstorm. The small "speckled" pattern over inland Borneo in the late afternoon is local convection \u2014 storm clouds grow from heated ground rather than from a front; that is why tropical forecasts change fast and why our 45-minute cache value is deliberately short. The pressure layer shows isobars: closely spaced isobars mean strong wind.</p>`
     + `<h2 class="section-title">Shared with the night sky</h2><p>This map shows <em>cloud right now</em> \u2014 the stargazer\u2019s enemy. If the cloud layer is empty over your location, check <a href="/nasa/sky">Tonight\u2019s Sky</a> for the moon phase and astronomical darkness before hauling out the telescope.</p>`
-    + `<p class="meta">Tiles: \u00a9 <a href="https://openweathermap.org/" rel="noopener nofollow">OpenWeather</a> \u00b7 base map: \u00a9 <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors.</p>`;
+    + `<p class="meta">Tiles: © <a href="https://openweathermap.org/" rel="noopener nofollow">OpenWeather</a> · base maps: © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors and live traffic © <a href="https://www.google.com/maps" rel="noopener nofollow">Google</a>.</p>`;
   const script = `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
-    + `<script>document.addEventListener('DOMContentLoaded',function(){var WXP=${payload};function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('wxmap').setView([3.8,107],5);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'\\u00a9 OpenStreetMap'}).addTo(m);var ctl=[];WXP.forEach(function(o){var tl=L.tileLayer(o.url,{maxZoom:12,opacity:.8});if(o.def)tl.addTo(m);ctl.push({[o.label]:tl});});L.control.layers(null,ctl,{collapsed:false}).addTo(m);}boot();});</script>`;
+    + `<script>document.addEventListener('DOMContentLoaded',function(){var WXP=${payload};function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('wxmap').setView([3.8,107],5);var wxOsm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'\\u00a9 OpenStreetMap'});var wxFlow=L.tileLayer('/api/traffic/tiles/{z}/{x}/{y}',{maxZoom:12,attribution:'Live traffic © Google'});wxOsm.addTo(m);var ctl=[];WXP.forEach(function(o){var tl=L.tileLayer(o.url,{maxZoom:12,opacity:.8});if(o.def)tl.addTo(m);ctl.push({[o.label]:tl});});L.control.layers({'🗺 Map':wxOsm,'🚦 Live traffic':wxFlow},ctl,{collapsed:false}).addTo(m);}boot();});</script>`;
   return cuacaDoc({
     title: 'Live Weather Map \u2014 Rain, Clouds & Pressure Worldwide (OpenWeather) | Tukuk-OS',
     desc: 'A free interactive map: layer OpenWeather rain, clouds and air pressure over OpenStreetMap. Zoom into your city and watch the weather move right now.',
@@ -9493,7 +9534,16 @@ const TRAFFIC_CSS = `#trf-wrap{display:grid;grid-template-columns:1fr 340px;gap:
 .trf-btn[disabled]{opacity:.5;cursor:default}
 #trf-status{font-size:.85rem;color:var(--muted,#9aa3b2);margin-left:6px}
 .leaflet-popup-content{font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#151922}
-.leaflet-popup-content b{color:#0b0f16}`;
+.leaflet-popup-content b{color:#0b0f16}
+#trf-live-badge{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel,#171a21);color:var(--muted,#9aa3b2);vertical-align:middle}
+#trf-live-badge .pulse{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.45}
+#trf-live-badge.on{color:#34d399;border-color:#34d399}
+#trf-live-badge.on .pulse{opacity:1;animation:trf-pulse 1.7s ease-in-out infinite}
+@keyframes trf-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.trf-btn.live-on{border-color:#34d399;color:#34d399}
+.trf-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:.82rem;color:var(--muted,#9aa3b2);margin:8px 0 0}
+.trf-legend i{display:inline-block;width:22px;height:5px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.leaflet-control-layers{font:14px system-ui}`;
 
 function trafficHubPage() {
   const activeCount = trf.activeCount();
@@ -9503,18 +9553,21 @@ function trafficHubPage() {
   // The chips row is server-rendered for SEO (the map itself is JS-only), so a
   // crawler sees at least a summary of what types exist and the current counts.
   const chipsHtml = Object.entries(trf.TYPES).map(([key, t]) =>
-    `<span class="trf-chip" data-type="${key}"><span class="dot" style="background:${t.color}"></span>${escapeHtml(t.emoji + ' ' + t.label)} <b class="meta">(${counts[key] || 0})</b></span>`
+    `<span class="trf-chip on" data-type="${key}"><span class="dot" style="background:${t.color}"></span>${escapeHtml(t.emoji + ' ' + t.label)} <b class="meta">(${counts[key] || 0})</b></span>`
   ).join('');
   const listHtml = trf.listActive().slice(0, 20).map((r) =>
     `<div class="trf-row" data-id="${r.id}"><div class="t"><span>${r.emoji}</span><b>${escapeHtml(r.label)}</b><span class="m">· ${r.expiresInMin} min left</span></div><p class="n">${escapeHtml(r.note || '(no details)')}</p><p class="m">▲ ${r.up} · ▼ ${r.down}</p></div>`
   ).join('') || '<p class="meta">No reports yet — be the first to add one.</p>';
-  const body = `<p><b>Tukuk Traffic</b> is a small, community-run road board: anyone can drop a pin for a jam, an accident, a police checkpoint, a hazard, a road closure, a speed camera, heavy rain or a fuel-price tip. Reports <b>fade out automatically</b> as they age (traffic in an hour, closures in a day, cameras in a week), and every driver can up-vote what they still see or down-vote what has cleared — so the map shows <em>the road right now</em>, not a stale archive. There is no login, no account and no location tracking: it is a shared whiteboard for anyone on the road.</p>
+  const body = `<p><b>Tukuk Traffic</b> is a live world traffic map with a community voice on top. The <b>coloured roads are real measured traffic</b> — green flowing, amber slow, red stopped — renewed every couple of minutes from the movement of phones in cars, so you can look at any city on Earth and see the jam before you join it. On top of that, anyone can drop a pin for the things a speed sensor cannot know: an accident, a police checkpoint, a road hazard, a closure, a speed camera, heavy rain or a fuel price. Those reports <b>fade out automatically</b> as they age, and drivers up-vote what they still see or down-vote what has cleared. There is no login, no account and no location tracking: the flow layer is anonymous and your own pins belong to nobody.</p>
   <div class="trf-fabs">
+    <button class="trf-btn live-on" id="trf-live-toggle" aria-pressed="true">🚦 Live traffic: ON</button>
     <button class="trf-btn primary" id="trf-new">➕ New report</button>
     <button class="trf-btn" id="trf-me">🎯 Near me</button>
     <button class="trf-btn" id="trf-refresh">🔄 Refresh</button>
-    <span id="trf-status">${activeCount} active reports worldwide · auto-refresh every 30s</span>
+    <span id="trf-live-badge" class="on"><span class="pulse"></span>live</span>
+    <span id="trf-status">${activeCount} active reports worldwide · flow refreshed every 2 min</span>
   </div>
+  <p class="trf-legend"><span><i style="background:#34a853"></i>flowing</span><span><i style="background:#fbbc04"></i>slow</span><span><i style="background:#ea4335"></i>stopped</span><span>traffic colours update about every 2 minutes</span></p>
   <div id="trf-filters">${chipsHtml}</div>
   <div id="trf-form">
     <p class="lbl">1. <b>Tap anywhere on the map</b> to place your pin — or use “Near me” above. Current pin: <span class="coord" id="trf-pin">no pin yet</span></p>
@@ -9530,17 +9583,33 @@ function trafficHubPage() {
     <aside id="trf-side"><h3>Latest reports</h3><div id="trf-list">${listHtml}</div></aside>
   </div>
   <noscript><p>JavaScript is required for the interactive map. Reload with JS enabled, or browse the <a href="/weather">world weather</a> instead.</p></noscript>
+  <h2 class="section-title">Two layers, two different questions</h2>
+  <p>The <b>flow layer</b> answers “is the road moving?”. It is a raster of measured speeds — the same class of reading a navigation app draws — coloured green (running near the limit), amber (slowed) and red (stopped or crawling). It covers the whole planet wherever enough phones are moving, and refreshes roughly every two minutes; a quiet rural road can show no colour at all, which is not a bug but an absence of evidence. The <b>community layer</b> answers “why?” and “what should I know?” — a crash, a checkpoint, a flooded stretch, a camera. A speed sensor cannot see any of those, and a driver can.</p>
+  <p>Both are served through our own server: the flow tiles are fetched and cached here, so the provider never learns who you are and a second look at the same junction costs nothing upstream. If the provider is unreachable the previous copy is still drawn instead of a blank square, and if there is nothing cached at all the page quietly falls back to a plain map with the community pins on top.</p>
   <h2 class="section-title">How the community keeps it honest</h2>
   <p>Every report has a <b>time-to-live</b>: a traffic-jam report naturally clears within an hour, police checkpoints within three, closures stay posted for a full day, and speed cameras — being fixed objects — persist for a week. The clock starts the moment you post. Up-votes from other drivers extend the clock a little (up to ten extra minutes per vote, capped at six votes’ worth), and once a report has five more down-votes than up-votes it disappears immediately. That way we never need a human moderator: the crowd trims the board by itself.</p>
   <h2 class="section-title">What this is not</h2>
-  <p>Tukuk Traffic is <b>not a turn-by-turn navigation app</b> and we do not offer live GPS routing or ETA prediction. It is a plain community notice board with a map on it. Nothing here is verified by authorities — use it as a heads-up alongside your own judgement and always obey local traffic laws. Want point-to-point directions instead? Open <a href="/maps">Maps &amp; Navigation</a>.</p>
+  <p>Tukuk Traffic is <b>not turn-by-turn navigation</b>: we show the state of the road and let people annotate it, but we do not compute traffic-aware routes or ETAs — the free <a href="/maps">route planner</a> gives honest free-flow times from OpenStreetMap instead. Community reports are unverified, so treat them as a heads-up alongside your own eyes and always obey local traffic laws. A traffic colour describes the last few minutes; it is a measurement, not a promise about the next five.</p>
   <h2 class="section-title">Data &amp; privacy</h2>
   <p>Reports are anonymous. We do not attach any user ID, IP address or device fingerprint to a post. Coordinates are rounded to 5 decimal places (roughly a metre), and we keep at most 500 active reports on the server at any time. Old rows are removed automatically on every read and every write.</p>
-  <p class="meta">Base map: © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors, rendered with Leaflet. Data: this site only — stored in <code>data/traffic.json</code>, reloaded atomically.</p>`;
+  <p class="meta">Live traffic flow and base map: © <a href="https://www.google.com/maps" rel="noopener nofollow">Google</a>, proxied and cached on this server for two minutes. Community reports: this site only — stored in <code>data/traffic.json</code>, reloaded atomically. Rendered with <a href="https://leafletjs.com" rel="noopener nofollow">Leaflet</a>.</p>`;
   const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
     + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
     + `<script>(function(){var TYPES=${typeMeta};var SEED=${initialReports};var all=SEED.slice();var pin=null;var chosenType=null;var voted={};var markers={};var activeTypes={};Object.keys(TYPES).forEach(function(k){activeTypes[k]=true;});function fmtAgo(ms){var m=Math.max(0,Math.round((Date.now()-ms)/60000));if(m<1)return'moments ago';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+' hr ago';return Math.floor(h/24)+' d ago';}
-function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('trf-map',{zoomControl:true,scrollWheelZoom:true}).setView([20,20],2);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'}).addTo(m);window.__trfMap=m;render(m);
+var LIVE_BASE='/api/traffic/tiles/{z}/{x}/{y}';var OSM_BASE='https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+var LIVE_ON=true;try{LIVE_ON=(localStorage.getItem('trf-live')||'on')!=='off';}catch(e){}
+var liveErrs=0;
+function liveLabel(on){var b=document.getElementById('trf-live-toggle');if(b){b.textContent=on?'🚦 Live traffic: ON':'🚦 Live traffic: OFF';b.classList.toggle('live-on',on);b.setAttribute('aria-pressed',on?'true':'false');}var g=document.getElementById('trf-live-badge');if(g){g.classList.toggle('on',on);if(g.lastChild)g.lastChild.nodeValue=on?'live':'off';}}
+function refreshLive(){var l=window.__trfLive;if(!l||!LIVE_ON)return;l.setUrl(LIVE_BASE+'?v='+Date.now());}
+function setLive(on){LIVE_ON=on;try{localStorage.setItem('trf-live',on?'on':'off');}catch(e){}
+  var m=window.__trfMap;
+  if(m){if(on){liveErrs=0;if(m.hasLayer(window.__trfOsm))m.removeLayer(window.__trfOsm);window.__trfLive.addTo(m);}else{if(m.hasLayer(window.__trfLive))m.removeLayer(window.__trfLive);window.__trfOsm.addTo(m);}}
+  liveLabel(on);if(on)refreshLive();
+  var s=document.getElementById('trf-status');if(s&&on)s.textContent=all.length+' active reports worldwide · flow refreshed every 2 min';}
+function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('trf-map',{zoomControl:true,scrollWheelZoom:true}).setView([20,20],2);var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'});var live=L.tileLayer(LIVE_BASE,{maxZoom:19,attribution:'Live traffic © Google'});
+  window.__trfMap=m;window.__trfOsm=osm;window.__trfLive=live;
+  live.on('tileerror',function(){liveErrs++;if(liveErrs>=6&&LIVE_ON){setLive(false);var s=document.getElementById('trf-status');if(s)s.textContent='live flow unreachable — showing the plain map';}});
+  (LIVE_ON?live:osm).addTo(m);liveLabel(LIVE_ON);render(m);
   m.on('click',function(e){pin=[e.latlng.lat.toFixed(5),e.latlng.lng.toFixed(5)];document.getElementById('trf-pin').textContent=pin.join(', ');showForm();var b=document.getElementById('trf-submit');if(b&&chosenType)b.disabled=false;});}
 function showForm(){document.getElementById('trf-form').classList.add('show');}
 function hideForm(){document.getElementById('trf-form').classList.remove('show');}
@@ -9553,20 +9622,22 @@ function submit(){if(!pin||!chosenType)return;var note=document.getElementById('
 document.addEventListener('DOMContentLoaded',function(){boot();
   document.getElementById('trf-new').onclick=function(){showForm();};
   document.getElementById('trf-cancel').onclick=function(){hideForm();};
-  document.getElementById('trf-refresh').onclick=function(){fetchReports();};
+  document.getElementById('trf-refresh').onclick=function(){fetchReports();refreshLive();};
+  document.getElementById('trf-live-toggle').onclick=function(){setLive(!LIVE_ON);};
   document.getElementById('trf-me').onclick=function(){if(!navigator.geolocation){alert('Your browser does not expose location.');return;}navigator.geolocation.getCurrentPosition(function(p){var c=[p.coords.latitude,p.coords.longitude];window.__trfMap.setView(c,13);pin=[c[0].toFixed(5),c[1].toFixed(5)];document.getElementById('trf-pin').textContent=pin.join(', ');showForm();document.getElementById('trf-submit').disabled=!chosenType;},function(e){alert('Location denied: '+(e.message||''));});};
   document.getElementById('trf-submit').onclick=submit;
   document.querySelectorAll('.trf-type').forEach(function(b){b.onclick=function(){document.querySelectorAll('.trf-type').forEach(function(x){x.style.outline='';});b.style.outline='2px solid var(--accent)';chosenType=b.dataset.type;if(pin)document.getElementById('trf-submit').disabled=false;};});
-  document.querySelectorAll('.trf-chip').forEach(function(c){c.onclick=function(){var k=c.dataset.type;activeTypes[k]=!activeTypes[k];c.classList.toggle('on',!activeTypes[k]?false:true);if(!activeTypes[k])c.classList.add('on');else c.classList.remove('on');render(window.__trfMap);c.classList.toggle('on',!activeTypes[k]);};});
+  document.querySelectorAll('.trf-chip').forEach(function(c){c.onclick=function(){var k=c.dataset.type;activeTypes[k]=!activeTypes[k];c.classList.toggle('on',activeTypes[k]);render(window.__trfMap);};});
   document.addEventListener('click',function(e){var t=e.target;if(t&&t.dataset&&t.dataset.vote&&t.dataset.id){vote(t.dataset.id,t.dataset.vote);}});
   setInterval(fetchReports,30000);
+  setInterval(function(){if(LIVE_ON)refreshLive();},120000);
 });})();</script>`;
   return worldDoc({
-    title: 'Tukuk Traffic — Community Road Reports, Live Hazards, Police, Closures & Jams | Tukuk-OS',
-    desc: 'A free, anonymous, community-maintained road map: report and see traffic jams, accidents, police checkpoints, road hazards, closures, speed cameras, heavy rain and fuel prices in real time — anywhere in the world.',
+    title: 'Tukuk Traffic — Live Traffic Map & Real Road Conditions Worldwide | Tukuk-OS',
+    desc: 'A live traffic map for any city on Earth: real measured road flow in green, amber and red, refreshed every two minutes, plus community reports of accidents, police checks, hazards and closures. Free, no login, no tracking.',
     selfUrl: 'https://tukuk.org/traffic',
     heroTitle: '🚦 Tukuk Traffic',
-    heroSub: 'Community road reports · auto-fading · no login · worldwide',
+    heroSub: 'Live flow map · community road reports · worldwide · no login',
     css: TRAFFIC_CSS,
     body: body + script,
     ld: JSON.stringify({
@@ -9752,7 +9823,7 @@ function petaPage() {
   <h2 class="section-title">How the route is built</h2>
   <p>Your place names are resolved by <b>Nominatim</b> (OpenStreetMap’s own search) and the road path by <b>OSRM</b>, one of the fastest open-source routing engines in existence — it answers in milliseconds across entire countries. Both run against the worldwide OpenStreetMap map, drawn and maintained by millions of volunteers, which is why remote villages and footpaths appear just like motorways. Our server caches every answer briefly, so repeated lookups never touch the public services.</p>
   <h2 class="section-title">What it is not</h2>
-  <p>This is a route <b>planner</b>, not a live navigation co-pilot: there are no voice prompts, no speed cameras on the route and no traffic-aware rerouting — for the community’s eyes on the road itself see <a href="/traffic">Tukuk Traffic</a>. Distances and times assume free-flowing conditions; road works, closures and local rules always win. Some pairs genuinely have no road between them (islands, or Borneo and the Peninsula without a ferry) — the router will say so honestly rather than invent a path.</p>
+  <p>This is a route <b>planner</b>, not a live navigation co-pilot: there are no voice prompts, no speed cameras on the route and the times assume free-flowing roads. The layer box in the corner does carry a real <b>Live traffic</b> view (measured road flow, green–amber–red, refreshed every couple of minutes) so you can read the road before you commit to a route, and <a href="/traffic">Tukuk Traffic</a> adds the community side — crashes, checkpoints, closures and hazards that a speed reading cannot explain. Distances and times assume free-flowing conditions; road works, closures and local rules always win. Some pairs genuinely have no road between them (islands, or Borneo and the Peninsula without a ferry) — the router will say so honestly rather than invent a path.</p>
   <p class="meta">Map data &amp; © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors; routing by <a href="http://project-osrm.org/" rel="noopener nofollow">OSRM</a>; search by <a href="https://nominatim.org/" rel="noopener nofollow">Nominatim</a>. Tiles rendered with Leaflet; satellite imagery © <a href="https://www.esri.com/content/dam/esrisites/en-us/media/legal/feature-article-licensing.pdf" rel="noopener nofollow">Esri</a>, Maxar &amp; Earthstar Geographics; daily true-color by <a href="https://worldview.earthdata.nasa.gov" rel="noopener nofollow">NASA GIBS</a> (VIIRS/Suomi-NPP, renewed every day). No coordinates leave your browser except the two endpoints you search.</p>`;
   const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
     + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
@@ -9791,14 +9862,15 @@ function boot(){if(!window.L){setTimeout(boot,300);return;}
   var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'});
   var sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery \\u00a9 Esri, Maxar, Earthstar Geographics'});
   var ref=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+  var flow=L.tileLayer('/api/traffic/tiles/{z}/{x}/{y}',{maxZoom:19,attribution:'Live traffic © Google'});
   var hybrid=L.layerGroup([sat,ref]);
   var d=new Date();var gd=d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);
   var live=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+gd+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpeg',{maxNativeZoom:9,maxZoom:12,attribution:'NASA GIBS — true-color satellite, renewed daily ('+gd+')'});
   var night=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_DayNightBand/default/'+gd+'/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png',{maxNativeZoom:7,maxZoom:12,attribution:'NASA GIBS — NOAA-20 day/night lights, renewed daily ('+gd+')'});
   var pref='';try{pref=localStorage.getItem('peta-view')||'';}catch(e){}
-  (pref==='sat'?hybrid:pref==='live'?live:pref==='night'?night:osm).addTo(map);
-  L.control.layers({'🗺 Map':osm,'🛰 Satellite':hybrid,'☀ Live true-color (daily)':live,'🌙 Night lights (daily)':night},null,{collapsed:window.innerWidth<720}).addTo(map);
-  map.on('baselayerchange',function(e){var k=e.layer===hybrid?'sat':(e.layer===live?'live':(e.layer===night?'night':'map'));try{localStorage.setItem('peta-view',k);}catch(x){}});
+  (pref==='sat'?hybrid:pref==='live'?live:pref==='night'?night:pref==='traffic'?flow:osm).addTo(map);
+  L.control.layers({'🚦 Live traffic':flow,'🗺 Map':osm,'🛰 Satellite':hybrid,'☀ Live true-color (daily)':live,'🌙 Night lights (daily)':night},null,{collapsed:window.innerWidth<720}).addTo(map);
+  map.on('baselayerchange',function(e){var k=e.layer===flow?'traffic':(e.layer===hybrid?'sat':(e.layer===live?'live':(e.layer===night?'night':'map')));try{localStorage.setItem('peta-view',k);}catch(x){}});
   map.on('click',function(e){pin('d',e.latlng.lat,e.latlng.lng);status('destination set — left-click again to move it, right-click for start');});
   map.on('contextmenu',function(e){e.originalEvent.preventDefault();pin('s',e.latlng.lat,e.latlng.lng);status('start set — press Go');});
   document.getElementById('peta-go').onclick=go;
@@ -9809,7 +9881,7 @@ function boot(){if(!window.L){setTimeout(boot,300);return;}
 boot();})();</script>`;
   return worldDoc({
     title: 'Maps & Navigation — Free Turn-by-Turn Route Planner (Driving, Cycling, Walking) | Tukuk-OS',
-    desc: 'Plan a route between any two places on Earth for free: driving, cycling or walking directions with distance, travel time and a full turn-by-turn list, powered by open OpenStreetMap engines. No account, no API key, no tracking.',
+    desc: 'Plan a route between any two places on Earth for free: driving, cycling or walking directions with distance, travel time and a full turn-by-turn list, plus a live traffic-flow layer to read the road before you go. Open OpenStreetMap engines, no account, no API key.',
     selfUrl: 'https://tukuk.org/maps',
     heroTitle: '🗺️ Maps & Navigation', heroSub: 'Free routes worldwide · driving, cycling & walking · turn-by-turn',
     css: PETA_CSS, body: body + script,
