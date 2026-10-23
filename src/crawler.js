@@ -20,6 +20,7 @@ const config = require('./config');
 const { extract } = require('./extract');
 const fallback = require('./fallback');
 const { assertPublicUrl, documentId, contentHash, normalizeUrl, sameSite } = require('./util');
+const safety = require('./safety');
 
 // Runtime counters surfaced via /dev and the crawler status API. Kept in one place so
 // resetStats() can zero everything atomically.
@@ -168,6 +169,13 @@ async function fetchDocument(targetUrl) {
   if (!parsed.title || parsed.title.length < 3) {
     stats.skipped += 1;
     return { status: 'skipped', reason: 'no title', url: targetUrl };
+  }
+
+  // Never let abuse-linked material into the index in the first place (the same
+  // term list that gates /search results — see src/safety.js).
+  if (safety.blockedHit({ title: parsed.title, url: parsed.url })) {
+    stats.skipped += 1;
+    return { status: 'skipped', reason: 'safety', url: targetUrl };
   }
 
   // The index may be null if Meilisearch was unreachable at boot.
