@@ -864,6 +864,13 @@ function cachePublicBaseSet() {
   return CACHE_PUBLIC_BASES;
 }
 const CACHE_PUBLIC_HTML = 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600';
+// The same 300 seconds, in the one dialect nginx's proxy_cache speaks. Needed because the
+// browser-facing policy above deliberately says max-age=0 (a visitor must revalidate every
+// view), and nginx would read that 0 and refuse to store the page at all. X-Accel-Expires is
+// the only thing that gives the front proxy a lease, and it is set here and nowhere else, so
+// this block stays the single place that decides cacheability — nginx holds no path list that
+// could drift out of step with it. (deploy/nginx/tukuk-front.conf)
+const X_ACCEL_EXPIRES_HTML = '300';
 
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -884,6 +891,7 @@ app.use((req, res, next) => {
   // which overwrites this — the 503/error paths included.
   if ((req.method === 'GET' || req.method === 'HEAD') && cachePublicBaseSet().has(seg.split('/')[0])) {
     res.setHeader('Cache-Control', CACHE_PUBLIC_HTML);
+    res.setHeader('X-Accel-Expires', X_ACCEL_EXPIRES_HTML);
   }
   next();
 });
