@@ -115,7 +115,9 @@ function hubToDoc(cluster) {
   // "California"); global clusters leave no 'of' trace → use the general question.
   const ofMatch = /^(.+?)\s+of\s+(.+)$/.exec(String(cfg.titleCase || '').trim());
   const subject = ofMatch ? ofMatch[2].trim() : '';
-  const topCountry = countries.length && countries[0][1] > 1
+  // "Unknown" is where an item's country was never recorded, not a country — 2,585 islands carry
+  // it, and quoting that as "Unknown has the most islands" is worse than saying nothing.
+  const topCountry = countries.length && countries[0][1] > 1 && countries[0][0] !== 'Unknown'
     ? `${countries[0][0]} (${countries[0][1]} ${unit})` : '';
 
   const lines = [

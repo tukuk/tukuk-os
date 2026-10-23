@@ -89,6 +89,30 @@ test('hubToDoc(): idempotent — id & hash stable between two builds', () => {
   assert.equal(one.hash, two.hash, 'hash comes only from content, never from time');
 });
 
+test('geoClusters(): the nine hand-written hubs are part of the corpus too', () => {
+  // These pages predate the geo cluster factory and were never registered with geoSitemap(), so
+  // they had no document at all: /search for "islands" could not reach our own front door and /ask
+  // could not read it. The list is duplicated here on purpose — if one of them stops producing a
+  // document, nothing else in the suite notices.
+  const legacy = ['islands', 'rivers', 'waterfalls', 'caves', 'glaciers', 'mountains', 'lakes', 'heritage', 'conservation-areas'];
+  for (const base of legacy) {
+    const doc = docs.find((d) => d.url === `https://tukuk.org/${base}`);
+    assert.ok(doc, `/${base} must produce a hub document`);
+    assert.equal(doc.type, 'cluster');
+    assert.equal(doc.quality, 0.9);
+    assert.match(doc.content, /How many /, `${base}: the question line must be there for /ask`);
+  }
+});
+
+test('hubToDoc(): an unrecorded country is never quoted as the leader', () => {
+  // 2,585 islands carry country "Unknown" — that is a missing field, not a country, so the
+  // "Which country has the most islands?" line must be dropped rather than answered with it.
+  const islands = docs.find((d) => d.url === 'https://tukuk.org/islands');
+  assert.ok(islands, 'the islands hub must be indexed');
+  assert.doesNotMatch(islands.content, /has the most islands\? Unknown/);
+  assert.match(islands.content, /How many islands are there in total\? There are \d+ islands\./);
+});
+
 test('hubToDoc(): big clusters are trimmed but still fully described', () => {
   const big = docs.slice().sort((a, b) => b.content.length - a.content.length)[0];
   assert.ok(big.content.length < 40000, `document should not explode (got ${big.content.length})`);

@@ -3949,7 +3949,7 @@ const GEO_SITEMAP_BASES = [];
 const GEO_CFG_BY_BASE = {};
 const GEO_MOD_BY_BASE = {};
 function geoClusters() {
-  return GEO_SITEMAP_BASES.slice()
+  const registered = GEO_SITEMAP_BASES.slice()
     .sort((a, b) => a.localeCompare(b))
     .map((base) => {
       const cfg = GEO_CFG_BY_BASE[base];
@@ -3957,6 +3957,69 @@ function geoClusters() {
       return cfg && reg && Array.isArray(reg.mod[reg.listKey]) ? { base, cfg, mod: reg.mod, listKey: reg.listKey } : null;
     })
     .filter(Boolean);
+  return registered.concat(legacyGeoClusters()).sort((a, b) => a.base.localeCompare(b.base));
+}
+
+/**
+ * The nine hub pages written before the geo cluster factory.
+ *
+ * Each is the same kind of page — a list grouped by continent with one profile per item — but
+ * none of them was registered with geoSitemap(), so this function never returned them and
+ * indexGeoHubs() never indexed them. They were missing from the corpus outright: the document id
+ * hubToDoc() would produce for /islands did not exist in Meilisearch, so neither /search nor /ask
+ * could reach a page we publish and link to ourselves.
+ *
+ * Normalised to the cluster descriptor shape rather than given a second document builder —
+ * hubToDoc() stays the one format for "a page of ours that lists things".
+ */
+const LEGACY_HUB_CFG = {
+  mountains: {
+    unit: 'mountains', singular: 'mountain', titleCase: 'Mountains',
+    seoTitle: 'Mountains of the World \u2014 Peaks, Elevation & Location | Tukuk-OS',
+    seoDesc: 'Introductions to notable mountains worldwide: elevation, country, continent and what makes each peak significant.',
+    intro: 'These are the world\u2019s most notable mountains \u2014 alpine giants, volcanic cones and ancient massifs that define landscapes and cultures.',
+    navBlurb: 'Profiles of the world\u2019s most notable mountains \u2014 where each peak rises, which country it is in, and its elevation.'
+  },
+  lakes: {
+    unit: 'lakes', singular: 'lake', titleCase: 'Lakes',
+    seoTitle: 'Lakes of the World \u2014 Profiles & Elevation | Tukuk-OS',
+    seoDesc: 'Introductions to notable lakes worldwide: location, country, surface elevation and what makes each water body significant.',
+    intro: 'These are the world\u2019s most notable lakes \u2014 from vast continental seas of water to hidden alpine tarns that define landscapes and sustain millions.',
+    navBlurb: 'Profiles of the world\u2019s notable lakes \u2014 where each lake sits, which country borders it, and its surface elevation.'
+  },
+  heritage: {
+    unit: 'world heritage sites', singular: 'heritage site', titleCase: 'World Heritage Sites',
+    seoTitle: 'UNESCO World Heritage Sites \u2014 Profiles & Locations | Tukuk-OS',
+    seoDesc: 'Introductions to celebrated UNESCO World Heritage sites worldwide: location, country, cultural or natural significance.',
+    intro: 'These are some of the world\u2019s most celebrated UNESCO World Heritage sites \u2014 the monuments, ancient cities, reefs and wild landscapes humanity has agreed are worth protecting.',
+    navBlurb: 'Profiles of celebrated UNESCO World Heritage sites \u2014 where each site sits, which country it belongs to, and whether it is cultural, natural or mixed.'
+  },
+  conservation: {
+    unit: 'protected areas', singular: 'protected area', titleCase: 'Protected Areas',
+    seoTitle: 'Protected Areas of the World \u2014 National Parks & Reserves | Tukuk-OS',
+    seoDesc: 'Introductions to protected areas worldwide: national parks, nature reserves and biosphere reserves \u2014 location, country and ecological significance.',
+    intro: 'These are the world\u2019s most important protected areas \u2014 national parks, nature reserves and biosphere reserves that safeguard biodiversity, ecosystems and cultural landscapes.',
+    navBlurb: 'Profiles of protected areas \u2014 where each area sits, which country manages it, and its protection category.'
+  }
+};
+
+/** hubToDoc() reads titleCase + singular; the five older cfgs were written for geoHubPage() only. */
+function clusterCfg(cfg, titleCase, singular) {
+  return { ...cfg, titleCase, singular };
+}
+
+function legacyGeoClusters() {
+  return [
+    { base: 'islands', cfg: clusterCfg(PULAU_CFG, 'Islands', 'island'), mod: pl, listKey: PULAU_CFG.listKey },
+    { base: 'rivers', cfg: clusterCfg(SUNGAI_CFG, 'Rivers', 'river'), mod: sg, listKey: SUNGAI_CFG.listKey },
+    { base: 'waterfalls', cfg: clusterCfg(AIR_TERJUN_CFG, 'Waterfalls', 'waterfall'), mod: at, listKey: AIR_TERJUN_CFG.listKey },
+    { base: 'caves', cfg: clusterCfg(GUA_CFG, 'Caves', 'cave'), mod: gu, listKey: GUA_CFG.listKey },
+    { base: 'glaciers', cfg: clusterCfg(GLETSER_CFG, 'Glaciers', 'glacier'), mod: gl, listKey: GLETSER_CFG.listKey },
+    { base: 'mountains', cfg: LEGACY_HUB_CFG.mountains, mod: gn, listKey: 'PEAKS' },
+    { base: 'lakes', cfg: LEGACY_HUB_CFG.lakes, mod: dn, listKey: 'LAKES' },
+    { base: 'heritage', cfg: LEGACY_HUB_CFG.heritage, mod: wr, listKey: 'SITES' },
+    { base: 'conservation-areas', cfg: LEGACY_HUB_CFG.conservation, mod: cg, listKey: 'AREAS' }
+  ];
 }
 function geoSitemap(base, mod, listKey) {
   GEO_SITEMAP_BASES.push(base);
