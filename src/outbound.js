@@ -33,6 +33,13 @@
 // and it never guards a `responseType: 'stream'` call: two readers cannot share one stream, and
 // a stream is by definition not a page render waiting on an answer.
 //
+// TWO MODULES ARE DELIBERATELY LEFT OUT: src/weather.js (a 429-driven 15-minute circuit breaker
+// plus a daily call budget — its own outage policy, and a cooldown would stack a second one on
+// top of it) and src/crawler.js (a per-domain politeness delay, a bounded worker pool and a queue
+// cap that answers HTTP 429 back-pressure to the caller). Neither is in the measured tail: their
+// declared timeouts are 8–10 s, not 12–25 s. NASA is half-in — guarded for dedupe and the socket
+// ceiling, with `cooldownMs: 0` so its own deliberate three-attempt retry keeps working.
+//
 // HOW IT HOOKS: the axios *adapter*, which is the single function every request in a module
 // instance goes through. That keeps the change in the modules to one line each instead of
 // touching every call site, and it means a call site cannot accidentally skip the guard.

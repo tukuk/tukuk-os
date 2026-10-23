@@ -1,0 +1,18 @@
+[Unit]
+Description=Tukuk-OS weight report once a day
+
+[Timer]
+# 05:40 local. NOT a measured choice — the front access log has only been kept since the nginx
+# cutover the same day, so there was no night in it to pick from. It is the hour before the site
+# gets busy and after the nightly backups have had their turn, and the report now prints its own
+# requests-per-hour-of-day line, so the next read of `journalctl -t weight-report` can show
+# whether this should move. Persistent=true matters more than the minute: a box restarted at
+# 09:00 would otherwise go a whole day without a measurement.
+OnCalendar=*-*-* 05:40:00
+Persistent=true
+AccuracySec=1min
+RandomizedDelaySec=10min
+Unit=weight-report.service
+
+[Install]
+WantedBy=timers.target

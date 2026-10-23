@@ -5,11 +5,14 @@
 // We cache 10 minutes with stale-while-revalidate (same pattern as gempa.js), so
 // a slow or failing HN call never breaks the page — old list beats an error.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 
 const http = axios.create({
   timeout: 15000,
   headers: { 'User-Agent': 'TukukOS-Technology-Client/1.0 (+https://tukuk.org)' },
 });
+// Dedupe + failure cooldown, declared 15 s kept as the deadline (src/outbound.js).
+attachGuard(http, { name: 'teknologi' });
 
 const API = 'https://hn.algolia.com/api/v1';
 

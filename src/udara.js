@@ -10,6 +10,7 @@
 // the page shows a rest note instead of made-up numbers.
 const axios = require('axios');
 const https = require('https');
+const { attachGuard } = require('./outbound');
 
 const http = axios.create({
   timeout: 20000,
@@ -18,6 +19,11 @@ const http = axios.create({
   httpsAgent: new https.Agent({ family: 4 }),
   headers: { 'User-Agent': 'TukukOS-Air-Client/1.0 (+https://tukuk.org)' },
 });
+// Deliberately shortened from the declared 20 s to the guard's 15 s ceiling: the NOAA daily
+// CO2 file and the open-meteo AQI call are both page-render dependencies, and this module's
+// honesty contract already says a dead source shows a rest note instead of numbers — a rest
+// note at 15 s beats a spinner at 20 s (src/outbound.js).
+attachGuard(http, { name: 'udara' });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

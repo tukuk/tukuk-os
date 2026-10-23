@@ -1,0 +1,25 @@
+[Unit]
+# One narrow job: measure what makes this box heavy, and put the answer in the journal.
+# It is read-only by design (scripts/weight-report.sh stops nothing and deletes nothing), and it
+# is deliberately NOT part of the load governor — the governor only ever reads. A monitor that
+# also acts is a second problem to debug when the site misbehaves.
+Description=Tukuk-OS weight report — request time, cache, memory, disk (read-only)
+Documentation=file:/opt/tukuk-os/scripts/weight-report.sh
+After=tukuk-os.service nginx.service
+Wants=tukuk-os.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tukuk-os
+ExecStart=/usr/bin/bash /opt/tukuk-os/scripts/weight-report.sh
+
+# Reads the whole nginx access log and du's a few big trees, so it must never compete with the
+# site it is measuring. Root only to get past /var/log/nginx group permissions.
+Nice=19
+IOSchedulingClass=idle
+MemoryMax=192M
+TasksMax=32
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=weight-report

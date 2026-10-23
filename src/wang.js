@@ -6,12 +6,17 @@
 // rates are always labelled "reference rate" — never airport/counter rates.
 const axios = require('axios');
 const https = require('https');
+const { attachGuard } = require('./outbound');
 
 const http = axios.create({
   timeout: 15000,
   httpsAgent: new https.Agent({ family: 4 }), // VPS: IPv6 is awkward (NOAA pitfall)
   headers: { 'User-Agent': 'TukukOS-Money-Client/1.0 (+https://tukuk.org)' },
 });
+// Same shape as the /muzik case that started the guard: /wang/kadar answered 503 after 15.018 s
+// in the survey window (the weight report still lists it among the ten slowest). Frankfurter is
+// the ECB reference rate — one page, one call, nobody needs to queue behind it (src/outbound.js).
+attachGuard(http, { name: 'wang' });
 
 const BASE = 'https://api.frankfurter.dev/v1';
 const cache = new Map();
