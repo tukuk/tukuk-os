@@ -891,7 +891,22 @@ app.use((req, res, next) => {
   // which overwrites this — the 503/error paths included.
   if ((req.method === 'GET' || req.method === 'HEAD') && cachePublicBaseSet().has(seg.split('/')[0])) {
     res.setHeader('Cache-Control', CACHE_PUBLIC_HTML);
-    res.setHeader('X-Accel-Expires', X_ACCEL_EXPIRES_HTML);
+    // The lease for the front proxy is handed over at the LAST moment, and only if this
+    // decision is still standing then. Two real cases prove why it cannot be set here: an
+    // unknown flag slug 404s under a cacheable prefix (nginx would serve a cached "not
+    // found" for five minutes), and /bendera/studio overwrites Cache-Control with no-store
+    // while living under /bendera (nginx would cache a page the app explicitly refuses to
+    // let anyone cache). Status + the final header value are the only honest signals, and
+    // reading them keeps the app as the single decider — nginx still holds no path list.
+    const end = res.end;
+    res.end = function (...args) {
+      const stillMarked = res.getHeader('Cache-Control') === CACHE_PUBLIC_HTML;
+      if (stillMarked && res.statusCode >= 200 && res.statusCode < 300) {
+        res.setHeader('X-Accel-Expires', X_ACCEL_EXPIRES_HTML);
+      }
+      res.end = end;
+      return end.apply(this, args);
+    };
   }
   next();
 });

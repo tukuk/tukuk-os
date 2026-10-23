@@ -118,6 +118,9 @@ case "${1:-status}" in
       step "re-verifying: nginx already holds $VERIFY_PORT, replacing its config"
     fi
     place_conf "$VERIFY_PORT" "$NOW_PORT"
+    # Test from an empty cache: an entry left by the previous build is exactly what would
+    # let a fixed bug still look like it works (a stale 404 survived a config change here).
+    find "$CACHE_DIR" -mindepth 1 -delete && step "cache emptied for a clean run"
     echo
     echo "   Now run the checks (they drive http://127.0.0.1:$VERIFY_PORT):"
     echo "     node $APP/data/nginx-front-check.js $VERIFY_PORT"
