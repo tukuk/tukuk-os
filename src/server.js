@@ -10415,25 +10415,30 @@ function build(){var mode=$('d-mode').value,range=$('d-range').value,ready=[],i;
  if(!ready.length){$('d-out').innerHTML='⚠ none of the chosen files could be read — see the list below.';return;}
  $('d-out').textContent='Working…';$('d-dl').hidden=true;
  if(mode==='merge'){
-  var out=PDFLib.PDFDocument.create(),all=[],chain=Promise.resolve();
+  var all=[],chain=Promise.resolve();
   ready.forEach(function(f){chain=chain.then(function(){return PDFLib.PDFDocument.load(f.buf);}).then(function(src){all.push(src);});});
-  chain.then(function(){var seq=Promise.resolve();
+  chain.then(function(){return PDFLib.PDFDocument.create();}).then(function(out){
+   var seq=Promise.resolve();
    all.forEach(function(src){seq=seq.then(function(){return appendCopies(src,out,src.getPageIndices());});});
-   return seq;}).then(function(){return out.save();})
-  .then(function(bytes){finish(bytes,'tukuk-merged.pdf','application/pdf');}).catch(fail);
+   return seq.then(function(){return out.save();});
+  }).then(function(bytes){finish(bytes,'tukuk-merged.pdf','application/pdf');}).catch(fail);
   return;}
  var first=ready[0];
  PDFLib.PDFDocument.load(first.buf).then(function(src){var total=src.getPageCount();
-  if(mode==='extract'){var idx=parseRange(range,total),out=PDFLib.PDFDocument.create();
-   return appendCopies(src,out,idx).then(function(){return out.save();}).then(function(bytes){finish(bytes,'tukuk-extracted.pdf','application/pdf');});}
-  if(mode==='remove'){var keep=complement(parseRange(range,total),total),out2=PDFLib.PDFDocument.create();
-   return appendCopies(src,out2,keep).then(function(){return out2.save();}).then(function(bytes){finish(bytes,'tukuk-pages-removed.pdf','application/pdf');});}
+  if(mode==='extract'){var idx=parseRange(range,total);
+   return PDFLib.PDFDocument.create().then(function(out){
+    return appendCopies(src,out,idx).then(function(){return out.save();});})
+   .then(function(bytes){finish(bytes,'tukuk-extracted.pdf','application/pdf');});}
+  if(mode==='remove'){var keep=complement(parseRange(range,total),total);
+   return PDFLib.PDFDocument.create().then(function(out2){
+    return appendCopies(src,out2,keep).then(function(){return out2.save();});})
+   .then(function(bytes){finish(bytes,'tukuk-pages-removed.pdf','application/pdf');});}
   if(mode==='rotate'){var deg=parseInt($('d-rot').value,10),targets=parseRange(range,total),j,pg;
    for(j=0;j<targets.length;j++){pg=src.getPage(targets[j]);pg.setRotation(PDFLib.degrees((pg.getRotation().angle+deg)%360));}
    return src.save().then(function(bytes){finish(bytes,'tukuk-rotated.pdf','application/pdf');});}
   var zipped={},seq2=Promise.resolve();
   for(var p=0;p<total;p++){(function(p){
-   seq2=seq2.then(function(){var one=PDFLib.PDFDocument.create();
+   seq2=seq2.then(function(){return PDFLib.PDFDocument.create();}).then(function(one){
     return appendCopies(src,one,[p]).then(function(){return one.save();}).then(function(bytes){
      zipped['page-'+(p+1)+'.pdf']=new Uint8Array(bytes);});});})(p);}
   return seq2.then(function(){var z=fflate.zipSync(zipped,{level:0});
