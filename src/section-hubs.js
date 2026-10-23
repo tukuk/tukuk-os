@@ -111,7 +111,7 @@ async function sectionHubs(logger = console) {
     },
     {
       url: '/disasters',
-      title: 'Disaster Tracker — active natural events',
+      title: 'Disasters Tracker — active natural events around the world',
       description: 'Active natural disasters around the world: wildfires, storms, floods and volcanic activity, tracked from public feeds.',
       lines: [
         'Which natural disasters are happening right now? The disaster tracker lists active events from public feeds.',

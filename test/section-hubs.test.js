@@ -65,6 +65,18 @@ test('isHubName(): the path list and the documents cannot drift apart', async ()
   assert.deepEqual(urls, [...HUB_PATHS].sort(), 'every hub has a path in HUB_PATHS and every path a hub');
 });
 
+test('sectionHubs(): every hub says its own name in the title', async () => {
+  // The title is the strongest attribute; a hub whose title says "Disaster Tracker" loses its own
+  // name to a news page titled "Disasters...", and the quality tie-break only decides documents
+  // that matched in the same attribute. /disasters sat at #3 for exactly that reason.
+  const list = await hubs;
+  for (const path of HUB_PATHS) {
+    const hub = list.find((h) => h.url === path);
+    const name = path.slice(1).replace(/-/g, ' ');
+    assert.ok(hub.title.toLowerCase().includes(name), `${path}: the title must contain "${name}"`);
+  }
+});
+
 test('/search keeps the reranker off a navigational query', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
   assert.match(src, /const navigational = isHubName\(term\);/);
