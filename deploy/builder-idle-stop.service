@@ -1,0 +1,23 @@
+[Unit]
+# One narrow job: put the Tukuk Builder to sleep when it has answered nobody for a while.
+# It is deliberately NOT part of the load governor — the governor only ever reads, and this
+# unit stops something. Keeping them apart is what makes both reviewable.
+Description=Stop the Tukuk Builder when it has been idle for hours
+Documentation=file:/opt/tukuk-os/deploy/builder-idle-stop.sh
+After=tukuk-builder.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tukuk-os
+ExecStart=/usr/bin/bash /opt/tukuk-os/deploy/builder-idle-stop.sh
+
+# Reading the journal and asking systemd to stop two units. Nothing about it should ever
+# compete with the site for CPU or memory.
+Nice=19
+IOSchedulingClass=idle
+MemoryMax=64M
+TasksMax=32
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=builder-idle

@@ -47,6 +47,11 @@ const MUST_STAY_OFF = [
   'bluetooth.service', 'ModemManager.service', 'smbd.service', 'nmbd.service',
   'udisks2.service', 'apport.service', 'pmcd.service', 'pmie.service', 'pmlogger.service',
   'pmproxy.service',
+  // snapd is masked, not merely disabled, because its own socket would re-spawn the daemon
+  // on the first snap command. Nothing on this box uses a snap: the one reference to gcloud
+  // in the tree is a fallback branch in scripts/play-upload.mjs, and the AAB it uploads is
+  // never built or stored here. An apt upgrade unmasking it is worth hearing about.
+  'snapd.service', 'snapd.socket',
 ];
 
 // Thresholds. Tuned to this box: 4 cores, ~6.8 GB RAM, and a normal idle load of ~0.2.

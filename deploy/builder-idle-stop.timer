@@ -1,0 +1,15 @@
+[Unit]
+Description=Ask every 15 min whether the Tukuk Builder has gone idle
+
+[Timer]
+# First check half an hour after boot (nothing to judge before the builder has even had a
+# request), then every 15 minutes. The decision itself needs 3 idle hours to be true, so a
+# frequent sample only buys a tighter worst-case window on the idle threshold.
+OnBootSec=30min
+OnUnitActiveSec=15min
+AccuracySec=1min
+RandomizedDelaySec=2min
+Unit=builder-idle-stop.service
+
+[Install]
+WantedBy=timers.target
