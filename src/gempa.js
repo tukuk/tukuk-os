@@ -100,6 +100,9 @@ async function fetchAndCache(key, params) {
 
 // Query by configured region (a lat/lon box, or none for the whole world).
 function regionFeed(r) {
+  // findRegion hands back null for a slug that is not in REGIONS; say so plainly
+  // instead of dereferencing null and surfacing a bare TypeError at the call site.
+  if (!r) throw new Error('regionFeed needs a known region');
   const params = { starttime: isoAgo(r.hours), endtime: new Date().toISOString(), minmagnitude: r.minMag, limit: r.limit };
   if (r.bbox) {
     const [minLon, minLat, maxLon, maxLat] = r.bbox;

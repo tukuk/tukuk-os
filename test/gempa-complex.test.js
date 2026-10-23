@@ -8,6 +8,7 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const serverSrc = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
 const gempaSrc = fs.readFileSync(path.join(ROOT, 'src', 'gempa.js'), 'utf8');
+const indexSrc = fs.readFileSync(path.join(ROOT, 'index.js'), 'utf8');
 const robotsTxt = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
 
 const SECTIONS = ['/earthquakes', '/earthquakes/malaysia', '/earthquakes/southeast-asia', '/earthquakes/japan',
@@ -71,4 +72,22 @@ test('sitemap-gempa.xml + robots + weather↔quake cross links & footer', () => 
   assert.ok(serverSrc.includes('<li><a href="/earthquakes">World Earthquakes</a></li>'), 'the footer links to the world quake hub');
   assert.ok(serverSrc.includes('<a href="/earthquakes">Earthquake Complex</a>'), 'the weather hub cross-links to the earthquake complex');
   assert.ok(serverSrc.includes("'/earthquakes', '/earthquakes/explained'"), 'the main sitemap lists /earthquakes');
+});
+
+// A slug rename inside REGIONS does not touch the call sites that pass a literal, and
+// findRegion returns null for an unknown slug — which used to surface as a bare
+// TypeError inside regionFeed and take the /earthquakes hub down with a 503.
+test('every findRegion() call site names a region that REGIONS declares', () => {
+  const declared = new Set([...gempaSrc.matchAll(/slug: '([a-z-]+)'/g)].map((m) => m[1]));
+  assert.ok(declared.has('world'), 'the world region is declared');
+  const callers = { 'src/server.js': serverSrc, 'index.js': indexSrc };
+  const bad = [];
+  for (const [file, src] of Object.entries(callers)) {
+    for (const m of src.matchAll(/findRegion\('([^']+)'\)/g)) {
+      if (!declared.has(m[1])) bad.push(`${file} → ${m[1]}`);
+    }
+  }
+  assert.deepEqual(bad, [], 'no call site asks for a slug that REGIONS does not define');
+  assert.match(serverSrc, /gp\.regionFeed\(gp\.findRegion\('world'\)\)/, 'the main hub feeds the world region');
+  assert.match(gempaSrc, /if \(!r\) throw new Error\('regionFeed needs a known region'\)/, 'regionFeed rejects null instead of dereferencing it');
 });

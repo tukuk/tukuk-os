@@ -1334,7 +1334,7 @@ app.get('/weather/:slug', (req, res) => cuacaCityHandler(req, res, 'kota'));
 app.get('/earthquakes', async (req, res) => {
   try {
     const [rows, myRows] = await Promise.all([
-      gp.regionFeed(gp.findRegion('dunia')),
+      gp.regionFeed(gp.findRegion('world')),
       gp.regionFeed(gp.findRegion('malaysia')).catch(() => []),
     ]);
     if (!rows || !rows.length) throw new Error('empty feed');
@@ -6687,7 +6687,7 @@ function cutiCountryPage(req, coun, holidays, lws, rows) {
     + `<h2 class="section-title">Long weekends in ${escapeHtml(nm)} ${yr}</h2>${ctWorldLwTable(lws)}`
     + `<h2 class="section-title">Planning leave in ${escapeHtml(nm)}</h2><p>${escapeHtml(nm)} gives <b>${sorted.length}</b> public days off in ${yr}${nationals !== sorted.length ? `, of which ${sorted.length - nationals} are recognised only in certain states or regions` : ' — all of them nationwide'}. The longest weekend run ${longest ? `this year is <b>${longest.dayCount} days</b> (${escapeHtml(ctShort(longest.start))} \u2013 ${escapeHtml(ctShort(longest.end))})` : 'is not reported for this year yet'}. The busiest month is <b>${escapeHtml(busyLabel)}</b>, and holidays land most often on a <b>${topDay != null ? DAY_EN[Number(topDay)] : '—'}</b> \u2014 two facts that are enough to decide when a ticket must be bought early.</p>`
     + `<p>Countries with multi-faith calendars usually have «moving» holidays (Eid al-Fitr, Easter, Chinese New Year, Diwali) whose dates change every year, so check the table a year ahead before booking school holidays.</p>`
-    + `<p class="meta">The full profile of ${escapeHtml(nm)} (capital, population, GDP, neighbours): <a href="/countries/${ngRow ? ngRow.slug : 'dunia'}">Country Complex</a>${coun.cca2 === 'MY' ? ` \u00b7 the detailed state-by-state table is at <a href="/holidays/${cu.YEAR_MIN}">Malaysia holidays ${cu.YEAR_MIN}</a>` : ''} \u00b7 socioeconomic ranking: <a href="/statistics">Statistics Complex</a> \u00b7 active natural events: <a href="/disasters">Disaster Complex</a>.</p>`
+    + `<p class="meta">The full profile of ${escapeHtml(nm)} (capital, population, GDP, neighbours): <a href="${ngRow ? `/countries/${ngRow.slug}` : '/countries'}">Country Complex</a>${coun.cca2 === 'MY' ? ` \u00b7 the detailed state-by-state table is at <a href="/holidays/${cu.YEAR_MIN}">Malaysia holidays ${cu.YEAR_MIN}</a>` : ''} \u00b7 socioeconomic ranking: <a href="/statistics">Statistics Complex</a> \u00b7 active natural events: <a href="/disasters">Disaster Complex</a>.</p>`
     + `<h2 class="section-title">Other countries in ${escapeHtml(coun.region)}</h2><p>${siblings}</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `Public Holidays in ${nm} ${yr}`,

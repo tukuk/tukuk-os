@@ -155,7 +155,7 @@ async function main() {
     // gets a warm cache instead of a cold 503. Non-blocking, fails silently.
     setTimeout(() => {
       Promise.all([
-        gempa.regionFeed(gempa.findRegion('dunia')).catch(() => {}),
+        gempa.regionFeed(gempa.findRegion('world')).catch(() => {}),
         gempa.regionFeed(gempa.findRegion('malaysia')).catch(() => []),
       ]).catch(() => {});
     }, 4000);
