@@ -47,15 +47,24 @@ test('toEnglishQuery(): words that are also English are never rewritten', () => 
   // "air" (air quality) and "api" are ordinary English/technical terms — both appear in the
   // real query log. "kota" and "batu" start place names (Kota Kinabalu, Batu Caves).
   for (const q of ['air quality', 'api', 'kota kinabalu', 'batu caves', 'harga emas']) {
-    assert.deepEqual(toEnglishQuery(q), { query: q, changed: false, terms: [] }, `${q} must be left alone`);
+    assert.deepEqual(toEnglishQuery(q), { query: q, changed: false, terms: [], coverage: 0 }, `${q} must be left alone`);
   }
+});
+
+test('toEnglishQuery(): coverage says how much of the query was Malay', () => {
+  // /search only switches when MORE THAN HALF the words were Malay. A place name that happens
+  // to contain one Malay word must stay as typed.
+  assert.equal(toEnglishQuery('berapa banyak pulau di jepun').coverage, 1);
+  assert.equal(toEnglishQuery('gunung dan danau').coverage, 1);
+  assert.equal(toEnglishQuery('pulau pinang').coverage, 0.5, 'one of two words — not enough to call it Malay');
+  assert.equal(toEnglishQuery('dan brown').coverage, 0.5, 'a personal name must not be rewritten');
 });
 
 test('toEnglishQuery(): a function word alone leaves no query to run', () => {
   const out = toEnglishQuery('yang');
   assert.equal(out.query, '');
   assert.equal(out.changed, false, 'nothing to search → the caller must not retry');
-  assert.deepEqual(toEnglishQuery(''), { query: '', changed: false, terms: [] });
+  assert.deepEqual(toEnglishQuery(''), { query: '', changed: false, terms: [], coverage: 0 });
 });
 
 test('toEnglishQuery(): unknown words are kept, never dropped', () => {
@@ -63,12 +72,13 @@ test('toEnglishQuery(): unknown words are kept, never dropped', () => {
   assert.equal(toEnglishQuery('gunung kinabalu 2026').query, 'mountain kinabalu 2026');
 });
 
-test('/search retries in English only after a zero-hit result', () => {
-  // The whole safety argument rests on this: a rewrite runs inside the `totalOf(result) === 0`
-  // branch, so a query that already worked can never be replaced.
-  assert.match(serverSrc, /if \(totalOf\(result\) === 0\) \{\n\s+const alt = queryLang\.toEnglishQuery\(qq\);/);
-  assert.match(serverSrc, /if \(totalOf\(retry\) > 0\) \{ result = retry; translation = alt; \}/,
-    'a retry that finds nothing must not replace the original result');
+test('/search switches to English only when the rewrite finds more', () => {
+  // Meili's default matching strategy still answers a Malay query with junk (it matched the
+  // word "di"), so "zero hits" is not the trigger. Two conditions guard the switch, and both
+  // are in the source: mostly-Malay coverage, and strictly more documents.
+  assert.match(serverSrc, /const alt = queryLang\.toEnglishQuery\(qq\);\n\s+if \(alt\.changed && alt\.coverage > 0\.5\) \{/);
+  assert.match(serverSrc, /if \(totalOf\(retry\) > totalOf\(result\)\) \{ result = retry; translation = alt; \}/,
+    'the English result must only win by finding more documents');
   assert.match(serverSrc, /\.\.\.\(translation \? \{ translatedQuery: translation\.query \} : \{\}\)/);
 });
 

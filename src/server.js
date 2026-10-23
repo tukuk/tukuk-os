@@ -18092,18 +18092,17 @@ app.get('/search', limiter.search, async (req, res) => {
     const params = buildSearchParams(rest);
     const wantedLimit = params.limit;
     let result = await target.search(qq, params);
-    // The corpus is English and Meili cannot match across languages, so "berapa banyak pulau
-    // di jepun" finds nothing while "how many islands in japan" finds the hub. Only a query
-    // that found ZERO hits is retried in English — a wrong rewrite then costs nothing, and a
-    // query that already worked is never touched. The rewrite is local (src/query-lang.js):
-    // no visitor query ever leaves this server to be translated.
+    // The corpus is English and Meili cannot match across languages: "berapa banyak pulau di
+    // jepun" answered with 5 documents that matched nothing but the word "di", while "how many
+    // islands in japan" finds the hub. So a query that is MOSTLY Malay is searched again in
+    // English (src/query-lang.js), and the English result is kept only when it finds MORE
+    // documents — a query that worked is never replaced by one that works less. The rewrite is
+    // local: no visitor query ever leaves this server to be translated.
     let translation = null;
-    if (totalOf(result) === 0) {
-      const alt = queryLang.toEnglishQuery(qq);
-      if (alt.changed) {
-        const retry = await target.search(alt.query, params);
-        if (totalOf(retry) > 0) { result = retry; translation = alt; }
-      }
+    const alt = queryLang.toEnglishQuery(qq);
+    if (alt.changed && alt.coverage > 0.5) {
+      const retry = await target.search(alt.query, params);
+      if (totalOf(retry) > totalOf(result)) { result = retry; translation = alt; }
     }
     const term = translation ? translation.query : qq;
     // Neural rerank (relevance mode only, first page). Safe: a no-op when
@@ -18124,9 +18123,11 @@ app.get('/search', limiter.search, async (req, res) => {
     if (filtered) result = { ...result, hits: kept };
     queries.logQuery(qq, { hits: filtered ? kept.length : total });
     res.json({
+      ...result,
+      // Meili echoes the term it searched as `query`; the visitor gets their own words back,
+      // and the English rewrite is reported separately below.
       query: qq,
       index: corpus || config.indexName,
-      ...result,
       related: queries.related(term),
       didYouMean: total === 0 ? queries.didYouMean(qq) : null,
       // Only present when the zero-hit retry rewrote the query AND found something, so the

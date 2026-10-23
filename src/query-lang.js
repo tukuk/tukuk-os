@@ -9,8 +9,9 @@
 // Three choices keep it safe:
 //   • LOCAL, not an API call. Sending every query to Google/MyMemory would contradict the
 //     privacy this site promises and would put a network timeout inside the search path.
-//   • FALLBACK ONLY. src/server.js calls this after a query already found ZERO hits, so a
-//     wrong rewrite can never damage a query that was working.
+//   • NEVER WORSE. src/server.js only switches to the English query when the query is mostly
+//     Malay AND the English words find more documents. A query that worked is never replaced
+//     by one that works less.
 //   • NO GUESSING. A word that is also ordinary English ("air", "api") is left alone, and a
 //     word this lexicon does not know passes through untouched instead of being dropped.
 
@@ -90,16 +91,19 @@ const MAX_PHRASE = Math.max(...PHRASES.map(([m]) => m.split(' ').length));
  * Rewrite the Malay words in a query into their English equivalents.
  * Untouched words — names, numbers, anything unknown — pass straight through.
  * @param {string} input the query as typed
- * @returns {{query:string, changed:boolean, terms:string[]}} the English query, whether it
- *   differs from the input, and which words were translated (for the operator, never public)
+ * @returns {{query:string, changed:boolean, terms:string[], coverage:number}} the English
+ *   query, whether it differs from the input, which words were translated, and what share of
+ *   the query those words are (0..1) — the caller uses the share to decide whether the query
+ *   can fairly be called Malay.
  */
 function toEnglishQuery(input) {
   const raw = String(input || '').trim();
-  if (!raw) return { query: '', changed: false, terms: [] };
+  if (!raw) return { query: '', changed: false, terms: [], coverage: 0 };
 
   const tokens = raw.split(/\s+/);
   const out = [];
   const terms = [];
+  let covered = 0;
 
   for (let i = 0; i < tokens.length;) {
     let matched = 0;
@@ -111,6 +115,7 @@ function toEnglishQuery(input) {
         const english = LEXICON.get(phrase);
         if (english) out.push(english); // an empty mapping drops a function word
         matched = n;
+        covered += n; // a phrase covers as many words as it spans
         break;
       }
     }
@@ -121,7 +126,12 @@ function toEnglishQuery(input) {
   const query = out.join(' ').replace(/\s+/g, ' ').trim();
   // A query made only of function words ("yang") rewrites to nothing — there is no second
   // search to run, so the caller is told nothing changed.
-  return { query, changed: Boolean(query) && terms.length > 0 && query !== raw, terms };
+  return {
+    query,
+    changed: Boolean(query) && terms.length > 0 && query !== raw,
+    terms,
+    coverage: covered / tokens.length
+  };
 }
 
 module.exports = { toEnglishQuery, LEXICON };
