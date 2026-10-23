@@ -8,6 +8,9 @@
 const axios = require('axios');
 const { attachGuard } = require('./outbound');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const config = require('./config');
 
 const http = axios.create({
   timeout: 12000,
@@ -25,10 +28,45 @@ attachGuard(http, { name: 'cuti' });
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const plainAgent = new https.Agent({ keepAlive: true });
 
-const BASE = 'https://malaysia-holiday.dydxsoft.my/api/v1';
+const BASE = String(process.env.CUTI_BASE_URL || 'https://malaysia-holiday.dydxsoft.my/api/v1').replace(/\/+$/, '');
 
 const cache = new Map();
 const TTL = 30 * 24 * 60 * 60 * 1000; // 30 days — the table only moves when the government declares a special day off
+
+// ── Disk mirror ──────────────────────────────────────────────────────────────
+// The in-memory cache dies with the process, and this process restarts on every
+// deploy. A calendar that changes a handful of times a year must not depend on the
+// upstream being up during that one cold minute: the last good copy on disk is
+// always a better answer than a 503 on a page Google has already indexed.
+const SNAPSHOT_FILE = path.join(path.dirname(config.store.path), 'cuti-holidays.json');
+const BOOT_FRESH_MS = 5 * 60 * 1000; // disk copy answers instantly, then revalidates
+
+function loadSnapshot() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(SNAPSHOT_FILE, 'utf8'));
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch {
+    return {};
+  }
+}
+
+const snapshot = loadSnapshot();
+let saveTimer = null;
+
+function saveSnapshot() {
+  try {
+    fs.mkdirSync(path.dirname(SNAPSHOT_FILE), { recursive: true });
+    fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(snapshot));
+  } catch {
+    // A failing mirror write is not a page failure — keep serving from memory.
+  }
+}
+
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => { saveTimer = null; saveSnapshot(); }, 2000);
+  if (saveTimer.unref) saveTimer.unref();
+}
 
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -39,10 +77,20 @@ function cacheGet(key) {
 
 function cacheSet(key, data) {
   cache.set(key, { data, expiresAt: Date.now() + TTL });
+  snapshot[key] = { data, savedAt: Date.now() };
+  scheduleSave();
   if (cache.size > 80) {
     let oldestKey = null; let oldest = Infinity;
     for (const [k, v] of cache) if (v.expiresAt < oldest) { oldest = v.expiresAt; oldestKey = k; }
     if (oldestKey) cache.delete(oldestKey);
+  }
+}
+
+// Seed the cache from disk so the first visitor after a restart is never made to
+// wait on — or fail with — the upstream.
+for (const [key, entry] of Object.entries(snapshot)) {
+  if (entry && Array.isArray(entry.data) && entry.data.length) {
+    cache.set(key, { data: entry.data, expiresAt: Date.now() + BOOT_FRESH_MS });
   }
 }
 
@@ -91,15 +139,13 @@ async function requestJson(url) {
 let queueTail = Promise.resolve();
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-async function apiGet(path, params) {
-  const key = `${path}:${JSON.stringify(params || {})}`;
-  const hit = cacheGet(key);
-  if (hit && !hit.stale) return hit.data;
-  const qs = new URLSearchParams(Object.entries(params || {}).map(([k, v]) => [k, String(v)])).toString();
-  const url = `${BASE}${path}${qs ? `?${qs}` : ''}`;
-  // The server-side hcdn sometimes answers 403 "challenge" when several
-  // connections from the same IP are open at once. Serialize the requests (one
-  // at a time) and retry once after 1.5s.
+// Keys with a refresh already in flight — a crawler burst must not queue ten of them.
+const refreshing = new Set();
+
+// The one place that actually talks to the API. Serialized because the server-side
+// hcdn answers 403 "challenge" when several connections from the same IP are open at
+// once, and retried once after 1.5 s for the same reason.
+async function fetchFresh(key, url, fallback) {
   const prev = queueTail;
   let release;
   queueTail = new Promise((r) => { release = r; });
@@ -112,17 +158,41 @@ async function apiGet(path, params) {
         const body = await requestJson(url);
         const data = (body && Array.isArray(body.data)) ? body.data : [];
         if (data.length) cacheSet(key, data);
-        return data.length ? data : (hit ? hit.data : data);
+        return data.length ? data : (fallback || data);
       } catch (err) {
         lastErr = err;
-        if (process.env.CUTI_DEBUG) console.error('[cuti] apiGet fail', path, JSON.stringify(params), 'attempt', attempt, err.message);
+        if (process.env.CUTI_DEBUG) console.error('[cuti] apiGet fail', key, 'attempt', attempt, err.message);
       }
     }
-    if (hit) return hit.data; // stale beats an error page
+    if (fallback) return fallback; // stale beats an error page
     throw lastErr;
   } finally {
     release();
   }
+}
+
+function refreshInBackground(key, url, fallback) {
+  if (refreshing.has(key)) return;
+  refreshing.add(key);
+  fetchFresh(key, url, fallback)
+    .catch(() => {})
+    .finally(() => refreshing.delete(key));
+}
+
+async function apiGet(path, params) {
+  const key = `${path}:${JSON.stringify(params || {})}`;
+  const hit = cacheGet(key);
+  if (hit && !hit.stale) return hit.data;
+  const qs = new URLSearchParams(Object.entries(params || {}).map(([k, v]) => [k, String(v)])).toString();
+  const url = `${BASE}${path}${qs ? `?${qs}` : ''}`;
+  // Expired but present: answer instantly from the copy we have and refresh behind the
+  // visitor's back. A 30-day calendar is never worth making someone wait 12 s for —
+  // and never worth answering with a 503 because the upstream had a bad minute.
+  if (hit) {
+    refreshInBackground(key, url, hit.data);
+    return hit.data;
+  }
+  return fetchFresh(key, url, null);
 }
 
 // National list (every entry carries state_codes = the states that rest that day).
@@ -199,4 +269,14 @@ function nextHoliday(rows, todayStr) {
   return sorted.find((r) => String(r.date) >= String(todayStr)) || null;
 }
 
-module.exports = { STATES, findState, getHolidays, getStateHolidays, forState, longWeekends, nextHoliday, YEAR_MIN, YEAR_MAX };
+// Restore the real 30-day TTL shortly after a restart, so the 5-minute disk window is
+// only ever paid by the visitors who arrive in the first seconds of a new process.
+if (Object.keys(snapshot).length) {
+  const warm = setTimeout(() => { getHolidays(YEAR_MIN).catch(() => {}); getHolidays(YEAR_MAX).catch(() => {}); }, 30000);
+  if (warm.unref) warm.unref();
+}
+
+module.exports = {
+  STATES, findState, getHolidays, getStateHolidays, forState, longWeekends, nextHoliday, YEAR_MIN, YEAR_MAX,
+  SNAPSHOT_FILE,
+};
