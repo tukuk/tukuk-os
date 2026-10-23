@@ -4427,7 +4427,7 @@ const COMMON_CSS = `
   ul, ol { padding-left:24px; margin:14px 0; }
   li { margin-bottom:6px; }
   .back-link { display:inline-block; margin-bottom:16px; font-size:.92rem; }
-  .ad-slot { margin:24px 0; overflow:hidden; }
+  .ad-slot { margin:24px 0; overflow:hidden; min-height:90px; }
   /* Ad slot: a panel-dark background so an empty or blocked slot never becomes a big
      white block on a dark theme. */
   .ad-sense { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 8px 6px; }
