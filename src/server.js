@@ -4021,6 +4021,27 @@ function legacyGeoClusters() {
     { base: 'conservation-areas', cfg: LEGACY_HUB_CFG.conservation, mod: cg, listKey: 'AREAS' }
   ];
 }
+
+/**
+ * Is this query the name of a page we publish — a geo hub or a section hub?
+ *
+ * /search hands page one to the neural reranker (src/brain/reranker.js), which reorders by
+ * embedding similarity. For a bare page name that is the wrong judge: it kept putting a BBC
+ * article ahead of /waterfalls and /conservation-areas even though the index had our own page at
+ * #1. A query that is exactly a name we serve is navigation, so it keeps Meilisearch's order.
+ *
+ * Built once: 619 descriptors is not something a search request should pay for, and the list
+ * cannot change while the process runs.
+ */
+let frontDoorNameSet = null;
+function isOwnFrontDoor(text) {
+  const norm = String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  if (!norm) return false;
+  if (!frontDoorNameSet) {
+    frontDoorNameSet = new Set(geoClusters().map((c) => String(c.base).replace(/-/g, ' ')));
+  }
+  return frontDoorNameSet.has(norm);
+}
 function geoSitemap(base, mod, listKey) {
   GEO_SITEMAP_BASES.push(base);
   GEO_MOD_BY_BASE[base] = { mod, listKey };
@@ -18172,10 +18193,11 @@ app.get('/search', limiter.search, async (req, res) => {
     // Neural rerank (relevance mode only, first page). Safe: a no-op when
     // no backend is available (the local model is not deployed & there are no cloud credentials).
     // Skipped when the query is the name of one of our own front doors ("weather", "air
-    // quality"): that is navigation, and an embedding model cannot know which page is the door
-    // — measured, it kept putting a 2023 BBC article ahead of /weather. Meilisearch's own order
-    // answers those with our hub first (see RANKING_RULES in src/meili.js).
-    const navigational = isHubName(term);
+    // quality", "waterfalls"): that is navigation, and an embedding model cannot know which page
+    // is the door — measured, it kept putting a 2023 BBC article ahead of /weather and demoting
+    // /waterfalls and /conservation-areas below their own results. Meilisearch's own order answers
+    // those with our hub first (see RANKING_RULES in src/meili.js).
+    const navigational = isHubName(term) || isOwnFrontDoor(term);
     if (reranker.available() && !params.sort && !navigational && (params.offset || 0) === 0 && result.hits.length > 1) {
       if (wantedLimit < config.rerank.candidates) {
         params.limit = Math.min(config.rerank.candidates, config.search.maxLimit);
@@ -20305,4 +20327,4 @@ app.use((error, req, res, next) => {
   res.status(error.statusCode || 500).json({ error: 'Server error', details: safeError(error) });
 });
 
-module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, notifyIndexNow };
+module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, isOwnFrontDoor, notifyIndexNow };

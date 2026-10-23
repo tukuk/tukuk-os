@@ -79,7 +79,8 @@ test('sectionHubs(): every hub says its own name in the title', async () => {
 
 test('/search keeps the reranker off a navigational query', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
-  assert.match(src, /const navigational = isHubName\(term\);/);
+  // Two sources: the ten section hubs listed here, and every geo hub base (isOwnFrontDoor).
+  assert.match(src, /const navigational = isHubName\(term\) \|\| isOwnFrontDoor\(term\);/);
   assert.match(src, /if \(reranker\.available\(\) && !params\.sort && !navigational &&/, 'the rerank guard must honour it');
 });
 

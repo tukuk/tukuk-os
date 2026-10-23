@@ -4,7 +4,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { geoClusters } = require('../src/server');
+const { geoClusters, isOwnFrontDoor } = require('../src/server');
 const { hubToDoc, indexGeoHubs, stripHtml, tally, faqLines } = require('../src/cluster-index');
 
 const clusters = geoClusters();
@@ -102,6 +102,16 @@ test('geoClusters(): the nine hand-written hubs are part of the corpus too', () 
     assert.equal(doc.quality, 0.9);
     assert.match(doc.content, /How many /, `${base}: the question line must be there for /ask`);
   }
+});
+
+test('isOwnFrontDoor(): a hub name is navigation, a phrase about it is not', () => {
+  // The reranker is skipped for a query that is exactly a page we publish (see /search in
+  // src/server.js); it kept demoting /waterfalls and /conservation-areas below a BBC article.
+  assert.equal(isOwnFrontDoor('waterfalls'), true);
+  assert.equal(isOwnFrontDoor('Conservation Areas'), true);
+  assert.equal(isOwnFrontDoor('california counties'), true);
+  assert.equal(isOwnFrontDoor('waterfalls in iceland'), false);
+  assert.equal(isOwnFrontDoor(''), false);
 });
 
 test('hubToDoc(): an unrecorded country is never quoted as the leader', () => {
