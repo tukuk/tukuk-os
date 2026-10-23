@@ -24,6 +24,10 @@ const http = axios.create({
 attachGuard(http, { name: 'muzik', budgetMs: 10000 });
 
 const RSS = 'https://rss.marketingtools.apple.com/api/v2';
+// Apple's legacy RSS host — a genuinely different server, so an edge problem on one
+// (measured: cl answered 502, pt hung at 8 s on the new host while legacy answered
+// 200 in 0.8 s) does not take the fallback with it. Same chart, older shape.
+const RSS_LEGACY = 'https://itunes.apple.com';
 
 const cache = new Map();
 const TTL = 24 * 60 * 60 * 1000;        // charts move once a day
@@ -231,6 +235,32 @@ function scheduleBackfill() {
 }
 scheduleBackfill();
 
+// One chart row from the LEGACY feed shape: values live in {label} wrappers under im:*
+// keys, entities are HTML-escaped, and the track id hides in id.attributes['im:id'].
+function legacyLab(x) {
+  return String((x && (x.label !== undefined ? x.label : x)) || '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").trim();
+}
+function normLegacy(h, rank) {
+  const imgs = Array.isArray(h['im:image']) ? h['im:image'] : [];
+  const big = imgs.length ? String((imgs[imgs.length - 1] || {}).label || '') : '';
+  const artwork = big.replace(/\/\d+x\d+bb\.(png|jpg)/, '/300x300bb.$1');
+  const cat = h.category;
+  return {
+    rank,
+    id: String((h.id && h.id.attributes && h.id.attributes['im:id']) || ''),
+    name: legacyLab(h['im:name']),
+    artist: legacyLab(h['im:artist']),
+    artistUrl: (h['im:artist'] && h['im:artist'].attributes) ? String(h['im:artist'].attributes.href || '') : '',
+    album: legacyLab(h['im:collection']),
+    genre: legacyLab(Array.isArray(cat) ? cat[0] : cat).split('>').pop().trim(),
+    releaseDate: '',
+    url: String((h.id && h.id.label) || '').replace(/[?&]uo=\d+/, ''),
+    artwork,
+  };
+}
+
 // Top-25 "Most Played" chart for one storefront. SWR: fresh hits return straight
 // from cache, stale hits serve instantly while revalidating in the background.
 async function countryChart(cc) {
@@ -246,12 +276,20 @@ async function countryChart(cc) {
 
 async function fetchChart(key, cc) {
   try {
-    const res = await http.get(`${RSS}/${cc}/music/most-played/25/songs.json`);
+    let res;
+    try {
+      res = await http.get(`${RSS}/${cc}/music/most-played/25/songs.json`);
+    } catch (err) {
+      const h = cacheGet(key);                              // memory last-good beats a fallback call
+      if (h) return h.data;
+      res = await http.get(`${RSS_LEGACY}/${cc}/rss/topsongs/limit=25/json`);   // different host, same chart
+    }
     const feed = res.data && res.data.feed;
-    const list = feed && Array.isArray(feed.results) ? feed.results : [];
-    const rows = list.map((h, i) => normSong(h, i + 1)).filter((r) => r.name && r.id);
+    const isNew = !!feed && Array.isArray(feed.results);
+    const list = isNew ? feed.results : (feed && Array.isArray(feed.entry) ? feed.entry : []);
+    const rows = list.map((h, i) => (isNew ? normSong(h, i + 1) : normLegacy(h, i + 1))).filter((r) => r.name && r.id);
     if (rows.length < 5) throw new Error('thin chart feed');
-    const value = { cc, rows, updated: String(feed.updated || ''), fetchedAt: Date.now() };
+    const value = { cc, rows, updated: legacyLab(feed.updated), fetchedAt: Date.now() };
     cacheSet(key, value);
     saveToDisk();
     return value;
