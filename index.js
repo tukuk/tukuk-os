@@ -23,7 +23,8 @@ const crawler = require('./src/crawler');
 const net = require('./src/net');
 const store = require('./src/store');
 const { indexBlogPosts } = require('./src/blog-index');
-const { indexGeoHubs } = require('./src/cluster-index');
+const { indexGeoHubs, indexSectionHubs } = require('./src/cluster-index');
+const { sectionHubs } = require('./src/section-hubs');
 const { app, geoClusters, notifyIndexNow } = require('./src/server');
 const news = require('./src/news');
 const queries = require('./src/queries');
@@ -123,6 +124,10 @@ async function main() {
           if (!skipped) console.log(`[cluster-index] ${count} cluster hubs are searchable`);
         })
         .catch((err) => console.warn(`[cluster-index] skipped: ${err.message}`));
+      // The section front doors (/countries, /weather, /holidays…) belong to the corpus too.
+      // Only blog posts and geo clusters were indexed, so searching "weather" or "how many
+      // countries" reached third-party pages instead of the answer we publish ourselves.
+      sectionHubs().then((hubs) => indexSectionHubs(index, hubs)).catch((err) => console.warn(`[section-hubs] skipped: ${err.message}`));
     }, 8000);
   } catch (error) {
     // Don't die — the search engine can still answer from the fallback cache.

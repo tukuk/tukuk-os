@@ -224,4 +224,68 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
   return { count: docs.length, skipped: false, taskUid: task && task.taskUid ? task.taskUid : null };
 }
 
-module.exports = { hubToDoc, indexGeoHubs, stripHtml, tally, faqLines };
+/**
+ * A search document for one of the section hubs — a page of ours that is not a geo cluster
+ * (src/section-hubs.js describes them). Same shape as hubToDoc so the corpus stays uniform,
+ * but `type: 'section'` on purpose: the geo guard in indexGeoHubs reads `type = "cluster"`
+ * and compares its ids, so these documents must never be mistaken for a removed cluster.
+ * @param {{url,title,description,lines,keywords}} section
+ */
+function sectionToDoc(section) {
+  if (!section || !section.url || !section.title) return null;
+  const url = `https://tukuk.org${section.url}`;
+  const lines = [
+    `${section.title} — hub at tukuk.org${section.url}.`,
+    ...(section.lines || [])
+  ].filter(Boolean);
+  const content = [...new Set(lines)].join('\n');
+
+  return {
+    id: crypto.createHash('sha256').update(`hub:${section.url}`).digest('hex').slice(0, 16),
+    url,
+    title: section.title,
+    description: section.description || '',
+    content,
+    summary: section.description || '',
+    siteName: 'Tukuk-OS',
+    host: 'tukuk.org',
+    lang: 'en',
+    type: 'section',
+    section: section.url.replace(/^\//, ''),
+    keywords: [...new Set(section.keywords || [])].slice(0, 20),
+    headings: [],
+    publishedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+    crawledAt: new Date().toISOString(),
+    wordCount: content.split(/\s+/).filter(Boolean).length,
+    quality: 0.9,
+    hash: crypto.createHash('sha256').update(content).digest('hex').slice(0, 16)
+  };
+}
+
+/**
+ * Push the section hubs into the main index.
+ *
+ * No hash guard here: it is ten documents, one small task, and a sentence edited in
+ * src/section-hubs.js should reach the index on the next boot without a second mechanism
+ * that could disagree with it. The push is an upsert, so repeating it changes nothing.
+ * @param {object} index Meilisearch index from ensureIndex().
+ * @param {Array}  sections [{url,title,description,lines,keywords}] from sectionHubs().
+ * @returns {Promise<{count:number}>}
+ */
+async function indexSectionHubs(index, sections, { logger = console } = {}) {
+  const docs = (sections || []).map(sectionToDoc).filter(Boolean);
+  if (!docs.length) return { count: 0 };
+  await index.updateDocuments(docs);
+  if (logger && logger.log) logger.log(`[section-hubs] ${docs.length} section hubs are searchable`);
+  return { count: docs.length };
+}
+
+module.exports = {
+  hubToDoc,
+  indexGeoHubs,
+  sectionToDoc,
+  indexSectionHubs,
+  stripHtml,
+  tally,
+  faqLines
+};
