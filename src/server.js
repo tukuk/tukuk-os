@@ -900,9 +900,15 @@ app.use((req, res, next) => {
     // reading them keeps the app as the single decider — nginx still holds no path list.
     const end = res.end;
     res.end = function (...args) {
-      const stillMarked = res.getHeader('Cache-Control') === CACHE_PUBLIC_HTML;
-      if (stillMarked && res.statusCode >= 200 && res.statusCode < 300) {
-        res.setHeader('X-Accel-Expires', X_ACCEL_EXPIRES_HTML);
+      // `headersSent` is not a nicety: some of these pages are streamed (res.write, then
+      // res.end), and setting a header after the first chunk went out throws
+      // ERR_HTTP_HEADERS_SENT inside end() — which killed requests and crash-looped the
+      // whole app. A response already on its way gets no lease, and so is simply not cached.
+      if (!res.headersSent) {
+        const stillMarked = res.getHeader('Cache-Control') === CACHE_PUBLIC_HTML;
+        if (stillMarked && res.statusCode >= 200 && res.statusCode < 300) {
+          res.setHeader('X-Accel-Expires', X_ACCEL_EXPIRES_HTML);
+        }
       }
       res.end = end;
       return end.apply(this, args);
