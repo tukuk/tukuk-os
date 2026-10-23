@@ -14,10 +14,16 @@
 #
 # The rule: if tukuk-builder has served no request line for BUILDER_IDLE_MIN minutes, and
 # has been running at least that long (so a builder that was just started is never killed
-# mid-boot), stop it and its tunnel.
+# mid-boot), stop it.
+#
+# WHY ONLY THE BUILDER AND NEVER ITS TUNNEL: cloudflared-build is a *connector*, not part of
+# the builder — it carries build.tukuk.org and tchat.tukuk.org, and stopping it makes those
+# hostnames vanish at the edge ("tunnel not reachable") for as long as it stays down, which is
+# a worse answer than the one cloudflared itself gives when :5174 refuses the connection.
+# It costs 41 MB, so keeping it up is not what this script is fighting.
 #
 # Escape hatch for a long session:  sudo touch /etc/tukuk-builder-keep
-# Bring it back by hand:            sudo systemctl start tukuk-builder.service cloudflared-build.service
+# Bring it back by hand:            sudo systemctl start tukuk-builder.service
 #
 #   bash deploy/builder-idle-stop.sh            # decide and act (what the timer runs)
 #   bash deploy/builder-idle-stop.sh --dry-run  # only report the verdict, change nothing
@@ -25,7 +31,7 @@ set -uo pipefail
 
 IDLE_MIN=${BUILDER_IDLE_MIN:-180}          # 3 hours: far longer than any gap inside a real session
 DRY=${1:-}
-UNITS=(tukuk-builder.service cloudflared-build.service)
+UNITS=(tukuk-builder.service)
 KEEP=/etc/tukuk-builder-keep
 
 step() { echo "[builder-idle] $*"; }
@@ -67,6 +73,6 @@ if [ "$DRY" = "--dry-run" ]; then
   exit 0
 fi
 
-systemctl stop "${UNITS[@]}" && step "stopped ${UNITS[*]} — build.tukuk.org and dashboard.tukuk.org/ now show a Cloudflare error until it is started again"
-step "bring it back: sudo systemctl start ${UNITS[0]} ${UNITS[1]}"
+systemctl stop "${UNITS[@]}" && step "stopped ${UNITS[*]} — build.tukuk.org and dashboard.tukuk.org/ now show an error page until it is started again (the tunnel itself stays up, so tchat.tukuk.org is untouched)"
+step "bring it back: sudo systemctl start ${UNITS[0]}"
 exit 0

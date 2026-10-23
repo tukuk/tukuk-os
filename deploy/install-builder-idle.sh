@@ -14,7 +14,11 @@
 set -uo pipefail
 
 SRC=/opt/tukuk-os/deploy
-UNITS=(tukuk-builder.service cloudflared-build.service)
+# Only the builder is ever stopped. cloudflared-build is the connector that carries
+# build.tukuk.org AND tchat.tukuk.org, so stopping it would take a live hostname off the
+# internet for the whole sleep — see builder-idle-stop.sh.
+UNITS=(tukuk-builder.service)
+CONNECTOR=cloudflared-build.service
 KEEP=/etc/tukuk-builder-keep
 MODE=${1:-status}
 
@@ -32,7 +36,7 @@ report() { bash "$SRC/builder-idle-stop.sh" --dry-run; }
 
 case "$MODE" in
   stop-now)
-    systemctl stop "${UNITS[@]}" && step "stopped ${UNITS[*]}"
+    systemctl stop "${UNITS[@]}" && step "stopped ${UNITS[*]} (the connector stays up: tchat.tukuk.org rides on it)"
     ;;
 
   keep)
@@ -53,7 +57,7 @@ case "$MODE" in
     ;;
 
   wake)
-    systemctl start "${UNITS[0]}" "${UNITS[1]}" || step "start failed — check: journalctl -u tukuk-builder -n 30"
+    systemctl start "${UNITS[0]}" "$CONNECTOR" || step "start failed — check: journalctl -u tukuk-builder -n 30"
     for i in $(seq 1 20); do
       curl -fsS -m 3 -o /dev/null http://127.0.0.1:5174/ && { step "answering on :5174 after $((i * 2))s"; break; }
       sleep 2
@@ -74,7 +78,7 @@ esac
 
 echo
 echo "--- what is holding memory now ---"
-for u in "${UNITS[@]}" tukuk-os.service meilisearch.service; do
+for u in "${UNITS[@]}" "$CONNECTOR" tukuk-os.service meilisearch.service; do
   step "$(printf '%-26s' "$u") $(systemctl is-active "$u")  $(($(systemctl show "$u" -p MemoryCurrent --value 2>/dev/null || echo 0)/1048576)) MB"
 done
 free -m | awk 'NR==2{print "[builder-idle-install] available on the box: " $7 " MB of " $2 " MB"}'

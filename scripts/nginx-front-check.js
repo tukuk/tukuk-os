@@ -245,6 +245,23 @@ const clean = (headers) => {
   check('a different hostname gets a different answer (the tunnel serves several hosts here)',
     tchat.status !== apex.status || sha(tchat.body) !== sha(apex.body),
     `tchat ${tchat.status}/${tchat.size}b vs apex ${apex.status}/${apex.size}b`);
+  // The messenger's own origin is the one place where a shared copy would be a privacy
+  // problem, so the app withholds its lease by overwriting the offered policy (src/server.js
+  // → the TCHAT_HOST gate). nginx has no rule about it — these three lines are the proof.
+  check('tchat / answers the chat app, not the blog list',
+    tchat.status === 200 && /T Chat|chat/i.test(tchat.body.slice(0, 4000)), `${tchat.status} ${tchat.size}b`);
+  const tchat2 = await get({ path: '/', headers: { Host: 'tchat.tukuk.org' } });
+  check('…and it is never held in the shared cache (no lease, so nothing to store)',
+    tchat.headers['x-accel-expires'] === undefined && !['HIT', 'STALE'].includes(cacheStatus(tchat2)),
+    `lease=${tchat.headers['x-accel-expires'] || 'ABSENT'} second read ${cacheStatus(tchat2)}`);
+  check('the private-space headers survive the hop (noindex + frame-ancestors none)',
+    /noindex/.test(String(tchat.headers['x-robots-tag']))
+      && /frame-ancestors 'none'/.test(String(tchat.headers['content-security-policy'])),
+    `robots="${String(tchat.headers['x-robots-tag']).slice(0, 24)}"`);
+  const tchatAway = await get({ path: '/bendera', headers: { Host: 'tchat.tukuk.org' } });
+  check('a path T Chat does not serve is 302’d back to tukuk.org, not answered from here',
+    tchatAway.status === 302 && String(tchatAway.headers.location).startsWith('https://tukuk.org/bendera'),
+    `${tchatAway.status} → ${tchatAway.headers.location}`);
 
   // The visitor's identity: Node buckets rate limits on the FIRST X-Forwarded-For entry.
   // If nginx replaced the header instead of appending, every visitor would share one bucket

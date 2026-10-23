@@ -1,4 +1,7 @@
-# Template for the SECOND cloudflared connector — build.tukuk.org → Tukuk Builder.
+# Template for the SECOND cloudflared connector — build.tukuk.org → Tukuk Builder,
+# plus tchat.tukuk.org → the nginx front, which is what makes the dedicated T Chat
+# domain work at all (the main tunnel is remote-config, so its hostnames can only be
+# added in the dashboard; this file is read locally and needs nothing but a restart).
 #
 # WHY SEPARATE: the main tunnel (87e7…) is remote-config type — the Cloudflare edge
 # ONLY serves hostnames registered in the dashboard; local ingress edits
@@ -9,6 +12,7 @@
 # PROVISION ONCE (on the VPS, user tukuk — cert.pem already in ~/.cloudflared/):
 #   cloudflared tunnel create build-tukuk
 #   cloudflared tunnel route dns --overwrite-dns <NEW-ID> build.tukuk.org
+#   cloudflared tunnel route dns --overwrite-dns <NEW-ID> tchat.tukuk.org
 #   cp ~/.cloudflared/<NEW-ID>.json /tmp && sudo mv to /etc/cloudflared/ (chmod 600)
 #   sudo cp config-build.example.yml → /etc/cloudflared/config-build.yml (fill ID)
 #   sudo cp deploy/cloudflared-build.service → /etc/systemd/system/
@@ -20,5 +24,10 @@ credentials-file: /etc/cloudflared/REPLACE_WITH_NEW_TUNNEL_ID.json
 ingress:
   - hostname: build.tukuk.org
     service: http://127.0.0.1:5174
+  # T Chat's own origin. It goes to the shared nginx front (127.0.0.1:3000), not straight
+  # to Node, so it gets the same Host header, cache-bypass rules and SSE handling that
+  # tukuk.org itself gets; src/server.js recognises the hostname and serves only chat.
+  - hostname: tchat.tukuk.org
+    service: http://127.0.0.1:3000
   # Required: catch-all rule last
   - service: http_status:404

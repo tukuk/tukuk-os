@@ -1001,6 +1001,15 @@ app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   // tchat root host → serve chat.html directly (the URL stays tchat.tukuk.org/).
   if (req.path === '/' || req.path === '/index.html') {
+    // The root of a private space is not shareable content, even though its body is one
+    // static file: `/` is a cacheable prefix as far as the policy block above knows (`''` is
+    // in the list, because the tukuk.org root is the busiest render on the box), so this
+    // origin would inherit a 5-minute shared copy of the messenger's entry page. Saying so
+    // here is the same mechanism that keeps /nasa/iss out of the cache — a Cache-Control that
+    // differs from the offered policy makes handProxyLease withhold the lease, and nginx keeps
+    // holding no path list. sendFile still answers a repeat visit with a 304, so the browser
+    // pays for one small conditional GET rather than a 100 KB refetch.
+    res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
     return res.sendFile(path.join(PUBLIC_DIR, 'apps', 'chat.html'), (err) => {
       if (err) res.status(503).type('txt').send('T Chat cannot load right now.');
     });
