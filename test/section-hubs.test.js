@@ -33,6 +33,19 @@ test('sectionHubs(): the front doors are described, English only', async () => {
   }
 });
 
+test('sectionHubs(): each hub carries the words a visitor actually types', async () => {
+  // Meili treats stop words as optional-but-better: a document that contains "in the world"
+  // outranks one that only contains "countries world", even though the stop words are not
+  // required. Re-phrasing a question line must not quietly drop those words again.
+  const list = await hubs;
+  const text = (url) => list.find((h) => h.url === url).lines.join(' ');
+  assert.match(text('/countries'), /in the world/);
+  assert.match(text('/flags'), /in the world/);
+  assert.match(text('/weather'), /today/);
+  assert.match(text('/earthquakes'), /today/);
+  assert.match(text('/holidays'), /2026/);
+});
+
 test('sectionHubs(): the country count comes from the data, not from a typed sentence', async () => {
   const list = await hubs;
   const rows = await negara.loadCountries();

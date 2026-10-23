@@ -39,7 +39,7 @@ async function sectionHubs(logger = console) {
       title: 'Countries of the World — capital, population, GDP and flag',
       description: 'A profile of every country on earth: capital, population, GDP, flag and land borders.',
       lines: [
-        n ? `How many countries are there? This site profiles ${n} countries and territories.` : '',
+        n ? `How many countries are there in the world? This site profiles ${n} countries and territories.` : '',
         'Every country page lists its capital, population, GDP, flag and land borders.',
         `Countries are grouped by region: ${regions}.`,
       ],
@@ -50,7 +50,7 @@ async function sectionHubs(logger = console) {
       title: 'World Weather — current conditions, forecast and map',
       description: 'World weather: current conditions and forecasts for cities everywhere, a live map, extremes, clouds, wind and the meaning of warning codes.',
       lines: [
-        'How do I check the weather? The weather pages give current conditions and a forecast for cities around the world, a weather map, extremes, cloud cover and wind.',
+        'What is the weather like today? These pages give the current conditions and a forecast for cities all over the world, plus a weather map, extremes, cloud cover and wind.',
         'Warning codes are explained in plain English, so a red alert from a foreign weather service reads as something more useful than a colour.',
       ],
       keywords: ['weather', 'forecast', 'temperature', 'rain', 'wind', 'clouds', 'weather map', 'warnings'],
@@ -60,7 +60,7 @@ async function sectionHubs(logger = console) {
       title: 'World Earthquakes — live USGS feed',
       description: 'Live earthquakes from the USGS feed: magnitude, depth, place and time, by region, plus an explanation of how earthquakes work.',
       lines: [
-        'Where did an earthquake just happen? This page shows the live earthquake feed, newest first.',
+        'Which earthquakes happened today? This page shows the live earthquake feed for the last 24 hours, newest first.',
         `Regions covered: ${gp.REGIONS.map((r) => r.name).join('; ')}.`,
         'Every event lists magnitude, depth, the nearest place and the time, with a link to the USGS record it came from.',
       ],
@@ -71,7 +71,7 @@ async function sectionHubs(logger = console) {
       title: 'Public Holidays of the World',
       description: `Public holidays by country and region for ${decades}, with long weekends and the rules behind each date.`,
       lines: [
-        `Which public holidays fall in ${cu.YEAR_MIN}? This section lists the public holidays of ${decades} by country and region.`,
+        `Which public holidays are coming up in ${cu.YEAR_MIN}? This section lists the public holidays in the world for ${decades}, by country and region.`,
         'Long weekends are counted out from the real calendar dates, not copied from a list.',
         'The explained page covers why the dates move — lunar calendars, equinoxes and government decrees.',
       ],
@@ -102,7 +102,7 @@ async function sectionHubs(logger = console) {
       title: 'Flags of the World — every flag, its story and a quiz',
       description: 'Every national flag with its colours, proportions and history, a flag quiz to test yourself, and a studio to design your own.',
       lines: [
-        n ? `How many flags are there? One for each of the ${n} countries and territories on this site.` : '',
+        n ? `How many flags are there in the world? One for each of the ${n} countries and territories on this site.` : '',
         'Each flag page gives its colours, proportions and the story behind the design.',
         'The quiz asks you to name a flag; the studio lets you build one from the real construction rules.',
       ],
