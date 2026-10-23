@@ -8,11 +8,14 @@
  * is bounded (300 entries, LRU via Map ordering) so memory stays flat on the VPS.
  */
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 
 const http = axios.create({
   timeout: 15000,
   headers: { 'User-Agent': 'TukukOS-Explore/1.0 (+https://tukuk.org)' }
 });
+// Dedupe + failure cooldown, declared 15 s kept as the deadline (src/outbound.js).
+attachGuard(http, { name: 'explore' });
 
 const cache = new Map();
 

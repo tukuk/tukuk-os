@@ -13,6 +13,7 @@
  * workaround for NASA's LB that sometimes routes a whole backend to a broken pool.
  */
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 const fs = require('fs');
 const https = require('https');
 const dns = require('dns');
@@ -91,6 +92,15 @@ const apiHttp = axios.create({
     'User-Agent': 'TukukOS-NASA-Client/1.0 (+https://tukuk.org)'
   }
 });
+
+// NASA owns its own outage policy — the `apodApiDownUntil` breaker below, the deliberate
+// three-attempt retry (a reused socket stays stuck on the same broken backend, so each attempt
+// must be a real new call) and the 2-minute degraded caches. So the guard is attached here
+// WITHOUT a cooldown (`cooldownMs: 0`) and without a shorter budget than any declared timeout:
+// what NASA has no protection against is a crawler burst for the same date opening twenty
+// identical requests, and that is exactly what the dedupe removes (src/outbound.js).
+attachGuard(http, { name: 'nasa-assets', budgetMs: 25000, cooldownMs: 0 });
+attachGuard(apiHttp, { name: 'nasa-api', budgetMs: 25000, cooldownMs: 0 });
 
 // Small in-memory cache to stay under the rate limit
 const cache = new Map();

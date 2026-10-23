@@ -52,6 +52,10 @@ const bingbot = require('./bingbot');
 const { client, health } = require('./meili');
 const crawler = require('./crawler');
 const fallback = require('./fallback');
+// A leaf module (it imports nothing from this server), so it is safe to require early. The
+// feature modules below register their guards as they load, and every one of them has loaded
+// long before the first request arrives, so /health's `outbound` list is complete.
+const { guardedStats } = require('./outbound');
 const nasa = require('./nasa');
 const wx = require('./weather');
 const trf = require('./traffic');
@@ -16268,7 +16272,11 @@ app.get('/health', async (req, res) => {
       meilisearch: meiliHealth.status,
       documents: serverStats.numberOfDocuments,
       rerank: reranker.status,
-      crawler: crawler.snapshot()
+      crawler: crawler.snapshot(),
+      // What the box is currently waiting for upstream, per module: through/deduped/cooled/
+      // queued/deadline/failed. See src/outbound.js — a deadline counter that never moves means
+      // the guard is decorative, which is exactly the failure mode this line exists to catch.
+      outbound: guardedStats(),
     });
   } catch (error) {
     res.status(503).json({ status: 'degraded', meilisearch: 'unreachable', error: safeError(error) });

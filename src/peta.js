@@ -7,6 +7,7 @@
 // charge nothing. Responses are cached per coordinate pair (30 min) with the
 // same stale-beats-error rule as gempa.js, so a flaky router never kills a page.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 const https = require('https');
 
 // Our deploy box has a working IPv4 route but no usable IPv6, and Node's
@@ -21,6 +22,8 @@ const http = axios.create({
   httpsAgent: agent,
   headers: { 'User-Agent': 'TukukOS-Peta-Client/1.0 (+https://tukuk.org)' },
 });
+// Dedupe + failure cooldown, declared 15 s kept as the deadline (src/outbound.js).
+attachGuard(http, { name: 'peta' });
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 const OM_GEO = 'https://geocoding-api.open-meteo.com/v1/search';

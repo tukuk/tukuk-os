@@ -6,12 +6,16 @@
 // covering 13 states + 3 federal territories. No signup and no hard quota; the
 // calendar rarely changes → cached for 30 days.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 const https = require('https');
 
 const http = axios.create({
   timeout: 12000,
   headers: { 'User-Agent': 'TukukOS-Cuti-Client/1.0 (+https://tukuk.org)' },
 });
+// Guarded as-is: the declared 12 s stays the deadline, what this adds is one shared call per
+// URL during a crawler burst and a cooldown after a failure instead of a queue (src/outbound.js).
+attachGuard(http, { name: 'cuti' });
 
 // The server-side CDN (hcdn) answers non-browser clients (axios/fetch/curl) with a
 // 403 "browser challenge" on its IPv4 edge but passes us through the IPv6 edge.

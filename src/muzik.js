@@ -6,11 +6,17 @@
 // stale-while-revalidate (the {data, expiresAt} pattern from src/teknologi.js) —
 // a slow or failing Apple call never breaks the page; the last good chart wins.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 
 const http = axios.create({
   timeout: 15000,
   headers: { 'User-Agent': 'TukukOS-Muzik-Client/1.0 (+https://tukuk.org)' },
 });
+// The measured case that started the guard: nine /muzik/<cc> requests held Node for exactly
+// 15.00 s each and then answered 503 (un-cached, so the next visitor pays it again), while the
+// feed itself answers in 1.0–3.0 s from this box. 6 s is twice the worst healthy answer, and
+// one dead chart costs a cooldown instead of a queue (src/outbound.js).
+attachGuard(http, { name: 'muzik', budgetMs: 6000 });
 
 const RSS = 'https://rss.marketingtools.apple.com/api/v2';
 

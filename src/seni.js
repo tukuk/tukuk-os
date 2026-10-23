@@ -7,6 +7,7 @@
 // There is no bulk /objects?ids= list — it now returns ALL ids, so
 // the grid page loads N objects at once with a small cap + a long cache.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 const https = require('https');
 
 const http = axios.create({
@@ -14,6 +15,8 @@ const http = axios.create({
   httpsAgent: new https.Agent({ family: 4 }),
   headers: { 'User-Agent': 'TukukOS-Gallery-Client/1.0 (+https://tukuk.org)' },
 });
+// Dedupe + failure cooldown, declared 15 s kept as the deadline (src/outbound.js).
+attachGuard(http, { name: 'seni' });
 
 const API = 'https://collectionapi.metmuseum.org/public/collection';
 const cache = new Map();

@@ -7,6 +7,7 @@
 //     sort=is-referenced-by-count yields the most-cited ones.
 // 24-hour cache — academy topics are stable, freshness needs no more than that.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 const https = require('https');
 
 const http = axios.create({
@@ -14,6 +15,8 @@ const http = axios.create({
   httpsAgent: new https.Agent({ family: 4 }),
   headers: { 'User-Agent': 'TukukOS-Reading/1.0 (+https://tukuk.org/contact)' },
 });
+// Dedupe + failure cooldown, declared 12 s kept as the deadline (src/outbound.js).
+attachGuard(http, { name: 'bacaan' });
 
 const cache = new Map();
 const TTL = 24 * 60 * 60 * 1000;

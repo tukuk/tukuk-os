@@ -6,6 +6,7 @@
 // license requires. Taxon IDs are NOT hardcoded — resolved at runtime via exact_name and cached
 // for 30 days so a scientific-name typo can never hurt the site.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 const https = require('https');
 
 const http = axios.create({
@@ -13,6 +14,8 @@ const http = axios.create({
   httpsAgent: new https.Agent({ family: 4 }),
   headers: { 'User-Agent': 'TukukOS-Wildlife-Client/1.0 (+https://tukuk.org)' },
 });
+// Dedupe + failure cooldown, declared 15 s kept as the deadline (src/outbound.js).
+attachGuard(http, { name: 'hidup' });
 
 const API = 'https://api.inaturalist.org/v1';
 const cache = new Map();

@@ -5,11 +5,15 @@
 // 10 minutes → zero extra load on our server.
 // The static big-event history lives inside the explanation page text only.
 const axios = require('axios');
+const { attachGuard } = require('./outbound');
 
 const http = axios.create({
   timeout: 20000,
   headers: { 'User-Agent': 'TukukOS-Gempa-Client/1.0 (+https://tukuk.org)' },
 });
+// Deliberately shortened from the declared 20 s: no page on this box may hold a visitor for
+// twenty seconds because USGS took a moment (the guard's 15 s default is the ceiling now).
+attachGuard(http, { name: 'gempa' });
 
 const QUERY_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
 
