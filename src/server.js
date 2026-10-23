@@ -1776,6 +1776,7 @@ app.get('/alat/gambar', (req, res) => {
 // the playful modes are pure client-side encoders in public/kamus.js, so they cost the server
 // nothing. Both API endpoints reuse the search rate-limiter and answer `private` (never an
 // edge-cached claim about somebody's query).
+app.get('/kamus', (req, res) => res.redirect(301, '/alat/kamus'));
 app.get('/alat/kamus', (req, res) => {
   try {
     res.status(200).type('html').send(kamusPage());
@@ -9385,7 +9386,7 @@ function boot(){if(!window.L){setTimeout(boot,300);return;}
   var live=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+gd+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpeg',{maxNativeZoom:9,maxZoom:12,attribution:'NASA GIBS — true-color satellite, renewed daily ('+gd+')'});
   var pref='';try{pref=localStorage.getItem('peta-view')||'';}catch(e){}
   (pref==='sat'?hybrid:pref==='live'?live:osm).addTo(map);
-  L.control.layers({'🗺 Map':osm,'🛰 Satellite':hybrid,'☀ Live true-color (daily)':live},null,{collapsed:false}).addTo(map);
+  L.control.layers({'🗺 Map':osm,'🛰 Satellite':hybrid,'☀ Live true-color (daily)':live},null,{collapsed:window.innerWidth<720}).addTo(map);
   map.on('baselayerchange',function(e){var k=e.layer===hybrid?'sat':(e.layer===live?'live':'map');try{localStorage.setItem('peta-view',k);}catch(x){}});
   map.on('click',function(e){pin('d',e.latlng.lat,e.latlng.lng);status('destination set — left-click again to move it, right-click for start');});
   map.on('contextmenu',function(e){e.originalEvent.preventDefault();pin('s',e.latlng.lat,e.latlng.lng);status('start set — press Go');});
