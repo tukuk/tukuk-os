@@ -4428,6 +4428,9 @@ const COMMON_CSS = `
   li { margin-bottom:6px; }
   .back-link { display:inline-block; margin-bottom:16px; font-size:.92rem; }
   .ad-slot { margin:24px 0; overflow:hidden; min-height:90px; }
+  /* Mobile auto-format ads grow to 250–600px; reserve the tall box on the TOP slot so
+     nothing below it jumps (Lighthouse CLS 0.145 → <0.1). */
+  @media(max-width:720px){.ad-top{min-height:280px}}
   /* Ad slot: a panel-dark background so an empty or blocked slot never becomes a big
      white block on a dark theme. */
   .ad-sense { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 8px 6px; }
@@ -4496,7 +4499,7 @@ function adUnit(slot, label) {
   const raw = storeKey ? store.getSetting(storeKey, slot) : slot;
   const s = realSlot(raw);
   if (!client || !s) return '';
-  return `<div class="ad-slot ad-sense"><span class="ad-label">Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${s}" data-ad-format="auto" data-full-width-responsive="true"></ins></div>` +
+  return `<div class="ad-slot ad-sense ad-${label}"><span class="ad-label">Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${s}" data-ad-format="auto" data-full-width-responsive="true"></ins></div>` +
     `<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>`;
 }
 // The Adsense loader script once in <head> (only when active + the client is valid).
