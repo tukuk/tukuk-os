@@ -171,7 +171,11 @@ test('SEO: robots, staticPages, footer SSR, tile index, OS catalogue', () => {
   assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-statistik.xml'), 'robots lists the statistik sitemap');
   assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-bencana.xml'), 'robots lists the bencana sitemap');
   assert.ok(serverSrc.includes("'/statistik', '/bencana'"), 'the main sitemap staticPages');
-  const footer = serverSrc.slice(serverSrc.indexOf('function siteFooter()'), serverSrc.indexOf('function siteFooter()') + 3000);
+  // The window has to cover the WHOLE footer. It used to be 3000 characters, which passed
+  // until an extra nav/footer entry pushed this link past it and made the test fail for a
+  // reason that had nothing to do with the link. Generous on purpose.
+  const footerAt = serverSrc.indexOf('function siteFooter()');
+  const footer = serverSrc.slice(footerAt, footerAt + 12000);
   assert.ok(footer.includes('<a href="/statistik">World statistics</a>'), 'the footer statistik link');
   assert.ok(footer.includes('<a href="/bencana">Live disaster watch</a>'), 'the footer bencana link');
   assert.ok(indexHtml.includes('href="/statistik"') && indexHtml.includes('href="/bencana"'), 'the tile index links both');
