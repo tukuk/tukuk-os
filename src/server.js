@@ -10821,8 +10821,8 @@ function fmtDate(y,m,d){return new Date(y,m,d).toLocaleDateString(undefined,{wee
 function add(z){if(!z)return;if(zones.indexOf(z)>=0){$('z-best').textContent=label(z)+' is already in the list.';return;}
  if(zones.length>=MAX){$('z-best').textContent='Eight zones is plenty — remove one first.';return;}
  zones.push(z);chips();draw();}
-function best(counts,y,m,d){var n=zones.length,i,top=-1,topAt=-1,start=-1,bestStart=-1,bestLen=0,html,t,p,list='';
- for(i=0;i<24;i++)if(counts[i]>top){top=counts[i];topAt=i;}
+function best(counts,dists,y,m,d){var n=zones.length,i,top=-1,topAt=-1,topDist=1e9,start=-1,bestStart=-1,bestLen=0,html,t,p,list='';
+ for(i=0;i<24;i++){if(counts[i]>top||(counts[i]===top&&dists[i]<topDist)){top=counts[i];topAt=i;topDist=dists[i];}}
  for(i=0;i<24;i++){if(counts[i]===n){if(start<0)start=i;if(i-start+1>bestLen){bestLen=i-start+1;bestStart=start;}}else start=-1;}
  if(bestLen>0){html='<b>Everyone is inside 09:00–17:59 from '+pad(bestStart)+':00 to '+pad(bestStart+bestLen-1)+':00 your time on '+fmtDate(y,m,d)+'.</b>';t=instant(base,y,m,d,bestStart);}
  else{html='<b>No hour puts all '+n+' zones inside 09:00–17:59.</b> The closest is '+pad(topAt)+':00 your time, when '+top+' of '+n+' are in working hours.';t=instant(base,y,m,d,topAt);}
@@ -10833,15 +10833,18 @@ function best(counts,y,m,d){var n=zones.length,i,top=-1,topAt=-1,start=-1,bestSt
 function draw(){var ds=$('z-date').value||'',dp=ds.split('-'),y=+dp[0],m=+dp[1]-1,d=+dp[2];
  if(!y||!m&&m!==0||!d){$('z-best').textContent='Pick a date first.';return;}
  if(!base){$('z-best').textContent='Pick your zone first.';return;}
- var hd='<tr><th>'+esc(label(base))+'</th>',i,h,p,t,cells,good,cls,counts=[],rows=[];
+ var hd='<tr><th>'+esc(label(base))+'</th>',i,h,p,t,cells,good,dist,cls,counts=[],dists=[],rows=[];
  for(i=0;i<zones.length;i++)hd+='<th>'+esc(label(zones[i]))+'<br><span class="z-off">'+utcLabel(zones[i],y,m,d)+'</span></th>';
  hd+='<th>Work hours</th></tr>';
- for(h=0;h<24;h++){t=instant(base,y,m,d,h);cells='';good=0;var tp=parts(t,base);
+ for(h=0;h<24;h++){t=instant(base,y,m,d,h);cells='';good=0;dist=0;var tp=parts(t,base);
   for(i=0;i<zones.length;i++){p=parts(t,zones[i]);cls=(p.h>=9&&p.h<18)?'z-good':((p.h>=7&&p.h<21)?'z-ok':'z-off');if(cls==='z-good')good++;
+   // Hours away from the 09:00–18:00 window; the tie-break prefers the least-bad hour
+   // over simply the first one, so a 04:00 beats a midnight at the same 2-of-3 count.
+   dist+=p.h<9?9-p.h:(p.h>=18?p.h-17:0);
    cells+='<td class="'+cls+'">'+pad(p.h)+':'+pad(p.mi)+'</td>';}
-  counts.push(good);
+  counts.push(good);dists.push(dist);
   rows.push('<tr><td>'+pad(tp.h)+':'+pad(tp.mi)+' <span class="z-off">'+tp.weekday+'</span></td>'+cells+'<td class="z-off">'+good+'/'+zones.length+'</td></tr>');}
- $('z-tab').innerHTML=hd+rows.join('');best(counts,y,m,d);}
+ $('z-tab').innerHTML=hd+rows.join('');best(counts,dists,y,m,d);}
 var now=new Date();
 $('z-date').value=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
 try{base=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch(e){base='UTC';}
@@ -10899,6 +10902,7 @@ function uuidPage() {
   const script = `<script>(function(){
 function $(id){return document.getElementById(id);}
 function hex(b){var o='',i;for(i=0;i<b.length;i++)o+=(b[i]<16?'0':'')+b[i].toString(16);return o;}
+function two(n){return (n<16?'0':'')+n.toString(16);}
 function rnd(n){var a=new Uint8Array(n);crypto.getRandomValues(a);return a;}
 function v4(){var b=rnd(16);b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;return hex(b);}
 function v7(){var b=rnd(16),t=Date.now();
@@ -10928,7 +10932,7 @@ function describe(){var raw=$('u-in').value,b=parse(raw);
   out+='<b>74 random bits</b> · created '+time(ms)+' (from the first 48 bits).';}
  else if(ver===1){var tl=b[0]*16777216+b[1]*65536+b[2]*256+b[3],tm=b[4]*256+b[5],th=((b[6]<<8)|b[7])&4095;
   var ms1=Number((BigInt(th)<<48n|BigInt(tm)<<32n|BigInt(tl))/10000n-12219292800000n);
-  out+='<b>timestamp</b> '+time(ms1)+' · node '+b[10].toString(16)+b[11].toString(16)+':'+b[12].toString(16)+b[13].toString(16)+':'+b[14].toString(16)+b[15].toString(16)+' — v1 embeds a clock and a hardware address, so treat it as a privacy leak.';}
+  out+='<b>timestamp</b> '+time(ms1)+' · node '+two(b[10])+':'+two(b[11])+':'+two(b[12])+':'+two(b[13])+':'+two(b[14])+':'+two(b[15])+' — v1 embeds a clock and a hardware address, so treat it as a privacy leak.';}
  else if(ver===3||ver===5)out+='<b>name-based hash</b> — deterministic: the same name in the same namespace always produces this exact UUID. No time, no randomness.';
  else if(ver===6)out+='<b>reordered time</b> — a v1 layout with the timestamp fields swapped for sorting.';
  else out+='a version field this decoder does not know — either a newer RFC or bits that are not a real UUID.';
