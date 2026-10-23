@@ -25,7 +25,7 @@
   // ── Collect readable text: drop nav/footer/ads/controls ──
   function collectSentences() {
     var clone = main.cloneNode(true);
-    var kill = 'script,style,nav,footer,form,button,input,select,textarea,ins,.ad-slot,.site-top,.site-foot,.ra-btn,.ra-tip,aside,noscript';
+    var kill = 'script,style,nav,footer,form,button,input,select,textarea,ins,.ad-slot,.site-top,.site-foot,.ra-btn,.ra-tip,.tl-form,.tl-res,.km-tabs,[data-ra="skip"],aside,noscript';
     var dead = clone.querySelectorAll(kill);
     for (var i = 0; i < dead.length; i++) dead[i].parentNode.removeChild(dead[i]);
     var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
@@ -80,6 +80,7 @@
 
   var sentences = collectSentences();
   if (!sentences.length) return;
+  var pageSentences = sentences;
 
   // ── UI: ONE small button only (bottom-right) ──
   var st = document.createElement('style');
@@ -197,8 +198,14 @@
     if (state === 'idle') {
       if (!voices.length) fillVoices();
       if (!voices.length) { say(T.novoice, 6000); return; } // be honest: never pretend to read
+      // If the reader has selected part of the page, read just that — the single most
+      // requested thing from a read-aloud control — otherwise fall back to the whole body.
+      var sel = window.getSelection && window.getSelection();
+      var selText = (sel && !sel.isCollapsed) ? String(sel.toString() || '') : '';
+      sentences = selText.trim() ? splitSentences(selText) : pageSentences;
+      if (!sentences.length) sentences = pageSentences;
       synth.cancel();
-      if (idx >= sentences.length) idx = 0;
+      idx = 0;
       state = 'reading'; errStreak = 0;
       armKeepAlive();
       setUI();
