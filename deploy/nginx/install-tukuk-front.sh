@@ -25,7 +25,12 @@ export HOME
 APP=/opt/tukuk-os
 CONF_SRC=$APP/deploy/nginx/tukuk-front.conf
 CONF=/etc/nginx/conf.d/tukuk-front.conf
-APP_ENV=/home/tukuk/.config/tukuk-os/env
+# The port is moved with a systemd DROP-IN, never by editing the unit. On this box the
+# live /etc/systemd/system/tukuk-os.service carries `Environment=PORT=3000` itself (the
+# copy in this repo is not what is installed), so a drop-in is both the only clean way to
+# override it and the only way to undo it without retyping someone else's file.
+DROPIN_DIR=/etc/systemd/system/tukuk-os.service.d
+DROPIN=$DROPIN_DIR/60-front-port.conf
 CACHE_DIR=/var/cache/nginx/tukuk
 NOW_PORT=3000   # where Node listens today
 NEW_PORT=3001   # where Node moves on cut-over
@@ -41,7 +46,7 @@ port_free() { ! ss -ltn 2>/dev/null | grep -q "127\.0\.0\.1:$1 "; }
 
 [ "$(id -u)" = 0 ] || die "run as root: sudo bash $0 ${1:-status}"
 [ -f "$CONF_SRC" ] || die "missing $CONF_SRC — git pull first"
-[ -f "$APP_ENV" ]  || die "missing $APP_ENV (the app's EnvironmentFile). Not this box?"
+[ -e /etc/systemd/system/tukuk-os.service ] || die "no tukuk-os.service here — not this box?"
 command -v nginx >/dev/null || die "nginx is not installed"
 
 # Current state of the installed front proxy: which port it listens on, which it proxies to.
@@ -75,16 +80,26 @@ place_conf() { # $1 = listen port, $2 = origin port
   step "nginx reloaded (listen $1 -> origin $2)"
 }
 
-set_app_port() { # $1 = the port Node should bind
-  local file=$1
-  cp -a "$APP_ENV" "$APP_ENV.bak-front-$(date +%s)" || die "could not back up $APP_ENV"
-  if grep -q '^PORT=' "$file"; then
-    sed -i "s/^PORT=.*/PORT=$1/" "$file"
-  else
-    printf 'PORT=%s\n' "$1" >>"$file"
+set_app_port() { # $1 = the port Node should bind, or '' to remove the override again
+  if [ -z "$1" ]; then
+    rm -f "$DROPIN"
+    systemctl daemon-reload
+    step "drop-in removed — the unit's own PORT applies again"
+    return
   fi
-  grep -q '^HOST=' "$file" || printf 'HOST=127.0.0.1\n' >>"$file"
-  step "EnvironmentFile now: $(grep -E '^(PORT|HOST)=' "$file" | tr '\n' ' ')"
+  mkdir -p "$DROPIN_DIR"
+  printf '[Service]\n# Written by install-tukuk-front.sh — delete this file to undo the front proxy.\nEnvironment=PORT=%s\nEnvironment=HOST=127.0.0.1\n' "$1" > "$DROPIN"
+  systemctl daemon-reload
+  step "drop-in says PORT=$1"
+}
+
+# What the running process ACTUALLY has in its environment. The drop-in is read after the
+# unit file, so it wins — but that precedence is asserted here from /proc, not assumed.
+effective_port() {
+  local pid
+  pid=$(systemctl show -p MainPID --value tukuk-os.service)
+  [ "$pid" = 0 ] && { echo none; return; }
+  tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^PORT=//p' | tail -1
 }
 
 case "${1:-status}" in
@@ -112,7 +127,8 @@ case "${1:-status}" in
     set_app_port "$NEW_PORT"
     systemctl restart tukuk-os.service || die "tukuk-os failed to restart — roll back with: bash $0 rollback"
     wait_health "$NEW_PORT" || die "Node is not answering on $NEW_PORT — roll back with: bash $0 rollback"
-    step "Node healthy on $NEW_PORT"
+    [ "$(effective_port)" = "$NEW_PORT" ] || die "the process still has PORT=$(effective_port) — the drop-in did not win; roll back with: bash $0 rollback"
+    step "Node healthy on $NEW_PORT, and /proc says PORT=$(effective_port)"
 
     echo "▶ moving nginx onto $PROD_PORT (it must bind it only now that Node has released it)"
     place_conf "$PROD_PORT" "$NEW_PORT"
@@ -138,15 +154,15 @@ case "${1:-status}" in
       place_conf "$VERIFY_PORT" "$NOW_PORT"
       rm -rf "$CACHE_DIR" && step "cache cleared (a stale page must not survive a rollback)"
     fi
-    set_app_port "$NOW_PORT"
+    set_app_port ''                       # drop-in gone → the unit's own PORT=3000 applies
     systemctl restart tukuk-os.service || step "WARNING: tukuk-os restart reported an error"
-    wait_health "$NOW_PORT" && step "✓ serving directly again on $NOW_PORT, as before" \
+    wait_health "$NOW_PORT" && step "✓ serving directly again on $NOW_PORT (PORT=$(effective_port) in the live process), as before" \
       || step "✗ still unhealthy on $NOW_PORT — check: systemctl status tukuk-os"
     ;;
 
   status)
     echo "nginx listens: $(installed_listen)   proxies to: $(installed_origin)"
-    step "node sees: $(grep -E '^PORT=' "$APP_ENV" 2>/dev/null || echo 'PORT not set (defaults to 3000)')"
+    step "PORT in the live process: $(effective_port)   drop-in: $([ -f "$DROPIN" ] && echo present || echo absent)"
     for p in 3000 3001 8080; do
       step ":$p → $(ss -ltnp 2>/dev/null | awk -v p="127.0.0.1:$p" '$4==p{print $NF}' | head -1)"
     done
