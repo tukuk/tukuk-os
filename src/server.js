@@ -18059,6 +18059,49 @@ app.get('/api/admin/status', auth.requireAdmin, async (req, res) => {
   }
 });
 
+// ── Load governor (admin only) ──────────────────────────────────────────────
+// The systemd timer in deploy/load-governor.* samples the machine every 2 minutes and leaves the
+// result under data/ (git-ignored, never served). This route only forwards that file — nothing is
+// measured here, so refreshing the panel cannot make a busy server busier. Gated because the
+// payload is host detail: core count, memory, unit names, PIDs. None of that belongs on a public
+// page or a public API.
+const LOAD_SNAPSHOT_FILE = path.join(process.cwd(), 'data', 'load-snapshot.json');
+const LOAD_ALERTS_FILE = path.join(process.cwd(), 'data', 'load-alerts.json');
+// Five missed samples: the timer stopped, or the box rebooted into a machine where it is not
+// installed. Say so instead of showing last week's numbers as if they were current.
+const LOAD_STALE_SECONDS = 600;
+
+app.get('/api/admin/load', auth.requireAdmin, (req, res) => {
+  try {
+    if (!fs.existsSync(LOAD_SNAPSHOT_FILE)) {
+      return res.json({
+        available: false,
+        hint: 'No sample yet. On the server: sudo bash /opt/tukuk-os/deploy/install-load-governor.sh',
+      });
+    }
+    const snap = JSON.parse(fs.readFileSync(LOAD_SNAPSHOT_FILE, 'utf8'));
+    const ageSeconds = Math.max(0, Math.round((Date.now() - Date.parse(snap.sampledAt || '')) / 1000));
+    let alerts = [];
+    try {
+      alerts = (JSON.parse(fs.readFileSync(LOAD_ALERTS_FILE, 'utf8')).alerts || []).slice(-40).reverse();
+    } catch { /* no alerts written yet is a good state, not an error */ }
+    res.json({
+      available: true,
+      stale: ageSeconds > LOAD_STALE_SECONDS,
+      ageSeconds,
+      self: {
+        memoryRssMb: Math.round(process.memoryUsage().rss / 1048576),
+        heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1048576),
+        uptimeSeconds: Math.round(process.uptime()),
+      },
+      snapshot: snap,
+      alerts,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to read the load snapshot', details: safeError(error) });
+  }
+});
+
 // Recommended (affiliate) products — the default so /rekomendasi is not empty. The admin replaces
 // them with real affiliate links (Shopee/Amazon/Hostinger/NordVPN etc). A JSON array.
 const DEFAULT_AFFILIATE = JSON.stringify([

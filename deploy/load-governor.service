@@ -1,0 +1,21 @@
+[Unit]
+Description=Load governor for Tukuk-OS — sample who is using this server
+Documentation=file:/opt/tukuk-os/scripts/load-governor.js
+After=tukuk-os.service meilisearch.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tukuk-os
+ExecStart=/usr/bin/node /opt/tukuk-os/scripts/load-governor.js
+
+# A monitor must never be the thing that makes the server heavy. It reads /proc and
+# systemctl and writes a few KB, so it can run at the lowest priority.
+Nice=19
+IOSchedulingClass=idle
+CPUAccounting=yes
+MemoryMax=96M
+TasksMax=32
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=load-governor

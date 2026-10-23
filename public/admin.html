@@ -228,6 +228,16 @@
   }
   .quick-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 
+  /* Load governor: dense read-outs, not marketing cards */
+  .lg-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .lg-table th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--panel-border); white-space: nowrap; }
+  .lg-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+  .lg-table td.lg-name { font-family: inherit; white-space: normal; }
+  .lg-spark { display: flex; align-items: flex-end; gap: 2px; height: 56px; margin: 6px 0 2px; }
+  .lg-spark i { flex: 1 1 auto; min-width: 2px; background: var(--accent); opacity: 0.75; border-radius: 2px 2px 0 0; display: block; }
+  .lg-alert { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.88rem; }
+  .lg-sub { margin: 22px 0 8px; font-size: 1rem; font-weight: 700; }
+
   /* Modal Login */
   .auth-overlay {
     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 1000;
@@ -324,10 +334,10 @@
     <div id="tab-monitor" class="tab-pane active">
       <div class="grid-stats">
         <div class="stat-card">
-          <div class="stat-label">RAM Usage (2GB Limit)</div>
+          <div class="stat-label">Node Process Memory</div>
           <div class="stat-val" id="statRam">... MB</div>
           <div class="stat-bar"><div class="stat-fill" id="statRamBar"></div></div>
-          <div class="help-text" id="statRamPercent">...% of 2GB RAM</div>
+          <div class="help-text" id="statRamPercent">loading…</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Indexed Documents</div>
@@ -341,7 +351,7 @@
         </div>
         <div class="stat-card">
           <div class="stat-label">Cloudflare Tunnel</div>
-          <div class="stat-val" style="color:var(--success);">Active</div>
+          <div class="stat-val" id="statTunnel" style="color:var(--text-muted);">…</div>
           <div class="help-text">Domain: tukuk.org</div>
         </div>
       </div>
@@ -380,6 +390,33 @@
         </div>
       </div>
       
+      <div class="card" id="loadCard">
+        <h2>🧮 Load Governor
+          <span class="badge badge-success" id="loadBadge" hidden>live</span>
+          <span class="badge badge-danger" id="loadStaleBadge" hidden>stale</span>
+        </h2>
+        <p class="help-text" id="loadLead" style="margin-bottom:16px;">
+          Sampled on the server every 2 minutes by <code>load-governor.timer</code>. It watches the
+          whole machine, not just this website: the incident it was written for was a GUI login greeter
+          burning 86% of a core for 3.5 days while <code>/health</code> stayed green.
+        </p>
+        <div class="grid-stats" id="loadStats"></div>
+        <div id="loadTrend" hidden>
+          <div class="stat-label">Load average, last <span id="loadTrendN">0</span> samples (2 min apart)</div>
+          <div class="lg-spark" id="loadSpark"></div>
+        </div>
+        <div class="lg-sub" id="loadServicesHead" hidden>Services</div>
+        <div style="overflow-x:auto;"><table class="lg-table" id="loadServices"></table></div>
+        <div class="lg-sub" id="loadProcsHead" hidden>Processes with no service behind them</div>
+        <p class="help-text" id="loadProcsNote" hidden>
+          Anything here is running outside systemd: no restart policy, no memory cap, nothing that will
+          ever notice it misbehaving. This is where the greeter lived.
+        </p>
+        <div style="overflow-x:auto;"><table class="lg-table" id="loadProcs"></table></div>
+        <div class="lg-sub" id="loadAlertsHead" hidden>Alerts</div>
+        <div id="loadAlerts"></div>
+      </div>
+
       <div class="card">
         <h2>🔥 Popular Search Queries</h2>
         <div id="popularQueriesList" style="display:flex; flex-wrap:wrap; gap:8px;">
@@ -1019,8 +1056,137 @@ Type a command below or click a quick action.
   
   async function loadData() {
     loadStatus();
+    loadLoad();
     loadSettings();
     loadPosts();
+  }
+
+  // The Node memory card needs two numbers that arrive from two endpoints: RSS from /status, the
+  // systemd cap from the governor snapshot. Both renderers call this, so whichever arrives last
+  // still draws the truth, and nothing is shown as a percentage before its denominator is known.
+  let lastRssMb = null, lastHeapMb = null, serviceCapMb = null;
+  function renderRamCard() {
+    const val = document.getElementById('statRam');
+    const bar = document.getElementById('statRamBar');
+    const sub = document.getElementById('statRamPercent');
+    if (lastRssMb === null) return;
+    val.textContent = `${lastRssMb} MB`;
+    if (serviceCapMb) {
+      const pct = Math.min(100, Math.round((lastRssMb / serviceCapMb) * 100));
+      bar.style.width = `${pct}%`;
+      sub.textContent = `${pct}% of the ${serviceCapMb} MB systemd MemoryMax for this service`;
+    } else {
+      bar.style.width = '0%';
+      sub.textContent = `heap ${lastHeapMb === null ? '…' : lastHeapMb + ' MB'} · cap not read yet`;
+    }
+  }
+
+  function esc(value) {
+    return String(value === null || value === undefined ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  // "—" means "the governor could not know", which is not the same as 0.
+  function dash(v, suffix) {
+    return (v === null || v === undefined) ? '—' : `${v}${suffix || ''}`;
+  }
+
+  async function loadLoad() {
+    try {
+      const res = await fetch('/api/admin/load', { headers: { 'Authorization': `Bearer ${authToken}` } });
+      if (res.status === 401) return forceLogout();
+      const data = await res.json();
+      const stats = document.getElementById('loadStats');
+      const servicesTable = document.getElementById('loadServices');
+      const procsTable = document.getElementById('loadProcs');
+      const alertsBox = document.getElementById('loadAlerts');
+
+      if (!data.available) {
+        document.getElementById('loadBadge').hidden = true;
+        document.getElementById('loadStaleBadge').hidden = true;
+        servicesTable.innerHTML = '';
+        procsTable.innerHTML = '';
+        alertsBox.innerHTML = '';
+        stats.innerHTML = `<div class="stat-card" style="grid-column:1/-1;">
+          <div class="stat-label">No sample on this machine yet</div>
+          <div class="help-text">${esc(data.hint || 'run the installer once')}</div></div>`;
+        return;
+      }
+
+      const s = data.snapshot || {};
+      const h = s.host || {};
+      const services = s.services || [];
+      document.getElementById('loadBadge').hidden = Boolean(data.stale);
+      document.getElementById('loadStaleBadge').hidden = !data.stale;
+      document.getElementById('loadStaleBadge').textContent = data.stale
+        ? `stale — last sample ${data.ageSeconds}s ago, the timer is not running`
+        : 'stale';
+
+      const tukuk = services.find((x) => x.unit === 'tukuk-os.service');
+      serviceCapMb = tukuk && tukuk.memoryLimitMb ? tukuk.memoryLimitMb : null;
+      if (data.self) { lastRssMb = data.self.memoryRssMb; lastHeapMb = data.self.heapUsedMb; }
+      renderRamCard();
+
+      const tunnel = services.find((x) => x.unit === 'cloudflared.service');
+      const tEl = document.getElementById('statTunnel');
+      tEl.textContent = tunnel ? tunnel.state : 'unknown';
+      tEl.style.color = tunnel && tunnel.state === 'active/running' ? 'var(--success)' : 'var(--danger)';
+
+      const pressure = (used, total) => (total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0);
+      const cards = [
+        { label: 'Load (1 min)', val: dash(h.load1), sub: `${dash(h.load1)} / ${dash(h.load5)} / ${dash(h.load15)} on ${dash(h.cores)} cores`, fill: Math.min(100, Math.round((h.loadPerCore1 || 0) * 100)) },
+        { label: 'Memory Free', val: `${dash(h.memAvailMb, ' MB')}`, sub: `${dash(h.memAvailPct, '%')} of ${dash(h.memTotalMb, ' MB')} still available`, fill: 100 - (h.memAvailPct || 0) },
+        { label: 'Swap In Use', val: `${dash(h.swapUsedMb, ' MB')}`, sub: h.swapTotalMb ? `of ${h.swapTotalMb} MB` : 'no swap configured', fill: pressure(h.swapUsedMb || 0, h.swapTotalMb || 0) },
+        { label: 'Disk Free (/)', val: h.disk ? `${dash(h.disk.freeMb, ' MB')}` : '—', sub: h.disk ? `${h.disk.usedMb} MB used of ${h.disk.totalMb} MB` : 'not reported', fill: h.disk ? pressure(h.disk.usedMb, h.disk.totalMb) : 0 },
+        { label: 'Machine Uptime', val: `${dash(h.uptimeHours, ' h')}`, sub: `sampled ${dash(data.ageSeconds, 's')} ago · ${dash(s.processesScanned)} processes scanned`, fill: 0 },
+      ];
+      stats.innerHTML = cards.map((c) => `<div class="stat-card">
+        <div class="stat-label">${esc(c.label)}</div>
+        <div class="stat-val">${esc(c.val)}</div>
+        <div class="stat-bar"><div class="stat-fill" style="width:${c.fill}%"></div></div>
+        <div class="help-text">${esc(c.sub)}</div></div>`).join('');
+
+      const hist = (s.history || []).slice(-90);
+      document.getElementById('loadTrend').hidden = hist.length < 2;
+      document.getElementById('loadTrendN').textContent = hist.length;
+      if (hist.length >= 2) {
+        const max = Math.max(...hist.map((x) => Number(x.l1) || 0), 0.5);
+        document.getElementById('loadSpark').innerHTML = hist.map((x) => {
+          const pct = Math.max(3, Math.round(((Number(x.l1) || 0) / max) * 100));
+          return `<i style="height:${pct}%" title="${esc(x.t)} load ${esc(x.l1)} · free ${esc(x.av)} MB"></i>`;
+        }).join('');
+      }
+
+      document.getElementById('loadServicesHead').hidden = services.length === 0;
+      servicesTable.innerHTML = services.length ? `<thead><tr>
+        <th>Unit</th><th>State</th><th>Memory</th><th>Cap</th><th>CPU</th><th>Restarts</th></tr></thead><tbody>${
+        services.map((x) => {
+          const color = x.state === 'active/running' ? 'var(--success)'
+            : x.state.indexOf('failed') === 0 || x.state === 'activating/start' ? 'var(--danger)' : 'var(--text-muted)';
+          return `<tr><td class="lg-name">${esc(x.unit)}</td>
+            <td style="color:${color};">${esc(x.state)}</td>
+            <td>${dash(x.memoryMb, ' MB')}</td><td>${dash(x.memoryLimitMb, ' MB')}</td>
+            <td>${dash(x.cpuPct, '%')}</td><td>${esc(x.restarts)}</td></tr>`;
+        }).join('')}</tbody>` : '';
+
+      const procs = s.unsupervised || [];
+      document.getElementById('loadProcsHead').hidden = procs.length === 0;
+      document.getElementById('loadProcsNote').hidden = procs.length === 0;
+      procsTable.innerHTML = procs.length ? `<thead><tr>
+        <th>Process</th><th>PID</th><th>CPU (interval)</th><th>CPU (lifetime)</th><th>RSS</th></tr></thead><tbody>${
+        procs.map((p) => `<tr><td class="lg-name">${esc(p.comm)}</td><td>${esc(p.pid)}</td>
+          <td>${dash(p.cpuPct, '%')}</td><td>${dash(p.sinceStartPct, '%')}</td>
+          <td>${dash(p.rssMb, ' MB')}</td></tr>`).join('')}</tbody>` : '';
+
+      const alerts = data.alerts || [];
+      document.getElementById('loadAlertsHead').hidden = alerts.length === 0;
+      alertsBox.innerHTML = alerts.length ? alerts.map((a) => {
+        const cls = a.level === 'crit' ? 'badge-danger' : 'badge-warning';
+        return `<div class="lg-alert"><span class="badge ${cls}">${esc(a.level)}</span>
+          <div><div>${esc(a.text)}</div><div class="help-text">${esc(a.at)}</div></div></div>`;
+      }).join('') : '';
+    } catch (err) {
+      console.error(err);
+    }
   }
   
   async function loadStatus() {
@@ -1029,11 +1195,12 @@ Type a command below or click a quick action.
       if (res.status === 401) return forceLogout();
       const data = await res.json();
       
-      document.getElementById('statRam').textContent = `${data.memoryRssMb} MB`;
-      const pct = Math.min(100, Math.round((data.memoryRssMb / 2048) * 100));
-      document.getElementById('statRamBar').style.width = `${pct}%`;
-      document.getElementById('statRamPercent').textContent = `${pct}% of 2,048 MB RAM used`;
-      
+      // Used to be `${pct}% of 2,048 MB RAM` with 2,048 typed into the page. This process is not
+      // the whole machine and the machine is not 2 GB, so the number came from neither.
+      lastRssMb = data.memoryRssMb;
+      lastHeapMb = data.heapUsedMb;
+      renderRamCard();
+
       document.getElementById('statDocs').textContent = data.documentsCount || 0;
       document.getElementById('statUptime').textContent = `${Math.round(data.uptimeSeconds / 60)}m`;
       
@@ -1048,7 +1215,7 @@ Type a command below or click a quick action.
     }
   }
   
-  document.getElementById('refreshStatsBtn').addEventListener('click', loadStatus);
+  document.getElementById('refreshStatsBtn').addEventListener('click', () => { loadStatus(); loadLoad(); });
   
   // Load Settings
   async function loadSettings() {
