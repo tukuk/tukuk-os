@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS PERPUSTAKAAN (/perpustakaan) — Public Libraries of the World ──
+// ── TUKUK-OS PERPUSTAKAAN (/libraries) — Public Libraries of the World ──
 const https = require('https');
 const DATA = require('./perpustakaan-data.json');
 const UA = 'TukukOS-Libraries/1.0 (+https://tukuk.org)';

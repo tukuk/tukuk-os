@@ -1,6 +1,6 @@
 'use strict';
 // Weather Complex invariants: 6 SSR sections in English + 3 pages per city in the
-// database + free slug geocoding + sitemap-cuaca.xml. Every weather page goes through
+// database + free slug geocoding + sitemap-weather.xml. Every weather page goes through
 // cuacaDoc → 3 ad units. URLs keep their Malay slugs for stability.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -83,12 +83,12 @@ test('src/weather.js: only FREE-tier endpoints + budget/breaker guards', () => {
   assert.match(serverSrc, /wx\.tileTemplateUrl/, 'the map page uses OpenWeather tiles');
 });
 
-test('sitemap-cuaca.xml + robots: 6 static + every DB city ×3 URLs; stats+nav indexable', () => {
-  assert.match(serverSrc, /app\.get\('\/sitemap-cuaca\.xml'/, 'the sitemap-cuaca route exists');
-  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-cuaca.xml'"), serverSrc.indexOf("app.get('/sitemap-cuaca.xml'") + 2000);
+test('sitemap-weather.xml + robots: 6 static + every DB city ×3 URLs; stats+nav indexable', () => {
+  assert.match(serverSrc, /app\.get\('\/sitemap-weather\.xml'/, 'the sitemap-weather route exists');
+  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-weather.xml'"), serverSrc.indexOf("app.get('/sitemap-weather.xml'") + 2000);
   assert.ok(sm.includes('wx.CITIES.map'), 'every DB city is listed in the sitemap');
   for (const suffix of ['/air', '/sun']) assert.ok(sm.includes(suffix), `city ×${suffix} in the sitemap`);
-  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-cuaca\.xml/, 'robots.txt advertises sitemap-cuaca');
+  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-weather\.xml/, 'robots.txt advertises sitemap-weather');
   // Tidy SEO: /weather* in the main sitemap list + site header/footer nav
   assert.ok(serverSrc.includes("const staticPages = ['', '/nasa'") && serverSrc.includes("'/weather/clouds'"), 'the main sitemap lists the /weather pages');
   assert.match(serverSrc, /link\('\/weather', 'Weather', 'cuaca'\)/, 'siteHeader has a Weather link');

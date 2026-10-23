@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS SUNGAI (/sungai) — Rivers of the World ────────────────────────
+// ── TUKUK-OS SUNGAI (/rivers) — Rivers of the World ────────────────────────
 const https = require('https');
 const DATA = require('./sungai-data.json');
 const UA = 'TukukOS-Sungai/1.0 (+https://tukuk.org)';

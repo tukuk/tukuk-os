@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS PELABUHAN (/pelabuhan) — Harbours of the World ──
+// ── TUKUK-OS PELABUHAN (/ports) — Harbours of the World ──
 const https = require('https');
 const DATA = require('./pelabuhan-data.json');
 const UA = 'TukukOS-Harbours/1.0 (+https://tukuk.org)';

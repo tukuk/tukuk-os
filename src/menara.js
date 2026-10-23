@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS MENARA (/menara) — Towers of the World ──
+// ── TUKUK-OS MENARA (/towers) — Towers of the World ──
 const https = require('https');
 const DATA = require('./menara-data.json');
 const UA = 'TukukOS-Towers/1.0 (+https://tukuk.org)';

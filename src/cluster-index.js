@@ -112,7 +112,7 @@ function hubToDoc(cluster) {
     ? `${countries[0][0]} (${countries[0][1]} ${unit})` : '';
 
   const lines = [
-    `${cfg.titleCase} — hub di tukuk.org/${base}.`,
+    `${cfg.titleCase} — hub at tukuk.org/${base}.`,
     // FACTS FIRST, prose after. `/ask` truncates content to
     // `BRAIN_SNIPPET_CHARS` (450 chars on the server) starting from the BEGINNING
     // of the document — a long intro pushes the FAQ lines outside the window and

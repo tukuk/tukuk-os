@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS LAPANGAN-TERBANG (/lapangan-terbang) — Airports of the World ──
+// ── TUKUK-OS LAPANGAN-TERBANG (/airports) — Airports of the World ──
 const https = require('https');
 const DATA = require('./lapangan-terbang-data.json');
 const UA = 'TukukOS-Airports/1.0 (+https://tukuk.org)';

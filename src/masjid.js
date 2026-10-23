@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS MASJID (/masjid) — Mosques of the World ──
+// ── TUKUK-OS MASJID (/mosques) — Mosques of the World ──
 const https = require('https');
 const DATA = require('./masjid-data.json');
 const UA = 'TukukOS-Mosques/1.0 (+https://tukuk.org)';

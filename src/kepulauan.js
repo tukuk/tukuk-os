@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS KEPULAUAN (/kepulauan) — Archipelagos of the World ──
+// ── TUKUK-OS KEPULAUAN (/archipelagos) — Archipelagos of the World ──
 const https = require('https');
 const DATA = require('./kepulauan-data.json');
 const UA = 'TukukOS-Archipelagos/1.0 (+https://tukuk.org)';

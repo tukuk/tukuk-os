@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS GUA (/gua) — Caves of the World ───────────────────────────────
+// ── TUKUK-OS GUA (/caves) — Caves of the World ───────────────────────────────
 const https = require('https');
 const DATA = require('./gua-data.json');
 const UA = 'TukukOS-Gua/1.0 (+https://tukuk.org)';

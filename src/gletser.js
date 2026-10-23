@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS GLETSER (/gletser) — Glaciers of the World ────────────────────
+// ── TUKUK-OS GLETSER (/glaciers) — Glaciers of the World ────────────────────
 const https = require('https');
 const DATA = require('./gletser-data.json');
 const UA = 'TukukOS-Gletser/1.0 (+https://tukuk.org)';

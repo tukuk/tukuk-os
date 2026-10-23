@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS MONUMEN (/monumen) — Monuments of the World ──
+// ── TUKUK-OS MONUMEN (/monuments) — Monuments of the World ──
 const https = require('https');
 const DATA = require('./monumen-data.json');
 const UA = 'TukukOS-Monuments/1.0 (+https://tukuk.org)';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS KATEDRAL (/katedral) — Cathedrals of the World ──
+// ── TUKUK-OS KATEDRAL (/cathedrals) — Cathedrals of the World ──
 const https = require('https');
 const DATA = require('./katedral-data.json');
 const UA = 'TukukOS-Cathedrals/1.0 (+https://tukuk.org)';

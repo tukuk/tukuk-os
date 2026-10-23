@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS AIR-PANAS (/air-panas) — Hot Springs of the World ──
+// ── TUKUK-OS AIR-PANAS (/hot-springs) — Hot Springs of the World ──
 const https = require('https');
 const DATA = require('./air-panas-data.json');
 const UA = 'TukukOS-HotSprings/1.0 (+https://tukuk.org)';

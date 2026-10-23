@@ -1,6 +1,6 @@
 'use strict';
 // Anchors for Akademi Tukuk-OS /academy: 50 lessons (10 tracks × 5), the routes, the
-// shell+ad wiring, quiz validity, sitemap-akademi and the per-track live-tool links.
+// shell+ad wiring, quiz validity, sitemap-academy and the per-track live-tool links.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -96,11 +96,11 @@ test('the lesson page: takeaway box, clickable quiz, prev/next, JSON-LD Learning
   assert.ok(page.includes('t.rel.map'), 'the per-track live-tool links');
 });
 
-test('sitemap-akademi.xml: the hub + 10 tracks + 50 lessons + robots registers it', () => {
-  const route = (serverSrc.match(/app\.get\('\/sitemap-akademi\.xml'[\s\S]*?\}\);/) || [''])[0];
+test('sitemap-academy.xml: the hub + 10 tracks + 50 lessons + robots registers it', () => {
+  const route = (serverSrc.match(/app\.get\('\/sitemap-academy\.xml'[\s\S]*?\}\);/) || [''])[0];
   assert.ok(route.length > 100, 'the sitemap route was found');
   assert.ok(route.includes('akad.TRACKS.map') && route.includes('akad.allLessons()'), 'tracks+lessons are generated from the dataset');
   assert.ok(route.includes("one('/academy', '0.9')"), 'the hub priority is 0.9');
   const robots = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
-  assert.ok(robots.includes('https://tukuk.org/sitemap-akademi.xml'), 'robots knows the academy sitemap');
+  assert.ok(robots.includes('https://tukuk.org/sitemap-academy.xml'), 'robots knows the academy sitemap');
 });

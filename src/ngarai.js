@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS NGARAI (/ngarai) — Gorges of the World ──
+// ── TUKUK-OS NGARAI (/gorges) — Gorges of the World ──
 const https = require('https');
 const DATA = require('./ngarai-data.json');
 const UA = 'TukukOS-Gorges/1.0 (+https://tukuk.org)';

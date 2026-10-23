@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TAPAK-ARKOLOGI (/tapak-arkologi) — Archaeological Sites of the World ──
+// ── TUKUK-OS TAPAK-ARKOLOGI (/archaeological-sites) — Archaeological Sites of the World ──
 const https = require('https');
 const DATA = require('./tapak-arkologi-data.json');
 const UA = 'TukukOS-Sites/1.0 (+https://tukuk.org)';

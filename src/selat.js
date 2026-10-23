@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS SELAT (/selat) — Straits of the World ──
+// ── TUKUK-OS SELAT (/straits) — Straits of the World ──
 const https = require('https');
 const DATA = require('./selat-data.json');
 const UA = 'TukukOS-Straits/1.0 (+https://tukuk.org)';

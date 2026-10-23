@@ -96,11 +96,11 @@ test('server: routes + footer + staticPages + sitemaps for all three clusters', 
   for (const f of ['World Currency — Live Rates', 'Free Art Gallery — The Met', 'Wildlife Atlas — Real Photos']) {
     assert.ok(serverSrc.includes(f), `footer ${f}`);
   }
-  for (const sm of ['/sitemap-wang.xml', '/sitemap-seni.xml', '/sitemap-hidupan.xml']) {
+  for (const sm of ['/sitemap-money.xml', '/sitemap-art.xml', '/sitemap-life.xml']) {
     assert.ok(serverSrc.includes(`app.get('${sm}'`), `the ${sm} route`);
   }
   const robots = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
-  for (const sm of ['sitemap-wang', 'sitemap-seni', 'sitemap-hidupan']) {
+  for (const sm of ['sitemap-money', 'sitemap-art', 'sitemap-life']) {
     assert.ok(robots.includes(`https://tukuk.org/${sm}.xml`), `robots ${sm}`);
     assert.ok(robots.includes(`\nSitemap: https://tukuk.org/${sm}.xml\n`), `robots ${sm} on its own line`);
   }

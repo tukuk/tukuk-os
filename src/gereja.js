@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS GEREJA (/gereja) — Churches of the World ──
+// ── TUKUK-OS GEREJA (/churches) — Churches of the World ──
 const https = require('https');
 const DATA = require('./gereja-data.json');
 const UA = 'TukukOS-Churches/1.0 (+https://tukuk.org)';

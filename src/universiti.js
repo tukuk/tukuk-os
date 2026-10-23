@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS UNIVERSITI (/universiti) — Universities of the World ──
+// ── TUKUK-OS UNIVERSITI (/universities) — Universities of the World ──
 const https = require('https');
 const DATA = require('./universiti-data.json');
 const UA = 'TukukOS-Universities/1.0 (+https://tukuk.org)';

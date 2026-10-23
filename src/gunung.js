@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS GUNUNG (/gunung) — Mountains of the World ─────────────────────
+// ── TUKUK-OS GUNUNG (/mountains) — Mountains of the World ─────────────────────
 // STATIC list of mountains from Wikidata (P31=Q8502) with coordinates + elevation.
 // LIVE Wikipedia summary + cached (fail-open). The page core always
 // renders from fixed data → it MUST NEVER 503. English scope.

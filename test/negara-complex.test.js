@@ -95,12 +95,12 @@ test('a dataset failure → 503, a wrong slug → 404, both through the noindex 
   assert.match(serverSrc, /status\(404\)\.type\('html'\)\.send\(negaraBusy/, 'the 404 (bad slug) uses negaraBusy');
 });
 
-test('sitemap-negara.xml + robots + footer + cross links from the other three complexes', () => {
-  assert.match(serverSrc, /app\.get\('\/sitemap-negara\.xml'/, 'the sitemap-negara route exists');
-  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-negara.xml'"), serverSrc.indexOf("app.get('/sitemap-negara.xml'") + 1500);
+test('sitemap-countries.xml + robots + footer + cross links from the other three complexes', () => {
+  assert.match(serverSrc, /app\.get\('\/sitemap-countries\.xml'/, 'the sitemap-countries route exists');
+  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-countries.xml'"), serverSrc.indexOf("app.get('/sitemap-countries.xml'") + 1500);
   assert.ok(sm.includes('ng.REGIONS.map'), 'the 6 continents enter the sitemap');
   assert.ok(sm.includes('loadCountries'), 'the ±250 countries enter the sitemap once the cache is warm');
-  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-negara\.xml/, 'robots advertises sitemap-negara');
+  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-countries\.xml/, 'robots advertises sitemap-countries');
   assert.ok(serverSrc.includes('<li><a href="/countries">World countries</a></li>'), 'the SSR footer links to the country hub');
   assert.ok(serverSrc.includes('<a href="/countries">Country Complex</a>'), 'the weather page cross-links to the country complex');
   assert.ok(serverSrc.includes("'/countries', '/countries/asia'"), 'the main sitemap lists /countries');

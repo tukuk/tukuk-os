@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS BENDUNGAN (/bendungan) — Dams of the World ──
+// ── TUKUK-OS BENDUNGAN (/dams) — Dams of the World ──
 const https = require('https');
 const DATA = require('./bendungan-data.json');
 const UA = 'TukukOS-Dams/1.0 (+https://tukuk.org)';

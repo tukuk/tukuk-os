@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS BUKIT (/bukit) — Hills of the World ──
+// ── TUKUK-OS BUKIT (/hills) — Hills of the World ──
 const https = require('https');
 const DATA = require('./bukit-data.json');
 const UA = 'TukukOS-Hills/1.0 (+https://tukuk.org)';

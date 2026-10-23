@@ -72,7 +72,7 @@ test('hubToDoc(): facts fit inside the /ask snippet window', () => {
     const i = d.content.indexOf('How many');
     assert.ok(i >= 0 && i < 120, `${d.url}: the first question must be at the head of the document (got ${i})`);
   }
-  const bays = docs.find((d) => d.url === 'https://tukuk.org/teluk');
+  const bays = docs.find((d) => d.url === 'https://tukuk.org/bays');
   assert.ok(bays, 'the teluk (bays) cluster must exist');
   const start = bays.content.indexOf('Which country has the most');
   const end = bays.content.indexOf('\n', start);

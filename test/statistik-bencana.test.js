@@ -144,7 +144,7 @@ test('server.js: routes + renderers + sitemaps of both complexes (static first, 
   for (const route of [
     "app.get('/statistics'", "app.get('/statistics/:slug'",
     "app.get('/disasters'", "app.get('/disasters/:cat'", "app.get('/disasters/:cat/:id'",
-    "app.get('/sitemap-statistik.xml'", "app.get('/sitemap-bencana.xml'",
+    "app.get('/sitemap-statistics.xml'", "app.get('/sitemap-disasters.xml'",
   ]) {
     assert.ok(serverSrc.includes(route), `the ${route} route`);
   }
@@ -175,8 +175,8 @@ test('server.js: routes + renderers + sitemaps of both complexes (static first, 
 });
 
 test('SEO: robots, staticPages, footer SSR, tile index, OS catalogue', () => {
-  assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-statistik.xml'), 'robots lists the statistik sitemap');
-  assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-bencana.xml'), 'robots lists the bencana sitemap');
+  assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-statistics.xml'), 'robots lists the statistik sitemap');
+  assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-disasters.xml'), 'robots lists the bencana sitemap');
   assert.ok(serverSrc.includes("'/statistics', '/disasters'"), 'the main sitemap staticPages');
   // The window has to cover the WHOLE footer. It used to be 3000 characters, which passed
   // until an extra nav/footer entry pushed this link past it and made the test fail for a

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS AKUARIUM (/akuarium) — Aquariums of the World ──
+// ── TUKUK-OS AKUARIUM (/aquariums) — Aquariums of the World ──
 const https = require('https');
 const DATA = require('./akuarium-data.json');
 const UA = 'TukukOS-Aquariums/1.0 (+https://tukuk.org)';

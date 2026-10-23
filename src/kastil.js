@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS KASTIL (/kastil) — Castles of the World ──
+// ── TUKUK-OS KASTIL (/castles) — Castles of the World ──
 const https = require('https');
 const DATA = require('./kastil-data.json');
 const UA = 'TukukOS-Castles/1.0 (+https://tukuk.org)';

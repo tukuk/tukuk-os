@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS PENCAKAR-LANGIT (/pencakar-langit) — Skyscrapers of the World ──
+// ── TUKUK-OS PENCAKAR-LANGIT (/skyscrapers) — Skyscrapers of the World ──
 const https = require('https');
 const DATA = require('./pencakar-langit-data.json');
 const UA = 'TukukOS-Skyscrapers/1.0 (+https://tukuk.org)';

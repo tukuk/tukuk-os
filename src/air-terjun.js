@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS AIR TERJUN (/air-terjun) — Waterfalls of the World ─────────────
+// ── TUKUK-OS AIR TERJUN (/waterfalls) — Waterfalls of the World ─────────────
 const https = require('https');
 const DATA = require('./air-terjun-data.json');
 const UA = 'TukukOS-AirTerjun/1.0 (+https://tukuk.org)';

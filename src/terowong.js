@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TEROWONG (/terowong) — Tunnels of the World ──
+// ── TUKUK-OS TEROWONG (/tunnels) — Tunnels of the World ──
 const https = require('https');
 const DATA = require('./terowong-data.json');
 const UA = 'TukukOS-Tunnels/1.0 (+https://tukuk.org)';

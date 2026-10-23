@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS GUNUNG-BERAPI (/gunung-berapi) — Volcanoes of the World ──
+// ── TUKUK-OS GUNUNG-BERAPI (/volcanoes) — Volcanoes of the World ──
 const https = require('https');
 const DATA = require('./gunung-berapi-data.json');
 const UA = 'TukukOS-Volcanoes/1.0 (+https://tukuk.org)';

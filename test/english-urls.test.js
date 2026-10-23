@@ -95,10 +95,67 @@ test('every English section address is a registered route', async () => {
   }
 });
 
-// Nothing reader-facing should still hand out an old address — that would cost every
-// visitor a redirect hop and keep the Malay URLs discoverable.
+// The geo/place clusters moved too. Their hubs are registered by the geoRoutes()
+// factory with a bare segment, so the route check looks for that form as well.
+const GEO_PAIRS = `cagar:conservation-areas gunung:mountains danau:lakes pulau:islands sungai:rivers
+air-terjun:waterfalls gua:caves gletser:glaciers teluk:bays lembah:valleys semenanjung:peninsulas
+gunung-berapi:volcanoes selat:straits kepulauan:archipelagos ngarai:gorges bukit:hills
+celah:mountain-gaps tanjung:capes lagun:lagoons danau-garam:salt-lakes laut:seas waduk:reservoirs
+tanah-basah:wetlands air-panas:hot-springs terumbu-karang:coral-reefs kaldera:calderas
+bendungan:dams pencakar-langit:skyscrapers jambatan:bridges mercu-suar:lighthouses terusan:canals
+menara:towers pelabuhan:ports terowong:tunnels gereja:churches museum:museums
+lapangan-terbang:airports istana:palaces universiti:universities stadium:stadiums
+kastil:castles masjid:mosques monumen:monuments katedral:cathedrals hospital:hospitals
+hotel:hotels taman-botani:botanical-gardens taman:parks sinagog:synagogues perpustakaan:libraries
+kubu:fortifications balai-cerap:astronomical-observatories akuarium:aquariums banjaran:mountain-ranges
+tanah-kubur:cemeteries biara:monasteries patung:statues rumah-opera:opera-houses gurun:deserts
+akueduk:aqueducts`
+  .split(/\s+/).filter(Boolean).map((pair) => pair.split(':')).map(([a, b]) => [`/${a}`, `/${b}`]);
+
+for (const [oldPath, newPath] of GEO_PAIRS) {
+  test(`GET ${oldPath} redirects permanently to ${newPath}`, async () => {
+    const res = await fetch(base + oldPath, { redirect: 'manual' });
+    assert.equal(res.status, 301, `${oldPath} must answer 301, not ${res.status}`);
+    assert.equal(res.headers.get('location'), newPath, `${oldPath} must land on ${newPath}`);
+  });
+}
+
+test('geo detail pages keep their slug through the redirect', async () => {
+  for (const [oldPath, newPath] of [['/gunung/asia', '/mountains/asia'], ['/teluk/asia', '/bays/asia'], ['/cagar/asia', '/conservation-areas/asia']]) {
+    const res = await fetch(base + oldPath, { redirect: 'manual' });
+    assert.equal(res.status, 301, `${oldPath} must answer 301`);
+    assert.equal(res.headers.get('location'), newPath, `${oldPath} → ${newPath}`);
+  }
+});
+
+test('every English geo address is registered (geoRoutes or app.get)', () => {
+  for (const [, newPath] of GEO_PAIRS) {
+    const root = newPath.split('/')[1];
+    const routed = serverSrc.includes(`geoRoutes('${root}'`) || serverSrc.includes(`app.get('/${root}'`);
+    assert.ok(routed, `${newPath} is registered`);
+  }
+});
+
+
+// robots.txt lists the sitemap files, so their names are public addresses too.
+test('old sitemap file names redirect to the English ones', async () => {
+  const pairs = [['/sitemap-cuaca.xml', '/sitemap-weather.xml'], ['/sitemap-gempa.xml', '/sitemap-earthquakes.xml'],
+    ['/sitemap-cuti.xml', '/sitemap-holidays.xml'], ['/sitemap-negara.xml', '/sitemap-countries.xml'],
+    ['/sitemap-statistik.xml', '/sitemap-statistics.xml'], ['/sitemap-bencana.xml', '/sitemap-disasters.xml'],
+    ['/sitemap-akademi.xml', '/sitemap-academy.xml'], ['/sitemap-wang.xml', '/sitemap-money.xml'],
+    ['/sitemap-seni.xml', '/sitemap-art.xml'], ['/sitemap-hidupan.xml', '/sitemap-life.xml'],
+    ['/sitemap-unsur.xml', '/sitemap-elements.xml'], ['/sitemap-pepatah.xml', '/sitemap-proverbs.xml'],
+    ['/sitemap-rekod.xml', '/sitemap-records.xml'], ['/sitemap-sejarah.xml', '/sitemap-history.xml'],
+    ['/sitemap-kota.xml', '/sitemap-cities.xml'], ['/sitemap-warisan.xml', '/sitemap-heritage.xml']];
+  for (const [oldPath, newPath] of pairs) {
+    const res = await fetch(base + oldPath, { redirect: 'manual' });
+    assert.equal(res.status, 301, `${oldPath} must answer 301`);
+    assert.equal(res.headers.get('location'), newPath, `${oldPath} → ${newPath}`);
+  }
+});
+
 test('no page or content file still links to a Malay section path', async () => {
-  const oldRoots = PAIRS.map(([p]) => p.split('/')[1]).filter((v, i, a) => a.indexOf(v) === i);
+  const oldRoots = [...PAIRS, ...GEO_PAIRS].map(([p]) => p.split('/')[1]).filter((v, i, a) => a.indexOf(v) === i);
   const offenders = [];
   for (const file of ['public/index.html', 'public/os.html', 'public/llms.txt']) {
     const body = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');

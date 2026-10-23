@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS BANJARAN (/banjaran) — Mountain Ranges of the World ──
+// ── TUKUK-OS BANJARAN (/mountain-ranges) — Mountain Ranges of the World ──
 const https = require('https');
 const DATA = require('./banjaran-data.json');
 const UA = 'TukukOS-Ranges/1.0 (+https://tukuk.org)';

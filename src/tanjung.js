@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TANJUNG (/tanjung) — Headlands of the World ──
+// ── TUKUK-OS TANJUNG (/capes) — Headlands of the World ──
 const https = require('https');
 const DATA = require('./tanjung-data.json');
 const UA = 'TukukOS-Headlands/1.0 (+https://tukuk.org)';

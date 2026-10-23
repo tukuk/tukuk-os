@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TAMAN (/taman) — Urban Parks of the World ──
+// ── TUKUK-OS TAMAN (/parks) — Urban Parks of the World ──
 const https = require('https');
 const DATA = require('./taman-data.json');
 const UA = 'TukukOS-Parks/1.0 (+https://tukuk.org)';

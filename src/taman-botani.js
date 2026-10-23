@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TAMAN-BOTANI (/taman-botani) — Botanical Gardens of the World ──
+// ── TUKUK-OS TAMAN-BOTANI (/botanical-gardens) — Botanical Gardens of the World ──
 const https = require('https');
 const DATA = require('./taman-botani-data.json');
 const UA = 'TukukOS-Gardens/1.0 (+https://tukuk.org)';

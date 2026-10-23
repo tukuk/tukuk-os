@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS LAUT (/laut) — Seas of the World ──
+// ── TUKUK-OS LAUT (/seas) — Seas of the World ──
 const https = require('https');
 const DATA = require('./laut-data.json');
 const UA = 'TukukOS-Seas/1.0 (+https://tukuk.org)';

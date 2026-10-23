@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS ISTANA (/istana) — Palaces of the World ──
+// ── TUKUK-OS ISTANA (/palaces) — Palaces of the World ──
 const https = require('https');
 const DATA = require('./istana-data.json');
 const UA = 'TukukOS-Palaces/1.0 (+https://tukuk.org)';

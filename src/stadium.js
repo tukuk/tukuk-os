@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS STADIUM (/stadium) — Stadiums of the World ──
+// ── TUKUK-OS STADIUM (/stadiums) — Stadiums of the World ──
 const https = require('https');
 const DATA = require('./stadium-data.json');
 const UA = 'TukukOS-Stadiums/1.0 (+https://tukuk.org)';

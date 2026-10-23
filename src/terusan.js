@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TERUSAN (/terusan) — Canals of the World ──
+// ── TUKUK-OS TERUSAN (/canals) — Canals of the World ──
 const https = require('https');
 const DATA = require('./terusan-data.json');
 const UA = 'TukukOS-Canals/1.0 (+https://tukuk.org)';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS DANAU-GARAM (/danau-garam) — Salt Lakes of the World ──
+// ── TUKUK-OS DANAU-GARAM (/salt-lakes) — Salt Lakes of the World ──
 const https = require('https');
 const DATA = require('./danau-garam-data.json');
 const UA = 'TukukOS-SaltLakes/1.0 (+https://tukuk.org)';

@@ -1,6 +1,6 @@
 'use strict';
 // Cuti Complex invariants: the WORLD hub (Nager.Date, no key) + 5 continents + country
-// pages + world long weekends + the 16-state MY tables + sitemap-cuti.
+// pages + world long weekends + the 16-state MY tables + sitemap-holidays.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -90,13 +90,13 @@ test('API failure → 503, a wrong state/year → 404, both through the noindex 
   assert.match(serverSrc, /year < cu\.YEAR_MIN \|\| year > cu\.YEAR_MAX\) year = cu\.YEAR_MIN/, 'a ?tahun outside coverage falls back to YEAR_MIN');
 });
 
-test('sitemap-cuti.xml + robots + footer + the weather/quake ↔ holiday cross links', () => {
-  assert.match(serverSrc, /app\.get\('\/sitemap-cuti\.xml'/, 'the sitemap-cuti route exists');
-  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-cuti.xml'"), serverSrc.indexOf("app.get('/sitemap-cuti.xml'") + 1600);
+test('sitemap-holidays.xml + robots + footer + the weather/quake ↔ holiday cross links', () => {
+  assert.match(serverSrc, /app\.get\('\/sitemap-holidays\.xml'/, 'the sitemap-holidays route exists');
+  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-holidays.xml'"), serverSrc.indexOf("app.get('/sitemap-holidays.xml'") + 1600);
   assert.ok(sm.includes('cu.STATES.map'), 'every state is in the sitemap');
   assert.ok(sm.includes('cu.YEAR_MAX'), 'the 2027 (?tahun) variants are in the sitemap');
   assert.ok(sm.includes('cd.REGIONS.map') && sm.includes('cd.COUNTRIES.map'), 'continents + countries are in the sitemap');
-  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-cuti\.xml/, 'robots advertises sitemap-cuti');
+  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-holidays\.xml/, 'robots advertises sitemap-holidays');
   // World policy: the footer chrome promotes the world label, NOT a MY-specific one.
   assert.ok(!serverSrc.includes('<li><a href="/holidays">Public holidays 2026</a></li>'), 'the footer no longer carries a MY holiday label');
   assert.ok(!serverSrc.includes('<li><a href="/holidays/long-weekends">Long weekends MY</a></li>'), 'the footer no longer carries Long weekends MY');

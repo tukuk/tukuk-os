@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS LAGUN (/lagun) — Lagoons of the World ──
+// ── TUKUK-OS LAGUN (/lagoons) — Lagoons of the World ──
 const https = require('https');
 const DATA = require('./lagun-data.json');
 const UA = 'TukukOS-Lagoons/1.0 (+https://tukuk.org)';

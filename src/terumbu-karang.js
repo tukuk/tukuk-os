@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TERUMBU-KARANG (/terumbu-karang) — Coral Reefs of the World ──
+// ── TUKUK-OS TERUMBU-KARANG (/coral-reefs) — Coral Reefs of the World ──
 const https = require('https');
 const DATA = require('./terumbu-karang-data.json');
 const UA = 'TukukOS-Reefs/1.0 (+https://tukuk.org)';

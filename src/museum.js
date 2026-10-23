@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS MUSEUM (/museum) — Museums of the World ──
+// ── TUKUK-OS MUSEUM (/museums) — Museums of the World ──
 const https = require('https');
 const DATA = require('./museum-data.json');
 const UA = 'TukukOS-Museums/1.0 (+https://tukuk.org)';

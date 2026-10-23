@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS HOSPITAL (/hospital) — Hospitals of the World ──
+// ── TUKUK-OS HOSPITAL (/hospitals) — Hospitals of the World ──
 const https = require('https');
 const DATA = require('./hospital-data.json');
 const UA = 'TukukOS-Hospitals/1.0 (+https://tukuk.org)';

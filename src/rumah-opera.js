@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS RUMAH-OPERA (/rumah-opera) — Opera Houses of the World ──
+// ── TUKUK-OS RUMAH-OPERA (/opera-houses) — Opera Houses of the World ──
 const https = require('https');
 const DATA = require('./rumah-opera-data.json');
 const UA = 'TukukOS-OperaHouses/1.0 (+https://tukuk.org)';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS AKUEDUK (/akueduk) — Aqueducts of the World ──
+// ── TUKUK-OS AKUEDUK (/aqueducts) — Aqueducts of the World ──
 const https = require('https');
 const DATA = require('./akueduk-data.json');
 const UA = 'TukukOS-Aqueducts/1.0 (+https://tukuk.org)';

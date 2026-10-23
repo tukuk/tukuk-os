@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS HOTEL (/hotel) — Hotels of the World ──
+// ── TUKUK-OS HOTEL (/hotels) — Hotels of the World ──
 const https = require('https');
 const DATA = require('./hotel-data.json');
 const UA = 'TukukOS-Hotels/1.0 (+https://tukuk.org)';

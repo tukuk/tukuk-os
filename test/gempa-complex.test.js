@@ -1,5 +1,5 @@
 'use strict';
-// Earthquake Complex invariants: keyless USGS feed + 7 English sections + sitemap-gempa + cross links.
+// Earthquake Complex invariants: keyless USGS feed + 7 English sections + sitemap-earthquakes + cross links.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -64,11 +64,11 @@ test('the quake copy is English: labels and slugs both translated', () => {
   assert.match(gempaSrc, /slug: 'southeast-asia', name: 'Southeast Asia'/, 'region label and URL slug are both English');
 });
 
-test('sitemap-gempa.xml + robots + weather↔quake cross links & footer', () => {
-  assert.match(serverSrc, /app\.get\('\/sitemap-gempa\.xml'/, 'the sitemap-gempa route exists');
-  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-gempa.xml'"), serverSrc.indexOf("app.get('/sitemap-gempa.xml'") + 1300);
+test('sitemap-earthquakes.xml + robots + weather↔quake cross links & footer', () => {
+  assert.match(serverSrc, /app\.get\('\/sitemap-earthquakes\.xml'/, 'the sitemap-earthquakes route exists');
+  const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-earthquakes.xml'"), serverSrc.indexOf("app.get('/sitemap-earthquakes.xml'") + 1300);
   assert.ok(sm.includes('gp.REGIONS.map'), 'every region goes into the sitemap');
-  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-gempa\.xml/, 'robots advertises sitemap-gempa');
+  assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-earthquakes\.xml/, 'robots advertises sitemap-earthquakes');
   assert.ok(serverSrc.includes('<li><a href="/earthquakes">World Earthquakes</a></li>'), 'the footer links to the world quake hub');
   assert.ok(serverSrc.includes('<a href="/earthquakes">Earthquake Complex</a>'), 'the weather hub cross-links to the earthquake complex');
   assert.ok(serverSrc.includes("'/earthquakes', '/earthquakes/explained'"), 'the main sitemap lists /earthquakes');

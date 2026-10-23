@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TANAH-BASAH (/tanah-basah) — Wetlands of the World ──
+// ── TUKUK-OS TANAH-BASAH (/wetlands) — Wetlands of the World ──
 const https = require('https');
 const DATA = require('./tanah-basah-data.json');
 const UA = 'TukukOS-Wetlands/1.0 (+https://tukuk.org)';

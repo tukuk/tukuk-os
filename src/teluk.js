@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TELUK (/teluk) — Bays of the World ──
+// ── TUKUK-OS TELUK (/bays) — Bays of the World ──
 const https = require('https');
 const DATA = require('./teluk-data.json');
 const UA = 'TukukOS-Bays/1.0 (+https://tukuk.org)';

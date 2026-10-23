@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS KUBU (/kubu) — Fortresses of the World ──
+// ── TUKUK-OS KUBU (/fortifications) — Fortresses of the World ──
 const https = require('https');
 const DATA = require('./kubu-data.json');
 const UA = 'TukukOS-Fortresses/1.0 (+https://tukuk.org)';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS DANAU (/danau) — Lakes of the World ────────────────────────────
+// ── TUKUK-OS DANAU (/lakes) — Lakes of the World ────────────────────────────
 // STATIC list of lakes from Wikidata (P31=Q23397) with coordinates + elevation.
 // LIVE Wikipedia summary + cached (fail-open). English scope.
 const https = require('https');

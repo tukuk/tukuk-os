@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS JAMBATAN (/jambatan) — Bridges of the World ──
+// ── TUKUK-OS JAMBATAN (/bridges) — Bridges of the World ──
 const https = require('https');
 const DATA = require('./jambatan-data.json');
 const UA = 'TukukOS-Bridges/1.0 (+https://tukuk.org)';

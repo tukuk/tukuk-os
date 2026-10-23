@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS BIARA (/biara) — Monasteries of the World ──
+// ── TUKUK-OS BIARA (/monasteries) — Monasteries of the World ──
 const https = require('https');
 const DATA = require('./biara-data.json');
 const UA = 'TukukOS-Monasteries/1.0 (+https://tukuk.org)';

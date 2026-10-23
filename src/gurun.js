@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS GURUN (/gurun) — Deserts of the World ──
+// ── TUKUK-OS GURUN (/deserts) — Deserts of the World ──
 const https = require('https');
 const DATA = require('./gurun-data.json');
 const UA = 'TukukOS-Deserts/1.0 (+https://tukuk.org)';

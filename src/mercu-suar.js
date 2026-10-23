@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS MERCU-SUAR (/mercu-suar) — Lighthouses of the World ──
+// ── TUKUK-OS MERCU-SUAR (/lighthouses) — Lighthouses of the World ──
 const https = require('https');
 const DATA = require('./mercu-suar-data.json');
 const UA = 'TukukOS-Lighthouses/1.0 (+https://tukuk.org)';

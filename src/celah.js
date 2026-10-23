@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS CELAH (/celah) — Mountain Passes of the World ──
+// ── TUKUK-OS CELAH (/mountain-gaps) — Mountain Passes of the World ──
 const https = require('https');
 const DATA = require('./celah-data.json');
 const UA = 'TukukOS-Passes/1.0 (+https://tukuk.org)';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS SINAGOG (/sinagog) — Synagogues of the World ──
+// ── TUKUK-OS SINAGOG (/synagogues) — Synagogues of the World ──
 const https = require('https');
 const DATA = require('./sinagog-data.json');
 const UA = 'TukukOS-Synagogues/1.0 (+https://tukuk.org)';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS WADUK (/waduk) — Reservoirs of the World ──
+// ── TUKUK-OS WADUK (/reservoirs) — Reservoirs of the World ──
 const https = require('https');
 const DATA = require('./waduk-data.json');
 const UA = 'TukukOS-Reservoirs/1.0 (+https://tukuk.org)';

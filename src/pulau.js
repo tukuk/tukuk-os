@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS PULAU (/pulau) — Islands of the World ─────────────────────────
+// ── TUKUK-OS PULAU (/islands) — Islands of the World ─────────────────────────
 const https = require('https');
 const DATA = require('./pulau-data.json');
 const UA = 'TukukOS-Pulau/1.0 (+https://tukuk.org)';

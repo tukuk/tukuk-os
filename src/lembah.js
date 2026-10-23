@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS LEMBah (/lembah) — Valleys of the World ──
+// ── TUKUK-OS LEMBah (/valleys) — Valleys of the World ──
 const https = require('https');
 const DATA = require('./lembah-data.json');
 const UA = 'TukukOS-Valleys/1.0 (+https://tukuk.org)';

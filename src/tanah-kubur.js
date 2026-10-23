@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS TANAH-KUBUR (/tanah-kubur) — Cemeteries of the World ──
+// ── TUKUK-OS TANAH-KUBUR (/cemeteries) — Cemeteries of the World ──
 const https = require('https');
 const DATA = require('./tanah-kubur-data.json');
 const UA = 'TukukOS-Cemeteries/1.0 (+https://tukuk.org)';

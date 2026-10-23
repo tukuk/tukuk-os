@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS CAGAR (/cagar) — Protected Areas of the World ─────────────────
+// ── TUKUK-OS CAGAR (/conservation-areas) — Protected Areas of the World ─────────────────
 // STATIC list of protected areas (national parks, nature reserves, biosphere reserves) from
 // Wikidata — stable facts: name, country, continent, coordinates, type. Summary
 // from Wikipedia LIVE + cached (fail-open). The page core always renders

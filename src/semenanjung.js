@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS SEMENANJUNG (/semenanjung) — Peninsulas of the World ──
+// ── TUKUK-OS SEMENANJUNG (/peninsulas) — Peninsulas of the World ──
 const https = require('https');
 const DATA = require('./semenanjung-data.json');
 const UA = 'TukukOS-Peninsulas/1.0 (+https://tukuk.org)';

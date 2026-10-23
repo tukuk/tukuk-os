@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS BALAI-CERAP (/balai-cerap) — Astronomical Observatories of the World ──
+// ── TUKUK-OS BALAI-CERAP (/astronomical-observatories) — Astronomical Observatories of the World ──
 const https = require('https');
 const DATA = require('./balai-cerap-data.json');
 const UA = 'TukukOS-Observatories/1.0 (+https://tukuk.org)';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ── TUKUK-OS KALDERA (/kaldera) — Calderas of the World ──
+// ── TUKUK-OS KALDERA (/calderas) — Calderas of the World ──
 const https = require('https');
 const DATA = require('./kaldera-data.json');
 const UA = 'TukukOS-Calderas/1.0 (+https://tukuk.org)';
