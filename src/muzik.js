@@ -15,10 +15,13 @@ const http = axios.create({
   headers: { 'User-Agent': 'TukukOS-Muzik-Client/1.0 (+https://tukuk.org)' },
 });
 // The measured case that started the guard: nine /muzik/<cc> requests held Node for exactly
-// 15.00 s each and then answered 503 (un-cached, so the next visitor pays it again), while the
-// feed itself answers in 1.0–3.0 s from this box. 6 s is twice the worst healthy answer, and
-// one dead chart costs a cooldown instead of a queue (src/outbound.js).
-attachGuard(http, { name: 'muzik', budgetMs: 6000 });
+// 15.00 s each and then answered 503 (un-cached, so the next visitor paid it again), while the
+// feed itself answers in 1.0–3.0 s from this box. 10 s is the compromise the disk cache makes
+// safe: it still catches a 6 s answer a smaller budget cut off (small storefronts like lv
+// intermittently land in the 6–10 s band and a refused cold visitor got a 503 with nothing
+// remembered), while a genuinely dead path costs one 10 s hold + a 2-minute cooldown, at most
+// once per country per day once the boot backfill below has every chart on disk (src/outbound.js).
+attachGuard(http, { name: 'muzik', budgetMs: 10000 });
 
 const RSS = 'https://rss.marketingtools.apple.com/api/v2';
 
@@ -207,6 +210,26 @@ function normSong(h, rank) {
     artwork,
   };
 }
+
+// Boot backfill: the static-page warm only visits the hub + a dozen countries, so the other
+// ~75 storefronts were cold for their first visitor each day — the exact request that could
+// 503. A minute after startup, fetch every chart that memory and disk do not already hold,
+// one at a time with a polite gap (≈90 calls/day to Apple in total, spread over minutes).
+// A failure today only means that country re-attempts on its next real visitor.
+function scheduleBackfill() {
+  const timer = setTimeout(async () => {
+    loadFromDisk();
+    for (const c of COUNTRIES) {
+      const key = `chart:${c.cc}`;
+      if (!cache.has(key)) {
+        try { await fetchChart(key, c.cc); } catch (e) { /* next visitor retries */ }
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
+  }, 60000);
+  if (timer.unref) timer.unref();                 // never keeps a test process alive
+}
+scheduleBackfill();
 
 // Top-25 "Most Played" chart for one storefront. SWR: fresh hits return straight
 // from cache, stale hits serve instantly while revalidating in the background.
