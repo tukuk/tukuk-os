@@ -38,7 +38,7 @@ arcade (`/games`) and an app hub on the homepage, a live NASA data hub
 - [App hub](https://tukuk.org/): mini apps and games on the homepage (install as PWA or fetch a signed APK).
 - [Download](https://tukuk.org/download): T Chat for every OS.
 - [Utilities](https://tukuk.org/alat): twenty-one browser-local tools — unit, date/age, percentage, loan & compound interest, QR code, IP lookup, Unix time, randomness, PDF merge/split/rotate, JSON formatter, MD5–SHA-512 checksums, Base64, time-zone meeting planner, UUID generator/decoder, cron explainer, colour/contrast, password, text, BMI/calories, image compressor and dictionary. Nothing is uploaded; every answer is computed on the visitor's device.
-- [Dictionary & Translator](https://tukuk.org/alat/kamus) (alias `/kamus`): define and translate across hundreds of human languages, plus animal, alien, sound and ancient-script encoders (runes, hieroglyphs, Morse, Braille), with browser read-aloud. `GET /api/kamus/define?word=&lang=` · `GET /api/kamus/translate?text=&from=&to=`.
+- [Dictionary & Translator](https://tukuk.org/alat/dictionary) (the older `/alat/kamus` and `/kamus` both redirect here): define and translate across hundreds of human languages, plus animal, alien, sound and ancient-script encoders (runes, hieroglyphs, Morse, Braille), with browser read-aloud. `GET /api/kamus/define?word=&lang=` · `GET /api/kamus/translate?text=&from=&to=`.
 
 ## Maps & world data
 - [Maps & Navigation](https://tukuk.org/peta): turn-by-turn route planner (OSRM + Nominatim, no API key) with four base views — open street map, high-resolution satellite (Esri World Imagery), a live daily true-color satellite composite and a daily night-lights band (NASA GIBS, renewed every 24 h).

@@ -1,5 +1,5 @@
 'use strict';
-// ── TUKUK-OS /alat/kamus — Dictionary & Translator + playful code encoders ──
+// ── TUKUK-OS /alat/dictionary — Dictionary & Translator + playful code encoders ──
 // Human languages: definitions + translation come from our server (/api/kamus/*, which
 // proxies the free Dictionary API + MyMemory with a cache — see src/kamus.js). Ancient/
 // animal/alien/sound modes are pure client-side letter→signal maps, so they cost the

@@ -1,5 +1,5 @@
 'use strict';
-// ── TUKUK-OS /alat/kamus — Dictionary + translation proxy (FREE, no API key) ──
+// ── TUKUK-OS /alat/dictionary — Dictionary + translation proxy (FREE, no API key) ──
 // Two keyless open sources back the human-language side of the tool:
 //   • Free Dictionary API (api.dictionaryapi.dev) — monolingual definitions, phonetics
 //     and a spoken-audio URL for the languages it holds (English richest, several others).
