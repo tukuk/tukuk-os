@@ -131,6 +131,10 @@ fi
 # at 253 MB until it was caught. A heredoc has no backslash for anything to lose, and the merged
 # config is printed below so a reader sees what systemd actually read, not what was meant.
 # Note: `journalctl --vacuum-size` is NOT proof the cap parses — it forces the size either way.
+# Why 150M and not more: measured on this box after the cap was applied, 149 MB of journal holds
+# 206,690 lines spanning Oct 17 -> Oct 23, i.e. about six days of history at normal traffic. That
+# is long enough to answer "what was it doing when it got slow", so the cap does not need to grow
+# to buy debugging headroom; it only has to stop journald from eating the mmap set unbounded.
 mkdir -p /etc/systemd/journald.conf.d
 cat > /etc/systemd/journald.conf.d/50-size.conf <<'CONF'
 # How much disk the journal may take. The proof this file works is the merged view printed by this
