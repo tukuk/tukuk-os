@@ -35,6 +35,7 @@ const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 const net = require('./net');
 const store = require('./store');
+const safety = require('./safety');
 const brain = require('./brain/provider');
 const rag = require('./brain/rag');
 const taskrouter = require('./brain/taskrouter');
@@ -1704,6 +1705,10 @@ app.get('/peta/jam', (req, res) => {
   }
 });
 app.get('/langit', (req, res) => res.redirect(301, '/peta/langit'));
+// Dead paths that still get real traffic (37 and 20 hits in the week of
+// 2026-10-23, per the [http] journal): send them somewhere useful instead of 404.
+app.get('/explore', (req, res) => res.redirect(301, '/os'));
+app.get('/builder', (req, res) => res.redirect(301, '/download'));
 app.get('/peta/langit', (req, res) => {
   try {
     res.status(200).type('html').send(langitPage());
@@ -3066,6 +3071,25 @@ app.get('/ask', limiter.search, async (req, res) => {
 
   if (!config.brain.enabled) {
     return res.status(503).json({ error: 'Brain engine disabled (BRAIN_ENABLED=false)' });
+  }
+
+  // Abuse-term gate: never hand such a question to the RAG pipeline or a model.
+  // Log the fact, never the text (see src/safety.js for the reasoning).
+  if (safety.blockedQuery(question)) {
+    store.event('warn', 'query blocked', { surface: 'ask' });
+    return res.json({
+      question: '',
+      answer: 'This question is outside the material this site searches. Try rephrasing it.',
+      mode: 'refused',
+      model: 'n/a',
+      provider: 'none',
+      sources: [],
+      tookMs: 0,
+      cached: false,
+      offline: !net.snapshot().internet,
+      apps: [],
+      network: net.snapshot().status
+    });
   }
 
   const health = await brain.health();
@@ -16583,6 +16607,10 @@ app.get('/search', limiter.search, async (req, res) => {
     return res.json({ query: '', hits: [], total: 0, index: corpus || config.indexName });
   }
   try {
+    if (safety.blockedQuery(q)) {
+      store.event('warn', 'query blocked', { surface: 'search' });
+      return res.json({ query: '', index: corpus || config.indexName, hits: [], total: 0, related: [], didYouMean: null });
+    }
     const target = corpus ? client.index(corpus) : index;
     const qq = String(q).trim();
     const params = buildSearchParams(rest);
@@ -16599,7 +16627,12 @@ app.get('/search', limiter.search, async (req, res) => {
       result = { ...result, hits: reranked };
     }
     const total = result.totalHits ?? result.estimatedTotalHits ?? result.hits.length;
-    queries.logQuery(qq, { hits: total });
+    // Defence in depth: abuse-linked documents stay out of every result list,
+    // whatever query surfaced them.
+    const kept = safety.filterHits(result.hits);
+    const filtered = kept.length !== result.hits.length;
+    if (filtered) result = { ...result, hits: kept };
+    queries.logQuery(qq, { hits: filtered ? kept.length : total });
     res.json({
       query: qq,
       index: corpus || config.indexName,
@@ -16820,10 +16853,14 @@ app.get('/cc', limiter.search, async (req, res) => {
 app.get('/suggest', limiter.search, async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (q.length < 2) return res.json({ suggestions: [] });
+  if (safety.blockedQuery(q)) {
+    store.event('warn', 'query blocked', { surface: 'suggest' });
+    return res.json({ suggestions: [] });
+  }
   try {
     const result = await index.search(q, { limit: 6, attributesToRetrieve: ['title', 'url'] });
     const suggestions = result.hits
-      .filter((hit) => hit && hit.title)
+      .filter((hit) => hit && hit.title && !safety.blockedHit(hit))
       .map((hit) => ({ title: hit.title, url: hit.url || '' }));
     res.json({ suggestions });
   } catch {
