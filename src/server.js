@@ -1799,6 +1799,25 @@ app.get('/alat/kamus', (req, res) => {
     res.status(503).type('html').send(toolsBusy());
   }
 });
+// ── Calculator/generator pages (Oct 2026): the questions people type into a search box ──
+// All browser-local (private by construction) and sharing TOOLS_CSS/toolsNav with the rest.
+[
+  ['/alat/peratus', peratusPage],
+  ['/alat/pinjaman', pinjamanPage],
+  ['/alat/qr', qrPage],
+  ['/alat/ip', ipPage],
+  ['/alat/epoch', epochPage],
+  ['/alat/rawak', rawakPage],
+].forEach(function (entry) {
+  app.get(entry[0], function (req, res) {
+    try {
+      res.status(200).type('html').send(entry[1]());
+    } catch (e) {
+      console.warn('[' + entry[0] + '] render failed:', e.message);
+      res.status(503).type('html').send(toolsBusy());
+    }
+  });
+});
 app.get('/api/kamus/define', limiter.search, async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'private, max-age=300');
@@ -3332,7 +3351,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/peta/langit', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/alat/kamus', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/peta/langit', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/alat/kamus', '/alat/peratus', '/alat/pinjaman', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/rawak', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -9730,6 +9749,7 @@ textarea.tl-in{width:100%;box-sizing:border-box;padding:10px;border:1px solid va
 .tl-btn.primary{background:var(--accent,#4c8dff);border-color:transparent;color:#fff;font-weight:700}
 .tl-res{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--panel,#171a21);margin:12px 0;line-height:1.6}
 .tl-big{font-size:1.5rem;font-weight:800;color:var(--accent,#4c8dff);word-break:break-all}
+.tl-pick{font:700 1.35rem/1.7 ui-monospace,Consolas,monospace;color:var(--accent,#4c8dff);word-break:break-word}
 .tl-chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 table.tl-tab{width:100%;border-collapse:collapse;font-size:.92rem;margin:10px 0}
 .tl-tab td{padding:6px 10px;border-bottom:1px solid var(--line)}
@@ -9754,11 +9774,17 @@ function toolsNav() {
     { href: '/alat/bmi', icon: '❤️', name: 'BMI & Calorie Calculator', blurb: 'BMI with WHO bands, your healthy weight range for height, BMR and daily calorie needs (Mifflin-St Jeor) plus body-fat and waist-to-height estimates.' },
     { href: '/alat/gambar', icon: '🖼️', name: 'Image Compressor', blurb: 'Shrink a photo or screenshot right in your browser — resize, pick quality, compare before/after and download. Your file never uploads anywhere.' },
     { href: '/alat/kamus', icon: '📖', name: 'Dictionary & Translator', blurb: 'Look up any word’s meaning and translate it across dozens of human languages — plus ancient scripts and playful animal, alien and sound “languages”, with spoken pronunciation.' },
+    { href: '/alat/peratus', icon: '🧮', name: 'Percentage Calculator', blurb: 'What is X% of Y, X is what percent of Y, percent change and add-or-subtract a percentage — with the arithmetic printed beside every answer.' },
+    { href: '/alat/pinjaman', icon: '🏦', name: 'Loan & Interest Calculator', blurb: 'Monthly loan payments, total interest, the effect of extra payments, and compound savings growth — the maths printed honestly, no quote requested.' },
+    { href: '/alat/qr', icon: '🔳', name: 'QR Code Generator', blurb: 'Turn a link, text or Wi-Fi network into a QR code in your own browser, with error-correction controls and a print-ready PNG download.' },
+    { href: '/alat/ip', icon: '📍', name: 'What Is My IP?', blurb: 'Your public address, the ISP-level location databases infer from it, and every browser field a website can read — shown openly, nothing stored.' },
+    { href: '/alat/epoch', icon: '⏱', name: 'Unix Timestamp Converter', blurb: 'Epoch to date and back, with seconds/millisecond auto-detection, ISO 8601, your local zone and a live ticking clock.' },
+    { href: '/alat/rawak', icon: '🎲', name: 'Random Numbers & Dice', blurb: 'Unbiased integers, d4–d100 dice and a raffle-style list picker — drawn from crypto.getRandomValues with rejection sampling, so nothing is favoured.' },
   ]);
 }
 
 function alatHubPage() {
-  const body = `<p><b>The honest kind of useful.</b> Five small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  const body = `<p><b>The honest kind of useful.</b> Fourteen small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
   <h2 class="section-title">In the toolbox</h2>
   <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
   <p><b><a href="/alat/tarikh">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
@@ -9768,6 +9794,12 @@ function alatHubPage() {
   <p><b><a href="/alat/bmi">❤️ BMI &amp; calorie calculator</a></b> — the health numbers that come from arithmetic: BMI bands, healthy weight range, and calorie needs from the published Mifflin-St Jeor equation.</p>
   <p><b><a href="/alat/gambar">🖼️ Image compressor</a></b> — shrink photos and screenshots with quality and resize controls; your file is re-encoded on your own device and never uploaded.</p>
   <p><b><a href="/alat/kamus">📖 Dictionary &amp; translator</a></b> — word meanings and translation across dozens of human languages, plus ancient scripts and playful animal/alien/sound codes, all with spoken pronunciation.</p>
+  <p><b><a href="/alat/peratus">🧮 Percentage calculator</a></b> — the four questions people actually type: what is X% of Y, X is what percent of Y, percent change, and adding or subtracting a percentage — with the arithmetic shown.</p>
+  <p><b><a href="/alat/pinjaman">🏦 Loan &amp; compound interest calculator</a></b> — monthly payment, total interest, the real savings from overpaying, and what regular saving grows into after compounding.</p>
+  <p><b><a href="/alat/qr">🔳 QR code generator</a></b> — links, text and Wi-Fi credentials into a scannable code with L/M/Q/H error correction, drawn on a canvas and downloaded as a print-ready PNG.</p>
+  <p><b><a href="/alat/ip">📍 What is my IP?</a></b> — your public address, the ISP and inferred city from a keyless database, and the browser fields any site can read, all explained instead of hidden.</p>
+  <p><b><a href="/alat/epoch">⏱ Unix timestamp converter</a></b> — epoch to date and back, seconds-versus-milliseconds auto-detection, ISO 8601, time zones and a live clock.</p>
+  <p><b><a href="/alat/rawak">🎲 Random numbers &amp; dice</a></b> — unbiased integer ranges, d4–d100 rolls and a raffle-style list picker from the operating system’s cryptographic generator.</p>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
   <p class="meta">Prefer maps and time? The neighbouring <a href="/peta">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
@@ -10277,6 +10309,404 @@ $('b-go').onclick=calc;
       applicationCategory: 'HealthApplication', operatingSystem: 'Web browser',
       description: 'Browser-local BMI, BMR/TDEE, body-fat and waist-to-height calculator using published WHO, Mifflin-St Jeor and Deurenberg equations.',
       url: 'https://tukuk.org/alat/bmi', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function peratusPage() {
+  const body = `<p>The four percentage questions people actually type into a search box — <b>“what is X% of Y”</b>, <b>“X is what percent of Y”</b>, <b>“percent change”</b> and <b>“add or subtract a percent”</b> — answered with the arithmetic printed beside the number, so you can check it instead of trusting it. No account, nothing sent anywhere.</p>
+  <div class="tl-form">
+    <label>Question <select id="p-mode"><option value="of">What is X% of Y?</option><option value="ispct">X is what percent of Y?</option><option value="change">Percent change from X to Y</option><option value="addsub">Increase / decrease Y by X%</option></select></label>
+    <label>X <input id="p-x" type="number" step="any" value="15"></label>
+    <label>Y <input id="p-y" type="number" step="any" value="200"></label>
+    <button class="tl-btn primary" id="p-go" type="button">Calculate</button>
+  </div>
+  <div class="tl-res" id="p-out">Enter two numbers.</div>
+  <noscript><p>JavaScript is required — the whole calculator is this page’s script, running on your device.</p></noscript>
+  <h2 class="section-title">Percentages without the usual traps</h2>
+  <p><b>Percentage points are not percent.</b> A rate moving from 4% to 6% rose by 2 points but by 50%. Politicians and ads switch between the two on purpose — when the base is a percentage itself, always say which one you mean. <b>Percent change has a direction and a base:</b> (new − old) ÷ |old| × 100; the absolute value in the denominator is what keeps a drop from −20 to −10 reading as a 50% gain rather than a nonsense sign flip. A change from zero has no percentage — it is a move from nothing, so the honest answer is “infinite”, not “100%” or “0%”.</p>
+  <p><b>Discounts stack multiplicatively, not additively.</b> “30% off, then another 20%” is 0.7 × 0.8 = 0.56 — a 44% saving, not 50%. The same maths explains why a 20% price rise needs only a 16.7% cut to return to the old price, and why “+50% then −50%” leaves you at 75% of where you started.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For money maths with a rate and a term, the <a href="/alat/pinjaman">loan &amp; interest calculator</a> does the compounding properly.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function fmt(n){if(!isFinite(n))return '—';return (Math.round(n*1e6)/1e6).toLocaleString('en-US',{maximumFractionDigits:6});}
+function run(){var m=$('p-mode').value,x=parseFloat($('p-x').value),y=parseFloat($('p-y').value),out=$('p-out');
+ if(isNaN(x)||isNaN(y)){out.textContent='⚠ both fields need a number.';return;}
+ var h='';
+ if(m==='of'){h='<div class="tl-big">'+fmt(y*x/100)+'</div><p>'+fmt(y)+' × '+fmt(x)+' ÷ 100 = '+fmt(y*x/100)+'</p>';}
+ else if(m==='ispct'){if(y===0){out.textContent='⚠ dividing by zero has no answer — Y cannot be 0 here.';return;}h='<div class="tl-big">'+fmt(x/y*100)+'%</div><p>'+fmt(x)+' ÷ '+fmt(y)+' × 100 = '+fmt(x/y*100)+'%</p>';}
+ else if(m==='change'){if(x===0){out.textContent='⚠ there is no percent change from zero — any increase is infinite in percentage terms.';return;}var d=(y-x)/Math.abs(x)*100;h='<div class="tl-big">'+(d>=0?'+':'')+fmt(d)+'%</div><p>('+fmt(y)+' − '+fmt(x)+') ÷ |'+fmt(x)+'| × 100 = '+fmt(d)+'% '+(d>=0?'increase':'decrease')+'</p>';}
+ else {var up=y*(1+x/100),dn=y*(1-x/100);h='<div class="tl-big">'+fmt(up)+' / '+fmt(dn)+'</div><p>'+fmt(y)+' plus '+fmt(x)+'% = <b>'+fmt(up)+'</b></p><p>'+fmt(y)+' minus '+fmt(x)+'% = <b>'+fmt(dn)+'</b></p><p class="meta">Notice +'+fmt(x)+'% then −'+fmt(x)+'% does not land back on '+fmt(y)+' — that is the multiplicative trap below.</p>';}
+ out.innerHTML=h;}
+$('p-go').addEventListener('click',run);
+Array.prototype.forEach.call(document.querySelectorAll('#p-x,#p-y'),function(el){el.addEventListener('keydown',function(e){if(e.key==='Enter')run();});});
+$('p-mode').addEventListener('change',run);
+run();
+})();</script>`;
+  return worldDoc({
+    title: 'Percentage Calculator — X% of Y, Percent Change, Increase & Decrease | Tukuk-OS',
+    desc: 'Four percentage calculators in one page: what is X% of Y, X is what percent of Y, percent change between two numbers, and add or subtract a percentage. Free, instant, private.',
+    selfUrl: 'https://tukuk.org/alat/peratus',
+    heroTitle: '🧮 Percentage Calculator', heroSub: 'X% of Y · X is what % of Y · percent change · increase & decrease',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Percentage Calculator',
+      applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web browser',
+      description: 'Percentage calculator with four modes: percent of a number, what percent one number is of another, percent change, and percentage increase or decrease.',
+      url: 'https://tukuk.org/alat/peratus', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function pinjamanPage() {
+  const body = `<p>Two questions that decide real money: <b>what will this loan cost me every month, and in total</b> — and <b>what will regular saving grow into</b>. Both are answered with the standard amortisation maths printed alongside, plus an honest warning that a lender’s quote, fees and taxes always win over any calculator. Nothing you type leaves your browser.</p>
+  <h2 class="section-title">Loan repayment</h2>
+  <div class="tl-form">
+    <label>Amount borrowed <input id="l-p" type="number" step="any" min="0" value="20000"></label>
+    <label>Annual interest rate (%) <input id="l-r" type="number" step="any" min="0" value="6.5"></label>
+    <label>Term — years <input id="l-y" type="number" min="0" max="50" value="5"></label>
+    <label>… plus months <input id="l-m" type="number" min="0" max="11" value="0"></label>
+    <label>Extra payment / month (optional) <input id="l-x" type="number" step="any" min="0" value="0"></label>
+    <button class="tl-btn primary" id="l-go" type="button">Calculate loan</button>
+  </div>
+  <div class="tl-res" id="l-out">Fill the fields and press Calculate.</div>
+  <h2 class="section-title">Savings &amp; compound growth</h2>
+  <div class="tl-form">
+    <label>Starting amount <input id="c-p" type="number" step="any" min="0" value="1000"></label>
+    <label>Monthly contribution <input id="c-c" type="number" step="any" min="0" value="200"></label>
+    <label>Annual return (%) <input id="c-r" type="number" step="any" value="7"></label>
+    <label>Years <input id="c-y" type="number" min="0" max="80" value="20"></label>
+    <button class="tl-btn primary" id="c-go" type="button">Project growth</button>
+  </div>
+  <div class="tl-res" id="c-out">Fill the fields and press Project growth.</div>
+  <noscript><p>JavaScript is required — the calculators run entirely on your device, which is also why your numbers stay private.</p></noscript>
+  <h2 class="section-title">How to read these numbers honestly</h2>
+  <p><b>The monthly payment is not the price.</b> A 20,000 loan at 6.5% over five years costs about 391 a month — but roughly 3,500 of the 23,500 you hand over is interest, and front-loaded: in year one most of each payment is interest, so early overpayments save far more than later ones, which is exactly what the “extra payment” box demonstrates. <b>Quoted rates are nominal.</b> The effective annual rate is higher because interest compounds monthly: (1 + r/12)¹² − 1 gives about 6.70% for a 6.5% nominal rate. Fees, insurance and arrangement charges belong in the comparison too — the only fair way to compare two loans is the total cost, not the headline rate.</p>
+  <p><b>Compounding is the same maths pointed the other way.</b> The savings projection assumes a constant return every month, contributions at month-end and no tax — real markets deliver the average with violent detours, so the final number is a planning anchor, not a promise. The honest summary of the table above is the gap between what you put in and what the growth adds; that gap is what time, not cleverness, creates. At high rates, note the rule of 72: money doubles in roughly 72 ÷ rate years.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For currency conversion at today’s reference rates, see <a href="/wang">the currency converter</a>. Estimates only — not financial advice, not a loan offer.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function money(n){if(!isFinite(n))return '—';return n.toLocaleString('en-US',{maximumFractionDigits:2,minimumFractionDigits:2});}
+function num(id){return parseFloat($(id).value);}
+$('l-go').addEventListener('click',function(){
+ var P=num('l-p'),R=num('l-r'),Y=num('l-y')||0,M=num('l-m')||0,X=num('l-x')||0,out=$('l-out');
+ if(!(P>0)){out.textContent='⚠ the amount borrowed must be greater than zero.';return;}
+ if(!(R>=0)){out.textContent='⚠ the interest rate cannot be negative here.';return;}
+ var n=Math.round(Y*12+M);
+ if(!(n>0)){out.textContent='⚠ the term needs at least one month.';return;}
+ var r=R/100/12,pay=r===0?P/n:P*r/(1-Math.pow(1+r,-n));
+ var total=pay*n,interest=total-P;
+ var h='<div class="tl-big">'+money(pay)+' / month</div>'
+ +'<p>Over '+n+' months you pay <b>'+money(total)+'</b>, of which <b>'+money(interest)+'</b> is interest ('+(interest/P*100).toFixed(1)+'% of the amount borrowed).</p>';
+ var bal=P,rows='',i,ip,pp;
+ for(i=1;i<=Math.min(n,12);i++){ip=bal*r;pp=pay-ip;if(pp>bal)pp=bal;bal-=pp;
+  rows+='<tr><td>'+i+'</td><td>'+money(pay)+'</td><td>'+money(ip)+'</td><td>'+money(pp)+'</td><td>'+money(bal>0.005?bal:0)+'</td></tr>';}
+ h+='<p><b>First 12 months</b> (interest, then principal — the balance moves slower than people expect):</p>'
+ +'<table class="tl-tab"><tr><td>Month</td><td>Payment</td><td>Interest</td><td>Principal</td><td>Balance</td></tr>'+rows+'</table>';
+ if(X>0){var b=P,m2=0,ti=0;while(b>0.005&&m2<1200){var ii=b*r,pp2=pay+X-ii;if(pp2<=0){h+='<p>⚠ an extra payment that small never covers the interest — the balance would grow.</p>';break;}if(pp2>b)pp2=b;ti+=ii;b-=pp2;m2++;}
+  if(b<=0.005){h+='<p>With <b>'+money(X)+'</b> extra every month the loan ends in <b>'+m2+' months</b> ('+Math.floor(m2/12)+'y '+(m2%12)+'m) instead of '+n+' — '+Math.max(n-m2,0)+' months earlier, and interest drops from '+money(interest)+' to <b>'+money(ti)+'</b>.</p>';}}
+ out.innerHTML=h;
+});
+$('c-go').addEventListener('click',function(){
+ var P=num('c-p')||0,C=num('c-c')||0,R=num('c-r'),Y=num('c-y'),out=$('c-out');
+ if(!(Y>0)){out.textContent='⚠ the time horizon needs at least one year.';return;}
+ if(!(R>=0)){out.textContent='⚠ enter a non-negative annual return.';return;}
+ var i=R/100/12,m=Math.round(Y*12);
+ var fv=P*Math.pow(1+i,m)+(i===0?C*m:C*(Math.pow(1+i,m)-1)/i);
+ var paid=P+C*m,grown=fv-paid;
+ var h='<div class="tl-big">'+money(fv)+'</div>'
+ +'<p>After '+m+' months: you contributed <b>'+money(paid)+'</b> (starting '+money(P)+' + '+money(C)+' × '+m+'), and compounding adds <b>'+money(grown)+'</b> — '+(paid>0?(grown/paid*100).toFixed(1):'0')+'% on top of what you put in.</p>'
+ +'<p>Effective annual rate at this monthly compounding: <b>'+((Math.pow(1+i,12)-1)*100).toFixed(2)+'%</b> — that, not the nominal '+R+'%, is the number to compare against other products.</p>'
+ +'<p class="meta">Assumes a constant monthly return after contributions and no tax or fees. Markets do not deliver averages on schedule — treat this as a planning anchor.</p>';
+ out.innerHTML=h;
+});
+})();</script>`;
+  return worldDoc({
+    title: 'Loan & Compound Interest Calculator — Monthly Payment, Total Interest, Savings Growth | Tukuk-OS',
+    desc: 'Calculate monthly loan payments, total interest and the effect of extra payments, plus compound savings growth from a starting amount and monthly contributions. Free, private, browser-local.',
+    selfUrl: 'https://tukuk.org/alat/pinjaman',
+    heroTitle: '🏦 Loan & Interest Calculator', heroSub: 'Monthly payment · total interest · extra payments · compound growth',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Loan & Compound Interest Calculator',
+      applicationCategory: 'FinanceApplication', operatingSystem: 'Web browser',
+      description: 'Amortising loan calculator with total interest and extra-payment impact, plus a compound growth projection for savings.',
+      url: 'https://tukuk.org/alat/pinjaman', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function qrPage() {
+  const body = `<p>Turn a link, a line of text or a <b>Wi-Fi network</b> into a QR code that is generated by your own browser — the content never leaves the page, and the PNG you download is drawn locally on a canvas. Useful for sharing a network without spelling out a password, printing a link on paper, or getting text from a computer to a phone without sending it anywhere.</p>
+  <div class="tl-form">
+    <label>Content <select id="q-mode"><option value="text">Text or URL</option><option value="wifi">Wi-Fi network</option></select></label>
+    <label>Error correction <select id="q-ec"><option value="L">L — 7% damage tolerable (smallest)</option><option value="M" selected>M — 15% (best default)</option><option value="Q">Q — 25%</option><option value="H">H — 30% (largest, for logos)</option></select></label>
+    <label>PNG size <select id="q-size"><option value="256">256 px</option><option value="512" selected>512 px</option><option value="1024">1024 px</option></select></label>
+  </div>
+  <div id="q-text-wrap"><textarea id="q-text" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel,#171a21);color:inherit;font:inherit" spellcheck="false">https://tukuk.org</textarea></div>
+  <div id="q-wifi-wrap" class="tl-form" style="display:none">
+    <label>Network name (SSID) <input id="q-ssid" type="text" placeholder="Cafe-Guest"></label>
+    <label>Password <input id="q-pass" type="text" placeholder="leave empty for open networks"></label>
+    <label>Security <select id="q-enc"><option value="WPA">WPA / WPA2 / WPA3</option><option value="WEP">WEP (legacy)</option><option value="nopass">Open — no password</option></select></label>
+  </div>
+  <div class="tl-res" id="q-out" style="text-align:center">Type something to encode.</div>
+  <p style="text-align:center"><canvas id="q-cv" width="512" height="512" style="max-width:100%;height:auto;border-radius:10px;background:#fff"></canvas></p>
+  <p><button class="tl-btn primary" id="q-dl" type="button">Download PNG</button></p>
+  <noscript><p>JavaScript is required — the encoder is the page’s own script, which is also why the content stays private.</p></noscript>
+  <h2 class="section-title">How QR codes fail, and how to avoid it</h2>
+  <p><b>Error correction is printed redundancy, not a bigger code.</b> A quarter of the data is repeated at level M, so a scuffed sticker still scans; level H survives a logo in the middle but packs the same text into more, smaller modules — which is why dense content at H can fail on cheap scanners. Keep codes printed at least 2 cm wide per 10 characters of payload, and respect the <b>quiet zone</b> (the blank margin around the code — this page keeps four modules of it, as the standard requires). Low contrast, glossy laminate and screen glare break more codes than distance does.</p>
+  <p><b>A QR code is not a secure channel.</b> Anyone who photographs it reads exactly what you encoded — a Wi-Fi password in a QR code on a café wall is public. It also gives no guarantee of where it points: the destination of a printed code can be changed at the server side later, which is why banks now warn before acting on scanned links. Scan with an app that shows the URL first, not one that opens it blindly. Everything in this tool is computed on your device; the library is the MIT-licensed <a href="/libs/qrcode.LICENSE">qrcode-generator</a>, vendored on our own server.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Need to shrink a screenshot before printing it next to the code? <a href="/alat/gambar">The image compressor</a> runs on your device too.</p>`;
+  const script = `<script src="/libs/qrcode.js"></script><script>(function(){
+function $(id){return document.getElementById(id);}
+var cv=$('q-cv'),ctx=cv.getContext('2d');
+function esc(v){var BS=String.fromCharCode(92),s=String(v),o='',i,ch;for(i=0;i<s.length;i++){ch=s.charAt(i);o+=(ch===BS||ch===';'||ch===','||ch===':')?BS+ch:ch;}return o;}
+function payload(){if($('q-mode').value==='wifi'){var e=$('q-enc').value,p=$('q-pass').value;return 'WIFI:T:'+e+';S:'+esc($('q-ssid').value)+';P:'+esc(e==='nopass'?'':p)+';;';}return $('q-text').value;}
+function draw(){var text=payload(),ec=$('q-ec').value,size=parseInt($('q-size').value,10),out=$('q-out');
+ if(!text||!text.trim()){out.textContent='⚠ type something to encode.';return;}
+ var qr;
+ try{qr=qrcode(0,ec);qr.addData(text,'Byte');qr.make();}
+ catch(err){out.innerHTML='⚠ that content is too long for one QR code at this error-correction level. Shorten it, or choose level L.';return;}
+ var n=qr.getModuleCount(),q=4,px=Math.max(1,Math.floor(size/(n+q*2))),dim=px*(n+q*2),r,c;
+ cv.width=dim;cv.height=dim;
+ ctx.fillStyle='#ffffff';ctx.fillRect(0,0,dim,dim);
+ ctx.fillStyle='#000000';
+ for(r=0;r<n;r++)for(c=0;c<n;c++)if(qr.isDark(r,c))ctx.fillRect((c+q)*px,(r+q)*px,px,px);
+ out.innerHTML='Encoded <b>'+text.length+' characters</b> as a '+n+'×'+n+' module code with '+ec+' error correction ('+dim+'×'+dim+' px).';
+}
+function sync(){var wifi=$('q-mode').value==='wifi';
+ $('q-text-wrap').style.display=wifi?'none':'block';
+ $('q-wifi-wrap').style.display=wifi?'flex':'none';
+ draw();}
+$('q-mode').addEventListener('change',sync);
+Array.prototype.forEach.call(document.querySelectorAll('#q-text,#q-ssid,#q-pass,#q-enc,#q-ec,#q-size'),function(el){el.addEventListener('input',draw);el.addEventListener('change',draw);});
+$('q-dl').addEventListener('click',function(){cv.toBlob(function(b){if(!b)return;var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='tukuk-qr.png';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(a.href);},5000);},'image/png');});
+sync();
+})();</script>`;
+  return worldDoc({
+    title: 'QR Code Generator — Text, URL & Wi-Fi QR Codes with PNG Download | Tukuk-OS',
+    desc: 'Create a QR code for a link, text or Wi-Fi network entirely in your browser, with error-correction and size controls, then download a print-ready PNG. Nothing you encode is uploaded.',
+    selfUrl: 'https://tukuk.org/alat/qr',
+    heroTitle: '🔳 QR Code Generator', heroSub: 'Text · URL · Wi-Fi · L/M/Q/H correction · PNG download',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk QR Code Generator',
+      applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local QR code generator for text, URLs and Wi-Fi network credentials, with PNG download.',
+      url: 'https://tukuk.org/alat/qr', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function ipPage() {
+  const body = `<p>Your public IP address is the return address every website sees. This page shows it, what the internet’s geolocation databases infer from it, and the browser facts a page can read without asking permission — the same list most “device fingerprint” scripts collect quietly. Here it is printed openly, and nothing is stored.</p>
+  <div class="tl-res" id="i-out">Looking up your address…</div>
+  <p><button class="tl-btn" id="i-copy" type="button">Copy IP address</button></p>
+  <h2 class="section-title">Why the city can be wrong</h2>
+  <p><b>IP geolocation is a database guess, not GPS.</b> Registries map address blocks to the ISP that owns them, and databases infer a city from that — usually the regional hub, not your street. Mobile carriers and <b>CGNAT</b> make it worse: thousands of phones share one public address, so a whole country can sit behind a single entry, and a VPN makes the answer deliberate fiction. Treat the city as “the ISP’s opinion”, the country as usually right, and the ISP/ASN as the genuinely reliable field. The time zone shown is the one the database attributes to that block — your device’s real zone can differ.</p>
+  <p><b>IPv4 and IPv6 are separate addresses.</b> Most networks still run both, and the address visible here is whichever one your connection happened to use — reload through another network and the address, country and ISP can all change. The lookup itself runs on our own server (a single request to the keyless <a href="https://ipwho.is" rel="nofollow noopener">ipwho.is</a> database, cached 30 minutes), and this page never writes your address to disk or to any analytics field.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Curious what the same address sees of the world? Open <a href="/peta">Maps &amp; Navigation</a>.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function row(k,v){return v?'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>':'';}
+var current='';
+fetch('/api/explore/ip',{headers:{Accept:'application/json'}}).then(function(r){return r.json().then(function(j){return {ok:r.ok,body:j};});}).then(function(x){
+ var d=x.body||{};
+ if(!x.ok||d.success===false){$('i-out').innerHTML='⚠ the address lookup service is unreachable right now. Your IP still exists — it just could not be described. Try again shortly.';return;}
+ current=d.ip||'';
+ var flag=d.flag&&d.flag.emoji?d.flag.emoji+' ':'',tz=d.timezone||{},local='';
+ try{if(tz.id)local=new Intl.DateTimeFormat('en-GB',{timeZone:tz.id,dateStyle:'medium',timeStyle:'short'}).format(new Date());}catch(e){}
+ var ua=navigator.userAgent||'',conn=navigator.connection||{},langs=(navigator.languages||[]).join(', ');
+ var h='<div class="tl-big">'+esc(d.ip||'unknown')+'</div>'
+ +'<p>'+(d.type?esc(d.type)+' · ':'')+flag+esc([d.city,d.region,d.country].filter(Boolean).join(', '))+'</p>'
+ +'<table class="tl-tab">'+row('Network operator',d.isp)+row('ASN','AS'+(d.asn||''))+row('Time zone',(tz.id||'')+(tz.utc?' ('+tz.utc+')':'')+(local?' → '+local+' local time':''))+row('Latitude / longitude',d.latitude!=null?d.latitude+', '+d.longitude:'')+'</table>'
+ +'<h2 class="section-title">What your browser also reveals</h2>'
+ +'<table class="tl-tab">'+row('Platform',navigator.platform)+row('Languages',langs)+row('Screen',screen.width+'×'+screen.height+' @ '+window.devicePixelRatio+'x')+row('CPU threads',navigator.hardwareConcurrency)+row('Device memory',navigator.deviceMemory?navigator.deviceMemory+' GB':'')+row('Connection type',conn.effectiveType)+row('User agent',ua)+'</table>'
+ +'<p class="meta">Every field above is visible to any website you visit unless you block it. The user-agent string and connection type are the two most commonly used in fingerprinting.</p>';
+ $('i-out').innerHTML=h;
+}).catch(function(){$('i-out').innerHTML='⚠ the lookup request failed — check your connection and reload.';});
+$('i-copy').addEventListener('click',function(){if(!current)return;var b=$('i-copy');
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(current).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy IP address';},1500);});}
+ else{b.textContent='Copy unavailable in this browser';}
+});
+})();</script>`;
+  return worldDoc({
+    title: 'What Is My IP Address — IPv4/IPv6, Location, ISP & What Your Browser Reveals | Tukuk-OS',
+    desc: 'See your public IP address, the city, country and ISP that IP databases attribute to it, and the browser facts any website can read. Explained honestly, nothing stored.',
+    selfUrl: 'https://tukuk.org/alat/ip',
+    heroTitle: '📍 What Is My IP?', heroSub: 'Public address · inferred location · ISP/ASN · browser fingerprint fields',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk What Is My IP',
+      applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web browser',
+      description: 'Shows your public IPv4/IPv6 address with the ISP-level location databases infer and the browser facts a page can read.',
+      url: 'https://tukuk.org/alat/ip', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function epochPage() {
+  const body = `<p>Unix time is the number of seconds since <b>1970-01-01 00:00:00 UTC</b>, ignoring leap seconds. Every database timestamp, JWT claim and log line is built on it, and almost every bug around it is the same one: <b>seconds versus milliseconds</b>. This page converts both ways, live, and shows which unit it assumed.</p>
+  <div class="tl-res" id="e-now">—</div>
+  <h2 class="section-title">Timestamp → date</h2>
+  <div class="tl-form">
+    <label>Unix timestamp <input id="e-in" type="text" inputmode="numeric" value="" placeholder="e.g. 1761177600"></label>
+    <label>Unit <select id="e-unit"><option value="auto" selected>Auto-detect</option><option value="s">Seconds</option><option value="ms">Milliseconds</option></select></label>
+    <button class="tl-btn primary" id="e-go" type="button">Convert</button>
+  </div>
+  <div class="tl-res" id="e-out">Paste a timestamp.</div>
+  <h2 class="section-title">Date → timestamp</h2>
+  <div class="tl-form">
+    <label>Local date &amp; time <input id="e-local" type="datetime-local"></label>
+    <button class="tl-btn primary" id="e-back" type="button">Convert</button>
+  </div>
+  <div class="tl-res" id="e-back-out">Pick a date and time (in your own zone).</div>
+  <h2 class="section-title">Right now, by time zone</h2>
+  <div id="e-zones" class="tl-res">Computing…</div>
+  <noscript><p>JavaScript is required — the conversion uses your browser’s own date engine, which is why it knows your zone.</p></noscript>
+  <h2 class="section-title">The three traps in Unix time</h2>
+  <p><b>Seconds vs milliseconds.</b> JavaScript’s <code>Date.now()</code> returns milliseconds; Unix time, PHP and most databases use seconds. A 10-digit number is seconds (good until 2286), a 13-digit number is milliseconds — this page’s auto-detect uses exactly that rule and says which it chose. <b>Leap seconds are not counted:</b> Unix time pretends every day is exactly 86,400 seconds, so it has drifted 27 seconds from UTC since 1972 — irrelevant for logs, real for astronomy, and the reason <code>tai</code> exists. <b>Time zones are not part of the number:</b> a timestamp describes one instant on Earth; 09:00 in Tokyo and 02:00 in Berlin can be the same integer. Only the rendering has a zone — which is why “the timestamp looks wrong” is almost always a display problem, not a data problem.</p>
+  <p>Also worth knowing: the classic <b>Year 2038 problem</b> comes from 32-bit signed seconds running out on 2038-01-19; 64-bit systems are fine for ~292 billion years. Negative timestamps are legitimate — they mean dates before 1970, and this page converts them correctly.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For calendar arithmetic (days between dates, exact age), use the <a href="/alat/tarikh">date &amp; age calculator</a>.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function pad(n){return n<10?'0'+n:''+n;}
+function rel(ms){var d=Date.now()-ms,a=Math.abs(d)/1000,unit,v;
+ if(a<60){unit='second';v=Math.round(a);}else if(a<3600){unit='minute';v=Math.round(a/60);}else if(a<86400){unit='hour';v=Math.round(a/3600);}else if(a<2592000){unit='day';v=Math.round(a/86400);}else if(a<31536000){unit='month';v=Math.round(a/2592000);}else{unit='year';v=Math.round(a/31536000);}
+ return v+' '+unit+(v===1?'':'s')+(v===0?' (just now)':(d<0?' from now':' ago'));}
+function tick(){var ms=Date.now();$('e-now').innerHTML='<div class="tl-big">'+Math.floor(ms/1000)+'</div><p>seconds · <b>'+ms+'</b> milliseconds · '+new Date(ms).toISOString().replace('T',' ').replace('.000Z',' UTC')+'</p>';}
+tick();setInterval(tick,250);
+function toDate(){var raw=$('e-in').value.trim().replace(/[^0-9.-]/g,''),unit=$('e-unit').value,out=$('e-out');
+ if(raw===''){out.textContent='Paste a timestamp first.';return;}
+ var n=Number(raw);
+ if(!isFinite(n)){out.textContent='⚠ that is not a number.';return;}
+ var ms,used;
+ if(unit==='ms'){ms=n;used='milliseconds';}
+ else if(unit==='s'){ms=n*1000;used='seconds (as selected)';}
+ else {var a=Math.abs(n);ms=a>1e11?n:n*1000;used=a>1e11?'milliseconds (13+ digits → auto)':'seconds (10 digits → auto)';}
+ var d=new Date(ms);
+ if(isNaN(d.getTime())){out.textContent='⚠ that timestamp is outside the range JavaScript can represent (±8.64e15 ms).';return;}
+ out.innerHTML='<div class="tl-big">'+d.toISOString().replace('T',' ').replace('.000Z',' UTC')+'</div>'
+ +'<p>Read as <b>'+used+'</b>: '+rel(ms)+'.</p>'
+ +'<table class="tl-tab"><tr><td>UTC (ISO 8601)</td><td>'+d.toISOString()+'</td></tr><tr><td>Your local time</td><td>'+d.toLocaleString('en-GB',{dateStyle:'full',timeStyle:'long'})+'</td></tr><tr><td>Seconds</td><td>'+Math.floor(ms/1000)+'</td></tr><tr><td>Milliseconds</td><td>'+ms+'</td></tr></table>';}
+$('e-go').addEventListener('click',toDate);$('e-in').addEventListener('keydown',function(e){if(e.key==='Enter')toDate();});$('e-unit').addEventListener('change',toDate);
+function toEpoch(){var v=$('e-local').value,out=$('e-back-out');
+ if(!v){out.textContent='⚠ pick a date and time first.';return;}
+ var d=new Date(v);
+ if(isNaN(d.getTime())){out.textContent='⚠ that date could not be read.';return;}
+ var ms=d.getTime();
+ out.innerHTML='<div class="tl-big">'+Math.floor(ms/1000)+'</div><p>seconds · <b>'+ms+'</b> milliseconds. The date you typed was read as <b>your local time</b>; the same instant in UTC is '+d.toISOString()+'.</p>';}
+$('e-back').addEventListener('click',toEpoch);
+(function zones(){
+ var list=[['UTC','UTC'],['America/New_York','New York'],['Europe/London','London'],['Europe/Berlin','Berlin'],['Asia/Dubai','Dubai'],['Asia/Kolkata','Kolkata'],['Asia/Singapore','Singapore'],['Asia/Tokyo','Tokyo'],['Australia/Sydney','Sydney']];
+ var rows='';
+ list.forEach(function(z){try{var parts=new Intl.DateTimeFormat('en-GB',{timeZone:z[0],timeZoneName:'shortOffset',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());var off='',tm='';parts.forEach(function(p){if(p.type==='timeZoneName')off=p.value;if(p.type==='hour')tm=p.value+':';if(p.type==='minute')tm+=p.value;});rows+='<tr><td>'+z[1]+'</td><td>'+tm+' ('+off+')</td></tr>';}catch(e){}});
+ $('e-zones').innerHTML='<table class="tl-tab">'+rows+'</table>';
+})();
+})();</script>`;
+  return worldDoc({
+    title: 'Unix Timestamp Converter — Epoch to Date, Date to Epoch, Live Clock | Tukuk-OS',
+    desc: 'Convert Unix timestamps to human dates and back, with seconds/millisecond auto-detection, ISO 8601 output, your local time zone and a live ticking epoch clock. Free and instant.',
+    selfUrl: 'https://tukuk.org/alat/epoch',
+    heroTitle: '⏱ Unix Timestamp Converter', heroSub: 'Live epoch · seconds ↔ milliseconds · ISO 8601 · time zones',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Unix Timestamp Converter',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Two-way Unix epoch converter with seconds/milliseconds detection, ISO 8601 and local-time output, and a live clock.',
+      url: 'https://tukuk.org/alat/epoch', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+function rawakPage() {
+  const body = `<p>Randomness that you can audit: every number here comes from <b>crypto.getRandomValues</b> — the operating system’s cryptographic generator — not <code>Math.random()</code> and not a hidden seed. Three tools share the page: a <b>range generator</b> (with optional unique picks), <b>dice</b> from d4 to d100, and a <b>list picker</b> for raffles and decisions.</p>
+  <h2 class="section-title">Numbers in a range</h2>
+  <div class="tl-form">
+    <label>From (inclusive) <input id="r-min" type="number" value="1"></label>
+    <label>To (inclusive) <input id="r-max" type="number" value="100"></label>
+    <label>How many <input id="r-count" type="number" min="1" max="100" value="1"></label>
+    <label>Unique picks <select id="r-uniq"><option value="no" selected>No — allow repeats</option><option value="yes">Yes — lottery style</option></select></label>
+    <button class="tl-btn primary" id="r-go" type="button">Generate</button>
+  </div>
+  <div class="tl-res" id="r-out">Press Generate.</div>
+  <h2 class="section-title">Dice</h2>
+  <div class="tl-form">
+    <label>Die <select id="d-sides"><option>4</option><option>6</option><option selected>8</option><option>10</option><option>12</option><option>20</option><option>100</option></select></label>
+    <label>How many <input id="d-count" type="number" min="1" max="50" value="2"></label>
+    <button class="tl-btn primary" id="d-go" type="button">Roll</button>
+  </div>
+  <div class="tl-res" id="d-out">Press Roll.</div>
+  <h2 class="section-title">Pick from a list</h2>
+  <p class="meta">One entry per line. Names, tasks, lunch places — the pick is uniform, so every entry has the same chance.</p>
+  <textarea id="l-items" rows="6" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel,#171a21);color:inherit;font:inherit" spellcheck="false">Alice
+Bob
+Chen
+Dara
+Esi</textarea>
+  <div class="tl-form">
+    <label>Picks <input id="l-n" type="number" min="1" value="1"></label>
+    <label>Unique <select id="l-uniq"><option value="yes" selected>Yes</option><option value="no">No</option></select></label>
+    <button class="tl-btn primary" id="l-go" type="button">Pick</button>
+    <button class="tl-btn" id="l-shuffle" type="button">Shuffle all</button>
+  </div>
+  <div class="tl-res" id="l-out">Press Pick.</div>
+  <noscript><p>JavaScript is required — the generator is the page’s own script, which is also what keeps it auditable.</p></noscript>
+  <h2 class="section-title">Why “random” is usually broken</h2>
+  <p><b>Modulo bias.</b> The naive way to get a number in a range — take a random 32-bit integer and use the remainder — makes the first few values slightly more likely whenever the range does not divide 2³² evenly. It is small (typically under one part in a million) but it is real, and it is exactly what a rigged give-away would exploit. This page uses <b>rejection sampling</b>: it draws until the value falls inside the largest multiple of the range, so every number has identical probability. <b>Seeds matter for reproducibility, not fairness:</b> there is deliberately no seed box here — a reproducible “random” draw is a nice feature for testing and a liability for a raffle.</p>
+  <p><b>Math.random() is not for anything that matters.</b> It is fast, seedable and fine for a game’s dust particles; it is not cryptographically secure, and V8’s generator can be predicted after observing enough outputs. <code>crypto.getRandomValues</code> pulls from the OS entropy pool (Linux <code>getrandom</code>, the kernel CSPRNG) and is the correct source for passwords, tokens, dice you intend to trust and lottery draws. <b>Fairness still needs a fair process:</b> if the list order is known in advance and you publish the result, publish the list and the draw time too — the maths can only be uniform over the input it receives.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For a login secret rather than a lucky number, use the <a href="/alat/kata-laluan">password generator</a> — it draws from the same entropy pool.</p>`;
+  const script = `<script>(function(){
+function $(id){return document.getElementById(id);}
+function randInt(lo,hi){
+ var range=hi-lo+1;
+ if(!(range>0)||range>4294967296)return NaN;
+ var bits=Math.ceil(Math.log2(range)),span=Math.pow(2,bits),buf=new Uint32Array(1),limit=span-(span%range),v;
+ do{crypto.getRandomValues(buf);v=buf[0]%span;}while(v>=limit);
+ return lo+v;
+}
+$('r-go').addEventListener('click',function(){
+ var lo=Math.ceil(Number($('r-min').value)),hi=Math.floor(Number($('r-max').value)),n=Math.max(1,Math.min(100,Math.floor(Number($('r-count').value)||1))),out=$('r-out');
+ if(!isFinite(lo)||!isFinite(hi)||hi<lo){out.textContent='⚠ the “to” value must be at least as large as the “from” value.';return;}
+ var unique=$('r-uniq').value==='yes';
+ if(unique&&(hi-lo+1)<n){out.textContent='⚠ cannot pick '+n+' unique numbers from a range of only '+(hi-lo+1)+'.';return;}
+ var picks=[],seen={},guard=0,v;
+ while(picks.length<n&&guard<100000){v=randInt(lo,hi);if(isNaN(v)){out.textContent='⚠ that range is too large for 32-bit sampling.';return;}if(!unique||!seen[v]){seen[v]=1;picks.push(v);}guard++;}
+ out.innerHTML='<div class="tl-pick">'+picks.join(' · ')+'</div><p class="meta">'+(unique?'Unique':'Independent')+' picks from '+lo+' to '+hi+', drawn with rejection sampling over crypto.getRandomValues.</p>';
+});
+$('d-go').addEventListener('click',function(){
+ var sides=parseInt($('d-sides').value,10),n=Math.max(1,Math.min(50,Math.floor(Number($('d-count').value)||1))),res=[],sum=0,i,v;
+ for(i=0;i<n;i++){v=randInt(1,sides);res.push(v);sum+=v;}
+ $('d-out').innerHTML='<div class="tl-pick">'+res.join(' · ')+'</div><p>Total <b>'+sum+'</b>'+(n>1?' · average '+(sum/n).toFixed(2):'')+' on d'+sides+'.</p>';
+});
+function items(){var NL=String.fromCharCode(10);return $('l-items').value.split(NL).map(function(s){return s.trim();}).filter(function(s){return s.length>0;});}
+$('l-go').addEventListener('click',function(){
+ var list=items(),n=Math.max(1,Math.floor(Number($('l-n').value)||1)),out=$('l-out'),unique=$('l-uniq').value==='yes';
+ if(!list.length){out.textContent='⚠ the list is empty.';return;}
+ if(unique&&n>list.length){out.textContent='⚠ you asked for '+n+' unique picks from '+list.length+' entries.';return;}
+ var pool=list.slice(),picks=[],i;
+ for(i=0;i<n;i++){if(!pool.length){if(unique)break;pool=list.slice();}var idx=randInt(0,pool.length-1);picks.push(pool[idx]);if(unique)pool.splice(idx,1);}
+ out.innerHTML='<div class="tl-pick">'+picks.join(' · ')+'</div><p class="meta">Each entry had the same 1-in-'+list.length+' chance per pick.</p>';
+});
+$('l-shuffle').addEventListener('click',function(){
+ var a=items(),i,j,t,out=$('l-out');
+ if(!a.length){out.textContent='⚠ the list is empty.';return;}
+ for(i=a.length-1;i>0;i--){j=randInt(0,i);t=a[i];a[i]=a[j];a[j]=t;}
+ out.innerHTML='<div class="tl-pick" style="font-size:1rem">'+a.join('<br>')+'</div><p class="meta">Fisher–Yates shuffle with unbiased indices.</p>';
+});
+})();</script>`;
+  return worldDoc({
+    title: 'Random Number Generator, Dice Roller & List Picker — Cryptographic, Unbiased | Tukuk-OS',
+    desc: 'Generate random integers in any range, roll d4–d100 dice and pick winners from a list — all from crypto.getRandomValues with rejection sampling, so no number is favoured. Runs in your browser.',
+    selfUrl: 'https://tukuk.org/alat/rawak',
+    heroTitle: '🎲 Random Number, Dice & List Picker', heroSub: 'Unbiased integers · d4–d100 · raffle picker · crypto-grade entropy',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Random Number Generator',
+      applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web browser',
+      description: 'Cryptographically sourced random integers with rejection sampling to avoid modulo bias, dice roller and list picker.',
+      url: 'https://tukuk.org/alat/rawak', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, toolsNav());
 }
@@ -18129,7 +18559,11 @@ app.get('/api/explore/arxiv', async (req, res) => {
 
 app.get('/api/explore/ip', async (req, res) => {
   try {
-    res.json(await explore.getIpInfo(req.query.ip));
+    // A visitor asking “what is my IP?” must be geolocated by their own address.
+    // Behind the Cloudflare tunnel the socket address is loopback/edge, so the
+    // forwarded header is the only truthful source — an explicit ?ip= still wins.
+    const forwarded = String(req.headers['cf-connecting-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0] || '').trim();
+    res.json(await explore.getIpInfo(req.query.ip || forwarded || ''));
   } catch (error) {
     res.status(error.statusCode || 500).json({ error: 'Failed to identify IP', details: safeError(error) });
   }
