@@ -9322,7 +9322,7 @@ function petaNav() {
 
 function petaPage() {
   const modeMeta = JSON.stringify(peta.MODE_LABEL).replace(/</g, '\\u003c');
-  const body = `<p><b>Maps &amp; Navigation</b> plots a real route between any two places on Earth and walks you through it turn by turn. Type two place names — a city, an address, a landmark — or click the map, pick driving, cycling or walking, and press Go. The route is computed by <b>OSRM</b> on <b>OpenStreetMap</b> data, the same open engines that power community maps worldwide, proxied through our own server and cached — so nothing is sent about you, and the page stays fast even when the public routers are busy.</p>
+  const body = `<p><b>Maps &amp; Navigation</b> plots a real route between any two places on Earth and walks you through it turn by turn. Type two place names — a city, an address, a landmark — or click the map, pick driving, cycling or walking, and press Go. One click in the view panel flips the whole map between the open street map, high-resolution <b>satellite imagery</b> and NASA's <b>daily true-color satellite pass</b> — imagery composited from satellites that flew over today. The route is computed by <b>OSRM</b> on <b>OpenStreetMap</b> data, the same open engines that power community maps worldwide, proxied through our own server and cached — so nothing is sent about you, and the page stays fast even when the public routers are busy.</p>
   <div class="peta-form">
     <label>From <input id="peta-from" type="text" placeholder="e.g. Kuala Lumpur" autocomplete="off"></label>
     <label>To <input id="peta-to" type="text" placeholder="e.g. Penang" autocomplete="off"></label>
@@ -9342,7 +9342,7 @@ function petaPage() {
   <p>Your place names are resolved by <b>Nominatim</b> (OpenStreetMap’s own search) and the road path by <b>OSRM</b>, one of the fastest open-source routing engines in existence — it answers in milliseconds across entire countries. Both run against the worldwide OpenStreetMap map, drawn and maintained by millions of volunteers, which is why remote villages and footpaths appear just like motorways. Our server caches every answer briefly, so repeated lookups never touch the public services.</p>
   <h2 class="section-title">What it is not</h2>
   <p>This is a route <b>planner</b>, not a live navigation co-pilot: there are no voice prompts, no speed cameras on the route and no traffic-aware rerouting — for the community’s eyes on the road itself see <a href="/traffic">Tukuk Traffic</a>. Distances and times assume free-flowing conditions; road works, closures and local rules always win. Some pairs genuinely have no road between them (islands, or Borneo and the Peninsula without a ferry) — the router will say so honestly rather than invent a path.</p>
-  <p class="meta">Map data &amp; © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors; routing by <a href="http://project-osrm.org/" rel="noopener nofollow">OSRM</a>; search by <a href="https://nominatim.org/" rel="noopener nofollow">Nominatim</a>. Tiles rendered with Leaflet. No coordinates leave your browser except the two endpoints you search.</p>`;
+  <p class="meta">Map data &amp; © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors; routing by <a href="http://project-osrm.org/" rel="noopener nofollow">OSRM</a>; search by <a href="https://nominatim.org/" rel="noopener nofollow">Nominatim</a>. Tiles rendered with Leaflet; satellite imagery © <a href="https://www.esri.com/content/dam/esrisites/en-us/media/legal/feature-article-licensing.pdf" rel="noopener nofollow">Esri</a>, Maxar &amp; Earthstar Geographics; daily true-color by <a href="https://worldview.earthdata.nasa.gov" rel="noopener nofollow">NASA GIBS</a> (VIIRS/Suomi-NPP, renewed every day). No coordinates leave your browser except the two endpoints you search.</p>`;
   const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
     + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
     + `<script>(function(){var MODE=${modeMeta};var map=null,start=null,dest=null,mkS=null,mkD=null,line=null;
@@ -9377,7 +9377,16 @@ function draw(j){if(line){map.removeLayer(line);line=null;}
   side.innerHTML=html;}
 function boot(){if(!window.L){setTimeout(boot,300);return;}
   map=L.map('peta-map',{zoomControl:true}).setView([20,100],3);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'}).addTo(map);
+  var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'});
+  var sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery \\u00a9 Esri, Maxar, Earthstar Geographics'});
+  var ref=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+  var hybrid=L.layerGroup([sat,ref]);
+  var d=new Date();var gd=d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);
+  var live=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+gd+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpeg',{maxNativeZoom:9,maxZoom:12,attribution:'NASA GIBS — true-color satellite, renewed daily ('+gd+')'});
+  var pref='';try{pref=localStorage.getItem('peta-view')||'';}catch(e){}
+  (pref==='sat'?hybrid:pref==='live'?live:osm).addTo(map);
+  L.control.layers({'🗺 Map':osm,'🛰 Satellite':hybrid,'☀ Live true-color (daily)':live},null,{collapsed:false}).addTo(map);
+  map.on('baselayerchange',function(e){var k=e.layer===hybrid?'sat':(e.layer===live?'live':'map');try{localStorage.setItem('peta-view',k);}catch(x){}});
   map.on('click',function(e){pin('d',e.latlng.lat,e.latlng.lng);status('destination set — left-click again to move it, right-click for start');});
   map.on('contextmenu',function(e){e.originalEvent.preventDefault();pin('s',e.latlng.lat,e.latlng.lng);status('start set — press Go');});
   document.getElementById('peta-go').onclick=go;
