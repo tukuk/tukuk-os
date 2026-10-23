@@ -34,6 +34,40 @@ const negara = require('./src/negara');
 const bendera = require('./src/bendera');
 const agentEditor = require('./src/agent-editor');
 
+// ── Runtime resilience guard ────────────────────────────────────────────────
+// The boot contract above is "the process never exits on subsystem errors", but
+// that only covered *boot-time* failures. A runtime throw that escapes the
+// request lifecycle still killed node: `compression`'s Brotli `onStreamEnd`
+// fires from a stream 'end' tick after the route function has already returned,
+// so Express's error middleware can't see it — when it races a closed response
+// it throws ERR_HTTP_HEADERS_SENT, which propagated to the top and took the
+// whole engine down (observed 2026-10-23: 24 crashes in a burst, systemd
+// restart-looping every page offline). Install catch-all handlers so a single
+// malformed response can never crash the server. They only keep the process
+// alive once we are *serving*; a real startup failure still exits non-zero.
+// Logging is throttled so a crash storm can't refill the size-capped journal.
+let serving = false;
+let lastGuardLog = 0;
+let suppressedSinceLastLog = 0;
+function reportRuntimeError(kind, err) {
+  const detail = err && err.stack ? err.stack : String(err);
+  if (!serving) {
+    console.error(`[tukuk-os] fatal during startup, exiting: ${kind}: ${detail}`);
+    process.exit(1);
+  }
+  const now = Date.now();
+  if (now - lastGuardLog >= 1000) {
+    if (suppressedSinceLastLog > 0) console.error(`[tukuk-os] ... ${suppressedSinceLastLog} similar suppressed`);
+    lastGuardLog = now;
+    suppressedSinceLastLog = 0;
+    console.error(`[tukuk-os] ${kind} (kept alive, connection dropped): ${detail}`);
+  } else {
+    suppressedSinceLastLog += 1;
+  }
+}
+process.on('uncaughtException', (err) => reportRuntimeError('UNCAUGHT EXCEPTION', err));
+process.on('unhandledRejection', (reason) => reportRuntimeError('UNHANDLED REJECTION', reason));
+
 /**
  * Poll Meilisearch until it reports "available", or throw after `attempts` tries.
  * @param {{attempts?: number, delayMs?: number}} [opts]
@@ -97,6 +131,7 @@ async function main() {
   }
 
   const server = app.listen(config.port, config.host, () => {
+    serving = true; // the resilience guard now logs & continues instead of exiting
     console.log(`[tukuk-os] search engine running at http://${config.host}:${config.port}`);
     console.log(`[tukuk-os] health: http://localhost:${config.port}/health  |  search: http://localhost:${config.port}/search?q=word`);
     console.log(`[tukuk-os] ask:    http://localhost:${config.port}/ask?q=question     |  dev: http://localhost:${config.port}/dev`);
