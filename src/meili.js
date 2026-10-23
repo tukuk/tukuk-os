@@ -586,24 +586,58 @@ async function waitForTask(taskUid) {
 }
 
 /**
- * Push the ranking rules from settings() onto an index that already exists, but only when
- * they differ — a boot that changes nothing should not queue a Meilisearch task.
- * @returns {Promise<boolean>} whether the rules were written
+ * Push every field of settings() onto an index that already exists.
+ *
+ * ensureIndex() applies settings only when it CREATES the index, so an index provisioned by an
+ * older version keeps that version's configuration for good. Measured on production: the live
+ * index was still filtering 82 Malay stop-words ("apabila", "ada", "adalah") and expanding Malay
+ * synonyms, while this file had long since moved to 114 English ones — ENGLISH_STOP_WORDS had
+ * never taken effect, so "how many caves are there listed" was searched with all six words.
+ *
+ * Compares field by field and writes only what differs, so a boot that changes nothing queues no
+ * Meilisearch task (and changing searchableAttributes would otherwise force a reindex every boot).
+ * @returns {Promise<string[]>} the names of the fields that were written
  */
-async function syncRankingRules(idx, { logger = console } = {}) {
-  let current;
+async function syncSettings(idx, { logger = console } = {}) {
+  let have;
   try {
-    const have = await idx.getSettings();
-    current = (have && have.rankingRules) || [];
+    have = await idx.getSettings();
   } catch {
-    return false;
+    return [];
   }
-  const want = settings().rankingRules;
-  if (JSON.stringify(current) === JSON.stringify(want)) return false;
-  const task = await idx.updateSettings({ rankingRules: want });
+  if (!have) return [];
+  const want = settings();
+  const patch = {};
+  for (const [key, value] of Object.entries(want)) {
+    // undefined/null means "leave whatever is there" — distinctAttribute is deliberately unset.
+    if (value === undefined || value === null) continue;
+    if (settingsMatch(have[key], value)) continue;
+    patch[key] = value;
+  }
+  if (!Object.keys(patch).length) return [];
+  const task = await idx.updateSettings(patch);
   await waitForTask(task.taskUid);
-  if (logger && logger.log) logger.log(`[meili] ranking rules updated: ${want.join(' > ')}`);
-  return true;
+  if (logger && logger.log) logger.log(`[meili] settings updated: ${Object.keys(patch).join(', ')}`);
+  return Object.keys(patch);
+}
+
+/**
+ * Comparison used by syncSettings(). Arrays compare as sets — Meilisearch returns
+ * sortableAttributes and dictionary in its own order — and objects compare only on the keys we
+ * set, because the server reports fields we never configure (typoTolerance.disableOnWords, …).
+ */
+function settingsMatch(have, want) {
+  if (Array.isArray(want)) {
+    if (!Array.isArray(have) || have.length !== want.length) return false;
+    const a = have.map(String).sort();
+    const b = want.map(String).sort();
+    return a.every((value, i) => value === b[i]);
+  }
+  if (want && typeof want === 'object') {
+    if (!have || typeof have !== 'object' || Array.isArray(have)) return false;
+    return Object.keys(want).every((key) => settingsMatch(have[key], want[key]));
+  }
+  return have === want;
 }
 
 async function ensureIndex({ logger = console } = {}) {
@@ -618,7 +652,7 @@ async function ensureIndex({ logger = console } = {}) {
     logger.log(`[meili] REAL index connected: "${name}" (${stats.numberOfDocuments} documents)`);
     // The index already exists, so its settings were written by an older version of this
     // file and no longer follow the code. Push the difference instead of trusting it.
-    await syncRankingRules(idx, { logger });
+    await syncSettings(idx, { logger });
   } catch (err) {
     // Index doesn't exist yet → create it + apply settings so the crawler can start using it.
     try {
@@ -679,6 +713,6 @@ module.exports = {
   settings,
   backfillQuality,
   CRAWLED_QUALITY,
-  syncRankingRules,
+  syncSettings,
   indexName: config.indexName
 };

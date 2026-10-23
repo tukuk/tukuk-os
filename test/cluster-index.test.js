@@ -40,12 +40,15 @@ test('faqLines(): global clusters use jurisdiction-free questions', () => {
   const lines = faqLines({ subject: '', unit: 'bays', singular: 'bay', count: 52, top: 'Norway (11 bays)' });
   assert.deepEqual(lines, [
     'How many bays are there in total? There are 52 bays.',
+    // "listed" is not a stop-word, so the corpus has to carry the word for the query
+    // "how many bays are listed" to reach this document at all.
+    'How many bays are listed here? 52 bays are listed on this page.',
     'Which country has the most bays? Norway (11 bays).',
     'List of bays worldwide (52 entries): names, country and region.',
     'Every bay on this page lists its country and region.'
   ]);
   const none = faqLines({ subject: '', unit: 'lagoons', singular: 'lagoon', count: 60, top: '' });
-  assert.equal(none.length, 3, 'no dominant country → drop the "most" line');
+  assert.equal(none.length, 4, 'no dominant country → drop the "most" line');
 });
 
 test('faqLines(): the corpus stays English — no Malay question templates', () => {

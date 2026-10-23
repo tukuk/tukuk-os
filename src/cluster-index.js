@@ -82,11 +82,16 @@ function faqLines({ subject, unit, singular, count, top }) {
     ? [
       `How many ${unit} does ${subject} have? ${subject} has ${count} ${unit}.`,
       `How many ${unit} are there${where}? There are ${count}.`,
+      // "listed" is how people phrase the same question, and it is not a stop-word: measured,
+      // "how many caves are there listed" returned campsites and an MDN page, because `words`
+      // ranks documents that also contain that word above ours.
+      `How many ${unit} are listed${where}? ${count} ${unit} are listed on this page.`,
       `Does ${subject} have ${count} ${unit}? Yes — the full list of every ${singular}${where} is on this page.`,
       `List of ${unit}${where} (${count} entries): names, country and region.`,
     ]
     : [
       `How many ${unit} are there in total? There are ${count} ${unit}.`,
+      `How many ${unit} are listed here? ${count} ${unit} are listed on this page.`,
       top ? `Which country has the most ${unit}? ${top}.` : '',
       `List of ${unit} worldwide (${count} entries): names, country and region.`,
       // Meili has no stemming ('bay' ≠ 'bays'), so the singular gets its own line.

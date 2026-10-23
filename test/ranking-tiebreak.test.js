@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { settings, syncRankingRules, backfillQuality, CRAWLED_QUALITY } = require('../src/meili');
+const { settings, syncSettings, backfillQuality, CRAWLED_QUALITY } = require('../src/meili');
 const { postToDoc } = require('../src/blog-index');
 const { hubToDoc, sectionToDoc } = require('../src/cluster-index');
 
@@ -57,34 +57,50 @@ test('ranking: the crawler stamps every crawled page with the neutral score', ()
     'the document the crawler returns must carry quality');
 });
 
-test('ranking: a live index keeps the rules the code holds, not the ones it was created with', async () => {
-  // The index already exists on the server, so updateSettings() at creation time never runs
-  // again — a new rule added to the code would otherwise never reach production.
+test('settings: a live index keeps the configuration the code holds, not the one it was created with', async () => {
+  // The index already exists on the server, so updateSettings() at creation time never runs again.
+  // Measured consequence: the live index still filtered 82 Malay stop-words from an older version
+  // while this file held 114 English ones, and ranking rules added later never arrived at all.
   const stale = {
+    // Everything as the code has it, except the two fields that actually drifted on the server.
     current: {
+      ...settings(),
       rankingRules: BUILT_IN,
-      searchableAttributes: ['title']
+      stopWords: ['apabila', 'ada', 'adalah']
     },
     written: null,
     async getSettings() { return this.current; },
     async updateSettings(next) { this.written = next; return { taskUid: 7 }; }
   };
-  assert.equal(await syncRankingRules(stale, { logger: { log() {} } }), true);
-  assert.deepEqual(stale.written, { rankingRules: settings().rankingRules });
+  const wrote = await syncSettings(stale, { logger: { log() {} } });
+  assert.deepEqual(wrote.sort(), ['rankingRules', 'stopWords']);
+  assert.deepEqual(stale.written.rankingRules, settings().rankingRules);
+  assert.deepEqual(stale.written.stopWords, settings().stopWords);
+  assert.equal(stale.written.searchableAttributes, undefined, 'unchanged fields are not rewritten');
 
+  // The server returns extra fields we never set (typoTolerance.disableOnWords, its own array
+  // order) — that must not look like a change, or every boot would queue a settings task.
   const current = {
     calls: 0,
-    async getSettings() { return { rankingRules: settings().rankingRules }; },
+    async getSettings() {
+      const want = settings();
+      return {
+        ...want,
+        sortableAttributes: want.sortableAttributes.slice().reverse(),
+        typoTolerance: { ...want.typoTolerance, disableOnWords: [], disableOnNumbers: [] },
+        distinctAttribute: null
+      };
+    },
     async updateSettings() { this.calls += 1; return { taskUid: 8 }; }
   };
-  assert.equal(await syncRankingRules(current, { logger: { log() {} } }), false, 'no change, no task');
+  assert.deepEqual(await syncSettings(current, { logger: { log() {} } }), [], 'no change, no task');
   assert.equal(current.calls, 0);
 
   const unreadable = {
     async getSettings() { throw new Error('meili down'); },
     async updateSettings() { throw new Error('must not be called'); }
   };
-  assert.equal(await syncRankingRules(unreadable, { logger: { log() {} } }), false, 'fail soft at boot');
+  assert.deepEqual(await syncSettings(unreadable, { logger: { log() {} } }), [], 'fail soft at boot');
 });
 
 /** An index handle that pages like Meilisearch's documents endpoint (offset/limit + total). */
