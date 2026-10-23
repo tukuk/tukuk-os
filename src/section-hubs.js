@@ -17,6 +17,28 @@ const gp = require('./gempa');
 const udara = require('./udara');
 
 /**
+ * The ten front doors by path. One list, used twice: every document below is built from one of
+ * these, and a test keeps them in step — the urls in the objects and this list must not drift.
+ */
+const HUB_PATHS = [
+  '/countries', '/weather', '/earthquakes', '/holidays', '/statistics',
+  '/disasters', '/flags', '/maps', '/air-quality', '/academy'
+];
+
+/**
+ * True when the query is nothing but the name of a front door — "weather", "air quality".
+ * A visitor typing that is navigating, not searching: they want that page, and /search uses
+ * this to leave page one in Meilisearch's order instead of handing it to the embedding
+ * reranker, which scores a news article about the weather as close to "weather" as the page
+ * that serves the weather (and then decides by chance).
+ * @param {string} text
+ */
+function isHubName(text) {
+  const norm = String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return HUB_PATHS.some((path) => path.slice(1).replace(/-/g, ' ') === norm);
+}
+
+/**
  * Build the section-hub documents.
  * @param {object} logger used only to report a data source that was unreachable.
  * @returns {Promise<Array<{url,title,description,lines,keywords}>>}
@@ -143,4 +165,4 @@ async function sectionHubs(logger = console) {
   ];
 }
 
-module.exports = { sectionHubs };
+module.exports = { sectionHubs, isHubName, HUB_PATHS };

@@ -49,6 +49,7 @@ const templates = require('./brain/templates');
 const news = require('./news');
 const queries = require('./queries');
 const queryLang = require('./query-lang');
+const { isHubName } = require('./section-hubs');
 const answer = require('./answer');
 const bingbot = require('./bingbot');
 const { client, health } = require('./meili');
@@ -18107,7 +18108,12 @@ app.get('/search', limiter.search, async (req, res) => {
     const term = translation ? translation.query : qq;
     // Neural rerank (relevance mode only, first page). Safe: a no-op when
     // no backend is available (the local model is not deployed & there are no cloud credentials).
-    if (reranker.available() && !params.sort && (params.offset || 0) === 0 && result.hits.length > 1) {
+    // Skipped when the query is the name of one of our own front doors ("weather", "air
+    // quality"): that is navigation, and an embedding model cannot know which page is the door
+    // — measured, it kept putting a 2023 BBC article ahead of /weather. Meilisearch's own order
+    // answers those with our hub first (see RANKING_RULES in src/meili.js).
+    const navigational = isHubName(term);
+    if (reranker.available() && !params.sort && !navigational && (params.offset || 0) === 0 && result.hits.length > 1) {
       if (wantedLimit < config.rerank.candidates) {
         params.limit = Math.min(config.rerank.candidates, config.search.maxLimit);
         result = await target.search(term, params);

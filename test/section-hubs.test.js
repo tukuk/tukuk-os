@@ -7,8 +7,10 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const { sectionHubs } = require('../src/section-hubs');
+const { sectionHubs, isHubName, HUB_PATHS } = require('../src/section-hubs');
 const { sectionToDoc, indexSectionHubs } = require('../src/cluster-index');
 const negara = require('../src/negara');
 
@@ -44,6 +46,29 @@ test('sectionHubs(): each hub carries the words a visitor actually types', async
   assert.match(text('/weather'), /today/);
   assert.match(text('/earthquakes'), /today/);
   assert.match(text('/holidays'), /2026/);
+});
+
+test('isHubName(): a bare hub name is navigation, anything longer is a search', () => {
+  // /search leaves page one in Meilisearch's order for these, because the embedding reranker
+  // put a 2023 BBC article ahead of /weather. Only the whole query counts.
+  for (const q of ['weather', 'Weather', '  maps ', 'air quality', 'air-quality', 'AIR QUALITY!', 'academy']) {
+    assert.equal(isHubName(q), true, `${q} names a front door`);
+  }
+  for (const q of ['', 'weather today', 'weather in tokyo', 'how many flags are there in the world',
+    'dan brown', 'forecast', 'weathers', 'world weather']) {
+    assert.equal(isHubName(q), false, `${q} is a search, not a door`);
+  }
+});
+
+test('isHubName(): the path list and the documents cannot drift apart', async () => {
+  const urls = (await hubs).map((h) => h.url).sort();
+  assert.deepEqual(urls, [...HUB_PATHS].sort(), 'every hub has a path in HUB_PATHS and every path a hub');
+});
+
+test('/search keeps the reranker off a navigational query', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js'), 'utf8');
+  assert.match(src, /const navigational = isHubName\(term\);/);
+  assert.match(src, /if \(reranker\.available\(\) && !params\.sort && !navigational &&/, 'the rerank guard must honour it');
 });
 
 test('sectionHubs(): the country count comes from the data, not from a typed sentence', async () => {
