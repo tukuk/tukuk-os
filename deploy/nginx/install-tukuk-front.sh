@@ -64,6 +64,11 @@ wait_health() {
 }
 
 place_conf() { # $1 = listen port, $2 = origin port
+  # The cache directory has to exist BEFORE the test: nginx creates only the last
+  # component of proxy_cache_path, and on Ubuntu /var/cache/nginx is not there at all
+  # (its own cache lives under /var/lib/nginx), so `nginx -t` fails with mkdir() ENOENT.
+  mkdir -p /var/cache/nginx "$CACHE_DIR" || die "cannot create $CACHE_DIR"
+  chown -R www-data:www-data /var/cache/nginx && chmod 700 "$CACHE_DIR"
   sed -e "s/listen 127\.0\.0\.1:[0-9]\+;/listen 127.0.0.1:$1;/" \
       -e "s/listen \[::1\]:[0-9]\+;/listen [::1]:$1;/" \
       -e "s/server 127\.0\.0\.1:[0-9]\+;/server 127.0.0.1:$2;/" "$CONF_SRC" > "$CONF.new"
@@ -75,7 +80,6 @@ place_conf() { # $1 = listen port, $2 = origin port
     die "config rejected by nginx -t — removed it, nginx reloaded with its old config"
   fi
   step "nginx -t OK"
-  mkdir -p "$CACHE_DIR" && chown -R www-data:www-data "$CACHE_DIR" && chmod 700 "$CACHE_DIR"
   systemctl reload nginx || die "nginx reload failed"
   step "nginx reloaded (listen $1 -> origin $2)"
 }
