@@ -6324,7 +6324,10 @@ function cuacaSunPage(req, city, cur) {
 // ——— /weather/map — Leaflet + free OpenWeather tiles (rain/clouds/pressure) ———
 function cuacaMapPage(req) {
   const layers = [
-    ['weather_new', 'Rain & storms', true],
+    // 'weather_new' was the old combined rain layer; OpenWeather now answers it with
+    // 400 {"message":"Unexpected layer name."} — verified on the box 24 Oct 2026.
+    // precipitation_new is the current equivalent and returns a real radar PNG.
+    ['precipitation_new', 'Rain & storms', true],
     ['clouds_new', 'Clouds', false],
     ['pressure_new', 'Air pressure', false],
   ];
@@ -6336,7 +6339,7 @@ function cuacaMapPage(req) {
     + `<h2 class="section-title">Shared with the night sky</h2><p>This map shows <em>cloud right now</em> \u2014 the stargazer\u2019s enemy. If the cloud layer is empty over your location, check <a href="/nasa/sky">Tonight\u2019s Sky</a> for the moon phase and astronomical darkness before hauling out the telescope.</p>`
     + `<p class="meta">Tiles: © <a href="https://openweathermap.org/" rel="noopener nofollow">OpenWeather</a> · base maps: © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors and live traffic © <a href="https://www.google.com/maps" rel="noopener nofollow">Google</a>.</p>`;
   const script = `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
-    + `<script>document.addEventListener('DOMContentLoaded',function(){var WXP=${payload};function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('wxmap').setView([3.8,107],5);var wxOsm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'\\u00a9 OpenStreetMap'});var wxFlow=L.tileLayer('/api/traffic/tiles/{z}/{x}/{y}',{maxZoom:12,attribution:'Live traffic © Google'});wxOsm.addTo(m);var ctl=[];WXP.forEach(function(o){var tl=L.tileLayer(o.url,{maxZoom:12,opacity:.8});if(o.def)tl.addTo(m);ctl.push({[o.label]:tl});});L.control.layers({'🗺 Map':wxOsm,'🚦 Live traffic':wxFlow},ctl,{collapsed:false}).addTo(m);}boot();});</script>`;
+    + `<script>document.addEventListener('DOMContentLoaded',function(){var WXP=${payload};function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('wxmap').setView([3.8,107],5);var wxOsm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'\\u00a9 OpenStreetMap'});var wxFlow=L.tileLayer('/api/traffic/tiles/{z}/{x}/{y}',{maxZoom:12,attribution:'Live traffic © Google'});wxOsm.addTo(m);var ctl={};WXP.forEach(function(o){var tl=L.tileLayer(o.url,{maxZoom:12,opacity:.8});if(o.def)tl.addTo(m);ctl[o.label]=tl;});L.control.layers({'🗺 Map':wxOsm,'🚦 Live traffic':wxFlow},ctl,{collapsed:false}).addTo(m);window.addEventListener('resize',function(){m.invalidateSize();});if(window.ResizeObserver)new ResizeObserver(function(){m.invalidateSize();}).observe(document.getElementById('wxmap'));}boot();});</script>`;
   return cuacaDoc({
     title: 'Live Weather Map \u2014 Rain, Clouds & Pressure Worldwide (OpenWeather) | Tukuk-OS',
     desc: 'A free interactive map: layer OpenWeather rain, clouds and air pressure over OpenStreetMap. Zoom into your city and watch the weather move right now.',
@@ -6347,7 +6350,7 @@ function cuacaMapPage(req) {
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'Map', name: 'Tukuk-OS Live Weather Map',
       description: 'Slippy map of OpenWeather rain/cloud/pressure layers', url: 'https://tukuk.org/weather/map',
-      contentUrl: wx.tileTemplateUrl('weather_new').replace('{z}/{x}/{y}', '5/24/40'),
+      contentUrl: wx.tileTemplateUrl('precipitation_new').replace('{z}/{x}/{y}', '5/24/40'),
       license: 'https://openweathermap.org/terms-of-use',
     }).replace(/</g, '\\u003c'),
   });
