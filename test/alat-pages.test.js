@@ -60,3 +60,18 @@ test('sitemap.xml lists all six new tools', async () => {
     assert.ok(xml.includes(`${page.path}</loc>`), `sitemap misses ${page.path}`);
   }
 });
+
+// The report-only policy is the site's own measuring stick: every host a page embeds
+// has to appear in it, or each view produces a violation report that says nothing new
+// (production was emitting ~330 per 6 hours from exactly this drift).
+test('report-only CSP covers the third parties the pages embed', async () => {
+  const res = await fetch(base + '/alat/peratus');
+  const reportOnly = res.headers.get('content-security-policy-report-only') || '';
+  for (const host of ['https://googleads.g.doubleclick.net', 'https://www.google.com', 'https://www.clarity.ms', 'https://static.cloudflareinsights.com', 'https://unpkg.com']) {
+    assert.ok(reportOnly.includes(host), `report-only CSP misses ${host}`);
+  }
+  // The enforced policy stays structural (no script-src) — that part is deliberate.
+  const enforced = res.headers.get('content-security-policy') || '';
+  assert.match(enforced, /object-src 'none'/);
+  assert.ok(!enforced.includes('script-src'), 'script-src must not be enforced on interactive pages');
+});
