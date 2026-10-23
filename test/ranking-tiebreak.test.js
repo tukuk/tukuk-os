@@ -16,13 +16,16 @@ const { hubToDoc, sectionToDoc } = require('../src/cluster-index');
 
 const BUILT_IN = ['words', 'typo', 'proximity', 'attribute', 'sort', 'exactness'];
 
-test('ranking: the tie-break is a custom quality rule, and it comes last', () => {
+test('ranking: the tie-break is a custom quality rule, placed where it can decide', () => {
   const rules = settings().rankingRules;
-  assert.deepEqual(rules.slice(0, BUILT_IN.length), BUILT_IN, 'the built-in rules keep their order');
-  assert.equal(rules[rules.length - 1], 'quality:desc', 'the custom rule must come after every built-in one');
+  // The built-ins keep their relative order; the custom rule is spliced in before exactness.
+  assert.deepEqual(rules.filter((rule) => BUILT_IN.includes(rule)), BUILT_IN, 'the built-in rules keep their order');
   assert.equal(rules.length, BUILT_IN.length + 1, 'one custom rule, no more');
-  // Meilisearch rejects `attribute` together with `attributeRank`/`wordPosition`, and a custom
-  // rule placed early would outrank relevance instead of only breaking ties.
+  assert.equal(rules.indexOf('quality:desc'), rules.indexOf('exactness') - 1,
+    'measured: the documents that outrank ours differ on exactness alone, so the rule must come first');
+  assert.ok(rules.indexOf('quality:desc') > rules.indexOf('attribute'),
+    'never above attribute — a better-matching attribute still wins');
+  // Meilisearch rejects `attribute` together with `attributeRank`/`wordPosition`.
   assert.ok(!rules.some((rule) => rule === 'attributeRank' || rule === 'wordPosition'));
 });
 

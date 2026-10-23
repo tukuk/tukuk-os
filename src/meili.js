@@ -69,14 +69,21 @@ const RANKING_RULES = [
   'proximity',
   'attribute',
   'sort',
-  'exactness',
-  // A single word is a pure tie: "weather" matches 275 documents equally well on every rule
-  // above, and the order then falls to insertion — which is how a 2023 BBC article came to
-  // outrank our own /weather at #46. The pages we write carry a score; a crawled page is
+  // A single word is a pure tie: "weather" matches 275 documents and every rule above scores
+  // them identically, so the order fell to insertion — which is how a 2023 BBC article came to
+  // outrank our own /weather at #46. The pages we write carry a score, a crawled page is
   // unrated and takes CRAWLED_QUALITY, so the tie goes to the page we actually reviewed.
-  // Meilisearch documents this rule as UNDEFINED if any document lacks the field, which is
+  //
+  // It sits BEFORE `exactness`, and that position is the whole point: measured with
+  // showRankingScoreDetails, the documents beating us scored 1.0 on words/typo/proximity/
+  // attribute and only differed on exactness (they 1.0, we 0.667). Placed after exactness the
+  // rule never gets a say. It stays after `attribute`, so a document that matched the query in
+  // a more important attribute still wins — this only decides documents that matched as well.
+  //
+  // Meilisearch documents a custom rule as UNDEFINED when a document lacks the field, which is
   // why every writer sets `quality` and backfillQuality() covers the ones that predate it.
-  'quality:desc'
+  'quality:desc',
+  'exactness'
 ];
 
 /** The neutral middle: a page we crawled but never reviewed. Ours sit at 0.9–0.95. */
