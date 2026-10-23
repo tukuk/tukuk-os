@@ -33,4 +33,6 @@ Open [Tukuk-OS Maps](/peta) and switch the base layer to the live view, or skip 
 2. **Flip to night lights and look at your border.** The line where one country's grid brightness drops to another's is one of the most quietly political images available to the public — the Korea DMZ, India–Pakistan at Diwali, the Nile seen as a single lit filament.
 3. **Search any place and fly there** on Live Earth, then toggle layers over the same spot: geography in true color, human footprint at night, maximum detail in the high-res layer. The same square of land tells three unrelated stories depending on which sensor looked at it.
 
-The satellites are not coming, and they are not going anywhere. The images are already on the server, already dated today, already free. The only missing part was ever the button — so press it.
+> 🛰️ **Try it right now →** [Live Earth — full-window satellite view](/peta/langit) · or switch the base layer on [Maps & Navigation](/peta), which now carries the same daily true-color and night-lights passes beside the street map.
+
+The satellites are not coming, and they are not going anywhere. The images are already on the server, already dated today, already free. The only missing part was ever the button — so press it. Two more doors in this cluster: [reading Earth at night — what city lights reveal](/blog/reading-earth-at-night-what-city-lights-reveal) and [weather satellites vs map satellites](/blog/weather-satellites-vs-map-satellites).

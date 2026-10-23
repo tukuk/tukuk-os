@@ -8522,7 +8522,7 @@ function worldDoc(o, navHtml) {
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#4c8dff">
+<meta name="theme-color" content="#4c8dff">${o.head || ''}
 <style>${COMMON_CSS}
 .world-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
 .world-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel,#171a21);margin:0}
@@ -9333,7 +9333,7 @@ function petaNav() {
 
 function petaPage() {
   const modeMeta = JSON.stringify(peta.MODE_LABEL).replace(/</g, '\\u003c');
-  const body = `<p><b>Maps &amp; Navigation</b> plots a real route between any two places on Earth and walks you through it turn by turn. Type two place names — a city, an address, a landmark — or click the map, pick driving, cycling or walking, and press Go. One click in the view panel flips the whole map between the open street map, high-resolution <b>satellite imagery</b> and NASA's <b>daily true-color satellite pass</b> — imagery composited from satellites that flew over today. The route is computed by <b>OSRM</b> on <b>OpenStreetMap</b> data, the same open engines that power community maps worldwide, proxied through our own server and cached — so nothing is sent about you, and the page stays fast even when the public routers are busy.</p>
+  const body = `<p><b>Maps &amp; Navigation</b> plots a real route between any two places on Earth and walks you through it turn by turn. Type two place names — a city, an address, a landmark — or click the map, pick driving, cycling or walking, and press Go. One click in the view panel flips the whole map between the open street map, high-resolution <b>satellite imagery</b>, NASA's <b>daily true-color satellite pass</b> — imagery composited from satellites that flew over today — and the <b>night-lights</b> band that shows where people actually live after dark. The route is computed by <b>OSRM</b> on <b>OpenStreetMap</b> data, the same open engines that power community maps worldwide, proxied through our own server and cached — so nothing is sent about you, and the page stays fast even when the public routers are busy.</p>
   <div class="peta-form">
     <label>From <input id="peta-from" type="text" placeholder="e.g. Kuala Lumpur" autocomplete="off"></label>
     <label>To <input id="peta-to" type="text" placeholder="e.g. Penang" autocomplete="off"></label>
@@ -9394,10 +9394,11 @@ function boot(){if(!window.L){setTimeout(boot,300);return;}
   var hybrid=L.layerGroup([sat,ref]);
   var d=new Date();var gd=d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);
   var live=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+gd+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpeg',{maxNativeZoom:9,maxZoom:12,attribution:'NASA GIBS — true-color satellite, renewed daily ('+gd+')'});
+  var night=L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_DayNightBand/default/'+gd+'/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png',{maxNativeZoom:7,maxZoom:12,attribution:'NASA GIBS — NOAA-20 day/night lights, renewed daily ('+gd+')'});
   var pref='';try{pref=localStorage.getItem('peta-view')||'';}catch(e){}
-  (pref==='sat'?hybrid:pref==='live'?live:osm).addTo(map);
-  L.control.layers({'🗺 Map':osm,'🛰 Satellite':hybrid,'☀ Live true-color (daily)':live},null,{collapsed:window.innerWidth<720}).addTo(map);
-  map.on('baselayerchange',function(e){var k=e.layer===hybrid?'sat':(e.layer===live?'live':'map');try{localStorage.setItem('peta-view',k);}catch(x){}});
+  (pref==='sat'?hybrid:pref==='live'?live:pref==='night'?night:osm).addTo(map);
+  L.control.layers({'🗺 Map':osm,'🛰 Satellite':hybrid,'☀ Live true-color (daily)':live,'🌙 Night lights (daily)':night},null,{collapsed:window.innerWidth<720}).addTo(map);
+  map.on('baselayerchange',function(e){var k=e.layer===hybrid?'sat':(e.layer===live?'live':(e.layer===night?'night':'map'));try{localStorage.setItem('peta-view',k);}catch(x){}});
   map.on('click',function(e){pin('d',e.latlng.lat,e.latlng.lng);status('destination set — left-click again to move it, right-click for start');});
   map.on('contextmenu',function(e){e.originalEvent.preventDefault();pin('s',e.latlng.lat,e.latlng.lng);status('start set — press Go');});
   document.getElementById('peta-go').onclick=go;
@@ -9453,7 +9454,7 @@ function langitPage() {
   <h2 class="section-title">What each view actually is</h2>
   <p><b>True-color (day)</b> is a mosaic the satellite stitches every single day from light reflected off clouds, ocean and land — so haze, smoke plumes and the swirl of a developing storm are all real and current. <b>Night lights</b> come from a day/night band sensor sensitive enough to pick up individual cities, gas flares and even moonlight glinting off clouds; the lights you see are genuinely where people are after dark. <b>Blue Marble</b> is NASA's cleaned composite reference — cloudless and sharp, ideal for reading coastlines and deserts. <b>High-resolution</b> switches to a commercial satellite basemap that lets you zoom into airports, districts and harbours.</p>
   <h2 class="section-title">Why it is free (and what it is not)</h2>
-  <p>Every layer here is published by NASA's Global Imagery Browse Services or a national geographic archive for exactly this kind of use — no account, no API key, no usage limit on your side. The imagery is refreshed on the providers' schedule (typically about a day behind for the daily composites), so this is a living snapshot of the planet, not a real-time video feed, and clouds are sometimes in the way — that is the honest weather, not a bug. For routing between places use <a href="/peta">Maps &amp; Navigation</a>; for a single full-disk portrait of Earth use <a href="/nasa/earth">EPIC</a>; and for the fuller story behind these layers — why a daily composite beats a live feed — read <a href="/blog/see-earth-from-space-today-free-satellite-imagery">how free satellite imagery actually works</a>.</p>
+  <p>Every layer here is published by NASA's Global Imagery Browse Services or a national geographic archive for exactly this kind of use — no account, no API key, no usage limit on your side. The imagery is refreshed on the providers' schedule (typically about a day behind for the daily composites), so this is a living snapshot of the planet, not a real-time video feed, and clouds are sometimes in the way — that is the honest weather, not a bug. For routing between places use <a href="/peta">Maps &amp; Navigation</a>; for a single full-disk portrait of Earth use <a href="/nasa/earth">EPIC</a>; and for the fuller story behind these layers — why a daily composite beats a live feed — read <a href="/blog/see-earth-from-space-today-free-satellite-imagery">how free satellite imagery actually works</a> — then go deeper on <a href="/blog/reading-earth-at-night-what-city-lights-reveal">what city lights reveal about us</a> and <a href="/blog/weather-satellites-vs-map-satellites">weather vs map satellites</a>.</p>
   <p class="meta">Imagery: <a href="https://www.earthdata.nasa.gov/centers/goddard-earths-gibs-science-team/gibs" rel="noopener nofollow">NASA GIBS</a> (VIIRS true-color &amp; NOAA-20 day/night band), <a href="https://visibleearth.nasa.gov/collection/1484/blue-marble" rel="noopener nofollow">NASA Blue Marble</a>, <a href="https://www.esri.com/en-us/arcgis/products/arcgis-world-imagery/overview" rel="noopener nofollow">Esri World Imagery</a>. Rendered with Leaflet. Your view stays in your browser — no coordinates are stored.</p>`;
   const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
     + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
@@ -9474,6 +9475,7 @@ function boot(){if(!window.L){setTimeout(boot,300);return;}
   document.getElementById('langit-go').onclick=fly;document.getElementById('langit-q').addEventListener('keydown',function(e){if(e.key==='Enter')fly();});
   document.getElementById('langit-full').onclick=function(){var w=document.querySelector('.langit-wrap');if(document.fullscreenElement){document.exitFullscreen&&document.exitFullscreen();}else{w.requestFullscreen&&w.requestFullscreen();}};
   document.addEventListener('fullscreenchange',function(){setTimeout(function(){map.invalidateSize();},200);});
+  if('serviceWorker' in navigator)addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});
 }
 function fly(){var v=document.getElementById('langit-q').value.trim();if(!v){st('type a place first');return;}
   var m=v.split(',');if(m.length===2){var a=parseFloat(m[0]),b=parseFloat(m[1]);if(isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180){go(a,b,v);return;}}
@@ -9489,6 +9491,7 @@ boot();})();</script>`;
     selfUrl: 'https://tukuk.org/peta/langit',
     heroTitle: '🛰️ Live Earth', heroSub: "Today's satellite view of the whole planet · day, night lights & high-res · fly anywhere",
     css: LANGIT_CSS, body: body + script,
+    head: '\n<link rel="manifest" href="/manifest-langit.json">',
     ld: JSON.stringify({
       '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Live Earth',
       applicationCategory: 'ReferenceApplication', operatingSystem: 'Web browser',

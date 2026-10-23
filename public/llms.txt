@@ -41,7 +41,7 @@ arcade (`/games`) and an app hub on the homepage, a live NASA data hub
 - [Dictionary & Translator](https://tukuk.org/alat/kamus) (alias `/kamus`): define and translate across hundreds of human languages, plus animal, alien, sound and ancient-script encoders (runes, hieroglyphs, Morse, Braille), with browser read-aloud. `GET /api/kamus/define?word=&lang=` · `GET /api/kamus/translate?text=&from=&to=`.
 
 ## Maps & world data
-- [Maps & Navigation](https://tukuk.org/peta): turn-by-turn route planner (OSRM + Nominatim, no API key) with three base views — open street map, high-resolution satellite (Esri World Imagery) and a live daily true-color satellite composite (NASA GIBS, renewed every 24 h).
+- [Maps & Navigation](https://tukuk.org/peta): turn-by-turn route planner (OSRM + Nominatim, no API key) with four base views — open street map, high-resolution satellite (Esri World Imagery), a live daily true-color satellite composite and a daily night-lights band (NASA GIBS, renewed every 24 h).
 - [Live Earth — Satellite View](https://tukuk.org/peta/langit): full-window satellite globe — today's NASA true-color pass, nightly city lights (VIIRS day/night band), Blue Marble and street-level high-res, with fly-to place search.
 - [Distance Calculator](https://tukuk.org/peta/jarak) · [Sunrise & Sunset](https://tukuk.org/peta/matahari) · [World Clock](https://tukuk.org/peta/jam).
 - [World Weather](https://tukuk.org/cuaca) · [World Earthquakes](https://tukuk.org/gempa) · [Traffic](https://tukuk.org/traffic).

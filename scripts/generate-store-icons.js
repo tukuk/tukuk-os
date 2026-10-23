@@ -36,6 +36,7 @@ const APPS = {
   dice:     { em: '🎲', c1: '#f59e0b', c2: '#d97706' },
   tip:      { em: '💵', c1: '#10b981', c2: '#059669' },
   bmi:      { em: '⚖️', c1: '#6366f1', c2: '#4338ca' },
+  langit:   { em: '🛰️', c1: '#38bdf8', c2: '#1e3a8a' },
   // Hit game ports — unique gradient + emoji per title
   candy:     { em: '🍬', c1: '#ff6b9d', c2: '#c44569' },
   flappy:    { em: '🐦', c1: '#ffd166', c2: '#ef7d00' },
