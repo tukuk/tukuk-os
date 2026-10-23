@@ -139,6 +139,26 @@ test('indexGeoHubs(): a change in ONE non-sentinel hub is still detected', async
   assert.equal(pushes, 2, 'even one changed document must be re-pushed');
 });
 
+test('indexGeoHubs(): a renamed cluster does not leave its old document behind', async () => {
+  // The id is derived from the base (`geo-hub:` + base), so renaming /kepulauan → /archipelagos
+  // creates a NEW document and never overwrites the old one. Before this, search kept
+  // advertising https://tukuk.org/kepulauan — a Malay address that only 301s now.
+  const store = new Map();
+  let deleted = [];
+  const index = {
+    async updateDocuments(list) { list.forEach((d) => store.set(d.id, d)); return { taskUid: 2 }; },
+    async getDocuments() { return { results: [...store.values()].map((d) => ({ id: d.id, hash: d.hash })), total: store.size }; },
+    async deleteDocuments(ids) { deleted = ids; ids.forEach((id) => store.delete(id)); return { taskUid: 3 }; }
+  };
+  await indexGeoHubs(index, clusters, { logger: { log() {} } });
+  store.set('geo-hub:kepulauan', { id: 'geo-hub:kepulauan', hash: 'stale', url: 'https://tukuk.org/kepulauan' });
+
+  await indexGeoHubs(index, clusters, { logger: { log() {} } });
+  assert.deepEqual(deleted, ['geo-hub:kepulauan']);
+  assert.equal(store.has('geo-hub:kepulauan'), false, 'the old hub must be gone from the index');
+  assert.ok(store.size === docs.length, 'every current hub is still there');
+});
+
 test('indexGeoHubs(): empty/broken index → try to push, never drop documents', async () => {
   let pushed = 0;
   const index = {

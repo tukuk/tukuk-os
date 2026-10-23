@@ -178,24 +178,33 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
   // that list, so a search would always come back empty and this guard would
   // never skip a push. The documents endpoint uses `fields` (it crosses
   // `displayedAttributes`) and supports the `type` filter (filterableAttributes).
+  // The same read also finds documents whose cluster no longer exists. A renamed base changes
+  // the id (`geo-hub:` + base), so the OLD document is never overwritten by the push — it just
+  // sits in the index advertising a Malay address that now only 301s. Collected here, removed
+  // after the push.
+  let stale = [];
   if (!force) {
     try {
       const found = await index.getDocuments({
         filter: 'type = "cluster"',
         // The documents endpoint is NOT governed by `pagination.maxTotalHits`
         // (that only applies to search), so one request is enough even if the
-        // cluster count grows far past 1000.
-        limit: docs.length,
-        fields: ['hash']
+        // cluster count grows far past 1000. The slack above `docs.length` leaves room for
+        // exactly the leftovers this pass is meant to delete.
+        limit: docs.length + 100,
+        fields: ['id', 'hash']
       });
       const rows = (found && found.results) || [];
       const total = found && found.total != null ? found.total : rows.length;
+      const ids = new Set(docs.map((d) => d.id));
+      stale = rows.map((r) => r && r.id).filter((id) => id && !ids.has(id));
       const want = docs.map((d) => d.hash).sort();
       const got = rows.map((r) => r && r.hash).filter(Boolean).sort();
       // The multisets match only when the document COUNT is the same and every
       // hash matches; any incomplete read (hidden attribute, 404, mock fallback)
-      // results in re-pushing — always the safe direction.
-      const unchanged = total === docs.length && got.length === want.length &&
+      // results in re-pushing — always the safe direction. A leftover also counts as a change,
+      // so a rename is cleaned up even when every current hub is already correct.
+      const unchanged = stale.length === 0 && total === docs.length && got.length === want.length &&
         want.every((h, i) => h === got[i]);
       if (unchanged) {
         if (logger && logger.log) logger.log(`[cluster-index] ${docs.length} cluster hubs already in the index — no change`);
@@ -207,6 +216,10 @@ async function indexGeoHubs(index, clusters, { logger = console, force = false }
   const task = await index.updateDocuments(docs);
   if (logger && logger.log) {
     logger.log(`[cluster-index] ${docs.length} cluster hubs submitted to the main index (task ${task && task.taskUid ? task.taskUid : 'mock'})`);
+  }
+  if (stale.length && typeof index.deleteDocuments === 'function') {
+    await index.deleteDocuments(stale);
+    if (logger && logger.log) logger.log(`[cluster-index] removed ${stale.length} hub document(s) for clusters that no longer exist: ${stale.join(', ')}`);
   }
   return { count: docs.length, skipped: false, taskUid: task && task.taskUid ? task.taskUid : null };
 }
