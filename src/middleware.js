@@ -1,5 +1,6 @@
 /**
- * Express middleware: token-bucket rate limiter + optional API-key gate.
+ * Express middleware: token-bucket rate limiter, optional API-key gate, and the cache
+ * lease handed to a shared front proxy (see handProxyLease).
  *
  * Rate limiter state lives in an in-process Map keyed by `prefix + clientIp`. Buckets
  * are lazily expired (a full sweep runs every 500 requests) so a burst of unique IPs
@@ -79,4 +80,58 @@ function requireApiKey(req, res, next) {
   return res.status(401).json({ error: 'API key invalid or missing' });
 }
 
-module.exports = { rateLimit, requireApiKey, clientKey, buckets };
+/**
+ * Hand a shared front proxy its cache lease at the last instant it can still be decided.
+ *
+ * `app.use` can only say "this prefix may be cached"; it cannot know what the route will
+ * finally do. Two real cases prove the gap: an unknown flag slug 404s under a cacheable
+ * prefix (the proxy would serve a cached "not found" for the whole lease), and
+ * /bendera/studio overwrites Cache-Control with no-store while living under /bendera.
+ * So the lease (`X-Accel-Expires`, the one header nginx's proxy_cache obeys while
+ * deliberately ignoring the browser-facing `max-age=0`) is applied only if the final
+ * status is 2xx and the final Cache-Control is still the policy that was offered.
+ *
+ * WHY THE HOOK IS writeHead AND NOT write/end: writeHead is the one function every response
+ * goes through before a single header byte leaves, and at that moment setHeader() is still
+ * legal. Deciding at `end()` throws ERR_HTTP_HEADERS_SENT because compression() calls
+ * writeHead() itself (node_modules/compression/index.js:126) and then streams the body — that
+ * throw crash-looped the live process. Guarding `end()` with headersSent then marks NOTHING,
+ * because by then the headers are long gone: every gzipped page would silently get no lease
+ * and the cache would stay empty while every other check kept passing. Both directions are
+ * pinned by test/proxy-lease.test.js, which runs the real express + real compression chain.
+ *
+ * @param {any} res express response
+ * @param {{policy: string, seconds: string}} opts the exact Cache-Control value that
+ *   entitles the response to a lease, and how long the proxy may hold it
+ */
+function handProxyLease(res, { policy, seconds }) {
+  const decide = () => {
+    if (res.headersSent) return;                                  // too late; leave it uncached
+    if (res.getHeader('Cache-Control') !== policy) return;        // a route said no
+    if (!(res.statusCode >= 200 && res.statusCode < 300)) return; // not a real render
+    res.setHeader('X-Accel-Expires', seconds);
+  };
+  const original = res.writeHead;
+  res.writeHead = function (...args) {
+    if (res.headersSent) return original.apply(this, args);   // nothing left to decide
+    // writeHead(status, [reason,] headers) applies `headers` itself, AFTER this point. Cache-
+    // Control is the one value the decision depends on, so mirror it into the header store
+    // first — a route that passes no-store here must not be leased. Any other shape (an
+    // array of pairs, anything not a plain object) is not worth guessing about: skip the
+    // decision entirely, which leaves the response uncached, never wrongly cached.
+    const passed = typeof args[1] === 'string' ? args[2] : args[1];
+    if (passed !== undefined && (typeof passed !== 'object' || Array.isArray(passed))) {
+      res.writeHead = original;
+      return original.apply(this, args);
+    }
+    if (passed) {
+      const cc = passed['Cache-Control'] !== undefined ? passed['Cache-Control'] : passed['cache-control'];
+      if (cc !== undefined) res.setHeader('Cache-Control', cc);
+    }
+    decide();
+    res.writeHead = original;   // only the first flush can still be influenced
+    return original.apply(this, args);
+  };
+}
+
+module.exports = { rateLimit, requireApiKey, clientKey, handProxyLease, buckets };

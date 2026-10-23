@@ -698,7 +698,7 @@ const kor = require('./county-oregon');
 const knm = require('./county-new-mexico');
 const social = require('./social');
 const explore = require('./explore');
-const { rateLimit, requireApiKey } = require('./middleware');
+const { rateLimit, requireApiKey, handProxyLease } = require('./middleware');
 const { safeError, truncate, escapeHtml } = require('./util');
 const { assertPublicUrl } = require('./util');
 const auth = require('./auth');
@@ -867,9 +867,11 @@ const CACHE_PUBLIC_HTML = 'public, max-age=0, s-maxage=300, stale-while-revalida
 // The same 300 seconds, in the one dialect nginx's proxy_cache speaks. Needed because the
 // browser-facing policy above deliberately says max-age=0 (a visitor must revalidate every
 // view), and nginx would read that 0 and refuse to store the page at all. X-Accel-Expires is
-// the only thing that gives the front proxy a lease, and it is set here and nowhere else, so
-// this block stays the single place that decides cacheability — nginx holds no path list that
-// could drift out of step with it. (deploy/nginx/tukuk-front.conf)
+// the only thing that gives the front proxy a lease, and its length is decided here and
+// nowhere else, so this block stays the single place that decides cacheability — nginx holds
+// no path list that could drift out of step with it. handProxyLease (src/middleware.js) is
+// what applies it, at the last moment where the decision can still be made correctly.
+// (deploy/nginx/tukuk-front.conf)
 const X_ACCEL_EXPIRES_HTML = '300';
 
 app.use((req, res, next) => {
@@ -891,28 +893,11 @@ app.use((req, res, next) => {
   // which overwrites this — the 503/error paths included.
   if ((req.method === 'GET' || req.method === 'HEAD') && cachePublicBaseSet().has(seg.split('/')[0])) {
     res.setHeader('Cache-Control', CACHE_PUBLIC_HTML);
-    // The lease for the front proxy is handed over at the LAST moment, and only if this
-    // decision is still standing then. Two real cases prove why it cannot be set here: an
-    // unknown flag slug 404s under a cacheable prefix (nginx would serve a cached "not
-    // found" for five minutes), and /bendera/studio overwrites Cache-Control with no-store
-    // while living under /bendera (nginx would cache a page the app explicitly refuses to
-    // let anyone cache). Status + the final header value are the only honest signals, and
-    // reading them keeps the app as the single decider — nginx still holds no path list.
-    const end = res.end;
-    res.end = function (...args) {
-      // `headersSent` is not a nicety: some of these pages are streamed (res.write, then
-      // res.end), and setting a header after the first chunk went out throws
-      // ERR_HTTP_HEADERS_SENT inside end() — which killed requests and crash-looped the
-      // whole app. A response already on its way gets no lease, and so is simply not cached.
-      if (!res.headersSent) {
-        const stillMarked = res.getHeader('Cache-Control') === CACHE_PUBLIC_HTML;
-        if (stillMarked && res.statusCode >= 200 && res.statusCode < 300) {
-          res.setHeader('X-Accel-Expires', X_ACCEL_EXPIRES_HTML);
-        }
-      }
-      res.end = end;
-      return end.apply(this, args);
-    };
+    // The lease for the front proxy is not set here: it goes through handProxyLease, which
+    // waits for the final status and the final Cache-Control before committing to it, so a
+    // 404 or a no-store page under a cacheable prefix never reaches the cache. The app stays
+    // the single decider — nginx holds no path list (deploy/nginx/tukuk-front.conf).
+    handProxyLease(res, { policy: CACHE_PUBLIC_HTML, seconds: X_ACCEL_EXPIRES_HTML });
   }
   next();
 });
