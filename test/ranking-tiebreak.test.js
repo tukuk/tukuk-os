@@ -46,6 +46,8 @@ test('ranking: every document we write carries a numeric quality', () => {
   }
   assert.ok(post.quality > CRAWLED_QUALITY && hub.quality > CRAWLED_QUALITY,
     'a page we wrote must score above an unrated crawl');
+  assert.ok(section.quality > post.quality && post.quality > hub.quality,
+    'front door > blog post > data hub — otherwise the hub loses its own name to an article');
 });
 
 test('ranking: the crawler stamps every crawled page with the neutral score', () => {

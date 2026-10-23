@@ -27,6 +27,15 @@ const NAME_CAP = 400;
 // Tally lists are trimmed so the document does not grow with the number of countries.
 const TALLY_CAP = 60;
 
+/**
+ * What a section front door is worth when two documents matched a query equally well — the
+ * `quality:desc` rule in src/meili.js. The scale, highest first: a front door (0.98), our blog
+ * posts (0.95), a data hub (0.9, below), and a page we merely crawled (0.5, CRAWLED_QUALITY).
+ * A front door wins its own name with that: "weather" is a page here, so the page comes first
+ * and not a third-party article about the weather.
+ */
+const SECTION_QUALITY = 0.98;
+
 function stripHtml(value) {
   return String(value || '')
     .replace(/<[^>]*>/g, ' ')
@@ -257,7 +266,7 @@ function sectionToDoc(section) {
     publishedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
     crawledAt: new Date().toISOString(),
     wordCount: content.split(/\s+/).filter(Boolean).length,
-    quality: 0.9,
+    quality: SECTION_QUALITY,
     hash: crypto.createHash('sha256').update(content).digest('hex').slice(0, 16)
   };
 }
