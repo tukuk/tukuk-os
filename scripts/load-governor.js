@@ -238,8 +238,12 @@ function processes(prev) {
     const ageSec = bootUptimeSec - starttime / HZ;
     let sinceStartPct = null;
     if (ageSec > 60) sinceStartPct = +(((utime + stime) / HZ / ageSec) * 100).toFixed(1);
+    // Worth alerting on its own only once the process has lived long enough for the average to mean
+    // something. A service that restarted 40 s ago burns CPU on start-up (V8, module load) and its
+    // lifetime average says 18% while its real current use is 0.9% — a false alarm every deploy.
+    const mature = ageSec > 300;
     list.push({
-      pid, comm, starttime, rssMb, ticks: utime + stime, cpuPct, sinceStartPct,
+      pid, comm, starttime, rssMb, ticks: utime + stime, cpuPct, sinceStartPct, mature,
       // The same lifetime total the greeter was proven with: 256,700 CPU-seconds is not a rate,
       // it is a bill, and it is the number that says "this has been burning since Thursday".
       cpuTotalText: cpuText(Math.round((utime + stime) / HZ * 1e6)),
@@ -307,9 +311,12 @@ function evaluate(h, svcs, procs, prev, lastAlerts) {
     }
   }
   for (const p of procs.unsupervised) {
-    const burning = Math.max(p.cpuPct === null ? -1 : p.cpuPct, p.sinceStartPct === null ? -1 : p.sinceStartPct);
+    // The interval measure is always evidence; the lifetime measure only once the process is old
+    // enough for the average to be a claim rather than a start-up artefact.
+    const lifetime = p.mature ? p.sinceStartPct : null;
+    const burning = Math.max(p.cpuPct === null ? -1 : p.cpuPct, lifetime === null ? -1 : lifetime);
     if (burning > LIMITS.rogueCpuPct) {
-      const how = p.cpuPct !== null && p.cpuPct >= (p.sinceStartPct || 0) ? `${p.cpuPct}% over the last interval` : `${p.sinceStartPct}% averaged over its whole life`;
+      const how = p.cpuPct !== null && p.cpuPct >= (lifetime || 0) ? `${p.cpuPct}% over the last interval` : `${lifetime}% averaged over its whole life`;
       push(`roguecpu:${p.comm}`, 'crit', `${p.comm} (pid ${p.pid}) is using ${how} of a core, has taken ${p.cpuTotalText} of CPU in total, and belongs to no service — nothing will restart or stop it`);
     }
     if (p.rssMb > LIMITS.rogueRssMb) {
@@ -338,7 +345,7 @@ function main() {
     services: svcs.map((s) => ({ unit: s.unit, state: s.state, memoryMb: s.memoryMb, memoryLimitMb: s.memoryLimitMb, cpuPct: s.cpuPct, cpuTotalText: s.cpuTotalText, restarts: s.restarts })),
     topCpu: procs.busy.map((p) => ({ comm: p.comm, pid: p.pid, cpuPct: p.cpuPct, sinceStartPct: p.sinceStartPct, cpuTotalText: p.cpuTotalText, rssMb: p.rssMb, unit: p.unit || '(no service)' })),
     topRss: procs.fat.map((p) => ({ comm: p.comm, pid: p.pid, rssMb: p.rssMb, unit: p.unit || '(no service)' })),
-    unsupervised: procs.unsupervised.map((p) => ({ comm: p.comm, pid: p.pid, rssMb: p.rssMb, cpuPct: p.cpuPct, sinceStartPct: p.sinceStartPct, cpuTotalText: p.cpuTotalText })),
+    unsupervised: procs.unsupervised.map((p) => ({ comm: p.comm, pid: p.pid, rssMb: p.rssMb, cpuPct: p.cpuPct, sinceStartPct: p.sinceStartPct, mature: p.mature, cpuTotalText: p.cpuTotalText })),
     processesScanned: procs.scanned,
     newAlerts: alerts,
   };
