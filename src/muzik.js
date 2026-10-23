@@ -6,6 +6,8 @@
 // stale-while-revalidate (the {data, expiresAt} pattern from src/teknologi.js) —
 // a slow or failing Apple call never breaks the page; the last good chart wins.
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { attachGuard } = require('./outbound');
 
 const http = axios.create({
@@ -23,6 +25,43 @@ const RSS = 'https://rss.marketingtools.apple.com/api/v2';
 const cache = new Map();
 const TTL = 24 * 60 * 60 * 1000;        // charts move once a day
 const PREVIEW_TTL = 7 * TTL;            // preview URLs are static assets
+
+// Last-good charts live on disk too. The in-memory SWR only protects a page after the
+// first successful fetch of the current process — and the service restarts daily (auto-
+// update, deploys), so a cold visitor who hit /muzik/<cc> while Apple was timing out got
+// a 503 and the error was forgotten, over and over. data/muzik-charts.json reloads the
+// last good chart of every country at startup as a STALE entry: the page serves instantly
+// and revalidates in the background, so an upstream timeout can never break the page.
+const STORE = path.join(__dirname, '..', 'data', 'muzik-charts.json');
+let storeLoaded = false;
+function loadFromDisk() {
+  if (storeLoaded) return;
+  storeLoaded = true;
+  try {
+    const obj = JSON.parse(fs.readFileSync(STORE, 'utf8'));
+    for (const key of Object.keys(obj)) {
+      const value = obj[key];
+      if (!cache.has(key) && value && Array.isArray(value.rows) && value.rows.length >= 5) {
+        // fetchedAt + TTL: an old file simply loads already-stale → serve now, refresh in background.
+        cache.set(key, { data: value, expiresAt: (value.fetchedAt || 0) + TTL });
+      }
+    }
+  } catch (e) { /* first run / no file yet — in-memory caching still works */ }
+}
+let saveTimer = null;
+function saveToDisk() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {                  // debounced: a hub warm hits 12+ charts at once
+    saveTimer = null;
+    try {
+      const out = {};
+      for (const [key, hit] of cache) if (key.startsWith('chart:')) out[key] = hit.data;
+      fs.mkdirSync(path.dirname(STORE), { recursive: true });   // fresh clone: data/ may not exist yet
+      fs.writeFileSync(STORE + '.tmp', JSON.stringify(out));
+      fs.renameSync(STORE + '.tmp', STORE);       // atomic: a crash mid-write keeps the old file
+    } catch (e) { /* read-only disk: the page is still served from memory */ }
+  }, 2000);
+}
 
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -174,6 +213,7 @@ function normSong(h, rank) {
 async function countryChart(cc) {
   const c = BY_CC.get(String(cc).toLowerCase());
   if (!c) { const e = new Error('unknown country'); e.notFound = true; throw e; }
+  loadFromDisk();
   const key = `chart:${c.cc}`;
   const hit = cacheGet(key);
   if (hit && !hit.stale) return hit.data;
@@ -190,6 +230,7 @@ async function fetchChart(key, cc) {
     if (rows.length < 5) throw new Error('thin chart feed');
     const value = { cc, rows, updated: String(feed.updated || ''), fetchedAt: Date.now() };
     cacheSet(key, value);
+    saveToDisk();
     return value;
   } catch (err) {
     const h = cacheGet(key);
