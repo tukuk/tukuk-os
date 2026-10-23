@@ -109,57 +109,77 @@ function host() {
 }
 
 // ── services: memory in, CPU out ────────────────────────────────────────────
-// systemd already counts cumulative CPU nanoseconds per unit, so the delta against the
-// previous sample gives a clean percentage without polling /proc twice a second.
-function units(names, prev) {
-  let out = '';
+// One `systemctl show` per unit. Measured on the server, not assumed: systemd 259 does not print
+// the `Unit=` property even when asked for it, so a multi-unit call comes back as nameless blocks
+// that cannot be attributed — that is how this function once silently reported zero services. Its
+// CPU total is not exposed through `systemctl show` either, so it is read from the unit's own
+// cgroup, which is the file the kernel actually maintains.
+function cgroupUs(unit) {
+  // Every unit tracked here is a system unit, and those live in system.slice under their exact name.
   try {
-    out = execFileSync('systemctl', ['show', ...names,
-      '-p', 'LoadState', '-p', 'ActiveState', '-p', 'SubState', '-p', 'MainPID',
-      '-p', 'MemoryCurrent', '-p', 'MemoryMax', '-p', 'CPUUsageNanoseconds',
-      '-p', 'NRestarts', '-p', 'TasksCurrent', '-p', 'Unit'], { encoding: 'utf8', maxBuffer: 1 << 22 });
-  } catch (err) {
-    log(`systemctl unavailable (${err.message}) — reporting services as unknown`);
-    return [];
-  }
-  // systemctl prints one block per unit starting with "Unit=", then its properties.
-  const blocks = [];
-  let cur = null;
-  for (const line of out.split('\n')) {
-    if (line.startsWith('Unit=')) { cur = { unit: line.slice(5), props: {} }; blocks.push(cur); continue; }
-    const eq = line.indexOf('=');
-    if (eq > 0 && cur) cur.props[line.slice(0, eq)] = line.slice(eq + 1);
-  }
+    const m = /^usage_usec (\d+)/m.exec(fs.readFileSync(`/sys/fs/cgroup/system.slice/${unit}/cpu.stat`, 'utf8'));
+    return m ? Number(m[1]) : null;
+  } catch { return null; } // never started: there is no cgroup, which is unknown rather than zero
+}
 
+// Cumulative CPU, in the unit that actually shows something. A fixed number of hours rounded every
+// service younger than ~18 minutes to 0, which is the one number worth reading: how much of this
+// machine a unit has taken in total. The greeter's 256,700 CPU-seconds read as "3.0 d" here.
+function cpuText(us) {
+  if (us === null) return null;
+  if (us < 1e6) return `${Math.round(us / 1000)} ms`;
+  if (us < 6e7) return `${(us / 1e6).toFixed(1)} s`;
+  if (us < 3.6e9) return `${(us / 6e7).toFixed(1)} min`;
+  if (us < 8.64e10) return `${(us / 3.6e9).toFixed(1)} h`;
+  return `${(us / 8.64e10).toFixed(1)} d`;
+}
+
+function units(names, prev) {
   const interval = prev && prev.sampledAtMs ? (Date.now() - prev.sampledAtMs) / 1000 : 0;
-  return blocks.map((b) => {
-    const p = b.props;
-    if (p.LoadState === 'not-found') return null;
-    // systemd reports "18446744073685477580" (uint64 -1) for "no limit" and "[not set]"/"" for
-    // "never started", and Number() turns both into garbage, so anything implausible is null.
+  const rows = [];
+  for (const unit of names) {
+    let out = '';
+    try {
+      out = execFileSync('systemctl', ['show', unit,
+        '-p', 'LoadState', '-p', 'ActiveState', '-p', 'SubState', '-p', 'MainPID',
+        '-p', 'MemoryCurrent', '-p', 'MemoryMax', '-p', 'NRestarts', '-p', 'TasksCurrent'],
+      { encoding: 'utf8', timeout: 5000 });
+    } catch (err) {
+      log(`systemctl show ${unit} failed (${err.message}) — skipped this sample`);
+      continue;
+    }
+    const p = {};
+    for (const line of out.split('\n')) {
+      const eq = line.indexOf('=');
+      if (eq > 0) p[line.slice(0, eq)] = line.slice(eq + 1);
+    }
+    if (p.LoadState === 'not-found') continue; // this machine does not have that unit at all
+    // systemd prints "[not set]", "infinity" and uint64 -1 for "no limit"/"never started", and
+    // Number() turns each of those into a plausible-looking catastrophe, so bounds are checked.
     const num = (k) => { const v = Number(p[k]); return Number.isFinite(v) && v >= 0 && v < 1e15 ? v : null; };
-    const cpuNs = num('CPUUsageNanoseconds');
-    const prevCpu = prev && prev.services && prev.services[b.unit] ? prev.services[b.unit].cpuNs : null;
+    const cpuUs = cgroupUs(unit);
+    const prevUs = prev && prev.services && prev.services[unit] ? prev.services[unit].cpuUs : null;
     let cpuPct = null;
-    if (cpuNs !== null && prevCpu !== null && interval > LIMITS.minSamplesForRate) {
-      cpuPct = +(((cpuNs - prevCpu) / 1e9 / interval) * 100).toFixed(1);
+    if (cpuUs !== null && prevUs !== null && interval > LIMITS.minSamplesForRate) {
+      cpuPct = +(((cpuUs - prevUs) / 1e6 / interval) * 100).toFixed(1);
       if (cpuPct < 0) cpuPct = null; // counter reset (unit restarted) — the restart alerts cover it
     }
     const memCur = num('MemoryCurrent');
     const memMax = num('MemoryMax');
-    return {
-      unit: b.unit,
+    rows.push({
+      unit,
       state: `${p.ActiveState || '?'}/${p.SubState || '?'}`,
       pid: Number(p.MainPID) || 0,
       memoryMb: memCur === null ? null : Math.round(memCur / 1048576),
       memoryLimitMb: memMax === null ? null : Math.round(memMax / 1048576),
       cpuPct,
-      cpuNs,
-      cpuTotalHours: cpuNs === null ? null : +(cpuNs / 3.6e12).toFixed(2),
+      cpuUs,
+      cpuTotalText: cpuText(cpuUs),
       restarts: Number(p.NRestarts) || 0,
       tasks: num('TasksCurrent'),
-    };
-  }).filter(Boolean);
+    });
+  }
+  return rows;
 }
 
 // ── processes: find the greeter case ────────────────────────────────────────
@@ -218,7 +238,13 @@ function processes(prev) {
     const ageSec = bootUptimeSec - starttime / HZ;
     let sinceStartPct = null;
     if (ageSec > 60) sinceStartPct = +(((utime + stime) / HZ / ageSec) * 100).toFixed(1);
-    list.push({ pid, comm, starttime, rssMb, ticks: utime + stime, cpuPct, sinceStartPct, unit: ownUnit(cgroup) });
+    list.push({
+      pid, comm, starttime, rssMb, ticks: utime + stime, cpuPct, sinceStartPct,
+      // The same lifetime total the greeter was proven with: 256,700 CPU-seconds is not a rate,
+      // it is a bill, and it is the number that says "this has been burning since Thursday".
+      cpuTotalText: cpuText(Math.round((utime + stime) / HZ * 1e6)),
+      unit: ownUnit(cgroup),
+    });
   }
   const totalCpuTicks = list.reduce((n, p) => n + p.ticks, 0);
   // Rank by what the process did in THIS interval, falling back to its lifetime rate, then to
@@ -284,7 +310,7 @@ function evaluate(h, svcs, procs, prev, lastAlerts) {
     const burning = Math.max(p.cpuPct === null ? -1 : p.cpuPct, p.sinceStartPct === null ? -1 : p.sinceStartPct);
     if (burning > LIMITS.rogueCpuPct) {
       const how = p.cpuPct !== null && p.cpuPct >= (p.sinceStartPct || 0) ? `${p.cpuPct}% over the last interval` : `${p.sinceStartPct}% averaged over its whole life`;
-      push(`roguecpu:${p.comm}`, 'crit', `${p.comm} (pid ${p.pid}) is using ${how} of a core and belongs to no service — nothing will restart or stop it`);
+      push(`roguecpu:${p.comm}`, 'crit', `${p.comm} (pid ${p.pid}) is using ${how} of a core, has taken ${p.cpuTotalText} of CPU in total, and belongs to no service — nothing will restart or stop it`);
     }
     if (p.rssMb > LIMITS.rogueRssMb) {
       push(`rogueross:${p.comm}`, 'warn', `${p.comm} (pid ${p.pid}) holds ${p.rssMb} MB with no unit managing it`);
@@ -309,10 +335,10 @@ function main() {
     sampledAt: new Date().toISOString(),
     hostname: os.hostname(),
     host: h,
-    services: svcs.map((s) => ({ unit: s.unit, state: s.state, memoryMb: s.memoryMb, memoryLimitMb: s.memoryLimitMb, cpuPct: s.cpuPct, restarts: s.restarts })),
-    topCpu: procs.busy.map((p) => ({ comm: p.comm, pid: p.pid, cpuPct: p.cpuPct, sinceStartPct: p.sinceStartPct, rssMb: p.rssMb, unit: p.unit || '(no service)' })),
+    services: svcs.map((s) => ({ unit: s.unit, state: s.state, memoryMb: s.memoryMb, memoryLimitMb: s.memoryLimitMb, cpuPct: s.cpuPct, cpuTotalText: s.cpuTotalText, restarts: s.restarts })),
+    topCpu: procs.busy.map((p) => ({ comm: p.comm, pid: p.pid, cpuPct: p.cpuPct, sinceStartPct: p.sinceStartPct, cpuTotalText: p.cpuTotalText, rssMb: p.rssMb, unit: p.unit || '(no service)' })),
     topRss: procs.fat.map((p) => ({ comm: p.comm, pid: p.pid, rssMb: p.rssMb, unit: p.unit || '(no service)' })),
-    unsupervised: procs.unsupervised.map((p) => ({ comm: p.comm, pid: p.pid, rssMb: p.rssMb, cpuPct: p.cpuPct, sinceStartPct: p.sinceStartPct })),
+    unsupervised: procs.unsupervised.map((p) => ({ comm: p.comm, pid: p.pid, rssMb: p.rssMb, cpuPct: p.cpuPct, sinceStartPct: p.sinceStartPct, cpuTotalText: p.cpuTotalText })),
     processesScanned: procs.scanned,
     newAlerts: alerts,
   };
@@ -332,8 +358,8 @@ function main() {
   writeAtomic(SNAPSHOT, snap);
   writeAtomic(PREV, {
     sampledAtMs: Date.now(),
-    // cpuNs has to be carried forward or the next run can never turn it into a rate.
-    services: Object.fromEntries(svcs.map((s) => [s.unit, { cpuNs: s.cpuNs, restarts: s.restarts }])),
+    // cpuUs has to be carried forward or the next run can never turn it into a rate.
+    services: Object.fromEntries(svcs.map((s) => [s.unit, { cpuUs: s.cpuUs, restarts: s.restarts }])),
     procs: procs.procsForPrev,
   });
   alertState.alerts = [...alertState.alerts, ...alerts].slice(-ALERTS_MAX);
@@ -342,8 +368,15 @@ function main() {
   console.log(`[load-governor] load1=${h.load1} (${h.loadPerCore1}x) free=${h.memAvailMb}MB services=${svcs.length} scanned=${procs.scanned} alerts=${alerts.length}`);
 }
 
-try { main(); } catch (err) {
-  // Monitoring must never be the outage: report and leave the last good snapshot in place.
-  log(`ERROR sampling failed: ${(err && err.message) || err}`);
+// Exported so the systemd reading and the alert thresholds can be tested on their own. A bug in
+// units() shows up as "no services", which is indistinguishable from a machine that genuinely has
+// none — that is exactly how a parse bug survived a first run on the wrong box.
+module.exports = { host, units, processes, evaluate, cgroupUs, cpuText, LIMITS, SERVICES, MUST_STAY_OFF };
+
+if (require.main === module) {
+  try { main(); } catch (err) {
+    // Monitoring must never be the outage: report and leave the last good snapshot in place.
+    log(`ERROR sampling failed: ${(err && err.message) || err}`);
+  }
+  process.exit(0);
 }
-process.exit(0);

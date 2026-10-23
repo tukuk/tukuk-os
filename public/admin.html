@@ -410,7 +410,8 @@
         <div class="lg-sub" id="loadProcsHead" hidden>Processes with no service behind them</div>
         <p class="help-text" id="loadProcsNote" hidden>
           Anything here is running outside systemd: no restart policy, no memory cap, nothing that will
-          ever notice it misbehaving. This is where the greeter lived.
+          ever notice it misbehaving. This is where the greeter lived. “CPU (lifetime)” is the number that
+          proved it — 85.7% of a core averaged over 3.5 days of nobody logging in.
         </p>
         <div style="overflow-x:auto;"><table class="lg-table" id="loadProcs"></table></div>
         <div class="lg-sub" id="loadAlertsHead" hidden>Alerts</div>
@@ -1158,24 +1159,24 @@ Type a command below or click a quick action.
 
       document.getElementById('loadServicesHead').hidden = services.length === 0;
       servicesTable.innerHTML = services.length ? `<thead><tr>
-        <th>Unit</th><th>State</th><th>Memory</th><th>Cap</th><th>CPU</th><th>Restarts</th></tr></thead><tbody>${
+        <th>Unit</th><th>State</th><th>Memory</th><th>Cap</th><th>CPU</th><th>CPU total</th><th>Restarts</th></tr></thead><tbody>${
         services.map((x) => {
           const color = x.state === 'active/running' ? 'var(--success)'
             : x.state.indexOf('failed') === 0 || x.state === 'activating/start' ? 'var(--danger)' : 'var(--text-muted)';
           return `<tr><td class="lg-name">${esc(x.unit)}</td>
             <td style="color:${color};">${esc(x.state)}</td>
             <td>${dash(x.memoryMb, ' MB')}</td><td>${dash(x.memoryLimitMb, ' MB')}</td>
-            <td>${dash(x.cpuPct, '%')}</td><td>${esc(x.restarts)}</td></tr>`;
+            <td>${dash(x.cpuPct, '%')}</td><td>${dash(x.cpuTotalText)}</td><td>${esc(x.restarts)}</td></tr>`;
         }).join('')}</tbody>` : '';
 
       const procs = s.unsupervised || [];
       document.getElementById('loadProcsHead').hidden = procs.length === 0;
       document.getElementById('loadProcsNote').hidden = procs.length === 0;
       procsTable.innerHTML = procs.length ? `<thead><tr>
-        <th>Process</th><th>PID</th><th>CPU (interval)</th><th>CPU (lifetime)</th><th>RSS</th></tr></thead><tbody>${
+        <th>Process</th><th>PID</th><th>CPU (interval)</th><th>CPU (lifetime)</th><th>CPU total</th><th>RSS</th></tr></thead><tbody>${
         procs.map((p) => `<tr><td class="lg-name">${esc(p.comm)}</td><td>${esc(p.pid)}</td>
           <td>${dash(p.cpuPct, '%')}</td><td>${dash(p.sinceStartPct, '%')}</td>
-          <td>${dash(p.rssMb, ' MB')}</td></tr>`).join('')}</tbody>` : '';
+          <td>${dash(p.cpuTotalText)}</td><td>${dash(p.rssMb, ' MB')}</td></tr>`).join('')}</tbody>` : '';
 
       const alerts = data.alerts || [];
       document.getElementById('loadAlertsHead').hidden = alerts.length === 0;
