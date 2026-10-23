@@ -30,6 +30,24 @@ test('the IPv4 CDN edge returns 403 → requests are forced over IPv6 with a fal
   assert.ok(cutiSrc.includes('let queueTail = Promise.resolve()'), 'requests are serialised (no fake CDN honeypot)');
 });
 
+test('the IPv6 probe runs unguarded, so a dead v6 route cannot cool the IPv4 fallback', () => {
+  // This is the outage of 24 Oct 2026, in one assertion. The guard (src/outbound.js) cools a
+  // URL for 120 s after any failure that is not a 4xx; on a host with no IPv6 route the probe
+  // dies in ~80 ms with ENETUNREACH, which is not the upstream's fault. On the guarded client
+  // that cooled the very URL the IPv4 fallback needed 80 ms later, so every /holidays page
+  // answered 503 — permanently, not intermittently. Only the unguarded probe may hold v6Agent.
+  assert.strictEqual((cutiSrc.match(/httpsAgent: v6Agent/g) || []).length, 1,
+    'exactly one client — the unguarded probe — uses the IPv6 agent');
+  const rj = cutiSrc.slice(cutiSrc.indexOf('async function requestJson'), cutiSrc.indexOf('let queueTail'));
+  assert.ok(rj.length > 100, 'requestJson is found');
+  assert.ok(rj.includes('await probe.get(url)'), 'the IPv6 attempt goes through the probe');
+  assert.ok(rj.includes('await http.get(url, { httpsAgent: plainAgent })'), 'the fallback goes through the guarded client');
+  assert.ok(!rj.includes('httpsAgent: v6Agent'), 'the guarded client never carries the v6 probe');
+  const probeBlock = cutiSrc.slice(cutiSrc.indexOf('const probe = axios.create('), cutiSrc.indexOf('const BASE ='));
+  assert.ok(probeBlock.includes('timeout: 5000'), 'the probe has a short deadline of its own');
+  assert.ok(!probeBlock.includes('attachGuard'), 'the probe client is not guarded');
+});
+
 test('long-weekend maths: consecutive runs + weekend attachment + bridge days', () => {
   assert.match(cutiSrc, /function longWeekends\(rows\)/, 'longWeekends is defined');
   assert.match(cutiSrc, /if \(ld === 5\) span \+= 2/, 'a holiday ending Friday adds 2');

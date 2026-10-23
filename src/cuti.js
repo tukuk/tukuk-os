@@ -28,6 +28,20 @@ attachGuard(http, { name: 'cuti' });
 const v6Agent = new https.Agent({ family: 6, keepAlive: true });
 const plainAgent = new https.Agent({ keepAlive: true });
 
+// The IPv6 route is a *probe* and runs on its own unguarded client, deliberately.
+// The guard in src/outbound.js cools a URL down for two minutes after any failure
+// that is not a 4xx — and on a host with no IPv6 route the probe dies in ~80 ms with
+// ENETUNREACH, which is not the upstream's fault at all. On the guarded client that
+// failure cooled the very URL the IPv4 request needed 80 ms later, so the fallback was
+// refused instantly and every /holidays page answered 503 for the rest of the minute.
+// Probe unguarded, fetch data guarded: a route that does not exist here must never be
+// able to take out the route that does.
+const probe = axios.create({
+  timeout: 5000,
+  httpsAgent: v6Agent,
+  headers: { 'User-Agent': 'TukukOS-Cuti-Client/1.0 (+https://tukuk.org)' },
+});
+
 const BASE = String(process.env.CUTI_BASE_URL || 'https://malaysia-holiday.dydxsoft.my/api/v1').replace(/\/+$/, '');
 
 const cache = new Map();
@@ -124,12 +138,14 @@ function findState(slug) {
 async function requestJson(url) {
   // Two routes: the forced-IPv6 one (the edge the CDN serves) then plain resolution.
   try {
-    const res = await http.get(url, { httpsAgent: v6Agent });
+    const res = await probe.get(url);
     return res.data;
   } catch (err) {
     const status = err.response ? err.response.status : null;
     // A non-403 status that did get a response (404/500) really means "no data".
     if (status && status !== 403) throw err;
+    // Either no IPv6 route on this host or the 403 challenge on IPv4 — the real fetch
+    // goes out over plain resolution, through the guard, which is where it belongs.
     const res2 = await http.get(url, { httpsAgent: plainAgent });
     return res2.data;
   }
