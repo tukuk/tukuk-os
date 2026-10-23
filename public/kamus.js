@@ -69,11 +69,15 @@
       return (i >= 0 && i < 26) ? arr[i] : ch;
     }).join('');
   }
+  // Ancient scripts: signs of one word are spaced apart for readability, and a real
+  // word gap becomes a double space (letter spacing alone must not blur words together).
   function mapTable(text, table) {
-    return String(text).split('').map(function (ch) {
-      var low = ch.toLowerCase();
-      return Object.prototype.hasOwnProperty.call(table, low) ? table[low] : ch;
-    }).join(' ');
+    return String(text).split(/\s+/).filter(Boolean).map(function (word) {
+      return word.split('').map(function (ch) {
+        var low = ch.toLowerCase();
+        return Object.prototype.hasOwnProperty.call(table, low) ? table[low] : ch;
+      }).join(' ');
+    }).join('  ');
   }
   // One token per letter (for word-valued codes like animal/sound), joined with spaces so
   // it reads; an original word-gap becomes “ / ” so the source words stay visible.

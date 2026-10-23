@@ -3,7 +3,11 @@
 // Two keyless open sources back the human-language side of the tool:
 //   • Free Dictionary API (api.dictionaryapi.dev) — monolingual definitions, phonetics
 //     and a spoken-audio URL for the languages it holds (English richest, several others).
-//   • MyMemory (api.mymemory.translated.net) — machine translation across ~50 languages.
+//   • Google's keyless web endpoint (translate.googleapis.com/translate_a/single?client=gtx)
+//     — the same machine translation the Google Translate page uses, ~100 languages.
+//   • MyMemory (api.mymemory.translated.net) — fallback across ~50 languages. Its answer
+//     is a community translation memory, so it can be empty-poisoned (garbage) or simply
+//     echo the input when it has no match; those answers are detected and never cached.
 // Both are anonymous and rate-limited, so every answer is cached here (definitions a day,
 // translations a few hours) with the same {data, expiresAt} + stale-serving pattern as
 // src/muzik.js, and the axios instance carries the outbound circuit-breaker (attachGuard):
@@ -20,7 +24,12 @@ const http = axios.create({
 attachGuard(http, { name: 'kamus', budgetMs: 6000 });
 
 const DICT_URL = 'https://api.dictionaryapi.dev/api/v2/entries';
+const GTX_URL = 'https://translate.googleapis.com/translate_a/single';
 const MT_URL = 'https://api.mymemory.translated.net/get';
+
+// MyMemory leaks its internal markers into translatedText when it is refusing a call
+// (quota exhausted / rejected pair). Anything matching this is not a real translation.
+const MT_GARBAGE_RE = /(MYMEMORY WARNING|WARNING: QUOTA|INVALID LANGUAGE|MINED|GEDI)/i;
 
 const DEF_TTL = 24 * 60 * 60 * 1000;   // a word's meaning is not going anywhere today
 const TR_TTL = 6 * 60 * 60 * 1000;     // machine translations of a fixed phrase are stable enough
@@ -101,27 +110,47 @@ async function translate(text, from, to) {
   if (hit && hit.stale) { fetchTranslate(key, s, src, dst).catch(() => {}); return { ...hit.data, cached: true }; }
   return fetchTranslate(key, s, src, dst);
 }
+// Primary path: Google's keyless gtx endpoint. Answer shape: [ [ [seg, orig, ...], …], …, srcLang ].
+async function translateGtx(text, from, to) {
+  const res = await http.get(GTX_URL, { params: { client: 'gtx', sl: from, tl: to, dt: 't', q: text } });
+  const d = res.data;
+  if (!Array.isArray(d) || !Array.isArray(d[0])) throw new Error('gtx: unexpected shape');
+  const out = d[0].map((seg) => (seg && seg[0]) || '').join('').trim();
+  if (!out) throw new Error('gtx: empty answer');
+  return { text: out, detected: (typeof d[2] === 'string' && d[2]) || from };
+}
 async function fetchTranslate(key, text, from, to) {
+  // 1) Google gtx — real MT, quality answer; trust and cache it.
+  try {
+    const g = await translateGtx(text, from, to);
+    const value = { ok: true, text: g.text, src: from, dst: to, detected: g.detected, chars: text.length };
+    cacheSet(key, value, TR_TTL);
+    return { ...value, cached: false };
+  } catch (err) { /* fall through to MyMemory below */ }
+  // 2) MyMemory fallback — HTTP 200 hides refusals; the real signal is responseStatus, and
+  //    garbage markers / plain echoes of the input mean “no usable translation” → not cached.
   try {
     const res = await http.get(MT_URL, { params: { q: text, langpair: `${from}|${to}` } });
     const data = res.data || {};
     const status = Number(data.responseStatus || data.responseDetails || 0);
-    const translated = data.responseData && data.responseData.translatedText;
-    // MyMemory answers HTTP 200 even on a quota/refusal; the real signal is responseStatus.
-    if (!translated || (status && status >= 400)) {
+    const translated = data.responseData && String(data.responseData.translatedText || '');
+    if (!translated || (status && status >= 400) || MT_GARBAGE_RE.test(translated)) {
       const h = cacheGet(key);
       if (h) return h.data;
       const e = new Error('translate refused'); e.upstream = true; throw e;
     }
     const value = {
       ok: true,
-      text: String(translated),
+      text: translated,
       src: from,
       dst: to,
-      detected: (data.match && data.match.length && data.match[0].translation) ? from : from,
+      detected: from,
       chars: text.length,
     };
-    cacheSet(key, value, TR_TTL);
+    // An echo means MyMemory had no match; it may be genuinely untranslated (café→cafe)
+    // but it may also be a miss — serve it once, cache nothing, so a retry can do better.
+    const echoed = translated.trim().toLowerCase() === text.trim().toLowerCase();
+    if (!echoed) cacheSet(key, value, TR_TTL);
     return { ...value, cached: false };
   } catch (err) {
     const h = cacheGet(key);
