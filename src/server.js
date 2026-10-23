@@ -10362,10 +10362,16 @@ function $(id){return document.getElementById(id);}
 var files=[],lastUrl='',NL=String.fromCharCode(10);
 function human(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';if(n<1073741824)return (n/1048576).toFixed(2)+' MB';return (n/1073741824).toFixed(2)+' GB';}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function why(e){var l=String(e&&e.message||e).toLowerCase();
+function why(e){var m=String(e&&e.message||e),l=m.toLowerCase();
  if(l.indexOf('encrypt')>=0)return 'password-protected — a locked PDF cannot be edited without its password';
  if(l.indexOf('header')>=0||l.indexOf('parse')>=0)return 'not a PDF, or the file is damaged';
- return String(e&&e.message||e);}
+ // Our own range errors are already written for a reader; keep them verbatim.
+ if(/does not exist|runs backwards|selected nothing|deletes every page|is not a page number|choose at least one/.test(l))return m;
+ // A truncated or forged file makes pdf-lib fail on its internals ('Cannot read properties of
+ // undefined (reading \'Pages\')', 'Expected instance of PDFDict'). None of that tells a visitor
+ // anything they can act on, so translate it into the one thing that is true.
+ if(/cannot read propert|expected instance|unexpectedobject|invalid pdf|no pdf|xref|object stream/.test(l))return 'not a PDF, or the file is damaged';
+ return m;}
 function drawList(){var html='',total=0,i,f;
  for(i=0;i<files.length;i++){f=files[i];if(!f)continue;
   if(f.error)html+='<div>⚠ '+esc(f.name)+' — '+esc(f.error)+'</div>';
