@@ -8,8 +8,9 @@
 #   cut       Move Node to 127.0.0.1:3001 and move nginx onto 127.0.0.1:3000, which
 #             is what cloudflared already dials. The tunnel config is never touched,
 #             because in token mode its routes may live in the Cloudflare dashboard
-#             (which this project's API token cannot edit). Brief blip = the Node
-#             restart, the same one every deploy already has.
+#             (which this project's API token cannot edit).
+#             The steps are ordered so that the port is only unmanned for the split
+#             second between `stop` and the nginx reload — see the note above stop_app().
 #   rollback  Node back on 3000, nginx back on 8080. One command, no rebuild.
 #   status    Show where each layer is listening and whether the cache is answering.
 #
@@ -108,6 +109,31 @@ effective_port() {
   tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^PORT=//p' | tail -1
 }
 
+# Stop the app so nginx can take the port, then the caller starts the app again.
+#
+# WHY THE STOP/START IS SPLIT APART: `systemctl restart` releases the port inside one
+# operation, so while Node boots (it warms feeds — tens of seconds) NOTHING listens on 3000 and
+# cloudflared answers its visitors with "Unable to reach the origin service: dial tcp
+# 127.0.0.1:3000: connect: connection refused". Measured on the first cutover: 26 refused
+# requests across ~30 s. With nginx bound to 3000 during the whole boot, that window becomes
+# the few hundred milliseconds of a reload, and while Node warms up nginx either serves a
+# cached page (proxy_cache_use_stale error … http_502 …) or a fast 502 — not a refusal.
+# The same ordering is used for a rollback, so no path through this script leaves the port
+# unmanned longer than the reload itself.
+stop_app() { # $1 = the port that must be free once the app is down
+  systemctl stop tukuk-os.service || die "tukuk-os would not stop — check: systemctl status tukuk-os"
+  port_free "$1" || die "something took :$1 as the app went down ($(port_owner "$1")) — nginx cannot bind it. The app is stopped: systemctl start tukuk-os"
+  step "app stopped, :$1 released"
+}
+
+# How many visitor requests the tunnel could not reach since the last minute — the honest
+# measure of what a cutover actually cost, printed instead of being assumed to be zero.
+refused_since() { # $1 = journalctl --since argument
+  local n
+  n=$(journalctl -u cloudflared --since "$1" --no-pager 2>/dev/null | grep -c 'connect: connection refused')
+  step "cloudflared 'connection refused' since $1: ${n:-unknown}"
+}
+
 case "${1:-status}" in
   verify)
     echo "▶ verify — the front proxy beside production, changing nothing that serves traffic"
@@ -123,7 +149,7 @@ case "${1:-status}" in
     find "$CACHE_DIR" -mindepth 1 -delete && step "cache emptied for a clean run"
     echo
     echo "   Now run the checks (they drive http://127.0.0.1:$VERIFY_PORT):"
-    echo "     node $APP/data/nginx-front-check.js $VERIFY_PORT"
+    echo "     node /tmp/nginx-front-check.js $VERIFY_PORT"
     echo "   If they pass:  sudo bash $0 cut"
     ;;
 
@@ -135,17 +161,26 @@ case "${1:-status}" in
     cp -a /etc/cloudflared/config.yml "/etc/cloudflared/config.yml.bak-front-$(date +%s)" 2>/dev/null \
       && step "cloudflared config backed up (it is NOT modified)"
 
-    echo "▶ moving Node to $NEW_PORT"
+    echo "▶ moving Node to $NEW_PORT and handing $PROD_PORT to nginx — in that order"
     set_app_port "$NEW_PORT"
-    systemctl restart tukuk-os.service || die "tukuk-os failed to restart — roll back with: bash $0 rollback"
+    # From the moment the app is stopped, EVERY exit path — including a config rejected by
+    # nginx -t — has to bring it back up. Without this, one bad reload would leave the site
+    # with no app at all, which is worse than the blip this ordering exists to avoid.
+    APP_STOPPED=1
+    trap '[ "$APP_STOPPED" = 1 ] && systemctl start tukuk-os.service && echo "   (restarted tukuk-os on the way out — the app is serving again on its configured port)"' EXIT
+    stop_app "$NOW_PORT"
+    place_conf "$PROD_PORT" "$NEW_PORT"
+    systemctl start tukuk-os.service || die "tukuk-os would not start — the app is DOWN, fix now: bash $0 rollback"
     wait_health "$NEW_PORT" || die "Node is not answering on $NEW_PORT — roll back with: bash $0 rollback"
     [ "$(effective_port)" = "$NEW_PORT" ] || die "the process still has PORT=$(effective_port) — the drop-in did not win; roll back with: bash $0 rollback"
     step "Node healthy on $NEW_PORT, and /proc says PORT=$(effective_port)"
-
-    echo "▶ moving nginx onto $PROD_PORT (it must bind it only now that Node has released it)"
-    place_conf "$PROD_PORT" "$NEW_PORT"
     wait_health "$PROD_PORT" || die "the app is not reachable THROUGH nginx on $PROD_PORT — roll back with: bash $0 rollback"
     step "healthy through nginx on $PROD_PORT"
+    APP_STOPPED=0; trap - EXIT
+
+    echo
+    echo "▶ what the change cost the visitors who were on the site at that moment"
+    refused_since "2 minutes ago"
 
     echo
     echo "▶ live check — is HTML actually being served from the cache?"
@@ -155,21 +190,30 @@ case "${1:-status}" in
       step "https://tukuk.org$u  nginx: ${first:-none} → ${second:-none}"
     done
     echo
-    echo "   Full regression: node $APP/data/nginx-front-check.js $PROD_PORT"
+    echo "   Full regression: node /tmp/nginx-front-check.js $PROD_PORT"
     ;;
 
   rollback)
     echo "▶ rollback — Node back on $NOW_PORT, nginx back on $VERIFY_PORT, tunnel untouched"
-    # nginx must give port $PROD_PORT up BEFORE Node is restarted onto it, so this
-    # moves the proxy aside first and only then moves the app back. One restart.
+    # Same rule as the cut-over: the port is never unmanned by a restart. Node stops, nginx
+    # moves off $PROD_PORT and back to $VERIFY_PORT, then Node starts on $NOW_PORT — so the gap
+    # is only Node's own boot, which is what serving directly on 3000 always cost.
     if [ -f "$CONF" ]; then
+      APP_STOPPED=1
+      trap '[ "$APP_STOPPED" = 1 ] && systemctl start tukuk-os.service && echo "   (restarted tukuk-os on the way out)"' EXIT
+      stop_app "$NEW_PORT"
+      set_app_port ''                      # drop-in gone → the unit's own PORT=3000 applies
       place_conf "$VERIFY_PORT" "$NOW_PORT"
       rm -rf "$CACHE_DIR" && step "cache cleared (a stale page must not survive a rollback)"
+      systemctl start tukuk-os.service || step "WARNING: tukuk-os start reported an error"
+      APP_STOPPED=0; trap - EXIT
+    else
+      set_app_port ''
+      systemctl restart tukuk-os.service || step "WARNING: tukuk-os restart reported an error"
     fi
-    set_app_port ''                       # drop-in gone → the unit's own PORT=3000 applies
-    systemctl restart tukuk-os.service || step "WARNING: tukuk-os restart reported an error"
     wait_health "$NOW_PORT" && step "✓ serving directly again on $NOW_PORT (PORT=$(effective_port) in the live process), as before" \
       || step "✗ still unhealthy on $NOW_PORT — check: systemctl status tukuk-os"
+    refused_since "2 minutes ago"
     ;;
 
   status)
