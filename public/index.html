@@ -1284,9 +1284,15 @@ function renderResults(data, m) {
   $('count').textContent = `${totalShown} results`;
   $('took').textContent = data.tookMs ? `${data.tookMs}ms` : (data.provider ? `${data.provider}` : '');
   $('meta').hidden = false;
-  const dymHtml = m === 'web' && data.didYouMean
-    ? `<div class="dym">Did you mean: <button type="button" data-sugq="${esc(data.didYouMean)}">${esc(data.didYouMean)}</button></div>`
+  // The corpus is English, so a Malay query that found nothing is searched again in English
+  // on the server. Say which words the results actually answered instead of implying we
+  // matched the query as typed.
+  const translatedHtml = data.translatedQuery
+    ? `<div class="dym">Searched in English as: <button type="button" data-sugq="${esc(data.translatedQuery)}">${esc(data.translatedQuery)}</button></div>`
     : '';
+  const dymHtml = translatedHtml + (m === 'web' && data.didYouMean
+    ? `<div class="dym">Did you mean: <button type="button" data-sugq="${esc(data.didYouMean)}">${esc(data.didYouMean)}</button></div>`
+    : '');
   const ansHtml = m === 'web' && data.answer && data.answer.answer
     ? `<div class="answer-card"><div class="a-head">Answer<span class="src">${esc((data.answer.sourceNames || []).join(' · '))}${data.answer.tookMs ? ` · ${data.answer.tookMs}ms` : ''}</span></div><p>${esc(data.answer.answer)}</p></div>`
     : '';

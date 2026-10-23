@@ -48,6 +48,7 @@ const builderGen = require('./builder-gen');
 const templates = require('./brain/templates');
 const news = require('./news');
 const queries = require('./queries');
+const queryLang = require('./query-lang');
 const answer = require('./answer');
 const bingbot = require('./bingbot');
 const { client, health } = require('./meili');
@@ -18069,6 +18070,12 @@ function statsPageHtml(d) {
 </html>`;
 }
 
+// Meili reports a total under two different names depending on version/call shape, and a
+// mock index has neither.
+function totalOf(result) {
+  return result.totalHits ?? result.estimatedTotalHits ?? (result.hits ? result.hits.length : 0);
+}
+
 app.get('/search', limiter.search, async (req, res) => {
   const { q, index: indexParam, ...rest } = req.query;
   const corpus = DEMO_INDEXES.has(String(indexParam || '')) ? String(indexParam) : null;
@@ -18085,17 +18092,31 @@ app.get('/search', limiter.search, async (req, res) => {
     const params = buildSearchParams(rest);
     const wantedLimit = params.limit;
     let result = await target.search(qq, params);
+    // The corpus is English and Meili cannot match across languages, so "berapa banyak pulau
+    // di jepun" finds nothing while "how many islands in japan" finds the hub. Only a query
+    // that found ZERO hits is retried in English — a wrong rewrite then costs nothing, and a
+    // query that already worked is never touched. The rewrite is local (src/query-lang.js):
+    // no visitor query ever leaves this server to be translated.
+    let translation = null;
+    if (totalOf(result) === 0) {
+      const alt = queryLang.toEnglishQuery(qq);
+      if (alt.changed) {
+        const retry = await target.search(alt.query, params);
+        if (totalOf(retry) > 0) { result = retry; translation = alt; }
+      }
+    }
+    const term = translation ? translation.query : qq;
     // Neural rerank (relevance mode only, first page). Safe: a no-op when
     // no backend is available (the local model is not deployed & there are no cloud credentials).
     if (reranker.available() && !params.sort && (params.offset || 0) === 0 && result.hits.length > 1) {
       if (wantedLimit < config.rerank.candidates) {
         params.limit = Math.min(config.rerank.candidates, config.search.maxLimit);
-        result = await target.search(qq, params);
+        result = await target.search(term, params);
       }
-      const reranked = await reranker.rerank(qq, result.hits, { topN: wantedLimit });
+      const reranked = await reranker.rerank(term, result.hits, { topN: wantedLimit });
       result = { ...result, hits: reranked };
     }
-    const total = result.totalHits ?? result.estimatedTotalHits ?? result.hits.length;
+    const total = totalOf(result);
     // Defence in depth: abuse-linked documents stay out of every result list,
     // whatever query surfaced them.
     const kept = safety.filterHits(result.hits);
@@ -18106,8 +18127,11 @@ app.get('/search', limiter.search, async (req, res) => {
       query: qq,
       index: corpus || config.indexName,
       ...result,
-      related: queries.related(qq),
-      didYouMean: total === 0 ? queries.didYouMean(qq) : null
+      related: queries.related(term),
+      didYouMean: total === 0 ? queries.didYouMean(qq) : null,
+      // Only present when the zero-hit retry rewrote the query AND found something, so the
+      // page can say which English words the results actually answered.
+      ...(translation ? { translatedQuery: translation.query } : {})
     });
   } catch (error) {
     res.status(500).json({ error: 'Search failed' });
