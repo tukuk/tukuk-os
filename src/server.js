@@ -1759,6 +1759,19 @@ app.get('/bendera/teka', async (req, res) => {
   }
 });
 
+// Flag Studio is another literal segment, so it also sits before /bendera/:slug.
+// It needs no network at all: the measured palettes are read from disk at startup.
+// If that file is unusable the matches would be wrong rather than merely missing,
+// so the route refuses to render a page that would lie.
+app.get('/bendera/studio', (req, res) => {
+  if (!FD_ROWS) {
+    console.warn('[bendera/studio] no usable palette data');
+    res.status(503).type('html').send(benderaBusy());
+    return;
+  }
+  res.status(200).type('html').send(benderaStudioPage());
+});
+
 app.get('/bendera/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase();
   let rows;
@@ -3173,7 +3186,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/cuaca', '/cuaca/peta', '/cuaca/ekstrem', '/cuaca/kod', '/cuaca/awan', '/cuaca/angin', '/gempa', '/gempa/penjelasan', '/cuti', '/cuti/dunia/asia', '/cuti/dunia/europe', '/cuti/dunia/americas', '/cuti/dunia/africa', '/cuti/dunia/oceania', '/cuti/2026', '/cuti/2027', '/cuti/hujung-minggu-panjang', '/cuti/penjelasan', '/negara', '/negara/asia', '/negara/europe', '/negara/africa', '/statistik', '/bencana', '/wiki', '/traffic', '/peta', '/peta/jarak', '/peta/matahari', '/peta/jam', '/alat', '/alat/unit', '/alat/tarikh', '/alat/warna', '/alat/kata-laluan', '/alat/teks', '/alat/bmi', '/alat/gambar', '/muzik', '/muzik/us', '/muzik/gb', '/muzik/jp', '/muzik/kr', '/muzik/ng', '/muzik/br', '/muzik/in', '/muzik/my', '/muzik/de', '/muzik/id', '/muzik/au', '/bendera', '/bendera/teka', '/bendera/studio', '/bendera/united-states', '/bendera/united-kingdom', '/bendera/japan', '/bendera/brazil', '/bendera/india', '/bendera/nigeria', '/bendera/germany', '/bendera/france', '/bendera/malaysia', '/bendera/singapore', '/bendera/australia', '/bendera/netherlands', '/bendera/south-korea', '/bendera/mexico', '/bendera/saudi-arabia', '/social', '/teknologi', '/teknologi/new', '/teknologi/show', '/teknologi/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/udara', '/udara/oxygen', '/udara/breath', '/udara/carbon', '/akademi', '/akademi/sky', '/akademi/weather', '/akademi/earth', '/akademi/air', '/akademi/body', '/akademi/life', '/akademi/numbers', '/akademi/internet', '/akademi/things', '/akademi/thinking', '/wang', '/wang/kadar', '/seni', '/hidupan', '/unsur', '/buruj', '/messier', '/pepatah', '/rekod', '/sejarah', '/kota', '/warisan', '/cagar', '/gunung', '/danau', '/pulau', '/sungai', '/air-terjun', '/gua', '/gletser', '/teluk', '/lembah', '/semenanjung', '/gunung-berapi', '/selat', '/kepulauan', '/ngarai', '/bukit', '/celah', '/tanjung', '/lagun', '/danau-garam', '/laut', '/waduk', '/fjord', '/tanah-basah', '/air-panas', '/terumbu-karang', '/kaldera', '/bendungan', '/pencakar-langit', '/jambatan', '/mercu-suar', '/terusan', '/menara', '/pelabuhan', '/terowong', '/gereja', '/museum', '/tapak-arkologi', '/universiti', '/stadium', '/kastil', '/masjid', '/monumen', '/katedral', '/hospital', '/hotel', '/istana', '/taman-botani', '/taman', '/sinagog', '/perpustakaan', '/zoo', '/kubu', '/balai-cerap', '/akuarium', '/banjaran', '/tanah-kubur', '/lapangan-terbang', '/biara', '/patung', '/rumah-opera', '/gurun', '/akueduk', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -4484,6 +4497,7 @@ function siteFooter() {
       <li><a href="/muzik">World Music Charts — Daily Top 25 From 90 Countries</a></li>
       <li><a href="/bendera">Flags of the World — The Story Behind 250 Flags</a></li>
       <li><a href="/bendera/teka">Guess the Flag Quiz — Ten Random Flags</a></li>
+      <li><a href="/bendera/studio">Flag Studio — Draw a Flag, Find Its Closest Real Matches</a></li>
       <li><a href="/apps/chat">T Chat — Free Messenger</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
@@ -10222,12 +10236,95 @@ const BENDERA_CSS = `.bd-search{width:100%;max-width:420px;padding:10px 14px;bor
 .qz-list a:hover{color:var(--accent,#4c8dff)}
 .qz-list img{width:32px;height:22px;object-fit:cover;border:1px solid var(--line);border-radius:3px;flex:none}
 .qz-list em{font-style:normal;margin-left:auto;font-size:.78rem}
-.qz-btn{border:1px solid var(--accent,#4c8dff);border-radius:10px;background:var(--accent,#4c8dff);color:#0b0f16;font:inherit;font-weight:700;padding:10px 18px;cursor:pointer;margin-top:8px}`;
+.qz-btn{border:1px solid var(--accent,#4c8dff);border-radius:10px;background:var(--accent,#4c8dff);color:#0b0f16;font:inherit;font-weight:700;padding:10px 18px;cursor:pointer;margin-top:8px}
+.qz-btn.ghost{background:none;color:inherit;border-color:var(--line)}
+.st-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin:16px 0}
+.st-prev{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#20242c;line-height:0;flex:none}
+.st-prev svg{display:block;width:min(340px,80vw);height:auto}
+.st-panel{flex:1;min-width:260px}
+.st-panel label{display:block;font-size:.8rem;color:var(--muted,#9aa3b2);margin:10px 0 3px}
+.st-panel select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit}
+.st-slots{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
+.st-note{font-size:.86rem;color:var(--muted,#9aa3b2);margin:10px 0 0}
+.st-hits{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0}
+@media(max-width:640px){.st-hits,.st-slots{grid-template-columns:1fr}}
+.st-hit{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--panel,#171a21);text-decoration:none;color:inherit}
+.st-hit:hover{border-color:var(--accent,#4c8dff)}
+.st-hit img{width:60px;height:40px;object-fit:cover;border:1px solid var(--line);border-radius:4px;flex:none;background:#20242c}
+.st-hit b{display:block;font-size:.92rem}
+.st-hit em{font-style:normal;font-size:.78rem;color:var(--accent,#4c8dff)}
+.st-bar{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:5px;background:#20242c}
+.st-bar i{display:block;height:100%}
+.st-url{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:.82rem/1.4 ui-monospace,monospace}`;
+
+// ── Flag Studio data ──────────────────────────────────────────────────────────
+// The colour ruler below is the one src/flag-palettes.json was measured with (see
+// data/flag-palette-gen.js). Keys are URL-safe; labels and hex are what the picker shows.
+const FD_PAL = [
+  ['white', 'White', '#FFFFFF'], ['silver', 'Silver', '#C0C0C0'], ['grey', 'Grey', '#808080'],
+  ['black', 'Black', '#000000'], ['brown', 'Brown', '#7B3F00'], ['tan', 'Tan', '#D2B48C'],
+  ['orange', 'Orange', '#F97316'], ['gold', 'Gold', '#FFCC00'], ['yellow', 'Yellow', '#FFE000'],
+  ['lgreen', 'Light green', '#9ACD32'], ['green', 'Green', '#009E49'], ['dgreen', 'Dark green', '#01411C'],
+  ['sky', 'Sky blue', '#6EC1E4'], ['blue', 'Blue', '#005BBB'], ['navy', 'Navy', '#00205E'],
+  ['purple', 'Purple', '#6A2C70'], ['pink', 'Pink', '#FF66CC'], ['red', 'Red', '#CE1126'],
+  ['dred', 'Dark red', '#7A0016'],
+];
+const FD_KEY_OF = {
+  white: 'white', silver: 'silver', grey: 'grey', black: 'black', brown: 'brown', tan: 'tan',
+  orange: 'orange', gold: 'gold', yellow: 'yellow', 'light green': 'lgreen', green: 'green',
+  'dark green': 'dgreen', 'sky blue': 'sky', blue: 'blue', navy: 'navy', purple: 'purple',
+  pink: 'pink', red: 'red', 'dark red': 'dred',
+};
+
+// Measured palettes, re-keyed for the browser. Null if the file is missing or holds a
+// colour name we have no swatch for — the studio route then serves the busy shell
+// instead of a page whose matches would be wrong.
+const FD_ROWS = (() => {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'flag-palettes.json'), 'utf8'));
+    if (!Array.isArray(raw) || raw.length < 200) throw new Error('too few rows');
+    return raw.map((r) => [r[0], r[1], r[2], r[3].map((b) => {
+      const k = FD_KEY_OF[b[0]];
+      if (!k) throw new Error('unmapped colour name: ' + b[0]);
+      return [k, b[1]];
+    })]);
+  } catch (e) {
+    console.warn('[bendera/studio] palette data unusable:', e.message);
+    return null;
+  }
+})();
+
+// Layouts in a 3×2 unit space (so a circle is a circle, not an ellipse, once scaled to
+// 300×200). Each slot is ONE shape drawn in order; `sub` marks a shape that a LATER shape
+// really sits on top of, so its visible share subtracts theirs. Only the field-behind-an-
+// emblem layouts carry it — two bands do not overlap, and flagging them lost half the flag.
+// Tiling layouts make the shares add to exactly 100 % by construction.
+// [id, label, slots, default colours]
+const FD_LAYOUTS = [
+  ['solid', 'One solid field', [['r', [0, 0, 3, 2]]], ['red']],
+  ['h2', 'Two horizontal bands', [['r', [0, 0, 3, 1]], ['r', [0, 1, 3, 1]]], ['red', 'white']],
+  ['v2', 'Two vertical bands', [['r', [0, 0, 1.5, 2]], ['r', [1.5, 0, 1.5, 2]]], ['navy', 'red']],
+  ['h3', 'Three horizontal stripes', [['r', [0, 0, 3, 2 / 3]], ['r', [0, 2 / 3, 3, 2 / 3]], ['r', [0, 4 / 3, 3, 2 / 3]]], ['black', 'red', 'gold']],
+  ['v3', 'Three vertical stripes', [['r', [0, 0, 1, 2]], ['r', [1, 0, 1, 2]], ['r', [2, 0, 1, 2]]], ['navy', 'white', 'red']],
+  ['h4', 'Four horizontal stripes', [['r', [0, 0, 3, 0.5]], ['r', [0, 0.5, 3, 0.5]], ['r', [0, 1, 3, 0.5]], ['r', [0, 1.5, 3, 0.5]]], ['sky', 'white', 'sky', 'white']],
+  ['q4', 'Quartered', [['r', [0, 0, 1.5, 1]], ['r', [1.5, 0, 1.5, 1]], ['r', [0, 1, 1.5, 1]], ['r', [1.5, 1, 1.5, 1]]], ['green', 'white', 'white', 'green']],
+  ['diag', 'Diagonal split', [['p', [[0, 0], [3, 0], [3, 2]]], ['p', [[0, 0], [3, 2], [0, 2]]]], ['green', 'gold']],
+  // Two cross widths, both taken from what the real flags measure: a centred (Latin)
+  // cross at a quarter-unit arm leaves the cross 19.8 % of the area — Switzerland comes
+  // out at 20 %, Denmark at 21.3 % — while the off-centre Nordic cross is broader at
+  // 30.7 %, which is where Sweden's gold actually sits (30 %).
+  ['cross', 'Centred cross', [['r', [0, 0, 3, 2], 1], ['p', [[1.375, 0], [1.625, 0], [1.625, 0.875], [3, 0.875], [3, 1.125], [1.625, 1.125], [1.625, 2], [1.375, 2], [1.375, 1.125], [0, 1.125], [0, 0.875], [1.375, 0.875]]]], ['red', 'white']],
+  ['nordic', 'Off-centre cross', [['r', [0, 0, 3, 2], 1], ['p', [[0.65, 0], [1.05, 0], [1.05, 0.8], [3, 0.8], [3, 1.2], [1.05, 1.2], [1.05, 2], [0.65, 2], [0.65, 1.2], [0, 1.2], [0, 0.8], [0.65, 0.8]]]], ['blue', 'gold']],
+  ['disc', 'Disc in the centre', [['r', [0, 0, 3, 2], 1], ['c', [1.5, 1, 0.6]]], ['white', 'red']],
+  ['disc-o', 'Disc off centre', [['r', [0, 0, 3, 2], 1], ['c', [1.15, 1, 0.66]]], ['dgreen', 'red']],
+  ['tri', 'Triangle at the hoist', [['r', [0, 0, 3, 2], 1], ['p', [[0, 0], [1.5, 1], [0, 2]]]], ['red', 'white']],
+];
 
 function benderaNav() {
   return worldNav('Flags of the World — tukuk.org/bendera', [
     { href: '/bendera', icon: '🚩', name: 'All Flags', blurb: 'Every national flag on one searchable page, each linking to its origin story and free image files.' },
     { href: '/bendera/teka', icon: '🎯', name: 'Guess the Flag Quiz', blurb: 'Ten random flags, four plausible names each — score 10 out of 10? Runs entirely in your browser, nothing is sent.' },
+    { href: '/bendera/studio', icon: '🎨', name: 'Flag Studio', blurb: 'Draw a flag from stripes, crosses and discs in 19 colours — the page ranks the real national flags that already share most of its colour area.' },
     { href: '/bendera/malaysia', icon: '🇲🇾', name: 'Malaysia', blurb: 'The 14 stripes and the crescent — what the Jalur Gemilang stands for, and where to get the file.' },
     { href: '/bendera/united-states', icon: '🇺🇸', name: 'United States', blurb: 'Fifty stars, seven red stripes — the story behind the most copied flag design on Earth.' },
     { href: '/bendera/nepal', icon: '🇳🇵', name: 'Nepal', blurb: 'The only non-rectangular national flag in the world, two centuries old and still in use.' },
@@ -10255,7 +10352,7 @@ function benderaHubPage(rows) {
   ${sections}
   <h2 class="section-title">How the stories are researched</h2>
   <p>Each flag page quotes the lead of the matching <i>Flag of …</i> article on English Wikipedia — written by vexillologists and historians, cited to sources, and released under CC BY-SA so we can quote it with a link back. Flag images come from flagcdn.com (free for any use), and country facts from the open world-countries dataset. Where Wikipedia has no article for a flag — four entries in our list are uninhabited territories — we say so plainly on that page instead of inventing a story.</p>
-  <p><a class="btn" href="/bendera/teka">🎯 Play the Guess-the-Flag quiz</a></p>
+  <p><a class="btn" href="/bendera/teka">🎯 Play the Guess-the-Flag quiz</a> <a class="btn ghost" href="/bendera/studio">🎨 Draw your own flag</a></p>
   <p class="meta">Looking for the country itself — capital, population, GDP? <a href="/negara">Country profiles</a>. Need the flag for a project? Every page links the original SVG and PNG sizes.</p>
   <noscript><p>The filter box needs JavaScript; without it every flag below is still listed and linked.</p></noscript>`;
   const script = `<script>(function(){
@@ -10426,6 +10523,108 @@ newRound();})();</script>`;
       '@context': 'https://schema.org', '@type': 'WebPage', name: 'Guess the Flag Quiz',
       description: `Ten random national flags, four answer options each, scored entirely in the browser.`,
       url: 'https://tukuk.org/bendera/teka', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    }).replace(/</g, '\\u003c'),
+  }, benderaNav());
+}
+
+function benderaStudioPage() {
+  // Called only when FD_ROWS is populated, so the length is safe to interpolate.
+  const pj = (x) => JSON.stringify(x).replace(/</g, '\\u003c');
+  const layHtml = FD_LAYOUTS.map((l) => `<option value="${l[0]}">${escapeHtml(l[1])}</option>`).join('');
+  const body = `<p><b>Draw a flag and see who already flies something like it.</b> Pick an arrangement, pick the colours, and the page scores your design against all ${FD_ROWS.length} national flags on this site. Everything happens in your browser — the design is not stored on our server unless you copy its link.</p>
+  <div class="st-row">
+    <div class="st-prev" id="st-prev"></div>
+    <div class="st-panel">
+      <label for="st-l">Arrangement</label>
+      <select id="st-l">${layHtml}</select>
+      <div class="st-slots" id="st-slots"></div>
+      <p class="st-note" id="st-note" role="status"></p>
+      <p><button class="qz-btn" id="st-rand" type="button">🎲 Surprise me</button> <button class="qz-btn ghost" id="st-dl" type="button">⬇ Download SVG</button></p>
+    </div>
+  </div>
+  <h2 class="section-title">Closest real flags</h2>
+  <div class="st-hits" id="st-hits"></div>
+  <p class="st-note" id="st-quiet"></p>
+  <h2 class="section-title">Share or keep your design</h2>
+  <p class="meta">The link below rebuilds this exact flag for anyone who opens it — the design lives in the address, not in an account.</p>
+  <input class="st-url" id="st-url" readonly aria-label="Link to this design">
+  <p><button class="qz-btn ghost" id="st-copy" type="button">Copy link</button> <span class="meta" id="st-copied"></span></p>
+  <h2 class="section-title">How the matches are worked out</h2>
+  <p>Every flag on this site was measured pixel by pixel from the same image files we serve: a grid of 640 sample points, each given one of ${FD_PAL.length} plain colour names by its hue, lightness and saturation, so the result says how much of that flag is each colour. Your design is measured the same way — the areas come from the geometry itself. Two flags count as close when a lot of their area is made of the same colours, so the ranking is about <b>colour and coverage only</b>: it does not look at where the bands run, how dark the exact red is, or what any of it symbolises.</p>
+  <p>Because of that, a match is a starting point, not a verdict — the two flags either side of yours may be near-identical in colours and completely different as designs. The ruler also keeps near shades apart: light green, green and dark green are three separate answers, so a plainer green than a flag’s own measured shade will rank it lower — pick the shade the flag really carries. Open any result to read what its symbols actually mean, with sources, on its own page.</p>
+  <p class="meta">Measuring all ${FD_ROWS.length} of them this way also shows what the world does <i>not</i> put on its flags: no national flag in the set has a measurable amount of pink or purple on it — nothing over the 1.5 % floor the measurement keeps. Try either colour and watch the list fall away. <a href="/bendera">All flags</a> · <a href="/bendera/teka">Guess-the-Flag quiz</a>.</p>
+  <noscript><p>The studio needs JavaScript to draw and compare. <a href="/bendera">Every flag is still listed here</a> without it.</p></noscript>`;
+  const script = `<script>(function(){
+var PF=${pj(FD_ROWS)},LP=${pj(FD_LAYOUTS)},PL=${pj(FD_PAL.map((p) => [p[0], p[1], p[2]]))};
+function $(x){return document.getElementById(x);}
+function pal(k){for(var i=0;i<PL.length;i++)if(PL[i][0]===k)return PL[i];return null;}
+function hex(k){var p=pal(k);return p?p[2]:'#999999';}
+function lay(id){for(var i=0;i<LP.length;i++)if(LP[i][0]===id)return LP[i];return LP[0];}
+function own(s){var g=s[1];if(s[0]==='r')return g[2]*g[3];if(s[0]==='c')return Math.PI*g[2]*g[2];
+ var a=0,i,n=g.length;for(i=0;i<n;i++)a+=g[i][0]*g[(i+1)%n][1]-g[i][1]*g[(i+1)%n][0];return Math.abs(a)/2;}
+function vis(L,i){var s=L[2],a=own(s[i]),j;for(j=i+1;j<s.length;j++)if(s[i][2])a-=own(s[j]);return a<0?0:a;}
+function shape(s,c){var g=s[1],o='',i;
+ if(s[0]==='r')return '<rect x="'+g[0]*100+'" y="'+g[1]*100+'" width="'+g[2]*100+'" height="'+g[3]*100+'" fill="'+c+'"/>';
+ if(s[0]==='c')return '<circle cx="'+g[0]*100+'" cy="'+g[1]*100+'" r="'+g[2]*100+'" fill="'+c+'"/>';
+ for(i=0;i<g.length;i++)o+=(i?' ':'')+(g[i][0]*100)+','+(g[i][1]*100);
+ return '<polygon points="'+o+'" fill="'+c+'"/>';}
+function inner(L,cols){var o='',i;for(i=0;i<L[2].length;i++)o+=shape(L[2][i],hex(cols[i]));return o;}
+function shares(L,cols){var m={},i,k;for(i=0;i<L[2].length;i++){k=cols[i];m[k]=(m[k]||0)+vis(L,i)/6*100;}return m;}
+function sim(d,f){var s=0,k,i;for(k in d)for(i=0;i<f.length;i++)if(f[i][0]===k)s+=Math.min(d[k],f[i][1]);return s;}
+function bar(f){var o='',i;for(i=0;i<f.length;i++)o+='<i style="width:'+f[i][1]+'%;background:'+hex(f[i][0])+'"></i>';return o;}
+function opts(sel){var o='',i;for(i=0;i<PL.length;i++)o+='<option value="'+PL[i][0]+'"'+(PL[i][0]===sel?' selected':'')+'>'+PL[i][1]+'</option>';return o;}
+function pickers(L,cols){var o='',i;for(i=0;i<L[2].length;i++)o+='<span><label for="st-c'+i+'">Colour '+(i+1)+'</label><select id="st-c'+i+'">'+opts(cols[i])+'</select></span>';
+ $('st-slots').innerHTML=o;for(i=0;i<L[2].length;i++)$('st-c'+i).addEventListener('change',render);}
+function render(){
+ var L=lay($('st-l').value),cols=[],i;
+ for(i=0;i<L[2].length;i++){var el=$('st-c'+i);cols.push(el?el.value:L[3][i]);}
+ $('st-prev').innerHTML='<svg viewBox="0 0 300 200" width="300" height="200" role="img" aria-label="Your flag design">'+inner(L,cols)+'</svg>';
+ var d=shares(L,cols),parts=[];
+ for(var k in d)parts.push(k+' '+Math.round(d[k])+'%');
+ $('st-note').textContent='Your flag measures: '+parts.join(' · ')+' of its area.';
+ var best=PF.map(function(r){return [r,Math.round(sim(d,r[3]))];}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+ var out='';
+ for(i=0;i<best.length;i++){var r=best[i][0];
+  out+='<a class="st-hit" href="/bendera/'+r[2]+'"><img src="https://flagcdn.com/w160/'+r[1]+'.png" width="60" height="40" loading="lazy" decoding="async" alt=""><span><b>'+r[0]+'</b><em>'+best[i][1]+'% of its area is the same colours</em><span class="st-bar">'+bar(r[3])+'</span></span></a>';}
+ $('st-hits').innerHTML=out;
+ $('st-quiet').textContent=best.length&&best[0][1]<30?'Nothing official comes close to this one — under a third of any national flag matches. Which is rather the point of designing your own.':'';
+ $('st-url').value='/bendera/studio?l='+L[0]+'&c='+cols.join(',');
+}
+function par(n){var s=location.search.slice(1).split('&'),i,kv;for(i=0;i<s.length;i++){kv=s[i].split('=');if(decodeURIComponent(kv[0])===n)return decodeURIComponent(kv[1]||'');}return '';}
+var L0=lay(par('l')),
+    asked=(par('c')||'').split(',').filter(function(x){return !!pal(x);}),
+    cols=[];
+for(var i=0;i<L0[2].length;i++)cols.push(asked[i]&&pal(asked[i])?asked[i]:L0[3][i]);
+$('st-l').value=L0[0];
+$('st-l').addEventListener('change',function(){var L=lay(this.value);pickers(L,L[3]);render();});
+pickers(L0,cols);render();
+$('st-rand').onclick=function(){var L=LP[Math.floor(Math.random()*LP.length)],c=[],i;
+ $('st-l').value=L[0];for(i=0;i<L[2].length;i++)c.push(PL[Math.floor(Math.random()*PL.length)][0]);
+ pickers(L,c);render();};
+var lastSvg=function(){var L=lay($('st-l').value),c=[],i;for(i=0;i<L[2].length;i++){var el=$('st-c'+i);c.push(el?el.value:L[3][i]);}return inner(L,c);};
+$('st-dl').onclick=function(){
+ var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="900" height="600">'+lastSvg()+'</svg>';
+ var u=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+ var a=document.createElement('a');a.href=u;a.download='my-flag.svg';document.body.appendChild(a);a.click();
+ setTimeout(function(){URL.revokeObjectURL(u);a.remove();},500);};
+$('st-copy').onclick=function(){
+ var el=$('st-url');el.select();
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(location.origin+el.value).then(function(){
+  $('st-copied').textContent='Copied.';},function(){$('st-copied').textContent='Press Ctrl+C — the link is selected.';});
+ else $('st-copied').textContent='Press Ctrl+C — the link is selected.';};
+})();</script>`;
+  return worldDoc({
+    title: 'Flag Studio — Design a Flag, Find the Real Ones Closest to It | Tukuk-OS',
+    desc: `Draw a flag from ${FD_LAYOUTS.length} arrangements and ${FD_PAL.length} colours, then see which of ${FD_ROWS.length} national flags share the most of their colours and coverage — measured from the flag images themselves, in your browser.`,
+    selfUrl: 'https://tukuk.org/bendera/studio',
+    heroTitle: '🎨 Flag Studio', heroSub: `Design a flag · scored against ${FD_ROWS.length} real national flags by measured colour`,
+    css: BENDERA_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Flag Studio',
+      applicationCategory: 'DesignApplication', operatingSystem: 'Any (web browser)',
+      description: 'A flag designer that compares your design with the measured colour composition of every national flag.',
+      url: 'https://tukuk.org/bendera/studio', isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
   }, benderaNav());
 }
