@@ -111,23 +111,26 @@ function trimAir() {
 // The token is the whole gate: no token, no socket, ships stay off, the page says so.
 const AIS_URL = 'wss://stream.aisstream.io/v0/stream';
 const AIS_TOKEN = String(process.env.AISSTREAM_TOKEN || '').trim();
-// aisstream's free tier subscribes a handful of boxes at once. These are the busiest
-// shipping lanes on the planet plus the water beside this project's home region — the
-// sea where ships genuinely crowd, so the layer is alive on arrival. Each box is
-// [[southWestLat, southWestLon], [northEastLat, northEastLon]]. Edit freely.
+// aisstream's free tier subscribes several boxes at once. These are busy shipping lanes
+// on every continent we can actually hear, so the layer is alive wherever a visitor looks.
+// Each box is [[southWestLat, southWestLon], [northEastLat, northEastLon]]. Edit freely.
 //
-// Chosen by counting, not by guessing: one minute on the live socket (25 Oct 2026) gave
-// 860 reports in the English Channel against 4 in a Malacca box that stopped at 2°N.
-// Widening that box to 1°N — which brings in the Singapore Strait, where the page opens —
-// lifted the home lane to 27 a minute. The Gulf box delivered none that minute: not every
-// lane has a receiver feeding it, and the page already says coverage is only as good as
-// the ground stations.
+// Chosen by counting, not by guessing. Two minutes on the live socket (25 Oct 2026, twelve
+// candidate boxes at once) reported: English Channel 1191, US East Coast 175, US West Coast
+// 159, eastern Mediterranean 83, Brazil/Santos 60, South China Sea 45, Malacca+Singapore 27,
+// Tokyo Bay 15 — and Persian Gulf 1, Panama 1, Shanghai 0, Red Sea 0. The fourth and fifth
+// boxes used to be the Gulf and Suez; the Gulf brought one report in two minutes, so the
+// traffic-carrying lanes took its place. A lane with no receiver is worth re-testing later:
+// aisstream adds ground stations without telling anyone.
 const AIS_BOXES = [
-  [[1.0, 99.0], [7.5, 105.5]],    // Malacca & Singapore Strait — the home lane
-  [[19.0, 110.0], [32.0, 123.0]], // South China Sea to the East China Sea
-  [[48.5, -3.0], [52.0, 4.5]],    // English Channel / Dover / southern North Sea
-  [[23.5, 47.0], [31.5, 60.0]],   // Persian Gulf & Strait of Hormuz
-  [[29.0, 30.5], [36.5, 41.0]],   // Eastern Mediterranean & Suez approaches
+  [[1.0, 99.0], [7.5, 105.5]],       // Malacca & Singapore Strait — the home lane
+  [[19.0, 110.0], [32.0, 123.0]],    // South China Sea to the East China Sea
+  [[33.0, 128.0], [36.5, 141.0]],    // Tokyo Bay, Korea Strait, Japan's Pacific coast
+  [[48.5, -3.0], [52.0, 4.5]],       // English Channel / Dover / southern North Sea
+  [[29.0, 30.5], [36.5, 47.0]],      // Levant, Suez approaches, Turkish coast
+  [[37.0, -76.0], [41.5, -70.0]],    // New York, Chesapeake, Boston — US East Coast
+  [[32.0, -122.5], [35.0, -117.0]],  // Los Angeles, Long Beach, San Francisco — US West Coast
+  [[-25.0, -47.5], [-21.5, -42.0]],  // Santos, Rio, Sepetiba — Brazil's busiest water
 ];
 
 const vessels = new Map();        // mmsi -> merged last-known record
