@@ -240,6 +240,20 @@ test('the six families of subject string that never become a page', () => {
     comportement: 'French for behaviour',
     'economia politica': 'the Spanish/Italian spelling of political economy',
     dieu: 'French for God',
+    // The third thousand (the run stopped itself at 2,693 after 4,367 of 6,000 calls — the
+    // candidate frontier ran dry, which is the honest ceiling). Its deeper subjects carried a
+    // fresh foreign residue, so these are refused by MORPHOLOGY, not by one more word each — a
+    // whole class dies, and every match across all 2,693 shelves was checked to be non-English:
+    urbanisme: 'the -isme shape: no English word ends this way (English uses -ism)',
+    determinisme: 'the -isme shape',
+    totalitarisme: 'the -isme shape',
+    internationalisatie: 'the Dutch -isatie shape (English -ization)',
+    programmierung: 'the German -ierung shape',
+    'objektorientierte programmierung': 'the German -ierung shape on a two-word label',
+    apprentissage: 'the French -issage shape',
+    'philosophische anthropologie': 'the German -ische adjective ending',
+    konzentrationslager: 'a German compound no English shelf would use',
+    aprendizagem: 'Portuguese for learning',
     methods: 'a subdivision standing on its own',
     origin: 'a subdivision standing on its own',
     history: 'a bare umbrella word',
@@ -256,7 +270,10 @@ test('the six families of subject string that never become a page', () => {
     'play therapy', 'child development', 'mortality', 'death', 'psychology', 'optics',
     // The foreign shapes must not eat an English discipline that ends the same way.
     'mythology', 'cosmology', 'topography', 'ethnography', 'cartography', 'oncology', 'graphology',
-    'theory of computation', 'history of science', 'philosophy of mind', 'psychology of language']) {
+    'theory of computation', 'history of science', 'philosophy of mind', 'psychology of language',
+    // The -isme/-isatie/-ierung/-ische/-issage shapes must not eat the English words that end near them.
+    'organicism', 'journalism', 'criticism', 'anatomy', 'massage therapy', 'marriage law',
+    'language acquisition', 'internationalization', 'apprenticeship', 'social policy']) {
     assert.strictEqual(books.rejected(term), null, `“${term}” is a subject, not a label`);
   }
   // Anchored on purpose: the umbrella list must not eat a qualified phrase.
