@@ -161,9 +161,11 @@ function writeApodFallback(data) {
 //
 // The guards are the point: only the plain "current picture" read takes this path (a dated
 // or counted request asked for something specific and must be live), only once per process,
-// and only while the snapshot is under two days old — an old picture is not "the picture of
-// the day", and every payload is dated, so nobody is shown an old page as if it were new.
-const APOD_SNAPSHOT_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+// and only while the snapshot is under a week old — every payload is dated and the page
+// prints that date, so a four-day-old picture shown as 2026-10-22 is honest. A blank week
+// or more is not a slow API, it is a broken one, and then the live path with its three
+// attempts is the only thing worth waiting for.
+const APOD_SNAPSHOT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 let apodColdStartHandled = false;
 let apodRefreshing = false;
 

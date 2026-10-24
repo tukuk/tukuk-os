@@ -44,9 +44,14 @@ test('yesterday\'s snapshot is still usable — the API can lag a day behind', (
   assert.ok(nasa.apodFromDiskIfFresh(), 'one day old is what a cold start usually has');
 });
 
+test('a snapshot from earlier in the week is usable — the page prints its date', () => {
+  write(payload(dayOffset(4)));
+  assert.ok(nasa.apodFromDiskIfFresh(), 'a dated picture beats a 12-second wait');
+});
+
 test('a snapshot too old to be today\'s picture is refused', () => {
-  write(payload(dayOffset(5)));
-  assert.strictEqual(nasa.apodFromDiskIfFresh(), null, 'five days old is a different picture, not a slow one');
+  write(payload(dayOffset(10)));
+  assert.strictEqual(nasa.apodFromDiskIfFresh(), null, 'a week and a half of silence is a broken API, not a slow one');
 });
 
 test('a snapshot with no usable date is refused rather than guessed at', () => {
