@@ -59,6 +59,7 @@ const fallback = require('./fallback');
 // feature modules below register their guards as they load, and every one of them has loaded
 // long before the first request arrives, so /health's `outbound` list is complete.
 const { guardedStats } = require('./outbound');
+const updateStatus = require('./update-status');
 const nasa = require('./nasa');
 const wx = require('./weather');
 const trf = require('./traffic');
@@ -18138,6 +18139,10 @@ app.get('/health', async (req, res) => {
       // queued/deadline/failed. See src/outbound.js — a deadline counter that never moves means
       // the guard is decorative, which is exactly the failure mode this line exists to catch.
       outbound: guardedStats(),
+      // What the daily auto-update last did, and how long ago. A status that cannot be
+      // dated (or is older than the timer's own period) is reported as stale: silence
+      // and a dead timer are indistinguishable from outside otherwise.
+      update: updateStatus.read(),
     });
   } catch (error) {
     res.status(503).json({ status: 'degraded', meilisearch: 'unreachable', error: safeError(error) });
