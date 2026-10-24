@@ -94,6 +94,25 @@ function docText(hit) {
   return `${title}. ${body}`.replace(/\s+/g, ' ').trim().slice(0, 480);
 }
 
+// The prior Meilisearch itself already ranks by (RANKING_RULES in src/meili.js: `quality:desc`
+// sits before `exactness`): a page we wrote and reviewed scores 0.9–0.95, a page we crawled but
+// never reviewed scores CRAWLED_QUALITY = 0.5. A cross-encoder knows none of that — it sees a
+// title and 480 characters — and reordering by it alone throws the prior away.
+//
+// That is not theoretical. Measured on this index on 25 Oct 2026, "largest deserts by area":
+// our geography-records page scored 0.593 and a BBC wildfire story 0.598 — five thousandths of
+// cosine, which is the model's own noise — and the wrong page came first. The weight below is
+// deliberately small: it settles near-ties in favour of the page we reviewed and cannot lift a
+// document that the query barely matched.
+const CRAWLED_QUALITY = 0.5;
+const QUALITY_PRIOR = 0.15; // a reviewed page gets +0.0675 over a crawled one — a tie-breaker, not a rank
+
+/** How much authority a hit carries, as a score adjustment on top of its relevance. */
+function qualityPrior(hit) {
+  const q = Number(hit && hit.quality);
+  return QUALITY_PRIOR * ((Number.isFinite(q) ? q : CRAWLED_QUALITY) - CRAWLED_QUALITY);
+}
+
 /**
  * Reorder `hits` by relevance to `query`.
  * Returns the original array when reranking isn't available (safe).
@@ -148,6 +167,9 @@ async function localRerank(eng, query, list, topN) {
     // logits.dims = [batch, 1]; data = Float32Array of length = batch (raw logits).
     const data = logits.data;
     const scored = list.map((hit, i) => ({ hit, s: Number(data[i]) || 0 }));
+    // No quality prior here: this model's output is a raw, unbounded logit (see the header), so
+    // +0.0675 would be meaningless against it. The local model needs its own calibration before
+    // a prior can settle anything — and it is not deployed today.
     scored.sort((a, b) => b.s - a.s);
     const sliced = scored.slice(0, topN == null ? scored.length : topN);
     // Attach the raw scores for debug/display (not a required frontend field).
@@ -244,7 +266,7 @@ async function cloudRerank(query, list, topN) {
   const vecs = await embedBatch(token, account, texts);
   if (!Array.isArray(vecs) || vecs.length !== texts.length) throw new Error('embed-count');
   const qv = vecs[0];
-  const scored = list.map((hit, i) => ({ hit, s: cosine(qv, vecs[i + 1]) }));
+  const scored = list.map((hit, i) => ({ hit, s: cosine(qv, vecs[i + 1]) + qualityPrior(hit) }));
   scored.sort((a, b) => b.s - a.s);
   const sliced = scored.slice(0, topN == null ? scored.length : topN);
   status.backend = 'cloud';
@@ -262,4 +284,4 @@ function available() {
   return false;
 }
 
-module.exports = { rerank, status, looksDeployed, available };
+module.exports = { rerank, status, looksDeployed, available, qualityPrior, docText };
