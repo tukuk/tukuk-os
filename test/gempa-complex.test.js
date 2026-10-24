@@ -91,3 +91,14 @@ test('every findRegion() call site names a region that REGIONS declares', () => 
   assert.match(serverSrc, /gp\.regionFeed\(gp\.findRegion\('world'\)\)/, 'the main hub feeds the world region');
   assert.match(gempaSrc, /if \(!r\) throw new Error\('regionFeed needs a known region'\)/, 'regionFeed rejects null instead of dereferencing it');
 });
+
+// A cold cache plus a burst of readers opened one USGS query per request; when the upstream
+// call timed out the hub answered 503 even though a retry a moment later succeeds. One shared
+// promise per feed plus a single retry removes that window.
+test('gempa.js: one upstream call per feed (single-flight) and one retry on a cold start', () => {
+  assert.match(gempaSrc, /const inflight = new Map\(\)/, 'the in-flight registry exists');
+  assert.match(gempaSrc, /const running = inflight\.get\(key\)/, 'a concurrent caller reuses the running fetch');
+  assert.match(gempaSrc, /inflight\.set\(key, p\)/, 'the promise is registered before it settles');
+  assert.match(gempaSrc, /async function fetchOnce\(key, params, attempt\)/, 'the single attempt is extracted');
+  assert.match(gempaSrc, /if \(attempt < 1\) return fetchOnce\(key, params, attempt \+ 1\)/, 'a failed attempt is retried once');
+});

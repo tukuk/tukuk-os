@@ -18,6 +18,7 @@ attachGuard(http, { name: 'gempa' });
 const QUERY_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
 
 const cache = new Map();
+const inflight = new Map();
 const TTL = 10 * 60 * 1000;
 
 function cacheGet(key) {
@@ -66,6 +67,17 @@ async function usgsQuery(params) {
 }
 
 async function fetchAndCache(key, params) {
+  // Single-flight: a cold cache plus a burst of readers used to open one USGS query per
+  // request, and when that upstream call timed out the page answered 503 even though a
+  // retry a moment later succeeds. Callers now share one promise.
+  const running = inflight.get(key);
+  if (running) return running;
+  const p = fetchOnce(key, params, 0).finally(() => { inflight.delete(key); });
+  inflight.set(key, p);
+  return p;
+}
+
+async function fetchOnce(key, params, attempt) {
   try {
     const res = await http.get(QUERY_URL, {
       params: { format: 'geojson', orderby: 'time', ...params },
@@ -94,6 +106,7 @@ async function fetchAndCache(key, params) {
   } catch (err) {
     const h = cacheGet(key);
     if (h) return h.data; // stale beats an error
+    if (attempt < 1) return fetchOnce(key, params, attempt + 1); // one retry, then give up
     throw err;
   }
 }

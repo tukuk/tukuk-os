@@ -3278,6 +3278,8 @@ for (const name of APPS) {
 // The app/game catalogue (/apps, /apps/) was dropped — the focus is content+chat. /apps/ → '/' so
 // old links do not 404. /apps/chat (chat) is still served by the APPS loop above.
 app.get(['/apps', '/apps/'], (req, res) => res.redirect(301, '/'));
+// The old /store storefront was folded into the OS shell (/os) — keep old links alive instead of 404ing.
+app.get(['/store', '/store/'], (req, res) => res.redirect(301, '/os'));
 
 // Language aliases so the existing links do not 404
 const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', privasi: 'privacy', dokumen: 'docs' };
@@ -3681,7 +3683,7 @@ app.get('/datacenter', (req, res) => {
   }).catch(function () { el.innerHTML = '<p>Could not load /api/datacenter.</p>'; });
 })();
 </script>
-<footer>Tukuk-OS · AI Data Center · <a href="/models">models</a> · <a href="/store">store</a> · <a href="/docs">docs</a></footer>
+<footer>Tukuk-OS · AI Data Center · <a href="/models">models</a> · <a href="/os">store</a> · <a href="/docs">docs</a></footer>
 </div></body></html>`);
 });
 
@@ -14013,7 +14015,7 @@ function cityCard(c) {
 }
 function kotaNav() {
   return worldNav('World Cities — tukuk.org/cities', [{ href: '/cities', icon: '🌆', name: 'All cities', blurb: 'Profiles of the world’s great cities — where they are, which country they belong to, and a plain-English introduction to each.' }
-  ].concat(kt.REGIONS.map((r) => ({ href: `/cities/${r.slug}`, icon: '🌍', name: `${r} cities`, blurb: `${r.count} cities across ${r}, from global megacities to historic capitals.`}))));
+  ].concat(kt.REGIONS.map((r) => ({ href: `/cities/${r.slug}`, icon: '🌍', name: `${r.name} cities`, blurb: `${r.count} cities across ${r.name}, from global megacities to historic capitals.`}))));
 }
 
 function kotaHubPage() {
@@ -14022,7 +14024,7 @@ function kotaHubPage() {
     if (!cs.length) return '';
     return `<h2 class="section-title" id="${kt.slugify(r)}"><a href="/cities/${kt.slugify(r)}">${r}</a> <span class="meta">(${cs.length} cities)</span></h2><div class="city-grid">${cs.map(cityCard).join('')}</div>`;
   }).join('');
-  const browse = `<p>${kt.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/cities/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${kt.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/cities/${r.slug}">${escapeHtml(r.name)} (${r.count})</a>`).join(' ')}</p>`;
   const body = `<p>These are some of the world’s most <b>influential and visited cities</b> — the megacities, capitals and cultural crossroads that shape economies, art and everyday life. Each profile shows <em>where</em> the city sits, <em>which country</em> it belongs to and <em>what it is known for</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${kt.CITIES.length} cities from ${kt.COUNTRIES.length} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each city to read about its country in our World Countries series.</p>
   ${browse}
@@ -14046,7 +14048,7 @@ function kotaRegionPage(region) {
   const cs = kt.citiesInRegion(region.name);
   const countries = [...new Set(cs.map((c) => c.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="city-grid">${cs.map(cityCard).join('')}</div>`;
-  const other = kt.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/cities/${r.slug}">${r}</a>`).join(' ');
+  const other = kt.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/cities/${r.slug}">${escapeHtml(r.name)}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/cities">&larr; All cities</a></p>
   <p>A profile for each of the <b>${cs.length} major cities in ${region.name}</b> in our World Cities series — where the city sits, which country it belongs to, and a plain-English introduction drawn from Wikipedia so the description stays sourced rather than invented. These ${cs.length} cities span ${countries.length} countries across the continent.</p>
   ${grid}
@@ -14136,7 +14138,7 @@ function siteCard(s) {
 }
 function warisanNav() {
   return worldNav('World Heritage — tukuk.org/heritage', [{ href: '/heritage', icon: '🏛️', name: 'All sites', blurb: 'Profiles of the world’s most celebrated UNESCO World Heritage sites — where they are, which country they belong to, whether they are cultural or natural, and a plain-English introduction to each.' }
-  ].concat(wr.REGIONS.map((r) => ({ href: `/heritage/${r.slug}`, icon: '🌍', name: `${r} sites`, blurb: `${r.count} World Heritage sites across ${r}, from ancient monuments to protected landscapes.`}))));
+  ].concat(wr.REGIONS.map((r) => ({ href: `/heritage/${r.slug}`, icon: '🌍', name: `${r.name} sites`, blurb: `${r.count} World Heritage sites across ${r.name}, from ancient monuments to protected landscapes.`}))));
 }
 
 function warisanHubPage() {
@@ -14145,7 +14147,7 @@ function warisanHubPage() {
     if (!ss.length) return '';
     return `<h2 class="section-title" id="${wr.slugify(r)}"><a href="/heritage/${wr.slugify(r)}">${r}</a> <span class="meta">(${ss.length} sites)</span></h2><div class="site-grid">${ss.map(siteCard).join('')}</div>`;
   }).join('');
-  const browse = `<p>${wr.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/heritage/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${wr.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/heritage/${r.slug}">${escapeHtml(r.name)} (${r.count})</a>`).join(' ')}</p>`;
   const legend = `<p><span class="site-badge Cultural">🏛️ Cultural</span> monuments, cities &amp; sites of human achievement · <span class="site-badge Natural">🌿 Natural</span> ecosystems, landscapes &amp; protected areas · <span class="site-badge Mixed">🏔️ Mixed</span> sites of both.</p>`;
   const body = `<p>These are some of the world’s most <b>celebrated UNESCO World Heritage sites</b> — the monuments, ancient cities, reefs and wild landscapes that humanity has agreed are worth protecting for everyone. Each profile shows <em>where</em> the site sits, <em>which country</em> it belongs to, whether it is <em>cultural or natural</em>, and <em>what makes it special</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${wr.SITES.length} iconic sites from ${new Set(wr.SITES.map((s) => s.country)).size} countries are covered below, grouped by continent. Open any name for its full profile, or follow the <b>profile</b> link beside each site to read about its country in our World Countries series.</p>
@@ -14171,7 +14173,7 @@ function warisanRegionPage(region) {
   const ss = wr.sitesInRegion(region.name);
   const countries = [...new Set(ss.map((s) => s.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="site-grid">${ss.map(siteCard).join('')}</div>`;
-  const other = wr.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/heritage/${r.slug}">${r}</a>`).join(' ');
+  const other = wr.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/heritage/${r.slug}">${escapeHtml(r.name)}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/heritage">&larr; All sites</a></p>
   <p>A profile for each of the <b>${ss.length} celebrated World Heritage sites in ${region.name}</b> — where the site sits, which country it belongs to, whether it is cultural or natural, and a plain-English introduction drawn from Wikipedia so the description stays sourced rather than invented. These ${ss.length} sites span ${countries.length} countries across the continent.</p>
   ${grid}
@@ -14263,7 +14265,7 @@ function areaCard(a) {
 }
 function cagarNav() {
   return worldNav('Protected Areas — tukuk.org/conservation-areas', [{ href: '/conservation-areas', icon: '🌲', name: 'All areas', blurb: 'Profiles of the world\u2019s national parks, nature reserves, and biosphere reserves \u2014 where they are, which country manages them, and what makes each one ecologically significant.' }
-  ].concat(cg.REGIONS.map((r) => ({ href: `/conservation-areas/${r.slug}`, icon: '🌍', name: `${r} areas`, blurb: `${r.count} protected areas across ${r.name}, from savanna reserves to mountain parks.`}))));
+  ].concat(cg.REGIONS.map((r) => ({ href: `/conservation-areas/${r.slug}`, icon: '🌍', name: `${r.name} areas`, blurb: `${r.count} protected areas across ${r.name}, from savanna reserves to mountain parks.`}))));
 }
 
 function cagarHubPage() {
@@ -14272,7 +14274,7 @@ function cagarHubPage() {
     if (!as.length) return '';
     return `<h2 class="section-title" id="${cg.slugify(r)}"><a href="/conservation-areas/${cg.slugify(r)}">${r}</a> <span class="meta">(${as.length} areas)</span></h2><div class="area-grid">${as.map(areaCard).join('')}</div>`;
   }).join('');
-  const browse = `<p>${cg.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/conservation-areas/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${cg.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/conservation-areas/${r.slug}">${escapeHtml(r.name)} (${r.count})</a>`).join(' ')}</p>`;
   const legend = `<p><span class="area-badge National-park">🌲 National Park</span> government-managed wilderness &amp; recreation · <span class="area-badge Nature-reserve">🦎 Nature Reserve</span> strict biodiversity protection · <span class="area-badge Biosphere-reserve">🌐 Biosphere Reserve</span> UNESCO-recognised human-nature coexistence.</p>`;
   const body = `<p>These are the world\u2019s most important <b>protected areas</b> \u2014 national parks, nature reserves and biosphere reserves that safeguard biodiversity, ecosystems and cultural landscapes. Each profile shows <em>where</em> the area sits, <em>which country</em> manages it, its <em>protection category</em>, and <em>what makes it ecologically special</em>, with a plain-English introduction drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${cg.AREAS.length} protected areas from ${new Set(cg.AREAS.map((a) => a.country)).size} countries are covered below, grouped by continent. Open any name for its full profile.</p>
@@ -14298,7 +14300,7 @@ function cagarRegionPage(region) {
   const as = cg.areasInRegion(region.name);
   const countries = [...new Set(as.map((a) => a.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="area-grid">${as.map(areaCard).join('')}</div>`;
-  const other = cg.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/conservation-areas/${r.slug}">${r}</a>`).join(' ');
+  const other = cg.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/conservation-areas/${r.slug}">${escapeHtml(r.name)}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/conservation-areas">&larr; All areas</a></p>
   <p>A profile for each of the <b>${as.length} protected areas in ${region.name}</b> \u2014 where the area sits, which country manages it, its protection category, and a plain-English introduction drawn from Wikipedia. These ${as.length} areas span ${countries.length} countries across the continent.</p>
   ${grid}
@@ -14419,7 +14421,7 @@ function geoRegionPage(region, mod, base, cfg) {
   const items = mod[cfg.inRegion](region.name);
   const countries = [...new Set(items.map((x) => x.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="geo-grid">${items.map((x) => geoCard(x, base)).join('')}</div>`;
-  const other = mod.REGIONS.filter((r) => r.slug !== region.slug && geoRegionHasItems(r)).map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${r}</a>`).join(' ');
+  const other = mod.REGIONS.filter((r) => r.slug !== region.slug && geoRegionHasItems(r)).map((r) => `<a class="btn ghost" style="margin:3px" href="/${base}/${r.slug}">${escapeHtml(r.name)}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
   <p>A profile for each of the <b>${items.length} notable ${cfg.unit} in ${region.name}</b> \u2014 location, country, and a plain-English introduction from Wikipedia. These ${items.length} ${cfg.unit} span ${geoCountries(countries.length)}.</p>
   ${grid}
@@ -18629,7 +18631,7 @@ function peakCard(p) {
 }
 function gunungNav() {
   return worldNav('Mountains — tukuk.org/mountains', [{ href: '/mountains', icon: '⛰️', name: 'All peaks', blurb: 'Profiles of the world\u2019s mountains \u2014 where each peak is, which country it belongs to, its elevation, and a plain-English introduction from Wikipedia.' }
-  ].concat(gn.REGIONS.map((r) => ({ href: `/mountains/${r.slug}`, icon: '\ud83c\udfd4️', name: `${r} mountains`, blurb: `${r.count} documented peaks across ${r.name}, from alpine giants to volcanic cones.`}))));
+  ].concat(gn.REGIONS.map((r) => ({ href: `/mountains/${r.slug}`, icon: '\ud83c\udfd4️', name: `${r.name} mountains`, blurb: `${r.count} documented peaks across ${r.name}, from alpine giants to volcanic cones.`}))));
 }
 
 function gunungHubPage() {
@@ -18638,7 +18640,7 @@ function gunungHubPage() {
     if (!ps.length) return '';
     return `<h2 class="section-title" id="${gn.slugify(rg)}"><a href="/mountains/${gn.slugify(rg)}">${rg}</a> <span class="meta">(${ps.length} peaks)</span></h2><div class="peak-grid">${ps.map(peakCard).join('')}</div>`;
   }).join('');
-  const browse = `<p>${gn.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/mountains/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${gn.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/mountains/${r.slug}">${escapeHtml(r.name)} (${r.count})</a>`).join(' ')}</p>`;
   const countries = new Set(gn.PEAKS.map((p) => p.country)).size;
   const body = `<p>These are the world\u2019s most notable <b>mountains</b> \u2014 alpine giants, volcanic cones and ancient massifs that define landscapes and cultures. Each profile shows <em>where</em> the peak rises, <em>which country</em> claims it, its <em>elevation</em>, and a <em>plain-English introduction</em> drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${gn.PEAKS.length} mountains from ${countries} countries are covered below, grouped by continent. Open any peak for its full profile.</p>
@@ -18663,7 +18665,7 @@ function gunungRegionPage(region) {
   const ps = gn.peaksInRegion(region.name);
   const countries = [...new Set(ps.map((p) => p.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="peak-grid">${ps.map(peakCard).join('')}</div>`;
-  const other = gn.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/mountains/${r.slug}">${r}</a>`).join(' ');
+  const other = gn.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/mountains/${r.slug}">${escapeHtml(r.name)}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/mountains">&larr; All peaks</a></p>
   <p>A profile for each of the <b>${ps.length} notable mountains in ${region.name}</b> \u2014 where the peak rises, which country claims it, elevation, and a plain-English introduction from Wikipedia. These ${ps.length} peaks span ${countries.length} countries.</p>
   ${grid}
@@ -18753,7 +18755,7 @@ function lakeCard(l) {
 }
 function danauNav() {
   return worldNav('Lakes — tukuk.org/lakes', [{ href: '/lakes', icon: '\ud83c\udf0a', name: 'All lakes', blurb: 'Profiles of the world\u2019s lakes \u2014 where each lake is, which country borders it, its surface elevation, and a plain-English introduction from Wikipedia.' }
-  ].concat(dn.REGIONS.map((r) => ({ href: `/lakes/${r.slug}`, icon: '\ud83d\udcab', name: `${r} lakes`, blurb: `${r.count} documented lakes across ${r.name}, from alpine tarns to great continental seas of water.`}))));
+  ].concat(dn.REGIONS.map((r) => ({ href: `/lakes/${r.slug}`, icon: '\ud83d\udcab', name: `${r.name} lakes`, blurb: `${r.count} documented lakes across ${r.name}, from alpine tarns to great continental seas of water.`}))));
 }
 
 function danauHubPage() {
@@ -18762,7 +18764,7 @@ function danauHubPage() {
     if (!ls.length) return '';
     return `<h2 class="section-title" id="${dn.slugify(rg)}"><a href="/lakes/${dn.slugify(rg)}">${rg}</a> <span class="meta">(${ls.length} lakes)</span></h2><div class="lake-grid">${ls.map(lakeCard).join('')}</div>`;
   }).join('');
-  const browse = `<p>${dn.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/lakes/${r.slug}">${r} (${r.count})</a>`).join(' ')}</p>`;
+  const browse = `<p>${dn.REGIONS.map((r) => `<a class="btn ghost" style="margin:3px" href="/lakes/${r.slug}">${escapeHtml(r.name)} (${r.count})</a>`).join(' ')}</p>`;
   const countries = new Set(dn.LAKES.map((l) => l.country)).size;
   const body = `<p>These are the world\u2019s most notable <b>lakes</b> \u2014 from vast continental seas of water to hidden alpine tarns that define landscapes and sustain millions. Each profile shows <em>where</em> the lake sits, <em>which country</em> borders it, its <em>surface elevation</em>, and a <em>plain-English introduction</em> drawn live from Wikipedia so the description stays accurate and sourced rather than invented.</p>
   <p>${dn.LAKES.length} lakes from ${countries} countries are covered below, grouped by continent. Open any lake for its full profile.</p>
@@ -18787,7 +18789,7 @@ function danauRegionPage(region) {
   const ls = dn.lakesInRegion(region.name);
   const countries = [...new Set(ls.map((l) => l.country))].sort((a, b) => a.localeCompare(b));
   const grid = `<div class="lake-grid">${ls.map(lakeCard).join('')}</div>`;
-  const other = dn.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/lakes/${r.slug}">${r}</a>`).join(' ');
+  const other = dn.REGIONS.filter((r) => r.slug !== region.slug).map((r) => `<a class="btn ghost" style="margin:3px" href="/lakes/${r.slug}">${escapeHtml(r.name)}</a>`).join(' ');
   const body = `<p class="back-link"><a href="/lakes">&larr; All lakes</a></p>
   <p>A profile for each of the <b>${ls.length} notable lakes in ${region.name}</b> \u2014 location, country, surface elevation, and a plain-English introduction from Wikipedia. These ${ls.length} lakes span ${countries.length} countries.</p>
   ${grid}
@@ -20725,7 +20727,7 @@ app.get('/play', (req, res) => {
 app.get('/play/:id', (req, res) => {
   const item = storeCatalog().find((x) => x.id === String(req.params.id));
   if (!item) {
-    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Store</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>That store item does not exist.</p><p><a href="/store">← Back to Store</a></p></body></html>');
+    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Store</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>That store item does not exist.</p><p><a href="/os">← Back to the app store</a></p></body></html>');
   }
   res.sendFile(path.join(PUBLIC_DIR, 'play.html'), (error) => {
     if (error) res.status(404).json({ error: 'Play page not found', path: req.originalUrl });
