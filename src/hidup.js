@@ -82,7 +82,10 @@ async function resolveTaxon(t) {
   const out = {
     id: r.id, sci: r.name, rank: r.rank,
     common: (r.common_name && r.common_name.name) || t.name,
-    photo: r.default_photo && (r.default_photo.medium_url || r.default_photo.square_url),
+    // Only a default photo the photographer actually offered for reuse (a license_code) becomes a
+    // hero image; an "all rights reserved" default is left off rather than shown under a CC claim.
+    photo: r.default_photo && r.default_photo.license_code
+      ? (r.default_photo.medium_url || r.default_photo.square_url || photoVariant(r.default_photo.url)) : undefined,
     photoCredit: (r.default_photo && r.default_photo.attribution) || '',
     wikiUrl: r.wikipedia_url || null,
     ancestorIds: (r.ancestry || '').split(',').filter(Boolean).map(Number),
@@ -91,7 +94,19 @@ async function resolveTaxon(t) {
   return out;
 }
 
-// Research-grade records for a taxon with photos (CC attribution included).
+// iNaturalist serves an observation's photo at its `url`, which points at the SQUARE crop; the
+// same object has no medium_url. Upgrading square→medium is pure formatting of a path we were
+// handed (the file exists at both sizes on their CDN), so we display a readable tile without
+// copying anything. Returns null when there is no photo to show.
+function photoVariant(url) {
+  return String(url || '').replace(/\/(square|thumbnail|small)\.(jpe?g|png|gif|webp)$/i, '/medium.$2');
+}
+
+// Research-grade records for a taxon with photos. Two honest filters matter here: the observation
+// must actually carry a photo, and that photo must be OPENLY LICENSED (a real license_code). A
+// null license_code means "all rights reserved" — which the photographer did NOT offer for reuse —
+// so such observations are dropped, because every wall on this site promises Creative-Commons
+// photographs credited as each licence requires, and that promise has to be true of every image.
 async function getObservations(taxonId, want) {
   const key = `obs:${taxonId}:${want}`;
   const hit = cacheGet(key);
@@ -107,13 +122,13 @@ async function getObservations(taxonId, want) {
       date: o.observed_on || (o.time_observed_at || '').slice(0, 10) || '',
       place: o.place_guess || (o.geoprivacy === 'obscured' ? 'private location' : ''),
       uri: o.uri || `https://www.inaturalist.org/observations/${o.id}`,
-      photoUrl: p ? (p.medium_url || p.square_url) : null,
+      photoUrl: p ? (photoVariant(p.url) || p.medium_url || p.square_url) : null,
       attribution: p ? (p.attribution || `${(o.identity && o.identity.user && o.identity.user.name) || 'observer'} / iNaturalist`) : '',
-      license: p && p.license ? String(p.license) : null,
+      license: p && p.license_code ? String(p.license_code) : null,
       taxonName: t.name || '',
       taxonCommon: (t.common_name && t.common_name.name) || '',
     };
-  }).filter((r) => r.photoUrl);
+  }).filter((r) => r.photoUrl && r.license);
   cacheSet(key, rows, TTL_OBS);
   return rows;
 }
@@ -256,7 +271,8 @@ function taxonToRecord(r, opts) {
     classification: ancestors.map((a) => ({ rank: a.rank, name: a.name })),
     ...(cs ? { conservation: { code: cs.status, label: IUCN[cs.status] || cs.status, authority: cs.authority || null } } : {}),
     obsCount: Number(r.observations_count) || 0,
-    photo: dp ? { url: dp.medium_url || dp.square_url, credit: dp.attribution || '', license: dp.license_code || null } : null,
+    photo: dp && dp.license_code
+      ? { url: dp.medium_url || dp.square_url || photoVariant(dp.url), credit: dp.attribution || '', license: dp.license_code } : null,
     iNatUrl: `https://www.inaturalist.org/taxa/${r.id}`,
   };
 }

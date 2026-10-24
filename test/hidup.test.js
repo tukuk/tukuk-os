@@ -79,6 +79,9 @@ test('taxonToRecord: lineage is filtered, status is expanded, sourcing links are
   // A species with no conservation status must not gain a fake one.
   const bare = hidup.taxonToRecord({ ...full, conservation_status: null, preferred_common_name: '' }, { slug: 'x' });
   assert.ok(!bare.conservation, 'no status → no status, never a guess');
+  // An "all rights reserved" default photo (license_code null) is never shown under our CC promise.
+  const arr = hidup.taxonToRecord({ ...full, default_photo: { ...full.default_photo, license_code: null } }, { slug: 'x' });
+  assert.equal(arr.photo, null, 'an all-rights-reserved photo is refused, not credited as CC');
 });
 
 test('disk reads are read-only safe before the first build', () => {
