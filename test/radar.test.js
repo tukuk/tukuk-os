@@ -182,6 +182,76 @@ test('ingestMessage: the subscription handshake is not a ship', () => {
   assert.equal(radar.aisStatus().vessels, before, 'no phantom vessel from a handshake');
 });
 
+// ── Class B transponders (yachts, fishing boats, small craft) — also captured live ──
+// Roughly one message in seven on a busy coast is Class B. Dropping those types left
+// whole harbours empty while the channel itself looked busy.
+const REAL_CLASS_B_POS = JSON.stringify({
+  MetaData: {
+    MMSI: 205669370, MMSI_String: 205669370, ShipName: 'SANDIR I',
+    latitude: 51.19503, longitude: 3.22577, time_utc: '2026-10-24 19:47:58.996884671 +0000 UTC',
+  },
+  MessageType: 'StandardClassBPositionReport',
+  Message: {
+    StandardClassBPositionReport: {
+      AssignedMode: false, ClassBBand: true, ClassBDisplay: false, ClassBDsc: true,
+      ClassBMsg22: true, ClassBUnit: false, Cog: 360, CommunicationState: 83706,
+      CommunicationStateIsItdma: true, Latitude: 51.195029999999996, Longitude: 3.22577,
+      MessageID: 18, PositionAccuracy: false, Raim: false, RepeatIndicator: 0,
+      Sog: 0.1, Spare1: 0, Spare2: 0, Timestamp: 58, TrueHeading: 511,
+      UserID: 205669370, Valid: true,
+    },
+  },
+});
+const REAL_CLASS_B_STATIC = JSON.stringify({
+  MetaData: {
+    MMSI: 367563380, MMSI_String: 367563380, ShipName: 'BLUE NOTE',
+    latitude: 51.74292, longitude: 3.88905, time_utc: '2026-10-24 19:47:59.390087403 +0000 UTC',
+  },
+  MessageType: 'StaticDataReport',
+  Message: {
+    StaticDataReport: {
+      MessageID: 24, PartNumber: false, RepeatIndicator: 0,
+      ReportA: { Name: 'BLUE NOTE', Valid: true },
+      ReportB: {
+        CallSign: '', Dimension: { A: 0, B: 0, C: 0, D: 0 }, FixType: 0,
+        ShipType: 0, Spare: 0, Valid: false, VenderIDModel: 0, VenderIDSerial: 0,
+        VendorIDName: '',
+      },
+      Reserved: 0, UserID: 367563380, Valid: true,
+    },
+  },
+});
+
+test('ingestMessage: a Class B position report is a vessel too', () => {
+  radar.ingestMessage(REAL_CLASS_B_POS);
+  const v = radar.vesselsNear(51.19503, 3.22577, 5).find((x) => x.mmsi === 205669370);
+  assert.ok(v, 'Class B positions must reach the map');
+  assert.equal(v.name, 'SANDIR I');
+  assert.equal(v.speed, 0);
+  assert.equal(v.course, null, 'Cog 360 is "not available"');
+  assert.equal(v.heading, null, 'TrueHeading 511 is "not available"');
+  assert.equal(v.navStatus, null, 'Class B sends no navigational status');
+});
+
+test('ingestMessage: a Class B StaticDataReport takes the name from ReportA', () => {
+  radar.ingestMessage(REAL_CLASS_B_STATIC);
+  // A later fix for the same MMSI — constructed, but with the same field names as the
+  // capture above, so the merge is exercised without pretending to be a second sample.
+  radar.ingestMessage(JSON.stringify({
+    MetaData: { MMSI: 367563380, ShipName: 'BLUE NOTE' },
+    MessageType: 'StandardClassBPositionReport',
+    Message: { StandardClassBPositionReport: {
+      UserID: 367563380, Latitude: 51.74292, Longitude: 3.88905,
+      Sog: 3.4, Cog: 120, TrueHeading: 121,
+    } },
+  }));
+  const v = radar.vesselsNear(51.74292, 3.88905, 5).find((x) => x.mmsi === 367563380);
+  assert.ok(v, 'the two-part static report is remembered for the next fix');
+  assert.equal(v.name, 'BLUE NOTE');
+  assert.equal(v.speed, 3);
+  assert.equal(v.type, '', 'ShipType 0 means "not available", not "other craft"');
+});
+
 // ── /maps/live page ─────────────────────────────────────────────────────────────────
 test('GET /maps/live returns a complete rendered page', async () => {
   const res = await fetch(base + '/maps/live');

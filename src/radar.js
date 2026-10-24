@@ -115,8 +115,15 @@ const AIS_TOKEN = String(process.env.AISSTREAM_TOKEN || '').trim();
 // shipping lanes on the planet plus the water beside this project's home region — the
 // sea where ships genuinely crowd, so the layer is alive on arrival. Each box is
 // [[southWestLat, southWestLon], [northEastLat, northEastLon]]. Edit freely.
+//
+// Chosen by counting, not by guessing: one minute on the live socket (25 Oct 2026) gave
+// 860 reports in the English Channel against 4 in a Malacca box that stopped at 2°N.
+// Widening that box to 1°N — which brings in the Singapore Strait, where the page opens —
+// lifted the home lane to 27 a minute. The Gulf box delivered none that minute: not every
+// lane has a receiver feeding it, and the page already says coverage is only as good as
+// the ground stations.
 const AIS_BOXES = [
-  [[2.0, 97.5], [7.0, 105.0]],    // Strait of Malacca & Singapore — the home lane
+  [[1.0, 99.0], [7.5, 105.5]],    // Malacca & Singapore Strait — the home lane
   [[19.0, 110.0], [32.0, 123.0]], // South China Sea to the East China Sea
   [[48.5, -3.0], [52.0, 4.5]],    // English Channel / Dover / southern North Sea
   [[23.5, 47.0], [31.5, 60.0]],   // Persian Gulf & Strait of Hormuz
@@ -194,7 +201,11 @@ function ingestMessage(raw) {
   const id = fin(pick(d, ['UserID', 'user_id', 'mmsi']) ?? pick(meta, ['MMSI', 'mmsi']));
   if (!Number.isFinite(id)) return;
   const cur = vessels.get(id) || { mmsi: id };
-  if (t === 'PositionReport') {
+  // Class A transponders send PositionReport; Class B (yachts, fishing boats, small
+  // craft) send StandardClassBPositionReport or ExtendedClassBPositionReport — same
+  // field names, no navigational status. About one message in seven on a busy coast is
+  // Class B, and dropping it leaves whole harbours empty.
+  if (t === 'PositionReport' || t === 'StandardClassBPositionReport' || t === 'ExtendedClassBPositionReport') {
     const lat = fin(pick(d, ['Latitude', 'lat', 'latitude']) ?? pick(meta, ['latitude', 'Latitude']));
     const lon = fin(pick(d, ['Longitude', 'lon', 'longitude']) ?? pick(meta, ['longitude', 'Longitude']));
     if (Number.isFinite(lat) && Number.isFinite(lon)) { cur.lat = lat; cur.lon = lon; }
@@ -212,10 +223,16 @@ function ingestMessage(raw) {
     if (nm != null) cur.name = String(nm).trim();
     cur.seenAt = Date.now();
     msgCount++;
-  } else if (t === 'ShipStaticData') {
+  } else if (t === 'ShipStaticData' || t === 'StaticDataReport') {
     const sd = d.static_data && typeof d.static_data === 'object' ? d.static_data : d;
-    const name = pick(sd, ['Name', 'name', 'NAME']) ?? pick(meta, ['ShipName']);
-    const rawType = pick(sd, ['Type', 'ship_type', 'type', 'shp_type']);
+    // A Class B ship describes itself in two halves: ReportA carries the name, ReportB
+    // carries the kind. A Class A ship sends it all at once (Name / Type / Destination).
+    const partA = sd.ReportA && typeof sd.ReportA === 'object' ? sd.ReportA : null;
+    const partB = sd.ReportB && typeof sd.ReportB === 'object' ? sd.ReportB : null;
+    const name = pick(sd, ['Name', 'name', 'NAME'])
+      ?? (partA ? pick(partA, ['Name', 'name']) : null) ?? pick(meta, ['ShipName']);
+    const rawType = pick(sd, ['Type', 'ship_type', 'type', 'shp_type'])
+      ?? (partB ? pick(partB, ['ShipType', 'Type']) : null);
     const dest = pick(sd, ['Destination', 'destination', 'DESTINATION']);
     const kind = Number.isFinite(fin(rawType)) ? shipKind(Number(rawType))
       : (rawType == null ? '' : String(rawType).trim());
