@@ -8,6 +8,7 @@
 #   3. Meilisearch dead         → cascade restart
 #   4. internet/tunnel problem  → just log a warning
 #      (the site stays up because the Cloudflare fallback serves from R2)
+#   5. daily update gone quiet  → nudge tukuk-update.service (see below)
 #
 # Run every 2 minutes via a systemd timer.
 
@@ -48,6 +49,33 @@ else
   if [ "$P" -eq 1 ] || [ $((P % 15)) -eq 0 ]; then
     log "Public site not answering (attempt $P) — internet/tunnel? Cloudflare fallback still serving static pages"
   fi
+fi
+
+# --- 5. did the daily update actually run? -----------------------------------
+# The update is silent by design, so a timer that died in March looks exactly like
+# "nothing to do today": a wedged fetch sat in the oneshot unit for 31 hours on 24 Oct 2026
+# and nothing anywhere said so. /health carries the last attempt now, and this is the only
+# thing that reads it. One nudge per six hours — a stale record means the last run never
+# finished, and starting it every two minutes would only pile up attempts.
+UPD_STAMP="/tmp/tukuk-os-watchdog.update"
+HEALTH_JSON="$(curl -sf -m 10 "$URL" 2>/dev/null || true)"
+if [ -n "$HEALTH_JSON" ]; then
+  UPD_STATE="$(printf '%s' "$HEALTH_JSON" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const u=JSON.parse(s).update;if(!u){process.stdout.write("none");return}process.stdout.write((u.stale?"stale":"fresh")+" "+(u.ageSeconds===null?"?":u.ageSeconds)+"s "+(u.stage||"?"))}catch{process.stdout.write("unknown")}})' 2>/dev/null)"
+  case "$UPD_STATE" in
+    stale*)
+      if [ ! -f "$UPD_STAMP" ] || [ -n "$(find "$UPD_STAMP" -mmin +360 2>/dev/null)" ]; then
+        log "Daily update looks stale ($UPD_STATE) — starting tukuk-update.service"
+        systemctl start --no-block tukuk-update.service || log "could not start tukuk-update.service"
+        touch "$UPD_STAMP"
+      fi
+      ;;
+    unknown)
+      if [ ! -f "$UPD_STAMP" ] || [ -n "$(find "$UPD_STAMP" -mmin +1440 2>/dev/null)" ]; then
+        log "Update record is present but unreadable — check src/update-status.js and data/update-status.json"
+        touch "$UPD_STAMP"
+      fi
+      ;;
+  esac
 fi
 
 if ! systemctl is-active --quiet "$APP"; then

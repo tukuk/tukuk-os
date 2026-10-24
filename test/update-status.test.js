@@ -94,3 +94,13 @@ test('the shipped script writes exactly the fields this reader expects', () => {
   assert.ok(/timeout \d+ git fetch/.test(script), 'the fetch is bounded — an unbounded fetch is the 31-hour wedge');
   assert.ok(script.includes('GIT_TERMINAL_PROMPT=0'), 'no credential prompt can hang a timer');
 });
+
+test('the watchdog is what reads the flag, and it only nudges every six hours', () => {
+  const wd = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'watchdog.sh'), 'utf8');
+  assert.ok(wd.includes('update'), 'the watchdog looks at the update record');
+  assert.ok(wd.includes('systemctl start --no-block tukuk-update.service'), 'a stale record starts the update again');
+  assert.ok(/-mmin \+360/.test(wd), 'but not every two minutes — the update may be slow, not dead');
+  // The reporter that has no threshold is the failure: a watchdog that restarts on the
+  // first failed health check turns a slow minute into a restart loop.
+  assert.ok(/\$COUNT" -ge "\$THRESHOLD/.test(wd), 'the health-check restart still has its threshold');
+});
