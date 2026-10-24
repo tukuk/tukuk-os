@@ -1474,7 +1474,11 @@ app.get('/countries/:slug', async (req, res) => {
   const region = ng.findRegion(slug);
   if (region) return res.status(200).type('html').send(negaraRegionPage(req, region, ng.inRegion(rows, slug)));
   const country = ng.findCountry(rows, slug);
-  if (country) return res.status(200).type('html').send(negaraCountryPage(req, country, rows));
+  if (country) {
+    let facts = [];
+    try { facts = await countryFacts(country); } catch { facts = []; }
+    return res.status(200).type('html').send(negaraCountryPage(req, country, rows, facts));
+  }
   return res.status(404).type('html').send(negaraBusy(`Country "${slug}" is not in our list`));
 });
 
@@ -7970,7 +7974,27 @@ function negaraRegionPage(req, region, rows) {
 }
 
 // ─── /country page — one country: flag hero, statistics table, neighbours ───
-function negaraCountryPage(req, c, rows) {
+// A handful of World Bank indicators, looked up for a single country — the deeper story
+// beyond the quick-fact table. Each value comes from the very same cached map the
+// /statistics rankings build from, so this adds no new upstream cost (a 30-day cache);
+// an indicator a country never reported simply does not appear rather than showing zero.
+// They are named by their English label so no non-English slug literal sits in the copy.
+const NG_FACT_NAMES = ['GDP per Capita', 'Internet Users', 'Fertility Rate', 'Infant Mortality', 'CO\u2082 Emissions per Capita', 'Forest Cover'];
+async function countryFacts(c) {
+  const picked = NG_FACT_NAMES.map((en) => st.INDICATORS.find((i) => i.en === en)).filter((i) => i && i.code && !i.field);
+  const out = [];
+  for (const ind of picked) {
+    try {
+      const map = await st.loadWbMap(ind.code, ind.yr);
+      const v = map[c.cca3];
+      if (v != null && Number.isFinite(v)) out.push({ en: ind.en, slug: ind.slug, text: stFmt(ind, v) });
+    } catch { /* indicator briefly unavailable — skip it, never fail the page */ }
+  }
+  return out;
+}
+
+function negaraCountryPage(req, c, rows, facts) {
+  facts = facts || [];
   const selfUrl = `https://tukuk.org/countries/${c.slug}`;
   const nameBySlug = {}; for (const x of rows) nameBySlug[x.slug] = x.name;
   const regionLabel = c.region || '';
@@ -7988,6 +8012,7 @@ function negaraCountryPage(req, c, rows) {
     + baris('Population', popLine)
     + baris('Area', c.area ? `${ngNum(c.area)} km²` : '—')
     + baris('Density', c.population && c.area ? `${NG_INT.format(Math.round(c.population / c.area))} people/km²` : '—')
+    + baris('Share of world population', c.population && c.worldPop ? `${(c.population / c.worldPop * 100).toFixed(c.population / c.worldPop * 100 < 0.1 ? 3 : 2)}% of ${NG_INT.format(Math.round(c.worldPop))}` : '—')
     + baris('GDP (nominal)', ngGdp(c.gdp))
     + baris('Urbanisation', c.urban == null ? '—' : `${NG_DEC.format(c.urban)}% urban population`)
     + baris('Life expectancy', c.life == null ? '—' : `${NG_DEC.format(c.life)} years`)
@@ -8000,12 +8025,17 @@ function negaraCountryPage(req, c, rows) {
   const neighbours = c.borderSlugs.length
     ? `<h2 class="section-title">Neighbours (land borders)</h2><div class="ng-az">${c.borderSlugs.map((s) => `<a href="/countries/${s}">${escapeHtml(nameBySlug[s] || s)}</a>`).join('')}</div>`
     : `<h2 class="section-title">Neighbours (land borders)</h2><p>No land borders \u2014 ${c.landlocked ? 'a landlocked country' : 'an island country or a remote territory'}.</p>`;
+  const factsTable = facts.length
+    ? `<h2 class="section-title">Development &amp; environment in numbers</h2><table class="wx-table">`
+      + facts.map((f) => `<tr><th>${escapeHtml(f.en)}</th><td>${escapeHtml(f.text)} \u00b7 <a href="/statistics/${f.slug}">see world ranking</a></td></tr>`).join('')
+      + `</table><p class="meta">These come from the <b>World Bank Open Data</b> 2023 series, the same source behind the <a href="/statistics">world indicator rankings</a>. A blank simply means ${escapeHtml(c.name)} did not report that figure.</p>`
+    : '';
   const coord = c.latlng && c.latlng.length === 2 && (c.latlng[0] || c.latlng[1]) ? `<p>The geographic position is roughly <b>${NG_DEC.format(c.latlng[0])}\u00b0, ${NG_DEC.format(c.latlng[1])}\u00b0</b>.</p>` : '';
   // Cross link to this country's holiday page ( World Holiday Complex ) when we cover it.
   const cutiCoun = cd.findCountry(c.cca2);
   const cutiLink = cutiCoun ? `<a href="/holidays/world/${cutiCoun.slug}">the ${escapeHtml(c.name)} public-holiday calendar for ${CT_WORLD_YEAR}</a>` : '<a href="/holidays">world public holidays</a>';
-  const body = hero + stats + neighbours + coord
-    + `<p>Flags: flagcdn.com; population, GDP, urbanisation & life expectancy: <b>World Bank Open Data</b> (2023 indicators); base data: the open-source <b>world-countries</b> package \u2014 all of it free, with no registration.</p>`
+  const body = hero + stats + factsTable + neighbours + coord
+    + `<p>Flags: flagcdn.com; population, GDP, urbanisation, life expectancy and every development indicator above: <b>World Bank Open Data</b> (2023 series); base data: the open-source <b>world-countries</b> package \u2014 all of it free, with no registration.</p>`
     + `<p class="meta">See also: <a href="/weather">weather by city</a> · <a href="/earthquakes">latest earthquakes</a> · <a href="/disasters">active natural events</a> · <a href="/statistics">world indicator rankings</a> · ${cutiLink} · <a href="/countries">the full country list</a>.</p>`;
   const descBits = [
     c.capital ? `capital ${c.capital}` : null,

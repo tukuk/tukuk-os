@@ -105,3 +105,15 @@ test('sitemap-countries.xml + robots + footer + cross links from the other three
   assert.ok(serverSrc.includes('<a href="/countries">Country Complex</a>'), 'the weather page cross-links to the country complex');
   assert.ok(serverSrc.includes("'/countries', '/countries/asia'"), 'the main sitemap lists /countries');
 });
+
+test('deeper country data: per-country World Bank facts + derived world share, cache-reused', () => {
+  // A single country profile now also shows a handful of World Bank indicators looked up
+  // for that cca3, reusing the SAME cached maps /statistics ranks from — no new keyed API.
+  assert.match(serverSrc, /async function countryFacts\(c\)/, 'countryFacts builds the deeper indicators');
+  assert.match(serverSrc, /st\.loadWbMap\(ind\.code, ind\.yr\)/, 'facts reuse the statistics World Bank cache (no new source)');
+  assert.match(serverSrc, /NG_FACT_NAMES/, 'the deeper-fact indicator set is declared');
+  assert.match(serverSrc, /Development &amp; environment in numbers/, 'the deeper-facts section renders');
+  assert.match(serverSrc, /Share of world population/, 'the derived world-population share row is present');
+  // The route fetches facts (safely) before rendering the country page.
+  assert.match(serverSrc, /await countryFacts\(country\)/, 'the :slug route loads the deeper facts');
+});
