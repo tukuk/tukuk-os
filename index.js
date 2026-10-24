@@ -37,6 +37,7 @@ const agentEditor = require('./src/agent-editor');
 const warmup = require('./src/warmup');
 const books = require('./src/books');
 const recipes = require('./src/recipes');
+const radar = require('./src/radar');
 
 // ── Runtime resilience guard ────────────────────────────────────────────────
 // The boot contract above is "the process never exits on subsystem errors", but
@@ -200,6 +201,13 @@ async function main() {
     // reading lists so the two do not queue behind each other on a slow link; sequential and
     // spaced inside, because that wiki is a shared free service and not our own database.
     setTimeout(() => { recipes.prime().catch(() => {}); }, 30000);
+    // Live runtime for /maps/live. If a free aisstream.io token is configured, open ONE
+    // inbound AIS socket over the busy lanes and keep the vessel store warm for every
+    // viewer; with no token this is a deliberate no-op and the ships layer just reads
+    // "not enabled" — never a crash, never a fake dot. Then warm one aircraft box so the
+    // first visitor to the page gets a snapshot instead of a cold wait. Both fail-soft.
+    radar.startAis();
+    setTimeout(() => { radar.aircraft(3.1, 101.6, 150).catch(() => {}); }, 10000);
     // APOD auto-update + NASA archive backfill — OFF unless NASA_AUTO=1.
     // The NASA pages were removed (content focus + a light server); they are disabled
     // by default so the VPS does not waste CPU/network/disk on them.
@@ -223,6 +231,7 @@ async function main() {
   const shutdown = (signal) => async () => {
     console.log(`\n[tukuk-os] received ${signal}, shutting down gracefully...`);
     net.stop();
+    radar.stopAis();
     nasa.stopApodAutoUpdate();
     nasa.stopArchiveBackfill();
     store.close();
