@@ -131,7 +131,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const APOD_FALLBACK_FILE = path.join(path.dirname(config.store.path), 'apod-last.json');
+const APOD_FALLBACK_FILE = process.env.APOD_FALLBACK_PATH || path.join(path.dirname(config.store.path), 'apod-last.json');
 
 // Circuit breaker: when the NASA APOD API fails, don't waste time retrying over and over
 let apodApiDownUntil = 0;
@@ -151,6 +151,38 @@ function writeApodFallback(data) {
   } catch {
     // a failing fallback write is not a critical problem
   }
+}
+
+// ── Cold start: the picture we already have on disk ─────────────────────────
+// After every restart the first /nasa render waited on api.nasa.gov before anything was
+// drawn — 10 s, measured after the 24 Oct 2026 restart — for a picture that was already
+// sitting on disk from the last successful fetch. The snapshot is now served at once and
+// the live request runs behind the response, so the next visitor gets today's.
+//
+// The guards are the point: only the plain "current picture" read takes this path (a dated
+// or counted request asked for something specific and must be live), only once per process,
+// and only while the snapshot is under two days old — an old picture is not "the picture of
+// the day", and every payload is dated, so nobody is shown an old page as if it were new.
+const APOD_SNAPSHOT_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+let apodColdStartHandled = false;
+let apodRefreshing = false;
+
+/** The disk snapshot, if it is a valid APOD and still recent enough to stand in. */
+function apodFromDiskIfFresh() {
+  const stored = readApodFallback();
+  if (!stored || !isValidApodPayload(stored, null)) return null;
+  const at = Date.parse(String(stored.date || ''));
+  if (!Number.isFinite(at) || Date.now() - at > APOD_SNAPSHOT_MAX_AGE_MS) return null;
+  return stored;
+}
+
+/** Fetch the live picture behind an already-sent response. One at a time, failures ignored. */
+function refreshApodBehind() {
+  if (apodRefreshing) return;
+  apodRefreshing = true;
+  getAPOD()
+    .catch(() => {})
+    .finally(() => { apodRefreshing = false; });
 }
 
 function decodeEntities(str) {
@@ -253,6 +285,15 @@ async function getAPOD({ date, count, force } = {}) {
   if (force) apodApiDownUntil = 0; // "Try live again" / auto-update: clear the circuit breaker first
   const cached = force ? null : getCache(cacheKey);
   if (cached && isValidApodPayload(cached, null)) return cached;
+
+  if (!date && !count && !force && !apodColdStartHandled) {
+    apodColdStartHandled = true;
+    const snapshot = apodFromDiskIfFresh();
+    if (snapshot) {
+      refreshApodBehind();
+      return { ...snapshot, refreshing: true };
+    }
+  }
 
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const targetDate = date || new Date().toISOString().slice(0, 10);
@@ -1361,6 +1402,8 @@ function stopArchiveBackfill() {
 
 module.exports = {
   getAPOD,
+  apodFromDiskIfFresh,
+  APOD_SNAPSHOT_MAX_AGE_MS,
   startApodAutoUpdate,
   stopApodAutoUpdate,
   backfillArchive,
