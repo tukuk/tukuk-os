@@ -597,7 +597,13 @@ function inventory() {
     }
   }
   for (const s of autoShelves()) {
-    if (shelfWorks(s.slug).length) {
+    // The shelf file is not parsed here. At a thousand shelves that is a thousand JSON reads on
+    // every crawler hit to /sitemap-books.xml — measured live at 1.5 s — and the only question
+    // this route asks of the file is whether it is there at all, which is what a half-finished
+    // build changes. The number of works comes from the index row the builder wrote beside it.
+    let shelved = false;
+    try { shelved = fs.statSync(shelfFile(s.slug)).size > 2; } catch { shelved = false; }
+    if (shelved && s.works > 0) {
       shelves.push({ slug: s.slug, title: s.title, at: s.at || null, curated: false, works: s.works });
     }
   }
