@@ -46,6 +46,7 @@
 //   node scripts/books-build.js --concurrency=1          # a quieter network, a longer run
 //   node scripts/books-build.js --prune-only             # retire what is on disk, no searches
 //   node scripts/books-build.js --terms=beekeeping,jazz  # build exactly these, nothing else
+//   node scripts/books-build.js --terms=solar+energy,jazz # a '+' is a space: a term can be two words
 // Ctrl-C is safe: state is written after every shelf and re-running resumes from the file.
 // --calls is measured against the LIFETIME total the state file remembers, not the current run:
 // resuming a build that has spent 1,400 searches needs --calls above that number.
@@ -82,9 +83,10 @@ const TERMS = (() => {
   const m = /--terms=(\S+)/.exec(process.argv.join(' '));
   return parseTerms(m ? m[1] : '');
 })();
-/** `--terms=a, B ,c` → ['a','b','c']; anything else → []. Split out so a test can ask it. */
+/** `--terms=a, B ,c` → ['a','b','c']; a '+' is a space, so "solar+energy" is one term. */
 function parseTerms(list) {
-  return String(list || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return String(list || '').split(',')
+    .map((s) => s.replace(/\+/g, ' ').trim().toLowerCase()).filter(Boolean);
 }
 const OPTS = {
   shelves: arg('shelves', DEFAULTS.shelves),

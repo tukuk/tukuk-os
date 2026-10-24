@@ -312,6 +312,8 @@ test('--terms builds exactly the names it is given, and nothing else', () => {
   const build = require('../scripts/books-build.js');
   assert.deepStrictEqual(build.parseTerms('climate change, Solar Energy ,,jazz'),
     ['climate change', 'solar energy', 'jazz']);
+  // A shell word cannot carry a space, so '+' is how "solar energy" is handed in.
+  assert.deepStrictEqual(build.parseTerms('solar+energy,jazz'), ['solar energy', 'jazz']);
   assert.deepStrictEqual(build.parseTerms(''), []);
   assert.deepStrictEqual(build.parseTerms(undefined), []);
   // An empty name must never become a term: a shelf with no label is a 404 with a file on disk.
