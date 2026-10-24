@@ -26,8 +26,21 @@
 //     CC0; text, author, year and a link to the catalogue entry are enough;
 //   • no article text mirrored — every title links to the catalogue so the reader can
 //     borrow or read the real thing where the rights allow it;
-//   • no mass crawl — twenty-four subjects, one request each, cached for a day and
-//     mirrored to disk so a restart never waits on the network.
+//   • no crawl from the web process. Twenty-four curated subjects fetch live (one request
+//     each, cached a day, mirrored to disk). Everything beyond them is built by
+//     scripts/books-build.js as an explicit, bounded, resumable run and written to disk;
+//     a request never reaches the catalogue for one of those, so a crawler storm on a
+//     thousand shelves costs this box file reads, not somebody else's API.
+//
+// SCALE, and why the files are shaped this way (measured while planning, 24 Oct 2026):
+// a sample of 40 topics found 24 with at least 100 works and 17 with 1,000+, so roughly
+// one in two candidate subjects is a real shelf. At ~1,000 shelves the JSON for every
+// work on every shelf is ~20 MB — which must never be parsed into RAM at boot on a box
+// that has 6.8 GB shared with Meilisearch, a tunnel and nginx. So the data lives in three
+// pieces: a small shelf *index* (one entry per shelf, ~110 KB, read once), one file per
+// shelf (~6 KB, read per request), and works in 40 shards chosen by a hash of the Open
+// Library id — no lookup table needed to find a work's shard, and an LRU keeps the four
+// hottest shards parsed.
 const axios = require('axios');
 const https = require('https');
 const fs = require('fs');
@@ -93,6 +106,8 @@ function normalise(doc) {
   if (!key || !title) return null;
   const editions = Number(doc.edition_count);
   const names = (doc.author_name && doc.author_name[0]) ? doc.author_name : [];
+  const subjects = Array.isArray(doc.subject) ? doc.subject : [];
+  const ia = Array.isArray(doc.ia) ? doc.ia : [];
   return {
     title: title.slice(0, 180),
     author: String(names[0] || 'Unknown author').trim().slice(0, 120),
@@ -100,6 +115,11 @@ function normalise(doc) {
     year: Number.isFinite(Number(doc.first_publish_year)) ? Number(doc.first_publish_year) : null,
     editions: Number.isFinite(editions) && editions > 0 ? editions : null,
     slug: key.replace(/^\/works\//, ''),
+    // Kept for the book page, which is built from the same payload rather than from a
+    // second request per work: what else the record is tagged with, and whether an
+    // archive.org copy exists that a reader can actually open.
+    subjects: subjects.slice(0, 12).map((s) => String(s).slice(0, 80)),
+    ia: ia.slice(0, 2).map((s) => String(s).slice(0, 120)),
   };
 }
 
@@ -197,6 +217,32 @@ function writeMirror(slug, entry, all) {
 }
 
 /**
+ * The catalogue search behind a shelf: one request, the works it matched, and how many the
+ * subject holds in total. Exported because scripts/books-build.js builds a thousand shelves
+ * through exactly this call — the deadline, the cooldown and the dedupe in src/outbound.js
+ * apply to the build exactly as they do to a page, which is the point of having one choke
+ * point. A quote in a subject string would break the query, so it is stripped rather than
+ * escaped: no Open Library subject contains one.
+ */
+async function searchSubject(term) {
+  const res = await http.get('https://openlibrary.org/search.json', {
+    params: {
+      // No `sort` on purpose: the server-side sort ignores the subject and ranks the
+      // whole index, which is how Dickens ended up on a climate list. Relevance in,
+      // editions ordered locally.
+      q: `subject:"${String(term).replace(/"/g, '')}"`,
+      limit: PER_SEARCH,
+      fields: 'title,author_name,first_publish_year,edition_count,key,subject,ia',
+    },
+  });
+  const data = (res && res.data) || {};
+  return {
+    docs: Array.isArray(data.docs) ? data.docs : [],
+    found: Number.isFinite(Number(data.numFound)) ? Number(data.numFound) : 0,
+  };
+}
+
+/**
  * The reading list for one subject.
  * Order: fresh memory → the network → the disk mirror (any age) → an empty list.
  * @returns {Promise<{works:Array, at:number|null, stale:boolean}>}
@@ -209,17 +255,7 @@ async function subject(slug) {
 
   const mirror = readMirror();
   try {
-    const res = await http.get('https://openlibrary.org/search.json', {
-      params: {
-        // No `sort` on purpose: the server-side sort ignores the subject and ranks the
-        // whole index, which is how Dickens ended up on a climate list. Relevance in,
-        // editions ordered locally.
-        q: `subject:"${meta.term}"`,
-        limit: PER_SEARCH,
-        fields: 'title,author_name,first_publish_year,edition_count,key,subject',
-      },
-    });
-    const docs = (res.data && Array.isArray(res.data.docs)) ? res.data.docs : [];
+    const { docs } = await searchSubject(meta.term);
     const works = rankWorks(docs, meta);
     if (!works.length) throw new Error('no works carry this subject');
     const entry = { at: Date.now(), works };
@@ -272,10 +308,308 @@ async function prime({ gapMs = PRIME_GAP_MS, log = console.log, fetchOne = subje
   return done.size;
 }
 
-/** How the cluster is doing — for /health and for us. */
+// ── The built shelves: everything past the curated twenty-four, read off disk ────────
+// Written by scripts/books-build.js, never by a page request. Three files and a directory,
+// because the whole point is that a visitor opening /books/amateur-radio must not pay a
+// catalogue search: the shelf is a 6 KB file already on this box.
+const DATA_DIR = path.dirname(MIRROR_FILE);
+const SHELF_DIR = path.join(DATA_DIR, 'books-shelves');
+const SHELF_INDEX_FILE = path.join(DATA_DIR, 'books-shelves.json');
+const WORK_DIR = path.join(DATA_DIR, 'books-works');
+const WORK_INDEX_FILE = path.join(DATA_DIR, 'books-works-index.jsonl');
+const WORK_SHARDS = 40;          // ~30,000 works ÷ 40 ≈ 750 records a shard, ~250 KB
+const SHELF_MIN_WORKS = 8;       // below this it is a stub, not a reading list
+
+// Subject strings are the catalogue's own lowercase labels ("beekeeping", "quantum
+// computing"). Capitalising them is formatting, not authorship — but the words are the
+// source's, which is why nothing here invents a title out of prose.
+const SMALL_WORDS = new Set(['of', 'and', 'in', 'the', 'for', 'a', 'an', 'on', 'to', 'de', 'la', 'with', 'at', 'by']);
+
+/** Display name for a catalogue subject, by title case with the small words left down. */
+function titleCase(term) {
+  const words = String(term || '').split(/\s+/).filter(Boolean);
+  return words.map((w, i) => {
+    const low = w.toLowerCase();
+    if (i > 0 && SMALL_WORDS.has(low)) return low;
+    return low.charAt(0).toUpperCase() + low.slice(1);
+  }).join(' ')
+    .replace(/\s,\s/g, ', ').replace(/\(\s?/g, '(').replace(/\s?\)/g, ')')
+    .slice(0, 70);
+}
+
+/** A url-safe shelf slug from a subject string, accents folded, never truncated mid-word. */
+function shelfSlug(term) {
+  const folded = String(term || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+    .replace(/-+$/, '');
+  return folded || 'subject';
+}
+
+// Four families of subject string produce a page nobody would read, all of them seen in
+// the catalogue while this was being written:
+//   • a subdivision ("beekeeping--history") is half a subject and returned 24 works;
+//   • a form tag ("juvenile fiction", "nonfiction", "textbooks") describes the SHAPE of a book
+//     rather than what it is about, and is broad enough to be a subject in the catalogue — the
+//     first two of those came back as the top candidates on the very first build run, which is
+//     how we know they had to be rejected: a list of everything the library calls nonfiction is
+//     not a reading list, it is the whole shelf sorted by reprint count;
+//   • the paperwork of a discipline (statistics, congresses, directories, sources) is
+//     catalogued under the topic and tops an editions-sorted list every single time;
+//   • a bare umbrella word — "history", "science", "world" — is so wide that ordering it by
+//     editions returns Dickens, which is the exact failure the curated rules were built to
+//     stop. It is anchored to the WHOLE label on purpose: "history of science" and "world
+//     war" are shelves, "history" is a shrug. The second proof run (45 shelves) added the last
+//     few words of that list by measurement: "Methods" (91,291 works, a subdivision), "Origin"
+//     (14,889, half of them Victorian), "Behavior", "Medical" and "Translations Into English"
+//     (a label for the book's language, not its topic) all came back as top candidates;
+//   • the catalogue's subject strings are not all English, and not all of them are labels a
+//     reader would recognise. The first 30-shelf proof run (24 Oct 2026) published "Chemie",
+//     "Physik", "Histoire", "Lehrbuch", "Natuurkunde", "Economie Politique", "Problemes Et
+//     Exercices", "Manuels D'enseignement Superieur", "Early Works To 1800", "Popular Works",
+//     "Chemistry, Organic", "Study And Teaching (Secondary)" and "Open_syllabus_Project" —
+//     eleven of thirty pages that nobody would have read. Two of the three families below
+//     exist because of that list, measured rather than imagined.
+const REJECT = {
+  // A subject label is a topic, so it is written with words and spaces. Commas are the
+  // inverted subdivision order ("chemistry, organic" — the same topic as "organic
+  // chemistry", already a candidate in its own right); parentheses, slashes, underscores,
+  // apostrophes and full stops are catalogue machinery ("study and teaching (secondary)",
+  // "science/mathematics", "open_syllabus_project"). Accents go with them: this is an
+  // English-language site and "problèmes et exercices" is not an English label.
+  label: /[^a-z0-9 -]/,
+  subdivision: /--/,
+  form: /\b(fiction|novels?|romance|juvenile|drama|poetry|poems|stories|tales|legends|myths|essays|speeches|addresses|plays|nonfiction|non-fiction)\b/i,
+  // Where a form or paperwork word sits anywhere in the label, the label describes the book
+  // rather than the topic: "science textbooks", "laboratory manuals", "popular works" and
+  // "early works to 1800" all topped the harvested pool with counts over 60. "problems" and
+  // "exercises" are only rejected as the pair the catalogue writes, so that "problem solving"
+  // stays a subject.
+  shape: /\b(textbooks?|handbooks?|manuals?|popular works|early works|pictorial works|illustrated|miscellanea|bestsellers?|criticism and interpretation|physiological phenomena|aspects?)\b|problems?[^a-z]{0,3}exercises?|translat\w*\s+into/i,
+  // The coverage gate catches most foreign spellings by their titles, but not those whose
+  // books are written in the same language as the label: the 150-shelf proof run (24 Oct 2026)
+  // published "Anatomie Humaine", "Cellules", "Enfants", "Denken", "Exito En Los Negocios",
+  // "Genetica", "Strategisch Management" and "Ontwikkelingspsychologie" with coverages over the
+  // threshold, because a French subject does find French titles. This is an English-language
+  // site, so the tokens that were actually seen are refused by name. Every word here was
+  // observed in the harvested pool and each is a spelling of a topic the catalogue already
+  // offers in English — nothing here is a guess about a language.
+  foreign: /\b(anatomie|humaine|cellules|enfants|denken|exito|negocios|genetica|genetik|strategisch|strategisches|entwicklungspsychologie|ontwikkelingspsychologie|psychologie|chemie|chimie|physik|physique|natuurkunde|histoire|philosophie|lehrbuch|economie|politique|mathematiques|manuels|problemes|exercices|d-enseignement|sociale|sociologie|medicina|historia|literatura|ciencias)\b/i,
+  paperwork: /^(laws|acts|bills|treaties|agreements|reports|proceedings|congresses|conferences|symposia|colloquia|periodicals|serials|dictionaries|enc[oa]cl[oa]p[ae]dias|directories|yearbooks|almanacs|statistics|sources|bibliograph\w*|indexes|abstracts|microforms?|microfilms?|patents?|standards?|specifications|catalogs|catalogues|pictures\b)/i,
+  bare: /^(history|society|geography|science|technology|nature|world|civilization|civilisation|commerce|trade|industry|education|research|methodology|miscellany|miscellaneous|biography|autobiography|diaries|correspondence|letters|interviews|obituaries|study and teaching|study and travel|description and travel|origin|origins|methods|behavior|behaviour|medical|physiological|phenomena)$/i,
+};
+
+/**
+ * Should this subject string become a page? Returns a reason string when it should not,
+ * or null when it may be tried. Pure, so the rules can be argued about in a test rather
+ * than discovered in a live 404. Note that a rejection here costs nothing: the term was
+ * read off a record we already fetched.
+ */
+function rejected(term) {
+  const t = String(term || '').trim().toLowerCase();
+  if (t.length < 4 || t.length > 52) return 'too short or too long to be a subject';
+  if (!/[a-z]{3}/.test(t)) return 'no real word in it';
+  if (/^[\d\s.,-]+$/.test(t)) return 'a number, not a subject';
+  for (const [name, re] of Object.entries(REJECT)) if (re.test(t)) return `a ${name} label, not a topic`;
+  if (/\bin\s+(fiction|literature)\b|\bof\s+the\b/.test(t)) return 'a qualified fragment';
+  return null;
+}
+
+/**
+ * The last gate, and the only one that needs the shelf's own books: how often does the
+ * label actually appear in the titles on the list?
+ *
+ * A real subject is a word its books use. Measured on 24 Oct 2026 over thirty titles a
+ * term: beekeeping 0.57, gardening 0.57, organic chemistry 0.93, astronomy 0.50,
+ * mountaineering 0.27, numismatics 0.33, cosmology 0.20, economics 0.20 — while every
+ * foreign label came in at or under 0.13 (chimie 0.03, physik 0.03, histoire 0.00,
+ * lehrbuch 0.00, natuurkunde 0.00, economie politique 0.03) and so did the catalogue
+ * jargon the shape rule misses (long now manual for civilization 0.03, new york times
+ * bestseller 0.13). The gate is the maximum over the label's words, because "organic
+ * chemistry" needs only "organic" to be a title-word; a stem match both ways so
+ * "photography" is credited by "Photographic" and "numismatics" by "Numismatic".
+ *
+ * Returns null when the label has no word long enough to test ("art", "dna"): an
+ * untestable label is not a false label, so the build keeps it.
+ */
+const LABEL_MIN_TITLE_COVERAGE = 0.15;
+const stemWord = (w) => String(w).replace(/[^a-z]/g, '').replace(/s$/, '');
+function labelCoverage(term, titles) {
+  const words = [...new Set(String(term || '').toLowerCase().split(/[^a-z0-9]+/)
+    .map(stemWord).filter((w) => w.length >= 4))];
+  const list = Array.isArray(titles) ? titles.filter(Boolean) : [];
+  if (!words.length || !list.length) return null;
+  const stems = list.map((t) => String(t).toLowerCase().split(/[^a-z0-9]+/).map(stemWord));
+  let best = 0;
+  let word = words[0];
+  for (const w of words) {
+    const hits = stems.filter((line) => line.some((x) => x.startsWith(w) || w.startsWith(x))).length;
+    if (hits / list.length > best) { best = hits / list.length; word = w; }
+  }
+  return { coverage: best, word };
+}
+
+const readJson = (file) => {
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return raw && typeof raw === 'object' ? raw : null;
+  } catch {
+    return null;
+  }
+};
+const writeAtomic = (file, text) => {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, text);
+  fs.renameSync(tmp, file); // rename is atomic: a reader never sees half a file
+};
+
+// The shelf index is read once and kept — ~1,000 entries of {slug, term, title, works, found, at}
+// is a few hundred kilobytes, and every hub, A–Z page and sitemap row comes from it.
+let shelfIndex = null;
+function autoShelves() {
+  if (shelfIndex) return shelfIndex;
+  const raw = readJson(SHELF_INDEX_FILE);
+  shelfIndex = Array.isArray(raw) ? raw.filter((s) => s && s.slug && s.term && s.works > 0) : [];
+  return shelfIndex;
+}
+/** Forget the parsed index — the build script and the tests both need this. */
+function reloadShelves() { shelfIndex = null; workCountCache = null; }
+
+/** Curated first, then built: the twenty-four hand-written shelves always lead. */
+function shelfMeta(slug) {
+  const key = String(slug || '').toLowerCase();
+  return BY_SLUG.get(key) || autoShelves().find((s) => s.slug === key) || null;
+}
+
+function allShelves() {
+  return [...SUBJECTS.map((s) => ({ ...s, curated: true })), ...autoShelves().map((s) => ({ ...s, curated: false }))];
+}
+
+// Last twenty-four shelf files parsed. Twenty-four is the number a crawler can plausibly
+// have open at once across the whole cluster; past that a page costs one file read, which
+// is what this box is good at.
+const shelfLru = new Map();
+function shelfFile(slug) { return path.join(SHELF_DIR, `${slug}.json`); }
+
+/** The works on a built shelf, from disk. Never the network, never a surprise. */
+function shelfWorks(slug) {
+  const hit = shelfLru.get(slug);
+  if (hit) return hit.works;
+  const raw = readJson(shelfFile(slug));
+  const works = raw && Array.isArray(raw.works) ? raw.works : [];
+  shelfLru.set(slug, { works });
+  if (shelfLru.size > 24) shelfLru.delete(shelfLru.keys().next().value);
+  return works;
+}
+
+/**
+ * Which shard file holds a work. An Open Library key is "/works/OL2941508W", so the digits
+ * give a stable bucket with no lookup table to keep in step with the data. The digits are
+ * extracted rather than the prefix trimmed, because a key reaches this code both as a bare
+ * id and as the "/works/…" path off the record.
+ */
+function shardOf(id) {
+  const m = /OL(\d+)W/i.exec(String(id || ''));
+  return m ? Number(m[1]) % WORK_SHARDS : 0;
+}
+
+const shardLru = new Map();
+function shard(n) {
+  if (shardLru.has(n)) return shardLru.get(n);
+  const raw = readJson(path.join(WORK_DIR, `shard-${n}.json`)) || {};
+  shardLru.set(n, raw);
+  if (shardLru.size > 4) shardLru.delete(shardLru.keys().next().value);
+  return raw;
+}
+
+/** One catalogue record by Open Library work id, or null. */
+function work(id) {
+  const m = /OL(\d+)W/i.exec(String(id || ''));
+  if (!m) return null;
+  return shard(shardOf(`OL${m[1]}W`))[`OL${m[1]}W`] || null;
+}
+
+// The work index is one JSON line per work. It exists for exactly one reason: a sitemap may
+// only promise urls the site can serve, so the list of what was built has to be readable
+// without parsing 20 MB of shards. Cached by mtime, because the build rewrites it.
+let workCountCache = null;
+function workIds() {
+  let mtime = 0;
+  try { mtime = fs.statSync(WORK_INDEX_FILE).mtimeMs; } catch { return []; }
+  if (workCountCache && workCountCache.mtime === mtime) return workCountCache.ids;
+  try {
+    const ids = fs.readFileSync(WORK_INDEX_FILE, 'utf8').split('\n').filter(Boolean)
+      .map((line) => { try { return JSON.parse(line); } catch { return null; } })
+      .filter((r) => r && r.id).map((r) => ({ id: r.id, at: r.at || null }));
+    workCountCache = { mtime, ids };
+    return ids;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * What the site can actually serve right now — the only honest source for a sitemap.
+ * A curated shelf counts when its mirror holds works; a built shelf counts when its file
+ * does, which means a partially finished build simply publishes fewer urls, not 404s.
+ */
+function inventory() {
+  const mirror = readMirror();
+  const shelves = [];
+  for (const s of SUBJECTS) {
+    const m = mirror[s.slug];
+    if (m && Array.isArray(m.works) && m.works.length) {
+      shelves.push({ slug: s.slug, title: s.title, at: m.at || null, curated: true, works: m.works.length });
+    }
+  }
+  for (const s of autoShelves()) {
+    if (shelfWorks(s.slug).length) {
+      shelves.push({ slug: s.slug, title: s.title, at: s.at || null, curated: false, works: s.works });
+    }
+  }
+  return { shelves, works: workIds() };
+}
+
+// ── Writers, used by the build script only ─────────────────────────────────────────
+/** Save one shelf: the index entry plus its own file, so a page reads one small file. */
+function saveShelf(shelf) {
+  const { slug, term, title, works, found, at } = shelf;
+  writeAtomic(shelfFile(slug), JSON.stringify({ slug, term, title, found, at, works }));
+}
+
+/** Persist the whole shelf index at once — a reader never sees a half-written list. */
+function saveShelfIndex(list) {
+  writeAtomic(SHELF_INDEX_FILE, JSON.stringify(list));
+  shelfIndex = null;
+}
+
+/** Write every work into its shard and rewrite the index. */
+function saveWorks(records) {
+  const byShard = new Map();
+  for (const r of records) {
+    const n = shardOf(r.id);
+    if (!byShard.has(n)) byShard.set(n, {});
+    byShard.get(n)[r.id] = r;
+  }
+  for (const [n, map] of byShard) {
+    const file = path.join(WORK_DIR, `shard-${n}.json`);
+    writeAtomic(file, JSON.stringify({ ...readJson(file), ...map }));
+  }
+  shardLru.clear();
+  writeAtomic(WORK_INDEX_FILE, records.map((r) => JSON.stringify({ id: r.id, at: r.at })).join('\n') + '\n');
+  workCountCache = null;
+}
+
+/**
+ * How the cluster is doing — for /health and for us.
+ */
 function status() {
+  const built = autoShelves();
   return {
     subjects: SUBJECTS.length,
+    built: built.length,
+    builtWorks: built.reduce((a, s) => a + (s.works || 0), 0),
+    records: workIds().length,
     cached: cache.size,
     ...stats,
     lastError: stats.lastError || null,
@@ -284,5 +618,9 @@ function status() {
 
 module.exports = {
   SUBJECTS, BY_SLUG, LIMIT, PER_SEARCH, MAX_PER_AUTHOR, TTL, MIRROR_FILE,
+  SHELF_DIR, SHELF_INDEX_FILE, WORK_DIR, WORK_INDEX_FILE, WORK_SHARDS, SHELF_MIN_WORKS,
+  LABEL_MIN_TITLE_COVERAGE,
   subject, prime, status, normalise, rankWorks, carriesSubject, isFiction, isSerial, readMirror,
+  searchSubject, titleCase, shelfSlug, rejected, labelCoverage, shelfMeta, allShelves, autoShelves, shelfWorks,
+  work, workIds, shardOf, inventory, saveShelf, saveShelfIndex, saveWorks, reloadShelves,
 };

@@ -33,3 +33,5 @@ Sitemap: https://tukuk.org/sitemap-cities.xml
 Sitemap: https://tukuk.org/sitemap-heritage.xml
 Sitemap: https://tukuk.org/sitemap-geo.xml
 Sitemap: https://tukuk.org/sitemap-recipes.xml
+Sitemap: https://tukuk.org/sitemap-books.xml
+Sitemap: https://tukuk.org/sitemap-book-works.xml

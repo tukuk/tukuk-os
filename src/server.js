@@ -3672,37 +3672,121 @@ const BK_CSS = `.bk-grid{display:grid;grid-template-columns:repeat(auto-fill,min
 .bk-list th{text-align:left;color:var(--muted);font-weight:600;font-size:.85rem;padding:8px 10px;border-bottom:1px solid var(--line)}
 .bk-list td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 .bk-list td:last-child,.bk-list th:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.bk-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:0 6px 6px 0;font-size:.82rem;color:var(--muted)}`;
+.bk-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:0 6px 6px 0;font-size:.82rem;color:var(--muted)}
+.bk-facts{display:grid;grid-template-columns:max-content 1fr;gap:8px 18px;margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.bk-facts dt{color:var(--muted);font-size:.86rem}
+.bk-facts dd{margin:0;font-size:.95rem}`;
 
-const booksNav = (except) => worldNav('More reading lists', books.SUBJECTS
-  .filter((s) => s.slug !== except)
-  .slice(0, 8)
-  .map((s) => ({ href: `/books/${s.slug}`, icon: '📚', name: s.title, blurb: s.blurb })));
+const booksNav = (except) => worldNav('More reading lists', [{
+  href: '/books', icon: '📚', name: 'All reading lists',
+  blurb: `${books.allShelves().length} subjects, each a list of the works the world keeps reprinting.`,
+}, {
+  href: '/books/a-z', icon: '🔤', name: 'Every subject, A–Z',
+  blurb: `All ${books.allShelves().length} shelves in one page, in order.`,
+}].concat(books.SUBJECTS.filter((s) => s.slug !== except).slice(0, 6)
+  .map((s) => ({ href: `/books/${s.slug}`, icon: '📚', name: s.title, blurb: s.blurb }))));
+
+/**
+ * The works of one shelf, from wherever that kind of shelf keeps them: the curated twenty-four
+ * fetch live through the cache and the mirror, a built shelf is already on disk and is never
+ * fetched by a page request at all. Same shape out of both, so the page below does not care.
+ */
+async function worksForShelf(meta) {
+  if (books.BY_SLUG.get(meta.slug)) return books.subject(meta.slug);
+  return { works: books.shelfWorks(meta.slug), at: meta.at ? Date.parse(meta.at) : null, stale: false };
+}
+
+/**
+ * The sentence under the title. A curated shelf has a hand-written reason to open it; a built
+ * shelf has no blurb, and inventing one would be the site writing marketing about a body of
+ * literature it has not read. So the built line states only arithmetic on the list itself.
+ */
+function shelfIntro(meta, works) {
+  if (meta.blurb) return escapeHtml(meta.blurb);
+  const years = works.map((w) => w.year).filter((y) => Number.isFinite(y));
+  const span = years.length > 1 ? `, first published between ${Math.min(...years)} and ${Math.max(...years)}` : '';
+  return `Books with <b>${escapeHtml(meta.term)}</b> on their catalogue record${span}, ordered by how many editions are in print.`;
+}
+
+/**
+ * Six neighbouring shelves, taken alphabetically after this one. Alphabetical neighbours are a
+ * deliberate choice: "related subjects" would have to be asserted by somebody, and the only
+ * somebody here is a reprint count. A reader who wants the neighbours of "beekeeping" gets the
+ * neighbours of "beekeeping" as the list is ordered, which is what the list actually claims.
+ */
+function shelfNeighbours(slug) {
+  const all = books.allShelves().slice().sort((a, b) => a.title.localeCompare(b.title));
+  const i = all.findIndex((s) => s.slug === slug);
+  if (i < 0) return '';
+  return all.slice(i + 1, i + 7).concat(all.slice(0, Math.max(0, 6 - (all.length - i - 1))))
+    .filter((s) => s.slug !== slug)
+    .map((s) => `<a class="bk-pill" href="/books/${s.slug}">${escapeHtml(s.title)}</a>`).join('');
+}
 
 function booksHubPage() {
+  const shelves = books.allShelves();
+  const built = shelves.length - books.SUBJECTS.length;
   const cards = books.SUBJECTS.map((s) => `<div class="bk-card"><h3><a href="/books/${s.slug}">${escapeHtml(s.title)}</a></h3><p>${escapeHtml(s.blurb)}</p></div>`).join('');
+  // The twelve newest built shelves, so the hub changes as the build goes and a reader who has
+  // seen this page before has a reason to look again. Ordered by title (the index is), because
+  // "newest" here means newest to the catalogue's own list, not news.
+  const recent = books.autoShelves().slice(-12).map((s) => `<a class="bk-pill" href="/books/${s.slug}">${escapeHtml(s.title)}</a>`).join('');
   const body = `<p>“What should I read about <i>this</i>?” is a harder question than “what is this?”, and most sites answer it with an affiliate list. This one answers it with the books the world keeps reprinting: for each subject below, the works carrying that subject in the <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> catalogue — the Internet Archive's record of what libraries actually hold — ordered by how many editions exist.</p>
   <p>Why editions rather than sales or stars? Because a work with forty editions was reprinted, translated and taught for decades, and that number is a fact you can check rather than a score somebody sold. Each entry gives the author, the year it was first published and how many editions exist, and links to the catalogue so you can borrow or read the real thing wherever the rights allow.</p>
   <p>Three rules keep the lists about the subject and not merely near it: a work must carry the subject on its own record, a novel is left out unless the subject is literature (the catalogue tags historical fiction under <i>ancient history</i>), and no author takes more than two of the thirty slots. Statute books and conference proceedings are dropped too — the law list was headed by a record literally titled “Laws, etc”, which is a country's legislation, not a book to read.</p>
+  <h2 class="section-title">Subjects chosen by hand</h2>
   <div class="bk-grid">${cards}</div>
+  ${built > 0 ? `<h2 class="section-title">And ${built} more, from the catalogue itself</h2>
+  <p>Every shelf below was published because the catalogue proved it: the subject string was written by librarians on books that were already on another list, and at least eight works carry it once the rules above are applied. These pages have no introduction — a machine cannot tell you why a subject is worth your time, and pretending otherwise would be the site writing advertising for books it has not read.</p>
+  <p>${recent}</p>
+  <p><a class="bk-pill" href="/books/a-z">🔤 All ${shelves.length} subjects, A–Z</a></p>` : ''}
   <h2 class="section-title">How to use a list like this</h2>
   <p>Start with the newest-looking title on a subject you already know — it will tell you where the field stands now. Then take the oldest one that still gets reprinted; that is usually the book everyone else is arguing with. If a subject bores you, that is information too: a canon is a map of other people's obsessions, not a duty.</p>
   <p class="meta">Data: <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a>, whose metadata is dedicated to the public domain (CC0), refreshed daily and cached on disk. No covers are copied, no book text is mirrored, and no account is needed here or there.</p>`;
   return worldDoc({
-    title: 'Books by Subject — What to Read on 24 Subjects | Tukuk-OS',
-    desc: 'Reading lists for 24 subjects — history, philosophy, physics, economics, medicine and more — built from the most-reprinted works in the Open Library catalogue, with author, first year and edition counts.',
+    title: `Books by Subject — What to Read on ${shelves.length} Subjects | Tukuk-OS`,
+    desc: `Reading lists for ${shelves.length} subjects — history, philosophy, physics, economics, medicine and more — built from the most-reprinted works in the Open Library catalogue, with author, first year and edition counts.`,
     selfUrl: 'https://tukuk.org/books',
-    heroTitle: '📚 Books by Subject', heroSub: 'The most-reprinted works on each subject · author, first year, edition count',
+    heroTitle: '📚 Books by Subject', heroSub: `${shelves.length} subjects · the most-reprinted works on each · author, first year, edition count`,
+    css: BK_CSS, body,
+  }, booksNav(null));
+}
+
+/**
+ * Every shelf on the site in one page, grouped by initial letter. This is the page that makes a
+ * thousand shelves navigable: without it a built shelf is reachable only from search or a
+ * sitemap, and a reader who cannot get to a page is a good reason not to publish it.
+ */
+function booksAzPage() {
+  const all = books.allShelves().slice().sort((a, b) => a.title.localeCompare(b.title, 'en'));
+  const byLetter = new Map();
+  for (const s of all) {
+    const ch = (s.title[0] || '?').toUpperCase();
+    const letter = /[A-Z]/.test(ch) ? ch : '#';
+    if (!byLetter.has(letter)) byLetter.set(letter, []);
+    byLetter.get(letter).push(s);
+  }
+  const letters = [...byLetter.keys()];
+  const jump = letters.map((l) => `<a class="bk-pill" href="#${l === '#' ? 'other' : l}">${l} (${byLetter.get(l).length})</a>`).join('');
+  const sections = letters.map((l) => `<h2 class="section-title" id="${l === '#' ? 'other' : l}">${l}</h2><p>${byLetter.get(l)
+    .map((s) => `<a class="bk-pill" href="/books/${s.slug}">${escapeHtml(s.title)}${s.works ? ` · ${s.works}` : ''}</a>`).join('')}</p>`).join('');
+  const body = `<p>${all.length} reading lists, every subject this site can actually serve. The ${books.SUBJECTS.length} with a written introduction are marked on <a href="/books">the main page</a>; the rest are shelves the catalogue proved for itself, and each one says so on the page.</p>
+  <p>${jump}</p>${sections}`;
+  return worldDoc({
+    title: 'Every Reading List, A–Z — Books by Subject | Tukuk-OS',
+    desc: `All ${all.length} book lists on tukuk.org in alphabetical order, each one the most-reprinted works carrying that subject in the Open Library catalogue.`,
+    selfUrl: 'https://tukuk.org/books/a-z',
+    heroTitle: '🔤 All Reading Lists A–Z', heroSub: `${all.length} subjects · every shelf this site serves`,
     css: BK_CSS, body,
   }, booksNav(null));
 }
 
 async function booksSubjectPage(req, meta) {
-  const { works, at, stale } = await books.subject(meta.slug);
+  const { works, at, stale } = await worksForShelf(meta);
   const when = at ? new Date(at).toUTCString().slice(5, 16) : null;
   if (!works.length) {
     const search = `https://openlibrary.org/search?q=${encodeURIComponent(`subject:"${meta.term}"`)}`;
-    const body = `<p>${escapeHtml(meta.blurb)}</p>
+    const body = `<p>${shelfIntro(meta, works)}</p>
     <div class="st-banner" style="border-left:3px solid #f59e0b"><b>The list could not be loaded just now.</b><br><span class="meta">The catalogue did not answer. The subject itself is fine — <a href="${search}" rel="nofollow noopener">search Open Library directly</a>, or try this page again in a minute.</span></div>`;
     return worldDoc({
       title: `${meta.title} — Reading List (temporarily unavailable) | Tukuk-OS`,
@@ -3711,13 +3795,18 @@ async function booksSubjectPage(req, meta) {
       heroTitle: `📚 ${meta.title}`, heroSub: 'Reading list', css: BK_CSS, body,
     }, booksNav(meta.slug));
   }
-  const rows = works.map((w) => `<tr><td><a href="https://openlibrary.org/works/${encodeURIComponent(w.slug)}" rel="nofollow noopener">${escapeHtml(w.title)}</a></td><td>${escapeHtml(w.author)}</td><td>${w.year || '—'}</td><td>${w.editions ? w.editions.toLocaleString('en-US') : '—'}</td></tr>`).join('');
-  const others = books.SUBJECTS.filter((s) => s.slug !== meta.slug).slice(0, 6).map((s) => `<a class="bk-pill" href="/books/${s.slug}">${escapeHtml(s.title)}</a>`).join('');
-  const body = `<p>${escapeHtml(meta.blurb)}</p>
-  <p>Below are the ${works.length} works carrying the subject <b>${escapeHtml(meta.term)}</b> in the Open Library catalogue with the most editions in print, out of the ${books.PER_SEARCH} the catalogue matches for it. Author and first year are as the record states them; a missing year means the record does not carry one, not that the book is undated.${meta.literary ? '' : ' Novels set in the subject are left out, because a list of historical fiction is not a list of history.'} Where one author dominates the reprint counts, no more than two of their titles appear.</p>
+  // A work gets an internal page only once the build has actually written those records; until
+  // then the row links out to the catalogue. Checking the index (one mtime-cached file read)
+  // rather than each record keeps a shelf page at one cheap lookup instead of thirty shard parses.
+  const hasBookPages = books.workIds().length > 0;
+  const rows = works.map((w) => `<tr><td><a href="${hasBookPages ? `/book/${encodeURIComponent(w.slug)}` : `https://openlibrary.org/works/${encodeURIComponent(w.slug)}`}"${hasBookPages ? '' : ' rel="nofollow noopener"'}>${escapeHtml(w.title)}</a></td><td>${escapeHtml(w.author)}</td><td>${w.year || '—'}</td><td>${w.editions ? w.editions.toLocaleString('en-US') : '—'}</td></tr>`).join('');
+  const more = Number.isFinite(meta.found) && meta.found > works.length
+    ? `, out of the ${meta.found.toLocaleString('en-US')} works the catalogue holds under that subject` : '';
+  const body = `<p>${shelfIntro(meta, works)}</p>
+  <p>Below are the ${works.length} works carrying the subject <b>${escapeHtml(meta.term)}</b> in the Open Library catalogue with the most editions in print${more}. Author and first year are as the record states them; a missing year means the record does not carry one, not that the book is undated.${meta.literary ? '' : ' Novels set in the subject are left out, because a list of historical fiction is not a list of history.'} Where one author dominates the reprint counts, no more than two of their titles appear.</p>
   <table class="bk-list"><thead><tr><th>Title</th><th>Author</th><th>First published</th><th>Editions</th></tr></thead><tbody>${rows}</tbody></table>
   <p class="meta">List built from <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> (CC0 metadata)${when ? ` · retrieved ${escapeHtml(when)} UTC` : ''}${stale ? ' · showing a saved copy while the catalogue is unreachable' : ''} · capped at ${books.LIMIT} works per subject.</p>
-  <h2 class="section-title">Read on</h2><p>${others}</p>
+  <h2 class="section-title">Nearby shelves</h2><p>${shelfNeighbours(meta.slug) || '<a class="bk-pill" href="/books/a-z">All subjects A–Z</a>'}</p>
   <p class="meta">Want the ideas behind these books explained rather than listed? Try <a href="/study">Study</a> for short explainers, <a href="/academy">Academy</a> for deeper tracks, and <a href="/elements">the periodic table</a> or <a href="/constellations">the night sky</a> when the book is about matter or stars.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'ItemList',
@@ -3736,6 +3825,58 @@ async function booksSubjectPage(req, meta) {
   }, booksNav(meta.slug));
 }
 
+/**
+ * One work: a catalogue record, not a copy of the book. Everything here is what Open Library
+ * states about the work, and the two links that matter go where the book itself lives — the
+ * record, and an archive.org copy when the record says there is one. Whether a reader can borrow
+ * it is the Internet Archive's licensing decision, and the page says that rather than implying
+ * the book is free.
+ */
+function bookPage(rec) {
+  const record = `https://openlibrary.org/works/${rec.id}`;
+  const years = rec.year ? String(rec.year) : null;
+  const subjectPills = (rec.subjects || []).map((t) => {
+    const meta = books.shelfMeta(books.shelfSlug(t));
+    return meta
+      ? `<a class="bk-pill" href="/books/${meta.slug}">${escapeHtml(books.titleCase(t))}</a>`
+      : `<span class="bk-pill">${escapeHtml(String(t))}</span>`;
+  }).join('');
+  const lists = (rec.shelves || []).map((s) => {
+    const meta = books.shelfMeta(s);
+    return meta ? `<a class="bk-pill" href="/books/${s}">${escapeHtml(meta.title)}</a>` : '';
+  }).filter(Boolean).join('');
+  const copies = (rec.ia || []).map((id) => `<li><a href="https://archive.org/details/${encodeURIComponent(id)}" rel="nofollow noopener">archive.org/details/${escapeHtml(String(id))}</a></li>`).join('');
+  const body = `<dl class="bk-facts">
+  <dt>Author</dt><dd>${escapeHtml(rec.author || 'Unknown author')}</dd>
+  <dt>First published</dt><dd>${years || 'the record does not say'}</dd>
+  <dt>Editions in the catalogue</dt><dd>${rec.editions ? rec.editions.toLocaleString('en-US') : 'the record does not say'}</dd>
+  <dt>Catalogue id</dt><dd><code>${escapeHtml(rec.id)}</code></dd>
+  </dl>
+  <p>This is a library's record of the work, not a copy of it: everything above is what <a href="${record}" rel="nofollow noopener">the Open Library entry</a> states, and the numbers are the catalogue's own. No text and no cover is reproduced here.</p>
+  ${copies ? `<h2 class="section-title">Copies the catalogue knows about</h2><p>${copies}</p><p class="meta">A link to archive.org means the Internet Archive holds that scan or edition. Whether you can read it in full, borrow it, or only view its contents depends on their licensing and on where you are — the page will tell you when you get there.</p>` : ''}
+  ${subjectPills ? `<h2 class="section-title">What the catalogue tags it with</h2><p>${subjectPills}</p>` : ''}
+  ${lists ? `<h2 class="section-title">On our lists</h2><p>This work appears on ${lists}.</p>` : ''}
+  <p class="meta">Metadata from <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> (CC0)${rec.at ? ` · retrieved ${escapeHtml(new Date(rec.at).toUTCString().slice(5, 16))} UTC` : ''}.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'Book',
+    name: rec.title, ...(rec.author ? { author: { '@type': 'Person', name: rec.author } } : {}),
+    ...(years ? { datePublished: years } : {}),
+    url: `https://tukuk.org/book/${rec.id}`,
+    isBasedOn: record,
+    publisher: { '@type': 'Organization', name: 'Open Library catalogue record', url: record },
+  }).replace(/</g, '\\u003c');
+  return worldDoc({
+    title: `${rec.title}${rec.author ? ` — ${rec.author}` : ''} | Tukuk-OS`,
+    desc: `${rec.title}${rec.author ? ` by ${rec.author}` : ''}: the Open Library catalogue record — first published, how many editions exist, what the work is tagged with, and where a copy can be read or borrowed.`,
+    selfUrl: `https://tukuk.org/book/${rec.id}`,
+    heroTitle: `📖 ${rec.title}`, heroSub: [rec.author, years ? `first published ${years}` : null, rec.editions ? `${rec.editions.toLocaleString('en-US')} editions` : null].filter(Boolean).join(' · '),
+    ld, css: BK_CSS, body,
+  }, worldNav('More from this subject', (rec.shelves || []).slice(0, 4).map((s) => {
+    const meta = books.shelfMeta(s);
+    return { href: `/books/${s}`, icon: '📚', name: meta ? meta.title : s, blurb: (meta && meta.blurb) || 'A reading list from the Open Library catalogue.' };
+  }).concat([{ href: '/books/a-z', icon: '🔤', name: 'Every subject, A–Z', blurb: `${books.allShelves().length} reading lists in one page.` }])));
+}
+
 app.get('/books', limiter.search, (req, res) => {
   try {
     res.type('html').send(booksHubPage());
@@ -3744,8 +3885,28 @@ app.get('/books', limiter.search, (req, res) => {
   }
 });
 
+// Registered before /books/:slug, which would otherwise swallow it as a subject called "a-z".
+app.get('/books/a-z', limiter.search, (req, res) => {
+  try {
+    res.type('html').send(booksAzPage());
+  } catch {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Books A–Z | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🔤 Books A–Z</h1><p>The subject list failed to render. Please try again in a moment.</p><p><a href="/books">Books</a></p>');
+  }
+});
+
+app.get('/book/:id', limiter.search, async (req, res, next) => {
+  const rec = books.work(req.params.id);
+  if (!rec) return next();            // not built yet: a normal 404, never an empty page
+  try {
+    res.type('html').send(bookPage(rec));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Book | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>📖 Book</h1><p>That record failed to render. Please try again in a moment.</p><p><a href="/books">All reading lists</a></p>');
+    console.error('[books]', safeError(error));
+  }
+});
+
 app.get('/books/:slug', limiter.search, async (req, res, next) => {
-  const meta = books.BY_SLUG.get(String(req.params.slug || '').toLowerCase());
+  const meta = books.shelfMeta(String(req.params.slug || '').toLowerCase());
   if (!meta) return next(); // not one of ours: let the normal 404 handle it
   try {
     res.type('html').send(await booksSubjectPage(req, meta));
@@ -4084,6 +4245,58 @@ app.get('/sitemap-recipes.xml', (req, res) => {
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + (urls || '  <!-- the cookbook has not been read yet -->') + '\n</urlset>\n'
+  );
+});
+
+// ── SITEMAP BOOKS — the shelves a build has published, and the works on them ──────
+// The curated twenty-four are already in sitemap.xml beside the hub. What is listed here is
+// the long tail: the built shelves (one url each, straight off the shelf index) and the
+// per-work pages, which are far too many for one file and so go in chunks under an index —
+// the same shape /sitemap-nasa.xml uses for eleven thousand APOD pages.
+// Everything is read from books.inventory(), which reports only what this box can serve from
+// disk right now. A build that is half-done therefore publishes half the urls, not a list of
+// 404s, and no request here touches the catalogue.
+app.get('/sitemap-books.xml', (req, res) => {
+  const { shelves } = books.inventory();
+  const built = shelves.filter((s) => !s.curated);
+  const one = (p, at, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n${at ? `    <lastmod>${String(at).slice(0, 10)}</lastmod>\n` : ''}    <changefreq>weekly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/books/a-z', null, '0.7')]
+    .concat(built.map((s) => one(`/books/${s.slug}`, s.at, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + urls + '\n</urlset>\n'
+  );
+});
+
+// 10,000 work urls a file: under Google's 50,000 cap by a wide margin, and small enough that
+// one chunk is a few hundred kilobytes of string rather than megabytes held per request.
+const BOOK_WORK_CHUNK = 10000;
+
+app.get('/sitemap-book-works.xml', (req, res) => {
+  const total = books.inventory().works.length;
+  const parts = Math.max(1, Math.ceil(total / BOOK_WORK_CHUNK));
+  const list = [];
+  for (let n = 0; n < parts; n += 1) list.push(n);
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + list.map((n) => `  <sitemap>\n    <loc>https://tukuk.org/sitemap-book-works-${n}.xml</loc>\n  </sitemap>`).join('\n')
+    + '\n</sitemapindex>\n'
+  );
+});
+
+// A regex route, as with the APOD years: `:n.xml` cannot be relied on across path-to-regexp
+// versions. An unknown chunk answers 404 rather than an empty urlset, so a crawler asking for
+// chunk 7 of 3 learns that there is no chunk 7 instead of that the cluster is empty.
+app.get(/^\/sitemap-book-works-(\d+)\.xml$/, (req, res) => {
+  const n = Number(req.params[0]);
+  const works = books.inventory().works;
+  const chunk = works.slice(n * BOOK_WORK_CHUNK, (n + 1) * BOOK_WORK_CHUNK);
+  if (!chunk.length) return res.status(404).type('text/plain').send('No such book sitemap chunk');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + chunk.map((w) => `  <url>\n    <loc>https://tukuk.org/book/${encodeURIComponent(w.id)}</loc>\n${w.at ? `    <lastmod>${String(w.at).slice(0, 10)}</lastmod>\n` : ''}    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>`).join('\n')
+    + '\n</urlset>\n'
   );
 });
 
