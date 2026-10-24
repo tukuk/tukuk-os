@@ -34,6 +34,7 @@ const seni = require('./src/seni');
 const negara = require('./src/negara');
 const bendera = require('./src/bendera');
 const agentEditor = require('./src/agent-editor');
+const warmup = require('./src/warmup');
 
 // ── Runtime resilience guard ────────────────────────────────────────────────
 // The boot contract above is "the process never exits on subsystem errors", but
@@ -176,6 +177,17 @@ async function main() {
         .then((rows) => bendera.warmStories(rows, bendera.PRIORITY.length))
         .catch(() => {});
     }, 9000);
+    // Warm the pages whose first render after a restart is expensive (/nasa/sounds was
+    // 13.6 s cold vs 0.68 s warm, /academy/body 8.3 s vs 0.86 s). Sequential, spaced and
+    // fail-soft; WARMUP=0 turns it off. See src/warmup.js.
+    setTimeout(() => {
+      const plan = warmup.plan(process.env, config.port);
+      if (!plan) {
+        console.log('[warmup] disabled (WARMUP=0)');
+        return;
+      }
+      warmup.start(plan).catch(() => {});
+    }, 15000);
     // APOD auto-update + NASA archive backfill — OFF unless NASA_AUTO=1.
     // The NASA pages were removed (content focus + a light server); they are disabled
     // by default so the VPS does not waste CPU/network/disk on them.
