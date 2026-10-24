@@ -38,7 +38,6 @@ const warmup = require('./src/warmup');
 const books = require('./src/books');
 const recipes = require('./src/recipes');
 const radar = require('./src/radar');
-const reranker = require('./src/brain/reranker');
 
 // ── Runtime resilience guard ────────────────────────────────────────────────
 // The boot contract above is "the process never exits on subsystem errors", but
@@ -202,11 +201,6 @@ async function main() {
     // reading lists so the two do not queue behind each other on a slow link; sequential and
     // spaced inside, because that wiki is a shared free service and not our own database.
     setTimeout(() => { recipes.prime().catch(() => {}); }, 30000);
-    // And load the search reranker's backend before the first visitor asks for a search. Its
-    // cloud model loads lazily at the edge, so whoever searched first after a restart paid ~1.1 s
-    // of model load on top of the query (1.3 s against 0.25 s warm, measured 25 Oct 2026). A
-    // no-op when no backend is configured, and it cannot throw.
-    setTimeout(() => { reranker.warm(); }, 35000);
     // Live runtime for /maps/live. If a free aisstream.io token is configured, open ONE
     // inbound AIS socket over the busy lanes and keep the vessel store warm for every
     // viewer; with no token this is a deliberate no-op and the ships layer just reads
