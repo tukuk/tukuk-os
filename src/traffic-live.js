@@ -10,7 +10,11 @@
 //   1. PROXY      — tiles are fetched by us, not by the visitor, so the page stays
 //                   same-origin (no CSP surprises, no referer games) and the provider
 //                   never sees a visitor's IP. One place to swap providers later:
-//                   set TRAFFIC_TILE_URL to any {z}/{x}/{y} template.
+//                   set TRAFFIC_TILE_URL to any {z}/{x}/{y} template, plus
+//                   TRAFFIC_SOURCE_LABEL and (for keyed providers) TRAFFIC_API_KEY.
+//                   Keyless default today, keyed provider one restart away:
+//                     TomTom  https://api.tomtom.com/traffic/map/4/tile/flow/relative/{z}/{x}/{y}.png?key={apiKey}
+//                     HERE    https://traffic.maps.hereapi.com/v1/tiles/{z}/{x}/{y}/png8?apiKey={apiKey}
 //   2. CACHE      — a tile is reused for two minutes, which is exactly how often a
 //                   flow raster genuinely changes. Panning back to a spot you just
 //                   looked at costs zero upstream calls.
@@ -56,6 +60,12 @@ attachGuard(http, { name: 'traffic-tiles', budgetMs: 8000, cooldownMs: 60000, ma
 const DEFAULT_TEMPLATE = 'https://mt{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}&hl=en';
 const TILE_TEMPLATE = String(process.env.TRAFFIC_TILE_URL || DEFAULT_TEMPLATE).trim();
 const SOURCE_LABEL = String(process.env.TRAFFIC_SOURCE_LABEL || 'Google live traffic').trim();
+// Only used when the template asks for it. Keeping the key out of the template means
+// the same provider URL can live in docs/logs without carrying the secret.
+const API_KEY = String(process.env.TRAFFIC_API_KEY || '').trim();
+// A keyed template with no key would just be a wall of 403s in the log, so treat it
+// as "no provider configured" and let the page fall back honestly.
+const TEMPLATE_USABLE = Boolean(TILE_TEMPLATE) && (!TILE_TEMPLATE.includes('{apiKey}') || Boolean(API_KEY));
 
 const MIN_ZOOM = 2;
 const MAX_ZOOM = 19;
@@ -97,14 +107,13 @@ function normalise(z, x, y) {
 
 /** The provider URL for one tile, with our headers and subdomain rotation. */
 function upstreamUrl(z, x, y) {
-  const key = `${z}/${x}/${y}`;
-  if (!TILE_TEMPLATE) return '';
+  if (!TEMPLATE_USABLE) return '';
   return TILE_TEMPLATE
     .replace('{s}', String((x + y) % 4))
     .replace('{z}', String(z))
     .replace('{x}', String(x))
     .replace('{y}', String(y))
-    .replace('{key}', key);
+    .replace('{apiKey}', API_KEY);
 }
 
 function touch(key, entry) {
@@ -191,7 +200,7 @@ function status() {
   for (const entry of cache.values()) if (now - entry.at < FRESH_MS) fresh++;
   return {
     source: SOURCE_LABEL,
-    provider: TILE_TEMPLATE ? safeHost(TILE_TEMPLATE) : '',
+    provider: TEMPLATE_USABLE ? safeHost(TILE_TEMPLATE) : '',
     refreshSec: Math.round(FRESH_MS / 1000),
     staleSec: Math.round(STALE_MS / 1000),
     tiles: {
