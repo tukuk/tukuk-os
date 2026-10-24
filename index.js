@@ -35,6 +35,7 @@ const negara = require('./src/negara');
 const bendera = require('./src/bendera');
 const agentEditor = require('./src/agent-editor');
 const warmup = require('./src/warmup');
+const books = require('./src/books');
 
 // ── Runtime resilience guard ────────────────────────────────────────────────
 // The boot contract above is "the process never exits on subsystem errors", but
@@ -188,6 +189,11 @@ async function main() {
       }
       warmup.start(plan).catch(() => {});
     }, 15000);
+    // Build the twenty-four reading lists before anybody asks for one. A cold /books page
+    // waits on an Open Library search that has measured up to 13 s, and the first visitor
+    // after a deploy should not be the one who pays for it. Sequential, spaced, retried
+    // once, and it never rejects — the disk mirror covers whatever the network refused.
+    setTimeout(() => { books.prime().catch(() => {}); }, 20000);
     // APOD auto-update + NASA archive backfill — OFF unless NASA_AUTO=1.
     // The NASA pages were removed (content focus + a light server); they are disabled
     // by default so the VPS does not waste CPU/network/disk on them.

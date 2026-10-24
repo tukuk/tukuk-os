@@ -78,6 +78,7 @@ const wang = require('./wang');
 const seni = require('./seni');
 const hidup = require('./hidup');
 const bacaan = require('./bacaan');
+const books = require('./books');
 const kamus = require('./kamus');
 const st = require('./statistik');
 const bc = require('./bencana');
@@ -3657,6 +3658,102 @@ app.get('/models', (req, res) => {
 </div></body></html>`);
 });
 
+// ── /books — what to read on a subject, with a reason to read it ──────────────
+// The list is Open Library's (keyless, CC0 metadata) sorted by edition count: a plain
+// proxy for 'this work mattered', since a book with forty editions was taught and
+// reprinted for decades. Nothing is mirrored, no cover is hotlinked, and each title
+// links to the catalogue entry where the reader can borrow or read it.
+const BK_CSS = `.bk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin:18px 0}
+.bk-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel)}
+.bk-card h3{margin:0 0 6px;font-size:1rem}
+.bk-card p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.5}
+.bk-list{width:100%;border-collapse:collapse;margin:16px 0}
+.bk-list th{text-align:left;color:var(--muted);font-weight:600;font-size:.85rem;padding:8px 10px;border-bottom:1px solid var(--line)}
+.bk-list td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.bk-list td:last-child,.bk-list th:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bk-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:0 6px 6px 0;font-size:.82rem;color:var(--muted)}`;
+
+const booksNav = (except) => worldNav('More reading lists', books.SUBJECTS
+  .filter((s) => s.slug !== except)
+  .slice(0, 8)
+  .map((s) => ({ href: `/books/${s.slug}`, icon: '📚', name: s.title, blurb: s.blurb })));
+
+function booksHubPage() {
+  const cards = books.SUBJECTS.map((s) => `<div class="bk-card"><h3><a href="/books/${s.slug}">${escapeHtml(s.title)}</a></h3><p>${escapeHtml(s.blurb)}</p></div>`).join('');
+  const body = `<p>“What should I read about <i>this</i>?” is a harder question than “what is this?”, and most sites answer it with an affiliate list. This one answers it with the books the world keeps reprinting: for each subject below, the works carrying that subject in the <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> catalogue — the Internet Archive's record of what libraries actually hold — ordered by how many editions exist.</p>
+  <p>Why editions rather than sales or stars? Because a work with forty editions was reprinted, translated and taught for decades, and that number is a fact you can check rather than a score somebody sold. Each entry gives the author, the year it was first published and how many editions exist, and links to the catalogue so you can borrow or read the real thing wherever the rights allow.</p>
+  <p>Three rules keep the lists about the subject and not merely near it: a work must carry the subject on its own record, a novel is left out unless the subject is literature (the catalogue tags historical fiction under <i>ancient history</i>), and no author takes more than two of the thirty slots. Statute books and conference proceedings are dropped too — the law list was headed by a record literally titled “Laws, etc”, which is a country's legislation, not a book to read.</p>
+  <div class="bk-grid">${cards}</div>
+  <h2 class="section-title">How to use a list like this</h2>
+  <p>Start with the newest-looking title on a subject you already know — it will tell you where the field stands now. Then take the oldest one that still gets reprinted; that is usually the book everyone else is arguing with. If a subject bores you, that is information too: a canon is a map of other people's obsessions, not a duty.</p>
+  <p class="meta">Data: <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a>, whose metadata is dedicated to the public domain (CC0), refreshed daily and cached on disk. No covers are copied, no book text is mirrored, and no account is needed here or there.</p>`;
+  return worldDoc({
+    title: 'Books by Subject — What to Read on 24 Subjects | Tukuk-OS',
+    desc: 'Reading lists for 24 subjects — history, philosophy, physics, economics, medicine and more — built from the most-reprinted works in the Open Library catalogue, with author, first year and edition counts.',
+    selfUrl: 'https://tukuk.org/books',
+    heroTitle: '📚 Books by Subject', heroSub: 'The most-reprinted works on each subject · author, first year, edition count',
+    css: BK_CSS, body,
+  }, booksNav(null));
+}
+
+async function booksSubjectPage(req, meta) {
+  const { works, at, stale } = await books.subject(meta.slug);
+  const when = at ? new Date(at).toUTCString().slice(5, 16) : null;
+  if (!works.length) {
+    const search = `https://openlibrary.org/search?q=${encodeURIComponent(`subject:"${meta.term}"`)}`;
+    const body = `<p>${escapeHtml(meta.blurb)}</p>
+    <div class="st-banner" style="border-left:3px solid #f59e0b"><b>The list could not be loaded just now.</b><br><span class="meta">The catalogue did not answer. The subject itself is fine — <a href="${search}" rel="nofollow noopener">search Open Library directly</a>, or try this page again in a minute.</span></div>`;
+    return worldDoc({
+      title: `${meta.title} — Reading List (temporarily unavailable) | Tukuk-OS`,
+      desc: `A reading list for ${meta.title.toLowerCase()} from the Open Library catalogue, ordered by how often each work was reprinted.`,
+      selfUrl: `https://tukuk.org/books/${meta.slug}`, robots: 'noindex,follow',
+      heroTitle: `📚 ${meta.title}`, heroSub: 'Reading list', css: BK_CSS, body,
+    }, booksNav(meta.slug));
+  }
+  const rows = works.map((w) => `<tr><td><a href="https://openlibrary.org/works/${encodeURIComponent(w.slug)}" rel="nofollow noopener">${escapeHtml(w.title)}</a></td><td>${escapeHtml(w.author)}</td><td>${w.year || '—'}</td><td>${w.editions ? w.editions.toLocaleString('en-US') : '—'}</td></tr>`).join('');
+  const others = books.SUBJECTS.filter((s) => s.slug !== meta.slug).slice(0, 6).map((s) => `<a class="bk-pill" href="/books/${s.slug}">${escapeHtml(s.title)}</a>`).join('');
+  const body = `<p>${escapeHtml(meta.blurb)}</p>
+  <p>Below are the ${works.length} works carrying the subject <b>${escapeHtml(meta.term)}</b> in the Open Library catalogue with the most editions in print, out of the ${books.PER_SEARCH} the catalogue matches for it. Author and first year are as the record states them; a missing year means the record does not carry one, not that the book is undated.${meta.literary ? '' : ' Novels set in the subject are left out, because a list of historical fiction is not a list of history.'} Where one author dominates the reprint counts, no more than two of their titles appear.</p>
+  <table class="bk-list"><thead><tr><th>Title</th><th>Author</th><th>First published</th><th>Editions</th></tr></thead><tbody>${rows}</tbody></table>
+  <p class="meta">List built from <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> (CC0 metadata)${when ? ` · retrieved ${escapeHtml(when)} UTC` : ''}${stale ? ' · showing a saved copy while the catalogue is unreachable' : ''} · capped at ${books.LIMIT} works per subject.</p>
+  <h2 class="section-title">Read on</h2><p>${others}</p>
+  <p class="meta">Want the ideas behind these books explained rather than listed? Try <a href="/study">Study</a> for short explainers, <a href="/academy">Academy</a> for deeper tracks, and <a href="/elements">the periodic table</a> or <a href="/constellations">the night sky</a> when the book is about matter or stars.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'ItemList',
+    name: `Books on ${meta.title}`,
+    itemListElement: works.slice(0, 20).map((w, i) => ({
+      '@type': 'ListItem', position: i + 1,
+      item: { '@type': 'Book', name: w.title, author: { '@type': 'Person', name: w.author }, ...(w.year ? { datePublished: String(w.year) } : {}) },
+    })),
+  }).replace(/</g, '\\u003c');
+  return worldDoc({
+    title: `${meta.title} — Reading List, Most-Reprinted Books | Tukuk-OS`,
+    desc: `${meta.title} reading list: the ${works.length} most-reprinted works in the Open Library catalogue, with author, first publication year and edition count — plus what the subject is actually about.`,
+    selfUrl: `https://tukuk.org/books/${meta.slug}`,
+    heroTitle: `📚 ${meta.title}`, heroSub: `${works.length} works · ordered by editions in print`,
+    ld, css: BK_CSS, body,
+  }, booksNav(meta.slug));
+}
+
+app.get('/books', limiter.search, (req, res) => {
+  try {
+    res.type('html').send(booksHubPage());
+  } catch {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Books | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>📚 Books</h1><p>The reading lists failed to render. Please try again in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p>');
+  }
+});
+
+app.get('/books/:slug', limiter.search, async (req, res, next) => {
+  const meta = books.BY_SLUG.get(String(req.params.slug || '').toLowerCase());
+  if (!meta) return next(); // not one of ours: let the normal 404 handle it
+  try {
+    res.type('html').send(await booksSubjectPage(req, meta));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Books | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>📚 Books</h1><p>That reading list could not be built just now. Please try again in a moment.</p><p><a href="/books">All subjects</a></p>');
+    console.error('[books]', safeError(error));
+  }
+});
+
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
@@ -3664,6 +3761,10 @@ app.get('/sitemap.xml', async (req, res) => {
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
   const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/charts', '/charts/us', '/charts/gb', '/charts/jp', '/charts/kr', '/charts/ng', '/charts/br', '/charts/in', '/charts/my', '/charts/de', '/charts/id', '/charts/au', '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/castles', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  // The reading lists are live pages as well, and typing twenty-four slugs into the array
+  // above is how a page and its sitemap entry drift apart. Generated from the subject
+  // table, so adding a subject to src/books.js publishes it here too.
+  staticPages.push('/books', ...books.SUBJECTS.map((s) => `/books/${s.slug}`));
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -8170,7 +8271,11 @@ const STUDY_SECTIONS = [
   { href: '/study/riddles', icon: '\uD83E\uDD14', name: 'Riddles', blurb: 'Classic brain-teasers; guess first, then unfold the answer.' },
   { href: '/study/facts', icon: '\uD83D\uDCA1', name: 'Facts', blurb: 'Verified, checkable fun facts across science, history, body and world.' },
   { href: '/study/math', icon: '\u2795', name: 'Math', blurb: 'A mental-math sprint trainer plus the formulas and stories behind numbers.' },
-  { href: '/study/alarm', icon: '\u23F0', name: 'Alarm & Timer', blurb: 'A browser alarm clock and pomodoro timer \u2014 no install, no account.' },
+  { href: '/study/alarm', icon: '\u23F0', name: 'Alarm & Timer', blurb: 'A browser alarm clock and pomodoro timer — no install, no account.' },
+  // The reading lists are the exit from this complex: a fact page answers "what is it", a
+  // book list answers "now what should I read". Linked from every /study page, because that
+  // is where the question occurs.
+  { href: '/books', icon: '\uD83D\uDCDA', name: 'Books by Subject', blurb: 'What to read on twenty-four subjects — the works libraries keep reprinting, with author, year and edition count.' },
 ];
 
 function studyNav() {
@@ -8264,7 +8369,7 @@ function studyHubPage() {
     <div class="study-card"><h3>\uD83E\uDEBA Experiment of the day</h3><p><b>${escapeHtml(exp.name)}</b> \u2014 about ${escapeHtml(exp.time)}.</p><p>${escapeHtml(exp.why.split('.')[0])}.</p><p><a class="btn ghost" href="/study/experiments">Full instructions &rarr;</a></p></div>
     <div class="study-card"><h3>\uD83D\uDCDC History moment</h3><p><b>${escapeHtml(hist.y)}</b> \u2014 ${escapeHtml(hist.t)}</p><p>${escapeHtml(hist.d)}</p><p><a class="btn ghost" href="/study/history">See the full timeline &rarr;</a></p></div>
   </div>
-  <h2 class="section-title">Nine ways to explore</h2>
+  <h2 class="section-title">Ten ways to explore</h2>
   <p>Each section below is a full standalone page \u2014 read it, play with it, or use it for classroom and family curiosity.</p>`;
   return studyDoc({
     title: 'General Knowledge \u2014 Science, Geography, History, Riddles & More | Tukuk-OS',

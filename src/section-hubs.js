@@ -15,14 +15,15 @@ const ng = require('./negara');
 const cu = require('./cuti');
 const gp = require('./gempa');
 const udara = require('./udara');
+const bk = require('./books');
 
 /**
- * The ten front doors by path. One list, used twice: every document below is built from one of
+ * The front doors by path. One list, used twice: every document below is built from one of
  * these, and a test keeps them in step — the urls in the objects and this list must not drift.
  */
 const HUB_PATHS = [
   '/countries', '/weather', '/earthquakes', '/holidays', '/statistics',
-  '/disasters', '/flags', '/maps', '/air-quality', '/academy'
+  '/disasters', '/flags', '/maps', '/air-quality', '/academy', '/books'
 ];
 
 /**
@@ -161,6 +162,17 @@ async function sectionHubs(logger = console) {
         'Each lesson is short enough to read in a few minutes and links to the tool that lets you check the idea for yourself.',
       ],
       keywords: ['academy', 'learn', 'lesson', 'science', 'explained', 'education', 'how does'],
+    },
+    {
+      url: '/books',
+      title: `Books by Subject — what to read on ${bk.SUBJECTS.length} subjects`,
+      description: `Reading lists for ${bk.SUBJECTS.length} subjects — history, philosophy, physics, economics, medicine and more — ordered by how many editions each work is in print.`,
+      lines: [
+        `What should I read about history, philosophy or physics? These ${bk.SUBJECTS.length} reading lists answer with the books libraries keep reprinting, not with an affiliate pick.`,
+        'Each entry gives the author, the year it was first published and how many editions exist, and links to the Open Library record where the book can be borrowed or read.',
+        'Novels set in a subject are left out of a non-literary list, and no author takes more than two of the thirty slots.',
+      ],
+      keywords: ['books', 'reading list', 'what to read', 'philosophy', 'history', 'science books', 'open library'],
     },
   ];
 }
