@@ -24,6 +24,7 @@ const net = require('./src/net');
 const store = require('./src/store');
 const { indexBlogPosts } = require('./src/blog-index');
 const { indexGeoHubs, indexSectionHubs } = require('./src/cluster-index');
+const { indexBooksShelves } = require('./src/books-index');
 const { sectionHubs } = require('./src/section-hubs');
 const { app, geoClusters, notifyIndexNow } = require('./src/server');
 const news = require('./src/news');
@@ -132,6 +133,13 @@ async function main() {
       // Only blog posts and geo clusters were indexed, so searching "weather" or "how many
       // countries" reached third-party pages instead of the answer we publish ourselves.
       sectionHubs().then((hubs) => indexSectionHubs(index, hubs)).catch((err) => console.warn(`[section-hubs] skipped: ${err.message}`));
+      // And the 2,550 reading lists. They were published but never indexed, which is why
+      // "beekeeping" and "climate change" reached a crawled BBC article while /books/bees
+      // and /books/climate-change sat on this disk unanswered. Files only, no HTTP; the hash
+      // guard means a restart that changed nothing sends nothing.
+      indexBooksShelves(index, books)
+        .then(({ count, skipped }) => { if (!skipped && count) console.log(`[books-index] ${count} reading lists are searchable`); })
+        .catch((err) => console.warn(`[books-index] skipped: ${err.message}`));
     }, 8000);
   } catch (error) {
     // Don't die — the search engine can still answer from the fallback cache.
