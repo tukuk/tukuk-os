@@ -85,6 +85,103 @@ test('aisStatus: reports no-token or closed without a token', () => {
   assert.equal(typeof s.vessels, 'number');
 });
 
+// ── the feed's real envelope (captured off the socket, not imagined) ───────────────
+// Both samples below are verbatim from wss://stream.aisstream.io/v0/stream on 25 Oct 2026.
+// They are the regression guard for the bug that made the ship layer read "live" with
+// zero vessels: the parser had been written against a flat {type, data} guess, so every
+// real message matched no key and was dropped without a word.
+const REAL_POSITION = JSON.stringify({
+  MetaData: {
+    MMSI: 538012693, MMSI_String: 538012693, ShipName: 'MAERSK PUELO        ',
+    latitude: 1.23603, longitude: 103.93925, time_utc: '2026-10-24 19:38:36.379823433 +0000 UTC',
+  },
+  MessageType: 'PositionReport',
+  Message: {
+    PositionReport: {
+      MessageID: 1, RepeatIndicator: 0, UserID: 538012693, Valid: true, NavigationalStatus: 0,
+      RateOfTurn: 0, Sog: 12.6, PositionAccuracy: false, Longitude: 103.93925333333333,
+      Latitude: 1.23603, Cog: 248.3, TrueHeading: 248, Timestamp: 35,
+      SpecialManoeuvreIndicator: 0, Spare: 0, Raim: false, CommunicationState: 99662,
+    },
+  },
+});
+const REAL_STATIC = JSON.stringify({
+  MetaData: {
+    MMSI: 533110714, MMSI_String: 533110714, ShipName: 'HERA',
+    latitude: 1.24041, longitude: 103.80322, time_utc: '2026-10-24 19:38:58.187492758 +0000 UTC',
+  },
+  MessageType: 'ShipStaticData',
+  Message: {
+    ShipStaticData: {
+      AisVersion: 2, CallSign: '9M3234', Destination: '',
+      Dimension: { A: 96, B: 9, C: 13, D: 2 }, Dte: false,
+      Eta: { Day: 0, Hour: 0, Minute: 0, Month: 0 }, FixType: 1, ImoNumber: 1075375,
+      MaximumStaticDraught: 0, MessageID: 5, Name: 'HERA', RepeatIndicator: 0,
+      Spare: false, Type: 80, UserID: 533110714, Valid: true,
+    },
+  },
+});
+
+test('ingestMessage: a real aisstream envelope becomes a vessel', () => {
+  radar.ingestMessage(REAL_POSITION);
+  const v = radar.vesselsNear(1.23603, 103.93925, 5).find((x) => x.mmsi === 538012693);
+  assert.ok(v, 'the captured PositionReport must land in the store');
+  assert.equal(v.name, 'MAERSK PUELO', 'name comes from MetaData, trimmed');
+  assert.equal(v.lat, 1.23603);
+  assert.equal(v.lon, 103.93925333333333);
+  assert.equal(v.speed, 13);
+  assert.equal(v.course, 248);
+  assert.equal(v.heading, 248);
+  assert.equal(v.navStatus, 0);
+});
+
+test('ingestMessage: a real ShipStaticData names the ship and its kind', () => {
+  // Static data carries no fix of its own — the latitude in MetaData belongs to the
+  // receiver that heard the broadcast, not necessarily to the ship — so it must not put
+  // a marker on the map on its own. It is remembered, and the next fix joins it up.
+  radar.ingestMessage(REAL_STATIC);
+  assert.ok(!radar.vesselsNear(1.24041, 103.80322, 5).find((x) => x.mmsi === 533110714),
+    'no position report yet, so no marker');
+  radar.ingestMessage(JSON.stringify({
+    MetaData: { MMSI: 533110714, ShipName: 'HERA' },
+    MessageType: 'PositionReport',
+    Message: { PositionReport: {
+      UserID: 533110714, Latitude: 1.24041, Longitude: 103.80322,
+      Sog: 0, Cog: 90, TrueHeading: 90, NavigationalStatus: 5,
+    } },
+  }));
+  const v = radar.vesselsNear(1.24041, 103.80322, 5).find((x) => x.mmsi === 533110714);
+  assert.ok(v, 'the remembered static data joins the first fix');
+  assert.equal(v.name, 'HERA');
+  assert.equal(v.type, 'Tanker', 'Type 80 is a tanker, not the number 80');
+  assert.equal(v.dest, '', 'an empty destination stays empty rather than becoming "null"');
+  assert.equal(v.speed, 0, 'a moored ship reports 0.0 kt, which is a fact, not a blank');
+});
+
+test('ingestMessage: "not available" sentinels are dropped, the fix is kept', () => {
+  const nothing = JSON.stringify({
+    MetaData: { MMSI: 111222333, ShipName: 'SENTINELS' },
+    MessageType: 'PositionReport',
+    Message: { PositionReport: {
+      UserID: 111222333, Latitude: 4.5, Longitude: 100.2,
+      Sog: 102.3, Cog: 360, TrueHeading: 511, NavigationalStatus: 15,
+    } },
+  });
+  radar.ingestMessage(nothing);
+  const v = radar.vesselsNear(4.5, 100.2, 10).find((x) => x.mmsi === 111222333);
+  assert.ok(v, 'the position is real and must still be plotted');
+  assert.equal(v.speed, null, '102.3 kt is "speed not available"');
+  assert.equal(v.course, null, '360° is "course not available"');
+  assert.equal(v.heading, null, '511 is "heading not available"');
+  assert.equal(v.navStatus, null, '15 is "navigational status undefined"');
+});
+
+test('ingestMessage: the subscription handshake is not a ship', () => {
+  const before = radar.aisStatus().vessels;
+  radar.ingestMessage(JSON.stringify({ Message: { CompressionEnabled: true }, MessageType: 'SubscriptionConfirmation' }));
+  assert.equal(radar.aisStatus().vessels, before, 'no phantom vessel from a handshake');
+});
+
 // ── /maps/live page ─────────────────────────────────────────────────────────────────
 test('GET /maps/live returns a complete rendered page', async () => {
   const res = await fetch(base + '/maps/live');

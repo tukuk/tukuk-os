@@ -140,38 +140,87 @@ const pick = (o, keys) => {
   return null;
 };
 
+// AIS reports a vessel's kind as an ITU-R M.1371 type code (70 = cargo, 80 = tanker …).
+// A popup is no place for a bare "70", so the common codes get their plain name and an
+// unlisted code honestly shows nothing rather than a guess.
+function shipKind(code) {
+  if (!Number.isFinite(code)) return '';
+  if (code >= 70 && code <= 79) return 'Cargo';
+  if (code >= 80 && code <= 89) return 'Tanker';
+  if (code >= 60 && code <= 69) return 'Passenger';
+  if (code >= 40 && code <= 49) return 'High-speed craft';
+  if (code >= 90 && code <= 99) return 'Other';
+  switch (code) {
+    case 30: return 'Fishing';
+    case 31: case 32: return 'Towing';
+    case 33: return 'Dredger';
+    case 34: return 'Diving operations';
+    case 35: return 'Military';
+    case 36: return 'Sailing';
+    case 37: return 'Pleasure craft';
+    case 50: return 'Pilot';
+    case 51: return 'Search & rescue';
+    case 52: return 'Tug';
+    case 53: return 'Port tender';
+    case 54: return 'Anti-pollution';
+    case 55: return 'Law enforcement';
+    case 58: return 'Medical transport';
+    default: return '';
+  }
+}
+
 // Feed one raw AIS message into the store. Exported (as ingestMessage) so the parser can
 // be tested offline with a captured sample, without a token or a network.
+//
+// The feed is an ENVELOPE, captured verbatim off the socket on 25 Oct 2026:
+//   {"MetaData":{"MMSI":538012693,"ShipName":"MAERSK PUELO","latitude":1.23603,…},
+//    "MessageType":"PositionReport",
+//    "Message":{"PositionReport":{"UserID":538012693,"Latitude":1.23603,
+//               "Longitude":103.93925,"Sog":12.6,"Cog":248.3,"TrueHeading":248,…}}}
+// This parser was first written against a flat {type, data} guess, so every live message
+// matched no key and was silently dropped — the socket read "live" with zero ships for
+// ever. Both shapes are read now; the flat one is what the older offline samples use.
 function ingestMessage(raw) {
   let m;
   try { m = JSON.parse(typeof raw === 'string' ? raw : raw.toString()); } catch { return; }
-  const d = m && m.data;
-  if (!d || d.mmsi == null) return;
-  const id = Number(d.mmsi);
+  if (!m || typeof m !== 'object') return;
+  const t = String(m.MessageType || m.type || '');
+  if (!t) return;                                      // SubscriptionConfirmation and friends
+  const meta = m.MetaData && typeof m.MetaData === 'object' ? m.MetaData : {};
+  const env = m.Message && typeof m.Message === 'object' ? m.Message : null;
+  const d = (env && env[t] && typeof env[t] === 'object' ? env[t] : null)
+    || (m.data && typeof m.data === 'object' ? m.data : null);
+  if (!d) return;
+  const id = fin(pick(d, ['UserID', 'user_id', 'mmsi']) ?? pick(meta, ['MMSI', 'mmsi']));
   if (!Number.isFinite(id)) return;
-  const t = String(m.type || '');
   const cur = vessels.get(id) || { mmsi: id };
   if (t === 'PositionReport') {
-    const lat = fin(pick(d, ['lat', 'latitude']));
-    const lon = fin(pick(d, ['lon', 'longitude']));
+    const lat = fin(pick(d, ['Latitude', 'lat', 'latitude']) ?? pick(meta, ['latitude', 'Latitude']));
+    const lon = fin(pick(d, ['Longitude', 'lon', 'longitude']) ?? pick(meta, ['longitude', 'Longitude']));
     if (Number.isFinite(lat) && Number.isFinite(lon)) { cur.lat = lat; cur.lon = lon; }
-    const sog = fin(pick(d, ['sog', 'SOG', 'speed_over_ground']));
-    const cog = fin(pick(d, ['cog', 'COG', 'course_over_ground']));
-    const hdg = fin(pick(d, ['true_heading', 'hdg', 'heading']));
-    const nav = pick(d, ['nav_status', 'navStatus', 'navi']);
-    if (Number.isFinite(sog)) cur.speed = Math.round(sog);
-    if (Number.isFinite(cog)) cur.course = Math.round(cog);
-    if (Number.isFinite(hdg)) cur.heading = Math.round(hdg);
-    if (nav != null) cur.navStatus = Number(nav);
+    const sog = fin(pick(d, ['Sog', 'sog', 'SOG', 'speed_over_ground']));
+    const cog = fin(pick(d, ['Cog', 'cog', 'COG', 'course_over_ground']));
+    const hdg = fin(pick(d, ['TrueHeading', 'true_heading', 'hdg', 'heading']));
+    const nav = pick(d, ['NavigationalStatus', 'nav_status', 'navStatus', 'navi']);
+    // The feed's own "not available" sentinels: speed 102.3, course 360, heading 511,
+    // navigational status 15. They are not facts about the ship and must not be drawn.
+    if (Number.isFinite(sog) && sog < 102) cur.speed = Math.round(sog);
+    if (Number.isFinite(cog) && cog < 360) cur.course = Math.round(cog);
+    if (Number.isFinite(hdg) && hdg < 360) cur.heading = Math.round(hdg);
+    if (nav != null && Number(nav) < 15) cur.navStatus = Number(nav);
+    const nm = pick(meta, ['ShipName', 'ship_name']);
+    if (nm != null) cur.name = String(nm).trim();
     cur.seenAt = Date.now();
     msgCount++;
   } else if (t === 'ShipStaticData') {
     const sd = d.static_data && typeof d.static_data === 'object' ? d.static_data : d;
-    const name = pick(sd, ['name', 'NAME']);
-    const type = pick(sd, ['ship_type', 'type', 'shp_type']);
-    const dest = pick(sd, ['destination', 'DESTINATION']);
+    const name = pick(sd, ['Name', 'name', 'NAME']) ?? pick(meta, ['ShipName']);
+    const rawType = pick(sd, ['Type', 'ship_type', 'type', 'shp_type']);
+    const dest = pick(sd, ['Destination', 'destination', 'DESTINATION']);
+    const kind = Number.isFinite(fin(rawType)) ? shipKind(Number(rawType))
+      : (rawType == null ? '' : String(rawType).trim());
     if (name != null) cur.name = String(name).trim();
-    if (type != null) cur.type = String(type).trim();
+    if (kind) cur.type = kind;
     if (dest != null) cur.dest = String(dest).trim();
     if (!cur.seenAt) cur.seenAt = Date.now();
     msgCount++;
@@ -221,6 +270,9 @@ function aisStatus() {
   return {
     state: wsState,
     live: wsState === 'live',
+    // A socket that is up but has never delivered a report is not yet a live layer; the
+    // page says "waiting for the first report" rather than claiming ships it cannot show.
+    receiving: msgCount > 0,
     enabled: !!AIS_TOKEN,
     vessels: vessels.size,
     msgs: msgCount,

@@ -10766,7 +10766,7 @@ function draw(j){if(airG)airG.clearLayers();if(shipG)shipG.clearLayers();var na=
   (j.vessels||[]).forEach(function(v){if(ns++>=600)return;var m2=L.marker([v.lat,v.lon],{icon:shIcon(v),title:(v.name||'ship')});m2.bindPopup(shPop(v));shipG.addLayer(m2);});
   var ais=j.ais||{};var txt='\u2708 '+na+' aircraft \u00b7 \ud83d\udea2 '+ns+' ships';
   if(j.aircraftError)txt+=' \u00b7 sky feed busy, showing last snapshot';else if(j.aircraftAgeMs>0)txt+=' \u00b7 updated '+Math.round(j.aircraftAgeMs/1000)+'s ago';
-  var note=ais.live?('ships live over '+ais.boxes+' lanes'):(ais.enabled?'connecting to the ship feed\u2026':'ships not enabled on this server yet');
+  var note=ais.live?(ais.receiving===false?'ship feed connected \u2014 waiting for the first report':('ships live over '+ais.boxes+' lanes')):(ais.enabled?'connecting to the ship feed\u2026':'ships not enabled on this server yet');
   document.getElementById('radar-legend').textContent=txt+' \u00b7 '+note;}
 function fly(){var v=document.getElementById('radar-q').value.trim();if(!v)return;var m=v.split(',');
   if(m.length===2){var a=parseFloat(m[0]),b=parseFloat(m[1]);if(isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180){map.setView([a,b],8);return;}}
