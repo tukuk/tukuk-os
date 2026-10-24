@@ -115,22 +115,26 @@ const AIS_TOKEN = String(process.env.AISSTREAM_TOKEN || '').trim();
 // on every continent we can actually hear, so the layer is alive wherever a visitor looks.
 // Each box is [[southWestLat, southWestLon], [northEastLat, northEastLon]]. Edit freely.
 //
-// Chosen by counting, not by guessing. Two minutes on the live socket (25 Oct 2026, twelve
-// candidate boxes at once) reported: English Channel 1191, US East Coast 175, US West Coast
-// 159, eastern Mediterranean 83, Brazil/Santos 60, South China Sea 45, Malacca+Singapore 27,
-// Tokyo Bay 15 — and Persian Gulf 1, Panama 1, Shanghai 0, Red Sea 0. The fourth and fifth
-// boxes used to be the Gulf and Suez; the Gulf brought one report in two minutes, so the
-// traffic-carrying lanes took its place. A lane with no receiver is worth re-testing later:
-// aisstream adds ground stations without telling anyone.
+// Chosen by counting, not by guessing. Two rounds on the live socket (25 Oct 2026, twelve
+// then seventeen candidate boxes at once, a different hour each) reported per 90 s: English
+// Channel 1191/1365, US Gulf 219, US East 175/208, US West 159/206, eastern Mediterranean
+// 83/100, South China Sea 45/98, Brazil/Santos 60/72, Australia/Sydney 59, Gibraltar 55,
+// Tokyo Bay 15/30, Malacca+Singapore 27/19, Panama 1/6 — and Persian Gulf 1/0, Shanghai 0/0,
+// Red Sea 0/0, Hong Kong 0/0, Mumbai 0/0. The Gulf box of the original five is gone in favour
+// of the lanes that carry traffic. Asia outside Malacca and the South China Sea is simply not
+// fed by this feed's receivers: worth re-testing later, since aisstream adds stations quietly.
 const AIS_BOXES = [
   [[1.0, 99.0], [7.5, 105.5]],       // Malacca & Singapore Strait — the home lane
   [[19.0, 110.0], [32.0, 123.0]],    // South China Sea to the East China Sea
   [[33.0, 128.0], [36.5, 141.0]],    // Tokyo Bay, Korea Strait, Japan's Pacific coast
   [[48.5, -3.0], [52.0, 4.5]],       // English Channel / Dover / southern North Sea
   [[29.0, 30.5], [36.5, 47.0]],      // Levant, Suez approaches, Turkish coast
+  [[34.5, -7.5], [37.5, -3.0]],      // Strait of Gibraltar & the Alboran Sea
   [[37.0, -76.0], [41.5, -70.0]],    // New York, Chesapeake, Boston — US East Coast
-  [[32.0, -122.5], [35.0, -117.0]],  // Los Angeles, Long Beach, San Francisco — US West Coast
+  [[27.0, -96.0], [30.5, -88.0]],    // Houston, New Orleans, Mobile — US Gulf Coast
+  [[32.0, -122.5], [35.0, -117.0]],  // Los Angeles, Long Beach, San Francisco
   [[-25.0, -47.5], [-21.5, -42.0]],  // Santos, Rio, Sepetiba — Brazil's busiest water
+  [[-35.0, 150.0], [-31.5, 154.5]],  // Sydney, Newcastle, Port Botany — south-east Australia
 ];
 
 const vessels = new Map();        // mmsi -> merged last-known record
