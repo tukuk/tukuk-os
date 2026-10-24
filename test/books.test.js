@@ -264,6 +264,17 @@ test('a label has to be a word its own books use', () => {
   assert.strictEqual(books.labelCoverage('beekeeping', []), null, 'no titles, no opinion');
 });
 
+test('a sitemap index never advertises a chunk that does not exist', () => {
+  // Measured live on the VPS before its first build: /sitemap-book-works.xml listed chunk 0 and
+  // chunk 0 answered 404, because the count was clamped to a minimum of one.
+  assert.strictEqual(books.workSitemapChunks(0, 10000), 0, 'nothing built, nothing advertised');
+  assert.strictEqual(books.workSitemapChunks(1, 10000), 1);
+  assert.strictEqual(books.workSitemapChunks(10000, 10000), 1, 'a full chunk is one file, not two');
+  assert.strictEqual(books.workSitemapChunks(10001, 10000), 2, 'one work over the cap starts a second file');
+  assert.strictEqual(books.workSitemapChunks(30000, 10000), 3, 'the scale this build is aimed at');
+  assert.strictEqual(books.workSitemapChunks('nonsense', 10000), 0, 'a bad count is an empty cluster, not NaN chunks');
+});
+
 test('a work id finds its shard with no lookup table, from either shape of key', () => {
   const a = books.shardOf('OL2941508W');
   assert.strictEqual(a, books.shardOf('/works/OL2941508W'), 'the path and the bare id must agree');

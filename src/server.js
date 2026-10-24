@@ -4275,7 +4275,9 @@ const BOOK_WORK_CHUNK = 10000;
 
 app.get('/sitemap-book-works.xml', (req, res) => {
   const total = books.inventory().works.length;
-  const parts = Math.max(1, Math.ceil(total / BOOK_WORK_CHUNK));
+  // Not Math.max(1, …): an index that lists a chunk which 404s is the one thing a sitemap is
+  // not allowed to do, and before the first build the box had no works at all.
+  const parts = books.workSitemapChunks(total, BOOK_WORK_CHUNK);
   const list = [];
   for (let n = 0; n < parts; n += 1) list.push(n);
   res.type('application/xml').send(

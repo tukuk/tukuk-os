@@ -570,6 +570,19 @@ function inventory() {
   return { shelves, works: workIds() };
 }
 
+/**
+ * How many work-sitemap chunks a build of `total` works needs — and zero works is zero chunks.
+ * A sitemap index may not advertise a file that answers 404. This is not theoretical: the VPS
+ * was probed before its first build (24 Oct 2026) and /sitemap-book-works.xml listed chunk 0
+ * while chunk 0 replied "No such book sitemap chunk", because the route had a Math.max(1, …) in
+ * it. An empty index is valid XML and simply says the cluster has no pages to offer yet.
+ */
+function workSitemapChunks(total, chunk) {
+  const n = Number(total) || 0;
+  const size = Number(chunk) || 1;
+  return n <= 0 ? 0 : Math.ceil(n / size);
+}
+
 // ── Writers, used by the build script only ─────────────────────────────────────────
 /** Save one shelf: the index entry plus its own file, so a page reads one small file. */
 function saveShelf(shelf) {
@@ -623,4 +636,5 @@ module.exports = {
   subject, prime, status, normalise, rankWorks, carriesSubject, isFiction, isSerial, readMirror,
   searchSubject, titleCase, shelfSlug, rejected, labelCoverage, shelfMeta, allShelves, autoShelves, shelfWorks,
   work, workIds, shardOf, inventory, saveShelf, saveShelfIndex, saveWorks, reloadShelves,
+  workSitemapChunks,
 };
