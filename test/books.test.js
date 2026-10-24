@@ -225,6 +225,21 @@ test('the six families of subject string that never become a page', () => {
     cosmologie: 'the Dutch spelling of a shelf the site already has',
     dermatologie: 'the Dutch spelling of dermatology',
     diagnostiek: 'the Dutch spelling of diagnosis',
+    // Doubling the build to 2,001 shelves on the VPS put 70 foreign labels live (3.5%), found by
+    // diffing the vocabulary of the new half against the hand-checked old half. Coverage cannot see
+    // any of them — a French, German, Dutch, Spanish or Italian subject really does find books in
+    // that language — so each observed spelling is named here. A language-ratio gate was measured
+    // first and rejected: "numismatics" scores 0.33 English while "christentum" scores 0.70, so the
+    // bands cross — the field records a work's translations, not the label's language.
+    'actualisation de soi': 'French for self-actualisation',
+    christentum: 'German for Christianity',
+    mythen: 'Dutch/German for myths',
+    technik: 'the German spelling of a shelf the site already has',
+    'soziale probleme': 'German social problems (soziale, not sociale)',
+    'corps humain': 'French for the human body',
+    comportement: 'French for behaviour',
+    'economia politica': 'the Spanish/Italian spelling of political economy',
+    dieu: 'French for God',
     methods: 'a subdivision standing on its own',
     origin: 'a subdivision standing on its own',
     history: 'a bare umbrella word',
@@ -238,7 +253,10 @@ test('the six families of subject string that never become a page', () => {
   // And the ones that must survive, each a real topic a reader might ask for.
   for (const term of ['beekeeping', 'world war', 'history of science', 'photography', 'mountaineering',
     'numismatics', 'organic chemistry', 'problem solving', 'amateur radio',
-    'play therapy', 'child development', 'mortality', 'death', 'psychology', 'optics']) {
+    'play therapy', 'child development', 'mortality', 'death', 'psychology', 'optics',
+    // The foreign shapes must not eat an English discipline that ends the same way.
+    'mythology', 'cosmology', 'topography', 'ethnography', 'cartography', 'oncology', 'graphology',
+    'theory of computation', 'history of science', 'philosophy of mind', 'psychology of language']) {
     assert.strictEqual(books.rejected(term), null, `“${term}” is a subject, not a label`);
   }
   // Anchored on purpose: the umbrella list must not eat a qualified phrase.
