@@ -3671,6 +3671,11 @@ const BK_CSS = `.bk-grid{display:grid;grid-template-columns:repeat(auto-fill,min
 .bk-list{width:100%;border-collapse:collapse;margin:16px 0}
 .bk-list th{text-align:left;color:var(--muted);font-weight:600;font-size:.85rem;padding:8px 10px;border-bottom:1px solid var(--line)}
 .bk-list td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.bk-covtd{width:54px;padding:6px 6px 6px 0!important}
+.bk-cov{width:44px;height:66px;object-fit:cover;border-radius:4px;border:1px solid var(--line);display:block;background:var(--panel)}
+.bk-cover{float:right;margin:0 0 14px 20px;line-height:0}
+.bk-cover img{width:170px;height:255px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;box-shadow:0 8px 22px rgba(0,0,0,.28)}
+@media(max-width:560px){.bk-cover{float:none;margin:0 0 16px;text-align:center;line-height:normal}}
 .bk-list td:last-child,.bk-list th:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .bk-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:0 6px 6px 0;font-size:.82rem;color:var(--muted)}
 .bk-facts{display:grid;grid-template-columns:max-content 1fr;gap:8px 18px;margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
@@ -3746,7 +3751,7 @@ function booksHubPage() {
   <p><a class="bk-pill" href="/books/a-z">🔤 All ${shelves.length} subjects, A–Z</a></p>` : ''}
   <h2 class="section-title">How to use a list like this</h2>
   <p>Start with the newest-looking title on a subject you already know — it will tell you where the field stands now. Then take the oldest one that still gets reprinted; that is usually the book everyone else is arguing with. If a subject bores you, that is information too: a canon is a map of other people's obsessions, not a duty.</p>
-  <p class="meta">Data: <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a>, whose metadata is dedicated to the public domain (CC0), refreshed daily and cached on disk. No covers are copied, no book text is mirrored, and no account is needed here or there.</p>`;
+  <p class="meta">Data: <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a>, whose metadata is dedicated to the public domain (CC0), refreshed daily and cached on disk. Covers, where a work has a scanned copy, are linked from the Internet Archive's own image service and never stored here; no book text is mirrored, and no account is needed here or there.</p>`;
   return worldDoc({
     title: `Books by Subject — What to Read on ${shelves.length} Subjects | Tukuk-OS`,
     desc: `Reading lists for ${shelves.length} subjects — history, philosophy, physics, economics, medicine and more — built from the most-reprinted works in the Open Library catalogue, with author, first year and edition counts.`,
@@ -3803,12 +3808,19 @@ async function booksSubjectPage(req, meta) {
   // then the row links out to the catalogue. Checking the index (one mtime-cached file read)
   // rather than each record keeps a shelf page at one cheap lookup instead of thirty shard parses.
   const hasBookPages = books.workIds().length > 0;
-  const rows = works.map((w) => `<tr><td><a href="${hasBookPages ? `/book/${encodeURIComponent(w.slug)}` : `https://openlibrary.org/works/${encodeURIComponent(w.slug)}`}"${hasBookPages ? '' : ' rel="nofollow noopener"'}>${escapeHtml(w.title)}</a></td><td>${escapeHtml(w.author)}</td><td>${w.year || '—'}</td><td>${w.editions ? w.editions.toLocaleString('en-US') : '—'}</td></tr>`).join('');
+  // The cover is never copied here: when the work names a scanned archive.org item, the row
+  // links that item's own thumbnail and `onerror` clears the cell if IA no longer serves it,
+  // so a withdrawn scan degrades to the plain row rather than a broken-image icon.
+  const rows = works.map((w) => {
+    const cov = books.coverUrl(w.ia);
+    const cell = cov ? `<td class="bk-covtd"><img class="bk-cov" src="${cov}" alt="" loading="lazy" width="44" height="66" onerror="this.closest('td').innerHTML=''"></td>` : '<td class="bk-covtd"></td>';
+    return `<tr>${cell}<td><a href="${hasBookPages ? `/book/${encodeURIComponent(w.slug)}` : `https://openlibrary.org/works/${encodeURIComponent(w.slug)}`}"${hasBookPages ? '' : ' rel="nofollow noopener"'}>${escapeHtml(w.title)}</a></td><td>${escapeHtml(w.author)}</td><td>${w.year || '—'}</td><td>${w.editions ? w.editions.toLocaleString('en-US') : '—'}</td></tr>`;
+  }).join('');
   const more = Number.isFinite(meta.found) && meta.found > works.length
     ? `, out of the ${meta.found.toLocaleString('en-US')} works the catalogue holds under that subject` : '';
   const body = `<p>${shelfIntro(meta, works)}</p>
   <p>Below are the ${works.length} works carrying the subject <b>${escapeHtml(meta.term)}</b> in the Open Library catalogue with the most editions in print${more}. Author and first year are as the record states them; a missing year means the record does not carry one, not that the book is undated.${meta.literary ? '' : ' Novels set in the subject are left out, because a list of historical fiction is not a list of history.'} Where one author dominates the reprint counts, no more than two of their titles appear.</p>
-  <table class="bk-list"><thead><tr><th>Title</th><th>Author</th><th>First published</th><th>Editions</th></tr></thead><tbody>${rows}</tbody></table>
+  <table class="bk-list"><thead><tr><th></th><th>Title</th><th>Author</th><th>First published</th><th>Editions</th></tr></thead><tbody>${rows}</tbody></table>
   <p class="meta">List built from <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> (CC0 metadata)${when ? ` · retrieved ${escapeHtml(when)} UTC` : ''}${stale ? ' · showing a saved copy while the catalogue is unreachable' : ''} · capped at ${books.LIMIT} works per subject.</p>
   <h2 class="section-title">Nearby shelves</h2><p>${shelfNeighbours(meta.slug) || '<a class="bk-pill" href="/books/a-z">All subjects A–Z</a>'}</p>
   <p class="meta">Want the ideas behind these books explained rather than listed? Try <a href="/study">Study</a> for short explainers, <a href="/academy">Academy</a> for deeper tracks, and <a href="/elements">the periodic table</a> or <a href="/constellations">the night sky</a> when the book is about matter or stars.</p>`;
@@ -3850,13 +3862,20 @@ function bookPage(rec) {
     return meta ? `<a class="bk-pill" href="/books/${s}">${escapeHtml(meta.title)}</a>` : '';
   }).filter(Boolean).join('');
   const copies = (rec.ia || []).map((id) => `<li><a href="https://archive.org/details/${encodeURIComponent(id)}" rel="nofollow noopener">archive.org/details/${escapeHtml(String(id))}</a></li>`).join('');
-  const body = `<dl class="bk-facts">
+  // The cover, when the record names a scanned item, is IA's own thumbnail linked in — not a
+  // file on this server. `onerror` removes the box entirely if IA stops serving it, so a
+  // withdrawn scan leaves a clean record page instead of a broken image beside the facts.
+  const cover = books.coverUrl(rec.ia);
+  const coverHtml = cover
+    ? `<div class="bk-cover"><img src="${cover}" alt="Cover of ${escapeHtml(rec.title)}" width="170" height="255" onerror="this.closest('.bk-cover').remove()"></div>`
+    : '';
+  const body = `${coverHtml}<dl class="bk-facts">
   <dt>Author</dt><dd>${escapeHtml(rec.author || 'Unknown author')}</dd>
   <dt>First published</dt><dd>${years || 'the record does not say'}</dd>
   <dt>Editions in the catalogue</dt><dd>${rec.editions ? rec.editions.toLocaleString('en-US') : 'the record does not say'}</dd>
   <dt>Catalogue id</dt><dd><code>${escapeHtml(rec.id)}</code></dd>
   </dl>
-  <p>This is a library's record of the work, not a copy of it: everything above is what <a href="${record}" rel="nofollow noopener">the Open Library entry</a> states, and the numbers are the catalogue's own. No text and no cover is reproduced here.</p>
+  <p>This is a library's record of the work, not a copy of it: everything above is what <a href="${record}" rel="nofollow noopener">the Open Library entry</a> states, and the numbers are the catalogue's own. No book text is reproduced here, and the cover, when one appears, is linked from the Internet Archive's own image service rather than copied onto this site.</p>
   ${copies ? `<h2 class="section-title">Copies the catalogue knows about</h2><p>${copies}</p><p class="meta">A link to archive.org means the Internet Archive holds that scan or edition. Whether you can read it in full, borrow it, or only view its contents depends on their licensing and on where you are — the page will tell you when you get there.</p>` : ''}
   ${subjectPills ? `<h2 class="section-title">What the catalogue tags it with</h2><p>${subjectPills}</p>` : ''}
   ${lists ? `<h2 class="section-title">On our lists</h2><p>This work appears on ${lists}.</p>` : ''}

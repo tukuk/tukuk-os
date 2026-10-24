@@ -22,8 +22,11 @@
 //     so every returned work is checked against the subject string on its own record.
 //
 // What we deliberately do NOT do:
-//   • no cover images — Open Library's cover files carry their own rights and are not
-//     CC0; text, author, year and a link to the catalogue entry are enough;
+//   • no cover files are copied or hosted — the Internet Archive's scans carry their own
+//     rights and are not CC0, so we never take one onto this box. What a page shows is a
+//     link to IA's own thumbnail service for the archive.org item the record already names
+//     (coverUrl below): we store no image and serve no bytes, and a work with no scanned
+//     copy simply shows no cover — same as before;
 //   • no article text mirrored — every title links to the catalogue so the reader can
 //     borrow or read the real thing where the rights allow it;
 //   • no crawl from the web process. Twenty-four curated subjects fetch live (one request
@@ -687,6 +690,22 @@ function status() {
   };
 }
 
+/**
+ * A cover for a work, without ever touching a byte on this box. The `ia` field Open Library
+ * carries lists the archive.org items attached to the work; those are the Internet Archive's
+ * own scan identifiers, and IA publishes a thumbnail for each at its services/img endpoint.
+ * Two kinds of value appear there: a real item identifier (the machine slug IA names the scan
+ * by, sometimes with a prefix like "bwb_") and a pseudo-identifier like "isbn_978..." that
+ * stands for a record with no scan attached. Only the first resolves, so it is the only one
+ * linked; anything else that turns out not to serve an image is cleared by the page's onerror.
+ * Returns null when every value is an isbn pseudo-id — the caller then shows no cover.
+ */
+function coverUrl(ia) {
+  const real = (Array.isArray(ia) ? ia : []).find((x) => typeof x === 'string'
+    && /^[a-z0-9][a-z0-9_.@-]{3,119}$/i.test(x) && !/^isbn[_-]/i.test(x));
+  return real ? `https://archive.org/services/img/${encodeURIComponent(real)}` : null;
+}
+
 module.exports = {
   SUBJECTS, BY_SLUG, LIMIT, PER_SEARCH, MAX_PER_AUTHOR, TTL, MIRROR_FILE,
   SHELF_DIR, SHELF_INDEX_FILE, WORK_DIR, WORK_INDEX_FILE, WORK_SHARDS, SHELF_MIN_WORKS,
@@ -694,5 +713,5 @@ module.exports = {
   subject, prime, status, normalise, rankWorks, carriesSubject, isFiction, isSerial, readMirror,
   searchSubject, titleCase, shelfSlug, rejected, labelCoverage, shelfMeta, allShelves, autoShelves, shelfWorks,
   work, workIds, shardOf, inventory, saveShelf, saveShelfIndex, saveWorks, replaceWorks, reloadShelves,
-  workSitemapChunks,
+  workSitemapChunks, coverUrl,
 };

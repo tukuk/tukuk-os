@@ -485,3 +485,25 @@ test('the books routes answer in the order that keeps them all reachable', () =>
   // link out to the catalogue instead of 404ing thirty times from one page.
   assert.ok(/books\.workIds\(\)\.length > 0/.test(serverSrc), 'internal book links are gated on the work index');
 });
+
+test('a cover links the archive.org scan the record already names, and never an isbn stand-in', () => {
+  // Covers are the one thing this cluster deliberately did NOT ship, because Open Library's
+  // cover files are not CC0. The honest way back in is to hotlink the Internet Archive's own
+  // thumbnail for the scan identifier already stored on the work: we host no image. So the
+  // rule to test is which `ia` value may be linked. `isbn_978...` is not an archive item, it
+  // is Open Library's placeholder for a record with no scan, and linking it yields a broken
+  // image; a real slug (even one carrying a prefix like bwb_) is the item and resolves.
+  assert.strictEqual(books.coverUrl(['secretlifeofbees00suem']),
+    'https://archive.org/services/img/secretlifeofbees00suem', 'a real scan id is linked');
+  assert.strictEqual(books.coverUrl(['bwb_P8-BMO-217']),
+    'https://archive.org/services/img/bwb_P8-BMO-217', 'a prefixed archive item is still a real item');
+  assert.strictEqual(books.coverUrl(['isbn_9781101911761']), null, 'an isbn stand-in has no scan to show');
+  assert.strictEqual(books.coverUrl(['isbn_9789023443322', 'secretlifeofbees00kidd']),
+    'https://archive.org/services/img/secretlifeofbees00kidd', 'a real id past a leading stand-in is still found');
+  assert.strictEqual(books.coverUrl([]), null, 'no identifier is no cover');
+  assert.strictEqual(books.coverUrl(undefined), null, 'a missing field is not a crash');
+  // The pages must both use the helper and degrade without a broken image, not hard-code a URL.
+  assert.ok(/books\.coverUrl\(w\.ia\)/.test(serverSrc), 'shelf rows ask the helper for a cover');
+  assert.ok(/books\.coverUrl\(rec\.ia\)/.test(serverSrc), 'the book page asks the helper for a cover');
+  assert.ok(/onerror=/.test(serverSrc), 'a withdrawn scan clears the cell instead of showing a broken image');
+});
