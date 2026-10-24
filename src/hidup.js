@@ -8,6 +8,9 @@
 const axios = require('axios');
 const { attachGuard } = require('./outbound');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const config = require('./config');
 
 const http = axios.create({
   timeout: 15000,
@@ -115,4 +118,171 @@ async function getObservations(taxonId, want) {
   return rows;
 }
 
-module.exports = { TAXA, findTaxon, resolveTaxon, getObservations };
+// ── THE BUILT ATLAS (scale) ───────────────────────────────────────────────────
+// The sixteen above are hand-authored, with a hand-written natural-history blurb each. That
+// is not something a machine can honestly mass-produce, so the expansion works exactly like
+// /books: an explicit, bounded, resumable build (scripts/life-build.js) harvests "the species
+// the world photographs most" — iNaturalist's default species sort IS observation count — and
+// writes each one to disk. A page request then reads a small file already on this box and NEVER
+// reaches the API, because a crawler storm of live lookups against iNaturalist's low anonymous
+// limit would be both fragile and rude. The body text of a built page is not invented here: it
+// is the taxon's own Wikipedia summary, credited and linked — the same rule /recipes keeps with
+// the Wikibooks Cookbook.
+//
+// Data lives in two places, mirroring books: a small index (one row per built species) that
+// every hub, A–Z and sitemap reads, and one JSON file per species (the page: summary, lineage,
+// conservation status, the reference photo and a wall of research-grade observations) read only
+// when that species is opened. Photo URLs point at iNaturalist's own open-data S3; we store the
+// link and the credit, never the bytes.
+const DATA_DIR = path.dirname(config.store.path);
+const SPECIES_DIR = path.join(DATA_DIR, 'life-species');
+const SPECIES_INDEX_FILE = path.join(DATA_DIR, 'life-species.json');
+const OBS_MIN = 50;              // below this there may be no research-grade photo to show
+const WALL = 8;                  // community photographs per species page
+
+const readJson = (file) => {
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return raw && typeof raw === 'object' ? raw : null;
+  } catch { return null; }
+};
+const writeAtomic = (file, text) => {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, text);
+  fs.renameSync(tmp, file); // rename is atomic: a reader never sees half a file
+};
+
+/** A url-safe species slug from a display name; the caller guarantees uniqueness. */
+function slugify(name) {
+  const folded = String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '');
+  return folded || '';
+}
+
+/**
+ * Does a candidate taxon deserve a page? Pure, so the honest bar can be argued in a test rather
+ * than discovered as a thin page. A species qualifies only if it is a real, active species with
+ * an English common name (else we would be titling a page by a Latin binomial nobody searches),
+ * enough observations that a research-grade photograph wall is guaranteed, and — checked once the
+ * full taxon is fetched — its own Wikipedia summary, because without sourced prose a built page
+ * would be a picture with nothing honest to say about it. `obsCount` here is the catalogue's own
+ * number, not a claim we make.
+ */
+function speciesQualifies(t) {
+  if (!t || t.rank !== 'species') return 'not a species';
+  if (t.is_active === false || t.extinct === true || t.provisional === true) return 'inactive, extinct or provisional';
+  const common = String(t.preferred_common_name || '').trim();
+  if (!common) return 'no English common name to title the page';
+  if (!(Number(t.observations_count) >= OBS_MIN)) return `only ${t.observations_count || 0} observations (needs ${OBS_MIN})`;
+  return null;
+}
+
+// A curated scientific name → its hand-authored entry, so the build reuses the good slug and
+// keeps the written blurb instead of publishing a second, thinner page for the same animal.
+const curatedBySci = new Map(TAXA.map((t) => [String(t.sci).toLowerCase(), t]));
+
+/**
+ * The index of built species, re-read when the file's mtime moves (as books does) so a finished
+ * build becomes visible without restarting the site. Only rows with a display name and a record
+ * on disk are trusted; the count is used by the hub and the A–Z page.
+ */
+let builtCache = null;
+let builtCacheAt = 0;
+function builtSpecies() {
+  let mtime = 0;
+  try { mtime = fs.statSync(SPECIES_INDEX_FILE).mtimeMs; } catch { /* not built yet */ }
+  if (builtCache && builtCacheAt === mtime) return builtCache;
+  const raw = readJson(SPECIES_INDEX_FILE);
+  builtCache = Array.isArray(raw) ? raw.filter((r) => r && r.slug && r.name).sort((a, b) => (b.obs || 0) - (a.obs || 0)) : [];
+  builtCacheAt = mtime;
+  return builtCache;
+}
+function reloadSpecies() { builtCache = null; builtCacheAt = 0; }
+
+/** The full page record for one species, or null if it has not been built. */
+function speciesRecord(slug) {
+  const key = String(slug || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (!key) return null;
+  return readJson(path.join(SPECIES_DIR, `${key}.json`));
+}
+
+/** Save one species page + upsert its index row. Called only by the build script. */
+function saveSpecies(record) {
+  writeAtomic(path.join(SPECIES_DIR, `${record.slug}.json`), JSON.stringify(record));
+  const list = readJson(SPECIES_INDEX_FILE);
+  const rows = Array.isArray(list) ? list : [];
+  const row = { slug: record.slug, name: record.name, sci: record.sci, obs: record.obsCount || 0, blurb: Boolean(record.blurb), at: record.at };
+  const i = rows.findIndex((r) => r && r.slug === record.slug);
+  if (i >= 0) rows[i] = row; else rows.push(row);
+  writeAtomic(SPECIES_INDEX_FILE, JSON.stringify(rows));
+  reloadSpecies();
+  return row;
+}
+
+function inventory() {
+  try { return fs.statSync(SPECIES_INDEX_FILE).size > 2; } catch { return false; }
+}
+
+// iNaturalist carries the IUCN code verbatim; expanding it to words is formatting, and the
+// page always names the assessment as the catalogue's own rather than a claim we are making.
+const IUCN = { ex: 'Extinct', ew: 'Extinct in the Wild', cr: 'Critically Endangered', en: 'Endangered',
+  vu: 'Vulnerable', nt: 'Near Threatened', dd: 'Data Deficient', lc: 'Least Concern', ne: 'Not Evaluated' };
+
+/** Wikipedia's summary markup reduced to safe plain text — we render no external HTML. */
+function summarise(html) {
+  return String(html || '')
+    .replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&(?:#39|apos);/g, "'")
+    .replace(/&quot;/g, '"').replace(/&nbsp;/g, ' ').replace(/\[[a-z0-9 ,]*\]/gi, '')
+    .replace(/\s+/g, ' ').trim().slice(0, 900);
+}
+
+/**
+ * The full iNaturalist taxon object (from /taxa/{id}?locale=en, which is the only shape that
+ * returns preferred_common_name AND wikipedia_summary together) folded into what a page needs.
+ * Pure and offline so the mapping — especially the lineage filter and the status expansion — can
+ * be checked in a test against a captured payload rather than discovered on a thin page.
+ */
+function taxonToRecord(r, opts) {
+  const o = opts || {};
+  const keep = ['kingdom', 'phylum', 'class', 'order', 'family'];
+  const ancestors = Array.isArray(r.ancestors) ? r.ancestors.filter((a) => keep.includes(a.rank)) : [];
+  const cs = r.conservation_status && r.conservation_status.status ? r.conservation_status : null;
+  const dp = r.default_photo || null;
+  return {
+    slug: o.slug, taxonId: r.id, sci: r.name, name: String(r.preferred_common_name || '').trim(),
+    rank: r.rank, ...(o.blurb ? { blurb: o.blurb } : {}),
+    summary: summarise(r.wikipedia_summary), summaryUrl: r.wikipedia_url || null,
+    classification: ancestors.map((a) => ({ rank: a.rank, name: a.name })),
+    ...(cs ? { conservation: { code: cs.status, label: IUCN[cs.status] || cs.status, authority: cs.authority || null } } : {}),
+    obsCount: Number(r.observations_count) || 0,
+    photo: dp ? { url: dp.medium_url || dp.square_url, credit: dp.attribution || '', license: dp.license_code || null } : null,
+    iNatUrl: `https://www.inaturalist.org/taxa/${r.id}`,
+  };
+}
+
+// One full call per surviving species returns everything a page shows except the photograph
+// wall; the wall is a second call. Both go through the same guarded client (src/outbound.js).
+async function fetchFullTaxon(id) {
+  const res = await http.get(`${API}/taxa/${id}`, { params: { locale: 'en' } });
+  const r = res.data && res.data.results && res.data.results[0];
+  if (!r) throw new Error(`taxon ${id} not found`);
+  return r;
+}
+
+/**
+ * One page of the species catalogue in iNaturalist's own default order — which IS observation
+ * count, highest first. That is why no sort parameter is needed and why the harvest reads top
+ * down: page 1 is the mallard, the honey bee, the ladybird and the house sparrow, the animals the
+ * world photographs most. Returns the compact rows (id, name, rank, observations_count, flags).
+ */
+async function fetchSpeciesPage(page, perPage = 30) {
+  const res = await http.get(`${API}/taxa`, { params: { rank: 'species', per_page: perPage, page } });
+  return (res.data && res.data.results) || [];
+}
+
+module.exports = { TAXA, findTaxon, resolveTaxon, getObservations,
+  SPECIES_DIR, SPECIES_INDEX_FILE, OBS_MIN, WALL, curatedBySci,
+  slugify, speciesQualifies, builtSpecies, reloadSpecies, speciesRecord, saveSpecies, inventory,
+  summarise, taxonToRecord, fetchFullTaxon, fetchSpeciesPage };
+

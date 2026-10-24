@@ -5395,11 +5395,14 @@ app.get('/sitemap-art.xml', async (req, res) => {
   );
 });
 
-// ── SITEMAP HIDUPAN — hub + 16 species pages ─────────────────────────
+// ── SITEMAP LIFE — hub + A–Z + every species actually on disk or curated ─────
 app.get('/sitemap-life.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/life', '0.9')].concat(hidup.TAXA.map((t) => one(`/life/${t.slug}`, '0.7'))).join('\n');
+  // Only advertise pages the site can actually serve: the merged built+curated set, each of which
+  // resolves to a disk record or the curated live fallback. Never list a species that is not there.
+  const urls = [one('/life', '0.9'), one('/life/a-z', '0.8')]
+    .concat(hidupMerged().map((s) => one(`/life/${s.slug}`, '0.7'))).join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
@@ -9638,8 +9641,8 @@ const wangNav = () => worldNav('World Money — tukuk.org/money', [
 ]);
 const seniNav = () => worldNav('Art Gallery — free images from The Met', [{ href: '/art', icon: '🖼️', name: 'All collections', blurb: 'Ten curated doors into the Metropolitan Museum’s open-access archive — hundreds of thousands of public-domain images.' }]
   .concat(seni.COLLECTIONS.map((c) => ({ href: `/art/collection/${c.slug}`, icon: c.icon, name: c.name, blurb: c.blurb }))));
-const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/life', icon: '🦁', name: 'All species', blurb: 'Sixteen animals, each with a plain-language story and real research-grade photographs from the iNaturalist community.' }
-  ].concat(hidup.TAXA.map((t) => ({ href: `/life/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
+const hidupNav = () => worldNav('Wildlife Atlas — real photographs', [{ href: '/life', icon: '🦁', name: 'All species', blurb: `Animals chosen by hand, plus every species the world photographs most — each with real research-grade photographs from the iNaturalist community.` }, { href: '/life/a-z', icon: '🔤', name: 'Every species, A–Z', blurb: `The full atlas in one page: ${hidupMerged().length} species in alphabetical order.` }]
+  .concat(hidup.TAXA.slice(0, 6).map((t) => ({ href: `/life/${t.slug}`, icon: t.icon, name: t.name, blurb: t.blurb }))));
 
 // ── /elements — periodic table of the elements (STATIK data embedded) ────────────
 const EL_CSS = `.el-scroll{overflow-x:auto;padding-bottom:8px;margin:14px 0}
@@ -18456,17 +18459,101 @@ function hidupDown(note) {
   }, hidupNav());
 }
 
+// The authoritative species set = everything on disk (built, which after a run also includes the
+// seeded sixteen) UNION the curated hand-authored sixteen that have not been built yet. Keyed by
+// slug so a species is never listed twice, and the icon survives the merge. Hub, A–Z, the sitemap
+// and the nav count all read this one function, so the pages and the sitemap can never disagree
+// about how many species exist or which urls are real.
+function hidupMerged() {
+  const by = new Map();
+  for (const t of hidup.TAXA) by.set(t.slug, { slug: t.slug, name: t.name, sci: t.sci, icon: t.icon, obs: 0 });
+  for (const r of hidup.builtSpecies()) {
+    const cur = hidup.findTaxon(r.slug);
+    by.set(r.slug, { slug: r.slug, name: r.name, sci: r.sci, obs: Number(r.obs) || 0, icon: (cur && cur.icon) || '🐾' });
+  }
+  return [...by.values()];
+}
+
 function hidupHubPage() {
   const cards = hidup.TAXA.map((t) => `<div class="world-card"><h3><a href="/life/${t.slug}">${t.icon} ${escapeHtml(t.name)}</a></h3><p>${escapeHtml(String(t.blurb).slice(0, 150))}…</p><p class="meta"><i>${escapeHtml(t.sci)}</i></p></div>`).join('');
-  const body = `<p>Sixteen animals chosen because their stories teach something real — migration without a teacher, a carnivore that eats bamboo, a fish that never grows up, a crab whose blue blood tests every injection given to humans. Each page pairs a plain-language account with <b>research-grade photographs posted by the iNaturalist community</b>, credited exactly as the photographers and their Creative Commons licences require.</p>
+  const built = hidup.builtSpecies();
+  const total = hidupMerged().length;
+  const builtSection = built.length
+    ? `<h2 class="section-title">The species the world photographs most</h2><p>On top of the hand-picked animals above, the atlas now carries every species the iNaturalist community observes most — harvested by our own build, one observation-count-ordered page at a time, and stored on this server so opening one is a file read, never a live lookup. Each links to a page of research-grade photographs.</p><p>${built.slice(0, 120).map((r) => `<a href="/life/${r.slug}">${escapeHtml(r.name)}</a>`).join(' · ')}</p><p class="meta">${total} species in all · <a href="/life/a-z">the complete A–Z atlas →</a></p>`
+    : `<p class="meta">The long tail of the atlas — “the animals the world photographs most” — is being built. <a href="/life/a-z">See every species published so far →</a></p>`;
+  const body = `<p>Sixteen animals are chosen by hand because their stories teach something real — migration without a teacher, a carnivore that eats bamboo, a fish that never grows up, a crab whose blue blood tests every injection given to humans. Each page pairs a plain-language account with <b>research-grade photographs posted by the iNaturalist community</b>, credited exactly as the photographers and their Creative Commons licences require.</p>
   <div class="world-grid">${cards}</div>
+  ${builtSection}
   <h2 class="section-title">What “research grade” means</h2><p>On iNaturalist, an observation earns research-grade status when the community independently confirms the identification — usually several qualified human eyes plus automated checks. It is the closest thing ecology has to a peer-reviewed photograph, which is why every wall below filters to it.</p>
-  <p class="meta">Photographs & records: iNaturalist (CC-licensed community observations). Population statuses follow IUCN Red List assessments as reported by the community; figures are approximate and labelled where sources differ.</p>`;
+  <p class="meta">Photographs & records: iNaturalist (CC-licensed community observations). Species summaries on built pages are that taxon’s own Wikipedia text, credited and linked. Population statuses follow IUCN Red List assessments as reported by the community; figures are approximate and labelled where sources differ.</p>`;
   return worldDoc({
     title: 'Wildlife Atlas — Real Animals, Research-Grade Photos | Tukuk-OS',
-    desc: 'Sixteen species with honest natural-history stories and Creative Commons photographs confirmed by the iNaturalist research community.',
+    desc: `Species with honest natural-history stories and Creative Commons photographs confirmed by the iNaturalist research community — ${total} species and counting, each with real research-grade photographs.`,
     selfUrl: 'https://tukuk.org/life',
-    heroTitle: 'Wildlife Atlas', heroSub: 'Sixteen species · real photographs · no stock images',
+    heroTitle: 'Wildlife Atlas', heroSub: `${total} species · real photographs · no stock images`,
+    body,
+  }, hidupNav());
+}
+
+// A built species page: read entirely from the small file on disk, with nothing fetched live. The
+// body is either the hand-written curated blurb (for the seeded sixteen) or the taxon’s OWN
+// Wikipedia summary, credited and linked — never prose this site invents about an animal it has not
+// studied. The photograph wall and the reference photo are the community’s CC observations.
+function hidupBuiltPage(req, rec) {
+  const name = escapeHtml(rec.name || '');
+  const sci = escapeHtml(rec.sci || '');
+  const wall = Array.isArray(rec.wall) ? rec.wall : [];
+  const obsCards = wall.map((o) => `<figure><a href="${escapeHtml(o.uri)}" rel="noopener nofollow"><img src="${escapeHtml(o.photoUrl)}" alt="${name} photograph by the iNaturalist community" loading="lazy"></a><figcaption>${escapeHtml(o.date || 'undated')}${o.place ? ` · ${escapeHtml(o.place)}` : ''}<br><span class="meta">${escapeHtml(o.attribution)}${o.license ? ` · ${escapeHtml(o.license)}` : ''}</span></figcaption></figure>`).join('');
+  const lineage = Array.isArray(rec.classification) && rec.classification.length
+    ? rec.classification.map((c) => `${escapeHtml(c.rank)} <i>${escapeHtml(c.name)}</i>`).join(' › ') : '';
+  const facts = [['Scientific name', `<i>${sci}</i>`], ['Rank', escapeHtml(rec.rank || 'species')]];
+  facts.push(['Community observations', `${(Number(rec.obsCount) || 0).toLocaleString('en-GB')} research-grade records on iNaturalist`]);
+  if (rec.conservation) facts.push(['Conservation status', `${escapeHtml(rec.conservation.label || rec.conservation.code)}${rec.conservation.authority ? ` — ${escapeHtml(rec.conservation.authority)} assessment` : ''}`]);
+  const factRows = facts.map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const bodyText = rec.blurb
+    ? `<article><p>${escapeHtml(rec.blurb)}</p></article>`
+    : (rec.summary ? `<article><p>${escapeHtml(rec.summary)} <a rel="noopener nofollow" href="${escapeHtml(rec.summaryUrl || rec.iNatUrl)}">Text: Wikipedia, CC BY-SA</a>.</p></article>` : '');
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Article', headline: rec.name, description: (rec.blurb || rec.summary || '').slice(0, 200),
+      url: `https://tukuk.org/life/${rec.slug}`, inLanguage: 'en',
+      about: { '@type': 'Species', name: rec.sci, commonName: rec.name },
+      publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' } } ],
+  ).replace(/</g, '\u003c');
+  const firstLine = String(rec.blurb || rec.summary || `${rec.name} (${rec.sci}).`).split('. ')[0].slice(0, 160);
+  const body = `<p class="back-link"><a href="/life">&larr; Wildlife Atlas</a> · <a href="/life/a-z">A–Z</a></p>
+  ${bodyText}
+  ${rec.photo && rec.photo.url ? `<figure style="margin:18px 0"><img src="${escapeHtml(rec.photo.url)}" alt="${name} — reference photo from iNaturalist" loading="eager" style="width:100%;max-width:640px;height:auto;border-radius:10px;border:1px solid var(--line)">${rec.photo.credit ? `<figcaption class="meta">${escapeHtml(rec.photo.credit)}${rec.photo.license ? ` · ${escapeHtml(rec.photo.license)}` : ''}</figcaption>` : ''}</figure>` : ''}
+  <h2 class="section-title">Record card</h2><table class="world-table">${factRows}</table>
+  ${lineage ? `<h2 class="section-title">Classification</h2><p>${lineage}</p>` : ''}
+  ${obsCards ? `<h2 class="section-title">Seen in the wild — community photographs</h2><div class="seni-grid">${obsCards}</div><p class="meta">Photographs are Creative Commons-licensed observations from iNaturalist, credited as each licence requires. Click any photo for the full research record.</p>` : ''}
+  <p class="back-link"><a rel="noopener nofollow" href="${escapeHtml(rec.iNatUrl)}">All ${name} records on iNaturalist →</a>${rec.summaryUrl ? ` · <a rel="noopener nofollow" href="${escapeHtml(rec.summaryUrl)}">Encyclopedia entry (Wikipedia) →</a>` : ''}</p>
+  <p class="meta">Data: iNaturalist open API · stored on this server by the wildlife build so a page request never reaches the network · observations filtered to research grade with photos.</p>`;
+  return worldDoc({
+    title: `${rec.name} (${rec.sci}) — Facts & Real Photos | Tukuk-OS Wildlife Atlas`,
+    desc: `${firstLine}. Research-grade community photographs, scientific name and record links — free wildlife atlas entry.`,
+    selfUrl: `https://tukuk.org/life/${rec.slug}`,
+    robots: 'index,follow,max-image-preview:large',
+    ogImage: (rec.photo && rec.photo.url) || 'https://tukuk.org/og.png',
+    heroTitle: `${(hidup.findTaxon(rec.slug) || {}).icon || '🐾'} ${rec.name}`, heroSub: `${escapeHtml(rec.sci)} · wildlife atlas entry`,
+    ld, body,
+  }, hidupNav());
+}
+
+function hidupAzPage() {
+  const all = hidupMerged().slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const byLetter = new Map();
+  for (const s of all) { const L = (String(s.name)[0] || '#').toUpperCase(); if (!byLetter.has(L)) byLetter.set(L, []); byLetter.get(L).push(s); }
+  const letters = [...byLetter.keys()].sort();
+  const index = letters.map((L) => `<a href="#az-${L}">${L}</a>`).join(' · ');
+  const sections = letters.map((L) => `<h2 class="section-title" id="az-${L}">${L}</h2><p>${byLetter.get(L).map((s) => `<a href="/life/${s.slug}">${escapeHtml(s.name)}</a>`).join(' · ')}</p>`).join('');
+  const body = `<p class="back-link"><a href="/life">&larr; Wildlife Atlas</a></p>
+  <p>${all.length} species in the atlas — the animals the world photographs most, led by the sixteen chosen by hand. Every entry links to a page of real research-grade community photographs.</p>
+  <p>${index}</p>${sections}`;
+  return worldDoc({
+    title: 'Wildlife Atlas — Every Species, A–Z | Tukuk-OS',
+    desc: `All ${all.length} species in the Tukuk-OS Wildlife Atlas listed alphabetically, each with research-grade Creative Commons photographs from the iNaturalist community.`,
+    selfUrl: 'https://tukuk.org/life/a-z', robots: 'index,follow',
+    heroTitle: 'Every species, A–Z', heroSub: `${all.length} species · in alphabetical order`,
     body,
   }, hidupNav());
 }
@@ -18503,7 +18590,14 @@ function hidupSpeciesPage(req, t, taxon, obs) {
 }
 
 app.get('/life', (req, res) => res.type('html').send(hidupHubPage()));
+// A–Z must be matched before /life/:slug, or "a-z" would be treated as a species slug.
+app.get('/life/a-z', (req, res) => res.type('html').send(hidupAzPage()));
 app.get('/life/:slug', async (req, res) => {
+  // A built page is a file read: served entirely from disk, never reaching iNaturalist. Only the
+  // hand-authored species that the build has not yet seeded fall back to the old live resolve path
+  // (the pre-build fallback), so the site works before and after the first harvest.
+  const rec = hidup.speciesRecord(req.params.slug);
+  if (rec) return res.type('html').send(hidupBuiltPage(req, rec));
   const t = hidup.findTaxon(req.params.slug);
   if (!t) return res.redirect(302, '/life');
   try {
