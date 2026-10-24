@@ -36,6 +36,7 @@ const bendera = require('./src/bendera');
 const agentEditor = require('./src/agent-editor');
 const warmup = require('./src/warmup');
 const books = require('./src/books');
+const recipes = require('./src/recipes');
 
 // ── Runtime resilience guard ────────────────────────────────────────────────
 // The boot contract above is "the process never exits on subsystem errors", but
@@ -194,6 +195,11 @@ async function main() {
     // after a deploy should not be the one who pays for it. Sequential, spaced, retried
     // once, and it never rejects — the disk mirror covers whatever the network refused.
     setTimeout(() => { books.prime().catch(() => {}); }, 20000);
+    // And fill the twenty-seven recipe shelves. A cold shelf costs two or three seconds of
+    // Wikibooks API, and a dish page cannot be built without its shelf. Read after the
+    // reading lists so the two do not queue behind each other on a slow link; sequential and
+    // spaced inside, because that wiki is a shared free service and not our own database.
+    setTimeout(() => { recipes.prime().catch(() => {}); }, 30000);
     // APOD auto-update + NASA archive backfill — OFF unless NASA_AUTO=1.
     // The NASA pages were removed (content focus + a light server); they are disabled
     // by default so the VPS does not waste CPU/network/disk on them.

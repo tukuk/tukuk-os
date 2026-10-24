@@ -79,6 +79,7 @@ const seni = require('./seni');
 const hidup = require('./hidup');
 const bacaan = require('./bacaan');
 const books = require('./books');
+const rcp = require('./recipes');
 const kamus = require('./kamus');
 const st = require('./statistik');
 const bc = require('./bencana');
@@ -3754,6 +3755,243 @@ app.get('/books/:slug', limiter.search, async (req, res, next) => {
   }
 });
 
+// ── /recipes — a real recipe, from a free cookbook, with the credit kept ────────
+// The Wikibooks Cookbook is written by cooks under CC BY-SA 4.0. Every dish here is read from
+// that wiki, parsed into a list and a method, and published with the licence, the author of
+// its photograph and a link to the page it came from. Nothing is generated: no quantity is
+// invented and no method is rewritten, so a reader can always check the page against its
+// authors. The scaler is arithmetic on their numbers, never a new recipe.
+const RC_CSS = `.rc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin:18px 0}
+.rc-card{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.rc-card a{display:block;color:inherit;text-decoration:none}
+.rc-card img{width:100%;height:148px;object-fit:cover;display:block}
+.rc-noimg{width:100%;height:148px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;background:var(--bg,#0f1115)}
+.rc-card h3{margin:0 0 4px;font-size:.97rem;line-height:1.35}
+.rc-card p{margin:0;color:var(--muted);font-size:.81rem;line-height:1.4}
+.rc-card .rc-pad{padding:11px 13px}
+.rc-card:hover{border-color:var(--accent,#4c8dff)}
+.rc-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:24px;margin:20px 0;align-items:start}
+@media(max-width:780px){.rc-two{grid-template-columns:1fr}}
+.rc-ing{margin:0 0 16px;padding-left:20px}
+.rc-ing li{margin:4px 0;line-height:1.5}
+.rc-steps{margin:0;padding:0;list-style:none;counter-reset:rcstep}
+.rc-steps li{counter-increment:rcstep;margin:0 0 12px;padding:0 0 0 40px;position:relative;line-height:1.55}
+.rc-steps li::before{content:counter(rcstep);position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;background:var(--accent,#4c8dff);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.84rem}
+.rc-figure{margin:18px 0}
+.rc-figure img{max-width:100%;height:auto;border-radius:12px;display:block}
+.rc-credit{color:var(--muted);font-size:.78rem;margin:6px 0 0;line-height:1.45}
+.rc-facts{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}
+.rc-fact{border:1px solid var(--line);border-radius:999px;padding:4px 13px;font-size:.85rem;color:var(--muted)}
+.rc-scale{display:flex;gap:9px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:var(--panel);margin:16px 0;font-size:.92rem}
+.rc-scale input{width:4.6rem;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit}
+.rc-scale button{padding:6px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);cursor:pointer;font:inherit;font-size:.86rem}
+.rc-scale button:hover{border-color:var(--accent,#4c8dff)}
+.rc-note{border-left:3px solid var(--accent,#4c8dff);background:var(--panel);border-radius:0 10px 10px 0;padding:12px 15px;margin:18px 0;font-size:.92rem;line-height:1.55}
+.rc-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:0 6px 6px 0;font-size:.82rem;color:var(--muted)}`;
+
+const recipesNav = (except) => worldNav('World Recipes — tukuk.org/recipes', [{
+  href: '/recipes', icon: '🍲', name: 'All shelves', blurb: 'Twenty-seven shelves of cookable recipes from the Wikibooks Cookbook, free under CC BY-SA.',
+}].concat(rcp.SECTIONS.filter((s) => s.slug !== except).slice(0, 7)
+  .map((s) => ({ href: `/recipes/${s.slug}`, icon: '🍲', name: `${s.title} recipes`, blurb: s.blurb }))));
+
+function recipesHubPage() {
+  const counts = {};
+  for (const row of rcp.inventory()) counts[row.section] = (counts[row.section] || 0) + 1;
+  const cards = rcp.SECTIONS.map((s) => `<div class="rc-card"><a href="/recipes/${s.slug}"><div class="rc-noimg">🍲</div><div class="rc-pad"><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.blurb)}${counts[s.slug] ? ` · <b>${counts[s.slug]} recipes</b>` : ''}</p></div></a></div>`).join('');
+  const body = `<p>tukuk.org can tell you what rendang is and could not tell you how to cook it. This is that second answer: recipes written by cooks, with quantities and a method, read straight from the <a href="https://en.wikibooks.org/wiki/Cookbook:Home" rel="nofollow noopener">Wikibooks Cookbook</a> and put on a page you can cook from on a phone with wet hands.</p>
+  <p>The Cookbook is free in the sense that matters: its text is published under <b>CC BY-SA 4.0</b>, so it may be copied and adapted as long as the licence and the authors are named. That is done here rather than waved at — every dish says where it came from, links the page it was taken from, and prints the licence and the photographer under its picture. Photographs are served from Wikimedia's own servers so that a picture is never separated from the metadata that says who may use it.</p>
+  <div class="rc-grid">${cards}</div>
+  <h2 class="section-title">How a shelf is filled</h2>
+  <p>A shelf is drawn either from the Cookbook's own category ("Indonesian recipes", "Recipes for bread") or, where the category holds sub-categories rather than dishes, from a search of the Cookbook namespace. Then four rules: a page the wiki itself flags as unfinished — missing quantities, a method copied off YouTube, a stub — is not published; a page with no recipe summary template is an article about an ingredient and is left out; the dishes a visitor came for are put first, because a category is sorted by title and the first twenty-four of four hundred Indian recipes are the ones beginning A and B; and the rest are taken at stride so a shelf is a spread rather than an alphabet.</p>
+  <p>What is on the page comes from the source page: the quantities, the ingredients, the steps, the stated serving size. Nothing is added to make a recipe look better, and a step that the wiki wrote badly is left as it was written — with the link there so you can read it yourself.</p>
+  <div class="rc-note"><b>Cooking from a stranger's recipe.</b> Ovens, spoons and pan sizes differ, and a free wiki written since 2004 has had more cooks than editors. Trust your nose before the clock, and read the source page for the comments other people left.</div>
+  <p class="meta">Source: <a href="https://en.wikibooks.org" rel="nofollow noopener">Wikibooks Cookbook</a>, CC BY-SA 4.0. Shelves are cached a week and mirrored to disk, so this page does not wait on the wiki every time it is opened.</p>`;
+  return worldDoc({
+    title: 'World Recipes — Cookable Recipes from the Wikibooks Cookbook | Tukuk-OS',
+    desc: 'Twenty-seven shelves of real recipes — Indonesian, Indian, Italian, bread, soups, cakes — read from the Wikibooks Cookbook under CC BY-SA, with ingredients, method, serving size and a scaler.',
+    selfUrl: 'https://tukuk.org/recipes',
+    heroTitle: '🍲 World Recipes', heroSub: 'Real recipes from the Wikibooks Cookbook · ingredients, method, servings · free source, credit kept',
+    css: RC_CSS, body,
+  }, recipesNav(null));
+}
+
+function shelfCards(recipes, slug) {
+  return recipes.map((r) => {
+    const facts = [r.time && `${r.time}`, r.batch && `serves ${r.batch}`, r.difficulty].filter(Boolean).join(' · ');
+    const pic = r.thumb
+      ? `<img src="${escapeHtml(r.thumb)}" alt="${escapeHtml(r.title)}" loading="lazy" width="${rcp.CARD_THUMB}" height="${rcp.CARD_THUMB}">`
+      : '<div class="rc-noimg">🍽️</div>';
+    return `<div class="rc-card"><a href="/recipes/${slug}/${escapeHtml(rcp.recipePath(r))}">${pic}<div class="rc-pad"><h3>${escapeHtml(r.title)}</h3><p>${escapeHtml(facts || 'recipe')}</p></div></a></div>`;
+  }).join('');
+}
+
+const shelfPills = (except) => rcp.SECTIONS.filter((s) => s.slug !== except)
+  .map((s) => `<a class="rc-pill" href="/recipes/${s.slug}">${escapeHtml(s.title)}</a>`).join('');
+
+function shelfSourceLink(meta) {
+  // A shelf built from a category links the category; a shelf built from a search links the
+  // search, because there is no category to name and an invented one is a 404 for the reader.
+  if (meta.cats && meta.cats.length) {
+    return `https://en.wikibooks.org/wiki/Category:${meta.cats[0].replace(/ /g, '_')}`;
+  }
+  const term = [].concat(meta.search || [])[0] || 'Cookbook:Home';
+  return `https://en.wikibooks.org/w/index.php?search=${encodeURIComponent(`ns:102 ${term.replace(/intitle:/gi, '')}`)}&ns102=1`;
+}
+
+function recipesShelfPage(meta, recipes, at, stale) {
+  const when = at ? new Date(at).toUTCString().slice(5, 16) : null;
+  const body = `<p>${escapeHtml(meta.blurb)}</p>`
+    + (stale ? '<div class="rc-note">The wiki is not answering right now, so this shelf is the copy saved on the last time it did. The recipes are real; they may have been improved since.</div>' : '')
+    + `<div class="rc-grid">${shelfCards(recipes, meta.slug)}</div>`
+    + `<p class="meta">${recipes.length} recipes read from <a href="${escapeHtml(shelfSourceLink(meta))}" rel="nofollow noopener">the Wikibooks Cookbook</a> (CC BY-SA 4.0)${when ? ` · retrieved ${escapeHtml(when)} UTC` : ''}. Each dish names the page it was taken from.</p>`
+    + '<h2 class="section-title">Other shelves</h2><p>' + shelfPills(meta.slug) + '</p>'
+    + '<p class="meta">Looking for the dish rather than the method? <a href="/heritage">Heritage sites</a> and <a href="/countries">countries</a> explain where these recipes come from.</p>';
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage',
+    name: `${meta.title} recipes`, description: meta.blurb, url: `https://tukuk.org/recipes/${meta.slug}`,
+    mainEntity: { '@type': 'ItemList', itemListElement: recipes.slice(0, 20).map((r, i) => ({ '@type': 'ListItem', position: i + 1, url: `https://tukuk.org/recipes/${meta.slug}/${rcp.recipePath(r)}`, name: r.title })) },
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  }).replace(/</g, '\\u003c');
+  return worldDoc({
+    title: `${meta.title} Recipes — ${recipes.length} Cookable Dishes | Tukuk-OS`,
+    desc: `${meta.title} recipes you can actually cook: ${recipes.length} dishes from the Wikibooks Cookbook with quantities, method, serving size and photograph — ${meta.blurb.toLowerCase()}`,
+    selfUrl: `https://tukuk.org/recipes/${meta.slug}`, ld, ogImage: (recipes.find((r) => r.thumb) || {}).thumb,
+    heroTitle: `🍲 ${meta.title} recipes`, heroSub: `${recipes.length} dishes · from the Wikibooks Cookbook · CC BY-SA`,
+    css: RC_CSS, body,
+  }, recipesNav(meta.slug));
+}
+
+// The scaler: arithmetic on the source's own numbers, in the marks a cup and a spoon carry.
+const RC_SCALE_JS = `(function(){
+var box=document.getElementById('rc-scale');if(!box)return;
+var base=Number(box.getAttribute('data-base'))||0,inp=document.getElementById('rc-serve'),out=document.getElementById('rc-factor');
+var MARKS=[[0,''],[0.125,'\u215b'],[0.25,'\u00bc'],[1/3,'\u2153'],[0.375,'\u215c'],[0.5,'\u00bd'],[0.625,'\u215d'],[2/3,'\u2154'],[0.75,'\u00be'],[0.875,'\u215e'],[1,'']];
+function fmt(v){if(v>=100)return String(Math.round(v));var w=Math.floor(v),r=v-w,b=MARKS[0];
+for(var i=0;i<MARKS.length;i++){if(Math.abs(MARKS[i][0]-r)<Math.abs(b[0]-r))b=MARKS[i];}
+var t=w,f=b[1];if(b[0]===1){t+=1;f='';}
+if(!t&&!f)return String(+v.toFixed(2));return((t||'')+(t&&f?' ':'')+f).trim();}
+function apply(v){var f=base?v/base:1;
+var list=document.querySelectorAll('.rc-ing li');
+for(var j=0;j<list.length;j++){var li=list[j],orig=li.getAttribute('data-orig')||'';
+if(f===1){li.textContent=orig;continue;}
+var n=parseFloat(li.getAttribute('data-num'));
+if(!isFinite(n)){li.textContent=orig;continue;}
+li.textContent=fmt(n*f)+' '+(li.getAttribute('data-tail')||'');}
+var sv=document.getElementById('rc-serves');if(sv)sv.textContent='about '+v;
+out.textContent=f===1?'as written':'\u00d7'+(Math.round(f*100)/100);}
+inp.addEventListener('input',function(){var v=Math.max(1,Math.round(Number(inp.value)||0));if(v&&v!==base)apply(v);else apply(base);});
+box.addEventListener('click',function(e){var b=e.target.closest?e.target.closest('button[data-f]'):null;if(!b)return;
+var v=Math.max(1,Math.round(base*Number(b.getAttribute('data-f'))));inp.value=v;apply(v);});
+})();`;
+
+function recipesDishPage(meta, found, credit) {
+  const r = found;
+  const ingredients = r.groups.map((g) => {
+    const items = g.items.map((it) => {
+      const n = rcp.toNumber(it.amount);
+      const tail = it.amount && String(it.text).startsWith(it.amount) ? String(it.text).slice(it.amount.length).trim() : '';
+      // A line is only scalable when its own number is the one being cooked. "1 lb (450 g)
+      // grapes" and "1 kg beef, cut to make 20 pieces" carry a second number that the source
+      // wrote to match the first, and doubling the first while leaving the second is a
+      // contradiction — so those lines stay exactly as the cookbook has them.
+      const data = n !== null && r.batch && !/\d/.test(tail) ? ` data-num="${n}" data-tail="${escapeHtml(tail)}"` : '';
+      return `<li${data} data-orig="${escapeHtml(it.text)}">${escapeHtml(it.text)}</li>`;
+    }).join('');
+    return `${g.group ? `<h3>${escapeHtml(g.group)}</h3>` : ''}<ul class="rc-ing">${items}</ul>`;
+  }).join('');
+  const steps = r.steps.map((s) => `<li>${escapeHtml(s.text)}</li>`).join('');
+  const scale = r.batch ? `<div class="rc-scale" id="rc-scale" data-base="${r.batch}">
+    <b>Cook for</b> <input id="rc-serve" type="number" min="1" max="999" step="any" value="${escapeHtml(String(r.batch))}" inputmode="numeric" aria-label="Servings to cook for">
+    <span>servings <span id="rc-factor" class="rc-fact" style="border:0;padding:0">as written</span></span>
+    <button type="button" data-f="0.5">half</button><button type="button" data-f="2">double</button><button type="button" data-f="1">as written</button>
+    <span class="meta">The source's own quantities, rounded to the nearest mark on a cup or a spoon. A line carrying a second number of its own — a weight in another unit, a count of pieces — is left as written.</span>
+  </div>` : '<p class="meta">This recipe states no serving size, so the quantities are left exactly as written.</p>';
+  const figure = r.thumb && credit && credit.thumb
+    ? `<figure class="rc-figure"><img src="${escapeHtml(credit.thumb)}" alt="${escapeHtml(r.title)}" width="${rcp.PAGE_THUMB}"><figcaption class="rc-credit">${escapeHtml(r.title)} — photograph by ${escapeHtml(credit.author || 'unattributed')}, licensed ${escapeHtml(credit.licence || 'see source')}, from <a href="${escapeHtml(credit.page || r.url)}" rel="nofollow noopener">Wikimedia</a>.</figcaption></figure>` : '';
+  const servesChip = r.servings
+    ? (/^[\d.,]+\s*$/.test(r.servings) ? `serves ${r.servings}` : r.servings)
+    : (r.batch ? `serves ${r.batch}` : '');
+  const facts = [r.time, servesChip, r.difficulty]
+    .filter(Boolean).map((f) => `<span class="rc-fact">${escapeHtml(String(f))}</span>`).join('');
+  const others = rcp.inventory().filter((row) => row.section === meta.slug && row.path !== rcp.recipePath(r)).slice(0, 6)
+    .map((row) => `<a class="rc-pill" href="/recipes/${meta.slug}/${escapeHtml(row.path)}">${escapeHtml(row.title)}</a>`).join('');
+  const body = (r.intro ? `<p>${escapeHtml(r.intro)}</p>` : '')
+    + figure + (facts ? `<div class="rc-facts">${facts}</div>` : '') + scale
+    + `<div class="rc-two"><section><h2>Ingredients</h2>${ingredients}</section>`
+    + `<section><h2>Method</h2><ol class="rc-steps">${steps}</ol></section></div>`
+    + (r.note ? `<p class="meta">${escapeHtml(r.note)}</p>` : '')
+    + `<div class="rc-note"><b>Where this came from.</b> Adapted from <a href="${escapeHtml(r.url)}" rel="nofollow noopener">${escapeHtml(r.title)}</a> in the <a href="https://en.wikibooks.org/wiki/Cookbook:Home" rel="nofollow noopener">Wikibooks Cookbook</a>, written by its contributors and published under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="nofollow noopener license">CC BY-SA 4.0</a>. This page changes the layout and nothing else: the ingredients, the quantities and the steps are the source's. If you improve on it, the Cookbook welcomes edits.</div>`
+    + (others ? `<h2 class="section-title">More ${escapeHtml(meta.title)}</h2><p>${others}</p>` : '')
+    + `<p class="meta">Part of the <a href="/recipes/${meta.slug}">${escapeHtml(meta.title)}</a> shelf · <a href="/recipes">all shelves</a></p>`
+    + '<script>' + RC_SCALE_JS + '</script>';
+  const ldObj = {
+    '@context': 'https://schema.org', '@type': 'Recipe', name: r.title,
+    description: r.intro || `${r.title} — recipe from the Wikibooks Cookbook`,
+    url: `https://tukuk.org/recipes/${meta.slug}/${rcp.recipePath(r)}`,
+    recipeCategory: meta.title,
+    recipeIngredient: r.groups.flatMap((g) => g.items.map((it) => it.text)),
+    recipeSteps: r.steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, text: s.text })),
+    isBasedOn: r.url, license: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    // The author is the wiki, not this site: a reader following the link finds the same list,
+    // and an editor of the Cookbook can see exactly what was taken.
+    author: { '@type': 'Organization', name: 'Wikibooks Cookbook contributors', url: 'https://en.wikibooks.org/wiki/Cookbook:Home' },
+    ...(credit && credit.thumb ? { image: credit.thumb } : {}),
+    ...(r.batch ? { serves: String(r.batch) } : {}),
+    // totalTime only. The summary's Time= parameter is the whole job, and inventing a prep
+    // figure out of it would put a number in the search result that no source states.
+    ...(rcp.duration(r.time) ? { totalTime: rcp.duration(r.time) } : {}),
+    publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+  };
+  return worldDoc({
+    title: `${r.title} — Recipe, Ingredients and Method | Tukuk-OS`,
+    desc: `${r.title}: the ingredient list and method from the Wikibooks Cookbook, with serving size, a scaler for any number of people, and the source page linked.`,
+    selfUrl: `https://tukuk.org/recipes/${meta.slug}/${rcp.recipePath(r)}`,
+    ld: JSON.stringify(ldObj).replace(/</g, '\\u003c'),
+    ogImage: (credit && credit.thumb) || r.thumb,
+    heroTitle: `🍲 ${r.title}`, heroSub: `${meta.title} · ${(r.groups || []).reduce((n, g) => n + g.items.length, 0)} ingredients · ${r.steps.length} steps`,
+    css: RC_CSS, body,
+  }, recipesNav(meta.slug));
+}
+
+const REC_UNAVAILABLE = (name, back) => `<!doctype html><meta charset="utf-8"><title>${escapeHtml(name)} | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🍲 ${escapeHtml(name)}</h1><p>The cookbook is not answering right now, and this page has no saved copy to fall back on. The recipes are still there — try <a href="https://en.wikibooks.org/wiki/Cookbook:Home" rel="nofollow noopener">the Wikibooks Cookbook</a> directly, or come back in a few minutes.</p><p><a href="${back}">Back</a></p>`;
+
+app.get('/recipes', limiter.search, (req, res) => {
+  try {
+    res.type('html').send(recipesHubPage());
+  } catch {
+    res.status(503).send(REC_UNAVAILABLE('World Recipes', '/'));
+  }
+});
+
+app.get('/recipes/:slug', limiter.search, async (req, res, next) => {
+  const meta = rcp.BY_SLUG.get(String(req.params.slug || '').toLowerCase());
+  if (!meta) return next(); // not a shelf of ours: let the normal 404 answer
+  try {
+    const { recipes, at, stale } = await rcp.section(meta.slug);
+    if (!recipes.length) return res.status(503).type('html').send(REC_UNAVAILABLE(`${meta.title} recipes`, '/recipes'));
+    res.type('html').send(recipesShelfPage(meta, recipes, at, stale));
+  } catch (error) {
+    res.status(503).type('html').send(REC_UNAVAILABLE(`${meta.title} recipes`, '/recipes'));
+    console.error('[recipes]', safeError(error));
+  }
+});
+
+app.get('/recipes/:slug/:dish', limiter.search, async (req, res, next) => {
+  const meta = rcp.BY_SLUG.get(String(req.params.slug || '').toLowerCase());
+  if (!meta) return next();
+  const want = String(req.params.dish || '').toLowerCase();
+  try {
+    const { recipes } = await rcp.section(meta.slug);
+    const found = recipes.find((r) => rcp.recipePath(r) === want);
+    if (!found) return next(); // a dish that is not on this shelf is not a page of ours
+    const credit = found.image ? await rcp.credit(found.image) : {};
+    res.type('html').send(recipesDishPage(meta, found, credit));
+  } catch (error) {
+    res.status(503).type('html').send(REC_UNAVAILABLE('That recipe', `/recipes/${meta.slug}`));
+    console.error('[recipes]', safeError(error));
+  }
+});
+
 app.get('/sitemap.xml', async (req, res) => {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
@@ -3765,6 +4003,10 @@ app.get('/sitemap.xml', async (req, res) => {
   // above is how a page and its sitemap entry drift apart. Generated from the subject
   // table, so adding a subject to src/books.js publishes it here too.
   staticPages.push('/books', ...books.SUBJECTS.map((s) => `/books/${s.slug}`));
+  // The same for the cookbook: the hub and its shelves are table-driven, so a shelf added to
+  // src/recipes.js is indexed without anyone remembering to edit a second file. The dishes
+  // themselves live in /sitemap-recipes.xml, which is built from what is actually served.
+  staticPages.push('/recipes', ...rcp.SECTIONS.map((s) => `/recipes/${s.slug}`));
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -3823,6 +4065,25 @@ app.get(/^\/sitemap-nasa-(\d{4})\.xml$/, (req, res) => {
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
     + dates.map((d) => `  <url>\n    <loc>https://tukuk.org/nasa/apod/${d}</loc>\n    <lastmod>${d}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>0.6</priority>\n  </url>`).join('\n')
     + '\n</urlset>\n'
+  );
+});
+
+// ── SITEMAP RECIPES — every dish this site can currently serve ────────────────
+// Built from the shelf cache and the disk mirror, never from the wiki: a sitemap that asked
+// the API would be slow, would fail exactly when the API is down, and would list dishes that
+// do not render. A shelf that has never been read simply contributes nothing until it has —
+// prime() at boot means that is almost never, and the hub and the 27 shelves above are always
+// there to be crawled instead.
+app.get('/sitemap-recipes.xml', (req, res) => {
+  const urls = rcp.inventory().map((row) => {
+    const parts = ['  <url>', `    <loc>https://tukuk.org/recipes/${row.section}/${row.path}</loc>`];
+    if (row.at) parts.push(`    <lastmod>${row.at}</lastmod>`);
+    parts.push('    <changefreq>monthly</changefreq>', '    <priority>0.7</priority>', '  </url>');
+    return parts.join('\n');
+  }).join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`
+    + (urls || '  <!-- the cookbook has not been read yet -->') + '\n</urlset>\n'
   );
 });
 
@@ -5166,6 +5427,7 @@ function siteFooter() {
       <li><a href="/apps/chat">T Chat — Free Messenger</a></li>
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
+      <li><a href="/recipes">World Recipes — Cook From a Free Cookbook</a></li>
       <li><a href="/air-quality">Air & Oxygen</a></li>
       <li><a href="/academy">Academy — 50 Lessons</a></li>
       <li><a href="/games">Game Arcade — Play Free</a></li>
@@ -8276,6 +8538,9 @@ const STUDY_SECTIONS = [
   // book list answers "now what should I read". Linked from every /study page, because that
   // is where the question occurs.
   { href: '/books', icon: '\uD83D\uDCDA', name: 'Books by Subject', blurb: 'What to read on twenty-four subjects — the works libraries keep reprinting, with author, year and edition count.' },
+  // A shelf of recipes belongs here for the same reason a reading list does: this is the part
+  // of the site somebody comes to when they want to do something with an evening.
+  { href: '/recipes', icon: '\uD83C\uDF72', name: 'World Recipes', blurb: 'Twenty-seven shelves of real dishes with quantities and a method, from a free cookbook — with the source linked and the credit kept.' },
 ];
 
 function studyNav() {
@@ -8369,7 +8634,7 @@ function studyHubPage() {
     <div class="study-card"><h3>\uD83E\uDEBA Experiment of the day</h3><p><b>${escapeHtml(exp.name)}</b> \u2014 about ${escapeHtml(exp.time)}.</p><p>${escapeHtml(exp.why.split('.')[0])}.</p><p><a class="btn ghost" href="/study/experiments">Full instructions &rarr;</a></p></div>
     <div class="study-card"><h3>\uD83D\uDCDC History moment</h3><p><b>${escapeHtml(hist.y)}</b> \u2014 ${escapeHtml(hist.t)}</p><p>${escapeHtml(hist.d)}</p><p><a class="btn ghost" href="/study/history">See the full timeline &rarr;</a></p></div>
   </div>
-  <h2 class="section-title">Ten ways to explore</h2>
+  <h2 class="section-title">Eleven ways to explore</h2>
   <p>Each section below is a full standalone page \u2014 read it, play with it, or use it for classroom and family curiosity.</p>`;
   return studyDoc({
     title: 'General Knowledge \u2014 Science, Geography, History, Riddles & More | Tukuk-OS',

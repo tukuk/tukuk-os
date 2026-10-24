@@ -16,6 +16,7 @@ const cu = require('./cuti');
 const gp = require('./gempa');
 const udara = require('./udara');
 const bk = require('./books');
+const rcp = require('./recipes');
 
 /**
  * The front doors by path. One list, used twice: every document below is built from one of
@@ -23,7 +24,7 @@ const bk = require('./books');
  */
 const HUB_PATHS = [
   '/countries', '/weather', '/earthquakes', '/holidays', '/statistics',
-  '/disasters', '/flags', '/maps', '/air-quality', '/academy', '/books'
+  '/disasters', '/flags', '/maps', '/air-quality', '/academy', '/books', '/recipes'
 ];
 
 /**
@@ -173,6 +174,17 @@ async function sectionHubs(logger = console) {
         'Novels set in a subject are left out of a non-literary list, and no author takes more than two of the thirty slots.',
       ],
       keywords: ['books', 'reading list', 'what to read', 'philosophy', 'history', 'science books', 'open library'],
+    },
+    {
+      url: '/recipes',
+      title: `World Recipes — ${rcp.SECTIONS.length} shelves of cookable dishes`,
+      description: `Real recipes with quantities and a method, in ${rcp.SECTIONS.length} shelves from Indonesian and Indian to bread, soups and cake, read from the Wikibooks Cookbook under CC BY-SA.`,
+      lines: [
+        `How do you cook rendang, nasi lemak or a carbonara? These ${rcp.SECTIONS.length} shelves carry recipes written by cooks, with the ingredient list, the quantities and the method.`,
+        'Every dish links back to the page it was taken from and prints its licence, because the source is a free cookbook rather than an affiliate list.',
+        'Each recipe page scales the quantities to any number of servings, rounding to the marks a cup and a spoon actually carry.',
+      ],
+      keywords: ['recipe', 'recipes', 'cook', 'cooking', 'how to make', 'ingredients', 'method', 'wikibooks cookbook'],
     },
   ];
 }
