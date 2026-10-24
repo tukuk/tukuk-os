@@ -2,7 +2,7 @@
 // ── Build the long tail of /books: real shelves, from the catalogue's own subject strings ──
 //
 // WHY THIS IS A SCRIPT AND NOT A PAGE REQUEST
-// The curated twenty-six shelves in src/books.js fetch live, one search per subject, and are
+// The curated twenty-seven shelves in src/books.js fetch live, one search per subject, and are
 // primed at boot. A thousand more shelves cannot work that way: priming them would take half an
 // hour of the Internet Archive's time after every deploy, and a crawler that arrives before the
 // priming finishes would be handed a sixteen-second search. So the shelves are built here, once,
@@ -250,6 +250,26 @@ function twinOfPublished(term, state) {
 }
 
 /**
+ * Which curated shelf, if any, already answers a built shelf's term or owns its slug.
+ *
+ * A curated shelf is the better page for the same literature by every measure this cluster uses:
+ * it is hand-written, it carries an introduction and a blurb, and it reads the catalogue live
+ * rather than from a file. A built shelf over the same term holds the same thirty works under a
+ * generated title, which is a doorway page standing beside a real one. `twinOfPublished` already
+ * refuses this for a NEW candidate (the curated terms are in its list), but a shelf published
+ * before the curation existed was never asked again — measured on production, 25 Oct 2026:
+ * "climatic changes" (beside curated /books/climate-change) and "solar energy" (beside
+ * /books/solar-power) were each published twice, once by hand and once by the build.
+ *
+ * @returns {object|null} the curated subject row that supersedes this shelf
+ */
+function curatedTwin(p) {
+  const term = String((p && p.term) || '').toLowerCase();
+  const twin = term ? twinOf(term, books.SUBJECTS.map((s) => s.term)) : null;
+  return (twin && books.SUBJECTS.find((s) => s.term === twin)) || books.BY_SLUG.get(String((p && p.slug) || '')) || null;
+}
+
+/**
  * The gates are written down, so they change — and a shelf published under rules that have since
  * been found wrong must not stay up simply because it was written first. Re-checking what is
  * already on disk costs no search, so every run begins by pruning its own published list: a term
@@ -258,6 +278,9 @@ function twinOfPublished(term, state) {
  * to promise. Measured on the VPS (24 Oct 2026) after the 1,000-shelf run: this dropped "Peur",
  * "Amor", "Kind", "Wiskunde", "Mort", "Femmes", "Mujeres", "Will", "Sick", "Face", "Play" and a
  * second copy of "Atlas", leaving the run to refill those slots with shelves that clear the rules.
+ *
+ * The same re-check retires a built shelf that a curated page has since taken over (`curatedTwin`):
+ * two terms on production, 25 Oct 2026, were published by both halves of the cluster.
  */
 function prunePublished(state, works) {
   const byTime = state.published.slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
@@ -266,8 +289,13 @@ function prunePublished(state, works) {
   for (const p of byTime) {
     const why = books.rejected(p.term);
     const twin = why ? null : twinOf(p.term, kept.map((k) => k.term));
-    if (why || twin) dropped.push({ ...p, why: why || `the same shelf is published as “${twin}”` });
-    else kept.push(p);
+    const curated = (why || twin) ? null : curatedTwin(p);
+    if (why || twin || curated) {
+      dropped.push({
+        ...p,
+        why: why || (twin ? `the same shelf is published as “${twin}”` : `the curated page /books/${curated.slug} answers the same term`),
+      });
+    } else kept.push(p);
   }
   if (!dropped.length) return { dropped, kept: kept.length };
   for (const d of dropped) state.visited[d.term] = `pruned: ${d.why}`;
@@ -439,7 +467,7 @@ async function main() {
   let stop = false;
   const budget = () => state.published.length < OPTS.shelves && (state.calls || 0) < OPTS.calls;
 
-  // Seed the candidate pool from the curated twenty-six. `books.subject()` is used rather than a
+  // Seed the candidate pool from the curated twenty-seven. `books.subject()` is used rather than a
   // raw search because it keeps the cache/mirror order and rewrites the mirror in the current
   // shape — an old mirror entry has no `subjects` on its works, which is exactly the case that
   // would otherwise leave the pool empty and the run with nothing to build.
@@ -549,7 +577,7 @@ async function main() {
 // The pure rules are exported and the run is guarded, so test/books.test.js can ask this file
 // what it would publish without opening a socket — a build script that only runs as a CLI is a
 // script whose worst bugs are found in production data.
-module.exports = { stemWords, twinOf, twinOfPublished, prunePublished, pruneThin, biggestOverlap, nextCandidates, buildShelf, parseTerms, OPTS };
+module.exports = { stemWords, twinOf, twinOfPublished, curatedTwin, prunePublished, pruneThin, biggestOverlap, nextCandidates, buildShelf, parseTerms, OPTS };
 
 if (require.main === module) {
   main().catch((err) => {

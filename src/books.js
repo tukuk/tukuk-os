@@ -96,6 +96,16 @@ const SUBJECTS = [
   // five (15 times), because the climate shelf above is titled "Climate & Environment" and has no
   // "change" in it. The term is the catalogue's key, the title is the reader's word.
   { slug: 'climate-change', title: 'Climate Change', term: 'climatic changes', blurb: 'What seventy years of measurement, ice cores and ocean heat records show, and the argument about how fast it is happening.' },
+  // The same split once more, and this one had a cost. Measured on production, 25 Oct 2026:
+  // "solar panels" and "solar panel efficiency" were answered by BBC news and by our own
+  // /books/industrial-efficiency — a reading list about factories — because not one page we
+  // publish contained the word "panel". The shelves we already had (solar cells, photovoltaic
+  // cells, solar energy industries) name the cells and the trade, never the object on the roof.
+  // The catalogue files this literature under "solar energy" (3,826 works), and those works are
+  // panel books: "Stand-alone solar electric systems", "Photovoltaic design & installation for
+  // dummies", "Solar Installations", "Rooftop revolution". Term is the catalogue's key, title is
+  // the reader's word.
+  { slug: 'solar-power', title: 'Solar Power & Solar Panels', term: 'solar energy', blurb: 'Sunlight turned into heat and current: the cells inside a solar panel, the systems that store and deliver the power, and what an installation costs and produces.' },
   { slug: 'geology', title: 'Geology & Earth', term: 'geology', blurb: 'Plate tectonics, deep time and the rocks that record four and a half billion years of it.' },
   { slug: 'anthropology', title: 'Anthropology', term: 'anthropology', blurb: 'What people do and why they say they do it — kinship, ritual, exchange, and the argument about culture.' },
   { slug: 'linguistics', title: 'Language & Linguistics', term: 'linguistics', blurb: 'Sound, grammar, meaning and change: how language works as a system, and how it reshapes itself in every generation.' },
@@ -292,7 +302,7 @@ async function subject(slug) {
 
 /**
  * Fill the cache for every subject, one at a time, after boot. Without this the first
- * visitor to each of the twenty-six pages pays an up-to-16-second catalogue search, and
+ * visitor to each of the twenty-seven pages pays an up-to-16-second catalogue search, and
  * the first ten minutes after a deploy are exactly when a slow page goes unnoticed.
  * Sequential and spaced because this is a 4 GB box coming back up, and polite because
  * the searches belong to the Internet Archive, not to us. Never rejects.
@@ -322,7 +332,7 @@ async function prime({ gapMs = PRIME_GAP_MS, log = console.log, fetchOne = subje
   return done.size;
 }
 
-// ── The built shelves: everything past the curated twenty-six, read off disk ────────
+// ── The built shelves: everything past the curated twenty-seven, read off disk ────────
 // Written by scripts/books-build.js, never by a page request. Three files and a directory,
 // because the whole point is that a visitor opening /books/amateur-radio must not pay a
 // catalogue search: the shelf is a 6 KB file already on this box.
@@ -524,7 +534,7 @@ function autoShelves() {
 /** Forget the parsed index — the build script and the tests both need this. */
 function reloadShelves() { shelfIndex = null; shelfIndexAt = 0; workCountCache = null; }
 
-/** Curated first, then built: the twenty-six hand-written shelves always lead. */
+/** Curated first, then built: the twenty-seven hand-written shelves always lead. */
 function shelfMeta(slug) {
   const key = String(slug || '').toLowerCase();
   return BY_SLUG.get(key) || autoShelves().find((s) => s.slug === key) || null;

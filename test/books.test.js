@@ -492,6 +492,64 @@ test('a run re-checks the shelves an older run published, and pays nothing for i
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('a built shelf a curated page has taken over is retired, not left as a second copy', () => {
+  // The two halves of this cluster can publish the same term: the curated table by hand, the build
+  // by harvest. When the curated page arrives second, nothing re-asked the built shelf, so the site
+  // carried both — measured on production, 25 Oct 2026, for "climatic changes" and "solar energy".
+  // Same thirty works, two urls, one of them generated: a doorway page standing beside a real one.
+  // The run re-checks its own published list, so this costs no search at all.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tukuk-curated-'));
+  const probe = `
+    process.env.BOOKS_MIRROR_PATH = ${JSON.stringify(path.join(dir, 'books-last.json'))};
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const b = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'books.js'))});
+    const build = require(${JSON.stringify(path.join(__dirname, '..', 'scripts', 'books-build.js'))});
+    const at = (h) => new Date(1000 * 3600 * h).toISOString();
+    const state = { published: [], visited: {}, seen: {}, tries: {}, defer: {}, queue: [] };
+    const recs = new Map();
+    const link = (id, slug) => {
+      const r = recs.get(id) || { id, title: 'T' + id, slug: id, shelves: [] };
+      if (!r.shelves.includes(slug)) r.shelves.push(slug);
+      recs.set(id, r);
+    };
+    const shelf = (term, slug, ids, h) => {
+      b.saveShelf({ slug, term, title: term, found: 500, at: at(h), works: ids.map((id) => link(id, slug)) });
+      state.published.push({ slug, term, title: term, works: ids.length, found: 500, at: at(h) });
+    };
+    // The term a curated shelf now owns...
+    shelf('solar energy', 'solar-energy', ['/works/OL1W'], 1);
+    // ...and a term nobody curated, sitting on a slug the curated table has claimed since.
+    shelf('sunlight', 'solar-power', ['/works/OL2W', '/works/OL1W'], 2);
+    shelf('beekeeping', 'beekeeping', ['/works/OL3W'], 3);
+    const out = build.prunePublished(state, recs);
+    console.log(JSON.stringify({
+      why: out.dropped.map((d) => d.term + ' -> ' + d.why),
+      kept: out.kept,
+      visited: state.visited['solar energy'],
+      files: fs.readdirSync(path.join(b.SHELF_DIR)).sort(),
+      records: b.workIds().map((r) => r.id).sort(),
+      shelves: b.inventory().shelves.filter((s) => !s.curated).map((s) => s.slug).sort(),
+      curatedStillThere: b.allShelves().filter((s) => s.curated && /^solar|^climate/.test(s.slug)).map((s) => s.slug),
+      twin: build.curatedTwin({ term: 'climatic changes', slug: 'climatic-changes' }).slug,
+    }));
+  `;
+  const got = JSON.parse(execFileSync(process.execPath, ['-e', probe], { encoding: 'utf8', cwd: path.join(__dirname, '..') }).trim().split('\n').pop());
+  assert.deepStrictEqual(got.why, [
+    'solar energy -> the curated page /books/solar-power answers the same term',
+    'sunlight -> the curated page /books/solar-power answers the same term',
+  ], 'the term a curated page owns goes, and so does an uncurated term sharing its slug');
+  assert.strictEqual(got.kept, 1, 'a shelf on a topic nobody curated is untouched');
+  assert.match(got.visited, /^pruned: the curated page/, 'the retired term says why, so no search is spent on it again');
+  assert.deepStrictEqual(got.files, ['beekeeping.json'], 'the built duplicate leaves the disk');
+  // OL1W was only on the two retired shelves; OL2W with it; OL3W belongs to the shelf that stays.
+  assert.deepStrictEqual(got.records, ['/works/OL3W'], 'works nothing links to go with the page');
+  assert.deepStrictEqual(got.shelves, ['beekeeping'], 'the inventory stops advertising the second copy');
+  assert.deepStrictEqual(got.curatedStillThere, ['climate', 'climate-change', 'solar-power'], 'the curated pages are never the ones pruned');
+  assert.strictEqual(got.twin, 'climate-change', 'the same rule catches the other pair production already carries');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('a shelf under the works floor is retired, with the works only it showed', () => {
   // The floor was eight for the first full build, and 139 of the 2,660 shelves it published held
   // fewer than twenty works. Raising it is only half the job: the files the old floor wrote are
