@@ -206,6 +206,19 @@ test('the six families of subject string that never become a page', () => {
     'exito en los negocios': 'a Spanish label on an English site',
     'strategisch management': 'a German label on an English site',
     denken: 'a German label that its own German titles happily confirmed',
+    // The 1,000-shelf run on the VPS added the rest, found by reading every label of eight
+    // characters or fewer. Coverage did not stop any of them: a French or Dutch subject really
+    // does find French and Dutch titles, and "kind"/"mort" even share a stem with English words.
+    peur: 'French for fear, with French books in the list to prove it',
+    amor: 'Spanish for love',
+    kind: 'Dutch for child',
+    wiskunde: 'Dutch for mathematics',
+    femmes: 'French for women',
+    mujeres: 'Spanish for women',
+    erfolg: 'German for success',
+    will: 'an English word standing for two unrelated headings at once',
+    sick: 'an English word whose list is the Rituale Romanum next to a novel',
+    play: "the catalogue's drama heading, and a form tag standing alone",
     methods: 'a subdivision standing on its own',
     origin: 'a subdivision standing on its own',
     history: 'a bare umbrella word',
@@ -218,7 +231,8 @@ test('the six families of subject string that never become a page', () => {
   }
   // And the ones that must survive, each a real topic a reader might ask for.
   for (const term of ['beekeeping', 'world war', 'history of science', 'photography', 'mountaineering',
-    'numismatics', 'organic chemistry', 'problem solving', 'amateur radio']) {
+    'numismatics', 'organic chemistry', 'problem solving', 'amateur radio',
+    'play therapy', 'child development', 'mortality', 'death']) {
     assert.strictEqual(books.rejected(term), null, `“${term}” is a subject, not a label`);
   }
   // Anchored on purpose: the umbrella list must not eat a qualified phrase.
@@ -329,6 +343,91 @@ test('a built shelf, its index and its works round-trip off disk in a fresh dire
   assert.strictEqual(out.inventory.works.length, 1);
   assert.strictEqual(out.status.built, 2, 'status counts the index it was written; the ghost is missing from the sitemap, which is the file that must not lie');
   assert.strictEqual(out.status.records, 1);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('a shelf the build rewrote while the server was running becomes visible', () => {
+  // The failure this rule exists for, measured on the VPS 24 Oct 2026: a build finished with a
+  // thousand shelves on disk while /books/a-z and /sitemap-books.xml kept reporting the sixty that
+  // were there when the process first looked, because the index was parsed once and kept.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tukuk-books-refresh-'));
+  const probe = `
+    process.env.BOOKS_MIRROR_PATH = ${JSON.stringify(path.join(dir, 'books-last.json'))};
+    const fs = require('node:fs');
+    const b = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'books.js'))});
+    const shelf = (n, works) => {
+      b.saveShelf({ slug: 'beekeeping', term: 'beekeeping', title: 'Beekeeping', found: 249, at: new Date(0).toISOString(), works });
+      b.saveShelfIndex([{ slug: 'beekeeping', term: 'beekeeping', title: 'Beekeeping', works: n, found: 249, at: new Date(0).toISOString() }]);
+      // mtime is what the cache compares, and two writes in a row can land in the same
+      // millisecond — the test says when the file changed, rather than trusting the clock.
+      fs.utimesSync(b.SHELF_INDEX_FILE, new Date(), new Date(1000 * n));
+      fs.utimesSync(require('node:path').join(b.SHELF_DIR, 'beekeeping.json'), new Date(), new Date(1000 * n));
+    };
+    shelf(1, [{ slug: 'OL1W', title: 'The Country Beekeeper' }]);
+    const first = { shelves: b.autoShelves().length, indexWorks: b.autoShelves()[0].works, works: b.shelfWorks('beekeeping').map((w) => w.title), inv: b.inventory().shelves.length };
+    shelf(2, [{ slug: 'OL1W', title: 'The Country Beekeeper' }, { slug: 'OL2W', title: 'Bee, the' }]);
+    const second = { shelves: b.autoShelves().length, indexWorks: b.autoShelves()[0].works, works: b.shelfWorks('beekeeping').map((w) => w.title), inv: b.inventory().shelves.length };
+    console.log(JSON.stringify({ first, second }));
+  `;
+  const out = JSON.parse(execFileSync(process.execPath, ['-e', probe], { encoding: 'utf8', cwd: path.join(__dirname, '..') }));
+  assert.strictEqual(out.first.works.length, 1, 'the first read is the first build');
+  assert.strictEqual(out.first.indexWorks, 1, 'the index count read the first time');
+  assert.strictEqual(out.second.indexWorks, 2, 'a rewritten index is re-read too, not only the shelf file');
+  assert.strictEqual(out.second.works.length, 2, 'a rewritten shelf file is read again, not remembered');
+  assert.deepStrictEqual(out.second.works, ['The Country Beekeeper', 'Bee, the']);
+  assert.strictEqual(out.second.inv, out.first.inv, 'and the inventory still says one shelf is servable');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('a run re-checks the shelves an older run published, and pays nothing for it', () => {
+  // The gates are code, so they change. What was already written under the older rules has to be
+  // looked at again, or the site keeps a page the moment nobody would publish — and the sitemap
+  // keeps promising the works that page was the only link to.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tukuk-prune-'));
+  const probe = `
+    process.env.BOOKS_MIRROR_PATH = ${JSON.stringify(path.join(dir, 'books-last.json'))};
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const b = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'books.js'))});
+    const build = require(${JSON.stringify(path.join(__dirname, '..', 'scripts', 'books-build.js'))});
+    const at = (h) => new Date(1000 * 3600 * h).toISOString();
+    const state = { published: [], visited: {}, seen: {}, tries: {}, defer: {}, queue: [] };
+    // One record per work, naming every shelf it sits on — the shape the builder really writes.
+    const recs = new Map();
+    const link = (id, slug) => {
+      const r = recs.get(id) || { id, title: 'T' + id, slug: id, shelves: [] };
+      if (!r.shelves.includes(slug)) r.shelves.push(slug);
+      recs.set(id, r);
+      return r;
+    };
+    const shelf = (term, slug, ids, h) => {
+      b.saveShelf({ slug, term, title: term, found: 500, at: at(h), works: ids.map((id) => link(id, slug)) });
+      state.published.push({ slug, term, title: term, works: ids.length, found: 500, at: at(h) });
+    };
+    shelf('death', 'death', ['/works/OL1W'], 1);
+    shelf('peur', 'peur', ['/works/OL2W', '/works/OL1W'], 2);          // foreign label, shares a work
+    shelf('social science', 'social-science', ['/works/OL3W'], 3);
+    shelf('social sciences', 'social-sciences', ['/works/OL4W'], 4);   // its twin, published later
+    const out = build.prunePublished(state, recs);
+    console.log(JSON.stringify({
+      out: { dropped: out.dropped.map((d) => ({ term: d.term, why: d.why })), kept: out.kept },
+      files: fs.readdirSync(path.join(b.SHELF_DIR)).sort(),
+      index: JSON.parse(fs.readFileSync(b.SHELF_INDEX_FILE, 'utf8')).map((s) => s.term),
+      records: b.workIds().map((r) => r.id).sort(),
+      shelves: b.inventory().shelves.filter((s) => !s.curated).map((s) => s.slug).sort(),
+    }));
+  `;
+  // The last line only: pruning says out loud what it removed, which is the behaviour worth
+  // checking and the reason a probe of it must not read the whole stdout as one JSON value.
+  const got = JSON.parse(execFileSync(process.execPath, ['-e', probe], { encoding: 'utf8', cwd: path.join(__dirname, '..') }).trim().split('\n').pop());
+  assert.deepStrictEqual(got.out.dropped.map((d) => d.term), ['peur', 'social sciences'],
+    'the foreign label goes and the later twin goes, the earlier shelf stays');
+  assert.strictEqual(got.out.kept, 2);
+  assert.deepStrictEqual(got.files, ['death.json', 'social-science.json'], 'a pruned shelf file is deleted, not hidden');
+  assert.deepStrictEqual(got.index, ['death', 'social science'], 'the index is rewritten with what is left');
+  // OL1W was on "death" as well as on "peur", so it stays; OL2W lived only on the pruned shelf.
+  assert.deepStrictEqual(got.records, ['/works/OL1W', '/works/OL3W'], 'a work nothing links to leaves the store the sitemap is built from');
+  assert.deepStrictEqual(got.shelves, ['death', 'social-science'], 'and the inventory agrees with the disk');
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

@@ -199,20 +199,70 @@ function biggestOverlap(ranked, works) {
  * "cellules" and "child"/"children" all match, the last one on purpose: the catalogue writes one
  * heading under two spellings and a crawler handed both would find the same thirty books twice.
  */
+// Every candidate is compared against every published term, which at 1,000 shelves is a couple
+// of million word comparisons — and the same handful of strings comes back each time, so the
+// stems are remembered rather than re-split. 12,000 candidate terms of two or three words is a
+// few hundred KB, not a thing worth an eviction policy.
+const stemCache = new Map();
 function stemWords(term) {
-  return String(term || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+  const key = String(term || '').toLowerCase();
+  const hit = stemCache.get(key);
+  if (hit) return hit;
+  const stems = key.split(/[^a-z0-9]+/).filter(Boolean)
     .map((w) => w.replace(/s$/, '')).filter((w) => w.length >= 3).sort();
+  stemCache.set(key, stems);
+  return stems;
 }
-function twinOfPublished(term, state) {
+function twinOf(term, known) {
   const a = stemWords(term);
   if (!a.length) return null;
-  const known = [...state.published.map((p) => p.term), ...books.SUBJECTS.map((s) => s.term)];
   for (const other of known) {
     const b = stemWords(other);
-    if (b.length !== a.length) continue;
-    if (a.every((w, i) => w.startsWith(b[i]) || b[i].startsWith(w))) return other;
+    if (b.length === a.length && a.every((w, i) => w.startsWith(b[i]) || b[i].startsWith(w))) return other;
   }
   return null;
+}
+function twinOfPublished(term, state) {
+  return twinOf(term, [...state.published.map((p) => p.term), ...books.SUBJECTS.map((s) => s.term)]);
+}
+
+/**
+ * The gates are written down, so they change — and a shelf published under rules that have since
+ * been found wrong must not stay up simply because it was written first. Re-checking what is
+ * already on disk costs no search, so every run begins by pruning its own published list: a term
+ * rejected now, or a twin of an earlier shelf, loses its file, its index row and — when no shelf
+ * links to them any more — its work records, because the work index is what a sitemap is allowed
+ * to promise. Measured on the VPS (24 Oct 2026) after the 1,000-shelf run: this dropped "Peur",
+ * "Amor", "Kind", "Wiskunde", "Mort", "Femmes", "Mujeres", "Will", "Sick", "Face", "Play" and a
+ * second copy of "Atlas", leaving the run to refill those slots with shelves that clear the rules.
+ */
+function prunePublished(state, works) {
+  const byTime = state.published.slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  const kept = [];
+  const dropped = [];
+  for (const p of byTime) {
+    const why = books.rejected(p.term);
+    const twin = why ? null : twinOf(p.term, kept.map((k) => k.term));
+    if (why || twin) dropped.push({ ...p, why: why || `the same shelf is published as “${twin}”` });
+    else kept.push(p);
+  }
+  if (!dropped.length) return { dropped, kept: kept.length };
+
+  const gone = new Set(dropped.map((d) => d.slug));
+  for (const d of dropped) {
+    try { fs.unlinkSync(path.join(books.SHELF_DIR, `${d.slug}.json`)); } catch { /* already gone */ }
+    state.visited[d.term] = `pruned: ${d.why}`;
+  }
+  for (const [id, rec] of works) {
+    rec.shelves = (rec.shelves || []).filter((s) => !gone.has(s));
+    if (!rec.shelves.length) works.delete(id);
+  }
+  state.published = kept;
+  books.saveShelfIndex(kept.slice().sort((a, b) => a.title.localeCompare(b.title)));
+  books.replaceWorks([...works.values()]);
+  console.log(`[books-build] pruned ${dropped.length} shelf files under rules newer than they are:`);
+  for (const d of dropped.slice(0, 12)) console.log(`  ✂ ${d.term} — ${d.why}`);
+  return { dropped, kept: kept.length };
 }
 
 /**
@@ -270,6 +320,7 @@ async function buildShelf(term, { works, state }) {
 async function main() {
   const state = loadState();
   const works = loadExistingWorks();
+  prunePublished(state, works);
 
   for (const s of state.published) state.visited[s.term] = 'published';
 
@@ -390,7 +441,7 @@ async function main() {
 // The pure rules are exported and the run is guarded, so test/books.test.js can ask this file
 // what it would publish without opening a socket — a build script that only runs as a CLI is a
 // script whose worst bugs are found in production data.
-module.exports = { stemWords, twinOfPublished, biggestOverlap, nextCandidates, buildShelf, OPTS };
+module.exports = { stemWords, twinOf, twinOfPublished, prunePublished, biggestOverlap, nextCandidates, buildShelf, OPTS };
 
 if (require.main === module) {
   main().catch((err) => {

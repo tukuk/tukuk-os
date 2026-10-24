@@ -369,6 +369,15 @@ function shelfSlug(term) {
 //     "Chemistry, Organic", "Study And Teaching (Secondary)" and "Open_syllabus_Project" —
 //     eleven of thirty pages that nobody would have read. Two of the three families below
 //     exist because of that list, measured rather than imagined.
+// The `bare` additions are a different failure: "will", "sick" and "face" are English, but the
+// catalogue folds several headings into one string, so their lists are incoherent — measured on
+// the VPS, "Will" (12,441 works) is Schopenhauer's "Die Welt als Wille und Vorstellung" next to
+// "Will of General George Washington" next to "La Ley Del Exito", and "Sick" (8,836) is the
+// "Rituale Romanum" next to "Long day's journey into night". One label standing for two
+// unrelated topics is not a reading list, it is a homophone. "Play" is the same family and is
+// anchored for the opposite reason: the plural is a form tag wherever it sits, while "play"
+// standing alone is the catalogue's drama heading — but "play therapy" is a real topic, so it
+// must not be caught by a substring rule.
 const REJECT = {
   // A subject label is a topic, so it is written with words and spaces. Commas are the
   // inverted subdivision order ("chemistry, organic" — the same topic as "organic
@@ -393,9 +402,17 @@ const REJECT = {
   // site, so the tokens that were actually seen are refused by name. Every word here was
   // observed in the harvested pool and each is a spelling of a topic the catalogue already
   // offers in English — nothing here is a guess about a language.
-  foreign: /\b(anatomie|humaine|cellules|enfants|denken|exito|negocios|genetica|genetik|strategisch|strategisches|entwicklungspsychologie|ontwikkelingspsychologie|psychologie|chemie|chimie|physik|physique|natuurkunde|histoire|philosophie|lehrbuch|economie|politique|mathematiques|manuels|problemes|exercices|d-enseignement|sociale|sociologie|medicina|historia|literatura|ciencias)\b/i,
+  // …and the 1,000-shelf run (24 Oct 2026, on the VPS) added the rest of them by reading every
+  // label of eight characters or fewer: peur, mort, amor, kind, femmes, mujeres, erfolg, ethik,
+  // raison, quelle and wiskunde all cleared the coverage gate, because the catalogue holds the
+  // topic's books in that language too. Two routes were measured and rejected before this list
+  // was written: the `language` field is a list of every translation a work has ("The Wisdom of
+  // Insecurity" = spa,tur,eng,fre,slv,chi,ger), so it cannot say what language a TITLE is; and
+  // there is no English lexicon on this box (/usr/share/dict/words is absent, none in
+  // node_modules). A named list of strings the harvest really published is the honest shape.
+  foreign: /\b(anatomie|humaine|cellules|enfants|denken|exito|negocios|genetica|genetik|strategisch|strategisches|entwicklungspsychologie|ontwikkelingspsychologie|psychologie|chemie|chimie|physik|physique|natuurkunde|histoire|philosophie|lehrbuch|economie|politique|mathematiques|manuels|problemes|exercices|d-enseignement|sociale|sociologie|medicina|historia|literatura|ciencias|peur|mort|amor|kind|femmes|mujeres|erfolg|ethik|raison|quelle|wiskunde)\b/i,
   paperwork: /^(laws|acts|bills|treaties|agreements|reports|proceedings|congresses|conferences|symposia|colloquia|periodicals|serials|dictionaries|enc[oa]cl[oa]p[ae]dias|directories|yearbooks|almanacs|statistics|sources|bibliograph\w*|indexes|abstracts|microforms?|microfilms?|patents?|standards?|specifications|catalogs|catalogues|pictures\b)/i,
-  bare: /^(history|society|geography|science|technology|nature|world|civilization|civilisation|commerce|trade|industry|education|research|methodology|miscellany|miscellaneous|biography|autobiography|diaries|correspondence|letters|interviews|obituaries|study and teaching|study and travel|description and travel|origin|origins|methods|behavior|behaviour|medical|physiological|phenomena)$/i,
+  bare: /^(history|society|geography|science|technology|nature|world|civilization|civilisation|commerce|trade|industry|education|research|methodology|miscellany|miscellaneous|biography|autobiography|diaries|correspondence|letters|interviews|obituaries|study and teaching|study and travel|description and travel|origin|origins|methods|behavior|behaviour|medical|physiological|phenomena|will|sick|face|play)$/i,
 };
 
 /**
@@ -463,17 +480,25 @@ const writeAtomic = (file, text) => {
   fs.renameSync(tmp, file); // rename is atomic: a reader never sees half a file
 };
 
-// The shelf index is read once and kept — ~1,000 entries of {slug, term, title, works, found, at}
-// is a few hundred kilobytes, and every hub, A–Z page and sitemap row comes from it.
+// The shelf index is read and kept — 1,000 entries of {slug, term, title, works, found, at} is
+// 130 KB, and every hub, A–Z page and sitemap row comes from it. It is re-read when the file's
+// mtime moves rather than parsed exactly once: a build that finishes while the server is running
+// must become visible without restarting the site, and measured on the VPS (24 Oct 2026) the
+// opposite choice left /books/a-z and /sitemap-books.xml reporting sixty shelves after the run had
+// written a thousand, while the work sitemaps — which already cache by mtime — were correct.
 let shelfIndex = null;
+let shelfIndexAt = 0;
 function autoShelves() {
-  if (shelfIndex) return shelfIndex;
+  let mtime = 0;
+  try { mtime = fs.statSync(SHELF_INDEX_FILE).mtimeMs; } catch { /* no index yet */ }
+  if (shelfIndex && shelfIndexAt === mtime) return shelfIndex;
   const raw = readJson(SHELF_INDEX_FILE);
   shelfIndex = Array.isArray(raw) ? raw.filter((s) => s && s.slug && s.term && s.works > 0) : [];
+  shelfIndexAt = mtime;
   return shelfIndex;
 }
 /** Forget the parsed index — the build script and the tests both need this. */
-function reloadShelves() { shelfIndex = null; workCountCache = null; }
+function reloadShelves() { shelfIndex = null; shelfIndexAt = 0; workCountCache = null; }
 
 /** Curated first, then built: the twenty-four hand-written shelves always lead. */
 function shelfMeta(slug) {
@@ -487,17 +512,22 @@ function allShelves() {
 
 // Last twenty-four shelf files parsed. Twenty-four is the number a crawler can plausibly
 // have open at once across the whole cluster; past that a page costs one file read, which
-// is what this box is good at.
+// is what this box is good at. The mtime rides along with the parse for the same reason the
+// index's does: the build rewrites a shelf file, and a reader must not be served the old list
+// because this process happened to look at it first.
 const shelfLru = new Map();
 function shelfFile(slug) { return path.join(SHELF_DIR, `${slug}.json`); }
 
 /** The works on a built shelf, from disk. Never the network, never a surprise. */
 function shelfWorks(slug) {
+  const file = shelfFile(slug);
+  let mtime = 0;
+  try { mtime = fs.statSync(file).mtimeMs; } catch { return []; }
   const hit = shelfLru.get(slug);
-  if (hit) return hit.works;
-  const raw = readJson(shelfFile(slug));
+  if (hit && hit.mtime === mtime) return hit.works;
+  const raw = readJson(file);
   const works = raw && Array.isArray(raw.works) ? raw.works : [];
-  shelfLru.set(slug, { works });
+  shelfLru.set(slug, { mtime, works });
   if (shelfLru.size > 24) shelfLru.delete(shelfLru.keys().next().value);
   return works;
 }
@@ -515,9 +545,13 @@ function shardOf(id) {
 
 const shardLru = new Map();
 function shard(n) {
-  if (shardLru.has(n)) return shardLru.get(n);
-  const raw = readJson(path.join(WORK_DIR, `shard-${n}.json`)) || {};
-  shardLru.set(n, raw);
+  const file = path.join(WORK_DIR, `shard-${n}.json`);
+  let mtime = 0;
+  try { mtime = fs.statSync(file).mtimeMs; } catch { return {}; }
+  const hit = shardLru.get(n);
+  if (hit && hit.mtime === mtime) return hit.map;
+  const raw = readJson(file) || {};
+  shardLru.set(n, { mtime, map: raw });
   if (shardLru.size > 4) shardLru.delete(shardLru.keys().next().value);
   return raw;
 }
@@ -597,16 +631,28 @@ function saveShelfIndex(list) {
 }
 
 /** Write every work into its shard and rewrite the index. */
-function saveWorks(records) {
+function saveWorks(records) { writeWorks(records, true); }
+
+/**
+ * The same, but every shard is written from scratch, so a record nobody gave you any more is
+ * gone rather than merely absent. Used when a shelf is pruned: its works must leave the store
+ * with it, because the work index is what a sitemap is allowed to promise.
+ */
+function replaceWorks(records) { writeWorks(records, false); }
+
+function writeWorks(records, merge) {
   const byShard = new Map();
   for (const r of records) {
     const n = shardOf(r.id);
     if (!byShard.has(n)) byShard.set(n, {});
     byShard.get(n)[r.id] = r;
   }
-  for (const [n, map] of byShard) {
+  const all = [];
+  for (let n = 0; n < WORK_SHARDS; n += 1) all.push(n);
+  for (const n of (merge ? [...byShard.keys()] : all)) {
     const file = path.join(WORK_DIR, `shard-${n}.json`);
-    writeAtomic(file, JSON.stringify({ ...readJson(file), ...map }));
+    const map = byShard.get(n) || {};
+    writeAtomic(file, JSON.stringify(merge ? { ...readJson(file), ...map } : map));
   }
   shardLru.clear();
   writeAtomic(WORK_INDEX_FILE, records.map((r) => JSON.stringify({ id: r.id, at: r.at })).join('\n') + '\n');
@@ -635,6 +681,6 @@ module.exports = {
   LABEL_MIN_TITLE_COVERAGE,
   subject, prime, status, normalise, rankWorks, carriesSubject, isFiction, isSerial, readMirror,
   searchSubject, titleCase, shelfSlug, rejected, labelCoverage, shelfMeta, allShelves, autoShelves, shelfWorks,
-  work, workIds, shardOf, inventory, saveShelf, saveShelfIndex, saveWorks, reloadShelves,
+  work, workIds, shardOf, inventory, saveShelf, saveShelfIndex, saveWorks, replaceWorks, reloadShelves,
   workSitemapChunks,
 };
