@@ -107,10 +107,22 @@ function docText(hit) {
 const CRAWLED_QUALITY = 0.5;
 const QUALITY_PRIOR = 0.15; // a reviewed page gets +0.0675 over a crawled one — a tie-breaker, not a rank
 
+/**
+ * The prior is bounded on purpose: it spans at most ±0.075, which is smaller than any relevance
+ * gap the similarity scores actually show (0.05-0.1 between neighbouring hits), so it can only
+ * settle a near-tie. It cannot make an unrelated document relevant.
+ */
+
 /** How much authority a hit carries, as a score adjustment on top of its relevance. */
 function qualityPrior(hit) {
-  const q = Number(hit && hit.quality);
-  return QUALITY_PRIOR * ((Number.isFinite(q) ? q : CRAWLED_QUALITY) - CRAWLED_QUALITY);
+  const raw = Number(hit && hit.quality);
+  if (!Number.isFinite(raw)) return 0;
+  // The index holds two scales in one field: our reviewed pages use 0-1 (0.9-0.95) and some
+  // crawled records carry a 0-100 score — 96 and 94 were the first two found. Normalise before
+  // use, or 0.15 × (96 - 0.5) = +14.3 drowns a cosine of 0.6: measured live on 25 Oct 2026,
+  // that is exactly how an MDN page about HTTP came back first for "solar panel efficiency".
+  const q = raw > 1 ? raw / 100 : raw;
+  return QUALITY_PRIOR * (Math.min(1, Math.max(0, q)) - CRAWLED_QUALITY);
 }
 
 /**
