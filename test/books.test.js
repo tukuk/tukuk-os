@@ -219,6 +219,12 @@ test('the six families of subject string that never become a page', () => {
     will: 'an English word standing for two unrelated headings at once',
     sick: 'an English word whose list is the Rituale Romanum next to a novel',
     play: "the catalogue's drama heading, and a form tag standing alone",
+    // The Dutch and German spellings of a discipline: a shape, not another word list, because no
+    // English word ends this way and the twin rule cannot see them ("cosmologi" is not a prefix
+    // of "cosmology").
+    cosmologie: 'the Dutch spelling of a shelf the site already has',
+    dermatologie: 'the Dutch spelling of dermatology',
+    diagnostiek: 'the Dutch spelling of diagnosis',
     methods: 'a subdivision standing on its own',
     origin: 'a subdivision standing on its own',
     history: 'a bare umbrella word',
@@ -232,7 +238,7 @@ test('the six families of subject string that never become a page', () => {
   // And the ones that must survive, each a real topic a reader might ask for.
   for (const term of ['beekeeping', 'world war', 'history of science', 'photography', 'mountaineering',
     'numismatics', 'organic chemistry', 'problem solving', 'amateur radio',
-    'play therapy', 'child development', 'mortality', 'death']) {
+    'play therapy', 'child development', 'mortality', 'death', 'psychology', 'optics']) {
     assert.strictEqual(books.rejected(term), null, `“${term}” is a subject, not a label`);
   }
   // Anchored on purpose: the umbrella list must not eat a qualified phrase.

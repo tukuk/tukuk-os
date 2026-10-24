@@ -410,7 +410,13 @@ const REJECT = {
   // Insecurity" = spa,tur,eng,fre,slv,chi,ger), so it cannot say what language a TITLE is; and
   // there is no English lexicon on this box (/usr/share/dict/words is absent, none in
   // node_modules). A named list of strings the harvest really published is the honest shape.
-  foreign: /\b(anatomie|humaine|cellules|enfants|denken|exito|negocios|genetica|genetik|strategisch|strategisches|entwicklungspsychologie|ontwikkelingspsychologie|psychologie|chemie|chimie|physik|physique|natuurkunde|histoire|philosophie|lehrbuch|economie|politique|mathematiques|manuels|problemes|exercices|d-enseignement|sociale|sociologie|medicina|historia|literatura|ciencias|peur|mort|amor|kind|femmes|mujeres|erfolg|ethik|raison|quelle|wiskunde)\b/i,
+  //
+  // The tail is a shape rather than a list, and this part is a rule instead of more words: no
+  // English word ends in "…ologie" or "…iek", while the Dutch and German spellings of a
+  // discipline do — "cosmologie", "dermatologie", "diagnostiek" were all live shelves beside the
+  // English ones they duplicate, and their stem differs at the last letter, so the twin rule
+  // cannot see them either ("cosmologi" is not a prefix of "cosmology").
+  foreign: /\b(anatomie|humaine|cellules|enfants|denken|exito|negocios|genetica|genetik|strategisch|strategisches|entwicklungspsychologie|ontwikkelingspsychologie|psychologie|chemie|chimie|physik|physique|natuurkunde|histoire|philosophie|lehrbuch|economie|politique|mathematiques|manuels|problemes|exercices|d-enseignement|sociale|sociologie|medicina|historia|literatura|ciencias|peur|mort|amor|kind|femmes|mujeres|erfolg|ethik|raison|quelle|wiskunde)\b|^(?:\w+ologie|\w+iek)$/i,
   paperwork: /^(laws|acts|bills|treaties|agreements|reports|proceedings|congresses|conferences|symposia|colloquia|periodicals|serials|dictionaries|enc[oa]cl[oa]p[ae]dias|directories|yearbooks|almanacs|statistics|sources|bibliograph\w*|indexes|abstracts|microforms?|microfilms?|patents?|standards?|specifications|catalogs|catalogues|pictures\b)/i,
   bare: /^(history|society|geography|science|technology|nature|world|civilization|civilisation|commerce|trade|industry|education|research|methodology|miscellany|miscellaneous|biography|autobiography|diaries|correspondence|letters|interviews|obituaries|study and teaching|study and travel|description and travel|origin|origins|methods|behavior|behaviour|medical|physiological|phenomena|will|sick|face|play)$/i,
 };
