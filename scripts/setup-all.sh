@@ -323,13 +323,28 @@ fi
 # ── [8] Cloudflare Edge — www.tukuk.org always live ───────────────────────
 info "[7/8] Cloudflare Edge (www mirror + R2 snapshot)..."
 CF_API="$(get_env CLOUDFLARE_API_TOKEN)"
+CF_ACC="$(get_env CLOUDFLARE_ACCOUNT_ID)"
 if [[ -n "$CF_API" ]]; then
   export CLOUDFLARE_API_TOKEN="$CF_API"
+  # wrangler finds the account from this one variable. Without it the deploy answers
+  # "Failed to automatically retrieve account IDs for the logged in user", which reads as a
+  # permissions problem and is not one — the token is fine, the account id was never passed.
+  if [[ -n "$CF_ACC" ]]; then export CLOUDFLARE_ACCOUNT_ID="$CF_ACC"; fi
   command -v wrangler >/dev/null || npm install -g wrangler --silent || true
   ( cd "$INSTALL_DIR/worker" && npx --yes wrangler deploy >/dev/null ) \
     && ok "Worker www.tukuk.org deployed (try origin → on failure → serve R2 snapshot)." \
     || warn "wrangler deploy failed — check CLOUDFLARE_API_TOKEN & zone permissions."
-  bash "$INSTALL_DIR/scripts/snapshot-r2.sh" || true
+  # snapshot-r2.sh reads its whole configuration from the environment and this is the only
+  # call that runs it without systemd's EnvironmentFile: invoked from npm's postinstall there
+  # is no .env in scope, so BACKUP_WORKER_URL/SECRET are empty, every upload falls back to a
+  # wrangler call that cannot authenticate, and the log reads like the edge mirror is down —
+  # while the timer's own run (which does load .env) keeps it fresh. Hand it the keys here.
+  ( export BACKUP_WORKER_URL="$(get_env BACKUP_WORKER_URL)" \
+           BACKUP_UPLOAD_SECRET="$(get_env BACKUP_UPLOAD_SECRET)" \
+           MEILI_MASTER_KEY="$(get_env MEILI_MASTER_KEY)" \
+           MEILI_HOST="$(get_env MEILI_HOST)" \
+           R2_BUCKET="$(get_env R2_BUCKET)"
+    bash "$INSTALL_DIR/scripts/snapshot-r2.sh" ) || true
   cat > /etc/systemd/system/tukuk-snapshot.service << EOF
 [Unit]
 Description=Snapshot Tukuk-OS site to R2
