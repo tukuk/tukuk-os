@@ -3727,10 +3727,14 @@ function booksHubPage() {
   const shelves = books.allShelves();
   const built = shelves.length - books.SUBJECTS.length;
   const cards = books.SUBJECTS.map((s) => `<div class="bk-card"><h3><a href="/books/${s.slug}">${escapeHtml(s.title)}</a></h3><p>${escapeHtml(s.blurb)}</p></div>`).join('');
-  // The twelve newest built shelves, so the hub changes as the build goes and a reader who has
-  // seen this page before has a reason to look again. Ordered by title (the index is), because
-  // "newest" here means newest to the catalogue's own list, not news.
-  const recent = books.autoShelves().slice(-12).map((s) => `<a class="bk-pill" href="/books/${s.slug}">${escapeHtml(s.title)}</a>`).join('');
+  // The twelve most recently built shelves, so the hub changes as the build goes and a reader who
+  // has seen this page before has a reason to look again. Sorted on the `at` stamp the builder
+  // writes beside each index row: the index itself is stored sorted by title, so slicing its tail
+  // would show the same twelve names from W to Z no matter how many shelves got built.
+  const recent = books.autoShelves().slice()
+    .sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+    .slice(0, 12)
+    .map((s) => `<a class="bk-pill" href="/books/${s.slug}">${escapeHtml(s.title)}</a>`).join('');
   const body = `<p>“What should I read about <i>this</i>?” is a harder question than “what is this?”, and most sites answer it with an affiliate list. This one answers it with the books the world keeps reprinting: for each subject below, the works carrying that subject in the <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> catalogue — the Internet Archive's record of what libraries actually hold — ordered by how many editions exist.</p>
   <p>Why editions rather than sales or stars? Because a work with forty editions was reprinted, translated and taught for decades, and that number is a fact you can check rather than a score somebody sold. Each entry gives the author, the year it was first published and how many editions exist, and links to the catalogue so you can borrow or read the real thing wherever the rights allow.</p>
   <p>Three rules keep the lists about the subject and not merely near it: a work must carry the subject on its own record, a novel is left out unless the subject is literature (the catalogue tags historical fiction under <i>ancient history</i>), and no author takes more than two of the thirty slots. Statute books and conference proceedings are dropped too — the law list was headed by a record literally titled “Laws, etc”, which is a country's legislation, not a book to read.</p>
@@ -3738,7 +3742,7 @@ function booksHubPage() {
   <div class="bk-grid">${cards}</div>
   ${built > 0 ? `<h2 class="section-title">And ${built} more, from the catalogue itself</h2>
   <p>Every shelf below was published because the catalogue proved it: the subject string was written by librarians on books that were already on another list, and at least eight works carry it once the rules above are applied. These pages have no introduction — a machine cannot tell you why a subject is worth your time, and pretending otherwise would be the site writing advertising for books it has not read.</p>
-  <p>${recent}</p>
+  <p><b>Most recently added:</b> ${recent}</p>
   <p><a class="bk-pill" href="/books/a-z">🔤 All ${shelves.length} subjects, A–Z</a></p>` : ''}
   <h2 class="section-title">How to use a list like this</h2>
   <p>Start with the newest-looking title on a subject you already know — it will tell you where the field stands now. Then take the oldest one that still gets reprinted; that is usually the book everyone else is arguing with. If a subject bores you, that is information too: a canon is a map of other people's obsessions, not a duty.</p>
