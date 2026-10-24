@@ -262,4 +262,34 @@ function available() {
   return false;
 }
 
-module.exports = { rerank, status, looksDeployed, available };
+/**
+ * Load whatever backend this box actually has before the first visitor needs it.
+ *
+ * Both backends pay a one-off cost on their first call: the cloud one loads the model at the
+ * edge (measured from this VPS, 623 ms for the first embed against 203 ms for the next, and the
+ * second embed of the same text was the warm one), and the local one parses an ONNX file into
+ * memory. Whoever types the first search after a restart paid that cost in full — 1.3 s end to
+ * end against 0.25 s warm. One tiny embed at boot removes it.
+ *
+ * Never throws and never retries: a warm-up that fails is a warm-up that was not needed yet.
+ */
+async function warm() {
+  try {
+    if (!available()) return false;
+    if (config.rerank.enabled && looksDeployed(resolveModelDir())) {
+      if (!(await loadOnce())) return false;
+    }
+    if (config.rerank.cloud) {
+      const token = CF_TOKEN();
+      if (!token) return false;
+      const account = config.brain.cloudflareAccountId || (await resolveAccount());
+      if (!account) return false;
+      await embedBatch(token, account, ['warm up']);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { rerank, warm, status, looksDeployed, available };
