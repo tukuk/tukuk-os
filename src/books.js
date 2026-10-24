@@ -321,7 +321,11 @@ const SHELF_INDEX_FILE = path.join(DATA_DIR, 'books-shelves.json');
 const WORK_DIR = path.join(DATA_DIR, 'books-works');
 const WORK_INDEX_FILE = path.join(DATA_DIR, 'books-works-index.jsonl');
 const WORK_SHARDS = 40;          // ~30,000 works ÷ 40 ≈ 750 records a shard, ~250 KB
-const SHELF_MIN_WORKS = 8;       // below this it is a stub, not a reading list
+// Below this it is a stub, not a reading list. The first full build (VPS, 24 Oct 2026) published
+// 2,660 shelves at a floor of eight: the shortest held eight works and the median held the full
+// thirty, but 139 of them sat under twenty — pages that cost a crawl to serve a handful of titles.
+// Twenty is where the distribution stops looking like a footnote.
+const SHELF_MIN_WORKS = 20;
 
 // Subject strings are the catalogue's own lowercase labels ("beekeeping", "quantum
 // computing"). Capitalising them is formatting, not authorship — but the words are the

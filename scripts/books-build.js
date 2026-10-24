@@ -19,7 +19,7 @@
 //   1. src/books.js's rejection rules — the shape of the label (subdivisions, form tags,
 //      paperwork, punctuation, foreign spellings, bare umbrella words) — cost nothing, because
 //      the term is a string we already hold;
-//   2. at least SHELF_MIN_WORKS (8) works survive the four list rules on it;
+//   2. at least SHELF_MIN_WORKS (20) works survive the four list rules on it;
 //   3. the catalogue holds at least --minFound (120) works under it, so the list shown is a
 //      sample of a real body of work and not the whole topic;
 //   4. the label is a word its own books use (books.labelCoverage) — without this the harvest
@@ -44,6 +44,7 @@
 //   node scripts/books-build.js                          # default: 1,000 shelves, 3,000 calls
 //   node scripts/books-build.js --shelves=60 --calls=200 # a proof run before the real one
 //   node scripts/books-build.js --concurrency=1          # a quieter network, a longer run
+//   node scripts/books-build.js --prune-only             # retire what is on disk, no searches
 // Ctrl-C is safe: state is written after every shelf and re-running resumes from the file.
 // --calls is measured against the LIFETIME total the state file remembers, not the current run:
 // resuming a build that has spent 1,400 searches needs --calls above that number.
@@ -67,6 +68,9 @@ function arg(name, fallback) {
   const m = new RegExp(`--${name}=(\\S+)`).exec(process.argv.join(' '));
   return m ? Number(m[1]) : fallback;
 }
+// Pruning what is already published needs no network at all, and a floor that moved has to be
+// applied to the files the old floor produced. This flag does exactly that and exits.
+const PRUNE_ONLY = /--prune-only\b/.test(process.argv.join(' '));
 const OPTS = {
   shelves: arg('shelves', DEFAULTS.shelves),
   calls: arg('calls', DEFAULTS.calls),
@@ -249,11 +253,50 @@ function prunePublished(state, works) {
     else kept.push(p);
   }
   if (!dropped.length) return { dropped, kept: kept.length };
+  for (const d of dropped) state.visited[d.term] = `pruned: ${d.why}`;
+  dropShelves(state, works, dropped, kept);
+  console.log(`[books-build] pruned ${dropped.length} shelf files under rules newer than they are:`);
+  for (const d of dropped.slice(0, 12)) console.log(`  ✂ ${d.term} — ${d.why}`);
+  return { dropped, kept: kept.length };
+}
 
+/**
+ * The other half of that re-check, and the only one that has to read the files: a shelf shorter
+ * than SHELF_MIN_WORKS is a stub that cleared the gates on a thin day. The floor was eight for the
+ * first full build; measured on the VPS (24 Oct 2026) out of 2,660 shelves 139 sat under twenty
+ * works, and a page carrying nine books costs a crawl to say what the shelf beside it already
+ * says. Their URLs go with the files: the sitemap stops advertising them on the same run, so the
+ * 404s are never promised to anybody.
+ */
+function pruneThin(state, works) {
+  const min = books.SHELF_MIN_WORKS;
+  const kept = [];
+  const dropped = [];
+  for (const p of state.published) {
+    // The file is the count that matters: the index row was written by whichever run published
+    // the shelf, and a list re-written since then may carry fewer works than the row remembers.
+    // A row whose file has vanished counts as zero and goes the same way.
+    const size = books.shelfWorks(p.slug).length;
+    if (size < min) dropped.push({ ...p, size, why: `${size} works — a shelf needs ${min}` });
+    else kept.push(p);
+  }
+  if (!dropped.length) return { dropped, kept: kept.length };
+  for (const d of dropped) state.visited[d.term] = `pruned: only ${d.size} works`;
+  dropShelves(state, works, dropped, kept);
+  console.log(`[books-build] pruned ${dropped.length} shelves below the ${min}-work floor:`);
+  for (const d of dropped.slice(0, 12)) console.log(`  ✂ ${d.term} (${d.size} works)`);
+  return { dropped, kept: kept.length };
+}
+
+/**
+ * What both prunes do to the disk: the file, the index row, and every work record the surviving
+ * shelves no longer link to. The work index is what a sitemap is allowed to promise, so a record
+ * left behind is a page advertised with nothing to show.
+ */
+function dropShelves(state, works, dropped, kept) {
   const gone = new Set(dropped.map((d) => d.slug));
   for (const d of dropped) {
     try { fs.unlinkSync(path.join(books.SHELF_DIR, `${d.slug}.json`)); } catch { /* already gone */ }
-    state.visited[d.term] = `pruned: ${d.why}`;
   }
   for (const [id, rec] of works) {
     rec.shelves = (rec.shelves || []).filter((s) => !gone.has(s));
@@ -262,9 +305,6 @@ function prunePublished(state, works) {
   state.published = kept;
   books.saveShelfIndex(kept.slice().sort((a, b) => a.title.localeCompare(b.title)));
   books.replaceWorks([...works.values()]);
-  console.log(`[books-build] pruned ${dropped.length} shelf files under rules newer than they are:`);
-  for (const d of dropped.slice(0, 12)) console.log(`  ✂ ${d.term} — ${d.why}`);
-  return { dropped, kept: kept.length };
 }
 
 /**
@@ -323,6 +363,13 @@ async function main() {
   const state = loadState();
   const works = loadExistingWorks();
   prunePublished(state, works);
+  pruneThin(state, works);
+
+  if (PRUNE_ONLY) {
+    saveState(state);
+    console.log(`[books-build] prune-only run: ${state.published.length} shelves left, ${works.size} works`);
+    return;
+  }
 
   for (const s of state.published) state.visited[s.term] = 'published';
 
@@ -452,7 +499,7 @@ async function main() {
 // The pure rules are exported and the run is guarded, so test/books.test.js can ask this file
 // what it would publish without opening a socket — a build script that only runs as a CLI is a
 // script whose worst bugs are found in production data.
-module.exports = { stemWords, twinOf, twinOfPublished, prunePublished, biggestOverlap, nextCandidates, buildShelf, OPTS };
+module.exports = { stemWords, twinOf, twinOfPublished, prunePublished, pruneThin, biggestOverlap, nextCandidates, buildShelf, OPTS };
 
 if (require.main === module) {
   main().catch((err) => {

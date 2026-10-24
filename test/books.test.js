@@ -472,6 +472,65 @@ test('a run re-checks the shelves an older run published, and pays nothing for i
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('a shelf under the works floor is retired, with the works only it showed', () => {
+  // The floor was eight for the first full build, and 139 of the 2,660 shelves it published held
+  // fewer than twenty works. Raising it is only half the job: the files the old floor wrote are
+  // still on disk and still in the index, so the next run has to look at what it published and
+  // take the stubs out — file, index row and the work records nothing links to any more.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tukuk-thin-'));
+  const probe = `
+    process.env.BOOKS_MIRROR_PATH = ${JSON.stringify(path.join(dir, 'books-last.json'))};
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const b = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'books.js'))});
+    const build = require(${JSON.stringify(path.join(__dirname, '..', 'scripts', 'books-build.js'))});
+    const at = (h) => new Date(1000 * 3600 * h).toISOString();
+    const state = { published: [], visited: {}, seen: {}, tries: {}, defer: {}, queue: [] };
+    const recs = new Map();
+    const link = (id, slug) => {
+      const r = recs.get(id) || { id, title: 'T' + id, slug: id, shelves: [] };
+      if (!r.shelves.includes(slug)) r.shelves.push(slug);
+      recs.set(id, r);
+    };
+    // Each shelf gets its own id block; h doubles as the block number so nothing collides.
+    const shelf = (term, slug, n, h) => {
+      const ids = [];
+      for (let i = 0; i < n; i++) { const id = '/works/OL' + (h * 100 + i) + 'W'; ids.push({ slug: id, title: 'T' + id }); link(id, slug); }
+      b.saveShelf({ slug, term, title: term, found: 500, at: at(h), works: ids });
+      state.published.push({ slug, term, title: term, works: n, found: 500, at: at(h) });
+    };
+    shelf('beekeeping', 'beekeeping', 20, 1);   // clears the floor
+    shelf('chapbooks', 'chapbooks', 19, 2);     // one short
+    shelf('pamphlets', 'pamphlets', 8, 3);      // the old floor: a stub
+    link('/works/OL100W', 'pamphlets');          // a good shelf names this work too
+    // A published row whose file is already gone promises a page with nothing behind it.
+    state.published.push({ slug: 'ghost', term: 'ghost', title: "Ghost", works: 30, found: 500, at: at(4) });
+    const out = build.pruneThin(state, recs);
+    console.log(JSON.stringify({
+      why: out.dropped.map((d) => d.term + ':' + d.size),
+      kept: out.kept,
+      visited: [state.visited.chapbooks, state.visited.pamphlets],
+      published: state.published.map((p) => p.slug),
+      files: fs.readdirSync(path.join(b.SHELF_DIR)).sort(),
+      index: JSON.parse(fs.readFileSync(b.SHELF_INDEX_FILE, 'utf8')).map((s) => s.term),
+      records: b.workIds().map((r) => r.id).length,
+      keptFirst: b.workIds().some((r) => r.id === '/works/OL100W'),
+    }));
+  `;
+  const got = JSON.parse(execFileSync(process.execPath, ['-e', probe], { encoding: 'utf8', cwd: path.join(__dirname, '..') }).trim().split('\n').pop());
+  assert.deepStrictEqual(got.why, ['chapbooks:19', 'pamphlets:8', 'ghost:0'],
+    'a list of nineteen is a stub at this floor, eight certainly is, and a row with no file is nothing at all');
+  assert.strictEqual(got.kept, 1);
+  assert.deepStrictEqual(got.visited, ['pruned: only 19 works', 'pruned: only 8 works'],
+    'the retired terms say why, so the builder does not spend a search asking for them again');
+  assert.deepStrictEqual(got.published, ['beekeeping'], 'the state file stops claiming pages that are gone');
+  assert.deepStrictEqual(got.files, ['beekeeping.json'], 'the shelf file is deleted, not hidden');
+  assert.deepStrictEqual(got.index, ['beekeeping'], 'and the index the sitemap is built from agrees');
+  assert.strictEqual(got.records, 20, 'the works only the stubs showed leave the store with them');
+  assert.ok(got.keptFirst, 'a work a surviving shelf also names stays, because that shelf still links to it');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('the books routes answer in the order that keeps them all reachable', () => {
   // /books/a-z registered after /books/:slug would be swallowed by the subject route, and the
   // A–Z page — the only page that makes a thousand shelves navigable — would 404 forever with
