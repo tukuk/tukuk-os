@@ -90,12 +90,23 @@ const SUBJECTS = [
   { slug: 'engineering', title: 'Engineering', term: 'engineering', blurb: 'Bridges, engines, materials and margins of safety — the discipline of making things that do not fall down.' },
   { slug: 'computer-science', title: 'Computer Science', term: 'computer science', blurb: 'Computation itself: algorithms, complexity, information, and why some problems are cheap and others are not.' },
   { slug: 'climate', title: 'Climate & Environment', term: 'climatology', blurb: 'How the atmosphere, oceans and ice work as one system, and what the measurements have shown over seventy years.' },
+  // The subject everybody types and the heading the catalogue filed it under are two different
+  // strings: Open Library holds this literature under "Climatic changes". Measured on the VPS,
+  // 25 Oct 2026: "climate change" was the most-searched query with no page of ours in the top
+  // five (15 times), because the climate shelf above is titled "Climate & Environment" and has no
+  // "change" in it. The term is the catalogue's key, the title is the reader's word.
+  { slug: 'climate-change', title: 'Climate Change', term: 'climatic changes', blurb: 'What seventy years of measurement, ice cores and ocean heat records show, and the argument about how fast it is happening.' },
   { slug: 'geology', title: 'Geology & Earth', term: 'geology', blurb: 'Plate tectonics, deep time and the rocks that record four and a half billion years of it.' },
   { slug: 'anthropology', title: 'Anthropology', term: 'anthropology', blurb: 'What people do and why they say they do it — kinship, ritual, exchange, and the argument about culture.' },
   { slug: 'linguistics', title: 'Language & Linguistics', term: 'linguistics', blurb: 'Sound, grammar, meaning and change: how language works as a system, and how it reshapes itself in every generation.' },
   { slug: 'art-history', title: 'Art History', term: 'art history', blurb: 'How images were made, paid for and read — from cave walls to the gallery wall, and who got to be called an artist.' },
   { slug: 'architecture', title: 'Architecture', term: 'architecture', blurb: 'Buildings as decisions: structure, light, city, climate and the politics of putting a roof over people.' },
   { slug: 'poetry', title: 'Poetry', term: 'poetry', literary: true, blurb: 'The shortest form with the longest memory — how a line can carry more than a paragraph, and why metre matters.' },
+  // "movie" was the second-biggest gap in the same measurement (11 searches, no page of ours).
+  // Nobody catalogs books under the word movie: the heading is "Motion pictures". Same split as
+  // the shelf above — the catalogue's term, the reader's word — and a reading list, not the video
+  // tool this site used to have and deliberately dropped.
+  { slug: 'film', title: 'Movies & Film', term: 'motion pictures', blurb: 'Film as a subject: how pictures learned to move, how studios and directors split the work, and what a camera does to a face.' },
 ];
 
 const BY_SLUG = new Map(SUBJECTS.map((s) => [s.slug, s]));
@@ -281,7 +292,7 @@ async function subject(slug) {
 
 /**
  * Fill the cache for every subject, one at a time, after boot. Without this the first
- * visitor to each of the twenty-four pages pays an up-to-16-second catalogue search, and
+ * visitor to each of the twenty-six pages pays an up-to-16-second catalogue search, and
  * the first ten minutes after a deploy are exactly when a slow page goes unnoticed.
  * Sequential and spaced because this is a 4 GB box coming back up, and polite because
  * the searches belong to the Internet Archive, not to us. Never rejects.
@@ -311,7 +322,7 @@ async function prime({ gapMs = PRIME_GAP_MS, log = console.log, fetchOne = subje
   return done.size;
 }
 
-// ── The built shelves: everything past the curated twenty-four, read off disk ────────
+// ── The built shelves: everything past the curated twenty-six, read off disk ────────
 // Written by scripts/books-build.js, never by a page request. Three files and a directory,
 // because the whole point is that a visitor opening /books/amateur-radio must not pay a
 // catalogue search: the shelf is a 6 KB file already on this box.
@@ -513,7 +524,7 @@ function autoShelves() {
 /** Forget the parsed index — the build script and the tests both need this. */
 function reloadShelves() { shelfIndex = null; shelfIndexAt = 0; workCountCache = null; }
 
-/** Curated first, then built: the twenty-four hand-written shelves always lead. */
+/** Curated first, then built: the twenty-six hand-written shelves always lead. */
 function shelfMeta(slug) {
   const key = String(slug || '').toLowerCase();
   return BY_SLUG.get(key) || autoShelves().find((s) => s.slug === key) || null;

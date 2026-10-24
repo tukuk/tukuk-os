@@ -24,7 +24,7 @@ const PHRASES = [
   ['dimanakah', 'where'],
   ['bagaimana caranya', 'how'],
   ['hari ini', 'today'],
-  ['gunung berapi', 'volcano'],
+  ['gunung berapi', 'volcanoes'],
   ['air terjun', 'waterfall'],
   ['mata air panas', 'hot spring'],
   ['terumbu karang', 'coral reef'],
@@ -52,22 +52,32 @@ const WORDS = {
   pada: 'in', dalam: 'in', yang: '', itu: 'that', hari: 'day', ini: 'this',
   carian: 'search', cari: 'find', sekarang: 'now',
   satu: 'one', dua: 'two', tiga: 'three',
-  // the place nouns this site used to serve under Malay addresses
-  pulau: 'island', gunung: 'mountain', danau: 'lake', tasik: 'lake', sungai: 'river',
-  gua: 'cave', glasier: 'glacier', teluk: 'bay', lembah: 'valley',
-  semenanjung: 'peninsula', selat: 'strait', kepulauan: 'archipelago', gaung: 'gorge',
-  ngarai: 'canyon', bukit: 'hill', tanjung: 'cape', lagun: 'lagoon', laut: 'sea',
-  empangan: 'dam', paya: 'wetland', hutan: 'forest', kaldera: 'caldera', puncak: 'peak',
+  // The place nouns this site used to serve under Malay addresses. Written in the PLURAL on
+  // purpose: what answers them are the listing hubs (/islands, /volcanoes, /lakes, /dams …) and
+  // Meilisearch does not stem, so "country" never matches /countries. Measured live on 25 Oct
+  // 2026: "berapa banyak negara di dunia" was asked three times, rewrote to "how many country in
+  // world", found zero documents, and the page that answers it was one letter away.
+  pulau: 'islands', gunung: 'mountains', danau: 'lakes', tasik: 'lakes', sungai: 'rivers',
+  gua: 'caves', glasier: 'glaciers', lembah: 'valleys', kepulauan: 'archipelagos',
+  bukit: 'hills', empangan: 'dams',
+  // Nouns that mostly arrive inside a proper name keep the singular: "selat melaka" must still
+  // reach the Strait of Malacca page, not the /straits hub, and "laut jepun" the sea, not a list.
+  teluk: 'bay', semenanjung: 'peninsula', selat: 'strait', gaung: 'gorge',
+  ngarai: 'canyon', tanjung: 'cape', lagun: 'lagoon', laut: 'sea',
+  paya: 'wetland', hutan: 'forest', kaldera: 'caldera', puncak: 'peak',
   oasis: 'oasis', benua: 'continent', peta: 'map',
-  // landmarks and institutions
-  bangunan: 'building', jambatan: 'bridge', terusan: 'canal', menara: 'tower',
-  pelabuhan: 'port', terowong: 'tunnel', gereja: 'church', muzium: 'museum',
-  universiti: 'university', stadium: 'stadium', istana: 'palace', masjid: 'mosque',
-  katedral: 'cathedral', hospital: 'hospital', hotel: 'hotel', taman: 'park',
-  perpustakaan: 'library', makam: 'cemetery', biara: 'monastery', patung: 'statue',
-  kubu: 'fortification', akuarium: 'aquarium', zoo: 'zoo',
+  // Landmarks and institutions — plural for the same reason: "senarai muzium di jerman" is a
+  // request for /museums, and /museums is where it lands.
+  jambatan: 'bridges', terusan: 'canals', menara: 'towers', pelabuhan: 'ports',
+  terowong: 'tunnels', gereja: 'churches', muzium: 'museums', universiti: 'universities',
+  stadium: 'stadiums', istana: 'palaces', masjid: 'mosques', katedral: 'cathedrals',
+  hospital: 'hospitals', hotel: 'hotels', perpustakaan: 'libraries', makam: 'cemeteries',
+  biara: 'monasteries', patung: 'statues', kubu: 'fortifications', akuarium: 'aquariums',
+  // No plural hub exists for these (measured: /buildings, /zoos and /parks-as-a-name all 404 or
+  // read as proper nouns), so they stay as they were.
+  bangunan: 'building', taman: 'park', zoo: 'zoo',
   // the words people wrap around those nouns
-  negara: 'country', negeri: 'state', bandar: 'city', kampung: 'village',
+  negara: 'countries', negeri: 'state', bandar: 'city', kampung: 'village',
   daerah: 'district', wilayah: 'region', penduduk: 'population', keluasan: 'area',
   dunia: 'world', sejarah: 'history', bahasa: 'language', makanan: 'food',
   cuaca: 'weather', gempa: 'earthquake', bencana: 'disaster', cuti: 'holiday',

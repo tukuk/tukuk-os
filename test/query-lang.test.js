@@ -20,19 +20,31 @@ const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'server.js')
 
 test('toEnglishQuery(): a Malay geo question becomes the English one the corpus holds', () => {
   const out = toEnglishQuery('berapa banyak pulau di jepun');
-  assert.equal(out.query, 'how many island in japan');
+  assert.equal(out.query, 'how many islands in japan');
   assert.equal(out.changed, true);
   assert.deepEqual(out.terms, ['berapa banyak', 'pulau', 'di', 'jepun']);
 });
 
 test('toEnglishQuery(): phrases win over their component words', () => {
   // "gunung berapi" is a volcano, not a "mountain" + something.
-  assert.equal(toEnglishQuery('senarai gunung berapi di indonesia').query, 'list volcano in indonesia');
-  assert.equal(toEnglishQuery('negara mana paling banyak tasik').query, 'which country most many lake');
+  assert.equal(toEnglishQuery('senarai gunung berapi di indonesia').query, 'list volcanoes in indonesia');
+  assert.equal(toEnglishQuery('negara mana paling banyak tasik').query, 'which country most many lakes');
   // A trailing question mark belongs to the sentence, not to the word lookup.
-  assert.equal(toEnglishQuery('berapa banyak negara di dunia?').query, 'how many country in world');
+  assert.equal(toEnglishQuery('berapa banyak negara di dunia?').query, 'how many countries in world');
   // Conjunctions matter too: without "dan" the two nouns would run together.
-  assert.equal(toEnglishQuery('gunung dan danau').query, 'mountain and lake');
+  assert.equal(toEnglishQuery('gunung dan danau').query, 'mountains and lakes');
+});
+
+test('toEnglishQuery(): class nouns come out plural, because the pages they reach are', () => {
+  // Measured live on 25 Oct 2026: "berapa banyak negara di dunia" was asked three times, rewrote
+  // to "how many country in world", found zero documents — and /countries answers it. Meilisearch
+  // does not stem, so the lexicon has to match the hub's spelling, not the dictionary's.
+  assert.equal(toEnglishQuery('berapa banyak negara di dunia').query, 'how many countries in world');
+  assert.equal(toEnglishQuery('senarai muzium di jerman').query, 'list museums in germany');
+  // …while a noun that arrives inside a proper name keeps the singular: the Strait of Malacca and
+  // the Sea of Japan are pages with those words in their titles, not rows in a list.
+  assert.equal(toEnglishQuery('selat melaka').query, 'strait melaka');
+  assert.equal(toEnglishQuery('laut jepun').query, 'sea japan');
 });
 
 test('toEnglishQuery(): English passes through untouched', () => {
@@ -68,8 +80,10 @@ test('toEnglishQuery(): a function word alone leaves no query to run', () => {
 });
 
 test('toEnglishQuery(): unknown words are kept, never dropped', () => {
-  assert.equal(toEnglishQuery('pulau pinang').query, 'island pinang');
-  assert.equal(toEnglishQuery('gunung kinabalu 2026').query, 'mountain kinabalu 2026');
+  // Both of these are place names, and the rewrite would still make a plural of the class noun.
+  // It never gets the chance: coverage is exactly half, and /search only switches above half.
+  assert.equal(toEnglishQuery('pulau pinang').query, 'islands pinang');
+  assert.equal(toEnglishQuery('gunung kinabalu 2026').query, 'mountains kinabalu 2026');
 });
 
 test('/search switches to English only when the rewrite finds more', () => {
@@ -92,7 +106,7 @@ test('GET /search answers a Malay query without failing', async () => {
   assert.equal(body.query, 'berapa banyak pulau di jepun', 'the query is echoed as typed');
   assert.ok(Array.isArray(body.hits));
   if (body.translatedQuery) {
-    assert.equal(body.translatedQuery, 'how many island in japan');
+    assert.equal(body.translatedQuery, 'how many islands in japan');
     assert.ok(body.hits.length > 0, 'translatedQuery is only reported when the retry found hits');
   }
 });

@@ -191,7 +191,7 @@ async function main() {
       }
       warmup.start(plan).catch(() => {});
     }, 15000);
-    // Build the twenty-four reading lists before anybody asks for one. A cold /books page
+    // Build the twenty-six reading lists before anybody asks for one. A cold /books page
     // waits on an Open Library search that has measured up to 13 s, and the first visitor
     // after a deploy should not be the one who pays for it. Sequential, spaced, retried
     // once, and it never rejects — the disk mirror covers whatever the network refused.

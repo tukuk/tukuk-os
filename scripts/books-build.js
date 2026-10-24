@@ -2,7 +2,7 @@
 // ── Build the long tail of /books: real shelves, from the catalogue's own subject strings ──
 //
 // WHY THIS IS A SCRIPT AND NOT A PAGE REQUEST
-// The curated twenty-four shelves in src/books.js fetch live, one search per subject, and are
+// The curated twenty-six shelves in src/books.js fetch live, one search per subject, and are
 // primed at boot. A thousand more shelves cannot work that way: priming them would take half an
 // hour of the Internet Archive's time after every deploy, and a crawler that arrives before the
 // priming finishes would be handed a sixteen-second search. So the shelves are built here, once,
@@ -45,6 +45,7 @@
 //   node scripts/books-build.js --shelves=60 --calls=200 # a proof run before the real one
 //   node scripts/books-build.js --concurrency=1          # a quieter network, a longer run
 //   node scripts/books-build.js --prune-only             # retire what is on disk, no searches
+//   node scripts/books-build.js --terms=beekeeping,jazz  # build exactly these, nothing else
 // Ctrl-C is safe: state is written after every shelf and re-running resumes from the file.
 // --calls is measured against the LIFETIME total the state file remembers, not the current run:
 // resuming a build that has spent 1,400 searches needs --calls above that number.
@@ -71,6 +72,20 @@ function arg(name, fallback) {
 // Pruning what is already published needs no network at all, and a floor that moved has to be
 // applied to the files the old floor produced. This flag does exactly that and exits.
 const PRUNE_ONLY = /--prune-only\b/.test(process.argv.join(' '));
+// A searched query that no page of ours answers is the best evidence there is for a topic we
+// should have a door for — better than the catalogue's own subject strings, because somebody
+// asked. `--terms` builds exactly the names it is given (comma separated, in order) through the
+// same six gates, and does nothing else: the candidate pool is not consulted, nothing is
+// harvested, and a term that fails is written into `visited` with its reason so the next run does
+// not spend a second search on it. The list comes from the query log, not from a guess.
+const TERMS = (() => {
+  const m = /--terms=(\S+)/.exec(process.argv.join(' '));
+  return parseTerms(m ? m[1] : '');
+})();
+/** `--terms=a, B ,c` → ['a','b','c']; anything else → []. Split out so a test can ask it. */
+function parseTerms(list) {
+  return String(list || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
 const OPTS = {
   shelves: arg('shelves', DEFAULTS.shelves),
   calls: arg('calls', DEFAULTS.calls),
@@ -371,6 +386,39 @@ async function main() {
     return;
   }
 
+  if (TERMS.length) {
+    const built = [];
+    for (const term of TERMS) {
+      if (state.visited[term] === 'published' || state.published.some((p) => p.term === term)) {
+        console.log(`  skip  ${term} — already published`);
+        continue;
+      }
+      let why;
+      try {
+        while (load1() > LOAD_MAX) { console.log(`[books-build] load is ${load1()}, pausing 20s`); await sleep(20000); }
+        why = await buildShelf(term, { works, state });
+      } catch (err) {
+        why = `the catalogue refused the search (${String((err && err.message) || err).slice(0, 120)})`;
+      }
+      if (why) {
+        state.visited[term] = why;
+        console.log(`  skip  ${term} — ${why}`);
+      } else {
+        state.visited[term] = 'published';
+        built.push(term);
+        console.log(`  built ${term} (${state.calls} calls so far)`);
+      }
+      saveState(state);
+      books.saveWorks([...works.values()]);
+      books.saveShelfIndex(state.published.slice().sort((a, b) => a.title.localeCompare(b.title)));
+      await sleep(OPTS.gapMs);
+    }
+    console.log(`[books-build] terms run: ${built.length} built of ${TERMS.length} asked; `
+      + `${state.published.length} shelves, ${works.size} works, ${state.calls || 0} calls`);
+    for (const t of built) console.log(`  ✓ ${t}`);
+    return;
+  }
+
   for (const s of state.published) state.visited[s.term] = 'published';
 
   console.log(`[books-build] target ${OPTS.shelves} shelves, ${OPTS.calls} calls, ${OPTS.concurrency} workers`);
@@ -389,7 +437,7 @@ async function main() {
   let stop = false;
   const budget = () => state.published.length < OPTS.shelves && (state.calls || 0) < OPTS.calls;
 
-  // Seed the candidate pool from the curated twenty-four. `books.subject()` is used rather than a
+  // Seed the candidate pool from the curated twenty-six. `books.subject()` is used rather than a
   // raw search because it keeps the cache/mirror order and rewrites the mirror in the current
   // shape — an old mirror entry has no `subjects` on its works, which is exactly the case that
   // would otherwise leave the pool empty and the run with nothing to build.
@@ -499,7 +547,7 @@ async function main() {
 // The pure rules are exported and the run is guarded, so test/books.test.js can ask this file
 // what it would publish without opening a socket — a build script that only runs as a CLI is a
 // script whose worst bugs are found in production data.
-module.exports = { stemWords, twinOf, twinOfPublished, prunePublished, pruneThin, biggestOverlap, nextCandidates, buildShelf, OPTS };
+module.exports = { stemWords, twinOf, twinOfPublished, prunePublished, pruneThin, biggestOverlap, nextCandidates, buildShelf, parseTerms, OPTS };
 
 if (require.main === module) {
   main().catch((err) => {

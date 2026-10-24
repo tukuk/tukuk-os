@@ -303,6 +303,24 @@ test('a shelf that is another shelf with an s on the end is not published twice'
   assert.strictEqual(build.twinOfPublished('beekeeping', { published: [] }), null, 'nothing published, nothing to duplicate');
 });
 
+test('--terms builds exactly the names it is given, and nothing else', () => {
+  // The candidate pool is made of subject strings the catalogue volunteered; a query somebody
+  // actually typed is better evidence that a door is missing. Measured on the VPS, 25 Oct 2026:
+  // 21 of 182 distinct searched queries had no page of ours in the top five, and "climate change"
+  // alone was asked fifteen times. Those names are handed in explicitly, built through the same
+  // six gates, and nothing is harvested behind their backs.
+  const build = require('../scripts/books-build.js');
+  assert.deepStrictEqual(build.parseTerms('climate change, Solar Energy ,,jazz'),
+    ['climate change', 'solar energy', 'jazz']);
+  assert.deepStrictEqual(build.parseTerms(''), []);
+  assert.deepStrictEqual(build.parseTerms(undefined), []);
+  // An empty name must never become a term: a shelf with no label is a 404 with a file on disk.
+  assert.deepStrictEqual(build.parseTerms(' , ,'), []);
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'books-build.js'), 'utf8');
+  assert.match(src, /if \(TERMS\.length\) \{/, 'main() has to consult the list');
+  assert.match(src, /node scripts\/books-build\.js --terms=/, 'and the usage line has to say so');
+});
+
 test('a label has to be a word its own books use', () => {
   const titles = ['The Country Beekeeper', 'Beekeeping for beginners', 'Letters on Beekeeping',
     'The bee book', 'Practical beekeeping in the garden', 'Wisdom of the hive',
