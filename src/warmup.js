@@ -26,6 +26,8 @@ const DEFAULT_PATHS = [
   '/',
   '/holidays/2026',
   '/holidays/long-weekends',
+  // /nasa is the most expensive page on the box: 12.8 s cold, 0.44 s warm.
+  '/nasa',
   '/nasa/earth',
   '/nasa/iss',
   '/nasa/sounds',
@@ -35,6 +37,9 @@ const DEFAULT_PATHS = [
 
 const PER_REQUEST_MS = 15000;
 const GAP_MS = 750;
+// A page slower than this on a cold render is worth naming in the log: the list above
+// should be tuned from measurements, not from guesses about what looks heavy.
+const SLOW_MS = 2000;
 const MAX_PATHS = 24;
 const UA = 'TukukOS-Warmup/1.0 (+https://tukuk.org)';
 
@@ -100,19 +105,23 @@ function hit(url, { host, timeoutMs = PER_REQUEST_MS, ua = UA } = {}) {
  * Walk the list. Never rejects.
  * @returns {Promise<{ok:number,total:number,results:Array<{path:string,status:number}>}>}
  */
-async function start({ base, paths, host, delayMs = GAP_MS, timeoutMs = PER_REQUEST_MS, log = console.log } = {}) {
+async function start({ base, paths, host, delayMs = GAP_MS, timeoutMs = PER_REQUEST_MS, slowMs = SLOW_MS, log = console.log } = {}) {
   if (!base || !Array.isArray(paths) || !paths.length) return { ok: 0, total: 0, results: [] };
   const startedAt = Date.now();
   const results = [];
   for (const p of paths) {
-    results.push({ path: p, status: await hit(new URL(p, base), { host, timeoutMs }) });
+    const at = Date.now();
+    const status = await hit(new URL(p, base), { host, timeoutMs });
+    results.push({ path: p, status, ms: Date.now() - at });
     if (delayMs) await sleep(delayMs);
   }
   const ok = results.filter((r) => r.status >= 200 && r.status < 400).length;
   log(`[warmup] ${ok}/${results.length} pages warm in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
   const cold = results.filter((r) => !(r.status >= 200 && r.status < 400));
   if (cold.length) log(`[warmup] not warm: ${cold.map((c) => `${c.path} (${c.status || 'no answer'})`).join(', ')}`);
+  const slow = results.filter((r) => r.ms >= slowMs);
+  if (slow.length) log(`[warmup] expensive: ${slow.map((r) => `${r.path} ${r.ms}ms`).join(', ')}`);
   return { ok, total: results.length, results };
 }
 
-module.exports = { plan, start, hit, DEFAULT_PATHS, PER_REQUEST_MS, GAP_MS };
+module.exports = { plan, start, hit, DEFAULT_PATHS, PER_REQUEST_MS, GAP_MS, SLOW_MS };

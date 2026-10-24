@@ -72,6 +72,32 @@ test('a page that never answers is cut off by its own deadline and the queue con
   }
 });
 
+test('a page that is slow to warm is named in the log, so the list is tuned from evidence', async () => {
+  const server = await serve((req, res) => {
+    setTimeout(() => {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('ok');
+    }, req.url === '/nasa' ? 80 : 0);
+  });
+  try {
+    const lines = [];
+    const result = await warmup.start({
+      base: baseOf(server),
+      paths: ['/fast', '/nasa'],
+      delayMs: 0,
+      slowMs: 50,
+      log: (line) => lines.push(line),
+    });
+    const expensive = lines.find((l) => l.includes('expensive:'));
+    assert.ok(expensive, 'the slow page is reported');
+    assert.ok(expensive.includes('/nasa'), 'under its own name');
+    assert.ok(!expensive.includes('/fast'), 'and the fast one is not noise in the line');
+    assert.ok(result.results.find((r) => r.path === '/nasa').ms >= 50, 'the result carries the timing');
+  } finally {
+    await stop(server);
+  }
+});
+
 test('an empty list or a missing base is a no-op, not a crash', async () => {
   assert.deepStrictEqual(await warmup.start({}), { ok: 0, total: 0, results: [] });
   assert.deepStrictEqual(await warmup.start({ base: 'http://127.0.0.1:1', paths: [] }), { ok: 0, total: 0, results: [] });
