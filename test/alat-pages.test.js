@@ -26,7 +26,12 @@ const PAGES = [
   { path: '/alat/base64', marker: 'Base64 Encoder &amp; Decoder', ids: ['b-in', 'b-variant', 'b-enc', 'b-dec', 'b-copy', 'b-out', 'b-file', 'b-finfo', 'b-fileout'] },
   { path: '/alat/timezone', marker: 'Time Zone Meeting Planner', ids: ['z-date', 'z-base', 'z-add', 'z-do', 'z-chips', 'z-best', 'z-tab'] },
   { path: '/alat/uuid', marker: 'UUID Generator', ids: ['u-count', 'u-ver', 'u-up', 'u-go', 'u-out', 'u-copy', 'u-in', 'u-dec'] },
-  { path: '/alat/cron', marker: 'Cron Expression Explainer', ids: ['c-in', 'c-go', 'c-pre', 'c-out', 'c-fields', 'c-next'] }
+  { path: '/alat/cron', marker: 'Cron Expression Explainer', ids: ['c-in', 'c-go', 'c-pre', 'c-out', 'c-fields', 'c-next'] },
+  { path: '/alat/regex', marker: 'Regex Tester', ids: ['rx-pat', 'rx-flags', 'rx-text', 'rx-out', 'rx-tab', 'rx-pres'] },
+  { path: '/alat/csv', marker: 'CSV Viewer', ids: ['csv-del', 'csv-hdr', 'csv-in', 'csv-info', 'csv-tab', 'csv-json', 'csv-tj', 'csv-cj', 'csv-dl'] },
+  { path: '/alat/diff', marker: 'Text Diff', ids: ['df-a', 'df-b', 'df-mode', 'df-go', 'df-stats', 'df-out'] },
+  { path: '/alat/url', marker: 'URL Parser', ids: ['up-url', 'up-parse', 'up-tab', 'up-comp', 'up-enc', 'up-dec', 'up-out'] },
+  { path: '/alat/char', marker: 'Unicode Reference', ids: ['ch-in', 'ch-tab', 'ch-ref'] }
 ];
 
 for (const page of PAGES) {

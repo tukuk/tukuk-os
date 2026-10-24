@@ -2153,6 +2153,11 @@ app.get('/alat/dictionary', (req, res) => {
   ['/alat/timezone', zonaPage],
   ['/alat/uuid', uuidPage],
   ['/alat/cron', cronPage],
+  ['/alat/regex', regexPage],
+  ['/alat/csv', csvPage],
+  ['/alat/diff', diffPage],
+  ['/alat/url', urlPage],
+  ['/alat/char', charPage],
 ].forEach(function (entry) {
   app.get(entry[0], function (req, res) {
     try {
@@ -4213,7 +4218,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/charts', '/charts/us', '/charts/gb', '/charts/jp', '/charts/kr', '/charts/ng', '/charts/br', '/charts/in', '/charts/my', '/charts/de', '/charts/id', '/charts/au', '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/castles', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/alat/regex', '/alat/csv', '/alat/diff', '/alat/url', '/alat/char', '/charts', '/charts/us', '/charts/gb', '/charts/jp', '/charts/kr', '/charts/ng', '/charts/br', '/charts/in', '/charts/my', '/charts/de', '/charts/id', '/charts/au', '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/castles', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat'];
   // The reading lists are live pages as well, and typing twenty-four slugs into the array
   // above is how a page and its sitemap entry drift apart. Generated from the subject
   // table, so adding a subject to src/books.js publishes it here too.
@@ -10955,11 +10960,16 @@ function toolsNav() {
     { href: '/alat/timezone', icon: '🌍', name: 'Time Zone Planner', blurb: 'Compare up to eight cities hour by hour and find the call time that works for everyone — real IANA offsets and daylight saving, computed in the browser.' },
     { href: '/alat/uuid', icon: '🆔', name: 'UUID Generator', blurb: 'Random v4 and time-ordered v7 identifiers in bulk, plus a decoder that shows the version, variant and any embedded timestamp.' },
     { href: '/alat/cron', icon: '⏰', name: 'Cron Explainer', blurb: 'Any five-field cron schedule in plain English with its next ten runs, every field validated — including the day-of-month/day-of-week OR trap.' },
+    { href: '/alat/regex', icon: '🔍', name: 'Regex Tester', blurb: 'Test JavaScript regular expressions with live match highlighting, group inspection, and a common-pattern library (email, URL, IPv4, dates).' },
+    { href: '/alat/csv', icon: '📊', name: 'CSV Viewer', blurb: 'Paste CSV or TSV and see it as a formatted table instantly. Convert to JSON, copy or download — RFC 4180 compliant, all local.' },
+    { href: '/alat/diff', icon: '🔀', name: 'Text Diff', blurb: 'Compare two blocks of text line-by-line or word-by-word: additions, deletions and unchanged parts highlighted instantly.' },
+    { href: '/alat/url', icon: '🔗', name: 'URL Parser', blurb: 'Break a URL into protocol, host, port, path, query parameters and fragment. Encode and decode components side-by-side.' },
+    { href: '/alat/char', icon: '🔣', name: 'Character Reference', blurb: 'Inspect any character: Unicode code point, HTML entity, UTF-8 bytes and UTF-16 unit count — a quick-reference for invisible bugs.' },
   ]);
 }
 
 function alatHubPage() {
-  const body = `<p><b>The honest kind of useful.</b> Twenty-one small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  const body = `<p><b>The honest kind of useful.</b> Twenty-six small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
   <h2 class="section-title">In the toolbox</h2>
   <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
   <p><b><a href="/alat/date">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
@@ -10982,6 +10992,11 @@ function alatHubPage() {
   <p><b><a href="/alat/timezone">🌍 Time zone meeting planner</a></b> — up to eight cities, every hour of the chosen day, with true UTC offsets and the best overlap named for you instead of counted by hand.</p>
   <p><b><a href="/alat/uuid">🆔 UUID generator</a></b> — random v4 and time-ordered v7 in bulk, plus a decoder that reports the version, variant and any timestamp hiding inside an identifier.</p>
   <p><b><a href="/alat/cron">⏰ Cron expression explainer</a></b> — a schedule in plain English with its next ten runs on your clock, every field range-checked, and the day-of-month/day-of-week OR trap spelled out.</p>
+  <p><b><a href="/alat/regex">🔍 Regex tester</a></b> — write a pattern, see live match highlighting with groups; a common-pattern library gets you started on email, URL and IPv4.</p>
+  <p><b><a href="/alat/csv">📊 CSV viewer &amp; converter</a></b> — paste delimited text, get a formatted table and clean JSON, with RFC 4180 quoting handled correctly.</p>
+  <p><b><a href="/alat/diff">🔀 Text diff</a></b> — compare two blocks of text line-by-line or word-by-word; see additions and deletions highlighted instantly.</p>
+  <p><b><a href="/alat/url">🔗 URL parser &amp; encoder</a></b> — break a URL into every component, or encode/decode query values side-by-side to catch the classic percent-encoding bug.</p>
+  <p><b><a href="/alat/char">🔣 Character &amp; Unicode reference</a></b> — inspect code points, HTML entities, UTF-8 bytes and UTF-16 units for any character; a quick-reference table for typographic symbols.</p>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
   <p class="meta">Prefer maps and time? The neighbouring <a href="/maps">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
@@ -12714,6 +12729,345 @@ $('g-q').onchange=run;
   }, toolsNav());
 }
 
+
+// ── /alat/regex — Regular-expression tester with live highlighting ──
+function regexPage() {
+  const body = `<p><b>Test, debug and learn regular expressions</b> without leaving the browser. Type a pattern and a test string: matches highlight instantly, named groups get colour-coded, and the common-patterns library gives you a starting point for email, URL, IPv4, dates and more. The JavaScript regex engine runs directly on your device — the same behaviour you get in Node, a browser console or input validation.</p>
+  <div class="tl-form">
+    <label style="flex:1;min-width:280px">Pattern <input id="rx-pat" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. (\\d{3,5})-(\\d{4})" value="\\b(\\w+)@(\\w+\\.\\w+)\\b"></label>
+    <label>Flags <input id="rx-flags" type="text" value="gi" maxlength="6" style="width:70px"></label>
+  </div>
+  <label style="display:block;margin-bottom:8px">Test string <textarea id="rx-text" class="tl-in" rows="5" spellcheck="false" placeholder="Paste text to match against\u2026">Contact: john@example.com or sales@tukuk.org for help.</textarea></label>
+  <div class="tl-res" id="rx-out" aria-live="polite">\u2014</div>
+  <h2 class="section-title">Match results</h2>
+  <div style="overflow-x:auto"><table class="tl-tab" id="rx-tab"></table></div>
+  <h2 class="section-title">Common patterns</h2>
+  <div class="tl-chips" id="rx-pres"></div>
+  <noscript><p>JavaScript is required \u2014 the regex engine IS the tool.</p></noscript>
+  <h2 class="section-title">How JavaScript regex works</h2>
+  <p>JavaScript uses <b>ECMAScript regex syntax</b> \u2014 close to PCRE, but with key differences. There are no possessive quantifiers (<code>a++</code> is not valid), no atomic groups, and <b>no multiline by default</b>: <code>^</code> and <code>$</code> match only the start and end of the whole string unless you add the <code>m</code> flag. The <code>u</code> flag enables Unicode mode (surrogate-pair-aware dot, property escapes like <code>\\p{L}</code>), and the <code>d</code> flag (ES2022) adds match indices.</p>
+  <p><b>Backtracking caution:</b> patterns that nest quantifiers (like <code>(a+)+b</code>) can blow up exponentially against adversarial input \u2014 the infamous ReDoS. Keep your patterns simple and avoid ambiguous nested quantifiers for anything running server-side.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For string manipulation try the <a href="/alat/text">Text Toolkit</a>.</p>`;
+  const script = '<script>(function(){'
+    + 'var $=function(id){return document.getElementById(id);};'
+    + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}'
+    + 'var PRESETS=['
+    + '["Email","\\\\b[A-Za-z0-9._%+\\\\-]+@[A-Za-z0-9.\\\\-]+\\\\.[A-Za-z]{2,}\\\\b","gi"],'
+    + '["URL","https?:\\\\/\\\\/[^\\\\s/$?#]+(?:\\\\/[^\\\\s]*)?","gi"],'
+    + '["IPv4","\\\\b(?:(?:25[0-5]|2[0-4]\\\\d|1\\\\d\\\\d|[1-9]?\\\\d)\\\\.){3}(?:25[0-5]|2[0-4]\\\\d|1\\\\d\\\\d|[1-9]?\\\\d)\\\\b","g"],'
+    + '["Date","\\\\b\\\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\\\d|3[01])\\\\b","g"],'
+    + '["Hex colour","#[0-9A-Fa-f]{6}\\\\b","g"],'
+    + '["UUID","[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}","gi"],'
+    + '["Duplicate words","\\\\b(\\\\w+)\\\\s+\\\\1\\\\b","gi"],'
+    + '["HTML tag","<\\\\/?([a-zA-Z][a-zA-Z0-9]*)\\\\b[^>]*>","gi"]'
+    + '];'
+    + 'function run(){var pat=$("rx-pat").value,fl=$("rx-flags").value,txt=$("rx-text").value,out=$("rx-out"),tab=$("rx-tab");'
+    + 'if(!pat){out.textContent="Type a pattern first.";tab.innerHTML="";return;}'
+    + 'var re;try{re=new RegExp(pat,fl);}catch(e){out.innerHTML="<span style=\\"color:#e6552d\\">\\u26a0 "+esc(e.message)+"</span>";tab.innerHTML="";return;}'
+    + 'var m,ms=[];'
+    + 'if(fl.indexOf("g")<0&&fl.indexOf("y")<0){m=re.exec(txt);if(m)ms.push(m);}'
+    + 'else{while((m=re.exec(txt))!==null){ms.push(m);if(m.index===re.lastIndex)re.lastIndex++;if(ms.length>500)break;}}'
+    + 'if(!ms.length){out.innerHTML="<b>0 matches.</b> Pattern is valid but nothing matched.";tab.innerHTML="";return;}'
+    + 'out.innerHTML="<b>"+ms.length+" match"+(ms.length===1?"":"es")+" found.</b>";'
+    + 'var rows="<tr><th>#</th><th>Match</th><th>Index</th><th>Groups</th></tr>";'
+    + 'for(var idx=0;idx<ms.length;idx++){var g="";'
+    + 'for(var i=1;i<ms[idx].length;i++)g+=(i>1?", ":"")+"$"+i+"="+(ms[idx][i]||"\\u2205")+" ";'
+    + 'rows+="<tr><td>"+(idx+1)+"</td><td><code>"+esc(ms[idx][0])+"</code></td><td>"+ms[idx].index+"</td><td>"+esc(g)+"</td></tr>";}'
+    + 'tab.innerHTML=rows;'
+    + 'var hl="",last=0;for(idx=0;idx<ms.length;idx++){hl+=esc(txt.slice(last,ms[idx].index))+"<mark>"+esc(ms[idx][0])+"</mark>";last=ms[idx].index+ms[idx][0].length;}'
+    + 'hl+=esc(txt.slice(last));'
+    + 'out.innerHTML+="<div class=\\"tl-res\\" style=\\"margin-top:10px;white-space:pre-wrap;font-size:.92rem\\">"+hl+"</div>";}'
+    + 'var ph="";for(var i=0;i<PRESETS.length;i++)ph+="<button class=\\"tl-btn\\" type=\\"button\\" data-i=\\""+i+"\\">"+esc(PRESETS[i][0])+"</button>";'
+    + '$("rx-pres").innerHTML=ph;'
+    + '$("rx-pres").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;'
+    + 'var p=PRESETS[+b.getAttribute("data-i")];$("rx-pat").value=p[1];$("rx-flags").value=p[2];run();});'
+    + '$("rx-pat").addEventListener("input",run);'
+    + '$("rx-flags").addEventListener("input",run);'
+    + '$("rx-text").addEventListener("input",run);'
+    + 'run();'
+    + '})();</' + 'script>';
+  return worldDoc({
+    title: 'Regex Tester \u2014 JavaScript Regular Expression Debugger & Pattern Library | Tukuk-OS',
+    desc: 'Test and debug regex live in your browser: instant match highlighting, group display, common patterns (email, URL, IPv4, dates, UUID). Free, private, no server needed.',
+    selfUrl: 'https://tukuk.org/alat/regex',
+    heroTitle: '\ud83d\udd0d Regex Tester', heroSub: 'Live highlighting \u00b7 match groups \u00b7 common patterns \u2014 all in your browser',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Regex Tester',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Test JavaScript regular expressions with live match highlighting, group inspection and a pattern library.',
+      url: 'https://tukuk.org/alat/regex', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/csv \u2014 CSV / TSV viewer and JSON converter ──
+function csvPage() {
+  const body = `<p>Paste a <b>CSV</b>, <b>TSV</b> or any delimited text and see it as a readable table instantly. Convert to JSON, copy, or download \u2014 all locally, so confidential spreadsheets never touch a server. Handles quoted fields, embedded commas, newlines inside cells, and the RFC 4180 escaping rules correctly.</p>
+  <div class="tl-form">
+    <label>Delimiter <select id="csv-del"><option value=",">Comma (CSV)</option><option value="tab">Tab (TSV)</option><option value=";">Semicolon</option><option value="|">Pipe</option></select></label>
+    <label><input id="csv-hdr" type="checkbox" checked> First row is header</label>
+  </div>
+  <label style="display:block">Input <textarea id="csv-in" class="tl-in" rows="10" spellcheck="false" placeholder="Paste CSV here\u2026">name,age,city
+Alice,30,Tokyo
+Bob,25,London
+Chen,35,Singapore
+Dara,28,Kuala Lumpur</textarea></label>
+  <div class="tl-res" id="csv-info" aria-live="polite">\u2014</div>
+  <div style="overflow-x:auto"><table class="tl-tab" id="csv-tab"></table></div>
+  <h2 class="section-title">JSON output</h2>
+  <textarea id="csv-json" class="tl-in" rows="8" readonly spellcheck="false" placeholder="JSON appears here after conversion"></textarea>
+  <div class="tl-form">
+    <button class="tl-btn primary" id="csv-tj" type="button">\u2192 Convert to JSON</button>
+    <button class="tl-btn" id="csv-cj" type="button">\ud83d\udccb Copy JSON</button>
+    <button class="tl-btn" id="csv-dl" type="button">\u2b07 Download .json</button>
+  </div>
+  <noscript><p>JavaScript is required \u2014 the parser and converter run entirely on your device.</p></noscript>
+  <h2 class="section-title">RFC 4180 compliance</h2>
+  <p>Fields may be quoted; a quoted field can contain the delimiter, newlines, and escaped double-quotes (<code>""</code>). Rows with inconsistent column counts are tolerated: the table pads short rows and the header defines column names regardless. Blank lines are skipped silently.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For JSON formatting try the <a href="/alat/json">JSON Formatter</a>.</p>`;
+  const script = '<script>(function(){'
+    + 'var $=function(id){return document.getElementById(id);};'
+    + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
+    + 'function parse(text,dl){var rows=[],i=0,len=text.length,row=[],field="",inQ=false;'
+    + 'while(i<len){var c=text.charAt(i);'
+    + 'if(inQ){if(c===String(34)){if(i+1<len&&text.charAt(i+1)===String(34)){field+=c;i+=2;}else{inQ=false;i++;}}else{field+=c;i++;}}'
+    + 'else{if(c===String(34)){inQ=true;i++;}else if(c===dl){row.push(field);field="";i++;}'
+    + 'else if(c==="\\r"||c==="\\n"){row.push(field);field="";if(row.length>1||row[0]!=="")rows.push(row);row=[];'
+    + 'if(c==="\\r"&&i+1<len&&text.charAt(i+1)==="\\n")i++;i++;}else{field+=c;i++;}}}'
+    + 'if(field!==""||row.length)rows.push(row);return rows;}'
+    + 'function getDel(){var v=$("csv-del").value;return v==="tab"?"\\t":v;}'
+    + 'function render(){var text=$("csv-in").value,dl=getDel(),hasH=$("csv-hdr").checked;'
+    + 'var rows=parse(text,dl);'
+    + 'if(!rows.length){$("csv-info").textContent="\\u26a0 No data.";$("csv-tab").innerHTML="";$("csv-json").value="";return;}'
+    + 'var hdr=hasH?rows[0]:rows[0].map(function(_,i){return "Col"+(i+1);});'
+    + 'var data=hasH?rows.slice(1):rows;'
+    + '$("csv-info").innerHTML="<b>"+data.length+" rows</b> \\u00d7 <b>"+hdr.length+" columns</b>";'
+    + 'var h="<tr>";for(var i=0;i<hdr.length;i++)h+="<th>"+esc(hdr[i])+"</th>";h+="</tr>";'
+    + 'for(var r=0;r<Math.min(data.length,300);r++){h+="<tr>";for(var c=0;c<hdr.length;c++)h+="<td>"+esc(data[r][c]||"")+"</td>";h+="</tr>";}'
+    + 'if(data.length>300)h+="<tr><td colspan=\\""+hdr.length+"\\">\u2026and "+(data.length-300)+" more rows</td></tr>";'
+    + '$("csv-tab").innerHTML=h;'
+    + '$("csv-json").value=JSON.stringify(data.map(function(row){var o={};for(var i=0;i<hdr.length;i++)o[hdr[i]]=row[i]||"";return o;}),null,2);}'
+    + '$("csv-in").addEventListener("input",render);'
+    + '$("csv-del").addEventListener("change",render);'
+    + '$("csv-hdr").addEventListener("change",render);'
+    + '$("csv-tj").addEventListener("click",render);'
+    + '$("csv-cj").addEventListener("click",function(){var t=$("csv-json").value;if(!t)return;var b=this;'
+    + 'if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){b.textContent="Copied!";setTimeout(function(){b.textContent="\\ud83d\\udccb Copy JSON";},1200);});});'
+    + '$("csv-dl").addEventListener("click",function(){var t=$("csv-json").value;if(!t)return;'
+    + 'var blob=new Blob([t],{type:"application/json"});var url=URL.createObjectURL(blob);'
+    + 'var a=document.createElement("a");a.href=url;a.download="data.json";document.body.appendChild(a);a.click();document.body.removeChild(a);'
+    + 'setTimeout(function(){URL.revokeObjectURL(url);},5000);});'
+    + 'render();'
+    + '})();</' + 'script>';
+  return worldDoc({
+    title: 'CSV Viewer & JSON Converter \u2014 Parse, Preview & Convert Delimited Data | Tukuk-OS',
+    desc: 'Paste CSV or TSV and see a formatted table instantly. Convert to JSON, copy, or download. RFC 4180 parsing, multi-delimiter support. Free, private, browser-local.',
+    selfUrl: 'https://tukuk.org/alat/csv',
+    heroTitle: '\ud83d\udcca CSV Viewer & Converter', heroSub: 'Parse \u00b7 preview \u00b7 convert to JSON \u2014 your data never leaves your device',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk CSV Viewer',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local CSV/TSV parser with table preview and JSON conversion.',
+      url: 'https://tukuk.org/alat/csv', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/diff \u2014 Text comparison / diff ──
+function diffPage() {
+  const body = `<p>Compare two pieces of text and see exactly what changed: <b>additions</b>, <b>deletions</b> and unchanged lines highlighted. Useful for checking a document revision, spotting a config-file edit, or verifying two strings you think are identical really are. Uses the longest-common-subsequence algorithm \u2014 no external library, no upload.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0">
+    <label>Original <textarea id="df-a" class="tl-in" rows="14" spellcheck="false">Hello world
+This is a test
+The quick brown fox
+jumps over the lazy dog
+Goodbye</textarea></label>
+    <label>Modified <textarea id="df-b" class="tl-in" rows="14" spellcheck="false">Hello world
+This is a TEST
+The quick red fox
+leaps over the lazy dog
+Goodbye world
+Extra line here</textarea></label>
+  </div>
+  <div class="tl-form">
+    <label>Compare <select id="df-mode"><option value="line">Line by line</option><option value="word">Word by word</option></select></label>
+    <button class="tl-btn primary" id="df-go" type="button">Compare</button>
+  </div>
+  <div class="tl-res" id="df-stats"></div>
+  <div id="df-out" class="tl-res" style="white-space:pre-wrap;font-family:monospace;font-size:.9rem;overflow-x:auto"></div>
+  <noscript><p>JavaScript is required \u2014 the diff algorithm runs on your device.</p></noscript>
+  <h2 class="section-title">How the algorithm works</h2>
+  <p>The <b>LCS (longest common subsequence)</b> approach finds the maximal set of lines (or words) that appear in both texts in the same order. Everything in the LCS is "unchanged"; what remains in the first input is "deleted"; what remains in the second is "added". The classic <b>Myers diff</b> algorithm used by Git finds the minimum edit script more efficiently, but LCS gives the same result for the modest input sizes here and is small enough to ship in a page script.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For text transformation try the <a href="/alat/text">Text Toolkit</a>.</p>`;
+  const script = '<script>(function(){'
+    + 'var $=function(id){return document.getElementById(id);};'
+    + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
+    + 'function lcs(a,b){var m=a.length,n=b.length,dp=[],i,j;'
+    + 'for(i=0;i<=m;i++){dp[i]=new Array(n+1);for(j=0;j<=n;j++)dp[i][j]=0;}'
+    + 'for(i=1;i<=m;i++)for(j=1;j<=n;j++)dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);'
+    + 'var res=[],x=m,y=n;'
+    + 'while(x>0&&y>0){if(a[x-1]===b[y-1]){res.unshift(a[x-1]);x--;y--;}else if(dp[x-1][y]>=dp[x][y-1])x--;else y--;}'
+    + 'return res;}'
+    + 'function doDiff(a,b){var common=lcs(a,b),res=[],ai=0,bi=0,ci=0;'
+    + 'while(ai<a.length||bi<b.length){'
+    + 'if(ci<common.length&&ai<a.length&&bi<b.length&&a[ai]===common[ci]&&b[bi]===common[ci]){res.push({t:"eq",s:a[ai]});ai++;bi++;ci++;}'
+    + 'else if(ci<common.length&&ai<a.length&&a[ai]!==common[ci]){res.push({t:"del",s:a[ai]});ai++;}'
+    + 'else if(ci<common.length&&bi<b.length&&b[bi]!==common[ci]){res.push({t:"ins",s:b[bi]});bi++;}'
+    + 'else if(ai<a.length){res.push({t:"del",s:a[ai]});ai++;}'
+    + 'else if(bi<b.length){res.push({t:"ins",s:b[bi]});bi++;}}'
+    + 'return res;}'
+    + 'function run(){var mode=$("df-mode").value,a,b;'
+    + 'if(mode==="line"){a=$("df-a").value.split("\\n");b=$("df-b").value.split("\\n");}'
+    + 'else{a=$("df-a").value.match(/\\S+|\\s+/g)||[];b=$("df-b").value.match(/\\S+|\\s+/g)||[];}'
+    + 'var d=doDiff(a,b),out="",eq=0,dl=0,ins=0;'
+    + 'for(var i=0;i<d.length;i++){var r=d[i];'
+    + 'if(r.t==="eq"){out+=esc(r.s)+"\\n";eq++;}'
+    + 'else if(r.t==="del"){out+="<span style=\\"background:#3d1a1a;color:#ff6b6b\\">\\u2212 "+esc(r.s)+"</span>\\n";dl++;}'
+    + 'else{out+="<span style=\\"background:#1a2d3d;color:#6bcaff\\">+ "+esc(r.s)+"</span>\\n";ins++;}}'
+    + '$("df-out").innerHTML=out||"<p>Both inputs are identical.</p>";'
+    + '$("df-stats").innerHTML=eq+" unchanged \\u00b7 <span style=\\"color:#ff6b6b\\">"+dl+" removed</span> \\u00b7 <span style=\\"color:#6bcaff\\">"+ins+" added</span>";}'
+    + '$("df-go").addEventListener("click",run);'
+    + 'run();'
+    + '})();</' + 'script>';
+  return worldDoc({
+    title: 'Text Diff \u2014 Compare Two Texts, See Line & Word Differences | Tukuk-OS',
+    desc: 'Paste two blocks of text and see additions, deletions and unchanged lines highlighted instantly. Line-by-line or word-by-word comparison. Free, browser-local.',
+    selfUrl: 'https://tukuk.org/alat/diff',
+    heroTitle: '\ud83d\udd00 Text Diff', heroSub: 'Line or word comparison \u00b7 + additions \u2212 deletions \u00b7 nothing uploaded',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Text Diff',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local text comparison tool that highlights additions and deletions between two inputs.',
+      url: 'https://tukuk.org/alat/diff', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/url \u2014 URL parser, encoder & decoder ──
+function urlPage() {
+  const body = `<p>Break a URL into its <b>parts</b> (protocol, host, port, path, query, fragment, each parameter individually) or <b>encode/decode</b> components with the correct function. The classic bug: using <code>encodeURI</code> when you needed <code>encodeURIComponent</code>, sending half your value as a separate query parameter. This page shows the difference side-by-side.</p>
+  <div class="tl-form">
+    <label style="flex:1;min-width:300px">URL <input id="up-url" type="text" spellcheck="false" value="https://tukuk.org/alat/color?bg=%231e1e2e&fg=white#contrast"></label>
+    <button class="tl-btn primary" id="up-parse" type="button">Parse</button>
+  </div>
+  <div style="overflow-x:auto"><table class="tl-tab" id="up-tab"></table></div>
+  <h2 class="section-title">Encode / Decode a component</h2>
+  <div class="tl-form">
+    <label style="flex:1;min-width:280px">Value <input id="up-comp" type="text" spellcheck="false" value="hello world&foo=bar"></label>
+    <button class="tl-btn" id="up-enc" type="button">Encode \u2192</button>
+    <button class="tl-btn" id="up-dec" type="button">\u2190 Decode</button>
+  </div>
+  <div class="tl-res" id="up-out">\u2014</div>
+  <noscript><p>JavaScript is required \u2014 the URL parser uses the browser\u2019s own <code>new URL()</code> constructor.</p></noscript>
+  <h2 class="section-title">encodeURI vs encodeURIComponent</h2>
+  <p><b><code>encodeURIComponent</code></b> encodes everything except <code>A-Z a-z 0-9 - _ . ! ~ * ' ( )</code>. Use it when putting user input into a single query value or path segment. <b><code>encodeURI</code></b> leaves the reserved characters <code>; , / ? : @ &amp; = + $ #</code> unencoded \u2014 use it only when encoding a whole URL that is already well-formed.</p>
+  <p>The example above: <code>hello world&amp;foo=bar</code> encoded with <code>encodeURI</code> produces <code>hello%20world&amp;foo=bar</code>, which on the server side decodes as <b>two parameters</b>, not one value. With <code>encodeURIComponent</code> the ampersand becomes <code>%26</code> and the entire string stays one intact value.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For Base64 and hashing see the <a href="/alat/text">Text Toolkit</a>.</p>`;
+  const script = '<script>(function(){'
+    + 'var $=function(id){return document.getElementById(id);};'
+    + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}'
+    + 'function parseUrl(){var raw=$("up-url").value.trim(),u;'
+    + 'try{u=new URL(raw);}catch(e){$("up-tab").innerHTML="<tr><td>\\u26a0 "+esc(e.message)+"</td></tr>";return;}'
+    + 'var rows="<tr><th>Part</th><th>Value</th></tr>";'
+    + 'rows+="<tr><td>protocol</td><td><code>"+esc(u.protocol)+"</code></td></tr>";'
+    + 'rows+="<tr><td>host</td><td><code>"+esc(u.host)+"</code></td></tr>";'
+    + 'rows+="<tr><td>hostname</td><td><code>"+esc(u.hostname)+"</code></td></tr>";'
+    + 'rows+="<tr><td>port</td><td><code>"+(u.port||"(default)")+"</code></td></tr>";'
+    + 'rows+="<tr><td>pathname</td><td><code>"+esc(u.pathname)+"</code></td></tr>";'
+    + 'rows+="<tr><td>search</td><td><code>"+esc(u.search)+"</code></td></tr>";'
+    + 'rows+="<tr><td>hash</td><td><code>"+(esc(u.hash)||"(none)")+"</code></td></tr>";'
+    + 'var p="";u.searchParams.forEach(function(v,k){p+="<tr><td>  param: "+esc(k)+"</td><td>"+esc(v)+"</td></tr>";});'
+    + 'if(p)rows+="<tr><th>Parameter</th><th>Value</th></tr>"+p;'
+    + '$("up-tab").innerHTML=rows;}'
+    + 'function doEnc(){var t=$("up-comp").value;'
+    + '$("up-out").innerHTML="<b>encodeURIComponent:</b><br><code>"+esc(encodeURIComponent(t))+"</code><br><b>encodeURI:</b><br><code>"+esc(encodeURI(t))+"</code>";}'
+    + 'function doDec(){var t=$("up-comp").value;try{$("up-out").innerHTML="<b>Decoded:</b><br><code>"+esc(decodeURIComponent(t))+"</code>";}catch(e){'
+    + 'try{$("up-out").textContent="\\u26a0 cannot decode: "+e.message;}catch(e2){$("up-out").textContent="\\u26a0 decode failed";}}} '
+    + '$("up-parse").addEventListener("click",parseUrl);'
+    + '$("up-url").addEventListener("input",parseUrl);'
+    + '$("up-enc").addEventListener("click",doEnc);'
+    + '$("up-dec").addEventListener("click",doDec);'
+    + 'parseUrl();doEnc();'
+    + '})();</' + 'script>';
+  return worldDoc({
+    title: 'URL Parser & Encoder \u2014 Break Down Any URL, Encode & Decode Components | Tukuk-OS',
+    desc: 'Parse a URL into protocol, host, port, path, query parameters and fragment. Encode/decode components side-by-side. Free and browser-local.',
+    selfUrl: 'https://tukuk.org/alat/url',
+    heroTitle: '\ud83d\udd17 URL Parser & Encoder', heroSub: 'Protocol \u00b7 host \u00b7 query params \u00b7 encode \u00b7 decode \u2014 all local',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk URL Parser',
+      applicationCategory: 'DeveloperApplication', operatingSystem: 'Web browser',
+      description: 'Browser-local URL parser and component encoder/decoder.',
+      url: 'https://tukuk.org/alat/url', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/char \u2014 Character / Unicode reference ──
+function charPage() {
+  const body = `<p>Inspect any character: <b>Unicode code point</b>, decimal value, HTML entity (named and numeric), <b>UTF-8 bytes</b> and UTF-16 unit count. Paste a word and every letter breaks down, so those invisible \u201csmart quotes\u201d and stray zero-width spaces finally become visible.</p>
+  <div class="tl-form">
+    <label style="flex:1;min-width:280px">Characters <input id="ch-in" type="text" spellcheck="false" value="Aa\u20ac\ud83d\ude80" maxlength="50"></label>
+  </div>
+  <div style="overflow-x:auto"><table class="tl-tab" id="ch-tab"></table></div>
+  <h2 class="section-title">Common characters quick-reference</h2>
+  <div style="overflow-x:auto"><table class="tl-tab" id="ch-ref"></table></div>
+  <noscript><p>JavaScript is required \u2014 code-point inspection uses <code>String.prototype.codePointAt</code>.</p></noscript>
+  <h2 class="section-title">How code points and UTF-16 work</h2>
+  <p>Every character has a <b>code point</b> written as <code>U+</code> with hex digits (from <code>U+0041</code> for \u2018A\u2019 up to <code>U+10FFFF</code>). JavaScript strings are UTF-16, so characters above <code>U+FFFF</code> (emoji, ancient scripts) occupy <b>two surrogate units</b>: <code>"\ud83d\ude80".length === 2</code> but its code point is <code>U+1F680</code>. This table uses <code>codePointAt</code> and iterates correctly across surrogate pairs.</p>
+  <p>HTML entities: named (<code>&amp;euro;</code>) and numeric (<code>&amp;#8364;</code> decimal, <code>&amp;#x20AC;</code> hex) produce the same character. UTF-8 encodes code points up to U+10FFFF in 1\u20134 bytes; the byte column shows you exactly what goes into a file declared <code>charset=utf-8</code>.</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. For encoding whole documents try <a href="/alat/base64">Base64</a>.</p>`;
+  const script = '<script>(function(){'
+    + 'var $=function(id){return document.getElementById(id);};'
+    + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
+    + 'function hex(n){return n.toString(16).toUpperCase();}'
+    + 'function pad4(s){return "0000".slice(s.length)+s;}'
+    + 'function utf8(cp){var b=[];'
+    + 'if(cp<0x80)b=[cp];else if(cp<0x800)b=[0xc0|(cp>>6),0x80|(cp&0x3f)];'
+    + 'else if(cp<0x10000)b=[0xe0|(cp>>12),0x80|((cp>>6)&0x3f),0x80|(cp&0x3f)];'
+    + 'else b=[0xf0|(cp>>18),0x80|((cp>>12)&0x3f),0x80|((cp>>6)&0x3f),0x80|(cp&0x3f)];'
+    + 'return b.map(function(x){return "0x"+hex(x);}).join(" ");}'
+    + 'function typeOf(cp){'
+    + 'if(cp>=0x41&&cp<=0x5a)return "Latin uppercase";if(cp>=0x61&&cp<=0x7a)return "Latin lowercase";'
+    + 'if(cp>=0x30&&cp<=0x39)return "Digit";if(cp===0x20)return "Space";'
+    + 'if(cp>=0x1F300&&cp<=0x1FAFF)return "Emoji/Symbols";if(cp>=0x2000&&cp<=0x206F)return "General Punctuation";'
+    + 'if(cp>=0x20&&cp<=0x7e)return "ASCII printable";return "Other";}'
+    + 'function render(){var s=$("ch-in").value,rows="<tr><th>Char</th><th>Code point</th><th>Decimal</th><th>HTML dec</th><th>HTML hex</th><th>UTF-8</th><th>UTF-16</th><th>Type</th></tr>";'
+    + 'var i=0;while(i<s.length){var cp=s.codePointAt(i),ch=String.fromCodePoint(cp),units=cp>0xFFFF?2:1;'
+    + 'rows+="<tr><td style=\\"font-size:1.3rem\\">"+esc(ch)+"</td><td><code>U+"+pad4(hex(cp))+"</code></td><td>"+cp+"</td>"'
+    + '"+<td><code>&amp;#"+cp+";</code></td><td><code>&amp;#x"+hex(cp)+";</code></td>"'
+    + '"+<td><code>"+utf8(cp)+"</code></td><td>"+units+"</td><td>"+typeOf(cp)+"</td></tr>";i+=units;}'
+    + '$("ch-tab").innerHTML=rows;}'
+    + 'var CM=[["\u20ac","Euro sign","U+20AC","euro"],["\u00a3","Pound sign","U+00A3","pound"],["\u00a9","Copyright","U+00A9","copy"],'
+    + '["\u00ae","Registered","U+00AE","reg"],["\u2122","Trademark","U+2122","trade"],["\u00d7","Multiplication","U+00D7","times"],'
+    + '["\u00f7","Division","U+00F7","div"],["\u2014","Em dash","U+2014","mdash"],["\u2013","En dash","U+2013","ndash"],'
+    + '["\u201c","Left double quote","U+201C","ldquo"],["\u201d","Right double quote","U+201D","rdquo"],'
+    + '["\u00b7","Middle dot","U+00B7","middot"],["\u2192","Right arrow","U+2192","rarr"],["\u2190","Left arrow","U+2190","larr"],'
+    + '["\u2660","Spade","U+2660",""],["\u2665","Heart","U+2665",""],["\u2666","Diamond","U+2666",""],["\u2663","Club","U+2663",""]];'
+    + 'var ref="<tr><th>Char</th><th>Name</th><th>Code point</th><th>HTML named</th></tr>";'
+    + 'for(var i=0;i<CM.length;i++)ref+="<tr><td style=\\"font-size:1.3rem\\">"+CM[i][0]+"</td><td>"+CM[i][1]+"</td><td><code>"+CM[i][2]+"</code></td><td><code>&"+CM[i][3]+";</code></td></tr>";'
+    + '$("ch-ref").innerHTML=ref;'
+    + '$("ch-in").addEventListener("input",render);'
+    + 'render();'
+    + '})();</' + 'script>';
+  return worldDoc({
+    title: 'Character Map & Unicode Reference \u2014 Code Point, HTML Entity, UTF-8 | Tukuk-OS',
+    desc: 'Inspect any character: Unicode code point, decimal, HTML entity, UTF-8 bytes, UTF-16 unit count. Quick-reference table of common typographic symbols. Free and browser-local.',
+    selfUrl: 'https://tukuk.org/alat/char',
+    heroTitle: '\ud83d\udd23 Character & Unicode Reference', heroSub: 'Code point \u00b7 HTML entity \u00b7 UTF-8 bytes \u00b7 type \u2014 instant',
+    css: TOOLS_CSS, body: body + script,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Tukuk Character Reference',
+      applicationCategory: 'ReferenceApplication', operatingSystem: 'Web browser',
+      description: 'Inspect Unicode code points, HTML entities and UTF-8 encodings for any character.',
+      url: 'https://tukuk.org/alat/char', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
 // ── /charts — World Music Charts (SSR over the 24h SWR cache in src/muzik.js) ──────
 const MUZIK_CSS = `.mz-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
 @media(max-width:900px){.mz-tiles{grid-template-columns:repeat(2,1fr)}}
