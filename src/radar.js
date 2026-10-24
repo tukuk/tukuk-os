@@ -119,10 +119,13 @@ const AIS_TOKEN = String(process.env.AISSTREAM_TOKEN || '').trim();
 // then seventeen candidate boxes at once, a different hour each) reported per 90 s: English
 // Channel 1191/1365, US Gulf 219, US East 175/208, US West 159/206, eastern Mediterranean
 // 83/100, South China Sea 45/98, Brazil/Santos 60/72, Australia/Sydney 59, Gibraltar 55,
-// Tokyo Bay 15/30, Malacca+Singapore 27/19, Panama 1/6 — and Persian Gulf 1/0, Shanghai 0/0,
-// Red Sea 0/0, Hong Kong 0/0, Mumbai 0/0. The Gulf box of the original five is gone in favour
-// of the lanes that carry traffic. Asia outside Malacca and the South China Sea is simply not
-// fed by this feed's receivers: worth re-testing later, since aisstream adds stations quietly.
+// Tokyo Bay 15/30, Malacca+Singapore 27/19, Panama 1/6. The Gulf box of the original five is
+// gone in favour of the lanes that carry traffic; the Gulf, Mumbai and the Red Sea returned
+// nothing twice and are left out rather than pretended. Note what the counts cannot see: a
+// box only gets credit for messages no earlier box already claimed, so Hong Kong's own box
+// read zero while it sits inside the South China Sea box — where 111 ships answer. Shanghai
+// and the Taiwan Strait are inside that same box and stay empty anyway: a receiver gap, not
+// a subscription gap, and worth re-testing, since aisstream adds stations quietly.
 const AIS_BOXES = [
   [[1.0, 99.0], [7.5, 105.5]],       // Malacca & Singapore Strait — the home lane
   [[19.0, 110.0], [32.0, 123.0]],    // South China Sea to the East China Sea
