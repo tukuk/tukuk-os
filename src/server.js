@@ -18149,6 +18149,134 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// ── /status — plain language, for a person ─────────────────────────────────
+// /health is the probe a machine reads and /stats reports the search index; neither
+// answers the question a visitor actually asks ("is it broken, or is it me?"). This page
+// does, from the same facts the watchdog acts on — and nothing else: no hosts, no paths,
+// no commit hashes. The repository is private and this page is public.
+const ST_CSS = `.st-table{width:100%;border-collapse:collapse;margin:20px 0}
+.st-table td{padding:14px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.st-table td:first-child{white-space:nowrap;font-weight:600}
+.st-what{color:var(--muted);display:block;font-weight:400;font-size:.86rem;margin-top:2px}
+.st-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.st-ok .st-dot{background:#22c55e}
+.st-warn .st-dot{background:#f59e0b}
+.st-bad .st-dot{background:#ef4444}
+.st-banner{border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:18px 0;background:var(--panel)}
+.st-banner b{font-size:1.1rem}`;
+
+/** "3 hours ago" — a number a person can read, from a number of seconds. */
+function stAgo(sec) {
+  if (sec == null) return 'at an unknown time';
+  if (sec < 90) return `${Math.max(0, Math.round(sec))} seconds ago`;
+  if (sec < 5400) return `${Math.round(sec / 60)} minutes ago`;
+  if (sec < 172800) return `${Math.round(sec / 3600)} hours ago`;
+  return `${Math.round(sec / 86400)} days ago`;
+}
+
+async function statusData() {
+  const rows = [];
+  rows.push({ state: 'ok', name: 'This website', what: 'The page you are reading, served by the same engine as every other page', detail: 'answering' });
+
+  // Search: Meilisearch itself, or the saved index that keeps search answering without it.
+  let meiliOk = true;
+  try {
+    const h = await health();
+    meiliOk = h && h.status === 'available';
+  } catch {
+    meiliOk = false;
+  }
+  let documents = null;
+  try {
+    const s = await index.getStats();
+    documents = Number(s.numberOfDocuments) || 0;
+  } catch {
+    documents = null;
+  }
+  rows.push({
+    state: meiliOk ? 'ok' : 'warn',
+    name: 'Search',
+    what: 'The index behind /search and the answer box',
+    detail: meiliOk
+      ? `answering${documents ? ` · ${documents.toLocaleString('en-US')} documents indexed` : ''}`
+      : 'running on the saved index — results are older than usual',
+  });
+
+  // Live traffic tiles: measured from the tile cache, not promised.
+  const tiles = trfLive.status ? trfLive.status() : {};
+  const tileCounts = (tiles && tiles.tiles) || {};
+  const tilesUp = Boolean(tiles && tiles.provider) && (!tileCounts.errors || tileCounts.lastOkAt || tiles.lastOkAt);
+  rows.push({
+    state: !tiles || !tiles.provider ? 'warn' : (tilesUp ? 'ok' : 'bad'),
+    name: 'Live traffic tiles',
+    what: 'The traffic layer on /traffic, /maps and /weather/map',
+    detail: !tiles || !tiles.provider
+      ? 'no traffic provider is configured'
+      : tilesUp
+        ? `live${tiles.lastOkAt ? `, last tile received ${stAgo(Math.round((Date.now() - tiles.lastOkAt) / 1000))}` : ''}`
+        : 'reconnecting — the map keeps the last good tiles meanwhile',
+  });
+
+  // The daily update: silence is the failure mode, so say when it last spoke.
+  const update = updateStatus.read();
+  let deployState = 'ok';
+  let deployDetail = 'no new version was waiting at the last check';
+  if (!update) {
+    deployState = 'warn';
+    deployDetail = 'no update has been recorded yet';
+  } else if (update.stale) {
+    deployState = 'warn';
+    deployDetail = `the last check has not finished — it started ${stAgo(update.ageSeconds)}`;
+  } else if (!update.ok) {
+    deployState = 'warn';
+    deployDetail = `the last check stopped while ${update.stage || 'starting'}`;
+  } else if (update.stage === 'done' && update.to && update.from !== update.to) {
+    deployDetail = `a new version was installed ${stAgo(update.ageSeconds)}`;
+  } else {
+    deployDetail = `checked ${stAgo(update.ageSeconds)}, nothing was new`;
+  }
+  rows.push({ state: deployState, name: 'Daily update', what: 'The 04:30 pull that keeps this site current', detail: deployDetail });
+
+  rows.push({
+    state: 'ok',
+    name: 'This server run',
+    what: 'How long the current process has been serving',
+    detail: fmtUptime(Math.round(process.uptime())),
+  });
+
+  const worst = rows.some((r) => r.state === 'bad') ? 'bad' : rows.some((r) => r.state === 'warn') ? 'warn' : 'ok';
+  return { rows, worst };
+}
+
+app.get('/status', limiter.search, async (req, res) => {
+  let data;
+  try {
+    data = await statusData();
+  } catch {
+    // A status page that 500s is worse than useless: say only what is certainly true.
+    data = { worst: 'warn', rows: [{ state: 'warn', name: 'This website', what: 'The engine you are talking to', detail: 'answering, but it could not read all of its own checks' }] };
+  }
+  const headline = data.worst === 'bad' ? 'One thing is down' : data.worst === 'warn' ? 'Running, with one thing degraded' : 'Everything is answering';
+  const rows = data.rows.map((r) => `<tr class="st-${r.state}"><td><span class="st-dot"></span>${escapeHtml(r.name)}<span class="st-what">${escapeHtml(r.what)}</span></td><td>${escapeHtml(r.detail)}</td></tr>`).join('');
+  const body = `<div class="st-banner"><b>${escapeHtml(headline)}</b><br><span class="meta">Checked when you loaded this page. Every line below is a fact this server can see about itself, not a promise.</span></div>
+  <table class="st-table">${rows}</table>
+  <h2 class="section-title">What each line means</h2>
+  <p><b>Search</b> degrades on purpose rather than failing: if Meilisearch restarts, the engine answers from the last saved index, and search still works — with slightly older results. <b>Live traffic tiles</b> are measured from the tile cache: when the provider is unreachable the map keeps the last good tiles for ten minutes, so “reconnecting” is a note, not an outage. <b>Daily update</b> is the one people never notice: if it stops running, the site quietly stays on an old version, which is why its last attempt and its age are written out here.</p>
+  <p class="meta">For the numbers behind the search index, see <a href="/stats">live statistics</a>. For what this site is and how it is built, see <a href="/about">about</a>.</p>`;
+  res.type('html').send(worldDoc({
+    title: 'Service Status — is tukuk.org up? | Tukuk-OS',
+    desc: 'A plain-language, live status page: whether the site, the search index, the live traffic layer and the daily update are working right now — checked on this server, not promised.',
+    selfUrl: 'https://tukuk.org/status',
+    robots: 'noindex,follow',
+    heroTitle: '🩺 Service Status', heroSub: 'What is answering right now — measured, not promised',
+    css: ST_CSS, body,
+  }, worldNav('Where to go next', [
+    { href: '/stats', icon: '📈', name: 'Live statistics', blurb: 'Documents indexed, index size, requests served and memory in use — the numbers behind the search engine.' },
+    { href: '/about', icon: 'ℹ️', name: 'About Tukuk-OS', blurb: 'What this site is, what it runs on, and the promises it keeps about privacy and tracking.' },
+    { href: '/contact', icon: '✉️', name: 'Contact', blurb: 'Report something broken, or ask a question — there is a real person at the other end.' },
+  ])));
+});
+
 app.get('/stats', limiter.search, async (req, res) => {
   try {
     const [indexStats, settings] = await Promise.all([index.getStats(), index.getSettings()]);
@@ -18234,7 +18362,7 @@ function statsPageHtml(d) {
     <div class="trust">
       <strong>Privacy promise.</strong> This page loads no third-party analytics or tracking cookies. The counts above are in-memory totals for the current server run and contain no personal data about any visitor.
     </div>
-    <p class="meta">Want the machine-readable version? This page is served from the same data as <a href="/stats" rel="nofollow">the JSON <code>/stats</code> endpoint</a>.</p>
+    <p class="meta">Want the machine-readable version? This page is served from the same data as <a href="/stats" rel="nofollow">the JSON <code>/stats</code> endpoint</a>. Wondering whether something is down right now? See <a href="/status">service status</a>.</p>
   </main>
   <footer><p>&copy; 2026 Tukuk-OS &mdash; A free and open web search engine.</p></footer>
 </div>
