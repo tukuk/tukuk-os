@@ -104,8 +104,10 @@ const SUBJECTS = [
   // The catalogue files this literature under "solar energy" (3,826 works), and those works are
   // panel books: "Stand-alone solar electric systems", "Photovoltaic design & installation for
   // dummies", "Solar Installations", "Rooftop revolution". Term is the catalogue's key, title is
-  // the reader's word.
-  { slug: 'solar-power', title: 'Solar Power & Solar Panels', term: 'solar energy', blurb: 'Sunlight turned into heat and current: the cells inside a solar panel, the systems that store and deliver the power, and what an installation costs and produces.' },
+  // the reader's word. Both words the queries used are in the blurb on purpose: it is reader-facing
+  // prose about a panel's efficiency and an installation's cost, and it is also the only place this
+  // shelf can say those two things in its own voice — the titles it shows are the catalogue's.
+  { slug: 'solar-power', title: 'Solar Power & Solar Panels', term: 'solar energy', blurb: 'Sunlight turned into current: the cells inside a solar panel, the efficiency a panel reaches in real light and why heat takes part of it back, the batteries and inverters that deliver the power, and what an installation costs and produces.' },
   { slug: 'geology', title: 'Geology & Earth', term: 'geology', blurb: 'Plate tectonics, deep time and the rocks that record four and a half billion years of it.' },
   { slug: 'anthropology', title: 'Anthropology', term: 'anthropology', blurb: 'What people do and why they say they do it — kinship, ritual, exchange, and the argument about culture.' },
   { slug: 'linguistics', title: 'Language & Linguistics', term: 'linguistics', blurb: 'Sound, grammar, meaning and change: how language works as a system, and how it reshapes itself in every generation.' },
