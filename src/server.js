@@ -6140,34 +6140,45 @@ function nasaBusy(msg) {
 function nasaApodDatePage(req, apod, dateStr) {
   const a = Array.isArray(apod) ? apod[0] : (apod || {});
   const title = String(a.title || 'APOD').slice(0, 120);
-  const selfUrl = `https://tukuk.org/nasa/apod/${dateStr}`;
+  // A mirror that has no copy of the requested date falls back to the newest entry it holds
+  // (src/nasa.js fallback B/C). Say so, and date everything from the entry's own date: a page
+  // that claims "2026-10-20" while showing 2026-10-23's picture is a false statement for the
+  // reader and duplicate content for a crawler.
+  const shown = /^\d{4}-\d{2}-\d{2}$/.test(String(a.date || '')) ? String(a.date) : dateStr;
+  const offDate = shown !== dateStr;
+  const selfUrl = `https://tukuk.org/nasa/apod/${offDate ? shown : dateStr}`;
   const day = 86400000;
-  const shift = (n) => { const d = new Date(Date.parse(dateStr + 'T12:00:00Z') + n * day); return d.toISOString().slice(0, 10); };
+  const shiftFrom = offDate ? shown : dateStr;
+  const shift = (n) => { const d = new Date(Date.parse(shiftFrom + 'T12:00:00Z') + n * day); return d.toISOString().slice(0, 10); };
   const prev = shift(-1); const next = shift(1);
   const isVideo = String(a.media_type || '') === 'video';
   const imgHtml = isVideo
     ? nasaVideoPlayer(a.url, title, true)
-    : nasaImg(a.hdurl || a.url, `${title} — APOD for ${dateStr}`, true);
+    : nasaImg(a.hdurl || a.url, `${title} — APOD for ${shown}`, true);
   const poster = isVideo ? nasaVideoPoster(a) : '';
+  const offNote = offDate
+    ? `<p class="meta" style="border:1px solid var(--line);border-radius:10px;padding:10px 14px"><b>No copy of the ${dateStr} picture yet.</b> This mirror does not hold NASA's entry for that date, so what is shown below is the entry for <a href="/nasa/apod/${shown}">${shown}</a>${a.staleNote ? ' — ' + escapeHtml(String(a.staleNote)) : ''}.</p>`
+    : (a.staleNote ? `<p class="meta" style="border:1px solid var(--line);border-radius:10px;padding:10px 14px">${escapeHtml(String(a.staleNote))}</p>` : '');
   const jsonLd = JSON.stringify(isVideo ? {
     '@context': 'https://schema.org', '@type': 'VideoObject', name: title, description: String(a.explanation || '').slice(0, 300),
-    contentUrl: String(a.url || ''), thumbnailUrl: /^https?:\/\//i.test(poster) ? poster : undefined, datePublished: dateStr,
+    contentUrl: String(a.url || ''), thumbnailUrl: /^https?:\/\//i.test(poster) ? poster : undefined, datePublished: shown,
     publisher: { '@type': 'Organization', name: 'NASA' },
   } : {
     '@context': 'https://schema.org', '@type': 'ImageObject', name: title, description: String(a.explanation || '').slice(0, 300),
-    contentUrl: String(a.hdurl || a.url || ''), datePublished: dateStr,
+    contentUrl: String(a.hdurl || a.url || ''), datePublished: shown,
     license: 'https://www.nasa.gov/multimedia/guidelines/index.html', producer: { '@type': 'Organization', name: 'NASA' },
   }).replace(/</g, '\\u003c');
   const body = `<p class="back-link"><a href="/nasa">&larr; Space Complex</a> &middot; <a href="/nasa/archive">Archive</a></p>`
+    + offNote
     + `<div class="nasa-daynav"><a class="btn ghost" href="/nasa/apod/${prev}">&larr; ${prev}</a>`
     + `<a class="btn ghost" href="/nasa/apod/${next}">${next} &rarr;</a></div>`
     + imgHtml
     + `<article>${nasaParas(a.explanation, 12)}</article>`
     + (a.copyright ? `<p class="meta">Copyright: ${escapeHtml(String(a.copyright).slice(0, 120))}</p>` : '')
-    + `<p class="meta">Astronomy Picture of the Day for ${dateStr} — image &amp; explanation courtesy of NASA (public domain), mirrored at Tukuk-OS for reading and search convenience.</p>`;
+    + `<p class="meta">Astronomy Picture of the Day for ${shown}${offDate ? ` (requested ${dateStr})` : ''} — image &amp; explanation courtesy of NASA (public domain), mirrored at Tukuk-OS for reading and search convenience.</p>`;
   return nasaDoc({
-    title: `${title} — APOD ${dateStr} | Tukuk-OS`, desc: String(a.explanation || '').slice(0, 155) || `NASA's Astronomy Picture of the Day for ${dateStr}.`,
-    selfUrl, heroTitle: title, heroSub: `Astronomy Picture of the Day \u00b7 ${dateStr} \u00b7 NASA (public domain)`,
+    title: `${title} — APOD ${shown} | Tukuk-OS`, desc: String(a.explanation || '').slice(0, 155) || `NASA's Astronomy Picture of the Day for ${shown}.`,
+    selfUrl, heroTitle: title, heroSub: `Astronomy Picture of the Day \u00b7 ${shown} \u00b7 NASA (public domain)`,
     image: (isVideo ? (/^https?:\/\//i.test(poster) ? poster : undefined) : (a.hdurl || a.url)) || undefined, ld: jsonLd, body,
   });
 }

@@ -128,3 +128,18 @@ test('ISS: honest telemetry — source markers, NO invented 0,0 position', () =>
   assert.ok(!/latitude: 0,/.test(nasaSrc), 'the fake 0,0 fallback is removed for good');
   assert.ok(nasaSrc.includes("setCache('iss:last-good'"), 'last-good is cached for the busy mode');
 });
+
+// A dated APOD URL that the mirror has no copy of falls back to the newest entry on disk.
+// Dating that picture with the requested date is a false statement (and duplicate content),
+// so the page must show the entry's own date and say why.
+test('APOD date page dates the picture it actually shows, never the URL it was asked for', () => {
+  const idx = serverSrc.indexOf('function nasaApodDatePage');
+  assert.ok(idx > 0, 'nasaApodDatePage is defined');
+  const fn = serverSrc.slice(idx, idx + 4200);
+  assert.ok(fn.includes('const shown = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(a.date'), 'the shown date comes from the entry');
+  assert.ok(fn.includes('const offDate = shown !== dateStr'), 'a mismatch between URL and entry is detected');
+  assert.ok(fn.includes('No copy of the ${dateStr} picture yet'), 'the mismatch is stated to the reader');
+  assert.ok(fn.includes('datePublished: shown'), 'JSON-LD dates the entry, not the URL');
+  assert.ok(fn.includes('nasa/apod/${offDate ? shown : dateStr}'), 'the canonical URL points at the real date');
+  assert.ok(fn.includes('Astronomy Picture of the Day for ${shown}'), 'the credit line dates the entry');
+});
