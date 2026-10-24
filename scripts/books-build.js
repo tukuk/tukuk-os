@@ -45,6 +45,8 @@
 //   node scripts/books-build.js --shelves=60 --calls=200 # a proof run before the real one
 //   node scripts/books-build.js --concurrency=1          # a quieter network, a longer run
 // Ctrl-C is safe: state is written after every shelf and re-running resumes from the file.
+// --calls is measured against the LIFETIME total the state file remembers, not the current run:
+// resuming a build that has spent 1,400 searches needs --calls above that number.
 const fs = require('fs');
 const path = require('path');
 const books = require('../src/books');
@@ -327,6 +329,15 @@ async function main() {
   console.log(`[books-build] target ${OPTS.shelves} shelves, ${OPTS.calls} calls, ${OPTS.concurrency} workers`);
   console.log(`[books-build] resuming: ${state.published.length} published, ${works.size} works on disk, `
     + `${Object.keys(state.seen).length} candidate terms known`);
+  // `calls` is a lifetime budget kept in the state file, not a per-run one — so a resume given a
+  // smaller --calls than the run has already spent does nothing at all, and did exactly that here
+  // (993 shelves, 1,387 calls spent, --calls=600: the loop never started). Say so instead of
+  // looking like a build that ran and found the catalogue empty.
+  if ((state.calls || 0) >= OPTS.calls && state.published.length < OPTS.shelves) {
+    console.log(`[books-build] NOTE: ${state.calls} searches have already been spent against a budget of `
+      + `${OPTS.calls}, and ${state.published.length} of ${OPTS.shelves} shelves are published. `
+      + `--calls is the lifetime budget; raise it above ${state.calls} to keep building.`);
+  }
 
   let stop = false;
   const budget = () => state.published.length < OPTS.shelves && (state.calls || 0) < OPTS.calls;
