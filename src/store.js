@@ -286,6 +286,8 @@ function createPost(post) {
     excerpt: post.excerpt || post.content.slice(0, 200),
     author: post.author || 'Fevian Donald',
     tags: post.tags || [],
+    status: post.status === 'draft' ? 'draft' : 'published',
+    publishAt: post.publishAt ? new Date(post.publishAt).toISOString() : null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -314,24 +316,42 @@ function deletePost(id) {
   return true;
 }
 
-/**
- * Look up a post by URL slug.
- * Accepts both the raw slug and its percent-encoded form (URL-encoded CJK / Turkish
- * slugs come in from the router already encoded), and falls back to id lookup for admin
- * perm-links. Comparison is lower-cased to be safe against case-only drift.
- */
-function getPostBySlug(slug) {
+/** A post is publicly visible once it is not a draft and its scheduled time (if any) has passed. */
+function isPublic(post) {
+  if (!post) return false;
+  if (post.status === 'draft') return false;
+  if (post.publishAt && new Date(post.publishAt) > new Date()) return false;
+  return true;
+}
+
+/** Raw slug/id lookup that ignores draft & schedule state — for admin collision checks & edits. */
+function getPostBySlugAny(slug) {
   const decoded = decodeURIComponent(slug || '').trim().toLowerCase();
   return load().posts.find(p => p.slug.toLowerCase() === decoded || encodeURIComponent(p.slug).toLowerCase() === decoded || p.id === slug) || null;
 }
 
-/** Look up a post by its internal id. */
+/**
+ * Public slug lookup: returns null for a draft or a not-yet-due scheduled post, so every
+ * page that resolves a post by URL (/blog/:slug, /wiki/:slug, the learn track) 404s it
+ * without each route re-checking visibility. Use getPostBySlugAny for admin paths.
+ */
+function getPostBySlug(slug) {
+  const post = getPostBySlugAny(slug);
+  return post && isPublic(post) ? post : null;
+}
+
+/** Look up a post by its internal id (raw — admin editing must reach drafts). */
 function getPostById(id) {
   return load().posts.find(p => p.id === id) || null;
 }
 
-/** Return the newest N posts (creation order is preserved by the unshift in createPost). */
+/** Public posts only, newest first — the default for every reader-facing page and the search index. */
 function getAllPosts(limit = 20) {
+  return load().posts.filter(isPublic).slice(0, limit);
+}
+
+/** Every post including drafts & scheduled ones — for the admin manager only. */
+function getAllPostsAll(limit = 100) {
   return load().posts.slice(0, limit);
 }
 
@@ -356,6 +376,7 @@ process.on('exit', close);
 module.exports = {
   load, flush, close, recordSearch, recordAsk, recordCrawl, event,
   history, popularQueries, stats, getSetting, setSetting, clear,
-  createPost, updatePost, deletePost, getPostBySlug, getPostById, getAllPosts,
+  createPost, updatePost, deletePost, getPostBySlug, getPostBySlugAny, getPostById,
+  getAllPosts, getAllPostsAll, isPublic,
   takeContentNewSlugs
 };

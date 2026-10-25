@@ -730,6 +730,21 @@ Type a command below or click a quick action.
             </div>
           </div>
           
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label for="postStatus">Visibility</label>
+              <select id="postStatus">
+                <option value="published" selected>Published</option>
+                <option value="draft">Draft (hidden from site &amp; search)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="postSchedule">Schedule publish (optional)</label>
+              <input type="datetime-local" id="postSchedule">
+              <div class="help-text">Empty = publish now. A future date keeps it hidden until then.</div>
+            </div>
+          </div>
+          
           <div class="form-group">
             <label for="postContent">Article Body (Markdown)</label>
             <textarea id="postContent" rows="8" placeholder="Write your article in Markdown..." required></textarea>
@@ -1515,6 +1530,12 @@ Type a command below or click a quick action.
     document.getElementById('postEditingBadge').hidden = !on;
     if (on) document.getElementById('postEditingSlug').textContent = slug || '';
   }
+  function toLocalInput(iso) {
+    if (!iso) return '';
+    const d = new Date(iso); if (isNaN(d)) return '';
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
   document.getElementById('postCancelEdit').addEventListener('click', (e) => {
     e.preventDefault();
     editingId = null;
@@ -1527,7 +1548,9 @@ Type a command below or click a quick action.
       title: document.getElementById('postTitle').value.trim(),
       slug: document.getElementById('postSlug').value.trim(),
       tags: document.getElementById('postTags').value.split(',').map(t => t.trim()).filter(Boolean),
-      content: document.getElementById('postContent').value.trim()
+      content: document.getElementById('postContent').value.trim(),
+      status: document.getElementById('postStatus').value,
+      publishAt: document.getElementById('postSchedule').value || null
     };
     const res = await fetch(editingId ? `/api/admin/posts/${editingId}` : '/api/admin/posts', {
       method: editingId ? 'PUT' : 'POST',
@@ -1555,6 +1578,8 @@ Type a command below or click a quick action.
     document.getElementById('postSlug').value = p.slug || '';
     document.getElementById('postTags').value = (p.tags || []).join(', ');
     document.getElementById('postContent').value = p.content || '';
+    document.getElementById('postStatus').value = (p.status === 'draft') ? 'draft' : 'published';
+    document.getElementById('postSchedule').value = toLocalInput(p.publishAt);
     setEditChrome(true, p.slug);
     document.getElementById('postForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.getElementById('postTitle').focus();
@@ -1571,18 +1596,22 @@ Type a command below or click a quick action.
         box.innerHTML = '<span style="color:var(--text-muted);">No posts found.</span>';
         return;
       }
-      box.innerHTML = posts.map(p => `
+      box.innerHTML = posts.map(p => {
+        let badge = '';
+        if (p.status === 'draft') badge = ' <span style="font-size:.68rem; letter-spacing:.08em; color:#e0a34a; border:1px solid #e0a34a55; border-radius:20px; padding:1px 8px; vertical-align:middle;">DRAFT</span>';
+        else if (p.publishAt && new Date(p.publishAt) > new Date()) badge = ' <span style="font-size:.68rem; letter-spacing:.08em; color:var(--accent); border:1px solid var(--accent); border-radius:20px; padding:1px 8px; vertical-align:middle;">SCHEDULED</span>';
+        return `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--panel-border);">
           <div>
-            <strong>${p.title}</strong>
+            <strong>${p.title}</strong>${badge}
             <div style="font-size:0.82rem; color:var(--text-muted);"><a href="/blog/${p.slug}" target="_blank">/blog/${p.slug}</a> &middot; ${new Date(p.createdAt).toLocaleDateString()}</div>
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn btn-secondary" onclick="editPost('${p.id}')" style="font-size:0.8rem; padding:4px 10px;">Edit</button>
             <button class="btn btn-secondary" onclick="deletePost('${p.id}')" style="font-size:0.8rem; padding:4px 10px; color:var(--danger);">Delete</button>
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     } catch {
       box.innerHTML = '<span style="color:var(--danger);">Failed to load posts.</span>';
     }

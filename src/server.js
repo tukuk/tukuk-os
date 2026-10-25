@@ -21829,13 +21829,14 @@ app.post('/api/admin/crawl', auth.requireAdmin, async (req, res) => {
 });
 
 app.get('/api/admin/posts', auth.requireAdmin, (req, res) => {
-  res.json(store.getAllPosts(100));
+  res.json(store.getAllPostsAll(100));
 });
 
 app.post('/api/admin/posts', auth.requireAdmin, (req, res) => {
-  const { title, content, slug, tags, author } = req.body || {};
+  const { title, content, slug, tags, author, status, publishAt } = req.body || {};
   if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
-  const post = store.createPost({ title, content, slug, tags, author });
+  const post = store.createPost({ title, content, slug, tags, author, status, publishAt });
+  if (!store.isPublic(post)) return res.json(post); // draft / scheduled-ahead: save it but keep it out of search & IndexNow
   const id = require('crypto').createHash('sha256').update(post.slug || post.title).digest('hex').slice(0, 16);
   index.addDocuments([{
     id,
@@ -21878,10 +21879,13 @@ app.put('/api/admin/posts/:id', auth.requireAdmin, (req, res) => {
   if (typeof b.content === 'string' && b.content.trim()) patch.content = b.content.trim();
   if (typeof b.author === 'string' && b.author.trim()) patch.author = b.author.trim();
   if (Array.isArray(b.tags)) patch.tags = b.tags.map((t) => String(t).trim()).filter(Boolean).slice(0, 12);
+  if (b.status === 'draft' || b.status === 'published') patch.status = b.status;
+  if (b.publishAt === '' || b.publishAt === null) patch.publishAt = null;
+  else if (b.publishAt) { const d = new Date(b.publishAt); if (!isNaN(d)) patch.publishAt = d.toISOString(); }
   if (typeof b.slug === 'string' && b.slug.trim()) {
     const ns = cleanSlug(b.slug);
     if (ns && ns !== existing.slug) {
-      const clash = store.getPostBySlug(ns);
+      const clash = store.getPostBySlugAny(ns);
       if (clash && clash.id !== existing.id) return res.status(409).json({ error: 'That slug is already used by another post' });
       patch.slug = ns;
     }
@@ -21894,8 +21898,13 @@ app.put('/api/admin/posts/:id', auth.requireAdmin, (req, res) => {
   const finalExcerpt = updated.excerpt || String(updated.content || '').slice(0, 200);
   try {
     const blogDir = path.join(__dirname, '..', 'content', 'blog');
-    const md = `SLUG: ${finalSlug}\nTITLE: ${updated.title}\nEXCERPT: ${finalExcerpt}\nTAGS: ${(updated.tags || []).join(', ')}\n\n${updated.content || ''}\n`;
-    fs.writeFileSync(path.join(blogDir, `${finalSlug}.md`), md);
+    const mdPath = path.join(blogDir, `${finalSlug}.md`);
+    if (store.isPublic(updated)) {
+      const md = `SLUG: ${finalSlug}\nTITLE: ${updated.title}\nEXCERPT: ${finalExcerpt}\nTAGS: ${(updated.tags || []).join(', ')}\n\n${updated.content || ''}\n`;
+      fs.writeFileSync(mdPath, md);
+    } else if (fs.existsSync(mdPath)) {
+      fs.unlinkSync(mdPath); // draft/scheduled: keep it out of content/blog, or a boot sync would re-import it as published
+    }
     if (patch.slug && existing.slug && existing.slug !== finalSlug) {
       const old = path.join(blogDir, `${existing.slug}.md`);
       if (fs.existsSync(old)) fs.unlinkSync(old);
@@ -21903,13 +21912,17 @@ app.put('/api/admin/posts/:id', auth.requireAdmin, (req, res) => {
   } catch { /* the content dir may be read-only on some deploys — the store edit still holds */ }
   try {
     const { postToDoc } = require('./blog-index');
-    index.addDocuments([postToDoc(updated)], { primaryKey: 'id' });
+    const slugId = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+    if (store.isPublic(updated)) {
+      index.addDocuments([postToDoc(updated)], { primaryKey: 'id' });
+    } else {
+      Promise.resolve(index.deleteDocument(slugId(finalSlug))).catch(() => {}); // un-published → drop from search
+    }
     if (patch.slug && existing.slug && patch.slug !== existing.slug) {
-      const oldId = require('crypto').createHash('sha256').update(existing.slug).digest('hex').slice(0, 16);
-      Promise.resolve(index.deleteDocument(oldId)).catch(() => {});
+      Promise.resolve(index.deleteDocument(slugId(existing.slug))).catch(() => {});
     }
   } catch { /* search re-index is best-effort */ }
-  notifyIndexNow([`https://tukuk.org/blog/${finalSlug}`]);
+  if (store.isPublic(updated)) notifyIndexNow([`https://tukuk.org/blog/${finalSlug}`]);
   res.json(updated);
 });
 
