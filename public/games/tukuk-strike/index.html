@@ -256,6 +256,37 @@
     border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
   }
 
+  /* ── Difficulty selector + between-wave perks ───────────────── */
+  .diffrow { display: flex; gap: 8px; margin-bottom: 14px; }
+  .diffbtn {
+    flex: 1; text-align: center; cursor: pointer; font: inherit; font-weight: 700;
+    font-size: .72rem; letter-spacing: .08em; color: var(--muted);
+    background: rgba(255, 255, 255, .04); border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 6px; transition: all .15s;
+  }
+  .diffbtn small { display: block; font-weight: 500; font-size: .6rem; letter-spacing: .02em; opacity: .7; margin-top: 3px; }
+  .diffbtn:hover { color: var(--text); border-color: rgba(125, 211, 252, .5); }
+  body[data-diff="recruit"] #btnDiffRecruit,
+  body[data-diff="veteran"] #btnDiffVeteran,
+  body[data-diff="nightmare"] #btnDiffNightmare {
+    color: #fff; background: linear-gradient(180deg, #5b9bff, #2f6fd6); border-color: #6aa6ff;
+    box-shadow: 0 6px 18px rgba(47, 111, 214, .4);
+  }
+
+  #screenUpgrade .card { max-width: 760px; }
+  .perkrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 6px; }
+  @media (max-width: 640px) { .perkrow { grid-template-columns: 1fr; } }
+  .perkcard {
+    cursor: pointer; font: inherit; text-align: left; color: var(--text); position: relative;
+    background: linear-gradient(180deg, rgba(24, 34, 54, .9), rgba(12, 18, 30, .95));
+    border: 1px solid var(--line); border-radius: 14px; padding: 16px 14px;
+    display: flex; flex-direction: column; gap: 8px; transition: all .15s; min-height: 128px;
+  }
+  .perkcard:hover { border-color: rgba(125, 211, 252, .6); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, .4); }
+  .perknum { position: absolute; top: 10px; right: 12px; font-size: .62rem; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .perkname { font-weight: 900; letter-spacing: .06em; color: var(--cyan); font-size: .92rem; }
+  .perkdesc { color: var(--muted); font-size: .78rem; line-height: 1.4; margin-top: auto; }
+
   /* ── Touch controls ──────────────────────────────────────────── */
   #touchLayer { display: none; position: fixed; inset: 0; z-index: 20; }
   body.touch #touchLayer { display: block; }
@@ -371,12 +402,18 @@
       <a href="/games">&larr; All games</a>
     </div>
     <h1 class="logo">TUKUK<br>STRIKE</h1>
-    <p class="sub">A third-person arena shooter built for the open web. Survive endless robot waves, chain kills for a score multiplier, and drop a titan every fifth wave.</p>
+    <p class="sub">A third-person arena shooter built for the open web. Survive endless robot waves, pick a perk after every wave to build your run, chain kills for a score multiplier, and drop a titan every fifth wave.</p>
     <div class="pillrow">
       <span class="pill">NO INSTALL</span>
       <span class="pill">WEBGL</span>
+      <span class="pill">3 WEAPONS</span>
+      <span class="pill">PERK UPGRADES</span>
       <span class="pill">TOUCH READY</span>
-      <span class="pill">FREE</span>
+    </div>
+    <div class="diffrow" role="group" aria-label="Difficulty">
+      <button class="diffbtn" id="btnDiffRecruit" type="button">RECRUIT<small>relaxed · 0.8× score</small></button>
+      <button class="diffbtn" id="btnDiffVeteran" type="button">VETERAN<small>standard · 1× score</small></button>
+      <button class="diffbtn" id="btnDiffNightmare" type="button">NIGHTMARE<small>brutal · 1.7× score</small></button>
     </div>
     <div class="btnrow">
       <button class="btn prim" id="btnPlay" type="button">Play now</button>
@@ -399,9 +436,10 @@
         <div><span>Overcharge</span><kbd>E</kbd></div>
         <div><span>Reload</span><kbd>R</kbd></div>
         <div><span>Swap weapon</span><kbd>Q / wheel</kbd></div>
+        <div><span>Select weapon</span><kbd>1 2 3</kbd></div>
         <div><span>Pause</span><kbd>Esc</kbd></div>
       </div>
-      <p style="margin-top:12px">Aim down sights for accuracy and a tighter camera. Dash through fire to break line of sight — you are briefly invulnerable. Kills feed a combo multiplier that fades if you stop shooting. Health regenerates after a few seconds without damage; green crates repair, gold crates resupply, cyan crates reset the overcharge cooldown.</p>
+      <p style="margin-top:12px">Aim down sights for accuracy and a tighter camera. Dash through fire to break line of sight — you are briefly invulnerable. Kills feed a combo multiplier that fades if you stop shooting. Health regenerates after a few seconds without damage; green crates repair, gold crates resupply, cyan crates reset the overcharge cooldown. Clear a wave and you pick one of three perks — stack damage, fire rate, speed, cooldowns and more into your own build. The ARC LANCE (key 3) fires a piercing rail that punches through a whole line of robots.</p>
       <button class="btn ghost" id="howToClose" type="button" style="margin-top:6px">Close</button>
     </div>
   </div>
@@ -457,6 +495,19 @@
       <button class="btn" id="btnQuit" type="button">Back to title</button>
       <a class="btn ghost" href="/games" style="text-align:center;text-decoration:none">All games</a>
     </div>
+  </div>
+</section>
+
+<!-- ── between-wave upgrade ─────────────────────────────────── -->
+<section class="screen" id="screenUpgrade">
+  <div class="card">
+    <div class="brandline">
+      <span class="tag"><img src="/icon.svg" alt=""> tukuk.org arcade</span>
+      <span class="pill" id="upgradeWave">WAVE CLEARED</span>
+    </div>
+    <h1 class="logo" style="font-size:1.9rem">CHOOSE AN UPGRADE</h1>
+    <p class="sub" style="margin-bottom:14px">Pick one perk to carry into the next wave. Press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> — or click a card.</p>
+    <div class="perkrow" id="perkRow"></div>
   </div>
 </section>
 

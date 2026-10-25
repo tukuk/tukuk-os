@@ -953,6 +953,16 @@ void main() {
     this.noiseHit(800, 0.22, 0.34, 'lowpass');
     this.tone(140, 0.2, 0.2, 'sawtooth', 55);
   };
+  // A charged energy lance: a rising whine that snaps into a bright discharge.
+  Audio.prototype.railgun = function () {
+    this.tone(320, 0.28, 0.16, 'sawtooth', 1500);
+    this.noiseHit(2600, 0.24, 0.26, 'highpass');
+    this.tone(1200, 0.16, 0.12, 'square', 300);
+  };
+  // A soft ascending arpeggio for picking a between-wave upgrade.
+  Audio.prototype.upgrade = function () {
+    [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => this.tone(f, 0.2, 0.12, 'triangle'), i * 80));
+  };
   Audio.prototype.enemyShoot = function () {
     this.tone(520, 0.14, 0.12, 'sawtooth', 220);
   };

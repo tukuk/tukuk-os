@@ -35,6 +35,11 @@
       reserveMax: 60, reload: 1.85, spread: 0.075, pellets: 7, kick: 2.4,
       color: [1.0, 0.62, 0.25], tracer: [1.0, 0.7, 0.3], auto: false,
     },
+    {
+      id: 'arc', name: 'ARC LANCE', short: 'ARC', dmg: 95, rate: 1.15, mag: 4,
+      reserveMax: 36, reload: 2.0, spread: 0.0015, pellets: 1, kick: 3.4,
+      color: [0.72, 0.45, 1.0], tracer: [0.8, 0.55, 1.0], auto: false, pierce: true,
+    },
   ];
 
   const ENEMY_TYPES = {
@@ -61,7 +66,7 @@
   };
 
   const S = {
-    mode: 'title',            // title | play | pause | over
+    mode: 'title',            // title | play | pause | over | upgrade
     time: 0, run: 0, dt: 0,
     wave: 0, wavePhase: 'idle', waveT: 0, queue: [], alive: 0,
     score: 0, kills: 0, shots: 0, hits: 0, combo: 0, comboT: 0,
@@ -69,7 +74,39 @@
     obstacles: [], shake: 0, flash: 0, hitT: 0, toastT: 0,
     spawnPt: [0, 0, 0], best: 0, muted: false, quality: 1,
     submitted: false, lbDirty: true,
+    diff: 'veteran',          // active run difficulty (also the title selection)
+    mods: baseMods(),         // per-run perk multipliers, reset in resetRun()
+    offers: [],               // the three perk cards currently on the upgrade screen
   };
+
+  // ── Difficulty tiers ────────────────────────────────────────────────────
+  // hp/speed scale every robot; budget/cap drive how many spawn at once;
+  // mult is a straight score multiplier so harder runs are worth more.
+  const DIFFS = {
+    recruit:   { name: 'RECRUIT',   hp: 0.82, speed: 0.9,  budget: 0.8, cap: 10, mult: 0.8 },
+    veteran:   { name: 'VETERAN',   hp: 1.0,  speed: 1.0,  budget: 1.0, cap: 14, mult: 1.0 },
+    nightmare: { name: 'NIGHTMARE', hp: 1.5,  speed: 1.16, budget: 1.4, cap: 20, mult: 1.7 },
+  };
+  const DIFF_ORDER = ['recruit', 'veteran', 'nightmare'];
+
+  // ── Between-wave perk upgrades (the roguelite build layer) ──────────────
+  // Every perk mutates the run's S.mods and, where relevant, the live player.
+  // shoot()/playerUpdate()/useAbility()/updatePickups() read these each frame.
+  function baseMods() {
+    return { dmg: 1, rate: 1, hp: 1, speed: 1, ability: 1, dash: 1, ammo: 1, crit: 2, lifesteal: 0, magnet: 1 };
+  }
+  const PERKS = [
+    { id: 'dmg', name: 'HOLLOW POINT', desc: '+22% weapon damage', apply: (m) => { m.dmg *= 1.22; } },
+    { id: 'rate', name: 'HAIR TRIGGER', desc: '+18% fire rate', apply: (m) => { m.rate *= 1.18; } },
+    { id: 'hp', name: 'TEMPERED CHASSIS', desc: '+25% max integrity · repairs 25', apply: (m, p) => { m.hp *= 1.25; if (p) { p.maxHp = Math.round(MAX_HP * m.hp); p.hp = Math.min(p.maxHp, p.hp + 25); } } },
+    { id: 'speed', name: 'KINETIC BOOSTERS', desc: '+16% movement speed', apply: (m) => { m.speed *= 1.16; } },
+    { id: 'dash', name: 'BLINK CAPACITOR', desc: 'dash recharges 30% faster', apply: (m) => { m.dash *= 0.7; } },
+    { id: 'ability', name: 'OVERCLOCK CORE', desc: 'overcharge recharges 32% faster', apply: (m) => { m.ability *= 0.68; } },
+    { id: 'crit', name: 'DEADEYE OPTIC', desc: 'headshot bonus +1×', apply: (m) => { m.crit += 1; } },
+    { id: 'leech', name: 'VAMPIRIC ROUNDS', desc: 'heal 4 integrity per kill', apply: (m) => { m.lifesteal += 4; } },
+    { id: 'ammo', name: 'AMMO HOARD', desc: '+45% reserve capacity', apply: (m, p) => { m.ammo *= 1.45; if (p) p.ammo.forEach((s, i) => { s.reserve = Math.min(Math.round(WEAPONS[i].reserveMax * m.ammo), s.reserve + Math.round(WEAPONS[i].reserveMax * 0.3)); }); } },
+    { id: 'magnet', name: 'MAGNET COIL', desc: 'pull pickups from farther away', apply: (m) => { m.magnet *= 1.9; } },
+  ];
 
   let R = null, A = null, I = null, MESH = null;
   const tmpM = M4.create();
@@ -389,14 +426,16 @@
 
   // ── 4. Player, camera, weapons ──────────────────────────────────────────
   function newPlayer() {
+    const m = S.mods;
+    const maxHp = Math.round(MAX_HP * m.hp);
     return {
       x: 0, y: 0, z: 20, vx: 0, vy: 0, vz: 0,
-      yaw: 0, pitch: 0, grounded: true, hp: MAX_HP, dead: false,
+      yaw: 0, pitch: 0, grounded: true, hp: maxHp, maxHp, dead: false,
       aim: false, sprint: false, bob: 0, hurtT: 0, regenT: 0,
       weapon: 0, fireCd: 0, kick: 0.04, recoil: 0,
-      ammo: WEAPONS.map((w) => ({ mag: w.mag, reserve: w.reserveMax, reloadT: 0 })),
+      ammo: WEAPONS.map((w) => ({ mag: w.mag, reserve: Math.round(w.reserveMax * m.ammo), reloadT: 0 })),
       dashT: 0, dashCd: 0, dashDir: [0, 0, -1], invuln: 0,
-      abilityCd: 0, jumpBuf: 0, dashFx: 0, lastShot: 0,
+      abilityCd: 0, abilityMax: 14, jumpBuf: 0, dashFx: 0, lastShot: 0,
     };
   }
 
@@ -406,7 +445,8 @@
     S.pickups.length = 0;
     S.wave = 0; S.wavePhase = 'idle'; S.waveT = 0; S.queue = []; S.alive = 0;
     S.score = 0; S.kills = 0; S.shots = 0; S.hits = 0; S.combo = 0; S.comboT = 0;
-    S.shake = 0; S.flash = 0; S.hitT = 0; S.submitted = false;
+    S.shake = 0; S.flash = 0; S.hitT = 0; S.submitted = false; S.offers = [];
+    S.mods = baseMods();
     S.player = newPlayer();
     S.run = 0;
     R.particles.list.length = 0;
@@ -450,7 +490,7 @@
     if (wlen > 1) { wx /= wlen; wz /= wlen; }
 
     p.sprint = !!(I.down('ShiftLeft') || I.down('ShiftRight')) && !p.aim && wlen > 0.1;
-    const targetSpeed = p.aim ? 3.4 : p.sprint ? 8.6 : 5.9;
+    const targetSpeed = (p.aim ? 3.4 : p.sprint ? 8.6 : 5.9) * S.mods.speed;
 
     if (p.dashT > 0) {
       p.dashT -= dt;
@@ -468,7 +508,7 @@
       const dxi = wlen > 0.1 ? wx : fx, dzi = wlen > 0.1 ? wz : fz;
       p.dashDir = [dxi, dzi];
       p.dashT = 0.24;
-      p.dashCd = 1.9;
+      p.dashCd = 1.9 * S.mods.dash;
       p.invuln = Math.max(p.invuln, 0.3);
       S.shake = Math.max(S.shake, 0.25);
       R.particles.burst(p.x, p.y + 0.9, p.z, 14, { color: [0.45, 0.85, 1], speed: 4, up: 0.3, gravity: 2, size: 1.1 });
@@ -513,9 +553,9 @@
     p.bob += dt * (2.2 + spd * 0.8);
     p.hurtT = Math.max(0, p.hurtT - dt);
     p.invuln = Math.max(0, p.invuln - dt);
-    if (p.hurtT <= 0 && p.hp < MAX_HP) {
+    if (p.hurtT <= 0 && p.hp < p.maxHp) {
       p.regenT += dt;
-      if (p.regenT > 1.2) p.hp = Math.min(MAX_HP, p.hp + 7 * dt);
+      if (p.regenT > 1.2) p.hp = Math.min(p.maxHp, p.hp + 7 * dt);
     } else p.regenT = 0;
 
     // weapon one-shots
@@ -547,8 +587,18 @@
 
   function switchWeapon() {
     const p = S.player;
-    p.weapon = (p.weapon + 1) % WEAPONS.length;
+    selectWeapon((p.weapon + 1) % WEAPONS.length);
+  }
+
+  // Direct slot pick (keys 1/2/3). Guards the index so a fourth weapon slot in
+  // the DOM never selects out of range, and keeps the swap cadence fair.
+  function selectWeapon(i) {
+    const p = S.player;
+    if (i < 0 || i >= WEAPONS.length || i === p.weapon) return;
+    p.weapon = i;
     p.fireCd = Math.max(p.fireCd, 0.25);
+    const slot = p.ammo[i];
+    if (slot.reloadT > 0) slot.reloadT = 0; // cancelling the swap aborts the current reload
     A.reload();
     HUD.weaponFlash();
   }
@@ -580,7 +630,7 @@
   function shoot() {
     const p = S.player, W = WEAPONS[p.weapon], slot = p.ammo[p.weapon];
     slot.mag--;
-    p.fireCd = W.rate;
+    p.fireCd = W.rate / S.mods.rate;
     S.shots++;
     p.kick = W.kick;
     p.recoil = Math.min(1.5, p.recoil + W.kick * 0.6);
@@ -597,7 +647,7 @@
     R.particles.burst(from[0], from[1], from[2], W.id === 'scatter' ? 12 : 5, {
       color: W.color, speed: 5, up: 0.6, gravity: 4, life: 0.35, size: 0.9, drag: 4,
     });
-    if (W.id === 'scatter') A.scatter(); else A.shoot();
+    if (W.id === 'scatter') A.scatter(); else if (W.id === 'arc') A.railgun(); else A.shoot();
 
     for (let i = 0; i < W.pellets; i++) {
       const spread = W.spread * (W.pellets > 1 ? 1 : 0.5);
@@ -607,6 +657,27 @@
       const dl = Math.hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
 
       const wallT = rayObstacles(from[0], from[1], from[2], dx, dy, dz, 120);
+      if (W.pierce) {
+        // A lance beam punches through everything short of a wall, damaging each robot it crosses.
+        let far = 0;
+        for (const e of S.enemies) {
+          if (e.state === 'dead' || e.state === 'spawn') continue;
+          const cy = e.y + e.height * 0.55;
+          const t = raySphere(from[0], from[1], from[2], dx, dy, dz, e.x, cy, e.z, e.radius + 0.18);
+          if (t !== null && t < wallT) {
+            S.hits++;
+            const hy = from[1] + dy * t;
+            const head = hy > e.y + e.height * 0.78;
+            damageEnemy(e, W.dmg * S.mods.dmg * (head ? S.mods.crit : 1), head, from);
+            if (t > far) far = t;
+          }
+        }
+        const reach = far > 0 ? Math.min(far + 6, wallT, 120) : Math.min(wallT, 120);
+        const ex = from[0] + dx * reach, ey = from[1] + dy * reach, ez = from[2] + dz * reach;
+        R.beams.add(from, [ex, ey, ez], W.tracer, 0.16, 0.09);
+        R.particles.burst(ex, ey, ez, far > 0 ? 10 : 4, { color: W.tracer, speed: 4, up: 0.5, gravity: 4, life: 0.5, size: 0.8, drag: 3 });
+        continue;
+      }
       let hitEnemy = null, hitT = wallT, head = false;
       for (const e of S.enemies) {
         if (e.state === 'dead' || e.state === 'spawn') continue;
@@ -627,7 +698,7 @@
       R.beams.add(from, [ex, ey, ez], W.tracer, 0.07, W.pellets > 1 ? 0.035 : 0.045);
       if (hitEnemy) {
         S.hits++;
-        const dmg = W.dmg * (head ? 2 : 1);
+        const dmg = W.dmg * S.mods.dmg * (head ? S.mods.crit : 1);
         damageEnemy(hitEnemy, dmg, head, from);
       } else if (wallT < 120) {
         R.particles.burst(ex, ey, ez, 4, { color: [0.8, 0.9, 1], speed: 3.2, up: 0.5, gravity: 8, life: 0.4, size: 0.55, drag: 3 });
@@ -638,7 +709,8 @@
   function useAbility() {
     const p = S.player;
     if (p.abilityCd > 0) return;
-    p.abilityCd = 14;
+    p.abilityMax = 14 * S.mods.ability;
+    p.abilityCd = p.abilityMax;
     A.ability();
     S.shake = Math.max(S.shake, 0.7);
     S.flash = Math.max(S.flash, 0.5);
@@ -728,12 +800,14 @@
   // ── 5. Enemies and AI ───────────────────────────────────────────────────
   function newEnemy(type, x, z) {
     const T = ENEMY_TYPES[type];
-    const hpScale = 1 + Math.max(0, S.wave - 1) * 0.075;
+    const D = DIFFS[S.diff] || DIFFS.veteran;
+    const hpScale = (1 + Math.max(0, S.wave - 1) * 0.075) * D.hp;
     return {
       type, x, z, y: T.fly || 0,
       vx: 0, vy: 0, vz: 0,
       yaw: Math.atan2(-(S.player.x - x), -(S.player.z - z)),
       hp: T.hp * hpScale, maxHp: T.hp * hpScale,
+      spdMul: D.speed,
       radius: T.radius * (T.scale || 1) * 0.85,
       height: T.height * (T.scale || 1),
       scale: T.scale || 1,
@@ -823,8 +897,8 @@
       e.hurtT = 0.34;
       e.vx = 0; e.vz = 0;
     } else {
-      e.vx = U.damp(e.vx, nx * T.speed, 7, dt);
-      e.vz = U.damp(e.vz, nz * T.speed, 7, dt);
+      e.vx = U.damp(e.vx, nx * T.speed * e.spdMul, 7, dt);
+      e.vz = U.damp(e.vz, nz * T.speed * e.spdMul, 7, dt);
     }
   }
 
@@ -834,11 +908,11 @@
     if (e.strafeT <= 0) { e.strafe = -e.strafe; e.strafeT = U.rand(1.6, 3.2); }
     const tx = -nz * e.strafe, tz = nx * e.strafe;
     if (dist > T.keep + 3) {
-      e.vx = U.damp(e.vx, nx * T.speed, 4, dt); e.vz = U.damp(e.vz, nz * T.speed, 4, dt);
+      e.vx = U.damp(e.vx, nx * T.speed * e.spdMul, 4, dt); e.vz = U.damp(e.vz, nz * T.speed * e.spdMul, 4, dt);
     } else if (dist < T.keep - 3) {
-      e.vx = U.damp(e.vx, -nx * T.speed, 4, dt); e.vz = U.damp(e.vz, -nz * T.speed, 4, dt);
+      e.vx = U.damp(e.vx, -nx * T.speed * e.spdMul, 4, dt); e.vz = U.damp(e.vz, -nz * T.speed * e.spdMul, 4, dt);
     } else {
-      e.vx = U.damp(e.vx, tx * T.speed * 0.8, 4, dt); e.vz = U.damp(e.vz, tz * T.speed * 0.8, 4, dt);
+      e.vx = U.damp(e.vx, tx * T.speed * 0.8 * e.spdMul, 4, dt); e.vz = U.damp(e.vz, tz * T.speed * 0.8 * e.spdMul, 4, dt);
     }
     const sy = e.y + e.height * 0.7;
     const los = lineOfSight(e.x, sy, e.z, S.player.x, S.player.y + 1.1, S.player.z);
@@ -859,8 +933,8 @@
     const radial = dist > want + 1.5 ? 1 : dist < want - 1.5 ? -1 : 0;
     const tx = -nz * e.strafe * 0.85 + nx * radial;
     const tz = nx * e.strafe * 0.85 + nz * radial;
-    e.vx = U.damp(e.vx, tx * T.speed, 5, dt);
-    e.vz = U.damp(e.vz, tz * T.speed, 5, dt);
+    e.vx = U.damp(e.vx, tx * T.speed * e.spdMul, 5, dt);
+    e.vz = U.damp(e.vz, tz * T.speed * e.spdMul, 5, dt);
     const los = lineOfSight(e.x, e.y, e.z, S.player.x, S.player.y + 1.1, S.player.z);
     if (e.tel > 0) {
       e.tel -= dt;
@@ -909,15 +983,15 @@
         }
       }
     } else {
-      e.vx = U.damp(e.vx, nx * T.speed, 4, dt);
-      e.vz = U.damp(e.vz, nz * T.speed, 4, dt);
+      e.vx = U.damp(e.vx, nx * T.speed * e.spdMul, 4, dt);
+      e.vz = U.damp(e.vz, nz * T.speed * e.spdMul, 4, dt);
     }
   }
 
   function aiTitan(e, dt, nx, nz, dist) {
     const T = ENEMY_TYPES.titan;
     const half = e.hp < e.maxHp * 0.5;
-    const spd = T.speed * (half ? 1.55 : 1);
+    const spd = T.speed * e.spdMul * (half ? 1.55 : 1);
     e.vx = U.damp(e.vx, nx * spd, 3, dt);
     e.vz = U.damp(e.vz, nz * spd, 3, dt);
     e.summonCd -= dt;
@@ -1041,8 +1115,14 @@
     S.combo++;
     S.comboT = 3.4;
     const mult = 1 + Math.min(8, Math.floor(S.combo / 5)) * 0.5;
-    const gain = Math.round(T.score * mult);
+    const D = DIFFS[S.diff] || DIFFS.veteran;
+    const gain = Math.round(T.score * mult * D.mult);
     S.score += gain;
+    if (S.mods.lifesteal > 0 && S.player && !S.player.dead) {
+      S.player.hp = Math.min(S.player.maxHp, S.player.hp + S.mods.lifesteal);
+    }
+    if (S.combo === 8) HUD.banner('KILLING SPREE', 'x' + mult.toFixed(1) + ' combo');
+    else if (S.combo === 16) HUD.banner('UNSTOPPABLE', 'x' + mult.toFixed(1) + ' combo');
     const cy = e.y + e.height * 0.5;
     R.particles.burst(e.x, cy, e.z, T.boss ? 70 : 26, {
       color: T.color, speed: T.boss ? 14 : 7, up: 0.7, gravity: 9, size: T.boss ? 1.8 : 1.1, life: 1.1,
@@ -1099,7 +1179,7 @@
       const k = S.pickups[i];
       k.t += dt; k.life -= dt;
       const d = Math.hypot(p.x - k.x, p.z - k.z);
-      if (d < 3.2 && k.life < 26 && d > 0.6) {
+      if (d < 3.2 * S.mods.magnet && k.life < 26 && d > 0.6) {
         // magnet toward the player once they are close
         k.x += ((p.x - k.x) / d) * 6 * dt;
         k.z += ((p.z - k.z) / d) * 6 * dt;
@@ -1108,9 +1188,9 @@
       k.y += k.vy * dt;
       if (k.y < 0.6) { k.y = 0.6; k.vy = 0; }
       if (d < 0.9) {
-        if (k.kind === 'health') { p.hp = Math.min(MAX_HP, p.hp + 32); HUD.toast('+32 HP', 'repair kit'); }
+        if (k.kind === 'health') { p.hp = Math.min(p.maxHp, p.hp + 32); HUD.toast('+32 HP', 'repair kit'); }
         else if (k.kind === 'ammo') {
-          p.ammo.forEach((s, idx) => { s.reserve = Math.min(WEAPONS[idx].reserveMax, s.reserve + 60); });
+          p.ammo.forEach((s, idx) => { s.reserve = Math.min(Math.round(WEAPONS[idx].reserveMax * S.mods.ammo), s.reserve + 60); });
           HUD.toast('+60 AMMO', 'resupply');
         } else { p.abilityCd = 0; HUD.toast('OVERCHARGE READY', 'core recovered'); }
         A.pickup();
@@ -1135,7 +1215,7 @@
     if (n >= 2) pool.push('sentry');
     if (n >= 3) pool.push('drone');
     if (n >= 5) pool.push('brute');
-    let budget = 7 + n * 3.4;
+    let budget = (7 + n * 3.4) * ((DIFFS[S.diff] || DIFFS.veteran).budget);
     let guard = 0;
     while (budget > 0 && guard++ < 60) {
       const t = U.pick(pool);
@@ -1170,8 +1250,9 @@
     }
     // active
     S.spawnT -= dt;
+    const D = DIFFS[S.diff] || DIFFS.veteran;
     const live = S.enemies.filter((e) => e.state !== 'dead').length;
-    if (S.queue.length && live < 14 && S.spawnT <= 0) {
+    if (S.queue.length && live < D.cap && S.spawnT <= 0) {
       const item = S.queue.shift();
       if (item.x !== undefined) spawnEnemy(item.type, item.x, item.z);
       else {
@@ -1181,16 +1262,15 @@
       S.spawnT = item.type === 'titan' ? 1.4 : U.rand(0.35, 0.9);
     }
     if (!S.queue.length && live === 0) {
-      S.wavePhase = 'clear';
-      S.waveT = 4.2;
       const bonus = 250 + S.wave * 100;
       S.score += bonus;
-      HUD.banner('WAVE ' + S.wave + ' CLEAR', '+' + bonus + ' bonus · next wave incoming');
+      HUD.banner('WAVE ' + S.wave + ' CLEAR', '+' + bonus + ' bonus · choose an upgrade');
       for (let i = 0; i < 2; i++) {
         const a = Math.random() * Math.PI * 2;
         dropPickup(S.player.x + Math.cos(a) * 5, S.player.z + Math.sin(a) * 5, i === 0 ? 'health' : 'ammo');
       }
       A.wave();
+      enterUpgrade();
     }
   }
 
@@ -1201,7 +1281,7 @@
       const ids = ['hud', 'hpFill', 'hpText', 'ammoText', 'weaponName', 'reloadBar', 'scoreVal', 'waveVal',
         'comboVal', 'minimap', 'hitmark', 'vignette', 'toast', 'toastTitle', 'toastSub', 'banner',
         'bannerTitle', 'bannerSub', 'abilityRing', 'abilityKey', 'screenTitle', 'screenPause',
-        'screenOver', 'stScore', 'stWave', 'stKills', 'stAcc', 'stTime', 'stBest', 'lbList', 'nameInput',
+        'screenOver', 'screenUpgrade', 'stScore', 'stWave', 'stKills', 'stAcc', 'stTime', 'stBest', 'lbList', 'nameInput',
         'btnSubmit', 'lbStatus', 'sensRange', 'qualitySel', 'btnMute', 'bestTitle', 'lockHint'];
       for (const id of ids) this.el[id] = $(id);
       this.e = this.el;
@@ -1218,7 +1298,7 @@
     },
     setScreen(name) {
       document.body.dataset.screen = name;
-      const map = { title: this.e.screenTitle, pause: this.e.screenPause, over: this.e.screenOver };
+      const map = { title: this.e.screenTitle, pause: this.e.screenPause, over: this.e.screenOver, upgrade: this.e.screenUpgrade };
       for (const k of Object.keys(map)) if (map[k]) map[k].classList.toggle('show', name === k);
       if (this.e.hud) this.e.hud.classList.toggle('show', name === 'play' || name === 'pause');
     },
@@ -1267,7 +1347,7 @@
     sync() {
       const p = S.player;
       if (!p || !this.e.hpFill) return;
-      const pct = Math.max(0, p.hp) / MAX_HP;
+      const pct = Math.max(0, p.hp) / (p.maxHp || MAX_HP);
       this.e.hpFill.style.width = (pct * 100).toFixed(1) + '%';
       this.e.hpFill.classList.toggle('low', pct < 0.3);
       this.e.hpText.textContent = Math.ceil(Math.max(0, p.hp));
@@ -1289,7 +1369,7 @@
       this.e.comboVal.style.opacity = S.combo > 1 ? 1 : 0;
       if (this.e.abilityRing) {
         const ready = p.abilityCd <= 0;
-        this.e.abilityRing.style.setProperty('--cd', ready ? '0%' : ((p.abilityCd / 14) * 100).toFixed(0) + '%');
+        this.e.abilityRing.style.setProperty('--cd', ready ? '0%' : ((p.abilityCd / (p.abilityMax || 14)) * 100).toFixed(0) + '%');
         this.e.abilityRing.classList.toggle('ready', ready);
       }
       if (this.e.vignette) this.e.vignette.style.opacity = Math.min(0.85, S.flash).toFixed(2);
@@ -1544,6 +1624,58 @@
     HUD.sync();
   }
 
+  // ── Between-wave upgrades ────────────────────────────────────
+  // Freezes the run (mode 'upgrade' => update() is skipped, render stays), shows three
+  // perk cards, and resumes toward the next wave once one is chosen. If the overlay DOM
+  // is missing it falls back to a short auto-countdown, so a wave can never soft-lock.
+  function pickOffers(k) {
+    const pool = PERKS.slice();
+    const out = [];
+    for (let i = 0; i < k && pool.length; i++) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    return out;
+  }
+  function renderUpgrades() {
+    const row = $('perkRow');
+    if (!row) return;
+    row.innerHTML = '';
+    S.offers.forEach((perk, i) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'perkcard';
+      card.dataset.perk = String(i);
+      const num = document.createElement('span'); num.className = 'perknum'; num.textContent = String(i + 1);
+      const nm = document.createElement('span'); nm.className = 'perkname'; nm.textContent = perk.name;
+      const ds = document.createElement('span'); ds.className = 'perkdesc'; ds.textContent = perk.desc;
+      card.appendChild(num); card.appendChild(nm); card.appendChild(ds);
+      row.appendChild(card);
+    });
+    const wt = $('upgradeWave');
+    if (wt) wt.textContent = 'WAVE ' + S.wave + ' CLEARED';
+  }
+  function enterUpgrade() {
+    if (!$('perkRow')) { S.wavePhase = 'clear'; S.waveT = 1.6; return; } // no overlay: keep the old auto-advance
+    S.mode = 'upgrade';
+    S.offers = pickOffers(3);
+    renderUpgrades();
+    HUD.setScreen('upgrade');
+    if (document.pointerLockElement) document.exitPointerLock();
+    A.ui();
+  }
+  function choosePerk(i) {
+    if (S.mode !== 'upgrade') return;
+    const perk = S.offers[i];
+    try { if (perk) perk.apply(S.mods, S.player); } catch (err) { /* one bad perk must not stall the run */ }
+    if (A && A.upgrade) A.upgrade();
+    S.offers = [];
+    S.mode = 'play';
+    HUD.setScreen('play');
+    S.wavePhase = 'idle';
+    S.waveT = 1.4;
+    lastTs = 0;
+    const canvas = $('gl');
+    if (canvas && I) I.lock(canvas);
+  }
+
   // ── Leaderboard (the site's own /api/score, no account needed) ───────────
   function renderBoard(items) {
     if (!HUD.e.lbList) return;
@@ -1586,8 +1718,10 @@
       if (raw.sens) I.sensitivity = U.clamp(Number(raw.sens), 0.25, 3);
       if (raw.quality !== undefined) S.quality = U.clamp(Number(raw.quality), 0, 2);
       if (raw.muted) { S.muted = true; A.setMuted(true); }
+      if (raw.diff && DIFFS[raw.diff]) S.diff = raw.diff;
       S.best = Number(localStorage.getItem('tukuk-strike-best') || 0) || 0;
     } catch (e) { /* ignore */ }
+    document.body.dataset.diff = S.diff;
     if (HUD.e.sensRange) HUD.e.sensRange.value = String(I.sensitivity);
     if (HUD.e.qualitySel) HUD.e.qualitySel.value = String(S.quality);
     if (HUD.e.btnMute) HUD.e.btnMute.textContent = S.muted ? 'Sound off' : 'Sound on';
@@ -1595,7 +1729,7 @@
   }
   function saveSettings() {
     try {
-      localStorage.setItem('tukuk-strike-settings', JSON.stringify({ sens: I.sensitivity, quality: S.quality, muted: S.muted }));
+      localStorage.setItem('tukuk-strike-settings', JSON.stringify({ sens: I.sensitivity, quality: S.quality, muted: S.muted, diff: S.diff }));
     } catch (e) { /* ignore */ }
   }
 
@@ -1627,6 +1761,26 @@
     on('howToClose', 'click', () => { const p = $('howTo'); if (p) p.classList.remove('show'); });
     I.onLockRequest = () => I.lock(canvas);
 
+    // Difficulty picker on the title — the chosen tier persists and drives the run.
+    const setDiff = (id) => {
+      if (!DIFFS[id]) return;
+      S.diff = id;
+      document.body.dataset.diff = id;
+      saveSettings();
+      if (A) A.ui();
+    };
+    DIFF_ORDER.forEach((id) => {
+      const b = $('btnDiff' + id.charAt(0).toUpperCase() + id.slice(1));
+      if (b) b.addEventListener('click', () => setDiff(id));
+    });
+
+    // Perk cards are built dynamically, so one delegated listener covers all three.
+    const perkRow = $('perkRow');
+    if (perkRow) perkRow.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest ? e.target.closest('[data-perk]') : null;
+      if (btn) choosePerk(Number(btn.dataset.perk));
+    });
+
     addEventListener('keydown', (e) => {
       if (e.code === 'Escape') {
         if (S.mode === 'play') pauseGame();
@@ -1634,6 +1788,15 @@
       }
       if (e.code === 'KeyP' && (S.mode === 'play' || S.mode === 'pause')) {
         if (S.mode === 'play') pauseGame(); else resumeGame();
+      }
+      if (S.mode === 'play') {
+        if (e.code === 'Digit1') selectWeapon(0);
+        else if (e.code === 'Digit2') selectWeapon(1);
+        else if (e.code === 'Digit3') selectWeapon(2);
+      } else if (S.mode === 'upgrade') {
+        if (e.code === 'Digit1') choosePerk(0);
+        else if (e.code === 'Digit2') choosePerk(1);
+        else if (e.code === 'Digit3') choosePerk(2);
       }
     });
     document.addEventListener('pointerlockchange', () => {
