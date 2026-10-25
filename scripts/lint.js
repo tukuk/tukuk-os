@@ -44,7 +44,13 @@ function* htmlFiles(dir) {
     else if (e.name.endsWith('.html')) yield full;
   }
 }
-const scopeTargets = [...htmlFiles('public'), ...htmlFiles('templates'), ...all];
+// Third-party bundles under public/libs are vendored exactly as their authors publish them.
+// Their globals are assigned by minified UMD patterns the scope walker cannot follow, so
+// fflate, pdf-lib and qrcode alone accounted for 21 "dangling variable" findings and kept this
+// gate red for everything else — which is how a real regression gets waved through. They stay in
+// the syntax pass above, where a truncated download is still caught, and leave the scope pass.
+const vendored = (f) => f.split(path.sep).join('/').startsWith('public/libs/');
+const scopeTargets = [...htmlFiles('public'), ...htmlFiles('templates'), ...all.filter((f) => !vendored(f))];
 let scopeOut = '', scopeFail = null, scopeSkipped = false;
 try {
   scopeOut = execFileSync(process.execPath, ['scripts/lint-inline.js', ...scopeTargets], { stdio: 'pipe' }).toString().trim();
