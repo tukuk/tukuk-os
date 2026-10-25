@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tukuk Strike HD (Godot) — Tukuk-OS</title>
+<meta name="description" content="Versi grafik tinggi Tukuk Strike, dibina dengan enjin Godot dan dieksport ke web. Muat turun besar — buka dalam tab baharu pada perkakas dengan sambungan kuat.">
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="https://tukuk.org/games/tukuk-strike-godot">
+<link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    color: #e6e9ef; background: radial-gradient(1200px 700px at 50% -10%, #171b26, #0d1017 60%, #090b10);
+  }
+  .card {
+    width: 100%; max-width: 620px; text-align: center;
+    background: rgba(20,24,33,.72); border: 1px solid #262c3a; border-radius: 18px;
+    padding: 34px 28px; box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  }
+  .badge { display: inline-block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: #b9a4ff; border: 1px solid #4b3d7a; border-radius: 999px; padding: 5px 12px; margin-bottom: 14px; }
+  h1 { margin: 4px 0 8px; font-size: 30px; }
+  p { margin: 10px auto; max-width: 46ch; color: #c4cad6; }
+  .launch {
+    display: inline-block; margin: 20px 0 8px; padding: 15px 34px; border-radius: 12px;
+    font-size: 18px; font-weight: 700; text-decoration: none; color: #0a0c11;
+    background: linear-gradient(180deg, #8f6bff, #6b46e0); box-shadow: 0 10px 26px rgba(107,70,224,.45);
+  }
+  .launch:hover { filter: brightness(1.08); }
+  .warn { background: #171320; border: 1px solid #3a2f4d; border-radius: 12px; padding: 14px 16px;
+    color: #d8cbe6; font-size: 14px; margin-top: 18px; text-align: left; }
+  .warn b { color: #f0c98a; }
+  ul { text-align: left; margin: 10px 0 0; padding-left: 20px; color: #b7bfcd; font-size: 14px; }
+  li { margin: 4px 0; }
+  .alt { margin-top: 20px; font-size: 14px; }
+  a.lnk { color: #7fb0ff; text-decoration: none; }
+  a.lnk:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <span class="badge">Grafik penuh · Godot 4</span>
+    <h1>Tukuk Strike <span style="color:#8f6bff">HD</span></h1>
+    <p>Versi berfideliti tinggi dengan model beranimasi &amp; pencahayaan prapas — dibina dengan enjin Godot dan dieksport ke web.</p>
+
+    <a class="launch" href="https://play.tukuk.org/" target="_blank" rel="noopener">Buka dalam tab baharu ↗</a>
+
+    <div class="warn">
+      <b>Baca dulu — versi ini berat.</b>
+      <ul>
+        <li>Muat turun <b>~100 MB+</b> (model + pencahayaan), jadi ia perlu <b>sambungan kuat</b> — elakkan guna data terhad.</li>
+        <li>Perlu pelayar moden dengan <b>WebGL2 + benang</b>. Desktop disyorkan; telefon lemah mungkin tersekat atau tak jalan.</li>
+        <li>Ia dibuka <b>top-level di tab sendiri</b> (play.tukuk.org), bukan dalam halaman ini — sebab teknikal: binaan Godot perlukan konteks yang terasing sepenuhnya.</li>
+        <li>Jika ia tak load, kemungkinan build belum dipasang di pelayan — cuba versi ringan di bawah.</li>
+      </ul>
+    </div>
+
+    <p class="alt">
+      Nak yang <b>ringan &amp; serta-merta</b>? Main
+      <a class="lnk" href="/games/tukuk-strike">Tukuk Strike (WebGL)</a> —
+      tiada muat turun, jalan di mana-mana.
+      &nbsp;·&nbsp; <a class="lnk" href="/games">← Semua permainan</a>
+    </p>
+  </main>
+</body>
+</html>

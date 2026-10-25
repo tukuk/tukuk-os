@@ -20777,6 +20777,7 @@ function renderGamesIndex() {
   const genres = Array.from(new Set(games.map((g) => g.genre).filter(Boolean)));
   const chips = ['all'].concat(genres).map((g) => `<button class="gchip${g === 'all' ? ' on' : ''}" data-f="${escapeHtml(g)}" type="button">${escapeHtml(g === 'all' ? 'All' : (GENRE_UI[g] || g))}</button>`).join('');
   const cards = '<a class="gcard feat" href="/games/tukuk-strike" data-genre="penembakan"><span class="gic">🎯</span><span class="gt">Tukuk Strike</span><span class="gg">3D Shooter</span></a>'
+    + '<a class="gcard feat" href="/games/tukuk-strike-godot" data-genre="penembakan"><span class="gic">🛰️</span><span class="gt">Tukuk Strike HD</span><span class="gg">Godot 3D · New tab</span></a>'
     + games.map((g) => `<a class="gcard" href="/games/${encodeURIComponent(g.key)}" data-genre="${escapeHtml(g.genre || 'lain')}"><span class="gic">${g.ic}</span><span class="gt">${escapeHtml(g.title)}</span><span class="gg">${escapeHtml(GENRE_UI[g.genre] || 'Arcade')}</span></a>`).join('');
   return `<!DOCTYPE html>
 <html lang="en">
@@ -20814,6 +20815,18 @@ app.get('/games', (req, res) => {
 app.get(['/games/tukuk-strike', '/games/tukuk-strike/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike', 'index.html'), (error) => {
+    if (error) res.status(404).json({ error: 'Game not found', path: req.originalUrl });
+  });
+});
+
+// Tukuk Strike HD — the Godot web build's launcher. It is a static splash page that
+// opens the isolated play.tukuk.org origin in its own tab (see deploy/nginx/tukuk-play.conf
+// and public/games/tukuk-strike-godot/index.html). The build itself is NOT here: a threaded
+// Godot export needs cross-origin isolation that tukuk.org deliberately does not set, so it
+// is served from its own subdomain and only linked to, never iframed.
+app.get(['/games/tukuk-strike-godot', '/games/tukuk-strike-godot/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike-godot', 'index.html'), (error) => {
     if (error) res.status(404).json({ error: 'Game not found', path: req.originalUrl });
   });
 });

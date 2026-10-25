@@ -41,5 +41,13 @@ ingress:
   # cloudflared in token mode IGNORES the local ingress section.
   - hostname: agent.tukuk.org
     service: http://127.0.0.1:8443
+  # Tukuk Strike HD — the Godot web build. Same target as the rest (:3000/nginx);
+  # nginx routes this Host to its OWN server block (deploy/nginx/tukuk-play.conf) which
+  # serves static files with the COOP/COEP headers a threaded Godot export needs. This
+  # origin is deliberately cross-origin-ISOLATED and separate, so it cannot share the
+  # tukuk.org host (site-wide COEP would break GTM/AdSense/Clarity + cross-subdomain assets).
+  # In TOKEN mode this route must ALSO be added in the dashboard, plus a DNS record.
+  - hostname: play.tukuk.org
+    service: http://localhost:3000
   # Required: catch-all rule last
   - service: http_status:404
