@@ -3,6 +3,12 @@
 # domain work at all (the main tunnel is remote-config, so its hostnames can only be
 # added in the dashboard; this file is read locally and needs nothing but a restart).
 #
+# NOTE ON 5174: build.tukuk.org points at 127.0.0.1:5174, which is the always-on
+# wake-on-request FRONT DOOR (tukuk-builder-wake.service / builder-wakekeeper.js), NOT the
+# builder itself. The front door forwards to the real builder on 127.0.0.1:5176 and wakes it
+# when it has been idle-stopped, so a sleeping builder shows a "warming up" page instead of a
+# Cloudflare 502. Keep the ingress on 5174; only move it if the front door is removed for good.
+#
 # WHY SEPARATE: the main tunnel (87e7…) is remote-config type — the Cloudflare edge
 # ONLY serves hostnames registered in the dashboard; local ingress edits
 # (config.yml) are ignored and a new hostname gets a 404 at the edge. The

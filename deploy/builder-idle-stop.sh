@@ -4,8 +4,9 @@
 # Why this exists and why it is allowed to ACT when the load governor is not:
 # the governor watches shared infrastructure, and acting there could take the site down.
 # This unit owns exactly one thing — a development-only service whose whole job is to be
-# started, used, and forgotten. Stopping it is not destructive: the next request is met
-# with a page saying the builder is asleep, and `systemctl start` brings it back in seconds.
+# started, used, and forgotten. Stopping it is not destructive: the always-on front door
+# (tukuk-builder-wake.service) keeps holding port 5174, so the next request wakes this unit
+# with `systemctl start` and shows a self-reloading "warming up" page — never a Cloudflare 502.
 #
 # What is being saved, measured on the box rather than guessed (cgroup memory.stat):
 #   tukuk-builder  anon 508 MB + file 179 MB   (the workerd it spawns is inside the same cgroup)
@@ -73,6 +74,6 @@ if [ "$DRY" = "--dry-run" ]; then
   exit 0
 fi
 
-systemctl stop "${UNITS[@]}" && step "stopped ${UNITS[*]} — build.tukuk.org and dashboard.tukuk.org/ now show an error page until it is started again (the tunnel itself stays up, so tchat.tukuk.org is untouched)"
+systemctl stop "${UNITS[@]}" && step "stopped ${UNITS[*]} — the front door (tukuk-builder-wake) still holds :5174, so build.tukuk.org wakes this unit on the next request and shows a warming page (no 502); tchat.tukuk.org is untouched"
 step "bring it back: sudo systemctl start ${UNITS[0]}"
 exit 0

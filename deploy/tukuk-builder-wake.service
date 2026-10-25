@@ -1,0 +1,42 @@
+[Unit]
+# Tukuk Builder front door — an always-on, ~15 MB proxy that owns 127.0.0.1:5174 (the port
+# cloudflared reaches for build.tukuk.org) and forwards to the real builder on 127.0.0.1:5176.
+#
+# WHY IT IS ALWAYS UP: the builder itself is put to sleep when idle to save ~500 MB. If nothing
+# held 5174 while it slept, cloudflared's origin would refuse the connection and visitors would
+# get a raw Cloudflare 502. This unit answers instead, wakes the builder with `systemctl start`,
+# and serves a self-reloading "warming up" page until the builder is listening again.
+#
+# It must NEVER be stopped by builder-idle-stop.sh — only tukuk-builder.service sleeps. This one
+# is the thing that brings it back, so it has to survive.
+Description=Tukuk Builder wake-on-request front door (5174 -> 5176)
+Documentation=file:/opt/tukuk-os/deploy/builder-wakekeeper.js
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tukuk-os
+# Runs as root (the default) because its whole job is to call `systemctl start tukuk-builder`,
+# a system unit that a non-privileged user could not start.
+ExecStart=/usr/bin/node /opt/tukuk-os/deploy/builder-wakekeeper.js
+Environment=BUILDER_PORT=5174
+Environment=BUILDER_UP_PORT=5176
+Environment=BUILDER_SERVICE=tukuk-builder
+
+Restart=always
+RestartSec=3
+# A thin byte-pipe over a handful of connections — a small, hard cap is plenty.
+MemoryMax=96M
+TasksMax=256
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=builder-wake
+
+NoNewPrivileges=false
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

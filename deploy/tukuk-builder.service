@@ -11,6 +11,9 @@
 # hostname.
 # Vite rejects Hosts outside its list: preview/server.allowedHosts=['.tukuk.org']
 # in vite.config.ts (fork tukuk-builder commit 9e769c4) — do not remove it.
+# PORT 5176, NOT 5174: the always-on front door (tukuk-builder-wake.service) owns 5174 because
+# that is the port cloudflared is configured to reach. It forwards here, and wakes this unit when
+# it has been asleep. Do not move this back to 5174 or the two units will fight for the socket.
 Description=Tukuk Builder (bolt.diy fork — AI app-building agent)
 Documentation=https://github.com/fevian448/tukuk-builder
 After=network-online.target
@@ -24,7 +27,7 @@ EnvironmentFile=-/opt/tukuk-builder/.env.production
 Environment=NODE_ENV=production
 # bolt.diy's official pattern: `vite preview` serves the SSR build (build/server) —
 # pointed straight at the vite binary so pnpm is not needed inside the systemd unit.
-ExecStart=/usr/bin/node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5174 --strictPort
+ExecStart=/usr/bin/node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5176 --strictPort
 
 Restart=always
 RestartSec=3

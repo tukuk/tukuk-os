@@ -34,10 +34,21 @@ ssh_run "sh -c 'corepack disable >/dev/null 2>&1 || true; command -v pnpm >/dev/
 ssh_run "sh -c 'cd $DEST && pnpm install --frozen-lockfile --prefer-offline 2>&1 | tail -3'"
 ssh_run "sh -c 'cd $DEST && pnpm build 2>&1 | tail -5'"
 
-echo "[builder] install systemd unit + restart"
-ssh_run "sh -c 'cp /opt/tukuk-os/deploy/tukuk-builder.service /etc/systemd/system/ && systemctl daemon-reload'"
-ssh_run "systemctl enable tukuk-builder >/dev/null 2>&1 || true"
+echo "[builder] ship the wake-on-request front door (lives in the main repo, not the fork)"
+# builder-wakekeeper.js + its unit own port 5174 (what cloudflared reaches) and forward to the
+# builder here on 5176. They are part of THIS repo's deploy/, so copy them to the server's
+# /opt/tukuk-os/deploy rather than relying on the main-repo checkout being up to date.
+DEPLOY_DIR="$(cd "$(dirname "$0")/.." && pwd)/deploy"
+sshpass -p "$PASS" scp -o StrictHostKeyChecking=no "$DEPLOY_DIR/builder-wakekeeper.js" "$DEPLOY_DIR/tukuk-builder-wake.service" "$HOST:/tmp/" || true
+ssh_run "sh -c 'mv /tmp/builder-wakekeeper.js /tmp/tukuk-builder-wake.service /opt/tukuk-os/deploy/ && chmod +x /opt/tukuk-os/deploy/builder-wakekeeper.js'" || true
+
+echo "[builder] install systemd units + restart"
+ssh_run "sh -c 'cp /opt/tukuk-os/deploy/tukuk-builder.service /opt/tukuk-os/deploy/tukuk-builder-wake.service /etc/systemd/system/ && systemctl daemon-reload'"
+ssh_run "systemctl enable tukuk-builder tukuk-builder-wake >/dev/null 2>&1 || true"
+ssh_run "systemctl restart tukuk-builder-wake"   # front door first, so 5174 is never briefly empty
 ssh_run "systemctl restart tukuk-builder"
-sleep 2
-ssh_run "systemctl is-active tukuk-builder && curl -s -o /dev/null -w 'http=%{http_code}\n' http://127.0.0.1:5174/"
+sleep 3
+# builder origin (5176) must answer directly; the front door (5174) must proxy it end to end.
+ssh_run "systemctl is-active tukuk-builder && curl -s -o /dev/null -w 'builder:5176 http=%{http_code}\n' http://127.0.0.1:5176/"
+ssh_run "curl -s -o /dev/null -w 'frontdoor:5174 http=%{http_code}\n' -H 'Host: build.tukuk.org' http://127.0.0.1:5174/"
 echo "[builder] done. https://build.tukuk.org (the second connector cloudflared-build — legacy tunnel, see deploy/cloudflared/config-build.example.yml) and https://dashboard.tukuk.org (the primary remote-config tunnel) both serve Builder; do not drop allowedHosts .tukuk.org in vite.config.ts."

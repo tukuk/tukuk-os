@@ -19,6 +19,7 @@ SRC=/opt/tukuk-os/deploy
 # internet for the whole sleep — see builder-idle-stop.sh.
 UNITS=(tukuk-builder.service)
 CONNECTOR=cloudflared-build.service
+WAKE=tukuk-builder-wake.service
 KEEP=/etc/tukuk-builder-keep
 MODE=${1:-status}
 
@@ -33,6 +34,19 @@ have_units() {
   systemctl daemon-reload
 }
 report() { bash "$SRC/builder-idle-stop.sh" --dry-run; }
+
+# The always-on front door (owns :5174, forwards to the builder on :5176, and wakes it on request).
+# Installed and started in EVERY mode: it is the thing that replaces the Cloudflare 502 with a
+# "warming up" page, so it must never depend on which idle mode was last chosen.
+ensure_wake() {
+  [ -f "$SRC/$WAKE" ] || { step "MISSING $SRC/$WAKE — git pull first"; return; }
+  [ -f "$SRC/builder-wakekeeper.js" ] || { step "MISSING $SRC/builder-wakekeeper.js — git pull first"; return; }
+  chmod +x "$SRC/builder-wakekeeper.js" 2>/dev/null || true
+  install -m 644 "$SRC/$WAKE" "/etc/systemd/system/$WAKE" && step "installed $WAKE"
+  systemctl daemon-reload
+  systemctl enable "$WAKE" >/dev/null 2>&1 || true
+  systemctl restart "$WAKE" && step "front door up on :5174 -> builder :5176"
+}
 
 # Stopping on purpose must not read as a failure. The builder is a Node app that exits 143 after
 # SIGTERM, so systemd logged every idle stop as `failed (exit-code)` — and the load governor
@@ -56,12 +70,14 @@ case "$MODE" in
     rm -f "$KEEP"
     systemctl stop builder-idle-stop.timer 2>/dev/null || true
     systemctl disable builder-idle-stop.timer 2>/dev/null || true
+    ensure_wake
     systemctl start "${UNITS[0]}" || step "tukuk-builder did not start — check: journalctl -u tukuk-builder -n 30"
     step "builder is up and the idle timer is OFF — it will not be stopped while you work"
     ;;
 
   sleep)
     have_units
+    ensure_wake
     rm -f "$KEEP"
     systemctl enable --now builder-idle-stop.timer && step "timer enabled — the builder goes to sleep after 3 idle hours"
     systemctl start builder-idle-stop.service
@@ -70,17 +86,19 @@ case "$MODE" in
     ;;
 
   wake)
+    ensure_wake
     systemctl start "${UNITS[0]}" "$CONNECTOR" || step "start failed — check: journalctl -u tukuk-builder -n 30"
     for i in $(seq 1 20); do
-      curl -fsS -m 3 -o /dev/null http://127.0.0.1:5174/ && { step "answering on :5174 after $((i * 2))s"; break; }
+      curl -fsS -m 3 -o /dev/null http://127.0.0.1:5176/ && { step "builder answering on :5176 after $((i * 2))s"; break; }
       sleep 2
     done
-    curl -fsS -m 3 -o /dev/null http://127.0.0.1:5174/ || step "still not answering on :5174 — check: journalctl -u tukuk-builder -n 30"
+    curl -fsS -m 3 -o /dev/null http://127.0.0.1:5176/ || step "builder still not answering on :5176 — check: journalctl -u tukuk-builder -n 30"
     ;;
 
   status)
     [ -f /etc/systemd/system/builder-idle-stop.timer ] && step "units installed: yes (timer $(systemctl is-enabled builder-idle-stop.timer 2>/dev/null || echo no))" \
       || step "units installed: no — the builder will run forever until this is run in sleep mode"
+    step "front door ($WAKE): $(systemctl is-active $WAKE 2>/dev/null || echo no)  (:5174 -> :5176)"
     step "builder: $(systemctl is-active tukuk-builder.service), holds $(($(systemctl show tukuk-builder.service -p MemoryCurrent --value 2>/dev/null || echo 0)/1048576)) MB"
     [ -e "$KEEP" ] && step "$KEEP exists — the builder is pinned up"
     report
@@ -91,7 +109,7 @@ esac
 
 echo
 echo "--- what is holding memory now ---"
-for u in "${UNITS[@]}" "$CONNECTOR" tukuk-os.service meilisearch.service; do
+for u in "${UNITS[@]}" "$WAKE" "$CONNECTOR" tukuk-os.service meilisearch.service; do
   step "$(printf '%-26s' "$u") $(systemctl is-active "$u")  $(($(systemctl show "$u" -p MemoryCurrent --value 2>/dev/null || echo 0)/1048576)) MB"
 done
 free -m | awk 'NR==2{print "[builder-idle-install] available on the box: " $7 " MB of " $2 " MB"}'
