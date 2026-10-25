@@ -824,7 +824,7 @@ const CSP_ENFORCED = [
 // otherwise every view pays for a report nobody reads.
 const CSP_REPORT_ONLY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.clarity.ms https://scripts.clarity.ms https://static.cloudflareinsights.com https://unpkg.com",
+  "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.clarity.ms https://scripts.clarity.ms https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com",
   "style-src 'self' 'unsafe-inline' https://unpkg.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
@@ -5669,6 +5669,30 @@ function clarityScript() {
   if (!/^[a-z0-9]+$/i.test(id)) return '';
   return `<script async src="https://www.clarity.ms/tag/${escapeHtml(id)}"></script>`;
 }
+// Google Tag (Tag Manager) — the single Google tag for tukuk.org. GA4 and every other
+// Google property (Analytics, Ads, conversions) is configured INSIDE the container at
+// tagmanager.google.com, so ONLY the container snippet is hardcoded here (installing both
+// the container and a separate gtag.js would double-count pageviews). The container ID is
+// public (it is baked into the tag URL), so a safe default fallback is fine — same posture
+// as Clarity. Default ON; the Admin `gtmEnabled` toggle (env GTM_ENABLED) turns it off on
+// every page instantly. Injected at the same <head> sites as Clarity, so it never reaches
+// the strict-CSP legal pages (about/privacy/terms/docs) that deliberately carry no tags.
+const DEFAULT_GTM_ID = 'GT-PZXWTWW8';
+function gtmIdValue() {
+  return String(store.getSetting('gtmId', process.env.GTM_CONTAINER_ID || DEFAULT_GTM_ID) || '').trim().toUpperCase();
+}
+function gtmEnabledValue() {
+  const envDefault = typeof process.env.GTM_ENABLED !== 'undefined'
+    ? /^(1|true|yes|on)$/i.test(process.env.GTM_ENABLED)
+    : true;
+  return Boolean(store.getSetting('gtmEnabled', envDefault));
+}
+function googleTagHead() {
+  if (!gtmEnabledValue()) return '';
+  const id = gtmIdValue();
+  if (!/^GTM-[A-Z0-9]+$/.test(id)) return '';
+  return `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer',${JSON.stringify(id)});</script>`;
+}
 // The in-content unit: when third-party is ON, never stack an AdSense <ins> on the same page.
 function adUnitGuarded(slot, label) {
   return thirdPartyAdTag() ? '' : adUnit(slot, label);
@@ -5857,7 +5881,7 @@ function renderBlogListPage(req, asHome) {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader(asHome ? 'home' : 'blog')}
@@ -5967,7 +5991,7 @@ function renderNasaApodPage(req, apod) {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('nasa')}
@@ -6111,7 +6135,7 @@ table.nasa-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('nasa')}
@@ -6752,7 +6776,7 @@ table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('cuaca')}
@@ -7226,7 +7250,7 @@ table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('gempa')}
@@ -7425,7 +7449,7 @@ table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('cuti')}
@@ -7895,7 +7919,7 @@ table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('negara')}
@@ -8144,7 +8168,7 @@ table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('statistik')}
@@ -8311,7 +8335,7 @@ table.wx-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('bencana')}
@@ -8519,7 +8543,7 @@ function wikiHead(title, selfUrl, desc, jsonLd, robots) {
     `<meta name="google-adsense-account" content="ca-pub-8954948214333501">` +
     `<link rel="icon" href="/icon.svg" type="image/svg+xml">` +
     `<link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">` +
-    ld + `<style>${WIKI_CSS}</style>${pageAdScript()}${clarityScript()}</head><body>`;
+    ld + `<style>${WIKI_CSS}</style>${pageAdScript()}${clarityScript()}${googleTagHead()}</head><body>`;
 }
 
 function wikiTopbar() {
@@ -8839,7 +8863,7 @@ app.get('/learn', (req, res) => {
   border-radius:999px;padding:2px 12px;font-size:.85rem;font-weight:600;margin-left:8px;}
 </style>
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
 </head>
@@ -8962,7 +8986,7 @@ details.study-q p{margin:10px 0 0;color:var(--accent,#4c8dff)}
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('learn')}
@@ -9290,7 +9314,7 @@ function udaraDoc(o) {
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('learn')}
@@ -9535,7 +9559,7 @@ function akadDoc(o) {
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('learn')}
@@ -9727,7 +9751,7 @@ ${o.css || ''}
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('learn')}
@@ -19399,7 +19423,7 @@ app.get('/blog/:slug', (req, res) => {
 <style>${COMMON_CSS}</style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
-${pageAdScript()}${clarityScript()}
+${pageAdScript()}${clarityScript()}${googleTagHead()}
 </head>
 <body>
 ${siteHeader('blog')}
@@ -21543,6 +21567,8 @@ app.get('/api/public/settings', (req, res) => {
     affiliateProducts: store.getSetting('affiliateProducts', DEFAULT_AFFILIATE),
     clarityEnabled: clarityEnabledValue(),
     clarityId: clarityIdValue(),
+    gtmEnabled: gtmEnabledValue(),
+    gtmId: gtmIdValue(),
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
     siteTitle: store.getSetting('siteTitle', 'Tukuk-OS'),
@@ -21576,6 +21602,9 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
     // Microsoft Clarity (analytics)
     clarityEnabled: clarityEnabledValue(),
     clarityId: clarityIdValue(),
+    // Google Tag Manager (the single Google tag — GA4 lives inside the container)
+    gtmEnabled: gtmEnabledValue(),
+    gtmId: gtmIdValue(),
     // Custom Themes & Wallpaper
     bgMode: store.getSetting('bgMode', 'default'),
     customBgUrl: store.getSetting('customBgUrl', ''),
@@ -21625,6 +21654,9 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   // Microsoft Clarity
   if (typeof b.clarityEnabled !== 'undefined') store.setSetting('clarityEnabled', Boolean(b.clarityEnabled));
   if (typeof b.clarityId !== 'undefined') store.setSetting('clarityId', String(b.clarityId).trim());
+  // Google Tag Manager — the ID is validated on read (gtmIdValue), only normalise case here.
+  if (typeof b.gtmEnabled !== 'undefined') store.setSetting('gtmEnabled', Boolean(b.gtmEnabled));
+  if (typeof b.gtmId !== 'undefined') store.setSetting('gtmId', String(b.gtmId).trim().toUpperCase());
   // Themes & Custom Background
   if (typeof b.bgMode !== 'undefined') store.setSetting('bgMode', String(b.bgMode));
   if (typeof b.customBgUrl !== 'undefined') store.setSetting('customBgUrl', String(b.customBgUrl));

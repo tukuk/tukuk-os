@@ -27,6 +27,17 @@
             head.appendChild(cl);
           }
         }
+        // Google Tag Manager — the single Google tag (GA4 is configured inside the
+        // container). Like Clarity it is analytics, NOT an ad, so it loads even when the
+        // third-party network below `return` replaces AdSense. Container ID is public.
+        if (s.gtmEnabled) {
+          var gid = String(s.gtmId || '').toUpperCase();
+          if (/^GTM-[A-Z0-9]+$/.test(gid)) {
+            var gt = document.createElement('script');
+            gt.text = "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gid + "');";
+            head.appendChild(gt);
+          }
+        }
         // FAST ad networks (Adsterra / PropellerAds / etc.) — when enabled they
         // REPLACE AdSense on the same page (avoids "mixed networks" → protects the
         // AdSense account from a ban). AdSense auto-resumes when this toggle is off.

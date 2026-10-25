@@ -604,6 +604,20 @@ Type a command below or click a quick action.
             <div class="help-text">Get the ID from <a href="https://clarity.microsoft.com" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>. It only loads when enabled (see /api/public/settings).</div>
           </div>
 
+          <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">Google Tag (Tag Manager)</h3>
+          <div class="form-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="gtmEnabled">
+              <span class="slider"></span>
+              <span><strong>Enable Google Tag Manager</strong></span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="gtmId">GTM Container ID</label>
+            <input type="text" id="gtmId" placeholder="e.g. GT-XXXXXXX">
+            <div class="help-text">The single Google tag for the site. Configure <strong>Google Analytics&nbsp;4</strong> (and any Google Ads/conversion tags) <em>inside</em> the container at <a href="https://tagmanager.google.com" target="_blank" rel="noopener noreferrer">tagmanager.google.com</a> — do <strong>not</strong> also paste a separate <code>gtag.js</code>, or pageviews get double-counted. Loads on content pages only (not the tag-free legal pages). It only loads when enabled.</div>
+          </div>
+
           <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">⚡ Fast Ad Network (Adsterra / PropellerAds / etc)</h3>
           <div class="form-group">
             <label class="toggle-switch">
@@ -1248,6 +1262,9 @@ Type a command below or click a quick action.
       // Microsoft Clarity
       document.getElementById('clarityEnabled').checked = Boolean(s.clarityEnabled);
       document.getElementById('clarityId').value = s.clarityId || '';
+      // Google Tag Manager
+      document.getElementById('gtmEnabled').checked = Boolean(s.gtmEnabled);
+      document.getElementById('gtmId').value = s.gtmId || '';
       
       // UI & Wallpaper
       document.getElementById('siteTitle').value = s.siteTitle || 'Tukuk-OS';
@@ -1297,7 +1314,9 @@ Type a command below or click a quick action.
       thirdPartyAdEnabled: document.getElementById('thirdPartyAdEnabled').checked,
       thirdPartyAdSrc: document.getElementById('thirdPartyAdSrc').value.trim(),
       clarityEnabled: document.getElementById('clarityEnabled').checked,
-      clarityId: document.getElementById('clarityId').value.trim()
+      clarityId: document.getElementById('clarityId').value.trim(),
+      gtmEnabled: document.getElementById('gtmEnabled').checked,
+      gtmId: document.getElementById('gtmId').value.trim()
     };
     await fetch('/api/admin/settings', {
       method: 'POST',
