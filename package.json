@@ -18,9 +18,9 @@
     "lint": "node scripts/lint.js",
     "meili": "meilisearch --db-path ./meili_data --master-key $(grep '^MEILI_MASTER_KEY=' ~/.config/tukuk-os/env | cut -d= -f2-) --http-addr 127.0.0.1:7700",
     "test": "node --test test/*.test.js",
-    "desktop": "electron .",
-    "desktop:dev": "electron . --dev",
-    "desktop:no-sandbox": "electron . --no-sandbox",
+    "desktop": "electron desktop/main.js",
+    "desktop:dev": "electron desktop/main.js --dev",
+    "desktop:no-sandbox": "electron desktop/main.js --no-sandbox",
     "dist": "npm run dist:win && npm run dist:mac && npm run dist:linux",
     "dist:win": "electron-builder --win --x64",
     "dist:mac": "electron-builder --mac --x64 --arm64",
@@ -59,6 +59,9 @@
     "appId": "org.tukuk.os",
     "productName": "Tukuk-OS",
     "copyright": "Copyright © 2026 Tukuk-OS",
+    "extraMetadata": {
+      "main": "desktop/main.js"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -155,7 +158,7 @@
       ],
       "desktop": {
         "Name": "Tukuk-OS",
-        "Comment": "Enjin carian web bebas",
+        "Comment": "Free web search engine",
         "Categories": "Network;Search;"
       }
     },

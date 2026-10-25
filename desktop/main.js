@@ -1,10 +1,16 @@
 /**
  * Electron desktop wrapper for Tukuk-OS.
  *
- * Boots a child `node index.js` process on port 8000 if one is not already listening,
+ * Boots a child `node index.js` process on 127.0.0.1:8000 if one is not already listening,
  * then loads http://127.0.0.1:8000 into a single Chromium window. Menu shortcuts mirror
  * what a desktop user would expect (Cmd/Ctrl+K to focus search, Cmd/Ctrl+R to reload,
  * Cmd/Ctrl+Shift+I for DevTools, and a manual "Restart the Server" item for development).
+ *
+ * Everything below hardcoded its own idea of where the server lives: the window loaded :8000,
+ * the child was spawned without a PORT (so it bound 3000 from src/config.js), and it was
+ * pointed at `desktop/index.js`, a file that has never existed — so `npm run desktop` opened
+ * a window on a port nothing served, then a child that exited on a missing module. The port
+ * and the host are now decided once, here, and handed to the child.
  *
  * Sandbox: Chromium's chrome-sandbox helper needs root-owned setuid 4755 to start. If
  * that cannot be configured (typical on a dev laptop without an SUID helper installed)
@@ -18,6 +24,16 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+
+// 8000 rather than the server's own default of 3000: a desktop user is the most likely to have
+// something else on 3000. PORT still wins when it is set. The child is told the same port and is
+// pinned to loopback, so the desktop app never exposes the portal to the local network.
+const PORT = Number(process.env.PORT) || 8000;
+const HOST = '127.0.0.1';
+const BASE = `http://${HOST}:${PORT}`;
+// The server entry is the repo root's index.js — desktop/ holds only the wrapper.
+const SERVER_DIR = path.join(__dirname, '..');
+const SERVER_ENTRY = path.join(SERVER_DIR, 'index.js');
 
 let mainWindow = null;
 let serverProcess = null;
@@ -34,8 +50,9 @@ function createWindow() {
       minWidth: 800,
       minHeight: 600,
       title: 'Tukuk-OS — Web Search Engine',
-      icon: path.join(__dirname, 'public', 'favicon.ico'),
+      icon: path.join(__dirname, '..', 'public', 'favicon.ico'),
       webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: true
@@ -50,8 +67,9 @@ function createWindow() {
         minWidth: 800,
         minHeight: 600,
         title: 'Tukuk-OS — Web Search Engine',
-        icon: path.join(__dirname, 'public', 'favicon.ico'),
+        icon: path.join(__dirname, '..', 'public', 'favicon.ico'),
         webPreferences: {
+          preload: path.join(__dirname, 'preload.js'),
           nodeIntegration: false,
           contextIsolation: true,
           sandbox: false
@@ -65,8 +83,8 @@ function createWindow() {
   // Try to start the local server if it is not already running.
   startLocalServer();
 
-  // Open the main UI.
-  mainWindow.loadURL('http://127.0.0.1:8000');
+  // Open the main UI — the same host and port the health check just asked.
+  mainWindow.loadURL(BASE);
 
   // Open DevTools in development mode.
   if (process.argv.includes('--dev')) {
@@ -78,15 +96,16 @@ function createWindow() {
   });
 }
 
-/** If a health check on 127.0.0.1:8000 succeeds we reuse it; otherwise spawn our own. */
+/** If a health check on the app's own port succeeds we reuse it; otherwise spawn our own. */
 function startLocalServer() {
   // Try the local server connection first.
   const http = require('http');
-  const req = http.get('http://127.0.0.1:8000/health', (res) => {
+  const req = http.get(`${BASE}/health`, (res) => {
     if (res.statusCode === 200) {
       console.log('[desktop] local server is already running.');
       return;
     }
+    req.destroy();
     spawnServer();
   });
   req.on('error', () => {
@@ -94,12 +113,12 @@ function startLocalServer() {
   });
 }
 
-/** Spawn `node index.js` from the packaged app root and pipe stdio for developer visibility. */
+/** Spawn `node index.js` from the app root, on the port the window is about to load. */
 function spawnServer() {
   console.log('[desktop] starting the local server...');
-  const serverPath = path.join(__dirname, 'index.js');
-  serverProcess = spawn('node', [serverPath], {
-    cwd: __dirname,
+  serverProcess = spawn('node', [SERVER_ENTRY], {
+    cwd: SERVER_DIR,
+    env: { ...process.env, PORT: String(PORT), HOST },
     stdio: 'inherit',
     shell: process.platform === 'win32'
   });
