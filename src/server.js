@@ -20810,12 +20810,23 @@ app.get('/games', (req, res) => {
 });
 
 // Tukuk Strike — the flagship third-person shooter (public/games/tukuk-strike/).
-// It is a real static page (engine.js + game.js + index.html), not a template string:
-// express.static already serves the assets, this route only gives it the clean URL.
+// It is a real static page (engine.js + game.js + index.html), not a template string.
+// The HTML is served no-cache, but Cloudflare edge-caches the .js/.css assets by
+// extension, so after a deploy the public kept getting the previous build for the
+// edge TTL while the origin was already correct. We stamp each script src with the
+// file's mtime (?v=…) so the URL changes on every deploy → guaranteed edge MISS on
+// the renamed asset, and the no-cache HTML always carries the fresh stamp. Automatic
+// from mtime: nothing to remember, and it only re-busts when a file truly changed.
 app.get(['/games/tukuk-strike', '/games/tukuk-strike/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
-  res.sendFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike', 'index.html'), (error) => {
-    if (error) res.status(404).json({ error: 'Game not found', path: req.originalUrl });
+  const dir = path.join(PUBLIC_DIR, 'games', 'tukuk-strike');
+  fs.readFile(path.join(dir, 'index.html'), 'utf8', (error, html) => {
+    if (error) return res.status(404).json({ error: 'Game not found', path: req.originalUrl });
+    const stamp = (f) => { try { return Math.floor(fs.statSync(path.join(dir, f)).mtimeMs); } catch { return 0; } };
+    const out = html
+      .replace('src="/games/tukuk-strike/engine.js"', 'src="/games/tukuk-strike/engine.js?v=' + stamp('engine.js') + '"')
+      .replace('src="/games/tukuk-strike/game.js"', 'src="/games/tukuk-strike/game.js?v=' + stamp('game.js') + '"');
+    res.type('html').send(out);
   });
 });
 
