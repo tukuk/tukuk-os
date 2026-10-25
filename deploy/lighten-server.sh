@@ -36,6 +36,14 @@ for u in $UNITS; do
   fi
 done
 
+# udisks2, masked rather than disabled: it is D-Bus activated, so the next thing that asks for a
+# disk — an apt hook, a udev event, a container runtime — starts it again. That is what happened on
+# 23 Oct 2026: the daemon was back a day later, and the governor then warned "switched off on
+# purpose but running" every 30 minutes, 77 times, for a process holding 3.6 MB. Masking is what
+# makes "off" mean off. Undo: sudo systemctl unmask udisks2 && sudo systemctl start udisks2
+systemctl stop udisks2 2>/dev/null
+systemctl mask udisks2 >/dev/null 2>&1 && echo "mask  udisks2"
+
 # snapd, masked rather than disabled: its own socket re-spawns the daemon on the
 # first snap invocation, so `disable` alone would put it back. Measured on this box, the
 # honest saving is NOT the 757 MB that `systemctl show -p MemoryCurrent` reported — that

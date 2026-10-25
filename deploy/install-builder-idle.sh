@@ -34,6 +34,19 @@ have_units() {
 }
 report() { bash "$SRC/builder-idle-stop.sh" --dry-run; }
 
+# Stopping on purpose must not read as a failure. The builder is a Node app that exits 143 after
+# SIGTERM, so systemd logged every idle stop as `failed (exit-code)` — and the load governor
+# reports any failed unit as CRITICAL every 30 minutes. One deliberate stop on 23 Oct 2026
+# produced 65 identical critical alerts over the next day and a half and buried everything else
+# that happened in that window. 143 is what this app does when it is asked to stop; a crash
+# looks like a different code (1, or 137 when the kernel kills it for memory).
+DROPIN=/etc/systemd/system/tukuk-builder.service.d
+mkdir -p "$DROPIN"
+printf '# An idle stop is a success, not a failure: the app exits 143 after SIGTERM.\n[Service]\nSuccessExitStatus=143\n' \
+  > "$DROPIN/exit-codes.conf"
+systemctl daemon-reload
+step "drop-in written: an idle stop is recorded as success (SuccessExitStatus=143)"
+
 case "$MODE" in
   stop-now)
     systemctl stop "${UNITS[@]}" && step "stopped ${UNITS[*]} (the connector stays up: tchat.tukuk.org rides on it)"
