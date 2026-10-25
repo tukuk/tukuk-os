@@ -5,6 +5,9 @@
 // 10 minutes → zero extra load on our server.
 // The static big-event history lives inside the explanation page text only.
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const config = require('./config');
 const { attachGuard } = require('./outbound');
 
 const http = axios.create({
@@ -20,6 +23,73 @@ const QUERY_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
 const cache = new Map();
 const inflight = new Map();
 const TTL = 10 * 60 * 1000;
+const stats = { through: 0, mirrored: 0, failed: 0, lastError: '' };
+
+// The last feed of every region, on disk, exactly as the books and recipes modules keep theirs:
+// a restart must not make the first visitor wait for USGS, and a region whose upstream call is
+// down must still answer with the list it answered with yesterday.
+const MIRROR_FILE = process.env.GEMPA_MIRROR_PATH || path.join(path.dirname(config.store.path), 'gempa-last.json');
+const KEEP_MIRRORED = 12; // the five regions, plus room for a question invented later
+
+function readMirror() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(MIRROR_FILE, 'utf8'));
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeMirror(key, entry, all) {
+  try {
+    all[key] = entry;
+    // One entry per region question; the bound is here so a caller that invents a new question
+    // every time can never grow this file without limit.
+    const keys = Object.keys(all);
+    if (keys.length > KEEP_MIRRORED) {
+      keys.sort((a, b) => String(all[a].at || '').localeCompare(String(all[b].at || '')))
+        .slice(0, keys.length - KEEP_MIRRORED)
+        .forEach((k) => delete all[k]);
+    }
+    fs.mkdirSync(path.dirname(MIRROR_FILE), { recursive: true });
+    const tmp = `${MIRROR_FILE}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(all));
+    fs.renameSync(tmp, MIRROR_FILE); // rename is atomic: a reader never sees half a file
+    stats.mirrored++;
+  } catch {
+    // a failed mirror is a slow restart later, never a broken page now
+  }
+}
+
+/**
+ * What the mirror files a feed under: the question, without its moving window.
+ *
+ * The window is rebuilt every ten minutes, so a mirror keyed by the whole parameter set would
+ * file a fresh copy of the same region forever and never answer for the one being asked now.
+ * Dropping the two timestamps leaves the region's identity — its box, magnitude floor and limit
+ * — which is exactly why yesterday's list is still the right answer to today's question.
+ */
+function mirrorKey(params) {
+  const rest = { ...params };
+  delete rest.starttime;
+  delete rest.endtime;
+  return JSON.stringify(rest);
+}
+
+/**
+ * The feed window is rounded DOWN to the TTL boundary before it is used as a key.
+ *
+ * This is the difference between a cache and a decoration: a window that ends at `now` is a
+ * window that never repeats, and the key is the window. Measured on this box (24 Oct 2026),
+ * three page views in a row produced three distinct keys and three USGS queries — so the
+ * ten-minute cache above had never served a single hit, every visitor paid the full 7–9 s
+ * round-trip, and any slow upstream call became the 503 the sitemap crawler found on
+ * /earthquakes. Every request inside the same ten minutes now asks the identical question and
+ * shares one entry, while the data stays no older than the window this module already promised.
+ */
+function timeBucket(ms = TTL) {
+  return new Date(Math.floor(Date.now() / ms) * ms).toISOString();
+}
 
 function cacheGet(key) {
   const hit = cache.get(key);
@@ -63,6 +133,16 @@ async function usgsQuery(params) {
   // stale-while-revalidate: a USGS feed can take ~8s; serve the old data at once
   // and re-fetch in the background so the page never 503s or waits a long time.
   if (hit && hit.stale) { fetchAndCache(key, params).catch(() => {}); return hit.data; }
+  // Nothing in memory — which after a restart is every region. The disk mirror is read before
+  // the network, so the first visitor of a new process gets a rendered page in milliseconds and
+  // the refresh happens behind it. The entry is stored already-expired on purpose: the call
+  // after this one revalidates, and the single-flight map keeps that to one USGS query.
+  const mirrored = readMirror()[mirrorKey(params)];
+  if (mirrored && Array.isArray(mirrored.rows) && mirrored.rows.length) {
+    cache.set(key, { data: mirrored.rows, expiresAt: Date.now() });
+    fetchAndCache(key, params).catch(() => {});
+    return mirrored.rows;
+  }
   return fetchAndCache(key, params);
 }
 
@@ -102,10 +182,18 @@ async function fetchOnce(key, params, attempt) {
       };
     });
     cacheSet(key, rows);
+    stats.through++;
+    writeMirror(mirrorKey(params), { at: new Date().toISOString(), rows }, readMirror());
     return rows;
   } catch (err) {
+    stats.failed++;
+    stats.lastError = String((err && err.message) || err).slice(0, 160);
     const h = cacheGet(key);
     if (h) return h.data; // stale beats an error
+    // The memory is empty and the call failed: yesterday's list is still a correct answer to
+    // "what happened", and it is the difference between a page and a 503 for a crawler.
+    const m = readMirror()[mirrorKey(params)];
+    if (m && Array.isArray(m.rows) && m.rows.length) return m.rows;
     if (attempt < 1) return fetchOnce(key, params, attempt + 1); // one retry, then give up
     throw err;
   }
@@ -116,7 +204,10 @@ function regionFeed(r) {
   // findRegion hands back null for a slug that is not in REGIONS; say so plainly
   // instead of dereferencing null and surfacing a bare TypeError at the call site.
   if (!r) throw new Error('regionFeed needs a known region');
-  const params = { starttime: isoAgo(r.hours), endtime: new Date().toISOString(), minmagnitude: r.minMag, limit: r.limit };
+  // Both ends of the window come from the bucket (see timeBucket): the page shows the same
+  // question for the whole ten minutes, which is what lets the cache answer at all.
+  const end = timeBucket();
+  const params = { starttime: isoAgo(r.hours, end), endtime: end, minmagnitude: r.minMag, limit: r.limit };
   if (r.bbox) {
     const [minLon, minLat, maxLon, maxLat] = r.bbox;
     params.minlongitude = minLon; params.minlatitude = minLat;
@@ -125,8 +216,8 @@ function regionFeed(r) {
   return usgsQuery(params);
 }
 
-function isoAgo(hours) {
-  return new Date(Date.now() - hours * 3600 * 1000).toISOString();
+function isoAgo(hours, end = new Date().toISOString()) {
+  return new Date(Date.parse(end) - hours * 3600 * 1000).toISOString();
 }
 
 // Summary for the hub statistic cards.
@@ -142,4 +233,4 @@ function summarise(rows) {
   return { count: rows.length, max, latest: rows[0], shallow, felt, tsunamis };
 }
 
-module.exports = { REGIONS, findRegion, regionFeed, usgsQuery, summarise };
+module.exports = { REGIONS, findRegion, regionFeed, usgsQuery, summarise, timeBucket, mirrorKey, MIRROR_FILE, readMirror, stats };
