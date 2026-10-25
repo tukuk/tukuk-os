@@ -19300,24 +19300,33 @@ app.get('/blog/rss.xml', (req, res) => {
   const items = posts.map((p) => {
     const link = `${base}/blog/${encodeURIComponent(p.slug)}`;
     const date = (p.updatedAt || p.createdAt || new Date().toISOString());
+    const cats = (p.tags || []).map((t) => `    <category>${x(t)}</category>`).join('\n');
+    // Full text so aggregators & the Medium/dev.to importers get the whole article, closed by an
+    // original-source line — syndication readers keep a canonical back-link to tukuk.org.
+    const body = `${renderMarkdown(p.content || '')}\n<hr/>\n<p><em>This article was originally published on the Tukuk-OS blog at <a href="${link}">${link}</a> \u2014 the canonical version lives there.</em></p>`.replace(/]]>/g, ']]&gt;]]>');
     return `  <item>
     <title>${x(p.title)}</title>
     <link>${link}</link>
     <guid isPermaLink="true">${link}</guid>
     <description>${x(p.excerpt || '')}</description>
+    <content:encoded><![CDATA[${body}]]></content:encoded>
     <dc:creator>${x(p.author || 'Fevian Donald')}</dc:creator>
-    <pubDate>${new Date(date).toUTCString()}</pubDate>
+${cats ? cats + '\n' : ''}    <pubDate>${new Date(date).toUTCString()}</pubDate>
   </item>`;
   }).join('\n');
   res.type('application/rss+xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
+    `<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">\n` +
     `<channel>\n` +
-    `  <title>Tukuk-OS — Blog &amp; Knowledge Archive</title>\n` +
+    `  <title>Tukuk-OS \u2014 Blog &amp; Knowledge Archive</title>\n` +
     `  <link>${base}/blog</link>\n` +
     `  <atom:link href="${base}/blog/rss.xml" rel="self" type="application/rss+xml"/>\n` +
     `  <description>Articles, tutorials and analysis about search technology, web privacy, AI and Tukuk-OS apps.</description>\n` +
     `  <language>en</language>\n` +
+    `  <generator>Tukuk-OS CMS (tukuk.org)</generator>\n` +
+    `  <docs>https://validator.w3.org/feed/docs/rss2.html</docs>\n` +
+    `  <ttl>60</ttl>\n` +
+    `  <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n` +
     items + `\n</channel>\n</rss>\n`
   );
 });
