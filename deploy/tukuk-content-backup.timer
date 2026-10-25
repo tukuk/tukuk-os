@@ -1,0 +1,10 @@
+[Unit]
+Description=Export + backup Tukuk-OS content to R2 daily (rotate 7 slots)
+
+[Timer]
+OnCalendar=*-*-* 03:40:00
+Persistent=true
+Unit=tukuk-content-backup.service
+
+[Install]
+WantedBy=timers.target

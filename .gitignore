@@ -92,3 +92,7 @@ bolt.diy/
 # generated/ are committed occasionally and explicitly; this directory is written
 # directly by the code running on the server.
 generated/gpu/
+
+# Portable CMS content snapshot written by scripts/export-content.js (the daily
+# content backup) — a runtime artifact, never committed.
+generated/content-export/
