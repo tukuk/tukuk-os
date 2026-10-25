@@ -20835,10 +20835,36 @@ app.get(['/games/tukuk-strike', '/games/tukuk-strike/'], (req, res) => {
 // and public/games/tukuk-strike-godot/index.html). The build itself is NOT here: a threaded
 // Godot export needs cross-origin isolation that tukuk.org deliberately does not set, so it
 // is served from its own subdomain and only linked to, never iframed.
+// A tiny cached probe decides whether the build is actually live before we offer the
+// button, so the launcher never dangles a broken tab during setup: we ask play.tukuk.org
+// once a minute; a 2xx/3xx (or an in-flight check) means the Godot export is being served
+// there. The static file keeps the real button so a direct hit still works; the route only
+// swaps it for a notice when the probe says the subdomain is not answering yet.
+const HD_ANCHOR = '<a class="launch" href="https://play.tukuk.org/" target="_blank" rel="noopener" data-hd-launch>Buka dalam tab baharu ↗</a>';
+const HD_PENDING = '<div class="pending">⏳ Versi HD belum tersedia — build Godot perlu dieksport dan play.tukuk.org dikonfigurasi di pelayan. Cuba lagi nanti, atau main versi ringan di bawah.</div>';
+let _hdOk = null, _hdAt = 0, _hdInflight = null;
+function hdBuildAvailable() {
+  if (_hdOk !== null && Date.now() - _hdAt < 60000) return Promise.resolve(_hdOk);
+  if (_hdInflight) return _hdInflight;
+  _hdInflight = new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => { if (settled) return; settled = true; _hdOk = v; _hdAt = Date.now(); _hdInflight = null; resolve(v); };
+    try {
+      const req = require('https').get('https://play.tukuk.org/', { timeout: 2500, headers: { 'user-agent': 'tukuk-hd-probe' } }, (r) => {
+        r.resume();
+        finish(r.statusCode >= 200 && r.statusCode < 400);
+      });
+      req.on('error', () => finish(false));
+      req.on('timeout', () => { try { req.destroy(); } catch { /* ignore */ } finish(false); });
+    } catch { finish(false); }
+  });
+  return _hdInflight;
+}
 app.get(['/games/tukuk-strike-godot', '/games/tukuk-strike-godot/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
-  res.sendFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike-godot', 'index.html'), (error) => {
-    if (error) res.status(404).json({ error: 'Game not found', path: req.originalUrl });
+  fs.readFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike-godot', 'index.html'), 'utf8', (error, html) => {
+    if (error) return res.status(404).json({ error: 'Game not found', path: req.originalUrl });
+    hdBuildAvailable().then((ok) => res.type('html').send(ok ? html : html.replace(HD_ANCHOR, HD_PENDING)));
   });
 });
 
