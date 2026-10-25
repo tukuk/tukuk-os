@@ -927,7 +927,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// SEO: canonical host — every www request is 301'd to the apex
+// SEO: canonical host — a www request is 301'd to the apex. This only fires when the
+// www hostname actually arrives intact: the www.tukuk.org mirror worker rewrites Host to
+// tukuk.org before proxying (cloudflare-worker/tukuk-fallback), so browser traffic is
+// redirected at the edge. Both stay: this one answers the paths the worker never sees
+// (curl --resolve, a LAN address, a tunnel route added by hand).
 app.use((req, res, next) => {
   if (req.hostname === 'www.tukuk.org') {
     return res.redirect(301, `https://tukuk.org${req.originalUrl}`);
@@ -20753,7 +20757,9 @@ const GAMES_CSS = '<style>.gwrap{max-width:960px;margin:0 auto;padding:14px}.ggr
   + '.gcard{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--text);transition:transform .12s,border-color .12s}'
   + '.gcard:hover{transform:translateY(-3px);border-color:var(--accent)}.gic{font-size:2rem;line-height:1}.gt{font-weight:700;font-size:.92rem;text-align:center}.gg{font-size:.68rem;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:2px 10px}'
   + '.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.gchip{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;font:inherit;font-size:.82rem;cursor:pointer}.gchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}'
-  + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent),#7a5cff);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.92;font-size:.95rem}</style>';
+  + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent),#7a5cff);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.92;font-size:.95rem}'
+  + '.gcard.feat{border-color:var(--accent);background:linear-gradient(160deg,rgba(76,141,255,.18),var(--panel));box-shadow:0 0 0 1px var(--accent) inset}'
+  + '.gcard.feat .gg{background:var(--accent);color:#fff;border-color:var(--accent)}</style>';
 function renderGamesIndex() {
   // The arcade ONLY shows real 3D games (keys ending in '3d'). Flat 2D games still
   // exist in the REGISTRY for the builder (/api/builder/build → /a/<slug>) & the
@@ -20761,7 +20767,8 @@ function renderGamesIndex() {
   const games = templates.list().filter((t) => t.kind === 'game' && /3d$/i.test(t.key));
   const genres = Array.from(new Set(games.map((g) => g.genre).filter(Boolean)));
   const chips = ['all'].concat(genres).map((g) => `<button class="gchip${g === 'all' ? ' on' : ''}" data-f="${escapeHtml(g)}" type="button">${escapeHtml(g === 'all' ? 'All' : (GENRE_UI[g] || g))}</button>`).join('');
-  const cards = games.map((g) => `<a class="gcard" href="/games/${encodeURIComponent(g.key)}" data-genre="${escapeHtml(g.genre || 'lain')}"><span class="gic">${g.ic}</span><span class="gt">${escapeHtml(g.title)}</span><span class="gg">${escapeHtml(GENRE_UI[g.genre] || 'Arcade')}</span></a>`).join('');
+  const cards = '<a class="gcard feat" href="/games/tukuk-strike" data-genre="penembakan"><span class="gic">🎯</span><span class="gt">Tukuk Strike</span><span class="gg">3D Shooter</span></a>'
+    + games.map((g) => `<a class="gcard" href="/games/${encodeURIComponent(g.key)}" data-genre="${escapeHtml(g.genre || 'lain')}"><span class="gic">${g.ic}</span><span class="gt">${escapeHtml(g.title)}</span><span class="gg">${escapeHtml(GENRE_UI[g.genre] || 'Arcade')}</span></a>`).join('');
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20776,7 +20783,7 @@ function renderGamesIndex() {
 </head>
 <body>
 ${siteHeader('')}
-<div class="gwrap"><section class="ghero"><h1>🎮 Game Arcade</h1><p>${games.length} free games — click to play instantly. Runs on the CPU-free web: no downloads, no accounts, works offline once loaded.</p></section>
+<div class="gwrap"><section class="ghero"><h1>🎮 Game Arcade</h1><p>${games.length ? games.length + ' free games' : 'Free games'} — click to play instantly. Tukuk Strike, our own 3D third-person shooter, runs right here: no downloads, no accounts, works on a weak connection.</p></section>
 <div class="gchips">${chips}</div>
 <main><div class="ggrid" id="ggrid">${cards}</div></main>
 </div>
@@ -20790,6 +20797,16 @@ app.get('/games', (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex, follow');
   res.setHeader('Cache-Control', 'public, max-age=120');
   res.type('html').send(renderGamesIndex());
+});
+
+// Tukuk Strike — the flagship third-person shooter (public/games/tukuk-strike/).
+// It is a real static page (engine.js + game.js + index.html), not a template string:
+// express.static already serves the assets, this route only gives it the clean URL.
+app.get(['/games/tukuk-strike', '/games/tukuk-strike/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike', 'index.html'), (error) => {
+    if (error) res.status(404).json({ error: 'Game not found', path: req.originalUrl });
+  });
 });
 
 app.get('/games/:key', (req, res) => {
