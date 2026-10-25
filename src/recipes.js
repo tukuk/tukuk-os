@@ -738,13 +738,24 @@ async function fetchSection(slug) {
   return assignSlugs(parsed.filter((r) => r.usable).slice(0, PER_SECTION));
 }
 
-/** The list for one shelf. Fresh memory → the API → the disk mirror → nothing. */
+/** The list for one shelf. Fresh memory → a fresh mirror → the API → any mirror → nothing. */
 async function section(slug) {
   if (!BY_SLUG.get(slug)) return { recipes: [], at: null, stale: false };
   const key = `section:${slug}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < SECTION_TTL) return { recipes: hit.recipes, at: hit.at, stale: false };
   const mirror = readMirror();
+  const last = mirror[key];
+  const lastRows = last && Array.isArray(last.recipes) && last.recipes.length ? last.recipes : null;
+  const lastAt = lastRows ? (Date.parse(last.at) || 0) : 0;
+  // The mirror is the same cache one level down, so a mirror younger than the shelf TTL is an
+  // answer, not a hint: re-reading twenty-seven shelves (up to forty-eight wiki pages each)
+  // after every restart is neither faster nor politer, and the previous process had already
+  // paid for them.
+  if (lastAt && Date.now() - lastAt < SECTION_TTL) {
+    cache.set(key, { at: lastAt, recipes: lastRows });
+    return { recipes: lastRows, at: lastAt, stale: false };
+  }
   try {
     const recipes = await fetchSection(slug);
     if (!recipes.length) throw new Error('no cookable recipe on this shelf');
@@ -755,9 +766,8 @@ async function section(slug) {
   } catch (err) {
     stats.failed++;
     stats.lastError = String((err && err.message) || err).slice(0, 160);
-    const last = mirror[key];
-    if (last && Array.isArray(last.recipes) && last.recipes.length) {
-      return { recipes: last.recipes, at: Date.parse(last.at) || null, stale: true };
+    if (lastRows) {
+      return { recipes: lastRows, at: lastAt || null, stale: true };
     }
     return { recipes: [], at: null, stale: false };
   }
@@ -864,12 +874,21 @@ function inventory() {
  * Read every shelf once so the first visitor after a deploy is not the one who waits for it.
  * Sequential and spaced — this is a shared free API, not our own database.
  */
-async function prime({ gapMs = 900, log = () => {}, fetchOne = fetchSection } = {}) {
+async function prime({ gapMs = 900, log = () => {}, fetchOne = null } = {}) {
   let done = 0;
   for (const spec of SECTIONS) {
     try {
-      const recipes = await fetchOne(spec.slug);
-      if (recipes.length) { cache.set(`section:${spec.slug}`, { at: Date.now(), recipes }); done++; }
+      // section() rather than a bare fetchSection(): the shelf it fills is also written to the
+      // disk mirror, and that file is what /sitemap-recipes.xml reads while this walk is still
+      // running — and what answers at all when the wiki is not reachable. Priming through the
+      // bare fetch, which is what this did, left the mirror to a visitor who happened to arrive
+      // on a cold cache; on the VPS that never happened, so there was no recipes-last.json after
+      // days of serving, every restart re-read all twenty-seven shelves from the wiki, and the
+      // sitemap answered with 85 of its 608 dish urls until the walk finished (25 Oct 2026).
+      const recipes = fetchOne ? await fetchOne(spec.slug) : (await section(spec.slug)).recipes;
+      // A probe hands back rows without the cache section() would have filled on its way.
+      if (fetchOne && recipes.length) cache.set(`section:${spec.slug}`, { at: Date.now(), recipes });
+      if (recipes.length) done++;
       log(`[recipes] ${spec.slug}: ${recipes.length}`);
     } catch {
       log(`[recipes] ${spec.slug}: unavailable`); // the mirror and the next visitor will cope

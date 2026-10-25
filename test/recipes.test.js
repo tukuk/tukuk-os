@@ -9,7 +9,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const rec = require('../src/recipes');
 const config = require('../src/config');
 
@@ -187,6 +189,50 @@ test('a shelf is mirrored beside the store and served stale if the wiki dies', (
   assert.ok(writer.includes('renameSync(tmp, MIRROR_FILE)'), 'then renamed, so a reader never sees half a file');
   assert.ok(writer.includes('catch {'), 'a failed mirror is a slow request later, not a broken page now');
   assert.ok(writer.includes('KEEP_MIRRORED'), 'and the file is bounded, because a recipe page is not a line');
+});
+
+// Measured on the VPS, 25 Oct 2026: after a deploy /sitemap-recipes.xml answered with 85 dish
+// urls instead of 608, because the sitemap is built from the mirror when the memory is empty and
+// the mirror had never been written — prime() read every shelf with the bare fetch, so only a
+// visitor who arrived on a cold cache ever wrote one. A mirror younger than the shelf TTL is an
+// answer, not a hint: the previous process had already paid for those wiki pages.
+test('a restart reads the shelf from the mirror instead of re-reading the wiki', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tukuk-recipes-'));
+  const probe = `
+    process.env.RECIPES_MIRROR_PATH = ${JSON.stringify(path.join(dir, 'recipes-last.json'))};
+    let calls = 0;
+    const axios = require('axios');
+    const realCreate = axios.create;
+    axios.create = (opts) => {
+      const inst = realCreate.call(axios, opts);
+      inst.defaults.adapter = async () => { calls += 1; throw new Error('wikibooks unreachable (probe)'); };
+      return inst;
+    };
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const rec = require(${JSON.stringify(path.join(__dirname, '..', 'src', 'recipes.js'))});
+    fs.mkdirSync(path.dirname(rec.MIRROR_FILE), { recursive: true });
+    fs.writeFileSync(rec.MIRROR_FILE, JSON.stringify({
+      'section:indonesian': { at: new Date().toISOString(), recipes: [{ title: 'Rendang', path: 'rendang' }, { title: 'Nasi Goreng', path: 'nasi-goreng' }] },
+      'section:thai': { at: new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString(), recipes: [{ title: 'Tom Yum', path: 'tom-yum' }] },
+    }));
+    (async () => {
+      const fresh = await rec.section('indonesian');
+      const freshCalls = calls;
+      const stale = await rec.section('thai');
+      console.log(JSON.stringify({ fresh, freshCalls, calls, stale, inventory: rec.inventory().map((r) => r.path).sort() }));
+    })();
+  `;
+  const out = JSON.parse(execFileSync(process.execPath, ['-e', probe], { encoding: 'utf8', cwd: path.join(__dirname, '..') }));
+
+  assert.strictEqual(out.freshCalls, 0, 'a mirror younger than the shelf TTL is served without touching the wiki');
+  assert.strictEqual(out.fresh.recipes.length, 2, 'the whole shelf comes off disk');
+  assert.strictEqual(out.fresh.stale, false, 'and is not presented as stale');
+  assert.ok(out.calls >= 1, 'an older mirror is still revalidated against the wiki');
+  assert.strictEqual(out.stale.recipes[0].title, 'Tom Yum', 'and answers with it when the wiki cannot be reached');
+  assert.strictEqual(out.stale.stale, true, 'saying so, rather than pretending it is fresh');
+  assert.deepStrictEqual(out.inventory, ['nasi-goreng', 'rendang', 'tom-yum'], 'the sitemap is complete from disk alone, which is what a restart needs');
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('every shelf is reachable, distinct, and has somewhere to read from', () => {
