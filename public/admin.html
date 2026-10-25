@@ -710,8 +710,8 @@ Type a command below or click a quick action.
     <!-- Tab 6: Articles & Blog (Stor) -->
     <div id="tab-posts" class="tab-pane">
       <div class="card">
-        <h2>📝 Publish New Blog Article</h2>
-        <p style="color:var(--text-muted); font-size:0.92rem;">Articles published here are immediately indexed and available at <code>/blog</code> and search results.</p>
+        <h2 id="postFormTitle">📝 Publish New Blog Article</h2>
+        <p style="color:var(--text-muted); font-size:0.92rem;">Articles published here are immediately indexed and available at <code>/blog</code> and search results. Press <b>Edit</b> on any stored article to change it here.</p>
         
         <form id="postForm">
           <div class="form-group">
@@ -735,7 +735,8 @@ Type a command below or click a quick action.
             <textarea id="postContent" rows="8" placeholder="Write your article in Markdown..." required></textarea>
           </div>
           
-          <button type="submit" class="btn btn-primary">🚀 Publish Article</button>
+          <button type="submit" id="postSubmitBtn" class="btn btn-primary">🚀 Publish Article</button>
+          <span id="postEditingBadge" class="badge" style="margin-left:12px; color:var(--accent);" hidden>Editing: <b id="postEditingSlug"></b> · <a href="#" id="postCancelEdit" style="color:var(--text-muted);">cancel</a></span>
           <span id="postSavedBadge" class="badge badge-success" style="margin-left:12px;" hidden>Article Published!</span>
         </form>
       </div>
@@ -1505,7 +1506,21 @@ Type a command below or click a quick action.
     }
   });
   
-  // Publish Post
+  // Publish / edit Post (editingId set => PUT, else POST)
+  let editingId = null;
+  let allPosts = [];
+  function setEditChrome(on, slug) {
+    document.getElementById('postFormTitle').textContent = on ? '✏️ Edit Blog Article' : '📝 Publish New Blog Article';
+    document.getElementById('postSubmitBtn').textContent = on ? '💾 Save changes' : '🚀 Publish Article';
+    document.getElementById('postEditingBadge').hidden = !on;
+    if (on) document.getElementById('postEditingSlug').textContent = slug || '';
+  }
+  document.getElementById('postCancelEdit').addEventListener('click', (e) => {
+    e.preventDefault();
+    editingId = null;
+    document.getElementById('postForm').reset();
+    setEditChrome(false);
+  });
   document.getElementById('postForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
@@ -1514,24 +1529,44 @@ Type a command below or click a quick action.
       tags: document.getElementById('postTags').value.split(',').map(t => t.trim()).filter(Boolean),
       content: document.getElementById('postContent').value.trim()
     };
-    await fetch('/api/admin/posts', {
-      method: 'POST',
+    const res = await fetch(editingId ? `/api/admin/posts/${editingId}` : '/api/admin/posts', {
+      method: editingId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
       body: JSON.stringify(payload)
     });
+    if (res.status === 401) return forceLogout();
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'Save failed'); return; }
+    const wasEdit = Boolean(editingId);
+    editingId = null;
+    setEditChrome(false);
     const b = document.getElementById('postSavedBadge');
+    b.textContent = wasEdit ? 'Article Updated!' : 'Article Published!';
     b.hidden = false;
     setTimeout(() => { b.hidden = true; }, 2500);
     document.getElementById('postForm').reset();
     loadPosts();
   });
-  
+
+  window.editPost = function(id) {
+    const p = allPosts.find((x) => x.id === id);
+    if (!p) return;
+    editingId = id;
+    document.getElementById('postTitle').value = p.title || '';
+    document.getElementById('postSlug').value = p.slug || '';
+    document.getElementById('postTags').value = (p.tags || []).join(', ');
+    document.getElementById('postContent').value = p.content || '';
+    setEditChrome(true, p.slug);
+    document.getElementById('postForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('postTitle').focus();
+  };
+
   async function loadPosts() {
     const box = document.getElementById('postsList');
     try {
       const res = await fetch('/api/admin/posts', { headers: { 'Authorization': `Bearer ${authToken}` } });
       if (res.status === 401) return forceLogout();
       const posts = await res.json();
+      allPosts = posts;
       if (!posts.length) {
         box.innerHTML = '<span style="color:var(--text-muted);">No posts found.</span>';
         return;
@@ -1542,7 +1577,10 @@ Type a command below or click a quick action.
             <strong>${p.title}</strong>
             <div style="font-size:0.82rem; color:var(--text-muted);"><a href="/blog/${p.slug}" target="_blank">/blog/${p.slug}</a> &middot; ${new Date(p.createdAt).toLocaleDateString()}</div>
           </div>
-          <button class="btn btn-secondary" onclick="deletePost('${p.id}')" style="font-size:0.8rem; padding:4px 10px; color:var(--danger);">Delete</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-secondary" onclick="editPost('${p.id}')" style="font-size:0.8rem; padding:4px 10px;">Edit</button>
+            <button class="btn btn-secondary" onclick="deletePost('${p.id}')" style="font-size:0.8rem; padding:4px 10px; color:var(--danger);">Delete</button>
+          </div>
         </div>
       `).join('');
     } catch {

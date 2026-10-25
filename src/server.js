@@ -21864,6 +21864,55 @@ app.delete('/api/admin/posts/:id', auth.requireAdmin, (req, res) => {
   res.json({ ok: success });
 });
 
+// Edit an existing post in place — the admin editor's "Save changes". The store is the source of
+// truth; when a matching content/blog/<slug>.md exists (the post came from markdown) we rewrite it
+// so a boot-time syncPostsFromContent() does not roll the edit back on the next restart. Re-indexed
+// under the (possibly new) slug id; the stale search doc is dropped when the slug changes.
+app.put('/api/admin/posts/:id', auth.requireAdmin, (req, res) => {
+  const existing = store.getPostById(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Post not found' });
+  const b = req.body || {};
+  const cleanSlug = (s) => String(s).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  const patch = {};
+  if (typeof b.title === 'string' && b.title.trim()) patch.title = b.title.trim();
+  if (typeof b.content === 'string' && b.content.trim()) patch.content = b.content.trim();
+  if (typeof b.author === 'string' && b.author.trim()) patch.author = b.author.trim();
+  if (Array.isArray(b.tags)) patch.tags = b.tags.map((t) => String(t).trim()).filter(Boolean).slice(0, 12);
+  if (typeof b.slug === 'string' && b.slug.trim()) {
+    const ns = cleanSlug(b.slug);
+    if (ns && ns !== existing.slug) {
+      const clash = store.getPostBySlug(ns);
+      if (clash && clash.id !== existing.id) return res.status(409).json({ error: 'That slug is already used by another post' });
+      patch.slug = ns;
+    }
+  }
+  if (patch.content !== undefined) patch.excerpt = (typeof b.excerpt === 'string' && b.excerpt.trim()) ? b.excerpt.trim() : patch.content.slice(0, 200);
+  else if (typeof b.excerpt === 'string' && b.excerpt.trim()) patch.excerpt = b.excerpt.trim();
+  if (!Object.keys(patch).length) return res.json(existing);
+  const updated = store.updatePost(existing.id, patch);
+  const finalSlug = updated.slug;
+  const finalExcerpt = updated.excerpt || String(updated.content || '').slice(0, 200);
+  try {
+    const blogDir = path.join(__dirname, '..', 'content', 'blog');
+    const md = `SLUG: ${finalSlug}\nTITLE: ${updated.title}\nEXCERPT: ${finalExcerpt}\nTAGS: ${(updated.tags || []).join(', ')}\n\n${updated.content || ''}\n`;
+    fs.writeFileSync(path.join(blogDir, `${finalSlug}.md`), md);
+    if (patch.slug && existing.slug && existing.slug !== finalSlug) {
+      const old = path.join(blogDir, `${existing.slug}.md`);
+      if (fs.existsSync(old)) fs.unlinkSync(old);
+    }
+  } catch { /* the content dir may be read-only on some deploys — the store edit still holds */ }
+  try {
+    const { postToDoc } = require('./blog-index');
+    index.addDocuments([postToDoc(updated)], { primaryKey: 'id' });
+    if (patch.slug && existing.slug && patch.slug !== existing.slug) {
+      const oldId = require('crypto').createHash('sha256').update(existing.slug).digest('hex').slice(0, 16);
+      Promise.resolve(index.deleteDocument(oldId)).catch(() => {});
+    }
+  } catch { /* search re-index is best-effort */ }
+  notifyIndexNow([`https://tukuk.org/blog/${finalSlug}`]);
+  res.json(updated);
+});
+
 app.use((req, res) => {
   const wantsJson = req.path.startsWith('/api') || /\.(json|xml)$/i.test(req.path) || !isHtmlRequest(req);
   if (wantsJson) return res.status(404).json({ error: 'Route not found', path: req.originalUrl });
