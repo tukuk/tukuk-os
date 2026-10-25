@@ -20382,56 +20382,29 @@ app.get('/api/contact/messages', requireApiKey, (req, res) => {
   res.json({ total: list.length, messages: list.slice(0, Math.min(Number(req.query.limit) || 50, 200)) });
 });
 
-// Visitor JS-error logger — a Clarity ScriptError/ErrorClick add-on (its API cannot give the cause)
-const JS_ERROR_FILE = path.join(path.dirname(config.store.path), 'js-errors.json');
+// Visitor JS-error logger — a Clarity ScriptError/ErrorClick add-on (its API cannot give the cause).
+// The merge-and-persist lives in src/js-errors.js: a count that is never written back is a log
+// that cannot say whether an error is still happening.
+const jsErrorLog = require('./js-errors');
 const jsErrorLimiter = config.rateLimit.enabled
   ? rateLimit({ windowMs: 60 * 1000, max: 30, keyPrefix: 'jserr:' })
   : (req, res, next) => next();
 
-function loadJsErrors() {
-  try {
-    return JSON.parse(fs.readFileSync(JS_ERROR_FILE, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
 app.post('/api/js-error', jsErrorLimiter, (req, res) => {
   const body = req.body || {};
-  const message = truncate(String(body.message || ''), 400);
-  if (!message) return res.status(400).json({ error: 'message is required' });
-
-  const entry = {
-    at: new Date().toISOString(),
-    page: truncate(String(body.page || ''), 300),
-    kind: truncate(String(body.kind || 'error'), 20),
-    message,
-    source: truncate(String(body.source || ''), 300),
-    line: Number(body.line) || 0,
-    col: Number(body.col) || 0,
-    ua: truncate(String(req.get('user-agent') || ''), 200)
-  };
-
-  const list = loadJsErrors();
-  // merge identical messages so the file is not flooded
-  const same = list.find((e) => e.message === entry.message && e.page === entry.page);
-  if (same) {
-    same.count = (same.count || 1) + 1;
-    same.lastAt = entry.at;
-  } else {
-    list.unshift({ ...entry, count: 1 });
-    list.splice(300);
-    fs.mkdirSync(path.dirname(JS_ERROR_FILE), { recursive: true });
-    const temporary = `${JS_ERROR_FILE}.${process.pid}.tmp`;
-    fs.writeFileSync(temporary, JSON.stringify(list, null, 2));
-    fs.renameSync(temporary, JS_ERROR_FILE);
+  try {
+    const stored = jsErrorLog.record({ ...body, ua: req.get('user-agent') || '' });
+    if (!stored) return res.status(400).json({ error: 'message is required' });
+  } catch (error) {
+    // A full or read-only data dir must not look like a broken page to the visitor.
+    return res.status(503).json({ error: 'log unavailable', details: safeError(error) });
   }
   res.json({ ok: true });
 });
 
 app.get('/api/js-error', requireApiKey, (req, res) => {
-  const list = loadJsErrors();
-  res.json({ total: list.length, errors: list.slice(0, Math.min(Number(req.query.limit) || 100, 300)) });
+  const list = jsErrorLog.read();
+  res.json({ total: list.length, errors: list.slice(0, Math.min(Number(req.query.limit) || 100, jsErrorLog.MAX)) });
 });
 
 // ── /builder publishing: one click to a public link (tukuk.org/a/<slug>) ─────────
