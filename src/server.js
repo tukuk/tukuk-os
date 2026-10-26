@@ -7076,12 +7076,19 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
   const selfUrl = `https://tukuk.org/weather/${city.slug}`;
   const aqi = air && air.list && air.list[0] ? air.list[0].main : null;
   const band = aqi ? wx.aqiBand(aqi.aqi) : null;
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Place', name: `Weather in ${city.name}`,
-    description: `Live weather check for ${city.name}: ${d.label}, ${wxTempC(main.temp)}, wind ${wxKmh(cur.wind.speed)} km/h.`,
-    geo: { '@type': 'GeoCoordinates', latitude: city.lat, longitude: city.lon },
-    url: selfUrl,
-  }).replace(/</g, '\\u003c');
+  const jsonLd = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Place', name: `Weather in ${city.name}`,
+      description: `Live weather check for ${city.name}: ${d.label}, ${wxTempC(main.temp)}, wind ${wxKmh(cur.wind.speed)} km/h.`,
+      geo: { '@type': 'GeoCoordinates', latitude: city.lat, longitude: city.lon },
+      url: selfUrl,
+    },
+    // BreadcrumbList mirrors the visible trail (Weather hub → this city) so Google can
+    // show the path in results. Structural markup only — no claims beyond what renders.
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Weather', item: 'https://tukuk.org/weather' },
+      { '@type': 'ListItem', position: 2, name: city.name, item: selfUrl },
+    ] },
+  ]).replace(/</g, '\\u003c');
   const hero = `<div class="wx-hero"><div class="temp">${d.emoji} ${wxTempC(main.temp)}</div><div class="wmeta">`
     + `<b>${escapeHtml(city.name)}</b>${city.country ? `, ${escapeHtml(String(city.country))}` : ''} \u00b7 ${escapeHtml(d.label)}<br>`
     + `Feels like ${wxTempC(main.feels_like)} \u00b7 ${wxDateLabel(nowP)} ${String(nowP.h).padStart(2, '0')}:${String(nowP.m).padStart(2, '0')} local time`
@@ -7171,11 +7178,17 @@ function cuacaAirPage(req, city, air, airFc) {
     fcHtml = `<h2 class="section-title">Pollution forecast (3-hour slots)</h2><p>${chips}</p>`;
   }
   const bandRows = wx.AQI_BANDS.map((b) => `<tr><td><span class="wx-pill" style="background:${b.color}">${b.n} \u00b7 ${escapeHtml(b.label)}</span></td><td>${escapeHtml(b.advice)}</td></tr>`).join('');
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'Dataset', name: `Air quality in ${city.name}`,
-    description: `Current AQI ${Number(item.main.aqi)} (${band.label}) with PM2.5, PM10, O\u2083, NO\u2082, SO\u2082, CO and NH\u2083 components.`,
-    url: selfUrl,
-  }).replace(/</g, '\\u003c');
+  const jsonLd = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Dataset', name: `Air quality in ${city.name}`,
+      description: `Current AQI ${Number(item.main.aqi)} (${band.label}) with PM2.5, PM10, O\u2083, NO\u2082, SO\u2082, CO and NH\u2083 components.`,
+      url: selfUrl,
+    },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Weather', item: 'https://tukuk.org/weather' },
+      { '@type': 'ListItem', position: 2, name: city.name, item: `https://tukuk.org/weather/${city.slug}` },
+      { '@type': 'ListItem', position: 3, name: 'Air quality', item: selfUrl },
+    ] },
+  ]).replace(/</g, '\\u003c');
   const body = `<p class="back-link"><a href="/weather/${city.slug}">\u2190 Weather in ${escapeHtml(city.name)}</a> \u00b7 <a href="/weather/map">Map</a></p>`
     + `<div class="wx-hero"><div class="temp" style="font-size:2.6rem">AQI ${Number(item.main.aqi)}</div><div class="wmeta">`
     + `<span class="wx-pill" style="background:${band.color}">${escapeHtml(band.label)}</span><br>${escapeHtml(band.advice)}</div></div>`
@@ -7224,6 +7237,13 @@ function cuacaSunPage(req, city, cur) {
     title: `Sun Times in ${city.name} \u2014 Sunrise, Sunset & Golden Hour | Tukuk-OS`,
     desc: `Sunrise ${wxHHMM(rise, tz)}, sunset ${wxHHMM(set, tz)} in ${city.name} local time (${lenH}h ${lenM}m of daylight) + a golden-hour guide for photographers and solar-panel owners.`,
     selfUrl, heroTitle: `Sun in ${city.name}`, heroSub: 'Local astronomical times \u00b7 golden hour & solar noon',
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Weather', item: 'https://tukuk.org/weather' },
+        { '@type': 'ListItem', position: 2, name: city.name, item: `https://tukuk.org/weather/${city.slug}` },
+        { '@type': 'ListItem', position: 3, name: 'Sun times', item: selfUrl },
+      ] },
+    ).replace(/</g, '\\u003c'),
     body,
   });
 }
