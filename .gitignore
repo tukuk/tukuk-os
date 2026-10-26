@@ -96,3 +96,6 @@ generated/gpu/
 # Portable CMS content snapshot written by scripts/export-content.js (the daily
 # content backup) — a runtime artifact, never committed.
 generated/content-export/
+
+# Clarity Data-export API output (may contain analytics; never commit)
+clarity-export/
