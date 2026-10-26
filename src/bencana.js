@@ -5,9 +5,13 @@
 // Covers volcanoes, storms, wildfires, floods, drought, landslides, snow,
 // dust, sea ice and water issues around the world.
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const config = require('./config');
 
 const EONET = 'https://eonet.gsfc.nasa.gov/api/v3';
 const cache = new Map();
+const inflight = new Map();   // one shared EONET promise per key, so a cold burst of readers asks once
 const TTL_OPEN = 6 * 60 * 60 * 1000;  // the open-event list refreshes a few times a day
 const TTL_ONE = 24 * 60 * 60 * 1000;  // one event's detail
 
@@ -18,6 +22,34 @@ function cacheGet(key, ttl) {
 }
 function cacheSet(key, data, ttl) {
   cache.set(key, { data, expiresAt: Date.now() + (ttl || TTL_OPEN) });
+}
+
+// The last-good open list of every category, on disk — exactly how gempa/books/recipes keep
+// theirs. A restart must not make the first visitor wait on EONET, and a category whose
+// upstream call is slow or down must still answer with the list it showed an hour ago, so the
+// live hub never has to hand a crawler a 503. Keyed by EONET category id (never a query, so it
+// stays small: one entry per category, bounded by CATS.length).
+const MIRROR_FILE = process.env.BENCANA_MIRROR_PATH || path.join(path.dirname(config.store.path), 'bencana-last.json');
+
+function readMirror() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(MIRROR_FILE, 'utf8'));
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeMirror(catId, entry, all) {
+  try {
+    all[catId] = entry;
+    fs.mkdirSync(path.dirname(MIRROR_FILE), { recursive: true });
+    const tmp = `${MIRROR_FILE}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(all));
+    fs.renameSync(tmp, MIRROR_FILE); // rename is atomic: a reader never sees half a file
+  } catch {
+    // a failed mirror is a slow restart later, never a broken page now
+  }
 }
 
 // The IPv6 agent goes first — server.js pins the global resolver to 'ipv4first'.
@@ -123,18 +155,50 @@ function normaliseEvent(ev) {
 }
 
 // The list of events still open for one EONET category.
+// Resilience ladder (same shape as the USGS feed): fresh cache → stale-while-revalidate →
+// disk mirror (read before the network, so a cold process renders at once) → live fetch with
+// one retry. Every rung that can answer does, so a slow or briefly-down EONET call produces a
+// slightly older hub page, never a 503 that an AdSense reviewer would see.
 async function loadEvents(cat) {
   const key = `open:${cat.id}`;
   const hit = cacheGet(key);
   if (hit && !hit.stale) return hit.data;
+  if (hit && hit.stale) { refreshEvents(cat).catch(() => {}); return hit.data; }
+  const mirrored = readMirror()[cat.id];
+  if (mirrored && Array.isArray(mirrored.events)) {
+    cache.set(key, { data: mirrored.events, expiresAt: Date.now() }); // expired on purpose: next call revalidates
+    refreshEvents(cat).catch(() => {});
+    return mirrored.events;
+  }
+  return refreshEvents(cat);
+}
+
+// Single-flight refresh: a cold cache plus a burst of readers opens ONE EONET query per
+// category, not one per request.
+function refreshEvents(cat) {
+  const key = `open:${cat.id}`;
+  const running = inflight.get(key);
+  if (running) return running;
+  const p = fetchEvents(cat, 0).finally(() => { inflight.delete(key); });
+  inflight.set(key, p);
+  return p;
+}
+
+async function fetchEvents(cat, attempt) {
+  const key = `open:${cat.id}`;
   try {
     const body = await fetchJson(`${EONET}/events?category=${encodeURIComponent(cat.id)}&status=open&limit=300&include=geo`);
     const events = (body && Array.isArray(body.events)) ? body.events.map(normaliseEvent) : null;
     if (!events) throw new Error('no event list');
     cacheSet(key, events, TTL_OPEN);
+    writeMirror(cat.id, { at: new Date().toISOString(), events }, readMirror());
     return events;
   } catch (err) {
-    if (hit) return hit.data;
+    const h = cacheGet(key);
+    if (h) return h.data; // stale beats an error
+    const m = readMirror()[cat.id];
+    if (m && Array.isArray(m.events)) return m.events; // yesterday's list beats a 503
+    if (attempt < 1) return fetchEvents(cat, attempt + 1); // one retry, then give up
     throw err;
   }
 }
