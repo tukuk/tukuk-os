@@ -3284,6 +3284,10 @@ for (const name of APPS) {
 app.get(['/apps', '/apps/'], (req, res) => res.redirect(301, '/'));
 // The old /store storefront was folded into the OS shell (/os) — keep old links alive instead of 404ing.
 app.get(['/store', '/store/'], (req, res) => res.redirect(301, '/os'));
+// tukuk.org/chat is the URL most people guess for the messenger, but T Chat really lives on
+// its own host (tchat.tukuk.org, see the TCHAT middleware above). Send the guess there with a
+// crawlable 301 instead of a dead 404; keep the query string so any deep link still survives.
+if (TCHAT_HOST) app.get(['/chat', '/chat/'], (req, res) => res.redirect(301, `https://${TCHAT_HOST}/`));
 
 // Language aliases so the existing links do not 404
 const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', privasi: 'privacy', dokumen: 'docs' };
