@@ -1,0 +1,26 @@
+SLUG: the-doppler-effect-how-motion-changes-everything-you-hear-and-see
+TITLE: The Doppler Effect: How Motion Changes Everything You Hear — and See
+EXCERPT: The drop in pitch of a passing ambulance siren is the same physics that finds exoplanets, measures heart blood flow, and proved the universe is expanding. One everyday sound hides four centuries of the most useful trick in science.
+TAGS: Doppler, sound, light, physics, radar, astronomy, redshift
+
+## The Siren That Falls
+
+An ambulance does not change its siren as it drives past you; you change. Sound travels as waves compressed into the air ahead of a moving source and stretched out behind it, so an approaching siren delivers its crests to your ear more frequently — a higher pitch — and a receding one delivers them less frequently — lower. The pitch drop you hear in the two seconds after the vehicle passes is not a quirk of acoustics but a direct measurement of speed: the size of the shift tells you how fast the source moved relative to you, which is exactly how a police radar gun reads traffic and how a [weather radar](https://tukuk.org/blog/how-a-weather-forecast-is-made-from-balloon-to-supercomputer) detects whether a storm's rain is heading toward your town or away from it — scanning the Doppler shift of reflected microwaves off moving droplets.
+
+The formula is friendlier than its reputation. For sound, the observed frequency shifts by the ratio of wave-speed-plus-your-motion to wave-speed-minus-the-source's-motion. Everything else in this article is consequences of that one fraction.
+
+## Christian Doppler's Bad Example, Fixed Later
+
+Doppler proposed the effect in 1842 for *light* from binary stars, and his original paper was partly wrong: he explained colour changes with the right mechanism but assumed light needed a medium like sound, and misapplied it to colours in ways the physics could not support. It took Buys Ballot's 1845 trumpet-on-a-train experiment to confirm the effect for sound, and decades more — plus Michelson and colleagues' stellar interferometry work — for the optical version to mature. The lesson in the history is instructive for anyone who has ever published a first draft: a correct core idea can spend a generation half-right before the measurements catch up to it.
+
+For light the shift has a special name because colour is what you can see: an approaching source is blueshifted, a receding one redshifted. Hubble's 1929 discovery was this, applied to galaxies: their light was redshifted, and the shift scaled with distance — the farthest objects retreating fastest, the observational seed of the expanding-universe model. The same measurement now classifies every spectrum in professional astronomy, and a careful version of it — radial-velocity monitoring, reading the Doppler wobble of a star's spectral lines as planets tug it — was responsible for the first wave of [exoplanet](https://tukuk.org/blog/a-field-guide-to-your-first-night-of-stargazing) discoveries, and still finds the giant, fast-orbiting worlds that no telescope can photograph directly. The star's wobble is often less than a metre per second — walking pace, read from a light source tens of light-years away.
+
+## From Astronomy to the Clinic
+
+Because Doppler shift is a speedometer for anything that reflects or emits waves, medicine borrowed it. The echocardiograph and the obstetric ultrasound probe you have seen at a scan send ultrasound into tissue and read the shift from moving red blood cells — the device literally pictures flow, showing the heart's valves leaking or a fetus's blood moving through its umbilical artery. Colour-flow imaging, where arteries glow red and veins blue on the screen, is not a photograph but a *velocity map* painted onto anatomy by Doppler arithmetic. It is the same engineering that measures storm winds, and the same physics as the siren, applied at frequencies so high the waves reveal cells instead of cars.
+
+And it is in your daily routine more often than you notice. Every radar cruise-control system, every speed sign that flashes your number as you approach, every air-traffic secondary surveillance radar, and the satellite constellation that makes car navigation possible all correct for Doppler shift — GPS receivers literally account for the frequency offsets of satellites moving at four kilometres per second overhead, because without relativity and Doppler corrections the system would drift by [kilometres a day](https://tukuk.org/blog/how-gps-knows-where-you-are).
+
+## The One Trick to Take From All This
+
+When something you can see or hear seems to change as it moves past you — a siren's pitch, a star's colour, a radar gun's reading, an echo from a falling rain cell — the change is not in the object; it is in the *transit*, the geometry of waves between a moving source and you. Once that idea is internalised, an enormous family of instruments becomes legible at a glance: they all answer the same question, *how fast is the distance changing*, asked of sound, of light, or of radio. It is one of the rare cases where the physics you can verify with a train and a brass trumpet turns out to be the same physics that measures the expansion of the universe.

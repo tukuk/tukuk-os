@@ -1,0 +1,20 @@
+SLUG: why-there-are-so-few-top-predators
+TITLE: Why There Are So Few Top Predators — The 10% Rule of Energy
+EXCERPT: A forest can feed ten thousand deer, a thousand wolves at most, and one bear family per valley. The reason is not hunting skill or territory — it is thermodynamics, and the same arithmetic that limits your food chain also explains why eating lower on it feeds more people.
+TAGS: ecology, food chain, energy, predators, biology, environment
+
+## The Sun Writes One Cheque a Year
+
+Every ecosystem runs on a single income: sunlight, captured by plants and fixed into chemical energy. That income is huge in total but strictly bounded per square kilometre, and it gets spent through a chain — grass, grasshopper, frog, snake, hawk. At every step, most of the energy is lost: used up by the animal's own metabolism as heat, movement and body warmth, or excreted undigested. The classic rule of thumb, formalised by Raymond Lindeman in 1942, is that roughly **a tenth of the energy passes to the next level**, with real ranges of 5–20%. This is why ecological pyramids always widen at the base: a lake's phytoplankton can support thousands of small fish, which can support hundreds of larger ones, which can support a pair of otters. The hawk at the top is not the king of the pyramid; it is its most expensive resident.
+
+## Why That Makes Predators Rare and Fragile
+
+Ten-percent arithmetic has brutal consequences. A top predator needs an enormous, productive territory simply to metabolise: a tiger's hunting range can cover dozens of square kilometres of forest because everything below it in the chain is quietly running on one-tenth transfers. Predators therefore exist in small numbers by definition — and small populations are the ones that collapse first: less genetic diversity, slower recovery from a bad year, and catastrophic exposure when any single prey species declines. Almost every "top of the food chain" extinction story — wolves from Yellowstone, sea otters from kelp forests, sharks from coastal systems — is the 10% rule expressed as politics: the species with the largest energy bill is the first one the budget cuts. The chain also runs on more than appetite: the species lists and distributions behind these dynamics are catalogued on the life pages at [tukuk.org/life](https://tukuk.org/life), and the system for naming who belongs to which branch is told in [how scientists classify life](https://tukuk.org/blog/how-scientists-classify-life-from-linnaeus-to-dna-trees).
+
+## Trophic Cascades: When the Expensive One Vanishes
+
+Remove the top predator and the pyramid reorganises — sometimes violently. Without wolves, Yellowstone's elk overgrazed willows, beavers lost their dam-building material, and the streams lost their engineers; reintroducing a few wolves in 1995 set the whole chain back in motion. Sea otters vanished from parts of the Pacific and kelp forests collapsed under urchin deserts. These cascades are ecology's proof that the rare term in the pyramid can be load-bearing: populations measured in tens can hold ecosystems measured in thousands of square kilometres together. Conservation biology now treats top predators as "umbrella species" for exactly this reason — protecting their huge energy budgets forces you to protect entire landscapes, and everything in them.
+
+## The Same Math on Your Plate
+
+The rule has a personal corollary: eating lower on the chain is the most energy-efficient way to feed people. Grain fed to cattle returns a tenth of its calories as beef; the same acreage as bread or rice supports many times the human calories — the arithmetic behind global debates about diet, land use and food security, measurable country by country on [tukuk.org/statistics](https://tukuk.org/statistics) and [tukuk.org/recipes](https://tukuk.org/recipes) food data. Thermodynamics does not choose your morality; it only sets the bill. But once you see the 10% rule — why eagles are rare, why tigers need valleys, why salmon feed the forest itself — the living world stops looking like a competition and starts looking like an economy, with the sun as its central bank and every calorie audited.
