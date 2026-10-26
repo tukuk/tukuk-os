@@ -55,6 +55,15 @@ usable "${MEILI_MASTER_KEY:-}" || fail "MEILI_MASTER_KEY empty/placeholder (chec
 
 mkdir -p "$SNAP_DIR"
 
+upload_wrangler() {
+  # Direct R2 via wrangler — bypasses the throttled workers.dev edge entirely.
+  # Only works once CLOUDFLARE_API_TOKEN has Account·R2 Storage·Read & Edit (README §9).
+  local file="$1" key="$2" ctype="${3:-application/gzip}"
+  log "trying wrangler path for $(basename "$file") -> $R2_BUCKET/$key"
+  npx --yes wrangler r2 object put "${R2_BUCKET:-tukuk-fallback}/$key" --file "$file" \
+    --content-type "$ctype" --remote >/dev/null 2>&1
+}
+
 upload_worker() {
   local file="$1" key="$2" ctype="${3:-application/gzip}"
   local size remote
@@ -66,11 +75,17 @@ upload_worker() {
     -H "Content-Type: $ctype" \
     --data-binary "@$file" \
     "$BACKUP_WORKER_URL/?key=$key" \
-    || fail "worker upload failed"
+    || { log "worker upload failed (edge 429?) — trying wrangler path"
+         upload_wrangler "$file" "$key" "$ctype" && { log "wrangler upload OK"; return 0; }
+         fail "both upload paths failed"; }
 
   remote=$(curl -sf -m 60 -H "Authorization: Bearer $BACKUP_UPLOAD_SECRET" \
-    "$BACKUP_WORKER_URL/?key=$key" -o /dev/null -w '%{size_download}')
-  [ "$remote" = "$size" ] || fail "size mismatch: local=$size remote=$remote"
+    "$BACKUP_WORKER_URL/?key=$key" -o /dev/null -w '%{size_download}') || remote=""
+  if [ "$remote" != "$size" ]; then
+    log "worker verify failed/mismatch (local=$size remote=${remote:-empty}) — trying wrangler path"
+    upload_wrangler "$file" "$key" "$ctype" && { log "wrangler upload OK"; return 0; }
+    fail "no upload path produced a verified copy: local=$size remote=${remote:-empty}"
+  fi
   log "size verified OK ($size bytes)"
 }
 

@@ -33,14 +33,14 @@ put() { # put <key> <fail> [content-type]
     # 429 (see backup-data.sh for the full diagnosis). Retry with a short backoff so a
     # transient throttle on one of these many small objects does not mark the whole
     # snapshot failed; a light 5 s/10 s pause is enough for the shared edge to free up.
-    local n=0
+    local n=0 failed=0
     until curl "${args[@]}" "$WURL/?key=$key" >/dev/null 2>&1; do
       n=$((n + 1))
-      if [[ $n -ge 3 ]]; then echo "  ! failed $key (after $n tries)"; FAILS=$((FAILS + 1)); return; fi
+      if [[ $n -ge 3 ]]; then echo "  ~ $key worker failed after $n tries — trying wrangler path"; failed=1; break; fi
       echo "  ~ $key throttled (429?) — retry $n/2"; sleep $((n * 5))
     done
-    echo "  ✓ $key"
-    return
+    if [[ $failed -eq 0 ]]; then echo "  ✓ $key"; return; fi
+    # fall through to the wrangler branch below (self-heals when token gains R2 scope)
   fi
   if [[ -n "$ct" ]]; then
     npx --yes wrangler r2 object put "$BUCKET/$key" --file "$file" --content-type "$ct" --remote >/dev/null 2>&1

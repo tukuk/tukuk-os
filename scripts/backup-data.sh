@@ -54,14 +54,22 @@ if [[ -n "$WURL" && -n "$WSEC" ]]; then
        "$WURL/?key=$KEY" >/dev/null; do
     ATTEMPTS=$((ATTEMPTS + 1))
     if [[ $ATTEMPTS -ge 4 ]]; then
-      echo "[backup] ERROR: worker post failed after $ATTEMPTS tries (edge still 429/throttled)" >&2; exit 1
+      # Workers.dev edge still throttled after the full backoff. Do NOT give up: fall
+      # through to the wrangler path below. The moment the VPS CLOUDFLARE_API_TOKEN
+      # gains Account·R2 Storage·Read & Edit (README §9), uploads self-heal with no
+      # further human action.
+      echo "[backup] worker path failed after $ATTEMPTS tries (edge 429) — trying wrangler path" >&2
+      WORKER_FAILED=1
+      break
     fi
     case $ATTEMPTS in 1) SLEEP=8 ;; 2) SLEEP=20 ;; *) SLEEP=45 ;; esac
     echo "[backup] worker POST failed (likely a 429 throttle) — retry $ATTEMPTS/3 in ${SLEEP}s" >&2
     sleep "$SLEEP"
   done
-  echo "[backup] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"
-  exit 0
+  if [[ -z "${WORKER_FAILED:-}" ]]; then
+    echo "[backup] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"
+    exit 0
+  fi
 fi
 if npx --yes wrangler r2 object put "$BUCKET/$KEY" --file "$TMP/data.tar.gz" --remote >/dev/null 2>&1; then
   echo "[backup] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [wrangler]"

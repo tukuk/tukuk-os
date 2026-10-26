@@ -41,7 +41,9 @@ if [[ -n "$WURL" && -n "$WSEC" ]]; then
     echo "[backup-content] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"
     exit 0
   fi
-  echo "[backup-content] ERROR: worker post failed" >&2; exit 1
+  # Worker edge throttled (chronic workers.dev 429) — fall through to the wrangler
+  # path instead of aborting; self-heals once the VPS token gains R2 scope (README §9).
+  echo "[backup-content] worker post failed — trying wrangler path" >&2
 fi
 if npx --yes wrangler r2 object put "$BUCKET/$KEY" --file "$TMP/content.tar.gz" --remote >/dev/null 2>&1; then
   echo "[backup-content] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [wrangler]"
