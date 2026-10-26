@@ -41,7 +41,7 @@ const SECTION_QUALITY = 0.98;
 // into `keywords` only — the English-only rule (test/section-hubs.test.js) protects
 // the prose, not the search vocabulary, and tukuk.org is read in every language.
 const HUB_ALIASES = {
-  islands: ['pulau', 'pulaupulau', 'how many islands are there', 'isla', 'isole', 'insel'],
+  islands: ['pulau', 'pulaupulau', 'pulau jepun', 'jepun', 'how many islands are there', 'number of islands in japan', 'isla', 'isole', 'insel'],
   mountains: ['gunung', 'how many mountains', 'montaña', 'berg'],
   rivers: ['sungai', 'rio', 'fleuve', 'fluss'],
   countries: ['berapa banyak negara di dunia', '¿cuántos países hay en el mundo?', 'combien de pays dans le monde'],

@@ -217,6 +217,7 @@ async function sectionHubs(logger = console) {
         `Films are browsable by ${movies.GENRES.length} genres and by decade, oldest first within each list.`,
         'No star-ratings or box-office totals are published, because those change constantly and cannot be verified offline — the pages say what a film is, not what it scored.',
         `The companion collection at /movies/tv covers ${tv.SHOWS.length} notable television series from around the world — years, creator, country, network and episode count.`,
+        `Series in the TV collection include: ${tv.SHOWS.map((s) => s.t).join(', ')}.`,
       ],
       keywords: ['movies', 'films', 'film', 'movie', 'director', 'cinema', 'what is it about', 'best known films', 'genre',
         'tv', 'tv series', 'television', 'best tv shows', 'séries', 'series de tv', 'fernsehserien'],
