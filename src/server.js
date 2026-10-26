@@ -5830,8 +5830,26 @@ function thirdPartyAdTag() {
   return `<script async src="${escapeHtml(src)}"></script>`;
 }
 // The <head> script for server-rendered pages (blog/articles): third-party OR AdSense.
+// Google Consent Mode v2 bootstrap — emitted in <head> immediately BEFORE the ad / tag
+// loaders on pageAdScript's output. It seeds the dataLayer with consent defaults (all
+// `denied`) so Google serves only non-personalised ads until the visitor chooses, and
+// restores `granted` first-hand from localStorage for returning visitors who already said
+// yes. The visible banner itself lives in /consent.js (a self-hosted deferred script, so it
+// needs no inline permission). Without a prior choice the defaults stand and the banner asks.
+function consentBootstrap() {
+  return `<script>(function(){var d=window.dataLayer=window.dataLayer||[];function g(){d.push(arguments)}window.gtag=window.gtag||g;`
+    + `var v='';try{v=localStorage.getItem('tk-adconsent')||''}catch(e){}`
+    + `g('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});`
+    + `if(v==='granted'){g('consent','update',{ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted',analytics_storage:'granted'});}`
+    + `})();</script><script src="/consent.js" defer></script>`;
+}
 function pageAdScript() {
-  return thirdPartyAdTag() || adsenseLoader();
+  const third = thirdPartyAdTag() || adsenseLoader();
+  // Consent is only needed where a third party actually sets cookies. If no ad network, no
+  // Clarity and no GTM/GA is active this page drops nothing to third parties, so it stays
+  // cookie-free and emits nothing — no banner, no consent command, page unchanged.
+  if (!third && !clarityEnabledValue() && !gtmEnabledValue()) return '';
+  return consentBootstrap() + third;
 }
 // Microsoft Clarity (usage analytics) — already disclosed in /privacy. The project ID
 // is public (it is baked into the tag URL), so a safe default fallback is fine. The Admin
@@ -6045,6 +6063,7 @@ function siteFooter() {
     <h3>Legal</h3><ul>
       <li><a href="/privacy">Privacy</a></li>
       <li><a href="/terms">Terms</a></li>
+      <li><a href="/privacy" data-tk-consent>Manage cookie preferences</a></li>
     </ul></div>
   </div>
   <div class="foot-bottom">
