@@ -27,4 +27,4 @@ A free graph router knows the road network, not tonight's crash on it. Commercia
 
 ## Try It Yourself
 
-Our own free route planner, [Maps & Navigation](/maps), runs exactly this pipeline: Nominatim for place lookup, OSRM for driving, cycling and walking routes, and the step list rendered from OSRM manoeuvre tags — no account, no key, nothing tracked. Compare a driving and a walking route between the same two pins and you can watch the graph costs change: the same edges, very different prices.
+Our own free route planner, [Maps & Navigation](https://tukuk.org/maps), runs exactly this pipeline: Nominatim for place lookup, OSRM for driving, cycling and walking routes, and the step list rendered from OSRM manoeuvre tags — no account, no key, nothing tracked. Compare a driving and a walking route between the same two pins and you can watch the graph costs change: the same edges, very different prices.

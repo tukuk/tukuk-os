@@ -1,0 +1,20 @@
+SLUG: how-ai-app-builders-turn-a-prompt-into-an-app
+TITLE: How AI App Builders Turn a Prompt Into an App — and Where They Still Need You
+EXCERPT: "Describe an app, get an app" sounds like magic and is actually plumbing: a language model writing code, a sandbox running it, and a deploy button bolted onto the end. Understanding the machinery tells you exactly what these tools do brilliantly, what they get wrong, and where your judgment still decides the outcome.
+TAGS: ai, app builder, coding, deploy, llm, development
+
+## The Three Machines Under the Magic
+
+Every modern AI app builder is the same stack of three older, honest technologies. First, a **large language model** trained on enormous amounts of public code — which means it has seen a million real projects and can imitate their structure the way a parrot-learned pianist imitates sonatas: fluently, statistically, without fully knowing why a bar works. Second, a **sandboxed development environment**: the model's output is written into actual files, installed, built and run inside an isolated container so errors can be fed back and fixed in a loop instead of dumped on you. Third, a **deploy pipeline** that takes the surviving project and pushes it to a public URL. Remove any one of the three and "prompt to app" collapses back into "prompt to pastebin." The magic is the loop between them: run, read the error, patch, run again.
+
+## What the Model Is Actually Doing
+
+When you describe an app, the model decomposes the request into a plan it has seen thousands of times before — data model, routes, components, styling — then writes code section by section, conditioned on the sections it already wrote. This is why the first draft is usually impressive and the fifth feature request sometimes breaks the whole: the model holds the project in *context*, a limited working memory, and long sessions silently lose the thread. It is also why specific, example-rich prompts beat vague ambitious ones — the model predicts best in the neighbourhood of concrete details. The pattern generalises far beyond builders: any AI system fails quietly at the edges of its memory, and succeeds loudly at the middle of its training distribution.
+
+## Where Humans Still Earn Their Place
+
+The honest assessment: AI builders ship *working demos* superbly and *maintainable products* mediocrely. Security is the classic weak spot — a generated app happily stores secrets in client code unless told not to, and dependency choices are whatever the training data used two years ago. Architecture decisions (one big file versus modules, what belongs server-side) are made by statistical habit, not by your constraints. Testing, accessibility and edge-case handling arrive only when asked for specifically. The builders that work in practice treat the AI as an extremely fast junior developer: brilliant at typing what they have seen, needing review on everything that matters. Knowing even a little code — the kind you get from [learning to program by building things](https://tukuk.org/blog/learn-programming-by-building-zero-to-hero) — multiplies what these tools can do for you, because you become the reviewer the loop is missing.
+
+## From Prompt to Public URL
+
+The last mile is where the real product work hides: version history so an edit that breaks the app can be rolled back, preview-before-publish so a half-finished idea never goes live, and one-click hosting so the output is a link other people can actually open. That end-to-end path — describe, generate, iterate, publish — is exactly what the builder at [tukuk.org/builder](https://tukuk.org/builder) wires together, and it changes who can ship: the bottleneck moves from typing speed to *taste*, because the machine handles the hundred small implementation choices while you handle the one that matters — what should exist at all. Which is the same skill the no-code era always promised and the AI era finally made practical: [launching a side-project](https://tukuk.org/blog/launch-checklist-for-a-side-project) is now a weekend of reviewing, not a season of building.

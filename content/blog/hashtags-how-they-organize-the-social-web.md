@@ -17,7 +17,7 @@ The other structural limit: a hashtag is a flat namespace. Everything under #pyt
 
 ## What Survives Everywhere
 
-Hashtags outlived their birth platform because every community tool since has needed the same cheap trick: group messages by topic, expose the group as a link, let anyone mint new ones. Tagging lives in our own [social feed](/social) too — every post parses its #hashtags the moment it is written, and that one line of code does the essential half of what paid "topic channels" do: the writer labels the thing, and the label travels with it forever. Even the humble search box is a hashtag's cousin: a query is just a tag typed by the reader instead of the writer.
+Hashtags outlived their birth platform because every community tool since has needed the same cheap trick: group messages by topic, expose the group as a link, let anyone mint new ones. Tagging lives in our own [social feed](https://tukuk.org/social) too — every post parses its #hashtags the moment it is written, and that one line of code does the essential half of what paid "topic channels" do: the writer labels the thing, and the label travels with it forever. Even the humble search box is a hashtag's cousin: a query is just a tag typed by the reader instead of the writer.
 
 ## Try It Yourself
 

@@ -19,4 +19,4 @@ Three honest caveats. First, "disappearing" almost never means *gone* — screen
 
 ## Try It Yourself
 
-Our [T Chat](/apps/chat) runs the same bargain at human scale: stories live 24 hours, then quietly expire, with viewer lists and tap-to-reply — and the [community counters](/social) publicly show how many are live right now, which is the most honest engagement metric in social design: *not views, but moments that are currently alive.* Post one thing you would never post permanently and notice how small the fear feels. That gap — between permanent-fear and temporary-freedom — is the entire psychology of the feature.
+Our [T Chat](https://tukuk.org/apps/chat) runs the same bargain at human scale: stories live 24 hours, then quietly expire, with viewer lists and tap-to-reply — and the [community counters](https://tukuk.org/social) publicly show how many are live right now, which is the most honest engagement metric in social design: *not views, but moments that are currently alive.* Post one thing you would never post permanently and notice how small the fear feels. That gap — between permanent-fear and temporary-freedom — is the entire psychology of the feature.

@@ -27,12 +27,12 @@ For the truly impatient, real-ish alternatives exist: geostationary weather sate
 
 ## Trying It Properly
 
-Open [Tukuk-OS Maps](/maps) and switch the base layer to the live view, or skip straight to [Live Earth](/maps/sky) — a full-window version with the daily true-color pass, the night-lights band, Blue Marble and street-level zoom stacked in one panel. A few exercises that make the data click:
+Open [Tukuk-OS Maps](https://tukuk.org/maps) and switch the base layer to the live view, or skip straight to [Live Earth](https://tukuk.org/maps/sky) — a full-window version with the daily true-color pass, the night-lights band, Blue Marble and street-level zoom stacked in one panel. A few exercises that make the data click:
 
 1. **Find weather, not landmarks.** At country zoom on the true-color layer, clouds are the story. Watch the Indian Ocean or the Atlantic during storm season and you are seeing the same imagery meteorologists brief governments from.
 2. **Flip to night lights and look at your border.** The line where one country's grid brightness drops to another's is one of the most quietly political images available to the public — the Korea DMZ, India–Pakistan at Diwali, the Nile seen as a single lit filament.
 3. **Search any place and fly there** on Live Earth, then toggle layers over the same spot: geography in true color, human footprint at night, maximum detail in the high-res layer. The same square of land tells three unrelated stories depending on which sensor looked at it.
 
-> 🛰️ **Try it right now →** [Live Earth — full-window satellite view](/maps/sky) · or switch the base layer on [Maps & Navigation](/maps), which now carries the same daily true-color and night-lights passes beside the street map.
+> 🛰️ **Try it right now →** [Live Earth — full-window satellite view](https://tukuk.org/maps/sky) · or switch the base layer on [Maps & Navigation](https://tukuk.org/maps), which now carries the same daily true-color and night-lights passes beside the street map.
 
-The satellites are not coming, and they are not going anywhere. The images are already on the server, already dated today, already free. The only missing part was ever the button — so press it. Two more doors in this cluster: [reading Earth at night — what city lights reveal](/blog/reading-earth-at-night-what-city-lights-reveal) and [weather satellites vs map satellites](/blog/weather-satellites-vs-map-satellites).
+The satellites are not coming, and they are not going anywhere. The images are already on the server, already dated today, already free. The only missing part was ever the button — so press it. Two more doors in this cluster: [reading Earth at night — what city lights reveal](https://tukuk.org/blog/reading-earth-at-night-what-city-lights-reveal) and [weather satellites vs map satellites](https://tukuk.org/blog/weather-satellites-vs-map-satellites).

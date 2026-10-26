@@ -24,8 +24,8 @@ No system removes the incentive to lie; good ones just make truth cheaper to pro
 
 ## What a Community Board Cannot Be
 
-A notice board is not a guarantee. Official feeds have legal liability and calibration; crowd pins have enthusiasm and fog. That is why the honest framing everywhere — including our own [Traffic board](/traffic) — is "a heads-up alongside your own judgement", never a replacement for navigation or authority alerts. And why aggregate counters beat per-reporter surveillance: knowing *how many* people saw a jam matters; knowing *who* they are does not, and demanding their identities would kill the candour that makes the whole thing work.
+A notice board is not a guarantee. Official feeds have legal liability and calibration; crowd pins have enthusiasm and fog. That is why the honest framing everywhere — including our own [Traffic board](https://tukuk.org/traffic) — is "a heads-up alongside your own judgement", never a replacement for navigation or authority alerts. And why aggregate counters beat per-reporter surveillance: knowing *how many* people saw a jam matters; knowing *who* they are does not, and demanding their identities would kill the candour that makes the whole thing work.
 
 ## Try It Yourself
 
-Open [Tukuk Traffic](/traffic), drop a report on a road you know, and watch what happens when a second stranger confirms it — or does not. Then compare with how your usual map app learned the same jam: one of those systems ran on a tap from someone with nothing to gain, which is either beautifully efficient or beautifully fragile, and mostly it is both.
+Open [Tukuk Traffic](https://tukuk.org/traffic), drop a report on a road you know, and watch what happens when a second stranger confirms it — or does not. Then compare with how your usual map app learned the same jam: one of those systems ran on a tap from someone with nothing to gain, which is either beautifully efficient or beautifully fragile, and mostly it is both.
