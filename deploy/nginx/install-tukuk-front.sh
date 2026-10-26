@@ -14,6 +14,11 @@
 #   rollback  Node back on 3000, nginx back on 8080. One command, no rebuild.
 #   status    Show where each layer is listening and whether the cache is answering.
 #
+#   reload    Re-copy the repo conf to /etc/nginx on the CURRENT ports and reload nginx,
+#             WITHOUT moving any port or touching the app. This is how a content change to
+#             tukuk-front.conf (a new error_page, a header) reaches production with no
+#             cutover blip — the verify/cut/rollback paths all stop the app, this one never does.
+#
 # Run over SSH as root:
 #   ssh tukuk@<box> "echo <pw> | sudo -S bash /opt/tukuk-os/deploy/nginx/install-tukuk-front.sh verify"
 # ==============================================================================
@@ -216,6 +221,16 @@ case "${1:-status}" in
     refused_since "2 minutes ago"
     ;;
 
+  reload)
+    echo "▶ reload — apply the repo conf on the CURRENT ports, no app restart, no cutover"
+    L=$(installed_listen); O=$(installed_origin)
+    [ "$L" != none ] || die "front proxy is not installed — nothing to reload (run verify/cut first)"
+    # place_conf seds the listen/origin lines to whatever is live now, then nginx -t gates
+    # the reload, so a bad edit can never land on the running proxy.
+    place_conf "$L" "$O"
+    step "conf reloaded in place (listen $L -> origin $O); app untouched"
+    ;;
+
   status)
     echo "nginx listens: $(installed_listen)   proxies to: $(installed_origin)"
     step "PORT in the live process: $(effective_port)   drop-in: $([ -f "$DROPIN" ] && echo present || echo absent)"
@@ -228,6 +243,6 @@ case "${1:-status}" in
     tail -6 /var/log/nginx/tukuk-front.log 2>/dev/null | sed 's/^/   /' || echo "   (no log yet)"
     ;;
 
-  *) die "usage: $0 verify|cut|rollback|status" ;;
+  *) die "usage: $0 verify|cut|rollback|reload|status" ;;
 esac
 exit 0

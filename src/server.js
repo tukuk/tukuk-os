@@ -933,11 +933,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// SEO: canonical host — a www request is 301'd to the apex. This only fires when the
-// www hostname actually arrives intact: the www.tukuk.org mirror worker rewrites Host to
-// tukuk.org before proxying (cloudflare-worker/tukuk-fallback), so browser traffic is
-// redirected at the edge. Both stay: this one answers the paths the worker never sees
-// (curl --resolve, a LAN address, a tunnel route added by hand).
+// SEO: canonical host — a www request is 301'd to the apex. tukuk.org is now WORKERLESS
+// (both hosts resolve straight to the Cloudflare Tunnel → nginx → Node, Host preserved by
+// `proxy_set_header Host $host`), so this middleware is what actually answers www.tukuk.org
+// in production — it is not a fallback any more. (A Worker route on the apex used to rewrite
+// Host before the tunnel; that same-zone fetch doubled the request count and tripped a
+// zone-wide 429 "error code: 1027", so the Worker was removed. See worker/wrangler.toml.)
 app.use((req, res, next) => {
   if (req.hostname === 'www.tukuk.org') {
     return res.redirect(301, `https://tukuk.org${req.originalUrl}`);
