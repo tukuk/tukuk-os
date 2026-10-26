@@ -4328,6 +4328,10 @@ app.get('/sitemap.xml', async (req, res) => {
   // src/recipes.js is indexed without anyone remembering to edit a second file. The dishes
   // themselves live in /sitemap-recipes.xml, which is built from what is actually served.
   staticPages.push('/recipes', ...rcp.SECTIONS.map((s) => `/recipes/${s.slug}`));
+  // The three world-reference clusters added this pass. Their detail pages live in the
+  // child sitemaps (sitemap-nutrition/movies/football.xml, declared in robots.txt); here we
+  // list the hubs so the master sitemap points crawlers at each cluster's front door.
+  staticPages.push('/nutrition', '/movies', '/football');
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -5868,6 +5872,9 @@ function siteFooter() {
       <li><a href="/learn">Learn</a></li>
       <li><a href="/study">General Knowledge</a></li>
       <li><a href="/recipes">World Recipes — Cook From a Free Cookbook</a></li>
+      <li><a href="/nutrition">Food &amp; Calories — Nutrition Reference</a></li>
+      <li><a href="/movies">Notable Films of the World — Year, Director &amp; Premise</a></li>
+      <li><a href="/football">Football — World Cup History &amp; the Laws of the Game</a></li>
       <li><a href="/air-quality">Air & Oxygen</a></li>
       <li><a href="/academy">Academy — 50 Lessons</a></li>
       <li><a href="/games">Game Arcade — Play Free</a></li>
