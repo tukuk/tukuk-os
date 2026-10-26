@@ -5756,8 +5756,8 @@ const COMMON_CSS = `
   .site-foot { margin-top:54px; border-top:1px solid var(--line); background:var(--panel); }
   .foot-cols { display:grid; grid-template-columns:1.5fr repeat(4,1fr); gap:26px; padding:38px 0 22px; }
   @media (max-width:900px){ .foot-cols { grid-template-columns:1fr 1fr; } .brand-foot { grid-column:1 / -1; } }
-  .foot-cols h4 { margin:0 0 12px; font-size:.82rem; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
-  .foot-cols h4 + h4, .foot-cols ul + h4 { margin-top:18px; }
+  .foot-cols h3 { margin:0 0 12px; font-size:.82rem; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
+  .foot-cols h3 + h3, .foot-cols ul + h3 { margin-top:18px; }
   .foot-cols ul { list-style:none; margin:0; padding:0; }
   .foot-cols li { margin:0 0 9px; }
   .foot-cols a { color:var(--text); opacity:.85; font-size:.94rem; } .foot-cols a:hover { opacity:1; color:var(--accent); text-decoration:none; }
@@ -5928,7 +5928,7 @@ function siteFooter() {
       <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
       <p>Independent articles, guides and reference on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account required.</p>
     </div>
-    <div><h4>Explore</h4><ul>
+    <div><h3>Explore</h3><ul>
       <li><a href="/">Home</a></li>
       <li><a href="/cari">Search</a></li>
       <li><a href="/blog">Blog</a></li>
@@ -5961,7 +5961,7 @@ function siteFooter() {
       <li><a href="/docs">Docs</a></li>
       <li><a href="https://build.tukuk.org">Tukuk Builder — build apps &amp; 3D games</a></li>
     </ul></div>
-    <div><h4>NASA Space</h4><ul>
+    <div><h3>NASA Space</h3><ul>
       <li><a href="/nasa">Picture of the Day</a></li>
       <li><a href="/nasa/archive">APOD Archive</a></li>
       <li><a href="/nasa/sky">Sky Tonight</a></li>
@@ -5969,7 +5969,7 @@ function siteFooter() {
       <li><a href="/nasa/asteroids">Asteroid Watch</a></li>
       <li><a href="/nasa/exoplanets">Exoplanets</a></li>
     </ul></div>
-    <div><h4>Weather</h4><ul>
+    <div><h3>Weather</h3><ul>
       <li><a href="/weather">World Weather</a></li>
       <li><a href="/weather/map">Weather map</a></li>
       <li><a href="/weather/extremes">World extremes</a></li>
@@ -5983,14 +5983,14 @@ function siteFooter() {
       <li><a href="/disasters">Live disaster watch</a></li>
       <li><a href="/holidays">World public holidays</a></li>
     </ul></div>
-    <div><h4>Site</h4><ul>
+    <div><h3>Site</h3><ul>
       <li><a href="/about">About</a></li>
       <li><a href="/contact">Contact</a></li>
       <li><a href="/download">Download</a></li>
       <li><a href="/rekomendasi">Recommended</a></li>
       <li><a href="/access">Global Access</a></li>
     </ul>
-    <h4>Legal</h4><ul>
+    <h3>Legal</h3><ul>
       <li><a href="/privacy">Privacy</a></li>
       <li><a href="/terms">Terms</a></li>
     </ul></div>
@@ -6116,6 +6116,7 @@ function renderNasaApodPage(req, apod) {
       'description': String(explanation || '').replace(/\s+/g, ' ').slice(0, 300),
       'contentUrl': /^https?:\/\//i.test(String(a.url || '')) ? String(a.url) : undefined,
       'thumbnailUrl': /^https?:\/\//i.test(img) ? img : undefined,
+      'uploadDate': dateStr,
       'datePublished': dateStr,
       'publisher': { '@type': 'Organization', 'name': 'NASA' },
       'url': selfUrl,
@@ -6129,6 +6130,9 @@ function renderNasaApodPage(req, apod) {
       'datePublished': dateStr,
       'creditText': 'NASA',
       'creator': { '@type': 'Organization', 'name': 'NASA' },
+      'copyrightNotice': 'NASA — public domain.',
+      'license': 'https://www.nasa.gov/multimedia/guidelines/index.html',
+      'acquireLicensePage': 'https://www.nasa.gov/multimedia/guidelines/index.html',
       'url': selfUrl,
     }).replace(/</g, '\\u003c');
   const explanationHtml = explanation
@@ -6361,12 +6365,13 @@ function nasaApodDatePage(req, apod, dateStr) {
     : (a.staleNote ? `<p class="meta" style="border:1px solid var(--line);border-radius:10px;padding:10px 14px">${escapeHtml(String(a.staleNote))}</p>` : '');
   const jsonLd = JSON.stringify(isVideo ? {
     '@context': 'https://schema.org', '@type': 'VideoObject', name: title, description: String(a.explanation || '').slice(0, 300),
-    contentUrl: String(a.url || ''), thumbnailUrl: /^https?:\/\//i.test(poster) ? poster : undefined, datePublished: shown,
+    contentUrl: String(a.url || ''), thumbnailUrl: /^https?:\/\//i.test(poster) ? poster : undefined, uploadDate: shown, datePublished: shown,
     publisher: { '@type': 'Organization', name: 'NASA' },
   } : {
     '@context': 'https://schema.org', '@type': 'ImageObject', name: title, description: String(a.explanation || '').slice(0, 300),
     contentUrl: String(a.hdurl || a.url || ''), datePublished: shown,
     license: 'https://www.nasa.gov/multimedia/guidelines/index.html', producer: { '@type': 'Organization', name: 'NASA' },
+    copyrightNotice: 'NASA — public domain.', acquireLicensePage: 'https://www.nasa.gov/multimedia/guidelines/index.html',
   }).replace(/</g, '\\u003c');
   const body = `<p class="back-link"><a href="/nasa">&larr; Space Complex</a> &middot; <a href="/nasa/archive">Archive</a></p>`
     + offNote
@@ -6735,6 +6740,7 @@ function nasaEarthPage(req, list) {
     '@context': 'https://schema.org', '@type': 'ImageObject', name: 'EPIC: Earth from a million miles',
     contentUrl: String(first.url), caption: String(first.caption || 'Whole-Earth disc imaged by DSCOVR EPIC'),
     creditText: 'NASA', creator: { '@type': 'Organization', name: 'NASA' }, license: 'https://www.nasa.gov/multimedia/guidelines/index.html',
+    copyrightNotice: 'NASA — public domain.', acquireLicensePage: 'https://www.nasa.gov/multimedia/guidelines/index.html',
   }).replace(/</g, '\\u003c') : undefined;
   const slides = items.map((e, i) => ({ src: String(e.url || e.thumb), cap: String(e.caption || 'Earth \u00b7 DSCOVR EPIC').slice(0, 200), date: String(e.date || '').slice(0, 10), i })).slice(0, 12);
   const payload = JSON.stringify(slides).replace(/</g, '\\u003c');
@@ -14590,6 +14596,9 @@ function benderaFlagPage(c, story, rows) {
       name: `Flag of ${c.name}`, caption: `National flag of ${c.official || c.name}`,
       creditText: 'flagcdn.com — national flags, free to download and use',
       creator: { '@type': 'Organization', name: 'flagcdn.com', url: 'https://flagcdn.com' },
+      copyrightNotice: `Public domain — the national flag of ${c.official || c.name} is an official government symbol.`,
+      license: 'https://creativecommons.org/publicdomain/mark/1.0/',
+      acquireLicensePage: 'https://flagpedia.net/',
     }).replace(/</g, '\\u003c'),
   }, benderaNav());
 }

@@ -92,7 +92,7 @@ test('sitemap-weather.xml + robots: 6 static + every DB city ×3 URLs; stats+nav
   // Tidy SEO: /weather* in the main sitemap list + site header/footer nav
   assert.ok(serverSrc.includes("const staticPages = ['', '/nasa'") && serverSrc.includes("'/weather/clouds'"), 'the main sitemap lists the /weather pages');
   assert.match(serverSrc, /link\('\/weather', 'Weather', 'cuaca'\)/, 'siteHeader has a Weather link');
-  const footerCol = serverSrc.slice(serverSrc.indexOf('<h4>Weather</h4>'), serverSrc.indexOf('<h4>Weather</h4>') + 1200);
+  const footerCol = serverSrc.slice(serverSrc.indexOf('<h3>Weather</h3>'), serverSrc.indexOf('<h3>Weather</h3>') + 1200);
   assert.ok(footerCol.includes('<li><a href="/weather/clouds">Cloud types</a></li>'), 'siteFooter has the world education page');
   assert.ok(footerCol.includes('<li><a href="/weather/wind">Beaufort wind scale</a></li>'), 'siteFooter has the wind scale page');
   // Policy: site chrome does NOT promote specific local city pages (global traffic).
