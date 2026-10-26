@@ -144,7 +144,11 @@ function render(){
   el.innerHTML = html;
 }
 function renderChips(){
-  var chips = [['all','All'],['game','Games'],['app','Apps'],['komuniti','Community'],['arked','Arcade']];
+  // Only offer filters that actually have items — a chip that always shows "nothing
+  // matches" is noise (the arcade rows were retired with the 2D template library).
+  var have = {}; DATA.forEach(function(it){ have[it.kind] = 1; have[it.src] = 1; });
+  var chips = [['all','All'],['game','Games'],['app','Apps'],['komuniti','Community'],['arked','Arcade']]
+    .filter(function(c){ return c[0] === 'all' || have[c[0]]; });
   var bar = document.getElementById('chips');
   bar.innerHTML = chips.map(function(c){return '<button class="chip'+(c[0]===FILTER?' on':'')+'" data-f="'+c[0]+'">'+c[1]+'</button>';}).join('');
 }

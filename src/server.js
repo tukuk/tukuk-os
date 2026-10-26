@@ -21621,31 +21621,17 @@ const STORE_APP_META = {
   bmi: { ic: '⚖️', title: 'BMI Check', desc: 'Body mass index with colour gauge and healthy-weight range, metric or imperial.' },
   chat: { ic: '/icons/apps/chat.svg?v=3', title: 'T Chat', desc: 'A real messenger in your browser that keeps working on weak networks (2G/3G/4G/GPRS). Install as an app on Android, iOS, Windows, Linux & Huawei, or download the native Android APK directly (beta — stable coming soon). Name + password signup, permanent Tukuk ID, public room, 1-to-1 DMs and groups, video & voice calls (WebRTC) with TukuCaller-style caller ID, fake-call prank mode (no network needed), voice messages, offline outbox (auto-resend), data-saving mode (tap-to-load media), read receipts ✓✓, photo & video sending, reply, forward, reactions, edit, pin messages, search, friends & blocking, wallpapers & sounds.' }
 };
-// Arcade = the builder's game templates; opened with ?tpl=<name> → /builder loads & plays right away.
-// genre = the /store filter label (web-games.io style).
-const STORE_ARCADE = [
-  { tpl: 'arcade', genre: 'arkad', ic: '🕹️', title: 'Mini Arcade', desc: 'Tic-Tac-Toe + Memory Match + Whack-a-Mole + Reaction Time on one page.' },
-  { tpl: 'tttpl', genre: 'teki-teki', ic: '⭕', title: 'Tic-Tac-Toe', desc: 'The classic two-player game — line up three to win.' },
-  { tpl: 'brtpl', genre: 'tindakan', ic: '🔫', title: 'Battle Royale Arena', desc: 'WASD/mouse or touch joystick — dodge the blue zone, stay alive.' },
-  { tpl: 'fpstpl', genre: 'penembakan', ic: '🎯', title: 'FPS Arena 3D', desc: 'Lightweight 3D first-person shooter, straight in the browser.' },
-  { tpl: 'runtpl', genre: 'santai', ic: '🏃', title: 'Endless Runner', desc: 'Click / tap / Space to jump — dodge obstacles as far as you can.' },
-  { tpl: 'memtpl', genre: 'teki-teki', ic: '🧠', title: 'Memory Match', desc: 'Flip cards and match every pair as fast as possible.' },
-  { tpl: 'moletpl', genre: 'refleks', ic: '🐹', title: 'Whack-a-Mole', desc: 'Just 20 of them — whack the moles as fast as you can.' },
-  { tpl: 'rpstpl', genre: 'teki-teki', ic: '✊', title: 'Rock-Paper-Scissors', desc: 'Pick your hand, go up against the CPU head-to-head.' },
-  { tpl: 'reacttpl', genre: 'refleks', ic: '⚡', title: 'Reaction Time', desc: 'Wait for green, click as fast as possible — measure your milliseconds.' },
-  { tpl: 'guesstpl', genre: 'teki-teki', ic: '🔢', title: 'Number Guess', desc: 'A number 1–100 has been picked — guess it with higher/lower hints.' },
-  { tpl: 'quiztpl', genre: 'kuiz', ic: '💡', title: 'Quick Quiz', desc: 'Multiple-choice questions with instant green/red answers.' },
-  { tpl: 'astrotpl', genre: 'penembakan', ic: '☄️', title: 'Asteroids', desc: 'Vector classic: turn, thrust, shoot — big asteroids split in two.' }
-];
+// RETIRED (Oct 2026): the 12 `arked` rows (Mini Arcade, Tic-Tac-Toe, FPS Arena, …) pointed at
+// builder templates that no longer exist — /builder is a dead redirect and every play link 404'd.
+// Real, hand-checked 3D games live on the /games hub instead; nothing here may dangle a dead URL.
 function storeBawaan() {
   return Object.entries(STORE_APP_META)
     .filter(([name]) => fs.existsSync(path.join(PUBLIC_DIR, 'apps', `${name}.html`)))
     .map(([name, m]) => ({ id: 'bv-' + name, kind: m.game ? 'game' : 'app', src: 'bawaan', genre: m.game ? m.genre : null, icon: m.ic, title: m.title, desc: m.desc, url: `/apps/${name}`, updated: 0 }));
 }
 function storeCatalog() {
-  const arked = STORE_ARCADE.map((g) => ({ id: 'ak-' + g.tpl, kind: 'game', src: 'arked', genre: g.genre, icon: g.ic, title: g.title, desc: g.desc, url: '/builder?tpl=' + g.tpl + '&play=1', updated: 0 }));
   const komuniti = listPublished(200).map((x) => ({ id: 'km-' + x.slug, kind: x.kind, src: 'komuniti', genre: x.kind === 'game' ? guessGameGenre(x.title) : null, icon: x.kind === 'game' ? '🎮' : '📱', title: truncate(x.title, 80), desc: 'Published from Tukuk Builder.', url: `/a/${x.slug}`, views: x.views, updated: x.t }));
-  const items = storeBawaan().concat(arked, komuniti);
+  const items = storeBawaan().concat(komuniti);
   // The "played" count — community items have no play history yet → fall back to "seen" so
   // the Trending section stays meaningful from the very first day.
   for (const it of items) it.plays = playsMap[it.id] || (it.src === 'komuniti' ? (it.views || 0) : 0);
@@ -21710,23 +21696,34 @@ const GAMES_CSS = '<style>.gwrap{max-width:960px;margin:0 auto;padding:14px}.ggr
   + '.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.gchip{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;font:inherit;font-size:.82rem;cursor:pointer}.gchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}'
   + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent),#7a5cff);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.92;font-size:.95rem}'
   + '.gcard.feat{border-color:var(--accent);background:linear-gradient(160deg,rgba(76,141,255,.18),var(--panel));box-shadow:0 0 0 1px var(--accent) inset}'
-  + '.gcard.feat .gg{background:var(--accent);color:#fff;border-color:var(--accent)}</style>';
+  + '.gcard.feat .gg{background:var(--accent);color:#fff;border-color:var(--accent)}'
+  + '.gttl{margin:26px 0 0;font-size:1.02rem;display:flex;align-items:baseline;gap:8px}.gttl small{color:var(--muted);font-weight:400;font-size:.78rem}'
+  + '.gcta{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:26px;color:var(--muted);font-size:.9rem;line-height:1.55}.gcta b{color:var(--text)}.gcta a{color:var(--accent);font-weight:700;text-decoration:none}</style>';
 function renderGamesIndex() {
-  // The arcade ONLY shows real 3D games (keys ending in '3d'). Flat 2D games still
-  // exist in the REGISTRY for the builder (/api/builder/build → /a/<slug>) & the
-  // direct /games/<key> links — they are just not listed on the hub so the arcade stays premium.
+  // The hub lists only hand-checked 3D games (template keys ending in '3d') plus the two
+  // Tukuk Strike launches. The flat 2D library and the first nine 3D templates were
+  // retired after quality review — direct /games/<key> links and the builder API still
+  // resolve for whatever remains registered, but nothing unreviewed clutters the grid.
   const games = templates.list().filter((t) => t.kind === 'game' && /3d$/i.test(t.key));
   const genres = Array.from(new Set(games.map((g) => g.genre).filter(Boolean)));
-  const chips = ['all'].concat(genres).map((g) => `<button class="gchip${g === 'all' ? ' on' : ''}" data-f="${escapeHtml(g)}" type="button">${escapeHtml(g === 'all' ? 'All' : (GENRE_UI[g] || g))}</button>`).join('');
-  const cards = '<a class="gcard feat" href="/games/tukuk-strike" data-genre="penembakan"><span class="gic">🎯</span><span class="gt">Tukuk Strike</span><span class="gg">3D Shooter</span></a>'
-    + '<a class="gcard feat" href="/games/tukuk-strike-godot" data-genre="penembakan"><span class="gic">🛰️</span><span class="gt">Tukuk Strike HD</span><span class="gg">Godot 3D · New tab</span></a>'
-    + games.map((g) => `<a class="gcard" href="/games/${encodeURIComponent(g.key)}" data-genre="${escapeHtml(g.genre || 'lain')}"><span class="gic">${g.ic}</span><span class="gt">${escapeHtml(g.title)}</span><span class="gg">${escapeHtml(GENRE_UI[g.genre] || 'Arcade')}</span></a>`).join('');
+  const total = games.length + 2;
+  // A lone "All" chip says nothing — only offer genre filters once the catalog has depth.
+  const chips = genres.length > 1
+    ? `<div class="gchips">${['all'].concat(genres).map((g) => `<button class="gchip${g === 'all' ? ' on' : ''}" data-f="${escapeHtml(g)}" type="button">${escapeHtml(g === 'all' ? 'All' : (GENRE_UI[g] || g))}</button>`).join('')}</div>`
+    : '';
+  const feat = '<a class="gcard feat" href="/games/tukuk-strike" data-genre="penembakan"><span class="gic">🎯</span><span class="gt">Tukuk Strike</span><span class="gg">3D Shooter</span></a>'
+    + '<a class="gcard feat" href="/games/tukuk-strike-godot" data-genre="penembakan"><span class="gic">🛰️</span><span class="gt">Tukuk Strike HD</span><span class="gg">Godot 3D · New tab</span></a>';
+  const rest = games.length
+    ? `<h2 class="gttl">More 3D games <small>${games.length}</small></h2><div class="ggrid">${games.map((g) => `<a class="gcard" href="/games/${encodeURIComponent(g.key)}" data-genre="${escapeHtml(g.genre || 'lain')}"><span class="gic">${g.ic}</span><span class="gt">${escapeHtml(g.title)}</span><span class="gg">${escapeHtml(GENRE_UI[g.genre] || 'Arcade')}</span></a>`).join('')}</div>`
+    : '';
+  // With an empty catalog the page must not look broken — say plainly what the bar is.
+  const cta = games.length ? '' : '<div class="gcta"><b>Quality over quantity.</b> Every game here is hand-checked before it lands, and the first template library did not clear that bar. Want a game right now? <a href="https://build.tukuk.org/" target="_blank" rel="noopener">Build one from a single prompt →</a></div>';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Free HTML5 Games Arcade — Play Instantly — Tukuk-OS</title>
-<meta name="description" content="Play real 3D browser games instantly — no download, no sign-up, no install. WebGL racing, penalty shootout, first-person shooter, bowling, golf and more, all running lightweight in your browser.">
+<meta name="description" content="Play real 3D browser games instantly — no download, no sign-up, no install. A 3D third-person shooter and Godot-built HD shooter running lightweight in your browser, plus more hand-checked 3D titles.">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://tukuk.org/games">
 <link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -21735,12 +21732,14 @@ function renderGamesIndex() {
 </head>
 <body>
 ${siteHeader('')}
-<div class="gwrap"><section class="ghero"><h1>🎮 Game Arcade</h1><p>${games.length ? games.length + ' free games' : 'Free games'} — click to play instantly. Tukuk Strike, our own 3D third-person shooter, runs right here: no downloads, no accounts, works on a weak connection.</p></section>
-<div class="gchips">${chips}</div>
-<main><div class="ggrid" id="ggrid">${cards}</div></main>
+<div class="gwrap"><section class="ghero"><h1>🎮 Game Arcade</h1><p>${total} free 3D games — click to play instantly. No downloads, no accounts, no install. Tukuk Strike, our own third-person shooter, runs right here even on a weak connection.</p></section>
+${chips}
+<h2 class="gttl">★ Flagship <small>play right here</small></h2>
+<main><div class="ggrid" id="ggrid" style="margin-top:8px">${feat}</div>${rest}</main>
+${cta}
 </div>
 ${siteFooter()}
-<script>(function(){var bs=document.querySelectorAll('.gchip'),cs=document.querySelectorAll('.gcard');function f(v){cs.forEach(function(c){c.style.display=(v==='all'||c.getAttribute('data-genre')===v)?'':'none';});bs.forEach(function(b){b.classList.toggle('on',b.getAttribute('data-f')===v);});}bs.forEach(function(b){b.addEventListener('click',function(){f(b.getAttribute('data-f'));});});})();</' + 'script>
+<script>(function(){var bs=document.querySelectorAll('.gchip'),cs=document.querySelectorAll('.ggrid .gcard:not(.feat)');function f(v){cs.forEach(function(c){c.style.display=(v==='all'||c.getAttribute('data-genre')===v)?'':'none';});bs.forEach(function(b){b.classList.toggle('on',b.getAttribute('data-f')===v);});}bs.forEach(function(b){b.addEventListener('click',function(){f(b.getAttribute('data-f'));});});})();</' + 'script>
 </body>
 </html>`;
 }
