@@ -88,6 +88,7 @@ const bc = require('./bencana');
 const els = require('./elements');
 const sky = require('./deepsky');
 const pv = require('./proverbs');
+const nutrition = require('./nutrition');
 const rek = require('./rekod');
 const sj = require('./sejarah');
 const kt = require('./kota');
@@ -1583,6 +1584,21 @@ app.get('/proverbs/:slug', (req, res) => {
   const p = pv.findProverb(req.params.slug);
   if (!p) return res.status(404).type('html').send(pepatahNotFound(req.params.slug));
   res.status(200).type('html').send(pepatahProverbPage(p));
+});
+
+// ── NUTRITION COMPLEX ROUTES (/nutrition*) — Food & Calories reference, STATIC ──
+// Embedded data → can never 503 and never calls an external API. The category route
+// (/nutrition/category/:c) has 3 segments so it cannot collide with /nutrition/:slug (2).
+app.get('/nutrition', (req, res) => res.status(200).type('html').send(nutritionHubPage()));
+app.get('/nutrition/category/:c', (req, res) => {
+  const c = nutrition.findCategory(req.params.c);
+  if (!c) return res.status(404).type('html').send(nutritionNotFound(req.params.c));
+  res.status(200).type('html').send(nutritionCategoryPage(c));
+});
+app.get('/nutrition/:slug', (req, res) => {
+  const f = nutrition.findFood(req.params.slug);
+  if (!f) return res.status(404).type('html').send(nutritionNotFound(req.params.slug));
+  res.status(200).type('html').send(nutritionFoodPage(f));
 });
 
 // ── WORLD EXTREMES ROUTES (/records*) — Superlatives of the Earth, STATIC ────────
@@ -4512,6 +4528,19 @@ app.get('/sitemap-proverbs.xml', (req, res) => {
   const urls = [one('/proverbs', '0.9')]
     .concat(pv.COUNTRIES.map((c) => one(`/proverbs/country/${c.slug}`, '0.7')))
     .concat(pv.PROVERBS.map((p) => one(`/proverbs/${p.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP NUTRITION — the hub + every food group + every food (static list) ──
+app.get('/sitemap-nutrition.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/nutrition', '0.9')]
+    .concat(nutrition.CATEGORIES.map((c) => one(`/nutrition/category/${c.slug}`, '0.7')))
+    .concat(nutrition.FOODS.map((f) => one(`/nutrition/${f.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -10267,6 +10296,139 @@ function rekodNotFound(q) {
     css: REC_CSS,
     body: `<p>We could not match that to one of our world records. Open <a href="/records">the full World Extremes collection</a> and browse by category.</p>`,
   }, rekodNav());
+}
+
+// ── /nutrition — Food & Calories reference (STATIC embedded data) ──────────────
+const NUT_CSS = `.nut-lead{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin:18px 0}
+.nut-kcal{text-align:center;border:1px solid var(--line);border-radius:12px;padding:14px 22px;background:var(--panel,#171a21)}
+.nut-kcal .big{font-size:2.1rem;font-weight:800;color:var(--accent,#4c8dff);line-height:1}
+.nut-kcal .unit{font-size:.8rem;color:var(--muted,#9aa3b2)}
+.nut-bar{display:flex;height:16px;border-radius:8px;overflow:hidden;margin:10px 0;border:1px solid var(--line)}
+.nut-bar span{display:block;height:100%}
+.nut-bar .b-pro{background:#4c8dff}.nut-bar .b-carb{background:#f59e0b}.nut-bar .b-fat{background:#e11d48}
+.nut-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted,#9aa3b2);margin:4px 0 16px}
+.nut-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.nut-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.nut-tile{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:9px;padding:11px 13px;background:var(--panel,#171a21);text-decoration:none;color:inherit}
+.nut-tile .nm{font-weight:600}
+.nut-tile .kc{font-size:.82rem;color:var(--muted,#9aa3b2);white-space:nowrap}
+@media(max-width:820px){.nut-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.nut-grid{grid-template-columns:1fr}.nut-lead{gap:12px}}`;
+const NUT_CAT_EMOJI = {
+  'Fruits': '🍎', 'Vegetables': '🥦', 'Grains & Bread': '🍞', 'Protein': '🍗',
+  'Dairy': '🥛', 'Nuts & Seeds': '🥜', 'Fats & Oils': '🫒', 'Snacks & Sweets': '🍫', 'Drinks': '☕',
+};
+
+function nutCard(f) {
+  return `<a class="nut-tile" href="/nutrition/${f.slug}"><span class="nm">${escapeHtml(f.name)}</span><span class="kc">${f.kcal} kcal</span></a>`;
+}
+
+// Energy contributed by each macronutrient, drawn as a single stacked bar.
+function nutBar(f) {
+  const m = nutrition.macroPercents(f);
+  return `<div class="nut-bar" role="img" aria-label="Energy split: ${m.protein}% protein, ${m.carbs}% carbohydrate, ${m.fat}% fat">`
+    + `<span class="b-pro" style="width:${m.protein}%"></span>`
+    + `<span class="b-carb" style="width:${m.carbs}%"></span>`
+    + `<span class="b-fat" style="width:${m.fat}%"></span></div>`
+    + `<p class="nut-legend"><span><i style="background:#4c8dff"></i>Protein ${m.protein}%</span>`
+    + `<span><i style="background:#f59e0b"></i>Carbohydrate ${m.carbs}%</span>`
+    + `<span><i style="background:#e11d48"></i>Fat ${m.fat}%</span></p>`;
+}
+
+function nutritionNav() {
+  return worldNav('Food & Calories — tukuk.org/nutrition', [{
+    href: '/nutrition', icon: '🥗', name: 'Every food, one page',
+    blurb: `Calories and macronutrients for ${nutrition.FOODS.length} everyday foods from around the world, per 100 g and per typical serving — no login, no app.`,
+  }].concat(nutrition.CATEGORIES.map((c) => ({
+    href: `/nutrition/category/${c.slug}`, icon: NUT_CAT_EMOJI[c.name] || '🍽️', name: c.name,
+    blurb: `${c.items.length} foods in the ${c.name.toLowerCase()} group, each with calories, protein, carbohydrate, sugar, fat and fibre.`,
+  }))));
+}
+
+function nutritionHubPage() {
+  const toc = nutrition.CATEGORIES.map((c) => `<a href="/nutrition/category/${c.slug}">${NUT_CAT_EMOJI[c.name] || '🍽️'} ${escapeHtml(c.name)} (${c.items.length})</a>`).join(' · ');
+  const sections = nutrition.CATEGORIES.map((c) => `<h2 class="section-title" id="${c.slug}">${NUT_CAT_EMOJI[c.name] || '🍽️'} ${escapeHtml(c.name)} <span class="meta">(${c.items.length} foods)</span></h2><div class="nut-grid">${c.items.map(nutCard).join('')}</div>`).join('');
+  const body = `<p>Food is the thing almost everyone on the planet searches for — what is in it, how many <b>calories</b>, how much <b>protein</b>, <b>carbohydrate</b>, <b>sugar</b>, <b>fat</b> and <b>fibre</b>. This reference collects the everyday building blocks of diets across cultures and shows the numbers two ways: <b>per 100&nbsp;g</b> for comparing foods, and <b>per typical serving</b> for the portion you actually put on the plate. Open any food for its full profile and the share of energy that comes from each macronutrient.</p>
+  <h2 class="section-title">Browse by group</h2><p>${toc}</p>
+  <p class="meta">Figures are approximate reference values per 100&nbsp;g for the plain/raw form of each food, derived from public-domain national food-composition tables. Real values vary with variety, ripeness, cut and how the food is cooked. This is general nutritional data, not medical or dietary advice.</p>
+  ${sections}`;
+  return worldDoc({
+    title: `Food & Calories — Nutrition of ${nutrition.FOODS.length} Everyday Foods | Tukuk-OS`,
+    desc: `Calories, protein, carbohydrate, sugar, fat and fibre for ${nutrition.FOODS.length} common foods from around the world, shown per 100 g and per typical serving.`,
+    selfUrl: 'https://tukuk.org/nutrition',
+    heroTitle: '🥗 Food & Calories', heroSub: `${nutrition.FOODS.length} everyday foods · per 100 g & per serving`,
+    css: NUT_CSS, body,
+  }, nutritionNav());
+}
+
+function nutritionCategoryPage(c) {
+  const siblings = nutrition.CATEGORIES.filter((x) => x.slug !== c.slug);
+  const otherLinks = `<h2 class="section-title">More food groups</h2><p>${siblings.map((x) => `<a href="/nutrition/category/${x.slug}">${NUT_CAT_EMOJI[x.name] || '🍽️'} ${escapeHtml(x.name)}</a>`).join(' · ')}.</p>`;
+  const body = `<p class="back-link"><a href="/nutrition">&larr; All foods</a></p>
+  <p><b>${escapeHtml(c.name)}</b> covers ${c.items.length} foods in this collection. Each tile links to a full nutrition profile with calories, protein, carbohydrate, sugar, fat and fibre — per 100&nbsp;g and per a typical serving.</p>
+  <div class="nut-grid">${c.items.map(nutCard).join('')}</div>
+  ${otherLinks}
+  <p class="meta">Approximate reference values per 100&nbsp;g for the plain/raw form; they vary with variety and cooking. General nutritional data, not medical advice.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${c.name} — nutrition`, description: `Nutrition for ${c.items.length} ${c.name.toLowerCase()} foods.`, url: `https://tukuk.org/nutrition/category/${c.slug}`,
+    mainEntity: { '@type': 'ItemList', itemListElement: c.items.map((f, i) => ({ '@type': 'ListItem', position: i + 1, name: f.name, url: `https://tukuk.org/nutrition/${f.slug}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${c.name} — Calories & Nutrition | Tukuk-OS`,
+    desc: `Calories, protein, carbohydrate, sugar, fat and fibre for ${c.items.length} common ${c.name.toLowerCase()} foods, per 100 g and per serving.`,
+    selfUrl: `https://tukuk.org/nutrition/category/${c.slug}`,
+    heroTitle: `${NUT_CAT_EMOJI[c.name] || '🍽️'} ${escapeHtml(c.name)}`, heroSub: `${c.items.length} foods · calories & macronutrients`,
+    ld, css: NUT_CSS, body,
+  }, nutritionNav());
+}
+
+function nutritionFoodPage(f) {
+  const sv = nutrition.perServing(f);
+  const cat = nutrition.findCategory(nutrition.slugify(f.cat));
+  const others = cat ? cat.items.filter((x) => x.slug !== f.slug) : [];
+  const g = (v) => `${v}`;
+  const perHundred = `<table class="world-table"><thead><tr><th>Nutrient</th><th>Per 100 g</th><th>Per serving (${escapeHtml(f.serveLabel)}, ${f.serve} g)</th></tr></thead><tbody>`
+    + `  <tr><td>Energy</td><td>${f.kcal} kcal</td><td>${sv.kcal} kcal</td></tr>`
+    + `  <tr><td>Protein</td><td>${g(f.protein)} g</td><td>${g(sv.protein)} g</td></tr>`
+    + `  <tr><td>Carbohydrate</td><td>${g(f.carbs)} g</td><td>${g(sv.carbs)} g</td></tr>`
+    + `  <tr><td>&nbsp;&nbsp;of which sugars</td><td>${g(f.sugar)} g</td><td>${g(sv.sugar)} g</td></tr>`
+    + `  <tr><td>Fat</td><td>${g(f.fat)} g</td><td>${g(sv.fat)} g</td></tr>`
+    + `  <tr><td>Fibre</td><td>${g(f.fiber)} g</td><td>${g(sv.fiber)} g</td></tr>`
+    + `</tbody></table>`;
+  const moreBlock = others.length ? `<h2 class="section-title">More in ${escapeHtml(f.cat)}</h2><div class="nut-grid">${others.map(nutCard).join('')}</div>` : '';
+  const body = `<p class="back-link"><a href="/nutrition">&larr; All foods</a> · <a href="/nutrition/category/${nutrition.slugify(f.cat)}">${escapeHtml(f.cat)}</a></p>
+  <div class="nut-lead"><div class="nut-kcal"><div class="big">${f.kcal}</div><div class="unit">kcal / 100 g</div></div>
+  <div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(f.name)}</h2>${nutBar(f)}<p class="meta">A typical serving — ${escapeHtml(f.serveLabel)} (${f.serve} g) — gives about <b>${sv.kcal} kcal</b>.</p></div></div>
+  <h2 class="section-title">Nutrition per 100 g and per serving</h2>${perHundred}
+  <p>These are the macronutrients most people track when planning meals. For a quick body-weight estimate, see our <a href="/alat/bmi">BMI calculator</a>, and for cooking ideas browse the <a href="/recipes">world recipe collection</a>.</p>
+  ${moreBlock}
+  <p class="meta">Approximate reference value per 100&nbsp;g for the plain/raw form of ${escapeHtml(f.name.toLowerCase())}, derived from public-domain food-composition tables. Real values vary with variety, ripeness, cut and cooking method. General nutritional data, not medical or dietary advice.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'ItemPage', name: `${f.name} — nutrition`, url: `https://tukuk.org/nutrition/${f.slug}`, about: { '@type': 'NutritionInformation', calorie: `${f.kcal} kcal`, proteinContent: `${f.protein} g`, fatContent: `${f.fat} g`, carbohydrateContent: `${f.carbs} g`, sugarContent: `${f.sugar} g`, fiberContent: `${f.fiber} g` } },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Food & Calories', item: 'https://tukuk.org/nutrition' },
+      { '@type': 'ListItem', position: 2, name: f.cat, item: `https://tukuk.org/nutrition/category/${nutrition.slugify(f.cat)}` },
+      { '@type': 'ListItem', position: 3, name: f.name, item: `https://tukuk.org/nutrition/${f.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${f.name} — Calories & Nutrition (per 100 g & serving) | Tukuk-OS`,
+    desc: `${f.name}: ${f.kcal} kcal per 100 g, with protein, carbohydrate, sugar, fat and fibre shown per 100 g and per a typical serving (${f.serveLabel}).`,
+    selfUrl: `https://tukuk.org/nutrition/${f.slug}`,
+    heroTitle: `${NUT_CAT_EMOJI[f.cat] || '🍽️'} ${escapeHtml(f.name)}`, heroSub: `${f.kcal} kcal / 100 g · ${escapeHtml(f.cat)}`,
+    ld, css: NUT_CSS, body,
+  }, nutritionNav());
+}
+
+function nutritionNotFound(q) {
+  return worldDoc({
+    title: 'Food not found | Food & Calories — Tukuk-OS',
+    desc: 'That food was not recognised — browse the full food and calories reference instead.',
+    selfUrl: 'https://tukuk.org/nutrition', robots: 'noindex,follow',
+    heroTitle: 'Food not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: NUT_CSS,
+    body: `<p>We could not match that to one of our foods. Open <a href="/nutrition">the full Food &amp; Calories reference</a> and browse by group.</p>`,
+  }, nutritionNav());
 }
 
 // ── /traffic — Tukuk Traffic (Waze-style community road reports) ───────────────
