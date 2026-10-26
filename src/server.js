@@ -6008,16 +6008,16 @@ function renderBlogListPage(req, asHome) {
   const posts = store.getAllPosts(100);
   const selfUrl = asHome ? 'https://tukuk.org/' : 'https://tukuk.org/blog';
   const titleText = asHome
-    ? 'Tukuk-OS \u2014 Articles, Guides & Tech Knowledge'
-    : 'Blog & Tech Knowledge Base \u2014 Tukuk-OS';
+    ? 'Tukuk-OS \u2014 Free Tools, Maps, Weather & How-To Guides'
+    : 'Blog & Knowledge Base \u2014 Science, Geography, Health & Tools';
   const pageDesc = asHome
-    ? 'In-depth articles, how-to guides and analysis on technology, privacy, Android, servers and the open web.'
-    : 'Articles, tutorials and analysis on search engine technology, data privacy and artificial intelligence from Tukuk-OS.';
+    ? 'Free online tools, world maps, live weather, earthquake and space data, plus in-depth how-to guides on geography, health, money and everyday maths \u2014 no account, no cost.'
+    : 'In-depth, free-to-read guides on science, geography, health, money, technology and everyday tools from the Tukuk-OS knowledge base.';
   const jsonLdBlog = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Blog",
     "@id": "https://tukuk.org/blog#blog",
-    "name": "Blog & Tech Knowledge Base \u2014 Tukuk-OS",
+    "name": "Tukuk-OS Blog & Knowledge Base",
     "description": pageDesc,
     "url": selfUrl,
     "inLanguage": "en",
@@ -6063,8 +6063,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 ${siteHeader(asHome ? 'home' : 'blog')}
 <div class="wrap">
   ${asHome
-    ? `<section class="hero"><h1>Tukuk-OS &mdash; Knowledge &amp; How-To Library</h1><p>Original, in-depth articles and guides on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account needed.</p><div class="cta"><a class="btn primary" href="/blog">Browse all articles</a><a class="btn ghost" href="/nasa">Today\u2019s NASA picture</a><a class="btn ghost" href="https://build.tukuk.org" rel="noopener">Build an app</a></div></section>`
-    : `<header><h1>Blog &amp; Knowledge Archive</h1><p class="tagline">In-depth articles on search engine technology, cybersecurity, semantic AI and web privacy.</p></header>`}
+    ? `<section class="hero"><h1>Tukuk-OS &mdash; Free Tools &amp; Knowledge Library</h1><p>Original how-to guides and free tools for the whole world \u2014 maps, weather, calculators, geography, astronomy, food and everyday maths. Free to read, no account needed.</p><div class="cta"><a class="btn primary" href="/blog">Browse all articles</a><a class="btn ghost" href="/nasa">Today\u2019s NASA picture</a><a class="btn ghost" href="https://build.tukuk.org" rel="noopener">Build an app</a></div></section>`
+    : `<header><h1>Blog &amp; Knowledge Archive</h1><p class="tagline">In-depth, free-to-read guides on science, geography, health, money, technology and everyday tools.</p></header>`}
   <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}${asHome ? '<h2 class="section-title">Latest articles</h2><div class="feed">' : ''}`;
 
   for (const post of posts) {
