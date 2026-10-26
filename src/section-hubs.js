@@ -20,6 +20,9 @@ const rcp = require('./recipes');
 const nutrition = require('./nutrition');
 const movies = require('./movies');
 const football = require('./football');
+const cricket = require('./cricket');
+const olympics = require('./olympics');
+const tv = require('./tv');
 
 /**
  * The front doors by path. One list, used twice: every document below is built from one of
@@ -28,7 +31,7 @@ const football = require('./football');
 const HUB_PATHS = [
   '/countries', '/weather', '/earthquakes', '/holidays', '/statistics',
   '/disasters', '/flags', '/maps', '/air-quality', '/academy', '/books', '/recipes',
-  '/nutrition', '/movies', '/football'
+  '/nutrition', '/movies', '/football', '/cricket', '/olympics'
 ];
 
 /**
@@ -71,7 +74,10 @@ async function sectionHubs(logger = console) {
         'Every country page lists its capital, population, GDP, flag and land borders.',
         `Countries are grouped by region: ${regions}.`,
       ],
-      keywords: ['countries', 'country', 'capital', 'population', 'gdp', 'flag', 'borders', 'region'],
+      keywords: ['countries', 'country', 'capital', 'population', 'gdp', 'flag', 'borders', 'region',
+        // The same question in the world's other languages — keywords only, the prose stays English.
+        'berapa banyak negara di dunia', '¿cuántos países hay en el mundo?', 'combien de pays dans le monde',
+        'wie viele Länder gibt es', 'quantos países existem', 'कितने देश हैं', 'كم عدد دول العالم'],
     },
     {
       url: '/weather',
@@ -199,7 +205,8 @@ async function sectionHubs(logger = console) {
         `Foods are grouped into ${nutrition.CATEGORIES.length} categories: ${nutrition.CAT_ORDER.join(', ')}.`,
         'Each food page also shows the energy split between protein, carbohydrate and fat, so a diet can be balanced without a scale.',
       ],
-      keywords: ['nutrition', 'calories', 'food', 'protein', 'carbohydrate', 'sugar', 'fat', 'fibre', 'diet', 'serving size'],
+      keywords: ['nutrition', 'calories', 'food', 'protein', 'carbohydrate', 'sugar', 'fat', 'fibre', 'diet', 'serving size',
+        'kalori', 'berapa kalori', 'combien de calories', 'cuántas calorías', 'wieviele kalorien', 'quantas calorias'],
     },
     {
       url: '/movies',
@@ -209,8 +216,10 @@ async function sectionHubs(logger = console) {
         `What is The Godfather about? These pages answer with the year, the director, the country and a plain-English premise for each of ${movies.FILMS.length} widely-seen films, from Japan and France to South Korea, Brazil and the United States.`,
         `Films are browsable by ${movies.GENRES.length} genres and by decade, oldest first within each list.`,
         'No star-ratings or box-office totals are published, because those change constantly and cannot be verified offline — the pages say what a film is, not what it scored.',
+        `The companion collection at /movies/tv covers ${tv.SHOWS.length} notable television series from around the world — years, creator, country, network and episode count.`,
       ],
-      keywords: ['movies', 'films', 'film', 'movie', 'director', 'cinema', 'what is it about', 'best known films', 'genre'],
+      keywords: ['movies', 'films', 'film', 'movie', 'director', 'cinema', 'what is it about', 'best known films', 'genre',
+        'tv', 'tv series', 'television', 'best tv shows', 'séries', 'series de tv', 'fernsehserien'],
     },
     {
       url: '/football',
@@ -221,7 +230,32 @@ async function sectionHubs(logger = console) {
         football.CHAMPIONS.length ? `Which country has won the most World Cups? ${football.CHAMPIONS[0].name}, with ${football.CHAMPIONS[0].titles} titles (${football.CHAMPIONS[0].years.join(', ')}).` : '',
         `How is football played? The ${football.LAWS.length} Laws of the Game — pitch, players, offside, fouls, free kicks and the penalty kick — are each explained in a short plain-English summary.`,
       ],
-      keywords: ['football', 'soccer', 'world cup', 'fifa', 'laws of the game', 'offside', 'penalty', 'rules', 'champion'],
+      keywords: ['football', 'soccer', 'world cup', 'fifa', 'laws of the game', 'offside', 'penalty', 'rules', 'champion',
+        'fußball', 'futbol', 'futebol', 'calcio', 'football world cup winners'],
+    },
+    {
+      url: '/cricket',
+      title: 'Cricket — World Cup History & How the Game Is Played',
+      description: `Every men's ICC Cricket World Cup final since 1975 and every T20 World Cup champion since 2007 — host, winner and runner-up — plus how cricket is played, in plain English.`,
+      lines: [
+        `Who won the Cricket World Cup? This roll of honour lists all ${cricket.CUPS.length} fifty-over finals since 1975 and all ${cricket.T20S.length} T20 World Cups since 2007, with the host nation, the champion and the runner-up.`,
+        cricket.CHAMPIONS_ODI.length ? `Which country has the most Cricket World Cup titles? ${cricket.CHAMPIONS_ODI[0].name}, with ${cricket.CHAMPIONS_ODI[0].titles} (${cricket.CHAMPIONS_ODI[0].years.join(', ')}).` : '',
+        `How do you play cricket? ${cricket.RULES.length} plain-English notes cover the three formats — Test, one-day and T20 — the 22-yard pitch, the six-ball over, the ways a batter is out and how rain sets targets.`,
+      ],
+      keywords: ['cricket', 't20', 'odi', 'world cup cricket', 'kriket', 'cricket rules', 'how to play cricket', 'ways to be out', 'pitch', 'icc',
+        'cricket world cup winners', 'cricket how many overs'],
+    },
+    {
+      url: '/olympics',
+      title: 'Olympics — Every Host City of the Modern Games Since 1896',
+      description: `Every scheduled Summer and Winter Olympic Games since Athens 1896 — host city, host country and what each edition is remembered for, including the editions the world wars cancelled.`,
+      lines: [
+        `Where were the Olympics held? This record lists all ${olympics.SUMMER.length} scheduled Summer editions since 1896 and all ${olympics.WINTER.length} Winter editions since 1924, with host city and host country.`,
+        'Which country tops the all-time Summer medal table? The United States. And the Winter table? Norway. Swimmer Michael Phelps holds more Olympic medals than any other athlete in history.',
+        'Five editions were cancelled by the world wars — Summer 1916, 1940 and 1944, Winter 1940 and 1944 — and the Olympic numbering carried on without them.',
+      ],
+      keywords: ['olympics', 'olympic games', 'host city', 'summer olympics', 'winter olympics', 'medal table', 'cancelled games',
+        'olimpiade', 'jeux olympiques', 'olimpiadas', 'olympics history'],
     },
   ];
 }

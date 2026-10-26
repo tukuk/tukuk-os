@@ -91,6 +91,9 @@ const pv = require('./proverbs');
 const nutrition = require('./nutrition');
 const movies = require('./movies');
 const football = require('./football');
+const tv = require('./tv');
+const cricket = require('./cricket');
+const olympics = require('./olympics');
 const rek = require('./rekod');
 const sj = require('./sejarah');
 const kt = require('./kota');
@@ -1612,6 +1615,19 @@ app.get('/movies/genre/:g', (req, res) => {
   if (!gr) return res.status(404).type('html').send(moviesNotFound(req.params.g));
   res.status(200).type('html').send(moviesGenrePage(gr));
 });
+// TV routes register BEFORE /movies/:slug — /movies/tv (2 segments) would otherwise
+// be swallowed as a film named "tv". The genre form (4 segments) cannot collide.
+app.get('/movies/tv', (req, res) => res.status(200).type('html').send(tvHubPage()));
+app.get('/movies/tv/genre/:g', (req, res) => {
+  const gr = tv.findTvGenre(req.params.g);
+  if (!gr) return res.status(404).type('html').send(tvNotFound(req.params.g));
+  res.status(200).type('html').send(tvGenrePage(gr));
+});
+app.get('/movies/tv/:slug', (req, res) => {
+  const s = tv.findShow(req.params.slug);
+  if (!s) return res.status(404).type('html').send(tvNotFound(req.params.slug));
+  res.status(200).type('html').send(tvShowPage(s));
+});
 app.get('/movies/:slug', (req, res) => {
   const f = movies.findFilm(req.params.slug);
   if (!f) return res.status(404).type('html').send(moviesNotFound(req.params.slug));
@@ -1630,6 +1646,37 @@ app.get('/football/world-cup/:year', (req, res) => {
   res.status(200).type('html').send(footballTournamentPage(c));
 });
 app.get('/football/rules', (req, res) => res.status(200).type('html').send(footballRulesPage()));
+
+// ── CRICKET COMPLEX ROUTES (/cricket*) — World Cups & how the game is played ────
+// Embedded data → can never 503 and never calls an external API. The final route
+// (/cricket/world-cup/:year) has 3 segments and every other path is a literal.
+app.get('/cricket', (req, res) => res.status(200).type('html').send(cricketHubPage()));
+app.get('/cricket/world-cup', (req, res) => res.status(200).type('html').send(cricketWorldCupPage()));
+app.get('/cricket/world-cup/:year', (req, res) => {
+  const c = cricket.findCup(req.params.year);
+  if (!c) return res.status(404).type('html').send(cricketNotFound(req.params.year));
+  res.status(200).type('html').send(cricketFinalPage(c));
+});
+app.get('/cricket/t20-world-cup', (req, res) => res.status(200).type('html').send(cricketT20Page()));
+app.get('/cricket/rules', (req, res) => res.status(200).type('html').send(cricketRulesPage()));
+
+// ── OLYMPICS COMPLEX ROUTES (/olympics*) — every modern Games, STATIC ──────────
+// Embedded data → can never 503 and never calls an external API. The detail routes
+// (/olympics/summer/:year and /olympics/winter/:year) have 3 segments; every other
+// path is a literal, so nothing collides.
+app.get('/olympics', (req, res) => res.status(200).type('html').send(olympicsHubPage()));
+app.get('/olympics/summer', (req, res) => res.status(200).type('html').send(olympicsListPage('summer')));
+app.get('/olympics/winter', (req, res) => res.status(200).type('html').send(olympicsListPage('winter')));
+app.get('/olympics/summer/:year', (req, res) => {
+  const g = olympics.findGames('summer', req.params.year);
+  if (!g) return res.status(404).type('html').send(olympicsNotFound(req.params.year));
+  res.status(200).type('html').send(olympicsGamePage('summer', g));
+});
+app.get('/olympics/winter/:year', (req, res) => {
+  const g = olympics.findGames('winter', req.params.year);
+  if (!g) return res.status(404).type('html').send(olympicsNotFound(req.params.year));
+  res.status(200).type('html').send(olympicsGamePage('winter', g));
+});
 
 // ── WORLD EXTREMES ROUTES (/records*) — Superlatives of the Earth, STATIC ────────
 // Embedded data → can never 503 and never calls an external API. Only the hub and
@@ -4328,10 +4375,10 @@ app.get('/sitemap.xml', async (req, res) => {
   // src/recipes.js is indexed without anyone remembering to edit a second file. The dishes
   // themselves live in /sitemap-recipes.xml, which is built from what is actually served.
   staticPages.push('/recipes', ...rcp.SECTIONS.map((s) => `/recipes/${s.slug}`));
-  // The three world-reference clusters added this pass. Their detail pages live in the
-  // child sitemaps (sitemap-nutrition/movies/football.xml, declared in robots.txt); here we
+  // The world-reference clusters added this pass. Their detail pages live in the
+  // child sitemaps (sitemap-nutrition/movies/football/cricket/olympics.xml, declared in robots.txt); here we
   // list the hubs so the master sitemap points crawlers at each cluster's front door.
-  staticPages.push('/nutrition', '/movies', '/football');
+  staticPages.push('/nutrition', '/movies', '/football', '/cricket', '/olympics');
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -4585,9 +4632,11 @@ app.get('/sitemap-nutrition.xml', (req, res) => {
 app.get('/sitemap-movies.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/movies', '0.9')]
+  const urls = [one('/movies', '0.9'), one('/movies/tv', '0.8')]
     .concat(movies.GENRES.map((gr) => one(`/movies/genre/${gr.slug}`, '0.7')))
     .concat(movies.FILMS.map((f) => one(`/movies/${f.slug}`, '0.6')))
+    .concat(tv.TV_GENRES.map((gr) => one(`/movies/tv/genre/${gr.slug}`, '0.7')))
+    .concat(tv.SHOWS.map((s) => one(`/movies/tv/${s.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -4600,6 +4649,31 @@ app.get('/sitemap-football.xml', (req, res) => {
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/football', '0.9'), one('/football/world-cup', '0.8'), one('/football/rules', '0.8')]
     .concat(football.CUPS.map((c) => one(`/football/world-cup/${c.y}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP PESTA BOLA KRIKET — hub + both World Cup lists + every ODI final ──
+app.get('/sitemap-cricket.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/cricket', '0.9'), one('/cricket/world-cup', '0.8'), one('/cricket/t20-world-cup', '0.8'), one('/cricket/rules', '0.8')]
+    .concat(cricket.CUPS.map((c) => one(`/cricket/world-cup/${c.y}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP OLYMPIADE — hub + both lists + every scheduled edition ──
+app.get('/sitemap-olympics.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/olympics', '0.9'), one('/olympics/summer', '0.8'), one('/olympics/winter', '0.8')]
+    .concat(olympics.SUMMER.map((g) => one(`/olympics/summer/${g.y}`, '0.6')))
+    .concat(olympics.WINTER.map((g) => one(`/olympics/winter/${g.y}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5874,7 +5948,10 @@ function siteFooter() {
       <li><a href="/recipes">World Recipes — Cook From a Free Cookbook</a></li>
       <li><a href="/nutrition">Food &amp; Calories — Nutrition Reference</a></li>
       <li><a href="/movies">Notable Films of the World — Year, Director &amp; Premise</a></li>
+      <li><a href="/movies/tv">Notable TV Series of the World — Years, Creator &amp; Premise</a></li>
       <li><a href="/football">Football — World Cup History &amp; the Laws of the Game</a></li>
+      <li><a href="/cricket">Cricket — World Cup History &amp; How the Game Is Played</a></li>
+      <li><a href="/olympics">Olympics — Every Host City Since 1896</a></li>
       <li><a href="/air-quality">Air & Oxygen</a></li>
       <li><a href="/academy">Academy — 50 Lessons</a></li>
       <li><a href="/games">Game Arcade — Play Free</a></li>
@@ -10520,6 +10597,9 @@ function moviesNav() {
   return worldNav('Notable Films — tukuk.org/movies', [{
     href: '/movies', icon: '🎬', name: 'Every film, one page',
     blurb: `Facts and a plain-English premise for ${movies.FILMS.length} acclaimed and widely-seen films from around the world — year, director, country, language, running time and prize.`,
+  }, {
+    href: '/movies/tv', icon: '📺', name: 'TV series collection',
+    blurb: `The companion list: ${tv.SHOWS.length} notable television series from ${tv.TV_COUNTRIES.length} countries of origin — years, creator, network, seasons and episode count.`,
   }].concat(movies.GENRES.map((gr) => ({
     href: `/movies/genre/${gr.slug}`, icon: MOV_GENRE_EMOJI[gr.name] || '🎞️', name: gr.name,
     blurb: `${gr.items.length} films in the ${gr.name.toLowerCase()} genre, with director, country and running time for each.`,
@@ -10533,6 +10613,7 @@ function moviesHubPage() {
   const body = `<p>Cinema is one of the things people everywhere love and search for most. This collection gathers ${movies.FILMS.length} widely-acclaimed and widely-seen films from many countries and languages — from Japan and France to South Korea, Brazil, Mexico and the United States. Each entry is a single page with the settled facts (year, director, country, language, running time, genres and any major prize) plus a short, spoiler-free description of what the film is about. We deliberately publish <b>no star-ratings or box-office totals</b>, because those change constantly and we cannot verify them offline — this is an honest reference to what a film <em>is</em>, not a score.</p>
   <h2 class="section-title">Browse by genre</h2><p>${toc}</p>
   <h2 class="section-title">Browse by decade</h2><p>${dec}</p>
+  <p>Looking for television? The companion collection of <a href="/movies/tv">notable TV series of the world</a> works the same way — one page per series with years, creator, country, network and episode count.</p>
   ${sections}
   <p class="meta">Titles, dates, names and running times are widely-documented facts; every synopsis is our own original wording and avoids spoiler endings. Stored statically on our server — no external call when you load a page.</p>`;
   return worldDoc({
@@ -10609,6 +10690,107 @@ function moviesNotFound(q) {
     heroTitle: 'Film not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
     css: MOV_CSS,
     body: `<p>We could not match that to one of our films. Open <a href="/movies">the full collection</a> and browse by genre or decade.</p>`,
+  }, moviesNav());
+}
+
+// ── /movies/tv — Notable Television Series of the World (STATIC embedded data) ─
+// Same shell and vocabulary as /movies: MOV_CSS, genre emoji, one tile per entry.
+function tvCard(s) {
+  return `<a class="mov-tile" href="/movies/tv/${s.slug}"><div><span class="mt">${escapeHtml(s.t)}</span> <span class="my">(${escapeHtml(s.y)})</span></div><div class="md">${escapeHtml(s.d)} · ${escapeHtml(s.c)} · ${escapeHtml(s.g.join(', '))}</div></a>`;
+}
+
+function tvHubPage() {
+  const toc = tv.TV_GENRES.map((gr) => `<a href="/movies/tv/genre/${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} (${gr.items.length})</a>`).join(' · ');
+  const co = tv.TV_COUNTRIES.map((x) => `<span class="mov-tag">${escapeHtml(x.name)} · ${x.items.length}</span>`).join(' ');
+  const sections = tv.TV_GENRES.map((gr) => `<h2 class="section-title" id="${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} <span class="meta">(${gr.items.length} series)</span></h2><div class="mov-grid">${gr.items.map(tvCard).join('')}</div>`).join('');
+  const body = `<p>Television is the thing almost everyone in the world watches, and much of the most-watched television ever made was not made in Hollywood. This companion collection gathers ${tv.SHOWS.length} notable series from ${tv.TV_COUNTRIES.length} countries of origin — the United States and the United Kingdom, but also Japan, India, Colombia, Germany, Spain, France, Denmark, South Korea and Turkey. Each entry is one page with the settled facts (years, creator, country, language, original network, seasons and episode count) plus a short premise of what the series is about. We publish <b>no star-ratings</b> and no viewership figures beyond the few records every source agrees on.</p>
+  <h2 class="section-title">Browse by genre</h2><p>${toc}</p>
+  <h2 class="section-title">Where they were made</h2><p>${co}</p>
+  ${sections}
+  <p class="meta">Titles, dates, names and episode counts are widely-documented facts; every description is our own original wording. See also the <a href="/movies">notable films collection</a>. Stored statically on our server — no external call when you load a page.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Notable Television Series of the World', description: `Facts and premises for ${tv.SHOWS.length} notable TV series from around the world.`, url: 'https://tukuk.org/movies/tv',
+    mainEntity: { '@type': 'ItemList', itemListElement: tv.SHOWS.slice().sort((a, b) => a.t.localeCompare(b.t)).map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.t, url: `https://tukuk.org/movies/tv/${s.slug}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'Notable TV Series of the World — Years, Creator & Premise | Tukuk-OS',
+    desc: `Facts and plain-English premises for ${tv.SHOWS.length} notable television series from around the world: years, creator, country, language, network, seasons and episode count.`,
+    selfUrl: 'https://tukuk.org/movies/tv',
+    heroTitle: '📺 Notable TV Series of the World', heroSub: `${tv.SHOWS.length} series · ${tv.TV_GENRES.length} genres · ${tv.TV_COUNTRIES.length} countries of origin`,
+    ld, css: MOV_CSS, body,
+  }, moviesNav());
+}
+
+function tvGenrePage(gr) {
+  const siblings = tv.TV_GENRES.filter((x) => x.slug !== gr.slug);
+  const otherLinks = `<h2 class="section-title">More genres</h2><p>${siblings.map((x) => `<a href="/movies/tv/genre/${x.slug}">${MOV_GENRE_EMOJI[x.name] || '🎞️'} ${escapeHtml(x.name)}</a>`).join(' · ')}.</p>`;
+  const body = `<p class="back-link"><a href="/movies/tv">&larr; All TV series</a></p>
+  <p><b>${escapeHtml(gr.name)}</b> has ${gr.items.length} series in this collection, listed oldest first. Each tile opens a page with the creator, country, network, seasons and episode count.</p>
+  <div class="mov-grid">${gr.items.map(tvCard).join('')}</div>
+  ${otherLinks}
+  <p class="meta">Settled facts with original descriptions. Stored statically.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${gr.name} TV series`, description: `${gr.items.length} notable ${gr.name.toLowerCase()} television series.`, url: `https://tukuk.org/movies/tv/genre/${gr.slug}`,
+    mainEntity: { '@type': 'ItemList', itemListElement: gr.items.map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.t, url: `https://tukuk.org/movies/tv/${s.slug}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${gr.name} TV Series — Notable ${gr.name} Shows | Tukuk-OS`,
+    desc: `${gr.items.length} notable ${gr.name.toLowerCase()} television series with years, creator, country, network and episode count.`,
+    selfUrl: `https://tukuk.org/movies/tv/genre/${gr.slug}`,
+    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} TV Series`, heroSub: `${gr.items.length} series · oldest first`,
+    ld, css: MOV_CSS, body,
+  }, moviesNav());
+}
+
+function tvShowPage(s) {
+  const firstYear = parseInt(String(s.y), 10);
+  const rows = [
+    ['Creator / writer', escapeHtml(s.d)],
+    ['Country of origin', escapeHtml(s.c)],
+    ['Language', escapeHtml(s.l)],
+    ['Original network', escapeHtml(s.n)],
+    ['Seasons', escapeHtml(s.se)],
+  ];
+  if (s.ep != null) rows.push(['Episodes', `${s.ep}`]);
+  rows.push(['Genres', s.g.map((g) => `<a class="mov-tag" href="/movies/tv/genre/${tv.slugify(g)}">${MOV_GENRE_EMOJI[g] || '🎞️'} ${escapeHtml(g)}</a>`).join('')]);
+  const table = `<table class="world-table">${rows.map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('')}</table>`;
+  const record = s.f ? `<div class="mov-award">🏅 <b>${escapeHtml(s.f)}</b></div>` : '';
+  const related = tv.SHOWS.filter((x) => x.slug !== s.slug && x.g.some((g) => s.g.includes(g))).slice(0, 6);
+  const relBlock = related.length ? `<h2 class="section-title">More series like this</h2><div class="mov-grid">${related.map(tvCard).join('')}</div>` : '';
+  const body = `<p class="back-link"><a href="/movies/tv">&larr; All TV series</a></p>
+  <div class="mov-lead"><div class="mov-year"><div class="big">${escapeHtml(String(firstYear))}</div><div class="unit">first aired</div></div>
+  <div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(s.t)} (${escapeHtml(s.y)})</h2><p class="meta">${escapeHtml(s.d)} · ${escapeHtml(s.c)} · ${escapeHtml(s.l)} · ${escapeHtml(s.n)}</p></div></div>
+  ${record}
+  <h2 class="section-title">What the series is about</h2><p>${escapeHtml(s.s)}</p>
+  <h2 class="section-title">Series at a glance</h2>${table}
+  ${relBlock}
+  <p class="meta">Years, names, network and episode counts are widely-documented facts; the description is our own. No rating is shown because we cannot verify a changing score offline. Stored statically.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'CreativeWorkSeries', name: s.t, datePublished: String(firstYear), creator: { '@type': 'Person', name: s.d }, countryOfOrigin: { '@type': 'Country', name: s.c }, inLanguage: s.l, genre: s.g, abstract: s.s, url: `https://tukuk.org/movies/tv/${s.slug}` },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Notable Films', item: 'https://tukuk.org/movies' },
+      { '@type': 'ListItem', position: 2, name: 'TV Series', item: 'https://tukuk.org/movies/tv' },
+      { '@type': 'ListItem', position: 3, name: s.g[0], item: `https://tukuk.org/movies/tv/genre/${tv.slugify(s.g[0])}` },
+      { '@type': 'ListItem', position: 4, name: s.t, item: `https://tukuk.org/movies/tv/${s.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${s.t} (${escapeHtml(s.y)}) — Creator, Country & Premise | Tukuk-OS`,
+    desc: `${s.t} (${escapeHtml(s.y)}), created by ${s.d}. ${s.c}, ${s.l}, ${s.n}${s.ep != null ? `, ${s.ep} episodes` : ''}. Seasons, genres and a plain-English premise of what the series is about.`,
+    selfUrl: `https://tukuk.org/movies/tv/${s.slug}`,
+    heroTitle: `📺 ${escapeHtml(s.t)}`, heroSub: `${escapeHtml(s.y)} · ${escapeHtml(s.d)} · ${escapeHtml(s.g.join(', '))}`,
+    ld, css: MOV_CSS, body,
+  }, moviesNav());
+}
+
+function tvNotFound(q) {
+  return worldDoc({
+    title: 'TV series not found | Notable TV Series of the World — Tukuk-OS',
+    desc: 'That series was not recognised — browse the full collection of notable TV series instead.',
+    selfUrl: 'https://tukuk.org/movies/tv', robots: 'noindex,follow',
+    heroTitle: 'TV series not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: MOV_CSS,
+    body: `<p>We could not match that to one of our series. Open <a href="/movies/tv">the full TV collection</a> and browse by genre or country of origin.</p>`,
   }, moviesNav());
 }
 
@@ -10739,6 +10921,275 @@ function footballNotFound(q) {
     css: FBALL_CSS,
     body: `<p>We could not match that. Try <a href="/football/world-cup">the World Cup roll of honour</a> or <a href="/football/rules">the Laws of the Game</a>.</p>`,
   }, footballNav());
+}
+
+// ── /cricket — World Cup history & how the game is played (STATIC embedded data) ─
+const CK_CSS = `.ck-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #b45309;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
+.ck-row .cy{font-weight:800;color:#f59e0b;font-size:1.05rem;min-width:3.4rem}
+.ck-row .cw{font-weight:700}
+.ck-row .cl{font-size:.86rem;color:var(--muted,#9aa3b2)}
+.ck-row .cs{font-weight:700;text-align:right;white-space:nowrap}
+.ck-champ{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:7px 0;background:var(--panel,#171a21)}
+.ck-champ .n{font-weight:700;flex:1}
+.ck-champ .t{color:#f59e0b;font-weight:800}
+.ck-trophy{display:inline-block;background:#f5c518;color:#151922;border-radius:999px;padding:1px 9px;font-weight:800;font-size:.8rem}
+.ck-rule{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
+.ck-rule .lt{font-weight:700}
+.ck-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.ck-card{border:1px solid var(--line);border-radius:12px;padding:14px 20px;background:var(--panel,#171a21)}
+.ck-card .big{font-size:1.7rem;font-weight:800;color:#f59e0b;line-height:1}
+.ck-card .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
+@media(max-width:680px){.ck-row{grid-template-columns:auto 1fr}.ck-row .cs{text-align:left}}`;
+
+function ckCupRow(c) {
+  return `<a class="ck-row" href="/cricket/world-cup/${c.y}" style="text-decoration:none;color:inherit"><span class="cy">${c.y}</span><span><span class="cw">${escapeHtml(c.win)}</span> <span class="cl">beat ${escapeHtml(c.run)} — host: ${escapeHtml(c.host)}</span></span><span class="cs">${escapeHtml(c.how.replace(c.win + ' ', ''))}</span></a>`;
+}
+
+function ckT20Row(c) {
+  return `<div class="ck-row"><span class="cy">${c.y}</span><span><span class="cw">${escapeHtml(c.win)}</span> <span class="cl">beat ${escapeHtml(c.run)} — host: ${escapeHtml(c.host)}</span></span><span class="cs">🏆</span></div>`;
+}
+
+function cricketNav() {
+  return worldNav('Cricket — tukuk.org/cricket', [
+    { href: '/cricket/world-cup', icon: '🏆', name: 'World Cup roll of honour', blurb: `Every one of the ${cricket.CUPS.length} men's ICC Cricket World Cup finals since 1975 — host, champion, runner-up and how it was decided.` },
+    { href: '/cricket/t20-world-cup', icon: '⚡', name: 'T20 World Cup', blurb: `All ${cricket.T20S.length} men's T20 World Cup champions since 2007 — the shortest, loudest format's biggest event.` },
+    { href: '/cricket/rules', icon: '📘', name: 'How the game is played', blurb: 'Tests, one-days and T20 in plain English — the pitch, the over, the ways to be out and how rain ends matches.' },
+  ]);
+}
+
+function cricketHubPage() {
+  const top3 = cricket.CHAMPIONS_ODI.slice(0, 3).map((c) => `<span class="ck-champ"><span class="n">${escapeHtml(c.name)}</span><span class="t">${c.titles} ${c.titles === 1 ? 'title' : 'titles'}</span></span>`).join('');
+  const body = `<p>Cricket is the world's second-most-followed sport — a billion-strong game whose heartlands are India, Pakistan, Bangladesh, the Caribbean, Australia, England and South Africa, with an audience stretching from Afghanistan to the Pacific islands. Its two flagship events are the <b>ICC Cricket World Cup</b> (50-over, every four years) and the <b>ICC T20 World Cup</b> (twenty overs a side). This page keeps the settled facts of both and a plain-English guide to how the game is actually played.</p>
+  <div class="ck-lead"><div class="ck-card"><div class="big">${cricket.CUPS.length}</div><div class="unit">50-over World Cups</div></div><div class="ck-card"><div class="big">${cricket.T20S.length}</div><div class="unit">T20 World Cups</div></div><a class="ck-card" href="/cricket/rules" style="text-decoration:none;color:inherit"><div class="big">📘</div><div class="unit">How to play</div></a></div>
+  <h2 class="section-title">The most successful 50-over nations</h2>${top3}
+  <p class="meta">Australia leads with ${cricket.CHAMPIONS_ODI[0].titles} titles; India (2007, 2013, 2024) leads the T20 roll with ${cricket.CHAMPIONS_T20[0].titles}.</p>
+  <h2 class="section-title">Where to go next</h2><p><a href="/cricket/world-cup">🏆 Every Cricket World Cup final, 1975 to today</a> &nbsp;·&nbsp; <a href="/cricket/t20-world-cup">⚡ Every T20 World Cup champion</a> &nbsp;·&nbsp; <a href="/cricket/rules">📘 How the game is played</a></p>
+  <p>Nearly two billion people first fell for cricket through a radio or a television in the last fifty years — the <a href="/movies/tv">TV series collection</a> carries the shows the world watched alongside it, and <a href="/football">football's World Cup record</a> sits next door.</p>`;
+  return worldDoc({
+    title: 'Cricket — World Cup History & How the Game Is Played | Tukuk-OS',
+    desc: `The ICC Cricket World Cup and T20 World Cup rolls of honour (${cricket.CUPS.length + cricket.T20S.length} tournaments), champions per nation and the basics of how cricket is played, in plain English.`,
+    selfUrl: 'https://tukuk.org/cricket',
+    heroTitle: '🏏 Cricket', heroSub: `World Cup history & how the game is played · ${cricket.CUPS.length + cricket.T20S.length} tournaments`,
+    css: CK_CSS, body,
+  }, cricketNav());
+}
+
+function cricketWorldCupPage() {
+  const champRows = cricket.CHAMPIONS_ODI.map((c) => `<div class="ck-champ"><span class="n">${escapeHtml(c.name)}</span><span class="ck-trophy">${c.titles} ${c.titles === 1 ? 'title' : 'titles'}</span><span class="cl">${c.years.join(', ')}</span></div>`).join('');
+  const finalRows = cricket.CUPS.map(ckCupRow).join('');
+  const body = `<p class="back-link"><a href="/cricket">&larr; Cricket home</a></p>
+  <h2 class="section-title">Roll of honour — most titles</h2>${champRows}
+  <h2 class="section-title">Every final, year by year</h2>${finalRows}
+  <p class="meta">${cricket.NEXT_CUP.y}: hosted by ${escapeHtml(cricket.NEXT_CUP.host)} — ${escapeHtml(cricket.NEXT_CUP.note)}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'ICC Cricket World Cup finals', description: 'Every men\u2019s ICC Cricket World Cup final with host, champion, runner-up and result.', url: 'https://tukuk.org/cricket/world-cup',
+    mainEntity: { '@type': 'ItemList', itemListElement: cricket.CUPS.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: `${c.y} Cricket World Cup`, url: `https://tukuk.org/cricket/world-cup/${c.y}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'Cricket World Cup Winners — Every Final, 1975 to Today | Tukuk-OS',
+    desc: `All ${cricket.CUPS.length} men\u2019s ICC Cricket World Cup finals: host nation, champion, runner-up and how the final was decided, plus the roll of honour.`,
+    selfUrl: 'https://tukuk.org/cricket/world-cup', ld,
+    heroTitle: '🏆 Cricket World Cup Roll of Honour', heroSub: `${cricket.CUPS.length} finals since 1975`,
+    css: CK_CSS, body,
+  }, cricketNav());
+}
+
+function cricketFinalPage(c) {
+  const prev = cricket.findCup(c.y - 4);
+  const next = cricket.findCup(c.y + 4);
+  const nav = `<p class="back-link">${prev ? `<a href="/cricket/world-cup/${prev.y}">&larr; ${prev.y}</a>` : ''}${prev && next ? ' · ' : ''}${next ? `<a href="/cricket/world-cup/${next.y}">${next.y} &rarr;</a>` : ''} &nbsp; <a href="/cricket/world-cup">All finals</a></p>`;
+  const rows = [
+    ['Host', escapeHtml(c.host)],
+    ['Champion', `🏆 ${escapeHtml(c.win)}`],
+    ['Runner-up', escapeHtml(c.run)],
+    ['Result', escapeHtml(c.how)],
+  ].map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/cricket/world-cup">&larr; All Cricket World Cup finals</a></p>
+  <div class="ck-lead"><div class="ck-card"><div class="big">${c.y}</div><div class="unit">World Cup</div></div><div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(c.win)} win the ${c.y} Cricket World Cup</h2><p class="meta">Hosted by ${escapeHtml(c.host)}</p></div></div>
+  <p>${escapeHtml(c.note)}</p>
+  <table class="world-table">${rows}</table>
+  ${nav}`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'SportsEvent', name: `${c.y} Cricket World Cup`, startDate: String(c.y),
+    description: `${c.win} won the ${c.y} ICC Cricket World Cup, hosted by ${c.host}, beating ${c.run} — ${c.how}.`,
+    url: `https://tukuk.org/cricket/world-cup/${c.y}`,
+    competitor: [{ '@type': 'SportsTeam', name: c.win, description: 'Champion' }, { '@type': 'SportsTeam', name: c.run, description: 'Runner-up' }],
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${c.y} Cricket World Cup — ${c.win} Beat ${c.run} | Tukuk-OS`,
+    desc: `${c.win} won the ${c.y} Cricket World Cup hosted by ${c.host}, beating ${c.run}: ${c.how}.`,
+    selfUrl: `https://tukuk.org/cricket/world-cup/${c.y}`, ld,
+    heroTitle: `🏆 ${c.y} Cricket World Cup`, heroSub: `${escapeHtml(c.win)} beat ${escapeHtml(c.run)}`,
+    css: CK_CSS, body,
+  }, cricketNav());
+}
+
+function cricketT20Page() {
+  const champRows = cricket.CHAMPIONS_T20.map((c) => `<div class="ck-champ"><span class="n">${escapeHtml(c.name)}</span><span class="ck-trophy">${c.titles} ${c.titles === 1 ? 'title' : 'titles'}</span><span class="cl">${c.years.join(', ')}</span></div>`).join('');
+  const rows = cricket.T20S.map(ckT20Row).join('');
+  const body = `<p class="back-link"><a href="/cricket">&larr; Cricket home</a></p>
+  <p>Twenty20 is cricket at full volume: two innings of 120 balls each, over in about three hours. The ICC Men's T20 World Cup has been played since 2007 — annually until 2014, then every two years. Every champion so far, oldest first:</p>
+  ${rows}
+  <h2 class="section-title">Most titles</h2>${champRows}
+  <p class="meta">${cricket.NEXT_T20.y}: hosted by ${escapeHtml(cricket.NEXT_T20.host)} — ${escapeHtml(cricket.NEXT_T20.note)}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: "ICC Men's T20 World Cup champions", description: 'Every men\u2019s T20 World Cup since 2007 with host, champion and runner-up.', url: 'https://tukuk.org/cricket/t20-world-cup',
+    mainEntity: { '@type': 'ItemList', itemListElement: cricket.T20S.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: `${c.y} T20 World Cup`, item: `https://tukuk.org/cricket/t20-world-cup` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'T20 World Cup Winners — Every Champion Since 2007 | Tukuk-OS',
+    desc: `All ${cricket.T20S.length} men\u2019s ICC T20 World Cup champions: host nation, winner and runner-up, from India 2007 to India 2024.`,
+    selfUrl: 'https://tukuk.org/cricket/t20-world-cup', ld,
+    heroTitle: '⚡ T20 World Cup Champions', heroSub: `${cricket.T20S.length} tournaments since 2007`,
+    css: CK_CSS, body,
+  }, cricketNav());
+}
+
+function cricketRulesPage() {
+  const rules = cricket.RULES.map((r, i) => `<div class="ck-rule" id="${r.slug}"><span class="ck-trophy">${i + 1}</span> <span class="lt">${escapeHtml(r.t)}</span><p>${escapeHtml(r.s)}</p></div>`).join('');
+  const toc = cricket.RULES.map((r, i) => `<a class="mov-tag" href="#${r.slug}">${i + 1}. ${escapeHtml(r.t)}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/cricket">&larr; Cricket home</a></p>
+  <p>Cricket looks complicated from the outside — three formats, two innings, a vocabulary all its own — but it reduces to one contest: <b>a bowler trying to hit the wicket, a batter trying to stop them</b>, and runs as the scorecard of who won each ball. These ${cricket.RULES.length} notes cover everything a newcomer needs to follow a World Cup match.</p>
+  <p>${toc}</p>
+  ${rules}
+  <p class="meta">The Laws of cricket are officially kept by the Marylebone Cricket Club (MCC); these are our own plain-English notes on how the game works, not the legal text. Stored statically — no external call when you load a page.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'TechArticle', headline: 'How cricket is played — formats, pitch, over and wickets',
+    description: 'Plain-English notes on the three formats of cricket and how a match is won.', url: 'https://tukuk.org/cricket/rules',
+    about: cricket.RULES.map((r, i) => ({ '@type': 'Thing', name: `${i + 1}. ${r.t}`, description: r.s })),
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'How Cricket Is Played — Formats, Rules & Ways to Be Out | Tukuk-OS',
+    desc: `Cricket explained in plain English: Tests, ODIs and T20, the 22-yard pitch, the six-ball over, how runs are scored and every common way a batter is out.`,
+    selfUrl: 'https://tukuk.org/cricket/rules', ld,
+    heroTitle: '📘 How the Game Is Played', heroSub: `${cricket.RULES.length} plain-English notes`,
+    css: CK_CSS, body,
+  }, cricketNav());
+}
+
+function cricketNotFound(q) {
+  return worldDoc({
+    title: 'Not found | Cricket on Tukuk-OS',
+    desc: 'That cricket page was not recognised — see the World Cup rolls of honour or how the game is played instead.',
+    selfUrl: 'https://tukuk.org/cricket', robots: 'noindex,follow',
+    heroTitle: 'Not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: CK_CSS,
+    body: `<p>We could not match that. Try <a href="/cricket/world-cup">the Cricket World Cup finals</a>, <a href="/cricket/t20-world-cup">the T20 champions</a> or <a href="/cricket/rules">how the game is played</a>.</p>`,
+  }, cricketNav());
+}
+
+// ── /olympics — every modern Olympic Games (STATIC embedded data) ─────────────
+const OL_CSS = `.ol-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #7c3aed;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
+.ol-row .oy{font-weight:800;color:#a78bfa;font-size:1.05rem;min-width:3.4rem}
+.ol-row .oc{font-weight:700}
+.ol-row .oh{font-size:.86rem;color:var(--muted,#9aa3b2)}
+.ol-row .ox{font-weight:700;text-align:right;color:var(--muted,#9aa3b2);white-space:nowrap}
+.ol-fact{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
+.ol-fact .lt{font-weight:700}
+.ol-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.ol-card{border:1px solid var(--line);border-radius:12px;padding:14px 20px;background:var(--panel,#171a21)}
+.ol-card .big{font-size:1.7rem;font-weight:800;color:#a78bfa;line-height:1}
+.ol-card .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
+.ol-rings{letter-spacing:.15em}
+@media(max-width:680px){.ol-row{grid-template-columns:auto 1fr}.ol-row .ox{text-align:left}}`;
+
+function olName(season, y) { return `${y} ${season === 'winter' ? 'Winter Olympic Games' : 'Olympic Games'}`; }
+function olIcon(season) { return season === 'winter' ? '❄️' : '☀️'; }
+
+function olRow(season, g) {
+  const right = g.x ? '<span class="ox">cancelled</span>' : '<span class="ox">›</span>';
+  return `<a class="ol-row" href="/olympics/${season}/${g.y}" style="text-decoration:none;color:inherit"><span class="oy">${g.y}</span><span><span class="oc">${escapeHtml(g.city)}</span> <span class="oh">${escapeHtml(g.c)}</span></span>${right}</a>`;
+}
+
+function olympicsNav() {
+  return worldNav('Olympics — tukuk.org/olympics', [
+    { href: '/olympics/summer', icon: '☀️', name: 'Summer Games', blurb: `All ${olympics.SUMMER.length} scheduled Summer Olympics since 1896 — host city, host country and what each edition is remembered for.` },
+    { href: '/olympics/winter', icon: '❄️', name: 'Winter Games', blurb: `All ${olympics.WINTER.length} scheduled Winter Olympics since 1924, from Chamonix to Beijing.` },
+  ]);
+}
+
+function olympicsHubPage() {
+  const facts = olympics.FACTS.map((f) => `<div class="ol-fact"><span class="lt">${escapeHtml(f.t)}</span><p>${escapeHtml(f.s)}</p></div>`).join('');
+  const body = `<p>The <b>Olympic Games</b> are the biggest event that almost the whole world takes part in: more than two hundred nations send athletes to the same arenas, twice every four years — Summer and Winter on alternating cycles. This record names <b>every scheduled edition since Athens 1896</b>, host city and country, including the five the world wars cancelled. Each Games gets its own page with the settled facts. We publish <b>no live medal tables</b> — they exist for fifteen days and then never change, but we cannot verify one offline — only the all-time superlatives every source agrees on.</p>
+  <div class="ol-lead"><div class="ol-card"><div class="big ol-rings">◎◎◎</div><div class="unit">since 1896</div></div><a class="ol-card" href="/olympics/summer" style="text-decoration:none;color:inherit"><div class="big">☀️</div><div class="unit">${olympics.SUMMER.length} Summer editions</div></a><a class="ol-card" href="/olympics/winter" style="text-decoration:none;color:inherit"><div class="big">❄️</div><div class="unit">${olympics.WINTER.length} Winter editions</div></a></div>
+  <h2 class="section-title">What everyone agrees on</h2>${facts}
+  <h2 class="section-title">Where to go next</h2><p><a href="/olympics/summer">☀️ Every Summer Games, 1896 to today</a> &nbsp;·&nbsp; <a href="/olympics/winter">❄️ Every Winter Games, 1924 to today</a></p>
+  <p class="meta">Upcoming: ${olympics.NEXT_WINTER.y} (${escapeHtml(olympics.NEXT_WINTER.city)}) and ${olympics.NEXT_SUMMER.y} (${escapeHtml(olympics.NEXT_SUMMER.city)}) — their results are not part of this static record until decided. See also <a href="/football">football</a> and <a href="/cricket">cricket</a>, the world's two biggest annual-and-quadrennial games.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Olympic Games — every host since 1896', description: 'Every Summer and Winter Olympic Games with host city and country, including cancelled editions.', url: 'https://tukuk.org/olympics',
+    mainEntity: { '@type': 'ItemList', itemListElement: olympics.SUMMER.map((g, i) => ({ '@type': 'ListItem', position: i + 1, name: olName('summer', g.y), url: `https://tukuk.org/olympics/summer/${g.y}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'Olympic Games — Every Host City Since 1896 | Tukuk-OS',
+    desc: `All ${olympics.SUMMER.length + olympics.WINTER.length} scheduled Summer and Winter Olympic Games since 1896: host city, host country, what each edition is remembered for, and the settled all-time records.`,
+    selfUrl: 'https://tukuk.org/olympics', ld,
+    heroTitle: '◎ Olympic Games', heroSub: `Every host since Athens 1896 · Summer &amp; Winter`,
+    css: OL_CSS, body,
+  }, olympicsNav());
+}
+
+function olympicsListPage(season) {
+  const list = season === 'winter' ? olympics.WINTER : olympics.SUMMER;
+  const next = season === 'winter' ? olympics.NEXT_WINTER : olympics.NEXT_SUMMER;
+  const other = season === 'winter' ? 'summer' : 'winter';
+  const rows = list.map((g) => olRow(season, g)).join('');
+  const body = `<p class="back-link"><a href="/olympics">&larr; Olympics home</a> · <a href="/olympics/${other}">${olIcon(other)} ${other} Games</a></p>
+  <p>Every ${season === 'winter' ? 'Winter' : 'Summer'} Olympic edition on the four-year calendar, oldest first. Editions marked <b>cancelled</b> were called off by the world wars — the numbering carried on regardless. Each row opens a page with the host and what that Games is remembered for.</p>
+  ${rows}
+  <p class="meta">Next: ${next.y} — ${escapeHtml(next.city)}, ${escapeHtml(next.c)}. ${escapeHtml(next.note)}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: season === 'winter' ? 'Winter Olympic Games' : 'Summer Olympic Games', description: `Every ${season} Olympic edition with host city and country.`, url: `https://tukuk.org/olympics/${season}`,
+    mainEntity: { '@type': 'ItemList', itemListElement: list.map((g, i) => ({ '@type': 'ListItem', position: i + 1, name: olName(season, g.y), url: `https://tukuk.org/olympics/${season}/${g.y}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${season === 'winter' ? 'Winter' : 'Summer'} Olympic Games — Every Host, ${list[0].y} to ${list[list.length - 1].y} | Tukuk-OS`,
+    desc: `All ${list.length} scheduled ${season} Olympic editions: host city, host country and the settled facts of each Games, oldest first.`,
+    selfUrl: `https://tukuk.org/olympics/${season}`, ld,
+    heroTitle: `${olIcon(season)} ${season === 'winter' ? 'Winter' : 'Summer'} Olympic Games`, heroSub: `${list.length} editions since ${list[0].y}`,
+    css: OL_CSS, body,
+  }, olympicsNav());
+}
+
+function olympicsGamePage(season, g) {
+  const prev = olympics.findGames(season, g.y - 4);
+  const next = olympics.findGames(season, g.y + 4);
+  const nav = `<p class="back-link">${prev ? `<a href="/olympics/${season}/${prev.y}">&larr; ${prev.y}</a>` : ''}${prev && next ? ' · ' : ''}${next ? `<a href="/olympics/${season}/${next.y}">${next.y} &rarr;</a>` : ''} &nbsp; <a href="/olympics/${season}">All ${season} Games</a></p>`;
+  const rows = [
+    ['Host city', escapeHtml(g.city)],
+    ['Host country', escapeHtml(g.c)],
+    ['Status', g.x ? `Cancelled — ${escapeHtml(g.x)}` : 'Held'],
+  ].map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/olympics/${season}">&larr; All ${season} Games</a></p>
+  <div class="ol-lead"><div class="ol-card"><div class="big">${g.y}</div><div class="unit">${season === 'winter' ? 'Winter Olympics' : 'Olympiad'}</div></div><div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${olIcon(season)} ${escapeHtml(olName(season, g.y))}</h2><p class="meta">${escapeHtml(g.city)}, ${escapeHtml(g.c)}</p></div></div>
+  <p>${escapeHtml(g.note)}</p>
+  <table class="world-table">${rows}</table>
+  ${nav}`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'SportsEvent', name: olName(season, g.y), startDate: String(g.y),
+    description: g.x ? `The ${g.y} ${season} Olympic Games, awarded to ${g.city}, were cancelled.` : `${g.y} Olympic Games held in ${g.city}, ${g.c}.`,
+    location: { '@type': 'Place', name: `${g.city}, ${g.c}` },
+    url: `https://tukuk.org/olympics/${season}/${g.y}`,
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${olName(season, g.y)} — Host City & History | Tukuk-OS`,
+    desc: g.x
+      ? `The ${g.y} ${season} Olympic Games were awarded to ${g.city} but cancelled. ${g.note}`
+      : `The ${g.y} ${season === 'winter' ? 'Winter Olympic Games' : 'Olympic Games'} were held in ${g.city}, ${g.c}. ${g.note}`.slice(0, 200),
+    selfUrl: `https://tukuk.org/olympics/${season}/${g.y}`, ld,
+    heroTitle: `${olIcon(season)} ${olName(season, g.y)}`, heroSub: `${escapeHtml(g.city)} · ${escapeHtml(g.c)}`,
+    css: OL_CSS, body,
+  }, olympicsNav());
+}
+
+function olympicsNotFound(q) {
+  return worldDoc({
+    title: 'Not found | Olympics on Tukuk-OS',
+    desc: 'That Olympic Games was not recognised — browse every Summer and Winter host city instead.',
+    selfUrl: 'https://tukuk.org/olympics', robots: 'noindex,follow',
+    heroTitle: 'Not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: OL_CSS,
+    body: `<p>We could not match that. Try <a href="/olympics/summer">every Summer Games</a> or <a href="/olympics/winter">every Winter Games</a>.</p>`,
+  }, olympicsNav());
 }
 
 // ── /traffic — Tukuk Traffic (Waze-style community road reports) ───────────────

@@ -36,6 +36,17 @@ const TALLY_CAP = 60;
  */
 const SECTION_QUALITY = 0.98;
 
+// Query aliases in the world's other languages for geo hubs whose English documents
+// a Malay, Spanish or French visitor cannot match with the words they type. They go
+// into `keywords` only — the English-only rule (test/section-hubs.test.js) protects
+// the prose, not the search vocabulary, and tukuk.org is read in every language.
+const HUB_ALIASES = {
+  islands: ['pulau', 'pulaupulau', 'how many islands are there', 'isla', 'isole', 'insel'],
+  mountains: ['gunung', 'how many mountains', 'montaña', 'berg'],
+  rivers: ['sungai', 'rio', 'fleuve', 'fluss'],
+  countries: ['berapa banyak negara di dunia', '¿cuántos países hay en el mundo?', 'combien de pays dans le monde'],
+};
+
 function stripHtml(value) {
   return String(value || '')
     .replace(/<[^>]*>/g, ' ')
@@ -161,7 +172,9 @@ function hubToDoc(cluster) {
     lang: 'en',
     type: 'cluster',
     section: cfg.titleCase || base,
+    // HUB_ALIASES first so they survive the 20-keyword slice below.
     keywords: [...new Set([cfg.singular, unit, base.replace(/-/g, ' '), base.replace(/-/g, ' ').replace(/\bcounties?\b/, 'county'),
+      ...(HUB_ALIASES[base] || []),
       ...countries.slice(0, 8).map(([name]) => name)])].filter(Boolean).slice(0, 20),
     headings: countries.slice(0, 20).map(([name]) => name),
     publishedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
