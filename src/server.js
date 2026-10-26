@@ -6266,11 +6266,11 @@ function nasaFmt(n) { return Number(n || 0).toLocaleString('en-US'); }
 function nasaDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
   const ogImage = o.image || 'https://tukuk.org/og.png';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6915,11 +6915,11 @@ function cuacaNav() {
 function cuacaDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
   const ogImage = o.image || 'https://tukuk.org/og.png';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7416,11 +7416,11 @@ function gempaBusy(msg) {
 // reused so the hub and the tables look the same across both earth complexes.
 function gempaDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8332,11 +8332,11 @@ function statistikBusy(msg) {
 
 function statistikDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8501,11 +8501,11 @@ function bencanaBusy(msg) {
 
 function bencanaDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9145,11 +9145,11 @@ function studyNav() {
 // The standard /study section wrapper — mirrors nasaDoc (full chrome + gated ads).
 function studyDoc(o) {
   const robots = o.robots || 'index,follow';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9471,11 +9471,11 @@ function udaraNav() {
 // The standard /air-quality wrapper — mirrors studyDoc (full chrome + gated ads).
 function udaraDoc(o) {
   const robots = o.robots || 'index,follow';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9721,11 +9721,11 @@ function akadNav() {
 // The standard /academy page wrapper — mirrors studyDoc (full chrome + gated ads).
 function akadDoc(o) {
   const robots = o.robots || 'index,follow';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
