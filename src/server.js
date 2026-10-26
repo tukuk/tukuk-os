@@ -89,6 +89,7 @@ const els = require('./elements');
 const sky = require('./deepsky');
 const pv = require('./proverbs');
 const nutrition = require('./nutrition');
+const movies = require('./movies');
 const rek = require('./rekod');
 const sj = require('./sejarah');
 const kt = require('./kota');
@@ -1599,6 +1600,21 @@ app.get('/nutrition/:slug', (req, res) => {
   const f = nutrition.findFood(req.params.slug);
   if (!f) return res.status(404).type('html').send(nutritionNotFound(req.params.slug));
   res.status(200).type('html').send(nutritionFoodPage(f));
+});
+
+// ── FILM COMPLEX ROUTES (/movies*) — Notable Films of the World, STATIC ────────
+// Embedded data → can never 503 and never calls an external API. The genre route
+// (/movies/genre/:g) has 3 segments so it cannot collide with /movies/:slug (2).
+app.get('/movies', (req, res) => res.status(200).type('html').send(moviesHubPage()));
+app.get('/movies/genre/:g', (req, res) => {
+  const gr = movies.findGenre(req.params.g);
+  if (!gr) return res.status(404).type('html').send(moviesNotFound(req.params.g));
+  res.status(200).type('html').send(moviesGenrePage(gr));
+});
+app.get('/movies/:slug', (req, res) => {
+  const f = movies.findFilm(req.params.slug);
+  if (!f) return res.status(404).type('html').send(moviesNotFound(req.params.slug));
+  res.status(200).type('html').send(moviesFilmPage(f));
 });
 
 // ── WORLD EXTREMES ROUTES (/records*) — Superlatives of the Earth, STATIC ────────
@@ -4541,6 +4557,19 @@ app.get('/sitemap-nutrition.xml', (req, res) => {
   const urls = [one('/nutrition', '0.9')]
     .concat(nutrition.CATEGORIES.map((c) => one(`/nutrition/category/${c.slug}`, '0.7')))
     .concat(nutrition.FOODS.map((f) => one(`/nutrition/${f.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP FILEM — the hub + every genre + every notable film (a static list) ──
+app.get('/sitemap-movies.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/movies', '0.9')]
+    .concat(movies.GENRES.map((gr) => one(`/movies/genre/${gr.slug}`, '0.7')))
+    .concat(movies.FILMS.map((f) => one(`/movies/${f.slug}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -10429,6 +10458,125 @@ function nutritionNotFound(q) {
     css: NUT_CSS,
     body: `<p>We could not match that to one of our foods. Open <a href="/nutrition">the full Food &amp; Calories reference</a> and browse by group.</p>`,
   }, nutritionNav());
+}
+
+// ── /movies — Notable Films of the World (STATIC embedded data) ─────────────
+const MOV_CSS = `.mov-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
+.mov-tile{display:block;border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:9px;padding:12px 15px;background:var(--panel,#171a21);text-decoration:none;color:inherit}
+.mov-tile .mt{font-weight:700;font-size:1.02rem}
+.mov-tile .my{color:var(--accent,#4c8dff);font-weight:600}
+.mov-tile .md{font-size:.86rem;color:var(--muted,#9aa3b2);margin-top:3px}
+.mov-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.mov-year{text-align:center;border:1px solid var(--line);border-radius:12px;padding:12px 20px;background:var(--panel,#171a21)}
+.mov-year .big{font-size:1.9rem;font-weight:800;color:var(--accent,#4c8dff);line-height:1}
+.mov-year .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
+.mov-tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 11px;font-size:.82rem;margin:2px 4px 2px 0;background:var(--panel,#171a21);text-decoration:none;color:inherit}
+.mov-award{border-left:3px solid #f5c518;background:var(--panel,#171a21);padding:9px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:.94rem}
+@media(max-width:680px){.mov-grid{grid-template-columns:1fr}}`;
+const MOV_GENRE_EMOJI = {
+  'Drama': '🎭', 'Comedy': '😄', 'Romance': '❤️', 'Action & Adventure': '💥', 'Crime': '🕵️',
+  'Thriller': '😰', 'Mystery': '❓', 'Horror': '👻', 'Sci-Fi & Fantasy': '🚀', 'Fantasy': '🐉',
+  'Animation': '🎨', 'War': '🎖️', 'History': '🏛️', 'Musical': '🎵',
+};
+
+function movCard(f) {
+  return `<a class="mov-tile" href="/movies/${f.slug}"><div><span class="mt">${escapeHtml(f.t)}</span> <span class="my">(${f.y})</span></div><div class="md">${escapeHtml(f.d)} · ${escapeHtml(f.g.join(', '))}</div></a>`;
+}
+
+function moviesNav() {
+  return worldNav('Notable Films — tukuk.org/movies', [{
+    href: '/movies', icon: '🎬', name: 'Every film, one page',
+    blurb: `Facts and a plain-English premise for ${movies.FILMS.length} acclaimed and widely-seen films from around the world — year, director, country, language, running time and prize.`,
+  }].concat(movies.GENRES.map((gr) => ({
+    href: `/movies/genre/${gr.slug}`, icon: MOV_GENRE_EMOJI[gr.name] || '🎞️', name: gr.name,
+    blurb: `${gr.items.length} films in the ${gr.name.toLowerCase()} genre, with director, country and running time for each.`,
+  }))));
+}
+
+function moviesHubPage() {
+  const toc = movies.GENRES.map((gr) => `<a href="/movies/genre/${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} (${gr.items.length})</a>`).join(' · ');
+  const dec = movies.DECADES.map((d) => `<span class="mov-tag">${escapeHtml(d.label)} · ${d.items.length}</span>`).join(' ');
+  const sections = movies.GENRES.map((gr) => `<h2 class="section-title" id="${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} <span class="meta">(${gr.items.length} films)</span></h2><div class="mov-grid">${gr.items.map(movCard).join('')}</div>`).join('');
+  const body = `<p>Cinema is one of the things people everywhere love and search for most. This collection gathers ${movies.FILMS.length} widely-acclaimed and widely-seen films from many countries and languages — from Japan and France to South Korea, Brazil, Mexico and the United States. Each entry is a single page with the settled facts (year, director, country, language, running time, genres and any major prize) plus a short, spoiler-free description of what the film is about. We deliberately publish <b>no star-ratings or box-office totals</b>, because those change constantly and we cannot verify them offline — this is an honest reference to what a film <em>is</em>, not a score.</p>
+  <h2 class="section-title">Browse by genre</h2><p>${toc}</p>
+  <h2 class="section-title">Browse by decade</h2><p>${dec}</p>
+  ${sections}
+  <p class="meta">Titles, dates, names and running times are widely-documented facts; every synopsis is our own original wording and avoids spoiler endings. Stored statically on our server — no external call when you load a page.</p>`;
+  return worldDoc({
+    title: 'Notable Films of the World — Year, Director & Premise | Tukuk-OS',
+    desc: `Facts and spoiler-free premises for ${movies.FILMS.length} acclaimed films from around the world: year, director, country, language, running time, genre and major prizes.`,
+    selfUrl: 'https://tukuk.org/movies',
+    heroTitle: '🎬 Notable Films of the World', heroSub: `${movies.FILMS.length} films · ${movies.GENRES.length} genres · many countries & languages`,
+    css: MOV_CSS, body,
+  }, moviesNav());
+}
+
+function moviesGenrePage(gr) {
+  const siblings = movies.GENRES.filter((x) => x.slug !== gr.slug);
+  const otherLinks = `<h2 class="section-title">More genres</h2><p>${siblings.map((x) => `<a href="/movies/genre/${x.slug}">${MOV_GENRE_EMOJI[x.name] || '🎞️'} ${escapeHtml(x.name)}</a>`).join(' · ')}.</p>`;
+  const body = `<p class="back-link"><a href="/movies">&larr; All films</a></p>
+  <p><b>${escapeHtml(gr.name)}</b> has ${gr.items.length} films in this collection, listed oldest first. Each tile opens a page with the director, country, language, running time and a short premise.</p>
+  <div class="mov-grid">${gr.items.map(movCard).join('')}</div>
+  ${otherLinks}
+  <p class="meta">Settled facts with original synopsis text. Stored statically.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${gr.name} films`, description: `${gr.items.length} notable ${gr.name.toLowerCase()} films.`, url: `https://tukuk.org/movies/genre/${gr.slug}`,
+    mainEntity: { '@type': 'ItemList', itemListElement: gr.items.map((f, i) => ({ '@type': 'ListItem', position: i + 1, name: f.t, url: `https://tukuk.org/movies/${f.slug}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${gr.name} Films — Notable ${gr.name} Movies | Tukuk-OS`,
+    desc: `${gr.items.length} notable ${gr.name.toLowerCase()} films with year, director, country, language and running time.`,
+    selfUrl: `https://tukuk.org/movies/genre/${gr.slug}`,
+    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} Films`, heroSub: `${gr.items.length} films · oldest first`,
+    ld, css: MOV_CSS, body,
+  }, moviesNav());
+}
+
+function moviesFilmPage(f) {
+  const rows = [
+    ['Director', escapeHtml(f.d)],
+    ['Country of origin', escapeHtml(f.c)],
+    ['Language', escapeHtml(f.l)],
+    ['Running time', `${f.rt} min`],
+    ['Genres', f.g.map((g) => `<a class="mov-tag" href="/movies/genre/${movies.slugify(g)}">${MOV_GENRE_EMOJI[g] || '🎞️'} ${escapeHtml(g)}</a>`).join('')],
+  ].map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');
+  const award = f.aw ? `<div class="mov-award">🏆 <b>${escapeHtml(f.aw)}</b></div>` : '';
+  const related = movies.relatedFilms(f, 6);
+  const relBlock = related.length ? `<h2 class="section-title">More films like this</h2><div class="mov-grid">${related.map(movCard).join('')}</div>` : '';
+  const body = `<p class="back-link"><a href="/movies">&larr; All films</a></p>
+  <div class="mov-lead"><div class="mov-year"><div class="big">${f.y}</div><div class="unit">release year</div></div>
+  <div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(f.t)} (${f.y})</h2><p class="meta">Directed by ${escapeHtml(f.d)} · ${escapeHtml(f.c)} · ${escapeHtml(f.l)} · ${f.rt} min</p></div></div>
+  ${award}
+  <h2 class="section-title">What the film is about</h2><p>${escapeHtml(f.s)}</p>
+  <h2 class="section-title">Film at a glance</h2><table class="world-table">${rows}</table>
+  ${relBlock}
+  <p class="meta">Year, director, country, language and running time are widely-documented facts; the description is our own and avoids spoiler endings. No rating is shown because we cannot verify a changing score offline. Stored statically.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'Movie', name: f.t, image: undefined, datePublished: String(f.y), director: { '@type': 'Person', name: f.d }, countryOfOrigin: { '@type': 'Country', name: f.c }, inLanguage: f.l, duration: `PT${f.rt}M`, genre: f.g, description: f.s, url: `https://tukuk.org/movies/${f.slug}` },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Notable Films', item: 'https://tukuk.org/movies' },
+      { '@type': 'ListItem', position: 2, name: f.g[0], item: `https://tukuk.org/movies/genre/${movies.slugify(f.g[0])}` },
+      { '@type': 'ListItem', position: 3, name: f.t, item: `https://tukuk.org/movies/${f.slug}` },
+    ] },
+  ]).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${f.t} (${f.y}) — Director, Country & Premise | Tukuk-OS`,
+    desc: `${f.t} (${f.y}), directed by ${f.d}. ${f.c}, ${f.l}, ${f.rt} min. Genres, prizes and a spoiler-free premise of what the film is about.`,
+    selfUrl: `https://tukuk.org/movies/${f.slug}`,
+    heroTitle: `🎬 ${escapeHtml(f.t)}`, heroSub: `${f.y} · ${escapeHtml(f.d)} · ${escapeHtml(f.g.join(', '))}`,
+    ld, css: MOV_CSS, body,
+  }, moviesNav());
+}
+
+function moviesNotFound(q) {
+  return worldDoc({
+    title: 'Film not found | Notable Films of the World — Tukuk-OS',
+    desc: 'That film was not recognised — browse the full collection of notable films instead.',
+    selfUrl: 'https://tukuk.org/movies', robots: 'noindex,follow',
+    heroTitle: 'Film not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: MOV_CSS,
+    body: `<p>We could not match that to one of our films. Open <a href="/movies">the full collection</a> and browse by genre or decade.</p>`,
+  }, moviesNav());
 }
 
 // ── /traffic — Tukuk Traffic (Waze-style community road reports) ───────────────
