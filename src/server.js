@@ -825,18 +825,20 @@ const CSP_ENFORCED = [
 ].join('; ') + ';';
 // The report stream is only useful if a violation means something new. Enumerated
 // from production /csp-report entries: AdSense frames (doubleclick, www.google.com,
-// adtrafficquality), Microsoft Clarity, the Cloudflare Web Analytics beacon that the
-// edge injects, and Leaflet from unpkg. Any host added to a page belongs here too —
-// otherwise every view pays for a report nobody reads.
+// adtrafficquality), the Google Funding Choices consent/ad-block-recovery loader
+// (fundingchoicesmessages.google.com — its <script> + named iframe, see adsense-loader.js),
+// Microsoft Clarity, the Cloudflare Web Analytics beacon that the edge injects, and Leaflet
+// from unpkg. Any host added to a page belongs here too — otherwise every view pays for a
+// report nobody reads.
 const CSP_REPORT_ONLY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.clarity.ms https://scripts.clarity.ms https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com",
+  "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://fundingchoicesmessages.google.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.clarity.ms https://scripts.clarity.ms https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com",
   "style-src 'self' 'unsafe-inline' https://unpkg.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' data: blob: https: wss:",
   "media-src 'self' data: blob: https:",
-  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com https://googleads.g.doubleclick.net https://www.google.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.googletagservices.com",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com https://googleads.g.doubleclick.net https://www.google.com https://fundingchoicesmessages.google.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.googletagservices.com",
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
