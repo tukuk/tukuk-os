@@ -187,12 +187,34 @@ function logEvent(env, e) {
   }
 }
 
+// Paths served as JSON (search, suggest, health, …) are left on www so programmatic
+// and backup-mode callers keep working without following a redirect. Everything else
+// on www is a page → 301 to the apex so there is exactly one canonical URL per page.
+const API_PATHS = new Set(['/search', '/websearch', '/suggest', '/images', '/videos', '/news', '/answer', '/music', '/radio', '/health', '/stats']);
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
     const host = url.hostname; // the original host: tukuk.org / www.tukuk.org
     const q = (url.searchParams.get("q") || "").slice(0, 200);
+
+    // SEO: the www mirror is a canonical duplicate of the apex. Redirect page requests
+    // (GET/HEAD, non-API) www.tukuk.org → tukuk.org, preserving path + query string.
+    const isApi = pathname.startsWith("/api/") || API_PATHS.has(pathname);
+    if (host === "www.tukuk.org" && !isApi && (request.method === "GET" || request.method === "HEAD")) {
+      ctx.waitUntil(Promise.resolve().then(() =>
+        logEvent(env, { hostname: host, method: request.method, pathname, q, mode: "www_redirect", status: 301 })
+      ));
+      return new Response(null, {
+        status: 301,
+        headers: {
+          Location: "https://tukuk.org" + pathname + url.search,
+          "Cache-Control": "public, max-age=300"
+        }
+      });
+    }
+
     url.hostname = "tukuk.org";
 
     try {
