@@ -45,7 +45,18 @@ const SYNONYM_GROUPS = [
   ['search', 'find', 'lookup', 'query', 'seek'],
   ['news', 'updates', 'report', 'bulletin'],
   ['software', 'application', 'app', 'program'],
-  ['website', 'webpage', 'site', 'portal']
+  ['website', 'webpage', 'site', 'portal'],
+  // The geo hubs list a Malay alias only in `keywords` (the lowest-priority attribute), so a
+  // Malay query loses to any hub that happens to carry the word in prose — "gunung" reached
+  // /geoparks ("Gunung Sewu Geopark" in its Names line) instead of our /mountains door. A
+  // synonym expands the query to the English noun, which sits in the hub TITLE (top attribute)
+  // and only there, so the dedicated door wins. Invisible index data, not English-page prose.
+  ['mountain', 'mountains', 'gunung'],
+  ['river', 'rivers', 'sungai'],
+  ['lake', 'lakes', 'danau'],
+  ['island', 'islands', 'pulau'],
+  ['waterfall', 'waterfalls', 'air terjun'],
+  ['cave', 'caves', 'gua']
 ];
 
 /** Expand an array-of-groups into the {word: [otherWords]} shape Meilisearch expects. */

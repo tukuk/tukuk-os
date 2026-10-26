@@ -29,6 +29,18 @@ test('ranking: the tie-break is a custom quality rule, placed where it can decid
   assert.ok(!rules.some((rule) => rule === 'attributeRank' || rule === 'wordPosition'));
 });
 
+test('synonyms: a Malay geo word reaches the English hub noun in the title', () => {
+  // "gunung" was landing on /geoparks ("Gunung Sewu" in its content) because the mountains hub
+  // carries the alias only in `keywords`. The query must expand to the English noun so it can
+  // match the hub TITLE — the top searchable attribute — instead of losing on `attribute`.
+  const syn = settings().synonyms;
+  for (const [ms, en] of [['gunung', 'mountains'], ['sungai', 'rivers'], ['danau', 'lakes'],
+    ['pulau', 'islands'], ['air terjun', 'waterfalls'], ['gua', 'caves']]) {
+    assert.ok(syn[ms] && syn[ms].includes(en), `${ms} must expand to ${en}`);
+    assert.ok(syn[en] && syn[en].includes(ms), `${en} must expand back to ${ms}`);
+  }
+});
+
 test('ranking: every document we write carries a numeric quality', () => {
   // Meilisearch documents a custom ranking rule as UNDEFINED when a document lacks the field,
   // so a writer that forgets `quality` silently breaks the order for everyone.
