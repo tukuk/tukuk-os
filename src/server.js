@@ -6075,7 +6075,7 @@ ${siteHeader(asHome ? 'home' : 'blog')}
     html += `
     <div class="post-card">
       <h2><a href="${href}">${escapeHtml(post.title)}</a></h2>
-      <div class="meta">${postDate} &middot; ${escapeHtml(post.author || 'Fevian Donald')} &middot; ${mins} min read</div>
+      <div class="meta">${postDate} &middot; <a href="/about" rel="author">${escapeHtml(post.author || 'Fevian Donald')}</a> &middot; ${mins} min read</div>
       <p class="excerpt">${escapeHtml(post.excerpt)}</p>
       ${post.tags && post.tags.length ? `<div class="tags">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       <a class="read-more" href="${href}" aria-label="Read ${escapeHtml(post.title)}">Read article <span class="arrow">&rarr;</span></a>
@@ -20301,7 +20301,12 @@ app.get('/blog/:slug', (req, res) => {
   const eExcerptAttr = escapeHtml(post.excerpt || '');
   const eAuthor = escapeHtml(post.author || 'Fevian Donald');
 
-  const ogImage = 'https://tukuk.org/og.png';
+  // Per-article branded OG card (public/og/<slug>.png, see scripts/gen-og-images.js)
+  // when one was generated; otherwise the generic site graphic. Auto-generated
+  // posts (NASA/recipe) have no card here and keep the fallback.
+  const ogImage = fs.existsSync(path.join(PUBLIC_DIR, 'og', post.slug + '.png'))
+    ? `https://tukuk.org/og/${encodeURIComponent(post.slug)}.png`
+    : 'https://tukuk.org/og.png';
   const postUrl = `https://tukuk.org/blog/${post.slug}`;
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -20316,7 +20321,7 @@ app.get('/blog/:slug', (req, res) => {
         "author": {
           "@type": "Person",
           "name": post.author || "Fevian Donald",
-          "url": "https://tukuk.org"
+          "url": "https://tukuk.org/about"
         },
         "datePublished": post.createdAt,
         "dateModified": post.updatedAt || post.createdAt,
@@ -20381,7 +20386,7 @@ ${siteHeader('blog')}
   <header>
     <a href="/blog" class="back-link">&larr; Back to all articles</a>
     <h1>${eTitle}</h1>
-    <div class="meta">Published: ${postDate} &middot; ${eAuthor} &middot; ${mins} min read</div>
+    <div class="meta">Published: ${postDate} &middot; <a href="/about" rel="author">${eAuthor}</a> &middot; ${mins} min read</div>
   </header>
   <main>
     ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
