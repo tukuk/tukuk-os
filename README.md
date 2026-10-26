@@ -98,7 +98,18 @@ sudo ./deploy/build-iso.sh
 2. **Cloudflare Tunnel (TOKEN mode — automatic, do not create a new one):**
    The tunnel `tukuk-os-v2` (UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae`) already exists & its token is stored in `deploy/env.defaults`. `setup-all.sh` writes `/etc/cloudflared/config.yml` (token + ingress `tukuk.org`/`www`/`dashboard`) and the systemd unit `--config ... tunnel run`. **DNS for `tukuk.org`/`dashboard`/`www` is already routed.** Just run `sudo bash scripts/setup-all.sh` — do NOT `tunnel create` a new one.
 
-3. **Auto-sync — `/opt/tukuk-os` is now a REAL `git clone` (deploy = push, not rsync):**
+3. **Front proxy (nginx) — the HTML cache, one cut-over per server:**
+   `setup-all.sh` brings up Node and the tunnel, but **not** nginx. Until the cut-over the tunnel's `http://127.0.0.1:3000` target is Node itself: the site works, it is just uncached. The cut-over moves Node to `:3001` and puts nginx on `:3000`, so the tunnel target never changes:
+   ```bash
+   sudo bash deploy/nginx/install-tukuk-front.sh verify        # nginx on :8080 → Node :3000, no live traffic yet
+   sudo node scripts/nginx-front-check.js 8080                # the checks
+   sudo bash deploy/nginx/install-tukuk-front.sh cut           # Node → :3001, nginx → :3000
+   sudo bash deploy/nginx/install-tukuk-front.sh status        # who holds which port
+   # undo with: sudo bash deploy/nginx/install-tukuk-front.sh rollback
+   ```
+   After the cut-over **every** hostname on the tunnel must point at `http://127.0.0.1:3000` — nginx answers any `Host` and the app decides what each hostname may serve. A hostname left on another port (the `:8080` verify port is the usual accident) answers `error code: 502` from cloudflared.
+
+4. **Auto-sync — `/opt/tukuk-os` is now a REAL `git clone` (deploy = push, not rsync):**
    The script `scripts/setup-autosync.sh` turns the install directory into a git repo authenticated with a **read-only SSH deploy key** (`/root/.ssh/tukuk_deploy`, registered on the repo → can only `pull`, no token in the URL, no interactive login). After that the existing **`tukuk-update.timer` (root, ~04:30)** (enabled by `setup-all.sh` unless `GIT_AUTO_UPDATE=0`) actually works:
    ```bash
    # Automatic cycle (daily, root): fetch origin/main → merge --ff-only → npm install
@@ -185,7 +196,7 @@ Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered 
 
 ## ☁️ 9. Cloudflare — Facts, Audit & Rules (DO NOT blindly revamp)
 
-**Zone:** `tukuk.org` · **Plan:** *Free Website* (Cloudflare Free) · **Node bind:** `127.0.0.1:3000` (loopback-only → public access ONLY through the tunnel).
+**Zone:** `tukuk.org` · **Plan:** *Free Website* (Cloudflare Free) · **Origin bind:** `127.0.0.1:3000` = nginx front (Node itself on a box that has not run the cut-over; Node sits on `127.0.0.1:3001` after it — §5#3). Loopback-only → public access ONLY through the tunnel.
 
 **Tunnel (ONE only now):** `tukuk-os-v2` · UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae` · **TOKEN mode** (no `.json` files).
 - Token = `cloudflared tunnel token 87e7e77f…` (uses `~/.cloudflared/cert.pem`). Already stored in `deploy/env.defaults` (`CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID`).
@@ -270,7 +281,7 @@ Turn **one word** into **one web-app + one web-game** ready live — **with no b
 | Weekly mirror (limited) | **GitLab CI** (~400 min/mo → schedule-only, does not change GitHub state) | `.gitlab-ci.yml` |
 | "Serious" games (manual opt-in) | **Unity Cloud** | `scripts/satu-kata/templates/unity-GameMain.cs.tpl` |
 
-**Setup (done & verified green):** Secrets `CLOUDFLARE_API_TOKEN` (a token scoped to **`Cloudflare Pages: Edit`**) + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`) are set; **Workflow permissions = Read and write** is enabled. One full run (`workflow_dispatch`) succeeded: generate word → **Pages deploy OK** → bot `git push`es the manifest back to `main`. The daily cron `03:15 MYT` now updates **Cloudflare Pages (`tukuk-satu-kata.pages.dev`)** AND commits the next word automatically. The Pages step is `continue-on-error: true` so the cron still commits even if the Pages deploy has trouble. **Primary hosting `tukuk.org/satu-kata` stays token-free** (second path / redundancy). The workflow has no `push` trigger → no CI loops. ⚠️ `generated/` (a new word each cron) reaches the VPS via **auto-git-pull** (`/opt/tukuk-os` is already a `git clone` — see §5#3): bot commits the manifest → `tukuk-update.timer` pulls → the `tukuk.org/satu-kata` hub updates itself.
+**Setup (done & verified green):** Secrets `CLOUDFLARE_API_TOKEN` (a token scoped to **`Cloudflare Pages: Edit`**) + `CLOUDFLARE_ACCOUNT_ID` (`391d9aa59cfcc5ec44c3d25c855c45cb`) are set; **Workflow permissions = Read and write** is enabled. One full run (`workflow_dispatch`) succeeded: generate word → **Pages deploy OK** → bot `git push`es the manifest back to `main`. The daily cron `03:15 MYT` now updates **Cloudflare Pages (`tukuk-satu-kata.pages.dev`)** AND commits the next word automatically. The Pages step is `continue-on-error: true` so the cron still commits even if the Pages deploy has trouble. **Primary hosting `tukuk.org/satu-kata` stays token-free** (second path / redundancy). The workflow has no `push` trigger → no CI loops. ⚠️ `generated/` (a new word each cron) reaches the VPS via **auto-git-pull** (`/opt/tukuk-os` is already a `git clone` — see §5#4): bot commits the manifest → `tukuk-update.timer` pulls → the `tukuk.org/satu-kata` hub updates itself.
 
 **Why the default is not Unity:** Unity needs a licensed editor + heavy builds → unsuitable for "1 day 1 game" automation on free CI without burdening the server. Web (Phaser) = the automatic default; Unity stays a manual opt-in scaffold.
 

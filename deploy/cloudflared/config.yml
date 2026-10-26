@@ -24,11 +24,20 @@ tunnel: <TUNNEL_ID>
 credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
 
 ingress:
-  # Tukuk-OS search engine + admin panel (node index.js, port 3000)
+  # THE TARGET IS ALWAYS :3000 — it is Node before the front-proxy cut-over and nginx
+  # afterwards (deploy/nginx/install-tukuk-front.sh cut moves Node to :3001 and hands
+  # :3000 to nginx). That is deliberate: the tunnel never has to be touched, and the
+  # cache can be installed or rolled back without a single visitor seeing a dead port.
+  # Every hostname points at the same target: nginx answers any Host and the app decides
+  # what each hostname may serve. A hostname pointed anywhere else (the :8080 verify port
+  # is the usual accident) answers "error code: 502" from cloudflared.
+  # Tukuk-OS search engine + admin panel
   - hostname: tukuk.org
     service: http://localhost:3000
   - hostname: www.tukuk.org
     service: http://localhost:3000
+  # Same app, used for the admin panel. Keep this route alive or delete it everywhere:
+  # WEBAUTHN_ORIGIN advertises it, so a 502 here looks like a broken login page.
   - hostname: dashboard.tukuk.org
     service: http://localhost:3000
   # Dedicated T Chat space (same server, different host — src/server.js TCHAT_HOST gate).
