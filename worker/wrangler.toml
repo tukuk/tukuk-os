@@ -2,10 +2,16 @@ name = "tukuk-www-worker"
 main = "index.js"
 compatibility_date = "2026-10-08"
 
-routes = [
-  { pattern = "tukuk.org/*", zone_name = "tukuk.org" },
-  { pattern = "www.tukuk.org/*", zone_name = "tukuk.org" }
-]
+# FULLY WORKERLESS — tukuk.org & www.tukuk.org now resolve straight to the
+# Cloudflare Tunnel (CNAME → …cfargotunnel.com) → nginx → Node. No Worker routes.
+#
+# Why: the apex Worker route fetched() the SAME zone (url.hostname = tukuk.org),
+# so every page doubled the zone request count and tripped Cloudflare's zone
+# rate-limit → a site-wide 429 "error code: 1027" for ALL visitors. The www was
+# a Worker Custom Domain whose edge path blocked the same way. Both now live on
+# the tunnel; the www→apex 301 is served by Node's canonical middleware. If you
+# re-enable a route here, the same-zone subrequest WILL re-trigger the 429.
+routes = []
 
 # Site snapshot bucket — when the origin is down, the worker serves files from here.
 [[r2_buckets]]
