@@ -5819,6 +5819,19 @@ function adsenseLoader() {
   return `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`;
 }
 
+// Google's ad-block-recovery base tag (Funding Choices framework). Placed once in <head> on
+// AdSense pages so the "please allow ads" recovery message published in the AdSense console can
+// run. It is consent-aware (the framework honours Consent Mode) and keyed by the same publisher
+// ID. When a FAST network replaces AdSense this is skipped — recovery is an AdSense-only feature.
+function adBlockRecoveryTag() {
+  const client = adsenseOn();
+  if (!client) return '';
+  const pub = String(client).replace(/^ca-/, '');
+  if (!/^pub-\d+$/.test(pub)) return '';
+  return `<script async src="https://fundingchoicesmessages.google.com/i/${escapeHtml(pub)}?ers=1"></script>`
+    + `<script>(function(){function s(){if(!window.frames.googlefcPresent){if(document.body){var f=document.createElement('iframe');f.style.cssText='width:0;height:0;border:none;z-index:-1000;left:-1000px;top:-1000px;display:none';f.name='googlefcPresent';document.body.appendChild(f);}else{setTimeout(s,0);}}}s();})();</script>`;
+}
+
 // FAST ad networks (Adsterra / PropellerAds / HilltopAds, etc): the admin pastes
 // ONE universal script URL + flips the toggle. When active it REPLACES AdSense on
 // the same page — avoiding "mixed/competing ad networks", which can get an
@@ -5844,12 +5857,15 @@ function consentBootstrap() {
     + `})();</script><script src="/consent.js" defer></script>`;
 }
 function pageAdScript() {
-  const third = thirdPartyAdTag() || adsenseLoader();
+  const third = thirdPartyAdTag();
+  const adTag = third || adsenseLoader();
   // Consent is only needed where a third party actually sets cookies. If no ad network, no
   // Clarity and no GTM/GA is active this page drops nothing to third parties, so it stays
   // cookie-free and emits nothing — no banner, no consent command, page unchanged.
-  if (!third && !clarityEnabledValue() && !gtmEnabledValue()) return '';
-  return consentBootstrap() + third;
+  if (!adTag && !clarityEnabledValue() && !gtmEnabledValue()) return '';
+  // Ad-block recovery rides only with AdSense, never with a replacing FAST network.
+  const fc = third ? '' : adBlockRecoveryTag();
+  return consentBootstrap() + adTag + fc;
 }
 // Microsoft Clarity (usage analytics) — already disclosed in /privacy. The project ID
 // is public (it is baked into the tag URL), so a safe default fallback is fine. The Admin

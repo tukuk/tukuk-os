@@ -25,19 +25,22 @@
     else layer().push(['consent', 'update', sig]);
   }
 
-  // Stand down if a Google-certified CMP (AdSense "Privacy & Messaging" / Funding Choices) is
-  // already on the page — otherwise the visitor would see two consent prompts. We look for the
-  // framework globals and its script/iframe hosts, which are specific to Google's CMP.
+  // Stand down if Google's OWN consent dialog is already on the page — otherwise the visitor
+  // would see two prompts. Detect ONLY consent-specific signals: the Funding Choices consent
+  // globals or a consent.google.com frame/script. We deliberately do NOT match the shared
+  // fundingchoicesmessages.google.com host, because the ad-block-recovery base tag also loads
+  // from there — matching it would wrongly hide our banner when only ad-block recovery (not
+  // consent messaging) is enabled, leaving no consent prompt at all.
   function googleCmp() {
     try {
-      if (window.__fcconfig || window.fundingChoices || window.__fc) return true;
-      var sc = document.getElementsByTagName('script');
-      for (var i = 0; i < sc.length; i++) {
-        if (/fundingchoicesmessages\.google\.com|consent\.google\.com\//i.test(sc[i].src || '')) return true;
-      }
+      if (window.__fcconfig || window.fundingChoices) return true;
       var fr = document.getElementsByTagName('iframe');
       for (var j = 0; j < fr.length; j++) {
-        if (/fundingchoicesmessages\.google\.com|consent\.google\.com/i.test(fr[j].src || '')) return true;
+        if (/consent\.google\.com/i.test(fr[j].src || '')) return true;
+      }
+      var sc = document.getElementsByTagName('script');
+      for (var i = 0; i < sc.length; i++) {
+        if (/consent\.google\.com\//i.test(sc[i].src || '')) return true;
       }
     } catch (e) {}
     return false;

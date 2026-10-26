@@ -80,6 +80,21 @@
             g.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + c;
             head.appendChild(g);
             firedAd = true;
+            // Google ad-block-recovery base tag (Funding Choices), keyed to the same publisher.
+            var fcs = document.createElement('script');
+            fcs.async = true;
+            fcs.src = 'https://fundingchoicesmessages.google.com/i/' + c.replace(/^ca-/, '') + '?ers=1';
+            head.appendChild(fcs);
+            (function sig() {
+              if (!window.frames['googlefcPresent']) {
+                if (document.body) {
+                  var f = document.createElement('iframe');
+                  f.style.cssText = 'width:0;height:0;border:none;z-index:-1000;left:-1000px;top:-1000px;display:none';
+                  f.name = 'googlefcPresent';
+                  document.body.appendChild(f);
+                } else setTimeout(sig, 0);
+              }
+            })();
           }
         }
         if (granted && s.msAdsEnabled && !firedAd) {
