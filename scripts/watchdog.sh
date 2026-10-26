@@ -6,8 +6,9 @@
 #   1. process dead             → systemctl start
 #   2. process alive but hung   → systemctl restart
 #   3. Meilisearch dead         → cascade restart
-#   4. internet/tunnel problem  → just log a warning
-#      (the site stays up because the Cloudflare fallback serves from R2)
+#   4. edge problem (Cloudflare 429/1027 zone block, tunnel/internet drop) → log LOUDLY.
+#      tukuk.org is WORKERLESS now (no R2 fallback to lean on), so a non-2xx at the
+#      public edge means real visitors are getting an error page even if Node is fine.
 #   5. daily update gone quiet  → nudge tukuk-update.service (see below)
 #
 # Run every 2 minutes via a systemd timer.
@@ -32,24 +33,46 @@ if ! systemctl is-active --quiet cloudflared.service 2>/dev/null; then
   log "cloudflared (system) not active — run: sudo systemctl restart cloudflared.service"
 fi
 
-# --- public site: detect internet/tunnel drop (not a restart cause) ---
-# When the public internet drops, the site still lives via the Cloudflare fallback (R2).
+# --- public edge: is tukuk.org actually answering VISITORS through Cloudflare? ----------
+# The local :3000 check further down cannot see an EDGE fault. This box once sat behind a
+# zone-wide Cloudflare 429 "error code: 1027" (a Worker route fetching its own zone tripped
+# the rate-limit) with Node perfectly healthy — a purely-local watchdog would never notice.
+# Since the site is workerless (no R2 fallback), anything other than a 2xx here means real
+# visitors are being served an error, so a sustained problem is logged loudly (first attempt
+# and then every 15th ≈ 30 min) and every state change (healthy→bad, bad→healthy) is logged
+# once. The status code, not `curl -f`, decides: 429 is called out as the edge-block case.
+probe_edge() { # $1 = url → echoes the HTTP code, or 000 when curl itself could not connect
+  local c; c=$(curl -s -o /dev/null -w '%{http_code}' -m 12 "$1" 2>/dev/null); echo "${c:-000}";
+}
 PUB="${WATCHDOG_PUBLIC_URL:-https://tukuk.org/health}"
+PUB_ASSET="${WATCHDOG_PUBLIC_ASSET:-https://tukuk.org/libs/leaflet.min.js}"
 PUB_STAMP="/tmp/tukuk-os-watchdog.public"
-if curl -sf -m 12 -o /dev/null "$PUB"; then
-  if [ -f "$PUB_STAMP" ]; then
-    log "Internet/tunnel recovered — $PUB answering again"
-    rm -f "$PUB_STAMP"
-  fi
-else
-  P=$(cat "$PUB_STAMP" 2>/dev/null || echo 0)
-  P=$((P + 1))
-  echo "$P" > "$PUB_STAMP"
-  # log on the first attempt and every 15th (≈30 min) — avoid spamming the journal
-  if [ "$P" -eq 1 ] || [ $((P % 15)) -eq 0 ]; then
-    log "Public site not answering (attempt $P) — internet/tunnel? Cloudflare fallback still serving static pages"
-  fi
-fi
+CODE=$(probe_edge "$PUB")
+PREV=$(cat "$PUB_STAMP" 2>/dev/null || echo ok)
+case "$CODE" in
+  2??)
+    [ "$PREV" != ok ] && { log "Public edge RECOVERED — $PUB answering HTTP $CODE (was: $PREV)"; rm -f "$PUB_STAMP"; }
+    ;;
+  429)
+    N=${PREV#429:}; N=$(( ${N:-0} + 1 )); echo "429:$N" > "$PUB_STAMP"
+    [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⛔ CLOUDFLARE EDGE BLOCK (429/error 1027): $PUB — a zone rate-limit/WAF rule is blocking EVERY visitor; Node is NOT the cause (attempt $N). Check tukuk.org → Security → Events + WAF → Rate limiting rules."
+    ;;
+  000)
+    N=${PREV#000:}; N=$(( ${N:-0} + 1 )); echo "000:$N" > "$PUB_STAMP"
+    [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⚠ Public edge UNREACHABLE — curl to $PUB failed (tunnel/internet down, not an app fault) (attempt $N)"
+    ;;
+  *)
+    N=${PREV#err:}; N=$(( ${N:-0} + 1 )); echo "err:$N" > "$PUB_STAMP"
+    [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⚠ Public edge answered HTTP $CODE (non-2xx) — bad deploy or origin error surfacing through Cloudflare (attempt $N)"
+    ;;
+esac
+# A self-hosted vendored library missing at the edge (the exact class of bug that blanked
+# the /traffic map) — catch it here so a broken /libs/ path never waits for a human report.
+ACODE=$(probe_edge "$PUB_ASSET")
+case "$ACODE" in
+  2??) ;;
+  *) log "⚠ Public self-hosted asset $PUB_ASSET returned HTTP $ACODE — a vendored /libs/ file may be missing or misconfigured" ;;
+esac
 
 # --- 5. did the daily update actually run? -----------------------------------
 # The update is silent by design, so a timer that died in March looks exactly like
