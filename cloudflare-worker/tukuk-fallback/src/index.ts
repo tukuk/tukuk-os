@@ -10,6 +10,66 @@ const isApiRequest = (path: string): boolean => path.startsWith('/api/') || API_
 
 type Outcome = 'origin_ok' | 'www_redirect' | 'origin_error' | 'fallback_served' | 'static_miss' | 'api_unavailable';
 
+// ---- authenticated R2 gateway (tukuk-backup's role, moved onto our own zone) ----
+// The VPS Cloudflare token has no R2 scope, so its backup timers POST archives to a
+// Worker holding the bucket binding. The tukuk-backup worker's *.workers.dev hostname
+// is platform-throttled with HTTP 429 (shared edge), which silently killed every
+// backup for a week; this hostname (www.tukuk.org) is on our own zone and not
+// throttled. Same contract as tukuk-backup: Bearer UPLOAD_SECRET, POST ?key= put,
+// GET ?key= fetch (or ?prefix= list), DELETE ?key= remove, 90 MB cap on declared
+// AND actual bytes. Must be intercepted BEFORE origin proxying — the origin would
+// just 404 it. Keys land in the same tukuk-fallback bucket the mirror reads from.
+const MAX_BYTES = 90 * 1024 * 1024;
+
+async function backupGateway(request: Request, env: any, url: URL): Promise<Response> {
+	const header = request.headers.get('authorization') || '';
+	const token = header.replace(/^Bearer\s+/i, '');
+	const secret: string | undefined = (env as Record<string, any>).UPLOAD_SECRET;
+	if (!secret || token !== secret) return new Response('forbidden', { status: 403 });
+	const bucket = (env as Record<string, any>).FALLBACK_BUCKET;
+
+	if (request.method === 'POST') {
+		const declared = Number(request.headers.get('content-length') || 0);
+		if (declared > MAX_BYTES) return new Response('payload too large', { status: 413 });
+		const body = await request.arrayBuffer();
+		if (body.byteLength > MAX_BYTES) return new Response('payload too large', { status: 413 });
+		const key =
+			url.searchParams.get('key') ||
+			request.headers.get('x-object-key') ||
+			`meili-${new Date().toISOString().replace(/[:.]/g, '-')}.json.gz`;
+		const ct = request.headers.get('x-content-type') || 'application/gzip';
+		await bucket.put(key, body, { httpMetadata: { contentType: ct } });
+		return Response.json({ ok: true, key, bytes: body.byteLength });
+	}
+
+	if (request.method === 'GET') {
+		const key = url.searchParams.get('key');
+		if (!key) {
+			const listed = await bucket.list({ prefix: url.searchParams.get('prefix') || '' });
+			return Response.json({
+				objects: listed.objects.map((o: any) => ({ key: o.key, bytes: o.size, uploaded: o.uploaded })),
+			});
+		}
+		const object = await bucket.get(key);
+		if (!object) return new Response('not found', { status: 404 });
+		return new Response(object.body, {
+			headers: {
+				'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+				'Content-Length': String(object.size),
+			},
+		});
+	}
+
+	if (request.method === 'DELETE') {
+		const key = url.searchParams.get('key');
+		if (!key) return new Response('key required', { status: 400 });
+		await bucket.delete(key);
+		return Response.json({ ok: true, key });
+	}
+
+	return new Response('edge-backup gateway', { status: 405 });
+}
+
 function track(env: any, outcome: Outcome, method: string, path: string, status?: number): void {
 	try {
 		const engine = (env as Record<string, any>)['tukuk-os_engine'];
@@ -27,6 +87,11 @@ export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
 		const path = url.pathname;
+		// Backup-timer uploads arrive here (see backupGateway) — handle at the edge,
+		// before the origin proxy, so a healthy origin cannot 404 them.
+		if (path === '/edge-backup' || path.startsWith('/edge-backup/')) {
+			return backupGateway(request, env, url);
+		}
 		// This worker is routed on www.tukuk.org — the mirror hostname. The app tries to
 		// 301 www → apex itself (src/server.js), but the request below is rebuilt against
 		// ORIGIN, so the origin only ever sees Host: tukuk.org and that check cannot fire.
