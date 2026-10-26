@@ -25,13 +25,31 @@
     else layer().push(['consent', 'update', sig]);
   }
 
+  // Stand down if a Google-certified CMP (AdSense "Privacy & Messaging" / Funding Choices) is
+  // already on the page — otherwise the visitor would see two consent prompts. We look for the
+  // framework globals and its script/iframe hosts, which are specific to Google's CMP.
+  function googleCmp() {
+    try {
+      if (window.__fcconfig || window.fundingChoices || window.__fc) return true;
+      var sc = document.getElementsByTagName('script');
+      for (var i = 0; i < sc.length; i++) {
+        if (/fundingchoicesmessages\.google\.com|consent\.google\.com\//i.test(sc[i].src || '')) return true;
+      }
+      var fr = document.getElementsByTagName('iframe');
+      for (var j = 0; j < fr.length; j++) {
+        if (/fundingchoicesmessages\.google\.com|consent\.google\.com/i.test(fr[j].src || '')) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
   var bar = null;
   function close() { if (bar && bar.parentNode) bar.parentNode.removeChild(bar); bar = null; }
 
   function decide(v) { apply(v); save(v); close(); }
 
   function build() {
-    if (bar) return;
+    if (bar || googleCmp()) return;
     bar = document.createElement('div');
     bar.id = 'tk-consent';
     bar.setAttribute('role', 'dialog');
@@ -61,10 +79,15 @@
     document.documentElement.appendChild(bar);
   }
 
-  // Only ask when no choice has been recorded yet.
+  // Only ask when no choice has been recorded yet. Google's CMP can inject a beat after our
+  // deferred script, so re-check shortly after load: build only if theirs is still absent, and
+  // tear our bar down if theirs appears later.
+  function standDown() { if (bar && googleCmp()) close(); }
   if (!stored()) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);
     else build();
+    setTimeout(function () { if (!googleCmp()) build(); standDown(); }, 1500);
+    setTimeout(standDown, 3200);
   }
 
   // Let a “Manage cookies” link (or the console) re-open the banner without clearing storage.
