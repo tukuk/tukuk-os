@@ -15,44 +15,63 @@
       .then(function (s) {
         if (!s) return;
         var head = document.head || document.documentElement;
-        // Microsoft Clarity (usage analytics — disclosed on /privacy). It is FREE
-        // of the ad toggle, so it is loaded early to stay alive even when the
-        // third-party ad networks below `return` (replacing AdSense).
-        if (s.clarityEnabled) {
-          var cid = String(s.clarityId || '');
-          if (/^[a-z0-9]+$/i.test(cid)) {
-            var cl = document.createElement('script');
-            cl.async = true;
-            cl.src = 'https://www.clarity.ms/tag/' + cid;
-            head.appendChild(cl);
+        // Google Consent Mode v2 — read the stored choice and set the default BEFORE any tag
+        // is injected. Nothing that drops a personalisation/analytics cookie may fire until the
+        // visitor grants it. AdSense is the one exception Google blesses: it serves
+        // non-personalised ads even under a denied state, so it can still run. This mirrors the
+        // server-rendered pages, where consentBootstrap() emits the same default inline.
+        var state = 'unset';
+        try { state = localStorage.getItem('tk-adconsent') || 'unset'; } catch (e) {}
+        var granted = state === 'granted';
+        var dataLayer = window.dataLayer = window.dataLayer || [];
+        var gtag = window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+        gtag('consent', 'default', granted
+          ? { ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'granted' }
+          : { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied' });
+        // First visit: bring in the visible banner (self-hosted) so the choice can be made; it
+        // stores the answer and pushes a consent `update`, which is honoured on the next load.
+        if (state === 'unset') {
+          var cb = document.createElement('script');
+          cb.defer = true;
+          cb.src = '/consent.js';
+          head.appendChild(cb);
+        }
+        // Analytics (Clarity + GTM/GA) set cookies, so they only load once consent is granted.
+        if (granted) {
+          if (s.clarityEnabled) {
+            var cid = String(s.clarityId || '');
+            if (/^[a-z0-9]+$/i.test(cid)) {
+              var cl = document.createElement('script');
+              cl.async = true;
+              cl.src = 'https://www.clarity.ms/tag/' + cid;
+              head.appendChild(cl);
+            }
+          }
+          if (s.gtmEnabled) {
+            var gid = String(s.gtmId || '').toUpperCase();
+            if (/^(GTM|GT)-[A-Z0-9]+$/.test(gid)) { // classic GTM container (GTM-) or the new Google tag (GT-)
+              var gt = document.createElement('script');
+              gt.text = "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gid + "');";
+              head.appendChild(gt);
+            }
           }
         }
-        // Google Tag Manager — the single Google tag (GA4 is configured inside the
-        // container). Like Clarity it is analytics, NOT an ad, so it loads even when the
-        // third-party network below `return` replaces AdSense. Container ID is public.
-        if (s.gtmEnabled) {
-          var gid = String(s.gtmId || '').toUpperCase();
-          if (/^(GTM|GT)-[A-Z0-9]+$/.test(gid)) { // classic GTM container (GTM-) or the new Google tag (GT-)
-            var gt = document.createElement('script');
-            gt.text = "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gid + "');";
-            head.appendChild(gt);
-          }
-        }
-        // FAST ad networks (Adsterra / PropellerAds / etc.) — when enabled they
-        // REPLACE AdSense on the same page (avoids "mixed networks" → protects the
-        // AdSense account from a ban). AdSense auto-resumes when this toggle is off.
-        if (s.thirdPartyAdEnabled) {
+        // Non-Google networks (FAST / Microsoft USM) are not Consent-Mode aware, so they wait
+        // for a grant too. AdSense still covers the ungranted visitor with compliant
+        // non-personalised ads; when only a third-party network is configured the page simply
+        // shows no ad until the visitor accepts.
+        var firedAd = false;
+        if (granted && s.thirdPartyAdEnabled) {
           var t = String(s.thirdPartyAdSrc || '');
           if (/^https:\/\/[a-z0-9.-]+\//i.test(t)) {
             var tp = document.createElement('script');
             tp.async = true;
             tp.src = t;
             head.appendChild(tp);
-            return;
+            firedAd = true;
           }
         }
-        // Google AdSense auto-ads
-        if (s.adsEnabled) {
+        if (s.adsEnabled && !firedAd) {
           var c = String(s.adsClient || '');
           if (/^ca-pub-\d+$/.test(c)) {
             var g = document.createElement('script');
@@ -60,10 +79,10 @@
             g.crossOrigin = 'anonymous';
             g.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + c;
             head.appendChild(g);
+            firedAd = true;
           }
         }
-        // Microsoft USM (Universal Site Monetization) — one <script src> in the head.
-        if (s.msAdsEnabled) {
+        if (granted && s.msAdsEnabled && !firedAd) {
           var u = String(s.msAdsUsmSrc || '');
           if (/^https:\/\/[a-z0-9.-]+\//i.test(u)) {
             var m = document.createElement('script');
