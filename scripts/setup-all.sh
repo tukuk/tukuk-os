@@ -320,8 +320,8 @@ else
   echo "   Quick test without a token:  cloudflared tunnel --url http://localhost:3000"
 fi
 
-# ── [8] Cloudflare Edge — www.tukuk.org always live ───────────────────────
-info "[7/8] Cloudflare Edge (www mirror + R2 snapshot)..."
+# ── [8] Cloudflare R2 cold backup — edge is WORKERLESS (see README §9) ────
+info "[7/8] Cloudflare (R2 cold backup — NO Worker on the request path)..."
 CF_API="$(get_env CLOUDFLARE_API_TOKEN)"
 CF_ACC="$(get_env CLOUDFLARE_ACCOUNT_ID)"
 if [[ -n "$CF_API" ]]; then
@@ -331,9 +331,12 @@ if [[ -n "$CF_API" ]]; then
   # permissions problem and is not one — the token is fine, the account id was never passed.
   if [[ -n "$CF_ACC" ]]; then export CLOUDFLARE_ACCOUNT_ID="$CF_ACC"; fi
   command -v wrangler >/dev/null || npm install -g wrangler --silent || true
-  ( cd "$INSTALL_DIR/worker" && npx --yes wrangler deploy >/dev/null ) \
-    && ok "Worker www.tukuk.org deployed (try origin → on failure → serve R2 snapshot)." \
-    || warn "wrangler deploy failed — check CLOUDFLARE_API_TOKEN & zone permissions."
+  # WORKERLESS: the tukuk.org/www Worker route is intentionally gone — a route that
+  # fetch()ed its own zone doubled the request count and tripped Cloudflare's zone
+  # rate-limit (site-wide 429 error 1027). Both hosts are plain tunnel CNAMEs now,
+  # and origin-down failover lives in nginx (@down / @down_json), so DO NOT deploy or
+  # route worker/ here. Global wrangler above stays only because snapshot-r2.sh can
+  # fall back to a wrangler R2 upload when BACKUP_WORKER_URL is not set.
   # snapshot-r2.sh reads its whole configuration from the environment and this is the only
   # call that runs it without systemd's EnvironmentFile: invoked from npm's postinstall there
   # is no .env in scope, so BACKUP_WORKER_URL/SECRET are empty, every upload falls back to a
@@ -370,9 +373,9 @@ WantedBy=timers.target
 EOF
   systemctl daemon-reload
   systemctl enable --now tukuk-snapshot.timer >/dev/null
-  ok "6-hour snapshot timer active — the www mirror stays fresh."
+  ok "6-hour snapshot timer active — site snapshots kept in R2 as a cold disaster backup."
 else
-  warn "No CLOUDFLARE_API_TOKEN — edge step skipped (www fallback not active)."
+  warn "No CLOUDFLARE_API_TOKEN — R2 snapshot step skipped (site still serves fine via tunnel + nginx)."
 fi
 
 # ── T Chat backup (chat.json + chat-media) → R2, every 6 hours ──

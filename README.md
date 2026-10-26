@@ -20,7 +20,7 @@ Our own internet portal — web search engine + AI answers + in-browser app & ga
 | Change config/keys | Edit `deploy/env.defaults` (private repo) → `sudo bash scripts/setup-all.sh` (idempotent). |
 | Generate app+game from 1 word | `node scripts/satu-kata/generate.mjs [word]` — free CI (GitHub Actions) daily cron → hub served at **`tukuk.org/satu-kata/`** (Cloudflare Pages = optional). See **§12** |
 | Check health | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
-| Public sites now | ✅ `tukuk.org`, `dashboard.tukuk.org`, `www.tukuk.org` = **200** (Cloudflare Free) |
+| Public sites now | ✅ `tukuk.org`, `dashboard.tukuk.org` = **200**; `www.tukuk.org` = **301 → apex** (edge workerless — §9) |
 
 **Key file skeleton:** `src/server.js` (all routes) · `public/index.html` (search+dashboard SPA) · `public/editor.html` & `public/editor-video.html` (Studio) · `src/brain/*` (AI + search) · `scripts/setup-all.sh` (auto-setup) · `deploy/env.defaults` (shipped keys & config) · `deploy/cloudflared/config.yml` (tunnel template).
 
@@ -89,7 +89,7 @@ sudo ./deploy/build-iso.sh
    ```
    The script copies to `/opt/tukuk-os`, generates `.env` from `deploy/env.defaults`, and calls `setup-all.sh` (Node→Meili→services→tunnel). **The server must have internet** for this step.
    - **Fully offline (no internet):** `TUKUK_KEEP_NODEMODULES=1 TUKUK_OFFLINE=1 sudo bash scripts/install-from-usb.sh` — but you must also carry `node_modules` (built on an online machine of the same arch) + the `node`/`cloudflared`/`meilisearch` binaries, and enable the systemd services manually.
-   - **Tunnel & edge AUTOMATIC:** `deploy/env.defaults` already contains `CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) and `CLOUDFLARE_API_TOKEN` — so `setup-all.sh` brings the tunnel up straight away (TOKEN mode, no `.json` files) and deploys the worker/edge. **No manual steps needed** on a new server.
+   - **Tunnel AUTOMATIC:** `deploy/env.defaults` already contains `CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) and `CLOUDFLARE_API_TOKEN` — so `setup-all.sh` brings the tunnel up straight away (TOKEN mode, no `.json` files). **No manual steps needed** on a new server. ⚠️ It does **NOT** deploy a Worker on the site — the edge is workerless (§9); `worker/` is kept inert only. `CLOUDFLARE_API_TOKEN` is now used just for the optional R2 cold backup.
 
 1. **Quick Install on an existing Ubuntu Server (LAN IP — `TUKUK_HOST`, now `192.168.8.105`):**
    ```bash
@@ -198,6 +198,12 @@ Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered 
 
 **Zone:** `tukuk.org` · **Plan:** *Free Website* (Cloudflare Free) · **Origin bind:** `127.0.0.1:3000` = nginx front (Node itself on a box that has not run the cut-over; Node sits on `127.0.0.1:3001` after it — §5#3). Loopback-only → public access ONLY through the tunnel.
 
+### 🚫 EDGE IS WORKERLESS — do NOT route a Worker on `tukuk.org` again
+Both `tukuk.org` and `www.tukuk.org` are **plain CNAMEs to the tunnel** (`87e7e77f…cfargotunnel.com`, proxied) → nginx → Node. **No Cloudflare Worker sits on the request path.** `worker/wrangler.toml` has `routes = []` for exactly this reason — leave it empty.
+- **Why:** the old `tukuk-www-worker` route proxied by `fetch()`ing `url.hostname = "tukuk.org"` — the SAME zone it was routed on. Every page therefore hit the zone **twice** (client request + Worker subrequest), which tripped Cloudflare's zone **rate-limiting** rule and returned **`HTTP 429 · error code: 1027` for every visitor**, while Node/nginx stayed perfectly healthy. `www` was a Worker *Custom Domain* (which auto-creates a read-only `AAAA 100::` DNS record the Zones API can't edit until the Custom Domain is deleted) and blocked the same way.
+- **Recovery that worked:** delete the routes via `DELETE /zones/{Z}/workers/routes/{id}`, delete the Custom Domain via `DELETE /accounts/{ACC}/workers/domains/{id}` (both with a *Workers Scripts: Edit* token — WAF scope is **not** needed for these), then repoint `www` to the tunnel CNAME. The deployed `tukuk-www-worker` script has since been deleted; its source stays in `worker/` (inert) so it can be revived **without an apex route** if ever needed.
+- **Failover replacement (no Worker):** nginx serves a branded `503 Under maintenance` (`@down`) / JSON (`@down_json` on `/api` + `/health`) when the origin is unreachable and there is no stale cache — `deploy/nginx/tukuk-front.conf`. This lives one hop **before** the tunnel, so it is invisible to zone security rules and adds zero requests (it can never cause a 429). The `scripts/watchdog.sh` public-edge check classifies `429/1027` vs tunnel-down vs non-2xx and logs the edge-block case loudly.
+
 **Tunnel (ONE only now):** `tukuk-os-v2` · UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae` · **TOKEN mode** (no `.json` files).
 - Token = `cloudflared tunnel token 87e7e77f…` (uses `~/.cloudflared/cert.pem`). Already stored in `deploy/env.defaults` (`CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID`).
 - `/etc/cloudflared/config.yml` is written by `setup-all.sh` (token + ingress) + the systemd unit `--config … tunnel run`. **`cloudflared service install` REJECTS `token:` configs** — that is why the unit is written directly.
@@ -208,7 +214,7 @@ Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered 
 |---|---|---|
 | `CNAME @ (tukuk.org) → 87e7e77f…cfargotunnel` (proxy) | Main site | ❌ NEVER |
 | `CNAME dashboard → 87e7e77f…` (proxy) | Panel/admin | ❌ NEVER |
-| `AAAA www → 100::` (proxy) | www fallback (edge Worker) | ❌ NEVER |
+| `CNAME www → 87e7e77f…cfargotunnel` (proxy) | www mirror → Node 301 to apex (workerless) | ❌ NEVER |
 | `MX ×3 → route1/2/3.mx.cloudflare.net` | Cloudflare Email Routing | ❌ NEVER |
 | `TXT @ → v=spf1 include:_spf.mx.cloudflare.net` | Email SPF | ❌ NEVER |
 | `TXT cf2024-1._domainkey` (DKIM) · `TXT _dmarc` | Email DKIM/DMARC | ❌ NEVER |
@@ -227,7 +233,7 @@ None of it needs payment at small scale. Here is the list + where each is set:
 | Service | Free plan | Where / how |
 |---|---|---|
 | **Cloudflare DNS + Tunnel** | Free | Zone `tukuk.org`; tunnel `tukuk-os-v2` (token mode) |
-| **Cloudflare Workers** | 100k req/day | `worker/` + `cloudflare-worker/tukuk-fallback` (www mirror) — deploys when `CLOUDFLARE_API_TOKEN` exists |
+| **Cloudflare Workers** | 100k req/day | ⚠️ **NOT on `tukuk.org`** — edge is workerless (§9). `cloudflare-worker/tukuk-backup` writes R2 snapshots; `worker/` source is kept inert (`routes=[]`, undeployed) |
 | **Cloudflare R2** | 10 GB storage | Snapshots `scripts/snapshot-r2.sh` (6-hour timer) — file `scripts/r2.env` |
 | **Cloudflare Email Routing** | Free | MX/SPF/DKIM/DMARC active (hello@tukuk.org) |
 | **Cloudflare Zero Trust** | 50 users free | Tunnel + access; admin passkeys |
