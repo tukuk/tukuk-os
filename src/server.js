@@ -6003,6 +6003,28 @@ function siteFooter() {
       <li><a href="/disasters">Live disaster watch</a></li>
       <li><a href="/holidays">World public holidays</a></li>
     </ul></div>
+    <div><h3>Geography &amp; Places</h3><ul>
+      <li><a href="/islands">Islands of the World</a></li>
+      <li><a href="/mountains">Mountains &amp; Peaks</a></li>
+      <li><a href="/rivers">Rivers of the World</a></li>
+      <li><a href="/lakes">Lakes of the World</a></li>
+      <li><a href="/waterfalls">Waterfalls</a></li>
+      <li><a href="/volcanoes">Volcanoes</a></li>
+      <li><a href="/deserts">Deserts</a></li>
+      <li><a href="/caves">Caves</a></li>
+      <li><a href="/glaciers">Glaciers</a></li>
+      <li><a href="/coral-reefs">Coral Reefs</a></li>
+      <li><a href="/museums">Museums of the World</a></li>
+      <li><a href="/castles">Castles</a></li>
+      <li><a href="/cathedrals">Cathedrals</a></li>
+      <li><a href="/bridges">Bridges</a></li>
+      <li><a href="/skyscrapers">Skyscrapers</a></li>
+      <li><a href="/stadiums">Stadiums</a></li>
+      <li><a href="/airports">Airports</a></li>
+      <li><a href="/parks">Parks &amp; Gardens</a></li>
+      <li><a href="/beaches">Beaches</a></li>
+      <li><a href="/heritage">World Heritage Sites</a></li>
+    </ul></div>
     <div><h3>Site</h3><ul>
       <li><a href="/about">About</a></li>
       <li><a href="/contact">Contact</a></li>
