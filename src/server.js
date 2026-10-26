@@ -7614,11 +7614,11 @@ function cutiBusy(msg) {
 // throughout; the party-green hero is what tells the holiday pages apart from weather/quakes.
 function cutiDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8083,11 +8083,11 @@ function ngThumb(cca2) { return `https://flagcdn.com/w160/${String(cca2 || '').t
 
 function negaraDoc(o) {
   const robots = o.robots || 'index,follow,max-image-preview:large';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
