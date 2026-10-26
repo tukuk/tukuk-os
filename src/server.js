@@ -7247,8 +7247,8 @@ function cuacaMapPage(req) {
   // leaflet.css is not optional: it is what makes a pile of <img> tiles a map
   // (absolute panes, clipped edges). Without it the tiles lay themselves out in
   // normal flow and spill out of the box — which is how this page shipped.
-  const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
-    + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
+  const script = `<link rel="stylesheet" href="/libs/leaflet.css">`
+    + `<script src="/libs/leaflet.min.js" defer></script>`
     + `<script>document.addEventListener('DOMContentLoaded',function(){var WXP=${payload};function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('wxmap').setView([3.8,107],5);var wxOsm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'\\u00a9 OpenStreetMap'});var wxFlow=L.tileLayer('/api/traffic/tiles/{z}/{x}/{y}',{maxZoom:12,attribution:'Live traffic © Google'});wxOsm.addTo(m);var ctl={};WXP.forEach(function(o){var tl=L.tileLayer(o.url,{maxZoom:12,opacity:.8});if(o.def)tl.addTo(m);ctl[o.label]=tl;});L.control.layers({'🗺 Map':wxOsm,'🚦 Live traffic':wxFlow},ctl,{collapsed:false}).addTo(m);window.addEventListener('resize',function(){m.invalidateSize();});if(window.ResizeObserver)new ResizeObserver(function(){m.invalidateSize();}).observe(document.getElementById('wxmap'));}boot();});</script>`;
   return cuacaDoc({
     title: 'Live Weather Map \u2014 Rain, Clouds & Pressure Worldwide (OpenWeather) | Tukuk-OS',
@@ -11294,8 +11294,8 @@ function trafficHubPage() {
   <h2 class="section-title">Data &amp; privacy</h2>
   <p>Reports are anonymous. We do not attach any user ID, IP address or device fingerprint to a post. Coordinates are rounded to 5 decimal places (roughly a metre), and we keep at most 500 active reports on the server at any time. Old rows are removed automatically on every read and every write.</p>
   <p class="meta">Live traffic flow and base map: © <a href="https://www.google.com/maps" rel="noopener nofollow">Google</a>, proxied and cached on this server for two minutes. Community reports: this site only — stored in <code>data/traffic.json</code>, reloaded atomically. Rendered with <a href="https://leafletjs.com" rel="noopener nofollow">Leaflet</a>.</p>`;
-  const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
-    + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
+  const script = `<link rel="stylesheet" href="/libs/leaflet.css">`
+    + `<script src="/libs/leaflet.min.js" defer></script>`
     + `<script>(function(){var TYPES=${typeMeta};var SEED=${initialReports};var all=SEED.slice();var pin=null;var chosenType=null;var voted={};var markers={};var activeTypes={};Object.keys(TYPES).forEach(function(k){activeTypes[k]=true;});function fmtAgo(ms){var m=Math.max(0,Math.round((Date.now()-ms)/60000));if(m<1)return'moments ago';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+' hr ago';return Math.floor(h/24)+' d ago';}
 var LIVE_BASE='/api/traffic/tiles/{z}/{x}/{y}';var OSM_BASE='https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 var LIVE_ON=true;try{LIVE_ON=(localStorage.getItem('trf-live')||'on')!=='off';}catch(e){}
@@ -11307,7 +11307,7 @@ function setLive(on){LIVE_ON=on;try{localStorage.setItem('trf-live',on?'on':'off
   if(m){if(on){liveErrs=0;if(m.hasLayer(window.__trfOsm))m.removeLayer(window.__trfOsm);window.__trfLive.addTo(m);}else{if(m.hasLayer(window.__trfLive))m.removeLayer(window.__trfLive);window.__trfOsm.addTo(m);}}
   liveLabel(on);if(on)refreshLive();
   var s=document.getElementById('trf-status');if(s&&on)s.textContent=all.length+' active reports worldwide · flow refreshed every 2 min';}
-function boot(){if(!window.L){setTimeout(boot,300);return;}var m=L.map('trf-map',{zoomControl:true,scrollWheelZoom:true}).setView([20,20],2);var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'});var live=L.tileLayer(LIVE_BASE,{maxZoom:19,attribution:'Live traffic © Google'});
+function boot(t){if(!window.L){t=(t||0)+400;var s0=document.getElementById('trf-status');if(t>12000){if(s0)s0.textContent='map library failed to load — please reload the page';return;}setTimeout(function(){boot(t);},400);return;}var m=L.map('trf-map',{zoomControl:true,scrollWheelZoom:true}).setView([20,20],2);var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\\u00a9 OpenStreetMap'});var live=L.tileLayer(LIVE_BASE,{maxZoom:19,attribution:'Live traffic © Google'});
   window.__trfMap=m;window.__trfOsm=osm;window.__trfLive=live;
   live.on('tileerror',function(){liveErrs++;if(liveErrs>=6&&LIVE_ON){setLive(false);var s=document.getElementById('trf-status');if(s)s.textContent='live flow unreachable — showing the plain map';}});
   (LIVE_ON?live:osm).addTo(m);liveLabel(LIVE_ON);render(m);
@@ -11528,8 +11528,8 @@ function petaPage() {
   <h2 class="section-title">What it is not</h2>
   <p>This is a route <b>planner</b>, not a live navigation co-pilot: there are no voice prompts, no speed cameras on the route and the times assume free-flowing roads. The layer box in the corner does carry a real <b>Live traffic</b> view (measured road flow, green–amber–red, refreshed every couple of minutes) so you can read the road before you commit to a route, and <a href="/traffic">Tukuk Traffic</a> adds the community side — crashes, checkpoints, closures and hazards that a speed reading cannot explain. Distances and times assume free-flowing conditions; road works, closures and local rules always win. Some pairs genuinely have no road between them (islands, or Borneo and the Peninsula without a ferry) — the router will say so honestly rather than invent a path.</p>
   <p class="meta">Map data &amp; © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors; routing by <a href="http://project-osrm.org/" rel="noopener nofollow">OSRM</a>; search by <a href="https://nominatim.org/" rel="noopener nofollow">Nominatim</a>. Tiles rendered with Leaflet; satellite imagery © <a href="https://www.esri.com/content/dam/esrisites/en-us/media/legal/feature-article-licensing.pdf" rel="noopener nofollow">Esri</a>, Maxar &amp; Earthstar Geographics; daily true-color by <a href="https://worldview.earthdata.nasa.gov" rel="noopener nofollow">NASA GIBS</a> (VIIRS/Suomi-NPP, renewed every day). No coordinates leave your browser except the two endpoints you search.</p>`;
-  const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
-    + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
+  const script = `<link rel="stylesheet" href="/libs/leaflet.css">`
+    + `<script src="/libs/leaflet.min.js" defer></script>`
     + `<script>(function(){var MODE=${modeMeta};var map=null,start=null,dest=null,mkS=null,mkD=null,line=null;
 function esc(x){return String(x).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});}
 function status(t){document.getElementById('peta-status').textContent=t||'';}
@@ -11631,8 +11631,8 @@ function langitPage() {
   <h2 class="section-title">Why it is free (and what it is not)</h2>
   <p>Every layer here is published by NASA's Global Imagery Browse Services or a national geographic archive for exactly this kind of use — no account, no API key, no usage limit on your side. The imagery is refreshed on the providers' schedule (typically about a day behind for the daily composites), so this is a living snapshot of the planet, not a real-time video feed, and clouds are sometimes in the way — that is the honest weather, not a bug. For routing between places use <a href="/maps">Maps &amp; Navigation</a>; for a single full-disk portrait of Earth use <a href="/nasa/earth">EPIC</a>; and for the fuller story behind these layers — why a daily composite beats a live feed — read <a href="/blog/see-earth-from-space-today-free-satellite-imagery">how free satellite imagery actually works</a> — then go deeper on <a href="/blog/reading-earth-at-night-what-city-lights-reveal">what city lights reveal about us</a> and <a href="/blog/weather-satellites-vs-map-satellites">weather vs map satellites</a>.</p>
   <p class="meta">Imagery: <a href="https://www.earthdata.nasa.gov/centers/goddard-earths-gibs-science-team/gibs" rel="noopener nofollow">NASA GIBS</a> (VIIRS true-color &amp; NOAA-20 day/night band), <a href="https://visibleearth.nasa.gov/collection/1484/blue-marble" rel="noopener nofollow">NASA Blue Marble</a>, <a href="https://www.esri.com/en-us/arcgis/products/arcgis-world-imagery/overview" rel="noopener nofollow">Esri World Imagery</a>; live traffic flow © <a href="https://www.google.com/maps" rel="noopener nofollow">Google</a>. Rendered with Leaflet. Your view stays in your browser — no coordinates are stored.</p>`;
-  const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
-    + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
+  const script = `<link rel="stylesheet" href="/libs/leaflet.css">`
+    + `<script src="/libs/leaflet.min.js" defer></script>`
     + `<script>(function(){var map=null,mark=null;
 function st(t){document.getElementById('langit-status').textContent=t||'';}
 function gibs(layer,lvl,ext,date,nz,mz,attr){return L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/'+layer+'/default/'+date+'/GoogleMapsCompatible_Level'+lvl+'/{z}/{y}/{x}.'+ext,{maxNativeZoom:nz,maxZoom:mz,attribution:attr});}
@@ -11710,8 +11710,8 @@ function petaLivePage() {
   <h2 class="section-title">What it is, honestly</h2>
   <p>Coverage is only as good as the ground stations: over Europe and East Asia the skies are dense, over open ocean and remote land a aircraft or ship may go minutes without a fresh report, and a few aircraft (military, some private) simply do not broadcast. Positions are as-reported and can lag by a handful of seconds — this is situational <b>awareness</b>, not an air-traffic-control or navigation tool, and it must never be relied on for separation or collision avoidance. If the ship layer reads “not enabled on this server yet”, the free AIS feed has not been wired up on this box; the aircraft layer is unaffected and stays live. <b>Ships only appear where we listen</b>: one AIS socket covers a handful of lanes, and ours are the Malacca and Singapore Strait, the South China Sea, Tokyo Bay and Korea, the English Channel, the eastern Mediterranean and Suez approaches, the Strait of Gibraltar, the US East Coast, the US Gulf Coast, the US West Coast, Brazil’s Santos–Rio approach and south-east Australia. Open water outside those boxes is not empty — it is unheard, which is a different thing. Each box was kept or dropped by counting what it actually delivered on the live socket, twice, at two different hours: the lanes that returned nothing — the Persian Gulf, Mumbai, the Red Sea — are left out rather than pretended, and Shanghai and the Taiwan Strait sit inside a box we do subscribe to and stay quiet anyway, because no receiver there feeds this stream. Silence in one of our boxes is a receiver gap, not a statement that no ship is there.</p>
   <p class="meta">Aircraft: <a href="https://opensky-network.org" rel="noopener nofollow">OpenSky Network</a> (open ADS-B). Vessels: <a href="https://aisstream.io" rel="noopener nofollow">aisstream.io</a> (public AIS). Base map © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors, satellite © <a href="https://www.esri.com" rel="noopener nofollow">Esri</a> &amp; Maxar. Rendered with <a href="https://leafletjs.com" rel="noopener nofollow">Leaflet</a>. Pan and search stay between you and our server — we store nothing about where you looked.</p>`;
-  const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
-    + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
+  const script = `<link rel="stylesheet" href="/libs/leaflet.css">`
+    + `<script src="/libs/leaflet.min.js" defer></script>`
     + `<script>(function(){var map=null,airG=null,shipG=null,labels=null,paused=false,timer=null,moveT=null;
 function esc(x){return String(x==null?'':x).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});}
 function num(v,u){return v==null?'\u2014':(v.toLocaleString('en-US')+(u||''));}
@@ -11798,8 +11798,8 @@ function petaStormPage() {
   <h2 class="section-title">How to read it</h2>
   <p>A wind direction is named for where the wind comes <i>from</i>: a <b>north wind</b> blows from the north toward the south, so the arrowhead points south. The colour runs from pale blue (calm) through amber and red to violet as it builds past gale and storm force — the bands follow the <b>Beaufort scale</b>, the old mariner’s measure, and each arrow’s popup gives the force number too. Over the open ocean the click panel adds the <b>significant wave height</b> (the average of the highest third of waves) and their period; on land that row honestly says there is no sea here, because there isn’t. A forecast is a forecast: it is the best current model run, not a guarantee, and it is situational <b>awareness</b> — never a substitute for an official storm warning.</p>
   <p class="meta">Weather &amp; marine models: <a href="https://open-meteo.com" rel="noopener nofollow">Open-Meteo</a> (free, non-commercial, no key). Base map © <a href="https://www.openstreetmap.org/copyright" rel="noopener nofollow">OpenStreetMap</a> contributors, satellite © <a href="https://www.esri.com" rel="noopener nofollow">Esri</a> &amp; Maxar. Rendered with <a href="https://leafletjs.com" rel="noopener nofollow">Leaflet</a>. Your view stays between you and our server — we store nothing about where you looked.</p>`;
-  const script = `<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
-    + `<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>`
+  const script = `<link rel="stylesheet" href="/libs/leaflet.css">`
+    + `<script src="/libs/leaflet.min.js" defer></script>`
     + `<script>(function(){var map=null,windG=null,labels=null,mark=null,timer=null,moveT=null;
 var BANDS=[[6,'#7fd0ff','Calm'],[20,'#4c8dff','Breeze'],[39,'#f2a541','Fresh'],[62,'#e6552d','Strong'],[89,'#c0392b','Gale'],[Infinity,'#8e44ad','Storm']];
 function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];});}
