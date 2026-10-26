@@ -90,6 +90,7 @@ const sky = require('./deepsky');
 const pv = require('./proverbs');
 const nutrition = require('./nutrition');
 const movies = require('./movies');
+const football = require('./football');
 const rek = require('./rekod');
 const sj = require('./sejarah');
 const kt = require('./kota');
@@ -1616,6 +1617,19 @@ app.get('/movies/:slug', (req, res) => {
   if (!f) return res.status(404).type('html').send(moviesNotFound(req.params.slug));
   res.status(200).type('html').send(moviesFilmPage(f));
 });
+
+// ── FOOTBALL COMPLEX ROUTES (/football*) — World Cup history & Laws, STATIC ─────
+// Embedded data → can never 503 and never calls an external API. The tournament route
+// (/football/world-cup/:year) has 3 segments and /football/rules is a literal, so
+// nothing collides with the 2-segment /football/:x form (which we don't use).
+app.get('/football', (req, res) => res.status(200).type('html').send(footballHubPage()));
+app.get('/football/world-cup', (req, res) => res.status(200).type('html').send(footballWorldCupPage()));
+app.get('/football/world-cup/:year', (req, res) => {
+  const c = football.findCup(req.params.year);
+  if (!c) return res.status(404).type('html').send(footballNotFound(req.params.year));
+  res.status(200).type('html').send(footballTournamentPage(c));
+});
+app.get('/football/rules', (req, res) => res.status(200).type('html').send(footballRulesPage()));
 
 // ── WORLD EXTREMES ROUTES (/records*) — Superlatives of the Earth, STATIC ────────
 // Embedded data → can never 503 and never calls an external API. Only the hub and
@@ -4570,6 +4584,18 @@ app.get('/sitemap-movies.xml', (req, res) => {
   const urls = [one('/movies', '0.9')]
     .concat(movies.GENRES.map((gr) => one(`/movies/genre/${gr.slug}`, '0.7')))
     .concat(movies.FILMS.map((f) => one(`/movies/${f.slug}`, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP BOLA — the hub + World Cup list + every final + the Laws page ──
+app.get('/sitemap-football.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const urls = [one('/football', '0.9'), one('/football/world-cup', '0.8'), one('/football/rules', '0.8')]
+    .concat(football.CUPS.map((c) => one(`/football/world-cup/${c.y}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -10577,6 +10603,135 @@ function moviesNotFound(q) {
     css: MOV_CSS,
     body: `<p>We could not match that to one of our films. Open <a href="/movies">the full collection</a> and browse by genre or decade.</p>`,
   }, moviesNav());
+}
+
+// ── /football — World Cup history & the Laws of the Game (STATIC embedded data) ─
+const FBALL_CSS = `.fb-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #1a7f4e;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
+.fb-row .fy{font-weight:800;color:#22c55e;font-size:1.05rem;min-width:3.4rem}
+.fb-row .fw{font-weight:700}
+.fb-row .fl{font-size:.86rem;color:var(--muted,#9aa3b2)}
+.fb-row .fs{font-weight:700;text-align:right;white-space:nowrap}
+.fb-champ{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:7px 0;background:var(--panel,#171a21)}
+.fb-champ .n{font-weight:700;flex:1}
+.fb-champ .t{color:#22c55e;font-weight:800}
+.fb-trophy{display:inline-block;background:#f5c518;color:#151922;border-radius:999px;padding:1px 9px;font-weight:800;font-size:.8rem}
+.fb-law{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
+.fb-law .ln{display:inline-block;background:#1a7f4e;color:#fff;border-radius:7px;padding:1px 9px;font-weight:800;margin-right:8px}
+.fb-law .lt{font-weight:700}
+.fb-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.fb-card{border:1px solid var(--line);border-radius:12px;padding:14px 20px;background:var(--panel,#171a21)}
+.fb-card .big{font-size:1.7rem;font-weight:800;color:#22c55e;line-height:1}
+.fb-card .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
+@media(max-width:680px){.fb-row{grid-template-columns:auto 1fr}.fb-row .fs{text-align:left}}`;
+
+function fbCupRow(c) {
+  return `<a class="fb-row" href="/football/world-cup/${c.y}" style="text-decoration:none;color:inherit"><span class="fy">${c.y}</span><span><span class="fw">${escapeHtml(c.win)}</span> <span class="fl">beat ${escapeHtml(c.run)} — host: ${escapeHtml(c.host)}</span></span><span class="fs">${escapeHtml(c.score)}</span></a>`;
+}
+
+function footballNav() {
+  return worldNav('Football — tukuk.org/football', [
+    { href: '/football/world-cup', icon: '🏆', name: 'World Cup roll of honour', blurb: `Every ${football.CUPS.length} Men's FIFA World Cup final since 1930 — host, champion, runner-up and the score.` },
+    { href: '/football/rules', icon: '📘', name: 'The Laws of the Game', blurb: 'The 17 laws that govern football everywhere, in plain English — pitch, offside, fouls, penalties and set pieces.' },
+  ]);
+}
+
+function footballHubPage() {
+  const top3 = football.CHAMPIONS.slice(0, 3).map((c) => `<span class="fb-champ"><span class="n">${escapeHtml(c.name)}</span><span class="t">${c.titles} ${c.titles === 1 ? 'title' : 'titles'}</span></span>`).join('');
+  const body = `<p>Association football — <b>soccer</b> — is the world's most popular sport: played in almost every country and watched by more people than any other game. The <b>FIFA World Cup</b>, held every four years, is the single most-watched sporting event on Earth. This page keeps the settled facts of that history and a plain-English guide to how the game is actually played.</p>
+  <div class="fb-lead"><div class="fb-card"><div class="big">${football.CUPS.length}</div><div class="unit">World Cups played</div></div><a class="fb-card" href="/football/world-cup" style="text-decoration:none;color:inherit"><div class="big">🏆</div><div class="unit">Full roll of honour</div></a><a class="fb-card" href="/football/rules" style="text-decoration:none;color:inherit"><div class="big">${football.LAWS.length}</div><div class="unit">Laws of the Game</div></a></div>
+  <h2 class="section-title">The most successful nations</h2>${top3}
+  <p class="meta">Brazil leads with ${football.CHAMPIONS[0].titles} titles. Two World Cups (1942, 1946) were cancelled during the Second World War.</p>
+  <h2 class="section-title">Where to go next</h2><p><a href="/football/world-cup">🏆 Every World Cup final, 1930 to today</a> &nbsp;·&nbsp; <a href="/football/rules">📘 The 17 Laws of the Game</a></p>`;
+  return worldDoc({
+    title: 'Football — World Cup History & the Laws of the Game | Tukuk-OS',
+    desc: `The FIFA World Cup roll of honour (${football.CUPS.length} finals since 1930) and the 17 Laws of the Game in plain English — the settled facts of the world's most popular sport.`,
+    selfUrl: 'https://tukuk.org/football',
+    heroTitle: '⚽ Football', heroSub: `World Cup history & the Laws of the Game · ${football.CUPS.length} tournaments`,
+    css: FBALL_CSS, body,
+  }, footballNav());
+}
+
+function footballWorldCupPage() {
+  const champRows = football.CHAMPIONS.map((c) => `<div class="fb-champ"><span class="n">${escapeHtml(c.name)}</span><span class="fb-trophy">${c.titles} ${c.titles === 1 ? 'title' : 'titles'}</span><span class="fl">${c.years.join(', ')}</span></div>`).join('');
+  const finalRows = football.CUPS.map(fbCupRow).join('');
+  const body = `<p class="back-link"><a href="/football">&larr; Football home</a></p>
+  <h2 class="section-title">Roll of honour — most titles</h2>${champRows}
+  <h2 class="section-title">Every final, year by year</h2>${finalRows}
+  <p class="meta">${football.NEXT_CUP.y}: hosted by ${escapeHtml(football.NEXT_CUP.host)} — ${escapeHtml(football.NEXT_CUP.note)}</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'FIFA World Cup finals', description: 'Every Men\u2019s FIFA World Cup final with host, champion, runner-up and score.', url: 'https://tukuk.org/football/world-cup',
+    mainEntity: { '@type': 'ItemList', itemListElement: football.CUPS.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: `${c.y} FIFA World Cup`, url: `https://tukuk.org/football/world-cup/${c.y}` })) },
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'FIFA World Cup Winners — Every Final, 1930 to Today | Tukuk-OS',
+    desc: `All ${football.CUPS.length} Men\u2019s FIFA World Cup finals: host nation, champion, runner-up and the score, plus the roll of honour of titles per country.`,
+    selfUrl: 'https://tukuk.org/football/world-cup', ld,
+    heroTitle: '🏆 World Cup Roll of Honour', heroSub: `${football.CUPS.length} finals since 1930`,
+    css: FBALL_CSS, body,
+  }, footballNav());
+}
+
+function footballTournamentPage(c) {
+  const prev = football.findCup(c.y - 4);
+  const next = football.findCup(c.y + 4);
+  const nav = `<p class="back-link">${prev ? `<a href="/football/world-cup/${prev.y}">&larr; ${prev.y}</a>` : ''}${prev && next ? ' · ' : ''}${next ? `<a href="/football/world-cup/${next.y}">${next.y} &rarr;</a>` : ''} &nbsp; <a href="/football/world-cup">All finals</a></p>`;
+  const rows = [
+    ['Host', escapeHtml(c.host)],
+    ['Champion', `🏆 ${escapeHtml(c.win)}`],
+    ['Runner-up', escapeHtml(c.run)],
+    ['Final score', `${escapeHtml(c.score)}${c.how ? ' (' + escapeHtml(c.how) + ')' : ''}`],
+  ].map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');
+  const body = `<p class="back-link"><a href="/football/world-cup">&larr; All World Cup finals</a></p>
+  <div class="fb-lead"><div class="fb-card"><div class="big">${c.y}</div><div class="unit">World Cup</div></div><div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(c.win)} win the ${c.y} World Cup</h2><p class="meta">Hosted by ${escapeHtml(c.host)}</p></div></div>
+  <p>${escapeHtml(c.note)}</p>
+  <table class="world-table">${rows}</table>
+  ${nav}`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'SportsEvent', name: `${c.y} FIFA World Cup`, startDate: String(c.y),
+    description: `${c.win} won the ${c.y} FIFA World Cup, hosted by ${c.host}, beating ${c.run} ${c.score}${c.how ? ' (' + c.how + ')' : ''}.`,
+    url: `https://tukuk.org/football/world-cup/${c.y}`,
+    competitor: [{ '@type': 'SportsTeam', name: c.win, description: 'Champion' }, { '@type': 'SportsTeam', name: c.run, description: 'Runner-up' }],
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: `${c.y} FIFA World Cup — ${c.win} Beat ${c.run} (${c.score}) | Tukuk-OS`,
+    desc: `${c.win} won the ${c.y} World Cup hosted by ${c.host}, beating ${c.run} ${c.score}${c.how ? ' ' + c.how : ''}.`,
+    selfUrl: `https://tukuk.org/football/world-cup/${c.y}`, ld,
+    heroTitle: `🏆 ${c.y} World Cup`, heroSub: `${escapeHtml(c.win)} beat ${escapeHtml(c.run)} ${escapeHtml(c.score)}`,
+    css: FBALL_CSS, body,
+  }, footballNav());
+}
+
+function footballRulesPage() {
+  const laws = football.LAWS.map((l) => `<div class="fb-law" id="law-${l.n}"><span class="ln">${l.n}</span><span class="lt">${escapeHtml(l.t)}</span><p>${escapeHtml(l.s)}</p></div>`).join('');
+  const toc = football.LAWS.map((l) => `<a class="mov-tag" style="display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 11px;font-size:.82rem;margin:2px 4px 2px 0;text-decoration:none;color:inherit" href="#law-${l.n}">${l.n}. ${escapeHtml(l.t)}</a>`).join(' ');
+  const body = `<p class="back-link"><a href="/football">&larr; Football home</a></p>
+  <p>Football is governed by just <b>${football.LAWS.length} laws</b>, maintained by the International Football Association Board (IFAB). They are short enough that a child can play by them and detailed enough to settle arguments at every level of the game. Here is each one in plain English.</p>
+  <p>${toc}</p>
+  ${laws}
+  <p class="meta">Law titles are official; the summaries are our own wording of objective rules. Stored statically — no external call when you load a page.</p>`;
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'TechArticle', headline: 'The 17 Laws of the Game',
+    description: 'Plain-English summaries of the 17 laws that govern association football.', url: 'https://tukuk.org/football/rules',
+    about: football.LAWS.map((l) => ({ '@type': 'Thing', name: `${l.n}. ${l.t}`, description: l.s })),
+  }).replace(/</g, '\u003c');
+  return worldDoc({
+    title: 'The 17 Laws of the Game (Football) — Explained in Plain English | Tukuk-OS',
+    desc: 'All 17 Laws of the Game that govern association football — pitch, players, offside, fouls, penalties and set pieces — summarised in plain English.',
+    selfUrl: 'https://tukuk.org/football/rules', ld,
+    heroTitle: '📘 The Laws of the Game', heroSub: `${football.LAWS.length} laws, in plain English`,
+    css: FBALL_CSS, body,
+  }, footballNav());
+}
+
+function footballNotFound(q) {
+  return worldDoc({
+    title: 'Not found | Football on Tukuk-OS',
+    desc: 'That football page was not recognised — see the World Cup roll of honour or the Laws of the Game instead.',
+    selfUrl: 'https://tukuk.org/football', robots: 'noindex,follow',
+    heroTitle: 'Not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    css: FBALL_CSS,
+    body: `<p>We could not match that. Try <a href="/football/world-cup">the World Cup roll of honour</a> or <a href="/football/rules">the Laws of the Game</a>.</p>`,
+  }, footballNav());
 }
 
 // ── /traffic — Tukuk Traffic (Waze-style community road reports) ───────────────
