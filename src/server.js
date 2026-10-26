@@ -849,7 +849,7 @@ const CSP_REPORT_ONLY = [
 //     `script-src 'self'` WITHOUT unsafe-inline/unsafe-eval — this is the real Lighthouse win.
 //     Interactive pages (index/apps/nasa/editor/collage/studio*) are NOT included
 //     because they have inline <script> + handlers + `new Function` (they could break silently).
-const CSP_STRICT_PAGES = new Set(['about', 'privacy', 'terms', 'docs', 'access', 'tentang', 'terma', 'privasi', 'dokumen']);
+const CSP_STRICT_PAGES = new Set(['about', 'privacy', 'terms', 'docs', 'access', 'cookies', 'tentang', 'terma', 'privasi', 'dokumen']);
 const CSP_STRICT = [
   "default-src 'self'",
   "script-src 'self'",
@@ -884,7 +884,7 @@ const CACHE_PUBLIC_EXTRA = [
   'alat', 'flags', 'countries', 'charts', 'study', 'learn', 'academy', 'proverbs', 'history',
   'heritage', 'conservation-areas', 'elements', 'constellations', 'messier', 'records', 'cities', 'money', 'art', 'life',
   'mountains', 'lakes', 'islands', 'rivers', 'waterfalls', 'glaciers', 'blog',
-  'docs', 'about', 'privacy', 'terms', 'contact', 'access', 'download', 'rekomendasi', 'os',
+  'docs', 'about', 'privacy', 'terms', 'contact', 'access', 'download', 'rekomendasi', 'os', 'cookies',
 ];
 // The geo clusters are the bulk of the site and all register through geoSitemap(), so
 // this can never drift away from the sitemap. It is only read at request time, by which
@@ -3366,7 +3366,7 @@ app.use(express.static(PUBLIC_DIR, {
 // Clean URLs for static pages: /privacy -> public/privacy.html
 // NOTE: the heavy AI pages (nasa/explore/builder/editor/editor-video/3d/design/movie/
 // collage/converter/bg-remover/studio) + the app-store UI (store) were dropped — the focus is T Chat.
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'access', 'bingbot', 'playstore', 'download', 'rekomendasi', 'os', 'sms'];
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'access', 'bingbot', 'playstore', 'download', 'rekomendasi', 'os', 'sms', 'cookies'];
 // res.sendFile sets its own "public, max-age=0" AFTER the policy middleware ran, which would
 // drop the edge lease, so the files served directly repeat the policy explicitly.
 const SEND_FILE_OPTS = { headers: { 'Cache-Control': CACHE_PUBLIC_HTML } };
@@ -6063,7 +6063,7 @@ function siteFooter() {
     <h3>Legal</h3><ul>
       <li><a href="/privacy">Privacy</a></li>
       <li><a href="/terms">Terms</a></li>
-      <li><a href="/privacy" data-tk-consent>Manage cookie preferences</a></li>
+      <li><a href="/cookies">Manage cookie preferences</a></li>
     </ul></div>
   </div>
   <div class="foot-bottom">

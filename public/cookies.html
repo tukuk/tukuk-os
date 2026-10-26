@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cookie Preferences &mdash; Tukuk-OS</title>
+<meta name="description" content="Choose whether Tukuk-OS may use cookies for personalised advertising and usage analytics. You can change this decision at any time; either way the site still works.">
+<link rel="canonical" href="https://tukuk.org/cookies">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tukuk-OS">
+<meta property="og:title" content="Cookie Preferences &mdash; Tukuk-OS">
+<meta property="og:description" content="Choose whether Tukuk-OS may use cookies for personalised advertising and usage analytics. Change your mind at any time.">
+<meta property="og:url" content="https://tukuk.org/cookies">
+<meta property="og:image" content="https://tukuk.org/og.png">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cookie Preferences &mdash; Tukuk-OS">
+<meta name="twitter:description" content="Choose whether Tukuk-OS may use cookies for personalised advertising and usage analytics.">
+<meta name="twitter:image" content="https://tukuk.org/og.png">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#4c8dff">
+<link rel="stylesheet" href="/static-pages.css">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+.cp-card{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:18px 0;background:var(--card,#fff)}
+.cp-opt{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.cp-opt:last-child{border-bottom:0}
+.cp-opt input{margin-top:4px;width:18px;height:18px;flex:0 0 auto;accent-color:var(--accent,#4c8dff)}
+.cp-opt h3{margin:0 0 2px;font-size:1.02rem}
+.cp-opt p{margin:0;color:var(--muted,#5b6472);font-size:.92rem}
+.cp-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.cp-save{cursor:pointer;border:0;border-radius:9px;padding:10px 20px;font:inherit;font-weight:700;background:var(--accent,#4c8dff);color:#fff}
+.cp-reset{cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:10px 18px;font:inherit;background:transparent;color:inherit}
+.cp-status{margin:14px 0 0;font-weight:600}
+.cp-msg{margin:10px 0 0;font-size:.92rem;color:var(--muted,#5b6472)}
+.cp-msg.ok{color:#1a7f37}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <h1>Cookie Preferences</h1>
+  <p class="updated">Control how Tukuk-OS uses cookies &middot; related: <a href="/privacy">Privacy Policy</a></p>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/wiki">Wiki</a>
+    <a href="/nasa">NASA</a>
+    <a href="/blog">Blog</a>
+    <a href="/docs">Docs</a>
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/contact">Contact</a>
+    <span class="theme-tools">
+      <button type="button" id="theme-toggle" class="tk-btn" aria-label="Colour theme">&#9680;</button>
+      <span class="tk-accents" role="group" aria-label="Accent colour">
+        <button type="button" data-accent-set="blue" class="tk-dot" aria-label="Blue"></button>
+        <button type="button" data-accent-set="green" class="tk-dot" aria-label="Green"></button>
+        <button type="button" data-accent-set="violet" class="tk-dot" aria-label="Violet"></button>
+        <button type="button" data-accent-set="amber" class="tk-dot" aria-label="Amber"></button>
+        <button type="button" data-accent-set="rose" class="tk-dot" aria-label="Rose"></button>
+      </span>
+    </span>
+  </nav>
+</header>
+
+<main class="wrap">
+  <p>Tukuk-OS is free to read and is funded by advertising. We use <strong>Google Consent Mode</strong> to honour your decision: nothing that sets a personalisation or analytics cookie runs until you allow it. This page lets you change that decision at any time. Whichever you pick, the site keeps working.</p>
+
+  <form id="cp-form" class="cp-card" aria-describedby="cp-status">
+    <div class="cp-opt">
+      <input type="radio" id="cp-accept" name="cp-choice" value="granted">
+      <label for="cp-accept">
+        <h3>Accept all</h3>
+        <p>Allows personalised advertising (Google AdSense) and usage analytics (Google Analytics&nbsp;4 and Microsoft Clarity). This is what keeps the site free.</p>
+      </label>
+    </div>
+    <div class="cp-opt">
+      <input type="radio" id="cp-reject" name="cp-choice" value="denied">
+      <label for="cp-reject">
+        <h3>Essential only (reject)</h3>
+        <p>Blocks personalised ads and analytics. You may still see non-personalised, context-based ads served without cookies. The site stays fully usable.</p>
+      </label>
+    </div>
+    <div class="cp-actions">
+      <button type="submit" class="cp-save">Save preference</button>
+      <button type="button" id="cp-reset" class="cp-reset">Clear my choice</button>
+    </div>
+    <p id="cp-status" class="cp-status" role="status" aria-live="polite">Loading your current choice&hellip;</p>
+    <p id="cp-msg" class="cp-msg"></p>
+  </form>
+
+  <h2>What each choice enables</h2>
+  <div class="box">
+    <ul>
+      <li><strong>Advertising storage</strong> (<code>ad_storage</code>) &mdash; lets ad cookies be written.</li>
+      <li><strong>Ad user data</strong> (<code>ad_user_data</code>) &mdash; sends data to Google for ad targeting.</li>
+      <li><strong>Ad personalisation</strong> (<code>ad_personalization</code>) &mdash; enables personalised remarketing ads.</li>
+      <li><strong>Analytics storage</strong> (<code>analytics_storage</code>) &mdash; lets Google Analytics and Microsoft Clarity measure how the site is used.</li>
+    </ul>
+  </div>
+
+  <h2>Managing Google ads on the web</h2>
+  <p>Your ad personalisation is also controlled by Google, independently of this site. You can review and opt out at any time through <a href="https://myadcenter.google.com/" rel="noopener noreferrer">Google Ad Center</a>, and install the <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener noreferrer">Google Analytics opt-out browser add-on</a>. Microsoft Clarity data is handled under the <a href="https://privacy.microsoft.com/en-us/privacystatement" rel="noopener noreferrer">Microsoft Privacy Statement</a>.</p>
+
+  <p style="margin-top:22px">Your decision is stored only on this device (in <code>localStorage</code>) &mdash; we do not receive it. Read more in the <a href="/privacy">Privacy Policy</a>, or ask a question via <a href="/contact">Contact</a>.</p>
+</main>
+
+<footer class="wrap">Tukuk-OS &middot; <a href="/">Search</a> &middot; <a href="/blog">Blog</a> &middot; ISC licence</footer>
+<script src="/cookie-preferences.js" defer></script>
+</body>
+</html>
