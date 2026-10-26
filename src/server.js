@@ -9906,13 +9906,39 @@ app.get('/academy/:track/:slug', (req, res) => {
 // frankfurter.dev), /art (The Metropolitan Museum), /life (iNaturalist).
 // English for a global audience; the full chrome + 3 ad units like
 // akadDoc, with the per-cluster nav injected so one wrapper looks after three pages.
+// Derive a two-level BreadcrumbList from the URL for pages that ship none. The
+// cluster root (first path segment) and this page both resolve, so the trail is
+// always valid — and Google still surfaces BreadcrumbList rich results (unlike
+// FAQPage/HowTo, retired for ordinary sites in 2023). Labels come from the slugs,
+// not the <title>, to avoid HTML-entity/emoji noise. Idempotent and fail-soft:
+// any problem returns the original markup untouched.
+function autoBreadcrumb(o, ldStr) {
+  try {
+    if (!o.selfUrl || !/^https:\/\/tukuk\.org\/[a-z]/.test(o.selfUrl)) return ldStr;
+    if (o.robots && /noindex/.test(o.robots)) return ldStr;
+    if (ldStr.indexOf('BreadcrumbList') !== -1) return ldStr;
+    const parts = new URL(o.selfUrl).pathname.split('/').filter(Boolean);
+    if (parts.length < 2) return ldStr; // a top-level hub has no parent segment
+    const nice = (s) => decodeURIComponent(s).replace(/-/g, ' ').replace(/(^| )([a-z])/g, (m, sp, c) => sp + c.toUpperCase());
+    const bc = {
+      '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: nice(parts[0]), item: `https://tukuk.org/${parts[0]}` },
+        { '@type': 'ListItem', position: 2, name: nice(parts[parts.length - 1]), item: o.selfUrl },
+      ],
+    };
+    const parsed = JSON.parse(ldStr);
+    const merged = (Array.isArray(parsed) ? parsed : [parsed]).concat([bc]);
+    return JSON.stringify(merged).replace(/</g, '\\u003c');
+  } catch { return ldStr; }
+}
+
 function worldDoc(o, navHtml) {
   const robots = o.robots || 'index,follow';
-  const ld = o.ld || JSON.stringify({
+  const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
     publisher: { '@type': 'Organization', name: 'Tukuk-OS', url: 'https://tukuk.org' },
-  }).replace(/</g, '\\u003c');
+  }).replace(/</g, '\\u003c'));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
