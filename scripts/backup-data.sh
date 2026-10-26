@@ -43,13 +43,25 @@ SIZE="$(du -h "$TMP/data.tar.gz" | cut -f1)"
 
 echo "[backup] sending $KEY ($SIZE) to R2 ..."
 if [[ -n "$WURL" && -n "$WSEC" ]]; then
-  if curl -fsS --max-time 120 -X POST -H "Authorization: Bearer $WSEC" \
+  # The upload endpoint is a *.workers.dev URL, and Cloudflare platform-throttles that
+  # shared edge with HTTP 429 (a GET on the root and a tiny POST both 429 under congestion,
+  # unrelated to our 18 MB body). `curl -f` exits non-zero on the 429, so a single failed
+  # attempt must not silently drop the slot: retry with backoff before giving up. The hourly
+  # timer leaves plenty of room for a 45 s worst case, and a transient throttle clears fast.
+  ATTEMPTS=0
+  until curl -fsS --max-time 120 -X POST -H "Authorization: Bearer $WSEC" \
        -H "x-content-type: application/gzip" --data-binary "@$TMP/data.tar.gz" \
-       "$WURL/?key=$KEY" >/dev/null; then
-    echo "[backup] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"
-    exit 0
-  fi
-  echo "[backup] ERROR: worker post failed" >&2; exit 1
+       "$WURL/?key=$KEY" >/dev/null; do
+    ATTEMPTS=$((ATTEMPTS + 1))
+    if [[ $ATTEMPTS -ge 4 ]]; then
+      echo "[backup] ERROR: worker post failed after $ATTEMPTS tries (edge still 429/throttled)" >&2; exit 1
+    fi
+    case $ATTEMPTS in 1) SLEEP=8 ;; 2) SLEEP=20 ;; *) SLEEP=45 ;; esac
+    echo "[backup] worker POST failed (likely a 429 throttle) — retry $ATTEMPTS/3 in ${SLEEP}s" >&2
+    sleep "$SLEEP"
+  done
+  echo "[backup] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"
+  exit 0
 fi
 if npx --yes wrangler r2 object put "$BUCKET/$KEY" --file "$TMP/data.tar.gz" --remote >/dev/null 2>&1; then
   echo "[backup] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [wrangler]"

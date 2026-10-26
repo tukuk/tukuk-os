@@ -29,8 +29,17 @@ put() { # put <key> <fail> [content-type]
   if [[ -n "$WURL" && -n "$WSEC" ]]; then
     local args=(-fsS --max-time 60 -X POST -H "Authorization: Bearer $WSEC" --data-binary "@$file")
     [[ -n "$ct" ]] && args+=(-H "x-content-type: $ct")
-    curl "${args[@]}" "$WURL/?key=$key" >/dev/null 2>&1 \
-      && echo "  ✓ $key" || { echo "  ! failed $key"; FAILS=$((FAILS+1)); }
+    # The upload lands on a *.workers.dev endpoint that Cloudflare platform-throttles with
+    # 429 (see backup-data.sh for the full diagnosis). Retry with a short backoff so a
+    # transient throttle on one of these many small objects does not mark the whole
+    # snapshot failed; a light 5 s/10 s pause is enough for the shared edge to free up.
+    local n=0
+    until curl "${args[@]}" "$WURL/?key=$key" >/dev/null 2>&1; do
+      n=$((n + 1))
+      if [[ $n -ge 3 ]]; then echo "  ! failed $key (after $n tries)"; FAILS=$((FAILS + 1)); return; fi
+      echo "  ~ $key throttled (429?) — retry $n/2"; sleep $((n * 5))
+    done
+    echo "  ✓ $key"
     return
   fi
   if [[ -n "$ct" ]]; then
