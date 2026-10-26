@@ -2008,6 +2008,10 @@ function legacyRedirect(from, to, slugMap) {
   ['/cuaca/:slug/surya', '/weather/:slug/sun'],
   ['/cuaca/:slug/udara', '/weather/:slug/air'],
   ['/cuaca/:slug', '/weather/:slug'],
+  // Canonical selfUrls briefly kept the Malay suffix on the English root (/weather/x/udara
+  // instead of /air). Those never routed → 404. Send any crawler that still holds them on.
+  ['/weather/:slug/udara', '/weather/:slug/air'],
+  ['/weather/:slug/surya', '/weather/:slug/sun'],
   ['/gempa', '/earthquakes'],
   ['/gempa/penjelasan', '/earthquakes/explained'],
   ['/gempa/asia-tenggara', '/earthquakes/southeast-asia'],
@@ -7100,7 +7104,7 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
     + `<div class="wx-card"><h3>Pressure</h3><div class="big">${Number(main.pressure) || 0} hPa</div></div>`
     + `<div class="wx-card"><h3>Visibility</h3><div class="big">${cur.visibility ? (cur.visibility / 1000).toFixed(cur.visibility >= 10000 ? 0 : 1) + ' km' : '\u2014'}</div></div>`
     + `<div class="wx-card"><h3>Cloud cover</h3><div class="big">${Number(cur.clouds && cur.clouds.all) || 0}%</div></div>`
-    + `<div class="wx-card"><h3>Sun</h3><div class="big">${wxHHMM(cur.sunrise, tz)} \u2192 ${wxHHMM(cur.sunset, tz)}</div><div class="meta"><a href="/weather/${city.slug}/surya">golden-hour guide \u2192</a></div></div>`
+    + `<div class="wx-card"><h3>Sun</h3><div class="big">${wxHHMM(cur.sunrise, tz)} \u2192 ${wxHHMM(cur.sunset, tz)}</div><div class="meta"><a href="/weather/${city.slug}/sun">golden-hour guide \u2192</a></div></div>`
     + `</div>`;
   let hourHtml = '';
   if (fc && Array.isArray(fc.list)) {
@@ -7115,7 +7119,7 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
     daysHtml = rows ? `<h2 class="section-title">5\u20136 day forecast</h2><table class="wx-table"><tr><th>Day</th><th>Conditions</th><th>Temperature</th><th>Rain probability</th><th>Expected rain</th></tr>${rows}</table>` : '';
   }
   const airBox = band
-    ? `<h2 class="section-title">Air quality</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} — ${escapeHtml(band.label)}</span> · ${escapeHtml(band.advice)} <a href="/weather/${city.slug}/udara">PM2.5 detail & pollution forecast →</a></p>`
+    ? `<h2 class="section-title">Air quality</h2><p><span class="wx-pill" style="background:${band.color}">AQI ${Number(aqi.aqi)} — ${escapeHtml(band.label)}</span> · ${escapeHtml(band.advice)} <a href="/weather/${city.slug}/air">PM2.5 detail & pollution forecast →</a></p>`
     : '';
   // River-risk card — GloFAS model via Open-Meteo Flood (not a real measurement;
   // the 5 km grid can miss small rivers — labelled honestly in the meta note).
@@ -7152,7 +7156,7 @@ function cuacaAirPage(req, city, air, airFc) {
   if (!item) throw new Error('no air quality data');
   const band = wx.aqiBand(item.main.aqi);
   const c = item.components || {};
-  const selfUrl = `https://tukuk.org/weather/${city.slug}/udara`;
+  const selfUrl = `https://tukuk.org/weather/${city.slug}/air`;
   const POLLUTANTS = [
     ['pm2_5', 'PM2.5', 'fine particles under 2.5 \u03bcm \u2014 they enter the bloodstream; the main haze risk'],
     ['pm10', 'PM10', 'dust & coarse dust \u2014 irritates the eyes and throat'],
@@ -7215,7 +7219,7 @@ function cuacaSunPage(req, city, cur) {
   const lenMin = Math.max(0, Math.round((set - rise) / 60));
   const lenH = Math.floor(lenMin / 60); const lenM = lenMin % 60;
   const noon = rise + (set - rise) / 2;
-  const selfUrl = `https://tukuk.org/weather/${city.slug}/surya`;
+  const selfUrl = `https://tukuk.org/weather/${city.slug}/sun`;
   const rows = [
     ['Sunrise', wxHHMM(rise, tz), 'The sky starts to colour; birds begin to sing'],
     ['Morning golden hour', `${wxHHMM(rise + 15 * 60, tz)} \u2013 ${wxHHMM(rise + 45 * 60, tz)}`, 'Soft, slanted light \u2014 best for portraits & landscapes'],
