@@ -5868,6 +5868,21 @@ function googleTagHead() {
   if (!/^(GTM|GT)-[A-Z0-9]+$/.test(id)) return ''; // classic GTM container (GTM-) or the new Google tag (GT-)
   return `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer',${JSON.stringify(id)});</script>`;
 }
+// Search-engine site verification, driven entirely by .env so adding a Google/Yandex/
+// Pinterest token never means editing a template and redeploying. Absent → no-op (nothing
+// is emitted, so a normal page is byte-for-byte unchanged). Values come straight from each
+// provider's "verification method → HTML meta tag" content="…" string. Comma-separated to
+// allow several Google tokens; every value is escaped so a bad paste can't break <head>.
+function siteVerifyMeta() {
+  const out = [];
+  const push = (name, raw) => String(raw || '').split(',').map((s) => s.trim()).filter(Boolean)
+    .forEach((v) => out.push(`<meta name="${escapeHtml(name)}" content="${escapeHtml(v)}">`));
+  push('google-site-verification', process.env.GOOGLE_SITE_VERIFICATION);
+  push('yandex-verification', process.env.YANDEX_SITE_VERIFICATION);
+  push('p:domain_verify', process.env.PINTEREST_DOMAIN_VERIFY);
+  return out.length ? out.join('\n') : '';
+}
+
 // The in-content unit: when third-party is ON, never stack an AdSense <ins> on the same page.
 function adUnitGuarded(slot, label) {
   return thirdPartyAdTag() ? '' : adUnit(slot, label);
@@ -6055,6 +6070,7 @@ function renderBlogListPage(req, asHome) {
 <link rel="canonical" href="${selfUrl}">
 <meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <meta name="msvalidate.01" content="9D34E2DE0B3B9812D4E65387C9209658">
+${siteVerifyMeta()}
 <link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
 <script type="application/ld+json">${jsonLdBlog}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
