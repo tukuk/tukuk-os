@@ -5,7 +5,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { geoClusters, isOwnFrontDoor } = require('../src/server');
-const { hubToDoc, indexGeoHubs, stripHtml, tally, faqLines } = require('../src/cluster-index');
+const { hubToDoc, indexGeoHubs, stripHtml, tally, faqLines, HUB_ALIASES } = require('../src/cluster-index');
 
 const clusters = geoClusters();
 const docs = clusters.map(hubToDoc).filter(Boolean);
@@ -89,7 +89,29 @@ test('hubToDoc(): idempotent — id & hash stable between two builds', () => {
   const one = hubToDoc(clusters[0]);
   const two = hubToDoc(clusters[0]);
   assert.equal(one.id, two.id);
-  assert.equal(one.hash, two.hash, 'hash comes only from content, never from time');
+  assert.equal(one.hash, two.hash, 'hash comes only from content + keywords, never from time');
+});
+
+test('hubToDoc(): a keywords-only change moves the hash (alias edits must reach Meili)', () => {
+  // Real gap: HUB_ALIASES only touch the keywords field. When the hash covered
+  // `content` alone, indexGeoHubs' multiset guard said "no change" and the new
+  // aliases never left the code. The hash must therefore depend on keywords too.
+  const islands = clusters.find((c) => c.base === 'islands');
+  assert.ok(islands, 'the islands cluster must be registered');
+  const before = hubToDoc(islands);
+  assert.ok(before.keywords.includes('pulau jepun'), 'the Malay alias must ship in the keywords');
+  // Simulate a future alias edit: same data, same prose, one keyword added.
+  const saved = HUB_ALIASES.islands;
+  HUB_ALIASES.islands = [...saved, 'pulaun test'];
+  let after;
+  try {
+    after = hubToDoc(islands);
+  } finally {
+    HUB_ALIASES.islands = saved;
+  }
+  assert.equal(after.content, before.content, 'the prose really did not change');
+  assert.notEqual(after.keywords.join('|'), before.keywords.join('|'), 'the alias really joined the keywords');
+  assert.notEqual(after.hash, before.hash, 'a keywords-only difference must change the hash');
 });
 
 test('geoClusters(): the nine hand-written hubs are part of the corpus too', () => {

@@ -158,7 +158,14 @@ function hubToDoc(cluster) {
   // Unique lines only — many clusters share the same sentence template.
   const content = [...new Set(lines)].join('\n');
   const id = crypto.createHash('sha256').update(`geo-hub:${base}`).digest('hex').slice(0, 16);
-  const hash = crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
+  // HUB_ALIASES first so they survive the 20-keyword slice below.
+  const keywords = [...new Set([cfg.singular, unit, base.replace(/-/g, ' '), base.replace(/-/g, ' ').replace(/\bcounties?\b/, 'county'),
+    ...(HUB_ALIASES[base] || []),
+    ...countries.slice(0, 8).map(([name]) => name)])].filter(Boolean).slice(0, 20);
+  // Keywords join the hash: the multiset guard in indexGeoHubs compares this value,
+  // so an edit to HUB_ALIASES alone (no prose change) must still trigger a re-push —
+  // otherwise the aliases would sit in the code and never reach Meilisearch.
+  const hash = crypto.createHash('sha256').update(content + '\n' + JSON.stringify(keywords)).digest('hex').slice(0, 16);
 
   return {
     id,
@@ -172,10 +179,7 @@ function hubToDoc(cluster) {
     lang: 'en',
     type: 'cluster',
     section: cfg.titleCase || base,
-    // HUB_ALIASES first so they survive the 20-keyword slice below.
-    keywords: [...new Set([cfg.singular, unit, base.replace(/-/g, ' '), base.replace(/-/g, ' ').replace(/\bcounties?\b/, 'county'),
-      ...(HUB_ALIASES[base] || []),
-      ...countries.slice(0, 8).map(([name]) => name)])].filter(Boolean).slice(0, 20),
+    keywords,
     headings: countries.slice(0, 20).map(([name]) => name),
     publishedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
     crawledAt: new Date().toISOString(),
@@ -316,5 +320,6 @@ module.exports = {
   indexSectionHubs,
   stripHtml,
   tally,
-  faqLines
+  faqLines,
+  HUB_ALIASES
 };
