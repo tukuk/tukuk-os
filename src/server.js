@@ -1473,6 +1473,15 @@ app.get('/countries', async (req, res) => {
   }
 });
 
+app.get('/countries/largest', async (req, res) => {
+  try { const rows = await ng.loadCountries(); if (!rows || rows.length < 200) throw new Error('empty'); res.status(200).type('html').send(negaraRankingPage(req, rows, 'largest')); }
+  catch { res.status(503).type('html').send(negaraBusy('The country data has not loaded yet')); }
+});
+app.get('/countries/smallest', async (req, res) => {
+  try { const rows = await ng.loadCountries(); if (!rows || rows.length < 200) throw new Error('empty'); res.status(200).type('html').send(negaraRankingPage(req, rows, 'smallest')); }
+  catch { res.status(503).type('html').send(negaraBusy('The country data has not loaded yet')); }
+});
+
 app.get('/countries/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase();
   let rows;
@@ -4571,8 +4580,8 @@ app.get('/sitemap-holidays.xml', (req, res) => {
 app.get('/sitemap-countries.xml', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const special = ['/countries'].concat(ng.REGIONS.map((r) => `/countries/${r.slug}`))
-    .map((p) => one(p, p === '/countries' ? '0.9' : '0.7')).join('\n');
+  const special = ['/countries', '/countries/largest', '/countries/smallest'].concat(ng.REGIONS.map((r) => `/countries/${r.slug}`))
+    .map((p) => one(p, p === '/countries' ? '0.9' : '0.8')).join('\n');
   let countries = '';
   try {
     const rows = await ng.loadCountries();
@@ -8093,7 +8102,9 @@ function cutiExplainPage(req) {
 // GDP, urbanisation, life expectancy 2023) + flagcdn.com for the flags. Same shell
 // recipe as cutiDoc: lang en, 3 ad slots, cross nav; the seafaring-blue hero sets this complex apart.
 
-const NEGARA_SECTIONS = [{ href: '/countries', icon: '\uD83D\uDDFA\uFE0F', name: 'All Countries', blurb: 'A profile of every country on earth — capital, population, GDP, flag and land borders.' }]
+const NEGARA_SECTIONS = [{ href: '/countries', icon: '\uD83D\uDDFA\uFE0F', name: 'All Countries', blurb: 'A profile of every country on earth — capital, population, GDP, flag and land borders.' },
+  { href: '/countries/largest', icon: '\uD83D\uDCCF', name: 'Largest countries by area', blurb: 'The 40 biggest countries in the world ranked by land area in km² and mi².' },
+  { href: '/countries/smallest', icon: '\uD83D\uDD3C', name: 'Smallest countries by area', blurb: 'The world\u2019s smallest states and microcountries, ranked from Vatican City up.' }]
   .concat(ng.REGIONS.map((r) => ({ href: `/countries/${r.slug}`, icon: '\uD83E\uDDED', name: `Countries of ${r.en}`, blurb: `The complete list of countries on the ${r.en} continent, in alphabetical order.` })));
 
 function negaraNav() {
@@ -8225,6 +8236,61 @@ function negaraHubPage(req, rows) {
     selfUrl: 'https://tukuk.org/countries',
     heroTitle: 'Tukuk-OS Country Complex', heroSub: `${rows.length} countries \u00b7 6 continents \u00b7 World Bank & world-countries data, free with no signup`,
     body, ld,
+  });
+}
+
+// ─── ranked country lists (largest / smallest by land area) ───
+// Data honesty: every figure is the very same `area` (km²) value world-countries ships
+// and every country page already prints — nothing is invented. The "share of Earth's
+// land" uses the standard, widely published world land figure of 148.94 million km².
+const NG_RANK_CFG = {
+  largest: {
+    dir: 'desc', take: 40, selfUrl: 'https://tukuk.org/countries/largest',
+    title: 'Largest Countries in the World by Area — Top 40 Ranked | Tukuk-OS',
+    desc: 'The 40 largest countries in the world ranked by land area in km² and mi², with continent, share of Earth\u2019s land and a link to each country\u2019s full profile.',
+    hero: 'The Largest Countries in the World', prio: '0.8',
+    intro: 'Countries ranked by total land area (the world-countries figure every country profile on this site already shows). Russia dwarfs every other nation; the bottom of the table still spans a million square kilometres.',
+  },
+  smallest: {
+    dir: 'asc', take: 30, selfUrl: 'https://tukuk.org/countries/smallest',
+    title: 'Smallest Countries in the World by Area — Ranked | Tukuk-OS',
+    desc: 'The smallest countries and microstates in the world ranked by land area in km² and mi², with population, continent and a link to each full profile.',
+    hero: 'The Smallest Countries in the World', prio: '0.8',
+    intro: 'The world\u2019s smallest independent states ranked by land area. Several are city-states you could walk across in an hour \u2014 Vatican City is smaller than many single parks.',
+  },
+};
+function negaraRankingPage(req, rows, kind) {
+  const cfg = NG_RANK_CFG[kind];
+  const withArea = rows.filter((c) => c.area && Number.isFinite(c.area));
+  const sorted = [...withArea].sort((a, b) => cfg.dir === 'desc' ? b.area - a.area : a.area - b.area);
+  const take = sorted.slice(0, cfg.take);
+  const KM2MI = 0.386102, WORLD_LAND = 148939063;
+  const showShare = cfg.dir === 'desc';
+  const showPop = cfg.dir === 'asc';
+  const head = `<tr><th>#</th><th>Country</th><th>Continent</th><th>Area (km\u00b2)</th><th>Area (mi\u00b2)</th>${showShare ? '<th>Share of land</th>' : ''}${showPop ? '<th>Population</th>' : ''}</tr>`;
+  const body = take.map((c, i) => `<tr><td>${i + 1}</td>`
+    + `<td><a href="/countries/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></td>`
+    + `<td>${escapeHtml(ngSub(c.subregion) || c.region || '')}</td>`
+    + `<td>${ngNum(c.area)}</td><td>${ngNum(c.area * KM2MI)}</td>`
+    + (showShare ? `<td>${((c.area / WORLD_LAND) * 100).toFixed(2)}%</td>` : '')
+    + (showPop ? `<td>${c.population ? ngNum(c.population) : '\u2014'}</td>` : '')
+    + `</tr>`).join('');
+  const first = take[0];
+  const callout = first ? `<div class="wx-hero"><div class="temp">${escapeHtml(first.name)}</div><div class="wmeta">${showShare ? 'The largest country on Earth' : 'The smallest country in our list'} \u00b7 <b>${ngNum(first.area)} km\u00b2</b> (${ngNum(first.area * KM2MI)} mi\u00b2)${first.capital ? ` \u00b7 Capital ${escapeHtml(first.capital)}` : ''}</div></div>` : '';
+  const htmlBody = `<p>${cfg.intro}</p>${callout}`
+    + `<h2 class="section-title">${cfg.dir === 'desc' ? 'Top ' + take.length + ' by area' : 'Ranked ' + take.length + ' smallest'}</h2>`
+    + `<table class="wx-table">${head}${body}</table>`
+    + `<p class="meta">Rankings by <b>total area</b> (land + inland water) as published by the open <a href="https://github.com/mledoze/countries" rel="noopener nofollow" target="_blank">world-countries</a> package. "Share of land" is against Earth\u2019s ~${ngNum(WORLD_LAND)} km\u00b2 of land. Explore the full <a href="/countries">country directory</a>, the <a href="/countries/${kind === 'largest' ? 'smallest' : 'largest'}">${kind === 'largest' ? 'smallest' : 'largest'} countries</a> list, and single-superlative records on <a href="/records">World Extremes</a>.</p>`;
+  const ld = JSON.stringify([
+    { '@context': 'https://schema.org', '@type': 'CollectionPage', name: cfg.title.split(' | ')[0], description: cfg.desc, url: cfg.selfUrl,
+      isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' } },
+    { '@context': 'https://schema.org', '@type': 'ItemList', numberOfItems: take.length,
+      itemListElement: take.slice(0, 20).map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, url: `https://tukuk.org/countries/${c.slug}` })) },
+  ]).replace(/</g, '\u003c');
+  return negaraDoc({
+    title: cfg.title, desc: cfg.desc, selfUrl: cfg.selfUrl,
+    heroTitle: cfg.hero, heroSub: `${withArea.length} countries measured \u00b7 world-countries area data \u00b7 km\u00b2 and mi\u00b2`,
+    body: htmlBody, ld,
   });
 }
 
