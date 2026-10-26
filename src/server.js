@@ -1537,7 +1537,11 @@ app.get('/disasters', async (req, res) => {
     const all = await bc.loadAllOpen();
     res.status(200).type('html').send(bencanaHubPage(req, all));
   } catch {
-    res.status(503).type('html').send(bencanaBusy('The NASA EONET event feed did not answer in time'));
+    // EONET fully down AND no disk mirror yet (a first-ever cold start mid-outage). A public
+    // page must never hand a crawler a 5xx — render the reference hub (the categories, what
+    // EONET is, cross-links) with an honest "live feed temporarily unavailable" note, still a
+    // 200. The moment any category fetch succeeds the mirror is written and this path stops.
+    res.status(200).type('html').send(bencanaHubPage(req, bc.CATS.map((cat) => ({ cat, events: null })), { feedDown: true }));
   }
 });
 
@@ -1548,7 +1552,9 @@ app.get('/disasters/:cat', async (req, res) => {
     const events = await bc.loadEvents(cat);
     res.status(200).type('html').send(bencanaCatPage(req, cat, events || []));
   } catch {
-    res.status(503).type('html').send(bencanaBusy(`The ${cat.en} feed did not load in time`));
+    // same posture as the hub: a category page keeps its reference blurb and returns 200 with
+    // an honest "feed briefly unavailable" note instead of a 5xx a review would flag as broken.
+    res.status(200).type('html').send(bencanaCatPage(req, cat, [], { feedDown: true }));
   }
 });
 
@@ -8714,7 +8720,8 @@ function bcDate(iso) {
 function bcLatest(ev) { return ev.updated || ev.created || (ev.geometries && ev.geometries.length ? ev.geometries[ev.geometries.length - 1].date : null) || null; }
 
 // ─── Hub /disasters — a live count per category plus the newest events ───
-function bencanaHubPage(req, all) {
+function bencanaHubPage(req, all, opts = {}) {
+  const feedDown = Boolean(opts.feedDown);
   const totalOpen = all.reduce((s, x) => s + (x.events ? x.events.length : 0), 0);
   const cards = all.map((x) => {
     const latest = x.events && x.events.length ? [...x.events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')))[0] : null;
@@ -8730,9 +8737,15 @@ function bencanaHubPage(req, all) {
     const loc = g ? bc.geoLabel(g.coordinates) : null;
     return `<tr><td>${bcDate(bcLatest(ev))}</td><td>${cat.icon} <a href="/disasters/${cat.slug}">${escapeHtml(cat.en)}</a></td><td><a href="/disasters/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${loc ? escapeHtml(loc.text) : '—'}</td></tr>`;
   }).join('');
-  const body = `<div class="wx-hero"><div class="temp">${totalOpen} natural event${totalOpen === 1 ? '' : 's'} in progress</div><div class="wmeta">Watched 24/7 by NASA EONET · ${bc.CATS.length} categories · updated several times a day · no signup</div></div>`
+  const hero = feedDown
+    ? `<div class="wx-hero"><div class="temp">Live disaster feed temporarily unavailable</div><div class="wmeta">The NASA EONET feed is not answering right now. The ${bc.CATS.length} categories we watch are listed below; the live counts return automatically once it is reachable again. Earthquakes (an independent USGS feed) are unaffected at the <a href="/earthquakes">Earthquake Complex</a>.</div></div>`
+    : `<div class="wx-hero"><div class="temp">${totalOpen} natural event${totalOpen === 1 ? '' : 's'} in progress</div><div class="wmeta">Watched 24/7 by NASA EONET · ${bc.CATS.length} categories · updated several times a day · no signup</div></div>`;
+  const eventsSection = feedDown
+    ? `<h2 class="section-title">Current events</h2><p>The live event list reappears here as soon as the NASA EONET feed answers again. Meanwhile, shaking ground is in the <a href="/earthquakes">Earthquake Complex</a> (USGS) and the sky over any city in the <a href="/weather">Weather Complex</a>.</p>`
+    : `<h2 class="section-title">The 15 most recently updated events</h2><table class="wx-table"><tr><th>Updated</th><th>Category</th><th>Event</th><th>Last location</th></tr>${rowsHtml}</table>`;
+  const body = `${hero}`
     + `<h2 class="section-title">Categories under watch</h2><div class="wx-grid">${cards}</div>`
-    + `<h2 class="section-title">The 15 most recently updated events</h2><table class="wx-table"><tr><th>Updated</th><th>Category</th><th>Event</th><th>Last location</th></tr>${rowsHtml}</table>`
+    + eventsSection
     + `<h2 class="section-title">What is EONET?</h2><p>EONET (the Earth Observatory Natural Event Tracker) is NASA's open feed of every significant natural event on earth — volcanic eruptions, storms, wildfires, floods, landslides and more — recorded with satellite coordinates and a human curator's report. The data is public, with no API key; we show it in plain English and give every event its own page so it can be cited.</p>`
     + `<p class="meta">Live earthquakes are in the <a href="/earthquakes">Earthquake Complex (USGS)</a>; the sky over your city is in the <a href="/weather">Weather Complex</a>; the profile of an affected country is in the <a href="/countries">Country Complex</a>.</p>`;
   const ld = JSON.stringify({
@@ -8742,15 +8755,19 @@ function bencanaHubPage(req, all) {
   }).replace(/</g, '\\u003c');
   return bencanaDoc({
     title: 'Live World Disasters — Volcanoes, Storms, Wildfires (NASA EONET) | Tukuk-OS',
-    desc: `${totalOpen} natural events are in progress on this planet right now: watch volcanoes, storms, wildfires, floods, drought and landslides — live from NASA EONET.`,
+    desc: feedDown
+      ? 'Watch volcanoes, storms, wildfires, floods, drought and landslides — the NASA EONET live disaster watch. The feed is briefly unavailable; the categories and their reference pages are below.'
+      : `${totalOpen} natural events are in progress on this planet right now: watch volcanoes, storms, wildfires, floods, drought and landslides — live from NASA EONET.`,
     selfUrl: 'https://tukuk.org/disasters',
-    heroTitle: 'Tukuk-OS Disaster Complex', heroSub: `NASA EONET feed · ${totalOpen} open event${totalOpen === 1 ? '' : 's'} · updated ${bcDate(new Date().toISOString())}`,
+    heroTitle: 'Tukuk-OS Disaster Complex',
+    heroSub: feedDown ? 'NASA EONET feed · temporarily unavailable' : `NASA EONET feed · ${totalOpen} open event${totalOpen === 1 ? '' : 's'} · updated ${bcDate(new Date().toISOString())}`,
     body, ld,
   });
 }
 
 // ─── /disasters/:category — every open event in one category ───
-function bencanaCatPage(req, cat, events) {
+function bencanaCatPage(req, cat, events, opts = {}) {
+  const feedDown = Boolean(opts.feedDown);
   const selfUrl = `https://tukuk.org/disasters/${cat.slug}`;
   const sorted = [...events].sort((a, b) => String(bcLatest(b) || '').localeCompare(String(bcLatest(a) || '')));
   const rowsHtml = sorted.map((ev) => {
@@ -8758,11 +8775,16 @@ function bencanaCatPage(req, cat, events) {
     const last = geo.length ? bc.geoLabel(geo[geo.length - 1].coordinates) : null;
     return `<tr><td><a href="/disasters/${cat.slug}/${encodeURIComponent(ev.id)}">${escapeHtml(String(ev.title || ev.id))}</a></td><td>${bcDate(ev.created)}</td><td>${bcDate(bcLatest(ev))}</td><td>${geo.length}</td><td>${last ? escapeHtml(last.text) : '—'}</td></tr>`;
   }).join('');
-  const body = `<div class="wx-hero"><div class="temp">${cat.icon} ${sorted.length} ${escapeHtml(cat.en).toLowerCase()} event${sorted.length === 1 ? '' : 's'} active</div><div class="wmeta">Live from NASA EONET · every event has its own page with coordinates &amp; a timeline</div></div>`
+  const catHero = feedDown
+    ? `<div class="wx-hero"><div class="temp">${cat.icon} ${escapeHtml(cat.en)} — live feed temporarily unavailable</div><div class="wmeta">The NASA EONET ${escapeHtml(cat.en).toLowerCase()} feed is not answering right now; the live list returns automatically as soon as it is reachable.</div></div>`
+    : `<div class="wx-hero"><div class="temp">${cat.icon} ${sorted.length} ${escapeHtml(cat.en).toLowerCase()} event${sorted.length === 1 ? '' : 's'} active</div><div class="wmeta">Live from NASA EONET · every event has its own page with coordinates &amp; a timeline</div></div>`;
+  const body = `${catHero}`
     + `<p>${escapeHtml(cat.blurb)}</p>`
-    + (sorted.length
-      ? `<h2 class="section-title">Open events</h2><table class="wx-table"><tr><th>Event</th><th>Started</th><th>Updated</th><th>Locations logged</th><th>Last coordinates</th></tr>${rowsHtml}</table>`
-      : '<p>No event in this category is still open right now. See the <a href="/disasters">hub of all categories</a>.</p>')
+    + (feedDown
+      ? `<p>The open ${escapeHtml(cat.en).toLowerCase()} list is briefly unavailable and refreshes on its own. See all categories at the <a href="/disasters">Disaster Complex hub</a>.</p>`
+      : sorted.length
+        ? `<h2 class="section-title">Open events</h2><table class="wx-table"><tr><th>Event</th><th>Started</th><th>Updated</th><th>Locations logged</th><th>Last coordinates</th></tr>${rowsHtml}</table>`
+        : '<p>No event in this category is still open right now. See the <a href="/disasters">hub of all categories</a>.</p>')
     + `<p class="meta">Raw data: <a rel="noopener" target="_blank" href="https://eonet.gsfc.nasa.gov">eonet.gsfc.nasa.gov</a> (a public NASA domain). Current weather in an affected area: <a href="/weather">Weather Complex</a>; tectonic quakes: <a href="/earthquakes">Earthquake Complex</a>.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${cat.en} — live`,
@@ -8772,7 +8794,7 @@ function bencanaCatPage(req, cat, events) {
     title: `${cat.en} Live — Active Events Worldwide Today | Tukuk-OS`,
     desc: sorted.length ? `Live NASA EONET updates on ${sorted.length} open ${cat.en.toLowerCase()} event${sorted.length === 1 ? '' : 's'} — coordinates, dates and a link to the official source.` : `Watch ${cat.en.toLowerCase()} news live from NASA EONET — with the coordinates and the timeline of every event.`,
     selfUrl,
-    heroTitle: `${cat.icon} ${cat.en}`, heroSub: `Live NASA EONET feed · ${sorted.length} open event${sorted.length === 1 ? '' : 's'} · updated ${bcDate(new Date().toISOString())}`,
+    heroTitle: `${cat.icon} ${cat.en}`, heroSub: feedDown ? 'NASA EONET feed · temporarily unavailable' : `Live NASA EONET feed · ${sorted.length} open event${sorted.length === 1 ? '' : 's'} · updated ${bcDate(new Date().toISOString())}`,
     body, ld,
   });
 }
