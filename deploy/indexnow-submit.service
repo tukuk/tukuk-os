@@ -1,0 +1,13 @@
+[Unit]
+Description=Submit every sitemap URL to IndexNow (fast Bing/Yandex indexing)
+
+# Reference unit — scripts/setup-all.sh installs units with the right
+# $INSTALL_DIR. This one is self-contained (the script carries the IndexNow key
+# as its default), so it needs no EnvironmentFile. Safe to run on a fresh box
+# even before .env is populated.
+[Service]
+Type=oneshot
+User=tukuk
+WorkingDirectory=/opt/tukuk-os
+Nice=10
+ExecStart=/usr/bin/env node /opt/tukuk-os/scripts/indexnow-submit.js

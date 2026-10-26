@@ -1,0 +1,11 @@
+[Unit]
+Description=Re-submit sitemap URLs to IndexNow once a week
+
+[Timer]
+OnCalendar=Sun *-*-* 05:30:00
+Persistent=true
+Unit=indexnow-submit.service
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target
