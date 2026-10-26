@@ -13,6 +13,12 @@
 # so a laptop that was off at 03:45 catches up on next power-on.
 # USE:  bash scripts/backup-laptop.sh          (interactive sshpass or key)
 # RESTORE: tar xzf ~/tukuk-backups/data-<date>.tar.gz -C /opt/tukuk-os
+#          ...or from the cloud copy: wrangler r2 object get tukuk-fallback/laptop-backup/data-<date>.tar.gz
+#
+# Phase 2 (added Oct 27): after a good local archive, push the same file to R2
+# under laptop-backup/ using the laptop's wrangler OAuth token — that token has
+# full R2 put/get/delete on tukuk-fallback (verified round-trip), so offsite
+# revival no longer waits on the VPS-token dashboard change.
 # ==============================================================================
 set -uo pipefail
 
@@ -52,6 +58,22 @@ fi
 [[ $RC -eq 1 ]] && echo "[laptop-backup] WARN: a file changed mid-read — continuing with usable archive" >&2
 echo "[laptop-backup] ✓ $KEY ($SIZE) [host=$HOST]"
 
-# --- retention: drop dailies older than KEEP_DAYS ---
+# --- retention: drop local dailies older than KEEP_DAYS ---
 find "$DEST_DIR" -name 'data-*.tar.gz' -mtime +"$KEEP_DAYS" -delete 2>/dev/null
-echo "[laptop-backup] kept: $(ls -1 "$DEST_DIR"/data-*.tar.gz 2>/dev/null | wc -l) file(s), newest $(date -r "$(ls -1t "$DEST_DIR"/data-*.tar.gz 2>/dev/null | head -1)" +%F 2>/dev/null)"
+
+# --- phase 2: offsite copy to R2 via the laptop's wrangler OAuth token ---
+R2_BUCKET="${R2_BUCKET:-tukuk-fallback}"
+R2_KEY="laptop-backup/$(basename "$KEY")"
+if npx --yes wrangler r2 object put "$R2_BUCKET/$R2_KEY" --file "$KEY" \
+     --content-type application/gzip --remote >/dev/null 2>&1; then
+  echo "[laptop-backup] ✓ r2://$R2_BUCKET/$R2_KEY ($SIZE) [oauth]"
+  # prune cloud dailies older than KEEP_DAYS (a 404 on already-gone keys is fine)
+  for d in $(seq "$((KEEP_DAYS + 1))" "$((KEEP_DAYS + 21))"); do
+    npx --yes wrangler r2 object delete "$R2_BUCKET/laptop-backup/data-$(date -d "-${d} days" +%Y%m%d).tar.gz" \
+      --remote >/dev/null 2>&1 || true
+  done
+else
+  echo "[laptop-backup] WARN: R2 upload failed — is 'wrangler login' still valid?" >&2
+fi
+
+echo "[laptop-backup] kept: $(ls -1 "$DEST_DIR"/data-*.tar.gz 2>/dev/null | wc -l) local file(s), newest $(date -r "$(ls -1t "$DEST_DIR"/data-*.tar.gz 2>/dev/null | head -1)" +%F 2>/dev/null)"
