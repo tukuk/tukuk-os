@@ -22112,15 +22112,22 @@ app.get(['/games/tukuk-strike', '/games/tukuk-strike/'], (req, res) => {
 // reworded, and an exact-string swap silently stops matching whenever it does.
 const HD_ANCHOR_RE = /<a class="launch"[^>]*data-hd-launch>[\s\S]*?<\/a>/;
 const HD_PENDING = '<div class="pending">⏳ The HD build is not reachable right now — it is served from play.tukuk.org. Try again shortly, or play the light WebGL version instead, which needs no download: <a href="/games/tukuk-strike">Tukuk Strike (WebGL)</a>.</div>';
-let _hdOk = null, _hdAt = 0, _hdInflight = null;
+// Stale-while-revalidate, on purpose. The page is rendered from the last known
+// answer and the probe only refreshes it in the background. Awaiting the probe
+// instead made the first hit after every restart wait on a cold TLS handshake,
+// and when that overran the budget the launcher spent the next minute refusing
+// to offer a game that was perfectly online. Cold start is optimistic: the one
+// visitor right after a deploy might see a button for a build that is down,
+// which is a much cheaper mistake than everyone losing the button each time.
+let _hdOk = true, _hdAt = 0, _hdInflight = null;
 function hdBuildAvailable() {
-  if (_hdOk !== null && Date.now() - _hdAt < 60000) return Promise.resolve(_hdOk);
+  if (Date.now() - _hdAt < (_hdOk ? 60000 : 5000)) return Promise.resolve(_hdOk);
   if (_hdInflight) return _hdInflight;
   _hdInflight = new Promise((resolve) => {
     let settled = false;
     const finish = (v) => { if (settled) return; settled = true; _hdOk = v; _hdAt = Date.now(); _hdInflight = null; resolve(v); };
     try {
-      const req = require('https').get('https://play.tukuk.org/', { timeout: 2500, headers: { 'user-agent': 'tukuk-hd-probe' } }, (r) => {
+      const req = require('https').get('https://play.tukuk.org/', { timeout: 5000, headers: { 'user-agent': 'tukuk-hd-probe' } }, (r) => {
         r.resume();
         finish(r.statusCode >= 200 && r.statusCode < 400);
       });
@@ -22134,7 +22141,8 @@ app.get(['/games/tukuk-strike-godot', '/games/tukuk-strike-godot/'], (req, res) 
   res.setHeader('Cache-Control', 'no-cache');
   fs.readFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike-godot', 'index.html'), 'utf8', (error, html) => {
     if (error) return res.status(404).json({ error: 'Game not found', path: req.originalUrl });
-    hdBuildAvailable().then((ok) => res.type('html').send(ok ? html : html.replace(HD_ANCHOR_RE, HD_PENDING)));
+    hdBuildAvailable().catch(() => { /* the cached answer already went out */ });
+    res.type('html').send(_hdOk ? html : html.replace(HD_ANCHOR_RE, HD_PENDING));
   });
 });
 
