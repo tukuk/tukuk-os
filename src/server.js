@@ -22108,8 +22108,10 @@ app.get(['/games/tukuk-strike', '/games/tukuk-strike/'], (req, res) => {
 // once a minute; a 2xx/3xx (or an in-flight check) means the Godot export is being served
 // there. The static file keeps the real button so a direct hit still works; the route only
 // swaps it for a notice when the probe says the subdomain is not answering yet.
-const HD_ANCHOR = '<a class="launch" href="https://play.tukuk.org/" target="_blank" rel="noopener" data-hd-launch>Buka dalam tab baharu ↗</a>';
-const HD_PENDING = '<div class="pending">⏳ Versi HD belum tersedia — build Godot perlu dieksport dan play.tukuk.org dikonfigurasi di pelayan. Cuba lagi nanti, atau main versi ringan di bawah.</div>';
+// Matched on the tag rather than the label: the button copy is English and gets
+// reworded, and an exact-string swap silently stops matching whenever it does.
+const HD_ANCHOR_RE = /<a class="launch"[^>]*data-hd-launch>[\s\S]*?<\/a>/;
+const HD_PENDING = '<div class="pending">⏳ The HD build is not reachable right now — it is served from play.tukuk.org. Try again shortly, or play the light WebGL version instead, which needs no download: <a href="/games/tukuk-strike">Tukuk Strike (WebGL)</a>.</div>';
 let _hdOk = null, _hdAt = 0, _hdInflight = null;
 function hdBuildAvailable() {
   if (_hdOk !== null && Date.now() - _hdAt < 60000) return Promise.resolve(_hdOk);
@@ -22132,7 +22134,7 @@ app.get(['/games/tukuk-strike-godot', '/games/tukuk-strike-godot/'], (req, res) 
   res.setHeader('Cache-Control', 'no-cache');
   fs.readFile(path.join(PUBLIC_DIR, 'games', 'tukuk-strike-godot', 'index.html'), 'utf8', (error, html) => {
     if (error) return res.status(404).json({ error: 'Game not found', path: req.originalUrl });
-    hdBuildAvailable().then((ok) => res.type('html').send(ok ? html : html.replace(HD_ANCHOR, HD_PENDING)));
+    hdBuildAvailable().then((ok) => res.type('html').send(ok ? html : html.replace(HD_ANCHOR_RE, HD_PENDING)));
   });
 });
 
