@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# backup-identity.sh — the off-box copy of everything that cannot be rebuilt.
+#
+# The other tracks already cover the recoverable things: data/ hourly, the
+# search index and chat every 6h, a static mirror of the site every 6h, and the
+# source on GitHub. None of them cover this box's IDENTITY: the two cloudflared
+# tunnel secret keys, the cert.pem that authorises `tunnel route dns`, .env, the
+# nginx and systemd units, the SSH host keys and authorized_keys.
+#
+# Those are the files that turn "the disk died" from an outage into a permanent
+# loss. A tunnel credential exists only in /etc/cloudflared and in the
+# Cloudflare dashboard -- with it gone, a brand-new server with every byte of
+# content restored still cannot be pointed at tukuk.org.
+#
+# NOTHING LEAVES UNENCRYPTED. The tarball is AES-256/PBKDF2 with the passphrase
+# in /root/tukuk-backup-key (0400). That passphrase is the only thing between
+# whoever reads the bucket and your API tokens, so it must live somewhere other
+# than this server; the laptop keeps a copy at ~/.config/tukuk/backup-key.
+#
+# ROTATION: day-of-month slot, 31 slots, the same no-delete-API trick as
+# backup-data.sh -- a month of history without needing bucket delete scope.
+#
+# USE:     sudo bash scripts/backup-identity.sh        (daily 04:40 timer)
+# RESTORE: sudo bash scripts/restore-identity.sh [DD]  (verify + stage; --apply to install)
+# ==============================================================================
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+WURL="${BACKUP_WORKER_URL:-}"
+WSEC="${BACKUP_UPLOAD_SECRET:-}"
+KEYFILE="${IDENTITY_KEY_FILE:-/root/tukuk-backup-key}"
+BUCKET="${R2_BUCKET:-tukuk-fallback}"
+DAY="$(date -u +%d)"
+KEY="backups/tukuk-identity-$DAY.tar.gz.enc"
+# A human running this at 3am will not have the timer's EnvironmentFile loaded,
+# so read it ourselves instead of failing on unset variables.
+if [[ -z "$WURL" || -n "${BACKUP_UPLOAD_SECRET:-}" && -z "$WSEC" ]] || [[ -z "$WURL" || -z "$WSEC" ]]; then
+  ENVF="${TUKUK_ENV_FILE:-/opt/tukuk-os/.env}"
+  if [[ -r "$ENVF" ]]; then
+    set -a; . "$ENVF" 2>/dev/null; set +a
+    WURL="${BACKUP_WORKER_URL:-$WURL}"
+    WSEC="${BACKUP_UPLOAD_SECRET:-$WSEC}"
+  fi
+fi
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+# A missing destination or key is an ERROR here, not a silent skip like the data
+# track: this is the backup nobody thinks to look for until the machine is gone.
+[[ -n "$WURL" && -n "$WSEC" ]] || { echo "[identity] ERROR: BACKUP_WORKER_URL / BACKUP_UPLOAD_SECRET not set." >&2; exit 1; }
+[[ -r "$KEYFILE" ]] || { echo "[identity] ERROR: $KEYFILE unreadable -- refusing to put your secrets in a bucket unencrypted." >&2; exit 1; }
+
+# Relative to / so the archive unpacks onto the same absolute layout.
+PATHS=(
+  etc/cloudflared
+  etc/nginx
+  etc/systemd/system
+  etc/ssh
+  etc/netplan
+  etc/hosts
+  etc/resolv.conf
+  etc/timezone
+  etc/crontab
+  home/tukuk/.cloudflared
+  home/tukuk/.ssh
+  home/tukuk/gt
+  opt/tukuk-os/.env
+)
+PRESENT=()
+for p in "${PATHS[@]}"; do
+  if [[ -e "/$p" ]]; then PRESENT+=("$p"); else echo "[identity] WARN: /$p absent -- skipped" >&2; fi
+done
+[[ ${#PRESENT[@]} -gt 0 ]] || { echo "[identity] ERROR: none of the expected paths exist." >&2; exit 1; }
+
+# --------------------------------------------------------------------------------
+# Manifest: enough that a rebuild can be done from the archive alone, and a
+# checksum per file so a restore can prove what it actually unpacked.
+# --------------------------------------------------------------------------------
+M="$TMP/manifest"
+mkdir -p "$M"
+{
+  date -u +"created=%FT%TZ"; echo "hostname=$(hostname)"; uname -a
+  echo "node=$(node -v 2>/dev/null)"
+  echo "cloudflared=$(cloudflared --version 2>/dev/null | head -1)"
+  echo "openssl=$(openssl version)"
+  echo "tukuk-os HEAD=$(git -C /opt/tukuk-os rev-parse HEAD 2>/dev/null)"
+  echo "station-break HEAD=$(git -C /home/tukuk/station-break rev-parse HEAD 2>/dev/null)"
+  echo; echo "--- timers as installed:"; systemctl list-timers --all --no-pager 2>/dev/null | head -30
+  echo; echo "--- listening sockets:"; ss -ltnp 2>/dev/null | head -25
+  echo; echo "--- interfaces:"; ip -br a 2>/dev/null
+  echo; echo "--- published game files:"; ls -l /var/www/tukuk-play 2>/dev/null
+} > "$M/system.txt" 2>&1
+dpkg -l > "$M/packages.txt" 2>/dev/null
+crontab -l -u root  > "$M/crontab-root.txt"  2>/dev/null
+crontab -l -u tukuk > "$M/crontab-tukuk.txt" 2>/dev/null
+ls -R /var/www      > "$M/var-www-listing.txt" 2>/dev/null
+( for p in "${PRESENT[@]}"; do find "/$p" -type f -readable -print0 2>/dev/null; done \
+  | xargs -0 -r sha256sum ) > "$M/checksums.txt" 2>/dev/null
+echo "[identity] manifest lists $(wc -l < "$M/checksums.txt") files, $(du -h "$M/checksums.txt" | cut -f1) of checksums"
+
+echo "[identity] packing ${#PRESENT[@]} trees ..."
+tar cf "$TMP/identity.tar" -C / "${PRESENT[@]}" 2>/dev/null || { echo "[identity] ERROR: tar failed" >&2; exit 1; }
+tar rf "$TMP/identity.tar" -C "$TMP" manifest
+gzip -n "$TMP/identity.tar"
+openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+  -in "$TMP/identity.tar.gz" -out "$TMP/identity.enc" -pass "file:$KEYFILE" \
+  || { echo "[identity] ERROR: encryption failed" >&2; exit 1; }
+SIZE="$(du -h "$TMP/identity.enc" | cut -f1)"
+echo "[identity] encrypted to $SIZE, sha256 $(sha256sum "$TMP/identity.enc" | cut -c1-16)..."
+
+echo "[identity] sending $KEY ($SIZE) to R2 ..."
+ATTEMPTS=0
+until curl -fsS --max-time 180 -X POST -H "Authorization: Bearer $WSEC" \
+     -H "x-content-type: application/octet-stream" --data-binary "@$TMP/identity.enc" \
+     "$WURL/?key=$KEY" >/dev/null; do
+  ATTEMPTS=$((ATTEMPTS + 1))
+  if [[ $ATTEMPTS -ge 4 ]]; then
+    echo "[identity] ERROR: worker path failed after $ATTEMPTS tries (edge 429?)" >&2
+    exit 1
+  fi
+  case $ATTEMPTS in 1) SLEEP=8 ;; 2) SLEEP=20 ;; *) SLEEP=45 ;; esac
+  echo "[identity] POST failed (throttled?) -- retry $ATTEMPTS/3 in ${SLEEP}s" >&2
+  sleep "$SLEEP"
+done
+echo "[identity] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"

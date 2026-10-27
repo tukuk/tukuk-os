@@ -1,0 +1,9 @@
+[Unit]
+Description=Encrypted off-box copy of this box's identity (tunnel keys, .env, configs)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/opt/tukuk-os/.env
+ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-identity.sh
