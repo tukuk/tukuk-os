@@ -41,6 +41,16 @@ elif [[ $TARRC -eq 1 ]]; then
 fi
 SIZE="$(du -h "$TMP/data.tar.gz" | cut -f1)"
 
+# Keep the newest archive on the box. Two reasons: a second-provider job can
+# mirror a finished file instead of re-reading the live data dir while the app
+# writes to it, and a restore can start from the disk it is restoring to. It is
+# overwritten in place each run, so this costs one archive (~18 MB), not a slot
+# per hour. Written via tmp+mv: a half-written "latest" file is worse than none.
+KEEP=/var/backups/tukuk-data-latest.tar.gz
+cp "$TMP/data.tar.gz" "$KEEP.part" && mv -f "$KEEP.part" "$KEEP" \
+  && chmod 600 "$KEEP" \
+  || echo "[backup] WARN: could not retain $KEEP" >&2
+
 echo "[backup] sending $KEY ($SIZE) to R2 ..."
 if [[ -n "$WURL" && -n "$WSEC" ]]; then
   # The upload endpoint is a *.workers.dev URL, and Cloudflare platform-throttles that

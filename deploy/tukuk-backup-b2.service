@@ -1,0 +1,21 @@
+[Unit]
+Description=Mirror the tukuk.org archives to Backblaze B2 (second provider)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# The two archives this mirrors are produced by tukuk-backup-data (hourly) and
+# tukuk-identity-backup (04:40); 05:10 leaves room for both to have finished.
+EnvironmentFile=-/opt/tukuk-os/.env
+ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-b2.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=3600
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups /tmp
+
+[Install]
+WantedBy=multi-user.target

@@ -38,9 +38,16 @@ KEY="backups/tukuk-identity-$DAY.tar.gz.enc"
 if [[ -z "$WURL" || -n "${BACKUP_UPLOAD_SECRET:-}" && -z "$WSEC" ]] || [[ -z "$WURL" || -z "$WSEC" ]]; then
   ENVF="${TUKUK_ENV_FILE:-/opt/tukuk-os/.env}"
   if [[ -r "$ENVF" ]]; then
-    set -a; . "$ENVF" 2>/dev/null; set +a
-    WURL="${BACKUP_WORKER_URL:-$WURL}"
-    WSEC="${BACKUP_UPLOAD_SECRET:-$WSEC}"
+    # Read the two keys we need rather than sourcing the file. Sourcing runs it
+    # as shell, and this .env has values with spaces (`WEBAUTHN_RP_NAME=Tukuk
+    # Passkey`), which bash parses as "assign, then execute `Passkey` as a
+    # command". The error is only hidden by 2>/dev/null, and whether the rest of
+    # the file survives to define BACKUP_WORKER_URL depends on the shell options
+    # in force -- which is not something an emergency restore should gamble on.
+    # Values are taken whole after the first `=`, exactly as systemd does.
+    _env_get() { grep -E "^[[:space:]]*$1=" "$ENVF" | tail -1 | cut -d= -f2- | sed -e "s/^[[:space:]]*//" -e "s/[[:space:]]*$//" -e 's/^"//' -e 's/"$//'; }
+    WURL="${WURL:-$(_env_get BACKUP_WORKER_URL)}"
+    WSEC="${WSEC:-$(_env_get BACKUP_UPLOAD_SECRET)}"
   fi
 fi
 
@@ -112,6 +119,14 @@ echo "[identity] encrypted to $SIZE, sha256 $(sha256sum "$TMP/identity.enc" | cu
 
 echo "[identity] sending $KEY ($SIZE) to R2 ..."
 ATTEMPTS=0
+# Same reasoning as backup-data.sh: leave the finished object on disk so the
+# second-provider job mirrors a stable file rather than re-taring /etc while
+# services are running.
+KEEP=/var/backups/tukuk-identity-latest.tar.gz.enc
+cp "$TMP/identity.enc" "$KEEP.part" && mv -f "$KEEP.part" "$KEEP" \
+  && chmod 600 "$KEEP" \
+  || echo "[identity] WARN: could not retain $KEEP" >&2
+
 until curl -fsS --max-time 180 -X POST -H "Authorization: Bearer $WSEC" \
      -H "x-content-type: application/octet-stream" --data-binary "@$TMP/identity.enc" \
      "$WURL/?key=$KEY" >/dev/null; do
