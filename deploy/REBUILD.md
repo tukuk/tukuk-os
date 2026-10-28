@@ -230,7 +230,7 @@ exist *before* the old disk is formatted rather than being chased afterwards ove
 
 | file | bytes | proof it is usable |
 |---|---|---|
-| `code/tukuk-os-v2-main.bundle` | 39,673,056 | `git bundle verify` → "records a complete history", `refs/heads/main` |
+| `code/tukuk-os-v2-main.bundle` | 39,691,023 | `git bundle verify` → "records a complete history", `refs/heads/main` = the pushed HEAD |
 | `code/station-break-game.bundle` | 869,119,994 | `git bundle verify` → complete history, `refs/heads/game`; 1,114 tracked files, 0 LFS pointers |
 | `id.enc` | 137,760 | decrypts with `key/tukuk-backup-key` **alone**: `gzip -t` OK, 252 entries, 12 `etc/cloudflared/` files |
 | `data.tar.gz` | 18,398,889 | `gzip -t` OK, 3,019 entries |
@@ -240,6 +240,18 @@ exist *before* the old disk is formatted rather than being chased afterwards ove
 
 A bundle rather than a directory copy for the same reason the clone is a problem: it needs no
 GitHub credentials on a machine that has none yet, and it carries history.
+
+**Regenerate it last, after the final push** — a bundle cut before the docs commit ships a stick
+whose code tells you to run steps that commit added. Then re-run `sha256sum -c`:
+
+```bash
+git bundle create ~/vps-handover-2026-10-28/code/tukuk-os-v2-main.bundle refs/heads/main
+git bundle verify ~/vps-handover-2026-10-28/code/tukuk-os-v2-main.bundle   # must say "complete history"
+git clone -q -b main ~/vps-handover-2026-10-28/code/tukuk-os-v2-main.bundle /tmp/sticktest \
+  && git -C /tmp/sticktest log --oneline -1 && rm -rf /tmp/sticktest        # must be the pushed HEAD
+(cd ~/vps-handover-2026-10-28 && find . -type f ! -name SHA256SUMS -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS \
+  && sha256sum -c SHA256SUMS)                                              # every line OK
+```
 
 First boot, in order — the entire sequence, no other terminal work required:
 
