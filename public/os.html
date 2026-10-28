@@ -184,12 +184,17 @@ input{font:inherit;color:inherit}
 <div id="boot"><div class="logo">🧠</div><b>TUKUK OS</b><small>the AI web phone</small></div>
 
 <div id="os" hidden>
-  <div id="status" title="Pull down for notifications">
+  <!-- The shell is a page of landmarks, not a pile of divs: axe's "region" rule flagged the
+       status bar, the shade, the lock screen, the toast stack and the hint line for sitting
+       outside any landmark. Each one now declares what it is, which is also what a screen
+       reader lists when someone asks for the regions of this page.
+       header = banner (top bar), aside = complementary (the pulled-down shade). -->
+  <header id="status" title="Pull down for notifications">
     <span class="net" id="netDot"></span><b style="font-weight:600">tukuk.org</b>
     <span class="sp"></span><span class="ico" id="notifIco">🔔</span><span class="ico" id="batt">🔋</span><span id="clock">--:--</span>
-  </div>
+  </header>
 
-  <div id="shade"><h3>NOTIFICATIONS · QUICK TILES</h3><div id="notes"></div>
+  <aside id="shade" aria-label="Notifications and quick settings"><h3>NOTIFICATIONS · QUICK TILES</h3><div id="notes"></div>
     <div class="qtiles">
       <button class="qtile" id="qtTheme">🌗 Theme</button>
       <button class="qtile" id="qtWall">🌈 Wallpaper</button>
@@ -197,8 +202,8 @@ input{font:inherit;color:inherit}
       <button class="qtile" id="qtClear">🧹 Clear</button>
       <button class="qtile" id="qtLock">🔒 Lock</button>
     </div>
-    <div class="qrow">☀️<input type="range" id="dimRange" min="25" max="100"><span id="dimPct" style="font-size:12px;color:var(--muted)">100%</span></div>
-  </div>
+    <div class="qrow">☀️<input type="range" id="dimRange" min="25" max="100" aria-label="Brightness"><span id="dimPct" style="font-size:12px;color:var(--muted)">100%</span></div>
+  </aside>
 
   <main id="home">
     <div id="glance"><b id="gClock">--:--</b><span id="gDate"></span><span class="r" id="gStat"></span></div>
@@ -210,14 +215,19 @@ input{font:inherit;color:inherit}
   </main>
 
   <nav id="dock">
-    <button class="cell" id="dAssist"><span class="ic">✦</span><span>Assistant</span></button>
-    <button class="cell" id="dChat"><span class="ic">💬</span><span>Chat</span></button>
-    <button class="cell" id="dStore"><span class="ic">🛒</span><span>Store</span></button>
-    <button class="cell" id="dStudio"><span class="ic">🅰️</span><span>Studio</span></button>
-    <button class="cell" id="dRecents"><span class="ic">⧉</span><span>Recent</span></button>
-    <button class="cell" id="dDrawer"><span class="ic">▤</span><span>Apps</span></button>
+    <!-- The labels are hidden below 900px (#dock .cell span{display:none}), which leaves these
+         buttons with an icon and no accessible name — screen readers announced six unlabelled
+         buttons. aria-label carries the name at every width; the visible span is the same word,
+         so it never disagrees with what is on screen. -->
+    <button class="cell" id="dAssist" aria-label="Assistant"><span class="ic">✦</span><span>Assistant</span></button>
+    <button class="cell" id="dChat" aria-label="Chat"><span class="ic">💬</span><span>Chat</span></button>
+    <button class="cell" id="dStore" aria-label="Store"><span class="ic">🛒</span><span>Store</span></button>
+    <button class="cell" id="dStudio" aria-label="Studio"><span class="ic">🅰️</span><span>Studio</span></button>
+    <button class="cell" id="dRecents" aria-label="Recent apps"><span class="ic">⧉</span><span>Recent</span></button>
+    <button class="cell" id="dDrawer" aria-label="All apps"><span class="ic">▤</span><span>Apps</span></button>
   </nav>
-  <div class="hint">Tukuk OS · tap 🔍 bar to command the AI · long-press an icon for options</div>
+  <!-- contentinfo: the shell-wide caption, not part of the home screen's content -->
+  <footer class="hint">Tukuk OS · tap 🔍 bar to command the AI · long-press an icon for options</footer>
 
   <div id="drawer"><button class="close" id="drawerX">✕</button><button id="drawerStudio">🅰️ Android Studio</button><div id="drawerBody"></div></div>
   <div id="windows"></div>
@@ -258,17 +268,19 @@ input{font:inherit;color:inherit}
     <h3>YOUR INSTALLED APPS</h3><div class="pins" id="webList"></div>
   </div>
 
-  <div id="lock" hidden>
+  <section id="lock" hidden aria-label="Lock screen">
     <div class="lc-clock" id="lcClock">--:--</div>
     <div class="lc-date" id="lcDate"></div>
     <div class="lc-notifs" id="lcNotifs"></div>
     <div class="lc-hint">⌃ Swipe up to unlock</div>
     <div class="lc-sugs" id="lcSugs"></div>
     <div class="lc-apps"><button id="lcCam" title="Image Search">🖼️</button><button id="lcNotes" title="T Chat">💬</button></div>
-  </div>
+  </section>
   <div id="dim"></div>
 
-  <div id="toasts"></div>
+  <!-- region + aria-live: a landmark for the axe "region" rule, and toasts that are actually
+       announced instead of appearing silently -->
+  <div id="toasts" role="region" aria-label="Messages" aria-live="polite"></div>
 </div>
 
 <script>

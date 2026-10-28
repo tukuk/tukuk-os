@@ -32,16 +32,27 @@
 :root[data-accent="amber"] { --accent-fill: #b45309; --accent: #fbbf24; }
 :root[data-accent="rose"] { --accent-fill: #be123c; --accent: #fb7185; }
 
-:root[data-theme="light"][data-accent="blue"] { --accent-fill: #2a6edb; --accent: #1f6feb; }
-:root[data-theme="light"][data-accent="green"] { --accent-fill: #047857; --accent: #0f9d6f; }
+:root[data-theme="light"][data-accent="blue"] { --accent-fill: #2a6edb; --accent: #1a63d4; }
+:root[data-theme="light"][data-accent="green"] { --accent-fill: #047857; --accent: #0b7a55; }
 :root[data-theme="light"][data-accent="violet"] { --accent-fill: #6d28d9; --accent: #7c3aed; }
 :root[data-theme="light"][data-accent="amber"] { --accent-fill: #b45309; --accent: #b45309; }
-:root[data-theme="light"][data-accent="rose"] { --accent-fill: #be123c; --accent: #e11d48; }
+:root[data-theme="light"][data-accent="rose"] { --accent-fill: #be123c; --accent: #b3123c; }
 
 body, header, footer, nav, main, .box, .card, .panel, .post-card,
 .site-nav, .search-box, input, button, pre, code, table, th, td, .tag {
   transition: background-color 0.22s ease, border-color 0.22s ease,
               color 0.22s ease, box-shadow 0.22s ease;
+}
+
+/* Links inside running text. WCAG 1.4.1 asks a link to be distinguishable without relying
+   on colour, and every prose link here is `--accent` on the page background and nothing else
+   — axe (link-in-text-block) flagged 107 of them across the home, about/privacy/contact and
+   wiki pages. An underline is the affordance that survives colour-blindness, a grayscale
+   print and a forced-colours mode. Scoped to text blocks on purpose: cards, the nav and the
+   button-shaped links keep their flat look. */
+p a, li a, td a, dd a, blockquote a, footer a, .updated a, .meta a, .tagline a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .theme-tools {

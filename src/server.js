@@ -5806,7 +5806,9 @@ const COMMON_CSS = `
   .hero p { color:var(--muted); font-size:1.12rem; max-width:64ch; margin:0; line-height:1.6; }
   .hero .cta { margin-top:22px; display:flex; gap:12px; flex-wrap:wrap; }
   .btn { display:inline-block; padding:10px 18px; border-radius:10px; font-weight:600; }
-  .btn.primary { background:var(--accent); color:#fff; } .btn.primary:hover { text-decoration:none; filter:brightness(1.08); }
+  /* White text needs --accent-fill, never --accent: #4c8dff under #fff is only 3.2:1 and WCAG AA
+     wants 4.5:1, while every fill in theme.css clears it (blue 4.8, green 5.5, violet 7.1, amber 5.0, rose 6.3). */
+  .btn.primary { background:var(--accent-fill,#2a6edb); color:#fff; } .btn.primary:hover { text-decoration:none; filter:brightness(1.04); }
   .btn.ghost { border:1px solid var(--line); color:var(--text); } .btn.ghost:hover { border-color:var(--accent); text-decoration:none; }
   .section-title { margin:34px 0 6px; font-size:1.35rem; }
   .feed { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
@@ -5994,7 +5996,7 @@ function msAdUnit(label) {
 function siteHeader(active) {
   const a = String(active || '');
   const link = (href, label, key) => `<a href="${href}"${a === key ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
-  return `<div class="site-top"><div class="wrap-w"><div class="topbar">
+  return `<header class="site-top"><div class="wrap-w"><div class="topbar">
     <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
     <nav class="topnav" aria-label="Primary">
       ${link('/', 'Home', 'home')}
@@ -6026,7 +6028,7 @@ function siteHeader(active) {
         </span>
       </span>
     </nav>
-  </div></div></div>`;
+  </div></div></header>`;
 }
 
 function siteFooter() {
@@ -6195,10 +6197,11 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader(asHome ? 'home' : 'blog')}
 <div class="wrap">
+  <main>
   ${asHome
     ? `<section class="hero"><h1>Tukuk-OS &mdash; Free Tools &amp; Knowledge Library</h1><p>Original how-to guides and free tools for the whole world \u2014 maps, weather, calculators, geography, astronomy, food and everyday maths. Free to read, no account needed.</p><div class="cta"><a class="btn primary" href="/blog">Browse all articles</a><a class="btn ghost" href="/nasa">Today\u2019s NASA picture</a><a class="btn ghost" href="https://build.tukuk.org" rel="noopener">Build an app</a></div></section>`
     : `<header><h1>Blog &amp; Knowledge Archive</h1><p class="tagline">In-depth, free-to-read guides on science, geography, health, money, technology and everyday tools.</p></header>`}
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}${asHome ? '<h2 class="section-title">Latest articles</h2><div class="feed">' : ''}`;
+  ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}${asHome ? '<h2 class="section-title">Latest articles</h2><div class="feed">' : ''}`;
 
   for (const post of posts) {
     const postDate = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -6210,7 +6213,7 @@ ${siteHeader(asHome ? 'home' : 'blog')}
       <div class="meta">${postDate} &middot; <a href="/about" rel="author">${escapeHtml(post.author || 'Fevian Donald')}</a> &middot; ${mins} min read</div>
       <p class="excerpt">${escapeHtml(post.excerpt)}</p>
       ${post.tags && post.tags.length ? `<div class="tags">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-      <a class="read-more" href="${href}" aria-label="Read ${escapeHtml(post.title)}">Read article <span class="arrow">&rarr;</span></a>
+      <a class="read-more" href="${href}" aria-label="Read article: ${escapeHtml(post.title)}">Read article <span class="arrow" aria-hidden="true">&rarr;</span></a>
     </div>`;
   }
 
@@ -8955,11 +8958,13 @@ function wikiHead(title, selfUrl, desc, jsonLd, robots) {
 }
 
 function wikiTopbar() {
-  return `<div class="wrap"><div class="wiki-topbar">` +
+  // <header> rather than <div>: the wordmark and the search box sat outside every landmark, which
+  // is what axe's "region" rule reported on /wiki. A header here is the page banner.
+  return `<div class="wrap"><header class="wiki-topbar">` +
     `<a class="wiki-wordmark" href="/wiki"><b>Tukuk-OS</b> Wiki</a>` +
     `<form class="wiki-search" action="/wiki" method="get" role="search">` +
     `<input type="search" name="q" placeholder="Search the wiki" aria-label="Search the wiki">` +
-    `<button type="submit">Search</button></form></div>`;
+    `<button type="submit">Search</button></form></header>`;
 }
 
 function wikiSidebar() {
@@ -22056,10 +22061,10 @@ app.get('/play/:id', (req, res) => {
 const GAMES_CSS = '<style>.gwrap{max-width:960px;margin:0 auto;padding:14px}.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}'
   + '.gcard{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--text);transition:transform .12s,border-color .12s}'
   + '.gcard:hover{transform:translateY(-3px);border-color:var(--accent)}.gic{font-size:2rem;line-height:1}.gt{font-weight:700;font-size:.92rem;text-align:center}.gg{font-size:.68rem;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:2px 10px}'
-  + '.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.gchip{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;font:inherit;font-size:.82rem;cursor:pointer}.gchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}'
-  + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent),#7a5cff);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.92;font-size:.95rem}'
+  + '.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.gchip{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:6px 14px;font:inherit;font-size:.82rem;cursor:pointer}.gchip.on{background:var(--accent-fill,#2a6edb);color:#fff;border-color:var(--accent)}'
+  + '.gsec{max-width:960px;margin:0 auto;padding:14px}.ghero{background:linear-gradient(135deg,var(--accent-fill,#2a6edb),#5b3fd6);color:#fff;border-radius:16px;padding:26px 22px;margin:8px 0}.ghero h1{margin:0 0 6px;font-size:1.5rem}.ghero p{margin:0;opacity:.96;font-size:.95rem}'
   + '.gcard.feat{border-color:var(--accent);background:linear-gradient(160deg,rgba(76,141,255,.18),var(--panel));box-shadow:0 0 0 1px var(--accent) inset}'
-  + '.gcard.feat .gg{background:var(--accent);color:#fff;border-color:var(--accent)}'
+  + '.gcard.feat .gg{background:var(--accent-fill,#2a6edb);color:#fff;border-color:var(--accent-fill,#2a6edb)}'
   + '.gttl{margin:26px 0 0;font-size:1.02rem;display:flex;align-items:baseline;gap:8px}.gttl small{color:var(--muted);font-weight:400;font-size:.78rem}'
   + '.gcta{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:26px;color:var(--muted);font-size:.9rem;line-height:1.55}.gcta b{color:var(--text)}.gcta a{color:var(--accent);font-weight:700;text-decoration:none}</style>';
 function renderGamesIndex() {
@@ -23168,7 +23173,7 @@ app.get('/api/proxy/reader', async (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (err) {
-    res.status(500).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#111;color:#eee;padding:40px;text-align:center;"><h2>Could not load preview</h2><p>This website prevents in-frame preview.</p><a href="${escapeHtml(targetUrl)}" target="_blank" style="color:#3b82f6;font-size:1.1rem;">Open in new window &rarr;</a></body></html>`);
+    res.status(500).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#111;color:#eee;padding:40px;text-align:center;"><h2>Could not load preview</h2><p>This website prevents in-frame preview.</p><a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;font-size:1.1rem;">Open in new window &rarr;</a></body></html>`);
   }
 });
 
@@ -23322,7 +23327,7 @@ app.use((req, res) => {
   .actions a:hover { border-color:var(--accent); color:var(--accent); }
   .oops form { margin:0 auto 6px; max-width:420px; display:flex; gap:8px; }
   .oops form input { flex:1; padding:10px 14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--text); }
-  .oops form button { padding:10px 18px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  .oops form button { padding:10px 18px; border:0; border-radius:10px; background:var(--accent-fill,#2a6edb); color:#fff; font-weight:600; cursor:pointer; }
 </style>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
