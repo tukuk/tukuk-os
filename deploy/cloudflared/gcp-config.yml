@@ -1,0 +1,39 @@
+# ==============================================================================
+# Cloudflared config template for the GCP failover MIRROR (www.tukuk.org).
+#
+# This is a SEPARATE tunnel from the home box's. The whole point is that the
+# backup lives on a different machine, in a different provider, behind a
+# different connector — so a home-box blackout or a dropped box connector cannot
+# take the mirror down with it. See deploy/GCP-FAILOVER.md for the full runbook.
+#
+# HOW IT RUNS ON THE VM
+#   * Token mode is NOT used here: this connector reads hostname routes from the
+#     LOCAL `ingress:` below, because we want www.tukuk.org pointed at the VM's
+#     own nginx and nothing else. (The home box uses dashboard/TOKEN mode; the two
+#     tunnels are deliberately configured differently so neither can shadow the
+#     other.) cloudflared only obeys a local ingress when the tunnel is created
+#     with a credentials .json (legacy-connector style), i.e. `tunnel login` +
+#     `tunnel create` + `tunnel route dns`, NOT a dashboard-token tunnel.
+#   * setup-mirror.sh installs this file to /etc/cloudflared/config.yml and
+#     replaces <TUNNEL_ID> with the VM tunnel's UUID.
+#
+# WHAT :8080 IS
+#   nginx on the VM serves the static snapshot from /var/www/tukuk-mirror on
+#   127.0.0.1:8080 (a non-privileged port; nginx also owns :80/:443 for a plain
+#   health check, but the tunnel points ONLY at :8080). The tunnel never sees a
+#   public IP — cloudflared dials out to Cloudflare, exactly like the home box.
+# ==============================================================================
+
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  # The backup origin: www.tukuk.org answers with the last static snapshot.
+  # Pointed at the VM's own nginx, never at :3000 (that is the home box's port and
+  # means nothing here). A hostname pointed at the wrong local port is the usual
+  # cause of cloudflared's "error code: 502" — the mirror must never show that.
+  - hostname: www.tukuk.org
+    service: http://127.0.0.1:8080
+  # Required catch-all last, so an unexpected Host fails closed instead of being
+  # proxied somewhere it should not be.
+  - service: http_status:404

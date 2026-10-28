@@ -1,0 +1,20 @@
+# tukuk-mirror-pull.timer — refresh the mirror every 6 hours.
+#
+# The home box writes the R2 snapshot on tukuk-snapshot.timer (every 6h). This pulls
+# shortly AFTER that, so the mirror always copies a snapshot that was just refreshed,
+# never a half-written one. The minutes are staggered to sit after the box's :00 run;
+# if you move the box's snapshot schedule, push these minutes later too.
+#
+# Persistent=true means: if the VM was off (reboot, spot pre-emption) and a run was
+# missed, systemd fires it as soon as it is back — the mirror is never silently stale.
+[Unit]
+Description=Every 6h refresh the tukuk.org GCP failover mirror
+Requires=tukuk-mirror-pull.service
+
+[Timer]
+OnCalendar=*-*-* 00/6:40:00
+RandomizedDelaySec=180
+Persistent=true
+
+[Install]
+WantedBy=timers.target

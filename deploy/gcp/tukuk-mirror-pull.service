@@ -1,0 +1,25 @@
+# tukuk-mirror-pull.service — oneshot: refresh the GCP mirror from the R2 snapshot.
+# Started by tukuk-mirror-pull.timer (every 6h) or by hand with `systemctl start`.
+# Runs as root so it can flip the /var/www symlink; it needs no other privilege, so
+# the tree is kept read-only everywhere else.
+[Unit]
+Description=Refresh the tukuk.org GCP failover mirror from R2
+Documentation=file:/deploy/GCP-FAILOVER.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/tukuk-mirror.env
+ExecStart=/usr/local/bin/mirror-pull.sh
+TimeoutStartSec=15min
+
+# Least privilege: the only writes are the new release under /srv and the symlink in
+# /var/www. Everything else (incl. the read token's config) is read-only.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/tukuk-mirror /var/www
+
+[Install]
+WantedBy=multi-user.target
