@@ -3918,6 +3918,9 @@ const BK_CSS = `.bk-grid{display:grid;grid-template-columns:repeat(auto-fill,min
 .bk-card h3{margin:0 0 6px;font-size:1rem}
 .bk-card p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.5}
 .bk-list{width:100%;border-collapse:collapse;margin:16px 0}
+/* The cover column has no visible heading, but an empty <th> is a header a screen reader
+   announces as nothing (axe: empty-table-header) — the label is here, hidden visually. */
+.bk-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .bk-list th{text-align:left;color:var(--muted);font-weight:600;font-size:.85rem;padding:8px 10px;border-bottom:1px solid var(--line)}
 .bk-list td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 .bk-covtd{width:54px;padding:6px 6px 6px 0!important}
@@ -4069,7 +4072,7 @@ async function booksSubjectPage(req, meta) {
     ? `, out of the ${meta.found.toLocaleString('en-US')} works the catalogue holds under that subject` : '';
   const body = `<p>${shelfIntro(meta, works)}</p>
   <p>Below are the ${works.length} works carrying the subject <b>${escapeHtml(meta.term)}</b> in the Open Library catalogue with the most editions in print${more}. Author and first year are as the record states them; a missing year means the record does not carry one, not that the book is undated.${meta.literary ? '' : ' Novels set in the subject are left out, because a list of historical fiction is not a list of history.'} Where one author dominates the reprint counts, no more than two of their titles appear.</p>
-  <table class="bk-list"><thead><tr><th></th><th>Title</th><th>Author</th><th>First published</th><th>Editions</th></tr></thead><tbody>${rows}</tbody></table>
+  <table class="bk-list"><thead><tr><th><span class="bk-sr">Cover</span></th><th>Title</th><th>Author</th><th>First published</th><th>Editions</th></tr></thead><tbody>${rows}</tbody></table>
   <p class="meta">List built from <a href="https://openlibrary.org" rel="nofollow noopener">Open Library</a> (CC0 metadata)${when ? ` · retrieved ${escapeHtml(when)} UTC` : ''}${stale ? ' · showing a saved copy while the catalogue is unreachable' : ''} · capped at ${books.LIMIT} works per subject.</p>
   <h2 class="section-title">Nearby shelves</h2><p>${shelfNeighbours(meta.slug) || '<a class="bk-pill" href="/books/a-z">All subjects A–Z</a>'}</p>
   <p class="meta">Want the ideas behind these books explained rather than listed? Try <a href="/study">Study</a> for short explainers, <a href="/academy">Academy</a> for deeper tracks, and <a href="/elements">the periodic table</a> or <a href="/constellations">the night sky</a> when the book is about matter or stars.</p>`;
@@ -4209,7 +4212,7 @@ const RC_CSS = `.rc-grid{display:grid;grid-template-columns:repeat(auto-fill,min
 .rc-ing li{margin:4px 0;line-height:1.5}
 .rc-steps{margin:0;padding:0;list-style:none;counter-reset:rcstep}
 .rc-steps li{counter-increment:rcstep;margin:0 0 12px;padding:0 0 0 40px;position:relative;line-height:1.55}
-.rc-steps li::before{content:counter(rcstep);position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;background:var(--accent,#4c8dff);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.84rem}
+.rc-steps li::before{content:counter(rcstep);position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;background:var(--accent-fill,#2a6edb);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.84rem}
 .rc-figure{margin:18px 0}
 .rc-figure img{max-width:100%;height:auto;border-radius:12px;display:block}
 .rc-credit{color:var(--muted);font-size:.78rem;margin:6px 0 0;line-height:1.45}
@@ -4276,6 +4279,7 @@ function recipesShelfPage(meta, recipes, at, stale) {
   const when = at ? new Date(at).toUTCString().slice(5, 16) : null;
   const body = `<p>${escapeHtml(meta.blurb)}</p>`
     + (stale ? '<div class="rc-note">The wiki is not answering right now, so this shelf is the copy saved on the last time it did. The recipes are real; they may have been improved since.</div>' : '')
+    + `<h2 class="section-title">The ${recipes.length} dishes on this shelf</h2>`
     + `<div class="rc-grid">${shelfCards(recipes, meta.slug)}</div>`
     + `<p class="meta">${recipes.length} recipes read from <a href="${escapeHtml(shelfSourceLink(meta))}" rel="nofollow noopener">the Wikibooks Cookbook</a> (CC BY-SA 4.0)${when ? ` · retrieved ${escapeHtml(when)} UTC` : ''}. Each dish names the page it was taken from.</p>`
     + '<h2 class="section-title">Other shelves</h2><p>' + shelfPills(meta.slug) + '</p>'
@@ -8401,7 +8405,7 @@ function negaraRegionPage(req, region, rows) {
   const most = rows.filter((x) => x.population).sort((a, b) => b.population - a.population)[0];
   const cards = rows.map((c) => `<div class="wx-card"><h3><a href="/countries/${c.slug}"><img class="ng-fl" src="${ngThumb(c.cca2)}" alt="" loading="lazy" decoding="async"> ${escapeHtml(c.name)}</a></h3>`
     + `<div class="meta">${escapeHtml(c.capital || 'No fixed capital')}${c.population ? ` \u00b7 ${ngNum(c.population)} people` : ''}</div></div>`).join('');
-  const body = `<div class="wx-grid">`
+  const body = `<h2 class="section-title">At a glance</h2><div class="wx-grid">`
     + `<div class="wx-card"><h3>Entries in ${escapeHtml(region.en)}</h3><div class="big">${rows.length}</div><div class="meta">countries & territories listed</div></div>`
     + `<div class="wx-card"><h3>Combined population</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">residents of every entry (World Bank 2023)</div></div>`
     + `<div class="wx-card"><h3>Most populous in ${escapeHtml(region.en)}</h3><div class="big">${most ? `<a href="/countries/${most.slug}">${escapeHtml(most.name)}</a>` : '—'}</div><div class="meta">${most ? ngNum(most.population) : 0} people</div></div>`
@@ -8934,6 +8938,8 @@ const WIKI_CSS = `
   .wiki-content{flex:1 1 auto;min-width:0}
   .wiki-content h1{font-family:Georgia,serif;font-weight:400;font-size:1.95rem;border-bottom:1px solid #a2a9b1;padding-bottom:6px;margin:0 0 4px}
   .wiki-from{color:#54595d;font-size:.92rem;margin:0 0 18px}
+  /* A link inside that line of text was colour-only (WCAG 1.4.1, axe: link-in-text-block). */
+  .wiki-from a{text-decoration:underline}
   .wiki-content h2{font-family:Georgia,serif;font-weight:400;font-size:1.45rem;border-bottom:1px solid #c8ccd1;padding-bottom:4px;margin:28px 0 12px}
   .wiki-content h3{font-size:1.12rem;font-weight:700;margin:18px 0 8px}
   .wiki-content p{line-height:1.7;margin:0 0 14px}
@@ -9327,8 +9333,8 @@ ${siteHeader('learn')}
   }
 
   html += `
-  </main>
   ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}
+  </main>
 </div>
 ${siteFooter()}
 <script>document.getElementById('lesson-count').textContent='${lessonNo} lessons';</script>
@@ -9444,6 +9450,7 @@ function studyHubPage() {
   const hist = study.pickDaily(study.HISTORY, seed);
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const body = `<p class="learn-intro">One place for curiosity: verified facts, real experiments and quick brain training \u2014 every section is free, needs no account, and rotates its daily picks on the calendar. For deeper structured learning try the <a href="/learn">Zero-to-Hero Academy</a> or the <a href="/nasa">NASA Space Complex</a>.</p>
+  <h2 class="section-title">Today, in four cards</h2>
   <div class="study-grid">
     <div class="study-card"><h3>\uD83D\uDCC5 Today\u2019s fact</h3><p>${escapeHtml(fact.s)}</p><p class="meta">Topic: ${escapeHtml(fact.t)} \u00b7 ${today}</p></div>
     <div class="study-card"><h3>\uD83E\uDD14 Riddle of the day</h3><p>${escapeHtml(riddle.q)}</p><details class="study-q" style="border:0;padding:0;margin:6px 0 0;background:none"><summary style="font-size:.9rem">Show answer</summary><p>${escapeHtml(riddle.a)}</p></details></div>
@@ -9465,6 +9472,7 @@ function studyHubPage() {
 function studySciencePage() {
   const cards = study.SCIENCE.map((c) => `<div class="study-card"><h3>${escapeHtml(c.title)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
   const body = `<p class="learn-intro">Seventeen core ideas that school curricula usually scatter across five subjects \u2014 collected here in plain language, each in three short paragraphs. Read one a day; they stand alone. Pair them with the <a href="/study/experiments">hands-on experiments</a> to see the ideas move.</p>
+  <h2 class="section-title">The seventeen ideas</h2>
   <div class="study-grid">${cards}</div>`;
   return studyDoc({
     title: 'Science Explained \u2014 17 Core Ideas of Physics, Chemistry & Biology | Tukuk-OS',
@@ -9542,6 +9550,7 @@ function studyGeographyPage(rows) {
 function studyExperimentsPage() {
   const cards = study.EXPERIMENTS.map((e) => `<div class="study-card"><h3>${escapeHtml(e.name)}</h3><p class="meta">${escapeHtml(e.level)} \u00b7 ${escapeHtml(e.time)}</p><p><b>You need:</b> ${escapeHtml(e.materials)}</p><ol>${e.steps.map((s) => `<li class="study-step">${escapeHtml(s)}</li>`).join('')}</ol><p><b>Why it happens:</b> ${escapeHtml(e.why)}</p></div>`).join('');
   const body = `<p class="learn-intro">Twelve safe, low-cost experiments using things already in most kitchens. Each lists materials, ordered steps and the real science behind the result. Items marked <b>medium</b> need an adult for a hot-water or boiling step. The concepts connect directly to the <a href="/study/science">science explainers</a>.</p>
+  <h2 class="section-title">Twelve experiments</h2>
   <div class="study-grid">${cards}</div>`;
   return studyDoc({
     title: '12 Safe Home Science Experiments \u2014 With Real Explanations | Tukuk-OS',
@@ -9822,6 +9831,7 @@ function udaraHubPage(air, co2) {
     ${waitNote}`;
   }
   const body = `<p class="learn-intro">Live air-quality readings for over seventy world cities, modelled by the Copernicus Atmosphere Monitoring Service and delivered through the free Open-Meteo API, refreshed on our side every 45 minutes. These are model estimates for each city\u2019s coordinates \u2014 your street can differ; treat them as a global pulse, not a personal sensor. Weather for any of these cities lives at <a href="/weather">World Weather</a>.</p>
+  <h2 class="section-title">Right now, around the world</h2>
   ${data}
   ${scale}`;
   return udaraDoc({
@@ -9856,6 +9866,7 @@ function udaraCarbonPage(co2) {
     readout = `<p class="meta">\u26A0 The NOAA carbon feed is resting right now and we keep no invented placeholder \u2014 reload in a few minutes for the real number.</p>`;
   }
   const body = `<p class="learn-intro">Carbon dioxide is the gas of breath and fire: every animal exhales it, every flame turns air into it, and for two centuries humans have been doing so at an industrial scale. This page shows the actual measurement \u2014 no model, no estimate: flasks and analysers at NOAA\u2019s Mauna Loa observatory in Hawaii and a global network, published freely.</p>
+  <h2 class="section-title">Today at Mauna Loa</h2>
   ${readout}
   <h2 class="section-title">What the number means</h2>
   <div class="air-grid">
@@ -9880,6 +9891,7 @@ function udaraOxygenPage() {
   const cards = udara.OXYGEN.map((c) => `<div class="air-card"><h3>${escapeHtml(c.h)}</h3>${c.paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>`).join('');
   const myths = udara.MYTHS.map((m) => `<div class="air-card"><h3>Myth: ${escapeHtml(m.m)}</h3><p>${escapeHtml(m.f)}</p></div>`).join('');
   const body = `<p class="learn-intro">Oxygen is the most consequential chemical argument on Earth: it lets fires spread, lets animals run hot and lets brains afford to think. Below \u2014 where it comes from, where it is going, and how the planet has breathed differently across deep time. The live side of this story is the <a href="/air-quality">world air ranking</a> and the <a href="/air-quality/carbon">CO2 readout</a>.</p>
+  <h2 class="section-title">Oxygen, from source to sky</h2>
   <div class="air-grid">${cards}</div>
   <h2 class="section-title">Claims worth un-learning</h2>
   <div class="air-grid">${myths}</div>`;
@@ -10056,6 +10068,7 @@ async function akadTrackPage(t) {
     : '';
   const body = `<p class="learn-intro"><a href="/academy">&larr; All 50 lessons</a></p>
   <p>${escapeHtml(t.blurb)} Five lessons, about ${min} minutes in total — read one at a time; each stands alone.</p>
+  <h2 class="section-title">The five lessons</h2>
   <div class="akad-grid">${rows}</div>
   ${rel}${bookBox}${paperBox}`;
   return akadDoc({
@@ -10250,9 +10263,12 @@ const EL_CSS = `.el-scroll{overflow-x:auto;padding-bottom:8px;margin:14px 0}
 .el-grid{display:grid;grid-template-columns:repeat(18,minmax(38px,1fr));grid-auto-rows:minmax(44px,auto);gap:3px;min-width:760px}
 .el-tile{display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;color:#0b0f16;border-radius:5px;padding:3px 4px;font-size:.7rem;line-height:1.05;background:var(--c);transition:transform .12s}
 .el-tile:hover{transform:scale(1.18);z-index:3;box-shadow:0 4px 14px rgba(0,0,0,.4)}
-.el-tile .num{opacity:.75;font-size:.6rem}
+.el-tile .num{font-size:.6rem}
 .el-tile .sym{font-weight:800;font-size:1.05rem}
-.el-tile .nm{font-size:.52rem;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* No opacity on the two small labels any more: at .75 and .85 they blended into the category
+   colour and axe measured 3.57:1 and 4.1:1 (WCAG 1.4.3 wants 4.5). The tile ink at full
+   strength is 5.8:1 on the blue cells and 6.9:1 on the grey ones. */
+.el-tile .nm{font-size:.52rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .el-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 0;font-size:.82rem}
 .el-legend span{display:inline-flex;align-items:center;gap:6px}
 .el-legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
@@ -10260,7 +10276,7 @@ const EL_CSS = `.el-scroll{overflow-x:auto;padding-bottom:8px;margin:14px 0}
 .el-hero .el-big{display:flex;flex-direction:column;justify-content:center;width:150px;height:150px;border-radius:14px;padding:12px;color:#0b0f16;background:var(--c)}
 .el-hero .el-big .b-sym{font-size:3rem;font-weight:800;line-height:1}
 .el-hero .el-big .b-nm{font-size:1.1rem;font-weight:700}
-.el-hero .el-big .b-meta{display:flex;justify-content:space-between;font-size:.72rem;opacity:.85}`;
+.el-hero .el-big .b-meta{display:flex;justify-content:space-between;font-size:.72rem}`;
 const EL_CAT_BLURB = {
   'Reactive nonmetal': 'Elements that readily gain or share electrons — the building blocks of water, air, living tissue and most organic chemistry.',
   'Noble gas': 'Full outer electron shells make these gases almost inert: they barely react, glow in discharge lamps and are used to create unreactive atmospheres.',
@@ -11076,21 +11092,28 @@ function tvNotFound(q) {
 }
 
 // ── /football — World Cup history & the Laws of the Game (STATIC embedded data) ─
-const FBALL_CSS = `.fb-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #1a7f4e;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
-.fb-row .fy{font-weight:800;color:#22c55e;font-size:1.05rem;min-width:3.4rem}
+const FBALL_CSS = `/* The accent green was #22c55e, which is 2.28:1 on the white light-theme card — axe
+   color-contrast, WCAG 1.4.3 wants 4.5 — and no single green clears both surfaces: 4.5:1 on
+   white needs a relative luminance at or below .183, while the #171a21 panel needs at or above
+   .200. So the ink follows the theme: #15803d is 5.02:1 on white (4.72:1 on the page bg), and
+   #4ade80 is 9.99:1 on the panel. */
+:root{--fb-ink:#4ade80}
+:root[data-theme="light"]{--fb-ink:#15803d}
+.fb-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #1a7f4e;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
+.fb-row .fy{font-weight:800;color:var(--fb-ink);font-size:1.05rem;min-width:3.4rem}
 .fb-row .fw{font-weight:700}
 .fb-row .fl{font-size:.86rem;color:var(--muted,#9aa3b2)}
 .fb-row .fs{font-weight:700;text-align:right;white-space:nowrap}
 .fb-champ{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:7px 0;background:var(--panel,#171a21)}
 .fb-champ .n{font-weight:700;flex:1}
-.fb-champ .t{color:#22c55e;font-weight:800}
+.fb-champ .t{color:var(--fb-ink);font-weight:800}
 .fb-trophy{display:inline-block;background:#f5c518;color:#151922;border-radius:999px;padding:1px 9px;font-weight:800;font-size:.8rem}
 .fb-law{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
 .fb-law .ln{display:inline-block;background:#1a7f4e;color:#fff;border-radius:7px;padding:1px 9px;font-weight:800;margin-right:8px}
 .fb-law .lt{font-weight:700}
 .fb-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
 .fb-card{border:1px solid var(--line);border-radius:12px;padding:14px 20px;background:var(--panel,#171a21)}
-.fb-card .big{font-size:1.7rem;font-weight:800;color:#22c55e;line-height:1}
+.fb-card .big{font-size:1.7rem;font-weight:800;color:var(--fb-ink);line-height:1}
 .fb-card .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
 @media(max-width:680px){.fb-row{grid-template-columns:auto 1fr}.fb-row .fs{text-align:left}}`;
 
@@ -11205,20 +11228,25 @@ function footballNotFound(q) {
 }
 
 // ── /cricket — World Cup history & how the game is played (STATIC embedded data) ─
-const CK_CSS = `.ck-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #b45309;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
-.ck-row .cy{font-weight:800;color:#f59e0b;font-size:1.05rem;min-width:3.4rem}
+const CK_CSS = `/* #f59e0b was 2.14:1 on the white light-theme card (axe color-contrast) but 8.11:1 on the
+   #171a21 panel, so only the light theme needs a different amber: #b45309 is 5.02:1 on white.
+   Both are read through one variable so a theme change cannot leave a failing number behind. */
+:root{--ck-ink:#f59e0b}
+:root[data-theme="light"]{--ck-ink:#b45309}
+.ck-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #b45309;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
+.ck-row .cy{font-weight:800;color:var(--ck-ink);font-size:1.05rem;min-width:3.4rem}
 .ck-row .cw{font-weight:700}
 .ck-row .cl{font-size:.86rem;color:var(--muted,#9aa3b2)}
 .ck-row .cs{font-weight:700;text-align:right;white-space:nowrap}
 .ck-champ{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:7px 0;background:var(--panel,#171a21)}
 .ck-champ .n{font-weight:700;flex:1}
-.ck-champ .t{color:#f59e0b;font-weight:800}
+.ck-champ .t{color:var(--ck-ink);font-weight:800}
 .ck-trophy{display:inline-block;background:#f5c518;color:#151922;border-radius:999px;padding:1px 9px;font-weight:800;font-size:.8rem}
 .ck-rule{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
 .ck-rule .lt{font-weight:700}
 .ck-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
 .ck-card{border:1px solid var(--line);border-radius:12px;padding:14px 20px;background:var(--panel,#171a21)}
-.ck-card .big{font-size:1.7rem;font-weight:800;color:#f59e0b;line-height:1}
+.ck-card .big{font-size:1.7rem;font-weight:800;color:var(--ck-ink);line-height:1}
 .ck-card .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
 @media(max-width:680px){.ck-row{grid-template-columns:auto 1fr}.ck-row .cs{text-align:left}}`;
 
@@ -11481,7 +11509,7 @@ const TRAFFIC_CSS = `#trf-wrap{display:grid;grid-template-columns:1fr 340px;gap:
 @media(max-width:900px){#trf-wrap{grid-template-columns:1fr}}
 #trf-map{height:520px;border:1px solid var(--line);border-radius:12px;background:var(--panel,#171a21);z-index:1}
 #trf-side{border:1px solid var(--line);border-radius:12px;background:var(--panel,#171a21);padding:14px;max-height:520px;overflow-y:auto}
-#trf-side h3{margin:0 0 10px;font-size:.95rem;color:var(--muted,#9aa3b2);text-transform:uppercase;letter-spacing:.5px}
+#trf-side h2{margin:0 0 10px;font-size:.95rem;color:var(--muted,#9aa3b2);text-transform:uppercase;letter-spacing:.5px}
 .trf-row{border-bottom:1px solid var(--line);padding:9px 0;font-size:.92rem;line-height:1.4}
 .trf-row:last-child{border-bottom:none}
 .trf-row .t{display:flex;align-items:center;gap:8px;margin-bottom:3px}
@@ -11504,7 +11532,7 @@ const TRAFFIC_CSS = `#trf-wrap{display:grid;grid-template-columns:1fr 340px;gap:
 .trf-fabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
 .trf-btn{padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel,#171a21);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
 .trf-btn:hover{border-color:var(--accent,#4c8dff);text-decoration:none}
-.trf-btn.primary{background:var(--accent,#4c8dff);color:#fff;border-color:transparent}
+.trf-btn.primary{background:var(--accent-fill,#2a6edb);color:#fff;border-color:transparent}
 .trf-btn.primary:hover{filter:brightness(1.1)}
 .trf-btn[disabled]{opacity:.5;cursor:default}
 #trf-status{font-size:.85rem;color:var(--muted,#9aa3b2);margin-left:6px}
@@ -11512,10 +11540,13 @@ const TRAFFIC_CSS = `#trf-wrap{display:grid;grid-template-columns:1fr 340px;gap:
 .leaflet-popup-content b{color:#0b0f16}
 #trf-live-badge{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel,#171a21);color:var(--muted,#9aa3b2);vertical-align:middle}
 #trf-live-badge .pulse{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.45}
-#trf-live-badge.on{color:#34d399;border-color:#34d399}
+/* "Live" was a fixed #34d399, which is 1.92:1 on the light theme's white panel (axe
+   color-contrast, WCAG 1.4.3 wants 4.5). The theme's --success token is the right colour for
+   it: 5.08:1 light, 9.47:1 on the dark panel. */
+#trf-live-badge.on{color:var(--success,#4cd964);border-color:var(--success,#4cd964)}
 #trf-live-badge.on .pulse{opacity:1;animation:trf-pulse 1.7s ease-in-out infinite}
 @keyframes trf-pulse{0%,100%{opacity:1}50%{opacity:.25}}
-.trf-btn.live-on{border-color:#34d399;color:#34d399}
+.trf-btn.live-on{border-color:var(--success,#4cd964);color:var(--success,#4cd964)}
 .trf-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:.82rem;color:var(--muted,#9aa3b2);margin:8px 0 0}
 .trf-legend i{display:inline-block;width:22px;height:5px;border-radius:2px;margin-right:6px;vertical-align:middle}
 .leaflet-control-layers{font:14px system-ui}`;
@@ -11555,7 +11586,7 @@ function trafficHubPage() {
   </div>
   <div id="trf-wrap">
     <div id="trf-map" role="application" aria-label="Live road-report map"></div>
-    <aside id="trf-side"><h3>Latest reports</h3><div id="trf-list">${listHtml}</div></aside>
+    <aside id="trf-side"><h2>Latest reports</h2><div id="trf-list">${listHtml}</div></aside>
   </div>
   <noscript><p>JavaScript is required for the interactive map. Reload with JS enabled, or browse the <a href="/weather">world weather</a> instead.</p></noscript>
   <h2 class="section-title">Two layers, two different questions</h2>
@@ -11673,6 +11704,7 @@ function tkItemListLd(name, selfUrl, desc, stories) {
 function teknologiHubPage(stories) {
   const rows = stories.slice(0, 20).map((s) => tkRow(s, false)).join('');
   const body = `<p>This is the <b>live technology pulse</b> of tukuk.org: the stories the world’s developers, founders and engineers are reading and arguing over right now. The list is the front page of <b>Hacker News</b> — the oldest community-run tech newswire, where every story and every rank comes from readers’ votes, not an editorial desk. We mirror it through the public Algolia API and re-cache it on our server every ten minutes, so this page loads instantly and never overloads the source.</p>
+  <h2 class="section-title">Right now, ranked by the community</h2>
   <div class="tk-topline"><span><b>${rows ? stories.length : 0}</b> stories ranked by the community</span><span class="meta">cached 10 min · auto-revalidated on our server</span></div>
   ${rows || '<p class="meta">The feed is briefly empty — reload in a minute.</p>'}
   <h2 class="section-title">How to read this page</h2>
@@ -11720,6 +11752,7 @@ function teknologiFeedPage(f, stories) {
   const rows = stories.map((s) => tkRow(s, withText)).join('');
   const selfUrl = `https://tukuk.org/technology/${slug}`;
   const body = `${f.intro}
+  <h2 class="section-title">The stories in this feed</h2>
   <div class="tk-topline"><span><b>${stories.length}</b> stories</span><span class="meta">cached 10 min · source: Hacker News community</span></div>
   ${rows || '<p class="meta">Nothing in the window right now — reload in a minute.</p>'}
   <h2 class="section-title">Other tech feeds</h2>
@@ -11754,7 +11787,7 @@ const PETA_CSS = `.peta-form{display:flex;gap:10px;flex-wrap:wrap;align-items:fl
 .peta-form input,.peta-form select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;min-width:170px}
 .peta-btn{border:1px solid var(--line);border-radius:8px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);padding:8px 14px;font:inherit;cursor:pointer}
 .peta-btn:hover{border-color:var(--accent,#4c8dff)}
-.peta-btn.primary{background:var(--accent,#4c8dff);border-color:transparent;color:#fff;font-weight:700}
+.peta-btn.primary{background:var(--accent-fill,#2a6edb);border-color:transparent;color:#fff;font-weight:700}
 #peta-status{font-size:.88rem;color:var(--muted,#9aa3b2);align-self:center;min-height:1.2em}
 .peta-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin:14px 0}
 #peta-map{height:480px;border:1px solid var(--line);border-radius:12px;z-index:1}
@@ -11794,7 +11827,7 @@ function petaPage() {
   <p class="meta">Tip: <b>left-click</b> the map to set the destination, <b>right-click (or long-press)</b> to set the start — then drag the pins to fine-tune. Place names beat raw coordinates; blank a box to use its pin instead.</p>
   <div class="peta-grid">
     <div id="peta-map" role="application" aria-label="Route map"></div>
-    <aside id="peta-side"><h3 style="margin:0 0 8px">Directions</h3><p class="meta">Your turn-by-turn list will appear here.</p></aside>
+    <aside id="peta-side"><h2 style="margin:0 0 8px;font-size:1rem">Directions</h2><p class="meta">Your turn-by-turn list will appear here.</p></aside>
   </div>
   <noscript><p>JavaScript is required for the interactive map and routing. Everything else on tukuk.org works without it — try the <a href="/weather">world weather</a>.</p></noscript>
   <h2 class="section-title">How the route is built</h2>
@@ -12338,7 +12371,7 @@ const TOOLS_CSS = `.tl-form{display:flex;gap:10px;flex-wrap:wrap;align-items:fle
 textarea.tl-in{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:13px/1.5 ui-monospace,Consolas,monospace;min-height:140px}
 .tl-btn{border:1px solid var(--line);border-radius:8px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);padding:8px 14px;font:inherit;cursor:pointer}
 .tl-btn:hover{border-color:var(--accent,#4c8dff)}
-.tl-btn.primary{background:var(--accent,#4c8dff);border-color:transparent;color:#fff;font-weight:700}
+.tl-btn.primary{background:var(--accent-fill,#2a6edb);border-color:transparent;color:#fff;font-weight:700}
 .tl-res{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--panel,#171a21);margin:12px 0;line-height:1.6}
 .tl-big{font-size:1.5rem;font-weight:800;color:var(--accent,#4c8dff);word-break:break-all}
 .tl-pick{font:700 1.35rem/1.7 ui-monospace,Consolas,monospace;color:var(--accent,#4c8dff);word-break:break-word}
@@ -12562,7 +12595,7 @@ render();recalc();
 // data-ra="skip" so Read Aloud voices the article, not the form.
 const KAMUS_CSS = `.km-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
 .km-tab{border:1px solid var(--line);border-radius:999px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);padding:7px 14px;font:inherit;cursor:pointer}
-.km-tab[aria-selected="true"]{background:var(--accent,#4c8dff);border-color:transparent;color:#fff;font-weight:700}
+.km-tab[aria-selected="true"]{background:var(--accent-fill,#2a6edb);border-color:transparent;color:#fff;font-weight:700}
 .km-def{margin:10px 0;padding-left:14px;border-left:3px solid var(--accent,#4c8dff)}
 .km-def .pos{font-style:italic;color:var(--muted,#9aa3b2);font-size:.85rem}
 .km-def li{margin:4px 0}
@@ -20369,6 +20402,7 @@ function seniDown(note) {
 function seniHubPage() {
   const cards = seni.COLLECTIONS.map((c) => `<div class="world-card"><h3><a href="/art/collection/${c.slug}">${c.icon} ${escapeHtml(c.name)}</a></h3><p>${escapeHtml(c.blurb)}</p><p class="meta">Open the wall &rarr;</p></div>`).join('');
   const body = `<p>The Metropolitan Museum of Art has placed <b>hundreds of thousands of its works into the public domain</b> — 5,000 years of art from a dozen curatorial departments, photographed in high resolution and free to view, study and download. This gallery reads straight from the museum’s open-collection API: ten curated doors below, each a living wall of real objects.</p>
+  <h2 class="section-title">${seni.COLLECTIONS.length} collections, door by door</h2>
   <div class="world-grid">${cards}</div>
   <h2 class="section-title">Why “open access” matters</h2><p>A public-domain artwork belongs to everyone: no licence to read, no watermarked thumbnail, no permission email. Seeing a Vermeer at full resolution — brush hairs, canvas weave, the exact lead-white of a collar — is the difference between reading about art and meeting it. The Met switched this on in 2017 and has kept widening it; every image here is served from their own servers.</p>
   <p class="meta">Images & metadata: The Metropolitan Museum of Art Collection API (public-domain works marked “Open Access”). Some non-public-domain works appear in search walls too — their pages state the status honestly.</p>`;
@@ -20490,6 +20524,7 @@ function hidupHubPage() {
     ? `<h2 class="section-title">The species the world photographs most</h2><p>On top of the hand-picked animals above, the atlas now carries every species the iNaturalist community observes most — harvested by our own build, one observation-count-ordered page at a time, and stored on this server so opening one is a file read, never a live lookup. Each links to a page of research-grade photographs.</p><p>${built.slice(0, 120).map((r) => `<a href="/life/${r.slug}">${escapeHtml(r.name)}</a>`).join(' · ')}</p><p class="meta">${total} species in all · <a href="/life/a-z">the complete A–Z atlas →</a></p>`
     : `<p class="meta">The long tail of the atlas — “the animals the world photographs most” — is being built. <a href="/life/a-z">See every species published so far →</a></p>`;
   const body = `<p>Sixteen animals are chosen by hand because their stories teach something real — migration without a teacher, a carnivore that eats bamboo, a fish that never grows up, a crab whose blue blood tests every injection given to humans. Each page pairs a plain-language account with <b>research-grade photographs posted by the iNaturalist community</b>, credited exactly as the photographers and their Creative Commons licences require.</p>
+  <h2 class="section-title">The ${hidup.TAXA.length} species you can meet here</h2>
   <div class="world-grid">${cards}</div>
   ${builtSection}
   <h2 class="section-title">What “research grade” means</h2><p>On iNaturalist, an observation earns research-grade status when the community independently confirms the identification — usually several qualified human eyes plus automated checks. It is the closest thing ecology has to a peer-reviewed photograph, which is why every wall below filters to it.</p>
@@ -22062,7 +22097,7 @@ app.get('/play', (req, res) => {
 app.get('/play/:id', (req, res) => {
   const item = storeCatalog().find((x) => x.id === String(req.params.id));
   if (!item) {
-    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Store</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>That store item does not exist.</p><p><a href="/os">← Back to the app store</a></p></body></html>');
+    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not found — Tukuk Store</title><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><main><h1>404</h1><p>That store item does not exist.</p><p><a href="/os">← Back to the app store</a></p></main></body></html>');
   }
   res.sendFile(path.join(PUBLIC_DIR, 'play.html'), (error) => {
     if (error) res.status(404).json({ error: 'Play page not found', path: req.originalUrl });
@@ -22118,12 +22153,12 @@ function renderGamesIndex() {
 </head>
 <body>
 ${siteHeader('')}
-<div class="gwrap"><section class="ghero"><h1>🎮 Game Arcade</h1><p>${total} free 3D games — click to play instantly. No downloads, no accounts, no install. Tukuk Strike, our own third-person shooter, runs right here even on a weak connection.</p></section>
+<div class="gwrap"><main><section class="ghero"><h1>🎮 Game Arcade</h1><p>${total} free 3D games — click to play instantly. No downloads, no accounts, no install. Tukuk Strike, our own third-person shooter, runs right here even on a weak connection.</p></section>
 ${chips}
 <h2 class="gttl">★ Flagship <small>play right here</small></h2>
-<main><div class="ggrid" id="ggrid" style="margin-top:8px">${feat}</div>${rest}</main>
+<div class="ggrid" id="ggrid" style="margin-top:8px">${feat}</div>${rest}
 ${cta}
-</div>
+</main></div>
 ${siteFooter()}
 <script>(function(){var bs=document.querySelectorAll('.gchip'),cs=document.querySelectorAll('.ggrid .gcard:not(.feat)');function f(v){cs.forEach(function(c){c.style.display=(v==='all'||c.getAttribute('data-genre')===v)?'':'none';});bs.forEach(function(b){b.classList.toggle('on',b.getAttribute('data-f')===v);});}bs.forEach(function(b){b.addEventListener('click',function(){f(b.getAttribute('data-f'));});});})();</' + 'script>
 </body>
@@ -22209,7 +22244,7 @@ app.get('/games/:key', (req, res) => {
   const meta = templates.REGISTRY.find((r) => r.key === String(req.params.key || ''));
   const html = meta ? templates.get(meta.key) : null;
   if (!html) {
-    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Game not found — Tukuk-OS</title><meta name="robots" content="noindex"><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><h1>404</h1><p>That game does not exist.</p><p><a href="/games">&larr; All games</a></p></body></html>');
+    return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Game not found — Tukuk-OS</title><meta name="robots" content="noindex"><style>body{font:16px system-ui;padding:40px;background:#0f1115;color:#e6e9ef}a{color:#4c8dff}</style></head><body><main><h1>404</h1><p>That game does not exist.</p><p><a href="/games">&larr; All games</a></p></main></body></html>');
   }
   const proto = (req.headers['x-forwarded-proto'] === 'https' || req.secure) ? 'https' : 'http';
   const out = publish.injectArcade(html, meta.key, meta.kind === 'game');

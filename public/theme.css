@@ -55,6 +55,14 @@ p a, li a, td a, dd a, blockquote a, footer a, .updated a, .meta a, .tagline a {
   text-underline-offset: 2px;
 }
 
+/* The same problem one level up: a link that names a section heading. The list hubs put a link
+   inside <h2 class="section-title"> (/zoo's continent names), and in the dark theme the accent
+   and the body ink are too close for colour alone — axe link-in-text-block, 5 nodes. */
+.section-title a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .theme-tools {
   display: inline-flex;
   align-items: center;

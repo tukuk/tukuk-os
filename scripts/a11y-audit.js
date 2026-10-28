@@ -12,6 +12,8 @@
 //               the summary only samples.
 //   --contrast  every colour-contrast node with the fg/bg axe measured, the ratio, the font
 //               size and weight, so a palette change can be judged instead of guessed.
+//   --dark      emulate prefers-color-scheme: dark, which is what public/theme.js reads — the
+//               same page has a different palette in each theme, so both need measuring.
 //
 // Nothing is fixed here: this is the measurement the fixes are judged against, run before and
 // after the same way.
@@ -24,6 +26,7 @@ const AXE = fs.readFileSync(path.join(__dirname, '..', 'node_modules/axe-core/ax
 const args = process.argv.slice(2);
 const RULE = (args.find((a) => a.startsWith('--rule=')) || '').slice(7) || null;
 const CONTRAST = args.includes('--contrast');
+const DARK = args.includes('--dark');
 const URLS = args.filter((a) => !a.startsWith('--'));
 if (!URLS.length) URLS.push('https://tukuk.org/', 'https://tukuk.org/about', 'https://tukuk.org/privacy', 'https://tukuk.org/wiki');
 
@@ -63,6 +66,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // deploy made a fixed page look unfixed. An audit measures what the server serves now.
     await send('Network.enable', {}, sessionId);
     await send('Network.setCacheDisabled', { cacheDisabled: true }, sessionId);
+    if (DARK) await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] }, sessionId);
     const loaded = new Promise((res) => { handlers['Page.loadEventFired'] = [res]; });
     await send('Page.navigate', { url }, sessionId);
     await Promise.race([loaded, sleep(20000)]);

@@ -41,10 +41,16 @@
   .box h3 { margin:0 0 6px; font-size:1rem; }
   .box p { margin:6px 0; }
   .badge { display:inline-block; font-size:.72rem; font-weight:600; letter-spacing:.4px; text-transform:uppercase;
-    background:rgba(76,141,255,.15); color:var(--accent); border:1px solid rgba(76,141,255,.35);
+    background:rgba(76,141,255,.15); color:var(--acc-blue); border:1px solid rgba(76,141,255,.35);
     border-radius:999px; padding:1px 8px; margin-left:8px; vertical-align:middle; }
-  .badge.alt { background:rgba(76,255,170,.12); color:#4cffaa; border-color:rgba(76,255,170,.3); }
-  .badge.mirror { background:rgba(255,196,76,.12); color:#ffc44c; border-color:rgba(255,196,76,.3); }
+  /* The badges are tinted pills, so their text is judged against the tint, not the panel. The
+     dark-theme accent #4c8dff measured 4.43:1 on its own 15% tint (axe color-contrast, WCAG 1.4.3
+     wants 4.5), and the onion/mirror pair was 1.24:1 and 1.49:1 on the light theme's white box,
+     so each has a value per theme: 6.78:1, 10.08:1 and 8.50:1 dark; 4.76:1, 6.31:1 and 6.04:1 light. */
+  :root { --acc-blue:#8ab4ff; --acc-green:#4cffaa; --acc-amber:#ffc44c; }
+  :root[data-theme="light"] { --acc-blue:#1a63d4; --acc-green:#0b6b3f; --acc-amber:#8a5200; }
+  .badge.alt { background:rgba(76,255,170,.12); color:var(--acc-green); border-color:rgba(76,255,170,.3); }
+  .badge.mirror { background:rgba(255,196,76,.12); color:var(--acc-amber); border-color:rgba(255,196,76,.3); }
   code { background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-size:.9em; overflow-wrap:anywhere; }
   .onion { font-size:.95em; }
   ol.steps { padding-left:1.3em; }
@@ -65,6 +71,7 @@
   <p>Tukuk-OS is served from hundreds of cities and offers several independent ways in.
      If one path is blocked by your network or country, use another — the site content is identical everywhere.</p>
 
+  <h2>Three doors, one site</h2>
   <div class="box">
     <h3><span class="badge">Primary</span> Main website</h3>
     <p><a href="https://tukuk.org">https://tukuk.org</a></p>

@@ -96,6 +96,9 @@ test('prose links are distinguishable without colour (WCAG 1.4.1)', () => {
   for (const sel of ['p a', 'li a', 'footer a']) {
     assert.ok(rule[1].includes(sel), `${sel} is not underlined`);
   }
+  // One level up: a link that names a section heading (/zoo's continent names). It only failed in
+  // the dark theme, where the accent and the body ink are too close to tell apart by colour.
+  assert.match(THEME, /\.section-title a\s*\{[^}]*text-decoration:\s*underline/, 'section-title links are colour-only again');
 });
 
 // ── markup invariants ──
@@ -228,4 +231,75 @@ test('the hidden attribute still hides things', () => {
   // /play/<id> showed the "not found" panel underneath a working game: .oops{display:grid}
   // outranks the UA rule for [hidden]. The page needs its own guard.
   assert.match(PLAY, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/, 'public/play.html lost its [hidden] override');
+});
+
+// ── third wave: the templates beyond the hubs ──
+// axe over ~90 real pages found six classes of defect left: an ad unit outside <main>, two 404
+// bodies and /games with no <main> at all, h1 → h3 skips where a grid of cards followed the hero,
+// an empty <th>, a colour-only link in the wiki credit line, and text faded with opacity onto the
+// periodic table's category colours.
+
+test('every card grid whose cards open with an h3 sits under an h2', () => {
+  // heading-order on /art, /life, /academy/<track>, /study, /air-quality, /countries/<region>,
+  // /maps, /books/<shelf>, /recipes/<shelf> and /technology: the hero is an h1, the cards are h3,
+  // and nothing in between. A section heading is the fix that keeps the outline honest.
+  const grids = [...SERVER.matchAll(/<div class="(world|akad)-grid">\$\{/g)];
+  assert.ok(grids.length >= 5, `only ${grids.length} card grids found — the sweep stopped reading them`);
+  for (const m of grids) {
+    const before = SERVER.slice(Math.max(0, m.index - 400), m.index);
+    assert.match(before, /<h2[ >]/, `the ${m[1]}-grid at offset ${m.index} has no <h2> above it`);
+  }
+  // The tech feeds list tkRow()s, which open with an h3, the same way.
+  assert.ok(SERVER.includes('<h2 class="section-title">Right now, ranked by the community</h2>'), '/technology lost its heading above the story list');
+  assert.ok(SERVER.includes('<h2 class="section-title">The stories in this feed</h2>'), '/technology/<feed> lost its heading above the story list');
+});
+
+test('the sports accents follow the theme instead of failing on white', () => {
+  // #22c55e measured 2.28:1 and #f59e0b 2.14:1 on the white light-theme card. No single colour
+  // clears both surfaces: 4.5:1 on white needs a relative luminance at or below .183, the #171a21
+  // panel needs at or above .200. So each accent is a pair of theme-scoped tokens.
+  for (const [block, name, dark, light] of [['FBALL', 'fb-ink', '#4ade80', '#15803d'], ['CK', 'ck-ink', '#f59e0b', '#b45309']]) {
+    const css = SERVER.match(new RegExp('const ' + block + '_CSS = `([\\s\\S]*?)`;'));
+    assert.ok(css, `${block}_CSS is gone`);
+    assert.ok(SERVER.includes(`:root{--${name}:${dark}}`), `--${name} lost its dark-theme value`);
+    assert.ok(SERVER.includes(`:root[data-theme="light"]{--${name}:${light}}`), `--${name} lost its light-theme value`);
+    assert.ok(!/color:#(22c55e|f59e0b)/.test(css[1]), `${block}_CSS hard-codes an accent colour again`);
+    for (const [surface, bg, hex] of [['light card', '#ffffff', light], ['light page', '#f7f8fa', light], ['dark panel', '#171a21', dark]]) {
+      const r = ratio(hex, bg);
+      assert.ok(r >= 4.5, `${hex} on the ${surface} ${bg} = ${r.toFixed(2)}:1, under 4.5:1`);
+    }
+  }
+});
+
+test('the last bare page bodies carry a main landmark', () => {
+  // landmark-one-main plus three region nodes on each: /play/<id> and /games/<key> replied with a
+  // <body> of loose <h1>/<p>, and /games put its hero, chips and grid outside <main> as well.
+  assert.equal((SERVER.match(/<body><main><h1>404<\/h1>/g) || []).length, 2, 'a 404 body is outside every landmark again');
+  assert.match(SERVER, /<div class="gwrap"><main><section class="ghero">/, '/games left its cards outside <main>');
+  // One ad unit sat after </main> on /learn, which is what made it a region rather than content.
+  assert.match(SERVER, /\$\{adUnitGuarded\(config\.adsense\.slotBottom, 'bottom'\)\}\s*<\/main>/, 'a bottom ad unit is outside <main> again');
+});
+
+test('the books table labels its cover column for screen readers', () => {
+  // empty-table-header on /books/<shelf>: the cover column's <th></th> was announced as nothing.
+  assert.ok(SERVER.includes('<th><span class="bk-sr">Cover</span></th>'), 'the cover column header is empty again');
+  assert.match(SERVER, /\.bk-sr\{[^}]*position:absolute/, 'the visually-hidden label lost its clipping');
+});
+
+test('white text sits on the fill token, never on the link token', () => {
+  // --accent is the colour text is *read* in; in the dark theme it is #4c8dff, which is 3.2:1
+  // under white. Every filled control (submit buttons, step counters, selected tabs) has to read
+  // --accent-fill — axe found the /contact and /traffic buttons only because they were on screen.
+  for (const [name, css] of [['src/server.js', SERVER], ['public/static-pages.css', read('public/static-pages.css')]]) {
+    const bad = [...css.matchAll(/background:var\(--accent,[^)]*\)[^}]*color:#fff/gi)];
+    assert.equal(bad.length, 0, `${name}: ${bad.length} filled controls read --accent instead of --accent-fill`);
+  }
+});
+
+test('the wiki credit link, and the periodic tiles, keep their contrast', () => {
+  // link-in-text-block on .wiki-from, and 54 color-contrast nodes where .num/.nm/.b-meta were
+  // faded with opacity onto the category colour — 3.57:1 and 4.1:1 measured, 4.5 wanted.
+  assert.match(SERVER, /\.wiki-from a\{text-decoration:underline\}/, 'the wiki credit link is colour-only again');
+  assert.ok(!/\.el-tile \.(num|nm)\{[^}]*opacity/.test(SERVER), 'a periodic-table label is faded with opacity again');
+  assert.ok(!/\.el-hero \.el-big \.b-meta\{[^}]*opacity/.test(SERVER), 'the element hero meta line is faded again');
 });
