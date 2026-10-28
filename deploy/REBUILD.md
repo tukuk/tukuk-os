@@ -239,6 +239,33 @@ Two traps this table is written to defuse:
   machine's interface names. The rebuild script therefore restores selectively and leaves netplan in
   `etc-netplan-reference/` for a human to adapt with `netplan try`.
 
+### Reading a tunnel token back when the connector refuses it
+
+Both tunnels still exist at the edge (`status: down` only because the connector is off), and a
+connector token is a **readable** value — `GET /cfd_tunnel/<uuid>/token` returned the same string on
+repeated calls, so this does not rotate the credential the running box is using:
+
+```bash
+ACC=$(awk -F= '/^CLOUDFLARE_ACCOUNT_ID=/{print $2}' deploy/env.defaults)
+APIT=$(awk -F= '/^CLOUDFLARE_API_TOKEN=/{print $2}' deploy/env.defaults)
+curl -4 -s -H "Authorization: Bearer $APIT" \
+  "https://api.cloudflare.com/client/v4/accounts/$ACC/cfd_tunnel/87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae/token" \
+  | sed 's/.*"result":"//; s/".*//'      # → paste as CF_TUNNEL_TOKEN in .env / env.defaults
+```
+
+Measured 2026-10-28: the token in `deploy/env.defaults` and the one in the dead box's
+`/etc/cloudflared/config.yml` were identical to each other but **different** from what the edge
+issues now — two credentials for the same tunnel UUID (`t` field decodes to `87e7e77f…` in both).
+`env.defaults` now carries the edge-issued one, because "what the API returns today" beats "what was
+in the file last autumn". Same call works for `a3af5bb4…` (play/tchat/build), though that connector
+is legacy credentials-file mode and its `.json` remains the proven path.
+
+Also measured: the main tunnel's config has `source: "cloudflare"`, so `tukuk.org`/`www`/`dashboard`
+are stored **at the edge** — a rebuilt box needs the token only, and its local `ingress:` block does
+not decide routing. The build tunnel has `source: "local"`, so `play`/`tchat`/`build` DO come from
+`/etc/cloudflared/config-build.yml` on the box — which is why that file plus its `.json` is the one
+thing in the tunnel layer that only the identity archive can restore.
+
 Still manual, by design (each has a live test, not a hope):
 
 - Godot HD build: in the game repo, `sudo -u tukuk -H bash tools/build-web.sh --deploy` (it injects

@@ -318,6 +318,13 @@ else
   echo "   paste CF_TUNNEL_TOKEN=<token> + CF_TUNNEL_ID=<uuid> into $INSTALL_DIR/.env,"
   echo "   then:  sudo bash scripts/setup-all.sh   (only the tunnel step is rerun)"
   echo "   Quick test without a token:  cloudflared tunnel --url http://localhost:3000"
+  # A tunnel token can be READ back from the account API — this is a GET, verified to
+  # return the same value on repeated calls, so it does not rotate or invalidate the
+  # connector credential the box is already using. It works with the API token already
+  # in this file, and needs no dashboard click and no Zone DNS permission.
+  echo "   Re-read the live token for any tunnel UUID (no dashboard needed):"
+  echo "     curl -s -H \"Authorization: Bearer \$(get_env CLOUDFLARE_API_TOKEN)\" \"https://api.cloudflare.com/client/v4/accounts/\$(get_env CLOUDFLARE_ACCOUNT_ID)/cfd_tunnel/<uuid>/token\" | sed 's/.*\"result\":\"//; s/\".*//'"
+  echo "   (tukuk.org/www/dashboard = 87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae; play/tchat/build = a3af5bb4-49e5-4c29-b2d6-5fce9d00bce4)"
 fi
 
 # ── [7b] The SECOND tunnel — play / tchat / build are NOT on the main one ──────
