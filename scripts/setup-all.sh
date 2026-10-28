@@ -136,7 +136,13 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-ExecStart=$(command -v meilisearch) --db-path $INSTALL_DIR/meili_data --master-key $MEILI_KEY --http-addr 127.0.0.1:7700
+# The key is read from .env at start, never interpolated into the unit. Interpolating it
+# (what this script used to do) leaves the secret world-readable in /etc/systemd/system
+# AND freezes it: once .env was rotated on the box, the unit kept the old literal, every
+# search answered 403 and src/meili.js silently served the 30-document mock instead of the
+# real 859-document index. /health still said "meilisearch":"available" throughout.
+EnvironmentFile=$INSTALL_DIR/.env
+ExecStart=$(command -v meilisearch) --db-path $INSTALL_DIR/meili_data --master-key \${MEILI_MASTER_KEY} --http-addr 127.0.0.1:7700
 Restart=always
 RestartSec=3
 MemoryMax=1G
@@ -428,6 +434,10 @@ fi
 # ── T Chat backup (chat.json + chat-media) → R2, every 6 hours ──
 if [ -f "$INSTALL_DIR/scripts/backup-chat.sh" ]; then
   chmod +x "$INSTALL_DIR/scripts/backup-chat.sh" 2>/dev/null || true
+  # SNAP_DIR defaults to $INSTALL_DIR/snapshots, which is a root-owned tree while this unit
+  # runs as tukuk: tar died with "Cannot open: Permission denied" every 6 hours, so the chat
+  # backup never happened. Give the unit a directory its user actually owns.
+  install -d -o tukuk -g tukuk -m 750 /var/backups/tukuk-chat
   cat > /etc/systemd/system/chat-backup.service << EOF
 [Unit]
 Description=Backup T Chat data (chat.json + media)
@@ -438,6 +448,7 @@ Type=oneshot
 User=tukuk
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=-$INSTALL_DIR/.env
+Environment=SNAP_DIR=/var/backups/tukuk-chat
 ExecStart=/bin/bash $INSTALL_DIR/scripts/backup-chat.sh
 EOF
   cat > /etc/systemd/system/chat-backup.timer << 'EOF'

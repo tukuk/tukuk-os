@@ -8,5 +8,10 @@ Description=Backup T Chat data (chat.json + media) to Cloudflare R2
 Type=oneshot
 User=tukuk
 WorkingDirectory=/opt/tukuk-os
-EnvironmentFile=/home/tukuk/.config/tukuk-os/r2.env
+# The real .env, not a hand-made r2.env: on 28 Oct 2026 this box had no
+# /home/tukuk/.config/tukuk-os/r2.env at all, so the unit ran with no upload target.
+EnvironmentFile=-/opt/tukuk-os/.env
+# /opt/tukuk-os/snapshots is root-owned while this unit runs as tukuk — tar could not even
+# create the archive ("Cannot open: Permission denied"), every 6 hours, silently.
+Environment=SNAP_DIR=/var/backups/tukuk-chat
 ExecStart=/bin/bash /opt/tukuk-os/scripts/backup-chat.sh

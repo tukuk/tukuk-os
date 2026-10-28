@@ -8,9 +8,12 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-WorkingDirectory=/home/tukuk/tukuk-os
-EnvironmentFile=/home/tukuk/.config/tukuk-os/env
-ExecStart=/home/tukuk/.local/bin/meilisearch --db-path /home/tukuk/tukuk-os/meili_data --master-key ${MEILI_MASTER_KEY} --http-addr ${MEILI_BIND}:7700
+# setup-all.sh writes the live unit with $INSTALL_DIR substituted; this copy is the shape.
+# The master key is READ from .env — never interpolated into ExecStart. Interpolating it
+# leaves the secret world-readable in /etc/systemd/system and freezes it, so a rotated .env
+# stops matching and every search falls back to the 30-document mock with no visible fault.
+EnvironmentFile=-/opt/tukuk-os/.env
+ExecStart=/usr/local/bin/meilisearch --db-path /opt/tukuk-os/meili_data --master-key ${MEILI_MASTER_KEY} --http-addr 127.0.0.1:7700
 
 Restart=always
 RestartSec=3
