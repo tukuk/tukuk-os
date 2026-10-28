@@ -12,6 +12,7 @@
     "mcp": "node mcp/server.js",
     "postinstall": "bash scripts/setup-all.sh --from-npm || true",
     "setup": "bash scripts/setup-all.sh",
+    "rebuild": "sudo bash scripts/rebuild-from-offsite.sh",
     "usb": "sudo bash scripts/install-from-usb.sh",
     "update": "bash scripts/auto-update.sh",
     "build": "node -e \"console.log('no build step — static assets are served directly')\"",

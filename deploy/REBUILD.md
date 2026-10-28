@@ -17,9 +17,10 @@ deliberately gated: **Part D is the point of the whole file.**
 
 > Do not format the disk until Part D's restore point has been downloaded, decrypted and listed.
 
-`.gitignore` keeps `/opt/tukuk-os/.env`, `apk/*.jks` and `apk/keystore.env` out of git (lines 6, 7,
-64, 65), so `git clone` + `npm install` alone cannot rebuild the box. The off-site archives close
-that gap, and their retrievability is now **proven rather than assumed** (Part D). What still lives
+`.gitignore` keeps `data/`, `/opt/tukuk-os/.env` and `apk/*.jks` out of git, so `git clone` +
+`npm install` restores the **program**, not the **box**: users, passkeys, chat history and the
+second tunnel's credentials only come back from the off-site archives, whose retrievability is now
+**proven rather than assumed** (Part D). What still lives
 only on that disk is the delta written after the last archive, plus any uncommitted work in the game
 repo — which is why one console visit is still worth making before the wipe.
 
@@ -198,47 +199,74 @@ The repo is **private**, so a fresh clone over HTTPS fails. Two supported paths:
 `sudo bash scripts/install-from-usb.sh`, or add a GitHub key for the new box, then
 `git clone git@github.com:fevian448/tukuk-os-v2.git /opt/tukuk-os`.
 
+Everything after that is **one command**, and it is the command to run even when the box is
+already half-built (it is idempotent, and it ends with a PASS/FAIL table instead of a promise):
+
 ```bash
-sudo bash scripts/setup-all.sh        # idempotent: .env from deploy/env.defaults, packages, ZRAM,
-                                      # sysctl, Node, nginx front, meilisearch, cloudflared token mode,
-                                      # tukuk-os + update/watchdog/snapshot/agent units
-bash scripts/setup-all.sh --help 2>/dev/null || true
+sudo bash scripts/rebuild-from-offsite.sh
 ```
 
-`setup-all.sh` does **not** cover these, so they are manual and each has a live test:
+It runs `setup-all.sh`, finds the newest identity + data archives by **listing** the bucket through
+the project's own backup gateway (`GET ?prefix=`), decrypts them, restores only the paths this
+project owns, cuts nginx over in front of Node, enables every timer, and verifies what a visitor
+can actually see. `FAILS>0` means exit 1 — a rebuild that "finished" while the site was down is the
+failure this script exists to prevent.
 
-- `.env`: restore the real one from Part C (`env.defaults` holds placeholders only, so a blank
-  `CF_TUNNEL_TOKEN`/`ADMIN_PASSWORD` here silently degrades the box).
-- `deploy/nginx/tukuk-play.conf` → `/etc/nginx/conf.d/`, then `sudo nginx -t && sudo systemctl reload nginx`.
-  This file now carries the **`.pck.zip` alias location** that makes the 476 MB Godot pack
-  edge-cacheable; without it every visitor streams the pack off this VPS. Verify at the edge, not
-  locally — Cloudflare Free caches by URL extension, so `.pck`/`.wasm` are `DYNAMIC` no matter what
-  we send, while `.zip` goes `MISS → HIT`:
+### What each path really installs (measured against the live box's own file list)
+
+| piece | plain `npm install` | + `rebuild-from-offsite.sh` |
+|---|---|---|
+| Node 22, ZRAM, sysctl, Meilisearch + unit | yes | yes |
+| `tukuk-os`, watchdog, snapshot, chat-backup, auto-update | yes | yes |
+| nginx front (public hostnames → `:3000` nginx → `:3001` Node) | yes — added; before this it was never installed | yes |
+| `tukuk-play.conf` incl. the `.pck.zip` edge-cache alias | yes — added; `install-tukuk-front.sh` never copied it | yes |
+| data/content/indexnow/load-governor/weight-report/builder timers | yes — added from `deploy/` | yes |
+| Cockpit, LAN-only | yes — added (`cockpit.socket.d/40-lan-only.conf`) | yes |
+| main tunnel `tukuk.org`/`www`/`dashboard` (token mode) | yes — `CF_TUNNEL_TOKEN` is in `deploy/env.defaults` | yes |
+| **second tunnel** `play`/`tchat`/`build` (`a3af5bb4`, credentials-file mode) | **no** — its `.json` is not in git | **yes** (archive) |
+| `data/` — passkeys, chat, counters | **no** | **yes** (archive) |
+| ssh host keys, `/etc/hosts`, real `.env` | **no** | **no** netplan (deliberately) / **yes** for the rest |
+| Godot HD build in `/var/www/tukuk-play` | **no** | **no** — rebuild with `tools/build-web.sh --deploy` |
+| APK keystore `apk/*.jks` | **no** | **no** — copy from the laptop, then compare md5 against a released APK |
+
+Two traps this table is written to defuse:
+
+- `deploy/tukuk-os.service` is the **developer** variant (`WorkingDirectory=/home/tukuk/tukuk-os`,
+  `WantedBy=default.target`). The unit that runs is generated inline by `setup-all.sh`. Copying the
+  `deploy/` file onto a server yields a service that cannot start, so `[8d]` deliberately skips it.
+- `restore-identity.sh --apply` copies the **whole** `/etc`. On a fresh box that dumps ~100 foreign OS
+  units (snapd, cloud-init, grub) into `/etc/systemd/system` and replaces `/etc/netplan` with the old
+  machine's interface names. The rebuild script therefore restores selectively and leaves netplan in
+  `etc-netplan-reference/` for a human to adapt with `netplan try`.
+
+Still manual, by design (each has a live test, not a hope):
+
+- Godot HD build: in the game repo, `sudo -u tukuk -H bash tools/build-web.sh --deploy` (it injects
+  `mainPack` and hard-fails if the pack would not be cached). Check at the edge, not locally —
+  Cloudflare Free caches by URL extension, so `.pck`/`.wasm` stay `DYNAMIC` while `.zip` goes `MISS → HIT`:
   ```bash
   V=$(grep -o 'pck[0-9a-f]\{12\}' /var/www/tukuk-play/index.html | head -1)
   curl -4 -s -D- -o /dev/null "https://play.tukuk.org/index.pck.zip?v=$V" | grep -i cf-cache-status
   ```
-- Godot HD build: in the game repo, `sudo -u tukuk -H bash tools/build-web.sh --deploy` (it injects
-  `mainPack` and hard-fails if the pack would not be cached).
-- Backup units — all already in git, just install and enable them:
-  `deploy/tukuk-data-backup.{service,timer}`, `deploy/tukuk-identity-backup.{service,timer}`,
-  `deploy/tukuk-content-backup.*`, `deploy/meili-backup.*`, `deploy/chat-backup.*`,
-  `deploy/tukuk-os-watchdog.*`, `deploy/tukuk-snapshot.*`.
 - `scripts/backup-b2.sh` + `deploy/tukuk-backup-b2.{service,timer}`: install only after
   `B2_ACCOUNT_ID`/`B2_APPLICATION_KEY`/`B2_BUCKET` are in `.env`, one real upload has run, and its
   remote MD5 has been read back. The script refuses a source archive older than 25 h.
 
 ## Part H — Cockpit, LAN only
 
+`setup-all.sh` now installs and binds Cockpit itself, so this part is a **check**, not a task:
+
 ```bash
-sudo apt-get install -y cockpit cockpit-network
-sudo systemctl enable --now cockpit.socket
-ss -ltnp | grep 9090                                   # must be *:9090
-sudo ufw allow in on <iface> from 192.168.8.0/24 to any port 9090 proto tcp
+cat /etc/systemd/system/cockpit.socket.d/40-lan-only.conf   # ListenStream= cleared, then 127.0.0.1 + LAN IP
+ss -ltnp | grep 9090                                        # must be 127.0.0.1:9090 and <lan-ip>:9090 only
+curl -k -s -o /dev/null -w '%{http_code}\n' https://192.168.8.101:9090/login   # 200
 ```
 
-From the laptop: `https://192.168.8.101:9090` (self-signed cert is Cockpit's default; click through
-once, then generate the real cert with `sudo cockpit-certificate-ensure`).
+The drop-in clears Cockpit's default `0.0.0.0`/`::` listeners (systemd list-type options **append**,
+so the empty `ListenStream=` line is required) and re-listens on the box's own LAN IPv4 plus
+loopback — loopback so that `ssh -L 9090:127.0.0.1:9090 tukuk@<host>` still opens the console if the
+LAN address ever moves. No firewall rule is added by a script: automating `ufw` over SSH is how a
+box gets locked out a second time.
 
 Never put Cockpit behind a public tunnel hostname. It is a root shell with a password prompt, and
 the tunnel would hand it an internet-facing address. If remote eyes on the box are genuinely needed,

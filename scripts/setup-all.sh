@@ -320,6 +320,46 @@ else
   echo "   Quick test without a token:  cloudflared tunnel --url http://localhost:3000"
 fi
 
+# ── [7b] The SECOND tunnel — play / tchat / build are NOT on the main one ──────
+# The split is real and easy to lose on a rebuild: tukuk.org + www + dashboard are
+# ingress on tunnel 87e7e77f (token mode), while play.tukuk.org, tchat.tukuk.org and
+# build.tukuk.org are ingress on tunnel a3af5bb4 in LEGACY credentials-file mode. That
+# connector needs /etc/cloudflared/config-build.yml AND the a3af5bb4 credentials .json,
+# and neither is in git — deploy/cloudflared/ ships templates only. Skip this block and
+# the site comes up fine while the game page 530s, which reads like a Godot problem.
+info "[+] second tunnel (play / tchat / build)..."
+CF_BID="$(get_env CF_BUILD_TUNNEL_ID)"
+if [[ -f /etc/cloudflared/config-build.yml ]]; then
+  systemctl enable --now cloudflared-build >/dev/null 2>&1 \
+    && ok "cloudflared-build running — https://play.tukuk.org through the second tunnel." \
+    || warn "cloudflared-build would not start — check: journalctl -u cloudflared-build -n 30"
+elif [[ -n "$CF_BID" ]]; then
+  sed "s#REPLACE_WITH_NEW_TUNNEL_ID#$CF_BID#g" "$INSTALL_DIR/deploy/cloudflared/config-build.example.yml" > /etc/cloudflared/config-build.yml
+  # Same trick as the main tunnel: the unit runs `--config … tunnel run`, which accepts a
+  # `token:` line, so a token makes this box self-sufficient without any .json file.
+  CF_BTOK="$(get_env CF_BUILD_TUNNEL_TOKEN)"
+  # `if` rather than `[[ … ]] && sed && chmod`: this script runs under `set -e`, and a
+  # bare test chain that evaluates false (no token yet) would abort the whole setup.
+  if [[ "$CF_BTOK" == eyJ* ]]; then
+    sed -i "s#^credentials-file:.*#token: $CF_BTOK#" /etc/cloudflared/config-build.yml
+    chmod 600 /etc/cloudflared/config-build.yml
+  fi
+  for cand in "$INSTALL_DIR/deploy/cloudflared/$CF_BID.json" "/home/tukuk/.cloudflared/$CF_BID.json" "/root/.cloudflared/$CF_BID.json"; do
+    [[ -f "$cand" ]] && cp "$cand" "/etc/cloudflared/$CF_BID.json" && chmod 600 "/etc/cloudflared/$CF_BID.json" && break
+  done
+  if grep -q '^token: eyJ' /etc/cloudflared/config-build.yml || [[ -f "/etc/cloudflared/$CF_BID.json" ]]; then
+    systemctl enable --now cloudflared-build >/dev/null 2>&1 && ok "cloudflared-build installed from CF_BUILD_TUNNEL_ID." \
+      || warn "cloudflared-build would not start — journalctl -u cloudflared-build -n 30"
+  else
+    warn "config-build.yml written but it has neither a token nor $CF_BID.json — play.tukuk.org stays down."
+  fi
+else
+  warn "No /etc/cloudflared/config-build.yml and no CF_BUILD_TUNNEL_ID in .env."
+  echo "   https://play.tukuk.org (and tchat/build) will answer 530 until the second tunnel is restored."
+  echo "   Easiest fix: sudo bash scripts/rebuild-from-offsite.sh   (the identity archive carries both files),"
+  echo "   or put CF_BUILD_TUNNEL_ID=a3af5bb4-49e5-4c29-b2d6-5fce9d00bce4 in .env and scp its .json here."
+fi
+
 # ── [8] Cloudflare R2 cold backup — edge is WORKERLESS (see README §9) ────
 info "[7/8] Cloudflare (R2 cold backup — NO Worker on the request path)..."
 CF_API="$(get_env CLOUDFLARE_API_TOKEN)"
@@ -440,10 +480,97 @@ EOF
   ok "Daily auto-update active (tukuk-update.timer ~04:30). Manual: npm run update"
 fi
 
+# ── [8c] nginx front proxy ────────────────────────────────────────────────────
+# The tunnel ingress sends every public hostname to 127.0.0.1:3000, and on the live
+# box that port is NGINX, with Node behind it on 3001. Without this step a fresh
+# box serves the same hostname straight from Node: no shared cache, no front-set
+# CSP/permissions headers, and `tukuk-front.conf`'s edge rules never apply — the
+# site looks alive while behaving like a different site. Idempotent: the installer
+# detects Node already on 3001 and just reloads the config.
+info "[+] nginx front proxy..."
+if ! command -v nginx >/dev/null; then
+  apt-get install -y -qq nginx >/dev/null || warn "nginx install failed — the front proxy step is skipped."
+fi
+if [[ -f "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" ]] && command -v nginx >/dev/null; then
+  bash "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" cut >/dev/null 2>&1 \
+    && ok "nginx fronts the app (public hostnames -> nginx :3000 -> Node :3001)." \
+    || warn "front cut-over incomplete — check: sudo bash deploy/nginx/install-tukuk-front.sh verify"
+fi
+# play.tukuk.org is a second server block on the same :3000 listener, and its
+# `location = /index.pck.zip` alias is the only reason the 476 MB Godot pack gets
+# cached at the edge. install-tukuk-front.sh has never copied this conf (it only
+# knows about the front one), so without the step below a rebuilt box serves the
+# game from the wrong root — and the page still looks fine locally while every
+# visitor streams the pack off this VPS.
+if [[ -f "$INSTALL_DIR/deploy/nginx/tukuk-play.conf" ]] && command -v nginx >/dev/null; then
+  install -d /var/www/tukuk-play
+  cp "$INSTALL_DIR/deploy/nginx/tukuk-play.conf" /etc/nginx/conf.d/tukuk-play.conf
+  if nginx -t >/dev/null 2>&1; then
+    systemctl reload nginx >/dev/null 2>&1 || true
+    ok "play.tukuk.org block installed (root /var/www/tukuk-play + the .pck.zip cache alias)."
+  else
+    warn "nginx -t failed after adding tukuk-play.conf — config not reloaded: sudo nginx -t"
+  fi
+fi
+
+# ── [8d] every other unit the running box has ─────────────────────────────────
+# These files live in deploy/ and are part of the box, but nothing above installed
+# them, so a rebuild silently lost backups, indexnow, load governance and the
+# builder. tukuk-os.service is deliberately NOT in this list: the deploy copy is
+# the developer variant (/home/tukuk paths, WantedBy=default.target) and would
+# overwrite the working unit written in [5] with one that cannot start here.
+info "[+] remaining services & timers..."
+for u in tukuk-data-backup.service tukuk-data-backup.timer \
+         tukuk-identity-backup.service tukuk-identity-backup.timer \
+         tukuk-content-backup.service tukuk-content-backup.timer \
+         meili-backup.service meili-backup.timer \
+         indexnow-submit.service indexnow-submit.timer \
+         load-governor.service load-governor.timer \
+         weight-report.service weight-report.timer \
+         builder-idle-stop.service builder-idle-stop.timer \
+         cloudflared-build.service cloudflared-update.service cloudflared-update.timer \
+         tukuk-builder.service tukuk-builder-wake.service; do
+  [[ -f "$INSTALL_DIR/deploy/$u" ]] || continue
+  cp "$INSTALL_DIR/deploy/$u" "/etc/systemd/system/$u"
+done
+systemctl daemon-reload
+for t in tukuk-data-backup tukuk-identity-backup tukuk-content-backup meili-backup \
+         indexnow-submit load-governor weight-report builder-idle-stop cloudflared-update; do
+  systemctl enable --now "$t.timer" >/dev/null 2>&1 || true
+done
+for s in cloudflared-build tukuk-builder; do
+  systemctl enable --now "$s" >/dev/null 2>&1 || true
+done
+ok "backup / indexnow / governance timers enabled."
+
+# ── [8e] Cockpit — the console that would have made this rebuild a non-event ──
+# Installed because "no remote shell" is what turned a broken network setting into
+# a full reinstall. LAN address ONLY: the socket drop-in clears the default
+# 0.0.0.0/:: listeners (systemd list-type options APPEND, so the empty assignment
+# is required) and re-listens on the box's own LAN IPv4. Nothing is exposed to the
+# internet, and no firewall rule is added — automating ufw over SSH is how boxes
+# get locked out a second time.
+info "[+] Cockpit (LAN-only console)..."
+apt-get install -y -qq cockpit >/dev/null 2>&1 || warn "cockpit install failed (not fatal)."
+LAN_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '/src/{for(i=1;i<NF;i++) if($i=="src") print $(i+1)}' | head -1)"
+if [[ -n "$LAN_IP" ]]; then
+  mkdir -p /etc/systemd/system/cockpit.socket.d
+  # Loopback is kept as well: if the LAN address ever moves (DHCP, NIC rename), a
+  # socket bound only to the old address is a console you cannot reach — the exact
+  # failure this block exists to prevent. With 127.0.0.1 also listening, ssh -L
+  # 9090:127.0.0.1:9090 tukuk@<anything> still opens the dashboard.
+  printf '[Socket]\nListenStream=\nListenStream=127.0.0.1:9090\nListenStream=%s:9090\n' "$LAN_IP" > /etc/systemd/system/cockpit.socket.d/40-lan-only.conf
+  systemctl daemon-reload
+  systemctl restart cockpit.socket >/dev/null 2>&1 || systemctl enable --now cockpit.socket >/dev/null 2>&1 || true
+  ok "Cockpit: http://$LAN_IP:9090 (plus 127.0.0.1:9090 for an ssh tunnel). No public listener."
+else
+  warn "could not determine the LAN address; Cockpit left on its default listener. Bind it before relying on it."
+fi
+
 # ── [9] Final verification ────────────────────────────────────────────────────
 info "[8/8] Verifying..."
 sleep 3
-for svc in meilisearch tukuk-os cloudflared; do
+for svc in meilisearch tukuk-os cloudflared nginx; do
   printf "  %-14s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
 done
 if [[ "$(curl -s -m5 -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health 2>/dev/null)" == "200" ]]; then
