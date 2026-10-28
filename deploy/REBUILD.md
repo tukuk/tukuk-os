@@ -419,7 +419,10 @@ loopback. The address list is **never stored**: `deploy/cockpit-lan-socket.sh` (
 `setup-all.sh`) rewrites the drop-in from `ip -4 addr` whenever the answer changes. Pinning the lease
 seen at install time is what made the console unreachable on 28 Oct 2026: the drop-in still pointed at
 `192.168.8.104` after the box had moved to `.100`/`.101`, so `systemctl is-active cockpit.socket` said
-`active` while every LAN connection was refused. Loopback stays in the list so
+`active` while every LAN connection was refused. The unit carries `Before=cockpit.socket` on purpose:
+`cockpit.socket` starts from `sockets.target`, which is earlier than the `multi-user.target` the
+regenerator is wanted by, so without it the socket comes up on the previous boot's drop-in and the
+console is dead for the first seconds after any lease change. Loopback stays in the list so
 `ssh -L 9090:127.0.0.1:9090 tukuk@<host>` still reaches the console. No firewall rule is added by a
 script: automating `ufw` over SSH is how a box gets locked out a second time.
 

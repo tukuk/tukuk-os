@@ -121,3 +121,18 @@ test('setup-all.sh calls the regenerator and never pins a lease again', () => {
   // have marked a healthy console as broken.
   assert.match(rebuild, /chk "cockpit on 9090"\s+401/);
 });
+
+test('the boot unit runs before cockpit.socket, not after it', () => {
+  // cockpit.socket is started by sockets.target; the regenerator is wanted by
+  // multi-user.target, which is later. Without an explicit ordering the socket comes up on
+  // the previous boot's drop-in and only gets corrected seconds later — still "active",
+  // still refusing LAN connections, which is the whole bug wearing a shorter duration.
+  const setup = fs.readFileSync(path.join(ROOT, 'scripts/setup-all.sh'), 'utf8');
+  const unit = setup.slice(setup.indexOf('cockpit-lan-socket.service << '), setup.indexOf('ExecStart=/usr/local/sbin/cockpit-lan-socket'));
+  assert.ok(unit, 'the unit heredoc is gone — setup-all installs the unit inline');
+  assert.match(unit, /^Before=cockpit\.socket$/m, 'the regenerator must run before the socket it rewrites for');
+  assert.ok(!/^After=cockpit\.socket$/m.test(unit), 'After=cockpit.socket would guarantee the stale bind');
+  // …and REBUILD.md has to say why, or the next handover drops the line as noise.
+  const doc = fs.readFileSync(path.join(ROOT, 'deploy/REBUILD.md'), 'utf8');
+  assert.match(doc, /Before=cockpit\.socket/);
+});

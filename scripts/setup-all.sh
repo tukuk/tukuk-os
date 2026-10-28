@@ -588,11 +588,16 @@ LAN_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '/src/{for(i=1;i<NF;i++) if(
 # drop-in from `ip` at every boot; this call fixes it right now.
 if [[ -f "$INSTALL_DIR/deploy/cockpit-lan-socket.sh" ]]; then
   install -m 0755 "$INSTALL_DIR/deploy/cockpit-lan-socket.sh" /usr/local/sbin/cockpit-lan-socket
+  # Before=cockpit.socket is what makes this a fix rather than a correction: cockpit.socket
+  # starts from sockets.target, i.e. EARLIER than multi-user.target. Without the ordering it
+  # comes up first on a stale drop-in and the console is dead for the first seconds of every
+  # boot after a lease change, until the regenerator restarts it.
   cat > /etc/systemd/system/cockpit-lan-socket.service << 'EOF'
 [Unit]
 Description=Cockpit socket: bind to the LAN addresses this boot actually has
 After=network-online.target
 Wants=network-online.target
+Before=cockpit.socket
 
 [Service]
 Type=oneshot
