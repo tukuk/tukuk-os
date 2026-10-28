@@ -15,13 +15,13 @@ deliberately gated: **Part D is the point of the whole file.**
 
 ## The one rule
 
-> Do not format the disk until every line in Part D prints `OK`.
+> Do not format the disk until Part D's restore point has been downloaded, decrypted and listed.
 
-Three things in this project are gitignored and therefore exist on that box and nowhere else in
-git: `/opt/tukuk-os/.env`, `apk/*.jks`, `apk/keystore.env` (see `.gitignore` lines 6, 7, 64, 65).
-Two more things were never committed at all: `scripts/backup-identity.sh` and
-`scripts/restore-identity.sh`. If those five are lost, the reinstall produces a machine that boots,
-serves pages, and can never sign an APK, log in as admin, or restore a passkey again.
+`.gitignore` keeps `/opt/tukuk-os/.env`, `apk/*.jks` and `apk/keystore.env` out of git (lines 6, 7,
+64, 65), so `git clone` + `npm install` alone cannot rebuild the box. The off-site archives close
+that gap, and their retrievability is now **proven rather than assumed** (Part D). What still lives
+only on that disk is the delta written after the last archive, plus any uncommitted work in the game
+repo — which is why one console visit is still worth making before the wipe.
 
 ---
 
@@ -60,15 +60,13 @@ From the laptop: `sshpass -p '<pw>' ssh -o PreferredAuthentications=password -o 
 
 | path | why it cannot be re-created | verified off-box today? |
 |---|---|---|
-| `/opt/tukuk-os/.env` | gitignored. tunnel token+id, admin email/password hash, WebAuthn RP config, API_KEY, `BACKUP_WORKER_URL`, `BACKUP_UPLOAD_SECRET`, ad/analytics IDs | **no** |
-| `/etc/cloudflared/` (`config.yml`, `cert.pem`, `*.json`) | `cert.pem` is what lets hostnames be provisioned without the dashboard (legacy connector). Token mode covers the named tunnel only if `CF_TUNNEL_TOKEN` is real | **no** |
-| `/var/backups/tukuk-data-latest.tar.gz` | newest data copy, made on the box (~18 MB) | **no** |
-| `/var/backups/tukuk-identity-latest.tar.gz.enc` | encrypted identity: `/etc/nginx`, systemd units, netplan, ssh host keys, cloudflared, `.env` (~137 KB) | **no** |
-| `scripts/backup-identity.sh`, `scripts/restore-identity.sh` | never committed — the whole identity tooling | **no** |
-| `deploy/tukuk-identity.service`, `deploy/tukuk-os-data.service`, `deploy/tukuk-identity.timer` (as on the box) | units installed but not in git | **no** |
+| `/opt/tukuk-os/.env` | gitignored. tunnel token+id, admin email/password hash, WebAuthn RP config, API_KEY, `BACKUP_WORKER_URL`, `BACKUP_UPLOAD_SECRET`, ad/analytics IDs | **yes** — 1 copy inside the identity archive (33 keys listed in Part D) |
+| `/etc/cloudflared/` (`config.yml`, `cert.pem`, `*.json`) | `cert.pem` is what lets hostnames be provisioned without the dashboard (legacy connector). Token mode covers the named tunnel only if `CF_TUNNEL_TOKEN` is real | **yes** — `cert.pem` 1 + tunnel `*.json` 2 in the identity archive |
+| `/var/backups/tukuk-*-latest` | newest local copy | **yes** — R2 holds the same files, see Part D |
+| identity tooling: `scripts/backup-identity.sh`, `scripts/restore-identity.sh`, `scripts/backup-b2.sh`, `deploy/tukuk-identity-backup.{service,timer}`, `deploy/tukuk-backup-b2.{service,timer}` | the whole restore chain | **yes** — committed from the box in `cd18d7b` and `52a5e96`; nothing to extract |
 | `apk/tukuk-chat-release.jks`, `apk/keystore.env` | gitignored; the laptop has a copy (md5 `589d30f8e7476d779c5a9d6d60b431b6`) — compare against the box before trusting either | laptop only |
 | `/opt/tukuk-os/data/`, `generated/`, `meili_data/` | runtime stores: passkey credentials, chat accounts/counters, published items, books corpus, ip-to-country. Partly gitignored | data archive only |
-| `/etc/ssh/ssh_host_*` | optional, but a new key = a warning on every client and a lost pin for known_hosts pinning | no |
+| `/etc/ssh/ssh_host_*` | optional but nice: a new key means a warning on every client and breaks any known_hosts pin | **yes** — 6 files in the identity archive |
 | `/home/tukuk/station-break/` | the Godot game. In git on branch `game` **only if committed** — run `git -C ~/station-break status --porcelain | wc -l` first | partial |
 | `/root/.ssh/`, `/home/tukuk/.ssh/`, `/home/tukuk/askpass.sh` | deploy keys and the HTTPS push helper | no |
 
@@ -130,14 +128,31 @@ Then run the drill that has already passed once, so the restored state is proven
 for: `sudo bash scripts/restore-identity.sh --stage /tmp/drill` and check it reports the file count
 and 0 mismatches, then `rm -rf /tmp/drill` (it stages decrypted secrets — never leave it on disk).
 
-**Open problem, still unresolved as of writing:** off-site retrieval has *not* been proven. The
-deployed `tukuk-backup` worker writes through an R2 binding, but the wrangler build on the laptop
-has only `r2 object get|put|delete` — no `list` — so guessing keys (`backups/tukuk-identity-27.tar.gz.enc`,
-`backups/tukuk-data-302.tar.gz`) across all three buckets (`tukuk-os-backups` 22 objects/22 MB,
-`tukuk-fallback` 328/1.66 GB, `tukuk-fallback-preview`) all returned "key does not exist". Bucket
-`info` proves objects exist; it does not prove we can name them. Fix: after the box is back, list
-through the worker itself (`GET ?prefix=backups/` with the upload secret) and download at least one
-archive to a different machine. Until that passes, the USB stick in Part C is the only real backup.
+### The proven restore point (measured 2026-10-28, with the box dead)
+
+Retrieved from R2, decrypted and listed from the laptop — not from the box:
+
+| archive | key | size | verified contents |
+|---|---|---|---|
+| data | `backups/tukuk-data-207.tar.gz` (2026-10-27 07:10 UTC) | 18,398,889 B | `gzip -t` OK, 3,019 entries, 31 top-level stores incl. `data/tukuk-os.json`, `chat.json`, `comments.json`, `leaderboard.json` |
+| identity | `backups/tukuk-identity-27.tar.gz.enc` | 137,760 B | decrypts with the escrow key, 252 entries: `cert.pem` 1, tunnel `*.json` 2, `/opt/tukuk-os/.env` 1 (33 keys), ssh host keys 6, netplan 4, `nginx/conf.d` 3, 18 `tukuk-*` systemd units |
+
+Both are also copied to the laptop at `~/vps-handover-2026-10-28/` (`sha256sum` recorded in
+`SHA256SUMS` there) so a second vendor failure cannot take the only copy.
+
+Passkeys survive: `src/auth.js` reads them through `store.getSetting('passkeys')`, which persists in
+`data/tukuk-os.json` — a file present in the data archive above. So existing credentials restore,
+they do not need re-enrolling.
+
+Two lessons worth keeping:
+
+- **`wrangler r2 object get` is not a reliable proof of existence.** It reported "The specified key
+  does not exist" for keys that a Worker with an R2 binding lists and downloads in the same account.
+  Prove retrievability through a bound Worker (or the app's own read path), never through one CLI call.
+- The audit Worker used to do this, `tukuk-r2-audit` (one small file, token-gated list + get on the
+  `tukuk-fallback` bucket), is still deployed because the new box needs it to pull these archives
+  without the upload secret. **Delete it when the rebuild passes Part I:**
+  `npx wrangler delete --name tukuk-r2-audit`.
 
 ## Part E — Install the OS
 
@@ -205,9 +220,10 @@ bash scripts/setup-all.sh --help 2>/dev/null || true
   ```
 - Godot HD build: in the game repo, `sudo -u tukuk -H bash tools/build-web.sh --deploy` (it injects
   `mainPack` and hard-fails if the pack would not be cached).
-- Backup units: `deploy/tukuk-data-backup.{service,timer}`, `deploy/tukuk-content-backup.*`,
-  `deploy/meili-backup.*`, `deploy/chat-backup.*`, plus the identity units restored in Part C —
-  **and commit the identity scripts + units to git this time.**
+- Backup units — all already in git, just install and enable them:
+  `deploy/tukuk-data-backup.{service,timer}`, `deploy/tukuk-identity-backup.{service,timer}`,
+  `deploy/tukuk-content-backup.*`, `deploy/meili-backup.*`, `deploy/chat-backup.*`,
+  `deploy/tukuk-os-watchdog.*`, `deploy/tukuk-snapshot.*`.
 - `scripts/backup-b2.sh` + `deploy/tukuk-backup-b2.{service,timer}`: install only after
   `B2_ACCOUNT_ID`/`B2_APPLICATION_KEY`/`B2_BUCKET` are in `.env`, one real upload has run, and its
   remote MD5 has been read back. The script refuses a source archive older than 25 h.
@@ -249,8 +265,8 @@ All of these, in this order, before the box is called "back":
 
 ## Part J — Things that do not survive a wipe no matter what we back up
 
-- **Passkey credentials** are server-side secrets in `data/`; if the store is lost, every user must
-  re-register. This is the single strongest reason to verify the data archive before formatting.
+- **Passkey credentials** live in `data/tukuk-os.json` (see Part D), so they ride on the data
+  archive. If that archive is lost, every user must re-register and admin passkeys are gone.
 - **Legacy-connector provisioning** (`cert.pem`): without it, hostnames can only be added through
   the dashboard by hand.
 - **Any APK signed with the old keystore** can only be updated by that keystore. Losing it does not
