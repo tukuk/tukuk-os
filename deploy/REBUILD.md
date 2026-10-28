@@ -207,7 +207,8 @@ git clone git@github.com:fevian448/tukuk-os-v2.git /opt/tukuk-os               #
 
 Path 2 is the one that has bitten before: `install-from-usb.sh` rsyncs with `--exclude .git`, so the
 box it produces has **no history and no remote**, and the daily `tukuk-update` timer (`git pull
---ff-only`) is dead from the first day — silently, because everything else works. Use a bundle.
+--ff-only`) is dead from the first day — silently, because everything else works. Use a bundle, and
+repoint its `origin` (step 5 below).
 
 Everything after that is **one command**, and it is the command to run even when the box is
 already half-built (it is idempotent, and it ends with a PASS/FAIL table instead of a promise):
@@ -249,9 +250,17 @@ sudo cp /media/usb/key/tukuk-backup-key /root/tukuk-backup-key && sudo chmod 600
 sudo bash scripts/rebuild-from-offsite.sh
 # only if play.tukuk.org has to be rebuilt as well (~1.3 GB of Godot + template downloads):
 sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=/media/usb/code/station-break-game.bundle bash scripts/setup-all.sh
+# 5. once this box has a GitHub key, and only then, hand the remote back to GitHub:
+sudo git -C /opt/tukuk-os remote set-url origin git@github.com:fevian448/tukuk-os-v2.git
 ```
 
-The last step is deliberately not part of `npm install`: a routine deploy must not spend half an
+Step 5 is not busywork: cloning from a bundle records `origin` as **the path of the stick** (proved
+by `git remote -v` in a test clone of this very bundle), so the daily `tukuk-update` timer would go
+on fetching a USB that is no longer in the machine — the box stays up and never takes another commit.
+`rebuild-from-offsite.sh` prints that as a `NEXT` line in its final table rather than a failure, so it
+cannot be missed and cannot stop the rebuild.
+
+Step 4 is deliberately not part of `npm install`: a routine deploy must not spend half an
 hour and a gigabyte on a page it never touches.
 
 `rebuild-from-offsite.sh` refuses to start unless `$APP/package.json` and `/root/tukuk-backup-key`
