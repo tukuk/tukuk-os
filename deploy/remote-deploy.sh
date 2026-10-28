@@ -29,6 +29,14 @@ sshpass -p "$PASSWORD" rsync -avz --exclude 'node_modules' --exclude '.git' --ex
 echo "3. Installing dependencies and restarting service on server..."
 sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_IP" "cd $REMOTE_DIR && npm install --omit=dev && sudo systemctl restart tukuk-os || systemctl --user restart tukuk-os"
 
+echo "4. Purging the Cloudflare edge cache..."
+# Restarting the service does not reach users on its own: /theme.css and /theme.js go out with
+# s-maxage=3600 and the rendered pages with s-maxage=300, so the edge keeps serving the build
+# before this one until that expires. The purge runs on the server because the token lives in
+# its .env, not on the machine running this script.
+sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_IP" "cd $REMOTE_DIR && bash deploy/purge-edge-cache.sh" \
+  || echo "   ⚠ purge failed — the edge may serve the previous build for up to an hour"
+
 echo ""
 echo "================================================================"
 echo "✓ Deployment successful!"

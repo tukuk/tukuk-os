@@ -59,6 +59,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
     await send('Page.enable', {}, sessionId);
     await send('Runtime.enable', {}, sessionId);
+    // Chrome keeps a disk cache between runs of this script, and a stylesheet cached before a
+    // deploy made a fixed page look unfixed. An audit measures what the server serves now.
+    await send('Network.enable', {}, sessionId);
+    await send('Network.setCacheDisabled', { cacheDisabled: true }, sessionId);
     const loaded = new Promise((res) => { handlers['Page.loadEventFired'] = [res]; });
     await send('Page.navigate', { url }, sessionId);
     await Promise.race([loaded, sleep(20000)]);
