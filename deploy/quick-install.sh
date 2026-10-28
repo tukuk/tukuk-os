@@ -89,23 +89,46 @@ cd "$INSTALL_DIR"
 npm install --omit=dev --no-audit --no-fund
 
 echo -e "\n${BLUE}[5/6] Creating Systemd Service for Tukuk-OS...${NC}"
-cat > /etc/systemd/system/tukuk-os.service << 'EOF'
+# Not root: /api/admin/terminal runs shell commands as the service user, so root here
+# would make any admin-session bug a root shell. setup-all.sh does the same in full.
+SVC_USER="tukuk-os"
+getent passwd "$SVC_USER" >/dev/null 2>&1 || \
+  useradd --system --no-create-home --home-dir /var/lib/tukuk-os \
+    --shell /usr/sbin/nologin --comment "Tukuk-OS web + search services" "$SVC_USER"
+mkdir -p "$INSTALL_DIR/data" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/dumps" "$INSTALL_DIR/meili_data"
+for d in data snapshots dumps meili_data content/blog public/downloads; do
+  [ -d "$INSTALL_DIR/$d" ] || continue
+  chown -R "$SVC_USER:$SVC_USER" "$INSTALL_DIR/$d"
+  chmod -R g+rwX "$INSTALL_DIR/$d"
+  find "$INSTALL_DIR/$d" -type d -exec chmod g+s {} +
+done
+[[ -f "$INSTALL_DIR/.env" ]] && { chmod 600 "$INSTALL_DIR/.env"; setfacl -m "u:$SVC_USER:r--" "$INSTALL_DIR/.env" 2>/dev/null || true; }
+
+cat > /etc/systemd/system/tukuk-os.service << EOF
 [Unit]
 Description=Tukuk-OS Search Engine (Lightweight Node.js)
 After=network.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/opt/tukuk-os
+User=$SVC_USER
+Group=$SVC_USER
+WorkingDirectory=$INSTALL_DIR
+EnvironmentFile=-$INSTALL_DIR/.env
 Environment=PORT=3000
 Environment=HOST=0.0.0.0
 Environment=NODE_ENV=production
-Environment=NODE_OPTIONS="--max-old-space-size=768"
+Environment=NODE_OPTIONS=--max-old-space-size=768
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=3
 MemoryMax=1G
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=yes
+CapabilityBoundingSet=
+ReadWritePaths=$INSTALL_DIR/data $INSTALL_DIR/content/blog $INSTALL_DIR/public/downloads
 
 [Install]
 WantedBy=multi-user.target

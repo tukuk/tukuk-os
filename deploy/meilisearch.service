@@ -13,6 +13,10 @@ Type=simple
 # leaves the secret world-readable in /etc/systemd/system and freezes it, so a rotated .env
 # stops matching and every search falls back to the 30-document mock with no visible fault.
 EnvironmentFile=-/opt/tukuk-os/.env
+# Same unprivileged user as tukuk-os.service (setup-all.sh [3b]). A root-run index engine
+# is a second, equally silent way to lose the box: it holds an HTTP API and a master key.
+User=tukuk-os
+Group=tukuk-os
 ExecStart=/usr/local/bin/meilisearch --db-path /opt/tukuk-os/meili_data --master-key ${MEILI_MASTER_KEY} --http-addr 127.0.0.1:7700
 
 Restart=always
@@ -29,9 +33,18 @@ SyslogIdentifier=meilisearch
 
 NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=full
-ProtectHome=read-only
-ReadWritePaths=/home/tukuk/tukuk-os/meili_data /home/tukuk/tukuk-os/snapshots
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/opt/tukuk-os/meili_data
 
 [Install]
 WantedBy=default.target

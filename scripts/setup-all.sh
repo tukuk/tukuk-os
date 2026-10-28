@@ -128,6 +128,20 @@ if [[ -z "$MEILI_KEY" ]]; then
   warn "A new MEILI_MASTER_KEY was generated and stored in .env."
 fi
 
+# ── [3b] Unprivileged service user ────────────────────────────────────────────
+# Both long-running services run as `tukuk-os`, never as root. This is not cosmetic:
+# /api/admin/terminal (src/server.js) executes shell commands as the user the web
+# service runs under, so `User=root` there meant any admin-session bug was a root
+# shell on the box. The code tree stays root-owned and READ-ONLY to the service;
+# only the runtime dirs handed over below are writable.
+info "[3b/8] Service user..."
+SVC_USER="tukuk-os"
+getent passwd "$SVC_USER" >/dev/null 2>&1 || \
+  useradd --system --no-create-home --home-dir /var/lib/tukuk-os \
+    --shell /usr/sbin/nologin --comment "Tukuk-OS web + search services" "$SVC_USER"
+install -d -m 0750 -o "$SVC_USER" -g "$SVC_USER" /var/lib/tukuk-os
+ok "Service user: $SVC_USER"
+
 cat > /etc/systemd/system/meilisearch.service << EOF
 [Unit]
 Description=Meilisearch (Tukuk-OS index engine)
@@ -142,10 +156,27 @@ Type=simple
 # search answered 403 and src/meili.js silently served the 30-document mock instead of the
 # real 859-document index. /health still said "meilisearch":"available" throughout.
 EnvironmentFile=$INSTALL_DIR/.env
+User=$SVC_USER
+Group=$SVC_USER
 ExecStart=$(command -v meilisearch) --db-path $INSTALL_DIR/meili_data --master-key \${MEILI_MASTER_KEY} --http-addr 127.0.0.1:7700
 Restart=always
 RestartSec=3
 MemoryMax=1G
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=$INSTALL_DIR/meili_data
 
 [Install]
 WantedBy=multi-user.target
@@ -169,6 +200,30 @@ fi
 [[ -d node_modules ]] || npm install --omit=dev --no-audit --no-fund
 mkdir -p meili_data snapshots dumps data
 
+# Hand the RUNTIME dirs to the service user. `content/blog` and `public/downloads` are
+# also runtime: the admin post editor rewrites markdown there and /api/apk writes the
+# built APKs there. Everything else in $INSTALL_DIR stays root-owned (read-only to Node).
+for d in data snapshots dumps meili_data content/blog public/downloads; do
+  install -d -o "$SVC_USER" -g "$SVC_USER" -m 0750 "$INSTALL_DIR/$d"
+  chown -R "$SVC_USER:$SVC_USER" "$INSTALL_DIR/$d"
+  chmod -R g+rwX "$INSTALL_DIR/$d"
+  find "$INSTALL_DIR/$d" -type d -exec chmod g+s {} +
+  # ROOT timers (auto-update, every backup) also write into these dirs. A file written
+  # by a root script would otherwise be group-read-only and the app would silently stop
+  # persisting to it after the first root-written file landed — the same class of silent
+  # failure as a frozen secret. The default ACL keeps every new file group-writable.
+  if command -v setfacl >/dev/null; then
+    setfacl -R -m "g:$SVC_USER:rwX" "$INSTALL_DIR/$d" 2>/dev/null || true
+    find "$INSTALL_DIR/$d" -type d -exec setfacl -m "d:g:$SVC_USER:rwX" {} + 2>/dev/null || true
+  fi
+done
+# .env holds ADMIN_PASSWORD / MEILI_MASTER_KEY / API_KEY. It keeps its 0600 owner; the
+# service user gets read through a one-off ACL so nothing else changes hands.
+if [[ -f "$INSTALL_DIR/.env" ]] && command -v setfacl >/dev/null; then
+  setfacl -m "u:$SVC_USER:r--" "$INSTALL_DIR/.env" 2>/dev/null || true
+fi
+ok "Runtime dirs owned by $SVC_USER (root timers stay writable via a default ACL)."
+
 # ── [6] systemd services (tukuk-os + watchdog) ──────────────────────────────
 info "[5/8] Tukuk-OS service..."
 cat > /etc/systemd/system/tukuk-os.service << EOF
@@ -180,6 +235,10 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
+# NEVER root: see [3b]. The code tree is read-only to the service; the only writable
+# paths are the three listed in ReadWritePaths (data, blog markdown, APK output).
+User=$SVC_USER
+Group=$SVC_USER
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=-$INSTALL_DIR/.env
 Environment=NODE_ENV=production
@@ -191,8 +250,24 @@ Restart=always
 RestartSec=3
 MemoryMax=1G
 TasksMax=512
+
+# --- sandbox ---
 NoNewPrivileges=true
 PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=$INSTALL_DIR/data $INSTALL_DIR/content/blog $INSTALL_DIR/public/downloads
 
 [Install]
 WantedBy=multi-user.target

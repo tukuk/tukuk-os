@@ -152,7 +152,7 @@ Two lessons worth keeping:
   Prove retrievability through a bound Worker (or the app's own read path), never through one CLI call.
 - The audit Worker used to do this, `tukuk-r2-audit` (one small file, token-gated list + get on the
   `tukuk-fallback` bucket), is still deployed because the new box needs it to pull these archives
-  without the upload secret. **Delete it when the rebuild passes Part I:**
+  without the upload secret. **Delete it when the rebuild passes Part J:**
   `npx wrangler delete --name tukuk-r2-audit`.
 
 ## Part E — Install the OS
@@ -439,7 +439,61 @@ the tunnel would hand it an internet-facing address. If remote eyes on the box a
 the correct shape is Cloudflare Zero Trust Access in front of it (policy: your email + TOTP), not a
 bare public hostname — that requires dashboard work and is not done by a script.
 
-## Part I — Acceptance checklist
+## Part I — Service accounts: nothing runs as root
+
+`tukuk-os.service` and `meilisearch.service` both run as the system user **`tukuk-os`**, created by
+`setup-all.sh` [3b]. This is not tidiness. `POST /api/admin/terminal` (`src/server.js`) runs whatever
+shell command an admin types, as the user the web service happens to be. With no `User=` line that was
+**root**: one stolen admin cookie, one new route that forgot `auth.requireAdmin`, or one gap in the
+destructive-command list was a root shell on the box — no privilege escalation needed. Measured on the
+old unit, 2026-10-28: `User=(root)`, `ProtectSystem=no`, `ProtectHome=no`, and all 41 capabilities in
+`CapabilityBoundingSet`.
+
+The split is deliberate:
+
+| path | owner | who writes |
+|---|---|---|
+| `/opt/tukuk-os` (code, `.git`, `scripts/`, `public/` minus `downloads/`) | `root` | root timers, `git pull`, deploys |
+| `data/`, `snapshots/`, `dumps/`, `meili_data/`, `content/blog/`, `public/downloads/` | `tukuk-os` | the app; **also** root timers (auto-update, backups) |
+| `/opt/tukuk-os/.env` | `tukuk` 0600 + ACL `u:tukuk-os:r--` | nobody — read-only to the service |
+
+That middle row is the trap. `auto-update.sh` (root) writes `data/update-status.json`, and the two-minute
+`load-governor` writes `data/load-*.json`. A file created by root in an owned-by-`tukuk-os` directory is
+group-**read-only** by default, so the app would silently stop persisting the moment one of those landed
+— no error, just stale data, exactly like the frozen Meilisearch key. So the dirs are `g+s` (setgid, so
+new files inherit the group) and carry a **default ACL** `d:g:tukuk-os:rwX`, and every unit that writes
+there keeps working regardless of who created the file.
+
+Check it, on any box:
+
+```bash
+systemctl show tukuk-os.service   -p User -p Group -p ProtectSystem -p ProtectHome -p ReadWritePaths
+systemctl show meilisearch.service -p User -p Group -p ProtectSystem
+ps -o user,args -p "$(systemctl show -p MainPID --value tukuk-os.service)"     # tukuk-os, not root
+
+# the service may write its runtime dirs …
+runuser -u tukuk-os -- sh -c 'touch /opt/tukuk-os/data/.w && rm /opt/tukuk-os/data/.w' && echo OK
+# …and must NOT write its own code, or the next edit is persistent
+runuser -u tukuk-os -- touch /opt/tukuk-os/scripts/.w    # Permission denied = correct
+
+# no file in data/ may have lost group-write to a root timer
+find /opt/tukuk-os/data -maxdepth 2 ! -perm -g+w | head
+```
+
+The app is started with `ProtectSystem=strict` + `ProtectHome=yes` + an empty `CapabilityBoundingSet`,
+so the tree it serves is read-only to it even if a route is buggy. Consequences to know: the admin
+terminal can no longer `systemctl restart` anything (use SSH, or wait for the hourly `tukuk-update`),
+`/api/apk` cannot rebuild an APK unless the Android SDK is visible (there is no SDK on this box — only
+the prebuilt files in `public/downloads/` are served), and an editor write to `content/blog/*.md` works
+because that path is in `ReadWritePaths`.
+
+Rollback is one file, and it puts root back:
+
+```bash
+bash /root/root4-rollback.sh      # restores /root/root4-backup/*.pre-deroot and restarts both units
+```
+
+## Part J — Acceptance checklist
 
 All of these, in this order, before the box is called "back":
 
@@ -456,8 +510,10 @@ All of these, in this order, before the box is called "back":
 8. `git -C /opt/tukuk-os status --porcelain` empty and the box can push.
 9. Re-check the two things that used to be silently broken: `run/main_scene` in the game project and
    the presence of the control-hint overlay.
+10. `systemctl show -p User --value tukuk-os.service` → `tukuk-os` (empty means root), the same for
+    `meilisearch.service`, and `find /opt/tukuk-os/data ! -perm -g+w` is empty (Part I).
 
-## Part J — Things that do not survive a wipe no matter what we back up
+## Part K — Things that do not survive a wipe no matter what we back up
 
 - **Passkey credentials** live in `data/tukuk-os.json` (see Part D), so they ride on the data
   archive. If that archive is lost, every user must re-register and admin passkeys are gone.
