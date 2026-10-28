@@ -6,6 +6,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const net = require('node:net');
 const express = require('express');
 const agentEditor = require('../src/agent-editor');
 
@@ -148,4 +149,40 @@ test('attachUpgrade: relays 101 for /agent; other upgrades are left alone', asyn
   killSockets(); killUp();
   server.close(); server.closeAllConnections();
   up.close(); up.closeAllConnections();
+});
+
+test('attachUpgrade with no upstream: refuses with 503 on the socket instead of hanging', async () => {
+  // This is the bug that made a rebuilt box look like a broken front proxy. The handler used to
+  // `return` when there was no AGENT_EDITOR_UPSTREAM, leaving the socket open until the client
+  // timed out. So the SAME upgrade request answered differently depending on the route taken:
+  // straight to Node it was an empty close, through nginx (which cannot wait for a response that
+  // never comes) it was a 503. scripts/nginx-front-check.js compares the two and therefore blamed
+  // the proxy. The app now refuses the way its HTTP half does, identically on every port.
+  const { app, config } = buildApp('');
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((r) => server.once('listening', r));
+  const port = server.address().port;
+  const killSockets = trackSockets(server);
+  const detach = agentEditor.attachUpgrade(server, { config });
+
+  const ask = () => new Promise((resolve, reject) => {
+    const s = net.connect(port, '127.0.0.1');
+    let buf = '';
+    s.setTimeout(4000);
+    s.on('connect', () => s.write('GET /agent/ HTTP/1.1\r\nHost: tukuk.org\r\nUpgrade: websocket\r\n'
+      + 'Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n'));
+    s.on('data', (d) => { buf += d.toString('latin1'); });
+    s.on('timeout', () => { s.destroy(); reject(new Error('the upgrade hung — nothing was ever sent back')); });
+    s.on('close', () => resolve(buf));
+    s.on('error', reject);
+  });
+
+  const answer = await ask();
+  assert.match(answer, /^HTTP\/1\.1 503 /, `an HTTP refusal is required, got ${JSON.stringify(answer.slice(0, 48))}`);
+  assert.match(answer, /AGENT_EDITOR_UPSTREAM/, 'and it has to name the setting that is missing');
+
+  // An upgrade on a path that is not the editor still belongs to someone else (chat SSE does this).
+  detach();
+  killSockets();
+  server.close(); server.closeAllConnections();
 });

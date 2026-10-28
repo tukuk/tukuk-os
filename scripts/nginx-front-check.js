@@ -27,6 +27,14 @@ const crypto = require('crypto');
 
 const FRONT = Number(process.argv[2] || 8080);
 const ORIGIN = Number(process.argv[3] || (FRONT === 3000 ? 3001 : 3000));
+// The cacheable public hub this harness probes. It used to be /bendera; the Indonesian→English
+// route rename in src/server.js turned that into a permanent 301, and a 301 can never carry a
+// lease — so seven checks went red on a box whose cache was working perfectly. /flags is the live
+// path. The redirect is asserted on its own merits further down instead of being probed as if it
+// were a page, because "the front must not eat a redirect" is a real question and "why does this
+// 301 have no X-Accel-Expires" is not.
+const HUB = '/flags';
+const HUB_404 = `${HUB}/not-a-real-flag-xyz`;
 const results = [];
 function check(name, pass, detail) {
   results.push({ name, pass });
@@ -114,7 +122,7 @@ const clean = (headers) => {
   // Plus the root (the busiest single render on the box) and the local APOD archive, which
   // is the entry to the ±11,000-date cluster and reads only the on-disk store (no NASA quota
   // involved, so the check cannot go red because NASA is having a bad minute).
-  const PAGES = ['/bendera', '/alat/unit', '/blog', '/', '/nasa/archive'];
+  const PAGES = [HUB, '/alat/unit', '/blog', '/', '/nasa/archive'];
   for (const p of PAGES) {
     const a = await get({ path: p, headers: { 'Accept-Encoding': 'identity' } });
     const b = await get({ path: p, headers: { 'Accept-Encoding': 'identity' } });
@@ -149,9 +157,9 @@ const clean = (headers) => {
     // 12 seconds on purpose, so the route overrides the policy to no-store itself.
     ['/nasa/iss ("right now" — the app re-reads it every 12 s, so a 5-minute copy is 25x too stale)', '/nasa/iss'],
     // THE drift case, measured rather than assumed: this slug 404s INSIDE the cacheable
-    // /bendera prefix, and the middleware has already put the public policy on the response
+    // /flags prefix, and the middleware has already put the public policy on the response
     // by the time the route answered. Only the withheld lease keeps it out of the cache.
-    ['a 404 under a cacheable prefix', '/bendera/not-a-real-flag-xyz'],
+    ['a 404 under a cacheable prefix', HUB_404],
   ];
   for (const [label, path] of never) {
     const a = await get({ path });
@@ -159,7 +167,7 @@ const clean = (headers) => {
     check(`${label} is never a cache hit`, !['HIT', 'STALE'].includes(cacheStatus(b)) && !['HIT', 'STALE'].includes(cacheStatus(a)),
       `${cacheStatus(a)} → ${cacheStatus(b)} (status ${b.status})`);
   }
-  const studioOrigin = await get({ port: ORIGIN, path: '/bendera/not-a-real-flag-xyz' });
+  const studioOrigin = await get({ port: ORIGIN, path: HUB_404 });
   check('…and for that 404 it is the APP that withholds the lease, not a rule in nginx',
     studioOrigin.status === 404 && studioOrigin.headers['x-accel-expires'] === undefined
       && /s-maxage=300/.test(String(studioOrigin.headers['cache-control'])),
@@ -190,15 +198,16 @@ const clean = (headers) => {
     `first ${cacheStatus(qa1)} → other key ${cacheStatus(qb1)} → first again ${cacheStatus(qa2)}`);
   const redir = await get({ port: ORIGIN, path: '/bendera', headers: { Accept: 'text/html' } });
   check('a redirect or error never carries the lease either (only a real 2xx render does)',
-    ![301, 302, 404, 500, 503].includes(redir.status) || redir.headers['x-accel-expires'] === undefined,
-    `status ${redir.status} x-accel-expires=${redir.headers['x-accel-expires']}`);
+    redir.status === 301 && /\/flags$/.test(String(redir.headers.location || ''))
+      && redir.headers['x-accel-expires'] === undefined,
+    `${redir.status} → ${redir.headers.location} x-accel-expires=${redir.headers['x-accel-expires']}`);
   const headReq = await get({ method: 'HEAD', path: '/alat/unit' });
   check('a HEAD of a cacheable page is answered like the GET (200, same policy)',
     headReq.status === 200 && /s-maxage=300/.test(String(headReq.headers['cache-control'])),
     `${headReq.status} ${String(headReq.headers['cache-control']).slice(0, 30)}…`);
 
-  const nf = await get({ path: '/bendera/not-a-real-flag-xyz' });
-  const nf2 = await get({ path: '/bendera/not-a-real-flag-xyz' });
+  const nf = await get({ path: HUB_404 });
+  const nf2 = await get({ path: HUB_404 });
   check('a 404 is not cached (an unknown slug must 404 again, not forever)',
     nf.status === 404 && nf2.status === 404 && !['HIT', 'STALE'].includes(cacheStatus(nf2)),
     `${nf.status}/${cacheStatus(nf)} then ${nf2.status}/${cacheStatus(nf2)}`);
@@ -207,10 +216,10 @@ const clean = (headers) => {
   // Two halves, because a public page is 200 whether or not a bogus token is present — what
   // matters is that credentials keep it out of the shared cache. On a route that actually
   // requires them, a cached copy would be a private answer handed to a stranger.
-  const before = await get({ path: '/bendera', headers: { 'Accept-Encoding': 'identity' } });
-  const authed = await get({ path: '/bendera', headers: { Authorization: 'Bearer deliberately-not-a-token' } });
-  const withCookie = await get({ path: '/bendera', headers: { Cookie: 'session=abc' } });
-  const after = await get({ path: '/bendera', headers: { 'Accept-Encoding': 'identity' } });
+  const before = await get({ path: HUB, headers: { 'Accept-Encoding': 'identity' } });
+  const authed = await get({ path: HUB, headers: { Authorization: 'Bearer deliberately-not-a-token' } });
+  const withCookie = await get({ path: HUB, headers: { Cookie: 'session=abc' } });
+  const after = await get({ path: HUB, headers: { 'Accept-Encoding': 'identity' } });
   const adminDirect = await get({ port: ORIGIN, path: '/api/admin/status', headers: { Authorization: 'Bearer deliberately-not-a-token' } });
   const adminFrontA = await get({ path: '/api/admin/status', headers: { Authorization: 'Bearer deliberately-not-a-token' } });
   const adminFrontB = await get({ path: '/api/admin/status', headers: { Authorization: 'Bearer deliberately-not-a-token' } });
@@ -224,7 +233,7 @@ const clean = (headers) => {
     withCookie.status === 200 && !['HIT', 'STALE'].includes(cacheStatus(withCookie)), `${withCookie.status} ${cacheStatus(withCookie)}`);
   check('neither of them put anything into the shared copy',
     sha(before.body) === sha(after.body) && cacheStatus(after) === 'HIT', `${sha(before.body)} vs ${sha(after.body)} ${cacheStatus(after)}`);
-  const post = await get({ method: 'POST', path: '/bendera', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const post = await get({ method: 'POST', path: HUB, headers: { 'Content-Type': 'application/json' }, body: '{}' });
   check('a POST is not cached and not turned into a page',
     !['HIT', 'STALE'].includes(cacheStatus(post)), `${post.status} ${cacheStatus(post)}`);
 
@@ -303,6 +312,11 @@ const clean = (headers) => {
 
   // /agent/ is a WebSocket upgrade handled by Node’s own server. Whatever code-server
   // answers (101, or 401 for the password), the proxy must answer the SAME thing.
+  // A box without the builder installed has no upstream at all: src/agent-editor.js then
+  // refuses the upgrade with its own 503, on every port, and that agreement is the proxy
+  // working — not the proxy inventing a gateway error. The case this check exists for is the
+  // opposite one: the origin handshakes (101) while the front answers 5xx, i.e. the Upgrade
+  // headers were eaten on the hop.
   const wsAsk = (port) => new Promise((resolve) => {
     const s = net.connect(port, '127.0.0.1');
     let buf = '';
@@ -315,8 +329,10 @@ const clean = (headers) => {
   });
   const wsO = await wsAsk(ORIGIN);
   const wsF = await wsAsk(FRONT);
+  const bothRefused = wsF === wsO && / 50[0-9]/.test(wsF);
   check('the WebSocket upgrade is forwarded, not eaten (proxy status == origin status)',
-    wsF === wsO && !/50[0-9]/.test(wsF), `origin "${wsO}" front "${wsF}"`);
+    wsF === wsO && (!/50[0-9]/.test(wsF) || bothRefused),
+    `origin "${wsO}" front "${wsF}"${bothRefused ? ' — no editor upstream here, so both refuse identically; install the builder to turn this into a 101' : ''}`);
 
   // A too-small client_max_body_size would show up as 413 on the builder’s publish route.
   // Judged against the same request sent straight to the origin: the app may reject the body

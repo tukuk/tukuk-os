@@ -91,8 +91,20 @@ function mount(app, { config }) {
  */
 function attachUpgrade(server, { config }) {
   const onUpgrade = (req, clientSocket, head) => {
+    if (!req.url || !req.url.startsWith(PREFIX)) return; // not the editor — let other listeners handle it
     const target = upstreamOf(config);
-    if (!target || !req.url || !req.url.startsWith(PREFIX)) return; // not the editor — let other listeners handle it
+    if (!target) {
+      // No editor upstream on this box (builder not installed, or AGENT_EDITOR_UPSTREAM unset).
+      // Returning would leave the socket hanging until the client times out, and the two ways of
+      // reaching the app then disagree: a direct client gets an empty close while nginx, having
+      // got nothing back, answers 503. That mismatch made scripts/nginx-front-check.js report that
+      // the proxy was eating WebSocket upgrades on a box whose proxy was fine. Say 503 here, the
+      // same answer the HTTP half of /agent gives above, so both paths agree at any port.
+      clientSocket.end('HTTP/1.1 503 Service Unavailable\r\n'
+        + 'Content-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n'
+        + 'The editor agent is not configured (AGENT_EDITOR_UPSTREAM).\n');
+      return;
+    }
     // Strip the /agent prefix from the full URL (the browser's ws URL starts with /agent/...).
     const stripped = req.url.slice(PREFIX.length) || '/';
     const p = http.request(target + stripped, { method: req.method, headers: forwardHeaders(req.headers, target) });

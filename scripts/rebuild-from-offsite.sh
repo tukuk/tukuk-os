@@ -29,10 +29,21 @@ APP="${TUKUK_INSTALL_DIR:-/opt/tukuk-os}"
 ENV="$APP/.env"
 KEYFILE="${IDENTITY_KEY_FILE:-/root/tukuk-backup-key}"
 FAILS=0
+RESTORED_DATA=0
 log() { printf '\033[1;34m➜\033[0m %s\n' "$*"; }
 good() { printf '  \033[0;32mPASS\033[0m %-30s %s\n' "$1" "${2:-}"; }
 bad()  { printf '  \033[0;31mFAIL\033[0m %-30s %s\n' "$1" "${2:-}"; FAILS=$((FAILS+1)); }
 note() { printf '  \033[1;33mNEXT\033[0m %-28s %s\n' "$1" "${2:-}"; }
+
+# What the runtime store actually holds, for the data guard in step 3 and the verify table in step 5.
+# Read as JSON rather than by grepping the file for a token: the credential objects use `id` and
+# `publicKey` (src/auth.js), so an earlier version of this line searched for "credentialId", found
+# nothing, and reported "0 credential(s) — users would have to re-register" as a FAIL on a store
+# that was fine. The shape is measured: settings.passkeys is the array, users is an object.
+# Defined here, at the top, because step 3 runs it — a function called before bash has executed its
+# definition is "command not found", and inside `VAR=$(...)` that non-zero exit kills a `set -e` script.
+store_shape() { # <file> → "<n> passkey(s), <m> user record(s)" | unreadable
+  node -e 'try{const d=require(require("path").resolve(process.argv[1]));const p=(d.settings&&Array.isArray(d.settings.passkeys))?d.settings.passkeys:[];const u=d.users?(Array.isArray(d.users)?d.users.length:Object.keys(d.users).length):0;console.log(p.length+" passkey(s), "+u+" user record(s)")}catch(e){console.log("unreadable")}' "$1" 2>/dev/null || echo unreadable; }
 
 _env_get() { [[ -r "$ENV" ]] && grep -E "^[[:space:]]*$1=" "$ENV" | tail -1 | cut -d= -f2- \
              | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//' || true; }
@@ -150,10 +161,29 @@ fi
 # Refusing to overwrite a live data dir is the point: a rebuild must not eat today's writes.
 if [[ -n "$DATAKEY" ]]; then
   if [[ -f "$APP/data/tukuk-os.json" && "${FORCE_DATA:-0}" != "1" ]]; then
-    echo "  data/ already present — not overwritten (FORCE_DATA=1 to restore anyway). $DATAKEY left off-site."
+    # Say what is actually at stake, in both directions. The guard exists so a rebuild cannot eat
+    # today's writes, but on a box that was installed hours ago data/ holds only the app's own
+    # first-boot files and the archive holds every passkey credential ever registered -- so a bare
+    # "not overwritten" pushed operators into leaving real user data out on purpose.
+    LIVE=$(store_shape "$APP/data/tukuk-os.json")
+    echo "  data/ already present ($LIVE on this box) — not overwritten. $DATAKEY left off-site."
+    echo "  FORCE_DATA=1 takes the archive: passkeys/chat/counters as of that backup come back,"
+    echo "  and anything written on THIS box since the install is lost. An empty store here means"
+    echo "  every registered user would have to re-register if you do not restore."
   else
-    fetch "$DATAKEY" "$TMP/data.tar.gz" && gzip -t "$TMP/data.tar.gz" \
-      && tar xzf "$TMP/data.tar.gz" -C "$APP" && echo "  ✓ data/ restored from $DATAKEY ($(tar tzf "$TMP/data.tar.gz" | wc -l) entries)"
+    # Stop the writers first. The app holds its stores in memory and flushes them on the next
+    # change, so a data/ restored under a running tukuk-os.service can be overwritten seconds
+    # later by what that process still believes it knows -- the restore would report ✓ and the
+    # passkey store would go back to empty, which is precisely the failure this whole script is
+    # supposed to prevent. The watchdog timer is stopped with it because it restarts anything it
+    # watches; step 4 brings both back up and re-enables the timers afterwards.
+    systemctl stop tukuk-os.service tukuk-os-watchdog.service tukuk-os-watchdog.timer >/dev/null 2>&1 || true
+    if fetch "$DATAKEY" "$TMP/data.tar.gz" && gzip -t "$TMP/data.tar.gz" && tar xzf "$TMP/data.tar.gz" -C "$APP"; then
+      RESTORED_DATA=1
+      echo "  ✓ data/ restored from $DATAKEY ($(tar tzf "$TMP/data.tar.gz" | wc -l) entries)"
+    else
+      bad "data restore" "download or unpack of $DATAKEY failed — the archive never landed"
+    fi
   fi
 fi
 
@@ -199,12 +229,33 @@ chk "cockpit on 9090"            200 "$(code https://127.0.0.1:9090/login)"
 for s in meilisearch tukuk-os cloudflared nginx; do
   [[ "$(systemctl is-active "$s" 2>/dev/null)" == active ]] && good "service $s" active || bad "service $s" "$(systemctl is-active "$s" 2>/dev/null)"
 done
-[[ "$(ss -ltn 2>/dev/null | grep -c ':3001')" == 1 ]] && good "Node behind front (3001)" 3001 || bad "Node behind front (3001)" "$(ss -ltn | awk '/:3001/:3000/{print $4}' | tr '\n' ' ')"
+# Both ports must be up for the front to be real: nginx on 3000, Node on 3001. Count the loopback
+# families rather than assuming one line each (Node may bind 127.0.0.1 and ::1), and on a failure
+# show what IS listening instead of an awk syntax error -- the previous version of this line had
+# two adjacent regexes, `/:3001/:3000/`, which bash -n accepted and awk rejected, so the FAIL row
+# printed an empty detail and looked like a mystery instead of a cutover that never happened.
+N3001=$(ss -ltn 2>/dev/null | grep -cE ':3001\b')
+N3000=$(ss -ltn 2>/dev/null | grep -cE ':3000\b')
+if (( N3001 >= 1 && N3000 >= 1 )); then good "Node behind front (3001 ← nginx 3000)" "3001:${N3001} 3000:${N3000}"
+else bad "Node behind front (3001)" "listening on 3000/3001: $(ss -ltn 2>/dev/null | awk '/:(3000|3001)\b/{print $4}' | tr '\n' ' ')"; fi
 if [[ -f "$APP/data/tukuk-os.json" ]]; then
-  PK=$(node -e 'try{const d=require("'"$APP"'/data/tukuk-os.json");const s=JSON.stringify(d);console.log((s.match(/credentialId/g)||[]).length+" credential(s)")}catch(e){console.log("unreadable")}' 2>/dev/null || echo unreadable)
-  [[ "$PK" != "unreadable" && "$PK" != "0 credential(s)" ]] && good "passkey store" "$PK" || bad "passkey store" "$PK — users would have to re-register"
+  PK=$(store_shape "$APP/data/tukuk-os.json")
+  if [[ "$PK" == unreadable ]]; then
+    bad "runtime store" "$APP/data/tukuk-os.json is not readable JSON"
+  elif [[ "$PK" == "0 passkey(s), 0 user record(s)" && "${RESTORED_DATA:-0}" != 1 ]]; then
+    # Nothing was restored and the live store is the app's own first boot. This is the row that
+    # decides whether the off-site data archive is a cold-weather file or the site's memory.
+    bad "runtime store" "$PK and data/ was not restored — rerun with FORCE_DATA=1"
+  else
+    # Zero passkeys here is a fact about the backup, not a fault: the archived store measured
+    # 2026-10-28 held settings.passkeys = [] as well. Saying so keeps a real gap (lost chat, posts,
+    # counters) apart from something that was never in the file to begin with.
+    DET="$PK"
+    [[ "$PK" == "0 passkey(s),"* ]] && DET="$PK — none was ever registered; the off-site archive held none either (measured 2026-10-28)"
+    good "runtime store" "$DET"
+  fi
 else
-  bad "passkey store" "no data/tukuk-os.json"
+  bad "runtime store" "no data/tukuk-os.json"
 fi
 TIMERS=$(systemctl list-timers --all --no-pager 2>/dev/null | grep -c 'tukuk-\|meili-\|chat-\|indexnow\|load-governor\|weight-report\|builder-idle')
 [[ "$TIMERS" -ge 8 ]] && good "backup/maintenance timers" "$TIMERS scheduled" || bad "backup/maintenance timers" "$TIMERS scheduled"

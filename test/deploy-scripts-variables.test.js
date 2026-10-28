@@ -147,3 +147,43 @@ test('the Meilisearch unit is re-keyed after the restored .env lands, not before
   // a key with shell metacharacters must not be sed-injected into a unit file
   assert.match(src, /if \[\[ "\$MK" =~ \^\[A-Za-z0-9_-\]\+\$ \]\]/, 're-key only a quoting-safe key');
 });
+
+// ── the traps that are one step beyond an unbound variable ──────────────────────
+test('store_shape is defined before step 3 calls it', () => {
+  // Bash only knows a function once execution has passed its definition. `store_shape` is used in
+  // the data guard (step 3) and in the verify table (step 5); the definition has to sit above both,
+  // because a `VAR=$(undefined_function …)` returns non-zero and takes the whole `set -e` script
+  // down -- the same class of death as an unbound variable, one layer up.
+  const lines = fs.readFileSync(path.join(ROOT, 'scripts/rebuild-from-offsite.sh'), 'utf8').split('\n');
+  const def = lines.findIndex((l) => l.startsWith('store_shape() {'));
+  const call = lines.findIndex((l) => l.includes('LIVE=$(store_shape'));
+  assert.ok(def !== -1, 'store_shape is gone; the runtime-store row needs a new home');
+  assert.ok(call !== -1, 'the data guard no longer calls store_shape; update this test with it');
+  assert.ok(def < call, `definition (line ${def + 1}) must precede the first call (line ${call + 1})`);
+});
+
+test('a data/ restore stops the app and the watchdog first, and reports failure', () => {
+  // The app keeps its stores in memory, so restoring data/ under a running service can be flushed
+  // straight back out again -- ✓ in the log, empty store in the file. And the restore itself must
+  // not be a `&&` chain whose middle can fail silently.
+  const src = fs.readFileSync(path.join(ROOT, 'scripts/rebuild-from-offsite.sh'), 'utf8');
+  const stop = src.indexOf('systemctl stop tukuk-os.service tukuk-os-watchdog.service');
+  const untar = src.indexOf('tar xzf "$TMP/data.tar.gz" -C "$APP"');
+  assert.ok(stop !== -1 && untar !== -1, 'the stop-before-restore pair is gone');
+  assert.ok(stop < untar, 'the writers have to be stopped before the archive is unpacked');
+  assert.match(src, /RESTORED_DATA=1/, 'and the script has to remember that it restored, for the verify row');
+  assert.match(src, /bad "data restore"/, 'a failed download must be a FAIL row, not a missing line');
+});
+
+test('the runtime store is measured as JSON, not grepped for a token that does not exist', () => {
+  // credentials are stored as { id, publicKey, counter, … } under settings.passkeys (src/auth.js);
+  // the first version of this row counted occurrences of "credentialId" and therefore reported
+  // "0 credential(s)" as a failure on every box, restored or not.
+  const src = fs.readFileSync(path.join(ROOT, 'scripts/rebuild-from-offsite.sh'), 'utf8');
+  // The word may appear in the prose that explains why it was wrong; it may not appear in code.
+  const code = src.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+  assert.ok(!/credentialId/.test(code), 'the store has no such key; the count has to read settings.passkeys');
+  assert.match(src, /d\.settings&&Array\.isArray\(d\.settings\.passkeys\)/, 'the measured shape is settings.passkeys[]');
+  const auth = fs.readFileSync(path.join(ROOT, 'src/auth.js'), 'utf8');
+  assert.match(auth, /passkeys/, 'and that is the field the app itself uses');
+});

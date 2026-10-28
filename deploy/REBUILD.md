@@ -259,12 +259,22 @@ First boot, in order — the entire sequence, no other terminal work required:
 sudo git clone -b main /media/usb/code/tukuk-os-v2-main.bundle /opt/tukuk-os
 cd /opt/tukuk-os
 sudo cp /media/usb/key/tukuk-backup-key /root/tukuk-backup-key && sudo chmod 600 /root/tukuk-backup-key
-sudo bash scripts/rebuild-from-offsite.sh
+sudo FORCE_DATA=1 bash scripts/rebuild-from-offsite.sh
 # only if play.tukuk.org has to be rebuilt as well (~1.3 GB of Godot + template downloads):
 sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=/media/usb/code/station-break-game.bundle bash scripts/setup-all.sh
 # 5. once this box has a GitHub key, and only then, hand the remote back to GitHub:
 sudo git -C /opt/tukuk-os remote set-url origin git@github.com:fevian448/tukuk-os-v2.git
 ```
+
+`FORCE_DATA=1` is on that line for a reason, and it is the one flag whose absence is invisible:
+step 1 of the rebuild runs `setup-all.sh`, which installs **and starts** the app, and the app creates
+`data/tukuk-os.json` on boot. By the time step 3 reaches the data archive, the guard that rightly
+refuses to overwrite a live data dir sees a file the install itself made — so the units, `.env`,
+cloudflared and ssh keys come back and the site's memory does not. Measured on this box 2026-10-28:
+the plain run printed `data/ already present — not overwritten` and its own table then reported
+`0 passkey(s), 0 user record(s)`. The refusal is correct for a box that has been serving for weeks;
+on a box that was installed minutes ago it is the bug. The row now names the live counts so the
+choice is made from numbers rather than from a guess.
 
 Step 5 is not busywork: cloning from a bundle records `origin` as **the path of the stick** (proved
 by `git remote -v` in a test clone of this very bundle), so the daily `tukuk-update` timer would go
@@ -295,7 +305,8 @@ to the directories as well makes their contents unlistable, which looks exactly 
 | Cockpit, LAN-only | yes — added (`cockpit.socket.d/40-lan-only.conf`) | yes |
 | main tunnel `tukuk.org`/`www`/`dashboard` (token mode) | yes — `CF_TUNNEL_TOKEN` is in `deploy/env.defaults` | yes |
 | **second tunnel** `play`/`tchat`/`build` (`a3af5bb4`, credentials-file mode) | **no** — its `.json` is not in git | **yes** (archive) |
-| `data/` — passkeys, chat, counters | **no** | **yes** (archive) |
+| `data/` — the site's memory (posts, history, stats, events, chat, counters; passkeys *would* live here) | **no** | **yes** (archive) with `FORCE_DATA=1` — see the first-boot note |
+| passkey credentials | **no** | **no** — the archive itself held none: `settings.passkeys` is `[]` and `users` is `{}` in `data/tukuk-os.json` as backed up 2026-10-27 |
 | ssh host keys, `/etc/hosts`, real `.env` | **no** | **no** netplan (deliberately) / **yes** for the rest |
 | Godot HD build in `/var/www/tukuk-play` | **no** — opt-in with `INSTALL_GAME=1` (`[8f]`) | **no** — same gate; the script prints the exact command |
 | APK keystore `apk/*.jks` | **no** | **no** — copy from the laptop, then compare md5 against a released APK |
@@ -321,10 +332,16 @@ looked like a normal successful install.
 
 `node scripts/check-shell-vars.js scripts/rebuild-from-offsite.sh` prints any name that is read with
 no assignment and no `${NAME:-default}`. `npm test` runs it over every `set -u` script under
-`scripts/` and `deploy/` (`test/deploy-scripts-variables.test.js`, 7 tests), together with `bash -n`
+`scripts/` and `deploy/` (`test/deploy-scripts-variables.test.js`), together with `bash -n`
 for each file, and its first group proves the scanner is not vacuous by feeding it the exact shape of
 the incident. It is approximate on purpose: it knows quoted heredocs and single-quoted awk/`node -e`
 programs are not shell, so `$GODOT_HEAD_INCLUDE` and `$NF` do not become findings.
+
+Two neighbours of the same class, both caught by hand on this rebuild and both pinned in that file:
+a **function called above its own definition** (`store_shape` was used by the data guard before step 5
+defined it — `command not found` inside `VAR=$(…)` is fatal under `set -e`), and an **awk program with
+two adjacent regexes** (`'/:3001/:3000/{print $4}'`) that `bash -n` waved through and awk rejected,
+so the FAIL row printed an empty detail and a cutover that had never happened looked like a mystery.
 
 The general lesson for this box, stated where it will be read: **when a measurement and your own
 reasoning disagree, the measurement wins.** The throwaway version of that scan flagged `CFID` after
