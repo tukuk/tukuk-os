@@ -112,7 +112,11 @@ if [[ -f "$TMP/opt/tukuk-os/.env" ]]; then
   CFGTOK=$(grep -oE '^token: eyJ[^ ]*' /etc/cloudflared/config.yml 2>/dev/null | head -1 | cut -d' ' -f2)
   CFGID=$(grep -oE '^tunnel: [0-9a-f-]{36}' /etc/cloudflared/config.yml 2>/dev/null | head -1 | cut -d' ' -f2)
   if [[ -n "$CFGTOK" && -z "$(_env_get CF_TUNNEL_TOKEN)" ]]; then
-    grep -q '^CF_TUNNEL_ID=' "$ENV" && sed -i "s|^CF_TUNNEL_ID=.*|CF_TUNNEL_ID=$CFGRID|" "$ENV" || echo "CF_TUNNEL_ID=$CFGRID" >> "$ENV"
+    # The variable is CFID (the tunnel UUID read out of config.yml). It was written CFGRID here,
+    # and `set -u` makes an unbound reference fatal -- which killed the rebuild halfway through
+    # the restore, right after the .env landed. Names in a script that no longer stops at a
+    # syntax check are exactly what a linter is for.
+    grep -q '^CF_TUNNEL_ID=' "$ENV" && sed -i "s|^CF_TUNNEL_ID=.*|CF_TUNNEL_ID=$CFID|" "$ENV" || echo "CF_TUNNEL_ID=$CFID" >> "$ENV"
     echo "CF_TUNNEL_TOKEN=$CFGTOK" >> "$ENV"; chmod 600 "$ENV"
     echo "  ✓ CF_TUNNEL_TOKEN/ID captured from /etc/cloudflared/config.yml (stays out of git: .env is ignored)"
   fi
