@@ -112,11 +112,12 @@ if [[ -f "$TMP/opt/tukuk-os/.env" ]]; then
   CFGTOK=$(grep -oE '^token: eyJ[^ ]*' /etc/cloudflared/config.yml 2>/dev/null | head -1 | cut -d' ' -f2)
   CFGID=$(grep -oE '^tunnel: [0-9a-f-]{36}' /etc/cloudflared/config.yml 2>/dev/null | head -1 | cut -d' ' -f2)
   if [[ -n "$CFGTOK" && -z "$(_env_get CF_TUNNEL_TOKEN)" ]]; then
-    # The variable is CFID (the tunnel UUID read out of config.yml). It was written CFGRID here,
-    # and `set -u` makes an unbound reference fatal -- which killed the rebuild halfway through
-    # the restore, right after the .env landed. Names in a script that no longer stops at a
-    # syntax check are exactly what a linter is for.
-    grep -q '^CF_TUNNEL_ID=' "$ENV" && sed -i "s|^CF_TUNNEL_ID=.*|CF_TUNNEL_ID=$CFID|" "$ENV" || echo "CF_TUNNEL_ID=$CFID" >> "$ENV"
+    # The name here is CFGID (three letters, assigned two lines above). It has been mistyped twice,
+    # and under `set -u` an unbound reference is FATAL -- it killed the rebuild immediately after
+    # the identity archive's .env landed, so the netplan reference, the data restore, the front-proxy
+    # step and the whole verify table never ran. test/deploy-scripts-variables.test.js now greps
+    # every install script for exactly this, because `bash -n` cannot see it.
+    grep -q '^CF_TUNNEL_ID=' "$ENV" && sed -i "s|^CF_TUNNEL_ID=.*|CF_TUNNEL_ID=$CFGID|" "$ENV" || echo "CF_TUNNEL_ID=$CFGID" >> "$ENV"
     echo "CF_TUNNEL_TOKEN=$CFGTOK" >> "$ENV"; chmod 600 "$ENV"
     echo "  ✓ CF_TUNNEL_TOKEN/ID captured from /etc/cloudflared/config.yml (stays out of git: .env is ignored)"
   fi

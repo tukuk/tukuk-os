@@ -310,6 +310,26 @@ Two traps this table is written to defuse:
   machine's interface names. The rebuild script therefore restores selectively and leaves netplan in
   `etc-netplan-reference/` for a human to adapt with `netplan try`.
 
+### The check `bash -n` cannot do, and what it cost
+
+`set -u` makes a read of a variable the script never assigned **fatal at runtime**, and `bash -n`
+accepts it because it is valid syntax. On this rebuild it happened twice in a row, in the same line:
+`$CFGRID`, then — while "fixing" it — `$CFID` for the real name `CFGID`. Both deaths landed right
+after the identity archive's `.env` was installed, so the netplan reference, the `data/` restore, the
+front-proxy step, the timer enabling and the whole verify table never ran, while the log above them
+looked like a normal successful install.
+
+`node scripts/check-shell-vars.js scripts/rebuild-from-offsite.sh` prints any name that is read with
+no assignment and no `${NAME:-default}`. `npm test` runs it over every `set -u` script under
+`scripts/` and `deploy/` (`test/deploy-scripts-variables.test.js`, 7 tests), together with `bash -n`
+for each file, and its first group proves the scanner is not vacuous by feeding it the exact shape of
+the incident. It is approximate on purpose: it knows quoted heredocs and single-quoted awk/`node -e`
+programs are not shell, so `$GODOT_HEAD_INCLUDE` and `$NF` do not become findings.
+
+The general lesson for this box, stated where it will be read: **when a measurement and your own
+reasoning disagree, the measurement wins.** The throwaway version of that scan flagged `CFID` after
+the first "fix" and it was overruled as a false positive; the next run died on `CFID`.
+
 ### Reading a tunnel token back when the connector refuses it
 
 Both tunnels still exist at the edge (`status: down` only because the connector is off), and a
