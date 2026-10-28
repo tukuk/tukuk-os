@@ -23,6 +23,11 @@
     --text-bright: #f0f4fc;
     --muted: #8b99b5;
   }
+  /* The player shows and hides whole regions with the `hidden` attribute (topbar, stage,
+     relbar, oops). Every one of them also sets `display:`, which beats the UA rule for
+     `hidden` — so a working game still rendered the "not found" panel underneath it, and
+     the error state never actually hid the player it was meant to replace. */
+  [hidden] { display: none !important; }
   body {
     margin: 0; background: var(--bg-dark); color: var(--text-bright);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
