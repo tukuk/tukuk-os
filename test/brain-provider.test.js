@@ -9,8 +9,12 @@ function freshRequire(host) {
   for (const k of Object.keys(require.cache)) {
     if (k.includes('/src/')) delete require.cache[k];
   }
-  if (host === undefined) delete process.env.LITERT_HOST;
-  else process.env.LITERT_HOST = host;
+  // Deleting the variable is not enough on a configured box: src/config.js reads the repo `.env`
+  // and puts LITERT_HOST straight back, so the "absent" case quietly exercised the present one
+  // and this file failed wherever the edge tier is actually set up. The loader never overwrites
+  // a key that is already in process.env, so an empty value wins — and an empty host means the
+  // same thing to the provider as no host at all.
+  process.env.LITERT_HOST = host === undefined ? '' : host;
   return require('../src/brain/provider');
 }
 

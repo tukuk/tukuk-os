@@ -21,7 +21,7 @@ ZONE_NAME="${CLOUDFLARE_ZONE_NAME:-tukuk.org}"
 
 if [[ -z "${CLOUDFLARE_API_TOKEN:-}" && -f "$ROOT/.env" ]]; then
   # Read one key without sourcing the file: .env holds values with spaces and quotes.
-  CLOUDFLARE_API_TOKEN="$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' "$ROOT/.env" | tail -1 | tr -d '"'"'"'')"
+  CLOUDFLARE_API_TOKEN="$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' "$ROOT/.env" | tail -1 | tr -d '"')"
 fi
 if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
   echo "purge-edge-cache: CLOUDFLARE_API_TOKEN is not set (env or $ROOT/.env)" >&2

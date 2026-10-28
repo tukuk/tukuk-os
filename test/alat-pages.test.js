@@ -86,13 +86,29 @@ test('vendored PDF and ZIP libraries are served from our own host', async () => 
 });
 
 // The report-only policy is the site's own measuring stick: every host a page embeds
-// has to appear in it, or each view produces a violation report that says nothing new
-// (production was emitting ~330 per 6 hours from exactly this drift).
+// has to be allowed by the directive that governs it, or each view produces a violation
+// report that says nothing new (production was emitting ~330 per 6 hours from exactly this
+// drift). Checked per directive, not against the header as one string: unpkg serves the
+// globe textures (img-src), it does not serve a script or a stylesheet, and a string search
+// cannot tell those apart.
 test('report-only CSP covers the third parties the pages embed', async () => {
   const res = await fetch(base + '/alat/percentage');
   const reportOnly = res.headers.get('content-security-policy-report-only') || '';
-  for (const host of ['https://googleads.g.doubleclick.net', 'https://www.google.com', 'https://www.clarity.ms', 'https://static.cloudflareinsights.com', 'https://unpkg.com']) {
-    assert.ok(reportOnly.includes(host), `report-only CSP misses ${host}`);
+  const directives = new Map();
+  for (const part of reportOnly.split(';')) {
+    const [name, ...sources] = part.trim().split(/\s+/);
+    if (name) directives.set(name.toLowerCase(), sources);
+  }
+  const allows = (directive, host) => (directives.get(directive) || []).some((s) =>
+    s === host || s === 'https:' || (s.startsWith('https://*.') && host.endsWith(s.slice(9))));
+  for (const [host, directive] of [
+    ['https://googleads.g.doubleclick.net', 'frame-src'],
+    ['https://www.google.com', 'frame-src'],
+    ['https://www.clarity.ms', 'script-src'],
+    ['https://static.cloudflareinsights.com', 'script-src'],
+    ['https://unpkg.com', 'img-src'] // the three-globe earth textures
+  ]) {
+    assert.ok(allows(directive, host), `${host} is not allowed by ${directive} in the report-only CSP`);
   }
   // The enforced policy stays structural (no script-src) — that part is deliberate.
   const enforced = res.headers.get('content-security-policy') || '';
