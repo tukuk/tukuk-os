@@ -89,20 +89,25 @@ function mount(app, { config }) {
  * @param {import('node:http').Server} server
  * @param {{config: object}} deps
  */
+/** Write a plain HTTP error to a socket that asked to upgrade, then close it. */
+function refuseUpgrade(socket, status, message) {
+  socket.end(`HTTP/1.1 ${status} ${status === 503 ? 'Service Unavailable' : 'Bad Gateway'}\r\n`
+    + 'Content-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n'
+    + message + '\n');
+}
+
 function attachUpgrade(server, { config }) {
   const onUpgrade = (req, clientSocket, head) => {
     if (!req.url || !req.url.startsWith(PREFIX)) return; // not the editor — let other listeners handle it
     const target = upstreamOf(config);
     if (!target) {
-      // No editor upstream on this box (builder not installed, or AGENT_EDITOR_UPSTREAM unset).
-      // Returning would leave the socket hanging until the client times out, and the two ways of
-      // reaching the app then disagree: a direct client gets an empty close while nginx, having
-      // got nothing back, answers 503. That mismatch made scripts/nginx-front-check.js report that
-      // the proxy was eating WebSocket upgrades on a box whose proxy was fine. Say 503 here, the
-      // same answer the HTTP half of /agent gives above, so both paths agree at any port.
-      clientSocket.end('HTTP/1.1 503 Service Unavailable\r\n'
-        + 'Content-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n'
-        + 'The editor agent is not configured (AGENT_EDITOR_UPSTREAM).\n');
+      // No editor upstream on this box (AGENT_EDITOR_UPSTREAM set to empty). Answer 503 — the
+      // same code the HTTP half of /agent gives for this case above — instead of returning
+      // silently. A bare `return` leaves the socket hanging until the client times out, and the
+      // two ways of reaching the app then disagree: a direct client gets an empty close while
+      // nginx, having got nothing back, answers its own 503. That mismatch made
+      // scripts/nginx-front-check.js report the proxy was eating WebSocket upgrades.
+      refuseUpgrade(clientSocket, 503, 'The editor agent is not configured (AGENT_EDITOR_UPSTREAM).');
       return;
     }
     // Strip the /agent prefix from the full URL (the browser's ws URL starts with /agent/...).
@@ -125,7 +130,13 @@ function attachUpgrade(server, { config }) {
       upSocket.on('close', () => clientSocket.destroy());
       clientSocket.on('close', () => upSocket.destroy());
     });
-    p.on('error', () => clientSocket.destroy());
+    // An upstream is configured but code-server is not answering (the default 8443 is
+    // hardcoded in src/config.js and the builder is not installed on a fresh box). Mirror the
+    // HTTP half above, which turns the same connection error into a 502: write a real response
+    // here too, rather than destroying the socket. Destroying is what produced the EMPTY origin
+    // answer that disagreed with nginx's 503 on the live front-proxy check — the very mismatch
+    // this handler exists to prevent, just reached by a different branch.
+    p.on('error', () => refuseUpgrade(clientSocket, 502, 'The editor agent is not ready — please try again in a moment.'));
     p.end();
   };
   server.on('upgrade', onUpgrade);

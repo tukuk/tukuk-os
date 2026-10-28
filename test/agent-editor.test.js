@@ -186,3 +186,39 @@ test('attachUpgrade with no upstream: refuses with 503 on the socket instead of 
   killSockets();
   server.close(); server.closeAllConnections();
 });
+
+test('attachUpgrade with a configured-but-dead upstream: 502 on the socket, never an empty close', async () => {
+  // The branch that actually burned the rebuilt box. src/config.js hardcodes the editor upstream
+  // to http://127.0.0.1:8443 even when AGENT_EDITOR_UPSTREAM is unset, and a fresh box has no
+  // code-server there — so upstreamOf() returned a NON-empty target. The upgrade then took the
+  // relay path, the connection to 8443 failed, and the old `p.on('error', () => socket.destroy())`
+  // closed the socket with no bytes. Straight to Node that read as EMPTY; through nginx it was a
+  // 503 — the same origin-vs-front disagreement nginx-front-check.js flags as an eaten Upgrade.
+  // The HTTP half of /agent already answers this exact situation with a 502; the WS half must too.
+  const { app, config } = buildApp('http://127.0.0.1:1'); // a dead port, non-empty upstream
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((r) => server.once('listening', r));
+  const port = server.address().port;
+  const killSockets = trackSockets(server);
+  const detach = agentEditor.attachUpgrade(server, { config });
+
+  const ask = () => new Promise((resolve, reject) => {
+    const s = net.connect(port, '127.0.0.1');
+    let buf = '';
+    s.setTimeout(4000);
+    s.on('connect', () => s.write('GET /agent/ HTTP/1.1\r\nHost: tukuk.org\r\nUpgrade: websocket\r\n'
+      + 'Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n'));
+    s.on('data', (d) => { buf += d.toString('latin1'); });
+    s.on('timeout', () => { s.destroy(); reject(new Error('the upgrade hung or was dropped with no response')) });
+    s.on('close', () => resolve(buf));
+    s.on('error', reject);
+  });
+
+  const answer = await ask();
+  assert.match(answer, /^HTTP\/1\.1 502 /, `a dead upstream must answer 502, got ${JSON.stringify(answer.slice(0, 48))}`);
+  assert.match(answer, /not ready/, 'and say the agent is not ready, matching the HTTP half');
+
+  detach();
+  killSockets();
+  server.close(); server.closeAllConnections();
+});

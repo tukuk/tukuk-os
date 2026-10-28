@@ -189,7 +189,9 @@ case "${1:-status}" in
 
     echo
     echo "▶ live check — is HTML actually being served from the cache?"
-    for u in /bendera /alat/unit /theme.css /health; do
+    # /flags not /bendera: the hub route was renamed to English, and the old path is a bare 301
+    # that never carries a lease — probing it would report "none → none" and look like a dead cache.
+    for u in /flags /alat/unit /theme.css /health; do
       first=$(curl -s -o /dev/null -m 20 -D- "https://tukuk.org$u" | grep -im1 '^x-cache-status' | tr -d '\r' | cut -d' ' -f2)
       second=$(curl -s -o /dev/null -m 20 -D- "https://tukuk.org$u" | grep -im1 '^x-cache-status' | tr -d '\r' | cut -d' ' -f2)
       step "https://tukuk.org$u  nginx: ${first:-none} → ${second:-none}"
