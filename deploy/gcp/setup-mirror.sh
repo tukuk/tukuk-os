@@ -106,14 +106,18 @@ server {
 
     # The snapshot is static HTML + hashed-ish assets; a short lease is plenty and
     # lets a re-pull become visible quickly. search-index.json is fine to cache too.
+    # Pulled pages land as files (about.html, learn/index.html), so an extensionless
+    # request like /about has to fall back to $uri.html or every deep link 404s.
     location ~* \.(html)$ {
         add_header x-mirror "gcp" always;
         add_header Cache-Control "public, max-age=60";
-        try_files $uri $uri/ =404;
+        try_files $uri $uri.html =404;
     }
     location / {
         add_header x-mirror "gcp" always;
-        try_files $uri $uri/ $uri/index.html =404;
+        # File candidates first: $uri alone matches an existing directory (learn/), which
+        # would 301 /learn to /learn/ before $uri/index.html was ever tried.
+        try_files $uri.html $uri/index.html $uri $uri/ =404;
     }
 }
 NGX

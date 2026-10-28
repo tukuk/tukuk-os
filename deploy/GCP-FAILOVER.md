@@ -92,9 +92,37 @@ accounts):
 mirror.tukuk.org   CNAME   16359e22-3a06-4012-abc0-3b1c3cf7204a.cfargotunnel.com   proxied
 ```
 
-Add that record — or grant `Zone:DNS:Edit` and it can be created by API — then set the
-worker var `MIRROR_URL=https://mirror.tukuk.org`. Until then the ladder's mirror rung points
-at `www`, which *is* the box, so only the R2 snapshot rung can actually fire.
+Add that record — or grant `Zone:DNS:Edit` and it can be created by API. The brain already
+carries `MIRROR_URL=https://mirror.tukuk.org` (wrangler `vars`), so the rung lights up the
+moment the name resolves, with no further deploy. Until then it resolves to nothing and the
+ladder drops straight to the cold R2 snapshot (a miss, never an error). If `www` is the
+hostname that gets cut over instead, set that var to `https://www.tukuk.org`.
+
+**Blackout drill, 29 Oct 07:47 (+08)** — `systemctl stop cloudflared` on the box for ~15 s,
+probing `worker.tukuk.org` with a unique query string each time:
+
+| request | origin healthy | during the blackout |
+|---|---|---|
+| `/` | 200, 127,478 B | 200, 127,373 B — the cold snapshot |
+| `/about` | 200, 5,893 B | 200, 6,193 B — the cold snapshot |
+| `/learn` | 200 | 200, 38,310 B, “Tukuk-OS Academy: Zero to Hero” |
+| `/theme.css` | 200 | 200, 6,178 B |
+| `/health` | 200 JSON | **503** “API unavailable” — by design |
+
+Recovery was immediate (`cloudflared active`, apex 200, `/` back to 127,478 B). Two defects
+surfaced while wiring that drill, both fixed in the same pass:
+
+* the brain looked up `FALLBACK_BUCKET.get(path)`, but the snapshot stores `about.html` and
+  `learn/index.html` — so **every deep link 503'd** during a blackout instead of serving its
+  cold copy. It now tries `<path>.html`, `<path>/index.html`, then the raw key.
+* the mirror's nginx had `try_files $uri $uri/ $uri/index.html`; `$uri` matches an existing
+  *directory*, so `/learn` 301'd to `/learn/` before any file was tried, and `/about` never
+  resolved at all. The order is now `$uri.html $uri/index.html $uri $uri/`.
+
+The R2 snapshot itself covers 11 pages (`/`, `/about`, `/contact`, `/privacy`, `/terms`,
+`/docs`, `/explore`, `/access`, `/nasa`, `/blog`, `/learn`), `search-index.json` and the
+`public/` assets — content routes outside that list (e.g. `/art`, `/traffic`) still 503 in a
+blackout, which is the accepted trade-off for a 22 MB snapshot.
 
 ---
 

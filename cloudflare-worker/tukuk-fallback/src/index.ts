@@ -1,6 +1,12 @@
-import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
-
-const ORIGIN = 'https://tukuk.org';
+// Tukuk-OS failover brain. Routed on worker.tukuk.org: it proxies every request to the
+// live origin (the home box, through its Cloudflare Tunnel). When the origin answers 5xx,
+// or the fetch itself throws — a blackout, a dropped connector, a deploy that stopped the
+// app — it degrades along a ladder instead of dying: first the independent GCP mirror
+// (www.tukuk.org, its own tunnel on a separate machine), then the cold R2 static snapshot,
+// and only if both miss does it 503. ORIGIN/MIRROR_URL come from env so one build is safe
+// before and after the route move.
+const DEFAULT_ORIGIN = 'https://tukuk.org';
+const DEFAULT_MIRROR = 'https://www.tukuk.org';
 
 // Paths that must keep talking to the origin on whichever host they arrived at. A
 // redirect cannot answer an API call, and a POST that received a 301 would arrive at
@@ -8,7 +14,26 @@ const ORIGIN = 'https://tukuk.org';
 const API_PATHS = new Set(['/search', '/websearch', '/suggest', '/images', '/videos', '/health', '/stats']);
 const isApiRequest = (path: string): boolean => path.startsWith('/api/') || API_PATHS.has(path);
 
-type Outcome = 'origin_ok' | 'www_redirect' | 'origin_error' | 'fallback_served' | 'static_miss' | 'api_unavailable';
+// snapshot-r2.sh stores pages under their file key (index.html, about.html,
+// learn/index.html, theme.css) — never under the request path. Map a URL path onto the
+// shapes that snapshot actually writes, in the order most likely to hit.
+function snapshotKeys(path: string): string[] {
+	const clean = path.replace(/^\/+/, '').replace(/\/+$/, '');
+	if (clean === '') return ['index.html'];
+	if (clean.split('/').some((part) => part === '..')) return [];
+	return [`${clean}.html`, `${clean}/index.html`, clean];
+}
+
+// 'www_redirect' is gone: the brain lives on worker.tukuk.org now, so visitors who reach
+// it are here precisely because the primary is suspect — bouncing them to the apex would
+// defeat the whole point. 'mirror_served' marks a hit off the independent GCP origin.
+type Outcome =
+	| 'origin_ok'
+	| 'origin_error'
+	| 'mirror_served'
+	| 'fallback_served'
+	| 'static_miss'
+	| 'api_unavailable';
 
 // ---- authenticated R2 gateway (tukuk-backup's role, moved onto our own zone) ----
 // The VPS Cloudflare token has no R2 scope, so its backup timers POST archives to a
@@ -24,8 +49,15 @@ const MAX_BYTES = 90 * 1024 * 1024;
 async function backupGateway(request: Request, env: any, url: URL): Promise<Response> {
 	const header = request.headers.get('authorization') || '';
 	const token = header.replace(/^Bearer\s+/i, '');
-	const secret: string | undefined = (env as Record<string, any>).UPLOAD_SECRET;
-	if (!secret || token !== secret) return new Response('forbidden', { status: 403 });
+	// Two secrets. UPLOAD_SECRET writes (POST/DELETE); MIRROR_READ_TOKEN may only read
+	// (GET/list). The GCP mirror VM polls the snapshot out of the bucket through this
+	// gateway, so it needs GET but must NOT be able to overwrite a backup — a stolen VM
+	// key can then only read already-public pages, never poison the archive.
+	const writeSecret: string | undefined = (env as Record<string, any>).UPLOAD_SECRET;
+	const readSecret: string | undefined = (env as Record<string, any>).MIRROR_READ_TOKEN;
+	const isWrite = Boolean(writeSecret) && token === writeSecret;
+	const isRead = Boolean(readSecret) && token === readSecret && request.method === 'GET';
+	if (!isWrite && !isRead) return new Response('forbidden', { status: 403 });
 	const bucket = (env as Record<string, any>).FALLBACK_BUCKET;
 
 	if (request.method === 'POST') {
@@ -92,70 +124,70 @@ export default {
 		if (path === '/edge-backup' || path.startsWith('/edge-backup/')) {
 			return backupGateway(request, env, url);
 		}
-		// This worker is routed on www.tukuk.org — the mirror hostname. The app tries to
-		// 301 www → apex itself (src/server.js), but the request below is rebuilt against
-		// ORIGIN, so the origin only ever sees Host: tukuk.org and that check cannot fire.
-		// The edge is the last place that still knows the visitor used www.
-		const isMirrorHost = url.hostname.toLowerCase().startsWith('www.');
-		const canRedirect = isMirrorHost && !isApiRequest(path) && (request.method === 'GET' || request.method === 'HEAD');
+		const ORIGIN = env.ORIGIN || DEFAULT_ORIGIN;
+		const MIRROR = env.MIRROR_URL || DEFAULT_MIRROR;
+		const isReadMethod = request.method === 'GET' || request.method === 'HEAD';
 
-		// Try to proxy to main server first
+		// 1. Primary — proxy to the live origin (home box via its tunnel). new Request(url,
+		//    request) forwards method, body and all original headers (Cookie, Authorization,
+		//    Content-Type); redirect:'manual' so the origin's 3xx reach the visitor untouched.
 		try {
 			const originUrl = new URL(ORIGIN + path + url.search);
-			// new Request(originUrl, request) forwards the method, body, and all
-			// original headers (including Cookie, Authorization, Content-Type).
-			// `redirect: 'manual'` so 3xx responses are not followed automatically.
 			const originResponse = await fetch(new Request(originUrl, request, { redirect: 'manual' }));
-
-			// Forward ANY response below 500 (including 3xx redirects).
-			// Return the original response — all headers (Set-Cookie, Location, etc.)
-			// are passed straight to the browser without filtering.
-			// Only fall back to R2 if the origin returns a 5xx or
-			// the fetch fails entirely (network down).
+			// Anything below 500 is a real answer from a healthy origin — forward it whole.
 			if (originResponse.status < 500) {
-				// The origin is healthy, so one hostname can be enforced: send the visitor to
-				// the apex instead of serving the same page twice. Deliberately AFTER the
-				// health check — a 301 while the origin is down would follow the visitor
-				// straight into the outage, and the mirror exists for exactly that moment.
-				if (canRedirect) {
-					track(env, 'www_redirect', request.method, path, 301);
-					return new Response(null, {
-						status: 301,
-						headers: {
-							Location: ORIGIN + path + url.search,
-							'Cache-Control': 'public, max-age=300',
-						},
-					});
-				}
 				track(env, 'origin_ok', request.method, path, originResponse.status);
 				return originResponse;
 			}
-			// 5xx: origin in trouble — fall through to the fallback below
+			// 5xx: origin in trouble — fall through to the ladder below
 			track(env, 'origin_error', request.method, path, originResponse.status);
 		} catch (e) {
-			// Server down / unreachable — fall through to static fallback
+			// fetch threw: connector down / box offline / DNS gone — degrade.
 			track(env, 'origin_error', request.method, path);
 		}
 
-		// Fallback: serve static from R2
-		if (isApiRequest(path)) {
+		// 2. No static answer exists for an API call or a mutation — refuse honestly rather
+		//    than serving an HTML page where JSON, or the effect of a write, was expected.
+		if (isApiRequest(path) || !isReadMethod) {
 			track(env, 'api_unavailable', request.method, path, 503);
 			return new Response('API unavailable — server offline', { status: 503 });
 		}
 
+		// 3. Ladder step one — the independent GCP mirror (own tunnel, own machine), so a
+		//    home-box blackout cannot take the backup down with it. A plain GET/HEAD, no
+		//    forwarded cookies: it serves static pages only. Only accept a genuine hit
+		//    (<400); a mirror 404/5xx means "this page isn't mirrored", so we do NOT forward
+		//    that error — we drop to the cold R2 copy instead of surfacing the mirror's miss.
 		try {
-			const object = await env.FALLBACK_BUCKET.get(path === '/' ? 'index.html' : path);
-			if (object) {
-				track(env, 'fallback_served', request.method, path, 200);
-				return new Response(object.body, {
-					headers: {
-						'Content-Type': object.httpMetadata?.contentType || 'text/html',
-						'Cache-Control': 'public, max-age=300',
-					},
-				});
+			const mirrorResponse = await fetch(MIRROR + path + url.search, {
+				method: request.method,
+				redirect: 'manual',
+			});
+			if (mirrorResponse.status < 400) {
+				track(env, 'mirror_served', request.method, path, mirrorResponse.status);
+				return mirrorResponse;
 			}
 		} catch (e) {
-			// fall through
+			// mirror unreachable too — fall through to R2
+		}
+
+		// 4. Last resort — the cold R2 static snapshot the box writes every 6h. Look the
+		//    page up by its snapshot key, not its URL path, or every deep link 503s.
+		try {
+			for (const key of snapshotKeys(path)) {
+				const object = await env.FALLBACK_BUCKET.get(key);
+				if (object) {
+					track(env, 'fallback_served', request.method, path, 200);
+					return new Response(object.body, {
+						headers: {
+							'Content-Type': object.httpMetadata?.contentType || 'text/html',
+							'Cache-Control': 'public, max-age=300',
+						},
+					});
+				}
+			}
+		} catch (e) {
+			// fall through to 503
 		}
 
 		track(env, 'static_miss', request.method, path, 503);

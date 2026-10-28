@@ -3,6 +3,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-06",
   "compatibility_flags": ["global_fetch_strictly_public"],
+  // Rung 2 of the ladder: the independent GCP mirror, on its own tunnel and machine.
+  // Until its DNS record exists this resolves to nothing and the ladder drops straight to
+  // the cold R2 snapshot - a miss, never an error. Flip this to https://www.tukuk.org if
+  // www is the hostname that gets cut over to the mirror instead.
+  "vars": {
+    "MIRROR_URL": "https://mirror.tukuk.org"
+  },
   "r2_buckets": [
     {
       "binding": "FALLBACK_BUCKET",
