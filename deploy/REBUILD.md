@@ -195,9 +195,19 @@ Either way, before first reboot:
 
 ## Part G — Bring the app up
 
-The repo is **private**, so a fresh clone over HTTPS fails. Two supported paths:
-`sudo bash scripts/install-from-usb.sh`, or add a GitHub key for the new box, then
-`git clone git@github.com:fevian448/tukuk-os-v2.git /opt/tukuk-os`.
+The repo is **private** (both GitHub repos answer `404` to an unauthenticated request), so a fresh
+clone over HTTPS fails and a clone over SSH needs a key the new box does not have yet. Three
+supported paths, best first:
+
+```bash
+sudo git clone -b main /media/usb/code/tukuk-os-v2-main.bundle /opt/tukuk-os   # 1. no credentials needed
+sudo bash scripts/install-from-usb.sh                                          # 2. directory copy
+git clone git@github.com:fevian448/tukuk-os-v2.git /opt/tukuk-os               # 3. after adding a box key
+```
+
+Path 2 is the one that has bitten before: `install-from-usb.sh` rsyncs with `--exclude .git`, so the
+box it produces has **no history and no remote**, and the daily `tukuk-update` timer (`git pull
+--ff-only`) is dead from the first day — silently, because everything else works. Use a bundle.
 
 Everything after that is **one command**, and it is the command to run even when the box is
 already half-built (it is idempotent, and it ends with a PASS/FAIL table instead of a promise):
@@ -211,6 +221,46 @@ the project's own backup gateway (`GET ?prefix=`), decrypts them, restores only 
 project owns, cuts nginx over in front of Node, enables every timer, and verifies what a visitor
 can actually see. `FAILS>0` means exit 1 — a rebuild that "finished" while the site was down is the
 failure this script exists to prevent.
+
+### The handover set (every row measured 2026-10-28)
+
+`~/vps-handover-2026-10-28/` is what has to be on the stick, so that the two prerequisites below
+exist *before* the old disk is formatted rather than being chased afterwards over SSH:
+
+| file | bytes | proof it is usable |
+|---|---|---|
+| `code/tukuk-os-v2-main.bundle` | 39,673,056 | `git bundle verify` → "records a complete history", `refs/heads/main` |
+| `code/station-break-game.bundle` | 869,119,994 | `git bundle verify` → complete history, `refs/heads/game`; 1,114 tracked files, 0 LFS pointers |
+| `id.enc` | 137,760 | decrypts with `key/tukuk-backup-key` **alone**: `gzip -t` OK, 252 entries, 12 `etc/cloudflared/` files |
+| `data.tar.gz` | 18,398,889 | `gzip -t` OK, 3,019 entries |
+| `key/tukuk-backup-key` | 45 | the escrow key; nothing else decrypts `id.enc` |
+| `key/tukuk-chat-release.jks` | 2,302 | md5 `589d30f8e7476d779c5a9d6d60b431b6` — compare against a released APK before trusting it |
+| `key/keystore.env` | 614 | md5 `48c47bba542c…` |
+
+A bundle rather than a directory copy for the same reason the clone is a problem: it needs no
+GitHub credentials on a machine that has none yet, and it carries history.
+
+First boot, in order — the entire sequence, no other terminal work required:
+
+```bash
+sudo git clone -b main /media/usb/code/tukuk-os-v2-main.bundle /opt/tukuk-os
+cd /opt/tukuk-os
+sudo cp /media/usb/key/tukuk-backup-key /root/tukuk-backup-key && sudo chmod 600 /root/tukuk-backup-key
+sudo bash scripts/rebuild-from-offsite.sh
+# only if play.tukuk.org has to be rebuilt as well (~1.3 GB of Godot + template downloads):
+sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=/media/usb/code/station-break-game.bundle bash scripts/setup-all.sh
+```
+
+The last step is deliberately not part of `npm install`: a routine deploy must not spend half an
+hour and a gigabyte on a page it never touches.
+
+`rebuild-from-offsite.sh` refuses to start unless `$APP/package.json` and `/root/tukuk-backup-key`
+both exist, and names which one is missing — the first two lines above are preconditions it checks,
+not conventions.
+
+Keep the stick's permissions asymmetric on purpose: directories `700`, files `600`. Applying `600`
+to the directories as well makes their contents unlistable, which looks exactly like a wrong key
+(`0 entries` back from `tar tz`) and sends you hunting for a backup problem that is only a mode bit.
 
 ### What each path really installs (measured against the live box's own file list)
 
@@ -226,7 +276,7 @@ failure this script exists to prevent.
 | **second tunnel** `play`/`tchat`/`build` (`a3af5bb4`, credentials-file mode) | **no** — its `.json` is not in git | **yes** (archive) |
 | `data/` — passkeys, chat, counters | **no** | **yes** (archive) |
 | ssh host keys, `/etc/hosts`, real `.env` | **no** | **no** netplan (deliberately) / **yes** for the rest |
-| Godot HD build in `/var/www/tukuk-play` | **no** | **no** — rebuild with `tools/build-web.sh --deploy` |
+| Godot HD build in `/var/www/tukuk-play` | **no** — opt-in with `INSTALL_GAME=1` (`[8f]`) | **no** — same gate; the script prints the exact command |
 | APK keystore `apk/*.jks` | **no** | **no** — copy from the laptop, then compare md5 against a released APK |
 
 Two traps this table is written to defuse:
@@ -268,9 +318,18 @@ thing in the tunnel layer that only the identity archive can restore.
 
 Still manual, by design (each has a live test, not a hope):
 
-- Godot HD build: in the game repo, `sudo -u tukuk -H bash tools/build-web.sh --deploy` (it injects
-  `mainPack` and hard-fails if the pack would not be cached). Check at the edge, not locally —
-  Cloudflare Free caches by URL extension, so `.pck`/`.wasm` stay `DYNAMIC` while `.zip` goes `MISS → HIT`:
+- Godot HD build: `sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=<stick>/code/station-break-game.bundle bash scripts/setup-all.sh`.
+  That runs `deploy/godot/build-web.sh` (clone the game if `STATION_BREAK_DIR` is empty → splice
+  `deploy/godot/web-head.html` into a copy of the engine's own HTML template → headless export →
+  assert the overlay really landed) and then `deploy/godot/publish-tukuk-play.sh`, which enforces
+  the CDN contract: refuses a pack over 512 MB, publishes `index.pck` also as `index.pck.zip`,
+  rewrites `mainPack` to `index.pck.zip?v=pck<sha256-12>`, refuses to publish if that rewrite found
+  nothing to change, and then proves `cf-cache-status: MISS → HIT` at the edge. Both halves are
+  covered by `npm test` (`test/godot-rebuild.test.js`, 10 tests) — including the refusal paths,
+  which is the part that used to be only a hope. `--deploy` may not publish with a hand-written
+  `sudo cp`: the sudoers entry grants only the publisher, and copying by hand would skip the alias.
+  Check at the edge, never locally: Cloudflare Free caches by URL extension, so `.pck`/`.wasm` stay
+  `DYNAMIC` while `.zip` goes `MISS → HIT`:
   ```bash
   V=$(grep -o 'pck[0-9a-f]\{12\}' /var/www/tukuk-play/index.html | head -1)
   curl -4 -s -D- -o /dev/null "https://play.tukuk.org/index.pck.zip?v=$V" | grep -i cf-cache-status
@@ -326,3 +385,25 @@ All of these, in this order, before the box is called "back":
   the dashboard by hand.
 - **Any APK signed with the old keystore** can only be updated by that keystore. Losing it does not
   break the site; it permanently breaks updates to the published apps.
+
+### What the wipe actually took, and where it stands now
+
+The two files that produced the flagship game were **never committed to anything** — they lived in
+`~/station-break/tools/` on the box, `~/station-break` is not a backed-up path, and the game repo
+still shows neither (`git ls-tree -r refs/heads/game` → `project.godot`, `export_presets.cfg`, no
+builder, no overlay). Measured and resolved 2026-10-28:
+
+| artifact | status |
+|---|---|
+| `tools/build-web.sh` | **rescued** into git as `deploy/godot/build-web.sh` — a surviving working copy was found in `.artifacts/tmp-build-web.sh` |
+| `web-head.html` (the boot readout) | **recovered** as `deploy/godot/web-head.html`: `.artifacts/tmp-web-head.html` (the pre-fix draft) plus `.artifacts/tmp-fix-overlay.py` (the exact patch, both anchors matched, 2/2 swaps applied). `node --check` clean, and `test/godot-rebuild.test.js` pins both repairs so a re-draft fails. |
+| any *later* box revision of either | **lost** — unrecoverable, and unknowable: there is no manifest to diff against |
+| `/var/www/tukuk-play` (the built game) | **lost** — but it is a build product; `INSTALL_GAME=1` regenerates it |
+| writes after 2026-10-27 07:10 UTC | **lost** — that is the newest off-site data archive |
+
+Because the overlay is only now in git, `build-web.sh` resolves it as `$WEB_HEAD` →
+`<project>/web-head.html` → the copy committed beside the script, and hard-fails if none exists. The
+game repo does not need to gain the file: the platform repo carries it. Its header comment names
+`html/custom_html_shell`, not `html/head_include`, because Godot 4.7 **silently ignores**
+`head_include` — verified against a scratch project — and a comment pointing at the dead key is how
+the next reader ends up shipping a shell with no progress readout at all.

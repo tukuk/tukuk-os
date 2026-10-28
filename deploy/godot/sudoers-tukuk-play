@@ -1,8 +1,8 @@
 # Repo copy of /etc/sudoers.d/tukuk-play. The installed file stays root-owned
 # mode 440; this one is the source of truth for a rebuilt box.
 #
-# Why: station-break's tools/build-web.sh --deploy runs detached (setsid, no
-# terminal), where sudo cannot prompt for a password. Instead of giving the
+# Why: build-web.sh --deploy runs detached (setsid, no terminal), where sudo cannot
+# prompt for a password. Instead of giving the
 # build user a broad grant or piping a password through the scripts, the
 # privileged work sits behind one root-owned script that validates its own
 # argument, and only that script is NOPASSWD.
@@ -12,6 +12,6 @@
 #   install -o root -g root -m 440 sudoers-tukuk-play    /etc/sudoers.d/tukuk-play
 #   visudo -c            # must report /etc/sudoers.d/tukuk-play parsed OK
 #
-# Then the build publishes with:  tools/build-web.sh --deploy
+# Then the build publishes with:  deploy/godot/build-web.sh --deploy
 
 tukuk ALL=(root) NOPASSWD: /usr/local/sbin/publish-tukuk-play

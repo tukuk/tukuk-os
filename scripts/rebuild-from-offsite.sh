@@ -129,9 +129,16 @@ fi
 # ── 4. the front proxy: nginx on 3000, Node on 3001 (drop-in), tunnel to nginx ─
 log "[4/5] nginx front + services"
 command -v nginx >/dev/null || { apt-get install -y -qq nginx >/dev/null && echo "  ✓ nginx installed"; }
-if [[ -f "$APP/deploy/nginx/install-tukuk-front.sh" ]]; then
-  bash "$APP/deploy/nginx/install-tukuk-front.sh" cut >/dev/null 2>&1 \
-    && echo "  ✓ front proxy cut over" || echo "  front proxy cut not needed or failed — verify with: bash deploy/nginx/install-tukuk-front.sh verify"
+# The archive has already restored both halves of the front: /etc/nginx/conf.d (listen
+# 127.0.0.1:3000) and tukuk-os.service.d/60-front-port.conf (Node → 3001). So this line
+# measures the result instead of calling `cut` again — the installer refuses to cut a
+# second time, and that refusal would read like a failure of the rebuild.
+if ss -ltn 2>/dev/null | grep -q ':3000 ' && ss -ltn 2>/dev/null | grep -q ':3001 '; then
+  echo "  ✓ front proxy in place: nginx :3000, Node :3001"
+else
+  echo "  front proxy NOT in place. Redo the staged way:"
+  echo "    sudo bash deploy/nginx/install-tukuk-front.sh verify"
+  echo "    sudo node scripts/nginx-front-check.js 8080 && sudo bash deploy/nginx/install-tukuk-front.sh cut"
 fi
 systemctl daemon-reload
 for s in meilisearch tukuk-os cloudflared nginx cockpit.socket; do systemctl enable --now "$s" >/dev/null 2>&1 || true; done
@@ -171,7 +178,7 @@ fi
 TIMERS=$(systemctl list-timers --all --no-pager 2>/dev/null | grep -c 'tukuk-\|meili-\|chat-\|indexnow\|load-governor\|weight-report\|builder-idle')
 [[ "$TIMERS" -ge 8 ]] && good "backup/maintenance timers" "$TIMERS scheduled" || bad "backup/maintenance timers" "$TIMERS scheduled"
 MP=$(grep -o 'index.pck.zip?v=pck[0-9a-f]*' /var/www/tukuk-play/index.html 2>/dev/null | head -1)
-[[ -n "$MP" ]] && good "pack is edge-cacheable" "$MP" || note "Godot HD build" "no mainPack in /var/www/tukuk-play — rebuild: cd ~/station-break && sudo -u tukuk -H bash tools/build-web.sh --deploy"
+[[ -n "$MP" ]] && good "pack is edge-cacheable" "$MP" || note "Godot HD build" "no mainPack alias in /var/www/tukuk-play — rebuild: sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=<usb>/code/station-break-game.bundle bash scripts/setup-all.sh (builder + boot overlay now live in deploy/godot/)"
 [[ -f "$APP/apk/tukuk-chat-release.jks" ]] && good "APK signing key" present || note "APK signing key" "apk/*.jks is gitignored — copy it from the laptop, then verify md5 matches the released APKs"
 # A missing provider key is not a failure — the app degrades to extractive answers —
 # but it must be visible, because "chat stopped working after the rebuild" is

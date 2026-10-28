@@ -498,10 +498,31 @@ info "[+] nginx front proxy..."
 if ! command -v nginx >/dev/null; then
   apt-get install -y -qq nginx >/dev/null || warn "nginx install failed — the front proxy step is skipped."
 fi
-if [[ -f "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" ]] && command -v nginx >/dev/null; then
-  bash "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" cut >/dev/null 2>&1 \
-    && ok "nginx fronts the app (public hostnames -> nginx :3000 -> Node :3001)." \
-    || warn "front cut-over incomplete — check: sudo bash deploy/nginx/install-tukuk-front.sh verify"
+if command -v nginx >/dev/null && [[ -f "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" ]]; then
+  # Is the front already cut over? nginx on 3000 AND Node on 3001 is the finished shape.
+  front_live() { ss -ltn 2>/dev/null | grep -q '127.0.0.1:3000 ' && ss -ltn 2>/dev/null | grep -q '127.0.0.1:3001 '; }
+  if front_live; then
+    bash "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" reload >/dev/null 2>&1 \
+      && ok "nginx front already live — config reloaded from the repo copy." \
+      || warn "front reload failed — sudo nginx -t"
+  else
+    # The installer refuses to `cut` until the proxy passed its checks on VERIFY_PORT
+    # (8080), so the automatic path has to honour that staging rather than fight it:
+    # verify (installs the conf on 8080) → the non-interactive harness → cut.
+    # nginx-front-check.js exits 1 on any failed check, which is the gate that keeps a
+    # half-installed proxy from stealing the port the tunnel dials.
+    if bash "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" verify >/dev/null 2>&1 \
+       && node "$INSTALL_DIR/scripts/nginx-front-check.js" 8080 >/tmp/tukuk-front-check.log 2>&1; then
+      bash "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" cut >/dev/null 2>&1 \
+        && ok "nginx fronts the app (hostnames -> nginx :3000 -> Node :3001); front checks passed." \
+        || warn "cut-over failed after passing checks — sudo bash deploy/nginx/install-tukuk-front.sh status"
+    else
+      warn "front proxy NOT enabled: nginx-front-check.js on 8080 did not pass."
+      echo "   Node keeps serving :3000 directly (site works, without the front cache/headers)."
+      echo "   Last failing checks: $(grep -c '^FAIL' /tmp/tukuk-front-check.log 2>/dev/null || echo '?') — see /tmp/tukuk-front-check.log"
+      echo "   Redo by hand once nginx is sane: sudo bash deploy/nginx/install-tukuk-front.sh verify"
+    fi
+  fi
 fi
 # play.tukuk.org is a second server block on the same :3000 listener, and its
 # `location = /index.pck.zip` alias is the only reason the 476 MB Godot pack gets
@@ -572,6 +593,55 @@ if [[ -n "$LAN_IP" ]]; then
   ok "Cockpit: http://$LAN_IP:9090 (plus 127.0.0.1:9090 for an ssh tunnel). No public listener."
 else
   warn "could not determine the LAN address; Cockpit left on its default listener. Bind it before relying on it."
+fi
+
+# ── [8f] The Godot HD build — opt-in, because it is 1.3 GB of downloads ────────
+# INSTALL_GAME=1 makes play.tukuk.org reproducible from this script alone. Default is
+# OFF: pulling Godot plus the export templates on every `npm install` would make a
+# routine deploy take half an hour and a gigabyte for a page most deploys never touch.
+if [[ "${INSTALL_GAME:-0}" == "1" ]]; then
+  info "[+] Godot web build (INSTALL_GAME=1)..."
+  GAME_DIR="${STATION_BREAK_DIR:-/home/tukuk/station-break}"
+  GBIN="${GODOT_BIN:-/home/tukuk/bin/godot}"
+  # Source: the game lives in its own private repo (fevian448/station-break). A handover
+  # USB carries it as a bundle, which needs no GitHub auth on a machine that has no key yet.
+  if [[ ! -f "$GAME_DIR/project.godot" ]]; then
+    BUN="${TUKUK_GAME_BUNDLE:-}"
+    if [[ -n "$BUN" && -f "$BUN" ]]; then
+      git clone -b game "$BUN" "$GAME_DIR" >/dev/null 2>&1 || true
+      [[ -f "$GAME_DIR/project.godot" ]] && ok "game source cloned from the bundle."
+    fi
+  fi
+  if [[ ! -f "$GAME_DIR/project.godot" ]]; then
+    warn "no game source at $GAME_DIR — set STATION_BREAK_DIR, or TUKUK_GAME_BUNDLE=/media/…/code/station-break-game.bundle"
+  elif ! "$GBIN" --version >/dev/null 2>&1; then
+    warn "Godot not runnable at $GBIN — install the headless 4.x binary there (or set GODOT_BIN), then rerun."
+    echo "   It must match the installed export templates; a mismatch fails the export silently." >&2
+  else
+    # The boot overlay. The builder falls back to the copy committed beside it, so this is
+    # only a report of WHICH copy is going into the shell — said before a ~20 minute export,
+    # not after. The builder's own `grep -q tb-bytes index.html` stays the real gate: a shell
+    # that silently fell back to the stock template must never be published.
+    if [[ -f "$GAME_DIR/web-head.html" ]]; then
+      info "boot overlay: $GAME_DIR/web-head.html (box copy wins)"
+    elif [[ -f "$INSTALL_DIR/deploy/godot/web-head.html" ]]; then
+      info "boot overlay: deploy/godot/web-head.html (the copy rescued into git)"
+    else
+      warn "no boot overlay anywhere — the builder will refuse to run. play.tukuk.org would show a bare progress bar."
+    fi
+    install -m 0755 "$INSTALL_DIR/deploy/godot/publish-tukuk-play.sh" /usr/local/sbin/publish-tukuk-play
+    install -m 0440 "$INSTALL_DIR/deploy/godot/sudoers-tukuk-play" /etc/sudoers.d/tukuk-play \
+      && visudo -c -f /etc/sudoers.d/tukuk-play >/dev/null 2>&1 \
+      || warn "sudoers file installed but visudo did not validate it — check /etc/sudoers.d/tukuk-play"
+    if sudo -u tukuk -H env "HOME=/home/tukuk" STATION_BREAK_DIR="$GAME_DIR" GODOT_BIN="$GBIN" \
+         bash "$INSTALL_DIR/deploy/godot/build-web.sh"; then
+      sudo -u tukuk /usr/local/sbin/publish-tukuk-play "$GAME_DIR/web-build" \
+        && ok "Godot build published; the publisher printed its own edge-cache MISS/HIT verdict." \
+        || warn "publisher refused to publish — read its FATAL line (pack size or mainPack alias)."
+    else
+      warn "Godot export failed — tail: \${WEB_BUILD_LOG:-$GAME_DIR/../web-latest.log}"
+    fi
+  fi
 fi
 
 # ── [9] Final verification ────────────────────────────────────────────────────
