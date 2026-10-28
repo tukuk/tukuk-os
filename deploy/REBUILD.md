@@ -230,7 +230,7 @@ exist *before* the old disk is formatted rather than being chased afterwards ove
 
 | file | bytes | proof it is usable |
 |---|---|---|
-| `code/tukuk-os-v2-main.bundle` | 39,691,023 | `git bundle verify` → "records a complete history", `refs/heads/main` = the pushed HEAD |
+| `code/tukuk-os-v2-main.bundle` | ≈39.7 MB (exact figure lives in `SHA256SUMS` on the stick, not here — a byte count in a file the bundle carries goes stale on every commit) | `git bundle verify` → "records a complete history", `refs/heads/main` = the pushed HEAD |
 | `code/station-break-game.bundle` | 869,119,994 | `git bundle verify` → complete history, `refs/heads/game`; 1,114 tracked files, 0 LFS pointers |
 | `id.enc` | 137,760 | decrypts with `key/tukuk-backup-key` **alone**: `gzip -t` OK, 252 entries, 12 `etc/cloudflared/` files |
 | `data.tar.gz` | 18,398,889 | `gzip -t` OK, 3,019 entries |
