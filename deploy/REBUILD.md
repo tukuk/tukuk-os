@@ -302,7 +302,7 @@ to the directories as well makes their contents unlistable, which looks exactly 
 | nginx front (public hostnames → `:3000` nginx → `:3001` Node) | yes — added; before this it was never installed | yes |
 | `tukuk-play.conf` incl. the `.pck.zip` edge-cache alias | yes — added; `install-tukuk-front.sh` never copied it | yes |
 | data/content/indexnow/load-governor/weight-report/builder timers | yes — added from `deploy/` | yes |
-| Cockpit, LAN-only | yes — added (`cockpit.socket.d/40-lan-only.conf`) | yes |
+| Cockpit, LAN-only | yes — added (`cockpit.socket.d/40-lan-only.conf`, regenerated at boot by `cockpit-lan-socket.service`) | yes |
 | main tunnel `tukuk.org`/`www`/`dashboard` (token mode) | yes — `CF_TUNNEL_TOKEN` is in `deploy/env.defaults` | yes |
 | **second tunnel** `play`/`tchat`/`build` (`a3af5bb4`, credentials-file mode) | **no** — its `.json` is not in git | **yes** (archive) |
 | `data/` — the site's memory (posts, history, stats, events, chat, counters; passkeys *would* live here) | **no** | **yes** (archive) with `FORCE_DATA=1` — see the first-boot note |
@@ -398,19 +398,30 @@ Still manual, by design (each has a live test, not a hope):
 
 ## Part H — Cockpit, LAN only
 
-`setup-all.sh` now installs and binds Cockpit itself, so this part is a **check**, not a task:
+`setup-all.sh` installs and binds Cockpit itself, so this part is a **check**, not a task:
 
 ```bash
-cat /etc/systemd/system/cockpit.socket.d/40-lan-only.conf   # ListenStream= cleared, then 127.0.0.1 + LAN IP
-ss -ltnp | grep 9090                                        # must be 127.0.0.1:9090 and <lan-ip>:9090 only
-curl -k -s -o /dev/null -w '%{http_code}\n' https://192.168.8.101:9090/login   # 200
+cat /etc/systemd/system/cockpit.socket.d/40-lan-only.conf   # ListenStream= cleared, then 127.0.0.1 + every LAN IP the box has now
+ss -ltnp | grep 9090                                        # 127.0.0.1:9090 and <lan-ip>:9090, nothing on 0.0.0.0
+curl -k -s -o /dev/null -w '%{http_code}\n' https://<lan-ip>:9090/login   # 401 (unauthenticated), never 000
 ```
+
+Then open `https://<lan-ip>:9090/` in a browser (self-signed cert, so accept it once) and log in with
+the `tukuk` account. A 401 from `curl` is the healthy answer for an unauthenticated GET; a **login**
+can only be proven in a browser — `curl -u user:pass -X POST https://<ip>:9090/cockpit/login` returns
+**405** even when the password is right, because Cockpit 360 wants the React login page's own flow.
+Do not read that 405 as a broken console.
 
 The drop-in clears Cockpit's default `0.0.0.0`/`::` listeners (systemd list-type options **append**,
 so the empty `ListenStream=` line is required) and re-listens on the box's own LAN IPv4 plus
-loopback — loopback so that `ssh -L 9090:127.0.0.1:9090 tukuk@<host>` still opens the console if the
-LAN address ever moves. No firewall rule is added by a script: automating `ufw` over SSH is how a
-box gets locked out a second time.
+loopback. The address list is **never stored**: `deploy/cockpit-lan-socket.sh` (installed as
+`/usr/local/sbin/cockpit-lan-socket`, run at boot by `cockpit-lan-socket.service` and from
+`setup-all.sh`) rewrites the drop-in from `ip -4 addr` whenever the answer changes. Pinning the lease
+seen at install time is what made the console unreachable on 28 Oct 2026: the drop-in still pointed at
+`192.168.8.104` after the box had moved to `.100`/`.101`, so `systemctl is-active cockpit.socket` said
+`active` while every LAN connection was refused. Loopback stays in the list so
+`ssh -L 9090:127.0.0.1:9090 tukuk@<host>` still reaches the console. No firewall rule is added by a
+script: automating `ufw` over SSH is how a box gets locked out a second time.
 
 Never put Cockpit behind a public tunnel hostname. It is a root shell with a password prompt, and
 the tunnel would hand it an internet-facing address. If remote eyes on the box are genuinely needed,

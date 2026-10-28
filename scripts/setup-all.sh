@@ -581,18 +581,32 @@ ok "backup / indexnow / governance timers enabled."
 info "[+] Cockpit (LAN-only console)..."
 apt-get install -y -qq cockpit >/dev/null 2>&1 || warn "cockpit install failed (not fatal)."
 LAN_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '/src/{for(i=1;i<NF;i++) if($i=="src") print $(i+1)}' | head -1)"
-if [[ -n "$LAN_IP" ]]; then
-  mkdir -p /etc/systemd/system/cockpit.socket.d
-  # Loopback is kept as well: if the LAN address ever moves (DHCP, NIC rename), a
-  # socket bound only to the old address is a console you cannot reach — the exact
-  # failure this block exists to prevent. With 127.0.0.1 also listening, ssh -L
-  # 9090:127.0.0.1:9090 tukuk@<anything> still opens the dashboard.
-  printf '[Socket]\nListenStream=\nListenStream=127.0.0.1:9090\nListenStream=%s:9090\n' "$LAN_IP" > /etc/systemd/system/cockpit.socket.d/40-lan-only.conf
+# The address is RE-DERIVED, never stored. Freezing the lease this script happens to
+# see is how the console went unreachable on 28 Oct 2026: the drop-in still pointed at
+# 192.168.8.104 while the box had moved to .100/.101, so cockpit.socket reported
+# "active" and refused every LAN connection. deploy/cockpit-lan-socket.sh rewrites the
+# drop-in from `ip` at every boot; this call fixes it right now.
+if [[ -f "$INSTALL_DIR/deploy/cockpit-lan-socket.sh" ]]; then
+  install -m 0755 "$INSTALL_DIR/deploy/cockpit-lan-socket.sh" /usr/local/sbin/cockpit-lan-socket
+  cat > /etc/systemd/system/cockpit-lan-socket.service << 'EOF'
+[Unit]
+Description=Cockpit socket: bind to the LAN addresses this boot actually has
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cockpit-lan-socket
+
+[Install]
+WantedBy=multi-user.target
+EOF
   systemctl daemon-reload
-  systemctl restart cockpit.socket >/dev/null 2>&1 || systemctl enable --now cockpit.socket >/dev/null 2>&1 || true
-  ok "Cockpit: http://$LAN_IP:9090 (plus 127.0.0.1:9090 for an ssh tunnel). No public listener."
+  systemctl enable cockpit-lan-socket.service >/dev/null 2>&1 || true
+  bash /usr/local/sbin/cockpit-lan-socket || warn "cockpit LAN socket bind failed — check: sudo bash $INSTALL_DIR/deploy/cockpit-lan-socket.sh"
+  ok "Cockpit: http://${LAN_IP:-<lan-ip>}:9090 (127.0.0.1 kept for an ssh tunnel). Addresses re-derived at boot."
 else
-  warn "could not determine the LAN address; Cockpit left on its default listener. Bind it before relying on it."
+  warn "deploy/cockpit-lan-socket.sh missing — Cockpit left on its default listener. Bind it before relying on it."
 fi
 
 # ── [8f] The Godot HD build — opt-in, because it is 1.3 GB of downloads ────────

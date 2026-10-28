@@ -202,7 +202,7 @@ else
   echo "    sudo node scripts/nginx-front-check.js 8080 && sudo bash deploy/nginx/install-tukuk-front.sh cut"
 fi
 systemctl daemon-reload
-for s in meilisearch tukuk-os cloudflared nginx cockpit.socket; do systemctl enable --now "$s" >/dev/null 2>&1 || true; done
+for s in meilisearch tukuk-os cloudflared nginx cockpit.socket cockpit-lan-socket.service; do systemctl enable --now "$s" >/dev/null 2>&1 || true; done
 systemctl restart cloudflared cloudflared-build >/dev/null 2>&1 || true
 for t in tukuk-data-backup tukuk-identity-backup tukuk-content-backup meili-backup chat-backup tukuk-snapshot tukuk-os-watchdog tukuk-update indexnow-submit load-governor weight-report builder-idle-stop; do
   systemctl enable --now "$t.timer" >/dev/null 2>&1 || true
@@ -225,7 +225,10 @@ chk "play.tukuk.org"            200 "$(code https://play.tukuk.org/)"
 [[ "$(systemctl is-active cloudflared-build 2>/dev/null)" == active ]] \
   && good "second tunnel (cloudflared-build)" active \
   || bad "second tunnel (cloudflared-build)" "$(systemctl is-active cloudflared-build 2>/dev/null) — play/tchat/build will 530"
-chk "cockpit on 9090"            200 "$(code https://127.0.0.1:9090/login)"
+# 401, not 200: Cockpit 360 answers an unauthenticated GET /login with a JSON
+# "authentication-unavailable" problem. A 200 here would mean something else is
+# wearing the port.
+chk "cockpit on 9090"           401 "$(code https://127.0.0.1:9090/login)"
 for s in meilisearch tukuk-os cloudflared nginx; do
   [[ "$(systemctl is-active "$s" 2>/dev/null)" == active ]] && good "service $s" active || bad "service $s" "$(systemctl is-active "$s" 2>/dev/null)"
 done
