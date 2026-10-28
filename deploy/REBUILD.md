@@ -403,14 +403,22 @@ Still manual, by design (each has a live test, not a hope):
 ```bash
 cat /etc/systemd/system/cockpit.socket.d/40-lan-only.conf   # ListenStream= cleared, then 127.0.0.1 + every LAN IP the box has now
 ss -ltnp | grep 9090                                        # 127.0.0.1:9090 and <lan-ip>:9090, nothing on 0.0.0.0
-curl -k -s -o /dev/null -w '%{http_code}\n' https://<lan-ip>:9090/login   # 401 (unauthenticated), never 000
+curl -k -s -o /dev/null -w '%{http_code}\n' https://<lan-ip>:9090/login   # 200 (the login page), never 000
 ```
 
 Then open `https://<lan-ip>:9090/` in a browser (self-signed cert, so accept it once) and log in with
-the `tukuk` account. A 401 from `curl` is the healthy answer for an unauthenticated GET; a **login**
-can only be proven in a browser — `curl -u user:pass -X POST https://<ip>:9090/cockpit/login` returns
-**405** even when the password is right, because Cockpit 360 wants the React login page's own flow.
-Do not read that 405 as a broken console.
+the `tukuk` account. Plain `http://` on the LAN answers **301** to https; on loopback it serves 200
+directly. Three responses are easy to misread, so they are listed measured from this box (Cockpit
+360-1, 2026-10-28):
+
+| request | answer | reads as |
+|---|---|---|
+| `GET https://<ip>:9090/login` | **200** | healthy — this IS the login page (`#login-user-input`) |
+| `GET https://<ip>:9090/cockpit/login` | **401** | also healthy — the *package* endpoint, not the login page |
+| `POST https://<ip>:9090/cockpit/login` with `-u user:pass` | **405** | not a broken console — this build rejects the POST, so a **login can only be proven in a browser** |
+
+A **000** on the first row is the failure that matters: nothing is listening, which is what a stale
+drop-in produces while `systemctl is-active cockpit.socket` still says `active`.
 
 The drop-in clears Cockpit's default `0.0.0.0`/`::` listeners (systemd list-type options **append**,
 so the empty `ListenStream=` line is required) and re-listens on the box's own LAN IPv4 plus

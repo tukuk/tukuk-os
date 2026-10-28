@@ -225,10 +225,11 @@ chk "play.tukuk.org"            200 "$(code https://play.tukuk.org/)"
 [[ "$(systemctl is-active cloudflared-build 2>/dev/null)" == active ]] \
   && good "second tunnel (cloudflared-build)" active \
   || bad "second tunnel (cloudflared-build)" "$(systemctl is-active cloudflared-build 2>/dev/null) — play/tchat/build will 530"
-# 401, not 200: Cockpit 360 answers an unauthenticated GET /login with a JSON
-# "authentication-unavailable" problem. A 200 here would mean something else is
-# wearing the port.
-chk "cockpit on 9090"           401 "$(code https://127.0.0.1:9090/login)"
+# 200, measured: an unauthenticated GET /login is the real login page (it carries
+# #login-user-input / #login-password-input). The 401 belongs to /cockpit/login, the package
+# endpoint — checking THAT would pass for a console nobody can reach a login page on. A 000
+# here means nothing is bound (the stale-drop-in failure), not that Cockpit refused us.
+chk "cockpit on 9090"           200 "$(code https://127.0.0.1:9090/login)"
 for s in meilisearch tukuk-os cloudflared nginx; do
   [[ "$(systemctl is-active "$s" 2>/dev/null)" == active ]] && good "service $s" active || bad "service $s" "$(systemctl is-active "$s" 2>/dev/null)"
 done

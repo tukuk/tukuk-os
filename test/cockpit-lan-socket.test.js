@@ -117,9 +117,12 @@ test('setup-all.sh calls the regenerator and never pins a lease again', () => {
   // silently keeps whatever the archive left behind.
   const rebuild = fs.readFileSync(path.join(ROOT, 'scripts/rebuild-from-offsite.sh'), 'utf8');
   assert.match(rebuild, /cockpit-lan-socket\.service/, 'rebuild-from-offsite must enable the regenerator');
-  // Cockpit 360 answers an unauthenticated GET /login with 401; expecting 200 there would
-  // have marked a healthy console as broken.
-  assert.match(rebuild, /chk "cockpit on 9090"\s+401/);
+  // Cockpit answers an unauthenticated GET /login with the login page itself (200). The 401
+  // belongs to /cockpit/login, the package endpoint; checking that instead would pass on a
+  // console nobody could open a login page on.
+  assert.match(rebuild, /chk "cockpit on 9090"\s+200/);
+  assert.ok(!/chk "cockpit on 9090"\s+401/.test(rebuild), 'the 401 belonged to /cockpit/login, not /login');
+  assert.match(rebuild, /9090\/login/, 'the check must hit /login, the page the operator will open');
 });
 
 test('the boot unit runs before cockpit.socket, not after it', () => {
