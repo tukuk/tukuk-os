@@ -40,7 +40,10 @@ api() {
 # when the token is rotated.
 ZONE_ID="$(api GET "/zones?name=$ZONE_NAME" | sed -n 's/.*"id":"\([a-f0-9]\{32\}\)".*/\1/p' | head -1)"
 if [[ -z "$ZONE_ID" ]]; then
-  echo "purge-edge-cache: could not resolve the zone id for $ZONE_NAME (token lacks Zone:Read?)" >&2
+  # The token on this box is scoped to Workers/AI and sees no zones, so this is the expected
+  # outcome here today — the script is the right tool, the credential is the missing piece.
+  echo "purge-edge-cache: the API token cannot see $ZONE_NAME (needs Zone:Read + Zone:Cache Purge)." >&2
+  echo "purge-edge-cache: nothing was purged; the edge will refresh on its own within its TTL." >&2
   exit 1
 fi
 

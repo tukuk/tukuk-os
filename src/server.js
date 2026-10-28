@@ -3398,10 +3398,12 @@ app.use(express.static(PUBLIC_DIR, {
     // HTML shells: revalidate every time, so an update shows at once.
     else if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
     // CSS/JS used to be `no-cache` too, which meant every single page view paid a round
-    // trip to this box just for the stylesheet. These files are not content-hashed, so a
-    // short browser lease is kept (a style edit still lands as soon as it expires) while
-    // the shared cache gets the long lease — that is where the requests were being lost.
-    else if (/\.(css|js)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400');
+    // trip to this box just for the stylesheet. These files are not content-hashed, so the
+    // shared lease is what decides how long a deploy takes to be visible: at s-maxage=3600 an
+    // accessibility fix sat in the repo while the edge kept serving the previous stylesheet to
+    // every visitor for an hour. Five minutes is the same lease the HTML gets, and a style edit
+    // only costs one origin fetch per edge node per file.
+    else if (/\.(css|js)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600');
     // Images/icons/fonts: rarely changed, and a stale one is only ever a visual regression.
     else if (/\.(?:png|jpe?g|webp|avif|svg|ico|woff2?)$/i.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000');
   }
