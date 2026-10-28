@@ -14,14 +14,19 @@
 <link rel="stylesheet" href="/theme.css">
 <script src="/adsense-loader.js" defer></script>
 <style>
+  /* Names are `--pl-*` on purpose. theme.css is loaded here and its :root[data-theme] palette has
+     a higher specificity than a plain :root, so when it redefined --muted and --accent-glow the
+     player's own values lost: the "not found" text was #5c6472 on #090c15 (3.27:1) and its link
+     was rgba(31,111,235,.15), a 1.13:1 ghost. The player is always dark, so it carries its own
+     palette under names the site theme cannot reach. */
   :root {
     --bg-dark: #090c15;
     --panel-glass: rgba(18, 24, 38, 0.72);
     --panel-border: rgba(255, 255, 255, 0.1);
-    --accent-glow: #4c8dff;
+    --pl-accent: #4c8dff;
     --play-green: #22c55e;
-    --text-bright: #f0f4fc;
-    --muted: #8b99b5;
+    --pl-text: #f0f4fc;
+    --pl-muted: #8b99b5;
   }
   /* The player shows and hides whole regions with the `hidden` attribute (topbar, stage,
      relbar, oops). Every one of them also sets `display:`, which beats the UA rule for
@@ -29,10 +34,13 @@
      the error state never actually hid the player it was meant to replace. */
   [hidden] { display: none !important; }
   body {
-    margin: 0; background: var(--bg-dark); color: var(--text-bright);
+    margin: 0; background: var(--bg-dark); color: var(--pl-text);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden;
   }
+  /* One main landmark holding the whole player. It takes over the column layout the body used to
+     give its children, so the topbar / stage / strip keep their flex sizes. */
+  main.player { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
   /* Thin top bar — back, title, play count, player tools */
   .topbar {
@@ -45,28 +53,30 @@
     border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 12px;
     background: rgba(255,255,255,0.05); white-space: nowrap;
   }
-  .topbar .back:hover { border-color: var(--accent-glow); color: #fff; }
+  .topbar .back:hover { border-color: var(--pl-accent); color: #fff; }
   .topbar .ttl { min-width: 0; display: flex; flex-direction: column; }
   .topbar .ttl h1 { margin: 0; font-size: 1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .topbar .ttl .sub { font-size: .7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .ttl .sub { font-size: .7rem; color: var(--pl-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .topbar .plays {
     background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.35); color: #7ce898;
     font-size: .74rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; white-space: nowrap;
   }
   .topbar .sp { flex: 1; }
   .tbtn {
-    background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: var(--muted);
+    background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: var(--pl-muted);
     border-radius: 10px; padding: 6px 11px; font-size: .82rem; font-weight: 700; cursor: pointer;
     text-decoration: none; white-space: nowrap; transition: all .18s;
   }
-  .tbtn:hover { color: #fff; border-color: var(--accent-glow); }
-  .tbtn.prim { background: var(--play-green); border-color: var(--play-green); color: #fff; }
+  .tbtn:hover { color: #fff; border-color: var(--pl-accent); }
+  /* White on --play-green was 2.30:1, so the fullscreen button carries the player ink instead: dark
+     text on a green fill is the same 4.5:1+ choice every other chip here makes. */
+  .tbtn.prim { background: var(--play-green); border-color: var(--play-green); color: #08121e; }
 
   /* Play stage — the iframe fills the remaining viewport */
   .stage { flex: 1; min-height: 0; position: relative; background: #05070d; }
   .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
   .stage .loadmsg {
-    position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted);
+    position: absolute; inset: 0; display: grid; place-items: center; color: var(--pl-muted);
     font-size: .95rem; background: #05070d; z-index: 2; transition: opacity .3s;
   }
   .stage .loadmsg.gone { opacity: 0; pointer-events: none; }
@@ -78,7 +88,7 @@
     backdrop-filter: blur(12px);
   }
   .rotate.show { display: flex; }
-  .rotate button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: .9rem; }
+  .rotate button { background: none; border: 0; color: var(--pl-muted); cursor: pointer; font-size: .9rem; }
 
   /* Related gallery — a horizontal strip along the bottom */
   .relbar {
@@ -86,15 +96,15 @@
     padding: 8px 12px 10px; display: flex; gap: 10px; align-items: center; overflow-x: auto;
     scrollbar-width: thin;
   }
-  .relbar .rl { color: var(--muted); font-size: .74rem; font-weight: 800; white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; }
+  .relbar .rl { color: var(--pl-muted); font-size: .74rem; font-weight: 800; white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; }
   .rcard {
-    flex: none; width: 108px; text-decoration: none; color: var(--text-bright); display: block;
+    flex: none; width: 108px; text-decoration: none; color: var(--pl-text); display: block;
   }
   .rcard .rthumb {
     position: relative; aspect-ratio: 3/2; border-radius: 10px; border: 1px solid var(--panel-border);
     display: grid; place-items: center; font-size: 1.7rem; overflow: hidden; transition: all .18s;
   }
-  .rcard:hover .rthumb { border-color: var(--accent-glow); transform: translateY(-2px); }
+  .rcard:hover .rthumb { border-color: var(--pl-accent); transform: translateY(-2px); }
   .rcard .rt { font-size: .72rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
   .bg-arkad { background: linear-gradient(150deg, #34246b, #12142e); }
   .bg-teki-teki { background: linear-gradient(150deg, #103d52, #0d1f33); }
@@ -110,9 +120,9 @@
   .bg-app { background: linear-gradient(150deg, #1b2b55, #101a33); }
 
   /* Error state */
-  .oops { flex: 1; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 30px; }
+  .oops { flex: 1; display: grid; place-items: center; text-align: center; color: var(--pl-muted); padding: 30px; }
   .oops .big { font-size: 3rem; margin-bottom: 10px; }
-  .oops a { color: var(--accent-glow); font-weight: 700; text-decoration: none; }
+  .oops a { color: var(--pl-accent); font-weight: 700; text-decoration: none; }
 
   @media (max-width: 640px) {
     .topbar .ttl h1 { font-size: .9rem; }
@@ -124,6 +134,7 @@
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8954948214333501" crossorigin="anonymous"></script>
 </head>
 <body>
+<main class="player">
 <div class="topbar" id="topbar" hidden>
   <a class="back" href="/os">← Tukuk OS</a>
   <div class="ttl">
@@ -152,6 +163,7 @@
     <p><a href="/os">← Back to Tukuk OS</a></p>
   </div>
 </div>
+</main>
 
 <script>
 (() => {

@@ -3816,6 +3816,7 @@ app.get('/datacenter', (req, res) => {
 <link rel="canonical" href="https://tukuk.org/datacenter">
 <style>${COMMON_CSS}</style>
 </head><body><div class="wrap">
+<main>
 <header><h1>🏢 Tukuk-OS AI Data Center</h1>
 <p class="tagline">Every application and every AI model — unified, live.</p></header>
 <a class="back-link" href="/models">← Model inventory</a>
@@ -3845,6 +3846,7 @@ app.get('/datacenter', (req, res) => {
   }).catch(function () { el.innerHTML = '<p>Could not load /api/datacenter.</p>'; });
 })();
 </script>
+</main>
 <footer>Tukuk-OS · AI Data Center · <a href="/models">models</a> · <a href="/os">store</a> · <a href="/docs">docs</a></footer>
 </div></body></html>`);
 });
@@ -3858,6 +3860,7 @@ app.get('/models', (req, res) => {
 <link rel="canonical" href="https://tukuk.org/models">
 <style>${COMMON_CSS}</style>
 </head><body><div class="wrap">
+<main>
 <header><h1>🧠 AI Data Center</h1>
 <p class="tagline">Every AI model this server runs — local inference, the self-trained brain, and emergency fallbacks.</p></header>
 <a class="back-link" href="/">← Back to search</a>
@@ -3900,6 +3903,7 @@ app.get('/models', (req, res) => {
   }).catch(function () { el.innerHTML = '<p>Could not load /api/models.</p>'; });
 })();
 </script>
+</main>
 <footer>Tukuk-OS · AI Data Center · <a href="/docs">docs</a> · <a href="/about">about</a></footer>
 </div></body></html>`);
 });
@@ -4229,6 +4233,7 @@ function recipesHubPage() {
   const cards = rcp.SECTIONS.map((s) => `<div class="rc-card"><a href="/recipes/${s.slug}"><div class="rc-noimg">🍲</div><div class="rc-pad"><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.blurb)}${counts[s.slug] ? ` · <b>${counts[s.slug]} recipes</b>` : ''}</p></div></a></div>`).join('');
   const body = `<p>tukuk.org can tell you what rendang is and could not tell you how to cook it. This is that second answer: recipes written by cooks, with quantities and a method, read straight from the <a href="https://en.wikibooks.org/wiki/Cookbook:Home" rel="nofollow noopener">Wikibooks Cookbook</a> and put on a page you can cook from on a phone with wet hands.</p>
   <p>The Cookbook is free in the sense that matters: its text is published under <b>CC BY-SA 4.0</b>, so it may be copied and adapted as long as the licence and the authors are named. That is done here rather than waved at — every dish says where it came from, links the page it was taken from, and prints the licence and the photographer under its picture. Photographs are served from Wikimedia's own servers so that a picture is never separated from the metadata that says who may use it.</p>
+  <h2 class="section-title">The shelves</h2>
   <div class="rc-grid">${cards}</div>
   <h2 class="section-title">How a shelf is filled</h2>
   <p>A shelf is drawn either from the Cookbook's own category ("Indonesian recipes", "Recipes for bread") or, where the category holds sub-categories rather than dishes, from a search of the Cookbook namespace. Then four rules: a page the wiki itself flags as unfinished — missing quantities, a method copied off YouTube, a stub — is not published; a page with no recipe summary template is an article about an ingredient and is left out; the dishes a visitor came for are put first, because a category is sorted by title and the first twenty-four of four hundred Indian recipes are the ones beginning A and B; and the rest are taken at stride so a shelf is a spread rather than an alphabet.</p>
@@ -5751,7 +5756,7 @@ function renderMarkdown(md) {
 
 const COMMON_CSS = `
   :root { --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef; --muted:#9aa3b2; --accent:#4c8dff; --code-bg:#12151c; }
-  @media (prefers-color-scheme: light) { :root { --bg:#f7f8fa; --panel:#fff; --line:#e3e6ec; --text:#151922; --muted:#5c6472; --accent:#1f6feb; --code-bg:#f0f3f8; } }
+  @media (prefers-color-scheme: light) { :root { --bg:#f7f8fa; --panel:#fff; --line:#e3e6ec; --text:#151922; --muted:#5c6472; --accent:#1a63d4; --code-bg:#f0f3f8; } }
   * { box-sizing:border-box; }
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   body { margin:0; background:var(--bg); color:var(--text); font:16px/1.75 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
@@ -5763,6 +5768,10 @@ const COMMON_CSS = `
   .tagline { color:var(--muted); font-size:1.05rem; margin:0; }
   a { color:var(--accent); text-decoration:none; }
   a:hover { text-decoration:underline; }
+  /* Links inside running text (WCAG 1.4.1): colour alone does not distinguish them, and #1f6feb
+     on #f7f8fa was also only 4.36:1 (1.4.3). The underline is the affordance that survives
+     colour-blindness and forced-colours; cards, nav and buttons keep their flat look. */
+  p a, li a, td a, dd a, blockquote a, footer a, .meta a, .tagline a { text-decoration:underline; text-underline-offset:2px; }
   nav { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0 0; font-size:.92rem; }
   footer { margin:54px 0 36px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:.88rem; text-align:center; }
   .post-card { position:relative; display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 22px 18px; margin:22px 0; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
@@ -6314,11 +6323,12 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('nasa')}
 <div class="wrap">
+  <main>
   <header>
     <h1>${escapeHtml(title)}</h1>
     <p class="tagline">Astronomy Picture of the Day &middot; ${escapeHtml(dateLabel)} &middot; Image &amp; explanation courtesy of NASA (public domain).</p>
   </header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     <p class="back-link"><a href="/">&larr; Back to Tukuk-OS</a></p>
     ${imgHtml}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
@@ -6458,8 +6468,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('nasa')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${nasaSpaceNav()}
@@ -7101,8 +7111,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('cuaca')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${cuacaNav()}
@@ -7595,8 +7605,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('gempa')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${gempaNav()}
@@ -7614,7 +7624,10 @@ function gpWhen(t) {
   return `${WX_DAYS[p.wday]} ${p.day} ${WX_MONTHS[p.mon].slice(0, 3)} ${String(p.h).padStart(2, '0')}:${String(p.m).padStart(2, '0')}`;
 }
 function gpChip(m) {
-  const bg = m >= 6 ? '#c0392b' : m >= 5 ? '#e67e22' : m >= 4 ? '#2980b9' : '#7f8c8d';
+  // White on these four needs 4.5:1 (1.4.3): the old #e67e22 was 2.85, #2980b9 4.31 and #7f8c8d
+  // 3.48 against #fff. These four darker tones keep the same red/orange/blue/grey severity ladder
+  // and clear it (5.41, 4.75, 5.14, 4.73).
+  const bg = m >= 6 ? '#c0392b' : m >= 5 ? '#b35c00' : m >= 4 ? '#2573a6' : '#6b7576';
   return `<span class="wx-pill" style="background:${bg};color:#fff">M ${Number(m).toFixed(1)}</span>`;
 }
 function gpTable(rows, n) {
@@ -7627,7 +7640,9 @@ function gpTable(rows, n) {
 }
 function gpStatCards(rows, my) {
   const s = gp.summarise(rows);
-  return `<div class="wx-grid">`
+  // The heading is here, not in the caller: the cards are h3s, and a page that opened h1 → h3 was
+  // reported as heading-order on every quake page (axe's best-practice rule, WCAG 1.3.1 in spirit).
+  return `<h2 class="section-title">At a glance</h2><div class="wx-grid">`
     + `<div class="wx-card"><h3>Earthquakes M4.5+ (7 days)</h3><div class="big">${s.count}</div><div class="meta">worldwide</div></div>`
     + `<div class="wx-card"><h3>Strongest</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
     + `<div class="wx-card"><h3>Closest to Malaysia</h3><div class="big">${my ? my.length : 0}</div><div class="meta">last 30 days, all magnitudes</div></div>`
@@ -7670,7 +7685,7 @@ function gempaRegionPage(req, region, rows) {
     description: region.blurb, url: selfUrl,
   }).replace(/</g, '\\u003c');
   const body = `<p>${escapeHtml(region.blurb)} The data is refreshed every 10 minutes by the United States Geological Survey (USGS); times are shown in UTC+8.</p>`
-    + `<div class="wx-grid">`
+    + `<h2 class="section-title">At a glance</h2><div class="wx-grid">`
     + `<div class="wx-card"><h3>Total in the window</h3><div class="big">${s.count}</div><div class="meta">minimum magnitude ${region.minMag.toFixed(1)}</div></div>`
     + `<div class="wx-card"><h3>Strongest</h3><div class="big">M ${s.max.toFixed(1)}</div><div class="meta">${s.latest ? escapeHtml(s.latest.place) : '\u2014'}</div></div>`
     + `<div class="wx-card"><h3>Shallow (&lt;35 km)</h3><div class="big">${s.shallow}</div><div class="meta">shallow quakes are the ones felt at the surface</div></div></div>`
@@ -7794,8 +7809,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('cuti')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${cutiNav()}
@@ -7813,10 +7828,10 @@ const CT_SHORT_FMT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: '
 function ctDateFr(dateStr) { return CT_DATE_FMT.format(new Date(`${dateStr}T00:00:00Z`)); }
 function ctShort(dateStr) { return CT_SHORT_FMT.format(new Date(`${dateStr}T00:00:00Z`)); }
 function ctBadge(r) {
-  if (!Array.isArray(r.state_codes)) return '<span class="wx-pill" style="background:#4c8dff;color:#fff">Federal &amp; all states</span>';
-  if (r.state_codes.length >= 14) return '<span class="wx-pill" style="background:#4c8dff;color:#fff">Most states</span>';
+  if (!Array.isArray(r.state_codes)) return '<span class="wx-pill" style="background:#4c8dff;color:#08121e">Federal &amp; all states</span>';
+  if (r.state_codes.length >= 14) return '<span class="wx-pill" style="background:#4c8dff;color:#08121e">Most states</span>';
   const names = r.state_codes.map((c) => { const st = cu.STATES.find((x) => x.code === c); return st ? st.name : c; });
-  return `<span class="wx-pill" style="background:#2f9e63;color:#fff">${escapeHtml(names.join(', '))}</span>`;
+  return `<span class="wx-pill" style="background:#2f9e63;color:#08121e">${escapeHtml(names.join(', '))}</span>`;
 }
 function ctTable(rows, n) {
   if (!rows || !rows.length) return '<p>No holiday records for this year yet.</p>';
@@ -7830,7 +7845,7 @@ function ctLwHtml(list) {
   return `<table class="wx-table"><tr><th>Period</th><th>Days</th><th>Related holidays</th><th>Requirement</th></tr>`
     + list.map((w) => `<tr><td>${escapeHtml(ctShort(w.start))} – ${escapeHtml(ctShort(w.end))}</td><td><b>${w.spanDays} days</b></td>`
       + `<td>${escapeHtml(w.holidays.map((h) => h.name).join(' + '))}</td>`
-      + `<td>${w.auto ? '<span class="wx-pill" style="background:#2f9e63;color:#fff">Automatic</span>' : '<span class="wx-pill" style="background:#e67e22;color:#fff">1 leave day</span>'}</td></tr>`).join('')
+      + `<td>${w.auto ? '<span class="wx-pill" style="background:#2f9e63;color:#08121e">Automatic</span>' : '<span class="wx-pill" style="background:#e67e22;color:#08121e">1 leave day</span>'}</td></tr>`).join('')
     + '</table>';
 }
 
@@ -7855,8 +7870,8 @@ function ctWorldTable(holidays) {
     const local = String(h.localName || h.name || '');
     const en = String(h.name || '');
     const scope = h.global
-      ? '<span class="wx-pill" style="background:#4c8dff;color:#fff">Whole country</span>'
-      : `<span class="wx-pill" style="background:#2f9e63;color:#fff">${escapeHtml(Array.isArray(h.counties) && h.counties.length ? `States/regions (${h.counties.length})` : 'Part of the country')}</span>`;
+      ? '<span class="wx-pill" style="background:#4c8dff;color:#08121e">Whole country</span>'
+      : `<span class="wx-pill" style="background:#2f9e63;color:#08121e">${escapeHtml(Array.isArray(h.counties) && h.counties.length ? `States/regions (${h.counties.length})` : 'Part of the country')}</span>`;
     return `<tr><td><b>${escapeHtml(String(h.date))}</b></td><td>${escapeHtml(ctDay(h.date))}</td>`
       + `<td>${escapeHtml(local)}${en && en !== local ? ` <span class="meta">(${escapeHtml(en)})</span>` : ''}</td>`
       + `<td>${scope}</td><td class="meta">${escapeHtml((h.types || []).join(', '))}</td></tr>`;
@@ -7868,7 +7883,7 @@ function ctWorldLwTable(list) {
   return `<table class="wx-table"><tr><th>Period</th><th>Starts</th><th>Days</th><th>Bridge day</th></tr>`
     + list.map((w) => `<tr><td><b>${escapeHtml(ctShort(w.start))} \u2013 ${escapeHtml(ctShort(w.end))}</b></td>`
       + `<td>${escapeHtml(ctDay(w.start))}</td><td><b>${w.dayCount} days</b></td>`
-      + `<td>${w.needBridge ? `<span class="wx-pill" style="background:#e67e22;color:#fff">${escapeHtml((w.bridgeDays || []).join(', ') || '1 day')}</span>` : '<span class="wx-pill" style="background:#2f9e63;color:#fff">Automatic</span>'}</td></tr>`).join('')
+      + `<td>${w.needBridge ? `<span class="wx-pill" style="background:#e67e22;color:#08121e">${escapeHtml((w.bridgeDays || []).join(', ') || '1 day')}</span>` : '<span class="wx-pill" style="background:#2f9e63;color:#08121e">Automatic</span>'}</td></tr>`).join('')
     + '</table>';
 }
 // A short essay per continent — so the region pages are more than a table.
@@ -7896,7 +7911,7 @@ function cutiHubPage(req, world, rows) {
       + (sameDay.length ? ` \u00b7 ${escapeHtml(sameDay.slice(0, 8).map((u) => ctName(u)).join(', '))}${sameDay.length > 8 ? ' etc.' : ''}` : '')
       + '</div></div>'
     : '<p>No world holiday inside the data coverage right now.</p>';
-  const cards = `<div class="wx-grid">`
+  const cards = `<h2 class="section-title">${yr} at a glance</h2><div class="wx-grid">`
     + `<div class="wx-card"><h3>Countries with data ${yr}</h3><div class="big">${tot.countries}</div><div class="meta">out of ${cd.COUNTRIES.length} countries covered</div></div>`
     + `<div class="wx-card"><h3>Public holidays counted ${yr}</h3><div class="big">${tot.total}</div><div class="meta">days off recorded across the planet</div></div>`
     + `<div class="wx-card"><h3>Average per country</h3><div class="big">${tot.avg.toFixed(1)}</div><div class="meta">holidays a year${rank.length ? ` \u00b7 highest ${escapeHtml(ctName(rank[0]))} (${rank[0].count})` : ''}</div></div>`
@@ -8082,9 +8097,9 @@ function cutiLongWeekendPage(req, rows26, rows27, worldLw) {
   const longest = world.length ? world[0] : null;
   const nationCount = new Set(world.map((w) => w.cca2)).size;
   const lwPill = (w) => {
-    if (!w.needBridge) return '<span class="wx-pill" style="background:#2f9e63;color:#fff">Automatic</span>';
+    if (!w.needBridge) return '<span class="wx-pill" style="background:#2f9e63;color:#08121e">Automatic</span>';
     const nb = (w.bridgeDays || []).length || 1;
-    return `<span class="wx-pill" style="background:#e67e22;color:#fff">${escapeHtml(`${nb} bridge day${nb === 1 ? '' : 's'}`)}</span>`;
+    return `<span class="wx-pill" style="background:#e67e22;color:#08121e">${escapeHtml(`${nb} bridge day${nb === 1 ? '' : 's'}`)}</span>`;
   };
   const worldRows = big.slice(0, 60).map((w) => `<tr><td>${ctNation(w)}</td>`
     + `<td>${escapeHtml(w.region)}</td>`
@@ -8266,8 +8281,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('negara')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${negaraNav()}
@@ -8300,7 +8315,7 @@ function negaraHubPage(req, rows) {
   }
   const az = [...letters.entries()].map(([L, links]) => `<h3>${L}</h3><div class="ng-az">${links.join('')}</div>`).join('');
   const body = `<div class="wx-hero"><div class="temp">${rows.length} countries</div><div class="wmeta">The complete profile of every country \u00b7 World Bank population & GDP (2023) \u00b7 flags from flagcdn \u00b7 base data from the open world-countries package</div></div>`
-    + `<div class="wx-grid">`
+    + `<h2 class="section-title">The world in three numbers</h2><div class="wx-grid">`
     + `<div class="wx-card"><h3>Population counted so far</h3><div class="big">${ngNum(totalPop)}</div><div class="meta">the world's people in our coverage (World Bank 2023)</div></div>`
     + `<div class="wx-card"><h3>Most populous country</h3><div class="big">${byPop[0] ? `<a href="/countries/${byPop[0].slug}">${escapeHtml(byPop[0].name)}</a>` : '—'}</div><div class="meta">${byPop[0] ? ngNum(byPop[0].population) : 0} people</div></div>`
     + `<div class="wx-card"><h3>Largest country</h3><div class="big">${byArea[0] ? `<a href="/countries/${byArea[0].slug}">${escapeHtml(byArea[0].name)}</a>` : '—'}</div><div class="meta">${byArea[0] ? ngNum(byArea[0].area) : 0} km²</div></div>`
@@ -8570,8 +8585,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('statistik')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${statistikNav()}
@@ -8737,8 +8752,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('bencana')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${bencanaNav()}
@@ -9265,14 +9280,14 @@ app.get('/learn', (req, res) => {
 .stage-num{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;border-radius:50%;
   background:var(--accent-fill,#2a6edb);color:#fff;font-weight:700;font-size:1rem;flex:none;}
 .stage-title{margin:0;font-size:1.3rem;}
-.stage-blurb{color:#9aa3b2;margin:4px 0 14px 50px;}
+.stage-blurb{color:var(--muted,#9aa3b2);margin:4px 0 14px 50px;}
 .stage-list{list-style:none;margin:0 0 8px;padding:0 0 0 50px;counter-reset:lesson;}
 .stage-list li{counter-increment:lesson;position:relative;padding:9px 12px 9px 44px;border-bottom:1px solid var(--line,#262b36);}
 .stage-list li::before{content:counter(lesson);position:absolute;left:8px;top:9px;width:24px;height:24px;border-radius:6px;
-  background:var(--panel,#171a21);border:1px solid var(--line,#262b36);font-size:.75rem;display:flex;align-items:center;justify-content:center;color:#9aa3b2;}
+  background:var(--panel,#171a21);border:1px solid var(--line,#262b36);font-size:.75rem;display:flex;align-items:center;justify-content:center;color:var(--muted,#9aa3b2);}
 .stage-list a{font-weight:600;text-decoration:none;color:inherit;}
 .stage-list a:hover{color:var(--accent,#4c8dff);text-decoration:underline;}
-.stage-list .ex{display:block;font-size:.88rem;color:#9aa3b2;font-weight:400;margin-top:2px;}
+.stage-list .ex{display:block;font-size:.88rem;color:var(--muted,#9aa3b2);font-weight:400;margin-top:2px;}
 .learn-intro{font-size:1.05rem;}
 .badge-count{display:inline-block;background:rgba(76,141,255,.15);border:1px solid rgba(76,141,255,.35);color:var(--accent,#4c8dff);
   border-radius:999px;padding:2px 12px;font-size:.85rem;font-weight:600;margin-left:8px;}
@@ -9285,13 +9300,14 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('learn')}
 <div class="wrap">
+  <main>
   ${adUnitGuarded(config.adsense.slotTop, 'top')}
   <header>
     <h1>Tukuk-OS Academy<span class="badge-count" id="lesson-count"></span></h1>
     <p class="tagline">Zero to Hero: one free curriculum from your first terminal command to running, defending and growing your own search engine.</p>
     <p class="learn-intro">Follow the stages in order \u2014 each lesson assumes only what came before it. Stuck at any point? Start at <a href="/learn">Stage 0</a> and keep the <a href="/blog">full archive</a> within reach.</p>
   </header>
-  <main>`;
+`;
 
   let lessonNo = 0;
   for (const stage of LEARN_STAGES) {
@@ -9406,8 +9422,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('learn')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${studyNav()}
@@ -9713,8 +9729,8 @@ function udaraDoc(o) {
 .aqi-chip.good{background:#3fb950}
 .aqi-chip.moderate{background:#d29922}
 .aqi-chip.usg{background:#f0883e}
-.aqi-chip.unhealthy{background:#e5534b;color:#fff}
-.aqi-chip.very{background:#a371f7;color:#fff}
+.aqi-chip.unhealthy{background:#e5534b}
+.aqi-chip.very{background:#a371f7}
 .aqi-chip.hazardous{background:#8e1f2c;color:#fff}
 .air-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
 .air-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel,#171a21);margin:0}
@@ -9734,8 +9750,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('learn')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${udaraNav()}
@@ -9979,8 +9995,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('learn')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${akadNav()}
@@ -10197,8 +10213,8 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('learn')}
 <div class="wrap">
-  <header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
-  <main>${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+    ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     ${o.body}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${navHtml}
@@ -12334,7 +12350,7 @@ table.tl-tab{width:100%;border-collapse:collapse;font-size:.92rem;margin:10px 0}
 .tl-tab tr:hover{background:var(--panel,#171a21)}
 .tl-pass{font:700 20px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.5px;word-break:break-all}
 .tl-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;font-weight:700;margin-right:6px}
-.tl-ok{background:#138a3d;color:#fff}
+.tl-ok{background:#11753a;color:#fff}
 .tl-no{background:#a02020;color:#fff}
 .sw{display:inline-block;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;margin:2px}
 .tl-tab th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);font-size:.8rem;color:var(--muted,#9aa3b2);vertical-align:bottom;font-weight:700}
@@ -20753,12 +20769,12 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('blog')}
 <div class="wrap">
+  <main>
   <header>
     <a href="/blog" class="back-link">&larr; Back to all articles</a>
     <h1>${eTitle}</h1>
     <div class="meta">Published: ${postDate} &middot; <a href="/about" rel="author">${eAuthor}</a> &middot; ${mins} min read</div>
   </header>
-  <main>
     ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     <article>
       ${renderedContent}

@@ -162,6 +162,68 @@ test('every "read more" link announces the article it opens', () => {
   assert.match(link[2], /aria-hidden="true"/, 'the arrow is part of the name again');
 });
 
+test('no page hero is a second banner', () => {
+  // The second wave of the audit (12 pages) all reported the same pair: landmark-no-duplicate-banner
+  // and landmark-unique on .site-top. siteHeader() is the banner; every page that then rendered
+  // its own <header><h1> outside <main> created a second one. A <header> inside <main> is not a
+  // banner, so the rule is simply that the hero opens after <main>.
+  // Every page that renders siteHeader() and then a hero must open <main> first: a <header> inside
+  // <main> is not a banner, so the hero stops competing with the site header for that role.
+  const opens = [...SERVER.matchAll(/\$\{siteHeader\(/g)];
+  assert.ok(opens.length >= 15, `only ${opens.length} siteHeader call sites found`);
+  for (const m of opens) {
+    const tail = SERVER.slice(m.index, m.index + 1200);
+    const mainAt = tail.search(/<main[\s>]/);
+    const headerAt = tail.indexOf('<header');
+    if (headerAt === -1) continue;
+    assert.ok(mainAt !== -1 && mainAt < headerAt, `a page hero <header> precedes <main> after siteHeader at offset ${m.index}`);
+  }
+  assert.match(SERVER, /<div class="wrap">\s*<main><header><h1>\$\{o\.heroHtml/, 'the doc templates no longer open <main> before the hero');
+});
+
+test('the player carries its own palette and one main landmark', () => {
+  // theme.css redefines --muted and --accent-glow under a higher-specificity :root[data-theme],
+  // which left the "not found" text at 3.27:1 and its link at 1.13:1 on the player's fixed dark
+  // background. The player therefore uses --pl-* names that no site theme can reach.
+  assert.ok(!/var\(--muted\)/.test(PLAY), 'public/play.html reads the site --muted again');
+  assert.ok(!/var\(--accent-glow\)/.test(PLAY), 'public/play.html reads the site --accent-glow again');
+  assert.match(PLAY, /var\(--pl-muted\)/, 'the player lost its own muted colour');
+  // region ×1 on #oops: the error panel was the only visible content and sat outside every
+  // landmark, because the player is a full-viewport flex column with no <main> at all.
+  assert.equal((PLAY.match(/<main[\s>]/g) || []).length, 1, 'the player must hold exactly one <main>');
+  assert.match(PLAY, /<main class="player">[\s\S]*id="oops"[\s\S]*<\/main>/, '#oops is outside the player landmark again');
+});
+
+test('every literal chip and badge pair clears 4.5:1', () => {
+  // 78 colour-contrast nodes in the second wave were all of two shapes: a status pill whose white
+  // text sat on #e67e22 (2.85:1) / #2980b9 (4.31:1) / #2f9e63 (3.39:1), and /learn's CSS
+  // hard-coding the dark palette's #9aa3b2 into a page that renders on #f7f8fa (2.39:1).
+  const pairs = [...SERVER.matchAll(/background:(#[0-9a-f]{6});color:(#[0-9a-f]{6})/gi)];
+  assert.ok(pairs.length >= 8, `only ${pairs.length} literal colour pairs found — the sweep stopped reading them`);
+  for (const [, bg, fg] of pairs) {
+    const r = ratio(bg, fg);
+    assert.ok(r >= 4.5, `${fg} on ${bg} = ${r.toFixed(2)}:1, under 4.5:1`);
+  }
+  // The AQI chips inherit --ink from .aqi-chip; only the deep maroon level needs white.
+  const ink = '#0f1115';
+  const chips = [...SERVER.matchAll(/\.aqi-chip\.(\w+)\{background:(#[0-9a-f]{3,6})(?:;color:(#[0-9a-f]{3,6}))?/gi)];
+  assert.equal(chips.length, 6, `expected six AQI levels, found ${chips.length}`);
+  for (const [, name, bg, fg] of chips) {
+    const r = ratio(bg, fg || ink);
+    assert.ok(r >= 4.5, `AQI chip ${name}: ${fg || ink} on ${bg} = ${r.toFixed(2)}:1`);
+  }
+  // /learn painted its prose with the dark theme's muted colour instead of the token.
+  assert.ok(SERVER.includes('.stage-blurb{color:var(--muted'), '/learn hard-codes a palette colour again');
+  assert.ok(SERVER.includes('.stage-list .ex{display:block;font-size:.88rem;color:var(--muted'), '/learn hard-codes a palette colour again');
+  // The magnitude chips put white on the ladder, so it is checked colour by colour.
+  const ladder = SERVER.match(/const bg = m >= 6 \? '(#[0-9a-f]{6})' : m >= 5 \? '(#[0-9a-f]{6})' : m >= 4 \? '(#[0-9a-f]{6})' : '(#[0-9a-f]{6})'/i);
+  assert.ok(ladder, 'the magnitude severity ladder is gone');
+  for (const hex of ladder.slice(1)) {
+    const r = ratio(hex, '#ffffff');
+    assert.ok(r >= 4.5, `white on magnitude ${hex} = ${r.toFixed(2)}:1`);
+  }
+});
+
 test('the hidden attribute still hides things', () => {
   // /play/<id> showed the "not found" panel underneath a working game: .oops{display:grid}
   // outranks the UA rule for [hidden]. The page needs its own guard.
