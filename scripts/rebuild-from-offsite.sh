@@ -116,6 +116,24 @@ if [[ -f "$TMP/opt/tukuk-os/.env" ]]; then
     echo "CF_TUNNEL_TOKEN=$CFGTOK" >> "$ENV"; chmod 600 "$ENV"
     echo "  ✓ CF_TUNNEL_TOKEN/ID captured from /etc/cloudflared/config.yml (stays out of git: .env is ignored)"
   fi
+  # The restored .env is now the authority, but setup-all ran BEFORE it and wrote this server's
+  # Meilisearch unit with the key it had at that moment — on an empty box that is a freshly
+  # generated one. A unit key that disagrees with .env means Meilisearch answers 401 to every
+  # search, which reads like a broken app rather than a key that arrived one step too late.
+  MK="$(_env_get MEILI_MASTER_KEY)"
+  MSVC=/etc/systemd/system/meilisearch.service
+  if [[ -f "$MSVC" && -n "$MK" ]]; then
+    UK=$(sed -n 's/.*--master-key \([^ ]*\).*/\1/p' "$MSVC" | head -1)
+    if [[ "$UK" != "$MK" ]]; then
+      if [[ "$MK" =~ ^[A-Za-z0-9_-]+$ ]]; then
+        sed -i "s#--master-key [^ ]*#--master-key $MK#" "$MSVC"
+        systemctl daemon-reload && systemctl restart meilisearch >/dev/null 2>&1
+        echo "  ✓ meilisearch unit re-keyed to match the restored .env"
+      else
+        note "meilisearch key" "restored MEILI_MASTER_KEY has characters sed cannot take blindly — edit $MSVC by hand and restart meilisearch"
+      fi
+    fi
+  fi
 fi
 if [[ -f "$TMP/etc/netplan/00-installer-config.yaml" ]]; then
   mkdir -p "$APP/etc-netplan-reference"; cp -a "$TMP/etc/netplan/." "$APP/etc-netplan-reference/"
