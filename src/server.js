@@ -807,38 +807,74 @@ app.disable('x-powered-by');
 
 // Security headers (Lighthouse "Trust & Safety"). Cloudflare can add them at the edge too,
 // but this guarantees the headers exist on every route (direct app access, tunnel, etc.).
-// CSP IN TWO LAYERS:
-//  (1) ENFORCED — `CSP_ENFORCED` holds ONLY structural directives (frame-ancestors/object-src/
-//      base-uri/form-action). It deliberately does NOT touch default-src/script-src/style-src,
-//      so there is NO breakage: AdSense + the inline `<script>` SPA + 62 style= attributes keep running.
-//      It still gives real protection (clickjacking, injected <base>/<object>/form).
-//  (2) REPORT-ONLY — `CSP_REPORT_ONLY` = the full strict policy (default/script-src etc.) used to
-//      collect telemetry into /csp-report. Going fully enforced needs: extracting the inline
-//      scripts into external files + de-inlining 70 handlers (onclick/onerror) + AdSense strict-dynamic/
-//      nonce — a big job that also requires browser QA. Clickjacking is covered by X-Frame-Options too;
-//      COOP = same-origin-allow-popups so OAuth/login popups (window.open) are not cut off.
+// CSP IN THREE POLICIES, because exactly one directive is not ready:
+//  (1) ENFORCED — every loading directive EXCEPT script-src. This is the product of the
+//      /csp-report stream, not of optimism: img/media/connect/font were reported zero times
+//      and all still carry `https:`, so enforcing them cannot take a page away from a
+//      visitor, while frame-src is enforced with the hosts actually measured (media embeds,
+//      AdSense's own slots, the Builder). object-src/base-uri/form-action/frame-ancestors
+//      close the holes that cost something: injected <object>, <base> hijacking, form
+//      exfiltration, framing by another site.
+//      There is deliberately NO `default-src` here. It is the fallback for script-src, so
+//      shipping it would block every inline <script> and all 70 onclick handlers at once.
+//      script-src is the one directive left out until the inline scripts are externalised.
+//  (2) REPORT-ONLY — `CSP_REPORT_ONLY` is the policy we are heading for. Its remaining job
+//      is the script-src allowlist: a report now means "this script breaks the day we
+//      enforce". Every other directive in it must stay identical to the enforced one, or the
+//      report stream describes a policy nobody ships.
+//  (3) STRICT — static pages proven clean (external scripts only, no inline handler, no ad
+//      or analytics tag). For those, script-src 'self' is ENFORCED. test/csp-policy.test.js
+//      is what keeps "proven clean" from quietly becoming false.
+// Clickjacking is covered by X-Frame-Options too; COOP = same-origin-allow-popups so
+// OAuth/login popups (window.open) are not cut off.
+//
+// The frame allowlist. Enumerated from production /csp-report entries (/flags, /wiki, /maps,
+// /countries/* … were all reporting pagead2) plus every <iframe> in the repo: YouTube, Vimeo
+// and Dailymotion embeds, AdSense's own unfilled/consent frames (pagead2 is the host the
+// report kept naming; the wildcards cover its sub-frames), the Funding Choices consent
+// loader, and build.tukuk.org (Builder preview; /os only frames same-origin apps, but a
+// stored app entry can point at the Builder). A host that a page frames belongs here — a
+// blocked frame renders as a blank box, which is the silent breakage this list prevents.
+const CSP_FRAME_SRC = [
+  "'self'",
+  'https://www.youtube.com',
+  'https://www.youtube-nocookie.com',
+  'https://player.vimeo.com',
+  'https://www.dailymotion.com',
+  'https://pagead2.googlesyndication.com',
+  'https://*.googlesyndication.com',
+  'https://*.doubleclick.net',
+  'https://www.google.com',
+  'https://fundingchoicesmessages.google.com',
+  'https://*.adtrafficquality.google',
+  'https://www.googletagservices.com',
+  'https://build.tukuk.org',
+].join(' ');
 const CSP_ENFORCED = [
-  "frame-ancestors 'self'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "media-src 'self' data: blob: https:",
+  "connect-src 'self' data: blob: https: wss:",
+  `frame-src ${CSP_FRAME_SRC}`,
   "object-src 'none'",
+  "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
+  "report-uri /csp-report",
 ].join('; ') + ';';
-// The report stream is only useful if a violation means something new. Enumerated
-// from production /csp-report entries: AdSense frames (doubleclick, www.google.com,
-// adtrafficquality), the Google Funding Choices consent/ad-block-recovery loader
-// (fundingchoicesmessages.google.com — its <script> + named iframe, see adsense-loader.js),
-// Microsoft Clarity, the Cloudflare Web Analytics beacon that the edge injects, and Leaflet
-// from unpkg. Any host added to a page belongs here too — otherwise every view pays for a
-// report nobody reads.
+// The script-src list is the measured one: AdSense (pagead2 + its ad/consent frames),
+// the Google Funding Choices loader (see adsense-loader.js), Microsoft Clarity, the
+// Cloudflare Web Analytics beacon the edge injects, and Google Tag Manager/Analytics.
 const CSP_REPORT_ONLY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://fundingchoicesmessages.google.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.clarity.ms https://scripts.clarity.ms https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com",
-  "style-src 'self' 'unsafe-inline' https://unpkg.com",
+  "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://fundingchoicesmessages.google.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.clarity.ms https://scripts.clarity.ms https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' data: blob: https: wss:",
   "media-src 'self' data: blob: https:",
-  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com https://googleads.g.doubleclick.net https://www.google.com https://fundingchoicesmessages.google.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://www.googletagservices.com",
+  `frame-src ${CSP_FRAME_SRC}`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
