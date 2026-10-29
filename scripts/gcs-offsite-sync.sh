@@ -16,6 +16,10 @@
 # inside the 5 GB / 5 k class-A-op free tier. The size cap below refuses to run past
 # 4 GB so the allowance can never be exceeded by drift.
 #
+# Reads go to worker.tukuk.org, NOT the *.workers.dev hostname in .env: workers.dev is
+# platform-throttled (HTTP 429) under load, which is what silently killed the upload
+# timers before they moved onto the zone.
+#
 # USE:    sudo systemctl start tukuk-gcs-offsite.service   (weekly timer)
 # VERIFY: gcloud storage ls -l gs://tukuk-os-offsite/r2/backups/
 # ==============================================================================
@@ -33,9 +37,9 @@ ENVF="${TUKUK_ENV_FILE:-/opt/tukuk-os/.env}"
 # Same rule as the other backup tracks: read the two values whole after the first `=`
 # instead of sourcing .env, whose RP name contains a space.
 _env_get() { grep -E "^[[:space:]]*$1=" "$ENVF" 2>/dev/null | tail -1 | cut -d= -f2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//'; }
-WURL="${BACKUP_WORKER_URL:-$(_env_get BACKUP_WORKER_URL)}"
+WURL="${BACKUP_READ_URL:-https://worker.tukuk.org/edge-backup}"
 WSEC="${BACKUP_UPLOAD_SECRET:-$(_env_get BACKUP_UPLOAD_SECRET)}"
-[[ -n "$WURL" && -n "$WSEC" ]] || { echo "[gcs-offsite] ERROR: BACKUP_WORKER_URL / BACKUP_UPLOAD_SECRET missing." >&2; exit 1; }
+[[ -n "$WSEC" ]] || { echo "[gcs-offsite] ERROR: BACKUP_UPLOAD_SECRET missing." >&2; exit 1; }
 command -v gcloud >/dev/null || { echo "[gcs-offsite] ERROR: gcloud not found." >&2; exit 1; }
 
 TMP="$(mktemp -d)"
