@@ -106,10 +106,15 @@ fi
 [ -n "${WEB_HEAD:-}" ] && [ -f "$WEB_HEAD" ] \
   || { echo "FATAL: no boot overlay found (checked \$WEB_HEAD, $PROJ/web-head.html, $SELF/web-head.html)." >&2; exit 1; }
 echo "overlay: $WEB_HEAD"
-unzip -p "$TPL_ZIP" godot.html > /tmp/godot-shell.template
-python3 - "$WEB_HEAD" <<'PY'
+# The engine template goes to a per-run temp file, never a fixed /tmp path: the builder
+# runs both as root (a detached --deploy) and as the game user, and a second run used to
+# die on EACCES over the first run's leftover file -- same collision that broke the test.
+SHELL_TPL="$(mktemp "${TMPDIR:-/tmp}/godot-shell.XXXXXX")"
+trap 'rm -f "$SHELL_TPL"' EXIT
+unzip -p "$TPL_ZIP" godot.html > "$SHELL_TPL"
+python3 - "$WEB_HEAD" "$SHELL_TPL" <<'PY'
 import sys
-template = open('/tmp/godot-shell.template', encoding='utf-8').read()
+template = open(sys.argv[2], encoding='utf-8').read()
 fragment = open(sys.argv[1], encoding='utf-8').read()
 marker = '$GODOT_HEAD_INCLUDE'
 if marker not in template:

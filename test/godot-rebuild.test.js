@@ -98,21 +98,25 @@ test('build-web.sh: the splice injects the overlay and aborts if the engine temp
   const t = scratch();
   // The python body, taken verbatim from between the heredoc markers.
   const lines = fs.readFileSync(BUILD, 'utf8').split('\n');
-  const start = lines.indexOf('python3 - "$WEB_HEAD" <<\'PY\'') + 1;
+  const start = lines.indexOf('python3 - "$WEB_HEAD" "$SHELL_TPL" <<\'PY\'') + 1;
   assert.ok(start > 0, 'splice invocation not found');
   const py = lines.slice(start, lines.indexOf('PY', start)).join('\n');
   fs.writeFileSync(path.join(t, 'splice.py'), py);
+  // The template has to be read from the per-run path the builder passes, not from a
+  // fixed /tmp file: two runs (or a root run then a user run) collide on one shared name.
+  assert.match(fs.readFileSync(BUILD, 'utf8'), /SHELL_TPL="\$\(mktemp /, 'the engine template must go to a per-run temp file');
 
-  fs.writeFileSync('/tmp/godot-shell.template', '<head>$GODOT_HEAD_INCLUDE</head><body>engine</body>');
-  let r = bash(`cd '${t}' && python3 '${t}/splice.py' '${HEAD}' && cat web-shell.html`);
+  const tpl = path.join(t, 'engine-shell.html');
+  fs.writeFileSync(tpl, '<head>$GODOT_HEAD_INCLUDE</head><body>engine</body>');
+  let r = bash(`cd '${t}' && python3 '${t}/splice.py' '${HEAD}' '${tpl}' && cat web-shell.html`);
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /tb-bytes/, 'the readout has to end up inside the shell');
   assert.ok(!r.out.includes('$GODOT_HEAD_INCLUDE'), 'the placeholder must be consumed');
 
   // A renamed placeholder must fail the build rather than ship the stock shell: the
   // engine's own template is the one thing this cannot be re-checked after publishing.
-  fs.writeFileSync('/tmp/godot-shell.template', '<head>no placeholder</head>');
-  r = bash(`cd '${t}' && python3 '${t}/splice.py' '${HEAD}'`);
+  fs.writeFileSync(tpl, '<head>no placeholder</head>');
+  r = bash(`cd '${t}' && python3 '${t}/splice.py' '${HEAD}' '${tpl}'`);
   assert.notEqual(r.code, 0, 'a shell without the placeholder must abort');
   assert.match(r.out, /FATAL/);
 });
