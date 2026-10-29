@@ -1657,7 +1657,10 @@ function paintThemeUI() {
 
 function openThemeModal() {
   if (!themeModal.hidden) return;
-  tLastFocus = document.activeElement;
+  // A programmatic click (and a click on some browsers) leaves focus on <body>, which would
+  // "restore" focus to nowhere on close — fall back to the button that owns this dialog.
+  const opener = document.getElementById('theme-customizer-btn');
+  tLastFocus = document.activeElement && document.activeElement !== document.body ? document.activeElement : opener;
   paintThemeUI();
   themeModal.hidden = false;
   document.body.style.overflow = 'hidden';
