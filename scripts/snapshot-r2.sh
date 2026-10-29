@@ -22,6 +22,8 @@ BASE="${TUKUK_LOCAL_BASE:-http://127.0.0.1:3000}"
 WURL="${BACKUP_WORKER_URL:-}"
 WSEC="${BACKUP_UPLOAD_SECRET:-}"
 FAILS=0
+OKS=0
+GIVEUP=0
 
 # The VPS token has no R2 scope — without the worker path, the snapshot is sure to fail silently.
 if [[ -z "$WURL" || -z "$WSEC" ]]; then
@@ -30,6 +32,8 @@ fi
 
 put() { # put <key> <fail> [content-type]
   local key="$1" file="$2" ct="${3:-}"
+  # Once the two transports are both proven unusable, stop paying for the proof.
+  [[ "$GIVEUP" == "1" ]] && return 0
   if [[ -n "$WURL" && -n "$WSEC" ]]; then
     local args=(-fsS --max-time 60 -X POST -H "Authorization: Bearer $WSEC" --data-binary "@$file")
     [[ -n "$ct" ]] && args+=(-H "x-content-type: $ct")
@@ -43,7 +47,7 @@ put() { # put <key> <fail> [content-type]
       if [[ $n -ge 3 ]]; then echo "  ~ $key worker failed after $n tries — trying wrangler path"; failed=1; break; fi
       echo "  ~ $key throttled (429?) — retry $n/2"; sleep $((n * 5))
     done
-    if [[ $failed -eq 0 ]]; then echo "  ✓ $key"; return; fi
+    if [[ $failed -eq 0 ]]; then echo "  ✓ $key"; OKS=$((OKS+1)); return; fi
     # fall through to the wrangler branch below (self-heals when token gains R2 scope)
   fi
   if [[ -n "$ct" ]]; then
@@ -51,6 +55,18 @@ put() { # put <key> <fail> [content-type]
   else
     npx --yes wrangler r2 object put "$BUCKET/$key" --file "$file" --remote >/dev/null 2>&1
   fi && echo "  ✓ $key" || { echo "  ! failed $key"; FAILS=$((FAILS+1)); }
+  # Fail fast, and say why. On a rebuilt box there is no BACKUP_WORKER_URL, and the R2
+  # token in deploy/env.defaults authenticates but has no R2 Write scope — so every one
+  # of these ~60 objects burns a 5 s + 10 s backoff and then a cold `npx wrangler`.
+  # Measured on 30 Oct 2026: 78 throttled retries and 38 failures before the install
+  # moved on, roughly 30 s each. Three failures with zero successes is conclusive.
+  if [[ $FAILS -ge 3 && $OKS -eq 0 && "$GIVEUP" == "0" ]]; then
+    GIVEUP=1
+    echo "[snapshot] 3 uploads failed, 0 succeeded — neither transport works on this box:" >&2
+    echo "           no BACKUP_WORKER_URL/BACKUP_UPLOAD_SECRET, and CLOUDFLARE_API_TOKEN has" >&2
+    echo "           no R2 Write scope. Skipping the rest instead of spending half an hour" >&2
+    echo "           re-proving it. Fix by setting the worker pair, or widening the token." >&2
+  fi
 }
 
 TMP="$(mktemp -d)"
