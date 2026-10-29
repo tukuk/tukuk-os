@@ -71,6 +71,11 @@
     apply();
   }
 
+  function setTheme(pref) {
+    write(KEY_THEME, ORDER.indexOf(pref) >= 0 ? pref : 'system');
+    apply();
+  }
+
   function setBg(bgMode, customUrl) {
     write(KEY_BG, bgMode);
     if (customUrl !== undefined) write(KEY_CUSTOM_BG, customUrl);
@@ -121,8 +126,11 @@
     apply: apply, 
     cycle: cycleTheme, 
     bind: bind,
+    setTheme: setTheme,
     setBg: setBg,
     setAccent: setAccent,
+    getTheme: function () { return preference(); },
+    getAccent: function () { return read(KEY_ACCENT) || DEFAULT_ACCENT; },
     getBg: function () { return read(KEY_BG) || 'default'; },
     getCustomBg: function () { return read(KEY_CUSTOM_BG) || ''; }
   };
