@@ -20,7 +20,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
 const RSYNC = path.join(ROOT, 'deploy', 'remote-deploy.sh');
@@ -115,6 +115,46 @@ test('the purge script states which failure the current token produces', () => {
   assert.match(purgeSrc, /not set/, 'with the other outcome — an empty key in .env — distinguished');
   assert.match(purgeSrc, /cannot see \$ZONE_NAME/, 'the failure branch exists as written');
   assert.match(purgeSrc, /nothing was purged/, 'and admits it, instead of exiting 0 on a no-op');
-  // Deliberately not executed here, unlike remote-deploy.sh: on the VPS its .env does hold a
-  // live token, so running it would put a real API call — and a zone id — into test output.
+  // Deliberately not executed here without --check: on the VPS its .env does hold a live
+  // token, so a bare run would put a real API call — and a zone id — into test output.
+});
+
+// ── --check: the mode that exists so testing a token is not a cache event ───────────
+test('--check with an unusable credential reaches no purge', () => {
+  // The no-argument form purges EVERY cached object in the zone. On a Free plan that is a
+  // full cache miss for every visitor, so "let's see if the new token works" must never be
+  // the way to find out. This runs the script for real with a token that cannot authenticate:
+  // one GET /zones, no POST, and the failure half of --check is what gets pinned.
+  let out;
+  try {
+    out = spawnSync('/bin/bash', [PURGE, '--check'], {
+      encoding: 'utf8',
+      env: { ...process.env, CLOUDFLARE_API_TOKEN: 'not-a-token-hygiene-test' },
+    });
+  } catch (e) {
+    out = e; // spawnSync does not throw; this is only for a missing bash
+  }
+  const all = `${out.stdout || ''}${out.stderr || ''}`;
+  assert.notEqual(out.status, 0, `an invalid token must not look like a pass:\n${all}`);
+  assert.match(all, /cannot see/, `expected the zone-visibility failure:\n${all}`);
+  assert.ok(!/^purge-edge-cache: purged /m.test(all), `--check must never report a purge:\n${all}`);
+});
+
+test('the --check block is before the purge call, not merely earlier', () => {
+  const check = purgeSrc.search(/CHECK"? == "1/);
+  const purge = purgeSrc.search(/\/purge_cache/);
+  assert.notEqual(check, -1, 'the --check branch is gone');
+  assert.notEqual(purge, -1, 'the purge call is gone');
+  assert.ok(check < purge, `--check (offset ${check}) must exit before purge_cache (offset ${purge})`);
+});
+
+test('--check prints a verdict, never a blank where the status should be', () => {
+  // First version interpolated `grep -o '"status":"…"'` of /user/tokens/verify, which answers
+  // for API tokens only. With the laptop's OAuth token it printed "Token status:" and nothing
+  // after it — indistinguishable from a broken script, on the one path whose whole job is to
+  // tell someone whether their credential is usable.
+  assert.ok(!/Token status: \$\(/.test(purgeSrc), 'the blank-on-no-match form is back');
+  assert.match(purgeSrc, /verify endpoint/, 'it must name the non-API-token case instead');
+  assert.match(purgeSrc, /Cache Purge scope is still unproven/,
+    'and still refuse to claim the purge scope was checked');
 });
