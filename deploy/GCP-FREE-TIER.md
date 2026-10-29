@@ -105,7 +105,7 @@ them was quietly heading for a bill:
 
 | Free allowance | Our exposure | Status |
 |---|---|---|
-| R2: **10 GB stored**, 1M Class A / 10M Class B ops per month, **egress is always free** | 342 objects, **1.62 GB (16 %)** — 1.34 GB of it is the hourly `backups/` slots | `scripts/r2-inventory.sh`, exit 1 past 6 GB |
+| R2: **10 GB stored per account** (all buckets together), 1M Class A / 10M Class B ops per month, **egress is always free** | 7 buckets, 367 objects, **1.644 GB (16.4 %)** — 1.34 GB of it is the 168 hourly `backups/` slots, 242 MB is frozen meili history | `scripts/r2-inventory.sh`, exit 1 past 6 GB or on any unbounded writer |
 | Workers: 100k requests/day, free plan | the brain only sees `worker.tukuk.org` traffic, nowhere near 100k/day | watching; exceeding it means the \$5/mo plan, not a per-request bill |
 | Zone redirect + proxying | free plan | fine |
 
@@ -120,12 +120,17 @@ design `backup-data.sh` already used for the 168 `backups/` slots. The 17–28 O
 (~263 MB) were **left in place** — they are history, they no longer grow, and deleting backups
 is not an audit's job.
 
-`scripts/r2-inventory.sh` is the guard: it lists every object, splits prefixes into *bounded*
-(slot/fixed keys) and *date-stamped*, names the biggest objects, and exits 1 if the bucket is
-over 60 % of the ceiling or a date-stamped prefix is **still being written** after the 29 Oct
-cutover. Because 168 slots each hold one `data.tar.gz`, the bucket tracks roughly
-**168 × the size of `data/`**: today that is 18 MB → 1.34 GB, and a ~60 MB `data/` would be
-what touches 10 GB. The warning fires long before that.
+`scripts/r2-inventory.sh` is the guard. It walks **every bucket in the account** (the 10 GB
+is an account ceiling, not a per-bucket one), splits prefixes into *bounded* (slot/fixed
+keys) and *date-stamped*, names the biggest objects, and exits 1 if the account is over 60 %
+of the ceiling or a date-stamped prefix is **still being written** after the 29 Oct cutover
+(`laptop-backup` is exempt — it prunes its own cloud keys). Verified on the box the same day:
+`meili-backup.service` and `chat-backup.service` each wrote one `slot-401/…` object and the
+inventory lists those prefixes as bounded with 1 object. Because 168 slots each hold one
+`data.tar.gz`, the bucket tracks roughly **168 × the size of `data/`**: today that is 18 MB →
+1.34 GB, and a ~60 MB `data/` would be what touches 10 GB. The warning fires long before
+that. One incidental find: `tukuk-os-backups` holds 22 MB of 6–8 Oct meili/store history from
+before the backup worker was repointed at `tukuk-fallback` — frozen, harmless, left alone.
 
 ## How to check you are still inside the free tier
 
