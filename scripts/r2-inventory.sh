@@ -9,6 +9,12 @@
 #
 # Read-only: it lists objects, it never writes or deletes.
 #
+# WHERE TO RUN IT: it needs a credential with **Account · R2 Storage · Read**. The box's
+# `cfut_…` token has Workers scope only (verified: /workers/scripts answers, every /r2/…
+# call returns "Authentication error") — by design, because the box writes R2 through the
+# backup *Worker* (`BACKUP_WORKER_URL` + secret), never through the R2 API. So run this on a
+# machine with a wrangler login, or mint an R2-read token for the box first.
+#
 #   bash scripts/r2-inventory.sh                 # every bucket in the account
 #   R2_BUCKET=tukuk-fallback bash scripts/r2-inventory.sh    # just one
 #
@@ -41,18 +47,24 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
 echo "== R2 inventory (account ${ACC:0:8}…, ${CEILING_GB} GB free across ALL buckets)"
-api '/r2/buckets' | python3 -c '
-import json, sys
-d = json.load(sys.stdin)
-r = d.get("result")
-bs = r.get("buckets") if isinstance(r, dict) else r
-only = sys.argv[1]
-for b in bs or []:
-    if only and b.get("name") != only:
-        continue
-    print(b.get("name"))
-' "$ONLY" > "$WORK/buckets"
-[ -s "$WORK/buckets" ] || { echo "  no buckets matched (token lacks R2 read scope?)"; exit 1; }
+api '/r2/buckets' > "$WORK/buckets.json"
+python3 - "$WORK" "$ONLY" <<'PY' || exit 1
+import json, sys, os
+d = json.load(open(os.path.join(sys.argv[1], 'buckets.json')))
+if not d.get('success'):
+    err = (d.get('errors') or [{}])[0]
+    print('  API refused the bucket list: %s (code %s)' % (err.get('message'), err.get('code')))
+    print('  This needs a token with Account · R2 Storage · Read. The box\'s cfut_ token is')
+    print('  Workers-only (it writes R2 through the backup Worker instead), so run this')
+    print('  where wrangler is logged in, or mint an R2-read token and set it in .env.')
+    raise SystemExit(1)
+r = d.get('result')
+bs = r.get('buckets') if isinstance(r, dict) else r
+only = sys.argv[2]
+names = [b.get('name') for b in (bs or []) if not only or b.get('name') == only]
+open(os.path.join(sys.argv[1], 'buckets'), 'w').write('\n'.join(names) + ('\n' if names else ''))
+PY
+[ -s "$WORK/buckets" ] || { echo "  no buckets${ONLY:+ named $ONLY} — nothing to audit"; exit 1; }
 echo "  buckets: $(tr '\n' ' ' < "$WORK/buckets")"
 
 for BUCKET in $(cat "$WORK/buckets"); do

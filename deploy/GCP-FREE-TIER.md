@@ -148,6 +148,13 @@ deploy/gcp/verify-free-tier.sh
 bash scripts/r2-inventory.sh      # the Cloudflare half of the same question
 ```
 
+`verify-free-tier.sh` runs on the box (it uses the box's `gcloud`). `r2-inventory.sh` runs
+where a **wrangler login** exists — the laptop — because the box's `cfut_…` token is Workers
+scope only: verified on the box, `/workers/scripts` answers and every `/r2/…` call returns
+`Authentication error`. That is the correct amount of privilege, not a bug: the box writes R2
+through the backup Worker, never through the R2 API, so a stolen box cannot enumerate or
+touch the vault.
+
 To park or un-park the VM (idempotent — safe to run twice):
 
 ```bash
