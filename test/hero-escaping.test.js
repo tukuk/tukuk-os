@@ -13,6 +13,11 @@
 //
 // The rule the fixes restore: heroTitle / heroSub carry PLAIN TEXT; the shell escapes
 // once at render; markup goes in heroHtml instead.
+//
+// The same audit found a second, different cause in the DATA itself: src/warisan-data.json
+// stored 153 site names as markup text ("Chang&apos;an", "&lt;em&gt;Stato da Terra&lt;/em&gt;").
+// Escaping those once is correct and still shows the entity, so the corpus is guarded too
+// (last test) — repaired by scripts/fix-geo-entities.js.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -53,4 +58,33 @@ test('a hero name reaches the browser as text, not as a visible entity', () => {
   const h1 = `<h1>${escapeHtml("St Chad's Church, York")}</h1>`;
   assert.ok(h1.includes('&#39;') && !h1.includes('&amp;'), h1);
   assert.equal(h1.replace(/<[^>]+>/g, '').replace(/&#39;/g, "'"), "St Chad's Church, York");
+});
+
+test('no place corpus stores markup as text', () => {
+  // A name kept as "Chang&apos;an" is invisible to the code (it is just characters) but the
+  // reader and the search index see the entity, and slugify() bakes it into the URL:
+  // /heritage/fert-xf6-neusiedlersee-cultural-landscape. Ingests that copy from Wikipedia are
+  // the way this happens again, so the whole corpus is scanned, not just warisan.
+  const ENT = /&(?:amp|lt|gt|quot|apos|nbsp|#\d{1,7}|#[xX][0-9a-fA-F]{1,6});/;
+  const TAG = /<\/?(?:em|i|b|sup|sub|u|small|span|br)\b[^>]*>/;
+  const dir = path.join(ROOT, 'src');
+  const offenders = [];
+  for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('-data.json'))) {
+    const txt = fs.readFileSync(path.join(dir, f), 'utf8');
+    if (ENT.test(txt) || TAG.test(txt)) offenders.push(f);
+  }
+  assert.deepEqual(offenders, [], `these datasets hold HTML entities/tags as text — run node scripts/fix-geo-entities.js --apply`);
+});
+
+test('the /heritage renames all have a 301 and a live target', () => {
+  const map = JSON.parse(fs.readFileSync(path.join(ROOT, 'migrations/heritage-slug-301.json'), 'utf8'));
+  assert.ok(map.length > 100, `expected the rename table, found ${map.length} rows`);
+  const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/warisan-data.json'), 'utf8'));
+  const slugify = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const alive = new Set(data.map((r) => '/heritage/' + slugify(r.name)));
+  for (const m of map) {
+    assert.ok(SERVER.includes(`['${m.from}', '${m.to}'],`), `no 301 installed for ${m.from}`);
+    assert.ok(alive.has(m.to), `${m.to} is not a page any more (target of ${m.from})`);
+  }
 });

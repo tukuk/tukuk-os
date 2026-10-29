@@ -1,0 +1,767 @@
+[
+ {
+  "from": "/heritage/qhapaq-xd1-an-andean-road-system",
+  "to": "/heritage/qhapaq-nan-andean-road-system",
+  "site": "Qhapaq Ñan, Andean Road System"
+ },
+ {
+  "from": "/heritage/jesuit-missions-of-the-guaranis-san-ignacio-mini-santa-ana-nuestra-se-xf1-ora-de-loreto-and-santa-maria-mayor-argentina-ruins-of-sao-miguel-das-missoes-brazil",
+  "to": "/heritage/jesuit-missions-of-the-guaranis-san-ignacio-mini-santa-ana-nuestra-senora-de-loreto-and-santa-maria-mayor-argentina-ruins-of-sao-miguel-das-missoes-brazil",
+  "site": "Jesuit Missions of the Guaranis: San Ignacio Mini, Santa Ana, Nuestra Señora de Loreto and Santa Maria Mayor (Argentina), Ruins of Sao Miguel das Missoes (Brazil)"
+ },
+ {
+  "from": "/heritage/fert-xf6-neusiedlersee-cultural-landscape",
+  "to": "/heritage/ferto-neusiedlersee-cultural-landscape",
+  "site": "Fertö / Neusiedlersee Cultural Landscape"
+ },
+ {
+  "from": "/heritage/silk-roads-the-routes-network-of-chang-apos-an-tianshan-corridor",
+  "to": "/heritage/silk-roads-the-routes-network-of-chang-an-tianshan-corridor",
+  "site": "Silk Roads: the Routes Network of Chang'an-Tianshan Corridor"
+ },
+ {
+  "from": "/heritage/venetian-works-of-defence-between-the-16th-and-17th-centuries-lt-em-gt-stato-da-terra-lt-em-gt-western-lt-em-gt-stato-da-mar-lt-em-gt",
+  "to": "/heritage/venetian-works-of-defence-between-the-16th-and-17th-centuries-stato-da-terra-western-stato-da-mar",
+  "site": "Venetian Works of Defence between the 16th and 17th Centuries: Stato da Terra – Western Stato da Mar"
+ },
+ {
+  "from": "/heritage/erzgebirge-krusnohor-xed-mining-region",
+  "to": "/heritage/erzgebirge-krusnohori-mining-region",
+  "site": "Erzgebirge/Krušnohoří Mining Region"
+ },
+ {
+  "from": "/heritage/pyr-xe9-n-xe9-es-mont-perdu",
+  "to": "/heritage/pyrenees-mont-perdu",
+  "site": "Pyrénées - Mont Perdu"
+ },
+ {
+  "from": "/heritage/wooden-lt-em-gt-tserkvas-lt-em-gt-of-the-carpathian-region-in-poland-and-ukraine",
+  "to": "/heritage/wooden-tserkvas-of-the-carpathian-region-in-poland-and-ukraine",
+  "site": "Wooden Tserkvas of the Carpathian Region in Poland and Ukraine"
+ },
+ {
+  "from": "/heritage/prehistoric-rock-art-sites-in-the-c-xf4-a-valley-and-siega-verde",
+  "to": "/heritage/prehistoric-rock-art-sites-in-the-coa-valley-and-siega-verde",
+  "site": "Prehistoric Rock Art Sites in the Côa Valley and Siega Verde"
+ },
+ {
+  "from": "/heritage/heritage-of-mercury-almad-xe9-n-and-idrija",
+  "to": "/heritage/heritage-of-mercury-almaden-and-idrija",
+  "site": "Heritage of Mercury. Almadén and Idrija"
+ },
+ {
+  "from": "/heritage/al-qal-apos-a-of-beni-hammad",
+  "to": "/heritage/al-qal-a-of-beni-hammad",
+  "site": "Al Qal'a of Beni Hammad"
+ },
+ {
+  "from": "/heritage/m-apos-zab-valley",
+  "to": "/heritage/m-zab-valley",
+  "site": "M'Zab Valley"
+ },
+ {
+  "from": "/heritage/pen-xed-nsula-vald-xe9-s",
+  "to": "/heritage/peninsula-valdes",
+  "site": "Península Valdés"
+ },
+ {
+  "from": "/heritage/jesuit-block-and-estancias-of-c-xf3-rdoba",
+  "to": "/heritage/jesuit-block-and-estancias-of-cordoba",
+  "site": "Jesuit Block and Estancias of Córdoba"
+ },
+ {
+  "from": "/heritage/ulu-lt-u-gt-r-lt-u-gt-u-kata-tju-lt-u-gt-t-lt-u-gt-a-national-park",
+  "to": "/heritage/uluru-kata-tjuta-national-park",
+  "site": "Uluru-Kata Tjuta National Park"
+ },
+ {
+  "from": "/heritage/palace-and-gardens-of-sch-xf6-nbrunn",
+  "to": "/heritage/palace-and-gardens-of-schonbrunn",
+  "site": "Palace and Gardens of Schönbrunn"
+ },
+ {
+  "from": "/heritage/walled-city-of-baku-with-the-shirvanshah-apos-s-palace-and-maiden-tower",
+  "to": "/heritage/walled-city-of-baku-with-the-shirvanshah-s-palace-and-maiden-tower",
+  "site": "Walled City of Baku with the Shirvanshah's Palace and Maiden Tower"
+ },
+ {
+  "from": "/heritage/cultural-landscape-of-khinalig-people-and-k-xf6-xe7-yolu-transhumance-route",
+  "to": "/heritage/cultural-landscape-of-khinalig-people-and-koc-yolu-transhumance-route",
+  "site": "Cultural Landscape of Khinalig People and “Köç Yolu” Transhumance Route"
+ },
+ {
+  "from": "/heritage/flemish-b-xe9-guinages",
+  "to": "/heritage/flemish-beguinages",
+  "site": "Flemish Béguinages"
+ },
+ {
+  "from": "/heritage/the-four-lifts-on-the-canal-du-centre-and-their-environs-la-louvi-xe8-re-and-le-roeulx-hainaut",
+  "to": "/heritage/the-four-lifts-on-the-canal-du-centre-and-their-environs-la-louviere-and-le-roeulx-hainaut",
+  "site": "The Four Lifts on the Canal du Centre and their Environs, La Louvière and Le Roeulx (Hainaut)"
+ },
+ {
+  "from": "/heritage/igua-xe7-u-national-park",
+  "to": "/heritage/iguacu-national-park",
+  "site": "Iguaçu National Park"
+ },
+ {
+  "from": "/heritage/historic-centre-of-s-xe3-o-lu-xed-s",
+  "to": "/heritage/historic-centre-of-sao-luis",
+  "site": "Historic Centre of São Luís"
+ },
+ {
+  "from": "/heritage/historic-centre-of-the-town-of-goi-xe1-s",
+  "to": "/heritage/historic-centre-of-the-town-of-goias",
+  "site": "Historic Centre of the Town of Goiás"
+ },
+ {
+  "from": "/heritage/s-xe3-o-francisco-square-in-the-town-of-s-xe3-o-crist-xf3-v-xe3-o",
+  "to": "/heritage/sao-francisco-square-in-the-town-of-sao-cristovao",
+  "site": "São Francisco Square in the Town of São Cristóvão"
+ },
+ {
+  "from": "/heritage/s-xed-tio-roberto-burle-marx",
+  "to": "/heritage/sitio-roberto-burle-marx",
+  "site": "Sítio Roberto Burle Marx"
+ },
+ {
+  "from": "/heritage/len-xe7-xf3-is-maranhenses-national-park",
+  "to": "/heritage/lencois-maranhenses-national-park",
+  "site": "Lençóis Maranhenses National Park"
+ },
+ {
+  "from": "/heritage/perua-xe7-u-river-canyon",
+  "to": "/heritage/peruacu-river-canyon",
+  "site": "Peruaçu River Canyon"
+ },
+ {
+  "from": "/heritage/ruins-of-lorop-xe9-ni",
+  "to": "/heritage/ruins-of-loropeni",
+  "site": "Ruins of Loropéni"
+ },
+ {
+  "from": "/heritage/royal-court-of-ti-xe9-b-xe9-l-xe9",
+  "to": "/heritage/royal-court-of-tiebele",
+  "site": "Royal Court of Tiébélé"
+ },
+ {
+  "from": "/heritage/s-lt-u-gt-g-lt-u-gt-ang-gwaay",
+  "to": "/heritage/sgang-gwaay",
+  "site": "SGang Gwaay"
+ },
+ {
+  "from": "/heritage/landscape-of-grand-pr-xe9",
+  "to": "/heritage/landscape-of-grand-pre",
+  "site": "Landscape of Grand Pré"
+ },
+ {
+  "from": "/heritage/writing-on-stone-xc1-xed-s-xed-nai-pi",
+  "to": "/heritage/writing-on-stone-aisinai-pi",
+  "site": "Writing-on-Stone / Áísínai’pi"
+ },
+ {
+  "from": "/heritage/tr-ond-xeb-k-klondike",
+  "to": "/heritage/tr-ondek-klondike",
+  "site": "Tr’ondëk-Klondike"
+ },
+ {
+  "from": "/heritage/historic-quarter-of-the-seaport-city-of-valpara-xed-so",
+  "to": "/heritage/historic-quarter-of-the-seaport-city-of-valparaiso",
+  "site": "Historic Quarter of the Seaport City of Valparaíso"
+ },
+ {
+  "from": "/heritage/churches-of-chilo-xe9",
+  "to": "/heritage/churches-of-chiloe",
+  "site": "Churches of Chiloé"
+ },
+ {
+  "from": "/heritage/fujian-lt-em-gt-tulou-lt-em-gt",
+  "to": "/heritage/fujian-tulou",
+  "site": "Fujian Tulou"
+ },
+ {
+  "from": "/heritage/los-kat-xed-os-national-park",
+  "to": "/heritage/los-katios-national-park",
+  "site": "Los Katíos National Park"
+ },
+ {
+  "from": "/heritage/area-de-conservaci-xf3-n-guanacaste",
+  "to": "/heritage/area-de-conservacion-guanacaste",
+  "site": "Area de Conservación Guanacaste"
+ },
+ {
+  "from": "/heritage/precolumbian-chiefdom-settlements-with-stone-spheres-of-the-diqu-xed-s",
+  "to": "/heritage/precolumbian-chiefdom-settlements-with-stone-spheres-of-the-diquis",
+  "site": "Precolumbian Chiefdom Settlements with Stone Spheres of the Diquís"
+ },
+ {
+  "from": "/heritage/sudanese-style-mosques-in-northern-c-xf4-te-d-ivoire",
+  "to": "/heritage/sudanese-style-mosques-in-northern-cote-d-ivoire",
+  "site": "Sudanese style mosques in northern Côte d’Ivoire"
+ },
+ {
+  "from": "/heritage/vi-xf1-ales-valley",
+  "to": "/heritage/vinales-valley",
+  "site": "Viñales Valley"
+ },
+ {
+  "from": "/heritage/historic-centre-of-camag-xfc-ey",
+  "to": "/heritage/historic-centre-of-camaguey",
+  "site": "Historic Centre of Camagüey"
+ },
+ {
+  "from": "/heritage/historic-centre-of-cesk-xfd-krumlov",
+  "to": "/heritage/historic-centre-of-cesky-krumlov",
+  "site": "Historic Centre of Český Krumlov"
+ },
+ {
+  "from": "/heritage/pilgrimage-church-of-st-john-of-nepomuk-at-zelen-xe1-hora",
+  "to": "/heritage/pilgrimage-church-of-st-john-of-nepomuk-at-zelena-hora",
+  "site": "Pilgrimage Church of St John of Nepomuk at Zelená Hora"
+ },
+ {
+  "from": "/heritage/kutn-xe1-hora-historical-town-centre-with-the-church-of-st-barbara-and-the-cathedral-of-our-lady-at-sedlec",
+  "to": "/heritage/kutna-hora-historical-town-centre-with-the-church-of-st-barbara-and-the-cathedral-of-our-lady-at-sedlec",
+  "site": "Kutná Hora: Historical Town Centre with the Church of St Barbara and the Cathedral of Our Lady at Sedlec"
+ },
+ {
+  "from": "/heritage/gardens-and-castle-at-kromer-xed-z",
+  "to": "/heritage/gardens-and-castle-at-kromeriz",
+  "site": "Gardens and Castle at Kroměříž"
+ },
+ {
+  "from": "/heritage/jewish-quarter-and-st-procopius-apos-basilica-in-treb-xed-c",
+  "to": "/heritage/jewish-quarter-and-st-procopius-basilica-in-trebic",
+  "site": "Jewish Quarter and St Procopius' Basilica in Třebíč"
+ },
+ {
+  "from": "/heritage/m-xf8-ns-klint",
+  "to": "/heritage/m-ns-klint",
+  "site": "Møns Klint"
+ },
+ {
+  "from": "/heritage/historic-centre-of-santa-ana-de-los-r-xed-os-de-cuenca",
+  "to": "/heritage/historic-centre-of-santa-ana-de-los-rios-de-cuenca",
+  "site": "Historic Centre of Santa Ana de los Ríos de Cuenca"
+ },
+ {
+  "from": "/heritage/bronze-age-burial-site-of-sammallahdenm-xe4-ki",
+  "to": "/heritage/bronze-age-burial-site-of-sammallahdenmaki",
+  "site": "Bronze Age Burial Site of Sammallahdenmäki"
+ },
+ {
+  "from": "/heritage/pet-xe4-j-xe4-vesi-old-church",
+  "to": "/heritage/petajavesi-old-church",
+  "site": "Petäjävesi Old Church"
+ },
+ {
+  "from": "/heritage/cathedral-of-notre-dame-former-abbey-of-saint-r-xe9-mi-and-palace-of-tau-reims",
+  "to": "/heritage/cathedral-of-notre-dame-former-abbey-of-saint-remi-and-palace-of-tau-reims",
+  "site": "Cathedral of Notre-Dame, Former Abbey of Saint-Rémi and Palace of Tau, Reims"
+ },
+ {
+  "from": "/heritage/roman-theatre-and-its-surroundings-and-the-quot-triumphal-arch-quot-of-orange",
+  "to": "/heritage/roman-theatre-and-its-surroundings-and-the-triumphal-arch-of-orange",
+  "site": "Roman Theatre and its Surroundings and the \"Triumphal Arch\" of Orange"
+ },
+ {
+  "from": "/heritage/v-xe9-zelay-church-and-hill",
+  "to": "/heritage/vezelay-church-and-hill",
+  "site": "Vézelay, Church and Hill"
+ },
+ {
+  "from": "/heritage/the-causses-and-the-c-xe9-vennes-mediterranean-agro-pastoral-cultural-landscape",
+  "to": "/heritage/the-causses-and-the-cevennes-mediterranean-agro-pastoral-cultural-landscape",
+  "site": "The Causses and the Cévennes, Mediterranean agro-pastoral Cultural Landscape"
+ },
+ {
+  "from": "/heritage/decorated-cave-of-pont-d-arc-known-as-grotte-chauvet-pont-d-arc-ard-xe8-che",
+  "to": "/heritage/decorated-cave-of-pont-d-arc-known-as-grotte-chauvet-pont-d-arc-ardeche",
+  "site": "Decorated Cave of Pont d’Arc, known as Grotte Chauvet-Pont d’Arc, Ardèche"
+ },
+ {
+  "from": "/heritage/strasbourg-grande-xce-le-and-lt-em-gt-neustadt-lt-em-gt",
+  "to": "/heritage/strasbourg-grande-ile-and-neustadt",
+  "site": "Strasbourg, Grande-Île and Neustadt"
+ },
+ {
+  "from": "/heritage/place-stanislas-place-de-la-carri-xe8-re-and-place-d-apos-alliance-in-nancy",
+  "to": "/heritage/place-stanislas-place-de-la-carriere-and-place-d-alliance-in-nancy",
+  "site": "Place Stanislas, Place de la Carrière and Place d'Alliance in Nancy"
+ },
+ {
+  "from": "/heritage/cha-xee-ne-des-puys-limagne-fault-tectonic-arena",
+  "to": "/heritage/chaine-des-puys-limagne-fault-tectonic-arena",
+  "site": "Chaîne des Puys - Limagne fault tectonic arena"
+ },
+ {
+  "from": "/heritage/volcanoes-and-forests-of-mount-pel-xe9-e-and-the-pitons-of-northern-martinique",
+  "to": "/heritage/volcanoes-and-forests-of-mount-pelee-and-the-pitons-of-northern-martinique",
+  "site": "Volcanoes and Forests of Mount Pelée and the Pitons of Northern Martinique"
+ },
+ {
+  "from": "/heritage/the-maison-carr-xe9-e-of-n-xee-mes",
+  "to": "/heritage/the-maison-carree-of-nimes",
+  "site": "The Maison Carrée of Nîmes"
+ },
+ {
+  "from": "/heritage/prehistoric-sites-and-decorated-caves-of-the-v-xe9-z-xe8-re-valley",
+  "to": "/heritage/prehistoric-sites-and-decorated-caves-of-the-vezere-valley",
+  "site": "Prehistoric Sites and Decorated Caves of the Vézère Valley"
+ },
+ {
+  "from": "/heritage/ecosystem-and-relict-cultural-landscape-of-lop-xe9-okanda",
+  "to": "/heritage/ecosystem-and-relict-cultural-landscape-of-lope-okanda",
+  "site": "Ecosystem and Relict Cultural Landscape of Lopé-Okanda"
+ },
+ {
+  "from": "/heritage/st-mary-apos-s-cathedral-and-st-michael-apos-s-church-at-hildesheim",
+  "to": "/heritage/st-mary-s-cathedral-and-st-michael-s-church-at-hildesheim",
+  "site": "St Mary's Cathedral and St Michael's Church at Hildesheim"
+ },
+ {
+  "from": "/heritage/hanseatic-city-of-l-xfc-beck",
+  "to": "/heritage/hanseatic-city-of-lubeck",
+  "site": "Hanseatic City of Lübeck"
+ },
+ {
+  "from": "/heritage/abbey-and-altenm-xfc-nster-of-lorsch",
+  "to": "/heritage/abbey-and-altenmunster-of-lorsch",
+  "site": "Abbey and Altenmünster of Lorsch"
+ },
+ {
+  "from": "/heritage/mathildenh-xf6-he-darmstadt",
+  "to": "/heritage/mathildenhohe-darmstadt",
+  "site": "Mathildenhöhe Darmstadt"
+ },
+ {
+  "from": "/heritage/garden-kingdom-of-dessau-w-xf6-rlitz",
+  "to": "/heritage/garden-kingdom-of-dessau-worlitz",
+  "site": "Garden Kingdom of Dessau-Wörlitz"
+ },
+ {
+  "from": "/heritage/castles-of-augustusburg-and-falkenlust-at-br-xfc-hl",
+  "to": "/heritage/castles-of-augustusburg-and-falkenlust-at-bruhl",
+  "site": "Castles of Augustusburg and Falkenlust at Brühl"
+ },
+ {
+  "from": "/heritage/the-historic-centre-chor-xe1-with-the-monastery-of-saint-john-the-theologian-and-the-cave-of-the-apocalypse-on-the-island-of-p-xe1-tmos",
+  "to": "/heritage/the-historic-centre-chora-with-the-monastery-of-saint-john-the-theologian-and-the-cave-of-the-apocalypse-on-the-island-of-patmos",
+  "site": "The Historic Centre (Chorá) with the Monastery of Saint-John the Theologian and the Cave of the Apocalypse on the Island of Pátmos"
+ },
+ {
+  "from": "/heritage/coastal-and-marine-ecosystems-of-the-bijag-xf3-s-archipelago-omat-xed-minh-xf4",
+  "to": "/heritage/coastal-and-marine-ecosystems-of-the-bijagos-archipelago-omati-minho",
+  "site": "Coastal and Marine Ecosystems of the Bijagós Archipelago – Omatí Minhô"
+ },
+ {
+  "from": "/heritage/r-xed-o-pl-xe1-tano-biosphere-reserve",
+  "to": "/heritage/rio-platano-biosphere-reserve",
+  "site": "Río Plátano Biosphere Reserve"
+ },
+ {
+  "from": "/heritage/budapest-including-the-banks-of-the-danube-the-buda-castle-quarter-and-andr-xe1-ssy-avenue",
+  "to": "/heritage/budapest-including-the-banks-of-the-danube-the-buda-castle-quarter-and-andrassy-avenue",
+  "site": "Budapest, including the Banks of the Danube, the Buda Castle Quarter and Andrássy Avenue"
+ },
+ {
+  "from": "/heritage/hortob-xe1-gy-national-park-the-lt-i-gt-puszta-lt-i-gt",
+  "to": "/heritage/hortobagy-national-park-the-puszta",
+  "site": "Hortobágy National Park - the Puszta"
+ },
+ {
+  "from": "/heritage/early-christian-necropolis-of-p-xe9-cs-sopianae",
+  "to": "/heritage/early-christian-necropolis-of-pecs-sopianae",
+  "site": "Early Christian Necropolis of Pécs (Sopianae)"
+ },
+ {
+  "from": "/heritage/xde-ingvellir-national-park",
+  "to": "/heritage/ingvellir-national-park",
+  "site": "Þingvellir National Park"
+ },
+ {
+  "from": "/heritage/vatnaj-xf6-kull-national-park-dynamic-nature-of-fire-and-ice",
+  "to": "/heritage/vatnajokull-national-park-dynamic-nature-of-fire-and-ice",
+  "site": "Vatnajökull National Park - Dynamic Nature of Fire and Ice"
+ },
+ {
+  "from": "/heritage/sun-temple-kon-xe2-rak",
+  "to": "/heritage/sun-temple-konarak",
+  "site": "Sun Temple, Konârak"
+ },
+ {
+  "from": "/heritage/cultural-landscape-of-bali-province-the-lt-em-gt-subak-lt-em-gt-system-as-a-manifestation-of-the-lt-em-gt-tri-hita-karana-lt-em-gt-philosophy",
+  "to": "/heritage/cultural-landscape-of-bali-province-the-subak-system-as-a-manifestation-of-the-tri-hita-karana-philosophy",
+  "site": "Cultural Landscape of Bali Province: the Subak System as a Manifestation of the Tri Hita Karana Philosophy"
+ },
+ {
+  "from": "/heritage/masjed-e-jam-xe9-of-isfahan",
+  "to": "/heritage/masjed-e-jame-of-isfahan",
+  "site": "Masjed-e Jāmé of Isfahan"
+ },
+ {
+  "from": "/heritage/ashur-qal-apos-at-sherqat",
+  "to": "/heritage/ashur-qal-at-sherqat",
+  "site": "Ashur (Qal'at Sherqat)"
+ },
+ {
+  "from": "/heritage/bah-xe1-i-holy-places-in-haifa-and-the-western-galilee",
+  "to": "/heritage/baha-i-holy-places-in-haifa-and-the-western-galilee",
+  "site": "Bahá’i Holy Places in Haifa and the Western Galilee"
+ },
+ {
+  "from": "/heritage/the-lt-i-gt-trulli-lt-i-gt-of-alberobello",
+  "to": "/heritage/the-trulli-of-alberobello",
+  "site": "The Trulli of Alberobello"
+ },
+ {
+  "from": "/heritage/val-d-apos-orcia",
+  "to": "/heritage/val-d-orcia",
+  "site": "Val d'Orcia"
+ },
+ {
+  "from": "/heritage/lt-i-gt-sacri-monti-lt-i-gt-of-piedmont-and-lombardy",
+  "to": "/heritage/sacri-monti-of-piedmont-and-lombardy",
+  "site": "Sacri Monti of Piedmont and Lombardy"
+ },
+ {
+  "from": "/heritage/genoa-lt-i-gt-le-strade-nuove-lt-i-gt-and-the-system-of-the-lt-i-gt-palazzi-dei-rolli-lt-i-gt",
+  "to": "/heritage/genoa-le-strade-nuove-and-the-system-of-the-palazzi-dei-rolli",
+  "site": "Genoa: Le Strade Nuove and the system of the Palazzi dei Rolli"
+ },
+ {
+  "from": "/heritage/arab-norman-palermo-and-the-cathedral-churches-of-cefal-xfa-and-monreale",
+  "to": "/heritage/arab-norman-palermo-and-the-cathedral-churches-of-cefalu-and-monreale",
+  "site": "Arab-Norman Palermo and the Cathedral Churches of Cefalú and Monreale"
+ },
+ {
+  "from": "/heritage/via-appia-lt-em-gt-regina-viarum-lt-em-gt",
+  "to": "/heritage/via-appia-regina-viarum",
+  "site": "Via Appia. Regina Viarum"
+ },
+ {
+  "from": "/heritage/funerary-tradition-in-the-prehistory-of-sardinia-lt-em-gt-the-domus-de-janas-lt-em-gt",
+  "to": "/heritage/funerary-tradition-in-the-prehistory-of-sardinia-the-domus-de-janas",
+  "site": "Funerary Tradition in the Prehistory of Sardinia – The domus de janas"
+ },
+ {
+  "from": "/heritage/the-system-of-italian-style-lt-em-gt-condominio-lt-em-gt-theatres-of-the-18th-and-19th-centuries-in-central-italy",
+  "to": "/heritage/the-system-of-italian-style-condominio-theatres-of-the-18th-and-19th-centuries-in-central-italy",
+  "site": "The system of Italian-style condominio theatres of the 18th and 19th centuries in Central Italy"
+ },
+ {
+  "from": "/heritage/old-town-of-ghadam-xe8-s",
+  "to": "/heritage/old-town-of-ghadames",
+  "site": "Old Town of Ghadamès"
+ },
+ {
+  "from": "/heritage/ancient-lt-i-gt-ksour-lt-i-gt-of-ouadane-chinguetti-tichitt-and-oualata",
+  "to": "/heritage/ancient-ksour-of-ouadane-chinguetti-tichitt-and-oualata",
+  "site": "Ancient Ksour of Ouadane, Chinguetti, Tichitt and Oualata"
+ },
+ {
+  "from": "/heritage/sian-ka-apos-an",
+  "to": "/heritage/sian-ka-an",
+  "site": "Sian Ka'an"
+ },
+ {
+  "from": "/heritage/archaeological-zone-of-paquim-xe9-casas-grandes",
+  "to": "/heritage/archaeological-zone-of-paquime-casas-grandes",
+  "site": "Archaeological Zone of Paquimé, Casas Grandes"
+ },
+ {
+  "from": "/heritage/historic-monuments-zone-of-quer-xe9-taro",
+  "to": "/heritage/historic-monuments-zone-of-queretaro",
+  "site": "Historic Monuments Zone of Querétaro"
+ },
+ {
+  "from": "/heritage/hospicio-caba-xf1-as-guadalajara",
+  "to": "/heritage/hospicio-cabanas-guadalajara",
+  "site": "Hospicio Cabañas, Guadalajara"
+ },
+ {
+  "from": "/heritage/franciscan-missions-in-the-sierra-gorda-of-quer-xe9-taro",
+  "to": "/heritage/franciscan-missions-in-the-sierra-gorda-of-queretaro",
+  "site": "Franciscan Missions in the Sierra Gorda of Querétaro"
+ },
+ {
+  "from": "/heritage/central-university-city-campus-of-the-lt-i-gt-universidad-nacional-aut-xf3-noma-de-m-xe9-xico-lt-i-gt-unam",
+  "to": "/heritage/central-university-city-campus-of-the-universidad-nacional-autonoma-de-mexico-unam",
+  "site": "Central University City Campus of the Universidad Nacional Autónoma de México (UNAM)"
+ },
+ {
+  "from": "/heritage/archipi-xe9-lago-de-revillagigedo",
+  "to": "/heritage/archipielago-de-revillagigedo",
+  "site": "Archipiélago de Revillagigedo"
+ },
+ {
+  "from": "/heritage/tehuac-xe1-n-cuicatl-xe1-n-valley-originary-habitat-of-mesoamerica",
+  "to": "/heritage/tehuacan-cuicatlan-valley-originary-habitat-of-mesoamerica",
+  "site": "Tehuacán-Cuicatlán Valley: originary habitat of Mesoamerica"
+ },
+ {
+  "from": "/heritage/wix-xe1-rika-route-through-sacred-sites-to-wirikuta-tatehuar-xed-huajuy-xe9",
+  "to": "/heritage/wixarika-route-through-sacred-sites-to-wirikuta-tatehuari-huajuye",
+  "site": "Wixárika Route through Sacred Sites to Wirikuta (Tatehuarí Huajuyé)"
+ },
+ {
+  "from": "/heritage/medina-of-t-xe9-touan-formerly-known-as-titawin",
+  "to": "/heritage/medina-of-tetouan-formerly-known-as-titawin",
+  "site": "Medina of Tétouan (formerly known as Titawin)"
+ },
+ {
+  "from": "/heritage/historic-area-of-willemstad-inner-city-and-harbour-cura-xe7-ao",
+  "to": "/heritage/historic-area-of-willemstad-inner-city-and-harbour-curacao",
+  "site": "Historic Area of Willemstad, Inner City and Harbour, Curaçao"
+ },
+ {
+  "from": "/heritage/rietveld-schr-xf6-derhuis-rietveld-schr-xf6-der-house",
+  "to": "/heritage/rietveld-schroderhuis-rietveld-schroder-house",
+  "site": "Rietveld Schröderhuis (Rietveld Schröder House)"
+ },
+ {
+  "from": "/heritage/ruins-of-le-xf3-n-viejo",
+  "to": "/heritage/ruins-of-leon-viejo",
+  "site": "Ruins of León Viejo"
+ },
+ {
+  "from": "/heritage/le-xf3-n-cathedral",
+  "to": "/heritage/leon-cathedral",
+  "site": "León Cathedral"
+ },
+ {
+  "from": "/heritage/air-and-t-xe9-n-xe9-r-xe9-natural-reserves",
+  "to": "/heritage/air-and-tenere-natural-reserves",
+  "site": "Air and Ténéré Natural Reserves"
+ },
+ {
+  "from": "/heritage/west-norwegian-fjords-geirangerfjord-and-n-xe6-r-xf8-yfjord",
+  "to": "/heritage/west-norwegian-fjords-geirangerfjord-and-n-r-yfjord",
+  "site": "West Norwegian Fjords – Geirangerfjord and Nærøyfjord"
+ },
+ {
+  "from": "/heritage/r-xf8-ros-mining-town-and-the-circumference",
+  "to": "/heritage/r-ros-mining-town-and-the-circumference",
+  "site": "Røros Mining Town and the Circumference"
+ },
+ {
+  "from": "/heritage/lt-i-gt-aflaj-lt-i-gt-irrigation-systems-of-oman",
+  "to": "/heritage/aflaj-irrigation-systems-of-oman",
+  "site": "Aflaj Irrigation Systems of Oman"
+ },
+ {
+  "from": "/heritage/the-colonial-transisthmian-route-of-panam-xe1",
+  "to": "/heritage/the-colonial-transisthmian-route-of-panama",
+  "site": "The Colonial Transisthmian Route of Panamá"
+ },
+ {
+  "from": "/heritage/jesuit-missions-of-la-sant-xed-sima-trinidad-de-paran-xe1-and-jes-xfa-s-de-tavarangue",
+  "to": "/heritage/jesuit-missions-of-la-santisima-trinidad-de-parana-and-jesus-de-tavarangue",
+  "site": "Jesuit Missions of La Santísima Trinidad de Paraná and Jesús de Tavarangue"
+ },
+ {
+  "from": "/heritage/r-xed-o-abiseo-national-park",
+  "to": "/heritage/rio-abiseo-national-park",
+  "site": "Río Abiseo National Park"
+ },
+ {
+  "from": "/heritage/man-xfa-national-park",
+  "to": "/heritage/manu-national-park",
+  "site": "Manú National Park"
+ },
+ {
+  "from": "/heritage/auschwitz-birkenau-lt-br-gt-lt-small-gt-german-nazi-concentration-and-extermination-camp-1940-1945-lt-small-gt",
+  "to": "/heritage/auschwitz-birkenau-german-nazi-concentration-and-extermination-camp-1940-1945",
+  "site": "Auschwitz Birkenau German Nazi Concentration and Extermination Camp (1940-1945)"
+ },
+ {
+  "from": "/heritage/historic-centre-of-krak-xf3-w",
+  "to": "/heritage/historic-centre-of-krakow",
+  "site": "Historic Centre of Kraków"
+ },
+ {
+  "from": "/heritage/tarnowskie-g-xf3-ry-lead-silver-zinc-mine-and-its-underground-water-management-system",
+  "to": "/heritage/tarnowskie-gory-lead-silver-zinc-mine-and-its-underground-water-management-system",
+  "site": "Tarnowskie Góry Lead-Silver-Zinc Mine and its Underground Water Management System"
+ },
+ {
+  "from": "/heritage/historic-centre-of-xc9-vora",
+  "to": "/heritage/historic-centre-of-evora",
+  "site": "Historic Centre of Évora"
+ },
+ {
+  "from": "/heritage/monastery-of-the-hieronymites-and-tower-of-bel-xe9-m-in-lisbon",
+  "to": "/heritage/monastery-of-the-hieronymites-and-tower-of-belem-in-lisbon",
+  "site": "Monastery of the Hieronymites and Tower of Belém in Lisbon"
+ },
+ {
+  "from": "/heritage/royal-building-of-lt-i-gt-mafra-lt-i-gt-palace-basilica-convent-lt-i-gt-cerco-lt-i-gt-garden-and-hunting-park-lt-i-gt-tapada-lt-i-gt",
+  "to": "/heritage/royal-building-of-mafra-palace-basilica-convent-cerco-garden-and-hunting-park-tapada",
+  "site": "Royal Building of Mafra – Palace, Basilica, Convent, Cerco Garden and Hunting Park (Tapada)"
+ },
+ {
+  "from": "/heritage/historic-centre-of-guimar-xe3-es-and-couros-zone",
+  "to": "/heritage/historic-centre-of-guimaraes-and-couros-zone",
+  "site": "Historic Centre of Guimarães and Couros Zone"
+ },
+ {
+  "from": "/heritage/haeinsa-temple-janggyeong-panjeon-the-depositories-for-the-lt-i-gt-tripitaka-koreana-lt-i-gt-woodblocks",
+  "to": "/heritage/haeinsa-temple-janggyeong-panjeon-the-depositories-for-the-tripitaka-koreana-woodblocks",
+  "site": "Haeinsa Temple Janggyeong Panjeon, the Depositories for the Tripitaka Koreana Woodblocks"
+ },
+ {
+  "from": "/heritage/br-xe2-ncusi-monumental-ensemble-of-t-xe2-rgu-jiu",
+  "to": "/heritage/brancusi-monumental-ensemble-of-targu-jiu",
+  "site": "Brâncuși Monumental Ensemble of Târgu Jiu"
+ },
+ {
+  "from": "/heritage/the-ro-xe7-as-of-sao-tome-and-principe-colonial-agricultural-system-and-forced-migration",
+  "to": "/heritage/the-rocas-of-sao-tome-and-principe-colonial-agricultural-system-and-forced-migration",
+  "site": "The Roças of Sao Tome and Principe: Colonial Agricultural System and Forced Migration"
+ },
+ {
+  "from": "/heritage/at-turaif-district-in-ad-dir-apos-iyah",
+  "to": "/heritage/at-turaif-district-in-ad-dir-iyah",
+  "site": "At-Turaif District in ad-Dir'iyah"
+ },
+ {
+  "from": "/heritage/historic-town-of-bansk-xe1-stiavnica-and-the-technical-monuments-in-its-vicinity",
+  "to": "/heritage/historic-town-of-banska-stiavnica-and-the-technical-monuments-in-its-vicinity",
+  "site": "Historic Town of Banská Štiavnica and the Technical Monuments in its Vicinity"
+ },
+ {
+  "from": "/heritage/levoca-spissk-xfd-hrad-and-the-associated-cultural-monuments",
+  "to": "/heritage/levoca-spissky-hrad-and-the-associated-cultural-monuments",
+  "site": "Levoča, Spišský Hrad and the Associated Cultural Monuments"
+ },
+ {
+  "from": "/heritage/works-of-antoni-gaud-xed",
+  "to": "/heritage/works-of-antoni-gaudi",
+  "site": "Works of Antoni Gaudí"
+ },
+ {
+  "from": "/heritage/renaissance-monumental-ensembles-of-xda-beda-and-baeza",
+  "to": "/heritage/renaissance-monumental-ensembles-of-ubeda-and-baeza",
+  "site": "Renaissance Monumental Ensembles of Úbeda and Baeza"
+ },
+ {
+  "from": "/heritage/archaeological-ensemble-of-m-xe9-rida",
+  "to": "/heritage/archaeological-ensemble-of-merida",
+  "site": "Archaeological Ensemble of Mérida"
+ },
+ {
+  "from": "/heritage/royal-monastery-of-santa-mar-xed-a-de-guadalupe",
+  "to": "/heritage/royal-monastery-of-santa-maria-de-guadalupe",
+  "site": "Royal Monastery of Santa María de Guadalupe"
+ },
+ {
+  "from": "/heritage/do-xf1-ana-national-park",
+  "to": "/heritage/donana-national-park",
+  "site": "Doñana National Park"
+ },
+ {
+  "from": "/heritage/san-mill-xe1-n-yuso-and-suso-monasteries",
+  "to": "/heritage/san-millan-yuso-and-suso-monasteries",
+  "site": "San Millán Yuso and Suso Monasteries"
+ },
+ {
+  "from": "/heritage/university-and-historic-precinct-of-alcal-xe1-de-henares",
+  "to": "/heritage/university-and-historic-precinct-of-alcala-de-henares",
+  "site": "University and Historic Precinct of Alcalá de Henares"
+ },
+ {
+  "from": "/heritage/san-crist-xf3-bal-de-la-laguna",
+  "to": "/heritage/san-cristobal-de-la-laguna",
+  "site": "San Cristóbal de La Laguna"
+ },
+ {
+  "from": "/heritage/old-town-of-xc1-vila-with-its-extra-muros-churches",
+  "to": "/heritage/old-town-of-avila-with-its-extra-muros-churches",
+  "site": "Old Town of Ávila with its Extra-Muros Churches"
+ },
+ {
+  "from": "/heritage/palau-de-la-m-xfa-sica-catalana-and-hospital-de-sant-pau-barcelona",
+  "to": "/heritage/palau-de-la-musica-catalana-and-hospital-de-sant-pau-barcelona",
+  "site": "Palau de la Música Catalana and Hospital de Sant Pau, Barcelona"
+ },
+ {
+  "from": "/heritage/cathedral-alc-xe1-zar-and-archivo-de-indias-in-seville",
+  "to": "/heritage/cathedral-alcazar-and-archivo-de-indias-in-seville",
+  "site": "Cathedral, Alcázar and Archivo de Indias in Seville"
+ },
+ {
+  "from": "/heritage/routes-of-santiago-de-compostela-lt-i-gt-camino-franc-xe9-s-lt-i-gt-and-routes-of-northern-spain",
+  "to": "/heritage/routes-of-santiago-de-compostela-camino-frances-and-routes-of-northern-spain",
+  "site": "Routes of Santiago de Compostela: Camino Francés and Routes of Northern Spain"
+ },
+ {
+  "from": "/heritage/old-town-of-c-xe1-ceres",
+  "to": "/heritage/old-town-of-caceres",
+  "site": "Old Town of Cáceres"
+ },
+ {
+  "from": "/heritage/birka-and-hovg-xe5-rden",
+  "to": "/heritage/birka-and-hovgarden",
+  "site": "Birka and Hovgården"
+ },
+ {
+  "from": "/heritage/church-town-of-gammelstad-lule-xe5",
+  "to": "/heritage/church-town-of-gammelstad-lulea",
+  "site": "Church Town of Gammelstad, Luleå"
+ },
+ {
+  "from": "/heritage/agricultural-landscape-of-southern-xd6-land",
+  "to": "/heritage/agricultural-landscape-of-southern-oland",
+  "site": "Agricultural Landscape of Southern Öland"
+ },
+ {
+  "from": "/heritage/decorated-farmhouses-of-h-xe4-lsingland",
+  "to": "/heritage/decorated-farmhouses-of-halsingland",
+  "site": "Decorated Farmhouses of Hälsingland"
+ },
+ {
+  "from": "/heritage/benedictine-convent-of-st-john-at-m-xfc-stair",
+  "to": "/heritage/benedictine-convent-of-st-john-at-mustair",
+  "site": "Benedictine Convent of St John at Müstair"
+ },
+ {
+  "from": "/heritage/village-of-sidi-bou-sa-xef-d",
+  "to": "/heritage/village-of-sidi-bou-said",
+  "site": "Village of Sidi Bou Saïd"
+ },
+ {
+  "from": "/heritage/g-xf6-reme-national-park-and-the-rock-sites-of-cappadocia",
+  "to": "/heritage/goreme-national-park-and-the-rock-sites-of-cappadocia",
+  "site": "Göreme National Park and the Rock Sites of Cappadocia"
+ },
+ {
+  "from": "/heritage/l-apos-viv-the-ensemble-of-the-historic-centre",
+  "to": "/heritage/l-viv-the-ensemble-of-the-historic-centre",
+  "site": "L'viv – the Ensemble of the Historic Centre"
+ },
+ {
+  "from": "/heritage/canterbury-cathedral-st-augustine-apos-s-abbey-and-st-martin-apos-s-church",
+  "to": "/heritage/canterbury-cathedral-st-augustine-s-abbey-and-st-martin-s-church",
+  "site": "Canterbury Cathedral, St Augustine's Abbey, and St Martin's Church"
+ },
+ {
+  "from": "/heritage/gorham-apos-s-cave-complex",
+  "to": "/heritage/gorham-s-cave-complex",
+  "site": "Gorham's Cave Complex"
+ },
+ {
+  "from": "/heritage/the-work-of-engineer-eladio-dieste-church-of-atl-xe1-ntida",
+  "to": "/heritage/the-work-of-engineer-eladio-dieste-church-of-atlantida",
+  "site": "The work of engineer Eladio Dieste: Church of Atlántida"
+ },
+ {
+  "from": "/heritage/complex-of-hu-xe9-monuments",
+  "to": "/heritage/complex-of-hue-monuments",
+  "site": "Complex of Hué Monuments"
+ },
+ {
+  "from": "/heritage/old-city-of-sana-apos-a",
+  "to": "/heritage/old-city-of-sana-a",
+  "site": "Old City of Sana'a"
+ }
+]
