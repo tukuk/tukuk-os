@@ -288,9 +288,10 @@ else
   say "WARNING: /health does not report an update to $SHORT — the tree is right, but read"
   say "         https://$ZONE/health's update block before calling this shipped."
 fi
-say "public site: https://$ZONE/ — static assets carry s-maxage=3600, so /theme.css and the
-        rest can stay at the edge an hour past this deploy; deploy/purge-edge-cache.sh
-        clears them but needs a token with Zone:Cache Purge (see its header). Rendered HTML
+say "public site: https://$ZONE/ — CSS/JS go out with s-maxage=300, so /theme.css and the rest
+        refresh themselves at the edge within about five minutes. Images, icons and fonts carry
+        s-maxage=604800 — a changed one can sit a week, and that is what deploy/purge-edge-cache.sh
+        is for; it needs a token with Zone:Read + Zone:Cache Purge (see its header). Rendered HTML
         measured DYNAMIC at the edge, so the read below is a live one."
 
 # ── 7. and through the edge, not just the loopback ──────────────────────────────
