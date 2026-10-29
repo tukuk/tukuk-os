@@ -99,3 +99,9 @@ generated/content-export/
 
 # Clarity Data-export API output (may contain analytics; never commit)
 clarity-export/
+
+# Alibaba Cloud AccessKey export — SECRET, never commit (see deploy/GCP-FREE-TIER.md)
+AccessKey.csv
+AccessKey-*.csv
+*.AccessKey.csv
+aliyun/credentials

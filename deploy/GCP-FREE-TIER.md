@@ -186,6 +186,49 @@ Two free allowances have already been defused here:
   Compute Engine API **never enabled**, so they cannot hold a VM and cost nothing. That is
   also why scanning them for instances hangs or errors — not a leak.
 
+## Alibaba Cloud: surveyed, and the answer is "use nothing" (2026-10-29)
+
+An `AccessKey.csv` from an Alibaba Cloud account (registered to `admin@tukuk.org`, Singapore
+region) showed up in the working tree, with the question: is anything in it free *forever* and
+worth using? Full read-only probe: `.artifacts/aliyun_probe.py` (hand-rolled RPC + OSS v1
+signing; the secret is read from the CSV inside the process and never printed or put in argv).
+
+**What the account actually is** — identity `acs:ram::5425290117724784:root`, i.e. a **root**
+key, not a RAM user: 0 RAM users, 0 custom policies, `MFADevicesInUse: 0`, and exactly **one**
+root AccessKey, created 2026-10-29. Balance `0.00 USD`, and `QueryBill` returns **zero line
+items** for 2025-11, 2026-05, 2026-08, 2026-09 and 2026-10. Zero ECS instances across the 8
+regions probed, zero RDS, zero Redis, zero subscription instances
+(`QueryAvailableInstances TotalCount: 0`); OSS answers `403 UserDisable` because the service
+was never activated. So there is nothing to switch off and no spend lurking.
+
+**Why it is still a no** — checked against the pricing pages, not from memory:
+
+* **OSS** meters storage, requests **and egress**. R2's whole reason for existing in this
+  design is free egress; OSS is the opposite shape, and activating it opens a meter.
+* **Function Compute** is pure pay-per-CU with only a 10 GB disk free quota and a **minimum
+  US\$0.01 for any hour with invocations** — there is no always-free compute rung at all.
+* **Simple Message Queue** advertises 20 M free requests/month, but the *resource* fee has no
+  free tier: US\$0.11/queue/day, US\$0.46/topic/day (Singapore). "Free requests" ≠ free.
+* **Cloud DNS Public Zone** has no free edition any more — Personal Edition is
+  **US\$7/domain/year**, and new Personal Edition purchases are closed to enterprise-verified
+  accounts. Cloudflare DNS already serves `tukuk.org` for nothing.
+* **Model Studio** free quota is a *new-user* benefit: **90 days**, per model, expiring even if
+  unused, then auto-billing. The only safe way to touch it is `Free Quota Only`, which returns
+  `AllocationQuota.FreeTierOnly` instead of a charge.
+* The "free trial" centre is **credits with an expiry** (e.g. US\$90), not permanent capacity.
+
+GCP and Cloudflare hand out always-free capacity (the time-limited e2-micro, Cloud Run's
+2 M requests + 1 GB egress, R2's 10 GB with free egress, Workers' 100 k requests/day). Alibaba
+hands out trials and meters. Under the rule for this project — *only arrange what is free
+forever with no possible charge* — the correct move is to leave the account dormant and switch
+on nothing. **The one action item is security, not cost:** a root AccessKey is account-owner
+admin (including billing) and cannot be scoped by policy. It was sitting mode `0664` in a
+working tree with a GitHub remote. Now fixed to `0600` and gitignored
+(`.gitignore` — `AccessKey.csv` and three sibling patterns). To finish: enable **MFA on the
+root login**, then either **deactivate and delete** this key in the console (nothing uses it —
+the safest close), or create a **RAM user** holding only the policy you actually need and issue
+that user its own key instead. Never copy the CSV onto the box or into `/opt/tukuk-os/.env`.
+
 ## What money still has to buy (two things, and only two)
 
 Everything that runs the site is inside a free allowance. Two dependencies are not free, and
