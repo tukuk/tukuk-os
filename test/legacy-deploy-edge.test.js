@@ -4,9 +4,12 @@
 //
 // remote-deploy.sh is the legacy rsync path. It still sits in the repo next to the real
 // one, and it does damage in a way that cannot be seen: step 2 rsyncs the working tree
-// over /opt/tukuk-os, which is a git clone, so the tree goes dirty; scripts/auto-update.sh
-// merges with --ff-only and refuses to overwrite a dirty tree; the nightly timer reports
-// nothing interesting and production drifts days behind main while every run looks green.
+// over /opt/tukuk-os, which is a git clone, so tracked files there stop matching HEAD;
+// scripts/auto-update.sh merges with --ff-only, and such a merge refuses when a path it
+// must write is modified locally (verified against git in a scratch repo — dirt elsewhere
+// merges straight through). So the first upstream edit to an overlapping file skips the
+// merge, the nightly timer reports nothing interesting, and production drifts days behind
+// main while every run looks green.
 // So it is now guard-blocked rather than deleted, because the one job it does have left is
 // provisioning a box that has no clone. These tests execute the refusal — the guard is the
 // first executable statement in the file, so running it here cannot rsync anything, and a

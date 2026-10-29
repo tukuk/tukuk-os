@@ -3,13 +3,17 @@
 # ⚠️ DEPRECATED — this is NOT the deploy path. `bash scripts/ship-to-box.sh` is.
 # The difference is not style. This script rsync's the working tree over
 # /opt/tukuk-os, and that tree is a git clone whose update (scripts/auto-update.sh)
-# merges with --ff-only and REFUSES to touch a dirty tree — by design, so that a
-# stray local edit can never be overwritten in production. The consequence is the
-# quiet one: the nightly timer skips the merge, reports nothing interesting, and
-# production ends up days behind main while every run looks green. Step 1 also
-# `chown -R`s the whole directory to the login user, against the root-owned clone
-# that git ops on the box depend on, and the rsync carries .env over the production
-# one (keys, tokens, everything the server generated for itself).
+# merges with --ff-only. Such a merge refuses, by design, when a file it is about to
+# write is modified locally — the guard that stops a stray production edit being
+# stamped over. Measured rather than assumed: dirt on a path the merge does not touch
+# goes straight through, so this is about overlapping paths, not about any dirt.
+# Files the rsync leaves differing from HEAD are exactly the ones a later upstream
+# change has to overwrite, so the day main touches one of them the timer skips the
+# merge, reports nothing interesting, and production ends up days behind main while
+# every run looks green. Step 1 also `chown -R`s the whole directory to the login
+# user, against the root-owned clone that git ops on the box depend on, and the rsync
+# carries .env over the production one (keys, tokens, everything the server generated
+# for itself).
 #
 # Kept for the one job git cannot do: bringing up a machine that has no clone yet.
 # Say so explicitly, because nothing here should run by accident:

@@ -47,7 +47,9 @@
 #
 # The update itself is the repo's own scripts/auto-update.sh via tukuk-update.service:
 # fetch → merge --ff-only → (npm install if dependencies changed) → restart tukuk-os.
-# It is fail-safe: a dirty tree aborts the merge rather than overwriting anything.
+# It is fail-safe: --ff-only refuses when a path it must write is modified locally, so a
+# hot edit on the box is never stamped over — it just stops the update, which is why this
+# script checks the journal instead of assuming a green unit meant a merge happened.
 # ==============================================================================
 set -euo pipefail
 
