@@ -76,6 +76,19 @@ test('the deploy is not believed until the box reports the shipped sha', () => {
   assert.ok(src.includes('grep -qF "\\"to\\":\\"$SHA\\""'), 'the /health update record must be checked too');
 });
 
+test('a server that is still booting is not reported unhealthy', () => {
+  // auto-update.sh logs "done" the moment `systemctl restart` returns, and this app
+  // takes a few seconds to bind 3000. The first live ship read /health three seconds
+  // after that and got an empty string back — on a deploy whose own record said ok 17
+  // seconds later. A warning that fires on success is worse than no warning, so both
+  // post-deploy reads (journal and health) are polls with a deadline.
+  assert.match(src, /HEALTH=""\nfor _ in \$\(seq 1 15\); do/, 'the health read has to be a loop');
+  assert.match(src, /never answered ok in 30 s/, 'and the warning has to name the deadline it missed');
+  const journal = line(/JOURNAL=""\nfor _ in \$\(seq 1 20\); do/, 'polling the journal');
+  const health = line(/HEALTH=""\nfor _ in \$\(seq 1 15\); do/, 'polling /health');
+  assert.ok(journal < health, 'the journal is read before health: a merge that never happened cannot be healthy');
+});
+
 test('re-shipping a sha that is already live is a no-op, not a failed deploy', () => {
   // auto-update.sh merges with --ff-only and logs "Already up to date" when there is
   // nothing to do — which contains no sha, so the journal assertion below it would kill

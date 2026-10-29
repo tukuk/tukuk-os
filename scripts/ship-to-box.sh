@@ -170,8 +170,18 @@ printf '%s\n' "$JOURNAL" | grep -qF "$SHA" || printf '%s\n' "$JOURNAL" | grep -q
 LIVE="$(box "cd '$REPO_DIR' && git -c safe.directory='$REPO_DIR' rev-parse HEAD")"
 [[ "$LIVE" == "$SHA" ]] || die "$REPO_DIR is at $LIVE, not $SHA"
 say "repo on the box: $LIVE"
-HEALTH="$(box "curl -s --max-time 10 http://127.0.0.1:3000/health" || true)"
-printf '%s\n' "$HEALTH" | grep -q '"status":"ok"' || say "WARNING: /health did not answer ok — check: systemctl status tukuk-os"
+# Poll, do not sample. auto-update.sh logs "done" the instant `systemctl restart`
+# returns, and the app takes several seconds to bind 3000 — the first read after a real
+# ship came back empty three seconds in, on a deploy that then reported ok on /health.
+# Calling a booting server unhealthy would train whoever reads this to ignore it.
+HEALTH=""
+for _ in $(seq 1 15); do
+  sleep 2
+  HEALTH="$(box "curl -s --max-time 10 http://127.0.0.1:3000/health" || true)"
+  printf '%s\n' "$HEALTH" | grep -q '"status":"ok"' && break
+done
+printf '%s\n' "$HEALTH" | grep -q '"status":"ok"' \
+  || say "WARNING: /health never answered ok in 30 s — check: systemctl status tukuk-os"
 # The box keeps its own record of every update — stage, result, the two commits — and
 # publishes it on /health (src/update-status.js, written by scripts/auto-update.sh). It
 # exists because "nothing happened" and "the timer died in March" look identical from
