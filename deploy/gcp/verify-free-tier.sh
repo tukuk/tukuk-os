@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# verify-free-tier.sh — read-only audit of this account's GCP spend posture for tukuk.org.
+# verify-free-tier.sh — read-only audit of this account's GCP spend posture for tukuk.org,
+# plus the Cloudflare-side meters and the domain registration that bound the whole design.
 #
 # Prints what is running, what is parked, and what would start costing money if it appeared.
 # Safe to run anytime: it creates and deletes nothing. Run ON THE HOME BOX as the tukuk user.
@@ -122,6 +123,33 @@ echo
 echo "== budget guard"
 gcloud billing budgets list --billing-account="$BILLING" \
   --format='value(displayName,amount.specifiedAmount.units,thresholdRules.len())' 2>&1 | sed 's/^/  /'
+
+# The site being free to run does not mean it is free to *own*: tukuk.org is a registration
+# that expires, and a lapse takes the whole thing down for everyone. RDAP is a public
+# registry lookup — no account, no key, nothing to pay.
+echo
+echo "== domain renewal (not a Google cost — the one recurring thing that is not free)"
+RDAP=$(timeout 30 curl -sL "https://rdap.org/domain/${DOMAIN:-tukuk.org}" 2>/dev/null)
+RDAP_JSON="$RDAP" python3 - <<'PY'
+import json, os, sys, datetime
+raw = os.environ.get('RDAP_JSON', '')
+try:
+    d = json.loads(raw)
+except Exception:
+    print("  lookup failed (no RDAP answer) — check by hand: whois tukuk.org")
+    raise SystemExit(0)
+exp = next((e['eventDate'] for e in d.get('events', []) if e.get('eventAction') == 'expiration'), None)
+if not exp:
+    print("  RDAP answered but has no expiration event")
+    raise SystemExit(0)
+day = exp[:10]
+days = (datetime.date.fromisoformat(day) - datetime.date.today()).days
+print("  %s expires %s (%d days out); status=%s" % (d.get('ldhName', '?'), day, days, ','.join(d.get('status', []))))
+if days < 60:
+    print("  WARNING: under 60 days — renew (or confirm auto-renew is on) at the registrar now")
+else:
+    print("  comfortable: %.1f months of registration left" % (days / 30.4))
+PY
 
 echo
 if [ "$problems" -eq 0 ]; then

@@ -35,7 +35,7 @@ systemctl list-timers 'tukuk-*' --no-pager
 ```
 
 Nothing on the box talks to the VM any more: the old `tukuk-mirror-pull.timer` lived *on the
-VM* and went to sleep with it. Rung 2 is Cloud Run, rebuilt by the box from the R2 gateway.
+VM* and went to sleep with it. Rung 3 is Cloud Run, rebuilt by the box from the R2 gateway.
 
 ## Parked on purpose: the e2-micro
 
@@ -98,16 +98,49 @@ the free allowance itself.
 1. **Cloudflare R2 stays the vault** (10 GB, zero egress). GCS holds a *bounded slice* of
    it, not a second full copy.
 
+## The Cloudflare side of "free forever" (measured, not assumed)
+
+GCP is only half of the footprint. Cloudflare's free allowances bound the rest, and one of
+them was quietly heading for a bill:
+
+| Free allowance | Our exposure | Status |
+|---|---|---|
+| R2: **10 GB stored**, 1M Class A / 10M Class B ops per month, **egress is always free** | 342 objects, **1.62 GB (16 %)** — 1.34 GB of it is the hourly `backups/` slots | `scripts/r2-inventory.sh`, exit 1 past 6 GB |
+| Workers: 100k requests/day, free plan | the brain only sees `worker.tukuk.org` traffic, nowhere near 100k/day | watching; exceeding it means the \$5/mo plan, not a per-request bill |
+| Zone redirect + proxying | free plan | fine |
+
+**The trap that was actually in there:** `scripts/backup-meili.sh` and `backup-chat.sh` wrote
+a **date-stamped key on every run** (`meilisearch/2026/10/28/meili_halaman_web-20261028T221500Z.json.gz`)
+and nothing ever deleted those. Meilisearch dumps alone were ~20 MB/day — 600 MB/month, every
+month, forever, toward a hard 10 GB ceiling. Left alone it becomes a paid bucket in about a
+year. Both scripts now write **slot keys** (`meilisearch/slot-<weekday><hour>/meili_halaman_web.json.gz`),
+so the object is overwritten in place: a bounded 7 days of history at 6-hour granularity, at
+most ~28 meili + 28 store + 168 chat objects, and no delete API needed. That is the same
+design `backup-data.sh` already used for the 168 `backups/` slots. The 17–28 Oct dated objects
+(~263 MB) were **left in place** — they are history, they no longer grow, and deleting backups
+is not an audit's job.
+
+`scripts/r2-inventory.sh` is the guard: it lists every object, splits prefixes into *bounded*
+(slot/fixed keys) and *date-stamped*, names the biggest objects, and exits 1 if the bucket is
+over 60 % of the ceiling or a date-stamped prefix is **still being written** after the 29 Oct
+cutover. Because 168 slots each hold one `data.tar.gz`, the bucket tracks roughly
+**168 × the size of `data/`**: today that is 18 MB → 1.34 GB, and a ~60 MB `data/` would be
+what touches 10 GB. The warning fires long before that.
+
 ## How to check you are still inside the free tier
 
 One command, read-only, exits non-zero if anything billable appears:
 
 ```bash
 deploy/gcp/verify-free-tier.sh
-# == Cloud Run   minScale: 0 (unset = scale to zero)
+# == Cloud Run   minScale: 0 (0 = scale to zero)
+# == metered mirror usage   96 requests, 1.40 MB sent — 0.14% of the 1 GB allowance
 # == Compute     instance-free  TERMINATED
 # == other projects   ai-agent-offline  compute=off (no VMs possible, no spend)
+# == domain renewal   tukuk.org expires 2027-09-17 (323 days out)
 # RESULT: clean — nothing billable found.
+
+bash scripts/r2-inventory.sh      # the Cloudflare half of the same question
 ```
 
 To park or un-park the VM (idempotent — safe to run twice):
@@ -140,3 +173,28 @@ Two free allowances have already been defused here:
 * **The two other projects on this account** (`ai-agent-offline`, `test-1-3fe04`) have the
   Compute Engine API **never enabled**, so they cannot hold a VM and cost nothing. That is
   also why scanning them for instances hangs or errors — not a leak.
+
+## What money still has to buy (two things, and only two)
+
+Everything that runs the site is inside a free allowance. Two dependencies are not free, and
+both are worth more than they cost — this is the honest remainder of "free forever":
+
+1. **The domain: ~US\$11–13 a year.** `tukuk.org` expires **2027-09-17** (verified by RDAP,
+   and printed by `verify-free-tier.sh`, which warns inside 60 days). Nothing else matters if
+   this lapses — the site, the backups and the fallback all point at that name. Check that
+   **auto-renew is on** at the registrar, and that the card/paypal behind it is still live.
+   Cheapest real option: register for several years in one go if the registrar discounts it.
+2. **A UPS for the box + router (one-off, ~RM150–350).** There is no battery anywhere in this
+   design: `/sys/class/power_supply` on the box is empty and no USB UPS is attached, so a
+   power cut takes the origin down *and* stops the 6-hourly timers that keep the R2 snapshot
+   fresh — the failover then serves a stale copy, and every backup job is skipped until power
+   returns. The box is an AMD RX-427BB mini/desktop (4 cores, 7 GB, one 512 GB SSD) drawing
+   roughly 25–45 W, so a 650 VA / 360 W unit covers the box plus the router for tens of
+   minutes — long to ride out a flicker, and long enough to shut down cleanly in a real
+   outage. Pair it with `apcupsd` (or NUT) calling `systemctl stop tukuk-os.service` at 20 %
+   battery so an outage cannot corrupt `data/*.json` mid-write.
+
+Everything else considered and **rejected as not worth money**: a Cloudflare paid plan (the
+free tier is not close to its limits), a VPS as a second origin (Cloud Run already gives an
+independent, always-free machine), GPUs or any training hardware (never free in any tier),
+and a second GCS bucket (the free 5 GB-month is already shared with `run-sources`).

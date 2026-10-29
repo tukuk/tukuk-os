@@ -99,6 +99,10 @@ prune_local() {
 }
 
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+# Slot key, not a timestamp key: the R2 object is overwritten in place, so the bucket cannot
+# grow without limit (Cloudflare's free R2 tier ends at 10 GB). weekday+hour = 168 slots = a
+# full 7 days of history. Same scheme as scripts/backup-data.sh and backup-meili.sh.
+SLOT="slot-$(date -u +%u%H)"
 OUT="$SNAP_DIR/tukuk-chat-${STAMP}.tar.gz"
 log "creating T Chat snapshot ($OUT)..."
 
@@ -120,9 +124,9 @@ SIZE=$(du -h "$OUT" | cut -f1)
 log "snapshot ready ($SIZE)"
 
 if [ "$WORKER_OK" = 1 ]; then
-  upload_worker "$OUT" "tukuk-chat/$(date -u +%Y/%m/%d)/$(basename "$OUT")"
+  upload_worker "$OUT" "tukuk-chat/$SLOT/tukuk-chat.tar.gz"
 elif usable "${CLOUDFLARE_API_TOKEN:-}"; then
-  upload_wrangler "$OUT" "tukuk-chat/$(date -u +%Y/%m/%d)/$(basename "$OUT")" \
+  upload_wrangler "$OUT" "tukuk-chat/$SLOT/tukuk-chat.tar.gz" \
     || fail "no working upload path (worker unset, wrangler failed — token likely lacks R2 scope)"
 else
   log "WORKER OK=0 — keep local only (fill BACKUP_WORKER_URL+BACKUP_UPLOAD_SECRET for R2)"

@@ -13,6 +13,16 @@
 #
 #   BOTH: MEILI_MASTER_KEY
 #
+# ROTATION (why the keys are slots, not timestamps): this job runs every 6 hours and
+# used to write a brand-new dated object each time — `meilisearch/2026/10/28/meili_...Z.json.gz`.
+# Nothing ever deleted those, so R2 grew ~20 MB/day forever. Cloudflare's free R2 tier ends
+# at 10 GB, so an unbounded mirror is a bill waiting to happen. Keys are now
+# `meilisearch/slot-<day-of-week><hour>/...` (168 possible slots, 4 per weekday in practice =
+# ~28 objects): the same slot is overwritten weekly, giving a full 7 days of history at 6 h
+# granularity with NO delete API needed. Same scheme as scripts/backup-data.sh.
+# The dated keys from 17–28 Oct (meilisearch/2026/… + store/2026/…, ~263 MB) are left in
+# place — they are history, they no longer grow, and deleting backups is not this script's job.
+#
 # All values come from the unit's EnvironmentFile (/opt/tukuk-os/.env) or
 # ~/.config/tukuk-os/r2.env if found (laptop leftover — still supported).
 
@@ -103,11 +113,12 @@ prune_local() {
 if [ "$WORKER_OK" = 1 ]; then
   # ---- path 1: export index -> worker ----
   STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+  SLOT="slot-$(date -u +%u%H)"   # weekday+hour, overwritten weekly (see ROTATION above)
   OUT="$SNAP_DIR/meili_${MEILI_INDEX}-${STAMP}.json.gz"
   log "exporting index $MEILI_INDEX..."
   MEILI_HOST="$MEILI_URL" node "$APP_DIR/scripts/export-index.js" "$OUT" "$MEILI_INDEX" \
     || { rm -f "$OUT"; fail "index export failed"; }
-  upload_worker "$OUT" "meilisearch/$(date -u +%Y/%m/%d)/$(basename "$OUT")"
+  upload_worker "$OUT" "meilisearch/$SLOT/meili_${MEILI_INDEX}.json.gz"
   prune_local 'meili_*.json.gz'
 
   # blog store (data/tukuk-os.json) — not part of the Meilisearch export
@@ -115,7 +126,7 @@ if [ "$WORKER_OK" = 1 ]; then
   if [ -f "$STORE" ]; then
     SOUT="$SNAP_DIR/store_${STAMP}.json"
     cp "$STORE" "$SOUT"
-    upload_worker "$SOUT" "store/$(date -u +%Y/%m/%d)/$(basename "$SOUT")" "application/json"
+    upload_worker "$SOUT" "store/$SLOT/tukuk-os.json" "application/json"
     prune_local 'store_*.json'
   fi
   prune_local 'meili_*.json.gz'
@@ -145,7 +156,7 @@ elif [ "$S3_OK" = 1 ]; then
   SNAP=$(ls -1t "$SNAP_DIR"/*.snapshot 2>/dev/null | head -1)
   [ -n "$SNAP" ] || fail "no .snapshot file in $SNAP_DIR"
   SIZE=$(du -h "$SNAP" | cut -f1)
-  KEY="meilisearch/$(date -u +%Y/%m/%d)/meili_data-$(date -u +%Y%m%dT%H%M%SZ).snapshot"
+  KEY="meilisearch/slot-$(date -u +%u%H)/meili_data.snapshot"   # overwritten weekly
   log "uploading $SNAP ($SIZE) -> $R2_BUCKET/$KEY"
 
   curl -sf -m 900 --aws-sigv4 "aws:amz:$R2_REGION:s3" \
