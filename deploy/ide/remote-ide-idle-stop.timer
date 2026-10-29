@@ -1,0 +1,20 @@
+[Unit]
+Description=Ask every 3 min whether the remote IDE stack has gone idle
+# This IS the one unit of the whole ide stack that gets a normal [Install] section and is
+# enabled to run at boot: it does nothing until remote-ide.target is actually active, so
+# enabling it is free. Every .service file in this directory stays off at boot on purpose
+# (see README.md) -- do not copy this section into one of those.
+
+[Timer]
+# IDE_IDLE_MIN defaults to 15 minutes (deploy/ide/ide.env). Sampling that window every 3
+# minutes bounds the worst case: a tab closed at the very start of an interval costs the
+# box at most ~18 minutes of idle gigabytes rather than ~30. AccuracySec and a small random
+# delay keep a reboot of several boxes from ever aligning their checks with a cron job.
+OnBootSec=5min
+OnUnitActiveSec=3min
+AccuracySec=30s
+RandomizedDelaySec=45s
+Unit=remote-ide-idle-stop.service
+
+[Install]
+WantedBy=timers.target

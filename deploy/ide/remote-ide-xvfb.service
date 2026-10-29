@@ -1,0 +1,39 @@
+[Unit]
+# The virtual screen everything else draws on. Part of the target, never started by itself,
+# and never started at boot: no [Install] section exists in this file or any of its siblings
+# on purpose (see deploy/ide/README.md for the memory arithmetic).
+Description=Xvfb virtual display for the remote IDE
+Documentation=file:/opt/tukuk-os/deploy/ide/README.md
+PartOf=remote-ide.target
+After=network.target
+
+[Service]
+Type=simple
+User=tukuk
+Group=tukuk
+EnvironmentFile=/etc/tukuk-ide/env
+Environment=XDG_RUNTIME_DIR=/home/tukuk/.ide-runtime
+# -nolisten tcp: the display is reachable through the X socket in /tmp/.X11-unix and nothing
+# else. Without this flag an X server that listens on 6000+ is a local network exposure of
+# the same desktop that has root's shell inside it.
+# No -auth: every client of this display runs as the same single user, so there is no
+# boundary for an X cookie to enforce, and a stale xauth file is a classic
+# "invalid X cookie" debugging trap on a rebuilt box.
+ExecStartPre=/bin/sh -c 'mkdir -p /home/tukuk/.ide-runtime && chmod 700 /home/tukuk/.ide-runtime'
+ExecStart=/usr/bin/Xvfb ${IDE_DISPLAY} -screen 0 ${IDE_GEOMETRY} -nolisten tcp
+Restart=on-failure
+RestartSec=3
+
+# Xvfb itself is small; the ceiling is here to stop a leak in the compositor path from
+# quietly eating the site's headroom.
+MemoryMax=320M
+TasksMax=64
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ide-xvfb
+NoNewPrivileges=true
+# NOTE: PrivateTmp is deliberately NOT set anywhere in this stack. Xvfb publishes its socket
+# under /tmp/.X11-unix, and a private /tmp would publish the socket where no other unit can
+# see it -- every client would then fail with "cannot open display" for no visible reason.
+ProtectKernelTunables=true
+ProtectControlGroups=true

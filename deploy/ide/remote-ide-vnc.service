@@ -1,0 +1,53 @@
+[Unit]
+# The only thing that ever authenticates a session. Layers 1 and 2 of the access story
+# (Cloudflare Access, then the nginx header check in deploy/nginx/tukuk-ide.conf) both
+# protect a URL; this one protects the protocol, and it still works if both of those rot.
+# That is the reason the password file is mandatory here and the installer refuses to
+# install the stack without it.
+Description=x11vnc server for the remote IDE display (loopback only)
+Documentation=file:/opt/tukuk-os/deploy/ide/README.md
+PartOf=remote-ide.target
+After=remote-ide-wm.service
+Requires=remote-ide-wm.service
+
+[Service]
+Type=simple
+User=tukuk
+Group=tukuk
+EnvironmentFile=/etc/tukuk-ide/env
+Environment=XDG_RUNTIME_DIR=/home/tukuk/.ide-runtime
+# NO Environment=DISPLAY= here, unlike the other units in this stack. systemd does not
+# expand ${VAR} inside Environment= (it is a plain string assignment, not a command line --
+# only ExecStart-style lines get that treatment), so an Environment=DISPLAY=${IDE_DISPLAY}
+# line here would set DISPLAY to the literal text "${IDE_DISPLAY}" and be worse than saying
+# nothing at all. x11vnc does not need $DISPLAY in its environment anyway: the -display
+# flag on the ExecStart line below is authoritative, and it IS expanded correctly, because
+# that is an argument position, not the Environment= assignment position.
+# -localhost binds 127.0.0.1 only: the sole permitted client is websockify below it. Without
+# this flag x11vnc listens on 0.0.0.0 and the RFB handshake (whose "auth" is a 6-char DES
+# challenge, crackable and replayable) faces the internet.
+# -forever keeps serving after a client disconnects, which is what lets the noVNC tab be
+# closed and reopened without tearing the stack down.
+# -noxdamage + -scale: -scale is the bandwidth dial (see /etc/tukuk-ide/env); -noxdamage
+# sidesteps the DAMAGE extension, which x11vnc and some drivers disagree about in a way that
+# shows up as a screen that only repaints when the mouse moves over it.
+# -bg is NOT used: systemd needs the process in the foreground to track and stop it.
+# The line is one physical line: systemd parses ExecStart itself (no shell), so a trailing
+# backslash here buys nothing and invites a quoting mistake.
+ExecStart=/usr/bin/x11vnc -display ${IDE_DISPLAY} -localhost -rfbport ${IDE_VNC_PORT} -rfbauth /etc/tukuk-ide/vnc.pass -forever -shared -noxdamage -scale ${IDE_SCALE} -quiet
+Restart=on-failure
+RestartSec=3
+MemoryMax=512M
+TasksMax=128
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ide-vnc
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+# Read-only for the rest of the filesystem is fine here (x11vnc writes nothing but sockets and
+# its own log to the journal) and keeps a compromised VNC server from dropping files on disk.
+ProtectSystem=full

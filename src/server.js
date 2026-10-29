@@ -39,6 +39,7 @@ const safety = require('./safety');
 const brain = require('./brain/provider');
 const rag = require('./brain/rag');
 const taskrouter = require('./brain/taskrouter');
+const modelhub = require('./brain/modelhub');
 const approuter = require('./brain/approuter');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
@@ -3918,6 +3919,9 @@ async function modelsInventory() {
     ollamaModels,
     // Our OWN AI models — trained here by scripts/train-brain.js.
     ownModel: taskrouter.modelInfo(),
+    // Models WE trained on a Kaggle GPU and stored on the Hugging Face hub, with their
+    // live install state on this box (see ai-models/registry.json + hf-model-pull.sh).
+    publishedModels: modelhub.inventory(),
     reranker: {
       enabled: config.rerank.enabled,
       modelDir: config.rerank.modelDir,
@@ -4040,6 +4044,22 @@ app.get('/models', (req, res) => {
       html += '<p>No self-trained model found. Run <code>node scripts/train-brain.js</code> on the server, then restart the service.</p>';
     }
     html += '</div>';
+    // Models WE trained (Kaggle GPU) and published on the Hugging Face hub. 'installed'
+    // is derived from the file on disk, so a forgotten pull is visible, not hidden.
+    var pub = d.publishedModels || {};
+    html += '<div class="post-card"><h2>Published models (Kaggle → Hugging Face)</h2>';
+    if ((pub.models || []).length) {
+      (pub.models).forEach(function (mo) {
+        html += '<p><strong>' + esc(mo.name) + '</strong> · ' + esc(mo.quant || '') + ' · ' + esc(mo.base || '') + '</p>';
+        html += '<p>' + (mo.installed
+          ? '<span style="color:#3fbf7f">installed</span> — ' + esc(mo.local && mo.local.sizeMb) + ' MB in <code>' + esc(mo.local && mo.local.path) + '</code>'
+          : '<span style="color:#e0a94a">not installed here</span>') + '</p>';
+        html += '<p>Role: ' + esc(mo.role || '') + ' · Licence: ' + esc(mo.license || '') + '</p>';
+        if (mo.hfUrl) html += '<p><a href="' + esc(mo.hfUrl) + '" rel="noopener">' + esc(mo.hfRepo) + '</a>' + (mo.metricsUrl ? ' · <a href="' + esc(mo.metricsUrl) + '" rel="noopener">metrics.json</a>' : '') + '</p>';
+        if (!mo.installed) html += '<p style="color:var(--muted)">Install: <code>sudo bash scripts/hf-model-pull.sh ' + esc(mo.id) + '</code></p>';
+      });
+    } else { html += '<p>No published models registered yet.</p>'; }
+    html += '<p style="color:var(--muted)">' + esc(pub.note || '') + '</p></div>';
     html += '<div class="post-card"><h2>Local LLMs (Ollama)</h2>';
     if ((d.ollamaModels || []).length) {
       html += '<table style="width:100%;border-collapse:collapse">';

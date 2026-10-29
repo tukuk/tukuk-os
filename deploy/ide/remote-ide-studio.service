@@ -1,0 +1,64 @@
+[Unit]
+# Started by ide-session.sh, never by the target: this is the gigabyte-eating part, and it
+# should be a decision rather than a side effect of connecting to a screen.
+Description=Android Studio on the remote IDE display
+Documentation=file:/opt/tukuk-os/deploy/ide/README.md
+After=remote-ide.target
+Requires=remote-ide.target
+PartOf=remote-ide.target
+
+[Service]
+Type=simple
+User=tukuk
+Group=tukuk
+EnvironmentFile=/etc/tukuk-ide/env
+Environment=XDG_RUNTIME_DIR=/home/tukuk/.ide-runtime
+# THREE separate systemd-parsing rules meet in this one unit, and getting any of them wrong
+# is a silent failure, not an obvious one:
+#   1. Environment= lines are plain assignments. ${IDE_DISPLAY} is NOT expanded there (see
+#      remote-ide-wm.service) -- and unlike openbox/xterm, studio.sh has no -display flag to
+#      fall back on, so DISPLAY genuinely has to be set correctly for the JVM to find X.
+#   2. The FIRST word of ExecStart (the program itself) is never variable-expanded, only the
+#      arguments after it are -- ${IDE_STUDIO_DIR}/bin/studio.sh as a command path fails to
+#      parse outright ("Neither a valid executable name nor an absolute path").
+#   3. Resource-control directives (MemoryMax/CPUQuota below) do not expand variables AT ALL,
+#      in any position, and a bad value there is only a journal warning, not a start failure.
+# All of 1 and 2 are fixed by doing the variable work inside a real shell: the process
+# environment that EnvironmentFile= populates is a normal, shell-expandable environment, so
+# `sh -c 'exec env DISPLAY="$IDE_DISPLAY" "$IDE_STUDIO_DIR/bin/studio.sh" ...'` gets every
+# value expanded by sh itself, correctly, and the command systemd actually parses is just
+# /bin/sh -- an absolute literal path that can never have a parsing problem.
+# studio.sh execs the IDE in the foreground, which is what systemd needs. `-D` arguments are
+# forwarded to the JVM by the JetBrains launcher; the one here stops the "platform update
+# available" nag dialog from opening a modal the operator has to hunt for inside a VNC tab.
+ExecStart=/bin/sh -c 'exec env DISPLAY="$IDE_DISPLAY" "$IDE_STUDIO_DIR/bin/studio.sh" -Dide.no.platform.update=true'
+# Never Restart=on-failure here. A Studio JVM that dies under memory pressure and is
+# immediately dragged back up is the loop that takes a shared box down; one dead IDE and a
+# clear journal line is the better outcome, and ide-check.sh re-starts it deliberately.
+Restart=no
+# A JVM that lost its X connection can sit on exit for a while. Give it room, then kill it,
+# so `ide-session.sh stop` is never a manual kill -9 session.
+TimeoutStopSec=45
+# The two numbers that make this safe on a 6.8 GB box alongside the live site: the cgroup is
+# capped (so an IDE + Gradle + Kotlin daemon runaway kills the IDE, not tukuk.org) and it is
+# CPU-throttled and de-prioritised (so a Gradle sync makes the site slower by an amount, not
+# by an outage).
+# These are HARD-CODED, not ${IDE_MEM_MAX}/${IDE_CPU_QUOTA} as this file used to say: systemd
+# silently DISCARDS a variable it cannot expand in a resource-control directive -- the unit
+# still starts, no error, it just runs with NO memory ceiling at all, which is precisely the
+# protection this whole design is built around. The values here must match /etc/tukuk-ide/env
+# by hand; install-remote-ide.sh checks that the two agree and shouts if they drift, because
+# that drift is otherwise invisible until it is an outage.
+MemoryMax=4G
+CPUQuota=250%
+CPUWeight=30
+Nice=10
+TasksMax=2048
+LimitNOFILE=65536
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ide-studio
+NoNewPrivileges=true
+# NOT ProtectSystem/ProtectHome: Studio writes ~/.gradle, ~/.android, ~/.cache/Google and its
+# own config dir, and a read-only home turns the IDE into a "project won't open" mystery.
+# PrivateTmp is off stack-wide because of the X socket (see remote-ide-xvfb.service).

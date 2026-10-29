@@ -97,3 +97,173 @@
   }
 })();
 </script>
+<style>
+  /* ── press-to-download gate ────────────────────────────────────────────────
+     The stock shell calls engine.startGame() while it parses, so the ~500 MB
+     pack begins downloading the moment the page is opened -- by a crawler, by a
+     preconnect/prefetch, by someone who shared the link, or by a visitor who
+     tapped it on a phone and did not know what it was. This panel makes the
+     download a decision instead of a side effect. It lives inside the splash
+     overlay, so when the engine swaps that overlay out the gate goes with it.
+     Colours are AA-contrast on purpose: #ffffff on #0b57d0 is 6.7:1, the grey
+     body copy sits above 8:1 on the panel. */
+  #tb-gate {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 8%;
+    text-align: center;
+    background: rgba(12, 14, 18, .92);
+    color: #e8edf5;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  #tb-gate[hidden] {
+    display: none;
+  }
+  #tb-gate h1 {
+    margin: 0;
+    font: 600 22px/1.25 inherit;
+    letter-spacing: .01em;
+  }
+  #tb-gate p {
+    margin: 0;
+    max-width: 34em;
+    font: 400 14px/1.55 inherit;
+    color: #c6cfdd;
+  }
+  #tb-gate a {
+    color: #9ecbff;
+  }
+  #tb-gate button {
+    margin-top: 14px;
+    padding: 14px 28px;
+    border: 0;
+    border-radius: 10px;
+    background: #0b57d0;
+    color: #fff;
+    font: 600 16px/1 inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  #tb-gate button:hover {
+    background: #0842a0;
+  }
+  #tb-gate button:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+  }
+</style>
+<script>
+(function () {
+  'use strict';
+  var MB = 1048576;
+
+  function mb(bytes) {
+    return (bytes / MB).toFixed(bytes >= 100 * MB ? 0 : 1) + ' MB';
+  }
+
+  function totalBytes() {
+    var total = 0;
+    try {
+      for (var key in GODOT_CONFIG.fileSizes) {
+        total += GODOT_CONFIG.fileSizes[key];
+      }
+    } catch (ignored) {
+      return 0;
+    }
+    return total;
+  }
+
+  // ── persist the download across browser sessions ──────────────────────────
+  // sw.js answers the hash-versioned artifacts from Cache Storage, so the next
+  // visit (even days later, even after the browser's HTTP cache dropped the
+  // 476 MB pack) downloads NOTHING. persist() asks the browser not to evict
+  // that storage under disk pressure — the difference between "cached" and
+  // "cached while it was convenient". Both are best-effort and silent: an
+  // absent sw (older publish, file:// boot) or a refused persistence just
+  // leaves the old HTTP-cache behaviour, never a broken game.
+  function armPersistentCache() {
+    try {
+      if (navigator.serviceWorker && location.protocol === 'https:') {
+        navigator.serviceWorker.register('/sw.js');
+      }
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist();
+      }
+    } catch (ignored) {
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', armPersistentCache);
+  } else {
+    armPersistentCache();
+  }
+
+  // A laptop that will throttle or die under a full-rate forward+ renderer is
+  // detected BEFORE asking for 500 MB, not after the tab crashes. deviceMemory
+  // and hardwareConcurrency are the only honest hints available to a page
+  // (Firefox/Safari expose neither; undefined there, which fails toward the
+  // plain copy rather than insulting a capable machine).
+  function weakDevice() {
+    var mem = navigator.deviceMemory;
+    var cores = navigator.hardwareConcurrency;
+    return (mem !== undefined && mem <= 4) || (cores !== undefined && cores <= 4);
+  }
+
+  // Called by the shell right after it builds the engine, and it only defers the
+  // start: the raw method is captured and re-invoked on press, so every code path
+  // the stock shell has (progress callback, failure notice, restart) still runs
+  // through the engine's own implementation.
+  window.tukukGate = function (engine) {
+    var raw = engine.startGame.bind(engine);
+    var release;
+    var pressed = false;
+    var ready = new Promise(function (resolve) { release = resolve; });
+
+    engine.startGame = function (opts) {
+      return ready.then(function () { return raw(opts); });
+    };
+
+    var panel = null;
+
+    function press() {
+      if (pressed) {
+        return;
+      }
+      pressed = true;
+      if (panel) {
+        panel.hidden = true;
+      }
+      release();
+    }
+
+    try {
+      var host = document.getElementById('status') || document.body;
+      var total = totalBytes();
+      var weak = weakDevice();
+      panel = document.createElement('div');
+      panel.id = 'tb-gate';
+      panel.innerHTML =
+        '<h1>Station Break</h1>' +
+        '<p>' + (total ? 'This downloads about ' + mb(total) + ' before the first frame; after the first play it is kept on this device and never re-downloaded. ' : '') +
+        'It needs a WebGL2 browser, so it is not a good idea on mobile data.</p>' +
+        (weak
+          ? '<p><b>This device looks light on memory or cores.</b> The HD build runs the full forward+ renderer and will push a weak laptop to the point of throttling or crashing the tab. The <a href="https://tukuk.org/games/tukuk-strike" target="_blank" rel="noopener">instant WebGL version</a> needs no download at all.</p>'
+          : '') +
+        '<button type="button">Download and play</button>';
+      panel.querySelector('button').addEventListener('click', press);
+      host.appendChild(panel);
+      // Desktop visitors can just hit Enter; phone visitors tap the button.
+      panel.querySelector('button').focus({ preventScroll: true });
+    } catch (err) {
+      // Fail open. A gate that cannot be built must never strand a working game.
+      press();
+    }
+  };
+})();
+</script>

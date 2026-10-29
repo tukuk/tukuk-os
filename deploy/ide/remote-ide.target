@@ -1,0 +1,17 @@
+[Unit]
+# The base stack: display + window manager + VNC + web bridge, and nothing that thinks.
+# Starting this alone costs a few hundred MB and buys a browser tab with a repair shell in
+# it, which is the cheap 80% of what the user asked for. Android Studio is a separate,
+# deliberate decision on top (remote-ide-studio.service), pulled up by ide-session.sh.
+#
+# There is intentionally NO [Install] section in this file. Nothing enables this target, no
+# boot pulls it up, and a reboot therefore returns the box to "site only". That is the
+# property that makes the whole thing safe to install on a production box at all.
+Description=Remote IDE base stack (Xvfb + openbox + x11vnc + noVNC), off by default
+Documentation=file:/opt/tukuk-os/deploy/ide/README.md
+# Requires, not Wants: a half-up stack is the confusing failure. If websockify cannot start
+# because x11vnc is missing, the operator wants the target to fail loudly, not to get a tab
+# that connects to nothing. After makes the same requirement come up in dependency order
+# instead of all four racing for the display socket.
+Requires=remote-ide-xvfb.service remote-ide-wm.service remote-ide-vnc.service remote-ide-web.service
+After=remote-ide-xvfb.service remote-ide-wm.service remote-ide-vnc.service remote-ide-web.service

@@ -1,0 +1,328 @@
+{
+  "measured_at": "2026-10-29T16:29:22+00:00",
+  "dataset": "data/ARC-AGI-2/data/evaluation",
+  "protocol": "holdout (last train pair withheld)",
+  "tasks": 40,
+  "graded": 40,
+  "consistent_program": 12,
+  "pass@1": 0,
+  "pass@2": 0,
+  "pass@1_rate": 0.0,
+  "pass@2_rate": 0.0,
+  "consistent_rate": 0.3,
+  "elapsed_s": 1.1,
+  "per_task_s": 0.03,
+  "config": {
+    "attempts": 2,
+    "time_budget_s": 2.0,
+    "compositions": true
+  },
+  "command": "python -m arc.evaluate --dir data/ARC-AGI-2/data/evaluation --holdout --limit 40 --time-budget 2 --quiet --out results/smoke-eval40.json",
+  "note": "pass@N counts a task only when EVERY test input is exactly right. 'consistent_program' is not accuracy: it only says the train pairs were reproduced.",
+  "per_task": {
+    "0934a4d8": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.088,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "135a2760": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "136b0064": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "13e47133": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.036,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "142ca369": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.039,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "16b78196": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.028,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "16de56c4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1818057f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "195c6913": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.04,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1ae2feb7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "20270e3b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "20a9e565": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.078,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "21897d95": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.02,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "221dfab4": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.02,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "247ef758": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "269e22fb": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "271d71e2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "28a6681f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "291dc1e1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2b83f449": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2ba387bc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.052,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2c181942": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.042,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2d0172a1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.046,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "31f7f899": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.02,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "332f06d7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.015,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "35ab12c3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.042,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "36a08778": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "38007db0": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.015,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3a25b0d8": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.016,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3dc255db": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.018,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3e6067c3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.044,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "409aa875": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.029,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "446ef5d2": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "45a5af55": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4a21e3da": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.033,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4c3d4a41": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4c416de3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.045,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4c7dc4dd": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.045,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4e34c42c": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.018,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "53fb4810": {
+      "consistent": true,
+      "programs": [
+        "constant_output"
+      ],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    }
+  }
+}

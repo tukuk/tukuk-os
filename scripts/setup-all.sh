@@ -611,19 +611,18 @@ if command -v nginx >/dev/null && [[ -f "$INSTALL_DIR/deploy/nginx/install-tukuk
   fi
 fi
 # play.tukuk.org is a second server block on the same :3000 listener, and its
-# `location = /index.pck.zip` alias is the only reason the 476 MB Godot pack gets
-# cached at the edge. install-tukuk-front.sh has never copied this conf (it only
-# knows about the front one), so without the step below a rebuilt box serves the
-# game from the wrong root — and the page still looks fine locally while every
-# visitor streams the pack off this VPS.
-if [[ -f "$INSTALL_DIR/deploy/nginx/tukuk-play.conf" ]] && command -v nginx >/dev/null; then
-  install -d /var/www/tukuk-play
-  cp "$INSTALL_DIR/deploy/nginx/tukuk-play.conf" /etc/nginx/conf.d/tukuk-play.conf
-  if nginx -t >/dev/null 2>&1; then
-    systemctl reload nginx >/dev/null 2>&1 || true
-    ok "play.tukuk.org block installed (root /var/www/tukuk-play + the .pck.zip cache alias)."
+# `location = /index.pck.zip` + `= /index.wasm.zip` aliases are the only reason the
+# Godot pack and binary get cached at the edge. install-tukuk-front.sh has never copied
+# this conf (it only knows about the front one), so without the step below a rebuilt box
+# serves the game from the wrong root — and the page still looks fine locally while every
+# visitor streams 500 MB off this VPS. The installer also puts the publisher and its
+# sudoers grant in place, and proves the grant works, because a detached --deploy build
+# fails on sudo authorization minutes after the export finished.
+if [[ -f "$INSTALL_DIR/deploy/godot/install-on-box.sh" ]] && command -v nginx >/dev/null; then
+  if bash "$INSTALL_DIR/deploy/godot/install-on-box.sh"; then
+    ok "play.tukuk.org origin installed (nginx block + publisher + sudoers grant)."
   else
-    warn "nginx -t failed after adding tukuk-play.conf — config not reloaded: sudo nginx -t"
+    warn "play.tukuk.org origin install failed — the game may be serving uncached artifacts; run: sudo bash $INSTALL_DIR/deploy/godot/install-on-box.sh"
   fi
 fi
 
@@ -734,10 +733,9 @@ if [[ "${INSTALL_GAME:-0}" == "1" ]]; then
     else
       warn "no boot overlay anywhere — the builder will refuse to run. play.tukuk.org would show a bare progress bar."
     fi
-    install -m 0755 "$INSTALL_DIR/deploy/godot/publish-tukuk-play.sh" /usr/local/sbin/publish-tukuk-play
-    install -m 0440 "$INSTALL_DIR/deploy/godot/sudoers-tukuk-play" /etc/sudoers.d/tukuk-play \
-      && visudo -c -f /etc/sudoers.d/tukuk-play >/dev/null 2>&1 \
-      || warn "sudoers file installed but visudo did not validate it — check /etc/sudoers.d/tukuk-play"
+    # The publisher, the sudoers grant and the nginx block were installed back in [8c] by
+    # deploy/godot/install-on-box.sh, which also proved the grant works. Nothing is
+    # installed here: this section only spends the ~20 minutes an export takes.
     if sudo -u tukuk -H env "HOME=/home/tukuk" STATION_BREAK_DIR="$GAME_DIR" GODOT_BIN="$GBIN" \
          bash "$INSTALL_DIR/deploy/godot/build-web.sh"; then
       sudo -u tukuk /usr/local/sbin/publish-tukuk-play "$GAME_DIR/web-build" \

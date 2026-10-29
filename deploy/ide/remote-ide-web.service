@@ -1,0 +1,34 @@
+[Unit]
+# The browser end. websockify serves noVNC's static files AND bridges the WebSocket that
+# vnc.html opens to the plain RFB socket on 5900. This is the only piece of the stack that
+# nginx ever proxies to, and it stays on loopback like everything else here.
+Description=noVNC web bridge for the remote IDE (loopback only)
+Documentation=file:/opt/tukuk-os/deploy/ide/README.md
+PartOf=remote-ide.target
+After=remote-ide-vnc.service
+Requires=remote-ide-vnc.service
+
+[Service]
+Type=simple
+User=tukuk
+Group=tukuk
+EnvironmentFile=/etc/tukuk-ide/env
+# Binding the LISTEN socket to 127.0.0.1 is the argument, not decoration: websockify would
+# otherwise sit on 0.0.0.0:6080 and hand anyone who can reach the box a tunnel straight into
+# a VNC server that is itself only loopback-bound.
+# --heartbeat=15 keeps the WebSocket busy enough that the Cloudflare edge never decides it is
+# idle and drops it mid-session (a dropped socket is the "screen froze then disconnected"
+# report; the ping is what removes that class of failure).
+ExecStart=/usr/bin/websockify --web=/usr/share/novnc --heartbeat=15 127.0.0.1:${IDE_WEB_PORT} 127.0.0.1:${IDE_VNC_PORT}
+Restart=on-failure
+RestartSec=3
+MemoryMax=256M
+TasksMax=64
+Nice=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ide-web
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectControlGroups=true

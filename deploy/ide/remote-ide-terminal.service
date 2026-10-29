@@ -1,0 +1,36 @@
+[Unit]
+# The other half of why this exists: the repair shell. The user asked to "see the server and
+# repair it" from the website, and a terminal inside the same VNC tab is literally that —
+# journalctl, systemctl, the repo, nano — without a second SSH hop and without a web terminal
+# written into the site (which would be a root shell behind a URL, a much worse idea than a
+# loopback VNC server behind three layers of auth).
+Description=Repair shell (xterm) on the remote IDE display
+Documentation=file:/opt/tukuk-os/deploy/ide/README.md
+After=remote-ide.target
+Requires=remote-ide.target
+PartOf=remote-ide.target
+
+[Service]
+Type=simple
+User=tukuk
+Group=tukuk
+EnvironmentFile=/etc/tukuk-ide/env
+Environment=XDG_RUNTIME_DIR=/home/tukuk/.ide-runtime
+# NOT Environment=DISPLAY=${IDE_DISPLAY} -- systemd does not expand ${VAR} inside an
+# Environment= line, only on ExecStart command lines (see remote-ide-wm.service for the
+# full reasoning; same bug, same fix). xterm unlike openbox does take a -display flag, so
+# the fix here is just to use it, and that argument position IS expanded correctly.
+# xterm has no notion of "detach": when the window is closed the process exits, and
+# Restart=no below is what makes closing it a normal event instead of a respawn loop.
+# The title says who the shell belongs to, which matters when several windows are stacked in
+# one VNC view. `-e -` keeps bash as a login-ish shell so the PATH from ~/.profile applies
+# (that is where ANDROID_HOME / the SDK tools come from, and a bare sh would lose them).
+ExecStart=/usr/bin/xterm -display ${IDE_DISPLAY} -title "tukuk@server — repair shell" -geometry 128x38 -fa -fs 12 -e -
+Restart=no
+MemoryMax=96M
+TasksMax=64
+Nice=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ide-term
+NoNewPrivileges=true

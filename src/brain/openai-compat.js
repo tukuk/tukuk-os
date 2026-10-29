@@ -5,9 +5,11 @@
  * `messages` + `tools` + `tool_choice` + `stream` and expect `tool_calls`
  * back. `provider.js.callCloud()` cannot do that — it flattens everything
  * into one text-only `prompt`. This module does a raw PASSTHROUGH to
- * OpenAI-kind providers (Groq `openai/gpt-oss-120b`, OpenRouter, OpenAI, xAI,
- * HuggingFace) that support function-calling, using the same quota ROTATION +
- * COOLING as /ask (imported from provider.js — no duplicated logic).
+ * OpenAI-kind providers (openrouter, openai, xai, ollama-cloud,
+ * HuggingFace, gemini-openai) that support function-calling, using the same quota
+ * ROTATION + COOLING as /ask (imported from provider.js — no duplicated logic).
+ * Groq is vetoed upstream (provider.js LLM_DISABLED_PROVIDERS), so it never appears
+ * here even if a stale GROQ_API_KEY survives in .env.
  *
  * CSP/edge note: NEVER return 5xx for application failures —
  * the tukuk.org edge worker reads any upstream 5xx as "server down" and
@@ -24,8 +26,8 @@ const ADVERTISED_MODEL_FAST = 'tukuk-agent-fast';
 /*
  * Fast-model map for the free/`-fast` tier: the
  * AGENT_FAST_MODEL_<NAME> variable wins; if absent, a default proven to EXIST + be QUICK
- * on our Groq account (openai/gpt-oss-20b replies in ±0.9s, lighter than
- * 120b). llama-3.1-8b-instant is RETIRED by Groq (404) — do not use it.
+ * (openrouter's llama-3.3-70b answers well under 2s). The groq entry is inert — the
+ * provider is vetoed before rotation — but harmless to keep for the characterisation test.
  * Providers without a default just use the regular model (no model 404s).
  */
 const FAST_MODELS = {
@@ -115,7 +117,7 @@ async function chatWithRotation(body, { fetchImpl = globalThis.fetch, timeoutMs 
     return {
       ok: false,
       status: 409,
-      error: 'No tool-capable agent provider configured. Set OLLAMA_CLOUD_API_KEY or GROQ_API_KEY (etc) in .env.',
+      error: 'No tool-capable agent provider configured. Set OLLAMA_CLOUD_API_KEY, OPENROUTER_API_KEY or GEMINI_API_KEY in .env.',
       rejected: [],
     };
   }

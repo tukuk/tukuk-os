@@ -371,7 +371,7 @@ async function ask(question, { limit } = {}) {
   // INTERACTIVE BUDGET: the LLM phase (cloud+ollama) must not exceed budgetMs from
   // the start. Past that → stop and use the extractive pass at once (instant, sourced).
   // This closes the 37s/60s gap. A small floor after retrieve so a slow websearch
-  // doesn't grab the whole budget — the cloud (groq) usually returns in 1–2s.
+  // doesn't grab the whole budget — the cloud tier usually returns in 1–2s.
   const deadline = Math.max(
     startedAt + (config.brain.budgetMs || config.brain.timeout),
     Date.now() + 3000
@@ -393,7 +393,7 @@ async function ask(question, { limit } = {}) {
     // SIMULTANEOUS HYBRID (local ollama + cloud used together): the cloud rotation and
     // the Ollama chain run AT THE SAME TIME — the first coherent answer wins, the loser
     // is cancelled at once (AbortController) so tokens/CPU are not burned.
-    // The cloud is usually ~1–2s (groq); local models fill the gap when the cloud is cooling/
+    // The cloud is usually ~1–2s; local models fill the gap when the cloud is cooling/
     // blipping/out of key — and we still TRY, rather than dropping straight to extractive.
     const controller = new AbortController();
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

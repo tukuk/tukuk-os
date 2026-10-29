@@ -40,9 +40,22 @@
 #    never committed to the game repo, so without it a rebuild would only ever
 #    ship a progress bar with no numbers.
 #
-# Usage (as the tukuk user on the VPS):
-#   ~/station-break/tools/build-web.sh              # build only
-#   ~/station-break/tools/build-web.sh --deploy     # build, then publish via sudo
+# 3. THE ENGINE JS IS PATCHED, NOT PADDED. Three fixes are applied to the exported
+#    index.js below, both anchored on exact bytes from the 4.7 nothreads template
+#    and both hard-failing the build if an anchor does not appear exactly once --
+#    an anchor that moves is an engine change, and shipping blind is how the audio
+#    fix ended up hand-edited into /var/www only, where the next build erased it.
+#
+# 4. THE DOWNLOAD GATE. The pack is ~500 MB. The shell calls engine.startGame()
+#    while it parses, so a stray link, a crawler or a second tab spends a visitor's
+#    data allowance before they see anything. web-head.html supplies tukukGate(),
+#    and the line the shell uses to build the engine is rewritten to route the
+#    start through a press. Fails open: if the overlay cannot be built, the game
+#    starts exactly as it used to.
+#
+# Usage (as the tukuk user on the VPS; the builder runs from this repo's checkout):
+#   /opt/tukuk-os/deploy/godot/build-web.sh              # build only
+#   /opt/tukuk-os/deploy/godot/build-web.sh --deploy     # build, then publish via sudo
 #
 # --deploy shells out to publish-tukuk-play under sudo, so run it where sudo works (or
 # from a detached session, which is what the NOPASSWD sudoers entry is for).
@@ -131,7 +144,10 @@ set +e
 rc=$?
 set -e
 echo "EXPORT-rc=$rc"
-grep -E "ERROR|Cannot export" "$LOG" | grep -viE "Unrecognized UID" | head -5 || true
+# No exclusions here. "Unrecognized UID" used to be filtered out because it was a known
+dangling reference; a build log that hides the one error class the exporter is most
+counter-intuitive about is how a broken bus layout shipped twice.
+grep -E "ERROR|Cannot export" "$LOG" | head -5 || true
 [ "$rc" -eq 0 ] || { tail -20 "$LOG"; exit 1; }
 
 pck=$(stat -c %s "$PROJ/web-build/index.pck")
@@ -144,6 +160,72 @@ grep -q "tb-bytes" "$PROJ/web-build/index.html" \
   || { echo "FATAL: overlay missing from index.html -- custom shell was not used." >&2; exit 1; }
 grep -q '"index.pck":'"$pck" "$PROJ/web-build/index.html" \
   || echo "WARN: shell fileSizes do not match the packed pck; rebuild the shell." >&2
+
+# ── patch the exported engine js ─────────────────────────────────────────────────
+# Godot defers GodotAudio.initialize() until a user gesture (browser autoplay policy),
+# and sampleNodes is declared `null` until then -- but the WASM bindings happily call
+# into it on the very first frame, when a sample stops during teardown, or when audio
+# never starts at all. Each unguarded read threw a TypeError straight into the engine.
+# This is the fix that used to live only in /var/www/tukuk-play/index.js, applied by
+# hand, and silently vanished on the next publish.
+echo "== patching the exported engine js =="
+python3 - "$PROJ/web-build/index.js" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+PATCHES = [
+    ('if(!GodotAudio.sampleNodes.has(id)){',
+     'if(!GodotAudio.sampleNodes?.has(id)){',
+     'getSampleNode must raise its own ReferenceError, not a TypeError'),
+    ('static getSampleNodeOrNull(id){return GodotAudio.sampleNodes.get(id)??null}',
+     'static getSampleNodeOrNull(id){return GodotAudio.sampleNodes?.get(id)??null}',
+     'stop/pause of a sample before audio init crashed'),
+    ('return Number(GodotAudio.sampleNodes.has(playbackObjectId))',
+     'return Number(GodotAudio.sampleNodes?.has(playbackObjectId))',
+     'the exists-binding is the first call WASM makes, and it crashed pre-init'),
+]
+bad = []
+for old, new, why in PATCHES:
+    n = src.count(old)
+    if n == 1:
+        src = src.replace(old, new)
+        print('patched: %s' % why)
+    elif n == 0 and src.count(new) == 1:
+        print('already applied: %s' % why)
+    else:
+        bad.append('%s (matched %d times, expected 1)' % (why, n))
+if bad:
+    raise SystemExit('FATAL: engine js anchors did not hold -- the template changed,\n  '
+                     + '\n  '.join(bad)
+                     + '\n  Refusing to ship: an unpatched build crashes on audio.')
+open(path, 'w', encoding='utf-8').write(src)
+PY
+
+# ── route the boot through the press-to-download gate ────────────────────────────
+echo "== gating the 500 MB download =="
+python3 - "$PROJ/web-build/index.html" <<'PY'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+anchor = 'const engine = new Engine(GODOT_CONFIG);'
+wrapped = anchor + '\n\t\tif (window.tukukGate) { tukukGate(engine); }'
+n = src.count(anchor)
+if n == 1:
+    open(path, 'w', encoding='utf-8').write(src.replace(anchor, wrapped))
+    print('gate wired into the shell')
+elif n == 0 and wrapped in src:
+    print('gate already wired')
+else:
+    raise SystemExit('FATAL: `const engine = new Engine(GODOT_CONFIG);` matched %d times, '
+                     'expected 1 -- the shell format changed, so the download would ship '
+                     'ungated.' % n)
+PY
+# A gate whose helper did not make it into the shell would hang the game forever,
+# because the call above is what starts it. Both halves or neither.
+if ! grep -q 'window.tukukGate = function' "$PROJ/web-build/index.html"; then
+  echo "FATAL: the gate call is in the shell but tukukGate() is not -- web-head.html is stale." >&2
+  exit 1
+fi
 
 if [ "$deploy" = "1" ]; then
   echo "== publishing to /var/www/tukuk-play =="

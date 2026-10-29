@@ -1,0 +1,16 @@
+# Repo copy of /etc/sudoers.d/tukuk-ide. The installed file stays root-owned mode 440;
+# this one is the source of truth for a rebuilt box. Installed by install-remote-ide.sh.
+#
+# Why: ide-session.sh runs as the `tukuk` user on purpose -- Android Studio must own
+# ~/.gradle and ~/.android as the site user, not as root -- but starting a system unit
+# (remote-ide.target and its services) is a privileged operation. Rather than hand out
+# `systemctl` broadly, every mutating call goes through one root-owned script that
+# validates its own argument against a fixed unit allowlist (deploy/ide/ide-ctl.sh), and
+# only that script is NOPASSWD. This mirrors deploy/godot/sudoers-tukuk-play exactly.
+#
+# Apply after copying this directory to a fresh server:
+#   install -o root -g root -m 755 deploy/ide/ide-ctl.sh      /usr/local/sbin/ide-ctl
+#   install -o root -g root -m 440 deploy/ide/sudoers-tukuk-ide /etc/sudoers.d/tukuk-ide
+#   visudo -c            # must report /etc/sudoers.d/tukuk-ide parsed OK
+
+tukuk ALL=(root) NOPASSWD: /usr/local/sbin/ide-ctl

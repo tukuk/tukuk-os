@@ -1,0 +1,34 @@
+[Unit]
+# A window manager, not a desktop. Studio is a Swing app: without a WM its menus and
+# dialogs misplace themselves, new windows never take focus, and the "looks frozen" report
+# that follows is really "the WM that was never there". openbox is ~40 MB and does exactly
+# the two jobs needed (placement and focus).
+Description=openbox window manager for the remote IDE display
+Documentation=file:/opt/tukuk-os/deploy/ide/README.md
+PartOf=remote-ide.target
+After=remote-ide-xvfb.service
+Requires=remote-ide-xvfb.service
+
+[Service]
+Type=simple
+User=tukuk
+Group=tukuk
+EnvironmentFile=/etc/tukuk-ide/env
+Environment=XDG_RUNTIME_DIR=/home/tukuk/.ide-runtime
+# NOT Environment=DISPLAY=${IDE_DISPLAY}: systemd does not expand ${VAR} inside an
+# Environment= line, so that form sets DISPLAY to the literal string "${IDE_DISPLAY}" and
+# every X client on the display (starting with openbox itself) fails "cannot open display"
+# with a completely unhelpful name in the error. openbox has no command-line flag for the
+# display the way x11vnc does, so the fix has to be a real shell: systemd expands variables
+# correctly on an ExecStart *command line*, and inside that shell the value from
+# EnvironmentFile is a normal environment variable, expanded by the shell itself.
+ExecStart=/bin/sh -c 'exec env DISPLAY="$IDE_DISPLAY" /usr/bin/openbox'
+Restart=on-failure
+RestartSec=3
+MemoryMax=160M
+TasksMax=64
+Nice=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ide-wm
+NoNewPrivileges=true

@@ -20,8 +20,19 @@
  *
  * It uses only Node core modules — no install step, no dependency drift from the builder itself.
  *
- *   node deploy/builder-wakekeeper.js            # foreground (what the systemd unit runs)
- *   BUILDER_UP_PORT=5176 BUILDER_PORT=5174 ...    # override the two ports if ever needed
+ * ONE ORIGIN ONLY (and why)
+ * The builder is also reachable on dashboard.tukuk.org, where the Cloudflare remote-config
+ * route rules reserve `/api/*` and `/admin` for the Tukuk-OS app on port 3000. A page served
+ * from there therefore calls its OWN `/api/chat`, `/api/models`, `/api/configured-providers`
+ * and gets Tukuk-OS's answers (404 `{"error":"Route not found"}` or a different JSON shape),
+ * which the client then spreads and crashes on ("TypeError: r is not iterable" -> the app's
+ * "Application Error" screen). Two apps cannot share one hostname's /api namespace, so every
+ * alias hostname is answered with a 308 to the canonical builder origin instead: the visitor
+ * lands on a builder whose API actually belongs to it, and /admin & /api on the alias host
+ * stay exactly where the edge rules put them (we never see those requests).
+ *
+ *   BUILDER_CANONICAL_HOST=build.tukuk.org   # where aliases are sent
+ *   BUILDER_ALIAS_HOSTS=dashboard.tukuk.org  # comma list; empty disables the redirect
  */
 'use strict';
 
@@ -36,10 +47,31 @@ const SERVICE = process.env.BUILDER_SERVICE || 'tukuk-builder';
 const KICK_COOLDOWN_MS = 8000;   // never call `systemctl start` more than once per this window
 const SLOW_WARN_MS = 45000;      // after this long still-down, hint that a redeploy may be needed
 
+// Canonical origin + the hostnames that must be redirected to it (see the header above).
+const CANONICAL_HOST = String(process.env.BUILDER_CANONICAL_HOST || 'build.tukuk.org').toLowerCase();
+const ALIAS_HOSTS = String(process.env.BUILDER_ALIAS_HOSTS || 'dashboard.tukuk.org')
+  .split(',')
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+
+// Paths owned by the OTHER app that shares an alias hostname. They never reach this process
+// (the edge routes them to :3000), but if a rule ever changes they must not be redirected into
+// the builder either — a silent pass-through keeps the existing behaviour obvious.
+const ALIAS_PASSTHROUGH = /^\/(?:api|admin)(?:\/|$|\?)/i;
+
 let lastKickAt = 0;
 let wakeStartedAt = 0; // when we first noticed the builder was down during this wake cycle
 
 function log(...a) { console.log('[wakekeeper]', ...a); }
+
+// Where (if anywhere) this request should be sent instead of the builder.
+function aliasRedirectUrl(req) {
+  if (!ALIAS_HOSTS.length) return null;
+  const host = String(req.headers.host || '').split(':')[0].toLowerCase();
+  if (!ALIAS_HOSTS.includes(host)) return null;
+  if (ALIAS_PASSTHROUGH.test(req.url || '/')) return null;
+  return 'https://' + CANONICAL_HOST + (req.url || '/');
+}
 
 // Ask systemd to start the builder. Fire-and-forget: the warming page keeps reloading, and the
 // moment the builder binds 5176 the next proxied request succeeds. Coalesced so a burst of
@@ -97,6 +129,23 @@ function serveWarming(req, res) {
 }
 
 const server = http.createServer((req, res) => {
+  const redirectTo = aliasRedirectUrl(req);
+  if (redirectTo) {
+    /*
+     * 308, not 301: the method and body are preserved, so a stray POST ends up as the same
+     * POST on the builder's own origin rather than being downgraded to a GET.
+     */
+    log('alias host -> ' + redirectTo);
+    res.writeHead(308, {
+      Location: redirectTo,
+      'Cache-Control': 'no-store',
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Length': Buffer.byteLength('Moved to ' + redirectTo),
+    });
+    res.end('Moved to ' + redirectTo);
+    return;
+  }
+
   const proxyReq = http.request(
     { host: UP_HOST, port: UP_PORT, method: req.method, path: req.url, headers: req.headers },
     (proxyRes) => {
@@ -124,6 +173,10 @@ const server = http.createServer((req, res) => {
 // WebSockets (and any other upgrade) go through as a raw byte pipe. If the builder is asleep the
 // socket is simply dropped — the page is reloading anyway, and it reconnects once the builder is up.
 server.on('upgrade', (req, clientSocket, head) => {
+  // An alias host cannot host a WebSocket for this builder either (its /api belongs elsewhere);
+  // drop the socket and let the page reload onto the canonical origin.
+  if (aliasRedirectUrl(req)) { clientSocket.destroy(); return; }
+
   const upstream = net.connect(UP_PORT, UP_HOST, () => {
     let raw = req.method + ' ' + req.url + ' HTTP/1.1\r\n';
     for (let i = 0; i < req.rawHeaders.length; i += 2) raw += req.rawHeaders[i] + ': ' + req.rawHeaders[i + 1] + '\r\n';

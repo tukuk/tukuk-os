@@ -1,0 +1,26 @@
+[Unit]
+# Same narrow job as deploy/builder-idle-stop.service, for the IDE stack instead of the
+# Builder: tear something down when it is holding memory for nobody. Deliberately not part
+# of the load governor -- the governor only reads, this unit acts, and keeping the two apart
+# is what makes each one reviewable on its own.
+Description=Stop the remote IDE stack when no browser tab is attached
+Documentation=file:/opt/tukuk-os/deploy/ide/ide-idle-stop.sh
+# No After= on remote-ide.target: this timer must run whether or not the stack is up, and
+# ide-idle-stop.sh's first check is "is the target active at all". A dependency here would
+# only ever delay the check that decides "nothing to do".
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tukuk-os
+ExecStart=/usr/bin/bash /opt/tukuk-os/deploy/ide/ide-idle-stop.sh
+
+# Reading a socket table and asking systemd to stop three units must never compete with the
+# live site for anything.
+Nice=19
+IOSchedulingClass=idle
+MemoryMax=64M
+TasksMax=32
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ide-idle

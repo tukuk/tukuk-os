@@ -1,0 +1,2586 @@
+{
+  "measured_at": "2026-10-29T16:32:09+00:00",
+  "dataset": "data/ARC-AGI/data/evaluation",
+  "protocol": "holdout (last train pair withheld, min 2 train pairs kept)",
+  "tasks": 355,
+  "graded": 355,
+  "consistent_program": 38,
+  "pass@1": 2,
+  "pass@2": 2,
+  "pass@1_rate": 0.0056,
+  "pass@2_rate": 0.0056,
+  "consistent_rate": 0.107,
+  "elapsed_s": 14.6,
+  "per_task_s": 0.04,
+  "config": {
+    "attempts": 2,
+    "time_budget_s": 3.0,
+    "compositions": true,
+    "min_pairs": 2
+  },
+  "command": "python -m arc.evaluate --dir data/ARC-AGI/data/evaluation --holdout --time-budget 3 --quiet --out results/arc1-eval-holdout.json",
+  "note": "pass@N counts a task only when EVERY test input is exactly right. 'consistent_program' is not accuracy: it only says the train pairs were reproduced.",
+  "per_task": {
+    "009d5c81": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.061,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "00dbd492": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "03560426": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "05a7bcf2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.147,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0607ce86": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.101,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0692e18c": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "08573cc6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.022,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0934a4d8": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.091,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "09c534e7": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.125,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0a1d4ef5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.085,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0a2355a6": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.038,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0bb8deee": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0becf7df": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.022,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0c786b71": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0c9aba6e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.008,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0d87d2a6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.063,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0e671a1a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.035,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "0f63c0b9": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.045,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "12422b43": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "12997ef3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.017,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "12eac192": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.017,
+      "pass@1": true,
+      "pass@2": true
+    },
+    "136b0064": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.013,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "13713586": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.044,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "137f0df0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "140c817e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "14754a24": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.091,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "15113be4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.105,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "15663ba9": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.032,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "15696249": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "17b80ad2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.059,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "17cae0c1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "18419cfa": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.06,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "184a9768": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.085,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "195ba7dc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1990f7a8": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.047,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "19bb5feb": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1a2e2828": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1a6449f1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.03,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1acc24af": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.036,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1c02dbbe": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.043,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1c0d0a4b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.018,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1c56ad9f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.041,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1d0a4b61": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.122,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1d398264": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.037,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1e81d6f9": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.045,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "1e97544e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.1,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2037f2c7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.052,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2072aba6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "20818e16": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.027,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "20981f0e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.045,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "212895b5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.069,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "22a4bbc2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "256b0a75": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.09,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2685904e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.033,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2697da3f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2753e76c": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "27a77e38": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.006,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "27f8ce4f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "281123b4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "292dd178": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "29700607": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.038,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2a5f8217": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2b01abd0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2c0b0aff": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.047,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2c737e39": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.025,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "2f0c5170": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.044,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "310f3251": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.003,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3194b014": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.044,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "319f2597": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.109,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "31adaf00": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "31d5ba1a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.006,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "32e9702f": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "332efdb3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3391f8c0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.034,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3490cc26": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.094,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "34b99a2b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "358ba94e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.025,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "37d3e8b2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.057,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3a301edc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.058,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3b4c2228": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.008,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3d31c5b3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.011,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3ed85e70": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.155,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "3ee1011a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.06,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "40f6cd08": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.139,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "414297c0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.039,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "423a55dc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.029,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "42918530": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.065,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "42a15761": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.018,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4364c1c4": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.034,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "456873bc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.056,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "45737921": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "45bbe264": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.043,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "477d2879": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.035,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "47996f11": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.236,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "48131b3c": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4852f2fa": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "48f8583b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4aab4007": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.159,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4acc7107": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4b6b68e5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.075,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4c177718": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4cd1b7b2": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.006,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4e45f183": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.061,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4e469f39": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.018,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "4ff4c9da": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.098,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "505fff84": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.017,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "506d28a5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.008,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "50a16a69": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.035,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "50aad11f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.013,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "50f325b5": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.075,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "516b51b7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5207a7b5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.017,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5289ad53": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "52fd389e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.103,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "54db823b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.059,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "55059096": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.03,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "55783887": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.028,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "575b1a71": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5783df64": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5833af48": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "58e15b12": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.066,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "59341089": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5af49b42": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.034,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5b6cbef5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5d2a5c43": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "5ffb2104": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "604001fa": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.054,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "60a26a3e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "626c0bcc": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "62ab2642": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.018,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "62b74c02": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "642248e4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.03,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "642d658d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.063,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "64a7c07e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.017,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "66f2d22f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.008,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "67636eac": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "67b4a34d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.03,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "67c52801": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "68b67ca3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "692cd3b6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.042,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "695367ec": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.003,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "696d4842": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.131,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "69889d6e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.02,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "6a11f6da": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "6ad5bdfd": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "6df30ad6": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.036,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "6ea4a07e": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.006,
+      "pass@1": true,
+      "pass@2": true
+    },
+    "6f473927": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7039b2d7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.036,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "705a3229": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.036,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "712bf12e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "72207abc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.016,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "72a961c9": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "73182012": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.016,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "73c3b0d8": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.015,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "73ccf9c2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.047,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "762cd429": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.027,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "770cc55f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.013,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "782b5218": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.025,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "79369cc6": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.062,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7953d61e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "79fb03f4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.069,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7bb29440": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.037,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7c8af763": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7c9b52a0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7d18a6fb": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7d1f7ee8": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.113,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7d419a02": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.048,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7e02026e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "7ee1c6ea": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "817e6c09": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.028,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "81c0276b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "845d6e51": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.051,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "84db8fc4": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "84f2aca1": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.028,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8597cfd7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.01,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "85b81ff1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.042,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "85fa5666": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.025,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8719f442": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "891232d6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.117,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "896d5239": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.036,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8a371977": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.069,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8b28cd80": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8ba14f53": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8cb8642d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.034,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8dae5dfc": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.086,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8e2edd66": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8ee62060": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.027,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "8fbca751": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "90347967": {
+      "consistent": true,
+      "programs": [
+        "rot180"
+      ],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "903d1b4a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.062,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9110e3c5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.009,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "917bccba": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.027,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "929ab4e9": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.16,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "92e50de0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.113,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "93c31fbe": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.094,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "94133066": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.041,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "94414823": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "95a58926": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.062,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "963f59bc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.028,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "96a8c0cd": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.053,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "97239e3d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.054,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "981571dc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.215,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "992798f6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.035,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "99306f82": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9a4bb226": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.025,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9b2a60aa": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.06,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9b365c51": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9b4c17c4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.046,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9bebae7a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9c1e755f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9c56f360": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.011,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9caba7c3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.073,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9def23fe": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.082,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "9f27f097": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.028,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a04b2602": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.075,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a096bf4d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.08,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a3f84088": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.032,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a406ac07": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.022,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a57f2f04": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.053,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a59b95c0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a680ac02": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a8610ef7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "a934301b": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.039,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "aa18de87": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.011,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "aa300dc3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "aa4ec2a5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.105,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "aab50785": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ac0c5833": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.137,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ac2e8ecf": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.037,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ac3e2b04": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.027,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ac605cbb": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ad7e01d0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ae58858e": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "aee291af": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "af22c60d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.213,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "af24b4cc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b0f4d537": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b15fca0b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.011,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b1fc8b8e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.006,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b20f7c8b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.076,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b457fec5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.071,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b4a43f3b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b7999b51": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.033,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b7cb93ac": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b7f8a4d8": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.117,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b7fb29bc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.038,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b942fd60": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.029,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "b9630600": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.171,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ba9d41b8": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.046,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "baf41dbf": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.034,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "bb52a14b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.097,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "bbb1b8b6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "bc4146bd": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "bcb3040b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.047,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "bd14c3bf": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.052,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "be03b35f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "bf32578f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "bf89d739": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.05,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c074846d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c1990cce": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c3202e5a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.059,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c35c1b4c": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.028,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c48954c1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c62e2108": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.059,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c663677b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.145,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c6e1b8da": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.072,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c87289bb": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.023,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c8b7cc0f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "c92b942c": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ca8de6ea": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ca8f78db": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.169,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "cad67732": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "cb227835": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.03,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ccd554ac": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "cd3c21df": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.015,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ce039d91": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.026,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ce8d95cc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "cf133acc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.041,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "cfb2ce5a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d017b73f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.007,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d19f7514": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.008,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d282b262": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.042,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d2acf2cb": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.017,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d37a1ef5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.021,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d47aa2ff": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d4b1c2b1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d4c90558": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.053,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d56f2372": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.036,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d5c634a2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.022,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d931c21c": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.022,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "d94c3b52": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.075,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "da2b0fe3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.02,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "da515329": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.066,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "dc2aa30b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "dc2e9a9d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.062,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "dd2401ed": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "de493100": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.087,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "df8cc377": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.07,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e0fb7511": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.032,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e133d23d": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e1baa8a4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.02,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e1d2900e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.146,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e2092e0c": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.048,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e21a174a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.033,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e345f17b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.006,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e4075551": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.038,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e41c6fd3": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.056,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e57337a4": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e5790162": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e5c44e8f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.022,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e619ca6e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.124,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e633a9e5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e66aafb8": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.063,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e681b708": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.108,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e69241bd": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e6de6e8f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e74e1818": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e760a62e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.085,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e7639916": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.032,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e78887d1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.016,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e7b06bea": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e7dd8335": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.012,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e872b94a": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.015,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e88171ec": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.064,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e95e3d8e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.102,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e99362f0": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e9ac8c9e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.024,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e9b4f6fc": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.02,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e9bb6954": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.063,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "e9c9d9a1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.041,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ea959feb": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.137,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ea9794b1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.014,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ecaa0ec1": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.03,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ed74f2f2": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.008,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ed98d772": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.004,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f0afb749": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.005,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f0df5ff0": {
+      "consistent": true,
+      "programs": [
+        "context_learner"
+      ],
+      "elapsed": 0.051,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f21745ec": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.064,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f3b10344": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.149,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f3cdc58f": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.022,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f3e62deb": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.03,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f4081712": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.059,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f45f5ca7": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.019,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f5aa3634": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.017,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f5c89df1": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.035,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f83cb3f6": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.033,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f8be4b64": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.136,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f9a67cb5": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.031,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "f9d67f8b": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.24,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "fb791726": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.006,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "fc754716": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.006,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "fd4b2b02": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.072,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "fea12743": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.033,
+      "pass@1": false,
+      "pass@2": false
+    },
+    "ff72ca3e": {
+      "consistent": false,
+      "programs": [],
+      "elapsed": 0.025,
+      "pass@1": false,
+      "pass@2": false
+    }
+  }
+}

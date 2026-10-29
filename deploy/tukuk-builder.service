@@ -1,11 +1,12 @@
 [Unit]
 # Tukuk Builder — a bolt.diy fork: a Tukuk-branded AI app builder.
-# SERVED ON TWO HOSTNAMES (both live):
-#   build.tukuk.org — the LEGACY second tunnel (cloudflared-build.service; see
-#     deploy/cloudflared/config-build.example.yml — the main tunnel is
-#     remote-config type, a new hostname is IMPOSSIBLE via a local ingress)
-#   dashboard.tukuk.org — the main remote-config tunnel; the /admin & /api route
-#     rules stay pointed at port 3000.
+# ONE CANONICAL HOST: build.tukuk.org (the legacy cloudflared-build connector).
+#   dashboard.tukuk.org is an ALIAS: the main remote-config tunnel keeps `/admin` and `/api/*`
+#   on port 3000 for Tukuk-OS, so a builder served from that host is handed the wrong
+#   `/api/models`, `/api/chat`, `/api/configured-providers` and dies on the reply shape
+#   ("TypeError: r is not iterable" -> Application Error). The always-on front door on :5174
+#   (builder-wakekeeper.js) therefore 308s every alias-host page to build.tukuk.org; only
+#   /admin and /api on that hostname stay with Tukuk-OS.
 # WebContainer needs the COOP/COEP headers set by entry.server.tsx —
 # under tukuk.org they clash with the existing CSP, hence a separate
 # hostname.

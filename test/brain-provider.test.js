@@ -46,3 +46,41 @@ test('litert: the default order puts it last', () => {
   assert.equal(order[order.length - 1], 'litert', 'the local tier is the slowest — last in line');
   void p;
 });
+
+// ── Groq veto (owner decision) ───────────────────────────────────────────────
+// Groq stays in CLOUD_PROVIDERS (characterisation tests + providerBaseUrl), but it must
+// NEVER reach the rotation — not through the default order, not through LLM_CLOUD_ORDER,
+// not through a leftover GROQ_API_KEY, not through the admin aiProvider setting.
+test('groq: a GROQ_API_KEY alone can never enter the rotation', () => {
+  process.env.GROQ_API_KEY = 'gsk_stale_should_be_ignored';
+  const p = freshRequire(undefined);
+  assert.equal(p.isDisabled('groq'), true, 'groq is on the default veto list');
+  assert.ok(!p.listCloudProviders().some((x) => x.name === 'groq'), 'a stale key must not activate it');
+  delete process.env.GROQ_API_KEY;
+});
+
+test('groq: listing it in LLM_CLOUD_ORDER is still vetoed', () => {
+  process.env.GROQ_API_KEY = 'gsk_stale';
+  const p = freshRequire(undefined);
+  // freshRequire masks the operator's order; override the loaded config to simulate a
+  // .env that still lists groq (the real-world upgrade case).
+  require('../src/config').brain.cloudOrder = 'groq,openrouter';
+  const names = p.listCloudProviders().map((x) => x.name);
+  assert.ok(!names.includes('groq'), 'the env order cannot re-admit a vetoed provider');
+  delete process.env.GROQ_API_KEY;
+});
+
+test('groq: the veto can be lifted explicitly (order must name it too)', () => {
+  process.env.LLM_DISABLED_PROVIDERS = '';
+  process.env.GROQ_API_KEY = 'gsk_ok';
+  const p = freshRequire(undefined);
+  assert.equal(p.isDisabled('groq'), false);
+  // Two independent locks: the veto list AND the default order. The default order no
+  // longer names groq, so lifting only the veto is not enough.
+  const config = require('../src/config');
+  assert.ok(!p.listCloudProviders().some((x) => x.name === 'groq'), 'default order does not name it');
+  config.brain.cloudOrder = 'groq,openrouter';
+  assert.ok(p.listCloudProviders().some((x) => x.name === 'groq'), 'veto lifted + named in the order → admitted');
+  delete process.env.LLM_DISABLED_PROVIDERS;
+  delete process.env.GROQ_API_KEY;
+});

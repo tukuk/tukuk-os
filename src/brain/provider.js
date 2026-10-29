@@ -145,6 +145,9 @@ function isLocalFirst() {
 
 const CLOUD_PROVIDERS = {
   gemini: { defaultModel: 'gemini-flash-latest', kind: 'gemini' },
+  // VETOED by the owner — kept in the registry ONLY so providerBaseUrl()/tests keep
+  // working. Never reached: 'groq' is in DISABLED_PROVIDERS below, and every rotation
+  // path (listCloudProviders → providerOrder) drops it. Do not put it back in env.
   groq: { defaultModel: 'openai/gpt-oss-120b', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
   // Google Gemini through the OpenAI-compatible layer (function-calling supported) so
   // it QUALIFIES for the builder AGENT rotation (kind:'openai'). The key is the same GEMINI_API_KEY
@@ -163,7 +166,18 @@ const CLOUD_PROVIDERS = {
   // via providerBaseUrl(). No quota → no cooling; always the last in line.
   litert: { defaultModel: 'gemma3-1b-it-int4.litertlm', kind: 'openai', baseUrl: '' }
 };
-const DEFAULT_ORDER = ['groq', 'gemini-openai', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai', 'litert'];
+const DEFAULT_ORDER = ['gemini-openai', 'gemini', 'ollama-cloud', 'openrouter', 'xai', 'huggingface', 'cloudflare', 'openai', 'litert'];
+
+// ── Provider veto list ─────────────────────────────────────────────────────
+// A HARD filter applied to every rotation source (env, config default, the admin
+// aiProvider). One comma-separated env var, default 'groq' because the owner does
+// not want Groq in this project at all. Set LLM_DISABLED_PROVIDERS='' to lift the
+// veto — nothing else needs to change.
+const DISABLED_PROVIDERS = new Set(
+  String(process.env.LLM_DISABLED_PROVIDERS ?? 'groq')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+);
+function isDisabled(name) { return DISABLED_PROVIDERS.has(String(name).toLowerCase()); }
 
 function providerBaseUrl(name) {
   if (name === 'litert') return config.brain.litertHost;
@@ -210,7 +224,9 @@ function providerOrder() {
   // The admin aiProvider (when it is one of the cloud ones) pushes that provider to the front.
   const pref = String(setting('aiProvider', '') || '').toLowerCase();
   if (order.includes(pref)) { order.splice(order.indexOf(pref), 1); order.unshift(pref); }
-  return order;
+  // The veto is the LAST word: no env value and no admin setting can re-admit a provider
+  // that lives on the veto list (owner decision for Groq).
+  return order.filter((name) => !isDisabled(name));
 }
 // The cloud providers that HAVE a key, in rotation order.
 function listCloudProviders() {
@@ -407,5 +423,8 @@ module.exports = {
   currentModel, activeBackend, ollamaReachable, listCloudProviders, isLocalFirst,
   // Used by src/brain/openai-compat.js (the agent tool-calling proxy) to reuse the
   // SAME rotation + quota-cooling state as /ask, without re-implementing it.
-  markCooling, coolingRemaining, isQuotaError, quotaCooldownMs, cloudModel, CLOUD_PROVIDERS, providerBaseUrl
+  markCooling, coolingRemaining, isQuotaError, quotaCooldownMs, cloudModel, CLOUD_PROVIDERS, providerBaseUrl,
+  // The veto list (owner decision: no Groq) — surfaced by /api/models so a missing
+  // provider is explained instead of looking like a bug.
+  DISABLED_PROVIDERS, isDisabled
 };

@@ -11,10 +11,34 @@
 # pnpm download is ~1-2 GB); after that it is incremental only.
 set -euo pipefail
 
-HOST="${BUILDER_HOST:-tukuk@${TUKUK_HOST:-192.168.8.105}}"
+TUKUK_HOST="${TUKUK_HOST:-}"
+if [ -z "$TUKUK_HOST" ]; then
+  cat >&2 <<'MSG'
+✗ TUKUK_HOST is not set.
+
+  There is deliberately NO default: the box takes its address over DHCP and a stale
+  hardcoded one (192.168.8.105) is how a deploy "ran" and shipped nothing — rsync
+  failed, the script carried on, and the browser kept loading the old bundle.
+
+  Find the box first (it must answer on port 22, not just ping):
+    for i in $(seq 1 254); do timeout 1 bash -c "</dev/tcp/192.168.8.$i/22" 2>/dev/null && echo "192.168.8.$i"; done
+    TUKUK_HOST=192.168.8.101 bash scripts/deploy-builder.sh
+MSG
+  exit 1
+fi
+HOST="${BUILDER_HOST:-tukuk@${TUKUK_HOST}}"
 PASS="${1:-${BUILDER_PASS:-1}}"
 DEST="/opt/tukuk-builder"
 SRC="$(cd "$(dirname "$0")/.." && pwd)/bolt.diy"
+
+# Reachability gate: ping proves the host is up, not that sshd is listening. The 2026-10-29
+# run pinged fine and every inbound port was closed (the box is reachable only outbound via
+# the Cloudflare Tunnel), so refuse now instead of after a half-finished rsync.
+if ! timeout 8 bash -c "</dev/tcp/${TUKUK_HOST}/22" 2>/dev/null; then
+  echo "✗ ${TUKUK_HOST}:22 does not accept connections — sshd is down, firewalled, or that is not the box."
+  echo "  ping answering is not enough. Nothing was changed. Check: systemctl status ssh on the box."
+  exit 1
+fi
 
 ssh_run() { sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$HOST" "echo $PASS | sudo -S $1"; }
 
@@ -51,4 +75,20 @@ sleep 3
 # builder origin (5176) must answer directly; the front door (5174) must proxy it end to end.
 ssh_run "systemctl is-active tukuk-builder && curl -s -o /dev/null -w 'builder:5176 http=%{http_code}\n' http://127.0.0.1:5176/"
 ssh_run "curl -s -o /dev/null -w 'frontdoor:5174 http=%{http_code}\n' -H 'Host: build.tukuk.org' http://127.0.0.1:5174/"
-echo "[builder] done. https://build.tukuk.org (the second connector cloudflared-build — legacy tunnel, see deploy/cloudflared/config-build.example.yml) and https://dashboard.tukuk.org (the primary remote-config tunnel) both serve Builder; do not drop allowedHosts .tukuk.org in vite.config.ts."
+# The alias host must NOT serve the builder any more: its /api belongs to Tukuk-OS on :3000,
+# so the front door redirects it to build.tukuk.org (see builder-wakekeeper.js).
+ssh_run "curl -s -o /dev/null -w 'frontdoor:5174 alias-host http=%{http_code} -> %{redirect_url}\n' -H 'Host: dashboard.tukuk.org' http://127.0.0.1:5174/"
+echo "[builder] done. https://build.tukuk.org is the ONLY builder origin; dashboard.tukuk.org now answers 308 -> build.tukuk.org (its /admin & /api stay with Tukuk-OS). Do not drop allowedHosts .tukuk.org in vite.config.ts."
+
+# Verify from the OUTSIDE, which is the only place the user's crash is visible. Every check
+# above ran on the box and several end in `|| true`, so a green "done" is not evidence.
+echo
+echo "[builder] verifying the PUBLIC origin (scripts/verify-builder-fix.sh)"
+if bash scripts/verify-builder-fix.sh; then
+  echo "[builder] public verification PASSED."
+else
+  echo "[builder] ⚠ the box restarted but the public origin does not show the fix — see above."
+  echo "[builder]   Most likely the Cloudflare edge is still serving the old asset, or the"
+  echo "[builder]   alias host is not reaching this unit. Do not report this deploy as done."
+  exit 1
+fi

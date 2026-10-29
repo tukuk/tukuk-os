@@ -18,18 +18,28 @@ automatik (`src/brain/provider.js` → `activeBackend()`):
 
 ### Aktifkan cloud (paling ringan — disyorkan)
 
-1. Dapat kunci **percuma** (pilih satu):
-   - Groq (pantas): https://console.groq.com/keys → `GROQ_API_KEY`
+> ⛔ **Groq DILARANG** (keputusan pemilik). Kunci `GROQ_API_KEY` yang masih ada dalam
+> `.env` **diabaikan**: `src/brain/provider.js` menapis nama dalam
+> `LLM_DISABLED_PROVIDERS` (lalai `groq`) SEBELUM sebarang rotasi berlaku. Jangan
+> masukkan `groq` ke `LLM_CLOUD_ORDER` dan jangan pilih Groq di panel admin — kedua-dua
+> laluan itu ditolak oleh penapis yang sama.
+
+1. Dapat kunci **percuma** (pilih satu atau lebih):
    - Google Gemini: https://aistudio.google.com/apikey → `GEMINI_API_KEY`
-   - OpenAI (berbayar): `OPENAI_API_KEY`
+     (dipakai dua kali: `gemini` asli + `gemini-openai` untuk function-calling)
+   - OpenRouter: https://openrouter.ai/keys → `OPENROUTER_API_KEY`
+   - Cloudflare Workers AI (percuma 10k Neuron/hari): `CLOUDFLARE_AI_TOKEN` +
+     `CLOUDFLARE_ACCOUNT_ID`
+   - OpenAI / xAI (berbayar): `OPENAI_API_KEY` / `XAI_API_KEY`
 2. Tambah ke `.env` di server (`/opt/tukuk-os/.env`) — **tiada `BRAIN_PROVIDER`
    diperlukan**, pengesanan automatik akan pilih cloud apabila kunci ada:
    ```env
-   GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxx
-   # atau GEMINI_API_KEY=AIza...
+   GEMINI_API_KEY=AIza...
+   # atau OPENROUTER_API_KEY=sk-or-...
    ```
 3. Restart servis: `sudo systemctl restart tukuk-os`
-4. Sahkan: `curl -s localhost:3000/brain` → `online:true, cloud:true, provider:groq`.
+4. Sahkan: `curl -s localhost:3000/brain` → `online:true, cloud:true, provider:gemini-openai`.
+   Provider yang dipakai mesti BUKAN `groq`.
 
 Alternatif tanpa restart: panel admin (`/admin`) → tetapkan pembekal & kunci
 (disimpan sebagai setting `aiProvider`/`aiApiKey`/`aiModel` dan didahulukan
@@ -143,6 +153,65 @@ AVX2) ambil BERBULAN. Softmax di atas data sendiri pula: detik sahaja, dan
 untuk lapisan ROUTING ia benar-benar lebih baik daripada regex statik.
 "Sangat pintar" pada CPU = pembahagian tugas: LLM kecil + router neural
 milik sendiri + RAG berlandaskan sumber + kalkulator deterministik.
+
+## 🚀 Model sendiri: Kaggle GPU → Hugging Face → server
+
+Aliran penuh untuk model yang **kita latih sendiri** (bukan model orang lain):
+
+```
+Kaggle GPU percuma            Hugging Face hub            server tukuk.org
+kaggle-jobs/<job>.py   →   <user>/tukuk-builder-mini   →   scripts/hf-model-pull.sh
+(LoRA + GGUF Q4_K_M)          (GGUF + metrics.json)        (file + tag Ollama)
+```
+
+### 1. Latih (GPU percuma, tiada kos)
+
+```bash
+KAGGLE_ID=fevian448 bash scripts/kaggle-train-model.sh          # latih + publish
+KAGGLE_ID=fevian448 bash scripts/kaggle-train-model.sh --pull   # + install di server
+```
+
+Dua perkara sekali sahaja di browser (tidak boleh diotomasi):
+
+1. https://www.kaggle.com/code/new → Settings → Accelerator → **GPU T4 x2** → Run
+   (akaun yang belum pernah buka sesi GPU akan dapat kernel CPU secara senyap).
+2. Kaggle → **Add-ons → Secrets** → tambah `HF_TOKEN` (token *write* dari
+   https://huggingface.co/settings/tokens) dan hidupkan untuk notebook.
+
+Pekerjaan `kaggle-jobs/tukuk-builder-mini.py`:
+
+- Qwen2.5-Coder-1.5B-Instruct + LoRA (r=16) atas dataset **awam** berlisénsi
+  (korpus peribadi Tukuk-OS **tidak pernah** dimuat naik ke Kaggle).
+- Merge adapter → GGUF f16 → quantise **Q4_K_M** (llama.cpp, dibina dalam kernel).
+- Push ke HF: `GGUF` + `README.md` (model card) + `metrics.json`.
+- `metrics.json` = angka **sebenar** run itu (loss, eval loss, wall-clock, GPU,
+  saiz + sha256 GGUF, sampel output). Tiada angka rekaan; yang tidak diukur = `null`.
+
+### 2. Install di server
+
+```bash
+sudo bash scripts/hf-model-pull.sh tukuk-builder-mini   # ikut ai-models/registry.json
+sudo bash scripts/hf-model-pull.sh                     # semua entri registry
+```
+
+Skrip ini: muat turun → sahkan `sha256` terhadap `metrics.json` (**abort** kalau tak
+padan) → `install` ke `/home/tukuk/models` (simpan `.prev` untuk rollback) →
+`ollama create <tag>`. Selepas itu model muncul di https://tukuk.org/models sebagai
+*installed*.
+
+Jika kernel tiada `HF_TOKEN`, GGUF kekal di output Kaggle — muat turun dan naikkan
+sendiri:
+
+```bash
+HF_TOKEN=hf_... bash scripts/publish-model-hf.sh <file.gguf> --id tukuk-builder-mini
+```
+
+### 3. Daftar model baharu
+
+Tambah satu entri dalam `ai-models/registry.json` (`id`, `hfRepo`, `hfFile`,
+`ollamaTag`, `quant`, `base`, `license`). Fail itu satu-satunya sumber kebenaran:
+`/api/models` membaca entri + menyemak fail pada disk untuk menentukan `installed`
+(tiada panggilan rangkaian, jadi papan tidak pernah tergantung).
 
 ## ⚡ Pengiraan kelajuan sebenar CPU (RX-427BB / Kaveri)
 

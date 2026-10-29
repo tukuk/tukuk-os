@@ -23,6 +23,29 @@ STAMP="/tmp/tukuk-os-watchdog.fail"
 
 log() { logger -t tukuk-os-watchdog -- "$*"; echo "[watchdog] $*"; }
 
+# --- 0. the management plane must always be reachable -----------------------
+# A box you cannot log into is a box you cannot fix. On 29 Oct 2026 the site was
+# healthy while sshd dropped every SYN and cockpit.socket refused connections on
+# the address the box actually held — the socket was still bound to the one it had
+# at boot (see deploy/cockpit-lan-socket.sh), and the firewall no longer allowed 22.
+# Neither is visible through Cloudflare, because the tunnel is outbound-only, so no
+# other check in this stack ever notices. Runs FIRST, so it still fires on the
+# early-exit paths below, and on a 30-minute stamp: a healthy box pays one `ss`
+# call and nothing else, while a locked-out box is fixed within 2 minutes.
+ACCESS_STAMP="/tmp/tukuk-os-watchdog.access"
+if [ ! -f "$ACCESS_STAMP" ] || [ -n "$(find "$ACCESS_STAMP" -mmin +30 2>/dev/null)" ]; then
+  MISSING=""
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltn 2>/dev/null | grep -qE '[:.]22[[:space:]]'   || MISSING="ssh"
+    ss -ltn 2>/dev/null | grep -qE '[:.]9090[[:space:]]' || MISSING="${MISSING:+$MISSING+}cockpit"
+  fi
+  if [ -n "$MISSING" ]; then
+    log "🔑 admin access missing ($MISSING) — re-asserting via scripts/selfheal-access.sh"
+    bash "$(dirname "$0")/selfheal-access.sh" 2>&1 | while IFS= read -r l; do log "  $l"; done
+    touch "$ACCESS_STAMP"
+  fi
+fi
+
 if ! systemctl is-active --quiet "$MEILI"; then
   log "Meilisearch not active — restart"
   systemctl restart "$MEILI"

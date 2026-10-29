@@ -1,0 +1,22 @@
+{
+  "$comment": "Published-model registry for Tukuk-OS. One entry per model WE trained (or fine-tuned) — trained on a Kaggle GPU, stored on the Hugging Face hub, installed onto this server by scripts/hf-model-pull.sh. src/brain/modelhub.js only READS this file plus the local filesystem: nothing here opens a socket, so /api/models cannot hang. 'installed' is never stored — it is derived at request time from the presence of hfFile in models.localDir. Verified numbers live in the HF model card + metrics.json produced by the training kernel; do not invent values here.",
+  "updatedAt": "2026-10-30",
+  "models": [
+    {
+      "id": "tukuk-builder-mini",
+      "name": "Tukuk Builder Mini",
+      "role": "Coding assistant for Tukuk Builder (LoRA fine-tune, GGUF for CPU inference)",
+      "kind": "llm",
+      "base": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+      "tuning": "LoRA r=16 / alpha=32, merge-and-export",
+      "hfRepo": "fevian448/tukuk-builder-mini",
+      "hfFile": "tukuk-builder-mini-q4_k_m.gguf",
+      "quant": "Q4_K_M",
+      "ollamaTag": "tukuk-builder-mini:q4",
+      "trainedOn": "kaggle",
+      "job": "kaggle-jobs/tukuk-builder-mini.py",
+      "license": "apache-2.0",
+      "notes": "Trained from a public permissively licensed instruction dataset inside the Kaggle kernel — the private Tukuk-OS corpus is never uploaded to Kaggle. Honest metrics (loss, tokens, wall-clock, GGUF sha256) are written to metrics.json in the same HF repo."
+    }
+  ]
+}

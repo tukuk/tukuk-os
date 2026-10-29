@@ -132,7 +132,7 @@ The **"AI Chat"** widget (💬 at the corner of `/`) calls `GET /ask?q=...`.
 **Chain:** `/ask` (`src/server.js`) → `rag.ask()` (`src/brain/rag.js`) → `provider` (`src/brain/provider.js`).
 
 `provider.activeBackend()` picks a backend automatically (no Ollama/model required — suits a **CPU-only server**):
-1. **Cloud LLM** (Groq / Gemini / OpenAI / …) — when a key exists. The server makes just 1 HTTP call; processing happens in the cloud, CPU ≈ 0.
+1. **Cloud LLM** (Gemini / OpenRouter / OpenAI / xAI / Cloudflare / Hugging Face …) — when a key exists. The server makes just 1 HTTP call; processing happens in the cloud, CPU ≈ 0.
 2. **Local Ollama** — when `OLLAMA_HOST` (default `127.0.0.1:11434`) is reachable.
 3. **Extractive answer** — if neither exists: quotes the most relevant sentences from the search results (`extractiveAnswer` in `src/brain/quality.js`). **0 models, 0 cost, always on.** (Out-of-the-box default, which is why `No answer` no longer happens.)
 
@@ -142,9 +142,11 @@ Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered 
 
 **How to configure the cloud (pick one, then restart `node index.js`):**
 - **Admin → AI Settings:** `aiProvider=gemini`, `aiApiKey=<your key>`, `aiModel=gemini-2.5-flash`; **or**
-- **env:** `GEMINI_API_KEY=...` (also `GROQ_API_KEY`, `OPENAI_API_KEY`). Put it in `deploy/env.defaults` (private repo) so `npm install` auto-provisions.
+- **env:** `GEMINI_API_KEY=...` (also `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`). Put it in `deploy/env.defaults` (private repo) so `npm install` auto-provisions.
 
-**Check / test:** `GET /brain` → `provider` (`gemini|groq|openai|ollama|extractive`) & `online`; `GET /ask?q=question`.
+**⚠️ Groq is vetoed.** The owner does not want it. `src/brain/provider.js` filters it out as the **last** step of `providerOrder()` via `LLM_DISABLED_PROVIDERS` (default `groq`), so a leftover `GROQ_API_KEY`, an `LLM_CLOUD_ORDER` entry, or an admin `aiProvider` setting can never re-admit it. Three tests in `test/brain-provider.test.js` pin that. It is also absent from the Builder's `ENABLED_PROVIDERS` (`bolt.diy/app/lib/modules/llm/manager.ts`), which is what removes it from the picker.
+
+**Check / test:** `GET /brain` → `provider` (`gemini|openrouter|openai|ollama|extractive`) & `online`; `GET /ask?q=question`.
 
 **Flags:** `BRAIN_ENABLED=false` disables `/ask` (503). `BRAIN_FAST_MODE=true` (default) + Ollama with **no cloud key** → extractive immediately (skips the weak small model). `LLM_CHAIN` = Ollama failover list. `BRAIN_BUDGET_MS` (default 9000) = hard time budget for the whole LLM phase, after which extractive answers instantly (with a 3s floor so slow web-search retrieve can't starve the race).
 
@@ -310,7 +312,65 @@ Turn **one word** into **one web-app + one web-game** ready live — **with no b
 
 ---
 
+## 🧪 12½. Own AI models (Kaggle → Hugging Face) + ARC Prize 2026
+
+Two things live here that are **not** the cloud rotation: our **own** weights, and a
+research project. Both run on Kaggle's free tier and cost nothing.
+
+### A. Train our own model, store it on Hugging Face
+
+```bash
+KAGGLE_ID=<username> bash scripts/kaggle-train-model.sh          # train on a free T4
+KAGGLE_ID=<username> bash scripts/kaggle-train-model.sh --pull   # …and install it here
+```
+
+| Step | What happens | Where |
+|---|---|---|
+| 1 | LoRA fine-tune of `Qwen2.5-Coder-1.5B-Instruct` on a **public** dataset (no private text leaves the server) | `kaggle-jobs/tukuk-builder-mini.py` |
+| 2 | merge → GGUF f16 → `llama-quantize` Q4_K_M, `metrics.json` with **measured** loss / wall-clock / sha256 / GPU | same kernel |
+| 3 | push GGUF + model card + `metrics.json` to the hub | needs `HF_TOKEN` as a **Kaggle secret** |
+| 4 | pull, verify sha256 against the published `metrics.json`, install to `/home/tukuk/models`, `ollama create` | `sudo bash scripts/hf-model-pull.sh tukuk-builder-mini` |
+
+One-time prerequisites (browser, cannot be automated): open a Kaggle GPU session once
+(the API silently runs CPU-only until you do), and add `HF_TOKEN` under
+**Kaggle → Add-ons → Secrets**. Without the token the kernel still trains and stops with
+a **HOLD** message, and `scripts/publish-model-hf.sh` uploads the artefacts later.
+
+`ai-models/registry.json` is the single source of truth for what we publish.
+`src/brain/modelhub.js` reads it (no network at request time) and the result is visible
+as `publishedModels` in `GET /api/models` and as the **“Published models (Kaggle →
+Hugging Face)”** card on `/models`.
+
+**These weights are not part of the `/ask` rotation** — they are served by Ollama and
+picked up locally. A model that is on the hub but not installed reports
+`installed: false`, which is the point (no invented state).
+
+### B. ARC Prize 2026 — Paper Track
+
+`arc-2026/` is a complete entry: solver, 19 unit tests, a holdout evaluator, measured
+results and the write-up. Deadline **2026-11-09**. See `arc-2026/README.md`.
+
+```bash
+bash arc-2026/fetch-data.sh                                   # public ARC data
+cd arc-2026 && python3 -m unittest discover -s tests -v
+python3 -m arc.evaluate --dir data/ARC-AGI-2/data/evaluation --holdout --out results/x.json
+
+cd ..
+bash scripts/arc-2026-push.sh --dry-run                       # build + verify, submit nothing
+KAGGLE_ID=<username> bash scripts/arc-2026-push.sh --public   # the linked code submission
+```
+
+Measured, not claimed (`arc-2026/results/*.json`): pass@2 **7.27%** on ARC-AGI-1
+training holdout, **0.56%** on ARC-AGI-1 evaluation holdout, **0.00%** on ARC-AGI-2
+evaluation holdout. The paper is about why consistency and accuracy decouple — the
+ARC-AGI-2 number stays 0% in the write-up. The Kaggle notebook is **generated** from
+`arc-2026/arc/*.py` and byte-compiled before every push, so the submission cannot drift
+from the code that produced those numbers.
+
+---
+
 ## 🔮 13. Future Roadmap
 - ✅ **1 Day 1 App + Game:** **DONE** — see **§12** (GitHub Actions cron generates an app+game for every word, every day, automatically).
 - **Unity Cloud Games:** Opt-in scaffold exists (**§12**); next = connecting a Unity WebGL *build* (needs a license + paid/manual CI minutes) into the Tukuk-OS games tab.
-- **Kaggle CLI:** Use the Kaggle CLI to process heavy AI data/training when the laptop's RAM is limited.
+- ✅ **Kaggle CLI:** **DONE** — free GPU training → Hugging Face hub → install on the server, see **§12½-A** (`scripts/kaggle-train-model.sh`).
+- ✅ **ARC Prize 2026 Paper Track:** **DONE (code + measured results)** — see **§12½-B**; what remains is the Kaggle submission fields in `arc-2026/paper/writeup.md`.

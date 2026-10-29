@@ -195,6 +195,8 @@ module.exports = {
     provider: process.env.BRAIN_PROVIDER || 'ollama',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
+    // Kept only so an old .env does not crash — Groq is VETOED in provider.js
+    // (LLM_DISABLED_PROVIDERS defaults to 'groq'). Do not add a GROQ_API_KEY.
     groqApiKey: process.env.GROQ_API_KEY || '',
     openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
     xaiApiKey: process.env.XAI_API_KEY || '',
@@ -209,11 +211,15 @@ module.exports = {
     // LITERT_HOST is set explicitly — off by default so CI/laptops don't
     // try to reach a port that isn't there. The model is overridable via LITERT_MODEL.
     litertHost: process.env.LITERT_HOST || '',
-    // The cloud rotation order (left→right). FASTEST FIRST: groq (LPU ~1s) & gemini-flash
-    // lead; the cloudflare scout (slow, ~30s+) is sent to the back so the interactive
-    // budget rarely has to wait for a slow provider. litert (the local edge tier) is
-    // last: always available, no quota, but the slowest.
-    cloudOrder: process.env.LLM_CLOUD_ORDER || 'groq,gemini-openai,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai,litert'
+    // The cloud rotation order (left→right). FASTEST FIRST: the Gemini OpenAI-compatible
+    // layer & gemini-flash lead; the cloudflare scout (slow, ~30s+) is sent to the back so
+    // the interactive budget rarely waits for a slow provider. litert (the local edge tier)
+    // is last: always available, no quota, but the slowest.
+    // Groq is DELIBERATELY ABSENT (owner veto, enforced by LLM_DISABLED_PROVIDERS).
+    cloudOrder: process.env.LLM_CLOUD_ORDER || 'gemini-openai,gemini,ollama-cloud,openrouter,xai,huggingface,cloudflare,openai,litert',
+    // Hard veto list for cloud providers: a name here can never enter the rotation,
+    // whatever LLM_CLOUD_ORDER or the admin aiProvider says. Default 'groq' (owner).
+    disabledProviders: process.env.LLM_DISABLED_PROVIDERS ?? 'groq'
   },
 
   // Tukuk Agent (editor AI) — OpenAI-compatible tool-calling proxy + headless build.
@@ -236,6 +242,18 @@ module.exports = {
   // tukuk.org/agent → 127.0.0.1:8443 (--auth password on its side).
   agentEditor: {
     upstream: process.env.AGENT_EDITOR_UPSTREAM || 'http://127.0.0.1:8443'
+  },
+
+  // OUR OWN models (trained on Kaggle GPU, stored on Hugging Face, pulled onto
+  // this box). The registry file is the source of truth: ai-models/registry.json.
+  // src/brain/modelhub.js only READS it and probes the local filesystem, so
+  // /api/models never waits on the network.
+  models: {
+    registryPath: process.env.TUKUK_MODEL_REGISTRY || path.join(__dirname, '..', 'ai-models', 'registry.json'),
+    localDir: process.env.TUKUK_MODEL_DIR || '/home/tukuk/models',
+    // Where scripts/hf-model-pull.sh drops downloads before installing; shown in
+    // the inventory so a half-finished pull is visible instead of silent.
+    stagingDir: process.env.TUKUK_MODEL_STAGING || '/opt/tukuk-os/generated/hf'
   },
 
   net: {
