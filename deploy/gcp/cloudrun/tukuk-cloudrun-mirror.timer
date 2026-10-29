@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly rebuild of the Cloud Run failover copy of tukuk.org
+
+[Timer]
+# Snapshot runs 04:38 UTC, the GCS offsite copy at 04:20 — build the mirror after both.
+OnCalendar=Sun 04:50
+RandomizedDelaySec=600
+Persistent=true
+Unit=tukuk-cloudrun-mirror.service
+
+[Install]
+WantedBy=timers.target

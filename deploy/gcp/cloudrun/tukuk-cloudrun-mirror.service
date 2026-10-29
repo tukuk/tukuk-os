@@ -1,0 +1,17 @@
+[Unit]
+Description=Rebuild the Cloud Run copy of tukuk.org from the newest R2 snapshot
+Documentation=https://github.com/fevian448/tukuk-os-v2/blob/main/deploy/gcp/cloudrun/cloudrun-mirror-rebuild.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# systemd does not set HOME — gcloud needs it to find ~/.config/gcloud credentials.
+User=tukuk
+Environment=HOME=/home/tukuk
+WorkingDirectory=/home/tukuk
+ExecStart=/usr/local/bin/cloudrun-mirror-rebuild.sh
+# One build is ~1 minute; this is the ceiling before we call it hung.
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=idle

@@ -3,12 +3,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-06",
   "compatibility_flags": ["global_fetch_strictly_public"],
-  // Rung 2 of the ladder: the independent GCP mirror, on its own tunnel and machine.
-  // Until its DNS record exists this resolves to nothing and the ladder drops straight to
-  // the cold R2 snapshot - a miss, never an error. Flip this to https://www.tukuk.org if
-  // www is the hostname that gets cut over to the mirror instead.
+  // Rung 2 of the ladder: the independent GCP copy of the site, on Cloud Run (always-free
+  // tier, scales to zero). A *.run.app hostname needs no DNS record, so this rung works
+  // without Zone:DNS — which is exactly what blocked the VM + tunnel path. Rebuilt weekly
+  // by deploy/gcp/cloudrun/rebuild.sh. Fall back to https://www.tukuk.org only if the
+  // Cloud Run service is deleted.
   "vars": {
-    "MIRROR_URL": "https://mirror.tukuk.org"
+    "MIRROR_URL": "https://tukuk-mirror-176041010195.us-central1.run.app"
   },
   "r2_buckets": [
     {

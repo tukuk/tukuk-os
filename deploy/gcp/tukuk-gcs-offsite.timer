@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly GCS offsite copy of the R2 backup vault
+
+[Timer]
+# Sunday morning, well clear of the 6h mirror pulls (:40) and the 04:38 snapshot.
+OnCalendar=Sun 04:20
+RandomizedDelaySec=600
+Persistent=true
+Unit=tukuk-gcs-offsite.service
+
+[Install]
+WantedBy=timers.target

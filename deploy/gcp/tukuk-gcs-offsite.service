@@ -1,0 +1,13 @@
+[Unit]
+Description=Mirror the newest backup slices from R2 into the free GCS bucket
+Documentation=https://github.com/fevian448/tukuk-os-v2/blob/main/scripts/gcs-offsite-sync.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/gcs-offsite-sync.sh
+# 164 vault objects / 1.3 GB total today; a bounded slice of that is minutes, not hours.
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=idle
