@@ -149,5 +149,9 @@ aliyun/credentials
 # the tidiness: if a path with one of these names ever became tracked, `git merge --ff-only`
 # on the box would refuse to create a file over the untracked one and the nightly update
 # would stop, each run exiting 0. Ignoring them makes that unstageable by accident.
+# Mind the asymmetry, also measured: an IGNORED path does not block the merge the way an
+# untracked one does — a commit that adds it overwrites the server's copy and fast-forwards
+# (scripts/ship-to-box.sh carries the numbers). So this rule protects the box by keeping the
+# path out of the repo, not by keeping the repo out of the box.
 # test/repo-ignore-hygiene.test.js pins this list against the box's measured state.
 etc-netplan-reference/

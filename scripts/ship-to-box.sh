@@ -137,6 +137,13 @@ fi
 # $ONBOX — the code the box runs — so it catches exactly what this ship is adding.
 # --untracked-files=all matters: the default collapses a directory to "?? build/" and a
 # directory name never matches the file paths being added, so the check would find nothing.
+# What it cannot see is a path the box's own .gitignore hides: measured in a scratch repo
+# (two clones, one seed), a merge that adds a path which exists on the receiver IGNORED goes
+# straight through — rc=0, Fast-forward, the box's copy replaced by the incoming one, status
+# listing nothing beforehand. Ignoring therefore trades a loud refusal for a silent
+# overwrite, which is why the rules in .gitignore are paired with
+# test/repo-ignore-hygiene.test.js asserting those paths stay untracked HERE: the only
+# defence left is never force-adding them in the first place.
 NEW_PATHS="$(git diff --name-only --diff-filter=A "$ONBOX" "$BRANCH" 2>/dev/null || true)"
 if [[ -n "$NEW_PATHS" ]]; then
   # Read-only probe as the unprivileged ssh user; if it cannot read the tree the ship
