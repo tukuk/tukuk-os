@@ -14,6 +14,17 @@
 # truncated transfer is still a file scp calls success. So both paths are checked
 # at the far end, and the degraded one puts itself back when it is done.
 #
+# Both have actually run. 4c86a37 went over GitHub; dcad3d6 was shipped with root's
+# ssh config deliberately moved aside, so the probe refused, the bundle path executed
+# end to end (39,933,411 bytes, byte-matched at the far end, verified inside the repo,
+# the unit logging `From /home/tukuk/handover/code/...`, record and public edge both
+# agreeing) and the EXIT trap put origin back. The fallback costs more than the direct
+# path: 495.9 MB peak RSS and 10.7 s CPU on the box, against 32.7 MB and 2.2 s for
+# GitHub's incremental of the same two commits — a bundle carries full history and has
+# to be repacked. Wall time was 7 s either way, so the bundle is not slower for whoever
+# is waiting on it; it is slower for a small box doing that work while serving traffic,
+# which is the reason GitHub stays the default rather than merely the nicer option.
+#
 #   bash scripts/ship-to-box.sh                 # ship the current branch (main)
 #   TUKUK_HOST=192.168.8.100 bash scripts/ship-to-box.sh
 #   bash scripts/ship-to-box.sh --branch main --no-deploy   # deliver, do not restart
