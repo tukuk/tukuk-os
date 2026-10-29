@@ -30,8 +30,14 @@ any of it can run.
 * **`worker.tukuk.org`** — the brain Worker. Proxies the apex; on origin 5xx or a
   thrown fetch (blackout / dropped connector) it serves the **GCP mirror**, then the
   **R2 static snapshot**, then `503`. Also hosts the `/edge-backup` R2 gateway.
-* **`www.tukuk.org`** — the GCP mirror: Tunnel #2 on a separate e2-micro VM serving a
-  static copy pulled from R2 every 6h. Independent of the home box.
+* **`www.tukuk.org`** — a static copy of the site on **Cloud Run** (`x-mirror: gcp-run`),
+  rebuilt weekly from the R2 snapshot. The older route — Tunnel #2 on the e2-micro — is
+  **parked** (see "Where this actually stands").
+
+> **Read the status section first.** Parts B–G below describe the *VM + Tunnel #2* build of
+> rung 2. That build was completed and then superseded: the VM is stopped and rung 2 is a
+> Cloud Run service, which needs no DNS record, no tunnel and no external IP. The Parts stay
+> as the rebuild recipe if the VM path is ever needed again.
 
 ### The one caveat to accept up front
 Because you kept **apex unchanged (direct tunnel)**, when the box is down a visitor
@@ -63,10 +69,11 @@ this before following any later Part.
 
 * **Billing is open** (`billingEnabled: True`). One e2-micro exists: `instance-free`,
   **`us-central1-a`** (not `us-west1-a`/`tukuk-mirror` as Part B says), 30 GB pd,
-  tag `tukuk-mirror`, external IP 34.60.67.212, bootstrapped by its `startup-script`.
+  tag `tukuk-mirror`, **`TERMINATED` since 29 Oct 08:23 +08, external IP released**.
   It is the *only* instance in the project: the free tier is **one e2-micro instance-month
   in total**, not one per zone, so a second VM (another zone, or the same name in another
-  project) is billed.
+  project) is billed. Restart with
+  `gcloud compute instances start instance-free --zone=us-central1-a`.
 * **The brain is live on `worker.tukuk.org` with no DNS scope at all** — it was attached as
   a Workers **custom domain** (`PUT /accounts/{acc}/workers/domains`), which lets Cloudflare
   create the record itself. `GET /health` proxies the box; `/edge-backup` lists 341 objects
@@ -78,25 +85,31 @@ this before following any later Part.
   (`POST /accounts/{acc}/cfd_tunnel` with `config_src: cloudflare`) and its ingress is set
   with `PUT /accounts/{acc}/cfd_tunnel/{id}/configurations`, so
   `deploy/cloudflared/gcp-config.yml` is reference-only. Connector installed on the VM with
-  `cloudflared service install <token>`; tunnel `16359e22-3a06-4012-abc0-3b1c3cf7204a`,
-  status healthy, 4 connections.
-* **The 6 h puller is installed and enabled on the VM**, reading
-  `MIRROR_BASE=https://worker.tukuk.org/edge-backup`. First runs: 92 objects, ~21.9 MB,
-  0 failed, atomic symlink swap, pruned to the newest 3 releases.
+  `cloudflared service install <token>`; tunnel `16359e22-3a06-4012-abc0-3b1c3cf7204a`.
+  **Its connector ran on the VM, so it is offline while the VM is parked** — which is fine,
+  nothing routes through it any more.
+* **The 6 h puller lives on the VM too** and is idle with it. It read
+  `MIRROR_BASE=https://worker.tukuk.org/edge-backup` (92 objects, ~21.9 MB, 0 failed,
+  atomic symlink swap, newest 3 releases kept) whenever the VM was up.
 
-**The only thing still missing is one DNS record**, because nothing in this project holds
-`Zone → DNS → Edit` (the OAuth session has `zone (read)`; the `cfut_` token cannot even list
-accounts):
+### Rung 2 moved to Cloud Run (29 Oct 2026)
 
+A running VM's ephemeral external IPv4 is billed at ~$0.005/h — about **$3.6/month**, the one
+recurring charge this design created, and not inside any always-free allowance. A VM without
+an external IP would need Cloud NAT (also billed) just to let cloudflared dial out. So rung 2
+became a **Cloud Run** service instead, which is inside the always-free tier, scales to zero
+when idle, and — crucially — gets a `*.run.app` hostname that **resolves without any DNS
+record**, the exact thing we could not create.
+
+```bash
+gcloud run services describe tukuk-mirror --region=us-central1 --format='value(status.url)'
+# https://tukuk-mirror-176041010195.us-central1.run.app   (x-mirror: gcp-run)
 ```
-mirror.tukuk.org   CNAME   16359e22-3a06-4012-abc0-3b1c3cf7204a.cfargotunnel.com   proxied
-```
 
-Add that record — or grant `Zone:DNS:Edit` and it can be created by API. The brain already
-carries `MIRROR_URL=https://mirror.tukuk.org` (wrangler `vars`), so the rung lights up the
-moment the name resolves, with no further deploy. Until then it resolves to nothing and the
-ladder drops straight to the cold R2 snapshot (a miss, never an error). If `www` is the
-hostname that gets cut over instead, set that var to `https://www.tukuk.org`.
+`MIRROR_URL` in `wrangler.jsonc` points at that URL, so **the `mirror.tukuk.org` CNAME in the
+old plan is no longer required** — do not add it. Rebuild weekly with
+`deploy/gcp/cloudrun/cloudrun-mirror-rebuild.sh` (unit `tukuk-cloudrun-mirror.timer`); the
+runbook for the free tier as a whole is `deploy/GCP-FREE-TIER.md`.
 
 **Blackout drill, 29 Oct 07:47 (+08)** — `systemctl stop cloudflared` on the box for ~15 s,
 probing `worker.tukuk.org` with a unique query string each time:
