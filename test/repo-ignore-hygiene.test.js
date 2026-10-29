@@ -35,10 +35,19 @@ function git(args) {
     { cwd: ROOT, encoding: 'utf8' });
 }
 
-/** git grep exits 1 for "no matches", which is the wanted answer here, not an error */
-function gitGrep(pattern) {
+/**
+ * git grep exits 1 for "no matches", which is the wanted answer here, not an error.
+ * `skip` is a list of pathspecs to exclude. This file has to CONTAIN the string it searches
+ * for, and `git grep` only reads tracked files — so the assertion below passed on the laptop
+ * (this file was still untracked when it was first run) and failed on the server, where the
+ * ship had made it tracked. Same trap as the ignore rules it tests: green that came from
+ * looking at nothing, and only the real deploy target exposed it.
+ */
+function gitGrep(pattern, skip = []) {
+  const args = ['grep', '-l', '-e', pattern];
+  if (skip.length) args.push('--', ...skip.map((s) => `:(exclude)${s}`));
   try {
-    return git(['grep', '-l', '-e', pattern]).trim().split('\n').filter(Boolean);
+    return git(args).trim().split('\n').filter(Boolean);
   } catch (e) {
     if (e.status === 1) return [];
     throw e;
@@ -109,8 +118,9 @@ test('the scratch file with a hardcoded sudo password is out of the repo root', 
   // untracked and referenced by nothing. It now lives under .artifacts/, which is ignored.
   assert.ok(!fs.existsSync(path.join(ROOT, 'tmp-survey.sh')), 'it must not be back at the root');
   assert.ok(ignored('.artifacts/tmp-survey.sh'), 'and the location it moved to must be ignored');
-  // Nothing in the tracked tree may carry that shape of credential handling.
-  assert.deepEqual(gitGrep('echo 1 | sudo -S'), [], 'a tracked file pipes a password to sudo -S');
+  // Nothing else in the tracked tree may carry that shape of credential handling.
+  assert.deepEqual(gitGrep('echo 1 | sudo -S', ['test/repo-ignore-hygiene.test.js']), [],
+    'a tracked file pipes a password to sudo -S');
 });
 
 test('no tracked file is newly ignored — the over-match check', () => {
