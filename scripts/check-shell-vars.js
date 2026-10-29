@@ -117,8 +117,16 @@ function scan(text) {
 module.exports = { scan };
 
 if (require.main === module) {
+  const files = process.argv.slice(2);
+  if (!files.length) {
+    // Zero arguments used to loop over nothing and exit 0 — the one answer that must never be
+    // free, because "no findings" and "nothing was looked at" are the same exit code and the
+    // same silence. deploy/REBUILD.md documents the named-file form; a bare run is a mistake.
+    console.error('usage: node scripts/check-shell-vars.js <script.sh> [...] — nothing to scan.');
+    process.exit(2);
+  }
   let bad = 0;
-  for (const file of process.argv.slice(2)) {
+  for (const file of files) {
     const found = scan(fs.readFileSync(file, 'utf8'));
     if (!found.length) { console.log(`OK   ${file}`); continue; }
     bad++;

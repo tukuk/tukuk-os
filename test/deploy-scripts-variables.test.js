@@ -6,7 +6,8 @@
 //
 // The first test group proves the scanner is not vacuous (a deliberately bad fixture IS flagged),
 // the second group asserts the shipped install path is clean, recursively, so a script added later
-// is covered without anyone remembering to list it.
+// is covered without anyone remembering to list it, and the one between them pins that the CLI
+// cannot answer "all clean" when it was handed no files at all.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -70,6 +71,29 @@ node -e '
 ' 2>&1 | sed 's/^/   /'
 echo "$x $String"
 `), ['x', 'String'], 'reads AFTER the closing quote are still real shell reads');
+});
+
+// ── the command line, not just the exported scan() ───────────────────────────────
+const CLI = path.join(ROOT, 'scripts', 'check-shell-vars.js');
+
+test('the command line refuses to report success over zero files', () => {
+  // `node scripts/check-shell-vars.js` with no arguments looped over nothing and exited 0.
+  // That is the answer a human gets when they type the command from memory, and it reads
+  // exactly like "every script is clean" — so the empty case now costs a usage error, kept a
+  // distinct code from "findings" (1) to leave the difference observable.
+  let err = null;
+  try {
+    execFileSync(process.execPath, [CLI], { encoding: 'utf8', stdio: 'pipe' });
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(err, 'a bare run must not exit 0');
+  assert.equal(err.status, 2, 'usage error, not a finding');
+  assert.match(err.stderr, /nothing to scan/);
+  // …and the documented form still works, on a script this suite already knows is clean.
+  const out = execFileSync(process.execPath, [CLI, path.join(ROOT, 'deploy', 'purge-edge-cache.sh')],
+    { encoding: 'utf8' });
+  assert.match(out, /^OK .*purge-edge-cache\.sh\n$/, `got: ${JSON.stringify(out)}`);
 });
 
 // ── the shipped install path ─────────────────────────────────────────────────────
