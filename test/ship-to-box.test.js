@@ -1,16 +1,16 @@
 'use strict';
 // scripts/ship-to-box.sh — the only way work gets from this laptop to production.
 //
-// The VPS cannot fetch from GitHub: its deploy key is gone from /root/.ssh, so `origin`
-// inside /opt/tukuk-os is a git BUNDLE sitting on the box's own disk, and every deploy
-// has to rebuild and re-copy that file. That is not a topology you can trust from memory,
-// and it is not a procedure you can repeat from a terminal without writing things down:
-// four commits were shipped by hand out of scattered .artifacts/*.sh spells before this
-// script existed, and the hand version had already been fooled once — `tukuk-update.service`
-// reported "Already up to date" while four commits were waiting, because the bundle that
-// `origin` pointed at had not been refreshed. A deploy that reports success and changed
-// nothing is the failure mode worth testing for, so these tests pin the ordering and the
-// refusals rather than the prose.
+// Two transports. Normally the box fetches from GitHub itself, over the read-only deploy
+// key at /root/.ssh/tukuk_deploy; then this script pushes, starts tukuk-update.service
+// and reads the proof. When the box cannot reach GitHub — which is not hypothetical, the
+// key disappeared from /root/.ssh sometime before 29 Oct 2026 and origin got repointed at
+// a git bundle on the box's own disk — it builds, transfers, verifies and installs that
+// bundle instead, and puts origin back when it is done. The incident the shape of this
+// script comes from is the quiet kind: with `origin` on a bundle nobody refreshed, the
+// nightly timer reported "Already up to date" for days while four commits waited on
+// GitHub. A deploy that reports success and changed nothing is the failure mode worth
+// testing for, so these tests pin the ordering and the refusals rather than the prose.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -53,10 +53,45 @@ test('GitHub gets the commit before the bundle is built', () => {
   assert.match(src, /is not on origin/, 'and the script must refuse if the push did not land');
   // The other direction matters more than a rejected push. The Actions bot commits
   // straight to GitHub every day; a bundle built from a branch that never pulled those
-  // commits simply does not contain them, and the box — whose only remote is that
-  // bundle — never learns what it missed.
+  // commits simply does not contain them, and a box that cannot ask GitHub what it is
+  // missing never learns.
   assert.match(src, /git rev-list --count "\$BRANCH\.\.origin\/\$BRANCH"/, 'behind-ness must be counted');
   assert.match(src, /those commits never reach the box/, 'and named as the loss it is');
+});
+
+test('the transport is asked of the box, not of the README, before a bundle is built', () => {
+  // Whether the box can fetch for itself decides whether 40 MB needs to move at all, and
+  // the answer has to come from the machine: "the deploy key is missing" is a note in a
+  // README, and notes in READMEs go stale the day someone fixes the thing.
+  const probe = line(/GITHUB_OK=0/, 'the transport probe');
+  const bundle = line(/git bundle create/, 'building the bundle');
+  assert.ok(probe < bundle, `the probe (line ${probe}) must precede the bundle (line ${bundle})`);
+  assert.match(src, /remote get-url origin/, 'by reading what origin actually is');
+  assert.match(src, /git ls-remote origin HEAD/, 'and asking GitHub through it');
+  assert.match(src, /if \[\[ "\$GITHUB_OK" == "0" \]\]; then/, 'the whole bundle dance lives inside that guard');
+  assert.match(src, /cannot fetch from GitHub/, 'and the degraded path says so out loud');
+});
+
+test('a box left pointing at a stale bundle is the bug being prevented', () => {
+  // The fallback repoints origin at the bundle so auto-update.sh can fetch it. Leaving it
+  // there is what made the timer useless for days: a bundle remote always answers, and it
+  // answers about the code it already has. So the restore is registered the moment the
+  // repoint succeeds, on the EXIT trap, not at the end of the happy path.
+  const repoint = line(/git remote set-url origin '\$BUNDLE_ON_BOX'/, 'repointing origin at the bundle');
+  const trap = line(/trap 'rm -f "\$\{TMP:-\}"; restore_origin' EXIT/, 'the EXIT trap that restores origin');
+  assert.ok(repoint < trap, `the restore (line ${trap}) must be armed after the repoint (line ${repoint})`);
+  assert.match(src, /restore_origin\(\) \{/, 'the helper exists');
+  assert.match(src, /git remote set-url origin '\$ORIGIN_WAS'/, 'and puts back what was there, not a URL copied from docs');
+  assert.match(src, /COULD NOT RESTORE origin/, 'and if it cannot, that is printed with the command to run');
+});
+
+test('a privileged command with && in it runs as root entirely', () => {
+  // `printf pw | sudo -S -p '' cd /opt/x && git fetch` is a precedence trap: the && binds
+  // outside sudo, so the fetch runs unprivileged against a root-owned .git directory and
+  // fails in a way that looks like a permissions bug. One helper, one wrapper, so no call
+  // site has to think about it.
+  const helper = src.split('\n').find((l) => /sudo -S/.test(l) && !/^\s*#/.test(l));
+  assert.match(helper, /sudo -S -p '' bash -c/, 'the whole command string runs inside bash -c as root');
 });
 
 test('the transfer is measured and verified before the old bundle is replaced', () => {
@@ -104,9 +139,28 @@ test('re-shipping a sha that is already live is a no-op, not a failed deploy', (
   // mentioning systemctl, and matched first when this anchor was loose
   const start = line(/rootcmd "systemctl start tukuk-update\.service"/, 'starting the update unit');
   assert.ok(noop < start, `no-op (line ${noop}) must precede the start (line ${start})`);
+  // and precede the transport probe too: when the box already runs this commit there is
+  // nothing to stage, so a 40 MB bundle should not be built to deliver it twice.
+  const probe = line(/GITHUB_OK=0/, 'the transport probe');
+  assert.ok(noop < probe, `no-op (line ${noop}) must precede the transport work (line ${probe})`);
 });
 
 // ── the two failure modes that are invisible unless you go looking ────────────────
+test('shipped means reachable at tukuk.org, not merely listening on the box', () => {
+  // Every other read in this script goes through ssh to 127.0.0.1:3000. The public site is
+  // that app reached through the Cloudflare tunnel, so a green loopback check and a 530 at
+  // the edge can happen in the same minute — the connector, not the app, is the thing down.
+  // The edge read therefore has to come AFTER the loopback one (a merge that never happened
+  // is not a routing problem) and must not be fatal (the deploy is already a fact by then).
+  const loopback = line(/HEALTH=""\nfor _ in \$\(seq 1 15\); do/, 'polling /health on the box');
+  const edge = line(/EDGE=""\nfor _ in \$\(seq 1 15\); do/, 'polling /health through the edge');
+  assert.ok(loopback < edge, `the loopback read (line ${loopback}) must come first, so the edge warning means routing`);
+  assert.match(src, /curl -s --max-time 15 "https:\/\/\$ZONE\/health"/, 'the edge read is https, from this machine, not from the box');
+  assert.match(src, /never answered ok from this machine/, 'a dead tunnel is named as a routing failure');
+  assert.match(src, /systemctl status cloudflared/, 'and the thing to check is printed');
+  assert.ok(!/die .*cloudflared/.test(src), 'but it stays a warning: the app being deployed is decided on the box');
+});
+
 test('an untracked file on the box is caught before the merge, not in its aftermath', () => {
   // A newly tracked path that already exists untracked on the box makes `merge --ff-only`
   // refuse the WHOLE update, and the nightly timer dies with it and says nothing.

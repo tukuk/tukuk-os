@@ -14,6 +14,13 @@
 #
 # Credentials: CLOUDFLARE_API_TOKEN from the environment or from .env next to this repo.
 # The token needs Zone → Cache Purge → Purge for the zone. Nothing is printed but the outcome.
+#
+# Which message you will get, measured 29 Oct 2026: the token in /opt/tukuk-os/.env on the VPS
+# verifies active but sees ZERO zones — `GET /zones?name=tukuk.org` answers count 0, because it
+# is scoped to Workers/AI. So run this on the box and expect "cannot see tukuk.org"; on this
+# laptop the key is present with an empty value, which is the "not set" message. Neither is a
+# bug in this script. The missing piece is one dashboard action: an API token with Zone:Read
+# and Zone:Cache Purge for the tukuk.org zone.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

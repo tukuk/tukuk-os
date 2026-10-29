@@ -2,26 +2,37 @@
 # ==============================================================================
 # ship-to-box.sh — push work from this dev box to the VPS and deploy it.
 #
-# WHY THIS EXISTS. The VPS cannot fetch from GitHub: its read-only deploy key is gone
-# from /root/.ssh, so `origin` in /opt/tukuk-os is a git BUNDLE on the box's own disk
-# (/home/tukuk/handover/code/tukuk-os-v2-main.bundle) that gets refreshed from here.
-# Until now that was a spell repeated by hand out of scattered .artifacts/*.sh files —
-# build a bundle, scp it, verify it, rotate it, sudo systemctl start, read the journal.
-# This is that procedure, once, with the checks that were being skipped.
+# Two transports, one command. The normal one is GitHub: /opt/tukuk-os fetches
+# origin over a read-only deploy key (/root/.ssh/tukuk_deploy, registered on the
+# repo), so `git push` here plus tukuk-update.timer is the whole deploy, and this
+# script only has to push, start the unit, and read the proof. The other one is a
+# git BUNDLE copied to the box's own disk, used when the box cannot reach GitHub —
+# which is not hypothetical: the key vanished from /root/.ssh sometime before
+# 29 Oct 2026, origin was repointed at a bundle, and for days the nightly timer
+# answered "Already up to date" while four commits waited on GitHub. The mistakes
+# here are the quiet kind: a stale bundle is a remote that always succeeds, and a
+# truncated transfer is still a file scp calls success. So both paths are checked
+# at the far end, and the degraded one puts itself back when it is done.
 #
 #   bash scripts/ship-to-box.sh                 # ship the current branch (main)
 #   TUKUK_HOST=192.168.8.100 bash scripts/ship-to-box.sh
 #   bash scripts/ship-to-box.sh --branch main --no-deploy   # stage only
 #
 # What it guarantees:
-#   * the pushed commit is on GitHub first, so the bundle is never the only copy;
-#   * the bundle is verified INSIDE the repo it will be merged into before it replaces
-#     the file `origin` points at, and the previous bundle is kept as .pre-<sha>;
-#   * the box's own HEAD is what gets diffed, so a re-run after a successful deploy is a
-#     no-op instead of a failed journal assertion (nothing was merged, so nothing logged);
+#   * the pushed commit is on GitHub first, and this branch is never behind
+#     origin — the Actions bot commits straight to GitHub, and commits left out of
+#     a bundle never reach production;
+#   * untracked files on the box that this ship adds as tracked paths are refused
+#     before the merge, because that is what makes `merge --ff-only` give up;
+#   * the bundle is verified INSIDE the repo it will be merged into, arrives with
+#     the byte count it left with, and the previous copy is kept as .pre-<sha>;
+#   * the box's own HEAD is the baseline, so a re-run after a successful deploy is
+#     a no-op instead of a failed journal assertion (nothing merged, nothing logged);
 #   * the sudo password is read from the box's own 0600 file (/home/tukuk/.ssh/
 #     initial-password.txt) on the box — never argv, never this machine, never printed;
-#   * the deploy is not believed until /opt/tukuk-os reports the shipped sha.
+#   * the deploy is not believed until the shipped sha is in /opt/tukuk-os AND the
+#     box's own update record on /health names it;
+#   * if origin had to be repointed at a bundle, it is put back on exit.
 #
 # The update itself is the repo's own scripts/auto-update.sh via tukuk-update.service:
 # fetch → merge --ff-only → (npm install if dependencies changed) → restart tukuk-os.
@@ -61,7 +72,11 @@ box() { ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$HOST" "$@" </dev/
 # printed, and never leaves the machine. Deliberately no local variable holding it: the
 # suite scans every set -u script under scripts/ for reads with no assignment, and a
 # variable that only exists inside a quoted ssh command string is exactly such a read.
-rootcmd() { box "printf '%s\n' \"\$(cat '$PWFILE')\" | sudo -S -p '' $1"; }
+# The command runs inside `bash -c` on the far side, not as bare sudo arguments: with
+# `sudo -S -p '' cd /opt/tukuk-os && git fetch` the && binds outside sudo and the fetch
+# would run unprivileged against a root-owned .git. Call sites therefore use single
+# quotes inside and no double quotes.
+rootcmd() { box "printf '%s\n' \"\$(cat '$PWFILE')\" | sudo -S -p '' bash -c \"$1\""; }
 
 command -v git >/dev/null || die "git is not installed"
 git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repository"
@@ -72,16 +87,14 @@ SHORT="$(git rev-parse --short "$BRANCH")"
 say "shipping $BRANCH @ $SHORT ($(git log -1 --format=%s "$BRANCH"))"
 
 # ── 1. GitHub first ────────────────────────────────────────────────────────────────
-# The bundle is the delivery mechanism, not the backup: if this box is the only place the
-# commit exists, a lost laptop takes the deploy with it.
+# Even on the bundle path. If this box is the only place the commit exists, a lost
+# laptop takes the deploy with it.
 BEHIND="$(git rev-list --count "origin/$BRANCH..$BRANCH" 2>/dev/null || echo '?')"
-# …and the other direction, because it is the one that loses work silently. The Actions
-# bot commits straight to GitHub (satu-kata, daily), and a bundle built from a branch that
-# never pulled those commits leaves them out of production — the push is rejected first,
-# so say why rather than reporting a git error the reader has to decode.
+# …and the other direction, because it is the one that loses work silently: a branch
+# that never pulled the bot's commits ships a production that is missing them.
 AHEAD="$(git rev-list --count "$BRANCH..origin/$BRANCH" 2>/dev/null || echo 0)"
 [[ "$BEHIND" == "?" || "$AHEAD" == "0" ]] \
-  || die "origin/$BRANCH has $AHEAD commit(s) $BRANCH does not — git pull --rebase origin $BRANCH first, or those commits never reach the box (the bundle is all it can fetch)"
+  || die "origin/$BRANCH has $AHEAD commit(s) $BRANCH does not — git pull --rebase origin $BRANCH first, or those commits never reach the box"
 if [[ "$BEHIND" == "?" ]]; then
   say "origin/$BRANCH is unknown — fetching to find out"
   git fetch -q origin "$BRANCH" || die "cannot reach origin (offline?); refusing to ship"
@@ -106,23 +119,6 @@ if git cat-file -e "$ONBOX" 2>/dev/null && ! git merge-base --is-ancestor "$ONBO
   die "the box has commits that $BRANCH does not — --ff-only would refuse; reconcile $REPO_DIR first"
 fi
 
-# ── 3. build + stage the bundle ─────────────────────────────────────────────────────
-TMP="$(mktemp "${TMPDIR:-/tmp}/tukuk-ship.XXXXXX")"; trap 'rm -f "$TMP"' EXIT
-git bundle create "$TMP" "$BRANCH" >/dev/null 2>&1 || die "git bundle failed"
-git bundle verify "$TMP" >/dev/null 2>&1 || die "the bundle does not verify against this repo"
-LOCAL_BYTES=$(stat -c %s "$TMP")
-say "bundle ready: $LOCAL_BYTES bytes, complete history, tip $SHORT"
-
-box "mkdir -p \"\$(dirname '$BUNDLE_ON_BOX')\"" || die "cannot prepare the handover directory on $HOST"
-scp -q -o StrictHostKeyChecking=no "$TMP" "$HOST:$BUNDLE_ON_BOX.new" || die "scp failed"
-REMOTE_BYTES="$(box "stat -c %s '$BUNDLE_ON_BOX.new' 2>/dev/null || echo 0")"
-[[ "$REMOTE_BYTES" == "$LOCAL_BYTES" ]] || die "the bundle arrived as $REMOTE_BYTES bytes, expected $LOCAL_BYTES"
-say "transferred: $REMOTE_BYTES bytes verified at the far end"
-
-# Verify inside the real repo: a bundle can be well-formed and still un-mergeable here.
-box "cd '$REPO_DIR' && git -c safe.directory='$REPO_DIR' bundle verify '$BUNDLE_ON_BOX.new'" >/dev/null \
-  || die "the box cannot verify this bundle inside $REPO_DIR"
-
 # A new tracked path that already exists on the box UNTRACKED makes `merge --ff-only`
 # refuse the whole update (and the nightly timer dies silently with it). Diffed against
 # $ONBOX — the code the box runs — so it catches exactly what this ship is adding.
@@ -138,29 +134,90 @@ if [[ -n "$NEW_PATHS" ]]; then
   [[ -z "$COLLIDING" ]] || die "these paths are untracked on the box and would be overwritten: $(printf '%s' "$COLLIDING" | tr '\n' ' ')"
 fi
 
-# ── 4. rotate, install ──────────────────────────────────────────────────────────────
-box "mv '$BUNDLE_ON_BOX' '$BUNDLE_ON_BOX.pre-$SHORT' 2>/dev/null || true
-     chmod 600 '$BUNDLE_ON_BOX.new' && mv '$BUNDLE_ON_BOX.new' '$BUNDLE_ON_BOX'
-     ls -l '$BUNDLE_ON_BOX'" >/dev/null || die "could not install the bundle on the box"
-say "origin bundle now points at $SHORT (previous copy kept as .pre-$SHORT)"
-
-[[ "$DEPLOY" == "1" ]] || { say "--no-deploy: staged only. Run: systemctl start tukuk-update.service"; exit 0; }
-
-# Staging an already-live sha is a no-op, and saying so is better than starting a unit
-# that will answer "Already up to date" and then fail its own journal assertion.
+# Shipping a sha that is already live is a no-op, and saying so beats starting a unit
+# that answers "Already up to date" — a line containing no sha, which the journal
+# assertion downstream would read as a failed deploy. Checked before any transport work,
+# because when the box already runs this commit there is nothing to stage either.
 if [[ "$ONBOX" == "$SHA" ]]; then
-  say "the box is already at $SHORT — bundle refreshed, nothing to deploy"
+  say "the box is already at $SHORT — nothing to deploy"
   exit 0
 fi
+
+# ── 3. which transport can this box use? ───────────────────────────────────────────
+# Asked of the box, not of the README. A read-only key that is present answers
+# `ls-remote` in about a second; a missing one, or a box with no route, does not.
+ORIGIN_WAS="$(box "cd '$REPO_DIR' && git -c safe.directory='$REPO_DIR' remote get-url origin" || true)"
+GITHUB_OK=0
+if [[ "$ORIGIN_WAS" == *github.com* ]]; then
+  if rootcmd "cd '$REPO_DIR' && timeout 25 git ls-remote origin HEAD | head -1" | grep -qE '[0-9a-f]{40}'; then
+    GITHUB_OK=1
+  fi
+fi
+if [[ "$GITHUB_OK" == "1" ]]; then
+  say "the box can reach GitHub — it will fetch $SHORT itself"
+else
+  say "WARNING: the box cannot fetch from GitHub (origin=${ORIGIN_WAS:-unset}); deploying through the handover bundle"
+fi
+
+# ── 4. the bundle, only when the box cannot fetch for itself ────────────────────────
+# Not built when GitHub works: ~40 MB for nothing, and a bundle nobody refreshes is a
+# remote that lies. The fallback always rebuilds from $BRANCH here, so whatever is
+# sitting in the handover directory from some past ship is never trusted.
+
+# Put origin back no matter how we leave a repointed box. A box left fetching a bundle
+# is precisely how the timer spent days answering "Already up to date" about the code it
+# already had while newer commits sat unreferenced on GitHub. Best effort: if the ssh
+# session is gone there is nothing to do but say so, and say where to fix it.
+restore_origin() {
+  if rootcmd "cd '$REPO_DIR' && git remote set-url origin '$ORIGIN_WAS'"; then
+    say "origin put back at ${ORIGIN_WAS}"
+  else
+    echo "ship-to-box: COULD NOT RESTORE origin on the box — it is still pointed at the bundle." >&2
+    echo "ship-to-box:   ssh in and run: git -C $REPO_DIR remote set-url origin '$ORIGIN_WAS'" >&2
+  fi
+}
+
+if [[ "$GITHUB_OK" == "0" ]]; then
+  TMP="$(mktemp "${TMPDIR:-/tmp}/tukuk-ship.XXXXXX")"; trap 'rm -f "$TMP"' EXIT
+  git bundle create "$TMP" "$BRANCH" >/dev/null 2>&1 || die "git bundle failed"
+  git bundle verify "$TMP" >/dev/null 2>&1 || die "the bundle does not verify against this repo"
+  LOCAL_BYTES=$(stat -c %s "$TMP")
+  say "bundle ready: $LOCAL_BYTES bytes, complete history, tip $SHORT"
+
+  box "mkdir -p \"\$(dirname '$BUNDLE_ON_BOX')\"" || die "cannot prepare the handover directory on $HOST"
+  scp -q -o StrictHostKeyChecking=no "$TMP" "$HOST:$BUNDLE_ON_BOX.new" || die "scp failed"
+  REMOTE_BYTES="$(box "stat -c %s '$BUNDLE_ON_BOX.new' 2>/dev/null || echo 0")"
+  [[ "$REMOTE_BYTES" == "$LOCAL_BYTES" ]] || die "the bundle arrived as $REMOTE_BYTES bytes, expected $LOCAL_BYTES"
+  say "transferred: $REMOTE_BYTES bytes verified at the far end"
+
+  # Verify inside the real repo: a bundle can be well-formed and still un-mergeable here.
+  box "cd '$REPO_DIR' && git -c safe.directory='$REPO_DIR' bundle verify '$BUNDLE_ON_BOX.new'" >/dev/null \
+    || die "the box cannot verify this bundle inside $REPO_DIR"
+
+  box "mv '$BUNDLE_ON_BOX' '$BUNDLE_ON_BOX.pre-$SHORT' 2>/dev/null || true
+       chmod 600 '$BUNDLE_ON_BOX.new' && mv '$BUNDLE_ON_BOX.new' '$BUNDLE_ON_BOX'
+       ls -l '$BUNDLE_ON_BOX'" >/dev/null || die "could not install the bundle on the box"
+  say "bundle installed (previous copy kept as .pre-$SHORT)"
+
+  # Point origin at it for the duration; `restore_origin` on the EXIT trap puts it back.
+  rootcmd "cd '$REPO_DIR' && git remote set-url origin '$BUNDLE_ON_BOX'" \
+    || die "could not repoint origin at the bundle"
+  # Both cleanups in one trap: a second `trap … EXIT` replaces the first, so the temp
+  # bundle would otherwise be left in /tmp whenever the ship got this far.
+  trap 'rm -f "${TMP:-}"; restore_origin' EXIT
+fi
+
+[[ "$DEPLOY" == "1" ]] || { say "--no-deploy: staged only. Run: systemctl start tukuk-update.service"; exit 0; }
 
 # ── 5. deploy through the repo's own update unit ────────────────────────────────────
 say "starting tukuk-update.service as root (password read from $PWFILE on the box)"
 rootcmd "systemctl start tukuk-update.service" || die "could not start the update unit"
 
 # The unit is Type=oneshot and auto-update.sh does a fetch + merge + restart, so the
-# journal is the proof — but it lands a few seconds late. The last real ship (c9ed781 →
-# 3da96fe, a ~40 MB bundle) took nine seconds end to end; this polls for up to forty and
-# stops the moment the shipped sha shows up, so a slow merge is not called a failure.
+# journal is the proof — but it lands a few seconds late. Measured ships on this box:
+# five commits in nine seconds, two commits in seven, both ~40 MB of bundle; a fetch
+# that finds nothing costs about six. This polls for up to forty and stops the moment
+# the shipped sha shows up, so a slow merge is not called a failure.
 JOURNAL=""
 for _ in $(seq 1 20); do
   sleep 2
@@ -203,7 +260,35 @@ else
   say "WARNING: /health does not report an update to $SHORT — the tree is right, but read"
   say "         https://$ZONE/health's update block before calling this shipped."
 fi
-say "public site: https://$ZONE/ — HTML is served through the edge with s-maxage=300, so an
-        audit run in the next few minutes can still measure the PREVIOUS deploy. Purge with
-        deploy/purge-edge-cache.sh (needs a token with Zone:Cache Purge) or wait out the TTL."
+say "public site: https://$ZONE/ — static assets carry s-maxage=3600, so /theme.css and the
+        rest can stay at the edge an hour past this deploy; deploy/purge-edge-cache.sh
+        clears them but needs a token with Zone:Cache Purge (see its header). Rendered HTML
+        measured DYNAMIC at the edge, so the read below is a live one."
+
+# ── 7. and through the edge, not just the loopback ──────────────────────────────
+# Everything above is read on 127.0.0.1 over ssh. tukuk.org is the app reached through
+# the Cloudflare tunnel, so this is the only check that covers the tunnel: the service
+# can restart onto the right commit and the public site still be down, and no loopback
+# curl can see that. GET /health measured cf-cache-status: DYNAMIC twice on 29 Oct 2026
+# (as did the homepage, so HTML is not edge-cached on this zone), which means this poll is
+# reading the app and not a stored copy. A WARNING, not a death: the deploy on the box is a
+# fact by this point, and this read is about the road to it.
+EDGE=""
+for _ in $(seq 1 15); do
+  sleep 2
+  EDGE="$(curl -s --max-time 15 "https://$ZONE/health" || true)"
+  printf '%s\n' "$EDGE" | grep -q '"status":"ok"' && break
+done
+if printf '%s\n' "$EDGE" | grep -q '"status":"ok"'; then
+  if printf '%s\n' "$EDGE" | grep -qF "\"to\":\"$SHA\""; then
+    say "https://$ZONE/health serves the update record for $SHORT — tunnel and edge included"
+  else
+    say "https://$ZONE/ is up, but its update record is not this ship yet — read it yourself"
+  fi
+else
+  say "WARNING: https://$ZONE/health never answered ok from this machine in 30 s while the box"
+  say "         itself is healthy: the app is deployed, the route to it is not. Check on the box:"
+  say "         systemctl status cloudflared   (a token-managed tunnel has no cert, so"
+  say "         'cloudflared tunnel list' cannot work here — it is not evidence of anything)"
+fi
 say "shipped and deployed: $SHORT"
