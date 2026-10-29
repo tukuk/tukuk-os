@@ -41,11 +41,17 @@ put() { # put <key> <fail> [content-type]
     # 429 (see backup-data.sh for the full diagnosis). Retry with a short backoff so a
     # transient throttle on one of these many small objects does not mark the whole
     # snapshot failed; a light 5 s/10 s pause is enough for the shared edge to free up.
+    # The upload lands on a *.workers.dev endpoint. It answers 429 for TWO unrelated
+    # reasons, and telling them apart is the whole difference between "retry" and
+    # "give up": a platform throttle, and Cloudflare error 1027 = the worker has no
+    # workers.dev route bound (verified on a rebuilt box, 30 Oct 2026: a bare GET with
+    # no auth answers 429 + "error code: 1027" too, so it is refused before the Worker
+    # ever runs). Retry on a throttle; 1027 will never succeed, so say which it was.
     local n=0 failed=0
     until curl "${args[@]}" "$WURL/?key=$key" >/dev/null 2>&1; do
       n=$((n + 1))
       if [[ $n -ge 3 ]]; then echo "  ~ $key worker failed after $n tries — trying wrangler path"; failed=1; break; fi
-      echo "  ~ $key throttled (429?) — retry $n/2"; sleep $((n * 5))
+      echo "  ~ $key refused (429 — throttle, or error 1027 = no workers.dev route) — retry $n/2"; sleep $((n * 5))
     done
     if [[ $failed -eq 0 ]]; then echo "  ✓ $key"; OKS=$((OKS+1)); return; fi
     # fall through to the wrangler branch below (self-heals when token gains R2 scope)
@@ -63,9 +69,18 @@ put() { # put <key> <fail> [content-type]
   if [[ $FAILS -ge 3 && $OKS -eq 0 && "$GIVEUP" == "0" ]]; then
     GIVEUP=1
     echo "[snapshot] 3 uploads failed, 0 succeeded — neither transport works on this box:" >&2
-    echo "           no BACKUP_WORKER_URL/BACKUP_UPLOAD_SECRET, and CLOUDFLARE_API_TOKEN has" >&2
-    echo "           no R2 Write scope. Skipping the rest instead of spending half an hour" >&2
-    echo "           re-proving it. Fix by setting the worker pair, or widening the token." >&2
+    if [[ -n "$WURL" ]]; then
+      echo "           the worker pair IS configured, so probe it directly:" >&2
+      echo "           curl -s $WURL | head -1  →  'error code: 1027' means this worker has" >&2
+      echo "           no workers.dev route bound (dashboard: Workers → the worker → Domains)." >&2
+      echo "           That is not a throttle, so no retry count will ever fix it." >&2
+    else
+      echo "           no BACKUP_WORKER_URL/BACKUP_UPLOAD_SECRET, and CLOUDFLARE_API_TOKEN has" >&2
+      echo "           no R2 Write scope." >&2
+    fi
+    echo "           Skipping the rest instead of spending half an hour re-proving it." >&2
+    echo "           Meanwhile the laptop track works (wrangler OAuth has R2 write):" >&2
+    echo "           bash scripts/backup-laptop.sh" >&2
   fi
 }
 

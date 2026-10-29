@@ -140,7 +140,12 @@ until curl -fsS --max-time 180 -X POST -H "Authorization: Bearer $WSEC" \
      "$WURL/?key=$KEY" >/dev/null; do
   ATTEMPTS=$((ATTEMPTS + 1))
   if [[ $ATTEMPTS -ge 4 ]]; then
-    echo "[identity] ERROR: worker path failed after $ATTEMPTS tries (edge 429?)" >&2
+    echo "[identity] ERROR: worker path failed after $ATTEMPTS tries." >&2
+    echo "[identity] A 429 from a *.workers.dev URL is usually NOT a throttle: run"
+    echo "           'curl -s $WURL | head -1' — 'error code: 1027' means this worker has no"
+    echo "           workers.dev route bound, which no retry can fix. Until that is sorted, the"
+    echo "           laptop track copies the same paths with the same scheme: backup-laptop.sh."
+    echo "           The archive also stays on this box at $KEEP — copy it off before you wipe."
     exit 1
   fi
   case $ATTEMPTS in 1) SLEEP=8 ;; 2) SLEEP=20 ;; *) SLEEP=45 ;; esac

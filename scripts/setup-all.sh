@@ -686,7 +686,13 @@ if [[ -f "$BUILDER_DIR/package.json" && ! -d "$BUILDER_DIR/node_modules" ]]; the
   fi
 fi
 
-for s in cloudflared-build tukuk-builder; do
+# The wake front door FIRST, so :5174 is never briefly empty (same ordering rule as
+# scripts/deploy-builder.sh). It used to be missing from this list: [8d] copies
+# tukuk-builder-wake.service into /etc/systemd/system but nothing enabled or started it,
+# so a rebuilt box had a live connector, a built Builder on :5176, and NOTHING on the
+# :5174 that config-build.yml points at — build.tukuk.org 502 with no log line naming
+# the cause. Verified on a rebuild, 30 Oct 2026.
+for s in tukuk-builder-wake cloudflared-build tukuk-builder; do
   systemctl enable --now "$s" >/dev/null 2>&1 || true
 done
 ok "backup / indexnow / governance timers enabled."
@@ -803,6 +809,58 @@ elif [[ "$TCHAT_CODE" == "000" ]]; then
   warn "https://$TCHAT_H does not resolve in DNS yet — add a public hostname in Cloudflare Zero Trust → Networks → Routes (full guide in .env.example)."
 else
   warn "https://$TCHAT_H replied HTTP $TCHAT_CODE — check the tunnel route + the TCHAT_HOST gate in src/server.js."
+fi
+
+# ── [9b] The three things a rebuild loses SILENTLY ────────────────────────
+# Proven by the 30 Oct 2026 rebuild, where each of these was wrong and nothing said
+# so: the box came up green and serving 200 while it was in fact (a) answering every
+# question from the 30-document mock, because data/ is gitignored and therefore absent
+# from a fresh clone, (b) running with no LLM provider key at all, and (c) unable to
+# write a single backup — which is exactly how (a) and (b) get lost a second time. All
+# three cost one second to check here, and this list is the only place an operator ever
+# reads them at install time.
+info "[+] what a fresh clone cannot have (check before you trust this box)..."
+
+# 1. the corpus. books-shelves/ is ~2500 crawled reading lists; rebuilding it is a
+#    ~30-minute Internet Archive crawl and it exists in no git object anywhere.
+if [[ -d "$INSTALL_DIR/data/books-shelves" ]]; then
+  ok "data/ corpus present ($(find "$INSTALL_DIR/data/books-shelves" -name '*.json' 2>/dev/null | wc -l) shelves)."
+else
+  warn "data/ has NO crawled corpus — search and /books are serving the mock. Restore it:"
+  echo "     bash scripts/restore-data.sh <slot>   # slot = weekday+hour, e.g. 207. Find a copy:"
+  echo "     R2_BUCKET=tukuk-fallback bash scripts/r2-inventory.sh   (run where wrangler is logged in)"
+fi
+
+# 2. the LLM chain. Every key lives in .env only, so a rebuild drops the brain to its
+#    extractive floor — which still answers, so nothing looks broken.
+if grep -qE '^(GROQ|OPENROUTER|OPENAI|HUGGINGFACE)_API_KEY=.+' "$INSTALL_DIR/.env" 2>/dev/null; then
+  ok "LLM provider key(s) present in .env."
+else
+  warn "no LLM provider key in .env — cloud answers are OFF (extractive floor only)."
+  echo "     They were never in git. Recover them from the encrypted identity copy:"
+  echo "     sudo bash scripts/restore-identity.sh          # verify + stage; --apply to install"
+fi
+
+# 3. the backup tracks. A timer that fails every night is worse than no timer, because
+#    it reads as coverage. Result is the unit's own verdict ("success" | "exit-code"),
+#    but a unit that has NEVER run reports "success" too — so the start timestamp is
+#    what separates "covered" from "never tried". Verified on a rebuild, 30 Oct 2026.
+for t in tukuk-data-backup tukuk-identity-backup tukuk-content-backup meili-backup; do
+  res=$(systemctl show "$t.service" -p Result --value 2>/dev/null || echo -)
+  started=$(systemctl show "$t.service" -p ExecMainStartTimestamp --value 2>/dev/null || echo -)
+  if [[ -z "$started" || "$started" == "n/a" || "$started" == "-" ]]; then
+    warn "$t has never run — no off-box copy of that track yet"
+  elif [[ "$res" == "success" ]]; then
+    ok "$t last run: ok"
+  else
+    warn "$t last run: $res — this box has NO working copy of that track"
+  fi
+done
+if [[ ! -r /root/tukuk-backup-key ]]; then
+  warn "/root/tukuk-backup-key is missing, so backup-identity.sh refuses to upload unencrypted and"
+  echo "     the tunnel keys, .env and signing keystore have no off-box copy at all. The laptop holds"
+  echo "     the same passphrase at ~/.config/tukuk/backup-key; put it back with:"
+  echo "     scp ~/.config/tukuk/backup-key tukuk@<lan-ip>:/tmp/k && sudo install -m 400 /tmp/k /root/tukuk-backup-key"
 fi
 
 echo -e "${BLUE}========================================================${NC}"
