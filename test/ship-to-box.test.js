@@ -72,6 +72,16 @@ test('the transport is asked of the box, not of the README, before a bundle is b
   assert.match(src, /cannot fetch from GitHub/, 'and the degraded path says so out loud');
 });
 
+test('--no-deploy on the degraded path says what does not carry over', () => {
+  // Staging a bundle and restoring origin happen in the same run, so "deploy it later"
+  // does not compose on the fallback path — the file is there but nothing points at it.
+  // The message has to say that and print the two commands that finish the job, because
+  // a rescue handed over half-done becomes a mystery about why the box never updated.
+  assert.match(src, /origin goes back to \$\{ORIGIN_WAS\} as this script exits/, 'the restore is announced');
+  assert.match(src, /sudo git -C \$REPO_DIR remote set-url origin '\$BUNDLE_ON_BOX'/, 'and the manual continuation is printed');
+  assert.match(src, /or the box stops seeing GitHub again/, 'with the reason to put it back');
+});
+
 test('a box left pointing at a stale bundle is the bug being prevented', () => {
   // The fallback repoints origin at the bundle so auto-update.sh can fetch it. Leaving it
   // there is what made the timer useless for days: a bundle remote always answers, and it

@@ -16,7 +16,7 @@
 #
 #   bash scripts/ship-to-box.sh                 # ship the current branch (main)
 #   TUKUK_HOST=192.168.8.100 bash scripts/ship-to-box.sh
-#   bash scripts/ship-to-box.sh --branch main --no-deploy   # stage only
+#   bash scripts/ship-to-box.sh --branch main --no-deploy   # deliver, do not restart
 #
 # What it guarantees:
 #   * the pushed commit is on GitHub first, and this branch is never behind
@@ -207,7 +207,24 @@ if [[ "$GITHUB_OK" == "0" ]]; then
   trap 'rm -f "${TMP:-}"; restore_origin' EXIT
 fi
 
-[[ "$DEPLOY" == "1" ]] || { say "--no-deploy: staged only. Run: systemctl start tukuk-update.service"; exit 0; }
+# `--no-deploy` means different things on the two paths, and the degraded one has a
+# consequence worth saying out loud: the bundle is installed, but the EXIT trap puts
+# origin back straight away, so nothing later fetches it by itself. Handing over a
+# half-staged deploy is how a rescue turns into a mystery, so print the two commands
+# that finish it instead of implying they are already arranged.
+if [[ "$DEPLOY" != "1" ]]; then
+  if [[ "$GITHUB_OK" == "1" ]]; then
+    say "--no-deploy: $SHORT is on GitHub and the box was not disturbed"
+    say "           tukuk-update.timer picks it up (~04:30), or now: sudo systemctl start tukuk-update.service"
+  else
+    say "--no-deploy: the bundle is installed at $BUNDLE_ON_BOX"
+    say "           origin goes back to ${ORIGIN_WAS} as this script exits, so to deploy by hand:"
+    say "             sudo git -C $REPO_DIR remote set-url origin '$BUNDLE_ON_BOX'"
+    say "             sudo systemctl start tukuk-update.service"
+    say "           then put the URL back, or the box stops seeing GitHub again."
+  fi
+  exit 0
+fi
 
 # ── 5. deploy through the repo's own update unit ────────────────────────────────────
 say "starting tukuk-update.service as root (password read from $PWFILE on the box)"
