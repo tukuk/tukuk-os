@@ -18,8 +18,8 @@ gcloud billing budgets list --billing-account=017AAF-23F886-A97138 \
 
 | Free allowance | What we use it for | Region | Guard rails |
 |---|---|---|---|
-| Cloud Run: 2M requests, 180k vCPU-s, 360k GiB-s per month | **Rung 2 of the failover ladder** — nginx serving the site snapshot at `https://tukuk-mirror-176041010195.us-central1.run.app` (marker `x-mirror: gcp-run`) | us-central1 | `--min-instances=0` (idles to zero), `--max-instances=1`, 256 MiB / 1 vCPU |
-| Cloud Build: 120 build-minutes per day | Rebuilds that Cloud Run image once a week (~1 min per build) | us-central1 | one build per week via `tukuk-cloudrun-mirror.timer` |
+| Cloud Run: 2M requests, 180k vCPU-s, 360k GiB-s **and 1 GB egress** per month | **Rung 2 of the failover ladder** — nginx serving the site snapshot at `https://tukuk-mirror-176041010195.us-central1.run.app` (marker `x-mirror: gcp-run`) | us-central1 | `--min-instances=0` (idles to zero), `--max-instances=1`, 256 MiB / 1 vCPU |
+| Cloud Build: 2,500 build-minutes per month (e2-standard-2) | Rebuilds that Cloud Run image once a week (~1 min per build) | us-central1 | one build per week via `tukuk-cloudrun-mirror.timer` |
 | Artifact Registry: 0.5 GB | Holds the one image (~70 MB) | us-central1 | weekly rebuild replaces, never accumulates |
 | Cloud Storage: 5 GB standard + 5 000 class-A ops + 100 GB egress from North America | **Third copy of the backup vault** — `gs://tukuk-os-offsite/r2/backups/` (encrypted identity tarballs, content snapshot, newest 12 data slices) | us-central1 | `gcs-offsite-sync.sh` refuses to mirror past 4 GB; objects deleted after 60 days |
 | e2-micro: 1 instance-month (744 h) | The older mirror VM (`instance-free`) — **parked, `TERMINATED` since 29 Oct 2026 08:23 +08, no external IP** | us-central1-a | see "Cost traps" |
@@ -81,10 +81,16 @@ the free allowance itself.
 1. **Tunnel #2's connector ran on that VM.** With the VM parked it cannot connect, so the
    `www.tukuk.org → VM` route is dead. That is intended — the ladder's rung 2 is Cloud Run
    now — but do not "fix" the tunnel before starting the VM again.
-1. **Egress is the other meter.** VM egress is 1 GB/month from North America; Cloud Run and
-   Cloud Storage have their own allowances. Serving a 22 MB site copy thousands of times
-   from Cloud Run is well inside 360k GiB-s but watch `2M requests` if the mirror ever
-   becomes the primary.
+1. **Egress is the other meter, and Cloud Run's free egress is only 1 GB/month** from North
+   America. At ~128 KB per cached page that is roughly **7,800 mirror views a month** — fine
+   for a failover that almost never gets hit, but a *full day* of real traffic moved to the
+   mirror would cross it. Estimate before an outage: `requests × 0.125 MB`. Beyond 1 GB,
+   Cloud Run egress is ~$0.12/GB, so 50,000 mirror views ≈ 6 GB ≈ **$0.70**.
+1. **VM egress is 1 GB/month** from North America; Cloud Storage has its own 100 GB/month
+   (NA origins). Serving a 22 MB site copy from Cloud Run is comfortably inside 360k GiB-s of
+   memory time — the request count and the egress bytes are the ones to watch.
+1. **Unused allowance does not carry over.** Every line resets on the 1st; burning 2,000
+   build-minutes in week one leaves 500 for the rest of the month.
 1. **Cloudflare R2 stays the vault** (10 GB, zero egress). GCS holds a *bounded slice* of
    it, not a second full copy.
 
