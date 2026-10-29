@@ -7291,7 +7291,7 @@ function cuacaCityPage(req, city, cur, fc, air, river) {
   return cuacaDoc({
     title: `Weather Today in ${city.name}${city.country ? `, ${city.country}` : ''} \u2014 Temperature, Forecast & Air Quality | Tukuk-OS`,
     desc: `Right now in ${city.name}: ${wxTempC(main.temp)} (${d.label}), wind ${wxKmh(cur.wind.speed)} km/h, humidity ${Number(main.humidity) || 0}% + a 5-day forecast and air quality.`,
-    selfUrl, heroTitle: `Weather in ${city.name}`, heroSub: `${d.emoji} ${escapeHtml(d.label)} \u00b7 updated ${wxHHMM(cur.dt, tz)} local time`,
+    selfUrl, heroTitle: `Weather in ${city.name}`, heroSub: `${d.emoji} ${d.label} \u00b7 updated ${wxHHMM(cur.dt, tz)} local time`,
     ld: jsonLd, body,
   });
 }
@@ -10367,7 +10367,7 @@ function elementPage(req, e) {
     title: `${e.name} (${e.s}) — Properties, Facts & Uses | Periodic Table`,
     desc: `${e.name}, atomic number ${e.n}: symbol, atomic mass, electron configuration, melting and boiling points, density and a plain-language summary of what ${e.name} is used for.`,
     selfUrl: `https://tukuk.org/elements/${e.slug}`,
-    heroTitle: escapeHtml(e.name), heroSub: `${escapeHtml(e.catLabel)} · atomic number ${e.n}`,
+    heroTitle: e.name, heroSub: `${e.catLabel} · atomic number ${e.n}`,
     ld, css: EL_CSS, body,
   }, elementsNav());
 }
@@ -10377,7 +10377,7 @@ function elementsNotFound(q) {
     title: 'Element not found | Periodic Table — Tukuk-OS',
     desc: 'That element was not recognised — browse the full periodic table of all 118 chemical elements instead.',
     selfUrl: 'https://tukuk.org/elements', robots: 'noindex,follow',
-    heroTitle: 'Element not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Element not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: EL_CSS,
     body: `<p>We could not match that to one of the 118 elements. Try a name (e.g. <a href="/elements/gold">gold</a>), a symbol (e.g. <a href="/elements/Au">Au</a>) or an atomic number — or open the <a href="/elements">full periodic table</a> and pick a tile.</p>`,
   }, elementsNav());
@@ -10436,7 +10436,7 @@ function constellationPage(c) {
     title: `${c.name} Constellation — Meaning, Brightest Star & Objects | Tukuk-OS`,
     desc: `${c.name} (${c.abbr})${c.meaning ? `, meaning “${c.meaning}”` : ''}${c.brightest ? `, brightest star ${c.brightest}` : ''}: a full profile plus every Messier object lying in this ${c.hemisphere.toLowerCase()} constellation.`,
     selfUrl: `https://tukuk.org/constellations/${c.slug}`,
-    heroTitle: `✨ ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.abbr)} · ${escapeHtml(c.meaning || '')} · ${escapeHtml(c.hemisphere)} sky`,
+    heroTitle: `✨ ${c.name}`, heroSub: `${c.abbr} · ${c.meaning || ''} · ${c.hemisphere} sky`,
     ld, body,
   }, deepskyNav());
 }
@@ -10493,7 +10493,7 @@ function messierPage(m) {
     title: `${m.id}${m.name ? ` (${m.name})` : ''} — ${m.type} Facts & Location | Tukuk-OS`,
     desc: `${m.id}${m.name ? `, ${m.name},` : ''} a ${String(m.type).toLowerCase()} in ${m.constellation || 'the night sky'}${m.mag != null ? ` (magnitude ${m.mag})` : ''}: type, constellation, catalogue references and what this kind of object is.`,
     selfUrl: `https://tukuk.org/messier/${m.slug}`,
-    heroTitle: `🔭 ${escapeHtml(m.id)}${m.name ? ` — ${escapeHtml(m.name)}` : ''}`, heroSub: `${escapeHtml(m.type)} in ${escapeHtml(m.constellation || 'the night sky')}`,
+    heroTitle: `🔭 ${m.id}${m.name ? ` — ${m.name}` : ''}`, heroSub: `${m.type} in ${m.constellation || 'the night sky'}`,
     ld, body,
   }, deepskyNav());
 }
@@ -10503,7 +10503,7 @@ function burujNotFound(q) {
     title: 'Constellation not found | Tukuk-OS',
     desc: 'That constellation was not recognised — browse the full list of all 88 IAU constellations instead.',
     selfUrl: 'https://tukuk.org/constellations', robots: 'noindex,follow',
-    heroTitle: 'Constellation not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Constellation not found', heroSub: `Nothing matched “${String(q || '')}”`,
     body: `<p>We could not match that to one of the 88 constellations. Open <a href="/constellations">the full list</a>, or explore the <a href="/messier">Messier catalogue</a>.</p>`,
   }, deepskyNav());
 }
@@ -10512,7 +10512,7 @@ function messierNotFound(q) {
     title: 'Messier object not found | Tukuk-OS',
     desc: 'That Messier object was not recognised — browse the full catalogue of 110 Messier objects instead.',
     selfUrl: 'https://tukuk.org/messier', robots: 'noindex,follow',
-    heroTitle: 'Messier object not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Messier object not found', heroSub: `Nothing matched “${String(q || '')}”`,
     body: `<p>Messier catalogued 110 objects (M1 to M110). Try a designation like <a href="/messier/m31">M31</a> — or open <a href="/messier">the full catalogue</a>.</p>`,
   }, deepskyNav());
 }
@@ -10577,7 +10577,7 @@ function pepatahCountryPage(c) {
     title: `Proverbs of ${c.name} — Sayings & Meanings | Tukuk-OS`,
     desc: `${c.items.length} traditional ${c.name} proverbs with their original wording, English translations and the wisdom behind each — from the Proverbs of the World collection.`,
     selfUrl: `https://tukuk.org/proverbs/country/${c.slug}`,
-    heroTitle: `🗣️ Proverbs of ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.region)} · ${c.items.length} traditional sayings`,
+    heroTitle: `🗣️ Proverbs of ${c.name}`, heroSub: `${c.region} · ${c.items.length} traditional sayings`,
     ld, css: PV_CSS, body,
   }, pepatahNav());
 }
@@ -10609,7 +10609,7 @@ function pepatahProverbPage(p) {
     title: `${p.en} — ${p.lang} Proverb (${p.country}) | Tukuk-OS`,
     desc: `The ${p.country} proverb ${p.translit ? `(${p.translit}) ` : ''}“${p.en}” — its original wording, English translation and the practical wisdom behind it.`,
     selfUrl: `https://tukuk.org/proverbs/${p.slug}`,
-    heroTitle: `🗣️ ${escapeHtml(p.country)}: &ldquo;${escapeHtml(p.en)}&rdquo;`, heroSub: `${escapeHtml(p.lang)} proverb · ${escapeHtml(p.region)}`,
+    heroTitle: `🗣️ ${p.country}: “${p.en}”`, heroSub: `${p.lang} proverb · ${p.region}`,
     ld, css: PV_CSS, body,
   }, pepatahNav());
 }
@@ -10619,7 +10619,7 @@ function pepatahNotFound(q) {
     title: 'Proverb not found | Proverbs of the World — Tukuk-OS',
     desc: 'That proverb was not recognised — browse the full collection of world proverbs instead.',
     selfUrl: 'https://tukuk.org/proverbs', robots: 'noindex,follow',
-    heroTitle: 'Proverb not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Proverb not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: PV_CSS,
     body: `<p>We could not match that to one of our world proverbs. Open <a href="/proverbs">the full collection</a> and browse by country or region.</p>`,
   }, pepatahNav());
@@ -10718,7 +10718,7 @@ function rekodRecordPage(r) {
     title: `${r.record} — ${r.name} (${r.value}) | World Extremes`,
     desc: `${r.record}: ${r.name} at ${r.value}, in ${r.place}. Measurement, location and a plain-English explanation from the tukuk.org World Extremes collection.`,
     selfUrl: `https://tukuk.org/records/${r.slug}`,
-    heroTitle: `${catEmoji} ${escapeHtml(r.record)}`, heroSub: `${escapeHtml(r.name)} · ${escapeHtml(r.value)}`,
+    heroTitle: `${catEmoji} ${r.record}`, heroSub: `${r.name} · ${r.value}`,
     ld, css: REC_CSS, body,
   }, rekodNav());
 }
@@ -10728,7 +10728,7 @@ function rekodNotFound(q) {
     title: 'Record not found | World Extremes — Tukuk-OS',
     desc: 'That record was not recognised — browse the full World Extremes collection instead.',
     selfUrl: 'https://tukuk.org/records', robots: 'noindex,follow',
-    heroTitle: 'Record not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Record not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: REC_CSS,
     body: `<p>We could not match that to one of our world records. Open <a href="/records">the full World Extremes collection</a> and browse by category.</p>`,
   }, rekodNav());
@@ -10813,7 +10813,7 @@ function nutritionCategoryPage(c) {
     title: `${c.name} — Calories & Nutrition | Tukuk-OS`,
     desc: `Calories, protein, carbohydrate, sugar, fat and fibre for ${c.items.length} common ${c.name.toLowerCase()} foods, per 100 g and per serving.`,
     selfUrl: `https://tukuk.org/nutrition/category/${c.slug}`,
-    heroTitle: `${NUT_CAT_EMOJI[c.name] || '🍽️'} ${escapeHtml(c.name)}`, heroSub: `${c.items.length} foods · calories & macronutrients`,
+    heroTitle: `${NUT_CAT_EMOJI[c.name] || '🍽️'} ${c.name}`, heroSub: `${c.items.length} foods · calories & macronutrients`,
     ld, css: NUT_CSS, body,
   }, nutritionNav());
 }
@@ -10851,7 +10851,7 @@ function nutritionFoodPage(f) {
     title: `${f.name} — Calories & Nutrition (per 100 g & serving) | Tukuk-OS`,
     desc: `${f.name}: ${f.kcal} kcal per 100 g, with protein, carbohydrate, sugar, fat and fibre shown per 100 g and per a typical serving (${f.serveLabel}).`,
     selfUrl: `https://tukuk.org/nutrition/${f.slug}`,
-    heroTitle: `${NUT_CAT_EMOJI[f.cat] || '🍽️'} ${escapeHtml(f.name)}`, heroSub: `${f.kcal} kcal / 100 g · ${escapeHtml(f.cat)}`,
+    heroTitle: `${NUT_CAT_EMOJI[f.cat] || '\ud83c\udf7d\ufe0f'} ${f.name}`, heroSub: `${f.kcal} kcal / 100 g · ${f.cat}`,
     ld, css: NUT_CSS, body,
   }, nutritionNav());
 }
@@ -10861,7 +10861,7 @@ function nutritionNotFound(q) {
     title: 'Food not found | Food & Calories — Tukuk-OS',
     desc: 'That food was not recognised — browse the full food and calories reference instead.',
     selfUrl: 'https://tukuk.org/nutrition', robots: 'noindex,follow',
-    heroTitle: 'Food not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Food not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: NUT_CSS,
     body: `<p>We could not match that to one of our foods. Open <a href="/nutrition">the full Food &amp; Calories reference</a> and browse by group.</p>`,
   }, nutritionNav());
@@ -10938,7 +10938,7 @@ function moviesGenrePage(gr) {
     title: `${gr.name} Films — Notable ${gr.name} Movies | Tukuk-OS`,
     desc: `${gr.items.length} notable ${gr.name.toLowerCase()} films with year, director, country, language and running time.`,
     selfUrl: `https://tukuk.org/movies/genre/${gr.slug}`,
-    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} Films`, heroSub: `${gr.items.length} films · oldest first`,
+    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${gr.name} Films`, heroSub: `${gr.items.length} films · oldest first`,
     ld, css: MOV_CSS, body,
   }, moviesNav());
 }
@@ -10974,7 +10974,7 @@ function moviesFilmPage(f) {
     title: `${f.t} (${f.y}) — Director, Country & Premise | Tukuk-OS`,
     desc: `${f.t} (${f.y}), directed by ${f.d}. ${f.c}, ${f.l}, ${f.rt} min. Genres, prizes and a spoiler-free premise of what the film is about.`,
     selfUrl: `https://tukuk.org/movies/${f.slug}`,
-    heroTitle: `🎬 ${escapeHtml(f.t)}`, heroSub: `${f.y} · ${escapeHtml(f.d)} · ${escapeHtml(f.g.join(', '))}`,
+    heroTitle: `🎬 ${f.t}`, heroSub: `${f.y} · ${f.d} · ${f.g.join(', ')}`,
     ld, css: MOV_CSS, body,
   }, moviesNav());
 }
@@ -10984,7 +10984,7 @@ function moviesNotFound(q) {
     title: 'Film not found | Notable Films of the World — Tukuk-OS',
     desc: 'That film was not recognised — browse the full collection of notable films instead.',
     selfUrl: 'https://tukuk.org/movies', robots: 'noindex,follow',
-    heroTitle: 'Film not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Film not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: MOV_CSS,
     body: `<p>We could not match that to one of our films. Open <a href="/movies">the full collection</a> and browse by genre or decade.</p>`,
   }, moviesNav());
@@ -11034,7 +11034,7 @@ function tvGenrePage(gr) {
     title: `${gr.name} TV Series — Notable ${gr.name} Shows | Tukuk-OS`,
     desc: `${gr.items.length} notable ${gr.name.toLowerCase()} television series with years, creator, country, network and episode count.`,
     selfUrl: `https://tukuk.org/movies/tv/genre/${gr.slug}`,
-    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} TV Series`, heroSub: `${gr.items.length} series · oldest first`,
+    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${gr.name} TV Series`, heroSub: `${gr.items.length} series · oldest first`,
     ld, css: MOV_CSS, body,
   }, moviesNav());
 }
@@ -11075,7 +11075,7 @@ function tvShowPage(s) {
     title: `${s.t} (${escapeHtml(s.y)}) — Creator, Country & Premise | Tukuk-OS`,
     desc: `${s.t} (${escapeHtml(s.y)}), created by ${s.d}. ${s.c}, ${s.l}, ${s.n}${s.ep != null ? `, ${s.ep} episodes` : ''}. Seasons, genres and a plain-English premise of what the series is about.`,
     selfUrl: `https://tukuk.org/movies/tv/${s.slug}`,
-    heroTitle: `📺 ${escapeHtml(s.t)}`, heroSub: `${escapeHtml(s.y)} · ${escapeHtml(s.d)} · ${escapeHtml(s.g.join(', '))}`,
+    heroTitle: `📺 ${s.t}`, heroSub: `${s.y} · ${s.d} · ${s.g.join(', ')}`,
     ld, css: MOV_CSS, body,
   }, moviesNav());
 }
@@ -11085,7 +11085,7 @@ function tvNotFound(q) {
     title: 'TV series not found | Notable TV Series of the World — Tukuk-OS',
     desc: 'That series was not recognised — browse the full collection of notable TV series instead.',
     selfUrl: 'https://tukuk.org/movies/tv', robots: 'noindex,follow',
-    heroTitle: 'TV series not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'TV series not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: MOV_CSS,
     body: `<p>We could not match that to one of our series. Open <a href="/movies/tv">the full TV collection</a> and browse by genre or country of origin.</p>`,
   }, moviesNav());
@@ -11189,7 +11189,7 @@ function footballTournamentPage(c) {
     title: `${c.y} FIFA World Cup — ${c.win} Beat ${c.run} (${c.score}) | Tukuk-OS`,
     desc: `${c.win} won the ${c.y} World Cup hosted by ${c.host}, beating ${c.run} ${c.score}${c.how ? ' ' + c.how : ''}.`,
     selfUrl: `https://tukuk.org/football/world-cup/${c.y}`, ld,
-    heroTitle: `🏆 ${c.y} World Cup`, heroSub: `${escapeHtml(c.win)} beat ${escapeHtml(c.run)} ${escapeHtml(c.score)}`,
+    heroTitle: `🏆 ${c.y} World Cup`, heroSub: `${c.win} beat ${c.run} ${c.score}`,
     css: FBALL_CSS, body,
   }, footballNav());
 }
@@ -11221,7 +11221,7 @@ function footballNotFound(q) {
     title: 'Not found | Football on Tukuk-OS',
     desc: 'That football page was not recognised — see the World Cup roll of honour or the Laws of the Game instead.',
     selfUrl: 'https://tukuk.org/football', robots: 'noindex,follow',
-    heroTitle: 'Not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: FBALL_CSS,
     body: `<p>We could not match that. Try <a href="/football/world-cup">the World Cup roll of honour</a> or <a href="/football/rules">the Laws of the Game</a>.</p>`,
   }, footballNav());
@@ -11328,7 +11328,7 @@ function cricketFinalPage(c) {
     title: `${c.y} Cricket World Cup — ${c.win} Beat ${c.run} | Tukuk-OS`,
     desc: `${c.win} won the ${c.y} Cricket World Cup hosted by ${c.host}, beating ${c.run}: ${c.how}.`,
     selfUrl: `https://tukuk.org/cricket/world-cup/${c.y}`, ld,
-    heroTitle: `🏆 ${c.y} Cricket World Cup`, heroSub: `${escapeHtml(c.win)} beat ${escapeHtml(c.run)}`,
+    heroTitle: `🏆 ${c.y} Cricket World Cup`, heroSub: `${c.win} beat ${c.run}`,
     css: CK_CSS, body,
   }, cricketNav());
 }
@@ -11381,7 +11381,7 @@ function cricketNotFound(q) {
     title: 'Not found | Cricket on Tukuk-OS',
     desc: 'That cricket page was not recognised — see the World Cup rolls of honour or how the game is played instead.',
     selfUrl: 'https://tukuk.org/cricket', robots: 'noindex,follow',
-    heroTitle: 'Not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: CK_CSS,
     body: `<p>We could not match that. Try <a href="/cricket/world-cup">the Cricket World Cup finals</a>, <a href="/cricket/t20-world-cup">the T20 champions</a> or <a href="/cricket/rules">how the game is played</a>.</p>`,
   }, cricketNav());
@@ -11485,7 +11485,7 @@ function olympicsGamePage(season, g) {
       ? `The ${g.y} ${season} Olympic Games were awarded to ${g.city} but cancelled. ${g.note}`
       : `The ${g.y} ${season === 'winter' ? 'Winter Olympic Games' : 'Olympic Games'} were held in ${g.city}, ${g.c}. ${g.note}`.slice(0, 200),
     selfUrl: `https://tukuk.org/olympics/${season}/${g.y}`, ld,
-    heroTitle: `${olIcon(season)} ${olName(season, g.y)}`, heroSub: `${escapeHtml(g.city)} · ${escapeHtml(g.c)}`,
+    heroTitle: `${olIcon(season)} ${olName(season, g.y)}`, heroSub: `${g.city} · ${g.c}`,
     css: OL_CSS, body,
   }, olympicsNav());
 }
@@ -11495,7 +11495,7 @@ function olympicsNotFound(q) {
     title: 'Not found | Olympics on Tukuk-OS',
     desc: 'That Olympic Games was not recognised — browse every Summer and Winter host city instead.',
     selfUrl: 'https://tukuk.org/olympics', robots: 'noindex,follow',
-    heroTitle: 'Not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: OL_CSS,
     body: `<p>We could not match that. Try <a href="/olympics/summer">every Summer Games</a> or <a href="/olympics/winter">every Winter Games</a>.</p>`,
   }, olympicsNav());
@@ -11775,7 +11775,7 @@ function teknologiNotFound(q) {
     title: 'Tech feed not found | Tukuk-OS',
     desc: 'That technology feed does not exist — browse the live front page, latest, Show HN and Ask HN feeds instead.',
     selfUrl: 'https://tukuk.org/technology', robots: 'noindex,follow',
-    heroTitle: 'Feed not found', heroSub: `“${escapeHtml(String(q || ''))}” is not a tech feed`,
+    heroTitle: 'Feed not found', heroSub: `“${String(q || '')}” is not a tech feed`,
     css: TK_CSS,
     body: `<p>Try one of the live feeds: <a href="/technology">front page</a>, <a href="/technology/new">latest</a>, <a href="/technology/show">Show HN</a> or <a href="/technology/ask">Ask HN</a>.</p>`,
   }, teknologiNav());
@@ -15376,7 +15376,7 @@ function sejarahDayPage(data) {
     title: `On This Day in History — ${data.label} | Tukuk-OS`,
     desc: `What happened on ${data.label}: notable events, famous births and deaths, and observances for this date in history.`,
     selfUrl: `https://tukuk.org/history/${data.mm}/${data.dd}`,
-    heroTitle: `📅 ${escapeHtml(data.label)}`, heroSub: `${data.selected.length} events · ${data.births.length} births · ${data.deaths.length} deaths`,
+    heroTitle: `📅 ${data.label}`, heroSub: `${data.selected.length} events · ${data.births.length} births · ${data.deaths.length} deaths`,
     ld, css: SJ_CSS, body,
   }, sejarahNav());
 }
@@ -15390,7 +15390,7 @@ function sejarahNotFound(q) {
     title: 'Date not found — On this day | Tukuk-OS',
     desc: 'That date was not recognised — browse the full On this day calendar instead.',
     selfUrl: 'https://tukuk.org/history', robots: 'noindex,follow',
-    heroTitle: 'Date not found', heroSub: `“${escapeHtml(String(q || ''))}” is not a valid calendar date`,
+    heroTitle: 'Date not found', heroSub: `“${String(q || '')}” is not a valid calendar date`,
     css: SJ_CSS,
     body: `<p>That looks like a date outside the calendar (try <a href="/history/10/20">10/20</a> for October 20). Open <a href="/history">the full On this day calendar</a> and pick any day.</p>`,
   }, sejarahNav());
@@ -15498,7 +15498,7 @@ function kotaPage(c, sum) {
     title: `${c.name} — City Profile, Location & Facts | Tukuk-OS`,
     desc: sum && sum.description ? `${c.name}, ${sum.description.toLowerCase()} — location, country and a plain-English introduction.` : `${c.name} is a city in ${c.country}. Where it is, what country it belongs to, and a sourced introduction.`,
     selfUrl: `https://tukuk.org/cities/${c.slug}`,
-    heroTitle: `🌆 ${escapeHtml(c.name)}`, heroSub: `${escapeHtml(c.country)} · ${escapeHtml(c.region)} · ${escapeHtml(coords)}`,
+    heroTitle: `🌆 ${c.name}`, heroSub: `${c.country} · ${c.region} · ${coords}`,
     ld, css: KT_CSS, body, ogImage,
   }, kotaNav());
 }
@@ -15508,7 +15508,7 @@ function kotaNotFound(q) {
     title: 'City not found — World Cities | Tukuk-OS',
     desc: 'That city was not recognised — browse the full list of world cities instead.',
     selfUrl: 'https://tukuk.org/cities', robots: 'noindex,follow',
-    heroTitle: 'City not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'City not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: KT_CSS,
     body: `<p>We don’t have a profile for that city yet. Open <a href="/cities">the full list of world cities</a> and browse by continent.</p>`,
   }, kotaNav());
@@ -15624,7 +15624,7 @@ function warisanPage(s, sum) {
     title: `${s.name} — UNESCO World Heritage Site Profile | Tukuk-OS`,
     desc: sum && sum.description ? `${s.name}, ${sum.description.toLowerCase()} — a ${s.type.toLowerCase()} World Heritage site: location, country and a plain-English introduction.` : `${s.name} is a ${s.type.toLowerCase()} UNESCO World Heritage site in ${s.country}. Where it is, and a sourced introduction.`,
     selfUrl: `https://tukuk.org/heritage/${s.slug}`,
-    heroTitle: `${TYPE_ICON[s.type] || '🏛️'} ${escapeHtml(s.name)}`, heroSub: `${escapeHtml(s.country)} · ${escapeHtml(s.region)} · ${escapeHtml(s.type)} · ${escapeHtml(coords)}`,
+    heroTitle: `${TYPE_ICON[s.type] || '🏛️'} ${s.name}`, heroSub: `${s.country} · ${s.region} · ${s.type} · ${coords}`,
     ld, css: WR_CSS, body, ogImage,
   }, warisanNav());
 }
@@ -15634,7 +15634,7 @@ function warisanNotFound(q) {
     title: 'Site not found — World Heritage | Tukuk-OS',
     desc: 'That heritage site was not recognised — browse the full list of UNESCO World Heritage sites instead.',
     selfUrl: 'https://tukuk.org/heritage', robots: 'noindex,follow',
-    heroTitle: 'Site not found', heroSub: `Nothing matched “${escapeHtml(String(q || ''))}”`,
+    heroTitle: 'Site not found', heroSub: `Nothing matched “${String(q || '')}”`,
     css: WR_CSS,
     body: `<p>We don’t have a profile for that site yet. Open <a href="/heritage">the full list of World Heritage sites</a> and browse by continent.</p>`,
   }, warisanNav());
@@ -15751,7 +15751,7 @@ function cagarPage(a, sum) {
     title: `${a.name} \u2014 ${a.type} Profile | Tukuk-OS`,
     desc: sum && sum.description ? `${a.name}, ${sum.description.toLowerCase()} \u2014 a ${a.type.toLowerCase()}: location, country and ecological introduction.` : `${a.name} is a ${a.type.toLowerCase()} in ${a.country}. Where it is, and a sourced introduction.`,
     selfUrl: `https://tukuk.org/conservation-areas/${a.slug}`,
-    heroTitle: `${AREA_ICON[a.type] || '\ud83c\udf0d'} ${escapeHtml(a.name)}`, heroSub: `${escapeHtml(a.country)} · ${escapeHtml(a.region)} · ${escapeHtml(a.type)} · ${escapeHtml(coords)}`,
+    heroTitle: `${AREA_ICON[a.type] || '\ud83c\udf0d'} ${a.name}`, heroSub: `${a.country} · ${a.region} · ${a.type} · ${coords}`,
     ld, css: CG_CSS, body, ogImage,
   }, cagarNav());
 }
@@ -15761,7 +15761,7 @@ function cagarNotFound(q) {
     title: 'Area not found \u2014 Protected Areas | Tukuk-OS',
     desc: 'That protected area was not recognised \u2014 browse the full list of national parks and reserves instead.',
     selfUrl: 'https://tukuk.org/conservation-areas', robots: 'noindex,follow',
-    heroTitle: 'Area not found', heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    heroTitle: 'Area not found', heroSub: `Nothing matched \u201c${String(q || '')}\u201d`,
     css: CG_CSS,
     body: `<p>We don\u2019t have a profile for that area yet. Open <a href="/conservation-areas">the full list of Protected Areas</a> and browse by continent.</p>`,
   }, cagarNav());
@@ -15871,7 +15871,7 @@ function geoItemPage(item, sum, mod, base, cfg) {
     title: `${item.name} \u2014 ${cfg.titleCase} Profile | Tukuk-OS`,
     desc: sum && sum.description ? `${item.name}, ${sum.description.charAt(0).toLowerCase()}${sum.description.slice(1)}.` : `${item.name} is ${geoArticle(cfg.singular)} ${cfg.singular} in ${item.country}. Location and introduction.`,
     selfUrl: `https://tukuk.org/${base}/${item.slug}`,
-    heroTitle: `${cfg.icon} ${escapeHtml(item.name)}`, heroSub: `${escapeHtml(item.country)} \u00b7 ${escapeHtml(item.region)} \u00b7 ${escapeHtml(coords)}`,
+    heroTitle: `${cfg.icon} ${item.name}`, heroSub: `${item.country} \u00b7 ${item.region} \u00b7 ${coords}`,
     ld, css: GEO_CSS, body, ogImage,
   }, geoNav(base, cfg, mod));
 }
@@ -15880,7 +15880,7 @@ function geoNotFound(base, cfg, q) {
     title: `${cfg.titleCase} not found | Tukuk-OS`,
     desc: `Browse the full list of ${cfg.unit} instead.`,
     selfUrl: `https://tukuk.org/${base}`, robots: 'noindex,follow',
-    heroTitle: `${cfg.titleCase} not found`, heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    heroTitle: `${cfg.titleCase} not found`, heroSub: `Nothing matched \u201c${String(q || '')}\u201d`,
     css: GEO_CSS,
     body: `<p>Open <a href="/${base}">the full list of ${cfg.unit}</a> and browse by continent.</p>`,
   }, geoNav(base, cfg, undefined));
@@ -20118,7 +20118,7 @@ function gunungPage(p, sum) {
     title: `${p.name}${elevStr ? ` (${p.elev.toLocaleString()} m)` : ''} \u2014 Mountain Profile | Tukuk-OS`,
     desc: sum && sum.description ? `${p.name}, ${sum.description.toLowerCase()} \u2014 elevation, location and introduction.` : `${p.name} is a mountain in ${p.country}${elevStr ? `, elevation ${p.elev.toLocaleString()} m` : ''}. Location and sourced introduction.`,
     selfUrl: `https://tukuk.org/mountains/${p.slug}`,
-    heroTitle: `\u26f0\ufe0f ${escapeHtml(p.name)}`, heroSub: `${escapeHtml(p.country)} · ${escapeHtml(p.region)}${elevStr ? ' · ' + escapeHtml(elevStr.trim()) : ''} · ${escapeHtml(coords)}`,
+    heroTitle: `\u26f0\ufe0f ${p.name}`, heroSub: `${p.country} · ${p.region}${elevStr ? ' · ' + elevStr.trim() : ''} · ${coords}`,
     ld, css: GN_CSS, body, ogImage,
   }, gunungNav());
 }
@@ -20128,7 +20128,7 @@ function gunungNotFound(q) {
     title: 'Mountain not found \u2014 Mountains of the World | Tukuk-OS',
     desc: 'That mountain was not recognised \u2014 browse the full list of peaks instead.',
     selfUrl: 'https://tukuk.org/mountains', robots: 'noindex,follow',
-    heroTitle: 'Mountain not found', heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    heroTitle: 'Mountain not found', heroSub: `Nothing matched \u201c${String(q || '')}\u201d`,
     css: GN_CSS,
     body: `<p>We don\u2019t have a profile for that peak yet. Open <a href="/mountains">the full list of Mountains</a> and browse by continent.</p>`,
   }, gunungNav());
@@ -20242,7 +20242,7 @@ function danauPage(l, sum) {
     title: `${l.name}${elevStr ? ` (${elevStr})` : ''} \u2014 Lake Profile | Tukuk-OS`,
     desc: sum && sum.description ? `${l.name}, ${sum.description.toLowerCase()} \u2014 elevation, location and introduction.` : `${l.name} is a lake in ${l.country}${elevStr ? `, elevation ${elevStr}` : ''}. Location and sourced introduction.`,
     selfUrl: `https://tukuk.org/lakes/${l.slug}`,
-    heroTitle: `\ud83c\udf0a ${escapeHtml(l.name)}`, heroSub: `${escapeHtml(l.country)} \u00b7 ${escapeHtml(l.region)}${elevStr ? ' \u00b7 ' + escapeHtml(elevStr) : ''} \u00b7 ${escapeHtml(coords)}`,
+    heroTitle: `\ud83c\udf0a ${l.name}`, heroSub: `${l.country} \u00b7 ${l.region}${elevStr ? ' \u00b7 ' + elevStr : ''} \u00b7 ${coords}`,
     ld, css: DN_CSS, body, ogImage,
   }, danauNav());
 }
@@ -20252,7 +20252,7 @@ function danauNotFound(q) {
     title: 'Lake not found \u2014 Lakes of the World | Tukuk-OS',
     desc: 'That lake was not recognised \u2014 browse the full list of lakes instead.',
     selfUrl: 'https://tukuk.org/lakes', robots: 'noindex,follow',
-    heroTitle: 'Lake not found', heroSub: `Nothing matched \u201c${escapeHtml(String(q || ''))}\u201d`,
+    heroTitle: 'Lake not found', heroSub: `Nothing matched \u201c${String(q || '')}\u201d`,
     css: DN_CSS,
     body: `<p>We don\u2019t have a profile for that lake yet. Open <a href="/lakes">the full list of Lakes</a> and browse by continent.</p>`,
   }, danauNav());
@@ -20577,7 +20577,7 @@ function hidupBuiltPage(req, rec) {
     selfUrl: `https://tukuk.org/life/${rec.slug}`,
     robots: 'index,follow,max-image-preview:large',
     ogImage: (rec.photo && rec.photo.url) || 'https://tukuk.org/og.png',
-    heroTitle: `${(hidup.findTaxon(rec.slug) || {}).icon || '🐾'} ${rec.name}`, heroSub: `${escapeHtml(rec.sci)} · wildlife atlas entry`,
+    heroTitle: `${(hidup.findTaxon(rec.slug) || {}).icon || '🐾'} ${rec.name}`, heroSub: `${rec.sci} · wildlife atlas entry`,
     ld, body,
   }, hidupNav());
 }
@@ -20627,7 +20627,7 @@ function hidupSpeciesPage(req, t, taxon, obs) {
     selfUrl: `https://tukuk.org/life/${t.slug}`,
     robots: 'index,follow,max-image-preview:large',
     ogImage: taxon.photo || 'https://tukuk.org/og.png',
-    heroTitle: `${t.icon} ${t.name}`, heroSub: `${escapeHtml(taxon.sci || t.sci)} · wildlife atlas entry`,
+    heroTitle: `${t.icon} ${t.name}`, heroSub: `${taxon.sci || t.sci} · wildlife atlas entry`,
     ld, body,
   }, hidupNav());
 }

@@ -168,6 +168,13 @@ function escapeRegex(value) {
 
 // Escape HTML characters so user content (title/author/excerpt)
 // cannot inject scripts (XSS) into templates.
+//
+// NOT IDEMPOTENT: `'` → `&#39;` → `&amp;#39;` on a second pass, and the browser then
+// prints the entity as text. Escape each string exactly ONCE, at the point it enters the
+// markup — never in a builder that hands the value to a template which escapes again. That
+// is why the page shells (`*Doc` in server.js) are the single authority for `heroTitle`/
+// `heroSub`: builders pass plain text, and markup belongs in `heroHtml`. Guarded by
+// test/hero-escaping.test.js.
 function escapeHtml(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
