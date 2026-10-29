@@ -32,6 +32,33 @@ data/
 # Static copies not needed in version control.
 Tukuk-Os.html
 
+# ─── Session scratch (.artifacts) ───────────────────────────────
+# 130+ probe/bench/CDP/screenshot files written while debugging live production: `git status
+# --porcelain -uall` was 201 lines long, which is how a real change gets lost in the noise.
+# More than tidiness — nothing in here may be staged by accident. /opt/tukuk-os is a git
+# clone that updates itself with `git merge --ff-only`, and a path that becomes TRACKED while
+# an untracked copy already sits on the box makes that merge refuse (measured in a scratch
+# repo: rc=1, "The following untracked working tree files would be overwritten by merge",
+# HEAD unchanged; the same merge fast-forwards once the file is removed). The nightly timer
+# stops dead and every skipped run exits 0. Measured 29 Oct 2026, the box's own
+# `.artifacts/` holds nothing but the five files negated below (its status is clean apart
+# from the etc-netplan-reference/ files further down), so this is one careless `git add -A`
+# away from that collision rather than today's news. Same class as the
+# public/downloads/tukuk-km*.apk rule below, which is the version of this that already bit
+# the repo. Those five files ARE intentional history — deploy/GCP-FREE-TIER.md cites one of
+# them by path.
+.artifacts/*
+!.artifacts/aliyun_probe.py
+!.artifacts/geo-fix-redirects.js
+!.artifacts/geo-migrate.js
+!.artifacts/sitemap-migrate.js
+# A negated directory alone would re-include EVERY file inside it, so the third line
+# re-excludes the contents and the fourth brings back the one page that is real history.
+# (Git cannot re-include a file whose parent directory is excluded — hence the order.)
+!.artifacts/d0a2208f-c940-48a0-ae36-17d63af3a2dd/
+.artifacts/d0a2208f-c940-48a0-ae36-17d63af3a2dd/*
+!.artifacts/d0a2208f-c940-48a0-ae36-17d63af3a2dd/deploy_iso_guide.artifact.md
+
 # ─── OS & editor ─────────────────────────────────────────────
 .DS_Store
 Thumbs.db
@@ -84,6 +111,15 @@ fastlane/screenshots/**/*.png
 code-server/
 # Tukuk Builder = bolt.diy fork with its own history (nested repo, remote fevian448)
 bolt.diy/
+# Map-AI (git@github remote) and station-break (godot tps-demo fork) — same shape: each
+# is a clone with its own origin, so the parent repo must never absorb them as a gitlink
+Map-Ai---Version-1/
+tps-demo/
+# Local Godot build target for station-break (linux .so + binary) — rebuilt, never
+# shipped. Anchored with a leading slash on purpose: unanchored `build/` also matches
+# public/build/, and git then reports those TRACKED icons as ignored (verified with
+# `git ls-files -i -c`), which is how a PWA icon directory gets accidentally orphaned.
+/build/
 
 # local safety-net backups (never commit)
 .backups/
@@ -105,3 +141,13 @@ AccessKey.csv
 AccessKey-*.csv
 *.AccessKey.csv
 aliyun/credentials
+
+# ─── Paths that already exist UNTRACKED on /opt/tukuk-os ────────────────────────────
+# Measured 29 Oct 2026 (`git status --porcelain -uall` on the box): three netplan/NM yaml
+# files under etc-netplan-reference/. They are the box's own network reference and nothing
+# of theirs belongs in this repo — but the reason they are listed here is the deploy, not
+# the tidiness: if a path with one of these names ever became tracked, `git merge --ff-only`
+# on the box would refuse to create a file over the untracked one and the nightly update
+# would stop, each run exiting 0. Ignoring them makes that unstageable by accident.
+# test/repo-ignore-hygiene.test.js pins this list against the box's measured state.
+etc-netplan-reference/
