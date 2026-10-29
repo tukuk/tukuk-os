@@ -75,6 +75,13 @@ say "shipping $BRANCH @ $SHORT ($(git log -1 --format=%s "$BRANCH"))"
 # The bundle is the delivery mechanism, not the backup: if this box is the only place the
 # commit exists, a lost laptop takes the deploy with it.
 BEHIND="$(git rev-list --count "origin/$BRANCH..$BRANCH" 2>/dev/null || echo '?')"
+# …and the other direction, because it is the one that loses work silently. The Actions
+# bot commits straight to GitHub (satu-kata, daily), and a bundle built from a branch that
+# never pulled those commits leaves them out of production — the push is rejected first,
+# so say why rather than reporting a git error the reader has to decode.
+AHEAD="$(git rev-list --count "$BRANCH..origin/$BRANCH" 2>/dev/null || echo 0)"
+[[ "$BEHIND" == "?" || "$AHEAD" == "0" ]] \
+  || die "origin/$BRANCH has $AHEAD commit(s) $BRANCH does not — git pull --rebase origin $BRANCH first, or those commits never reach the box (the bundle is all it can fetch)"
 if [[ "$BEHIND" == "?" ]]; then
   say "origin/$BRANCH is unknown — fetching to find out"
   git fetch -q origin "$BRANCH" || die "cannot reach origin (offline?); refusing to ship"

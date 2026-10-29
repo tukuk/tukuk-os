@@ -51,6 +51,12 @@ test('GitHub gets the commit before the bundle is built', () => {
   const bundle = line(/git bundle create/, 'building the bundle');
   assert.ok(push < bundle, `push (line ${push}) must precede the bundle (line ${bundle})`);
   assert.match(src, /is not on origin/, 'and the script must refuse if the push did not land');
+  // The other direction matters more than a rejected push. The Actions bot commits
+  // straight to GitHub every day; a bundle built from a branch that never pulled those
+  // commits simply does not contain them, and the box — whose only remote is that
+  // bundle — never learns what it missed.
+  assert.match(src, /git rev-list --count "\$BRANCH\.\.origin\/\$BRANCH"/, 'behind-ness must be counted');
+  assert.match(src, /those commits never reach the box/, 'and named as the loss it is');
 });
 
 test('the transfer is measured and verified before the old bundle is replaced', () => {
