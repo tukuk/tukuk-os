@@ -158,6 +158,12 @@ Type=simple
 EnvironmentFile=$INSTALL_DIR/.env
 User=$SVC_USER
 Group=$SVC_USER
+# systemd defaults the working directory to /, and ProtectSystem=strict below makes /
+# read-only -- so meilisearch aborts at startup with "Read-only file system (os error
+# 30)" and Restart=always spins it forever (seen on a rebuilt box, 30 Oct 2026: restart
+# counter 52, /health "meilisearch":"unreachable"). Point the cwd at the one path this
+# unit is allowed to write.
+WorkingDirectory=$INSTALL_DIR/meili_data
 ExecStart=$(command -v meilisearch) --db-path $INSTALL_DIR/meili_data --master-key \${MEILI_MASTER_KEY} --http-addr 127.0.0.1:7700
 Restart=always
 RestartSec=3

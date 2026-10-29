@@ -17,6 +17,13 @@ EnvironmentFile=-/opt/tukuk-os/.env
 # is a second, equally silent way to lose the box: it holds an HTTP API and a master key.
 User=tukuk-os
 Group=tukuk-os
+# Where meilisearch puts files that are NOT under --db-path. systemd defaults the
+# working directory to /, and ProtectSystem=strict makes / read-only, so without this
+# line meilisearch exits at once with "Read-only file system (os error 30)" and
+# Restart=always spins forever: verified on a rebuilt box, 30 Oct 2026, restart counter
+# 52 while /health reported "meilisearch":"unreachable". It is not a db-path permission
+# problem — the same command started cleanly once its cwd was inside a writable dir.
+WorkingDirectory=/opt/tukuk-os/meili_data
 ExecStart=/usr/local/bin/meilisearch --db-path /opt/tukuk-os/meili_data --master-key ${MEILI_MASTER_KEY} --http-addr 127.0.0.1:7700
 
 Restart=always
