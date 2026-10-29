@@ -9,11 +9,15 @@ import worker from "../src";
 
 // The failover brain. Every test drives a real scenario end to end:
 //   origin healthy            → origin passthrough
-//   origin 5xx / throws       → GCP mirror
-//   mirror also misses        → cold R2 snapshot
-//   both miss and R2 empty    → 503
+//   origin 5xx / throws       → free R2 snapshot if it holds the page
+//   snapshot lacks it / R2 down→ paid GCP mirror (last independent copy)
+//   everything misses         → 503
 //   API call during outage    → 503 (never a static page)
 // plus the authenticated /edge-backup gateway (write secret vs read-only secret).
+//
+// The free rung goes FIRST: R2 has no egress charge, Cloud Run's free tier stops at 1 GB a
+// month, and the snapshot is 6h fresh against the mirror's weekly rebuild. So a test that
+// seeds R2 must also prove the mirror was never dialed.
 //
 // ORIGIN/MIRROR_URL are pointed at inert *.test hosts and intercepted with undici's
 // MockAgent, so nothing touches the network. disableNetConnect() makes any request we
@@ -60,16 +64,17 @@ describe("failover brain - origin ladder", () => {
 		expect(await res.text()).toBe("LIVE FROM BOX");
 	});
 
-	it("degrades to the GCP mirror when the origin returns 5xx", async () => {
-		fetchMock.get(ORIGIN).intercept({ path: "/", method: "GET" }).reply(502, "bad gateway");
-		fetchMock.get(MIRROR).intercept({ path: "/", method: "GET" }).reply(200, "MIRROR PAGE");
+	it("reaches the GCP mirror only when the snapshot holds no copy of the page", async () => {
+		// R2 is empty here, so the ladder is allowed to spend the metered egress.
+		fetchMock.get(ORIGIN).intercept({ path: "/blog", method: "GET" }).reply(502, "bad gateway");
+		fetchMock.get(MIRROR).intercept({ path: "/blog", method: "GET" }).reply(200, "MIRROR PAGE");
 
-		const res = await run("/");
+		const res = await run("/blog");
 		expect(res.status).toBe(200);
 		expect(await res.text()).toBe("MIRROR PAGE");
 	});
 
-	it("degrades to the GCP mirror when the origin fetch throws (box/tunnel down)", async () => {
+	it("reaches the GCP mirror when the origin fetch throws (box/tunnel down)", async () => {
 		fetchMock
 			.get(ORIGIN)
 			.intercept({ path: "/about", method: "GET" })
@@ -81,10 +86,11 @@ describe("failover brain - origin ladder", () => {
 		expect(await res.text()).toBe("MIRROR ABOUT");
 	});
 
-	it("falls through a mirror miss to the cold R2 snapshot", async () => {
-		// origin down, mirror 404s the page (not <400), so the R2 copy wins.
+	it("serves the free snapshot and never dials the mirror when the snapshot has the page", async () => {
+		// The cost-bearing rung must stay untouched when the free one can answer. No mirror
+		// interceptor is staged: with disableNetConnect() a dial of mirror.test would throw,
+		// and afterEach()'s pending check would fail if the ladder reached for it.
 		fetchMock.get(ORIGIN).intercept({ path: "/", method: "GET" }).reply(500, "boom");
-		fetchMock.get(MIRROR).intercept({ path: "/", method: "GET" }).reply(404, "not mirrored");
 		await env.FALLBACK_BUCKET.put("index.html", "R2 HOME", {
 			httpMetadata: { contentType: "text/html" },
 		});
@@ -98,7 +104,6 @@ describe("failover brain - origin ladder", () => {
 		// snapshot-r2.sh writes about.html for /about, so a lookup by path alone 503s a
 		// blackout on every page except the home page.
 		fetchMock.get(ORIGIN).intercept({ path: "/about", method: "GET" }).reply(500, "boom");
-		fetchMock.get(MIRROR).intercept({ path: "/about", method: "GET" }).reply(404, "not mirrored");
 		await env.FALLBACK_BUCKET.put("about.html", "R2 ABOUT", {
 			httpMetadata: { contentType: "text/html" },
 		});
@@ -110,7 +115,6 @@ describe("failover brain - origin ladder", () => {
 
 	it("serves a nested page from its index.html key", async () => {
 		fetchMock.get(ORIGIN).intercept({ path: "/learn", method: "GET" }).reply(500, "boom");
-		fetchMock.get(MIRROR).intercept({ path: "/learn", method: "GET" }).reply(404, "not mirrored");
 		await env.FALLBACK_BUCKET.put("learn/index.html", "R2 LEARN", {
 			httpMetadata: { contentType: "text/html" },
 		});
@@ -120,7 +124,7 @@ describe("failover brain - origin ladder", () => {
 		expect(await res.text()).toBe("R2 LEARN");
 	});
 
-	it("returns 503 when origin, mirror and R2 all miss", async () => {
+	it("returns 503 when origin, snapshot and mirror all miss", async () => {
 		fetchMock.get(ORIGIN).intercept({ path: "/gone", method: "GET" }).reply(500, "boom");
 		fetchMock.get(MIRROR).intercept({ path: "/gone", method: "GET" }).reply(404, "nope");
 		// nothing seeded for /gone under any of its snapshot keys
@@ -128,6 +132,42 @@ describe("failover brain - origin ladder", () => {
 		const res = await run("/gone");
 		expect(res.status).toBe(503);
 		expect(await res.text()).toMatch(/Offline/);
+	});
+
+	it("treats a mirror that cannot be reached as a miss, not an error", async () => {
+		// The mirror's own failure must never surface as its status code or crash the rung.
+		// Unique path so a snapshot seeded by another test cannot answer first.
+		fetchMock.get(ORIGIN).intercept({ path: "/unserved-page", method: "GET" }).reply(500, "boom");
+		fetchMock.get(MIRROR).intercept({ path: "/unserved-page", method: "GET" })
+			.replyWithError(new Error("cloud run unreachable"));
+
+		const res = await run("/unserved-page");
+		expect(res.status).toBe(503);
+	});
+
+	it("does not fetch any mirror at all when MIRROR_URL is off", async () => {
+		// The cut-out for the only metered rung: `off` demotes the ladder to R2 alone. There
+		// is no default mirror host either, so an unset MIRROR_URL cannot 301 a visitor back
+		// into the dead apex — the old DEFAULT_MIRROR (www.tukuk.org) did exactly that.
+		fetchMock.get(ORIGIN).intercept({ path: "/", method: "GET" }).reply(500, "boom");
+		await env.FALLBACK_BUCKET.put("index.html", "R2 HOME", {
+			httpMetadata: { contentType: "text/html" },
+		});
+
+		const res = await run("/", {}, testEnv({ MIRROR_URL: "off" }));
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe("R2 HOME");
+	});
+
+	it("still answers from the snapshot when the mirror var is absent entirely", async () => {
+		fetchMock.get(ORIGIN).intercept({ path: "/", method: "GET" }).reply(500, "boom");
+		await env.FALLBACK_BUCKET.put("index.html", "R2 HOME", {
+			httpMetadata: { contentType: "text/html" },
+		});
+
+		const res = await run("/", {}, testEnv({ MIRROR_URL: "" }));
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe("R2 HOME");
 	});
 });
 

@@ -16,7 +16,7 @@ any of it can run.
                                │     └──────────────────────────────┘
                                │
                                ├──▶ WORKER (brain) on worker.tukuk.org
-                               │      try apex ─▶ 5xx/throw ─▶ GCP mirror ─▶ R2 snapshot ─▶ 503
+                               │      try apex ─▶ 5xx/throw ─▶ R2 snapshot ─▶ GCP mirror ─▶ 503
                                │
                                └──▶ ┌──────────────────────────────┐
                                      │ TUNNEL #2 (GCP VM)           │  BACKUP (static)
@@ -28,14 +28,15 @@ any of it can run.
 
 * **`tukuk.org` (apex)** — unchanged. Tunnel #1 → the home box. Full dynamic site.
 * **`worker.tukuk.org`** — the brain Worker. Proxies the apex; on origin 5xx or a
-  thrown fetch (blackout / dropped connector) it serves the **GCP mirror**, then the
-  **R2 static snapshot**, then `503`. Also hosts the `/edge-backup` R2 gateway.
+  thrown fetch (blackout / dropped connector) it serves the **free R2 static snapshot**
+  first, then the **metered GCP mirror** (only when the snapshot has no copy), then `503`.
+  Also hosts the `/edge-backup` R2 gateway.
 * **`www.tukuk.org`** — a static copy of the site on **Cloud Run** (`x-mirror: gcp-run`),
   rebuilt weekly from the R2 snapshot. The older route — Tunnel #2 on the e2-micro — is
   **parked** (see "Where this actually stands").
 
 > **Read the status section first.** Parts B–G below describe the *VM + Tunnel #2* build of
-> rung 2. That build was completed and then superseded: the VM is stopped and rung 2 is a
+> rung 3. That build was completed and then superseded: the VM is stopped and rung 3 is a
 > Cloud Run service, which needs no DNS record, no tunnel and no external IP. The Parts stay
 > as the rebuild recipe if the VM path is ever needed again.
 
@@ -50,7 +51,7 @@ section) and needs routing `tukuk.org/*` through the brain — deliberately defe
 ## ⚠️ Two blockers — a human must clear these first
 
 1. **~~Open GCP billing.~~ CLEARED 29 Oct 2026** — `billingEnabled` is now `True` and the
-   free VM is running (see the status section above). Original note kept for context: a
+   free VM is parked (see the status section above). Original note kept for context: a
    closed billing account (`OPEN: False`) blocks **every** resource, even always-free at $0.
 2. **Cloudflare dashboard access.** The `cfut_…` token has **Workers + R2 scope only**
    — it cannot create DNS records, tunnels, public hostnames, or Worker **routes**. So
@@ -92,11 +93,11 @@ this before following any later Part.
   `MIRROR_BASE=https://worker.tukuk.org/edge-backup` (92 objects, ~21.9 MB, 0 failed,
   atomic symlink swap, newest 3 releases kept) whenever the VM was up.
 
-### Rung 2 moved to Cloud Run (29 Oct 2026)
+### Rung 3 moved to Cloud Run (29 Oct 2026)
 
 A running VM's ephemeral external IPv4 is billed at ~$0.005/h — about **$3.6/month**, the one
 recurring charge this design created, and not inside any always-free allowance. A VM without
-an external IP would need Cloud NAT (also billed) just to let cloudflared dial out. So rung 2
+an external IP would need Cloud NAT (also billed) just to let cloudflared dial out. So rung 3
 became a **Cloud Run** service instead, which is inside the always-free tier, scales to zero
 when idle, and — crucially — gets a `*.run.app` hostname that **resolves without any DNS
 record**, the exact thing we could not create.
@@ -136,6 +137,37 @@ The R2 snapshot itself covers 11 pages (`/`, `/about`, `/contact`, `/privacy`, `
 `/docs`, `/explore`, `/access`, `/nasa`, `/blog`, `/learn`), `search-index.json` and the
 `public/` assets — content routes outside that list (e.g. `/art`, `/traffic`) still 503 in a
 blackout, which is the accepted trade-off for a 22 MB snapshot.
+
+### The free rung moved in front of the metered one (29 Oct 2026)
+
+The ladder used to try Cloud Run *before* R2. Two things made that the wrong order:
+
+* Cloud Run's always-free allowance ends at **1 GB of outbound egress per month** — the only
+  billable path left anywhere in this design. R2 has no egress charge at all.
+* the mirror's own access log showed it being dialed for pages it could only ever 404
+  (`/history/02/07`, `/mountains/bald-mountain-uinta-range` → `404`, 153 B each). Every such
+  miss burned metered egress to return nothing.
+
+So the snapshot became rung 2 and Cloud Run rung 3: same cold-copy source, zero egress, ~6 h
+fresh, no cold start. Two safety changes shipped with it — `MIRROR_URL` set to `off` now
+removes rung 3 entirely without a redeploy, and the `DEFAULT_MIRROR = 'https://www.tukuk.org'`
+fallback is gone (that host is a zone redirect to the apex, so during an outage it handed
+visitors a `301` straight back into the dead origin).
+
+**Reorder drill, 29 Oct (+08)** — `.artifacts/drill3-reorder.sh`, same ~12 s blackout, rung
+detected from the response headers:
+
+| request | during the blackout | rung |
+|---|---|---|
+| `/` | 200, 127,372 B | `R2-free` |
+| `/about` | 200, 6,193 B | `R2-free` |
+| `/learn` | 200, 38,310 B | `R2-free` |
+| `/theme.css` | 200, 6,178 B | `R2-free` |
+| `/health` | **503** | by design |
+
+The Cloud Run service logged **no** request during the drill — the metered host was never
+dialed — and the apex was 200 again immediately after restore. 16 worker tests pass
+(`npm test` in `cloudflare-worker/tukuk-fallback`).
 
 ---
 

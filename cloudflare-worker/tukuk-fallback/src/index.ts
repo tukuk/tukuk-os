@@ -1,12 +1,15 @@
 // Tukuk-OS failover brain. Routed on worker.tukuk.org: it proxies every request to the
 // live origin (the home box, through its Cloudflare Tunnel). When the origin answers 5xx,
 // or the fetch itself throws — a blackout, a dropped connector, a deploy that stopped the
-// app — it degrades along a ladder instead of dying: first the independent GCP mirror
-// (www.tukuk.org, its own tunnel on a separate machine), then the cold R2 static snapshot,
-// and only if both miss does it 503. ORIGIN/MIRROR_URL come from env so one build is safe
-// before and after the route move.
+// app — it degrades along a ladder instead of dying: first the cold R2 static snapshot,
+// then the independent GCP mirror, and only if both miss does it 503. ORIGIN comes from
+// env so one build is safe before and after the route move.
 const DEFAULT_ORIGIN = 'https://tukuk.org';
-const DEFAULT_MIRROR = 'https://www.tukuk.org';
+
+// There is deliberately NO default mirror. The old one (`https://www.tukuk.org`) is now a
+// zone-level redirect to the apex, so during an outage it hands the visitor a 301 straight
+// back into the dead origin — worse than serving nothing. Rung 3 exists only when
+// MIRROR_URL is set, and `off` disables it without a redeploy of the code.
 
 // Paths that must keep talking to the origin on whichever host they arrived at. A
 // redirect cannot answer an API call, and a POST that received a 301 would arrive at
@@ -24,9 +27,35 @@ function snapshotKeys(path: string): string[] {
 	return [`${clean}.html`, `${clean}/index.html`, clean];
 }
 
+// Read the page out of the cold snapshot. Returns undefined on a miss so the caller can
+// keep climbing the ladder; a thrown R2 error is caught here too, because the next rung
+// (the GCP mirror) exists precisely for the case where Cloudflare storage is the part that
+// is broken.
+async function serveSnapshot(request: Request, env: any, path: string): Promise<Response | undefined> {
+	try {
+		for (const key of snapshotKeys(path)) {
+			const object = await env.FALLBACK_BUCKET.get(key);
+			if (object) {
+				track(env, 'fallback_served', request.method, path, 200);
+				return new Response(object.body, {
+					headers: {
+						'Content-Type': object.httpMetadata?.contentType || 'text/html',
+						'Cache-Control': 'public, max-age=300',
+					},
+				});
+			}
+		}
+	} catch (e) {
+		console.error('snapshot read failed', path, (e as Error)?.message);
+	}
+	return undefined;
+}
+
 // 'www_redirect' is gone: the brain lives on worker.tukuk.org now, so visitors who reach
 // it are here precisely because the primary is suspect — bouncing them to the apex would
-// defeat the whole point. 'mirror_served' marks a hit off the independent GCP origin.
+// defeat the whole point. The two fallback outcomes are tracked apart — 'fallback_served'
+// is the free R2 copy, 'mirror_served' the metered GCP one — so the split shows up in
+// Analytics Engine and you can see whether rung 3 is ever being reached.
 type Outcome =
 	| 'origin_ok'
 	| 'origin_error'
@@ -125,7 +154,8 @@ export default {
 			return backupGateway(request, env, url);
 		}
 		const ORIGIN = env.ORIGIN || DEFAULT_ORIGIN;
-		const MIRROR = env.MIRROR_URL || DEFAULT_MIRROR;
+		const MIRROR = env.MIRROR_URL || '';
+		const mirrorEnabled = MIRROR !== '' && MIRROR !== 'off';
 		const isReadMethod = request.method === 'GET' || request.method === 'HEAD';
 
 		// 1. Primary — proxy to the live origin (home box via its tunnel). new Request(url,
@@ -153,41 +183,32 @@ export default {
 			return new Response('API unavailable — server offline', { status: 503 });
 		}
 
-		// 3. Ladder step one — the independent GCP mirror (own tunnel, own machine), so a
-		//    home-box blackout cannot take the backup down with it. A plain GET/HEAD, no
-		//    forwarded cookies: it serves static pages only. Only accept a genuine hit
-		//    (<400); a mirror 404/5xx means "this page isn't mirrored", so we do NOT forward
-		//    that error — we drop to the cold R2 copy instead of surfacing the mirror's miss.
-		try {
-			const mirrorResponse = await fetch(MIRROR + path + url.search, {
-				method: request.method,
-				redirect: 'manual',
-			});
-			if (mirrorResponse.status < 400) {
-				track(env, 'mirror_served', request.method, path, mirrorResponse.status);
-				return mirrorResponse;
-			}
-		} catch (e) {
-			// mirror unreachable too — fall through to R2
-		}
+		// 3. Ladder step one — the cold R2 static snapshot the box writes every 6h. It goes
+		//    FIRST on purpose: it costs nothing to serve (R2 has no egress charge, Cloud Run's
+		//    free tier stops at 1 GB/month), it is fresher than the weekly mirror rebuild, and
+		//    it has no cold start. Look the page up by its snapshot key, not its URL path, or
+		//    every deep link 503s.
+		const cold = await serveSnapshot(request, env, path);
+		if (cold) return cold;
 
-		// 4. Last resort — the cold R2 static snapshot the box writes every 6h. Look the
-		//    page up by its snapshot key, not its URL path, or every deep link 503s.
-		try {
-			for (const key of snapshotKeys(path)) {
-				const object = await env.FALLBACK_BUCKET.get(key);
-				if (object) {
-					track(env, 'fallback_served', request.method, path, 200);
-					return new Response(object.body, {
-						headers: {
-							'Content-Type': object.httpMetadata?.contentType || 'text/html',
-							'Cache-Control': 'public, max-age=300',
-						},
-					});
+		// 4. Last independent copy — the GCP mirror (own machine, own tunnel). Only reached
+		//    when the snapshot has no copy of this page or R2 itself failed. A plain GET/HEAD,
+		//    no forwarded cookies: it serves static pages only. Only a genuine hit (<400) is
+		//    accepted; a mirror 404/5xx means "this page isn't mirrored", so we do NOT forward
+		//    that error — we 503 honestly instead of dressing up a miss.
+		if (mirrorEnabled) {
+			try {
+				const mirrorResponse = await fetch(MIRROR + path + url.search, {
+					method: request.method,
+					redirect: 'manual',
+				});
+				if (mirrorResponse.status < 400) {
+					track(env, 'mirror_served', request.method, path, mirrorResponse.status);
+					return mirrorResponse;
 				}
+			} catch (e) {
+				// mirror unreachable too — fall through to 503
 			}
-		} catch (e) {
-			// fall through to 503
 		}
 
 		track(env, 'static_miss', request.method, path, 503);

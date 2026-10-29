@@ -18,6 +18,9 @@ REPO=${REPO:-/opt/tukuk-os}
 # MIRROR_URL from wrangler.jsonc — instead of hardcoding one spelling.
 WRANGLER=$REPO/cloudflare-worker/tukuk-fallback/wrangler.jsonc
 MIRROR_URL=$(grep -o 'https://[^"]*\.run\.app' "$WRANGLER" 2>/dev/null | head -1)
+# `off` is the cut-out: the ladder then stops at the free R2 snapshot and never dials the
+# metered mirror. An unset value means the same thing since DEFAULT_MIRROR was removed.
+MIRROR_STATE=$(grep -o '"MIRROR_URL"[[:space:]]*:[[:space:]]*"[^"]*"' "$WRANGLER" 2>/dev/null | tail -1)
 problems=0
 bail() { echo "  !! $*"; problems=$((problems+1)); }
 
@@ -38,18 +41,51 @@ MIN=${MIN:-0}
 echo "  minScale: $MIN (0 = scales to zero; empty annotation means 0)"
 [ "$MIN" != "0" ] && bail "minScale=$MIN — the mirror stays warm and bills vCPU-seconds"
 
-# The invariant that matters: the URL the brain will fetch serves the mirror, marked gcp-run.
-if [ -z "$MIRROR_URL" ]; then
+# The invariant that matters: the snapshot is rung 2 (zero egress charge); the metered
+# mirror is only rung 3, reached when R2 lacks the page. Probe the mirror when it is on.
+if echo "$MIRROR_STATE" | grep -q '"off"'; then
+  echo "  rung 3 DISABLED (MIRROR_URL=off) — failover serves from R2 only. Intentional?"
+elif [ -z "$MIRROR_URL" ]; then
   bail "no *.run.app MIRROR_URL found in $WRANGLER"
 else
   for p in / /about /learn; do
     code=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "$MIRROR_URL$p")
     mark=$(curl -sI -m 20 "$MIRROR_URL$p" | grep -i '^x-mirror:' | tr -d '\r' | awk '{print $2}')
     printf '  %-8s %s x-mirror=%s\n' "$p" "$code" "${mark:-missing}"
-    [ "$code" != "200" ] && bail "$MIRROR_URL$p returned $code — rung 2 is down"
+    [ "$code" != "200" ] && bail "$MIRROR_URL$p returned $code — rung 3 is down (R2 still covers it)"
     [ "$mark" = "gcp-run" ] || bail "$MIRROR_URL$p is not served by the Cloud Run mirror"
   done
 fi
+
+# Cloud Run's free tier stops at 1 GB of egress per month. Measure what the mirror really
+# served this calendar month from its nginx access log in Cloud Logging (50 GiB/project of
+# logs is free), rather than assuming it is near zero.
+echo
+echo "== metered mirror usage, this calendar month (ceiling 1 GB egress)"
+MONTH_START=$(date -u +%Y-%m-01T00:00:00Z)
+LOGFILTER='resource.type="cloud_run_revision" AND resource.labels.service_name="tukuk-mirror"'
+LOGFILTER="$LOGFILTER AND timestamp>=\"$MONTH_START\""
+timeout 90 gcloud logging read "$LOGFILTER" --limit=10000 --format='value(textPayload)' 2>/dev/null \
+  | python3 -c '
+import sys, re
+# nginx combined: IP - - [date] "GET /path HTTP/1.1" STATUS BYTES ...
+pat = re.compile(r"^(\S+) \S+ \S+ \[([^\]]+)\] \"(\S+) (\S+)[^\"]*\" (\d{3}) (\d+|-)")
+reqs = byts = 0
+by_status = {}
+for line in sys.stdin:
+    m = pat.match(line.rstrip("\n"))
+    if not m:
+        continue
+    reqs += 1
+    byts += int(m.group(6)) if m.group(6).isdigit() else 0
+    by_status[m.group(5)] = by_status.get(m.group(5), 0) + 1
+mb = byts / 1e6
+print("  since %s: %d requests, %.2f MB sent, by_status=%s" % (sys.argv[1][:7], reqs, mb, dict(sorted(by_status.items()))))
+if mb > 700:
+    print("  WARNING: over 70% of the free egress ceiling this month")
+else:
+    print("  comfortable: %.2f%% of the 1 GB allowance used" % (mb / 10))
+' "$MONTH_START" 2>&1
 
 echo
 echo "== Compute Engine in $PROJ"

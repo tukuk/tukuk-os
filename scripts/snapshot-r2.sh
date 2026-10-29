@@ -4,11 +4,15 @@
 # Run by a systemd timer (every 6 hours) or manually:
 #   CLOUDFLARE_API_TOKEN=... bash scripts/snapshot-r2.sh
 #
-# This is a COLD disaster copy of the rendered site only — nothing serves it
-# automatically any more: the tukuk.org/www Worker was removed (edge is WORKERLESS,
-# see README §9). Recovery from here is a manual re-provision (git clone + setup-all)
-# plus scripts/restore-data.sh for the dynamic data/ — the snapshot is a last-resort
-# static mirror if the origin box is gone entirely, NOT a live fallback path.
+# This is the rendered-site mirror in R2 (bucket: tukuk-fallback). It is now a LIVE
+# fallback source again, and it is the FIRST one the brain reaches: during an origin
+# outage the tukuk-fallback Worker on worker.tukuk.org serves this snapshot before it
+# dials the Cloud Run mirror (which has a metered 1 GB/month egress ceiling; R2 has no
+# egress charge). Recovery of the whole box is still a manual re-provision (git clone +
+# setup-all) + scripts/restore-data.sh — this mirror is about *serving* through an
+# outage, not about rebuilding a wiped disk.
+# (Was: "edge is WORKERLESS, nothing serves it live" — re-lit by the GCP failover work;
+#  see deploy/GCP-FAILOVER.md.)
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."

@@ -18,7 +18,7 @@ gcloud billing budgets list --billing-account=017AAF-23F886-A97138 \
 
 | Free allowance | What we use it for | Region | Guard rails |
 |---|---|---|---|
-| Cloud Run: 2M requests, 180k vCPU-s, 360k GiB-s **and 1 GB egress** per month | **Rung 2 of the failover ladder** — nginx serving the site snapshot at `https://tukuk-mirror-176041010195.us-central1.run.app` (marker `x-mirror: gcp-run`) | us-central1 | `--min-instances=0` (idles to zero), `--max-instances=1`, 256 MiB / 1 vCPU |
+| Cloud Run: 2M requests, 180k vCPU-s, 360k GiB-s **and 1 GB egress** per month | **Rung 3 — the last resort** of the failover ladder: nginx serving the site snapshot at `https://tukuk-mirror-176041010195.us-central1.run.app` (marker `x-mirror: gcp-run`). Reached only when the R2 snapshot has no copy of the page or R2 itself is failing, because it is the one rung with a metered ceiling. Measured usage is printed by `verify-free-tier.sh` (Oct 2026: **88 requests / 1.4 MB of 1 GB**) | us-central1 | `--min-instances=0` (idles to zero), `--max-instances=1`, 256 MiB / 1 vCPU, and `MIRROR_URL=off` to demote the ladder to R2 alone |
 | Cloud Build: 2,500 build-minutes per month (e2-standard-2) | Rebuilds that Cloud Run image once a week (~1 min per build) | us-central1 | one build per week via `tukuk-cloudrun-mirror.timer` |
 | Artifact Registry: 0.5 GB | Holds the one image (~70 MB) | us-central1 | weekly rebuild replaces, never accumulates |
 | Cloud Storage: 5 GB standard + 5 000 class-A ops + 100 GB egress from North America | **Third copy of the backup vault** — `gs://tukuk-os-offsite/r2/backups/` (encrypted identity tarballs, content snapshot, newest 12 data slices) | us-central1 | `gcs-offsite-sync.sh` refuses to mirror past 4 GB; objects deleted after 60 days |
@@ -79,13 +79,17 @@ the free allowance itself.
    the VM costs nothing and nothing is lost. It also leaves *zero* headroom: a second
    30 GB disk in the same billing account is billed from the first byte.
 1. **Tunnel #2's connector ran on that VM.** With the VM parked it cannot connect, so the
-   `www.tukuk.org → VM` route is dead. That is intended — the ladder's rung 2 is Cloud Run
-   now — but do not "fix" the tunnel before starting the VM again.
+   `www.tukuk.org → VM` route is dead. That is intended — the ladder's metered rung 3 is
+   Cloud Run now — but do not "fix" the tunnel before starting the VM again.
 1. **Egress is the other meter, and Cloud Run's free egress is only 1 GB/month** from North
-   America. At ~128 KB per cached page that is roughly **7,800 mirror views a month** — fine
-   for a failover that almost never gets hit, but a *full day* of real traffic moved to the
-   mirror would cross it. Estimate before an outage: `requests × 0.125 MB`. Beyond 1 GB,
-   Cloud Run egress is ~$0.12/GB, so 50,000 mirror views ≈ 6 GB ≈ **$0.70**.
+   America. At ~128 KB per cached page that is roughly **7,800 mirror views a month** — so on
+   29 Oct the ladder was **reordered**: the free R2 snapshot (no egress charge at all, 6 h
+   fresh, no cold start) became rung 2, and the metered mirror became rung 3. A blackout drill
+   confirmed the new order — `/`, `/about`, `/learn`, `/theme.css` all answered from R2 and
+   the Cloud Run host was never dialed. Only a page the snapshot does not contain still
+   reaches the mirror, and that returns a 153-byte 404.
+1. **Cloud Run egress is measured, not assumed.** `verify-free-tier.sh` sums the mirror's own
+   nginx access log (Cloud Logging, free) for the current calendar month and warns past 700 MB.
 1. **VM egress is 1 GB/month** from North America; Cloud Storage has its own 100 GB/month
    (NA origins). Serving a 22 MB site copy from Cloud Run is comfortably inside 360k GiB-s of
    memory time — the request count and the egress bytes are the ones to watch.
