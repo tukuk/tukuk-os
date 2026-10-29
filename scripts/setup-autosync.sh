@@ -18,6 +18,26 @@ BRANCH="main"
 [[ "${EUID}" -eq 0 ]] || { echo "[autosync] run as root: sudo bash $0"; exit 1; }
 cd "$REPO" || { echo "[autosync] $REPO missing"; exit 1; }
 
+# 0) The deploy key itself --------------------------------------------------------
+# A freshly installed box has NO identity for github.com. Nothing here used to create
+# one: the fetch in step 4 then fails, `tukuk-update.timer` quietly stops deploying,
+# and every future fix has to be carried to the machine by hand — which is exactly how
+# 29 Oct 2026 ended up needing a visit. Generate only when absent, so a rerun never
+# rotates a key that GitHub already trusts.
+CREATED_KEY=0
+# /root/.ssh does not exist on a freshly installed box, and ssh-keygen will not make it.
+mkdir -p /root/.ssh; chmod 700 /root/.ssh
+if [[ ! -f /root/.ssh/tukuk_deploy ]]; then
+  if ssh-keygen -q -t ed25519 -N '' -C "tukuk-os-box-$(hostname)" -f /root/.ssh/tukuk_deploy; then
+    CREATED_KEY=1
+    echo "[autosync] created /root/.ssh/tukuk_deploy"
+  else
+    echo "[autosync] FAILED to create the deploy key — auto-update cannot work without it."
+    exit 1
+  fi
+fi
+chmod 600 /root/.ssh/tukuk_deploy 2>/dev/null || true
+
 # 1) SSH config for the deploy key (root) ------------------------------------------
 mkdir -p /root/.ssh; chmod 700 /root/.ssh
 if ! grep -q "^Host github.com" /root/.ssh/config 2>/dev/null; then
@@ -38,6 +58,25 @@ sort -u /root/.ssh/known_hosts -o /root/.ssh/known_hosts 2>/dev/null || true
 # ~/.gitconfig — safe.directory only takes effect if it is in the system config.
 git config --system --add safe.directory "$REPO" 2>/dev/null || true
 git config --global --add safe.directory "$REPO" 2>/dev/null || true
+
+# 2b) Hand the public half to GitHub ---------------------------------------------
+# This is the one step that needs an account, so it is impossible to miss: printed on
+# the box, with the exact place to paste it. A token with repo-admin scope registers it
+# on its own. Read-only ALWAYS — a writable deploy key is a path to production that no
+# longer needs anyone's password.
+if [[ "$CREATED_KEY" == "1" ]]; then
+  TOK="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  if [[ -n "$TOK" ]] && curl -sf -X POST -H "Authorization: Bearer $TOK" -H "Accept: application/vnd.github+json" \
+       -H "Content-Type: application/json" \
+       -d "{\"title\":\"tukuk-os-box-$(hostname)\",\"key\":\"$(cat /root/.ssh/tukuk_deploy.pub)\",\"read_only\":true}" \
+       https://api.github.com/repos/fevian448/tukuk-os-v2/keys >/dev/null; then
+    echo "[autosync] deploy key registered on fevian448/tukuk-os-v2 (read-only)."
+  else
+    echo "[autosync] ⚠ REGISTER THIS KEY before auto-update can run — GitHub → fevian448/tukuk-os-v2"
+    echo "            → Settings → Deploy keys → Add deploy key, and DO NOT tick 'Allow write access':"
+    sed 's/^/            /' /root/.ssh/tukuk_deploy.pub
+  fi
+fi
 
 # 3) Test SSH auth ------------------------------------------------------------
 echo "=== ssh -T git@github.com (expect: successfully authenticated) ==="

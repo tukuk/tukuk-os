@@ -74,6 +74,14 @@ PATHS=(
   home/tukuk/.ssh
   home/tukuk/gt
   opt/tukuk-os/.env
+  # The signing keystore. .gitignore holds `apk/*.jks` and `apk/keystore.env`, and no
+  # other track archives them — backup-data.sh only tars data/ — so this is the ONLY
+  # off-box copy of the key that signs every published Tukuk app. Lose it and existing
+  # installs can never receive an update: the store rejects a signature mismatch, and
+  # users would have to uninstall and reinstall. Absent on a box that never built an
+  # APK, which the WARN loop below reports and skips.
+  opt/tukuk-os/apk/tukuk-chat-release.jks
+  opt/tukuk-os/apk/keystore.env
 )
 PRESENT=()
 for p in "${PATHS[@]}"; do

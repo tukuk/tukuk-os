@@ -651,6 +651,35 @@ for t in tukuk-data-backup tukuk-identity-backup tukuk-content-backup meili-back
          indexnow-submit load-governor weight-report builder-idle-stop cloudflared-update; do
   systemctl enable --now "$t.timer" >/dev/null 2>&1 || true
 done
+# ── [8d-bis] the Builder's SOURCE is not this repo ────────────────────────────
+# tukuk-builder.service has WorkingDirectory=/opt/tukuk-builder and bolt.diy/ is
+# gitignored here, so a rebuild that only clones tukuk-os-v2 ends up with the unit
+# ENABLED and nothing under it: build.tukuk.org answers 502 and no log line says why.
+# fevian448/tukuk-builder is PUBLIC, so this needs no token. Install and build run ON
+# THE BOX, mirroring scripts/deploy-builder.sh, because a laptop-side build would not
+# match the server's node22. Both steps are gated on the source or node_modules being
+# absent, so a routine deploy pays nothing here.
+BUILDER_DIR="${TUKUK_BUILDER_DIR:-/opt/tukuk-builder}"
+BUILDER_LOG=/var/log/tukuk-builder-install.log
+if [[ ! -f "$BUILDER_DIR/package.json" ]]; then
+  info "[+] App Builder source missing — cloning fevian448/tukuk-builder into $BUILDER_DIR..."
+  if git clone --depth 1 https://github.com/fevian448/tukuk-builder.git "$BUILDER_DIR" >>"$BUILDER_LOG" 2>&1; then
+    ok "Builder source cloned."
+  else
+    warn "Builder clone failed (no network, or the repo moved). build.tukuk.org will answer 502 until you run: sudo git clone https://github.com/fevian448/tukuk-builder $BUILDER_DIR"
+  fi
+fi
+if [[ -f "$BUILDER_DIR/package.json" && ! -d "$BUILDER_DIR/node_modules" ]]; then
+  info "[+] installing Builder dependencies + building — 1-2 GB and several minutes, first time only..."
+  corepack disable >/dev/null 2>&1 || true
+  command -v pnpm >/dev/null || npm i -g pnpm@9.15.9 --silent
+  if ( cd "$BUILDER_DIR" && pnpm install --frozen-lockfile --prefer-offline && pnpm build ) >>"$BUILDER_LOG" 2>&1; then
+    ok "App Builder installed at $BUILDER_DIR (log: $BUILDER_LOG)."
+  else
+    warn "Builder install/build failed — tail $BUILDER_LOG. The unit will stay up but answer 502."
+  fi
+fi
+
 for s in cloudflared-build tukuk-builder; do
   systemctl enable --now "$s" >/dev/null 2>&1 || true
 done
