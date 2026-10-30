@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tic-Tac-Toe — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="Play X against a minimax opponent that cannot be beaten — or a careless one if you switch to easy. Score, win line and rematch.">
+<style>
+  body{margin:0;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+  .wrap{width:min(360px,92vw);padding:14px;text-align:center}
+  h1{margin:0 0 6px;font-size:1.1rem}
+  .hud{display:flex;justify-content:center;gap:10px;font-size:.8rem;color:var(--muted,#9aa3b2);margin-bottom:10px}
+  .hud b{color:var(--text,#e6e9ef)}
+  #board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .t{aspect-ratio:1/1;display:grid;place-items:center;font-size:2.4rem;font-weight:800;background:var(--panel,#171a21);border:1px solid var(--line,#262b36);border-radius:12px;cursor:pointer;color:var(--accent,#4c8dff)}
+  .t.o{color:#fb7185}
+  .t.w{border-color:var(--mark,#ffd54a);background:#1b2233}
+  .t[disabled]{cursor:default;opacity:.9}
+  .msg{font-size:.84rem;color:var(--muted,#9aa3b2);margin:12px 0 0;min-height:1.3em}
+  .row{display:flex;gap:8px;margin-top:10px}
+  button{flex:1;padding:10px;border:1px solid var(--line,#262b36);border-radius:10px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);font:inherit;font-weight:700;cursor:pointer}
+  button.on{background:var(--accent,#4c8dff);border-color:var(--accent,#4c8dff);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⭕ Tic-Tac-Toe</h1>
+  <div class="hud"><span>You <b id="w">0</b></span><span>Draws <b id="d">0</b></span><span>CPU <b id="l">0</b></span></div>
+  <div id="board"></div>
+  <div class="row">
+    <button id="easy" type="button">Easy</button>
+    <button id="hard" type="button" class="on">Unbeatable</button>
+    <button id="new" type="button">Rematch</button>
+  </div>
+  <p class="msg" id="msg">You are X. Take a corner or the centre — the CPU will not forgive a mistake.</p>
+</div>
+<script>
+(function () {
+  var b = Array(9).fill(''), busy = false, hard = true;
+  var tally = { w: 0, d: 0, l: 0 };
+  var LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  var el = document.getElementById('board'), msg = document.getElementById('msg');
+
+  function winner(g) {
+    for (var i = 0; i < LINES.length; i++) {
+      var L = LINES[i], a = g[L[0]];
+      if (a && a === g[L[1]] && a === g[L[2]]) return { who: a, line: L };
+    }
+    if (g.every(function (v) { return v; })) return { who: 'draw', line: null };
+    return null;
+  }
+  // Minimax with depth so it prefers a faster win / slower loss. 9 cells → instant.
+  function best(g, turn, me, depth) {
+    var r = winner(g);
+    if (r) return { value: r.who === me ? 10 - depth : depth - 10, move: -1 };
+    var bestMove = -1, bestVal = turn === me ? -Infinity : Infinity;
+    for (var i = 0; i < 9; i++) {
+      if (g[i]) continue;
+      g[i] = turn;
+      var v = best(g, turn === 'O' ? 'X' : 'O', me, depth + 1).value;
+      g[i] = '';
+      if (turn === me ? v > bestVal : v < bestVal) { bestVal = v; bestMove = i; }
+    }
+    return { value: bestVal, move: bestMove };
+  }
+  function cpuMove() {
+    var open = b.map(function (v, i) { return v ? -1 : i; }).filter(function (i) { return i >= 0; });
+    if (!hard) {
+      // easy: block only the obvious win, otherwise random
+      for (var i = 0; i < LINES.length; i++) {
+        var L = LINES[i].map(function (k) { return b[k]; });
+        if (L.filter(function (v) { return v === 'X'; }).length === 2 && L.indexOf('') >= 0) {
+          return LINES[i][L.indexOf('')];
+        }
+      }
+      return open[Math.floor(Math.random() * open.length)];
+    }
+    return best(b.slice(), 'O', 'O', 0).move;
+  }
+  function finish(res) {
+    if (!res) return;
+    busy = true;
+    if (res.who === 'X') { tally.w++; msg.textContent = hard ? 'You won a game on Unbeatable — that is a genuine draw at best. Rematch?' : 'You won the easy round. Try Unbeatable.'; }
+    else if (res.who === 'O') { tally.l++; msg.textContent = 'CPU won. Try a corner opening next time.'; }
+    else { tally.d++; msg.textContent = 'Draw. Perfect play on both sides ends level.'; }
+    document.getElementById('w').textContent = tally.w;
+    document.getElementById('d').textContent = tally.d;
+    document.getElementById('l').textContent = tally.l;
+    if (res.line) res.line.forEach(function (k) { cells[k].classList.add('w'); });
+  }
+  var cells = [];
+  function render() {
+    el.innerHTML = ''; cells = [];
+    b.forEach(function (v, i) {
+      var d = document.createElement('div');
+      d.className = 't' + (v === 'O' ? ' o' : '');
+      d.textContent = v;
+      d.onclick = function () { play(i); };
+      el.appendChild(d); cells.push(d);
+    });
+  }
+  function play(i) {
+    if (busy || b[i]) return;
+    b[i] = 'X'; render();
+    var r = winner(b);
+    if (r) return finish(r);
+    busy = true;
+    setTimeout(function () {
+      var m = cpuMove();
+      if (m >= 0) b[m] = 'O';
+      busy = false;
+      render();
+      finish(winner(b));
+    }, 260);
+  }
+  function reset() {
+    b = Array(9).fill(''); busy = false; render();
+    msg.textContent = hard
+      ? 'You are X. Take a corner or the centre — the CPU will not forgive a mistake.'
+      : 'Easy mode: the CPU only blocks the obvious threat.';
+  }
+  function setHard(v) {
+    hard = v;
+    document.getElementById('hard').classList.toggle('on', v);
+    document.getElementById('easy').classList.toggle('on', !v);
+    reset();
+  }
+  document.getElementById('new').onclick = reset;
+  document.getElementById('easy').onclick = function () { setHard(false); };
+  document.getElementById('hard').onclick = function () { setHard(true); };
+  reset();
+})();
+</script>
+</body>
+</html>

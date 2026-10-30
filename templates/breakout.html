@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breakout — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="Break the brick wall, brick by brick. Three lives, level restart, mouse/touch/arrow control — one self-contained file.">
+<style>
+  body{margin:0;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+  .wrap{width:min(560px,96vw);padding:12px}
+  h1{margin:0 0 6px;font-size:1.1rem}
+  .hud{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted,#9aa3b2);margin-bottom:6px}
+  canvas{display:block;width:100%;border-radius:12px;background:#0c0f16;border:1px solid var(--line,#262b36);touch-action:none}
+  .msg{text-align:center;color:var(--muted,#9aa3b2);font-size:.82rem;margin:8px 0 0;min-height:1.3em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧱 Breakout</h1>
+  <div class="hud"><span>Score <b id="sc">0</b></span><span>Lives <b id="lv">3</b></span><span>Bricks <b id="br">0</b></span></div>
+  <canvas id="c" width="560" height="380"></canvas>
+  <p class="msg" id="msg">Move with the mouse or a finger, ← → also work. Click or Space launches the ball.</p>
+</div>
+<script>
+(function () {
+  var c = document.getElementById('c'), x = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var COLS = 10, ROWS = 5, BW = W / COLS, BH = 18, TOP = 42;
+  var pad = { w: 92, h: 12, x: W / 2 - 46, y: H - 30 };
+  var ball = { x: 0, y: 0, vx: 0, vy: 0, r: 7, stuck: true };
+  var bricks = [], score = 0, lives = 3, keys = {}, running = true;
+  var HUES = ['#4c8dff', '#34d399', '#fbbf24', '#fb7185', '#a78bfa'];
+
+  function buildWall() {
+    bricks = [];
+    for (var r = 0; r < ROWS; r++) for (var col = 0; col < COLS; col++) {
+      bricks.push({ x: col * BW, y: TOP + r * (BH + 6), alive: true, hue: HUES[r], pts: (ROWS - r) * 10 });
+    }
+    document.getElementById('br').textContent = bricks.length;
+  }
+  function resetBall() {
+    ball.stuck = true;
+    ball.x = pad.x + pad.w / 2; ball.y = pad.y - ball.r - 2;
+    ball.vx = 0; ball.vy = 0;
+  }
+  function launch() {
+    if (!ball.stuck || !running) return;
+    var speed = 5.2 + Math.min(3, score / 220);      // the wall gets quicker as you clear it
+    ball.stuck = false;
+    ball.vx = speed * (Math.random() < 0.5 ? -0.6 : 0.6);
+    ball.vy = -speed * 0.8;
+  }
+  function hud() {
+    document.getElementById('sc').textContent = score;
+    document.getElementById('lv').textContent = lives;
+  }
+  function say(t) { document.getElementById('msg').textContent = t; }
+
+  function step() {
+    if (keys.ArrowLeft || keys.a) pad.x -= 8;
+    if (keys.ArrowRight || keys.d) pad.x += 8;
+    pad.x = Math.max(0, Math.min(W - pad.w, pad.x));
+
+    if (ball.stuck) { ball.x = pad.x + pad.w / 2; ball.y = pad.y - ball.r - 2; }
+    else if (running) {
+      ball.x += ball.vx; ball.y += ball.vy;
+      if (ball.x < ball.r) { ball.x = ball.r; ball.vx = -ball.vx; }
+      if (ball.x > W - ball.r) { ball.x = W - ball.r; ball.vx = -ball.vx; }
+      if (ball.y < ball.r + 4) { ball.y = ball.r + 4; ball.vy = -ball.vy; }
+
+      // paddle: contact point decides the angle, so aiming is a skill
+      if (ball.vy > 0 && ball.y + ball.r > pad.y && ball.y < pad.y + pad.h + 6 &&
+          ball.x > pad.x - ball.r && ball.x < pad.x + pad.w + ball.r) {
+        var off = (ball.x - (pad.x + pad.w / 2)) / (pad.w / 2);
+        var sp = Math.min(9, Math.hypot(ball.vx, ball.vy) * 1.02);
+        ball.vx = off * sp; ball.vy = -Math.sqrt(Math.max(1, sp * sp - ball.vx * ball.vx));
+      }
+
+      for (var i = 0; i < bricks.length; i++) {
+        var b = bricks[i];
+        if (!b.alive) continue;
+        if (ball.x > b.x && ball.x < b.x + BW && ball.y - ball.r < TOP + (BH + 6) * ROWS && ball.y > b.y - ball.r && ball.y < b.y + BH + ball.r) {
+          b.alive = false; score += b.pts;
+          ball.vy = -ball.vy;                          // bounce out of the brick face
+          hud();
+          document.getElementById('br').textContent = bricks.filter(function (k) { return k.alive; }).length;
+          break;
+        }
+      }
+      if (bricks.every(function (b) { return !b.alive; })) {
+        running = false; score += 120; hud();
+        say('Wall cleared! +' + 120 + ' — click to rebuild it.');
+      }
+      if (ball.y > H + 20) {
+        lives--; hud();
+        if (lives <= 0) { running = false; say('Out of lives at score ' + score + '. Click to start over.'); }
+        else { resetBall(); say('Ball lost — ' + lives + ' left. Click or Space to launch.'); }
+      }
+    }
+    draw();
+    requestAnimationFrame(step);
+  }
+  function draw() {
+    x.fillStyle = '#0c0f16'; x.fillRect(0, 0, W, H);
+    for (var i = 0; i < bricks.length; i++) {
+      var b = bricks[i];
+      if (!b.alive) continue;
+      x.fillStyle = b.hue; x.globalAlpha = 0.9;
+      x.fillRect(b.x + 2, b.y + 2, BW - 4, BH);
+      x.globalAlpha = 1;
+    }
+    x.fillStyle = '#4c8dff'; x.fillRect(pad.x, pad.y, pad.w, pad.h);
+    x.fillStyle = '#e6e9ef'; x.beginPath(); x.arc(ball.x, ball.y, ball.r, 0, 7); x.fill();
+  }
+  function fullReset() {
+    score = 0; lives = 3; running = true; buildWall(); resetBall(); hud();
+    say('Move with the mouse or a finger. Click or Space launches the ball.');
+  }
+  function pointerX(clientX) {
+    var rect = c.getBoundingClientRect();
+    pad.x = ((clientX - rect.left) / rect.width) * W - pad.w / 2;
+    pad.x = Math.max(0, Math.min(W - pad.w, pad.x));
+  }
+  c.addEventListener('pointermove', function (e) { pointerX(e.clientX); });
+  c.addEventListener('pointerdown', function (e) {
+    pointerX(e.clientX);
+    if (!running) { if (lives <= 0 || !bricks.some(function (b) { return b.alive; })) fullReset(); }
+    launch();
+  });
+  document.addEventListener('keydown', function (e) {
+    keys[e.key] = 1;
+    if (e.key === ' ') { e.preventDefault(); if (!running) fullReset(); launch(); }
+  });
+  document.addEventListener('keyup', function (e) { keys[e.key] = 0; });
+
+  buildWall(); resetBall(); hud(); step();
+})();
+</script>
+</body>
+</html>

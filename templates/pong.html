@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pong — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="The original rally game: first to seven against a CPU that speeds up as you score. Mouse, touch or arrow keys.">
+<style>
+  body{margin:0;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+  .wrap{width:min(560px,96vw);padding:12px}
+  h1{margin:0 0 6px;font-size:1.1rem}
+  .hud{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted,#9aa3b2);margin-bottom:6px}
+  canvas{display:block;width:100%;border-radius:12px;background:#0c0f16;border:1px solid var(--line,#262b36);touch-action:none}
+  .msg{text-align:center;color:var(--muted,#9aa3b2);font-size:.82rem;margin:8px 0 0;min-height:1.3em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏓 Pong — first to 7</h1>
+  <div class="hud"><span>YOU <b id="me">0</b></span><span>CPU <b id="ai">0</b></span></div>
+  <canvas id="c" width="560" height="360"></canvas>
+  <p class="msg" id="msg">Move with the mouse, a finger or ↑ ↓. Click or press Space to serve.</p>
+</div>
+<script>
+(function () {
+  var c = document.getElementById('c'), x = c.getContext('2d');
+  var W = c.width, H = c.height, PH = 74, PW = 10, WIN = 7;
+  var me = { y: H / 2 - PH / 2, s: 0 }, ai = { y: H / 2 - PH / 2, s: 0 };
+  var ball = { x: W / 2, y: H / 2, vx: 0, vy: 0, r: 7 };
+  var keys = {}, live = false, up = 0;
+
+  function serve(towardMe) {
+    ball.x = W / 2; ball.y = H / 2;
+    var speed = 4.6 + 0.28 * (me.s + ai.s);            // rallies get quicker as points stack up
+    ball.vx = towardMe ? -speed : speed;
+    ball.vy = (Math.random() * 2 - 1) * speed * 0.55;
+    live = true;
+    document.getElementById('msg').textContent = 'Rally!';
+  }
+  function pointTo(who) {
+    who.s++;
+    document.getElementById('me').textContent = me.s;
+    document.getElementById('ai').textContent = ai.s;
+    live = false; up = 0;
+    if (who.s >= WIN) {
+      document.getElementById('msg').textContent = (who === me ? 'You win ' : 'CPU wins ')
+        + me.s + '–' + ai.s + ' — click to play again.';
+      if (who === me) { me.s = 0; ai.s = 0; } else { me.s = 0; ai.s = 0; }
+      document.getElementById('me').textContent = 0;
+      document.getElementById('ai').textContent = 0;
+      return;
+    }
+    document.getElementById('msg').textContent = 'Point. Click or Space to serve.';
+  }
+  function clampPaddle(p) { p.y = Math.max(0, Math.min(H - PH, p.y)); }
+
+  function tick() {
+    // player follows pointer / keys
+    if (keys.ArrowUp || keys.w) me.y -= 7;
+    if (keys.ArrowDown || keys.s) me.y += 7;
+    clampPaddle(me);
+
+    // CPU tracks the ball but with a reaction cap, so it stays beatable
+    var target = ball.y - PH / 2;
+    var cap = 3.4 + 0.22 * me.s;
+    ai.y += Math.max(-cap, Math.min(cap, (target - ai.y) * 0.09));
+    clampPaddle(ai);
+
+    if (live) {
+      ball.x += ball.vx; ball.y += ball.vy;
+      if (ball.y < ball.r) { ball.y = ball.r; ball.vy = -ball.vy; }
+      if (ball.y > H - ball.r) { ball.y = H - ball.r; ball.vy = -ball.vy; }
+
+      function bounce(p, dir) {
+        if (ball.y > p.y - ball.r && ball.y < p.y + PH + ball.r) {
+          var off = (ball.y - (p.y + PH / 2)) / (PH / 2);   // hit near the edge = steep angle
+          var speed = Math.hypot(ball.vx, ball.vy) * 1.035;
+          ball.vx = dir * Math.min(11, speed);
+          ball.vy = off * 5.2;
+          up++;
+          return true;
+        }
+        return false;
+      }
+      if (ball.vx < 0 && ball.x - ball.r < PW + 14 && ball.x > 10) bounce(me, 1);
+      if (ball.vx > 0 && ball.x + ball.r > W - PW - 14 && ball.x < W - 10) bounce(ai, -1);
+
+      if (ball.x < -20) pointTo(ai);
+      else if (ball.x > W + 20) pointTo(me);
+    } else if (up) { up = 0; }
+
+    draw();
+    requestAnimationFrame(tick);
+  }
+  function draw() {
+    x.fillStyle = '#0c0f16'; x.fillRect(0, 0, W, H);
+    x.strokeStyle = 'rgba(154,163,178,.35)'; x.setLineDash([8, 12]); x.beginPath();
+    x.moveTo(W / 2, 0); x.lineTo(W / 2, H); x.stroke(); x.setLineDash([]);
+    x.fillStyle = '#4c8dff'; x.fillRect(14, me.y, PW, PH);
+    x.fillStyle = '#fb7185'; x.fillRect(W - 14 - PW, ai.y, PW, PH);
+    x.fillStyle = '#e6e9ef'; x.beginPath(); x.arc(ball.x, ball.y, ball.r, 0, 7); x.fill();
+    x.font = '12px system-ui'; x.fillStyle = 'rgba(154,163,178,.8)';
+    x.fillText('rally ' + up, 12, H - 12);
+  }
+  function movePointer(clientY) {
+    var rect = c.getBoundingClientRect();
+    me.y = ((clientY - rect.top) / rect.height) * H - PH / 2;
+    clampPaddle(me);
+  }
+  c.addEventListener('pointermove', function (e) { movePointer(e.clientY); });
+  c.addEventListener('pointerdown', function (e) { movePointer(e.clientY); if (!live) serve(Math.random() < 0.5); });
+  document.addEventListener('keydown', function (e) {
+    keys[e.key] = 1;
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+    if (e.key === ' ' && !live) serve(Math.random() < 0.5);
+  });
+  document.addEventListener('keyup', function (e) { keys[e.key] = 0; });
+  draw();
+  tick();
+})();
+</script>
+</body>
+</html>

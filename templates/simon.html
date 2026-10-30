@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simon — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="Watch the sequence, repeat it, one step longer each round. Four tones, real WebAudio, strict and forgiving modes.">
+<style>
+  body{margin:0;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+  .wrap{width:min(360px,92vw);padding:14px;text-align:center}
+  h1{margin:0 0 6px;font-size:1.1rem}
+  .hud{display:flex;justify-content:center;gap:12px;font-size:.8rem;color:var(--muted,#9aa3b2);margin-bottom:12px}
+  .hud b{color:var(--text,#e6e9ef)}
+  #pad{position:relative;width:280px;height:280px;margin:0 auto;border-radius:50%;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;background:#12151c}
+  .q{cursor:pointer;opacity:.55;transition:opacity .12s,transform .12s}
+  .q.lit{opacity:1;transform:scale(1.04)}
+  .q0{background:#34d399}.q1{background:#fb7185}.q2{background:#fbbf24}.q3{background:#4c8dff}
+  #core{position:absolute;inset:90px;border-radius:50%;background:var(--panel,#171a21);border:1px solid var(--line,#262b36);display:grid;place-items:center;font-weight:800}
+  .msg{font-size:.84rem;color:var(--muted,#9aa3b2);margin:14px 0 0;min-height:2.6em}
+  .row{display:flex;gap:8px;margin-top:8px}
+  button{flex:1;padding:10px;border:1px solid var(--line,#262b36);border-radius:10px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);font:inherit;font-weight:700;cursor:pointer}
+  button.on{background:var(--accent,#4c8dff);border-color:var(--accent,#4c8dff);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎵 Simon</h1>
+  <div class="hud"><span>Round <b id="rd">0</b></span><span>Best <b id="bs">0</b></span></div>
+  <div id="pad">
+    <div class="q q0" data-q="0"></div><div class="q q1" data-q="1"></div>
+    <div class="q q2" data-q="2"></div><div class="q q3" data-q="3"></div>
+    <div id="core">▶</div>
+  </div>
+  <div class="row">
+    <button id="start" type="button">Start</button>
+    <button id="soft" type="button">Repeat on miss</button>
+    <button id="strict" type="button" class="on">Strict</button>
+  </div>
+  <p class="msg" id="msg">Press Start, then copy the lit panels in order. Each round adds one.</p>
+</div>
+<script>
+(function () {
+  var seq = [], step = 0, round = 0, best = 0, playing = false, showing = false, strict = true;
+  var core = document.getElementById('core'), msg = document.getElementById('msg');
+  var qs = Array.prototype.slice.call(document.querySelectorAll('.q'));
+  try { best = Number(localStorage.getItem('tk-simon-best') || 0) || 0; } catch (e) { best = 0; }
+  document.getElementById('bs').textContent = best;
+
+  var ac = null;
+  function tone(f, ms) {
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.value = 0.0001;
+      o.connect(g); g.connect(ac.destination);
+      var t = ac.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+      o.start(t); o.stop(t + ms / 1000 + 0.02);
+    } catch (e) { /* audio is a bonus, never a blocker */ }
+  }
+  var FREQ = [329.6, 261.6, 196.0, 164.8];
+  function flash(i, ms) {
+    qs[i].classList.add('lit');
+    tone(FREQ[i], ms);
+    setTimeout(function () { qs[i].classList.remove('lit'); }, ms);
+  }
+  function wait(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+  async function show() {
+    showing = true; core.textContent = '👀';
+    for (var i = 0; i < seq.length; i++) { flash(seq[i], 380); await wait(480); }
+    showing = false; step = 0; core.textContent = '🎯';
+  }
+  function next() {
+    round++; document.getElementById('rd').textContent = round;
+    seq.push(Math.floor(Math.random() * 4));
+    show();
+  }
+  function miss() {
+    var at = round;
+    if (strict) {
+      playing = false; seq = []; round = 0;
+      core.textContent = '✕'; msg.textContent = 'Wrong panel at round ' + at + '. Game over — Start to retry.';
+      document.getElementById('rd').textContent = 0;
+    } else {
+      core.textContent = '↻'; step = 0;
+      msg.textContent = 'Missed — watch again.';
+      show();
+    }
+  }
+  qs.forEach(function (d, i) {
+    d.onclick = function () {
+      if (!playing || showing) return;
+      flash(i, 220);
+      if (seq[step] !== i) return miss();
+      step++;
+      if (step === seq.length) {
+        if (round > best) {
+          best = round; document.getElementById('bs').textContent = best;
+          try { localStorage.setItem('tk-simon-best', String(best)); } catch (e) {}
+        }
+        msg.textContent = 'Round ' + round + ' copied. One more coming…';
+        setTimeout(next, 620);
+      }
+    };
+  });
+  document.getElementById('start').onclick = function () {
+    seq = []; round = 0; playing = true;
+    msg.textContent = 'Watch the sequence…';
+    next();
+  };
+  function setMode(v) {
+    strict = v;
+    document.getElementById('strict').classList.toggle('on', v);
+    document.getElementById('soft').classList.toggle('on', !v);
+    msg.textContent = v ? 'Strict: one wrong panel ends the game.' : 'Forgiving: a miss just replays the sequence.';
+  }
+  document.getElementById('strict').onclick = function () { setMode(true); };
+  document.getElementById('soft').onclick = function () { setMode(false); };
+})();
+</script>
+</body>
+</html>

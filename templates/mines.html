@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minesweeper — Tukuk Games — Tukuk-OS</title>
+<meta name="description" content="9×9, ten mines, flood-reveal and flags. Right click or hold to flag, click to open — with a timer and a win check.">
+<style>
+  body{margin:0;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+  .wrap{width:min(430px,96vw);padding:12px}
+  h1{margin:0 0 8px;font-size:1.1rem}
+  .hud{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;color:var(--muted,#9aa3b2);margin-bottom:8px}
+  #grid{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;touch-action:none}
+  .s{aspect-ratio:1/1;display:grid;place-items:center;border-radius:6px;background:var(--panel,#171a21);border:1px solid var(--line,#262b36);font-weight:800;font-size:.9rem;cursor:pointer;user-select:none}
+  .s.o{background:#12151c;cursor:default}
+  .s.f{background:#241f12}
+  .s.boom{background:#3d1620}
+  .n1{color:#4c8dff}.n2{color:#34d399}.n3{color:#fbbf24}.n4{color:#a78bfa}.n5{color:#fb7185}
+  .n6{color:#e6e9ef}.n7{color:#f9a8d4}.n8{color:#f87171}
+  .msg{font-size:.82rem;color:var(--muted,#9aa3b2);margin:10px 0 0;min-height:1.3em}
+  #new{margin-top:8px;width:100%;padding:10px;border:0;border-radius:10px;background:var(--accent,#4c8dff);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💣 Minesweeper</h1>
+  <div class="hud"><span>Mines <b id="mine">10</b></span><span>Flags <b id="flag">0</b></span><span>Time <b id="time">0</b>s</span></div>
+  <div id="grid"></div>
+  <p class="msg" id="msg">Click to open. Right click or hold to flag. Open every safe square to win.</p>
+  <button id="new" type="button">New board</button>
+</div>
+<script>
+(function () {
+  var N = 9, MINES = 10;
+  var cells = [], started = false, dead = false, t0 = 0, timer = null, flags = 0, opened = 0;
+  var grid = document.getElementById('grid'), msg = document.getElementById('msg');
+
+  function idx(r, c) { return r * N + c; }
+  function neighbours(i) {
+    var r = Math.floor(i / N), c = i % N, out = [];
+    for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      var nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < N && nc >= 0 && nc < N) out.push(idx(nr, nc));
+    }
+    return out;
+  }
+  function build() {
+    clearInterval(timer); timer = null; started = false; dead = false; flags = 0; opened = 0; t0 = 0;
+    cells = [];
+    for (var i = 0; i < N * N; i++) cells.push({ mine: false, near: 0, open: false, flag: false });
+    var placed = 0;
+    while (placed < MINES) {
+      var k = Math.floor(Math.random() * cells.length);
+      if (!cells[k].mine) { cells[k].mine = true; placed++; }
+    }
+    cells.forEach(function (cl, i) {
+      cl.near = neighbours(i).filter(function (j) { return cells[j].mine; }).length;
+    });
+    render();
+    document.getElementById('mine').textContent = MINES;
+    document.getElementById('flag').textContent = 0;
+    document.getElementById('time').textContent = 0;
+    msg.textContent = 'Click to open. Right click or hold to flag. Open every safe square to win.';
+  }
+  function reveal(i) {
+    var cl = cells[i];
+    if (cl.open || cl.flag || dead) return;
+    if (!started) { started = true; t0 = Date.now(); timer = setInterval(clock, 250); }
+    cl.open = true; opened++;
+    if (cl.mine) {
+      dead = true; clearInterval(timer);
+      msg.textContent = 'Boom — that one had a mine. New board to try again.';
+      return;
+    }
+    // an empty square floods outward until each region touches a number
+    if (cl.near === 0) neighbours(i).forEach(reveal);
+    if (opened === N * N - MINES) {
+      dead = true; clearInterval(timer);
+      msg.textContent = 'Cleared in ' + seconds() + 's — every square was safe.';
+    }
+  }
+  function seconds() { return Math.round((Date.now() - t0) / 1000); }
+  function clock() { document.getElementById('time').textContent = started && !dead ? seconds() : document.getElementById('time').textContent; }
+  function render() {
+    grid.innerHTML = '';
+    cells.forEach(function (cl, i) {
+      var d = document.createElement('div');
+      d.className = 's' + (cl.open ? ' o' : '') + (cl.flag ? ' f' : '') + (cl.open && cl.mine ? ' boom' : '');
+      d.textContent = cl.flag ? '🚩' : (cl.open ? (cl.mine ? '💣' : (cl.near ? String(cl.near) : '')) : '');
+      if (cl.open && cl.near && !cl.mine) d.classList.add('n' + cl.near);
+      var hold = null, justFlagged = false;
+      // A long-press flag is followed by a click on touch devices, so the flag wins
+      // and the click that would have opened the square is swallowed once.
+      d.onclick = function () { if (justFlagged) { justFlagged = false; return; } reveal(i); render(); };
+      d.oncontextmenu = function (e) { e.preventDefault(); toggleFlag(i); };
+      d.addEventListener('touchstart', function () {
+        hold = setTimeout(function () { toggleFlag(i); justFlagged = true; hold = null; }, 420);
+      });
+      d.addEventListener('touchend', function () { if (hold) { clearTimeout(hold); hold = null; } });
+      d.addEventListener('touchmove', function () { if (hold) { clearTimeout(hold); hold = null; } });
+      grid.appendChild(d);
+    });
+    document.getElementById('flag').textContent = flags;
+  }
+  function toggleFlag(i) {
+    var cl = cells[i];
+    if (cl.open || dead) return;
+    cl.flag = !cl.flag; flags += cl.flag ? 1 : -1;
+    render();
+  }
+  document.getElementById('new').onclick = build;
+  build();
+})();
+</script>
+</body>
+</html>
