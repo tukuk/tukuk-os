@@ -53,29 +53,41 @@ cp "$TMP/data.tar.gz" "$KEEP.part" && mv -f "$KEEP.part" "$KEEP" \
 
 echo "[backup] sending $KEY ($SIZE) to R2 ..."
 if [[ -n "$WURL" && -n "$WSEC" ]]; then
-  # The upload endpoint is a *.workers.dev URL, and Cloudflare platform-throttles that
-  # shared edge with HTTP 429 (a GET on the root and a tiny POST both 429 under congestion,
-  # unrelated to our 18 MB body). `curl -f` exits non-zero on the 429, so a single failed
-  # attempt must not silently drop the slot: retry with backoff before giving up. The hourly
-  # timer leaves plenty of room for a 45 s worst case, and a transient throttle clears fast.
+  # The upload endpoint is a *.workers.dev URL, and 429 there means one of two unrelated
+  # things. A root GET answering `error code: 1027` is the ACCOUNT's daily free Worker
+  # request cap (Workers Free: 100,000 requests/day, reset at 00:00 UTC) — proved on 30 Oct
+  # 2026 by crossing the reset: 429/1027 at 23:59 UTC, this worker's own 403 at 00:02 UTC,
+  # and this exact upload landed 90 s later. Anything else is congestion at the shared
+  # edge. `curl -f` cannot tell them apart, exits non-zero for BOTH, and — the part that
+  # bit once already — it also throws the error page away, so the body has to be captured
+  # explicitly: read the status with -w, the page with -o, and drop -f entirely.
   ATTEMPTS=0
-  until curl -fsS --max-time 120 -X POST -H "Authorization: Bearer $WSEC" \
-       -H "x-content-type: application/gzip" --data-binary "@$TMP/data.tar.gz" \
-       "$WURL/?key=$KEY" >/dev/null; do
+  RBODY="$(mktemp)"
+  while :; do
+    RCODE="$(curl -sS --max-time 120 -o "$RBODY" -w '%{http_code}' -X POST \
+       -H "Authorization: Bearer $WSEC" -H "x-content-type: application/gzip" \
+       --data-binary "@$TMP/data.tar.gz" "$WURL/?key=$KEY" 2>/dev/null || echo 000)"
+    [[ "$RCODE" =~ ^2 ]] && break
+    if grep -q "error code: 1027" "$RBODY" 2>/dev/null; then
+      echo "[backup] worker refused: the account's daily free Worker request cap is spent (error 1027) — it resets 00:00 UTC, so no retry can help before then" >&2
+      WORKER_FAILED=1
+      break
+    fi
     ATTEMPTS=$((ATTEMPTS + 1))
     if [[ $ATTEMPTS -ge 4 ]]; then
-      # Workers.dev edge still throttled after the full backoff. Do NOT give up: fall
+      # Workers.dev edge still refused after the full backoff. Do NOT give up: fall
       # through to the wrangler path below. The moment the VPS CLOUDFLARE_API_TOKEN
       # gains Account·R2 Storage·Read & Edit (README §9), uploads self-heal with no
-      # further human action.
-      echo "[backup] worker path failed after $ATTEMPTS tries (edge 429) — trying wrangler path" >&2
+      # further human action — and that path spends zero Worker requests.
+      echo "[backup] worker path failed after $ATTEMPTS tries (HTTP $RCODE) — trying wrangler path" >&2
       WORKER_FAILED=1
       break
     fi
     case $ATTEMPTS in 1) SLEEP=8 ;; 2) SLEEP=20 ;; *) SLEEP=45 ;; esac
-    echo "[backup] worker POST failed (likely a 429 throttle) — retry $ATTEMPTS/3 in ${SLEEP}s" >&2
+    echo "[backup] worker POST failed (HTTP $RCODE) — retry $ATTEMPTS/3 in ${SLEEP}s" >&2
     sleep "$SLEEP"
   done
+  rm -f "$RBODY"
   if [[ -z "${WORKER_FAILED:-}" ]]; then
     echo "[backup] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"
     exit 0

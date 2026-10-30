@@ -135,21 +135,34 @@ cp "$TMP/identity.enc" "$KEEP.part" && mv -f "$KEEP.part" "$KEEP" \
   && chmod 600 "$KEEP" \
   || echo "[identity] WARN: could not retain $KEEP" >&2
 
-until curl -fsS --max-time 180 -X POST -H "Authorization: Bearer $WSEC" \
-     -H "x-content-type: application/octet-stream" --data-binary "@$TMP/identity.enc" \
-     "$WURL/?key=$KEY" >/dev/null; do
+RBODY="$(mktemp)"
+# Status via -w, page via -o, no -f: `curl -f` discards the error body, and the body is
+# the only thing that distinguishes the account's daily free Worker request cap
+# ('error code: 1027', reset at 00:00 UTC, immune to retries) from plain congestion
+# (clears in seconds, worth backing off for). See backup-data.sh for the same reasoning.
+while :; do
+  RCODE="$(curl -sS --max-time 180 -o "$RBODY" -w '%{http_code}' -X POST \
+     -H "Authorization: Bearer $WSEC" -H "x-content-type: application/octet-stream" \
+     --data-binary "@$TMP/identity.enc" "$WURL/?key=$KEY" 2>/dev/null || echo 000)"
+  [[ "$RCODE" =~ ^2 ]] && break
+  if grep -q "error code: 1027" "$RBODY" 2>/dev/null; then
+    ATTEMPTS=3   # next increment trips the give-up branch immediately, with the right advice
+  fi
   ATTEMPTS=$((ATTEMPTS + 1))
   if [[ $ATTEMPTS -ge 4 ]]; then
-    echo "[identity] ERROR: worker path failed after $ATTEMPTS tries." >&2
-    echo "[identity] A 429 from a *.workers.dev URL is usually NOT a throttle: run"
-    echo "           'curl -s $WURL | head -1' — 'error code: 1027' means this worker has no"
-    echo "           workers.dev route bound, which no retry can fix. Until that is sorted, the"
-    echo "           laptop track copies the same paths with the same scheme: backup-laptop.sh."
+    rm -f "$RBODY"
+    echo "[identity] ERROR: worker path failed after $ATTEMPTS tries (HTTP $RCODE)." >&2
+    echo "[identity] If 'curl -s $WURL | head -1' says 'error code: 1027', that is the"
+    echo "           account's daily free Worker request cap (100,000/day, resets 00:00 UTC) —"
+    echo "           a plan limit, NOT a missing route and NOT a throttle. Retrying is futile."
+    echo "           Until it resets, the laptop track copies the same paths with the same"
+    echo "           scheme: bash scripts/backup-laptop.sh"
     echo "           The archive also stays on this box at $KEEP — copy it off before you wipe."
     exit 1
   fi
   case $ATTEMPTS in 1) SLEEP=8 ;; 2) SLEEP=20 ;; *) SLEEP=45 ;; esac
-  echo "[identity] POST failed (throttled?) -- retry $ATTEMPTS/3 in ${SLEEP}s" >&2
+  echo "[identity] POST failed (HTTP $RCODE) -- retry $ATTEMPTS/3 in ${SLEEP}s" >&2
   sleep "$SLEEP"
 done
+rm -f "$RBODY"
 echo "[identity] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"

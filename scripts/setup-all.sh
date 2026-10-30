@@ -466,10 +466,13 @@ if [[ -n "$CF_API" ]]; then
   if [[ -n "$CF_ACC" ]]; then export CLOUDFLARE_ACCOUNT_ID="$CF_ACC"; fi
   command -v wrangler >/dev/null || npm install -g wrangler --silent || true
   # WORKERLESS: the tukuk.org/www Worker route is intentionally gone — a route that
-  # fetch()ed its own zone doubled the request count and tripped Cloudflare's zone
-  # rate-limit (site-wide 429 error 1027). Both hosts are plain tunnel CNAMEs now,
-  # and origin-down failover lives in nginx (@down / @down_json), so DO NOT deploy or
-  # route worker/ here. Global wrangler above stays only because snapshot-r2.sh can
+  # fetch()ed its own zone doubled the request count and spent the account's DAILY FREE
+  # WORKER REQUEST CAP, which is what "429 · error code: 1027" means (not a zone WAF rule —
+  # verified 30 Oct 2026 by crossing the 00:00 UTC reset, when the same URLs came back to
+  # life). Both hosts are plain tunnel CNAMEs now, and origin-down failover lives in
+  # nginx (@down / @down_json), so DO NOT deploy or route worker/ here: visitor traffic
+  # behind a Worker would re-spend that same cap and take the R2 backup uploads down with
+  # it. Global wrangler above stays only because snapshot-r2.sh can
   # fall back to a wrangler R2 upload when BACKUP_WORKER_URL is not set.
   # snapshot-r2.sh reads its whole configuration from the environment and this is the only
   # call that runs it without systemd's EnvironmentFile: invoked from npm's postinstall there

@@ -6,7 +6,7 @@
 #   1. process dead             → systemctl start
 #   2. process alive but hung   → systemctl restart
 #   3. Meilisearch dead         → cascade restart
-#   4. edge problem (Cloudflare 429/1027 zone block, tunnel/internet drop) → log LOUDLY.
+#   4. edge problem (Cloudflare 429 — plan cap or zone rule — tunnel/internet drop) → log LOUDLY.
 #      tukuk.org is WORKERLESS now (no R2 fallback to lean on), so a non-2xx at the
 #      public edge means real visitors are getting an error page even if Node is fine.
 #   5. daily update gone quiet  → nudge tukuk-update.service (see below)
@@ -58,8 +58,11 @@ fi
 
 # --- public edge: is tukuk.org actually answering VISITORS through Cloudflare? ----------
 # The local :3000 check further down cannot see an EDGE fault. This box once sat behind a
-# zone-wide Cloudflare 429 "error code: 1027" (a Worker route fetching its own zone tripped
-# the rate-limit) with Node perfectly healthy — a purely-local watchdog would never notice.
+# site-wide "429 · error code: 1027" with Node perfectly healthy: a Worker route was
+# fetching its own zone, and the doubled request count spent the ACCOUNT's daily free
+# Worker request cap (100,000/day, reset 00:00 UTC). 1027 is that cap page — it is NOT a
+# WAF rule, which is worth knowing because the two have different fixes and only one of
+# them clears by itself at midnight.
 # Since the site is workerless (no R2 fallback), anything other than a 2xx here means real
 # visitors are being served an error, so a sustained problem is logged loudly (first attempt
 # and then every 15th ≈ 30 min) and every state change (healthy→bad, bad→healthy) is logged
@@ -78,7 +81,7 @@ case "$CODE" in
     ;;
   429)
     N=${PREV#429:}; N=$(( ${N:-0} + 1 )); echo "429:$N" > "$PUB_STAMP"
-    [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⛔ CLOUDFLARE EDGE BLOCK (429/error 1027): $PUB — a zone rate-limit/WAF rule is blocking EVERY visitor; Node is NOT the cause (attempt $N). Check tukuk.org → Security → Events + WAF → Rate limiting rules."
+    [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⛔ CLOUDFLARE EDGE 429: $PUB — every visitor is being refused; Node is NOT the cause (attempt $N). If the body says 'error code: 1027' the account's daily free Worker request cap is spent (resets 00:00 UTC, and it also blocks the R2 backup uploads) — check for a Worker route fetching its own zone. Any other 429 is a zone rule: tukuk.org → Security → Events + WAF → Rate limiting rules."
     ;;
   000)
     N=${PREV#000:}; N=$(( ${N:-0} + 1 )); echo "000:$N" > "$PUB_STAMP"

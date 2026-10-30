@@ -41,7 +41,8 @@ if [[ -n "$WURL" && -n "$WSEC" ]]; then
     echo "[backup-content] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [worker]"
     exit 0
   fi
-  # Worker edge throttled (chronic workers.dev 429) — fall through to the wrangler
+  # Worker refused (congestion, or the account's daily free Worker request cap = error
+  # 1027, which resets at 00:00 UTC) — fall through to the wrangler
   # path instead of aborting; self-heals once the VPS token gains R2 scope (README §9).
   echo "[backup-content] worker post failed — trying wrangler path" >&2
 fi

@@ -3,14 +3,20 @@
 # backup-laptop.sh — nightly copy of the VPS runtime data/ onto THIS laptop.
 #
 # Why: the R2 offsite track (tukuk-data-backup.timer) uploads through a
-# *.workers.dev endpoint that replies 429 with "error code: 1027" — the worker's
-# workers.dev route is not bound, so every POST to tukuk-backup.…workers.dev is
-# refused before the Worker runs (re-checked on a rebuilt box, 30 Oct 2026: a bare
-# GET answers the same 1027, so this is not the platform throttle it looked like).
-# The zone's own security rules also block new upload hostnames (README §9 — edge
-# must stay workerless). Until that route is re-opened (needs a dashboard
-# permission change), the laptop is the second device that survives a server
-# disk death: one sudo tar pipe over SSH, 14 daily files kept.
+# *.workers.dev endpoint. When that endpoint answers 429 with "error code: 1027" it is
+# the ACCOUNT's daily free Worker request cap (Workers Free: 100,000 requests/day, reset
+# at 00:00 UTC) — NOT an unbound route and NOT congestion. Proven on 30 Oct 2026 by
+# crossing the reset: 429/1027 at 23:59 UTC, the worker's own "403 forbidden" at 00:02
+# UTC, and the box's own upload then landed within the minute. So the box track works on
+# most days — but a cap day kills all four tracks at once, because they share one
+# endpoint. This script is the copy that does not depend on Workers at all: it writes
+# with the laptop's wrangler OAuth token straight into R2, which costs zero Worker
+# requests. The laptop is also the device that survives a server disk death: one sudo
+# tar pipe over SSH, 14 daily files kept.
+#
+# Making the box independent of the cap needs ONE dashboard change: give the box's
+# CLOUDFLARE_API_TOKEN Account · R2 Storage · Read & Edit (README §9). The upload scripts
+# already fall through to `wrangler r2 object put` on that path.
 #
 # The 30 Oct 2026 rebuild ran off scripts/backup-identity.sh's Oct 27 archive, and
 # THIS script had failed silently since .101: the LAN address moved to .104 while
@@ -33,9 +39,9 @@
 # Phase 3 (added Oct 30): copy the box IDENTITY too, not just data/. The rebuild
 # proved which files are irreplaceable — the a3af5bb4 tunnel credential, .env with
 # every LLM key, the nginx/systemd units — and all of them came back from ONE
-# encrypted tukuk-identity archive. backup-data.sh never touched them and the box
-# cannot write its own identity off itself (that is the 1027 path), so the laptop
-# does it: same PATHS, same AES-256/PBKDF2 scheme, same key name, so
+# encrypted tukuk-identity archive. backup-data.sh never touched them, and on a cap day
+# the box cannot push its own identity off itself either (that is the 1027 path), so the
+# laptop does it: same PATHS, same AES-256/PBKDF2 scheme, same key name, so
 # scripts/restore-identity.sh <DD> reads either producer. The passphrase itself is
 # NEVER included — it lives here on the laptop, not in the bucket.
 # ==============================================================================

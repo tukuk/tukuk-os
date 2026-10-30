@@ -35,24 +35,32 @@ put() { # put <key> <fail> [content-type]
   # Once the two transports are both proven unusable, stop paying for the proof.
   [[ "$GIVEUP" == "1" ]] && return 0
   if [[ -n "$WURL" && -n "$WSEC" ]]; then
-    local args=(-fsS --max-time 60 -X POST -H "Authorization: Bearer $WSEC" --data-binary "@$file")
+    local args=(-sS --max-time 60 -X POST -H "Authorization: Bearer $WSEC" --data-binary "@$file")
     [[ -n "$ct" ]] && args+=(-H "x-content-type: $ct")
-    # The upload lands on a *.workers.dev endpoint that Cloudflare platform-throttles with
-    # 429 (see backup-data.sh for the full diagnosis). Retry with a short backoff so a
-    # transient throttle on one of these many small objects does not mark the whole
-    # snapshot failed; a light 5 s/10 s pause is enough for the shared edge to free up.
-    # The upload lands on a *.workers.dev endpoint. It answers 429 for TWO unrelated
+    # The upload lands on a *.workers.dev endpoint, which answers 429 for two unrelated
     # reasons, and telling them apart is the whole difference between "retry" and
-    # "give up": a platform throttle, and Cloudflare error 1027 = the worker has no
-    # workers.dev route bound (verified on a rebuilt box, 30 Oct 2026: a bare GET with
-    # no auth answers 429 + "error code: 1027" too, so it is refused before the Worker
-    # ever runs). Retry on a throttle; 1027 will never succeed, so say which it was.
-    local n=0 failed=0
-    until curl "${args[@]}" "$WURL/?key=$key" >/dev/null 2>&1; do
+    # "give up": congestion at the shared edge (this is one of ~60 small objects, so a
+    # light 5 s/10 s backoff keeps a transient from failing the whole snapshot), and
+    # Cloudflare error 1027 = the ACCOUNT has spent its daily free Worker request cap
+    # (Workers Free: 100,000 requests/day, resetting at 00:00 UTC). Verified on 30 Oct
+    # 2026 by crossing the reset: at 23:59 UTC every non-cached worker on the account
+    # answered 429/1027; three minutes later the same URLs returned the worker's own
+    # 403/404. `curl -f` cannot tell them apart and throws the error page away, so the
+    # status is read with -w and the page with -o: retry congestion, never burn backoff
+    # on 1027.
+    local n=0 failed=0 body code; body="$(mktemp)"
+    while :; do
+      code="$(curl "${args[@]}" -o "$body" -w '%{http_code}' "$WURL/?key=$key" 2>/dev/null || echo 000)"
+      [[ "$code" =~ ^2 ]] && break
       n=$((n + 1))
-      if [[ $n -ge 3 ]]; then echo "  ~ $key worker failed after $n tries — trying wrangler path"; failed=1; break; fi
-      echo "  ~ $key refused (429 — throttle, or error 1027 = no workers.dev route) — retry $n/2"; sleep $((n * 5))
+      if grep -q "error code: 1027" "$body" 2>/dev/null; then
+        echo "  ~ $key refused by the edge: the account's daily free Worker request cap is spent (1027) — no retry can help before 00:00 UTC"
+        CAPSPENT=1; failed=1; break
+      fi
+      if [[ $n -ge 3 ]]; then echo "  ~ $key worker failed after $n tries (HTTP $code) — trying wrangler path"; failed=1; break; fi
+      echo "  ~ $key refused (HTTP $code) — retry $n/2"; sleep $((n * 5))
     done
+    rm -f "$body"
     if [[ $failed -eq 0 ]]; then echo "  ✓ $key"; OKS=$((OKS+1)); return; fi
     # fall through to the wrangler branch below (self-heals when token gains R2 scope)
   fi
@@ -71,9 +79,10 @@ put() { # put <key> <fail> [content-type]
     echo "[snapshot] 3 uploads failed, 0 succeeded — neither transport works on this box:" >&2
     if [[ -n "$WURL" ]]; then
       echo "           the worker pair IS configured, so probe it directly:" >&2
-      echo "           curl -s $WURL | head -1  →  'error code: 1027' means this worker has" >&2
-      echo "           no workers.dev route bound (dashboard: Workers → the worker → Domains)." >&2
-      echo "           That is not a throttle, so no retry count will ever fix it." >&2
+      echo "           curl -s $WURL | head -1  →  'error code: 1027' = the account has spent" >&2
+      echo "           its daily free Worker request cap (100,000/day, resets 00:00 UTC)." >&2
+      echo "           A plan limit: not a throttle, not an unbound route — no retry helps." >&2
+      [[ "${CAPSPENT:-0}" == "1" ]] && echo "           1027 was seen this run, so that IS the cause." >&2
     else
       echo "           no BACKUP_WORKER_URL/BACKUP_UPLOAD_SECRET, and CLOUDFLARE_API_TOKEN has" >&2
       echo "           no R2 Write scope." >&2
