@@ -4982,7 +4982,7 @@ app.get('/sitemap-conservation-areas.xml', (req, res) => {
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/conservation-areas', '0.9')]
     .concat(cg.REGIONS.map((r) => one(`/conservation-areas/${r.slug}`, '0.8')))
-    .concat(cg.AREAS.map((a) => one(`/conservation-areas/${a.slug}`, '0.6')))
+    .concat(clusterIsIndexable(cg.AREAS.length) ? cg.AREAS.map((a) => one(`/conservation-areas/${a.slug}`, '0.6')) : [])
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -4990,12 +4990,14 @@ app.get('/sitemap-conservation-areas.xml', (req, res) => {
 });
 
 // ── SITEMAP GUNUNG — hub + every continent + every mountain ──
+// These first six hubs predate geoSitemap(), so they list their own item URLs. They obey the
+// same CRAWL_INDEX_MAX_ITEMS rule as the cluster factory: a noindexed item is never advertised.
 app.get('/sitemap-mountains.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/mountains', '0.9')]
     .concat(gn.REGIONS.map((r) => one(`/mountains/${r.slug}`, '0.8')))
-    .concat(gn.PEAKS.map((p) => one(`/mountains/${p.slug}`, '0.6')))
+    .concat(clusterIsIndexable(gn.PEAKS.length) ? gn.PEAKS.map((p) => one(`/mountains/${p.slug}`, '0.6')) : [])
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5008,7 +5010,7 @@ app.get('/sitemap-lakes.xml', (req, res) => {
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/lakes', '0.9')]
     .concat(dn.REGIONS.map((r) => one(`/lakes/${r.slug}`, '0.8')))
-    .concat(dn.LAKES.map((l) => one(`/lakes/${l.slug}`, '0.6')))
+    .concat(clusterIsIndexable(dn.LAKES.length) ? dn.LAKES.map((l) => one(`/lakes/${l.slug}`, '0.6')) : [])
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5021,7 +5023,7 @@ app.get('/sitemap-islands.xml', (req, res) => {
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/islands', '0.9')]
     .concat(pl.REGIONS.map((r) => one(`/islands/${r.slug}`, '0.8')))
-    .concat(pl.ISLANDS.map((i) => one(`/islands/${i.slug}`, '0.6')))
+    .concat(clusterIsIndexable(pl.ISLANDS.length) ? pl.ISLANDS.map((i) => one(`/islands/${i.slug}`, '0.6')) : [])
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5047,7 +5049,7 @@ app.get('/sitemap-waterfalls.xml', (req, res) => {
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/waterfalls', '0.9')]
     .concat(at.REGIONS.map((r) => one(`/waterfalls/${r.slug}`, '0.8')))
-    .concat(at.FALLS.map((f) => one(`/waterfalls/${f.slug}`, '0.6')))
+    .concat(clusterIsIndexable(at.FALLS.length) ? at.FALLS.map((f) => one(`/waterfalls/${f.slug}`, '0.6')) : [])
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5073,7 +5075,7 @@ app.get('/sitemap-glaciers.xml', (req, res) => {
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
   const urls = [one('/glaciers', '0.9')]
     .concat(gl.REGIONS.map((r) => one(`/glaciers/${r.slug}`, '0.8')))
-    .concat(gl.GLACIERS.map((g) => one(`/glaciers/${g.slug}`, '0.6')))
+    .concat(clusterIsIndexable(gl.GLACIERS.length) ? gl.GLACIERS.map((g) => one(`/glaciers/${g.slug}`, '0.6')) : [])
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5184,15 +5186,36 @@ function isOwnFrontDoor(text) {
   }
   return frontDoorNameSet.has(norm);
 }
+// ── CRAWL BUDGET — which cluster item pages may be indexed ─────────────────────────
+// A cluster item page is one encyclopaedia extract plus a three-row fact table. At a few
+// hundred items that still reads as a reference shelf; at 254,000 settlements it is the
+// identical layout repeated, which is exactly what "low value content" describes. So the line
+// is drawn by cluster size: item pages of a cluster larger than CRAWL_INDEX_MAX_ITEMS are
+// served noindex,follow and left out of its sitemap, while the hub and its continent pages
+// stay indexable. Lower the env var to shrink the indexed surface further — same code.
+const CRAWL_INDEX_MAX_ITEMS = Number.isFinite(Number(process.env.CRAWL_INDEX_MAX_ITEMS))
+  ? Math.max(0, Number(process.env.CRAWL_INDEX_MAX_ITEMS))
+  : 1500;
+function clusterIsIndexable(itemCount) {
+  return itemCount <= CRAWL_INDEX_MAX_ITEMS;
+}
+function clusterItemRobots(itemCount) {
+  return clusterIsIndexable(itemCount) ? 'index,follow' : 'noindex,follow';
+}
 function geoSitemap(base, mod, listKey) {
   GEO_SITEMAP_BASES.push(base);
   GEO_MOD_BY_BASE[base] = { mod, listKey };
   app.get(`/sitemap-${base}.xml`, (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+    // A noindexed cluster keeps its hub and continent pages in its sitemap; listing the item
+    // URLs would be asking Google to crawl pages the same response tells it to drop.
+    const items = clusterIsIndexable(mod[listKey].length)
+      ? mod[listKey].map((x) => one(`/${base}/${x.slug}`, '0.6'))
+      : [];
     const urls = [one(`/${base}`, '0.9')]
       .concat(mod.REGIONS.filter(geoRegionHasItems).map((r) => one(`/${base}/${r.slug}`, '0.8')))
-      .concat(mod[listKey].map((x) => one(`/${base}/${x.slug}`, '0.6')))
+      .concat(items)
       .join('\n');
     res.type('application/xml').send(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5983,16 +6006,33 @@ const COMMON_CSS = `
   .ad-sense ins.adsbygoogle { background:transparent; }
   .ad-label { display:block; font-size:.66rem; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); margin:0 2px 6px; }
   /* Site chrome — the full top bar, the hero, the feed grid, the multi-column footer. */
-  .site-top { position:sticky; top:0; z-index:50; background:var(--panel); border-bottom:1px solid var(--line); }
+  /* The bar is ONE line tall: the 18-link navigation lives in the <details> Menu panel
+     (native disclosure, so it works without JS). On top of that the bar auto-hides while
+     the reader scrolls down and slides back on any upward scroll (see theme.js), so it
+     never permanently eats the reading area. */
+  .site-top { position:sticky; top:0; z-index:50; background:var(--panel); border-bottom:1px solid var(--line); transition:transform .22s ease; }
+  .site-top.is-hidden { transform:translateY(-100%); }
   .wrap-w { max-width:1080px; margin:0 auto; padding:0 20px; }
-  .topbar { display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:11px 0; }
-  .brand { display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:1.08rem; letter-spacing:-.3px; color:var(--text); }
+  .topbar { display:flex; align-items:center; gap:14px; flex-wrap:nowrap; padding:9px 0; }
+  .brand { display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:1.08rem; letter-spacing:-.3px; color:var(--text); white-space:nowrap; }
   .brand:hover { text-decoration:none; }
   .brand .logo { width:26px; height:26px; border-radius:6px; display:block; }
-  .topnav { display:flex; gap:4px; flex-wrap:wrap; margin-left:auto; align-items:center; }
-  .topnav a { color:var(--muted); padding:7px 11px; border-radius:8px; font-weight:500; font-size:.95rem; }
-  .topnav a:hover { color:var(--text); background:var(--bg); text-decoration:none; }
-  .topnav a.active { color:var(--text); background:var(--bg); }
+  .topnav { display:flex; gap:6px; flex-wrap:nowrap; margin-left:auto; align-items:center; }
+  .topbar .theme-tools { margin-left:0; }
+  .nav-btn { display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); font-weight:600; font-size:.94rem; line-height:1.2; cursor:pointer; list-style:none; user-select:none; }
+  .nav-btn::-webkit-details-marker { display:none; }
+  .nav-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .nav-menu[open] > .nav-btn { border-color:var(--accent); color:var(--accent); }
+  .nav-btn:focus-visible, .nav-panel a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .nav-bars { width:16px; height:2px; border-radius:2px; background:currentColor; box-shadow:0 -5px 0 currentColor, 0 5px 0 currentColor; }
+  .nav-panel { position:absolute; top:calc(100% + 1px); right:max(20px, calc((100vw - 1040px) / 2)); width:min(720px, calc(100vw - 40px)); max-height:min(72vh, 520px); overflow:auto; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px 16px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.35); }
+  .nav-group h3 { margin:0 0 8px; font-size:.72rem; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); }
+  .nav-panel a { display:block; padding:8px 10px; border-radius:8px; color:var(--text); font-size:.94rem; font-weight:500; }
+  .nav-panel a:hover { color:var(--accent); background:var(--bg); text-decoration:none; }
+  .nav-panel a.active { color:var(--accent); background:var(--bg); }
+  @media (max-width:720px){ .nav-panel { grid-template-columns:1fr 1fr; } }
+  @media (max-width:480px){ .topbar { gap:10px; } .nav-btn { padding:7px 10px; } .nav-text { display:none; } .nav-panel { grid-template-columns:1fr; max-height:76vh; } }
+  @media (prefers-reduced-motion: reduce){ .site-top { transition:none; } }
   .hero { padding:44px 0 28px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,var(--panel),var(--bg)); }
   .hero h1 { font-size:2.4rem; margin:0 0 12px; }
   .hero p { color:var(--muted); font-size:1.12rem; max-width:64ch; margin:0; line-height:1.6; }
@@ -6027,6 +6067,11 @@ function adsenseClient() {
   return /^ca-pub-\d+$/.test(c) ? c : '';
 }
 function adsenseOn() {
+  // Approval gate first, before any toggle: an account that has not been approved must not
+  // serve a single unit. Every caller (loader, in-page units, Funding Choices, the client
+  // /api/public/settings feed) reads this function, so one line here silences AdSense
+  // site-wide and one env flip brings it back.
+  if (!config.adsense.approved) return '';
   // The Admin toggle (`adsEnabled`) takes the lead once it has been touched; if it never has,
   // follow config/env (default ON). This makes the home page (client) and the blog/app
   // (server) share ONE single source of truth.
@@ -6183,43 +6228,61 @@ function msAdUnit(label) {
   return raw ? `<div class="ad-slot" data-ad-network="ms-${label}">${raw}</div>` : '';
 }
 
-// The shared page chrome: the top bar (brand + nav + theme toggle) and the full layered footer.
+// The shared page chrome: the top bar (brand + Menu + theme toggle) and the full layered footer.
 // `active` marks the link of the current page (home|blog|nasa|learn|docs|about).
+// The navigation itself is a <details> disclosure: expanded it shows every destination in three
+// labelled columns, collapsed the bar is a single line — the space the old 18-link row used to
+// steal from the content. Every link stays in the HTML (crawlable), and the footer repeats them.
 function siteHeader(active) {
   const a = String(active || '');
-  const link = (href, label, key) => `<a href="${href}"${a === key ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
+  const link = (href, label, key) => `<a href="${href}"${key && a === key ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
+  const group = (title, links) => `<div class="nav-group"><h3>${title}</h3>${links.join('')}</div>`;
+  const readSearch = group('Read &amp; search', [
+    link('/', 'Home', 'home'),
+    link('/cari', 'Search', 'cari'),
+    link('/blog', 'Blog', 'blog'),
+    link('/wiki', 'Wiki', 'wiki'),
+    link('/docs', 'Docs', 'docs'),
+    link('/about', 'About', 'about'),
+  ]);
+  const worldLive = group('World &amp; live', [
+    link('/nasa', 'NASA', 'nasa'),
+    link('/weather', 'Weather', 'cuaca'),
+    link('/traffic', 'Traffic', 'traffic'),
+    link('/technology', 'Tech', 'teknologi'),
+    link('/maps', 'Maps', 'peta'),
+    link('/social', 'Social', 'social'),
+  ]);
+  const explorePlay = group('Explore &amp; play', [
+    link('/alat', 'Tools', 'alat'),
+    link('/charts', 'Music', 'muzik'),
+    link('/flags', 'Flags', 'bendera'),
+    link('/learn', 'Learn', 'learn'),
+    link('/games', 'Games', 'games'),
+    '<a href="https://build.tukuk.org" rel="noopener">Build</a>',
+  ]);
   return `<header class="site-top"><div class="wrap-w"><div class="topbar">
     <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
     <nav class="topnav" aria-label="Primary">
-      ${link('/', 'Home', 'home')}
-      ${link('/cari', 'Search', 'cari')}
-      ${link('/blog', 'Blog', 'blog')}
-      ${link('/wiki', 'Wiki', 'wiki')}
-      ${link('/nasa', 'NASA', 'nasa')}
-      ${link('/weather', 'Weather', 'cuaca')}
-      ${link('/traffic', 'Traffic', 'traffic')}
-      ${link('/technology', 'Tech', 'teknologi')}
-      ${link('/maps', 'Maps', 'peta')}
-      ${link('/social', 'Social', 'social')}
-      ${link('/alat', 'Tools', 'alat')}
-      ${link('/charts', 'Music', 'muzik')}
-      ${link('/flags', 'Flags', 'bendera')}
-      ${link('/learn', 'Learn', 'learn')}
-      ${link('/games', 'Games', 'games')}
-      <a href="https://build.tukuk.org" rel="noopener">Build</a>
-      ${link('/docs', 'Docs', 'docs')}
-      ${link('/about', 'About', 'about')}
-      <span class="theme-tools">
-        <button type="button" id="theme-toggle" class="tk-btn" aria-label="Colour theme">\u25d0</button>
-        <span class="tk-accents" role="group" aria-label="Accent colour">
-          <button type="button" data-accent-set="blue" class="tk-dot" aria-label="Blue"></button>
-          <button type="button" data-accent-set="green" class="tk-dot" aria-label="Green"></button>
-          <button type="button" data-accent-set="violet" class="tk-dot" aria-label="Violet"></button>
-          <button type="button" data-accent-set="amber" class="tk-dot" aria-label="Amber"></button>
-          <button type="button" data-accent-set="rose" class="tk-dot" aria-label="Rose"></button>
-        </span>
-      </span>
+      <details class="nav-menu" id="nav-menu">
+        <summary class="nav-btn" aria-label="Menu — all Tukuk-OS sections"><span class="nav-bars" aria-hidden="true"></span><span class="nav-text">Menu</span></summary>
+        <div class="nav-panel">
+          ${readSearch}
+          ${worldLive}
+          ${explorePlay}
+        </div>
+      </details>
     </nav>
+    <span class="theme-tools">
+      <button type="button" id="theme-toggle" class="tk-btn" aria-label="Colour theme">\u25d0</button>
+      <span class="tk-accents" role="group" aria-label="Accent colour">
+        <button type="button" data-accent-set="blue" class="tk-dot" aria-label="Blue"></button>
+        <button type="button" data-accent-set="green" class="tk-dot" aria-label="Green"></button>
+        <button type="button" data-accent-set="violet" class="tk-dot" aria-label="Violet"></button>
+        <button type="button" data-accent-set="amber" class="tk-dot" aria-label="Amber"></button>
+        <button type="button" data-accent-set="rose" class="tk-dot" aria-label="Rose"></button>
+      </span>
+    </span>
   </div></div></header>`;
 }
 
@@ -16015,9 +16078,14 @@ function geoRegionPage(region, mod, base, cfg) {
 function geoItemPage(item, sum, mod, base, cfg) {
   const coords = `${Math.abs(item.lat).toFixed(2)}\u00b0${item.lat >= 0 ? 'N' : 'S'}, ${Math.abs(item.lng).toFixed(2)}\u00b0${item.lng >= 0 ? 'E' : 'W'}`;
   const mapHref = `https://www.openstreetmap.org/?mlat=${item.lat}&mlon=${item.lng}#map=11/${item.lat}/${item.lng}`;
+  // The size of the cluster this item belongs to decides whether the page is indexable:
+  // see CRAWL_INDEX_MAX_ITEMS. Facts stay visible either way; only the robots meta changes.
+  const itemCount = Array.isArray(mod[cfg.listKey]) ? mod[cfg.listKey].length : 0;
+  // No extract means no article — only the fact table. Better to show just the facts than to
+  // print a sentence announcing that the page is still assembling itself.
   const hero = sum && sum.thumb
     ? `<div class="geo-hero"><img src="${escapeHtml(sum.thumb)}" width="${sum.thumbW || 280}" height="${sum.thumbH || 280}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async"><div class="geo-sum">${escapeHtml(sum.extract)}</div></div>`
-    : (sum && sum.extract ? `<p class="geo-sum">${escapeHtml(sum.extract)}</p>` : `<p class="meta">A fuller introduction to ${escapeHtml(item.name)} is briefly reloading \u2014 the key facts below always show.</p>`);
+    : (sum && sum.extract ? `<p class="geo-sum">${escapeHtml(sum.extract)}</p>` : '');
   const readMore = sum && sum.url ? `<p><a href="${escapeHtml(sum.url)}" rel="noopener" target="_blank">Read the full article on Wikipedia &rarr;</a></p>` : '';
   const siblings = mod[cfg.byCountry](item.countrySlug).filter((x) => x.slug !== item.slug).slice(0, 10);
   const more = siblings.length ? `<h2 class="section-title">More ${cfg.unit} in ${escapeHtml(item.country)}</h2><p>${siblings.map((x) => `<a href="/${base}/${x.slug}">${escapeHtml(x.name)}</a>`).join(' \u00b7 ')}.</p>` : '';
@@ -16048,6 +16116,7 @@ function geoItemPage(item, sum, mod, base, cfg) {
     title: `${item.name} \u2014 ${cfg.titleCase} Profile | Tukuk-OS`,
     desc: sum && sum.description ? `${item.name}, ${sum.description.charAt(0).toLowerCase()}${sum.description.slice(1)}.` : `${item.name} is ${geoArticle(cfg.singular)} ${cfg.singular} in ${item.country}. Location and introduction.`,
     selfUrl: `https://tukuk.org/${base}/${item.slug}`,
+    robots: clusterItemRobots(itemCount),
     heroTitle: `${cfg.icon} ${item.name}`, heroSub: `${item.country} \u00b7 ${item.region} \u00b7 ${coords}`,
     ld, css: GEO_CSS, body, ogImage,
   }, geoNav(base, cfg, mod));
@@ -23593,4 +23662,7 @@ app.use((error, req, res, next) => {
   res.status(error.statusCode || 500).json({ error: 'Server error', details: safeError(error) });
 });
 
-module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, isOwnFrontDoor, notifyIndexNow };
+module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, isOwnFrontDoor, notifyIndexNow,
+  // The crawl-budget rule is a policy, not a template detail: a test has to be able to pin it
+  // so the 816k thin URLs cannot quietly come back into the index or the sitemaps.
+  CRAWL_INDEX_MAX_ITEMS, clusterIsIndexable, clusterItemRobots };

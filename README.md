@@ -20,6 +20,7 @@ Our own internet portal — web search engine + AI answers + in-browser app & ga
 | Change config/keys | Edit `deploy/env.defaults` (private repo) → `sudo bash scripts/setup-all.sh` (idempotent). |
 | Generate app+game from 1 word | `node scripts/satu-kata/generate.mjs [word]` — free CI (GitHub Actions) daily cron → hub served at **`tukuk.org/satu-kata/`** (Cloudflare Pages = optional). See **§12** |
 | Check health | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
+| Prove the site from **outside** the box | `bash scripts/public-canary.sh` — 0 healthy, 1 wrong, 2 edge down. Checks homepage, sitemaps, the crawl budget (`/sitemap-settlements.xml` must stay ≤ 20 `<loc>`), a real shard item's `noindex`, and that an unapproved account ships no ad unit. Runs every 30 min on GitHub Actions (`.github/workflows/canary.yml`) because every other monitor lives on the box that dies. |
 | Public sites now | ✅ `tukuk.org`, `dashboard.tukuk.org` = **200**; `www.tukuk.org` = **301 → apex** (edge workerless — §9) |
 
 **Key file skeleton:** `src/server.js` (all routes) · `public/index.html` (search+dashboard SPA) · `public/editor.html` & `public/editor-video.html` (Studio) · `src/brain/*` (AI + search) · `scripts/setup-all.sh` (auto-setup) · `deploy/env.defaults` (shipped keys & config) · `deploy/cloudflared/config.yml` (tunnel template).
@@ -270,8 +271,10 @@ None of it needs payment at small scale. Here is the list + where each is set:
 
 **Infrastructure ALREADY ready (✓):**
 - Real `ads.txt`: `ca-pub-8954948214333501` (Google, verified). Microsoft line removed until a real Monetize/Xandr (`appnexus.com, <memberId>, DIRECT, f5ab79cb980f11d1`) account ID is available.
-- `ADSENSE_ENABLED=true`, client `ca-pub-8954948214333501` (`src/config.js`); slots placed **only on content/blog pages** (`server.js:822`), **not** on `/cari` (search results) → policy compliant (no ads on third-party content).
-- `sitemap.xml` (route exists), correct `robots.txt` (allows Googlebot/AdsBot), **48 original articles** (28 blog + 20 archive), Privacy/About/Contact/Terms pages present, HTTPS, mobile-friendly.
+- **Ads are OFF site-wide until the account is approved** — `adsenseOn()` returns nothing unless `config.adsense.approved` is true (`ADSENSE_APPROVED=1`). The loader, the three in-page units, the Funding Choices tag and the client `/api/public/settings` feed all read that one function, and the five static pages that used to hardcode the library tag now carry a comment instead. Serving units on pages that hold one sentence is the "ads on screens without publisher content" violation, and the review reads the LIVE markup.
+- **Crawl budget** — a cluster item page is one encyclopaedia extract plus a fact table. Item pages of any cluster larger than `CRAWL_INDEX_MAX_ITEMS` (default **1500**) are served `noindex,follow` and dropped from that cluster's sitemap; hubs and continent pages stay indexable. That takes 684,567 of the 816,527 item URLs out of the index in one rule. Lower the env var to tighten further (250 → ~28k indexable item pages, 0 → hubs only).
+- `sitemap.xml` lists hubs + posts only; `robots.txt` allows Googlebot/AdsBot; Privacy/About/Contact/Terms present; HTTPS; mobile-friendly.
+- Content worth reviewing: `/blog` has **100 original articles**, plus the `/academy`, `/learn`, `/docs`, `/alat`, `/elements` and `/countries` surfaces.
 
 **What Google still evaluates on its own (✗ code cannot guarantee):**
 1. **Real organic traffic** — needs actual visitors for a few weeks. New sites without traffic often land in "Pending/Not ready".
@@ -280,7 +283,7 @@ None of it needs payment at small scale. Here is the list + where each is set:
 4. **Domain & history** — a mature `tukuk.org` with no prior rejections helps.
 5. **Real ad slots** — currently `slotTop/InArticle/Bottom` are the same (`2206273113` = placeholder). After approval, create **3 distinct ad units** in AdSense & set their IDs (or leave them auto).
 
-**Straight answer:** **GOOD** odds technically (all major policy conditions are met), but **approval is not guaranteed** — Google wants organic traffic & content age/originality. **Recommended steps:** (a) register Search Console + submit the sitemap, gather some real traffic (IndieHackers/Reddit/your own products), (b) make sure navigation links work, (c) then apply for AdSense for `tukuk.org`. Do not paste AdSense code before the account is approved (it can trigger a rejection).
+**Straight answer:** the technical policy conditions are now met, but approval is still not guaranteed — and the single biggest risk is not code: **the site must be up**. A Cloudflare 530/1033 (tunnel down) on `/`, `/apps` or `/sitemap.xml` fails the review before anyone reads a word. **Before applying:** (a) confirm `curl -o /dev/null -w '%{http_code}' https://tukuk.org/` returns 200 for a few days straight, (b) register Search Console and submit the sitemap, (c) decide whether `CRAWL_INDEX_MAX_ITEMS=1500` is tight enough — at 1500 roughly 132k thin item pages remain indexable and a reviewer sampling the sitemap can still land on one, so **250 is the safer line before a re-application**. Set `ADSENSE_APPROVED=1` only AFTER the approval email arrives.
 
 ---
 

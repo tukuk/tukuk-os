@@ -154,6 +154,12 @@ module.exports = {
 
   adsense: {
     enabled: bool(process.env.ADSENSE_ENABLED, true),
+    // Pre-approval gate. While this is false NOTHING from AdSense reaches a page — not the
+    // library loader, not the three in-page units, not the Funding Choices tag — whatever the
+    // Admin toggle or ADSENSE_ENABLED says. The account is reviewed on the LIVE markup, and
+    // units on pages that carry one sentence is the "ads on screens without publisher content"
+    // violation. Set ADSENSE_APPROVED=1 the day the account is approved; nothing else changes.
+    approved: bool(process.env.ADSENSE_APPROVED, false),
     client: process.env.ADSENSE_CLIENT || 'ca-pub-8954948214333501',
     // The real units inside this account (AdSense console, Oct 2026):
     // top=「test banner 1」, in-article=「test banner」, bottom=「test banner 2」.
