@@ -20,6 +20,7 @@ const dns = require('dns');
 const path = require('path');
 const config = require('./config');
 const store = require('./nasa-store');
+const apodbank = require('./apodbank');
 
 // ——— IP rotation for api.nasa.gov ———
 // One of NASA's LB backends is often broken (500/timeout); observations show record A
@@ -215,21 +216,30 @@ async function getApodFromScienceSite(dateStr) {
   });
 
   const page = String(html);
-  const titleTag = page.match(/<title>APOD:\s*(\d{4})\s+([A-Za-z]+)\s+(\d{1,2})\s*-\s*([\s\S]*?)\s*-\s*NASA Science<\/title>/i);
-  if (!titleTag) return null;
-
-  const monthNum = MONTH_NUM[titleTag[2]] || '';
-  const pageDate = `${titleTag[1]}-${monthNum}-${String(titleTag[3]).padStart(2, '0')}`;
+  // NASA serves multiple <title> dialects: "2026 October 27", "29 October 2026" (day first) and
+  // en-dash separators. Anchor on "- NASA Science", parse the date part in either order.
+  // (tools/apod_build.py in tukuk-devops mirrors this exact tolerance — keep them in step.)
+  const tm = page.match(/<title>APOD:\s*(.+?)\s*[-\u2013\u2014]\s*(.*?)\s*-\s*NASA Science<\/title>/i);
+  if (!tm) return null;
+  const dm = String(tm[1]).trim().match(/^(?:(\d{4})\s+([A-Za-z]+)\s+(\d{1,2})|(\d{1,2})\s+([A-Za-z]+)\s+(\d{4}))$/);
+  if (!dm) return null;
+  const [py, pmo, pd] = dm[1] ? [dm[1], dm[2], dm[3]] : [dm[6], dm[5], dm[4]];
+  const monthNum = MONTH_NUM[pmo] || '';
+  const pageDate = `${py}-${monthNum}-${String(pd).padStart(2, '0')}`;
   if (monthNum && pageDate !== dateStr) return null; // a different date = the page is gone
 
-  const title = stripTags(titleTag[4]);
+  const title = stripTags(tm[2]);
   if (!title) return null;
 
-  const explIdx = page.indexOf('<strong>Explanation:</strong>');
+  // New article pages write "<strong>Explanation: </strong>" (a space INSIDE the tag) while the
+  // legacy /apod/ pages had none; the old exact indexOf silently lost the explanation on every
+  // new page — a regex covers both shapes. (tools/apod_build.py in tukuk-devops mirrors this.)
+  const explM = page.match(/<strong>Explanation:\s*<\/strong>/i);
   let explanation = '';
-  if (explIdx >= 0) {
+  if (explM) {
+    const explIdx = explM.index + explM[0].length;
     const end = page.indexOf('</p>', explIdx);
-    const seg = page.slice(explIdx + '<strong>Explanation:</strong>'.length, end > explIdx ? end : explIdx + 6000);
+    const seg = page.slice(explIdx, end > explIdx ? end : explIdx + 6000);
     explanation = stripTags(seg);
   }
 
@@ -287,6 +297,25 @@ async function getAPOD({ date, count, force } = {}) {
   if (force) apodApiDownUntil = 0; // "Try live again" / auto-update: clear the circuit breaker first
   const cached = force ? null : getCache(cacheKey);
   if (cached && isValidApodPayload(cached, null)) return cached;
+
+  // Bank first (pipeline 4: science.nasa.gov pages archived daily by apodbank-build.yml in the
+  // public tukuk/tukuk-devops repo, loaded into the `apod` Meilisearch index by wordbank-sync).
+  // The banked rows are the official pages' own content, so the broken-payload API is not even
+  // asked when they exist. Any miss — index absent, date not banked, Meili down — falls through
+  // to the untouched live chain below (API → page → disk → archive DB), which stays the fallback.
+  if (!count) {
+    const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+    const wantedDates = date ? [date] : [isoDay(Date.now()), isoDay(Date.now() - 24 * 60 * 60 * 1000)];
+    for (const wd of wantedDates) {
+      const row = await apodbank.byDate(wd);
+      if (row && isValidApodPayload(row, [wd])) {
+        const payload = { ...row, banked: true };
+        setCache(cacheKey, payload, 4 * 60 * 60 * 1000);
+        if (!date) writeApodFallback(payload);
+        return payload;
+      }
+    }
+  }
 
   if (!date && !count && !force && !apodColdStartHandled) {
     apodColdStartHandled = true;

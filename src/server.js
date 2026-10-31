@@ -6026,7 +6026,7 @@ const COMMON_CSS = `
   .nav-menu[open] > .nav-btn { border-color:var(--accent); color:var(--accent); }
   .nav-btn:focus-visible, .nav-panel a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .nav-bars { width:16px; height:2px; border-radius:2px; background:currentColor; box-shadow:0 -5px 0 currentColor, 0 5px 0 currentColor; }
-  .nav-panel { position:absolute; top:calc(100% + 1px); right:max(20px, calc((100vw - 1040px) / 2)); width:min(720px, calc(100vw - 40px)); max-height:min(72vh, 520px); overflow:auto; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px 16px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.35); }
+  .nav-panel { position:absolute; top:calc(100% + 1px); right:max(20px, calc((100vw - 1040px) / 2)); width:min(720px, calc(100vw - 40px)); max-height:min(72vh, 520px); overflow:auto; display:grid; grid-template-columns:repeat(var(--nav-cols,3), minmax(0, 1fr)); gap:4px 16px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.35); }
   .nav-group h3 { margin:0 0 8px; font-size:.72rem; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); }
   .nav-panel a { display:block; padding:8px 10px; border-radius:8px; color:var(--text); font-size:.94rem; font-weight:500; }
   .nav-panel a:hover { color:var(--accent); background:var(--bg); text-decoration:none; }
@@ -6048,10 +6048,12 @@ const COMMON_CSS = `
   .feed .post-card { margin:0; }
   @media (max-width:680px){ .feed { grid-template-columns:1fr; } .hero h1 { font-size:1.9rem; } }
   .site-foot { margin-top:54px; border-top:1px solid var(--line); background:var(--panel); }
-  .foot-cols { display:grid; grid-template-columns:1.5fr repeat(4,1fr); gap:26px; padding:38px 0 22px; }
-  @media (max-width:900px){ .foot-cols { grid-template-columns:1fr 1fr; } .brand-foot { grid-column:1 / -1; } }
+  .foot-cols { display:grid; grid-template-columns:repeat(var(--foot-cols,4),minmax(0,1fr)); gap:26px; padding:20px 0 22px; }
+  .brand-foot { padding-top:34px; }
+  @media (max-width:1100px){ .foot-cols { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+  @media (max-width:900px){ .foot-cols { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   .foot-cols h3 { margin:0 0 12px; font-size:.82rem; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
-  .foot-cols h3 + h3, .foot-cols ul + h3 { margin-top:18px; }
+  .foot-legal { display:flex; flex-wrap:wrap; gap:8px 20px; padding:4px 0 2px; font-size:.9rem; }
   .foot-cols ul { list-style:none; margin:0; padding:0; }
   .foot-cols li { margin:0 0 9px; }
   .foot-cols a { color:var(--text); opacity:.85; font-size:.94rem; } .foot-cols a:hover { opacity:1; color:var(--accent); text-decoration:none; }
@@ -6229,48 +6231,140 @@ function msAdUnit(label) {
   return raw ? `<div class="ad-slot" data-ad-network="ms-${label}">${raw}</div>` : '';
 }
 
+// ─── Site navigation: ONE array, two renderers ────────────────────────────────────────────
+// `top` marks the destinations the header menu shows, with a one-word `short` label; the footer
+// renders every entry under the same group titles, in the same order, using the full `label`.
+// Before this the two had been hand-written apart and had drifted into two different sites: the
+// menu was three tidy six-link groups while the footer was a single 32-link "Explore" column of
+// em-dash taglines — and brand + 5 columns made six boxes dropped into a five-track grid, so the
+// last column wrapped onto a row of its own. That lone wrapped column is the untidiness being
+// looked at. Column count now comes from this array (`--foot-cols`), so the CSS can never
+// disagree with the HTML again, and a group title exists exactly once for both renderers.
+// Every href that the old footer carried is still here — 77 of them — because this is the site's
+// internal-link graph and dropping one costs a page its only crawlable route.
+const SITE_NAV = [
+  { title: 'Read &amp; search', links: [
+    { href: '/', label: 'Home', short: 'Home', key: 'home', top: true },
+    { href: '/cari', label: 'Search', short: 'Search', key: 'cari', top: true },
+    { href: '/blog', label: 'Blog', short: 'Blog', key: 'blog', top: true },
+    { href: '/wiki', label: 'Wiki', short: 'Wiki', key: 'wiki', top: true },
+    { href: '/docs', label: 'Documentation', short: 'Docs', key: 'docs', top: true },
+    { href: '/about', label: 'About Tukuk-OS', short: 'About', key: 'about', top: true },
+  ] },
+  { title: 'World &amp; live', links: [
+    { href: '/nasa', label: 'NASA Space', short: 'NASA', key: 'nasa', top: true },
+    { href: '/weather', label: 'World Weather', short: 'Weather', key: 'cuaca', top: true },
+    { href: '/traffic', label: 'Community Road Reports', short: 'Traffic', key: 'traffic', top: true },
+    { href: '/technology', label: 'Live Tech Pulse', short: 'Tech', key: 'teknologi', top: true },
+    { href: '/maps', label: 'Maps &amp; Route Planner', short: 'Maps', key: 'peta', top: true },
+    { href: '/social', label: 'Chat, Posts &amp; Stories', short: 'Social', key: 'social', top: true },
+  ] },
+  { title: 'Explore &amp; play', links: [
+    { href: '/alat', label: 'Everyday Tools', short: 'Tools', key: 'alat', top: true },
+    { href: '/charts', label: 'World Music Charts', short: 'Music', key: 'muzik', top: true },
+    { href: '/flags', label: 'Flags of the World', short: 'Flags', key: 'bendera', top: true },
+    { href: '/learn', label: 'Learn', short: 'Learn', key: 'learn', top: true },
+    { href: '/games', label: 'Game Arcade', short: 'Games', key: 'games', top: true },
+    { href: 'https://build.tukuk.org', label: 'Tukuk Builder', short: 'Build', ext: true, top: true },
+    { href: '/apps/chat', label: 'T Chat Messenger' },
+    { href: '/flags/quiz', label: 'Guess the Flag Quiz' },
+    { href: '/flags/studio', label: 'Flag Studio' },
+  ] },
+  { title: 'Learn &amp; culture', links: [
+    { href: '/study', label: 'General Knowledge' },
+    { href: '/academy', label: 'Academy (50 Lessons)' },
+    { href: '/recipes', label: 'World Recipes' },
+    { href: '/nutrition', label: 'Food &amp; Calories' },
+    { href: '/movies', label: 'Notable Films of the World' },
+    { href: '/movies/tv', label: 'Notable TV Series' },
+    { href: '/football', label: 'Football &amp; the World Cup' },
+    { href: '/cricket', label: 'Cricket &amp; the World Cup' },
+    { href: '/olympics', label: 'Olympics Host Cities' },
+    { href: '/money', label: 'World Currency Rates' },
+    { href: '/art', label: 'Free Art Gallery' },
+    { href: '/life', label: 'Wildlife Atlas' },
+    { href: '/air-quality', label: 'Air & Oxygen' },
+  ] },
+  { title: 'Sky, weather &amp; Earth', links: [
+    { href: '/nasa/archive', label: 'APOD Archive' },
+    { href: '/nasa/sky', label: 'Sky Tonight' },
+    { href: '/nasa/iss', label: 'ISS Live' },
+    { href: '/nasa/asteroids', label: 'Asteroid Watch' },
+    { href: '/nasa/exoplanets', label: 'Exoplanets' },
+    { href: '/weather/map', label: 'Weather Map' },
+    { href: '/weather/extremes', label: 'World Extremes' },
+    { href: '/weather/clouds', label: 'Cloud Types' },
+    { href: '/weather/wind', label: 'Beaufort Wind Scale' },
+    { href: '/weather/codes', label: 'Weather Codes' },
+    { href: '/earthquakes', label: 'World Earthquakes' },
+    { href: '/earthquakes/world', label: 'Major Quakes M4.5+' },
+    { href: '/disasters', label: 'Live Disaster Watch' },
+    { href: '/countries', label: 'Countries of the World' },
+    { href: '/statistics', label: 'World Statistics' },
+    { href: '/holidays', label: 'World Public Holidays' },
+  ] },
+  { title: 'Natural world', links: [
+    { href: '/islands', label: 'Islands of the World' },
+    { href: '/mountains', label: 'Mountains &amp; Peaks' },
+    { href: '/rivers', label: 'Rivers of the World' },
+    { href: '/lakes', label: 'Lakes of the World' },
+    { href: '/waterfalls', label: 'Waterfalls' },
+    { href: '/volcanoes', label: 'Volcanoes' },
+    { href: '/deserts', label: 'Deserts' },
+    { href: '/caves', label: 'Caves' },
+    { href: '/glaciers', label: 'Glaciers' },
+    { href: '/coral-reefs', label: 'Coral Reefs' },
+  ] },
+  { title: 'Built world', links: [
+    { href: '/museums', label: 'Museums of the World' },
+    { href: '/castles', label: 'Castles' },
+    { href: '/cathedrals', label: 'Cathedrals' },
+    { href: '/bridges', label: 'Bridges' },
+    { href: '/skyscrapers', label: 'Skyscrapers' },
+    { href: '/stadiums', label: 'Stadiums' },
+    { href: '/airports', label: 'Airports' },
+    { href: '/parks', label: 'Parks &amp; Gardens' },
+    { href: '/beaches', label: 'Beaches' },
+    { href: '/heritage', label: 'World Heritage Sites' },
+  ] },
+];
+
+// The bottom line rather than a column: seven links do not need a vertical block competing for
+// width with the directories, and a horizontal legal line is where a visitor expects them.
+const SITE_LEGAL = [
+  { href: '/contact', label: 'Contact' },
+  { href: '/download', label: 'Download' },
+  { href: '/rekomendasi', label: 'Recommended' },
+  { href: '/access', label: 'Global Access' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/cookies', label: 'Manage cookie preferences' },
+];
+
 // The shared page chrome: the top bar (brand + Menu + theme toggle) and the full layered footer.
 // `active` marks the link of the current page (home|blog|nasa|learn|docs|about).
-// The navigation itself is a <details> disclosure: expanded it shows every destination in three
-// labelled columns, collapsed the bar is a single line — the space the old 18-link row used to
-// steal from the content. Every link stays in the HTML (crawlable), and the footer repeats them.
+// The navigation itself is a <details> disclosure: expanded it shows every destination in labelled
+// columns — one column per group that carries a `top` link, counted into `--nav-cols` so the panel
+// grid cannot disagree with the links inside it — collapsed the bar is a single line, the space the
+// old 18-link row used to steal from the content. Every link stays in the HTML (crawlable), and the
+// footer repeats them.
 function siteHeader(active) {
   const a = String(active || '');
-  const link = (href, label, key) => `<a href="${href}"${key && a === key ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
-  const group = (title, links) => `<div class="nav-group"><h3>${title}</h3>${links.join('')}</div>`;
-  const readSearch = group('Read &amp; search', [
-    link('/', 'Home', 'home'),
-    link('/cari', 'Search', 'cari'),
-    link('/blog', 'Blog', 'blog'),
-    link('/wiki', 'Wiki', 'wiki'),
-    link('/docs', 'Docs', 'docs'),
-    link('/about', 'About', 'about'),
-  ]);
-  const worldLive = group('World &amp; live', [
-    link('/nasa', 'NASA', 'nasa'),
-    link('/weather', 'Weather', 'cuaca'),
-    link('/traffic', 'Traffic', 'traffic'),
-    link('/technology', 'Tech', 'teknologi'),
-    link('/maps', 'Maps', 'peta'),
-    link('/social', 'Social', 'social'),
-  ]);
-  const explorePlay = group('Explore &amp; play', [
-    link('/alat', 'Tools', 'alat'),
-    link('/charts', 'Music', 'muzik'),
-    link('/flags', 'Flags', 'bendera'),
-    link('/learn', 'Learn', 'learn'),
-    link('/games', 'Games', 'games'),
-    '<a href="https://build.tukuk.org" rel="noopener">Build</a>',
-  ]);
+  const cell = (l) => `<a href="${l.href}"${l.ext ? ' rel="noopener"' : ''}`
+    + `${l.top && l.key && a === l.key ? ' class="active" aria-current="page"' : ''}>${l.short || l.label}</a>`;
+  // A projection, not a copy: any group holding a `top` link becomes a menu column, so the
+  // footer's first three columns are the menu's columns by construction rather than by memory.
+  const menuGroups = SITE_NAV.filter((g) => g.links.some((l) => l.top));
+  const menu = menuGroups
+    .map((g) => `<div class="nav-group"><h3>${g.title}</h3>${g.links.filter((l) => l.top).map(cell).join('')}</div>`)
+    .join('');
   return `<header class="site-top"><div class="wrap-w"><div class="topbar">
     <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
     <nav class="topnav" aria-label="Primary">
       <details class="nav-menu" id="nav-menu">
         <summary class="nav-btn" aria-label="Menu — all Tukuk-OS sections"><span class="nav-bars" aria-hidden="true"></span><span class="nav-text">Menu</span></summary>
-        <div class="nav-panel">
-          ${readSearch}
-          ${worldLive}
-          ${explorePlay}
+        <div class="nav-panel" style="--nav-cols:${menuGroups.length}">
+          ${menu}
         </div>
       </details>
     </nav>
@@ -6288,102 +6382,19 @@ function siteHeader(active) {
 }
 
 function siteFooter() {
+  const col = (g) => `<div><h3>${g.title}</h3><ul>`
+    + g.links.map((l) => `<li><a href="${l.href}"${l.ext ? ' rel="noopener"' : ''}>${l.label}</a></li>`).join('')
+    + '</ul></div>';
+  const legal = SITE_LEGAL.map((l) => `<a href="${l.href}">${l.label}</a>`).join('');
   return `<footer class="site-foot"><div class="wrap-w">
-  <div class="foot-cols">
-    <div class="brand-foot">
-      <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
-      <p>Independent articles, guides and reference on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account required.</p>
-    </div>
-    <div><h3>Explore</h3><ul>
-      <li><a href="/">Home</a></li>
-      <li><a href="/cari">Search</a></li>
-      <li><a href="/blog">Blog</a></li>
-      <li><a href="/wiki">Wiki</a></li>
-      <li><a href="/technology">Technology — Live Tech Pulse</a></li>
-      <li><a href="/traffic">Traffic — Community Road Reports</a></li>
-      <li><a href="/maps">Maps &amp; Navigation — Route Planner</a></li>
-      <li><a href="/social">Social &amp; Community — Chat, Posts &amp; Stories</a></li>
-      <li><a href="/alat">Everyday Tools — Converters, Calculators &amp; Generators</a></li>
-      <li><a href="/charts">World Music Charts — Daily Top 25 From 90 Countries</a></li>
-      <li><a href="/flags">Flags of the World — The Story Behind 250 Flags</a></li>
-      <li><a href="/flags/quiz">Guess the Flag Quiz — Ten Random Flags</a></li>
-      <li><a href="/flags/studio">Flag Studio — Draw a Flag, Find Its Closest Real Matches</a></li>
-      <li><a href="/apps/chat">T Chat — Free Messenger</a></li>
-      <li><a href="/learn">Learn</a></li>
-      <li><a href="/study">General Knowledge</a></li>
-      <li><a href="/recipes">World Recipes — Cook From a Free Cookbook</a></li>
-      <li><a href="/nutrition">Food &amp; Calories — Nutrition Reference</a></li>
-      <li><a href="/movies">Notable Films of the World — Year, Director &amp; Premise</a></li>
-      <li><a href="/movies/tv">Notable TV Series of the World — Years, Creator &amp; Premise</a></li>
-      <li><a href="/football">Football — World Cup History &amp; the Laws of the Game</a></li>
-      <li><a href="/cricket">Cricket — World Cup History &amp; How the Game Is Played</a></li>
-      <li><a href="/olympics">Olympics — Every Host City Since 1896</a></li>
-      <li><a href="/air-quality">Air & Oxygen</a></li>
-      <li><a href="/academy">Academy — 50 Lessons</a></li>
-      <li><a href="/games">Game Arcade — Play Free</a></li>
-      <li><a href="/money">World Currency — Live Rates</a></li>
-      <li><a href="/art">Free Art Gallery — The Met</a></li>
-      <li><a href="/life">Wildlife Atlas — Real Photos</a></li>
-      <li><a href="/docs">Docs</a></li>
-      <li><a href="https://build.tukuk.org">Tukuk Builder — build apps &amp; 3D games</a></li>
-    </ul></div>
-    <div><h3>NASA Space</h3><ul>
-      <li><a href="/nasa">Picture of the Day</a></li>
-      <li><a href="/nasa/archive">APOD Archive</a></li>
-      <li><a href="/nasa/sky">Sky Tonight</a></li>
-      <li><a href="/nasa/iss">ISS Live</a></li>
-      <li><a href="/nasa/asteroids">Asteroid Watch</a></li>
-      <li><a href="/nasa/exoplanets">Exoplanets</a></li>
-    </ul></div>
-    <div><h3>Weather</h3><ul>
-      <li><a href="/weather">World Weather</a></li>
-      <li><a href="/weather/map">Weather map</a></li>
-      <li><a href="/weather/extremes">World extremes</a></li>
-      <li><a href="/weather/clouds">Cloud types</a></li>
-      <li><a href="/weather/wind">Beaufort wind scale</a></li>
-      <li><a href="/weather/codes">Weather codes</a></li>
-      <li><a href="/earthquakes">World Earthquakes</a></li>
-      <li><a href="/earthquakes/world">Major Quakes M4.5+</a></li>
-      <li><a href="/countries">World countries</a></li>
-      <li><a href="/statistics">World statistics</a></li>
-      <li><a href="/disasters">Live disaster watch</a></li>
-      <li><a href="/holidays">World public holidays</a></li>
-    </ul></div>
-    <div><h3>Geography &amp; Places</h3><ul>
-      <li><a href="/islands">Islands of the World</a></li>
-      <li><a href="/mountains">Mountains &amp; Peaks</a></li>
-      <li><a href="/rivers">Rivers of the World</a></li>
-      <li><a href="/lakes">Lakes of the World</a></li>
-      <li><a href="/waterfalls">Waterfalls</a></li>
-      <li><a href="/volcanoes">Volcanoes</a></li>
-      <li><a href="/deserts">Deserts</a></li>
-      <li><a href="/caves">Caves</a></li>
-      <li><a href="/glaciers">Glaciers</a></li>
-      <li><a href="/coral-reefs">Coral Reefs</a></li>
-      <li><a href="/museums">Museums of the World</a></li>
-      <li><a href="/castles">Castles</a></li>
-      <li><a href="/cathedrals">Cathedrals</a></li>
-      <li><a href="/bridges">Bridges</a></li>
-      <li><a href="/skyscrapers">Skyscrapers</a></li>
-      <li><a href="/stadiums">Stadiums</a></li>
-      <li><a href="/airports">Airports</a></li>
-      <li><a href="/parks">Parks &amp; Gardens</a></li>
-      <li><a href="/beaches">Beaches</a></li>
-      <li><a href="/heritage">World Heritage Sites</a></li>
-    </ul></div>
-    <div><h3>Site</h3><ul>
-      <li><a href="/about">About</a></li>
-      <li><a href="/contact">Contact</a></li>
-      <li><a href="/download">Download</a></li>
-      <li><a href="/rekomendasi">Recommended</a></li>
-      <li><a href="/access">Global Access</a></li>
-    </ul>
-    <h3>Legal</h3><ul>
-      <li><a href="/privacy">Privacy</a></li>
-      <li><a href="/terms">Terms</a></li>
-      <li><a href="/cookies">Manage cookie preferences</a></li>
-    </ul></div>
+  <div class="brand-foot">
+    <a class="brand" href="/"><img class="logo" src="/icon.svg" alt="" width="26" height="26">Tukuk-OS</a>
+    <p>Independent articles, guides and reference on technology, privacy, servers, astronomy and the open web \u2014 free to read, no account required.</p>
   </div>
+  <div class="foot-cols" style="--foot-cols:${SITE_NAV.length}">
+    ${SITE_NAV.map(col).join('\n    ')}
+  </div>
+  <nav class="foot-legal" aria-label="Site and legal">${legal}</nav>
   <div class="foot-bottom">
     <span>&copy; 2026 Tukuk-OS. All rights reserved.</span>
     <span>A free, open, privacy-friendly knowledge site.</span>
@@ -12882,7 +12893,7 @@ function kamusPage() {
   <p>Definitions come from the free, open <b>Free Dictionary API</b> (richest in English, with several other European and Asian languages), and translation across dozens of living languages comes from the open <b>MyMemory</b> engine. We fetch these on our server and <b>cache every answer</b> — a word’s meaning for a day, a translation for a few hours — so common lookups never re-hit the upstream and one slow third-party call can never stall the page. The pronunciation button uses the speech voices already built into your own phone, tablet or computer, which is why it costs nothing and works offline once the page has loaded.</p>
   <h2 class="section-title">The ancient scripts are real alphabets</h2>
   <p>The <b>elder futhark</b> runic alphabet, <b> Egyptian hieroglyphs</b>, <b>Sumerian cuneiform</b> and the <b>Ogham</b> stone alphabet of early Ireland are genuine historical writing systems; each Latin letter is mapped to its closest attested sign, so the result is readable to anyone who knows the script — a transliteration, not a random font. The <b>animal</b>, <b>alien</b> and <b>sound</b> modes are, honestly, games: a fixed letter-to-signal code so the same word always encodes the same way. Nothing you type in any mode is stored.</p>
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Want a word read aloud anywhere on this site? Almost every page carries the <a href="/read-aloud">Read Aloud</a> engine too.</p>`;
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Want a word read aloud anywhere on this site? Almost every page carries the <b>Read Aloud</b> engine too.</p>`;
   return worldDoc({
     title: 'Dictionary & Translator — Every Human Language, Ancient Scripts, Animal & Alien Codes | Tukuk-OS',
     desc: 'Look up word definitions and translate across dozens of human languages with spoken pronunciation, and write any sentence in ancient scripts (runes, hieroglyphs, cuneiform, Ogham) or playful animal, alien and sound codes. Free, no account.',
@@ -13045,7 +13056,7 @@ function warnaPage() {
   <noscript><p>JavaScript is required; all colour maths run on your device.</p></noscript>
   <h2 class="section-title">What the numbers mean</h2>
   <p><b>AA</b> is the level most laws and policies require: normal text needs a ratio of <b>4.5:1</b>, large text (≈18.66px bold or 24px regular and up) needs <b>3:1</b>. <b>AAA</b> raises those to <b>7:1</b> and <b>4.5:1</b>. The ratio comes from relative luminance — each channel is linearised from sRGB and weighted for how sensitive the human eye is to red, green and blue (0.2126 / 0.7152 / 0.0722), which is exactly why bright yellow on white fails so violently while you can still read it yourself on a good screen. Roughly <b>1 in 12 men and 1 in 200 women</b> have some colour-vision deficiency, and every user over 40 loses contrast sensitivity — accessibility maths is audience maths, not bureaucracy.</p>
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Tukuk-OS practices what it checks: pages here ship with a <a href="/read-aloud">read-aloud engine</a> and this checker exists because we audited ourselves with it.</p>`;
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Tukuk-OS practices what it checks: pages here ship with a <b>read-aloud engine</b> and this checker exists because we audited ourselves with it.</p>`;
   const script = `<script>(function(){
 function $(id){return document.getElementById(id);}
 var BLACK=[0,0,0],WHITE=[255,255,255];
@@ -23704,4 +23715,9 @@ app.use((error, req, res, next) => {
 module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, isOwnFrontDoor, notifyIndexNow,
   // The crawl-budget rule is a policy, not a template detail: a test has to be able to pin it
   // so the 816k thin URLs cannot quietly come back into the index or the sitemaps.
-  CRAWL_INDEX_MAX_ITEMS, clusterIsIndexable, clusterItemRobots };
+  CRAWL_INDEX_MAX_ITEMS, clusterIsIndexable, clusterItemRobots,
+  // The site chrome is exported so the footer contract can be tested against the HTML a visitor
+  // actually receives. Tests that grep the template text are why header and footer were able to
+  // drift into two different sites for so long: they were asserting that the source still looked
+  // like the memory of the output, and both were free to change independently of each other.
+  siteHeader, siteFooter, SITE_NAV, SITE_LEGAL };

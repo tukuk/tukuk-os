@@ -79,8 +79,12 @@ test('no file at all is a null, not a throw', () => {
 
 test('the shortcut is wired into getAPOD and cannot outlive the first read', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'nasa.js'), 'utf8');
-  const fn = src.slice(src.indexOf('async function getAPOD('), src.indexOf('async function getAPOD(') + 1500);
-  assert.ok(fn.includes('apodFromDiskIfFresh()'), 'getAPOD asks the disk before the network');
+  // Window covers the whole head of getAPOD — cache check, the bank-first block (Pipeline 4,
+  // 2026-11-01), and the cold-start shortcut. Widened from 1500 because the bank block sits
+  // between the cache check and the shortcut; every assertion below still guards the same order.
+  const fn = src.slice(src.indexOf('async function getAPOD('), src.indexOf('async function getAPOD(') + 2600);
+  assert.ok(fn.includes('apodbank.byDate(wd)'), 'getAPOD asks its own bank before any network');
+  assert.ok(fn.includes('apodFromDiskIfFresh()'), 'and asks the disk before the live API');
   assert.ok(fn.includes('refreshApodBehind()'), 'and asks the API behind the response');
   assert.ok(fn.includes('refreshing: true'), 'the payload is marked as being refreshed, not as an outage');
   assert.match(fn, /if \(!date && !count && !force && !apodColdStartHandled\)/,

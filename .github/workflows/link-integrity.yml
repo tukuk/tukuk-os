@@ -1,0 +1,41 @@
+name: link-integrity
+
+# Static internal-link integrity for tukuk.org (scripts/link-check.js). No network, no server,
+# no npm install — it reads the route table out of src/*.js (both the app.get('/x') call-site
+# dialect and the table-registered [['/x', page]] forEach-mounts), treats public/ as the static
+# table, and fails if any LITERAL href/src/action in the 1 300+ page modules points at something
+# neither serves. This is the pipeline that would have caught the /read-aloud dead links the
+# first run found (fixed in the same commit that added this file).
+
+on:
+  schedule:
+    # Daily 05:50 UTC — beside the tukuk-devops cron lane (monitor 05:20, wikibank 06:07,
+    # apodbank 06:37, quakebank 07:17) but a different repo, so ordering is courtesy only.
+    - cron: '50 5 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'scripts/link-check.js'
+      - '.github/workflows/link-integrity.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # stdlib node only — deliberately NO npm install here: nothing about this check depends on
+      # dependencies, and every install is another way a check can go red for reasons that are
+      # not the links.
+      - name: link integrity
+        run: node scripts/link-check.js

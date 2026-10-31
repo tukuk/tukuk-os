@@ -1,0 +1,59 @@
+name: npm-audit
+
+# Weekly production-dependency vulnerability report for tukuk.org's app (private repo, so the
+# audit lives HERE — it is minutes of runner time and needs no cross-repo token).
+#
+# What it checks: `npm audit --omit=dev` — the dependency TREE the production box actually runs
+# (express, axios, cheerio, meilisearch, ws, sharp…). devDependencies (the electron build chain)
+# are reported for information but do not gate: they never execute on the server, and last
+# month's `npm audit fix --force` temptation on the box is exactly the failure mode this file
+# exists to defuse — a red run means "read the table and decide", never "force-upgrade express".
+#
+# Read-only by construction: `npm install --package-lock-only` touches only the lockfile inside
+# the runner's ephemeral checkout, and NO audit-fix subcommand appears anywhere. A real fix is
+# a human commit that runs the app's tests first.
+
+on:
+  schedule:
+    # Mondays 05:40 UTC, before the Monday wordbank/malaybank builds and the evening peak.
+    - cron: '40 5 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: resolve tree (no install, no scripts)
+        run: npm install --package-lock-only --ignore-scripts --no-audit --silent
+
+      - name: audit (full picture in the summary)
+        run: |
+          set -uo pipefail
+          npm audit --json > audit-all.json || true
+          npm audit --omit=dev --json > audit-prod.json || true
+          {
+            echo "## npm audit — production tree"
+            jq -r '.metadata.vulnerabilities | "prod: low=\(.low // 0) moderate=\(.moderate // 0) high=\(.high // 0) critical=\(.critical // 0)"' audit-prod.json
+            jq -r '.metadata.vulnerabilities | "with dev: low=\(.low // 0) moderate=\(.moderate // 0) high=\(.high // 0) critical=\(.critical // 0)"' audit-all.json
+            echo
+            echo "### Production advisories"
+            jq -r '.vulnerabilities | to_entries[] | "- \(.key) [\(.value.severity)] via \(.value.via | if type=="array" then map(if type=="string" then . else .title end) | join(", ") else . end)"' audit-prod.json | head -40
+            echo
+            echo 'Full data in the run log. Fix decisions are commits with tests, not `audit fix --force` on the box.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The gate: HIGH or CRITICAL in the PRODUCTION tree goes red. Moderate/low are informational
+      # — the 2026-11 box audit measured 15 moderate + 1 high, nearly all electron-chain devDeps.
+      - name: gate on production high/critical
+        run: npm audit --omit=dev --audit-level=high

@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const { attachGuard } = require('./outbound');
+const quakebank = require('./quakebank');
 
 const http = axios.create({
   timeout: 20000,
@@ -200,7 +201,7 @@ async function fetchOnce(key, params, attempt) {
 }
 
 // Query by configured region (a lat/lon box, or none for the whole world).
-function regionFeed(r) {
+async function regionFeed(r) {
   // findRegion hands back null for a slug that is not in REGIONS; say so plainly
   // instead of dereferencing null and surfacing a bare TypeError at the call site.
   if (!r) throw new Error('regionFeed needs a known region');
@@ -213,6 +214,14 @@ function regionFeed(r) {
     params.minlongitude = minLon; params.minlatitude = minLat;
     params.maxlongitude = maxLon; params.maxlatitude = maxLat;
   }
+  // Bank first (pipeline 5: rolling 35-day USGS window rebuilt daily by quakebank-build.yml in
+  // the public tukuk/tukuk-devops repo, loaded into the `quake` Meilisearch index by
+  // wordbank-sync). Bank rows carry exactly the fields fetchOnce maps GeoJSON into, so a hit
+  // is indistinguishable from a live answer apart from ~5 ms instead of ~8 s. A miss — or any
+  // bank problem at all — falls through to the untouched USGS chain below (cache → mirror →
+  // live with single-flight and retry), which stays the fallback for hours the bank lags.
+  const bankRows = await quakebank.feed(params);
+  if (bankRows && bankRows.length) return bankRows;
   return usgsQuery(params);
 }
 

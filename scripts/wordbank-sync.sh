@@ -6,15 +6,18 @@
 # public runners in tukuk/tukuk-devops; this script only DOWNLOADS finished files and LOADS them.
 # That keeps the production box light, which is the whole point of the split.
 #
-# Three rolling releases feed the box:
+# Five rolling releases feed the box:
 #   wordbank-latest   en            (WordNet,            wordbank-build.yml)   → kata
 #   malaybank-latest  ms+id         (raw wiktextract,    malaybank-build.yml)   → kata
 #   wikibank-latest   wiki titles   (en.wiki summaries,  wikibank-build.yml)    → wiki
+#   apodbank-latest   dated APODs   (science.nasa.gov pages, apodbank-build.yml) → apod
+#   quakebank-latest  35-day quakes (USGS window,       quakebank-build.yml)    → quake
 # Every release is DOWNLOADED AND VERIFIED FIRST; only when all checksums pass do we load, and the
 # kata load wipes exactly once (WORDBANK_FRESH=1 on the very first file, 0 on the rest). A failed
 # download therefore leaves yesterday's index untouched, and a per-file wipe can never erase the
-# language loaded before it. wikibank-latest is optional (it only exists once its daily build has
-# run at least once) — a missing or half-finished wiki release must never block the word banks.
+# language loaded before it. wikibank/apodbank/quakebank-latest are optional (each only exists
+# once its daily build has run at least once) — a missing or half-finished optional release must
+# never block the word banks.
 #
 # It verifies SHA256SUMS before loading anything. A truncated download on a home connection is not
 # a build failure unless we make it one — so we make it one.
@@ -24,9 +27,9 @@ set -euo pipefail
 
 REPO="${WORDBANK_REPO:-tukuk/tukuk-devops}"
 # Space-separated rolling tags, in load order. The first file of the FIRST tag does the kata wipe.
-TAGS="${WORDBANK_TAGS:-wordbank-latest malaybank-latest wikibank-latest}"
+TAGS="${WORDBANK_TAGS:-wordbank-latest malaybank-latest wikibank-latest apodbank-latest quakebank-latest}"
 # Tags whose absence is a warning, not a sync failure.
-OPTIONAL_TAGS="${WORDBANK_OPTIONAL_TAGS:-wikibank-latest}"
+OPTIONAL_TAGS="${WORDBANK_OPTIONAL_TAGS:-wikibank-latest apodbank-latest quakebank-latest}"
 DEST="${WORDBANK_DIR:-$(cd "$(dirname "$0")/.." && pwd)/data/wordbank}"
 NODE="${NODE:-node}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -87,6 +90,14 @@ for entry in "${ALL_FILES[@]}"; do
     # Whole-file snapshot into its own index — wikibank-load.js owns the wipe for `wiki`.
     echo "[wordbank] loading $path into Meilisearch (wiki)"
     "$NODE" "$ROOT/scripts/wikibank-load.js" "$path"
+  elif [ "$tag" = "apodbank-latest" ]; then
+    # Dated APOD archive into its own `apod` index — apod-load.js owns the wipe.
+    echo "[wordbank] loading $path into Meilisearch (apod)"
+    "$NODE" "$ROOT/scripts/apod-load.js" "$path"
+  elif [ "$tag" = "quakebank-latest" ]; then
+    # Rolling 35-day USGS window into its own `quake` index — quake-load.js owns the wipe.
+    echo "[wordbank] loading $path into Meilisearch (quake)"
+    "$NODE" "$ROOT/scripts/quake-load.js" "$path"
   else
     echo "[wordbank] loading $path into Meilisearch (kata, fresh=$FRESH)"
     WORDBANK_FRESH="$FRESH" "$NODE" "$ROOT/scripts/wordbank-load.js" "$path"
