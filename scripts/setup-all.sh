@@ -7,9 +7,9 @@
 #   cd /opt/tukuk-os
 #   npm install     # postinstall -> this script auto-runs, ready 100% at once
 #
-# (private repo — a new machine needs a GitHub SSH key; .env is auto-copied
-#  from deploy/env.defaults; tunnel credentials are read from
-#  deploy/cloudflared/<CF_TUNNEL_ID>.json)
+# (a new machine needs a GitHub SSH key while the repo is private; .env is MERGED by
+#  scripts/make-env.sh from deploy/env.defaults (publishable) + deploy/env.secrets (not
+#  in git) — the tunnel token comes from that private half, never from a .json file)
 #
 # Or manual:  sudo bash scripts/setup-all.sh
 #

@@ -153,8 +153,10 @@ test('the .env bootstrap runs before the preflight reads it (run #1 died on this
   const lines = fs.readFileSync(path.join(ROOT, 'scripts/rebuild-from-offsite.sh'), 'utf8').split('\n');
   // The bootstrap used to be `cp deploy/env.defaults $ENV`; it is now make-env.sh, which
   // merges the public defaults with the gitignored env.secrets. Same obligation, one
-  // fewer place that knows how .env is built.
-  const boot = lines.findIndex((l) => l.includes('make-env.sh') && l.includes('scripts'));
+  // fewer place that knows how .env is built. Anchored on the CALL, not on the word:
+  // the gate's own error message names make-env.sh (it has to, that is the fix it
+  // prescribes), so a loose match would compare the gate with itself.
+  const boot = lines.findIndex((l) => /^\s*bash /.test(l) && l.includes('make-env.sh'));
   const gate = lines.findIndex((l) => l.includes('BACKUP_WORKER_URL') && l.includes('empty in'));
   assert.ok(boot !== -1, 'no .env bootstrap step found (expected a make-env.sh call)');
   assert.ok(gate !== -1, 'the worker preflight was removed, so this test needs updating with it');

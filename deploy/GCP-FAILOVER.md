@@ -175,7 +175,7 @@ dialed — and the apex was 200 again immediately after restore. 16 worker tests
 ```bash
 # from the box (gcloud is at /home/tukuk/google-cloud-sdk/bin — not on PATH in ssh)
 export PATH="$HOME/google-cloud-sdk/bin:$PATH"
-gcloud auth list                                   # fevianbenjo48@gmail.com
+gcloud auth list                                   # → the operator's Google account (not written here)
 gcloud config set project polar-office-460107-j9
 gcloud billing projects describe polar-office-460107-j9   # billingEnabled must be true
 ```

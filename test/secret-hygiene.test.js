@@ -36,8 +36,28 @@ const LIVE_SHAPES = [
   [/-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY/, 'a private key'],
 ];
 
-// `NAME || 'literal'` / `NAME: 'literal'` where NAME is a key — the JS-shaped leak.
-const LITERAL_DEFAULT = /[A-Z0-9_]*(?:API_KEY|APIKEY|TOKEN|SECRET|PASSWORD|PASSPHRASE)[A-Z0-9_]*[^|]{0,40}\|\|\s*['"][^'"]{12,}['"]/;
+// `NAME || 'literal'` — the JS-shaped leak, and the one a KEY=value scanner cannot see.
+// It gets its own rule with its own filters instead of sharing the placeholder exemption
+// below, because the shape ALWAYS contains `process.env`: applying the placeholder filter
+// to it made the rule dead code, silently never firing on the exact class the audit found
+// in src/config.js (NASA key, OpenWeather key, admin email, 'tukuk123'). The name is
+// matched case-sensitively because these are env-var names; a lowercase `token` in prose
+// is not a config line.
+const FALLBACK = /([A-Z0-9_]*(?:API_KEY|APIKEY|TOKEN|SECRET|PASSPHRASE|PASSWORD|PIN|ADMIN_EMAIL)[A-Z0-9_]*)\s*\|\|\s*['"]([^'"]+)['"]/;
+// A password fallback is worth catching shorter than an API key: 'tukuk123' is 8 characters
+// and was the admin credential of a live site.
+const FALLBACK_MIN_LEN = (name) => (/(?:PASSWORD|PIN)/.test(name) ? 6 : 12);
+const OBVIOUS_DOC_VALUE = /your|example|replace|placeholder|change|dummy|sample|xxxx|edit[-_]?me/i;
+
+function isLiveFallback(line) {
+  const m = line.match(FALLBACK);
+  if (!m) return false;
+  const [, name, literal] = m;
+  if (OBVIOUS_DOC_VALUE.test(literal)) return false;
+  if (literal.includes('$')) return false;                 // reads another variable
+  if (!/^[A-Za-z0-9_@.:\/+ -]+$/.test(literal)) return false; // not a single-token value
+  return literal.length >= FALLBACK_MIN_LEN(name);
+}
 
 // Values that are public on purpose. Each one is public because a CLIENT needs it, which
 // is the only honest test for this list: if it must reach a browser or be fetchable from
@@ -56,7 +76,9 @@ function linesOf(file) {
 }
 
 // A placeholder is allowed to look like anything; only non-placeholder text is judged.
-const PLACEHOLDER = /REPLACE|CHANGE ME|YOUR_|PLACEHOLDER|EXAMPLE|xxxx|<[^>]*>|\$\{|secrets\.[A-Z]|process\.env|os\.environ|getenv|\.example\/|\.\.\./i;
+// `process.env` is deliberately NOT in here (see isLiveFallback): the JS fallback shape
+// always contains it, and exempting it here silently killed that rule.
+const PLACEHOLDER = /REPLACE|CHANGE ME|YOUR_|PLACEHOLDER|EXAMPLE|xxxx|<[^>]*>|\$\{|secrets\.[A-Z]|os\.environ|getenv|\.example\/|\.\.\./i;
 
 // Two exemptions the first run of this test produced out of real lines, both legitimate:
 //   • a digest. apk/gradlew pins the Gradle distribution by sha256 — 40+ hex characters
@@ -69,22 +91,75 @@ const PLACEHOLDER = /REPLACE|CHANGE ME|YOUR_|PLACEHOLDER|EXAMPLE|xxxx|<[^>]*>|\$
 const NOT_A_SECRET = /sha256|sha512|checksum|integrity|digest|distributionSha/i;
 const DYNAMIC_VALUE = /=\s*["']?\$/;
 
+// One judgement, two users: the tree scan below and the fixture test that proves the
+// rules fire. A guard nobody has demonstrated to be capable of failing is a comment.
+function judgeLine(line) {
+  const found = [];
+  if (isLiveFallback(line)) found.push('a key hardcoded as a JS/TS fallback');
+  const deliberate = Object.keys(PUBLIC_BY_DESIGN).some((k) =>
+    new RegExp(`^\\s*#?\\s*${k}\\s*[:=]`).test(line)
+    || new RegExp(`${k}$`).test(line.trim().split(/[=:]/)[0] || ''));
+  if (PLACEHOLDER.test(line) || NOT_A_SECRET.test(line) || deliberate) return found;
+  for (const [re, what] of LIVE_SHAPES) {
+    if (re.test(line)) found.push(what);
+  }
+  return found;
+}
+
 test('no tracked file carries a live-shaped credential', () => {
   const hits = [];
   for (const file of tracked) {
     linesOf(file).forEach((line, i) => {
-      if (PLACEHOLDER.test(line) || NOT_A_SECRET.test(line)) return;
-      // The names above are exempt only for their own assignment, not for anything else.
-      const deliberate = Object.keys(PUBLIC_BY_DESIGN).find((k) => new RegExp(`^\\s*#?\\s*${k}\\s*[:=]`).test(line)
-        || new RegExp(`${k}$`).test(line.trim().split(/[=:]/)[0] || ''));
-      if (deliberate) return;
-      for (const [re, what] of LIVE_SHAPES) {
-        if (re.test(line)) hits.push(`${file}:${i + 1}  ${what}`);
-      }
-      if (LITERAL_DEFAULT.test(line)) hits.push(`${file}:${i + 1}  a key hardcoded as a JS/TS fallback`);
+      for (const what of judgeLine(line)) hits.push(`${file}:${i + 1}  ${what}`);
     });
   }
   assert.deepEqual(hits, [], 'these tracked lines look like real credentials:\n' + hits.join('\n'));
+});
+
+test('the guard catches the shapes it was written for, and only those', () => {
+  // A guard that has never been demonstrated to fire is a comment, so this test hands it
+  // the exact lines the audit found (generic values, same shapes). It also proves the
+  // other half: the exemptions are for real lines in this repo, not for convenience.
+  //
+  // The fixtures are ASSEMBLED, not written out — same trick as repo-identity.test.js.
+  // A literal `CF_TUNNEL_TOKEN=eyJ….…` in this file would be a tracked line carrying a
+  // live-shaped credential, and the first test would (correctly) fail on the guard itself.
+  const JWT = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', 'eyJzdWIiOiJ0dWt1ay1vcy1hZG1pbiJ9', 'abcDEF123'].join('.');
+  const CFUT = ['cfut_', 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6'].join('');
+  // `NAME || 'value'` — built here so no source line of this file contains the shape.
+  const fallback = (name, value) => `process.env.${name} || '${value}',`;
+
+  const mustCatch = [
+    // the class a KEY=value scanner cannot see, all four of them
+    fallback('NASA_API_KEY', 'aB3dE5fG6hI7jK8lM9nO0pQ1rS2tU3vW4xY5zA6b'),
+    fallback('OPENWEATHER_API_KEY', 'c5cdeb2e2261ae767890f8e3c3a651ab'),
+    fallback('ADMIN_PASSWORD', 'tukuk123'),          // 8 chars: caught by the PASSWORD floor
+    fallback('ADMIN_EMAIL', 'operator.name77@gmail.com'),
+    // the class a KEY=value scanner does see
+    `CF_TUNNEL_TOKEN=${JWT}`,
+    `CLOUDFLARE_API_TOKEN=${CFUT}`,
+  ];
+
+  // Real lines from this repo that must stay unflagged. If one of these starts failing,
+  // the rule is guessing rather than matching, and the fix is a narrower shape — not a
+  // new exception.
+  const mustIgnore = [
+    fallback('MY_API_KEY', 'your-api-key-here'),     // documented placeholder
+    'GEMINI_API_KEY=REPLACE_ME',                     // .env.example
+    "distributionSha256Sum='470ac12e7aa8cf1a4256945a9bc72a108ea88d733e0c435bfbf22f802b162b26'", // checksum
+    'export CLOUDFLARE_API_TOKEN="$CF_API"',         // names the var, value at run time
+    'INDEXNOW_KEY=bd8f2c1a4e6d7f90b3c5d8e1f2a4b6c8', // public by design
+    'AGENT_FREE_TOKEN=041aab9c7d2e4f6081a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f',
+    '# CLOUDFLARE_API_TOKEN (cfut_\u2026) is in env.secrets', // prose, no value
+    'url = "https://example.com/api/v1"',            // not a key at all
+  ];
+
+  for (const line of mustCatch) {
+    assert.ok(judgeLine(line).length > 0, `should have been flagged: ${line.slice(0, 34)}\u2026`);
+  }
+  for (const line of mustIgnore) {
+    assert.deepEqual(judgeLine(line), [], `should NOT have been flagged: ${line.slice(0, 34)}\u2026`);
+  }
 });
 
 test('the six access-granting names are nowhere in the tracked tree', () => {
