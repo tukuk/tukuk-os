@@ -78,28 +78,43 @@ PUB_ASSET="${WATCHDOG_PUBLIC_ASSET:-https://tukuk.org/libs/leaflet.min.js}"
 PUB_STAMP="/tmp/tukuk-os-watchdog.public"
 CODE=$(probe_edge "$PUB")
 PREV=$(cat "$PUB_STAMP" 2>/dev/null || echo ok)
+# `2??` as a shell case pattern is NOT "2 followed by two digits": `?` matches ANY
+# character, so it also matched 530/503 — which is how this script sat silently "healthy"
+# through the 30-31 Oct edge outage, and then CRASHED (`ok: unbound variable`, line 94, on
+# `N=$((N+1))` with N unset under `set -u`) the moment the edge finally answered something
+# the fall-through caught. A watchdog that dies every 2 minutes on a broken edge is worse
+# than no watchdog: `systemctl is-failed` is the only clue and nobody watches it. Match on
+# the first character, explicitly.
+# And the counter guard is `${N:-0}` in the original — which does NOT guard what it looks
+# like it guards: when the stamp file is absent PREV is the literal "ok", the strip
+# `${PREV#err:}` leaves it "ok" (nothing matched), N is SET-but-non-numeric, so `${N:-0}`
+# expands to "ok" and `$(( ok + 1 ))` dies with "ok: unbound variable" — arithmetic treats
+# an unset identifier as an error under `set -u`. Only a prefix test is a real guard.
+bump() { # $1 = stamp prefix, $2 = previous stamp content → echoes the new count
+  local n; n=${2#"$1"}; case "$n" in ''|*[!0-9]*) n=0 ;; esac; echo $((n + 1));
+}
 case "$CODE" in
-  2??)
+  2[0-9][0-9])
     [ "$PREV" != ok ] && { log "Public edge RECOVERED — $PUB answering HTTP $CODE (was: $PREV)"; rm -f "$PUB_STAMP"; }
     ;;
   429)
-    N=${PREV#429:}; N=$(( ${N:-0} + 1 )); echo "429:$N" > "$PUB_STAMP"
+    N=$(bump "429:" "$PREV"); echo "429:$N" > "$PUB_STAMP"
     [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⛔ CLOUDFLARE EDGE 429: $PUB — every visitor is being refused; Node is NOT the cause (attempt $N). If the body says 'error code: 1027' the account's daily free Worker request cap is spent (resets 00:00 UTC, and it also blocks the R2 backup uploads) — check for a Worker route fetching its own zone. Any other 429 is a zone rule: tukuk.org → Security → Events + WAF → Rate limiting rules."
     ;;
   000)
-    N=${PREV#000:}; N=$(( ${N:-0} + 1 )); echo "000:$N" > "$PUB_STAMP"
+    N=$(bump "000:" "$PREV"); echo "000:$N" > "$PUB_STAMP"
     [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⚠ Public edge UNREACHABLE — curl to $PUB failed (tunnel/internet down, not an app fault) (attempt $N)"
     ;;
   *)
-    N=${PREV#err:}; N=$(( ${N:-0} + 1 )); echo "err:$N" > "$PUB_STAMP"
-    [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⚠ Public edge answered HTTP $CODE (non-2xx) — bad deploy or origin error surfacing through Cloudflare (attempt $N)"
+    N=$(bump "err:" "$PREV"); echo "err:$N" > "$PUB_STAMP"
+    [ "$N" -eq 1 ] || [ $((N % 15)) -eq 0 ] && log "⚠ Public edge answered HTTP $CODE (non-2xx) — bad deploy or origin error surfacing through Cloudflare (attempt $N). For a Worker/fallback answer the LOCAL :3000 check cannot see it, so this line is the only evidence the apex is not on the box — compare /zones/…/workers/routes."
     ;;
 esac
 # A self-hosted vendored library missing at the edge (the exact class of bug that blanked
 # the /traffic map) — catch it here so a broken /libs/ path never waits for a human report.
 ACODE=$(probe_edge "$PUB_ASSET")
 case "$ACODE" in
-  2??) ;;
+  2[0-9][0-9]) ;;
   *) log "⚠ Public self-hosted asset $PUB_ASSET returned HTTP $ACODE — a vendored /libs/ file may be missing or misconfigured" ;;
 esac
 
