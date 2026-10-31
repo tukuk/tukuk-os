@@ -3,7 +3,7 @@
 #
 # LIVES IN THIS REPO ON PURPOSE. It ran from ~/station-break/tools/ on the server, which
 # is not backed up anywhere: a wiped box used to take the only copy of the flagship game's
-# build logic with it. The game source is a separate private repo (fevian448/station-break);
+# build logic with it. The game source is a separate private repo (tukuk/station-break);
 # the builder belongs to the platform that has to rebuild it.
 #
 # Paths are overridable so a rebuilt machine can point it anywhere:

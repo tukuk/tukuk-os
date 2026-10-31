@@ -120,7 +120,7 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 # Tukuk Agent = code-server fork with its own history (nested repo, upstream detached)
 code-server/
-# Tukuk Builder = bolt.diy fork with its own history (nested repo, remote fevian448)
+# Tukuk Builder = bolt.diy fork with its own history (nested repo, remote tukuk)
 bolt.diy/
 # ─── ONE FOLDER: the payloads that live INSIDE this checkout on the box ─────────────
 # deploy/paths.sh makes the app folder the only folder on the server, so the Builder's

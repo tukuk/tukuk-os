@@ -1,6 +1,6 @@
 [Unit]
 Description=Mirror the newest backup slices from R2 into the free GCS bucket
-Documentation=https://github.com/fevian448/tukuk-os-v2/blob/main/scripts/gcs-offsite-sync.sh
+Documentation=https://github.com/tukuk/tukuk-os/blob/main/scripts/gcs-offsite-sync.sh
 After=network-online.target
 Wants=network-online.target
 

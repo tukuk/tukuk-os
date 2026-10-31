@@ -12,7 +12,7 @@
 set -uo pipefail
 
 REPO="/opt/tukuk-os"
-REMOTE="git@github.com:fevian448/tukuk-os-v2.git"
+REMOTE="git@github.com:tukuk/tukuk-os.git"
 BRANCH="main"
 
 [[ "${EUID}" -eq 0 ]] || { echo "[autosync] run as root: sudo bash $0"; exit 1; }
@@ -69,10 +69,10 @@ if [[ "$CREATED_KEY" == "1" ]]; then
   if [[ -n "$TOK" ]] && curl -sf -X POST -H "Authorization: Bearer $TOK" -H "Accept: application/vnd.github+json" \
        -H "Content-Type: application/json" \
        -d "{\"title\":\"tukuk-os-box-$(hostname)\",\"key\":\"$(cat /root/.ssh/tukuk_deploy.pub)\",\"read_only\":true}" \
-       https://api.github.com/repos/fevian448/tukuk-os-v2/keys >/dev/null; then
-    echo "[autosync] deploy key registered on fevian448/tukuk-os-v2 (read-only)."
+       https://api.github.com/repos/tukuk/tukuk-os/keys >/dev/null; then
+    echo "[autosync] deploy key registered on tukuk/tukuk-os (read-only)."
   else
-    echo "[autosync] ⚠ REGISTER THIS KEY before auto-update can run — GitHub → fevian448/tukuk-os-v2"
+    echo "[autosync] ⚠ REGISTER THIS KEY before auto-update can run — GitHub → tukuk/tukuk-os"
     echo "            → Settings → Deploy keys → Add deploy key, and DO NOT tick 'Allow write access':"
     sed 's/^/            /' /root/.ssh/tukuk_deploy.pub
   fi

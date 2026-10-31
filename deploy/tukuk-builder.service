@@ -15,7 +15,7 @@
 # that is the port cloudflared is configured to reach. It forwards here, and wakes this unit when
 # it has been asleep. Do not move this back to 5174 or the two units will fight for the socket.
 Description=Tukuk Builder (bolt.diy fork — AI app-building agent)
-Documentation=https://github.com/fevian448/tukuk-builder
+Documentation=https://github.com/tukuk/tukuk-builder
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0

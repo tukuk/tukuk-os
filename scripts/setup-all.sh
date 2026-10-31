@@ -3,7 +3,7 @@
 # setup-all.sh — Full automatic Tukuk-OS setup for a real server.
 #
 # How to use on an EMPTY machine (Ubuntu 22.04+) — ONE step only:
-#   git clone git@github.com:fevian448/tukuk-os-v2.git /opt/tukuk-os
+#   git clone git@github.com:tukuk/tukuk-os.git /opt/tukuk-os
 #   cd /opt/tukuk-os
 #   npm install     # postinstall -> this script auto-runs, ready 100% at once
 #
@@ -717,26 +717,26 @@ for t in tukuk-data-backup tukuk-identity-backup tukuk-content-backup meili-back
 done
 # ── [8d-bis] the Builder's SOURCE is not this repo ────────────────────────────
 # tukuk-builder.service has WorkingDirectory=$INSTALL_DIR/apps/builder — inside the app
-# folder, but NOT part of it: the Builder is its own git repo. A rebuild that only clones
-# tukuk-os-v2 ends up with the unit ENABLED and nothing under it:
+# folder, but NOT part of it: the Builder is its own git repo. A rebuild that only brings
+# this repo ends up with the unit ENABLED and nothing under it:
 # build.tukuk.org answers 502 and no log line says why.
-# fevian448/tukuk-builder is PUBLIC, so this needs no token. Install and build run ON
+# tukuk/tukuk-builder is PUBLIC, so this needs no token. Install and build run ON
 # THE BOX, mirroring scripts/deploy-builder.sh, because a laptop-side build would not
 # match the server's node22. Both steps are gated on the source or node_modules being
 # absent, so a routine deploy pays nothing here.
 BUILDER_DIR="${TUKUK_BUILDER_DIR:-$INSTALL_DIR/apps/builder}"
 BUILDER_LOG=/var/log/tukuk-builder-install.log
 if [[ ! -f "$BUILDER_DIR/package.json" ]]; then
-  info "[+] App Builder source missing — cloning fevian448/tukuk-builder into $BUILDER_DIR..."
+  info "[+] App Builder source missing — cloning tukuk/tukuk-builder into $BUILDER_DIR..."
   # [5b] creates the layout, but it is deliberately non-fatal: it warns and carries on so a
   # stale box keeps serving. That means this clone can be reached with apps/ missing, so it
   # cannot assume the parent it is about to write into exists. (git itself does create
   # missing parents — verified — which is exactly why this was invisible in testing.)
   mkdir -p "$(dirname "$BUILDER_DIR")"
-  if git clone --depth 1 https://github.com/fevian448/tukuk-builder.git "$BUILDER_DIR" >>"$BUILDER_LOG" 2>&1; then
+  if git clone --depth 1 https://github.com/tukuk/tukuk-builder.git "$BUILDER_DIR" >>"$BUILDER_LOG" 2>&1; then
     ok "Builder source cloned."
   else
-    warn "Builder clone failed (no network, or the repo moved). build.tukuk.org will answer 502 until you run: sudo git clone https://github.com/fevian448/tukuk-builder $BUILDER_DIR"
+    warn "Builder clone failed (no network, or the repo moved). build.tukuk.org will answer 502 until you run: sudo git clone https://github.com/tukuk/tukuk-builder $BUILDER_DIR"
   fi
 fi
 if [[ -f "$BUILDER_DIR/package.json" && ! -d "$BUILDER_DIR/node_modules" ]]; then
@@ -812,7 +812,7 @@ if [[ "${INSTALL_GAME:-0}" == "1" ]]; then
   info "[+] Godot web build (INSTALL_GAME=1)..."
   GAME_DIR="${STATION_BREAK_DIR:-${TUKUK_GAME_DIR:-$INSTALL_DIR/game}}"
   GBIN="${GODOT_BIN:-${TUKUK_GODOT_BIN:-$INSTALL_DIR/bin/godot}}"
-  # Source: the game lives in its own private repo (fevian448/station-break). A handover
+  # Source: the game lives in its own private repo (tukuk/station-break). A handover
   # USB carries it as a bundle, which needs no GitHub auth on a machine that has no key yet.
   if [[ ! -f "$GAME_DIR/project.godot" ]]; then
     BUN="${TUKUK_GAME_BUNDLE:-}"

@@ -2,7 +2,7 @@
 # ==============================================================================
 # install-from-usb.sh — install Tukuk-OS from a USB copy to /opt/tukuk-os.
 #
-# WHY: the repo is now PRIVATE (fevian448/tukuk-os-v2). Cloning from GitHub on a
+# WHY: the repo is now PRIVATE (tukuk/tukuk-os). Cloning from GitHub on a
 # new machine needs an SSH key/PAT — a hassle. The USB carries the code directly,
 # so NO auth is needed. The server only needs INTERNET for `npm install` (Node deps).
 #

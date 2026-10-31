@@ -27,7 +27,7 @@
 set -uo pipefail
 
 INSTALL_DIR=/opt/tukuk-os
-FORK_URL="https://github.com/fevian448/tukuk-agent-editor.git"
+FORK_URL="https://github.com/tukuk/tukuk-agent-editor.git"
 KEEP_OLLAMA=0
 [ "${1:-}" = "--keep-ollama" ] && KEEP_OLLAMA=1
 
@@ -70,7 +70,7 @@ fi
 ok "Node $(node -v) active."
 
 # ── [4] Fork + submodule (the server's git credentials must reach the private repo ─
-#     fevian448/tukuk-agent-editor; on 401: add a PAT, or make the fork public) ──
+#     tukuk/tukuk-agent-editor; on 401: add a PAT, or make the fork public) ──
 if [ ! -d code-server/.git ]; then
   info "[4] clone fork → $INSTALL_DIR/code-server (±350MB)..."
   # Reuse the credentials that ALREADY work for the parent auto-update:
@@ -80,13 +80,13 @@ if [ ! -d code-server/.git ]; then
   CLONE_URL="$FORK_URL"
   if [[ "$ORIGIN_URL" == https://*@github.com/* ]]; then
     CRED="${ORIGIN_URL%%github.com/*}"
-    CLONE_URL="${CRED}github.com/fevian448/tukuk-agent-editor.git"
+    CLONE_URL="${CRED}github.com/tukuk/tukuk-agent-editor.git"
   elif [[ "$ORIGIN_URL" == git@github.com:* || "$ORIGIN_URL" == ssh://git@github.com/* ]]; then
-    CLONE_URL="git@github.com:fevian448/tukuk-agent-editor.git"
+    CLONE_URL="git@github.com:tukuk/tukuk-agent-editor.git"
   fi
   git clone --depth 1 "$CLONE_URL" code-server \
     || { warn "clone with the origin URL failed — trying anonymous HTTPS."; rm -rf code-server; git clone --depth 1 "$FORK_URL" code-server; } \
-    || die "clone failed. The fork is now PUBLIC (fevian448/tukuk-agent-editor) — if anonymous HTTPS also fails, that is a GitHub network issue from the server, not credentials."
+    || die "clone failed. The fork is now PUBLIC (tukuk/tukuk-agent-editor) — if anonymous HTTPS also fails, that is a GitHub network issue from the server, not credentials."
 fi
 ( cd code-server && git submodule update --init --depth 1 lib/vscode >/dev/null 2>&1 ) \
   || ( cd code-server && git submodule update --init lib/vscode ) || die "lib/vscode submodule failed."

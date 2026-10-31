@@ -277,7 +277,7 @@ TIMERS=$(systemctl list-timers --all --no-pager 2>/dev/null | grep -c 'tukuk-\|m
 ORIGIN=$(git -C "$APP" remote get-url origin 2>/dev/null || echo none)
 case "$ORIGIN" in
   *.bundle|/media/*|/run/media/*|file:*)
-    note "git remote" "origin is the handover bundle — once this box has a key: sudo git -C $APP remote set-url origin git@github.com:fevian448/tukuk-os-v2.git" ;;
+    note "git remote" "origin is the handover bundle — once this box has a key: sudo git -C $APP remote set-url origin git@github.com:tukuk/tukuk-os.git" ;;
   none)
     note "git remote" "no origin at all (USB install excludes .git) — re-clone from a bundle to get the daily auto-update back" ;;
   *) good "git remote" "$ORIGIN" ;;

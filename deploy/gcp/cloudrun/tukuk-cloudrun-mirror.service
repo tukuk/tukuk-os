@@ -1,6 +1,6 @@
 [Unit]
 Description=Rebuild the Cloud Run copy of tukuk.org from the newest R2 snapshot
-Documentation=https://github.com/fevian448/tukuk-os-v2/blob/main/deploy/gcp/cloudrun/cloudrun-mirror-rebuild.sh
+Documentation=https://github.com/tukuk/tukuk-os/blob/main/deploy/gcp/cloudrun/cloudrun-mirror-rebuild.sh
 After=network-online.target
 Wants=network-online.target
 

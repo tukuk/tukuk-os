@@ -211,7 +211,7 @@ supported paths, best first:
 ```bash
 sudo git clone -b main /media/usb/code/tukuk-os-v2-main.bundle /opt/tukuk-os   # 1. no credentials needed
 sudo bash scripts/install-from-usb.sh                                          # 2. directory copy
-git clone git@github.com:fevian448/tukuk-os-v2.git /opt/tukuk-os               # 3. after adding a box key
+git clone git@github.com:tukuk/tukuk-os.git /opt/tukuk-os                     # 3. after adding a box key
 ```
 
 Path 2 is the one that has bitten before: `install-from-usb.sh` rsyncs with `--exclude .git`, so the
@@ -272,7 +272,7 @@ sudo FORCE_DATA=1 bash scripts/rebuild-from-offsite.sh
 # only if play.tukuk.org has to be rebuilt as well (~1.3 GB of Godot + template downloads):
 sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=/media/usb/code/station-break-game.bundle bash scripts/setup-all.sh
 # 5. once this box has a GitHub key, and only then, hand the remote back to GitHub:
-sudo git -C /opt/tukuk-os remote set-url origin git@github.com:fevian448/tukuk-os-v2.git
+sudo git -C /opt/tukuk-os remote set-url origin git@github.com:tukuk/tukuk-os.git
 ```
 
 `FORCE_DATA=1` is on that line for a reason, and it is the one flag whose absence is invisible:
