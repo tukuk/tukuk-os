@@ -19,8 +19,14 @@ uptime
 #   cockpit.socket               -> web admin console (unused; the admin panel is on tukuk.org)
 #   snapd.*                      -> the snap daemon and its socket (see the block below: masked,
 #                                  because socket activation would otherwise bring it straight back)
+#   warp-svc                     -> the Cloudflare WARP *client*. The tunnel is cloudflared, a
+#                                  separate daemon, so nothing here uses WARP. It was Connected in
+#                                  WarpWithDnsOverHttps mode holding 161 MB and 1.2% CPU, and it is a
+#                                  consumer VPN on a server — measured off: DNS still resolves via
+#                                  the WiFi link's 1.1.1.1, outbound HTTPS, /health, nginx and the
+#                                  public site all still answer. Undo: systemctl enable --now warp-svc
 #   snapd.snap-repair / motd-news / fwupd-refresh timers -> background chatter
-UNITS="lightdm avahi-daemon avahi-daemon.socket cups cups.socket cups.path cups-browsed bluetooth ModemManager smbd nmbd udisks2 gpu-manager switcheroo-control apport apport-forward.socket cockpit.socket pmcd pmie pmlogger pmproxy snapd.snap-repair.timer motd-news.timer fwupd-refresh.timer"
+UNITS="lightdm avahi-daemon avahi-daemon.socket cups cups.socket cups.path cups-browsed bluetooth ModemManager smbd nmbd udisks2 gpu-manager switcheroo-control apport apport-forward.socket cockpit.socket pmcd pmie pmlogger pmproxy warp-svc snapd.snap-repair.timer motd-news.timer fwupd-refresh.timer"
 
 echo
 echo "=== DISABLING ==="
