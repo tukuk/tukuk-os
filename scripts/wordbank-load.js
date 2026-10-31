@@ -15,6 +15,11 @@
  * document. So the loader derives its own pk from the row content; that also makes a re-sync
  * idempotent (same row -> same pk -> replace, never duplicate). We still deleteAll first so words
  * removed upstream do not linger.
+ *
+ * WORDBANK_FRESH (default 1): set 0 to SKIP the deleteAll. The `kata` index now holds several
+ * languages shipped as SEPARATE releases (wordbank-latest en, malaybank-latest ms+id), and sync
+ * loads them one file at a time — a deleteAll on every file would wipe the language loaded before
+ * it. wordbank-sync.sh therefore wipes exactly once by passing FRESH=1 with the first file only.
  */
 const fs = require('fs');
 const zlib = require('zlib');
@@ -25,6 +30,7 @@ const KEY = process.env.MEILI_MASTER_KEY || '';
 const INDEX = process.env.WORDBANK_INDEX || 'kata';
 const FILE = process.argv[2];
 const BATCH = Number(process.env.WORDBANK_BATCH || 1000);
+const FRESH = process.env.WORDBANK_FRESH !== '0'; // 1 = wipe index first (default), 0 = append
 
 if (!FILE) {
   console.error('usage: node scripts/wordbank-load.js <file.jsonl.gz>');
@@ -121,9 +127,13 @@ async function main() {
   const sTask = await request('PATCH', `/indexes/${INDEX}/settings`, settings);
   await waitForTask(sTask.taskUid);
 
-  // Clean sync: drop everything so words removed upstream don't linger, then add in batches.
-  const del = await request('DELETE', `/indexes/${INDEX}/documents`);
-  await waitForTask(del.taskUid);
+  // Clean sync (FRESH=1): drop everything so words removed upstream don't linger, then add in
+  // batches. With FRESH=0 we only add — safe because pk is a content hash, so re-adding a row
+  // replaces it instead of duplicating, and other languages already in the index are untouched.
+  if (FRESH) {
+    const del = await request('DELETE', `/indexes/${INDEX}/documents`);
+    await waitForTask(del.taskUid);
+  }
 
   for (let i = 0; i < docs.length; i += BATCH) {
     const slice = docs.slice(i, i + BATCH);
