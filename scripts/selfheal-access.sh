@@ -49,20 +49,40 @@ while IFS= read -r net; do
   NETS+=("$net")
 done < <(ip -4 route show scope link 2>/dev/null | awk '$1 ~ /\/[0-9]+$/ {print $1}' | sort -u)
 
-# --- 1. sshd -----------------------------------------------------------------
-# ssh.service (Debian/Ubuntu) and sshd.service (Fedora/Arch) are the same daemon
-# under two names; try both. `enable` without `--now` first so a unit that is
-# already running is not restarted under a live session.
-if systemctl list-unit-files 2>/dev/null | grep -qE '^(ssh|sshd)\.service'; then
-  UNIT=ssh
-  systemctl list-unit-files 2>/dev/null | grep -qE '^ssh\.service' || UNIT=sshd
-  systemctl enable "$UNIT" >/dev/null 2>&1 || warn "could not enable $UNIT"
-  if systemctl is-active --quiet "$UNIT"; then
+# --- 1. ssh ------------------------------------------------------------------
+# Why `systemctl list-unit-files | grep -q …` is not a working existence test — this script is the
+# evidence. list-unit-files emits several hundred lines, `grep -q` exits the instant it matches, and
+# systemctl then dies of SIGPIPE; under `set -o pipefail` the PIPELINE returns 141 even though the
+# pattern matched. Measured on the box on 2026-11-01:
+#     … | grep -qE '^cockpit[.]socket'          -> rc 141  (the if took the ELSE branch)
+#     … | grep -E  '^cockpit[.]socket' >/dev/null -> rc 0
+#     systemctl cat cockpit.socket              -> rc 0
+# So the owner's access monitor reported "no ssh/sshd unit found" and "no cockpit.socket unit found"
+# on a box whose very next line printed `listening: ssh(22)=yes cockpit(9090)=yes`, and none of the
+# enable/start calls inside those then-branches ever ran, because the else-branch is where they live
+# and it only warns. A monitor that cries wolf is how a real lockout gets ignored, and this is the
+# one script whose whole job is that the owner can log in.
+# `systemctl cat` resolves a unit by exact name, needs no filtering, and exits 1 only when the unit
+# genuinely does not exist — the same primitive deploy/lighten-server.sh had to move to (README §12).
+has_unit() { systemctl cat "$1" >/dev/null 2>&1; }
+
+# ssh.service (Debian/Ubuntu) and sshd.service (Fedora/Arch) are one daemon under two names, and
+# Ubuntu 24.04+ ships SOCKET ACTIVATION: this box runs ssh.socket enabled with ssh.service
+# deliberately disabled, which is the correct modern setup. So the socket is preferred, and only the
+# unit that is actually the boot-time enabler is enabled — forcing ssh.service on would move a
+# working box from on-demand to always-running sshd for no reason.
+SSH_UNIT=""
+for u in ssh.socket ssh.service sshd.socket sshd.service; do
+  if has_unit "$u"; then SSH_UNIT="$u"; break; fi
+done
+if [[ -n "$SSH_UNIT" ]]; then
+  systemctl enable "$SSH_UNIT" >/dev/null 2>&1 || warn "could not enable $SSH_UNIT"
+  if systemctl is-active --quiet "$SSH_UNIT"; then
     :
-  elif systemctl start "$UNIT" >/dev/null 2>&1; then
-    say "started $UNIT"
+  elif systemctl start "$SSH_UNIT" >/dev/null 2>&1; then
+    say "started $SSH_UNIT"
   else
-    warn "FAILED to start $UNIT — check: journalctl -u $UNIT -n 40"
+    warn "FAILED to start $SSH_UNIT — check: journalctl -u $SSH_UNIT -n 40"
     fails=$((fails + 1))
   fi
 else
@@ -79,8 +99,16 @@ elif command -v cockpit-ws >/dev/null 2>&1; then
   warn "cockpit-lan-socket.sh not found at $REPO/deploy — the socket may stay on a stale address"
 fi
 
-if systemctl list-unit-files 2>/dev/null | grep -qE '^cockpit\.socket'; then
-  systemctl enable cockpit.socket >/dev/null 2>&1 || warn "could not enable cockpit.socket"
+if has_unit cockpit.socket; then
+  # enable, not merely start: the owner opens this console in a browser, so a unit that is
+  # running-but-disabled dies on the next reboot and he is standing outside with no way in. That is
+  # exactly how cockpit went missing on 2026-10-31 — deploy/lighten-server.sh disabled it, and the
+  # SIGPIPE test above meant this branch never noticed, let alone re-enabled it.
+  if ! systemctl is-enabled --quiet cockpit.socket 2>/dev/null; then
+    systemctl enable cockpit.socket >/dev/null 2>&1 \
+      && say "enabled cockpit.socket" \
+      || warn "could not enable cockpit.socket"
+  fi
   if ! systemctl is-active --quiet cockpit.socket; then
     systemctl start cockpit.socket >/dev/null 2>&1 \
       || { warn "FAILED to start cockpit.socket — check: journalctl -u cockpit.socket -n 40"; fails=$((fails + 1)); }
@@ -115,7 +143,7 @@ fi
 # --- 4. report what is actually listening ------------------------------------
 # Listening state, not unit state: that distinction is the entire point of this
 # script — cockpit.socket reported `active` while refusing every connection.
-listen() { ss -ltn 2>/dev/null | grep -qE "[:.]$1[[:space:]]" && echo yes || echo no; }
+listen() { ss -ltn 2>/dev/null | grep -E "[:.]$1[[:space:]]" >/dev/null && echo yes || echo no; }
 SSH_UP="$(listen 22)"
 COCKPIT_UP="$(listen 9090)"
 ADDRS="$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | tr '\n' ' ')"
@@ -132,5 +160,28 @@ if [[ "$COCKPIT_UP" != "yes" ]]; then
   fails=$((fails + 1))
 fi
 
-[[ "$fails" -eq 0 ]] && say "access restored." || warn "$fails check(s) still failing — see above."
+# --- 5. the console must ANSWER, not merely listen ----------------------------
+# "A listener exists" was never the owner's question. His question is "can I open this in a
+# browser", and the two are not the same: on 2026-10-31 cockpit.socket held fds on
+# CloudflareWARP's tunnel address among others, and a listener no client can route to is the same
+# lockout wearing a different hat. So probe every address the drop-in itself claims and require the
+# login page over TLS. `/login` answers 200 UNAUTHENTICATED — that is the page he lands on; the 401
+# belongs to /cockpit/login, the package endpoint, and checking that would pass on a console whose
+# login page cannot be opened (the same trap scripts/rebuild-from-offsite.sh already documents).
+# The drop-in is the source of truth rather than `ip`, because the failure being guarded against is
+# precisely a disagreement between the two.
+DROPIN="${COCKPIT_DROPIN:-/etc/systemd/system/cockpit.socket.d/40-lan-only.conf}"
+if [[ "$COCKPIT_UP" == "yes" && -f "$DROPIN" ]]; then
+  while IFS= read -r caddr; do
+    [[ -n "$caddr" ]] || continue
+    ccode=$(curl -sk -m 6 -o /dev/null -w '%{http_code}' "https://${caddr}:9090/login" 2>/dev/null)
+    case "${ccode:-000}" in
+      2[0-9][0-9]) say "cockpit answers HTTP ${ccode} on ${caddr}:9090" ;;
+      *) warn "cockpit does NOT answer on ${caddr}:9090 (HTTP ${ccode:-000}) — the owner cannot log in there"
+         fails=$((fails + 1)) ;;
+    esac
+  done < <(sed -n 's/^ListenStream=\([0-9][0-9.]*\):9090$/\1/p' "$DROPIN")
+fi
+
+[[ "$fails" -eq 0 ]] && say "access restored — sshd up and the cockpit console answers." || warn "$fails check(s) still failing — see above."
 exit 0

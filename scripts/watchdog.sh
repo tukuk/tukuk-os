@@ -33,14 +33,27 @@ log() { logger -t tukuk-os-watchdog -- "$*"; echo "[watchdog] $*"; }
 # at boot (see deploy/cockpit-lan-socket.sh), and the firewall no longer allowed 22.
 # Neither is visible through Cloudflare, because the tunnel is outbound-only, so no
 # other check in this stack ever notices. Runs FIRST, so it still fires on the
-# early-exit paths below, and on a 30-minute stamp: a healthy box pays one `ss`
-# call and nothing else, while a locked-out box is fixed within 2 minutes.
+# early-exit paths below. The stamp is only refreshed when something is missing, so on a healthy
+# box this check runs on EVERY cycle (every 2 minutes) at the cost of two `ss` calls and one local
+# HTTP probe — which is the intent for the owner's own way into the machine.
+# `grep -q` is deliberately NOT used here: see scripts/selfheal-access.sh — under `set -o pipefail`
+# a `systemctl/ss | grep -q` that DOES match can return 141 (SIGPIPE) and invent a failure.
 ACCESS_STAMP="/tmp/tukuk-os-watchdog.access"
 if [ ! -f "$ACCESS_STAMP" ] || [ -n "$(find "$ACCESS_STAMP" -mmin +30 2>/dev/null)" ]; then
   MISSING=""
   if command -v ss >/dev/null 2>&1; then
-    ss -ltn 2>/dev/null | grep -qE '[:.]22[[:space:]]'   || MISSING="ssh"
-    ss -ltn 2>/dev/null | grep -qE '[:.]9090[[:space:]]' || MISSING="${MISSING:+$MISSING+}cockpit"
+    ss -ltn 2>/dev/null | grep -E '[:.]22[[:space:]]'   >/dev/null || MISSING="ssh"
+    ss -ltn 2>/dev/null | grep -E '[:.]9090[[:space:]]' >/dev/null || MISSING="${MISSING:+$MISSING+}cockpit"
+  fi
+  # A listening fd is not a console. cockpit can hold an address no client can route to (it did, on
+  # a CloudflareWARP tunnel address), so ask the loopback listener for the login page he actually
+  # opens. 2xx = fine; anything else means he is locked out of his own box.
+  if [ -z "$MISSING" ] && command -v curl >/dev/null 2>&1; then
+    CCODE=$(curl -sk -m 6 -o /dev/null -w '%{http_code}' https://127.0.0.1:9090/login 2>/dev/null)
+    case "${CCODE:-000}" in
+      2[0-9][0-9]) ;;
+      *) MISSING="cockpit-not-answering(${CCODE:-000})" ;;
+    esac
   fi
   if [ -n "$MISSING" ]; then
     log "🔑 admin access missing ($MISSING) — re-asserting via scripts/selfheal-access.sh"

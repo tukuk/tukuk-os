@@ -469,7 +469,10 @@ fi
 # Trust → Networks → Routes, connector c1d8ea0f). This block installs nothing; it
 # retires the old layout so a box upgraded from it converges on the new one.
 info "[+] one tunnel only (play / tchat / build ride c1d8ea0f)..."
-if systemctl list-unit-files 2>/dev/null | grep -q '^cloudflared-build\.service'; then
+# `systemctl cat`, NOT `list-unit-files | grep -q`: under pipefail a grep -q that matches early
+# leaves systemctl dead of SIGPIPE and the pipeline returns 141, so an installed unit reads as
+# absent. Same failure mode scripts/selfheal-access.sh was caught in on 2026-11-01.
+if systemctl cat cloudflared-build.service >/dev/null 2>&1; then
   # The second connector's credential is not in git, so a box upgraded from the old layout can
   # still be the only thing keeping those hostnames alive. Retiring it before the dashboard
   # routes exist would take three live hostnames down — and put nothing in the log to say why.
@@ -647,7 +650,7 @@ if ! command -v nginx >/dev/null; then
 fi
 if command -v nginx >/dev/null && [[ -f "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" ]]; then
   # Is the front already cut over? nginx on 3000 AND Node on 3001 is the finished shape.
-  front_live() { ss -ltn 2>/dev/null | grep -q '127.0.0.1:3000 ' && ss -ltn 2>/dev/null | grep -q '127.0.0.1:3001 '; }
+  front_live() { ss -ltn 2>/dev/null | grep -E '127\.0\.0\.1:3000 ' >/dev/null && ss -ltn 2>/dev/null | grep -E '127\.0\.0\.1:3001 ' >/dev/null; }
   if front_live; then
     bash "$INSTALL_DIR/deploy/nginx/install-tukuk-front.sh" reload >/dev/null 2>&1 \
       && ok "nginx front already live — config reloaded from the repo copy." \
