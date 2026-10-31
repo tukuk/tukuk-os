@@ -16,7 +16,6 @@ uptime
 #   smbd nmbd                    -> SMB/NetBIOS file sharing
 #   udisks2 gpu-manager switcheroo-control apport -> removable-disk service, hybrid-GPU helpers, crash reporter
 #   pmcd pmie pmlogger pmproxy   -> PCP telemetry daemons whose data nothing here reads
-#   cockpit.socket               -> web admin console (unused; the admin panel is on tukuk.org)
 #   snapd.*                      -> the snap daemon and its socket (see the block below: masked,
 #                                  because socket activation would otherwise bring it straight back)
 #   warp-svc                     -> the Cloudflare WARP *client*. The tunnel is cloudflared, a
@@ -26,7 +25,7 @@ uptime
 #                                  the WiFi link's 1.1.1.1, outbound HTTPS, /health, nginx and the
 #                                  public site all still answer. Undo: systemctl enable --now warp-svc
 #   snapd.snap-repair / motd-news / fwupd-refresh timers -> background chatter
-UNITS="lightdm avahi-daemon avahi-daemon.socket cups cups.socket cups.path cups-browsed bluetooth ModemManager smbd nmbd udisks2 gpu-manager switcheroo-control apport apport-forward.socket cockpit.socket pmcd pmie pmlogger pmproxy warp-svc snapd.snap-repair.timer motd-news.timer fwupd-refresh.timer"
+UNITS="lightdm avahi-daemon avahi-daemon.socket cups cups.socket cups.path cups-browsed bluetooth ModemManager smbd nmbd udisks2 gpu-manager switcheroo-control apport apport-forward.socket pmcd pmie pmlogger pmproxy warp-svc snapd.snap-repair.timer motd-news.timer fwupd-refresh.timer"
 
 echo
 echo "=== DISABLING ==="
@@ -196,7 +195,20 @@ journalctl --disk-usage | sed 's/^/      /'
 
 echo
 echo "=== DELIBERATELY KEPT (box is on WiFi and administered over SSH) ==="
-for k in NetworkManager wpa_supplicant ssh chrony cron nginx cloudflared fwupd unattended-upgrades thermald tukuk-os meilisearch tukuk-agent tukuk-builder; do
+# cockpit.socket belongs on THIS list, not the one above, and the difference cost the owner his
+# console. It used to be in UNITS annotated "web admin console (unused; the admin panel is on
+# tukuk.org)" — a guess about how the box is used, not a measurement of it, and a wrong one. He
+# opened https://192.168.8.104:9090 and found nothing listening; `systemctl is-enabled
+# cockpit.socket` answered `disabled`.
+#
+# Two reasons it is not worth optimising away:
+#   1. Cost when idle is zero. It is a SOCKET unit — while no browser is connected there is no
+#      cockpit-ws process to pay for, only a listening fd. Per-view CPU on these pages is noise
+#      next to what the GUI stack used to burn.
+#   2. It is the safety net for this script. If a change here ever breaks SSH or NetworkManager,
+#      the web console is the way back in without a physical keyboard on a box in a house.
+# Check:  systemctl is-active cockpit.socket && ss -ltn | grep 9090
+for k in NetworkManager wpa_supplicant ssh chrony cron nginx cloudflared fwupd unattended-upgrades thermald tukuk-os meilisearch tukuk-agent tukuk-builder cockpit.socket; do
   printf "%-20s active=%s enabled=%s\n" "$k" "$(systemctl is-active "$k" 2>/dev/null)" "$(systemctl is-enabled "$k" 2>/dev/null)"
 done
 

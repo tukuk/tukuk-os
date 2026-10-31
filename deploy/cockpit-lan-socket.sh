@@ -31,8 +31,22 @@ if [[ "${EUID}" -ne 0 && "$RESTART" == "1" ]]; then
   exit 1
 fi
 
-# Every global IPv4 the box currently holds (ethernet, wifi, whatever is up).
-mapfile -t ADDRS < <("$IP_BIN" -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | sort -u)
+# Every global IPv4 the box currently holds (ethernet, wifi, whatever is up) — minus any /32.
+#
+# A /32 is not a LAN segment: it is the far end of a point-to-point tunnel, and on this box that is
+# CloudflareWARP's 100.96.0.1/32. Listing it is not harmless, because systemd fails the WHOLE socket
+# unit when a single bind() fails — there is no "bind the addresses that still exist" behaviour. So
+# the moment that tunnel is gone the console cannot start, and on this box the tunnel does go: WARP
+# is disabled here, and its tun device does not survive a reboot. cockpit-lan-socket.service is
+# ordered Before=cockpit.socket, so a clean boot regenerates this file after the tun has already
+# vanished and the stale entry never reaches systemd — but any `systemctl restart cockpit.socket`
+# between the tunnel dying and the next boot would, and a console that only survives when nothing
+# else goes wrong is the exact class of bug this script exists to remove.
+#
+# A /32 *global* address with a live purpose here would be a router-on-a-stick or a /31 point-to-point
+# link; neither is how this box is addressed (enp1s0 and wlp2s0 are both /24).
+mapfile -t ADDRS < <("$IP_BIN" -4 -o addr show scope global 2>/dev/null |
+  awk '{ split($4, a, "/"); if (a[1] != "" && a[2] != 32) print a[1] }' | sort -u)
 
 next="$(mktemp)"
 {

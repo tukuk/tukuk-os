@@ -22,7 +22,13 @@ const SCRIPT = path.join(ROOT, 'deploy/cockpit-lan-socket.sh');
 /** A stand-in for `ip -4 -o addr show scope global` that reports the given addresses. */
 function fakeIp(dir, addresses) {
   const file = path.join(dir, 'ip');
-  const lines = addresses.map((a) => `1: fake0    inet ${a}/24 brd ${a.replace(/\d+$/, '255')} scope global fake0`).join('\n');
+  // A trailing `/len` is passed through: the prefix length is what tells a LAN segment from a
+  // point-to-point tunnel address, and one test below depends on the script making that call.
+  const lines = addresses.map((a) => {
+    const cidr = a.includes('/') ? a : `${a}/24`;
+    const ip = cidr.split('/')[0];
+    return `1: fake0    inet ${cidr} brd ${ip.replace(/\d+$/, '255')} scope global fake0`;
+  }).join('\n');
   // One address per line, exactly as `ip -4 -o addr` prints them — a single printf of a
   // multi-line string would give the parser one line and one address. No addresses at all
   // has to be NO output, not one blank line (which parses as one empty address).
@@ -77,6 +83,22 @@ test('a changed lease rewrites the drop-in instead of reporting success', () => 
   assert.match(moved.read(), /192\.168\.8\.101:9090/);
   assert.ok(!/192\.168\.8\.104/.test(moved.read()), 'the dead address must be gone, not appended to');
   assert.match(second, /bound to 127\.0\.0\.1/);
+});
+
+test('a tunnel host address is left out, because a failed bind is a dead console', () => {
+  // The live box before this was fixed: `ip -4 -o addr` lists CloudflareWARP's 100.96.0.1/32 next
+  // to the two real LAN addresses, and the drop-in took it verbatim. systemd does not bind "what it
+  // can" — one bad ListenStream fails the entire cockpit.socket unit. WARP is disabled on this box
+  // and its tun device does not survive a reboot, so that entry was a console that dies whenever
+  // the socket is restarted while the tunnel is gone.
+  const r = render(['192.168.8.104/24', '100.96.0.1/32']);
+  r.run();
+  const conf = r.read();
+  assert.match(conf, /ListenStream=192\.168\.8\.104:9090/);
+  assert.ok(
+    !/100\.96\.0\.1/.test(conf),
+    'a /32 tunnel address was kept — cockpit.socket cannot start once that tunnel is gone',
+  );
 });
 
 test('an unchanged answer is left alone', () => {
