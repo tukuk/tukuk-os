@@ -51,7 +51,13 @@ usable "${BACKUP_WORKER_URL:-}" && usable "${BACKUP_UPLOAD_SECRET:-}" && WORKER_
 
 CHAT_JSON="$DATA_DIR/chat.json"
 CHAT_MEDIA="$DATA_DIR/chat-media"
-[ -f "$CHAT_JSON" ] || fail "no $CHAT_JSON — T Chat data does not exist on this server yet"
+# No chat.json means T Chat has never been used on this box, which is not a backup failure.
+# The old `|| fail` turned every timer run red (exit 1) for a server that simply has no chat
+# data yet — and data/ is already covered by tukuk-data-backup. Skip cleanly instead.
+if [ ! -f "$CHAT_JSON" ]; then
+  log "no $CHAT_JSON — T Chat has no data on this server yet; nothing to back up (skip)"
+  exit 0
+fi
 
 mkdir -p "$SNAP_DIR"
 

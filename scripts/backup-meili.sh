@@ -59,9 +59,13 @@ usable() {
 
 usable "${R2_ACCESS_KEY_ID:-}" && usable "${R2_SECRET_ACCESS_KEY:-}" && usable "${R2_ACCOUNT_ID:-}" && S3_OK=1 || S3_OK=0
 usable "${BACKUP_WORKER_URL:-}" && usable "${BACKUP_UPLOAD_SECRET:-}" && WORKER_OK=1 || WORKER_OK=0
+# Third path: CLOUDFLARE_API_TOKEN + wrangler. This is the path the box actually has —
+# BACKUP_WORKER_URL is empty here, so without this meili-backup had no upload path at all
+# and failed every run. backup-data.sh has always fallen back to wrangler; this mirrors it.
+usable "${CLOUDFLARE_API_TOKEN:-}" && WRANGLER_OK=1 || WRANGLER_OK=0
 
 usable "${MEILI_MASTER_KEY:-}" || fail "MEILI_MASTER_KEY empty/placeholder (check /opt/tukuk-os/.env)"
-[ "$S3_OK" = 1 ] || [ "$WORKER_OK" = 1 ] || fail "no path: fill BACKUP_WORKER_URL+BACKUP_UPLOAD_SECRET (primary) OR the R2_* S3 keys"
+[ "$S3_OK" = 1 ] || [ "$WORKER_OK" = 1 ] || [ "$WRANGLER_OK" = 1 ] || fail "no path: fill BACKUP_WORKER_URL+BACKUP_UPLOAD_SECRET (primary), the R2_* S3 keys, or CLOUDFLARE_API_TOKEN (wrangler)"
 
 mkdir -p "$SNAP_DIR"
 
@@ -110,15 +114,23 @@ prune_local() {
   return 0
 }
 
-if [ "$WORKER_OK" = 1 ]; then
-  # ---- path 1: export index -> worker ----
+if [ "$WORKER_OK" = 1 ] || [ "$WRANGLER_OK" = 1 ]; then
+  # ---- path 1: export index -> worker (preferred) or wrangler (this box) ----
+  upload() {  # file key [content-type]
+    if [ "$WORKER_OK" = 1 ]; then
+      upload_worker "$1" "$2" "${3:-application/gzip}"
+    else
+      upload_wrangler "$1" "$2" "${3:-application/gzip}" \
+        || fail "wrangler upload failed (CLOUDFLARE_API_TOKEN likely lacks R2:Edit): $2"
+    fi
+  }
   STAMP=$(date -u +%Y%m%dT%H%M%SZ)
   SLOT="slot-$(date -u +%u%H)"   # weekday+hour, overwritten weekly (see ROTATION above)
   OUT="$SNAP_DIR/meili_${MEILI_INDEX}-${STAMP}.json.gz"
   log "exporting index $MEILI_INDEX..."
   MEILI_HOST="$MEILI_URL" node "$APP_DIR/scripts/export-index.js" "$OUT" "$MEILI_INDEX" \
     || { rm -f "$OUT"; fail "index export failed"; }
-  upload_worker "$OUT" "meilisearch/$SLOT/meili_${MEILI_INDEX}.json.gz"
+  upload "$OUT" "meilisearch/$SLOT/meili_${MEILI_INDEX}.json.gz"
   prune_local 'meili_*.json.gz'
 
   # blog store (data/tukuk-os.json) — not part of the Meilisearch export
@@ -126,7 +138,7 @@ if [ "$WORKER_OK" = 1 ]; then
   if [ -f "$STORE" ]; then
     SOUT="$SNAP_DIR/store_${STAMP}.json"
     cp "$STORE" "$SOUT"
-    upload_worker "$SOUT" "store/$SLOT/tukuk-os.json" "application/json"
+    upload "$SOUT" "store/$SLOT/tukuk-os.json" "application/json"
     prune_local 'store_*.json'
   fi
   prune_local 'meili_*.json.gz'
