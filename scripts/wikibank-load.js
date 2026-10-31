@@ -22,6 +22,7 @@
  */
 const fs = require('fs');
 const zlib = require('zlib');
+const crypto = require('crypto');
 
 const MEILI = (process.env.MEILI_HOST || 'http://127.0.0.1:7700').replace(/\/$/, '');
 const KEY = process.env.MEILI_MASTER_KEY || '';
@@ -68,9 +69,14 @@ async function waitForTask(uid, timeoutMs = 600000) {
 
 // Map one bank row to one Meili document. Field names stay short for the same reason the bank's do:
 // millions of rows. `k` must already be normalized (devops wikibank_build.py norm_key).
+// pk is a hash of k, NOT k itself: Meilisearch document ids must be ASCII [a-zA-Z0-9_-], and real
+// titles are not — "Aït Benhaddou" normalizes to "aït_benhaddou" and the whole batch task fails.
+// Lookups filter on the `k` attribute (wikibank.js never reads pk), so the hash is invisible above
+// this line; it is stable, so a re-sync replaces rather than duplicates.
 function docFromRow(d) {
   if (d.m || !d.k || !d.x) return null; // tombstone / no key / no extract
-  return { pk: d.k, k: d.k, t: d.t || '', d: d.d || '', x: d.x, u: d.u || '', h: d.h || '' };
+  const pk = crypto.createHash('sha1').update(d.k).digest('hex').slice(0, 16);
+  return { pk, k: d.k, t: d.t || '', d: d.d || '', x: d.x, u: d.u || '', h: d.h || '' };
 }
 
 async function main() {
