@@ -720,7 +720,7 @@ done
 # folder, but NOT part of it: the Builder is its own git repo. A rebuild that only brings
 # this repo ends up with the unit ENABLED and nothing under it:
 # build.tukuk.org answers 502 and no log line says why.
-# tukuk/tukuk-builder is PUBLIC, so this needs no token. Install and build run ON
+# Install and build run ON
 # THE BOX, mirroring scripts/deploy-builder.sh, because a laptop-side build would not
 # match the server's node22. Both steps are gated on the source or node_modules being
 # absent, so a routine deploy pays nothing here.
@@ -733,10 +733,33 @@ if [[ ! -f "$BUILDER_DIR/package.json" ]]; then
   # cannot assume the parent it is about to write into exists. (git itself does create
   # missing parents — verified — which is exactly why this was invisible in testing.)
   mkdir -p "$(dirname "$BUILDER_DIR")"
-  if git clone --depth 1 https://github.com/tukuk/tukuk-builder.git "$BUILDER_DIR" >>"$BUILDER_LOG" 2>&1; then
+  # The Builder has its OWN repo, and that repo is not anonymously readable — it used to be
+  # cloned from an account where it WAS public, so this step worked with no credentials at
+  # all and the install never said otherwise. Reuse whatever identity already reaches the
+  # parent repo (a token embedded in origin's URL, or the box's SSH key), then try anonymous
+  # HTTPS in case it gets published. Same pattern as scripts/build-agent-on-server.sh.
+  BUILDER_URL="https://github.com/tukuk/tukuk-builder.git"
+  ORIGIN_URL="$(git remote get-url origin 2>/dev/null || true)"
+  if [[ "$ORIGIN_URL" == https://*@github.com/* ]]; then
+    BUILDER_URL="${ORIGIN_URL%%github.com/*}github.com/tukuk/tukuk-builder.git"
+  elif [[ "$ORIGIN_URL" == git@github.com:* || "$ORIGIN_URL" == ssh://git@github.com/* ]]; then
+    BUILDER_URL="git@github.com:tukuk/tukuk-builder.git"
+  fi
+  if git clone --depth 1 "$BUILDER_URL" "$BUILDER_DIR" >>"$BUILDER_LOG" 2>&1; then
     ok "Builder source cloned."
+  elif [[ "$BUILDER_URL" != https://github.com/tukuk/tukuk-builder.git ]] \
+    && git clone --depth 1 https://github.com/tukuk/tukuk-builder.git "$BUILDER_DIR" >>"$BUILDER_LOG" 2>&1; then
+    ok "Builder source cloned anonymously."
   else
-    warn "Builder clone failed (no network, or the repo moved). build.tukuk.org will answer 502 until you run: sudo git clone https://github.com/tukuk/tukuk-builder $BUILDER_DIR"
+    warn "Builder clone failed — build.tukuk.org answers 502 until it succeeds. The reason is most"
+    warn "  likely auth, not network: tukuk/tukuk-builder is NOT readable anonymously."
+    if [[ -z "$ORIGIN_URL" || "$ORIGIN_URL" == *.bundle || "$ORIGIN_URL" == /media/* ]]; then
+      warn "  This box has no GitHub identity at all (installed from a bundle or a USB copy). Fix:"
+      warn "  copy the Builder source onto the box and run: sudo bash scripts/deploy-builder.sh <that path>"
+    else
+      warn "  Fix one of: publish tukuk/tukuk-builder, or give this box a read key/PAT for it, then:"
+      warn "    sudo git clone --depth 1 $BUILDER_URL $BUILDER_DIR"
+    fi
   fi
 fi
 if [[ -f "$BUILDER_DIR/package.json" && ! -d "$BUILDER_DIR/node_modules" ]]; then

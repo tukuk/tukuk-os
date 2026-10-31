@@ -86,7 +86,7 @@ if [ ! -d code-server/.git ]; then
   fi
   git clone --depth 1 "$CLONE_URL" code-server \
     || { warn "clone with the origin URL failed — trying anonymous HTTPS."; rm -rf code-server; git clone --depth 1 "$FORK_URL" code-server; } \
-    || die "clone failed. The fork is now PUBLIC (tukuk/tukuk-agent-editor) — if anonymous HTTPS also fails, that is a GitHub network issue from the server, not credentials."
+    || die "clone failed with both the origin identity and anonymous HTTPS. tukuk/tukuk-agent-editor is NOT anonymously readable: publish it, or give this box a read deploy key/PAT for the tukuk account."
 fi
 ( cd code-server && git submodule update --init --depth 1 lib/vscode >/dev/null 2>&1 ) \
   || ( cd code-server && git submodule update --init lib/vscode ) || die "lib/vscode submodule failed."

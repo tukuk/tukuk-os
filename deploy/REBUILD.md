@@ -211,7 +211,7 @@ supported paths, best first:
 ```bash
 sudo git clone -b main /media/usb/code/tukuk-os-v2-main.bundle /opt/tukuk-os   # 1. no credentials needed
 sudo bash scripts/install-from-usb.sh                                          # 2. directory copy
-git clone git@github.com:tukuk/tukuk-os.git /opt/tukuk-os                     # 3. after adding a box key
+git clone git@github.com:tukuk/tukuk-os.git /opt/tukuk-os                      # 3. after adding a box key
 ```
 
 Path 2 is the one that has bitten before: `install-from-usb.sh` rsyncs with `--exclude .git`, so the
@@ -318,6 +318,7 @@ to the directories as well makes their contents unlistable, which looks exactly 
 | passkey credentials | **no** | **no** — the archive itself held none: `settings.passkeys` is `[]` and `users` is `{}` in `data/tukuk-os.json` as backed up 2026-10-27 |
 | ssh host keys, `/etc/hosts`, real `.env` | **no** | **no** netplan (deliberately) / **yes** for the rest |
 | Godot HD build in `/opt/tukuk-os/apps/play` | **no** — opt-in with `INSTALL_GAME=1` (`[8f]`) | **no** — same gate; the script prints the exact command |
+| Builder **source** in `/opt/tukuk-os/apps/builder` | **no** — `[8d-bis]` clones it and `tukuk/tukuk-builder` is not anonymously readable, so it warns and continues | **no** — same; bring it over with `scripts/deploy-builder.sh` from the laptop instead |
 | APK keystore `apk/*.jks` | **no** | **no** — copy from the laptop, then compare md5 against a released APK |
 
 Two traps this table is written to defuse:
@@ -384,6 +385,18 @@ bypass that limit, and it left one hostname group restorable *only* from the ide
 there is one connector, one token, and one place hostnames are added — the dashboard.
 
 Still manual, by design (each has a live test, not a hope):
+
+- The Builder's **source** does not come off the stick. `tukuk/tukuk-builder` is not readable
+  anonymously, so `setup-all.sh`'s clone in `[8d-bis]` needs an identity a freshly formatted box
+  does not have yet — it warns and carries on, and `build.tukuk.org` answers 502 until the source
+  arrives. The path that involves GitHub not at all runs **on the laptop**:
+  ```bash
+  TUKUK_HOST=<box-ip> bash scripts/deploy-builder.sh   # rsyncs the fork's working copy → apps/builder,
+  ```
+  which installs and builds on the box, then restarts `tukuk-builder.service`. Check which is true
+  before blaming the script: `git ls-remote https://github.com/tukuk/tukuk-builder.git` from anywhere
+  with a browser session answers for the whole account — a repository that is merely private and one
+  that has not been created yet both reply the same way.
 
 - Godot HD build: `sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=<stick>/code/station-break-game.bundle bash scripts/setup-all.sh`.
   That runs `deploy/godot/build-web.sh` (clone the game if `STATION_BREAK_DIR` is empty → splice
