@@ -27,7 +27,7 @@ const store = require('./store');
 const RP_ID = config.webauthn.rpID;
 const RP_NAME = config.webauthn.rpName;
 // Allowed origins for WebAuthn. WEBAUTHN_ORIGIN may hold a
-// comma-separated list (e.g. https://tukuk.org,https://dashboard.tukuk.org).
+// comma-separated list (e.g. https://tukuk.org,https://www.tukuk.org).
 // localhost/127.0.0.1 (with a local port) is always allowed for testing.
 const EXPECTED_ORIGIN = config.webauthn.origin;
 const EXPECTED_ORIGINS = String(EXPECTED_ORIGIN)

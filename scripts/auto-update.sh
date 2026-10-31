@@ -90,6 +90,20 @@ if [[ "$OLD" == "$NEW" ]]; then
 fi
 echo "[auto-update] update $OLD → $NEW."
 
+# ── the ONE folder ────────────────────────────────────────────────────────────
+# The repo names /opt/tukuk-os/apps/builder, apps/play, models/, bin/ and game/
+# (deploy/paths.sh). A box built before that change still has those files in the old
+# top-level places, so the paths the unit, nginx and src/config.js expect would not
+# exist on the very deploy that introduces them — a Builder unit that fails to CHDIR
+# and a play origin that answers 404. consolidate-layout.sh moves them into the folder
+# and leaves the old paths as symlinks, which is also why a failure here must NOT abort:
+# the symlinks mean the old names still resolve, so the box keeps serving while it is
+# fixed. It runs before the restart for exactly that reason.
+if [[ -f scripts/consolidate-layout.sh ]]; then
+  bash scripts/consolidate-layout.sh \
+    || echo "[auto-update] warning: layout consolidation reported problems (above) — old paths still symlinked, box still serving."
+fi
+
 # Only reinstall when dependencies truly changed. This avoids `npm install`
 # daily re-fetching the heavy native binary (onnxruntime ~300MB) that can HANG
 # on a slow network, and avoids needless reloads.

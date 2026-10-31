@@ -20,7 +20,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 BUILD_HOST="${BUILD_HOST:-https://build.tukuk.org}"
-ALIAS_HOST="${ALIAS_HOST:-https://dashboard.tukuk.org}"
+ALIAS_HOST="${ALIAS_HOST:-}"   # empty = retired: dashboard.tukuk.org is gone, nothing to check
 ORIGIN_HOST="${ORIGIN_HOST:-https://tukuk.org}"
 TIMEOUT="${TIMEOUT:-20}"
 
@@ -54,20 +54,25 @@ case "$verdict" in
 esac
 
 echo
-echo "── 2. the alias host must redirect, not serve the builder ──"
-# dashboard.tukuk.org's /api belongs to Tukuk-OS, so the builder MUST NOT be served there:
-# its chat fetches /api/models, gets Tukuk-OS JSON with no modelList, and dies on the
-# spread. A 308 to the canonical origin is the fix; 200 means the fix is not deployed.
-code="$(curl -s -o /dev/null -m "$TIMEOUT" -w '%{http_code}' "$ALIAS_HOST/" 2>/dev/null || echo 000)"
-target="$(curl -s -o /dev/null -m "$TIMEOUT" -w '%{redirect_url}' "$ALIAS_HOST/" 2>/dev/null || true)"
-if [ "$code" = "308" ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then
-  case "$target" in
-    *build.tukuk.org*) ok "alias host answers ${code} -> ${target}" ;;
-    *) bad "alias host answers ${code} but to the wrong place: ${target:-<empty>}" ;;
-  esac
+echo "── 2. no alias host may serve the builder ──"
+# dashboard.tukuk.org was retired: it shared the apex app's /api namespace, so a builder served
+# there fetched Tukuk-OS's /api/models and crashed on the spread. The default is now empty (the
+# hostname is gone). Set ALIAS_HOST to re-check any hostname that still points at the front door:
+# then the acceptable answers are a redirect to the canonical origin, or no answer at all.
+if [ -z "$ALIAS_HOST" ]; then
+  note "no alias host configured — dashboard.tukuk.org is retired (the panel is tukuk.org/admin)"
 else
-  bad "alias host still SERVES the app (http ${code}) — no redirect, so the crash is still reachable"
-  note "expected 308 -> ${BUILD_HOST} (deploy/builder-wakekeeper.js + tukuk-builder-wake.service)"
+  code="$(curl -s -o /dev/null -m "$TIMEOUT" -w '%{http_code}' "$ALIAS_HOST/" 2>/dev/null || echo 000)"
+  target="$(curl -s -o /dev/null -m "$TIMEOUT" -w '%{redirect_url}' "$ALIAS_HOST/" 2>/dev/null || true)"
+  case "$code" in
+    2??) bad "alias host still SERVES the app (http ${code}) — its /api belongs to Tukuk-OS, the crash is reachable"
+         note "either retire the hostname or point it at ${BUILD_HOST}" ;;
+    3??) case "$target" in
+           *build.tukuk.org*) ok "alias host answers ${code} -> ${target}" ;;
+           *) bad "alias host answers ${code} but to the wrong place: ${target:-<empty>}" ;;
+         esac ;;
+    *)   ok "alias host is gone (http ${code}) — retired, nothing served there" ;;
+  esac
 fi
 
 echo

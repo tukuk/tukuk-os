@@ -90,5 +90,5 @@ cp -a "$STAGE/home/tukuk/.ssh/." /home/tukuk/.ssh/ 2>/dev/null
 chmod 600 /home/tukuk/.ssh/authorized_keys 2>/dev/null
 systemctl daemon-reload
 nginx -t && systemctl reload nginx
-echo "[restore] ✓ applied from slot $SLOT. Restart the tunnels if their config changed:"
-echo "[restore]   systemctl restart cloudflared cloudflared-build"
+echo "[restore] ✓ applied from slot $SLOT. Restart the tunnel if its config changed:"
+echo "[restore]   systemctl restart cloudflared"

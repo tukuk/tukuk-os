@@ -5,8 +5,9 @@
 #   1) Once on the server: the systemd + env files already live in deploy/.
 #   2) On the laptop: node scripts/lint.js, then run this script.
 #
-# What happens: rsync source (without node_modules/.git/build) to
-# /opt/tukuk-builder, install dependencies + build ON THE SERVER (node22 is
+# What happens: rsync source (without node_modules/.git/build) to the Builder's
+# directory INSIDE the app folder (/opt/tukuk-os/apps/builder, from deploy/paths.sh),
+# install dependencies + build ON THE SERVER (node22 is
 # already there), then restart tukuk-builder.service. The first pass is slow (the
 # pnpm download is ~1-2 GB); after that it is incremental only.
 set -euo pipefail
@@ -28,7 +29,9 @@ MSG
 fi
 HOST="${BUILDER_HOST:-tukuk@${TUKUK_HOST}}"
 PASS="${1:-${BUILDER_PASS:-1}}"
-DEST="/opt/tukuk-builder"
+# shellcheck source=../deploy/paths.sh
+. "$(cd "$(dirname "$0")/.." && pwd)/deploy/paths.sh"
+DEST="$TUKUK_BUILDER_DIR"
 SRC="$(cd "$(dirname "$0")/.." && pwd)/bolt.diy"
 
 # Reachability gate: ping proves the host is up, not that sshd is listening. The 2026-10-29
@@ -43,11 +46,15 @@ fi
 ssh_run() { sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$HOST" "echo $PASS | sudo -S $1"; }
 
 echo "[builder] rsync source → $DEST"
+# `P` = protect from THIS command's --delete, without excluding it from the transfer:
+# .env.production holds the Builder's TUKUK_API_KEY and is written on the server, so a
+# deploy must not delete it just because the laptop's checkout does not carry it.
 # NOTE: sudo -S ONLY applies to the first command — an && chain must be wrapped in sh -c.
 ssh_run "sh -c 'mkdir -p $DEST && chown -R tukuk:tukuk $DEST'" || true
 rsync -a --delete -e "sshpass -p $PASS ssh -o StrictHostKeyChecking=no" \
   --exclude .git --exclude node_modules --exclude build --exclude dist \
   --exclude .env.local \
+  --filter='P .env.production' \
   --exclude benchmarks --exclude e2e-tests --exclude playwright-report \
   "$SRC/" "$HOST:$DEST/"
 
@@ -75,10 +82,7 @@ sleep 3
 # builder origin (5176) must answer directly; the front door (5174) must proxy it end to end.
 ssh_run "systemctl is-active tukuk-builder && curl -s -o /dev/null -w 'builder:5176 http=%{http_code}\n' http://127.0.0.1:5176/"
 ssh_run "curl -s -o /dev/null -w 'frontdoor:5174 http=%{http_code}\n' -H 'Host: build.tukuk.org' http://127.0.0.1:5174/"
-# The alias host must NOT serve the builder any more: its /api belongs to Tukuk-OS on :3000,
-# so the front door redirects it to build.tukuk.org (see builder-wakekeeper.js).
-ssh_run "curl -s -o /dev/null -w 'frontdoor:5174 alias-host http=%{http_code} -> %{redirect_url}\n' -H 'Host: dashboard.tukuk.org' http://127.0.0.1:5174/"
-echo "[builder] done. https://build.tukuk.org is the ONLY builder origin; dashboard.tukuk.org now answers 308 -> build.tukuk.org (its /admin & /api stay with Tukuk-OS). Do not drop allowedHosts .tukuk.org in vite.config.ts."
+echo "[builder] done. https://build.tukuk.org is the ONLY builder origin (one tunnel, one route). dashboard.tukuk.org is retired — do not route the builder there again: that host's /api and /admin belong to Tukuk-OS. Do not drop allowedHosts .tukuk.org in vite.config.ts."
 
 # Verify from the OUTSIDE, which is the only place the user's crash is visible. Every check
 # above ran on the box and several end in `|| true`, so a green "done" is not evidence.

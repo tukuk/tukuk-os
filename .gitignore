@@ -122,6 +122,22 @@ fastlane/screenshots/**/*.png
 code-server/
 # Tukuk Builder = bolt.diy fork with its own history (nested repo, remote fevian448)
 bolt.diy/
+# ─── ONE FOLDER: the payloads that live INSIDE this checkout on the box ─────────────
+# deploy/paths.sh makes the app folder the only folder on the server, so the Builder's
+# clone, the published game, the Godot binary and the game source are SUBDIRECTORIES of
+# this repo on the box (models/ is already ignored above). They are box-local data, not
+# source: ignored here so `git status` stays quiet, and — more importantly — excluded
+# from setup-all.sh's `rsync --delete` so "copy this checkout over that one" cannot
+# delete 1-2 GB of Builder node_modules or the published game.
+#
+# /bin is NOT ignored wholesale, and test/repo-ignore-hygiene.test.js is why that was
+# noticed: bin/tukuk-os.js is a TRACKED source file, so a bare `bin/` rule hid a real
+# file from git (the test's "no tracked file is newly ignored" case). Only the Godot
+# binary is payload. Same anchoring reason as /build/ below: an unanchored `bin/` would
+# also match every node_modules bin directory.
+/apps/
+/bin/godot*
+/game/
 # Map-AI (git@github remote) and station-break (godot tps-demo fork) — same shape: each
 # is a clone with its own origin, so the parent repo must never absorb them as a gitlink
 Map-Ai---Version-1/

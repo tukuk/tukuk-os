@@ -187,7 +187,12 @@ test('nested clones cannot be absorbed as gitlinks', () => {
   // Each of these is a working copy with its own origin (bolt.diy → tukuk-builder,
   // Map-Ai---Version-1, tps-demo → station-break, code-server → the fork). A stray `git add .`
   // turns one into a 160000 entry whose commit exists only on this machine.
-  for (const dir of ['bolt.diy', 'code-server', 'Map-Ai---Version-1', 'tps-demo']) {
+  //
+  // apps/builder and game are the same hazard on the BOX: deploy/paths.sh puts the
+  // Builder's clone and the game's clone INSIDE this checkout, so there they are nested
+  // repos too. They do not exist in a laptop checkout, which is exactly why the rule has
+  // to be written down rather than inferred from what `ls` shows here.
+  for (const dir of ['bolt.diy', 'code-server', 'Map-Ai---Version-1', 'tps-demo', 'apps/builder', 'game']) {
     assert.ok(ignored(`${dir}/README.md`), `${dir}/ must stay ignored as a directory rule`);
   }
 });

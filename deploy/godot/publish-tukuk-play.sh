@@ -10,8 +10,11 @@ set -euo pipefail
 
 SRC=${1:-}
 # Overridable so the whole publish path can be exercised against a scratch directory on a
-# machine that has no /var/www yet -- and so that testing it does not overwrite a live game.
-DEST="${TUKUK_PLAY_DIR:-/var/www/tukuk-play}"
+# machine that has no /opt/tukuk-os yet -- and so that testing it does not overwrite a live
+# game. The default is inside the ONE folder (deploy/paths.sh): this script is installed at
+# /usr/local/sbin, where it cannot source that file, so the value is spelled out here and
+# kept in step with TUKUK_PLAY_DIR by test/server-layout.test.js.
+DEST="${TUKUK_PLAY_DIR:-/opt/tukuk-os/apps/play}"
 
 [ -n "$SRC" ] || { echo "usage: $0 <exported web-build directory>" >&2; exit 2; }
 [ -d "$SRC" ] || { echo "FATAL: no such directory: $SRC" >&2; exit 2; }

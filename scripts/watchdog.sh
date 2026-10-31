@@ -103,8 +103,8 @@ case "$ACODE" in
   *) log "⚠ Public self-hosted asset $PUB_ASSET returned HTTP $ACODE — a vendored /libs/ file may be missing or misconfigured" ;;
 esac
 
-# --- the tunnel connectors can be running AND serving nobody -----------------
-# 30 Oct 2026, 08:44 local: `cloudflared-build` was `active`, its process healthy, the
+# --- the tunnel connector can be running AND serving nobody -------------------
+# 30 Oct 2026, 08:44 local: `cloudflared` was `active`, its process healthy, the
 # wake front door answered 200 on 127.0.0.1:5174 — and build/play/tchat.tukuk.org all
 # served 530 (error code 1033, "no connector available"). The edge had dropped all four
 # registrations at 00:22Z; the connector logged "Registered tunnel connection" after that
@@ -114,16 +114,23 @@ esac
 # re-registering helps. 502 deliberately does NOT: that means the connector delivered the
 # request and the ORIGIN failed, which the checks below handle. Restarts are stamped to
 # one per 30 minutes so a genuinely gone tunnel cannot put the unit in a restart loop.
+# One tunnel serves every hostname now, so two hostnames can report the SAME fault and
+# the fix is one restart of one unit: the gate below is per UNIT, not per hostname.
 probe_local() { # $1 = port → echoes the HTTP code of the origin that connector fronts
   local c; c=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "http://127.0.0.1:$1/" 2>/dev/null); echo "${c:-000}";
 }
 re_register() { # $1 = public url, $2 = local port, $3 = unit, $4 = stamp file
-  local code lcode
+  local code lcode gate
+  gate="/tmp/tukuk-os-watchdog.${3%%.*}.gate"
   code=$(probe_edge "$1"); lcode=$(probe_local "$2")
   if [ "$code" = "530" ] && [ "$lcode" = "200" ]; then
+    # The gate is per unit, so two hostnames reporting the same dead registration cause
+    # ONE restart. Without it the second call would restart the connector again seconds
+    # after the first, resetting the very handshake the first restart was making.
+    if [ -f "$gate" ] && [ -n "$(find "$gate" -mmin -30 2>/dev/null)" ]; then return 0; fi
     if [ ! -f "$4" ] || [ -n "$(find "$4" -mmin +30 2>/dev/null)" ]; then
       log "🚇 $1 gives HTTP 530 while 127.0.0.1:$2 answers 200 — $3 lost its edge registrations; restarting the unit to re-register (no config or credential touched)"
-      touch "$4"
+      touch "$4" "$gate"
       systemctl restart "$3" || log "could not restart $3"
     fi
   elif [ "$code" = "200" ] && [ -f "$4" ]; then
@@ -131,8 +138,8 @@ re_register() { # $1 = public url, $2 = local port, $3 = unit, $4 = stamp file
     rm -f "$4"
   fi
 }
-re_register "${WATCHDOG_BUILD_URL:-https://build.tukuk.org/}" 5174 cloudflared-build.service /tmp/tukuk-os-watchdog.buildtunnel
-re_register "${WATCHDOG_MAIN_URL:-https://tukuk.org/}"          3000 cloudflared.service      /tmp/tukuk-os-watchdog.maintunnel
+re_register "${WATCHDOG_BUILD_URL:-https://build.tukuk.org/}" 5174 cloudflared.service /tmp/tukuk-os-watchdog.buildtunnel
+re_register "${WATCHDOG_MAIN_URL:-https://tukuk.org/}"          3000 cloudflared.service /tmp/tukuk-os-watchdog.maintunnel
 
 # --- 5. did the daily update actually run? -----------------------------------
 # The update is silent by design, so a timer that died in March looks exactly like

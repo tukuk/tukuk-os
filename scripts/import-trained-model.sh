@@ -7,13 +7,15 @@
 #
 # Destination by type:
 #   ranks → fine-tune/reranker (Meilisearch/onnx reranker) + restart tukuk-os
-#   edge  → /home/tukuk/models + litert-lm import (LiteRT edge tier)
+#   edge  → models/ inside the one folder + litert-lm import (LiteRT edge tier)
 #   brain → data/tukuk-brain-v1.json (AI corpus) + rebuild index
 #
 # Always keep a .prev copy next to the original file for easy rollback.
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=../deploy/paths.sh
+. ./deploy/paths.sh
 
 SRC="${1:?usage: import-trained-model.sh <file-path> [ranks|edge|brain]}"
 KIND="${2:-}"
@@ -39,7 +41,7 @@ case "$KIND" in
     echo "✓ $DEST installed; tukuk-os restarted. Rollback: mv $DEST.prev $DEST && restart."
     ;;
   edge)
-    DEST="/home/tukuk/models/$(basename "$SRC")"
+    DEST="$TUKUK_MODEL_DIR/$(basename "$SRC")"
     [ -f "$DEST" ] && cp -f "$DEST" "$DEST.prev"
     install -m 0644 -o tukuk -g tukuk "$SRC" "$DEST"
     sudo -u tukuk env HOME=/home/tukuk /home/tukuk/.local/bin/litert-lm import "$DEST" || exit 1

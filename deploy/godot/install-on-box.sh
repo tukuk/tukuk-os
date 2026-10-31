@@ -19,11 +19,14 @@
 #     with no terminal to prompt on, so this exact privilege has to be NOPASSWD.
 #     Handing out `sudo cp` instead would have skipped the alias step entirely.
 #
-# The publisher additionally drops deploy/godot/sw.js into /var/www/tukuk-play on every
+# The publisher additionally drops deploy/godot/sw.js into the play document root on every
 # publish: the worker that keeps the hash-versioned pack and binary in persistent Cache
 # Storage, so a revisit does not re-download 500 MB when the browser evicted its HTTP
 # cache. Nothing here has to copy it -- but the repo file must exist, or the publish
 # warns and players keep re-pulling.
+#
+# The document root is $TUKUK_PLAY_DIR (/opt/tukuk-os/apps/play) from deploy/paths.sh --
+# see that file for why every path on this box derives from one folder.
 #
 # Idempotent: it installs what the repo holds and reloads nginx only if the new config
 # passes `nginx -t`, restoring the previous file if it does not.
@@ -31,6 +34,8 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
+# shellcheck source=../paths.sh
+. "$REPO/deploy/paths.sh"
 CONF="$REPO/deploy/nginx/tukuk-play.conf"
 SBIN=/usr/local/sbin/publish-tukuk-play
 
@@ -41,7 +46,7 @@ command -v nginx >/dev/null || { echo "FATAL: nginx not installed -- this box is
 [ -f "$HERE/sudoers-tukuk-play" ] || { echo "FATAL: missing $HERE/sudoers-tukuk-play" >&2; exit 1; }
 
 # ── 1. the origin block ────────────────────────────────────────────────────────────
-install -d /var/www/tukuk-play
+install -d "$TUKUK_PLAY_DIR"
 PREV=''
 if [ -f /etc/nginx/conf.d/tukuk-play.conf ]; then
   PREV="$(mktemp)"

@@ -14,11 +14,11 @@
 set -uo pipefail
 
 SRC=/opt/tukuk-os/deploy
-# Only the builder is ever stopped. cloudflared-build is the connector that carries
-# build.tukuk.org AND tchat.tukuk.org, so stopping it would take a live hostname off the
-# internet for the whole sleep — see builder-idle-stop.sh.
+# Only the builder is ever stopped. The connector is not part of it: cloudflared carries
+# build.tukuk.org AND tchat.tukuk.org (one tunnel, every hostname), so stopping it would
+# take live hostnames off the internet for the whole sleep — see builder-idle-stop.sh.
 UNITS=(tukuk-builder.service)
-CONNECTOR=cloudflared-build.service
+CONNECTOR=cloudflared.service
 WAKE=tukuk-builder-wake.service
 KEEP=/etc/tukuk-builder-keep
 MODE=${1:-status}

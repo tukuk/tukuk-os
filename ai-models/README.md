@@ -195,7 +195,7 @@ sudo bash scripts/hf-model-pull.sh                     # semua entri registry
 ```
 
 Skrip ini: muat turun → sahkan `sha256` terhadap `metrics.json` (**abort** kalau tak
-padan) → `install` ke `/home/tukuk/models` (simpan `.prev` untuk rollback) →
+padan) → `install` ke `models/` dalam folder aplikasi (simpan `.prev` untuk rollback) →
 `ollama create <tag>`. Selepas itu model muncul di https://tukuk.org/models sebagai
 *installed*.
 

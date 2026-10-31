@@ -26,6 +26,11 @@
 set -uo pipefail
 
 APP="${TUKUK_INSTALL_DIR:-/opt/tukuk-os}"
+# ONE FOLDER (deploy/paths.sh): the game lives inside the app folder, not at /var/www.
+export TUKUK_ROOT="$APP"
+# shellcheck source=../deploy/paths.sh
+. "$APP/deploy/paths.sh"
+PLAY_DIR="$TUKUK_PLAY_DIR"
 ENV="$APP/.env"
 KEYFILE="${IDENTITY_KEY_FILE:-/root/tukuk-backup-key}"
 FAILS=0
@@ -203,7 +208,7 @@ else
 fi
 systemctl daemon-reload
 for s in meilisearch tukuk-os cloudflared nginx cockpit.socket cockpit-lan-socket.service; do systemctl enable --now "$s" >/dev/null 2>&1 || true; done
-systemctl restart cloudflared cloudflared-build >/dev/null 2>&1 || true
+systemctl restart cloudflared >/dev/null 2>&1 || true
 for t in tukuk-data-backup tukuk-identity-backup tukuk-content-backup meili-backup chat-backup tukuk-snapshot tukuk-os-watchdog tukuk-update indexnow-submit load-governor weight-report builder-idle-stop; do
   systemctl enable --now "$t.timer" >/dev/null 2>&1 || true
 done
@@ -220,11 +225,12 @@ chk "meilisearch up"           200 "$(code http://127.0.0.1:7700/health)"
 chk "tukuk.org through edge"    200 "$(code https://tukuk.org/)"
 chk "search answers"            200 "$(code 'https://tukuk.org/cari?q=weather')"
 chk "play.tukuk.org"            200 "$(code https://play.tukuk.org/)"
-# play/tchat/build ride the SECOND tunnel (a3af5bb4, credentials-file mode); a 530
-# here means that connector is not up, not that the Godot build is missing.
+# ONE connector (cloudflared) carries every hostname now, play included. So the old
+# second tunnel is what this checks FOR: a running cloudflared-build means the migration
+# never finished, and two connectors are then answering the same DNS records.
 [[ "$(systemctl is-active cloudflared-build 2>/dev/null)" == active ]] \
-  && good "second tunnel (cloudflared-build)" active \
-  || bad "second tunnel (cloudflared-build)" "$(systemctl is-active cloudflared-build 2>/dev/null) — play/tchat/build will 530"
+  && bad "one connector" "cloudflared-build still running — sudo bash scripts/setup-all.sh retires it" \
+  || good "one connector (cloudflared only)" "cloudflared-build inactive"
 # 200, measured: an unauthenticated GET /login is the real login page (it carries
 # #login-user-input / #login-password-input). The 401 belongs to /cockpit/login, the package
 # endpoint — checking THAT would pass for a console nobody can reach a login page on. A 000
@@ -276,8 +282,8 @@ case "$ORIGIN" in
     note "git remote" "no origin at all (USB install excludes .git) — re-clone from a bundle to get the daily auto-update back" ;;
   *) good "git remote" "$ORIGIN" ;;
 esac
-MP=$(grep -o 'index.pck.zip?v=pck[0-9a-f]*' /var/www/tukuk-play/index.html 2>/dev/null | head -1)
-[[ -n "$MP" ]] && good "pack is edge-cacheable" "$MP" || note "Godot HD build" "no mainPack alias in /var/www/tukuk-play — rebuild: sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=<usb>/code/station-break-game.bundle bash scripts/setup-all.sh (builder + boot overlay now live in deploy/godot/)"
+MP=$(grep -o 'index.pck.zip?v=pck[0-9a-f]*' "$PLAY_DIR/index.html" 2>/dev/null | head -1)
+[[ -n "$MP" ]] && good "pack is edge-cacheable" "$MP" || note "Godot HD build" "no mainPack alias in $PLAY_DIR — rebuild: sudo INSTALL_GAME=1 TUKUK_GAME_BUNDLE=<usb>/code/station-break-game.bundle bash scripts/setup-all.sh (builder + boot overlay now live in deploy/godot/)"
 [[ -f "$APP/apk/tukuk-chat-release.jks" ]] && good "APK signing key" present || note "APK signing key" "apk/*.jks is gitignored — copy it from the laptop, then verify md5 matches the released APKs"
 # A missing provider key is not a failure — the app degrades to extractive answers —
 # but it must be visible, because "chat stopped working after the rebuild" is

@@ -1,12 +1,11 @@
 [Unit]
 # Tukuk Builder — a bolt.diy fork: a Tukuk-branded AI app builder.
-# ONE CANONICAL HOST: build.tukuk.org (the legacy cloudflared-build connector).
-#   dashboard.tukuk.org is an ALIAS: the main remote-config tunnel keeps `/admin` and `/api/*`
-#   on port 3000 for Tukuk-OS, so a builder served from that host is handed the wrong
-#   `/api/models`, `/api/chat`, `/api/configured-providers` and dies on the reply shape
-#   ("TypeError: r is not iterable" -> Application Error). The always-on front door on :5174
-#   (builder-wakekeeper.js) therefore 308s every alias-host page to build.tukuk.org; only
-#   /admin and /api on that hostname stay with Tukuk-OS.
+# ONE CANONICAL HOST: build.tukuk.org (a route on the single cloudflared tunnel).
+#   It used to be reachable on dashboard.tukuk.org too, and that host is now RETIRED: it shared
+#   the apex app's `/api` namespace, so a builder page served there called Tukuk-OS's `/api/models`,
+#   `/api/chat`, `/api/configured-providers` and died on the reply shape
+#   ("TypeError: r is not iterable" -> Application Error). Every alias-host page was 308'd to
+#   build.tukuk.org as a patch; with the hostname gone the redirect has nothing left to catch.
 # WebContainer needs the COOP/COEP headers set by entry.server.tsx —
 # under tukuk.org they clash with the existing CSP, hence a separate
 # hostname.
@@ -23,8 +22,13 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/tukuk-builder
-EnvironmentFile=-/opt/tukuk-builder/.env.production
+# ONE FOLDER. The Builder used to live at /opt/tukuk-builder, a second top-level directory
+# that every script, backup and rebuild step had to remember separately. It is a subdirectory
+# of the app now, so /opt/tukuk-os is the only path on this box that needs to be known.
+# The old location is a compatibility symlink until scripts/consolidate-layout.sh
+# --prune-links runs; deploy/paths.sh is what the scripts read instead of either literal.
+WorkingDirectory=/opt/tukuk-os/apps/builder
+EnvironmentFile=-/opt/tukuk-os/apps/builder/.env.production
 Environment=NODE_ENV=production
 # bolt.diy's official pattern: `vite preview` serves the SSR build (build/server) —
 # pointed straight at the vite binary so pnpm is not needed inside the systemd unit.

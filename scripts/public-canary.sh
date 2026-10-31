@@ -89,6 +89,17 @@ expect "terms"             "/terms"          "200"
 expect "contact"           "/contact"        "200"
 expect "404 is a real 404" "/canary-no-such-page-$$" "404"
 
+# --- 1b. a retired hostname must not come back ------------------------------
+# The admin panel is /admin on the apex. dashboard.tukuk.org served the same app on the same
+# port, so "is it up" was never the question — the only thing worth pinning is that it is not
+# serving again. A second door to the login page is a second thing that can 502 on its own.
+DASH_CODE="$(curl -s -o /dev/null -w '%{http_code}' -m "$TIMEOUT" https://dashboard.tukuk.org/ 2>/dev/null)"
+DASH_CODE="${DASH_CODE: -3}"
+case "${DASH_CODE:-000}" in
+  200) row fail "dashboard hostname stays retired" "200 — remove the route, the panel is /admin" ;;
+  *)   row ok   "dashboard hostname stays retired" "http ${DASH_CODE:-000}" ;;
+esac
+
 # --- 2. what crawlers are told ----------------------------------------------
 if expect "robots.txt" "/robots.txt" "200" "Sitemap:"; then
   if grep -qE '^Disallow: /$' "$TMP/body"; then

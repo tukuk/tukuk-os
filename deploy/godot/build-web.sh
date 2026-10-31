@@ -166,7 +166,7 @@ grep -q '"index.pck":'"$pck" "$PROJ/web-build/index.html" \
 # and sampleNodes is declared `null` until then -- but the WASM bindings happily call
 # into it on the very first frame, when a sample stops during teardown, or when audio
 # never starts at all. Each unguarded read threw a TypeError straight into the engine.
-# This is the fix that used to live only in /var/www/tukuk-play/index.js, applied by
+# This is the fix that used to live only in the published game's index.js, applied by
 # hand, and silently vanished on the next publish.
 echo "== patching the exported engine js =="
 python3 - "$PROJ/web-build/index.js" <<'PY'
@@ -228,7 +228,7 @@ if ! grep -q 'window.tukukGate = function' "$PROJ/web-build/index.html"; then
 fi
 
 if [ "$deploy" = "1" ]; then
-  echo "== publishing to /var/www/tukuk-play =="
+  echo "== publishing to ${TUKUK_PLAY_DIR:-/opt/tukuk-os/apps/play} =="
   # Publish through the one root-owned script that /etc/sudoers.d/tukuk-play actually
   # grants. Copying the artifacts from here instead would fail on sudo authorization in
   # a detached build AND skip the index.pck.zip alias, so the pack would silently stop

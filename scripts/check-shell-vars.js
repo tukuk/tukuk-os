@@ -25,6 +25,16 @@ const ENV_NAMES = new Set([
   'INSTALL_GAME', 'STATION_BREAK_DIR', 'GODOT_BIN', 'WEB_BUILD_LOG', 'WEB_HEAD',
   'TUKUK_GAME_BUNDLE', 'TUKUK_PLAY_DIR', 'ALLOW_BIG_PACK', 'SKIP_EDGE_CHECK', 'SKIP_LOCAL_CHECK',
   'FORCE_NET', 'FORCE_DATA', 'CF_TUNNEL_TOKEN', 'CF_TUNNEL_ID', 'CLOUDFLARE_API_TOKEN',
+  // deploy/paths.sh EXPORTS these, so a script that sources it receives them from the
+  // environment exactly like PATH: a read is not an unset-variable bug. Listed here rather
+  // than taught to the scanner because following `. path` would also mean this linter has
+  // to resolve paths, and it is deliberately a one-class check. TUKUK_LEGACY_* are in the
+  // same file for the two callers allowed to name the old locations (the migration and the
+  // guard test); nothing else should read them.
+  'TUKUK_ROOT', 'TUKUK_APPS', 'TUKUK_BUILDER_DIR', 'TUKUK_GAME_DIR', 'TUKUK_BIN_DIR',
+  'TUKUK_GODOT_BIN', 'TUKUK_MODEL_DIR', 'TUKUK_MODEL_STAGING',
+  'TUKUK_LEGACY_BUILDER', 'TUKUK_LEGACY_PLAY', 'TUKUK_LEGACY_MODELS', 'TUKUK_LEGACY_BIN',
+  'TUKUK_LEGACY_GAME',
   'CLOUDFLARE_ACCOUNT_ID', 'MEILI_MASTER_KEY', 'MEILI_HOST', 'R2_BUCKET', 'BACKUP_WORKER_URL',
   'BACKUP_UPLOAD_SECRET', 'GIT_BRANCH', 'NPM_CONFIG_PREFIX', 'npm_config_', 'CI',
   // R2 S3 credentials, read by the backup/restore scripts when wrangler is the upload path

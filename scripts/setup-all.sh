@@ -28,6 +28,15 @@ die()  { echo -e "${RED}✗ $*${NC}"; exit 1; }
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 INSTALL_DIR="${TUKUK_INSTALL_DIR:-/opt/tukuk-os}"
+# ONE FOLDER: every other path this script needs derives from the install dir (see
+# deploy/paths.sh). TUKUK_ROOT is exported first so an overridden TUKUK_INSTALL_DIR
+# moves the Builder and the game source with it instead of splitting them across two
+# roots — the exact kind of disagreement this file exists to prevent.
+export TUKUK_ROOT="$INSTALL_DIR"
+if [[ -f "$REPO_DIR/deploy/paths.sh" ]]; then
+  # shellcheck source=../deploy/paths.sh
+  . "$REPO_DIR/deploy/paths.sh"
+fi
 FROM_NPM=0
 [[ "${1:-}" == "--from-npm" ]] && FROM_NPM=1
 
@@ -192,7 +201,14 @@ EOF
 info "[4/8] Application & git..."
 if [[ "$REPO_DIR" != "$INSTALL_DIR" ]]; then
   mkdir -p "$INSTALL_DIR"
-  rsync -a --delete --exclude node_modules --exclude meili_data --exclude snapshots --exclude dumps "$REPO_DIR/" "$INSTALL_DIR/"
+  # --delete with the payload dirs EXCLUDED. apps/ (the Builder), models/, bin/ and game/
+  # are box-local data living INSIDE the checkout — deploy/paths.sh made them subdirectories
+  # of the folder, so an ordinary "copy this checkout over that one" would now delete 1-2 GB
+  # of Builder node_modules and the published game. `--exclude` also protects a path from
+  # --delete, which is why these are excluded rather than merely ignored by .gitignore.
+  rsync -a --delete --exclude node_modules --exclude meili_data --exclude snapshots --exclude dumps \
+    --exclude apps --exclude models --exclude bin --exclude game \
+    "$REPO_DIR/" "$INSTALL_DIR/"
 fi
 cd "$INSTALL_DIR"
 git config --global --add safe.directory "$INSTALL_DIR" || true
@@ -229,6 +245,18 @@ if [[ -f "$INSTALL_DIR/.env" ]] && command -v setfacl >/dev/null; then
   setfacl -m "u:$SVC_USER:r--" "$INSTALL_DIR/.env" 2>/dev/null || true
 fi
 ok "Runtime dirs owned by $SVC_USER (root timers stay writable via a default ACL)."
+
+# ── [5b] ONE FOLDER: pull the stragglers in before anything references them ────
+# The units and nginx blocks below name paths inside $INSTALL_DIR; a box that still has
+# /opt/tukuk-builder, /var/www/tukuk-play, ~/models, ~/bin or ~/station-break would
+# otherwise install a unit pointing at nothing and serve 404s. Idempotent, and it leaves
+# the old paths as symlinks, so an nginx config or a script that was not reinstalled
+# still resolves. Its failure is not fatal: with the symlinks in place the box serves.
+if [[ -f "$INSTALL_DIR/scripts/consolidate-layout.sh" ]]; then
+  info "Consolidating everything under $INSTALL_DIR ..."
+  bash "$INSTALL_DIR/scripts/consolidate-layout.sh" \
+    || warn "layout consolidation reported problems — see above. The old paths are symlinked, so services still resolve."
+fi
 
 # ── [6] systemd services (tukuk-os + watchdog) ──────────────────────────────
 info "[5/8] Tukuk-OS service..."
@@ -411,47 +439,52 @@ else
   # in this file, and needs no dashboard click and no Zone DNS permission.
   echo "   Re-read the live token for any tunnel UUID (no dashboard needed):"
   echo "     curl -s -H \"Authorization: Bearer \$(get_env CLOUDFLARE_API_TOKEN)\" \"https://api.cloudflare.com/client/v4/accounts/\$(get_env CLOUDFLARE_ACCOUNT_ID)/cfd_tunnel/<uuid>/token\" | sed 's/.*\"result\":\"//; s/\".*//'"
-  echo "   (tukuk.org/www/dashboard = 87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae; play/tchat/build = a3af5bb4-49e5-4c29-b2d6-5fce9d00bce4)"
+  echo "   (ONE tunnel: 87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae carries tukuk.org, www, tchat, agent, play and build; the admin panel is https://tukuk.org/admin)"
 fi
 
-# ── [7b] The SECOND tunnel — play / tchat / build are NOT on the main one ──────
-# The split is real and easy to lose on a rebuild: tukuk.org + www + dashboard are
-# ingress on tunnel 87e7e77f (token mode), while play.tukuk.org, tchat.tukuk.org and
-# build.tukuk.org are ingress on tunnel a3af5bb4 in LEGACY credentials-file mode. That
-# connector needs /etc/cloudflared/config-build.yml AND the a3af5bb4 credentials .json,
-# and neither is in git — deploy/cloudflared/ ships templates only. Skip this block and
-# the site comes up fine while the game page 530s, which reads like a Godot problem.
-info "[+] second tunnel (play / tchat / build)..."
-CF_BID="$(get_env CF_BUILD_TUNNEL_ID)"
-if [[ -f /etc/cloudflared/config-build.yml ]]; then
-  systemctl enable --now cloudflared-build >/dev/null 2>&1 \
-    && ok "cloudflared-build running — https://play.tukuk.org through the second tunnel." \
-    || warn "cloudflared-build would not start — check: journalctl -u cloudflared-build -n 30"
-elif [[ -n "$CF_BID" ]]; then
-  sed "s#REPLACE_WITH_NEW_TUNNEL_ID#$CF_BID#g" "$INSTALL_DIR/deploy/cloudflared/config-build.example.yml" > /etc/cloudflared/config-build.yml
-  # Same trick as the main tunnel: the unit runs `--config … tunnel run`, which accepts a
-  # `token:` line, so a token makes this box self-sufficient without any .json file.
-  CF_BTOK="$(get_env CF_BUILD_TUNNEL_TOKEN)"
-  # `if` rather than `[[ … ]] && sed && chmod`: this script runs under `set -e`, and a
-  # bare test chain that evaluates false (no token yet) would abort the whole setup.
-  if [[ "$CF_BTOK" == eyJ* ]]; then
-    sed -i "s#^credentials-file:.*#token: $CF_BTOK#" /etc/cloudflared/config-build.yml
-    chmod 600 /etc/cloudflared/config-build.yml
-  fi
-  for cand in "$INSTALL_DIR/deploy/cloudflared/$CF_BID.json" "/home/tukuk/.cloudflared/$CF_BID.json" "/root/.cloudflared/$CF_BID.json"; do
-    [[ -f "$cand" ]] && cp "$cand" "/etc/cloudflared/$CF_BID.json" && chmod 600 "/etc/cloudflared/$CF_BID.json" && break
+# ── [7b] ONE connector — a second tunnel is an error now, not a missing feature ─
+# play / tchat / build once rode a SECOND tunnel (a3af5bb4) because the main tunnel is
+# TOKEN mode and ignores a local ingress. That split cost a second credential file, a
+# second unit, and a second thing to forget on a rebuild — and forgetting it 530'd a
+# production hostname. All of them are routes on the ONE tunnel now (dashboard → Zero
+# Trust → Networks → Routes, connector 87e7e77f). This block installs nothing; it
+# retires the old layout so a box upgraded from it converges on the new one.
+info "[+] one tunnel only (play / tchat / build ride 87e7e77f)..."
+if systemctl list-unit-files 2>/dev/null | grep -q '^cloudflared-build\.service'; then
+  # The second connector's credential is not in git, so a box upgraded from the old layout can
+  # still be the only thing keeping those hostnames alive. Retiring it before the dashboard
+  # routes exist would take three live hostnames down — and put nothing in the log to say why.
+  # So the order is prove-then-retire: every hostname it carries must answer 200 FIRST.
+  UNROUTED=()
+  for h in build.tukuk.org tchat.tukuk.org play.tukuk.org; do
+    c=$(curl -4 -s -o /dev/null -w '%{http_code}' -m 12 "https://$h/" 2>/dev/null || echo 000)
+    [[ "$c" == "200" ]] || UNROUTED+=("$h ($c)")
   done
-  if grep -q '^token: eyJ' /etc/cloudflared/config-build.yml || [[ -f "/etc/cloudflared/$CF_BID.json" ]]; then
-    systemctl enable --now cloudflared-build >/dev/null 2>&1 && ok "cloudflared-build installed from CF_BUILD_TUNNEL_ID." \
-      || warn "cloudflared-build would not start — journalctl -u cloudflared-build -n 30"
+  if [[ ${#UNROUTED[@]} -gt 0 && "${RETIRE_SECOND_TUNNEL:-0}" != "1" ]]; then
+    warn "cloudflared-build is still installed and was NOT retired — ${UNROUTED[*]} does not answer 200"
+    echo "   Add each of them as a public hostname on the ONE tunnel (Zero Trust → Networks → Routes,"
+    echo "   connector 87e7e77f; service = HTTP localhost:3000, except build = HTTP 127.0.0.1:5174),"
+    echo "   confirm they answer 200, then rerun this script to retire the second connector."
+    echo "   Force it anyway (takes those hostnames down): sudo RETIRE_SECOND_TUNNEL=1 bash scripts/setup-all.sh"
   else
-    warn "config-build.yml written but it has neither a token nor $CF_BID.json — play.tukuk.org stays down."
+    systemctl disable --now cloudflared-build >/dev/null 2>&1 || true
+    # `mv`, not `rm`: the old credential stays recoverable while the dashboard routes settle.
+    if [[ -f /etc/cloudflared/config-build.yml ]]; then
+      mv /etc/cloudflared/config-build.yml /etc/cloudflared/config-build.yml.retired
+    fi
+    if [[ -f /etc/systemd/system/cloudflared-build.service ]]; then
+      mv /etc/systemd/system/cloudflared-build.service /etc/systemd/system/cloudflared-build.service.retired
+    fi
+    systemctl daemon-reload
+    ok "cloudflared-build retired — one connector left (cloudflared), its hostnames proved 200 first"
   fi
 else
-  warn "No /etc/cloudflared/config-build.yml and no CF_BUILD_TUNNEL_ID in .env."
-  echo "   https://play.tukuk.org (and tchat/build) will answer 530 until the second tunnel is restored."
-  echo "   Easiest fix: sudo bash scripts/rebuild-from-offsite.sh   (the identity archive carries both files),"
-  echo "   or put CF_BUILD_TUNNEL_ID=a3af5bb4-49e5-4c29-b2d6-5fce9d00bce4 in .env and scp its .json here."
+  ok "one connector (cloudflared) — no cloudflared-build unit installed"
+fi
+if [[ "$(systemctl is-active cloudflared 2>/dev/null)" == active ]]; then
+  ok "cloudflared (87e7e77f) active"
+else
+  warn "cloudflared is not active — every hostname is down; check: journalctl -u cloudflared -n 40"
 fi
 
 # ── [8] Cloudflare R2 cold backup — edge is WORKERLESS (see README §9) ────
@@ -650,7 +683,7 @@ for u in tukuk-data-backup.service tukuk-data-backup.timer \
          load-governor.service load-governor.timer \
          weight-report.service weight-report.timer \
          builder-idle-stop.service builder-idle-stop.timer \
-         cloudflared-build.service cloudflared-update.service cloudflared-update.timer \
+         cloudflared-update.service cloudflared-update.timer \
          tukuk-builder.service tukuk-builder-wake.service; do
   [[ -f "$INSTALL_DIR/deploy/$u" ]] || continue
   cp "$INSTALL_DIR/deploy/$u" "/etc/systemd/system/$u"
@@ -661,14 +694,15 @@ for t in tukuk-data-backup tukuk-identity-backup tukuk-content-backup meili-back
   systemctl enable --now "$t.timer" >/dev/null 2>&1 || true
 done
 # ── [8d-bis] the Builder's SOURCE is not this repo ────────────────────────────
-# tukuk-builder.service has WorkingDirectory=/opt/tukuk-builder and bolt.diy/ is
-# gitignored here, so a rebuild that only clones tukuk-os-v2 ends up with the unit
-# ENABLED and nothing under it: build.tukuk.org answers 502 and no log line says why.
+# tukuk-builder.service has WorkingDirectory=$INSTALL_DIR/apps/builder — inside the app
+# folder, but NOT part of it: the Builder is its own git repo. A rebuild that only clones
+# tukuk-os-v2 ends up with the unit ENABLED and nothing under it:
+# build.tukuk.org answers 502 and no log line says why.
 # fevian448/tukuk-builder is PUBLIC, so this needs no token. Install and build run ON
 # THE BOX, mirroring scripts/deploy-builder.sh, because a laptop-side build would not
 # match the server's node22. Both steps are gated on the source or node_modules being
 # absent, so a routine deploy pays nothing here.
-BUILDER_DIR="${TUKUK_BUILDER_DIR:-/opt/tukuk-builder}"
+BUILDER_DIR="${TUKUK_BUILDER_DIR:-$INSTALL_DIR/apps/builder}"
 BUILDER_LOG=/var/log/tukuk-builder-install.log
 if [[ ! -f "$BUILDER_DIR/package.json" ]]; then
   info "[+] App Builder source missing — cloning fevian448/tukuk-builder into $BUILDER_DIR..."
@@ -693,9 +727,9 @@ fi
 # scripts/deploy-builder.sh). It used to be missing from this list: [8d] copies
 # tukuk-builder-wake.service into /etc/systemd/system but nothing enabled or started it,
 # so a rebuilt box had a live connector, a built Builder on :5176, and NOTHING on the
-# :5174 that config-build.yml points at — build.tukuk.org 502 with no log line naming
+# :5174 that the build route points at — build.tukuk.org 502 with no log line naming
 # the cause. Verified on a rebuild, 30 Oct 2026.
-for s in tukuk-builder-wake cloudflared-build tukuk-builder; do
+for s in tukuk-builder-wake tukuk-builder; do
   systemctl enable --now "$s" >/dev/null 2>&1 || true
 done
 ok "backup / indexnow / governance timers enabled."
@@ -749,8 +783,8 @@ fi
 # routine deploy take half an hour and a gigabyte for a page most deploys never touch.
 if [[ "${INSTALL_GAME:-0}" == "1" ]]; then
   info "[+] Godot web build (INSTALL_GAME=1)..."
-  GAME_DIR="${STATION_BREAK_DIR:-/home/tukuk/station-break}"
-  GBIN="${GODOT_BIN:-/home/tukuk/bin/godot}"
+  GAME_DIR="${STATION_BREAK_DIR:-${TUKUK_GAME_DIR:-$INSTALL_DIR/game}}"
+  GBIN="${GODOT_BIN:-${TUKUK_GODOT_BIN:-$INSTALL_DIR/bin/godot}}"
   # Source: the game lives in its own private repo (fevian448/station-break). A handover
   # USB carries it as a bundle, which needs no GitHub auth on a machine that has no key yet.
   if [[ ! -f "$GAME_DIR/project.godot" ]]; then

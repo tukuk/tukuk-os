@@ -4,8 +4,8 @@
 #
 # The other tracks already cover the recoverable things: data/ hourly, the
 # search index and chat every 6h, a static mirror of the site every 6h, and the
-# source on GitHub. None of them cover this box's IDENTITY: the two cloudflared
-# tunnel secret keys, the cert.pem that authorises `tunnel route dns`, .env, the
+# source on GitHub. None of them cover this box's IDENTITY: the cloudflared tunnel
+# credential, the cert.pem that authorises `tunnel route dns`, .env, the
 # nginx and systemd units, the SSH host keys and authorized_keys.
 #
 # Those are the files that turn "the disk died" from an outage into a permanent
@@ -26,6 +26,8 @@
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=../deploy/paths.sh
+. ./deploy/paths.sh
 
 WURL="${BACKUP_WORKER_URL:-}"
 WSEC="${BACKUP_UPLOAD_SECRET:-}"
@@ -101,11 +103,11 @@ mkdir -p "$M"
   echo "cloudflared=$(cloudflared --version 2>/dev/null | head -1)"
   echo "openssl=$(openssl version)"
   echo "tukuk-os HEAD=$(git -C /opt/tukuk-os rev-parse HEAD 2>/dev/null)"
-  echo "station-break HEAD=$(git -C /home/tukuk/station-break rev-parse HEAD 2>/dev/null)"
+  echo "station-break HEAD=$(git -C "$TUKUK_GAME_DIR" rev-parse HEAD 2>/dev/null)"
   echo; echo "--- timers as installed:"; systemctl list-timers --all --no-pager 2>/dev/null | head -30
   echo; echo "--- listening sockets:"; ss -ltnp 2>/dev/null | head -25
   echo; echo "--- interfaces:"; ip -br a 2>/dev/null
-  echo; echo "--- published game files:"; ls -l /var/www/tukuk-play 2>/dev/null
+  echo; echo "--- published game files:"; ls -l "$TUKUK_PLAY_DIR" 2>/dev/null
 } > "$M/system.txt" 2>&1
 dpkg -l > "$M/packages.txt" 2>/dev/null
 crontab -l -u root  > "$M/crontab-root.txt"  2>/dev/null

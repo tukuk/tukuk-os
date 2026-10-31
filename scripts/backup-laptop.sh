@@ -37,8 +37,8 @@
 # revival no longer waits on the VPS-token dashboard change.
 #
 # Phase 3 (added Oct 30): copy the box IDENTITY too, not just data/. The rebuild
-# proved which files are irreplaceable — the a3af5bb4 tunnel credential, .env with
-# every LLM key, the nginx/systemd units — and all of them came back from ONE
+# proved which files are irreplaceable — /etc/cloudflared (the one tunnel's config), .env
+# with every LLM key, the nginx/systemd units — and all of them came back from ONE
 # encrypted tukuk-identity archive. backup-data.sh never touched them, and on a cap day
 # the box cannot push its own identity off itself either (that is the 1027 path), so the
 # laptop does it: same PATHS, same AES-256/PBKDF2 scheme, same key name, so

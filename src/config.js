@@ -256,7 +256,12 @@ module.exports = {
   // /api/models never waits on the network.
   models: {
     registryPath: process.env.TUKUK_MODEL_REGISTRY || path.join(__dirname, '..', 'ai-models', 'registry.json'),
-    localDir: process.env.TUKUK_MODEL_DIR || '/home/tukuk/models',
+    // Relative to this file, so it follows the ONE folder instead of naming it: the
+    // weights live in models/ at the root of the checkout (deploy/paths.sh says the
+    // same thing for the shell scripts). This used to be the absolute path
+    // /home/tukuk/models, which is now a symlink into the checkout — resolving the
+    // default this way means the app never depends on that symlink existing.
+    localDir: process.env.TUKUK_MODEL_DIR || path.join(__dirname, '..', 'models'),
     // Where scripts/hf-model-pull.sh drops downloads before installing; shown in
     // the inventory so a half-finished pull is visible instead of silent.
     stagingDir: process.env.TUKUK_MODEL_STAGING || '/opt/tukuk-os/generated/hf'

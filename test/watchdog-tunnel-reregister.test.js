@@ -8,6 +8,10 @@
 // healthy and three hostnames were dead. Nothing in the stack noticed: every earlier check either
 // asked systemd (`active`) or probed the local port (`200`).
 //
+// That second connector has since been retired — every hostname is a route on the ONE tunnel — but
+// the failure mode did not go away with it, only the number of units it can happen to. So the
+// watchdog still probes two public hostnames and restarts `cloudflared.service` for either.
+//
 // The instrument that CAN see it is the public status code, and the condition has to be exact:
 //   530 + local 200  → the request never arrived; only re-registering the connector helps → restart.
 //   502 + local 5xx  → the connector delivered it and the ORIGIN is broken → restarting the tunnel
@@ -19,7 +23,7 @@ const path = require('node:path');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'watchdog.sh'), 'utf8');
 
-test('the watchdog reads the public code for the build connector, not just systemd', () => {
+test('the watchdog reads the public code for the build host, not just systemd', () => {
   assert.match(SRC, /WATCHDOG_BUILD_URL/, 'build.tukuk.org must be probed — it was the blind spot');
   assert.match(SRC, /probe_local/, 'and the local origin, so 530 and 502 can be told apart');
 });
@@ -31,12 +35,23 @@ test('it re-registers ONLY on 530 with a healthy local origin', () => {
     '502 means the origin failed — restarting the tunnel would hide an app bug and drop the healthy hostnames');
 });
 
-test('both connectors are covered, because either one can go stale', () => {
+test('both hostnames are covered, and both restart the ONE connector', () => {
   // \s+ not a single space: the two calls are column-aligned in the script for readability.
   // The URL is matched as a WHOLE quoted string ([^"]*") — a pattern that forgets the closing
   // quote cannot match, which is how this test first failed.
-  assert.match(SRC, /re_register\s+"[^"]*"\s+5174\s+cloudflared-build\.service/, 'the build tunnel');
+  assert.match(SRC, /re_register\s+"[^"]*"\s+5174\s+cloudflared\.service/, 'the build host');
   assert.match(SRC, /re_register\s+"[^"]*"\s+3000\s+cloudflared\.service/, 'and the main one');
+  assert.doesNotMatch(SRC, /cloudflared-build/, 'the second connector is gone: restarting it would be a no-op that logs success');
+});
+
+test('one fault means one restart, even when two hostnames report it', () => {
+  // With one tunnel both hostnames see the same dead registration, and two independent stamps
+  // would restart the unit twice within seconds — cancelling the handshake the first restart was
+  // making. The gate is therefore keyed on the UNIT (${3%%.*}), not on the hostname.
+  assert.match(SRC, /gate="\/tmp\/tukuk-os-watchdog\.\$\{3%%\.\*\}\.gate"/,
+    'the gate name derives from the unit');
+  assert.match(SRC, /touch "\$4" "\$gate"/, 'the restart stamps the hostname AND the unit gate');
+  assert.match(SRC, /find "\$gate" -mmin -30/, 'and the gate is what blocks the second restart');
 });
 
 test('restarts are rate-limited, so a genuinely gone tunnel cannot loop', () => {

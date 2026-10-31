@@ -19,9 +19,11 @@
 # ==============================================================================
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=../deploy/paths.sh
+. ./deploy/paths.sh
 
-MODEL_DIR="${TUKUK_MODEL_DIR:-/home/tukuk/models}"
-STAGING="${TUKUK_MODEL_STAGING:-/opt/tukuk-os/generated/hf}"
+MODEL_DIR="$TUKUK_MODEL_DIR"
+STAGING="$TUKUK_MODEL_STAGING"
 OLLAMA_HOST_ADDR="${OLLAMA_HOST:-127.0.0.1:11434}"
 TARGET="${1:-}"
 ADHOC_FILE="${2:-}"

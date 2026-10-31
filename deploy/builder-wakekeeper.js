@@ -21,18 +21,16 @@
  * It uses only Node core modules — no install step, no dependency drift from the builder itself.
  *
  * ONE ORIGIN ONLY (and why)
- * The builder is also reachable on dashboard.tukuk.org, where the Cloudflare remote-config
- * route rules reserve `/api/*` and `/admin` for the Tukuk-OS app on port 3000. A page served
- * from there therefore calls its OWN `/api/chat`, `/api/models`, `/api/configured-providers`
- * and gets Tukuk-OS's answers (404 `{"error":"Route not found"}` or a different JSON shape),
- * which the client then spreads and crashes on ("TypeError: r is not iterable" -> the app's
- * "Application Error" screen). Two apps cannot share one hostname's /api namespace, so every
- * alias hostname is answered with a 308 to the canonical builder origin instead: the visitor
- * lands on a builder whose API actually belongs to it, and /admin & /api on the alias host
- * stay exactly where the edge rules put them (we never see those requests).
+ * The builder is served from build.tukuk.org and nowhere else. That was not always true: it used
+ * to answer on dashboard.tukuk.org as well, where the apex app owns `/api/*` and `/admin`, so a
+ * builder page served there called its OWN `/api/chat`, `/api/models`, `/api/configured-providers`
+ * and got Tukuk-OS's answers (404 `{"error":"Route not found"}` or a different JSON shape), which
+ * the client spread and crashed on ("TypeError: r is not iterable" -> "Application Error").
+ * That hostname is retired; the redirect below stays as a guard for any FUTURE alias, because a
+ * shared `/api` namespace fails the same way every time.
  *
  *   BUILDER_CANONICAL_HOST=build.tukuk.org   # where aliases are sent
- *   BUILDER_ALIAS_HOSTS=dashboard.tukuk.org  # comma list; empty disables the redirect
+ *   BUILDER_ALIAS_HOSTS=                     # comma list; empty (the default) disables the redirect
  */
 'use strict';
 
@@ -49,7 +47,7 @@ const SLOW_WARN_MS = 45000;      // after this long still-down, hint that a rede
 
 // Canonical origin + the hostnames that must be redirected to it (see the header above).
 const CANONICAL_HOST = String(process.env.BUILDER_CANONICAL_HOST || 'build.tukuk.org').toLowerCase();
-const ALIAS_HOSTS = String(process.env.BUILDER_ALIAS_HOSTS || 'dashboard.tukuk.org')
+const ALIAS_HOSTS = String(process.env.BUILDER_ALIAS_HOSTS || '')
   .split(',')
   .map((h) => h.trim().toLowerCase())
   .filter(Boolean);

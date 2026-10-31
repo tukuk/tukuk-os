@@ -17,11 +17,11 @@
 # has been running at least that long (so a builder that was just started is never killed
 # mid-boot), stop it.
 #
-# WHY ONLY THE BUILDER AND NEVER ITS TUNNEL: cloudflared-build is a *connector*, not part of
-# the builder — it carries build.tukuk.org and tchat.tukuk.org, and stopping it makes those
-# hostnames vanish at the edge ("tunnel not reachable") for as long as it stays down, which is
-# a worse answer than the one cloudflared itself gives when :5174 refuses the connection.
-# It costs 41 MB, so keeping it up is not what this script is fighting.
+# WHY ONLY THE BUILDER AND NEVER THE TUNNEL: cloudflared is a *connector*, not part of the
+# builder — it carries every hostname (build, tchat, play, tukuk.org itself), and stopping it
+# makes all of them vanish at the edge ("tunnel not reachable") for as long as it stays down,
+# which is a worse answer than the one cloudflared itself gives when :5174 refuses the
+# connection. It costs 41 MB, so keeping it up is not what this script is fighting.
 #
 # Escape hatch for a long session:  sudo touch /etc/tukuk-builder-keep
 # Bring it back by hand:            sudo systemctl start tukuk-builder.service

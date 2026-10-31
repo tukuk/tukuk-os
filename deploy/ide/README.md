@@ -47,10 +47,11 @@
 #      destination `ide.tukuk.org/*`, session duration 8h.
 #   2. Add an Allow policy for your own e-mail (or a Service Token, and then send
 #      CF-Access-Client-Id / CF-Access-Client-Secret from whatever proxies it).
-#   3. Tunnel ingress: `ide.tukuk.org -> http://127.0.0.1:3000` on the NAMED build tunnel
-#      (see deploy/cloudflared/config-build.example.yml). The main tunnel is remote-config
-#      and ignores local ingress — the same trap play.tukuk.org hit.
-#   4. `cloudflared tunnel route dns <build-tunnel> ide.tukuk.org`
+#   3. Tunnel route: `ide.tukuk.org -> http://127.0.0.1:3000` on the ONE tunnel
+#      (`87e7e77f`), added in the dashboard — it is remote-config, so a local ingress file
+#      is ignored. The same rule that play.tukuk.org and tchat.tukuk.org follow. Do not
+#      create a second connector to bypass it: deploy/cloudflared/config.yml is the list.
+#   4. The dashboard route also creates the DNS record; no `tunnel route dns` needed.
 #
 # ── WHAT THIS IS FOR, AND WHAT IT IS NOT FOR ────────────────────────────────────
 #   Good: reading the box, editing project files, watching a build fail with the real

@@ -19,7 +19,7 @@ deliberately gated: **Part D is the point of the whole file.**
 
 `.gitignore` keeps `data/`, `/opt/tukuk-os/.env` and `apk/*.jks` out of git, so `git clone` +
 `npm install` restores the **program**, not the **box**: users, passkeys, chat history and the
-second tunnel's credentials only come back from the off-site archives, whose retrievability is now
+`/etc/cloudflared` credentials only come back from the off-site archives, whose retrievability is now
 **proven rather than assumed** (Part D). What still lives
 only on that disk is the delta written after the last archive, plus any uncommitted work in the game
 repo — which is why one console visit is still worth making before the wipe.
@@ -68,8 +68,17 @@ From the laptop: `sshpass -p '<pw>' ssh -o PreferredAuthentications=password -o 
 | `apk/tukuk-chat-release.jks`, `apk/keystore.env` | gitignored; the laptop has a copy (md5 `589d30f8e7476d779c5a9d6d60b431b6`) — compare against the box before trusting either | laptop only |
 | `/opt/tukuk-os/data/`, `generated/`, `meili_data/` | runtime stores: passkey credentials, chat accounts/counters, published items, books corpus, ip-to-country. Partly gitignored | data archive only |
 | `/etc/ssh/ssh_host_*` | optional but nice: a new key means a warning on every client and breaks any known_hosts pin | **yes** — 6 files in the identity archive |
-| `/home/tukuk/station-break/` | the Godot game. In git on branch `game` **only if committed** — run `git -C ~/station-break status --porcelain | wc -l` first | partial |
+| `/opt/tukuk-os/game/` | the Godot game (was `~/station-break`; `scripts/consolidate-layout.sh` moved it inside the app folder). In git on branch `game` **only if committed** — run `git -C /opt/tukuk-os/game status --porcelain | wc -l` first | partial |
 | `/root/.ssh/`, `/home/tukuk/.ssh/`, `/home/tukuk/askpass.sh` | deploy keys and the HTTPS push helper | no |
+
+**One folder.** Everything above that is not `/etc` or `/root` now lives under
+`/opt/tukuk-os`: the Builder in `apps/builder`, the published game in `apps/play`, the
+model weights in `models/`, the Godot binary in `bin/` and the game source in `game/`.
+`deploy/paths.sh` is the single place those paths are written down, and
+`scripts/consolidate-layout.sh` is what put them there (it is idempotent, so a restored
+box converges by running it). The old top-level locations are symlinks until
+`consolidate-layout.sh --prune-links` runs, which is why a restore script written against
+the old paths still works.
 
 Not on this list because they are genuinely rebuildable: Node 22, nginx, Chrome, Meilisearch binary,
 Ollama binary + models (re-download), Godot 4.7 + web export templates, the 476 MB `.pck`
@@ -303,12 +312,12 @@ to the directories as well makes their contents unlistable, which looks exactly 
 | `tukuk-play.conf` incl. the `.pck.zip` edge-cache alias | yes — added; `install-tukuk-front.sh` never copied it | yes |
 | data/content/indexnow/load-governor/weight-report/builder timers | yes — added from `deploy/` | yes |
 | Cockpit, LAN-only | yes — added (`cockpit.socket.d/40-lan-only.conf`, regenerated at boot by `cockpit-lan-socket.service`) | yes |
-| main tunnel `tukuk.org`/`www`/`dashboard` (token mode) | yes — `CF_TUNNEL_TOKEN` is in `deploy/env.defaults` | yes |
-| **second tunnel** `play`/`tchat`/`build` (`a3af5bb4`, credentials-file mode) | **no** — its `.json` is not in git | **yes** (archive) |
+| ONE tunnel `tukuk.org`/`www`/`tchat`/`agent`/`play`/`build` (token mode) | yes — `CF_TUNNEL_TOKEN` is in `deploy/env.defaults` | yes |
+| ~~second tunnel~~ `play`/`tchat`/`build` — **retired**, they are routes on `87e7e77f` | n/a — nothing to restore | n/a — the routes live at the edge in the dashboard |
 | `data/` — the site's memory (posts, history, stats, events, chat, counters; passkeys *would* live here) | **no** | **yes** (archive) with `FORCE_DATA=1` — see the first-boot note |
 | passkey credentials | **no** | **no** — the archive itself held none: `settings.passkeys` is `[]` and `users` is `{}` in `data/tukuk-os.json` as backed up 2026-10-27 |
 | ssh host keys, `/etc/hosts`, real `.env` | **no** | **no** netplan (deliberately) / **yes** for the rest |
-| Godot HD build in `/var/www/tukuk-play` | **no** — opt-in with `INSTALL_GAME=1` (`[8f]`) | **no** — same gate; the script prints the exact command |
+| Godot HD build in `/opt/tukuk-os/apps/play` | **no** — opt-in with `INSTALL_GAME=1` (`[8f]`) | **no** — same gate; the script prints the exact command |
 | APK keystore `apk/*.jks` | **no** | **no** — copy from the laptop, then compare md5 against a released APK |
 
 Two traps this table is written to defuse:
@@ -365,14 +374,14 @@ Measured 2026-10-28: the token in `deploy/env.defaults` and the one in the dead 
 `/etc/cloudflared/config.yml` were identical to each other but **different** from what the edge
 issues now — two credentials for the same tunnel UUID (`t` field decodes to `87e7e77f…` in both).
 `env.defaults` now carries the edge-issued one, because "what the API returns today" beats "what was
-in the file last autumn". Same call works for `a3af5bb4…` (play/tchat/build), though that connector
-is legacy credentials-file mode and its `.json` remains the proven path.
+in the file last autumn".
 
-Also measured: the main tunnel's config has `source: "cloudflare"`, so `tukuk.org`/`www`/`dashboard`
-are stored **at the edge** — a rebuilt box needs the token only, and its local `ingress:` block does
-not decide routing. The build tunnel has `source: "local"`, so `play`/`tchat`/`build` DO come from
-`/etc/cloudflared/config-build.yml` on the box — which is why that file plus its `.json` is the one
-thing in the tunnel layer that only the identity archive can restore.
+Also measured: the main tunnel's config has `source: "cloudflare"`, so **every** hostname
+(`tukuk.org`/`www`/`dashboard`/`tchat`/`play`/`build`/`agent`) is stored **at the edge** — a rebuilt
+box needs the token only, and its local `ingress:` block does not decide routing. That is exactly why
+the second tunnel (`a3af5bb4`, `source: "local"`, credentials-file mode) is gone: it existed only to
+bypass that limit, and it left one hostname group restorable *only* from the identity archive. Now
+there is one connector, one token, and one place hostnames are added — the dashboard.
 
 Still manual, by design (each has a live test, not a hope):
 
@@ -389,7 +398,7 @@ Still manual, by design (each has a live test, not a hope):
   Check at the edge, never locally: Cloudflare Free caches by URL extension, so `.pck`/`.wasm` stay
   `DYNAMIC` while `.zip` goes `MISS → HIT`:
   ```bash
-  V=$(grep -o 'pck[0-9a-f]\{12\}' /var/www/tukuk-play/index.html | head -1)
+  V=$(grep -o 'pck[0-9a-f]\{12\}' /opt/tukuk-os/apps/play/index.html | head -1)
   curl -4 -s -D- -o /dev/null "https://play.tukuk.org/index.pck.zip?v=$V" | grep -i cf-cache-status
   ```
 - `scripts/backup-b2.sh` + `deploy/tukuk-backup-b2.{service,timer}`: install only after
@@ -534,7 +543,7 @@ builder, no overlay). Measured and resolved 2026-10-28:
 | `tools/build-web.sh` | **rescued** into git as `deploy/godot/build-web.sh` — a surviving working copy was found in `.artifacts/tmp-build-web.sh` |
 | `web-head.html` (the boot readout) | **recovered** as `deploy/godot/web-head.html`: `.artifacts/tmp-web-head.html` (the pre-fix draft) plus `.artifacts/tmp-fix-overlay.py` (the exact patch, both anchors matched, 2/2 swaps applied). `node --check` clean, and `test/godot-rebuild.test.js` pins both repairs so a re-draft fails. |
 | any *later* box revision of either | **lost** — unrecoverable, and unknowable: there is no manifest to diff against |
-| `/var/www/tukuk-play` (the built game) | **lost** — but it is a build product; `INSTALL_GAME=1` regenerates it |
+| `/opt/tukuk-os/apps/play` (the built game) | **lost** — but it is a build product; `INSTALL_GAME=1` regenerates it |
 | writes after 2026-10-27 07:10 UTC | **lost** — that is the newest off-site data archive |
 
 Because the overlay is only now in git, `build-web.sh` resolves it as `$WEB_HEAD` →
