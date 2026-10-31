@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // ── TUKUK-OS SOUTH-AFRICAN-MUNICIPALITIES (/munisipaliti-afrika-selatan) — Local Municipalities of South Africa ──
 const https = require('https');
+const wikibank = require('./wikibank');
 const DATA = require('./munisipaliti-afrika-selatan-data.json');
 const UA = 'TukukOS-SouthAfricanMunicipalities/1.0 (+https://tukuk.org)';
 const cache = new Map();
@@ -48,7 +49,7 @@ async function fetchSummary(wikiTitle) {
   const hit = cache.get(key);
   if (hit && Date.now() <= hit.expiresAt) return hit.data;
   try {
-    const sum = await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, '_'))}`);
+    const sum = (await wikibank.summary(t)) || await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, '_'))}`);
     if (!sum || !sum.extract) { const out = null; cache.set(key, { data: out, expiresAt: Date.now() + TTL }); return out; }
     const out = {
       extract: String(sum.extract).trim(),

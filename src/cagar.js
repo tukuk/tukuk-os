@@ -5,6 +5,7 @@
 // from Wikipedia LIVE + cached (fail-open). The page core always renders
 // from fixed data → it MUST NEVER 503. English scope (international).
 const https = require('https');
+const wikibank = require('./wikibank');
 const DATA = require('./cagar-data.json');
 
 const UA = 'TukukOS-Cagar/1.0 (+https://tukuk.org)';
@@ -62,7 +63,7 @@ async function fetchSummary(wikiTitle) {
   const hit = cache.get(key);
   if (hit && Date.now() <= hit.expiresAt) return hit.data;
   try {
-    const s = await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, '_'))}`);
+    const s = (await wikibank.summary(t)) || await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, '_'))}`);
     if (!s || !s.extract) { const out = null; cache.set(key, { data: out, expiresAt: Date.now() + TTL }); return out; }
     const out = {
       extract: String(s.extract).trim(),
