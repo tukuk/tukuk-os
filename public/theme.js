@@ -260,3 +260,64 @@ window.tukukLookup = function (q) {
     .then(function (j) { return j && j.profile ? j.profile : null; })
     .catch(function () { return null; });
 };
+
+/* Site header control — the navigation lives in a native <details> Menu panel, so the bar is
+   one line tall. This script adds the comfort layer on top: the bar slides away while the
+   reader scrolls DOWN (giving the whole viewport back to the content) and returns on any
+   upward scroll or as soon as anything inside it takes keyboard focus. The panel also closes
+   on an outside click or Escape. Without this script everything still works — the Menu opens
+   natively and the bar simply stays put. */
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  ready(function () {
+    var top = document.querySelector('.site-top');
+    if (!top) return;
+    var menu = document.getElementById('nav-menu');
+    var lastY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var ticking = false;
+
+    function setHidden(hidden) {
+      if (hidden && menu && menu.open) return; // never hide the bar while the Menu is open
+      if (top.classList.contains('is-hidden') === hidden) return;
+      top.classList.toggle('is-hidden', hidden);
+    }
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      (window.requestAnimationFrame || function (f) { setTimeout(f, 16); })(function () {
+        var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+        if (y < 90) setHidden(false);
+        else if (y > 240 && y > lastY) setHidden(true);
+        else if (y < lastY) setHidden(false);
+        lastY = y;
+        ticking = false;
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    top.addEventListener('focusin', function () { setHidden(false); });
+
+    if (!menu) return;
+
+    menu.addEventListener('toggle', function () {
+      if (menu.open) setHidden(false);
+    });
+
+    document.addEventListener('click', function (e) {
+      if (menu.open && !menu.contains(e.target)) menu.open = false;
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && menu.open) {
+        menu.open = false;
+        var summary = menu.querySelector('summary');
+        if (summary) summary.focus();
+      }
+    });
+  });
+})();
