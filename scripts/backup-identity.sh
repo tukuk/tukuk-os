@@ -58,7 +58,13 @@ trap 'rm -rf "$TMP"' EXIT
 
 # A missing destination or key is an ERROR here, not a silent skip like the data
 # track: this is the backup nobody thinks to look for until the machine is gone.
-[[ -n "$WURL" && -n "$WSEC" ]] || { echo "[identity] ERROR: BACKUP_WORKER_URL / BACKUP_UPLOAD_SECRET not set." >&2; exit 1; }
+# Two destinations count: the upload Worker (WURL+WSEC) or R2 direct (a token with
+# Account · R2 Storage · Read & Edit). Since 31 Oct 2026 the live account has no
+# `tukuk-backup` worker at all, so on the rebuilt box the R2 branch is the PRIMARY
+# path, not a fallback -- blanking the dead URL must not cost the identity copy.
+if [[ -z "$WURL" || -z "$WSEC" ]] && [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+  echo "[identity] ERROR: no destination — set BACKUP_WORKER_URL + BACKUP_UPLOAD_SECRET, or CLOUDFLARE_API_TOKEN with R2:Edit." >&2; exit 1
+fi
 [[ -r "$KEYFILE" ]] || { echo "[identity] ERROR: $KEYFILE unreadable -- refusing to put your secrets in a bucket unencrypted." >&2; exit 1; }
 
 # Relative to / so the archive unpacks onto the same absolute layout.
@@ -137,6 +143,16 @@ cp "$TMP/identity.enc" "$KEEP.part" && mv -f "$KEEP.part" "$KEEP" \
   && chmod 600 "$KEEP" \
   || echo "[identity] WARN: could not retain $KEEP" >&2
 
+if [[ -z "$WURL" || -z "$WSEC" ]]; then
+  # No worker path at all -> straight to R2 with the token. Zero Worker requests, which
+  # is the point: the account's free Worker cap is what made this track fail before.
+  if npx --yes wrangler r2 object put "$BUCKET/$KEY" --file "$TMP/identity.enc" --remote >/dev/null 2>&1; then
+    echo "[identity] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [wrangler]"
+    exit 0
+  fi
+  echo "[identity] ERROR: R2 direct put failed for $KEY — the archive stays on this box at $KEEP" >&2
+  exit 1
+fi
 RBODY="$(mktemp)"
 # Status via -w, page via -o, no -f: `curl -f` discards the error body, and the body is
 # the only thing that distinguishes the account's daily free Worker request cap
@@ -153,6 +169,14 @@ while :; do
   ATTEMPTS=$((ATTEMPTS + 1))
   if [[ $ATTEMPTS -ge 4 ]]; then
     rm -f "$RBODY"
+    # Same self-heal as backup-data.sh: a dead/refused worker must not kill the only
+    # off-box copy of /etc + .env + the APK signing key. Try R2 direct first, and only
+    # report the cap advice if that failed too.
+    if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] && npx --yes wrangler r2 object put "$BUCKET/$KEY" --file "$TMP/identity.enc" --remote >/dev/null 2>&1; then
+      echo "[identity] worker path failed (HTTP $RCODE) — sent via R2 direct instead"
+      echo "[identity] ✓ $KEY ($SIZE) — $(date -u +%FT%TZ) [wrangler]"
+      exit 0
+    fi
     echo "[identity] ERROR: worker path failed after $ATTEMPTS tries (HTTP $RCODE)." >&2
     echo "[identity] If 'curl -s $WURL | head -1' says 'error code: 1027', that is the"
     echo "           account's daily free Worker request cap (100,000/day, resets 00:00 UTC) —"
