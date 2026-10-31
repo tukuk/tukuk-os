@@ -60,6 +60,18 @@ train_brain() {
 }
 
 echo "[auto-update] $(date -Is) — pulling origin/$BRANCH ..."
+# A box installed from a bundle, or from `install-from-usb.sh` (which rsyncs with
+# --exclude .git), has no remote at all. That is a supported shape, not a fault — but
+# without this check it reports "git fetch failed", which sends the reader looking at the
+# network for a problem that is a missing `git remote add`. Say which it is.
+if [[ -z "$(git config --get remote.origin.url 2>/dev/null || true)" ]]; then
+  echo "[auto-update] this box has no origin remote — nothing to pull from (a bundle or USB"
+  echo "               install looks like this). To enable daily updates:"
+  echo "                 git -C $INSTALL_DIR remote add origin <repo-url>"
+  write_status 1 no-remote "$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
+    "$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+  exit 0
+fi
 OLD="$(git rev-parse HEAD)"
 # The attempt is recorded BEFORE the network is touched: if this process is killed or
 # wedged, /health still shows a fetch that started at 04:30 and never finished, instead
