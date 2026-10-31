@@ -18,7 +18,8 @@
 #   CANARY_ADSENSE=on bash scripts/public-canary.sh                   # after approval
 #   bash scripts/public-canary.sh --json          # one JSON object, for machines
 #
-# Exit codes: 0 all good · 1 something is wrong · 2 the edge itself is unreachable.
+# Exit codes: 0 all good · 1 something is wrong · 2 the edge itself is unreachable ·
+#             3 the edge is healthy but it is refusing US, which is not the same finding.
 #
 # Only curl, sed, grep and wc are assumed. No npm, no node, no repo.
 set -uo pipefail
@@ -37,15 +38,30 @@ SKIPS=0
 ROWS=""
 UNREACHABLE=0
 ORIGIN_DOWN=0
+BLOCKED=0
 CHECKS=0
 
 # code_for <path> — HTTP status, or 000 when curl could not connect at all. curl prints its own
 # 000 to stdout on a connection failure, so only the last three characters are trusted.
+# Headers are kept alongside the body because a status code alone cannot say WHO answered: on
+# this zone the Cloudflare security layer, the fallback Worker and the app all speak in codes,
+# and "403 from GitHub's IPs but 200 from a laptop" is a different bug from "503 everywhere".
 code_for() {
   local c
-  c="$(curl -s -o "$TMP/body" -w '%{http_code}' -m "$TIMEOUT" "$BASE$1" 2>/dev/null)"
+  c="$(curl -s -D "$TMP/hdr" -o "$TMP/body" -w '%{http_code}' -m "$TIMEOUT" "$BASE$1" 2>/dev/null)"
   c="${c: -3}"
   printf '%s' "${c:-000}"
+}
+
+# who_answered — appended to a failing row so the issue body is evidence rather than a number.
+# Header names are matched case-insensitively and stripped by position, because the casing of an
+# edge response is not ours to dictate.
+who_answered() {
+  local srv cf body
+  srv="$(grep -i '^server:' "$TMP/hdr" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' | tr -d '\r')"
+  cf="$(grep -i '^cf-mitigated:' "$TMP/hdr" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' | tr -d '\r')"
+  body="$(tr -d '\r\n' < "$TMP/body" 2>/dev/null | cut -c1-90)"
+  printf '%s' " [server=${srv:-none}${cf:+ mitigated=$cf} body=${body:-(empty)}]"
 }
 
 row() { # $1 ok|fail|skip  $2 name  $3 detail
@@ -67,12 +83,22 @@ expect() {
   # different hop. All of them mean the box did not answer, which is a different failure
   # from "the box answered with a bug" — and the only one the on-box watchdog cannot report.
   case "$code" in 502|503|521|522|523|524|530) ORIGIN_DOWN=$((ORIGIN_DOWN + 1)) ;; esac
+  # A 403 that carries Cloudflare's own challenge/block shape is the security layer speaking,
+  # not the app. It gets its own verdict because the two readings are opposites: the site can be
+  # perfect for every visitor while this check's datacenter IP is blocked, and the case that
+  # matters — a rule that also catches Googlebot — is exactly how a site vanishes from search
+  # while looking fine from a laptop. `server: cloudflare` alone proves nothing: every response
+  # on this zone carries it.
+  if [ "$code" = "403" ] && { grep -qi '^cf-mitigated:' "$TMP/hdr" 2>/dev/null \
+    || grep -qiE 'code 1020|attention required|have been blocked|security policy' "$TMP/body" 2>/dev/null; }; then
+    BLOCKED=$((BLOCKED + 1))
+  fi
   if ! printf '%s' "$code" | grep -qE "^($want)$"; then
-    row fail "$name" "want $want, got $code"
+    row fail "$name" "want $want, got $code$(who_answered)"
     return 1
   fi
   if [ -n "$must" ] && ! grep -qF -- "$must" "$TMP/body"; then
-    row fail "$name" "missing text: $must"
+    row fail "$name" "missing text: $must$(who_answered)"
     return 1
   fi
   row ok "$name" "$code"
@@ -183,21 +209,25 @@ else
 fi
 
 # --- verdict ----------------------------------------------------------------
-# Two distinct tragedies, two distinct verdicts. EDGE_DOWN (exit 2) means requests are not
+# Three distinct tragedies, three distinct verdicts. EDGE_DOWN (exit 2) means requests are not
 # reaching the origin at all — dead box, dead tunnel, dead datacentre — and no amount of
-# on-box monitoring will have noticed. DEGRADED (exit 1) means the origin answered and got
-# something wrong, which is fixable by deploying.
-if [ "$UNREACHABLE" -ge 3 ] || [ "$ORIGIN_DOWN" -ge 3 ]; then VERDICT="EDGE_DOWN"; else VERDICT="$([ "$FAILS" -eq 0 ] && echo OK || echo DEGRADED)"; fi
+# on-box monitoring will have noticed. BLOCKED (exit 3) means the edge is alive and has decided
+# not to talk to this client: fix the rule, do not redeploy. DEGRADED (exit 1) means the origin
+# answered and got something wrong, which is fixable by deploying.
+if [ "$UNREACHABLE" -ge 3 ] || [ "$ORIGIN_DOWN" -ge 3 ]; then VERDICT="EDGE_DOWN"
+elif [ "$BLOCKED" -ge 3 ]; then VERDICT="BLOCKED"
+else VERDICT="$([ "$FAILS" -eq 0 ] && echo OK || echo DEGRADED)"; fi
 
 if [ "$JSON" = "1" ]; then
-  printf '{"base":"%s","verdict":"%s","checks":%d,"fails":%d,"skips":%d,"unreachable":%d,"origin_down":%d,"adsense":"%s","at":"%s"}\n' \
-    "$BASE" "$VERDICT" "$CHECKS" "$FAILS" "$SKIPS" "$UNREACHABLE" "$ORIGIN_DOWN" "$ADSENSE" "$(date -u +%FT%TZ)"
+  printf '{"base":"%s","verdict":"%s","checks":%d,"fails":%d,"skips":%d,"unreachable":%d,"origin_down":%d,"blocked":%d,"adsense":"%s","at":"%s"}\n' \
+    "$BASE" "$VERDICT" "$CHECKS" "$FAILS" "$SKIPS" "$UNREACHABLE" "$ORIGIN_DOWN" "$BLOCKED" "$ADSENSE" "$(date -u +%FT%TZ)"
 else
   printf '%s\n' "$ROWS"
-  printf '%s — %d checks, %d failed, %d skipped, %d unreachable, %d origin-down (%s)\n' \
-    "$VERDICT" "$CHECKS" "$FAILS" "$SKIPS" "$UNREACHABLE" "$ORIGIN_DOWN" "$(date -u +%FT%TZ)"
+  printf '%s — %d checks, %d failed, %d skipped, %d unreachable, %d origin-down, %d blocked (%s)\n' \
+    "$VERDICT" "$CHECKS" "$FAILS" "$SKIPS" "$UNREACHABLE" "$ORIGIN_DOWN" "$BLOCKED" "$(date -u +%FT%TZ)"
 fi
 
 [ "$VERDICT" = "EDGE_DOWN" ] && exit 2
+[ "$VERDICT" = "BLOCKED" ] && exit 3
 [ "$FAILS" -eq 0 ] || exit 1
 exit 0

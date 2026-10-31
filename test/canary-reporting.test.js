@@ -55,7 +55,10 @@ function report(rc, existingIssue) {
     'exit 0',
   ].join('\n'));
   fs.chmodSync(path.join(bin, 'gh'), 0o755);
-  fs.writeFileSync(path.join(dir, 'canary.log'), 'EDGE_DOWN — 16 checks, 5 failed, 5 origin-down\n');
+  // Deliberately verdict-free text: this file is cat'd into the issue body, and if it contained
+  // the word EDGE_DOWN then the "must not claim EDGE_DOWN" assertions would pass on the fixture
+  // rather than on the mapping being tested.
+  fs.writeFileSync(path.join(dir, 'canary.log'), '16 checks, 5 failed, 1 skipped\nFAIL health\n');
   fs.writeFileSync(path.join(dir, 'report.sh'), REPORT);
   const child = spawnSync('bash', ['report.sh'], {
     cwd: dir,
@@ -109,6 +112,13 @@ test('rc=0 closes the issue, and a lost rc counts as broken', () => {
   assert.equal(lost.status, 1);
 });
 
+test('rc=3 says BLOCKED, because a refused client and a dead origin want different fixes', () => {
+  const r = report('3', null);
+  assert.match(r.calls, /Verdict: BLOCKED/);
+  assert.doesNotMatch(r.calls, /EDGE_DOWN/, 'do not tell anyone to restart a tunnel that is fine');
+  assert.equal(r.status, 1);
+});
+
 // --- the probe against a fake edge ---------------------------------------------------------
 function withEdge(handler, fn) {
   return new Promise((resolve, reject) => {
@@ -153,6 +163,33 @@ test('the live fault: every path 503 is EDGE_DOWN with exit 2', () => withEdge(
     assert.match(r.stdout, /FAIL\s+health/, '/health is the path that told us the apex was shadowed');
     assert.match(r.stdout, /origin-down/);
     assert.equal(r.status, 2, 'exit 2 is what the workflow maps to EDGE_DOWN');
+  },
+));
+
+test('a 403 that is Cloudflare blocking US is BLOCKED with exit 3, not a fake site outage', () => withEdge(
+  (_req, res) => {
+    res.writeHead(403, { 'content-type': 'text/html', server: 'cloudflare', 'cf-mitigated': 'challenge' });
+    res.end('Sorry, you have been blocked');
+  },
+  async (base) => {
+    const r = await probe(base, `${base}/dashboard`);
+    assert.match(r.stdout, /^BLOCKED/m, 'the edge is alive; it has simply decided not to talk to this IP');
+    assert.doesNotMatch(r.stdout, /EDGE_DOWN/, 'and saying EDGE_DOWN here would send someone to restart the tunnel');
+    assert.match(r.stdout, /server=cloudflare/, 'the row must name who answered');
+    assert.match(r.stdout, /mitigated=challenge/);
+    assert.match(r.stdout, /body=Sorry, you have been blocked/);
+    assert.equal(r.status, 3, 'exit 3 is what the workflow maps to BLOCKED');
+  },
+));
+
+test('a plain app 403 with no Cloudflare block shape is DEGRADED, not blame laid on the WAF', () => withEdge(
+  (_req, res) => { res.writeHead(403, { server: 'cloudflare' }); res.end('Forbidden'); },
+  async (base) => {
+    // `server: cloudflare` is on every response on this zone, so it cannot be the evidence.
+    const r = await probe(base, `${base}/dashboard`);
+    assert.match(r.stdout, /^DEGRADED/m);
+    assert.doesNotMatch(r.stdout, /BLOCKED/);
+    assert.equal(r.status, 1);
   },
 ));
 

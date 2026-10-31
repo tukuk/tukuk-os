@@ -54,11 +54,13 @@ jobs:
         run: |
           set -uo pipefail
           TITLE="canary: the public site is not healthy"
-          # rc 2 = the edge itself never reached the origin; rc 1 = the origin answered and is
-          # wrong. Say which, because only one of them can be fixed by deploying.
+          # rc 2 = the edge never reached the origin; rc 3 = the edge is alive and refusing this
+          # client (fix the security rule, do not redeploy); rc 1 = the origin answered and is
+          # wrong. Three different faults, and only two of them are fixable by deploying.
           case "${RC:-1}" in
             0) VERDICT=OK ;;
             2) VERDICT=EDGE_DOWN ;;
+            3) VERDICT=BLOCKED ;;
             *) VERDICT=DEGRADED ;; esac
           NUM="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number \
                  --jq '.[0].number // empty')"
