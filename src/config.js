@@ -136,11 +136,19 @@ module.exports = {
   },
 
   // Admin: only ONE e-mail is allowed + a WebAuthn passkey.
+  //
+  // Both values come from the environment and have NO literal fallback. They used to:
+  // the owner's address and a bootstrap password were written here as defaults, which
+  // meant every clone — and every CI log that prints config — carried the username half
+  // of the admin login and a usable password if the .env was ever missing. Empty is not
+  // a bug: requireAllowedEmail() rejects an empty attempt, and checkBootstrapPassword()
+  // returns false when no password is set, so an unconfigured box is passkey-only and
+  // locked rather than open. Set them in deploy/env.secrets.
   admin: {
     // The owner's allowed e-mail. Anyone else is REJECTED.
-    email: String(process.env.ADMIN_EMAIL || 'fevianbenjo48@gmail.com').trim().toLowerCase(),
+    email: String(process.env.ADMIN_EMAIL || '').trim().toLowerCase(),
     // Bootstrap password (only used to register the first passkey).
-    bootstrapPassword: process.env.ADMIN_PASSWORD || process.env.ADMIN_PIN || 'tukuk123',
+    bootstrapPassword: process.env.ADMIN_PASSWORD || process.env.ADMIN_PIN || '',
     // Login session duration (milliseconds). Default 8 hours.
     sessionTtlMs: num(process.env.ADMIN_SESSION_TTL_MS, 8 * 60 * 60 * 1000)
   },
@@ -291,7 +299,9 @@ module.exports = {
   },
 
   nasa: {
-    apiKey: process.env.NASA_API_KEY || 'fmALFBwD70rhld4szo2P3qGezLRgTqWH6vLUh2lb',
+    // Free-tier key tied to the account: published, anyone can burn the 30 calls/day
+    // quota from it and the APOD refresh silently stops. Lives in env.secrets.
+    apiKey: process.env.NASA_API_KEY || '',
     baseUrl: 'https://api.nasa.gov',
     // APOD auto-update: the background pull interval (minutes, minimum 5)
     apodRefreshMinutes: num(process.env.NASA_APOD_REFRESH_MIN, 30)
@@ -301,7 +311,8 @@ module.exports = {
   // forecast, air pollution (+forecast) and geocoding. Tile maps are also free
   // with the appid. History/OneCall are paid → NOT used here.
   weather: {
-    apiKey: process.env.OPENWEATHER_API_KEY || 'c5cdeb2e2261ae767890f8e3c3a651ab',
+    // Same rule as NASA — a keyed free tier is a credential, not a default.
+    apiKey: process.env.OPENWEATHER_API_KEY || '',
     baseUrl: 'https://api.openweathermap.org',
     tileBase: 'https://tile.openweathermap.org/map',
     // Conservative daily budget so there is headroom for retries/manual seeds.

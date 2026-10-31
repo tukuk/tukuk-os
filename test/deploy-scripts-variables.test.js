@@ -151,9 +151,12 @@ test('the .env bootstrap runs before the preflight reads it (run #1 died on this
   // .env — a file setup-all.sh creates and git keeps out of the clone. On an empty box the gate
   // therefore fired before anything could satisfy it.
   const lines = fs.readFileSync(path.join(ROOT, 'scripts/rebuild-from-offsite.sh'), 'utf8').split('\n');
-  const boot = lines.findIndex((l) => l.includes('deploy/env.defaults') && l.includes('$ENV'));
+  // The bootstrap used to be `cp deploy/env.defaults $ENV`; it is now make-env.sh, which
+  // merges the public defaults with the gitignored env.secrets. Same obligation, one
+  // fewer place that knows how .env is built.
+  const boot = lines.findIndex((l) => l.includes('make-env.sh') && l.includes('scripts'));
   const gate = lines.findIndex((l) => l.includes('BACKUP_WORKER_URL') && l.includes('empty in'));
-  assert.ok(boot !== -1, 'no .env bootstrap step found');
+  assert.ok(boot !== -1, 'no .env bootstrap step found (expected a make-env.sh call)');
   assert.ok(gate !== -1, 'the worker preflight was removed, so this test needs updating with it');
   assert.ok(boot < gate, `.env bootstrap (line ${boot + 1}) must precede the preflight (line ${gate + 1})`);
 });

@@ -43,7 +43,15 @@ function readEnvFile(file) {
 }
 
 function credentials() {
-  const env = { ...readEnvFile(path.join(ROOT, 'deploy', 'env.defaults')), ...readEnvFile(path.join(ROOT, '.env')) };
+  // Three sources, later ones winning: the publishable defaults, the private half that
+  // is not in git, then the box's own .env (which scripts/make-env.sh builds from the
+  // first two). Reading env.secrets here is why the audit still works on a laptop that
+  // has no .env — the token left env.defaults when the repo became publishable.
+  const env = {
+    ...readEnvFile(path.join(ROOT, 'deploy', 'env.defaults')),
+    ...readEnvFile(path.join(ROOT, 'deploy', 'env.secrets')),
+    ...readEnvFile(path.join(ROOT, '.env')),
+  };
   const pick = (k) => process.env[k] || env[k] || '';
   return { account: pick('CLOUDFLARE_ACCOUNT_ID'), token: pick('CLOUDFLARE_API_TOKEN'), tunnel: pick('CF_TUNNEL_ID') };
 }

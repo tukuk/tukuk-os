@@ -17,7 +17,7 @@ Our own internet portal — web search engine + AI answers + in-browser app & ga
 | Server running | `192.168.8.105` (user `tukuk`) — LAN address **drifts** (DHCP; was `.100`); scripts read `TUKUK_HOST`. Admin access: `ssh -L 3000:localhost:3000 tukuk@192.168.8.105` → `http://localhost:3000/admin` (email + **WebAuthn passkey**). Public: `https://tukuk.org/admin` |
 | Edit static pages (`public/*.html`) | **Just reload the browser** — read on every request. |
 | Edit `src/server.js` (routes/`STATIC_PAGES`) | **MUST restart** `node index.js` — routes live in memory. |
-| Change config/keys | Edit `deploy/env.defaults` (private repo) → `sudo bash scripts/setup-all.sh` (idempotent). |
+| Change config/keys | Non-secret: edit `deploy/env.defaults`. Secret: edit `deploy/env.secrets` (not in git). Then `sudo bash scripts/make-env.sh --force` → `sudo bash scripts/setup-all.sh` (idempotent). |
 | Generate app+game from 1 word | `node scripts/satu-kata/generate.mjs [word]` — free CI (GitHub Actions) daily cron → hub served at **`tukuk.org/satu-kata/`** (Cloudflare Pages = optional). See **§12** |
 | Check health | `https://tukuk.org/health` (200), `/brain`, `/ask?q=...` |
 | Prove the site from **outside** the box | `bash scripts/public-canary.sh` — 0 healthy, 1 wrong, 2 edge down. Checks homepage, sitemaps, the crawl budget (`/sitemap-settlements.xml` must stay ≤ 20 `<loc>`), a real shard item's `noindex`, and that an unapproved account ships no ad unit. Runs every 30 min on GitHub Actions (`.github/workflows/canary.yml`) because every other monitor lives on the box that dies. |
@@ -89,16 +89,16 @@ sudo ./deploy/build-iso.sh
    cp -r /media/$USER/USB/tukuk-os /tmp/tukuk-os
    sudo bash /tmp/tukuk-os/scripts/install-from-usb.sh   # or: npm run usb
    ```
-   The script copies to `/opt/tukuk-os`, generates `.env` from `deploy/env.defaults`, and calls `setup-all.sh` (Node→Meili→services→tunnel). **The server must have internet** for this step.
+   The script copies to `/opt/tukuk-os`, builds `.env` from the two halves (`deploy/env.defaults` + `deploy/env.secrets`), and calls `setup-all.sh` (Node→Meili→services→tunnel). **The server must have internet** for this step, and **the secrets file must be on it** — it is not in the repo.
    - **Fully offline (no internet):** `TUKUK_KEEP_NODEMODULES=1 TUKUK_OFFLINE=1 sudo bash scripts/install-from-usb.sh` — but you must also carry `node_modules` (built on an online machine of the same arch) + the `node`/`cloudflared`/`meilisearch` binaries, and enable the systemd services manually.
-   - **Tunnel AUTOMATIC:** `deploy/env.defaults` already contains `CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) and `CLOUDFLARE_API_TOKEN` — so `setup-all.sh` brings the tunnel up straight away (TOKEN mode, no `.json` files). **No manual steps needed** on a new server. ⚠️ It does **NOT** deploy a Worker on the site — the edge is workerless (§9); `worker/` is kept inert only. `CLOUDFLARE_API_TOKEN` is now used just for the optional R2 cold backup.
+   - **Tunnel AUTOMATIC (given the secrets half):** `deploy/env.secrets` carries `CF_TUNNEL_TOKEN`; `deploy/env.defaults` carries `CF_TUNNEL_ID` (tunnel `tukuk-os-v2`) and the `CLOUDFLARE_API_TOKEN` lives in the secrets file too — so `setup-all.sh` brings the tunnel up straight away (TOKEN mode, no `.json` files). On a box with no `deploy/env.secrets`, `make-env.sh` exits 3 and names the missing keys: the tunnel cannot register until they arrive. ⚠️ It does **NOT** deploy a Worker on the site — the edge is workerless (§9); `worker/` is kept inert only. `CLOUDFLARE_API_TOKEN` is now used just for the optional R2 cold backup.
 
 1. **Quick Install on an existing Ubuntu Server (LAN IP — `TUKUK_HOST`, now `192.168.8.105`):**
    ```bash
    sudo ./deploy/quick-install.sh
    ```
 2. **Cloudflare Tunnel (TOKEN mode — automatic, do not create a new one):**
-   The tunnel `tukuk-os-v2` (UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae`) already exists & its token is stored in `deploy/env.defaults`. `setup-all.sh` writes `/etc/cloudflared/config.yml` (token + ingress `tukuk.org`/`www`/`tchat`/`agent`/`play`/`build`) and the systemd unit `--config ... tunnel run`. **DNS for those six hostnames is already routed** (the panel is `tukuk.org/admin` — `dashboard.tukuk.org` is retired). Just run `sudo bash scripts/setup-all.sh` — do NOT `tunnel create` a new one.
+   The tunnel `tukuk-os-v2` (UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae`) already exists; the ID is in `deploy/env.defaults`, the token in `deploy/env.secrets`. `setup-all.sh` writes `/etc/cloudflared/config.yml` (token + ingress `tukuk.org`/`www`/`tchat`/`agent`/`play`/`build`) and the systemd unit `--config ... tunnel run`. **DNS for those six hostnames is already routed** (the panel is `tukuk.org/admin` — `dashboard.tukuk.org` is retired). Just run `sudo bash scripts/setup-all.sh` — do NOT `tunnel create` a new one.
 
 3. **Front proxy (nginx) — the HTML cache, one cut-over per server:**
    `setup-all.sh` brings up Node and the tunnel, but **not** nginx. Until the cut-over the tunnel's `http://127.0.0.1:3000` target is Node itself: the site works, it is just uncached. The cut-over moves Node to `:3001` and puts nginx on `:3000`, so the tunnel target never changes:
@@ -144,7 +144,7 @@ Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered 
 
 **How to configure the cloud (pick one, then restart `node index.js`):**
 - **Admin → AI Settings:** `aiProvider=gemini`, `aiApiKey=<your key>`, `aiModel=gemini-2.5-flash`; **or**
-- **env:** `GEMINI_API_KEY=...` (also `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`). Put it in `deploy/env.defaults` (private repo) so `npm install` auto-provisions.
+- **env:** `GEMINI_API_KEY=...` (also `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`). They go in `deploy/env.secrets`, never in `env.defaults` — a provider key is a bill.
 
 **⚠️ Groq is vetoed.** The owner does not want it. `src/brain/provider.js` filters it out as the **last** step of `providerOrder()` via `LLM_DISABLED_PROVIDERS` (default `groq`), so a leftover `GROQ_API_KEY`, an `LLM_CLOUD_ORDER` entry, or an admin `aiProvider` setting can never re-admit it. Three tests in `test/brain-provider.test.js` pin that. It is also absent from the Builder's `ENABLED_PROVIDERS` (`bolt.diy/app/lib/modules/llm/manager.ts`), which is what removes it from the picker.
 
@@ -190,8 +190,8 @@ Self-referential questions ("what is tukuk-os", "endpoints", etc.) are answered 
 
 - **Express routes = in memory.** After editing `src/server.js` (adding a path/`STATIC_PAGES`) → **MUST restart** `node index.js`. Otherwise: `public/*.html` looks changed already (read on every request), but the new route gives **404**.
 - **Clean URLs for static pages** are registered through `STATIC_PAGES` (`src/server.js` ~L114): add a name (without `.html`) → `/name` serves `public/name.html`.
-- **One-command setup:** `npm install` → `scripts/setup-all.sh` (postinstall) auto-generates `.env` from `deploy/env.defaults`, installs services & the tunnel. Repo is **private** → keys can live in `deploy/env.defaults`.
-- **Admin** = email + **WebAuthn passkey** (not a PIN). `ADMIN_EMAIL=fevianbenjo48@gmail.com`. WebAuthn only works over **HTTPS** or `localhost`.
+- **One-command setup:** `npm install` → `scripts/setup-all.sh` (postinstall) builds `.env` by merging `deploy/env.defaults` (publishable) with `deploy/env.secrets` (never in git), then installs services & the tunnel. Keys do not live in the repo, private or otherwise.
+- **Admin** = email + **WebAuthn passkey** (not a PIN). The address is in `deploy/env.secrets` as `ADMIN_EMAIL`. WebAuthn only works over **HTTPS** or `localhost`.
 - **Language:** UI is **English** (the site is English-only by owner decision); code comments and docs follow the harness (English). Stay consistent.
 - **Assets & ads:** prefer **CC**-licensed assets; do **not** place ads on third-party search result pages (`/cari`).
 - **Check JS syntax inside HTML:** `awk '/<script>/{f=1;next}/</script>/{f=0} f' public/FILE.html > /tmp/x.js && node --check /tmp/x.js`.
@@ -221,7 +221,7 @@ Because there is no fallback Worker on the request path, R2 is now purely a **co
 - **⚠ STATUS (was "BLOCKED", corrected 30 Oct 2026 — the track works; the reading did not).** For a week the hourly timers failed while `*.workers.dev` answered 429, and the conclusion written down was that a Worker zone-route on `tukuk.org/_path*` and custom domains on new subdomains (`tukuk-sync`, `ping`) each answered **429 · error 1027 from the first request**, so "the zone has a security/rate rule that no machine credential can read or edit" and **the edge must stay workerless**. That misread cost a week of off-site copies. `429 · error code: 1027` is Cloudflare's **plan-limit page** — Workers Free gets **100,000 requests/day for the whole account**, resetting at **00:00 UTC**. Proof, by crossing the reset: at 23:59 UTC four of the account's five workers returned 429/1027 (including `ping.tukuk.org`, whose `workers/domains` binding had been `enabled: true` all along — so there was never a route to bind), and at 00:02 UTC the same URLs answered the worker's own `403 forbidden`, after which all four box tracks (`data`, `identity`, `content`, `meili`) landed their slots in R2 inside one minute. The cap is spent by *something* on this account and the source is still unidentified — Workers analytics left the GraphQL API, so read dashboard → Workers & Pages → Analytics for that day (or enable Logpush). Keeping `tukuk.org` workerless matters precisely because a visitor would otherwise *be* a billable Worker request. `scripts/backup-laptop.sh` remains the Workers-independent copy (wrangler OAuth writes straight to R2, zero Worker requests) — keep it running, because on a cap day all four box tracks fail together. It runs nightly at 03:45 via systemd-user timer `tukuk-laptop-backup.timer`, `Persistent=true`, 14 dailies in `~/tukuk-backups/`. **REVIVED (Oct 27): the laptop now also pushes each nightly archive straight into R2** — its `wrangler` OAuth token has full R2 put/get/delete on `tukuk-fallback` (unlike every API token), keys under `laptop-backup/data-YYYYMMDD.tar.gz`, verified by an md5 round-trip. So offsite R2 copies exist again with ZERO dashboard changes. The VPS timers' own track still needs ONE optional dashboard action: grant the VPS `CLOUDFLARE_API_TOKEN` an **Account · R2 Storage · Read & Edit** scope — the five upload scripts self-heal (after the throttled workers.dev POST exhausts retries they fall through to the direct `wrangler r2 object put` path, verified live), giving hourly offsite without anyone editing `/opt/tukuk-os/.env`. (There is no "zone rule that 1027s new hostnames" to go finding — that was the misread.)
 
 **Tunnel (ONE only now):** `tukuk-os-v2` · UUID `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae` · **TOKEN mode** (no `.json` files).
-- Token = `cloudflared tunnel token 87e7e77f…` (uses `~/.cloudflared/cert.pem`). Already stored in `deploy/env.defaults` (`CF_TUNNEL_TOKEN` + `CF_TUNNEL_ID`).
+- Token = `cloudflared tunnel token 87e7e77f…` (uses `~/.cloudflared/cert.pem`). Stored in `deploy/env.secrets` as `CF_TUNNEL_TOKEN`; the ID sits in `deploy/env.defaults`.
 - `/etc/cloudflared/config.yml` is written by `setup-all.sh` (token + ingress) + the systemd unit `--config … tunnel run`. **`cloudflared service install` REJECTS `token:` configs** — that is why the unit is written directly.
 - **The VPS has no `cert.pem`**, so every cert-authenticated `cloudflared` subcommand (`tunnel list`, `tunnel status`, `tunnel route dns`) dies with *"Cannot determine default origin certificate path"*. Do not read that as an outage — it is the missing laptop credential, not the tunnel. What actually means something: `systemctl is-active cloudflared` and a request that goes through the edge (`curl -sI https://tukuk.org/health` → 200 + `server: cloudflare`). Both measured 29 Oct 2026; `scripts/ship-to-box.sh` checks the second one after every deploy because a healthy restart and a dead connector are indistinguishable from loopback.
 - **Do NOT `tunnel create` a new one** — that is how `a3af5bb4` happened, and it cost a second credential plus a second unit. To serve a new hostname = one dashboard route on `87e7e77f` (Zero Trust → Networks → Routes, service = HTTP `localhost:3000`) **and** the matching `ingress` line in `deploy/cloudflared/config.yml`, which stays the canonical list. `npm test` fails if a second connector file reappears (`test/one-tunnel.test.js`), and `node scripts/cloudflared-audit.js` compares the file against the live edge when a token is present.
@@ -240,7 +240,7 @@ Because there is no fallback Worker on the request path, R2 is now purely a **co
 
 **Already cleaned (this session) — do not try to re-enable:** DNS `api.tukuk.org` & `mqtt.tukuk.org` (pointing at a dead tunnel → 530) **deleted**; dead tunnels `5ee04cc8` (cloudflare-os), `b400ad84` (iot-audit), `168a53af` (tukuk-os) **deleted**. Only 1 active tunnel remains.
 
-**Security:** `cert.pem` (`~/.cloudflared`) contains an `apiToken` `cfut_…` — **never commit**; permissions 600 only. The API token is also kept in `deploy/env.defaults` (private) for auto-DNS/edge.
+**Security:** `cert.pem` (`~/.cloudflared`) contains an `apiToken` `cfut_…` — **never commit**; permissions 600 only. The same token is kept in `deploy/env.secrets`, which is gitignored, for auto-DNS/edge.
 
 ---
 
@@ -264,7 +264,7 @@ None of it needs payment at small scale. Here is the list + where each is set:
 | **Cloudflare Pages** | Free (static) | App+game hub `tukuk-satu-kata` (`generated/public/`) — §12 |
 | **Google AdSense / Microsoft Ads** | Free (revenue) | `public/ads.txt` + `src/config.js:adsense` |
 
-**All of these come up automatically after `npm install`** because keys live in `deploy/env.defaults` (private repo). What NEEDS manual dashboard action (cannot be automated): register Search Console, submit to AdSense, enable the Clarity tag.
+**All of these come up automatically after `npm install`** on a box that has `deploy/env.secrets` (the USB install does; a fresh clone does not — copy it in or set `TUKUK_SECRETS`). What NEEDS manual dashboard action (cannot be automated): register Search Console, submit to AdSense, enable the Clarity tag.
 
 ---
 

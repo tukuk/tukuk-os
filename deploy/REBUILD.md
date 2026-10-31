@@ -312,7 +312,8 @@ to the directories as well makes their contents unlistable, which looks exactly 
 | `tukuk-play.conf` incl. the `.pck.zip` edge-cache alias | yes — added; `install-tukuk-front.sh` never copied it | yes |
 | data/content/indexnow/load-governor/weight-report/builder timers | yes — added from `deploy/` | yes |
 | Cockpit, LAN-only | yes — added (`cockpit.socket.d/40-lan-only.conf`, regenerated at boot by `cockpit-lan-socket.service`) | yes |
-| ONE tunnel `tukuk.org`/`www`/`tchat`/`agent`/`play`/`build` (token mode) | yes — `CF_TUNNEL_TOKEN` is in `deploy/env.defaults` | yes |
+| ONE tunnel `tukuk.org`/`www`/`tchat`/`agent`/`play`/`build` (token mode) | yes — **but only if `deploy/env.secrets` is on the box**: `CF_TUNNEL_TOKEN` left `env.defaults` with the split, and `make-env.sh` exits 3 naming what is missing | yes (the archive's `.env` lands at step 3) |
+| the private half `deploy/env.secrets` (tunnel token, API token, admin credential, agent token, upload secret) | **no** — gitignored on purpose, so no clone can carry it | **no** — put it on the handover stick; `install-from-usb.sh` refuses without it |
 | ~~second tunnel~~ `play`/`tchat`/`build` — **retired**, they are routes on `87e7e77f` | n/a — nothing to restore | n/a — the routes live at the edge in the dashboard |
 | `data/` — the site's memory (posts, history, stats, events, chat, counters; passkeys *would* live here) | **no** | **yes** (archive) with `FORCE_DATA=1` — see the first-boot note |
 | passkey credentials | **no** | **no** — the archive itself held none: `settings.passkeys` is `[]` and `users` is `{}` in `data/tukuk-os.json` as backed up 2026-10-27 |
@@ -357,6 +358,35 @@ The general lesson for this box, stated where it will be read: **when a measurem
 reasoning disagree, the measurement wins.** The throwaway version of that scan flagged `CFID` after
 the first "fix" and it was overruled as a false positive; the next run died on `CFID`.
 
+### Two files, one `.env`
+
+`deploy/env.defaults` is publishable. `deploy/env.secrets` is not in git. `scripts/make-env.sh` merges
+them into `.env` (secrets last, so a stale placeholder in the public half can never shadow a real
+value), and `setup-all.sh`, `install-from-usb.sh` and `rebuild-from-offsite.sh` all call that one
+script instead of each keeping its own copy rule. The app never sees either file — `src/config.js` reads
+`.env`, so nothing in the server code changed.
+
+Why the split had to happen: the public half used to hold the tunnel token, the Cloudflare account API
+token, the admin email+password, the agent bearer and the off-site upload secret. That is what kept the
+repository private — and it is the wrong reason to keep a repository private, because every CI job,
+every mirror and every "just make it public" decision has to be argued against it forever. A tunnel
+token in particular is not a mild leak: the edge authenticates the **token**, so whoever holds it can
+point `tukuk.org` at their own machine and the browser will never know the difference.
+
+What a fresh box therefore needs, in order:
+
+1. the code (bundle, clone, or USB copy);
+2. `deploy/env.secrets` — the single out-of-band object. Copy it to `deploy/`, or keep it anywhere and
+   run `TUKUK_SECRETS=/path/to/env.secrets sudo bash scripts/make-env.sh --force`;
+3. `sudo bash scripts/setup-all.sh`.
+
+For GitHub Actions the file is never read from disk: the workflows take the same values from the
+repository's encrypted Secrets (Settings → Secrets and variables → Actions), which is what makes the
+tukuk account usable as the CI/CD home without publishing a credential. `test/secret-hygiene.test.js`
+fails the build if a live-shaped value reappears in any tracked file, and it also catches the shape a
+`KEY=value` scanner misses: a key written as a JS fallback (`process.env.X || '<literal>'`), which is
+exactly how the NASA and OpenWeather keys were sitting in `src/config.js`.
+
 ### Reading a tunnel token back when the connector refuses it
 
 Both tunnels still exist at the edge (`status: down` only because the connector is off), and a
@@ -365,17 +395,17 @@ repeated calls, so this does not rotate the credential the running box is using:
 
 ```bash
 ACC=$(awk -F= '/^CLOUDFLARE_ACCOUNT_ID=/{print $2}' deploy/env.defaults)
-APIT=$(awk -F= '/^CLOUDFLARE_API_TOKEN=/{print $2}' deploy/env.defaults)
+APIT=$(awk -F= '/^CLOUDFLARE_API_TOKEN=/{print $2}' deploy/env.secrets)
 curl -4 -s -H "Authorization: Bearer $APIT" \
   "https://api.cloudflare.com/client/v4/accounts/$ACC/cfd_tunnel/87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae/token" \
-  | sed 's/.*"result":"//; s/".*//'      # → paste as CF_TUNNEL_TOKEN in .env / env.defaults
+  | sed 's/.*"result":"//; s/".*//'      # → paste as CF_TUNNEL_TOKEN into deploy/env.secrets, then make-env.sh --force
 ```
 
-Measured 2026-10-28: the token in `deploy/env.defaults` and the one in the dead box's
+Measured 2026-10-28: the token then in `deploy/env.defaults` and the one in the dead box's
 `/etc/cloudflared/config.yml` were identical to each other but **different** from what the edge
 issues now — two credentials for the same tunnel UUID (`t` field decodes to `87e7e77f…` in both).
-`env.defaults` now carries the edge-issued one, because "what the API returns today" beats "what was
-in the file last autumn".
+The edge-issued one is what `env.secrets` carries today, because "what the API returns today" beats
+"what was in the file last autumn".
 
 Also measured: the main tunnel's config has `source: "cloudflare"`, so **every** hostname
 (`tukuk.org`/`www`/`dashboard`/`tchat`/`play`/`build`/`agent`) is stored **at the edge** — a rebuilt

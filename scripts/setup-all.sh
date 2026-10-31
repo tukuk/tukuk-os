@@ -70,16 +70,13 @@ echo -e "${BLUE}========================================================${NC}"
 echo -e "${GREEN}  Tukuk-OS — Auto Setup (server + Cloudflare Tunnel)${NC}"
 echo -e "${BLUE}========================================================${NC}"
 
-# ── [1] .env file (keys & API) — automatic from bundled defaults ─────────────
-if [[ ! -f "$REPO_DIR/.env" ]]; then
-  if [[ -f "$REPO_DIR/deploy/env.defaults" ]]; then
-    cp "$REPO_DIR/deploy/env.defaults" "$REPO_DIR/.env"
-    ok ".env automatic from deploy/env.defaults — no editing needed."
-  elif [[ -f "$REPO_DIR/.env.example" ]]; then
-    cp "$REPO_DIR/.env.example" "$REPO_DIR/.env"
-    warn ".env created from .env.example — FILL IN ALL YOUR KEYS, then run again."
-  fi
-fi
+# ── [1] .env file (keys & API) — merged from the two bundled halves ──────────
+# deploy/env.defaults is publishable; deploy/env.secrets is not in git. make-env.sh
+# joins them, and exits 3 when the private half is missing. That is a WARNING here and
+# not a death: setup-all runs from npm postinstall, and killing `npm install` on a
+# laptop that has no tokens is worse than telling the operator once, in the tunnel step
+# below and again in make-env's own output, what is missing.
+bash "$REPO_DIR/scripts/make-env.sh" || warn ".env is incomplete — the tunnel and admin bootstrap need deploy/env.secrets (see the list above)."
 [[ -f "$REPO_DIR/.env" ]] && chmod 600 "$REPO_DIR/.env"
 get_env() { [[ -f "$REPO_DIR/.env" ]] && grep -E "^$1=" "$REPO_DIR/.env" | head -1 | cut -d= -f2- | sed 's/^["'"'"']//; s/["'"'"']$//' || true; }
 

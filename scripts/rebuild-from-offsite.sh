@@ -55,20 +55,22 @@ _env_get() { [[ -r "$ENV" ]] && grep -E "^[[:space:]]*$1=" "$ENV" | tail -1 | cu
 
 # ── 0. preflight: refuse loudly rather than half-install ──────────────────────
 [[ $EUID -eq 0 ]] || { echo "run as root (sudo)." >&2; exit 1; }
-[[ -f "$APP/package.json" ]] || { echo "code is not at $APP yet — clone or USB first (this repo is private)." >&2; exit 1; }
+[[ -f "$APP/package.json" ]] || { echo "code is not at $APP yet — clone or USB first (tukuk/tukuk-os is private until you publish it)." >&2; exit 1; }
 [[ -r "$KEYFILE" ]] || { echo "cannot read $KEYFILE — the archive is useless without the key. It rides on the handover stick as key/tukuk-backup-key (install -m 600 it to /root/tukuk-backup-key), or copy it from the laptop's ~/.config/tukuk/backup-key." >&2; exit 1; }
 for t in curl git openssl tar node; do command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }; done
 
-# Bootstrap .env exactly the way setup-all.sh does. The gate below READS .env, and a fresh clone
-# has none (it is gitignored), so on a truly empty box -- the only box this script is written for --
-# the one-command rebuild died at its own first check. Order matters more than cleverness here.
-if [[ ! -f "$ENV" && -f "$APP/deploy/env.defaults" ]]; then
-  cp "$APP/deploy/env.defaults" "$ENV" && chmod 600 "$ENV"
-  echo "  .env bootstrapped from deploy/env.defaults (same rule setup-all.sh uses)"
+# Bootstrap .env exactly the way setup-all.sh does, through the same script so the two
+# cannot drift. The gate below READS .env, and a fresh clone has none (it is gitignored),
+# so on a truly empty box -- the only box this script is written for -- the one-command
+# rebuild died at its own first check. Order matters more than cleverness here.
+# Exit 3 from make-env.sh means the private half was not found; that is fatal for THIS
+# script a few lines later, because BACKUP_UPLOAD_SECRET lives in that half.
+if [[ ! -f "$ENV" ]]; then
+  bash "$APP/scripts/make-env.sh" || echo "  make-env.sh reported an incomplete .env — see above."
 fi
 
 WURL="$(_env_get BACKUP_WORKER_URL)"; WSEC="$(_env_get BACKUP_UPLOAD_SECRET)"
-[[ -n "$WURL" && -n "$WSEC" ]] || { echo "BACKUP_WORKER_URL / BACKUP_UPLOAD_SECRET empty in $ENV — deploy/env.defaults should carry them." >&2; exit 1; }
+[[ -n "$WURL" && -n "$WSEC" ]] || { echo "BACKUP_WORKER_URL / BACKUP_UPLOAD_SECRET empty in $ENV." >&2; echo "  The upload secret is in deploy/env.secrets, which is deliberately NOT in git — a" >&2; echo "  fresh clone cannot carry it. Copy that file in (handover stick), or run this with" >&2; echo "  TUKUK_SECRETS=/path/to/env.secrets so make-env.sh can find it somewhere else." >&2; exit 1; }
 
 # ── 1. the ordinary bring-up (tuning, Node, Meilisearch, units, tunnel) ───────
 log "[1/5] scripts/setup-all.sh (idempotent core install)"

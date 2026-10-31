@@ -69,16 +69,19 @@ fi
 
 cd "$INSTALL_DIR"
 
-# ── 2. .env from defaults (if missing) ────────────────────────────────────
+# ── 2. .env: merge the public half with the private half ────────────────────
+# The USB stick IS the out-of-band channel, so this is the install path where a
+# missing deploy/env.secrets is a hard stop rather than a warning: without it the
+# tunnel token is nowhere on the box and tukuk.org stays down no matter what the rest
+# of the install does. The rsync above excludes .git, node_modules, .env and the
+# regenerable data dirs — but never deploy/env.secrets, so the file arrives with the
+# tree. Its absence therefore means it was never on the stick.
 if [[ ! -f .env ]]; then
-  if [[ -f deploy/env.defaults ]]; then
-    cp deploy/env.defaults .env && chmod 600 .env
-    ok ".env generated from deploy/env.defaults."
-  elif [[ -f .env.example ]]; then
-    cp .env.example .env && chmod 600 .env
-    warn ".env from .env.example — FILL your keys before the tunnel comes up."
+  if [[ -f deploy/env.secrets ]]; then
+    bash scripts/make-env.sh || die "make-env.sh failed — see its message above."
+    ok ".env generated from deploy/env.defaults + deploy/env.secrets."
   else
-    die "No deploy/env.defaults or .env.example to generate .env."
+    die "No deploy/env.secrets on this stick. The tunnel token, the Cloudflare API token, the admin credential and the agent token are not in git any more (they never should have been). Copy deploy/env.secrets onto the stick and re-run."
   fi
 fi
 
@@ -104,10 +107,12 @@ fi
 TOKEN="$(grep -E '^CF_TUNNEL_TOKEN=' .env | head -1 | cut -d= -f2- || true)"
 if [[ -z "$TOKEN" ]]; then
   echo
-  warn "Last step: bring up the domain."
-  echo "   1. Nano .env  →  CF_TUNNEL_TOKEN=eyJ...  (Cloudflare Zero Trust → Tunnels)"
-  echo "      (+ CLOUDFLARE_API_TOKEN=... for www.tukuk.org / edge snapshot)"
-  echo "   2. sudo bash scripts/setup-all.sh     # only the tunnel/edge steps are repeated"
+  warn "Last step: bring up the domain. The tunnel token is NOT in git — put it in the"
+  warn "private half and let make-env.sh rebuild .env:"
+  echo "   1. Cloudflare Zero Trust → Tunnels → copy the token into deploy/env.secrets as"
+  echo "        CF_TUNNEL_TOKEN=eyJ...      (+ CLOUDFLARE_API_TOKEN=... for www.tukuk.org / edge snapshot)"
+  echo "   2. sudo bash scripts/make-env.sh --force"
+  echo "   3. sudo bash scripts/setup-all.sh     # only the tunnel/edge steps are repeated"
 fi
 
 echo -e "${BLUE}========================================================${NC}"

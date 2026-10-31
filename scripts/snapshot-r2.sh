@@ -70,7 +70,7 @@ put() { # put <key> <fail> [content-type]
     npx --yes wrangler r2 object put "$BUCKET/$key" --file "$file" --remote >/dev/null 2>&1
   fi && echo "  ✓ $key" || { echo "  ! failed $key"; FAILS=$((FAILS+1)); }
   # Fail fast, and say why. On a rebuilt box there is no BACKUP_WORKER_URL, and the R2
-  # token in deploy/env.defaults authenticates but has no R2 Write scope — so every one
+  # token in deploy/env.secrets authenticates but has no R2 Write scope — so every one
   # of these ~60 objects burns a 5 s + 10 s backoff and then a cold `npx wrangler`.
   # Measured on 30 Oct 2026: 78 throttled retries and 38 failures before the install
   # moved on, roughly 30 s each. Three failures with zero successes is conclusive.

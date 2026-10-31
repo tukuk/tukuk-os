@@ -7,6 +7,11 @@ package-lock.json.bak
 .env.*
 !.env.example
 scripts/r2.env
+# The private half of the shipped configuration. deploy/env.defaults used to carry
+# live tokens, which meant the repo could never be published and a public CI run
+# would print them. env.secrets holds only what grants access; test/secret-hygiene.test.js
+# fails the build if a value of that shape reappears in a tracked file.
+deploy/env.secrets
 
 # ─── Meilisearch: index database ───────────────────────
 # File-based state — regenerated, no need to store.
