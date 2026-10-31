@@ -25,12 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # continue-on-error so the reporting step below always runs: a red run with no
-      # issue is only half a monitor.
+      # The probe's exit status is the whole point, and `| tee` hands the step's status to tee,
+      # so rc is recorded explicitly. That record replaces a real bug: this workflow used to read
+      # steps.probe.outcome with continue-on-error:true, and a step that exits 2 under
+      # continue-on-error reports outcome=success. The canary that found the edge down printed
+      # "canary passed", closed its own issue, and stayed green — the same shape as the on-box
+      # watchdog dying on an unbound variable instead of reporting the outage.
       - name: Probe the public surface
         id: probe
-        continue-on-error: true
-        run: bash scripts/public-canary.sh | tee canary.log
+        run: |
+          bash scripts/public-canary.sh | tee canary.log
+          echo "rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Upload canary log
         if: always()
@@ -44,15 +49,21 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OUTCOME: ${{ steps.probe.outcome }}
+          RC: ${{ steps.probe.outputs.rc }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -uo pipefail
           TITLE="canary: the public site is not healthy"
+          # rc 2 = the edge itself never reached the origin; rc 1 = the origin answered and is
+          # wrong. Say which, because only one of them can be fixed by deploying.
+          case "${RC:-1}" in
+            0) VERDICT=OK ;;
+            2) VERDICT=EDGE_DOWN ;;
+            *) VERDICT=DEGRADED ;; esac
           NUM="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number \
                  --jq '.[0].number // empty')"
 
-          if [ "$OUTCOME" = "success" ]; then
+          if [ "$VERDICT" = "OK" ]; then
             if [ -n "$NUM" ]; then
               gh issue close "$NUM" --comment "Recovered — the canary passes again: $RUN_URL"
             fi
@@ -60,8 +71,8 @@ jobs:
             exit 0
           fi
 
-          BODY="$(printf 'Canary failed at %s\n\n```\n%s\n```\n\nRun: %s' \
-                   "$(date -u +%FT%TZ)" "$(cat canary.log)" "$RUN_URL")"
+          BODY="$(printf 'Verdict: %s at %s\n\n```\n%s\n```\n\nRun: %s' \
+                   "$VERDICT" "$(date -u +%FT%TZ)" "$(cat canary.log)" "$RUN_URL")"
           if [ -n "$NUM" ]; then
             gh issue comment "$NUM" --body "$BODY"
           else

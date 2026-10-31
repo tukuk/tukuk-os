@@ -14,6 +14,7 @@
 #
 #   bash scripts/public-canary.sh                 # human table, exit 1 on any failure
 #   CANARY_BASE=http://127.0.0.1:3000 bash scripts/public-canary.sh   # against local
+#   CANARY_DASHBOARD_URL=http://127.0.0.1:3000/                       # local, retired-host check
 #   CANARY_ADSENSE=on bash scripts/public-canary.sh                   # after approval
 #   bash scripts/public-canary.sh --json          # one JSON object, for machines
 #
@@ -93,7 +94,10 @@ expect "404 is a real 404" "/canary-no-such-page-$$" "404"
 # The admin panel is /admin on the apex. dashboard.tukuk.org served the same app on the same
 # port, so "is it up" was never the question — the only thing worth pinning is that it is not
 # serving again. A second door to the login page is a second thing that can 502 on its own.
-DASH_CODE="$(curl -s -o /dev/null -w '%{http_code}' -m "$TIMEOUT" https://dashboard.tukuk.org/ 2>/dev/null)"
+# CANARY_DASHBOARD_URL exists only so the probe can be run against a local edge in the test
+# suite; the default is the real retired hostname and nothing else changes.
+DASH_URL="${CANARY_DASHBOARD_URL:-https://dashboard.tukuk.org/}"
+DASH_CODE="$(curl -s -o /dev/null -w '%{http_code}' -m "$TIMEOUT" "$DASH_URL" 2>/dev/null)"
 DASH_CODE="${DASH_CODE: -3}"
 case "${DASH_CODE:-000}" in
   200) row fail "dashboard hostname stays retired" "200 — remove the route, the panel is /admin" ;;
