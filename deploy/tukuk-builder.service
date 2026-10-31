@@ -18,7 +18,15 @@ Description=Tukuk Builder (bolt.diy fork — AI app-building agent)
 Documentation=https://github.com/tukuk/tukuk-builder
 After=network-online.target
 Wants=network-online.target
-StartLimitIntervalSec=0
+# A `StartLimitIntervalSec=0` used to sit here, i.e. the start limiter was OFF. Combined with
+# `Restart=always` below that is a hot loop, not resilience: on 31 Oct this unit had restarted 8 598
+# times since boot — every 3.6 s for eight hours — because node_modules was missing under
+# apps/builder, burning a core and filling the journal with the same stack trace. The limiter is
+# what turns "it keeps coming back" into "it stopped and told you why". Five attempts in five
+# minutes is enough for a deploy that races the network, and small enough that a genuinely broken
+# build parks in `failed` where `systemctl --failed` shows it.
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -34,7 +42,7 @@ Environment=NODE_ENV=production
 # pointed straight at the vite binary so pnpm is not needed inside the systemd unit.
 ExecStart=/usr/bin/node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5176 --strictPort
 
-Restart=always
+Restart=on-failure
 RestartSec=3
 # Build & serve a heavy SPA — give room but bounded (6.8G server total).
 MemoryMax=2G
