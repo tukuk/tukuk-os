@@ -15,7 +15,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync, statSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync, statSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, extname } from 'node:path';
 
@@ -127,13 +127,20 @@ test('the guard catches the shapes it was written for, and only those', () => {
   // live-shaped credential, and the first test would (correctly) fail on the guard itself.
   const JWT = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', 'eyJzdWIiOiJ0dWt1ay1vcy1hZG1pbiJ9', 'abcDEF123'].join('.');
   const CFUT = ['cfut_', 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6'].join('');
+  // Fake-but-shaped secrets for the fallback fixtures. The first version of this test used
+  // the real OpenWeather key as the fixture, which the new comparison test then caught:
+  // "assembled from fragments" only keeps a guard honest if the fragments are not the
+  // credential. 'deadbeef' repeated is the same length and charset and could not be less
+  // real.
+  const HEX40 = 'deadbeef'.repeat(5);
+  const HEX32 = 'deadbeef'.repeat(4);
   // `NAME || 'value'` — built here so no source line of this file contains the shape.
   const fallback = (name, value) => `process.env.${name} || '${value}',`;
 
   const mustCatch = [
     // the class a KEY=value scanner cannot see, all four of them
-    fallback('NASA_API_KEY', 'aB3dE5fG6hI7jK8lM9nO0pQ1rS2tU3vW4xY5zA6b'),
-    fallback('OPENWEATHER_API_KEY', 'c5cdeb2e2261ae767890f8e3c3a651ab'),
+    fallback('NASA_API_KEY', HEX40),
+    fallback('OPENWEATHER_API_KEY', HEX32),
     fallback('ADMIN_PASSWORD', 'tukuk123'),          // 8 chars: caught by the PASSWORD floor
     fallback('ADMIN_EMAIL', 'operator.name77@gmail.com'),
     // the class a KEY=value scanner does see
@@ -188,6 +195,43 @@ test('the private half is ignored, and the merge script exists', () => {
   const makeEnv = readFileSync(join(ROOT, 'scripts', 'make-env.sh'), 'utf8');
   assert.match(makeEnv, /env\.secrets/, 'make-env.sh is the single place the two halves meet');
   assert.match(makeEnv, /chmod 600/, '.env holds secrets, so it must not be world-readable');
+});
+
+test('no value from the private half appears anywhere in the tracked tree', (t) => {
+  // The shape-based rules above cannot answer the question that actually matters: IS THIS
+  // VALUE STILL A SECRET? A name-based exemption can. AGENT_FREE_TOKEN is deliberately
+  // public (it is compiled into the Builder bundle), so the scan ignores it — and that
+  // exemption also hid the fact that its value was the SAME string as the private
+  // AGENT_TOKEN, which src/agent.js checks first (line 61). Every free client was
+  // therefore handed a full-tier bearer, and the private half held a value that three
+  // tracked files already published. The fix for a hole like that is to compare against
+  // the secret itself, not against the shape of the line it sits on.
+  //
+  // This can only run on a box that HAS deploy/env.secrets, which is exactly the box
+  // where a mistake is cheap to make. CI has no secrets file, so it skips — and says so.
+  const secretsPath = join(ROOT, 'deploy', 'env.secrets');
+  if (!existsSync(secretsPath)) {
+    t.skip('no deploy/env.secrets here (CI): nothing to compare the tracked tree against');
+    return;
+  }
+  const values = readFileSync(secretsPath, 'utf8')
+    .split('\n')
+    .map((line) => line.match(/^([A-Z0-9_]+)=(.*)$/))
+    .filter((m) => m && m[2].length >= 8)
+    .map((m) => ({ name: m[1], value: m[2] }));
+  assert.ok(values.length >= 6, `env.secrets looks truncated: only ${values.length} usable values`);
+
+  const hits = [];
+  for (const file of tracked) {
+    const content = readFileSync(join(ROOT, file), 'utf8');
+    for (const { name, value } of values) {
+      if (!content.includes(value)) continue;
+      const line = content.split('\n').findIndex((l) => l.includes(value)) + 1;
+      hits.push(`${name} is in the private half and also in ${file}:${line}`);
+    }
+  }
+  assert.deepEqual(hits, [], 'these credentials are published in git while also living in env.secrets:\n'
+    + hits.join('\n') + '\nRotate the value, and remove it from the tracked file.');
 });
 
 test('make-env.sh rebuilds .env without deleting the keys it does not own', () => {
