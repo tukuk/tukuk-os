@@ -67,6 +67,15 @@ function migrate() {
     if (u.avatar === undefined) { u.avatar = null; changed = true; }
     // A phone number (optional) for the SMS fallback while offline; null = none.
     if (u.phone === undefined) { u.phone = null; changed = true; }
+    // Hide stamps were milliseconds before this file used seq. A legacy value (>1e9) read
+    // against a seq would be "hidden until seq passes 1.7 trillion", i.e. hidden forever —
+    // so re-stamp it at the room's current seq, which keeps today's meaning exactly: hidden
+    // now, back when the next message arrives.
+    if (u.hide) {
+      for (const [rid, v] of Object.entries(u.hide)) {
+        if (v > 1e9) { const r = s.rooms[rid]; u.hide[rid] = r ? (r.seq || 0) : 0; changed = true; }
+      }
+    }
   }
   for (const [id, r] of Object.entries(s.rooms)) {
     if (r.kind === 'group') {
@@ -450,8 +459,9 @@ function roomsFor(name) {
   return Object.values(s.rooms).filter(r => {
     if (r.kind !== 'global' && !isMember(r, name)) return false;
     // A DM "hidden for me": dropped from the sidebar until a new message
-    // (ts past the hide time) brings it back — like a private archive.
-    if (hide && r.kind === 'dm' && hide[r.id] && lastMsgTs(r) < hide[r.id]) return false;
+    // (activity past the hide stamp) brings it back — like a private archive.
+    // The stamp is the room's seq, not a clock: see hideRoom().
+    if (hide && r.kind === 'dm' && hide[r.id] !== undefined && (r.seq || 0) <= hide[r.id]) return false;
     return true;
   });
 }
@@ -486,14 +496,22 @@ function hideRoom(name, roomId) {
   if (!r || r.kind !== 'dm') return { error: 'Direct chat not found.' };
   const u = findUser(name);
   if (!u || !isMember(r, u)) return { error: 'You are not a member of this chat.' };
-  // The stamp must ALWAYS be at or after the last message (>=) so hiding never
-  // «sticks» when the hide and the last message land on the same millisecond.
-  (u.hide = u.hide || {})[roomId] = Math.max(Date.now(), lastMsgTs(r) + 1);
+  // The stamp is the room's MESSAGE SEQUENCE, not a timestamp. It used to be
+  // `Math.max(Date.now(), lastMsgTs(r) + 1)`, which cannot order two events inside the
+  // same millisecond: hide a DM and a new message landing in that same ms gets a ts equal
+  // to the previous one, while the stamp had been pushed +1 past it, so the room stayed
+  // hidden forever-from-the-user's-view and test/chat's "a new message un-hides it" failed
+  // on a fast runner and passed on a slow one. seq is monotonic per room and increments on
+  // every send, so "hidden until the NEXT message" is exactly expressible: hidden while
+  // seq <= stamp. Hiding in the same instant as the last message still sticks (equal seq).
+  (u.hide = u.hide || {})[roomId] = r.seq || 0;
   touch();
   return { ok: true };
 }
 function unhideRoom(u, roomId) {
-  if (u && u.hide && u.hide[roomId]) { delete u.hide[roomId]; touch(); }
+  // `!== undefined`, not truthiness: a DM hidden before its first message has the stamp 0,
+  // and 0 is falsy — opening such a room would leave it hidden forever.
+  if (u && u.hide && u.hide[roomId] !== undefined) { delete u.hide[roomId]; touch(); }
 }
 // ─── Group rooms ───
 function createGroup(creatorName, title, memberIds) {

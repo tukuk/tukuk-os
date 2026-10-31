@@ -1,6 +1,16 @@
 'use strict';
 // Unit tests for src/auth.js — focused on the real/security logic that does not need
 // an actual WebAuthn browser (session lifecycle, the e-mail gate, origins, bearer).
+//
+// These three lines MUST stay above the requires. config.admin.email and
+// bootstrapPassword have no literal fallback on purpose (see src/config.js:138 — a default
+// there shipped the owner's address and a usable password into every clone), so without an
+// .env they are empty and this file's gate tests assert against '' — which passed on a
+// laptop that happens to have a .env and failed in CI, where none exists. Test-local values
+// only; dotenv will not overwrite a variable already set, so this wins over any .env and the
+// real owner credentials are never read by the suite.
+process.env.ADMIN_EMAIL ||= 'owner@example.test';
+process.env.ADMIN_PASSWORD ||= 'bootstrap-password-for-tests';
 const { test } = require('node:test');
 const assert = require('node:assert');
 
@@ -26,6 +36,7 @@ test('isAllowedEmail: the owner e-mail passes, others are rejected', () => {
 // ── checkBootstrapPassword ──
 test('checkBootstrapPassword: an exact match passes, a wrong/added X fails', () => {
   const pw = config.admin.bootstrapPassword;
+  assert.ok(pw, 'the test env must supply a bootstrap password (see the header of this file)');
   assert.strictEqual(auth.checkBootstrapPassword(pw), true);
   assert.strictEqual(auth.checkBootstrapPassword(pw + 'X'), false);
   assert.strictEqual(auth.checkBootstrapPassword(''), pw ? false : false);
