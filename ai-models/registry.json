@@ -9,7 +9,7 @@
       "kind": "llm",
       "base": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
       "tuning": "LoRA r=16 / alpha=32, merge-and-export",
-      "hfRepo": "fevian448/tukuk-builder-mini",
+      "hfRepo": "tukuk/tukuk-builder-mini",
       "hfFile": "tukuk-builder-mini-q4_k_m.gguf",
       "quant": "Q4_K_M",
       "ollamaTag": "tukuk-builder-mini:q4",

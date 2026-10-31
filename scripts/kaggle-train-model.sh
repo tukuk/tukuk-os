@@ -3,8 +3,8 @@
 # kaggle-train-model.sh — one command: free Kaggle GPU → train our model →
 # publish it on Hugging Face → (optional) install it on this server.
 #
-#   KAGGLE_ID=fevian448 bash scripts/kaggle-train-model.sh
-#   KAGGLE_ID=fevian448 bash scripts/kaggle-train-model.sh --pull
+#   KAGGLE_ID=tukuk bash scripts/kaggle-train-model.sh
+#   KAGGLE_ID=tukuk bash scripts/kaggle-train-model.sh --pull
 #
 # It is a thin, opinionated wrapper around scripts/kaggle-gpu-burst.sh:
 #   [1] preflight: kaggle CLI + credentials + account GPU gate (same gate as burst)
@@ -34,7 +34,7 @@ command -v node >/dev/null 2>&1 || { echo "✗ node is required"; exit 1; }
 
 KAGGLE_ID="${KAGGLE_ID:-}"
 case "$KAGGLE_ID" in
-  ""|*REPLACE*) echo "✗ export KAGGLE_ID=<your kaggle username> first (example: KAGGLE_ID=fevian448)"; exit 1 ;;
+  ""|*REPLACE*) echo "✗ export KAGGLE_ID=<your kaggle username> first (example: KAGGLE_ID=tukuk)"; exit 1 ;;
 esac
 
 command -v kaggle >/dev/null 2>&1 || export PATH="$HOME/.local/bin:$PATH"

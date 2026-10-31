@@ -167,8 +167,8 @@ kaggle-jobs/<job>.py   →   <user>/tukuk-builder-mini   →   scripts/hf-model-
 ### 1. Latih (GPU percuma, tiada kos)
 
 ```bash
-KAGGLE_ID=fevian448 bash scripts/kaggle-train-model.sh          # latih + publish
-KAGGLE_ID=fevian448 bash scripts/kaggle-train-model.sh --pull   # + install di server
+KAGGLE_ID=tukuk bash scripts/kaggle-train-model.sh          # latih + publish
+KAGGLE_ID=tukuk bash scripts/kaggle-train-model.sh --pull   # + install di server
 ```
 
 Dua perkara sekali sahaja di browser (tidak boleh diotomasi):

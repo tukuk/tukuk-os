@@ -2,7 +2,7 @@
 # tukuk-builder-mini.py — train OUR OWN coding model on a free Kaggle GPU and
 # publish it to the Hugging Face hub.
 #
-#   From the server:  KAGGLE_ID=fevian448 bash scripts/kaggle-gpu-burst.sh tukuk-builder-mini
+#   From the server:  KAGGLE_ID=tukuk bash scripts/kaggle-gpu-burst.sh tukuk-builder-mini
 #   Or one shot:      bash scripts/kaggle-train-model.sh
 #
 # What this kernel does (all inside Kaggle — no private data leaves the box):
@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 
 # ── Knobs (env overrides, all optional) ──────────────────────────────────────
 BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-Coder-1.5B-Instruct")
-HF_REPO = os.environ.get("HF_REPO", "fevian448/tukuk-builder-mini")
+HF_REPO = os.environ.get("HF_REPO", "tukuk/tukuk-builder-mini")
 GGUF_NAME = os.environ.get("GGUF_NAME", "tukuk-builder-mini-q4_k_m.gguf")
 DATASET = os.environ.get("SFT_DATASET", "iamtarun/python_code_instructions_18k_alpaca")
 MAX_ROWS = int(os.environ.get("MAX_ROWS", "6000"))

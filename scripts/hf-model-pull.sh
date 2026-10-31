@@ -5,7 +5,7 @@
 #
 #   sudo bash scripts/hf-model-pull.sh                 # every registry entry
 #   sudo bash scripts/hf-model-pull.sh tukuk-builder-mini
-#   sudo bash scripts/hf-model-pull.sh fevian448/xyz xyz-q4_k_m.gguf   # ad-hoc
+#   sudo bash scripts/hf-model-pull.sh tukuk/xyz xyz-q4_k_m.gguf   # ad-hoc
 #
 # The registry (ai-models/registry.json) is the source of truth: it names the HF
 # repo, the GGUF file and the Ollama tag. /api/models derives "installed" from the

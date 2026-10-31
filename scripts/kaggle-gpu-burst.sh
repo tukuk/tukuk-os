@@ -33,7 +33,7 @@ command -v kaggle >/dev/null 2>&1 || { echo "✗ kaggle CLI missing (uv tool ins
 [ -f "$HOME/.kaggle/kaggle.json" ] || [ -f "$HOME/.kaggle/credentials.json" ] || { echo "✗ no kaggle.json nor credentials.json in ~/.kaggle — run: kaggle auth login"; exit 1; }
 SRC="kaggle-jobs/${JOB}.py"
 [ -f "$SRC" ] || { echo "✗ job '$JOB' missing — available: $(ls kaggle-jobs/*.py | xargs -n1 basename | sed 's/\.py//' | tr '\n' ' ')"; exit 1; }
-case "$KAGGLE_ID" in *REPLACE*) echo "✗ pass KAGGLE_ID=<username-kaggle> (example: KAGGLE_ID=fevian448)"; exit 1;; esac
+case "$KAGGLE_ID" in *REPLACE*) echo "✗ pass KAGGLE_ID=<username-kaggle> (example: KAGGLE_ID=tukuk)"; exit 1;; esac
 
 # ── Account-gate preflight (experience: 7 wasted runs): even when enable_gpu +
 # machine_shape + --accelerator + docker_image are all correct, the API still

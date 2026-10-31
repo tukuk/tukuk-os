@@ -134,7 +134,7 @@ fi
 # ── [3] submit as a Kaggle kernel ─────────────────────────────────────────────
 KAGGLE_ID="${KAGGLE_ID:-}"
 case "$KAGGLE_ID" in
-  ""|*REPLACE*) echo "✗ export KAGGLE_ID=<your kaggle username> first (example: KAGGLE_ID=fevian448)"; exit 1 ;;
+  ""|*REPLACE*) echo "✗ export KAGGLE_ID=<your kaggle username> first (example: KAGGLE_ID=tukuk)"; exit 1 ;;
 esac
 command -v kaggle >/dev/null 2>&1 || export PATH="$HOME/.local/bin:$PATH"
 command -v kaggle >/dev/null 2>&1 || { echo "✗ kaggle CLI missing: uv tool install kaggle (or pipx install kaggle)"; exit 1; }

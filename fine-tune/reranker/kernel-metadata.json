@@ -1,5 +1,5 @@
 {
-  "id": "fevian448/tukuk-reranker-msmarco",
+  "id": "tukuk/tukuk-reranker-msmarco",
   "title": "Tukuk Reranker MSMARCO",
   "code_file": "tukuk-reranker-msmarco.py",
   "language": "python",
