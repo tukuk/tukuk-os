@@ -3,7 +3,7 @@
 # Print only a summary (ID/status), never the token.
 set -uo pipefail
 ENVFILE="${1:-/opt/tukuk-os/.env}"
-TUNNEL_ID="${2:-87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae}"
+TUNNEL_ID="${2:-c1d8ea0f-b512-487b-b7e7-ad730c24da9e}"
 TOKEN=$(grep -E '^CLOUDFLARE_API_TOKEN=' "$ENVFILE" | cut -d= -f2- | tr -d '"'"'")
 [ -n "$TOKEN" ] || { echo "no token"; exit 1; }
 H=(-H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json")

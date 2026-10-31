@@ -216,6 +216,6 @@ fi
 step "install complete. Next steps, in order:"
 step "  1. bash $HERE/ide-check.sh                  # everything above, verified"
 step "  2. bash $HERE/ide-session.sh start           # as the tukuk user, not root"
-step "  3. Cloudflare Access + ONE dashboard route for ide.tukuk.org on tunnel 87e7e77f -- see"
+step "  3. Cloudflare Access + ONE dashboard route for ide.tukuk.org on tunnel c1d8ea0f -- see"
 step "     README.md, 'DASHBOARD SIDE': the current API token cannot do either one programmatically."
 step "     Do not create a second tunnel for it; one connector carries every hostname."

@@ -458,7 +458,7 @@ else
   # in this file, and needs no dashboard click and no Zone DNS permission.
   echo "   Re-read the live token for any tunnel UUID (no dashboard needed):"
   echo "     curl -s -H \"Authorization: Bearer \$(get_env CLOUDFLARE_API_TOKEN)\" \"https://api.cloudflare.com/client/v4/accounts/\$(get_env CLOUDFLARE_ACCOUNT_ID)/cfd_tunnel/<uuid>/token\" | sed 's/.*\"result\":\"//; s/\".*//'"
-  echo "   (ONE tunnel: 87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae carries tukuk.org, www, tchat, agent, play and build; the admin panel is https://tukuk.org/admin)"
+  echo "   (ONE tunnel: c1d8ea0f-b512-487b-b7e7-ad730c24da9e carries tukuk.org, www, tchat, agent, play and build; the admin panel is https://tukuk.org/admin)"
 fi
 
 # ── [7b] ONE connector — a second tunnel is an error now, not a missing feature ─
@@ -466,9 +466,9 @@ fi
 # TOKEN mode and ignores a local ingress. That split cost a second credential file, a
 # second unit, and a second thing to forget on a rebuild — and forgetting it 530'd a
 # production hostname. All of them are routes on the ONE tunnel now (dashboard → Zero
-# Trust → Networks → Routes, connector 87e7e77f). This block installs nothing; it
+# Trust → Networks → Routes, connector c1d8ea0f). This block installs nothing; it
 # retires the old layout so a box upgraded from it converges on the new one.
-info "[+] one tunnel only (play / tchat / build ride 87e7e77f)..."
+info "[+] one tunnel only (play / tchat / build ride c1d8ea0f)..."
 if systemctl list-unit-files 2>/dev/null | grep -q '^cloudflared-build\.service'; then
   # The second connector's credential is not in git, so a box upgraded from the old layout can
   # still be the only thing keeping those hostnames alive. Retiring it before the dashboard
@@ -482,7 +482,7 @@ if systemctl list-unit-files 2>/dev/null | grep -q '^cloudflared-build\.service'
   if [[ ${#UNROUTED[@]} -gt 0 && "${RETIRE_SECOND_TUNNEL:-0}" != "1" ]]; then
     warn "cloudflared-build is still installed and was NOT retired — ${UNROUTED[*]} does not answer 200"
     echo "   Add each of them as a public hostname on the ONE tunnel (Zero Trust → Networks → Routes,"
-    echo "   connector 87e7e77f; service = HTTP localhost:3000, except build = HTTP 127.0.0.1:5174),"
+    echo "   connector c1d8ea0f; service = HTTP localhost:3000, except build = HTTP 127.0.0.1:5174),"
     echo "   confirm they answer 200, then rerun this script to retire the second connector."
     echo "   Force it anyway (takes those hostnames down): sudo RETIRE_SECOND_TUNNEL=1 bash scripts/setup-all.sh"
   else
@@ -501,7 +501,7 @@ else
   ok "one connector (cloudflared) — no cloudflared-build unit installed"
 fi
 if [[ "$(systemctl is-active cloudflared 2>/dev/null)" == active ]]; then
-  ok "cloudflared (87e7e77f) active"
+  ok "cloudflared (c1d8ea0f) active"
 else
   warn "cloudflared is not active — every hostname is down; check: journalctl -u cloudflared -n 40"
 fi

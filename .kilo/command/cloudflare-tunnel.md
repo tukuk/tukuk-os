@@ -8,7 +8,7 @@ description: Inspect the single Cloudflare Tunnel that serves tukuk.org and its 
 
 ONE tunnel, ONE connector, ONE config file:
 
-- tunnel `87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae` (`tukuk-os-v2`)
+- tunnel `c1d8ea0f-b512-487b-b7e7-ad730c24da9e` (`tukuk-tunnel`)
 - unit `cloudflared.service`
 - config `/etc/cloudflared/config.yml`
 

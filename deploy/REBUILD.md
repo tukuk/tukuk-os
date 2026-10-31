@@ -314,7 +314,7 @@ to the directories as well makes their contents unlistable, which looks exactly 
 | Cockpit, LAN-only | yes — added (`cockpit.socket.d/40-lan-only.conf`, regenerated at boot by `cockpit-lan-socket.service`) | yes |
 | ONE tunnel `tukuk.org`/`www`/`tchat`/`agent`/`play`/`build` (token mode) | yes — **but only if `deploy/env.secrets` is on the box**: `CF_TUNNEL_TOKEN` left `env.defaults` with the split, and `make-env.sh` exits 3 naming what is missing | yes (the archive's `.env` lands at step 3) |
 | the private half `deploy/env.secrets` (tunnel token, API token, admin credential, agent token, upload secret) | **no** — gitignored on purpose, so no clone can carry it | **no** — put it on the handover stick; `install-from-usb.sh` refuses without it |
-| ~~second tunnel~~ `play`/`tchat`/`build` — **retired**, they are routes on `87e7e77f` | n/a — nothing to restore | n/a — the routes live at the edge in the dashboard |
+| ~~second tunnel~~ `play`/`tchat`/`build` — **retired**, they are routes on `c1d8ea0f` | n/a — nothing to restore | n/a — the routes live at the edge in the dashboard |
 | `data/` — the site's memory (posts, history, stats, events, chat, counters; passkeys *would* live here) | **no** | **yes** (archive) with `FORCE_DATA=1` — see the first-boot note |
 | passkey credentials | **no** | **no** — the archive itself held none: `settings.passkeys` is `[]` and `users` is `{}` in `data/tukuk-os.json` as backed up 2026-10-27 |
 | ssh host keys, `/etc/hosts`, real `.env` | **no** | **no** netplan (deliberately) / **yes** for the rest |
@@ -397,13 +397,13 @@ repeated calls, so this does not rotate the credential the running box is using:
 ACC=$(awk -F= '/^CLOUDFLARE_ACCOUNT_ID=/{print $2}' deploy/env.defaults)
 APIT=$(awk -F= '/^CLOUDFLARE_API_TOKEN=/{print $2}' deploy/env.secrets)
 curl -4 -s -H "Authorization: Bearer $APIT" \
-  "https://api.cloudflare.com/client/v4/accounts/$ACC/cfd_tunnel/87e7e77f-d6e0-410b-bbcb-dd74ae3a49ae/token" \
+  "https://api.cloudflare.com/client/v4/accounts/$ACC/cfd_tunnel/c1d8ea0f-b512-487b-b7e7-ad730c24da9e/token" \
   | sed 's/.*"result":"//; s/".*//'      # → paste as CF_TUNNEL_TOKEN into deploy/env.secrets, then make-env.sh --force
 ```
 
 Measured 2026-10-28: the token then in `deploy/env.defaults` and the one in the dead box's
 `/etc/cloudflared/config.yml` were identical to each other but **different** from what the edge
-issues now — two credentials for the same tunnel UUID (`t` field decodes to `87e7e77f…` in both).
+issues now — two credentials for the same tunnel UUID (`t` field decodes to `c1d8ea0f…` in both).
 The edge-issued one is what `env.secrets` carries today, because "what the API returns today" beats
 "what was in the file last autumn".
 

@@ -3,20 +3,22 @@
 # setup-all.sh copies this file to /etc/cloudflared/config.yml and fills in the
 # tunnel UUID from CF_TUNNEL_ID.
 #
-# THE RULE (on this box): exactly one tunnel (87e7e77f), exactly one unit
+# THE RULE (on this box): exactly one tunnel (c1d8ea0f = `tukuk-tunnel`), exactly one unit
 # (cloudflared.service). Every hostname below is a route ON THAT TUNNEL. If a new
 # entry point is needed, add a hostname here and in the dashboard — never stand up a
 # second connector. A second tunnel means a second credential file, a second unit to
 # forget on a rebuild, and a hostname that 530s when only the first one is running.
 # The legacy `build-tukuk` tunnel (a3af5bb4) existed only because of the token-mode
-# limitation below; it is retired. (gcp-config.yml is the one other file here and it is
+# limitation below; it is retired, and so is the tunnel it replaced on 31 Oct 2026
+# (`tukuk-os-v2` / 87e7e77f, which lived in the previous owner's account and does not
+# exist here). (gcp-config.yml is the one other file here and it is
 # a different machine on purpose — the GCP failover mirror; it is never installed here.)
 #
 #   TOKEN mode (what this box runs): setup-all replaces the `credentials-file:` line
 #     with `token: <CF_TUNNEL_TOKEN>`, so no .json is needed and a new server comes up
 #     from .env alone. ⚠ IMPORTANT: in TOKEN mode cloudflared IGNORES the local
 #     `ingress:` section — hostnames are read from the Cloudflare dashboard
-#     (Zero Trust → Networks → Routes → Add public hostname, connector 87e7e77f).
+#     (Zero Trust → Networks → Routes → Add public hostname, connector c1d8ea0f).
 #     The list below is therefore the CANONICAL LIST, not the live source of truth:
 #     the dashboard is. Keep the two in step; `node scripts/cloudflared-audit.js`
 #     compares them.
