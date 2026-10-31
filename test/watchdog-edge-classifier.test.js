@@ -47,13 +47,22 @@ test('a 530/503 from the edge is NOT read as healthy', () => {
   for (const dead of ['530', '503', '502', '522', '403', '301', '404']) {
     assert.match(classify(dead, 'ok').stamp, /^err:1$/, `${dead} must count as a bad edge, never as recovered`);
   }
+  // A code that is not three digits, or is 2 followed by junk, is the reason `2??` was never
+  // a digit class: only a real 2xx may clear the streak.
+  assert.match(classify('2xx', 'ok').stamp, /^err:1$/, 'a non-numeric 2-code is not health');
 });
 
-test('the shipped script no longer uses the `2??` glob as a digit class', () => {
+test('the old `2??` pattern is a wrong way to write 2xx, but it was NOT the silence', () => {
   assert.doesNotMatch(SRC, /case "\$CODE" in[\s\S]{0,120}?2\?\?\)/,
-    '2?? matches ANY character with ?, so it matched 530 and 503 — the outage went unreported');
-  assert.doesNotMatch(SRC, /case "\$ACODE" in[\s\S]{0,120}?2\?\?\)/, 'same pattern, same bug, second probe');
+    '2?? means "a 2 then ANY two characters", not 2xx — spell the digits out');
+  assert.doesNotMatch(SRC, /case "\$ACODE" in[\s\S]{0,120}?2\?\?\)/, 'same pattern, same defect, second probe');
   assert.match(SRC, /2\[0-9\]\[0-9\]\)/, 'match the digits explicitly');
+  // Pinned so nobody re-tells this wrong: `?` matches exactly one character and curl's
+  // %{http_code} is always three digits, so a 5xx never started with "2" and fell through to
+  // the `*)` branch — where the `${N:-0}` counter below killed the script before it could log.
+  const old = 'set -u\ncase "530" in 2??) echo healthy ;; *) echo err ;; esac';
+  assert.equal(execFileSync('bash', ['-c', old], { encoding: 'utf8' }).trim(), 'err',
+    '530 reached the error branch all along; attributing the outage to this pattern hides the real bug');
 });
 
 test('the counter survives a non-numeric previous value, which ${N:-0} did not', () => {

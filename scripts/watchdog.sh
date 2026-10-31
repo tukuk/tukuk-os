@@ -78,18 +78,20 @@ PUB_ASSET="${WATCHDOG_PUBLIC_ASSET:-https://tukuk.org/libs/leaflet.min.js}"
 PUB_STAMP="/tmp/tukuk-os-watchdog.public"
 CODE=$(probe_edge "$PUB")
 PREV=$(cat "$PUB_STAMP" 2>/dev/null || echo ok)
-# `2??` as a shell case pattern is NOT "2 followed by two digits": `?` matches ANY
-# character, so it also matched 530/503 — which is how this script sat silently "healthy"
-# through the 30-31 Oct edge outage, and then CRASHED (`ok: unbound variable`, line 94, on
-# `N=$((N+1))` with N unset under `set -u`) the moment the edge finally answered something
-# the fall-through caught. A watchdog that dies every 2 minutes on a broken edge is worse
-# than no watchdog: `systemctl is-failed` is the only clue and nobody watches it. Match on
-# the first character, explicitly.
-# And the counter guard is `${N:-0}` in the original — which does NOT guard what it looks
-# like it guards: when the stamp file is absent PREV is the literal "ok", the strip
-# `${PREV#err:}` leaves it "ok" (nothing matched), N is SET-but-non-numeric, so `${N:-0}`
-# expands to "ok" and `$(( ok + 1 ))` dies with "ok: unbound variable" — arithmetic treats
-# an unset identifier as an error under `set -u`. Only a prefix test is a real guard.
+# The 30-31 Oct edge outage went unreported by THIS COUNTER, not by the match patterns. When
+# the stamp file is absent PREV is the literal "ok"; `${PREV#err:}` strips nothing, so N is
+# SET-but-non-numeric, and `${N:-0}` only substitutes for unset-or-empty — it hands "ok"
+# straight to `$(( ok + 1 ))`, which reads an unset identifier inside arithmetic, and `set -u`
+# makes that FATAL: the unit died on the old line 94 with "ok: unbound variable" without ever
+# reaching the log call, every two minutes, for the whole outage. A watchdog that crashes at
+# the exact moment the edge breaks is worse than no watchdog — `systemctl is-failed` is the
+# only clue and nobody watches it. Only an all-digits test is a real guard, so one helper owns
+# the counter now and no branch can reintroduce the old form.
+# `2??` was wrong too, though not the cause: `?` matches ANY character, so the pattern means
+# "a 2 then any two characters", not "2xx". curl's %{http_code} is always three digits, so
+# 530/503 did fall through into `*)` — measured, not assumed — and that is exactly where they
+# met the crash above. Match the digits explicitly so the next reader never has to work out
+# which of the two was hiding the outage.
 bump() { # $1 = stamp prefix, $2 = previous stamp content → echoes the new count
   local n; n=${2#"$1"}; case "$n" in ''|*[!0-9]*) n=0 ;; esac; echo $((n + 1));
 }
