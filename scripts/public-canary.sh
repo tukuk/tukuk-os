@@ -145,6 +145,13 @@ if [ -n "$ITEM" ]; then
     else
       row fail "shard item is noindex" "$ITEM — meta robots is not noindex,follow"
     fi
+    # The computed facts are the difference between a profile and a Wikipedia wrapper:
+    # if this row disappears, the page has silently regressed to name + country + dot.
+    if grep -qF 'Distance to the equator' "$TMP/body" && grep -qF 'Closest ' "$TMP/body"; then
+      row ok "computed facts on the item" ""
+    else
+      row fail "computed facts on the item" "$ITEM lacks the computed-fact rows"
+    fi
     if [ "$ADSENSE" = "on" ]; then
       grep -qF 'pagead2.googlesyndication.com' "$TMP/body" \
         && row ok "approved: units present" "" || row fail "approved: units present" "no AdSense loader on the page"

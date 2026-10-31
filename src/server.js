@@ -34,6 +34,7 @@ const config = require('./config');
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 const net = require('./net');
+const geoFacts = require('./geo-facts');
 const store = require('./store');
 const safety = require('./safety');
 const brain = require('./brain/provider');
@@ -16014,7 +16015,9 @@ const GEO_CSS = `.geo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:
 .geo-hero{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
 .geo-hero img{border-radius:10px;border:1px solid var(--line);max-width:280px;width:100%;height:auto}
 .geo-sum{font-size:1.02rem;line-height:1.7}
-@media(max-width:760px){.geo-grid{grid-template-columns:1fr}}`;
+.geo-near{columns:2;column-gap:24px;margin:10px 0 4px;padding-left:18px}
+.geo-near li{margin:3px 0;line-height:1.5}
+@media(max-width:760px){.geo-grid{grid-template-columns:1fr}.geo-near{columns:1}}`;
 
 function geoCard(item, base) {
   return `<div class="geo-card"><h3><a href="/${base}/${item.slug}">${escapeHtml(item.name)}</a></h3><p class="meta" style="margin:0">${escapeHtml(item.country)}</p></div>`;
@@ -16090,15 +16093,51 @@ function geoItemPage(item, sum, mod, base, cfg) {
   const siblings = mod[cfg.byCountry](item.countrySlug).filter((x) => x.slug !== item.slug).slice(0, 10);
   const more = siblings.length ? `<h2 class="section-title">More ${cfg.unit} in ${escapeHtml(item.country)}</h2><p>${siblings.map((x) => `<a href="/${base}/${x.slug}">${escapeHtml(x.name)}</a>`).join(' \u00b7 ')}.</p>` : '';
   const isRealCountry = item.country && item.country !== 'Other' && item.country !== 'Antarctica';
+  // Everything below is arithmetic on coordinates the dataset already carries: no fetch, no
+  // model, so it cannot be stale, rate-limited or invented (see src/geo-facts.js). Five
+  // facts become eleven, and the nearest-neighbour web turns 816k dead ends into links.
+  const sunToday = geoFacts.sunOn(item, new Date().toISOString().slice(0, 10));
+  const solar = geoFacts.formatUtcOffset(geoFacts.solarOffsetMinutes(item.lng));
   const rows = [
     ['Country', isRealCountry ? `<a href="/countries/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)],
     ['Continent / region', escapeHtml(item.region)],
     ['Coordinates (approx.)', `${escapeHtml(coords)} \u00b7 <a href="${escapeHtml(mapHref)}" rel="noopener" target="_blank">view on map</a>`],
-  ].map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  ];
+  // A row is only added when the arithmetic behind it produced a number: a dataset entry
+  // missing a coordinate must lose a fact, never print "NaN km".
+  const eqKm = geoFacts.equatorKm(item);
+  if (Number.isFinite(eqKm)) {
+    rows.push(['Distance to the equator', `${eqKm.toLocaleString('en-US')} km ${Number(item.lat) >= 0 ? 'north' : 'south'} of it`]);
+  }
+  if (solar) {
+    rows.push(['Solar time', `${escapeHtml(solar)} \u2014 read from longitude, so it is the sky's clock rather than the government's`]);
+  }
+  if (sunToday && sunToday.polar === 'day') {
+    rows.push(['Sun today', `The sun does not set here today \u2014 polar day at ${Math.abs(Number(item.lat)).toFixed(1)}\u00b0 latitude.`]);
+  } else if (sunToday && sunToday.polar === 'night') {
+    rows.push(['Sun today', `The sun does not rise here today \u2014 polar night at ${Math.abs(Number(item.lat)).toFixed(1)}\u00b0 latitude.`]);
+  } else if (sunToday && typeof sunToday.sunrise === 'number' && typeof sunToday.sunset === 'number') {
+    const hh = Math.floor(sunToday.dayLengthMin / 60);
+    const mm = sunToday.dayLengthMin % 60;
+    rows.push(['Sun today (UTC)', `Rises ${geoFacts.formatMinutesUtc(sunToday.sunrise)}, sets ${geoFacts.formatMinutesUtc(sunToday.sunset)} \u2014 ${hh} h ${String(mm).padStart(2, '0')} min of daylight`]);
+  }
+  const elev = geoFacts.elevMeters(item);
+  const elevRank = elev ? geoFacts.rankBy(mod[cfg.listKey], item, 'elev', geoFacts.elevMeters) : null;
+  if (elevRank) {
+    // Ranked on cleaned metres, so a row stored in feet cannot outrank Everest.
+    const rankTxt = elevRank.total > 20 ? ` \u00b7 ranked ${elevRank.rank} of ${elevRank.total.toLocaleString('en-US')} in this list` : '';
+    rows.push(['Elevation', `${elev.toLocaleString('en-US')} m${rankTxt}`]);
+  }
+  const rowsHtml = rows.map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  const near = geoFacts.nearest(mod[cfg.listKey], item, 5);
+  const nearBlock = near.length ? `<h2 class="section-title">Closest ${cfg.unit}</h2>
+  <ul class="geo-near">${near.map((n) => `<li><a href="/${base}/${n.item.slug}">${escapeHtml(n.item.name)}</a> \u2014 ${geoFacts.formatKm(n.km)} away${n.item.country && n.item.country !== item.country ? `, in ${escapeHtml(n.item.country)}` : ''}</li>`).join('')}</ul>
+  <p class="meta">Straight-line distances on a sphere, computed from the coordinates. A road would be longer.</p>` : '';
   const body = `<p class="back-link"><a href="/${base}">&larr; All ${cfg.unit}</a></p>
   ${hero}${readMore}
-  <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
+  <h2 class="section-title">Quick facts</h2><table class="world-table">${rowsHtml}</table>
   <p><b>${escapeHtml(item.name)}</b> is located in ${isRealCountry ? `<a href="/countries/${item.countrySlug}">${escapeHtml(item.country)}</a>` : escapeHtml(item.country)}, in ${escapeHtml(item.region)}.</p>
+  ${nearBlock}
   ${more}
   <p class="meta">${cfg.itemFooter}</p>`;
   const ld = JSON.stringify([
