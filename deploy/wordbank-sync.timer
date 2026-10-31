@@ -1,0 +1,16 @@
+[Unit]
+Description=Sync the tukuk.org word bank weekly (after the Monday GitHub build)
+
+[Timer]
+# Tuesday 02:40 local. Chosen to sit well after the Monday 04:17 UTC Actions build, and away from the
+# backup timers at :00/:15 and the ~04:30 daily auto-update — a sync that lands on a backup window
+# gets slow and looks like the backup failed. Persistent=true means a box that was off simply catches
+# up on next boot instead of waiting another week.
+OnCalendar=Tue *-*-* 02:40:00
+Persistent=true
+AccuracySec=5min
+RandomizedDelaySec=10min
+Unit=wordbank-sync.service
+
+[Install]
+WantedBy=timers.target

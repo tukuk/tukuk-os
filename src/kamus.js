@@ -16,6 +16,7 @@
 // encoders in public/kamus.js and never touch this module.
 const axios = require('axios');
 const { attachGuard } = require('./outbound');
+const wordbank = require('./wordbank');
 
 const http = axios.create({
   timeout: 9000,
@@ -63,6 +64,11 @@ async function define(word, lang) {
   const key = `def:${l}:${w.toLowerCase()}`;
   const hit = cacheGet(key);
   if (hit && !hit.stale) return hit.data;
+  // tukuk.org's OWN data first: a normal English lookup is answered from the local `kata` Meilisearch
+  // index with no external call at all. A miss, or the store being down/slow, returns null and the
+  // code below runs exactly as it always did — the external APIs stay fully wired as the fallback.
+  const local = await wordbank.lookup(w, l);
+  if (local) { cacheSet(key, local, DEF_TTL); return local; }
   if (hit && hit.stale) { fetchDefine(key, l, w).catch(() => {}); return hit.data; }
   return fetchDefine(key, l, w);
 }

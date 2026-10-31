@@ -1,0 +1,19 @@
+[Unit]
+Description=Pull tukuk.org's word bank from the public release and load the Meilisearch kata index
+
+# The build runs free on GitHub's public runners (tukuk/tukuk-devops, Mondays). All this unit does
+# is download the finished file by HTTPS, verify SHA256, and load it locally — so it stays light even
+# though the bank is large. lookups in src/wordbank.js read whatever kata currently holds, so no app
+# restart is needed; a refreshed index is picked up live.
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tukuk-os
+# MEILI_HOST + MEILI_MASTER_KEY come from the deployment .env, same as meili-backup.service.
+EnvironmentFile=-/opt/tukuk-os/.env
+Environment=APP_DIR=/opt/tukuk-os
+# Down-priority: a bank sync must never compete with live visitor traffic for CPU or disk.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/bin/bash /opt/tukuk-os/scripts/wordbank-sync.sh
