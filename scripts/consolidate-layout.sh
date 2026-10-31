@@ -81,7 +81,14 @@ PAIRS=(
   "models|$TUKUK_LEGACY_MODELS|$TUKUK_MODEL_DIR|inward"
 )
 
-[ "$(id -u)" -eq 0 ] || { bad "run as root: sudo bash $0"; exit 1; }
+# Root is required for the real thing: it writes to /opt and /var/www. It is deliberately NOT
+# required when TUKUK_ROOT points somewhere else, because that is a rehearsal against a
+# scratch directory — the only way to exercise a freshly formatted box (or CI) without
+# formatting one. The check keys off the DEFAULT root, so a non-root run against the app
+# folder is still refused.
+if [ "$(id -u)" -ne 0 ] && [ "$TUKUK_ROOT" = "/opt/tukuk-os" ]; then
+  bad "run as root: sudo bash $0"; exit 1
+fi
 [ -d "$TUKUK_ROOT" ] || { bad "no $TUKUK_ROOT — this is not the app folder, so there is nothing to consolidate into."; exit 1; }
 
 # ── --prune-links ──────────────────────────────────────────────────────────────
@@ -126,7 +133,7 @@ fi
 say "The one folder: $TUKUK_ROOT"
 say
 
-MOVES=0; LINKS=0; SKIP=0; CONFLICT=0
+MOVES=0; LINKS=0; CREATED=0; SKIP=0; CONFLICT=0
 
 for row in "${PAIRS[@]}"; do
   IFS='|' read -r name legacy new mode <<<"$row"
@@ -149,7 +156,23 @@ for row in "${PAIRS[@]}"; do
 
   if [ ! -e "$legacy" ]; then
     if [ -d "$new" ]; then ok "nothing at $legacy; $new already in place"; SKIP=$((SKIP+1)); continue; fi
-    info "nothing at $legacy — skipped"; SKIP=$((SKIP+1)); continue
+    # A freshly formatted box has no legacy path at all — there this is the normal case, not
+    # an oddity, and it is what makes the layout EXIST: apps/ is the parent `git clone` needs
+    # before it can put the Builder inside it, bin/ is where the Godot binary goes, models/ is
+    # what src/config.js reads. An `inward` pair reaching here means a box with no weights yet,
+    # so a real directory is correct; on the old box the legacy dir exists and this is skipped.
+    info "nothing at $legacy — creating $new"
+    if [ "$DRY" -eq 0 ]; then
+      # Same owner as the checkout, because the Builder and the model imports write here as
+      # tukuk; a root-owned parent is the kind of difference that only shows up later, when
+      # something runs as the service user and silently cannot create its own directory.
+      if id -u tukuk >/dev/null 2>&1; then
+        install -d -o tukuk -g tukuk "$new"
+      else
+        install -d "$new"
+      fi
+    fi
+    CREATED=$((CREATED+1)); continue
   fi
 
   if [ -e "$new" ] && [ ! -L "$new" ]; then
@@ -226,14 +249,14 @@ if [ "$MOVES" -gt 0 ] && [ "$DRY" -eq 0 ] && command -v systemctl >/dev/null 2>&
 fi
 
 say
-say "Summary: $MOVES moved, $LINKS linked in place, $SKIP already fine, $CONFLICT needing a decision."
+say "Summary: $MOVES moved, $LINKS linked in place, $CREATED created, $SKIP already fine, $CONFLICT needing a decision."
 if [ "$DRY" -eq 1 ]; then
   say "Dry run — nothing was changed. Rerun without --dry-run to apply."
 fi
 if [ "$CONFLICT" -gt 0 ]; then
   exit 1
 fi
-if [ "$MOVES" -eq 0 ] && [ "$LINKS" -eq 0 ] && [ "$SKIP" -eq 0 ]; then
+if [ "$MOVES" -eq 0 ] && [ "$LINKS" -eq 0 ] && [ "$CREATED" -eq 0 ] && [ "$SKIP" -eq 0 ]; then
   bad "no pair was even inspected — check TUKUK_ROOT ($TUKUK_ROOT)"
   exit 1
 fi
@@ -252,5 +275,9 @@ for row in "${PAIRS[@]}"; do
 done
 say
 ok "everything lives under $TUKUK_ROOT"
-say "  The legacy paths are symlinks now. Once a deploy has gone green, drop them:"
-say "    sudo bash scripts/consolidate-layout.sh --prune-links"
+if [ "$MOVES" -eq 0 ] && [ "$LINKS" -eq 0 ] && [ "$CREATED" -gt 0 ]; then
+  say "  Fresh box: the folders were created. Nothing to migrate, no symlinks to prune."
+elif [ "$MOVES" -gt 0 ] || [ "$LINKS" -gt 0 ]; then
+  say "  The legacy paths are symlinks now. Once a deploy has gone green, drop them:"
+  say "    sudo bash scripts/consolidate-layout.sh --prune-links"
+fi

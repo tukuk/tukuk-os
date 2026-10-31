@@ -216,6 +216,37 @@ test('the migration is idempotent and refuses to merge two live trees', () => {
     'the prune scan must skip comment lines — a history note is not a live reference');
 });
 
+test('a freshly formatted box gets the layout, not a migration', () => {
+  // The rebuild case, and the one that matters right now: a new Ubuntu install has no legacy
+  // path at all, so every pair hits the "nothing to move" branch. If that branch merely
+  // skipped, the box would never grow apps/ (nginx root for play), bin/ (Godot), or models/
+  // (what src/config.js reads) — the layout would exist in paths.sh only.
+  assert.match(MIGRATE, /nothing at \$legacy — creating \$new/, 'an absent legacy path must create the destination');
+  assert.match(MIGRATE, /CREATED=\$\(\(CREATED\+1\)\)/, 'and count it, so the run is not reported as unhandled');
+  assert.match(MIGRATE, /install -d -o tukuk -g tukuk/, 'created dirs belong to the service user, as the legacy ones did');
+  assert.match(MIGRATE, /Fresh box: the folders were created/, 'a fresh box must not be told to prune symlinks it never had');
+  // Root is refused for the real folder only. Keying off the default root is what makes a
+  // rehearsal against a scratch directory possible without opening a hole in production.
+  assert.match(MIGRATE, /\[ "\$TUKUK_ROOT" = "\/opt\/tukuk-os" \]/, 'root must be required for the app folder');
+  assert.doesNotMatch(MIGRATE, /^\[ "\$\(id -u\)" -eq 0 \] \|\|/m, 'an unconditional root check blocks every rehearsal');
+  // setup-all must not assume [5b] succeeded: it warns and continues by design.
+  const setup = read('scripts', 'setup-all.sh');
+  assert.match(setup, /mkdir -p "\$\(dirname "\$BUILDER_DIR"\)"/,
+    'the Builder clone must create its parent; [5b] is allowed to fail without stopping the install');
+});
+
+test('the apt repos do not assume the distro they were written on', () => {
+  // Both of these ran under `set -e` and were pinned to a codename (cloudflared: literally
+  // `jammy`). On a freshly formatted Ubuntu those steps fail, and under `set -e` that ended
+  // the whole install before any fallback could run — a half-installed box with no message.
+  const setup = read('scripts', 'setup-all.sh');
+  assert.doesNotMatch(setup, /pkg\.cloudflare\.com\/cloudflared jammy main/, 'cloudflared must not hardcode a suite');
+  assert.match(setup, /VERSION_CODENAME/, 'it must ask the running system which suite it is');
+  assert.match(setup, /no apt suite for '\$CODENAME'/, 'and say so when Cloudflare publishes none for it');
+  assert.match(setup, /cloudflared is not installed/, 'a failed .deb fallback must fail loudly, not silently');
+  assert.match(setup, /setup_22\.x \| bash - >\/dev\/null \\\n\s*\|\| warn/, 'a NodeSource failure must warn, not abort the install');
+});
+
 test('the GCP mirror is not this box and stays out of the folder', () => {
   // /var/www/tukuk-mirror is the failover VM. One folder describes THIS machine; folding a
   // different machine's paths in here is how a restore script starts writing to the wrong host.

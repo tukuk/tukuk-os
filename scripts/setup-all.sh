@@ -117,8 +117,14 @@ ok "System tuning done."
 # ── [3] Node.js 22 LTS ─────────────────────────────────────────────────────────
 info "[2/8] Node.js..."
 if ! command -v node >/dev/null || [[ "$(node -v | cut -c2-3)" -lt 20 ]]; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
-  apt-get install -y -qq nodejs >/dev/null
+  # NodeSource publishes apt suites per Ubuntu release, and a freshly formatted box can be
+  # newer than the newest suite it carries. Under `set -e` a failing `bash -` here aborted
+  # the entire install at step [2/8], so it is allowed to fail and the failure must name the
+  # fix rather than leave a half-installed box.
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null \
+    || warn "NodeSource setup failed for this release — falling back to the distro package"
+  apt-get install -y -qq nodejs >/dev/null 2>&1 || true
+  command -v node >/dev/null || die "nodejs is not installed. Fix: curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - && sudo apt-get install -y nodejs"
 fi
 ok "Node $(node -v) / npm $(npm -v)"
 
@@ -366,12 +372,28 @@ fi
 info "[6/8] Cloudflare Tunnel..."
 if ! command -v cloudflared >/dev/null; then
   curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-  echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared jammy main' | tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
-  apt-get update -y -qq
-  apt-get install -y -qq cloudflared >/dev/null || {
-    wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-    dpkg -i cloudflared-linux-amd64.deb && rm -f cloudflared-linux-amd64.deb
-  }
+  # The suite is per codename and this line used to say `jammy` outright. On a box formatted
+  # with a newer Ubuntu that is either an empty repo or a dependency fight, and the
+  # `apt-get update` below it ran under `set -e` — so it killed the install BEFORE the .deb
+  # fallback could ever run. Ask the running system, check that Cloudflare publishes the
+  # suite, and treat every step as optional until cloudflared answers.
+  CODENAME="$(. /etc/os-release 2>/dev/null && echo "${VERSION_CODENAME:-}")"
+  CODENAME="${CODENAME:-jammy}"
+  if ! curl -fsI "https://pkg.cloudflare.com/cloudflared/dists/$CODENAME/Release" >/dev/null 2>&1; then
+    warn "Cloudflare publishes no apt suite for '$CODENAME' — installing the release .deb instead."
+    CODENAME=""
+  fi
+  if [ -n "$CODENAME" ]; then
+    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $CODENAME main" | tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
+    apt-get update -y -qq || warn "apt-get update failed after adding the Cloudflare repo"
+    apt-get install -y -qq cloudflared >/dev/null 2>&1 || true
+  fi
+  if ! command -v cloudflared >/dev/null; then
+    CF_ARCH="$(dpkg --print-architecture)"
+    wget -q "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}.deb" \
+      && dpkg -i "cloudflared-linux-${CF_ARCH}.deb" && rm -f "cloudflared-linux-${CF_ARCH}.deb"
+  fi
+  command -v cloudflared >/dev/null || die "cloudflared is not installed — no apt suite for $CODENAME and the .deb download failed (needs internet)"
 fi
 
 CF_TOKEN="$(get_env CF_TUNNEL_TOKEN)"
@@ -706,6 +728,11 @@ BUILDER_DIR="${TUKUK_BUILDER_DIR:-$INSTALL_DIR/apps/builder}"
 BUILDER_LOG=/var/log/tukuk-builder-install.log
 if [[ ! -f "$BUILDER_DIR/package.json" ]]; then
   info "[+] App Builder source missing — cloning fevian448/tukuk-builder into $BUILDER_DIR..."
+  # [5b] creates the layout, but it is deliberately non-fatal: it warns and carries on so a
+  # stale box keeps serving. That means this clone can be reached with apps/ missing, so it
+  # cannot assume the parent it is about to write into exists. (git itself does create
+  # missing parents — verified — which is exactly why this was invisible in testing.)
+  mkdir -p "$(dirname "$BUILDER_DIR")"
   if git clone --depth 1 https://github.com/fevian448/tukuk-builder.git "$BUILDER_DIR" >>"$BUILDER_LOG" 2>&1; then
     ok "Builder source cloned."
   else
