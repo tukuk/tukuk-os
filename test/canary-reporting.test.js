@@ -60,7 +60,10 @@ function report(rc, existingIssue) {
   // rather than on the mapping being tested.
   fs.writeFileSync(path.join(dir, 'canary.log'), '16 checks, 5 failed, 1 skipped\nFAIL health\n');
   fs.writeFileSync(path.join(dir, 'report.sh'), REPORT);
-  const child = spawnSync('bash', ['report.sh'], {
+  // -e because that is how the GitHub runner executes run: blocks. Without it the harness is
+  // more forgiving than production, and a bare `[ -n "$X" ] && do_thing` would pass here and
+  // abort the real step.
+  const child = spawnSync('bash', ['-e', 'report.sh'], {
     cwd: dir,
     encoding: 'utf8',
     env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, RC: rc, RUN_URL: 'https://run/example', GH_TOKEN: 'x' },
@@ -112,11 +115,23 @@ test('rc=0 closes the issue, and a lost rc counts as broken', () => {
   assert.equal(lost.status, 1);
 });
 
-test('rc=3 says BLOCKED, because a refused client and a dead origin want different fixes', () => {
+test('rc=3 keeps the outage issue clean: its own title, a warning, and a GREEN run', () => {
   const r = report('3', null);
-  assert.match(r.calls, /Verdict: BLOCKED/);
-  assert.doesNotMatch(r.calls, /EDGE_DOWN/, 'do not tell anyone to restart a tunnel that is fine');
-  assert.equal(r.status, 1);
+  assert.match(r.calls, /issue create --title canary: the edge is challenging this runner/);
+  assert.doesNotMatch(r.calls, /canary: the public site is not healthy/, 'a blocked client is not an outage');
+  assert.match(r.out, /::warning/, 'the run says it plainly without claiming the site is down');
+  assert.equal(r.status, 0, 'red must keep meaning broken — a permanently red monitor is ignored');
+});
+
+test('the reporting step is written for bash -e, so no conditional can abort it', () => {
+  // `bash -e` + `[ -n "$X" ] && cmd` is the trap: when the test is false the compound returns 1
+  // and the step dies before printing anything. This exact shape took out the on-box watchdog.
+  for (const line of REPORT.split('\n')) {
+    const stripped = line.trim();
+    if (/^\[/.test(stripped) && /&&/.test(stripped)) {
+      assert.fail(`bare test-and-execute would abort the step under errexit: ${stripped}`);
+    }
+  }
 });
 
 // --- the probe against a fake edge ---------------------------------------------------------
