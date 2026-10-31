@@ -15,7 +15,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, extname } from 'node:path';
 
 const ROOT = join(import.meta.dirname, '..');
@@ -187,6 +188,42 @@ test('the private half is ignored, and the merge script exists', () => {
   const makeEnv = readFileSync(join(ROOT, 'scripts', 'make-env.sh'), 'utf8');
   assert.match(makeEnv, /env\.secrets/, 'make-env.sh is the single place the two halves meet');
   assert.match(makeEnv, /chmod 600/, '.env holds secrets, so it must not be world-readable');
+});
+
+test('make-env.sh rebuilds .env without deleting the keys it does not own', () => {
+  // The one destructive thing a configuration split can do: setup-all.sh GENERATES
+  // API_KEY (the mutation-route guard) and MEILI_MASTER_KEY into .env on a box that has
+  // neither, and they are in neither half. A naive `--force` would drop them, and that
+  // is an outage rather than a cosmetic diff — meilisearch.service reads the key through
+  // EnvironmentFile=.env, so the service would come up with a key the data dir was not
+  // written with: every search 403, /health still claiming "meilisearch":"available".
+  // This runs the real script against a throwaway tree, because the claim is about
+  // behaviour, not about a regex over the source. The credentials below are one-letter
+  // fakes written into a temp directory under /tmp, never into a tracked file.
+  const dir = mkdtempSync(join(tmpdir(), 'tukuk-make-env-'));
+  try {
+    mkdirSync(join(dir, 'deploy'));
+    mkdirSync(join(dir, 'scripts'));
+    copyFileSync(join(ROOT, 'scripts', 'make-env.sh'), join(dir, 'scripts', 'make-env.sh'));
+    writeFileSync(join(dir, 'deploy', 'env.defaults'), 'FOO=1\nBAR=2\n');
+    writeFileSync(join(dir, 'deploy', 'env.secrets'),
+      'CF_TUNNEL_TOKEN=t\nCLOUDFLARE_API_TOKEN=a\nADMIN_EMAIL=e@x.y\n'
+      + 'ADMIN_PASSWORD=p\nAGENT_TOKEN=g\nBACKUP_UPLOAD_SECRET=u\n');
+    writeFileSync(join(dir, '.env'), 'FOO=999\nAPI_KEY=generated-on-the-box\nMEILI_MASTER_KEY=old-key\n');
+
+    execFileSync('bash', [join(dir, 'scripts', 'make-env.sh'), '--force'], { encoding: 'utf8' });
+    const env = readFileSync(join(dir, '.env'), 'utf8');
+
+    assert.match(env, /^FOO=1$/m, 'a value the two halves own wins over a stale .env');
+    assert.match(env, /^BAR=2$/m);
+    assert.match(env, /^API_KEY=generated-on-the-box$/m, 'a generated key must survive the rebuild');
+    assert.match(env, /^MEILI_MASTER_KEY=old-key$/m, 'including the one meilisearch.service reads');
+    // Mask the group/other bits: the property that matters is that nobody but the owner
+    // can read the rebuilt .env, whatever owner-read style the box umask left behind.
+    assert.equal(statSync(join(dir, '.env')).mode & 0o077, 0, 'and the result is not group/world readable');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('no local runtime state is tracked', () => {

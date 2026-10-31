@@ -53,9 +53,39 @@ fi
 # Secrets last so they win, and so a stray placeholder in the public half can never
 # shadow a real value. Comments and blank lines are dropped: .env is read by
 # src/config.js's own parser, which handles '#' but is simpler served clean.
+# Built next to the target, not in /tmp: mktemp's file is 0600 and a rename inside one
+# directory is atomic, so there is never a half-written .env and never a copy of the
+# secret material living on another filesystem. The trap is for the failure path — a
+# leftover .env.XXXXXX would hold real values.
+TMP=$(mktemp "${TARGET}.XXXXXX") || { red "cannot create a temp file next to $TARGET"; exit 1; }
+trap 'rm -f "$TMP"' EXIT
 { grep -hE '^[A-Za-z_][A-Za-z0-9_]*=' "$DEFAULTS"; \
-  [[ -f "$SECRETS" ]] && grep -hE '^[A-Za-z_][A-Za-z0-9_]*=' "$SECRETS"; } > "$TARGET"
+  [[ -f "$SECRETS" ]] && grep -hE '^[A-Za-z_][A-Za-z0-9_]*=' "$SECRETS"; } > "$TMP"
+
+# Some keys exist ONLY in .env, because setup-all.sh generated them on this box: API_KEY
+# (the mutation-route guard) and MEILI_MASTER_KEY. Rebuilding from the two halves alone
+# would silently drop them, and that is not a cosmetic loss — meilisearch.service reads
+# EnvironmentFile=$INSTALL_DIR/.env and passes ${MEILI_MASTER_KEY} on its command line, so
+# a regenerated key means the service comes up asking for a key the data dir was written
+# with: every search 403, /health still claiming "meilisearch":"available". That exact
+# stale-key shape is documented in setup-all.sh. So any name that is only in the old .env
+# is carried across, and the carry is printed by name (never by value).
+carried=()
+if [[ -f "$TARGET" ]]; then
+  while IFS= read -r line; do
+    key=${line%%=*}
+    grep -qE "^${key}=" "$TMP" && continue
+    printf '%s\n' "$line" >> "$TMP"
+    carried+=("$key")
+  done < <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$TARGET")
+fi
+
+mv "$TMP" "$TARGET"
+trap - EXIT
 chmod 600 "$TARGET"
+if [[ ${#carried[@]} -gt 0 ]]; then
+  ylw "  carried over from the old .env (generated on this box, in neither half): ${carried[*]}"
+fi
 
 count=$(grep -cE '.' "$TARGET")
 grn "✓ .env written: $count keys from $(basename "$DEFAULTS")$( [[ -f "$SECRETS" ]] && echo " + $(basename "$SECRETS")" )."
