@@ -25,7 +25,15 @@ UNITS="lightdm avahi-daemon avahi-daemon.socket cups cups.socket cups.path cups-
 echo
 echo "=== DISABLING ==="
 for u in $UNITS; do
-  if ! systemctl list-unit-files "$u" >/dev/null 2>&1; then
+  # `systemctl list-unit-files lightdm` answers "0 unit files listed" and exits 1: the probe only
+  # matches a name WITH its suffix, and these names have none. That is not cosmetic. It is how this
+  # loop once printed "none  lightdm (unit not installed)" and skipped the unit whose greeter was
+  # the fourth-largest process on the box, so the whole pass read as applied while the GUI login
+  # screen kept running with nobody logged in. `systemctl cat` resolves the name as written
+  # (service, socket or timer) and exits 1 for a genuinely absent unit, which is the only question
+  # worth asking here — measured on this box it answers 0 for lightdm/cups/udisks2 and 1 for
+  # switcheroo-control/smbd/nmbd, exactly the split the old check got backwards.
+  if ! systemctl cat "$u" >/dev/null 2>&1; then
     echo "none  $u (unit not installed)"
     continue
   fi
@@ -35,6 +43,20 @@ for u in $UNITS; do
     echo "skip  $u (already off or never enabled)"
   fi
 done
+
+# And make the default target agree, or the X stack returns on the first reboot. `disable lightdm`
+# only stops systemd from starting it as a dependency; `set-default graphical.target` still declares
+# the graphical session to be the thing this box boots into. multi-user.target is what a headless
+# server wants, and getty@tty1 still gives a text login over the serial/console path.
+# Undo: sudo systemctl set-default graphical.target && sudo systemctl enable --now lightdm
+cur_target=$(systemctl get-default)
+if [ "$cur_target" = "multi-user.target" ]; then
+  echo "target multi-user.target (already)"
+elif systemctl set-default multi-user.target >/dev/null 2>&1; then
+  echo "target multi-user.target (was $cur_target)"
+else
+  echo "fail  could not set default target (still $cur_target)"
+fi
 
 # udisks2, masked rather than disabled: it is D-Bus activated, so the next thing that asks for a
 # disk — an apt hook, a udev event, a container runtime — starts it again. That is what happened on
