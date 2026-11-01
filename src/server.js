@@ -6101,10 +6101,15 @@ function adUnit(slot, label) {
     `<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>`;
 }
 // The Adsense loader script once in <head> (only when active + the client is valid).
+// The meta tag is AdSense's own third domain-verification method (alongside ads.txt and
+// pasting the loader snippet itself) — it is just the publisher ID echoed back, so it can
+// never be wrong in a way the loader script isn't already, and it costs nothing to emit on
+// the exact same condition, so verification is satisfied on every page that serves ads.
 function adsenseLoader() {
   const client = adsenseOn();
   if (!client) return '';
-  return `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`;
+  return `<meta name="google-adsense-account" content="${escapeHtml(client)}">\n`
+    + `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`;
 }
 
 // Google's ad-block-recovery base tag (Funding Choices framework). Placed once in <head> on
