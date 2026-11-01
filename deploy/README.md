@@ -54,6 +54,13 @@ decision — an apex Worker route once doubled every zone request and caused a s
 points at the box, and the box updates itself within 30 minutes. That is the free answer
 to "auto update ke cloudflare".
 
+agent/play/build are PARKED: the edge has never routed them, so `config.yml` now lists them
+as commented pairs only (a canonical list must mirror the routed edge — the audit compared
+them every run and the drift was permanent noise). Reviving one = add the public hostname in
+Zero Trust → Networks → Routes (connector `c1d8ea0f`), uncomment the pair, re-run
+`node scripts/cloudflared-audit.js`. The local origins stay installed (agent :8443, play
+nginx block, builder-wake :5174).
+
 The `tukuk-os` Workers project in the dashboard is where the pain was: it tried
 `npm install` on the whole server monolith (Electron, onnxruntime, even the Gemfile's
 Ruby gems) and burned ~1.5 build minutes failing. Configure it like this instead:

@@ -458,7 +458,7 @@ else
   # in this file, and needs no dashboard click and no Zone DNS permission.
   echo "   Re-read the live token for any tunnel UUID (no dashboard needed):"
   echo "     curl -s -H \"Authorization: Bearer \$(get_env CLOUDFLARE_API_TOKEN)\" \"https://api.cloudflare.com/client/v4/accounts/\$(get_env CLOUDFLARE_ACCOUNT_ID)/cfd_tunnel/<uuid>/token\" | sed 's/.*\"result\":\"//; s/\".*//'"
-  echo "   (ONE tunnel: c1d8ea0f-b512-487b-b7e7-ad730c24da9e carries tukuk.org, www, tchat, agent, play and build; the admin panel is https://tukuk.org/admin)"
+  echo "   (ONE tunnel: c1d8ea0f-b512-487b-b7e7-ad730c24da9e routes tukuk.org, www and tchat — the owner freeze; agent/play/build are parked commented in config.yml until routed in the dashboard. Admin panel: https://tukuk.org/admin)"
 fi
 
 # ── [7b] ONE connector — a second tunnel is an error now, not a missing feature ─

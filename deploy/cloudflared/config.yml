@@ -63,27 +63,19 @@ ingress:
   # Dedicated T Chat space (same server, different host — src/server.js TCHAT_HOST gate).
   - hostname: tchat.tukuk.org
     service: http://localhost:3000
-  # Tukuk Agent (code-server editor + AI build-agent). A DIFFERENT server
-  # (tukuk-agent.service, port 8443). A separate hostname avoids CSP/route collisions
-  # with the main tukuk.org app. In TOKEN mode, this route must ALSO
-  # be added in the Cloudflare dashboard (Zero Trust → Networks → Routes) —
-  # cloudflared in token mode IGNORES the local ingress section.
-  - hostname: agent.tukuk.org
-    service: http://127.0.0.1:8443
-  # Tukuk Strike HD — the Godot web build. Same target as the rest (:3000/nginx);
-  # nginx routes this Host to its OWN server block (deploy/nginx/tukuk-play.conf) which
-  # serves static files with the COOP/COEP headers a threaded Godot export needs. This
-  # origin is deliberately cross-origin-ISOLATED and separate, so it cannot share the
-  # tukuk.org host (site-wide COEP would break GTM/AdSense/Clarity + cross-subdomain assets).
-  # In TOKEN mode this route must ALSO be added in the dashboard, plus a DNS record.
-  - hostname: play.tukuk.org
-    service: http://localhost:3000
-  # Tukuk Builder. The target is the always-on wake-on-request front door (:5174,
-  # tukuk-builder-wake.service), not the builder itself on :5176: the front door wakes an
-  # idle-stopped builder and shows a warming page instead of a Cloudflare 502. This route
-  # used to live on the second tunnel; it does not need one — the builder has its own
-  # hostname, not its own connector.
-  - hostname: build.tukuk.org
-    service: http://127.0.0.1:5174
+  # Tukuk Agent (code-server editor + AI build-agent), play (Godot web build) and build
+  # (Tukuk Builder wake front door :5174) were carried in this list as an ASPIRATION, but
+  # the edge has never routed them (measured by cloudflared-audit 2026-11-01: edge = exactly
+  # the three hostnames above, the owner's freeze). An entry here with no dashboard route is
+  # a hostname that has never worked — so they are parked as comments. To revive one: add the
+  # public hostname in Zero Trust → Networks → Routes (connector c1d8ea0f), uncomment the
+  # pair below, and re-run the audit. The local origins stay installed and ready on the box
+  # (tukuk-agent.service :8443, nginx play block, tukuk-builder-wake :5174).
+  # - hostname: agent.tukuk.org
+  #   service: http://127.0.0.1:8443
+  # - hostname: play.tukuk.org
+  #   service: http://localhost:3000
+  # - hostname: build.tukuk.org
+  #   service: http://127.0.0.1:5174
   # Required: catch-all rule last
   - service: http_status:404
