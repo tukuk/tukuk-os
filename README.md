@@ -23,7 +23,7 @@ Our own internet portal — web search engine + AI answers + in-browser app & ga
 | **Server** | Ubuntu box, LAN **`192.168.8.104`** (user `tukuk`, ssh key `~/.ssh/tukuk_vps_ed25519`, alias `tukuk-vps`), app at `/opt/tukuk-os` | `TUKUK_HOST` env / `~/.ssh/config` |
 | **GitHub** | This project's home is **`github.com/tukuk/tukuk-os`** — the `tukuk` account, same owner as the domain, and the identity `test/repo-identity.test.js` enforces (it fails the suite if the older account is named in any file). Measured 31 Oct 2026: `tukuk` exposes exactly one public repo (`email-routing-template`) and `tukuk/tukuk-os` answers **404 to the credential this laptop currently logs in with** (`gh auth status`) — i.e. that login is the *other* account, and it cannot see or push a private `tukuk` repo. Consequence: the deploy pipeline's "GitHub first" step is dead until a `tukuk` token is on the machine, and unpushed commits are only saved by bundle (`deploy/REBUILD.md` Part G) | `git remote -v` in each repo · `gh auth status` |
 
-⚠️ **Two credentials that look alive but are dead** — do not spend time debugging them: the `cfut_…` token that is still sitting in `/opt/tukuk-os/.env` (revoked with the old account; `tokens/verify` → *Invalid API Token*), and `BACKUP_WORKER_URL=https://tukuk-backup.fevianbenjo48.workers.dev` (that worker does not exist in the new account). Backups therefore go **straight to R2** — the current token has R2 Read & Edit, which is what §9 asked for. Verified 31 Oct 2026 by running each track once: `tukuk-data` (1.1 M), `tukuk-identity` (120 K, encrypted), `tukuk-content` (1.0 M) and `tukuk-snapshot` all landed in `tukuk-fallback` via `wrangler r2 object put`.
+⚠️ **Two credentials that look alive but are dead** — do not spend time debugging them: the `cfut_…` token that is still sitting in `/opt/tukuk-os/.env` (revoked with the old account; `tokens/verify` → *Invalid API Token*), and the `BACKUP_WORKER_URL` still pointing at the retired personal account's `*.workers.dev` subdomain (that worker does not exist in the new account — the old identity was scrubbed from every tracked file on 2026-11-01). Backups therefore go **straight to R2** — the current token has R2 Read & Edit, which is what §9 asked for. Verified 31 Oct 2026 by running each track once: `tukuk-data` (1.1 M), `tukuk-identity` (120 K, encrypted), `tukuk-content` (1.0 M) and `tukuk-snapshot` all landed in `tukuk-fallback` via `wrangler r2 object put`.
 
 🚨 **BACKUP SPLIT-BRAIN (measured 31 Oct 2026).** Both accounts own a bucket literally named `tukuk-fallback`, so the two backup tracks are quietly writing to **different** buckets:
 - the **box timers** use `CLOUDFLARE_API_TOKEN` → account `6134c115…` (new, `tukuk.co@gmail.com`) ✓ correct;
@@ -88,7 +88,7 @@ After visiting `http://localhost:3000/admin` and logging in (email + WebAuthn pa
 ## 📢 3. Ad Verification (`ads.txt`)
 
 The [ads.txt](public/ads.txt) file in the `public/` directory contains the official authorizations for:
-- **Google AdSense:** `pub-8954948214333501`
+- **Google AdSense:** `RETIRED-PERSONAL-ACCOUNT-scrubbed-2026-11-01`
 - **Microsoft Advertising:** `100001`
 
 ---
@@ -318,7 +318,7 @@ None of it needs payment at small scale. Here is the list + where each is set:
 ## 💰 11. Google AdSense — Status & Honest Answer: "will it pass?"
 
 **Infrastructure ALREADY ready (✓):**
-- Real `ads.txt`: `ca-pub-8954948214333501` (Google, verified). Microsoft line removed until a real Monetize/Xandr (`appnexus.com, <memberId>, DIRECT, f5ab79cb980f11d1`) account ID is available.
+- Real `ads.txt`: `ca-RETIRED-PERSONAL-ACCOUNT-scrubbed-2026-11-01` (Google, verified). Microsoft line removed until a real Monetize/Xandr (`appnexus.com, <memberId>, DIRECT, f5ab79cb980f11d1`) account ID is available.
 - **Ads are OFF site-wide until the account is approved** — `adsenseOn()` returns nothing unless `config.adsense.approved` is true (`ADSENSE_APPROVED=1`). The loader, the three in-page units, the Funding Choices tag and the client `/api/public/settings` feed all read that one function, and the five static pages that used to hardcode the library tag now carry a comment instead. Serving units on pages that hold one sentence is the "ads on screens without publisher content" violation, and the review reads the LIVE markup.
 - **Crawl budget** — a cluster item page is one encyclopaedia extract plus a fact table. Item pages of any cluster larger than `CRAWL_INDEX_MAX_ITEMS` (default **1500**) are served `noindex,follow` and dropped from that cluster's sitemap; hubs and continent pages stay indexable. That takes 684,567 of the 816,527 item URLs out of the index in one rule. Lower the env var to tighten further (250 → ~28k indexable item pages, 0 → hubs only).
 - `sitemap.xml` lists hubs + posts only; `robots.txt` allows Googlebot/AdsBot; Privacy/About/Contact/Terms present; HTTPS; mobile-friendly.

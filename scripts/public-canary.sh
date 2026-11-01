@@ -139,12 +139,20 @@ if expect "robots.txt" "/robots.txt" "200" "Sitemap:"; then
   fi
 fi
 
-ADSTXT_PUB="${CANARY_PUB:-pub-8954948214333501}"
+# The personal AdSense account that used to be pinned here was scrubbed 2026-11-01; ads.txt is
+# deliberately seller-less until the owner arranges a new account. Pass CANARY_PUB=pub-XXXX on
+# the day that happens, and the canary re-arms this check — until then it only insists the file
+# is served, which is what keeps Google's crawler from flagging a 404.
 if expect "ads.txt" "/ads.txt" "200"; then
-  if grep -qF "$ADSTXT_PUB" "$TMP/body"; then
-    row ok "ads.txt names the publisher" "$ADSTXT_PUB"
+  CANARY_PUB="${CANARY_PUB:-}"
+  if [ -n "$CANARY_PUB" ]; then
+    if grep -qF "$CANARY_PUB" "$TMP/body"; then
+      row ok "ads.txt names the publisher" "$CANARY_PUB"
+    else
+      row fail "ads.txt names the publisher" "no $CANARY_PUB line"
+    fi
   else
-    row fail "ads.txt names the publisher" "no $ADSTXT_PUB line"
+    row ok "ads.txt served (no publisher configured yet)" ""
   fi
 fi
 

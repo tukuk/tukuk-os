@@ -9,7 +9,7 @@ Worker `tukuk-fallback` deployed untuk static fallback bila server tempatan mati
 ## Worker Info
 
 - Name: `tukuk-fallback`
-- URL: `https://tukuk-fallback.fevianbenjo48.workers.dev`
+- URL: DEAD — the old `*.workers.dev` subdomain lived in the retired personal account's namespace (scrubbed 2026-11-01); this worker was never recreated in the `tukuk` account. Fallback today = R2 + tunnel, not this URL.
 - Version ID: `a8647778-6704-4dca-bcae-69a19619321e`
 - R2 Bucket: `tukuk-fallback`
 

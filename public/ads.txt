@@ -1,1 +1,4 @@
-google.com, pub-8954948214333501, DIRECT, f08c47fec0942fa0
+# ads.txt — no authorized sellers configured (the previous entry pointed at a retired personal
+# AdSense account and was removed 2026-11-01 by owner instruction).
+# When the new AdSense account is arranged, add a line in this exact format:
+#   google.com, pub-XXXXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

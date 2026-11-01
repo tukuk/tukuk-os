@@ -1,1 +1,3 @@
-google.com, pub-8954948214333501, DIRECT, f08c47fec0942fa0
+# app-ads.txt — no seller configured (the previous line pointed at a retired personal
+# AdMob/AdSense account, removed 2026-11-01 by owner instruction).
+# Format when the owner arranges one: google.com, pub-XXXXXXXX, DIRECT, f08c47fec0942fa0

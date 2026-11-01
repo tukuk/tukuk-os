@@ -95,7 +95,10 @@ test('adsense: no page may ship the library loader while unapproved', async () =
     assert.ok(!/pagead2\.googlesyndication\.com\/pagead/.test(html), `${page} still loads the AdSense library`);
     assert.ok(!/<ins class="adsbygoogle"/.test(html), `${page} still contains an ad unit`);
   }
-  // The publisher meta tag stays: it is ownership verification, not an ad.
+  // No account identifier reaches a page any more — the publisher meta and the hardcoded
+  // ca-pub were scrubbed 2026-11-01 (owner instruction); a client id only ever appears
+  // once the owner configures one, and the meta tag itself is gone from every template.
   const home = await get('/');
-  assert.match(home, /google-adsense-account/);
+  assert.doesNotMatch(home, /google-adsense-account/);
+  assert.doesNotMatch(home, /ca-pub-\d+/);
 });

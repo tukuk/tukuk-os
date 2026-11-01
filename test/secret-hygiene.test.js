@@ -71,7 +71,7 @@ function isLiveFallback(line) {
 const PUBLIC_BY_DESIGN = {
   AGENT_FREE_TOKEN: 'compiled into the Builder browser bundle (providers/tukuk.ts)',
   INDEXNOW_KEY: 'IndexNow fetches it from https://tukuk.org/<key>.txt',
-  ADSENSE: 'ca-pub/slot ids ship in every page source',
+  ADSENSE: 'if the owner configures a client id it ships in page source by design (none hardcoded since 2026-11-01)',
 };
 
 const tracked = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })

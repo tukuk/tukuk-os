@@ -168,12 +168,16 @@ module.exports = {
     // units on pages that carry one sentence is the "ads on screens without publisher content"
     // violation. Set ADSENSE_APPROVED=1 the day the account is approved; nothing else changes.
     approved: bool(process.env.ADSENSE_APPROVED, false),
-    client: process.env.ADSENSE_CLIENT || 'ca-pub-8954948214333501',
-    // The real units inside this account (AdSense console, Oct 2026):
-    // top=「test banner 1」, in-article=「test banner」, bottom=「test banner 2」.
-    slotTop: process.env.ADSENSE_SLOT_TOP || '4776075642',
-    slotInArticle: process.env.ADSENSE_SLOT_IN_ARTICLE || '2206273113',
-    slotBottom: process.env.ADSENSE_SLOT_BOTTOM || '7701621880'
+    // NO PERSONAL ACCOUNT VALUES (scrubbed 2026-11-01, owner instruction). The client id and
+    // the three slot ids that used to be hardcoded here belonged to a retired personal AdSense
+    // account. Empty is a working state: adsenseClient() refuses a non-`ca-pub-\d+` value, so
+    // with nothing configured the whole AdSense surface (loader, units, Funding Choices tag,
+    // /api/public/settings adsClient) renders NOTHING. The owner will arrange the account later
+    // via env (ADSENSE_CLIENT / ADSENSE_SLOT_*) or the Admin panel — the machinery is untouched.
+    client: process.env.ADSENSE_CLIENT || '',
+    slotTop: process.env.ADSENSE_SLOT_TOP || '',
+    slotInArticle: process.env.ADSENSE_SLOT_IN_ARTICLE || '',
+    slotBottom: process.env.ADSENSE_SLOT_BOTTOM || ''
   },
 
   brain: {

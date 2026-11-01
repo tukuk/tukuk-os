@@ -6063,8 +6063,8 @@ const COMMON_CSS = `
 
 // Blog routes
 // AdSense: only show a unit when it is ACTIVE + the client `ca-pub-…` is valid + a numeric slot.
-// `2206273113` is a confirmed REAL unit ("test banner", this account) — the old
-// placeholder guard is dropped; a non-numeric empty slot is still refused.
+// No account values are hardcoded (scrubbed 2026-11-01); until the owner configures a client
+// and slots — env or Admin — every one of these gates is shut and no ad markup reaches a page.
 function adsenseClient() {
   const c = String(store.getSetting('adsClient', config.adsense.client) || '').trim();
   return /^ca-pub-\d+$/.test(c) ? c : '';
@@ -6448,7 +6448,6 @@ function renderBlogListPage(req, asHome) {
 <meta name="twitter:description" content="${escapeHtml(pageDesc)}">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 <link rel="canonical" href="${selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <meta name="msvalidate.01" content="9D34E2DE0B3B9812D4E65387C9209658">
 ${siteVerifyMeta()}
 <link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
@@ -6566,7 +6565,6 @@ function renderNasaApodPage(req, apod) {
 <meta name="twitter:description" content="${escapeHtml(desc)}">
 <meta name="twitter:image" content="${escapeHtml(ogImage)}">
 <link rel="canonical" href="${selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${jsonLd}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -6685,7 +6683,6 @@ function nasaDoc(o) {
 <meta property="og:image" content="${escapeHtml(ogImage)}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -7335,7 +7332,6 @@ function cuacaDoc(o) {
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -7836,7 +7832,6 @@ function gempaDoc(o) {
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -8039,7 +8034,6 @@ function cutiDoc(o) {
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -8510,7 +8504,6 @@ function negaraDoc(o) {
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -8814,7 +8807,6 @@ function statistikDoc(o) {
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -8983,7 +8975,6 @@ function bencanaDoc(o) {
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -9226,7 +9217,6 @@ function wikiHead(title, selfUrl, desc, jsonLd, robots) {
     `<meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(desc)}">` +
     `<meta property="og:url" content="${selfUrl}"><meta property="og:image" content="https://tukuk.org/og.png">` +
     `<link rel="canonical" href="${selfUrl}">` +
-    `<meta name="google-adsense-account" content="ca-pub-8954948214333501">` +
     `<link rel="icon" href="/icon.svg" type="image/svg+xml">` +
     `<link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">` +
     ld + `<style>${WIKI_CSS}</style>${pageAdScript()}${clarityScript()}${googleTagHead()}</head><body>`;
@@ -9550,7 +9540,6 @@ app.get('/learn', (req, res) => {
 .badge-count{display:inline-block;background:rgba(76,141,255,.15);border:1px solid rgba(76,141,255,.35);color:var(--accent,#4c8dff);
   border-radius:999px;padding:2px 12px;font-size:.85rem;font-weight:600;margin-left:8px;}
 </style>
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
@@ -9647,7 +9636,6 @@ function studyDoc(o) {
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -9976,7 +9964,6 @@ function udaraDoc(o) {
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -10229,7 +10216,6 @@ function akadDoc(o) {
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -10443,7 +10429,6 @@ function worldDoc(o, navHtml) {
 <meta property="og:image" content="${o.ogImage || 'https://tukuk.org/og.png'}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${o.selfUrl}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <script type="application/ld+json">${ld}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
@@ -21087,7 +21072,6 @@ app.get('/blog/:slug', (req, res) => {
 <meta name="twitter:image" content="${ogImage}">
 <link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
 <link rel="canonical" href="https://tukuk.org/blog/${encodeURIComponent(post.slug)}">
-<meta name="google-adsense-account" content="ca-pub-8954948214333501">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -23300,7 +23284,7 @@ const DEFAULT_AFFILIATE = JSON.stringify([
 app.get('/api/public/settings', (req, res) => {
   res.json({
     adsEnabled: Boolean(adsenseOn()),
-    adsClient: store.getSetting('adsClient', 'ca-pub-8954948214333501'),
+    adsClient: store.getSetting('adsClient', ''),
     adsSlotTop: store.getSetting('adsSlotTop', ''),
     adsSlotBottom: store.getSetting('adsSlotBottom', ''),
     msAdsEnabled: Boolean(store.getSetting('msAdsEnabled', false)),
@@ -23325,7 +23309,7 @@ app.get('/api/admin/settings', auth.requireAdmin, (req, res) => {
   res.json({
     // Google Ads
     adsEnabled: Boolean(adsenseOn()),
-    adsClient: store.getSetting('adsClient', 'ca-pub-8954948214333501'),
+    adsClient: store.getSetting('adsClient', ''),
     adsSlotTop: store.getSetting('adsSlotTop', ''),
     adsSlotInArticle: store.getSetting('adsSlotInArticle', ''),
     adsSlotBottom: store.getSetting('adsSlotBottom', ''),
