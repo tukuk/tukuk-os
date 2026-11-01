@@ -12,7 +12,7 @@
 #   4b. a tunnel connector that is running but has LOST its edge registrations → 530 at the
 #      public URL with a 200 from the local origin, which `is-active` cannot see. Re-registered
 #      by restarting that unit (see re_register below).
-#   5. daily update gone quiet  → nudge tukuk-update.service (see below)
+#   5. the 30-minute update gone quiet → nudge tukuk-update.service (see below)
 #
 # Run every 2 minutes via a systemd timer.
 
@@ -171,9 +171,9 @@ re_register() { # $1 = public url, $2 = local port, $3 = unit, $4 = stamp file
 re_register "${WATCHDOG_BUILD_URL:-https://build.tukuk.org/}" 5174 cloudflared.service /tmp/tukuk-os-watchdog.buildtunnel
 re_register "${WATCHDOG_MAIN_URL:-https://tukuk.org/}"          3000 cloudflared.service /tmp/tukuk-os-watchdog.maintunnel
 
-# --- 5. did the daily update actually run? -----------------------------------
+# --- 5. did the auto-update actually run? --------------------------------------
 # The update is silent by design, so a timer that died in March looks exactly like
-# "nothing to do today": a wedged fetch sat in the oneshot unit for 31 hours on 24 Oct 2026
+# "nothing to do": a wedged fetch sat in the oneshot unit for 31 hours on 24 Oct 2026
 # and nothing anywhere said so. /health carries the last attempt now, and this is the only
 # thing that reads it. One nudge per six hours — a stale record means the last run never
 # finished, and starting it every two minutes would only pile up attempts.
@@ -184,7 +184,7 @@ if [ -n "$HEALTH_JSON" ]; then
   case "$UPD_STATE" in
     stale*)
       if [ ! -f "$UPD_STAMP" ] || [ -n "$(find "$UPD_STAMP" -mmin +360 2>/dev/null)" ]; then
-        log "Daily update looks stale ($UPD_STATE) — starting tukuk-update.service"
+        log "Auto-update looks stale ($UPD_STATE) — starting tukuk-update.service"
         systemctl start --no-block tukuk-update.service || log "could not start tukuk-update.service"
         touch "$UPD_STAMP"
       fi

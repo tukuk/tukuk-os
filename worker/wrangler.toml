@@ -13,6 +13,12 @@ compatibility_date = "2026-10-08"
 # re-enable a route here, the same-zone subrequest WILL re-trigger the 429.
 routes = []
 
+# Observability — pinned OFF at the file level, mirroring the dashboard toggle the
+# owner set on 1 Nov 2026. Persisted invocation logs/traces are the metered part;
+# keeping them off keeps this worker inside the FREE plan forever. It lives HERE
+# because a re-deploy without the block silently re-enables what the dashboard turned off.
+observability = { enabled = false, head_sampling_rate = 1, redact_query_string = false, logs = { enabled = false, invocation_logs = true, persist = false }, traces = { enabled = false, persist = false }, issues = { enabled = true } }
+
 # Site snapshot bucket — when the origin is down, the worker serves files from here.
 [[r2_buckets]]
 binding = "BACKUP"

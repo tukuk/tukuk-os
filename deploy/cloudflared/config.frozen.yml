@@ -8,9 +8,15 @@
 #   sudo systemctl restart cloudflared
 # NEVER add a second `tunnel:` key — duplicate YAML keys crash the connector
 # (that exact mistake took tukuk.org down on 2026-11-01 05:35, 223 crash loops).
-
+#
+# NO TOKEN IN GIT (found 2026-11-01: this file briefly carried the live connector token,
+# and BOTH hygiene guards missed it — a connector token is one base64 blob with no dots,
+# so the JWT shape does not match, and the yaml key is `tunnel-token`, not the env name).
+# Whoever holds this token can point tukuk.org at their own machine. The live value lives
+# only in /etc/cloudflared/config.yml (mode 600, root). Fill it in on a rebuild with:
+#   sudo cp /root/cloudflared-config-with-token.yml /etc/cloudflared/config.yml   (or edit by hand)
 tunnel: c1d8ea0f-b512-487b-b7e7-ad730c24da9e
-tunnel-token: eyJhIjoiNjEzNGMxMTVmNzMxMTQxMjMxNGIzNWYzY2NmNzYxNjYiLCJ0IjoiYzFkOGVhMGYtYjUxMi00ODdiLWI3ZTctYWQ3MzBjMjRkYTllIiwicyI6Ik56bGtOelppTTJFdFpqWTJaUzAwTldaakxUZzVPV0l0TWpjNU16UTNOMlk1Tm1OaiJ9
+# tunnel-token: <paste from the box — never commit>
 
 ingress:
   - hostname: tukuk.org

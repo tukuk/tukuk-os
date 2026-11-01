@@ -607,8 +607,11 @@ EOF
   ok "6-hour T Chat backup timer active (chat-backup.timer)."
 fi
 
-# Daily auto-update: git pull → npm install (postinstall → setup-all) → services
-# & worker & snapshot tidy themselves. Disable with GIT_AUTO_UPDATE=0 in .env.
+# Auto-update every 30 minutes: git pull → npm install (only if the lock changed)
+# → restart (only if code changed). Every half hour is cheap because a quiet box pays
+# for it with ONE bounded `git fetch` — the owner asked for GitHub code to be live
+# within 30 minutes, and the pull model costs zero CI minutes. :07/:37 keeps the run
+# clear of the :00/:15 backup lanes. Disable with GIT_AUTO_UPDATE=0 in .env.
 if [[ "$(get_env GIT_AUTO_UPDATE)" != "0" ]]; then
   cat > /etc/systemd/system/tukuk-update.service << 'EOF'
 [Unit]
@@ -621,11 +624,11 @@ ExecStart=/bin/bash /opt/tukuk-os/scripts/auto-update.sh
 EOF
   cat > /etc/systemd/system/tukuk-update.timer << 'EOF'
 [Unit]
-Description=Auto-update Tukuk-OS daily
+Description=Auto-update Tukuk-OS every 30 minutes
 
 [Timer]
-OnCalendar=*-*-* 04:30:00
-RandomizedDelaySec=1500
+OnCalendar=*-*-* *:07,37:00
+RandomizedDelaySec=180
 Persistent=true
 Unit=tukuk-update.service
 
@@ -634,7 +637,7 @@ WantedBy=timers.target
 EOF
   systemctl daemon-reload
   systemctl enable --now tukuk-update.timer >/dev/null
-  ok "Daily auto-update active (tukuk-update.timer ~04:30). Manual: npm run update"
+  ok "Auto-update every 30 min active (tukuk-update.timer :07/:37). Manual: npm run update"
 fi
 
 # ── [8c] nginx front proxy ────────────────────────────────────────────────────

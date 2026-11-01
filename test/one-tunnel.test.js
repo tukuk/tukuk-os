@@ -29,9 +29,17 @@ test('this box has exactly one connector config, and the mirror is not it', () =
   // gcp-config.yml is deliberate and different in kind: it is installed on a Google Cloud VM in
   // another provider, precisely so a home-box blackout cannot take the mirror down with it. The
   // rule this file enforces is "one connector on THIS box" — not "one tunnel on the planet".
+  // config.frozen.yml is not a second connector either: it is the TOKENLESS snapshot of the
+  // SAME tunnel c1d8ea0f — the exact three-hostname, token-mode shape the live box holds
+  // (owner freeze, 2026-11-01), kept so a rebuild can never invent a fourth hostname back.
+  // Its `tunnel-token` line is a placeholder; the live value lives only on the box.
   const files = fs.readdirSync(CF_DIR).filter((f) => /\.ya?ml$/i.test(f)).sort();
-  assert.deepEqual(files, ['config.yml', 'gcp-config.yml'],
+  assert.deepEqual(files, ['config.frozen.yml', 'config.yml', 'gcp-config.yml'],
     'a third config file is a third connector waiting to be installed');
+  const frozen = read('deploy', 'cloudflared', 'config.frozen.yml');
+  assert.match(frozen, /c1d8ea0f/, 'the frozen snapshot must name the ONE real tunnel');
+  assert.doesNotMatch(frozen, /tunnel-token:\s*\S*eyJ/,
+    'the frozen snapshot ships TOKENLESS — a connector token in git can point tukuk.org anywhere');
   const setup = read('scripts', 'setup-all.sh');
   assert.doesNotMatch(setup, /gcp-config/,
     'the mirror config belongs to the VM; installing it here would give this box a second ingress');

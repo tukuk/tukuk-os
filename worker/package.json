@@ -1,0 +1,9 @@
+{
+  "name": "tukuk-www-worker",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Edge fallback worker for tukuk.org (deployed, but deliberately unrouted — see wrangler.toml). Its own package.json exists so the Cloudflare git build can install THIS folder in seconds instead of npm-installing the whole server monolith (which pulls Electron/onnxruntime and once burned 1.5 build minutes to fail).",
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

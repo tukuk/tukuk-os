@@ -1,7 +1,7 @@
 'use strict';
-// ── WHAT THE 04:30 UPDATE ACTUALLY DID ─────────────────────────────────────────
+// ── WHAT THE :07/:37 UPDATE ACTUALLY DID ───────────────────────────────────────
 //
-// The daily update is invisible by design: a timer pulls, restarts, and says nothing.
+// The auto-update is invisible by design: a timer pulls, restarts, and says nothing.
 // That silence is also the failure mode. On 24 Oct 2026 a `git fetch` wedged for 31
 // hours inside the oneshot unit — no new commit, no restart, no error anyone could see
 // — and the only reason it was found at all is that somebody was looking at a page that
@@ -18,8 +18,9 @@ const config = require('./config');
 
 const FILE = process.env.UPDATE_STATUS_PATH || path.join(path.dirname(config.store.path), 'update-status.json');
 
-// The timer runs daily; two missed days is a dead timer, not a slow day.
-const STALE_MS = 36 * 60 * 60 * 1000;
+// The timer runs every 30 minutes; four hours without a record is a dead timer, not a
+// slow cycle — a legitimate run writes one within its 10-minute fetch bound at latest.
+const STALE_MS = 4 * 60 * 60 * 1000;
 
 /** Trim to a printable token: a commit hash or a stage name, never free text. */
 function token(v, maxLen) {

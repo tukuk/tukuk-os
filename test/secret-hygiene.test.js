@@ -27,6 +27,11 @@ const BINARY = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.svg'
 // Credential FORMATS. None of these is a secret; a line matching one of them is.
 const LIVE_SHAPES = [
   [/eyJ[A-Za-z0-9_-]{18,}\./, 'a JWT (cloudflared tunnel tokens start eyJ)'],
+  // …but a CONNECTOR token is NOT a JWT: it is one base64 JSON blob with no dots, written
+  // under the yaml key `tunnel-token`, not the env name. That combination walked past both
+  // original guards and reached a tracked file on 2026-11-01 (deploy/cloudflared/config.frozen.yml).
+  // Whoever holds it points tukuk.org at their own machine, so the KEY NAME is the shape here.
+  [/\btunnel[-_]token\s*[:=]\s*['"]?[A-Za-z0-9+/=_-]{20,}/, 'a cloudflared connector token (base64 JSON, no dots, under a tunnel-token key)'],
   [/(?:cfut_|gh[pousr]_|github_pat_|xox[abposr]-|AKIA)[A-Za-z0-9_-]{12,}/, 'a provider token prefix'],
   [/AIza[0-9A-Za-z_-]{20,}/, 'a Google API key'],
   // A 40+ hex run ONLY counts next to a key-shaped name. The first version of this rule
@@ -127,6 +132,9 @@ test('the guard catches the shapes it was written for, and only those', () => {
   // live-shaped credential, and the first test would (correctly) fail on the guard itself.
   const JWT = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', 'eyJzdWIiOiJ0dWt1ay1vcy1hZG1pbiJ9', 'abcDEF123'].join('.');
   const CFUT = ['cfut_', 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6'].join('');
+  // A shaped-but-fake connector token: eyJ + a long base64 run, NO dots — the exact form
+  // the JWT rule cannot see. Assembled for the same reason as everything else here.
+  const CONNECTOR = ['eyJhIjoi', 'deadbeefdeadbeef', 'deadbeefdeadbeef'].join('');
   // Fake-but-shaped secrets for the fallback fixtures. The first version of this test used
   // the real OpenWeather key as the fixture, which the new comparison test then caught:
   // "assembled from fragments" only keeps a guard honest if the fragments are not the
@@ -145,6 +153,7 @@ test('the guard catches the shapes it was written for, and only those', () => {
     fallback('ADMIN_EMAIL', 'operator.name77@gmail.com'),
     // the class a KEY=value scanner does see
     `CF_TUNNEL_TOKEN=${JWT}`,
+    `tunnel-token: ${CONNECTOR}`,                     // the yaml shape that walked past the dot rule
     `CLOUDFLARE_API_TOKEN=${CFUT}`,
   ];
 
@@ -160,6 +169,7 @@ test('the guard catches the shapes it was written for, and only those', () => {
     'AGENT_FREE_TOKEN=041aab9c7d2e4f6081a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f',
     '# CLOUDFLARE_API_TOKEN (cfut_\u2026) is in env.secrets', // prose, no value
     'url = "https://example.com/api/v1"',            // not a key at all
+    'tunnel-token: <paste from the box — never commit>', // the placeholder the frozen config uses
   ];
 
   for (const line of mustCatch) {

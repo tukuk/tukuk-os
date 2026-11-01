@@ -7,14 +7,15 @@
     "tukuk-os": "bin/tukuk-os.js"
   },
   "scripts": {
-    "start": "node index.js",
+    "start": "bash scripts/tukuk.sh dev",
     "dev": "node index.js",
     "mcp": "node mcp/server.js",
-    "postinstall": "bash scripts/setup-all.sh --from-npm || true",
+    "postinstall": "bash scripts/pull-before-install.sh || true; bash scripts/setup-all.sh --from-npm || true",
     "setup": "bash scripts/setup-all.sh",
     "rebuild": "sudo bash scripts/rebuild-from-offsite.sh",
     "usb": "sudo bash scripts/install-from-usb.sh",
-    "update": "bash scripts/auto-update.sh",
+    "update": "bash scripts/tukuk.sh update",
+    "repair": "bash scripts/tukuk.sh repair",
     "build": "node -e \"console.log('no build step — static assets are served directly')\"",
     "lint": "node scripts/lint.js",
     "meili": "meilisearch --db-path ./meili_data --master-key $(grep '^MEILI_MASTER_KEY=' ~/.config/tukuk-os/env | cut -d= -f2-) --http-addr 127.0.0.1:7700",
