@@ -47,13 +47,12 @@ ingress:
   # Tukuk-OS search engine + admin panel
   - hostname: tukuk.org
     service: http://localhost:3000
-  # www no longer needs the box: in the dashboard it is a zone-level redirect to the apex
-  # (`curl -o /dev/null -w '%{http_code} %{redirect_url}' https://www.tukuk.org/` →
-  #   `301 https://tukuk.org/`; note HEAD returns nothing here, use GET), and the
-  # independent backup copy lives on Cloud Run, reached through the brain Worker — see
-  # deploy/GCP-FAILOVER.md. This route is therefore dead weight, kept only as a safety net
-  # if the redirect is ever removed. In TOKEN mode cloudflared ignores this file anyway,
-  # so deleting the entry here changes nothing until the dashboard route goes too.
+  # www DOES need the box. An old comment here claimed the dashboard answers www with a
+  # zone-level redirect and called this route "dead weight" — MEASURED FALSE (2026-11-01,
+  # re-proven): `curl -sI https://www.tukuk.org/` returns the 301 WITH the app's own CSP
+  # headers, i.e. the request comes here and Node's canonical middleware (src/server.js,
+  # the www→apex rule) answers it. Deleting this public hostname would make www DEAD,
+  # not redirected. Keep the route; keep the middleware.
   - hostname: www.tukuk.org
     service: http://localhost:3000
   # dashboard.tukuk.org is RETIRED. The panel was /admin on the apex all along — same app, same
