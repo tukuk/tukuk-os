@@ -31,7 +31,9 @@ const PAGES = [
   { path: '/alat/csv', marker: 'CSV Viewer', ids: ['csv-del', 'csv-hdr', 'csv-in', 'csv-info', 'csv-tab', 'csv-json', 'csv-tj', 'csv-cj', 'csv-dl'] },
   { path: '/alat/diff', marker: 'Text Diff', ids: ['df-a', 'df-b', 'df-mode', 'df-go', 'df-stats', 'df-out'] },
   { path: '/alat/url', marker: 'URL Parser', ids: ['up-url', 'up-parse', 'up-tab', 'up-comp', 'up-enc', 'up-dec', 'up-out'] },
-  { path: '/alat/char', marker: 'Unicode Reference', ids: ['ch-in', 'ch-tab', 'ch-ref'] }
+  { path: '/alat/char', marker: 'Unicode Reference', ids: ['ch-in', 'ch-tab', 'ch-ref'] },
+  { path: '/alat/convert', marker: 'Image Converter', ids: ['iv-file', 'iv-drop', 'iv-info', 'iv-fmt', 'iv-w', 'iv-h', 'iv-lock', 'iv-q', 'iv-bg', 'iv-go', 'iv-out', 'iv-dl'] },
+  { path: '/alat/image-to-pdf', marker: 'Images to PDF', ids: ['ip-files', 'ip-page', 'ip-orient', 'ip-margin', 'ip-go', 'ip-out', 'ip-dl', 'ip-list'] }
 ];
 
 for (const page of PAGES) {
