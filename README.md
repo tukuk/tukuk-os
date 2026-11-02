@@ -348,6 +348,16 @@ The console's data-stream panel for property **TUKUK OS** (web stream id `162512
 3. **`/api/public/settings` ignored env.** `adsClient`/`adsSlotTop`/`adsSlotBottom` were store-only with an empty fallback, so a box configured through `.env` served ads on server pages and nothing on the homepage. They now follow store-then-env exactly like `adUnit()`, and `normalizeAdsClient()` accepts the console's own spelling (`pub-…`) as well as the tag's (`ca-pub-…`) — a paste straight out of the account page works, junk still renders nothing.
 4. **And the box had the old container saved in Admin.** Reading the live feed showed `"gtmId":"GT-PZXWTWW8"`: the Admin store beats env and the code default, so deploying the new measurement id alone would have changed **nothing** — the property would have stayed empty and this section would have been wrong about its own fix. `resolveGoogleTagId()` now reads a stored `GT-PZXWTWW8` as "never configured" and falls through to env/default; any other stored value still wins, and `GTM_KEEP_LEGACY_ID=1` honours the legacy string again if it really is somebody's own container. The clean fix is of course to paste `G-HLPDZPEYMN` into Admin → Google Tag ID, which makes the stored value non-legacy and the three layers agree.
 
+5. **The fix is on GitHub and the box has not taken it.** `3c36dfd` (the tag work above) and
+   `9731595` (`/rekomendasi` cards rendered server-side) were pushed on 2 Nov 2026, and the box's own
+   unit then answered `GET /health → update: {ok:false, stage:"merge-failed"}` at 06:09:59Z. `git
+   fetch` succeeded, so the deploy key and GitHub are fine — `/opt/tukuk-os` has a working tree that
+   refuses `merge --ff-only`, which is the silent failure mode the ops runbook calls out (a green
+   timer while no code lands). Until that is cleaned up, `/` still serves
+   `dataLayer',"GT-PZXWTWW8"` and GA4 is *correctly* empty; no console setting changes that. Check
+   on the box: `git -C /opt/tukuk-os status --porcelain`, read the diff, resolve it, then
+   `sudo systemctl start tukuk-update.service`.
+
 **Consent, which is not a bug and must stay as it is:** every page that drops a third party emits the Consent Mode v2 bootstrap *before* the tag — defaults `denied`, `wait_for_update: 500`, restored from `localStorage.tk-adconsent`. Under `denied` Google writes no cookie and sends at most a cookieless hit, so the tag is **supposed** to be present on every pageview and Google decides what the declared state permits. The loader used to install the Google tag only after a grant, which does not protect anyone — it measures nobody and hides the consent split. The tag now waits only for its own `gtmEnabled` switch; Clarity, which has no such contract, stays behind the grant. `test/google-tag.test.js` pins the ordering and both gates.
 
 **What Google evaluates and code cannot guarantee (✗):**
