@@ -6455,7 +6455,10 @@ function renderBlogListPage(req, asHome) {
 <meta name="twitter:description" content="${escapeHtml(pageDesc)}">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 <link rel="canonical" href="${selfUrl}">
+<!-- Bing Webmaster verification. The first token predates the current Bing account; kept until
+     the old property is confirmed gone. Second token + CNAME 960e3a… verify.bing.com issued Nov 2026. -->
 <meta name="msvalidate.01" content="9D34E2DE0B3B9812D4E65387C9209658">
+<meta name="msvalidate.01" content="580912D8A8D8D0E593278B6BBC8415C3">
 ${siteVerifyMeta()}
 <link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">
 <script type="application/ld+json">${jsonLdBlog}</script>
