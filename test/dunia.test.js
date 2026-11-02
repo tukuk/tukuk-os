@@ -93,8 +93,9 @@ test('server: routes + footer + staticPages + sitemaps for all three clusters', 
   for (const p of ["'/money'", "'/money/rates'", "'/art'", "'/life'"]) {
     assert.ok(staticLine.includes(p), `staticPages ${p}`);
   }
-  for (const f of ['World Currency — Live Rates', 'Free Art Gallery — The Met', 'Wildlife Atlas — Real Photos']) {
-    assert.ok(serverSrc.includes(f), `footer ${f}`);
+  const footer = require(path.join(ROOT, 'src', 'server')).siteFooter();
+  for (const f of ['World Currency Rates', 'Free Art Gallery', 'Wildlife Atlas']) {
+    assert.ok(footer.includes(f), `footer ${f}`);
   }
   for (const sm of ['/sitemap-money.xml', '/sitemap-art.xml', '/sitemap-life.xml']) {
     assert.ok(serverSrc.includes(`app.get('${sm}'`), `the ${sm} route`);

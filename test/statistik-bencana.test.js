@@ -178,13 +178,10 @@ test('SEO: robots, staticPages, footer SSR, tile index, OS catalogue', () => {
   assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-statistics.xml'), 'robots lists the statistik sitemap');
   assert.ok(robotsTxt.includes('Sitemap: https://tukuk.org/sitemap-disasters.xml'), 'robots lists the bencana sitemap');
   assert.ok(serverSrc.includes("'/statistics', '/disasters'"), 'the main sitemap staticPages');
-  // The window has to cover the WHOLE footer. It used to be 3000 characters, which passed
-  // until an extra nav/footer entry pushed this link past it and made the test fail for a
-  // reason that had nothing to do with the link. Generous on purpose.
-  const footerAt = serverSrc.indexOf('function siteFooter()');
-  const footer = serverSrc.slice(footerAt, footerAt + 12000);
-  assert.ok(footer.includes('<a href="/statistics">World statistics</a>'), 'the footer statistik link');
-  assert.ok(footer.includes('<a href="/disasters">Live disaster watch</a>'), 'the footer bencana link');
+  // The footer is generated from SITE_NAV, so assert against the HTML a visitor receives.
+  const footer = require(path.join(ROOT, 'src', 'server')).siteFooter();
+  assert.ok(footer.includes('<li><a href="/statistics">World Statistics</a></li>'), 'the footer statistik link');
+  assert.ok(footer.includes('<li><a href="/disasters">Live Disaster Watch</a></li>'), 'the footer bencana link');
   assert.ok(indexHtml.includes('href="/statistics"') && indexHtml.includes('href="/disasters"'), 'the tile index links both');
   assert.ok(osHtml.includes("'/statistics'") && osHtml.includes("'/disasters'"), 'the OS catalogue has both entries');
   // Cross links out of the Country Complex hub page.

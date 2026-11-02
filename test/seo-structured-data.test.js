@@ -13,6 +13,10 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 
 const serverSrc = fs.readFileSync(require.resolve('../src/server.js'), 'utf8');
+// The footer is now generated from SITE_NAV, so grep of the template source would look for
+// column titles that no longer appear as literals. Assert against the rendered HTML instead —
+// the only thing a visitor or Lighthouse ever receives.
+const { siteFooter, SITE_NAV } = require('../src/server');
 
 test('every VideoObject we emit carries the required uploadDate', () => {
   const count = (serverSrc.match(/'@type': 'VideoObject'/g) || []).length;
@@ -35,9 +39,12 @@ test('flag ImageObjects declare license, copyrightNotice and acquireLicensePage'
 });
 
 test('the shared footer uses h3, not h4, so heading order stays sequential', () => {
-  const footer = serverSrc.slice(serverSrc.indexOf('function siteFooter'), serverSrc.indexOf('function renderBlogListPage'));
+  const footer = siteFooter();
   assert.ok(!/<h4>/.test(footer), 'no h4 in the footer (h2 content → h4 skipped a level)');
-  assert.ok(footer.includes('<h3>Explore</h3>') && footer.includes('<h3>Weather</h3>'), 'footer column titles are h3');
+  // One h3 per column title, taken from the array the footer is built from.
+  for (const g of SITE_NAV) {
+    assert.ok(footer.includes(`<h3>${g.title}</h3>`), `column title "${g.title}" renders as h3`);
+  }
   // The CSS that styles them must follow the new level or the titles lose their look.
   assert.ok(/\.foot-cols h3 \{/.test(serverSrc), '.foot-cols h3 CSS rule exists');
 });

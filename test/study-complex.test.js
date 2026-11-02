@@ -82,7 +82,8 @@ test('/study is registered in the sitemap staticPages + the footer', () => {
   const staticLine = (serverSrc.match(/const staticPages = \[[^\]]*\]/) || [''])[0];
   assert.ok(staticLine.includes("'/study'"), 'the /study hub is in staticPages');
   assert.ok(staticLine.includes("'/study/alarm'"), 'every section is in staticPages');
-  assert.ok(serverSrc.includes('<a href="/study">General Knowledge</a>'), 'the footer links to the knowledge hub');
+  // The footer is generated from SITE_NAV now, so assert on the rendered HTML, not the source.
+  assert.ok(require(path.join(ROOT, 'src', 'server')).siteFooter().includes('<a href="/study">General Knowledge</a>'), 'the footer links to the knowledge hub');
 });
 
 test('the quiz, math and alarm pages each have an interactive IIFE script', () => {

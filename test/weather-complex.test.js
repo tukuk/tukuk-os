@@ -91,12 +91,16 @@ test('sitemap-weather.xml + robots: 6 static + every DB city ×3 URLs; stats+nav
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-weather\.xml/, 'robots.txt advertises sitemap-weather');
   // Tidy SEO: /weather* in the main sitemap list + site header/footer nav
   assert.ok(serverSrc.includes("const staticPages = ['', '/nasa'") && serverSrc.includes("'/weather/clouds'"), 'the main sitemap lists the /weather pages');
-  assert.match(serverSrc, /link\('\/weather', 'Weather', 'cuaca'\)/, 'siteHeader has a Weather link');
-  const footerCol = serverSrc.slice(serverSrc.indexOf('<h3>Weather</h3>'), serverSrc.indexOf('<h3>Weather</h3>') + 1200);
-  assert.ok(footerCol.includes('<li><a href="/weather/clouds">Cloud types</a></li>'), 'siteFooter has the world education page');
-  assert.ok(footerCol.includes('<li><a href="/weather/wind">Beaufort wind scale</a></li>'), 'siteFooter has the wind scale page');
+  const { siteHeader, siteFooter } = require(path.join(ROOT, 'src', 'server'));
+  assert.ok(siteHeader('cuaca').includes('<a href="/weather" class="active" aria-current="page">Weather</a>'), 'siteHeader has a Weather link');
+  // The footer is generated from SITE_NAV; slice its weather column from the rendered HTML.
+  const footer = siteFooter();
+  const colStart = footer.indexOf('<h3>Sky, weather &amp; Earth</h3>');
+  const footerCol = footer.slice(colStart, footer.indexOf('</ul>', colStart));
+  assert.ok(footerCol.includes('<li><a href="/weather/clouds">Cloud Types</a></li>'), 'siteFooter has the world education page');
+  assert.ok(footerCol.includes('<li><a href="/weather/wind">Beaufort Wind Scale</a></li>'), 'siteFooter has the wind scale page');
   // Policy: site chrome does NOT promote specific local city pages (global traffic).
-  assert.ok(!footerCol.includes('/weather/kuala-lumpur') && !footerCol.includes('/weather/serian'), 'no local city labels in the footer');
+  assert.ok(!footer.includes('/weather/kuala-lumpur') && !footer.includes('/weather/serian'), 'no local city labels in the footer');
 });
 
 test('NASA sky ↔ weather cross-links + JSON-LD Place/Dataset on city pages', () => {

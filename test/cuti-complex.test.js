@@ -116,9 +116,10 @@ test('sitemap-holidays.xml + robots + footer + the weather/quake ↔ holiday cro
   assert.ok(sm.includes('cd.REGIONS.map') && sm.includes('cd.COUNTRIES.map'), 'continents + countries are in the sitemap');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-holidays\.xml/, 'robots advertises sitemap-holidays');
   // World policy: the footer chrome promotes the world label, NOT a MY-specific one.
-  assert.ok(!serverSrc.includes('<li><a href="/holidays">Public holidays 2026</a></li>'), 'the footer no longer carries a MY holiday label');
-  assert.ok(!serverSrc.includes('<li><a href="/holidays/long-weekends">Long weekends MY</a></li>'), 'the footer no longer carries Long weekends MY');
-  assert.ok(serverSrc.includes('<li><a href="/holidays">World public holidays</a></li>'), 'the footer carries the world holiday label');
+  const siteFooter = require(path.join(ROOT, 'src', 'server')).siteFooter;
+  assert.ok(!siteFooter().includes('<li><a href="/holidays">Public holidays 2026</a></li>'), 'the footer no longer carries a MY holiday label');
+  assert.ok(!siteFooter().includes('<li><a href="/holidays/long-weekends">Long weekends MY</a></li>'), 'the footer no longer carries Long weekends MY');
+  assert.ok(siteFooter().includes('<li><a href="/holidays">World Public Holidays</a></li>'), 'the footer carries the world holiday label');
   assert.ok(serverSrc.includes('<a href="/holidays">world public holidays</a>'), 'the weather hub cross-links to the world holidays');
   assert.ok(serverSrc.includes('<a href="/holidays">the public-holiday calendar</a>'), 'the quake pages cross-link to the holiday calendar');
   assert.ok(serverSrc.includes("'/holidays', ") && serverSrc.includes("'/holidays/2026', '/holidays/2027'"), 'the main sitemap lists the holiday pages');

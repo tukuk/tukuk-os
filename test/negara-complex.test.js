@@ -101,7 +101,7 @@ test('sitemap-countries.xml + robots + footer + cross links from the other three
   assert.ok(sm.includes('ng.REGIONS.map'), 'the 6 continents enter the sitemap');
   assert.ok(sm.includes('loadCountries'), 'the ±250 countries enter the sitemap once the cache is warm');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-countries\.xml/, 'robots advertises sitemap-countries');
-  assert.ok(serverSrc.includes('<li><a href="/countries">World countries</a></li>'), 'the SSR footer links to the country hub');
+  assert.ok(require(path.join(ROOT, 'src', 'server')).siteFooter().includes('<li><a href="/countries">Countries of the World</a></li>'), 'the SSR footer links to the country hub');
   assert.ok(serverSrc.includes('<a href="/countries">Country Complex</a>'), 'the weather page cross-links to the country complex');
   assert.ok(serverSrc.includes("'/countries', '/countries/asia'"), 'the main sitemap lists /countries');
 });

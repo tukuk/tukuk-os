@@ -74,7 +74,7 @@ test('sitemap-earthquakes.xml + robots + weather↔quake cross links & footer', 
   const sm = serverSrc.slice(serverSrc.indexOf("app.get('/sitemap-earthquakes.xml'"), serverSrc.indexOf("app.get('/sitemap-earthquakes.xml'") + 1300);
   assert.ok(sm.includes('gp.REGIONS.map'), 'every region goes into the sitemap');
   assert.match(robotsTxt, /Sitemap: https:\/\/tukuk\.org\/sitemap-earthquakes\.xml/, 'robots advertises sitemap-earthquakes');
-  assert.ok(serverSrc.includes('<li><a href="/earthquakes">World Earthquakes</a></li>'), 'the footer links to the world quake hub');
+  assert.ok(require(path.join(ROOT, 'src', 'server')).siteFooter().includes('<li><a href="/earthquakes">World Earthquakes</a></li>'), 'the footer links to the world quake hub');
   assert.ok(serverSrc.includes('<a href="/earthquakes">Earthquake Complex</a>'), 'the weather hub cross-links to the earthquake complex');
   assert.ok(serverSrc.includes("'/earthquakes', '/earthquakes/explained'"), 'the main sitemap lists /earthquakes');
 });

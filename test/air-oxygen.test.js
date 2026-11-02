@@ -19,7 +19,7 @@ test('/air-quality: 4 registered routes + staticPages + the global footer', () =
   for (const u of ["'/air-quality'", "'/air-quality/oxygen'", "'/air-quality/breath'", "'/air-quality/carbon'"]) {
     assert.ok(staticLine.includes(u), `staticPages ${u}`);
   }
-  assert.ok(serverSrc.includes('<li><a href="/air-quality">Air & Oxygen</a></li>'), 'the footer link');
+  assert.ok(require(path.join(ROOT, 'src', 'server')).siteFooter().includes('<li><a href="/air-quality">Air & Oxygen</a></li>'), 'the footer link');
 });
 
 test('/air-quality: a full shell chrome — header/footer, 3 ad slots, the cross nav', () => {

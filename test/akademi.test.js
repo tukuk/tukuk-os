@@ -68,7 +68,7 @@ test('/academy: 3 routes + staticPages (hub+10 tracks) + footer + a bogus-slug r
   const staticLine = (serverSrc.match(/const staticPages = \[[^\]]*\]/) || [''])[0];
   assert.ok(staticLine.includes("'/academy'"), 'the hub in staticPages');
   for (const t of akad.TRACKS) assert.ok(staticLine.includes(`'/academy/${t.s}'`), `staticPages track ${t.s}`);
-  assert.ok(serverSrc.includes('<li><a href="/academy">Academy — 50 Lessons</a></li>'), 'the footer link');
+  assert.ok(require(path.join(ROOT, 'src', 'server')).siteFooter().includes('<li><a href="/academy">Academy (50 Lessons)</a></li>'), 'the footer link');
   assert.ok((serverSrc.match(/app\.get\('\/academy\/:track'[\s\S]*?\}\);/) || [''])[0].includes("res.redirect('/academy')"), 'a fake track → redirect');
   assert.ok((serverSrc.match(/app\.get\('\/academy\/:track\/:slug'[\s\S]*?\}\);/) || ['']).length > 0 && serverSrc.includes("if (!l) return res.redirect('/academy')"), 'a fake lesson → redirect');
 });
