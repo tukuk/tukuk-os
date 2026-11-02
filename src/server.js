@@ -9152,6 +9152,13 @@ async function bencanaEventPage(req, cat, ev) {
     description: String(ev.description || cat.blurb).slice(0, 300), url: selfUrl,
     startDate: ev.created || undefined, endDate: ev.closed || undefined,
     eventStatus: ev.closed ? 'EventCancelled' : 'EventOngoing',
+    // Search Console's "Event" report flags six optional fields as missing here. Four
+    // of them (offers/actors/image/address) genuinely don't exist for a natural
+    // disaster — no tickets, no performers, no photo asset, no street address — so
+    // leaving them out is the honest markup, not an omission. organizer does have a
+    // real answer though: the same NASA EONET attribution already printed on the
+    // page below, so it's added here too.
+    organizer: { '@type': 'Organization', name: 'NASA EONET', url: 'https://eonet.gsfc.nasa.gov' },
     location: lastLoc ? { '@type': 'Place', name: `${cat.en} — ${lastLoc.text}`, geo: { '@type': 'GeoCoordinates', latitude: lastLoc.lat, longitude: lastLoc.lng } } : undefined,
   }).replace(/</g, '\\u003c');
   return bencanaDoc({
