@@ -6410,6 +6410,18 @@ function siteFooter() {
 <script src="/read-aloud.js" defer></script>`;
 }
 
+// Google renders ~155–160 characters of a meta description before truncating with its own
+// ellipsis, and audit tools flag everything longer as an issue. Card excerpts stay generous
+// (they are display copy for a blog list); this clamps the <head> copy at a word boundary
+// so the snippet is what we wrote, not what Google cut off mid-sentence.
+function metaDesc(text, fallback) {
+  const t = String(text || fallback || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= 155) return t;
+  const cut = t.slice(0, 155);
+  const space = cut.lastIndexOf(' ');
+  return `${space > 80 ? cut.slice(0, space) : cut}…`;
+}
+
 // The content hub — the article list. asHome=true when served at '/' (tukuk.org = content, not search).
 function renderBlogListPage(req, asHome) {
   const posts = store.getAllPosts(100);
@@ -6418,7 +6430,7 @@ function renderBlogListPage(req, asHome) {
     ? 'Tukuk-OS \u2014 Free Tools, Maps, Weather & How-To Guides'
     : 'Blog & Knowledge Base \u2014 Science, Geography, Health & Tools';
   const pageDesc = asHome
-    ? 'Free online tools, world maps, live weather, earthquake and space data, plus in-depth how-to guides on geography, health, money and everyday maths \u2014 no account, no cost.'
+    ? 'Free tools, maps, live weather, earthquake and space data, plus how-to guides on geography, health, money and everyday maths \u2014 no account, no cost.'
     : 'In-depth, free-to-read guides on science, geography, health, money, technology and everyday tools from the Tukuk-OS knowledge base.';
   const jsonLdBlog = JSON.stringify({
     "@context": "https://schema.org",
@@ -6561,18 +6573,18 @@ function renderNasaApodPage(req, apod) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)} \u2014 Astronomy Picture of the Day (${escapeHtml(dateStr)}) | Tukuk-OS</title>
-<meta name="description" content="${escapeHtml(desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(desc))}">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(title)}">
-<meta property="og:description" content="${escapeHtml(desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(desc))}">
 <meta property="og:url" content="${selfUrl}">
 <meta property="og:image" content="${escapeHtml(ogImage)}">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${escapeHtml(title)}">
-<meta name="twitter:description" content="${escapeHtml(desc)}">
+<meta name="twitter:description" content="${escapeHtml(metaDesc(desc))}">
 <meta name="twitter:image" content="${escapeHtml(ogImage)}">
 <link rel="canonical" href="${selfUrl}">
 <script type="application/ld+json">${jsonLd}</script>
@@ -6683,12 +6695,12 @@ function nasaDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="${escapeHtml(ogImage)}">
 <meta name="twitter:card" content="summary_large_image">
@@ -7331,12 +7343,12 @@ function cuacaDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="${escapeHtml(ogImage)}">
 <meta property="og:locale" content="en_US">
@@ -7831,12 +7843,12 @@ function gempaDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta property="og:locale" content="en_US">
@@ -8033,12 +8045,12 @@ function cutiDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta property="og:locale" content="en_US">
@@ -8503,12 +8515,12 @@ function negaraDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta property="og:locale" content="en_US">
@@ -8806,12 +8818,12 @@ function statistikDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta property="og:locale" content="en_US">
@@ -8974,12 +8986,12 @@ function bencanaDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta property="og:locale" content="en_US">
@@ -9226,12 +9238,13 @@ const WIKI_CSS = `
 
 function wikiHead(title, selfUrl, desc, jsonLd, robots) {
   const rb = robots || 'index,follow';
+  const d = escapeHtml(metaDesc(desc, title));
   const ld = jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : '';
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
-    `<title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(desc)}">` +
+    `<title>${escapeHtml(title)}</title><meta name="description" content="${d}">` +
     `<meta name="robots" content="${rb}">` +
     `<meta property="og:type" content="article"><meta property="og:site_name" content="Tukuk-OS Wiki">` +
-    `<meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(desc)}">` +
+    `<meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${d}">` +
     `<meta property="og:url" content="${selfUrl}"><meta property="og:image" content="https://tukuk.org/og.png">` +
     `<link rel="canonical" href="${selfUrl}">` +
     `<link rel="icon" href="/icon.svg" type="image/svg+xml">` +
@@ -9643,12 +9656,12 @@ function studyDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -9971,12 +9984,12 @@ function udaraDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -10223,12 +10236,12 @@ function akadDoc(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -10436,12 +10449,12 @@ function worldDoc(o, navHtml) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(o.title)}</title>
-<meta name="description" content="${escapeHtml(o.desc)}">
+<meta name="description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta name="robots" content="${robots}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="${escapeHtml(o.title)}">
-<meta property="og:description" content="${escapeHtml(o.desc)}">
+<meta property="og:description" content="${escapeHtml(metaDesc(o.desc, o.title))}">
 <meta property="og:url" content="${o.selfUrl}">
 <meta property="og:image" content="${o.ogImage || 'https://tukuk.org/og.png'}">
 <meta name="twitter:card" content="summary_large_image">
@@ -21263,7 +21276,7 @@ app.get('/blog/:slug', (req, res) => {
   // HTML-escaped values to keep XSS out of the head/meta & body.
   const eTitle = escapeHtml(post.title);
   const eTitleAttr = escapeHtml(post.title);
-  const eExcerptAttr = escapeHtml(post.excerpt || '');
+  const eExcerptAttr = escapeHtml(metaDesc(post.excerpt, `${post.title} — a free guide from the Tukuk-OS knowledge base.`));
   const eAuthor = escapeHtml(post.author || 'Fevian Donald');
 
   // Per-article branded OG card (public/og/<slug>.png, see scripts/gen-og-images.js)
