@@ -10,6 +10,8 @@ Our own internet portal — web search engine + AI answers + in-browser app & ga
 
 **The domain `tukuk.org` belongs to `tukuk.co@gmail.com`.** It is **NOT** the previous owner's Gmail address any more — that account used to hold the Cloudflare zone and it no longer controls this site. Anything below that names the old owner is history, not the live state. (Changed / recorded 31 Oct 2026.)
 
+✅ **Re-confirmed 2026-11-02 (owner: "tukuk.org ialah kepunyaan tukuk.co@gmail.com … keluarkan dari kod"):** this repo, `tukuk-os-v2` and `tukuk-builder` were already clean, and the name was swept out of the last places it survived — the archived `tukuk-raw/` sandbox (install/deploy scripts, systemd `Documentation=`, Kaggle/HF namespaces, `.idea/` link patterns) and the `wikibank_build.py` user-agent in `tukuk-devops`. `test/repo-identity.test.js` here is the guard that keeps it out of this repo; the runbook above (`../README.md` §0 + §17.11) records the sweep and the owner-side follow-ups (repoint `tukuk-raw`'s origin, create/transfer `tukuk/station-break` · `tukuk/tukuk-agent-editor` · `tukuk/Map-Ai---Version-1`, push the Kaggle/HF namespaces under the tukuk accounts).
+
 ⚠️ **AND THE ADMIN LOGIN HAS NOT FOLLOWED THE MOVE.** `ADMIN_EMAIL` in `deploy/env.secrets` — the bootstrap identity of `https://tukuk.org/admin`, paired with `ADMIN_PASSWORD` — is **still the previous owner's address**. That is deliberate in this file rather than fixed by a script: changing it changes who can log in, and the passkey already registered is bound to that identity. To hand the panel to the new owner: set `ADMIN_EMAIL` (+ a fresh `ADMIN_PASSWORD`) in `deploy/env.secrets` on the box, run `sudo bash scripts/make-env.sh --force && sudo systemctl restart tukuk-os`, then register a new passkey at `/admin` before the old credential is removed anywhere. Do not paste either address into a tracked file — the hygiene test will fail, and it is right to.
 
 | Thing | Live value (31 Oct 2026) | Where it is stored |
@@ -78,7 +80,11 @@ After visiting `http://localhost:3000/admin` and logging in (email + WebAuthn pa
 - **Server & Security Monitor:** 2GB RAM monitor, CPU usage, and indexed-document stats (30+ base documents).
 - **Web Terminal:** Run server commands directly (e.g. `git status`, `uptime`, `npm test`).
 - **Add Web Crawl:** Enter a URL to crawl and index new content immediately.
-- **Ads (Google & MS):** Google AdSense and Microsoft Advertising Publisher ID settings.
+- **Ads & measurement (Google & MS):** the AdSense publisher id (`pub-…` or `ca-pub-…`, both
+  accepted — see §11), the three in-page slot ids, the Microsoft Ads fields, the third-party "FAST"
+  script, the **single Google Tag ID** (`G-…` GA4 measurement id *or* a `GTM-`/`GT-` container) and
+  the Clarity project id, each with its own on/off switch. Everything here is stored in the Admin
+  store and read **before** env; `ADSENSE_APPROVED` is deliberately not a field (§11).
 - **UI & Custom Theme:** Change the site title, dark/light logo, background mode, and theme colors.
 - **Articles & Blog:** Write and publish new articles.
 - **AI Engine & Writer:** Configure the AI API (Google Gemini / Ollama).
@@ -87,9 +93,12 @@ After visiting `http://localhost:3000/admin` and logging in (email + WebAuthn pa
 
 ## 📢 3. Ad Verification (`ads.txt`)
 
-The [ads.txt](public/ads.txt) file in the `public/` directory contains the official authorizations for:
-- **Google AdSense:** `RETIRED-PERSONAL-ACCOUNT-scrubbed-2026-11-01`
-- **Microsoft Advertising:** `100001`
+The [ads.txt](public/ads.txt) file in the `public/` directory carries ONE authorization:
+- **Google AdSense / AdMob:** `google.com, pub-2797331455354322, DIRECT, f08c47fec0942fa0` — the publisher account of record for tukuk.org, held by `tukuk.co@gmail.com` (Customer ID `5990814777`, business domain `tukuk.org` **verified**, active products *AdMob* + *Content*, timezone UTC+08:00 Kuala Lumpur, legal entity on file `tukuk trading plt`). The same id is `ADSENSE_CLIENT` in [deploy/env.defaults](deploy/env.defaults); it is public by design — it travels in every ad request the site makes.
+- [app-ads.txt](public/app-ads.txt) holds the identical line on purpose: the file must be served from the domain each Tukuk APK declares as its website, and that domain is `tukuk.org` for all of them.
+- **Microsoft Advertising:** no line. There is no Monetize/Xandr member id to publish (`appnexus.com, <memberId>, DIRECT, f5ab79cb980f11d1`), and an invented one is a policy violation rather than a placeholder. Add it the day the account exists.
+
+The retired personal account's line was removed 2026-11-01; nothing else may be added to these two files without the owner's confirmation, because ads.txt is a *statement of ownership*.
 
 ---
 
@@ -304,34 +313,87 @@ None of it needs payment at small scale. Here is the list + where each is set:
 | **Meilisearch** | Open-source | Index search (self-host, low RAM + ZRAM) |
 | **IndexNow** | Free (Bing/Yandex/DuckDuckGo) | `scripts/indexnow.sh` + key `public/bd8f0317….txt` |
 | **Google Search Console** | Free | Verification files `public/*.html` (bingbot etc.) — register & submit `sitemap.xml` |
-| **Microsoft Clarity** | Free (cookieless analytics) | Token once shared — put the ID in Admin if you want session recording |
+| **Microsoft Clarity** | Free (cookieless analytics) | Project `ytshvg0zer`, default in `src/server.js` + `deploy/env.defaults`; Admin can override or switch it off |
+| **Google Analytics 4** | Free | Property **tukuk-org-web** (property id `561854360`) — web stream id `16251234684`, measurement id **`G-HLPDZPEYMN`**, the single Google tag (§11), linked to Google Ads **622-127-4131** / `AW-18551010096`. Firebase account `360653340` (`tukuk trading plt`) is the same property's parent |
 | **NASA APOD API** | Free (DEMO_KEY) | `src/nasa.js` / `public/nasa.html` |
 | **GitHub Actions** | 2,000 min/mo (private) · unlimited (public) | Cron brain + `satu-kata` deploy → `.github/workflows/satu-kata.yml` |
 | **GitLab CI** | ~400 min/mo | Weekly `satu-kata` mirror → `.gitlab-ci.yml` |
 | **Cloudflare Pages** | Free (static) | App+game hub `tukuk-satu-kata` (`generated/public/`) — §12 |
-| **Google AdSense / Microsoft Ads** | Free (revenue) | `public/ads.txt` + `src/config.js:adsense` |
+| **Google AdSense / Microsoft Ads** | Free (revenue) | `public/ads.txt` + `src/config.js:adsense` — publisher `pub-2797331455354322` (§3, §11) |
 
-**All of these come up automatically after `npm install`** on a box that has `deploy/env.secrets` (the USB install does; a fresh clone does not — copy it in or set `TUKUK_SECRETS`). What NEEDS manual dashboard action (cannot be automated): register Search Console, submit to AdSense, enable the Clarity tag.
+**All of these come up automatically after `npm install`** on a box that has `deploy/env.secrets` (the USB install does; a fresh clone does not — copy it in or set `TUKUK_SECRETS`). What NEEDS manual dashboard action (cannot be automated): register Search Console, connect the APKs to the AdMob account. The three AdSense ad units exist and are live (§11).
 
 ---
 
-## 💰 11. Google AdSense — Status & Honest Answer: "will it pass?"
+## 💰 11. Google AdSense — the account, the gate, and the single Google tag
+
+**The account is live (console, 2 Nov 2026): status `Open`, active products *AdMob* + *Content*, business domain `tukuk.org` verified, publisher `pub-2797331455354322`, Customer ID `5990814777`.** That answers the question this section used to ask ("will it pass?") — the application went through.
 
 **Infrastructure ALREADY ready (✓):**
-- Real `ads.txt`: `ca-RETIRED-PERSONAL-ACCOUNT-scrubbed-2026-11-01` (Google, verified). Microsoft line removed until a real Monetize/Xandr (`appnexus.com, <memberId>, DIRECT, f5ab79cb980f11d1`) account ID is available.
-- **Ads are OFF site-wide until the account is approved** — `adsenseOn()` returns nothing unless `config.adsense.approved` is true (`ADSENSE_APPROVED=1`). The loader, the three in-page units, the Funding Choices tag and the client `/api/public/settings` feed all read that one function, and the five static pages that used to hardcode the library tag now carry a comment instead. Serving units on pages that hold one sentence is the "ads on screens without publisher content" violation, and the review reads the LIVE markup.
+- Real `ads.txt` + `app-ads.txt`, both naming that publisher (§3). `adsenseLoader()` also emits `<meta name="google-adsense-account" content="ca-pub-…">` on every page that serves ads — Google's third verification method, keyed to the same id.
+- **Ads stay OFF site-wide until one env line says otherwise** — `adsenseOn()` returns nothing unless `config.adsense.approved` is true. The loader, the three in-page units, the Funding Choices tag and the client `/api/public/settings` feed all read that one function. Serving units on pages that hold one sentence is the "ads on screens without publisher content" violation, and the review reads the LIVE markup — which is why the switch is deliberately **not** a repo default: `test/crawl-budget.test.js` pins `approved: false` when the key is absent, so it has to be flipped per box, on purpose:
+  ```bash
+  echo 'ADSENSE_APPROVED=1' | sudo tee -a /opt/tukuk-os/.env && sudo systemctl restart tukuk-os
+  ```
+  Until that exists on the box, no page loads `pagead2.googlesyndication.com` and the account earns nothing. **Verified 2 Nov 2026: the live box already has it** — `GET /api/public/settings` answers `adsEnabled:true` with `ca-pub-2797331455354322` and `/blog` ships three `<ins>` units, so ads are running in production.
 - **Crawl budget** — a cluster item page is one encyclopaedia extract plus a fact table. Item pages of any cluster larger than `CRAWL_INDEX_MAX_ITEMS` (default **1500**) are served `noindex,follow` and dropped from that cluster's sitemap; hubs and continent pages stay indexable. That takes 684,567 of the 816,527 item URLs out of the index in one rule. Lower the env var to tighten further (250 → ~28k indexable item pages, 0 → hubs only).
 - `sitemap.xml` lists hubs + posts only; `robots.txt` allows Googlebot/AdsBot; Privacy/About/Contact/Terms present; HTTPS; mobile-friendly.
 - Content worth reviewing: `/blog` has **100 original articles**, plus the `/academy`, `/learn`, `/docs`, `/alat`, `/elements` and `/countries` surfaces.
 
-**What Google still evaluates on its own (✗ code cannot guarantee):**
-1. **Real organic traffic** — needs actual visitors for a few weeks. New sites without traffic often land in "Pending/Not ready".
-2. **Enough content & not copied** — 48 articles is good, but avoid duplicate/low-value content; steer clear of thin auto-generated pages.
-3. **Clear navigation** — menus/links between pages (Studio/blog/about) must exist.
-4. **Domain & history** — a mature `tukuk.org` with no prior rejections helps.
-5. **Real ad slots** — currently `slotTop/InArticle/Bottom` are the same (`2206273113` = placeholder). After approval, create **3 distinct ad units** in AdSense & set their IDs (or leave them auto).
+### The single Google tag — and why GA4 reported nothing (2 Nov 2026)
 
-**Straight answer:** the technical policy conditions are now met, but approval is still not guaranteed — and the single biggest risk is not code: **the site must be up**. A Cloudflare 530/1033 (tunnel down) on `/`, `/apps` or `/sitemap.xml` fails the review before anyone reads a word. **Before applying:** (a) confirm `curl -o /dev/null -w '%{http_code}' https://tukuk.org/` returns 200 for a few days straight, (b) register Search Console and submit the sitemap, (c) decide whether `CRAWL_INDEX_MAX_ITEMS=1500` is tight enough — at 1500 roughly 132k thin item pages remain indexable and a reviewer sampling the sitemap can still land on one, so **250 is the safer line before a re-application**. Set `ADSENSE_APPROVED=1` only AFTER the approval email arrives.
+The console's data-stream panel for property **TUKUK OS** (web stream id `16251234684`) said *"Tiada data diterima dalam tempoh 48 jam yang lalu"* — nothing received in 48 hours. Three separate reasons, all now closed:
+1. **The site was not pointing at the property at all.** `src/server.js` used to hardcode a GTM container (`GT-PZXWTWW8`) as the only accepted value; the GA4 measurement id `G-HLPDZPEYMN` was never installed anywhere. `googleTagHead()` now accepts **either** form — a `G-…` id loads Google's "install manually" `gtag.js`, a `GTM-`/`GT-` id loads `gtm.js` — and the shipped default (`DEFAULT_GTM_ID`, also `GTM_CONTAINER_ID` in `deploy/env.defaults`) is the measurement id. Exactly **one** tag per page, because a container plus a gtag.js would count every pageview twice; `test/google-tag.test.js` pins that count on rendered HTML.
+2. **The SPA pages had a second, narrower code path.** `/`, `/store`, `/apps`… do not render server-side chrome: they get their tag from `public/adsense-loader.js` reading `/api/public/settings`. That loader only understood container ids, so the homepage silently dropped the measurement id while `/blog` reported traffic. It now mirrors `googleTagHead()` branch for branch, and one test asserts the id in the page equals the id in the feed, so the two paths cannot drift again.
+3. **`/api/public/settings` ignored env.** `adsClient`/`adsSlotTop`/`adsSlotBottom` were store-only with an empty fallback, so a box configured through `.env` served ads on server pages and nothing on the homepage. They now follow store-then-env exactly like `adUnit()`, and `normalizeAdsClient()` accepts the console's own spelling (`pub-…`) as well as the tag's (`ca-pub-…`) — a paste straight out of the account page works, junk still renders nothing.
+4. **And the box had the old container saved in Admin.** Reading the live feed showed `"gtmId":"GT-PZXWTWW8"`: the Admin store beats env and the code default, so deploying the new measurement id alone would have changed **nothing** — the property would have stayed empty and this section would have been wrong about its own fix. `resolveGoogleTagId()` now reads a stored `GT-PZXWTWW8` as "never configured" and falls through to env/default; any other stored value still wins, and `GTM_KEEP_LEGACY_ID=1` honours the legacy string again if it really is somebody's own container. The clean fix is of course to paste `G-HLPDZPEYMN` into Admin → Google Tag ID, which makes the stored value non-legacy and the three layers agree.
+
+**Consent, which is not a bug and must stay as it is:** every page that drops a third party emits the Consent Mode v2 bootstrap *before* the tag — defaults `denied`, `wait_for_update: 500`, restored from `localStorage.tk-adconsent`. Under `denied` Google writes no cookie and sends at most a cookieless hit, so the tag is **supposed** to be present on every pageview and Google decides what the declared state permits. The loader used to install the Google tag only after a grant, which does not protect anyone — it measures nobody and hides the consent split. The tag now waits only for its own `gtmEnabled` switch; Clarity, which has no such contract, stays behind the grant. `test/google-tag.test.js` pins the ordering and both gates.
+
+**What Google evaluates and code cannot guarantee (✗):**
+1. **Real organic traffic** — needs actual visitors for a few weeks; GA4 is the place that will show whether the fixes above worked (check *Realtime* on `tukuk.org` a few hours after a deploy, remembering that a denied-consent visit shows up smaller than an accepted one).
+2. **Enough content & not copied** — avoid duplicate/low-value pages; the crawl-budget rule above is what keeps a reviewer from landing on a thin one.
+3. **Clear navigation** — menus/links between pages (Studio/blog/about) exist.
+4. **Ad slots** — ✅ **done and live** (measured in rendered HTML, 2 Nov 2026): top `6911764298`, in-article `8510244432` (blog posts), bottom `7197162760`, all under `ca-pub-2797331455354322`; the same three numbers are recorded in `deploy/env.defaults` as the public values they are, with Admin still winning over env. The homepage and every SPA page run **auto ads**, which need only the client id.
+5. **AdMob** — the account lists *AdMob* as an active product, but no `ca-app-pub-…~<appId>` exists anywhere in this repo, and `app-ads.txt` is the only mobile-side artifact. Connecting the APKs/AAB to the account (`PLAYSTORE.md`) is open, and it is a console action, not a code change.
+6. **CMP choice** — the banner is self-hosted (`public/consent.js`), which satisfies "collect consent" but is **not** a Google-certified CMP. Since Feb 2024 Google requires publishers serving EEA/UK traffic for personalized ads to use a certified one (Funding Choices / GDHR). Serving non-personalized ads under `denied` still works. If Google's policy centre ever flags this, the fix is to enable Funding Choices' own message and let `consent.js` stand down — it already detects Google's frame (`googleCmp()`) and removes itself so a visitor never sees two prompts.
+
+**Seller visibility** (console: Confidential / Transparent) is the owner's call and touches nothing here: *Transparent* puts the business name (`tukuk trading plt`) and the verified domain into Google's public `sellers.json`, which is consistent with an ads.txt that already names the publisher DIRECT.
+
+### The gateway and the tag ids that are not in this repo (2 Nov 2026)
+
+GA4's *Other domains* screen lists **tukuk.org as tagged with `G-XCEC5PL7DV`, `GT-PZXWTWW8` and
+`GTM-NMSTF6NQ`**. None of the three exists anywhere in this workspace (`grep` for them across every
+repo finds only `GT-PZXWTWW8`, in the retired default this section just buried), so they arrive from
+outside the code: the container the box used to load, and whatever the **Cloudflare "Google tag
+gateway"** for the zone injects — that feature is enabled, and its *"set up the tag automatically"*
+option writes a tag into HTML responses at the edge. Which makes the one-tag rule a two-sided
+promise: this repo installs exactly one, and the edge must not add another. Correct posture —
+`measurementId = G-HLPDZPEYMN`, `setUpTag = false`, the gateway as a first-party proxy only.
+
+**Neither Cloudflare token provided can do it.** Both verify as active (`/user/tokens/verify`,
+`/accounts/<id>/tokens/verify`) and the user token reads the zone and its DNS records, but every
+zone *setting* answers `9109 Unauthorized to access requested resource`, including
+`GET /zones/4ad6f31b444b19c37d5429da4619c845/settings/google-tag-gateway/config`. So it is either a
+dashboard change (zone → Settings → Google Tag Gateway) or a token with **Zone · Settings: Edit**:
+
+```bash
+curl -X PUT "https://api.cloudflare.com/client/v4/zones/<ZONE>/settings/google-tag-gateway/config" \
+  -H "Authorization: Bearer <token with Zone · Settings: Edit>" -H "Content-Type: application/json" \
+  --data '{"value":{"enabled":true,"endpoint":"/gtag","hideOriginalIp":true,"measurementId":"G-HLPDZPEYMN","setUpTag":false}}'
+```
+
+Tokens are described here as *which* token and *what scope*; their values are never written into the
+repo — a secret in a tracked file is the one thing this project has had to recover from before.
+
+**Google Ads (account 622-127-4131, tag `AW-18551010096`) is linked to the property, and it must not
+become a second script.** Conversions and remarketing audiences run off the *same* Google tag: in
+Analytics, *Google tag → Manage Google tag → add destination → Google Ads*. Pasting the provider's
+`gtag('config','AW-…')` block into a page that already loads `G-HLPDZPEYMN` is precisely the
+double-count the rule above forbids. The console's "create conversions / create an audience" offers
+are owner actions, and while consent is `denied` (the default) they measure less by design, not less
+by bug: `ad_storage`, `ad_user_data` and `ad_personalization` all have to be granted for a
+personalised remarketing hit.
 
 ---
 

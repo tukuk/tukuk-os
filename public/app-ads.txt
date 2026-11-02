@@ -1,3 +1,7 @@
-# app-ads.txt — no seller configured (the previous line pointed at a retired personal
-# AdMob/AdSense account, removed 2026-11-01 by owner instruction).
-# Format when the owner arranges one: google.com, pub-XXXXXXXX, DIRECT, f08c47fec0942fa0
+# app-ads.txt — seller authorization for the Tukuk Android apps (apk/…, served by the site).
+# Same publisher as the site: pub-2797331455354322, the AdMob + AdSense ("Content") account of
+# record held by tukuk.co@gmail.com. The retired personal account's line was removed 2026-11-01.
+# Google's app-ads.txt spec: the file must be served from the domain the app declares as its
+# website, which for every Tukuk APK is tukuk.org — so this file and ads.txt intentionally carry
+# the identical line.
+google.com, pub-2797331455354322, DIRECT, f08c47fec0942fa0

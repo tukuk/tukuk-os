@@ -6065,11 +6065,20 @@ const COMMON_CSS = `
 
 // Blog routes
 // AdSense: only show a unit when it is ACTIVE + the client `ca-pub-…` is valid + a numeric slot.
-// No account values are hardcoded (scrubbed 2026-11-01); until the owner configures a client
-// and slots — env or Admin — every one of these gates is shut and no ad markup reaches a page.
-function adsenseClient() {
-  const c = String(store.getSetting('adsClient', config.adsense.client) || '').trim();
+// The account values live in env/Admin only (nothing is hardcoded here): the publisher id of
+// record is named in the ops runbook, and `adsenseClient()` reads it through the same two gates
+// as everything else. With nothing configured every gate is shut and no ad markup reaches a page.
+// The AdSense console shows the id WITHOUT its `ca-` prefix (`pub-2797…`), while the ad tag and
+// the client loader both require `ca-pub-\d+`. normalizeAdsClient() accepts either spelling so a
+// value pasted straight out of the account page works, and keeps the strict test — a half-pasted
+// or third-party value still renders nothing.
+function normalizeAdsClient(raw) {
+  const c = String(raw || '').trim().toLowerCase();
+  if (/^pub-\d+$/.test(c)) return `ca-${c}`;
   return /^ca-pub-\d+$/.test(c) ? c : '';
+}
+function adsenseClient() {
+  return normalizeAdsClient(store.getSetting('adsClient', config.adsense.client));
 }
 function adsenseOn() {
   // Approval gate first, before any toggle: an account that has not been approved must not
@@ -6181,17 +6190,35 @@ function clarityScript() {
   if (!/^[a-z0-9]+$/i.test(id)) return '';
   return `<script async src="https://www.clarity.ms/tag/${escapeHtml(id)}"></script>`;
 }
-// Google Tag (Tag Manager) — the single Google tag for tukuk.org. GA4 and every other
-// Google property (Analytics, Ads, conversions) is configured INSIDE the container at
-// tagmanager.google.com, so ONLY the container snippet is hardcoded here (installing both
-// the container and a separate gtag.js would double-count pageviews). The container ID is
-// public (it is baked into the tag URL), so a safe default fallback is fine — same posture
-// as Clarity. Default ON; the Admin `gtmEnabled` toggle (env GTM_ENABLED) turns it off on
-// every page instantly. Injected at the same <head> sites as Clarity, so it never reaches
-// the strict-CSP legal pages (about/privacy/terms/docs) that deliberately carry no tags.
-const DEFAULT_GTM_ID = 'GT-PZXWTWW8';
+// Google Tag — the single Google tag for tukuk.org. The admin field (and this default)
+// accepts EITHER a GTM container (GTM-/GT-, loaded via gtm.js — configure GA4 and any Ads
+// tags INSIDE the container at tagmanager.google.com) OR a GA4 measurement ID (G-,
+// loaded via gtag.js with a `gtag('config')` — Google's "install manually" incantation).
+// One field, one tag: installing both the container and a separate gtag.js would
+// double-count pageviews. The ID is public (it is baked into the tag URL), so a safe
+// default fallback is fine — same posture as Clarity. Default ON; the Admin `gtmEnabled`
+// toggle (env GTM_ENABLED) turns it off on every page instantly. Injected at the same
+// <head> sites as Clarity, so it never reaches the strict-CSP legal pages
+// (about/privacy/terms/docs) that deliberately carry no tags.
+const DEFAULT_GTM_ID = 'G-HLPDZPEYMN';
+// The container that used to be hardcoded above as the only value the code accepted. Any box
+// that never had a real tag configured still carries this string in its Admin store — and the
+// store beats env — so a plain deploy of the fix would keep serving the old container and the
+// GA4 property would go on reporting nothing. A stored legacy id is therefore treated as
+// "never configured". Set GTM_KEEP_LEGACY_ID=1 to honour it again (if it really is your own
+// container, prefer pasting its id into Admin instead: that value is not legacy and always wins).
+const LEGACY_GOOGLE_TAG_IDS = new Set(['GT-PZXWTWW8']);
+function resolveGoogleTagId(stored, envValue) {
+  const fallback = String(envValue || DEFAULT_GTM_ID).trim().toUpperCase();
+  // null/undefined = the Admin store never had the field: env, then the shipped default.
+  if (stored === null || stored === undefined) return fallback;
+  const id = String(stored).trim().toUpperCase();
+  if (LEGACY_GOOGLE_TAG_IDS.has(id) && process.env.GTM_KEEP_LEGACY_ID !== '1') return fallback;
+  // An explicitly cleared field stays cleared — `gtmEnabled` is the switch that means "off".
+  return id;
+}
 function gtmIdValue() {
-  return String(store.getSetting('gtmId', process.env.GTM_CONTAINER_ID || DEFAULT_GTM_ID) || '').trim().toUpperCase();
+  return resolveGoogleTagId(store.getSetting('gtmId'), process.env.GTM_CONTAINER_ID);
 }
 function gtmEnabledValue() {
   const envDefault = typeof process.env.GTM_ENABLED !== 'undefined'
@@ -6202,6 +6229,14 @@ function gtmEnabledValue() {
 function googleTagHead() {
   if (!gtmEnabledValue()) return '';
   const id = gtmIdValue();
+  // GA4 measurement ID pasted directly → Google's own "install manually" snippet, async
+  // gtag.js + config. consentBootstrap() already seeded window.gtag on the SAME dataLayer,
+  // so Consent Mode v2 defaults still stand; `window.gtag=window.gtag||gtag` keeps that
+  // first definition when both scripts are present.
+  if (/^G-[A-Z0-9]+$/.test(id)) {
+    return `<script async src="https://www.googletagmanager.com/gtag/js?id=${escapeHtml(id)}"></script>`
+      + `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=window.gtag||gtag;gtag('js',new Date());gtag('config',${JSON.stringify(id)});</script>`;
+  }
   if (!/^(GTM|GT)-[A-Z0-9]+$/.test(id)) return ''; // classic GTM container (GTM-) or the new Google tag (GT-)
   return `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer',${JSON.stringify(id)});</script>`;
 }
@@ -23670,9 +23705,13 @@ const DEFAULT_AFFILIATE = JSON.stringify([
 app.get('/api/public/settings', (req, res) => {
   res.json({
     adsEnabled: Boolean(adsenseOn()),
-    adsClient: store.getSetting('adsClient', ''),
-    adsSlotTop: store.getSetting('adsSlotTop', ''),
-    adsSlotBottom: store.getSetting('adsSlotBottom', ''),
+    // The client loader on the SPA pages reads these. They used to be store-only with an empty
+    // fallback, which meant a box configured purely through .env rendered ads on server pages and
+    // NOTHING on the homepage — the one page that matters for the AdSense review. adsenseClient()
+    // is store-then-env (and canonical `ca-pub-…`); the slots follow the same order as adUnit().
+    adsClient: adsenseClient(),
+    adsSlotTop: store.getSetting('adsSlotTop', config.adsense.slotTop),
+    adsSlotBottom: store.getSetting('adsSlotBottom', config.adsense.slotBottom),
     msAdsEnabled: Boolean(store.getSetting('msAdsEnabled', false)),
     msAdsTagId: store.getSetting('msAdsTagId', ''),
     msAdsUsmSrc: store.getSetting('msAdsUsmSrc', ''),
@@ -23749,7 +23788,12 @@ app.post('/api/admin/settings', auth.requireAdmin, (req, res) => {
   }
   // Google Ads
   if (typeof b.adsEnabled !== 'undefined') store.setSetting('adsEnabled', Boolean(b.adsEnabled));
-  if (typeof b.adsClient !== 'undefined') store.setSetting('adsClient', String(b.adsClient));
+  if (typeof b.adsClient !== 'undefined') {
+    // Save the canonical form when the paste is recognisable, otherwise keep whatever the admin
+    // typed so the field still shows their value on reload — the gates render nothing either way.
+    const client = normalizeAdsClient(b.adsClient);
+    store.setSetting('adsClient', client || String(b.adsClient).trim());
+  }
   if (typeof b.adsSlotTop !== 'undefined') store.setSetting('adsSlotTop', String(b.adsSlotTop));
   if (typeof b.adsSlotInArticle !== 'undefined') store.setSetting('adsSlotInArticle', String(b.adsSlotInArticle));
   if (typeof b.adsSlotBottom !== 'undefined') store.setSetting('adsSlotBottom', String(b.adsSlotBottom));
@@ -24083,6 +24127,14 @@ app.use((error, req, res, next) => {
 });
 
 module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, isOwnFrontDoor, notifyIndexNow,
+  // The publisher id has exactly one legal shape, and the paste form a human copies out of the
+  // AdSense console (`pub-…`, no `ca-`) is not it. Exported so the guard is testable without
+  // booting a second server or faking an Admin session.
+  normalizeAdsClient,
+  // Which Google id a page will actually load is decided by three layers (Admin store, env, code
+  // default) and one legacy exception. Exported so the precedence is testable as a pure function
+  // instead of by writing into the live Admin store.
+  resolveGoogleTagId, DEFAULT_GTM_ID, LEGACY_GOOGLE_TAG_IDS,
   // The crawl-budget rule is a policy, not a template detail: a test has to be able to pin it
   // so the 816k thin URLs cannot quietly come back into the index or the sitemaps.
   CRAWL_INDEX_MAX_ITEMS, clusterIsIndexable, clusterItemRobots,

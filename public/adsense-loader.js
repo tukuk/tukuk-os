@@ -36,24 +36,45 @@
           cb.src = '/consent.js';
           head.appendChild(cb);
         }
-        // Analytics (Clarity + GTM/GA) set cookies, so they only load once consent is granted.
-        if (granted) {
-          if (s.clarityEnabled) {
-            var cid = String(s.clarityId || '');
-            if (/^[a-z0-9]+$/i.test(cid)) {
-              var cl = document.createElement('script');
-              cl.async = true;
-              cl.src = 'https://www.clarity.ms/tag/' + cid;
-              head.appendChild(cl);
-            }
+        // Clarity sets its own cookies, so it loads only once consent is granted: it is not a
+        // Google property, it is not Consent-Mode aware, and /privacy discloses it as a
+        // granted-consent tool.
+        if (granted && s.clarityEnabled) {
+          var cid = String(s.clarityId || '');
+          if (/^[a-z0-9]+$/i.test(cid)) {
+            var cl = document.createElement('script');
+            cl.async = true;
+            cl.src = 'https://www.clarity.ms/tag/' + cid;
+            head.appendChild(cl);
           }
-          if (s.gtmEnabled) {
-            var gid = String(s.gtmId || '').toUpperCase();
-            if (/^(GTM|GT)-[A-Z0-9]+$/.test(gid)) { // classic GTM container (GTM-) or the new Google tag (GT-)
-              var gt = document.createElement('script');
-              gt.text = "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gid + "');";
-              head.appendChild(gt);
-            }
+        }
+        // The Google tag is NOT behind the grant, and that is Google's own design, not a loophole:
+        // Consent Mode means the tag is always present and Google decides what the declared state
+        // permits — under `denied` it writes no cookie and sends at most a cookieless hit, under
+        // `granted` it measures normally. Gating the loader instead measures nobody at all, so the
+        // property cannot even see the consent split (and tukuk.org's GA4 stream looked empty for
+        // exactly this reason on 2026-11-02). The `consent default` push above runs before this in
+        // the same synchronous block, so no hit is ever sent under an undeclared state. Server-
+        // rendered pages already behaved this way (googleTagHead() ignores `granted`), which is why
+        // the blog reported traffic while the homepage did not — the two paths now agree.
+        if (s.gtmEnabled) {
+          var gid = String(s.gtmId || '').toUpperCase();
+          if (/^G-[A-Z0-9]+$/.test(gid)) {
+            // A GA4 measurement ID pasted in Admin → Google's "install manually" incantation,
+            // exactly what googleTagHead() emits on server-rendered pages. Without this branch
+            // the SPA pages (home, search, store…) silently dropped the measurement ID, so the
+            // property looked dead while the blog pages reported traffic.
+            var gs = document.createElement('script');
+            gs.async = true;
+            gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + gid;
+            head.appendChild(gs);
+            var gc = document.createElement('script');
+            gc.text = "gtag('js',new Date());gtag('config','" + gid + "');";
+            head.appendChild(gc);
+          } else if (/^(GTM|GT)-[A-Z0-9]+$/.test(gid)) { // classic GTM container (GTM-) or the new Google tag (GT-)
+            var gt = document.createElement('script');
+            gt.text = "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gid + "');";
+            head.appendChild(gt);
           }
         }
         // Non-Google networks (FAST / Microsoft USM) are not Consent-Mode aware, so they wait
@@ -73,6 +94,9 @@
         }
         if (s.adsEnabled && !firedAd) {
           var c = String(s.adsClient || '');
+          // The feed now returns the canonical `ca-pub-…` form (normalized on read AND on save),
+          // so a `pub-…` pasted into Admin still reaches the homepage loader.
+          if (/^pub-\d+$/.test(c)) c = 'ca-' + c;
           if (/^ca-pub-\d+$/.test(c)) {
             var g = document.createElement('script');
             g.async = true;

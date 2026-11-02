@@ -525,13 +525,14 @@ Type a command below or click a quick action.
           
           <div class="form-group">
             <label for="adsClient">AdSense Publisher ID (client)</label>
-            <input type="text" id="adsClient" placeholder="ca-pub-XXXXXXXXXXXXXXXX (set your own)">
+            <input type="text" id="adsClient" placeholder="pub-XXXXXXXXXXXXXXXX or ca-pub-XXXXXXXXXXXXXXXX">
+            <div class="help-text">Either spelling works — the id is stored in its canonical <code>ca-pub-…</code> form. Copy it straight from AdSense → Account → <strong>Publisher ID</strong> (which shows it <em>without</em> the <code>ca-</code>). Anything else in this field is kept visible to you but serves <strong>no ads</strong>, and with no client id the whole AdSense surface stays off: no loader, no units, no Funding Choices tag, no <code>google-adsense-account</code> meta. Also confirm <code>ads.txt</code> names the same publisher, and that <code>ADSENSE_APPROVED=1</code> is set in this server's <code>.env</code> — approval is deliberately an env decision, not a form field.</div>
           </div>
           
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
             <div class="form-group">
               <label for="adsSlotTop">Top Banner Slot ID</label>
-              <input type="text" id="adsSlotTop" placeholder="e.g. 2206273113">
+              <input type="text" id="adsSlotTop" placeholder="digits only, e.g. 1234567890">
             </div>
             <div class="form-group">
               <label for="adsSlotInArticle">In-Article Slot ID</label>
@@ -613,9 +614,9 @@ Type a command below or click a quick action.
             </label>
           </div>
           <div class="form-group">
-            <label for="gtmId">GTM Container ID</label>
-            <input type="text" id="gtmId" placeholder="e.g. GT-XXXXXXX">
-            <div class="help-text">The single Google tag for the site. Configure <strong>Google Analytics&nbsp;4</strong> (and any Google Ads/conversion tags) <em>inside</em> the container at <a href="https://tagmanager.google.com" target="_blank" rel="noopener noreferrer">tagmanager.google.com</a> — do <strong>not</strong> also paste a separate <code>gtag.js</code>, or pageviews get double-counted. Loads on content pages only (not the tag-free legal pages). It only loads when enabled.</div>
+            <label for="gtmId">Google Tag ID</label>
+            <input type="text" id="gtmId" placeholder="G-HLPDZPEYMN">
+            <div class="help-text">The single Google tag for the site. Paste either the <strong>GA4 measurement ID</strong> (<code>G-…</code>, from Analytics → property settings → Data streams — the site then loads Google's "install manually" gtag.js for you), <em>or</em> a <strong>Tag Manager container</strong> (<code>GT-…</code>/<code>GTM-…</code>, in which case configure <strong>Google Analytics&nbsp;4</strong> <em>inside</em> the container at <a href="https://tagmanager.google.com" target="_blank" rel="noopener noreferrer">tagmanager.google.com</a>). Use ONE only — installing both double-counts pageviews. Loads on content pages only (not the tag-free legal pages). It only loads when enabled.<br>tukuk.org's property is <strong>G-HLPDZPEYMN</strong>; leaving the field empty lets the code default (the same id) apply. The container this used to require (<code>GT-PZXWTWW8</code>) is now read as "not configured" and ignored, so this field shows the id the site actually loads — save it once to make the stored value match. Google Ads conversions/remarketing (<code>AW-…</code>) attach as a <em>destination</em> of that tag in the Google console, never as a second script here.</div>
           </div>
 
           <h3 style="margin-top:32px; font-size:1.05rem; border-bottom:1px solid var(--panel-border); padding-bottom:8px;">⚡ Fast Ad Network (Adsterra / PropellerAds / etc)</h3>
