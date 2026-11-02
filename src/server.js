@@ -3570,10 +3570,55 @@ app.use(express.static(PUBLIC_DIR, {
   }
 }));
 
+// ── /rekomendasi: the product list rendered on the server, not only by the browser ────────
+// The page used to ship one paragraph plus "Loading recommendations…", and the cards were put in
+// by JavaScript after a fetch. A visitor saw a list; a crawler that does not run the script — and
+// Google's ad review, which reads the live markup — saw a near-empty page that also carries
+// affiliate links, which is exactly what a low-value-content flag looks for. The same list the
+// settings feed hands out is therefore written into the HTML here. The client script stays, and
+// still refreshes the grid: an old cached copy of the page has no cards without it.
+function affiliateItems() {
+  const raw = store.getSetting('affiliateProducts', DEFAULT_AFFILIATE);
+  let list = raw;
+  if (typeof raw === 'string') { try { list = JSON.parse(raw); } catch { list = null; } }
+  return Array.isArray(list) ? list : [];
+}
+function affiliateCardHtml(item) {
+  const it = item && typeof item === 'object' ? item : {};
+  const url = String(it.url || '').trim();
+  // No destination, no card: the sponsored link IS the page's purpose, and an <a> pointing at a
+  // non-URL promises the visitor and Google something the site cannot deliver.
+  if (!/^https?:\/\/.+/i.test(url)) return '';
+  return '<div class="card">'
+    + `<h3>${escapeHtml(it.name || '')}</h3>`
+    + (it.price ? `<span class="price">${escapeHtml(it.price)}</span>` : '')
+    + `<p class="blurb">${escapeHtml(it.blurb || '')}</p>`
+    + `<a class="cta" href="${escapeHtml(url)}" target="_blank" rel="sponsored nofollow noopener">${escapeHtml(it.cta || 'View')}</a>`
+    + '</div>';
+}
+// Registered before the STATIC_PAGES loop below, so this route — not express.static — answers
+// /rekomendasi. The template is read once like /cari reads its shell: the file only changes on a
+// deploy, while the cards are computed per request, so an Admin edit is live immediately.
+let rekomendasiHtml = null;
+app.get('/rekomendasi', (req, res) => {
+  if (!rekomendasiHtml) {
+    try { rekomendasiHtml = fs.readFileSync(path.join(PUBLIC_DIR, 'rekomendasi.html'), 'utf8'); }
+    catch { return res.status(404).json({ error: 'Page not found', path: req.originalUrl }); }
+  }
+  const cards = affiliateItems().map(affiliateCardHtml).filter(Boolean).join('\n    ');
+  const out = rekomendasiHtml.replace(
+    /<div class="empty" data-rec-placeholder>[\s\S]*?<\/div>/,
+    cards || '<div class="empty">No recommendations yet. Check back soon.</div>');
+  res.setHeader('Cache-Control', CACHE_PUBLIC_HTML);
+  res.type('html').send(out);
+});
+
 // Clean URLs for static pages: /privacy -> public/privacy.html
 // NOTE: the heavy AI pages (nasa/explore/builder/editor/editor-video/3d/design/movie/
 // collage/converter/bg-remover/studio) + the app-store UI (store) were dropped — the focus is T Chat.
-const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'access', 'bingbot', 'playstore', 'download', 'rekomendasi', 'os', 'sms', 'cookies'];
+// `rekomendasi` is NOT in this list: it has its own route above, because its content comes from
+// the Admin store and must be in the HTML rather than only in the browser.
+const STATIC_PAGES = ['about', 'privacy', 'terms', 'contact', 'dev', 'terminal', 'settings', 'docs', 'access', 'bingbot', 'playstore', 'download', 'os', 'sms', 'cookies'];
 // res.sendFile sets its own "public, max-age=0" AFTER the policy middleware ran, which would
 // drop the edge lease, so the files served directly repeat the policy explicitly.
 const SEND_FILE_OPTS = { headers: { 'Cache-Control': CACHE_PUBLIC_HTML } };

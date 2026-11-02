@@ -43,7 +43,6 @@
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/theme.css">
 <script src="/adsense-loader.js" defer></script>
-<!-- AdSense is off site-wide until the account is approved (src/config.js: adsense.approved). -->
 </head>
 <body>
 <header class="wrap">
@@ -76,6 +75,15 @@
      recommend — hosting, domains, VPN, VPS and work gear. All chosen from daily use,
      not advertising.</p>
 
+  <h2>How a product gets on this page</h2>
+  <p>Nothing here is paid placement. A tool appears after it has run a real part of Tukuk's own
+     workload for at least a month — a VPS that has hosted the origin, a domain registrar that has
+     moved a nameserver, a keyboard that has survived daily typing. Price matters, but only after
+     reliability: a cheap service that loses data costs more than an expensive one that does not.
+     We list the plan we actually use, the price we actually paid, and we remove an item when we
+     stop using it. If you have had a different experience with something on this page,
+     <a href="/contact">tell us</a> and we will re-check it.</p>
+
   <div class="disclosure">
     <strong>Affiliate Disclosure:</strong> Some of the links below are affiliate links. If you
     buy through them, we may earn a small commission at no extra cost to you —
@@ -84,7 +92,7 @@
   </div>
 
   <div id="recGrid" class="grid" aria-live="polite">
-    <div class="empty">Loading recommendations…</div>
+    <div class="empty" data-rec-placeholder>Loading recommendations&hellip;</div>
   </div>
 
   <h2>Want your product listed here?</h2>
@@ -107,8 +115,13 @@
   }
   function render(list) {
     var grid = document.getElementById('recGrid');
+    // The server has already written this same list into the grid (see rekomendasiPage in
+    // src/server.js), so this fetch is a refresh, not the only source of the content. When it
+    // fails or comes back with nothing, the cards already on screen are kept: clearing them
+    // would turn a working page into an empty one for the visitor who can see the difference.
+    var serverRendered = grid.querySelector('.card') !== null;
     if (!Array.isArray(list) || !list.length) {
-      grid.innerHTML = '<div class="empty">No recommendations yet. Check back soon.</div>';
+      if (!serverRendered) grid.innerHTML = '<div class="empty">No recommendations yet. Check back soon.</div>';
       return;
     }
     var html = '';
@@ -124,7 +137,7 @@
         + esc(it.cta || 'View') + '</a>'
         + '</div>';
     }
-    grid.innerHTML = html || '<div class="empty">No recommendations yet.</div>';
+    if (html || !serverRendered) grid.innerHTML = html || '<div class="empty">No recommendations yet.</div>';
   }
   fetch('/api/public/settings', { cache: 'no-store' })
     .then(function (r) { return (r && r.ok) ? r.json() : null; })
