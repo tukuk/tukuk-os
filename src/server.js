@@ -22700,7 +22700,7 @@ function renderGamesIndex() {
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Free HTML5 Games Arcade — Play Instantly — Tukuk-OS</title>
-<meta name="description" content="Play real 3D browser games instantly — no download, no sign-up, no install. A 3D third-person shooter and Godot-built HD shooter running lightweight in your browser, plus more hand-checked 3D titles.">
+<meta name="description" content="Play real 3D browser games instantly — no download, no sign-up. A third-person shooter and a Godot-built HD shooter that run lightweight in any browser.">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://tukuk.org/games">
 <link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/icon.svg">
