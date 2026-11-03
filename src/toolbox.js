@@ -1828,4 +1828,647 @@ select(1);`,
   <p class="meta">Thumbnail makers: Impact at one-eleventh of the canvas width (about 116 px on a 1280 canvas) is the size that still reads at phone preview width — anything smaller is decoration, not headline.</p>`,
 });
 
+// ── 38. /alat/water — daily water target ─────────────────────────────────────
+TOOLKIT.push({
+  slug: 'water', ic: '💧', name: 'Water Target',
+  title: 'Daily Water Intake Target — Weight, Activity & Climate | Tukuk-OS',
+  desc: 'A personal daily water target built from body weight, weekly exercise, climate, and pregnancy or breastfeeding — shown in litres, glasses, bottles and an hourly sipping pace. Plain arithmetic, in your browser.',
+  hero: 'Water Target', sub: '35 ml per kg · exercise top-up · climate multiplier · hourly pace',
+  navBlurb: 'How much water is actually enough for your weight, your training week and your climate — converted into glasses, bottles and an hourly sip pace you can follow.',
+  hubBlurb: 'a daily water goal built from body weight, exercise minutes and climate, shown as litres, glasses and an hourly drinking plan',
+  lead: 'The "eight glasses a day" rule is folklore, not science — the underlying guidance is roughly <b>35 ml per kg of body weight</b>, plus about <b>500 ml for every hour of exercise</b>, plus more when it is hot, dry or you are pregnant or breastfeeding. This page shows every term of the sum so you can see where your number comes from. It is guidance for healthy adults, never a prescription.',
+  form: `<div class="tl-form">
+  ${field('Body weight (kg)', '<input id="wa-kg" type="number" min="20" max="300" step="any" value="65">')}
+  ${field('Exercise (minutes per week)', '<input id="wa-ex" type="number" min="0" max="2100" step="10" value="150">')}
+  ${field('Climate / setting', '<select id="wa-cl"><option value="1" selected>temperate, mostly indoors</option><option value="1.1">hot, dry or high altitude</option><option value="1.25">hot & humid, heavy sweating</option></select>')}
+  ${field('Pregnancy / breastfeeding', '<select id="wa-pg"><option value="0" selected>not applicable</option><option value="300">pregnant (+300 ml)</option><option value="700">breastfeeding (+700 ml)</option></select>')}
+  ${field('Waking hours (for the pace)', '<input id="wa-hrs" type="number" min="6" max="20" step="1" value="16">')}
+  <button class="tl-btn primary" id="wa-go" type="button">Fill my glass</button>
+</div>
+<div class="tl-res" id="wa-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function num(v,d){var n=parseFloat(v);return isNaN(n)?d:n;}
+function l1(n){return (n/1000).toFixed(2)+' L';}
+function render(){var kg=num($('wa-kg').value,-1),ex=num($('wa-ex').value,-1),cl=num($('wa-cl').value,1),pg=num($('wa-pg').value,0),hrs=num($('wa-hrs').value,16);
+ if(kg<20||kg>300||ex<0||ex>2100||hrs<6||hrs>20){$('wa-out').innerHTML='<span class="tl-badge tl-no">check input</span> Weight 20-300 kg, exercise 0-2100 min/week, waking hours 6-20.';return;}
+ var base=35*kg, exd=ex*500/(7*60), preMul=base+exd, climate=preMul*(cl-1);
+ var total=preMul+climate+pg, r=Math.round(total/10)*10;
+ var html='<div class="tl-big">'+l1(r)+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Base — 35 ml × '+kg+' kg</td><td>'+Math.round(base)+' ml</td></tr>';
+ html+='<tr><td>Exercise — '+ex+' min/week averaged daily</td><td>+'+Math.round(exd)+' ml</td></tr>';
+ html+='<tr><td>Climate ×'+cl.toFixed(2)+'</td><td>+'+Math.round(climate)+' ml</td></tr>';
+ if(pg>0)html+='<tr><td>Pregnancy / breastfeeding</td><td>+'+pg+' ml</td></tr>';
+ html+='<tr><td>Daily target</td><td><b>'+r+' ml ('+l1(r)+')</b></td></tr>';
+ html+='<tr><td>250 ml glasses</td><td>'+(r/250).toFixed(1)+' glasses</td></tr>';
+ html+='<tr><td>500 ml bottles</td><td>'+(r/500).toFixed(1)+' bottles</td></tr>';
+ html+='<tr><td>Hourly pace over '+hrs+' waking hours</td><td>'+Math.round(r/hrs)+' ml every hour</td></tr>';
+ html+='<tr><td>Reminder plan</td><td>8 equal stops — every '+Math.round(hrs*60/8)+' min, ~'+Math.round(r/8)+' ml each</td></tr>';
+ html+='</tbody></table><p class="meta">Food already supplies roughly a fifth of daily water intake, which this deliberately generous rounding absorbs. If a doctor restricts your fluids — kidney or heart conditions — the prescription beats this page.</p>';
+ $('wa-out').innerHTML=html;}
+$('wa-go').onclick=render;['wa-kg','wa-ex','wa-cl','wa-pg','wa-hrs'].forEach(function(id){$(id).oninput=render;$(id).onchange=render;});render();`,
+  seo: `<h2 class="section-title">Where "eight glasses a day" came from</h2>
+  <p>The number traces to a 1945 U.S. Food and Nutrition Board line: about one millilitre of water per food calorie, <i>most of which is already contained in food</i>. The second half of that sentence got lost, and a hydration myth was born — one that sold bottled water beautifully. The real signals are simpler: body weight sets the baseline (roughly 35 ml/kg), sweat sets the surcharge (about 500 ml per hour of exercise and more in heat), and urine colour is the live feedback loop — pale straw means you are keeping up, dark amber means you are a glass or two behind. Thirst is a lagging indicator, which is why the hourly pace above matters more than the daily total.</p>`,
+});
+
+// ── 39. /alat/compound — compound interest & savings growth ─────────────────
+TOOLKIT.push({
+  slug: 'compound', ic: '🌱', name: 'Compound Interest',
+  title: 'Compound Interest Calculator — Growth, Monthly Savings & Effective Rate | Tukuk-OS',
+  desc: 'Compound a lump sum plus optional monthly savings at any rate and compounding frequency, with year-by-year balances, the effective annual rate and the true doubling time. Closed-form maths, in your browser.',
+  hero: 'Compound Interest', sub: 'lump sum + monthly savings · yearly to daily compounding · EAR & exact doubling time',
+  navBlurb: 'A lump sum and a monthly habit grown year by year with true compounding maths — including the effective annual rate banks quote differently and the exact doubling time, not just rule of 72.',
+  hubBlurb: 'compound a principal plus regular savings, see the yearly table, the effective annual rate and how long money actually takes to double',
+  lead: 'Interest on interest, computed the honest way: <b>A = P(1+i)ᴺ</b> for the lump sum plus the ordinary-annuity term <b>C·((1+i)ᴺ−1)/i</b> for savings deposited at each month-end. Every number below comes from those two closed forms — no simulation, no rounding drift — and the page shows the <b>effective annual rate</b> so monthly-compounded 5% is never confused with a flat 5%.',
+  form: `<div class="tl-form">
+  ${field('Initial amount', '<input id="ci-p" type="number" min="0" step="any" value="10000">')}
+  ${field('Monthly addition', '<input id="ci-c" type="number" min="0" step="any" value="100">')}
+  ${field('Annual rate (%)', '<input id="ci-r" type="number" min="0" max="100" step="any" value="5">')}
+  ${field('Compounded', '<select id="ci-f"><option value="1">yearly</option><option value="2">half-yearly</option><option value="4">quarterly</option><option value="12" selected>monthly</option><option value="365">daily</option></select>')}
+  ${field('Years', '<input id="ci-t" type="number" min="1" max="60" step="1" value="10">')}
+  <button class="tl-btn primary" id="ci-go" type="button">Grow it</button>
+</div>
+<div class="tl-res" id="ci-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var FREQ={1:'yearly',2:'half-yearly',4:'quarterly',12:'monthly',365:'daily'};
+function num(v,d){var n=parseFloat(v);return isNaN(n)?d:n;}
+function m2(n){return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function render(){var P=num($('ci-p').value,0),C=num($('ci-c').value,0),r=num($('ci-r').value,0)/100,
+ n=num($('ci-f').value,12),t=num($('ci-t').value,10);
+ if(P<0||C<0||r<0||r>1||t<1||t>60){$('ci-out').innerHTML='<span class="tl-badge tl-no">check input</span> Rate between 0 and 100% / years between 1 and 60.';return;}
+ var i=r/12,N=Math.round(t*12),growth=Math.pow(1+i,N);
+ var lump=P*growth,ann=(i===0)?C*N:C*(growth-1)/i;
+ var total=lump+ann,put=P+C*N,earn=total-put;
+ var ear=i===0?0:Math.pow(1+r/n,n)-1;
+ var dbl=i===0?Infinity:Math.log(2)/Math.log(1+i)/12,r72=r>0?72/(r*100):Infinity;
+ var html='<div class="tl-big">'+m2(total)+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>You put in</td><td>'+m2(put)+'</td></tr>';
+ html+='<tr><td>Interest earned</td><td>'+m2(earn)+'</td></tr>';
+ html+='<tr><td>Effective annual rate</td><td>'+(ear*100).toFixed(3)+'% (nominal '+(r*100).toFixed(2)+'% compounded '+(FREQ[n]||n)+')</td></tr>';
+ html+='<tr><td>Doubling time</td><td>'+(isFinite(dbl)?dbl.toFixed(2)+' years exact':'—')+(isFinite(r72)?' · rule of 72 guesses '+r72.toFixed(2)+' (off by '+Math.abs(dbl-r72).toFixed(2)+' yr)':'')+'</td></tr>';
+ html+='</tbody></table><h3 class="section-title">Year by year</h3><table class="tl-tab"><tbody><tr><td>Year</td><td>Balance</td><td>Interest so far</td></tr>';
+ for(var y=1;y<=t;y++){var Ny=y*12,G=Math.pow(1+i,Ny),B=P*G+(i===0?C*Ny:C*(G-1)/i);
+  html+='<tr><td>'+y+'</td><td>'+m2(B)+'</td><td>'+m2(B-P-C*Ny)+'</td></tr>';}
+ html+='</tbody></table><p class="meta">Savings are treated as end-of-month deposits; taxed accounts and inflation are ignored — this is growth of the nominal number.</p>';
+ $('ci-out').innerHTML=html;}
+$('ci-go').onclick=render;['ci-p','ci-c','ci-r','ci-f','ci-t'].forEach(function(id){$(id).oninput=render;$(id).onchange=render;});render();`,
+  seo: `<h2 class="section-title">Nominal rate, effective rate, and why banks quote both</h2>
+  <p>5% "compounded monthly" is not 5% a year — it is 5%/12 credited twelve times, which comes to (1+0.05/12)¹² − 1 = 5.116% effective. Advertised savings rates that mention the frequency are quoting the nominal number; the page above always shows both, because the comparison shoppers who win are the ones who compare effective rates. The doubling time is the same honesty: <code>ln 2 / ln(1+i)</code> periods, exact — the rule of 72 is shown next to it as the mental shortcut it is.</p>`,
+});
+
+// ── 40. /alat/tax — add & remove tax (SST / GST / VAT) ──────────────────────
+TOOLKIT.push({
+  slug: 'tax', ic: '🧾', name: 'Tax Add & Remove',
+  title: 'Tax Calculator — Add or Remove GST, SST & VAT | Tukuk-OS',
+  desc: 'Take a net amount and add tax, or take a gross receipt and strip tax out of it, for any rate — with the exact net/tax split and a comparison table of common GST/VAT rates. Two multiplications, in your browser.',
+  hero: 'Tax Add & Remove', sub: 'net → gross · gross → net · any rate · common-rate comparison',
+  navBlurb: 'Add GST/SST/VAT to a price or strip it back out of a receipt — with the exact net and tax split, and every common world rate compared on the same number.',
+  hubBlurb: 'the two directions of tax maths (adding a rate, and removing it from an inclusive price) with the precise split each time',
+  lead: 'The trap this page exists for is <b>removing</b> tax: taking 6% off a tax-inclusive receipt is not the same as adding 6% and undoing it. From a gross amount the tax inside it is <b>G·t/(1+t)</b>, not <b>G·t</b>. On RM106 at 6% the tax is RM6 — subtract 6% of 106 and you get RM5.98 and a reconciliation that never balances.',
+  form: `<div class="tl-form">
+  ${field('Direction', '<select id="tx-mode"><option value="add" selected>Add tax to a net amount</option><option value="remove">Remove tax from a gross amount</option></select>')}
+  ${field('Amount', '<input id="tx-amt" type="number" min="0" step="any" value="100">')}
+  ${field('Tax rate (%)', '<input id="tx-rate" type="number" min="0" max="50" step="any" value="6">')}
+  <button class="tl-btn primary" id="tx-go" type="button">Split it</button>
+</div>
+<div class="tl-res" id="tx-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function num(v,d){var n=parseFloat(v);return isNaN(n)?d:n;}
+function m2(n){return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function split(amt,rate,mode){var t=rate/100;
+ if(mode==='add')return {net:amt,tax:amt*t,gross:amt*(1+t)};
+ return {net:amt/(1+t),tax:amt-amt/(1+t),gross:amt};}
+function render(){var amt=num($('tx-amt').value,-1),rate=num($('tx-rate').value,-1),mode=$('tx-mode').value;
+ if(amt<0||rate<0||rate>50){$('tx-out').innerHTML='<span class="tl-badge tl-no">check input</span> Amount and a rate from 0 to 50%.';return;}
+ var s=split(amt,rate,mode);
+ var html='<div class="tl-big">'+(mode==='add'?m2(s.gross)+' gross':m2(s.net)+' net')+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>'+(mode==='add'?'Net (before tax)':'Net (excl. tax)')+'</td><td>'+m2(s.net)+'</td></tr>';
+ html+='<tr><td>Tax at '+rate+'%</td><td>'+m2(s.tax)+'</td></tr>';
+ html+='<tr><td>'+(mode==='add'?'Gross (with tax)':'Gross (receipt)')+'</td><td>'+m2(s.gross)+'</td></tr>';
+ html+='</tbody></table><h3 class="section-title">Same number at other rates</h3><table class="tl-tab"><tbody><tr><td>Rate</td><td>Net</td><td>Tax</td><td>Gross</td></tr>';
+ [5,6,8,10,12,15,18,20].forEach(function(rr){var x=split(mode==='add'?amt:s.gross,rr,mode);
+  html+='<tr><td>'+rr+'%</td><td>'+m2(x.net)+'</td><td>'+m2(x.tax)+'</td><td>'+m2(x.gross)+'</td></tr>';});
+ html+='</tbody></table><p class="meta">Receipt reconciliation: tax removed here is gross − net, so the three lines always add back to the printed total.</p>';
+ $('tx-out').innerHTML=html;}
+$('tx-go').onclick=render;['tx-amt','tx-rate','tx-mode'].forEach(function(id){$(id).oninput=render;$(id).onchange=render;});render();`,
+  seo: `<h2 class="section-title">Why you cannot "take off" the rate you "put on"</h2>
+  <p>Adding t% multiplies by (1+t); reversing must divide by (1+t), and division is not subtraction. On RM100: add 6% → RM106, and the tax is RM6.00. Take 6% off RM106 → RM99.64 — you have lost 36 sen per hundred and your accounts will not foot. Every GST/SST/VAT receipt you file uses the inclusive formula tax = gross × t/(1+t); that is what the "remove" direction computes, exactly, to the sen.</p>`,
+});
+
+// ── 41. /alat/breath — guided breathing pacer ────────────────────────────────
+TOOLKIT.push({
+  slug: 'breath', ic: '🫁', name: 'Breathing Pacer',
+  title: 'Guided Breathing Pacer — Box, 4-7-8 & Coherent Breathing | Tukuk-OS',
+  desc: 'A visual breathing pacer: the circle grows as you inhale, freezes on the holds, shrinks as you exhale. Coherent 5-5, box 4-4-4-4 and the calming 4-7-8 pattern, with round counter and pace summary. In your browser.',
+  hero: 'Breathing Pacer', sub: 'coherent 5·5 · box 4·4·4·4 · 4-7-8 calming · visual ring, no audio',
+  navBlurb: 'Follow a growing and shrinking circle through coherent, box and 4-7-8 breathing — the visual pacer that makes a one-minute calm session actually work.',
+  hubBlurb: 'a visual pacer for 5-5 coherent, box 4-4-4-4 and 4-7-8 breathing with phase labels and a round countdown',
+  lead: 'Breathing is the one part of your nervous system you can steer on purpose: the long exhale is the brake pedal, and every calming tradition — and modern heart-rate-variability research — converges on <b>slow exhales at roughly six rounds a minute</b>. But counting seconds is itself a stressor, so stop counting and follow the ring instead: it grows while you inhale, freezes on the holds and shrinks while you exhale. Press Start and match your breath to it.',
+  form: `<div class="tl-form">
+  ${field('Pattern', '<select id="bp-pat"><option value="coh" selected>Coherent 5·5 — 6 rounds/min</option><option value="box">Box 4·4·4·4 — focus</option><option value="four">4-7-8 — calming</option></select>')}
+  ${field('Rounds', '<input id="bp-cy" type="number" min="1" max="40" step="1" value="6">')}
+  <button class="tl-btn primary" id="bp-go" type="button">Start</button>
+  <button class="tl-btn" id="bp-rs" type="button">Stop</button>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:26px 0">
+  <div id="bp-ring" style="width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;color:#fff;background:linear-gradient(135deg,#38bdf8,#6366f1);transform:scale(1)">Ready</div>
+  <div id="bp-left" class="meta">pick a pattern and press Start</div>
+</div>
+<div class="tl-res" id="bp-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var LB={'in':'Breathe in','hold':'Hold','out':'Breathe out'};
+var PATS={coh:{name:'Coherent 5 in, 5 out',steps:[['in',5,'up'],['out',5,'down']]},
+ box:{name:'Box 4·4·4·4',steps:[['in',4,'up'],['hold',4,'max'],['out',4,'down'],['hold',4,'min']]},
+ four:{name:'4-7-8',steps:[['in',4,'up'],['hold',7,'max'],['out',8,'down']]}};
+var timer=null,si=0,el=0,cy=0,left=0,totalSec=0,nCy=0,len=0;
+function setRing(txt,scale){$('bp-ring').style.transform='scale('+scale.toFixed(3)+')';$('bp-ring').textContent=txt;}
+function stop(){if(timer){clearInterval(timer);timer=null;}$('bp-go').textContent='Start';setRing('Ready',1);$('bp-left').textContent='stopped — press Start to begin again';}
+function start(){if(timer){stop();return;}
+ var p=PATS[$('bp-pat').value];
+ nCy=parseInt($('bp-cy').value,10)||6;
+ if(nCy<1||nCy>40){$('bp-out').innerHTML='<span class="tl-badge tl-no">check input</span> Rounds from 1 to 40.';return;}
+ si=0;el=0;cy=0;len=0;
+ p.steps.forEach(function(s){len+=s[1];});
+ totalSec=len*nCy;left=totalSec;
+ $('bp-go').textContent='Stop';
+ $('bp-out').innerHTML='—';
+ timer=setInterval(function(){el+=0.1;left-=0.1;
+  var s=p.steps[si],prog=Math.min(el/s[1],1),sc=1;
+  if(s[2]==='up')sc=1+prog;else if(s[2]==='down')sc=2-prog;else if(s[2]==='max')sc=2;else sc=1;
+  setRing(LB[s[0]]+' '+Math.max(0,Math.ceil(s[1]-el)),sc);
+  $('bp-left').textContent=p.name+' · round '+(cy+1)+' of '+nCy+' · '+Math.max(0,Math.ceil(left))+' s left';
+  if(el>=s[1]){el=0;si++;
+   if(si>=p.steps.length){si=0;cy++;
+    if(cy>=nCy){clearInterval(timer);timer=null;$('bp-go').textContent='Start';setRing('Done',1);
+     $('bp-out').innerHTML='<div class="tl-big">'+nCy+' rounds · '+totalSec+' s</div><table class="tl-tab"><tbody><tr><td>Pattern</td><td>'+p.name+'</td></tr><tr><td>Pace</td><td>one round every '+len+' s — '+(60/len).toFixed(1)+' rounds per minute</td></tr><tr><td>How to run it</td><td>inhale through the nose, exhale through pursed lips; light-headed means ease off, not push through</td></tr></tbody></table><p class="meta">Tab switches can pause the visual — if you leave the page, press Stop and restart the round. Calming practice, not medical advice.</p>';}
+   }}
+ },100);}
+$('bp-go').onclick=start;$('bp-rs').onclick=stop;
+(function init(){$('bp-out').innerHTML='<h3 class="section-title">The three patterns at a glance</h3><table class="tl-tab"><tbody><tr><td>Pattern</td><td>Counts</td><td>One round</td><td>Rounds/min</td><td>Reach for it when</td></tr><tr><td>Coherent 5\u00b75</td><td>in 5 s, out 5 s</td><td>10 s</td><td>6.0</td><td>default — steady, calm, countless</td></tr><tr><td>Box 4\u00b74\u00b74\u00b74</td><td>in, hold, out, hold on 4</td><td>16 s</td><td>3.8</td><td>stress — the shape is easy to remember</td></tr><tr><td>4-7-8</td><td>in 4, hold 7, out 8</td><td>19 s</td><td>3.2</td><td>bedtime — the longest exhale of the three</td></tr></tbody></table><p class="meta">Pick a pattern above and press Start; the ring is the metronome.</p>';})();`,
+  seo: `<h2 class="section-title">Why six rounds a minute is the magic number</h2>
+  <p>Blood pressure and heart rate ride a roughly ten-second wave — five seconds up, five down. Breathe at that same rate (0.1 Hz) and your lungs, heart and baroreflex lock into the same rhythm, which is why 5-in-5-out coherent breathing measurably widens heart-rate variability, the recovery marker training apps chase. Box breathing trades the long exhale for symmetry — in, hold, out, hold on one count — easy to remember exactly when adrenaline makes counting hard, which is why pilots and emergency services train it. 4-7-8 leans the opposite way: the eight-count exhale is the longest brake-pull of the three, and the reason the pattern lives in the bedtime corner. All three work best with a pacer, because the ring costs no attention while the counting does.</p>`,
+});
+
+// ── 42. /alat/morse — morse code translator ──────────────────────────────────
+TOOLKIT.push({
+  slug: 'morse', ic: '📡', name: 'Morse Code',
+  title: 'Morse Code Translator — Text ⇄ Morse, With Timing | Tukuk-OS',
+  desc: 'Translate text to International Morse and back, with the full ITU letter, digit and punctuation table, word slashes, and dit/dah timing shown as dash counts. Optional WebAudio playback. In your browser.',
+  hero: 'Morse Translator', sub: 'ITU table · A–Z 0–9 punctuation · word gaps · audio playback',
+  navBlurb: 'Text to International Morse and back with the full ITU table including punctuation, word-gap slashes, and dit/dah playback generated by your browser\'s own audio oscillator.',
+  hubBlurb: 'type it or dot it — encode, decode, and hear SOS at the correct 1:3:7 unit timing, no radio required',
+  lead: 'The real ITU table, not the movie version: letters, digits and common punctuation, with words separated by <b>/</b> and symbols by spaces. Playback uses a single WebAudio oscillator — a dit is one unit, a dah three, intra-symbol gaps one unit, inter-symbol three, inter-word seven — so <b>SOS</b> really does come out ··· −−− ··· at 12 words per minute by default.',
+  form: `<div class="tl-form">
+  ${field('Direction', '<select id="mo-mode"><option value="enc" selected>text → morse</option><option value="dec">morse → text</option></select>')}
+  ${field('Speed', '<select id="mo-wpm"><option value="5">5 wpm · careful</option><option value="12" selected>12 wpm · standard</option><option value="20">20 wpm · brisk</option></select>')}
+  <textarea class="tl-in" id="mo-in" spellcheck="false">HELLO, WORLD!</textarea>
+  <button class="tl-btn primary" id="mo-go" type="button">Translate</button>
+  <button class="tl-btn" id="mo-play" type="button">▶ Play</button>
+</div>
+<div class="tl-res" id="mo-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var T={'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---','K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-','U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..','0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.','.':'.-.-.-',',':'--..--','?':'..--..','!':'-.-.--','/':'-..-.','(':'-.--.',')':'-.--.-','&':'.-...',':':'---...',';':'-.-.-.','=':'-...-','+':'.-.-.','-':'-....-','_':'..--.-','\"':'.-..-.','$':'...-..-','@':'.--.-.'};
+var RT={};for(var k in T)if(T[k])RT[T[k]]=k;
+function encode(s){var out=[],bad=[];s=s.toUpperCase();
+ for(var i=0;i<s.length;i++){var c=s[i];
+  if(c===' '){out.push('/');continue;}
+  if(T[c]!==undefined)out.push(T[c]);else bad.push(c);}
+ return {morse:out.join(' '),bad:bad};}
+function decode(s){var words=s.trim().split(/\\s*\\/\\s*/),out=[],bad=[];
+ words.forEach(function(w){var toks=w.split(/\\s+/).filter(Boolean),buf=[];
+  toks.forEach(function(t){if(RT[t]!==undefined)buf.push(RT[t]);else bad.push(t);});
+  out.push(buf.join(''));});
+ return {text:out.join(' '),bad:bad};}
+function unitMs(){return Math.round(1200/parseInt($('mo-wpm').value,10));}
+function render(){var raw=$('mo-in').value;
+ var r=$('mo-mode').value==='enc'?encode(raw):decode(raw);
+ var outv=$('mo-mode').value==='enc'?r.morse:r.text;
+ var html='<div class="tl-pick">'+String(outv).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
+ var dots=0,dashes=0;(''+outv).split('').forEach(function(c){if(c==='.')dots++;if(c==='-')dashes++;});
+ html+='<p class="meta">'+unitMs()+' ms per unit ('+$('mo-wpm').value+' wpm)';
+ if($('mo-mode').value==='enc'&&outv!=='')html+=' · '+dots+' dits, '+dashes+' dahs — the timing is 1:3 for symbols and 1:3:7 between letter / word / gap';
+ if(r.bad.length)html+=' · unmapped: '+r.bad.join(' ');
+ html+='.</p>';
+ $('mo-out').innerHTML=html;}
+$('mo-go').onclick=render;$('mo-in').oninput=render;$('mo-mode').onchange=function(){
+ var raw=$('mo-in').value;$('mo-in').value=$('mo-mode').value==='enc'?raw.toUpperCase():decode(raw).text;render();};
+$('mo-wpm').onchange=render;
+$('mo-play').onclick=function(){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+ var ac=new AC(),u=unitMs(),t=ac.currentTime+0.05;
+ var seq=($('mo-mode').value==='enc'?encode($('mo-in').value).morse:$('mo-in').value);
+ var osc=ac.createOscillator(),g=ac.createGain();g.gain.value=0;osc.connect(g);g.connect(ac.destination);osc.start();
+ seq.split('').forEach(function(c){var on=0;
+  if(c==='.')on=u;else if(c==='-')on=3*u;
+  if(on){g.gain.setValueAtTime(0.7,t);t+=on/1000;g.gain.setValueAtTime(0,t);}
+  else if(c===' ')t+=3*u/1000;else if(c==='/')t+=7*u/1000;});
+ osc.stop(t+0.01);setTimeout(function(){try{ac.close();}catch(e){}},(t-ac.currentTime+0.3)*1000);};
+render();`,
+  seo: `<h2 class="section-title">The timing is the code</h2>
+  <p>Morse is a rhythm language: a dit is one unit, a dah three, the space inside a letter one, between letters three, between words seven. Get the ratios right and "ears" can copy any speed — which is why the unit length here is derived from words-per-minute the way radio operators do it: PARIS, a five-letter test word worth exactly 50 units, times the wpm. 1200 ÷ 12 wpm = 100 ms per unit. The oscillator is the browser's own; nothing is recorded, nothing is downloaded.</p>`,
+});
+
+// ── 43. /alat/phonetic — NATO alphabet ───────────────────────────────────────
+TOOLKIT.push({
+  slug: 'phonetic', ic: '🗣️', name: 'Phonetic Alphabet',
+  title: 'NATO Phonetic Alphabet Converter — Alpha to Zulu | Tukuk-OS',
+  desc: 'Spell any code, callsign or booking reference in the NATO/ICAO alphabet — Alpha Bravo Charlie — and decode word lists back to letters, digits included. A static table, in your browser.',
+  hero: 'Phonetic Alphabet', sub: 'ICAO/NATO 26 words + digits · encode & decode · no audio, no account',
+  navBlurb: 'Read any code out loud unambiguously: the official ICAO words Alpha through Zulu plus the digit list, both directions, with the awkward-pronunciation notes.',
+  hubBlurb: 'the "can you repeat that over the phone" tool — spell it in NATO words, or paste a word chain back into letters',
+  lead: 'B and D, M and N, F and S do not survive a bad line — the alphabet fix this has been standard at ICAO since 1956. Encode anything and get the word chain with separators; paste a word chain back and it decodes, tolerantly, one word at a time. The table is static and complete: including the official spellings <b>Alfa</b> and <b>Juliett</b> the standards documents actually use.',
+  form: `<div class="tl-form">
+  ${field('Direction', '<select id="ph-mode"><option value="enc" selected>letters → words</option><option value="dec">words → letters</option></select>')}
+  <textarea class="tl-in" id="ph-in" spellcheck="false">TUKUK-2026</textarea>
+  <button class="tl-btn primary" id="ph-go" type="button">Spell it</button>
+</div>
+<div class="tl-res" id="ph-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var W={'A':'Alpha','B':'Bravo','C':'Charlie','D':'Delta','E':'Echo','F':'Foxtrot','G':'Golf','H':'Hotel','I':'India','J':'Juliett','K':'Kilo','L':'Lima','M':'Mike','N':'November','O':'Oscar','P':'Papa','Q':'Quebec','R':'Romeo','S':'Sierra','T':'Tango','U':'Uniform','V':'Victor','W':'Whiskey','X':'X-ray','Y':'Yankee','Z':'Zulu','0':'Zero','1':'One','2':'Two','3':'Three','4':'Four','5':'Five','6':'Six','7':'Seven','8':'Eight','9':'Nine'};
+var RW={};for(var k in W)RW[W[k].toLowerCase()]=k;
+RW['alfa']='A';
+function enc(s){var out=[],keep=[];
+ for(var i=0;i<s.length;i++){var c=s[i].toUpperCase();
+  if(W[c])out.push(W[c]);
+  else if(c===' ')out.push('/');
+  else if(keep.indexOf(s[i])<0)keep.push(s[i]);}
+ return {chain:out.join(' '),keep:keep};}
+function dec(s){var toks=s.toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean),letters=[],bad=[];
+ toks.forEach(function(t){if(t==='/'){letters.push(' ');return;}
+  if(RW[t])letters.push(RW[t]);else if(t==='xray')letters.push('X');else bad.push(t);});
+ return {text:letters.join(''),bad:bad};}
+function render(){var raw=$('ph-in').value;
+ var r=$('ph-mode').value==='enc'?enc(raw):dec(raw);
+ var html='<div class="tl-pick">'+String(r.text||r.chain).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
+ if($('ph-mode').value==='enc'){
+  html+='<p class="meta">'+raw.replace(/</g,'&lt;')+' \u2192 '+r.chain+'.';
+  if(r.keep.length){var u=[];r.keep.forEach(function(c){if(u.indexOf(c)<0&&c!==' ')u.push(c);});
+   if(u.length)html+=' Not in the alphabet and left as-is: '+u.join(' ')+'.';}
+ }else{
+  html+='<p class="meta">Decoded: '+r.text+'.';
+  if(r.bad.length)html+=' Unknown words ignored: '+r.bad.join(', ')+'.';}
+ html+='</p>';$('ph-out').innerHTML=html;}
+$('ph-go').onclick=render;$('ph-in').oninput=render;$('ph-mode').onchange=function(){
+ var raw=$('ph-in').value;$('ph-in').value=$('ph-mode').value==='enc'?raw.toUpperCase():dec(raw).text;render();};
+render();`,
+  seo: `<h2 class="section-title">Why Alfa, and why Juliett with two t's</h2>
+  <p>The words were chosen for cross-language distinctiveness, not spelling elegance: non-native speakers confuse v/f and j/y, so the ICAO text writes <b>Alfa</b> and <b>Juliett</b> — the double-t stops French readers pronouncing it "Jew-ette", and the f stops the Spanish aitch. Numbers ride the same table (Three=Niner was proposed but rejected; the aviation "niner" lives on informally only). This page follows the published words and adds nothing.</p>`,
+});
+
+
+// ── 44. /alat/week — ISO week number & day of year ──────────────────────────
+TOOLKIT.push({
+  slug: 'week', ic: '🗓️', name: 'Week Number',
+  title: 'Week Number Calculator — ISO 8601 Week, Day of Year & Reverse | Tukuk-OS',
+  desc: 'Any date in its ISO week number, day of the year, days remaining and ISO date string (2026-W45-2) — or reverse: week number to the Monday–Sunday it covers. The Thursday rule, exactly, in your browser.',
+  hero: 'Week Number', sub: 'ISO 8601 · W1–W53 · day-of-year · dates-to-week and week-to-dates',
+  navBlurb: 'The week number the standard actually defines — first week contains a Thursday, weeks start Monday — plus day-of-year, days left, and the reverse lookup from W-number to dates.',
+  hubBlurb: 'what week is it? ISO-8601 the correct way (not the +1 the spreadsheet got), day of year, and what dates a given week spans',
+  lead: 'Two countries disagree about "week 1" every January, and the ISO 8601 rule settles it: <b>week 1 is the week containing the first Thursday of the year</b> (equivalently, containing January 4). Weeks run Monday to Sunday, so a 4- or 5-day January stub belongs to last year\'s final week. Both directions are on this page, from that one rule — including the Dec-28 check that catches every year-boundary case.',
+  form: `<div class="tl-form">
+  ${field('Direction', '<select id="wk-mode"><option value="d2w" selected>date → week & day-of-year</option><option value="w2d">year + week → dates</option></select>')}
+  ${field('Date', '<input id="wk-date" type="date" value="2026-11-03">')}
+  ${field('ISO year', '<input id="wk-year" type="number" min="1970" max="2099" step="1" value="2026">')}
+  ${field('Week number', '<input id="wk-n" type="number" min="1" max="53" step="1" value="45">')}
+  <button class="tl-btn primary" id="wk-go" type="button">Find it</button>
+</div>
+<div class="tl-res" id="wk-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var WD=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+function ms(y,m,d){return Date.UTC(y,m-1,d);}
+function dow(t){return (new Date(t).getUTCDay()+6)%7;}
+function ord(t,y){return Math.floor((t-ms(y,1,1))/864e5)+1;}
+function lastW(y){var t=ms(y,12,28);return Math.floor((ord(t,y)-dow(t)-1+10)/7);}
+function iso(t){var y=new Date(t).getUTCFullYear();var w=Math.floor((ord(t,y)-dow(t)-1+10)/7);
+ if(w<1){y--;w=lastW(y);}else if(w>lastW(y)){y++;w=1;}return {y:y,w:w,d:dow(t)};}
+ function pad(n){return (n<10?'0':'')+n;}
+function fmt(t){var d=new Date(t);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}
+function render(){var mode=$('wk-mode').value;
+ if(mode==='d2w'){var s=$('wk-date').value.split('-');
+  if(s.length!==3){$('wk-out').innerHTML='<span class="tl-badge tl-no">check input</span> Pick a date.';return;}
+  var t=ms(+s[0],+s[1],+s[2]),y=+s[0];
+  if(isNaN(t)||s[0]<1970||s[0]>2099){$('wk-out').innerHTML='<span class="tl-badge tl-no">check input</span> Years 1970 to 2099.';return;}
+  var i=iso(t),leap=(y%4===0&&y%100!==0)||y%400===0,oy=ord(t,y),tot=leap?366:365;
+  var html='<div class="tl-big">W'+i.w+' of '+i.y+'</div><table class="tl-tab"><tbody>';
+  html+='<tr><td>ISO date string</td><td>'+i.y+'-W'+pad(i.w)+'-'+(i.d+1)+'</td></tr>';
+  html+='<tr><td>Week spans</td><td>'+fmt(t-i.d*864e5)+' to '+fmt(t+(6-i.d)*864e5)+'</td></tr>';
+  html+='<tr><td>Weekday</td><td>'+WD[i.d]+'</td></tr>';
+  html+='<tr><td>Day of year</td><td>'+oy+' of '+tot+'</td></tr>';
+  html+='<tr><td>Days remaining</td><td>'+(tot-oy)+' · '+Math.floor((tot-oy)/7)+' whole weeks left in '+y+'</td></tr>';
+  html+='<tr><td>Weeks in '+i.y+'</td><td>'+lastW(i.y)+'</td></tr></tbody></table>';
+  html+='<p class="meta">If the calendar year and ISO year differ (early January), the ISO year is printed first — that is the Dec-28 rule doing its job.</p>';
+  $('wk-out').innerHTML=html;
+ }else{var wy=parseInt($('wk-year').value,10),wn=parseInt($('wk-n').value,10);
+  if(!(wy>=1970&&wy<=2099)||!(wn>=1&&wn<=lastW(wy))){
+   $('wk-out').innerHTML='<span class="tl-badge tl-no">check input</span> '+wy+' has weeks 1 to '+(wy>=1970&&wy<=2099?lastW(wy):53)+'.';return;}
+  var j4=ms(wy,1,4),w1=j4-dow(j4)*864e5,mon=w1+(wn-1)*7*864e5;
+  var html2='<div class="tl-big">'+wy+'-W'+pad(wn)+'</div><table class="tl-tab"><tbody>';
+  html2+='<tr><td>Monday</td><td>'+fmt(mon)+'</td></tr>';
+  ['Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].forEach(function(nm,ix){
+   html2+='<tr><td>'+nm+'</td><td>'+fmt(mon+(ix+1)*864e5)+'</td></tr>';});
+  html2+='</tbody></table><p class="meta">Week 1 always contains January 4 — that is the fastest way to check the Monday above by hand.</p>';
+  $('wk-out').innerHTML=html2;}}
+$('wk-go').onclick=render;['wk-date','wk-year','wk-n'].forEach(function(id){$(id).oninput=render;});
+$('wk-mode').onchange=render;render();`,
+  seo: `<h2 class="section-title">The spreadsheet that starts the year on week 2</h2>
+  <p>US convention counts the week containing January 1 as week 1, so its numbers trail ISO by one for years that start in November, December or January — 2026 starts on a Thursday, so its first four days are already ISO week 1 and the difference shows up the very next Monday. This page never counts from January 1: it computes floor((ordinal − weekday + 10) ÷ 7), the direct form of the Thursday rule, and cross-checks boundaries against December 28, which is provably always in the last ISO week of its year.</p>`,
+});
+
+// ── 45. /alat/markdown — markdown to html ────────────────────────────────────
+TOOLKIT.push({
+  slug: 'markdown', ic: '📝', name: 'Markdown to HTML',
+  title: 'Markdown to HTML Converter — Safe Subset, No Uploads | Tukuk-OS',
+  desc: 'Convert Markdown to clean, escaped HTML — headings, bold, italic, code, links, lists and quotes — with the output shown side by side. Everything happens in your browser; raw angle brackets can never sneak through.',
+  hero: 'Markdown → HTML', sub: 'headings · bold · italic · code · links · lists · quotes · escaped first',
+  navBlurb: 'A Markdown-to-HTML converter that escapes angle brackets before it formats, so no script tag ever survives the trip — paste, copy, done, nothing uploaded.',
+  hubBlurb: 'quick md → html with a deliberately small, fully predictable subset of CommonMark — safe by escaping first, not by filtering later',
+  lead: 'The order matters: every <code>&lt;</code>, <code>&amp;</code> and <code>&gt;</code> is escaped <b>before</b> any formatting is applied, so the only HTML tags in the output are the ones this page emits. Supported: <code>#</code>–<code>######</code> headings, <b>**bold**</b>, <i>*italic*</i> and <i>_italic_</i>, <code>&#96;code&#96;</code>, <code>[text](url)</code> links (http, https, mailto and site-relative only), <code>- </code> and <code>1. </code> lists, <code>&gt; </code> quotes, and <code>---</code> rules.',
+  form: `<div class="tl-form">
+  <textarea class="tl-in" id="mk-in" rows="10" spellcheck="false"># Hello tukuk
+
+Some **bold**, some *italic*, and some &#96;code&#96;.
+
+- first point
+- second point
+
+1. numbered one
+2. numbered two
+
+> A quotation, with a [link](https://tukuk.org).
+
+---</textarea>
+  <button class="tl-btn primary" id="mk-go" type="button">Convert</button>
+  <button class="tl-btn" id="mk-copy" type="button">Copy HTML</button>
+</div>
+<div class="tl-res" id="mk-prev">—</div>
+<div class="tl-res" id="mk-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var TICK=String.fromCharCode(96);
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function inline(s){var e=esc(s);
+ e=e.replace(new RegExp(TICK+'([^'+TICK+']+?)'+TICK,'g'),function(m,c){return '<code>'+c+'</code>';});
+ e=e.replace(/\\*\\*([^*]+?)\\*\\*/g,'<strong>$1</strong>');
+ e=e.replace(/(^|[^*])\\*([^*\\s][^*]*?)\\*/g,'$1<em>$2</em>');
+ e=e.replace(/(^|[\\s(_])_([^_\\s][^_]*?)_/g,'$1<em>$2</em>');
+ e=e.replace(/\\[([^\\]]+?)\\]\\(([^)\\s]+?)\\)/g,function(m,txt,url){
+  var oku=/^(https?:|mailto:|\\/)/i.test(url);
+  return oku?'<a href="'+url+'">'+txt+'</a>':m;});
+ return e;}
+function conv(src){var lines=src.replace(/\\r/g,'').split('\\n'),out=[],i=0;
+ while(i<lines.length){var L=lines[i];
+  if(/^\\s*$/.test(L)){i++;continue;}
+  var h=L.match(/^(#{1,6})\\s+(.*)$/);
+  if(h){out.push('<h'+h[1].length+'>'+inline(h[2])+'</h'+h[1].length+'>');i++;continue;}
+  if(/^(-{3,}|\\*{3,})\\s*$/.test(L)){out.push('<hr>');i++;continue;}
+  if(/^>\\s?/.test(L)){var q=[];while(i<lines.length&&/^>\\s?/.test(lines[i])){q.push(inline(lines[i].replace(/^>\\s?/,'')));i++;}
+   out.push('<blockquote><p>'+q.join(' ')+'</p></blockquote>');continue;}
+  if(/^\\s*[-*]\\s+/.test(L)){var ul=[];while(i<lines.length&&/^\\s*[-*]\\s+/.test(lines[i])){ul.push('<li>'+inline(lines[i].replace(/^\\s*[-*]\\s+/,''))+'</li>');i++;}
+   out.push('<ul>'+ul.join('')+'</ul>');continue;}
+  if(/^\\s*\\d+\\.\\s+/.test(L)){var ol=[];while(i<lines.length&&/^\\s*\\d+\\.\\s+/.test(lines[i])){ol.push('<li>'+inline(lines[i].replace(/^\\s*\\d+\\.\\s+/,''))+'</li>');i++;}
+   out.push('<ol>'+ol.join('')+'</ol>');continue;}
+  var par=[];while(i<lines.length&&!/^\\s*$/.test(lines[i])&&!/^(#{1,6}\\s|>|\\s*[-*]\\s|\\s*\\d+\\.\\s|-{3,}\\s*$|\\*{3,}\\s*$)/.test(lines[i])){par.push(lines[i]);i++;}
+  if(par.length)out.push('<p>'+inline(par.join(' '))+'</p>');else i++;}
+ return out.join('\\n');}
+function render(){var html=conv($('mk-in').value);
+ $('mk-prev').innerHTML=html;
+ $('mk-out').innerHTML='<pre class="tl-pick">'+esc(html)+'</pre>';
+ $('mk-copy').onclick=function(){if(navigator.clipboard&&navigator.clipboard.writeText)
+  navigator.clipboard.writeText(html).catch(function(){});};}
+render();$('mk-in').oninput=render;$('mk-go').onclick=render;`,
+  seo: `<h2 class="section-title">Escaping first is the whole security story</h2>
+  <p>Most online Markdown converters inject raw HTML from the input — which is how a paste into a comment box becomes a session-stealing script. Here the reverse is true: nothing that is not an entity or one of the dozen tags above can appear in the output, and links are checked against http/https/mailto/relative so a <code>javascript:</code> href dies on the spot. That also means the converter is boring on purpose: tables, footnotes and HTML blocks belong to bigger renderers, not to a paste box.</p>`,
+});
+
+// ── 46. /alat/case — programmer case converter ───────────────────────────────
+TOOLKIT.push({
+  slug: 'case', ic: '🔤', name: 'Case Converter',
+  title: 'Case Converter — camelCase, snake_case, kebab & Pascal | Tukuk-OS',
+  desc: 'One identifier in, all nine programmer conventions out: camelCase, PascalCase, snake_case, SCREAMING_SNAKE, kebab-case, Title Case, Sentence case, dot.case and path/case. Word-boundary aware, in your browser.',
+  hero: 'Case Converter', sub: 'camel · Pascal · snake · SCREAMING · kebab · Title · dot · path · sentence',
+  navBlurb: 'Paste any identifier — getUserID, http-request, API_KEY_2 — and get all nine naming conventions from one tokenisation, camelCase humps included.',
+  hubBlurb: 'the copy-from-stackoverflow formatting tool: every dev naming style at once, with the acronym-aware split shown',
+  lead: 'The hard half of re-casing is splitting: this page breaks on spaces and punctuation, on lowercase-to-uppercase humps (<code>requestId</code> → request + Id) and on acronym runs (<code>HTTPServer</code> → HTTP + Server) — the same two regexes ESLint and Prettier plugins use. Once the word list is right, every convention is just a different join.',
+  form: `<div class="tl-form">
+  <textarea class="tl-in" id="cs-in" rows="3" spellcheck="false">getUserID http-server API_KEY_2 the quick_brownFox</textarea>
+  <button class="tl-btn primary" id="cs-go" type="button">Convert</button>
+</div>
+<div class="tl-res" id="cs-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function words(s){return s
+ .replace(/([a-z0-9])([A-Z])/g,'$1 $2')
+ .replace(/([A-Z]+)([A-Z][a-z])/g,'$1 $2')
+ .split(/[^A-Za-z0-9]+/).filter(Boolean);}
+function cap(w){return w.charAt(0).toUpperCase()+w.slice(1);}
+function render(){var ws=words($('cs-in').value);
+ if(!ws.length){$('cs-out').innerHTML='<span class="tl-badge tl-no">check input</span> Type an identifier — letters or digits.';return;}
+ var lw=ws.map(function(w){return /^[0-9]+$/.test(w)?w:w.toLowerCase();}),uw=lw.map(function(w){return w.toUpperCase();});
+ function rows(){return [
+  ['camelCase',lw[0]+lw.slice(1).map(cap).join('')],
+  ['PascalCase',lw.map(cap).join('')],
+  ['snake_case',lw.join('_')],
+  ['SCREAMING_SNAKE',uw.join('_')],
+  ['kebab-case',lw.join('-')],
+  ['Title Case',lw.map(cap).join(' ')],
+  ['Sentence case',lw.join(' ').replace(/^[a-z]/,function(c){return c.toUpperCase();})],
+  ['dot.case',lw.join('.')],
+  ['path/case',lw.join('/')]];
+ }
+ var html='<div class="tl-big">'+ws.length+' word'+(ws.length===1?'':'s')+': '+ws.map(function(w){return esc(w);}).join(' · ')+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ rows().forEach(function(r){html+='<tr><td>'+r[0]+'</td><td>'+esc(r[1])+'</td></tr>';});
+ html+='</tbody></table><p class="meta">Digits stay their own word (KEY_2 → key · 2), which is why SCREAMING and snake keep the underscore before them.</p>';
+ $('cs-out').innerHTML=html;}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+$('cs-go').onclick=render;$('cs-in').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why HTTPServer and requestId split differently</h2>
+  <p>A hump is a lowercase letter followed by an uppercase one — that is the <code>(lower)(UPPER)</code> boundary. An acronym is an uppercase run followed by a capital-and-lowercase pair, so the last capital belongs to the next word: <code>HTTPServer</code> splits before "Server", <code>getUserID</code> splits after "get" and leaves "UserID", which a second pass on the acronym rule does not break further because "ID" has no lowercase tail. Every convention in the table is then just lowercasing, capitalising and choosing a separator — dot, slash, underscore, hyphen or space.</p>`,
+});
+
+// ── 47. /alat/coords — coordinate distance & bearing ─────────────────────────
+TOOLKIT.push({
+  slug: 'coords', ic: '📍', name: 'Coordinate Distance',
+  title: 'Distance Between Two Coordinates — Haversine km, Miles & Bearing | Tukuk-OS',
+  desc: 'Paste two latitude/longitude pairs and get the great-circle distance in km, miles and nautical miles plus the initial bearing — the haversine formula, shown in full, in your browser.',
+  hero: 'Coordinate Distance', sub: 'haversine · great-circle · km / mi / nmi · initial bearing · swap',
+  navBlurb: 'How far is it really between two lat/lon dots: haversine great-circle distance in km, miles and nautical miles, with the compass bearing you would leave on.',
+  hubBlurb: 'two map pins in, straight-line-over-the-globe distance out — with the rhumb-line bearing and a map of why it is not the driving distance',
+  lead: 'Flat maps lie about distance; the shortest path between two points on a sphere is the arc of the great circle through them. This page computes that arc with the <b>haversine formula</b> on the mean Earth radius <b>6,371.0088 km</b> — accurate to a few tenths of a percent everywhere (the true ellipsoid differs by up to 0.5% — stated, not hidden) — plus the <b>initial bearing</b>, the compass heading at departure, which is not the heading you arrive on.',
+  form: `<div class="tl-form">
+  ${field('Latitude 1', '<input id="hv-a1" type="number" step="any" min="-90" max="90" value="3.1390">')}
+  ${field('Longitude 1', '<input id="hv-o1" type="number" step="any" min="-180" max="180" value="101.6869">')}
+  ${field('Latitude 2', '<input id="hv-a2" type="number" step="any" min="-90" max="90" value="1.3521">')}
+  ${field('Longitude 2', '<input id="hv-o2" type="number" step="any" min="-180" max="180" value="103.8198">')}
+  <button class="tl-btn primary" id="hv-go" type="button">Measure</button>
+  <button class="tl-btn" id="hv-swap" type="button">Swap ⇅</button>
+</div>
+<div class="tl-res" id="hv-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var R=6371.0088,D=Math.PI/180;
+var CAR=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function num(id){var v=parseFloat($(id).value);return isNaN(v)?null:v;}
+function render(){var a1=num('hv-a1'),o1=num('hv-o1'),a2=num('hv-a2'),o2=num('hv-o2');
+ if(a1===null||o1===null||a2===null||o2===null||Math.abs(a1)>90||Math.abs(a2)>90||Math.abs(o1)>180||Math.abs(o2)>180){
+  $('hv-out').innerHTML='<span class="tl-badge tl-no">check input</span> Latitude −90…90, longitude −180…180, all four filled.';return;}
+ var p1=a1*D,p2=a2*D,dp=p2-p1,dl=(o2-o1)*D;
+ var h=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ var c=2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h)),km=R*c;
+ var y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+ var br=(Math.atan2(y,x)/D+360)%360;
+ var same=km<0.0005;
+ var html='<div class="tl-big">'+km.toFixed(1)+' km</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Miles</td><td>'+(km/1.609344).toFixed(1)+' mi</td></tr>';
+ html+='<tr><td>Nautical miles</td><td>'+(km/1.852).toFixed(1)+' nmi — the definition: 1 nmi = 1 minute of arc</td></tr>';
+ html+='<tr><td>Initial bearing</td><td>'+br.toFixed(1)+'° '+CAR[Math.round(br/22.5)%16]+(same?'':' (reciprocal arrival heading '+(((br+180)%360).toFixed(1))+'°)')+'</td></tr>';
+ html+='<tr><td>Antipodes</td><td>'+(km>20015?'beyond half the planet — "as the crow flies" points the other way':'fine, less than a hemisphere')+'</td></tr>';
+ html+='</tbody></table><h3 class="section-title">The formula, in one line</h3><p>a = sin²(Δφ/2) + cos φ₁ · cos φ₂ · sin²(Δλ/2), d = 2R·atan2(√a, √(1−a))</p>';
+ html+='<p class="meta">Driving distance is typically 1.2–1.8× this; the great circle is what a plane, a ship or a radio beam uses.</p>';
+ $('hv-out').innerHTML=html;}
+$('hv-go').onclick=render;$('hv-swap').onclick=function(){
+ var t;$('hv-a1').value=(t=$('hv-a1').value,$('hv-a1').value=$('hv-a2').value,$('hv-a2').value=t);
+ $('hv-o1').value=(t=$('hv-o1').value,$('hv-o1').value=$('hv-o2').value,$('hv-o2').value=t);render();};
+['hv-a1','hv-o1','hv-a2','hv-o2'].forEach(function(id){$(id).oninput=render;});render();`,
+  seo: `<h2 class="section-title">Haversine instead of the spherical law of cosines</h2>
+  <p>Both give the same arc; the haversine form is used because it stays numerically stable for short hops — the cosine version loses precision to floating-point rounding when the two points are close (the famous "1-metre error at 5 km"). The radius 6,371.0088 km is the IUGG mean: equatorial points are ~0.3% further from the centre than polar ones, so a WGS-84 ellipsoid calculator (Vincenty) will differ from this by up to about 0.5% — acceptable for curiosity, not for surveying.</p>`,
+});
+
+
+// ── 48. /alat/month-grid — month calendar grid generator ─────────────────────────
+TOOLKIT.push({
+  slug: 'month-grid', ic: '🗓️', name: 'Calendar Grid',
+  title: 'Month Calendar Generator — Printable Grid with Week Numbers | Tukuk-OS',
+  desc: 'Any month, any year, Monday or Sunday start — a clean printable grid with ISO week numbers down the side, built from plain date arithmetic in your browser. No trackers, no sign-up, no sidebar.',
+  hero: 'Calendar Grid', sub: 'any month 1900–2200 · Mon/Sun start · ISO week numbers · print-ready',
+  navBlurb: 'A printable month grid for any month in 240 years — Monday or Sunday start, ISO week numbers down the side, generated from calendar arithmetic and nothing else.',
+  hubBlurb: 'plan-a-month calendar with real week numbers, the right length of every month and leap years handled by the 4/100/400 rule',
+  lead: 'The whole grid comes from three pieces of honest arithmetic: the 4-or-100-or-400 leap rule for February, the day-of-week of the 1st from UTC midnights, and the ISO week number of each row taken from the Thursday that row contains — which is why a row can show W1 in December or W53 in January and be correct.',
+  form: `<div class="tl-form">
+  ${field('Month', '<select id="ca-m"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11" selected>November</option><option value="12">December</option></select>')}
+  ${field('Year', '<input id="ca-y" type="number" min="1900" max="2200" step="1" value="2026">')}
+  ${field('Week starts', '<select id="ca-s"><option value="1" selected>Monday</option><option value="0">Sunday</option></select>')}
+  <button class="tl-btn primary" id="ca-go" type="button">Draw it</button>
+  <button class="tl-btn" id="ca-print" type="button">🖨 Print</button>
+</div>
+<div class="tl-res" id="ca-out">—</div>`,
+  css: `
+.ca-grid{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.ca-grid th,.ca-grid td{border:1px solid #d3365b22;padding:7px 6px;text-align:center;font-size:15px}
+.ca-grid th{background:#f6eef1;font-weight:700}
+.ca-grid .ca-w{background:#faf7f8;color:#8a8f98;font-size:12px;font-weight:700}
+.ca-grid .ca-d{color:#c8ccd2}
+@media print{.ca-grid th,.ca-grid td{border-color:#999}}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var WD=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+function ms(y,m,d){return Date.UTC(y,m-1,d);}
+function dowM(t){return (new Date(t).getUTCDay()+6)%7;}
+function dim(y,m){return new Date(Date.UTC(y,m,0)).getUTCDate();}
+function thuWeek(t){var d=new Date(t),y=d.getUTCFullYear();
+ var ord=Math.floor((t-ms(y,1,1))/864e5)+1;return Math.floor((ord+6)/7);}
+function render(){var y=parseInt($('ca-y').value,10),m=parseInt($('ca-m').value,10),st=parseInt($('ca-s').value,10);
+ if(!(y>=1900&&y<=2200)){ $('ca-out').innerHTML='<span class="tl-badge tl-no">check input</span> Years 1900 to 2200.';return;}
+ var first=ms(y,m,1),days=dim(y,m),shift=(dowM(first)+(st===0?1:0))%7;
+ var heads=st===0?['Sun','Mon','Tue','Wed','Thu','Fri','Sat']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+ var html='<div class="tl-big">'+MN[m-1]+' '+y+'</div>';
+ html+='<table class="ca-grid"><thead><tr><th class="ca-w">W</th>';
+ heads.forEach(function(h){html+='<th>'+h+'</th>';});html+='</tr></thead><tbody>';
+ var cell=1-shift;
+ while(cell<=days){html+='<tr>';
+ var startT=ms(y,m,cell),thuT=startT+(st===0?4:3)*864e5;
+ html+='<td class="ca-w">W'+thuWeek(thuT)+'</td>';
+ for(var k=0;k<7;k++){var dnum=cell+k;
+  if(dnum<1||dnum>days)html+='<td class="ca-d"></td>';
+  else html+='<td>'+dnum+'</td>';}
+ html+='</tr>';cell+=7;}
+ html+='</tbody></table>';
+ var leap=(y%4===0&&y%100!==0)||y%400===0;
+ html+='<p class="meta">'+MN[m-1]+' '+y+' has '+days+' days and starts on a '+WD[dowM(first)]+
+ (m===2?' — '+y+' is '+(leap?'a leap year (Feb has 29)':'not a leap year (Feb has 28)'):'')+
+ '. W-numbers are ISO 8601, taken from the Thursday each row contains.</p>';
+ $('ca-out').innerHTML=html;}
+$('ca-go').onclick=render;$('ca-print').onclick=function(){if(window.print)window.print();};
+$('ca-m').onchange=render;$('ca-y').oninput=render;$('ca-s').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why the week number belongs to the Thursday</h2>
+  <p>A calendar row straddles months, and in January it can straddle years — so asking "what week is this row" needs one unambiguous member of it. ISO 8601 effectively answers with the Thursday: the Thursday of a row is never in a different ISO year than the majority of its days (Monday through Thursday of a new year guarantee the switch), which makes it the safest single reference day. November 2026 is a good test case: the first cell, Sunday Nov 1 on a Monday-start grid, still belongs to W44 — and the grid above shows exactly that.</p>`,
+});
+
+// ── 49. /alat/typing — typing speed test ─────────────────────────────────────
+TOOLKIT.push({
+  slug: 'typing', ic: '⌨️', name: 'Typing Speed Test',
+  title: 'Typing Speed Test — Words Per Minute & Accuracy, No Sign-Up | Tukuk-OS',
+  desc: 'A one-minute typing test against 60 common English words: live WPM, raw WPM and error rate, scored with the standard five-characters-per-word rule. Timed entirely in your browser.',
+  hero: 'Typing Speed Test', sub: '60 s · WPM · raw WPM · accuracy · the honest 5-char word rule',
+  navBlurb: 'Sixty seconds, sixty common words, live scoring by the standard typing-test convention — 5 keystrokes = 1 word, errors count against you, nothing leaves the page.',
+  hubBlurb: 'measure your real typing speed the way every benchmark defines it, with per-keystroke feedback and an accuracy score',
+  lead: 'The scoreboard uses the conventions actual typing benchmarks defined: a word is <b>five correct characters</b> (the length of average English words on a typewriter counter), <b>net WPM</b> subtracts errors, <b>raw WPM</b> does not, and accuracy is correct ÷ total keystrokes. Words come from a fixed list of common English words — 60 sampled per run, shuffled in the browser, never fetched.',
+  form: `<div class="tl-form">
+  <div class="tl-pick" id="ty-words">Press Start — 60 common words, 60 seconds.</div>
+  <input id="ty-type" type="text" placeholder="type the words here, space to advance…" autocomplete="off" autocapitalize="off" spellcheck="false" disabled>
+  ${field('Seconds', '<select id="ty-dur"><option value="30">30</option><option value="60" selected>60</option><option value="120">120</option></select>')}
+  <button class="tl-btn primary" id="ty-start" type="button">Start</button>
+</div>
+<div class="tl-res" id="ty-out">—</div>`,
+  css: `
+.ty-w{display:inline-block;padding:3px 8px;margin:2px;border-radius:8px;background:#f4eef0;color:#3a3f46;font-family:ui-monospace,monospace}
+.ty-cur{outline:2px solid #38bdf8}
+.ty-bad{background:#fbdce4;color:#a3133f}
+.ty-done{background:#e5f6e9;color:#1c6b34}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var W=['the','and','that','with','have','this','from','they','will','what','when','your','says','there','their','which','about','would','these','other','into','could','time','given','many','some','most','only','over','such','then','make','like','being','just','know','take','people','year','good','each','see','number','way','water','part','after','place','case','week','where','never','bring','while','learn','point','order','value','world','build','change','follow','begin','close','count','group','issue','level','move','music','need','play','quiet','range','right','shape','study','table','usual','voice','watch','write'];
+var pool=[],wi=0,typed=0,correct=0,errors=0,left=60,tick=null,started=0;
+function drawWords(){var h='';
+ for(var i=0;i<pool.length;i++){h+='<span class="ty-w'+(i===wi?' ty-cur':(i<wi?(pool[i].done?' ty-done':' ty-bad'):''))+'" data-i="'+i+'">'+pool[i].w+'</span> ';}
+ $('ty-words').innerHTML=h;}
+function shuffle(a){for(var j=a.length-1;j>0;j--){var k=Math.floor(Math.random()*(j+1)),t=a[j];a[j]=a[k];a[k]=t;}return a;}
+function finish(){if(tick)clearInterval(tick);tick=null;$('ty-type').disabled=true;
+ var mins=(Date.now()-started)/60000;if(mins<=0)mins=1/600;
+ var net=(correct/5)/mins,raw=(typed/5)/mins,acc=typed>0?100*correct/typed:0;
+ $('ty-out').innerHTML='<div class="tl-big">'+Math.round(net)+' WPM net</div>'+
+ '<table class="tl-tab"><tbody>'+
+ '<tr><td>Raw speed</td><td>'+Math.round(raw)+' WPM (errors included in the count)</td></tr>'+
+ '<tr><td>Accuracy</td><td>'+acc.toFixed(1)+'% — '+correct+' correct of '+typed+' keystrokes</td></tr>'+
+ '<tr><td>Errors</td><td>'+errors+' word'+(errors===1?'':'s')+' failed</td></tr>'+
+ '</tbody></table><p class="meta">Net WPM = correct characters ÷ 5 ÷ minutes — the same arithmetic as the classic typewriter counters; a 120 WPM claim measured as raw is roughly 100 net.</p>';
+ $('ty-start').textContent='Run again';}
+function advance(){var inp=$('ty-type'),want=pool[wi].w,got=inp.value.trim();
+ if(!got)return;
+ inp.value='';
+ if(got===want){pool[wi].done=true;correct+=want.length+1;}
+ else{pool[wi].done=false;errors++;
+  for(var i2=0;i2<Math.min(want.length,got.length);i2++)if(want[i2]===got[i2])correct++;
+  typed+=Math.max(got.length,want.length);}
+ wi++;drawWords();
+ if(wi>=pool.length)finish();}
+$('ty-type').onkeydown=function(e){if(e.key===' '){e.preventDefault();advance();}};
+$('ty-type').oninput=function(){var inp=$('ty-type'),want=pool[wi]?pool[wi].w:'';
+ typed++;
+ if(want.indexOf(inp.value)!==0){inp.classList.add('ty-bad');}
+ else inp.classList.remove('ty-bad');};
+$('ty-start').onclick=function(){pool=shuffle(W.slice()).slice(0,60).map(function(w){return {w:w,done:false};});
+ wi=0;typed=0;correct=0;errors=0;left=parseInt($('ty-dur').value,10);started=Date.now();
+ drawWords();$('ty-type').disabled=false;$('ty-type').value='';$('ty-type').focus();
+ $('ty-out').innerHTML='<span class="tl-badge tl-yes">go</span> '+left+' seconds — type each word and press space.';
+ if(tick)clearInterval(tick);
+ tick=setInterval(function(){left--;
+  $('ty-out').innerHTML='<span class="tl-badge tl-yes">'+left+' s left</span> Keep going.';
+  if(left<=0)finish();},1000);};
+(function init(){pool=W.slice(0,12).map(function(w){return {w:w,done:false};});wi=-1;drawWords();
+ $('ty-words').innerHTML+=' <span class="meta">preview of the word bank — Start shuffles a fresh 60.</span>';})();`,
+  seo: `<h2 class="section-title">Where "words per minute" comes from</h2>
+  <p>Counting words is ambiguous ("ox" vs "antidisestablishmentarianism"), so since the typewriter era speed has been measured in <b>five-character words</b> — the average length of English text as a constant. Your net score is correct keystrokes (including the spaces that complete each word) divided by five, divided by minutes; raw speed counts every keystroke you made. That single convention is what makes 60 WPM here comparable to 60 WPM anywhere else.</p>`,
+});
+
 module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };

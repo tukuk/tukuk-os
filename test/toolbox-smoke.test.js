@@ -430,6 +430,123 @@ test('design: the studio boots with a real selection, not an empty page', () => 
   assert.ok(dom.get('ds-sel').textContent.includes('layer 2: headline'), dom.get('ds-sel').textContent);
 });
 
+// ── batch 4 (Nov 2026) — hand-derived numbers again, swap-verified ──
+test('water: 65 kg + 150 min/week answers 2.45 L and shows every term', () => {
+  const { dom } = runTool(bySlug('water'));
+  const out = dom.get('wa-out')._html;
+  // 35×65 = 2275; 150×500/(7×60) = 178.6 → 179; total 2454 → rounded to 2450
+  assert.ok(out.includes('tl-big">2.45 L'), 'headline litres: ' + out.slice(0, 120));
+  assert.ok(out.includes('2275 ml'), 'base row');
+  assert.ok(out.includes('+179 ml'), 'exercise row (weekly average, not per session)');
+  assert.ok(out.includes('9.8 glasses'), '250 ml glasses');
+  assert.ok(out.includes('153 ml every hour'), '2450 ÷ 16 waking hours');
+  assert.ok(out.includes('every 120 min, ~306 ml'), '8-stop reminder plan');
+});
+
+test('compound: 10k + 100/mo at 5% monthly for 10 yrs is 31,998.32', () => {
+  const { dom } = runTool(bySlug('compound'));
+  const out = dom.get('ci-out')._html;
+  // A = 10000·1.0041667^120 + 100·(1.0041667^120−1)/0.0041667 — hand-checked
+  assert.ok(out.includes('31,998.32'), 'balance: ' + out.slice(0, 120));
+  assert.ok(out.includes('22,000.00'), 'you put in');
+  assert.ok(out.includes('9,998.32'), 'interest is the remainder');
+  assert.ok(out.includes('5.116% (nominal 5.00% compounded monthly)'), 'EAR row');
+  assert.ok(out.includes('13.89 years exact'), 'ln2/ln(1+i) per month ÷ 12');
+  assert.ok(out.includes('11,739.50'), 'year-one balance');
+});
+
+test('tax: adding 6% to 100 gives 106.00 gross, and the table foots', () => {
+  const { dom } = runTool(bySlug('tax'));
+  const out = dom.get('tx-out')._html;
+  assert.ok(out.includes('tl-big">106.00 gross'), out.slice(0, 120));
+  assert.ok(out.includes('6.00'), 'tax row');
+  assert.ok(out.includes('<td>20%</td><td>100.00</td><td>20.00</td><td>120.00</td>'), '20% comparison row');
+});
+
+test('breath: load shows the three-pattern table with correct paces', () => {
+  const { dom } = runTool(bySlug('breath'));
+  const out = dom.get('bp-out')._html;
+  // round lengths are sums of the counts: 10 s, 16 s, 19 s → 6.0, 3.8, 3.2 per min
+  assert.ok(out.includes('10 s') && out.includes('6.0'), 'coherent row');
+  assert.ok(out.includes('16 s') && out.includes('3.8'), 'box row (60/16)');
+  assert.ok(out.includes('19 s') && out.includes('3.2'), '4-7-8 row (60/19)');
+});
+
+test('morse: "Hello, World!" encodes to the exact ITU strings', () => {
+  const { dom } = runTool(bySlug('morse'));
+  const out = dom.get('mo-out')._html;
+  assert.ok(out.includes('.... . .-.. .-.. ---'), 'HELLO');
+  assert.ok(out.includes('--..--'), 'comma is ..--..');
+  assert.ok(out.includes('-.-.--'), 'exclamation');
+  assert.ok(out.includes('100 ms per unit'), 'PARIS rule: 1200 ÷ 12 wpm');
+});
+
+test('phonetic: TUKUK-2026 chains the NATO words exactly', () => {
+  const { dom } = runTool(bySlug('phonetic'));
+  assert.ok(dom.get('ph-out')._html.includes('Tango Uniform Kilo Uniform Kilo Two Zero Two Six'));
+});
+
+test('week: 3 Nov 2026 is W45-2, day 307, and 2026 has 53 weeks', () => {
+  // ISO 8601: W = floor((ordinal − isoDow + 10)/7) = (307 − 2 + 10)/7 = 45; Jan 1 2026 is
+  // a Thursday, so that partial week counts as week 1 and the year runs to 53.
+  const { dom } = runTool(bySlug('week'));
+  const out = dom.get('wk-out')._html;
+  assert.ok(out.includes('W45 of 2026'), out.slice(0, 120));
+  assert.ok(out.includes('2026-W45-2'), 'ISO date string');
+  assert.ok(out.includes('307 of 365'), 'day of year');
+  assert.ok(out.includes('53'), 'weeks in 2026');
+});
+
+test('markdown: headings, emphasis, lists, quote and link all render', () => {
+  const { dom } = runTool(bySlug('markdown'));
+  const prev = dom.get('mk-prev')._html;
+  assert.ok(prev.includes('<h1>Hello tukuk</h1>'), 'heading');
+  assert.ok(prev.includes('<strong>bold</strong>'), 'emphasis');
+  assert.ok(prev.includes('<ul><li>first point</li>'), 'bullet list');
+  assert.ok(prev.includes('<blockquote>'), 'quote');
+  assert.ok(prev.includes('<a href="https://tukuk.org">link</a>'), 'link');
+});
+
+test('case: the mixed default tokenises to 12 words and camelCase', () => {
+  const { dom } = runTool(bySlug('case'));
+  const out = dom.get('cs-out')._html;
+  assert.ok(out.includes('12 words'), 'token count');
+  assert.ok(out.includes('getUserIdHttpServerApiKey2TheQuickBrownFox'), 'camelCase joins acronym-aware tokens');
+});
+
+test('coords: KL→Singapore default is 309.3 km on the WGS-84 sphere', () => {
+  // haversine, R = 6371.0088 km — hand-checked against the published formula
+  const { dom } = runTool(bySlug('coords'));
+  const out = dom.get('hv-out')._html;
+  assert.ok(out.includes('309.3 km'), out.slice(0, 120));
+  assert.ok(out.includes('192.2 mi'), '× 0.621371');
+  assert.ok(out.includes('167.0 nmi'), '÷ 1.852 exactly');
+  assert.ok(out.includes('129.9°'), 'initial bearing');
+});
+
+test('month-grid: November 2026 starts on a Sunday under W44', () => {
+  // 1 Nov 2026 is a Sunday; the ISO week containing that row (Thursday 5 Nov) is W45,
+  // but the printed week label is for the row — the first partial week is W44.
+  const { dom } = runTool(bySlug('month-grid'));
+  const out = dom.get('ca-out')._html;
+  assert.ok(out.includes('November 2026'), 'headline');
+  assert.ok(out.includes('<td class="ca-w">W44</td>'), 'first row label');
+  assert.ok(out.includes('<td>1</td></tr>'), 'Nov 1 sits at the end of the first row (Sunday)');
+  assert.ok(out.includes('W45'), 'the full week below');
+});
+
+test('typing: preview on load, then a correct word turns green', () => {
+  const { dom } = runTool(bySlug('typing'));
+  assert.ok(dom.get('ty-words')._html.includes('preview'), 'word bank preview on load');
+  dom.get('ty-start').click();
+  const laid = dom.get('ty-words')._html;
+  assert.equal((laid.match(/ty-w/g) || []).length, 60, '60 chips after Start');
+  const first = /data-i="0"[^>]*>([a-z]+)</.exec(laid)[1];
+  dom.get('ty-type').value = first;
+  dom.get('ty-type').onkeydown({ key: ' ', preventDefault() {} });
+  assert.ok(dom.get('ty-words')._html.includes('ty-done'), 'correct word marked done');
+});
+
 function bySlug(slug) {
   const t = TOOLKIT.find((x) => x.slug === slug);
   assert.ok(t, 'tool ' + slug + ' vanished from the registry');

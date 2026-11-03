@@ -75,7 +75,20 @@ const PAGES = [
   { path: '/alat/printsize', marker: 'Print Size Calculator', ids: ['py-w', 'py-h', 'py-dpi', 'py-go', 'py-out'] },
   { path: '/alat/electricity', marker: 'Electricity Cost Calculator', ids: ['el-w', 'el-hrs', 'el-days', 'el-tar', 'el-go', 'el-out'] },
   { path: '/alat/pace', marker: 'Running Pace Calculator', ids: ['pc-dist', 'pc-h', 'pc-m', 'pc-s', 'pc-go', 'pc-out'] },
-  { path: '/alat/design', marker: 'Design Studio', ids: ['ds-size', 'ds-canvas', 'ds-addtext', 'ds-addcircle', 'ds-del', 'ds-dl', 'ds-out'] }
+  { path: '/alat/design', marker: 'Design Studio', ids: ['ds-size', 'ds-canvas', 'ds-addtext', 'ds-addcircle', 'ds-del', 'ds-dl', 'ds-out'] },
+  // ── fifth wave (Nov 2026 batch 4) ──
+  { path: '/alat/water', marker: 'Water Target', ids: ['wa-kg', 'wa-ex', 'wa-cl', 'wa-pg', 'wa-hrs', 'wa-go', 'wa-out'] },
+  { path: '/alat/compound', marker: 'Compound Interest', ids: ['ci-p', 'ci-c', 'ci-r', 'ci-f', 'ci-t', 'ci-go', 'ci-out'] },
+  { path: '/alat/tax', marker: 'Tax Add &amp; Remove', ids: ['tx-mode', 'tx-amt', 'tx-rate', 'tx-go', 'tx-out'] },
+  { path: '/alat/breath', marker: 'Breathing Pacer', ids: ['bp-pat', 'bp-cy', 'bp-go', 'bp-rs', 'bp-ring', 'bp-out'] },
+  { path: '/alat/morse', marker: 'Morse Translator', ids: ['mo-mode', 'mo-wpm', 'mo-in', 'mo-go', 'mo-play', 'mo-out'] },
+  { path: '/alat/phonetic', marker: 'Phonetic Alphabet', ids: ['ph-mode', 'ph-in', 'ph-go', 'ph-out'] },
+  { path: '/alat/week', marker: 'Week Number', ids: ['wk-mode', 'wk-date', 'wk-year', 'wk-n', 'wk-go', 'wk-out'] },
+  { path: '/alat/markdown', marker: 'Markdown \u2192 HTML', ids: ['mk-in', 'mk-go', 'mk-copy', 'mk-prev', 'mk-out'] },
+  { path: '/alat/case', marker: 'Case Converter', ids: ['cs-in', 'cs-go', 'cs-out'] },
+  { path: '/alat/coords', marker: 'Coordinate Distance', ids: ['hv-a1', 'hv-o1', 'hv-a2', 'hv-o2', 'hv-go', 'hv-swap', 'hv-out'] },
+  { path: '/alat/month-grid', marker: 'Calendar Grid', ids: ['ca-m', 'ca-y', 'ca-s', 'ca-go', 'ca-print', 'ca-out'] },
+  { path: '/alat/typing', marker: 'Typing Speed Test', ids: ['ty-words', 'ty-type', 'ty-dur', 'ty-start', 'ty-out'] }
 ];
 
 for (const page of PAGES) {
