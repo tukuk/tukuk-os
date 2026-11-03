@@ -23768,6 +23768,58 @@ app.get('/api/admin/load', auth.requireAdmin, (req, res) => {
   }
 });
 
+// ── Mission control (admin only) ────────────────────────────────────────────
+// One tile per subsystem the site runs for its readers — books, the day's
+// manfaat, each feed's own freshness, the nightly Drive backup. All of it is
+// already on disk or in memory: this route reads files and never calls a
+// network source, so opening the panel cannot make a busy server busier.
+const FEED_TILES = [
+  { key: 'gempa', label: 'Earthquake', file: 'gempa-last.json' },
+  { key: 'bencana', label: 'Disasters', file: 'bencana-last.json' },
+  { key: 'cuaca-nasa', label: 'NASA APOD', file: 'apod-last.json' },
+  { key: 'awak-angkasa', label: 'People in space', file: 'crew-last.json' },
+  { key: 'resipi', label: 'Recipes', file: 'recipes-last.json' },
+  { key: 'cuti', label: 'Holiday calendar', file: 'cuti-holidays.json' },
+  { key: 'muzik', label: 'Music charts', file: 'muzik-charts.json' },
+];
+
+function feedTile({ label, file }) {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', file), 'utf8'));
+    const times = [];
+    const hunt = (v, depth) => { // 'at' is nested differently in every feed; a bounded walk finds all of them
+      if (!v || typeof v !== 'object' || depth > 4) return;
+      for (const [k, x] of Object.entries(v)) {
+        if ((k === 'at' || k === 'savedAt' || k === 'date') && (typeof x === 'string' || typeof x === 'number')) times.push(x);
+        else if (x && typeof x === 'object') hunt(x, depth + 1);
+      }
+    };
+    hunt(raw, 0);
+    const stamps = times.map((t) => Date.parse(typeof t === 'number' ? t : t.length === 10 ? `${t}T00:00:00Z` : t)).filter(Number.isFinite);
+    if (!stamps.length) return { label, ok: true, ageHours: null }; // a file with content but no timestamp: present, age unknown
+    return { label, ok: true, ageHours: Math.max(0, Math.round((Date.now() - Math.max(...stamps)) / 36e5)) };
+  } catch {
+    return { label, ok: false, ageHours: null }; // missing or unreadable is a red tile, not a 500
+  }
+}
+
+app.get('/api/admin/overview', auth.requireAdmin, (req, res) => {
+  let bookStatus = null;
+  try { bookStatus = books.status(); } catch (e) { bookStatus = { error: safeError(e) }; }
+  let backup = null;
+  try {
+    const b = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'backup-last.json'), 'utf8'));
+    backup = { at: b.at, ok: Boolean(b.ok), error: b.error || null, files: (b.files || []).map((f) => ({ name: f.name, bytes: f.bytes })) };
+  } catch { /* never run yet — the tile says so */ }
+  res.json({
+    benefits: benefitToday,
+    lifetime: { requests: requestCount, errors: errorCount, firstStartedAt: lifetime.firstStartedAt },
+    books: bookStatus,
+    feeds: FEED_TILES.map(feedTile),
+    backup,
+  });
+});
+
 // Recommended (affiliate) products — the default so /rekomendasi is not empty. The admin replaces
 // them with real affiliate links (Shopee/Amazon/Hostinger/NordVPN etc). A JSON array.
 const DEFAULT_AFFILIATE = JSON.stringify([

@@ -390,6 +390,18 @@
         </div>
       </div>
       
+      <div class="card" id="missionCard">
+        <h2>🛰️ Mission Control <span class="badge badge-success" id="mcBadge" hidden>live</span></h2>
+        <p class="help-text" style="margin-bottom:16px;">
+          One tile per subsystem the site runs for its readers — the number it exists to raise
+          (manfaat hari ini), the books catalogue, every feed's own freshness, and last night's
+          off-site backup. Nothing here re-fetches a source: it reads what the server already knows.
+        </p>
+        <div class="grid-stats" id="mcStats"></div>
+        <div class="lg-sub" id="mcFeedsHead" hidden>Feeds</div>
+        <div id="mcFeeds" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      </div>
+
       <div class="card" id="loadCard">
         <h2>🧮 Load Governor
           <span class="badge badge-success" id="loadBadge" hidden>live</span>
@@ -1089,8 +1101,45 @@ Type a command below or click a quick action.
   async function loadData() {
     loadStatus();
     loadLoad();
+    loadOverview();
     loadSettings();
     loadPosts();
+  }
+
+  // Mission control: benefits + books + feeds + backup from /api/admin/overview.
+  // An hour is stale for a quake feed and fresh for the holiday calendar, so the
+  // thresholds live here in the view, not in the API — the API only reports ages.
+  async function loadOverview() {
+    try {
+      const res = await fetch('/api/admin/overview', { headers: { 'Authorization': `Bearer ${authToken}` } });
+      if (res.status === 401) return forceLogout();
+      const d = await res.json();
+      document.getElementById('mcBadge').hidden = false;
+      const b = d.benefits || { date: null, count: 0 };
+      const k = d.books || {};
+      const cards = [
+        { label: 'Manfaat hari ini', val: (b.count || 0).toLocaleString(), sub: `${b.date || '—'} · lifetime ${((d.lifetime && d.lifetime.requests) || 0).toLocaleString()} requests, ${((d.lifetime && d.lifetime.errors) || 0).toLocaleString()} errors`, fill: Math.min(100, ((b.count || 0) / 1000) * 100) },
+        { label: 'Books shelves', val: (k.subjects || 0).toLocaleString(), sub: `${k.built || 0} built · ${(k.builtWorks || 0).toLocaleString()} works cached${k.lastError ? ' · last error: ' + k.lastError : ''}`, fill: Math.min(100, ((k.subjects || 0) / 1000) * 100) },
+      ];
+      const bk = d.backup;
+      cards.push(bk
+        ? { label: 'Drive backup', val: bk.ok ? '✓ tonight' : '✗ failed', sub: `${(bk.at || '').slice(0, 16).replace('T', ' ')} · ${(bk.files || []).map((f) => Math.round((f.bytes || 0) / 1048576) + ' MB').join(' + ') || 'no archives'}${bk.error ? ' · ' + bk.error : ''}`, fill: bk.ok ? 8 : 100 }
+        : { label: 'Drive backup', val: '—', sub: 'never run yet — install deploy/drive-backup.timer', fill: 100 });
+      document.getElementById('mcStats').innerHTML = cards.map((c) => `<div class="stat-card">
+        <div class="stat-label">${esc(c.label)}</div>
+        <div class="stat-val">${esc(c.val)}</div>
+        <div class="stat-bar"><div class="stat-fill" style="width:${c.fill}%"></div></div>
+        <div class="help-text">${esc(c.sub)}</div></div>`).join('');
+      const feeds = d.feeds || [];
+      document.getElementById('mcFeedsHead').hidden = feeds.length === 0;
+      document.getElementById('mcFeeds').innerHTML = feeds.map((f) => {
+        const cls = !f.ok ? 'badge-danger' : (f.ageHours === null || f.ageHours <= 26) ? 'badge-success' : 'badge-warning';
+        const txt = !f.ok ? 'no data' : f.ageHours === null ? 'ok' : f.ageHours <= 1 ? '<1h' : `${f.ageHours}h`;
+        return `<span title="${esc(f.label)}: ${esc(txt)}"><span class="badge ${cls}">${esc(txt)}</span> ${esc(f.label)}</span>`;
+      }).join('');
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   // The Node memory card needs two numbers that arrive from two endpoints: RSS from /status, the
@@ -1247,7 +1296,7 @@ Type a command below or click a quick action.
     }
   }
   
-  document.getElementById('refreshStatsBtn').addEventListener('click', () => { loadStatus(); loadLoad(); });
+  document.getElementById('refreshStatsBtn').addEventListener('click', () => { loadStatus(); loadLoad(); loadOverview(); });
   
   // Load Settings
   async function loadSettings() {

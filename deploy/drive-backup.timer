@@ -1,0 +1,11 @@
+[Unit]
+Description=Drive off-site backup every night (05:20, kept up if the box was asleep)
+
+[Timer]
+OnCalendar=*-*-* 05:20:00
+RandomizedDelaySec=600
+Persistent=true
+Unit=drive-backup.service
+
+[Install]
+WantedBy=timers.target

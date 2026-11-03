@@ -1,0 +1,22 @@
+[Unit]
+Description=Drive off-site backup for Tukuk-OS — data/ and a git bundle, once a day
+Documentation=file:/opt/tukuk-os/scripts/drive-backup.js
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tukuk-os
+# The bot key is root-only; the timer therefore runs as root, and the script
+# uploads with a drive.file-scoped token that can only touch the backup folder.
+EnvironmentFile=-/opt/tukuk-os/.env
+ExecStart=/usr/bin/node /opt/tukuk-os/scripts/drive-backup.js
+
+# A backup must never compete with live traffic for the 4 GB box's resources.
+Nice=19
+IOSchedulingClass=idle
+MemoryMax=512M
+TasksMax=32
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=drive-backup
