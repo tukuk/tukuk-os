@@ -33,7 +33,22 @@ const PAGES = [
   { path: '/alat/url', marker: 'URL Parser', ids: ['up-url', 'up-parse', 'up-tab', 'up-comp', 'up-enc', 'up-dec', 'up-out'] },
   { path: '/alat/char', marker: 'Unicode Reference', ids: ['ch-in', 'ch-tab', 'ch-ref'] },
   { path: '/alat/convert', marker: 'Image Converter', ids: ['iv-file', 'iv-drop', 'iv-info', 'iv-fmt', 'iv-w', 'iv-h', 'iv-lock', 'iv-q', 'iv-bg', 'iv-go', 'iv-out', 'iv-dl'] },
-  { path: '/alat/image-to-pdf', marker: 'Images to PDF', ids: ['ip-files', 'ip-page', 'ip-orient', 'ip-margin', 'ip-go', 'ip-out', 'ip-dl', 'ip-list'] }
+  { path: '/alat/image-to-pdf', marker: 'Images to PDF', ids: ['ip-files', 'ip-page', 'ip-orient', 'ip-margin', 'ip-go', 'ip-out', 'ip-dl', 'ip-list'] },
+  // ── second wave (Nov 2026, src/toolbox.js) — the registry renders all six
+  // integration points from one object per tool; these entries pin that the
+  // pages actually answer before a visitor finds out they do not.
+  { path: '/alat/base', marker: 'Base Converter', ids: ['bc-in', 'bc-rad', 'bc-custom', 'bc-go', 'bc-out'] },
+  { path: '/alat/binary', marker: 'Text \u2194 Binary', ids: ['bt-in', 'bt-mode', 'bt-kind', 'bt-go', 'bt-out'] },
+  { path: '/alat/prime', marker: 'Prime Checker', ids: ['pr-n', 'pr-go', 'pr-out'] },
+  { path: '/alat/fraction', marker: 'Fraction Calculator', ids: ['fr-a', 'fr-op', 'fr-b', 'fr-go', 'fr-out'] },
+  { path: '/alat/stats', marker: 'Statistics Calculator', ids: ['st-data', 'st-go', 'st-out'] },
+  { path: '/alat/salary', marker: 'Salary Converter', ids: ['sa-amt', 'sa-per', 'sa-hrs', 'sa-wks', 'sa-go', 'sa-out'] },
+  { path: '/alat/tip', marker: 'Tip &amp; Bill Split', ids: ['tp-bill', 'tp-pct', 'tp-split', 'tp-go', 'tp-out'] },
+  { path: '/alat/discount', marker: 'Discount Calculator', ids: ['dc-price', 'dc-off', 'dc-extra', 'dc-go', 'dc-out'] },
+  { path: '/alat/countdown', marker: 'Countdown', ids: ['cd-name', 'cd-date', 'cd-time', 'cd-go', 'cd-out'] },
+  { path: '/alat/grade', marker: 'Grade Calculator', ids: ['gr-cur', 'gr-goal', 'gr-wt', 'gr-go', 'gr-out'] },
+  { path: '/alat/entity', marker: 'HTML Entities', ids: ['en-in', 'en-all', 'en-enc', 'en-dec', 'en-copy', 'en-out'] },
+  { path: '/alat/jwt', marker: 'JWT Decoder', ids: ['jw-tok', 'jw-go', 'jw-head', 'jw-claims'] }
 ];
 
 for (const page of PAGES) {
